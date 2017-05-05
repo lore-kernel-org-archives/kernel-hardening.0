@@ -1,58 +1,338 @@
 MIME-Version: 1.0
-In-Reply-To: <CAEiveUf4p1A1fggwibN+kJW7ruasQCmzr6=GSpTZXoyjJuz00Q@mail.gmail.com>
-References: <1492640420-27345-1-git-send-email-tixxdz@gmail.com>
- <1492640420-27345-3-git-send-email-tixxdz@gmail.com> <CALCETrXFp-apnfRPg9qx6E7g3KDU8DanBW1pMUnA1zShrB5xKg@mail.gmail.com>
- <CAGXu5jJ5dm8yJJ34tEyOP78OxUr2awXmNhm6RaVP8jE4q+L5Ng@mail.gmail.com>
- <CALCETrUueOx1tqj+Ru93KGpy2HHR-A_GQ6DrAppiomkPTtX7Lw@mail.gmail.com>
- <CAGXu5jJBp6VHvDP9182hJgvzS2sBUbUFpmZZ+196K2FcEHUxzw@mail.gmail.com>
- <CALCETrVZ2KH4s2uGW2J3zUQ8RNsrq=N7pJP=YDqd=+cp6fJW=g@mail.gmail.com>
- <CAEiveUdbQcfn1xC5xWMv91vL_uR1MGTvARqw-E4GDTMUZ6t=bA@mail.gmail.com> <CAEiveUf4p1A1fggwibN+kJW7ruasQCmzr6=GSpTZXoyjJuz00Q@mail.gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Fri, 5 May 2017 09:18:46 -0700
-Message-ID: <CALCETrWahivwjfMLQuLqg5w5K_xZG-+Yczqwr8Xyic4RACyBrA@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20170504142435.10175-1-danielmicay@gmail.com>
+References: <20170504142435.10175-1-danielmicay@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 5 May 2017 09:42:12 -0700
+Message-ID: <CAGXu5jL_YgHon7Jdx=PT3pfggwy_zehc+wttvLX6BmvPSOxPfA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 2/2] modules:capabilities: add a per-task modules
- autoload restriction
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, belakhdar abdeldjalil <zendyani@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
+Subject: [kernel-hardening] Re: [PATCH] add the option of fortified string.h functions
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 4, 2017 at 6:07 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
-> On Sat, Apr 22, 2017 at 2:17 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
->> On Sat, Apr 22, 2017 at 1:28 AM, Andy Lutomirski <luto@amacapital.net> wrote:
-> [...]
->>>
->>> My point is that all of these need some way to handle configuration
->>> and inheritance, and I don't think that a bunch of per-task prctls is
->>> the right way.  As just an example, saying that interactive users can
->>> autoload modules but other users can't, or that certain systemd
->>> services can, etc, might be nice.  Linus already complained that he
->>> (i.e. user "torvalds" or whatever) should be able to profile the
->>> kernel but that other uids should not be able to.
->>
->> Neat, maybe this could already be achieved with this interface and
->> systemd-logind,  "ModulesAutoloadUsers=andy" in logind.conf where
->> "andy" is the only logged-in user able to trigger and autoload kernel
->> modules. However maybe we should not restrict too much other bits or
->> functionality of the other users, please let me will follow up later
->> on it.
->>
->>> I personally like my implicit_rights idea, and it might be interesting
->>> to prototype it.
->>
+[adding lkml and rasmus to CC...]
+
+On Thu, May 4, 2017 at 7:24 AM, Daniel Micay <danielmicay@gmail.com> wrote:
+> This adds support for compiling with a rough equivalent to the glibc
+> _FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
+> overflow checks for string.h functions when the compiler determines the
+> size of the source or destination buffer at compile-time. Unlike glibc,
+> it covers buffer reads in addition to writes.
 >
-> Andy following on the idea of per user settings, I'm curious did you
-> manage to make some advance on how to store the user settings ? the
-> user database format is old and not extensible, there was cgmanager or
-> other libcgroup but for resources, and no simple thing for such
-> restrictions example: "RestrictLinuxModules=user" that will prevent
-> such users from making/loading extra Linux features/modules that are
-> not already available...
+> GNU C __builtin_*_chk intrinsics are avoided because they're only
+> designed to detect write overflows and are overly complex. A single
+> inline branch works for everything but strncat while those intrinsics
+> would force the creation of a bunch of extra non-inline wrappers that
+> aren't able to receive the detected source buffer size.
+>
+> This detects various undefined uses of memcpy, etc. at compile-time
+> outside of non-core kernel code, and in the arm64 vdso code, so there
+> will need to be a series of fixes applied (mainly memcpy -> strncpy for
+> copying string constants to avoid copying past the end of the source).
+> It isn't particularly bad, but there are likely some issues that occur
+> during regular use at runtime (none found so far).
+>
+> Future improvements left out of initial implementation for simplicity,
+> as it's all quite optional and can be done incrementally:
+>
+> The fortified string functions should place a limit on reads from the
+> source. For strcat/strcpy, these could just be a variant of strlcat /
+> strlcpy using the size limit as a bound on both the source and
+> destination, with the return value only reporting whether truncation
+> occurred rather than providing the source length. It would be an easier
+> API for developers to use too and not that it really matters but it
+> would be more efficient for the case where truncation is intended.
+>
+> It should be possible to optionally use __builtin_object_size(x, 1) for
+> some functions (C strings) to detect intra-object overflows (like
+> glibc's _FORTIFY_SOURCE=2), but for now this takes the conservative
+> approach to avoid likely compatibility issues.
+>
+> The error reporting could be made friendlier by splitting up the
+> compile-time error for reads and writes. The runtime error could also
+> directly report the buffer and copy sizes.
+>
+> It may make sense to have the compile-time checks in a separate
+> configuration option since they wouldn't have a runtime performance cost
+> if there was an ifdef for the runtime check. However, the runtime cost
+> of these checks is already quite low (much lower than SSP) and as long
+> as some people are using it with allyesconfig, the issues will be found
+> for any in-tree code.
+>
+> Signed-off-by: Daniel Micay <danielmicay@gmail.com>
+> ---
+>  arch/x86/boot/compressed/misc.c |   5 ++
+>  include/linux/string.h          | 161 ++++++++++++++++++++++++++++++++++++++++
+>  lib/string.c                    |   8 ++
+>  security/Kconfig                |   6 ++
+>  4 files changed, 180 insertions(+)
+>
+> diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+> index b3c5a5f030ce..43691238a21d 100644
+> --- a/arch/x86/boot/compressed/misc.c
+> +++ b/arch/x86/boot/compressed/misc.c
+> @@ -409,3 +409,8 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
+>         debug_putstr("done.\nBooting the kernel.\n");
+>         return output;
+>  }
+> +
+> +void fortify_panic(const char *name)
+> +{
+> +       error("detected buffer overflow");
+> +}
+> diff --git a/include/linux/string.h b/include/linux/string.h
+> index 26b6f6a66f83..3bd429c9593a 100644
+> --- a/include/linux/string.h
+> +++ b/include/linux/string.h
+> @@ -169,4 +169,165 @@ static inline const char *kbasename(const char *path)
+>         return tail ? tail + 1 : path;
+>  }
+>
+> +#define __FORTIFY_INLINE extern __always_inline __attribute__((gnu_inline))
+> +#define __RENAME(x) __asm__(#x)
+> +
+> +void fortify_panic(const char *name) __noreturn __cold;
+> +void __buffer_overflow(void) __compiletime_error("buffer overflow");
+
+I've been playing with this with allyesconfig on x86_64, and I've got
+some suggestions I think would make things nicer for others looking at
+this. How about splitting the compile-time buffer_overflow() report
+into the write and read overflow pieces:
+
+void __dst_overflow(void) __compiletime_error("writes beyond end of
+destination buffer");
+void __src_overflow(void) __compiletime_error("reads beyond end of
+source buffer");
+
+With things like memcpy split up:
+
+        if (__builtin_constant_p(size)) {
+                if (p_size < size)
+                        __dst_overflow();
+                if (q_size < size)
+                        __src_overflow();
+        }
+
+I don't think it's worth doing the same for the runtime side since
+that'll just increase text size, etc. (Or, I wasn't creative enough to
+think of a way to distinguish them without doing so.)
+
+I tried to figure out a way to use __same_type(q, (char *)0) to
+trigger strncpy automatically and issuing a warning, but I couldn't
+get it to work for some reason. It never tripped.
+
+> +#if !defined(__NO_FORTIFY) && defined(__OPTIMIZE__) && defined(CONFIG_FORTIFY_SOURCE)
+> +__FORTIFY_INLINE char *strcpy(char *p, const char *q)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       if (p_size == (size_t)-1)
+> +               return __builtin_strcpy(p, q);
+> +       if (strlcpy(p, q, p_size) >= p_size)
+> +               fortify_panic(__func__);
+> +       return p;
+> +}
+
+The other thing, which is cosmetic, would be to swap "p" and "q" for
+"dst" and "src" everywhere, just to make these more readable.
+
+The allyesconfig has tripped over a bunch of places where memcpy needs
+to be strncpy. I'll send those patches in a bit...
+
+-Kees
+
+> +
+> +__FORTIFY_INLINE char *strncpy(char *p, const char *q, __kernel_size_t size)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       if (__builtin_constant_p(size) && p_size < size)
+> +               __buffer_overflow();
+> +       if (p_size < size)
+> +               fortify_panic(__func__);
+> +       return __builtin_strncpy(p, q, size);
+> +}
+> +
+> +__FORTIFY_INLINE char *strcat(char *p, const char *q)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       if (p_size == (size_t)-1)
+> +               return __builtin_strcat(p, q);
+> +       if (strlcat(p, q, p_size) >= p_size)
+> +               fortify_panic(__func__);
+> +       return p;
+> +}
+> +
+> +__FORTIFY_INLINE char *strncat(char *p, const char *q, __kernel_size_t count)
+> +{
+> +       size_t p_len, copy_len;
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       if (p_size == (size_t)-1)
+> +               return __builtin_strncat(p, q, count);
+> +       p_len = __builtin_strlen(p);
+> +       copy_len = strnlen(q, count);
+> +       if (p_size < p_len + copy_len + 1)
+> +               fortify_panic(__func__);
+> +       __builtin_memcpy(p + p_len, q, copy_len);
+> +       p[p_len + copy_len] = '\0';
+> +       return p;
+> +}
+> +
+> +__FORTIFY_INLINE __kernel_size_t strlen(const char *p)
+> +{
+> +       __kernel_size_t ret;
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       if (p_size == (size_t)-1)
+> +               return __builtin_strlen(p);
+> +       ret = strnlen(p, p_size);
+> +       if (p_size <= ret)
+> +               fortify_panic(__func__);
+> +       return ret;
+> +}
+> +
+> +extern __kernel_size_t __real_strnlen(const char *, __kernel_size_t) __RENAME(strnlen);
+> +__FORTIFY_INLINE __kernel_size_t strnlen(const char *p, __kernel_size_t maxlen)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       __kernel_size_t ret = __real_strnlen(p, maxlen < p_size ? maxlen : p_size);
+> +       if (p_size <= ret)
+> +               fortify_panic(__func__);
+> +       return ret;
+> +}
+> +
+> +__FORTIFY_INLINE void *memset(void *p, int c, __kernel_size_t size)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       if (__builtin_constant_p(size) && p_size < size)
+> +               __buffer_overflow();
+> +       if (p_size < size)
+> +               fortify_panic(__func__);
+> +       return __builtin_memset(p, c, size);
+> +}
+> +
+> +__FORTIFY_INLINE void *memcpy(void *p, const void *q, __kernel_size_t size)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       size_t q_size = __builtin_object_size(q, 0);
+> +       if (__builtin_constant_p(size) && (p_size < size || q_size < size))
+> +               __buffer_overflow();
+> +       if (p_size < size || q_size < size)
+> +               fortify_panic(__func__);
+> +       return __builtin_memcpy(p, q, size);
+> +}
+> +
+> +__FORTIFY_INLINE void *memmove(void *p, const void *q, __kernel_size_t size)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       size_t q_size = __builtin_object_size(q, 0);
+> +       if (__builtin_constant_p(size) && (p_size < size || q_size < size))
+> +               __buffer_overflow();
+> +       if (p_size < size || q_size < size)
+> +               fortify_panic(__func__);
+> +       return __builtin_memmove(p, q, size);
+> +}
+> +
+> +extern void *__real_memscan(void *, int, __kernel_size_t) __RENAME(memscan);
+> +__FORTIFY_INLINE void *memscan(void *p, int c, __kernel_size_t size)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       if (__builtin_constant_p(size) && p_size < size)
+> +               __buffer_overflow();
+> +       if (p_size < size)
+> +               fortify_panic(__func__);
+> +       return __real_memscan(p, c, size);
+> +}
+> +
+> +__FORTIFY_INLINE int memcmp(const void *p, const void *q, __kernel_size_t size)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       size_t q_size = __builtin_object_size(q, 0);
+> +       if (__builtin_constant_p(size) && (p_size < size || q_size < size))
+> +               __buffer_overflow();
+> +       if (p_size < size || q_size < size)
+> +               fortify_panic(__func__);
+> +       return __builtin_memcmp(p, q, size);
+> +}
+> +
+> +__FORTIFY_INLINE void *memchr(const void *p, int c, __kernel_size_t size)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       if (__builtin_constant_p(size) && p_size < size)
+> +               __buffer_overflow();
+> +       if (p_size < size)
+> +               fortify_panic(__func__);
+> +       return __builtin_memchr(p, c, size);
+> +}
+> +
+> +void *__real_memchr_inv(const void *s, int c, size_t n) __RENAME(memchr_inv);
+> +__FORTIFY_INLINE void *memchr_inv(const void *p, int c, size_t size)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       if (__builtin_constant_p(size) && p_size < size)
+> +               __buffer_overflow();
+> +       if (p_size < size)
+> +               fortify_panic(__func__);
+> +       return __real_memchr_inv(p, c, size);
+> +}
+> +
+> +extern void *__real_kmemdup(const void *src, size_t len, gfp_t gfp) __RENAME(kmemdup);
+> +__FORTIFY_INLINE void *kmemdup(const void *p, size_t size, gfp_t gfp)
+> +{
+> +       size_t p_size = __builtin_object_size(p, 0);
+> +       if (__builtin_constant_p(size) && p_size < size)
+> +               __buffer_overflow();
+> +       if (p_size < size)
+> +               fortify_panic(__func__);
+> +       return __real_kmemdup(p, size, gfp);
+> +}
+> +#endif
+> +
+>  #endif /* _LINUX_STRING_H_ */
+> diff --git a/lib/string.c b/lib/string.c
+> index b5c9a1168d3a..ca356e537e24 100644
+> --- a/lib/string.c
+> +++ b/lib/string.c
+> @@ -19,6 +19,8 @@
+>   * -  Kissed strtok() goodbye
+>   */
+>
+> +#define __NO_FORTIFY
+> +
+>  #include <linux/types.h>
+>  #include <linux/string.h>
+>  #include <linux/ctype.h>
+> @@ -952,3 +954,9 @@ char *strreplace(char *s, char old, char new)
+>         return s;
+>  }
+>  EXPORT_SYMBOL(strreplace);
+> +
+> +void fortify_panic(const char *name)
+> +{
+> +       panic("detected buffer overflow in %s", name);
+> +}
+> +EXPORT_SYMBOL(fortify_panic);
+> diff --git a/security/Kconfig b/security/Kconfig
+> index 93027fdf47d1..0e5035d720ce 100644
+> --- a/security/Kconfig
+> +++ b/security/Kconfig
+> @@ -154,6 +154,12 @@ config HARDENED_USERCOPY_PAGESPAN
+>           been removed. This config is intended to be used only while
+>           trying to find such users.
+>
+> +config FORTIFY_SOURCE
+> +       bool "Harden common functions against buffer overflows"
+> +       help
+> +         Detect overflows of buffers in common functions where the compiler
+> +         can determine the buffer size.
+> +
+>  config STATIC_USERMODEHELPER
+>         bool "Force all usermode helper calls through a single binary"
+>         help
+> --
+> 2.12.2
 >
 
-I figured that user code would figure it out somehow.  Text config file?
 
-There is another odd way it could be configured: just leave the inodes
-around in /dev/rights with appropriate permissions.  Some startup
-script could re-instantiate them with the same permissions (via a
-syscall that does that atomically).
+
+-- 
+Kees Cook
+Pixel Security
