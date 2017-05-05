@@ -1,338 +1,138 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170504142435.10175-1-danielmicay@gmail.com>
+Message-ID: <1494005884.5150.6.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Fri, 05 May 2017 13:38:04 -0400
+In-Reply-To: <20170505103839.GB699@leverpostej>
 References: <20170504142435.10175-1-danielmicay@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 5 May 2017 09:42:12 -0700
-Message-ID: <CAGXu5jL_YgHon7Jdx=PT3pfggwy_zehc+wttvLX6BmvPSOxPfA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] add the option of fortified string.h functions
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, LKML <linux-kernel@vger.kernel.org>
+	 <20170504154850.GE20461@leverpostej> <1493920184.1596.4.camel@gmail.com>
+	 <20170504180917.GB19929@leverpostej> <20170505103839.GB699@leverpostej>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] [PATCH] add the option of fortified string.h
+ functions
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, ard.biesheuvel@linaro.org, matt@codeblueprint.co.uk
 List-ID: <kernel-hardening.lists.openwall.com>
 
-[adding lkml and rasmus to CC...]
+On Fri, 2017-05-05 at 11:38 +0100, Mark Rutland wrote:
+> On Thu, May 04, 2017 at 07:09:17PM +0100, Mark Rutland wrote:
+> > On Thu, May 04, 2017 at 01:49:44PM -0400, Daniel Micay wrote:
+> > > On Thu, 2017-05-04 at 16:48 +0100, Mark Rutland wrote:
+> > > > ... with an EFI stub fortify_panic() hacked in, I can build an
+> > > > arm64
+> > > > kernel with this applied. It dies at some point after exiting
+> > > > EFI
+> > > > boot services; i don't know whether it made it out of the stub
+> > > > and
+> > > > into the kernel proper.
+> > > 
+> > > Could start with #define __NO_FORTIFY above the #include sections
+> > > there
+> > > instead (or -D__NO_FORTIFY as a compiler flag), which will skip
+> > > fortifying those for now.
+> > 
+> > Neat. Given there are a few files, doing the latter for the stub is
+> > the
+> > simplest option.
+> > 
+> > > I'm successfully using this on a non-EFI ARM64 3.18 LTS kernel, so
+> > > it
+> > > should be close to working on other systems (but not necessarily
+> > > with
+> > > messy drivers). The x86 EFI workaround works.
+> > 
+> > FWIW, I've been playing atop of next-20170504, with a tonne of other
+> > debug options enabled (including KASAN_INLINE).
+> > 
+> > From a quick look with a JTAG debugger, the CPU got out of the stub
+> > and
+> > into the kernel. It looks like it's dying initialising KASAN, where
+> > the
+> > vectors appear to have been corrupted.
+> 
+> 
+> ... though it's a worring that __memcpy() is overridden. I think we
+> need
+> to be more careful with the way we instrument the string functions.
 
-On Thu, May 4, 2017 at 7:24 AM, Daniel Micay <danielmicay@gmail.com> wrote:
-> This adds support for compiling with a rough equivalent to the glibc
-> _FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
-> overflow checks for string.h functions when the compiler determines the
-> size of the source or destination buffer at compile-time. Unlike glibc,
-> it covers buffer reads in addition to writes.
->
-> GNU C __builtin_*_chk intrinsics are avoided because they're only
-> designed to detect write overflows and are overly complex. A single
-> inline branch works for everything but strncat while those intrinsics
-> would force the creation of a bunch of extra non-inline wrappers that
-> aren't able to receive the detected source buffer size.
->
-> This detects various undefined uses of memcpy, etc. at compile-time
-> outside of non-core kernel code, and in the arm64 vdso code, so there
-> will need to be a series of fixes applied (mainly memcpy -> strncpy for
-> copying string constants to avoid copying past the end of the source).
-> It isn't particularly bad, but there are likely some issues that occur
-> during regular use at runtime (none found so far).
->
-> Future improvements left out of initial implementation for simplicity,
-> as it's all quite optional and can be done incrementally:
->
-> The fortified string functions should place a limit on reads from the
-> source. For strcat/strcpy, these could just be a variant of strlcat /
-> strlcpy using the size limit as a bound on both the source and
-> destination, with the return value only reporting whether truncation
-> occurred rather than providing the source length. It would be an easier
-> API for developers to use too and not that it really matters but it
-> would be more efficient for the case where truncation is intended.
->
-> It should be possible to optionally use __builtin_object_size(x, 1) for
-> some functions (C strings) to detect intra-object overflows (like
-> glibc's _FORTIFY_SOURCE=2), but for now this takes the conservative
-> approach to avoid likely compatibility issues.
->
-> The error reporting could be made friendlier by splitting up the
-> compile-time error for reads and writes. The runtime error could also
-> directly report the buffer and copy sizes.
->
-> It may make sense to have the compile-time checks in a separate
-> configuration option since they wouldn't have a runtime performance cost
-> if there was an ifdef for the runtime check. However, the runtime cost
-> of these checks is already quite low (much lower than SSP) and as long
-> as some people are using it with allyesconfig, the issues will be found
-> for any in-tree code.
->
-> Signed-off-by: Daniel Micay <danielmicay@gmail.com>
-> ---
->  arch/x86/boot/compressed/misc.c |   5 ++
->  include/linux/string.h          | 161 ++++++++++++++++++++++++++++++++++++++++
->  lib/string.c                    |   8 ++
->  security/Kconfig                |   6 ++
->  4 files changed, 180 insertions(+)
->
-> diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
-> index b3c5a5f030ce..43691238a21d 100644
-> --- a/arch/x86/boot/compressed/misc.c
-> +++ b/arch/x86/boot/compressed/misc.c
-> @@ -409,3 +409,8 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
->         debug_putstr("done.\nBooting the kernel.\n");
->         return output;
->  }
-> +
-> +void fortify_panic(const char *name)
-> +{
-> +       error("detected buffer overflow");
-> +}
-> diff --git a/include/linux/string.h b/include/linux/string.h
-> index 26b6f6a66f83..3bd429c9593a 100644
-> --- a/include/linux/string.h
-> +++ b/include/linux/string.h
-> @@ -169,4 +169,165 @@ static inline const char *kbasename(const char *path)
->         return tail ? tail + 1 : path;
->  }
->
-> +#define __FORTIFY_INLINE extern __always_inline __attribute__((gnu_inline))
-> +#define __RENAME(x) __asm__(#x)
-> +
-> +void fortify_panic(const char *name) __noreturn __cold;
-> +void __buffer_overflow(void) __compiletime_error("buffer overflow");
+I don't think there's any way for the fortify code to be intercepting
+__memcpy. There's a memcpy function in arch/x86/boot/compressed/string.c
+defined via __memcpy and that appears to be working.
 
-I've been playing with this with allyesconfig on x86_64, and I've got
-some suggestions I think would make things nicer for others looking at
-this. How about splitting the compile-time buffer_overflow() report
-into the write and read overflow pieces:
+A shot in the dark is that it might not happen if a __real_memcpy alias
+via __RENAME is used instead of __builtin_memcpy, but I'm not sure how
+or why this is breaking in the first place.
 
-void __dst_overflow(void) __compiletime_error("writes beyond end of
-destination buffer");
-void __src_overflow(void) __compiletime_error("reads beyond end of
-source buffer");
+> FWIW, with that, and the previous bits, I can boot a next-20170504
+> kernel with this applied.
+> 
+> However, I get a KASAN splat from the SLUB init code, even though
+> that's
+> deliberately not instrumented by KASAN:
+> 
+> [    0.000000]
+> ==================================================================
+> [    0.000000] BUG: KASAN: slab-out-of-bounds in
+> kmem_cache_alloc+0x2ec/0x438
+> [    0.000000] Write of size 352 at addr ffff800936802000 by task
+> swapper/0
+> [    0.000000] 
+> [    0.000000] CPU: 0 PID: 0 Comm: swapper Not tainted 4.11.0-next-
+> 20170504-00002-g760cfdb-dirty #15
+> [    0.000000] Hardware name: ARM Juno development board (r1) (DT)
+> [    0.000000] Call trace:
+> [    0.000000] [<ffff2000080949c8>] dump_backtrace+0x0/0x538
+> [    0.000000] [<ffff2000080951a0>] show_stack+0x20/0x30
+> [    0.000000] [<ffff200008c125a0>] dump_stack+0x120/0x188
+> [    0.000000] [<ffff20000857ac04>]
+> print_address_description+0x10c/0x380
+> [    0.000000] [<ffff20000857b354>] kasan_report+0x12c/0x3b8
+> [    0.000000] [<ffff200008579d54>] check_memory_region+0x144/0x1a0
+> [    0.000000] [<ffff20000857a1f4>] memset+0x2c/0x50
+> [    0.000000] [<ffff2000085730bc>] kmem_cache_alloc+0x2ec/0x438
+> [    0.000000] [<ffff20000a937528>] bootstrap+0x34/0x28c
+> [    0.000000] [<ffff20000a937804>] kmem_cache_init+0x84/0x118
+> [    0.000000] [<ffff20000a9014bc>] start_kernel+0x2f8/0x644
+> [    0.000000] [<ffff20000a9001e8>] __primary_switched+0x6c/0x74
+> [    0.000000] 
+> [    0.000000] Allocated by task 0:
+> [    0.000000] (stack is not available)
+> [    0.000000] 
+> [    0.000000] Freed by task 0:
+> [    0.000000] (stack is not available)
+> [    0.000000] 
+> [    0.000000] The buggy address belongs to the object at
+> ffff800936802000
+> [    0.000000]  which belongs to the cache kmem_cache of size 352
+> [    0.000000] The buggy address is located 0 bytes inside of
+> [    0.000000]  352-byte region [ffff800936802000, ffff800936802160)
+> [    0.000000] The buggy address belongs to the page:
+> [    0.000000] page:ffff7e0024da0080 count:1 mapcount:0
+> mapping:          (null) index:0x0 compound_mapcount: 0
+> [    0.000000] flags: 0x1fffc00000008100(slab|head)
+> [    0.000000] raw: 1fffc00000008100 0000000000000000 0000000000000000
+> 0000000180100010
+> [    0.000000] raw: dead000000000100 dead000000000200 ffff20000aa2c068
+> 0000000000000000
+> [    0.000000] page dumped because: kasan: bad access detected
+> [    0.000000] 
+> [    0.000000] Memory state around the buggy address:
+> [    0.000000]  ffff800936801f00: ff ff ff ff ff ff ff ff ff ff ff ff
+> ff ff ff ff
+> [    0.000000]  ffff800936801f80: ff ff ff ff ff ff ff ff ff ff ff ff
+> ff ff ff ff
+> [    0.000000] >ffff800936802000: fc fc fc fc fc fc fc fc fc fc fc fc
+> fc fc fc fc
+> [    0.000000]                    ^
+> [    0.000000]  ffff800936802080: fc fc fc fc fc fc fc fc fc fc fc fc
+> fc fc fc fc
+> [    0.000000]  ffff800936802100: fc fc fc fc fc fc fc fc fc fc fc fc
+> fc fc fc fc
+> [    0.000000]
+> ==================================================================
 
-With things like memcpy split up:
+I'm not sure about this either. I'd like to avoid needing !KASAN since
+these are useful when paired together for finding bugs...
 
-        if (__builtin_constant_p(size)) {
-                if (p_size < size)
-                        __dst_overflow();
-                if (q_size < size)
-                        __src_overflow();
-        }
-
-I don't think it's worth doing the same for the runtime side since
-that'll just increase text size, etc. (Or, I wasn't creative enough to
-think of a way to distinguish them without doing so.)
-
-I tried to figure out a way to use __same_type(q, (char *)0) to
-trigger strncpy automatically and issuing a warning, but I couldn't
-get it to work for some reason. It never tripped.
-
-> +#if !defined(__NO_FORTIFY) && defined(__OPTIMIZE__) && defined(CONFIG_FORTIFY_SOURCE)
-> +__FORTIFY_INLINE char *strcpy(char *p, const char *q)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (p_size == (size_t)-1)
-> +               return __builtin_strcpy(p, q);
-> +       if (strlcpy(p, q, p_size) >= p_size)
-> +               fortify_panic(__func__);
-> +       return p;
-> +}
-
-The other thing, which is cosmetic, would be to swap "p" and "q" for
-"dst" and "src" everywhere, just to make these more readable.
-
-The allyesconfig has tripped over a bunch of places where memcpy needs
-to be strncpy. I'll send those patches in a bit...
-
--Kees
-
-> +
-> +__FORTIFY_INLINE char *strncpy(char *p, const char *q, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __buffer_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_strncpy(p, q, size);
-> +}
-> +
-> +__FORTIFY_INLINE char *strcat(char *p, const char *q)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (p_size == (size_t)-1)
-> +               return __builtin_strcat(p, q);
-> +       if (strlcat(p, q, p_size) >= p_size)
-> +               fortify_panic(__func__);
-> +       return p;
-> +}
-> +
-> +__FORTIFY_INLINE char *strncat(char *p, const char *q, __kernel_size_t count)
-> +{
-> +       size_t p_len, copy_len;
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (p_size == (size_t)-1)
-> +               return __builtin_strncat(p, q, count);
-> +       p_len = __builtin_strlen(p);
-> +       copy_len = strnlen(q, count);
-> +       if (p_size < p_len + copy_len + 1)
-> +               fortify_panic(__func__);
-> +       __builtin_memcpy(p + p_len, q, copy_len);
-> +       p[p_len + copy_len] = '\0';
-> +       return p;
-> +}
-> +
-> +__FORTIFY_INLINE __kernel_size_t strlen(const char *p)
-> +{
-> +       __kernel_size_t ret;
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (p_size == (size_t)-1)
-> +               return __builtin_strlen(p);
-> +       ret = strnlen(p, p_size);
-> +       if (p_size <= ret)
-> +               fortify_panic(__func__);
-> +       return ret;
-> +}
-> +
-> +extern __kernel_size_t __real_strnlen(const char *, __kernel_size_t) __RENAME(strnlen);
-> +__FORTIFY_INLINE __kernel_size_t strnlen(const char *p, __kernel_size_t maxlen)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       __kernel_size_t ret = __real_strnlen(p, maxlen < p_size ? maxlen : p_size);
-> +       if (p_size <= ret)
-> +               fortify_panic(__func__);
-> +       return ret;
-> +}
-> +
-> +__FORTIFY_INLINE void *memset(void *p, int c, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __buffer_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_memset(p, c, size);
-> +}
-> +
-> +__FORTIFY_INLINE void *memcpy(void *p, const void *q, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       size_t q_size = __builtin_object_size(q, 0);
-> +       if (__builtin_constant_p(size) && (p_size < size || q_size < size))
-> +               __buffer_overflow();
-> +       if (p_size < size || q_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_memcpy(p, q, size);
-> +}
-> +
-> +__FORTIFY_INLINE void *memmove(void *p, const void *q, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       size_t q_size = __builtin_object_size(q, 0);
-> +       if (__builtin_constant_p(size) && (p_size < size || q_size < size))
-> +               __buffer_overflow();
-> +       if (p_size < size || q_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_memmove(p, q, size);
-> +}
-> +
-> +extern void *__real_memscan(void *, int, __kernel_size_t) __RENAME(memscan);
-> +__FORTIFY_INLINE void *memscan(void *p, int c, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __buffer_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __real_memscan(p, c, size);
-> +}
-> +
-> +__FORTIFY_INLINE int memcmp(const void *p, const void *q, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       size_t q_size = __builtin_object_size(q, 0);
-> +       if (__builtin_constant_p(size) && (p_size < size || q_size < size))
-> +               __buffer_overflow();
-> +       if (p_size < size || q_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_memcmp(p, q, size);
-> +}
-> +
-> +__FORTIFY_INLINE void *memchr(const void *p, int c, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __buffer_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_memchr(p, c, size);
-> +}
-> +
-> +void *__real_memchr_inv(const void *s, int c, size_t n) __RENAME(memchr_inv);
-> +__FORTIFY_INLINE void *memchr_inv(const void *p, int c, size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __buffer_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __real_memchr_inv(p, c, size);
-> +}
-> +
-> +extern void *__real_kmemdup(const void *src, size_t len, gfp_t gfp) __RENAME(kmemdup);
-> +__FORTIFY_INLINE void *kmemdup(const void *p, size_t size, gfp_t gfp)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __buffer_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __real_kmemdup(p, size, gfp);
-> +}
-> +#endif
-> +
->  #endif /* _LINUX_STRING_H_ */
-> diff --git a/lib/string.c b/lib/string.c
-> index b5c9a1168d3a..ca356e537e24 100644
-> --- a/lib/string.c
-> +++ b/lib/string.c
-> @@ -19,6 +19,8 @@
->   * -  Kissed strtok() goodbye
->   */
->
-> +#define __NO_FORTIFY
-> +
->  #include <linux/types.h>
->  #include <linux/string.h>
->  #include <linux/ctype.h>
-> @@ -952,3 +954,9 @@ char *strreplace(char *s, char old, char new)
->         return s;
->  }
->  EXPORT_SYMBOL(strreplace);
-> +
-> +void fortify_panic(const char *name)
-> +{
-> +       panic("detected buffer overflow in %s", name);
-> +}
-> +EXPORT_SYMBOL(fortify_panic);
-> diff --git a/security/Kconfig b/security/Kconfig
-> index 93027fdf47d1..0e5035d720ce 100644
-> --- a/security/Kconfig
-> +++ b/security/Kconfig
-> @@ -154,6 +154,12 @@ config HARDENED_USERCOPY_PAGESPAN
->           been removed. This config is intended to be used only while
->           trying to find such users.
->
-> +config FORTIFY_SOURCE
-> +       bool "Harden common functions against buffer overflows"
-> +       help
-> +         Detect overflows of buffers in common functions where the compiler
-> +         can determine the buffer size.
-> +
->  config STATIC_USERMODEHELPER
->         bool "Force all usermode helper calls through a single binary"
->         help
-> --
-> 2.12.2
->
-
-
-
--- 
-Kees Cook
-Pixel Security
+ASan is incompatible with glibc _FORTIFY_SOURCE, but this is much
+different (no _chk functions) and it *should* just work already.
