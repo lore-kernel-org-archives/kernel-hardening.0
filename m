@@ -1,36 +1,25 @@
+References: <9df77051-ac01-bfe9-3cf7-4c2ecbcb9292@iaik.tugraz.at>
+ <CAG48ez2UB0iv50091h8-Xucp93GKdx=uyqD_HQY2YfAP_zqwSg@mail.gmail.com>
+ <CAG48ez1b0_WmjHABWukEcnLrV+beotynnAwz_scRss45uVB93g@mail.gmail.com>
+From: Daniel Gruss <daniel.gruss@iaik.tugraz.at>
+Message-ID: <dd7fd5dd-8038-a871-bdee-7b253078b933@iaik.tugraz.at>
+Date: Sat, 6 May 2017 10:28:30 +0200
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170505213545.GB3@computer.craftyguy.net>
-References: <20170505213545.GB3@computer.craftyguy.net>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 5 May 2017 22:13:08 -0700
-Message-ID: <CAGXu5j+NvqNMSXen74bj+Z-fdFmFdPq6vi8H5+TwoNS-ktoWUA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] auto-notify on edits to KSPP wiki page?
-To: Clayton Craft <clayton@craftyguy.net>, James Morris <jmorris@namei.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAG48ez1b0_WmjHABWukEcnLrV+beotynnAwz_scRss45uVB93g@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [RFC, PATCH] x86_64: KAISER - do not map
+ kernel in user mode
+To: Jann Horn <jannh@google.com>
+Cc: kernel list <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, "clementine.maurice@iaik.tugraz.at" <clementine.maurice@iaik.tugraz.at>, "moritz.lipp@iaik.tugraz.at" <moritz.lipp@iaik.tugraz.at>, Michael Schwarz <michael.schwarz@iaik.tugraz.at>, Richard Fellner <richard.fellner@student.tugraz.at>, kirill.shutemov@linux.intel.com, Ingo
+ Molnar <mingo@kernel.org>, "anders.fogh@gdata-adan.de" <anders.fogh@gdata-adan.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, May 5, 2017 at 2:35 PM, Clayton Craft <clayton@craftyguy.net> wrote:
-> Hi,
-> I'm maintaining a build of the latest stable mainline kernel with
-> almost all of the config options on the KSPP wiki page
-> (https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project)
-> applied to it. I'm wondering if it's possible to somehow get
-> automatically notified when there are edits to this page, for instance
-> if a config option is changed, added, or removed. If not, no biggie
-> since I can continue to hit the page every couple of days and look at
-> the history.
+On 2017-05-05 17:53, Jann Horn wrote:
+> Ah, I think I understand. The kernel stacks are mapped, but
+> cpu_current_top_of_stack isn't, so you can't find the stack until after the CR3
+> switch in the syscall handler?
 
-Hi!
-
-I'm not sure; I think a lot of those features are disabled.
-
-James, is this something that can be enabled in the wiki?
-
--Kees
-
-
--- 
-Kees Cook
-Pixel Security
+That's the idea. Only the absolute minimum that is required for a 
+context switch remains mapped (+ it is mapped at an offset which does 
+not depend on KASLR -> we do not leak the KASLR offsets).
