@@ -1,202 +1,119 @@
-From: Matt Brown <matt@nmatt.com>
-Date: Fri,  5 May 2017 19:20:18 -0400
-Message-Id: <20170505232018.28846-3-matt@nmatt.com>
-In-Reply-To: <20170505232018.28846-1-matt@nmatt.com>
-References: <20170505232018.28846-1-matt@nmatt.com>
-Subject: [kernel-hardening] [PATCH v6 2/2] security: tty: make TIOCSTI ioctl require CAP_SYS_ADMIN
-To: serge@hallyn.com, gregkh@linuxfoundation.org, jslaby@suse.com, akpm@linux-foundation.org, jannh@google.com, keescook@chromium.org
-Cc: jmorris@namei.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, Matt Brown <matt@nmatt.com>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20170504142435.10175-1-danielmicay@gmail.com>
+References: <20170504142435.10175-1-danielmicay@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 5 May 2017 19:12:33 -0700
+Message-ID: <CAGXu5jLPfNEnBJZbbxw58u+d3punUx5MNo=XRN-AnhM8RxB=jw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] add the option of fortified string.h functions
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This introduces the tiocsti_restrict sysctl, whose default is controlled via
-CONFIG_SECURITY_TIOCSTI_RESTRICT. When activated, this control restricts
-all TIOCSTI ioctl calls from non CAP_SYS_ADMIN users.
+On Thu, May 4, 2017 at 7:24 AM, Daniel Micay <danielmicay@gmail.com> wrote:
+> This adds support for compiling with a rough equivalent to the glibc
+> _FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
+> overflow checks for string.h functions when the compiler determines the
+> size of the source or destination buffer at compile-time. Unlike glibc,
+> it covers buffer reads in addition to writes.
+>
+> GNU C __builtin_*_chk intrinsics are avoided because they're only
+> designed to detect write overflows and are overly complex. A single
+> inline branch works for everything but strncat while those intrinsics
+> would force the creation of a bunch of extra non-inline wrappers that
+> aren't able to receive the detected source buffer size.
+>
+> This detects various undefined uses of memcpy, etc. at compile-time
+> outside of non-core kernel code, and in the arm64 vdso code, so there
+> will need to be a series of fixes applied (mainly memcpy -> strncpy for
+> copying string constants to avoid copying past the end of the source).
+> It isn't particularly bad, but there are likely some issues that occur
+> during regular use at runtime (none found so far).
+>
+> Future improvements left out of initial implementation for simplicity,
+> as it's all quite optional and can be done incrementally:
+>
+> The fortified string functions should place a limit on reads from the
+> source. For strcat/strcpy, these could just be a variant of strlcat /
+> strlcpy using the size limit as a bound on both the source and
+> destination, with the return value only reporting whether truncation
+> occurred rather than providing the source length. It would be an easier
+> API for developers to use too and not that it really matters but it
+> would be more efficient for the case where truncation is intended.
+>
+> It should be possible to optionally use __builtin_object_size(x, 1) for
+> some functions (C strings) to detect intra-object overflows (like
+> glibc's _FORTIFY_SOURCE=2), but for now this takes the conservative
+> approach to avoid likely compatibility issues.
+>
+> The error reporting could be made friendlier by splitting up the
+> compile-time error for reads and writes. The runtime error could also
+> directly report the buffer and copy sizes.
+>
+> It may make sense to have the compile-time checks in a separate
+> configuration option since they wouldn't have a runtime performance cost
+> if there was an ifdef for the runtime check. However, the runtime cost
+> of these checks is already quite low (much lower than SSP) and as long
+> as some people are using it with allyesconfig, the issues will be found
+> for any in-tree code.
+>
+> Signed-off-by: Daniel Micay <danielmicay@gmail.com>
+> ---
+>  arch/x86/boot/compressed/misc.c |   5 ++
+>  include/linux/string.h          | 161 ++++++++++++++++++++++++++++++++++++++++
+>  lib/string.c                    |   8 ++
+>  security/Kconfig                |   6 ++
+>  4 files changed, 180 insertions(+)
+>
+> diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+> index b3c5a5f030ce..43691238a21d 100644
+> --- a/arch/x86/boot/compressed/misc.c
+> +++ b/arch/x86/boot/compressed/misc.c
+> @@ -409,3 +409,8 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
+>         debug_putstr("done.\nBooting the kernel.\n");
+>         return output;
+>  }
+> +
+> +void fortify_panic(const char *name)
+> +{
+> +       error("detected buffer overflow");
+> +}
+> diff --git a/include/linux/string.h b/include/linux/string.h
+> index 26b6f6a66f83..3bd429c9593a 100644
+> --- a/include/linux/string.h
+> +++ b/include/linux/string.h
+> @@ -169,4 +169,165 @@ static inline const char *kbasename(const char *path)
+>         return tail ? tail + 1 : path;
+>  }
+>
+> +#define __FORTIFY_INLINE extern __always_inline __attribute__((gnu_inline))
+> +#define __RENAME(x) __asm__(#x)
+> +
+> +void fortify_panic(const char *name) __noreturn __cold;
 
-This patch depends on patch 1/2
+To avoid a warning about the compressed boot fortify_panic() not
+returning, this annotation is needed:
 
-This patch was inspired from GRKERNSEC_HARDEN_TTY.
+diff --git a/arch/x86/boot/compressed/error.h b/arch/x86/boot/compressed/error.h
+index 2e59dac07f9e..d732e608e3af 100644
+--- a/arch/x86/boot/compressed/error.h
++++ b/arch/x86/boot/compressed/error.h
+@@ -1,7 +1,9 @@
+ #ifndef BOOT_COMPRESSED_ERROR_H
+ #define BOOT_COMPRESSED_ERROR_H
 
-This patch would have prevented
-https://bugzilla.redhat.com/show_bug.cgi?id=1411256 under the following
-conditions:
-* non-privileged container
-* container run inside new user namespace
-
-Possible effects on userland:
-
-There could be a few user programs that would be effected by this
-change.
-See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
-notable programs are: agetty, csh, xemacs and tcsh
-
-However, I still believe that this change is worth it given that the
-Kconfig defaults to n. This will be a feature that is turned on for the
-same reason that people activate it when using grsecurity. Users of this
-opt-in feature will realize that they are choosing security over some OS
-features like unprivileged TIOCSTI ioctls, as should be clear in the
-Kconfig help message.
-
-Threat Model/Patch Rational:
-
->From grsecurity's config for GRKERNSEC_HARDEN_TTY.
-
- | There are very few legitimate uses for this functionality and it
- | has made vulnerabilities in several 'su'-like programs possible in
- | the past.  Even without these vulnerabilities, it provides an
- | attacker with an easy mechanism to move laterally among other
- | processes within the same user's compromised session.
-
-So if one process within a tty session becomes compromised it can follow
-that additional processes, that are thought to be in different security
-boundaries, can be compromised as a result. When using a program like su
-or sudo, these additional processes could be in a tty session where TTY file
-descriptors are indeed shared over privilege boundaries.
-
-This is also an excellent writeup about the issue:
-<http://www.halfdog.net/Security/2012/TtyPushbackPrivilegeEscalation/>
-
-When user namespaces are in use, the check for the capability
-CAP_SYS_ADMIN is done against the user namespace that originally opened
-the tty.
-
-Acked-by: Serge Hallyn <serge@hallyn.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Signed-off-by: Matt Brown <matt@nmatt.com>
----
- Documentation/sysctl/kernel.txt | 21 +++++++++++++++++++++
- drivers/tty/tty_io.c            |  6 ++++++
- include/linux/tty.h             |  2 ++
- kernel/sysctl.c                 | 12 ++++++++++++
- security/Kconfig                | 13 +++++++++++++
- 5 files changed, 54 insertions(+)
-
-diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
-index bac23c1..f7985cf 100644
---- a/Documentation/sysctl/kernel.txt
-+++ b/Documentation/sysctl/kernel.txt
-@@ -89,6 +89,7 @@ show up in /proc/sys/kernel:
- - sysctl_writes_strict
- - tainted
- - threads-max
-+- tiocsti_restrict
- - unknown_nmi_panic
- - watchdog
- - watchdog_thresh
-@@ -987,6 +988,26 @@ available RAM pages threads-max is reduced accordingly.
- 
- ==============================================================
- 
-+tiocsti_restrict:
++#include <linux/compiler.h>
 +
-+This toggle indicates whether unprivileged users are prevented
-+from using the TIOCSTI ioctl to inject commands into other processes
-+which share a tty session.
-+
-+When tiocsti_restrict is set to (0) there are no restrictions(accept
-+the default restriction of only being able to injection commands into
-+one's own tty). When tiocsti_restrict is set to (1), users must
-+have CAP_SYS_ADMIN to use the TIOCSTI ioctl.
-+
-+When user namespaces are in use, the check for the capability
-+CAP_SYS_ADMIN is done against the user namespace that originally
-+opened the tty.
-+
-+The kernel config option CONFIG_SECURITY_TIOCSTI_RESTRICT sets the
-+default value of tiocsti_restrict.
-+
-+==============================================================
-+
- unknown_nmi_panic:
- 
- The value in this file affects behavior of handling NMI. When the
-diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
-index c276814..fe68d14 100644
---- a/drivers/tty/tty_io.c
-+++ b/drivers/tty/tty_io.c
-@@ -2297,11 +2297,17 @@ static int tty_fasync(int fd, struct file *filp, int on)
-  *	FIXME: may race normal receive processing
-  */
- 
-+int tiocsti_restrict = IS_ENABLED(CONFIG_SECURITY_TIOCSTI_RESTRICT);
-+
- static int tiocsti(struct tty_struct *tty, char __user *p)
- {
- 	char ch, mbz = 0;
- 	struct tty_ldisc *ld;
- 
-+	if (tiocsti_restrict && !ns_capable(tty->owner_user_ns,CAP_SYS_ADMIN)) {
-+		pr_warn_ratelimited("TIOCSTI ioctl call blocked for non-privileged process\n");
-+		return -EPERM;
-+	}
- 	if ((current->signal->tty != tty) && !capable(CAP_SYS_ADMIN))
- 		return -EPERM;
- 	if (get_user(ch, p))
-diff --git a/include/linux/tty.h b/include/linux/tty.h
-index d902d42..2fd7f49 100644
---- a/include/linux/tty.h
-+++ b/include/linux/tty.h
-@@ -344,6 +344,8 @@ struct tty_file_private {
- 	struct list_head list;
- };
- 
-+extern int tiocsti_restrict;
-+
- /* tty magic number */
- #define TTY_MAGIC		0x5401
- 
-diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-index acf0a5a..68d1363 100644
---- a/kernel/sysctl.c
-+++ b/kernel/sysctl.c
-@@ -67,6 +67,7 @@
- #include <linux/kexec.h>
- #include <linux/bpf.h>
- #include <linux/mount.h>
-+#include <linux/tty.h>
- 
- #include <linux/uaccess.h>
- #include <asm/processor.h>
-@@ -833,6 +834,17 @@ static struct ctl_table kern_table[] = {
- 		.extra2		= &two,
- 	},
- #endif
-+#if defined CONFIG_TTY
-+	{
-+		.procname	= "tiocsti_restrict",
-+		.data		= &tiocsti_restrict,
-+		.maxlen		= sizeof(int),
-+		.mode		= 0644,
-+		.proc_handler	= proc_dointvec_minmax_sysadmin,
-+		.extra1		= &zero,
-+		.extra2		= &one,
-+	},
-+#endif
- 	{
- 		.procname	= "ngroups_max",
- 		.data		= &ngroups_max,
-diff --git a/security/Kconfig b/security/Kconfig
-index 3ff1bf9..7d13331 100644
---- a/security/Kconfig
-+++ b/security/Kconfig
-@@ -18,6 +18,19 @@ config SECURITY_DMESG_RESTRICT
- 
- 	  If you are unsure how to answer this question, answer N.
- 
-+config SECURITY_TIOCSTI_RESTRICT
-+	bool "Restrict unprivileged use of tiocsti command injection"
-+	default n
-+	help
-+	  This enforces restrictions on unprivileged users injecting commands
-+	  into other processes which share a tty session using the TIOCSTI
-+	  ioctl. This option makes TIOCSTI use require CAP_SYS_ADMIN.
-+
-+	  If this option is not selected, no restrictions will be enforced
-+	  unless the tiocsti_restrict sysctl is explicitly set to (1).
-+
-+	  If you are unsure how to answer this question, answer N.
-+
- config SECURITY
- 	bool "Enable different security models"
- 	depends on SYSFS
+ void warn(char *m);
+-void error(char *m);
++void error(char *m) __noreturn;
+
+ #endif /* BOOT_COMPRESSED_ERROR_H */
+
+
+-Kees
+
 -- 
-2.10.2
+Kees Cook
+Pixel Security
