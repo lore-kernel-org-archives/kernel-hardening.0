@@ -1,52 +1,36 @@
-Date: Fri, 5 May 2017 22:00:22 -0700
-From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20170506050022.GA11385@kroah.com>
-References: <20170506040641.GA32707@kroah.com>
- <20170506040747.GF32707@kroah.com>
- <1494045760.31950.21.camel@perches.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1494045760.31950.21.camel@perches.com>
-Subject: [kernel-hardening] Re: [RFC 5/6] lib: vsprintf: Add "%paP", "%padP" options
-To: Joe Perches <joe@perches.com>
-Cc: kernel-hardening@lists.openwall.com, Petr Mladek <pmladek@suse.com>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+Sender: keescook@google.com
+In-Reply-To: <20170505213545.GB3@computer.craftyguy.net>
+References: <20170505213545.GB3@computer.craftyguy.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 5 May 2017 22:13:08 -0700
+Message-ID: <CAGXu5j+NvqNMSXen74bj+Z-fdFmFdPq6vi8H5+TwoNS-ktoWUA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] auto-notify on edits to KSPP wiki page?
+To: Clayton Craft <clayton@craftyguy.net>, James Morris <jmorris@namei.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, May 05, 2017 at 09:42:40PM -0700, Joe Perches wrote:
-> On Fri, 2017-05-05 at 21:07 -0700, Greg KH wrote:
-> > From: Chris Fries <cfries@google.com>
-> > 
-> > Add %paP and %padP for physical address that need to always be shown
-> > regardless of kptr restrictions.
-> 
-> The commit message could be improved.
+On Fri, May 5, 2017 at 2:35 PM, Clayton Craft <clayton@craftyguy.net> wrote:
+> Hi,
+> I'm maintaining a build of the latest stable mainline kernel with
+> almost all of the config options on the KSPP wiki page
+> (https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project)
+> applied to it. I'm wondering if it's possible to somehow get
+> automatically notified when there are edits to this page, for instance
+> if a config option is changed, added, or removed. If not, no biggie
+> since I can continue to hit the page every couple of days and look at
+> the history.
 
-Good point, I'll work on that, thanks.
+Hi!
 
-> I had to look at the actual code to see if %papP was supported.
-> 
-> > diff --git a/Documentation/printk-formats.txt b/Documentation/printk-formats.txt
-> []
-> > @@ -82,18 +82,20 @@ Struct Resources:
-> >  
-> >  Physical addresses types phys_addr_t:
-> >  
-> > -	%pa[p]	0x01234567 or 0x0123456789abcdef
-> > +	%pa[p][P] 0x01234567 or 0x0123456789abcdef
-> 
-> Well, that's good.
-> 
-> > diff --git a/lib/vsprintf.c b/lib/vsprintf.c
-> []
-> > @@ -1394,23 +1394,29 @@ static noinline_for_stack
-> >  char *address_val(char *buf, char *end, const void *addr, const char *fmt)
-> >  {
-> >  	unsigned long long num;
-> > +	int cleanse = kptr_restrict_cleanse_addresses();
-> 
-> bool
+I'm not sure; I think a lot of those features are disabled.
 
-I'll change this, thanks.
+James, is this something that can be enabled in the wiki?
 
-greg k-h
+-Kees
+
+
+-- 
+Kees Cook
+Pixel Security
