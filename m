@@ -1,38 +1,31 @@
-References: <9df77051-ac01-bfe9-3cf7-4c2ecbcb9292@iaik.tugraz.at>
- <20170504154717.GA24353@infradead.org>
- <f9a4e8ed-1b22-0d73-924c-f5bb1e18ba93@iaik.tugraz.at>
- <CAFLxGvwuMN52-Xf46j7XuG+cnJ9xnZjXWhihpgxr9_EUX0Z+Bg@mail.gmail.com>
- <cc75a38a-4ea6-e300-0370-882dfbfd7a23@iaik.tugraz.at>
- <6013bf3f-c3bd-3836-e5e2-ea89cc2e556a@nod.at>
-From: Daniel Gruss <daniel.gruss@iaik.tugraz.at>
-Message-ID: <8aecf7d4-9767-5367-1bc0-75fbd4b17e46@iaik.tugraz.at>
-Date: Mon, 8 May 2017 00:18:14 +0200
+Date: Mon, 8 May 2017 09:39:46 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
+In-Reply-To: <20170505213545.GB3@computer.craftyguy.net>
+Message-ID: <alpine.LRH.2.20.1705080939050.28364@namei.org>
+References: <20170505213545.GB3@computer.craftyguy.net>
 MIME-Version: 1.0
-In-Reply-To: <6013bf3f-c3bd-3836-e5e2-ea89cc2e556a@nod.at>
-Content-Type: text/plain; charset="utf-8"; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [RFC, PATCH] x86_64: KAISER - do not map
- kernel in user mode
-To: Richard Weinberger <richard@nod.at>
-Cc: Christoph Hellwig <hch@infradead.org>, kernel list <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "clementine.maurice@iaik.tugraz.at" <clementine.maurice@iaik.tugraz.at>, "moritz.lipp@iaik.tugraz.at" <moritz.lipp@iaik.tugraz.at>, Michael Schwarz <michael.schwarz@iaik.tugraz.at>, Richard Fellner <richard.fellner@student.tugraz.at>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Ingo Molnar <mingo@kernel.org>, "anders.fogh@gdata-adan.de" <anders.fogh@gdata-adan.de>
+Content-Type: text/plain; charset=US-ASCII
+Subject: Re: [kernel-hardening] auto-notify on edits to KSPP wiki page?
+To: Clayton Craft <clayton@craftyguy.net>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2017-05-08 00:02, Richard Weinberger wrote:
-> Ahh, *very* recent is the keyword then. ;)
-> I was a bit confused since in your paper the overhead is less than 1%.
+On Fri, 5 May 2017, Clayton Craft wrote:
 
-Yes, only for very recent platforms (Skylake). While working on the 
-paper we were surprised that we found overheads that small.
+> Hi,
+> I'm maintaining a build of the latest stable mainline kernel with
+> almost all of the config options on the KSPP wiki page
+> (https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project)
+> applied to it. I'm wondering if it's possible to somehow get
+> automatically notified when there are edits to this page, for instance
+> if a config option is changed, added, or removed. If not, no biggie
+> since I can continue to hit the page every couple of days and look at
+> the history.
 
-> What platforms did you test?
+You can request an account (to me via email) and use a watchlist.  It 
+should allow email notifications, but that doesn't seem to be working for 
+my own account, not sure why.
 
-We tested it on multiple platforms for stability, but we only ran longer 
-performance tests on different Skylake i7-6700K systems we mentioned in 
-the paper.
-
-> i.e. how does it perform on recent AMD systems?
-
-Unfortunately, we don't have any AMD systems at hand. I'm also not sure 
-how AMD is affected by the issue in the first place. Although unlikely, 
-there is the possibility that the problem of KASLR information leakage 
-through microarchitectural side channels might be Intel-specific.
+-- 
+James Morris
+<jmorris@namei.org>
