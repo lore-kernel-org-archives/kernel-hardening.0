@@ -1,68 +1,33 @@
 MIME-Version: 1.0
-In-Reply-To: <CAHgaXd+2vF=d5zpWTg+a=vSnv2ZA+8LCR_MXT_MDKn4r2s8sig@mail.gmail.com>
-References: <CAHgaXdJ1M4W3p9=B2hJmtxByPsA5-XHae8U6YtDH_2r_XMaR5A@mail.gmail.com>
- <58E639E0.1010700@iogearbox.net> <CAHgaXdK1XjDnhTqtk=nCq2crrigHiuCaLhF+1GupJt9bPThwZw@mail.gmail.com>
- <20170506.143816.2259768618578706384.davem@davemloft.net> <CAHgaXd+2vF=d5zpWTg+a=vSnv2ZA+8LCR_MXT_MDKn4r2s8sig@mail.gmail.com>
-From: Shubham Bansal <illusionist.neo@gmail.com>
-Date: Sun, 7 May 2017 03:47:08 +0530
-Message-ID: <CAHgaXdLsUYEmY86Nz3rC50repRA_rz-CVYx_i90k1Q5G1E-mCw@mail.gmail.com>
+In-Reply-To: <f9a4e8ed-1b22-0d73-924c-f5bb1e18ba93@iaik.tugraz.at>
+References: <9df77051-ac01-bfe9-3cf7-4c2ecbcb9292@iaik.tugraz.at>
+ <20170504154717.GA24353@infradead.org> <f9a4e8ed-1b22-0d73-924c-f5bb1e18ba93@iaik.tugraz.at>
+From: Richard Weinberger <richard.weinberger@gmail.com>
+Date: Sun, 7 May 2017 22:20:31 +0200
+Message-ID: <CAFLxGvwuMN52-Xf46j7XuG+cnJ9xnZjXWhihpgxr9_EUX0Z+Bg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
-To: David Miller <davem@davemloft.net>
-Cc: Daniel Borkmann <daniel@iogearbox.net>, Kees Cook <keescook@chromium.org>, Mircea Gherzan <mgherzan@gmail.com>, Network Development <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, ast@fb.com
+Subject: Re: [kernel-hardening] Re: [RFC, PATCH] x86_64: KAISER - do not map
+ kernel in user mode
+To: Daniel Gruss <daniel.gruss@iaik.tugraz.at>
+Cc: Christoph Hellwig <hch@infradead.org>, kernel list <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "clementine.maurice@iaik.tugraz.at" <clementine.maurice@iaik.tugraz.at>, "moritz.lipp@iaik.tugraz.at" <moritz.lipp@iaik.tugraz.at>, Michael Schwarz <michael.schwarz@iaik.tugraz.at>, Richard Fellner <richard.fellner@student.tugraz.at>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Ingo Molnar <mingo@kernel.org>, "anders.fogh@gdata-adan.de" <anders.fogh@gdata-adan.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Okay. My mistake. I just checked the verify function.
+Daniel,
 
-Apologies.
-Best,
-Shubham Bansal
+On Fri, May 5, 2017 at 9:40 AM, Daniel Gruss
+<daniel.gruss@iaik.tugraz.at> wrote:
+> I'm sure the overhead on older systems is larger than on recent systems.
 
+Just did a quick test on my main KVM host, a 8 core Intel(R) Xeon(R)
+CPU E3-1240 V2.
+KVM guests are 4.10 w/o CONFIG_KAISER and kvmconfig without CONFIG_PARAVIRT.
+Building a defconfig kernel within that guests is about 10% slower
+when CONFIG_KAISER
+is enabled.
 
-On Sun, May 7, 2017 at 1:57 AM, Shubham Bansal
-<illusionist.neo@gmail.com> wrote:
-> Thanks David.
->
-> Hi all,
->
-> I have two questions about the code at arch/arm64/net/bpf_jit_comp.c.
->
-> 1. At line 708, " const u8 r1 = bpf2a64[BPF_REG_1]; /* r1: struct
-> sk_buff *skb */ ".
->     Why is this code using BPF_REG_1 before saving it? As far as I
-> know, BPF_REG_1 has pointer to bpf program context and this code
-> clearly is overwriting that pointer which makes that pointer useless
-> for future usage. It clearly looks like a bug.
->
-> 2. At line 256, " emit(A64_LDR64(prg, tmp, r3), ctx); ".
->     This line of code is used to load an array( of pointers ) element,
-> where r3 is used as an index of that array. Shouldn't it be be
-> arithmetic left shifted by 3 or multiplied by 8 to get the right
-> address in that array of pointers ?
->
-> Apologies if any of the above question is stupid to ask.
->
-> Best,
-> Shubham
-> Best,
-> Shubham Bansal
->
->
-> On Sun, May 7, 2017 at 12:08 AM, David Miller <davem@davemloft.net> wrote:
->> From: Shubham Bansal <illusionist.neo@gmail.com>
->> Date: Sat, 6 May 2017 22:18:16 +0530
->>
->>> Hi Daniel,
->>>
->>> Thanks for the last reply about the testing of eBPF JIT.
->>>
->>> I have one issue though, I am not able to find what BPF_ABS and
->>> BPF_IND instruction does exactly.
->>
->> They are not instructions, they are modifiers for the BPF_LD
->> instruction which indicate an SKB load is to be performed.
->>
->> You never need to ask what a BPF instruction does, it is clear
->> defined in the BPF interperter found in kernel/bpf/core.c
->>
->> Look for the case statement LD_ABS_W and friends in __bpf_prog_run().
+Is this expected?
+If it helps I can redo the same test also on bare metal.
+
+-- 
+Thanks,
+//richard
