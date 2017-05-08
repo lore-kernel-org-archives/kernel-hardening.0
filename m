@@ -1,135 +1,89 @@
-Date: Mon, 8 May 2017 12:41:24 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170508114123.GB5480@leverpostej>
-References: <20170504142435.10175-1-danielmicay@gmail.com>
- <20170504154850.GE20461@leverpostej>
- <1493920184.1596.4.camel@gmail.com>
- <20170504180917.GB19929@leverpostej>
- <20170505103839.GB699@leverpostej>
- <1494005884.5150.6.camel@gmail.com>
+Date: Mon, 8 May 2017 14:46:21 +0200
+From: Greg KH <greg@kroah.com>
+Message-ID: <20170508124621.GA20705@kroah.com>
+References: <20170428153213.137279-1-thgarnie@google.com>
+ <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
+ <20170508073352.caqe3fqf7nuxypgi@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1494005884.5150.6.camel@gmail.com>
-Subject: Re: [kernel-hardening] [PATCH] add the option of fortified string.h
- functions
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, ard.biesheuvel@linaro.org, matt@codeblueprint.co.uk
+In-Reply-To: <20170508073352.caqe3fqf7nuxypgi@gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
+ limit before returning to user-mode
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, May 05, 2017 at 01:38:04PM -0400, Daniel Micay wrote:
-> On Fri, 2017-05-05 at 11:38 +0100, Mark Rutland wrote:
-> > On Thu, May 04, 2017 at 07:09:17PM +0100, Mark Rutland wrote:
-> > > On Thu, May 04, 2017 at 01:49:44PM -0400, Daniel Micay wrote:
-> > > > On Thu, 2017-05-04 at 16:48 +0100, Mark Rutland wrote:
-> > > > > ... with an EFI stub fortify_panic() hacked in, I can build an
-> > > > > arm64 kernel with this applied. It dies at some point after
-> > > > > exiting EFI boot services; i don't know whether it made it out
-> > > > > of the stub and into the kernel proper.
-> > > > 
-> > > > Could start with #define __NO_FORTIFY above the #include
-> > > > sections there instead (or -D__NO_FORTIFY as a compiler flag),
-> > > > which will skip fortifying those for now.
-> > > 
-> > > Neat. Given there are a few files, doing the latter for the stub
-> > > is the simplest option.
-> > > 
-> > > > I'm successfully using this on a non-EFI ARM64 3.18 LTS kernel,
-> > > > so it should be close to working on other systems (but not
-> > > > necessarily with messy drivers). The x86 EFI workaround works.
-> > > 
-> > > FWIW, I've been playing atop of next-20170504, with a tonne of
-> > > other debug options enabled (including KASAN_INLINE).
-> > > 
-> > > From a quick look with a JTAG debugger, the CPU got out of the
-> > > stub and into the kernel. It looks like it's dying initialising
-> > > KASAN, where the vectors appear to have been corrupted.
-> > 
-> > ... though it's a worring that __memcpy() is overridden. I think we
-> > need to be more careful with the way we instrument the string
-> > functions.
+On Mon, May 08, 2017 at 09:33:52AM +0200, Ingo Molnar wrote:
 > 
-> I don't think there's any way for the fortify code to be intercepting
-> __memcpy. There's a memcpy function in arch/x86/boot/compressed/string.c
-> defined via __memcpy and that appears to be working.
-
-Just to check, are there additional patches to disable fortification of
-the KASAN code? With that, things seem fine.
-
-> A shot in the dark is that it might not happen if a __real_memcpy
-> alias via __RENAME is used instead of __builtin_memcpy, but I'm not
-> sure how or why this is breaking in the first place.
-
-Using a RENAME(__real_memcpy), and a call to that didn't help.
-
-With the rename removed (i.e. just an extern __real_memcpy()), it called
-__real_memcpy as expected.
-
-I think there's some unintended interaction with <asm/string.h>:
-
----->8----
-#if defined(CONFIG_KASAN) && !defined(__SANITIZE_ADDRESS__)
-
-/*
- * For files that are not instrumented (e.g. mm/slub.c) we
- * should use not instrumented version of mem* functions.
- */
-
-#define memcpy(dst, src, len) __memcpy(dst, src, len)
-#define memmove(dst, src, len) __memmove(dst, src, len)
-#define memset(s, c, n) __memset(s, c, n)
-#endif
----->8----
-
-If I *only* comment out the memcpy define above, KASAN's memcpy() calls
-__memcpy() as we expect.
-
-Looking at the assembly, I see memmove() and memset() have the same
-issue, and messing with their <asm/string.h> defintion helps.
-
-Looking at the preprocessed source, the fortified memcpy ends up as:
-
-extern inline __attribute__((always_inline)) __attribute__((no_instrument_function)) __attribute__((always_inline)) __attribute__((gnu_inline)) void *__memcpy(void *p, const void *q, __kernel_size_t size)
-{
- size_t p_size = __builtin_object_size(p, 0);
- size_t q_size = __builtin_object_size(q, 0);
- if (__builtin_constant_p(size) && (p_size < size || q_size < size))
-  __buffer_overflow();
- if (p_size < size || q_size < size)
-  fortify_panic(__func__);
- return __builtin_memcpy(p, q, size);
-}
-
-... i.e. we override __memcpy() rather than memcpy().
-
-In KASAN, we undef memcpy before providing KASAN's version, so it keeps
-its intended name, ending up as:
-
-void *memcpy(void *dest, const void *src, size_t len)
-{
- check_memory_region((unsigned long)src, len, false, (unsigned long)__builtin_return_address(0));
- check_memory_region((unsigned long)dest, len, true, (unsigned long)__builtin_return_address(0));
-
- return __memcpy(dest, src, len);
-}
-
-... then __memcpy() gets inlined and the builtin stuff resolved, calling
-memcpy().
-
-This'll require some thought.
-
-> > FWIW, with that, and the previous bits, I can boot a next-20170504
-> > kernel with this applied.
+> (added more Cc:s)
+> 
+> * Thomas Garnier <thgarnie@google.com> wrote:
+> 
+> > On Fri, Apr 28, 2017 at 8:32 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> > > Ensure that a syscall does not return to user-mode with a kernel address
+> > > limit. If that happens, a process can corrupt kernel-mode memory and
+> > > elevate privileges [1].
+> > >
+> > > The CONFIG_ADDR_LIMIT_CHECK option disables the generic check so each
+> > > architecture can create optimized versions. This option is enabled by
+> > > default on s390 because a similar feature already exists.
+> > >
+> > > [1] https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+> > >
+> > > Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> > > Tested-by: Kees Cook <keescook@chromium.org>
 > > 
-> > However, I get a KASAN splat from the SLUB init code, even though
-> > that's deliberately not instrumented by KASAN:
+> > Ingo: Do you want to take the set?
+> 
+> Yeah, so now I'm questioning the whole premise of the feature, sorry :-/
+> 
+> A big disavantage is that the "security check" will add 2-5 instructions to the 
+> system call fast path. Every one of them, and essentially forever. Just to handle 
+> a CVE that was caused by a buggy touch-screen driver helper function leaking 
+> KERNEL_DS and which was fixed long ago ...
+> 
+> And yes, I realize that there were other such bugs and that such bugs might occur 
+> in the future - but why not push the overhead of the security check to the kernel 
+> build phase? I.e. I'm wondering how well we could do static analysis during kernel 
+> build - would a limited mode of Sparse be good enough for that? Or we could add a 
+> new static checker to tools/, built from first principles and used primarily for 
+> extended syntactical checking.
+> 
+> For example I'd consider it a good practice to mandate that if a kernel function 
+> sets KERNEL_DS then it must restore it as well. Any function that does not do 
+> that, or is too complex for the static analysis to prove correctness for sure 
+> should be considered buggy!
+> 
+> Are there any common kernel APIs outside set_fs() that set KERNEL_DS 
+> intentionally? The overwhelming pattern ought to be:
+> 
+>         orig_fs = get_fs();
+>         set_fs(KERNEL_DS);
+> 	...
+>         set_fs(orig_fs);
+> 
+> ... and even a relatively simple static analysis tool ought to be able to see 
+> through that.
+> 
+> I'd even suggest we do it not like Sparse builds are done today, but in a more 
+> integrated fashion: do static analysis as part of a typical kernel defconfig build 
+> and not tolerate warnings but go for a 'zero warnings' policy like Linus uses for 
+> modconfig builds.
+> 
+> _That_ solution I'd feel very, very good about - it would be so much better than 
+> any runtime checks...
+> 
+> Not to mention that such an integrated static analysis facility would allow many 
+> other things to be checked during build time, which we couldn't possibly check 
+> runtime.
 
-[...]
+What about a simple coccinelle script to test for this type of thing?
+We write it once, add it to the in-kernel body of tests, and then 0-day
+runs it on all trees all the time.  That should catch this type of
+issue, like all of the other "bad programming bus" that the tool
+currently catches.
 
-> I'm not sure about this either. I'd like to avoid needing !KASAN since
-> these are useful when paired together for finding bugs...
+thanks,
 
-Likewise! I'd like to have both enabled for my fuzzing config.
-
-Thanks,
-Mark.
+greg k-h
