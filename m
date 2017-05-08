@@ -1,65 +1,84 @@
+References: <9200d87d-33b6-2c70-0095-e974a30639fd@huawei.com>
+ <a445774f-a307-25aa-d44e-c523a7a42da6@redhat.com>
+ <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <b3fab9c3-fa35-eb7b-204c-f85a0d392e12@redhat.com>
+Date: Mon, 8 May 2017 08:25:31 -0700
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170508140230.23kxf2kfeazeo4zr@gmail.com>
-References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
- <20170508073352.caqe3fqf7nuxypgi@gmail.com> <CAGXu5jKZRESgGhZ6GEoO784Q1G8V0DPcwM1T2PpyTqvEAsrUdg@mail.gmail.com>
- <20170508140230.23kxf2kfeazeo4zr@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 8 May 2017 08:24:43 -0700
-Message-ID: <CAGXu5jJ4iY7QZ9wRu5dmm7RHtLh_V6TQh4huWwLCYPKOr63aiA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address limit before returning to user-mode
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+In-Reply-To: <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: RFC v2: post-init-read-only protection for data allocated
+ dynamically
+To: Igor Stoppa <igor.stoppa@huawei.com>, Michal Hocko <mhocko@kernel.org>
+Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 8, 2017 at 7:02 AM, Ingo Molnar <mingo@kernel.org> wrote:
->
-> * Kees Cook <keescook@chromium.org> wrote:
->
->> > And yes, I realize that there were other such bugs and that such bugs might
->> > occur in the future - but why not push the overhead of the security check to
->> > the kernel build phase? I.e. I'm wondering how well we could do static
->> > analysis during kernel build - would a limited mode of Sparse be good enough
->> > for that? Or we could add a new static checker to tools/, built from first
->> > principles and used primarily for extended syntactical checking.
->>
->> Static analysis is just not going to cover all cases. We've had vulnerabilities
->> where interrupt handlers left KERNEL_DS set, for example. [...]
->
-> Got any commit ID of that bug - was it because a function executed by the
-> interrupt handler leaked KERNEL_DS?
+On 05/05/2017 03:42 AM, Igor Stoppa wrote:
+> On 04/05/17 19:49, Laura Abbott wrote:
+>> [adding kernel-hardening since I think there would be interest]
+> 
+> thank you, I overlooked this
+> 
+> 
+>> BPF takes the approach of calling set_memory_ro to mark regions as
+>> read only. I'm certainly over simplifying but it sounds like this
+>> is mostly a mechanism to have this happen mostly automatically.
+>> Can you provide any more details about tradeoffs of the two approaches?
+> 
+> I am not sure I understand the question ...
+> For what I can understand, the bpf is marking as read only something
+> that spans across various pages, which is fine.
+> The payload to be protected is already organized in such pages.
+> 
+> But in the case I have in mind, I have various, heterogeneous chunks of
+> data, coming from various subsystems, not necessarily page aligned.
+> And, even if they were page aligned, most likely they would be far
+> smaller than a page, even a 4k page.
+> 
+> The first problem I see, is how to compact them into pages, ensuring
+> that no rwdata manages to infiltrate the range.
+> 
+> The actual mechanism for marking pages as read only is not relevant at
+> this point, if I understand your question correctly, since set_memory_ro
+> is walking the pages it receives as parameter.
+> 
 
-Ah, it was an exception handler, but the one I was thinking of was this:
-https://lwn.net/Articles/419141/
+Thanks for clarifying, this makes sense. I also saw some replies up
+thread that also answered some my questions.
 
->> [...] If there are performance concerns, let's put this behind a CONFIG. 2-5
->> instructions is not an issue for most people that want this coverage.
->
-> That doesn't really _solve_ the performance concerns, it just forces most people
-> to enable it by creating a 'security or performance' false dichotomy ...
+>> arm and arm64 have the added complexity of using larger
+>> page sizes on the linear map so dynamic mapping/unmapping generally
+>> doesn't work. 
+> 
+> Do you mean that a page could be 16MB and therefore it would not be
+> possible to get a smaller chunk?
+> 
 
-That's fair, but what I'm trying to say is that many people will want
-this, so rejecting it because it's 2 more instructions seems
-unreasonable. We have had much more invasive changes added to the
-kernel.
+Roughly yes.
 
->> [...] and it still won't catch everything. Bug-finding is different from making
->> a bug class just unexploitable at all. As we've done before, it's the difference
->> between trying to find format string attacks vs just removing %n from the format
->> parser.
->
-> No, it does not make it unexploitable, it could still be exploitable if the
-> runtime check is buggy or if there's kernel execution outside of the regular
-> system call paths - there's plenty of such hardware functionality on x86 for
-> example.
+PAGE_SIZE is still 4K/16K/64K but the underlying page table mappings
+may use larger mappings (2MB, 32M, 512M, etc.). The ARM architecture
+has a break-before-make requirement which requires old mappings be
+fully torn down and invalidated to avoid TLB conflicts. This is nearly
+impossible to do correctly on live page tables so the current policy
+is to not break down larger mappings.
 
-Fine, but this is splitting hairs. This does protect a specific
-situation, and it does so very cheaply. The real fix would be to
-remove set_fs() entirely. :P
+>> arm64 supports DEBUG_PAGEALLOC by mapping with only
+>> pages but this is generally only wanted as a debug mechanism.
+>> I don't know if you've given this any thought at all.
+> 
+> Since the beginning I have thought about this feature as an opt-in
+> feature. I am aware that it can have drawbacks, but I think it would be
+> valuable as debugging tool even where it's not feasible to keep it
+> always-on.
+> 
+> OTOH on certain systems it can be sufficiently appealing to be kept on,
+> even if it eats up some more memory.
 
--Kees
+I'd rather see this designed as being mandatory from the start and then
+provide a mechanism to turn it off if necessary. The uptake and
+coverage from opt-in features tends to be very low based on past experience.
 
--- 
-Kees Cook
-Pixel Security
+Thanks,
+Laura
