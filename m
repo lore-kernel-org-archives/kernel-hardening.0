@@ -1,111 +1,68 @@
+Date: Mon, 8 May 2017 14:22:35 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170508132235.GC5480@leverpostej>
+References: <9df77051-ac01-bfe9-3cf7-4c2ecbcb9292@iaik.tugraz.at>
+ <CAJcbSZHcAi37FfFBKF4MsC3WM-RY5ar_e1pgMScb=S3+_-wqVQ@mail.gmail.com>
+ <55fa194e-69bd-fe39-f915-6f77673aea36@iaik.tugraz.at>
+ <CAJcbSZEOMssjUoMUBmArNeuOPoZ0gQJmEQ_WQaSOPiHp1XcNaQ@mail.gmail.com>
+ <01ebda5d918d9cbfd36d8ec4e6c12f55@cs.tu-darmstadt.de>
+ <a7cc85fd-b261-0c83-8636-eb57c9ba71f9@iaik.tugraz.at>
+ <20170508102100.GA5480@leverpostej>
+ <db80ae9d-15bc-5d32-afce-ea98a6059fb8@iaik.tugraz.at>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170508073352.caqe3fqf7nuxypgi@gmail.com>
-References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
- <20170508073352.caqe3fqf7nuxypgi@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 8 May 2017 06:09:28 -0700
-Message-ID: <CAGXu5jKZRESgGhZ6GEoO784Q1G8V0DPcwM1T2PpyTqvEAsrUdg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address limit before returning to user-mode
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <db80ae9d-15bc-5d32-afce-ea98a6059fb8@iaik.tugraz.at>
+Subject: Re: [kernel-hardening] [RFC, PATCH] x86_64: KAISER - do not map
+ kernel in user mode
+To: Daniel Gruss <daniel.gruss@iaik.tugraz.at>
+Cc: David Gens <david.gens@cs.tu-darmstadt.de>, Thomas Garnier <thgarnie@google.com>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, clementine.maurice@iaik.tugraz.at, moritz.lipp@iaik.tugraz.at, Michael Schwarz <michael.schwarz@iaik.tugraz.at>, Richard Fellner <richard.fellner@student.tugraz.at>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Ingo Molnar <mingo@kernel.org>, anders.fogh@gdata-adan.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 8, 2017 at 12:33 AM, Ingo Molnar <mingo@kernel.org> wrote:
->
-> (added more Cc:s)
->
-> * Thomas Garnier <thgarnie@google.com> wrote:
->
->> On Fri, Apr 28, 2017 at 8:32 AM, Thomas Garnier <thgarnie@google.com> wrote:
->> > Ensure that a syscall does not return to user-mode with a kernel address
->> > limit. If that happens, a process can corrupt kernel-mode memory and
->> > elevate privileges [1].
->> >
->> > The CONFIG_ADDR_LIMIT_CHECK option disables the generic check so each
->> > architecture can create optimized versions. This option is enabled by
->> > default on s390 because a similar feature already exists.
->> >
->> > [1] https://bugs.chromium.org/p/project-zero/issues/detail?id=990
->> >
->> > Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> > Tested-by: Kees Cook <keescook@chromium.org>
->>
->> Ingo: Do you want to take the set?
->
-> Yeah, so now I'm questioning the whole premise of the feature, sorry :-/
->
-> A big disavantage is that the "security check" will add 2-5 instructions to the
-> system call fast path. Every one of them, and essentially forever. Just to handle
-> a CVE that was caused by a buggy touch-screen driver helper function leaking
-> KERNEL_DS and which was fixed long ago ...
->
-> And yes, I realize that there were other such bugs and that such bugs might occur
-> in the future - but why not push the overhead of the security check to the kernel
-> build phase? I.e. I'm wondering how well we could do static analysis during kernel
-> build - would a limited mode of Sparse be good enough for that? Or we could add a
-> new static checker to tools/, built from first principles and used primarily for
-> extended syntactical checking.
+On Mon, May 08, 2017 at 12:51:27PM +0200, Daniel Gruss wrote:
+> >While it may be the case that in practice ARM systems do not have such a
+> >side channel, I think that it is erroneous to believe that the
+> >architectural TTBR{0,1} split ensures this.
+> >
+> >The use of TTBR0 for user and TTBR1 for kernel is entirely a SW policy,
+> >and not an architectural requirement. It is possible to map data in
+> >TTBR1 which is accessible to userspace, and data in TTBR0 which is only
+> >accessible by the kernel. In either case, this is determined by the page
+> >tables themselves.
+> 
+> Absolutely right, but TTBR0 and TTBR1 are usually used in this way.
 
-Static analysis is just not going to cover all cases. We've had
-vulnerabilities where interrupt handlers left KERNEL_DS set, for
-example. If there are performance concerns, let's put this behind a
-CONFIG. 2-5 instructions is not an issue for most people that want
-this coverage.
+Sure; if we consider Linux, while userspace is executing, TTBR1 will
+(only) contain kernel page tables and TTBR0 will (only) contain user
+page tables.
 
-> For example I'd consider it a good practice to mandate that if a kernel function
-> sets KERNEL_DS then it must restore it as well. Any function that does not do
-> that, or is too complex for the static analysis to prove correctness for sure
-> should be considered buggy!
->
-> Are there any common kernel APIs outside set_fs() that set KERNEL_DS
-> intentionally? The overwhelming pattern ought to be:
->
->         orig_fs = get_fs();
->         set_fs(KERNEL_DS);
->         ...
->         set_fs(orig_fs);
->
-> ... and even a relatively simple static analysis tool ought to be able to see
-> through that.
+However, as this is not an architectural requirement, the CPU cannot
+know that a user access that gets translated via TTBR1 will fault, and
+at some point must determine the permissions from the page tables as
+required by the architecture.
 
-This pattern was, in fact, what the interrupt handler bug escaped
-from. We have to build proactive defenses, and this check has a clear
-defensive advantage. It's a noble goal to improve the static analyzers
-and simplify the source, but we have too much history to prove that
-this just isn't enough. This instruction cost of this is extremely
-small, too. Until we can eliminate set_fs(), we need to add this
-check.
+> >Given this, I think that the statements in the KAISER paper regarding
+> >the TTBRs (in section 2.1) are not quite right. Architecturally,
+> >permission checks and lookups cannot be elided based on the TTBR used.
+> 
+> As we say in section 2.1, they are "typically" used in this way, and
+> this prevents the attacks. Not just the presence of a second
+> register, but the way how the two registers are used to split the
+> translation tables for user and kernel.
 
+In practice, while userspace is executing, TTBR1 still points to kernel
+page tables. If a user program attempts to access an address mapped via
+TTBR1, the CPU has to attempt this translation via the TTBR1 page tables
+and/or associated TLB entries.
 
-> I'd even suggest we do it not like Sparse builds are done today, but in a more
-> integrated fashion: do static analysis as part of a typical kernel defconfig build
-> and not tolerate warnings but go for a 'zero warnings' policy like Linus uses for
-> modconfig builds.
->
-> _That_ solution I'd feel very, very good about - it would be so much better than
-> any runtime checks...
+Specifically, I think this does not align with the statement in 2.1
+regarding the two TTBRs:
 
-I'm not opposed to this, but there will be push-back on "making the
-build slower", and it still won't catch everything. Bug-finding is
-different from making a bug class just unexploitable at all. As we've
-done before, it's the difference between trying to find format string
-attacks vs just removing %n from the format parser.
+  This simplifies privilege checks and does not require any address
+  translation for invalid memory accesses and thus no cache lookups.
 
-> Not to mention that such an integrated static analysis facility would allow many
-> other things to be checked during build time, which we couldn't possibly check
-> runtime.
+... since the use of the TTBRs is orthogonal to privilege checks and/or
+the design of the TLBs.
 
-Absolutely! But it's orthogonal to proactive runtime exploit blocking.
-We've got one that works and defends against an entire class of
-vulnerability for very low cost. It it's truly too costly for default,
-let's put it behind a CONFIG and see who wants it. (Most distros, I
-suspect, will enable it, just like hardened usercopy which is much
-more expensive than this.)
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+Thanks,
+Mark.
