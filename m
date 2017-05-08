@@ -1,36 +1,64 @@
-References: <9df77051-ac01-bfe9-3cf7-4c2ecbcb9292@iaik.tugraz.at>
- <CAJcbSZHcAi37FfFBKF4MsC3WM-RY5ar_e1pgMScb=S3+_-wqVQ@mail.gmail.com>
- <55fa194e-69bd-fe39-f915-6f77673aea36@iaik.tugraz.at>
- <CAJcbSZEOMssjUoMUBmArNeuOPoZ0gQJmEQ_WQaSOPiHp1XcNaQ@mail.gmail.com>
- <01ebda5d918d9cbfd36d8ec4e6c12f55@cs.tu-darmstadt.de>
- <a7cc85fd-b261-0c83-8636-eb57c9ba71f9@iaik.tugraz.at>
- <62c69fb5-03a8-4f30-cbc1-4955e9efbb18@iaik.tugraz.at>
- <CAJcbSZEEUMSfeyAGQm8Daaaa1WEptW46rN_nCSpq-WR9dowr1Q@mail.gmail.com>
-From: Daniel Gruss <daniel.gruss@iaik.tugraz.at>
-Message-ID: <f1ba0ab8-e2be-4b79-c895-7c10bd533ef5@iaik.tugraz.at>
-Date: Mon, 8 May 2017 16:19:29 +0200
-MIME-Version: 1.0
-In-Reply-To: <CAJcbSZEEUMSfeyAGQm8Daaaa1WEptW46rN_nCSpq-WR9dowr1Q@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [RFC, PATCH] x86_64: KAISER - do not map
- kernel in user mode
-To: Thomas Garnier <thgarnie@google.com>
-Cc: David Gens <david.gens@cs.tu-darmstadt.de>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, clementine.maurice@iaik.tugraz.at, moritz.lipp@iaik.tugraz.at, Michael Schwarz <michael.schwarz@iaik.tugraz.at>, Richard Fellner <richard.fellner@student.tugraz.at>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Ingo Molnar <mingo@kernel.org>, anders.fogh@gdata-adan.de
+Message-ID: <1494256932.1167.1.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Mon, 08 May 2017 11:22:12 -0400
+In-Reply-To: <20170508075209.7aluvpwildw325rf@gmail.com>
+References: <20170428153213.137279-1-thgarnie@google.com>
+	 <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
+	 <20170508073352.caqe3fqf7nuxypgi@gmail.com>
+	 <20170508075209.7aluvpwildw325rf@gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
+ limit before returning to user-mode
+To: Ingo Molnar <mingo@kernel.org>, Thomas Garnier <thgarnie@google.com>
+Cc: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?ISO-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul
+ E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter
+ Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A .
+ Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 08.05.2017 16:09, Thomas Garnier wrote:
->> Just to correct my answer here as well: Although we experimented with fixed
->> mappings for per-cpu addresses, the current patch does not incorporate this
->> yet, so it indeed still leaks. However, it is not a severe problem. The
->> mapping of the required (per-cpu) variables would be at a fixed location in
->> the user CR3, instead of the ones that are used in the kernel.
->
-> Why do you think it should be at a fixed location in the user CR3? I
-> see that you just mirror the entries. You also mirror
-> __entry_text_start / __entry_text_end which is part of the binary so
-> will leak the base address of the kernel. Maybe I am missing
-> something.
+On Mon, 2017-05-08 at 09:52 +0200, Ingo Molnar wrote:
+> 
+> ... it's just not usable in that form for a regular maintenance flow.
+> 
+> So what would be more useful is to add a specific Sparse check that
+> only checks 
+> KERNEL_DS, to add it as a regular (.config driven) build option and
+> make sure the 
+> kernel build has zero warnings.
+> 
+> From that point on we can declare that this kind of bug won't occur
+> anymore, if 
+> the Sparse implementation of the check is correct.
+> 
+> But there's a (big) problem with that development model: Sparse is not
+> part of the 
+> kernel tree and adding a feature to it while making the kernel depend
+> on that 
+> brand new feature is a logistical nightmare. The overhead is quite
+> similar to 
+> adding new features to a compiler - it happens at a glacial pace and
+> is only done 
+> for major features really, at considerable expense. I don't think this
+> is an 
+> adequate model for 'extended syntax checking' of the kernel,
+> especially when it 
+> comes to correctness that has such obvious security impact.
+> 
+> Thanks,
+> 
+> 	Ingo
 
-As I said, the current patch does not incorporate this yet, so yes, this part currently still leaks because we did not 
-implement it yet.
+There's the option of using GCC plugins now that the infrastructure was
+upstreamed from grsecurity. It can be used as part of the regular build
+process and as long as the analysis is pretty simple it shouldn't hurt
+compile time much.
+
+The problem with doing that is I don't think there are people with much
+experience with GCC contributing upstream and it's going to be more work
+to develop/maintain than some kind of specialized DSL for analysis. I
+think a few static analysis plugins are used as part of maintaining
+grsecurity for solving issues like finding false positives for the
+REFCOUNT overflow checking feature, so it's something that's already
+being done in practice elsewhere.
