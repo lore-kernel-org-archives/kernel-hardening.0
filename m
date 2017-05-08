@@ -1,78 +1,75 @@
+Date: Mon, 8 May 2017 17:53:08 -0500
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+Message-ID: <20170508225308.a6uznrhdm7pgyhcg@treble>
+References: <1494271972-140319-1-git-send-email-keescook@chromium.org>
+ <1494271972-140319-3-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1494276637.6144.1.camel@gmail.com>
-References: <20170504142435.10175-1-danielmicay@gmail.com> <87pofjqlj3.fsf@possimpible.ozlabs.ibm.com>
- <1494276637.6144.1.camel@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 8 May 2017 14:53:45 -0700
-Message-ID: <CAGXu5jLVTFF0vP3+eH3D=x8An+1zYekQywPLQ3=Kcku+ufH_NQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH] add the option of fortified string.h functions
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Daniel Axtens <dja@axtens.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, Andrew Donnellan <andrew.donnellan@au1.ibm.com>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <1494271972-140319-3-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v3 2/2] x86/refcount: Implement fast refcount overflow
+ protection
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 8, 2017 at 1:50 PM, Daniel Micay <danielmicay@gmail.com> wrote:
-> On Tue, 2017-05-09 at 03:57 +1000, Daniel Axtens wrote:
->> Hi Daniel and ppc people,
->>
->> (ppc people: this does some compile and run time bounds checking on
->> string functions. It's cool - currently it picks up a lot of random
->> things so it will require some more work across the tree, but
->> hopefully
->> it will eventually hit mainline.)
->>
->> I've tested this on ppc with pseries_le_defconfig.
+On Mon, May 08, 2017 at 12:32:52PM -0700, Kees Cook wrote:
+> +#define REFCOUNT_EXCEPTION				\
+> +	"movl $0x7fffffff, %[counter]\n\t"		\
+> +	"int $"__stringify(X86_REFCOUNT_VECTOR)"\n"	\
+> +	"0:\n\t"					\
+> +	_ASM_EXTABLE(0b, 0b)
 
-Yay! Thanks very much!
+Despite the objtool warnings going away, this still uses the exception
+table in a new way, which will confuse objtool.  I need to do some more
+thinking about the best way to fix it, either as a change to your patch
+or a change to objtool.
 
->>
->> I needed a couple of the fixes from github
->> (https://github.com/thestinger/linux-hardened/commits/4.11) in order
->> to
->> build, specifically
->> https://github.com/thestinger/linux-hardened/commit/c65d6a6f309b067035
->> 84a23ac2b2bda4bb363143
->> https://github.com/thestinger/linux-
->> hardened/commit/adcec4756574a8c7f7cb5b6fa51ebeaeeae71aae
->
-> By the way, Kees is working on landing these upstream as proper fixes
-> rather than the workarounds I did there. In most cases, it's a matter of
-> migrating from memcpy past the end of a constant string to strncpy (to
-> make sure that the destination is still fully filled but with zeroes
-> instead of arbitrary junk from rodata vs strcpy/strlcpy which won't
-> cover that). A few of them are a bit weirder though. I haven't seen any
-> false positives yet though, due to sticking to __builtin_object_size(p,
-> 0) for now.
+> diff --git a/include/asm-generic/sections.h b/include/asm-generic/sections.h
+> index 532372c6cf15..0590f384f234 100644
+> --- a/include/asm-generic/sections.h
+> +++ b/include/asm-generic/sections.h
+> @@ -20,6 +20,8 @@
+>   *                   may be out of this range on some architectures.
+>   * [_sinittext, _einittext]: contains .init.text.* sections
+>   * [__bss_start, __bss_stop]: contains BSS sections
+> + * [__refcount_overflow/underflow_start, ..._end]: contains .text sections
+> + *		     for refcount error handling.
+>   *
+>   * Following global variables are optional and may be unavailable on some
+>   * architectures and/or kernel configurations.
+> @@ -39,6 +41,8 @@ extern char __per_cpu_load[], __per_cpu_start[], __per_cpu_end[];
+>  extern char __kprobes_text_start[], __kprobes_text_end[];
+>  extern char __entry_text_start[], __entry_text_end[];
+>  extern char __start_rodata[], __end_rodata[];
+> +extern char __refcount_overflow_start[], __refcount_overflow_end[];
+> +extern char __refcount_underflow_start[], __refcount_underflow_end[];
 
-FWIW, all the net-dev ones have been applied for -next now.
+I think this part is no longer needed, since you got rid of the new
+sections?
 
->> Once those were added, I needed to disable fortification in
->> prom_init.c,
->> as we apparently can't have new symbols there. (I don't understand
->> that
->> file so I haven't dug into it.)
->>
->> We also have problems with the feature fixup tests leading to a panic
->> on
->> boot. It relates to getting what I think are asm labels(?) and how we
->> address them. I have just disabled fortify here for now; I think the
->> code could be rewritten to take the labels as unsigned char *, but I
->> haven't dug into it.
->
-> They probably need to be changed to use 'unsigned char foo[]' instead of
->  'char foo' with &foo taken as an address and used as a larger buffer.
-> That's undefined and the compiler can assume it's limited to the size of
-> the type used to define it which then gets enforced by these fortified
-> wrappers rather than just used for optimization (in practice, it won't
-> break much without these, but it could).
+> diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
+> index 3558f4eb1a86..2f2f34942689 100644
+> --- a/include/asm-generic/vmlinux.lds.h
+> +++ b/include/asm-generic/vmlinux.lds.h
+> @@ -446,9 +446,18 @@
+>  		ALIGN_FUNCTION();					\
+>  		*(.text.hot .text .text.fixup .text.unlikely)		\
+>  		*(.ref.text)						\
+> +		REFCOUNT_TEXT						\
+>  	MEM_KEEP(init.text)						\
+>  	MEM_KEEP(exit.text)						\
+>  
+> +#define __REFCOUNT_TEXT(section)					\
+> +		VMLINUX_SYMBOL(__##section##_start) = .;                \
+> +		*(.text.##section)                                      \
+> +		VMLINUX_SYMBOL(__##section##_end) = .;
+> +
+> +#define REFCOUNT_TEXT							\
+> +	__REFCOUNT_TEXT(refcount_overflow)				\
+> +	__REFCOUNT_TEXT(refcount_underflow)
 
-We'd need something to actually extract the sizes of the asm
-functions. Right now, that kind of thing is done in the linker
-scripts, but that may be too late.
-
--Kees
+Same here.
 
 -- 
-Kees Cook
-Pixel Security
+Josh
