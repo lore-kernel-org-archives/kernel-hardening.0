@@ -1,84 +1,64 @@
-References: <9200d87d-33b6-2c70-0095-e974a30639fd@huawei.com>
- <a445774f-a307-25aa-d44e-c523a7a42da6@redhat.com>
- <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <b3fab9c3-fa35-eb7b-204c-f85a0d392e12@redhat.com>
-Date: Mon, 8 May 2017 08:25:31 -0700
 MIME-Version: 1.0
-In-Reply-To: <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: RFC v2: post-init-read-only protection for data allocated
- dynamically
-To: Igor Stoppa <igor.stoppa@huawei.com>, Michal Hocko <mhocko@kernel.org>
-Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Sender: keescook@google.com
+In-Reply-To: <1494256932.1167.1.camel@gmail.com>
+References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
+ <20170508073352.caqe3fqf7nuxypgi@gmail.com> <20170508075209.7aluvpwildw325rf@gmail.com>
+ <1494256932.1167.1.camel@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 8 May 2017 08:26:23 -0700
+Message-ID: <CAGXu5jL61K0bRSEg9a_LswNyrt3K1J57REbWVcvAXT54zWwtMA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
+ limit before returning to user-mode
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: Ingo Molnar <mingo@kernel.org>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 05/05/2017 03:42 AM, Igor Stoppa wrote:
-> On 04/05/17 19:49, Laura Abbott wrote:
->> [adding kernel-hardening since I think there would be interest]
-> 
-> thank you, I overlooked this
-> 
-> 
->> BPF takes the approach of calling set_memory_ro to mark regions as
->> read only. I'm certainly over simplifying but it sounds like this
->> is mostly a mechanism to have this happen mostly automatically.
->> Can you provide any more details about tradeoffs of the two approaches?
-> 
-> I am not sure I understand the question ...
-> For what I can understand, the bpf is marking as read only something
-> that spans across various pages, which is fine.
-> The payload to be protected is already organized in such pages.
-> 
-> But in the case I have in mind, I have various, heterogeneous chunks of
-> data, coming from various subsystems, not necessarily page aligned.
-> And, even if they were page aligned, most likely they would be far
-> smaller than a page, even a 4k page.
-> 
-> The first problem I see, is how to compact them into pages, ensuring
-> that no rwdata manages to infiltrate the range.
-> 
-> The actual mechanism for marking pages as read only is not relevant at
-> this point, if I understand your question correctly, since set_memory_ro
-> is walking the pages it receives as parameter.
-> 
+On Mon, May 8, 2017 at 8:22 AM, Daniel Micay <danielmicay@gmail.com> wrote:
+> On Mon, 2017-05-08 at 09:52 +0200, Ingo Molnar wrote:
+>>
+>> ... it's just not usable in that form for a regular maintenance flow.
+>>
+>> So what would be more useful is to add a specific Sparse check that
+>> only checks
+>> KERNEL_DS, to add it as a regular (.config driven) build option and
+>> make sure the
+>> kernel build has zero warnings.
+>>
+>> From that point on we can declare that this kind of bug won't occur
+>> anymore, if
+>> the Sparse implementation of the check is correct.
+>>
+>> But there's a (big) problem with that development model: Sparse is not
+>> part of the
+>> kernel tree and adding a feature to it while making the kernel depend
+>> on that
+>> brand new feature is a logistical nightmare. The overhead is quite
+>> similar to
+>> adding new features to a compiler - it happens at a glacial pace and
+>> is only done
+>> for major features really, at considerable expense. I don't think this
+>> is an
+>> adequate model for 'extended syntax checking' of the kernel,
+>> especially when it
+>> comes to correctness that has such obvious security impact.
+>>
+>> Thanks,
+>>
+>>       Ingo
+>
+> There's the option of using GCC plugins now that the infrastructure was
+> upstreamed from grsecurity. It can be used as part of the regular build
+> process and as long as the analysis is pretty simple it shouldn't hurt
+> compile time much.
 
-Thanks for clarifying, this makes sense. I also saw some replies up
-thread that also answered some my questions.
+Well, and that the situation may arise due to memory corruption, not
+from poorly-matched set_fs() calls, which static analysis won't help
+solve. We need to catch this bad kernel state because it is a very bad
+state to run in.
 
->> arm and arm64 have the added complexity of using larger
->> page sizes on the linear map so dynamic mapping/unmapping generally
->> doesn't work. 
-> 
-> Do you mean that a page could be 16MB and therefore it would not be
-> possible to get a smaller chunk?
-> 
+-Kees
 
-Roughly yes.
-
-PAGE_SIZE is still 4K/16K/64K but the underlying page table mappings
-may use larger mappings (2MB, 32M, 512M, etc.). The ARM architecture
-has a break-before-make requirement which requires old mappings be
-fully torn down and invalidated to avoid TLB conflicts. This is nearly
-impossible to do correctly on live page tables so the current policy
-is to not break down larger mappings.
-
->> arm64 supports DEBUG_PAGEALLOC by mapping with only
->> pages but this is generally only wanted as a debug mechanism.
->> I don't know if you've given this any thought at all.
-> 
-> Since the beginning I have thought about this feature as an opt-in
-> feature. I am aware that it can have drawbacks, but I think it would be
-> valuable as debugging tool even where it's not feasible to keep it
-> always-on.
-> 
-> OTOH on certain systems it can be sufficiently appealing to be kept on,
-> even if it eats up some more memory.
-
-I'd rather see this designed as being mandatory from the start and then
-provide a mechanism to turn it off if necessary. The uptake and
-coverage from opt-in features tends to be very low based on past experience.
-
-Thanks,
-Laura
+-- 
+Kees Cook
+Pixel Security
