@@ -1,35 +1,46 @@
 MIME-Version: 1.0
-In-Reply-To: <20170508140230.23kxf2kfeazeo4zr@gmail.com>
-References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
- <20170508073352.caqe3fqf7nuxypgi@gmail.com> <CAGXu5jKZRESgGhZ6GEoO784Q1G8V0DPcwM1T2PpyTqvEAsrUdg@mail.gmail.com>
- <20170508140230.23kxf2kfeazeo4zr@gmail.com>
-From: Jann Horn <jannh@google.com>
-Date: Mon, 8 May 2017 16:06:35 +0200
-Message-ID: <CAG48ez0Hz=CimkPwuq903tgJkGj8gXUtiQJJb-P2zUes6bd6Hw@mail.gmail.com>
+In-Reply-To: <62c69fb5-03a8-4f30-cbc1-4955e9efbb18@iaik.tugraz.at>
+References: <9df77051-ac01-bfe9-3cf7-4c2ecbcb9292@iaik.tugraz.at>
+ <CAJcbSZHcAi37FfFBKF4MsC3WM-RY5ar_e1pgMScb=S3+_-wqVQ@mail.gmail.com>
+ <55fa194e-69bd-fe39-f915-6f77673aea36@iaik.tugraz.at> <CAJcbSZEOMssjUoMUBmArNeuOPoZ0gQJmEQ_WQaSOPiHp1XcNaQ@mail.gmail.com>
+ <01ebda5d918d9cbfd36d8ec4e6c12f55@cs.tu-darmstadt.de> <a7cc85fd-b261-0c83-8636-eb57c9ba71f9@iaik.tugraz.at>
+ <62c69fb5-03a8-4f30-cbc1-4955e9efbb18@iaik.tugraz.at>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Mon, 8 May 2017 07:09:45 -0700
+Message-ID: <CAJcbSZEEUMSfeyAGQm8Daaaa1WEptW46rN_nCSpq-WR9dowr1Q@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address limit before returning to user-mode
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+Subject: Re: [kernel-hardening] [RFC, PATCH] x86_64: KAISER - do not map
+ kernel in user mode
+To: Daniel Gruss <daniel.gruss@iaik.tugraz.at>
+Cc: David Gens <david.gens@cs.tu-darmstadt.de>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, clementine.maurice@iaik.tugraz.at, moritz.lipp@iaik.tugraz.at, Michael Schwarz <michael.schwarz@iaik.tugraz.at>, Richard Fellner <richard.fellner@student.tugraz.at>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Ingo Molnar <mingo@kernel.org>, anders.fogh@gdata-adan.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 8, 2017 at 4:02 PM, Ingo Molnar <mingo@kernel.org> wrote:
->
-> * Kees Cook <keescook@chromium.org> wrote:
->
->> > And yes, I realize that there were other such bugs and that such bugs might
->> > occur in the future - but why not push the overhead of the security check to
->> > the kernel build phase? I.e. I'm wondering how well we could do static
->> > analysis during kernel build - would a limited mode of Sparse be good enough
->> > for that? Or we could add a new static checker to tools/, built from first
->> > principles and used primarily for extended syntactical checking.
+On Mon, May 8, 2017 at 6:53 AM, Daniel Gruss
+<daniel.gruss@iaik.tugraz.at> wrote:
+> On 06.05.2017 10:38, Daniel Gruss wrote:
 >>
->> Static analysis is just not going to cover all cases. We've had vulnerabilities
->> where interrupt handlers left KERNEL_DS set, for example. [...]
+>> On 2017-05-06 06:02, David Gens wrote:
+>>>
+>>> Assuming that their patch indeed leaks per-cpu addresses.. it might not
+>>> necessarily
+>>> be required to change it.
+>>
+>>
+>> I think we're not leaking them (unless we still have some bug in our
+>> code).
 >
-> Got any commit ID of that bug - was it because a function executed by the
-> interrupt handler leaked KERNEL_DS?
+>
+> Just to correct my answer here as well: Although we experimented with fixed
+> mappings for per-cpu addresses, the current patch does not incorporate this
+> yet, so it indeed still leaks. However, it is not a severe problem. The
+> mapping of the required (per-cpu) variables would be at a fixed location in
+> the user CR3, instead of the ones that are used in the kernel.
 
-I think Kees might be talking about
-https://bugs.chromium.org/p/project-zero/issues/detail?id=822, fixed in
-commit e6978e4bf181fb3b5f8cb6f71b4fe30fbf1b655c. The issue was that
-perf code that can run in pretty much any context called access_ok().
+Why do you think it should be at a fixed location in the user CR3? I
+see that you just mirror the entries. You also mirror
+__entry_text_start / __entry_text_end which is part of the binary so
+will leak the base address of the kernel. Maybe I am missing
+something.
+
+-- 
+Thomas
