@@ -1,27 +1,29 @@
-Date: Tue, 9 May 2017 06:02:50 -0700
-From: Christoph Hellwig <hch@infradead.org>
-Message-ID: <20170509130250.GA11381@infradead.org>
-References: <20170428153213.137279-1-thgarnie@google.com>
- <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
- <20170508073352.caqe3fqf7nuxypgi@gmail.com>
- <20170508124621.GA20705@kroah.com>
- <20170509064522.anusoikaalvlux3w@gmail.com>
- <20170509085659.GA32555@infradead.org>
- <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
- limit before returning to user-mode
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Christoph Hellwig <hch@infradead.org>, Ingo Molnar <mingo@kernel.org>, Greg KH <greg@kroah.com>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+Message-ID: <1494338600.2410.6.camel@sipsolutions.net>
+From: Johannes Berg <johannes@sipsolutions.net>
+Date: Tue, 09 May 2017 16:03:20 +0200
+In-Reply-To: <20170509135009.13751-1-Jason@zx2c4.com> (sfid-20170509_155352_302082_2551EB62)
+References: <20170509135009.13751-1-Jason@zx2c4.com>
+	 (sfid-20170509_155352_302082_2551EB62)
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v7 0/5] skb_to_sgvec hardening
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, davem@davemloft.net, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 09, 2017 at 06:00:01AM -0700, Andy Lutomirski wrote:
-> fs/splice.c has some, ahem, interesting uses that have been the source
-> of nasty exploits in the past.  Converting them to use iov_iter
-> properly would be really, really nice.  Christoph, I don't suppose
-> you'd like to do that?
+On Tue, 2017-05-09 at 15:50 +0200, Jason A. Donenfeld wrote:
+> The recent bug with macsec and historical one with virtio have
+> indicated that letting skb_to_sgvec trounce all over an sglist
+> without checking the length is probably a bad idea. And it's not
+> necessary either: an sglist already explicitly marks its last
+> item, and the initialization functions are diligent in doing so.
+> Thus there's a clear way of avoiding future overflows.
+> 
+> So, this patchset, from a high level, makes skb_to_sgvec return
+> a potential error code, and then adjusts all callers to check
+> for the error code.
 
-I can take care of all the fs code including this one.
+Perhaps you should add __must_check annotation to the function
+prototype(s)?
+
+johannes
