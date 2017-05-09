@@ -1,86 +1,114 @@
-Date: Tue, 9 May 2017 14:33:02 -0500
-From: Josh Poimboeuf <jpoimboe@redhat.com>
-Message-ID: <20170509193302.f4eqholma2tw2llj@treble>
-References: <1494356483-81678-1-git-send-email-keescook@chromium.org>
- <1494356483-81678-3-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <1494356483-81678-3-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v4 2/2] x86/refcount: Implement fast refcount overflow
- protection
-To: Kees Cook <keescook@chromium.org>
-Cc: linux-kernel@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, kernel-hardening@lists.openwall.com
+In-Reply-To: <58E639E0.1010700@iogearbox.net>
+References: <CAHgaXd+EKJ0FWaaPojsNJtgY_YpdQXu6eMEp97uOpTFAWs4qTQ@mail.gmail.com>
+ <CAGXu5jLo8UvpNSQZBHjWZoO959ha6KFQxFzmg7SK44wz=R_QSg@mail.gmail.com>
+ <CAHgaXdJL92XRjHae2Nb9j9SerSe65=N=ErDHTQf23sdBxwthzw@mail.gmail.com>
+ <20170315.145512.1542025976162251828.davem@davemloft.net> <CAHgaXd+4QkFxnt-_iCqH8AyCN_Y8gXwr+y=iugz38NKSWspsbA@mail.gmail.com>
+ <58DAF908.8010404@iogearbox.net> <CAHgaXdKfbob3WHMho32JSh_dmfp2A=cjcePqk+NfajVpShPE6Q@mail.gmail.com>
+ <CAHgaXdJ1M4W3p9=B2hJmtxByPsA5-XHae8U6YtDH_2r_XMaR5A@mail.gmail.com> <58E639E0.1010700@iogearbox.net>
+From: Shubham Bansal <illusionist.neo@gmail.com>
+Date: Wed, 10 May 2017 01:42:10 +0530
+Message-ID: <CAHgaXd+xb5dN90sH___RtxgSC3usnH2jXkA5r3=fQJc3pOY5xw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
+To: Daniel Borkmann <daniel@iogearbox.net>
+Cc: David Miller <davem@davemloft.net>, Kees Cook <keescook@chromium.org>, Mircea Gherzan <mgherzan@gmail.com>, Network Development <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, ast@fb.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 09, 2017 at 12:01:23PM -0700, Kees Cook wrote:
-> This protection is a modified version of the x86 PAX_REFCOUNT defense
-> from PaX/grsecurity. This speeds up the refcount_t API by duplicating
-> the existing atomic_t implementation with a single instruction added to
-> detect if the refcount has wrapped past INT_MAX (or below 0) resulting
-> in a negative value, where the handler then restores the refcount_t to
-> INT_MAX. With this overflow protection, the use-after-free following a
-> refcount_t wrap is blocked from happening, avoiding the vulnerability
-> entirely.
-> 
-> While this defense only perfectly protects the overflow case, as that
-> can be detected and stopped before the reference is freed and left to be
-> abused by an attacker, it also notices some of the "inc from 0" and "below
-> 0" cases. However, these only indicate that a use-after-free has already
-> happened. Such notifications are likely avoidable by an attacker that has
-> already exploited a use-after-free vulnerability, but it's better to have
-> them than allow such conditions to remain universally silent.
-> 
-> On overflow detection (actually "negative value" detection), the refcount
-> value is reset to INT_MAX, the offending process is killed, and a report
-> and stack trace are generated. This allows the system to attempt to
-> keep operating. Another option, though not done in this patch, would be
-> to reset the counter to (INT_MIN / 2) to trap all future refcount inc
-> or dec actions, but this would result in even legitimate uses getting
-> blocked. Yet another option would be to choose (INT_MAX - N) with some
-> small N to provide some headroom for legitimate users of the reference
-> counter.
-> 
-> On the matter of races, since the entire range beyond INT_MAX but before 0
-> is negative, every inc will trap, leaving no overflow-only race condition.
-> 
-> As for performance, this implementation adds a single "js" instruction to
-> the regular execution flow of a copy of the regular atomic_t operations.
-> Since this is a forward jump, it is by default the non-predicted path,
-> which will be reinforced by dynamic branch prediction. The result is this
-> protection having no measurable change in performance over standard
-> atomic_t operations. The error path, located in .text.unlikely, uses
-> UD0 to fire a refcount exception handler, which reports and returns to
-> regular execution. This keeps the changes to .text size minimal, avoiding
-> return jumps and open-coded calls to the error reporting routine.
-> 
-> Assembly comparison:
-> 
-> atomic_inc
-> .text:
-> ffffffff81546149:       f0 ff 45 f4             lock incl -0xc(%rbp)
-> 
-> refcount_inc
-> .text:
-> ffffffff81546149:       f0 ff 45 f4             lock incl -0xc(%rbp)
-> ffffffff8154614d:       0f 88 80 d5 17 00       js     ffffffff816c36d3
-> ...
-> .text.unlikely:
-> ffffffff816c36d3:       c7 45 f4 ff ff ff 7f    movl   $0x7fffffff,-0xc(%rbp)
-> ffffffff816c36da:       0f ff                   (bad)
-> 
-> Various differences from PaX:
-> - uses earlier value reset implementation in assembly
-> - uses UD0 and refcount exception handler instead of new int vector
-> - uses .text.unlikely instead of custom named text sections
-> - applied only to refcount_t, not atomic_t (single size, only overflow)
-> - reorganized refcount error handler
-> - uses "js" instead of "jo" to trap all negative results instead of
->   just under/overflow transitions
-> 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
+Hi Daniel,
 
-Reviewed-by: Josh Poimboeuf <jpoimboe@redhat.com>
+I just tried running test_bpf.ko module.
 
--- 
-Josh
+$ echo 2 >>  /proc/sys/net/core/bpf_jit_enable
+$ insmod test_bpf.ko
+
+test_bpf: #0 TAX
+bpf_jit: flen=14 proglen=212 pass=2 image=7f15a83c from=insmod pid=730
+JIT code: 00000000: f0 05 2d e9 40 d2 4d e2 00 40 a0 e3 0c 42 8d e5
+JIT code: 00000010: 08 42 8d e5 00 00 20 e0 01 10 21 e0 20 62 9d e5
+JIT code: 00000020: 20 72 9d e5 06 70 27 e0 20 72 8d e5 24 62 9d e5
+JIT code: 00000030: 24 72 9d e5 06 70 27 e0 24 72 8d e5 00 40 a0 e1
+JIT code: 00000040: 01 50 a0 e1 01 00 a0 e3 00 10 a0 e3 20 02 8d e5
+JIT code: 00000050: 24 12 8d e5 02 00 a0 e3 00 10 a0 e3 20 62 9d e5
+JIT code: 00000060: 06 00 80 e0 00 10 a0 e3 00 00 60 e2 00 10 a0 e3
+JIT code: 00000070: 20 02 8d e5 24 12 8d e5 54 40 90 e5 20 62 9d e5
+JIT code: 00000080: 06 00 80 e0 00 10 a0 e3 20 02 8d e5 24 12 8d e5
+JIT code: 00000090: 04 00 a0 e1 01 10 a0 e3 20 62 9d e5 06 10 81 e0
+JIT code: 000000a0: 01 20 a0 e3 04 32 8d e2 bc 68 0a e3 11 60 48 e3
+JIT code: 000000b0: 36 ff 2f e1 01 10 21 e0 00 00 50 e3 04 00 00 0a
+JIT code: 000000c0: 00 00 d0 e5 01 00 00 ea 40 d2 8d e2 f0 05 bd e8
+JIT code: 000000d0: 1e ff 2f e1
+jited:1
+Unhandled fault: page domain fault (0x01b) at 0x00000051
+pgd = 871d0000
+[00000051] *pgd=671b7831, *pte=00000000, *ppte=00000000
+Internal error: : 1b [#1] SMP ARM
+Modules linked in: test_bpf(+)
+CPU: 0 PID: 730 Comm: insmod Not tainted 4.11.0+ #5
+Hardware name: ARM-Versatile Express
+task: 87023700 task.stack: 8718a000
+PC is at 0x7f15a8b4
+LR is at test_bpf_init+0x5bc/0x1000 [test_bpf]
+pc : [<7f15a8b4>]    lr : [<7f1575bc>]    psr: 80000013
+sp : 8718bd7c  ip : 00000015  fp : 7f005008
+r10: 7f005094  r9 : 893ba020  r8 : 893ba000
+r7 : 00000000  r6 : 00000001  r5 : 00000000  r4 : 00000000
+r3 : 7f15a83c  r2 : 893ba020  r1 : 00000000  r0 : fffffffd
+Flags: Nzcv  IRQs on  FIQs on  Mode SVC_32  ISA ARM  Segment none
+Control: 10c5387d  Table: 671d0059  DAC: 00000051
+Process insmod (pid: 730, stack limit = 0x8718a210)
+Stack: (0x8718bd7c to 0x8718c000)
+bd60:                                                                00000000
+bd80: 00002710 870db300 c302e7e8 7f004010 893ba000 7f005094 00000000 00000000
+bda0: 00000000 00000000 00000000 00000001 00000001 00000000 014000c0 00150628
+bdc0: 7f0050ac 7f154840 1234aaaa 1234aaab c302e7e8 0000000f 00000000 893ba000
+bde0: 0000000b 7f004010 87fd54a0 ffffe000 7f157000 00000000 871b6fc0 00000001
+be00: 78e4905c 00000024 7f154640 8010179c 80a06544 8718a000 00000001 80a54980
+be20: 80a3066c 00000007 809685c0 80a54700 80a54700 07551000 80a54700 60070013
+be40: 7f154640 801f3fc8 78e4905c 7f154640 00000001 871b6fe4 7f154640 00000001
+be60: 871b6b00 00000001 78e4905c 801eaa94 00000001 871b6fe4 8718bf44 00000001
+be80: 871b6fe4 80196e4c 7f15464c 00007fff 7f154640 80193f10 87127000 7f154640
+bea0: 7f154688 80703800 7f154770 807037e4 8081b184 807bec60 807becc4 807bec6c
+bec0: 7f15481c 8010c1b8 93600000 76ed8028 00000f60 00000000 00000000 00000000
+bee0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+bf00: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00003f80
+bf20: 76f5cf88 00000000 93684f80 8718a000 00160fda 00000051 00000000 801973b0
+bf40: 87671a00 93501000 00183f80 93684760 93684574 936788e0 00155000 00155290
+bf60: 00000000 00000000 00000000 00001f64 00000032 00000033 0000001d 00000000
+bf80: 00000017 00000000 00000000 00183f80 756e694c 00000080 80107684 fffffffd
+bfa0: 00000000 801074c0 00000000 00183f80 76dd9008 00183f80 00160fda 00000000
+bfc0: 00000000 00183f80 756e694c 00000080 00000001 7eabae2c 00172f8c 00000000
+bfe0: 7eabaae0 7eabaad0 0004017f 00013172 60070030 76dd9008 00000000 00000000
+[<7f1575bc>] (test_bpf_init [test_bpf]) from [<7f157000>]
+(test_bpf_init+0x0/0x1000 [test_bpf])
+[<7f157000>] (test_bpf_init [test_bpf]) from [<78e4905c>] (0x78e4905c)
+Code: e2600000 e3a01000 e58d0220 e58d1224 (e5904054)
+---[ end trace a36398923b914fe2 ]---
+Segmentation fault
+
+Why is trying to execute TAX which is a cBPF instruction?
+
+Best,
+Shubham Bansal
+
+
+On Thu, Apr 6, 2017 at 6:21 PM, Daniel Borkmann <daniel@iogearbox.net> wrote:
+> On 04/06/2017 01:05 PM, Shubham Bansal wrote:
+>>
+>> Gentle Reminder.
+>
+>
+> Sorry for late reply.
+>
+>> Anybody can tell me how to test the JIT compiler ?
+>
+>
+> There's lib/test_bpf.c, see Documentation/networking/filter.txt +1349
+> for some more information. It basically contains various test cases that
+> have the purpose to test the JIT with corner cases. If you see a useful
+> test missing, please send a patch for it, so all other JITs can benefit
+> from this as well. For extracting disassembly from a generated test case,
+> check out bpf_jit_disasm (Documentation/networking/filter.txt +486).
+>
+> Thanks,
+> Daniel
