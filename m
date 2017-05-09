@@ -1,77 +1,33 @@
-References: <9200d87d-33b6-2c70-0095-e974a30639fd@huawei.com>
- <a445774f-a307-25aa-d44e-c523a7a42da6@redhat.com>
- <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
- <b3fab9c3-fa35-eb7b-204c-f85a0d392e12@redhat.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <72cc9d16-305e-1856-0bbb-59010b067589@huawei.com>
-Date: Tue, 9 May 2017 12:38:58 +0300
+Date: Tue, 9 May 2017 01:56:59 -0700
+From: Christoph Hellwig <hch@infradead.org>
+Message-ID: <20170509085659.GA32555@infradead.org>
+References: <20170428153213.137279-1-thgarnie@google.com>
+ <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
+ <20170508073352.caqe3fqf7nuxypgi@gmail.com>
+ <20170508124621.GA20705@kroah.com>
+ <20170509064522.anusoikaalvlux3w@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <b3fab9c3-fa35-eb7b-204c-f85a0d392e12@redhat.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: RFC v2: post-init-read-only protection for data allocated
- dynamically
-To: Laura Abbott <labbott@redhat.com>, Michal Hocko <mhocko@kernel.org>
-Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170509064522.anusoikaalvlux3w@gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
+ limit before returning to user-mode
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Greg KH <greg@kroah.com>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 08/05/17 18:25, Laura Abbott wrote:
-> On 05/05/2017 03:42 AM, Igor Stoppa wrote:
->> On 04/05/17 19:49, Laura Abbott wrote:
+On Tue, May 09, 2017 at 08:45:22AM +0200, Ingo Molnar wrote:
+> We only have ~115 code blocks in the kernel that set/restore KERNEL_DS, it would 
+> be a pity to add a runtime check to every system call ...
 
-[...]
+I think we should simply strive to remove all of them that aren't
+in core scheduler / arch code.  Basically evetyytime we do the
 
-> PAGE_SIZE is still 4K/16K/64K but the underlying page table mappings
-> may use larger mappings (2MB, 32M, 512M, etc.). The ARM architecture
-> has a break-before-make requirement which requires old mappings be
-> fully torn down and invalidated to avoid TLB conflicts. This is nearly
-> impossible to do correctly on live page tables so the current policy
-> is to not break down larger mappings.
+	oldfs = get_fs();
+	set_fs(KERNEL_DS); 
+	..
+	set_fs(oldfs);
 
-ok, but if a system integrator chooses to have the mapping set to 512M
-(let's consider a case that is definitely unoptimized), this granularity
-will apply to anything that needs to be marked as R/O and is allocated
-through linear mapping.
-
-If the issue inherently sits with linear allocation, then maybe the
-correct approach is to confirm if linear allocation is really needed, in
-the first place.
-Maybe not, at least for the type of data I have in mind.
-
-However, that would require changes in the users of the interface,
-rather than the interface itself.
-
-I don't see this change as a problem, in general, but OTOH I do not know
-yet if there are legitimate reasons to use kmalloc for any
-post-init-read-only data.
-
-Of course, if you have any proposal that would solve this problem with
-large pages, I'd be interested to know.
-
-Also, for me to better understand the magnitude of the problem, do you
-know if there is any specific scenario where larger mappings would be
-used/recommended?
-
-The major reason for using larger mapping that I can think of, is to
-improve the efficiency of the TLB when under pressure, however I
-wouldn't be able to judge how much this can affect the overall
-performance a big iron or in a small device.
-
-Do you know if there is any similar case that has to deal with locking
-down large pages?
-Doesn't the kernel text have potentially a similar risks of leaving
-large amount of memory unused?
-Is rodata only virtual?
-
-> I'd rather see this designed as being mandatory from the start and then
-> provide a mechanism to turn it off if necessary. The uptake and
-> coverage from opt-in features tends to be very low based on past experience.
-
-I have nothing against such wish, actually I'd love it, but I'm not sure
-I have the answer for it.
-
-Yet, a partial solution is better than nothing, if there is no truly
-flexible one.
-
---
-igor
+trick we're doing something wrong, and there should always be better
+ways to archive it.  E.g. using iov_iter with a ITER_KVEC type
+consistently would already remove most of them.
