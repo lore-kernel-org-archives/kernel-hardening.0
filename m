@@ -1,64 +1,166 @@
-MIME-Version: 1.0
-In-Reply-To: <20170509085659.GA32555@infradead.org>
-References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
- <20170508073352.caqe3fqf7nuxypgi@gmail.com> <20170508124621.GA20705@kroah.com>
- <20170509064522.anusoikaalvlux3w@gmail.com> <20170509085659.GA32555@infradead.org>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Tue, 9 May 2017 06:00:01 -0700
-Message-ID: <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
- limit before returning to user-mode
-To: Christoph Hellwig <hch@infradead.org>
-Cc: Ingo Molnar <mingo@kernel.org>, Greg KH <greg@kroah.com>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue,  9 May 2017 15:50:05 +0200
+Message-Id: <20170509135009.13751-2-Jason@zx2c4.com>
+In-Reply-To: <20170509135009.13751-1-Jason@zx2c4.com>
+References: <20170509135009.13751-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH v7 1/5] skbuff: return -EMSGSIZE in skb_to_sgvec to prevent overflow
+To: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, davem@davemloft.net, kernel-hardening@lists.openwall.com
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, David Howells <dhowells@redhat.com>, Sabrina Dubroca <sd@queasysnail.net>, "Michael S. Tsirkin" <mst@redhat.com>, Jason Wang <jasowang@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 9, 2017 at 1:56 AM, Christoph Hellwig <hch@infradead.org> wrote:
-> On Tue, May 09, 2017 at 08:45:22AM +0200, Ingo Molnar wrote:
->> We only have ~115 code blocks in the kernel that set/restore KERNEL_DS, it would
->> be a pity to add a runtime check to every system call ...
->
-> I think we should simply strive to remove all of them that aren't
-> in core scheduler / arch code.  Basically evetyytime we do the
->
->         oldfs = get_fs();
->         set_fs(KERNEL_DS);
->         ..
->         set_fs(oldfs);
->
-> trick we're doing something wrong, and there should always be better
-> ways to archive it.  E.g. using iov_iter with a ITER_KVEC type
-> consistently would already remove most of them.
+This is a defense-in-depth measure in response to bugs like
+4d6fa57b4dab ("macsec: avoid heap overflow in skb_to_sgvec"). There's
+not only a potential overflow of sglist items, but also a stack overflow
+potential, so we fix this by limiting the amount of recursion this function
+is allowed to do. Not actually providing a bounded base case is a future
+disaster that we can easily avoid here.
 
-How about trying to remove all of them?  If we could actually get rid
-of all of them, we could drop the arch support, and we'd get faster,
-simpler, shorter uaccess code throughout the kernel.
+As a small matter of house keeping, we take this opportunity to move the
+documentation comment over the actual function the documentation is for.
 
-The ones in kernel/compat.c are generally garbage.  They should be
-using compat_alloc_user_space().  Ditto for kernel/power/user.c.
+While this could be implemented by using an explicit stack of skbuffs,
+when implementing this, the function complexity increased considerably,
+and I don't think such complexity and bloat is actually worth it. So,
+instead I built this and tested it on x86, x86_64, ARM, ARM64, and MIPS,
+and measured the stack usage there. I also reverted the recent MIPS
+changes that give it a separate IRQ stack, so that I could experience
+some worst-case situations. I found that limiting it to 24 layers deep
+yielded a good stack usage with room for safety, as well as being much
+deeper than any driver actually ever creates.
 
-flush_module_icache() is a potentially silly arch thing.  Does the
-code in kernel/module.c that uses set_fs() actually work?
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+Cc: Steffen Klassert <steffen.klassert@secunet.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: "David S. Miller" <davem@davemloft.net>
+Cc: David Howells <dhowells@redhat.com>
+Cc: Sabrina Dubroca <sd@queasysnail.net>
+Cc: "Michael S. Tsirkin" <mst@redhat.com>
+Cc: Jason Wang <jasowang@redhat.com>
+---
+ net/core/skbuff.c | 65 +++++++++++++++++++++++++++++++++++--------------------
+ 1 file changed, 42 insertions(+), 23 deletions(-)
 
-kernel/signal.c's set_fs() is laziness.
-
-__probe_kernel_read() and __probe_kernel_write() use set_fs(), but
-that usage only matters on sane arches* like s390x.  We should
-arguably have a set_uaccess_address_space() or similar for this
-purpose that's a nop on normal arches like x86.
-
-fs/splice.c has some, ahem, interesting uses that have been the source
-of nasty exploits in the past.  Converting them to use iov_iter
-properly would be really, really nice.  Christoph, I don't suppose
-you'd like to do that?
-
-The others seem to mostly be fixable, but I haven't looked that closely.
-
-Overall, I suspect that a big part of why mitigations like the one
-being discussed in this thread were developed is because addr_limit
-used to be on the stack, making it (along with restart_block) a really
-nice target.  This is fixed now on x86, arm64, and s390x, I believe,
-and other arches can easily opt in to the fix.
-
-* I'm strongly in favor of arches that have totally separate user and
-kernel address spaces.  Sadly, the most common arches don't do this.
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index f86bf69cfb8d..ab51b97d5600 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -3481,24 +3481,18 @@ void __init skb_init(void)
+ 						NULL);
+ }
+ 
+-/**
+- *	skb_to_sgvec - Fill a scatter-gather list from a socket buffer
+- *	@skb: Socket buffer containing the buffers to be mapped
+- *	@sg: The scatter-gather list to map into
+- *	@offset: The offset into the buffer's contents to start mapping
+- *	@len: Length of buffer space to be mapped
+- *
+- *	Fill the specified scatter-gather list with mappings/pointers into a
+- *	region of the buffer space attached to a socket buffer.
+- */
+ static int
+-__skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
++__skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len,
++	       unsigned int recursion_level)
+ {
+ 	int start = skb_headlen(skb);
+ 	int i, copy = start - offset;
+ 	struct sk_buff *frag_iter;
+ 	int elt = 0;
+ 
++	if (unlikely(recursion_level >= 24))
++		return -EMSGSIZE;
++
+ 	if (copy > 0) {
+ 		if (copy > len)
+ 			copy = len;
+@@ -3517,6 +3511,8 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 		end = start + skb_frag_size(&skb_shinfo(skb)->frags[i]);
+ 		if ((copy = end - offset) > 0) {
+ 			skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
++			if (unlikely(elt && sg_is_last(&sg[elt - 1])))
++				return -EMSGSIZE;
+ 
+ 			if (copy > len)
+ 				copy = len;
+@@ -3531,16 +3527,22 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 	}
+ 
+ 	skb_walk_frags(skb, frag_iter) {
+-		int end;
++		int end, ret;
+ 
+ 		WARN_ON(start > offset + len);
+ 
+ 		end = start + frag_iter->len;
+ 		if ((copy = end - offset) > 0) {
++			if (unlikely(elt && sg_is_last(&sg[elt - 1])))
++				return -EMSGSIZE;
++
+ 			if (copy > len)
+ 				copy = len;
+-			elt += __skb_to_sgvec(frag_iter, sg+elt, offset - start,
+-					      copy);
++			ret = __skb_to_sgvec(frag_iter, sg+elt, offset - start,
++					      copy, recursion_level + 1);
++			if (unlikely(ret < 0))
++				return ret;
++			elt += ret;
+ 			if ((len -= copy) == 0)
+ 				return elt;
+ 			offset += copy;
+@@ -3551,6 +3553,31 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 	return elt;
+ }
+ 
++/**
++ *	skb_to_sgvec - Fill a scatter-gather list from a socket buffer
++ *	@skb: Socket buffer containing the buffers to be mapped
++ *	@sg: The scatter-gather list to map into
++ *	@offset: The offset into the buffer's contents to start mapping
++ *	@len: Length of buffer space to be mapped
++ *
++ *	Fill the specified scatter-gather list with mappings/pointers into a
++ *	region of the buffer space attached to a socket buffer. Returns either
++ *	the number of scatterlist items used, or -EMSGSIZE if the contents
++ *	could not fit.
++ */
++int skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
++{
++	int nsg = __skb_to_sgvec(skb, sg, offset, len, 0);
++
++	if (nsg <= 0)
++		return nsg;
++
++	sg_mark_end(&sg[nsg - 1]);
++
++	return nsg;
++}
++EXPORT_SYMBOL_GPL(skb_to_sgvec);
++
+ /* As compared with skb_to_sgvec, skb_to_sgvec_nomark only map skb to given
+  * sglist without mark the sg which contain last skb data as the end.
+  * So the caller can mannipulate sg list as will when padding new data after
+@@ -3573,19 +3600,11 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ int skb_to_sgvec_nomark(struct sk_buff *skb, struct scatterlist *sg,
+ 			int offset, int len)
+ {
+-	return __skb_to_sgvec(skb, sg, offset, len);
++	return __skb_to_sgvec(skb, sg, offset, len, 0);
+ }
+ EXPORT_SYMBOL_GPL(skb_to_sgvec_nomark);
+ 
+-int skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+-{
+-	int nsg = __skb_to_sgvec(skb, sg, offset, len);
+ 
+-	sg_mark_end(&sg[nsg - 1]);
+-
+-	return nsg;
+-}
+-EXPORT_SYMBOL_GPL(skb_to_sgvec);
+ 
+ /**
+  *	skb_cow_data - Check that a socket buffer's data buffers are writable
+-- 
+2.12.2
