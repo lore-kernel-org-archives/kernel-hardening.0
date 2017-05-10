@@ -1,76 +1,57 @@
-Date: Wed, 10 May 2017 08:27:47 +0100
-From: Al Viro <viro@ZenIV.linux.org.uk>
-Message-ID: <20170510072746.GF390@ZenIV.linux.org.uk>
-References: <20170508124621.GA20705@kroah.com>
- <20170509064522.anusoikaalvlux3w@gmail.com>
- <20170509085659.GA32555@infradead.org>
- <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
- <20170509130250.GA11381@infradead.org>
- <20170509160322.GA15902@infradead.org>
- <20170510021118.GA390@ZenIV.linux.org.uk>
- <20170510024524.GB390@ZenIV.linux.org.uk>
- <20170510031254.GC390@ZenIV.linux.org.uk>
- <20170510065301.GC4115@infradead.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20170510065301.GC4115@infradead.org>
-Sender: Al Viro <viro@ftp.linux.org.uk>
+Sender: arndbergmann@gmail.com
+In-Reply-To: <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
+References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
+ <20170508073352.caqe3fqf7nuxypgi@gmail.com> <20170508124621.GA20705@kroah.com>
+ <20170509064522.anusoikaalvlux3w@gmail.com> <20170509085659.GA32555@infradead.org>
+ <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Wed, 10 May 2017 09:37:04 +0200
+Message-ID: <CAK8P3a2j6h2MAx3h2NCtadcFsNuFcf158F5OV1e2SK37acZRRg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
  limit before returning to user-mode
-To: Christoph Hellwig <hch@infradead.org>
-Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@kernel.org>, Greg KH <greg@kroah.com>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Christoph Hellwig <hch@infradead.org>, Ingo Molnar <mingo@kernel.org>, Greg KH <greg@kroah.com>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 09, 2017 at 11:53:01PM -0700, Christoph Hellwig wrote:
-> On Wed, May 10, 2017 at 04:12:54AM +0100, Al Viro wrote:
-> > What's the point?  What's wrong with having kernel_read()/kernel_readv()/etc.?
-> > You still have set_fs() in there; doing that one level up in call chain would
-> > be just fine...  IDGI.
-> 
-> The problem is that they modify the address limit, which the whole
-> subthread here wants to get rid of.
+On Tue, May 9, 2017 at 3:00 PM, Andy Lutomirski <luto@kernel.org> wrote:
+> On Tue, May 9, 2017 at 1:56 AM, Christoph Hellwig <hch@infradead.org> wrote:
+>> On Tue, May 09, 2017 at 08:45:22AM +0200, Ingo Molnar wrote:
+>>> We only have ~115 code blocks in the kernel that set/restore KERNEL_DS, it would
+>>> be a pity to add a runtime check to every system call ...
+>>
+>> I think we should simply strive to remove all of them that aren't
+>> in core scheduler / arch code.  Basically evetyytime we do the
+>>
+>>         oldfs = get_fs();
+>>         set_fs(KERNEL_DS);
+>>         ..
+>>         set_fs(oldfs);
+>>
+>> trick we're doing something wrong, and there should always be better
+>> ways to archive it.  E.g. using iov_iter with a ITER_KVEC type
+>> consistently would already remove most of them.
+>
+> How about trying to remove all of them?  If we could actually get rid
+> of all of them, we could drop the arch support, and we'd get faster,
+> simpler, shorter uaccess code throughout the kernel.
+>
+> The ones in kernel/compat.c are generally garbage.  They should be
+> using compat_alloc_user_space().  Ditto for kernel/power/user.c.
 
-And you *still* do the same.  Christoph, this is ridiculous - the worst
-part of the area is not a couple of functions in fs/read_write.c, it's
-a fucking lot of ->read() and ->write() instances in shitty driver code,
-pardon the redundance.  And _that_ is still done under set_fs(KERNEL_DS).
+compat_alloc_user_space() has some problems too, it adds
+complexity to a rarely-tested code path and can add some noticeable
+overhead in cases where user space access is slow because of
+extra checks.
 
-Claiming that set_fs() done one function deeper in callchain (both in
-fs/read_write.c) is somehow better because it reduces the amount of code
-under that thing...  Get real, please - helpers that encapsulate those
-set_fs() pairs (a-la kernel_read(), etc.) absolutely make sense and
-converting their open-coded instances to calls of those helpers is clearly
-a good thing.  However, we are not
-	* getting rid of low-quality code run under KERNEL_DS
-	* gettind rid of set_fs() itself
-	* getting a generic kernel_read() variant that would really take
-an iov_iter.
+It's clearly better than set_fs(), but the way I prefer to convert the
+code is to avoid both and instead move compat handlers next to
+the native code, and splitting out the common code between native
+and compat mode into a helper that takes a regular kernel pointer.
 
-That's what I'm objecting to.  Centralized kernel_readv() et.al. - sure,
-and fs/read_write.c is the right place for those.  No arguments here.
-Conversion to those - absolutely; drivers have no fucking business touching
-set_fs() at all.  But your primitives are trouble waiting to happen.
-Let them take kvec arrays.  And let them, in case when there's no
-->read_iter()/->write_iter(), do set_fs().  Statically, without this
-if (iter->type & ITER_KVEC) ... stuff.
+I think that's what both Al has done in the past on compat_ioctl()
+and select() and what Christoph does in his latest series, but
+it seems worth pointing out for others that decide to help out here.
 
-> > Another delicate place: you can't assume that write() always advances
-> > file position by its (positive) return value.  btrfs stuff is sensitive
-> > to that.
-> 
-> If we don't want to assume that we need to pass pointer to pos to
-> kernel_read/write.  Which might be a good idea in general.
-
-Yes.
-
-> > ashmem probably _is_ OK with demanding ->read_iter(), but I'm not sure
-> > about blind asma->file->f_pos += ret.  That's begging for races.  Actually,
-> > scratch that - it *is* racy.
-> 
-> I think the proper fix is to not even bother to maintain f_pos of the
-> backing file, as we don't ever use it - all reads from it pass in
-> an explicit position anyway.
-
-vfs_llseek() used by ashmem_llseek()...
+     Arnd
