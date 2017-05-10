@@ -1,34 +1,91 @@
-References: <9200d87d-33b6-2c70-0095-e974a30639fd@huawei.com>
- <a445774f-a307-25aa-d44e-c523a7a42da6@redhat.com>
- <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
- <20170510080542.GF31466@dhcp22.suse.cz>
- <885311a2-5b9f-4402-0a71-5a3be7870aa0@huawei.com>
- <20170510114319.GK31466@dhcp22.suse.cz>
- <1a8cc1f4-0b72-34ea-43ad-5ece22a8d5cf@huawei.com>
-From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <b780ac13-4fc3-ac07-f0c0-7a6cc8dae694@intel.com>
-Date: Wed, 10 May 2017 08:45:28 -0700
-MIME-Version: 1.0
-In-Reply-To: <1a8cc1f4-0b72-34ea-43ad-5ece22a8d5cf@huawei.com>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: RFC v2: post-init-read-only protection for data allocated
- dynamically
-To: Igor Stoppa <igor.stoppa@huawei.com>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>
-Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Wed, 10 May 2017 13:36:37 -0400
+Message-Id: <20170510173637.25116-1-danielmicay@gmail.com>
+Subject: [kernel-hardening] [PATCH] mark most percpu globals as __ro_after_init
+To: Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Daniel Micay <danielmicay@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 05/10/2017 08:19 AM, Igor Stoppa wrote:
-> So I'd like to play a little what-if scenario:
-> what if I was to support exclusively virtual memory and convert to it
-> everything that might need sealing?
+Moving pcpu_base_addr to this section comes from PaX where it's part of
+KERNEXEC. This extends it to the rest of the globals only written by the
+init code.
 
-Because of the issues related to fracturing large pages, you might have
-had to go this route eventually anyway.  Changing the kernel linear map
-isn't nice.
+Signed-off-by: Daniel Micay <danielmicay@gmail.com>
+---
+ mm/percpu.c | 36 ++++++++++++++++++------------------
+ 1 file changed, 18 insertions(+), 18 deletions(-)
 
-FWIW, you could test this scheme by just converting all the users to
-vmalloc() and seeing what breaks.  They'd all end up rounding up all
-their allocations to PAGE_SIZE, but that'd be fine for testing.
-
-Could you point out 5 or 10 places in the kernel that you want to convert?
+diff --git a/mm/percpu.c b/mm/percpu.c
+index e0aa8ae7bde7..c03753054099 100644
+--- a/mm/percpu.c
++++ b/mm/percpu.c
+@@ -121,35 +121,35 @@ struct pcpu_chunk {
+ 	unsigned long		populated[];	/* populated bitmap */
+ };
+ 
+-static int pcpu_unit_pages __read_mostly;
+-static int pcpu_unit_size __read_mostly;
+-static int pcpu_nr_units __read_mostly;
+-static int pcpu_atom_size __read_mostly;
+-static int pcpu_nr_slots __read_mostly;
+-static size_t pcpu_chunk_struct_size __read_mostly;
++static int pcpu_unit_pages __ro_after_init;
++static int pcpu_unit_size __ro_after_init;
++static int pcpu_nr_units __ro_after_init;
++static int pcpu_atom_size __ro_after_init;
++static int pcpu_nr_slots __ro_after_init;
++static size_t pcpu_chunk_struct_size __ro_after_init;
+ 
+ /* cpus with the lowest and highest unit addresses */
+-static unsigned int pcpu_low_unit_cpu __read_mostly;
+-static unsigned int pcpu_high_unit_cpu __read_mostly;
++static unsigned int pcpu_low_unit_cpu __ro_after_init;
++static unsigned int pcpu_high_unit_cpu __ro_after_init;
+ 
+ /* the address of the first chunk which starts with the kernel static area */
+-void *pcpu_base_addr __read_mostly;
++void *pcpu_base_addr __ro_after_init;
+ EXPORT_SYMBOL_GPL(pcpu_base_addr);
+ 
+-static const int *pcpu_unit_map __read_mostly;		/* cpu -> unit */
+-const unsigned long *pcpu_unit_offsets __read_mostly;	/* cpu -> unit offset */
++static const int *pcpu_unit_map __ro_after_init;		/* cpu -> unit */
++const unsigned long *pcpu_unit_offsets __ro_after_init;	/* cpu -> unit offset */
+ 
+ /* group information, used for vm allocation */
+-static int pcpu_nr_groups __read_mostly;
+-static const unsigned long *pcpu_group_offsets __read_mostly;
+-static const size_t *pcpu_group_sizes __read_mostly;
++static int pcpu_nr_groups __ro_after_init;
++static const unsigned long *pcpu_group_offsets __ro_after_init;
++static const size_t *pcpu_group_sizes __ro_after_init;
+ 
+ /*
+  * The first chunk which always exists.  Note that unlike other
+  * chunks, this one can be allocated and mapped in several different
+  * ways and thus often doesn't live in the vmalloc area.
+  */
+-static struct pcpu_chunk *pcpu_first_chunk;
++static struct pcpu_chunk *pcpu_first_chunk __ro_after_init;
+ 
+ /*
+  * Optional reserved chunk.  This chunk reserves part of the first
+@@ -158,13 +158,13 @@ static struct pcpu_chunk *pcpu_first_chunk;
+  * area doesn't exist, the following variables contain NULL and 0
+  * respectively.
+  */
+-static struct pcpu_chunk *pcpu_reserved_chunk;
+-static int pcpu_reserved_chunk_limit;
++static struct pcpu_chunk *pcpu_reserved_chunk __ro_after_init;
++static int pcpu_reserved_chunk_limit __ro_after_init;
+ 
+ static DEFINE_SPINLOCK(pcpu_lock);	/* all internal data structures */
+ static DEFINE_MUTEX(pcpu_alloc_mutex);	/* chunk create/destroy, [de]pop, map ext */
+ 
+-static struct list_head *pcpu_slot __read_mostly; /* chunk list slots */
++static struct list_head *pcpu_slot __ro_after_init; /* chunk list slots */
+ 
+ /* chunks which need their map areas extended, protected by pcpu_lock */
+ static LIST_HEAD(pcpu_map_extend_chunks);
+-- 
+2.12.2
