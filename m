@@ -1,51 +1,39 @@
-Date: Wed, 10 May 2017 04:39:12 +0100
-From: Al Viro <viro@ZenIV.linux.org.uk>
-Message-ID: <20170510033911.GE390@ZenIV.linux.org.uk>
-References: <20170508124621.GA20705@kroah.com>
- <20170509064522.anusoikaalvlux3w@gmail.com>
- <20170509085659.GA32555@infradead.org>
- <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
- <20170509130250.GA11381@infradead.org>
- <20170509160322.GA15902@infradead.org>
- <20170510021118.GA390@ZenIV.linux.org.uk>
- <20170510024524.GB390@ZenIV.linux.org.uk>
- <20170510031254.GC390@ZenIV.linux.org.uk>
- <20170510032137.GD390@ZenIV.linux.org.uk>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20170510032137.GD390@ZenIV.linux.org.uk>
-Sender: Al Viro <viro@ftp.linux.org.uk>
+Sender: arndbergmann@gmail.com
+In-Reply-To: <20170509160322.GA15902@infradead.org>
+References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
+ <20170508073352.caqe3fqf7nuxypgi@gmail.com> <20170508124621.GA20705@kroah.com>
+ <20170509064522.anusoikaalvlux3w@gmail.com> <20170509085659.GA32555@infradead.org>
+ <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
+ <20170509130250.GA11381@infradead.org> <20170509160322.GA15902@infradead.org>
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Wed, 10 May 2017 09:28:48 +0200
+Message-ID: <CAK8P3a1N6kVEBtSrA+A2QccT0t8P5nHJfui_dYxWd9Tz2Qb63w@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
  limit before returning to user-mode
 To: Christoph Hellwig <hch@infradead.org>
-Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@kernel.org>, Greg KH <greg@kroah.com>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@kernel.org>, Greg KH <greg@kroah.com>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 10, 2017 at 04:21:37AM +0100, Al Viro wrote:
-> On Wed, May 10, 2017 at 04:12:54AM +0100, Al Viro wrote:
-> 
-> > Broken commit: "net: don't play with address limits in kernel_recvmsg".
-> > It would be OK if it was only about data.  Unfortunately, that's not
-> > true in one case: svc_udp_recvfrom() wants ->msg_control.
-> > 
-> > Another delicate place: you can't assume that write() always advances
-> > file position by its (positive) return value.  btrfs stuff is sensitive
-> > to that.
-> > 
-> > ashmem probably _is_ OK with demanding ->read_iter(), but I'm not sure
-> > about blind asma->file->f_pos += ret.  That's begging for races.  Actually,
-> > scratch that - it *is* racy.
-> 
-> kvec_length(): please, don't.  I would rather have the last remaining
-> iov_length() gone...   What do you need it for, anyway?  You have only
-> two users and both have the count passed to them (as *count and *cnt resp.)
+On Tue, May 9, 2017 at 6:03 PM, Christoph Hellwig <hch@infradead.org> wrote:
+> On Tue, May 09, 2017 at 06:02:50AM -0700, Christoph Hellwig wrote:
+>> On Tue, May 09, 2017 at 06:00:01AM -0700, Andy Lutomirski wrote:
+>> > fs/splice.c has some, ahem, interesting uses that have been the source
+>> > of nasty exploits in the past.  Converting them to use iov_iter
+>> > properly would be really, really nice.  Christoph, I don't suppose
+>> > you'd like to do that?
+>>
+>> I can take care of all the fs code including this one.
+>
+> I spent the afternoon hacking up where I'd like this to head.  It's
+> completely untested as of now:
+>
+>         http://git.infradead.org/users/hch/vfs.git/shortlog/refs/heads/setfs-elimination
 
-fcntl stuff: I've decided not to put something similar into work.compat
-since I couldn't decide what to do with compat stuff - word-by-word copy
-from userland converting to struct flock + conversion to posix_lock +
-actual work + conversion to flock + word-by-word copy to userland...  Smells
-like we might be better off with compat_flock_to_posix_lock() et.al.
-I'm still not sure; played a bit one way and another and dediced to drop
-it for now.  Hell knows...
+My older time64_t syscall series has the side-effect of doing something
+like this to the time-related compat handlers in kernel/compat.c. If nobody
+else has started looking at removing set_fs from those, I can extract
+the relevant parts from my series.
+
+      Arnd
