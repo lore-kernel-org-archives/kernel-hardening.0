@@ -1,52 +1,58 @@
-Sender: Tejun Heo <htejun@gmail.com>
-Date: Wed, 10 May 2017 15:20:35 -0400
-From: Tejun Heo <tj@kernel.org>
-Message-ID: <20170510192035.GI32165@htj.duckdns.org>
-References: <20170510173637.25116-1-danielmicay@gmail.com>
- <20170510175238.GH32165@htj.duckdns.org>
- <1494439172.1255.1.camel@gmail.com>
+Date: Wed, 10 May 2017 21:29:20 +0100
+From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+Message-ID: <20170510212920.7f6bc5e6@alans-desktop>
+In-Reply-To: <20170505232018.28846-1-matt@nmatt.com>
+References: <20170505232018.28846-1-matt@nmatt.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1494439172.1255.1.camel@gmail.com>
-Subject: [kernel-hardening] Re: [PATCH] mark most percpu globals as __ro_after_init
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v6 0/2] security: tty: make TIOCSTI ioctl require
+ CAP_SYS_ADMIN
+To: Matt Brown <matt@nmatt.com>
+Cc: serge@hallyn.com, gregkh@linuxfoundation.org, jslaby@suse.com, akpm@linux-foundation.org, jannh@google.com, keescook@chromium.org, jmorris@namei.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 10, 2017 at 01:59:32PM -0400, Daniel Micay wrote:
-> On Wed, 2017-05-10 at 13:52 -0400, Tejun Heo wrote:
-> > Hello, Daniel.
-> > 
-> > On Wed, May 10, 2017 at 01:36:37PM -0400, Daniel Micay wrote:
-> > > Moving pcpu_base_addr to this section comes from PaX where it's part
-> > > of
-> > > KERNEXEC. This extends it to the rest of the globals only written by
-> > > the
-> > > init code.
-> > 
-> > How did you test the patch?
-> 
-> Booted / did some stuff on x86 (it's running right now), and currently
-> building it for a 3.18 arm64 kernel to test there.
-> 
-> > 
-> > > -static struct list_head *pcpu_slot __read_mostly; /* chunk list
-> > > slots */
-> > > +static struct list_head *pcpu_slot __ro_after_init; /* chunk list
-> > > slots */
-> > 
-> > At least this one isn't read only.
-> 
-> It's the array it points to being modified after it gets assigned to
-> during init with pcpu_slot = memblock_virt_alloc(...), not the pointer
-> variable itself. The references after init are all pcpu_slot[...]
-> including taking references to slots in the array so there's always a
-> dereference happening first.
+On Fri,  5 May 2017 19:20:16 -0400
+Matt Brown <matt@nmatt.com> wrote:
 
-Ah, right.  Cool, applying to percpu/for-4.13.
+> This patchset introduces the tiocsti_restrict sysctl, whose default is
+> controlled via CONFIG_SECURITY_TIOCSTI_RESTRICT. When activated, this
+> control restricts all TIOCSTI ioctl calls from non CAP_SYS_ADMIN users.
+> 
+> This patch was inspired from GRKERNSEC_HARDEN_TTY.
+> 
+> This patch would have prevented
+> https://bugzilla.redhat.com/show_bug.cgi?id=1411256 under the following
+> conditions:
+> * non-privileged container
+> * container run inside new user namespace
+> 
+> Possible effects on userland:
+> 
+> There could be a few user programs that would be effected by this
+> change.
+> See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
+> notable programs are: agetty, csh, xemacs and tcsh
+> 
+> However, I still believe that this change is worth it given that the
+> Kconfig defaults to n. 
 
-Thanks.
+And it still doesn't deal with the fact that there are hundreds of other
+ways to annoy the owner of a tty if it's passed to a lower privilege
+child from framebuffer reprogramming through keyboard remaps.
 
--- 
-tejun
+The proper way to handle those cases is to create a pty/tty pair and use
+that. Your patch is pure snake oil and if anything implies safety that
+doesn't exist.
+
+In addition your change to allow it to be used by root in the guest
+completely invalidates any protection you have because I can push
+
+"rm -rf /\n"
+
+as root in my namespace and exit
+
+The tty buffers are not flushed across the context change so the shell
+you return to gets the input and oh dear....
+
+Alan
