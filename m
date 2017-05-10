@@ -1,91 +1,33 @@
 From: Daniel Micay <danielmicay@gmail.com>
-Date: Wed, 10 May 2017 13:36:37 -0400
-Message-Id: <20170510173637.25116-1-danielmicay@gmail.com>
-Subject: [kernel-hardening] [PATCH] mark most percpu globals as __ro_after_init
-To: Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>
+Date: Wed, 10 May 2017 13:44:41 -0400
+Message-Id: <20170510174441.26163-1-danielmicay@gmail.com>
+Subject: [kernel-hardening] [PATCH] mark protection_map as __ro_after_init
+To: Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org
 Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Daniel Micay <danielmicay@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Moving pcpu_base_addr to this section comes from PaX where it's part of
-KERNEXEC. This extends it to the rest of the globals only written by the
-init code.
+The protection map is only modified by per-arch init code so it can be
+protected from writes after the init code runs.
+
+This change was extracted from PaX where it's part of KERNEXEC.
 
 Signed-off-by: Daniel Micay <danielmicay@gmail.com>
 ---
- mm/percpu.c | 36 ++++++++++++++++++------------------
- 1 file changed, 18 insertions(+), 18 deletions(-)
+ mm/mmap.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/mm/percpu.c b/mm/percpu.c
-index e0aa8ae7bde7..c03753054099 100644
---- a/mm/percpu.c
-+++ b/mm/percpu.c
-@@ -121,35 +121,35 @@ struct pcpu_chunk {
- 	unsigned long		populated[];	/* populated bitmap */
+diff --git a/mm/mmap.c b/mm/mmap.c
+index f82741e199c0..3bd5ecd20d4d 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -94,7 +94,7 @@ static void unmap_region(struct mm_struct *mm,
+  *								w: (no) no
+  *								x: (yes) yes
+  */
+-pgprot_t protection_map[16] = {
++pgprot_t protection_map[16] __ro_after_init = {
+ 	__P000, __P001, __P010, __P011, __P100, __P101, __P110, __P111,
+ 	__S000, __S001, __S010, __S011, __S100, __S101, __S110, __S111
  };
- 
--static int pcpu_unit_pages __read_mostly;
--static int pcpu_unit_size __read_mostly;
--static int pcpu_nr_units __read_mostly;
--static int pcpu_atom_size __read_mostly;
--static int pcpu_nr_slots __read_mostly;
--static size_t pcpu_chunk_struct_size __read_mostly;
-+static int pcpu_unit_pages __ro_after_init;
-+static int pcpu_unit_size __ro_after_init;
-+static int pcpu_nr_units __ro_after_init;
-+static int pcpu_atom_size __ro_after_init;
-+static int pcpu_nr_slots __ro_after_init;
-+static size_t pcpu_chunk_struct_size __ro_after_init;
- 
- /* cpus with the lowest and highest unit addresses */
--static unsigned int pcpu_low_unit_cpu __read_mostly;
--static unsigned int pcpu_high_unit_cpu __read_mostly;
-+static unsigned int pcpu_low_unit_cpu __ro_after_init;
-+static unsigned int pcpu_high_unit_cpu __ro_after_init;
- 
- /* the address of the first chunk which starts with the kernel static area */
--void *pcpu_base_addr __read_mostly;
-+void *pcpu_base_addr __ro_after_init;
- EXPORT_SYMBOL_GPL(pcpu_base_addr);
- 
--static const int *pcpu_unit_map __read_mostly;		/* cpu -> unit */
--const unsigned long *pcpu_unit_offsets __read_mostly;	/* cpu -> unit offset */
-+static const int *pcpu_unit_map __ro_after_init;		/* cpu -> unit */
-+const unsigned long *pcpu_unit_offsets __ro_after_init;	/* cpu -> unit offset */
- 
- /* group information, used for vm allocation */
--static int pcpu_nr_groups __read_mostly;
--static const unsigned long *pcpu_group_offsets __read_mostly;
--static const size_t *pcpu_group_sizes __read_mostly;
-+static int pcpu_nr_groups __ro_after_init;
-+static const unsigned long *pcpu_group_offsets __ro_after_init;
-+static const size_t *pcpu_group_sizes __ro_after_init;
- 
- /*
-  * The first chunk which always exists.  Note that unlike other
-  * chunks, this one can be allocated and mapped in several different
-  * ways and thus often doesn't live in the vmalloc area.
-  */
--static struct pcpu_chunk *pcpu_first_chunk;
-+static struct pcpu_chunk *pcpu_first_chunk __ro_after_init;
- 
- /*
-  * Optional reserved chunk.  This chunk reserves part of the first
-@@ -158,13 +158,13 @@ static struct pcpu_chunk *pcpu_first_chunk;
-  * area doesn't exist, the following variables contain NULL and 0
-  * respectively.
-  */
--static struct pcpu_chunk *pcpu_reserved_chunk;
--static int pcpu_reserved_chunk_limit;
-+static struct pcpu_chunk *pcpu_reserved_chunk __ro_after_init;
-+static int pcpu_reserved_chunk_limit __ro_after_init;
- 
- static DEFINE_SPINLOCK(pcpu_lock);	/* all internal data structures */
- static DEFINE_MUTEX(pcpu_alloc_mutex);	/* chunk create/destroy, [de]pop, map ext */
- 
--static struct list_head *pcpu_slot __read_mostly; /* chunk list slots */
-+static struct list_head *pcpu_slot __ro_after_init; /* chunk list slots */
- 
- /* chunks which need their map areas extended, protected by pcpu_lock */
- static LIST_HEAD(pcpu_map_extend_chunks);
 -- 
 2.12.2
