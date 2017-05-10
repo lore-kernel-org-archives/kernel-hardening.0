@@ -1,33 +1,32 @@
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Wed, 10 May 2017 13:44:41 -0400
-Message-Id: <20170510174441.26163-1-danielmicay@gmail.com>
-Subject: [kernel-hardening] [PATCH] mark protection_map as __ro_after_init
-To: Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Daniel Micay <danielmicay@gmail.com>
+Sender: Tejun Heo <htejun@gmail.com>
+Date: Wed, 10 May 2017 13:52:38 -0400
+From: Tejun Heo <tj@kernel.org>
+Message-ID: <20170510175238.GH32165@htj.duckdns.org>
+References: <20170510173637.25116-1-danielmicay@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170510173637.25116-1-danielmicay@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] mark most percpu globals as __ro_after_init
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The protection map is only modified by per-arch init code so it can be
-protected from writes after the init code runs.
+Hello, Daniel.
 
-This change was extracted from PaX where it's part of KERNEXEC.
+On Wed, May 10, 2017 at 01:36:37PM -0400, Daniel Micay wrote:
+> Moving pcpu_base_addr to this section comes from PaX where it's part of
+> KERNEXEC. This extends it to the rest of the globals only written by the
+> init code.
 
-Signed-off-by: Daniel Micay <danielmicay@gmail.com>
----
- mm/mmap.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+How did you test the patch?
 
-diff --git a/mm/mmap.c b/mm/mmap.c
-index f82741e199c0..3bd5ecd20d4d 100644
---- a/mm/mmap.c
-+++ b/mm/mmap.c
-@@ -94,7 +94,7 @@ static void unmap_region(struct mm_struct *mm,
-  *								w: (no) no
-  *								x: (yes) yes
-  */
--pgprot_t protection_map[16] = {
-+pgprot_t protection_map[16] __ro_after_init = {
- 	__P000, __P001, __P010, __P011, __P100, __P101, __P110, __P111,
- 	__S000, __S001, __S010, __S011, __S100, __S101, __S110, __S111
- };
+> -static struct list_head *pcpu_slot __read_mostly; /* chunk list slots */
+> +static struct list_head *pcpu_slot __ro_after_init; /* chunk list slots */
+
+At least this one isn't read only.
+
+Thanks.
+
 -- 
-2.12.2
+tejun
