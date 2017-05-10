@@ -1,58 +1,63 @@
-Date: Wed, 10 May 2017 10:05:43 +0200
-From: Michal Hocko <mhocko@kernel.org>
-Message-ID: <20170510080542.GF31466@dhcp22.suse.cz>
-References: <9200d87d-33b6-2c70-0095-e974a30639fd@huawei.com>
- <a445774f-a307-25aa-d44e-c523a7a42da6@redhat.com>
- <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
+Date: Wed, 10 May 2017 09:08:41 +0100
+From: Al Viro <viro@ZenIV.linux.org.uk>
+Message-ID: <20170510080841.GG390@ZenIV.linux.org.uk>
+References: <20170428153213.137279-1-thgarnie@google.com>
+ <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
+ <20170508073352.caqe3fqf7nuxypgi@gmail.com>
+ <20170508124621.GA20705@kroah.com>
+ <20170509064522.anusoikaalvlux3w@gmail.com>
+ <20170509085659.GA32555@infradead.org>
+ <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
+ <CAK8P3a2j6h2MAx3h2NCtadcFsNuFcf158F5OV1e2SK37acZRRg@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
-Subject: [kernel-hardening] Re: RFC v2: post-init-read-only protection for data allocated
- dynamically
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Laura Abbott <labbott@redhat.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAK8P3a2j6h2MAx3h2NCtadcFsNuFcf158F5OV1e2SK37acZRRg@mail.gmail.com>
+Sender: Al Viro <viro@ftp.linux.org.uk>
+Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
+ limit before returning to user-mode
+To: Arnd Bergmann <arnd@arndb.de>
+Cc: Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Ingo Molnar <mingo@kernel.org>, Greg KH <greg@kroah.com>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri 05-05-17 13:42:27, Igor Stoppa wrote:
-> On 04/05/17 19:49, Laura Abbott wrote:
-> > [adding kernel-hardening since I think there would be interest]
-> 
-> thank you, I overlooked this
-> 
-> 
-> > BPF takes the approach of calling set_memory_ro to mark regions as
-> > read only. I'm certainly over simplifying but it sounds like this
-> > is mostly a mechanism to have this happen mostly automatically.
-> > Can you provide any more details about tradeoffs of the two approaches?
-> 
-> I am not sure I understand the question ...
-> For what I can understand, the bpf is marking as read only something
-> that spans across various pages, which is fine.
-> The payload to be protected is already organized in such pages.
-> 
-> But in the case I have in mind, I have various, heterogeneous chunks of
-> data, coming from various subsystems, not necessarily page aligned.
-> And, even if they were page aligned, most likely they would be far
-> smaller than a page, even a 4k page.
+On Wed, May 10, 2017 at 09:37:04AM +0200, Arnd Bergmann wrote:
 
-This aspect of various sizes makes the SLAB allocator not optimal
-because it operates on caches (pools of pages) which manage objects of
-the same size. You could use the maximum size of all objects and waste
-some memory but you would have to know this max in advance which would
-make this approach less practical. You could create more caches of
-course but that still requires to know those sizes in advance.
+> > How about trying to remove all of them?  If we could actually get rid
+> > of all of them, we could drop the arch support, and we'd get faster,
+> > simpler, shorter uaccess code throughout the kernel.
 
-So it smells like a dedicated allocator which operates on a pool of
-pages might be a better option in the end. This depends on what you
-expect from the allocator. NUMA awareness? Very effective hotpath? Very
-good fragmentation avoidance? CPU cache awareness? Special alignment
-requirements? Reasonable free()? Etc...
+BTW, not all get_user() under KERNEL_DS are plain loads.  There is an
+exception - probe_kernel_read().
 
-To me it seems that this being an initialization mostly thingy a simple
-allocator which manages a pool of pages (one set of sealed and one for
-allocations) and which only appends new objects as they fit to unsealed
-pages would be sufficient for starter.
--- 
-Michal Hocko
-SUSE Labs
+> > The ones in kernel/compat.c are generally garbage.  They should be
+> > using compat_alloc_user_space().  Ditto for kernel/power/user.c.
+> 
+> compat_alloc_user_space() has some problems too, it adds
+> complexity to a rarely-tested code path and can add some noticeable
+> overhead in cases where user space access is slow because of
+> extra checks.
+> 
+> It's clearly better than set_fs(), but the way I prefer to convert the
+> code is to avoid both and instead move compat handlers next to
+> the native code, and splitting out the common code between native
+> and compat mode into a helper that takes a regular kernel pointer.
+> 
+> I think that's what both Al has done in the past on compat_ioctl()
+> and select() and what Christoph does in his latest series, but
+> it seems worth pointing out for others that decide to help out here.
+
+Folks, reducing the amount of places where we play with set_fs() is certainly
+a good thing.  Getting rid of them completely is something entirely different;
+I have tried to plot out patch series in this direction many times during the
+last 5 years or so, but it's not going to be easy.  Tomorrow I can start
+posting my notes in that direction (and there are tons of those, unfortunately
+mixed with git grep results, highly unprintable personal comments, etc.);
+just let me grab some sleep first...
+
+BTW, slow userland access is not just due to extra checks; access_ok(),
+in particular, is pretty much noise.  The real PITA comes from the things
+like STAC/CLAC on recent x86.  Or hardware overhead of cross-address-space
+block copy insn (e.g. on s390, where it's optimized for multi-cacheline
+blocks).  Or things like uml, where it's a matter of walking the page
+tables for each sodding __get_user().  It's not always just a matter of
+address space limit...
