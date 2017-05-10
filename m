@@ -1,45 +1,35 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
-In-Reply-To: <87pofjqlj3.fsf@possimpible.ozlabs.ibm.com>
-References: <20170504142435.10175-1-danielmicay@gmail.com> <87pofjqlj3.fsf@possimpible.ozlabs.ibm.com>
-Date: Wed, 10 May 2017 22:00:18 +1000
-Message-ID: <877f1okjl9.fsf@concordia.ellerman.id.au>
+Date: Tue, 9 May 2017 23:46:55 -0700
+From: Christoph Hellwig <hch@infradead.org>
+Message-ID: <20170510064655.GA4115@infradead.org>
+References: <20170428153213.137279-1-thgarnie@google.com>
+ <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
+ <20170508073352.caqe3fqf7nuxypgi@gmail.com>
+ <20170508124621.GA20705@kroah.com>
+ <20170509064522.anusoikaalvlux3w@gmail.com>
+ <20170509085659.GA32555@infradead.org>
+ <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
+ <20170509130250.GA11381@infradead.org>
+ <20170509160322.GA15902@infradead.org>
+ <CAGXu5jKHVMRMKDfn+=kkbm+JkWPhoEtDwKx=QXAYxg1p9bn7PQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: Re: [kernel-hardening] [PATCH] add the option of fortified string.h functions
-To: Daniel Axtens <dja@axtens.net>, Daniel Micay <danielmicay@gmail.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linuxppc-dev@lists.ozlabs.org
-Cc: andrew.donnellan@au1.ibm.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jKHVMRMKDfn+=kkbm+JkWPhoEtDwKx=QXAYxg1p9bn7PQ@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
+ limit before returning to user-mode
+To: Kees Cook <keescook@chromium.org>
+Cc: Christoph Hellwig <hch@infradead.org>, Andy Lutomirski <luto@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Greg KH <greg@kroah.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, LKML <linux-kernel@vger.kernel.org>, David Howells <dhowells@redhat.com>, Dave Hansen <dave.hansen@intel.com>, "H . Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@kernel.org>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, linux-s390 <linux-s390@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Catalin Marinas <catalin.marinas@arm.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Rik van Riel <riel@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Brian Gerst <brgerst@gmail.com>, Borislav Petkov <bp@alien8.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Linux API <linux-api@vger.kernel.org>, Oleg Nesterov <oleg@redhat.com>, James Morse <james.morse@arm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Paolo Bonzini <pbonzini@redhat.com>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Thomas Garnier <thgarnie@google.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Daniel Axtens <dja@axtens.net> writes:
+On Tue, May 09, 2017 at 09:50:32AM -0700, Kees Cook wrote:
+> http://git.infradead.org/users/hch/vfs.git/commitdiff/018e0e9030777121fe87e89d43066691e7366587
+> This accidentally(?) removes the kernel-doc comments.
 
-> Hi Daniel and ppc people,
->
-> (ppc people: this does some compile and run time bounds checking on
-> string functions. It's cool - currently it picks up a lot of random
-> things so it will require some more work across the tree, but hopefully
-> it will eventually hit mainline.)
+That was sort of intentional, the kerneldoc boilerplate adds very little
+value for method instances.
 
-Cool! 
+> http://git.infradead.org/users/hch/vfs.git/commitdiff/78b62c730254fc39fa888cdbdca08fde6e09a798
+> Could this be made defensive? (Return 0 if ret wraps, for example?) I
+> see what the comment says, but not everyone will read that. :(
 
-> Once those were added, I needed to disable fortification in prom_init.c,
-> as we apparently can't have new symbols there. (I don't understand that
-> file so I haven't dug into it.)
-
-We can refer to new symbols from there, we just have a script to check
-we don't refer to anything new inadvertently.
-
-prom_init() is sort of a shim that runs before the kernel, except it's
-linked with the kernel, but ideally wouldn't be, but we never bothered
-actually making it separate. O_o
-
-> We also have problems with the feature fixup tests leading to a panic on
-> boot. It relates to getting what I think are asm labels(?) and how we
-> address them. I have just disabled fortify here for now; I think the
-> code could be rewritten to take the labels as unsigned char *, but I
-> haven't dug into it.
-
-OK, yeah it's using asm labels to compare the patched code vs the
-expected result. Can probably be fixed by making them char[] like we do
-for other things like __start_interrupts etc.
-
-cheers
+It's a straight copy of iov_length, and I'd rather keep it that way.
