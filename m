@@ -1,119 +1,45 @@
-Date: Wed, 10 May 2017 13:43:19 +0200
-From: Michal Hocko <mhocko@kernel.org>
-Message-ID: <20170510114319.GK31466@dhcp22.suse.cz>
-References: <9200d87d-33b6-2c70-0095-e974a30639fd@huawei.com>
- <a445774f-a307-25aa-d44e-c523a7a42da6@redhat.com>
- <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
- <20170510080542.GF31466@dhcp22.suse.cz>
- <885311a2-5b9f-4402-0a71-5a3be7870aa0@huawei.com>
+From: Michael Ellerman <mpe@ellerman.id.au>
+In-Reply-To: <87pofjqlj3.fsf@possimpible.ozlabs.ibm.com>
+References: <20170504142435.10175-1-danielmicay@gmail.com> <87pofjqlj3.fsf@possimpible.ozlabs.ibm.com>
+Date: Wed, 10 May 2017 22:00:18 +1000
+Message-ID: <877f1okjl9.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <885311a2-5b9f-4402-0a71-5a3be7870aa0@huawei.com>
-Subject: [kernel-hardening] Re: RFC v2: post-init-read-only protection for data allocated
- dynamically
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Dave Hansen <dave.hansen@intel.com>, Laura Abbott <labbott@redhat.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain
+Subject: Re: [kernel-hardening] [PATCH] add the option of fortified string.h functions
+To: Daniel Axtens <dja@axtens.net>, Daniel Micay <danielmicay@gmail.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linuxppc-dev@lists.ozlabs.org
+Cc: andrew.donnellan@au1.ibm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed 10-05-17 11:57:42, Igor Stoppa wrote:
-> On 10/05/17 11:05, Michal Hocko wrote:
-[...]
-> > To me it seems that this being an initialization mostly thingy a simple
-> > allocator which manages a pool of pages (one set of sealed and one for
-> > allocations) 
-> 
-> Shouldn't also the set of pages used for keeping track of the others be
-> sealed? Once one is ro, also the other should not change.
+Daniel Axtens <dja@axtens.net> writes:
 
-Heh, that really depends how much consistency and robustness you want to
-achieve. It is really hard to defend against targeted attacks against
-the allocator metadata when a code is running in the kernel.
+> Hi Daniel and ppc people,
+>
+> (ppc people: this does some compile and run time bounds checking on
+> string functions. It's cool - currently it picks up a lot of random
+> things so it will require some more work across the tree, but hopefully
+> it will eventually hit mainline.)
 
-> > and which only appends new objects as they fit to unsealed
-> > pages would be sufficient for starter.
-> 
-> Any "free" that might happen during the initialization transient, would
-> actually result in an untracked gap, right?
+Cool! 
 
-yes. And once the whole page is free it would get unsealed and returned
-to the (page) allocator. This approach would inevitably lead to internal
-fragmentation but reducing that would require a pool which is shared for
-objects with the common life cycle which is quite hard with requirements
-you have (you would have to convey the allocation context to all users
-somehow).
+> Once those were added, I needed to disable fortification in prom_init.c,
+> as we apparently can't have new symbols there. (I don't understand that
+> file so I haven't dug into it.)
 
-> What about the size of the pool of pages?
+We can refer to new symbols from there, we just have a script to check
+we don't refer to anything new inadvertently.
 
-I wouldn't see that as a big deal. New pages would be allocated as
-needed.
+prom_init() is sort of a shim that runs before the kernel, except it's
+linked with the kernel, but ideally wouldn't be, but we never bothered
+actually making it separate. O_o
 
-> No predefined size, instead request a new page, when the memory
-> remaining from the page currently in use is not enough to fit the latest
-> allocation request?
+> We also have problems with the feature fixup tests leading to a panic on
+> boot. It relates to getting what I think are asm labels(?) and how we
+> address them. I have just disabled fortify here for now; I think the
+> code could be rewritten to take the labels as unsigned char *, but I
+> haven't dug into it.
 
-exactly
+OK, yeah it's using asm labels to compare the patched code vs the
+expected result. Can probably be fixed by making them char[] like we do
+for other things like __start_interrupts etc.
 
-> There are also two aspect we discussed earlier:
-> 
-> - livepatch: how to deal with it? Identify the page it wants to modify
-> and temporarily un-protect it?
-
-Livepatch doesn't support data structures patching currently and even if
-it would have to understand those data structures and do something like
-copy&replace...
- 
-> - modules: unloading and reloading modules will eventually lead to
-> permanently lost pages, in increasing number.
-
-Each module should free all objects that were allocated on its behalf
-and that should result in pages being freed as well
-
-> Loading/unloading repeatedly the same module is probably not so common,
-> with a major exception being USB, where almost anything can show up.
-> And disappear.
-> This seems like a major showstopper for the linear allocator you propose.
-
-I am not sure I understand. If such a module kept allocations behind it
-would be a memory leak no matter what.
-
-> My reasoning in pursuing the kmalloc approach was that it is already
-> equipped with mechanisms for dealing with these sort of cases, where
-> memory can be fragmented.
-
-Yeah, but kmalloc is optimized for a completely different usecase. You
-can reuse same pages again and again while you clearly cannot do the
-same once you seal a page and make it read only. Well unless you want to
-open time windows when the page stops being RO or use a different
-mapping for the allocator.
-
-But try to consider how many features of the slab allocator you are
-actually going to need wrt. to tweaks it would have to implement to
-support this new use case. Maybe duplicating general purpose caches and
-creating specialized explicitly is a viable path. I haven't tried
-it.
-
-> I also wouldn't risk introducing bugs with my homebrew allocator ...
-> 
-> The initial thought was that there could be a master toggle to
-> seal/unseal all the memory affected.
-> 
-> But you were not too excited, iirc :-D
-
-yes, If there are different users a pool (kmem_cache like) would be more
-natural.
-
-> Alternatively, kmalloc could be enhanced to unseal only the pages it
-> wants to modify.
-
-You would have to stop the world to prevent from an accidental overwrite
-during that time. Which makes the whole thing quite dubious IMHO.
-
-> I don't think much can be done for data that is placed together, in the
-> same page with something that needs to be altered.
-> But what is outside of that page could still enjoy the protection from
-> the seal.
-
--- 
-Michal Hocko
-SUSE Labs
+cheers
