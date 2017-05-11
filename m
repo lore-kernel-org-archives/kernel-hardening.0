@@ -1,50 +1,89 @@
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 11 May 2017 21:41:34 +0200
-Message-Id: <20170511194134.31183-6-Jason@zx2c4.com>
-In-Reply-To: <20170511194134.31183-1-Jason@zx2c4.com>
-References: <20170511194134.31183-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v8 5/5] virtio_net: check return value of skb_to_sgvec always
-To: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, davem@davemloft.net, kernel-hardening@lists.openwall.com
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, "Michael S. Tsirkin" <mst@redhat.com>, Jason Wang <jasowang@redhat.com>
+Date: Thu, 11 May 2017 16:25:38 -0500
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+Message-ID: <20170511212538.bjp4jbb7p4qipawo@treble>
+References: <1494356483-81678-1-git-send-email-keescook@chromium.org>
+ <1494356483-81678-3-git-send-email-keescook@chromium.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <1494356483-81678-3-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v4 2/2] x86/refcount: Implement fast refcount overflow
+ protection
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: "Michael S. Tsirkin" <mst@redhat.com>
-Cc: Jason Wang <jasowang@redhat.com>
----
- drivers/net/virtio_net.c | 9 +++++++--
- 1 file changed, 7 insertions(+), 2 deletions(-)
+On Tue, May 09, 2017 at 12:01:23PM -0700, Kees Cook wrote:
+> +#define _REFCOUNT_EXCEPTION				\
+> +	".pushsection .text.unlikely\n"			\
+> +	"111:\tmovl $0x7fffffff, %[counter]\n"		\
+> +	"112:\t" ASM_UD0 "\n"				\
+> +	".popsection\n"					\
+> +	"113:\n"					\
+> +	_ASM_EXTABLE_REFCOUNT(112b, 113b)
 
-diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 9320d96a1632..13fbe4b349c2 100644
---- a/drivers/net/virtio_net.c
-+++ b/drivers/net/virtio_net.c
-@@ -1150,7 +1150,7 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
- 	struct virtio_net_hdr_mrg_rxbuf *hdr;
- 	const unsigned char *dest = ((struct ethhdr *)skb->data)->h_dest;
- 	struct virtnet_info *vi = sq->vq->vdev->priv;
--	unsigned num_sg;
-+	int num_sg;
- 	unsigned hdr_len = vi->hdr_len;
- 	bool can_push;
+This resulted in some new objtool warnings because the UD0 instruction
+is a dead end in the .text.unlikely section, but it's not annotated as
+such.  (As opposed to the WARN macros' use of UD0, which aren't dead
+ends since they resume execution immediately afterwards).
+
+The below patch creates a UNREACHABLE_ASM macro, similar to the existing
+unreachable() macro for C code, which you can call right after the
+ASM_UD0 line above to fix the warnings.  Feel free to add the patch to
+your set.
+
+----
+
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+Subject: [PATCH] objtool: create UNREACHABLE_ASM macro
+
+Create an UNREACHABLE_ASM macro to enable inline asm to annotate dead
+end code paths.  This macro is analagous to the unreachable() macro for
+C code.
+
+Also add a couple of comments.
+
+Signed-off-by: Josh Poimboeuf <jpoimboe@redhat.com>
+---
+ include/linux/compiler-gcc.h | 25 +++++++++++++++++++------
+ 1 file changed, 19 insertions(+), 6 deletions(-)
+
+diff --git a/include/linux/compiler-gcc.h b/include/linux/compiler-gcc.h
+index 0efef9c..08cdf9e 100644
+--- a/include/linux/compiler-gcc.h
++++ b/include/linux/compiler-gcc.h
+@@ -198,13 +198,26 @@
+ #endif
  
-@@ -1177,11 +1177,16 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
- 	if (can_push) {
- 		__skb_push(skb, hdr_len);
- 		num_sg = skb_to_sgvec(skb, sq->sg, 0, skb->len);
-+                if (unlikely(num_sg < 0))
-+			return num_sg;
- 		/* Pull header back to avoid skew in tx bytes calculations. */
- 		__skb_pull(skb, hdr_len);
- 	} else {
- 		sg_set_buf(sq->sg, hdr, hdr_len);
--		num_sg = skb_to_sgvec(skb, sq->sg + 1, 0, skb->len) + 1;
-+		num_sg = skb_to_sgvec(skb, sq->sg + 1, 0, skb->len);
-+		if (unlikely(num_sg < 0))
-+			return num_sg;
-+		num_sg++;
- 	}
- 	return virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
- }
+ #ifdef CONFIG_STACK_VALIDATION
+-#define annotate_unreachable() ({					\
+-	asm("%c0:\t\n"							\
+-	    ".pushsection .discard.unreachable\t\n"			\
+-	    ".long %c0b - .\t\n"					\
+-	    ".popsection\t\n" : : "i" (__LINE__));			\
+-})
++/*
++ * This label needs to be unique to prevent GCC from removing what it sees as
++ * duplicate inline asm statements in a function.
++ */
++#define UNREACHABLE_ASM_LABEL __stringify(__LINE__)
++
++/*
++ * Annotate the previous instruction as unreachable.  This allows objtool to
++ * detect dead ends in the code flow.
++ */
++#define UNREACHABLE_ASM							\
++	UNREACHABLE_ASM_LABEL ":\n\t"					\
++	".pushsection .discard.unreachable\n\t"				\
++	".long " UNREACHABLE_ASM_LABEL "b - .\n\t"			\
++	".popsection\n"
++
++#define annotate_unreachable() asm(UNREACHABLE_ASM);
++
+ #else
++#define UNREACHABLE_ASM
+ #define annotate_unreachable()
+ #endif
+ 
 -- 
-2.13.0
+2.7.4
