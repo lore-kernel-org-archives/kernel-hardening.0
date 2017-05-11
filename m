@@ -1,95 +1,186 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <5913BD52.2305.3F7C9B7B@pageexec.freemail.hu>
-References: <1494356483-81678-1-git-send-email-keescook@chromium.org>
- <1494356483-81678-3-git-send-email-keescook@chromium.org> <5913BD52.2305.3F7C9B7B@pageexec.freemail.hu>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 11 May 2017 11:16:14 -0700
-Message-ID: <CAGXu5jJK-O91uei8bJeuS7jW5-h0QNsEeCvUXe0+RMuB4Ye7Vw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v4 2/2] x86/refcount: Implement fast refcount overflow protection
-To: PaX Team <pageexec@freemail.hu>
-Cc: LKML <linux-kernel@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Thu, 11 May 2017 21:41:30 +0200
+Message-Id: <20170511194134.31183-2-Jason@zx2c4.com>
+In-Reply-To: <20170511194134.31183-1-Jason@zx2c4.com>
+References: <20170511194134.31183-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH v8 1/5] skbuff: return -EMSGSIZE in skb_to_sgvec to prevent overflow
+To: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, davem@davemloft.net, kernel-hardening@lists.openwall.com
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, David Howells <dhowells@redhat.com>, Sabrina Dubroca <sd@queasysnail.net>, "Michael S. Tsirkin" <mst@redhat.com>, Jason Wang <jasowang@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 10, 2017 at 6:24 PM, PaX Team <pageexec@freemail.hu> wrote:
-> On 9 May 2017 at 12:01, Kees Cook wrote:
->> Various differences from PaX:
->> - uses earlier value reset implementation in assembly
->> - uses UD0 and refcount exception handler instead of new int vector
->> - uses .text.unlikely instead of custom named text sections
->
-> all the above together result in bloating .text.unlikely and thus the
-> kernel image in general.
+This is a defense-in-depth measure in response to bugs like
+4d6fa57b4dab ("macsec: avoid heap overflow in skb_to_sgvec"). There's
+not only a potential overflow of sglist items, but also a stack overflow
+potential, so we fix this by limiting the amount of recursion this function
+is allowed to do. Not actually providing a bounded base case is a future
+disaster that we can easily avoid here.
 
-O_o how is this any less of a problem than filling a different .text
-section with "lea" instructions?
+As a small matter of house keeping, we take this opportunity to move the
+documentation comment over the actual function the documentation is for.
 
-> the much bigger problem is that you introduced
-> a vulnerability because now refcount underflow bugs can not only trigger
-> a UAF but also a subsequent double-free since decrementing the saturation
-> value will not trigger any checks until 0 is reached a second time.
+While this could be implemented by using an explicit stack of skbuffs,
+when implementing this, the function complexity increased considerably,
+and I don't think such complexity and bloat is actually worth it. So,
+instead I built this and tested it on x86, x86_64, ARM, ARM64, and MIPS,
+and measured the stack usage there. I also reverted the recent MIPS
+changes that give it a separate IRQ stack, so that I could experience
+some worst-case situations. I found that limiting it to 24 layers deep
+yielded a good stack usage with room for safety, as well as being much
+deeper than any driver actually ever creates.
 
-This isn't an "introduced" vulnerability. With or without this patch,
-an atomic_t would never stop wrapping. Without a fast refcount_t, most
-of the critical parts of the kernel will not convert to refcount_t, so
-they'd still be atomic_t. Regardless, you have a valid point about
-this where it could be a _better_ protection, but it's not
-"introducing" a vulnerability.
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+Cc: Steffen Klassert <steffen.klassert@secunet.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: "David S. Miller" <davem@davemloft.net>
+Cc: David Howells <dhowells@redhat.com>
+Cc: Sabrina Dubroca <sd@queasysnail.net>
+Cc: "Michael S. Tsirkin" <mst@redhat.com>
+Cc: Jason Wang <jasowang@redhat.com>
+---
+ include/linux/skbuff.h |  8 +++----
+ net/core/skbuff.c      | 65 ++++++++++++++++++++++++++++++++------------------
+ 2 files changed, 46 insertions(+), 27 deletions(-)
 
->> - applied only to refcount_t, not atomic_t (single size, only overflow)
->
-> this description doesn't seem to be in sync with the code as the refcount
-> decrementing functions are also instrumented (and introduce the problem
-> mentioned above).
-
-Hunh? Decrementing is instrumented to notice the "below 0" cases. It
-gives late notification of UAF. Without instrumentation there would be
-no notification at all. Neither case protects underflow, just as
-you've talked about underflow not be a bug class that can be protected
-against.
-
->> - reorganized refcount error handler
->> - uses "js" instead of "jo" to trap all negative results instead of
->>   just under/overflow transitions
->
-> if you're describing differences to PaX in such detail you might as well
-> specify which version of PaX it is different from and credit the above idea
-> to me lest someone get the impression that it was yours.
-
-I am in a constant no-win situation with regard to giving credit. If I
-give too much credit, it's still not specific enough, if I give too
-little credit, I'm "stealing". The "v2" delta history (go see the 0/2
-email) mentions where "js" came from:
-
-v2:
-...
-- switch to js; pax-team
-
->> +static __always_inline __must_check bool refcount_inc_not_zero(refcount_t *r)
->> +{
->> +     int c;
->> +
->> +     c = atomic_read(&(r->refs));
->> +     do {
->> +             if (unlikely(c <= 0))
->> +                     break;
->> +     } while (!atomic_try_cmpxchg(&(r->refs), &c, c + 1));
->> +
->> +     /* Did we start or finish in an undesirable state? */
->> +     if (unlikely(c <= 0 || c + 1 < 0)) {
->
-> while -fno-strict-overflow should save you in linux it's still not
-> prudent programming to rely on signed overflow, especially in security
-> related checks. it's just too fragile and sets a bad example...
-
-Now you're telling me your own suggestion was not prudent? What we
-have now and for the foreseeable future is refcount_t being
-implemented with int, and that we'll have signed overflow. If that
-ever changes, refcount_t would hardly be the only thing affected.
-
--Kees
-
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index a098d95b3d84..f351df28942d 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -1001,10 +1001,10 @@ struct sk_buff *skb_realloc_headroom(struct sk_buff *skb,
+ 				     unsigned int headroom);
+ struct sk_buff *skb_copy_expand(const struct sk_buff *skb, int newheadroom,
+ 				int newtailroom, gfp_t priority);
+-int skb_to_sgvec_nomark(struct sk_buff *skb, struct scatterlist *sg,
+-			int offset, int len);
+-int skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset,
+-		 int len);
++int __must_check skb_to_sgvec_nomark(struct sk_buff *skb, struct scatterlist *sg,
++				     int offset, int len);
++int __must_check skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg,
++			      int offset, int len);
+ int skb_cow_data(struct sk_buff *skb, int tailbits, struct sk_buff **trailer);
+ int skb_pad(struct sk_buff *skb, int pad);
+ #define dev_kfree_skb(a)	consume_skb(a)
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index 346d3e85dfbc..ec33811559e3 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -3482,24 +3482,18 @@ void __init skb_init(void)
+ 						NULL);
+ }
+ 
+-/**
+- *	skb_to_sgvec - Fill a scatter-gather list from a socket buffer
+- *	@skb: Socket buffer containing the buffers to be mapped
+- *	@sg: The scatter-gather list to map into
+- *	@offset: The offset into the buffer's contents to start mapping
+- *	@len: Length of buffer space to be mapped
+- *
+- *	Fill the specified scatter-gather list with mappings/pointers into a
+- *	region of the buffer space attached to a socket buffer.
+- */
+ static int
+-__skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
++__skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len,
++	       unsigned int recursion_level)
+ {
+ 	int start = skb_headlen(skb);
+ 	int i, copy = start - offset;
+ 	struct sk_buff *frag_iter;
+ 	int elt = 0;
+ 
++	if (unlikely(recursion_level >= 24))
++		return -EMSGSIZE;
++
+ 	if (copy > 0) {
+ 		if (copy > len)
+ 			copy = len;
+@@ -3518,6 +3512,8 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 		end = start + skb_frag_size(&skb_shinfo(skb)->frags[i]);
+ 		if ((copy = end - offset) > 0) {
+ 			skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
++			if (unlikely(elt && sg_is_last(&sg[elt - 1])))
++				return -EMSGSIZE;
+ 
+ 			if (copy > len)
+ 				copy = len;
+@@ -3532,16 +3528,22 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 	}
+ 
+ 	skb_walk_frags(skb, frag_iter) {
+-		int end;
++		int end, ret;
+ 
+ 		WARN_ON(start > offset + len);
+ 
+ 		end = start + frag_iter->len;
+ 		if ((copy = end - offset) > 0) {
++			if (unlikely(elt && sg_is_last(&sg[elt - 1])))
++				return -EMSGSIZE;
++
+ 			if (copy > len)
+ 				copy = len;
+-			elt += __skb_to_sgvec(frag_iter, sg+elt, offset - start,
+-					      copy);
++			ret = __skb_to_sgvec(frag_iter, sg+elt, offset - start,
++					      copy, recursion_level + 1);
++			if (unlikely(ret < 0))
++				return ret;
++			elt += ret;
+ 			if ((len -= copy) == 0)
+ 				return elt;
+ 			offset += copy;
+@@ -3552,6 +3554,31 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 	return elt;
+ }
+ 
++/**
++ *	skb_to_sgvec - Fill a scatter-gather list from a socket buffer
++ *	@skb: Socket buffer containing the buffers to be mapped
++ *	@sg: The scatter-gather list to map into
++ *	@offset: The offset into the buffer's contents to start mapping
++ *	@len: Length of buffer space to be mapped
++ *
++ *	Fill the specified scatter-gather list with mappings/pointers into a
++ *	region of the buffer space attached to a socket buffer. Returns either
++ *	the number of scatterlist items used, or -EMSGSIZE if the contents
++ *	could not fit.
++ */
++int skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
++{
++	int nsg = __skb_to_sgvec(skb, sg, offset, len, 0);
++
++	if (nsg <= 0)
++		return nsg;
++
++	sg_mark_end(&sg[nsg - 1]);
++
++	return nsg;
++}
++EXPORT_SYMBOL_GPL(skb_to_sgvec);
++
+ /* As compared with skb_to_sgvec, skb_to_sgvec_nomark only map skb to given
+  * sglist without mark the sg which contain last skb data as the end.
+  * So the caller can mannipulate sg list as will when padding new data after
+@@ -3574,19 +3601,11 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ int skb_to_sgvec_nomark(struct sk_buff *skb, struct scatterlist *sg,
+ 			int offset, int len)
+ {
+-	return __skb_to_sgvec(skb, sg, offset, len);
++	return __skb_to_sgvec(skb, sg, offset, len, 0);
+ }
+ EXPORT_SYMBOL_GPL(skb_to_sgvec_nomark);
+ 
+-int skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+-{
+-	int nsg = __skb_to_sgvec(skb, sg, offset, len);
+ 
+-	sg_mark_end(&sg[nsg - 1]);
+-
+-	return nsg;
+-}
+-EXPORT_SYMBOL_GPL(skb_to_sgvec);
+ 
+ /**
+  *	skb_cow_data - Check that a socket buffer's data buffers are writable
 -- 
-Kees Cook
-Pixel Security
+2.13.0
