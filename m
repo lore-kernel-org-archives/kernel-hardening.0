@@ -1,56 +1,39 @@
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Thu, 11 May 2017 03:24:34 +0200
+Date: Thu, 11 May 2017 10:37:37 +0900
+From: Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>
+Message-ID: <20170511013737.GD801@jagdpanzerIV.localdomain>
+References: <20170506040641.GA32707@kroah.com>
 MIME-Version: 1.0
-Message-ID: <5913BD52.2305.3F7C9B7B@pageexec.freemail.hu>
-In-reply-to: <1494356483-81678-3-git-send-email-keescook@chromium.org>
-References: <1494356483-81678-1-git-send-email-keescook@chromium.org>, <1494356483-81678-3-git-send-email-keescook@chromium.org>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: [PATCH v4 2/2] x86/refcount: Implement fast refcount overflow protection
-To: linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>
-Cc: Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170506040641.GA32707@kroah.com>
+Subject: [kernel-hardening] Re: [RFC 00/06] printk: add more new kernel pointer filter options.
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: kernel-hardening@lists.openwall.com, Petr Mladek <pmladek@suse.com>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 9 May 2017 at 12:01, Kees Cook wrote:
-> Various differences from PaX:
-> - uses earlier value reset implementation in assembly
-> - uses UD0 and refcount exception handler instead of new int vector
-> - uses .text.unlikely instead of custom named text sections
+Hello Greg,
 
-all the above together result in bloating .text.unlikely and thus the
-kernel image in general. the much bigger problem is that you introduced
-a vulnerability because now refcount underflow bugs can not only trigger
-a UAF but also a subsequent double-free since decrementing the saturation
-value will not trigger any checks until 0 is reached a second time.
+On (05/05/17 21:06), Greg KH wrote:
+> Here's a short patch series from Chris Fries and Dave Weinstein that
+> implement some new restrictions when printing out kernel pointers, as
+> well as the ability to whitelist kernel pointers where needed.
+> 
+> These patches are based on work from William Roberts, and also is
+> inspired by grsecurity's %pP to specifically whitelist a kernel pointer,
+> where it is always needed, like the last patch in the series shows, in
+> the UIO drivers (UIO requires that you know the address, it's a hardware
+> address, nothing wrong with seeing that...)
+> 
+> I haven't done much to this patch series, only forward porting it from
+> an older kernel release (4.4) and a few minor tweaks.  It applies
+> cleanly on top of 4.11 as well as Linus's current development tree
+> (10502 patches into the 4.12-rc1 merge window).  I'm posting it now for
+> comments if anyone sees anything wrong with this approach
 
-> - applied only to refcount_t, not atomic_t (single size, only overflow)
+overall, I don't see anything wrong.
 
-this description doesn't seem to be in sync with the code as the refcount
-decrementing functions are also instrumented (and introduce the problem
-mentioned above).
+> or thinks the things that are being whitelisted should not be?
 
-> - reorganized refcount error handler
-> - uses "js" instead of "jo" to trap all negative results instead of
->   just under/overflow transitions
+can't say for sure, sorry.
 
-if you're describing differences to PaX in such detail you might as well
-specify which version of PaX it is different from and credit the above idea
-to me lest someone get the impression that it was yours.
-
-> +static __always_inline __must_check bool refcount_inc_not_zero(refcount_t *r)
-> +{
-> +	int c;
-> +
-> +	c = atomic_read(&(r->refs));
-> +	do {
-> +		if (unlikely(c <= 0))
-> +			break;
-> +	} while (!atomic_try_cmpxchg(&(r->refs), &c, c + 1));
-> +
-> +	/* Did we start or finish in an undesirable state? */
-> +	if (unlikely(c <= 0 || c + 1 < 0)) {
-
-while -fno-strict-overflow should save you in linux it's still not
-prudent programming to rely on signed overflow, especially in security
-related checks. it's just too fragile and sets a bad example...
+	-ss
