@@ -1,6 +1,6 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170512075458.09a3a1ce@mschwideX1>
+Sender: linus971@gmail.com
+In-Reply-To: <CAGXu5jL9vUrn4kpjO+qa4cHmWBypeqP17OGbrMs=5Nz0YpQMZw@mail.gmail.com>
 References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
  <20170508073352.caqe3fqf7nuxypgi@gmail.com> <20170508075209.7aluvpwildw325rf@gmail.com>
  <1494256932.1167.1.camel@gmail.com> <CAGXu5jL61K0bRSEg9a_LswNyrt3K1J57REbWVcvAXT54zWwtMA@mail.gmail.com>
@@ -9,124 +9,48 @@ References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn
  <CAJcbSZEoRyewUtBHvqmNZL9FtT_q42Vmmd-EuC50x-ZRASiHHg@mail.gmail.com>
  <CA+55aFwvQfs_X+paQF6Luc0Rq+W3J2fKuHRou7=ANcquDdXdDA@mail.gmail.com>
  <20170512072802.5a686f23@mschwideX1> <CAGXu5j+EatK=DYONRkgovwLgytAnbG8jnAZaMSLckZFNVj3gig@mail.gmail.com>
- <20170512075458.09a3a1ce@mschwideX1>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 12 May 2017 12:01:59 -0700
-Message-ID: <CAGXu5jL9vUrn4kpjO+qa4cHmWBypeqP17OGbrMs=5Nz0YpQMZw@mail.gmail.com>
+ <20170512075458.09a3a1ce@mschwideX1> <CAGXu5jL9vUrn4kpjO+qa4cHmWBypeqP17OGbrMs=5Nz0YpQMZw@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Fri, 12 May 2017 12:08:57 -0700
+Message-ID: <CA+55aFzbiBqsYb7vwO=+L4Vp_GOgPu+DBOrq4fBnyzq5DbBehg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
  limit before returning to user-mode
-To: Martin Schwidefsky <schwidefsky@de.ibm.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Thomas Garnier <thgarnie@google.com>, Greg KH <greg@kroah.com>, Ingo Molnar <mingo@kernel.org>, Daniel Micay <danielmicay@gmail.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Al Viro <viro@zeniv.linux.org.uk>
+To: Kees Cook <keescook@chromium.org>
+Cc: Martin Schwidefsky <schwidefsky@de.ibm.com>, Thomas Garnier <thgarnie@google.com>, Greg KH <greg@kroah.com>, Ingo Molnar <mingo@kernel.org>, Daniel Micay <danielmicay@gmail.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Al Viro <viro@zeniv.linux.org.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 11, 2017 at 10:54 PM, Martin Schwidefsky
-<schwidefsky@de.ibm.com> wrote:
-> On Thu, 11 May 2017 22:34:31 -0700
-> Kees Cook <keescook@chromium.org> wrote:
+On Fri, May 12, 2017 at 12:01 PM, Kees Cook <keescook@chromium.org> wrote:
 >
->> On Thu, May 11, 2017 at 10:28 PM, Martin Schwidefsky
->> <schwidefsky@de.ibm.com> wrote:
->> > On Thu, 11 May 2017 16:44:07 -0700
->> > Linus Torvalds <torvalds@linux-foundation.org> wrote:
->> >
->> >> On Thu, May 11, 2017 at 4:17 PM, Thomas Garnier <thgarnie@google.com> wrote:
->> >> >
->> >> > Ingo: Do you want the change as-is? Would you like it to be optional?
->> >> > What do you think?
->> >>
->> >> I'm not ingo, but I don't like that patch. It's in the wrong place -
->> >> that system call return code is too timing-critical to add address
->> >> limit checks.
->> >>
->> >> Now what I think you *could* do is:
->> >>
->> >>  - make "set_fs()" actually set a work flag in the current thread flags
->> >>
->> >>  - do the test in the slow-path (syscall_return_slowpath).
->> >>
->> >> Yes, yes, that ends up being architecture-specific, but it's fairly simple.
->> >>
->> >> And it only slows down the system calls that actually use "set_fs()".
->> >> Sure, it will slow those down a fair amount, but they are hopefully a
->> >> small subset of all cases.
->> >>
->> >> How does that sound to people?  Thats' where we currently do that
->> >>
->> >>         if (IS_ENABLED(CONFIG_PROVE_LOCKING) &&
->> >>             WARN(irqs_disabled(), "syscall %ld left IRQs disabled",
->> >> regs->orig_ax))
->> >>                 local_irq_enable();
->> >>
->> >> check too, which is a fairly similar issue.
->> >
->> > This is exactly what Heiko did for the s390 backend as a result of this
->> > discussion. See the _CIF_ASCE_SECONDARY bit in arch/s390/kernel/entry.S,
->> > for the hot patch the check for the bit is included in the general
->> > _CIF_WORK test. Only the slow patch gets a bit slower.
->> >
->> > git commit b5a882fcf146c87cb6b67c6df353e1c042b8773d
->> > "s390: restore address space when returning to user space".
->>
->> If I'm understanding this, it won't catch corruption of addr_limit
->> during fast-path syscalls, though (i.e. addr_limit changed without a
->> call to set_fs()). :( This addr_limit corruption is mostly only a risk
->> archs without THREAD_INFO_IN_TASK, but it would still be nice to catch
->> unbalanced set_fs() code, so I like the idea. I like getting rid of
->> addr_limit entirely even more, but that'll take some time. :)
->
-> Well for s390 there is no addr_limit as we use two separate address space
-> for kernel vs. user. The equivalent to the addr_limit corruption on a
-> fast-path syscall would be changing CR7 outside of set_fs. This boils
-> down to the question what we are protection against? Bad code with
-> unbalanced set_fs or evil code that changes addr_limit/CR7 outside of
-> set_fs
+> Yeah, the risk for "corrupted addr_limit" is mainly a concern for
+> archs with addr_limit on the kernel stack. If I'm reading things
+> correctly, that means, from the archs I've been paying closer
+> attention to, it's an issue for arm, mips, and powerpc:
 
-Yeah, the risk for "corrupted addr_limit" is mainly a concern for
-archs with addr_limit on the kernel stack. If I'm reading things
-correctly, that means, from the archs I've been paying closer
-attention to, it's an issue for arm, mips, and powerpc:
+I don't understand why people are looking at addr_limit as some kind
+of special thing.
 
-arch/arm/include/asm/uaccess.h: current_thread_info()->addr_limit = fs;
-arch/arm/include/asm/thread_info.h:             (current_stack_pointer
-& ~(THREAD_SIZE - 1));
+If somebody is smashing the stack and corrupting thread info data, the
+game is over. addr_limit is the *least* of your problems, and it's not
+even all that likely that it will be increasing (it's much more likely
+that it would be overwritten with a smaller value).
 
-arch/mips/include/asm/uaccess.h:#define set_fs(x)
-(current_thread_info()->addr_limit = (x))
-arch/mips/kernel/process.c:        * task stacks at THREAD_SIZE - 32
+Quite frankly, this kind of idiotic discussion just makes me question
+the whole idea of the patch.
 
-arch/powerpc/include/asm/uaccess.h:#define set_fs(val)
-(current->thread.fs = (val))
-arch/powerpc/kernel/process.c:          struct pt_regs *regs =
-task_stack_page(current) + THREAD_SIZE;
+Any "security" that is this specific is not real security, it's just
+masturbatory garbage.
 
-(s390 uses a register, x86 and arm64 implement THREAD_INFO_IN_TASK.)
-Targeting addr_limit through arbitrary write attacks isn't too common
-since ... it's an arbitrary write. The issue with addr_limit was that
-it can live on the kernel stack, which meant all kinds of
-stack-related bugs can lead to it getting stomped on.
+It may be worth checking that people use "set_fs()" properly. But stop
+this idiotic crap. It just makes the kernel security people look like
+the crazies.
 
-So, two goals to protect addr_limit:
+There are enough incompetent crazy security people, don't go there.
+The kinds of things it is worth protecting against are the big class
+of generic issues, not the kind of "oh, but imagine if a cosmic ray
+flips this particular word in memory" kind of crap that ignores all
+the other words of memory.
 
-- get it off the stack to make the difficulty of corruption on par
-with other sensitive things that would require an arbitrary write
-flaw.
+Seriously, Kees. You are just making security people look bad. Stop it.
 
-- detect/block unbalanced set_fs() calls.
-
-If we can get the former addressed by the remaining architectures,
-then that class of attack will go away. For the latter, it sounds like
-Linus's slowpath-exit will work nicely.
-
-To me it looks like he architectures with addr_limit still on the
-stack would still benefit from always-check-addr_limit on syscall
-exit, but that would be arch-specific anyway.
-
-And then, of course, we've got the parallel task of just removing
-set_fs() entirely. :)
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+                       Linus
