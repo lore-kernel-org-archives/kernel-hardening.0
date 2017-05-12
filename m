@@ -1,76 +1,70 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170512072802.5a686f23@mschwideX1>
+In-Reply-To: <CA+55aFwvQfs_X+paQF6Luc0Rq+W3J2fKuHRou7=ANcquDdXdDA@mail.gmail.com>
 References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
  <20170508073352.caqe3fqf7nuxypgi@gmail.com> <20170508075209.7aluvpwildw325rf@gmail.com>
  <1494256932.1167.1.camel@gmail.com> <CAGXu5jL61K0bRSEg9a_LswNyrt3K1J57REbWVcvAXT54zWwtMA@mail.gmail.com>
  <20170509065619.wmqa6z6w3n6xpvrw@gmail.com> <20170509111007.GA14702@kroah.com>
  <CAJcbSZFswDWZoK-1UK+xkRMJ4ttSYbtH2Y5WD5_aPR-8ru6t8A@mail.gmail.com>
- <CAJcbSZEoRyewUtBHvqmNZL9FtT_q42Vmmd-EuC50x-ZRASiHHg@mail.gmail.com>
- <CA+55aFwvQfs_X+paQF6Luc0Rq+W3J2fKuHRou7=ANcquDdXdDA@mail.gmail.com> <20170512072802.5a686f23@mschwideX1>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 11 May 2017 22:34:31 -0700
-Message-ID: <CAGXu5j+EatK=DYONRkgovwLgytAnbG8jnAZaMSLckZFNVj3gig@mail.gmail.com>
+ <CAJcbSZEoRyewUtBHvqmNZL9FtT_q42Vmmd-EuC50x-ZRASiHHg@mail.gmail.com> <CA+55aFwvQfs_X+paQF6Luc0Rq+W3J2fKuHRou7=ANcquDdXdDA@mail.gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Thu, 11 May 2017 23:13:49 -0700
+Message-ID: <CALCETrUYMSRV2vuhnDvb4myXgfsn-Z1PvprHSEL-xYfrANhr1g@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
  limit before returning to user-mode
-To: Martin Schwidefsky <schwidefsky@de.ibm.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Thomas Garnier <thgarnie@google.com>, Greg KH <greg@kroah.com>, Ingo Molnar <mingo@kernel.org>, Daniel Micay <danielmicay@gmail.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Al Viro <viro@zeniv.linux.org.uk>
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Thomas Garnier <thgarnie@google.com>, Greg KH <greg@kroah.com>, Ingo Molnar <mingo@kernel.org>, Kees Cook <keescook@chromium.org>, Daniel Micay <danielmicay@gmail.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Al Viro <viro@zeniv.linux.org.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 11, 2017 at 10:28 PM, Martin Schwidefsky
-<schwidefsky@de.ibm.com> wrote:
-> On Thu, 11 May 2017 16:44:07 -0700
-> Linus Torvalds <torvalds@linux-foundation.org> wrote:
+[resending because kernel.org seems to have mangled my SMTP
+credentials.  I wonder if this is a common problem.]
+
+On Thu, May 11, 2017 at 4:44 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Thu, May 11, 2017 at 4:17 PM, Thomas Garnier <thgarnie@google.com> wrote:
+>>
+>> Ingo: Do you want the change as-is? Would you like it to be optional?
+>> What do you think?
 >
->> On Thu, May 11, 2017 at 4:17 PM, Thomas Garnier <thgarnie@google.com> wrote:
->> >
->> > Ingo: Do you want the change as-is? Would you like it to be optional?
->> > What do you think?
->>
->> I'm not ingo, but I don't like that patch. It's in the wrong place -
->> that system call return code is too timing-critical to add address
->> limit checks.
->>
->> Now what I think you *could* do is:
->>
->>  - make "set_fs()" actually set a work flag in the current thread flags
->>
->>  - do the test in the slow-path (syscall_return_slowpath).
->>
->> Yes, yes, that ends up being architecture-specific, but it's fairly simple.
->>
->> And it only slows down the system calls that actually use "set_fs()".
->> Sure, it will slow those down a fair amount, but they are hopefully a
->> small subset of all cases.
->>
->> How does that sound to people?  Thats' where we currently do that
->>
->>         if (IS_ENABLED(CONFIG_PROVE_LOCKING) &&
->>             WARN(irqs_disabled(), "syscall %ld left IRQs disabled",
->> regs->orig_ax))
->>                 local_irq_enable();
->>
->> check too, which is a fairly similar issue.
+> I'm not ingo, but I don't like that patch. It's in the wrong place -
+> that system call return code is too timing-critical to add address
+> limit checks.
 >
-> This is exactly what Heiko did for the s390 backend as a result of this
-> discussion. See the _CIF_ASCE_SECONDARY bit in arch/s390/kernel/entry.S,
-> for the hot patch the check for the bit is included in the general
-> _CIF_WORK test. Only the slow patch gets a bit slower.
+> Now what I think you *could* do is:
 >
-> git commit b5a882fcf146c87cb6b67c6df353e1c042b8773d
-> "s390: restore address space when returning to user space".
+>  - make "set_fs()" actually set a work flag in the current thread flags
+>
+>  - do the test in the slow-path (syscall_return_slowpath).
+>
+> Yes, yes, that ends up being architecture-specific, but it's fairly simple.
+>
+> And it only slows down the system calls that actually use "set_fs()".
+> Sure, it will slow those down a fair amount, but they are hopefully a
+> small subset of all cases.
+>
+> How does that sound to people?  Thats' where we currently do that
+>
+>         if (IS_ENABLED(CONFIG_PROVE_LOCKING) &&
+>             WARN(irqs_disabled(), "syscall %ld left IRQs disabled",
+> regs->orig_ax))
+>                 local_irq_enable();
+>
+> check too, which is a fairly similar issue.
+>
 
-If I'm understanding this, it won't catch corruption of addr_limit
-during fast-path syscalls, though (i.e. addr_limit changed without a
-call to set_fs()). :( This addr_limit corruption is mostly only a risk
-archs without THREAD_INFO_IN_TASK, but it would still be nice to catch
-unbalanced set_fs() code, so I like the idea. I like getting rid of
-addr_limit entirely even more, but that'll take some time. :)
+I like this.  It wouldn't help the problem that I suspect is a major
+part of the motivation for this patch: a stack overflow could
+overwrite addr_limit.  But we fixed that for real already.
 
--Kees
+Slightly off-topic: I would *love* to see syscall_return_slowpath() or
+similar moved or at least mostly moved into generic code.  Aside from
+the fact that it used to be written in asm, there's nothing
+fundamentally arch-specific about it.
 
+>
+> And it only slows down the system calls that actually use "set_fs()".
+> Sure, it will slow those down a fair amount, but they are hopefully a
+> small subset of all cases.
 
--- 
-Kees Cook
-Pixel Security
+It won't even slow them down that much.  The slow path is reasonably
+fast these days.
