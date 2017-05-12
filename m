@@ -1,76 +1,68 @@
 MIME-Version: 1.0
-Sender: hunger.hu@gmail.com
-In-Reply-To: <CAGXu5j++3ciR1gHX5_aSoBXiMs9FgFAm9cRtDygiaKkG+3fWfw@mail.gmail.com>
-References: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
- <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
- <CAGXu5j+nB-0B9UNWV_u+xdWtmLnUQewfGXi2Kd=KjSLrcQu=NQ@mail.gmail.com>
- <5913BD53.14417.3F7C9BC9@pageexec.freemail.hu> <CAGXu5j++3ciR1gHX5_aSoBXiMs9FgFAm9cRtDygiaKkG+3fWfw@mail.gmail.com>
-From: Hunger <hunger@hunger.hu>
-Date: Fri, 12 May 2017 13:34:29 +0200
-Message-ID: <CAPshzHbwitYkpBXf4e3jbR7SXKCvPgw8R+UbWHSQRaK0vMshVg@mail.gmail.com>
-Content-Type: multipart/alternative; boundary="001a1143f042ae71ce054f521688"
-Subject: Re: [kernel-hardening] It looks like there will be no more public
- versions of PaX and Grsec.
-To: Kees Cook <keescook@chromium.org>
-Cc: PaX Team <pageexec@freemail.hu>, Mathias Krause <minipli@googlemail.com>, Daniel Cegielka <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20170512065818.mw7yqcdck7alqlzi@gmail.com>
+References: <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
+ <20170508073352.caqe3fqf7nuxypgi@gmail.com> <20170508075209.7aluvpwildw325rf@gmail.com>
+ <1494256932.1167.1.camel@gmail.com> <CAGXu5jL61K0bRSEg9a_LswNyrt3K1J57REbWVcvAXT54zWwtMA@mail.gmail.com>
+ <20170509065619.wmqa6z6w3n6xpvrw@gmail.com> <20170509111007.GA14702@kroah.com>
+ <CAJcbSZFswDWZoK-1UK+xkRMJ4ttSYbtH2Y5WD5_aPR-8ru6t8A@mail.gmail.com>
+ <CAJcbSZEoRyewUtBHvqmNZL9FtT_q42Vmmd-EuC50x-ZRASiHHg@mail.gmail.com>
+ <CA+55aFwvQfs_X+paQF6Luc0Rq+W3J2fKuHRou7=ANcquDdXdDA@mail.gmail.com> <20170512065818.mw7yqcdck7alqlzi@gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 12 May 2017 10:05:58 -0700
+Message-ID: <CAJcbSZFyzanv6ji97+K2kQH1CFX6qeXWsGwRvjiK1Dk+f3niBA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
+ limit before returning to user-mode
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Greg KH <greg@kroah.com>, Kees Cook <keescook@chromium.org>, Daniel Micay <danielmicay@gmail.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Al Viro <viro@zeniv.linux.org.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a1143f042ae71ce054f521688
-Content-Type: text/plain; charset="UTF-8"
-
-On Thu, May 11, 2017 at 8:02 PM, Kees Cook <keescook@chromium.org> wrote:
-
-> Your work has made
-> the world a little more secure. I'm doing my best to make the world a
-> lot more secure
-
-
-PaX and grsecurity had an influence on the whole industry. Every modern OS
-have NX support and ASLR now from Apple to Microsoft. PIE binaries and
-mprotect restrictions in Apple iOS. PaX UDEREF and KERNEXEC features
-implemented in hardware level, like ARM PXN, PAN and Intel SMEP, SMAP
-(still weaker protection than PaX btw). PaX RAP is leading in Control Flow
-Integrity.
-
-So how you make the world a lot more secure while just copy+pasting the 10+
-years old grsecurity and PaX features and innovating nothing new?
-
-
-> If a financial arrangement is desired, I believe
-> my employer continues to be willing to explore it now just as they
-> have in the past.
+On Thu, May 11, 2017 at 11:58 PM, Ingo Molnar <mingo@kernel.org> wrote:
 >
+> * Linus Torvalds <torvalds@linux-foundation.org> wrote:
+>
+>> On Thu, May 11, 2017 at 4:17 PM, Thomas Garnier <thgarnie@google.com> wrote:
+>> >
+>> > Ingo: Do you want the change as-is? Would you like it to be optional?
+>> > What do you think?
+>>
+>> I'm not ingo, but I don't like that patch. It's in the wrong place -
+>> that system call return code is too timing-critical to add address
+>> limit checks.
+>>
+>> Now what I think you *could* do is:
+>>
+>>  - make "set_fs()" actually set a work flag in the current thread flags
+>>
+>>  - do the test in the slow-path (syscall_return_slowpath).
+>>
+>> Yes, yes, that ends up being architecture-specific, but it's fairly simple.
+>>
+>> And it only slows down the system calls that actually use "set_fs()".
+>> Sure, it will slow those down a fair amount, but they are hopefully a
+>> small subset of all cases.
+>>
+>> How does that sound to people?  Thats' where we currently do that
+>>
+>>         if (IS_ENABLED(CONFIG_PROVE_LOCKING) &&
+>>             WARN(irqs_disabled(), "syscall %ld left IRQs disabled",
+>> regs->orig_ax))
+>>                 local_irq_enable();
+>>
+>> check too, which is a fairly similar issue.
+>
+> I really like that idea and I'd be perfectly fine with that solution, because it
+> puts the overhead where the problem comes from, and adds an extra incentive for
+> code to move away from set_fs() facilities. Win-win.
 
-If i read it correctly, pipacs and spender got no financial arrangement or
-any contact attempt about it in the past, so what will your employer
-continue?
+Great, I will adapt the patch for that.
 
---001a1143f042ae71ce054f521688
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+>
+> Thanks,
+>
+>         Ingo
 
-<div dir=3D"ltr"><div class=3D"gmail_extra"><div class=3D"gmail_quote">On T=
-hu, May 11, 2017 at 8:02 PM, Kees Cook <span dir=3D"ltr">&lt;<a href=3D"mai=
-lto:keescook@chromium.org" target=3D"_blank">keescook@chromium.org</a>&gt;<=
-/span> wrote:<br><blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8=
-ex;border-left:1px #ccc solid;padding-left:1ex">Your work has made<br>
-the world a little more secure. I&#39;m doing my best to make the world a<b=
-r>
-lot more secure</blockquote><div><br></div><div>PaX and grsecurity had an i=
-nfluence on the whole industry. Every modern OS have NX support and ASLR no=
-w from Apple to Microsoft. PIE binaries and mprotect restrictions in Apple =
-iOS. PaX UDEREF and KERNEXEC features implemented in hardware level, like A=
-RM PXN, PAN and Intel SMEP, SMAP (still weaker protection than PaX btw). Pa=
-X RAP is leading in Control Flow Integrity.</div><div><br></div><div>So how=
- you make the world a lot more secure while just copy+pasting the 10+ years=
- old grsecurity and PaX features and innovating nothing new?</div><div>=C2=
-=A0</div><blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;borde=
-r-left:1px #ccc solid;padding-left:1ex">If a financial arrangement is desir=
-ed, I believe<br>
-my employer continues to be willing to explore it now just as they<br>
-have in the past.<br></blockquote><div><br></div><div>If i read it correctl=
-y, pipacs and spender got no financial arrangement or any contact attempt a=
-bout it in the past, so what will your employer continue?</div><div><br></d=
-iv></div></div></div>
 
---001a1143f042ae71ce054f521688--
+
+-- 
+Thomas
