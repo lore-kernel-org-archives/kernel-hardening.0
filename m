@@ -1,161 +1,30 @@
-From: Lionel Debroux <lionel_debroux@yahoo.fr>
-Date: Sun, 14 May 2017 11:33:27 +0200
-Message-Id: <1494754407-31455-2-git-send-email-lionel_debroux@yahoo.fr>
-In-Reply-To: <1494754407-31455-1-git-send-email-lionel_debroux@yahoo.fr>
-References: <1494754407-31455-1-git-send-email-lionel_debroux@yahoo.fr>
-Subject: [kernel-hardening] [PATCH] drivers/media: improve the return type of a bunch of .get_frontend_algo callbacks.
-To: kernel-hardening@lists.openwall.com
-Cc: Lionel Debroux <lionel_debroux@yahoo.fr>
+Date: Sat, 13 May 2017 00:21:37 -0700
+From: Christoph Hellwig <hch@infradead.org>
+Message-ID: <20170513072137.GA29771@infradead.org>
+References: <CAJcbSZEoRyewUtBHvqmNZL9FtT_q42Vmmd-EuC50x-ZRASiHHg@mail.gmail.com>
+ <CA+55aFwvQfs_X+paQF6Luc0Rq+W3J2fKuHRou7=ANcquDdXdDA@mail.gmail.com>
+ <20170512072802.5a686f23@mschwideX1>
+ <CAGXu5j+EatK=DYONRkgovwLgytAnbG8jnAZaMSLckZFNVj3gig@mail.gmail.com>
+ <20170512075458.09a3a1ce@mschwideX1>
+ <CAGXu5jL9vUrn4kpjO+qa4cHmWBypeqP17OGbrMs=5Nz0YpQMZw@mail.gmail.com>
+ <CA+55aFzbiBqsYb7vwO=+L4Vp_GOgPu+DBOrq4fBnyzq5DbBehg@mail.gmail.com>
+ <CAGXu5j+xmyJ6RhtPw9rUgs7k3sZ1KKWffvyGGG--oPfu9W42ng@mail.gmail.com>
+ <20170512202106.GO22219@n2100.armlinux.org.uk>
+ <20170512203044.GI4626@worktop.programming.kicks-ass.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170512203044.GI4626@worktop.programming.kicks-ass.net>
+Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
+ limit before returning to user-mode
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Russell King - ARM Linux <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Mark Rutland <mark.rutland@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Greg KH <greg@kroah.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, LKML <linux-kernel@vger.kernel.org>, David Howells <dhowells@redhat.com>, Dave Hansen <dave.hansen@intel.com>, "H . Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@kernel.org>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, linux-s390 <linux-s390@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Will Deacon <will.deacon@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Catalin Marinas <catalin.marinas@arm.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Rik van Riel <riel@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Brian Gerst <brgerst@gmail.com>, Borislav Petkov <bp@alien8.de>, Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Linux API <linux-api@vger.kernel.org>, Oleg Nesterov <oleg@redhat.com>, Daniel Micay <danielmicay@gmail.com>, James Morse <james.morse@arm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Paolo Bonzini <pbonzini@redhat.com>, Andrew Morton <akpm@linux-foundation.org>, Thomas Garnier <thgarnie@google.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The definition of struct dvb_frontend_ops has .get_frontend_algo return
-enum dvbfe_algo, so use that instead of the less descriptive "int".
+On Fri, May 12, 2017 at 10:30:44PM +0200, Peter Zijlstra wrote:
+> On stack variable length arrays get implemented by the compiler doing
+> alloca(), and we sadly have a few of those around.
 
-Extracted from PaX/grsecurity.
-
-Signed-off-by: Lionel Debroux <lionel_debroux@yahoo.fr>
----
- drivers/media/dvb-frontends/cx24116.c       | 2 +-
- drivers/media/dvb-frontends/cx24117.c       | 2 +-
- drivers/media/dvb-frontends/cx24120.c       | 2 +-
- drivers/media/dvb-frontends/cx24123.c       | 2 +-
- drivers/media/dvb-frontends/cxd2820r_core.c | 2 +-
- drivers/media/dvb-frontends/mb86a20s.c      | 2 +-
- drivers/media/dvb-frontends/s921.c          | 2 +-
- drivers/media/pci/bt8xx/dst.c               | 2 +-
- drivers/media/pci/pt1/va1j5jf8007s.c        | 2 +-
- drivers/media/pci/pt1/va1j5jf8007t.c        | 2 +-
- 10 files changed, 10 insertions(+), 10 deletions(-)
-
-diff --git a/drivers/media/dvb-frontends/cx24116.c b/drivers/media/dvb-frontends/cx24116.c
-index e105532..e07d52bb 100644
---- a/drivers/media/dvb-frontends/cx24116.c
-+++ b/drivers/media/dvb-frontends/cx24116.c
-@@ -1462,7 +1462,7 @@ static int cx24116_tune(struct dvb_frontend *fe, bool re_tune,
- 	return cx24116_read_status(fe, status);
- }
- 
--static int cx24116_get_algo(struct dvb_frontend *fe)
-+static enum dvbfe_algo cx24116_get_algo(struct dvb_frontend *fe)
- {
- 	return DVBFE_ALGO_HW;
- }
-diff --git a/drivers/media/dvb-frontends/cx24117.c b/drivers/media/dvb-frontends/cx24117.c
-index d37cb77..97e0fef 100644
---- a/drivers/media/dvb-frontends/cx24117.c
-+++ b/drivers/media/dvb-frontends/cx24117.c
-@@ -1555,7 +1555,7 @@ static int cx24117_tune(struct dvb_frontend *fe, bool re_tune,
- 	return cx24117_read_status(fe, status);
- }
- 
--static int cx24117_get_algo(struct dvb_frontend *fe)
-+static enum dvbfe_algo cx24117_get_algo(struct dvb_frontend *fe)
- {
- 	return DVBFE_ALGO_HW;
- }
-diff --git a/drivers/media/dvb-frontends/cx24120.c b/drivers/media/dvb-frontends/cx24120.c
-index 7f11dcc..01da670 100644
---- a/drivers/media/dvb-frontends/cx24120.c
-+++ b/drivers/media/dvb-frontends/cx24120.c
-@@ -1491,7 +1491,7 @@ static int cx24120_tune(struct dvb_frontend *fe, bool re_tune,
- 	return cx24120_read_status(fe, status);
- }
- 
--static int cx24120_get_algo(struct dvb_frontend *fe)
-+static enum dvbfe_algo cx24120_get_algo(struct dvb_frontend *fe)
- {
- 	return DVBFE_ALGO_HW;
- }
-diff --git a/drivers/media/dvb-frontends/cx24123.c b/drivers/media/dvb-frontends/cx24123.c
-index 4ae3d92..1292c05 100644
---- a/drivers/media/dvb-frontends/cx24123.c
-+++ b/drivers/media/dvb-frontends/cx24123.c
-@@ -1005,7 +1005,7 @@ static int cx24123_tune(struct dvb_frontend *fe,
- 	return retval;
- }
- 
--static int cx24123_get_algo(struct dvb_frontend *fe)
-+static enum dvbfe_algo cx24123_get_algo(struct dvb_frontend *fe)
- {
- 	return DVBFE_ALGO_HW;
- }
-diff --git a/drivers/media/dvb-frontends/cxd2820r_core.c b/drivers/media/dvb-frontends/cxd2820r_core.c
-index f6ebbb4..3e0d8cb 100644
---- a/drivers/media/dvb-frontends/cxd2820r_core.c
-+++ b/drivers/media/dvb-frontends/cxd2820r_core.c
-@@ -403,7 +403,7 @@ static enum dvbfe_search cxd2820r_search(struct dvb_frontend *fe)
- 	return DVBFE_ALGO_SEARCH_ERROR;
- }
- 
--static int cxd2820r_get_frontend_algo(struct dvb_frontend *fe)
-+static enum dvbfe_algo cxd2820r_get_frontend_algo(struct dvb_frontend *fe)
- {
- 	return DVBFE_ALGO_CUSTOM;
- }
-diff --git a/drivers/media/dvb-frontends/mb86a20s.c b/drivers/media/dvb-frontends/mb86a20s.c
-index e8ac8c3..e0f4ba8 100644
---- a/drivers/media/dvb-frontends/mb86a20s.c
-+++ b/drivers/media/dvb-frontends/mb86a20s.c
-@@ -2055,7 +2055,7 @@ static void mb86a20s_release(struct dvb_frontend *fe)
- 	kfree(state);
- }
- 
--static int mb86a20s_get_frontend_algo(struct dvb_frontend *fe)
-+static enum dvbfe_algo mb86a20s_get_frontend_algo(struct dvb_frontend *fe)
- {
-         return DVBFE_ALGO_HW;
- }
-diff --git a/drivers/media/dvb-frontends/s921.c b/drivers/media/dvb-frontends/s921.c
-index 274544a..9ef9b9b 100644
---- a/drivers/media/dvb-frontends/s921.c
-+++ b/drivers/media/dvb-frontends/s921.c
-@@ -464,7 +464,7 @@ static int s921_tune(struct dvb_frontend *fe,
- 	return rc;
- }
- 
--static int s921_get_algo(struct dvb_frontend *fe)
-+static enum dvbfe_algo s921_get_algo(struct dvb_frontend *fe)
- {
- 	return DVBFE_ALGO_HW;
- }
-diff --git a/drivers/media/pci/bt8xx/dst.c b/drivers/media/pci/bt8xx/dst.c
-index 7166d22..fa682f9 100644
---- a/drivers/media/pci/bt8xx/dst.c
-+++ b/drivers/media/pci/bt8xx/dst.c
-@@ -1657,7 +1657,7 @@ static int dst_tune_frontend(struct dvb_frontend* fe,
- 	return 0;
- }
- 
--static int dst_get_tuning_algo(struct dvb_frontend *fe)
-+static enum dvbfe_algo dst_get_tuning_algo(struct dvb_frontend *fe)
- {
- 	return dst_algo ? DVBFE_ALGO_HW : DVBFE_ALGO_SW;
- }
-diff --git a/drivers/media/pci/pt1/va1j5jf8007s.c b/drivers/media/pci/pt1/va1j5jf8007s.c
-index f75f695..d913a60 100644
---- a/drivers/media/pci/pt1/va1j5jf8007s.c
-+++ b/drivers/media/pci/pt1/va1j5jf8007s.c
-@@ -98,7 +98,7 @@ static int va1j5jf8007s_read_snr(struct dvb_frontend *fe, u16 *snr)
- 	return 0;
- }
- 
--static int va1j5jf8007s_get_frontend_algo(struct dvb_frontend *fe)
-+static enum dvbfe_algo va1j5jf8007s_get_frontend_algo(struct dvb_frontend *fe)
- {
- 	return DVBFE_ALGO_HW;
- }
-diff --git a/drivers/media/pci/pt1/va1j5jf8007t.c b/drivers/media/pci/pt1/va1j5jf8007t.c
-index 63fda79..4115c3c 100644
---- a/drivers/media/pci/pt1/va1j5jf8007t.c
-+++ b/drivers/media/pci/pt1/va1j5jf8007t.c
-@@ -88,7 +88,7 @@ static int va1j5jf8007t_read_snr(struct dvb_frontend *fe, u16 *snr)
- 	return 0;
- }
- 
--static int va1j5jf8007t_get_frontend_algo(struct dvb_frontend *fe)
-+static enum dvbfe_algo va1j5jf8007t_get_frontend_algo(struct dvb_frontend *fe)
- {
- 	return DVBFE_ALGO_HW;
- }
--- 
-2.8.1.217.ge6ac6e1
+I've just got rid of one of those and I wish they would appear
+entirely as they are horrible in so many different ways.  Sparse
+warns about them, btw.
