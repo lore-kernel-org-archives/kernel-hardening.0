@@ -1,34 +1,74 @@
+References: <20170505232018.28846-1-matt@nmatt.com>
+ <20170510212920.7f6bc5e6@alans-desktop>
+From: Matt Brown <matt@nmatt.com>
+Message-ID: <e73698a7-7b6a-a916-3270-82dcfe0a558b@nmatt.com>
+Date: Sat, 13 May 2017 15:52:58 -0400
 MIME-Version: 1.0
-In-Reply-To: <20170512071549.GP390@ZenIV.linux.org.uk>
-References: <20170428153213.137279-1-thgarnie@google.com> <CAJcbSZGQsRVg3QZ9QfLn2HBC+RP-7fUTab0bYDJ455d8y8GyNw@mail.gmail.com>
- <20170508073352.caqe3fqf7nuxypgi@gmail.com> <20170508124621.GA20705@kroah.com>
- <20170509064522.anusoikaalvlux3w@gmail.com> <20170509085659.GA32555@infradead.org>
- <CALCETrUh8NO2scaqEM48K70Fo2+V3=Cpyk4JurCDiCYp4nm_+g@mail.gmail.com>
- <20170512070012.7dysuhbkcas7ibaj@gmail.com> <20170512071549.GP390@ZenIV.linux.org.uk>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Fri, 12 May 2017 16:20:31 -0700
-Message-ID: <CALCETrXMgx+pFsL-5s6jRHxsTCJk8U8f5AFMzchsy_L6DyMAvQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCH v9 1/4] syscalls: Verify address
- limit before returning to user-mode
-To: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Greg KH <greg@kroah.com>, Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+In-Reply-To: <20170510212920.7f6bc5e6@alans-desktop>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v6 0/2] security: tty: make TIOCSTI ioctl require
+ CAP_SYS_ADMIN
+To: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+Cc: serge@hallyn.com, gregkh@linuxfoundation.org, jslaby@suse.com, akpm@linux-foundation.org, jannh@google.com, keescook@chromium.org, jmorris@namei.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, May 12, 2017 at 12:15 AM, Al Viro <viro@zeniv.linux.org.uk> wrote:
+On 05/10/2017 04:29 PM, Alan Cox wrote:
+> On Fri,  5 May 2017 19:20:16 -0400
+> Matt Brown <matt@nmatt.com> wrote:
+>
+>> This patchset introduces the tiocsti_restrict sysctl, whose default is
+>> controlled via CONFIG_SECURITY_TIOCSTI_RESTRICT. When activated, this
+>> control restricts all TIOCSTI ioctl calls from non CAP_SYS_ADMIN users.
+>>
+>> This patch was inspired from GRKERNSEC_HARDEN_TTY.
+>>
+>> This patch would have prevented
+>> https://bugzilla.redhat.com/show_bug.cgi?id=1411256 under the following
+>> conditions:
+>> * non-privileged container
+>> * container run inside new user namespace
+>>
+>> Possible effects on userland:
+>>
+>> There could be a few user programs that would be effected by this
+>> change.
+>> See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
+>> notable programs are: agetty, csh, xemacs and tcsh
+>>
+>> However, I still believe that this change is worth it given that the
+>> Kconfig defaults to n.
+>
+> And it still doesn't deal with the fact that there are hundreds of other
+> ways to annoy the owner of a tty if it's passed to a lower privilege
+> child from framebuffer reprogramming through keyboard remaps.
+>
+> The proper way to handle those cases is to create a pty/tty pair and use
+> that. Your patch is pure snake oil and if anything implies safety that
+> doesn't exist.
+>
 
-> Folks, seriously, have you even looked through that zoo?  I have, and it's
-> really, really not fun.  Sure, we can say "fuck 'em, no need to allow
-> splice() on random crap".  Would be perfectly reasonable, expect that
-> it's not the only place doing kernel_write() and its ilk...
+I'm not implying that my patch is supposed to provide safety for
+"hundreds of other" issues. I'm looking to provide a way to lock down a
+single TTY ioctl that has caused real security issues to arise. For
+this reason, it's completely incorrect to say that this feature is
+snake oil. My patch does exactly what it claims to do. No more no less.
 
-Can you clarify this?  I think we really may be able to do exactly
-this.  From Christoph's list, there are only two things that need
-kernel_read/kernel_write to user-supplied fds that may come from a
-variety of sources: splice and exec.  If you're execing a chardev from
-a crappy driver, something is seriously wrong.  And returning -EINVAL
-from splice() to or from files that use ->read and ->write seems find
-(and splice(2) even documents -EINVAL as meaning that the target
-doesn't support splicing).
+> In addition your change to allow it to be used by root in the guest
+> completely invalidates any protection you have because I can push
+>
+> "rm -rf /\n"
+>
+> as root in my namespace and exit
+>
+> The tty buffers are not flushed across the context change so the shell
+> you return to gets the input and oh dear....
 
---Andy
+This is precisely what my patch prevents! With my protection enabled, a
+container will only be able to use the TIOCSTI ioctl on a tty if that
+container has CAP_SYS_ADMIN in the user namespace in which the tty was
+created.
+
+>
+> Alan
+>
