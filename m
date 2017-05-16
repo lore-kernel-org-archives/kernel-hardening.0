@@ -1,60 +1,81 @@
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Tue, 16 May 2017 21:36:37 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC563362B030@ORSMSX103.amr.corp.intel.com>
-References: <20170506040641.GA32707@kroah.com>
- <20170511013737.GD801@jagdpanzerIV.localdomain>
-In-Reply-To: <20170511013737.GD801@jagdpanzerIV.localdomain>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [RFC 00/06] printk: add more new kernel pointer filter options.
-To: Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Greg KH <gregkh@linuxfoundation.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Petr Mladek <pmladek@suse.com>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+In-Reply-To: <CAGXu5jJrEw1WOGniTV4Jhv_mO2zHxmXJqpzUs7BOUJNpCU1MNg@mail.gmail.com>
+References: <20170505232018.28846-1-matt@nmatt.com> <20170510212920.7f6bc5e6@alans-desktop>
+ <e73698a7-7b6a-a916-3270-82dcfe0a558b@nmatt.com> <20170515215752.4e9f3826@alans-desktop>
+ <CANA3KFU6Aor=NjdC49XpX=h29vSpeiDNn78en7sbZFosAcntGw@mail.gmail.com>
+ <5c5c9b06-d2ec-c2e5-3ea2-463f315428f6@nmatt.com> <CANA3KFUh6Q+Pq6Srh-dQv0gaRy4zUJAJcyGLYoDFH+MfTycp+A@mail.gmail.com>
+ <1a1730f3-5378-1ce5-77a9-b9bc8cd5c90b@nmatt.com> <CAGXu5jJrEw1WOGniTV4Jhv_mO2zHxmXJqpzUs7BOUJNpCU1MNg@mail.gmail.com>
+From: Peter Dolding <oiaohm@gmail.com>
+Date: Wed, 17 May 2017 07:43:18 +1000
+Message-ID: <CANA3KFX37=WEVXedSGAqMH_DxS=SxtjpeZ0PRizPQcBSyDqVpw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v6 0/2] security: tty: make TIOCSTI ioctl require CAP_SYS_ADMIN
+To: Kees Cook <keescook@chromium.org>
+Cc: Matt Brown <matt@nmatt.com>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>, "Serge E. Hallyn" <serge@hallyn.com>, Greg KH <gregkh@linuxfoundation.org>, Jiri Slaby <jslaby@suse.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, James Morris <jmorris@namei.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Wed, May 17, 2017 at 12:28 AM, Kees Cook <keescook@chromium.org> wrote:
+> On Tue, May 16, 2017 at 5:22 AM, Matt Brown <matt@nmatt.com> wrote:
+>> On 05/16/2017 05:01 AM, Peter Dolding wrote:
+>>>>
+>>>>
+>>>> I could see a case being make for CAP_SYS_TTY_CONFIG. However I still
+>>>> choose to do with CAP_SYS_ADMIN because it is already in use in the
+>>>> TIOCSTI ioctl.
+>>>>
+>>> Matt Brown don't give me existing behaviour.    CAP_SYS_ADMIN is
+>>> overload.   The documentation tells you that you are not to expand it
+>>> and you openly admit you have.
+>>>
+>>
+>> This is not true that I'm openly going against what the documentation
+>> instructs. The part of the email chain where I show this got removed
+>> somehow. Again I will refer to the capabilities man page that you
+>> quoted.
+>>
+>> From http://man7.org/linux/man-pages/man7/capabilities.7.html
+>>
+>> "Don't choose CAP_SYS_ADMIN if you can possibly avoid it!
+>> ...
+>> The only new features that should be associated with CAP_SYS_ADMIN are
+>> ones that closely match existing uses in that silo."
+>>
+>> My feature affects the TIOCSTI ioctl. The TIOCSTI ioctl already falls
+>> under CAP_SYS_ADMIN, therefore I actually *am* following the
+>> documentation.
+>
+> CAP_SYS_ADMIN is the right choice here, I agree with Matt: it is
+> already in use for TIOCSTI. We can't trivially add new capabilities
+> flags (see the various giant threads debating this, the most recently
+> that I remember from the kernel lock-down series related to Secure
+> Boot).
 
+We cannot just keep on expanding CAP_SYS_ADMIN either.
+>
+>>> I fact this usage of TIOCSTI I personally think should require two
+>>> capabilities flags set.   CAP_SYS_ADMIN section left as it is at this
+>>> stage.   With TIOSCTI stuck behind another capability.
+>>>
+>>> If you had added a new capability flag you could set file capabilities
+>>> on any of the old applications depending on the now secured behaviour.
+>
+> If we're adjusting applications, they should be made to avoid TIOSCTI
+> completely. This looks to me a lot like the symlink restrictions: yes,
+> userspace should be fixed to the do the right thing, but why not
+> provide support to userspace to avoid the problem entirely?
+>
+Kees I like but you have forgot the all important rule.   The Linus
+Rule.    Existing applications must  have a method work.
+  So modify applications  binary is not way out of problem.
 
-> -----Original Message-----
-> From: Sergey Senozhatsky [mailto:sergey.senozhatsky.work@gmail.com]
-> Sent: Wednesday, May 10, 2017 6:38 PM
-> To: Greg KH <gregkh@linuxfoundation.org>
-> Cc: kernel-hardening@lists.openwall.com; Petr Mladek <pmladek@suse.com>;
-> Sergey Senozhatsky <sergey.senozhatsky@gmail.com>; linux-
-> kernel@vger.kernel.org; Catalin Marinas <catalin.marinas@arm.com>; Will
-> Deacon <will.deacon@arm.com>; Steven Rostedt <rostedt@goodmis.org>;
-> Roberts, William C <william.c.roberts@intel.com>; Chris Fries
-> <cfries@google.com>; Dave Weinstein <olorin@google.com>
-> Subject: Re: [RFC 00/06] printk: add more new kernel pointer filter optio=
-ns.
->=20
-> Hello Greg,
->=20
-> On (05/05/17 21:06), Greg KH wrote:
-> > Here's a short patch series from Chris Fries and Dave Weinstein that
-> > implement some new restrictions when printing out kernel pointers, as
-> > well as the ability to whitelist kernel pointers where needed.
-> >
-> > These patches are based on work from William Roberts, and also is
-> > inspired by grsecurity's %pP to specifically whitelist a kernel
-> > pointer, where it is always needed, like the last patch in the series
-> > shows, in the UIO drivers (UIO requires that you know the address,
-> > it's a hardware address, nothing wrong with seeing that...)
-> >
-> > I haven't done much to this patch series, only forward porting it from
-> > an older kernel release (4.4) and a few minor tweaks.  It applies
-> > cleanly on top of 4.11 as well as Linus's current development tree
-> > (10502 patches into the 4.12-rc1 merge window).  I'm posting it now
-> > for comments if anyone sees anything wrong with this approach
->=20
-> overall, I don't see anything wrong.
->=20
-> > or thinks the things that are being whitelisted should not be?
->=20
-> can't say for sure, sorry.
->=20
-> 	-ss
+Please note making CAP_SYS_ADMIN the only way to use TIOCSTI also
+means setting CAP_SYS_ADMIN on all the existing applications to obey
+the Linus Rule of not break userspace.   So this is why the patch is
+strictly no as this means elevating privilege of existing applications
+and possibly opening up more security flaws.
 
-I almost missed this, none of the mail was delivered to my inbox...
+Reality any patch like the one we are talking about due to the Linus
+Rule and the security risk it will open up obey this it just be
+rejected.   There is another kind of way I will cover with Serge.
 
-Anyways, I am glad to see this revived and I don't have any
-Comments besides thanks.
+Peter Dolding.
