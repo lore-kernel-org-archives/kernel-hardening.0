@@ -1,69 +1,37 @@
+Date: Tue, 16 May 2017 16:41:04 +0200
+From: Petr Mladek <pmladek@suse.com>
+Message-ID: <20170516144104.GA8621@pathway.suse.cz>
+References: <20170506040641.GA32707@kroah.com>
+ <20170506040747.GF32707@kroah.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1a1730f3-5378-1ce5-77a9-b9bc8cd5c90b@nmatt.com>
-References: <20170505232018.28846-1-matt@nmatt.com> <20170510212920.7f6bc5e6@alans-desktop>
- <e73698a7-7b6a-a916-3270-82dcfe0a558b@nmatt.com> <20170515215752.4e9f3826@alans-desktop>
- <CANA3KFU6Aor=NjdC49XpX=h29vSpeiDNn78en7sbZFosAcntGw@mail.gmail.com>
- <5c5c9b06-d2ec-c2e5-3ea2-463f315428f6@nmatt.com> <CANA3KFUh6Q+Pq6Srh-dQv0gaRy4zUJAJcyGLYoDFH+MfTycp+A@mail.gmail.com>
- <1a1730f3-5378-1ce5-77a9-b9bc8cd5c90b@nmatt.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 16 May 2017 07:28:52 -0700
-Message-ID: <CAGXu5jJrEw1WOGniTV4Jhv_mO2zHxmXJqpzUs7BOUJNpCU1MNg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v6 0/2] security: tty: make TIOCSTI ioctl require CAP_SYS_ADMIN
-To: Matt Brown <matt@nmatt.com>
-Cc: Peter Dolding <oiaohm@gmail.com>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>, "Serge E. Hallyn" <serge@hallyn.com>, Greg KH <gregkh@linuxfoundation.org>, Jiri Slaby <jslaby@suse.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, James Morris <jmorris@namei.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170506040747.GF32707@kroah.com>
+Subject: [kernel-hardening] Re: [RFC 5/6] lib: vsprintf: Add "%paP", "%padP" options
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: kernel-hardening@lists.openwall.com, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 16, 2017 at 5:22 AM, Matt Brown <matt@nmatt.com> wrote:
-> On 05/16/2017 05:01 AM, Peter Dolding wrote:
->>>
->>>
->>> I could see a case being make for CAP_SYS_TTY_CONFIG. However I still
->>> choose to do with CAP_SYS_ADMIN because it is already in use in the
->>> TIOCSTI ioctl.
->>>
->> Matt Brown don't give me existing behaviour.    CAP_SYS_ADMIN is
->> overload.   The documentation tells you that you are not to expand it
->> and you openly admit you have.
->>
->
-> This is not true that I'm openly going against what the documentation
-> instructs. The part of the email chain where I show this got removed
-> somehow. Again I will refer to the capabilities man page that you
-> quoted.
->
-> From http://man7.org/linux/man-pages/man7/capabilities.7.html
->
-> "Don't choose CAP_SYS_ADMIN if you can possibly avoid it!
-> ...
-> The only new features that should be associated with CAP_SYS_ADMIN are
-> ones that closely match existing uses in that silo."
->
-> My feature affects the TIOCSTI ioctl. The TIOCSTI ioctl already falls
-> under CAP_SYS_ADMIN, therefore I actually *am* following the
-> documentation.
+On Fri 2017-05-05 21:07:47, Greg KH wrote:
+> From: Chris Fries <cfries@google.com>
+> 
+> Add %paP and %padP for physical address that need to always be shown
+> regardless of kptr restrictions.
+> 
+> Cc: William Roberts <william.c.roberts@intel.com>
+> Cc: Dave Weinstein <olorin@google.com>
+> Signed-off-by: Chris Fries <cfries@google.com>
+> Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> ---
+>  Documentation/printk-formats.txt | 10 ++++++----
+>  lib/vsprintf.c                   | 12 +++++++++---
+>  2 files changed, 15 insertions(+), 7 deletions(-)
 
-CAP_SYS_ADMIN is the right choice here, I agree with Matt: it is
-already in use for TIOCSTI. We can't trivially add new capabilities
-flags (see the various giant threads debating this, the most recently
-that I remember from the kernel lock-down series related to Secure
-Boot).
+This patch should update also the section about
+kptr_restrict in Documentation/sysctl/kernel.txt.
+It should mention that the trailing P allows to see
+pointers also for %pa, and %p[rR] formats when
+the level is 4.
 
->> I fact this usage of TIOCSTI I personally think should require two
->> capabilities flags set.   CAP_SYS_ADMIN section left as it is at this
->> stage.   With TIOSCTI stuck behind another capability.
->>
->> If you had added a new capability flag you could set file capabilities
->> on any of the old applications depending on the now secured behaviour.
-
-If we're adjusting applications, they should be made to avoid TIOSCTI
-completely. This looks to me a lot like the symlink restrictions: yes,
-userspace should be fixed to the do the right thing, but why not
-provide support to userspace to avoid the problem entirely?
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+Best Regards,
+Petr
