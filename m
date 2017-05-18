@@ -1,57 +1,40 @@
-Date: Thu, 18 May 2017 16:12:03 +0200
+Date: Thu, 18 May 2017 16:12:15 +0200
 From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20170518141203.GB23654@kroah.com>
+Message-ID: <20170518141215.GC23654@kroah.com>
 References: <20170506040641.GA32707@kroah.com>
- <20170506040656.GB32707@kroah.com>
- <20170516115811.GA7297@pathway.suse.cz>
+ <20170506040747.GF32707@kroah.com>
+ <20170516144104.GA8621@pathway.suse.cz>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170516115811.GA7297@pathway.suse.cz>
-Subject: [kernel-hardening] Re: [RFC 1/6] lib: vsprintf: additional kernel pointer filtering
- options
+In-Reply-To: <20170516144104.GA8621@pathway.suse.cz>
+Subject: [kernel-hardening] Re: [RFC 5/6] lib: vsprintf: Add "%paP", "%padP" options
 To: Petr Mladek <pmladek@suse.com>
 Cc: kernel-hardening@lists.openwall.com, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 16, 2017 at 01:58:11PM +0200, Petr Mladek wrote:
-> On Fri 2017-05-05 21:06:56, Greg KH wrote:
-> > From: Dave Weinstein <olorin@google.com>
+On Tue, May 16, 2017 at 04:41:04PM +0200, Petr Mladek wrote:
+> On Fri 2017-05-05 21:07:47, Greg KH wrote:
+> > From: Chris Fries <cfries@google.com>
 > > 
-> > Add the kptr_restrict setting of 3 which results in both
-> > %p and %pK values being replaced by zeros.
+> > Add %paP and %padP for physical address that need to always be shown
+> > regardless of kptr restrictions.
 > > 
-> > Add an additional %pP value inspired by the Grsecurity
-> > option which explicitly whitelists pointers for output.
-> > 
-> > This patch is based on work by William Roberts
-> > <william.c.roberts@intel.com>
-> > 
-> > diff --git a/lib/vsprintf.c b/lib/vsprintf.c
-> > index e3bf4e0f10b5..f4e11dade1ab 100644
-> > --- a/lib/vsprintf.c
-> > +++ b/lib/vsprintf.c
-> > @@ -395,6 +395,16 @@ struct printf_spec {
-> >  #define FIELD_WIDTH_MAX ((1 << 23) - 1)
-> >  #define PRECISION_MAX ((1 << 15) - 1)
-> >  
-> > +int kptr_restrict __read_mostly;
-> > +
-> > +/*
-> > + * Always cleanse %p and %pK specifiers
-> > + */
-> > +static inline int kptr_restrict_always_cleanse_pointers(void)
+> > Cc: William Roberts <william.c.roberts@intel.com>
+> > Cc: Dave Weinstein <olorin@google.com>
+> > Signed-off-by: Chris Fries <cfries@google.com>
+> > Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> > ---
+> >  Documentation/printk-formats.txt | 10 ++++++----
+> >  lib/vsprintf.c                   | 12 +++++++++---
+> >  2 files changed, 15 insertions(+), 7 deletions(-)
 > 
-> The name of the function is very long and still confusing.
-> It uses the word "always" but there are many types of pointers
-> that are not cleared with this condition, for example %pP, %pa.
-> 
-> Do we need this helper function at all? It is used
-> a weird way, see below.
+> This patch should update also the section about
+> kptr_restrict in Documentation/sysctl/kernel.txt.
+> It should mention that the trailing P allows to see
+> pointers also for %pa, and %p[rR] formats when
+> the level is 4.
 
-Thanks for the comments, I'll revise this for the next version, thanks
-so much for the review, much appreciated.
-
-thanks,
+Ah, good point, will do!
 
 greg k-h
