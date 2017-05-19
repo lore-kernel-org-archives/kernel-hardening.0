@@ -1,194 +1,119 @@
-References: <20170505232018.28846-1-matt@nmatt.com>
- <20170505232018.28846-3-matt@nmatt.com> <20170518133126.GA29952@kroah.com>
-From: Matt Brown <matt@nmatt.com>
-Message-ID: <9a633fdc-c260-d9e2-14ed-6911b6950ec0@nmatt.com>
-Date: Fri, 19 May 2017 00:51:29 -0400
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Date: Fri, 19 May 2017 13:38:10 +0300
+Message-ID: <20170519103811.2183-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-In-Reply-To: <20170518133126.GA29952@kroah.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v6 2/2] security: tty: make TIOCSTI ioctl require
- CAP_SYS_ADMIN
-To: Greg KH <gregkh@linuxfoundation.org>
-Cc: serge@hallyn.com, jslaby@suse.com, akpm@linux-foundation.org, jannh@google.com, keescook@chromium.org, jmorris@namei.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain
+Subject: [kernel-hardening] [RFC v3]mm: ro protection for data allocated dynamically 
+To: mhocko@kernel.org, dave.hansen@intel.com, labbott@redhat.com
+Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Igor Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 5/18/17 9:31 AM, Greg KH wrote:
-> On Fri, May 05, 2017 at 07:20:18PM -0400, Matt Brown wrote:
->> This introduces the tiocsti_restrict sysctl, whose default is controlled via
->> CONFIG_SECURITY_TIOCSTI_RESTRICT. When activated, this control restricts
->> all TIOCSTI ioctl calls from non CAP_SYS_ADMIN users.
->>
->> This patch depends on patch 1/2
->>
->> This patch was inspired from GRKERNSEC_HARDEN_TTY.
->>
->> This patch would have prevented
->> https://bugzilla.redhat.com/show_bug.cgi?id=1411256 under the following
->> conditions:
->> * non-privileged container
->> * container run inside new user namespace
->>
->> Possible effects on userland:
->>
->> There could be a few user programs that would be effected by this
->> change.
->> See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
->> notable programs are: agetty, csh, xemacs and tcsh
->>
->> However, I still believe that this change is worth it given that the
->> Kconfig defaults to n. This will be a feature that is turned on for the
->> same reason that people activate it when using grsecurity. Users of this
->> opt-in feature will realize that they are choosing security over some OS
->> features like unprivileged TIOCSTI ioctls, as should be clear in the
->> Kconfig help message.
->>
->> Threat Model/Patch Rational:
->>
->> >From grsecurity's config for GRKERNSEC_HARDEN_TTY.
->>
->>  | There are very few legitimate uses for this functionality and it
->>  | has made vulnerabilities in several 'su'-like programs possible in
->>  | the past.  Even without these vulnerabilities, it provides an
->>  | attacker with an easy mechanism to move laterally among other
->>  | processes within the same user's compromised session.
->>
->> So if one process within a tty session becomes compromised it can follow
->> that additional processes, that are thought to be in different security
->> boundaries, can be compromised as a result. When using a program like su
->> or sudo, these additional processes could be in a tty session where TTY file
->> descriptors are indeed shared over privilege boundaries.
->>
->> This is also an excellent writeup about the issue:
->> <http://www.halfdog.net/Security/2012/TtyPushbackPrivilegeEscalation/>
->>
->> When user namespaces are in use, the check for the capability
->> CAP_SYS_ADMIN is done against the user namespace that originally opened
->> the tty.
->>
->> Acked-by: Serge Hallyn <serge@hallyn.com>
->> Reviewed-by: Kees Cook <keescook@chromium.org>
->> Signed-off-by: Matt Brown <matt@nmatt.com>
->> ---
->>  Documentation/sysctl/kernel.txt | 21 +++++++++++++++++++++
->>  drivers/tty/tty_io.c            |  6 ++++++
->>  include/linux/tty.h             |  2 ++
->>  kernel/sysctl.c                 | 12 ++++++++++++
->>  security/Kconfig                | 13 +++++++++++++
->>  5 files changed, 54 insertions(+)
->>
->> diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
->> index bac23c1..f7985cf 100644
->> --- a/Documentation/sysctl/kernel.txt
->> +++ b/Documentation/sysctl/kernel.txt
->> @@ -89,6 +89,7 @@ show up in /proc/sys/kernel:
->>  - sysctl_writes_strict
->>  - tainted
->>  - threads-max
->> +- tiocsti_restrict
->>  - unknown_nmi_panic
->>  - watchdog
->>  - watchdog_thresh
->> @@ -987,6 +988,26 @@ available RAM pages threads-max is reduced accordingly.
->>  
->>  ==============================================================
->>  
->> +tiocsti_restrict:
->> +
->> +This toggle indicates whether unprivileged users are prevented
->> +from using the TIOCSTI ioctl to inject commands into other processes
->> +which share a tty session.
->> +
->> +When tiocsti_restrict is set to (0) there are no restrictions(accept
->> +the default restriction of only being able to injection commands into
->> +one's own tty). When tiocsti_restrict is set to (1), users must
->> +have CAP_SYS_ADMIN to use the TIOCSTI ioctl.
->> +
->> +When user namespaces are in use, the check for the capability
->> +CAP_SYS_ADMIN is done against the user namespace that originally
->> +opened the tty.
->> +
->> +The kernel config option CONFIG_SECURITY_TIOCSTI_RESTRICT sets the
->> +default value of tiocsti_restrict.
->> +
->> +==============================================================
->> +
->>  unknown_nmi_panic:
->>  
->>  The value in this file affects behavior of handling NMI. When the
->> diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
->> index c276814..fe68d14 100644
->> --- a/drivers/tty/tty_io.c
->> +++ b/drivers/tty/tty_io.c
->> @@ -2297,11 +2297,17 @@ static int tty_fasync(int fd, struct file *filp, int on)
->>   *	FIXME: may race normal receive processing
->>   */
->>  
->> +int tiocsti_restrict = IS_ENABLED(CONFIG_SECURITY_TIOCSTI_RESTRICT);
->> +
->>  static int tiocsti(struct tty_struct *tty, char __user *p)
->>  {
->>  	char ch, mbz = 0;
->>  	struct tty_ldisc *ld;
->>  
->> +	if (tiocsti_restrict && !ns_capable(tty->owner_user_ns,CAP_SYS_ADMIN)) {
->> +		pr_warn_ratelimited("TIOCSTI ioctl call blocked for non-privileged process\n");
->> +		return -EPERM;
-> 
-> Always follow the proper kernel coding style rules, as I don't want to
-> have someone else have to come along and fix up the error you have added
-> here :(
-> 
-> checkpatch.pl is your friend, really...
-> 
+Not all the data allocated dynamically needs to be altered frequently.
+In some cases, it might be written just once, at initialization.
 
-My bad. Will fix these issues in v7.
+This RFC has the goal of improving memory integrity, by explicitly
+making said data write-protected.
 
-> And why not do a warning with the device that caused the problem to
-> happen?  dev_warn has a ratelimit I think right?  "raw" printk messages
-> like this don't help in trying to track down what/who caused the issue.
-> 
+A reference implementation is provided.
 
-yes <linux/device.h> has dev_warn_ratelimited. I will use that in 7v.
+During the previous 2 rounds, some concerns/questions were risen.
+This iteration should address msot of them, if not all.
 
-> And finally, can userspace see the namespace for the tty?  Doesn't
-> things like checkpoint/restore need that in order to properly set the
-> tty connection back up when moving processes?
+Basic idea behind the implementation: on systems with MMU, the MMU
+supports associating various types of attribute to memory pages.
 
-This seems like we would need to expose the owner_user_ns of the tty in procfs
-somewhere. Section 1.7 Documentation/filesystems/proc.txt describes the
-following files in /proc/tty:
+One of them is being read-only.
+The MMU will cause an exception upon attempts to alter a read-only page.
+This mechanism is already in use for protecting: kernel text and
+constant data.
+Relatively recently, it has become possible to have also statically
+allocated data to become read-only, with the __ro_after_init annotation.
 
-Table 1-11: Files in /proc/tty
-..............................................................................
- File          Content
- drivers       list of drivers and their usage
- ldiscs        registered line disciplines
- driver/serial usage statistic and status of single tty lines
-..............................................................................
+However nothing is done for variables allocated dynamically.
 
-The drivers file is the one that gives the most information that we are
-interested in.
+The catch for re-using the same mechanism, is that soon-to-be read only
+variables must be grouped in dedicated memory pages, without any rw data
+falling in the same range.
 
-However, the current layout combines information about multiple ttys by driver.
-As I understand it, a single driver may have ttys that span across different
-owner_user_ns. would it make sense to add a file /proc/tty/ns that would
-contain the different tty to user namespace mappings? Or is there a better way
-to do this? I would appreciate any feedback/ideas you have on this.
+This can be achieved with a dedicated allocator.
 
-> 
-> v7?  :)
+The implementation proposed allows to create memory pools.
+Each pool can be treated independently from the others, allowing fine
+grained control about what data can be overwritten.
 
-v7 will be on its way soon. I'm not currently sure how to address the concern
-of giving things like checkpoint/restore in userland a way to get the
-owner_user_ns.
+A pool is a kernel linked list, where the head contains a mutex used for
+accessing the list, and the elements are nodes, providing the memory
+actually used.
 
-> 
-> thanks,
-> 
-> greg k-h
-> 
+When a pool receives an allocation request for which it doesn't have
+enough memory already available, it obtains a set of contiguous virtual
+pages (node) that is large enough to cover the request being processed.
+Such memory is likely to be significantly larger than what was required.
+The slack is used for fulfilling further allocation requests, provided
+that they fit the space available.
 
-Thanks for the feedback,
+The pool ends up being a list of nodes, where each node contains a
+request that, at the time it was received, could not be satisfied by
+using the exisitng nodes, plus other requests that happened to fit in the
+slack. Such requests handle each node as an individual linear pool.
 
-Matt Brown
+When it's time to seal/unseal a pool, each element (node) of the list is
+visited and the range of pages it comprises is passed ot set_memory_ro/rw.
+
+Freeing memory is supported at pool level: if for some reason one or more
+memory requests must be discarded, at some point, they are simply ignored.
+Upon the pool tear down, then nodes are removed one by one and the
+corresponding memory range freed for good with vfree.
+
+This approach avoids the extra coplexity of tracking individual
+allocations, yet it allows to control claim back pages when not needed
+anymore (i.e. module unloading.)
+
+The same design also supports isolation between different kernel modules:
+each module can allocae one or more pools, to obtain the desired level of
+granularity when managing portions of its data that need different handling.
+
+The price for this flexibility is that some more slack is produced.
+The exact amount depends on the sizes of allocations performed and in
+which order they arrive.
+
+Modules that do not want/need all of this flexibility can use the default
+global pool provided by the allocator.
+
+This pool is intended to provide consistency with __ro_after_init and
+therefore would be sealed at the same time.
+
+Some observations/questions:
+
+* the backend of the memory allocation is done by using vmalloc.
+  Is here any better way? the bpf uses module_alloc but that seems not
+  exactly its purpose.
+
+* because of the vmalloc backend, this is not suitable for cases where
+  it is really needed to have physically contiguous memory regions,
+  however the type of data that would use this interface is likely to
+  not require interaction with HW devices that could rise such need.
+
+* the allocator supports defining a preferred alignment (currently set
+  to 8 bytes, using uint64_t) - is it useful/desirable?
+  If yes, is it the correct granularity (global)?
+
+* to get the size of the padded header of a node, the current code uses
+  __align(align_t) and it seems to work, but is it correct?
+
+* examples of uses for this new allcoator:
+  - LSM Hooks
+  - policy database of SE Linux (several different structure types)
+
+Igor Stoppa (1):
+  Sealable memory support
+
+ mm/Makefile  |   2 +-
+ mm/smalloc.c | 200 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ mm/smalloc.h |  61 ++++++++++++++++++
+ 3 files changed, 262 insertions(+), 1 deletion(-)
+ create mode 100644 mm/smalloc.c
+ create mode 100644 mm/smalloc.h
+
+-- 
+2.9.3
