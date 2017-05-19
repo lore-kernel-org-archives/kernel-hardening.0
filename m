@@ -1,96 +1,141 @@
 From: Mauro Carvalho Chehab <mchehab@s-opensource.com>
-Date: Thu, 18 May 2017 22:22:05 -0300
-Message-Id: <cover.1495156488.git.mchehab@s-opensource.com>
+Date: Thu, 18 May 2017 22:22:28 -0300
+Message-Id: <c6318a78ef026da30aa488bd90a5a19e18fc13a3.1495156488.git.mchehab@s-opensource.com>
+In-Reply-To: <cover.1495156488.git.mchehab@s-opensource.com>
+References: <cover.1495156488.git.mchehab@s-opensource.com>
+In-Reply-To: <cover.1495156488.git.mchehab@s-opensource.com>
+References: <cover.1495156488.git.mchehab@s-opensource.com>
 Sender: Mauro Carvalho Chehab <mchehab@smtp.s-opensource.com>
-Subject: [kernel-hardening] [PATCH 00/31] Standardize doc formats - part 1
+Subject: [kernel-hardening] [PATCH 23/31] gcc-plugins.txt: standardize document format
 To: Linux Doc Mailing List <linux-doc@vger.kernel.org>
-Cc: Mauro Carvalho Chehab <mchehab@s-opensource.com>, Mauro Carvalho Chehab <mchehab@infradead.org>, linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, David Woodhouse <dwmw2@infradead.org>, Brian Norris <computersforpeace@gmail.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Marek Vasut <marek.vasut@gmail.com>, Richard Weinberger <richard@nod.at>, Cyrille Pitchen <cyrille.pitchen@atmel.com>, linux-mtd@lists.infradead.org, tboot-devel@lists.sourceforge.net, Emese Revfy <re.emese@gmail.com>, Li Zefan <lizefan@huawei.com>, Ning Sun <ning.sun@intel.com>, Kees Cook <keescook@chromium.org>, Tejun Heo <tj@kernel.org>, linux-crypto@vger.kernel.org, Ingo Molnar <mingo@redhat.com>, cgroups@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Johannes Weiner <hannes@cmpxchg.org>, Matt Mackall <mpm@selenic.com>, Peter Zijlstra <peterz@infradead.org>, Bjorn Andersson <bjorn.andersson@linaro.org>, kernel-hardening@lists.openwall.com, linux-remoteproc@vger.kernel.org, Ohad Ben-Cohen <ohad@wizery.com>, Thomas Gleixner <tglx@linutronix.de>, Doug Warzecha <Douglas_Warzecha@dell.com>, Darren Hart <dvhart@infradead.org>
+Cc: Mauro Carvalho Chehab <mchehab@s-opensource.com>, Mauro Carvalho Chehab <mchehab@infradead.org>, linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, David Woodhouse <dwmw2@infradead.org>, Brian Norris <computersforpeace@gmail.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Marek Vasut <marek.vasut@gmail.com>, Richard Weinberger <richard@nod.at>, Cyrille Pitchen <cyrille.pitchen@atmel.com>, linux-mtd@lists.infradead.org, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Each document under Documentation/*.txt has its own format.
-Some follow markup notations, some don't even have a title!
+Each text file under Documentation follows a different
+format. Some doesn't even have titles!
 
-In order to try to get some order on it, change the document
-style to the standard we're adopting after the adoption of
-ReStructured Text.
+Change its representation to follow the adopted standard,
+using ReST markups for it to be parseable by Sphinx:
 
-The documents touched on this series now build fine with
-Sphinx, if renamed to *.rst extension.
+- promote main title;
+- use the right markup for footnotes;
+- use bold markup for files name;
+- identify literal blocks;
+- add blank lines to avoid Sphinx to complain;
+- remove numeration from titles.
 
-The main goal with this is to teach people by example about
-what format is expected on newer documents. It also helps
-to add those files to Kernel books.
+Signed-off-by: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+---
+ Documentation/gcc-plugins.txt | 58 ++++++++++++++++++++++++-------------------
+ 1 file changed, 32 insertions(+), 26 deletions(-)
 
-In order to make things more palatable, I'm spliting the
-conversion into three parts.
-
-This is part 1.
-
-Mauro Carvalho Chehab (31):
-  bcache.txt: standardize document format
-  bt8xxgpio.txt: standardize document format
-  btmrvl.txt: standardize document format
-  bus-virt-phys-mapping.txt: standardize document format
-  cachetlb.txt: standardize document format
-  cgroup-v2.txt: standardize document format
-  circular-buffers.txt: standardize document format
-  clk.txt: standardize document format
-  cpu-load: standardize document format
-  cputopology.txt: standardize document format
-  crc32.txt: standardize document format
-  dcdbas.txt: standardize document format
-  digsig.txt: standardize document format
-  DMA-API.txt: standardize document format
-  DMA-API-HOWTO.txt: standardize document format
-  DMA-attributes.txt: standardize document format
-  DMA-ISA-LPC.txt: standardize document format
-  debugging-via-ohci1394.txt: standardize document format
-  efi-stub.txt: standardize document format
-  eisa.txt: standardize document format
-  flexible-arrays.txt: standardize document format
-  futex-requeue-pi.txt: standardize document format
-  gcc-plugins.txt: standardize document format
-  highuid.txt: standardize document format
-  hw_random.txt: standardize document format
-  hwspinlock.txt: standardize document format
-  intel_txt.txt: standardize document format
-  Intel-IOMMU.txt: standardize document format
-  io-mapping.txt: standardize document format
-  io_ordering.txt: standardize document format
-  iostats.txt: standardize document format
-
- Documentation/DMA-API-HOWTO.txt          | 159 +++++----
- Documentation/DMA-API.txt                | 575 ++++++++++++++++++-------------
- Documentation/DMA-ISA-LPC.txt            |  71 ++--
- Documentation/DMA-attributes.txt         |  15 +-
- Documentation/Intel-IOMMU.txt            |  36 +-
- Documentation/bcache.txt                 | 200 ++++++-----
- Documentation/bt8xxgpio.txt              |  19 +-
- Documentation/btmrvl.txt                 |  64 ++--
- Documentation/bus-virt-phys-mapping.txt  |  63 ++--
- Documentation/cachetlb.txt               |  92 ++---
- Documentation/cgroup-v2.txt              | 449 ++++++++++++------------
- Documentation/circular-buffers.txt       |  51 ++-
- Documentation/clk.txt                    | 189 +++++-----
- Documentation/cpu-load.txt               | 117 +++----
- Documentation/cputopology.txt            |  35 +-
- Documentation/crc32.txt                  |  75 ++--
- Documentation/dcdbas.txt                 |  24 +-
- Documentation/debugging-via-ohci1394.txt |  21 +-
- Documentation/digsig.txt                 | 124 +++----
- Documentation/efi-stub.txt               |  25 +-
- Documentation/eisa.txt                   | 260 +++++++-------
- Documentation/flexible-arrays.txt        |  24 +-
- Documentation/futex-requeue-pi.txt       |  83 ++---
- Documentation/gcc-plugins.txt            |  58 ++--
- Documentation/highuid.txt                |  46 +--
- Documentation/hw_random.txt              | 158 +++++----
- Documentation/hwspinlock.txt             | 527 ++++++++++++++++------------
- Documentation/intel_txt.txt              |  63 ++--
- Documentation/io-mapping.txt             |  67 ++--
- Documentation/io_ordering.txt            |  61 ++--
- Documentation/iostats.txt                |  40 ++-
- 31 files changed, 2101 insertions(+), 1690 deletions(-)
-
+diff --git a/Documentation/gcc-plugins.txt b/Documentation/gcc-plugins.txt
+index 433eaefb4aa1..8502f24396fb 100644
+--- a/Documentation/gcc-plugins.txt
++++ b/Documentation/gcc-plugins.txt
+@@ -1,14 +1,15 @@
++=========================
+ GCC plugin infrastructure
+ =========================
+ 
+ 
+-1. Introduction
+-===============
++Introduction
++============
+ 
+ GCC plugins are loadable modules that provide extra features to the
+-compiler [1]. They are useful for runtime instrumentation and static analysis.
++compiler [1]_. They are useful for runtime instrumentation and static analysis.
+ We can analyse, change and add further code during compilation via
+-callbacks [2], GIMPLE [3], IPA [4] and RTL passes [5].
++callbacks [2]_, GIMPLE [3]_, IPA [4]_ and RTL passes [5]_.
+ 
+ The GCC plugin infrastructure of the kernel supports all gcc versions from
+ 4.5 to 6.0, building out-of-tree modules, cross-compilation and building in a
+@@ -21,56 +22,61 @@ and versions 4.8+ can only be compiled by a C++ compiler.
+ Currently the GCC plugin infrastructure supports only the x86, arm, arm64 and
+ powerpc architectures.
+ 
+-This infrastructure was ported from grsecurity [6] and PaX [7].
++This infrastructure was ported from grsecurity [6]_ and PaX [7]_.
+ 
+ --
+-[1] https://gcc.gnu.org/onlinedocs/gccint/Plugins.html
+-[2] https://gcc.gnu.org/onlinedocs/gccint/Plugin-API.html#Plugin-API
+-[3] https://gcc.gnu.org/onlinedocs/gccint/GIMPLE.html
+-[4] https://gcc.gnu.org/onlinedocs/gccint/IPA.html
+-[5] https://gcc.gnu.org/onlinedocs/gccint/RTL.html
+-[6] https://grsecurity.net/
+-[7] https://pax.grsecurity.net/
+ 
++.. [1] https://gcc.gnu.org/onlinedocs/gccint/Plugins.html
++.. [2] https://gcc.gnu.org/onlinedocs/gccint/Plugin-API.html#Plugin-API
++.. [3] https://gcc.gnu.org/onlinedocs/gccint/GIMPLE.html
++.. [4] https://gcc.gnu.org/onlinedocs/gccint/IPA.html
++.. [5] https://gcc.gnu.org/onlinedocs/gccint/RTL.html
++.. [6] https://grsecurity.net/
++.. [7] https://pax.grsecurity.net/
+ 
+-2. Files
+-========
+ 
+-$(src)/scripts/gcc-plugins
++Files
++=====
++
++**$(src)/scripts/gcc-plugins**
++
+ 	This is the directory of the GCC plugins.
+ 
+-$(src)/scripts/gcc-plugins/gcc-common.h
++**$(src)/scripts/gcc-plugins/gcc-common.h**
++
+ 	This is a compatibility header for GCC plugins.
+ 	It should be always included instead of individual gcc headers.
+ 
+-$(src)/scripts/gcc-plugin.sh
++**$(src)/scripts/gcc-plugin.sh**
++
+ 	This script checks the availability of the included headers in
+ 	gcc-common.h and chooses the proper host compiler to build the plugins
+ 	(gcc-4.7 can be built by either gcc or g++).
+ 
+-$(src)/scripts/gcc-plugins/gcc-generate-gimple-pass.h
+-$(src)/scripts/gcc-plugins/gcc-generate-ipa-pass.h
+-$(src)/scripts/gcc-plugins/gcc-generate-simple_ipa-pass.h
+-$(src)/scripts/gcc-plugins/gcc-generate-rtl-pass.h
++**$(src)/scripts/gcc-plugins/gcc-generate-gimple-pass.h,
++$(src)/scripts/gcc-plugins/gcc-generate-ipa-pass.h,
++$(src)/scripts/gcc-plugins/gcc-generate-simple_ipa-pass.h,
++$(src)/scripts/gcc-plugins/gcc-generate-rtl-pass.h**
++
+ 	These headers automatically generate the registration structures for
+ 	GIMPLE, SIMPLE_IPA, IPA and RTL passes. They support all gcc versions
+ 	from 4.5 to 6.0.
+ 	They should be preferred to creating the structures by hand.
+ 
+ 
+-3. Usage
+-========
++Usage
++=====
+ 
+ You must install the gcc plugin headers for your gcc version,
+-e.g., on Ubuntu for gcc-4.9:
++e.g., on Ubuntu for gcc-4.9::
+ 
+ 	apt-get install gcc-4.9-plugin-dev
+ 
+-Enable a GCC plugin based feature in the kernel config:
++Enable a GCC plugin based feature in the kernel config::
+ 
+ 	CONFIG_GCC_PLUGIN_CYC_COMPLEXITY = y
+ 
+-To compile only the plugin(s):
++To compile only the plugin(s)::
+ 
+ 	make gcc-plugins
+ 
 -- 
 2.9.4
