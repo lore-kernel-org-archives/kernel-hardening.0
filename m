@@ -1,68 +1,96 @@
-References: <9200d87d-33b6-2c70-0095-e974a30639fd@huawei.com>
- <a445774f-a307-25aa-d44e-c523a7a42da6@redhat.com>
- <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
- <20170510080542.GF31466@dhcp22.suse.cz>
- <885311a2-5b9f-4402-0a71-5a3be7870aa0@huawei.com>
- <20170510114319.GK31466@dhcp22.suse.cz>
- <1a8cc1f4-0b72-34ea-43ad-5ece22a8d5cf@huawei.com>
- <b780ac13-4fc3-ac07-f0c0-7a6cc8dae694@intel.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <c04713b0-5e87-41f2-a3df-1b8f75e44bdc@huawei.com>
-Date: Fri, 19 May 2017 13:51:33 +0300
-MIME-Version: 1.0
-In-Reply-To: <b780ac13-4fc3-ac07-f0c0-7a6cc8dae694@intel.com>
-Content-Type: text/plain; charset="windows-1252"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: RFC v2: post-init-read-only protection for data allocated
- dynamically
-To: Dave Hansen <dave.hansen@intel.com>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>
-Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+Date: Thu, 18 May 2017 22:22:05 -0300
+Message-Id: <cover.1495156488.git.mchehab@s-opensource.com>
+Sender: Mauro Carvalho Chehab <mchehab@smtp.s-opensource.com>
+Subject: [kernel-hardening] [PATCH 00/31] Standardize doc formats - part 1
+To: Linux Doc Mailing List <linux-doc@vger.kernel.org>
+Cc: Mauro Carvalho Chehab <mchehab@s-opensource.com>, Mauro Carvalho Chehab <mchehab@infradead.org>, linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, David Woodhouse <dwmw2@infradead.org>, Brian Norris <computersforpeace@gmail.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Marek Vasut <marek.vasut@gmail.com>, Richard Weinberger <richard@nod.at>, Cyrille Pitchen <cyrille.pitchen@atmel.com>, linux-mtd@lists.infradead.org, tboot-devel@lists.sourceforge.net, Emese Revfy <re.emese@gmail.com>, Li Zefan <lizefan@huawei.com>, Ning Sun <ning.sun@intel.com>, Kees Cook <keescook@chromium.org>, Tejun Heo <tj@kernel.org>, linux-crypto@vger.kernel.org, Ingo Molnar <mingo@redhat.com>, cgroups@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Johannes Weiner <hannes@cmpxchg.org>, Matt Mackall <mpm@selenic.com>, Peter Zijlstra <peterz@infradead.org>, Bjorn Andersson <bjorn.andersson@linaro.org>, kernel-hardening@lists.openwall.com, linux-remoteproc@vger.kernel.org, Ohad Ben-Cohen <ohad@wizery.com>, Thomas Gleixner <tglx@linutronix.de>, Doug Warzecha <Douglas_Warzecha@dell.com>, Darren Hart <dvhart@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello,
+Each document under Documentation/*.txt has its own format.
+Some follow markup notations, some don't even have a title!
 
-On 10/05/17 18:45, Dave Hansen wrote:
-> On 05/10/2017 08:19 AM, Igor Stoppa wrote:
->> So I'd like to play a little what-if scenario:
->> what if I was to support exclusively virtual memory and convert to it
->> everything that might need sealing?
-> 
-> Because of the issues related to fracturing large pages, you might have
-> had to go this route eventually anyway.  Changing the kernel linear map
-> isn't nice.
-> 
-> FWIW, you could test this scheme by just converting all the users to
-> vmalloc() and seeing what breaks.  They'd all end up rounding up all
-> their allocations to PAGE_SIZE, but that'd be fine for testing.
+In order to try to get some order on it, change the document
+style to the standard we're adopting after the adoption of
+ReStructured Text.
 
-Apologies for the long hiatus, it took me some time to figure out
-a solution that could somehow address all the comments I got till this
-point.
+The documents touched on this series now build fine with
+Sphinx, if renamed to *.rst extension.
 
-It's here [1], I preferred to start one new thread, since the proposal
-has in practice changed significantly, even if in spirit it's still the
-same.
+The main goal with this is to teach people by example about
+what format is expected on newer documents. It also helps
+to add those files to Kernel books.
 
-It should also take care of the potential waste of space you mentioned
-wrt the round up to PAGE_SIZE.
+In order to make things more palatable, I'm spliting the
+conversion into three parts.
 
-> Could you point out 5 or 10 places in the kernel that you want to convert?
+This is part 1.
 
-Right now I can only repeat what I said initially:
-- the linked list used to implement LSM hooks
-- SE linux structures used to implement the policy DB, it should be
-  about 5 data types
+Mauro Carvalho Chehab (31):
+  bcache.txt: standardize document format
+  bt8xxgpio.txt: standardize document format
+  btmrvl.txt: standardize document format
+  bus-virt-phys-mapping.txt: standardize document format
+  cachetlb.txt: standardize document format
+  cgroup-v2.txt: standardize document format
+  circular-buffers.txt: standardize document format
+  clk.txt: standardize document format
+  cpu-load: standardize document format
+  cputopology.txt: standardize document format
+  crc32.txt: standardize document format
+  dcdbas.txt: standardize document format
+  digsig.txt: standardize document format
+  DMA-API.txt: standardize document format
+  DMA-API-HOWTO.txt: standardize document format
+  DMA-attributes.txt: standardize document format
+  DMA-ISA-LPC.txt: standardize document format
+  debugging-via-ohci1394.txt: standardize document format
+  efi-stub.txt: standardize document format
+  eisa.txt: standardize document format
+  flexible-arrays.txt: standardize document format
+  futex-requeue-pi.txt: standardize document format
+  gcc-plugins.txt: standardize document format
+  highuid.txt: standardize document format
+  hw_random.txt: standardize document format
+  hwspinlock.txt: standardize document format
+  intel_txt.txt: standardize document format
+  Intel-IOMMU.txt: standardize document format
+  io-mapping.txt: standardize document format
+  io_ordering.txt: standardize document format
+  iostats.txt: standardize document format
 
-Next week, I'll address the 2 cases I listed, then I'll look for more,
-but I think it should not be difficult to find customers for this.
+ Documentation/DMA-API-HOWTO.txt          | 159 +++++----
+ Documentation/DMA-API.txt                | 575 ++++++++++++++++++-------------
+ Documentation/DMA-ISA-LPC.txt            |  71 ++--
+ Documentation/DMA-attributes.txt         |  15 +-
+ Documentation/Intel-IOMMU.txt            |  36 +-
+ Documentation/bcache.txt                 | 200 ++++++-----
+ Documentation/bt8xxgpio.txt              |  19 +-
+ Documentation/btmrvl.txt                 |  64 ++--
+ Documentation/bus-virt-phys-mapping.txt  |  63 ++--
+ Documentation/cachetlb.txt               |  92 ++---
+ Documentation/cgroup-v2.txt              | 449 ++++++++++++------------
+ Documentation/circular-buffers.txt       |  51 ++-
+ Documentation/clk.txt                    | 189 +++++-----
+ Documentation/cpu-load.txt               | 117 +++----
+ Documentation/cputopology.txt            |  35 +-
+ Documentation/crc32.txt                  |  75 ++--
+ Documentation/dcdbas.txt                 |  24 +-
+ Documentation/debugging-via-ohci1394.txt |  21 +-
+ Documentation/digsig.txt                 | 124 +++----
+ Documentation/efi-stub.txt               |  25 +-
+ Documentation/eisa.txt                   | 260 +++++++-------
+ Documentation/flexible-arrays.txt        |  24 +-
+ Documentation/futex-requeue-pi.txt       |  83 ++---
+ Documentation/gcc-plugins.txt            |  58 ++--
+ Documentation/highuid.txt                |  46 +--
+ Documentation/hw_random.txt              | 158 +++++----
+ Documentation/hwspinlock.txt             | 527 ++++++++++++++++------------
+ Documentation/intel_txt.txt              |  63 ++--
+ Documentation/io-mapping.txt             |  67 ++--
+ Documentation/io_ordering.txt            |  61 ++--
+ Documentation/iostats.txt                |  40 ++-
+ 31 files changed, 2101 insertions(+), 1690 deletions(-)
 
-BTW, I forgot to mention that I tested the code against both SLAB and
-SLUB and it seems to work fine.
-
-So far I've used QEMU x86-64 as test environment.
-
---
-igor
-
-
-[1] https://marc.info/?l=linux-mm&m=149519044015956&w=2
+-- 
+2.9.4
