@@ -1,107 +1,38 @@
-From: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-Date: Sun, 21 May 2017 20:14:05 +0900
-Message-Id: <1495365245-3185-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp>
-In-Reply-To: <20170520085147.GA4619@kroah.com>
-References: <20170520085147.GA4619@kroah.com>
-Subject: [kernel-hardening] [PATCH] LSM: Make security_hook_heads a local variable.
-To: linux-security-module@vger.kernel.org
-Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, Casey Schaufler <casey@schaufler-ca.com>, Greg KH <gregkh@linuxfoundation.org>, Igor Stoppa <igor.stoppa@huawei.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>
+From: Daniel Axtens <dja@axtens.net>
+Date: Mon, 22 May 2017 11:32:31 +1000
+Message-Id: <20170522013233.21780-1-dja@axtens.net>
+Subject: [kernel-hardening] [PATCH 0/2] powerpc: fortify support
+To: kernel-hardening@lists.openwall.com, linuxppc-dev@lists.ozlabs.org
+Cc: Daniel Axtens <dja@axtens.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-A sealable memory allocator patch was proposed at
-http://lkml.kernel.org/r/20170519103811.2183-1-igor.stoppa@huawei.com ,
-and is waiting for a follow-on patch showing how any of the kernel
-can be changed to use this new subsystem. So, here it is for LSM hooks.
+This series provides arch-specific support for Daniel Micay's
+fortified string functions on powerpc.
 
-The LSM hooks ("struct security_hook_heads security_hook_heads" and
-"struct security_hook_list ...[]") will benefit from this allocator via
-protection using set_memory_ro()/set_memory_rw(), and it will remove
-CONFIG_SECURITY_WRITABLE_HOOKS config option.
+Fortified string functions provied some compile and run time bounds
+checking on commonly used string functions.
 
-This means that these structures will be allocated at run time using
-smalloc(), and therefore the address of these structures will be
-determined at run time rather than compile time.
+It's cool - currently it picks up a lot of random things so it will
+require some more work across the tree, but hopefully it will
+eventually hit mainline. These patches make powerpc ready for when it
+does.
 
-But currently, LSM_HOOK_INIT() macro depends on the address of
-security_hook_heads being known at compile time. But we already
-initialize security_hook_heads as an array of "struct list_head".
+They've been tested on pseries.
 
-Therefore, let's use index number (or relative offset from the head
-of security_hook_heads) instead of absolute address of
-security_hook_heads so that LSM_HOOK_INIT() macro does not need to
-know absolute address of security_hook_heads. Then, security_add_hooks()
-will be able to allocate and copy "struct security_hook_list ...[]" using
-smalloc().
+I think patch 1 should probably go through Kees to line up with the
+fortify patch itself, but patch 2 can apply to powerpc as is. But up
+to you, mpe.
 
-Signed-off-by: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Paul Moore <paul@paul-moore.com>
-Cc: Stephen Smalley <sds@tycho.nsa.gov>
-Cc: Casey Schaufler <casey@schaufler-ca.com>
-Cc: James Morris <james.l.morris@oracle.com>
-Cc: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Greg KH <gregkh@linuxfoundation.org>
----
- include/linux/lsm_hooks.h |  6 +++---
- security/security.c       | 10 ++++++++--
- 2 files changed, 11 insertions(+), 5 deletions(-)
+Regards,
+Daniel
 
-diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
-index 080f34e..865c11d 100644
---- a/include/linux/lsm_hooks.h
-+++ b/include/linux/lsm_hooks.h
-@@ -1884,8 +1884,8 @@ struct security_hook_heads {
-  */
- struct security_hook_list {
- 	struct list_head		list;
--	struct list_head		*head;
- 	union security_list_options	hook;
-+	const unsigned int		idx;
- 	char				*lsm;
- };
- 
-@@ -1896,9 +1896,9 @@ struct security_hook_list {
-  * text involved.
-  */
- #define LSM_HOOK_INIT(HEAD, HOOK) \
--	{ .head = &security_hook_heads.HEAD, .hook = { .HEAD = HOOK } }
-+	{ .idx = offsetof(struct security_hook_heads, HEAD) / \
-+		sizeof(struct list_head), .hook = { .HEAD = HOOK } }
- 
--extern struct security_hook_heads security_hook_heads;
- extern char *lsm_names;
- 
- extern void security_add_hooks(struct security_hook_list *hooks, int count,
-diff --git a/security/security.c b/security/security.c
-index 54b1e39..d6883ce 100644
---- a/security/security.c
-+++ b/security/security.c
-@@ -33,7 +33,7 @@
- /* Maximum number of letters for an LSM name string */
- #define SECURITY_NAME_MAX	10
- 
--struct security_hook_heads security_hook_heads __lsm_ro_after_init;
-+static struct security_hook_heads security_hook_heads __lsm_ro_after_init;
- char *lsm_names;
- /* Boot-time LSM user choice */
- static __initdata char chosen_lsm[SECURITY_NAME_MAX + 1] =
-@@ -152,10 +152,16 @@ void __init security_add_hooks(struct security_hook_list *hooks, int count,
- 				char *lsm)
- {
- 	int i;
-+	struct list_head *list = (struct list_head *) &security_hook_heads;
- 
- 	for (i = 0; i < count; i++) {
-+		const unsigned int idx = hooks[i].idx;
-+
-+		if (WARN_ON(idx >= sizeof(security_hook_heads) /
-+			    sizeof(struct list_head)))
-+			continue;
- 		hooks[i].lsm = lsm;
--		list_add_tail_rcu(&hooks[i].list, hooks[i].head);
-+		list_add_tail_rcu(&hooks[i].list, &list[idx]);
- 	}
- 	if (lsm_append(lsm, &lsm_names) < 0)
- 		panic("%s - Cannot get early memory.\n", __func__);
+Daniel Axtens (2):
+  powerpc: Don't fortify prom_init
+  powerpc: Make feature-fixup tests fortify-safe
+
+ arch/powerpc/kernel/prom_init.c   |   3 +
+ arch/powerpc/lib/feature-fixups.c | 180 +++++++++++++++++++-------------------
+ 2 files changed, 93 insertions(+), 90 deletions(-)
+
 -- 
-1.8.3.1
+2.11.0
