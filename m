@@ -1,58 +1,68 @@
-Message-ID: <5922E11C.4070307@iogearbox.net>
-Date: Mon, 22 May 2017 15:01:16 +0200
-From: Daniel Borkmann <daniel@iogearbox.net>
 MIME-Version: 1.0
-References: <CAHgaXdKsO2xoKYp7g91g+n+d_1KHSSByLjzBB-WjVXSjhB7qxw@mail.gmail.com> <20170510.212952.1440495072777358778.davem@davemloft.net> <CAHgaXdK8LEEUPm4jTRRzCnjwdWAauHmmB=caZsSFY8MmStH89Q@mail.gmail.com> <20170510.215218.2185526627014393313.davem@davemloft.net> <CAHgaXdKZ_v+iO7uqEDx7PA7D+xcp1FngGvJ1SRSsGXNQ-iWWDQ@mail.gmail.com> <CAHgaXdLJoVUXXGTYs7FYXay5wx=sA-O+=dYhX+r7AQT7vSNfGQ@mail.gmail.com> <CAGXu5j+2q4Wwfhuk_DnDaV894A9ZOD=A_AvAU_OZG6KQv0_KMg@mail.gmail.com> <CAHgaXdL7GcVzs+ANPke_NywhcgHbe_fzi1sTDEy+Ni1-o82GYQ@mail.gmail.com> <591A07A1.1030006@iogearbox.net> <CAHgaXdKKbRVSpX-036TXpV5z=1=QCnPoku0+CeHxHco8-aasPQ@mail.gmail.com>
-In-Reply-To: <CAHgaXdKKbRVSpX-036TXpV5z=1=QCnPoku0+CeHxHco8-aasPQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
-To: Shubham Bansal <illusionist.neo@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, David Miller <davem@davemloft.net>, Mircea Gherzan <mgherzan@gmail.com>, Network Development <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, ast@fb.com
+In-Reply-To: <20170522120848.GA3003@openwall.com>
+References: <1495454226-10027-1-git-send-email-tixxdz@gmail.com> <20170522120848.GA3003@openwall.com>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Mon, 22 May 2017 15:49:15 +0200
+Message-ID: <CAEiveUdqfMk4+vLg6TaEJNSGwoQHxYq0P4aqZoL4i9GgR3Vdtw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [PATCH v4 next 0/3] modules: automatic module
+ loading restrictions
+To: Solar Designer <solar@openwall.com>
+Cc: linux-kernel <linux-kernel@vger.kernel.org>, netdev@vger.kernel.org, LSM List <linux-security-module@vger.kernel.org>, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Rusty Russell <rusty@rustcorp.com.au>, "Serge E. Hallyn" <serge@hallyn.com>, Jessica Yu <jeyu@redhat.com>, "David S. Miller" <davem@davemloft.net>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Ingo Molnar <mingo@kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, Jonathan Corbet <corbet@lwn.net>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Zendyani <zendyani@gmail.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Ben Hutchings <ben.hutchings@codethink.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 05/20/2017 10:01 PM, Shubham Bansal wrote:
-[...]
-> Before I send the patch, I have tested the JIT compiler on ARMv7 but
-> not on ARMv5 or ARMv6. So can you tell me which arch versions I should
-> test it for?
-> Also for my testing, CONFIG_FRAME_POINTER and CONFIG_CPU_BIG_ENDIAN
-> are both disabled. But I need to test JIT with these flags as well.
-> Whenever I put these flags in .config file, the arm kernel is not
-> getting compiler with these flags. Can you tell me why? If you need
-> more information regarding this, please let me know.
+Hi Alexander,
 
-Maybe Mircea, Kees or someone from linux-arm-kernel can help you out
-on that.
-
-With regards to the below benchmark, I was mentioning how it compares
-to the interpreter. With only the numbers for jit it's hard to compare.
-So would be great to see the output for the following three cases:
-
-1) Interpreter:
-
-echo 0 > /proc/sys/net/core/bpf_jit_enable
-
-2) JIT enabled:
-
-echo 1 > /proc/sys/net/core/bpf_jit_enable
-
-3) JIT + blinding enabled:
-
-echo 1 > /proc/sys/net/core/bpf_jit_enable
-echo 2 > /proc/sys/net/core/bpf_jit_harden
-
-> With current config for ARMv7, benchmarks are :
+On Mon, May 22, 2017 at 2:08 PM, Solar Designer <solar@openwall.com> wrote:
+> Hi Djalal,
 >
-> [root@vexpress modules]# insmod test_bpf.ko
-> [   25.797766] test_bpf: #0 TAX jited:1 180 170 169 PASS
-> [   25.811395] test_bpf: #1 TXA jited:1 93 89 111 PASS
-> [   25.815073] test_bpf: #2 ADD_SUB_MUL_K jited:1 94 PASS
-> [   25.816779] test_bpf: #3 DIV_MOD_KX jited:1 983 PASS
-> [   25.827310] test_bpf: #4 AND_OR_LSH_K jited:1 94 93 PASS
-> [   25.829843] test_bpf: #5 LD_IMM_0 jited:1 83 PASS
-> [   25.831260] test_bpf: #6 LD_IND jited:1 338 266 305 PASS
-[...]
+> Thank you for your work on this!
+>
+> On Mon, May 22, 2017 at 01:57:03PM +0200, Djalal Harouni wrote:
+>> *) When modules_autoload_mode is set to (2), automatic module loading is
+>> disabled for all. Once set, this value can not be changed.
+>
+> What purpose does this securelevel-like property ("Once set, this value
+> can not be changed.") serve here?  I think this mode 2 is needed, but
+> without this extra property, which is bypassable by e.g. explicitly
+> loaded kernel modules anyway (and that's OK).
 
-Thanks,
-Daniel
+My reasoning about "Once set, this value can not be changed" is mainly for:
+
+If you have some systems where modules are not updated for any given
+reason, then the only one who will be able to load a module is an
+administrator, basically this is a shortcut for:
+
+* Apps/services can run with CAP_NET_ADMIN but they are not allowed to
+auto-load 'netdev' modules.
+
+* Explicitly loading modules can be guarded by seccomp filters *per*
+app, so even if these apps have
+  CAP_SYS_MODULE they won't be able to explicitly load modules, one
+has to remount some sysctl /proc/ entries read-only here and remove
+CAP_SYS_ADMIN for all apps anyway.
+
+This mainly serves the purpose of these systems that do not receive
+updates, if I don't want to expose those kernel interfaces what should
+I do ? then if I want to unload old versions and replace them with new
+ones what operation should be allowed ? and only real root of the
+system can do it. Hence, the "Once set, this value can not be changed"
+is more of a shortcut, also the idea was put in my mind based on how
+"modules_disabled" is disabled forever, and some other interfaces. I
+would say: it is easy to handle a transition from 1) "hey this system
+is still up to date, some features should be exposed" to 2) "this
+system is not up to date anymore, only root should expose some
+features..."
+
+Hmm, I am not sure if this answers your question ? :-)
+
+I definitively don't want to fall into "modules_disabled" trap where
+is it too strict! "Once set, this value can not be changed" means for
+some users do not set it otherwise the system is unusable...
+
+Maybe an extra "4" mode for that ? better get it right.
+
+Thanks!
+
+-- 
+tixxdz
