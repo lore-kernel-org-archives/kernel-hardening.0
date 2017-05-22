@@ -1,378 +1,277 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170519103811.2183-2-igor.stoppa@huawei.com>
-References: <20170519103811.2183-1-igor.stoppa@huawei.com> <20170519103811.2183-2-igor.stoppa@huawei.com>
+In-Reply-To: <1495454226-10027-2-git-send-email-tixxdz@gmail.com>
+References: <1495454226-10027-1-git-send-email-tixxdz@gmail.com> <1495454226-10027-2-git-send-email-tixxdz@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 22 May 2017 14:38:16 -0700
-Message-ID: <CAGXu5j+3-CZpZ4Vj2fHH+0UPAa_jOdJQxHtrQ=F_FvvzWvE00Q@mail.gmail.com>
+Date: Mon, 22 May 2017 15:20:56 -0700
+Message-ID: <CAGXu5jL9jRDkHj20kf4O6VrjiEpvXGzN3nn5Lw4fT2sx_Xg=+A@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 1/1] Sealable memory support
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Michal Hocko <mhocko@kernel.org>, Dave Hansen <dave.hansen@intel.com>, Laura Abbott <labbott@redhat.com>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Daniel Micay <danielmicay@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v4 next 1/3] modules:capabilities: allow
+ __request_module() to take a capability argument
+To: Djalal Harouni <tixxdz@gmail.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Rusty Russell <rusty@rustcorp.com.au>, "Serge E. Hallyn" <serge@hallyn.com>, Jessica Yu <jeyu@redhat.com>, "David S. Miller" <davem@davemloft.net>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Ingo Molnar <mingo@kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, Jonathan Corbet <corbet@lwn.net>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Zendyani <zendyani@gmail.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Ben Hutchings <ben.hutchings@codethink.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, May 19, 2017 at 3:38 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
-> Dynamically allocated variables can be made read only,
-> after they have been initialized, provided that they reside in memory
-> pages devoid of any RW data.
+On Mon, May 22, 2017 at 4:57 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
+> This is a preparation patch for the module auto-load restriction feature.
 >
-> The implementation supplies means to create independent pools of memory,
-> which can be individually created, sealed/unsealed and destroyed.
-
-This would be a welcome addition, thanks for posting it! I have a
-bunch of feedback, here and below:
-
-For the first bit of bikeshedding, should this really be called
-seal/unseal? My mind is probably just broken from having read TPM
-documentation, but this isn't really "sealing" as I'd understand it
-(it's not tied to a credential, for example). It's "only" rw/ro.
-Perhaps "protect/unprotect" or just simply "readonly/writable", and
-call the base function "romalloc"?
-
-This is fundamentally a heap allocator, with linked lists, etc. I'd
-like to see as much attention as possible given to hardening it
-against attacks, especially adding redzoning around the metadata at
-least, and perhaps requiring that CONFIG_DEBUG_LIST be enabled. And as
-part of that, I'd like hardened usercopy to grow knowledge of these
-allocations so we can bounds-check objects. Right now, mm/usercopy.c
-just looks at PageSlab(page) to decide if it should do slab checks. I
-think adding a check for this type of object would be very important
-there.
-
-The ro/rw granularity here is the _entire_ pool, not a specific
-allocation (or page containing the allocation). I'm concerned that
-makes this very open to race conditions where, especially in the
-global pool, one thread can be trying to write to ro data in a pool
-and another has made the pool writable.
-
-> A global pool is made available for those kernel modules that do not
-> need to manage an independent pool.
+> In order to restrict module auto-load operations we need to check if the
+> caller has CAP_SYS_MODULE capability. This allows to align security
+> checks of automatic module loading with the checks of the explicit operations.
 >
-> Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
+> However for "netdev-%s" modules, they are allowed to be loaded if
+> CAP_NET_ADMIN is set. Therefore, in order to not break this assumption,
+> and allow userspace to only load "netdev-%s" modules with CAP_NET_ADMIN
+> capability which is considered a privileged operation, we have two
+> choices: 1) parse "netdev-%s" alias and check the capability or 2) hand
+> the capability form request_module() to security_kernel_module_request()
+> hook and let the capability subsystem decide.
+>
+> After a discussion with Rusty Russell [1], the suggestion was to pass
+> the capability from request_module() to security_kernel_module_request()
+> for 'netdev-%s' modules that need CAP_NET_ADMIN.
+>
+> The patch does not update request_module(), it updates the internal
+> __request_module() that will take an extra "allow_cap" argument. If
+> positive, then automatic module load operation can be allowed.
+
+I find this refactor slightly confusing. I would expect to collapse
+the existing caps checks in net/core/dev_ioctl.c and
+net/ipv4/tcp_cong.c, and make this a "required cap" argument, and to
+add a new non-__ function instead of requiring callers use
+__request_module.
+
+request_module_capable(int cap_required, fmt, args);
+
+adjust __request_module() for the new arg, and when cap_required !=
+-1, perform a cap check.
+
+Then make request_module pass -1 to __request_module(), and change
+dev_ioctl.c (and tcp_cong.c) from:
+
+        if (no_module && capable(CAP_NET_ADMIN))
+                no_module = request_module("netdev-%s", name);
+        if (no_module && capable(CAP_SYS_MODULE))
+                request_module("%s", name);
+
+to:
+
+        if (no_module)
+                no_module = request_module_capable(CAP_NET_ADMIN,
+"netdev-%s", name);
+        if (no_module)
+                no_module = request_module_capable(CAP_SYS_MODULE, "%s", name);
+
+that'll make the code cleaner, too.
+
+> __request_module() will be only called by networking code which is the
+> exception to this, so we do not break userspace and CAP_NET_ADMIN can
+> continue to load 'netdev-%s' modules. Other kernel code should continue
+> to use request_module() which calls security_kernel_module_request() and
+> will check for CAP_SYS_MODULE capability in next patch. Allowing more
+> control on who can trigger automatic module loading.
+>
+> This patch updates security_kernel_module_request() to take the
+> 'allow_cap' argument and SELinux which is currently the only user of
+> security_kernel_module_request() hook.
+>
+> Based on patch by Rusty Russell:
+> https://lkml.org/lkml/2017/4/26/735
+>
+> Cc: Serge Hallyn <serge@hallyn.com>
+> Cc: Andy Lutomirski <luto@kernel.org>
+> Suggested-by: Rusty Russell <rusty@rustcorp.com.au>
+> Suggested-by: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
+>
+> [1] https://lkml.org/lkml/2017/4/24/7
 > ---
->  mm/Makefile  |   2 +-
->  mm/smalloc.c | 200 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
->  mm/smalloc.h |  61 ++++++++++++++++++
->  3 files changed, 262 insertions(+), 1 deletion(-)
->  create mode 100644 mm/smalloc.c
->  create mode 100644 mm/smalloc.h
+>  include/linux/kmod.h      | 15 ++++++++-------
+>  include/linux/lsm_hooks.h |  4 +++-
+>  include/linux/security.h  |  4 ++--
+>  kernel/kmod.c             | 15 +++++++++++++--
+>  net/core/dev_ioctl.c      | 10 +++++++++-
+>  security/security.c       |  4 ++--
+>  security/selinux/hooks.c  |  2 +-
+>  7 files changed, 38 insertions(+), 16 deletions(-)
 >
-> diff --git a/mm/Makefile b/mm/Makefile
-> index 026f6a8..737c42a 100644
-> --- a/mm/Makefile
-> +++ b/mm/Makefile
-> @@ -39,7 +39,7 @@ obj-y                 := filemap.o mempool.o oom_kill.o \
->                            mm_init.o mmu_context.o percpu.o slab_common.o \
->                            compaction.o vmacache.o swap_slots.o \
->                            interval_tree.o list_lru.o workingset.o \
-> -                          debug.o $(mmu-y)
-> +                          debug.o smalloc.o $(mmu-y)
+> diff --git a/include/linux/kmod.h b/include/linux/kmod.h
+> index c4e441e..a314432 100644
+> --- a/include/linux/kmod.h
+> +++ b/include/linux/kmod.h
+> @@ -32,18 +32,19 @@
+>  extern char modprobe_path[]; /* for sysctl */
+>  /* modprobe exit status on success, -ve on error.  Return value
+>   * usually useless though. */
+> -extern __printf(2, 3)
+> -int __request_module(bool wait, const char *name, ...);
+> -#define request_module(mod...) __request_module(true, mod)
+> -#define request_module_nowait(mod...) __request_module(false, mod)
+> +extern __printf(3, 4)
+> +int __request_module(bool wait, int allow_cap, const char *name, ...);
+>  #define try_then_request_module(x, mod...) \
+> -       ((x) ?: (__request_module(true, mod), (x)))
+> +       ((x) ?: (__request_module(true, -1, mod), (x)))
+>  #else
+> -static inline int request_module(const char *name, ...) { return -ENOSYS; }
+> -static inline int request_module_nowait(const char *name, ...) { return -ENOSYS; }
+> +static inline __printf(3, 4)
+> +int __request_module(bool wait, int allow_cap, const char *name, ...)
+> +{ return -ENOSYS; }
+>  #define try_then_request_module(x, mod...) (x)
+>  #endif
 >
->  obj-y += init-mm.o
+> +#define request_module(mod...) __request_module(true, -1, mod)
+> +#define request_module_nowait(mod...) __request_module(false, -1, mod)
 >
-> diff --git a/mm/smalloc.c b/mm/smalloc.c
-> new file mode 100644
-> index 0000000..fa04cc5
-> --- /dev/null
-> +++ b/mm/smalloc.c
-> @@ -0,0 +1,200 @@
-> +/*
-> + * smalloc.c: Sealable Memory Allocator
+>  struct cred;
+>  struct file;
+> diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
+> index f7914d9..7688f79 100644
+> --- a/include/linux/lsm_hooks.h
+> +++ b/include/linux/lsm_hooks.h
+> @@ -578,6 +578,8 @@
+>   *     Ability to trigger the kernel to automatically upcall to userspace for
+>   *     userspace to load a kernel module with the given name.
+>   *     @kmod_name name of the module requested by the kernel
+> + *     @allow_cap capability that allows to automatically load a kernel
+> + *     module.
+
+I would describe this as "required to load".
+
+>   *     Return 0 if successful.
+>   * @kernel_read_file:
+>   *     Read a file specified by userspace.
+> @@ -1516,7 +1518,7 @@ union security_list_options {
+>         void (*cred_transfer)(struct cred *new, const struct cred *old);
+>         int (*kernel_act_as)(struct cred *new, u32 secid);
+>         int (*kernel_create_files_as)(struct cred *new, struct inode *inode);
+> -       int (*kernel_module_request)(char *kmod_name);
+> +       int (*kernel_module_request)(char *kmod_name, int allow_cap);
+>         int (*kernel_read_file)(struct file *file, enum kernel_read_file_id id);
+>         int (*kernel_post_read_file)(struct file *file, char *buf, loff_t size,
+>                                      enum kernel_read_file_id id);
+> diff --git a/include/linux/security.h b/include/linux/security.h
+> index 549cb82..2f4c9d3 100644
+> --- a/include/linux/security.h
+> +++ b/include/linux/security.h
+> @@ -325,7 +325,7 @@ int security_prepare_creds(struct cred *new, const struct cred *old, gfp_t gfp);
+>  void security_transfer_creds(struct cred *new, const struct cred *old);
+>  int security_kernel_act_as(struct cred *new, u32 secid);
+>  int security_kernel_create_files_as(struct cred *new, struct inode *inode);
+> -int security_kernel_module_request(char *kmod_name);
+> +int security_kernel_module_request(char *kmod_name, int allow_cap);
+>  int security_kernel_read_file(struct file *file, enum kernel_read_file_id id);
+>  int security_kernel_post_read_file(struct file *file, char *buf, loff_t size,
+>                                    enum kernel_read_file_id id);
+> @@ -926,7 +926,7 @@ static inline int security_kernel_create_files_as(struct cred *cred,
+>         return 0;
+>  }
+>
+> -static inline int security_kernel_module_request(char *kmod_name)
+> +static inline int security_kernel_module_request(char *kmod_name, int allow_cap)
+>  {
+>         return 0;
+>  }
+> diff --git a/kernel/kmod.c b/kernel/kmod.c
+> index 563f97e..15c96e8 100644
+> --- a/kernel/kmod.c
+> +++ b/kernel/kmod.c
+> @@ -110,6 +110,7 @@ static int call_modprobe(char *module_name, int wait)
+>  /**
+>   * __request_module - try to load a kernel module
+>   * @wait: wait (or not) for the operation to complete
+> + * @allow_cap: if positive, may allow modprobe if this capability is set.
+>   * @fmt: printf style format string for the name of the module
+>   * @...: arguments as specified in the format string
+>   *
+> @@ -120,10 +121,20 @@ static int call_modprobe(char *module_name, int wait)
+>   * must check that the service they requested is now available not blindly
+>   * invoke it.
+>   *
+> + * If "allow_cap" is positive, The security subsystem will trust the caller
+> + * that "allow_cap" may allow to load some modules with a specific alias,
+> + * the security subsystem will make some exceptions based on that. This is
+> + * primally useful for backward compatibility. A permission check should not
+> + * be that strict and userspace should be able to continue to trigger module
+> + * auto-loading if needed.
 > + *
-> + * (C) Copyright 2017 Huawei Technologies Co. Ltd.
-> + * Author: Igor Stoppa <igor.stoppa@huawei.com>
+>   * If module auto-loading support is disabled then this function
+>   * becomes a no-operation.
 > + *
-> + * This program is free software; you can redistribute it and/or
-> + * modify it under the terms of the GNU General Public License
-> + * as published by the Free Software Foundation; version 2
-> + * of the License.
-> + */
-> +
-> +#include <linux/module.h>
-> +#include <linux/printk.h>
-> +#include <linux/kobject.h>
-> +#include <linux/sysfs.h>
-> +#include <linux/init.h>
-> +#include <linux/fs.h>
-> +#include <linux/string.h>
-> +
-> +
-> +#include <linux/vmalloc.h>
-> +#include <asm/cacheflush.h>
-> +#include "smalloc.h"
-
-Shouldn't this just be <linux/smalloc.h> ?
-
-> +#define page_roundup(size) (((size) + !(size) - 1 + PAGE_SIZE) & PAGE_MASK)
-> +
-> +#define pages_nr(size) (page_roundup(size) / PAGE_SIZE)
-> +
-> +static struct smalloc_pool *global_pool;
-> +
-> +struct smalloc_node *__smalloc_create_node(unsigned long words)
-> +{
-> +       struct smalloc_node *node;
-> +       unsigned long size;
-> +
-> +       /* Calculate the size to ask from vmalloc, page aligned. */
-> +       size = page_roundup(NODE_HEADER_SIZE + words * sizeof(align_t));
-> +       node = vmalloc(size);
-> +       if (!node) {
-> +               pr_err("No memory for allocating smalloc node.");
-> +               return NULL;
-> +       }
-> +       /* Initialize the node.*/
-> +       INIT_LIST_HEAD(&node->list);
-> +       node->free = node->data;
-> +       node->available_words = (size - NODE_HEADER_SIZE) / sizeof(align_t);
-> +       return node;
-> +}
-> +
-> +static __always_inline
-> +void *node_alloc(struct smalloc_node *node, unsigned long words)
-> +{
-> +       register align_t *old_free = node->free;
-> +
-> +       node->available_words -= words;
-> +       node->free += words;
-> +       return old_free;
-> +}
-> +
-> +void *smalloc(unsigned long size, struct smalloc_pool *pool)
-> +{
-> +       struct list_head *pos;
-> +       struct smalloc_node *node;
-> +       void *ptr;
-> +       unsigned long words;
-> +
-> +       /* If no pool specified, use the global one. */
-> +       if (!pool)
-> +               pool = global_pool;
-
-It should be impossible, but this should check for global_pool == NULL too, IMO.
-
-> +       mutex_lock(&pool->lock);
-> +
-> +       /* If the pool is sealed, then return NULL. */
-> +       if (pool->seal == SMALLOC_SEALED) {
-> +               mutex_unlock(&pool->lock);
-> +               return NULL;
-> +       }
-> +
-> +       /* Calculate minimum number of words required. */
-> +       words = (size + sizeof(align_t) - 1) / sizeof(align_t);
-> +
-> +       /* Look for slot that is large enough, in the existing pool.*/
-> +       list_for_each(pos, &pool->list) {
-> +               node = list_entry(pos, struct smalloc_node, list);
-> +               if (node->available_words >= words) {
-> +                       ptr = node_alloc(node, words);
-> +                       mutex_unlock(&pool->lock);
-> +                       return ptr;
-> +               }
-> +       }
-> +
-> +       /* No slot found, get a new chunk of virtual memory. */
-> +       node = __smalloc_create_node(words);
-> +       if (!node) {
-> +               mutex_unlock(&pool->lock);
-> +               return NULL;
-> +       }
-> +
-> +       list_add(&node->list, &pool->list);
-> +       ptr = node_alloc(node, words);
-> +       mutex_unlock(&pool->lock);
-> +       return ptr;
-> +}
-> +
-> +static __always_inline
-> +unsigned long get_node_size(struct smalloc_node *node)
-> +{
-> +       if (!node)
-> +               return 0;
-> +       return page_roundup((((void *)node->free) - (void *)node) +
-> +                           node->available_words * sizeof(align_t));
-> +}
-> +
-> +static __always_inline
-> +unsigned long get_node_pages_nr(struct smalloc_node *node)
-> +{
-> +       return pages_nr(get_node_size(node));
-> +}
-> +void smalloc_seal_set(enum seal_t seal, struct smalloc_pool *pool)
-> +{
-> +       struct list_head *pos;
-> +       struct smalloc_node *node;
-> +
-> +       if (!pool)
-> +               pool = global_pool;
-> +       mutex_lock(&pool->lock);
-> +       if (pool->seal == seal) {
-> +               mutex_unlock(&pool->lock);
-> +               return;
-
-I actually think this should be a BUG condition, since this means a
-mismatched seal/unseal happened. The pool should never be left
-writable at rest, a user should create a pool, write to it, seal. Any
-updates should unseal, write, seal. To attempt an unseal and find it
-already unsealed seems bad.
-
-Finding a user for this would help clarify its protection properties,
-too. (The LSM example is likely not the best starting point for that,
-as it would depend on other changes that are under discussion.)
-
-> +       }
-> +       list_for_each(pos, &pool->list) {
-> +               node = list_entry(pos, struct smalloc_node, list);
-> +               if (seal == SMALLOC_SEALED)
-> +                       set_memory_ro((unsigned long)node,
-> +                                     get_node_pages_nr(node));
-> +               else if (seal == SMALLOC_UNSEALED)
-> +                       set_memory_rw((unsigned long)node,
-> +                                     get_node_pages_nr(node));
-> +       }
-> +       pool->seal = seal;
-> +       mutex_unlock(&pool->lock);
-> +}
-> +
-> +int smalloc_initialize(struct smalloc_pool *pool)
-> +{
-> +       if (!pool)
-> +               return -EINVAL;
-> +       INIT_LIST_HEAD(&pool->list);
-> +       pool->seal = SMALLOC_UNSEALED;
-> +       mutex_init(&pool->lock);
-> +       return 0;
-> +}
-> +
-> +struct smalloc_pool *smalloc_create(void)
-> +{
-> +       struct smalloc_pool *pool = vmalloc(sizeof(struct smalloc_pool));
-> +
-> +       if (!pool) {
-> +               pr_err("No memory for allocating pool.");
-
-It might be handy to have pools named like they are for the slab allocator.
-
-> +               return NULL;
-> +       }
-> +       smalloc_initialize(pool);
-> +       return pool;
-> +}
-> +
-> +int smalloc_destroy(struct smalloc_pool *pool)
-> +{
-> +       struct list_head *pos, *q;
-> +       struct smalloc_node *node;
-> +
-> +       if (!pool)
-> +               return -EINVAL;
-> +       list_for_each_safe(pos, q, &pool->list) {
-> +               node = list_entry(pos, struct smalloc_node, list);
-> +               list_del(pos);
-> +               vfree(node);
-> +       }
-> +       return 0;
-> +}
-> +
-> +static int __init smalloc_init(void)
-> +{
-> +       global_pool = smalloc_create();
-> +       if (!global_pool) {
-> +               pr_err("Module smalloc initialization failed: no memory.\n");
-> +               return -ENOMEM;
-> +       }
-> +       pr_info("Module smalloc initialized successfully.\n");
-> +       return 0;
-> +}
-> +
-> +static void __exit smalloc_exit(void)
-> +{
-> +       pr_info("Module smalloc un initialized successfully.\n");
-
-typo: space after "un"
-
-> +}
-> +
-> +module_init(smalloc_init);
-> +module_exit(smalloc_exit);
-> +MODULE_LICENSE("GPL");
-> diff --git a/mm/smalloc.h b/mm/smalloc.h
-> new file mode 100644
-> index 0000000..344d962
-> --- /dev/null
-> +++ b/mm/smalloc.h
-> @@ -0,0 +1,61 @@
-> +/*
-> + * smalloc.h: Header for Sealable Memory Allocator
-> + *
-> + * (C) Copyright 2017 Huawei Technologies Co. Ltd.
-> + * Author: Igor Stoppa <igor.stoppa@huawei.com>
-> + *
-> + * This program is free software; you can redistribute it and/or
-> + * modify it under the terms of the GNU General Public License
-> + * as published by the Free Software Foundation; version 2
-> + * of the License.
-> + */
-> +
-> +#ifndef _SMALLOC_H
-> +#define _SMALLOC_H
-> +
-> +#include <linux/list.h>
-> +#include <linux/mutex.h>
-> +
-> +typedef uint64_t align_t;
-> +
-> +enum seal_t {
-> +       SMALLOC_UNSEALED,
-> +       SMALLOC_SEALED,
-> +};
-> +
-> +#define __SMALLOC_ALIGNED__ __aligned(sizeof(align_t))
-> +
-> +#define NODE_HEADER                                    \
-> +       struct {                                        \
-> +               __SMALLOC_ALIGNED__ struct {            \
-> +                       struct list_head list;          \
-> +                       align_t *free;                  \
-> +                       unsigned long available_words;  \
-> +               };                                      \
-> +       }
-> +
-> +#define NODE_HEADER_SIZE sizeof(NODE_HEADER)
-> +
-> +struct smalloc_pool {
-> +       struct list_head list;
-> +       struct mutex lock;
-> +       enum seal_t seal;
-> +};
-> +
-> +struct smalloc_node {
-> +       NODE_HEADER;
-> +       __SMALLOC_ALIGNED__ align_t data[];
-> +};
-> +
-> +#define smalloc_seal(pool) \
-> +       smalloc_seal_set(SMALLOC_SEALED, pool)
-> +
-> +#define smalloc_unseal(pool) \
-> +       smalloc_seal_set(SMALLOC_UNSEALED, pool)
-> +
-> +struct smalloc_pool *smalloc_create(void);
-> +int smalloc_destroy(struct smalloc_pool *pool);
-> +int smalloc_initialize(struct smalloc_pool *pool);
-> +void *smalloc(unsigned long size, struct smalloc_pool *pool);
-> +void smalloc_seal_set(enum seal_t seal, struct smalloc_pool *pool);
-
-I'd really like to see kernel-doc for the API functions (likely in the .c file).
-
-> +#endif
+> + * This function should not be directly used by other subsystems, for that
+> + * please call request_module().
+>   */
+> -int __request_module(bool wait, const char *fmt, ...)
+> +int __request_module(bool wait, int allow_cap, const char *fmt, ...)
+>  {
+>         va_list args;
+>         char module_name[MODULE_NAME_LEN];
+> @@ -150,7 +161,7 @@ int __request_module(bool wait, const char *fmt, ...)
+>         if (ret >= MODULE_NAME_LEN)
+>                 return -ENAMETOOLONG;
+>
+> -       ret = security_kernel_module_request(module_name);
+> +       ret = security_kernel_module_request(module_name, allow_cap);
+>         if (ret)
+>                 return ret;
+>
+> diff --git a/net/core/dev_ioctl.c b/net/core/dev_ioctl.c
+> index b94b1d2..c494351 100644
+> --- a/net/core/dev_ioctl.c
+> +++ b/net/core/dev_ioctl.c
+> @@ -366,8 +366,16 @@ void dev_load(struct net *net, const char *name)
+>         rcu_read_unlock();
+>
+>         no_module = !dev;
+> +       /*
+> +        * First do the CAP_NET_ADMIN check, then let the security
+> +        * subsystem checks know that this can be allowed since this is
+> +        * a "netdev-%s" module and CAP_NET_ADMIN is set.
+> +        *
+> +        * For this exception call __request_module().
+> +        */
+>         if (no_module && capable(CAP_NET_ADMIN))
+> -               no_module = request_module("netdev-%s", name);
+> +               no_module = __request_module(true, CAP_NET_ADMIN,
+> +                                            "netdev-%s", name);
+>         if (no_module && capable(CAP_SYS_MODULE))
+>                 request_module("%s", name);
+>  }
+> diff --git a/security/security.c b/security/security.c
+> index 714433e..cedb790 100644
+> --- a/security/security.c
+> +++ b/security/security.c
+> @@ -1021,9 +1021,9 @@ int security_kernel_create_files_as(struct cred *new, struct inode *inode)
+>         return call_int_hook(kernel_create_files_as, 0, new, inode);
+>  }
+>
+> -int security_kernel_module_request(char *kmod_name)
+> +int security_kernel_module_request(char *kmod_name, int allow_cap)
+>  {
+> -       return call_int_hook(kernel_module_request, 0, kmod_name);
+> +       return call_int_hook(kernel_module_request, 0, kmod_name, allow_cap);
+>  }
+>
+>  int security_kernel_read_file(struct file *file, enum kernel_read_file_id id)
+> diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
+> index 158f6a0..85eeff6 100644
+> --- a/security/selinux/hooks.c
+> +++ b/security/selinux/hooks.c
+> @@ -3842,7 +3842,7 @@ static int selinux_kernel_create_files_as(struct cred *new, struct inode *inode)
+>         return ret;
+>  }
+>
+> -static int selinux_kernel_module_request(char *kmod_name)
+> +static int selinux_kernel_module_request(char *kmod_name, int allow_cap)
+>  {
+>         struct common_audit_data ad;
+>
 > --
-> 2.9.3
+> 2.10.2
+>
 
-Thanks again for working on this! If you can find examples of file
-operations living in the heap, those would be great examples for using
-this API (assuming the other properties can be improved).
+Otherwise, looks good!
 
 -Kees
 
