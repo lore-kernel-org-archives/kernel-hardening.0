@@ -1,372 +1,91 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170522231025.30463-1-danielmicay@gmail.com>
-References: <20170522231025.30463-1-danielmicay@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 22 May 2017 16:24:39 -0700
-Message-ID: <CAGXu5j+x9QaAQfeFkeL6ba-6HtphBRp9LcBoUwaAcPLQEP_1dQ@mail.gmail.com>
+In-Reply-To: <CAGXu5jKGnG74KE-k9JPaH1bNqT5nbVioaeu_5sAKQ+4kgp-0Ng@mail.gmail.com>
+References: <1495454226-10027-1-git-send-email-tixxdz@gmail.com>
+ <20170522120848.GA3003@openwall.com> <CAEiveUdqfMk4+vLg6TaEJNSGwoQHxYq0P4aqZoL4i9GgR3Vdtw@mail.gmail.com>
+ <20170522164323.GA2048@openwall.com> <CAEiveUdb=yc5Gt_+pU_hfNdoNBP0JsUL1QUydNZgc2tD7n1h1w@mail.gmail.com>
+ <CAGXu5jKGnG74KE-k9JPaH1bNqT5nbVioaeu_5sAKQ+4kgp-0Ng@mail.gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Mon, 22 May 2017 16:38:31 -0700
+Message-ID: <CALCETrXyf3vM+NdFNcjwaOZs1KFJomuTL0DobXoH9Z68k8dknQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v3] add the option of fortified string.h functions
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-kernel <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Daniel Axtens <dja@axtens.net>, "x86@kernel.org" <x86@kernel.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Chris Metcalf <cmetcalf@ezchip.com>, Andrew Morton <akpm@linux-foundation.org>
+Subject: Re: [kernel-hardening] [PATCH v4 next 0/3] modules: automatic module
+ loading restrictions
+To: Kees Cook <keescook@chromium.org>
+Cc: Djalal Harouni <tixxdz@gmail.com>, Solar Designer <solar@openwall.com>, linux-kernel <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Rusty Russell <rusty@rustcorp.com.au>, "Serge E. Hallyn" <serge@hallyn.com>, Jessica Yu <jeyu@redhat.com>, "David S. Miller" <davem@davemloft.net>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Ingo Molnar <mingo@kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, Jonathan Corbet <corbet@lwn.net>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Zendyani <zendyani@gmail.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Ben Hutchings <ben.hutchings@codethink.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 22, 2017 at 4:10 PM, Daniel Micay <danielmicay@gmail.com> wrote:
-> This adds support for compiling with a rough equivalent to the glibc
-> _FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
-> overflow checks for string.h functions when the compiler determines the
-> size of the source or destination buffer at compile-time. Unlike glibc,
-> it covers buffer reads in addition to writes.
+On Mon, May 22, 2017 at 4:07 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Mon, May 22, 2017 at 12:55 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
+>> On Mon, May 22, 2017 at 6:43 PM, Solar Designer <solar@openwall.com> wrote:
+>>> On Mon, May 22, 2017 at 03:49:15PM +0200, Djalal Harouni wrote:
+>>>> On Mon, May 22, 2017 at 2:08 PM, Solar Designer <solar@openwall.com> wrote:
+>>>> > On Mon, May 22, 2017 at 01:57:03PM +0200, Djalal Harouni wrote:
+>>>> >> *) When modules_autoload_mode is set to (2), automatic module loading is
+>>>> >> disabled for all. Once set, this value can not be changed.
+>>>> >
+>>>> > What purpose does this securelevel-like property ("Once set, this value
+>>>> > can not be changed.") serve here?  I think this mode 2 is needed, but
+>>>> > without this extra property, which is bypassable by e.g. explicitly
+>>>> > loaded kernel modules anyway (and that's OK).
+>>>>
+>>>> My reasoning about "Once set, this value can not be changed" is mainly for:
+>>>>
+>>>> If you have some systems where modules are not updated for any given
+>>>> reason, then the only one who will be able to load a module is an
+>>>> administrator, basically this is a shortcut for:
+>>>>
+>>>> * Apps/services can run with CAP_NET_ADMIN but they are not allowed to
+>>>> auto-load 'netdev' modules.
+>>>>
+>>>> * Explicitly loading modules can be guarded by seccomp filters *per*
+>>>> app, so even if these apps have
+>>>>   CAP_SYS_MODULE they won't be able to explicitly load modules, one
+>>>> has to remount some sysctl /proc/ entries read-only here and remove
+>>>> CAP_SYS_ADMIN for all apps anyway.
+>>>>
+>>>> This mainly serves the purpose of these systems that do not receive
+>>>> updates, if I don't want to expose those kernel interfaces what should
+>>>> I do ? then if I want to unload old versions and replace them with new
+>>>> ones what operation should be allowed ? and only real root of the
+>>>> system can do it. Hence, the "Once set, this value can not be changed"
+>>>> is more of a shortcut, also the idea was put in my mind based on how
+>>>> "modules_disabled" is disabled forever, and some other interfaces. I
+>>>> would say: it is easy to handle a transition from 1) "hey this system
+>>>> is still up to date, some features should be exposed" to 2) "this
+>>>> system is not up to date anymore, only root should expose some
+>>>> features..."
+>>>>
+>>>> Hmm, I am not sure if this answers your question ? :-)
+>>>
+>>> This answers my question, but in a way that I summarize as "there's no
+>>> good reason to include this securelevel-like property".
+>>>
+>>
+>> Hmm, sorry I did forget to add in my previous comment that with such
+>> systems, CAP_SYS_MODULE can be used to reset the
+>> "modules_autoload_mode" sysctl back from mode 2 to mode 1, even if we
+>> disable it privileged tasks can be triggered to overwrite the sysctl
+>> flag and get it back unless /proc is read-only... that's one of the
+>> points, it should not be so easy to relax it.
 >
-> GNU C __builtin_*_chk intrinsics are avoided because they would force a
-> much more complex implementation. They aren't designed to detect read
-> overflows and offer no real benefit when using an implementation based
-> on inline checks. Inline checks don't add up to much code size and allow
-> full use of the regular string intrinsics while avoiding the need for a
-> bunch of _chk functions and per-arch assembly to avoid wrapper overhead.
+> I'm on the fence. For modules_disabled and Yama, it was tied to
+> CAP_SYS_ADMIN, basically designed to be a at-boot setting that could
+> not later be undone by an attacker gaining that privilege, keeping
+> them out of either kernel memory or existing user process memory.
+> Here, it's CAP_SYS_MODULE... it's hard to imagine the situation where
+> a CAP_SYS_MODULE-capable process could write to this sysctl but NOT
+> issue direct modprobe requests, but it's _possible_ via crazy symlink
+> games to trick capable processes into writing to sysctls. We've seen
+> this multiple times before, and it's a way for attackers to turn a
+> single privileged write into a privileged exec.
 >
-> This detects various overflows at compile-time in various drivers and
-> some non-x86 core kernel code. There will likely be issues caught in
-> regular use at runtime too.
+> I might turn the question around, though: why would we want to have it
+> changeable at this setting?
 >
-> Future improvements left out of initial implementation for simplicity,
-> as it's all quite optional and can be done incrementally:
->
-> * Some of the fortified string functions (strncpy, strcat), don't yet
->   place a limit on reads from the source based on __builtin_object_size of
->   the source buffer.
->
-> * Extending coverage to more string functions like strlcat.
->
-> * It should be possible to optionally use __builtin_object_size(x, 1) for
->   some functions (C strings) to detect intra-object overflows (like
->   glibc's _FORTIFY_SOURCE=2), but for now this takes the conservative
->   approach to avoid likely compatibility issues.
->
-> * The compile-time checks should be made available via a separate config
->   option which can be enabled by default (or always enabled) once enough
->   time has passed to get the issues it catches fixed.
->
-> Signed-off-by: Daniel Micay <danielmicay@gmail.com>
+> I'm fine leaving that piece off, either way.
 
-Acked-by: Kees Cook <keescook@chromium.org>
-
-This is great to have. While it was out-of-tree code, it would have
-blocked at least CVE-2016-3858 from being exploitable (improper size
-argument to strlcpy()). I've sent a number of fixes for
-out-of-bounds-reads that this detected upstream already. If I can
-collect Acks on this, I could carry it in the kspp tree for -next
-along with any other fixes. Otherwise, perhaps it can go via -mm?
-
-Thanks!
-
--Kees
-
-> ---
-> Changes since v2:
-> - add fortified strlcpy
-> - split the compile-time errors for reads and writes, and specify the parameter
-> - avoid redefinition of __NO_FORTIFY in KASan-uninstrumented code already defining __NO_FORTIFY
->
->  arch/arm64/include/asm/string.h  |   5 +
->  arch/x86/boot/compressed/misc.c  |   5 +
->  arch/x86/include/asm/string_64.h |   5 +
->  include/linux/string.h           | 200 +++++++++++++++++++++++++++++++++++++++
->  lib/string.c                     |   6 ++
->  security/Kconfig                 |   6 ++
->  6 files changed, 227 insertions(+)
->
-> diff --git a/arch/arm64/include/asm/string.h b/arch/arm64/include/asm/string.h
-> index 2eb714c4639f..d0aa42907569 100644
-> --- a/arch/arm64/include/asm/string.h
-> +++ b/arch/arm64/include/asm/string.h
-> @@ -63,6 +63,11 @@ extern int memcmp(const void *, const void *, size_t);
->  #define memcpy(dst, src, len) __memcpy(dst, src, len)
->  #define memmove(dst, src, len) __memmove(dst, src, len)
->  #define memset(s, c, n) __memset(s, c, n)
-> +
-> +#ifndef __NO_FORTIFY
-> +#define __NO_FORTIFY /* FORTIFY_SOURCE uses __builtin_memcpy, etc. */
-> +#endif
-> +
->  #endif
->
->  #endif
-> diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
-> index b3c5a5f030ce..43691238a21d 100644
-> --- a/arch/x86/boot/compressed/misc.c
-> +++ b/arch/x86/boot/compressed/misc.c
-> @@ -409,3 +409,8 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
->         debug_putstr("done.\nBooting the kernel.\n");
->         return output;
->  }
-> +
-> +void fortify_panic(const char *name)
-> +{
-> +       error("detected buffer overflow");
-> +}
-> diff --git a/arch/x86/include/asm/string_64.h b/arch/x86/include/asm/string_64.h
-> index 733bae07fb29..3c5b26e07b85 100644
-> --- a/arch/x86/include/asm/string_64.h
-> +++ b/arch/x86/include/asm/string_64.h
-> @@ -77,6 +77,11 @@ int strcmp(const char *cs, const char *ct);
->  #define memcpy(dst, src, len) __memcpy(dst, src, len)
->  #define memmove(dst, src, len) __memmove(dst, src, len)
->  #define memset(s, c, n) __memset(s, c, n)
-> +
-> +#ifndef __NO_FORTIFY
-> +#define __NO_FORTIFY /* FORTIFY_SOURCE uses __builtin_memcpy, etc. */
-> +#endif
-> +
->  #endif
->
->  #define __HAVE_ARCH_MEMCPY_MCSAFE 1
-> diff --git a/include/linux/string.h b/include/linux/string.h
-> index 537918f8a98e..66dc841e4c5e 100644
-> --- a/include/linux/string.h
-> +++ b/include/linux/string.h
-> @@ -187,4 +187,204 @@ static inline const char *kbasename(const char *path)
->         return tail ? tail + 1 : path;
->  }
->
-> +#define __FORTIFY_INLINE extern __always_inline __attribute__((gnu_inline))
-> +#define __RENAME(x) __asm__(#x)
-> +
-> +void fortify_panic(const char *name) __noreturn __cold;
-> +void __read_overflow(void) __compiletime_error("detected read beyond size of object passed as 1st parameter");
-> +void __read_overflow2(void) __compiletime_error("detected read beyond size of object passed as 2nd parameter");
-> +void __write_overflow(void) __compiletime_error("detected write beyond size of object passed as 1st parameter");
-> +
-> +#if !defined(__NO_FORTIFY) && defined(__OPTIMIZE__) && defined(CONFIG_FORTIFY_SOURCE)
-> +__FORTIFY_INLINE char *strcpy(char *p, const char *q)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       size_t q_size = __builtin_object_size(q, 0);
-> +       if (p_size == (size_t)-1 && q_size == (size_t)-1)
-> +               return __builtin_strcpy(p, q);
-> +       if (strscpy(p, q, p_size < q_size ? p_size : q_size) < 0)
-> +               fortify_panic(__func__);
-> +       return p;
-> +}
-> +
-> +__FORTIFY_INLINE char *strncpy(char *p, const char *q, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __write_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_strncpy(p, q, size);
-> +}
-> +
-> +__FORTIFY_INLINE char *strcat(char *p, const char *q)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (p_size == (size_t)-1)
-> +               return __builtin_strcat(p, q);
-> +       if (strlcat(p, q, p_size) >= p_size)
-> +               fortify_panic(__func__);
-> +       return p;
-> +}
-> +
-> +__FORTIFY_INLINE __kernel_size_t strlen(const char *p)
-> +{
-> +       __kernel_size_t ret;
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (p_size == (size_t)-1)
-> +               return __builtin_strlen(p);
-> +       ret = strnlen(p, p_size);
-> +       if (p_size <= ret)
-> +               fortify_panic(__func__);
-> +       return ret;
-> +}
-> +
-> +extern __kernel_size_t __real_strnlen(const char *, __kernel_size_t) __RENAME(strnlen);
-> +__FORTIFY_INLINE __kernel_size_t strnlen(const char *p, __kernel_size_t maxlen)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       __kernel_size_t ret = __real_strnlen(p, maxlen < p_size ? maxlen : p_size);
-> +       if (p_size <= ret)
-> +               fortify_panic(__func__);
-> +       return ret;
-> +}
-> +
-> +/* defined after fortified strlen to reuse it */
-> +extern size_t __real_strlcpy(char *, const char *, size_t) __RENAME(strlcpy);
-> +__FORTIFY_INLINE size_t strlcpy(char *p, const char *q, size_t size)
-> +{
-> +       size_t ret;
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       size_t q_size = __builtin_object_size(q, 0);
-> +       if (p_size == (size_t)-1 && q_size == (size_t)-1)
-> +               return __real_strlcpy(p, q, size);
-> +       ret = strlen(q);
-> +       if (size) {
-> +               size_t len = (ret >= size) ? size - 1 : ret;
-> +               if (__builtin_constant_p(len) && len >= p_size)
-> +                       __write_overflow();
-> +               if (len >= p_size)
-> +                       fortify_panic(__func__);
-> +               __builtin_memcpy(p, q, len);
-> +               p[len] = '\0';
-> +       }
-> +       return ret;
-> +}
-> +
-> +/* defined after fortified strlen and strnlen to reuse them */
-> +__FORTIFY_INLINE char *strncat(char *p, const char *q, __kernel_size_t count)
-> +{
-> +       size_t p_len, copy_len;
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       size_t q_size = __builtin_object_size(q, 0);
-> +       if (p_size == (size_t)-1 && q_size == (size_t)-1)
-> +               return __builtin_strncat(p, q, count);
-> +       p_len = strlen(p);
-> +       copy_len = strnlen(q, count);
-> +       if (p_size < p_len + copy_len + 1)
-> +               fortify_panic(__func__);
-> +       __builtin_memcpy(p + p_len, q, copy_len);
-> +       p[p_len + copy_len] = '\0';
-> +       return p;
-> +}
-> +
-> +__FORTIFY_INLINE void *memset(void *p, int c, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __write_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_memset(p, c, size);
-> +}
-> +
-> +__FORTIFY_INLINE void *memcpy(void *p, const void *q, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       size_t q_size = __builtin_object_size(q, 0);
-> +       if (__builtin_constant_p(size)) {
-> +               if (p_size < size)
-> +                       __write_overflow();
-> +               if (q_size < size)
-> +                       __read_overflow2();
-> +       }
-> +       if (p_size < size || q_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_memcpy(p, q, size);
-> +}
-> +
-> +__FORTIFY_INLINE void *memmove(void *p, const void *q, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       size_t q_size = __builtin_object_size(q, 0);
-> +       if (__builtin_constant_p(size)) {
-> +               if (p_size < size)
-> +                       __write_overflow();
-> +               if (q_size < size)
-> +                       __read_overflow2();
-> +       }
-> +       if (p_size < size || q_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_memmove(p, q, size);
-> +}
-> +
-> +extern void *__real_memscan(void *, int, __kernel_size_t) __RENAME(memscan);
-> +__FORTIFY_INLINE void *memscan(void *p, int c, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __read_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __real_memscan(p, c, size);
-> +}
-> +
-> +__FORTIFY_INLINE int memcmp(const void *p, const void *q, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       size_t q_size = __builtin_object_size(q, 0);
-> +       if (__builtin_constant_p(size)) {
-> +               if (p_size < size)
-> +                       __read_overflow();
-> +               if (q_size < size)
-> +                       __read_overflow2();
-> +       }
-> +       if (p_size < size || q_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_memcmp(p, q, size);
-> +}
-> +
-> +__FORTIFY_INLINE void *memchr(const void *p, int c, __kernel_size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __read_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __builtin_memchr(p, c, size);
-> +}
-> +
-> +void *__real_memchr_inv(const void *s, int c, size_t n) __RENAME(memchr_inv);
-> +__FORTIFY_INLINE void *memchr_inv(const void *p, int c, size_t size)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __read_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __real_memchr_inv(p, c, size);
-> +}
-> +
-> +extern void *__real_kmemdup(const void *src, size_t len, gfp_t gfp) __RENAME(kmemdup);
-> +__FORTIFY_INLINE void *kmemdup(const void *p, size_t size, gfp_t gfp)
-> +{
-> +       size_t p_size = __builtin_object_size(p, 0);
-> +       if (__builtin_constant_p(size) && p_size < size)
-> +               __read_overflow();
-> +       if (p_size < size)
-> +               fortify_panic(__func__);
-> +       return __real_kmemdup(p, size, gfp);
-> +}
-> +#endif
-> +
->  #endif /* _LINUX_STRING_H_ */
-> diff --git a/lib/string.c b/lib/string.c
-> index 1c1fc9187b05..a6ee1955a701 100644
-> --- a/lib/string.c
-> +++ b/lib/string.c
-> @@ -978,3 +978,9 @@ char *strreplace(char *s, char old, char new)
->         return s;
->  }
->  EXPORT_SYMBOL(strreplace);
-> +
-> +void fortify_panic(const char *name)
-> +{
-> +       panic("detected buffer overflow in %s", name);
-> +}
-> +EXPORT_SYMBOL(fortify_panic);
-> diff --git a/security/Kconfig b/security/Kconfig
-> index 93027fdf47d1..0e5035d720ce 100644
-> --- a/security/Kconfig
-> +++ b/security/Kconfig
-> @@ -154,6 +154,12 @@ config HARDENED_USERCOPY_PAGESPAN
->           been removed. This config is intended to be used only while
->           trying to find such users.
->
-> +config FORTIFY_SOURCE
-> +       bool "Harden common functions against buffer overflows"
-> +       help
-> +         Detect overflows of buffers in common functions where the compiler
-> +         can determine the buffer size.
-> +
->  config STATIC_USERMODEHELPER
->         bool "Force all usermode helper calls through a single binary"
->         help
-> --
-> 2.13.0
->
-
-
-
--- 
-Kees Cook
-Pixel Security
+I think that having the un-resettable mode is unnecessary.  We should
+have option that disables loading modules entirely and cannot be
+unset.  (That means no explicit loads and not implicit loads.)  Maybe
+we already have this.  Otherwise, tightening caps needed for implicit
+loads should just be a normal yes/no setting IMO.
