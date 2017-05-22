@@ -1,56 +1,41 @@
+References: <20170519103811.2183-1-igor.stoppa@huawei.com>
+ <20170519103811.2183-2-igor.stoppa@huawei.com>
+ <20170520085147.GA4619@kroah.com>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <b3b4a71a-01a4-dad2-8df4-8b945c25be2f@huawei.com>
+Date: Mon, 22 May 2017 22:45:26 +0300
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAHgaXdKKbRVSpX-036TXpV5z=1=QCnPoku0+CeHxHco8-aasPQ@mail.gmail.com>
-References: <CAHgaXdKsO2xoKYp7g91g+n+d_1KHSSByLjzBB-WjVXSjhB7qxw@mail.gmail.com>
- <20170510.212952.1440495072777358778.davem@davemloft.net> <CAHgaXdK8LEEUPm4jTRRzCnjwdWAauHmmB=caZsSFY8MmStH89Q@mail.gmail.com>
- <20170510.215218.2185526627014393313.davem@davemloft.net> <CAHgaXdKZ_v+iO7uqEDx7PA7D+xcp1FngGvJ1SRSsGXNQ-iWWDQ@mail.gmail.com>
- <CAHgaXdLJoVUXXGTYs7FYXay5wx=sA-O+=dYhX+r7AQT7vSNfGQ@mail.gmail.com>
- <CAGXu5j+2q4Wwfhuk_DnDaV894A9ZOD=A_AvAU_OZG6KQv0_KMg@mail.gmail.com>
- <CAHgaXdL7GcVzs+ANPke_NywhcgHbe_fzi1sTDEy+Ni1-o82GYQ@mail.gmail.com>
- <591A07A1.1030006@iogearbox.net> <CAHgaXdKKbRVSpX-036TXpV5z=1=QCnPoku0+CeHxHco8-aasPQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 22 May 2017 11:58:35 -0700
-Message-ID: <CAGXu5j+k+NMQGmmhuW-4pHFd6agfndJfxQ9k--h+ZpsDBVB8ig@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
-To: Shubham Bansal <illusionist.neo@gmail.com>
-Cc: Daniel Borkmann <daniel@iogearbox.net>, David Miller <davem@davemloft.net>, Mircea Gherzan <mgherzan@gmail.com>, Network Development <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, ast@fb.com
+In-Reply-To: <20170520085147.GA4619@kroah.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [PATCH 1/1] Sealable memory support
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: mhocko@kernel.org, dave.hansen@intel.com, labbott@redhat.com, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, May 20, 2017 at 1:01 PM, Shubham Bansal
-<illusionist.neo@gmail.com> wrote:
-> Hi Daniel and Kees,
->
-> Before I send the patch, I have tested the JIT compiler on ARMv7 but
-> not on ARMv5 or ARMv6. So can you tell me which arch versions I should
-> test it for?
-> Also for my testing, CONFIG_FRAME_POINTER and CONFIG_CPU_BIG_ENDIAN
-> are both disabled. But I need to test JIT with these flags as well.
-> Whenever I put these flags in .config file, the arm kernel is not
-> getting compiler with these flags. Can you tell me why? If you need
-> more information regarding this, please let me know.
+On 20/05/17 11:51, Greg KH wrote:
+> On Fri, May 19, 2017 at 01:38:11PM +0300, Igor Stoppa wrote:
+>> Dynamically allocated variables can be made read only,
 
-I think it is fine to only target ARMv7. It is harder and harder to
-find devices on v5 or v6 CPUs that would want to be using BPF JIT,
-IMO.
+[...]
 
-When they "disappear", it's because there isn't a prerequisite met. I
-either read the Kconfig files or use "make menuconfig" and "search" to
-tell me where a config is defined and what is needed to meet the
-prerequisites.
+> This is really nice, do you have a follow-on patch showing how any of
+> the kernel can be changed to use this new subsystem?
 
-In the case of CPU_BIG_ENDIAN, you need ARCH_SUPPORTS_BIG_ENDIAN,
-which appears to be only ARCH_IXP4XX. I don't think you're going to
-find an emulator that will handle this, so I'd suggest ignoring this
-config for now unless you can find someone with that hardware that you
-can work with to test it.
+Yes, actually I started from the need of turning into R/O some data
+structures in both LSM Hooks and SE Linux.
 
-In the case of CONFIG_FRAME_POINTER, I assume you built a
-THUMB2_KERNEL? I'd read the notes in arch/arm/Kconfig.debug for
-'config FRAME_POINTER'.
+> Without that, it
+> might be hard to get this approved (we don't like adding new apis
+> without users.)
 
--Kees
+Yes, I just wanted to give an early preview of the current
+implementation, since it is significantly different from what I
+initially proposed. So I was looking for early feedback.
 
--- 
-Kees Cook
-Pixel Security
+Right now, I'm fixing it up and adding some more structured debugging.
+
+Then I'll re-submit it together with the LSM Hooks example.
+
+---
+thanks, igor
