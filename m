@@ -1,39 +1,113 @@
-References: <20170520085147.GA4619@kroah.com>
- <1495365245-3185-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp>
- <20170522140306.GA3907@infradead.org>
- <d98f4cd5-3f21-3f7b-2842-12b9a009e453@schaufler-ca.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <d25e2fd3-da11-4ec0-8edc-f1327c04fa6e@huawei.com>
-Date: Mon, 22 May 2017 22:50:09 +0300
 MIME-Version: 1.0
-In-Reply-To: <d98f4cd5-3f21-3f7b-2842-12b9a009e453@schaufler-ca.com>
-Content-Type: text/plain; charset="windows-1252"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] LSM: Make security_hook_heads a local variable.
-To: Casey Schaufler <casey@schaufler-ca.com>, Christoph Hellwig <hch@infradead.org>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-Cc: linux-security-module@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Greg
- KH <gregkh@linuxfoundation.org>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>
+In-Reply-To: <20170522164323.GA2048@openwall.com>
+References: <1495454226-10027-1-git-send-email-tixxdz@gmail.com>
+ <20170522120848.GA3003@openwall.com> <CAEiveUdqfMk4+vLg6TaEJNSGwoQHxYq0P4aqZoL4i9GgR3Vdtw@mail.gmail.com>
+ <20170522164323.GA2048@openwall.com>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Mon, 22 May 2017 21:55:41 +0200
+Message-ID: <CAEiveUdb=yc5Gt_+pU_hfNdoNBP0JsUL1QUydNZgc2tD7n1h1w@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [PATCH v4 next 0/3] modules: automatic module
+ loading restrictions
+To: Solar Designer <solar@openwall.com>
+Cc: linux-kernel <linux-kernel@vger.kernel.org>, netdev@vger.kernel.org, LSM List <linux-security-module@vger.kernel.org>, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Rusty Russell <rusty@rustcorp.com.au>, "Serge E. Hallyn" <serge@hallyn.com>, Jessica Yu <jeyu@redhat.com>, "David S. Miller" <davem@davemloft.net>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Ingo Molnar <mingo@kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, Jonathan Corbet <corbet@lwn.net>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Zendyani <zendyani@gmail.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Ben Hutchings <ben.hutchings@codethink.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 22/05/17 18:09, Casey Schaufler wrote:
-> On 5/22/2017 7:03 AM, Christoph Hellwig wrote:
+On Mon, May 22, 2017 at 6:43 PM, Solar Designer <solar@openwall.com> wrote:
+> On Mon, May 22, 2017 at 03:49:15PM +0200, Djalal Harouni wrote:
+>> On Mon, May 22, 2017 at 2:08 PM, Solar Designer <solar@openwall.com> wrote:
+>> > On Mon, May 22, 2017 at 01:57:03PM +0200, Djalal Harouni wrote:
+>> >> *) When modules_autoload_mode is set to (2), automatic module loading is
+>> >> disabled for all. Once set, this value can not be changed.
+>> >
+>> > What purpose does this securelevel-like property ("Once set, this value
+>> > can not be changed.") serve here?  I think this mode 2 is needed, but
+>> > without this extra property, which is bypassable by e.g. explicitly
+>> > loaded kernel modules anyway (and that's OK).
+>>
+>> My reasoning about "Once set, this value can not be changed" is mainly for:
+>>
+>> If you have some systems where modules are not updated for any given
+>> reason, then the only one who will be able to load a module is an
+>> administrator, basically this is a shortcut for:
+>>
+>> * Apps/services can run with CAP_NET_ADMIN but they are not allowed to
+>> auto-load 'netdev' modules.
+>>
+>> * Explicitly loading modules can be guarded by seccomp filters *per*
+>> app, so even if these apps have
+>>   CAP_SYS_MODULE they won't be able to explicitly load modules, one
+>> has to remount some sysctl /proc/ entries read-only here and remove
+>> CAP_SYS_ADMIN for all apps anyway.
+>>
+>> This mainly serves the purpose of these systems that do not receive
+>> updates, if I don't want to expose those kernel interfaces what should
+>> I do ? then if I want to unload old versions and replace them with new
+>> ones what operation should be allowed ? and only real root of the
+>> system can do it. Hence, the "Once set, this value can not be changed"
+>> is more of a shortcut, also the idea was put in my mind based on how
+>> "modules_disabled" is disabled forever, and some other interfaces. I
+>> would say: it is easy to handle a transition from 1) "hey this system
+>> is still up to date, some features should be exposed" to 2) "this
+>> system is not up to date anymore, only root should expose some
+>> features..."
+>>
+>> Hmm, I am not sure if this answers your question ? :-)
+>
+> This answers my question, but in a way that I summarize as "there's no
+> good reason to include this securelevel-like property".
+>
 
-[...]
+Hmm, sorry I did forget to add in my previous comment that with such
+systems, CAP_SYS_MODULE can be used to reset the
+"modules_autoload_mode" sysctl back from mode 2 to mode 1, even if we
+disable it privileged tasks can be triggered to overwrite the sysctl
+flag and get it back unless /proc is read-only... that's one of the
+points, it should not be so easy to relax it.
 
->> But even with those we can still chain
->> them together with a list with external linkage.
-> 
-> I gave up that approach in 2012. Too many unnecessary calls to
-> null functions, and massive function vectors with a tiny number
-> of non-null entries. From a data structure standpoint, it was
-> just wrong. The list scheme is exactly right for the task at
-> hand.
 
-I understand this as a green light, for me to continue with the plan of
-using LSM Hooks as example for making dynamically allocated data become
-read-only, using also Tetsuo's patch (thanks, btw).
 
-Is that correct?
+>> I definitively don't want to fall into "modules_disabled" trap where
+>> is it too strict! "Once set, this value can not be changed" means for
+>> some users do not set it otherwise the system is unusable...
+>>
+>> Maybe an extra "4" mode for that ? better get it right.
+>
+> I think you should simply exclude this property from mode 2.
+>
 
----
-thanks, igor
+Ok, maybe my comment above answers this ?
+
+What I was referring to here, is to have one small window where it is
+disable for privileged and that securelevel-like like property or
+disable definitively are separated. I don't have a strong opinion
+here, having a usable system is important.
+
+
+> The module autoloading restrictions aren't meant to reduce root's
+> powers; they're only meant to protect processes from shooting themselves
+> and the system in the foot inadvertently (confused deputy).
+>
+> modules_disabled may be different in that respect, although with the
+> rest of the kernel lacking securelevel-like support the point is moot.
+>
+> We had working securelevel in 2.0.34 through 2.0.40 inclusive, but
+> we've lost it in 2.1+ with cap-bound apparently never becoming as
+> complete a replacement for it and having been lost/broken further in
+> 2.6.25+.  I regret this, but that's a different story.  Like I say,
+> module autoloading doesn't even fit in with those restrictions - it's
+> about a totally different threat model.
+>
+
+Ok, thanks for the information, so yes it seems we do not have such a
+consistent way, but this did not block Yama LSM and other sysctl to
+implement their own cases, maybe it did show that it is not that easy
+to have a generic securelevel mechanism ? and what we currently have
+is more practical ? I can't tell here. But we definitively want to
+block privileged tasks to revert the sysctl mode if the administrator
+do not want automatic module loading.
+
+Thanks!
+
+-- 
+tixxdz
