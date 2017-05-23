@@ -1,38 +1,47 @@
 MIME-Version: 1.0
-In-Reply-To: <CAHgaXdJa9uJYO3bODuzDRaqOas0i=zMk0jioWFXKm_=UJRtVrw@mail.gmail.com>
-References: <CAHgaXdKsO2xoKYp7g91g+n+d_1KHSSByLjzBB-WjVXSjhB7qxw@mail.gmail.com>
- <20170510.212952.1440495072777358778.davem@davemloft.net> <CAHgaXdK8LEEUPm4jTRRzCnjwdWAauHmmB=caZsSFY8MmStH89Q@mail.gmail.com>
- <20170510.215218.2185526627014393313.davem@davemloft.net> <CAHgaXdKZ_v+iO7uqEDx7PA7D+xcp1FngGvJ1SRSsGXNQ-iWWDQ@mail.gmail.com>
- <CAHgaXdLJoVUXXGTYs7FYXay5wx=sA-O+=dYhX+r7AQT7vSNfGQ@mail.gmail.com>
- <CAGXu5j+2q4Wwfhuk_DnDaV894A9ZOD=A_AvAU_OZG6KQv0_KMg@mail.gmail.com>
- <CAHgaXdL7GcVzs+ANPke_NywhcgHbe_fzi1sTDEy+Ni1-o82GYQ@mail.gmail.com>
- <591A07A1.1030006@iogearbox.net> <CAHgaXdKKbRVSpX-036TXpV5z=1=QCnPoku0+CeHxHco8-aasPQ@mail.gmail.com>
- <CAGXu5j+k+NMQGmmhuW-4pHFd6agfndJfxQ9k--h+ZpsDBVB8ig@mail.gmail.com>
- <8c53012b-cb81-5228-de79-f55457d1cf69@gmail.com> <CAHgaXdL2qReJF1Aw08k3C+OiC-3AOy3VeYmQ1Hs7vKcrfGQnvA@mail.gmail.com>
- <CAGXu5jKwTDYeNQggezzSKkFzZQkroC+6SdBB0qUKh5crfNk8PA@mail.gmail.com>
- <CAHgaXdKqt3mZmPG78w+4g_17D8EQoBgAZeuqM+MMsQg2f7apsw@mail.gmail.com>
- <CAGXu5jKDMUxRivMZdEQSBs81dkKRn5hRUiOz_wybCyphFFy+RQ@mail.gmail.com> <CAHgaXdJa9uJYO3bODuzDRaqOas0i=zMk0jioWFXKm_=UJRtVrw@mail.gmail.com>
-From: Kees Cook <keescook@google.com>
-Date: Tue, 23 May 2017 12:32:59 -0700
-Message-ID: <CAGXu5j+DZ7+5zBh7s82AZPgDT=-WHo8bG6XwPT6SzaMtVMMn_Q@mail.gmail.com>
+In-Reply-To: <CAGXu5jJ-zpqU9v44=bc0GnQP5zcKtceR_7DBQVBZ=vy3OvNx9w@mail.gmail.com>
+References: <1495454226-10027-1-git-send-email-tixxdz@gmail.com>
+ <20170522120848.GA3003@openwall.com> <CAEiveUdqfMk4+vLg6TaEJNSGwoQHxYq0P4aqZoL4i9GgR3Vdtw@mail.gmail.com>
+ <20170522164323.GA2048@openwall.com> <CAEiveUdb=yc5Gt_+pU_hfNdoNBP0JsUL1QUydNZgc2tD7n1h1w@mail.gmail.com>
+ <CAGXu5jKGnG74KE-k9JPaH1bNqT5nbVioaeu_5sAKQ+4kgp-0Ng@mail.gmail.com>
+ <20170523074808.GA4562@openwall.com> <CAGXu5jJ-zpqU9v44=bc0GnQP5zcKtceR_7DBQVBZ=vy3OvNx9w@mail.gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Tue, 23 May 2017 12:50:25 -0700
+Message-ID: <CALCETrXiaBweijZ22Lwb_pQY934ejcXtEG2EW3nRxe7cEx7PDw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
-To: Shubham Bansal <illusionist.neo@gmail.com>
-Cc: Florian Fainelli <f.fainelli@gmail.com>, Daniel Borkmann <daniel@iogearbox.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Network Development <netdev@vger.kernel.org>, ast@fb.com, Mircea Gherzan <mgherzan@gmail.com>, David Miller <davem@davemloft.net>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Nicolas Schichan <nschichan@freebox.fr>, andrew@lunn.ch
+Subject: Re: [kernel-hardening] [PATCH v4 next 0/3] modules: automatic module
+ loading restrictions
+To: Kees Cook <keescook@google.com>
+Cc: Solar Designer <solar@openwall.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Rusty Russell <rusty@rustcorp.com.au>, "Serge E. Hallyn" <serge@hallyn.com>, Jessica Yu <jeyu@redhat.com>, "David S. Miller" <davem@davemloft.net>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Ingo Molnar <mingo@kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, Jonathan Corbet <corbet@lwn.net>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Zendyani <zendyani@gmail.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Ben Hutchings <ben.hutchings@codethink.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 23, 2017 at 11:39 AM, Shubham Bansal
-<illusionist.neo@gmail.com> wrote:
-> Here is the patch I sent to the arm mailing list.
+On Tue, May 23, 2017 at 11:36 AM, Kees Cook <keescook@google.com> wrote:
+> On Tue, May 23, 2017 at 12:48 AM, Solar Designer <solar@openwall.com> wrote:
+>> For modules_autoload_mode=2, we already seem to have the equivalent of
+>> modprobe=/bin/true (or does it differ subtly, maybe in return values?),
+>> which I already use at startup on a GPU box like this (preloading
+>> modules so that the OpenCL backends wouldn't need the autoloading):
+>>
+>> nvidia-smi
+>> nvidia-modprobe -u -c=0
+>> #modprobe nvidia_uvm
+>> #modprobe fglrx
+>>
+>> sysctl -w kernel.modprobe=/bin/true
+>> sysctl -w kernel.hotplug=/bin/true
+>>
+>> but it's good to also have this supported more explicitly and more
+>> consistently through modules_autoload_mode=2 while we're at it.  So I
+>> support having this mode as well.  I just question the need to have it
+>> non-resettable.
+>
+> I agree it's useful to have the explicit =2 state just to avoid
+> confusion when more systems start implementing
+> CONFIG_STATIC_USERMODEHELPER and kernel.modprobe becomes read-only
+> (though the userspace implementation may allow for some way to disable
+> it, etc). I just like avoiding the upcall to modprobe at all.
 
-Thanks for sending this!
-
-I'm trying to figure out the best way to split this up, but the bulk
-of it (the actual JIT changes) seems like they need to all land at the
-same time. Any thoughts on this Daniel?
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+I fully support =2 to mean "no automatic loading at all".  I dislike
+making it non-resettable.  If you can write to sysctls, then, most
+likely you can either call init_module() directly or the system has
+module loading disabled entirely.
