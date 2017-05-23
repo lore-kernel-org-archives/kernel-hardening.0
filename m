@@ -1,16 +1,16 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Date: Tue, 23 May 2017 22:10:00 +0200
-Message-Id: <20170523200904.090914704@linuxfoundation.org>
-In-Reply-To: <20170523200856.903752266@linuxfoundation.org>
-References: <20170523200856.903752266@linuxfoundation.org>
+Date: Tue, 23 May 2017 22:10:20 +0200
+Message-Id: <20170523200853.672156654@linuxfoundation.org>
+In-Reply-To: <20170523200849.241966497@linuxfoundation.org>
+References: <20170523200849.241966497@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] [PATCH 4.4 094/103] stackprotector: Increase the per-task stack canarys random range from 32 bits to 64 bits on 64-bit platforms
+Subject: [kernel-hardening] [PATCH 3.18 52/59] stackprotector: Increase the per-task stack canarys random range from 32 bits to 64 bits on 64-bit platforms
 To: linux-kernel@vger.kernel.org
 Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Daniel Micay <danielmicay@gmail.com>, Arjan van de Ven <arjan@linux.intel.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, kernel-hardening@lists.openwall.com, Ingo Molnar <mingo@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-4.4-stable review patch.  If anyone has any objections, please let me know.
+3.18-stable review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
@@ -40,7 +40,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -368,7 +368,7 @@ static struct task_struct *dup_task_stru
+@@ -338,7 +338,7 @@ static struct task_struct *dup_task_stru
  	set_task_stack_end_magic(tsk);
  
  #ifdef CONFIG_CC_STACKPROTECTOR
