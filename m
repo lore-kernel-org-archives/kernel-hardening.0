@@ -1,6 +1,5 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAHgaXd+5h7aMxF83EEkD3iRyeZ1JxAX2oFYJdy3GtcNOWRsBGw@mail.gmail.com>
+In-Reply-To: <CAGXu5jKwTDYeNQggezzSKkFzZQkroC+6SdBB0qUKh5crfNk8PA@mail.gmail.com>
 References: <CAHgaXdKsO2xoKYp7g91g+n+d_1KHSSByLjzBB-WjVXSjhB7qxw@mail.gmail.com>
  <20170510.212952.1440495072777358778.davem@davemloft.net> <CAHgaXdK8LEEUPm4jTRRzCnjwdWAauHmmB=caZsSFY8MmStH89Q@mail.gmail.com>
  <20170510.215218.2185526627014393313.davem@davemloft.net> <CAHgaXdKZ_v+iO7uqEDx7PA7D+xcp1FngGvJ1SRSsGXNQ-iWWDQ@mail.gmail.com>
@@ -8,41 +7,44 @@ References: <CAHgaXdKsO2xoKYp7g91g+n+d_1KHSSByLjzBB-WjVXSjhB7qxw@mail.gmail.com>
  <CAGXu5j+2q4Wwfhuk_DnDaV894A9ZOD=A_AvAU_OZG6KQv0_KMg@mail.gmail.com>
  <CAHgaXdL7GcVzs+ANPke_NywhcgHbe_fzi1sTDEy+Ni1-o82GYQ@mail.gmail.com>
  <591A07A1.1030006@iogearbox.net> <CAHgaXdKKbRVSpX-036TXpV5z=1=QCnPoku0+CeHxHco8-aasPQ@mail.gmail.com>
- <5922E11C.4070307@iogearbox.net> <CAHgaXd+dTEKyPbkB6oFpLa3z0ygkxK1dMT8R55iYjvsU=GO3Wg@mail.gmail.com>
- <CAGXu5jLYunVCJGCfHPebKDaoQ71hdMGq4HhdDxTYpBQw_HXUYQ@mail.gmail.com> <CAHgaXd+5h7aMxF83EEkD3iRyeZ1JxAX2oFYJdy3GtcNOWRsBGw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 22 May 2017 21:27:57 -0700
-Message-ID: <CAGXu5j+Pqs-cPfRSm143DTrcj0NH5gmVRMSousgswR75y4R0MQ@mail.gmail.com>
+ <CAGXu5j+k+NMQGmmhuW-4pHFd6agfndJfxQ9k--h+ZpsDBVB8ig@mail.gmail.com>
+ <8c53012b-cb81-5228-de79-f55457d1cf69@gmail.com> <CAHgaXdL2qReJF1Aw08k3C+OiC-3AOy3VeYmQ1Hs7vKcrfGQnvA@mail.gmail.com>
+ <CAGXu5jKwTDYeNQggezzSKkFzZQkroC+6SdBB0qUKh5crfNk8PA@mail.gmail.com>
+From: Shubham Bansal <illusionist.neo@gmail.com>
+Date: Tue, 23 May 2017 10:33:26 +0530
+Message-ID: <CAHgaXdKqt3mZmPG78w+4g_17D8EQoBgAZeuqM+MMsQg2f7apsw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
-To: Shubham Bansal <illusionist.neo@gmail.com>
-Cc: Daniel Borkmann <daniel@iogearbox.net>, David Miller <davem@davemloft.net>, Mircea Gherzan <mgherzan@gmail.com>, Network Development <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, ast@fb.com
+To: Kees Cook <keescook@chromium.org>
+Cc: Florian Fainelli <f.fainelli@gmail.com>, Daniel Borkmann <daniel@iogearbox.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Network Development <netdev@vger.kernel.org>, ast@fb.com, Mircea Gherzan <mgherzan@gmail.com>, David Miller <davem@davemloft.net>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Nicolas Schichan <nschichan@freebox.fr>, andrew@lunn.ch
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 22, 2017 at 7:58 PM, Shubham Bansal
-<illusionist.neo@gmail.com> wrote:
-> On testing the eBPF JIT with CONFIG_FRAME_POINTER I got the following
-> crash for non jitted testcase.
+Hi Kees,
 
-It's just a softlockup WARN, not a crash, and I think it'd to be
-expected given the large runtime test_bpf reports:
+I already have ARMv5 and ARMv6 code written. I just haven't tested it
+yet. Should i send the patch with those as well ?
 
-> [   72.032494] test_bpf: #267 BPF_MAXINSNS: Call heavy transformations
-> jited:0 1112799
-> [   92.304815] NMI watchdog: BUG: soft lockup - CPU#0 stuck for 22s!
-> [insmod:104]
-> ...
-> [   93.835343] 1065840 PASS
+Best,
+Shubham Bansal
 
-https://www.kernel.org/doc/Documentation/lockup-watchdogs.txt
 
-You can raise the softlockup time-out by changing the number of
-seconds here: /proc/sys/kernel/watchdog_thresh I think the softlockup
-is counting the entire runtime of the bpf_tests run, so if it takes 30
-seconds to run, put at least 15 into /proc/sys/kernel/watchdog_thresh
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+On Tue, May 23, 2017 at 9:52 AM, Kees Cook <keescook@chromium.org> wrote:
+> On Mon, May 22, 2017 at 8:34 PM, Shubham Bansal
+> <illusionist.neo@gmail.com> wrote:
+>> I would post them as soon as I test them on ARMv5 and ARMv6. If you
+>> can help me with that, please let me know.
+>
+> Please post what you have: it would be better to see what you've got
+> now in case additional changes are needed so you don't have to do it
+> again on v5 and v6. Also, it means other people with real v5 and v6
+> hardware could test for you if they were so inclined, and you won't
+> need to be blocked on doing the tests in qemu.
+>
+> You can send it as an "RFC" in the subject, just to make sure people
+> know it's not considered fully done. :)
+>
+> -Kees
+>
+> --
+> Kees Cook
+> Pixel Security
