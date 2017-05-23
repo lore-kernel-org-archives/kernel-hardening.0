@@ -1,51 +1,54 @@
-From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Date: Tue, 23 May 2017 22:10:20 +0200
-Message-Id: <20170523200853.672156654@linuxfoundation.org>
-In-Reply-To: <20170523200849.241966497@linuxfoundation.org>
-References: <20170523200849.241966497@linuxfoundation.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] [PATCH 3.18 52/59] stackprotector: Increase the per-task stack canarys random range from 32 bits to 64 bits on 64-bit platforms
-To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Daniel Micay <danielmicay@gmail.com>, Arjan van de Ven <arjan@linux.intel.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, kernel-hardening@lists.openwall.com, Ingo Molnar <mingo@kernel.org>
+Date: Tue, 23 May 2017 15:48:23 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Message-Id: <20170523154823.4c1a09171e1ce3de8740156f@linux-foundation.org>
+In-Reply-To: <20170522231025.30463-1-danielmicay@gmail.com>
+References: <20170522231025.30463-1-danielmicay@gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v3] add the option of fortified string.h functions
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-kernel <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Daniel Axtens <dja@axtens.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-3.18-stable review patch.  If anyone has any objections, please let me know.
+On Mon, 22 May 2017 19:10:25 -0400 Daniel Micay <danielmicay@gmail.com> wrote:
 
-------------------
+> This adds support for compiling with a rough equivalent to the glibc
+> _FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
+> overflow checks for string.h functions when the compiler determines the
+> size of the source or destination buffer at compile-time. Unlike glibc,
+> it covers buffer reads in addition to writes.
+> 
+> GNU C __builtin_*_chk intrinsics are avoided because they would force a
+> much more complex implementation. They aren't designed to detect read
+> overflows and offer no real benefit when using an implementation based
+> on inline checks. Inline checks don't add up to much code size and allow
+> full use of the regular string intrinsics while avoiding the need for a
+> bunch of _chk functions and per-arch assembly to avoid wrapper overhead.
+> 
+> This detects various overflows at compile-time in various drivers and
+> some non-x86 core kernel code. There will likely be issues caught in
+> regular use at runtime too.
+> 
+> Future improvements left out of initial implementation for simplicity,
+> as it's all quite optional and can be done incrementally:
+> 
+> * Some of the fortified string functions (strncpy, strcat), don't yet
+>   place a limit on reads from the source based on __builtin_object_size of
+>   the source buffer.
+> 
+> * Extending coverage to more string functions like strlcat.
+> 
+> * It should be possible to optionally use __builtin_object_size(x, 1) for
+>   some functions (C strings) to detect intra-object overflows (like
+>   glibc's _FORTIFY_SOURCE=2), but for now this takes the conservative
+>   approach to avoid likely compatibility issues.
+> 
+> * The compile-time checks should be made available via a separate config
+>   option which can be enabled by default (or always enabled) once enough
+>   time has passed to get the issues it catches fixed.
 
-From: Daniel Micay <danielmicay@gmail.com>
+Confused by the final paragraph.  The patch adds CONFIG_FORTIFY_SOURCE
+so isn't that to-do item completed?
 
-commit 5ea30e4e58040cfd6434c2f33dc3ea76e2c15b05 upstream.
-
-The stack canary is an 'unsigned long' and should be fully initialized to
-random data rather than only 32 bits of random data.
-
-Signed-off-by: Daniel Micay <danielmicay@gmail.com>
-Acked-by: Arjan van de Ven <arjan@linux.intel.com>
-Acked-by: Rik van Riel <riel@redhat.com>
-Acked-by: Kees Cook <keescook@chromium.org>
-Cc: Arjan van Ven <arjan@linux.intel.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Peter Zijlstra <peterz@infradead.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: kernel-hardening@lists.openwall.com
-Link: http://lkml.kernel.org/r/20170504133209.3053-1-danielmicay@gmail.com
-Signed-off-by: Ingo Molnar <mingo@kernel.org>
-Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-
----
- kernel/fork.c |    2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -338,7 +338,7 @@ static struct task_struct *dup_task_stru
- 	set_task_stack_end_magic(tsk);
- 
- #ifdef CONFIG_CC_STACKPROTECTOR
--	tsk->stack_canary = get_random_int();
-+	tsk->stack_canary = get_random_long();
- #endif
- 
- 	/*
+Also, what does __NO_FORTIFY do?  Nothing ever defines it?
