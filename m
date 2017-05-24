@@ -1,101 +1,74 @@
-Date: Thu, 25 May 2017 05:18:27 +0900
-From: Mauro Carvalho Chehab <mchehab@s-opensource.com>
-Message-ID: <20170525051827.0ed2b88e@vela.lan>
-In-Reply-To: <CAGXu5jKyZEV+mvJUipfX5GMFqv=HYLoU-9C_1pYrc24J-0YaWg@mail.gmail.com>
-References: <cover.1495156488.git.mchehab@s-opensource.com>
-	<c6318a78ef026da30aa488bd90a5a19e18fc13a3.1495156488.git.mchehab@s-opensource.com>
-	<CAGXu5jKyZEV+mvJUipfX5GMFqv=HYLoU-9C_1pYrc24J-0YaWg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 23/31] gcc-plugins.txt: standardize document format
-To: Kees Cook <keescook@google.com>
-Cc: Linux Doc Mailing List <linux-doc@vger.kernel.org>, Mauro Carvalho Chehab <mchehab@infradead.org>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, David Woodhouse <dwmw2@infradead.org>, Brian Norris <computersforpeace@gmail.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Marek Vasut <marek.vasut@gmail.com>, Richard Weinberger <richard@nod.at>, Cyrille Pitchen <cyrille.pitchen@atmel.com>, Linux mtd <linux-mtd@lists.infradead.org>, Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: HacKurx <hackurx@gmail.com>
+Date: Wed, 24 May 2017 22:44:48 +0200
+Message-ID: <CAFwXZv_b3hdEA4xOFKqAVfc4UZEBX=dL9DOY_mDHExsW+Qg6tQ@mail.gmail.com>
+Content-Type: multipart/mixed; boundary="001a114b330eddb7b505504b2c2e"
+Subject: [kernel-hardening] Patch for random mac address
+To: kernel-hardening@lists.openwall.com, keescook@google.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Em Wed, 24 May 2017 10:35:42 -0700
-Kees Cook <keescook@google.com> escreveu:
+--001a114b330eddb7b505504b2c2e
+Content-Type: text/plain; charset="UTF-8"
 
-> On Thu, May 18, 2017 at 6:22 PM, Mauro Carvalho Chehab
-> <mchehab@s-opensource.com> wrote:
-> > Each text file under Documentation follows a different
-> > format. Some doesn't even have titles!
-> >
-> > Change its representation to follow the adopted standard,
-> > using ReST markups for it to be parseable by Sphinx:
-> >
-> > - promote main title;
-> > - use the right markup for footnotes;
-> > - use bold markup for files name;
-> > - identify literal blocks;
-> > - add blank lines to avoid Sphinx to complain;
-> > - remove numeration from titles.
-> >
-> > Signed-off-by: Mauro Carvalho Chehab <mchehab@s-opensource.com>  
-> 
-> Acked-by: Kees Cook <keescook@chromium.org>
-> 
-> This should probably get moved under "Kernel API documentation" but
-> may need a new sub-category, maybe "instrumentation"? Things like
-> KASan could be put under that too.
+Hi all,
 
-Yeah, I guess that most documents under Documentation/
-will need to be renamed and placed into an existing or new book.
+Firstly, I am sad that no major company has taken the trouble to
+finance PaX / Grsecurity so they can continue their development in a
+way that is accessible to all. This is regrettable because their work
+is your main source of inspiration ...
 
-Kasan documentation is currently under dev-tools, with is, currently,
-an unsorted book with:
+In what brings me here. Brad had released an interesting hack for privacy:
+https://www.grsecurity.net/~spender/random_mac.diff
 
-   coccinelle
-   sparse
-   kcov
-   gcov
-   kasan
-   ubsan
-   kmemleak
-   kmemcheck
-   gdb-kernel-debugging
-   kgdb
+I updated this patch and added a menu option. Can you examine it for
+include it upstream?
+Because this would be useful for distributions like Tails, Subgraph
+OS, Kali Linux and other ...
 
-I agree with you: it probably makes sense to split external development
-tools, like coccinelle/sparse from Kernel instrumentation, like kgdb,
-kasan, gcc-plugins, etc.
+Thanks. Best regards,
 
-So, perhaps we can change the content of Documentation/dev-tools/index.rst
-to something like.
+HacKurx (Loic)
 
+--001a114b330eddb7b505504b2c2e
+Content-Type: text/plain; charset="US-ASCII"; name="random-mac_linux-4.12-rc2.diff"
+Content-Disposition: attachment; filename="random-mac_linux-4.12-rc2.diff"
+Content-Transfer-Encoding: base64
+X-Attachment-Id: f_j33g6vwa0
 
-================================
-Development tools for the kernel
-================================
-
-This document describe tools and instrumentation features of the Linux Kernel
-used by developers to do quality assurance (QA).
-
-This section describes Kernel internal features designed to provide mechanisms
-for developers to test their code.
-
-.. toctree::
-   :maxdepth: 2
-
-   (add here books like kasan, printk related docs, gcc-plugins, etc)
-
-This section describes external tools used to ensure Kernel quality
-assurance (QA).
-
-.. toctree::
-   :maxdepth: 2
-
-   (add here books related external tools and robots, like coccinelle,
-    sparse, kernel build robot, ktest, Coverity, etc)
-
-.. only::  subproject and html
-
-   Indices
-   =======
-
-   * :ref:`genindex`
-
-
-
-Cheers,
-Mauro
+ZGlmZiAtLWdpdCBhL25ldC9jb3JlL2Rldi5jIGIvbmV0L2NvcmUvZGV2LmMKaW5kZXggZmNhNDA3
+Yi4uM2VlYjQyYiAxMDA2NDQKLS0tIGEvbmV0L2NvcmUvZGV2LmMKKysrIGIvbmV0L2NvcmUvZGV2
+LmMKQEAgLTY2NjksNiArNjY2OSwyNiBAQCBpbnQgZGV2X2NoYW5nZV9mbGFncyhzdHJ1Y3QgbmV0
+X2RldmljZSAqZGV2LCB1bnNpZ25lZCBpbnQgZmxhZ3MpCiAKIAljaGFuZ2VzID0gKG9sZF9mbGFn
+cyBeIGRldi0+ZmxhZ3MpIHwgKG9sZF9nZmxhZ3MgXiBkZXYtPmdmbGFncyk7CiAJX19kZXZfbm90
+aWZ5X2ZsYWdzKGRldiwgb2xkX2ZsYWdzLCBjaGFuZ2VzKTsKKworI2lmZGVmIENPTkZJR19SQU5E
+T01fTUFDX0FERFJFU1MKKwlpZiAoKGNoYW5nZXMgJiBJRkZfVVApICYmICEob2xkX2ZsYWdzICYg
+SUZGX1VQKSkgeworCQkvKiByYW5kb21pemUgTUFDIHdoZW5ldmVyIGludGVyZmFjZSBpcyBicm91
+Z2h0IHVwICovCisJCXN0cnVjdCBzb2NrYWRkciBzYTsKKwkJdW5zaWduZWQgaW50IG1hYzQ7CisJ
+CXVuc2lnbmVkIHNob3J0IG1hYzI7CisKKwkJbWFjNCA9IHByYW5kb21fdTMyKCk7CisJCW1hYzIg
+PSBwcmFuZG9tX3UzMigpOworCQltZW1jcHkoc2Euc2FfZGF0YSwgJm1hYzQsIHNpemVvZihtYWM0
+KSk7CisJCW1lbWNweSgoY2hhciAqKXNhLnNhX2RhdGEgKyBzaXplb2YobWFjNCksICZtYWMyLCBz
+aXplb2YobWFjMikpOworCQlpZiAoIWlzX3ZhbGlkX2V0aGVyX2FkZHIoc2Euc2FfZGF0YSkpCisJ
+CQlzYS5zYV9kYXRhWzVdID0gMTsKKwkJc2Euc2FfZGF0YVswXSAmPSAweEZDOworCQlzYS5zYV9m
+YW1pbHkgPSBkZXYtPnR5cGU7CisJCWRldl9zZXRfbWFjX2FkZHJlc3MoZGV2LCAmc2EpOworCX0K
+KyNlbmRpZgorCiAJcmV0dXJuIHJldDsKIH0KIEVYUE9SVF9TWU1CT0woZGV2X2NoYW5nZV9mbGFn
+cyk7CmRpZmYgLS1naXQgYS9uZXQvY29yZS9kZXZfaW9jdGwuYyBiL25ldC9jb3JlL2Rldl9pb2N0
+bC5jCmluZGV4IGI5NGIxZDIuLmIwMjBkMTUgMTAwNjQ0Ci0tLSBhL25ldC9jb3JlL2Rldl9pb2N0
+bC5jCisrKyBiL25ldC9jb3JlL2Rldl9pb2N0bC5jCkBAIC0yNjIsNiArMjYyLDEwIEBAIHN0YXRp
+YyBpbnQgZGV2X2lmc2lvYyhzdHJ1Y3QgbmV0ICpuZXQsIHN0cnVjdCBpZnJlcSAqaWZyLCB1bnNp
+Z25lZCBpbnQgY21kKQogCiAJY2FzZSBTSU9DU0lGSFdBRERSOgogCQlyZXR1cm4gZGV2X3NldF9t
+YWNfYWRkcmVzcyhkZXYsICZpZnItPmlmcl9od2FkZHIpOworI2lmZGVmIENPTkZJR19SQU5ET01f
+TUFDX0FERFJFU1MKKwkJLyogaWdub3JlIHVzZXJsYW5kIE1BQyBjaGFuZ2VzICovCisJCXJldHVy
+biAwOworI2VuZGlmCiAKIAljYXNlIFNJT0NTSUZIV0JST0FEQ0FTVDoKIAkJaWYgKGlmci0+aWZy
+X2h3YWRkci5zYV9mYW1pbHkgIT0gZGV2LT50eXBlKQpkaWZmIC0tZ2l0IGEvc2VjdXJpdHkvS2Nv
+bmZpZyBiL3NlY3VyaXR5L0tjb25maWcKaW5kZXggOTMwMjdmZC4uNmI3YjZmYyAxMDA2NDQKLS0t
+IGEvc2VjdXJpdHkvS2NvbmZpZworKysgYi9zZWN1cml0eS9LY29uZmlnCkBAIC02Nyw2ICs2Nywx
+NCBAQCBjb25maWcgU0VDVVJJVFlfTkVUV09SS19YRlJNCiAJICBJUFNlYy4KIAkgIElmIHlvdSBh
+cmUgdW5zdXJlIGhvdyB0byBhbnN3ZXIgdGhpcyBxdWVzdGlvbiwgYW5zd2VyIE4uCiAKK2NvbmZp
+ZyBSQU5ET01fTUFDX0FERFJFU1MKKwlib29sICJVc2UgcmFuZG9tIE1BQyBhZHJlc3NlcyIKKwlk
+ZWZhdWx0IG4KKwloZWxwCisJICBTYXkgWSBoZXJlIGZvciByYW5kb21pemUgdGhlIE1BQyBhZGRy
+ZXNzZXMgb2YgbmV0d29yayBpbnRlcmZhY2VzLgorCSAgVGhpcyBvcHRpb24gaXMgcmVjb21tZW5k
+ZWQgZm9yIHBlb3BsZSB3aG8gd2FudCB0byBpbmNyZWFzZSB0aGVpciBwcml2YWN5LgorCSAgSWYg
+eW91IGFyZSB1bnN1cmUgaG93IHRvIGFuc3dlciB0aGlzIHF1ZXN0aW9uLCBhbnN3ZXIgTi4KKwog
+Y29uZmlnIFNFQ1VSSVRZX1BBVEgKIAlib29sICJTZWN1cml0eSBob29rcyBmb3IgcGF0aG5hbWUg
+YmFzZWQgYWNjZXNzIGNvbnRyb2wiCiAJZGVwZW5kcyBvbiBTRUNVUklUWQo=
+--001a114b330eddb7b505504b2c2e--
