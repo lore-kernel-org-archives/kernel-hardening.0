@@ -1,74 +1,33 @@
+References: <CAFwXZv_b3hdEA4xOFKqAVfc4UZEBX=dL9DOY_mDHExsW+Qg6tQ@mail.gmail.com>
+From: Casey Schaufler <casey@schaufler-ca.com>
+Message-ID: <f6c8b2c4-965c-7f8e-bfff-36b63e6f87fb@schaufler-ca.com>
+Date: Wed, 24 May 2017 15:40:57 -0700
 MIME-Version: 1.0
-From: HacKurx <hackurx@gmail.com>
-Date: Wed, 24 May 2017 22:44:48 +0200
-Message-ID: <CAFwXZv_b3hdEA4xOFKqAVfc4UZEBX=dL9DOY_mDHExsW+Qg6tQ@mail.gmail.com>
-Content-Type: multipart/mixed; boundary="001a114b330eddb7b505504b2c2e"
-Subject: [kernel-hardening] Patch for random mac address
-To: kernel-hardening@lists.openwall.com, keescook@google.com
+In-Reply-To: <CAFwXZv_b3hdEA4xOFKqAVfc4UZEBX=dL9DOY_mDHExsW+Qg6tQ@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Patch for random mac address
+To: HacKurx <hackurx@gmail.com>, kernel-hardening@lists.openwall.com, keescook@google.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a114b330eddb7b505504b2c2e
-Content-Type: text/plain; charset="UTF-8"
+On 5/24/2017 1:44 PM, HacKurx wrote:
+> Hi all,
+>
+> Firstly, I am sad that no major company has taken the trouble to
+> finance PaX / Grsecurity so they can continue their development in a
+> way that is accessible to all. This is regrettable because their work
+> is your main source of inspiration ...
+>
+> In what brings me here. Brad had released an interesting hack for privacy:
+> https://www.grsecurity.net/~spender/random_mac.diff
+>
+> I updated this patch and added a menu option. Can you examine it for
+> include it upstream?
+> Because this would be useful for distributions like Tails, Subgraph
+> OS, Kali Linux and other ...
+>
+> Thanks. Best regards,
+>
+> HacKurx (Loic)
 
-Hi all,
-
-Firstly, I am sad that no major company has taken the trouble to
-finance PaX / Grsecurity so they can continue their development in a
-way that is accessible to all. This is regrettable because their work
-is your main source of inspiration ...
-
-In what brings me here. Brad had released an interesting hack for privacy:
-https://www.grsecurity.net/~spender/random_mac.diff
-
-I updated this patch and added a menu option. Can you examine it for
-include it upstream?
-Because this would be useful for distributions like Tails, Subgraph
-OS, Kali Linux and other ...
-
-Thanks. Best regards,
-
-HacKurx (Loic)
-
---001a114b330eddb7b505504b2c2e
-Content-Type: text/plain; charset="US-ASCII"; name="random-mac_linux-4.12-rc2.diff"
-Content-Disposition: attachment; filename="random-mac_linux-4.12-rc2.diff"
-Content-Transfer-Encoding: base64
-X-Attachment-Id: f_j33g6vwa0
-
-ZGlmZiAtLWdpdCBhL25ldC9jb3JlL2Rldi5jIGIvbmV0L2NvcmUvZGV2LmMKaW5kZXggZmNhNDA3
-Yi4uM2VlYjQyYiAxMDA2NDQKLS0tIGEvbmV0L2NvcmUvZGV2LmMKKysrIGIvbmV0L2NvcmUvZGV2
-LmMKQEAgLTY2NjksNiArNjY2OSwyNiBAQCBpbnQgZGV2X2NoYW5nZV9mbGFncyhzdHJ1Y3QgbmV0
-X2RldmljZSAqZGV2LCB1bnNpZ25lZCBpbnQgZmxhZ3MpCiAKIAljaGFuZ2VzID0gKG9sZF9mbGFn
-cyBeIGRldi0+ZmxhZ3MpIHwgKG9sZF9nZmxhZ3MgXiBkZXYtPmdmbGFncyk7CiAJX19kZXZfbm90
-aWZ5X2ZsYWdzKGRldiwgb2xkX2ZsYWdzLCBjaGFuZ2VzKTsKKworI2lmZGVmIENPTkZJR19SQU5E
-T01fTUFDX0FERFJFU1MKKwlpZiAoKGNoYW5nZXMgJiBJRkZfVVApICYmICEob2xkX2ZsYWdzICYg
-SUZGX1VQKSkgeworCQkvKiByYW5kb21pemUgTUFDIHdoZW5ldmVyIGludGVyZmFjZSBpcyBicm91
-Z2h0IHVwICovCisJCXN0cnVjdCBzb2NrYWRkciBzYTsKKwkJdW5zaWduZWQgaW50IG1hYzQ7CisJ
-CXVuc2lnbmVkIHNob3J0IG1hYzI7CisKKwkJbWFjNCA9IHByYW5kb21fdTMyKCk7CisJCW1hYzIg
-PSBwcmFuZG9tX3UzMigpOworCQltZW1jcHkoc2Euc2FfZGF0YSwgJm1hYzQsIHNpemVvZihtYWM0
-KSk7CisJCW1lbWNweSgoY2hhciAqKXNhLnNhX2RhdGEgKyBzaXplb2YobWFjNCksICZtYWMyLCBz
-aXplb2YobWFjMikpOworCQlpZiAoIWlzX3ZhbGlkX2V0aGVyX2FkZHIoc2Euc2FfZGF0YSkpCisJ
-CQlzYS5zYV9kYXRhWzVdID0gMTsKKwkJc2Euc2FfZGF0YVswXSAmPSAweEZDOworCQlzYS5zYV9m
-YW1pbHkgPSBkZXYtPnR5cGU7CisJCWRldl9zZXRfbWFjX2FkZHJlc3MoZGV2LCAmc2EpOworCX0K
-KyNlbmRpZgorCiAJcmV0dXJuIHJldDsKIH0KIEVYUE9SVF9TWU1CT0woZGV2X2NoYW5nZV9mbGFn
-cyk7CmRpZmYgLS1naXQgYS9uZXQvY29yZS9kZXZfaW9jdGwuYyBiL25ldC9jb3JlL2Rldl9pb2N0
-bC5jCmluZGV4IGI5NGIxZDIuLmIwMjBkMTUgMTAwNjQ0Ci0tLSBhL25ldC9jb3JlL2Rldl9pb2N0
-bC5jCisrKyBiL25ldC9jb3JlL2Rldl9pb2N0bC5jCkBAIC0yNjIsNiArMjYyLDEwIEBAIHN0YXRp
-YyBpbnQgZGV2X2lmc2lvYyhzdHJ1Y3QgbmV0ICpuZXQsIHN0cnVjdCBpZnJlcSAqaWZyLCB1bnNp
-Z25lZCBpbnQgY21kKQogCiAJY2FzZSBTSU9DU0lGSFdBRERSOgogCQlyZXR1cm4gZGV2X3NldF9t
-YWNfYWRkcmVzcyhkZXYsICZpZnItPmlmcl9od2FkZHIpOworI2lmZGVmIENPTkZJR19SQU5ET01f
-TUFDX0FERFJFU1MKKwkJLyogaWdub3JlIHVzZXJsYW5kIE1BQyBjaGFuZ2VzICovCisJCXJldHVy
-biAwOworI2VuZGlmCiAKIAljYXNlIFNJT0NTSUZIV0JST0FEQ0FTVDoKIAkJaWYgKGlmci0+aWZy
-X2h3YWRkci5zYV9mYW1pbHkgIT0gZGV2LT50eXBlKQpkaWZmIC0tZ2l0IGEvc2VjdXJpdHkvS2Nv
-bmZpZyBiL3NlY3VyaXR5L0tjb25maWcKaW5kZXggOTMwMjdmZC4uNmI3YjZmYyAxMDA2NDQKLS0t
-IGEvc2VjdXJpdHkvS2NvbmZpZworKysgYi9zZWN1cml0eS9LY29uZmlnCkBAIC02Nyw2ICs2Nywx
-NCBAQCBjb25maWcgU0VDVVJJVFlfTkVUV09SS19YRlJNCiAJICBJUFNlYy4KIAkgIElmIHlvdSBh
-cmUgdW5zdXJlIGhvdyB0byBhbnN3ZXIgdGhpcyBxdWVzdGlvbiwgYW5zd2VyIE4uCiAKK2NvbmZp
-ZyBSQU5ET01fTUFDX0FERFJFU1MKKwlib29sICJVc2UgcmFuZG9tIE1BQyBhZHJlc3NlcyIKKwlk
-ZWZhdWx0IG4KKwloZWxwCisJICBTYXkgWSBoZXJlIGZvciByYW5kb21pemUgdGhlIE1BQyBhZGRy
-ZXNzZXMgb2YgbmV0d29yayBpbnRlcmZhY2VzLgorCSAgVGhpcyBvcHRpb24gaXMgcmVjb21tZW5k
-ZWQgZm9yIHBlb3BsZSB3aG8gd2FudCB0byBpbmNyZWFzZSB0aGVpciBwcml2YWN5LgorCSAgSWYg
-eW91IGFyZSB1bnN1cmUgaG93IHRvIGFuc3dlciB0aGlzIHF1ZXN0aW9uLCBhbnN3ZXIgTi4KKwog
-Y29uZmlnIFNFQ1VSSVRZX1BBVEgKIAlib29sICJTZWN1cml0eSBob29rcyBmb3IgcGF0aG5hbWUg
-YmFzZWQgYWNjZXNzIGNvbnRyb2wiCiAJZGVwZW5kcyBvbiBTRUNVUklUWQo=
---001a114b330eddb7b505504b2c2e--
+Please submit patches inline for review.
