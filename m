@@ -1,64 +1,96 @@
-Date: Thu, 25 May 2017 23:28:39 +0200
-From: Anisse Astier <anisse@astier.eu>
-Message-ID: <20170525212839.GA21842@bifrost>
-References: <CAFwXZv_b3hdEA4xOFKqAVfc4UZEBX=dL9DOY_mDHExsW+Qg6tQ@mail.gmail.com>
- <85inkpie9o.fsf@boum.org>
- <1495724872.20270.46.camel@redhat.com>
- <8537bt9bvj.fsf@boum.org>
- <1495727974.20270.48.camel@redhat.com>
- <CAGXu5jKY+Fc5PcZdbXEXKXsxN2xb9Ext15yrhPrg4Afd1Rq_yA@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAGXu5jKY+Fc5PcZdbXEXKXsxN2xb9Ext15yrhPrg4Afd1Rq_yA@mail.gmail.com>
-Subject: Re: [kernel-hardening] Patch for random mac address
-To: Kees Cook <keescook@chromium.org>
-Cc: HacKurx <hackurx@gmail.com>, Rik van Riel <riel@redhat.com>, intrigeri <intrigeri@boum.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Date: Thu, 25 May 2017 16:52:26 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Message-Id: <20170525165226.a2a1064741d7a7ef66ef21b3@linux-foundation.org>
+In-Reply-To: <20170522231025.30463-1-danielmicay@gmail.com>
+References: <20170522231025.30463-1-danielmicay@gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v3] add the option of fortified string.h functions
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-kernel <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Daniel Axtens <dja@axtens.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On Mon, 22 May 2017 19:10:25 -0400 Daniel Micay <danielmicay@gmail.com> wrote:
 
-On Thu, May 25, 2017 at 10:28:19AM -0700, Kees Cook wrote:
-> On Thu, May 25, 2017 at 8:59 AM, Rik van Riel <riel@redhat.com> wrote:
-> > On Thu, 2017-05-25 at 17:47 +0200, intrigeri wrote:
-> >> Rik van Riel:
-> >> > That suggests maybe this kind of functionality should
-> >> > be implemented in userspace, instead?
-> >> > Maybe in NetworkManager, […]
-> >>
-> >> It's already implemented in NetworkManager :)
-> >
-> > So this kernel patch does not solve any problem,
-> > because the solution has already been implemented
-> > in userspace?
-> 
-> It makes sure you can never not randomize the MAC, no matter what
-> userspace is doing. I'm not opposed to the idea, but it feels like
-> overkill to me.
-> 
-> BTW, the proposed patch is slightly wrong: it still allows userspace
-> to change the MAC address. The ifdef with the return 0 should be moved
-> up (and "return 0" seems like a bit of a lie: maybe -EINVAL or
-> -ENOTSUPPORTED?). How about sending a v2 with that fixed, inline, etc.
-> And see if other people chime in?
+> This adds support for compiling with a rough equivalent to the glibc
+> _FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
+> overflow checks for string.h functions when the compiler determines the
+> size of the source or destination buffer at compile-time. Unlike glibc,
+> it covers buffer reads in addition to writes.
 
-Yes, the original grsec patch is slightly different.
+i386 allmodconfig, gcc-6.3.0:
 
-> 
-> It might also be nice to have it be a kernel command line option as
-> well as a Kconfig, so that distros could include the Kconfig but not
-> enable it by default (interested users could set the command line
-> option to enable it).
-
-Since it's still on the table, there's already a facility in the kernel
-to generate a random mac in include/linux/etherdevice.h:
-eth_random_addr. It's used by most network drivers when they can't fetch
-the hardware address, so that there's still a functionning interface.
-
-I'd be curious to know why this patch does not use it. The generation
-looks slightly similar.
-
-Regards,
-
-Anisse Astier
+In file included from ./arch/x86/include/asm/string.h:2:0,
+                 from ./include/linux/string.h:18,
+                 from ./arch/x86/include/asm/page_32.h:34,
+                 from ./arch/x86/include/asm/page.h:13,
+                 from ./arch/x86/include/asm/thread_info.h:11,
+                 from ./include/linux/thread_info.h:37,
+                 from ./arch/x86/include/asm/preempt.h:6,
+                 from ./include/linux/preempt.h:80,
+                 from ./include/linux/spinlock.h:50,
+                 from ./include/linux/seqlock.h:35,
+                 from ./include/linux/time.h:5,
+                 from ./include/linux/stat.h:18,
+                 from ./include/linux/module.h:10,
+                 from drivers/acpi/ac.c:23:
+./include/linux/string.h: In function 'acpi_ac_add':
+./arch/x86/include/asm/string_32.h:182:25: error: inlining failed in call to always_inline '__builtin_memcpy': function body not available
+ #define memcpy(t, f, n) __builtin_memcpy(t, f, n)
+                         ^
+./include/linux/string.h:301:24: note: in expansion of macro 'memcpy'
+ __FORTIFY_INLINE void *memcpy(void *p, const void *q, __kernel_size_t size)
+                        ^~~~~~
+In file included from ./arch/x86/include/asm/page_32.h:34:0,
+                 from ./arch/x86/include/asm/page.h:13,
+                 from ./arch/x86/include/asm/thread_info.h:11,
+                 from ./include/linux/thread_info.h:37,
+                 from ./arch/x86/include/asm/preempt.h:6,
+                 from ./include/linux/preempt.h:80,
+                 from ./include/linux/spinlock.h:50,
+                 from ./include/linux/seqlock.h:35,
+                 from ./include/linux/time.h:5,
+                 from ./include/linux/stat.h:18,
+                 from ./include/linux/module.h:10,
+                 from drivers/acpi/ac.c:23:
+./include/linux/string.h:204:10: note: called from here
+   return __builtin_strcpy(p, q);
+          ^~~~~~~~~~~~~~~~~~~~~~
+In file included from ./arch/x86/include/asm/string.h:2:0,
+                 from ./include/linux/string.h:18,
+                 from ./arch/x86/include/asm/page_32.h:34,
+                 from ./arch/x86/include/asm/page.h:13,
+                 from ./arch/x86/include/asm/thread_info.h:11,
+                 from ./include/linux/thread_info.h:37,
+                 from ./arch/x86/include/asm/preempt.h:6,
+                 from ./include/linux/preempt.h:80,
+                 from ./include/linux/spinlock.h:50,
+                 from ./include/linux/seqlock.h:35,
+                 from ./include/linux/time.h:5,
+                 from ./include/linux/stat.h:18,
+                 from ./include/linux/module.h:10,
+                 from drivers/acpi/ac.c:23:
+./arch/x86/include/asm/string_32.h:182:25: error: inlining failed in call to always_inline '__builtin_memcpy': function body not available
+ #define memcpy(t, f, n) __builtin_memcpy(t, f, n)
+                         ^
+./include/linux/string.h:301:24: note: in expansion of macro 'memcpy'
+ __FORTIFY_INLINE void *memcpy(void *p, const void *q, __kernel_size_t size)
+                        ^~~~~~
+In file included from ./arch/x86/include/asm/page_32.h:34:0,
+                 from ./arch/x86/include/asm/page.h:13,
+                 from ./arch/x86/include/asm/thread_info.h:11,
+                 from ./include/linux/thread_info.h:37,
+                 from ./arch/x86/include/asm/preempt.h:6,
+                 from ./include/linux/preempt.h:80,
+                 from ./include/linux/spinlock.h:50,
+                 from ./include/linux/seqlock.h:35,
+                 from ./include/linux/time.h:5,
+                 from ./include/linux/stat.h:18,
+                 from ./include/linux/module.h:10,
+                 from drivers/acpi/ac.c:23:
+./include/linux/string.h:204:10: note: called from here
+   return __builtin_strcpy(p, q);
+          ^~~~~~~~~~~~~~~~~~~~~~
+make[1]: *** [drivers/acpi/ac.o] Error 1
+make: *** [drivers/acpi/ac.o] Error 2
