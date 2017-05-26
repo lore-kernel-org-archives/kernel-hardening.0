@@ -1,46 +1,54 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 26 May 2017 13:17:09 -0700
-Message-Id: <1495829844-69341-6-git-send-email-keescook@chromium.org>
+Date: Fri, 26 May 2017 13:17:10 -0700
+Message-Id: <1495829844-69341-7-git-send-email-keescook@chromium.org>
 In-Reply-To: <1495829844-69341-1-git-send-email-keescook@chromium.org>
 References: <1495829844-69341-1-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH v2 05/20] randstruct: Whitelist struct security_hook_heads cast
+Subject: [kernel-hardening] [PATCH v2 06/20] randstruct: Whitelist UNIXCB cast
 To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, James Morris <james.l.morris@oracle.com>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Hannes Frederic Sowa <hannes@stressinduktion.org>, "Signed-off-by : David S . Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The LSM initialization routines walk security_hook_heads as an array
-of struct list_head instead of via names to avoid a ton of needless
-source. Whitelist this to avoid the false positive warning from the
-plugin:
+This is another false positive in bad cast detection:
 
-security/security.c: In function ‘security_init’:
-security/security.c:59:20: note: found mismatched op0 struct pointer types: ‘struct list_head’ and ‘struct security_hook_heads’
+net/unix/af_unix.c: In function ‘unix_skb_scm_eq’:
+net/unix/af_unix.c:1621:31: note: found mismatched rhs struct pointer types: ‘struct unix_skb_parms’ and ‘char’
 
-  struct list_head *list = (struct list_head *) &security_hook_heads;
-                    ^
+  const struct unix_skb_parms *u = &UNIXCB(skb);
+                               ^
 
-Cc: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-Cc: James Morris <james.l.morris@oracle.com>
+UNIXCB is:
+
+	#define UNIXCB(skb)     (*(struct unix_skb_parms *)&((skb)->cb))
+
+And ->cb is:
+
+	char                    cb[48] __aligned(8);
+
+This is a rather crazy cast, but appears to be safe in the face of
+randomization, so whitelist it in the plugin.
+
+Cc: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Cc: Signed-off-by: David S. Miller <davem@davemloft.net>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
  scripts/gcc-plugins/randomize_layout_plugin.c | 2 ++
  1 file changed, 2 insertions(+)
 
 diff --git a/scripts/gcc-plugins/randomize_layout_plugin.c b/scripts/gcc-plugins/randomize_layout_plugin.c
-index bccbec2af0e4..e126ac7874af 100644
+index e126ac7874af..bf110915a5aa 100644
 --- a/scripts/gcc-plugins/randomize_layout_plugin.c
 +++ b/scripts/gcc-plugins/randomize_layout_plugin.c
 @@ -43,6 +43,8 @@ struct whitelist_entry {
  };
  
  static const struct whitelist_entry whitelist[] = {
-+	/* walk struct security_hook_heads as an array of struct list_head */
-+	{ "security/security.c", "list_head", "security_hook_heads" },
++	/* unix_skb_parms via UNIXCB() buffer */
++	{ "net/unix/af_unix.c", "unix_skb_parms", "char" },
+ 	/* walk struct security_hook_heads as an array of struct list_head */
+ 	{ "security/security.c", "list_head", "security_hook_heads" },
  	{ }
- };
- 
 -- 
 2.7.4
