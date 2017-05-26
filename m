@@ -1,84 +1,117 @@
-MIME-Version: 1.0
-In-Reply-To: <20170526123416.GA26899@bifrost>
-References: <CAFwXZv_b3hdEA4xOFKqAVfc4UZEBX=dL9DOY_mDHExsW+Qg6tQ@mail.gmail.com>
- <85inkpie9o.fsf@boum.org> <1495724872.20270.46.camel@redhat.com>
- <8537bt9bvj.fsf@boum.org> <1495727974.20270.48.camel@redhat.com>
- <CAGXu5jKY+Fc5PcZdbXEXKXsxN2xb9Ext15yrhPrg4Afd1Rq_yA@mail.gmail.com>
- <CAFwXZv_Nb5Q8n1kobbxz7+3w4r6pt-fD5YR4jw6_ZeXk1__9+A@mail.gmail.com> <20170526123416.GA26899@bifrost>
-From: HacKurx <hackurx@gmail.com>
-Date: Fri, 26 May 2017 16:41:18 +0200
-Message-ID: <CAFwXZv9uYF0Z0t=Omu+Fu40PZgqPaf_BLnGbB2jnzAv0TN5OvA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Patch for random mac address
-To: Anisse Astier <anisse@astier.eu>
-Cc: Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, intrigeri <intrigeri@boum.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 26 May 2017 13:17:04 -0700
+Message-Id: <1495829844-69341-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v2 00/20] Introduce struct layout randomization plugin
+To: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2017-05-26 14:34 GMT+02:00 Anisse Astier <anisse@astier.eu>:
-> On Fri, May 26, 2017 at 09:55:37AM +0200, HacKurx wrote:
->> 2017-05-25 19:28 GMT+02:00 Kees Cook <keescook@chromium.org>:
->> > How about sending a v2 with that fixed, inline, etc.
->>
->> Agree with the V2. I'm not a developer, what do you mean by inline? Send by GIT?
->> If someone can make him grow in my place I will pay him a beer ^^
->
-> What he meant, is to follow the kernel process for sending patches.
-> Lukas already sent a link to the documentation, but you may be
-> interested in these parts:
-> https://www.kernel.org/doc/html/latest/process/submitting-patches.html#no-mime-no-links-no-compression-no-attachments-just-plain-text
-> Yes, you can use git as a client (with git send-email), but it's not
-> mandatory. You should use your real name though:
-> https://www.kernel.org/doc/html/latest/process/submitting-patches.html#sign-your-work-the-developer-s-certificate-of-origin
->
-> And add a Signed-off-by line.
+This series brings grsecurity's structure layout randomization plugin
+to upstream. The plugin randomizes the layout of selected structures at
+compile time, as a probabilistic defense against attacks that need to
+know the layout of structures within the kernel. This is most useful for
+"in-house" kernel builds where the neither the randomization seed nor
+other build artifacts are made available to an attacker. While less useful
+for distribution kernels (where the randomization seed must be exposed for
+third party kernel module builds), it still has some value there since now
+all kernel builds would need to be tracked by an attacker.
 
-I didn't understand it all that well. English is not my native language.
+One requirement of the plugin is that randomized structures must use
+designated initializers. Many of these have been landing already as
+I've been sending them over the past couple months, but there are
+still some stragglers, which are included here.
 
-In your link I could see:
-"Gmail (Web GUI)
-Does not work for sending patches.
-Gmail web client converts tabs to spaces automatically.
-At the same time it wraps lines every 78 chars with CRLF style line
-breaks although tab2space problem can be solved with external editor.
-Another problem is that Gmail will base64-encode any message that has
-a non-ASCII character. That includes things like European names."
+Another area to address are places where randomized structures are cast
+to other structures, since there may be implicit positional details
+that need to be addressed. Luckily, there are only a few of these false
+positives, and they have been worked around either by adjusting the source
+(e.g. correctly using ERR_CAST() or container_of()) or whitelisting them
+in the plugin. Some of these fixes have landed already, again with
+stragglers included here.
 
-So here is my error ^^
+The plugin selects structures in two ways: manually marked with the
+new __randomize_layout annotation, or automatically when a structure
+is found to consist entirely of function pointers (which can be opted
+out of with the new __no_randomize_layout annotation).
 
->> diff --git a/net/core/dev.c b/net/core/dev.c
->> index fca407b..3eeb42b 100644
->> --- a/net/core/dev.c
->> +++ b/net/core/dev.c
->> @@ -6669,6 +6669,26 @@ int dev_change_flags(struct net_device *dev, unsigned int flags)
->>
->>       changes = (old_flags ^ dev->flags) | (old_gflags ^ dev->gflags);
->>       __dev_notify_flags(dev, old_flags, changes);
->> +
->> +#ifdef CONFIG_RANDOM_MAC_ADDRESS
->> +     if ((changes & IFF_UP) && !(old_flags & IFF_UP)) {
->> +             /* randomize MAC whenever interface is brought up */
->> +             struct sockaddr sa;
->> +             unsigned int mac4;
->> +             unsigned short mac2;
->> +
->> +             mac4 = prandom_u32();
->> +             mac2 = prandom_u32();
->> +             memcpy(sa.sa_data, &mac4, sizeof(mac4));
->> +             memcpy((char *)sa.sa_data + sizeof(mac4), &mac2, sizeof(mac2));
->> +             if (!is_valid_ether_addr(sa.sa_data))
->> +                     sa.sa_data[5] = 1;
->> +             sa.sa_data[0] &= 0xFC;
->> +             sa.sa_family = dev->type;
->> +             dev_set_mac_address(dev, &sa);
->
-> You didn't answer my question regarding why this is different from the
-> function eth_random_addr.
+A structure that is especially sensitive and regularly abused in
+exploits is task_struct, but randomizing it requires some special
+handling due to some fields needing to be at the start and end. To
+deal with this, an internal anonymous struct is used to mark the
+portion that will be randomized. I'd love feedback on whether I
+should bite the bullet and perform indenting or violate indenting
+rules to avoid a massive white-space change. Also is the problem
+that older GCC seems to balk at its use, which I have not figured
+out yet.
 
-Because it's been working for years and I'm not a developer / kernel expert.
-"Keep it stupidly simple" Might be a reason?
+As already mentioned, the bulk of this feature and annotations are ported
+over from grsecurity. The implementation is almost entirely identical
+to the original code written by the PaX Team and Brad Spengler. The
+changes are an addition of improved designated initializer markings,
+a whitelisting mechanism, many false positive fixes, and a different
+approach to handling the task_struct randomization.
 
--- 
-Best regards,
+I've been doing boot tests with instrumentation showing successfully
+changing offsets within the task_struct, which ran overnight without
+problems. So far, the 0day builder hasn't alerted on anything either.
 
-HacKurx (Loic)
-blog.opensec.fr
+This series is based on next-20170525.
+
+I intend to push patches 1 through 18 into linux-next if there are no
+objections. The task_struct change needs some more attention, and I
+continue to wait on ACPICA to take the changes in the final patch.
+
+Patches are:
+
+[PATCH 01/20] NFS: Avoid cross-structure casting
+	Fix to use ERR_CAST()
+
+[PATCH 02/20] gcc-plugins: Detail c-common.h location for GCC 4.6
+	Update documentation about GCC 4.6 version file locations.
+
+[PATCH 03/20] compiler: Add __designated_init annotation
+	Introduce annotation for designated initializers.
+
+[PATCH 04/20] gcc-plugins: Add the randstruct plugin
+	The plugin itself, with struct auto-detection disabled.
+
+[PATCH 05/20] randstruct: Whitelist struct security_hook_heads cast
+[PATCH 06/20] randstruct: Whitelist UNIXCB cast
+[PATCH 07/20] randstruct: Whitelist big_key path struct overloading
+[PATCH 08/20] randstruct: Whitelist NIU struct page overloading
+	Whitelist a number of false positives that do not have
+	trivial source corrections to be made.
+
+[PATCH 09/20] randstruct: Mark various structs for randomization
+	Adds the manual annotation for structures to randomize.
+
+[PATCH 10/20] randstruct: opt-out externally exposed function pointer
+	Opt out of some externally-exposed structs that would be
+	otherwise automatically randomized.
+
+[PATCH 11/20] randstruct: Disable randomization of ACPICA structs
+	Opt out of ACPICA randomization.
+
+[PATCH 12/20] sgi-xp: Use designated initializers
+[PATCH 13/20] drm/amdgpu: Use designated initializers
+[PATCH 14/20] drm/amd/powerplay: Use designated initializers
+[PATCH 15/20] mtk-vcodec: Use designated initializers
+	The remaining designated initializer fixes for automatic
+	struct randomization.
+
+[PATCH 16/20] ntfs: Use ERR_CAST() to avoid cross-structure cast
+[PATCH 17/20] ocfs2: Use ERR_CAST() to avoid cross-structure cast
+	The remaining cast fixes for automatic struct randomization.
+
+[PATCH 18/20] randstruct: Enable function pointer struct detection
+	Enables automatic struct randomization.
+
+[PATCH 19/20] [RFC] task_struct: Allow randomized layout
+	Tricky anonymous struct within task_struct...
+
+[PATCH 20/20] ACPICA: Use designated initializers
+	Proposed upstream ACPICA solution for designated initializers...
+
+Testing/feedback appreciated!
+
+-Kees
