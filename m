@@ -1,39 +1,108 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 26 May 2017 13:17:15 -0700
-Message-Id: <1495829844-69341-12-git-send-email-keescook@chromium.org>
+Date: Fri, 26 May 2017 13:17:16 -0700
+Message-Id: <1495829844-69341-13-git-send-email-keescook@chromium.org>
 In-Reply-To: <1495829844-69341-1-git-send-email-keescook@chromium.org>
 References: <1495829844-69341-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 11/20] randstruct: Disable randomization of ACPICA structs
+Subject: [kernel-hardening] [PATCH v2 12/20] sgi-xp: Use designated initializers
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Since the ACPICA source is maintained externally to the kernel, we can
-neither switch it to designated initializers nor mark it
-__no_randomize_layout. Until ACPICA-upstream changes[1] land to handle the
-designated initialization, explicitly skip it in the plugin.
+Prepare to mark sensitive kernel structures for randomization by making
+sure they're using designated initializers. These were identified during
+allyesconfig builds of x86, arm, and arm64, with most initializer fixes
+extracted from grsecurity.
 
-[1] https://github.com/acpica/acpica/pull/248
+To avoid casting, this implements dummy functions with full function
+prototypes.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
+Acked-by: Robin Holt <robinmholt@gmail.com>
 ---
- scripts/gcc-plugins/randomize_layout_plugin.c | 4 ++++
- 1 file changed, 4 insertions(+)
+ drivers/misc/sgi-xp/xp_main.c | 59 ++++++++++++++++++++++++++++---------------
+ 1 file changed, 39 insertions(+), 20 deletions(-)
 
-diff --git a/scripts/gcc-plugins/randomize_layout_plugin.c b/scripts/gcc-plugins/randomize_layout_plugin.c
-index f777ead58ba8..e6e02a40d522 100644
---- a/scripts/gcc-plugins/randomize_layout_plugin.c
-+++ b/scripts/gcc-plugins/randomize_layout_plugin.c
-@@ -346,6 +346,10 @@ static int relayout_struct(tree type)
- 	    !strcmp((const char *)ORIG_TYPE_NAME(type), "RAWPCIFACTORY"))
- 		return 0;
- 
-+	/* Skip ACPICA structs until refreshed with designated_init. */
-+	if (!strcmp((const char *)ORIG_TYPE_NAME(type), "acpi_sleep_functions"))
-+		return 0;
+diff --git a/drivers/misc/sgi-xp/xp_main.c b/drivers/misc/sgi-xp/xp_main.c
+index 01be66d02ca8..bb47f9d9b68a 100644
+--- a/drivers/misc/sgi-xp/xp_main.c
++++ b/drivers/misc/sgi-xp/xp_main.c
+@@ -71,20 +71,44 @@ EXPORT_SYMBOL_GPL(xpc_registrations);
+ /*
+  * Initialize the XPC interface to indicate that XPC isn't loaded.
+  */
+-static enum xp_retval
+-xpc_notloaded(void)
++static void xpc_notloaded_connect(int ch_number)
++{ }
 +
- 	/* throw out any structs in uapi */
- 	xloc = expand_location(DECL_SOURCE_LOCATION(TYPE_FIELDS(type)));
++static void xpc_notloaded_disconnect(int ch_number)
++{ }
++
++static enum xp_retval xpc_notloaded_send(short partid, int ch_number,
++					 u32 flags, void *payload,
++					 u16 payload_size)
++{
++	return xpNotLoaded;
++}
++
++static enum xp_retval xpc_notloaded_send_notify(short partid, int ch_number,
++						u32 flags, void *payload,
++						u16 payload_size,
++						xpc_notify_func func,
++						void *key)
++{
++	return xpNotLoaded;
++}
++
++static void xpc_notloaded_received(short partid, int ch_number, void *payload)
++{ }
++
++static enum xp_retval xpc_notloaded_partid_to_nasids(short partid,
++						     void *nasid_mask)
+ {
+ 	return xpNotLoaded;
+ }
+ 
+ struct xpc_interface xpc_interface = {
+-	(void (*)(int))xpc_notloaded,
+-	(void (*)(int))xpc_notloaded,
+-	(enum xp_retval(*)(short, int, u32, void *, u16))xpc_notloaded,
+-	(enum xp_retval(*)(short, int, u32, void *, u16, xpc_notify_func,
+-			   void *))xpc_notloaded,
+-	(void (*)(short, int, void *))xpc_notloaded,
+-	(enum xp_retval(*)(short, void *))xpc_notloaded
++	.connect = xpc_notloaded_connect,
++	.disconnect = xpc_notloaded_disconnect,
++	.send = xpc_notloaded_send,
++	.send_notify = xpc_notloaded_send_notify,
++	.received = xpc_notloaded_received,
++	.partid_to_nasids = xpc_notloaded_partid_to_nasids
+ };
+ EXPORT_SYMBOL_GPL(xpc_interface);
+ 
+@@ -115,17 +139,12 @@ EXPORT_SYMBOL_GPL(xpc_set_interface);
+ void
+ xpc_clear_interface(void)
+ {
+-	xpc_interface.connect = (void (*)(int))xpc_notloaded;
+-	xpc_interface.disconnect = (void (*)(int))xpc_notloaded;
+-	xpc_interface.send = (enum xp_retval(*)(short, int, u32, void *, u16))
+-	    xpc_notloaded;
+-	xpc_interface.send_notify = (enum xp_retval(*)(short, int, u32, void *,
+-						       u16, xpc_notify_func,
+-						       void *))xpc_notloaded;
+-	xpc_interface.received = (void (*)(short, int, void *))
+-	    xpc_notloaded;
+-	xpc_interface.partid_to_nasids = (enum xp_retval(*)(short, void *))
+-	    xpc_notloaded;
++	xpc_interface.connect = xpc_notloaded_connect;
++	xpc_interface.disconnect = xpc_notloaded_disconnect;
++	xpc_interface.send = xpc_notloaded_send;
++	xpc_interface.send_notify = xpc_notloaded_send_notify;
++	xpc_interface.received = xpc_notloaded_received;
++	xpc_interface.partid_to_nasids = xpc_notloaded_partid_to_nasids;
+ }
+ EXPORT_SYMBOL_GPL(xpc_clear_interface);
  
 -- 
 2.7.4
