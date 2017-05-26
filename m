@@ -1,11 +1,11 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 26 May 2017 13:17:20 -0700
-Message-Id: <1495829844-69341-17-git-send-email-keescook@chromium.org>
+Date: Fri, 26 May 2017 13:17:21 -0700
+Message-Id: <1495829844-69341-18-git-send-email-keescook@chromium.org>
 In-Reply-To: <1495829844-69341-1-git-send-email-keescook@chromium.org>
 References: <1495829844-69341-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 16/20] ntfs: Use ERR_CAST() to avoid cross-structure cast
+Subject: [kernel-hardening] [PATCH v2 17/20] ocfs2: Use ERR_CAST() to avoid cross-structure cast
 To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Anton Altaparmakov <anton@tuxera.com>, Andrew Morton <akpm@linux-foundation.org>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Mark Fasheh <mfasheh@versity.com>, Joel Becker <jlbec@evilplan.org>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 When trying to propagate an error result, the error return path attempts
@@ -15,25 +15,25 @@ being potentially dangerous in the face of randomization. This is a false
 positive, but what this code actually wants to do is use ERR_CAST() to
 retain the error value.
 
-Cc: Anton Altaparmakov <anton@tuxera.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: Mark Fasheh <mfasheh@versity.com>
+Cc: Joel Becker <jlbec@evilplan.org>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- fs/ntfs/namei.c | 2 +-
+ fs/ocfs2/export.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/fs/ntfs/namei.c b/fs/ntfs/namei.c
-index 358258364616..4690cd75d8d7 100644
---- a/fs/ntfs/namei.c
-+++ b/fs/ntfs/namei.c
-@@ -159,7 +159,7 @@ static struct dentry *ntfs_lookup(struct inode *dir_ino, struct dentry *dent,
- 					PTR_ERR(dent_inode));
- 		kfree(name);
- 		/* Return the error code. */
--		return (struct dentry *)dent_inode;
-+		return ERR_CAST(dent_inode);
+diff --git a/fs/ocfs2/export.c b/fs/ocfs2/export.c
+index 827fc9809bc2..9f88188060db 100644
+--- a/fs/ocfs2/export.c
++++ b/fs/ocfs2/export.c
+@@ -119,7 +119,7 @@ static struct dentry *ocfs2_get_dentry(struct super_block *sb,
+ 
+ 	if (IS_ERR(inode)) {
+ 		mlog_errno(PTR_ERR(inode));
+-		result = (void *)inode;
++		result = ERR_CAST(inode);
+ 		goto bail;
  	}
- 	/* It is guaranteed that @name is no longer allocated at this point. */
- 	if (MREF_ERR(mref) == -ENOENT) {
+ 
 -- 
 2.7.4
