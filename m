@@ -1,96 +1,39 @@
-Date: Thu, 25 May 2017 16:52:26 -0700
-From: Andrew Morton <akpm@linux-foundation.org>
-Message-Id: <20170525165226.a2a1064741d7a7ef66ef21b3@linux-foundation.org>
+MIME-Version: 1.0
+Sender: keescook@google.com
 In-Reply-To: <20170522231025.30463-1-danielmicay@gmail.com>
 References: <20170522231025.30463-1-danielmicay@gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 25 May 2017 20:40:28 -0700
+Message-ID: <CAGXu5jJQpiSHVw-6OeS92i2UU+QFDeXN9Wrs-V_8YKD_fHuqNg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
 Subject: [kernel-hardening] Re: [PATCH v3] add the option of fortified string.h functions
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-kernel <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Daniel Axtens <dja@axtens.net>
+To: Daniel Micay <danielmicay@gmail.com>, Andrew Morton <akpm@linux-foundation.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-kernel <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Daniel Axtens <dja@axtens.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 22 May 2017 19:10:25 -0400 Daniel Micay <danielmicay@gmail.com> wrote:
+On Mon, May 22, 2017 at 4:10 PM, Daniel Micay <danielmicay@gmail.com> wrote:
+> diff --git a/arch/x86/include/asm/string_64.h b/arch/x86/include/asm/string_64.h
+> index 733bae07fb29..3c5b26e07b85 100644
+> --- a/arch/x86/include/asm/string_64.h
+> +++ b/arch/x86/include/asm/string_64.h
+> @@ -77,6 +77,11 @@ int strcmp(const char *cs, const char *ct);
+>  #define memcpy(dst, src, len) __memcpy(dst, src, len)
+>  #define memmove(dst, src, len) __memmove(dst, src, len)
+>  #define memset(s, c, n) __memset(s, c, n)
+> +
+> +#ifndef __NO_FORTIFY
+> +#define __NO_FORTIFY /* FORTIFY_SOURCE uses __builtin_memcpy, etc. */
+> +#endif
+> +
+>  #endif
+>
+>  #define __HAVE_ARCH_MEMCPY_MCSAFE 1
 
-> This adds support for compiling with a rough equivalent to the glibc
-> _FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
-> overflow checks for string.h functions when the compiler determines the
-> size of the source or destination buffer at compile-time. Unlike glibc,
-> it covers buffer reads in addition to writes.
+Ah-ha, this same KASAN exclusion is missing for string_32.h, which is
+what I think akpm tripped over in build tests.
 
-i386 allmodconfig, gcc-6.3.0:
+-Kees
 
-In file included from ./arch/x86/include/asm/string.h:2:0,
-                 from ./include/linux/string.h:18,
-                 from ./arch/x86/include/asm/page_32.h:34,
-                 from ./arch/x86/include/asm/page.h:13,
-                 from ./arch/x86/include/asm/thread_info.h:11,
-                 from ./include/linux/thread_info.h:37,
-                 from ./arch/x86/include/asm/preempt.h:6,
-                 from ./include/linux/preempt.h:80,
-                 from ./include/linux/spinlock.h:50,
-                 from ./include/linux/seqlock.h:35,
-                 from ./include/linux/time.h:5,
-                 from ./include/linux/stat.h:18,
-                 from ./include/linux/module.h:10,
-                 from drivers/acpi/ac.c:23:
-./include/linux/string.h: In function 'acpi_ac_add':
-./arch/x86/include/asm/string_32.h:182:25: error: inlining failed in call to always_inline '__builtin_memcpy': function body not available
- #define memcpy(t, f, n) __builtin_memcpy(t, f, n)
-                         ^
-./include/linux/string.h:301:24: note: in expansion of macro 'memcpy'
- __FORTIFY_INLINE void *memcpy(void *p, const void *q, __kernel_size_t size)
-                        ^~~~~~
-In file included from ./arch/x86/include/asm/page_32.h:34:0,
-                 from ./arch/x86/include/asm/page.h:13,
-                 from ./arch/x86/include/asm/thread_info.h:11,
-                 from ./include/linux/thread_info.h:37,
-                 from ./arch/x86/include/asm/preempt.h:6,
-                 from ./include/linux/preempt.h:80,
-                 from ./include/linux/spinlock.h:50,
-                 from ./include/linux/seqlock.h:35,
-                 from ./include/linux/time.h:5,
-                 from ./include/linux/stat.h:18,
-                 from ./include/linux/module.h:10,
-                 from drivers/acpi/ac.c:23:
-./include/linux/string.h:204:10: note: called from here
-   return __builtin_strcpy(p, q);
-          ^~~~~~~~~~~~~~~~~~~~~~
-In file included from ./arch/x86/include/asm/string.h:2:0,
-                 from ./include/linux/string.h:18,
-                 from ./arch/x86/include/asm/page_32.h:34,
-                 from ./arch/x86/include/asm/page.h:13,
-                 from ./arch/x86/include/asm/thread_info.h:11,
-                 from ./include/linux/thread_info.h:37,
-                 from ./arch/x86/include/asm/preempt.h:6,
-                 from ./include/linux/preempt.h:80,
-                 from ./include/linux/spinlock.h:50,
-                 from ./include/linux/seqlock.h:35,
-                 from ./include/linux/time.h:5,
-                 from ./include/linux/stat.h:18,
-                 from ./include/linux/module.h:10,
-                 from drivers/acpi/ac.c:23:
-./arch/x86/include/asm/string_32.h:182:25: error: inlining failed in call to always_inline '__builtin_memcpy': function body not available
- #define memcpy(t, f, n) __builtin_memcpy(t, f, n)
-                         ^
-./include/linux/string.h:301:24: note: in expansion of macro 'memcpy'
- __FORTIFY_INLINE void *memcpy(void *p, const void *q, __kernel_size_t size)
-                        ^~~~~~
-In file included from ./arch/x86/include/asm/page_32.h:34:0,
-                 from ./arch/x86/include/asm/page.h:13,
-                 from ./arch/x86/include/asm/thread_info.h:11,
-                 from ./include/linux/thread_info.h:37,
-                 from ./arch/x86/include/asm/preempt.h:6,
-                 from ./include/linux/preempt.h:80,
-                 from ./include/linux/spinlock.h:50,
-                 from ./include/linux/seqlock.h:35,
-                 from ./include/linux/time.h:5,
-                 from ./include/linux/stat.h:18,
-                 from ./include/linux/module.h:10,
-                 from drivers/acpi/ac.c:23:
-./include/linux/string.h:204:10: note: called from here
-   return __builtin_strcpy(p, q);
-          ^~~~~~~~~~~~~~~~~~~~~~
-make[1]: *** [drivers/acpi/ac.o] Error 1
-make: *** [drivers/acpi/ac.o] Error 2
+-- 
+Kees Cook
+Pixel Security
