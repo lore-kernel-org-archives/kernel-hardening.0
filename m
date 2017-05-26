@@ -1,108 +1,44 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 26 May 2017 13:17:16 -0700
-Message-Id: <1495829844-69341-13-git-send-email-keescook@chromium.org>
+Date: Fri, 26 May 2017 13:17:17 -0700
+Message-Id: <1495829844-69341-14-git-send-email-keescook@chromium.org>
 In-Reply-To: <1495829844-69341-1-git-send-email-keescook@chromium.org>
 References: <1495829844-69341-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 12/20] sgi-xp: Use designated initializers
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] [PATCH v2 13/20] drm/amdgpu: Use designated initializers
 To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Alex Deucher <alexander.deucher@amd.com>, =?UTF-8?q?Christian=20K=C3=B6nig?= <christian.koenig@amd.com>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Prepare to mark sensitive kernel structures for randomization by making
-sure they're using designated initializers. These were identified during
-allyesconfig builds of x86, arm, and arm64, with most initializer fixes
-extracted from grsecurity.
+The randstruct plugin requires structures that are entirely function
+pointers be initialized using designated initializers.
 
-To avoid casting, this implements dummy functions with full function
-prototypes.
-
+Cc: Alex Deucher <alexander.deucher@amd.com>
+Cc: Christian König <christian.koenig@amd.com>
 Signed-off-by: Kees Cook <keescook@chromium.org>
-Acked-by: Robin Holt <robinmholt@gmail.com>
 ---
- drivers/misc/sgi-xp/xp_main.c | 59 ++++++++++++++++++++++++++++---------------
- 1 file changed, 39 insertions(+), 20 deletions(-)
+ drivers/gpu/drm/amd/amdgpu/amdgpu_vram_mgr.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/misc/sgi-xp/xp_main.c b/drivers/misc/sgi-xp/xp_main.c
-index 01be66d02ca8..bb47f9d9b68a 100644
---- a/drivers/misc/sgi-xp/xp_main.c
-+++ b/drivers/misc/sgi-xp/xp_main.c
-@@ -71,20 +71,44 @@ EXPORT_SYMBOL_GPL(xpc_registrations);
- /*
-  * Initialize the XPC interface to indicate that XPC isn't loaded.
-  */
--static enum xp_retval
--xpc_notloaded(void)
-+static void xpc_notloaded_connect(int ch_number)
-+{ }
-+
-+static void xpc_notloaded_disconnect(int ch_number)
-+{ }
-+
-+static enum xp_retval xpc_notloaded_send(short partid, int ch_number,
-+					 u32 flags, void *payload,
-+					 u16 payload_size)
-+{
-+	return xpNotLoaded;
-+}
-+
-+static enum xp_retval xpc_notloaded_send_notify(short partid, int ch_number,
-+						u32 flags, void *payload,
-+						u16 payload_size,
-+						xpc_notify_func func,
-+						void *key)
-+{
-+	return xpNotLoaded;
-+}
-+
-+static void xpc_notloaded_received(short partid, int ch_number, void *payload)
-+{ }
-+
-+static enum xp_retval xpc_notloaded_partid_to_nasids(short partid,
-+						     void *nasid_mask)
- {
- 	return xpNotLoaded;
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_vram_mgr.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_vram_mgr.c
+index a4831fe0223b..a2c59a08b2bd 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_vram_mgr.c
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_vram_mgr.c
+@@ -220,9 +220,9 @@ static void amdgpu_vram_mgr_debug(struct ttm_mem_type_manager *man,
  }
  
- struct xpc_interface xpc_interface = {
--	(void (*)(int))xpc_notloaded,
--	(void (*)(int))xpc_notloaded,
--	(enum xp_retval(*)(short, int, u32, void *, u16))xpc_notloaded,
--	(enum xp_retval(*)(short, int, u32, void *, u16, xpc_notify_func,
--			   void *))xpc_notloaded,
--	(void (*)(short, int, void *))xpc_notloaded,
--	(enum xp_retval(*)(short, void *))xpc_notloaded
-+	.connect = xpc_notloaded_connect,
-+	.disconnect = xpc_notloaded_disconnect,
-+	.send = xpc_notloaded_send,
-+	.send_notify = xpc_notloaded_send_notify,
-+	.received = xpc_notloaded_received,
-+	.partid_to_nasids = xpc_notloaded_partid_to_nasids
+ const struct ttm_mem_type_manager_func amdgpu_vram_mgr_func = {
+-	amdgpu_vram_mgr_init,
+-	amdgpu_vram_mgr_fini,
+-	amdgpu_vram_mgr_new,
+-	amdgpu_vram_mgr_del,
+-	amdgpu_vram_mgr_debug
++	.init		= amdgpu_vram_mgr_init,
++	.takedown	= amdgpu_vram_mgr_fini,
++	.get_node	= amdgpu_vram_mgr_new,
++	.put_node	= amdgpu_vram_mgr_del,
++	.debug		= amdgpu_vram_mgr_debug
  };
- EXPORT_SYMBOL_GPL(xpc_interface);
- 
-@@ -115,17 +139,12 @@ EXPORT_SYMBOL_GPL(xpc_set_interface);
- void
- xpc_clear_interface(void)
- {
--	xpc_interface.connect = (void (*)(int))xpc_notloaded;
--	xpc_interface.disconnect = (void (*)(int))xpc_notloaded;
--	xpc_interface.send = (enum xp_retval(*)(short, int, u32, void *, u16))
--	    xpc_notloaded;
--	xpc_interface.send_notify = (enum xp_retval(*)(short, int, u32, void *,
--						       u16, xpc_notify_func,
--						       void *))xpc_notloaded;
--	xpc_interface.received = (void (*)(short, int, void *))
--	    xpc_notloaded;
--	xpc_interface.partid_to_nasids = (enum xp_retval(*)(short, void *))
--	    xpc_notloaded;
-+	xpc_interface.connect = xpc_notloaded_connect;
-+	xpc_interface.disconnect = xpc_notloaded_disconnect;
-+	xpc_interface.send = xpc_notloaded_send;
-+	xpc_interface.send_notify = xpc_notloaded_send_notify;
-+	xpc_interface.received = xpc_notloaded_received;
-+	xpc_interface.partid_to_nasids = xpc_notloaded_partid_to_nasids;
- }
- EXPORT_SYMBOL_GPL(xpc_clear_interface);
- 
 -- 
 2.7.4
