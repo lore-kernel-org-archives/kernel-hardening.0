@@ -1,52 +1,46 @@
-Message-ID: <1495787025.2392.0.camel@gmail.com>
+Message-ID: <1495787706.2392.3.camel@gmail.com>
 From: Daniel Micay <danielmicay@gmail.com>
-Date: Fri, 26 May 2017 04:23:45 -0400
-In-Reply-To: <20170525212839.GA21842@bifrost>
-References: 
-	<CAFwXZv_b3hdEA4xOFKqAVfc4UZEBX=dL9DOY_mDHExsW+Qg6tQ@mail.gmail.com>
-	 <85inkpie9o.fsf@boum.org> <1495724872.20270.46.camel@redhat.com>
-	 <8537bt9bvj.fsf@boum.org> <1495727974.20270.48.camel@redhat.com>
-	 <CAGXu5jKY+Fc5PcZdbXEXKXsxN2xb9Ext15yrhPrg4Afd1Rq_yA@mail.gmail.com>
-	 <20170525212839.GA21842@bifrost>
+Date: Fri, 26 May 2017 04:35:06 -0400
+In-Reply-To: <CAGXu5jJQpiSHVw-6OeS92i2UU+QFDeXN9Wrs-V_8YKD_fHuqNg@mail.gmail.com>
+References: <20170522231025.30463-1-danielmicay@gmail.com>
+	 <CAGXu5jJQpiSHVw-6OeS92i2UU+QFDeXN9Wrs-V_8YKD_fHuqNg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] Patch for random mac address
-To: Anisse Astier <anisse@astier.eu>, Kees Cook <keescook@chromium.org>
-Cc: HacKurx <hackurx@gmail.com>, Rik van Riel <riel@redhat.com>, intrigeri <intrigeri@boum.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v3] add the option of fortified string.h functions
+To: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-kernel <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Daniel Axtens <dja@axtens.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2017-05-25 at 23:28 +0200, Anisse Astier wrote:
-> Hi,
-> 
-> On Thu, May 25, 2017 at 10:28:19AM -0700, Kees Cook wrote:
-> > On Thu, May 25, 2017 at 8:59 AM, Rik van Riel <riel@redhat.com>
-> > wrote:
-> > > On Thu, 2017-05-25 at 17:47 +0200, intrigeri wrote:
-> > > > Rik van Riel:
-> > > > > That suggests maybe this kind of functionality should
-> > > > > be implemented in userspace, instead?
-> > > > > Maybe in NetworkManager, […]
-> > > > 
-> > > > It's already implemented in NetworkManager :)
-> > > 
-> > > So this kernel patch does not solve any problem,
-> > > because the solution has already been implemented
-> > > in userspace?
+On Thu, 2017-05-25 at 20:40 -0700, Kees Cook wrote:
+> On Mon, May 22, 2017 at 4:10 PM, Daniel Micay <danielmicay@gmail.com>
+> wrote:
+> > diff --git a/arch/x86/include/asm/string_64.h
+> > b/arch/x86/include/asm/string_64.h
+> > index 733bae07fb29..3c5b26e07b85 100644
+> > --- a/arch/x86/include/asm/string_64.h
+> > +++ b/arch/x86/include/asm/string_64.h
+> > @@ -77,6 +77,11 @@ int strcmp(const char *cs, const char *ct);
+> >  #define memcpy(dst, src, len) __memcpy(dst, src, len)
+> >  #define memmove(dst, src, len) __memmove(dst, src, len)
+> >  #define memset(s, c, n) __memset(s, c, n)
+> > +
+> > +#ifndef __NO_FORTIFY
+> > +#define __NO_FORTIFY /* FORTIFY_SOURCE uses __builtin_memcpy, etc.
+> > */
+> > +#endif
+> > +
+> >  #endif
 > > 
-> > It makes sure you can never not randomize the MAC, no matter what
-> > userspace is doing. I'm not opposed to the idea, but it feels like
-> > overkill to me.
-> > 
-> > BTW, the proposed patch is slightly wrong: it still allows userspace
-> > to change the MAC address. The ifdef with the return 0 should be
-> > moved
-> > up (and "return 0" seems like a bit of a lie: maybe -EINVAL or
-> > -ENOTSUPPORTED?). How about sending a v2 with that fixed, inline,
-> > etc.
-> > And see if other people chime in?
+> >  #define __HAVE_ARCH_MEMCPY_MCSAFE 1
 > 
-> Yes, the original grsec patch is slightly different.
+> Ah-ha, this same KASAN exclusion is missing for string_32.h, which is
+> what I think akpm tripped over in build tests.
+> 
+> -Kees
 
-It was never included in grsecurity, so it's not really a grsecurity
-patch.
+It's not KASAN-related but rather some cruft that's still around in the
+32-bit x86 header. It unnecessarily defines memcpy as __builtin_memcpy
+even though the built-in is already used on modern GCC, while the 64-bit 
+header only does a similar define for GCC < 4.3. I'll just make it stop
+doing that with fortify enabled.
