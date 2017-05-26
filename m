@@ -1,70 +1,59 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 26 May 2017 13:17:23 -0700
-Message-Id: <1495829844-69341-20-git-send-email-keescook@chromium.org>
+Date: Fri, 26 May 2017 13:17:22 -0700
+Message-Id: <1495829844-69341-19-git-send-email-keescook@chromium.org>
 In-Reply-To: <1495829844-69341-1-git-send-email-keescook@chromium.org>
 References: <1495829844-69341-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 19/20] [RFC] task_struct: Allow randomized layout
+Subject: [kernel-hardening] [PATCH v2 18/20] randstruct: Enable function pointer struct detection
 To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This marks most of the layout of task_struct as randomizable, but leaves
-thread_info and scheduler state untouched at the start, and thread_struct
-untouched at the end.
+This enables the automatic structure selection logic in the randstruct
+GCC plugin. The selection logic randomizes all structures that contain
+only function pointers, unless marked with __no_randomize_layout.
 
-Other parts of the kernel use unnamed structures, but the 0-day builder
-using gcc-4.4 blows up on static initializers. Officially, it's documented
-as only working on gcc 4.6 and later, which further confuses me:
-	https://gcc.gnu.org/wiki/C11Status
-The structure layout randomization already requires gcc 4.7, but instead
-of depending on the plugin being enabled, just check the gcc versions
-for wider build testing. (But I'd rather find a way to avoid the #ifdef
-entirely.)
-
-One question about formatting remains: should this patch indent all the
-randomized fields, due to the added unnamed struct, which would make
-this patch white-space huge, or should I leave the indentation level
-alone, to avoid massive churn? I opted for making the patch more readable,
-but can easily do the indentation here or as a separate patch. It's not
-obvious to me what is the least invasive change to make...
-
-Cc: Linus Torvalds <torvalds@linux-foundation.org>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- include/linux/sched.h | 14 ++++++++++++++
- 1 file changed, 14 insertions(+)
+ arch/Kconfig                                  | 12 +++++++-----
+ scripts/gcc-plugins/randomize_layout_plugin.c |  3 ---
+ 2 files changed, 7 insertions(+), 8 deletions(-)
 
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index b1298ad4da63..a9f7f957169c 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -490,6 +490,12 @@ struct task_struct {
- #endif
- 	/* -1 unrunnable, 0 runnable, >0 stopped: */
- 	volatile long			state;
-+
-+	/* This begins the randomizable portion of task_struct... */
-+#if GCC_VERSION >= 40600
-+	struct {
-+#endif
-+
- 	void				*stack;
- 	atomic_t			usage;
- 	/* Per task flags (PF_*), defined further below: */
-@@ -1052,6 +1058,14 @@ struct task_struct {
- 	/* Used by LSM modules for access restriction: */
- 	void				*security;
- #endif
-+
-+	/*
-+	 * New fields for task_struct should be added above here.
-+	 */
-+#if GCC_VERSION >= 40600
-+	} __randomize_layout;
-+#endif
-+
- 	/* CPU-specific state of this task: */
- 	struct thread_struct		thread;
+diff --git a/arch/Kconfig b/arch/Kconfig
+index 3eac97a4c7b3..f4597dbd0631 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -448,11 +448,13 @@ config GCC_PLUGIN_RANDSTRUCT
+ 	depends on GCC_PLUGINS
+ 	select MODVERSIONS if MODULES
+ 	help
+-	  If you say Y here, the layouts of structures explicitly
+-	  marked by __randomize_layout will be randomized at
+-	  compile-time.  This can introduce the requirement of an
+-	  additional information exposure vulnerability for exploits
+-	  targeting these structure types.
++	  If you say Y here, the layouts of structures that are entirely
++	  function pointers (and have not been manually annotated with
++	  __no_randomize_layout), or structures that have been explicitly
++	  marked with __randomize_layout, will be randomized at compile-time.
++	  This can introduce the requirement of an additional information
++	  exposure vulnerability for exploits targeting these structure
++	  types.
  
+ 	  Enabling this feature will introduce some performance impact,
+ 	  slightly increase memory usage, and prevent the use of forensic
+diff --git a/scripts/gcc-plugins/randomize_layout_plugin.c b/scripts/gcc-plugins/randomize_layout_plugin.c
+index e6e02a40d522..bb2c6789c4b7 100644
+--- a/scripts/gcc-plugins/randomize_layout_plugin.c
++++ b/scripts/gcc-plugins/randomize_layout_plugin.c
+@@ -437,9 +437,6 @@ static int is_pure_ops_struct(const_tree node)
+ 
+ 	gcc_assert(TREE_CODE(node) == RECORD_TYPE || TREE_CODE(node) == UNION_TYPE);
+ 
+-	/* XXX: Do not apply randomization to all-ftpr structs yet. */
+-	return 0;
+-
+ 	for (field = TYPE_FIELDS(node); field; field = TREE_CHAIN(field)) {
+ 		const_tree fieldtype = get_field_type(field);
+ 		enum tree_code code = TREE_CODE(fieldtype);
 -- 
 2.7.4
