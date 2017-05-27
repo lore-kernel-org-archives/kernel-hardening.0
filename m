@@ -1,35 +1,18 @@
-Date: Sat, 27 May 2017 01:44:14 -0700
+Date: Sat, 27 May 2017 01:47:48 -0700
 From: Christoph Hellwig <hch@infradead.org>
-Message-ID: <20170527084414.GC26844@infradead.org>
+Message-ID: <20170527084748.GA11558@infradead.org>
 References: <1495829844-69341-1-git-send-email-keescook@chromium.org>
- <1495829844-69341-13-git-send-email-keescook@chromium.org>
+ <1495829844-69341-15-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1495829844-69341-13-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v2 12/20] sgi-xp: Use designated initializers
+In-Reply-To: <1495829844-69341-15-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v2 14/20] drm/amd/powerplay: Use designated initializers
 To: Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, Christian =?iso-8859-1?Q?K=F6nig?= <christian.koenig@amd.com>, Eric Huang <JinHuiEric.Huang@amd.com>, Alex Deucher <alexander.deucher@amd.com>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, May 26, 2017 at 01:17:16PM -0700, Kees Cook wrote:
-> Prepare to mark sensitive kernel structures for randomization by making
-> sure they're using designated initializers. These were identified during
-> allyesconfig builds of x86, arm, and arm64, with most initializer fixes
-> extracted from grsecurity.
-> 
-> To avoid casting, this implements dummy functions with full function
-> prototypes.
+> +	{ .isFunctionNeededInRuntimeTable = NULL,
+> +	  .tableFunction = tf_vega10_thermal_initialize },
 
-Can we get this in ASAP?
-
-> +static void xpc_notloaded_connect(int ch_number)
-> +{ }
-> +
-> +static void xpc_notloaded_disconnect(int ch_number)
-> +{ }
-
-Also it might be a good idea to just check in the caller if the
-methods are defined instead of having all these dummys.  A branch
-is usually cheaper than an indirect call, AND it leads to less code,
-AND is is less fragile.
+I'd say drop the NULL initializations as they are implicit anyway.
