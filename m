@@ -1,75 +1,49 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1496003387-3184-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp>
-References: <1495883858-3336-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp>
- <1496003387-3184-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp>
-From: Kees Cook <keescook@chromium.org>
-Date: Sun, 28 May 2017 14:19:22 -0700
-Message-ID: <CAGXu5jK2azpWLOg=EGEOhPySN52_JpMcXoWaSkNSZhxF1_dNFA@mail.gmail.com>
+In-Reply-To: <CAFUG7Cen=g4PbDHmkNOqDdTOWWDEx_UTS2gk75_ub=63DQqpJA@mail.gmail.com>
+References: <20170519103811.2183-1-igor.stoppa@huawei.com> <20170519103811.2183-2-igor.stoppa@huawei.com>
+ <CAGXu5j+3-CZpZ4Vj2fHH+0UPAa_jOdJQxHtrQ=F_FvvzWvE00Q@mail.gmail.com>
+ <656b6465-16cd-ab0a-b439-ab5bea42006d@huawei.com> <CAGXu5jK25XvX4vSODg7rkdBPj_FzveUSODFUKu1=KatmKhFVzg@mail.gmail.com>
+ <138740ab-ba0b-053c-d5b9-a71d6a5c7187@huawei.com> <CAGXu5jKEmEzAFssmBu2=kJvXikTZ12CF4f8gQy+7UBh8F24PAw@mail.gmail.com>
+ <CAFUG7Cen=g4PbDHmkNOqDdTOWWDEx_UTS2gk75_ub=63DQqpJA@mail.gmail.com>
+From: Kees Cook <keescook@google.com>
+Date: Sun, 28 May 2017 14:32:24 -0700
+Message-ID: <CAGXu5j++h=a57hNAR-23NMcjXeysqbtHmc1P=K94-D4VNgVSYg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2] LSM: Convert security_hook_heads into explicit array
- of struct list_head
-To: Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>
-Cc: linux-security-module <linux-security-module@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Casey Schaufler <casey@schaufler-ca.com>, Christoph Hellwig <hch@infradead.org>, Igor Stoppa <igor.stoppa@huawei.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>
+Subject: Re: [kernel-hardening] Re: [PATCH 1/1] Sealable memory support
+To: Boris Lukashev <blukashev@sempervictus.com>
+Cc: Igor Stoppa <igor.stoppa@huawei.com>, Casey Schaufler <casey@schaufler-ca.com>, Michal Hocko <mhocko@kernel.org>, Dave Hansen <dave.hansen@intel.com>, Laura Abbott <labbott@redhat.com>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Daniel Micay <danielmicay@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, James Morris <james.l.morris@oracle.com>, Stephen Smalley <sds@tycho.nsa.gov>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, May 28, 2017 at 1:29 PM, Tetsuo Handa
-<penguin-kernel@i-love.sakura.ne.jp> wrote:
-> Commit 3dfc9b02864b19f4 ("LSM: Initialize security_hook_heads upon
-> registration.") treats "struct security_hook_heads" as an implicit array
-> of "struct list_head" so that we can eliminate code for static
-> initialization. Although we haven't encountered compilers which do not
-> treat sizeof(security_hook_heads) != sizeof(struct list_head) *
-> (sizeof(security_hook_heads) / sizeof(struct list_head)), Casey does not
-> like the assumption that a structure of N elements can be assumed to be
-> the same as an array of N elements.
->
-> Now that Kees found that randstruct complains about such casting
->
->   security/security.c: In function 'security_init':
->   security/security.c:59:20: note: found mismatched op0 struct pointer types: 'struct list_head' and 'struct security_hook_heads'
->
->     struct list_head *list = (struct list_head *) &security_hook_heads;
->
-> and Christoph thinks that we should fix it rather than make randstruct
-> whitelist it, this patch fixes it.
->
-> It would be possible to revert commit 3dfc9b02864b19f4, but this patch
-> converts security_hook_heads into an explicit array of struct list_head
-> by introducing an enum, due to reasons explained below.
->
-> Igor proposed a sealable memory allocator, and the LSM hooks
-> ("struct security_hook_heads security_hook_heads" and
-> "struct security_hook_list ...[]") will benefit from that allocator via
-> protection using set_memory_ro()/set_memory_rw(), and that allocator
-> will remove CONFIG_SECURITY_WRITABLE_HOOKS config option. Thus, we will
-> likely be moving to that direction.
->
-> This means that these structures will be allocated at run time using
-> that allocator, and therefore the address of these structures will be
-> determined at run time rather than compile time.
->
-> But currently, LSM_HOOK_INIT() macro depends on the address of
-> security_hook_heads being known at compile time. If we use an enum
-> so that LSM_HOOK_INIT() macro does not need to know absolute address of
-> security_hook_heads, it will help us to use that allocator for LSM hooks.
->
-> As a result of introducing an enum, security_hook_heads becomes a local
-> variable. In order to pass 80 columns check by scripts/checkpatch.pl ,
-> rename security_hook_heads to hook_heads.
->
-> Signed-off-by: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Paul Moore <paul@paul-moore.com>
-> Cc: Stephen Smalley <sds@tycho.nsa.gov>
-> Cc: Casey Schaufler <casey@schaufler-ca.com>
-> Cc: James Morris <james.l.morris@oracle.com>
-> Cc: Igor Stoppa <igor.stoppa@huawei.com>
-> Cc: Christoph Hellwig <hch@infradead.org>
+On Sun, May 28, 2017 at 11:56 AM, Boris Lukashev
+<blukashev@sempervictus.com> wrote:
+> So what about a middle ground where CoW semantics are used to enforce
+> the state of these allocations as RO, but provide a strictly
+> controlled pathway to read the RO data, copy and modify it, then write
+> and seal into a new allocation. Successful return from this process
+> should permit the page table to change the pointer to where the object
+> now resides, and initiate freeing of the original memory so long as a
+> refcount is kept for accesses. That way, sealable memory is sealed,
+> and any consumers reading it will be using the original ptr to the
+> original smalloc region. Attackers who do manage to change the
 
-Looks good to me; thanks for persisting! :)
+This could be another way to do it, yeah, and it helps that smalloc()
+is built on vmalloc(). It'd require some careful design, but it could
+be a way forward after this initial sealed-after-init version goes in.
 
-Acked-by: Kees Cook <keescook@chromium.org>
+> Lastly, my meager understanding is that PAX set the entire kernel as
+> RO, and implemented writeable access via pax_open/close. How were they
+> fighting against race conditions, and what is the benefit of specific
+> regions being allocated this way as opposed to the RO-all-the-things
+> approach which makes writes a specialized set of operations?
+
+My understanding is that PaX's KERNEXEC with the constification plugin
+moves a substantial portion of the kernel's .data section
+(effectively) into the .rodata section. It's not the "entire" kernel.
+(Well, depending on how you count. The .text section is already
+read-only upstream.) PaX, as far as I know, provided no dynamic memory
+allocation protections, like smalloc() would provide.
+
+-Kees
 
 -- 
 Kees Cook
