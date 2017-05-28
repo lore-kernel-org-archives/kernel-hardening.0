@@ -1,44 +1,140 @@
-Date: Sun, 28 May 2017 00:56:54 -0700
+Date: Sun, 28 May 2017 01:12:49 -0700
 From: Christoph Hellwig <hch@infradead.org>
-Message-ID: <20170528075654.GC22193@infradead.org>
+Message-ID: <20170528081249.GD22193@infradead.org>
 References: <1495829844-69341-1-git-send-email-keescook@chromium.org>
- <1495829844-69341-7-git-send-email-keescook@chromium.org>
+ <1495829844-69341-8-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <1495829844-69341-7-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v2 06/20] randstruct: Whitelist UNIXCB cast
+In-Reply-To: <1495829844-69341-8-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v2 07/20] randstruct: Whitelist big_key path struct
+ overloading
 To: Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, Hannes Frederic Sowa <hannes@stressinduktion.org>, "Signed-off-by : David S . Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, David Howells <dhowells@redhat.com>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, May 26, 2017 at 01:17:10PM -0700, Kees Cook wrote:
-> This is another false positive in bad cast detection:
-> 
-> net/unix/af_unix.c: In function ‘unix_skb_scm_eq’:
-> net/unix/af_unix.c:1621:31: note: found mismatched rhs struct pointer types: ‘struct unix_skb_parms’ and ‘char’
-> 
->   const struct unix_skb_parms *u = &UNIXCB(skb);
->                                ^
-> 
-> UNIXCB is:
-> 
-> 	#define UNIXCB(skb)     (*(struct unix_skb_parms *)&((skb)->cb))
-> 
-> And ->cb is:
-> 
-> 	char                    cb[48] __aligned(8);
-> 
-> This is a rather crazy cast, but appears to be safe in the face of
-> randomization, so whitelist it in the plugin.
+What about the untested patch below to just fix the issue?
 
-We have a lot of network protocol that use the ->cb area, which makes me
-wonder why this one would be so special.
+---
+>From e9eb519c854d2f3d16a4def492577a883246e290 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Sun, 28 May 2017 11:03:34 +0300
+Subject: security/keys: don't cast union key_payload
 
-It seems like everyone is just using a plain cast to a pointer without
-doing the address taking trick that doesn't make sense for arrays
-anyway.
+Instead store the individual pointers in struct path.
 
-Maybe we just need to fix up the af_unix code to work the same as all
-other protocols?
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+---
+ security/keys/big_key.c | 35 ++++++++++++++++++++---------------
+ 1 file changed, 20 insertions(+), 15 deletions(-)
+
+diff --git a/security/keys/big_key.c b/security/keys/big_key.c
+index 835c1ab30d01..06f2cd07dbd7 100644
+--- a/security/keys/big_key.c
++++ b/security/keys/big_key.c
+@@ -26,8 +26,8 @@
+  */
+ enum {
+ 	big_key_data,
+-	big_key_path,
+-	big_key_path_2nd_part,
++	big_key_path_mnt,
++	big_key_path_dentry,
+ 	big_key_len,
+ };
+ 
+@@ -118,12 +118,16 @@ static int big_key_crypt(enum big_key_op op, u8 *data, size_t datalen, u8 *key)
+ 	return ret;
+ }
+ 
++#define PATH_FROM_PAYLOAD(p) {				\
++	.mnt	= (p)->data[big_key_path_mnt],		\
++	.dentry	= (p)->data[big_key_path_dentry],	\
++}
++
+ /*
+  * Preparse a big key
+  */
+ int big_key_preparse(struct key_preparsed_payload *prep)
+ {
+-	struct path *path = (struct path *)&prep->payload.data[big_key_path];
+ 	struct file *file;
+ 	u8 *enckey;
+ 	u8 *data = NULL;
+@@ -190,9 +194,10 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ 		/* Pin the mount and dentry to the key so that we can open it again
+ 		 * later
+ 		 */
++		path_get(&file->f_path);
+ 		prep->payload.data[big_key_data] = enckey;
+-		*path = file->f_path;
+-		path_get(path);
++		prep->payload.data[big_key_path_mnt] = file->f_path.mnt;
++		prep->payload.data[big_key_path_dentry] = file->f_path.dentry;
+ 		fput(file);
+ 		kfree(data);
+ 	} else {
+@@ -222,9 +227,9 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ void big_key_free_preparse(struct key_preparsed_payload *prep)
+ {
+ 	if (prep->datalen > BIG_KEY_FILE_THRESHOLD) {
+-		struct path *path = (struct path *)&prep->payload.data[big_key_path];
++		struct path path = PATH_FROM_PAYLOAD(&prep->payload);
+ 
+-		path_put(path);
++		path_put(&path);
+ 	}
+ 	kfree(prep->payload.data[big_key_data]);
+ }
+@@ -235,13 +240,13 @@ void big_key_free_preparse(struct key_preparsed_payload *prep)
+  */
+ void big_key_revoke(struct key *key)
+ {
+-	struct path *path = (struct path *)&key->payload.data[big_key_path];
++	struct path path = PATH_FROM_PAYLOAD(&key->payload);
+ 
+ 	/* clear the quota */
+ 	key_payload_reserve(key, 0);
+ 	if (key_is_instantiated(key) &&
+ 	    (size_t)key->payload.data[big_key_len] > BIG_KEY_FILE_THRESHOLD)
+-		vfs_truncate(path, 0);
++		vfs_truncate(&path, 0);
+ }
+ 
+ /*
+@@ -252,11 +257,11 @@ void big_key_destroy(struct key *key)
+ 	size_t datalen = (size_t)key->payload.data[big_key_len];
+ 
+ 	if (datalen > BIG_KEY_FILE_THRESHOLD) {
+-		struct path *path = (struct path *)&key->payload.data[big_key_path];
++		struct path path = PATH_FROM_PAYLOAD(&key->payload);
+ 
+-		path_put(path);
+-		path->mnt = NULL;
+-		path->dentry = NULL;
++		path_put(&path);
++		key->payload.data[big_key_path_mnt] = NULL;
++		key->payload.data[big_key_path_dentry] = NULL;
+ 	}
+ 	kfree(key->payload.data[big_key_data]);
+ 	key->payload.data[big_key_data] = NULL;
+@@ -290,7 +295,7 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
+ 		return datalen;
+ 
+ 	if (datalen > BIG_KEY_FILE_THRESHOLD) {
+-		struct path *path = (struct path *)&key->payload.data[big_key_path];
++		struct path path = PATH_FROM_PAYLOAD(&key->payload);
+ 		struct file *file;
+ 		u8 *data;
+ 		u8 *enckey = (u8 *)key->payload.data[big_key_data];
+@@ -300,7 +305,7 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
+ 		if (!data)
+ 			return -ENOMEM;
+ 
+-		file = dentry_open(path, O_RDONLY, current_cred());
++		file = dentry_open(&path, O_RDONLY, current_cred());
+ 		if (IS_ERR(file)) {
+ 			ret = PTR_ERR(file);
+ 			goto error;
+-- 
+2.11.0
