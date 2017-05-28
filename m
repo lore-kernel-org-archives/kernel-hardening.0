@@ -1,140 +1,31 @@
-Date: Sun, 28 May 2017 01:12:49 -0700
+Date: Sun, 28 May 2017 01:15:41 -0700
 From: Christoph Hellwig <hch@infradead.org>
-Message-ID: <20170528081249.GD22193@infradead.org>
+Message-ID: <20170528081541.GE22193@infradead.org>
 References: <1495829844-69341-1-git-send-email-keescook@chromium.org>
- <1495829844-69341-8-git-send-email-keescook@chromium.org>
+ <1495829844-69341-9-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <1495829844-69341-8-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v2 07/20] randstruct: Whitelist big_key path struct
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <1495829844-69341-9-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v2 08/20] randstruct: Whitelist NIU struct page
  overloading
 To: Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, David Howells <dhowells@redhat.com>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, "David S . Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-What about the untested patch below to just fix the issue?
+On Fri, May 26, 2017 at 01:17:12PM -0700, Kees Cook wrote:
+> The NIU ethernet driver intentionally stores a page struct pointer on
+> top of the "mapping" field. Whitelist this case:
+> 
+> drivers/net/ethernet/sun/niu.c: In function ‘niu_rx_pkt_ignore’:
+> drivers/net/ethernet/sun/niu.c:3402:10: note: found mismatched ssa struct pointer types: ‘struct page’ and ‘struct address_space’
+> 
+>     *link = (struct page *) page->mapping;
+>     ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+> 
+> Cc: David S. Miller <davem@davemloft.net>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
----
->From e9eb519c854d2f3d16a4def492577a883246e290 Mon Sep 17 00:00:00 2001
-From: Christoph Hellwig <hch@lst.de>
-Date: Sun, 28 May 2017 11:03:34 +0300
-Subject: security/keys: don't cast union key_payload
-
-Instead store the individual pointers in struct path.
-
-Signed-off-by: Christoph Hellwig <hch@lst.de>
----
- security/keys/big_key.c | 35 ++++++++++++++++++++---------------
- 1 file changed, 20 insertions(+), 15 deletions(-)
-
-diff --git a/security/keys/big_key.c b/security/keys/big_key.c
-index 835c1ab30d01..06f2cd07dbd7 100644
---- a/security/keys/big_key.c
-+++ b/security/keys/big_key.c
-@@ -26,8 +26,8 @@
-  */
- enum {
- 	big_key_data,
--	big_key_path,
--	big_key_path_2nd_part,
-+	big_key_path_mnt,
-+	big_key_path_dentry,
- 	big_key_len,
- };
- 
-@@ -118,12 +118,16 @@ static int big_key_crypt(enum big_key_op op, u8 *data, size_t datalen, u8 *key)
- 	return ret;
- }
- 
-+#define PATH_FROM_PAYLOAD(p) {				\
-+	.mnt	= (p)->data[big_key_path_mnt],		\
-+	.dentry	= (p)->data[big_key_path_dentry],	\
-+}
-+
- /*
-  * Preparse a big key
-  */
- int big_key_preparse(struct key_preparsed_payload *prep)
- {
--	struct path *path = (struct path *)&prep->payload.data[big_key_path];
- 	struct file *file;
- 	u8 *enckey;
- 	u8 *data = NULL;
-@@ -190,9 +194,10 @@ int big_key_preparse(struct key_preparsed_payload *prep)
- 		/* Pin the mount and dentry to the key so that we can open it again
- 		 * later
- 		 */
-+		path_get(&file->f_path);
- 		prep->payload.data[big_key_data] = enckey;
--		*path = file->f_path;
--		path_get(path);
-+		prep->payload.data[big_key_path_mnt] = file->f_path.mnt;
-+		prep->payload.data[big_key_path_dentry] = file->f_path.dentry;
- 		fput(file);
- 		kfree(data);
- 	} else {
-@@ -222,9 +227,9 @@ int big_key_preparse(struct key_preparsed_payload *prep)
- void big_key_free_preparse(struct key_preparsed_payload *prep)
- {
- 	if (prep->datalen > BIG_KEY_FILE_THRESHOLD) {
--		struct path *path = (struct path *)&prep->payload.data[big_key_path];
-+		struct path path = PATH_FROM_PAYLOAD(&prep->payload);
- 
--		path_put(path);
-+		path_put(&path);
- 	}
- 	kfree(prep->payload.data[big_key_data]);
- }
-@@ -235,13 +240,13 @@ void big_key_free_preparse(struct key_preparsed_payload *prep)
-  */
- void big_key_revoke(struct key *key)
- {
--	struct path *path = (struct path *)&key->payload.data[big_key_path];
-+	struct path path = PATH_FROM_PAYLOAD(&key->payload);
- 
- 	/* clear the quota */
- 	key_payload_reserve(key, 0);
- 	if (key_is_instantiated(key) &&
- 	    (size_t)key->payload.data[big_key_len] > BIG_KEY_FILE_THRESHOLD)
--		vfs_truncate(path, 0);
-+		vfs_truncate(&path, 0);
- }
- 
- /*
-@@ -252,11 +257,11 @@ void big_key_destroy(struct key *key)
- 	size_t datalen = (size_t)key->payload.data[big_key_len];
- 
- 	if (datalen > BIG_KEY_FILE_THRESHOLD) {
--		struct path *path = (struct path *)&key->payload.data[big_key_path];
-+		struct path path = PATH_FROM_PAYLOAD(&key->payload);
- 
--		path_put(path);
--		path->mnt = NULL;
--		path->dentry = NULL;
-+		path_put(&path);
-+		key->payload.data[big_key_path_mnt] = NULL;
-+		key->payload.data[big_key_path_dentry] = NULL;
- 	}
- 	kfree(key->payload.data[big_key_data]);
- 	key->payload.data[big_key_data] = NULL;
-@@ -290,7 +295,7 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
- 		return datalen;
- 
- 	if (datalen > BIG_KEY_FILE_THRESHOLD) {
--		struct path *path = (struct path *)&key->payload.data[big_key_path];
-+		struct path path = PATH_FROM_PAYLOAD(&key->payload);
- 		struct file *file;
- 		u8 *data;
- 		u8 *enckey = (u8 *)key->payload.data[big_key_data];
-@@ -300,7 +305,7 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
- 		if (!data)
- 			return -ENOMEM;
- 
--		file = dentry_open(path, O_RDONLY, current_cred());
-+		file = dentry_open(&path, O_RDONLY, current_cred());
- 		if (IS_ERR(file)) {
- 			ret = PTR_ERR(file);
- 			goto error;
--- 
-2.11.0
+The driver really needs to stop doing this anyway.  It would be good
+to send this out to linux-mm and netdev to come up with a better scheme.
