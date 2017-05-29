@@ -1,75 +1,69 @@
-Date: Mon, 29 May 2017 12:24:42 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20170529102442.gerbzxzixllen46q@hirez.programming.kicks-ass.net>
-References: <1487590189-18151-1-git-send-email-elena.reshetova@intel.com>
- <20170303162352.b6af1c0c3115b3f5f1e7aed3@linux-foundation.org>
- <CAGXu5jKNChaVdfbM171FYkvY1hUMXG6cp-=WAdXBP0eTOO5RAA@mail.gmail.com>
- <20170529083903.GA17735@infradead.org>
- <87h904xc26.fsf@xmission.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <87h904xc26.fsf@xmission.com>
-Subject: [kernel-hardening] Re: [PATCH 0/3] ipc subsystem refcounter conversions
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: Christoph Hellwig <hch@infradead.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Elena Reshetova <elena.reshetova@intel.com>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@redhat.com>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <20170519143344.GA15983@mail.hallyn.com>
+References: <20170515215752.4e9f3826@alans-desktop> <CANA3KFU6Aor=NjdC49XpX=h29vSpeiDNn78en7sbZFosAcntGw@mail.gmail.com>
+ <5c5c9b06-d2ec-c2e5-3ea2-463f315428f6@nmatt.com> <CANA3KFUh6Q+Pq6Srh-dQv0gaRy4zUJAJcyGLYoDFH+MfTycp+A@mail.gmail.com>
+ <1a1730f3-5378-1ce5-77a9-b9bc8cd5c90b@nmatt.com> <CAGXu5jJrEw1WOGniTV4Jhv_mO2zHxmXJqpzUs7BOUJNpCU1MNg@mail.gmail.com>
+ <20170517174113.69d1cbaa@alans-desktop> <1495045540.1619.1.camel@gmail.com>
+ <CAGXu5jL9GUyVYf3d+13UE7UHd+CvUzVwasyCfUmF+ykaY5rpOQ@mail.gmail.com>
+ <CANA3KFWF-=6AWZKAc1ijyoL5vRAwPnwngZZEP9=5+AFgnMv1rg@mail.gmail.com> <20170519143344.GA15983@mail.hallyn.com>
+From: Peter Dolding <oiaohm@gmail.com>
+Date: Mon, 29 May 2017 20:42:19 +1000
+Message-ID: <CANA3KFXVzSXuA4Cocm7fUYE9EOvJX7pW0bsj=cgyUYvScUsXGQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: [PATCH v6 0/2] security: tty: make TIOCSTI
+ ioctl require CAP_SYS_ADMIN
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Kees Cook <keescook@chromium.org>, Daniel Micay <danielmicay@gmail.com>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>, Matt Brown <matt@nmatt.com>, Greg KH <gregkh@linuxfoundation.org>, Jiri Slaby <jslaby@suse.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, James Morris <jmorris@namei.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 29, 2017 at 04:11:13AM -0500, Eric W. Biederman wrote:
+On Sat, May 20, 2017 at 12:33 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> On Fri, May 19, 2017 at 12:48:17PM +1000, Peter Dolding wrote:
+>> Using cap_sys_admin as fix is like removing car windsheld because
+>> vision is being blocked by a rock hitting it.
+>
+> Nonsense.  If the application has cap_sys_admin then it is less contained and
+> more trusted anyway.  If I went to the trouble to run an application in a
+> private user namespace (where it can have cap_sys_admin, but not targeted
+> at my tty) then it should be more contained.  That's the point of targeted
+> capabilities.
 
-> Kees I I have a concern:
-> 
-> __must_check bool refcount_add_not_zero(unsigned int i, refcount_t *r)
-> {
->         unsigned int new, val = atomic_read(&r->refs);
-> 
->         do {
->                 if (!val)
->                         return false;
-> 
->                 if (unlikely(val == UINT_MAX))
->                         return true;
-> 
->                 new = val + i;
->                 if (new < val)
->                         new = UINT_MAX;
-> 
->         } while (!atomic_try_cmpxchg_relaxed(&r->refs, &val, new));
-> 
->         WARN_ONCE(new == UINT_MAX, "refcount_t: saturated; leaking memory.\n");
-> 
->         return true;
-> }
-> 
-> Why in the world do you succeed when you the value saturates????
+The thing that is missed every time is how much is cap_sys_admin.
 
-Why not? On saturation the object will leak and returning a reference to
-it is always good.
+So you are saying a user namespace has to be set up to contain the defect.
 
-> From a code perspective that is bizarre.   The code already has to handle
-> the case when the counter does not increment.
+Really no application should have cap_sys_admin.
 
-I don't see it as bizarre, we turned an overflow/use-after-free into a
-leak. That's the primary mechanism here.
+The theory of capabilities is that security should be broken down into
+logical blocks.
 
-As long as we have a reference to a leaked object, we might as well use
-it, its not going anywhere.
+So tty stuff should under a tty capabilities.
 
-> Fixing the return value would move refcount_t into the realm of
-> something that is desirable because it has bettern semantics and
-> is more useful just on a day to day correctness point of view.  Even
-> ignoring the security implications.
+This one here should not be shoved into cap_sys_admin because can you
+show a single case of a general used application performing this
+action in the exploit way that is normal behaviour.
 
-It changes the semantics between inc_not_zero() and inc(). It also
-complicates the semantics of inc_not_zero(), where currently the failure
-implies the count is 0 and means no-such-object, you complicate matters
-by basically returning 'busy'.
+The exploits are doing behaviours that have no general place.
 
-That is a completely new class of failure that is actually hard to deal
-with, not to mention that it completely destroys refcount_inc_not_zero()
-being a 'simple' replacement for atomic_inc_not_zero().
+Its really simple to shove everything to cap_sys_admin instead of hey
+lets look at the exploits how they work and if this should be fairly
+blanked banned.  The behaviour that is question is being able push
+chars into input stream and have them processed after application has
+terminated or after application has switched to background.   That is
+not pushing data into another tty.   Pushing data into a different tty
+is already restricted to cap_sys_admin.
 
-In case of the current failure, the no-such-object, we can fix that by
-creating said object. But what to do on 'busy' ? Surely you don't want
-to create another. You'd have to somehow retrofit something to wait on
-in every user.
+Personally from my point of view when application terminates or
+switches to background  what ever it pushed back into the input buffer
+should be junked and maybe a special cap to deal with rare case of
+applications that expect this behavour.
+
+Also please remember one of the application using this behaviour of
+pushing stuff back to input buffer is csh.  In other words a general
+user shell.   This will not be the only application that is general
+usage after the change of pushing to cap_sys_admin that would also
+have to be pushed to cap_sys_admin because they use TIOCSTI in a way
+that the patch will block when the program does not have
+cap_sys_admin.   So now you have more applications running as
+cap_sys_admin so more security problems.
+
+Peter Dolding.
