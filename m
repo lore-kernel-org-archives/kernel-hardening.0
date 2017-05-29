@@ -1,75 +1,88 @@
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <1487590189-18151-1-git-send-email-elena.reshetova@intel.com>
+	<20170303162352.b6af1c0c3115b3f5f1e7aed3@linux-foundation.org>
+	<CAGXu5jKNChaVdfbM171FYkvY1hUMXG6cp-=WAdXBP0eTOO5RAA@mail.gmail.com>
+	<20170529083903.GA17735@infradead.org>
+Date: Mon, 29 May 2017 04:11:13 -0500
+In-Reply-To: <20170529083903.GA17735@infradead.org> (Christoph Hellwig's
+	message of "Mon, 29 May 2017 01:39:04 -0700")
+Message-ID: <87h904xc26.fsf@xmission.com>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j++h=a57hNAR-23NMcjXeysqbtHmc1P=K94-D4VNgVSYg@mail.gmail.com>
-References: <20170519103811.2183-1-igor.stoppa@huawei.com> <20170519103811.2183-2-igor.stoppa@huawei.com>
- <CAGXu5j+3-CZpZ4Vj2fHH+0UPAa_jOdJQxHtrQ=F_FvvzWvE00Q@mail.gmail.com>
- <656b6465-16cd-ab0a-b439-ab5bea42006d@huawei.com> <CAGXu5jK25XvX4vSODg7rkdBPj_FzveUSODFUKu1=KatmKhFVzg@mail.gmail.com>
- <138740ab-ba0b-053c-d5b9-a71d6a5c7187@huawei.com> <CAGXu5jKEmEzAFssmBu2=kJvXikTZ12CF4f8gQy+7UBh8F24PAw@mail.gmail.com>
- <CAFUG7Cen=g4PbDHmkNOqDdTOWWDEx_UTS2gk75_ub=63DQqpJA@mail.gmail.com> <CAGXu5j++h=a57hNAR-23NMcjXeysqbtHmc1P=K94-D4VNgVSYg@mail.gmail.com>
-From: Boris Lukashev <blukashev@sempervictus.com>
-Date: Mon, 29 May 2017 02:04:10 -0400
-Message-ID: <CAFUG7Ce1t2upf4ZnOhSksjJQ_36WCF_wS8M=rcaY+DpBBKpWqA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCH 1/1] Sealable memory support
-To: Kees Cook <keescook@google.com>
-Cc: Igor Stoppa <igor.stoppa@huawei.com>, Casey Schaufler <casey@schaufler-ca.com>, Michal Hocko <mhocko@kernel.org>, Dave Hansen <dave.hansen@intel.com>, Laura Abbott <labbott@redhat.com>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Daniel Micay <danielmicay@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, James Morris <james.l.morris@oracle.com>, Stephen Smalley <sds@tycho.nsa.gov>
+Content-Type: text/plain
+Subject: [kernel-hardening] Re: [PATCH 0/3] ipc subsystem refcounter conversions
+To: Christoph Hellwig <hch@infradead.org>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Elena Reshetova <elena.reshetova@intel.com>, Peter Zijlstra <peterz@infradead.org>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@redhat.com>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-If i understand the current direction for smalloc, its to implement it
-without the ability to "unseal," which has implications on how LSM
-implementations and other users of these dynamic allocations handle
-things. If its implemented without a writeable interface for modules
-which need it, then switched to a CoW (or other
-controlled/isolated/hardened) mechanism for creating writeable
-segments in dynamic allocations, that would create another set of
-breaking changes for the consumers adapting to the first set. In the
-spirit of adopting things faster/smoother, maybe it makes sense to
-permit the smalloc re-writing method suggested in the first
-implementation; with an API which consumers can later use for a more
-secure approach that reduces the attack surface without breaking
-consumer interfaces (or internal semantics). A sysctl affecting the
-behavior as ro-only or ro-and-sometimes-rw would give users the
-flexibility to tune their environment per their needs, which should
-also reduce potential conflict/complaints.
+Christoph Hellwig <hch@infradead.org> writes:
 
-On Sun, May 28, 2017 at 5:32 PM, Kees Cook <keescook@google.com> wrote:
-> On Sun, May 28, 2017 at 11:56 AM, Boris Lukashev
-> <blukashev@sempervictus.com> wrote:
->> So what about a middle ground where CoW semantics are used to enforce
->> the state of these allocations as RO, but provide a strictly
->> controlled pathway to read the RO data, copy and modify it, then write
->> and seal into a new allocation. Successful return from this process
->> should permit the page table to change the pointer to where the object
->> now resides, and initiate freeing of the original memory so long as a
->> refcount is kept for accesses. That way, sealable memory is sealed,
->> and any consumers reading it will be using the original ptr to the
->> original smalloc region. Attackers who do manage to change the
+> On Sat, May 27, 2017 at 12:58:14PM -0700, Kees Cook wrote:
+>> FAST_REFCOUNT=n: use function-based refcount_t with cmpxvhg and
+>> full-verification
+>> FAST_REFCOUNT=y without arch-specific implementation: use atomic_t
+>> with no verification (i.e. no functional change from now)
+>> FAST_REFCOUNT=y with arch-specific implementation: use atomic_t with
+>> overflow protection
+>> 
+>> which means FAST_REFCOUNT would need to be default-on so that mm,
+>> block, net users will remain happy.
+>> 
+>> Does that sound reasonable?
 >
-> This could be another way to do it, yeah, and it helps that smalloc()
-> is built on vmalloc(). It'd require some careful design, but it could
-> be a way forward after this initial sealed-after-init version goes in.
->
->> Lastly, my meager understanding is that PAX set the entire kernel as
->> RO, and implemented writeable access via pax_open/close. How were they
->> fighting against race conditions, and what is the benefit of specific
->> regions being allocated this way as opposed to the RO-all-the-things
->> approach which makes writes a specialized set of operations?
->
-> My understanding is that PaX's KERNEXEC with the constification plugin
-> moves a substantial portion of the kernel's .data section
-> (effectively) into the .rodata section. It's not the "entire" kernel.
-> (Well, depending on how you count. The .text section is already
-> read-only upstream.) PaX, as far as I know, provided no dynamic memory
-> allocation protections, like smalloc() would provide.
->
-> -Kees
->
-> --
-> Kees Cook
-> Pixel Security
+> I'd rather turn the options around so that the atomic_t or fast
+> arch implementations are the defaul.  But either way it needs to
+> be configurable.  Once that is done we can spread refcount_t everywhere
+> and everyone will be better off, if only for the documentation value
+> of the type when they use the atomic_t based implementation.
 
+Agreed on the opposite default as opting into common library
+implementations is how we typically handle things in linux.
 
+Kees I I have a concern:
 
--- 
-Boris Lukashev
-Systems Architect
-Semper Victus
+__must_check bool refcount_add_not_zero(unsigned int i, refcount_t *r)
+{
+        unsigned int new, val = atomic_read(&r->refs);
+
+        do {
+                if (!val)
+                        return false;
+
+                if (unlikely(val == UINT_MAX))
+                        return true;
+
+                new = val + i;
+                if (new < val)
+                        new = UINT_MAX;
+
+        } while (!atomic_try_cmpxchg_relaxed(&r->refs, &val, new));
+
+        WARN_ONCE(new == UINT_MAX, "refcount_t: saturated; leaking memory.\n");
+
+        return true;
+}
+
+Why in the world do you succeed when you the value saturates????
+
+>From a code perspective that is bizarre.   The code already has to handle
+the case when the counter does not increment.
+
+So since we already have to have that code to handle the failure to
+increment I think it would make much more sense if the counters did not
+only saturate but report failure when the counter can not increment.
+
+Right now I am inclined to NACK refcount_t conversions because their
+semantics don't make sense.  Which would seem to make the code less
+correct by introducing bizarre corner cases instead of letting the code
+use the it's existing handling of the failure to increment or decrement
+the counter.
+
+Fixing the return value would move refcount_t into the realm of
+something that is desirable because it has bettern semantics and
+is more useful just on a day to day correctness point of view.  Even
+ignoring the security implications.
+
+I suspect that would also make it easier for refcount_t implementations
+to produce efficient code.
+
+Eric
