@@ -1,230 +1,101 @@
-MIME-Version: 1.0
-In-Reply-To: <CAEiveUeZhHtPyLv8=3BsPh5Anr2ynnzD0bprUkeKUGygtRQKsw@mail.gmail.com>
-References: <1495454226-10027-1-git-send-email-tixxdz@gmail.com>
- <1495454226-10027-2-git-send-email-tixxdz@gmail.com> <CAGXu5jL9jRDkHj20kf4O6VrjiEpvXGzN3nn5Lw4fT2sx_Xg=+A@mail.gmail.com>
- <CAEiveUe5cTCet6=Uzn64YANRZ2Qyqk5OSXqU3MybevbkbeNR3Q@mail.gmail.com>
- <CAGXu5j+L1aEWqi7DC4StwAorfG4da0XqrouMvbz07cJ7gYi0AQ@mail.gmail.com> <CAEiveUeZhHtPyLv8=3BsPh5Anr2ynnzD0bprUkeKUGygtRQKsw@mail.gmail.com>
-From: Kees Cook <keescook@google.com>
-Date: Tue, 30 May 2017 10:59:06 -0700
-Message-ID: <CAGXu5jK5exWBV+ub8ys86Ubu1vKwN=miOZxwp3zdWaWEfuJddQ@mail.gmail.com>
+Message-ID: <1496169122.2164.21.camel@tycho.nsa.gov>
+From: Stephen Smalley <sds@tycho.nsa.gov>
+Date: Tue, 30 May 2017 14:32:02 -0400
+In-Reply-To: <2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
+References: <20170529213800.29438-1-matt@nmatt.com>
+	 <20170529213800.29438-3-matt@nmatt.com>
+	 <20170529232640.16211960@alans-desktop>
+	 <CAFUG7CdDd0Yfegb1S6_wNQzje4EuLE0jPdvOE=uSQL152meyjQ@mail.gmail.com>
+	 <3738951f-7a4a-b37f-c695-21a2fcd45f76@schaufler-ca.com>
+	 <0e078ce7-5b62-f27c-3920-efc2ffdf342b@nmatt.com>
+	 <b0a29f23-4154-8f2f-98e7-0942612f0cdc@schaufler-ca.com>
+	 <e1c9e4e8-5427-b4b6-aad2-72c88552a6af@nmatt.com>
+	 <20170530132427.016053da@alans-desktop>
+	 <2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v4 next 1/3] modules:capabilities: allow
- __request_module() to take a capability argument
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: "Serge E. Hallyn" <serge@hallyn.com>, Rusty Russell <rusty@rustcorp.com.au>, "David S . Miller" <davem@davemloft.net>, Jessica Yu <jeyu@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Ingo Molnar <mingo@kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, Jonathan Corbet <corbet@lwn.net>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Zendyani <zendyani@gmail.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Ben Hutchings <ben.hutchings@codethink.co.uk>
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make
+ TIOCSTI ioctl require CAP_SYS_ADMIN
+To: Matt Brown <matt@nmatt.com>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+Cc: Casey Schaufler <casey@schaufler-ca.com>, Boris Lukashev <blukashev@sempervictus.com>, Greg KH <gregkh@linuxfoundation.org>, "Serge
+ E. Hallyn" <serge@hallyn.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 24, 2017 at 7:16 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
-> On Tue, May 23, 2017 at 9:19 PM, Kees Cook <keescook@google.com> wrote:
->> On Tue, May 23, 2017 at 3:29 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
->> Even in the existing code, there is a sense about CAP_NET_ADMIN and
->> CAP_SYS_MODULE having different privilege levels, in that
->> CAP_NET_ADMIN can only load netdev-%s modules, but CAP_SYS_MODULE can
->> load any module. What about refining request_module_cap() to _require_
->> an explicit string prefix instead of an arbitrary format string? e.g.
->> request_module_cap(CAP_NET_ADMIN, "netdev", "%s", name) which would
->> make requests for ("netdev-%s", name)
->>
->> I see a few options:
->>
->> 1) keep what you have for v4, and hope other places don't use
->> __request_module. (I'm not a fan of this.)
->
-> Yes even if it is documented I wouldn't bet on it, though. :-)
+On Tue, 2017-05-30 at 12:28 -0400, Matt Brown wrote:
+> On 5/30/17 8:24 AM, Alan Cox wrote:
+> > Look there are two problems here
+> > 
+> > 1. TIOCSTI has users
+> 
+> I don't see how this is a problem.
+> 
+> > 
+> > 2. You don't actually fix anything
+> > 
+> > The underlying problem is that if you give your tty handle to
+> > another
+> > process which you don't trust you are screwed. It's fundamental to
+> > the
+> > design of the Unix tty model and it's made worse in Linux by the
+> > fact
+> > that we use the tty descriptor to access all sorts of other console
+> > state
+> > (which makes a ton of sense).
+> > 
+> > Many years ago a few people got this wrong. All those apps got
+> > fixes back
+> > then. They allocate a tty/pty pair and create a new session over
+> > that.
+> > The potentially hostile other app only gets to screw itself.
+> > 
+> 
+> Many years ago? We already got one in 2017, as well as a bunch last
+> year.
+> See: https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=tiocsti
+> 
+> > If it was only about TIOCSTI then your patch would still not make
+> > sense
+> > because you could use on of the existing LSMs to actually write
+> > yourself
+> > some rules about who can and can't use TIOCSTI. For that matter you
+> > can
+> > even use the seccomp feature today to do this without touching your
+> > kernel because the ioctl number is a value so you can just block
+> > ioctl
+> > with argument 2 of TIOCSTI.
+> > 
+> 
+> Seccomp requires the program in question to "opt-in" so to speak and
+> set
+> certain restrictions on itself. However as you state above, any
+> TIOCSTI
+> protection doesn't matter if the program correctly allocates a
+> tty/pty pair.
+> This protections seeks to protect users from programs that don't do
+> things
+> correctly. Rather than killing bugs, this feature attempts to kill an
+> entire
+> bug class that shows little sign of slowing down in the world of
+> containers and
+> sandboxes.
 
-Okay, we seem to agree: we'll not use #1.
+Just FYI, you can also restrict TIOCSTI (or any other ioctl command)
+via SELinux ioctl whitelisting, and Android is using that feature to
+restrict TIOCSTI usage in Android O (at least based on the developer
+previews to date, also in AOSP master).
 
->> 2) switch the logic on autoload==1 from OR to AND: both the specified
->> caps _and_ CAP_SYS_MODULE are required. (This seems like it might make
->> autoload==1 less useful.)
->
-> That will restrict some userspace that works only with CAP_NET_ADMIN.
-
-Nor #2.
-
->> 3) use the request_module_cap() outlined above, which requires that
->> modules being loaded under a CAP_SYS_MODULE-aliased capability are at
->> least restricted to a subset of kernel module names.
->
-> This one tends to allow usability.
-
-Right, discussed below...
-
->> 4) same as 3 but also insert autoload==2 level that switches from OR
->> to AND (bumping existing ==2 to ==3).
->
-> I wouldn't expose autoload to callers, I think it is better if it
-> stays a property of the module subsystem. But lets use the bump idea,
-> please see below.
-
-If we can't agree below, I think #4 would be a good way to allow for
-both states.
-
->> What do you think?
->
-> Ok so given that we already have modules_autoload_mode=2 disabled,
-> maybe we go with 3)  like this ?
->
-> int __request_module(bool wait, int required_cap, const char *prefix,
-> const char *name, ...);
-> #define request_module(mod...) \
->         __request_module(true, -1, NULL, mod)
-> #define request_module_cap(required_cap, prefix, mod...) \
->         __request_module(true, required_cap, prefix, mod)
->
-> and we require allow_cap and prefix to be set.
->
-> request_module_cap(CAP_NET_ADMIN, "netdev-", "%s", name) for
-> net/core/dev_ioctl.c:dev_load()
->
-> request_module_cap(CAP_NET_ADMIN, "tcp_", "%s", name) for
-> net/ipv4/tcp_cong.c  functions.
->
->
-> Then
-> __request_module()
->   -> security_kernel_module_request(module_name, required_cap, prefix)
->      -> may_autoload_module(current, module_name, required_cap, prefix)
->
->
-> And update may_autoload_module() as below ? we hard code CAP_NET_ADMIN
-> and CAP_SYS_MODULE inside and make them the only capabilities needed
-> for a privileged auto-load operation.
-
-I still think making a specific exception for CAP_NET_ADMIN is not the
-right solution, instead allowing for non-CAP_SYS_MODULE caps when
-using a distinct prefix.
-
-> request_module_cap(CAP_SYS_MODULE, ...) or
-> request_module_cap(CAP_NET_ADMIN, ...) if the autoload should be a
-> privileged operation.
->
-> Kees will this work ?
->
-> Jessica,  Rusty,  Serge. What do you think ? I definitively think that
-> module_autoload should be contained only inside the module subsystem..
-
-I'd change it like this:
-
-> +int may_autoload_module(struct task_struct *task, char *kmod_name,
-> +                       int require_cap, char *prefix)
-> +{
-> +       unsigned int autoload;
-> +       int module_require_cap = 0;
-
-I'd initialize this to module_require_cap = CAP_SYS_MODULE;
-
-> +
-> +       if (require_cap > 0) {
-> +               if (prefix == NULL || *prefix == '\0')
-> +                       return -EPERM;
-
-Since an unprefixed module load should only be CAP_SYS_MODULE, change
-the above "if" to:
-
-    if (require_cap > 0 && prefix != NULL && *prefix != '\0')
-
-> +
-> +               /*
-> +                * We only allow CAP_SYS_MODULE or CAP_NET_ADMIN for
-> +                * 'netdev-%s' modules for backward compatibility.
-> +                * Please do not overload capabilities.
-> +                */
-> +               if (require_cap == CAP_SYS_MODULE ||
-> +                   require_cap == CAP_NET_ADMIN)
-> +                       module_require_cap = require_cap;
-> +               else
-> +                       return -EPERM;
-> +       }
-
-And then drop all these checks, leaving only:
-
-        module_require_cap = require_cap;
-
-> +
-> +       /* Get max value of sysctl and task "modules_autoload_mode" */
-> +       autoload = max_t(unsigned int, modules_autoload_mode,
-> +                        task->modules_autoload_mode);
-> +
-> +       /*
-> +        * If autoload is disabled then fail here and not bother at all
-> +        */
-> +       if (autoload == MODULES_AUTOLOAD_DISABLED)
-> +               return -EPERM;
-> +
-> +       /*
-> +        * If caller require capabilities then we may not allow
-> +        * automatic module loading. We should not bypass callers.
-> +        * This allows to support networking code that uses CAP_NET_ADMIN
-> +        * for some aliased 'netdev-%s' modules.
-> +        *
-> +        * Explicitly bump autoload here if necessary
-> +        */
-> +       if (module_require_cap && autoload == MODULES_AUTOLOAD_ALLOWED)
-> +               autoload = MODULES_AUTOLOAD_PRIVILEGED;
-
-I don't see a reason to bump the autoload level.
-
-> +
-> +       if (autoload == MODULES_AUTOLOAD_ALLOWED)
-> +               return 0;
-
-This test can be moved to above the AUTOLOAD_DISABLED test.
-
-> +       else if(autoload == MODULES_AUTOLOAD_PRIVILEGED) {
-> +               /*
-> +                * If module auto-load is a privileged operation then check
-> +                * if capabilities are set.
-> +                */
-> +               if (capable(CAP_SYS_MODULE) ||
-> +                   (module_require_cap && capable(module_require_cap)))
-> +                       return 0;
-> +       }
-
-This test could drop the explicit CAP_SYS_MODULE test and just rely on
-module_require_cap.
-
-> +
-> +       return -EPERM;
-> +}
-> +
-
-So, I would suggest:
-
-int may_autoload_module(struct task_struct *task, char *kmod_name,
-                       int require_cap, char *prefix)
-{
-        unsigned int autoload;
-        int module_require_cap;
-
-        if (autoload == MODULES_AUTOLOAD_DISABLED)
-                return -EPERM;
-
-        /* Get max value of sysctl and task "modules_autoload_mode" */
-        autoload = max_t(unsigned int, modules_autoload_mode,
-                        task->modules_autoload_mode);
-
-        if (autoload == MODULES_AUTOLOAD_ALLOWED)
-                return 0;
-
-        /*
-         * It should be impossible for autoload to have any other
-         * value at this point, so explicitly reject all other states.
-         */
-        if (autoload != MODULES_AUTOLOAD_PRIVILEGED)
-                return -EPERM;
-
-        /* Verify that alternate capabilities requirements had a prefix. */
-        if (require_cap > 0 && prefix != NULL && *prefix != '\0')
-                module_require_cap = require_cap;
-        else
-                module_require_cap = CAP_SYS_MODULE;
-
-        return capable(module_require_cap);
-}
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+> 
+> > So please explain why we need an obscure kernel config option that
+> > normal
+> > users will not understand which protects against nothing and can be
+> > done already ?
+> > 
+> > Alan
+> > 
+> 
+> --
+> To unsubscribe from this list: send the line "unsubscribe linux-
+> security-module" in
+> the body of a message to majordomo@vger.kernel.org
+> More majordomo info at  http://vger.kernel.org/majordomo-info.html
