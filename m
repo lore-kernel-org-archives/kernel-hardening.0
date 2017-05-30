@@ -1,41 +1,63 @@
-Date: Tue, 30 May 2017 16:25:50 +0100
-From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
-Message-ID: <20170530162550.19ba1811@alans-desktop>
-In-Reply-To: <201705302329.IEB05735.FLJOFHSQVtOOFM@I-love.SAKURA.ne.jp>
-References: <1495883858-3336-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp>
-	<CAGXu5jJ045iaDfoW+2dXU+U-KhfnNH1WX5ngUW9dHyS5Yn3EGg@mail.gmail.com>
-	<201705281026.EHD04622.HJFOLQFMSOtFOV@I-love.SAKURA.ne.jp>
-	<alpine.LRH.2.20.1705302021090.31018@namei.org>
-	<201705302329.IEB05735.FLJOFHSQVtOOFM@I-love.SAKURA.ne.jp>
+Date: Tue, 30 May 2017 10:52:35 -0500
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20170530155235.GA11861@mail.hallyn.com>
+References: <5c5c9b06-d2ec-c2e5-3ea2-463f315428f6@nmatt.com>
+ <CANA3KFUh6Q+Pq6Srh-dQv0gaRy4zUJAJcyGLYoDFH+MfTycp+A@mail.gmail.com>
+ <1a1730f3-5378-1ce5-77a9-b9bc8cd5c90b@nmatt.com>
+ <CAGXu5jJrEw1WOGniTV4Jhv_mO2zHxmXJqpzUs7BOUJNpCU1MNg@mail.gmail.com>
+ <20170517174113.69d1cbaa@alans-desktop>
+ <1495045540.1619.1.camel@gmail.com>
+ <CAGXu5jL9GUyVYf3d+13UE7UHd+CvUzVwasyCfUmF+ykaY5rpOQ@mail.gmail.com>
+ <CANA3KFWF-=6AWZKAc1ijyoL5vRAwPnwngZZEP9=5+AFgnMv1rg@mail.gmail.com>
+ <20170519143344.GA15983@mail.hallyn.com>
+ <CANA3KFXVzSXuA4Cocm7fUYE9EOvJX7pW0bsj=cgyUYvScUsXGQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] LSM: Convert security_hook_heads into explicit array of
- struct list_head
-To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-Cc: jmorris@namei.org, keescook@chromium.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, casey@schaufler-ca.com, hch@infradead.org, igor.stoppa@huawei.com, james.l.morris@oracle.com, paul@paul-moore.com, sds@tycho.nsa.gov
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CANA3KFXVzSXuA4Cocm7fUYE9EOvJX7pW0bsj=cgyUYvScUsXGQ@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v6 0/2] security: tty: make
+ TIOCSTI ioctl require CAP_SYS_ADMIN
+To: Peter Dolding <oiaohm@gmail.com>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>, Kees Cook <keescook@chromium.org>, Daniel Micay <danielmicay@gmail.com>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>, Matt Brown <matt@nmatt.com>, Greg KH <gregkh@linuxfoundation.org>, Jiri Slaby <jslaby@suse.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, James Morris <jmorris@namei.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 30 May 2017 23:29:10 +0900
-Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp> wrote:
-
-> James Morris wrote:
-> > On Sun, 28 May 2017, Tetsuo Handa wrote:
-> >   
-> > > can afford enabling". And we know that we cannot merge all security modules
-> > > into mainline. Thus, allowing LKM-based LSM modules is inevitable.  
-> > 
-> > Nope, it's not inevitable.  The LSM API only caters to in-tree users.
-> > 
-> > I'm not sure why you persist against this.  
+Quoting Peter Dolding (oiaohm@gmail.com):
+> On Sat, May 20, 2017 at 12:33 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> > On Fri, May 19, 2017 at 12:48:17PM +1000, Peter Dolding wrote:
+> >> Using cap_sys_admin as fix is like removing car windsheld because
+> >> vision is being blocked by a rock hitting it.
+> >
+> > Nonsense.  If the application has cap_sys_admin then it is less contained and
+> > more trusted anyway.  If I went to the trouble to run an application in a
+> > private user namespace (where it can have cap_sys_admin, but not targeted
+> > at my tty) then it should be more contained.  That's the point of targeted
+> > capabilities.
 > 
-> Then, we are willing to accept LSM modules with users less than 10, aren't we?
+> The thing that is missed every time is how much is cap_sys_admin.
+> 
+> So you are saying a user namespace has to be set up to contain the defect.
+> 
+> Really no application should have cap_sys_admin.
+> 
+> The theory of capabilities is that security should be broken down into
+> logical blocks.
+> 
+> So tty stuff should under a tty capabilities.
 
-Why not if they are properly written and maintained. Historically we've
-supported an entire architecture that had one machine ever built. We
-supported a strange subclass of x86 machines for many years because James
-Bottomley cared enough to do the work. We still support M68K, PA-RISC and
-other stuff as well as plenty of hardware which probably has few users -
-providing it doesn't cause maintenance problems.
+(last reply on this)
 
-Alan
+Currently capabilities.7 says
+
+              * employ  the  TIOCSTI ioctl(2) to insert characters into the input queue of a
+                terminal other than the caller's controlling terminal;
+
+for CAP_SYS_ADMIN.
+
+So you can create a new CAP_SYS_TIOCSSTI if you like, and offer a patch where
+*both* CAP_SYS_ADMIN and CAP_SYS_ADMIN suffice.  Again, see CAP_SYSLOG for a
+prior example.
+
+What you may not do is change it so that on an older kernel you must have
+CAP_SYS_ADMIN to use TIOCSTI, while on a newer one it does not suffice.
+
+-serge
