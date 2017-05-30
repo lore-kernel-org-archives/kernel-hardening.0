@@ -1,53 +1,73 @@
-References: <20170529213800.29438-1-matt@nmatt.com>
- <20170529213800.29438-3-matt@nmatt.com>
- <20170529232640.16211960@alans-desktop>
- <CAFUG7CdDd0Yfegb1S6_wNQzje4EuLE0jPdvOE=uSQL152meyjQ@mail.gmail.com>
- <3738951f-7a4a-b37f-c695-21a2fcd45f76@schaufler-ca.com>
- <0e078ce7-5b62-f27c-3920-efc2ffdf342b@nmatt.com>
- <b0a29f23-4154-8f2f-98e7-0942612f0cdc@schaufler-ca.com>
- <e1c9e4e8-5427-b4b6-aad2-72c88552a6af@nmatt.com>
- <20170530132427.016053da@alans-desktop>
- <2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
- <1496169122.2164.21.camel@tycho.nsa.gov>
- <CAFJ0LnHKKccbr-LqHHaFX5UNB20DzqfWDhvR-NTpgPedtkg0RA@mail.gmail.com>
- <100b7d8c-7468-3122-4f59-3b0dcdf5dfc3@nmatt.com>
- <1496175757.9871.6.camel@gmail.com>
-From: Matt Brown <matt@nmatt.com>
-Message-ID: <99069e11-dc84-8198-5d1c-f39b18ac9971@nmatt.com>
-Date: Tue, 30 May 2017 19:00:09 -0400
+Date: Wed, 31 May 2017 09:06:04 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
+In-Reply-To: <20170530162550.19ba1811@alans-desktop>
+Message-ID: <alpine.LRH.2.20.1705310858430.6920@namei.org>
+References: <1495883858-3336-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp> <CAGXu5jJ045iaDfoW+2dXU+U-KhfnNH1WX5ngUW9dHyS5Yn3EGg@mail.gmail.com> <201705281026.EHD04622.HJFOLQFMSOtFOV@I-love.SAKURA.ne.jp> <alpine.LRH.2.20.1705302021090.31018@namei.org>
+ <201705302329.IEB05735.FLJOFHSQVtOOFM@I-love.SAKURA.ne.jp> <20170530162550.19ba1811@alans-desktop>
 MIME-Version: 1.0
-In-Reply-To: <1496175757.9871.6.camel@gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make TIOCSTI
- ioctl require CAP_SYS_ADMIN
-To: Daniel Micay <danielmicay@gmail.com>, Nick Kralevich <nnk@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>, Kees Cook <keescook@chromium.org>
-Cc: Casey Schaufler <casey@schaufler-ca.com>, Boris Lukashev <blukashev@sempervictus.com>, Greg KH <gregkh@linuxfoundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, kernel-hardening@lists.openwall.com, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
+Content-Type: multipart/mixed; BOUNDARY="1665246916-223913274-1496185566=:6920"
+Subject: [kernel-hardening] Re: [PATCH] LSM: Convert security_hook_heads into explicit array of
+ struct list_head
+To: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+Cc: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, keescook@chromium.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, casey@schaufler-ca.com, hch@infradead.org, igor.stoppa@huawei.com, james.l.morris@oracle.com, paul@paul-moore.com, sds@tycho.nsa.gov
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 5/30/17 4:22 PM, Daniel Micay wrote:
->> Thanks, I didn't know that android was doing this. I still think this
->> feature
->> is worthwhile for people to be able to harden their systems against
->> this attack
->> vector without having to implement a MAC.
-> 
-> Since there's a capable LSM hook for ioctl already, it means it could go
-> in Yama with ptrace_scope but core kernel code would still need to be
-> changed to track the owning tty. I think Yama vs. core kernel shouldn't
-> matter much anymore due to stackable LSMs.
-> 
+  This message is in MIME format.  The first part should be readable text,
+  while the remaining parts are likely unreadable without MIME-aware tools.
 
-What does everyone think about a v8 that moves this feature under Yama and uses
-the file_ioctl LSM hook?
+--1665246916-223913274-1496185566=:6920
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8BIT
 
-> Not the case for perf_event_paranoid=3 where a) there's already a sysctl
-> exposed which would be unfortunate to duplicate, b) there isn't an LSM
-> hook yet (AFAIK).
+On Tue, 30 May 2017, Alan Cox wrote:
+
+> On Tue, 30 May 2017 23:29:10 +0900
+> Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp> wrote:
 > 
-> The toggles for ptrace and perf events are more useful though since
-> they're very commonly used debugging features vs. this obscure, rarely
-> used ioctl that in practice no one will notice is missing. It's still
-> friendlier to have a toggle than a seccomp policy requiring a reboot to
-> get rid of it, or worse compiling it out of the kernel.
+> > James Morris wrote:
+> > > On Sun, 28 May 2017, Tetsuo Handa wrote:
+> > >   
+> > > > can afford enabling". And we know that we cannot merge all security modules
+> > > > into mainline. Thus, allowing LKM-based LSM modules is inevitable.  
+> > > 
+> > > Nope, it's not inevitable.  The LSM API only caters to in-tree users.
+> > > 
+> > > I'm not sure why you persist against this.  
+> > 
+> > Then, we are willing to accept LSM modules with users less than 10, aren't we?
 > 
+> Why not if they are properly written and maintained. Historically we've
+> supported an entire architecture that had one machine ever built. We
+> supported a strange subclass of x86 machines for many years because James
+> Bottomley cared enough to do the work. We still support M68K, PA-RISC and
+> other stuff as well as plenty of hardware which probably has few users -
+> providing it doesn't cause maintenance problems.
+
+This is what we as a community came up with in 2008:
+
+  "Essentially, any new security project—not limited to LSMs—should be 
+   accompanied by a clear and concise document outlining its requirements 
+   and expected uses. This is to allow both security and regular folk to 
+   perform review of the code in terms of how it meets the specified 
+   requirements, and to avoid getting bogged down in unresolvable 
+   discussions about the project’s security model."
+
+>From https://blog.namei.org/2008/12/11/the-arjan-protocol/
+
+(Not sure if the original document at Kernel Trap still exists, alas).
+
+So what we need is clear design documentation that the code can be 
+reviewed against.  There is nothing about the number of users.  If the 
+code is simply using the existing API and meets its design goals, it's 
+pretty straightforward.  If changes to the API or core kernel are also 
+required, then more discussion and review will be needed.
+
+
+
+
+- James
+-- 
+James Morris 
+<jmorris@namei.org>
+
+--1665246916-223913274-1496185566=:6920--
