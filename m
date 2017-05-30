@@ -1,73 +1,100 @@
-Date: Wed, 31 May 2017 09:06:04 +1000 (AEST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <20170530162550.19ba1811@alans-desktop>
-Message-ID: <alpine.LRH.2.20.1705310858430.6920@namei.org>
-References: <1495883858-3336-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp> <CAGXu5jJ045iaDfoW+2dXU+U-KhfnNH1WX5ngUW9dHyS5Yn3EGg@mail.gmail.com> <201705281026.EHD04622.HJFOLQFMSOtFOV@I-love.SAKURA.ne.jp> <alpine.LRH.2.20.1705302021090.31018@namei.org>
- <201705302329.IEB05735.FLJOFHSQVtOOFM@I-love.SAKURA.ne.jp> <20170530162550.19ba1811@alans-desktop>
+References: <20170529213800.29438-1-matt@nmatt.com>
+ <20170529213800.29438-3-matt@nmatt.com>
+ <20170529232640.16211960@alans-desktop>
+ <CAFUG7CdDd0Yfegb1S6_wNQzje4EuLE0jPdvOE=uSQL152meyjQ@mail.gmail.com>
+ <3738951f-7a4a-b37f-c695-21a2fcd45f76@schaufler-ca.com>
+ <0e078ce7-5b62-f27c-3920-efc2ffdf342b@nmatt.com>
+ <b0a29f23-4154-8f2f-98e7-0942612f0cdc@schaufler-ca.com>
+ <e1c9e4e8-5427-b4b6-aad2-72c88552a6af@nmatt.com>
+ <20170530132427.016053da@alans-desktop>
+ <2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
+ <20170530235106.11aab25c@alans-desktop>
+From: Matt Brown <matt@nmatt.com>
+Message-ID: <3bd4ff7b-6f7d-52b0-03f6-026bac79f11f@nmatt.com>
+Date: Tue, 30 May 2017 19:19:05 -0400
 MIME-Version: 1.0
-Content-Type: multipart/mixed; BOUNDARY="1665246916-223913274-1496185566=:6920"
-Subject: [kernel-hardening] Re: [PATCH] LSM: Convert security_hook_heads into explicit array of
- struct list_head
+In-Reply-To: <20170530235106.11aab25c@alans-desktop>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make TIOCSTI
+ ioctl require CAP_SYS_ADMIN
 To: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
-Cc: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, keescook@chromium.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, casey@schaufler-ca.com, hch@infradead.org, igor.stoppa@huawei.com, james.l.morris@oracle.com, paul@paul-moore.com, sds@tycho.nsa.gov
+Cc: Casey Schaufler <casey@schaufler-ca.com>, Boris Lukashev <blukashev@sempervictus.com>, Greg KH <gregkh@linuxfoundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-  This message is in MIME format.  The first part should be readable text,
-  while the remaining parts are likely unreadable without MIME-aware tools.
-
---1665246916-223913274-1496185566=:6920
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8BIT
-
-On Tue, 30 May 2017, Alan Cox wrote:
-
-> On Tue, 30 May 2017 23:29:10 +0900
-> Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp> wrote:
+On 5/30/17 6:51 PM, Alan Cox wrote:
+> On Tue, 30 May 2017 12:28:59 -0400
+> Matt Brown <matt@nmatt.com> wrote:
 > 
-> > James Morris wrote:
-> > > On Sun, 28 May 2017, Tetsuo Handa wrote:
-> > >   
-> > > > can afford enabling". And we know that we cannot merge all security modules
-> > > > into mainline. Thus, allowing LKM-based LSM modules is inevitable.  
-> > > 
-> > > Nope, it's not inevitable.  The LSM API only caters to in-tree users.
-> > > 
-> > > I'm not sure why you persist against this.  
-> > 
-> > Then, we are willing to accept LSM modules with users less than 10, aren't we?
+>> On 5/30/17 8:24 AM, Alan Cox wrote:
+>>> Look there are two problems here
+>>>
+>>> 1. TIOCSTI has users  
+>>
+>> I don't see how this is a problem.
 > 
-> Why not if they are properly written and maintained. Historically we've
-> supported an entire architecture that had one machine ever built. We
-> supported a strange subclass of x86 machines for many years because James
-> Bottomley cared enough to do the work. We still support M68K, PA-RISC and
-> other stuff as well as plenty of hardware which probably has few users -
-> providing it doesn't cause maintenance problems.
+> Which is unfortunate. To start with if it didn't have users we could just
+> delete it.
+> 
+>>>
+>>> 2. You don't actually fix anything
+>>>
+>>> The underlying problem is that if you give your tty handle to another
+>>> process which you don't trust you are screwed. It's fundamental to the
+>>> design of the Unix tty model and it's made worse in Linux by the fact
+>>> that we use the tty descriptor to access all sorts of other console state
+>>> (which makes a ton of sense).
+>>>
+>>> Many years ago a few people got this wrong. All those apps got fixes back
+>>> then. They allocate a tty/pty pair and create a new session over that.
+>>> The potentially hostile other app only gets to screw itself.
+>>>   
+>>
+>> Many years ago? We already got one in 2017, as well as a bunch last year.
+>> See: https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=tiocsti
+> 
+> All the apps got fixed at the time. The fact the next generation of
+> forgot to learn from it is unfortunate but hardly new. Also every single
+> one of those that exposes a tty in that way allows other annoying
+> behaviours via other ioctl interfaces so none of them would have been
+> properly mitigated.
+> 
 
-This is what we as a community came up with in 2008:
+This is my point. Apps will continue to shoot themselves in the foot. Of course
+the correct response to one of these vulns is to not pass ttys across a
+security boundary. We have an opportunity here to reduce the impact of this bug
+class at the kernel level. Rejecting this mitigation because the real solution
+is to use a tty/pty pair is like saying we should reject ASLR because the real
+solution to buffer overflows is proper bounds checking.
 
-  "Essentially, any new security project—not limited to LSMs—should be 
-   accompanied by a clear and concise document outlining its requirements 
-   and expected uses. This is to allow both security and regular folk to 
-   perform review of the code in terms of how it meets the specified 
-   requirements, and to avoid getting bogged down in unresolvable 
-   discussions about the project’s security model."
+> If you really want to do that particular bit of snake oiling then you can
+> use the existing SELinux, seccomp and related interfaces. They can even
+> do the job properly by whitelisting or blocking long lists of ioctls.
+> 
+>> This protections seeks to protect users from programs that don't do things
+>> correctly. Rather than killing bugs, this feature attempts to kill an entire
+>> bug class that shows little sign of slowing down in the world of containers and
+>> sandboxes.
+> 
+> Well maybe the people writing them need to learn what they are doing and
+> stop passing random file descriptors into their container (I've even seen
+> people handing X file handles into their 'container').
+> 
+> The kernel can do some things to help programmers but it can't stop
+> people writing crap. Anyone writing code that crosses security boundaries
+> should have at least a vague idea of what they are doing.
+> 
+> The only way you'd actually really prevent this would be to magically
+> open a new pty/tty pair and substitute the file handlers plus a data
+> copying thread when someone created a namespace.
+> 
+> Now you can actually do that with the ptrace functionality in seccomp but
+> it would still be fairly insane to expect the kernel to handle.
+> 
+> Alan
+> [Actually even more sensible would be to revert the entire sorry
+> container mess and use VMs but it's a bit late for that ;-)]
+> 
 
->From https://blog.namei.org/2008/12/11/the-arjan-protocol/
-
-(Not sure if the original document at Kernel Trap still exists, alas).
-
-So what we need is clear design documentation that the code can be 
-reviewed against.  There is nothing about the number of users.  If the 
-code is simply using the existing API and meets its design goals, it's 
-pretty straightforward.  If changes to the API or core kernel are also 
-required, then more discussion and review will be needed.
-
-
-
-
-- James
--- 
-James Morris 
-<jmorris@namei.org>
-
---1665246916-223913274-1496185566=:6920--
+Totally agree. VMs >> Containers but the cat is out of the bag and we can't put
+it back.
