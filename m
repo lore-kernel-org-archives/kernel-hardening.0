@@ -1,44 +1,50 @@
-Date: Tue, 30 May 2017 20:34:30 +1000 (AEST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <CAGXu5j+SA8N6s7StQX1OQsNf6YeQBkS7vSFVN7MR=BzJMwJH9Q@mail.gmail.com>
-Message-ID: <alpine.LRH.2.20.1705302032510.31018@namei.org>
-References: <1495829844-69341-1-git-send-email-keescook@chromium.org> <1495829844-69341-6-git-send-email-keescook@chromium.org> <20170527084135.GA26844@infradead.org> <CAGXu5j+SA8N6s7StQX1OQsNf6YeQBkS7vSFVN7MR=BzJMwJH9Q@mail.gmail.com>
+Date: Tue, 30 May 2017 13:24:27 +0100
+From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+Message-ID: <20170530132427.016053da@alans-desktop>
+In-Reply-To: <e1c9e4e8-5427-b4b6-aad2-72c88552a6af@nmatt.com>
+References: <20170529213800.29438-1-matt@nmatt.com>
+	<20170529213800.29438-3-matt@nmatt.com>
+	<20170529232640.16211960@alans-desktop>
+	<CAFUG7CdDd0Yfegb1S6_wNQzje4EuLE0jPdvOE=uSQL152meyjQ@mail.gmail.com>
+	<3738951f-7a4a-b37f-c695-21a2fcd45f76@schaufler-ca.com>
+	<0e078ce7-5b62-f27c-3920-efc2ffdf342b@nmatt.com>
+	<b0a29f23-4154-8f2f-98e7-0942612f0cdc@schaufler-ca.com>
+	<e1c9e4e8-5427-b4b6-aad2-72c88552a6af@nmatt.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v2 05/20] randstruct: Whitelist struct security_hook_heads
- cast
-To: Kees Cook <keescook@chromium.org>
-Cc: Christoph Hellwig <hch@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, James Morris <james.l.morris@oracle.com>, Laura Abbott <labbott@redhat.com>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make
+ TIOCSTI ioctl require CAP_SYS_ADMIN
+To: Matt Brown <matt@nmatt.com>
+Cc: Casey Schaufler <casey@schaufler-ca.com>, Boris Lukashev <blukashev@sempervictus.com>, Greg KH <gregkh@linuxfoundation.org>, "Serge
+ E. Hallyn" <serge@hallyn.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, 27 May 2017, Kees Cook wrote:
+Look there are two problems here
 
-> On Sat, May 27, 2017 at 1:41 AM, Christoph Hellwig <hch@infradead.org> wrote:
-> > On Fri, May 26, 2017 at 01:17:09PM -0700, Kees Cook wrote:
-> >> The LSM initialization routines walk security_hook_heads as an array
-> >> of struct list_head instead of via names to avoid a ton of needless
-> >> source. Whitelist this to avoid the false positive warning from the
-> >> plugin:
-> >
-> > I think this crap just needs to be fixed properly.  If not it almost
-> > defeats the protections as the "security" ops are just about everywhere.
-> 
-> There's nothing unsafe about 3dfc9b02864b19f4dab376f14479ee4ad1de6c9e,
-> it just avoids tons of needless code. 
+1. TIOCSTI has users
 
-Removing needless code is a security feature, ideally.
+2. You don't actually fix anything
 
-> Tetsuo has some other ideas for
-> cleaning it up further, but I don't like it because it removes
-> compile-time verification of function types. There have been a lot of
-> trade-offs in getting this working correctly, so I don't have any
-> problem with how it looks currently. It's just a collision of
-> assumptions between randstruct (omg, you're accessing a randomized
-> struct with a different struct!) and the security head list (all
-> entries are lists, and we're just initializing them).
+The underlying problem is that if you give your tty handle to another
+process which you don't trust you are screwed. It's fundamental to the
+design of the Unix tty model and it's made worse in Linux by the fact
+that we use the tty descriptor to access all sorts of other console state
+(which makes a ton of sense).
 
-Fix randstruct perhaps, rather than modifying kernel code to shut it up.
+Many years ago a few people got this wrong. All those apps got fixes back
+then. They allocate a tty/pty pair and create a new session over that.
+The potentially hostile other app only gets to screw itself.
 
--- 
-James Morris
-<jmorris@namei.org>
+If it was only about TIOCSTI then your patch would still not make sense
+because you could use on of the existing LSMs to actually write yourself
+some rules about who can and can't use TIOCSTI. For that matter you can
+even use the seccomp feature today to do this without touching your
+kernel because the ioctl number is a value so you can just block ioctl
+with argument 2 of TIOCSTI.
+
+So please explain why we need an obscure kernel config option that normal
+users will not understand which protects against nothing and can be
+done already ?
+
+Alan
