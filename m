@@ -1,127 +1,99 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 30 May 2017 14:39:50 -0700
-Message-Id: <1496180392-98718-2-git-send-email-keescook@chromium.org>
+Date: Tue, 30 May 2017 14:39:51 -0700
+Message-Id: <1496180392-98718-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1496180392-98718-1-git-send-email-keescook@chromium.org>
 References: <1496180392-98718-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v5 1/3] refcount: Create unchecked atomic_t implementation
+Subject: [kernel-hardening] [PATCH v5 2/3] x86/asm: Add suffix macro for GEN_*_RMWcc()
 To: linux-kernel@vger.kernel.org
 Cc: Kees Cook <keescook@chromium.org>, Christoph Hellwig <hch@infradead.org>, Peter Zijlstra <peterz@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@redhat.com>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Many subsystems will not use refcount_t unless there is a way to build the
-kernel so that there is no regression in speed compared to atomic_t. This
-adds CONFIG_REFCOUNT_FULL to enable the full refcount_t implementation
-which has the validation but is slightly slower. When not enabled,
-refcount_t uses the basic unchecked atomic_t routines, which results in
-no code changes compared to just using atomic_t directly.
+The coming x86 refcount protection needs to be able to add trailing
+instructions to the GEN_*_RMWcc() operations. This extracts the
+difference between the goto/non-goto cases so the helper macros
+can be defined outside the #ifdef cases. Additionally adds argument
+naming to the resulting asm for referencing from suffixed
+instructions, and adds clobbers for "cc", and "cx" to let suffixes
+use _ASM_CX, and retain any set flags.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/Kconfig             |  9 +++++++++
- include/linux/refcount.h | 44 ++++++++++++++++++++++++++++++++++++++++++++
- lib/refcount.c           |  3 +++
- 3 files changed, 56 insertions(+)
+ arch/x86/include/asm/rmwcc.h | 37 ++++++++++++++++++++++++-------------
+ 1 file changed, 24 insertions(+), 13 deletions(-)
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 6c00e5b00f8b..fba3bf186728 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -867,4 +867,13 @@ config STRICT_MODULE_RWX
- config ARCH_WANT_RELAX_ORDER
- 	bool
+diff --git a/arch/x86/include/asm/rmwcc.h b/arch/x86/include/asm/rmwcc.h
+index 661dd305694a..045f99211a99 100644
+--- a/arch/x86/include/asm/rmwcc.h
++++ b/arch/x86/include/asm/rmwcc.h
+@@ -1,45 +1,56 @@
+ #ifndef _ASM_X86_RMWcc
+ #define _ASM_X86_RMWcc
  
-+config REFCOUNT_FULL
-+	bool "Perform full reference count validation at the expense of speed"
-+	help
-+	  Enabling this switches the refcounting infrastructure from a fast
-+	  unchecked atomic_t implementation to a fully state checked
-+	  implementation, which can be slower but provides protections
-+	  against various use-after-free conditions that can be used in
-+	  security flaw exploits.
++#define __CLOBBERS_MEM		"memory"
++#define __CLOBBERS_MEM_CC_CX	"memory", "cc", "cx"
 +
- source "kernel/gcov/Kconfig"
-diff --git a/include/linux/refcount.h b/include/linux/refcount.h
-index b34aa649d204..68ecb431dbab 100644
---- a/include/linux/refcount.h
-+++ b/include/linux/refcount.h
-@@ -41,6 +41,7 @@ static inline unsigned int refcount_read(const refcount_t *r)
- 	return atomic_read(&r->refs);
- }
+ #if !defined(__GCC_ASM_FLAG_OUTPUTS__) && defined(CC_HAVE_ASM_GOTO)
  
-+#ifdef CONFIG_REFCOUNT_FULL
- extern __must_check bool refcount_add_not_zero(unsigned int i, refcount_t *r);
- extern void refcount_add(unsigned int i, refcount_t *r);
+ /* Use asm goto */
  
-@@ -52,6 +53,49 @@ extern void refcount_sub(unsigned int i, refcount_t *r);
+-#define __GEN_RMWcc(fullop, var, cc, ...)				\
++#define __GEN_RMWcc(fullop, var, cc, clobbers, ...)			\
+ do {									\
+ 	asm_volatile_goto (fullop "; j" #cc " %l[cc_label]"		\
+-			: : "m" (var), ## __VA_ARGS__ 			\
+-			: "memory" : cc_label);				\
++			: : [counter] "m" (var), ## __VA_ARGS__		\
++			: clobbers : cc_label);				\
+ 	return 0;							\
+ cc_label:								\
+ 	return 1;							\
+ } while (0)
  
- extern __must_check bool refcount_dec_and_test(refcount_t *r);
- extern void refcount_dec(refcount_t *r);
-+#else
-+static inline __must_check bool refcount_add_not_zero(unsigned int i,
-+						      refcount_t *r)
-+{
-+	return atomic_add_return(i, &r->refs) != 0;
-+}
-+
-+static inline void refcount_add(unsigned int i, refcount_t *r)
-+{
-+	atomic_add(i, &r->refs);
-+}
-+
-+static inline __must_check bool refcount_inc_not_zero(refcount_t *r)
-+{
-+	return atomic_add_unless(&r->refs, 1, 0);
-+}
-+
-+static inline void refcount_inc(refcount_t *r)
-+{
-+	atomic_inc(&r->refs);
-+}
-+
-+static inline __must_check bool refcount_sub_and_test(unsigned int i,
-+						      refcount_t *r)
-+{
-+	return atomic_sub_return(i, &r->refs) == 0;
-+}
-+
-+static inline void refcount_sub(unsigned int i, refcount_t *r)
-+{
-+	atomic_sub(i, &r->refs);
-+}
-+
-+static inline __must_check bool refcount_dec_and_test(refcount_t *r)
-+{
-+	return atomic_dec_return(&r->refs) == 0;
-+}
-+
-+static inline void refcount_dec(refcount_t *r)
-+{
-+	atomic_dec(&r->refs);
-+}
-+#endif /* CONFIG_REFCOUNT_FULL */
+-#define GEN_UNARY_RMWcc(op, var, arg0, cc) 				\
+-	__GEN_RMWcc(op " " arg0, var, cc)
++#define __BINARY_RMWcc_ARG	" %1, "
  
- extern __must_check bool refcount_dec_if_one(refcount_t *r);
- extern __must_check bool refcount_dec_not_one(refcount_t *r);
-diff --git a/lib/refcount.c b/lib/refcount.c
-index 9f906783987e..5d0582a9480c 100644
---- a/lib/refcount.c
-+++ b/lib/refcount.c
-@@ -37,6 +37,8 @@
- #include <linux/refcount.h>
- #include <linux/bug.h>
+-#define GEN_BINARY_RMWcc(op, var, vcon, val, arg0, cc)			\
+-	__GEN_RMWcc(op " %1, " arg0, var, cc, vcon (val))
  
-+#ifdef CONFIG_REFCOUNT_FULL
+ #else /* defined(__GCC_ASM_FLAG_OUTPUTS__) || !defined(CC_HAVE_ASM_GOTO) */
+ 
+ /* Use flags output or a set instruction */
+ 
+-#define __GEN_RMWcc(fullop, var, cc, ...)				\
++#define __GEN_RMWcc(fullop, var, cc, clobbers, ...)			\
+ do {									\
+ 	bool c;								\
+ 	asm volatile (fullop ";" CC_SET(cc)				\
+-			: "+m" (var), CC_OUT(cc) (c)			\
+-			: __VA_ARGS__ : "memory");			\
++			: [counter] "+m" (var), CC_OUT(cc) (c)		\
++			: __VA_ARGS__ : clobbers);			\
+ 	return c;							\
+ } while (0)
+ 
++#define __BINARY_RMWcc_ARG	" %2, "
 +
- /**
-  * refcount_add_not_zero - add a value to a refcount unless it is 0
-  * @i: the value to add to the refcount
-@@ -225,6 +227,7 @@ void refcount_dec(refcount_t *r)
- 	WARN_ONCE(refcount_dec_and_test(r), "refcount_t: decrement hit 0; leaking memory.\n");
- }
- EXPORT_SYMBOL(refcount_dec);
-+#endif /* CONFIG_REFCOUNT_FULL */
++#endif /* defined(__GCC_ASM_FLAG_OUTPUTS__) || !defined(CC_HAVE_ASM_GOTO) */
++
+ #define GEN_UNARY_RMWcc(op, var, arg0, cc)				\
+-	__GEN_RMWcc(op " " arg0, var, cc)
++	__GEN_RMWcc(op " " arg0, var, cc, __CLOBBERS_MEM)
++
++#define GEN_UNARY_SUFFIXED_RMWcc(op, suffix, var, arg0, cc)		\
++	__GEN_RMWcc(op " " arg0 "\n\t" suffix, var, cc,			\
++		    __CLOBBERS_MEM_CC_CX)
  
- /**
-  * refcount_dec_if_one - decrement a refcount if it is 1
+ #define GEN_BINARY_RMWcc(op, var, vcon, val, arg0, cc)			\
+-	__GEN_RMWcc(op " %2, " arg0, var, cc, vcon (val))
++	__GEN_RMWcc(op __BINARY_RMWcc_ARG arg0, var, cc,		\
++		    __CLOBBERS_MEM, vcon (val))
+ 
+-#endif /* defined(__GCC_ASM_FLAG_OUTPUTS__) || !defined(CC_HAVE_ASM_GOTO) */
++#define GEN_BINARY_SUFFIXED_RMWcc(op, suffix, var, vcon, val, arg0, cc)	\
++	__GEN_RMWcc(op __BINARY_RMWcc_ARG arg0 "\n\t" suffix, var, cc,	\
++		    __CLOBBERS_MEM_CC_CX, vcon (val))
+ 
+ #endif /* _ASM_X86_RMWcc */
 -- 
 2.7.4
