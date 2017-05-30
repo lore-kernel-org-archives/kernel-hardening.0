@@ -1,42 +1,43 @@
-Date: Tue, 30 May 2017 20:32:02 +1000 (AEST)
+Date: Tue, 30 May 2017 20:34:30 +1000 (AEST)
 From: James Morris <jmorris@namei.org>
-In-Reply-To: <1496003387-3184-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp>
-Message-ID: <alpine.LRH.2.20.1705302025110.31018@namei.org>
-References: <1495883858-3336-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp> <1496003387-3184-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp>
+In-Reply-To: <CAGXu5j+SA8N6s7StQX1OQsNf6YeQBkS7vSFVN7MR=BzJMwJH9Q@mail.gmail.com>
+Message-ID: <alpine.LRH.2.20.1705302032510.31018@namei.org>
+References: <1495829844-69341-1-git-send-email-keescook@chromium.org> <1495829844-69341-6-git-send-email-keescook@chromium.org> <20170527084135.GA26844@infradead.org> <CAGXu5j+SA8N6s7StQX1OQsNf6YeQBkS7vSFVN7MR=BzJMwJH9Q@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v2] LSM: Convert security_hook_heads into explicit array
- of struct list_head
-To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Casey Schaufler <casey@schaufler-ca.com>, Christoph Hellwig <hch@infradead.org>, Igor Stoppa <igor.stoppa@huawei.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>
+Subject: [kernel-hardening] Re: [PATCH v2 05/20] randstruct: Whitelist struct security_hook_heads
+ cast
+To: Kees Cook <keescook@chromium.org>
+Cc: Christoph Hellwig <hch@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, James Morris <james.l.morris@oracle.com>, Laura Abbott <labbott@redhat.com>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 29 May 2017, Tetsuo Handa wrote:
+On Sat, 27 May 2017, Kees Cook wrote:
 
-> Igor proposed a sealable memory allocator, and the LSM hooks
-> ("struct security_hook_heads security_hook_heads" and
-> "struct security_hook_list ...[]") will benefit from that allocator via
-> protection using set_memory_ro()/set_memory_rw(), and that allocator
-> will remove CONFIG_SECURITY_WRITABLE_HOOKS config option. Thus, we will
-> likely be moving to that direction.
+> On Sat, May 27, 2017 at 1:41 AM, Christoph Hellwig <hch@infradead.org> wrote:
+> > On Fri, May 26, 2017 at 01:17:09PM -0700, Kees Cook wrote:
+> >> The LSM initialization routines walk security_hook_heads as an array
+> >> of struct list_head instead of via names to avoid a ton of needless
+> >> source. Whitelist this to avoid the false positive warning from the
+> >> plugin:
+> >
+> > I think this crap just needs to be fixed properly.  If not it almost
+> > defeats the protections as the "security" ops are just about everywhere.
 > 
-> This means that these structures will be allocated at run time using
-> that allocator, and therefore the address of these structures will be
-> determined at run time rather than compile time.
-> 
-> But currently, LSM_HOOK_INIT() macro depends on the address of
-> security_hook_heads being known at compile time. If we use an enum
-> so that LSM_HOOK_INIT() macro does not need to know absolute address of
-> security_hook_heads, it will help us to use that allocator for LSM hooks.
-> 
+> There's nothing unsafe about 3dfc9b02864b19f4dab376f14479ee4ad1de6c9e,
+> it just avoids tons of needless code. 
 
-This seems like pointless churn in security-critical code in anticipation 
-of features which are still in development and may not be adopted.
+Removing needless code is a security feature, ideally.
 
-Is there a compelling reason to merge this now? (And I don't mean worrying 
-about non-existent compliers).
+> Tetsuo has some other ideas for
+> cleaning it up further, but I don't like it because it removes
+> compile-time verification of function types. There have been a lot of
+> trade-offs in getting this working correctly, so I don't have any
+> problem with how it looks currently. It's just a collision of
+> assumptions between randstruct (omg, you're accessing a randomized
+> struct with a different struct!) and the security head list (all
+> entries are lists, and we're just initializing them).
 
-
+Fix randstruct perhaps, rather than modifying kernel code to shut it up.
 
 -- 
 James Morris
