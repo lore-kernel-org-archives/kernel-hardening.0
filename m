@@ -1,41 +1,29 @@
-Date: Wed, 31 May 2017 11:44:17 +0200
-From: =?UTF-8?B?Sm9zw6k=?= Bollo <jobol@nonadev.net>
-Message-ID: <20170531114417.5a7d8bcb@d-jobol.iot.bzh>
-In-Reply-To: <201705302329.IEB05735.FLJOFHSQVtOOFM@I-love.SAKURA.ne.jp>
-References: <1495883858-3336-1-git-send-email-penguin-kernel@I-love.SAKURA.ne.jp>
-	<CAGXu5jJ045iaDfoW+2dXU+U-KhfnNH1WX5ngUW9dHyS5Yn3EGg@mail.gmail.com>
-	<201705281026.EHD04622.HJFOLQFMSOtFOV@I-love.SAKURA.ne.jp>
-	<alpine.LRH.2.20.1705302021090.31018@namei.org>
-	<201705302329.IEB05735.FLJOFHSQVtOOFM@I-love.SAKURA.ne.jp>
+Date: Wed, 31 May 2017 21:04:30 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
+In-Reply-To: <201705311941.CGD64590.MOFSOLFJtQFOVH@I-love.SAKURA.ne.jp>
+Message-ID: <alpine.LRH.2.20.1705312102560.8015@namei.org>
+References: <201705281026.EHD04622.HJFOLQFMSOtFOV@I-love.SAKURA.ne.jp>        <alpine.LRH.2.20.1705302021090.31018@namei.org>        <201705302329.IEB05735.FLJOFHSQVtOOFM@I-love.SAKURA.ne.jp>        <20170530162550.19ba1811@alans-desktop>       
+ <alpine.LRH.2.20.1705310858430.6920@namei.org> <201705311941.CGD64590.MOFSOLFJtQFOVH@I-love.SAKURA.ne.jp>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset=US-ASCII
 Subject: [kernel-hardening] Re: [PATCH] LSM: Convert security_hook_heads into explicit array of
  struct list_head
 To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-Cc: jmorris@namei.org, keescook@chromium.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, casey@schaufler-ca.com, hch@infradead.org, igor.stoppa@huawei.com, james.l.morris@oracle.com, paul@paul-moore.com, sds@tycho.nsa.gov
+Cc: gnomes@lxorguk.ukuu.org.uk, keescook@chromium.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, casey@schaufler-ca.com, hch@infradead.org, igor.stoppa@huawei.com, james.l.morris@oracle.com, paul@paul-moore.com, sds@tycho.nsa.gov
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 30 May 2017 23:29:10 +0900
-Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp> wrote:
+On Wed, 31 May 2017, Tetsuo Handa wrote:
 
-> James Morris wrote:
-> > On Sun, 28 May 2017, Tetsuo Handa wrote:
-> >  =20
-> > > can afford enabling". And we know that we cannot merge all
-> > > security modules into mainline. Thus, allowing LKM-based LSM
-> > > modules is inevitable. =20
-> >=20
-> > Nope, it's not inevitable.  The LSM API only caters to in-tree
-> > users.
-> >=20
-> > I'm not sure why you persist against this. =20
->=20
-> Then, we are willing to accept LSM modules with users less than 10,
-> aren't we? Forcing users to patch and recompile is as heartless as
-> forcing CONFIG_MODULES=3Dn.
+> via lack of ability to use LKM-based LSM modules). My customers cannot afford
+> enabling SELinux, but my customers cannot rebuild their kernels because
+> rebuilding makes it even more difficult to get help from support centers.
+> Therefore, my customers remain unable to use LSM modules which they want.
+> This is really unfortunate for me.
 
-These are good reasons. I'm in favor of Tetsuo.
+And they'll be able to get vendor support when they have their own custom 
+LSMs installed?  
 
-Regards
-Jos=C3=A9
+
+-- 
+James Morris
+<jmorris@namei.org>
