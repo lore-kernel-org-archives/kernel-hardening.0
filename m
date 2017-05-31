@@ -1,93 +1,157 @@
-From: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-References: <201705281026.EHD04622.HJFOLQFMSOtFOV@I-love.SAKURA.ne.jp>
-	<alpine.LRH.2.20.1705302021090.31018@namei.org>
-	<201705302329.IEB05735.FLJOFHSQVtOOFM@I-love.SAKURA.ne.jp>
-	<20170530162550.19ba1811@alans-desktop>
-	<alpine.LRH.2.20.1705310858430.6920@namei.org>
-In-Reply-To: <alpine.LRH.2.20.1705310858430.6920@namei.org>
-Message-Id: <201705311941.CGD64590.MOFSOLFJtQFOVH@I-love.SAKURA.ne.jp>
-Date: Wed, 31 May 2017 19:41:46 +0900
-Mime-Version: 1.0
-Content-Type: text/plain; charset=iso-2022-jp
-Subject: [kernel-hardening] Re: [PATCH] LSM: Convert security_hook_heads into explicit array of struct list_head
-To: jmorris@namei.org, gnomes@lxorguk.ukuu.org.uk
-Cc: keescook@chromium.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, casey@schaufler-ca.com, hch@infradead.org, igor.stoppa@huawei.com, james.l.morris@oracle.com, paul@paul-moore.com, sds@tycho.nsa.gov
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Wed, 31 May 2017 10:45:09 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B6B215E2E@IRSMSX102.ger.corp.intel.com>
+References: <1496180392-98718-1-git-send-email-keescook@chromium.org>
+ <1496180392-98718-2-git-send-email-keescook@chromium.org>
+In-Reply-To: <1496180392-98718-2-git-send-email-keescook@chromium.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+Subject: [kernel-hardening] RE: [PATCH v5 1/3] refcount: Create unchecked atomic_t
+ implementation
+To: Kees Cook <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Cc: Christoph Hellwig <hch@infradead.org>, Peter Zijlstra <peterz@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew
+ Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@redhat.com>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, "arozansk@redhat.com" <arozansk@redhat.com>, Davidlohr
+ Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S.
+ Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-James Morris wrote:
-> On Tue, 30 May 2017, Alan Cox wrote:
-> 
-> > On Tue, 30 May 2017 23:29:10 +0900
-> > Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp> wrote:
-> > 
-> > > James Morris wrote:
-> > > > On Sun, 28 May 2017, Tetsuo Handa wrote:
-> > > >   
-> > > > > can afford enabling". And we know that we cannot merge all security modules
-> > > > > into mainline. Thus, allowing LKM-based LSM modules is inevitable.  
-> > > > 
-> > > > Nope, it's not inevitable.  The LSM API only caters to in-tree users.
-> > > > 
-> > > > I'm not sure why you persist against this.  
-> > > 
-> > > Then, we are willing to accept LSM modules with users less than 10, aren't we?
-> > 
-> > Why not if they are properly written and maintained. Historically we've
-> > supported an entire architecture that had one machine ever built. We
-> > supported a strange subclass of x86 machines for many years because James
-> > Bottomley cared enough to do the work. We still support M68K, PA-RISC and
-> > other stuff as well as plenty of hardware which probably has few users -
-> > providing it doesn't cause maintenance problems.
-> 
-> This is what we as a community came up with in 2008:
-> 
->   "Essentially, any new security project - not limited to LSMs - should be 
->    accompanied by a clear and concise document outlining its requirements 
->    and expected uses. This is to allow both security and regular folk to 
->    perform review of the code in terms of how it meets the specified 
->    requirements, and to avoid getting bogged down in unresolvable 
->    discussions about the project’s security model."
-> 
-> From https://blog.namei.org/2008/12/11/the-arjan-protocol/
-> 
-> (Not sure if the original document at Kernel Trap still exists, alas).
-> 
-> So what we need is clear design documentation that the code can be 
-> reviewed against.  There is nothing about the number of users.  If the 
-> code is simply using the existing API and meets its design goals, it's 
-> pretty straightforward.  If changes to the API or core kernel are also 
-> required, then more discussion and review will be needed.
+>=20
+> Many subsystems will not use refcount_t unless there is a way to build th=
+e
+> kernel so that there is no regression in speed compared to atomic_t. This
+> adds CONFIG_REFCOUNT_FULL to enable the full refcount_t implementation
+> which has the validation but is slightly slower. When not enabled,
+> refcount_t uses the basic unchecked atomic_t routines, which results in
+> no code changes compared to just using atomic_t directly.
+>=20
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  arch/Kconfig             |  9 +++++++++
+>  include/linux/refcount.h | 44 ++++++++++++++++++++++++++++++++++++++++++=
+++
+>  lib/refcount.c           |  3 +++
+>  3 files changed, 56 insertions(+)
+>=20
+> diff --git a/arch/Kconfig b/arch/Kconfig
+> index 6c00e5b00f8b..fba3bf186728 100644
+> --- a/arch/Kconfig
+> +++ b/arch/Kconfig
+> @@ -867,4 +867,13 @@ config STRICT_MODULE_RWX
+>  config ARCH_WANT_RELAX_ORDER
+>  	bool
+>=20
+> +config REFCOUNT_FULL
+> +	bool "Perform full reference count validation at the expense of
+> speed"
+> +	help
+> +	  Enabling this switches the refcounting infrastructure from a fast
+> +	  unchecked atomic_t implementation to a fully state checked
+> +	  implementation, which can be slower but provides protections
+> +	  against various use-after-free conditions that can be used in
+> +	  security flaw exploits.
+> +
+>  source "kernel/gcov/Kconfig"
+> diff --git a/include/linux/refcount.h b/include/linux/refcount.h
+> index b34aa649d204..68ecb431dbab 100644
+> --- a/include/linux/refcount.h
+> +++ b/include/linux/refcount.h
+> @@ -41,6 +41,7 @@ static inline unsigned int refcount_read(const refcount=
+_t *r)
+>  	return atomic_read(&r->refs);
+>  }
+>=20
+> +#ifdef CONFIG_REFCOUNT_FULL
+>  extern __must_check bool refcount_add_not_zero(unsigned int i, refcount_=
+t *r);
+>  extern void refcount_add(unsigned int i, refcount_t *r);
+>=20
+> @@ -52,6 +53,49 @@ extern void refcount_sub(unsigned int i, refcount_t *r=
+);
+>=20
+>  extern __must_check bool refcount_dec_and_test(refcount_t *r);
+>  extern void refcount_dec(refcount_t *r);
+> +#else
+> +static inline __must_check bool refcount_add_not_zero(unsigned int i,
+> +
+> 	      refcount_t *r)
+> +{
+> +	return atomic_add_return(i, &r->refs) !=3D 0;
+> +}
 
-I saw several companies who ship their embedded devices with
-single-function LSM modules (e.g. restrict only mount operation and
-ptrace operation). What is unfortunate is that their LSM modules had
-never been proposed for upstream, and thus bugs remained unnoticed.
+Maybe atomic_add_unless(&r->refs, i, 0) in order to be consistent with the =
+below inc_not_zero implementation?
+> +
+> +static inline void refcount_add(unsigned int i, refcount_t *r)
+> +{
+> +	atomic_add(i, &r->refs);
+> +}
+> +
+> +static inline __must_check bool refcount_inc_not_zero(refcount_t *r)
+> +{
+> +	return atomic_add_unless(&r->refs, 1, 0);
+> +}
+> +
+> +static inline void refcount_inc(refcount_t *r)
+> +{
+> +	atomic_inc(&r->refs);
+> +}
+> +
+> +static inline __must_check bool refcount_sub_and_test(unsigned int i,
+> +
+> 	      refcount_t *r)
+> +{
+> +	return atomic_sub_return(i, &r->refs) =3D=3D 0;
+> +}
 
-They cannot afford enabling SELinux or SMACK or TOMOYO or AppArmor
-in their products, whereas LSM community tends to think as whether
-SELinux or SMACK or TOMOYO or AppArmor can do what they want.
+Any reason for not using atomic_sub_and_test() here?
 
-It will become possible to get single-function LSM modules merged if we
-stop saying "you can do it with SELinux or SMACK or TOMOYO or AppArmor".
-But there is the other barrier if we think about distributions.
+> +
+> +static inline void refcount_sub(unsigned int i, refcount_t *r)
+> +{
+> +	atomic_sub(i, &r->refs);
+> +}
+> +
+> +static inline __must_check bool refcount_dec_and_test(refcount_t *r)
+> +{
+> +	return atomic_dec_return(&r->refs) =3D=3D 0;
+> +}
 
-If distributors enable all LSM modules which are wanted by their users
-(e.g. Ubuntu, or LSM modules dedicated for their embedded devices), there
-is no need to support LKM-based LSM modules.
+Same here: atomic_dec_and_test()?
 
-But otherwise (e.g. https://bugzilla.redhat.com/show_bug.cgi?id=542986 ),
-we are forcing users to rebuild distribution kernels even if the LSM code is
-available in vanilla kernels. It is a sort of enforcing CONFIG_MODULES=n.
-Offering users the ability to use LSM modules as LKM and allowing users to
-use LSM modules which are not enabled by distributors as LKM at user's own
-risk is a realistic choice, and therefore I developed AKARI.
+Best Regards,
+Elena.
 
-The location we are directing to via read-only LSM hooks seems to be: let's
-accept source code of LSM modules which they want (so that LKM-based LSM
-modules won't be needed), but let's prevent users from running binary code
-of LSM modules which they want (by forcing users to rebuild their kernels
-via lack of ability to use LKM-based LSM modules). My customers cannot afford
-enabling SELinux, but my customers cannot rebuild their kernels because
-rebuilding makes it even more difficult to get help from support centers.
-Therefore, my customers remain unable to use LSM modules which they want.
-This is really unfortunate for me.
+> +
+> +static inline void refcount_dec(refcount_t *r)
+> +{
+> +	atomic_dec(&r->refs);
+> +}
+> +#endif /* CONFIG_REFCOUNT_FULL */
+>=20
+>  extern __must_check bool refcount_dec_if_one(refcount_t *r);
+>  extern __must_check bool refcount_dec_not_one(refcount_t *r);
+> diff --git a/lib/refcount.c b/lib/refcount.c
+> index 9f906783987e..5d0582a9480c 100644
+> --- a/lib/refcount.c
+> +++ b/lib/refcount.c
+> @@ -37,6 +37,8 @@
+>  #include <linux/refcount.h>
+>  #include <linux/bug.h>
+>=20
+> +#ifdef CONFIG_REFCOUNT_FULL
+> +
+>  /**
+>   * refcount_add_not_zero - add a value to a refcount unless it is 0
+>   * @i: the value to add to the refcount
+> @@ -225,6 +227,7 @@ void refcount_dec(refcount_t *r)
+>  	WARN_ONCE(refcount_dec_and_test(r), "refcount_t: decrement hit
+> 0; leaking memory.\n");
+>  }
+>  EXPORT_SYMBOL(refcount_dec);
+> +#endif /* CONFIG_REFCOUNT_FULL */
+>=20
+>  /**
+>   * refcount_dec_if_one - decrement a refcount if it is 1
+> --
+> 2.7.4
