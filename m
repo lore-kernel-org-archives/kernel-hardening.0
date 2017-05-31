@@ -1,37 +1,30 @@
-From: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-References: <201705302329.IEB05735.FLJOFHSQVtOOFM@I-love.SAKURA.ne.jp>
-	<20170530162550.19ba1811@alans-desktop>
-	<alpine.LRH.2.20.1705310858430.6920@namei.org>
-	<201705311941.CGD64590.MOFSOLFJtQFOVH@I-love.SAKURA.ne.jp>
-	<alpine.LRH.2.20.1705312102560.8015@namei.org>
-In-Reply-To: <alpine.LRH.2.20.1705312102560.8015@namei.org>
-Message-Id: <201705312031.JFG24680.HQFtMJOLOOFSFV@I-love.SAKURA.ne.jp>
-Date: Wed, 31 May 2017 20:31:01 +0900
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Subject: [kernel-hardening] Re: [PATCH] LSM: Convert security_hook_heads into explicit array of struct list_head
-To: jmorris@namei.org
-Cc: gnomes@lxorguk.ukuu.org.uk, keescook@chromium.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, casey@schaufler-ca.com, hch@infradead.org, igor.stoppa@huawei.com, james.l.morris@oracle.com, paul@paul-moore.com, sds@tycho.nsa.gov
+Date: Wed, 31 May 2017 05:27:32 -0700
+From: Davidlohr Bueso <dave@stgolabs.net>
+Message-ID: <20170531122732.GA24923@linux-80c1.suse>
+References: <1496180392-98718-1-git-send-email-keescook@chromium.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <1496180392-98718-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v5 0/3] Implement fast refcount overflow protection
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, Christoph Hellwig <hch@infradead.org>, Peter Zijlstra <peterz@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@redhat.com>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-James Morris wrote:
-> On Wed, 31 May 2017, Tetsuo Handa wrote:
-> 
-> > via lack of ability to use LKM-based LSM modules). My customers cannot afford
-> > enabling SELinux, but my customers cannot rebuild their kernels because
-> > rebuilding makes it even more difficult to get help from support centers.
-> > Therefore, my customers remain unable to use LSM modules which they want.
-> > This is really unfortunate for me.
-> 
-> And they'll be able to get vendor support when they have their own custom 
-> LSMs installed?  
+On Tue, 30 May 2017, Kees Cook wrote:
 
-As long as customers are using the vmlinux provided by that distributor, they
-can get distributor's support regarding problems which are not caused by use of
-their own custom LKM-based LSMs. For example, distributors do not unconditionally
-reject due to use of storage driver kernel module provided by hardware venders
-(or, their servers won't boot) and/or on-access scanner kernel module provided by
-antivirus venders. Customers won't be able to get distributor's support regarding
-problems caused by use of storage driver / on-access scanner kernel modules not
-provided by distributors. But rebuilding the vmlinux in order to use LSM modules
-not enabled by distributors makes customer's situation very worse.
+>A new patch has been added at the start of this series to make the default
+>refcount_t implementation just use an unchecked atomic_t implementation,
+>since many kernel subsystems want to be able to opt out of the full
+>validation, since it includes a small performance overhead. When enabling
+>CONFIG_REFCOUNT_FULL, the full validation is used.
+>
+>The other two patches provide overflow protection on x86 without incurring
+>a performance penalty. The changelog for patch 3 is reproduced here for
+>details:
+
+To be sure I'm getting this right, after this all archs with the exception
+of x86 will use the regular atomic_t ("unsecure") flavor, right?
+
+Thanks,
+Davidlohr
