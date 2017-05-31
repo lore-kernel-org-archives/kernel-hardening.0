@@ -1,29 +1,47 @@
-Date: Wed, 31 May 2017 21:04:30 +1000 (AEST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <201705311941.CGD64590.MOFSOLFJtQFOVH@I-love.SAKURA.ne.jp>
-Message-ID: <alpine.LRH.2.20.1705312102560.8015@namei.org>
-References: <201705281026.EHD04622.HJFOLQFMSOtFOV@I-love.SAKURA.ne.jp>        <alpine.LRH.2.20.1705302021090.31018@namei.org>        <201705302329.IEB05735.FLJOFHSQVtOOFM@I-love.SAKURA.ne.jp>        <20170530162550.19ba1811@alans-desktop>       
- <alpine.LRH.2.20.1705310858430.6920@namei.org> <201705311941.CGD64590.MOFSOLFJtQFOVH@I-love.SAKURA.ne.jp>
+Date: Wed, 31 May 2017 13:09:18 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20170531110918.tgbppvxgkkhoaclk@hirez.programming.kicks-ass.net>
+References: <1496180392-98718-1-git-send-email-keescook@chromium.org>
+ <1496180392-98718-2-git-send-email-keescook@chromium.org>
+ <2236FBA76BA1254E88B949DDB74E612B6B215E2E@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH] LSM: Convert security_hook_heads into explicit array of
- struct list_head
-To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-Cc: gnomes@lxorguk.ukuu.org.uk, keescook@chromium.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, casey@schaufler-ca.com, hch@infradead.org, igor.stoppa@huawei.com, james.l.morris@oracle.com, paul@paul-moore.com, sds@tycho.nsa.gov
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B6B215E2E@IRSMSX102.ger.corp.intel.com>
+Subject: [kernel-hardening] Re: [PATCH v5 1/3] refcount: Create unchecked atomic_t implementation
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: Kees Cook <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@redhat.com>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, "arozansk@redhat.com" <arozansk@redhat.com>, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 31 May 2017, Tetsuo Handa wrote:
+On Wed, May 31, 2017 at 10:45:09AM +0000, Reshetova, Elena wrote:
 
-> via lack of ability to use LKM-based LSM modules). My customers cannot afford
-> enabling SELinux, but my customers cannot rebuild their kernels because
-> rebuilding makes it even more difficult to get help from support centers.
-> Therefore, my customers remain unable to use LSM modules which they want.
-> This is really unfortunate for me.
+> > +static inline __must_check bool refcount_add_not_zero(unsigned int i,
+> > +
+> > 	      refcount_t *r)
+> > +{
+> > +	return atomic_add_return(i, &r->refs) != 0;
+> > +}
+> 
+> Maybe atomic_add_unless(&r->refs, i, 0) in order to be consistent with the below inc_not_zero implementation?
 
-And they'll be able to get vendor support when they have their own custom 
-LSMs installed?  
+Yes, atomic_add_return() is strictly incorrect here since the add is
+unconditional.
 
+> > +static inline __must_check bool refcount_sub_and_test(unsigned int i,
+> > +
+> > 	      refcount_t *r)
+> > +{
+> > +	return atomic_sub_return(i, &r->refs) == 0;
+> > +}
+> 
+> Any reason for not using atomic_sub_and_test() here?
 
--- 
-James Morris
-<jmorris@namei.org>
+> > +static inline __must_check bool refcount_dec_and_test(refcount_t *r)
+> > +{
+> > +	return atomic_dec_return(&r->refs) == 0;
+> > +}
+> 
+> Same here: atomic_dec_and_test()?
+
+Both those are better because they return condition codes generated from
+the operand itself.
