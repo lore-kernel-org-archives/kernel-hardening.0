@@ -1,59 +1,42 @@
-References: <20170529213800.29438-1-matt@nmatt.com>
- <20170529213800.29438-3-matt@nmatt.com>
- <20170529232640.16211960@alans-desktop>
- <CAFUG7CdDd0Yfegb1S6_wNQzje4EuLE0jPdvOE=uSQL152meyjQ@mail.gmail.com>
- <3738951f-7a4a-b37f-c695-21a2fcd45f76@schaufler-ca.com>
- <0e078ce7-5b62-f27c-3920-efc2ffdf342b@nmatt.com>
- <b0a29f23-4154-8f2f-98e7-0942612f0cdc@schaufler-ca.com>
- <e1c9e4e8-5427-b4b6-aad2-72c88552a6af@nmatt.com>
- <20170530132427.016053da@alans-desktop>
- <2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
- <1496169122.2164.21.camel@tycho.nsa.gov>
- <CAFJ0LnHKKccbr-LqHHaFX5UNB20DzqfWDhvR-NTpgPedtkg0RA@mail.gmail.com>
- <100b7d8c-7468-3122-4f59-3b0dcdf5dfc3@nmatt.com>
- <1496175757.9871.6.camel@gmail.com>
- <99069e11-dc84-8198-5d1c-f39b18ac9971@nmatt.com>
- <1496187633.17013.2.camel@gmail.com>
-From: Matt Brown <matt@nmatt.com>
-Message-ID: <65b09473-a96a-69cf-9e5d-4a7d7e763da0@nmatt.com>
-Date: Tue, 30 May 2017 19:59:12 -0400
+Date: Wed, 31 May 2017 12:48:50 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
+In-Reply-To: <CAFUG7CdDd0Yfegb1S6_wNQzje4EuLE0jPdvOE=uSQL152meyjQ@mail.gmail.com>
+Message-ID: <alpine.LRH.2.20.1705311239420.6920@namei.org>
+References: <20170529213800.29438-1-matt@nmatt.com> <20170529213800.29438-3-matt@nmatt.com> <20170529232640.16211960@alans-desktop> <CAFUG7CdDd0Yfegb1S6_wNQzje4EuLE0jPdvOE=uSQL152meyjQ@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <1496187633.17013.2.camel@gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=US-ASCII
 Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make TIOCSTI
  ioctl require CAP_SYS_ADMIN
-To: Daniel Micay <danielmicay@gmail.com>, Nick Kralevich <nnk@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>, Kees Cook <keescook@chromium.org>
-Cc: Casey Schaufler <casey@schaufler-ca.com>, Boris Lukashev <blukashev@sempervictus.com>, Greg KH <gregkh@linuxfoundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, kernel-hardening@lists.openwall.com, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
+To: Boris Lukashev <blukashev@sempervictus.com>
+Cc: Alan Cox <gnomes@lxorguk.ukuu.org.uk>, Matt Brown <matt@nmatt.com>, Greg KH <gregkh@linuxfoundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 5/30/17 7:40 PM, Daniel Micay wrote:
-> On Tue, 2017-05-30 at 19:00 -0400, Matt Brown wrote:
->> On 5/30/17 4:22 PM, Daniel Micay wrote:
->>>> Thanks, I didn't know that android was doing this. I still think
->>>> this
->>>> feature
->>>> is worthwhile for people to be able to harden their systems
->>>> against
->>>> this attack
->>>> vector without having to implement a MAC.
->>>
->>> Since there's a capable LSM hook for ioctl already, it means it
->>> could go
->>> in Yama with ptrace_scope but core kernel code would still need to
->>> be
->>> changed to track the owning tty. I think Yama vs. core kernel
->>> shouldn't
->>> matter much anymore due to stackable LSMs.
->>>
->>
->> What does everyone think about a v8 that moves this feature under Yama
->> and uses
->> the file_ioctl LSM hook?
-> 
-> It would only make a difference if it could be fully contained there, as
-> in not depending on tracking the tty owner.
-> 
+On Mon, 29 May 2017, Boris Lukashev wrote:
 
-For the reasons discussed earlier (to allow for nested containers where one of
-the containers is privileged) we want to track the user namespace that owns the tty.
+> With all due respect sir, i believe your review falls short of the
+> purpose of this effort - to harden the kernel against flaws in
+> userspace.
+
+Which effort?  Kernel self protection is about protecting against flaws in 
+the kernel.
+
+See:
+https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project
+
+  "This project starts with the premise that kernel bugs have a very long 
+   lifetime, and that the kernel must be designed in ways to protect against 
+   these flaws."
+
+We need to avoid conflating:
+
+- hardening the kernel against attack; and 
+- modifying the kernel to try and harden userspace.
+
+These patches are the latter, and the case for them is not as 
+straightforward.
+
+
+- James
+-- 
+James Morris
+<jmorris@namei.org>
