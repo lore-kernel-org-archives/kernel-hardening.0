@@ -1,63 +1,43 @@
-Date: Thu, 1 Jun 2017 22:26:28 +0100
-From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
-Message-ID: <20170601222628.6e101a34@lxorguk.ukuu.org.uk>
-In-Reply-To: <20170601171858.GA19604@mail.hallyn.com>
-References: <0e078ce7-5b62-f27c-3920-efc2ffdf342b@nmatt.com>
-	<b0a29f23-4154-8f2f-98e7-0942612f0cdc@schaufler-ca.com>
-	<e1c9e4e8-5427-b4b6-aad2-72c88552a6af@nmatt.com>
-	<20170530132427.016053da@alans-desktop>
-	<2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
-	<20170530235106.11aab25c@alans-desktop>
-	<3bd4ff7b-6f7d-52b0-03f6-026bac79f11f@nmatt.com>
-	<20170531005633.484a2e14@alans-desktop>
-	<CAGXu5j+pqD1082fYDS_dvDB2QNvt9wSz+C7vAhGpMXcJWxoDkw@mail.gmail.com>
-	<20170601140812.583cf0a5@alans-desktop>
-	<20170601171858.GA19604@mail.hallyn.com>
+Date: Fri, 2 Jun 2017 08:56:13 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
+In-Reply-To: <CAGXu5jKLnn_eqerFYdsygjHM=WngUW=o2e65wgw1fjTM=pxO=Q@mail.gmail.com>
+Message-ID: <alpine.LRH.2.20.1706020830520.16910@namei.org>
+References: <20170529213800.29438-1-matt@nmatt.com> <20170529213800.29438-3-matt@nmatt.com> <20170529232640.16211960@alans-desktop> <CAFUG7CdDd0Yfegb1S6_wNQzje4EuLE0jPdvOE=uSQL152meyjQ@mail.gmail.com> <3738951f-7a4a-b37f-c695-21a2fcd45f76@schaufler-ca.com>
+ <0e078ce7-5b62-f27c-3920-efc2ffdf342b@nmatt.com> <b0a29f23-4154-8f2f-98e7-0942612f0cdc@schaufler-ca.com> <e1c9e4e8-5427-b4b6-aad2-72c88552a6af@nmatt.com> <20170530132427.016053da@alans-desktop> <2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
+ <20170530235106.11aab25c@alans-desktop> <3bd4ff7b-6f7d-52b0-03f6-026bac79f11f@nmatt.com> <20170531005633.484a2e14@alans-desktop> <CAGXu5j+pqD1082fYDS_dvDB2QNvt9wSz+C7vAhGpMXcJWxoDkw@mail.gmail.com> <6e713105-02db-12e1-68a9-f167fe11d0a9@gmail.com>
+ <CAGXu5jKLnn_eqerFYdsygjHM=WngUW=o2e65wgw1fjTM=pxO=Q@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make
- TIOCSTI ioctl require CAP_SYS_ADMIN
-To: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Kees Cook <keescook@chromium.org>, Matt Brown <matt@nmatt.com>, Casey Schaufler <casey@schaufler-ca.com>, Boris Lukashev <blukashev@sempervictus.com>, Greg KH <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
+Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make TIOCSTI
+ ioctl require CAP_SYS_ADMIN
+To: Kees Cook <keescook@chromium.org>
+Cc: lazytyped <lazytyped@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 1 Jun 2017 12:18:58 -0500
-"Serge E. Hallyn" <serge@hallyn.com> wrote:
+On Thu, 1 Jun 2017, Kees Cook wrote:
 
-> Quoting Alan Cox (gnomes@lxorguk.ukuu.org.uk):
-> > > I still cannot wrap my head around why providing users with a
-> > > protection is a bad thing. Yes, the other tty games are bad, but this
-> > > fixes a specific and especially bad case that is easy to kill. It's
-> > > got a Kconfig and a sysctl. It's not on by default. This protects the
-> > > common case of privileged ttys that aren't attached to consoles, etc,  
-> > 
-> > Which just leads to stuff not getting fixed. Like all the code out there
-> > today which is still vulnerable to selection based attacks because people
-> > didn't do the job right when "fixing" stuff because they are not
-> > thinking about security at a systems level but just tickboxing CVEs.
-> > 
-> > I'm not against doing something to protect the container folks, but that
-> > something as with Android is a whitelist of ioctls. And if we need to do  
-> 
-> Whitelist of ioctls (at least using seccomp) is not sufficient because
-> then we have to turn the ioctl always-off.  But like you say we may want
-> to enable it for ptys which are created inside the container's user ns.
-> 
-> > this with a kernel hook lets do it properly.
-> > 
-> > Remember the namespace of the tty on creation  
-> 
-> Matt's patch does this,
-> 
-> > If the magic security flag is set then
-> > 	Apply a whitelist to *any* tty ioctl call where the ns doesn't
-> > 		match  
-> 
-> Seems sensible.
+> All of the reasoning here seems to match the link restrictions from 5
+> years ago: a crappy API (sticky bit) is not handled by userspace (open
+> /tmp/$$!) and people get attacked. The solution was a sysctl to enable
+> the link restrictions that killed the entire class of the common
+> attack (though it didn't solve especially egregious bad uses, much
 
-I'm arguing that we need to swap the TIOCSTI test for a !whitelisted()
-test to go with the namespace difference check. Then it makes sense
-because we actually address the real problem.
+This is the problem -- it doesn't really eliminate the underlying issue.
 
-Alan
+A better solution (in this case) was to implement a new API which 
+addresses the issue at an architectural level, i.e. namespace-based 
+private /tmp views, and encourage its adoption.
+
+> like the TIOCSTI fix). Every distro enabled the sysctl, and, while the
+> data is noisy, looking a CVEs matching "/tmp symlink", the numbers
+> drop from 2013 and later (with none yet for 2017).
+
+I wonder how much of this is due to the sysctl vs. adoption of private 
+/tmp, and what may be lurking in the "egregious bad uses" category for 
+future CVEs.  And obviously we don't know what various folk may have up 
+their sleeves, if anything.
+
+
+-- 
+James Morris
+<jmorris@namei.org>
