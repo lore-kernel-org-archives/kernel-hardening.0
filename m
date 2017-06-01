@@ -1,71 +1,74 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170601140812.583cf0a5@alans-desktop>
-References: <20170529213800.29438-1-matt@nmatt.com> <20170529213800.29438-3-matt@nmatt.com>
- <20170529232640.16211960@alans-desktop> <CAFUG7CdDd0Yfegb1S6_wNQzje4EuLE0jPdvOE=uSQL152meyjQ@mail.gmail.com>
- <3738951f-7a4a-b37f-c695-21a2fcd45f76@schaufler-ca.com> <0e078ce7-5b62-f27c-3920-efc2ffdf342b@nmatt.com>
- <b0a29f23-4154-8f2f-98e7-0942612f0cdc@schaufler-ca.com> <e1c9e4e8-5427-b4b6-aad2-72c88552a6af@nmatt.com>
- <20170530132427.016053da@alans-desktop> <2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
- <20170530235106.11aab25c@alans-desktop> <3bd4ff7b-6f7d-52b0-03f6-026bac79f11f@nmatt.com>
- <20170531005633.484a2e14@alans-desktop> <CAGXu5j+pqD1082fYDS_dvDB2QNvt9wSz+C7vAhGpMXcJWxoDkw@mail.gmail.com>
- <20170601140812.583cf0a5@alans-desktop>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 1 Jun 2017 11:58:42 -0700
-Message-ID: <CAGXu5jLefv=T3mCYryqh2pYjYonFsTQZSLsHqLK75CKvSmgb-w@mail.gmail.com>
+In-Reply-To: <CAEiveUeKU-zxXUeeuTZ2Sf1NrbH+t9JjwaWOK_2varRDsfbEWg@mail.gmail.com>
+References: <1495454226-10027-1-git-send-email-tixxdz@gmail.com>
+ <1495454226-10027-2-git-send-email-tixxdz@gmail.com> <CAGXu5jL9jRDkHj20kf4O6VrjiEpvXGzN3nn5Lw4fT2sx_Xg=+A@mail.gmail.com>
+ <CAEiveUe5cTCet6=Uzn64YANRZ2Qyqk5OSXqU3MybevbkbeNR3Q@mail.gmail.com>
+ <CAGXu5j+L1aEWqi7DC4StwAorfG4da0XqrouMvbz07cJ7gYi0AQ@mail.gmail.com>
+ <CAEiveUeZhHtPyLv8=3BsPh5Anr2ynnzD0bprUkeKUGygtRQKsw@mail.gmail.com>
+ <CAGXu5jK5exWBV+ub8ys86Ubu1vKwN=miOZxwp3zdWaWEfuJddQ@mail.gmail.com> <CAEiveUeKU-zxXUeeuTZ2Sf1NrbH+t9JjwaWOK_2varRDsfbEWg@mail.gmail.com>
+From: Kees Cook <keescook@google.com>
+Date: Thu, 1 Jun 2017 12:10:07 -0700
+Message-ID: <CAGXu5jJPk5a_66FpMd6D-XdWyzD7sxCPQirz1C6_hEFu4qsP5g@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make TIOCSTI
- ioctl require CAP_SYS_ADMIN
-To: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
-Cc: Matt Brown <matt@nmatt.com>, Casey Schaufler <casey@schaufler-ca.com>, Boris Lukashev <blukashev@sempervictus.com>, Greg KH <gregkh@linuxfoundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v4 next 1/3] modules:capabilities: allow
+ __request_module() to take a capability argument
+To: Djalal Harouni <tixxdz@gmail.com>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>, Rusty Russell <rusty@rustcorp.com.au>, "David S . Miller" <davem@davemloft.net>, Jessica Yu <jeyu@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Ingo Molnar <mingo@kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, Jonathan Corbet <corbet@lwn.net>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Zendyani <zendyani@gmail.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Ben Hutchings <ben.hutchings@codethink.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 1, 2017 at 6:08 AM, Alan Cox <gnomes@lxorguk.ukuu.org.uk> wrote:
->> I still cannot wrap my head around why providing users with a
->> protection is a bad thing. Yes, the other tty games are bad, but this
->> fixes a specific and especially bad case that is easy to kill. It's
->> got a Kconfig and a sysctl. It's not on by default. This protects the
->> common case of privileged ttys that aren't attached to consoles, etc,
+On Thu, Jun 1, 2017 at 7:56 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
+>         module_require_cap = 0;
 >
-> Which just leads to stuff not getting fixed. Like all the code out there
-> today which is still vulnerable to selection based attacks because people
-> didn't do the job right when "fixing" stuff because they are not
-> thinking about security at a systems level but just tickboxing CVEs.
+>         if (autoload == MODULES_AUTOLOAD_DISABLED)
+>                 return -EPERM;
+>
+>         if (autoload == MODULES_AUTOLOAD_PRIVILEGED || require_cap > 0) {
+>                 if (prefix != NULL && *prefix != '\0')
+>                         /*
+>                          * Allow non-CAP_SYS_MODULE caps when
+>                          * using a distinct prefix.
+>                          */
+>                         module_require_cap = require_cap;
+>                 else
+>                         /*
+>                          * Otherwise always require CAP_SYS_MODULE if no
+>                          * valid prefix. Callers that do not provide a valid prefix
+>                          * should not provide a require_cap > 0
+>                          */
+>                         module_require_cap = CAP_SYS_MODULE;
+>         }
+>
+>         /* If autoload allowed and 'module_require_cap' was *never* set, allow */
+>         if (module_require_cap == 0 && autoload == MODULES_AUTOLOAD_ALLOWED)
+>                 return 0;
+>
+>         return capable(module_require_cap) ? 0 : -EPERM;
+>
+> Maybe you will agree :-) ?
 
-There's a difference between "bugs" and "security bugs". Letting
-security bugs continue to get exploited because we want to flush out
-bugs seems insensitive to the people getting attacked. I'd rather
-protect against a class of bug than have to endless fix each bug.
+Yes! Looks good. I was accidentally still thinking about the caps
+checks being in the net code, but obviously, that wouldn't be the case
+anymore. Thanks for the catch. :)
 
-> I'm not against doing something to protect the container folks, but that
-> something as with Android is a whitelist of ioctls. And if we need to do
-> this with a kernel hook lets do it properly.
->
-> Remember the namespace of the tty on creation
-> If the magic security flag is set then
->         Apply a whitelist to *any* tty ioctl call where the ns doesn't
->                 match
->
-> and we might as well just take the Android whitelist since they've kindly
-> built it for us all!
->
-> In the tty layer it ends up being something around 10 lines of code and
-> some other file somewhere in security/ that's just a switch or similar
-> with the whitelisted ioctl codes in it.
->
-> That (or a similar SELinux ruleset) would actually fix the problem.
-> SELinux would be better because it can also apply the rules when doing
-> things like su/sudo/...
+> BTW Kees, also in next version I won't remove the
+> capable(CAP_NET_ADMIN) check from [1]
+> even if there is the new request_module_cap(), I would like it to be
+> in a different patches, this way we go incremental
+> and maybe it is better to merge what we have now ?  and follow up
+> later, and of course if other maintainers agree too!
 
-Just to play devil's advocate, wouldn't such a system continue to not
-address your physical-console concerns? I wouldn't want to limit the
-protection to only containers (but it's a good start), since it
-wouldn't protect people not using containers that still have a
-privileged TTY attached badly somewhere.
+Yes, incremental. I would suggest first creating the API changes to
+move a basic require_cap test into the LSM (which would drop the
+open-coded capable() checks in the net code), and then add the
+autoload logic in the following patches. That way the "infrastructure"
+changes happen separately and do not change any behaviors, but moves
+the caps test down where its wanted in the LSM, before then augmenting
+the logic.
 
-If you're talking about wholistic SELinux policy, sure, I could
-imagine a wholistic fix. But for the tons of people without a
-comprehensive SELinux policy, the proposed protection continues to
-make sense.
+> I just need a bit of free time to check again everything and will send
+> a v5 with all requested changes.
+
+Great, thank you!
 
 -Kees
 
