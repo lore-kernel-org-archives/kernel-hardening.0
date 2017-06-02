@@ -1,44 +1,56 @@
 From: riel@redhat.com
-Date: Fri,  2 Jun 2017 11:20:09 -0400
-Message-Id: <20170602152010.2064-6-riel@redhat.com>
+Date: Fri,  2 Jun 2017 11:20:08 -0400
+Message-Id: <20170602152010.2064-5-riel@redhat.com>
 In-Reply-To: <20170602152010.2064-1-riel@redhat.com>
 References: <20170602152010.2064-1-riel@redhat.com>
-Subject: [kernel-hardening] [PATCH 5/6] arm64: move COMPAT_ELF_ET_DYN_BASE lower in the address space
+Subject: [kernel-hardening] [PATCH 4/6] arm64/mmap: properly account for stack randomization in mmap_base
 To: linux-kernel@vger.kernel.org
 Cc: kernel-hardening@lists.openwall.com, akpm@linux-foundation.org, mingo@kernel.org, oleg@redhat.com, lwoodman@redhat.com, mhocko@suse.de, danielmicay@gmail.com, will.deacon@arm.com, benh@kernel.crashing.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Rik van Riel <riel@redhat.com>
 
-When setting up mmap_base, we take care to start the mmap base
-below the maximum extent to which the stack will grow. However,
-we take no such precautions with PIE binaries, which are placed
-at 2/3 of TASK_SIZE plus a random offset. As a result, 32 bit PIE
-binaries can end up smack in the middle of where the stack (which
-is randomized down) is supposed to go.
+When RLIMIT_STACK is, for example, 256MB, the current code results in
+a gap between the top of the task and mmap_base of 256MB, failing to
+take into account the amount by which the stack address was randomized.
+In other words, the stack gets less than RLIMIT_STACK space.
 
-That problem can be avoided by putting the 32 bit ELF_ET_DYN_BASE
-at 256MB, which is a value linux-hardened and grsecurity have used
-for a long time now without any known (to me) bug reports.
+Ensure that the gap between the stack and mmap_base always takes stack
+randomization into account.
 
-Signed-off-by: Rik van Riel <riel@redhat.com>
+>From Daniel Micay's linux-hardened tree.
+
+Reported-by: Florian Weimer <fweimer@redhat.com>
 Signed-off-by: Daniel Micay <danielmicay@gmail.com>
+Signed-off-by: Rik van Riel <riel@redhat.com>
 ---
- arch/arm64/include/asm/elf.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ arch/arm64/mm/mmap.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
 
-diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
-index 5d1700425efe..88808a761816 100644
---- a/arch/arm64/include/asm/elf.h
-+++ b/arch/arm64/include/asm/elf.h
-@@ -173,7 +173,7 @@ extern int arch_setup_additional_pages(struct linux_binprm *bprm,
+diff --git a/arch/arm64/mm/mmap.c b/arch/arm64/mm/mmap.c
+index 7b0d55756eb1..3f15eb193e33 100644
+--- a/arch/arm64/mm/mmap.c
++++ b/arch/arm64/mm/mmap.c
+@@ -34,7 +34,7 @@
+  * Leave enough space between the mmap area and the stack to honour ulimit in
+  * the face of randomisation.
+  */
+-#define MIN_GAP (SZ_128M + ((STACK_RND_MASK << PAGE_SHIFT) + 1))
++#define MIN_GAP (SZ_128M)
+ #define MAX_GAP	(STACK_TOP/6*5)
  
- #ifdef CONFIG_COMPAT
+ static int mmap_is_legacy(void)
+@@ -64,6 +64,11 @@ unsigned long arch_mmap_rnd(void)
+ static unsigned long mmap_base(unsigned long rnd)
+ {
+ 	unsigned long gap = rlimit(RLIMIT_STACK);
++	unsigned long pad = STACK_RND_MASK << PAGE_SHIFT;
++
++	/* Values close to RLIM_INFINITY can overflow. */
++	if (gap + pad > gap)
++		gap += pad;
  
--#define COMPAT_ELF_ET_DYN_BASE		(2 * TASK_SIZE_32 / 3)
-+#define COMPAT_ELF_ET_DYN_BASE		(0x10000000UL)
- 
- /* AArch32 registers. */
- #define COMPAT_ELF_NGREG		18
+ 	if (gap < MIN_GAP)
+ 		gap = MIN_GAP;
 -- 
 2.9.3
