@@ -1,66 +1,78 @@
+Date: Fri, 2 Jun 2017 21:05:44 +0100
+From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+Message-ID: <20170602210544.73680be8@lxorguk.ukuu.org.uk>
+In-Reply-To: <a3c1b792-a426-90e1-e37b-9f9a8d4d192a@nmatt.com>
+References: <20170530132427.016053da@alans-desktop>
+	<2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
+	<20170530235106.11aab25c@alans-desktop>
+	<3bd4ff7b-6f7d-52b0-03f6-026bac79f11f@nmatt.com>
+	<20170531005633.484a2e14@alans-desktop>
+	<CAGXu5j+pqD1082fYDS_dvDB2QNvt9wSz+C7vAhGpMXcJWxoDkw@mail.gmail.com>
+	<20170601140812.583cf0a5@alans-desktop>
+	<CAGXu5jLefv=T3mCYryqh2pYjYonFsTQZSLsHqLK75CKvSmgb-w@mail.gmail.com>
+	<20170601222432.6f593538@lxorguk.ukuu.org.uk>
+	<2d0ad49c-886e-1caf-771a-d251957f614c@nmatt.com>
+	<20170602153647.GA2688@mail.hallyn.com>
+	<a3c1b792-a426-90e1-e37b-9f9a8d4d192a@nmatt.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170602152010.2064-2-riel@redhat.com>
-References: <20170602152010.2064-1-riel@redhat.com> <20170602152010.2064-2-riel@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 2 Jun 2017 12:27:44 -0700
-Message-ID: <CAGXu5jKcuV7jfPotd1y6GNWk=jyvvb2xqYGS8hMx8qD9de=uzA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH 1/6] binfmt_elf: document load_bias a
- little bit
-To: Rik van Riel <riel@redhat.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Larry Woodman <lwoodman@redhat.com>, mhocko@suse.de, Daniel Micay <danielmicay@gmail.com>, Will Deacon <will.deacon@arm.com>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make
+ TIOCSTI ioctl require CAP_SYS_ADMIN
+To: Matt Brown <matt@nmatt.com>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>, Kees Cook <keescook@chromium.org>, Casey Schaufler <casey@schaufler-ca.com>, Boris Lukashev <blukashev@sempervictus.com>, Greg KH <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 2, 2017 at 8:20 AM,  <riel@redhat.com> wrote:
-> From: Rik van Riel <riel@redhat.com>
->
-> After me and another unnamed developer got confused by the subtraction
-> of vaddr in this branch of the code, followed by adding vaddr back in
-> a little bit later, for the third time, maybe it is time to document
-> this quirky bit of code.
->
-> Signed-off-by: Rik van Riel <riel@redhat.com>
+> Can't we also have a sysctl that toggles if CAP_SYS_ADMIN is involved in
+> this whitelist check? Otherwise someone might leave things out of the
+> whitelist just because they want to use those ioctls as a privileged
+> process. Also restricting a privileged user from ioctls with this
+> whitelist approach is going to be pointless because, if the whitelist is
+> configurable from userspace, they will just be able to modify the
+> whitelist.
 
-Acked-by: Kees Cook <keescook@chromium.org>
+Something like CAP_SYS_ADMIN is fine if you must have it configurable on
+the grounds that CAP_SYS_ADMIN will let you override the list anyway.
 
-Any and all improvements to this code and its documentation are welcome. :)
+> I'm fine with moving this to an LSM that whitelists ioctls. I also want
+> to understand what a whitelist would like look and how you would
+> configure it? Does a sysctl that is a list of allowed ioctls work? I
+> don't want to just have a static whitelist that you can't change without
+> recompiling your kernel.
 
--Kees
+That's odd because your previous argument was for a fixed one entry
+whitelist containing TIOCSTI 8)
 
-> ---
->  fs/binfmt_elf.c | 10 ++++++++--
->  1 file changed, 8 insertions(+), 2 deletions(-)
->
-> diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
-> index 5075fd5c62c8..8c3f4dbc7603 100644
-> --- a/fs/binfmt_elf.c
-> +++ b/fs/binfmt_elf.c
-> @@ -930,10 +930,16 @@ static int load_elf_binary(struct linux_binprm *bprm)
->                 if (loc->elf_ex.e_type == ET_EXEC || load_addr_set) {
->                         elf_flags |= MAP_FIXED;
->                 } else if (loc->elf_ex.e_type == ET_DYN) {
-> -                       /* Try and get dynamic programs out of the way of the
-> +                       /*
-> +                        * Try and get dynamic programs out of the way of the
->                          * default mmap base, as well as whatever program they
->                          * might try to exec.  This is because the brk will
-> -                        * follow the loader, and is not movable.  */
-> +                        * follow the loader, and is not movable.
-> +                        *
-> +                        * The load_bias is the difference between the address
-> +                        * in the elf header and the address where the binary
-> +                        * is mmapped.
-> +                        */
->                         load_bias = ELF_ET_DYN_BASE - vaddr;
->                         if (current->flags & PF_RANDOMIZE)
->                                 load_bias += arch_mmap_rnd();
-> --
-> 2.9.3
->
+The list can probably be fixed. IMHO those wanting to do cleverer stuff
+sre inevitably going to end up using a "grown up" LSM for the job because
 
+a) they'll want to shape things like su not just containers
+b) they will have cases where you want to lock down cleverly - eg you can
+disable TIOCSTI use except by certain apps, and make those apps non
+ptraceable so only existing real users of it can continue to use it.
 
+For the whitelist you want most of the standard tty ioctls, but none of
+the device specific ones, none of the hardware configuration ones, no
+TIOCSTI, no selection, no line discipline change (or you can set a
+network ldisc or various other evil and fascinating things).
 
--- 
-Kees Cook
-Pixel Security
+I really think that for container type uses the whitelist can be fairly
+clearly defined because we know a container isn't supposed to be screwing
+with the hardware of the parent, configuring network interfaces or
+pushing data to trip people up.
+
+If we are prepared to accept nuisance attacks (messing up baud rate,
+hangup, etc) then it's fairly easy to fix.
+
+So I'd say it's all the generic tty ioctls except TIOCSTI and TIOCSETD
+but it would be good to see what Android is going with and why.
+
+You can still do some typeback stuff even then because the consoles and
+terminals have ranges of query and requests you can trigger. As you can
+use termios to absorb some symbols in the reply and map which one to use
+for newline you can even type stuff. However it's very limited - hex
+digits, [, c and some other oddments. People have looked hard at that and
+I've yet to see a successful attack. Yes I can make you run test (aka
+'[') but I've yet to see a way to use it for anything.
+
+Alan
