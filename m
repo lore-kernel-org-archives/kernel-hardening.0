@@ -1,156 +1,164 @@
-References: <20170529213800.29438-1-matt@nmatt.com>
- <20170529213800.29438-3-matt@nmatt.com>
- <20170529232640.16211960@alans-desktop>
- <CAFUG7CdDd0Yfegb1S6_wNQzje4EuLE0jPdvOE=uSQL152meyjQ@mail.gmail.com>
- <3738951f-7a4a-b37f-c695-21a2fcd45f76@schaufler-ca.com>
- <0e078ce7-5b62-f27c-3920-efc2ffdf342b@nmatt.com>
- <b0a29f23-4154-8f2f-98e7-0942612f0cdc@schaufler-ca.com>
- <e1c9e4e8-5427-b4b6-aad2-72c88552a6af@nmatt.com>
- <20170530132427.016053da@alans-desktop>
- <2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
- <20170530235106.11aab25c@alans-desktop>
- <3bd4ff7b-6f7d-52b0-03f6-026bac79f11f@nmatt.com>
- <20170531005633.484a2e14@alans-desktop>
- <CAGXu5j+pqD1082fYDS_dvDB2QNvt9wSz+C7vAhGpMXcJWxoDkw@mail.gmail.com>
- <20170601140812.583cf0a5@alans-desktop>
- <CAGXu5jLefv=T3mCYryqh2pYjYonFsTQZSLsHqLK75CKvSmgb-w@mail.gmail.com>
- <20170601222432.6f593538@lxorguk.ukuu.org.uk>
-From: Matt Brown <matt@nmatt.com>
-Message-ID: <2d0ad49c-886e-1caf-771a-d251957f614c@nmatt.com>
-Date: Fri, 2 Jun 2017 10:46:54 -0400
 MIME-Version: 1.0
-In-Reply-To: <20170601222432.6f593538@lxorguk.ukuu.org.uk>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make TIOCSTI
- ioctl require CAP_SYS_ADMIN
-To: Alan Cox <gnomes@lxorguk.ukuu.org.uk>, Kees Cook <keescook@chromium.org>
-Cc: Casey Schaufler <casey@schaufler-ca.com>, Boris Lukashev <blukashev@sempervictus.com>, Greg KH <gregkh@linuxfoundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Fri, 2 Jun 2017 16:59:56 +0200
+Message-ID: <CAHmME9q=AdK7BHQw0+sd4T0HGQce92KXTD+-TTc2s2CXbEHAAA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] get_random_bytes returns bad randomness before seeding is complete
+To: Stephan Mueller <smueller@chronox.de>, Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 6/1/17 5:24 PM, Alan Cox wrote:
->> There's a difference between "bugs" and "security bugs". Letting
-> 
-> Not really, it's merely a matter of severity of result. A non security
-> bug that hoses your hard disk is to anyone but security nutcases at
-> least as bad as a security hole.
-> 
->> security bugs continue to get exploited because we want to flush out
->> bugs seems insensitive to the people getting attacked. I'd rather
->> protect against a class of bug than have to endless fix each bug.
-> 
-> The others are security bugs too to varying degree
-> 
->>> I'm not against doing something to protect the container folks, but that
->>> something as with Android is a whitelist of ioctls. And if we need to do
->>> this with a kernel hook lets do it properly.
->>>
->>> Remember the namespace of the tty on creation
->>> If the magic security flag is set then
->>>         Apply a whitelist to *any* tty ioctl call where the ns doesn't
->>>                 match
->>>
->>> and we might as well just take the Android whitelist since they've kindly
->>> built it for us all!
->>>
->>> In the tty layer it ends up being something around 10 lines of code and
->>> some other file somewhere in security/ that's just a switch or similar
->>> with the whitelisted ioctl codes in it.
->>>
->>> That (or a similar SELinux ruleset) would actually fix the problem.
->>> SELinux would be better because it can also apply the rules when doing
->>> things like su/sudo/...  
->>
->> Just to play devil's advocate, wouldn't such a system continue to not
->> address your physical-console concerns? I wouldn't want to limit the
-> 
-> It would for the cases that a whitelist and container check covers -
-> because the whitelist wouldn't allow you to do anything but boring stuff
-> on the tty. TIOCSTI is just one of a whole range of differently stupid
-> and annoying opportunities. Containers do not and should not be able to
-> set the keymap, change the video mode, use console selection, make funny
-> beepy noises, access video I/O registers and all the other stuff like
-> that. Nothing is going to break if we have a fairly conservative
-> whitelist.
-> 
->> protection to only containers (but it's a good start), since it
->> wouldn't protect people not using containers that still have a
->> privileged TTY attached badly somewhere.
-> 
-> How are you going to magically fix the problem. I'm not opposed to fixing
-> the real problem but right now it appears to be a product of wishful
-> thinking not programming. What's the piece of security code that
-> magically discerns the fact you are running something untrusted at the
-> other end of your tty. SELinux can do it via labelling but I don't see
-> any generic automatic way for the kernel to magically work out when to
-> whitelist and when not to. If there is a better magic rule than
-> differing-namespace then provide the code.
-> 
-> You can't just disable TIOCSTI, it has users deal with it. You can
-> get away with disabling it for namespace crossing I think but if you do
-> that you need to disable a pile of others.
-> 
-> (If it breaks containers blocking TIOCSTI then we need to have a good
-> look at algorithms for deciding when to flush the input queue on exiting
-> a container or somesuch)
-> 
->> If you're talking about wholistic SELinux policy, sure, I could
->> imagine a wholistic fix. But for the tons of people without a
->> comprehensive SELinux policy, the proposed protection continues to
->> make sense.
-> 
-> No it doesn't. It's completely useless unless you actually bother to
-> address the other exploit opportunities.
-> 
-> Right now the proposal is a hack to do 
-> 
-> 	if (TIOCSTI && different_namespace && magic_flag)
-> 
+Hi folks,
 
+This email is about an issue with get_random_bytes(), the CSPRNG used
+inside the kernel for generating keys and nonces and whatnot. However,
+I will begin with an aside:
 
-This is not what my patch does. Mine is like:
+/dev/urandom will return bad randomness before its seeded, rather than
+blocking, and despite years and years of discussion and bike shedding,
+this behavior hasn't changed, and the vast majority of cryptographers
+and security experts remain displeased. It _should_ block until its
+been seeded for the first time, just like the new getrandom() syscall,
+and this important bug fix (which is not a real api break) should be
+backported to all stable kernels. (Userspace doesn't even have a
+reliable way of determining whether or not it's been seeded!) Yes,
+yes, you have arguments for why you're keeping this pathological, but
+you're still wrong, and this api is still a bug. Forcing userspace
+architectures to work around your bug, as your arguments usually go,
+is disquieting. Anyway, that's not what this email is about, but given
+that as a backdrop, here's a different-but-related, and perhaps more
+petulant, issue...
 
-	if (TIOCSTI && !ns_capable(tty->owner_user_ns, CAP_SYS_ADMIN) &&
-		magic_flag)
+The problem this email intends to address is this:
 
-in other words:
-	if (TIOCSTI && (different_owner_user_ns || !CAP_SYS_ADMIN) &&
-		magic_flag)
+void get_random_bytes(void *buf, int nbytes)
+{
+#if DEBUG_RANDOM_BOOT > 0
+       if (!crng_ready())
+               printk(KERN_NOTICE "random: %pF get_random_bytes called "
+                      "with crng_init = %d\n", (void *) _RET_IP_, crng_init);
+#endif
+       ...
+       extract_crng(buf);
 
-can you specify what you mean by different_namespace? which namespace?
+Or, on older kernels:
 
-The reason I brought in the user namespace was to solve an edge case
-with nested containers. capable() will never be true in a container, so
-nested containers would break if we didn't do the ns_capable check. This
-is also the reason for the addition of owner_user_ns to tty_struct.
+void get_random_bytes(void *buf, int nbytes)
+{
+#if DEBUG_RANDOM_BOOT > 0
+       if (unlikely(nonblocking_pool.initialized == 0))
+               printk(KERN_NOTICE "random: %pF get_random_bytes called "
+                      "with %d bits of entropy available\n",
+                      (void *) _RET_IP_,
+                      nonblocking_pool.entropy_total);
+#endif
+       trace_get_random_bytes(nbytes, _RET_IP_);
+       extract_entropy(&nonblocking_pool, buf, nbytes, 0, 0);
+}
 
-The point of my patch is to prevent any type of tiocsti activity where
-the tty is given to an unprivileged process/container. The emphasis of
-my check is on the CAP_SYS_ADMIN part, not the namespace part.
+As the printk implies, it's possible for get_random_bytes() to be
+called before it's seeded. Why was that helpful printk put behind an
+ifdef? I suspect because people would see the lines in their dmesg and
+write emails like this one to the list.
 
-> the proper solution is
-> 
-> 	if (!whitelisted(ioctl) && different_namespace && magic_flag)
-> 
-> The former is snake oil, the latter actually deals with the problem space
-> for namespaced stuff comprehensively and is only a tiny amount more code.
-> 
-> For non namespaced stuff it makes it no worse, if you don't allocate a
-> pty/tty pair properly then the gods are not going to magically save you
-> from on high sorry. And if you want to completely kill TIOCSTI even
-> though it's kind of pointless you can use seccomp.
-> 
-> We can make things a bit better for the non-namespaced cases by providing
-> a new ioctl that turns on/off whitelisting for that tty so that the
-> process can do
-> 
-> 	ioctl(tty_fd, TIOCTRUST, &zero);
-> 	execl("/home/foo/stupid-idea", "ooops", NULL);
-> 
-> that's a simple per tty flag and a trivial one condition extra check to
-> the test above. We do need some way to change it back however and that's
-> a bit trickier given we don't want the stupid-idea tool to be able to but
-> we do want the invoking shell to - maybe you have to be session leader ?
-> 
-> Alan
-> 
+I anticipate an argument coming from the never-block /dev/urandom
+cartel that goes something along the lines of, "get_random_bytes() is
+only called in paths initiated by a syscall; therefore, userspace must
+ensure /dev/urandom, which is the same pool as get_random_bytes, has
+been properly seeded, before making any syscalls that might lead to
+get_random_bytes() being called."
+
+If you've already given up on the general initiative of trying to urge
+them to make /dev/urandom block until seeded, then this might seem
+like a reasonable argument. If /dev/urandom is broken, it doesn't
+matter if get_random_bytes() is broken too, if the required
+work-around for one is the same as for the other.
+
+But the premise is flawed. get_random_bytes() can be called before any
+syscalls are made, before userspace even has an opportunity to ensure
+/dev/urandom is seeded. That's what that printk in the ifdef is all
+about. Bad news bears.
+
+Grepping through the source tree for get_random_bytes, I just opened a
+few files at random to see what the deal was. Here's one:
+
+drivers/net/ieee802154/at86rf230.c:
+static int at86rf230_probe(struct spi_device *spi)
+{
+...
+        get_random_bytes(csma_seed, ARRAY_SIZE(csma_seed));
+
+No clue what this driver is for or if it actually needs good
+randomness, but using get_random_bytes in a hardware probe function
+can happen prior to userspace's ability to seed.
+
+arch/s390/crypto/prng.c seems to call get_random_bytes on module load,
+which can happen pre-userspace, for seeding some kind of RNG of its
+own.
+
+net/ipv6/addrconf.c:
+static void __ipv6_regen_rndid(struct inet6_dev *idev)
+{
+regen:
+       get_random_bytes(idev->rndid, sizeof(idev->rndid));
+
+This is in the networking stack when bringing up an interface and
+assigning randomly assigned v6 addresses. While you might argue that
+userspace is required for networking, remember that the kernel
+actually has the ability to initiate networking all on its own, before
+userspace; the kernel even has its own dhcp client! Yowza. In fact, on
+that note:
+
+net/ipv4/ipconfig.c:
+static int __init ic_open_devs(void)
+{
+...
+        get_random_bytes(&d->xid, sizeof(__be32));
+
+And so on and so on and so on. If you grep the source as I did, you'll
+find there's no shortage of head-scratchers. "Hmmm," you ask yourself,
+"could this be called before userspace has ensured that /dev/urandom
+is seeded? do we actually _need_ good randomness here, or does it not
+matter?" I guess you could try to reason about each and every one of
+them -- you might even have those same questions about the silly
+examples I pasted above -- but that one-by-one methodology seems
+excessively fragile and arduous.
+
+There must have been a developer who thought about this at least once
+before, because random.c does have a callback notifier mechanism for
+drivers to learn when they can safely call get_random_bytes --
+add_random_ready_callback. However, it's only used by ONE driver --
+the drbg in crypto/. It's pretty clunky to use, and there's no
+reasonable to way replace every single usage of get_random_bytes with
+complicated callback infrastructure.
+
+Instead, get_random_bytes simply needs to always return good
+randomness. But this is complicated to do inside the kernel. We can't
+simply have it block until seeded, because we might not be in process
+context and therefore cannot sleep, and introducing a spin for
+something that could take a while is untenable too.
+
+There might be some hope, however. Recent kernels now have a very fast
+urandom seeding, which moves the seed-ready-point to be much early
+during boot. This is still not early enough to just "do nothing", but
+early enough that there's room for a good solution:
+
+For builtin modules, we defer all __init calls to after seeding of
+drivers that use get_random_bytes. That is to say, rather than using
+add_random_ready_callback one by one in an ad-hoc fashion with every
+call site that needs good randomness, we just defer loading those
+entire modules until an add_random_ready_callback callback. We might
+need to explicitly opt-in to this -- by introducing an
+`after_urandom_init(..)`, for example, to replace module_init in these
+cases -- or perhaps there's a way to automatically detect and defer.
+For external modules, it's much easier; we simply have
+request_module() block until after seeding is complete. This function
+is already a blocking one, so that's not an issue. And it'd ensure
+that things like virtual network drivers that are dynamically loaded
+and use get_random_bytes, such as vxlan or wireguard, simply block on
+`ip link add ...`, which would be the desired behavior.
+
+Alternatively, I'm open to other solutions people might come up with.
+
+Thoughts?
+
+Jason
