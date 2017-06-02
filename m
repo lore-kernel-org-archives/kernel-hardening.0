@@ -1,73 +1,196 @@
-Message-ID: <1496439121.13303.1.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Fri, 02 Jun 2017 17:32:01 -0400
-In-Reply-To: <20170602140743.274b9babba6118bfd12c7a26@linux-foundation.org>
-References: <20170526095404.20439-1-danielmicay@gmail.com>
-	 <20170602140743.274b9babba6118bfd12c7a26@linux-foundation.org>
+MIME-Version: 1.0
+In-Reply-To: <20170602190734.6zll7zc5hr66oacl@thunk.org>
+References: <CAHmME9q=AdK7BHQw0+sd4T0HGQce92KXTD+-TTc2s2CXbEHAAA@mail.gmail.com>
+ <20170602172616.47qcxav6adq52nmk@thunk.org> <CAHmME9oS_GCRMLf7EF8XBGwjdjohcRz4rzZiWr5ZDUurTj8A7Q@mail.gmail.com>
+ <20170602190734.6zll7zc5hr66oacl@thunk.org>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Sat, 3 Jun 2017 01:58:25 +0200
+Message-ID: <CAHmME9oLHP85ENr5aZgKsTSrxiUWoQ_pfv7C6XYxmcoxPfq3Ew@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v4] add the option of fortified string.h functions
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: linux-mm@kvack.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-kernel <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Daniel Axtens <dja@axtens.net>, Moni Shoua <monis@mellanox.com>, Doug Ledford <dledford@redhat.com>, Sean Hefty <sean.hefty@intel.com>, Hal Rosenstock <hal.rosenstock@gmail.com>, linux-rdma@vger.kernel.org
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: get_random_bytes returns bad randomness before seeding is complete
+To: Theodore Ts'o <tytso@mit.edu>, Stephan Mueller <smueller@chronox.de>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 2017-06-02 at 14:07 -0700, Andrew Morton wrote:
-> On Fri, 26 May 2017 05:54:04 -0400 Daniel Micay <danielmicay@gmail.com
-> > wrote:
-> 
-> > This adds support for compiling with a rough equivalent to the glibc
-> > _FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
-> > overflow checks for string.h functions when the compiler determines
-> > the
-> > size of the source or destination buffer at compile-time. Unlike
-> > glibc,
-> > it covers buffer reads in addition to writes.
-> 
-> Did we find a bug in drivers/infiniband/sw/rxe/rxe_resp.c?
-> 
-> i386 allmodconfig:
-> 
-> In file included from ./include/linux/bitmap.h:8:0,
->                  from ./include/linux/cpumask.h:11,
->                  from ./include/linux/mm_types_task.h:13,
->                  from ./include/linux/mm_types.h:4,
->                  from ./include/linux/kmemcheck.h:4,
->                  from ./include/linux/skbuff.h:18,
->                  from drivers/infiniband/sw/rxe/rxe_resp.c:34:
-> In function 'memcpy',
->     inlined from 'send_atomic_ack.constprop' at
-> drivers/infiniband/sw/rxe/rxe_resp.c:998:2,
->     inlined from 'acknowledge' at
-> drivers/infiniband/sw/rxe/rxe_resp.c:1026:3,
->     inlined from 'rxe_responder' at
-> drivers/infiniband/sw/rxe/rxe_resp.c:1286:10:
-> ./include/linux/string.h:309:4: error: call to '__read_overflow2'
-> declared with attribute error: detected read beyond size of object
-> passed as 2nd parameter
->     __read_overflow2();
-> 
-> 
-> If so, can you please interpret this for the infiniband developers?
+Hi Ted,
 
-It copies sizeof(skb->cb) bytes with memcpy which is 48 bytes since cb
-is a 48 byte char array in `struct sk_buff`. The source buffer is a
-`struct rxe_pkt_info`:
+Based on the tone of your last email, before I respond to your
+individual points, I think it's worth noting that the intent of this
+thread is to get a sampling of opinions of the issue of
+get_random_bytes, so that I can write a patch that fixes this issue
+(or a series of issues) using some strategy that we agree is a good
+one. I've already implemented prototypes of a few different ideas, so
+that I can discuss them competently here (a personal thing, I tend to
+learn best by "doing"), and so with list feedback, I'll know in which
+direction I should go for refinement eventually leading to a [PATCH]
+submission. In case it wasn't evident from my last patch series for
+drivers/char/random.c, despite not being corporately backed, I really
+have a fun time working on this part of the kernel in my freetime.
+With that said...
 
-struct rxe_pkt_info {
-	struct rxe_dev		*rxe;		/* device that owns packet */
-	struct rxe_qp		*qp;		/* qp that owns packet */
-	struct rxe_send_wqe	*wqe;		/* send wqe */
-	u8			*hdr;		/* points to bth */
-	u32			mask;		/* useful info about pkt */
-	u32			psn;		/* bth psn of packet */
-	u16			pkey_index;	/* partition of pkt */
-	u16			paylen;		/* length of bth - icrc */
-	u8			port_num;	/* port pkt received on */
-	u8			opcode;		/* bth opcode of packet */
-	u8			offset;		/* bth offset from pkt->hdr */
-};
+On Fri, Jun 2, 2017 at 9:07 PM, Theodore Ts'o <tytso@mit.edu> wrote:
+> It's not _my_ API, it's *our* API
+> much don't break backwards compatibility,
+> broken, and they complain, and you tell them to suck it,
+> If you are using the word *you*, and speaking as an outside to the
+> community, they you can kvetch all you like.  But you're an outsider,
+> take your complaints seriously.
 
-That looks like 32 bytes (1 byte of padding) on 32-bit and 48 bytes on
-64-bit (1 byte of padding), so on 32-bit there's a read overflow of 16
-bytes from the stack here.
+As I wrote earlier, if you want to bike-shed the technical aspects and
+political aspects of fixing /dev/urandom, we can do that in another
+thread. It's obviously a complex topic worthy of discussion, and I'd
+like that discussion to be technically worthy of the issues at hand,
+some of which you've raised here. So please, start a new topic for
+that, and I'll happily follow up, all with the intent of writing a
+patch series and running compatibility tests and whatnot; as I said
+before, I like working on this stuff. However, the focus of this
+thread is get_random_bytes, so please try to stay focused, lest this
+get derailed.
+
+So, you wrote:
+
+> And if your answer is just, "blah blah di blah blah", don't be
+> surprised if others respond to you in exactly the same way.
+> Specifically, by saying to you (in your words), "I don't care".
+
+I really don't care about bikeshedding this with you here, now, in
+this thread. I care about solving the get_random_bytes situation.
+
+>> While we're on the topic of that, you might consider adding a simple
+>> synchronous interface.
+>
+> There's that word "you" again....
+
+Yea, whatever, Ted. Can I rephrase? "As the maintainer of
+drivers/char/random.c, you might consider adding a synchronous
+interface so that the consumers of the file you maintain can benefit
+from it; alternatively, and perhaps easier for you, express your
+support for such an idea, and I'll gladly write the patch." Better? I
+ask you for the benefit of the doubt that this is what I had in mind
+when I wrote "you" -- that I'm seeking approval of the idea before
+moving my code past prototype stage. You're the boss, so whether I
+write the patch or you write the patch or someone else writes the
+patch, it really _is_ you whose consideration matters the most.
+
+> This is open source --- want to send patches?  It sounds like it's a
+> workable, good idea.
+
+Awesome, happy you like it. Yes, absolutely, I'll start cleaning
+things up and will send a series.
+
+Do you have any opinions on the issue of what the most flexible API
+would be? There are a lot of varieties of wait_event. The default one
+is uninterruptable, but as Stephan and Herbert saw when they were
+working on this was that it could be dangerous in certain
+circumstances not to allow interruption. So probably we'd want an
+interruptable variety. But then maybe we want to support the other
+wait_event_* modes too, like killable, timeout, hrtimeout, io, and so
+on. There's a huge list. These are all implemented as macros in
+wait.h, and I don't really want to have a different get_random_bytes_*
+function that corresponds to _each_ of these wait_event_* functions,
+since that'd be overwhelming. So I was thinking maybe a simple flag
+and a timeout param could work:
+
+int get_random_bytes_seeded(u8 *buf, size_t len, bool
+is_interruptable, unsigned long timeout);
+
+If timeout=3D=3D0, the timeout is infinite. If in_interruptible is true,
+we use wait_event_interruptible_*, otherwise we use wait_event_*, and
+the ret value is the usual return value from wait_event_*.
+
+Does that seem like a good simplification that will cover most use
+cases? We could of course add exceeding complexity and choice, but I
+was thinking this would cover most use cases, at least to begin.
+
+What do you think?
+
+> ...or that I disagree with your prior point.  I think you're being
+> lazy, and trying to make it someone else's problem and standing on the
+> side lines and complaining, as opposed to trying to help solve the
+> problem.
+
+Um, no, what an offensive insinuation. I'm trying to solve the
+problem. I'd like your honest feedback, since your maintainer, before
+I start fixing this.
+
+> No, of course we can't audit all of the code, but it's probably a good
+> idea to take a random sample, and to analyze them, so we can get a
+> sense of what the issues are.
+
+That's fair. In that case, please don't take my sample of 4 as a good
+one. I'll put some time into doing a more extensive analysis.
+
+> And then maybe we can find a way to
+> quickly find a class of users that can be easily fixed by using
+> prandom_u32() (for example).
+
+Yea, the easy cases like this might be easy to just extensively audit
+for (it's the more subtle ones I'm concerned about). I'm sure there
+will be some drivers where I'm unsure, in which case I'll leave it as
+is, but for others I can see.
+
+There are ~180 call sites to examine.
+
+> Or maybe we can then help figure out what percentage of the callsites
+> can be fixed with a synchronous interface, and fix some number of them
+> just to demonstrate that the synchronous interface does work well.
+
+I was planning on doing this to at least a couple callsites in my
+upcoming patch series that adds the synchronous interface. It seems
+like the right way to see if the API is good or not.
+
+> It depends on where it's being used.  If it's part of module load,
+> especially if it's one that's done automatically, having something
+> that blocks forever might not be all that useful.  Especially if it
+> blocks device drivers from being albe to be initialized enough to
+> actually supply entropy to the whole system.
+
+Right. In my initial email I proposed a distinction:
+
+- External module loading is usually in a different process context,
+so multiple modules can be attempted to be loaded at the same time. In
+this case, it is probably safe to block in request_module.
+- Built-in modules are loaded =C2=B1 linearly, from init/main.c, so these
+really can't block each other. For this, I was thinking of introducing
+an rnginit section, to add to the list of things like lateinit. The
+rnginit drivers would be loaded _after_ the RNG has initialized, so
+that they don't get blocked.
+
+This solution would be instead of introducing that synchronous API
+mentioned above. I generally like it better, since it means fewer
+error prone changes, and it kind of fixes the problem in a more
+systemic way.
+
+The point you raise against it is that there might be issues where a
+driver needs randomness to start, yet that driver contributes, perhaps
+solely, to randomness. However, I don't think this is an inherent
+problem with this solution. I think, rather, that in cases like this,
+it's the driver itself that needs to be fixed, so as not to have this
+catch-22. So, indeed, we'd have to hunt down any of these cases.
+
+>> What would you think of just removing the #ifdef completely?
+>
+> I think making it a Kconfig option which defaults to true is the
+> better approach.  At the very least let's make sure that on a range of
+> "standard x86 developer machines", we're not spamming dmesg.  If we
+> are, simply turning it on and standing on principle, "we're the
+> cryptographers and we get to decide what is right and holy", and if
+> lots of people start complaining about how it makes their machine
+> usuable, that's exactly the same kind of arrogance which caused kernel
+> developers to become incensed by systemd developers when they spammed
+> dmesg and made kernel developers' systems unusuable.  Would you be
+> upset if systemd developers did it unto you?  Then maybe you shouldn't
+> do it unto others....
+
+Again, I wasn't thinking about this in such an extreme polarized
+fashion like how you present it here. I was just thinking that since
+it's a bug when the pool is read from while unseeded -- either they
+should be using prandom or should be deferring the call, as we
+discussed -- that it'd just be easiest to always print, so we can
+always see when this bug occurs. I wasn't thinking that this would
+result in "arrogant log spam" or something. But anyway, if you prefer
+it to be a Kconfig option, that's no problem with me, and I'll roll a
+patch for that and submit it here.
+
+Regards,
+Jason
