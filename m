@@ -1,80 +1,34 @@
-Message-ID: <1496511155.29205.109.camel@redhat.com>
-From: Rik van Riel <riel@redhat.com>
-In-Reply-To: <20170603113007.GA1544@grsecurity.net>
-References: <20170603113007.GA1544@grsecurity.net>
+MIME-Version: 1.0
+In-Reply-To: <CAHmME9rwKneq0C5GYPSWamGRT0775=-Xw3pyq6uxJXJyyBtr1g@mail.gmail.com>
+References: <CAHmME9q=AdK7BHQw0+sd4T0HGQce92KXTD+-TTc2s2CXbEHAAA@mail.gmail.com>
+ <20170602172616.47qcxav6adq52nmk@thunk.org> <CAHmME9oS_GCRMLf7EF8XBGwjdjohcRz4rzZiWr5ZDUurTj8A7Q@mail.gmail.com>
+ <20170602190734.6zll7zc5hr66oacl@thunk.org> <CAHmME9oLHP85ENr5aZgKsTSrxiUWoQ_pfv7C6XYxmcoxPfq3Ew@mail.gmail.com>
+ <20170603050433.4xpvloul25s47f2z@thunk.org> <CAHmME9rwKneq0C5GYPSWamGRT0775=-Xw3pyq6uxJXJyyBtr1g@mail.gmail.com>
+From: Sandy Harris <sandyinchina@gmail.com>
+Date: Sat, 3 Jun 2017 17:45:43 -0400
+Message-ID: <CACXcFmndxSpytsndqeEsOsyB-nyx_xwBAaG1PMRUmof4U-rDMw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Date: Sat, 03 Jun 2017 13:32:35 -0400
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] Stop the plagiarism
-To: Brad Spengler <spender@grsecurity.net>, kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] Re: get_random_bytes returns bad randomness before seeding is complete
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Theodore Ts'o <tytso@mit.edu>, Stephan Mueller <smueller@chronox.de>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, 2017-06-03 at 07:30 -0400, Brad Spengler wrote:
+Stephan's driver, the HAVEGE system & several others purport to
+extract entropy from a series of timer calls. Probably the best
+analysis is in the Mcguire et al. paper at
+https://static.lwn.net/images/conf/rtlws11/random-hardware.pdf & the
+simplest code in my user-space driver at
+https://github.com/sandy-harris/maxwell The only kernel-space code I
+know of is Stephan's.
 
-> While I'm here:
-> http://openwall.com/lists/kernel-hardening/2017/06/02/3
-> 
-> "a value linux-hardened and grsecurity have used for a long time now"
-> Rik, you're giving credit to a project that didn't even exist a
-> couple
-> weeks ago, yet they've somehow used it "for a long time", even though
+If the claim that such calls give entropy is accepted (which I think
+it should be) then if we get one bit per call, need 100 or so bits &
+space the calls 100 ns apart, loading up a decent chunk of startup
+entropy takes about 10,000 ns or 10 microseconds which looks like an
+acceptable delay. Can we just do that very early in the boot process?
 
-CopperheadOS has been around for a few years now, with
-a hardened Linux kernel as one of its components.
-
-> it only exists there because it was copy+pasted from grsecurity?  Is
-> that what we do now, credit plagiarists instead of the actual authors
-> of
-> the work?  Sorry, but the "work" of struggling to understand code
-> that
-> isn't yours doesn't suddenly make it your code.
-
-The actual code in my patch is different from the #ifdef
-stuff in both linux-hardened and grsecurity. 
-
-The only thing that is the same is an integer constant.
-
-> This is exactly how your plagiarism works.
-
-If I wanted to do plagiarism, I would have copied the
-ugly-as-all-hell #ifdef magic from grsecurity. What
-do you think would have happened if I had submitted
-something like this to lkml?
-
-#ifdef CONFIG_PAX_SEGMEXEC
-#define ELF_ET_DYN_BASE         ((current->mm->pax_flags &
-MF_PAX_SEGMEXEC) ? SEGMEXEC_TASK_SIZE/3*2 : TASK_SIZE/3*2)
-#else
-#define ELF_ET_DYN_BASE         (TASK_SIZE / 3 * 2)
-#endif
-
-#ifdef CONFIG_PAX_ASLR
-#ifdef CONFIG_X86_32
-#define PAX_ELF_ET_DYN_BASE     0x10000000UL
-
-#define PAX_DELTA_MMAP_LEN      (current->mm->pax_flags &
-MF_PAX_SEGMEXEC ? 15 : 16)
-#define PAX_DELTA_STACK_LEN     (current->mm->pax_flags &
-MF_PAX_SEGMEXEC ? 15 : 16)
-#else
-#define PAX_ELF_ET_DYN_BASE     0x400000UL
-
-#define PAX_DELTA_MMAP_LEN      ((test_thread_flag(TIF_ADDR32)) ? 16 :
-TASK_SIZE_MAX_SHIFT - PAGE_SHIFT - 3)
-#define PAX_DELTA_STACK_LEN     ((test_thread_flag(TIF_ADDR32)) ? 16 :
-TASK_SIZE_MAX_SHIFT - PAGE_SHIFT - 3)
-#endif
-#endif
-
-Notice how the code in my patch does not look like that,
-at all?
-
-> This is your last warning.  This is not a new problem and it needs to
-> end completely, or I will make sure it ends.
-
-The grsecurity code you published is licensed under the
-GPLv2. I would be happy to add your copyright in if I
-ever copied around a larger piece of code, but most of
-the time the code I end up submitting is a rewrite and
-not a copy.
+Of course this will fail on systems with no high-res timer. Are there
+still some of those? It might be done in about 1000 times as long on a
+system that lacks the realtime library's nanosecond timer but has the
+Posix standard microsecond timer, implying a delay time in the
+milliseconds. Would that be acceptable in those cases?
