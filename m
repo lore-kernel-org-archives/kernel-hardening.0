@@ -1,34 +1,46 @@
+References: <20170603055351.16080-1-matt@nmatt.com>
+ <20170603154707.GA19161@openwall.com> <20170603155920.GA25740@kroah.com>
+ <20170603162231.GA20590@openwall.com>
+From: Corey Henderson <corman@cormander.com>
+Message-ID: <a8166866-4ef9-a6ef-a0ee-c4d169a435f1@cormander.com>
+Date: Sat, 3 Jun 2017 15:55:56 -0600
 MIME-Version: 1.0
-In-Reply-To: <CAHmME9rwKneq0C5GYPSWamGRT0775=-Xw3pyq6uxJXJyyBtr1g@mail.gmail.com>
-References: <CAHmME9q=AdK7BHQw0+sd4T0HGQce92KXTD+-TTc2s2CXbEHAAA@mail.gmail.com>
- <20170602172616.47qcxav6adq52nmk@thunk.org> <CAHmME9oS_GCRMLf7EF8XBGwjdjohcRz4rzZiWr5ZDUurTj8A7Q@mail.gmail.com>
- <20170602190734.6zll7zc5hr66oacl@thunk.org> <CAHmME9oLHP85ENr5aZgKsTSrxiUWoQ_pfv7C6XYxmcoxPfq3Ew@mail.gmail.com>
- <20170603050433.4xpvloul25s47f2z@thunk.org> <CAHmME9rwKneq0C5GYPSWamGRT0775=-Xw3pyq6uxJXJyyBtr1g@mail.gmail.com>
-From: Sandy Harris <sandyinchina@gmail.com>
-Date: Sat, 3 Jun 2017 17:45:43 -0400
-Message-ID: <CACXcFmndxSpytsndqeEsOsyB-nyx_xwBAaG1PMRUmof4U-rDMw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: get_random_bytes returns bad randomness before seeding is complete
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Theodore Ts'o <tytso@mit.edu>, Stephan Mueller <smueller@chronox.de>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+In-Reply-To: <20170603162231.GA20590@openwall.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [PATCH v1 1/1] Add Trusted Path Execution as a
+ stackable LSM
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Stephan's driver, the HAVEGE system & several others purport to
-extract entropy from a series of timer calls. Probably the best
-analysis is in the Mcguire et al. paper at
-https://static.lwn.net/images/conf/rtlws11/random-hardware.pdf & the
-simplest code in my user-space driver at
-https://github.com/sandy-harris/maxwell The only kernel-space code I
-know of is Stephan's.
+On 6/3/2017 10:22 AM, Solar Designer wrote:
+> On Sat, Jun 03, 2017 at 05:59:20PM +0200, Greg KH wrote:
+>> But for those systems, and this feature as well, can't a "simple"
+>> apparmor policy do the exact same thing?  Also, I'm sure the SELinux can
+>> do this as well, but I don't know the config language there as well.
+>>
+>> So I think this is already a feature that is supported, it just takes a
+>> bit more configuration work on the admin.
+> 
+> Yes, that's "a bit" more effort up to the point where almost(?) no one
+> would bother.  Sometimes simple features can reasonably co-exist with
+> more general frameworks that could also be used to achieve the effect.
+> So I don't view this as a sufficiently good argument against TPE as a
+> feature on its own.
+> 
+> Alexander
+> 
 
-If the claim that such calls give entropy is accepted (which I think
-it should be) then if we get one bit per call, need 100 or so bits &
-space the calls 100 ns apart, loading up a decent chunk of startup
-entropy takes about 10,000 ns or 10 microseconds which looks like an
-acceptable delay. Can we just do that very early in the boot process?
+For what it's worth, the whole reason I wrote Trusted Path Execution 
+(tpe-lkm) as an out-of-tree module was for those who use a targeted 
+SELinux policy (or none at all) but still wanted access to some basic 
+protection from their own authorized users, without having to maintain 
+their own kernel or a written LSM policy.
 
-Of course this will fail on systems with no high-res timer. Are there
-still some of those? It might be done in about 1000 times as long on a
-system that lacks the realtime library's nanosecond timer but has the
-Posix standard microsecond timer, implying a delay time in the
-milliseconds. Would that be acceptable in those cases?
+https://github.com/cormander/tpe-lkm
+
+It uses ftrace to enter the kernel, but the code should port pretty 
+easily to a stackable LSM built in-tree.
+
+--
+Corey
