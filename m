@@ -1,74 +1,90 @@
-References: <20170603113007.GA1544@grsecurity.net>
-From: Matt Brown <matt@nmatt.com>
-Message-ID: <a0ecb79b-c65a-1e8f-83e5-275d9ac5ab6d@nmatt.com>
-Date: Sat, 3 Jun 2017 11:16:37 -0400
-MIME-Version: 1.0
-In-Reply-To: <20170603113007.GA1544@grsecurity.net>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Stop the plagiarism
-To: Brad Spengler <spender@grsecurity.net>, kernel-hardening@lists.openwall.com
+Date: Sat, 3 Jun 2017 17:47:07 +0200
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20170603154707.GA19161@openwall.com>
+References: <20170603055351.16080-1-matt@nmatt.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170603055351.16080-1-matt@nmatt.com>
+Subject: Re: [kernel-hardening] [PATCH v1 1/1] Add Trusted Path Execution as a stackable LSM
+To: Matt Brown <matt@nmatt.com>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 6/3/17 7:30 AM, Brad Spengler wrote:
-> http://www.openwall.com/lists/kernel-hardening/2017/06/03/11
+Matt,
+
+On Sat, Jun 03, 2017 at 01:53:51AM -0400, Matt Brown wrote:
+> This patch was modified from Brad Spengler's Trusted Path Execution (TPE)
+> feature in Grsecurity and also incorporates logging ideas from
+> cormander's tpe-lkm.
 > 
-> Guys, this is your *last warning*.  This stops *now* or I'm sending lawyers
-> after you and the companies paying you to plagiarize our work and violate
-
-I actually do not get paid to do this work. I was a happy user of your
-patch while it was public. Now you took it away from the public and I'm
-doing my small part to pick up the baton.
-
-> our *registered* copyright (which for the record entitles us to punitive
-> damages which now are very easily provable).  It's time to get serious
-> about attribution -- what you are doing is completely unacceptable.  I'm
-> already in contact with lawyers to prepare for the next time this happens.
-> If any of this plagiarized and misattributed code actually made it into
-> the Linux kernel, you'd all be in a world of pain.
+> Modifications from the Grsecurity implementation of TPE were made to
+> turn it into a stackable LSM using the existing LSM hook bprm_set_creds.
+> Also, denial messages were improved by including the full path of the
+> disallowed program. (This idea was taken from cormander's tpe-lkm)
 > 
-> Matt -- did you not see in the directory the Kconfig file was copy+pasted
-> from the following:
+> Trusted Path Execution is not a new idea:
 > 
-> # grsecurity - access control and security hardening for Linux
-> # All code in this directory and various hooks located throughout the Linux kernel are
-> # Copyright (C) 2001-2014 Bradley Spengler, Open Source Security, Inc.
-> # http://www.grsecurity.net spender@grsecurity.net
-> #
-> # This program is free software; you can redistribute it and/or
-> # modify it under the terms of the GNU General Public License version 2
-> # as published by the Free Software Foundation.
-> #
-> # This program is distributed in the hope that it will be useful,
-> # but WITHOUT ANY WARRANTY; without even the implied warranty of
-> # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-> # GNU General Public License for more details.
-> #
-> # You should have received a copy of the GNU General Public License
-> # along with this program; if not, write to the Free Software
-> # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+> http://phrack.org/issues/52/6.html#article
+
+FWIW, I think this is mostly a misfeature, which I deliberately didn't
+merge into -ow patches back then.
+
+> This option enables Trusted Path Execution. TPE blocks *untrusted*
+> users from executing files that meet the following conditions:
 > 
-
-I am sincerely sorry about this. It will be corrected in v2. Would you
-like this license included in the Kconfig and tpe_lsm.c or just one of
-them? I didn't see a license at the top of grsecurity/grsec_tpe.c so I
-didn't know what to include.
-
-> Yet you are claiming copyright entirely over my work.  Your copy+pasted
-> Kconfig entry didn't even adjust for your renaming of my sysctl variables.
-> Search+replace of config and function names is not transformative, and
-> I dare to think how much of your tpe_lsm.c is copy+pasted from cormander's
-> LSM.
+> * file is not in a root-owned directory
+> * file is writable by a user other than root
 > 
-> I know it must be hard for the KSPP, having no original ideas of its
+> NOTE: root is never restricted by TPE
 
-I am not a part of KSPP nor do my patches/comments reflect on them.
+> Threat Models:
+> 
+> 1. Attacker on system executing exploit on system vulnerability
+> 
+> *  If attacker uses a binary as a part of their system exploit, TPE can
+>    frustrate their efforts
+> 
+> *  Issues:
+>    *  Can be bypassed by interpreted languages such as python. You can run
+>       malicious code by doing: python -c 'evil code'
 
-> own, but this is not security or development.  It's mindless plagiarism
-> and illegal.  Then to slap your own copyright over the whole copy+pasted
-> thing is a total insult and demonstrates the complete lack of respect
-> KSPP has for the work it can't accomplish anything without.  The KSPP
-> and the companies funding it wouldn't be able to show a shred of perceived
-> progress were it not for its ability to simply copy+paste portions of
-> our work, because every time you modify something you introduce bugs and
-> new vulnerabilities, demonstrating your cluelessness.
+Yes, and not only that: a local attacker may also bypass TPE by what
+would have been non-security bugs in many other programs - e.g., a
+buffer overflow by a command-line argument in any of the allowed
+programs suddenly becomes security-relevant.
+
+A variation of your threat model 1, which makes more sense to me than
+what's traditionally implied, is when the attacker does not yet use an
+interactive shell.  TPE can in fact frustrate automated remote exploits
+that don't specifically target (nor support) TPE-enabled systems.
+
+> 2. Attacker on system replaces binary used by a privileged user with a
+>    malicious one
+> 
+> *  This situation arises when administrator of a system leaves a binary
+>    as world writable.
+> 
+> *  TPE is very effective against this threat model
+
+This makes more sense to me.  It's known-bypassable policy enforcement
+by the sysadmin against one's own human error and such.  However, for
+this to be effective the exception "NOTE: root is never restricted by
+TPE" should be removed or made an option.
+
+In a similar spirit, it'd also make sense to have a policy disallowing
+at least root to write into directories writable by other users without
+setting the O_EXCL flag.  I actually had this in a kernel module, which
+I used to find issues of this kind in Postfix in 2006 or so (Wietse
+promptly patched those), but I didn't try running this in production.
+
+Summary: I see little value in TPE, but I don't intend to argue against
+it any further (and I deliberately dropped the CC list on this reply,
+not to hamper your efforts much).  If you choose to proceed with trying
+to upstream it anyway, I suggest the above changes to the description of
+the threat models and the tiny code change to allow for restricting root
+as well.
+
+Thanks,
+
+Alexander
