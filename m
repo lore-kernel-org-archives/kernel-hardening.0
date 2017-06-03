@@ -1,80 +1,86 @@
-MIME-Version: 1.0
-In-Reply-To: <20170603050433.4xpvloul25s47f2z@thunk.org>
-References: <CAHmME9q=AdK7BHQw0+sd4T0HGQce92KXTD+-TTc2s2CXbEHAAA@mail.gmail.com>
- <20170602172616.47qcxav6adq52nmk@thunk.org> <CAHmME9oS_GCRMLf7EF8XBGwjdjohcRz4rzZiWr5ZDUurTj8A7Q@mail.gmail.com>
- <20170602190734.6zll7zc5hr66oacl@thunk.org> <CAHmME9oLHP85ENr5aZgKsTSrxiUWoQ_pfv7C6XYxmcoxPfq3Ew@mail.gmail.com>
- <20170603050433.4xpvloul25s47f2z@thunk.org>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Sat, 3 Jun 2017 14:30:40 +0200
-Message-ID: <CAHmME9rwKneq0C5GYPSWamGRT0775=-Xw3pyq6uxJXJyyBtr1g@mail.gmail.com>
+Message-ID: <1496498027.22395.1.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Sat, 03 Jun 2017 09:53:47 -0400
+In-Reply-To: <20170603113007.GA1544@grsecurity.net>
+References: <20170603113007.GA1544@grsecurity.net>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: get_random_bytes returns bad randomness before seeding is complete
-To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Stephan Mueller <smueller@chronox.de>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Stop the plagiarism
+To: Brad Spengler <spender@grsecurity.net>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Jun 3, 2017 at 7:04 AM, Theodore Ts'o <tytso@mit.edu> wrote:
-> has been pretty terrible?
-> This kind of "my shit doesn't stink, but yours does", is not
-> The reason why I keep harping on this is because I'm concerned about
-> an absolutist attitude towards technical design, where the good is the
+> "a value linux-hardened and grsecurity have used for a long time now"
+> Rik, you're giving credit to a project that didn't even exist a couple
+> weeks ago, yet they've somehow used it "for a long time", even though
+> it only exists there because it was copy+pasted from grsecurity?
 
-Moving past that, did you see the [PATCH RCF 0/3] series I posted
-yesterday? Would be helpful to have your feedback on that approach and
-implementation strategy. Since it seems like you're preferring
-cleaning up things individually, rather than the systemic rnginit
-solution I initially proposed, I moved forward with implementing an
-RFC-version of that. I'm pretty sure so quickly compromising and going
-with what I perceived you thought was best is a strong indication that
-there isn't an, "absolutist attitude towards technical design".
-However, if you do somehow find evidence of that kind of claim in my
-[PATCH] set, please do bring it up, and I'll try to adjust to be more
-pleasing.
+You're going out of the way to misinterpret that wording.
 
-> We're going to have to look at a representative sample of the call
-> sites to figure this out.  The simple case is where the call site is
-> only run in response to a userspace system call.  There, blocking
-> makes perfect sense.  I'm just not sure there are many callers of
-> get_random_ bytes() where this is the case.
+You don't document where changes came from in the PaX and grsecurity
+patches. There's code written by other people in there, and there's
+neither a Git repository crediting them in a commit history or with a
+few exceptions inline credit given to those people. When I extract
+something from the PaX or grsecurity patches or base code on the ideas
+there, I can't state with certainty who authored the code. I've been
+stating 'extracted from PaX' or 'extracted from grsecurity' for code not
+part of PaX and documenting changes from the implementation there. Code
+being from PaX or grsecurity isn't necessarily 'code authored by the PaX
+Team or Brad Spengler'. It could be code written by Emese, minipli,
+someone else who contributed code to you or a patch that you took from
+elsewhere that was ignored / rejected by upstream. How is anyone else
+supposed to know?
 
-In the patch series I sent earlier, the reason I split things into
-wait_for_random_bytes, which just blocks until the pool is ready, and
-then the convenience combiner of get_random_bytes_wait, which calls
-wait_for_random_bytes and then get_random_bytes, is because I was
-thinking there might be a few places where we can't actually sleep
-during the get_random_bytes call, due to in_interrupt() or whatever,
-but that there's some process-context area that's _always_ called
-before get_random_bytes, like a userspace configuration API or an
-ioctl, so we could simply put a call to wait_for_random_bytes, and
-then be sure that all calls to get_random_bytes after that are safe.
+People were given credit in the original PaX changelogs at the top of
+the patches in most cases but all but the latest patch for kernel
+branches was taken down. Similarly, the grsecurity changelogs gave
+credit but are all taken down and it's not like many people actually
+looked at those at the time.
 
-I guess I'll see in practice if this is actually a useful way of doing
-it, once I dig in and start modifying representative call sites.
+For example, the MODIFY_LDT sysctl in grsecurity is someone else's code.
+It isn't stated in grsecurity where it came from. That's true to an even
+larger extent when it comes to ideas rather than implementation. You
+give credit to Willy Tarreau for NO_SIMULT_CONNECT but not that
+MODIFY_LDT one, and I can think of a bunch of other examples.
 
-> When would a timeout be useful?  If you are using get_random_bytes()
-> for security reasons, does the security reason go away after 15
-> seconds?  Or even 30 seconds?
+It looks to me like people contributing these changes upstream have been
+more consistently giving credit than the grsecurity patches do. When the
+grsecurity patches are not mentioning who wrote changes or came up with
+the idea how are people supposed to know who to credit... ? It applies
+to an even larger extent to ideas rather than code. Most of the code and
+ideas there are from the PaX Team and yourself, sure, but not all.
 
-I was thinking that returning to userspace with -ETIMEDOUT or
-something might be more desirable in some odd situations (which ones?)
-than just waiting for a signal and responding with
--EINTR/-ERESTARTSYS.  That might turn out to be not true, in which
-case I guess I won't add that API, as you suggested.
+Maybe stop calling me a plagiarist when I'm trying my best to give
+credit and actually do a better job than you do in practice.
 
-> Also, it is possible that we may have architectures, without
-> fine-grained clocks, where we don't initialize the rng until after
-> userspace as sharted running.  So it's not clear adding a rnginit
-> section makes sense.  Even if we put it as late as possible --- say,
-> after "late", what do we do if don't have the CRNG fully
-> negotiated after the last of the "late" drivers have been run?
+>   Is
+> that what we do now, credit plagiarists instead of the actual authors
+> of
+> the work?  Sorry, but the "work" of struggling to understand code that
+> isn't yours doesn't suddenly make it your code.
 
-My idea was that it would be eventually inserted on the callback from
-add_random_ready_callback. You're right that this would not be okay
-for things like filesystems, but maybe it'd be appropriate for things
-like crypto/rng.c? Or, perhaps the blocking API on configuration-time
-would be better, anyway, for things like that. You seem wary of this
-approach, so I'm going to roll with your suggestions above and see how
-they work out. It it pans out great, if not, maybe we'll revisit this
-down the road once I have a better picture of what the call sites are
-like.
+These commits reference the PaX implementation there. You've told me to
+stop doing that but rather reference the specific PaX version in the
+future which I intend to do. 
 
-Jason
+https://github.com/thestinger/linux-hardened/commit/4c355f98910e01256ee2b01dd1a02ac08dd316b2.patch
+https://github.com/thestinger/linux-hardened/commit/711e5650589c9d3c99706c6a5d52d2659519dc74.patch
+https://github.com/thestinger/linux-hardened/commit/cd9cdbff4bc69d2e88b37d106e6ee8ef33a3a1b8.patch
+
+The Linux kernel is GPL2 and grsecurity is a derivative work. I'm not
+sure how it's plagiarism to tweak the upstream implementation of ASLR
+based on the PaX implementation while describing the differences with
+the PaX implementation which I'm trying to do in depth:
+
+Making the stack entropy depend on the mainline mmap sysctl isn't based
+on PaX and therefore doesn't reference it.
+
+I needed to move the ET_DYN base on arm64 to 4G because the address
+range overlapped when using the sysctl for the stack which I noticed in
+testing. I then did x86_64 and the 32-bit architectures. I don't know
+how the values were chosen in PaX and they don't meet the compatibility
+requirements that I need on 64-bit where there are projects using 32-bit 
+pointers by mapping certain things in the lower 32 bits of the address
+space and they cannot necessarily cope with any fragmentation there.
+
+https://gist.github.com/thestinger/b43b460cfccfade51b5a2220a0550c35
