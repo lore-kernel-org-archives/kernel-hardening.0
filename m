@@ -1,92 +1,80 @@
-Message-ID: <1496510200.29378.1.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Sat, 03 Jun 2017 13:16:40 -0400
-In-Reply-To: <20170603162231.GA20590@openwall.com>
-References: <20170603055351.16080-1-matt@nmatt.com>
-	 <20170603154707.GA19161@openwall.com> <20170603155920.GA25740@kroah.com>
-	 <20170603162231.GA20590@openwall.com>
+Message-ID: <1496511155.29205.109.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+In-Reply-To: <20170603113007.GA1544@grsecurity.net>
+References: <20170603113007.GA1544@grsecurity.net>
 Content-Type: text/plain; charset="UTF-8"
+Date: Sat, 03 Jun 2017 13:32:35 -0400
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH v1 1/1] Add Trusted Path Execution as
- a stackable LSM
-To: Solar Designer <solar@openwall.com>, Greg KH <greg@kroah.com>
-Cc: Matt Brown <matt@nmatt.com>, kernel-hardening@lists.openwall.com
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] Stop the plagiarism
+To: Brad Spengler <spender@grsecurity.net>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, 2017-06-03 at 18:22 +0200, Solar Designer wrote:
-> On Sat, Jun 03, 2017 at 05:59:20PM +0200, Greg KH wrote:
-> > But for those systems, and this feature as well, can't a "simple"
-> > apparmor policy do the exact same thing?  Also, I'm sure the SELinux
-> > can
-> > do this as well, but I don't know the config language there as well.
-> > 
-> > So I think this is already a feature that is supported, it just
-> > takes a
-> > bit more configuration work on the admin.
+On Sat, 2017-06-03 at 07:30 -0400, Brad Spengler wrote:
+
+> While I'm here:
+> http://openwall.com/lists/kernel-hardening/2017/06/02/3
 > 
-> Yes, that's "a bit" more effort up to the point where almost(?) no one
-> would bother.  Sometimes simple features can reasonably co-exist with
-> more general frameworks that could also be used to achieve the effect.
-> So I don't view this as a sufficiently good argument against TPE as a
-> feature on its own.
-> 
-> Alexander
+> "a value linux-hardened and grsecurity have used for a long time now"
+> Rik, you're giving credit to a project that didn't even exist a
+> couple
+> weeks ago, yet they've somehow used it "for a long time", even though
 
-Some thoughts on this, veering a bit into some loosely related topics:
+CopperheadOS has been around for a few years now, with
+a hardened Linux kernel as one of its components.
 
-SELinux can cover the same kind of stuff as PaX MPROTECT (execmem,
-execheap, execstack, execmod) and grsecurity TPE (execute and
-execute_no_trans). Android uses it to enforce comparable rules for most
-of the SELinux domains in the base system, but the Android Runtime JIT
-and Chromium JIT (particularly in the WebView) block the equivalent to
-MPROTECT for much of the app layer and Play Services violates rules
-comparable to TPE in the app layer too. In CopperheadOS, it's taken to
-completion because the WebView sandbox is force enabled and the Android
-Runtime is set to use full ahead-of-time compilation without the JIT.
-Nothing violates the equivalent to the TPE rules in the Android Open
-Source Project. The domain for the Chromium sandbox is the only one with
-execmem and only the privileged base system really violates the TPE
-style guarantees (system_server/installd can install an app and run it
-in one of the app domains at the very least).
+> it only exists there because it was copy+pasted from grsecurity?  Is
+> that what we do now, credit plagiarists instead of the actual authors
+> of
+> the work?  Sorry, but the "work" of struggling to understand code
+> that
+> isn't yours doesn't suddenly make it your code.
 
-Beyond these features, there's also a distinction between code from
-verified/trusted partitions (i.e. covered by dm-verity) and from
-partitions that hold persistent state rather than being pristine
-verified OS partitions. There's more to "trust" than just whether only
-root or root / current user can write there. Android *mostly* forbids
-the base system from executing code from outside of those verified
-partitions too, but it falls a bit short and that's something else
-that's finished off in CopperheadOS. I wouldn't go as far as to say it
-makes verified boot work well for anything beyond the usual guarantees
-for factory resets though. There's still a lot of trust in persistent
-state, just not code executed from it by the base system. The SELinux
-label usage also needs to be audited to make sure that an attacker can't
-persist unverified SELinux labels that are not replaced. Verified boot
-is really hard to do in a meaningful way. ChromeOS weakened it via
-having an Android userspace in a container since the guarantees dropped
-to those of Android there.
+The actual code in my patch is different from the #ifdef
+stuff in both linux-hardened and grsecurity. 
 
-I see why people want lightweight, independent implementations of these
-features but I don't have a use for it anymore. I'm used to having great
-full system SELinux policies as a baseline from the Android Open Source
-Project and being able to tweak those existing policies to accomplish
-targeted goals like these. It provides much finer-grained control so it
-can do a lot more and compatibility is easier. The one thing it isn't
-capable of dealing with on Android is a dynamic toggle because Android
-uses a static SELinux policy. It's not possible to have a toggle for
-things like debugging features exposed via toggles over ADB that doesn't
-at least require respawning processes to get them into a different debug
-domain. That's why perf_event_paranoid=3 is needed for Android even if
-an LSM hook is added there and why ptrace_scope=2 in CopperheadOS does
-something that SELinux (on Android) and seccomp-bpf can't accomplish. On
-the other hand, I don't really have any use for TPE since doing it with
-SELinux doesn't interfere with debugging so a toggle isn't needed.
+The only thing that is the same is an integer constant.
 
-There's always the option of making a stub SELinux policy used for
-little more than covering similar ground to MPROTECT and TPE if that is
-really all someone wants. The policy would be tiny. There can be one
-domain for nearly everything and one for an exception from the rules.
-The labelling would be simple too. I'm curious how minimal that could
-be, but focusing on only those specific micro issues is probably not
-something people are going to do in practice.
+> This is exactly how your plagiarism works.
+
+If I wanted to do plagiarism, I would have copied the
+ugly-as-all-hell #ifdef magic from grsecurity. What
+do you think would have happened if I had submitted
+something like this to lkml?
+
+#ifdef CONFIG_PAX_SEGMEXEC
+#define ELF_ET_DYN_BASE         ((current->mm->pax_flags &
+MF_PAX_SEGMEXEC) ? SEGMEXEC_TASK_SIZE/3*2 : TASK_SIZE/3*2)
+#else
+#define ELF_ET_DYN_BASE         (TASK_SIZE / 3 * 2)
+#endif
+
+#ifdef CONFIG_PAX_ASLR
+#ifdef CONFIG_X86_32
+#define PAX_ELF_ET_DYN_BASE     0x10000000UL
+
+#define PAX_DELTA_MMAP_LEN      (current->mm->pax_flags &
+MF_PAX_SEGMEXEC ? 15 : 16)
+#define PAX_DELTA_STACK_LEN     (current->mm->pax_flags &
+MF_PAX_SEGMEXEC ? 15 : 16)
+#else
+#define PAX_ELF_ET_DYN_BASE     0x400000UL
+
+#define PAX_DELTA_MMAP_LEN      ((test_thread_flag(TIF_ADDR32)) ? 16 :
+TASK_SIZE_MAX_SHIFT - PAGE_SHIFT - 3)
+#define PAX_DELTA_STACK_LEN     ((test_thread_flag(TIF_ADDR32)) ? 16 :
+TASK_SIZE_MAX_SHIFT - PAGE_SHIFT - 3)
+#endif
+#endif
+
+Notice how the code in my patch does not look like that,
+at all?
+
+> This is your last warning.  This is not a new problem and it needs to
+> end completely, or I will make sure it ends.
+
+The grsecurity code you published is licensed under the
+GPLv2. I would be happy to add your copyright in if I
+ever copied around a larger piece of code, but most of
+the time the code I end up submitting is a rewrite and
+not a copy.
