@@ -1,139 +1,112 @@
-Date: Sat, 3 Jun 2017 01:04:33 -0400
-From: Theodore Ts'o <tytso@mit.edu>
-Message-ID: <20170603050433.4xpvloul25s47f2z@thunk.org>
-References: <CAHmME9q=AdK7BHQw0+sd4T0HGQce92KXTD+-TTc2s2CXbEHAAA@mail.gmail.com>
- <20170602172616.47qcxav6adq52nmk@thunk.org>
- <CAHmME9oS_GCRMLf7EF8XBGwjdjohcRz4rzZiWr5ZDUurTj8A7Q@mail.gmail.com>
- <20170602190734.6zll7zc5hr66oacl@thunk.org>
- <CAHmME9oLHP85ENr5aZgKsTSrxiUWoQ_pfv7C6XYxmcoxPfq3Ew@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAHmME9oLHP85ENr5aZgKsTSrxiUWoQ_pfv7C6XYxmcoxPfq3Ew@mail.gmail.com>
-Subject: [kernel-hardening] Re: get_random_bytes returns bad randomness before seeding is
- complete
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Stephan Mueller <smueller@chronox.de>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <1496439121.13303.1.camel@gmail.com>
+References: <20170526095404.20439-1-danielmicay@gmail.com> <20170602140743.274b9babba6118bfd12c7a26@linux-foundation.org>
+ <1496439121.13303.1.camel@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 2 Jun 2017 22:07:12 -0700
+Message-ID: <CAGXu5jLGU_HzjKGOCqc5qnCW9Zta6YNcoz2QeNBpvViyUS0GVg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v4] add the option of fortified string.h functions
+To: Andrew Morton <akpm@linux-foundation.org>, Moni Shoua <monis@mellanox.com>, Doug Ledford <dledford@redhat.com>, Sean Hefty <sean.hefty@intel.com>, Hal Rosenstock <hal.rosenstock@gmail.com>
+Cc: Daniel Micay <danielmicay@gmail.com>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-kernel <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Daniel Axtens <dja@axtens.net>, linux-rdma@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Jun 03, 2017 at 01:58:25AM +0200, Jason A. Donenfeld wrote:
-> Hi Ted,
-> 
-> Based on the tone of your last email, before I respond to your
-> individual points....
+On Fri, Jun 2, 2017 at 2:32 PM, Daniel Micay <danielmicay@gmail.com> wrote:
+> On Fri, 2017-06-02 at 14:07 -0700, Andrew Morton wrote:
+>> On Fri, 26 May 2017 05:54:04 -0400 Daniel Micay <danielmicay@gmail.com
+>> > wrote:
+>>
+>> > This adds support for compiling with a rough equivalent to the glibc
+>> > _FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
+>> > overflow checks for string.h functions when the compiler determines
+>> > the
+>> > size of the source or destination buffer at compile-time. Unlike
+>> > glibc,
+>> > it covers buffer reads in addition to writes.
+>>
+>> Did we find a bug in drivers/infiniband/sw/rxe/rxe_resp.c?
+>>
+>> i386 allmodconfig:
+>>
+>> In file included from ./include/linux/bitmap.h:8:0,
+>>                  from ./include/linux/cpumask.h:11,
+>>                  from ./include/linux/mm_types_task.h:13,
+>>                  from ./include/linux/mm_types.h:4,
+>>                  from ./include/linux/kmemcheck.h:4,
+>>                  from ./include/linux/skbuff.h:18,
+>>                  from drivers/infiniband/sw/rxe/rxe_resp.c:34:
+>> In function 'memcpy',
+>>     inlined from 'send_atomic_ack.constprop' at
+>> drivers/infiniband/sw/rxe/rxe_resp.c:998:2,
+>>     inlined from 'acknowledge' at
+>> drivers/infiniband/sw/rxe/rxe_resp.c:1026:3,
+>>     inlined from 'rxe_responder' at
+>> drivers/infiniband/sw/rxe/rxe_resp.c:1286:10:
+>> ./include/linux/string.h:309:4: error: call to '__read_overflow2'
+>> declared with attribute error: detected read beyond size of object
+>> passed as 2nd parameter
+>>     __read_overflow2();
+>>
+>>
+>> If so, can you please interpret this for the infiniband developers?
+>
+> It copies sizeof(skb->cb) bytes with memcpy which is 48 bytes since cb
+> is a 48 byte char array in `struct sk_buff`. The source buffer is a
+> `struct rxe_pkt_info`:
+>
+> struct rxe_pkt_info {
+>         struct rxe_dev          *rxe;           /* device that owns packet */
+>         struct rxe_qp           *qp;            /* qp that owns packet */
+>         struct rxe_send_wqe     *wqe;           /* send wqe */
+>         u8                      *hdr;           /* points to bth */
+>         u32                     mask;           /* useful info about pkt */
+>         u32                     psn;            /* bth psn of packet */
+>         u16                     pkey_index;     /* partition of pkt */
+>         u16                     paylen;         /* length of bth - icrc */
+>         u8                      port_num;       /* port pkt received on */
+>         u8                      opcode;         /* bth opcode of packet */
+>         u8                      offset;         /* bth offset from pkt->hdr */
+> };
+>
+> That looks like 32 bytes (1 byte of padding) on 32-bit and 48 bytes on
+> 64-bit (1 byte of padding), so on 32-bit there's a read overflow of 16
+> bytes from the stack here.
 
-May I gently point out that *your* tone that started this whole thread
-has been pretty terrible?   Quoting your your first message:
+This should work (untested):
 
-   "Yes, yes, you have arguments for why you're keeping this
-   pathological, but you're still wrong, and this api is still a bug."
+diff --git a/drivers/infiniband/sw/rxe/rxe_resp.c
+b/drivers/infiniband/sw/rxe/rxe_resp.c
+index 23039768f541..7b226deb83bb 100644
+--- a/drivers/infiniband/sw/rxe/rxe_resp.c
++++ b/drivers/infiniband/sw/rxe/rxe_resp.c
+@@ -995,7 +995,9 @@ static int send_atomic_ack(struct rxe_qp *qp,
+struct rxe_pkt_info *pkt,
+        free_rd_atomic_resource(qp, res);
+        rxe_advance_resp_resource(qp);
 
-This kind of "my shit doesn't stink, but yours does", is not
-particularly useful if you are trying to have a constructive
-discussion.  If you think the /dev/urandom question wasn't appropriate
-to discuss in this thread, then why the *hell* did you bring it up
-*first*?
+-       memcpy(SKB_TO_PKT(skb), &ack_pkt, sizeof(skb->cb));
++       memcpy(SKB_TO_PKT(skb), &ack_pkt, sizeof(ack_ptr));
++       memset(SKB_TO_PKT(skb) + sizeof(ack_ptr), 0,
++              sizeof(skb->cb) - sizeof(ack_ptr));
 
-The reason why I keep harping on this is because I'm concerned about
-an absolutist attitude towards technical design, where the good is the
-enemy of the perfect, and where bricking machines in the pursuit of
-cryptographic perfection is considered laudable.  Yes, if you apply
-thermite to the CPU and the hard drives, the system will be secure.
-But it also won't be terribly useful.
+        res->type = RXE_ATOMIC_MASK;
+        res->atomic.skb = skb;
 
-And to me, the phrase "you're still wrong" doesn't seem to admit any
-concessions towards acknowledging that there might be another side to
-the security versus usability debate.  And I'd ***really*** rather not
-waste my time trying to work with someone who doesn't care about
-usability, because my focus is in practical engineering, which means
-if no one uses the system, or can use the system, then I consider it a
-failure, even if it is 100% secure.  And this is true no matter
-whether we're talking about /dev/urandom or some enhancement to
-get_random_bytes().
+Andrew, there are other fortify fixes too:
 
-> Do you have any opinions on the issue of what the most flexible API
-> would be? There are a lot of varieties of wait_event. The default one
-> is uninterruptable, but as Stephan and Herbert saw when they were
-> working on this was that it could be dangerous in certain
-> circumstances not to allow interruption. So probably we'd want an
-> interruptable variety. But then maybe we want to support the other
-> wait_event_* modes too, like killable, timeout, hrtimeout, io, and so
-> on. There's a huge list. These are all implemented as macros in
-> wait.h, and I don't really want to have a different get_random_bytes_*
-> function that corresponds to _each_ of these wait_event_* functions,
-> since that'd be overwhelming.
+https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/commit/?h=kspp/fortify&id=af6b0151896240457ef0fdc18ace533c3d3fbb75
+https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/commit/?h=kspp/fortify&id=186eaf81b43bf90d6b533732fb11ad31ca27df9d
+https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/commit/?h=kspp/fortify&id=95d589f21b3aef757f0eb3d0224b78648a4b22d2
+https://github.com/thestinger/linux-hardened/commit/576e64469b0c4634c007445c5f16bfde610b3600
 
-We're going to have to look at a representative sample of the call
-sites to figure this out.  The simple case is where the call site is
-only run in response to a userspace system call.  There, blocking
-makes perfect sense.  I'm just not sure there are many callers of
-get_random_ bytes() where this is the case.
+Do you want me to resend these for you to carry, or reping
+maintainers? Other fixes have already landed in -next.
 
-There are definitely quite a few callsites of get_random_bytes() where
-the caller is in the middle of an interrupt service routine, or is
-holding spinlock.  There, we are *not* allowed to block.  So any kind
-of blocking interface isn't going to be allowed; the async callback is
-the only thing which is guaranteed to work, in fact.  Mercifully, many
-of these are cases where prandom_u32() makes sense.
+(And there are two arm64 fixes, too.)
 
-> So I was thinking maybe a simple flag and a timeout param could work:
+-Kees
 
-When would a timeout be useful?  If you are using get_random_bytes()
-for security reasons, does the security reason go away after 15
-seconds?  Or even 30 seconds?
-
-> > Or maybe we can then help figure out what percentage of the callsites
-> > can be fixed with a synchronous interface, and fix some number of them
-> > just to demonstrate that the synchronous interface does work well.
-> 
-> I was planning on doing this to at least a couple callsites in my
-> upcoming patch series that adds the synchronous interface. It seems
-> like the right way to see if the API is good or not.
-
-This is absolutely the right approach.  See my above comments about
-why there may not be that many places where a synchronous interface
-will work out.  And I'm going to be rather surprised if there are
-places where having a timeout parameter will be helpful.  But I could
-be wrong; let's see if we can find cases where we (a) need secure
-bytes, (b) are allowed to block, and (c) where a timeout would make
-sense.
-
-> Right. In my initial email I proposed a distinction:
-> 
-> - External module loading is usually in a different process context,
-> so multiple modules can be attempted to be loaded at the same time. In
-> this case, it is probably safe to block in request_module.
-> - Built-in modules are loaded ± linearly, from init/main.c, so these
-> really can't block each other. For this, I was thinking of introducing
-> an rnginit section, to add to the list of things like lateinit. The
-> rnginit drivers would be loaded _after_ the RNG has initialized, so
-> that they don't get blocked.
-
-... except that we already have an order in which drivers are added,
-so moving a driver to the rnginit section might mean that some kernel
-module that depends on that driver being loaded also needs to be moved
-after rnginit.  We already have the following initcall levels:
-
-static char *initcall_level_names[] __initdata = {
-	"early",
-	"core",
-	"postcore",
-	"arch",
-	"subsys",
-	"fs",
-	"device",
-	"late",
-};
-
-If we move a caller of get_random_bytes() from say, "fs" to after
-"rnginit", that may break things.
-
-Also, it is possible that we may have architectures, without
-fine-grained clocks, where we don't initialize the rng until after
-userspace as sharted running.  So it's not clear adding a rnginit
-section makes sense.  Even if we put it as late as possible --- say,
-after "late", what do we do if don't have the CRNG fully
-negotiated after the last of the "late" drivers have been run?
-
-	   	     	     	 - Ted
+-- 
+Kees Cook
+Pixel Security
