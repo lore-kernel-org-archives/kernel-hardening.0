@@ -1,108 +1,119 @@
-Date: Sat, 3 Jun 2017 23:28:13 -0400
-From: Brad Spengler <spender@grsecurity.net>
-Message-ID: <20170604032813.GB25424@grsecurity.net>
-References: <20170603113007.GA1544@grsecurity.net>
- <1496498027.22395.1.camel@gmail.com>
- <20170603142110.GA7578@grsecurity.net>
- <CA+DvKQ+1BRVgWRcg_anBdf-8cV4=mgu8J9Kf1xVcbZBVePHSsw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha512;
-	protocol="application/pgp-signature"; boundary="tjCHc7DPkfUGtrlw"
-Content-Disposition: inline
-In-Reply-To: <CA+DvKQ+1BRVgWRcg_anBdf-8cV4=mgu8J9Kf1xVcbZBVePHSsw@mail.gmail.com>
-Subject: Re: [kernel-hardening] Stop the plagiarism
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: kernel-hardening@lists.openwall.com
+In-Reply-To: <4a8e9445-4c3f-e44e-9d84-fef2ca956517@nmatt.com>
+References: <20170530132427.016053da@alans-desktop> <2ab8580e-bf8e-21bd-6bfa-33e5fa82400b@nmatt.com>
+ <20170530235106.11aab25c@alans-desktop> <3bd4ff7b-6f7d-52b0-03f6-026bac79f11f@nmatt.com>
+ <20170531005633.484a2e14@alans-desktop> <CAGXu5j+pqD1082fYDS_dvDB2QNvt9wSz+C7vAhGpMXcJWxoDkw@mail.gmail.com>
+ <20170601140812.583cf0a5@alans-desktop> <CAGXu5jLefv=T3mCYryqh2pYjYonFsTQZSLsHqLK75CKvSmgb-w@mail.gmail.com>
+ <20170601222432.6f593538@lxorguk.ukuu.org.uk> <2d0ad49c-886e-1caf-771a-d251957f614c@nmatt.com>
+ <20170602153647.GA2688@mail.hallyn.com> <a3c1b792-a426-90e1-e37b-9f9a8d4d192a@nmatt.com>
+ <20170602210544.73680be8@lxorguk.ukuu.org.uk> <48a28010-9f35-63e4-b815-71bb6139d50b@nmatt.com>
+ <20170603230048.52b7f111@lxorguk.ukuu.org.uk> <4a8e9445-4c3f-e44e-9d84-fef2ca956517@nmatt.com>
+From: Peter Dolding <oiaohm@gmail.com>
+Date: Sun, 4 Jun 2017 13:37:39 +1000
+Message-ID: <CANA3KFVXyJhUyxEiEBchbQwrMeO5_ZYY=J5mpaENyxhPXzWLpQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: [PATCH v7 2/2] security: tty: make TIOCSTI
+ ioctl require CAP_SYS_ADMIN
+To: Matt Brown <matt@nmatt.com>
+Cc: Alan Cox <gnomes@lxorguk.ukuu.org.uk>, "Serge E. Hallyn" <serge@hallyn.com>, Kees Cook <keescook@chromium.org>, Casey Schaufler <casey@schaufler-ca.com>, Boris Lukashev <blukashev@sempervictus.com>, Greg KH <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Sun, Jun 4, 2017 at 8:22 AM, Matt Brown <matt@nmatt.com> wrote:
+> On 06/03/2017 06:00 PM, Alan Cox wrote:
+>>>
+>>> TIOCSLCKTRMIOS
+>>
+>>
+>> That one I'm more dubious about
+>>
+>>> TIOCSLTC
+>>> TIOCSSOFTCAR
+>>
+>>
+>> tty_io.c also has a few and n_tty has a couple we'd want.
+>>
+>>>
+>>> would it be overkill to have a sysctl kernel.ttyioctlwhitelist.X where X
+>>> is one of the ioctls above?
+>>
+>>
+>> Why would anyone want to change the entries on that list
+>>
+>
+> Did you see Serge's proposed solution? I want us to not be talking past
+> each other. Serge proposed the following:
+>
+> | By default, nothing changes - you can use those on your own tty, need
+> | CAP_SYS_ADMIN against init_user_ns otherwise.
+> |
+> | Introduce a new CAP_TTY_PRIVILEGED.
+> |
+> | When may_push_chars is removed from the whitelist, you lose the
+> | ability to use TIOCSTI on a tty - even your own - if you do not have
+> | CAP_TTY_PRIVILEGED against the tty's user_ns.
+>
+> The question is how do you add/remove something from this whitelist? I
+> assume by add/remove we don't mean that you have to recompile your
+> kernel to change the whitelist!
+>
+> you earlier said you wanted the check to look like this:
+>
+> | if (!whitelisted(ioctl) && different_namespace && magic_flag)
+>
+> I want to know which namespace you are talking about here. Did you mean
+> user_namespace? (the namespace I added tracking for in the tty_struct)
 
---tjCHc7DPkfUGtrlw
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
+There are many ways to attempt to cure this problem.     They some
+that are just wrong.
 
-> That's what I said: at one point, it was mentioned in a changelog
-> which was removed when grsecurity moved to the next major kernel
-> version along with other cases. The attribution wasn't made in the
-> patch and there isn't anything similar to the Linux kernel's Git
-> history providing a long-term attribution. Only changelogs that were
-> removed after each major release and are now entirely gone. It's as if
-> you've taken ownership of the code. A third party archive of your
-> changelogs hosted lesewhere and the fact that it can be found via a
-> search doesn't really change that there isn't attribution in the
-> patches either via available commit history or inline comments /
-> documentation. I'm not saying that wrong. I'm saying that you're
-> getting mad about something less than that.
+Pushing stuff up to CAP_SYS_ADMIN is fairly much always wrong.
 
-What are you talking about?  This is like complaining that we don't
-have a single file containing all 16 years of history, some 400MB download
-if someone wanted to see what the latest changes are.  That commit message
-was in changelog-stable.txt which you can still find online in the various
-historical git repos and it's still present in the 3.14 changelog that
-customers have access to now.  You seem to be blaming your own laziness
-on me -- it'd be like me complaining I have to use extra means to find
-out who authored something prior to git history.  And now you want to
-use your laziness as a reason to try to claim that you don't know what
-the authorship is of some code you copy and paste, so you choose to take
-credit for it yourself:
-https://twitter.com/CopperheadOS/status/871017018010595328
-Have you ever even contacted either of us when you were unsure or too
-lazy to look it up?  I know the answer to that question, and you know
-the answer to that question, so quit with the BS.
+Using a whitelisted solution does have a downside but to use some
+application that use TIOCSTI safely I have not had to push application
+to CAP_SYS_ADMIN.
 
-> comparison with the last publicly available patch. You also took issue
-> with a stack canary fix which you're adamant must have come from PaX
-> but that's not what happened: it was noticed and fixed when adding a
-> zero byte there to match the earlier changes changing userspace junk
-> filling to zeroing and adding a zero byte to the heap canaries and
-> stack canaries in userspace.
+Another question due to the way the exploit work a broken TIOCSTI
+where push back could be something someone as CAP_SYS_ADMIN run.
 
-Cryptomnesia I guess, you looked at every other line of PaX to rip out
-stuff like:
-https://github.com/thestinger/linux-hardened/commit/e63d5e4db605e74b2d9631219dd58301be484bd7
-https://github.com/thestinger/linux-hardened/commit/93b646fed97b51e62cb48e0a25c2664cc2f86e0b
-but totally never saw that line that's been there ever since SSP existed
-in the kernel.  It also doesn't mesh with your lengthy excuse on github
-when I pointed it out to you.  Are the above changes your own work too?
+What I don't know if yet set when ever an application used TIOCSTI to
+push back chars back into input that this would set input to be
+flushed on tty disconnect or application termination would this break
+any applications.
 
+So it may be possible to allow applications to freely use TIOCSTI just
+make sure that anything an application has pushed back into input
+buffer cannot get to anything else.
 
-> And how is grsecurity not entirely based on the work of others i.e.
-> the Linux kernel, just as CopperheadOS is based on Android Open Source
-> Project and all of the baseline functionality and security model
-> provided by it?
+The thing to remember is most times when applications are controlling
+other applications they are not pushing data backwards on input..
 
-These false equivalences of yours are nonsense -- anyone can look at
-https://github.com/thestinger/linux-hardened/issues
-and see how utterly dependent you are.  You are comparing apples and
-oranges because you need to to justify your existence.  You didn't
-contribute a line of code to our work in 16 years and now you're trying
-to make a name for yourself off our work and reputation.  But you just
-make a fool of yourself when on one hand you're desperately copy+pasting
-and on the other trying to pretend you don't depend on it, or that your
-dependence on copy+pasting our work is somehow equivalent to building on
-top of whatever version of Linux that exists.
+Question I have is what is valid usage cases of TIOCSTI.   Thinking
+grscecurity got away with pushing this up to CAP_SYS_ADMIN there may
+not be many.
 
--Brad
+If there is no valid usage of TIOCSTI across applications there is no
+reason why TIOCSTI cannot be setup to automatically trigger input
+flushs to prevent TIOCSTI inserted data getting anywhere.
+.
+This could be like X11 and it huge number of features where large
+number were found that no one ever used just was created that way
+because it was though like it would be useful.
 
---tjCHc7DPkfUGtrlw
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
+My problem here is TIOCSTI might not need a flag at all.   TIOCSTI
+functionality maybe in need of limitations particularly if TIOCSTI
+push back into input cross from one application to the next has no
+genuine application usage.
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1.4.12 (GNU/Linux)
+So far no one has started that exploited TIOCSTI functionality exists
+in any genuine application as expected functionality.   I cannot find
+example of where pushing back into input then going to background or
+dieing/exiting and having that pushed back input processed is done by
+any genuine application as expected functionality.   That is something
+that could be limited if there is no genuine users and close the door
+without having to modify existing applications that don't expect to-do
+that.
 
-iQIcBAEBCgAGBQJZM35GAAoJEETRwPglJf5JAT4QAJUcWY13pu/0wES2nX/noPuy
-nKMzE4j3PqmhaTvEqhscVzINhc0mXBXVLnZjLEC88FjlpStUcabAzNhRfXdbiKN8
-gwMAjB6Hk8hXMlhOL3nJz/xQZoNsV2Nn4WnhAp9UtIVN3GpnxHsWIS/4aZHPdpbn
-ugZr/X3co3gCUtDZoqhaFPkHyI7dAsLI8axqegh7rLccoVUv0v3O3N3l0Ac5NQbH
-t6/P3xVKNBOjqb9tksGOlWJhm7jO4RqyIUb3hgqD63BTRVn7mp8a4ziCDlfrAkO4
-lztJMs7NajrLILio5HRiTq4qvZacR2XtDf/vr5bTrEM64i7gFs4HIS7HkIEDydbY
-EVhz+EZWvv9SDK/rXaR246+36X8wpmWUq8kg35ZWXgcZMOsW7ksY40j2iyIxUuLV
-FJcGTb8aCPyeQjclgiPtFuwcf/gILyHL2Ek+70lbmgMhUwmjn4iYzNOVRtx+5z1u
-ZakT7LvVfETm7T8C0inHFDRN9n2fWdUTUUm2z/BCnQTYzrWiHMjU0oUZjanwa9wR
-ax1F+lelB0FH8+YiHzvWqzzloJAftGh+AOiCvM3YuHHaMIbYiaKWed52eka6YYTu
-xDVUea7UbGK92QzQIWF80Zw7WZucHeeil9tuxUVYTT093kt5wifdeTo7wYo1c1aW
-txtom1o65JQZaXK8KTHc
-=tJ5I
------END PGP SIGNATURE-----
+Its really simple to get focused in on quick fix to problems without
+asking is the behaviour even required.
 
---tjCHc7DPkfUGtrlw--
+Peter Dolding
