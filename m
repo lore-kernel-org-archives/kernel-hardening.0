@@ -1,113 +1,118 @@
-Message-ID: <1496585753.11788.1.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Sun, 04 Jun 2017 10:15:53 -0400
-In-Reply-To: <20170604032813.GB25424@grsecurity.net>
+Date: Sun, 4 Jun 2017 10:44:54 -0400
+From: Brad Spengler <spender@grsecurity.net>
+Message-ID: <20170604144454.GA9802@grsecurity.net>
 References: <20170603113007.GA1544@grsecurity.net>
-	 <1496498027.22395.1.camel@gmail.com> <20170603142110.GA7578@grsecurity.net>
-	 <CA+DvKQ+1BRVgWRcg_anBdf-8cV4=mgu8J9Kf1xVcbZBVePHSsw@mail.gmail.com>
-	 <20170604032813.GB25424@grsecurity.net>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
+ <1496498027.22395.1.camel@gmail.com>
+ <20170603142110.GA7578@grsecurity.net>
+ <CA+DvKQ+1BRVgWRcg_anBdf-8cV4=mgu8J9Kf1xVcbZBVePHSsw@mail.gmail.com>
+ <20170604124900.GA7153@grsecurity.net>
+ <a485c07b-459b-0f6f-4dd9-4ddcf9d21086@marcan.st>
+MIME-Version: 1.0
+Content-Type: multipart/signed; micalg=pgp-sha512;
+	protocol="application/pgp-signature"; boundary="LQksG6bCIzRHxTLp"
+Content-Disposition: inline
+In-Reply-To: <a485c07b-459b-0f6f-4dd9-4ddcf9d21086@marcan.st>
 Subject: Re: [kernel-hardening] Stop the plagiarism
-To: Brad Spengler <spender@grsecurity.net>
-Cc: kernel-hardening@lists.openwall.com
+To: Hector Martin <marcan@marcan.st>
+Cc: Daniel Micay <danielmicay@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, pageexec@freemail.hu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> Cryptomnesia I guess, you looked at every other line of PaX to rip out
-> stuff like:
 
-Searching for __read_only and categorizing them as ones requiring
-pax_open_kernel and not requiring it != reading the entire patch set
-line by line, and you have the timeline very wrong.
+--LQksG6bCIzRHxTLp
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-> when I pointed it out to you.  Are the above changes your own work
-> too?
+> It's somewhat ironic that someone who repeatedly complains about his
+> limited amount of time precluding upstreaming work somehow finds time to
+> stealth-idle on IRC channels to find out when people are talking about hi=
+m.
 
-Clearly not, and they aren't submitted upstream like that. I've been
-treating it as a scratch space for putting together changes to send
-upstream and they haven't all had commit messages written. For the
-__ro_after_init changes that I submitted, I wrote commit messages
-stating which parts came from PaX. I'll write full commit messages
-before pushing there from now on. I hadn't done it for those because I
-wasn't finished and I couldn't yet write a commit message that I
-wouldn't need to change later.
+And your evidence is what exactly? That sounds like a statement of fact rat=
+her
+than opinion.  Have you considered that there might be others in whatever
+channels those are that disagree with you and happen to mention to me
+ridiculous things that are said about me in public?
 
-My knowledge of the SSP canary issue predates making linux-hardened or
-being on bad terms from you.
+> You can't copyright an integer constant. There is little point in
+> arguing over copyright on whole-tree cleanup work; things like
+> converting to designated initializers aren't even, in my opinion
+> (IANAL), clear-cut copyrightable changes. And you can't copyright ideas,
+> so if someone reimplements a grsecurity feature without copying any of
+> the code, that's entirely fair game copyright-wise.
 
-> but totally never saw that line that's been there ever since SSP
-existed
-> in the kernel.  It also doesn't mesh with your lengthy excuse on
-github
-> when I pointed it out to you.  Are the above changes your own work
-too?
+Point me to where I claimed "copyright" over an integer constant.  I also
+even agree the designated initializers changes aren't copyrightable.  My en=
+tire
+point was simply mentioning where those changes come from, which is a moral
+issue in these cases, not a copyright issue -- I'm sorry if you think
+not violating copyright means one doesn't engage in plagiarism; the bar for
+copyright is terribly low.  Credit is something people do that respect the
+work that they're copying.  Same as we're not *required* to credit people
+who report bugs to us, but we respect their time and so it's something we've
+always done.  Also since not crediting would give the impression that
+particular issue was found via some internal audit, which would be misleadi=
+ng.
 
-I don't have total knowledge about what exists in PaX. I had no idea
-that it made changes like effectively disabling the cr4 caching or
-partially protecting page tables on x86 until recently. How would I know
-that it made a one line change fixing that stack canary issue? I wasn't
-familiar with the ASLR implementation then including the
-pax_get_random_long function which it used as the fix.
+> Honestly, I'm not entirely sure why I'm writing this, because with moves
+> like the GCC plugin licensing shenanigans and the general licensing
+> approach for grsecurity you've demonstrated that you're not above using
+> ridiculous (and in my opinion license-violating) legal contortions to
+> try to exert further control over usage of your software than the GPLv2
+> allows;
 
-And yes my "excuse" is consistent with what I said on GitHub. I became
-of the stack canary issue when Jann Horn told me about it months ago. I
-might have IRC logs from back then. I then assumed it was going to get
-fixed and promptly forgot about it as I do with pretty much every other
-specific bug. I noticed it again when making related changes in
-CopperheadOS but: that's a 3.18 LTS kernel and 3.10 LTS kernels for
-older devices, so it didn't occur to me than Jann might not have gotten
-it fixed in master, and arm64 doesn't use the per-task canaries so I
-didn't need to fix that or add the zero byte there yet. Not sure what is
-so hard to understand about that. I noticed it still wasn't fixed when
-first making linux-hardened by porting those changes ahead.
+I don't know, maybe to draw more attention for yourself in a way that=20
+doesn't require doing any real work and dig yourself into a deeper hole=20
+with more libel that you'll be held accountable for later?
 
-If I *had* done research into the issue to point to when it had been
-first discovered by someone, I wouldn't have found PaX. You don't have
-patches uploaded on the site from before the earliest mailing list post
-that you pointed me at, which doesn't mention PaX.
+When you and comex started making your plugin licensing claims we=20
+contacted the FSF ourselves given how damaging such claims are=20
+(particularly given that a few of them are now included in Linux).  It=20
+has been nearly 4 months now and despite repeated follow-ups, I still=20
+haven't received anything back more than an automated reply.  Likewise=20
+regarding some supposed claims by RMS which were published last year by=20
+internet troll mikeeusa -- I have been trying since June 3rd of last=20
+year to get any response from him, but have been unable to.  So when you=20
+claim we're violating the GPL by releasing some GCC plugins under GPLv2,
+is that a claim of fact you're making?  Because last I checked, you're
+not a GCC copyright holder, only the FSF is, so you don't even meet the
+minimum threshold of being a person anyone should care about or listen to
+wrt this topic.  I think you'd be wise to stop talking, because we've really
+had enough of it.
 
-It's a one line fix for a bug that barely even matters. I'm not sure why
-it's so important to you that I do impossible historical research (you
-don't have the patches uploaded, I don't see them anywhere else) to
-figure out who to credit, and as I've pointed out it cannot be assumed
-that a change in PaX is something to credit to you or pipacs rather than
-a fix you picked up from a mailing list, even if I had access to those
-earlier patches and had decided to go on a research expedition to fix a
-minor bug.
+> P.S. I had to reboot my router a few months ago, so I no longer have the
+> old IP address that you had blocked from your web server. Feel free to
+> remove that iptables rule now and shave a microsecond or two off your
+> packet processing time.
 
-If it was so important to you that you get credit for fixing the bug,
-why didn't you submit it yourself? It was trivial to get it landed when
-it was simply sent to the right people without needing any discussion.
+Don't worry about it, there's nothing for a "grateful" user like yourself
+to download anymore.  Boy, if I had more "grateful" users like yourself
+obsessed with harrassing us on Twitter, Reddit, and IRC so that they
+can go around and paint themselves as some kind of victim, I wouldn't
+know what to do with myself.
 
-> 
-> > > And how is grsecurity not entirely based on the work of others
-> > > i.e.
-> > the Linux kernel, just as CopperheadOS is based on Android Open
-> > Source
-> > Project and all of the baseline functionality and security model
-> > provided by it?
-> 
-> These false equivalences of yours are nonsense -- anyone can look at
-> https://github.com/thestinger/linux-hardened/issues
-> and see how utterly dependent you are.  You are comparing apples and
-> oranges because you need to to justify your existence.  You didn't
-> contribute a line of code to our work in 16 years and now you're
-> trying
-> to make a name for yourself off our work and reputation.  But you just
-> make a fool of yourself when on one hand you're desperately
-> copy+pasting
-> and on the other trying to pretend you don't depend on it, or that
-> your
-> dependence on copy+pasting our work is somehow equivalent to building
-> on
-> top of whatever version of Linux that exists.
-> 
-> -Brad
+-Brad
 
-The linux-hardened project was just created. The initial work is porting
-existing hardening features to a mainline kernel split out as components
-since that's the lowest hanging fruit: working towards parity with what
-we already had before. Changes like slab canaries, SSP tweaks and
-fortify aren't linux-hardened work, they existed in CopperheadOS for a
-long time.
+--LQksG6bCIzRHxTLp
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.12 (GNU/Linux)
+
+iQIcBAEBCgAGBQJZNBzfAAoJEETRwPglJf5JaLsP/0Ag32rSDS/LGJMAwMSRRxQ0
+4UDzoaYzS41TOVKhTFM+0/SomSlU4QDOtzdcdDta0YVbgzYQaG2A+EH38pMTOmDv
+vHFvxAxJn5D9B6XRaWm5I6dzNKhQjMqHJ60HKo5kfHZWMIhRe/mODPlHkT99ZrGW
+J4RzRvxB0ZTFjqY/AUS4lG/IwQkN9VcL2emzaSqbHGcuE8w2FzOCO+A+JHuroXqb
+aIrwTleSRzCH47dAoaSc3/3d+PdA1PJxXaKktIL0DcotovSN5V+iuJoDJf4bXdAz
+9UoloaxLADRHrR/MTIrSt+C7c8FON7uDG0dJcdymMDGEG5V2Vyboyj5wjN0mKWfW
+JZfTeJBk9VFKG3lfNPW4Jr8NvV7q+pGtMfKq8u9i/DuvjXuuHZk3Nji9b3KGVkOP
+dNKVfOMVD5KClMy+C4t0Llfy5PB9SKdI24PDDvJ0lRCKZLJ33rxGiExL8V9RwWeI
+zAvT3zBkhEUHYB2kmpgynwSK3NVP1JkrpLHTYEDy6F8SXPCEJjDfa2gRUNO+kaT4
+6U0AkJGD2agLQRtailceo4sdeGjwE0UER1LQbCMgQDIlrlzxBPcrTCrOh5W28a2m
+giI00dbiIm+Dw/7scsKOL8RbhidkMpA5C2g2ZcsokH0AME6/TyItGHeh9s0VrRIX
+r6Ff+2ylZpghWYfPEt3B
+=z7ZZ
+-----END PGP SIGNATURE-----
+
+--LQksG6bCIzRHxTLp--
