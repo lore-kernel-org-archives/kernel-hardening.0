@@ -1,165 +1,51 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Sun,  4 Jun 2017 04:16:23 +0200
-Message-Id: <20170604021626.11968-3-Jason@zx2c4.com>
+Date: Sun,  4 Jun 2017 04:16:26 +0200
+Message-Id: <20170604021626.11968-6-Jason@zx2c4.com>
 In-Reply-To: <20170604021626.11968-1-Jason@zx2c4.com>
 References: <20170604021626.11968-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH net-next v10 2/5] ipsec: check return value of skb_to_sgvec always
+Subject: [kernel-hardening] [PATCH net-next v10 5/5] virtio_net: check return value of skb_to_sgvec always
 To: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, davem@davemloft.net, kernel-hardening@lists.openwall.com
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, "Michael S. Tsirkin" <mst@redhat.com>, Jason Wang <jasowang@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: Steffen Klassert <steffen.klassert@secunet.com>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: "David S. Miller" <davem@davemloft.net>
+Reviewed-by: Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>
+Cc: "Michael S. Tsirkin" <mst@redhat.com>
+Cc: Jason Wang <jasowang@redhat.com>
 ---
- net/ipv4/ah4.c  |  8 ++++++--
- net/ipv4/esp4.c | 20 +++++++++++++-------
- net/ipv6/ah6.c  |  8 ++++++--
- net/ipv6/esp6.c | 20 +++++++++++++-------
- 4 files changed, 38 insertions(+), 18 deletions(-)
+ drivers/net/virtio_net.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
 
-diff --git a/net/ipv4/ah4.c b/net/ipv4/ah4.c
-index 22377c8ff14b..e8f862358518 100644
---- a/net/ipv4/ah4.c
-+++ b/net/ipv4/ah4.c
-@@ -220,7 +220,9 @@ static int ah_output(struct xfrm_state *x, struct sk_buff *skb)
- 	ah->seq_no = htonl(XFRM_SKB_CB(skb)->seq.output.low);
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 3e9246cc49c3..57763d30cabb 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1150,7 +1150,7 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+ 	struct virtio_net_hdr_mrg_rxbuf *hdr;
+ 	const unsigned char *dest = ((struct ethhdr *)skb->data)->h_dest;
+ 	struct virtnet_info *vi = sq->vq->vdev->priv;
+-	unsigned num_sg;
++	int num_sg;
+ 	unsigned hdr_len = vi->hdr_len;
+ 	bool can_push;
  
- 	sg_init_table(sg, nfrags + sglists);
--	skb_to_sgvec_nomark(skb, sg, 0, skb->len);
-+	err = skb_to_sgvec_nomark(skb, sg, 0, skb->len);
-+	if (unlikely(err < 0))
-+		goto out_free;
- 
- 	if (x->props.flags & XFRM_STATE_ESN) {
- 		/* Attach seqhi sg right after packet payload */
-@@ -393,7 +395,9 @@ static int ah_input(struct xfrm_state *x, struct sk_buff *skb)
- 	skb_push(skb, ihl);
- 
- 	sg_init_table(sg, nfrags + sglists);
--	skb_to_sgvec_nomark(skb, sg, 0, skb->len);
-+	err = skb_to_sgvec_nomark(skb, sg, 0, skb->len);
-+	if (unlikely(err < 0))
-+		goto out_free;
- 
- 	if (x->props.flags & XFRM_STATE_ESN) {
- 		/* Attach seqhi sg right after packet payload */
-diff --git a/net/ipv4/esp4.c b/net/ipv4/esp4.c
-index 93322f895eab..d815d1755473 100644
---- a/net/ipv4/esp4.c
-+++ b/net/ipv4/esp4.c
-@@ -377,9 +377,11 @@ int esp_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info *
- 	esp->esph = esph;
- 
- 	sg_init_table(sg, esp->nfrags);
--	skb_to_sgvec(skb, sg,
--		     (unsigned char *)esph - skb->data,
--		     assoclen + ivlen + esp->clen + alen);
-+	err = skb_to_sgvec(skb, sg,
-+		           (unsigned char *)esph - skb->data,
-+		           assoclen + ivlen + esp->clen + alen);
-+	if (unlikely(err < 0))
-+		goto error;
- 
- 	if (!esp->inplace) {
- 		int allocsize;
-@@ -403,9 +405,11 @@ int esp_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info *
- 		spin_unlock_bh(&x->lock);
- 
- 		sg_init_table(dsg, skb_shinfo(skb)->nr_frags + 1);
--		skb_to_sgvec(skb, dsg,
--			     (unsigned char *)esph - skb->data,
--			     assoclen + ivlen + esp->clen + alen);
-+		err = skb_to_sgvec(skb, dsg,
-+			           (unsigned char *)esph - skb->data,
-+			           assoclen + ivlen + esp->clen + alen);
-+		if (unlikely(err < 0))
-+			goto error;
+@@ -1177,11 +1177,16 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+ 	if (can_push) {
+ 		__skb_push(skb, hdr_len);
+ 		num_sg = skb_to_sgvec(skb, sq->sg, 0, skb->len);
++		if (unlikely(num_sg < 0))
++			return num_sg;
+ 		/* Pull header back to avoid skew in tx bytes calculations. */
+ 		__skb_pull(skb, hdr_len);
+ 	} else {
+ 		sg_set_buf(sq->sg, hdr, hdr_len);
+-		num_sg = skb_to_sgvec(skb, sq->sg + 1, 0, skb->len) + 1;
++		num_sg = skb_to_sgvec(skb, sq->sg + 1, 0, skb->len);
++		if (unlikely(num_sg < 0))
++			return num_sg;
++		num_sg++;
  	}
- 
- 	if ((x->props.flags & XFRM_STATE_ESN))
-@@ -690,7 +694,9 @@ static int esp_input(struct xfrm_state *x, struct sk_buff *skb)
- 	esp_input_set_header(skb, seqhi);
- 
- 	sg_init_table(sg, nfrags);
--	skb_to_sgvec(skb, sg, 0, skb->len);
-+	err = skb_to_sgvec(skb, sg, 0, skb->len);
-+	if (unlikely(err < 0))
-+		goto out;
- 
- 	skb->ip_summed = CHECKSUM_NONE;
- 
-diff --git a/net/ipv6/ah6.c b/net/ipv6/ah6.c
-index dda6035e3b84..755f38271dd5 100644
---- a/net/ipv6/ah6.c
-+++ b/net/ipv6/ah6.c
-@@ -423,7 +423,9 @@ static int ah6_output(struct xfrm_state *x, struct sk_buff *skb)
- 	ah->seq_no = htonl(XFRM_SKB_CB(skb)->seq.output.low);
- 
- 	sg_init_table(sg, nfrags + sglists);
--	skb_to_sgvec_nomark(skb, sg, 0, skb->len);
-+	err = skb_to_sgvec_nomark(skb, sg, 0, skb->len);
-+	if (unlikely(err < 0))
-+		goto out_free;
- 
- 	if (x->props.flags & XFRM_STATE_ESN) {
- 		/* Attach seqhi sg right after packet payload */
-@@ -606,7 +608,9 @@ static int ah6_input(struct xfrm_state *x, struct sk_buff *skb)
- 	ip6h->hop_limit   = 0;
- 
- 	sg_init_table(sg, nfrags + sglists);
--	skb_to_sgvec_nomark(skb, sg, 0, skb->len);
-+	err = skb_to_sgvec_nomark(skb, sg, 0, skb->len);
-+	if (unlikely(err < 0))
-+		goto out_free;
- 
- 	if (x->props.flags & XFRM_STATE_ESN) {
- 		/* Attach seqhi sg right after packet payload */
-diff --git a/net/ipv6/esp6.c b/net/ipv6/esp6.c
-index 1fe99ba8066c..2ede4e459c4e 100644
---- a/net/ipv6/esp6.c
-+++ b/net/ipv6/esp6.c
-@@ -346,9 +346,11 @@ int esp6_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info
- 	esph = esp_output_set_esn(skb, x, ip_esp_hdr(skb), seqhi);
- 
- 	sg_init_table(sg, esp->nfrags);
--	skb_to_sgvec(skb, sg,
--		     (unsigned char *)esph - skb->data,
--		     assoclen + ivlen + esp->clen + alen);
-+	err = skb_to_sgvec(skb, sg,
-+		           (unsigned char *)esph - skb->data,
-+		           assoclen + ivlen + esp->clen + alen);
-+	if (unlikely(err < 0))
-+		goto error;
- 
- 	if (!esp->inplace) {
- 		int allocsize;
-@@ -372,9 +374,11 @@ int esp6_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info
- 		spin_unlock_bh(&x->lock);
- 
- 		sg_init_table(dsg, skb_shinfo(skb)->nr_frags + 1);
--		skb_to_sgvec(skb, dsg,
--			     (unsigned char *)esph - skb->data,
--			     assoclen + ivlen + esp->clen + alen);
-+		err = skb_to_sgvec(skb, dsg,
-+			           (unsigned char *)esph - skb->data,
-+			           assoclen + ivlen + esp->clen + alen);
-+		if (unlikely(err < 0))
-+			goto error;
- 	}
- 
- 	if ((x->props.flags & XFRM_STATE_ESN))
-@@ -618,7 +622,9 @@ static int esp6_input(struct xfrm_state *x, struct sk_buff *skb)
- 	esp_input_set_header(skb, seqhi);
- 
- 	sg_init_table(sg, nfrags);
--	skb_to_sgvec(skb, sg, 0, skb->len);
-+	ret = skb_to_sgvec(skb, sg, 0, skb->len);
-+	if (unlikely(ret < 0))
-+		goto out;
- 
- 	skb->ip_summed = CHECKSUM_NONE;
- 
+ 	return virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
+ }
 -- 
 2.13.0
