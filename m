@@ -1,52 +1,39 @@
-Date: Sat, 3 Jun 2017 22:47:46 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Message-ID: <20170604054746.GC12095@zzz>
-References: <20170603055351.16080-1-matt@nmatt.com>
- <20170603063354.GJ6365@ZenIV.linux.org.uk>
- <a507374a-e1b9-de56-5d50-825c283111ca@nmatt.com>
+From: Stephan =?ISO-8859-1?Q?M=FCller?= <smueller@chronox.de>
+Date: Sun, 04 Jun 2017 07:48:26 +0200
+Message-ID: <2400574.rYAxqaUNNq@positron.chronox.de>
+In-Reply-To: <CAHmME9q=AdK7BHQw0+sd4T0HGQce92KXTD+-TTc2s2CXbEHAAA@mail.gmail.com>
+References: <CAHmME9q=AdK7BHQw0+sd4T0HGQce92KXTD+-TTc2s2CXbEHAAA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <a507374a-e1b9-de56-5d50-825c283111ca@nmatt.com>
-Subject: Re: [kernel-hardening] Re: [PATCH v1 1/1] Add Trusted Path Execution
- as a stackable LSM
-To: Matt Brown <matt@nmatt.com>
-Cc: Al Viro <viro@ZenIV.linux.org.uk>, james.l.morris@oracle.com, serge@hallyn.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Subject: [kernel-hardening] Re: get_random_bytes returns bad randomness before seeding is complete
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jun 04, 2017 at 01:24:13AM -0400, Matt Brown wrote:
-> On 06/03/2017 02:33 AM, Al Viro wrote:
-> > On Sat, Jun 03, 2017 at 01:53:51AM -0400, Matt Brown wrote:
-> > 
-> > > +static int tpe_bprm_set_creds(struct linux_binprm *bprm)
-> > > +{
-> > > +	struct file *file = bprm->file;
-> > > +	struct inode *inode = d_backing_inode(file->f_path.dentry->d_parent);
-> > > +	struct inode *file_inode = d_backing_inode(file->f_path.dentry);
-> > 
-> > Bloody wonderful.  Do tell, what *does* prevent a race with rename(2) here,
-> > somehow making sure that your 'inode' won't get freed right under you?
-> > 
-> 
-> Good catch. How does this look:
-> 
-> spin_lock(&inode->i_lock);
-> spin_lock(&file_inode->i_lock);
-> if (global_nonroot(inode->i_uid) && !uid_eq(inode->i_uid, cred->uid))
-> 	reason1 = "directory not owned by user";
-> else if (inode->i_mode & 0002)
-> 	reason1 = "file in world-writable directory";
-> else if ((inode->i_mode & 0020) && global_nonroot_gid(inode->i_gid))
-> 	reason1 = "file in group-writable directory";
-> else if (file_inode->i_mode & 0002)
-> 	reason1 = "file is world-writable";
-> spin_unlock(&inode->i_lock);
-> spin_unlock(&file_inode->i_lock);
-> 
-> and likewise for other places in the code?
+Am Freitag, 2. Juni 2017, 16:59:56 CEST schrieb Jason A. Donenfeld:
 
-No, it needs to take a reference on the parent dentry before using it, using
-dget_parent(), I think, and then dropping it later with dput().  Taking i_lock
-isn't needed.
+Hi Jason,
 
-Eric
+> 
+> Alternatively, I'm open to other solutions people might come up with.
+
+How about stirring in some data from the Jitter RNG that we have in the kernel 
+already and that is used for the DRBG in case get_random_bytes has 
+insufficient entropy? Yes, two kernel developers said that this RNG is 
+useless, where in fact a lot of hardware and even crypto folks say that this 
+approach has merits.
+
+In any case, it cannot destroy the (not present) entropy at boot time anyway. 
+Thus, take some 32, 48 or 64 bytes from it right at the start of the kernel, 
+and we should be better (from the view point of quite some folks) or not worse 
+off (view point of two developers here).
+
+As this RNG does not depend on any in-kernel facility, it is always available 
+at any time.
+
+PS: I could revive a patch adding this to random.c that I sent long ago if 
+desired.
+
+Ciao
+Stephan
