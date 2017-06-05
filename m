@@ -1,42 +1,32 @@
-Date: Mon, 5 Jun 2017 13:06:52 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Message-ID: <20170605200652.GB87699@gmail.com>
-References: <20170605153020.953645204@linuxfoundation.org>
- <20170605153021.008595891@linuxfoundation.org>
- <CAGXu5jKQ63WOrPMMCVfvRueV2D=YnXAgUGm7zWU+hBSkVDmVwQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jKQ63WOrPMMCVfvRueV2D=YnXAgUGm7zWU+hBSkVDmVwQ@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH 3.18 01/33] Revert
- "stackprotector: Increase the per-task stack canarys random range from 32
- bits to 64 bits on 64-bit platforms"
-To: Kees Cook <keescook@chromium.org>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, LKML <linux-kernel@vger.kernel.org>, "# 3.4.x" <stable@vger.kernel.org>, Philip =?iso-8859-1?Q?M=FCller?= <philm@manjaro.org>, Daniel Micay <danielmicay@gmail.com>, Arjan van de Ven <arjan@linux.intel.com>, Rik van Riel <riel@redhat.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@kernel.org>
+In-Reply-To: <20170605192216.21596-4-igor.stoppa@huawei.com>
+References: <20170605192216.21596-1-igor.stoppa@huawei.com> <20170605192216.21596-4-igor.stoppa@huawei.com>
+From: Jann Horn <jannh@google.com>
+Date: Mon, 5 Jun 2017 22:24:20 +0200
+Message-ID: <CAG48ez1VMPLasTypDX5QnZnYprbCXfG9ZP9jQvPpS=HCpgvHvQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [PATCH 3/5] Protectable Memory Allocator -
+ Debug interface
+To: Igor Stoppa <igor.stoppa@huawei.com>
+Cc: Kees Cook <keescook@chromium.org>, mhocko@kernel.org, jmorris@namei.org, penguin-kernel@i-love.sakura.ne.jp, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, casey@schaufler-ca.com, Christoph Hellwig <hch@infradead.org>, labbott@redhat.com, linux-mm@kvack.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 05, 2017 at 12:13:11PM -0700, Kees Cook wrote:
-> On Mon, Jun 5, 2017 at 9:16 AM, Greg Kroah-Hartman
-> <gregkh@linuxfoundation.org> wrote:
-> > 3.18-stable review patch.  If anyone has any objections, please let me know.
-> >
-> > ------------------
-> >
-> > From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-> >
-> > This reverts commit 609a3e81550b0b4ea87197b0f59455a7bcff975a which is
-> > commit 5ea30e4e58040cfd6434c2f33dc3ea76e2c15b05 upstream.
-> >
-> > It shouldn't have been backported to 3.18, as we do not have
-> > get_random_long() in that kernel tree.
-> 
-> It should be possible to trivially backport
-> ec9ee4acd97c0039a61c0ae4f12705767ae62153 to gain get_random_long().
-> 
-> -Kees
+On Mon, Jun 5, 2017 at 9:22 PM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
+> Debugfs interface: it creates a file
+>
+> /sys/kernel/debug/pmalloc/pools
+>
+> which exposes statistics about all the pools and memory nodes in use.
+>
+> Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
+[...]
+> +       seq_printf(s, " - node:\t\t%p\n", node);
+> +       seq_printf(s, "   - start of data ptr:\t%p\n", node->data);
+> +       seq_printf(s, "   - end of node ptr:\t%p\n", (void *)end_of_node);
+[...]
+> +       seq_printf(s, "pool:\t\t\t%p\n", pool);
+[...]
+> +       debugfs_create_file("pools", 0644, pmalloc_root, NULL,
+> +                           &pmalloc_file_ops);
 
-If that's done it may be a good idea to take
-b1132deac01c2332d234fa821a70022796b79182 as well, which fixed an alignment bug
-in get_random_long().
-
-Eric
+You should probably be using %pK to hide the kernel pointers.
