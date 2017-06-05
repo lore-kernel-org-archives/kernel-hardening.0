@@ -1,38 +1,47 @@
-Message-ID: <1496627055.21652.4.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Sun, 04 Jun 2017 21:44:15 -0400
-In-Reply-To: <1496625669.21652.2.camel@gmail.com>
-References: <20170603113007.GA1544@grsecurity.net>
-	 <1496498027.22395.1.camel@gmail.com> <20170603142110.GA7578@grsecurity.net>
-	 <CA+DvKQ+1BRVgWRcg_anBdf-8cV4=mgu8J9Kf1xVcbZBVePHSsw@mail.gmail.com>
-	 <20170604032813.GB25424@grsecurity.net>
-	 <1496585753.11788.1.camel@gmail.com>
-	 <20170605001225.GA23953@grsecurity.net>
-	 <1496625669.21652.2.camel@gmail.com>
-Content-Type: text/plain; charset="UTF-8"
+Date: Sun, 04 Jun 2017 23:03:27 -0400 (EDT)
+Message-Id: <20170604.230327.148898250524251943.davem@davemloft.net>
+From: David Miller <davem@davemloft.net>
+In-Reply-To: <20170604021626.11968-1-Jason@zx2c4.com>
+References: <20170604021626.11968-1-Jason@zx2c4.com>
 Mime-Version: 1.0
+Content-Type: Text/Plain; charset=us-ascii
 Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Stop the plagiarism
-To: Brad Spengler <spender@grsecurity.net>
-Cc: kernel-hardening@lists.openwall.com, pageexec@freemail.hu
+Subject: [kernel-hardening] Re: [PATCH net-next v10 0/5] Avoiding stack overflow in
+ skb_to_sgvec
+To: Jason@zx2c4.com
+Cc: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> migrating it to get_random_long to the write people with a 
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Sun,  4 Jun 2017 04:16:21 +0200
 
-s/write/right/
+> Changes v9->v10:
+>    - Spaces to tabs on one line.
+>    - Added some acked-by, reviewed-by lines.
 
-Which is why Jann's submission of a patch earlier didn't land despite it
-being really clearly cut, and I really have no idea about any previous
-attempts. I have no interest in researching any previous attempts to get
-it fixed and guessing at why those never landed. You care who found and
-fixed it first, I didn't, so I didn't look into it. That doesn't mean I
-wanted credit for fixing it. I would have been happier if Jann, Kees or
-Riel had submitted it instead since it's less to deal with.
+I wish in the future you would retain the entire change history, and
+keep it in it's entirety here in the header postings.  That list of
+adjustments is important and might be useful to someone in the future
+("why didn't they do this, oh they decided to not do that
+intentionally I can see that in the Change list").
 
-It needed to be fixed before masking out one of the bytes so I made yet
-another fix for it and submitted it.
+> The recent bug with macsec and historical one with virtio have
+> indicated that letting skb_to_sgvec trounce all over an sglist
+> without checking the length is probably a bad idea. And it's not
+> necessary either: an sglist already explicitly marks its last
+> item, and the initialization functions are diligent in doing so.
+> Thus there's a clear way of avoiding future overflows.
+> 
+> So, this patchset, from a high level, makes skb_to_sgvec return
+> a potential error code, and then adjusts all callers to check
+> for the error code. There are two situations in which skb_to_sgvec
+> might return such an error:
+> 
+>    1) When the passed in sglist is too small; and
+>    2) When the passed in skbuff is too deeply nested.
+> 
+> So, the first patch in this series handles the issues with
+> skb_to_sgvec directly, and the remaining ones then handle the call
+> sites.
 
-When you showed up on IRC mad at me, I thought it was about the
-__ro_after_init changes which referenced PaX so I couldn't understand
-what you were talking about because *I didn't take this change from PaX
-like those ones*. Apparently quite hard to understand.
+Applied to net-next.
