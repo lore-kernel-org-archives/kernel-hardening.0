@@ -1,52 +1,121 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Mon,  5 Jun 2017 05:47:49 +0200
-Message-Id: <20170605034757.4803-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH RFC v2 0/8] get_random_bytes_wait family of APIs
+Date: Mon,  5 Jun 2017 05:47:50 +0200
+Message-Id: <20170605034757.4803-2-Jason@zx2c4.com>
+In-Reply-To: <20170605034757.4803-1-Jason@zx2c4.com>
+References: <20170605034757.4803-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH RFC v2 1/8] random: add synchronous API for the urandom pool
 To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-As discussed in [1], there is a problem with get_random_bytes being
-used before the RNG has actually been seeded. The solution for fixing
-this appears to be multi-pronged. One of those prongs involves adding
-a simple blocking API so that modules that use the RNG in process
-context can just sleep (in an interruptable manner) until the RNG is
-ready to be used. This winds up being a very useful API that covers
-a few use cases, 5 of which are included in this patch set.
+This enables users of get_random_{bytes,u32,u64,int,long} to wait until
+the pool is ready before using this function, in case they actually want
+to have reliable randomness.
 
-[1] http://www.openwall.com/lists/kernel-hardening/2017/06/02/2
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+---
+ drivers/char/random.c  | 41 +++++++++++++++++++++++++++++++----------
+ include/linux/random.h |  1 +
+ 2 files changed, 32 insertions(+), 10 deletions(-)
 
-Changes v1->v2:
-  - Rather than support both interruptable and non-interruptable
-    waiting and also timeouts, we just support the case that people
-    will actually use: ordinary interruptable waiting. This simplifies
-    the API a bit.
-  - This patch set now has a few examples of where it might be useful.
-
-Jason A. Donenfeld (8):
-  random: add synchronous API for the urandom pool
-  random: add get_random_{bytes,u32,u64,int,long,once}_wait family
-  random: warn when kernel uses unseeded randomness
-  crypto/rng: ensure that the RNG is ready before using
-  security/keys: ensure RNG is seeded before use
-  iscsi: ensure RNG is seeded before use
-  bluetooth/smp: ensure RNG is properly seeded before ECDH use
-  ceph: ensure RNG is seeded before using
-
- crypto/rng.c                              |  6 +++--
- drivers/char/random.c                     | 44 ++++++++++++++++++++++---------
- drivers/target/iscsi/iscsi_target_auth.c  | 14 +++++++---
- drivers/target/iscsi/iscsi_target_login.c | 22 ++++++++++------
- include/linux/net.h                       |  2 ++
- include/linux/once.h                      |  2 ++
- include/linux/random.h                    | 26 ++++++++++++++++++
- lib/Kconfig.debug                         | 15 +++++++++++
- net/bluetooth/hci_request.c               |  6 +++++
- net/bluetooth/smp.c                       | 18 ++++++++++---
- net/ceph/ceph_common.c                    |  6 ++++-
- security/keys/encrypted-keys/encrypted.c  |  8 +++---
- security/keys/key.c                       | 13 ++++++---
- 13 files changed, 145 insertions(+), 37 deletions(-)
-
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index 0ab024918907..035a5d7c06bd 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -844,11 +844,6 @@ static void crng_reseed(struct crng_state *crng, struct entropy_store *r)
+ 	spin_unlock_irqrestore(&primary_crng.lock, flags);
+ }
+ 
+-static inline void crng_wait_ready(void)
+-{
+-	wait_event_interruptible(crng_init_wait, crng_ready());
+-}
+-
+ static void _extract_crng(struct crng_state *crng,
+ 			  __u8 out[CHACHA20_BLOCK_SIZE])
+ {
+@@ -1466,7 +1461,10 @@ static ssize_t extract_entropy_user(struct entropy_store *r, void __user *buf,
+  * number of good random numbers, suitable for key generation, seeding
+  * TCP sequence numbers, etc.  It does not rely on the hardware random
+  * number generator.  For random bytes direct from the hardware RNG
+- * (when available), use get_random_bytes_arch().
++ * (when available), use get_random_bytes_arch(). In order to ensure
++ * that the randomness provided by this function is okay, the function
++ * wait_for_random_bytes() should be called and return 0 at least once
++ * at any point prior.
+  */
+ void get_random_bytes(void *buf, int nbytes)
+ {
+@@ -1496,6 +1494,24 @@ void get_random_bytes(void *buf, int nbytes)
+ EXPORT_SYMBOL(get_random_bytes);
+ 
+ /*
++ * Wait for the urandom pool to be seeded and thus guaranteed to supply
++ * cryptographically secure random numbers. This applies to: the /dev/urandom
++ * device, the get_random_bytes function, and the get_random_{u32,u64,int,long}
++ * family of functions. Using any of these functions without first calling
++ * this function forfeits the guarantee of security.
++ *
++ * Returns: 0 if the urandom pool has been seeded.
++ *          -ERESTARTSYS if the function was interrupted by a signal.
++ */
++int wait_for_random_bytes(void)
++{
++	if (likely(crng_ready()))
++		return 0;
++	return wait_event_interruptible(crng_init_wait, crng_ready());
++}
++EXPORT_SYMBOL(wait_for_random_bytes);
++
++/*
+  * Add a callback function that will be invoked when the nonblocking
+  * pool is initialised.
+  *
+@@ -1849,6 +1865,8 @@ const struct file_operations urandom_fops = {
+ SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
+ 		unsigned int, flags)
+ {
++	int ret;
++
+ 	if (flags & ~(GRND_NONBLOCK|GRND_RANDOM))
+ 		return -EINVAL;
+ 
+@@ -1861,9 +1879,9 @@ SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
+ 	if (!crng_ready()) {
+ 		if (flags & GRND_NONBLOCK)
+ 			return -EAGAIN;
+-		crng_wait_ready();
+-		if (signal_pending(current))
+-			return -ERESTARTSYS;
++		ret = wait_for_random_bytes();
++		if (unlikely(ret))
++			return ret;
+ 	}
+ 	return urandom_read(NULL, buf, count, NULL);
+ }
+@@ -2023,7 +2041,10 @@ struct batched_entropy {
+ /*
+  * Get a random word for internal kernel use only. The quality of the random
+  * number is either as good as RDRAND or as good as /dev/urandom, with the
+- * goal of being quite fast and not depleting entropy.
++ * goal of being quite fast and not depleting entropy. In order to ensure
++ * that the randomness provided by this function is okay, the function
++ * wait_for_random_bytes() should be called and return 0 at least once
++ * at any point prior.
+  */
+ static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u64);
+ u64 get_random_u64(void)
+diff --git a/include/linux/random.h b/include/linux/random.h
+index ed5c3838780d..e29929347c95 100644
+--- a/include/linux/random.h
++++ b/include/linux/random.h
+@@ -34,6 +34,7 @@ extern void add_input_randomness(unsigned int type, unsigned int code,
+ extern void add_interrupt_randomness(int irq, int irq_flags) __latent_entropy;
+ 
+ extern void get_random_bytes(void *buf, int nbytes);
++extern int wait_for_random_bytes(void);
+ extern int add_random_ready_callback(struct random_ready_callback *rdy);
+ extern void del_random_ready_callback(struct random_ready_callback *rdy);
+ extern void get_random_bytes_arch(void *buf, int nbytes);
 -- 
 2.13.0
