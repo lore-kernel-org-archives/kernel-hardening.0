@@ -1,69 +1,103 @@
-Message-ID: <1496670876.29205.119.camel@redhat.com>
-From: Rik van Riel <riel@redhat.com>
-Date: Mon, 05 Jun 2017 09:54:36 -0400
-In-Reply-To: <CAGXu5jJp-U2o9JEicyvM=205P7072kN_UCwh7=+UNJ2Z1HWKvg@mail.gmail.com>
-References: <20170602152010.2064-1-riel@redhat.com>
-	 <20170602152010.2064-3-riel@redhat.com>
-	 <CAGXu5jJp-U2o9JEicyvM=205P7072kN_UCwh7=+UNJ2Z1HWKvg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
+References: <20170603055351.16080-1-matt@nmatt.com>
+ <20170603154707.GA19161@openwall.com>
+From: Matt Brown <matt@nmatt.com>
+Message-ID: <f260f3fd-7fb7-7354-0830-204336004aca@nmatt.com>
+Date: Mon, 5 Jun 2017 10:41:30 -0400
+MIME-Version: 1.0
+In-Reply-To: <20170603154707.GA19161@openwall.com>
+Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 2/6] x86/elf: move 32 bit ELF_ET_DYN_BASE to 256MB
-To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Larry Woodman <lwoodman@redhat.com>, mhocko@suse.de, Daniel Micay <danielmicay@gmail.com>, Will Deacon <will.deacon@arm.com>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>
+Subject: Re: [kernel-hardening] [PATCH v1 1/1] Add Trusted Path Execution as a
+ stackable LSM
+To: Solar Designer <solar@openwall.com>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 2017-06-02 at 21:22 -0700, Kees Cook wrote:
-
-> As a result of these things, I'm not sure I like the 256MB change, as
-> I'd rather we get the PIE base as low as possible. I *think* this
-> should match the ET_EXEC addresses: 32-bit x86 ET_EXEC loads at
-> 0x8048000. 64-bit x86 ET_EXEC loads at 0x400000 (though maybe we can
-> take 32-bit lower still). However, the kernel needs to notice that
-> when running a loader, it should go into the mmap base like a .so,
-> which will keep out out of the way no matter what. However, then the
-> question becomes "can the brk be placed sanely?" since the brk is
-> allocated with whatever is mapped first.
-
-The problem is that the brk is allocated when the loader
-is loaded, before the loader maps that second executable.
-
-In other words, the problem has been changed from
-"where to place the loader?" to "where to place the
-brk?, but remains fundamentally the same.
-
-> I think loading an ET_DYN that lacks PT_INTERP should be mapped
-into
-> the mmap base so that we can lower ELF_ET_DYN_BASE as far as possible
-> in the address space without concern over ET_EXEC collisions.
-> (ELF_ET_DYN_BASE should be named ELF_PIE_BASE maybe, since it
-> shouldn't be exclusively used for ET_DYN, it should only be for
-> ET_DYN
-> with PT_INTERP. ET_DYN without PT_INTERP should get loaded into mmap
-> like the .so it is.)
+On 6/3/17 11:47 AM, Solar Designer wrote:
+> Matt,
 > 
-> I'm not sure what to do yet for set_brk() when an ET_DYN without
-> PT_INTERP is loaded into mmap base, but we need make sure we don't
-> create collisions or inappropriately small brk space.
+> On Sat, Jun 03, 2017 at 01:53:51AM -0400, Matt Brown wrote:
+>> This patch was modified from Brad Spengler's Trusted Path Execution (TPE)
+>> feature in Grsecurity and also incorporates logging ideas from
+>> cormander's tpe-lkm.
+>>
+>> Modifications from the Grsecurity implementation of TPE were made to
+>> turn it into a stackable LSM using the existing LSM hook bprm_set_creds.
+>> Also, denial messages were improved by including the full path of the
+>> disallowed program. (This idea was taken from cormander's tpe-lkm)
+>>
+>> Trusted Path Execution is not a new idea:
+>>
+>> http://phrack.org/issues/52/6.html#article
+> 
+> FWIW, I think this is mostly a misfeature, which I deliberately didn't
+> merge into -ow patches back then.
+> 
+>> This option enables Trusted Path Execution. TPE blocks *untrusted*
+>> users from executing files that meet the following conditions:
+>>
+>> * file is not in a root-owned directory
+>> * file is writable by a user other than root
+>>
+>> NOTE: root is never restricted by TPE
+> 
+>> Threat Models:
+>>
+>> 1. Attacker on system executing exploit on system vulnerability
+>>
+>> *  If attacker uses a binary as a part of their system exploit, TPE can
+>>    frustrate their efforts
+>>
+>> *  Issues:
+>>    *  Can be bypassed by interpreted languages such as python. You can run
+>>       malicious code by doing: python -c 'evil code'
+> 
+> Yes, and not only that: a local attacker may also bypass TPE by what
+> would have been non-security bugs in many other programs - e.g., a
+> buffer overflow by a command-line argument in any of the allowed
+> programs suddenly becomes security-relevant.
+> 
+> A variation of your threat model 1, which makes more sense to me than
+> what's traditionally implied, is when the attacker does not yet use an
+> interactive shell.  TPE can in fact frustrate automated remote exploits
+> that don't specifically target (nor support) TPE-enabled systems.
+> 
+>> 2. Attacker on system replaces binary used by a privileged user with a
+>>    malicious one
+>>
+>> *  This situation arises when administrator of a system leaves a binary
+>>    as world writable.
+>>
+>> *  TPE is very effective against this threat model
+> 
+> This makes more sense to me.  It's known-bypassable policy enforcement
+> by the sysadmin against one's own human error and such.  However, for
+> this to be effective the exception "NOTE: root is never restricted by
+> TPE" should be removed or made an option.
 
-Exactly, we end up with placing the brk at ELF_ET_DYN_BASE +
-randomization, instead of placing the interpreter and the
-brk there. I don't see how it would help much.
+OK so a sysctl, kernel.tpe.restrict_root, that toggles if root is also
+restricted? With this in mind I might rename restrict_all since that
+might be confusing.
 
-> Additionally, I think we need some runtime checking of the address
-> space layout min/max positionns to make sure we can't collide
-> anything. (And maybe some pretty ASCII-art to help visualize the
-> possible layouts, since we have several sets of variables to take
-> into
-> account, including: execution style (ET_EXEC, direct loader, and
-> PIE),
-> sysctl entropy sizing of the regions, and stack rlimit.)
+> 
+> In a similar spirit, it'd also make sense to have a policy disallowing
+> at least root to write into directories writable by other users without
+> setting the O_EXCL flag.  I actually had this in a kernel module, which
+> I used to find issues of this kind in Postfix in 2006 or so (Wietse
+> promptly patched those), but I didn't try running this in production.
+> 
 
-If you want maximum randomization, we should allow things
-like having the stack randomized to the bottom of the
-address space, and the executable / brk growing up from
-some distance above the top of the stack.
+Could you expand on what you think the threat model is for root not
+writing into directories writable by other users? symlink issues?
 
-Essentially allowing anything to be placed anywhere, and
-switching things like executable & mmap placement as a
-result of where the stack ends up, etc..
+> Summary: I see little value in TPE, but I don't intend to argue against
+> it any further (and I deliberately dropped the CC list on this reply,
+> not to hamper your efforts much).  If you choose to proceed with trying
+> to upstream it anyway, I suggest the above changes to the description of
+> the threat models and the tiny code change to allow for restricting root
+> as well.
+> 
+> Thanks,
+> 
+> Alexander
+> 
