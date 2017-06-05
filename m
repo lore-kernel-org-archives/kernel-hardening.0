@@ -1,47 +1,52 @@
-Date: Sun, 04 Jun 2017 23:03:27 -0400 (EDT)
-Message-Id: <20170604.230327.148898250524251943.davem@davemloft.net>
-From: David Miller <davem@davemloft.net>
-In-Reply-To: <20170604021626.11968-1-Jason@zx2c4.com>
-References: <20170604021626.11968-1-Jason@zx2c4.com>
-Mime-Version: 1.0
-Content-Type: Text/Plain; charset=us-ascii
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH net-next v10 0/5] Avoiding stack overflow in
- skb_to_sgvec
-To: Jason@zx2c4.com
-Cc: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Mon,  5 Jun 2017 05:47:49 +0200
+Message-Id: <20170605034757.4803-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH RFC v2 0/8] get_random_bytes_wait family of APIs
+To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Sun,  4 Jun 2017 04:16:21 +0200
+As discussed in [1], there is a problem with get_random_bytes being
+used before the RNG has actually been seeded. The solution for fixing
+this appears to be multi-pronged. One of those prongs involves adding
+a simple blocking API so that modules that use the RNG in process
+context can just sleep (in an interruptable manner) until the RNG is
+ready to be used. This winds up being a very useful API that covers
+a few use cases, 5 of which are included in this patch set.
 
-> Changes v9->v10:
->    - Spaces to tabs on one line.
->    - Added some acked-by, reviewed-by lines.
+[1] http://www.openwall.com/lists/kernel-hardening/2017/06/02/2
 
-I wish in the future you would retain the entire change history, and
-keep it in it's entirety here in the header postings.  That list of
-adjustments is important and might be useful to someone in the future
-("why didn't they do this, oh they decided to not do that
-intentionally I can see that in the Change list").
+Changes v1->v2:
+  - Rather than support both interruptable and non-interruptable
+    waiting and also timeouts, we just support the case that people
+    will actually use: ordinary interruptable waiting. This simplifies
+    the API a bit.
+  - This patch set now has a few examples of where it might be useful.
 
-> The recent bug with macsec and historical one with virtio have
-> indicated that letting skb_to_sgvec trounce all over an sglist
-> without checking the length is probably a bad idea. And it's not
-> necessary either: an sglist already explicitly marks its last
-> item, and the initialization functions are diligent in doing so.
-> Thus there's a clear way of avoiding future overflows.
-> 
-> So, this patchset, from a high level, makes skb_to_sgvec return
-> a potential error code, and then adjusts all callers to check
-> for the error code. There are two situations in which skb_to_sgvec
-> might return such an error:
-> 
->    1) When the passed in sglist is too small; and
->    2) When the passed in skbuff is too deeply nested.
-> 
-> So, the first patch in this series handles the issues with
-> skb_to_sgvec directly, and the remaining ones then handle the call
-> sites.
+Jason A. Donenfeld (8):
+  random: add synchronous API for the urandom pool
+  random: add get_random_{bytes,u32,u64,int,long,once}_wait family
+  random: warn when kernel uses unseeded randomness
+  crypto/rng: ensure that the RNG is ready before using
+  security/keys: ensure RNG is seeded before use
+  iscsi: ensure RNG is seeded before use
+  bluetooth/smp: ensure RNG is properly seeded before ECDH use
+  ceph: ensure RNG is seeded before using
 
-Applied to net-next.
+ crypto/rng.c                              |  6 +++--
+ drivers/char/random.c                     | 44 ++++++++++++++++++++++---------
+ drivers/target/iscsi/iscsi_target_auth.c  | 14 +++++++---
+ drivers/target/iscsi/iscsi_target_login.c | 22 ++++++++++------
+ include/linux/net.h                       |  2 ++
+ include/linux/once.h                      |  2 ++
+ include/linux/random.h                    | 26 ++++++++++++++++++
+ lib/Kconfig.debug                         | 15 +++++++++++
+ net/bluetooth/hci_request.c               |  6 +++++
+ net/bluetooth/smp.c                       | 18 ++++++++++---
+ net/ceph/ceph_common.c                    |  6 ++++-
+ security/keys/encrypted-keys/encrypted.c  |  8 +++---
+ security/keys/key.c                       | 13 ++++++---
+ 13 files changed, 145 insertions(+), 37 deletions(-)
+
+-- 
+2.13.0
