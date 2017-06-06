@@ -1,30 +1,58 @@
-Date: Tue, 6 Jun 2017 09:45:52 +0200
-From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Message-ID: <20170606074552.GA10432@kroah.com>
-References: <20170605034757.4803-1-Jason@zx2c4.com>
- <CAHmME9oXmZD2X8hSicVgAZRbaoBNUwRK-16Ekz2JAkNcZE+_dg@mail.gmail.com>
+References: <20170605192216.21596-1-igor.stoppa@huawei.com>
+ <20170605192216.21596-5-igor.stoppa@huawei.com>
+ <71e91de0-7d91-79f4-67f0-be0afb33583c@schaufler-ca.com>
+ <201706060550.HAC69712.OVFOtSFLQJOMFH@I-love.SAKURA.ne.jp>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <ff5714b2-bbb0-726d-2fe6-13d4f1a30a38@huawei.com>
+Date: Tue, 6 Jun 2017 11:58:53 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAHmME9oXmZD2X8hSicVgAZRbaoBNUwRK-16Ekz2JAkNcZE+_dg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH RFC v2 0/8] get_random_bytes_wait family of APIs
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+In-Reply-To: <201706060550.HAC69712.OVFOtSFLQJOMFH@I-love.SAKURA.ne.jp>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 4/5] Make LSM Writable Hooks a command line option
+To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, casey@schaufler-ca.com, keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org
+Cc: paul@paul-moore.com, sds@tycho.nsa.gov, hch@infradead.org, labbott@redhat.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 06, 2017 at 01:47:25AM +0200, Jason A. Donenfeld wrote:
-> As this RFC series matures, all the changes are in this branch here, to look at:
+On 05/06/17 23:50, Tetsuo Handa wrote:
+> Casey Schaufler wrote:
+
+[...]
+
+>> I don't care for calling this "security debug". Making
+>> the lists writable after init isn't about development,
+>> it's about (Tetsuo's desire for) dynamic module loading.
+>> I would prefer "dynamic_module_lists" our something else
+>> more descriptive.
 > 
-> https://git.zx2c4.com/linux-dev/log/?h=jd/rng-blocker
+> Maybe dynamic_lsm ?
+
+ok, apologies for misunderstanding, I'll fix it.
+
+I am not sure I understood what exactly the use case is:
+-1) loading off-tree modules
+-2) loading and unloading modules
+-3) something else ?
+
+I'm asking this because I now wonder if I should provide means for
+protecting the heads later on (which still can make sense for case 1).
+
+Or if it's expected that things will stay fluid and this dynamic loading
+is matched by unloading, therefore the heads must stay writable (case 2)
+
+[...]
+
+>>> +	if (!sec_pool)
+>>> +		goto error_pool;
+>>
+>> Excessive gotoing - return -ENOMEM instead.
 > 
-> Ted -- there's one, in particular, that should probably be picked up
-> regardless of the rest, and that's "random: invalidate batched entropy
-> after crng init". Hopefully though, we can develop that in relation
-> with the rest and make this a proper series.
+> But does it make sense to continue?
+> hook_heads == NULL and we will oops as soon as
+> call_void_hook() or call_int_hook() is called for the first time.
 
-If it's needed no matter what, can you make it the first patch in the
-series?  And does it need to go to any older kernels as well?
+Shouldn't the caller check for result? -ENOMEM gives it a chance to do
+so. I can replace the goto.
 
-thanks,
-
-greg k-h
+---
+igor
