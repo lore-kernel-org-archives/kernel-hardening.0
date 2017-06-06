@@ -1,93 +1,48 @@
+Date: Tue, 6 Jun 2017 09:21:36 +0200
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Message-ID: <20170606072136.GD26873@kroah.com>
+References: <20170605153020.953645204@linuxfoundation.org>
+ <20170605153021.008595891@linuxfoundation.org>
+ <CAGXu5jKQ63WOrPMMCVfvRueV2D=YnXAgUGm7zWU+hBSkVDmVwQ@mail.gmail.com>
+ <20170605200652.GB87699@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20170606005108.5646-3-Jason@zx2c4.com>
-References: <20170606005108.5646-1-Jason@zx2c4.com> <20170606005108.5646-3-Jason@zx2c4.com>
-From: Jeffrey Walton <noloader@gmail.com>
-Date: Tue, 6 Jun 2017 01:11:51 -0400
-Message-ID: <CAH8yC8kq7OVBw_L32qD+OMgUhhh0K3huHpamO+4ABrE5i=fPkw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v3 02/13] random: add get_random_{bytes,u32,u64,int,long,once}_wait
- family
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170605200652.GB87699@gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH 3.18 01/33] Revert
+ "stackprotector: Increase the per-task stack canarys random range from 32
+ bits to 64 bits on 64-bit platforms"
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, LKML <linux-kernel@vger.kernel.org>, "# 3.4.x" <stable@vger.kernel.org>, Philip =?iso-8859-1?Q?M=FCller?= <philm@manjaro.org>, Daniel Micay <danielmicay@gmail.com>, Arjan van de Ven <arjan@linux.intel.com>, Rik van Riel <riel@redhat.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 5, 2017 at 8:50 PM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
-> These functions are simple convenience wrappers that call
-> wait_for_random_bytes before calling the respective get_random_*
-> function.
+On Mon, Jun 05, 2017 at 01:06:52PM -0700, Eric Biggers wrote:
+> On Mon, Jun 05, 2017 at 12:13:11PM -0700, Kees Cook wrote:
+> > On Mon, Jun 5, 2017 at 9:16 AM, Greg Kroah-Hartman
+> > <gregkh@linuxfoundation.org> wrote:
+> > > 3.18-stable review patch.  If anyone has any objections, please let me know.
+> > >
+> > > ------------------
+> > >
+> > > From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> > >
+> > > This reverts commit 609a3e81550b0b4ea87197b0f59455a7bcff975a which is
+> > > commit 5ea30e4e58040cfd6434c2f33dc3ea76e2c15b05 upstream.
+> > >
+> > > It shouldn't have been backported to 3.18, as we do not have
+> > > get_random_long() in that kernel tree.
+> > 
+> > It should be possible to trivially backport
+> > ec9ee4acd97c0039a61c0ae4f12705767ae62153 to gain get_random_long().
+> > 
+> > -Kees
+> 
+> If that's done it may be a good idea to take
+> b1132deac01c2332d234fa821a70022796b79182 as well, which fixed an alignment bug
+> in get_random_long().
 
-It may be advantageous to add a timeout, too.
+Good idea for both of these, I'll do that in the next round of releases.
 
-There's been a number of times I did not want to wait an INFINITE
-amount of time for a completion. (In another context).
+thanks,
 
-Jeff
-
-> Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-> ---
->  include/linux/net.h    |  2 ++
->  include/linux/once.h   |  2 ++
->  include/linux/random.h | 25 +++++++++++++++++++++++++
->  3 files changed, 29 insertions(+)
->
-> diff --git a/include/linux/net.h b/include/linux/net.h
-> index abcfa46a2bd9..dda2cc939a53 100644
-> --- a/include/linux/net.h
-> +++ b/include/linux/net.h
-> @@ -274,6 +274,8 @@ do {                                                                        \
->
->  #define net_get_random_once(buf, nbytes)                       \
->         get_random_once((buf), (nbytes))
-> +#define net_get_random_once_wait(buf, nbytes)                  \
-> +       get_random_once_wait((buf), (nbytes))
->
->  int kernel_sendmsg(struct socket *sock, struct msghdr *msg, struct kvec *vec,
->                    size_t num, size_t len);
-> diff --git a/include/linux/once.h b/include/linux/once.h
-> index 285f12cb40e6..9c98aaa87cbc 100644
-> --- a/include/linux/once.h
-> +++ b/include/linux/once.h
-> @@ -53,5 +53,7 @@ void __do_once_done(bool *done, struct static_key *once_key,
->
->  #define get_random_once(buf, nbytes)                                        \
->         DO_ONCE(get_random_bytes, (buf), (nbytes))
-> +#define get_random_once_wait(buf, nbytes)                                    \
-> +       DO_ONCE(get_random_bytes_wait, (buf), (nbytes))                      \
->
->  #endif /* _LINUX_ONCE_H */
-> diff --git a/include/linux/random.h b/include/linux/random.h
-> index e29929347c95..4aecc339558d 100644
-> --- a/include/linux/random.h
-> +++ b/include/linux/random.h
-> @@ -58,6 +58,31 @@ static inline unsigned long get_random_long(void)
->  #endif
->  }
->
-> +/* Calls wait_for_random_bytes() and then calls get_random_bytes(buf, nbytes).
-> + * Returns the result of the call to wait_for_random_bytes. */
-> +static inline int get_random_bytes_wait(void *buf, int nbytes)
-> +{
-> +       int ret = wait_for_random_bytes();
-> +       if (unlikely(ret))
-> +               return ret;
-> +       get_random_bytes(buf, nbytes);
-> +       return 0;
-> +}
-> +
-> +#define declare_get_random_var_wait(var) \
-> +       static inline int get_random_ ## var ## _wait(var *out) { \
-> +               int ret = wait_for_random_bytes(); \
-> +               if (unlikely(ret)) \
-> +                       return ret; \
-> +               *out = get_random_ ## var(); \
-> +               return 0; \
-> +       }
-> +declare_get_random_var_wait(u32)
-> +declare_get_random_var_wait(u64)
-> +declare_get_random_var_wait(int)
-> +declare_get_random_var_wait(long)
-> +#undef declare_get_random_var
-> +
->  unsigned long randomize_page(unsigned long start, unsigned long range);
->
->  u32 prandom_u32(void);
+greg k-h
