@@ -1,60 +1,33 @@
-References: <ff5714b2-bbb0-726d-2fe6-13d4f1a30a38@huawei.com>
- <201706061954.GBH56755.QSOOFMFLtJFVOH@I-love.SAKURA.ne.jp>
- <6c807793-6a39-82ef-93d9-29ad2546fc4c@huawei.com>
- <201706062042.GAC86916.FMtHOOFJOSVLFQ@I-love.SAKURA.ne.jp>
- <4c3e3b8b-6507-7da5-1537-1e0ce04fcba5@huawei.com>
- <201706062336.CFE35913.OFFLQOHMtSJFVO@I-love.SAKURA.ne.jp>
- <bff5442e-9ecd-9493-7397-7030ade63e81@huawei.com>
-From: Casey Schaufler <casey@schaufler-ca.com>
-Message-ID: <61106c92-ab4c-4bc3-1cb9-d01b1845f670@schaufler-ca.com>
-Date: Tue, 6 Jun 2017 08:17:01 -0700
 MIME-Version: 1.0
-In-Reply-To: <bff5442e-9ecd-9493-7397-7030ade63e81@huawei.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 4/5] Make LSM Writable Hooks a command line option
-To: Igor Stoppa <igor.stoppa@huawei.com>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org
-Cc: paul@paul-moore.com, sds@tycho.nsa.gov, hch@infradead.org, labbott@redhat.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CAHmME9q0N3KgWU4XMDmzNjd0EF_HWROBquwXMYXxfssx_VoghA@mail.gmail.com>
+References: <20170606005108.5646-1-Jason@zx2c4.com> <20170606005108.5646-5-Jason@zx2c4.com>
+ <20170606030004.4go6btmobrsmqiwz@thunk.org> <CAHmME9qZUEMDjQGNOBC7PrCTcanOxohVHcED+Xyg_3jR64Q7VQ@mail.gmail.com>
+ <20170606044404.GA3469@zzz> <CAHmME9q0N3KgWU4XMDmzNjd0EF_HWROBquwXMYXxfssx_VoghA@mail.gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue, 6 Jun 2017 17:23:04 +0200
+Message-ID: <CAHmME9rTpe4FM2+VSxZB48JDPCNTpSWzHx2DW1om7DW_1PvttQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: [PATCH v3 04/13] crypto/rng: ensure that
+ the RNG is ready before using
+To: Eric Biggers <ebiggers3@gmail.com>, David Howells <dhowells@redhat.com>
+Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Stephan Mueller <smueller@chronox.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 6/6/2017 7:51 AM, Igor Stoppa wrote:
-> On 06/06/17 17:36, Tetsuo Handa wrote:
->> Igor Stoppa wrote:
->>> For the case at hand, would it work if there was a non-API call that you
->>> could use until the API is properly expanded?
->> Kernel command line switching (i.e. this patch) is fine for my use cases.
->>
->> SELinux folks might want
->>
->> -static int security_debug;
->> +static int security_debug = IS_ENABLED(CONFIG_SECURITY_SELINUX_DISABLE);
-> ok, thanks, I will add this
->
->> so that those who are using SELINUX=disabled in /etc/selinux/config won't
->> get oops upon boot by default. If "unlock the pool" were available,
->> SELINUX=enforcing users would be happy. Maybe two modes for rw/ro transition helps.
->>
->>   oneway rw -> ro transition mode: can't be made rw again by calling "unlock the pool" API
->>   twoway rw <-> ro transition mode: can be made rw again by calling "unlock the pool" API
-> This was in the first cut of the API, but I was told that it would
-> require further rework, to make it ok for upstream, so we agreed to do
-> first the lockdown/destroy only part and the the rewrite.
->
-> Is there really a valid use case for unloading SE Linux?
+Hey again Eric,
 
-It's used today in the Redhat distros. There is talk of removing it.
-You can only unload SELinux before policy is loaded, which is sort of
-saying that you have your system misconfigured but can't figure out
-how to fix it. You might be able to convince Paul Moore to accelerate
-the removal of this feature for this worthy cause.
+One thing led to another and I wound up just rewriting all the crypto
+in big_keys.c. I'll include this for v4:
 
-> Or any other security module.
+https://git.zx2c4.com/linux-dev/commit/?h=jd/rng-blocker&id=886ff283b9808aecb14aa8e397da8496a9635aed
 
-I suppose that you could argue that if a security module had
-been in place for 2 years on a system and had never once denied
-anyone access it should be removed. That's a reasonable use case
-description, but I doubt you'd encounter it in the real world.
-Another possibility is a security module that is used during
-container setup and once the system goes into full operation
-is no longer needed. Personally, I don't see either of these
-cases as compelling. "systemctl restart xyzzyd".
+Not only was the use of crypto/rng inappropriate, but the decision to
+go with aes-ecb is shocking. Seeing that this author had no other
+commits in the tree, and that all subsequent commits that mentioned
+his name were cleaning up his mess, I just went ahead and removed both
+the crypto/rng misusage and changed from aes-ecb to aes-gcm.
+
+Anyway, I'll wait for some more reviews on v3, and then this can be
+reviewed for v4.
+
+Regards,
+Jason
