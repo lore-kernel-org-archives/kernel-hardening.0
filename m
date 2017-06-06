@@ -1,153 +1,84 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue,  6 Jun 2017 19:47:57 +0200
-Message-Id: <20170606174804.31124-7-Jason@zx2c4.com>
+Date: Tue,  6 Jun 2017 19:47:54 +0200
+Message-Id: <20170606174804.31124-4-Jason@zx2c4.com>
 In-Reply-To: <20170606174804.31124-1-Jason@zx2c4.com>
 References: <20170606174804.31124-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v4 06/13] iscsi: ensure RNG is seeded before use
+Subject: [kernel-hardening] [PATCH v4 03/13] random: add get_random_{bytes,u32,u64,int,long,once}_wait family
 To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, "Nicholas A. Bellinger" <nab@linux-iscsi.org>, Lee Duncan <lduncan@suse.com>, Chris Leech <cleech@redhat.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-It's not safe to use weak random data here, especially for the challenge
-response randomness. Since we're always in process context, it's safe to
-simply wait until we have enough randomness to carry out the
-authentication correctly.
-
-While we're at it, we clean up a small memleak during an error
-condition.
+These functions are simple convenience wrappers that call
+wait_for_random_bytes before calling the respective get_random_*
+function.
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: "Nicholas A. Bellinger" <nab@linux-iscsi.org>
-Cc: Lee Duncan <lduncan@suse.com>
-Cc: Chris Leech <cleech@redhat.com>
 ---
- drivers/target/iscsi/iscsi_target_auth.c  | 14 +++++++++++---
- drivers/target/iscsi/iscsi_target_login.c | 22 ++++++++++++++--------
- 2 files changed, 25 insertions(+), 11 deletions(-)
+ include/linux/net.h    |  2 ++
+ include/linux/once.h   |  2 ++
+ include/linux/random.h | 25 +++++++++++++++++++++++++
+ 3 files changed, 29 insertions(+)
 
-diff --git a/drivers/target/iscsi/iscsi_target_auth.c b/drivers/target/iscsi/iscsi_target_auth.c
-index 903b667f8e01..f9bc8ec6fb6b 100644
---- a/drivers/target/iscsi/iscsi_target_auth.c
-+++ b/drivers/target/iscsi/iscsi_target_auth.c
-@@ -47,18 +47,21 @@ static void chap_binaryhex_to_asciihex(char *dst, char *src, int src_len)
- 	}
+diff --git a/include/linux/net.h b/include/linux/net.h
+index abcfa46a2bd9..dda2cc939a53 100644
+--- a/include/linux/net.h
++++ b/include/linux/net.h
+@@ -274,6 +274,8 @@ do {									\
+ 
+ #define net_get_random_once(buf, nbytes)			\
+ 	get_random_once((buf), (nbytes))
++#define net_get_random_once_wait(buf, nbytes)			\
++	get_random_once_wait((buf), (nbytes))
+ 
+ int kernel_sendmsg(struct socket *sock, struct msghdr *msg, struct kvec *vec,
+ 		   size_t num, size_t len);
+diff --git a/include/linux/once.h b/include/linux/once.h
+index 285f12cb40e6..9c98aaa87cbc 100644
+--- a/include/linux/once.h
++++ b/include/linux/once.h
+@@ -53,5 +53,7 @@ void __do_once_done(bool *done, struct static_key *once_key,
+ 
+ #define get_random_once(buf, nbytes)					     \
+ 	DO_ONCE(get_random_bytes, (buf), (nbytes))
++#define get_random_once_wait(buf, nbytes)                                    \
++	DO_ONCE(get_random_bytes_wait, (buf), (nbytes))                      \
+ 
+ #endif /* _LINUX_ONCE_H */
+diff --git a/include/linux/random.h b/include/linux/random.h
+index e29929347c95..4aecc339558d 100644
+--- a/include/linux/random.h
++++ b/include/linux/random.h
+@@ -58,6 +58,31 @@ static inline unsigned long get_random_long(void)
+ #endif
  }
  
--static void chap_gen_challenge(
-+static int chap_gen_challenge(
- 	struct iscsi_conn *conn,
- 	int caller,
- 	char *c_str,
- 	unsigned int *c_len)
- {
-+	int ret;
- 	unsigned char challenge_asciihex[CHAP_CHALLENGE_LENGTH * 2 + 1];
- 	struct iscsi_chap *chap = conn->auth_protocol;
- 
- 	memset(challenge_asciihex, 0, CHAP_CHALLENGE_LENGTH * 2 + 1);
- 
--	get_random_bytes(chap->challenge, CHAP_CHALLENGE_LENGTH);
-+	ret = get_random_bytes_wait(chap->challenge, CHAP_CHALLENGE_LENGTH);
++/* Calls wait_for_random_bytes() and then calls get_random_bytes(buf, nbytes).
++ * Returns the result of the call to wait_for_random_bytes. */
++static inline int get_random_bytes_wait(void *buf, int nbytes)
++{
++	int ret = wait_for_random_bytes();
 +	if (unlikely(ret))
 +		return ret;
- 	chap_binaryhex_to_asciihex(challenge_asciihex, chap->challenge,
- 				CHAP_CHALLENGE_LENGTH);
- 	/*
-@@ -69,6 +72,7 @@ static void chap_gen_challenge(
- 
- 	pr_debug("[%s] Sending CHAP_C=0x%s\n\n", (caller) ? "server" : "client",
- 			challenge_asciihex);
++	get_random_bytes(buf, nbytes);
 +	return 0;
- }
- 
- static int chap_check_algorithm(const char *a_str)
-@@ -143,6 +147,7 @@ static struct iscsi_chap *chap_server_open(
- 	case CHAP_DIGEST_UNKNOWN:
- 	default:
- 		pr_err("Unsupported CHAP_A value\n");
-+		kfree(conn->auth_protocol);
- 		return NULL;
- 	}
- 
-@@ -156,7 +161,10 @@ static struct iscsi_chap *chap_server_open(
- 	/*
- 	 * Generate Challenge.
- 	 */
--	chap_gen_challenge(conn, 1, aic_str, aic_len);
-+	if (chap_gen_challenge(conn, 1, aic_str, aic_len) < 0) {
-+		kfree(conn->auth_protocol);
-+		return NULL;
++}
++
++#define declare_get_random_var_wait(var) \
++	static inline int get_random_ ## var ## _wait(var *out) { \
++		int ret = wait_for_random_bytes(); \
++		if (unlikely(ret)) \
++			return ret; \
++		*out = get_random_ ## var(); \
++		return 0; \
 +	}
++declare_get_random_var_wait(u32)
++declare_get_random_var_wait(u64)
++declare_get_random_var_wait(int)
++declare_get_random_var_wait(long)
++#undef declare_get_random_var
++
+ unsigned long randomize_page(unsigned long start, unsigned long range);
  
- 	return chap;
- }
-diff --git a/drivers/target/iscsi/iscsi_target_login.c b/drivers/target/iscsi/iscsi_target_login.c
-index 66238477137b..5ef028c11738 100644
---- a/drivers/target/iscsi/iscsi_target_login.c
-+++ b/drivers/target/iscsi/iscsi_target_login.c
-@@ -245,22 +245,26 @@ int iscsi_check_for_session_reinstatement(struct iscsi_conn *conn)
- 	return 0;
- }
- 
--static void iscsi_login_set_conn_values(
-+static int iscsi_login_set_conn_values(
- 	struct iscsi_session *sess,
- 	struct iscsi_conn *conn,
- 	__be16 cid)
- {
-+	int ret;
- 	conn->sess		= sess;
- 	conn->cid		= be16_to_cpu(cid);
- 	/*
- 	 * Generate a random Status sequence number (statsn) for the new
- 	 * iSCSI connection.
- 	 */
--	get_random_bytes(&conn->stat_sn, sizeof(u32));
-+	ret = get_random_bytes_wait(&conn->stat_sn, sizeof(u32));
-+	if (unlikely(ret))
-+		return ret;
- 
- 	mutex_lock(&auth_id_lock);
- 	conn->auth_id		= iscsit_global->auth_id++;
- 	mutex_unlock(&auth_id_lock);
-+	return 0;
- }
- 
- __printf(2, 3) int iscsi_change_param_sprintf(
-@@ -306,7 +310,11 @@ static int iscsi_login_zero_tsih_s1(
- 		return -ENOMEM;
- 	}
- 
--	iscsi_login_set_conn_values(sess, conn, pdu->cid);
-+	ret = iscsi_login_set_conn_values(sess, conn, pdu->cid);
-+	if (unlikely(ret)) {
-+		kfree(sess);
-+		return ret;
-+	}
- 	sess->init_task_tag	= pdu->itt;
- 	memcpy(&sess->isid, pdu->isid, 6);
- 	sess->exp_cmd_sn	= be32_to_cpu(pdu->cmdsn);
-@@ -497,8 +505,7 @@ static int iscsi_login_non_zero_tsih_s1(
- {
- 	struct iscsi_login_req *pdu = (struct iscsi_login_req *)buf;
- 
--	iscsi_login_set_conn_values(NULL, conn, pdu->cid);
--	return 0;
-+	return iscsi_login_set_conn_values(NULL, conn, pdu->cid);
- }
- 
- /*
-@@ -554,9 +561,8 @@ static int iscsi_login_non_zero_tsih_s2(
- 		atomic_set(&sess->session_continuation, 1);
- 	spin_unlock_bh(&sess->conn_lock);
- 
--	iscsi_login_set_conn_values(sess, conn, pdu->cid);
--
--	if (iscsi_copy_param_list(&conn->param_list,
-+	if (iscsi_login_set_conn_values(sess, conn, pdu->cid) < 0 ||
-+	    iscsi_copy_param_list(&conn->param_list,
- 			conn->tpg->param_list, 0) < 0) {
- 		iscsit_tx_login_rsp(conn, ISCSI_STATUS_CLS_TARGET_ERR,
- 				ISCSI_LOGIN_STATUS_NO_RESOURCES);
+ u32 prandom_u32(void);
 -- 
 2.13.0
