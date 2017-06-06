@@ -1,37 +1,75 @@
 MIME-Version: 1.0
-In-Reply-To: <15666.1496774756@warthog.procyon.org.uk>
-References: <20170606173900.29279-1-Jason@zx2c4.com> <14825.1496771896@warthog.procyon.org.uk>
- <CAHmME9q35r302wJm_Y+UD1nT-fXcs9VGaDrZ5xWOm4jzDgyFwQ@mail.gmail.com> <15666.1496774756@warthog.procyon.org.uk>
+In-Reply-To: <20170606205851.GA65728@gmail.com>
+References: <20170606173900.29279-1-Jason@zx2c4.com> <20170606205851.GA65728@gmail.com>
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue, 6 Jun 2017 21:18:15 +0200
-Message-ID: <CAHmME9odRhCDMp7BYrhBwY+yc5av3WBb+EzTfVQtBGg5eWSoDg@mail.gmail.com>
+Date: Tue, 6 Jun 2017 23:31:31 +0200
+Message-ID: <CAHmME9p1VDaLL_0VRQU1Q3fxFtwvFNgfFQPOOGOuRyW8kY=41A@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: [kernel-hardening] Re: [PATCH] security/keys: rewrite all of big_key crypto
-To: David Howells <dhowells@redhat.com>
-Cc: keyrings@vger.kernel.org, Eric Biggers <ebiggers3@gmail.com>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, security@kernel.org, stable@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: keyrings@vger.kernel.org, David Howells <dhowells@redhat.com>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, security@kernel.org, stable@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 6, 2017 at 8:45 PM, David Howells <dhowells@redhat.com> wrote:
-> Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+On Tue, Jun 6, 2017 at 10:58 PM, Eric Biggers <ebiggers3@gmail.com> wrote:
+> No need to select CRYPTO_AEAD; it's already selected by CRYPTO_GCM.
+
+Ack.
+
 >
->> Thank you! Perfect instructions, I'll play around with this and make
->> sure it works.
+> Actually I just noticed another bug, which I suppose you might as well fix too.
+> Because different big_keys may be added or read concurrently, and each is
+> encrypted using a different encryption key, it's not safe to use a global
+> 'crypto_aead'.  Instead, a separate crypto_aead must be created for each key, or
+> for each encryption/decryption, or else a mutex needs to be held during each
+> rekeying and encryption/decryption.  For what it's worth, I recently fixed a
+> similar bug for the "encrypted" key type:
+> https://git.kernel.org/pub/scm/linux/kernel/git/dhowells/linux-fs.git/commit/?h=keys-fixes&id=69307a05d4d58f4c29aa7e9d83dc59d63e28c382
+
+I noticed that too, but I cynically supposed the flaw in the old code
+could carry over to the new code without too much difficulty... But
+sure, I'll fix this.
+
+This is a real flaw with the crypto API, IMHO. It seems like the key
+should be part of the request rather than the tfm. I understand some
+primitives can do per-key precomputations, but still, this is a real
+wart.
+
+Will be fixed in the next revision.
+
 >
-> Don't forget that it's bimodal.  You need to give it sufficient data to
-> trigger storage in swappable space.
+> memset(req_on_stack, 0, sizeof(req_on_stack));
+> memzero_explicit(req_on_stack, sizeof(req_on_stack));
 
-Somewhat incredibly, it works perfectly.
+I didn't really want to do sizeof with a VLA, but actually, it looks
+like gcc does the right thing, so I'll make that change.
 
-First I tried the instructions you noted, and things worked, both for
-big files and small ones.
+> It isn't "aligned" anymore --- instead, it's leaving room for the authentiation
+> tag.  I don't think it even needs to be zeroed, does it?  Can you update the
+> code and comments below this?
 
-Then I modified the source to print to dmesg the data buffer and the
-key before and after the encryption/decryption function. I verified
-with a small python script that indeed standard aes-gcm is being used
-successfully.
+Ack.
 
-Thus, pending Ted's approval of the new random API, this patch should
-be ready for merging.
+> I think these fixes are going to have to be done separately from the switch to
+> get_random_bytes_wait().  Just make it use get_random_bytes() for now, and
+> switch it to get_random_bytes_wait() later in a separate patch.
 
-Regards,
+Blah, I really dislike doing that. Can I just roll it into the RNG
+patchset, and then it'll go into Ted's tree with DavidH's sign-off?
+
+> Please also add a brief comment that anyone who might try to add an update()
+> method will find, e.g.:
+>
+> struct key_type key_type_big_key = {
+> [...]
+>         .describe               = big_key_describe,
+>         .read                   = big_key_read,
+>         /* no ->update() yet; don't add it without changing big_key_crypt() */
+> };
+>
+> Otherwise someone will add one, and the crypto will be broken again.
+
+Great idea, again.
+
+Thanks a bunch for the review!
+
 Jason
