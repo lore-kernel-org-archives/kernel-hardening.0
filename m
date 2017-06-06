@@ -1,40 +1,37 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue,  6 Jun 2017 02:51:06 +0200
-Message-Id: <20170606005108.5646-12-Jason@zx2c4.com>
+Date: Tue,  6 Jun 2017 02:51:05 +0200
+Message-Id: <20170606005108.5646-11-Jason@zx2c4.com>
 In-Reply-To: <20170606005108.5646-1-Jason@zx2c4.com>
 References: <20170606005108.5646-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v3 11/13] net/route: use get_random_int for random counter
+Subject: [kernel-hardening] [PATCH v3 10/13] net/neighbor: use get_random_u32 for 32-bit hash random
 To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>
 Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Using get_random_int here is faster, more fitting of the use case, and
+Using get_random_u32 here is faster, more fitting of the use case, and
 just as cryptographically secure. It also has the benefit of providing
 better randomness at early boot, which is when many of these structures
 are assigned.
 
-Also, semantically, it's not really proper to have been assigning an
-atomic_t in this way before, even if in practice it works fine.
-
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
 Cc: David Miller <davem@davemloft.net>
 ---
- net/ipv4/route.c | 3 +--
+ net/core/neighbour.c | 3 +--
  1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/net/ipv4/route.c b/net/ipv4/route.c
-index 655d9eebe43e..11e001a42094 100644
---- a/net/ipv4/route.c
-+++ b/net/ipv4/route.c
-@@ -2936,8 +2936,7 @@ static __net_init int rt_genid_init(struct net *net)
+diff --git a/net/core/neighbour.c b/net/core/neighbour.c
+index d274f81fcc2c..9784133b0cdb 100644
+--- a/net/core/neighbour.c
++++ b/net/core/neighbour.c
+@@ -312,8 +312,7 @@ static struct neighbour *neigh_alloc(struct neigh_table *tbl, struct net_device
+ 
+ static void neigh_get_hash_rnd(u32 *x)
  {
- 	atomic_set(&net->ipv4.rt_genid, 0);
- 	atomic_set(&net->fnhe_genid, 0);
--	get_random_bytes(&net->ipv4.dev_addr_genid,
--			 sizeof(net->ipv4.dev_addr_genid));
-+	atomic_set(&net->ipv4.dev_addr_genid, get_random_int());
- 	return 0;
+-	get_random_bytes(x, sizeof(*x));
+-	*x |= 1;
++	*x = get_random_u32() | 1;
  }
  
+ static struct neigh_hash_table *neigh_hash_alloc(unsigned int shift)
 -- 
 2.13.0
