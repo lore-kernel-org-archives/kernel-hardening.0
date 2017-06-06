@@ -1,68 +1,84 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue,  6 Jun 2017 02:50:55 +0200
-Message-Id: <20170606005108.5646-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v3 00/13] Unseeded In-Kernel Randomness Fixes
+Date: Tue,  6 Jun 2017 02:50:57 +0200
+Message-Id: <20170606005108.5646-3-Jason@zx2c4.com>
+In-Reply-To: <20170606005108.5646-1-Jason@zx2c4.com>
+References: <20170606005108.5646-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH v3 02/13] random: add get_random_{bytes,u32,u64,int,long,once}_wait family
 To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>
 Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-As discussed in [1], there is a problem with get_random_bytes being
-used before the RNG has actually been seeded. The solution for fixing
-this appears to be multi-pronged. One of those prongs involves adding
-a simple blocking API so that modules that use the RNG in process
-context can just sleep (in an interruptable manner) until the RNG is
-ready to be used. This winds up being a very useful API that covers
-a few use cases, 5 of which are included in this patch set.
+These functions are simple convenience wrappers that call
+wait_for_random_bytes before calling the respective get_random_*
+function.
 
-[1] http://www.openwall.com/lists/kernel-hardening/2017/06/02/2
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+---
+ include/linux/net.h    |  2 ++
+ include/linux/once.h   |  2 ++
+ include/linux/random.h | 25 +++++++++++++++++++++++++
+ 3 files changed, 29 insertions(+)
 
-Changes v2->v3:
-  - Since this issue, in general, is going to take a long time to fully
-    fix, the patch turning on the warning is now dependent on DEBUG_KERNEL
-    so that the right people see the messages but the others aren't annoyed.
-  - Fixed some inappropriate blocking for functions that load during module
-    insertion. As discussed in [1], module insertion deferal is a topic for
-    another patch set.
-  - An interesting and essential patch has been added for invalidating the
-    batched entropy pool after the crng initializes.
-  - Some places that need randomness at bootup for just small integers would
-    be better served by get_random_{u32,u64}, so this series makes those
-    changes in a few places. It's useful here, since on some architectures
-    that delivers better early randomness.
-
-Jason A. Donenfeld (13):
-  random: add synchronous API for the urandom pool
-  random: add get_random_{bytes,u32,u64,int,long,once}_wait family
-  random: invalidate batched entropy after crng init
-  crypto/rng: ensure that the RNG is ready before using
-  security/keys: ensure RNG is seeded before use
-  iscsi: ensure RNG is seeded before use
-  ceph: ensure RNG is seeded before using
-  cifs: use get_random_u32 for 32-bit lock random
-  rhashtable: use get_random_u32 for hash_rnd
-  net/neighbor: use get_random_u32 for 32-bit hash random
-  net/route: use get_random_int for random counter
-  bluetooth/smp: ensure RNG is properly seeded before ECDH use
-  random: warn when kernel uses unseeded randomness
-
- crypto/rng.c                              |  6 ++-
- drivers/char/random.c                     | 90 ++++++++++++++++++++++++++-----
- drivers/target/iscsi/iscsi_target_auth.c  | 14 +++--
- drivers/target/iscsi/iscsi_target_login.c | 22 +++++---
- fs/cifs/cifsfs.c                          |  2 +-
- include/linux/net.h                       |  2 +
- include/linux/once.h                      |  2 +
- include/linux/random.h                    | 26 +++++++++
- lib/Kconfig.debug                         | 16 ++++++
- lib/rhashtable.c                          |  2 +-
- net/bluetooth/hci_request.c               |  6 +++
- net/bluetooth/smp.c                       | 18 +++++--
- net/ceph/ceph_common.c                    |  6 ++-
- net/core/neighbour.c                      |  3 +-
- net/ipv4/route.c                          |  3 +-
- security/keys/encrypted-keys/encrypted.c  |  8 +--
- security/keys/key.c                       | 16 +++---
- 17 files changed, 195 insertions(+), 47 deletions(-)
-
+diff --git a/include/linux/net.h b/include/linux/net.h
+index abcfa46a2bd9..dda2cc939a53 100644
+--- a/include/linux/net.h
++++ b/include/linux/net.h
+@@ -274,6 +274,8 @@ do {									\
+ 
+ #define net_get_random_once(buf, nbytes)			\
+ 	get_random_once((buf), (nbytes))
++#define net_get_random_once_wait(buf, nbytes)			\
++	get_random_once_wait((buf), (nbytes))
+ 
+ int kernel_sendmsg(struct socket *sock, struct msghdr *msg, struct kvec *vec,
+ 		   size_t num, size_t len);
+diff --git a/include/linux/once.h b/include/linux/once.h
+index 285f12cb40e6..9c98aaa87cbc 100644
+--- a/include/linux/once.h
++++ b/include/linux/once.h
+@@ -53,5 +53,7 @@ void __do_once_done(bool *done, struct static_key *once_key,
+ 
+ #define get_random_once(buf, nbytes)					     \
+ 	DO_ONCE(get_random_bytes, (buf), (nbytes))
++#define get_random_once_wait(buf, nbytes)                                    \
++	DO_ONCE(get_random_bytes_wait, (buf), (nbytes))                      \
+ 
+ #endif /* _LINUX_ONCE_H */
+diff --git a/include/linux/random.h b/include/linux/random.h
+index e29929347c95..4aecc339558d 100644
+--- a/include/linux/random.h
++++ b/include/linux/random.h
+@@ -58,6 +58,31 @@ static inline unsigned long get_random_long(void)
+ #endif
+ }
+ 
++/* Calls wait_for_random_bytes() and then calls get_random_bytes(buf, nbytes).
++ * Returns the result of the call to wait_for_random_bytes. */
++static inline int get_random_bytes_wait(void *buf, int nbytes)
++{
++	int ret = wait_for_random_bytes();
++	if (unlikely(ret))
++		return ret;
++	get_random_bytes(buf, nbytes);
++	return 0;
++}
++
++#define declare_get_random_var_wait(var) \
++	static inline int get_random_ ## var ## _wait(var *out) { \
++		int ret = wait_for_random_bytes(); \
++		if (unlikely(ret)) \
++			return ret; \
++		*out = get_random_ ## var(); \
++		return 0; \
++	}
++declare_get_random_var_wait(u32)
++declare_get_random_var_wait(u64)
++declare_get_random_var_wait(int)
++declare_get_random_var_wait(long)
++#undef declare_get_random_var
++
+ unsigned long randomize_page(unsigned long start, unsigned long range);
+ 
+ u32 prandom_u32(void);
 -- 
 2.13.0
