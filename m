@@ -1,299 +1,111 @@
+From: Stephan =?ISO-8859-1?Q?M=FCller?= <smueller@chronox.de>
+Date: Tue, 06 Jun 2017 19:57:37 +0200
+Message-ID: <4135129.tBEIWBxXuR@tauon.chronox.de>
+In-Reply-To: <20170606170319.5eva2yoxxeru5p74@thunk.org>
+References: <20170606005108.5646-1-Jason@zx2c4.com> <CAHmME9q0N3KgWU4XMDmzNjd0EF_HWROBquwXMYXxfssx_VoghA@mail.gmail.com> <20170606170319.5eva2yoxxeru5p74@thunk.org>
 MIME-Version: 1.0
-In-Reply-To: <20170606173900.29279-1-Jason@zx2c4.com>
-References: <20170606173900.29279-1-Jason@zx2c4.com>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue, 6 Jun 2017 19:49:57 +0200
-Message-ID: <CAHmME9rDV-H1kzjMJ9OmzOtTpMzsxs2Ds6qhsSS_wmHhhBUNqQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] security/keys: rewrite all of big_key crypto
-To: keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
-Cc: Theodore Ts'o <tytso@mit.edu>
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Subject: Re: [kernel-hardening] Re: [PATCH v3 04/13] crypto/rng: ensure that the RNG is ready before using
+To: Theodore Ts'o <tytso@mit.edu>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers3@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Sorry, meant to cross-post the below to these other two mailing lists.
+Am Dienstag, 6. Juni 2017, 19:03:19 CEST schrieb Theodore Ts'o:
 
-On Tue, Jun 6, 2017 at 7:39 PM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
-> This started out as just replacing the use of crypto/rng with
-> get_random_bytes, so that we wouldn't use bad randomness at boot time.
-> But, upon looking further, it appears that there were even deeper
-> underlying cryptographic problems, and that this seems to have been
-> committed with very little crypto review. So, I rewrote the whole thing,
-> trying to keep to the conventions introduced by the previous author, to
-> fix these cryptographic flaws.
->
-> First, it makes no sense to seed crypto/rng at boot time and then keep
-> using it like this, when in fact there's already get_random_bytes_wait,
-> which can ensure there's enough entropy and be a much more standard way
-> of generating keys.
->
-> Second, since this sensitive material is being stored untrusted, using
-> ECB and no authentication is simply not okay at all. I find it surprising
-> that this code even made it past basic crypto review, though perhaps
-> there's something I'm missing. This patch moves from using AES-ECB to
-> using AES-GCM. Since keys are uniquely generated each time, we can set
-> the nonce to zero.
->
-> So, to summarize, this commit fixes the following vulnerabilities:
->
->   * Low entropy key generation, allowing an attacker to potentially
->     guess or predict keys.
->   * Unauthenticated encryption, allowing an attacker to modify the
->     cipher text in particular ways in order to manipulate the plaintext,
->     which is is even more frightening considering the next point.
->   * Use of ECB mode, allowing an attacker to trivially swap blocks or
->     compare identical plaintext blocks.
->
-> Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-> Cc: David Howells <dhowells@redhat.com>
-> Cc: Eric Biggers <ebiggers3@gmail.com>
-> Cc: Herbert Xu <herbert@gondor.apana.org.au>
-> Cc: Kirill Marinushkin <k.marinushkin@gmail.com>
-> Cc: security@kernel.org
-> Cc: stable@vger.kernel.org
-> ---
-> This commit has been compile-tested only, so I'd appreciate it if
-> somebody else who actually uses this would test it for functionality, or
-> if somebody into the kernel's crypto API would check that it's been done
-> correctly.
->
->  security/keys/Kconfig   |   5 +-
->  security/keys/big_key.c | 120 +++++++++++++++++++++++-------------------------
->  2 files changed, 59 insertions(+), 66 deletions(-)
->
-> diff --git a/security/keys/Kconfig b/security/keys/Kconfig
-> index 6fd95f76bfae..2f91f2368d29 100644
-> --- a/security/keys/Kconfig
-> +++ b/security/keys/Kconfig
-> @@ -41,10 +41,9 @@ config BIG_KEYS
->         bool "Large payload keys"
->         depends on KEYS
->         depends on TMPFS
-> -       depends on (CRYPTO_ANSI_CPRNG = y || CRYPTO_DRBG = y)
->         select CRYPTO_AES
-> -       select CRYPTO_ECB
-> -       select CRYPTO_RNG
-> +       select CRYPTO_GCM
-> +       select CRYPTO_AEAD
->         help
->           This option provides support for holding large keys within the kernel
->           (for example Kerberos ticket caches).  The data may be stored out to
-> diff --git a/security/keys/big_key.c b/security/keys/big_key.c
-> index 835c1ab30d01..40066cb6b8f4 100644
-> --- a/security/keys/big_key.c
-> +++ b/security/keys/big_key.c
-> @@ -1,5 +1,6 @@
->  /* Large capacity key type
->   *
-> + * Copyright (C) 2017 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
->   * Copyright (C) 2013 Red Hat, Inc. All Rights Reserved.
->   * Written by David Howells (dhowells@redhat.com)
->   *
-> @@ -16,10 +17,10 @@
->  #include <linux/shmem_fs.h>
->  #include <linux/err.h>
->  #include <linux/scatterlist.h>
-> +#include <linux/random.h>
->  #include <keys/user-type.h>
->  #include <keys/big_key-type.h>
-> -#include <crypto/rng.h>
-> -#include <crypto/skcipher.h>
-> +#include <crypto/aead.h>
->
->  /*
->   * Layout of key payload words.
-> @@ -49,7 +50,12 @@ enum big_key_op {
->  /*
->   * Key size for big_key data encryption
->   */
-> -#define ENC_KEY_SIZE   16
-> +#define ENC_KEY_SIZE 32
-> +
-> +/*
-> + * Authentication tag length
-> + */
-> +#define ENC_AUTHTAG_SIZE 16
->
->  /*
->   * big_key defined keys take an arbitrary string as the description and an
-> @@ -67,24 +73,14 @@ struct key_type key_type_big_key = {
->  };
->
->  /*
-> - * Crypto names for big_key data encryption
-> - */
-> -static const char big_key_rng_name[] = "stdrng";
-> -static const char big_key_alg_name[] = "ecb(aes)";
-> -
-> -/*
-> - * Crypto algorithms for big_key data encryption
-> + * Crypto names for big_key data authenticated encryption
->   */
-> -static struct crypto_rng *big_key_rng;
-> -static struct crypto_skcipher *big_key_skcipher;
-> +static const char big_key_alg_name[] = "gcm(aes)";
->
->  /*
-> - * Generate random key to encrypt big_key data
-> + * Crypto algorithms for big_key data authenticated encryption
->   */
-> -static inline int big_key_gen_enckey(u8 *key)
-> -{
-> -       return crypto_rng_get_bytes(big_key_rng, key, ENC_KEY_SIZE);
-> -}
-> +static struct crypto_aead *big_key_aead;
->
->  /*
->   * Encrypt/decrypt big_key data
-> @@ -93,27 +89,40 @@ static int big_key_crypt(enum big_key_op op, u8 *data, size_t datalen, u8 *key)
->  {
->         int ret = -EINVAL;
->         struct scatterlist sgio;
-> -       SKCIPHER_REQUEST_ON_STACK(req, big_key_skcipher);
-> -
-> -       if (crypto_skcipher_setkey(big_key_skcipher, key, ENC_KEY_SIZE)) {
-> +       u8 req_on_stack[sizeof(struct aead_request) +
-> +                       crypto_aead_reqsize(big_key_aead)];
-> +       struct aead_request *aead_req = (struct aead_request *)req_on_stack;
-> +
-> +       /* We always use a zero nonce. The reason we can get away with this is
-> +        * because we're using a different randomly generated key for every
-> +        * different encryption. Notably, too, key_type_big_key doesn't define
-> +        * an .update function, so there's no chance we'll wind up reusing the
-> +        * key to encrypt updated data. Simply put: one key, one encryption.
-> +        */
-> +       u8 zero_nonce[crypto_aead_ivsize(big_key_aead)];
-> +
-> +       memset(req_on_stack, 0, sizeof(struct aead_request) +
-> +                               crypto_aead_reqsize(big_key_aead));
-> +       memset(zero_nonce, 0, crypto_aead_ivsize(big_key_aead));
-> +       sg_init_one(&sgio, data, datalen + (op == BIG_KEY_ENC ? ENC_AUTHTAG_SIZE : 0));
-> +
-> +       if (crypto_aead_setkey(big_key_aead, key, ENC_KEY_SIZE)) {
->                 ret = -EAGAIN;
->                 goto error;
->         }
->
-> -       skcipher_request_set_tfm(req, big_key_skcipher);
-> -       skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_SLEEP,
-> -                                     NULL, NULL);
-> -
-> -       sg_init_one(&sgio, data, datalen);
-> -       skcipher_request_set_crypt(req, &sgio, &sgio, datalen, NULL);
-> +       aead_request_set_tfm(aead_req, big_key_aead);
-> +       aead_request_set_crypt(aead_req, &sgio, &sgio, datalen, zero_nonce);
-> +       aead_request_set_callback(aead_req, CRYPTO_TFM_REQ_MAY_SLEEP,
-> +                                 NULL, NULL);
->
->         if (op == BIG_KEY_ENC)
-> -               ret = crypto_skcipher_encrypt(req);
-> +               ret = crypto_aead_encrypt(aead_req);
->         else
-> -               ret = crypto_skcipher_decrypt(req);
-> -
-> -       skcipher_request_zero(req);
-> +               ret = crypto_aead_decrypt(aead_req);
->
-> +       memzero_explicit(req_on_stack, sizeof(struct aead_request) +
-> +                        crypto_aead_reqsize(big_key_aead));
->  error:
->         return ret;
->  }
-> @@ -146,7 +155,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
->                  *
->                  * File content is stored encrypted with randomly generated key.
->                  */
-> -               size_t enclen = ALIGN(datalen, crypto_skcipher_blocksize(big_key_skcipher));
-> +               size_t enclen = datalen + ENC_AUTHTAG_SIZE;
->
->                 /* prepare aligned data to encrypt */
->                 data = kmalloc(enclen, GFP_KERNEL);
-> @@ -162,13 +171,12 @@ int big_key_preparse(struct key_preparsed_payload *prep)
->                         ret = -ENOMEM;
->                         goto error;
->                 }
-> -
-> -               ret = big_key_gen_enckey(enckey);
-> +               ret = get_random_bytes_wait(enckey, ENC_KEY_SIZE);
->                 if (ret)
->                         goto err_enckey;
->
->                 /* encrypt aligned data */
-> -               ret = big_key_crypt(BIG_KEY_ENC, data, enclen, enckey);
-> +               ret = big_key_crypt(BIG_KEY_ENC, data, datalen, enckey);
->                 if (ret)
->                         goto err_enckey;
->
-> @@ -294,7 +302,7 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
->                 struct file *file;
->                 u8 *data;
->                 u8 *enckey = (u8 *)key->payload.data[big_key_data];
-> -               size_t enclen = ALIGN(datalen, crypto_skcipher_blocksize(big_key_skcipher));
-> +               size_t enclen = datalen + ENC_AUTHTAG_SIZE;
->
->                 data = kmalloc(enclen, GFP_KERNEL);
->                 if (!data)
-> @@ -342,47 +350,33 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
->   */
->  static int __init big_key_init(void)
->  {
-> -       struct crypto_skcipher *cipher;
-> -       struct crypto_rng *rng;
-> +       struct crypto_aead *tfm;
->         int ret;
->
-> -       rng = crypto_alloc_rng(big_key_rng_name, 0, 0);
-> -       if (IS_ERR(rng)) {
-> -               pr_err("Can't alloc rng: %ld\n", PTR_ERR(rng));
-> -               return PTR_ERR(rng);
-> -       }
-> -
-> -       big_key_rng = rng;
-> -
-> -       /* seed RNG */
-> -       ret = crypto_rng_reset(rng, NULL, crypto_rng_seedsize(rng));
-> -       if (ret) {
-> -               pr_err("Can't reset rng: %d\n", ret);
-> -               goto error_rng;
-> -       }
-> -
->         /* init block cipher */
-> -       cipher = crypto_alloc_skcipher(big_key_alg_name, 0, CRYPTO_ALG_ASYNC);
-> -       if (IS_ERR(cipher)) {
-> -               ret = PTR_ERR(cipher);
-> +       tfm = crypto_alloc_aead(big_key_alg_name, 0, CRYPTO_ALG_ASYNC);
-> +       if (IS_ERR(tfm)) {
-> +               ret = PTR_ERR(tfm);
->                 pr_err("Can't alloc crypto: %d\n", ret);
-> -               goto error_rng;
-> +               return ret;
-> +       }
-> +       ret = crypto_aead_setauthsize(tfm, ENC_AUTHTAG_SIZE);
-> +       if (ret < 0) {
-> +               pr_err("Can't set crypto auth tag len: %d\n", ret);
-> +               goto free_aead;
->         }
-> -
-> -       big_key_skcipher = cipher;
->
->         ret = register_key_type(&key_type_big_key);
->         if (ret < 0) {
->                 pr_err("Can't register type: %d\n", ret);
-> -               goto error_cipher;
-> +               goto free_aead;
->         }
->
-> +       big_key_aead = tfm;
->         return 0;
->
-> -error_cipher:
-> -       crypto_free_skcipher(big_key_skcipher);
-> -error_rng:
-> -       crypto_free_rng(big_key_rng);
-> +free_aead:
-> +       crypto_free_aead(tfm);
->         return ret;
->  }
->
-> --
-> 2.13.0
->
+Hi Theodore,
+
+> On Tue, Jun 06, 2017 at 02:34:43PM +0200, Jason A. Donenfeld wrote:
+> > Yes, I agree whole-heartedly.  A lot of people have proposals for
+> > fixing the direct idea of entropy gathering, but for whatever reason,
+> > Ted hasn't merged stuff. I think Stephan (CCd) rewrote big critical
+> > sections of the RNG, called LRNG, and published a big paper for peer
+> > review and did a lot of cool engineering, but for some reason this
+> > hasn't been integrated. I look forward to movement on this front in
+> > the future, if it ever happens. Would be great.
+> 
+> So it's not clear what you mean by Stephan's work.  It can be
+> separated into multiple pieces; one is simply using a mechanism which
+> can be directly mapped to NIST's DRBG framework.  I don't believe this
+> actually adds any real security per se, but it can make it easier to
+> get certification for people who care about getting FIPS
+> certification.  Since I've seen a lot of snake oil and massive waste
+> of taxpayer and industry dollars by FIPS certification firms, it's not
+> a thing I particularly find particularly compelling.
+> 
+> The second bit is "Jitter Entropy".  The problem I have with that is
+> there isn't any convincing explanation about why it can't be predicted
+> to some degree of accuracy with someone who understands what's going
+> on with Intel's cache architecture.  (And this isn't just me, I've
+> talked to people who work at Intel and they are at best skeptical of
+> the whole idea.)
+
+My LRNG approach covers many more concerns rather than just using the Jitter 
+RNG or using the DRBG. Using the Jitter RNG should just beef up the lacking 
+entropy at boot time. Irrespective of what you think of it, it will not 
+destroy existing entropy. Using the DRBG should allow crypto offloading and 
+provides a small API for other users to plug in their favorite DRNG (like the 
+ChaCha20 DRNG).
+
+I think I mentioned several times already which are the core concerns I have. 
+But allow me to re-iterate them again as I have not seen any answer so far:
+
+- There is per definition a high correlation between interrupts and HID/block 
+device events. The legacy /dev/random by far weights HID/block device noise 
+higher in entropy than interrupts and awards interrupts hardly any entropy. 
+But let us face it, HID and block devices are just a "derivative" of 
+interrupts. Instead of weighting HID/block devices higher than interrupts, we 
+should get rid of them when counting entropy and focus on interrupts. 
+Interrupts fare very well even in virtualized environments where the legacy /
+dev/random hardly collects any entropy. Note, this interrupt behavior in 
+virtual environments was the core motivation for developing the LRNG.
+
+- By not having such collision problems and the related low validations of 
+entropy from interrupts, a much faster initialization with sufficient entropy 
+is possible. This is now visible with the current initialization of the 
+ChaCha20 part of the legacy /dev/random. That comes, however, at the cost that 
+HID/disk events happening before the ChaCha20 is initialized are affected by 
+the aforementioned correlation. Just to say it again, correlation destroys 
+entropy.
+
+- The entropy estimate is based on first, second and third derivative of 
+Jiffies. As Jiffies hardly contribute any entropy per event, using this number 
+for an entropy estimation for an event is just coincidence that the legacy /
+dev/random underestimates entropy. And then using such coincidential estimates 
+to apply an asymptotic calculation how much the entropy estimator is 
+increased, is not really helpful.
+
+- The entropy transport within the legacy /dev/random allows small quantums 
+(down to 8 bit minimums) of entropy to be transported. Such approach is a 
+concern which can be illustrated with a pathological analogy (I understand 
+that this pathological case is not present for the legacy /dev/random, but it 
+illustrates the problem with small quantities of entropy). Assume that only 
+one bit of entropy is conveyed from input_pool to blocking_pool during each 
+read operation by an attacker from /dev/random (and assume that the attacker 
+an read that one bit). Now, if 128 bits of entropy are transported with 128 
+individual transactions where the attacker can read data from the RNG between 
+each transport, the final crypto strength is only 2 * 128 bits and not 2^128 
+bits. Thus, transports of entropy should be done in larger quantities (like 
+128 bits at least).
+
+- The DRNGs are fully testable by itself. The DRBG is tested using the kernel 
+crypto API's testmgr using blessed test vectors. The ChaCha20 DRNG is 
+implemented such that it can be extracted in a user space app to study it 
+further (such extraction of the ChaCha20 into a standalone DRNG is provided at 
+[1]).
+
+I tried to address those issues in the LRNG.
+
+Finally, I am very surprised that I get hardly any answers on patches to 
+random.c let alone that any changes to random.c will be applied at all.
+
+Lastly, it is very easy to call an approach (JitterRNG) flawed, but I would 
+like to see some back-up of such claim after the analysis that is provided on 
+that topic. This analysis refers to the wait states between individual CPU 
+components as the root of the noise knowing that the ISA != the hardware CPU 
+instruction set and the evidence collected on various different CPUs.
+
+[1] https://github.com/smuellerDD/chacha20_drng
+
+Ciao
+Stephan
