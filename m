@@ -1,53 +1,69 @@
-Date: Tue, 6 Jun 2017 10:26:43 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Message-ID: <20170606172643.GC88445@gmail.com>
-References: <20170606005108.5646-1-Jason@zx2c4.com>
- <20170606005108.5646-5-Jason@zx2c4.com>
- <20170606030004.4go6btmobrsmqiwz@thunk.org>
- <CAHmME9qZUEMDjQGNOBC7PrCTcanOxohVHcED+Xyg_3jR64Q7VQ@mail.gmail.com>
- <20170606044404.GA3469@zzz>
- <CAHmME9q0N3KgWU4XMDmzNjd0EF_HWROBquwXMYXxfssx_VoghA@mail.gmail.com>
- <CAHmME9rTpe4FM2+VSxZB48JDPCNTpSWzHx2DW1om7DW_1PvttQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAHmME9rTpe4FM2+VSxZB48JDPCNTpSWzHx2DW1om7DW_1PvttQ@mail.gmail.com>
+In-Reply-To: <20170606170319.5eva2yoxxeru5p74@thunk.org>
+References: <20170606005108.5646-1-Jason@zx2c4.com> <20170606005108.5646-5-Jason@zx2c4.com>
+ <20170606030004.4go6btmobrsmqiwz@thunk.org> <CAHmME9qZUEMDjQGNOBC7PrCTcanOxohVHcED+Xyg_3jR64Q7VQ@mail.gmail.com>
+ <20170606044404.GA3469@zzz> <CAHmME9q0N3KgWU4XMDmzNjd0EF_HWROBquwXMYXxfssx_VoghA@mail.gmail.com>
+ <20170606170319.5eva2yoxxeru5p74@thunk.org>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue, 6 Jun 2017 19:28:07 +0200
+Message-ID: <CAHmME9pXeSFWoeWmOpQ16e62y3_0hoHchU2o+RFAT9CKBPKsDA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
 Subject: Re: [kernel-hardening] Re: [PATCH v3 04/13] crypto/rng: ensure that
  the RNG is ready before using
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: David Howells <dhowells@redhat.com>, Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Stephan Mueller <smueller@chronox.de>
+To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers3@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Stephan Mueller <smueller@chronox.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Jason,
+On Tue, Jun 6, 2017 at 7:03 PM, Theodore Ts'o <tytso@mit.edu> wrote:
+> So it's not clear what you mean by Stephan's work.
 
-On Tue, Jun 06, 2017 at 05:23:04PM +0200, Jason A. Donenfeld wrote:
-> Hey again Eric,
-> 
-> One thing led to another and I wound up just rewriting all the crypto
-> in big_keys.c. I'll include this for v4:
-> 
-> https://git.zx2c4.com/linux-dev/commit/?h=jd/rng-blocker&id=886ff283b9808aecb14aa8e397da8496a9635aed
-> 
-> Not only was the use of crypto/rng inappropriate, but the decision to
-> go with aes-ecb is shocking. Seeing that this author had no other
-> commits in the tree, and that all subsequent commits that mentioned
-> his name were cleaning up his mess, I just went ahead and removed both
-> the crypto/rng misusage and changed from aes-ecb to aes-gcm.
-> 
-> Anyway, I'll wait for some more reviews on v3, and then this can be
-> reviewed for v4.
-> 
-> Regards,
-> Jason
+I just meant that there's a guy out there who seems really motivated
+to work on this stuff in detail, but hasn't seen too much love, AFAIK.
+I'm sure there's an interesting technical discussion to be had about
+his contributions.
 
-I agree that the use of ECB mode in big_key is broken, and thanks for trying to
-fix it!  I think using GCM is good, but please leave a very conspicuous comment
-where the nonce is being set to 0, noting that it's safe only because a unique
-key is used to encrypt every big_key *and* the big_keys are not updatable (via
-an .update method in the key_type), resulting in each GCM key being used for
-only a single encryption.
+> The reality though is that Linux is a volunteer effort
 
-Also, I think you should send this to the keyrings mailing list and maintainer
-so it can be discussed and merged separately from your RNG changes.
+Yep! And here I am volunteering, writing some code, in my free time,
+just for willies. I hope you'll be a kind, helpful, and supportive
+maintainer who welcomes contributions and discussion.
 
-Eric
+> So it may in
+> fact be _rational_ for people who are working on hardening the kernel
+> to focus on other areas.
+> improve things on all fronts, not just the sexy ones.
+
+I don't want people to use some aspects of a module I'm writing before
+get_random_bytes() will return good randomness. You made some point
+about what's sexy and what isn't and what is rational for people to
+work on, but I think I missed the thrust of it. I'm working on this
+particular problem now with get_random_bytes, as something motivated
+by simple considerations, not complex ulterior motives.
+
+
+But anyway, moving on...
+
+
+> I think this is a soluble problem, but it may be rather tricky.  For
+> example, it may be that for a certain class of init calls, even though
+> they are in subsystems that are compiled into the kernel, those init
+> calls perhaps could be deferred so they are running in parallel with
+> the init scripts.  (Or maybe we could just require that certain kernel
+> modules can *only* be compiled as modules if they use rng_init ---
+> although that may get annoying for those of us who like being able to
+> build custom configured monolithic kernels.  So I'd prefer the first
+> possibility if at all possible.)
+
+Right, indeed this is tricky, and you bring up good points about
+complex interactions on different architectures. Based on your
+comments about whack-a-mole, I think we're mostly on the same page
+about how arduous this is going to be to fix. My plan is to first get
+in this simple blocking API, because while it doesn't solve _every_
+use case, there are particular use cases that are helped nearly
+perfectly by it. Namely, places where userspace is going to configure
+something. So, soon after I finish up this testing I've been doing all
+day on my series, I'll post v4, and hopefully we can get that merged,
+and then move onto interesting other solutions for the general
+problem.
+
+Regards,
+Jason
