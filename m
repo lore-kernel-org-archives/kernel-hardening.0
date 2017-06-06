@@ -1,60 +1,24 @@
-References: <71e91de0-7d91-79f4-67f0-be0afb33583c@schaufler-ca.com>
- <201706060550.HAC69712.OVFOtSFLQJOMFH@I-love.SAKURA.ne.jp>
- <ff5714b2-bbb0-726d-2fe6-13d4f1a30a38@huawei.com>
- <201706061954.GBH56755.QSOOFMFLtJFVOH@I-love.SAKURA.ne.jp>
- <6c807793-6a39-82ef-93d9-29ad2546fc4c@huawei.com>
- <201706062042.GAC86916.FMtHOOFJOSVLFQ@I-love.SAKURA.ne.jp>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <4c3e3b8b-6507-7da5-1537-1e0ce04fcba5@huawei.com>
-Date: Tue, 6 Jun 2017 15:11:58 +0300
 MIME-Version: 1.0
-In-Reply-To: <201706062042.GAC86916.FMtHOOFJOSVLFQ@I-love.SAKURA.ne.jp>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 4/5] Make LSM Writable Hooks a command line option
-To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, casey@schaufler-ca.com, keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org
-Cc: paul@paul-moore.com, sds@tycho.nsa.gov, hch@infradead.org, labbott@redhat.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CAH8yC8kq7OVBw_L32qD+OMgUhhh0K3huHpamO+4ABrE5i=fPkw@mail.gmail.com>
+References: <20170606005108.5646-1-Jason@zx2c4.com> <20170606005108.5646-3-Jason@zx2c4.com>
+ <CAH8yC8kq7OVBw_L32qD+OMgUhhh0K3huHpamO+4ABrE5i=fPkw@mail.gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue, 6 Jun 2017 14:21:53 +0200
+Message-ID: <CAHmME9pWe15nBc+AusJ9W-ujkbq+LjNiQq8mzT_fmqHCeCmNSQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v3 02/13] random: add get_random_{bytes,u32,u64,int,long,once}_wait
+ family
+To: noloader@gmail.com
+Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Jun 6, 2017 at 7:11 AM, Jeffrey Walton <noloader@gmail.com> wrote:
+> On Mon, Jun 5, 2017 at 8:50 PM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+>> These functions are simple convenience wrappers that call
+>> wait_for_random_bytes before calling the respective get_random_*
+>> function.
+>
+> It may be advantageous to add a timeout, too.
 
-
-On 06/06/17 14:42, Tetsuo Handa wrote:
-> Igor Stoppa wrote:
->> Who decides when enough is enough, meaning that all the needed modules
->> are loaded?
->> Should I provide an interface to user-space? A sysfs entry?
-> 
-> No such interface is needed. Just an API for applying set_memory_rw()
-> and set_memory_ro() on LSM hooks is enough.
-> 
-> security_add_hooks() can call set_memory_rw() before adding hooks and
-> call set_memory_ro() after adding hooks. Ditto for security_delete_hooks()
-> for SELinux's unregistration.
-
-
-I think this should be considered part of the 2nd phase "write seldom",
-as we agreed with Kees Cook.
-
-Right now the goal was to provide the basic API for:
-- create pool
-- get memory from pool
-- lock the pool
-- destroy the pool
-
-And, behind the scene, verify that a memory range falls into Pmalloc pages.
-
-
-Then would come the "write seldom" part.
-
-The reason for this is that a proper implementation of write seldom
-should, imho, make writable only those pages that really need to be
-modified. Possibly also add some verification on the call stack about
-who is requesting the unlocking.
-
-Therefore I would feel more comfortable in splitting the work into 2 part.
-
-For the case at hand, would it work if there was a non-API call that you
-could use until the API is properly expanded?
-
---
-igor
+This was in v1, but was removed because of a lack of particular use
+case in this context.
