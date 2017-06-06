@@ -1,43 +1,54 @@
-Date: Wed, 7 Jun 2017 00:16:17 +0200
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20170606221617.GA14451@openwall.com>
-References: <20170606215534.GA13126@openwall.com>
-Mime-Version: 1.0
+Date: Tue, 6 Jun 2017 19:19:10 -0300
+From: Henrique de Moraes Holschuh <hmh@hmh.eng.br>
+Message-ID: <20170606221910.GB9057@khazad-dum.debian.net>
+References: <20170606005108.5646-1-Jason@zx2c4.com>
+ <20170606005108.5646-5-Jason@zx2c4.com>
+ <20170606030004.4go6btmobrsmqiwz@thunk.org>
+ <CAHmME9qZUEMDjQGNOBC7PrCTcanOxohVHcED+Xyg_3jR64Q7VQ@mail.gmail.com>
+ <20170606044404.GA3469@zzz>
+ <CAHmME9q0N3KgWU4XMDmzNjd0EF_HWROBquwXMYXxfssx_VoghA@mail.gmail.com>
+ <20170606170319.5eva2yoxxeru5p74@thunk.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170606215534.GA13126@openwall.com>
-Subject: Re: [kernel-hardening] symlink/hardlink/FIFO restrictions
-To: kernel-hardening@lists.openwall.com
+In-Reply-To: <20170606170319.5eva2yoxxeru5p74@thunk.org>
+Subject: Re: [kernel-hardening] Re: [PATCH v3 04/13] crypto/rng: ensure that
+ the RNG is ready before using
+To: Theodore Ts'o <tytso@mit.edu>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers3@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Stephan Mueller <smueller@chronox.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 06, 2017 at 11:55:34PM +0200, Solar Designer wrote:
-> The symlink restrictions in -ow vs. grsecurity look similar to me, but
-> Kees' patches that eventually got merged upstream introduce an extra
-> limitation on when the restrictions (do not) apply.  In Kees' patches as
-> posted in here, it was the "bool sensitive" parameter to follow_link(),
-> which one of the calls set to false.  In upstream code, the check is now
-> only in the new trailing_symlink() function, which I guess is called in
-> similar cases.  As the name suggests, this probably means the symlink
-> restrictions are only applied to last ("trailing") symlinks in a chain
-> (and hopefully to symlinks on their own as well, without a chain).
-> I guess this was suggested at some point, perhaps with some rationale
-> given, but I didn't watch those many threads closely and missed it.
-> Why wouldn't a "nested" symlink be used for a successful attack?  The
-> attacker can then provide their own "trailing" symlink in a non-+t
-> directory pointing to the ultimate target.  But maybe I misunderstand
-> what is called "trailing" vs. "nested" in there?
+On Tue, 06 Jun 2017, Theodore Ts'o wrote:
+> It might be possible, for example, to store a cryptographic key in a
+> UEFI boot-services variable, where the key becomes inaccessible after
+> the boot-time services terminate.  But you also need either a reliable
+> time-of-day clock, or a reliable counter which is incremented each
+> time the system that boots, and which can't be messed with by an
+> attacker, or trivially reset by a clueless user/sysadmin.
+> 
+> Or maybe we can have a script that is run at shutdown and boot-up that
+> stashes 32 bytes of entropy in a reserved space accessible to GRUB,
+> and which GRUB then passes to the kernel using an extension to the
+> Linux/x86 Boot Protocol.  (See Documentation/x86/boot.txt)
 
-I spoke too soon - should read code rather than derive meaning from
-names.  Looks like it's nested vs. trailing components in a pathname.
-So we're only protecting against bad symlinks for the last pathname
-component - not for upper directories in the path.  Indeed, for typical
-vulnerable programs it's the last pathname component that would be
-attacked, but I am not sure if it's always the case nor whether we
-needed this limitation in this security feature for some desirable uses.
+On that same idea, one could add an early_initramfs handler for entropy
+data.
 
-Does this mean symlink attacks against not-yet-created directories like
-/tmp/.X11-unix (so perhaps during the system's bootup, maybe when it
-already started sshd but not yet X) are still possible even with the
-feature enabled?
+One could also ensure the kernel command line is used to feed some
+entropy for the CRNG init (for all I know, this is already being done),
+and add a do-nothing parameter (that gets sanitized away after use) that
+can be used to add entropy to that command line.  Something like
+random.someentropy=<bootloader-supplied random stuff goes here>.  This
+might be more generic than the x86 boot protocol reserved space...
 
-Alexander
+On the better bootloaders, an initramfs segment can be loaded
+independently (and you can have as many as required), which makes an
+early_initramfs a more palatable vector to inject large amounts of
+entropy into the next boot than, say, modifying the kernel image
+directly at every boot/shutdown to stash entropy in there somewhere.
+
+These are all easy to implement, I just don't know how *useful* they
+would really be.
+
+-- 
+  Henrique Holschuh
