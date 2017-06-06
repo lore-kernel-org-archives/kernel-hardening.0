@@ -1,95 +1,121 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue,  6 Jun 2017 19:47:55 +0200
-Message-Id: <20170606174804.31124-5-Jason@zx2c4.com>
+Date: Tue,  6 Jun 2017 19:47:53 +0200
+Message-Id: <20170606174804.31124-3-Jason@zx2c4.com>
 In-Reply-To: <20170606174804.31124-1-Jason@zx2c4.com>
 References: <20170606174804.31124-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v4 04/13] security/keys: ensure RNG is seeded before use
+Subject: [kernel-hardening] [PATCH v4 02/13] random: add synchronous API for the urandom pool
 To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, David Howells <dhowells@redhat.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Safford <safford@us.ibm.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Otherwise, we might use bad random numbers which, particularly in the
-case of IV generation, could be quite bad. It makes sense to use the
-synchronous API here, because we're always in process context (as the
-code is littered with GFP_KERNEL and the like). However, we can't change
-to using a blocking function in key serial allocation, because this will
-block booting in some configurations, so here we use the more
-appropriate get_random_u32, which will use RDRAND if available.
+This enables users of get_random_{bytes,u32,u64,int,long} to wait until
+the pool is ready before using this function, in case they actually want
+to have reliable randomness.
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: David Howells <dhowells@redhat.com>
-Cc: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Cc: David Safford <safford@us.ibm.com>
 ---
- security/keys/encrypted-keys/encrypted.c |  8 +++++---
- security/keys/key.c                      | 16 ++++++++--------
- 2 files changed, 13 insertions(+), 11 deletions(-)
+ drivers/char/random.c  | 41 +++++++++++++++++++++++++++++++----------
+ include/linux/random.h |  1 +
+ 2 files changed, 32 insertions(+), 10 deletions(-)
 
-diff --git a/security/keys/encrypted-keys/encrypted.c b/security/keys/encrypted-keys/encrypted.c
-index 0010955d7876..d51a28fc5cd5 100644
---- a/security/keys/encrypted-keys/encrypted.c
-+++ b/security/keys/encrypted-keys/encrypted.c
-@@ -777,10 +777,12 @@ static int encrypted_init(struct encrypted_key_payload *epayload,
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index 2291e6224ed3..36cdb2406610 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -851,11 +851,6 @@ static void crng_reseed(struct crng_state *crng, struct entropy_store *r)
+ 	spin_unlock_irqrestore(&primary_crng.lock, flags);
+ }
  
- 	__ekey_init(epayload, format, master_desc, datalen);
- 	if (!hex_encoded_iv) {
--		get_random_bytes(epayload->iv, ivsize);
-+		ret = get_random_bytes_wait(epayload->iv, ivsize);
+-static inline void crng_wait_ready(void)
+-{
+-	wait_event_interruptible(crng_init_wait, crng_ready());
+-}
+-
+ static void _extract_crng(struct crng_state *crng,
+ 			  __u8 out[CHACHA20_BLOCK_SIZE])
+ {
+@@ -1473,7 +1468,10 @@ static ssize_t extract_entropy_user(struct entropy_store *r, void __user *buf,
+  * number of good random numbers, suitable for key generation, seeding
+  * TCP sequence numbers, etc.  It does not rely on the hardware random
+  * number generator.  For random bytes direct from the hardware RNG
+- * (when available), use get_random_bytes_arch().
++ * (when available), use get_random_bytes_arch(). In order to ensure
++ * that the randomness provided by this function is okay, the function
++ * wait_for_random_bytes() should be called and return 0 at least once
++ * at any point prior.
+  */
+ void get_random_bytes(void *buf, int nbytes)
+ {
+@@ -1503,6 +1501,24 @@ void get_random_bytes(void *buf, int nbytes)
+ EXPORT_SYMBOL(get_random_bytes);
+ 
+ /*
++ * Wait for the urandom pool to be seeded and thus guaranteed to supply
++ * cryptographically secure random numbers. This applies to: the /dev/urandom
++ * device, the get_random_bytes function, and the get_random_{u32,u64,int,long}
++ * family of functions. Using any of these functions without first calling
++ * this function forfeits the guarantee of security.
++ *
++ * Returns: 0 if the urandom pool has been seeded.
++ *          -ERESTARTSYS if the function was interrupted by a signal.
++ */
++int wait_for_random_bytes(void)
++{
++	if (likely(crng_ready()))
++		return 0;
++	return wait_event_interruptible(crng_init_wait, crng_ready());
++}
++EXPORT_SYMBOL(wait_for_random_bytes);
++
++/*
+  * Add a callback function that will be invoked when the nonblocking
+  * pool is initialised.
+  *
+@@ -1856,6 +1872,8 @@ const struct file_operations urandom_fops = {
+ SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
+ 		unsigned int, flags)
+ {
++	int ret;
++
+ 	if (flags & ~(GRND_NONBLOCK|GRND_RANDOM))
+ 		return -EINVAL;
+ 
+@@ -1868,9 +1886,9 @@ SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
+ 	if (!crng_ready()) {
+ 		if (flags & GRND_NONBLOCK)
+ 			return -EAGAIN;
+-		crng_wait_ready();
+-		if (signal_pending(current))
+-			return -ERESTARTSYS;
++		ret = wait_for_random_bytes();
 +		if (unlikely(ret))
 +			return ret;
- 
--		get_random_bytes(epayload->decrypted_data,
--				 epayload->decrypted_datalen);
-+		ret = get_random_bytes_wait(epayload->decrypted_data,
-+					    epayload->decrypted_datalen);
- 	} else
- 		ret = encrypted_key_decrypt(epayload, format, hex_encoded_iv);
- 	return ret;
-diff --git a/security/keys/key.c b/security/keys/key.c
-index 455c04d80bbb..b72078e532f2 100644
---- a/security/keys/key.c
-+++ b/security/keys/key.c
-@@ -134,17 +134,15 @@ void key_user_put(struct key_user *user)
-  * Allocate a serial number for a key.  These are assigned randomly to avoid
-  * security issues through covert channel problems.
+ 	}
+ 	return urandom_read(NULL, buf, count, NULL);
+ }
+@@ -2031,7 +2049,10 @@ static rwlock_t batched_entropy_reset_lock = __RW_LOCK_UNLOCKED(batched_entropy_
+ /*
+  * Get a random word for internal kernel use only. The quality of the random
+  * number is either as good as RDRAND or as good as /dev/urandom, with the
+- * goal of being quite fast and not depleting entropy.
++ * goal of being quite fast and not depleting entropy. In order to ensure
++ * that the randomness provided by this function is okay, the function
++ * wait_for_random_bytes() should be called and return 0 at least once
++ * at any point prior.
   */
--static inline void key_alloc_serial(struct key *key)
-+static inline int key_alloc_serial(struct key *key)
- {
- 	struct rb_node *parent, **p;
- 	struct key *xkey;
+ static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u64);
+ u64 get_random_u64(void)
+diff --git a/include/linux/random.h b/include/linux/random.h
+index ed5c3838780d..e29929347c95 100644
+--- a/include/linux/random.h
++++ b/include/linux/random.h
+@@ -34,6 +34,7 @@ extern void add_input_randomness(unsigned int type, unsigned int code,
+ extern void add_interrupt_randomness(int irq, int irq_flags) __latent_entropy;
  
--	/* propose a random serial number and look for a hole for it in the
--	 * serial number tree */
-+	/* propose a non-negative random serial number and look for a hole for
-+	 * it in the serial number tree */
- 	do {
--		get_random_bytes(&key->serial, sizeof(key->serial));
--
--		key->serial >>= 1; /* negative numbers are not permitted */
-+		key->serial = get_random_u32() >> 1;
- 	} while (key->serial < 3);
- 
- 	spin_lock(&key_serial_lock);
-@@ -170,7 +168,7 @@ static inline void key_alloc_serial(struct key *key)
- 	rb_insert_color(&key->serial_node, &key_serial_tree);
- 
- 	spin_unlock(&key_serial_lock);
--	return;
-+	return 0;
- 
- 	/* we found a key with the proposed serial number - walk the tree from
- 	 * that point looking for the next unused serial number */
-@@ -314,7 +312,9 @@ struct key *key_alloc(struct key_type *type, const char *desc,
- 
- 	/* publish the key by giving it a serial number */
- 	atomic_inc(&user->nkeys);
--	key_alloc_serial(key);
-+	ret = key_alloc_serial(key);
-+	if (ret < 0)
-+		goto security_error;
- 
- error:
- 	return key;
+ extern void get_random_bytes(void *buf, int nbytes);
++extern int wait_for_random_bytes(void);
+ extern int add_random_ready_callback(struct random_ready_callback *rdy);
+ extern void del_random_ready_callback(struct random_ready_callback *rdy);
+ extern void get_random_bytes_arch(void *buf, int nbytes);
 -- 
 2.13.0
