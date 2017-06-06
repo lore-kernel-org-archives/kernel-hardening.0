@@ -1,30 +1,20 @@
-References: <20170605192216.21596-1-igor.stoppa@huawei.com>
- <20170605192216.21596-4-igor.stoppa@huawei.com>
- <CAG48ez1VMPLasTypDX5QnZnYprbCXfG9ZP9jQvPpS=HCpgvHvQ@mail.gmail.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <71a18a70-45c9-d75c-db47-3edf41b25a72@huawei.com>
-Date: Tue, 6 Jun 2017 12:00:57 +0300
+From: David Howells <dhowells@redhat.com>
+In-Reply-To: <20170606005108.5646-6-Jason@zx2c4.com>
+References: <20170606005108.5646-6-Jason@zx2c4.com> <20170606005108.5646-1-Jason@zx2c4.com>
 MIME-Version: 1.0
-In-Reply-To: <CAG48ez1VMPLasTypDX5QnZnYprbCXfG9ZP9jQvPpS=HCpgvHvQ@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH 3/5] Protectable Memory Allocator -
- Debug interface
-To: Jann Horn <jannh@google.com>
-Cc: Kees Cook <keescook@chromium.org>, mhocko@kernel.org, jmorris@namei.org, penguin-kernel@i-love.sakura.ne.jp, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, casey@schaufler-ca.com, Christoph Hellwig <hch@infradead.org>, labbott@redhat.com, linux-mm@kvack.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-ID: <26641.1496743729.1@warthog.procyon.org.uk>
+Date: Tue, 06 Jun 2017 11:08:49 +0100
+Message-ID: <26642.1496743729@warthog.procyon.org.uk>
+Subject: [kernel-hardening] Re: [PATCH v3 05/13] security/keys: ensure RNG is seeded before use
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: dhowells@redhat.com, Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Safford <safford@us.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Jason A. Donenfeld <Jason@zx2c4.com> wrote:
 
+> +		key->serial = get_random_u32() >> 1;
 
-On 05/06/17 23:24, Jann Horn wrote:
-> On Mon, Jun 5, 2017 at 9:22 PM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
->> Debugfs interface: it creates a file
+If this may sleep, it must be interruptible.
 
-[...]
-
-> You should probably be using %pK to hide the kernel pointers.
-
-ok, will do
-
----
-igor
+David
