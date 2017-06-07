@@ -1,40 +1,36 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu,  8 Jun 2017 01:26:05 +0200
-Message-Id: <20170607232607.26870-12-Jason@zx2c4.com>
+Date: Thu,  8 Jun 2017 01:26:03 +0200
+Message-Id: <20170607232607.26870-10-Jason@zx2c4.com>
 In-Reply-To: <20170607232607.26870-1-Jason@zx2c4.com>
 References: <20170607232607.26870-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v5 11/13] net/route: use get_random_int for random counter
+Subject: [kernel-hardening] [PATCH v5 09/13] rhashtable: use get_random_u32 for hash_rnd
 To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Miller <davem@davemloft.net>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Thomas Graf <tgraf@suug.ch>, Herbert Xu <herbert@gondor.apana.org.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Using get_random_int here is faster, more fitting of the use case, and
-just as cryptographically secure. It also has the benefit of providing
-better randomness at early boot, which is when many of these structures
-are assigned.
-
-Also, semantically, it's not really proper to have been assigning an
-atomic_t in this way before, even if in practice it works fine.
+This is much faster and just as secure. It also has the added benefit of
+probably returning better randomness at early-boot on systems with
+architectural RNGs.
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: David Miller <davem@davemloft.net>
+Cc: Thomas Graf <tgraf@suug.ch>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>
 ---
- net/ipv4/route.c | 3 +--
- 1 file changed, 1 insertion(+), 2 deletions(-)
+ lib/rhashtable.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/net/ipv4/route.c b/net/ipv4/route.c
-index 6883b3d4ba8f..32a3332ec9cf 100644
---- a/net/ipv4/route.c
-+++ b/net/ipv4/route.c
-@@ -2944,8 +2944,7 @@ static __net_init int rt_genid_init(struct net *net)
- {
- 	atomic_set(&net->ipv4.rt_genid, 0);
- 	atomic_set(&net->fnhe_genid, 0);
--	get_random_bytes(&net->ipv4.dev_addr_genid,
--			 sizeof(net->ipv4.dev_addr_genid));
-+	atomic_set(&net->ipv4.dev_addr_genid, get_random_int());
- 	return 0;
- }
+diff --git a/lib/rhashtable.c b/lib/rhashtable.c
+index d9e7274a04cd..a1eb7c947f46 100644
+--- a/lib/rhashtable.c
++++ b/lib/rhashtable.c
+@@ -235,7 +235,7 @@ static struct bucket_table *bucket_table_alloc(struct rhashtable *ht,
  
+ 	INIT_LIST_HEAD(&tbl->walkers);
+ 
+-	get_random_bytes(&tbl->hash_rnd, sizeof(tbl->hash_rnd));
++	tbl->hash_rnd = get_random_u32();
+ 
+ 	for (i = 0; i < nbuckets; i++)
+ 		INIT_RHT_NULLS_HEAD(tbl->buckets[i], ht, i);
 -- 
 2.13.0
