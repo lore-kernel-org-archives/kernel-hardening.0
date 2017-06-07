@@ -1,171 +1,217 @@
 From: Tycho Andersen <tycho@docker.com>
-Date: Wed,  7 Jun 2017 15:16:52 -0600
-Message-Id: <20170607211653.14536-3-tycho@docker.com>
+Date: Wed,  7 Jun 2017 15:16:53 -0600
+Message-Id: <20170607211653.14536-4-tycho@docker.com>
 In-Reply-To: <20170607211653.14536-1-tycho@docker.com>
 References: <20170607211653.14536-1-tycho@docker.com>
-Subject: [kernel-hardening] [RFC v4 2/3] lkdtm: Add tests for XPFO
+Subject: [kernel-hardening] [RFC v4 3/3] xpfo: add support for hugepages
 To: linux-mm@kvack.org
-Cc: Juerg Haefliger <juergh@gmail.com>, kernel-hardening@lists.openwall.com, Juerg Haefliger <juerg.haefliger@hpe.com>, Tycho Andersen <tycho@docker.com>
+Cc: Juerg Haefliger <juergh@gmail.com>, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@docker.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Juerg Haefliger <juerg.haefliger@hpe.com>
+Based on an earlier draft by Marco Benatto.
 
-Signed-off-by: Juerg Haefliger <juerg.haefliger@hpe.com>
-minor fixups for 5-level paging, whitespace
 Signed-off-by: Tycho Andersen <tycho@docker.com>
+CC: Juerg Haefliger <juergh@gmail.com>
 ---
- drivers/misc/Makefile     |   1 +
- drivers/misc/lkdtm.h      |   3 ++
- drivers/misc/lkdtm_core.c |   1 +
- drivers/misc/lkdtm_xpfo.c | 105 ++++++++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 110 insertions(+)
+ arch/x86/include/asm/pgtable.h | 22 +++++++++++++++
+ arch/x86/mm/pageattr.c         | 21 +++------------
+ arch/x86/mm/xpfo.c             | 61 +++++++++++++++++++++++++++++++++++++++++-
+ include/linux/xpfo.h           |  1 +
+ mm/xpfo.c                      |  8 ++----
+ 5 files changed, 88 insertions(+), 25 deletions(-)
 
-diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
-index 81ef3e67acc9..e0b5065478be 100644
---- a/drivers/misc/Makefile
-+++ b/drivers/misc/Makefile
-@@ -61,6 +61,7 @@ lkdtm-$(CONFIG_LKDTM)		+= lkdtm_heap.o
- lkdtm-$(CONFIG_LKDTM)		+= lkdtm_perms.o
- lkdtm-$(CONFIG_LKDTM)		+= lkdtm_rodata_objcopy.o
- lkdtm-$(CONFIG_LKDTM)		+= lkdtm_usercopy.o
-+lkdtm-$(CONFIG_LKDTM)		+= lkdtm_xpfo.o
- 
- KCOV_INSTRUMENT_lkdtm_rodata.o	:= n
- 
-diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
-index 3b4976396ec4..ed9c3131bf41 100644
---- a/drivers/misc/lkdtm.h
-+++ b/drivers/misc/lkdtm.h
-@@ -64,4 +64,7 @@ void lkdtm_USERCOPY_STACK_FRAME_FROM(void);
- void lkdtm_USERCOPY_STACK_BEYOND(void);
- void lkdtm_USERCOPY_KERNEL(void);
- 
-+/* lkdtm_xpfo.c */
-+void lkdtm_XPFO_READ_USER(void);
-+
+diff --git a/arch/x86/include/asm/pgtable.h b/arch/x86/include/asm/pgtable.h
+index f5af95a0c6b8..58bb43d8b9c1 100644
+--- a/arch/x86/include/asm/pgtable.h
++++ b/arch/x86/include/asm/pgtable.h
+@@ -1185,6 +1185,28 @@ static inline u16 pte_flags_pkey(unsigned long pte_flags)
  #endif
-diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
-index 42d2b8e31e6b..4f3b60bb2d31 100644
---- a/drivers/misc/lkdtm_core.c
-+++ b/drivers/misc/lkdtm_core.c
-@@ -235,6 +235,7 @@ struct crashtype crashtypes[] = {
- 	CRASHTYPE(USERCOPY_STACK_FRAME_FROM),
- 	CRASHTYPE(USERCOPY_STACK_BEYOND),
- 	CRASHTYPE(USERCOPY_KERNEL),
-+	CRASHTYPE(XPFO_READ_USER),
- };
+ }
  
- 
-diff --git a/drivers/misc/lkdtm_xpfo.c b/drivers/misc/lkdtm_xpfo.c
-new file mode 100644
-index 000000000000..540a2539a88b
---- /dev/null
-+++ b/drivers/misc/lkdtm_xpfo.c
-@@ -0,0 +1,105 @@
 +/*
-+ * This is for all the tests related to XPFO (eXclusive Page Frame Ownership).
++ * The current flushing context - we pass it instead of 5 arguments:
 + */
++struct cpa_data {
++	unsigned long	*vaddr;
++	pgd_t		*pgd;
++	pgprot_t	mask_set;
++	pgprot_t	mask_clr;
++	unsigned long	numpages;
++	int		flags;
++	unsigned long	pfn;
++	unsigned	force_split : 1;
++	int		curpage;
++	struct page	**pages;
++};
 +
-+#include "lkdtm.h"
++int
++try_preserve_large_page(pte_t *kpte, unsigned long address,
++			struct cpa_data *cpa);
++int split_large_page(struct cpa_data *cpa, pte_t *kpte,
++		     unsigned long address);
 +
-+#include <linux/mman.h>
-+#include <linux/uaccess.h>
+ #include <asm-generic/pgtable.h>
+ #endif	/* __ASSEMBLY__ */
+ 
+diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
+index 1dcd2be4cce4..6d6a78e6e023 100644
+--- a/arch/x86/mm/pageattr.c
++++ b/arch/x86/mm/pageattr.c
+@@ -26,21 +26,6 @@
+ #include <asm/pat.h>
+ #include <asm/set_memory.h>
+ 
+-/*
+- * The current flushing context - we pass it instead of 5 arguments:
+- */
+-struct cpa_data {
+-	unsigned long	*vaddr;
+-	pgd_t		*pgd;
+-	pgprot_t	mask_set;
+-	pgprot_t	mask_clr;
+-	unsigned long	numpages;
+-	int		flags;
+-	unsigned long	pfn;
+-	unsigned	force_split : 1;
+-	int		curpage;
+-	struct page	**pages;
+-};
+ 
+ /*
+  * Serialize cpa() (for !DEBUG_PAGEALLOC which uses large identity mappings)
+@@ -506,7 +491,7 @@ static void __set_pmd_pte(pte_t *kpte, unsigned long address, pte_t pte)
+ #endif
+ }
+ 
+-static int
++int
+ try_preserve_large_page(pte_t *kpte, unsigned long address,
+ 			struct cpa_data *cpa)
+ {
+@@ -740,8 +725,8 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
+ 	return 0;
+ }
+ 
+-static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
+-			    unsigned long address)
++int split_large_page(struct cpa_data *cpa, pte_t *kpte,
++		     unsigned long address)
+ {
+ 	struct page *base;
+ 
+diff --git a/arch/x86/mm/xpfo.c b/arch/x86/mm/xpfo.c
+index c24b06c9b4ab..818da3ebc077 100644
+--- a/arch/x86/mm/xpfo.c
++++ b/arch/x86/mm/xpfo.c
+@@ -13,11 +13,70 @@
+ 
+ #include <linux/mm.h>
+ 
++#include <asm/tlbflush.h>
 +
-+/* This is hacky... */
-+#ifdef CONFIG_ARM64
-+#define pud_large(pud) (pud_sect(pud))
-+#define pmd_large(pmd) (pmd_sect(pmd))
-+#define PUD_PAGE_MASK PUD_MASK
-+#define PMD_PAGE_MASK PMD_MASK
-+#endif
+ /* Update a single kernel page table entry */
+ inline void set_kpte(void *kaddr, struct page *page, pgprot_t prot)
+ {
+ 	unsigned int level;
+ 	pte_t *pte = lookup_address((unsigned long)kaddr, &level);
+ 
+-	set_pte_atomic(pte, pfn_pte(page_to_pfn(page), canon_pgprot(prot)));
 +
-+static phys_addr_t user_virt_to_phys(unsigned long addr)
-+{
-+	phys_addr_t phys_addr;
-+	unsigned long offset;
-+	pgd_t *pgd;
-+	pud_t *pud;
-+	pmd_t *pmd;
-+	pte_t *pte;
-+	p4d_t *p4d;
++	BUG_ON(!pte);
 +
-+	pgd = pgd_offset(current->mm, addr);
-+	if (pgd_none(*pgd))
-+                return 0;
++	switch (level) {
++	case PG_LEVEL_4K:
++		set_pte_atomic(pte, pfn_pte(page_to_pfn(page), canon_pgprot(prot)));
++		break;
++	case PG_LEVEL_2M:
++	case PG_LEVEL_1G: {
++		struct cpa_data cpa;
++		int do_split;
 +
-+	p4d = p4d_offset(pgd, addr);
-+	if (p4d_none(*p4d))
-+		return 0;
++		memset(&cpa, 0, sizeof(cpa));
++		cpa.vaddr = kaddr;
++		cpa.pages = &page;
++		cpa.mask_set = prot;
++		pgprot_val(cpa.mask_clr) = ~pgprot_val(prot);
++		cpa.numpages = 1;
++		cpa.flags = 0;
++		cpa.curpage = 0;
++		cpa.force_split = 0;
 +
-+	pud = pud_offset(p4d, addr);
-+	if (pud_none(*pud))
-+		return 0;
++		do_split = try_preserve_large_page(pte, (unsigned long)kaddr, &cpa);
++		if (do_split < 0)
++			BUG_ON(split_large_page(&cpa, pte, (unsigned long)kaddr));
 +
-+	if (pud_large(*pud) || !pud_present(*pud)) {
-+		phys_addr = (unsigned long)pud_pfn(*pud) << PAGE_SHIFT;
-+		offset = addr & ~PUD_PAGE_MASK;
-+		goto out;
++		break;
++	}
++	default:
++		BUG();
 +	}
 +
-+	pmd = pmd_offset(pud, addr);
-+	if (pmd_none(*pmd))
-+		return 0;
-+
-+	if (pmd_large(*pmd) || !pmd_present(*pmd)) {
-+		phys_addr = (unsigned long)pmd_pfn(*pmd) << PAGE_SHIFT;
-+		offset = addr & ~PMD_PAGE_MASK;
-+		goto out;
-+	}
-+
-+	pte =  pte_offset_kernel(pmd, addr);
-+	phys_addr = (phys_addr_t)pte_pfn(*pte) << PAGE_SHIFT;
-+	offset = addr & ~PAGE_MASK;
-+
-+out:
-+	return (phys_addr_t)(phys_addr | offset);
 +}
 +
-+/* Read from userspace via the kernel's linear map */
-+void lkdtm_XPFO_READ_USER(void)
++inline void xpfo_flush_kernel_page(struct page *page, int order)
 +{
-+	unsigned long user_addr, user_data = 0xdeadbeef;
-+	phys_addr_t phys_addr;
-+	void *virt_addr;
++	int level;
++	unsigned long size, kaddr;
 +
-+	user_addr = vm_mmap(NULL, 0, PAGE_SIZE,
-+			    PROT_READ | PROT_WRITE | PROT_EXEC,
-+			    MAP_ANONYMOUS | MAP_PRIVATE, 0);
-+	if (user_addr >= TASK_SIZE) {
-+		pr_warn("Failed to allocate user memory\n");
-+		return;
++	kaddr = (unsigned long)page_address(page);
++	lookup_address(kaddr, &level);
++
++
++	switch (level) {
++	case PG_LEVEL_4K:
++		size = PAGE_SIZE;
++		break;
++	case PG_LEVEL_2M:
++		size = PMD_SIZE;
++		break;
++	case PG_LEVEL_1G:
++		size = PUD_SIZE;
++		break;
++	default:
++		BUG();
 +	}
 +
-+	if (copy_to_user((void __user *)user_addr, &user_data,
-+			 sizeof(user_data))) {
-+		pr_warn("copy_to_user failed\n");
-+		goto free_user;
-+	}
-+
-+	phys_addr = user_virt_to_phys(user_addr);
-+	if (!phys_addr) {
-+		pr_warn("Failed to get physical address of user memory\n");
-+		goto free_user;
-+	}
-+
-+	virt_addr = phys_to_virt(phys_addr);
-+	if (phys_addr != virt_to_phys(virt_addr)) {
-+		pr_warn("Physical address of user memory seems incorrect\n");
-+		goto free_user;
-+	}
-+
-+	pr_info("Attempting bad read from kernel address %p\n", virt_addr);
-+	if (*(unsigned long *)virt_addr == user_data)
-+		pr_info("Huh? Bad read succeeded?!\n");
-+	else
-+		pr_info("Huh? Bad read didn't fail but data is incorrect?!\n");
-+
-+ free_user:
-+	vm_munmap(user_addr, PAGE_SIZE);
-+}
++	flush_tlb_kernel_range(kaddr, kaddr + (1 << order) * size);
+ }
+diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
+index 031cbee22a41..a0f0101720f6 100644
+--- a/include/linux/xpfo.h
++++ b/include/linux/xpfo.h
+@@ -19,6 +19,7 @@
+ extern struct page_ext_operations page_xpfo_ops;
+ 
+ void set_kpte(void *kaddr, struct page *page, pgprot_t prot);
++void xpfo_flush_kernel_page(struct page *page, int order);
+ 
+ void xpfo_kmap(void *kaddr, struct page *page);
+ void xpfo_kunmap(void *kaddr, struct page *page);
+diff --git a/mm/xpfo.c b/mm/xpfo.c
+index 8384058136b1..895de28108da 100644
+--- a/mm/xpfo.c
++++ b/mm/xpfo.c
+@@ -78,7 +78,6 @@ void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp)
+ {
+ 	int i, flush_tlb = 0;
+ 	struct xpfo *xpfo;
+-	unsigned long kaddr;
+ 
+ 	if (!static_branch_unlikely(&xpfo_inited))
+ 		return;
+@@ -109,11 +108,8 @@ void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp)
+ 		}
+ 	}
+ 
+-	if (flush_tlb) {
+-		kaddr = (unsigned long)page_address(page);
+-		flush_tlb_kernel_range(kaddr, kaddr + (1 << order) *
+-				       PAGE_SIZE);
+-	}
++	if (flush_tlb)
++		xpfo_flush_kernel_page(page, order);
+ }
+ 
+ void xpfo_free_pages(struct page *page, int order)
 -- 
 2.11.0
