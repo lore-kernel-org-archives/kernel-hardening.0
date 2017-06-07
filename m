@@ -1,95 +1,84 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu,  8 Jun 2017 01:25:58 +0200
-Message-Id: <20170607232607.26870-5-Jason@zx2c4.com>
+Date: Thu,  8 Jun 2017 01:25:57 +0200
+Message-Id: <20170607232607.26870-4-Jason@zx2c4.com>
 In-Reply-To: <20170607232607.26870-1-Jason@zx2c4.com>
 References: <20170607232607.26870-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v5 04/13] security/keys: ensure RNG is seeded before use
+Subject: [kernel-hardening] [PATCH v5 03/13] random: add get_random_{bytes,u32,u64,int,long,once}_wait family
 To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Miller <davem@davemloft.net>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, David Howells <dhowells@redhat.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Safford <safford@us.ibm.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Otherwise, we might use bad random numbers which, particularly in the
-case of IV generation, could be quite bad. It makes sense to use the
-synchronous API here, because we're always in process context (as the
-code is littered with GFP_KERNEL and the like). However, we can't change
-to using a blocking function in key serial allocation, because this will
-block booting in some configurations, so here we use the more
-appropriate get_random_u32, which will use RDRAND if available.
+These functions are simple convenience wrappers that call
+wait_for_random_bytes before calling the respective get_random_*
+function.
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: David Howells <dhowells@redhat.com>
-Cc: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Cc: David Safford <safford@us.ibm.com>
 ---
- security/keys/encrypted-keys/encrypted.c |  8 +++++---
- security/keys/key.c                      | 16 ++++++++--------
- 2 files changed, 13 insertions(+), 11 deletions(-)
+ include/linux/net.h    |  2 ++
+ include/linux/once.h   |  2 ++
+ include/linux/random.h | 25 +++++++++++++++++++++++++
+ 3 files changed, 29 insertions(+)
 
-diff --git a/security/keys/encrypted-keys/encrypted.c b/security/keys/encrypted-keys/encrypted.c
-index 0010955d7876..d51a28fc5cd5 100644
---- a/security/keys/encrypted-keys/encrypted.c
-+++ b/security/keys/encrypted-keys/encrypted.c
-@@ -777,10 +777,12 @@ static int encrypted_init(struct encrypted_key_payload *epayload,
+diff --git a/include/linux/net.h b/include/linux/net.h
+index abcfa46a2bd9..dda2cc939a53 100644
+--- a/include/linux/net.h
++++ b/include/linux/net.h
+@@ -274,6 +274,8 @@ do {									\
  
- 	__ekey_init(epayload, format, master_desc, datalen);
- 	if (!hex_encoded_iv) {
--		get_random_bytes(epayload->iv, ivsize);
-+		ret = get_random_bytes_wait(epayload->iv, ivsize);
-+		if (unlikely(ret))
-+			return ret;
+ #define net_get_random_once(buf, nbytes)			\
+ 	get_random_once((buf), (nbytes))
++#define net_get_random_once_wait(buf, nbytes)			\
++	get_random_once_wait((buf), (nbytes))
  
--		get_random_bytes(epayload->decrypted_data,
--				 epayload->decrypted_datalen);
-+		ret = get_random_bytes_wait(epayload->decrypted_data,
-+					    epayload->decrypted_datalen);
- 	} else
- 		ret = encrypted_key_decrypt(epayload, format, hex_encoded_iv);
- 	return ret;
-diff --git a/security/keys/key.c b/security/keys/key.c
-index 455c04d80bbb..b72078e532f2 100644
---- a/security/keys/key.c
-+++ b/security/keys/key.c
-@@ -134,17 +134,15 @@ void key_user_put(struct key_user *user)
-  * Allocate a serial number for a key.  These are assigned randomly to avoid
-  * security issues through covert channel problems.
-  */
--static inline void key_alloc_serial(struct key *key)
-+static inline int key_alloc_serial(struct key *key)
- {
- 	struct rb_node *parent, **p;
- 	struct key *xkey;
+ int kernel_sendmsg(struct socket *sock, struct msghdr *msg, struct kvec *vec,
+ 		   size_t num, size_t len);
+diff --git a/include/linux/once.h b/include/linux/once.h
+index 285f12cb40e6..9c98aaa87cbc 100644
+--- a/include/linux/once.h
++++ b/include/linux/once.h
+@@ -53,5 +53,7 @@ void __do_once_done(bool *done, struct static_key *once_key,
  
--	/* propose a random serial number and look for a hole for it in the
--	 * serial number tree */
-+	/* propose a non-negative random serial number and look for a hole for
-+	 * it in the serial number tree */
- 	do {
--		get_random_bytes(&key->serial, sizeof(key->serial));
--
--		key->serial >>= 1; /* negative numbers are not permitted */
-+		key->serial = get_random_u32() >> 1;
- 	} while (key->serial < 3);
+ #define get_random_once(buf, nbytes)					     \
+ 	DO_ONCE(get_random_bytes, (buf), (nbytes))
++#define get_random_once_wait(buf, nbytes)                                    \
++	DO_ONCE(get_random_bytes_wait, (buf), (nbytes))                      \
  
- 	spin_lock(&key_serial_lock);
-@@ -170,7 +168,7 @@ static inline void key_alloc_serial(struct key *key)
- 	rb_insert_color(&key->serial_node, &key_serial_tree);
+ #endif /* _LINUX_ONCE_H */
+diff --git a/include/linux/random.h b/include/linux/random.h
+index e29929347c95..4aecc339558d 100644
+--- a/include/linux/random.h
++++ b/include/linux/random.h
+@@ -58,6 +58,31 @@ static inline unsigned long get_random_long(void)
+ #endif
+ }
  
- 	spin_unlock(&key_serial_lock);
--	return;
++/* Calls wait_for_random_bytes() and then calls get_random_bytes(buf, nbytes).
++ * Returns the result of the call to wait_for_random_bytes. */
++static inline int get_random_bytes_wait(void *buf, int nbytes)
++{
++	int ret = wait_for_random_bytes();
++	if (unlikely(ret))
++		return ret;
++	get_random_bytes(buf, nbytes);
 +	return 0;
++}
++
++#define declare_get_random_var_wait(var) \
++	static inline int get_random_ ## var ## _wait(var *out) { \
++		int ret = wait_for_random_bytes(); \
++		if (unlikely(ret)) \
++			return ret; \
++		*out = get_random_ ## var(); \
++		return 0; \
++	}
++declare_get_random_var_wait(u32)
++declare_get_random_var_wait(u64)
++declare_get_random_var_wait(int)
++declare_get_random_var_wait(long)
++#undef declare_get_random_var
++
+ unsigned long randomize_page(unsigned long start, unsigned long range);
  
- 	/* we found a key with the proposed serial number - walk the tree from
- 	 * that point looking for the next unused serial number */
-@@ -314,7 +312,9 @@ struct key *key_alloc(struct key_type *type, const char *desc,
- 
- 	/* publish the key by giving it a serial number */
- 	atomic_inc(&user->nkeys);
--	key_alloc_serial(key);
-+	ret = key_alloc_serial(key);
-+	if (ret < 0)
-+		goto security_error;
- 
- error:
- 	return key;
+ u32 prandom_u32(void);
 -- 
 2.13.0
