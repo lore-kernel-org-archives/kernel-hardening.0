@@ -1,29 +1,55 @@
-From: Stephan =?ISO-8859-1?Q?M=FCller?= <smueller@chronox.de>
-Date: Wed, 07 Jun 2017 07:00:17 +0200
-Message-ID: <1691714.1h4IbvMDSf@tauon.chronox.de>
-In-Reply-To: <20170606221910.GB9057@khazad-dum.debian.net>
-References: <20170606005108.5646-1-Jason@zx2c4.com> <20170606170319.5eva2yoxxeru5p74@thunk.org> <20170606221910.GB9057@khazad-dum.debian.net>
+Date: Wed, 7 Jun 2017 15:10:53 +0800
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Message-ID: <20170607071053.GC29532@gondor.apana.org.au>
+References: <20170606215129.26388-1-Jason@zx2c4.com>
+ <20170607042219.GC594@zzz>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Subject: Re: [kernel-hardening] Re: [PATCH v3 04/13] crypto/rng: ensure that the RNG is ready before using
-To: Henrique de Moraes Holschuh <hmh@hmh.eng.br>
-Cc: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers3@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170607042219.GC594@zzz>
+Subject: [kernel-hardening] Re: [PATCH v2] security/keys: rewrite all of big_key crypto
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Theodore Ts'o <tytso@mit.edu>, David Howells <dhowells@redhat.com>, Kirill Marinushkin <k.marinushkin@gmail.com>, security@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Am Mittwoch, 7. Juni 2017, 00:19:10 CEST schrieb Henrique de Moraes Holschuh:
+On Tue, Jun 06, 2017 at 09:22:19PM -0700, Eric Biggers wrote:
+> Hi Jason,
+> 
+> On Tue, Jun 06, 2017 at 11:51:29PM +0200, Jason A. Donenfeld wrote:
+> > issue now. And, some error paths forgot to zero out sensitive material, so
+> > this patch changes a kfree into a kzfree.
+> 
+> There are other places in big_key.c that should be doing kzfree() instead of
+> kfree().  Sorry, I actually recently did a patchset that fixed this for major
+> parts of the keyrings API, but I skipped the big_key type because it was one of
+> the more obscure key types (and frankly I have no idea what, if anything,
+> actually uses it).  Probably the switch to kzfree() should be its own patch
+> since it's a separate logical change.
+> 
+> >  {
+> >  	int ret = -EINVAL;
+> >  	struct scatterlist sgio;
+> > -	SKCIPHER_REQUEST_ON_STACK(req, big_key_skcipher);
+> > -
+> > -	if (crypto_skcipher_setkey(big_key_skcipher, key, ENC_KEY_SIZE)) {
+> > +	u8 req_on_stack[sizeof(struct aead_request) +
+> > +			crypto_aead_reqsize(big_key_aead)];
+> > +	struct aead_request *aead_req = (struct aead_request *)req_on_stack;
+> > +
+> 
+> The crypto API with CONFIG_VMAP_STACK=y and CONFIG_DEBUG_SG=y is unhappy with
+> using an aead_request on the stack, because it can't create a scatterlist from
+> it.  It will need to be on the heap instead.  (Or else the crypto API fixed.)
 
-Hi Henrique,
+You should not create AEAD requests on the stack.  The only reason
+skcipher requests can be created on the stack is for backwards
+compatibility with the sync blkcipher interface.
 
-> On that same idea, one could add an early_initramfs handler for entropy
-> data.
+For new code you should always allocate the request using
+aead_request_alloc.
 
-Any data that comes from outside during the boot process, be it some NVRAM 
-location, the /var/lib...seed file for /dev/random or other approaches are 
-viewed by a number of folks to have zero bits of entropy.
-
-I.e. this data is nice for stirring the pool, but is not considered to help 
-our entropy problem.
-
-Ciao
-Stephan
+Thanks,
+-- 
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
