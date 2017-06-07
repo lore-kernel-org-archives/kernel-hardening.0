@@ -1,44 +1,40 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170606225739.GA14682@openwall.com>
-References: <20170606215534.GA13126@openwall.com> <20170606221617.GA14451@openwall.com>
- <20170606225739.GA14682@openwall.com>
+In-Reply-To: <20170606215534.GA13126@openwall.com>
+References: <20170606215534.GA13126@openwall.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 6 Jun 2017 21:00:02 -0700
-Message-ID: <CAGXu5jK97z6Kb5VJMKhMcP61P8yeZaVTinVPS2aL5QFm9GbKqg@mail.gmail.com>
+Date: Tue, 6 Jun 2017 21:10:43 -0700
+Message-ID: <CAGXu5j+tMVT2uQMP74KsYfvN-uFtQmjin-mON9gAs-qAMUq52Q@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: Re: [kernel-hardening] symlink/hardlink/FIFO restrictions
 To: Solar Designer <solar@openwall.com>
 Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 6, 2017 at 3:57 PM, Solar Designer <solar@openwall.com> wrote:
-> On Wed, Jun 07, 2017 at 12:16:17AM +0200, Solar Designer wrote:
->> So we're only protecting against bad symlinks for the last pathname
->> component - not for upper directories in the path.  Indeed, for typical
->> vulnerable programs it's the last pathname component that would be
->> attacked, but I am not sure if it's always the case nor whether we
->> needed this limitation in this security feature for some desirable uses.
->>
->> Does this mean symlink attacks against not-yet-created directories like
->> /tmp/.X11-unix (so perhaps during the system's bootup, maybe when it
->> already started sshd but not yet X) are still possible even with the
->> feature enabled?
->
-> Confirmed this by testing (with a dummy user-owned directory in /tmp).
->
-> I think this is actually fine, because we were not protecting against a
-> variation of those attacks anyway: where the attacker could have created
-> a non-+t directory of their own in place of /tmp/.X11-unix or the like.
-> Then symlinks placed in that directory wouldn't be protected anyway.
+On Tue, Jun 6, 2017 at 2:55 PM, Solar Designer <solar@openwall.com> wrote:
+> The hardlink restrictions differ between -ow vs. grsecurity and upstream.
+> In -ow, I had the check in vfs_link().  In grsecurity (oldest I checked
+> now is grsecurity-2.1.11-2.4.35-200708071800), it's in sys_link() and
+> later in sys_linkat(), which is also called by sys_link().  Upstream
+> also has it right in the linkat() syscall function.  Maybe there were
+> good reasons not to do it in vfs_link(), but I am unaware of those.
+> We need to know what currently happens and what we'd like to happen for
+> other callers to vfs_link(), such as kernel nfsd and CRIU - do we want
+> the restrictions to apply there?  Maybe for some of those other callers,
+> but not for all?  Do the same checks work correctly when called from
+> those other contexts or do we need revised checks there?
 
-IIRC, the "trailing" part was requested by Al Viro in his various
-reviews of my port of the defense, and I came to the same conclusion:
-we can't really protected the non-+t directory case without some very
-different semantics.
+Hm, yeah, I don't remember sys_linkat() vs vfs_link() coming up during
+review, but it's been a while. The nfsd thing is interesting... would
+it be right to refuse a client's linkat based on the server's link
+restriction sysctl? Hmm.
 
-I couldn't come up with a situation where the intended defense didn't
-work as expected, but maybe I lacked imagination.
+> As to the FIFO restrictions, those don't appear to have been merged
+> upstream yet.
+
+Do the FIFO restrictions exist in -ow too? I wonder what enabling that
+protection might break... (better asked as "omg, what puts FIFOs in +t
+directories?")
 
 -Kees
 
