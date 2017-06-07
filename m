@@ -1,21 +1,34 @@
-From: David Howells <dhowells@redhat.com>
-In-Reply-To: <20170607042219.GC594@zzz>
-References: <20170607042219.GC594@zzz> <20170606215129.26388-1-Jason@zx2c4.com>
+From: Michael Ellerman <mpe@ellerman.id.au>
+In-Reply-To: <1496665366.343.1.camel@gmail.com>
+References: <1496642591-1373-1-git-send-email-bhsharma@redhat.com> <1496665366.343.1.camel@gmail.com>
+Date: Wed, 07 Jun 2017 19:29:37 +1000
+Message-ID: <87d1agp2m6.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <29550.1496820669.1@warthog.procyon.org.uk>
-Date: Wed, 07 Jun 2017 08:31:09 +0100
-Message-ID: <29551.1496820669@warthog.procyon.org.uk>
-Subject: [kernel-hardening] Re: [PATCH v2] security/keys: rewrite all of big_key crypto
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: dhowells@redhat.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Theodore Ts'o <tytso@mit.edu>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, security@kernel.org
+Content-Type: text/plain
+Subject: Re: [kernel-hardening] [PATCH] powerpc: Increase ELF_ET_DYN_BASE to 1TB for 64-bit applications
+To: Daniel Micay <danielmicay@gmail.com>, Bhupesh Sharma <bhsharma@redhat.com>, linuxppc-dev@lists.ozlabs.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: bhupesh.linux@gmail.com, Anton Blanchard <anton@samba.org>, Daniel Cashman <dcashman@android.com>, Kees Cook <keescook@chromium.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Eric Biggers <ebiggers3@gmail.com> wrote:
+Daniel Micay <danielmicay@gmail.com> writes:
 
-> but I skipped the big_key type because it was one of the more obscure key
-> types (and frankly I have no idea what, if anything, actually uses it)
+> Rather than doing this, the base should just be split for an ELF
+> interpreter like PaX.
 
-Kerberos can use it.
+I don't quite parse that, I think you mean PaX uses a different base for
+an ELF interpreter vs a regular ET_DYN?
 
-David
+That would be cool. How do you know that it's an ELF interpreter you're
+loading? Is it just something that's PIE but doesn't request an
+interpreter?
+
+Is the PaX code somewhere I can look at?
+
+> It makes sense for a standalone executable to be as low in the address
+> space as possible.
+
+More or less. There are performance reasons why 1T could be good for us,
+but I want to see some performance numbers to justify that change. And
+it does mean you have a bit less address space to play with.
+
+cheers
