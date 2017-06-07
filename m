@@ -1,89 +1,39 @@
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Date: Wed, 7 Jun 2017 15:35:05 +0300
-Message-ID: <20170607123505.16629-5-igor.stoppa@huawei.com>
-In-Reply-To: <20170607123505.16629-1-igor.stoppa@huawei.com>
-References: <20170607123505.16629-1-igor.stoppa@huawei.com>
+Date: Wed, 7 Jun 2017 11:42:28 -0300
+From: Henrique de Moraes Holschuh <hmh@hmh.eng.br>
+Message-ID: <20170607144228.GB5705@khazad-dum.debian.net>
+References: <20170606005108.5646-1-Jason@zx2c4.com>
+ <20170606170319.5eva2yoxxeru5p74@thunk.org>
+ <20170606221910.GB9057@khazad-dum.debian.net>
+ <1691714.1h4IbvMDSf@tauon.chronox.de>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] [PATCH 4/4] Make LSM Writable Hooks a command line option
-To: keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org
-Cc: penguin-kernel@I-love.SAKURA.ne.jp, paul@paul-moore.com, sds@tycho.nsa.gov, casey@schaufler-ca.com, hch@infradead.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <1691714.1h4IbvMDSf@tauon.chronox.de>
+Subject: Re: [kernel-hardening] Re: [PATCH v3 04/13] crypto/rng: ensure that
+ the RNG is ready before using
+To: Stephan =?iso-8859-1?Q?M=FCller?= <smueller@chronox.de>
+Cc: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers3@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This patch shows how it is possible to take advantage of pmalloc:
-instead of using the build-time option __lsm_ro_after_init, to decide if
-it is possible to keep the hooks modifiable, now this becomes a
-boot-time decision, based on the kernel command line.
+On Wed, 07 Jun 2017, Stephan Müller wrote:
+> Am Mittwoch, 7. Juni 2017, 00:19:10 CEST schrieb Henrique de Moraes Holschuh:
+> > On that same idea, one could add an early_initramfs handler for entropy
+> > data.
+> 
+> Any data that comes from outside during the boot process, be it some NVRAM 
+> location, the /var/lib...seed file for /dev/random or other approaches are 
+> viewed by a number of folks to have zero bits of entropy.
+> 
+> I.e. this data is nice for stirring the pool, but is not considered to help 
+> our entropy problem.
 
-This patch relies on:
+Stirring the pool is actually the objective, not entropy accounting.
+Let's not lose sight of what is really important.
 
-"Convert security_hook_heads into explicit array of struct list_head"
-Author: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
+But yes, you are quite correct in that it won't help anything that would
+like to block due to entropy accouting, or which needs to be certain
+about the amount of randomness in the pools.
 
-to break free from the static constraint imposed by the previous
-hardening model, based on __ro_after_init.
-
-The default value is disabled, unless SE Linux debugging is turned on.
-
-Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
-CC: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
----
- security/security.c | 22 +++++++++++++++++++---
- 1 file changed, 19 insertions(+), 3 deletions(-)
-
-diff --git a/security/security.c b/security/security.c
-index c492f68..9b8b478 100644
---- a/security/security.c
-+++ b/security/security.c
-@@ -26,6 +26,7 @@
- #include <linux/personality.h>
- #include <linux/backing-dev.h>
- #include <linux/string.h>
-+#include <linux/pmalloc.h>
- #include <net/flow.h>
- 
- #define MAX_LSM_EVM_XATTR	2
-@@ -33,8 +34,17 @@
- /* Maximum number of letters for an LSM name string */
- #define SECURITY_NAME_MAX	10
- 
--static struct list_head hook_heads[LSM_MAX_HOOK_INDEX]
--	__lsm_ro_after_init;
-+static int dynamic_lsm = IS_ENABLED(CONFIG_SECURITY_SELINUX_DISABLE);
-+
-+static __init int set_dynamic_lsm(char *str)
-+{
-+	get_option(&str, &dynamic_lsm);
-+	return 0;
-+}
-+early_param("dynamic_lsm", set_dynamic_lsm);
-+
-+static struct list_head *hook_heads;
-+static struct pmalloc_pool *sec_pool;
- char *lsm_names;
- /* Boot-time LSM user choice */
- static __initdata char chosen_lsm[SECURITY_NAME_MAX + 1] =
-@@ -59,6 +69,11 @@ int __init security_init(void)
- {
- 	enum security_hook_index i;
- 
-+	sec_pool = pmalloc_create_pool("security");
-+	BUG_ON(!sec_pool);
-+	hook_heads = pmalloc(sizeof(struct list_head) * LSM_MAX_HOOK_INDEX,
-+			     sec_pool);
-+	BUG_ON(!hook_heads);
- 	for (i = 0; i < LSM_MAX_HOOK_INDEX; i++)
- 		INIT_LIST_HEAD(&hook_heads[i]);
- 	pr_info("Security Framework initialized\n");
-@@ -74,7 +89,8 @@ int __init security_init(void)
- 	 * Load all the remaining security modules.
- 	 */
- 	do_security_initcalls();
--
-+	if (!dynamic_lsm)
-+		pmalloc_protect_pool(sec_pool);
- 	return 0;
- }
- 
 -- 
-2.9.3
+  Henrique Holschuh
