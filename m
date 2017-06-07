@@ -1,19 +1,75 @@
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Date: Wed, 7 Jun 2017 15:35:01 +0300
+Message-ID: <20170607123505.16629-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-In-Reply-To: <20170606174804.31124-1-Jason@zx2c4.com>
-References: <20170606174804.31124-1-Jason@zx2c4.com>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Wed, 7 Jun 2017 14:33:14 +0200
-Message-ID: <CAHmME9ouOPUf9g4bR9zfsiTYfB1-D5jfBB5BOCHUeoPUwC-C1A@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v4 00/13] Unseeded In-Kernel Randomness Fixes
-To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Content-Type: text/plain
+Subject: [kernel-hardening] [PATCH v6 0/4] ro protection for dynamic data
+To: keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org
+Cc: penguin-kernel@I-love.SAKURA.ne.jp, paul@paul-moore.com, sds@tycho.nsa.gov, casey@schaufler-ca.com, hch@infradead.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Ted,
+Hi,
+please consider for inclusion.
 
-Could I get your Signed-off-by on this patchset, so that somebody can
-add it to their tree?
+This patchset introduces the possibility of protecting memory that has
+been allocated dynamically.
 
-Thanks,
-Jason
+The memory is managed in pools: when a pool is made R/O, all the memory
+that is part of it, will become R/O.
+
+A R/O pool can be destroyed to recover its memory, but it cannot be
+turned back into R/W mode.
+
+This is intentional. This feature is meant for data that doesn't need
+further modifications, after initialization.
+
+An example is provided, showing how to turn into a boot-time option the
+writable state of the security hooks.
+Prior to this patch, it was a compile-time option.
+
+This is made possible, thanks to Tetsuo Handa's rework of the hooks
+structure (included in the patchset).
+
+Changes since the v5 version:
+- use unsigned long for  __PMALLOC_ALIGNED alignment
+- fixed a regression where size in bytes was used instead of size in words
+- tightened the update of the pools list during removal, by doing
+  earlier the decrement of the atomic counter
+
+The only question still open is if there should be a possibility for
+unprotecting a memory pool in other cases than destruction.
+
+The only cases found for this topic are:
+- protecting the LSM header structure between creation and insertion of a
+  security module that was not built as part of the kernel
+  (but the module can protect the headers after it has loaded)
+
+- unloading SELinux from RedHat, if the system has booted, but no policy
+  has been loaded yet - this feature is going away, according to Casey.
+
+
+Igor Stoppa (3):
+  Protectable Memory Allocator
+  Protectable Memory Allocator - Debug interface
+  Make LSM Writable Hooks a command line option
+
+Tetsuo Handa (1):
+  LSM: Convert security_hook_heads into explicit array of struct
+    list_head
+
+ include/linux/lsm_hooks.h      | 412 ++++++++++++++++++++---------------------
+ include/linux/page-flags.h     |   2 +
+ include/linux/pmalloc.h        |  20 ++
+ include/trace/events/mmflags.h |   1 +
+ init/main.c                    |   2 +
+ mm/Kconfig                     |  11 ++
+ mm/Makefile                    |   1 +
+ mm/pmalloc.c                   | 339 +++++++++++++++++++++++++++++++++
+ mm/usercopy.c                  |  24 ++-
+ security/security.c            |  49 +++--
+ 10 files changed, 631 insertions(+), 230 deletions(-)
+ create mode 100644 include/linux/pmalloc.h
+ create mode 100644 mm/pmalloc.c
+
+-- 
+2.9.3
