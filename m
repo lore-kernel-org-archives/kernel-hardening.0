@@ -1,61 +1,156 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu,  8 Jun 2017 01:25:54 +0200
-Message-Id: <20170607232607.26870-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v5 00/13] Unseeded In-Kernel Randomness Fixes
+Date: Thu,  8 Jun 2017 01:25:55 +0200
+Message-Id: <20170607232607.26870-2-Jason@zx2c4.com>
+In-Reply-To: <20170607232607.26870-1-Jason@zx2c4.com>
+References: <20170607232607.26870-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH v5 01/13] random: invalidate batched entropy after crng init
 To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Miller <davem@davemloft.net>
 Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-It looks like critique of this has come to an end. Could somebody take
-this into their tree for 4.12?
+It's possible that get_random_{u32,u64} is used before the crng has
+initialized, in which case, its output might not be cryptographically
+secure. For this problem, directly, this patch set is introducing the
+*_wait variety of functions, but even with that, there's a subtle issue:
+what happens to our batched entropy that was generated before
+initialization. Prior to this commit, it'd stick around, supplying bad
+numbers. After this commit, we force the entropy to be re-extracted
+after each phase of the crng has initialized.
 
-As discussed in [1], there is a problem with get_random_bytes being
-used before the RNG has actually been seeded. The solution for fixing
-this appears to be multi-pronged. One of those prongs involves adding
-a simple blocking API so that modules that use the RNG in process
-context can just sleep (in an interruptable manner) until the RNG is
-ready to be used. This winds up being a very useful API that covers
-a few use cases, several of which are included in this patch set.
+In order to avoid a race condition with the position counter, we
+introduce a simple rwlock for this invalidation. Since it's only during
+this awkward transition period, after things are all set up, we stop
+using it, so that it doesn't have an impact on performance.
 
-[1] http://www.openwall.com/lists/kernel-hardening/2017/06/02/2
+This should probably be backported to 4.11.
 
-Changes v4->v5:
-  - Old versions of gcc warned on an uninitialized variable, so set
-    this to silence warning.
+(Also: adding my copyright to the top. With the patch series from
+January, this patch, and then the ones that come after, I think there's
+a relevant amount of code in here to add my name to the top.)
 
-Jason A. Donenfeld (13):
-  random: invalidate batched entropy after crng init
-  random: add synchronous API for the urandom pool
-  random: add get_random_{bytes,u32,u64,int,long,once}_wait family
-  security/keys: ensure RNG is seeded before use
-  crypto/rng: ensure that the RNG is ready before using
-  iscsi: ensure RNG is seeded before use
-  ceph: ensure RNG is seeded before using
-  cifs: use get_random_u32 for 32-bit lock random
-  rhashtable: use get_random_u32 for hash_rnd
-  net/neighbor: use get_random_u32 for 32-bit hash random
-  net/route: use get_random_int for random counter
-  bluetooth/smp: ensure RNG is properly seeded before ECDH use
-  random: warn when kernel uses unseeded randomness
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/char/random.c | 37 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 37 insertions(+)
 
- crypto/rng.c                              |  6 +-
- drivers/char/random.c                     | 93 +++++++++++++++++++++++++++----
- drivers/target/iscsi/iscsi_target_auth.c  | 14 ++++-
- drivers/target/iscsi/iscsi_target_login.c | 22 +++++---
- fs/cifs/cifsfs.c                          |  2 +-
- include/linux/net.h                       |  2 +
- include/linux/once.h                      |  2 +
- include/linux/random.h                    | 26 +++++++++
- lib/Kconfig.debug                         | 16 ++++++
- lib/rhashtable.c                          |  2 +-
- net/bluetooth/hci_request.c               |  6 ++
- net/bluetooth/smp.c                       | 18 ++++--
- net/ceph/ceph_common.c                    |  6 +-
- net/core/neighbour.c                      |  3 +-
- net/ipv4/route.c                          |  3 +-
- security/keys/encrypted-keys/encrypted.c  |  8 ++-
- security/keys/key.c                       | 16 +++---
- 17 files changed, 198 insertions(+), 47 deletions(-)
-
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index a561f0c2f428..d35da1603e12 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -1,6 +1,9 @@
+ /*
+  * random.c -- A strong random number generator
+  *
++ * Copyright (C) 2017 Jason A. Donenfeld <Jason@zx2c4.com>. All
++ * Rights Reserved.
++ *
+  * Copyright Matt Mackall <mpm@selenic.com>, 2003, 2004, 2005
+  *
+  * Copyright Theodore Ts'o, 1994, 1995, 1996, 1997, 1998, 1999.  All
+@@ -762,6 +765,8 @@ static DECLARE_WAIT_QUEUE_HEAD(crng_init_wait);
+ static struct crng_state **crng_node_pool __read_mostly;
+ #endif
+ 
++static void invalidate_batched_entropy(void);
++
+ static void crng_initialize(struct crng_state *crng)
+ {
+ 	int		i;
+@@ -799,6 +804,7 @@ static int crng_fast_load(const char *cp, size_t len)
+ 		cp++; crng_init_cnt++; len--;
+ 	}
+ 	if (crng_init_cnt >= CRNG_INIT_CNT_THRESH) {
++		invalidate_batched_entropy();
+ 		crng_init = 1;
+ 		wake_up_interruptible(&crng_init_wait);
+ 		pr_notice("random: fast init done\n");
+@@ -836,6 +842,7 @@ static void crng_reseed(struct crng_state *crng, struct entropy_store *r)
+ 	memzero_explicit(&buf, sizeof(buf));
+ 	crng->init_time = jiffies;
+ 	if (crng == &primary_crng && crng_init < 2) {
++		invalidate_batched_entropy();
+ 		crng_init = 2;
+ 		process_random_ready_list();
+ 		wake_up_interruptible(&crng_init_wait);
+@@ -2023,6 +2030,7 @@ struct batched_entropy {
+ 	};
+ 	unsigned int position;
+ };
++static rwlock_t batched_entropy_reset_lock = __RW_LOCK_UNLOCKED(batched_entropy_reset_lock);
+ 
+ /*
+  * Get a random word for internal kernel use only. The quality of the random
+@@ -2033,6 +2041,8 @@ static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u64);
+ u64 get_random_u64(void)
+ {
+ 	u64 ret;
++	const bool use_lock = READ_ONCE(crng_init) < 2;
++	unsigned long flags = 0;
+ 	struct batched_entropy *batch;
+ 
+ #if BITS_PER_LONG == 64
+@@ -2045,11 +2055,15 @@ u64 get_random_u64(void)
+ #endif
+ 
+ 	batch = &get_cpu_var(batched_entropy_u64);
++	if (use_lock)
++		read_lock_irqsave(&batched_entropy_reset_lock, flags);
+ 	if (batch->position % ARRAY_SIZE(batch->entropy_u64) == 0) {
+ 		extract_crng((u8 *)batch->entropy_u64);
+ 		batch->position = 0;
+ 	}
+ 	ret = batch->entropy_u64[batch->position++];
++	if (use_lock)
++		read_unlock_irqrestore(&batched_entropy_reset_lock, flags);
+ 	put_cpu_var(batched_entropy_u64);
+ 	return ret;
+ }
+@@ -2059,22 +2073,45 @@ static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u32);
+ u32 get_random_u32(void)
+ {
+ 	u32 ret;
++	const bool use_lock = READ_ONCE(crng_init) < 2;
++	unsigned long flags = 0;
+ 	struct batched_entropy *batch;
+ 
+ 	if (arch_get_random_int(&ret))
+ 		return ret;
+ 
+ 	batch = &get_cpu_var(batched_entropy_u32);
++	if (use_lock)
++		read_lock_irqsave(&batched_entropy_reset_lock, flags);
+ 	if (batch->position % ARRAY_SIZE(batch->entropy_u32) == 0) {
+ 		extract_crng((u8 *)batch->entropy_u32);
+ 		batch->position = 0;
+ 	}
+ 	ret = batch->entropy_u32[batch->position++];
++	if (use_lock)
++		read_unlock_irqrestore(&batched_entropy_reset_lock, flags);
+ 	put_cpu_var(batched_entropy_u32);
+ 	return ret;
+ }
+ EXPORT_SYMBOL(get_random_u32);
+ 
++/* It's important to invalidate all potential batched entropy that might
++ * be stored before the crng is initialized, which we can do lazily by
++ * simply resetting the counter to zero so that it's re-extracted on the
++ * next usage. */
++static void invalidate_batched_entropy(void)
++{
++	int cpu;
++	unsigned long flags;
++
++	write_lock_irqsave(&batched_entropy_reset_lock, flags);
++	for_each_possible_cpu (cpu) {
++		per_cpu_ptr(&batched_entropy_u32, cpu)->position = 0;
++		per_cpu_ptr(&batched_entropy_u64, cpu)->position = 0;
++	}
++	write_unlock_irqrestore(&batched_entropy_reset_lock, flags);
++}
++
+ /**
+  * randomize_page - Generate a random, page aligned address
+  * @start:	The smallest acceptable address the caller will take.
 -- 
 2.13.0
