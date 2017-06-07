@@ -1,44 +1,153 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu,  8 Jun 2017 01:25:59 +0200
-Message-Id: <20170607232607.26870-6-Jason@zx2c4.com>
+Date: Thu,  8 Jun 2017 01:26:00 +0200
+Message-Id: <20170607232607.26870-7-Jason@zx2c4.com>
 In-Reply-To: <20170607232607.26870-1-Jason@zx2c4.com>
 References: <20170607232607.26870-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v5 05/13] crypto/rng: ensure that the RNG is ready before using
+Subject: [kernel-hardening] [PATCH v5 06/13] iscsi: ensure RNG is seeded before use
 To: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Miller <davem@davemloft.net>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Herbert Xu <herbert@gondor.apana.org.au>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, "Nicholas A. Bellinger" <nab@linux-iscsi.org>, Lee Duncan <lduncan@suse.com>, Chris Leech <cleech@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Otherwise, we might be seeding the RNG using bad randomness, which is
-dangerous. The one use of this function from within the kernel -- not
-from userspace -- is being removed (keys/big_key), so that call site
-isn't relevant in assessing this.
+It's not safe to use weak random data here, especially for the challenge
+response randomness. Since we're always in process context, it's safe to
+simply wait until we have enough randomness to carry out the
+authentication correctly.
 
-Cc: Herbert Xu <herbert@gondor.apana.org.au>
+While we're at it, we clean up a small memleak during an error
+condition.
+
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+Cc: "Nicholas A. Bellinger" <nab@linux-iscsi.org>
+Cc: Lee Duncan <lduncan@suse.com>
+Cc: Chris Leech <cleech@redhat.com>
 ---
- crypto/rng.c | 6 ++++--
- 1 file changed, 4 insertions(+), 2 deletions(-)
+ drivers/target/iscsi/iscsi_target_auth.c  | 14 +++++++++++---
+ drivers/target/iscsi/iscsi_target_login.c | 22 ++++++++++++++--------
+ 2 files changed, 25 insertions(+), 11 deletions(-)
 
-diff --git a/crypto/rng.c b/crypto/rng.c
-index f46dac5288b9..e042437e64b4 100644
---- a/crypto/rng.c
-+++ b/crypto/rng.c
-@@ -48,12 +48,14 @@ int crypto_rng_reset(struct crypto_rng *tfm, const u8 *seed, unsigned int slen)
- 		if (!buf)
- 			return -ENOMEM;
+diff --git a/drivers/target/iscsi/iscsi_target_auth.c b/drivers/target/iscsi/iscsi_target_auth.c
+index 903b667f8e01..f9bc8ec6fb6b 100644
+--- a/drivers/target/iscsi/iscsi_target_auth.c
++++ b/drivers/target/iscsi/iscsi_target_auth.c
+@@ -47,18 +47,21 @@ static void chap_binaryhex_to_asciihex(char *dst, char *src, int src_len)
+ 	}
+ }
  
--		get_random_bytes(buf, slen);
-+		err = get_random_bytes_wait(buf, slen);
-+		if (err)
-+			goto out;
- 		seed = buf;
+-static void chap_gen_challenge(
++static int chap_gen_challenge(
+ 	struct iscsi_conn *conn,
+ 	int caller,
+ 	char *c_str,
+ 	unsigned int *c_len)
+ {
++	int ret;
+ 	unsigned char challenge_asciihex[CHAP_CHALLENGE_LENGTH * 2 + 1];
+ 	struct iscsi_chap *chap = conn->auth_protocol;
+ 
+ 	memset(challenge_asciihex, 0, CHAP_CHALLENGE_LENGTH * 2 + 1);
+ 
+-	get_random_bytes(chap->challenge, CHAP_CHALLENGE_LENGTH);
++	ret = get_random_bytes_wait(chap->challenge, CHAP_CHALLENGE_LENGTH);
++	if (unlikely(ret))
++		return ret;
+ 	chap_binaryhex_to_asciihex(challenge_asciihex, chap->challenge,
+ 				CHAP_CHALLENGE_LENGTH);
+ 	/*
+@@ -69,6 +72,7 @@ static void chap_gen_challenge(
+ 
+ 	pr_debug("[%s] Sending CHAP_C=0x%s\n\n", (caller) ? "server" : "client",
+ 			challenge_asciihex);
++	return 0;
+ }
+ 
+ static int chap_check_algorithm(const char *a_str)
+@@ -143,6 +147,7 @@ static struct iscsi_chap *chap_server_open(
+ 	case CHAP_DIGEST_UNKNOWN:
+ 	default:
+ 		pr_err("Unsupported CHAP_A value\n");
++		kfree(conn->auth_protocol);
+ 		return NULL;
  	}
  
- 	err = crypto_rng_alg(tfm)->seed(tfm, seed, slen);
--
-+out:
- 	kzfree(buf);
- 	return err;
+@@ -156,7 +161,10 @@ static struct iscsi_chap *chap_server_open(
+ 	/*
+ 	 * Generate Challenge.
+ 	 */
+-	chap_gen_challenge(conn, 1, aic_str, aic_len);
++	if (chap_gen_challenge(conn, 1, aic_str, aic_len) < 0) {
++		kfree(conn->auth_protocol);
++		return NULL;
++	}
+ 
+ 	return chap;
  }
+diff --git a/drivers/target/iscsi/iscsi_target_login.c b/drivers/target/iscsi/iscsi_target_login.c
+index 92b96b51d506..e9bdc8b86e7d 100644
+--- a/drivers/target/iscsi/iscsi_target_login.c
++++ b/drivers/target/iscsi/iscsi_target_login.c
+@@ -245,22 +245,26 @@ int iscsi_check_for_session_reinstatement(struct iscsi_conn *conn)
+ 	return 0;
+ }
+ 
+-static void iscsi_login_set_conn_values(
++static int iscsi_login_set_conn_values(
+ 	struct iscsi_session *sess,
+ 	struct iscsi_conn *conn,
+ 	__be16 cid)
+ {
++	int ret;
+ 	conn->sess		= sess;
+ 	conn->cid		= be16_to_cpu(cid);
+ 	/*
+ 	 * Generate a random Status sequence number (statsn) for the new
+ 	 * iSCSI connection.
+ 	 */
+-	get_random_bytes(&conn->stat_sn, sizeof(u32));
++	ret = get_random_bytes_wait(&conn->stat_sn, sizeof(u32));
++	if (unlikely(ret))
++		return ret;
+ 
+ 	mutex_lock(&auth_id_lock);
+ 	conn->auth_id		= iscsit_global->auth_id++;
+ 	mutex_unlock(&auth_id_lock);
++	return 0;
+ }
+ 
+ __printf(2, 3) int iscsi_change_param_sprintf(
+@@ -306,7 +310,11 @@ static int iscsi_login_zero_tsih_s1(
+ 		return -ENOMEM;
+ 	}
+ 
+-	iscsi_login_set_conn_values(sess, conn, pdu->cid);
++	ret = iscsi_login_set_conn_values(sess, conn, pdu->cid);
++	if (unlikely(ret)) {
++		kfree(sess);
++		return ret;
++	}
+ 	sess->init_task_tag	= pdu->itt;
+ 	memcpy(&sess->isid, pdu->isid, 6);
+ 	sess->exp_cmd_sn	= be32_to_cpu(pdu->cmdsn);
+@@ -497,8 +505,7 @@ static int iscsi_login_non_zero_tsih_s1(
+ {
+ 	struct iscsi_login_req *pdu = (struct iscsi_login_req *)buf;
+ 
+-	iscsi_login_set_conn_values(NULL, conn, pdu->cid);
+-	return 0;
++	return iscsi_login_set_conn_values(NULL, conn, pdu->cid);
+ }
+ 
+ /*
+@@ -554,9 +561,8 @@ static int iscsi_login_non_zero_tsih_s2(
+ 		atomic_set(&sess->session_continuation, 1);
+ 	spin_unlock_bh(&sess->conn_lock);
+ 
+-	iscsi_login_set_conn_values(sess, conn, pdu->cid);
+-
+-	if (iscsi_copy_param_list(&conn->param_list,
++	if (iscsi_login_set_conn_values(sess, conn, pdu->cid) < 0 ||
++	    iscsi_copy_param_list(&conn->param_list,
+ 			conn->tpg->param_list, 0) < 0) {
+ 		iscsit_tx_login_rsp(conn, ISCSI_STATUS_CLS_TARGET_ERR,
+ 				ISCSI_LOGIN_STATUS_NO_RESOURCES);
 -- 
 2.13.0
