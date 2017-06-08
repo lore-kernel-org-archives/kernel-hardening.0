@@ -1,45 +1,82 @@
-Date: Wed, 7 Jun 2017 23:06:31 -0400
-From: Theodore Ts'o <tytso@mit.edu>
-Message-ID: <20170608030631.ywmldxzehtumeqd3@thunk.org>
-References: <20170606174804.31124-1-Jason@zx2c4.com>
- <20170606174804.31124-13-Jason@zx2c4.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170606174804.31124-13-Jason@zx2c4.com>
-Subject: [kernel-hardening] Re: [PATCH v4 12/13] bluetooth/smp: ensure RNG is properly seeded
- before ECDH use
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, Marcel Holtmann <marcel@holtmann.org>, Gustavo Padovan <gustavo@padovan.org>, Johan Hedberg <johan.hedberg@gmail.com>
+From: Matt Brown <matt@nmatt.com>
+Date: Wed,  7 Jun 2017 23:43:48 -0400
+Message-Id: <20170608034349.31876-1-matt@nmatt.com>
+Subject: [kernel-hardening] [PATCH v2 0/1]  Add Trusted Path Execution as a stackable LSM
+To: james.l.morris@oracle.com, serge@hallyn.com
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 06, 2017 at 07:48:03PM +0200, Jason A. Donenfeld wrote:
-> This protocol uses lots of complex cryptography that relies on securely
-> generated random numbers. Thus, it's important that the RNG is actually
-> seeded before use. Fortuantely, it appears we're always operating in
-> process context (there are many GFP_KERNEL allocations and other
-> sleeping operations), and so we can simply demand that the RNG is seeded
-> before we use it.
-> 
-> We take two strategies in this commit. The first is for the library code
-> that's called from other modules like hci or mgmt: here we just change
-> the call to get_random_bytes_wait, and return the result of the wait to
-> the caller, along with the other error codes of those functions like
-> usual. Then there's the SMP protocol handler itself, which makes many
-> many many calls to get_random_bytes during different phases. For this,
-> rather than have to change all the calls to get_random_bytes_wait and
-> propagate the error result, it's actually enough to just put a single
-> call to wait_for_random_bytes() at the beginning of the handler, to
-> ensure that all the subsequent invocations are safe, without having to
-> actually change them. Likewise, for the random address changing
-> function, we'd rather know early on in the function whether the RNG
-> initialization has been interrupted, rather than later, so we call
-> wait_for_random_bytes() at the top, so that later on the call to
-> get_random_bytes() is acceptable.
+Trusted Path Execution (TPE)
 
-Do we need to do all of this?  Bluetooth folks, is it fair to assume
-that hci_power_on() has to be called before any bluetooth functions
-can be done?  If so, adding a wait_for_random_bytes() in
-hci_power_on() might be all that is necessary.
+Patch Versions:
 
-	       	     	    	    - Ted
+v1:
+* initial patch introduction
+
+v2:
+* included copyright notice from Brad Spengler and Corey Henderson
+* reversed the invert_gid logic. tpe.gid now defaults to being the
+  trusted group rather than the untrusted group.
+* fixed race condition by taking reference to the parent dentry
+* added sysctl tpe.restrict_root that includes the root user in TPE checks
+* added mprotect and mmap restrictions from Corey Henderson tpe-lkm
+  project
+* added documentation file
+
+This patch was modified from Brad Spengler's Trusted Path Execution (TPE)
+feature. It also adds features and config options that were found in Corey
+Henderson's tpe-lkm project.
+
+Modifications from Brad Spengler's implementation of TPE were made to
+turn it into a stackable LSM using the existing LSM hook bprm_set_creds.
+Also, a new denial logging function was used to simplify printing messages
+to the kernel log. Additionally, mmap and mprotect restrictions were
+taken from Corey Henderson's tpe-lkm project and implemented using the
+LSM hooks mmap_file and file_mprotect.
+
+Trusted Path Execution is not a new idea:
+
+http://phrack.org/issues/52/6.html#article
+
+| A trusted path is one that is inside a root owned directory that
+| is not group or world writable.  /bin, /usr/bin, /usr/local/bin, are
+| (under normal circumstances) considered trusted.  Any non-root
+| users home directory is not trusted, nor is /tmp.
+
+To be clear, Trusted Path Execution is no replacement for a MAC system
+like SELinux, SMACK, or AppArmor. This LSM is designed to be good enough
+without requiring a userland utility to configure policies. The fact
+that TPE only requires the user to turn on a few sysctl options lowers
+the barrier to implementing a security framework substantially.
+
+Threat Models:
+
+1. Attacker on system executing exploit on system vulnerability
+
+*  If attacker uses a binary as a part of their system exploit, TPE can
+   frustrate their efforts
+
+*  This protection can be more effective when an attacker does not yet
+   have an interactive shell on a system
+
+*  Issues:
+   *  Can be bypassed by interpreted languages such as python. You can run
+      malicious code by doing: python -c 'evil code'
+
+2. Attacker on system replaces binary used by a privileged user with a
+   malicious one
+
+*  This situation arises when the administrator of a system leaves a
+   binary as world writable.
+
+*  TPE is very effective against this threat model
+
+Documentation/security/tpe.txt |  59 +++++++++++
+ MAINTAINERS                    |   5 +
+ include/linux/lsm_hooks.h      |   5 +
+ security/Kconfig               |   1 +
+ security/Makefile              |   2 +
+ security/security.c            |   1 +
+ security/tpe/Kconfig           |  64 ++++++++++++
+ security/tpe/Makefile          |   3 +
+ security/tpe/tpe_lsm.c         | 218 +++++++++++++++++++++++++++++++++++++++++
