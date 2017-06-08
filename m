@@ -1,460 +1,2598 @@
 References: <59cec608-608e-6de6-21d9-bdec7b0ded3b@schaufler-ca.com>
 From: Casey Schaufler <casey@schaufler-ca.com>
-Message-ID: <3cb05c5f-a8b1-9bdd-5db6-dd21bdcd4d22@schaufler-ca.com>
-Date: Thu, 8 Jun 2017 13:49:52 -0700
+Message-ID: <a50c4685-df76-9822-b232-06f84469e854@schaufler-ca.com>
+Date: Thu, 8 Jun 2017 13:50:01 -0700
 MIME-Version: 1.0
 In-Reply-To: <59cec608-608e-6de6-21d9-bdec7b0ded3b@schaufler-ca.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH 3/6] LSM: Manage file security blobs
+Subject: [kernel-hardening] [PATCH 5/6] LSM: Infrastructure management of the remaining blobs
 To: LSM <linux-security-module@vger.kernel.org>, James Morris <jmorris@namei.org>
 Cc: John Johansen <john.johansen@canonical.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKLM <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Subject: [PATCH 3/6] LSM: Manage file security blobs
+Subject: [PATCH 5/6] LSM: Infrastructure management of the remaining blobs
 
-Move the management of file security blobs from the individual
-security modules to the security infrastructure. The security modules
-using file blobs have been updated accordingly. Modules are required
-to identify the space they need at module initialization. In some
-cases a module no longer needs to supply a blob management hook, in
-which case the hook has been removed.
+Move management of the inode, ipc, key, msg_msg, sock and superblock
+security blobs from the security modules to the infrastructure.
+Use of the blob pointers is abstracted in the security modules.
 
 Signed-off-by: Casey Schaufler <casey@schaufler-ca.com>
 ---
- include/linux/lsm_hooks.h           |  1 +
- security/apparmor/include/context.h |  6 ++++++
- security/apparmor/lsm.c             | 26 ++++-------------------
- security/security.c                 | 32 +++++++++++++++++++++++++++++
- security/selinux/hooks.c            | 41 +++++++++----------------------------
- security/selinux/include/objsec.h   |  5 +++++
- security/smack/smack.h              |  5 +++++
- security/smack/smack_lsm.c          | 26 ++++++++---------------
- 8 files changed, 72 insertions(+), 70 deletions(-)
+ include/linux/lsm_hooks.h         |   8 +
+ security/security.c               | 259 +++++++++++++++++++++++++++-
+ security/selinux/hooks.c          | 333 ++++++++++++------------------------
+ security/selinux/include/objsec.h |  65 +++++++-
+ security/selinux/netlabel.c       |  15 +-
+ security/selinux/selinuxfs.c      |   4 +-
+ security/selinux/ss/services.c    |   3 +-
+ security/smack/smack.h            |  61 ++++++-
+ security/smack/smack_lsm.c        | 343 +++++++++++---------------------------
+ security/smack/smack_netfilter.c  |   8 +-
+ 10 files changed, 599 insertions(+), 500 deletions(-)
 
 diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
-index 41f01e2..dc012eb 100644
+index feb78e4..0f30752 100644
 --- a/include/linux/lsm_hooks.h
 +++ b/include/linux/lsm_hooks.h
-@@ -1894,6 +1894,7 @@ struct security_hook_list {
-  */
+@@ -1895,6 +1895,12 @@ struct security_hook_list {
  struct lsm_blob_sizes {
  	int	lbs_cred;
-+	int	lbs_file;
+ 	int	lbs_file;
++	int	lbs_inode;
++	int	lbs_ipc;
++	int	lbs_key;
++	int	lbs_msg_msg;
++	int	lbs_sock;
++	int	lbs_superblock;
+ 	int	lbs_task;
  };
  
- /*
-diff --git a/security/apparmor/include/context.h b/security/apparmor/include/context.h
-index f35ad39..3ff3879 100644
---- a/security/apparmor/include/context.h
-+++ b/security/apparmor/include/context.h
-@@ -25,6 +25,7 @@
- 
- #define cred_ctx(X) apparmor_cred(X)
- #define current_ctx() cred_ctx(current_cred())
-+#define file_ctx(X) apparmor_file(X)
- 
- /* struct aa_file_ctx - the AppArmor context the file was opened in
-  * @perms: the permission the file was opened with
-@@ -92,6 +93,11 @@ static inline struct aa_task_ctx *apparmor_cred(const struct cred *cred)
- 	return cred->security;
- }
- 
-+static inline struct aa_file_ctx *apparmor_file(const struct file *file)
-+{
-+	return file->f_security;
-+}
-+
- /**
-  * aa_cred_profile - obtain cred's profiles
-  * @cred: cred to obtain profiles from  (NOT NULL)
-diff --git a/security/apparmor/lsm.c b/security/apparmor/lsm.c
-index eef5551..12a0265 100644
---- a/security/apparmor/lsm.c
-+++ b/security/apparmor/lsm.c
-@@ -329,7 +329,7 @@ static int apparmor_inode_getattr(const struct path *path)
- 
- static int apparmor_file_open(struct file *file, const struct cred *cred)
- {
--	struct aa_file_ctx *fctx = file->f_security;
-+	struct aa_file_ctx *fctx = file_ctx(file);
- 	struct aa_profile *profile;
- 	int error = 0;
- 
-@@ -360,26 +360,9 @@ static int apparmor_file_open(struct file *file, const struct cred *cred)
- 	return error;
- }
- 
--static int apparmor_file_alloc_security(struct file *file)
--{
--	/* freed by apparmor_file_free_security */
--	file->f_security = aa_alloc_file_context(GFP_KERNEL);
--	if (!file->f_security)
--		return -ENOMEM;
--	return 0;
--
--}
--
--static void apparmor_file_free_security(struct file *file)
--{
--	struct aa_file_ctx *ctx = file->f_security;
--
--	aa_free_file_context(ctx);
--}
--
- static int common_file_perm(const char *op, struct file *file, u32 mask)
- {
--	struct aa_file_ctx *fctx = file->f_security;
-+	struct aa_file_ctx *fctx = file_ctx(file);
- 	struct aa_profile *profile, *fprofile = aa_cred_profile(file->f_cred);
- 	int error = 0;
- 
-@@ -425,7 +408,7 @@ static int common_mmap(const char *op, struct file *file, unsigned long prot,
- {
- 	int mask = 0;
- 
--	if (!file || !file->f_security)
-+	if (!file || file_ctx(file) == NULL)
- 		return 0;
- 
- 	if (prot & PROT_READ)
-@@ -566,6 +549,7 @@ static int apparmor_task_setrlimit(struct task_struct *task,
- 
- struct lsm_blob_sizes apparmor_blob_sizes = {
- 	.lbs_cred = sizeof(struct aa_task_ctx),
-+	.lbs_file = sizeof(struct aa_file_ctx),
- };
- 
- static struct security_hook_list apparmor_hooks[] __lsm_ro_after_init = {
-@@ -588,8 +572,6 @@ static struct security_hook_list apparmor_hooks[] __lsm_ro_after_init = {
- 
- 	LSM_HOOK_INIT(file_open, apparmor_file_open),
- 	LSM_HOOK_INIT(file_permission, apparmor_file_permission),
--	LSM_HOOK_INIT(file_alloc_security, apparmor_file_alloc_security),
--	LSM_HOOK_INIT(file_free_security, apparmor_file_free_security),
- 	LSM_HOOK_INIT(mmap_file, apparmor_mmap_file),
- 	LSM_HOOK_INIT(file_mprotect, apparmor_file_mprotect),
- 	LSM_HOOK_INIT(file_lock, apparmor_file_lock),
-diff --git a/security/security.c b/security/security.c
-index 062a9e4..3c22fb1 100644
---- a/security/security.c
-+++ b/security/security.c
-@@ -88,6 +88,7 @@ int __init security_init(void)
- 
- #ifdef CONFIG_SECURITY_LSM_DEBUG
- 	pr_info("LSM: cred blob size       = %d\n", blob_sizes.lbs_cred);
-+	pr_info("LSM: file blob size       = %d\n", blob_sizes.lbs_file);
+@@ -1958,9 +1964,11 @@ static inline void loadpin_add_hooks(void) { };
  #endif
  
+ extern int lsm_cred_alloc(struct cred *cred, gfp_t gfp);
++extern int lsm_inode_alloc(struct inode *inode);
+ 
+ #ifdef CONFIG_SECURITY
+ void lsm_early_cred(struct cred *cred);
++void lsm_early_inode(struct inode *inode);
+ #endif
+ 
+ #endif /* ! __LINUX_LSM_HOOKS_H */
+diff --git a/security/security.c b/security/security.c
+index bdf8c04..1004914 100644
+--- a/security/security.c
++++ b/security/security.c
+@@ -26,7 +26,9 @@
+ #include <linux/personality.h>
+ #include <linux/backing-dev.h>
+ #include <linux/string.h>
++#include <linux/msg.h>
+ #include <net/flow.h>
++#include <net/sock.h>
+ 
+ #define MAX_LSM_EVM_XATTR	2
+ 
+@@ -89,8 +91,16 @@ int __init security_init(void)
+ #ifdef CONFIG_SECURITY_LSM_DEBUG
+ 	pr_info("LSM: cred blob size       = %d\n", blob_sizes.lbs_cred);
+ 	pr_info("LSM: file blob size       = %d\n", blob_sizes.lbs_file);
++	pr_info("LSM: inode blob size      = %d\n", blob_sizes.lbs_inode);
++	pr_info("LSM: ipc blob size        = %d\n", blob_sizes.lbs_ipc);
++#ifdef CONFIG_KEYS
++	pr_info("LSM: key blob size        = %d\n", blob_sizes.lbs_key);
++#endif /* CONFIG_KEYS */
++	pr_info("LSM: msg_msg blob size    = %d\n", blob_sizes.lbs_msg_msg);
++	pr_info("LSM: sock blob size       = %d\n", blob_sizes.lbs_sock);
++	pr_info("LSM: superblock blob size = %d\n", blob_sizes.lbs_superblock);
+ 	pr_info("LSM: task blob size       = %d\n", blob_sizes.lbs_task);
+-#endif
++#endif /* CONFIG_SECURITY_LSM_DEBUG */
+ 
  	return 0;
-@@ -246,6 +247,30 @@ static void __init lsm_set_size(int *need, int *lbs)
- void __init security_add_blobs(struct lsm_blob_sizes *needed)
+ }
+@@ -249,7 +259,19 @@ void __init security_add_blobs(struct lsm_blob_sizes *needed)
  {
  	lsm_set_size(&needed->lbs_cred, &blob_sizes.lbs_cred);
-+	lsm_set_size(&needed->lbs_file, &blob_sizes.lbs_file);
-+}
-+
+ 	lsm_set_size(&needed->lbs_file, &blob_sizes.lbs_file);
++	lsm_set_size(&needed->lbs_ipc, &blob_sizes.lbs_ipc);
++	lsm_set_size(&needed->lbs_key, &blob_sizes.lbs_key);
++	lsm_set_size(&needed->lbs_msg_msg, &blob_sizes.lbs_msg_msg);
++	lsm_set_size(&needed->lbs_sock, &blob_sizes.lbs_sock);
++	lsm_set_size(&needed->lbs_superblock, &blob_sizes.lbs_superblock);
+ 	lsm_set_size(&needed->lbs_task, &blob_sizes.lbs_task);
++	/*
++	 * The inode blob gets an rcu_head in addition to
++	 * what the modules might need.
++	 */
++	if (needed->lbs_inode && blob_sizes.lbs_inode == 0)
++		blob_sizes.lbs_inode = sizeof(struct rcu_head);
++	lsm_set_size(&needed->lbs_inode, &blob_sizes.lbs_inode);
+ }
+ 
+ /**
+@@ -298,6 +320,166 @@ int lsm_task_alloc(struct task_struct *task)
+ 	return 0;
+ }
+ 
 +/**
-+ * lsm_file_alloc - allocate a composite file blob
-+ * @file: the file that needs a blob
++ * lsm_inode_alloc - allocate a composite inode blob
++ * @inode: the inode that needs a blob
 + *
-+ * Allocate the file blob for all the modules
++ * Allocate the inode blob for all the modules
 + *
 + * Returns 0, or -ENOMEM if memory can't be allocated.
 + */
-+int lsm_file_alloc(struct file *file)
++int lsm_inode_alloc(struct inode *inode)
 +{
 +#ifdef CONFIG_SECURITY_LSM_DEBUG
-+	if (file->f_security)
-+		pr_info("%s: Inbound file blob is not NULL.\n", __func__);
++	if (inode->i_security)
++		pr_info("%s: Inbound inode blob is not NULL.\n", __func__);
 +#endif
-+	if (blob_sizes.lbs_file == 0)
++	if (blob_sizes.lbs_inode == 0)
 +		return 0;
 +
-+	file->f_security = kzalloc(blob_sizes.lbs_file, GFP_KERNEL);
-+	if (file->f_security == NULL)
++	inode->i_security = kzalloc(blob_sizes.lbs_inode, GFP_KERNEL);
++	if (inode->i_security == NULL)
 +		return -ENOMEM;
 +	return 0;
- }
- 
++}
++
++/**
++ * lsm_early_inode - during initialization allocate a composite inode blob
++ * @inode: the inode that needs a blob
++ *
++ * Allocate the inode blob for all the modules if it's not already there
++ */
++void lsm_early_inode(struct inode *inode)
++{
++	int rc;
++
++	if (inode == NULL)
++		panic("%s: NULL inode.\n", __func__);
++	if (inode->i_security != NULL)
++		return;
++	rc = lsm_inode_alloc(inode);
++	if (rc)
++		panic("%s: Early inode alloc failed.\n", __func__);
++}
++
++/**
++ * lsm_ipc_alloc - allocate a composite ipc blob
++ * @kip: the ipc that needs a blob
++ *
++ * Allocate the ipc blob for all the modules
++ *
++ * Returns 0, or -ENOMEM if memory can't be allocated.
++ */
++int lsm_ipc_alloc(struct kern_ipc_perm *kip)
++{
++#ifdef CONFIG_SECURITY_LSM_DEBUG
++	if (kip->security)
++		pr_info("%s: Inbound ipc blob is not NULL.\n", __func__);
++#endif
++	if (blob_sizes.lbs_ipc == 0)
++		return 0;
++
++	kip->security = kzalloc(blob_sizes.lbs_ipc, GFP_KERNEL);
++	if (kip->security == NULL)
++		return -ENOMEM;
++	return 0;
++}
++
++#ifdef CONFIG_KEYS
++/**
++ * lsm_key_alloc - allocate a composite key blob
++ * @key: the key that needs a blob
++ *
++ * Allocate the key blob for all the modules
++ *
++ * Returns 0, or -ENOMEM if memory can't be allocated.
++ */
++int lsm_key_alloc(struct key *key)
++{
++#ifdef CONFIG_SECURITY_LSM_DEBUG
++	if (key->security)
++		pr_info("%s: Inbound key blob is not NULL.\n", __func__);
++#endif
++	if (blob_sizes.lbs_key == 0)
++		return 0;
++
++	key->security = kzalloc(blob_sizes.lbs_key, GFP_KERNEL);
++	if (key->security == NULL)
++		return -ENOMEM;
++	return 0;
++}
++#endif /* CONFIG_KEYS */
++
++/**
++ * lsm_msg_msg_alloc - allocate a composite msg_msg blob
++ * @mp: the msg_msg that needs a blob
++ *
++ * Allocate the ipc blob for all the modules
++ *
++ * Returns 0, or -ENOMEM if memory can't be allocated.
++ */
++int lsm_msg_msg_alloc(struct msg_msg *mp)
++{
++#ifdef CONFIG_SECURITY_LSM_DEBUG
++	if (mp->security)
++		pr_info("%s: Inbound msg_msg blob is not NULL.\n", __func__);
++#endif
++	if (blob_sizes.lbs_msg_msg == 0)
++		return 0;
++
++	mp->security = kzalloc(blob_sizes.lbs_msg_msg, GFP_KERNEL);
++	if (mp->security == NULL)
++		return -ENOMEM;
++	return 0;
++}
++
++/**
++ * lsm_sock_alloc - allocate a composite sock blob
++ * @sock: the sock that needs a blob
++ * @priority: allocation mode
++ *
++ * Allocate the sock blob for all the modules
++ *
++ * Returns 0, or -ENOMEM if memory can't be allocated.
++ */
++int lsm_sock_alloc(struct sock *sock, gfp_t priority)
++{
++#ifdef CONFIG_SECURITY_LSM_DEBUG
++	if (sock->sk_security)
++		pr_info("%s: Inbound sock blob is not NULL.\n", __func__);
++#endif
++	if (blob_sizes.lbs_sock == 0)
++		return 0;
++
++	sock->sk_security = kzalloc(blob_sizes.lbs_sock, priority);
++	if (sock->sk_security == NULL)
++		return -ENOMEM;
++	return 0;
++}
++
++/**
++ * lsm_superblock_alloc - allocate a composite superblock blob
++ * @sb: the superblock that needs a blob
++ *
++ * Allocate the superblock blob for all the modules
++ *
++ * Returns 0, or -ENOMEM if memory can't be allocated.
++ */
++int lsm_superblock_alloc(struct super_block *sb)
++{
++#ifdef CONFIG_SECURITY_LSM_DEBUG
++	if (sb->s_security)
++		pr_info("%s: Inbound superblock blob is not NULL.\n", __func__);
++#endif
++	if (blob_sizes.lbs_superblock == 0)
++		return 0;
++
++	sb->s_security = kzalloc(blob_sizes.lbs_superblock, GFP_KERNEL);
++	if (sb->s_security == NULL)
++		return -ENOMEM;
++	return 0;
++}
++
  /*
-@@ -933,12 +958,19 @@ int security_file_permission(struct file *file, int mask)
+  * Hook list operation macros.
+  *
+@@ -470,12 +652,18 @@ int security_bprm_secureexec(struct linux_binprm *bprm)
  
- int security_file_alloc(struct file *file)
+ int security_sb_alloc(struct super_block *sb)
  {
-+	int rc = lsm_file_alloc(file);
++	int rc = lsm_superblock_alloc(sb);
 +
 +	if (rc)
 +		return rc;
- 	return call_int_hook(file_alloc_security, 0, file);
+ 	return call_int_hook(sb_alloc_security, 0, sb);
  }
  
- void security_file_free(struct file *file)
+ void security_sb_free(struct super_block *sb)
  {
- 	call_void_hook(file_free_security, file);
-+
-+	kfree(file->f_security);
-+	file->f_security = NULL;
+ 	call_void_hook(sb_free_security, sb);
++	kfree(sb->s_security);
++	sb->s_security = NULL;
  }
  
- int security_file_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ int security_sb_copy_data(char *orig, char *copy)
+@@ -546,14 +734,39 @@ EXPORT_SYMBOL(security_sb_parse_opts_str);
+ 
+ int security_inode_alloc(struct inode *inode)
+ {
+-	inode->i_security = NULL;
++	int rc = lsm_inode_alloc(inode);
++
++	if (rc)
++		return rc;
+ 	return call_int_hook(inode_alloc_security, 0, inode);
+ }
+ 
++static void inode_free_by_rcu(struct rcu_head *head)
++{
++	/*
++	 * The rcu head is at the start of the inode blob
++	 */
++	kfree(head);
++}
++
+ void security_inode_free(struct inode *inode)
+ {
+ 	integrity_inode_free(inode);
+ 	call_void_hook(inode_free_security, inode);
++	/*
++	 * The inode may still be referenced in a path walk and
++	 * a call to security_inode_permission() can be made
++	 * after inode_free_security() is called. Ideally, the VFS
++	 * wouldn't do this, but fixing that is a much harder
++	 * job. For now, simply free the i_security via RCU, and
++	 * leave the current inode->i_security pointer intact.
++	 * The inode will be freed after the RCU grace period too.
++	 */
++	if (inode->i_security != NULL) {
++		call_rcu((struct rcu_head *)inode->i_security,
++				inode_free_by_rcu);
++		inode->i_security = NULL;
++	}
+ }
+ 
+ int security_dentry_init_security(struct dentry *dentry, int mode,
+@@ -1296,22 +1509,36 @@ void security_ipc_getsecid(struct kern_ipc_perm *ipcp, u32 *secid)
+ 
+ int security_msg_msg_alloc(struct msg_msg *msg)
+ {
++	int rc = lsm_msg_msg_alloc(msg);
++
++	if (rc)
++		return rc;
+ 	return call_int_hook(msg_msg_alloc_security, 0, msg);
+ }
+ 
+ void security_msg_msg_free(struct msg_msg *msg)
+ {
+ 	call_void_hook(msg_msg_free_security, msg);
++	kfree(msg->security);
++	msg->security = NULL;
+ }
+ 
+ int security_msg_queue_alloc(struct msg_queue *msq)
+ {
++	int rc = lsm_ipc_alloc(&msq->q_perm);
++
++	if (rc)
++		return rc;
+ 	return call_int_hook(msg_queue_alloc_security, 0, msq);
+ }
+ 
+ void security_msg_queue_free(struct msg_queue *msq)
+ {
++	struct kern_ipc_perm *kip = &msq->q_perm;
++
+ 	call_void_hook(msg_queue_free_security, msq);
++	kfree(kip->security);
++	kip->security = NULL;
+ }
+ 
+ int security_msg_queue_associate(struct msg_queue *msq, int msqflg)
+@@ -1338,12 +1565,20 @@ int security_msg_queue_msgrcv(struct msg_queue *msq, struct msg_msg *msg,
+ 
+ int security_shm_alloc(struct shmid_kernel *shp)
+ {
++	int rc = lsm_ipc_alloc(&shp->shm_perm);
++
++	if (rc)
++		return rc;
+ 	return call_int_hook(shm_alloc_security, 0, shp);
+ }
+ 
+ void security_shm_free(struct shmid_kernel *shp)
+ {
++	struct kern_ipc_perm *kip = &shp->shm_perm;
++
+ 	call_void_hook(shm_free_security, shp);
++	kfree(kip->security);
++	kip->security = NULL;
+ }
+ 
+ int security_shm_associate(struct shmid_kernel *shp, int shmflg)
+@@ -1363,12 +1598,20 @@ int security_shm_shmat(struct shmid_kernel *shp, char __user *shmaddr, int shmfl
+ 
+ int security_sem_alloc(struct sem_array *sma)
+ {
++	int rc = lsm_ipc_alloc(&sma->sem_perm);
++
++	if (rc)
++		return rc;
+ 	return call_int_hook(sem_alloc_security, 0, sma);
+ }
+ 
+ void security_sem_free(struct sem_array *sma)
+ {
++	struct kern_ipc_perm *kip = &sma->sem_perm;
++
+ 	call_void_hook(sem_free_security, sma);
++	kfree(kip->security);
++	kip->security = NULL;
+ }
+ 
+ int security_sem_associate(struct sem_array *sma, int semflg)
+@@ -1586,12 +1829,18 @@ EXPORT_SYMBOL(security_socket_getpeersec_dgram);
+ 
+ int security_sk_alloc(struct sock *sk, int family, gfp_t priority)
+ {
++	int rc = lsm_sock_alloc(sk, priority);
++
++	if (rc)
++		return rc;
+ 	return call_int_hook(sk_alloc_security, 0, sk, family, priority);
+ }
+ 
+ void security_sk_free(struct sock *sk)
+ {
+ 	call_void_hook(sk_free_security, sk);
++	kfree(sk->sk_security);
++	sk->sk_security = NULL;
+ }
+ 
+ void security_sk_clone(const struct sock *sk, struct sock *newsk)
+@@ -1794,12 +2043,18 @@ EXPORT_SYMBOL(security_skb_classify_flow);
+ int security_key_alloc(struct key *key, const struct cred *cred,
+ 		       unsigned long flags)
+ {
++	int rc = lsm_key_alloc(key);
++
++	if (rc)
++		return rc;
+ 	return call_int_hook(key_alloc, 0, key, cred, flags);
+ }
+ 
+ void security_key_free(struct key *key)
+ {
+ 	call_void_hook(key_free, key);
++	kfree(key->security);
++	key->security = NULL;
+ }
+ 
+ int security_key_permission(key_ref_t key_ref,
 diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
-index 00156c6..223a178 100644
+index 223a178..6e51ae5 100644
 --- a/security/selinux/hooks.c
 +++ b/security/selinux/hooks.c
-@@ -127,7 +127,6 @@ int selinux_enabled = 1;
+@@ -126,8 +126,6 @@ __setup("selinux=", selinux_enabled_setup);
+ int selinux_enabled = 1;
  #endif
  
- static struct kmem_cache *sel_inode_cache;
--static struct kmem_cache *file_security_cache;
- 
+-static struct kmem_cache *sel_inode_cache;
+-
  /**
   * selinux_secmark_enabled - Check to see if SECMARK is currently enabled
-@@ -347,27 +346,15 @@ static void inode_free_security(struct inode *inode)
+  *
+@@ -211,13 +209,9 @@ static inline u32 task_sid(const struct task_struct *task)
  
- static int file_alloc_security(struct file *file)
+ static int inode_alloc_security(struct inode *inode)
  {
--	struct file_security_struct *fsec;
-+	struct file_security_struct *fsec = selinux_file(file);
+-	struct inode_security_struct *isec;
++	struct inode_security_struct *isec = selinux_inode(inode);
  	u32 sid = current_sid();
  
--	fsec = kmem_cache_zalloc(file_security_cache, GFP_KERNEL);
--	if (!fsec)
+-	isec = kmem_cache_zalloc(sel_inode_cache, GFP_NOFS);
+-	if (!isec)
 -		return -ENOMEM;
 -
- 	fsec->sid = sid;
- 	fsec->fown_sid = sid;
--	file->f_security = fsec;
+ 	spin_lock_init(&isec->lock);
+ 	INIT_LIST_HEAD(&isec->list);
+ 	isec->inode = inode;
+@@ -225,7 +219,6 @@ static int inode_alloc_security(struct inode *inode)
+ 	isec->sclass = SECCLASS_FILE;
+ 	isec->task_sid = sid;
+ 	isec->initialized = LABEL_INVALID;
+-	inode->i_security = isec;
+ 
+ 	return 0;
+ }
+@@ -243,7 +236,7 @@ static int __inode_security_revalidate(struct inode *inode,
+ 				       struct dentry *opt_dentry,
+ 				       bool may_sleep)
+ {
+-	struct inode_security_struct *isec = inode->i_security;
++	struct inode_security_struct *isec = selinux_inode(inode);
+ 
+ 	might_sleep_if(may_sleep);
+ 
+@@ -263,7 +256,7 @@ static int __inode_security_revalidate(struct inode *inode,
+ 
+ static struct inode_security_struct *inode_security_novalidate(struct inode *inode)
+ {
+-	return inode->i_security;
++	return selinux_inode(inode);
+ }
+ 
+ static struct inode_security_struct *inode_security_rcu(struct inode *inode, bool rcu)
+@@ -273,7 +266,7 @@ static struct inode_security_struct *inode_security_rcu(struct inode *inode, boo
+ 	error = __inode_security_revalidate(inode, NULL, !rcu);
+ 	if (error)
+ 		return ERR_PTR(error);
+-	return inode->i_security;
++	return selinux_inode(inode);
+ }
+ 
+ /*
+@@ -282,14 +275,14 @@ static struct inode_security_struct *inode_security_rcu(struct inode *inode, boo
+ static struct inode_security_struct *inode_security(struct inode *inode)
+ {
+ 	__inode_security_revalidate(inode, NULL, true);
+-	return inode->i_security;
++	return selinux_inode(inode);
+ }
+ 
+ static struct inode_security_struct *backing_inode_security_novalidate(struct dentry *dentry)
+ {
+ 	struct inode *inode = d_backing_inode(dentry);
+ 
+-	return inode->i_security;
++	return selinux_inode(inode);
+ }
+ 
+ /*
+@@ -300,21 +293,14 @@ static struct inode_security_struct *backing_inode_security(struct dentry *dentr
+ 	struct inode *inode = d_backing_inode(dentry);
+ 
+ 	__inode_security_revalidate(inode, dentry, true);
+-	return inode->i_security;
+-}
+-
+-static void inode_free_rcu(struct rcu_head *head)
+-{
+-	struct inode_security_struct *isec;
+-
+-	isec = container_of(head, struct inode_security_struct, rcu);
+-	kmem_cache_free(sel_inode_cache, isec);
++	return selinux_inode(inode);
+ }
+ 
+ static void inode_free_security(struct inode *inode)
+ {
+-	struct inode_security_struct *isec = inode->i_security;
+-	struct superblock_security_struct *sbsec = inode->i_sb->s_security;
++	struct inode_security_struct *isec = selinux_inode(inode);
++	struct superblock_security_struct *sbsec =
++					selinux_superblock(inode->i_sb);
+ 
+ 	/*
+ 	 * As not all inode security structures are in a list, we check for
+@@ -331,17 +317,6 @@ static void inode_free_security(struct inode *inode)
+ 		list_del_init(&isec->list);
+ 		spin_unlock(&sbsec->isec_lock);
+ 	}
+-
+-	/*
+-	 * The inode may still be referenced in a path walk and
+-	 * a call to selinux_inode_permission() can be made
+-	 * after inode_free_security() is called. Ideally, the VFS
+-	 * wouldn't do this, but fixing that is a much harder
+-	 * job. For now, simply free the i_security via RCU, and
+-	 * leave the current inode->i_security pointer intact.
+-	 * The inode will be freed after the RCU grace period too.
+-	 */
+-	call_rcu(&isec->rcu, inode_free_rcu);
+ }
+ 
+ static int file_alloc_security(struct file *file)
+@@ -357,11 +332,7 @@ static int file_alloc_security(struct file *file)
+ 
+ static int superblock_alloc_security(struct super_block *sb)
+ {
+-	struct superblock_security_struct *sbsec;
+-
+-	sbsec = kzalloc(sizeof(struct superblock_security_struct), GFP_KERNEL);
+-	if (!sbsec)
+-		return -ENOMEM;
++	struct superblock_security_struct *sbsec = selinux_superblock(sb);
+ 
+ 	mutex_init(&sbsec->lock);
+ 	INIT_LIST_HEAD(&sbsec->isec_head);
+@@ -370,18 +341,10 @@ static int superblock_alloc_security(struct super_block *sb)
+ 	sbsec->sid = SECINITSID_UNLABELED;
+ 	sbsec->def_sid = SECINITSID_FILE;
+ 	sbsec->mntpoint_sid = SECINITSID_UNLABELED;
+-	sb->s_security = sbsec;
  
  	return 0;
  }
  
--static void file_free_security(struct file *file)
+-static void superblock_free_security(struct super_block *sb)
 -{
--	struct file_security_struct *fsec = file->f_security;
--	file->f_security = NULL;
--	kmem_cache_free(file_security_cache, fsec);
+-	struct superblock_security_struct *sbsec = sb->s_security;
+-	sb->s_security = NULL;
+-	kfree(sbsec);
 -}
 -
- static int superblock_alloc_security(struct super_block *sb)
+ /* The file system's label must be initialized prior to use. */
+ 
+ static const char *labeling_behaviors[7] = {
+@@ -457,7 +420,7 @@ static int may_context_mount_inode_relabel(u32 sid,
+ 
+ static int selinux_is_sblabel_mnt(struct super_block *sb)
  {
+-	struct superblock_security_struct *sbsec = sb->s_security;
++	struct superblock_security_struct *sbsec = selinux_superblock(sb);
+ 
+ 	return sbsec->behavior == SECURITY_FS_USE_XATTR ||
+ 		sbsec->behavior == SECURITY_FS_USE_TRANS ||
+@@ -476,7 +439,7 @@ static int selinux_is_sblabel_mnt(struct super_block *sb)
+ 
+ static int sb_finish_set_opts(struct super_block *sb)
+ {
+-	struct superblock_security_struct *sbsec = sb->s_security;
++	struct superblock_security_struct *sbsec = selinux_superblock(sb);
+ 	struct dentry *root = sb->s_root;
+ 	struct inode *root_inode = d_backing_inode(root);
+ 	int rc = 0;
+@@ -555,7 +518,7 @@ static int selinux_get_mnt_opts(const struct super_block *sb,
+ 				struct security_mnt_opts *opts)
+ {
+ 	int rc = 0, i;
+-	struct superblock_security_struct *sbsec = sb->s_security;
++	struct superblock_security_struct *sbsec = selinux_superblock(sb);
+ 	char *context = NULL;
+ 	u32 len;
+ 	char tmp;
+@@ -618,7 +581,8 @@ static int selinux_get_mnt_opts(const struct super_block *sb,
+ 	}
+ 	if (sbsec->flags & ROOTCONTEXT_MNT) {
+ 		struct dentry *root = sbsec->sb->s_root;
+-		struct inode_security_struct *isec = backing_inode_security(root);
++		struct inode_security_struct *isec =
++						backing_inode_security(root);
+ 
+ 		rc = security_sid_to_context(isec->sid, &context, &len);
+ 		if (rc)
+@@ -671,7 +635,7 @@ static int selinux_set_mnt_opts(struct super_block *sb,
+ {
+ 	const struct cred *cred = current_cred();
+ 	int rc = 0, i;
+-	struct superblock_security_struct *sbsec = sb->s_security;
++	struct superblock_security_struct *sbsec = selinux_superblock(sb);
+ 	const char *name = sb->s_type->name;
+ 	struct dentry *root = sbsec->sb->s_root;
+ 	struct inode_security_struct *root_isec;
+@@ -919,8 +883,8 @@ static int selinux_set_mnt_opts(struct super_block *sb,
+ static int selinux_cmp_sb_context(const struct super_block *oldsb,
+ 				    const struct super_block *newsb)
+ {
+-	struct superblock_security_struct *old = oldsb->s_security;
+-	struct superblock_security_struct *new = newsb->s_security;
++	struct superblock_security_struct *old = selinux_superblock(oldsb);
++	struct superblock_security_struct *new = selinux_superblock(newsb);
+ 	char oldflags = old->flags & SE_MNTMASK;
+ 	char newflags = new->flags & SE_MNTMASK;
+ 
+@@ -949,8 +913,9 @@ static int selinux_cmp_sb_context(const struct super_block *oldsb,
+ static int selinux_sb_clone_mnt_opts(const struct super_block *oldsb,
+ 					struct super_block *newsb)
+ {
+-	const struct superblock_security_struct *oldsbsec = oldsb->s_security;
+-	struct superblock_security_struct *newsbsec = newsb->s_security;
++	const struct superblock_security_struct *oldsbsec =
++						selinux_superblock(oldsb);
++	struct superblock_security_struct *newsbsec = selinux_superblock(newsb);
+ 
+ 	int set_fscontext =	(oldsbsec->flags & FSCONTEXT_MNT);
+ 	int set_context =	(oldsbsec->flags & CONTEXT_MNT);
+@@ -984,14 +949,17 @@ static int selinux_sb_clone_mnt_opts(const struct super_block *oldsb,
+ 		if (!set_fscontext)
+ 			newsbsec->sid = sid;
+ 		if (!set_rootcontext) {
+-			struct inode_security_struct *newisec = backing_inode_security(newsb->s_root);
++			struct inode_security_struct *newisec =
++					backing_inode_security(newsb->s_root);
+ 			newisec->sid = sid;
+ 		}
+ 		newsbsec->mntpoint_sid = sid;
+ 	}
+ 	if (set_rootcontext) {
+-		const struct inode_security_struct *oldisec = backing_inode_security(oldsb->s_root);
+-		struct inode_security_struct *newisec = backing_inode_security(newsb->s_root);
++		const struct inode_security_struct *oldisec =
++					backing_inode_security(oldsb->s_root);
++		struct inode_security_struct *newisec =
++					backing_inode_security(newsb->s_root);
+ 
+ 		newisec->sid = oldisec->sid;
+ 	}
+@@ -1434,7 +1402,7 @@ static int selinux_genfs_get_sid(struct dentry *dentry,
+ static int inode_doinit_with_dentry(struct inode *inode, struct dentry *opt_dentry)
+ {
+ 	struct superblock_security_struct *sbsec = NULL;
+-	struct inode_security_struct *isec = inode->i_security;
++	struct inode_security_struct *isec = selinux_inode(inode);
+ 	u32 task_sid, sid = 0;
+ 	u16 sclass;
+ 	struct dentry *dentry;
+@@ -1453,7 +1421,7 @@ static int inode_doinit_with_dentry(struct inode *inode, struct dentry *opt_dent
+ 	if (isec->sclass == SECCLASS_FILE)
+ 		isec->sclass = inode_mode_to_security_class(inode->i_mode);
+ 
+-	sbsec = inode->i_sb->s_security;
++	sbsec = selinux_superblock(inode->i_sb);
+ 	if (!(sbsec->flags & SE_SBINITIALIZED)) {
+ 		/* Defer initialization until selinux_complete_init,
+ 		   after the initial policy is loaded and the security
+@@ -1719,7 +1687,7 @@ static int inode_has_perm(const struct cred *cred,
+ 		return 0;
+ 
+ 	sid = cred_sid(cred);
+-	isec = inode->i_security;
++	isec = selinux_inode(inode);
+ 
+ 	return avc_has_perm(sid, isec->sid, isec->sclass, perms, adp);
+ }
+@@ -1816,7 +1784,8 @@ selinux_determine_inode_label(const struct task_security_struct *tsec,
+ 				 const struct qstr *name, u16 tclass,
+ 				 u32 *_new_isid)
+ {
+-	const struct superblock_security_struct *sbsec = dir->i_sb->s_security;
++	const struct superblock_security_struct *sbsec =
++						selinux_superblock(dir->i_sb);
+ 
+ 	if ((sbsec->flags & SE_SBINITIALIZED) &&
+ 	    (sbsec->behavior == SECURITY_FS_USE_MNTPOINT)) {
+@@ -1846,7 +1815,7 @@ static int may_create(struct inode *dir,
+ 	int rc;
+ 
+ 	dsec = inode_security(dir);
+-	sbsec = dir->i_sb->s_security;
++	sbsec = selinux_superblock(dir->i_sb);
+ 
+ 	sid = tsec->sid;
+ 
+@@ -1985,7 +1954,7 @@ static int superblock_has_perm(const struct cred *cred,
  	struct superblock_security_struct *sbsec;
-@@ -1793,7 +1780,7 @@ static int file_has_perm(const struct cred *cred,
- 			 struct file *file,
- 			 u32 av)
- {
--	struct file_security_struct *fsec = file->f_security;
-+	struct file_security_struct *fsec = selinux_file(file);
- 	struct inode *inode = file_inode(file);
- 	struct common_audit_data ad;
  	u32 sid = cred_sid(cred);
-@@ -2112,7 +2099,7 @@ static int selinux_binder_transfer_file(struct task_struct *from,
- 					struct file *file)
+ 
+-	sbsec = sb->s_security;
++	sbsec = selinux_superblock(sb);
+ 	return avc_has_perm(sid, sbsec->sid, SECCLASS_FILESYSTEM, perms, ad);
+ }
+ 
+@@ -2579,11 +2548,6 @@ static int selinux_sb_alloc_security(struct super_block *sb)
+ 	return superblock_alloc_security(sb);
+ }
+ 
+-static void selinux_sb_free_security(struct super_block *sb)
+-{
+-	superblock_free_security(sb);
+-}
+-
+ static inline int match_prefix(char *prefix, int plen, char *option, int olen)
  {
- 	u32 sid = task_sid(to);
--	struct file_security_struct *fsec = file->f_security;
-+	struct file_security_struct *fsec = selinux_file(file);
- 	struct dentry *dentry = file->f_path.dentry;
- 	struct inode_security_struct *isec;
+ 	if (plen > olen)
+@@ -2680,7 +2644,7 @@ static int selinux_sb_remount(struct super_block *sb, void *data)
+ 	int rc, i, *flags;
+ 	struct security_mnt_opts opts;
+ 	char *secdata, **mount_options;
+-	struct superblock_security_struct *sbsec = sb->s_security;
++	struct superblock_security_struct *sbsec = selinux_superblock(sb);
+ 
+ 	if (!(sbsec->flags & SE_SBINITIALIZED))
+ 		return 0;
+@@ -2871,7 +2835,7 @@ static int selinux_inode_init_security(struct inode *inode, struct inode *dir,
+ 	int rc;
+ 	char *context;
+ 
+-	sbsec = dir->i_sb->s_security;
++	sbsec = selinux_superblock(dir->i_sb);
+ 
+ 	sid = tsec->sid;
+ 	newsid = tsec->create_sid;
+@@ -2885,7 +2849,7 @@ static int selinux_inode_init_security(struct inode *inode, struct inode *dir,
+ 
+ 	/* Possibly defer initialization to selinux_complete_init. */
+ 	if (sbsec->flags & SE_SBINITIALIZED) {
+-		struct inode_security_struct *isec = inode->i_security;
++		struct inode_security_struct *isec = selinux_inode(inode);
+ 		isec->sclass = inode_mode_to_security_class(inode->i_mode);
+ 		isec->sid = newsid;
+ 		isec->initialized = LABEL_INITIALIZED;
+@@ -2983,7 +2947,7 @@ static noinline int audit_inode_permission(struct inode *inode,
+ 					   unsigned flags)
+ {
  	struct common_audit_data ad;
-@@ -3376,7 +3363,7 @@ static int selinux_revalidate_file_permission(struct file *file, int mask)
- static int selinux_file_permission(struct file *file, int mask)
+-	struct inode_security_struct *isec = inode->i_security;
++	struct inode_security_struct *isec = selinux_inode(inode);
+ 	int rc;
+ 
+ 	ad.type = LSM_AUDIT_DATA_INODE;
+@@ -3104,7 +3068,7 @@ static int selinux_inode_setxattr(struct dentry *dentry, const char *name,
+ 	if (strcmp(name, XATTR_NAME_SELINUX))
+ 		return selinux_inode_setotherxattr(dentry, name);
+ 
+-	sbsec = inode->i_sb->s_security;
++	sbsec = selinux_superblock(inode->i_sb);
+ 	if (!(sbsec->flags & SBLABEL_MNT))
+ 		return -EOPNOTSUPP;
+ 
+@@ -3929,7 +3893,7 @@ static int selinux_task_kill(struct task_struct *p, struct siginfo *info,
+ static void selinux_task_to_inode(struct task_struct *p,
+ 				  struct inode *inode)
  {
- 	struct inode *inode = file_inode(file);
--	struct file_security_struct *fsec = file->f_security;
-+	struct file_security_struct *fsec = selinux_file(file);
- 	struct inode_security_struct *isec;
+-	struct inode_security_struct *isec = inode->i_security;
++	struct inode_security_struct *isec = selinux_inode(inode);
+ 	u32 sid = task_sid(p);
+ 
+ 	spin_lock(&isec->lock);
+@@ -4215,7 +4179,7 @@ static int socket_sockcreate_sid(const struct task_security_struct *tsec,
+ 
+ static int sock_has_perm(struct sock *sk, u32 perms)
+ {
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 	struct common_audit_data ad;
+ 	struct lsm_network_audit net = {0,};
+ 
+@@ -4270,7 +4234,7 @@ static int selinux_socket_post_create(struct socket *sock, int family,
+ 	isec->initialized = LABEL_INITIALIZED;
+ 
+ 	if (sock->sk) {
+-		sksec = sock->sk->sk_security;
++		sksec = selinux_sock(sock->sk);
+ 		sksec->sclass = sclass;
+ 		sksec->sid = sid;
+ 		err = selinux_netlbl_socket_post_create(sock->sk, family);
+@@ -4301,7 +4265,7 @@ static int selinux_socket_bind(struct socket *sock, struct sockaddr *address, in
+ 	family = sk->sk_family;
+ 	if (family == PF_INET || family == PF_INET6) {
+ 		char *addrp;
+-		struct sk_security_struct *sksec = sk->sk_security;
++		struct sk_security_struct *sksec = selinux_sock(sk);
+ 		struct common_audit_data ad;
+ 		struct lsm_network_audit net = {0,};
+ 		struct sockaddr_in *addr4 = NULL;
+@@ -4394,7 +4358,7 @@ static int selinux_socket_bind(struct socket *sock, struct sockaddr *address, in
+ static int selinux_socket_connect(struct socket *sock, struct sockaddr *address, int addrlen)
+ {
+ 	struct sock *sk = sock->sk;
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 	int err;
+ 
+ 	err = sock_has_perm(sk, SOCKET__CONNECT);
+@@ -4526,9 +4490,9 @@ static int selinux_socket_unix_stream_connect(struct sock *sock,
+ 					      struct sock *other,
+ 					      struct sock *newsk)
+ {
+-	struct sk_security_struct *sksec_sock = sock->sk_security;
+-	struct sk_security_struct *sksec_other = other->sk_security;
+-	struct sk_security_struct *sksec_new = newsk->sk_security;
++	struct sk_security_struct *sksec_sock = selinux_sock(sock);
++	struct sk_security_struct *sksec_other = selinux_sock(other);
++	struct sk_security_struct *sksec_new = selinux_sock(newsk);
+ 	struct common_audit_data ad;
+ 	struct lsm_network_audit net = {0,};
+ 	int err;
+@@ -4559,8 +4523,8 @@ static int selinux_socket_unix_stream_connect(struct sock *sock,
+ static int selinux_socket_unix_may_send(struct socket *sock,
+ 					struct socket *other)
+ {
+-	struct sk_security_struct *ssec = sock->sk->sk_security;
+-	struct sk_security_struct *osec = other->sk->sk_security;
++	struct sk_security_struct *ssec = selinux_sock(sock->sk);
++	struct sk_security_struct *osec = selinux_sock(other->sk);
+ 	struct common_audit_data ad;
+ 	struct lsm_network_audit net = {0,};
+ 
+@@ -4599,7 +4563,7 @@ static int selinux_sock_rcv_skb_compat(struct sock *sk, struct sk_buff *skb,
+ 				       u16 family)
+ {
+ 	int err = 0;
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 	u32 sk_sid = sksec->sid;
+ 	struct common_audit_data ad;
+ 	struct lsm_network_audit net = {0,};
+@@ -4631,7 +4595,7 @@ static int selinux_sock_rcv_skb_compat(struct sock *sk, struct sk_buff *skb,
+ static int selinux_socket_sock_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ {
+ 	int err;
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 	u16 family = sk->sk_family;
+ 	u32 sk_sid = sksec->sid;
+ 	struct common_audit_data ad;
+@@ -4697,13 +4661,15 @@ static int selinux_socket_sock_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ 	return err;
+ }
+ 
+-static int selinux_socket_getpeersec_stream(struct socket *sock, char __user *optval,
+-					    int __user *optlen, unsigned len)
++static int selinux_socket_getpeersec_stream(struct socket *sock,
++					    __user char *optval,
++					    __user int *optlen,
++					    unsigned int len)
+ {
+ 	int err = 0;
+ 	char *scontext;
+ 	u32 scontext_len;
+-	struct sk_security_struct *sksec = sock->sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sock->sk);
+ 	u32 peer_sid = SECSID_NULL;
+ 
+ 	if (sksec->sclass == SECCLASS_UNIX_STREAM_SOCKET ||
+@@ -4761,34 +4727,27 @@ static int selinux_socket_getpeersec_dgram(struct socket *sock, struct sk_buff *
+ 
+ static int selinux_sk_alloc_security(struct sock *sk, int family, gfp_t priority)
+ {
+-	struct sk_security_struct *sksec;
+-
+-	sksec = kzalloc(sizeof(*sksec), priority);
+-	if (!sksec)
+-		return -ENOMEM;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 
+ 	sksec->peer_sid = SECINITSID_UNLABELED;
+ 	sksec->sid = SECINITSID_UNLABELED;
+ 	sksec->sclass = SECCLASS_SOCKET;
+ 	selinux_netlbl_sk_security_reset(sksec);
+-	sk->sk_security = sksec;
+ 
+ 	return 0;
+ }
+ 
+ static void selinux_sk_free_security(struct sock *sk)
+ {
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 
+-	sk->sk_security = NULL;
+ 	selinux_netlbl_sk_security_free(sksec);
+-	kfree(sksec);
+ }
+ 
+ static void selinux_sk_clone_security(const struct sock *sk, struct sock *newsk)
+ {
+-	struct sk_security_struct *sksec = sk->sk_security;
+-	struct sk_security_struct *newsksec = newsk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
++	struct sk_security_struct *newsksec = selinux_sock(newsk);
+ 
+ 	newsksec->sid = sksec->sid;
+ 	newsksec->peer_sid = sksec->peer_sid;
+@@ -4802,7 +4761,7 @@ static void selinux_sk_getsecid(struct sock *sk, u32 *secid)
+ 	if (!sk)
+ 		*secid = SECINITSID_ANY_SOCKET;
+ 	else {
+-		struct sk_security_struct *sksec = sk->sk_security;
++		struct sk_security_struct *sksec = selinux_sock(sk);
+ 
+ 		*secid = sksec->sid;
+ 	}
+@@ -4812,7 +4771,7 @@ static void selinux_sock_graft(struct sock *sk, struct socket *parent)
+ {
+ 	struct inode_security_struct *isec =
+ 		inode_security_novalidate(SOCK_INODE(parent));
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 
+ 	if (sk->sk_family == PF_INET || sk->sk_family == PF_INET6 ||
+ 	    sk->sk_family == PF_UNIX)
+@@ -4823,7 +4782,7 @@ static void selinux_sock_graft(struct sock *sk, struct socket *parent)
+ static int selinux_inet_conn_request(struct sock *sk, struct sk_buff *skb,
+ 				     struct request_sock *req)
+ {
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 	int err;
+ 	u16 family = req->rsk_ops->family;
+ 	u32 connsid;
+@@ -4844,7 +4803,7 @@ static int selinux_inet_conn_request(struct sock *sk, struct sk_buff *skb,
+ static void selinux_inet_csk_clone(struct sock *newsk,
+ 				   const struct request_sock *req)
+ {
+-	struct sk_security_struct *newsksec = newsk->sk_security;
++	struct sk_security_struct *newsksec = selinux_sock(newsk);
+ 
+ 	newsksec->sid = req->secid;
+ 	newsksec->peer_sid = req->peer_secid;
+@@ -4861,7 +4820,7 @@ static void selinux_inet_csk_clone(struct sock *newsk,
+ static void selinux_inet_conn_established(struct sock *sk, struct sk_buff *skb)
+ {
+ 	u16 family = sk->sk_family;
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 
+ 	/* handle mapped IPv4 packets arriving via IPv6 sockets */
+ 	if (family == PF_INET6 && skb->protocol == htons(ETH_P_IP))
+@@ -4941,7 +4900,7 @@ static int selinux_tun_dev_attach_queue(void *security)
+ static int selinux_tun_dev_attach(struct sock *sk, void *security)
+ {
+ 	struct tun_security_struct *tunsec = security;
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 
+ 	/* we don't currently perform any NetLabel based labeling here and it
+ 	 * isn't clear that we would want to do so anyway; while we could apply
+@@ -4980,7 +4939,7 @@ static int selinux_nlmsg_perm(struct sock *sk, struct sk_buff *skb)
+ 	int err = 0;
+ 	u32 perm;
+ 	struct nlmsghdr *nlh;
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 
+ 	if (skb->len < NLMSG_HDRLEN) {
+ 		err = -EINVAL;
+@@ -5119,7 +5078,7 @@ static unsigned int selinux_ip_output(struct sk_buff *skb,
+ 			return NF_ACCEPT;
+ 
+ 		/* standard practice, label using the parent socket */
+-		sksec = sk->sk_security;
++		sksec = selinux_sock(sk);
+ 		sid = sksec->sid;
+ 	} else
+ 		sid = SECINITSID_KERNEL;
+@@ -5158,7 +5117,7 @@ static unsigned int selinux_ip_postroute_compat(struct sk_buff *skb,
+ 
+ 	if (sk == NULL)
+ 		return NF_ACCEPT;
+-	sksec = sk->sk_security;
++	sksec = selinux_sock(sk);
+ 
+ 	ad.type = LSM_AUDIT_DATA_NET;
+ 	ad.u.net = &net;
+@@ -5249,7 +5208,7 @@ static unsigned int selinux_ip_postroute(struct sk_buff *skb,
+ 		u32 skb_sid;
+ 		struct sk_security_struct *sksec;
+ 
+-		sksec = sk->sk_security;
++		sksec = selinux_sock(sk);
+ 		if (selinux_skb_peerlbl_sid(skb, family, &skb_sid))
+ 			return NF_DROP;
+ 		/* At this point, if the returned skb peerlbl is SECSID_NULL
+@@ -5278,7 +5237,7 @@ static unsigned int selinux_ip_postroute(struct sk_buff *skb,
+ 	} else {
+ 		/* Locally generated packet, fetch the security label from the
+ 		 * associated socket. */
+-		struct sk_security_struct *sksec = sk->sk_security;
++		struct sk_security_struct *sksec = selinux_sock(sk);
+ 		peer_sid = sksec->sid;
+ 		secmark_perm = PACKET__SEND;
+ 	}
+@@ -5338,51 +5297,22 @@ static int selinux_netlink_send(struct sock *sk, struct sk_buff *skb)
+ 	return selinux_nlmsg_perm(sk, skb);
+ }
+ 
+-static int ipc_alloc_security(struct kern_ipc_perm *perm,
+-			      u16 sclass)
++static void ipc_init_security(struct ipc_security_struct *isec, u16 sclass)
+ {
+-	struct ipc_security_struct *isec;
+-
+-	isec = kzalloc(sizeof(struct ipc_security_struct), GFP_KERNEL);
+-	if (!isec)
+-		return -ENOMEM;
+-
+ 	isec->sclass = sclass;
+ 	isec->sid = current_sid();
+-	perm->security = isec;
+-
+-	return 0;
+-}
+-
+-static void ipc_free_security(struct kern_ipc_perm *perm)
+-{
+-	struct ipc_security_struct *isec = perm->security;
+-	perm->security = NULL;
+-	kfree(isec);
+ }
+ 
+ static int msg_msg_alloc_security(struct msg_msg *msg)
+ {
+ 	struct msg_security_struct *msec;
+ 
+-	msec = kzalloc(sizeof(struct msg_security_struct), GFP_KERNEL);
+-	if (!msec)
+-		return -ENOMEM;
+-
++	msec = selinux_msg_msg(msg);
+ 	msec->sid = SECINITSID_UNLABELED;
+-	msg->security = msec;
+ 
+ 	return 0;
+ }
+ 
+-static void msg_msg_free_security(struct msg_msg *msg)
+-{
+-	struct msg_security_struct *msec = msg->security;
+-
+-	msg->security = NULL;
+-	kfree(msec);
+-}
+-
+ static int ipc_has_perm(struct kern_ipc_perm *ipc_perms,
+ 			u32 perms)
+ {
+@@ -5390,7 +5320,7 @@ static int ipc_has_perm(struct kern_ipc_perm *ipc_perms,
+ 	struct common_audit_data ad;
  	u32 sid = current_sid();
  
-@@ -3398,11 +3385,6 @@ static int selinux_file_alloc_security(struct file *file)
- 	return file_alloc_security(file);
+-	isec = ipc_perms->security;
++	isec = selinux_ipc(ipc_perms);
+ 
+ 	ad.type = LSM_AUDIT_DATA_IPC;
+ 	ad.u.ipc_id = ipc_perms->key;
+@@ -5403,11 +5333,6 @@ static int selinux_msg_msg_alloc_security(struct msg_msg *msg)
+ 	return msg_msg_alloc_security(msg);
  }
  
--static void selinux_file_free_security(struct file *file)
+-static void selinux_msg_msg_free_security(struct msg_msg *msg)
 -{
--	file_free_security(file);
+-	msg_msg_free_security(msg);
 -}
 -
- /*
-  * Check whether a task has the ioctl permission and cmd
-  * operation to an inode.
-@@ -3411,7 +3393,7 @@ static int ioctl_has_perm(const struct cred *cred, struct file *file,
- 		u32 requested, u16 cmd)
+ /* message queue security operations */
+ static int selinux_msg_queue_alloc_security(struct msg_queue *msq)
  {
- 	struct common_audit_data ad;
--	struct file_security_struct *fsec = file->f_security;
-+	struct file_security_struct *fsec = selinux_file(file);
- 	struct inode *inode = file_inode(file);
- 	struct inode_security_struct *isec;
- 	struct lsm_ioctlop_audit ioctl;
-@@ -3645,7 +3627,7 @@ static void selinux_file_set_fowner(struct file *file)
- {
- 	struct file_security_struct *fsec;
+@@ -5416,27 +5341,15 @@ static int selinux_msg_queue_alloc_security(struct msg_queue *msq)
+ 	u32 sid = current_sid();
+ 	int rc;
  
--	fsec = file->f_security;
-+	fsec = selinux_file(file);
- 	fsec->fown_sid = current_sid();
+-	rc = ipc_alloc_security(&msq->q_perm, SECCLASS_MSGQ);
+-	if (rc)
+-		return rc;
+-
+-	isec = msq->q_perm.security;
++	isec = selinux_ipc(&msq->q_perm);
++	ipc_init_security(isec, SECCLASS_MSGQ);
+ 
+ 	ad.type = LSM_AUDIT_DATA_IPC;
+ 	ad.u.ipc_id = msq->q_perm.key;
+ 
+ 	rc = avc_has_perm(sid, isec->sid, SECCLASS_MSGQ,
+ 			  MSGQ__CREATE, &ad);
+-	if (rc) {
+-		ipc_free_security(&msq->q_perm);
+-		return rc;
+-	}
+-	return 0;
+-}
+-
+-static void selinux_msg_queue_free_security(struct msg_queue *msq)
+-{
+-	ipc_free_security(&msq->q_perm);
++	return rc;
  }
  
-@@ -3660,7 +3642,7 @@ static int selinux_file_send_sigiotask(struct task_struct *tsk,
- 	/* struct fown_struct is never outside the context of a struct file */
- 	file = container_of(fown, struct file, f_owner);
+ static int selinux_msg_queue_associate(struct msg_queue *msq, int msqflg)
+@@ -5445,7 +5358,7 @@ static int selinux_msg_queue_associate(struct msg_queue *msq, int msqflg)
+ 	struct common_audit_data ad;
+ 	u32 sid = current_sid();
  
--	fsec = file->f_security;
-+	fsec = selinux_file(file);
+-	isec = msq->q_perm.security;
++	isec = selinux_ipc(&msq->q_perm);
  
- 	if (!signum)
- 		perm = signal_to_av(SIGIO); /* as per send_sigio_to_task */
-@@ -3683,7 +3665,7 @@ static int selinux_file_open(struct file *file, const struct cred *cred)
- 	struct file_security_struct *fsec;
- 	struct inode_security_struct *isec;
+ 	ad.type = LSM_AUDIT_DATA_IPC;
+ 	ad.u.ipc_id = msq->q_perm.key;
+@@ -5491,8 +5404,8 @@ static int selinux_msg_queue_msgsnd(struct msg_queue *msq, struct msg_msg *msg,
+ 	u32 sid = current_sid();
+ 	int rc;
  
--	fsec = file->f_security;
-+	fsec = selinux_file(file);
- 	isec = inode_security(file_inode(file));
+-	isec = msq->q_perm.security;
+-	msec = msg->security;
++	isec = selinux_ipc(&msq->q_perm);
++	msec = selinux_msg_msg(msg);
+ 
  	/*
- 	 * Save inode label and policy sequence number
-@@ -3812,7 +3794,7 @@ static int selinux_kernel_module_from_file(struct file *file)
- 	ad.type = LSM_AUDIT_DATA_FILE;
- 	ad.u.file = file;
+ 	 * First time through, need to assign label to the message
+@@ -5536,8 +5449,8 @@ static int selinux_msg_queue_msgrcv(struct msg_queue *msq, struct msg_msg *msg,
+ 	u32 sid = task_sid(target);
+ 	int rc;
  
--	fsec = file->f_security;
-+	fsec = selinux_file(file);
- 	if (sid != fsec->sid) {
- 		rc = avc_has_perm(sid, fsec->sid, SECCLASS_FD, FD__USE, &ad);
- 		if (rc)
-@@ -6094,6 +6076,7 @@ static int selinux_key_getsecurity(struct key *key, char **_buffer)
+-	isec = msq->q_perm.security;
+-	msec = msg->security;
++	isec = selinux_ipc(&msq->q_perm);
++	msec = selinux_msg_msg(msg);
  
+ 	ad.type = LSM_AUDIT_DATA_IPC;
+ 	ad.u.ipc_id = msq->q_perm.key;
+@@ -5558,27 +5471,15 @@ static int selinux_shm_alloc_security(struct shmid_kernel *shp)
+ 	u32 sid = current_sid();
+ 	int rc;
+ 
+-	rc = ipc_alloc_security(&shp->shm_perm, SECCLASS_SHM);
+-	if (rc)
+-		return rc;
+-
+-	isec = shp->shm_perm.security;
++	isec = selinux_ipc(&shp->shm_perm);
++	ipc_init_security(isec, SECCLASS_SHM);
+ 
+ 	ad.type = LSM_AUDIT_DATA_IPC;
+ 	ad.u.ipc_id = shp->shm_perm.key;
+ 
+ 	rc = avc_has_perm(sid, isec->sid, SECCLASS_SHM,
+ 			  SHM__CREATE, &ad);
+-	if (rc) {
+-		ipc_free_security(&shp->shm_perm);
+-		return rc;
+-	}
+-	return 0;
+-}
+-
+-static void selinux_shm_free_security(struct shmid_kernel *shp)
+-{
+-	ipc_free_security(&shp->shm_perm);
++	return rc;
+ }
+ 
+ static int selinux_shm_associate(struct shmid_kernel *shp, int shmflg)
+@@ -5587,7 +5488,7 @@ static int selinux_shm_associate(struct shmid_kernel *shp, int shmflg)
+ 	struct common_audit_data ad;
+ 	u32 sid = current_sid();
+ 
+-	isec = shp->shm_perm.security;
++	isec = selinux_ipc(&shp->shm_perm);
+ 
+ 	ad.type = LSM_AUDIT_DATA_IPC;
+ 	ad.u.ipc_id = shp->shm_perm.key;
+@@ -5651,27 +5552,15 @@ static int selinux_sem_alloc_security(struct sem_array *sma)
+ 	u32 sid = current_sid();
+ 	int rc;
+ 
+-	rc = ipc_alloc_security(&sma->sem_perm, SECCLASS_SEM);
+-	if (rc)
+-		return rc;
+-
+-	isec = sma->sem_perm.security;
++	isec = selinux_ipc(&sma->sem_perm);
++	ipc_init_security(isec, SECCLASS_SEM);
+ 
+ 	ad.type = LSM_AUDIT_DATA_IPC;
+ 	ad.u.ipc_id = sma->sem_perm.key;
+ 
+ 	rc = avc_has_perm(sid, isec->sid, SECCLASS_SEM,
+ 			  SEM__CREATE, &ad);
+-	if (rc) {
+-		ipc_free_security(&sma->sem_perm);
+-		return rc;
+-	}
+-	return 0;
+-}
+-
+-static void selinux_sem_free_security(struct sem_array *sma)
+-{
+-	ipc_free_security(&sma->sem_perm);
++	return rc;
+ }
+ 
+ static int selinux_sem_associate(struct sem_array *sma, int semflg)
+@@ -5680,7 +5569,7 @@ static int selinux_sem_associate(struct sem_array *sma, int semflg)
+ 	struct common_audit_data ad;
+ 	u32 sid = current_sid();
+ 
+-	isec = sma->sem_perm.security;
++	isec = selinux_ipc(&sma->sem_perm);
+ 
+ 	ad.type = LSM_AUDIT_DATA_IPC;
+ 	ad.u.ipc_id = sma->sem_perm.key;
+@@ -5763,7 +5652,7 @@ static int selinux_ipc_permission(struct kern_ipc_perm *ipcp, short flag)
+ 
+ static void selinux_ipc_getsecid(struct kern_ipc_perm *ipcp, u32 *secid)
+ {
+-	struct ipc_security_struct *isec = ipcp->security;
++	struct ipc_security_struct *isec = selinux_ipc(ipcp);
+ 	*secid = isec->sid;
+ }
+ 
+@@ -5973,7 +5862,7 @@ static void selinux_release_secctx(char *secdata, u32 seclen)
+ 
+ static void selinux_inode_invalidate_secctx(struct inode *inode)
+ {
+-	struct inode_security_struct *isec = inode->i_security;
++	struct inode_security_struct *isec = selinux_inode(inode);
+ 
+ 	spin_lock(&isec->lock);
+ 	isec->initialized = LABEL_INVALID;
+@@ -6012,11 +5901,7 @@ static int selinux_key_alloc(struct key *k, const struct cred *cred,
+ 			     unsigned long flags)
+ {
+ 	const struct task_security_struct *tsec;
+-	struct key_security_struct *ksec;
+-
+-	ksec = kzalloc(sizeof(struct key_security_struct), GFP_KERNEL);
+-	if (!ksec)
+-		return -ENOMEM;
++	struct key_security_struct *ksec = selinux_key(k);
+ 
+ 	tsec = selinux_cred(cred);
+ 	if (tsec->keycreate_sid)
+@@ -6024,18 +5909,9 @@ static int selinux_key_alloc(struct key *k, const struct cred *cred,
+ 	else
+ 		ksec->sid = tsec->sid;
+ 
+-	k->security = ksec;
+ 	return 0;
+ }
+ 
+-static void selinux_key_free(struct key *k)
+-{
+-	struct key_security_struct *ksec = k->security;
+-
+-	k->security = NULL;
+-	kfree(ksec);
+-}
+-
+ static int selinux_key_permission(key_ref_t key_ref,
+ 				  const struct cred *cred,
+ 				  unsigned perm)
+@@ -6053,14 +5929,14 @@ static int selinux_key_permission(key_ref_t key_ref,
+ 	sid = cred_sid(cred);
+ 
+ 	key = key_ref_to_ptr(key_ref);
+-	ksec = key->security;
++	ksec = selinux_key(key);
+ 
+ 	return avc_has_perm(sid, ksec->sid, SECCLASS_KEY, perm, NULL);
+ }
+ 
+ static int selinux_key_getsecurity(struct key *key, char **_buffer)
+ {
+-	struct key_security_struct *ksec = key->security;
++	struct key_security_struct *ksec = selinux_key(key);
+ 	char *context = NULL;
+ 	unsigned len;
+ 	int rc;
+@@ -6077,6 +5953,14 @@ static int selinux_key_getsecurity(struct key *key, char **_buffer)
  struct lsm_blob_sizes selinux_blob_sizes = {
  	.lbs_cred = sizeof(struct task_security_struct),
-+	.lbs_file = sizeof(struct file_security_struct),
+ 	.lbs_file = sizeof(struct file_security_struct),
++	.lbs_inode = sizeof(struct inode_security_struct),
++	.lbs_ipc = sizeof(struct ipc_security_struct),
++#ifdef CONFIG_KEYS
++	.lbs_key = sizeof(struct key_security_struct),
++#endif /* CONFIG_KEYS */
++	.lbs_msg_msg = sizeof(struct msg_security_struct),
++	.lbs_sock = sizeof(struct sk_security_struct),
++	.lbs_superblock = sizeof(struct superblock_security_struct),
  };
  
  static struct security_hook_list selinux_hooks[] __lsm_ro_after_init = {
-@@ -6165,7 +6148,6 @@ static struct security_hook_list selinux_hooks[] __lsm_ro_after_init = {
+@@ -6103,7 +5987,6 @@ static struct security_hook_list selinux_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(bprm_secureexec, selinux_bprm_secureexec),
  
- 	LSM_HOOK_INIT(file_permission, selinux_file_permission),
- 	LSM_HOOK_INIT(file_alloc_security, selinux_file_alloc_security),
--	LSM_HOOK_INIT(file_free_security, selinux_file_free_security),
- 	LSM_HOOK_INIT(file_ioctl, selinux_file_ioctl),
- 	LSM_HOOK_INIT(mmap_file, selinux_mmap_file),
- 	LSM_HOOK_INIT(mmap_addr, selinux_mmap_addr),
-@@ -6340,9 +6322,6 @@ static __init int selinux_init(void)
- 	sel_inode_cache = kmem_cache_create("selinux_inode_security",
- 					    sizeof(struct inode_security_struct),
- 					    0, SLAB_PANIC, NULL);
--	file_security_cache = kmem_cache_create("selinux_file_security",
--					    sizeof(struct file_security_struct),
+ 	LSM_HOOK_INIT(sb_alloc_security, selinux_sb_alloc_security),
+-	LSM_HOOK_INIT(sb_free_security, selinux_sb_free_security),
+ 	LSM_HOOK_INIT(sb_copy_data, selinux_sb_copy_data),
+ 	LSM_HOOK_INIT(sb_remount, selinux_sb_remount),
+ 	LSM_HOOK_INIT(sb_kern_mount, selinux_sb_kern_mount),
+@@ -6186,24 +6069,20 @@ static struct security_hook_list selinux_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(ipc_getsecid, selinux_ipc_getsecid),
+ 
+ 	LSM_HOOK_INIT(msg_msg_alloc_security, selinux_msg_msg_alloc_security),
+-	LSM_HOOK_INIT(msg_msg_free_security, selinux_msg_msg_free_security),
+ 
+ 	LSM_HOOK_INIT(msg_queue_alloc_security,
+ 			selinux_msg_queue_alloc_security),
+-	LSM_HOOK_INIT(msg_queue_free_security, selinux_msg_queue_free_security),
+ 	LSM_HOOK_INIT(msg_queue_associate, selinux_msg_queue_associate),
+ 	LSM_HOOK_INIT(msg_queue_msgctl, selinux_msg_queue_msgctl),
+ 	LSM_HOOK_INIT(msg_queue_msgsnd, selinux_msg_queue_msgsnd),
+ 	LSM_HOOK_INIT(msg_queue_msgrcv, selinux_msg_queue_msgrcv),
+ 
+ 	LSM_HOOK_INIT(shm_alloc_security, selinux_shm_alloc_security),
+-	LSM_HOOK_INIT(shm_free_security, selinux_shm_free_security),
+ 	LSM_HOOK_INIT(shm_associate, selinux_shm_associate),
+ 	LSM_HOOK_INIT(shm_shmctl, selinux_shm_shmctl),
+ 	LSM_HOOK_INIT(shm_shmat, selinux_shm_shmat),
+ 
+ 	LSM_HOOK_INIT(sem_alloc_security, selinux_sem_alloc_security),
+-	LSM_HOOK_INIT(sem_free_security, selinux_sem_free_security),
+ 	LSM_HOOK_INIT(sem_associate, selinux_sem_associate),
+ 	LSM_HOOK_INIT(sem_semctl, selinux_sem_semctl),
+ 	LSM_HOOK_INIT(sem_semop, selinux_sem_semop),
+@@ -6279,7 +6158,6 @@ static struct security_hook_list selinux_hooks[] __lsm_ro_after_init = {
+ 
+ #ifdef CONFIG_KEYS
+ 	LSM_HOOK_INIT(key_alloc, selinux_key_alloc),
+-	LSM_HOOK_INIT(key_free, selinux_key_free),
+ 	LSM_HOOK_INIT(key_permission, selinux_key_permission),
+ 	LSM_HOOK_INIT(key_getsecurity, selinux_key_getsecurity),
+ #endif
+@@ -6319,9 +6197,6 @@ static __init int selinux_init(void)
+ 
+ 	default_noexec = !(VM_DATA_DEFAULT_FLAGS & VM_EXEC);
+ 
+-	sel_inode_cache = kmem_cache_create("selinux_inode_security",
+-					    sizeof(struct inode_security_struct),
 -					    0, SLAB_PANIC, NULL);
  	avc_init();
  
  	security_add_hooks(selinux_hooks, ARRAY_SIZE(selinux_hooks), "selinux");
 diff --git a/security/selinux/include/objsec.h b/security/selinux/include/objsec.h
-index 48132cc..6a638da 100644
+index 6a638da..1b1dff4 100644
 --- a/security/selinux/include/objsec.h
 +++ b/security/selinux/include/objsec.h
-@@ -150,4 +150,9 @@ static inline struct task_security_struct *selinux_cred(const struct cred *cred)
- 	return cred->security;
+@@ -58,10 +58,7 @@ enum label_initialized {
+ 
+ struct inode_security_struct {
+ 	struct inode *inode;	/* back pointer to inode object */
+-	union {
+-		struct list_head list;	/* list of inode_security_struct */
+-		struct rcu_head rcu;	/* for freeing the inode_security_struct */
+-	};
++	struct list_head list;	/* list of inode_security_struct */
+ 	u32 task_sid;		/* SID of creating task */
+ 	u32 sid;		/* SID of this object */
+ 	u16 sclass;		/* security class of this object */
+@@ -155,4 +152,64 @@ static inline struct file_security_struct *selinux_file(const struct file *file)
+ 	return file->f_security;
  }
  
-+static inline struct file_security_struct *selinux_file(const struct file *file)
++static inline struct inode_security_struct *selinux_inode(
++						const struct inode *inode)
 +{
-+	return file->f_security;
++#ifdef CONFIG_SECURITY_STACKING
++	return inode->i_security + selinux_blob_sizes.lbs_inode;
++#else
++	return inode->i_security;
++#endif
++}
++
++static inline struct superblock_security_struct *selinux_superblock(
++					const struct super_block *superblock)
++{
++#ifdef CONFIG_SECURITY_STACKING
++	return superblock->s_security + selinux_blob_sizes.lbs_superblock;
++#else
++	return superblock->s_security;
++#endif
++}
++
++static inline struct msg_security_struct *selinux_msg_msg(
++						const struct msg_msg *msg_msg)
++{
++#ifdef CONFIG_SECURITY_STACKING
++	return msg_msg->security + selinux_blob_sizes.lbs_msg_msg;
++#else
++	return msg_msg->security;
++#endif
++}
++
++static inline struct ipc_security_struct *selinux_ipc(
++						const struct kern_ipc_perm *ipc)
++{
++#ifdef CONFIG_SECURITY_STACKING
++	return ipc->security + selinux_blob_sizes.lbs_ipc;
++#else
++	return ipc->security;
++#endif
++}
++
++#ifdef CONFIG_KEYS
++static inline struct key_security_struct *selinux_key(const struct key *key)
++{
++#ifdef CONFIG_SECURITY_STACKING
++	return key->security + selinux_blob_sizes.lbs_key;
++#else
++	return key->security;
++#endif
++}
++#endif /* CONFIG_KEYS */
++
++static inline struct sk_security_struct *selinux_sock(const struct sock *sock)
++{
++#ifdef CONFIG_SECURITY_STACKING
++	return sock->sk_security + selinux_blob_sizes.lbs_sock;
++#else
++	return sock->sk_security;
++#endif
 +}
 +
  #endif /* _SELINUX_OBJSEC_H_ */
+diff --git a/security/selinux/netlabel.c b/security/selinux/netlabel.c
+index aaba667..0b0091c 100644
+--- a/security/selinux/netlabel.c
++++ b/security/selinux/netlabel.c
+@@ -32,6 +32,7 @@
+ #include <linux/gfp.h>
+ #include <linux/ip.h>
+ #include <linux/ipv6.h>
++#include <linux/lsm_hooks.h>
+ #include <net/sock.h>
+ #include <net/netlabel.h>
+ #include <net/ip.h>
+@@ -82,7 +83,7 @@ static int selinux_netlbl_sidlookup_cached(struct sk_buff *skb,
+ static struct netlbl_lsm_secattr *selinux_netlbl_sock_genattr(struct sock *sk)
+ {
+ 	int rc;
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 	struct netlbl_lsm_secattr *secattr;
+ 
+ 	if (sksec->nlbl_secattr != NULL)
+@@ -114,7 +115,7 @@ static struct netlbl_lsm_secattr *selinux_netlbl_sock_getattr(
+ 							const struct sock *sk,
+ 							u32 sid)
+ {
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 	struct netlbl_lsm_secattr *secattr = sksec->nlbl_secattr;
+ 
+ 	if (secattr == NULL)
+@@ -249,7 +250,7 @@ int selinux_netlbl_skbuff_setsid(struct sk_buff *skb,
+ 	 * being labeled by it's parent socket, if it is just exit */
+ 	sk = skb_to_full_sk(skb);
+ 	if (sk != NULL) {
+-		struct sk_security_struct *sksec = sk->sk_security;
++		struct sk_security_struct *sksec = selinux_sock(sk);
+ 		if (sksec->nlbl_state != NLBL_REQSKB)
+ 			return 0;
+ 		secattr = selinux_netlbl_sock_getattr(sk, sid);
+@@ -311,7 +312,7 @@ int selinux_netlbl_inet_conn_request(struct request_sock *req, u16 family)
+  */
+ void selinux_netlbl_inet_csk_clone(struct sock *sk, u16 family)
+ {
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 
+ 	if (family == PF_INET)
+ 		sksec->nlbl_state = NLBL_LABELED;
+@@ -332,7 +333,7 @@ void selinux_netlbl_inet_csk_clone(struct sock *sk, u16 family)
+ int selinux_netlbl_socket_post_create(struct sock *sk, u16 family)
+ {
+ 	int rc;
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 	struct netlbl_lsm_secattr *secattr;
+ 
+ 	if (family != PF_INET && family != PF_INET6)
+@@ -446,7 +447,7 @@ int selinux_netlbl_socket_setsockopt(struct socket *sock,
+ {
+ 	int rc = 0;
+ 	struct sock *sk = sock->sk;
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 	struct netlbl_lsm_secattr secattr;
+ 
+ 	if (selinux_netlbl_option(level, optname) &&
+@@ -482,7 +483,7 @@ int selinux_netlbl_socket_setsockopt(struct socket *sock,
+ int selinux_netlbl_socket_connect(struct sock *sk, struct sockaddr *addr)
+ {
+ 	int rc;
+-	struct sk_security_struct *sksec = sk->sk_security;
++	struct sk_security_struct *sksec = selinux_sock(sk);
+ 	struct netlbl_lsm_secattr *secattr;
+ 
+ 	if (sksec->nlbl_state != NLBL_REQSKB &&
+diff --git a/security/selinux/selinuxfs.c b/security/selinux/selinuxfs.c
+index 75c1a68..1d2f412 100644
+--- a/security/selinux/selinuxfs.c
++++ b/security/selinux/selinuxfs.c
+@@ -1309,7 +1309,7 @@ static int sel_make_bools(void)
+ 		if (len >= PAGE_SIZE)
+ 			goto out;
+ 
+-		isec = (struct inode_security_struct *)inode->i_security;
++		isec = (struct inode_security_struct *)selinux_inode(inode);
+ 		ret = security_genfs_sid("selinuxfs", page, SECCLASS_FILE, &sid);
+ 		if (ret) {
+ 			pr_warn_ratelimited("SELinux: no sid found, defaulting to security isid for %s\n",
+@@ -1850,7 +1850,7 @@ static int sel_fill_super(struct super_block *sb, void *data, int silent)
+ 		goto err;
+ 
+ 	inode->i_ino = ++sel_last_ino;
+-	isec = (struct inode_security_struct *)inode->i_security;
++	isec = (struct inode_security_struct *)selinux_inode(inode);
+ 	isec->sid = SECINITSID_DEVNULL;
+ 	isec->sclass = SECCLASS_CHR_FILE;
+ 	isec->initialized = LABEL_INITIALIZED;
+diff --git a/security/selinux/ss/services.c b/security/selinux/ss/services.c
+index 60d9b02..f388b3c 100644
+--- a/security/selinux/ss/services.c
++++ b/security/selinux/ss/services.c
+@@ -52,6 +52,7 @@
+ #include <linux/selinux.h>
+ #include <linux/flex_array.h>
+ #include <linux/vmalloc.h>
++#include <linux/lsm_hooks.h>
+ #include <net/netlabel.h>
+ 
+ #include "flask.h"
+@@ -2546,7 +2547,7 @@ int security_fs_use(struct super_block *sb)
+ {
+ 	int rc = 0;
+ 	struct ocontext *c;
+-	struct superblock_security_struct *sbsec = sb->s_security;
++	struct superblock_security_struct *sbsec = selinux_superblock(sb);
+ 	const char *fstype = sb->s_type->name;
+ 
+ 	read_lock(&policy_rwlock);
 diff --git a/security/smack/smack.h b/security/smack/smack.h
-index 17949ec..9e704a6 100644
+index 9e704a6..f4ad92d 100644
 --- a/security/smack/smack.h
 +++ b/security/smack/smack.h
-@@ -361,6 +361,11 @@ static inline struct task_smack *smack_cred(const struct cred *cred)
- 	return cred->security;
+@@ -366,12 +366,69 @@ static inline struct smack_known **smack_file(const struct file *file)
+ 	return file->f_security;
  }
  
-+static inline struct smack_known **smack_file(const struct file *file)
++static inline struct inode_smack *smack_inode(const struct inode *inode)
 +{
-+	return file->f_security;
++#ifdef CONFIG_SECURITY_STACKING
++	return inode->i_security + smack_blob_sizes.lbs_inode;
++#else
++	return inode->i_security;
++#endif
 +}
++
++static inline struct socket_smack *smack_sock(const struct sock *sock)
++{
++#ifdef CONFIG_SECURITY_STACKING
++	return sock->sk_security + smack_blob_sizes.lbs_sock;
++#else
++	return sock->sk_security;
++#endif
++}
++
++static inline struct superblock_smack *smack_superblock(
++					const struct super_block *superblock)
++{
++#ifdef CONFIG_SECURITY_STACKING
++	return superblock->s_security + smack_blob_sizes.lbs_superblock;
++#else
++	return superblock->s_security;
++#endif
++}
++
++static inline struct smack_known **smack_msg_msg(const struct msg_msg *msg)
++{
++#ifdef CONFIG_SECURITY_STACKING
++	return msg->security + smack_blob_sizes.lbs_msg_msg;
++#else
++	return msg->security;
++#endif
++}
++
++static inline struct smack_known **smack_ipc(const struct kern_ipc_perm *ipc)
++{
++#ifdef CONFIG_SECURITY_STACKING
++	return ipc->security + smack_blob_sizes.lbs_ipc;
++#else
++	return ipc->security;
++#endif
++}
++
++#ifdef CONFIG_KEYS
++static inline struct smack_known **smack_key(const struct key *key)
++{
++#ifdef CONFIG_SECURITY_STACKING
++	return key->security + smack_blob_sizes.lbs_key;
++#else
++	return key->security;
++#endif
++}
++#endif /* CONFIG_KEYS */
 +
  /*
   * Is the directory transmuting?
   */
+ static inline int smk_inode_transmutable(const struct inode *isp)
+ {
+-	struct inode_smack *sip = isp->i_security;
++	struct inode_smack *sip = smack_inode(isp);
+ 	return (sip->smk_flags & SMK_INODE_TRANSMUTE) != 0;
+ }
+ 
+@@ -380,7 +437,7 @@ static inline int smk_inode_transmutable(const struct inode *isp)
+  */
+ static inline struct smack_known *smk_of_inode(const struct inode *isp)
+ {
+-	struct inode_smack *sip = isp->i_security;
++	struct inode_smack *sip = smack_inode(isp);
+ 	return sip->smk_inode;
+ }
+ 
 diff --git a/security/smack/smack_lsm.c b/security/smack/smack_lsm.c
-index 3ee5a14..3c95c1f 100644
+index 3c95c1f..a0b580e 100644
 --- a/security/smack/smack_lsm.c
 +++ b/security/smack/smack_lsm.c
-@@ -1601,25 +1601,13 @@ static void smack_inode_getsecid(struct inode *inode, u32 *secid)
+@@ -165,7 +165,7 @@ static int smk_bu_task(struct task_struct *otp, int mode, int rc)
+ static int smk_bu_inode(struct inode *inode, int mode, int rc)
+ {
+ 	struct task_smack *tsp = smack_cred(current_cred());
+-	struct inode_smack *isp = inode->i_security;
++	struct inode_smack *isp = smack_inode(inode);
+ 	char acc[SMK_NUM_ACCESS_TYPE + 1];
+ 
+ 	if (isp->smk_flags & SMK_INODE_IMPURE)
+@@ -197,7 +197,7 @@ static int smk_bu_file(struct file *file, int mode, int rc)
+ 	struct task_smack *tsp = smack_cred(current_cred());
+ 	struct smack_known *sskp = tsp->smk_task;
+ 	struct inode *inode = file_inode(file);
+-	struct inode_smack *isp = inode->i_security;
++	struct inode_smack *isp = smack_inode(inode);
+ 	char acc[SMK_NUM_ACCESS_TYPE + 1];
+ 
+ 	if (isp->smk_flags & SMK_INODE_IMPURE)
+@@ -227,7 +227,7 @@ static int smk_bu_credfile(const struct cred *cred, struct file *file,
+ 	struct task_smack *tsp = smack_cred(cred);
+ 	struct smack_known *sskp = tsp->smk_task;
+ 	struct inode *inode = file_inode(file);
+-	struct inode_smack *isp = inode->i_security;
++	struct inode_smack *isp = smack_inode(inode);
+ 	char acc[SMK_NUM_ACCESS_TYPE + 1];
+ 
+ 	if (isp->smk_flags & SMK_INODE_IMPURE)
+@@ -287,24 +287,18 @@ static struct smack_known *smk_fetch(const char *name, struct inode *ip,
+ }
+ 
+ /**
+- * new_inode_smack - allocate an inode security blob
++ * init_inode_smack - initialize an inode security blob
++ * @isp: the blob to initialize
+  * @skp: a pointer to the Smack label entry to use in the blob
+  *
+- * Returns the new blob or NULL if there's no memory available
   */
- static int smack_file_alloc_security(struct file *file)
+-static struct inode_smack *new_inode_smack(struct smack_known *skp)
++static void init_inode_smack(struct inode *inode, struct smack_known *skp)
+ {
+-	struct inode_smack *isp;
+-
+-	isp = kmem_cache_zalloc(smack_inode_cache, GFP_NOFS);
+-	if (isp == NULL)
+-		return NULL;
++	struct inode_smack *isp = smack_inode(inode);
+ 
+ 	isp->smk_inode = skp;
+ 	isp->smk_flags = 0;
+ 	mutex_init(&isp->smk_lock);
+-
+-	return isp;
+ }
+ 
+ /**
+@@ -525,12 +519,7 @@ static int smack_syslog(int typefrom_file)
+  */
+ static int smack_sb_alloc_security(struct super_block *sb)
+ {
+-	struct superblock_smack *sbsp;
+-
+-	sbsp = kzalloc(sizeof(struct superblock_smack), GFP_KERNEL);
+-
+-	if (sbsp == NULL)
+-		return -ENOMEM;
++	struct superblock_smack *sbsp = smack_superblock(sb);
+ 
+ 	sbsp->smk_root = &smack_known_floor;
+ 	sbsp->smk_default = &smack_known_floor;
+@@ -539,23 +528,11 @@ static int smack_sb_alloc_security(struct super_block *sb)
+ 	/*
+ 	 * SMK_SB_INITIALIZED will be zero from kzalloc.
+ 	 */
+-	sb->s_security = sbsp;
+ 
+ 	return 0;
+ }
+ 
+ /**
+- * smack_sb_free_security - free a superblock blob
+- * @sb: the superblock getting the blob
+- *
+- */
+-static void smack_sb_free_security(struct super_block *sb)
+-{
+-	kfree(sb->s_security);
+-	sb->s_security = NULL;
+-}
+-
+-/**
+  * smack_sb_copy_data - copy mount options data for processing
+  * @orig: where to start
+  * @smackopts: mount options string
+@@ -745,7 +722,7 @@ static int smack_set_mnt_opts(struct super_block *sb,
+ {
+ 	struct dentry *root = sb->s_root;
+ 	struct inode *inode = d_backing_inode(root);
+-	struct superblock_smack *sp = sb->s_security;
++	struct superblock_smack *sp = smack_superblock(sb);
+ 	struct inode_smack *isp;
+ 	struct smack_known *skp;
+ 	int i;
+@@ -823,17 +800,13 @@ static int smack_set_mnt_opts(struct super_block *sb,
+ 	/*
+ 	 * Initialize the root inode.
+ 	 */
+-	isp = inode->i_security;
+-	if (isp == NULL) {
+-		isp = new_inode_smack(sp->smk_root);
+-		if (isp == NULL)
+-			return -ENOMEM;
+-		inode->i_security = isp;
+-	} else
+-		isp->smk_inode = sp->smk_root;
++	lsm_early_inode(inode);
++	init_inode_smack(inode, sp->smk_root);
+ 
+-	if (transmute)
++	if (transmute) {
++		isp = smack_inode(inode);
+ 		isp->smk_flags |= SMK_INODE_TRANSMUTE;
++	}
+ 
+ 	return 0;
+ }
+@@ -878,7 +851,7 @@ static int smack_sb_kern_mount(struct super_block *sb, int flags, void *data)
+  */
+ static int smack_sb_statfs(struct dentry *dentry)
+ {
+-	struct superblock_smack *sbp = dentry->d_sb->s_security;
++	struct superblock_smack *sbp = smack_superblock(dentry->d_sb);
+ 	int rc;
+ 	struct smk_audit_info ad;
+ 
+@@ -911,11 +884,11 @@ static int smack_bprm_set_creds(struct linux_binprm *bprm)
+ 	if (bprm->cred_prepared)
+ 		return 0;
+ 
+-	isp = inode->i_security;
++	isp = smack_inode(inode);
+ 	if (isp->smk_task == NULL || isp->smk_task == bsp->smk_task)
+ 		return 0;
+ 
+-	sbsp = inode->i_sb->s_security;
++	sbsp = smack_superblock(inode->i_sb);
+ 	if ((sbsp->smk_flags & SMK_SB_UNTRUSTED) &&
+ 	    isp->smk_task != sbsp->smk_root)
+ 		return 0;
+@@ -988,49 +961,11 @@ static int smack_inode_alloc_security(struct inode *inode)
+ {
+ 	struct smack_known *skp = smk_of_current();
+ 
+-	inode->i_security = new_inode_smack(skp);
+-	if (inode->i_security == NULL)
+-		return -ENOMEM;
++	init_inode_smack(inode, skp);
+ 	return 0;
+ }
+ 
+ /**
+- * smack_inode_free_rcu - Free inode_smack blob from cache
+- * @head: the rcu_head for getting inode_smack pointer
+- *
+- *  Call back function called from call_rcu() to free
+- *  the i_security blob pointer in inode
+- */
+-static void smack_inode_free_rcu(struct rcu_head *head)
+-{
+-	struct inode_smack *issp;
+-
+-	issp = container_of(head, struct inode_smack, smk_rcu);
+-	kmem_cache_free(smack_inode_cache, issp);
+-}
+-
+-/**
+- * smack_inode_free_security - free an inode blob using call_rcu()
+- * @inode: the inode with a blob
+- *
+- * Clears the blob pointer in inode using RCU
+- */
+-static void smack_inode_free_security(struct inode *inode)
+-{
+-	struct inode_smack *issp = inode->i_security;
+-
+-	/*
+-	 * The inode may still be referenced in a path walk and
+-	 * a call to smack_inode_permission() can be made
+-	 * after smack_inode_free_security() is called.
+-	 * To avoid race condition free the i_security via RCU
+-	 * and leave the current inode->i_security pointer intact.
+-	 * The inode will be freed after the RCU grace period too.
+-	 */
+-	call_rcu(&issp->smk_rcu, smack_inode_free_rcu);
+-}
+-
+-/**
+  * smack_inode_init_security - copy out the smack from an inode
+  * @inode: the newly created inode
+  * @dir: containing directory object
+@@ -1045,7 +980,7 @@ static int smack_inode_init_security(struct inode *inode, struct inode *dir,
+ 				     const struct qstr *qstr, const char **name,
+ 				     void **value, size_t *len)
+ {
+-	struct inode_smack *issp = inode->i_security;
++	struct inode_smack *issp = smack_inode(inode);
+ 	struct smack_known *skp = smk_of_current();
+ 	struct smack_known *isp = smk_of_inode(inode);
+ 	struct smack_known *dsp = smk_of_inode(dir);
+@@ -1383,7 +1318,7 @@ static void smack_inode_post_setxattr(struct dentry *dentry, const char *name,
+ 				      const void *value, size_t size, int flags)
+ {
+ 	struct smack_known *skp;
+-	struct inode_smack *isp = d_backing_inode(dentry)->i_security;
++	struct inode_smack *isp = smack_inode(d_backing_inode(dentry));
+ 
+ 	if (strcmp(name, XATTR_NAME_SMACKTRANSMUTE) == 0) {
+ 		isp->smk_flags |= SMK_INODE_TRANSMUTE;
+@@ -1464,7 +1399,7 @@ static int smack_inode_removexattr(struct dentry *dentry, const char *name)
+ 	if (rc != 0)
+ 		return rc;
+ 
+-	isp = d_backing_inode(dentry)->i_security;
++	isp = smack_inode(d_backing_inode(dentry));
+ 	/*
+ 	 * Don't do anything special for these.
+ 	 *	XATTR_NAME_SMACKIPIN
+@@ -1524,7 +1459,7 @@ static int smack_inode_getsecurity(struct inode *inode,
+ 	if (sock == NULL || sock->sk == NULL)
+ 		return -EOPNOTSUPP;
+ 
+-	ssp = sock->sk->sk_security;
++	ssp = smack_sock(sock->sk);
+ 
+ 	if (strcmp(name, XATTR_SMACK_IPIN) == 0)
+ 		isp = ssp->smk_in;
+@@ -1567,7 +1502,7 @@ static int smack_inode_listsecurity(struct inode *inode, char *buffer,
+  */
+ static void smack_inode_getsecid(struct inode *inode, u32 *secid)
+ {
+-	struct inode_smack *isp = inode->i_security;
++	struct inode_smack *isp = smack_inode(inode);
+ 
+ 	*secid = isp->smk_inode->smk_secid;
+ }
+@@ -1744,7 +1679,7 @@ static int smack_mmap_file(struct file *file,
+ 	if (unlikely(IS_PRIVATE(file_inode(file))))
+ 		return 0;
+ 
+-	isp = file_inode(file)->i_security;
++	isp = smack_inode(file_inode(file));
+ 	if (isp->smk_mmap == NULL)
+ 		return 0;
+ 	sbsp = file_inode(file)->i_sb->s_security;
+@@ -1900,7 +1835,7 @@ static int smack_file_receive(struct file *file)
+ 
+ 	if (S_ISSOCK(inode->i_mode)) {
+ 		sock = SOCKET_I(inode);
+-		ssp = sock->sk->sk_security;
++		ssp = smack_sock(sock->sk);
+ 		tsp = smack_cred(current_cred());
+ 		/*
+ 		 * If the receiving process can't write to the
+@@ -2069,7 +2004,7 @@ static int smack_kernel_act_as(struct cred *new, u32 secid)
+ static int smack_kernel_create_files_as(struct cred *new,
+ 					struct inode *inode)
+ {
+-	struct inode_smack *isp = inode->i_security;
++	struct inode_smack *isp = smack_inode(inode);
+ 	struct task_smack *tsp = smack_cred(new);
+ 
+ 	tsp->smk_forked = isp->smk_inode;
+@@ -2271,7 +2206,7 @@ static int smack_task_kill(struct task_struct *p, struct siginfo *info,
+  */
+ static void smack_task_to_inode(struct task_struct *p, struct inode *inode)
+ {
+-	struct inode_smack *isp = inode->i_security;
++	struct inode_smack *isp = smack_inode(inode);
+ 	struct smack_known *skp = smk_of_task_struct(p);
+ 
+ 	isp->smk_inode = skp;
+@@ -2294,11 +2229,7 @@ static void smack_task_to_inode(struct task_struct *p, struct inode *inode)
+ static int smack_sk_alloc_security(struct sock *sk, int family, gfp_t gfp_flags)
+ {
+ 	struct smack_known *skp = smk_of_current();
+-	struct socket_smack *ssp;
+-
+-	ssp = kzalloc(sizeof(struct socket_smack), gfp_flags);
+-	if (ssp == NULL)
+-		return -ENOMEM;
++	struct socket_smack *ssp = smack_sock(sk);
+ 
+ 	/*
+ 	 * Sockets created by kernel threads receive web label.
+@@ -2312,11 +2243,10 @@ static int smack_sk_alloc_security(struct sock *sk, int family, gfp_t gfp_flags)
+ 	}
+ 	ssp->smk_packet = NULL;
+ 
+-	sk->sk_security = ssp;
+-
+ 	return 0;
+ }
+ 
++#ifdef SMACK_IPV6_PORT_LABELING
+ /**
+  * smack_sk_free_security - Free a socket blob
+  * @sk: the socket
+@@ -2325,7 +2255,6 @@ static int smack_sk_alloc_security(struct sock *sk, int family, gfp_t gfp_flags)
+  */
+ static void smack_sk_free_security(struct sock *sk)
+ {
+-#ifdef SMACK_IPV6_PORT_LABELING
+ 	struct smk_port_label *spp;
+ 
+ 	if (sk->sk_family == PF_INET6) {
+@@ -2338,9 +2267,8 @@ static void smack_sk_free_security(struct sock *sk)
+ 		}
+ 		rcu_read_unlock();
+ 	}
+-#endif
+-	kfree(sk->sk_security);
+ }
++#endif
+ 
+ /**
+ * smack_ipv4host_label - check host based restrictions
+@@ -2458,7 +2386,7 @@ static struct smack_known *smack_ipv6host_label(struct sockaddr_in6 *sip)
+ static int smack_netlabel(struct sock *sk, int labeled)
+ {
+ 	struct smack_known *skp;
+-	struct socket_smack *ssp = sk->sk_security;
++	struct socket_smack *ssp = smack_sock(sk);
+ 	int rc = 0;
+ 
+ 	/*
+@@ -2503,7 +2431,7 @@ static int smack_netlabel_send(struct sock *sk, struct sockaddr_in *sap)
+ 	int rc;
+ 	int sk_lbl;
+ 	struct smack_known *hkp;
+-	struct socket_smack *ssp = sk->sk_security;
++	struct socket_smack *ssp = smack_sock(sk);
+ 	struct smk_audit_info ad;
+ 
+ 	rcu_read_lock();
+@@ -2579,7 +2507,7 @@ static void smk_ipv6_port_label(struct socket *sock, struct sockaddr *address)
+ {
+ 	struct sock *sk = sock->sk;
+ 	struct sockaddr_in6 *addr6;
+-	struct socket_smack *ssp = sock->sk->sk_security;
++	struct socket_smack *ssp = smack_sock(sock->sk);
+ 	struct smk_port_label *spp;
+ 	unsigned short port = 0;
+ 
+@@ -2666,7 +2594,7 @@ static int smk_ipv6_port_check(struct sock *sk, struct sockaddr_in6 *address,
+ 				int act)
+ {
+ 	struct smk_port_label *spp;
+-	struct socket_smack *ssp = sk->sk_security;
++	struct socket_smack *ssp = smack_sock(sk);
+ 	struct smack_known *skp = NULL;
+ 	unsigned short port;
+ 	struct smack_known *object;
+@@ -2733,7 +2661,7 @@ static int smack_inode_setsecurity(struct inode *inode, const char *name,
+ 				   const void *value, size_t size, int flags)
+ {
+ 	struct smack_known *skp;
+-	struct inode_smack *nsp = inode->i_security;
++	struct inode_smack *nsp = smack_inode(inode);
+ 	struct socket_smack *ssp;
+ 	struct socket *sock;
+ 	int rc = 0;
+@@ -2760,7 +2688,7 @@ static int smack_inode_setsecurity(struct inode *inode, const char *name,
+ 	if (sock == NULL || sock->sk == NULL)
+ 		return -EOPNOTSUPP;
+ 
+-	ssp = sock->sk->sk_security;
++	ssp = smack_sock(sock->sk);
+ 
+ 	if (strcmp(name, XATTR_SMACK_IPIN) == 0)
+ 		ssp->smk_in = skp;
+@@ -2808,7 +2736,7 @@ static int smack_socket_post_create(struct socket *sock, int family,
+ 	 * Sockets created by kernel threads receive web label.
+ 	 */
+ 	if (unlikely(current->flags & PF_KTHREAD)) {
+-		ssp = sock->sk->sk_security;
++		ssp = smack_sock(sock->sk);
+ 		ssp->smk_in = &smack_known_web;
+ 		ssp->smk_out = &smack_known_web;
+ 	}
+@@ -2860,7 +2788,7 @@ static int smack_socket_connect(struct socket *sock, struct sockaddr *sap,
+ #endif
+ #ifdef SMACK_IPV6_SECMARK_LABELING
+ 	struct smack_known *rsp;
+-	struct socket_smack *ssp = sock->sk->sk_security;
++	struct socket_smack *ssp = smack_sock(sock->sk);
+ #endif
+ 
+ 	if (sock->sk == NULL)
+@@ -2917,35 +2845,13 @@ static int smack_flags_to_may(int flags)
+  */
+ static int smack_msg_msg_alloc_security(struct msg_msg *msg)
  {
 -	struct smack_known *skp = smk_of_current();
-+	struct smack_known **blob = smack_file(file);
++	struct smack_known **blob = smack_msg_msg(msg);
  
--	file->f_security = skp;
+-	msg->security = skp;
 +	*blob = smk_of_current();
  	return 0;
  }
  
  /**
-- * smack_file_free_security - clear a file security blob
-- * @file: the object
+- * smack_msg_msg_free_security - Clear the security blob for msg_msg
+- * @msg: the object
 - *
-- * The security blob for a file is a pointer to the master
-- * label list, so no memory is freed.
+- * Clears the blob pointer
 - */
--static void smack_file_free_security(struct file *file)
+-static void smack_msg_msg_free_security(struct msg_msg *msg)
 -{
--	file->f_security = NULL;
+-	msg->security = NULL;
 -}
 -
 -/**
-  * smack_file_ioctl - Smack check on ioctls
-  * @file: the object
-  * @cmd: what to do
-@@ -1843,7 +1831,9 @@ static int smack_mmap_file(struct file *file,
+- * smack_of_shm - the smack pointer for the shm
+- * @shp: the object
+- *
+- * Returns a pointer to the smack value
+- */
+-static struct smack_known *smack_of_shm(struct shmid_kernel *shp)
+-{
+-	return (struct smack_known *)shp->shm_perm.security;
+-}
+-
+-/**
+  * smack_shm_alloc_security - Set the security blob for shm
+  * @shp: the object
+  *
+@@ -2953,27 +2859,13 @@ static struct smack_known *smack_of_shm(struct shmid_kernel *shp)
   */
- static void smack_file_set_fowner(struct file *file)
+ static int smack_shm_alloc_security(struct shmid_kernel *shp)
  {
--	file->f_security = smk_of_current();
-+	struct smack_known **blob = smack_file(file);
-+
+-	struct kern_ipc_perm *isp = &shp->shm_perm;
+-	struct smack_known *skp = smk_of_current();
++	struct smack_known **blob = smack_ipc(&shp->shm_perm);
+ 
+-	isp->security = skp;
 +	*blob = smk_of_current();
+ 	return 0;
  }
  
  /**
-@@ -1860,6 +1850,7 @@ static void smack_file_set_fowner(struct file *file)
- static int smack_file_send_sigiotask(struct task_struct *tsk,
- 				     struct fown_struct *fown, int signum)
+- * smack_shm_free_security - Clear the security blob for shm
+- * @shp: the object
+- *
+- * Clears the blob pointer
+- */
+-static void smack_shm_free_security(struct shmid_kernel *shp)
+-{
+-	struct kern_ipc_perm *isp = &shp->shm_perm;
+-
+-	isp->security = NULL;
+-}
+-
+-/**
+  * smk_curacc_shm : check if current has access on shm
+  * @shp : the object
+  * @access : access requested
+@@ -2982,7 +2874,8 @@ static void smack_shm_free_security(struct shmid_kernel *shp)
+  */
+ static int smk_curacc_shm(struct shmid_kernel *shp, int access)
+ {
+-	struct smack_known *ssp = smack_of_shm(shp);
++	struct smack_known **blob = smack_ipc(&shp->shm_perm);
++	struct smack_known *ssp = *blob;
+ 	struct smk_audit_info ad;
+ 	int rc;
+ 
+@@ -3062,17 +2955,6 @@ static int smack_shm_shmat(struct shmid_kernel *shp, char __user *shmaddr,
+ }
+ 
+ /**
+- * smack_of_sem - the smack pointer for the sem
+- * @sma: the object
+- *
+- * Returns a pointer to the smack value
+- */
+-static struct smack_known *smack_of_sem(struct sem_array *sma)
+-{
+-	return (struct smack_known *)sma->sem_perm.security;
+-}
+-
+-/**
+  * smack_sem_alloc_security - Set the security blob for sem
+  * @sma: the object
+  *
+@@ -3080,27 +2962,13 @@ static struct smack_known *smack_of_sem(struct sem_array *sma)
+  */
+ static int smack_sem_alloc_security(struct sem_array *sma)
+ {
+-	struct kern_ipc_perm *isp = &sma->sem_perm;
+-	struct smack_known *skp = smk_of_current();
++	struct smack_known **blob = smack_ipc(&sma->sem_perm);
+ 
+-	isp->security = skp;
++	*blob = smk_of_current();
+ 	return 0;
+ }
+ 
+ /**
+- * smack_sem_free_security - Clear the security blob for sem
+- * @sma: the object
+- *
+- * Clears the blob pointer
+- */
+-static void smack_sem_free_security(struct sem_array *sma)
+-{
+-	struct kern_ipc_perm *isp = &sma->sem_perm;
+-
+-	isp->security = NULL;
+-}
+-
+-/**
+  * smk_curacc_sem : check if current has access on sem
+  * @sma : the object
+  * @access : access requested
+@@ -3109,7 +2977,8 @@ static void smack_sem_free_security(struct sem_array *sma)
+  */
+ static int smk_curacc_sem(struct sem_array *sma, int access)
+ {
+-	struct smack_known *ssp = smack_of_sem(sma);
++	struct smack_known **blob = smack_ipc(&sma->sem_perm);
++	struct smack_known *ssp = *blob;
+ 	struct smk_audit_info ad;
+ 	int rc;
+ 
+@@ -3195,45 +3064,20 @@ static int smack_sem_semop(struct sem_array *sma, struct sembuf *sops,
+ }
+ 
+ /**
+- * smack_msg_alloc_security - Set the security blob for msg
++ * smack_msg_queue_alloc_security - Set the security blob for msg
+  * @msq: the object
+  *
+  * Returns 0
+  */
+ static int smack_msg_queue_alloc_security(struct msg_queue *msq)
+ {
+-	struct kern_ipc_perm *kisp = &msq->q_perm;
+-	struct smack_known *skp = smk_of_current();
++	struct smack_known **blob = smack_ipc(&msq->q_perm);
+ 
+-	kisp->security = skp;
++	*blob = smk_of_current();
+ 	return 0;
+ }
+ 
+ /**
+- * smack_msg_free_security - Clear the security blob for msg
+- * @msq: the object
+- *
+- * Clears the blob pointer
+- */
+-static void smack_msg_queue_free_security(struct msg_queue *msq)
+-{
+-	struct kern_ipc_perm *kisp = &msq->q_perm;
+-
+-	kisp->security = NULL;
+-}
+-
+-/**
+- * smack_of_msq - the smack pointer for the msq
+- * @msq: the object
+- *
+- * Returns a pointer to the smack label entry
+- */
+-static struct smack_known *smack_of_msq(struct msg_queue *msq)
+-{
+-	return (struct smack_known *)msq->q_perm.security;
+-}
+-
+-/**
+  * smk_curacc_msq : helper to check if current has access on msq
+  * @msq : the msq
+  * @access : access requested
+@@ -3242,7 +3086,8 @@ static struct smack_known *smack_of_msq(struct msg_queue *msq)
+  */
+ static int smk_curacc_msq(struct msg_queue *msq, int access)
+ {
+-	struct smack_known *msp = smack_of_msq(msq);
++	struct smack_known **blob = smack_ipc(&msq->q_perm);
++	struct smack_known *msp = *blob;
+ 	struct smk_audit_info ad;
+ 	int rc;
+ 
+@@ -3345,7 +3190,8 @@ static int smack_msg_queue_msgrcv(struct msg_queue *msq, struct msg_msg *msg,
+  */
+ static int smack_ipc_permission(struct kern_ipc_perm *ipp, short flag)
+ {
+-	struct smack_known *iskp = ipp->security;
++	struct smack_known **blob = smack_ipc(ipp);
++	struct smack_known *iskp = *blob;
+ 	int may = smack_flags_to_may(flag);
+ 	struct smk_audit_info ad;
+ 	int rc;
+@@ -3366,7 +3212,8 @@ static int smack_ipc_permission(struct kern_ipc_perm *ipp, short flag)
+  */
+ static void smack_ipc_getsecid(struct kern_ipc_perm *ipp, u32 *secid)
+ {
+-	struct smack_known *iskp = ipp->security;
++	struct smack_known **blob = smack_ipc(ipp);
++	struct smack_known *iskp = *blob;
+ 
+ 	*secid = iskp->smk_secid;
+ }
+@@ -3394,7 +3241,7 @@ static void smack_d_instantiate(struct dentry *opt_dentry, struct inode *inode)
+ 	if (inode == NULL)
+ 		return;
+ 
+-	isp = inode->i_security;
++	isp = smack_inode(inode);
+ 
+ 	mutex_lock(&isp->smk_lock);
+ 	/*
+@@ -3405,7 +3252,7 @@ static void smack_d_instantiate(struct dentry *opt_dentry, struct inode *inode)
+ 		goto unlockandout;
+ 
+ 	sbp = inode->i_sb;
+-	sbsp = sbp->s_security;
++	sbsp = smack_superblock(sbp);
+ 	/*
+ 	 * We're going to use the superblock default label
+ 	 * if there's no label on the file.
+@@ -3699,9 +3546,9 @@ static int smack_unix_stream_connect(struct sock *sock,
+ {
+ 	struct smack_known *skp;
+ 	struct smack_known *okp;
+-	struct socket_smack *ssp = sock->sk_security;
+-	struct socket_smack *osp = other->sk_security;
+-	struct socket_smack *nsp = newsk->sk_security;
++	struct socket_smack *ssp = smack_sock(sock);
++	struct socket_smack *osp = smack_sock(other);
++	struct socket_smack *nsp = smack_sock(newsk);
+ 	struct smk_audit_info ad;
+ 	int rc = 0;
+ #ifdef CONFIG_AUDIT
+@@ -3747,8 +3594,8 @@ static int smack_unix_stream_connect(struct sock *sock,
+  */
+ static int smack_unix_may_send(struct socket *sock, struct socket *other)
+ {
+-	struct socket_smack *ssp = sock->sk->sk_security;
+-	struct socket_smack *osp = other->sk->sk_security;
++	struct socket_smack *ssp = smack_sock(sock->sk);
++	struct socket_smack *osp = smack_sock(other->sk);
+ 	struct smk_audit_info ad;
+ 	int rc;
+ 
+@@ -3785,7 +3632,7 @@ static int smack_socket_sendmsg(struct socket *sock, struct msghdr *msg,
+ 	struct sockaddr_in6 *sap = (struct sockaddr_in6 *) msg->msg_name;
+ #endif
+ #ifdef SMACK_IPV6_SECMARK_LABELING
+-	struct socket_smack *ssp = sock->sk->sk_security;
++	struct socket_smack *ssp = smack_sock(sock->sk);
+ 	struct smack_known *rsp;
+ #endif
+ 	int rc = 0;
+@@ -3949,7 +3796,7 @@ static int smk_skb_to_addr_ipv6(struct sk_buff *skb, struct sockaddr_in6 *sip)
+ static int smack_socket_sock_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ {
+ 	struct netlbl_lsm_secattr secattr;
+-	struct socket_smack *ssp = sk->sk_security;
++	struct socket_smack *ssp = smack_sock(sk);
+ 	struct smack_known *skp = NULL;
+ 	int rc = 0;
+ 	struct smk_audit_info ad;
+@@ -4058,7 +3905,7 @@ static int smack_socket_getpeersec_stream(struct socket *sock,
+ 	int slen = 1;
+ 	int rc = 0;
+ 
+-	ssp = sock->sk->sk_security;
++	ssp = smack_sock(sock->sk);
+ 	if (ssp->smk_packet != NULL) {
+ 		rcp = ssp->smk_packet->smk_known;
+ 		slen = strlen(rcp) + 1;
+@@ -4108,7 +3955,7 @@ static int smack_socket_getpeersec_dgram(struct socket *sock,
+ 
+ 	switch (family) {
+ 	case PF_UNIX:
+-		ssp = sock->sk->sk_security;
++		ssp = smack_sock(sock->sk);
+ 		s = ssp->smk_out->smk_secid;
+ 		break;
+ 	case PF_INET:
+@@ -4121,7 +3968,7 @@ static int smack_socket_getpeersec_dgram(struct socket *sock,
+ 		 * Translate what netlabel gave us.
+ 		 */
+ 		if (sock != NULL && sock->sk != NULL)
+-			ssp = sock->sk->sk_security;
++			ssp = smack_sock(sock->sk);
+ 		netlbl_secattr_init(&secattr);
+ 		rc = netlbl_skbuff_getattr(skb, family, &secattr);
+ 		if (rc == 0) {
+@@ -4159,7 +4006,7 @@ static void smack_sock_graft(struct sock *sk, struct socket *parent)
+ 	    (sk->sk_family != PF_INET && sk->sk_family != PF_INET6))
+ 		return;
+ 
+-	ssp = sk->sk_security;
++	ssp = smack_sock(sk);
+ 	ssp->smk_in = skp;
+ 	ssp->smk_out = skp;
+ 	/* cssp->smk_packet is already set in smack_inet_csk_clone() */
+@@ -4179,7 +4026,7 @@ static int smack_inet_conn_request(struct sock *sk, struct sk_buff *skb,
+ {
+ 	u16 family = sk->sk_family;
+ 	struct smack_known *skp;
+-	struct socket_smack *ssp = sk->sk_security;
++	struct socket_smack *ssp = smack_sock(sk);
+ 	struct netlbl_lsm_secattr secattr;
+ 	struct sockaddr_in addr;
+ 	struct iphdr *hdr;
+@@ -4278,7 +4125,7 @@ static int smack_inet_conn_request(struct sock *sk, struct sk_buff *skb,
+ static void smack_inet_csk_clone(struct sock *sk,
+ 				 const struct request_sock *req)
+ {
+-	struct socket_smack *ssp = sk->sk_security;
++	struct socket_smack *ssp = smack_sock(sk);
+ 	struct smack_known *skp;
+ 
+ 	if (req->peer_secid != 0) {
+@@ -4310,24 +4157,14 @@ static void smack_inet_csk_clone(struct sock *sk,
+ static int smack_key_alloc(struct key *key, const struct cred *cred,
+ 			   unsigned long flags)
+ {
++	struct smack_known **blob = smack_key(key);
+ 	struct smack_known *skp = smk_of_task(smack_cred(cred));
+ 
+-	key->security = skp;
++	*blob = skp;
+ 	return 0;
+ }
+ 
+ /**
+- * smack_key_free - Clear the key security blob
+- * @key: the object
+- *
+- * Clear the blob pointer
+- */
+-static void smack_key_free(struct key *key)
+-{
+-	key->security = NULL;
+-}
+-
+-/**
+  * smack_key_permission - Smack access on a key
+  * @key_ref: gets to the object
+  * @cred: the credentials to use
+@@ -4339,6 +4176,8 @@ static void smack_key_free(struct key *key)
+ static int smack_key_permission(key_ref_t key_ref,
+ 				const struct cred *cred, unsigned perm)
  {
 +	struct smack_known **blob;
- 	struct smack_known *skp;
- 	struct smack_known *tkp = smk_of_task(smack_cred(tsk->cred));
- 	struct file *file;
-@@ -1872,7 +1863,8 @@ static int smack_file_send_sigiotask(struct task_struct *tsk,
- 	file = container_of(fown, struct file, f_owner);
- 
- 	/* we don't log here as rc can be overriden */
--	skp = file->f_security;
-+	blob = smack_file(file);
++	struct smack_known *skp;
+ 	struct key *keyp;
+ 	struct smk_audit_info ad;
+ 	struct smack_known *tkp = smk_of_task(smack_cred(cred));
+@@ -4352,7 +4191,9 @@ static int smack_key_permission(key_ref_t key_ref,
+ 	 * If the key hasn't been initialized give it access so that
+ 	 * it may do so.
+ 	 */
+-	if (keyp->security == NULL)
++	blob = smack_key(keyp);
 +	skp = *blob;
- 	rc = smk_access(skp, tkp, MAY_DELIVER, NULL);
- 	rc = smk_bu_note("sigiotask", skp, tkp, MAY_DELIVER, rc);
- 	if (rc != 0 && has_capability(tsk, CAP_MAC_OVERRIDE))
-@@ -4604,6 +4596,7 @@ static int smack_inode_getsecctx(struct inode *inode, void **ctx, u32 *ctxlen)
++	if (skp == NULL)
+ 		return 0;
+ 	/*
+ 	 * This should not occur
+@@ -4368,8 +4209,8 @@ static int smack_key_permission(key_ref_t key_ref,
+ 		request = MAY_READ;
+ 	if (perm & (KEY_NEED_WRITE | KEY_NEED_LINK | KEY_NEED_SETATTR))
+ 		request = MAY_WRITE;
+-	rc = smk_access(tkp, keyp->security, request, &ad);
+-	rc = smk_bu_note("key access", tkp, keyp->security, request, rc);
++	rc = smk_access(tkp, skp, request, &ad);
++	rc = smk_bu_note("key access", tkp, skp, request, rc);
+ 	return rc;
+ }
  
+@@ -4384,11 +4225,12 @@ static int smack_key_permission(key_ref_t key_ref,
+  */
+ static int smack_key_getsecurity(struct key *key, char **_buffer)
+ {
+-	struct smack_known *skp = key->security;
++	struct smack_known **blob = smack_key(key);
++	struct smack_known *skp = *blob;
+ 	size_t length;
+ 	char *copy;
+ 
+-	if (key->security == NULL) {
++	if (skp == NULL) {
+ 		*_buffer = NULL;
+ 		return 0;
+ 	}
+@@ -4597,6 +4439,14 @@ static int smack_inode_getsecctx(struct inode *inode, void **ctx, u32 *ctxlen)
  struct lsm_blob_sizes smack_blob_sizes = {
  	.lbs_cred = sizeof(struct task_smack),
-+	.lbs_file = sizeof(struct smack_known *),
+ 	.lbs_file = sizeof(struct smack_known *),
++	.lbs_inode = sizeof(struct inode_smack),
++	.lbs_ipc = sizeof(struct smack_known *),
++#ifdef CONFIG_KEYS
++	.lbs_key = sizeof(struct smack_known *),
++#endif /* CONFIG_KEYS */
++	.lbs_msg_msg = sizeof(struct smack_known *),
++	.lbs_sock = sizeof(struct socket_smack),
++	.lbs_superblock = sizeof(struct superblock_smack),
  };
  
  static struct security_hook_list smack_hooks[] __lsm_ro_after_init = {
-@@ -4643,7 +4636,6 @@ static struct security_hook_list smack_hooks[] __lsm_ro_after_init = {
- 	LSM_HOOK_INIT(inode_getsecid, smack_inode_getsecid),
+@@ -4605,7 +4455,6 @@ static struct security_hook_list smack_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(syslog, smack_syslog),
  
- 	LSM_HOOK_INIT(file_alloc_security, smack_file_alloc_security),
--	LSM_HOOK_INIT(file_free_security, smack_file_free_security),
- 	LSM_HOOK_INIT(file_ioctl, smack_file_ioctl),
- 	LSM_HOOK_INIT(file_lock, smack_file_lock),
- 	LSM_HOOK_INIT(file_fcntl, smack_file_fcntl),
+ 	LSM_HOOK_INIT(sb_alloc_security, smack_sb_alloc_security),
+-	LSM_HOOK_INIT(sb_free_security, smack_sb_free_security),
+ 	LSM_HOOK_INIT(sb_copy_data, smack_sb_copy_data),
+ 	LSM_HOOK_INIT(sb_kern_mount, smack_sb_kern_mount),
+ 	LSM_HOOK_INIT(sb_statfs, smack_sb_statfs),
+@@ -4617,7 +4466,6 @@ static struct security_hook_list smack_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(bprm_secureexec, smack_bprm_secureexec),
+ 
+ 	LSM_HOOK_INIT(inode_alloc_security, smack_inode_alloc_security),
+-	LSM_HOOK_INIT(inode_free_security, smack_inode_free_security),
+ 	LSM_HOOK_INIT(inode_init_security, smack_inode_init_security),
+ 	LSM_HOOK_INIT(inode_link, smack_inode_link),
+ 	LSM_HOOK_INIT(inode_unlink, smack_inode_unlink),
+@@ -4670,23 +4518,19 @@ static struct security_hook_list smack_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(ipc_getsecid, smack_ipc_getsecid),
+ 
+ 	LSM_HOOK_INIT(msg_msg_alloc_security, smack_msg_msg_alloc_security),
+-	LSM_HOOK_INIT(msg_msg_free_security, smack_msg_msg_free_security),
+ 
+ 	LSM_HOOK_INIT(msg_queue_alloc_security, smack_msg_queue_alloc_security),
+-	LSM_HOOK_INIT(msg_queue_free_security, smack_msg_queue_free_security),
+ 	LSM_HOOK_INIT(msg_queue_associate, smack_msg_queue_associate),
+ 	LSM_HOOK_INIT(msg_queue_msgctl, smack_msg_queue_msgctl),
+ 	LSM_HOOK_INIT(msg_queue_msgsnd, smack_msg_queue_msgsnd),
+ 	LSM_HOOK_INIT(msg_queue_msgrcv, smack_msg_queue_msgrcv),
+ 
+ 	LSM_HOOK_INIT(shm_alloc_security, smack_shm_alloc_security),
+-	LSM_HOOK_INIT(shm_free_security, smack_shm_free_security),
+ 	LSM_HOOK_INIT(shm_associate, smack_shm_associate),
+ 	LSM_HOOK_INIT(shm_shmctl, smack_shm_shmctl),
+ 	LSM_HOOK_INIT(shm_shmat, smack_shm_shmat),
+ 
+ 	LSM_HOOK_INIT(sem_alloc_security, smack_sem_alloc_security),
+-	LSM_HOOK_INIT(sem_free_security, smack_sem_free_security),
+ 	LSM_HOOK_INIT(sem_associate, smack_sem_associate),
+ 	LSM_HOOK_INIT(sem_semctl, smack_sem_semctl),
+ 	LSM_HOOK_INIT(sem_semop, smack_sem_semop),
+@@ -4709,7 +4553,9 @@ static struct security_hook_list smack_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(socket_getpeersec_stream, smack_socket_getpeersec_stream),
+ 	LSM_HOOK_INIT(socket_getpeersec_dgram, smack_socket_getpeersec_dgram),
+ 	LSM_HOOK_INIT(sk_alloc_security, smack_sk_alloc_security),
++#ifdef SMACK_IPV6_PORT_LABELING
+ 	LSM_HOOK_INIT(sk_free_security, smack_sk_free_security),
++#endif
+ 	LSM_HOOK_INIT(sock_graft, smack_sock_graft),
+ 	LSM_HOOK_INIT(inet_conn_request, smack_inet_conn_request),
+ 	LSM_HOOK_INIT(inet_csk_clone, smack_inet_csk_clone),
+@@ -4717,7 +4563,6 @@ static struct security_hook_list smack_hooks[] __lsm_ro_after_init = {
+  /* key management security hooks */
+ #ifdef CONFIG_KEYS
+ 	LSM_HOOK_INIT(key_alloc, smack_key_alloc),
+-	LSM_HOOK_INIT(key_free, smack_key_free),
+ 	LSM_HOOK_INIT(key_permission, smack_key_permission),
+ 	LSM_HOOK_INIT(key_getsecurity, smack_key_getsecurity),
+ #endif /* CONFIG_KEYS */
+diff --git a/security/smack/smack_netfilter.c b/security/smack/smack_netfilter.c
+index 205b785..1c6c9b0 100644
+--- a/security/smack/smack_netfilter.c
++++ b/security/smack/smack_netfilter.c
+@@ -30,8 +30,8 @@ static unsigned int smack_ipv6_output(void *priv,
+ 	struct socket_smack *ssp;
+ 	struct smack_known *skp;
+ 
+-	if (sk && sk->sk_security) {
+-		ssp = sk->sk_security;
++	if (sk && smack_sock(sk)) {
++		ssp = smack_sock(sk);
+ 		skp = ssp->smk_out;
+ 		skb->secmark = skp->smk_secid;
+ 	}
+@@ -48,8 +48,8 @@ static unsigned int smack_ipv4_output(void *priv,
+ 	struct socket_smack *ssp;
+ 	struct smack_known *skp;
+ 
+-	if (sk && sk->sk_security) {
+-		ssp = sk->sk_security;
++	if (sk && smack_sock(sk)) {
++		ssp = smack_sock(sk);
+ 		skp = ssp->smk_out;
+ 		skb->secmark = skp->smk_secid;
+ 	}
 -- 
 2.5.5
