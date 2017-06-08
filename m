@@ -3,8 +3,8 @@ In-Reply-To: <20170608002523.m3h3jin4poav5xy2@thunk.org>
 References: <20170606174804.31124-1-Jason@zx2c4.com> <20170606174804.31124-9-Jason@zx2c4.com>
  <20170608002523.m3h3jin4poav5xy2@thunk.org>
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 8 Jun 2017 02:31:23 +0200
-Message-ID: <CAHmME9prHVM+faDB61hQUSa9crSQqmLysWmTakf=9WcUyWwq4A@mail.gmail.com>
+Date: Thu, 8 Jun 2017 02:34:40 +0200
+Message-ID: <CAHmME9o+qn+yo1KRekNXNm1r1swSgQasKpqws2EGh6iv1LOagg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: Re: [kernel-hardening] [PATCH v4 08/13] cifs: use get_random_u32 for
  32-bit lock random
