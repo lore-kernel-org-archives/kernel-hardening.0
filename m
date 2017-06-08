@@ -1,120 +1,43 @@
+Date: Thu, 8 Jun 2017 08:02:02 -0400
+From: Kevin Easton <kevin@guarana.org>
+Message-ID: <20170608120202.GA19250@la.guarana.org>
+References: <20170606005108.5646-1-Jason@zx2c4.com>
+ <20170606005108.5646-5-Jason@zx2c4.com>
+ <20170606030004.4go6btmobrsmqiwz@thunk.org>
+ <CAHmME9qZUEMDjQGNOBC7PrCTcanOxohVHcED+Xyg_3jR64Q7VQ@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20170608024357.fhyyentj2qm7ti2q@thunk.org>
-References: <20170606174804.31124-1-Jason@zx2c4.com> <20170606174804.31124-7-Jason@zx2c4.com>
- <20170608024357.fhyyentj2qm7ti2q@thunk.org>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 8 Jun 2017 14:09:43 +0200
-Message-ID: <CAHmME9pViOqqDPyjXKLfCWSTnQrcE4OLJMdK1yaTiUvrOV+ecQ@mail.gmail.com>
-Content-Type: multipart/mixed; boundary="001a1135531e6bdd61055171ba52"
-Subject: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure RNG is
- seeded before use
-To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, "Nicholas A. Bellinger" <nab@linux-iscsi.org>, Lee Duncan <lduncan@suse.com>, Chris Leech <cleech@redhat.com>, open-iscsi@googlegroups.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAHmME9qZUEMDjQGNOBC7PrCTcanOxohVHcED+Xyg_3jR64Q7VQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v3 04/13] crypto/rng: ensure that the RNG is ready before
+ using
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a1135531e6bdd61055171ba52
-Content-Type: text/plain; charset="UTF-8"
+On Tue, Jun 06, 2017 at 05:56:20AM +0200, Jason A. Donenfeld wrote:
+> Hey Ted,
+> 
+> On Tue, Jun 6, 2017 at 5:00 AM, Theodore Ts'o <tytso@mit.edu> wrote:
+> > Note that crypto_rng_reset() is called by big_key_init() in
+> > security/keys/big_key.c as a late_initcall().  So if we are on a
+> > system where the crng doesn't get initialized until during the system
+> > boot scripts, and big_key is compiled directly into the kernel, the
+> > boot could end up deadlocking.
+> >
+> > There may be other instances of where crypto_rng_reset() is called by
+> > an initcall, so big_key_init() may not be an exhaustive enumeration of
+> > potential problems.  But this is an example of why the synchronous
+> > API, although definitely much more convenient, can end up being a trap
+> > for the unwary....
+> 
+> Thanks for pointing this out. I'll look more closely into it and see
+> if I can figure out a good way of approaching this.
 
-On Thu, Jun 8, 2017 at 4:43 AM, Theodore Ts'o <tytso@mit.edu> wrote:
-> What was the testing that was done for commit?  It looks safe, but I'm
-> unfamiliar enough with how the iSCSI authentication works that I'd
-> prefer getting an ack'ed by from the iSCSI maintainers or
-> alternativel, information about how to kick off some kind of automated
-> test suite ala xfstests for file systems.
+Would it work for wait_for_random_bytes() to include a
 
-Only very basic testing from my end.
+    WARN_ON(system_state < SYSTEM_RUNNING);
 
-I'm thus adding the iSCSI list to see if they'll have a look (patch reattached).
+to catch those kinds of cases?
 
-Jason
-
---001a1135531e6bdd61055171ba52
-Content-Type: text/x-patch; charset="US-ASCII";
-	name="0001-iscsi-ensure-RNG-is-seeded-before-use.patch"
-Content-Disposition: attachment;
-	filename="0001-iscsi-ensure-RNG-is-seeded-before-use.patch"
-Content-Transfer-Encoding: base64
-X-Attachment-Id: f_j3odrfe90
-
-RnJvbSAxYWRlY2Y3ODU1MjZhMmE5NjEwNDc2NzgwNzE0MGI5ZTFhOWUyYTI3IE1vbiBTZXAgMTcg
-MDA6MDA6MDAgMjAwMQpGcm9tOiAiSmFzb24gQS4gRG9uZW5mZWxkIiA8SmFzb25AengyYzQuY29t
-PgpEYXRlOiBNb24sIDUgSnVuIDIwMTcgMDU6MDk6NTQgKzAyMDAKU3ViamVjdDogW1BBVENIXSBp
-c2NzaTogZW5zdXJlIFJORyBpcyBzZWVkZWQgYmVmb3JlIHVzZQoKSXQncyBub3Qgc2FmZSB0byB1
-c2Ugd2VhayByYW5kb20gZGF0YSBoZXJlLCBlc3BlY2lhbGx5IGZvciB0aGUgY2hhbGxlbmdlCnJl
-c3BvbnNlIHJhbmRvbW5lc3MuIFNpbmNlIHdlJ3JlIGFsd2F5cyBpbiBwcm9jZXNzIGNvbnRleHQs
-IGl0J3Mgc2FmZSB0bwpzaW1wbHkgd2FpdCB1bnRpbCB3ZSBoYXZlIGVub3VnaCByYW5kb21uZXNz
-IHRvIGNhcnJ5IG91dCB0aGUKYXV0aGVudGljYXRpb24gY29ycmVjdGx5LgoKV2hpbGUgd2UncmUg
-YXQgaXQsIHdlIGNsZWFuIHVwIGEgc21hbGwgbWVtbGVhayBkdXJpbmcgYW4gZXJyb3IKY29uZGl0
-aW9uLgoKU2lnbmVkLW9mZi1ieTogSmFzb24gQS4gRG9uZW5mZWxkIDxKYXNvbkB6eDJjNC5jb20+
-CkNjOiAiTmljaG9sYXMgQS4gQmVsbGluZ2VyIiA8bmFiQGxpbnV4LWlzY3NpLm9yZz4KQ2M6IExl
-ZSBEdW5jYW4gPGxkdW5jYW5Ac3VzZS5jb20+CkNjOiBDaHJpcyBMZWVjaCA8Y2xlZWNoQHJlZGhh
-dC5jb20+Ci0tLQogZHJpdmVycy90YXJnZXQvaXNjc2kvaXNjc2lfdGFyZ2V0X2F1dGguYyAgfCAx
-NCArKysrKysrKysrKy0tLQogZHJpdmVycy90YXJnZXQvaXNjc2kvaXNjc2lfdGFyZ2V0X2xvZ2lu
-LmMgfCAyMiArKysrKysrKysrKysrKy0tLS0tLS0tCiAyIGZpbGVzIGNoYW5nZWQsIDI1IGluc2Vy
-dGlvbnMoKyksIDExIGRlbGV0aW9ucygtKQoKZGlmZiAtLWdpdCBhL2RyaXZlcnMvdGFyZ2V0L2lz
-Y3NpL2lzY3NpX3RhcmdldF9hdXRoLmMgYi9kcml2ZXJzL3RhcmdldC9pc2NzaS9pc2NzaV90YXJn
-ZXRfYXV0aC5jCmluZGV4IDkwM2I2NjdmOGUwMS4uZjliYzhlYzZmYjZiIDEwMDY0NAotLS0gYS9k
-cml2ZXJzL3RhcmdldC9pc2NzaS9pc2NzaV90YXJnZXRfYXV0aC5jCisrKyBiL2RyaXZlcnMvdGFy
-Z2V0L2lzY3NpL2lzY3NpX3RhcmdldF9hdXRoLmMKQEAgLTQ3LDE4ICs0NywyMSBAQCBzdGF0aWMg
-dm9pZCBjaGFwX2JpbmFyeWhleF90b19hc2NpaWhleChjaGFyICpkc3QsIGNoYXIgKnNyYywgaW50
-IHNyY19sZW4pCiAJfQogfQogCi1zdGF0aWMgdm9pZCBjaGFwX2dlbl9jaGFsbGVuZ2UoCitzdGF0
-aWMgaW50IGNoYXBfZ2VuX2NoYWxsZW5nZSgKIAlzdHJ1Y3QgaXNjc2lfY29ubiAqY29ubiwKIAlp
-bnQgY2FsbGVyLAogCWNoYXIgKmNfc3RyLAogCXVuc2lnbmVkIGludCAqY19sZW4pCiB7CisJaW50
-IHJldDsKIAl1bnNpZ25lZCBjaGFyIGNoYWxsZW5nZV9hc2NpaWhleFtDSEFQX0NIQUxMRU5HRV9M
-RU5HVEggKiAyICsgMV07CiAJc3RydWN0IGlzY3NpX2NoYXAgKmNoYXAgPSBjb25uLT5hdXRoX3By
-b3RvY29sOwogCiAJbWVtc2V0KGNoYWxsZW5nZV9hc2NpaWhleCwgMCwgQ0hBUF9DSEFMTEVOR0Vf
-TEVOR1RIICogMiArIDEpOwogCi0JZ2V0X3JhbmRvbV9ieXRlcyhjaGFwLT5jaGFsbGVuZ2UsIENI
-QVBfQ0hBTExFTkdFX0xFTkdUSCk7CisJcmV0ID0gZ2V0X3JhbmRvbV9ieXRlc193YWl0KGNoYXAt
-PmNoYWxsZW5nZSwgQ0hBUF9DSEFMTEVOR0VfTEVOR1RIKTsKKwlpZiAodW5saWtlbHkocmV0KSkK
-KwkJcmV0dXJuIHJldDsKIAljaGFwX2JpbmFyeWhleF90b19hc2NpaWhleChjaGFsbGVuZ2VfYXNj
-aWloZXgsIGNoYXAtPmNoYWxsZW5nZSwKIAkJCQlDSEFQX0NIQUxMRU5HRV9MRU5HVEgpOwogCS8q
-CkBAIC02OSw2ICs3Miw3IEBAIHN0YXRpYyB2b2lkIGNoYXBfZ2VuX2NoYWxsZW5nZSgKIAogCXBy
-X2RlYnVnKCJbJXNdIFNlbmRpbmcgQ0hBUF9DPTB4JXNcblxuIiwgKGNhbGxlcikgPyAic2VydmVy
-IiA6ICJjbGllbnQiLAogCQkJY2hhbGxlbmdlX2FzY2lpaGV4KTsKKwlyZXR1cm4gMDsKIH0KIAog
-c3RhdGljIGludCBjaGFwX2NoZWNrX2FsZ29yaXRobShjb25zdCBjaGFyICphX3N0cikKQEAgLTE0
-Myw2ICsxNDcsNyBAQCBzdGF0aWMgc3RydWN0IGlzY3NpX2NoYXAgKmNoYXBfc2VydmVyX29wZW4o
-CiAJY2FzZSBDSEFQX0RJR0VTVF9VTktOT1dOOgogCWRlZmF1bHQ6CiAJCXByX2VycigiVW5zdXBw
-b3J0ZWQgQ0hBUF9BIHZhbHVlXG4iKTsKKwkJa2ZyZWUoY29ubi0+YXV0aF9wcm90b2NvbCk7CiAJ
-CXJldHVybiBOVUxMOwogCX0KIApAQCAtMTU2LDcgKzE2MSwxMCBAQCBzdGF0aWMgc3RydWN0IGlz
-Y3NpX2NoYXAgKmNoYXBfc2VydmVyX29wZW4oCiAJLyoKIAkgKiBHZW5lcmF0ZSBDaGFsbGVuZ2Uu
-CiAJICovCi0JY2hhcF9nZW5fY2hhbGxlbmdlKGNvbm4sIDEsIGFpY19zdHIsIGFpY19sZW4pOwor
-CWlmIChjaGFwX2dlbl9jaGFsbGVuZ2UoY29ubiwgMSwgYWljX3N0ciwgYWljX2xlbikgPCAwKSB7
-CisJCWtmcmVlKGNvbm4tPmF1dGhfcHJvdG9jb2wpOworCQlyZXR1cm4gTlVMTDsKKwl9CiAKIAly
-ZXR1cm4gY2hhcDsKIH0KZGlmZiAtLWdpdCBhL2RyaXZlcnMvdGFyZ2V0L2lzY3NpL2lzY3NpX3Rh
-cmdldF9sb2dpbi5jIGIvZHJpdmVycy90YXJnZXQvaXNjc2kvaXNjc2lfdGFyZ2V0X2xvZ2luLmMK
-aW5kZXggOTJiOTZiNTFkNTA2Li5lOWJkYzhiODZlN2QgMTAwNjQ0Ci0tLSBhL2RyaXZlcnMvdGFy
-Z2V0L2lzY3NpL2lzY3NpX3RhcmdldF9sb2dpbi5jCisrKyBiL2RyaXZlcnMvdGFyZ2V0L2lzY3Np
-L2lzY3NpX3RhcmdldF9sb2dpbi5jCkBAIC0yNDUsMjIgKzI0NSwyNiBAQCBpbnQgaXNjc2lfY2hl
-Y2tfZm9yX3Nlc3Npb25fcmVpbnN0YXRlbWVudChzdHJ1Y3QgaXNjc2lfY29ubiAqY29ubikKIAly
-ZXR1cm4gMDsKIH0KIAotc3RhdGljIHZvaWQgaXNjc2lfbG9naW5fc2V0X2Nvbm5fdmFsdWVzKAor
-c3RhdGljIGludCBpc2NzaV9sb2dpbl9zZXRfY29ubl92YWx1ZXMoCiAJc3RydWN0IGlzY3NpX3Nl
-c3Npb24gKnNlc3MsCiAJc3RydWN0IGlzY3NpX2Nvbm4gKmNvbm4sCiAJX19iZTE2IGNpZCkKIHsK
-KwlpbnQgcmV0OwogCWNvbm4tPnNlc3MJCT0gc2VzczsKIAljb25uLT5jaWQJCT0gYmUxNl90b19j
-cHUoY2lkKTsKIAkvKgogCSAqIEdlbmVyYXRlIGEgcmFuZG9tIFN0YXR1cyBzZXF1ZW5jZSBudW1i
-ZXIgKHN0YXRzbikgZm9yIHRoZSBuZXcKIAkgKiBpU0NTSSBjb25uZWN0aW9uLgogCSAqLwotCWdl
-dF9yYW5kb21fYnl0ZXMoJmNvbm4tPnN0YXRfc24sIHNpemVvZih1MzIpKTsKKwlyZXQgPSBnZXRf
-cmFuZG9tX2J5dGVzX3dhaXQoJmNvbm4tPnN0YXRfc24sIHNpemVvZih1MzIpKTsKKwlpZiAodW5s
-aWtlbHkocmV0KSkKKwkJcmV0dXJuIHJldDsKIAogCW11dGV4X2xvY2soJmF1dGhfaWRfbG9jayk7
-CiAJY29ubi0+YXV0aF9pZAkJPSBpc2NzaXRfZ2xvYmFsLT5hdXRoX2lkKys7CiAJbXV0ZXhfdW5s
-b2NrKCZhdXRoX2lkX2xvY2spOworCXJldHVybiAwOwogfQogCiBfX3ByaW50ZigyLCAzKSBpbnQg
-aXNjc2lfY2hhbmdlX3BhcmFtX3NwcmludGYoCkBAIC0zMDYsNyArMzEwLDExIEBAIHN0YXRpYyBp
-bnQgaXNjc2lfbG9naW5femVyb190c2loX3MxKAogCQlyZXR1cm4gLUVOT01FTTsKIAl9CiAKLQlp
-c2NzaV9sb2dpbl9zZXRfY29ubl92YWx1ZXMoc2VzcywgY29ubiwgcGR1LT5jaWQpOworCXJldCA9
-IGlzY3NpX2xvZ2luX3NldF9jb25uX3ZhbHVlcyhzZXNzLCBjb25uLCBwZHUtPmNpZCk7CisJaWYg
-KHVubGlrZWx5KHJldCkpIHsKKwkJa2ZyZWUoc2Vzcyk7CisJCXJldHVybiByZXQ7CisJfQogCXNl
-c3MtPmluaXRfdGFza190YWcJPSBwZHUtPml0dDsKIAltZW1jcHkoJnNlc3MtPmlzaWQsIHBkdS0+
-aXNpZCwgNik7CiAJc2Vzcy0+ZXhwX2NtZF9zbgk9IGJlMzJfdG9fY3B1KHBkdS0+Y21kc24pOwpA
-QCAtNDk3LDggKzUwNSw3IEBAIHN0YXRpYyBpbnQgaXNjc2lfbG9naW5fbm9uX3plcm9fdHNpaF9z
-MSgKIHsKIAlzdHJ1Y3QgaXNjc2lfbG9naW5fcmVxICpwZHUgPSAoc3RydWN0IGlzY3NpX2xvZ2lu
-X3JlcSAqKWJ1ZjsKIAotCWlzY3NpX2xvZ2luX3NldF9jb25uX3ZhbHVlcyhOVUxMLCBjb25uLCBw
-ZHUtPmNpZCk7Ci0JcmV0dXJuIDA7CisJcmV0dXJuIGlzY3NpX2xvZ2luX3NldF9jb25uX3ZhbHVl
-cyhOVUxMLCBjb25uLCBwZHUtPmNpZCk7CiB9CiAKIC8qCkBAIC01NTQsOSArNTYxLDggQEAgc3Rh
-dGljIGludCBpc2NzaV9sb2dpbl9ub25femVyb190c2loX3MyKAogCQlhdG9taWNfc2V0KCZzZXNz
-LT5zZXNzaW9uX2NvbnRpbnVhdGlvbiwgMSk7CiAJc3Bpbl91bmxvY2tfYmgoJnNlc3MtPmNvbm5f
-bG9jayk7CiAKLQlpc2NzaV9sb2dpbl9zZXRfY29ubl92YWx1ZXMoc2VzcywgY29ubiwgcGR1LT5j
-aWQpOwotCi0JaWYgKGlzY3NpX2NvcHlfcGFyYW1fbGlzdCgmY29ubi0+cGFyYW1fbGlzdCwKKwlp
-ZiAoaXNjc2lfbG9naW5fc2V0X2Nvbm5fdmFsdWVzKHNlc3MsIGNvbm4sIHBkdS0+Y2lkKSA8IDAg
-fHwKKwkgICAgaXNjc2lfY29weV9wYXJhbV9saXN0KCZjb25uLT5wYXJhbV9saXN0LAogCQkJY29u
-bi0+dHBnLT5wYXJhbV9saXN0LCAwKSA8IDApIHsKIAkJaXNjc2l0X3R4X2xvZ2luX3JzcChjb25u
-LCBJU0NTSV9TVEFUVVNfQ0xTX1RBUkdFVF9FUlIsCiAJCQkJSVNDU0lfTE9HSU5fU1RBVFVTX05P
-X1JFU09VUkNFUyk7Ci0tIAoyLjEzLjAKCg==
---001a1135531e6bdd61055171ba52--
+    - Kevin 
