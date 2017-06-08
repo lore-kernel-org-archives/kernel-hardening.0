@@ -1,32 +1,32 @@
+Date: Wed, 7 Jun 2017 22:43:57 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Message-ID: <20170608024357.fhyyentj2qm7ti2q@thunk.org>
+References: <20170606174804.31124-1-Jason@zx2c4.com>
+ <20170606174804.31124-7-Jason@zx2c4.com>
 MIME-Version: 1.0
-In-Reply-To: <CAHmME9qbt70Oc0h_zfGqdrfTbrVsY4aUM-oUjpWHsU7PO7DZww@mail.gmail.com>
-References: <20170606174804.31124-1-Jason@zx2c4.com> <20170606174804.31124-5-Jason@zx2c4.com>
- <20170608003116.zgznzb37ms7wj4vl@thunk.org> <CAHmME9qbt70Oc0h_zfGqdrfTbrVsY4aUM-oUjpWHsU7PO7DZww@mail.gmail.com>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 8 Jun 2017 03:03:38 +0200
-Message-ID: <CAHmME9oGBpm=nBuDnSoVBg1A9BMvmR_9EpWE9nH6xoJONZv_fQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v4 04/13] security/keys: ensure RNG is seeded before use
-To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, David Howells <dhowells@redhat.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Safford <safford@us.ibm.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170606174804.31124-7-Jason@zx2c4.com>
+Subject: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure RNG is seeded before use
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, "Nicholas A. Bellinger" <nab@linux-iscsi.org>, Lee Duncan <lduncan@suse.com>, Chris Leech <cleech@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 8, 2017 at 2:50 AM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
-> On Thu, Jun 8, 2017 at 2:31 AM, Theodore Ts'o <tytso@mit.edu> wrote:
->> I'm guessing you changed key_alloc_serial() to return an int back when
->> you were thinking that you might use get_random_bytes_wait(), which
->> could return -ERESTARTSYS.
->>
->> Now that you're not doing this, but using get_random_u32() instead,
->> there's no point to change the function signature of
->> key_alloc_serial() and add an error check in key_alloc() that will
->> never fail, right?  That's just adding a dead code path.  Which the
->> compiler can probably optimize away, but why make the code slightly
->> harder to read than necessasry?
->
-> Good catch, and thanks for reading these so thoroughly that you caught
-> the churn artifacts. Do you want me to clean this up and resubmit, or
-> are you planning on adjusting it in the dev branch?
+On Tue, Jun 06, 2017 at 07:47:57PM +0200, Jason A. Donenfeld wrote:
+> It's not safe to use weak random data here, especially for the challenge
+> response randomness. Since we're always in process context, it's safe to
+> simply wait until we have enough randomness to carry out the
+> authentication correctly.
+> 
+> While we're at it, we clean up a small memleak during an error
+> condition.
 
-Fixed it up here if you just want to grab this instead:
+What was the testing that was done for commit?  It looks safe, but I'm
+unfamiliar enough with how the iSCSI authentication works that I'd
+prefer getting an ack'ed by from the iSCSI maintainers or
+alternativel, information about how to kick off some kind of automated
+test suite ala xfstests for file systems.
 
-https://git.kernel.org/pub/scm/linux/kernel/git/zx2c4/linux.git/patch/?id=a0361e55bce30ace529ed8b28bd452e3ac0ee91f
+Thanks,
+
+					- Ted
