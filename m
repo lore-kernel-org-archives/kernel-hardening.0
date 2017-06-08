@@ -1,52 +1,49 @@
-Date: Wed, 7 Jun 2017 20:31:16 -0400
-From: Theodore Ts'o <tytso@mit.edu>
-Message-ID: <20170608003116.zgznzb37ms7wj4vl@thunk.org>
-References: <20170606174804.31124-1-Jason@zx2c4.com>
- <20170606174804.31124-5-Jason@zx2c4.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170606174804.31124-5-Jason@zx2c4.com>
-Subject: [kernel-hardening] Re: [PATCH v4 04/13] security/keys: ensure RNG is seeded before use
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, David Howells <dhowells@redhat.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Safford <safford@us.ibm.com>
+In-Reply-To: <20170608002523.m3h3jin4poav5xy2@thunk.org>
+References: <20170606174804.31124-1-Jason@zx2c4.com> <20170606174804.31124-9-Jason@zx2c4.com>
+ <20170608002523.m3h3jin4poav5xy2@thunk.org>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Thu, 8 Jun 2017 02:31:23 +0200
+Message-ID: <CAHmME9prHVM+faDB61hQUSa9crSQqmLysWmTakf=9WcUyWwq4A@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [PATCH v4 08/13] cifs: use get_random_u32 for
+ 32-bit lock random
+To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, Steve French <sfrench@samba.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 06, 2017 at 07:47:55PM +0200, Jason A. Donenfeld wrote:
-> -static inline void key_alloc_serial(struct key *key)
-> +static inline int key_alloc_serial(struct key *key)
+On Thu, Jun 8, 2017 at 2:25 AM, Theodore Ts'o <tytso@mit.edu> wrote:
+> There's a bigger problem here, which is that cifs_lock_secret is a
+> 32-bit value which is being used to obscure flock->fl_owner before it
+> is sent across the wire.  But flock->fl_owner is a pointer to the
+> struct file *, so 64-bit architecture, the high 64-bits of a kernel
+> pointer is being exposed to anyone using tcpdump.  (Oops, I'm showing
+> my age; I guess all the cool kids are using Wireshark these days.)
+>
+> Worse, the obscuring is being done using XOR.  How an active attacker
+> might be able to trivially reverse engineer the 32-bit "secret" is
+> left as an exercise to the reader.  The bottom line is if the goal is
+> to hide the memory location of a struct file from an attacker,
+> cifs_lock_secret is about as useful as a TSA agent doing security
+> theatre at an airport.  Which is to say, it makes the civilians feel
+> good.  :-)
 
-> @@ -170,7 +168,7 @@ static inline void key_alloc_serial(struct key *key)
->  	rb_insert_color(&key->serial_node, &key_serial_tree);
->  
->  	spin_unlock(&key_serial_lock);
-> -	return;
-> +	return 0;
->  
->  	/* we found a key with the proposed serial number - walk the tree from
->  	 * that point looking for the next unused serial number */
+High five for taking the deep dive and actually reading how this all
+works. Nice bug!
 
-> @@ -314,7 +312,9 @@ struct key *key_alloc(struct key_type *type, const char *desc,
->  
->  	/* publish the key by giving it a serial number */
->  	atomic_inc(&user->nkeys);
-> -	key_alloc_serial(key);
-> +	ret = key_alloc_serial(key);
-> +	if (ret < 0)
-> +		goto security_error;
->  
->  error:
->  	return key;
+> Not waiting
+> for the CRNG to be fully initialized is the *least* of its problems.
 
-I'm guessing you changed key_alloc_serial() to return an int back when
-you were thinking that you might use get_random_bytes_wait(), which
-could return -ERESTARTSYS.
+The kernel is vast and filled with tons of bugs of many sorts. On this
+reasoning, maybe I should spend my time auditing web apps instead,
+which are usually the "front door" of bugs? I like the puzzles of
+random.c. I also had a real world need for wait_for_random_bytes() in
+a module I'm writing.
 
-Now that you're not doing this, but using get_random_u32() instead,
-there's no point to change the function signature of
-key_alloc_serial() and add an error check in key_alloc() that will
-never fail, right?  That's just adding a dead code path.  Which the
-compiler can probably optimize away, but why make the code slightly
-harder to read than necessasry?
+But anyway, your general point is a really good one. Tons of callers
+of the random functions are doing it wrong in one way or another.
+Spending time looking at those is probably a good idea...
 
-						- Ted
+> Anyway, I'll include this commit in the dev branch of the random tree,
+> since it's not going to make things worse.
+
+Great, thanks.
