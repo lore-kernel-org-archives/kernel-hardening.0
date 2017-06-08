@@ -1,43 +1,46 @@
-Date: Thu, 8 Jun 2017 08:02:02 -0400
-From: Kevin Easton <kevin@guarana.org>
-Message-ID: <20170608120202.GA19250@la.guarana.org>
-References: <20170606005108.5646-1-Jason@zx2c4.com>
- <20170606005108.5646-5-Jason@zx2c4.com>
- <20170606030004.4go6btmobrsmqiwz@thunk.org>
- <CAHmME9qZUEMDjQGNOBC7PrCTcanOxohVHcED+Xyg_3jR64Q7VQ@mail.gmail.com>
-MIME-Version: 1.0
+Date: Thu, 8 Jun 2017 15:05:47 +0200
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20170608130547.GA22981@openwall.com>
+References: <20170608034349.31876-1-matt@nmatt.com> <20170608034349.31876-2-matt@nmatt.com>
+Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAHmME9qZUEMDjQGNOBC7PrCTcanOxohVHcED+Xyg_3jR64Q7VQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v3 04/13] crypto/rng: ensure that the RNG is ready before
- using
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>
+In-Reply-To: <20170608034349.31876-2-matt@nmatt.com>
+Subject: Re: [kernel-hardening] [PATCH v2 1/1]  Add Trusted Path Execution as a stackable LSM
+To: Matt Brown <matt@nmatt.com>
+Cc: kernel-hardening@lists.openwall.com, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 06, 2017 at 05:56:20AM +0200, Jason A. Donenfeld wrote:
-> Hey Ted,
-> 
-> On Tue, Jun 6, 2017 at 5:00 AM, Theodore Ts'o <tytso@mit.edu> wrote:
-> > Note that crypto_rng_reset() is called by big_key_init() in
-> > security/keys/big_key.c as a late_initcall().  So if we are on a
-> > system where the crng doesn't get initialized until during the system
-> > boot scripts, and big_key is compiled directly into the kernel, the
-> > boot could end up deadlocking.
-> >
-> > There may be other instances of where crypto_rng_reset() is called by
-> > an initcall, so big_key_init() may not be an exhaustive enumeration of
-> > potential problems.  But this is an example of why the synchronous
-> > API, although definitely much more convenient, can end up being a trap
-> > for the unwary....
-> 
-> Thanks for pointing this out. I'll look more closely into it and see
-> if I can figure out a good way of approaching this.
+Matt,
 
-Would it work for wait_for_random_bytes() to include a
+I really didn't intend to comment on this further, but I just happened
+to notice:
 
-    WARN_ON(system_state < SYSTEM_RUNNING);
+On Wed, Jun 07, 2017 at 11:43:49PM -0400, Matt Brown wrote:
+> +static int tpe_check(struct file *file, char *method)
+> +{
+> +	struct inode *inode;
+> +	struct inode *file_inode;
+> +	struct dentry *dir;
+> +	const struct cred *cred = current_cred();
+> +	char *reason1 = NULL;
+> +	char *reason2 = NULL;
+> +
+> +	dir = dget_parent(file->f_path.dentry);
+> +	inode = d_backing_inode(dir);
+> +	file_inode = d_backing_inode(file->f_path.dentry);
+> +
+> +	if (!tpe_enabled)
+> +		return 0;
 
-to catch those kinds of cases?
+You have many return statements in tpe_check(), where it is already past
+dget_parent() and thus must have reached:
 
-    - Kevin 
+> +end:
+> +	dput(dir);
+
+You'll probably want to move the dget_parent() and the following two
+lines to be below the first few checks where you may just return, and
+then be careful not to ever use a return statement anymore.
+
+Alexander
