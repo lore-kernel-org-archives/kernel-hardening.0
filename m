@@ -1,40 +1,51 @@
-References: <CAFwXZv_b3hdEA4xOFKqAVfc4UZEBX=dL9DOY_mDHExsW+Qg6tQ@mail.gmail.com>
- <85inkpie9o.fsf@boum.org> <20170525154818.2mj5xp7dywty4nje@thunk.org>
+References: <20170608034349.31876-1-matt@nmatt.com>
+ <20170608034349.31876-2-matt@nmatt.com>
+ <CAGXu5jLsrTZV_xDR_MPZdkT44P1MpbDiF3Kk2HNWBXKsdY+fzg@mail.gmail.com>
+ <94ba5ebb-952b-2037-799e-07306629a6f9@nmatt.com>
+ <1497003507.21594.177.camel@linux.vnet.ibm.com>
+ <CAGXu5jKWJV34g5TMDtJLTxF1irijay7KMK3s5oxz8ZYTJZkV5Q@mail.gmail.com>
 From: Matt Brown <matt@nmatt.com>
-Message-ID: <0bbee9e4-78b5-c7d9-369f-2f2d9a480bf3@nmatt.com>
-Date: Fri, 9 Jun 2017 09:11:54 -0400
+Message-ID: <4bf3331c-9c02-1d76-01a8-92290800db7c@nmatt.com>
+Date: Fri, 9 Jun 2017 09:15:27 -0400
 MIME-Version: 1.0
-In-Reply-To: <20170525154818.2mj5xp7dywty4nje@thunk.org>
+In-Reply-To: <CAGXu5jKWJV34g5TMDtJLTxF1irijay7KMK3s5oxz8ZYTJZkV5Q@mail.gmail.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Patch for random mac address
-To: Theodore Ts'o <tytso@mit.edu>, intrigeri <intrigeri@boum.org>, HacKurx <hackurx@gmail.com>
-Cc: kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] Re: [PATCH v2 1/1] Add Trusted Path Execution as a stackable LSM
+To: Kees Cook <keescook@chromium.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>
+Cc: James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 5/25/17 11:48 AM, Theodore Ts'o wrote:
-> On Thu, May 25, 2017 at 09:31:15AM +0200, intrigeri wrote:
+On 6/9/17 8:55 AM, Kees Cook wrote:
+> On Fri, Jun 9, 2017 at 3:18 AM, Mimi Zohar <zohar@linux.vnet.ibm.com> wrote:
+>> On Thu, 2017-06-08 at 23:50 -0400, Matt Brown wrote:
+>>>>>
+>>>>> *  Issues:
+>>>>>    *  Can be bypassed by interpreted languages such as python. You can run
+>>>>>       malicious code by doing: python -c 'evil code'
+>>>>
+>>>> What's the recommendation for people interested in using TPE but
+>>>> having interpreters installed?
+>>>>
+>>>
+>>> If you don't need a given interpreter installed, uninstall it. While
+>>> this is common sense system hardening it especially would make a
+>>> difference under the TPE threat model.
+>>>
+>>> I don't have a knock down answer for this. Interpreters are a hard
+>>> problem for TPE.
 >>
->> HacKurx:
->>> Because this would be useful for distributions like Tails, Subgraph
->>> OS, Kali Linux and other ...
->>
->> For what it's worth, it's unlikely that Tails ever uses this unless it
->> can be controlled at runtime from userspace: we need to give users an
->> option to disable MAC address randomization, because it breaks network
->> connectivity in some cases.
+>> You might be interested in the minor LSM named "shebang", that I
+>> posted as a proof of concept back in January, which restricts the
+>> python interactive prompt/interpreter, but allows the scripts
+>> themselves to be executed.
 > 
-> BTW, in case people aren't aware ---- you can set the MAC address from
-> userspace already:
+> https://patchwork.kernel.org/patch/9547405/
 > 
-> Package: macchanger
+> Maybe these could be merged and the interpreter string could be made
+> into a configurable list?
+> 
 
-
-Yeah I've used this program before. If you want it to always run at boot
-you can write a service script for your init system of choice and set it
-to run on start up.
-
-In what way does this patch protect you more than a start up script as
-described above?
+Yes this looks promising. I'll look into integrating this.
 
 Matt
