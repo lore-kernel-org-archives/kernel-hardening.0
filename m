@@ -1,39 +1,39 @@
-Date: Fri, 9 Jun 2017 13:54:25 +1000 (AEST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <2a28d30a-22d3-33ff-581c-f1347fbbae74@nmatt.com>
-Message-ID: <alpine.LRH.2.20.1706091353380.8421@namei.org>
-References: <59cec608-608e-6de6-21d9-bdec7b0ded3b@schaufler-ca.com> <2a28d30a-22d3-33ff-581c-f1347fbbae74@nmatt.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: Re: [kernel-hardening] [PATCH 0/6] LSM: Security module blob
- management
-To: Matt Brown <matt@nmatt.com>
-Cc: Casey Schaufler <casey@schaufler-ca.com>, LSM <linux-security-module@vger.kernel.org>, John Johansen <john.johansen@canonical.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKLM <linux-kernel@vger.kernel.org>
+From: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Date: Fri, 09 Jun 2017 06:18:27 -0400
+In-Reply-To: <94ba5ebb-952b-2037-799e-07306629a6f9@nmatt.com>
+References: <20170608034349.31876-1-matt@nmatt.com>
+	 <20170608034349.31876-2-matt@nmatt.com>
+	 <CAGXu5jLsrTZV_xDR_MPZdkT44P1MpbDiF3Kk2HNWBXKsdY+fzg@mail.gmail.com>
+	 <94ba5ebb-952b-2037-799e-07306629a6f9@nmatt.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Message-Id: <1497003507.21594.177.camel@linux.vnet.ibm.com>
+Subject: [kernel-hardening] Re: [PATCH v2 1/1] Add Trusted Path Execution as a stackable LSM
+To: Matt Brown <matt@nmatt.com>, Kees Cook <keescook@chromium.org>
+Cc: James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 8 Jun 2017, Matt Brown wrote:
-
-> On 6/8/17 4:43 PM, Casey Schaufler wrote:
-> > Subject: [PATCH 0/6] LSM: Security module blob management
-> > 
-> > This patch set moves management of security blobs out of
-> > the Linux security modules and into the security module
-> > infrastructure. This allows "major" security modules that
-> > use blobs to be stacked, just as "minor" modules that
-> > do not use blobs can be stacked today. It stops short of
-> > providing a safe interface for the Netlabel and SO_PEERSEC.
-> > As a result, any of the existing security modules may be
-> > used in combination except for SELinux and Smack.
+On Thu, 2017-06-08 at 23:50 -0400, Matt Brown wrote:
+> >>
+> >> *  Issues:
+> >>    *  Can be bypassed by interpreted languages such as python. You can run
+> >>       malicious code by doing: python -c 'evil code'
+> >
+> > What's the recommendation for people interested in using TPE but
+> > having interpreters installed?
+> >
 > 
-> Very excited about this! I can definitely see use cases for special
-> purpose LSMs that require data blobs but do not replace things like
-> SELinux, SMACK or AppArmor. I have had a few ideas recently that would
-> not be possible under the current setup of one shared blob.
+> If you don't need a given interpreter installed, uninstall it. While
+> this is common sense system hardening it especially would make a
+> difference under the TPE threat model.
+> 
+> I don't have a knock down answer for this. Interpreters are a hard
+> problem for TPE.
 
-Please post details of these ideas once you have say a prototype working 
-with Casey's patches.
+You might be interested in the minor LSM named "shebang", that I
+posted as a proof of concept back in January, which restricts the
+python interactive prompt/interpreter, but allows the scripts
+themselves to be executed.
 
-
--- 
-James Morris
-<jmorris@namei.org>
+Mimi
