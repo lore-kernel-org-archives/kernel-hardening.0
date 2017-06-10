@@ -1,46 +1,43 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Sat, 10 Jun 2017 04:59:07 +0200
-Message-Id: <20170610025912.6499-2-Jason@zx2c4.com>
+Date: Sat, 10 Jun 2017 04:59:08 +0200
+Message-Id: <20170610025912.6499-3-Jason@zx2c4.com>
 In-Reply-To: <20170610025912.6499-1-Jason@zx2c4.com>
 References: <20170610025912.6499-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH 1/6] sunrpc: use constant time memory comparison for mac
+Subject: [kernel-hardening] [PATCH 2/6] net/ipv6: use constant time memory comparison for mac
 To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, "J. Bruce Fields" <bfields@fieldses.org>, Jeff Layton <jlayton@poochiereds.net>, Trond Myklebust <trond.myklebust@primarydata.com>, Anna Schumaker <anna.schumaker@netapp.com>, linux-nfs@vger.kernel.org, stable@vger.kernel.org
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, "David S. Miller" <davem@davemloft.net>, netdev@vger.kernel.org, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Otherwise, we enable a MAC forgery via timing attack.
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: "J. Bruce Fields" <bfields@fieldses.org>
-Cc: Jeff Layton <jlayton@poochiereds.net>
-Cc: Trond Myklebust <trond.myklebust@primarydata.com>
-Cc: Anna Schumaker <anna.schumaker@netapp.com>
-Cc: linux-nfs@vger.kernel.org
+Cc: "David S. Miller" <davem@davemloft.net>
+Cc: netdev@vger.kernel.org
 Cc: stable@vger.kernel.org
 ---
- net/sunrpc/auth_gss/gss_krb5_crypto.c | 3 ++-
+ net/ipv6/seg6_hmac.c | 3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)
 
-diff --git a/net/sunrpc/auth_gss/gss_krb5_crypto.c b/net/sunrpc/auth_gss/gss_krb5_crypto.c
-index fb39284ec174..12649c9fedab 100644
---- a/net/sunrpc/auth_gss/gss_krb5_crypto.c
-+++ b/net/sunrpc/auth_gss/gss_krb5_crypto.c
-@@ -34,6 +34,7 @@
-  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
-  */
+diff --git a/net/ipv6/seg6_hmac.c b/net/ipv6/seg6_hmac.c
+index f950cb53d5e3..54213c83b44e 100644
+--- a/net/ipv6/seg6_hmac.c
++++ b/net/ipv6/seg6_hmac.c
+@@ -38,6 +38,7 @@
+ #include <net/xfrm.h>
  
+ #include <linux/cryptohash.h>
 +#include <crypto/algapi.h>
  #include <crypto/hash.h>
- #include <crypto/skcipher.h>
- #include <linux/err.h>
-@@ -927,7 +928,7 @@ gss_krb5_aes_decrypt(struct krb5_ctx *kctx, u32 offset, struct xdr_buf *buf,
- 	if (ret)
- 		goto out_err;
+ #include <crypto/sha.h>
+ #include <net/seg6.h>
+@@ -274,7 +275,7 @@ bool seg6_hmac_validate_skb(struct sk_buff *skb)
+ 	if (seg6_hmac_compute(hinfo, srh, &ipv6_hdr(skb)->saddr, hmac_output))
+ 		return false;
  
--	if (memcmp(pkt_hmac, our_hmac, kctx->gk5e->cksumlength) != 0) {
-+	if (crypto_memneq(pkt_hmac, our_hmac, kctx->gk5e->cksumlength) != 0) {
- 		ret = GSS_S_BAD_SIG;
- 		goto out_err;
- 	}
+-	if (memcmp(hmac_output, tlv->hmac, SEG6_HMAC_FIELD_LEN) != 0)
++	if (crypto_memneq(hmac_output, tlv->hmac, SEG6_HMAC_FIELD_LEN))
+ 		return false;
+ 
+ 	return true;
 -- 
 2.13.1
