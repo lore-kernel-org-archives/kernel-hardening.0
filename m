@@ -1,110 +1,200 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Sat, 10 Jun 2017 04:59:09 +0200
-Message-Id: <20170610025912.6499-4-Jason@zx2c4.com>
+Date: Sat, 10 Jun 2017 04:59:11 +0200
+Message-Id: <20170610025912.6499-6-Jason@zx2c4.com>
 In-Reply-To: <20170610025912.6499-1-Jason@zx2c4.com>
 References: <20170610025912.6499-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH 3/6] ccree: use constant time memory comparison for macs and tags
+Subject: [kernel-hardening] [PATCH 5/6] bluetooth/smp: use constant time memory comparison for secret values
 To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Gilad Ben-Yossef <gilad@benyossef.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Marcel Holtmann <marcel@holtmann.org>, Gustavo Padovan <gustavo@padovan.org>, Johan Hedberg <johan.hedberg@gmail.com>, linux-bluetooth@vger.kernel.org, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Otherwise, we enable several different forgeries via timing attack.
-
-While the C inside this file is nearly incomprehensible, I did notice a
-high volume of "FIPS" and "NIST", which makes this kind of bug slightly
-more embarrassing.
+This file is filled with complex cryptography. Thus, the comparisons of
+MACs and secret keys and curve points and so forth should not add timing
+attacks, which could either result in a direct forgery, or, given the
+complexity, some other type of attack.
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: Gilad Ben-Yossef <gilad@benyossef.com>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: Marcel Holtmann <marcel@holtmann.org>
+Cc: Gustavo Padovan <gustavo@padovan.org>
+Cc: Johan Hedberg <johan.hedberg@gmail.com>
+Cc: linux-bluetooth@vger.kernel.org
 Cc: stable@vger.kernel.org
 ---
- drivers/staging/ccree/ssi_fips_ll.c | 17 +++++++++--------
- 1 file changed, 9 insertions(+), 8 deletions(-)
+ net/bluetooth/smp.c | 39 ++++++++++++++++++++-------------------
+ 1 file changed, 20 insertions(+), 19 deletions(-)
 
-diff --git a/drivers/staging/ccree/ssi_fips_ll.c b/drivers/staging/ccree/ssi_fips_ll.c
-index d573574bbb98..3310997d8e3e 100644
---- a/drivers/staging/ccree/ssi_fips_ll.c
-+++ b/drivers/staging/ccree/ssi_fips_ll.c
-@@ -19,6 +19,7 @@ This file defines the driver FIPS Low Level implmentaion functions,
- that executes the KAT.
- ***************************************************************/
- #include <linux/kernel.h>
+diff --git a/net/bluetooth/smp.c b/net/bluetooth/smp.c
+index 14585edc9439..a0ef89772c36 100644
+--- a/net/bluetooth/smp.c
++++ b/net/bluetooth/smp.c
+@@ -23,6 +23,7 @@
+ #include <linux/debugfs.h>
+ #include <linux/scatterlist.h>
+ #include <linux/crypto.h>
 +#include <crypto/algapi.h>
+ #include <crypto/b128ops.h>
+ #include <crypto/hash.h>
  
- #include "ssi_driver.h"
- #include "ssi_fips_local.h"
-@@ -462,7 +463,7 @@ ssi_cipher_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffe
+@@ -523,7 +524,7 @@ bool smp_irk_matches(struct hci_dev *hdev, const u8 irk[16],
+ 	if (err)
+ 		return false;
+ 
+-	return !memcmp(bdaddr->b, hash, 3);
++	return !crypto_memneq(bdaddr->b, hash, 3);
+ }
+ 
+ int smp_generate_rpa(struct hci_dev *hdev, const u8 irk[16], bdaddr_t *rpa)
+@@ -579,7 +580,7 @@ int smp_generate_oob(struct hci_dev *hdev, u8 hash[16], u8 rand[16])
+ 			/* This is unlikely, but we need to check that
+ 			 * we didn't accidentially generate a debug key.
+ 			 */
+-			if (memcmp(smp->local_sk, debug_sk, 32))
++			if (crypto_memneq(smp->local_sk, debug_sk, 32))
+ 				break;
  		}
+ 		smp->debug_key = false;
+@@ -993,7 +994,7 @@ static u8 smp_random(struct smp_chan *smp)
+ 	if (ret)
+ 		return SMP_UNSPECIFIED;
  
- 		/* compare actual dout to expected */
--		if (memcmp(virt_ctx->dout, cipherData->dataOut, cipherData->dataInSize) != 0)
-+		if (crypto_memneq(virt_ctx->dout, cipherData->dataOut, cipherData->dataInSize))
- 		{
- 			FIPS_LOG("dout comparison error %d - oprMode=%d, isAes=%d\n", i, cipherData->oprMode, cipherData->isAes);
- 			FIPS_LOG("  i  expected   received \n");
-@@ -586,7 +587,7 @@ ssi_cmac_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffer,
+-	if (memcmp(smp->pcnf, confirm, sizeof(smp->pcnf)) != 0) {
++	if (crypto_memneq(smp->pcnf, confirm, sizeof(smp->pcnf))) {
+ 		BT_ERR("Pairing failed (confirmation values mismatch)");
+ 		return SMP_CONFIRM_FAILED;
+ 	}
+@@ -1512,7 +1513,7 @@ static u8 sc_passkey_round(struct smp_chan *smp, u8 smp_op)
+ 			   smp->rrnd, r, cfm))
+ 			return SMP_UNSPECIFIED;
+ 
+-		if (memcmp(smp->pcnf, cfm, 16))
++		if (crypto_memneq(smp->pcnf, cfm, 16))
+ 			return SMP_CONFIRM_FAILED;
+ 
+ 		smp->passkey_round++;
+@@ -1908,7 +1909,7 @@ static u8 sc_send_public_key(struct smp_chan *smp)
+ 			/* This is unlikely, but we need to check that
+ 			 * we didn't accidentially generate a debug key.
+ 			 */
+-			if (memcmp(smp->local_sk, debug_sk, 32))
++			if (crypto_memneq(smp->local_sk, debug_sk, 32))
+ 				break;
  		}
+ 	}
+@@ -2176,7 +2177,7 @@ static u8 smp_cmd_pairing_random(struct l2cap_conn *conn, struct sk_buff *skb)
+ 		if (err)
+ 			return SMP_UNSPECIFIED;
  
- 		/* compare actual mac result to expected */
--		if (memcmp(virt_ctx->mac_res, cmac_data->mac_res, cmac_data->mac_res_size) != 0)
-+		if (crypto_memneq(virt_ctx->mac_res, cmac_data->mac_res, cmac_data->mac_res_size))
- 		{
- 			FIPS_LOG("comparison error %d - digest_size=%d \n", i, cmac_data->mac_res_size);
- 			FIPS_LOG("  i  expected   received \n");
-@@ -760,7 +761,7 @@ ssi_hash_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffer,
-                 }
+-		if (memcmp(smp->pcnf, cfm, 16))
++		if (crypto_memneq(smp->pcnf, cfm, 16))
+ 			return SMP_CONFIRM_FAILED;
+ 	} else {
+ 		smp_send_cmd(conn, SMP_CMD_PAIRING_RANDOM, sizeof(smp->prnd),
+@@ -2660,7 +2661,7 @@ static int smp_cmd_public_key(struct l2cap_conn *conn, struct sk_buff *skb)
+ 		if (err)
+ 			return SMP_UNSPECIFIED;
  
- 		/* compare actual mac result to expected */
--		if (memcmp(virt_ctx->mac_res, hash_data->mac_res, digest_size) != 0)
-+		if (crypto_memneq(virt_ctx->mac_res, hash_data->mac_res, digest_size))
- 		{
- 			FIPS_LOG("comparison error %d - hash_mode=%d digest_size=%d \n", i, hash_data->hash_mode, digest_size);
- 			FIPS_LOG("  i  expected   received \n");
-@@ -1093,7 +1094,7 @@ ssi_hmac_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffer,
- 		}
+-		if (memcmp(cfm.confirm_val, smp->pcnf, 16))
++		if (crypto_memneq(cfm.confirm_val, smp->pcnf, 16))
+ 			return SMP_CONFIRM_FAILED;
+ 	}
  
- 		/* compare actual mac result to expected */
--		if (memcmp(virt_ctx->mac_res, hmac_data->mac_res, digest_size) != 0)
-+		if (crypto_memneq(virt_ctx->mac_res, hmac_data->mac_res, digest_size))
- 		{
- 			FIPS_LOG("comparison error %d - hash_mode=%d digest_size=%d \n", i, hmac_data->hash_mode, digest_size);
- 			FIPS_LOG("  i  expected   received \n");
-@@ -1310,7 +1311,7 @@ ssi_ccm_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffer,
- 		}
+@@ -2693,7 +2694,7 @@ static int smp_cmd_public_key(struct l2cap_conn *conn, struct sk_buff *skb)
+ 	else
+ 		hcon->pending_sec_level = BT_SECURITY_FIPS;
  
- 		/* compare actual dout to expected */
--		if (memcmp(virt_ctx->dout, ccmData->dataOut, ccmData->dataInSize) != 0)
-+		if (crypto_memneq(virt_ctx->dout, ccmData->dataOut, ccmData->dataInSize))
- 		{
- 			FIPS_LOG("dout comparison error %d - size=%d \n", i, ccmData->dataInSize);
-                         error = CC_REE_FIPS_ERROR_AESCCM_PUT;
-@@ -1318,7 +1319,7 @@ ssi_ccm_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffer,
-                 }
+-	if (!memcmp(debug_pk, smp->remote_pk, 64))
++	if (!crypto_memneq(debug_pk, smp->remote_pk, 64))
+ 		set_bit(SMP_FLAG_DEBUG_KEY, &smp->flags);
  
- 		/* compare actual mac result to expected */
--		if (memcmp(virt_ctx->mac_res, ccmData->macResOut, ccmData->tagSize) != 0)
-+		if (crypto_memneq(virt_ctx->mac_res, ccmData->macResOut, ccmData->tagSize))
- 		{
- 			FIPS_LOG("mac_res comparison error %d - mac_size=%d \n", i, ccmData->tagSize);
- 			FIPS_LOG("  i  expected   received \n");
-@@ -1633,7 +1634,7 @@ ssi_gcm_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffer,
+ 	if (smp->method == DSP_PASSKEY) {
+@@ -2792,7 +2793,7 @@ static int smp_cmd_dhkey_check(struct l2cap_conn *conn, struct sk_buff *skb)
+ 	if (err)
+ 		return SMP_UNSPECIFIED;
  
- 		if (gcmData->direction == DRV_CRYPTO_DIRECTION_ENCRYPT) {
- 			/* compare actual dout to expected */
--			if (memcmp(virt_ctx->dout, gcmData->dataOut, gcmData->dataInSize) != 0)
-+			if (crypto_memneq(virt_ctx->dout, gcmData->dataOut, gcmData->dataInSize))
- 			{
- 				FIPS_LOG("dout comparison error %d - size=%d \n", i, gcmData->dataInSize);
- 				FIPS_LOG("  i  expected   received \n");
-@@ -1649,7 +1650,7 @@ ssi_gcm_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffer,
- 		}
+-	if (memcmp(check->e, e, 16))
++	if (crypto_memneq(check->e, e, 16))
+ 		return SMP_DHKEY_CHECK_FAILED;
  
- 		/* compare actual mac result to expected */
--		if (memcmp(virt_ctx->mac_res, gcmData->macResOut, gcmData->tagSize) != 0)
-+		if (crypto_memneq(virt_ctx->mac_res, gcmData->macResOut, gcmData->tagSize))
- 		{
- 			FIPS_LOG("mac_res comparison error %d - mac_size=%d \n", i, gcmData->tagSize);
- 			FIPS_LOG("  i  expected   received \n");
+ 	if (!hcon->out) {
+@@ -3506,10 +3507,10 @@ static int __init test_debug_key(void)
+ 	if (!generate_ecdh_keys(pk, sk))
+ 		return -EINVAL;
+ 
+-	if (memcmp(sk, debug_sk, 32))
++	if (crypto_memneq(sk, debug_sk, 32))
+ 		return -EINVAL;
+ 
+-	if (memcmp(pk, debug_pk, 64))
++	if (crypto_memneq(pk, debug_pk, 64))
+ 		return -EINVAL;
+ 
+ 	return 0;
+@@ -3529,7 +3530,7 @@ static int __init test_ah(struct crypto_cipher *tfm_aes)
+ 	if (err)
+ 		return err;
+ 
+-	if (memcmp(res, exp, 3))
++	if (crypto_memneq(res, exp, 3))
+ 		return -EINVAL;
+ 
+ 	return 0;
+@@ -3559,7 +3560,7 @@ static int __init test_c1(struct crypto_cipher *tfm_aes)
+ 	if (err)
+ 		return err;
+ 
+-	if (memcmp(res, exp, 16))
++	if (crypto_memneq(res, exp, 16))
+ 		return -EINVAL;
+ 
+ 	return 0;
+@@ -3584,7 +3585,7 @@ static int __init test_s1(struct crypto_cipher *tfm_aes)
+ 	if (err)
+ 		return err;
+ 
+-	if (memcmp(res, exp, 16))
++	if (crypto_memneq(res, exp, 16))
+ 		return -EINVAL;
+ 
+ 	return 0;
+@@ -3616,7 +3617,7 @@ static int __init test_f4(struct crypto_shash *tfm_cmac)
+ 	if (err)
+ 		return err;
+ 
+-	if (memcmp(res, exp, 16))
++	if (crypto_memneq(res, exp, 16))
+ 		return -EINVAL;
+ 
+ 	return 0;
+@@ -3650,10 +3651,10 @@ static int __init test_f5(struct crypto_shash *tfm_cmac)
+ 	if (err)
+ 		return err;
+ 
+-	if (memcmp(mackey, exp_mackey, 16))
++	if (crypto_memneq(mackey, exp_mackey, 16))
+ 		return -EINVAL;
+ 
+-	if (memcmp(ltk, exp_ltk, 16))
++	if (crypto_memneq(ltk, exp_ltk, 16))
+ 		return -EINVAL;
+ 
+ 	return 0;
+@@ -3686,7 +3687,7 @@ static int __init test_f6(struct crypto_shash *tfm_cmac)
+ 	if (err)
+ 		return err;
+ 
+-	if (memcmp(res, exp, 16))
++	if (crypto_memneq(res, exp, 16))
+ 		return -EINVAL;
+ 
+ 	return 0;
+@@ -3740,7 +3741,7 @@ static int __init test_h6(struct crypto_shash *tfm_cmac)
+ 	if (err)
+ 		return err;
+ 
+-	if (memcmp(res, exp, 16))
++	if (crypto_memneq(res, exp, 16))
+ 		return -EINVAL;
+ 
+ 	return 0;
 -- 
 2.13.1
