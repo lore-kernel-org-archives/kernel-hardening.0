@@ -1,226 +1,56 @@
-References: <20170607211653.14536-1-tycho@docker.com>
- <20170607211653.14536-4-tycho@docker.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <d8d4070e-a97d-c431-74ad-5ba1a30b5e18@redhat.com>
-Date: Fri, 9 Jun 2017 17:23:06 -0700
-MIME-Version: 1.0
-In-Reply-To: <20170607211653.14536-4-tycho@docker.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC v4 3/3] xpfo: add support for hugepages
-To: Tycho Andersen <tycho@docker.com>, linux-mm@kvack.org
-Cc: Juerg Haefliger <juergh@gmail.com>, kernel-hardening@lists.openwall.com
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Sat, 10 Jun 2017 04:59:06 +0200
+Message-Id: <20170610025912.6499-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH 0/6] Constant Time Memory Comparisons Are Important
+To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Anna Schumaker <anna.schumaker@netapp.com>, David Howells <dhowells@redhat.com>, David Safford <safford@us.ibm.com>, "David S. Miller" <davem@davemloft.net>, Gilad Ben-Yossef <gilad@benyossef.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Gustavo Padovan <gustavo@padovan.org>, "J. Bruce Fields" <bfields@fieldses.org>, Jeff Layton <jlayton@poochiereds.net>, Johan Hedberg <johan.hedberg@gmail.com>, Johannes Berg <johannes@sipsolutions.net>, Marcel Holtmann <marcel@holtmann.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Trond Myklebust <trond.myklebust@primarydata.com>, keyrings@vger.kernel.org, linux-bluetooth@vger.kernel.org, linux-nfs@vger.kernel.org, linux-wireless@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 06/07/2017 02:16 PM, Tycho Andersen wrote:
-> Based on an earlier draft by Marco Benatto.
-> 
-> Signed-off-by: Tycho Andersen <tycho@docker.com>
-> CC: Juerg Haefliger <juergh@gmail.com>
-> ---
->  arch/x86/include/asm/pgtable.h | 22 +++++++++++++++
->  arch/x86/mm/pageattr.c         | 21 +++------------
->  arch/x86/mm/xpfo.c             | 61 +++++++++++++++++++++++++++++++++++++++++-
->  include/linux/xpfo.h           |  1 +
->  mm/xpfo.c                      |  8 ++----
->  5 files changed, 88 insertions(+), 25 deletions(-)
-> 
-> diff --git a/arch/x86/include/asm/pgtable.h b/arch/x86/include/asm/pgtable.h
-> index f5af95a0c6b8..58bb43d8b9c1 100644
-> --- a/arch/x86/include/asm/pgtable.h
-> +++ b/arch/x86/include/asm/pgtable.h
-> @@ -1185,6 +1185,28 @@ static inline u16 pte_flags_pkey(unsigned long pte_flags)
->  #endif
->  }
->  
-> +/*
-> + * The current flushing context - we pass it instead of 5 arguments:
-> + */
-> +struct cpa_data {
-> +	unsigned long	*vaddr;
-> +	pgd_t		*pgd;
-> +	pgprot_t	mask_set;
-> +	pgprot_t	mask_clr;
-> +	unsigned long	numpages;
-> +	int		flags;
-> +	unsigned long	pfn;
-> +	unsigned	force_split : 1;
-> +	int		curpage;
-> +	struct page	**pages;
-> +};
-> +
-> +int
-> +try_preserve_large_page(pte_t *kpte, unsigned long address,
-> +			struct cpa_data *cpa);
-> +int split_large_page(struct cpa_data *cpa, pte_t *kpte,
-> +		     unsigned long address);
-> +
->  #include <asm-generic/pgtable.h>
->  #endif	/* __ASSEMBLY__ */
->  
-> diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
-> index 1dcd2be4cce4..6d6a78e6e023 100644
-> --- a/arch/x86/mm/pageattr.c
-> +++ b/arch/x86/mm/pageattr.c
-> @@ -26,21 +26,6 @@
->  #include <asm/pat.h>
->  #include <asm/set_memory.h>
->  
-> -/*
-> - * The current flushing context - we pass it instead of 5 arguments:
-> - */
-> -struct cpa_data {
-> -	unsigned long	*vaddr;
-> -	pgd_t		*pgd;
-> -	pgprot_t	mask_set;
-> -	pgprot_t	mask_clr;
-> -	unsigned long	numpages;
-> -	int		flags;
-> -	unsigned long	pfn;
-> -	unsigned	force_split : 1;
-> -	int		curpage;
-> -	struct page	**pages;
-> -};
->  
->  /*
->   * Serialize cpa() (for !DEBUG_PAGEALLOC which uses large identity mappings)
-> @@ -506,7 +491,7 @@ static void __set_pmd_pte(pte_t *kpte, unsigned long address, pte_t pte)
->  #endif
->  }
->  
-> -static int
-> +int
->  try_preserve_large_page(pte_t *kpte, unsigned long address,
->  			struct cpa_data *cpa)
->  {
-> @@ -740,8 +725,8 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
->  	return 0;
->  }
->  
-> -static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
-> -			    unsigned long address)
-> +int split_large_page(struct cpa_data *cpa, pte_t *kpte,
-> +		     unsigned long address)
->  {
->  	struct page *base;
->  
-> diff --git a/arch/x86/mm/xpfo.c b/arch/x86/mm/xpfo.c
-> index c24b06c9b4ab..818da3ebc077 100644
-> --- a/arch/x86/mm/xpfo.c
-> +++ b/arch/x86/mm/xpfo.c
-> @@ -13,11 +13,70 @@
->  
->  #include <linux/mm.h>
->  
-> +#include <asm/tlbflush.h>
-> +
->  /* Update a single kernel page table entry */
->  inline void set_kpte(void *kaddr, struct page *page, pgprot_t prot)
->  {
->  	unsigned int level;
->  	pte_t *pte = lookup_address((unsigned long)kaddr, &level);
->  
-> -	set_pte_atomic(pte, pfn_pte(page_to_pfn(page), canon_pgprot(prot)));
-> +
-> +	BUG_ON(!pte);
-> +
-> +	switch (level) {
-> +	case PG_LEVEL_4K:
-> +		set_pte_atomic(pte, pfn_pte(page_to_pfn(page), canon_pgprot(prot)));
-> +		break;
-> +	case PG_LEVEL_2M:
-> +	case PG_LEVEL_1G: {
-> +		struct cpa_data cpa;
-> +		int do_split;
-> +
-> +		memset(&cpa, 0, sizeof(cpa));
-> +		cpa.vaddr = kaddr;
-> +		cpa.pages = &page;
-> +		cpa.mask_set = prot;
-> +		pgprot_val(cpa.mask_clr) = ~pgprot_val(prot);
-> +		cpa.numpages = 1;
-> +		cpa.flags = 0;
-> +		cpa.curpage = 0;
-> +		cpa.force_split = 0;
-> +
-> +		do_split = try_preserve_large_page(pte, (unsigned long)kaddr, &cpa);
-> +		if (do_split < 0)
+Whenever you're comparing two MACs, it's important to do this using
+crypto_memneq instead of memcmp. With memcmp, you leak timing information,
+which could then be used to iteratively forge a MAC. This is far too basic
+of a mistake for us to have so pervasively in the year 2017, so let's begin
+cleaning this stuff up. The following 6 locations were found with some
+simple regex greps, but I'm sure more lurk below the surface. If you
+maintain some code or know somebody who maintains some code that deals
+with MACs, tell them to double check which comparison function they're
+using.
 
-I can't reproduce the failure you describe in the cover letter but are you sure this
-check is correct? It looks like try_preserve_large_page can return 1 on failure
-and you still need to call split_large_page.
+Jason A. Donenfeld (6):
+  sunrpc: use constant time memory comparison for mac
+  net/ipv6: use constant time memory comparison for mac
+  ccree: use constant time memory comparison for macs and tags
+  security/keys: use constant time memory comparison for macs
+  bluetooth/smp: use constant time memory comparison for secret values
+  mac80211/wpa: use constant time memory comparison for MACs
 
-> +			BUG_ON(split_large_page(&cpa, pte, (unsigned long)kaddr));
-> +
-> +		break;
-> +	}
-> +	default:
-> +		BUG();
-> +	}
-> +
-> +}
-> +
-> +inline void xpfo_flush_kernel_page(struct page *page, int order)
-> +{
-> +	int level;
-> +	unsigned long size, kaddr;
-> +
-> +	kaddr = (unsigned long)page_address(page);
-> +	lookup_address(kaddr, &level);
-> +
-> +
-> +	switch (level) {
-> +	case PG_LEVEL_4K:
-> +		size = PAGE_SIZE;
-> +		break;
-> +	case PG_LEVEL_2M:
-> +		size = PMD_SIZE;
-> +		break;
-> +	case PG_LEVEL_1G:
-> +		size = PUD_SIZE;
-> +		break;
-> +	default:
-> +		BUG();
-> +	}
-> +
-> +	flush_tlb_kernel_range(kaddr, kaddr + (1 << order) * size);
->  }
-> diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
-> index 031cbee22a41..a0f0101720f6 100644
-> --- a/include/linux/xpfo.h
-> +++ b/include/linux/xpfo.h
-> @@ -19,6 +19,7 @@
->  extern struct page_ext_operations page_xpfo_ops;
->  
->  void set_kpte(void *kaddr, struct page *page, pgprot_t prot);
-> +void xpfo_flush_kernel_page(struct page *page, int order);
->  
->  void xpfo_kmap(void *kaddr, struct page *page);
->  void xpfo_kunmap(void *kaddr, struct page *page);
-> diff --git a/mm/xpfo.c b/mm/xpfo.c
-> index 8384058136b1..895de28108da 100644
-> --- a/mm/xpfo.c
-> +++ b/mm/xpfo.c
-> @@ -78,7 +78,6 @@ void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp)
->  {
->  	int i, flush_tlb = 0;
->  	struct xpfo *xpfo;
-> -	unsigned long kaddr;
->  
->  	if (!static_branch_unlikely(&xpfo_inited))
->  		return;
-> @@ -109,11 +108,8 @@ void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp)
->  		}
->  	}
->  
-> -	if (flush_tlb) {
-> -		kaddr = (unsigned long)page_address(page);
-> -		flush_tlb_kernel_range(kaddr, kaddr + (1 << order) *
-> -				       PAGE_SIZE);
-> -	}
-> +	if (flush_tlb)
-> +		xpfo_flush_kernel_page(page, order);
->  }
->  
->  void xpfo_free_pages(struct page *page, int order)
-> 
+Cc: Anna Schumaker <anna.schumaker@netapp.com>
+Cc: David Howells <dhowells@redhat.com>
+Cc: David Safford <safford@us.ibm.com>
+Cc: "David S. Miller" <davem@davemloft.net>
+Cc: Gilad Ben-Yossef <gilad@benyossef.com>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: Gustavo Padovan <gustavo@padovan.org>
+Cc: "J. Bruce Fields" <bfields@fieldses.org>
+Cc: Jeff Layton <jlayton@poochiereds.net>
+Cc: Johan Hedberg <johan.hedberg@gmail.com>
+Cc: Johannes Berg <johannes@sipsolutions.net>
+Cc: Marcel Holtmann <marcel@holtmann.org>
+Cc: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Cc: Trond Myklebust <trond.myklebust@primarydata.com>
+Cc: keyrings@vger.kernel.org
+Cc: linux-bluetooth@vger.kernel.org
+Cc: linux-nfs@vger.kernel.org
+Cc: linux-wireless@vger.kernel.org
+Cc: netdev@vger.kernel.org
+
+ drivers/staging/ccree/ssi_fips_ll.c   | 17 ++++++++-------
+ net/bluetooth/smp.c                   | 39 ++++++++++++++++++-----------------
+ net/ipv6/seg6_hmac.c                  |  3 ++-
+ net/mac80211/wpa.c                    |  9 ++++----
+ net/sunrpc/auth_gss/gss_krb5_crypto.c |  3 ++-
+ security/keys/trusted.c               |  7 ++++---
+ 6 files changed, 42 insertions(+), 36 deletions(-)
+
+-- 
+2.13.1
