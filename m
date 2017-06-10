@@ -1,63 +1,46 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Sat, 10 Jun 2017 04:59:10 +0200
-Message-Id: <20170610025912.6499-5-Jason@zx2c4.com>
+Date: Sat, 10 Jun 2017 04:59:07 +0200
+Message-Id: <20170610025912.6499-2-Jason@zx2c4.com>
 In-Reply-To: <20170610025912.6499-1-Jason@zx2c4.com>
 References: <20170610025912.6499-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH 4/6] security/keys: use constant time memory comparison for macs
+Subject: [kernel-hardening] [PATCH 1/6] sunrpc: use constant time memory comparison for mac
 To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, David Safford <safford@us.ibm.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, stable@vger.kernel.org
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, "J. Bruce Fields" <bfields@fieldses.org>, Jeff Layton <jlayton@poochiereds.net>, Trond Myklebust <trond.myklebust@primarydata.com>, Anna Schumaker <anna.schumaker@netapp.com>, linux-nfs@vger.kernel.org, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Otherwise, we enable a MAC forgery via timing attack.
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: David Safford <safford@us.ibm.com>
-Cc: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Cc: David Howells <dhowells@redhat.com>
-Cc: keyrings@vger.kernel.org
+Cc: "J. Bruce Fields" <bfields@fieldses.org>
+Cc: Jeff Layton <jlayton@poochiereds.net>
+Cc: Trond Myklebust <trond.myklebust@primarydata.com>
+Cc: Anna Schumaker <anna.schumaker@netapp.com>
+Cc: linux-nfs@vger.kernel.org
 Cc: stable@vger.kernel.org
 ---
- security/keys/trusted.c | 7 ++++---
- 1 file changed, 4 insertions(+), 3 deletions(-)
+ net/sunrpc/auth_gss/gss_krb5_crypto.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
 
-diff --git a/security/keys/trusted.c b/security/keys/trusted.c
-index 2ae31c5a87de..df7d30b0a6f7 100644
---- a/security/keys/trusted.c
-+++ b/security/keys/trusted.c
-@@ -11,6 +11,7 @@
-  * See Documentation/security/keys-trusted-encrypted.txt
+diff --git a/net/sunrpc/auth_gss/gss_krb5_crypto.c b/net/sunrpc/auth_gss/gss_krb5_crypto.c
+index fb39284ec174..12649c9fedab 100644
+--- a/net/sunrpc/auth_gss/gss_krb5_crypto.c
++++ b/net/sunrpc/auth_gss/gss_krb5_crypto.c
+@@ -34,6 +34,7 @@
+  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
   */
  
 +#include <crypto/algapi.h>
- #include <crypto/hash_info.h>
- #include <linux/uaccess.h>
- #include <linux/module.h>
-@@ -243,7 +244,7 @@ static int TSS_checkhmac1(unsigned char *buffer,
- 	if (ret < 0)
- 		goto out;
+ #include <crypto/hash.h>
+ #include <crypto/skcipher.h>
+ #include <linux/err.h>
+@@ -927,7 +928,7 @@ gss_krb5_aes_decrypt(struct krb5_ctx *kctx, u32 offset, struct xdr_buf *buf,
+ 	if (ret)
+ 		goto out_err;
  
--	if (memcmp(testhmac, authdata, SHA1_DIGEST_SIZE))
-+	if (crypto_memneq(testhmac, authdata, SHA1_DIGEST_SIZE))
- 		ret = -EINVAL;
- out:
- 	kfree(sdesc);
-@@ -335,7 +336,7 @@ static int TSS_checkhmac2(unsigned char *buffer,
- 			  TPM_NONCE_SIZE, ononce, 1, continueflag1, 0, 0);
- 	if (ret < 0)
- 		goto out;
--	if (memcmp(testhmac1, authdata1, SHA1_DIGEST_SIZE)) {
-+	if (crypto_memneq(testhmac1, authdata1, SHA1_DIGEST_SIZE)) {
- 		ret = -EINVAL;
- 		goto out;
+-	if (memcmp(pkt_hmac, our_hmac, kctx->gk5e->cksumlength) != 0) {
++	if (crypto_memneq(pkt_hmac, our_hmac, kctx->gk5e->cksumlength) != 0) {
+ 		ret = GSS_S_BAD_SIG;
+ 		goto out_err;
  	}
-@@ -344,7 +345,7 @@ static int TSS_checkhmac2(unsigned char *buffer,
- 			  TPM_NONCE_SIZE, ononce, 1, continueflag2, 0, 0);
- 	if (ret < 0)
- 		goto out;
--	if (memcmp(testhmac2, authdata2, SHA1_DIGEST_SIZE))
-+	if (crypto_memneq(testhmac2, authdata2, SHA1_DIGEST_SIZE))
- 		ret = -EINVAL;
- out:
- 	kfree(sdesc);
 -- 
 2.13.1
