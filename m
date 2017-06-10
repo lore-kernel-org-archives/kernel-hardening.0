@@ -1,56 +1,63 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Sat, 10 Jun 2017 04:59:06 +0200
-Message-Id: <20170610025912.6499-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH 0/6] Constant Time Memory Comparisons Are Important
+Date: Sat, 10 Jun 2017 04:59:10 +0200
+Message-Id: <20170610025912.6499-5-Jason@zx2c4.com>
+In-Reply-To: <20170610025912.6499-1-Jason@zx2c4.com>
+References: <20170610025912.6499-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH 4/6] security/keys: use constant time memory comparison for macs
 To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Anna Schumaker <anna.schumaker@netapp.com>, David Howells <dhowells@redhat.com>, David Safford <safford@us.ibm.com>, "David S. Miller" <davem@davemloft.net>, Gilad Ben-Yossef <gilad@benyossef.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Gustavo Padovan <gustavo@padovan.org>, "J. Bruce Fields" <bfields@fieldses.org>, Jeff Layton <jlayton@poochiereds.net>, Johan Hedberg <johan.hedberg@gmail.com>, Johannes Berg <johannes@sipsolutions.net>, Marcel Holtmann <marcel@holtmann.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Trond Myklebust <trond.myklebust@primarydata.com>, keyrings@vger.kernel.org, linux-bluetooth@vger.kernel.org, linux-nfs@vger.kernel.org, linux-wireless@vger.kernel.org, netdev@vger.kernel.org
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, David Safford <safford@us.ibm.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Whenever you're comparing two MACs, it's important to do this using
-crypto_memneq instead of memcmp. With memcmp, you leak timing information,
-which could then be used to iteratively forge a MAC. This is far too basic
-of a mistake for us to have so pervasively in the year 2017, so let's begin
-cleaning this stuff up. The following 6 locations were found with some
-simple regex greps, but I'm sure more lurk below the surface. If you
-maintain some code or know somebody who maintains some code that deals
-with MACs, tell them to double check which comparison function they're
-using.
+Otherwise, we enable a MAC forgery via timing attack.
 
-Jason A. Donenfeld (6):
-  sunrpc: use constant time memory comparison for mac
-  net/ipv6: use constant time memory comparison for mac
-  ccree: use constant time memory comparison for macs and tags
-  security/keys: use constant time memory comparison for macs
-  bluetooth/smp: use constant time memory comparison for secret values
-  mac80211/wpa: use constant time memory comparison for MACs
-
-Cc: Anna Schumaker <anna.schumaker@netapp.com>
-Cc: David Howells <dhowells@redhat.com>
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
 Cc: David Safford <safford@us.ibm.com>
-Cc: "David S. Miller" <davem@davemloft.net>
-Cc: Gilad Ben-Yossef <gilad@benyossef.com>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Cc: Gustavo Padovan <gustavo@padovan.org>
-Cc: "J. Bruce Fields" <bfields@fieldses.org>
-Cc: Jeff Layton <jlayton@poochiereds.net>
-Cc: Johan Hedberg <johan.hedberg@gmail.com>
-Cc: Johannes Berg <johannes@sipsolutions.net>
-Cc: Marcel Holtmann <marcel@holtmann.org>
 Cc: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Cc: Trond Myklebust <trond.myklebust@primarydata.com>
+Cc: David Howells <dhowells@redhat.com>
 Cc: keyrings@vger.kernel.org
-Cc: linux-bluetooth@vger.kernel.org
-Cc: linux-nfs@vger.kernel.org
-Cc: linux-wireless@vger.kernel.org
-Cc: netdev@vger.kernel.org
+Cc: stable@vger.kernel.org
+---
+ security/keys/trusted.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
 
- drivers/staging/ccree/ssi_fips_ll.c   | 17 ++++++++-------
- net/bluetooth/smp.c                   | 39 ++++++++++++++++++-----------------
- net/ipv6/seg6_hmac.c                  |  3 ++-
- net/mac80211/wpa.c                    |  9 ++++----
- net/sunrpc/auth_gss/gss_krb5_crypto.c |  3 ++-
- security/keys/trusted.c               |  7 ++++---
- 6 files changed, 42 insertions(+), 36 deletions(-)
-
+diff --git a/security/keys/trusted.c b/security/keys/trusted.c
+index 2ae31c5a87de..df7d30b0a6f7 100644
+--- a/security/keys/trusted.c
++++ b/security/keys/trusted.c
+@@ -11,6 +11,7 @@
+  * See Documentation/security/keys-trusted-encrypted.txt
+  */
+ 
++#include <crypto/algapi.h>
+ #include <crypto/hash_info.h>
+ #include <linux/uaccess.h>
+ #include <linux/module.h>
+@@ -243,7 +244,7 @@ static int TSS_checkhmac1(unsigned char *buffer,
+ 	if (ret < 0)
+ 		goto out;
+ 
+-	if (memcmp(testhmac, authdata, SHA1_DIGEST_SIZE))
++	if (crypto_memneq(testhmac, authdata, SHA1_DIGEST_SIZE))
+ 		ret = -EINVAL;
+ out:
+ 	kfree(sdesc);
+@@ -335,7 +336,7 @@ static int TSS_checkhmac2(unsigned char *buffer,
+ 			  TPM_NONCE_SIZE, ononce, 1, continueflag1, 0, 0);
+ 	if (ret < 0)
+ 		goto out;
+-	if (memcmp(testhmac1, authdata1, SHA1_DIGEST_SIZE)) {
++	if (crypto_memneq(testhmac1, authdata1, SHA1_DIGEST_SIZE)) {
+ 		ret = -EINVAL;
+ 		goto out;
+ 	}
+@@ -344,7 +345,7 @@ static int TSS_checkhmac2(unsigned char *buffer,
+ 			  TPM_NONCE_SIZE, ononce, 1, continueflag2, 0, 0);
+ 	if (ret < 0)
+ 		goto out;
+-	if (memcmp(testhmac2, authdata2, SHA1_DIGEST_SIZE))
++	if (crypto_memneq(testhmac2, authdata2, SHA1_DIGEST_SIZE))
+ 		ret = -EINVAL;
+ out:
+ 	kfree(sdesc);
 -- 
 2.13.1
