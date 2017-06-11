@@ -1,39 +1,27 @@
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Sun, 11 Jun 2017 23:20:23 +0200
-Message-Id: <20170611212023.31101-1-Jason@zx2c4.com>
-In-Reply-To: <20170610025912.6499-1-Jason@zx2c4.com>
-References: <20170610025912.6499-1-Jason@zx2c4.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH] rsa-pkcs1pad: use constant time memory comparison for MACs
-To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, stable@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, linux-crypto@vger.kernel.org
+In-Reply-To: <20235732.W6WmnKk6cl@tauon.chronox.de>
+References: <20170610025912.6499-1-Jason@zx2c4.com> <20235732.W6WmnKk6cl@tauon.chronox.de>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Sun, 11 Jun 2017 23:21:55 +0200
+Message-ID: <CAHmME9rgVXkRfxEhJDu+LmAG64PT=NsJH3se_0ffPPXF=a8q+g@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH 0/6] Constant Time Memory Comparisons Are Important
+To: =?UTF-8?Q?Stephan_M=C3=BCller?= <smueller@chronox.de>
+Cc: LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Anna Schumaker <anna.schumaker@netapp.com>, David Howells <dhowells@redhat.com>, David Safford <safford@us.ibm.com>, "David S. Miller" <davem@davemloft.net>, Gilad Ben-Yossef <gilad@benyossef.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Gustavo Padovan <gustavo@padovan.org>, "J. Bruce Fields" <bfields@fieldses.org>, Jeff Layton <jlayton@poochiereds.net>, Johan Hedberg <johan.hedberg@gmail.com>, Johannes Berg <johannes@sipsolutions.net>, Marcel Holtmann <marcel@holtmann.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Trond Myklebust <trond.myklebust@primarydata.com>, keyrings@vger.kernel.org, linux-bluetooth@vger.kernel.org, linux-nfs@vger.kernel.org, linux-wireless@vger.kernel.org, Netdev <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Otherwise, we enable all sorts of forgeries via timing attack.
+Hi Stephan,
 
-Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Suggested-by: Stephan Müller <smueller@chronox.de>
-Cc: stable@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-crypto@vger.kernel.org
----
- crypto/rsa-pkcs1pad.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+On Sun, Jun 11, 2017 at 11:06 PM, Stephan M=C3=BCller <smueller@chronox.de>=
+ wrote:
+> Are you planning to send an update to your patch set? If yes, there is an=
+other
+> one which should be converted too: crypto/rsa-pkcs1pad.c.
 
-diff --git a/crypto/rsa-pkcs1pad.c b/crypto/rsa-pkcs1pad.c
-index 8baab4307f7b..7830d304dff6 100644
---- a/crypto/rsa-pkcs1pad.c
-+++ b/crypto/rsa-pkcs1pad.c
-@@ -496,7 +496,7 @@ static int pkcs1pad_verify_complete(struct akcipher_request *req, int err)
- 		goto done;
- 	pos++;
- 
--	if (memcmp(out_buf + pos, digest_info->data, digest_info->size))
-+	if (crypto_memneq(out_buf + pos, digest_info->data, digest_info->size))
- 		goto done;
- 
- 	pos += digest_info->size;
--- 
-2.13.1
+I just sent an update to this thread patching that, per your
+suggestion. Since these issues are expected to be cherry picked by
+their respective committer, I figure we can just pile on the patches
+here, listing the 0/6 intro email as each patch's parent.
+
+Jason
