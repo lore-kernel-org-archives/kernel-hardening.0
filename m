@@ -1,37 +1,54 @@
+References: <20170608034349.31876-1-matt@nmatt.com>
+ <20170608193719.2d9e8d17@lxorguk.ukuu.org.uk>
+ <3f9e53a8-87d2-9773-d30b-64b89da8f3ff@nmatt.com>
+ <9d175249-c9f3-daba-bae4-f60dc97795e6@digikod.net>
+From: Matt Brown <matt@nmatt.com>
+Message-ID: <d3b11dde-be5c-0bb8-6573-b331c593c9f7@nmatt.com>
+Date: Sun, 11 Jun 2017 20:04:59 -0400
 MIME-Version: 1.0
-In-Reply-To: <CANUX_P2b0Bx+-E_OBQ0reGW0=d6819qc=r83K0kTv0xMo8mtLQ@mail.gmail.com>
-References: <20170610025912.6499-1-Jason@zx2c4.com> <878tkzq6wi.fsf@purkki.adurom.net>
- <CAGXu5jKp=X7-eKo+HgzS3uqncx5yy-u=tJNqV9K8GOgJ=-C7iA@mail.gmail.com> <CANUX_P2b0Bx+-E_OBQ0reGW0=d6819qc=r83K0kTv0xMo8mtLQ@mail.gmail.com>
-From: Emil Lenngren <emil.lenngren@gmail.com>
-Date: Sun, 11 Jun 2017 23:30:33 +0200
-Message-ID: <CAO1O6see6yDr-hDVNPi9Kv9wO6p-98w7YhsnnwnVOVCSEGVksw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 0/6] Constant Time Memory Comparisons Are Important
-To: Emmanuel Grumbach <egrumbach@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, Kalle Valo <kvalo@codeaurora.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Anna Schumaker <anna.schumaker@netapp.com>, David Howells <dhowells@redhat.com>, David Safford <safford@us.ibm.com>, "David S. Miller" <davem@davemloft.net>, Gilad Ben-Yossef <gilad@benyossef.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Gustavo Padovan <gustavo@padovan.org>, "J. Bruce Fields" <bfields@fieldses.org>, Jeff Layton <jlayton@poochiereds.net>, Johan Hedberg <johan.hedberg@gmail.com>, Johannes Berg <johannes@sipsolutions.net>, Marcel Holtmann <marcel@holtmann.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Trond Myklebust <trond.myklebust@primarydata.com>, keyrings@vger.kernel.org, Bluez mailing list <linux-bluetooth@vger.kernel.org>, "open list:NFS, SUNRPC, AND..." <linux-nfs@vger.kernel.org>, linux-wireless <linux-wireless@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
+In-Reply-To: <9d175249-c9f3-daba-bae4-f60dc97795e6@digikod.net>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v2 0/1] Add Trusted Path Execution as a stackable LSM
+To: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+Cc: james.l.morris@oracle.com, serge@hallyn.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2017-06-11 22:48 GMT+02:00 Emmanuel Grumbach <egrumbach@gmail.com>:
-> On Sun, Jun 11, 2017 at 4:36 PM, Kees Cook <keescook@chromium.org> wrote:
->>
->> On Sun, Jun 11, 2017 at 1:13 AM, Kalle Valo <kvalo@codeaurora.org> wrote:
->> > "Jason A. Donenfeld" <Jason@zx2c4.com> writes:
->> >
->> >> Whenever you're comparing two MACs, it's important to do this using
->> >> crypto_memneq instead of memcmp. With memcmp, you leak timing information,
->> >> which could then be used to iteratively forge a MAC.
->> >
->> > Do you have any pointers where I could learn more about this?
->>
->> While not using C specifically, this talks about the problem generally:
->> https://www.chosenplaintext.ca/articles/beginners-guide-constant-time-cryptography.html
->>
+On 06/11/2017 07:30 AM, Mickaël Salaün wrote:
 >
-> Sorry for the stupid question, but the MAC address is in plaintext in
-> the air anyway or easily accessible via user space tools. I fail to
-> see what it is so secret about a MAC address in that code where that
-> same MAC address is accessible via myriads of ways.
+> On 08/06/2017 21:01, Matt Brown wrote:
+>> On 6/8/17 2:37 PM, Alan Cox wrote:
+>>>> http://phrack.org/issues/52/6.html#article
+>>>>
+>>>> | A trusted path is one that is inside a root owned directory that
+>>>> | is not group or world writable.  /bin, /usr/bin, /usr/local/bin, are
+>>>> | (under normal circumstances) considered trusted.  Any non-root
+>>>> | users home directory is not trusted, nor is /tmp.
+>>>
+>>> Note that in the real world the trusted path would and should also
+>>> require that any elements of the path above that point are also locked
+>>> down if you are using path based models. Ie you need to ensure nobody has
+>>> the ability to rename /usr or /usr/local before you trust /usr/local/bin.
+>>>
+>>
+>> So actually in this LSM it's not so much full paths that are trusted,
+>> rather it checks that the directory containing the program is only
+>> writable by root and that the program itself is only writable by root.
+>>
+>> For example, consider the following:
+>>
+>> /user/ with permissions drwxr-xr-x user user
+>> /user/user-owned/ with permissions drwxr-xr-x user user
+>> /user/user-owned/root-owned/ with permissions drwxr-xr-x root root
+>> /user/user-owned/root-owned/exe with permissions -rwxr-xr-x root root
+>
+> Some tests would make this scenario clear. ;)
+>
+> You can take a look at how seccomp-bpf does with the test_harness.h
+> helper. A new kselftest_harness.h will be available soon to not include
+> a file from the seccomp-bpf directory (cf. linux-next).
+>
 
-I think you're mixing up Media Access Control (MAC) addresses with
-Message Authentication Code (MAC). The second one is a cryptographic
-signature of a message.
+I'll take a look at those. Thanks!
+
+Matt
