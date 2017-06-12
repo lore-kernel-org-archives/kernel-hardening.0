@@ -1,162 +1,146 @@
 References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
- <1497286620-15027-4-git-send-email-s.mesoraca16@gmail.com>
+ <1497286620-15027-6-git-send-email-s.mesoraca16@gmail.com>
 From: Casey Schaufler <casey@schaufler-ca.com>
-Message-ID: <8219df49-321d-d032-48b5-cf1cd5a46664@schaufler-ca.com>
-Date: Mon, 12 Jun 2017 14:31:30 -0700
+Message-ID: <1dccd8da-c96f-3947-d90f-a3f3d4f389fd@schaufler-ca.com>
+Date: Mon, 12 Jun 2017 14:31:48 -0700
 MIME-Version: 1.0
-In-Reply-To: <1497286620-15027-4-git-send-email-s.mesoraca16@gmail.com>
+In-Reply-To: <1497286620-15027-6-git-send-email-s.mesoraca16@gmail.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 03/11] Creation of "usb_device_auth" LSM hook
+Subject: [kernel-hardening] Re: [PATCH 05/11] Creation of "check_vmflags" LSM hook
 To: Salvatore Mesoraca <s.mesoraca16@gmail.com>, linux-kernel@vger.kernel.org
-Cc: linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-usb@vger.kernel.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On 6/12/2017 9:56 AM, Salvatore Mesoraca wrote:
-> Creation of a new LSM hook that can be used to authorize or deauthorize
-> new USB devices via the usb authorization interface.
-> The same hook can also prevent the authorization of a USB device via
-> "/sys/bus/usb/devices/DEVICE/authorized".
-> Using this hook an LSM could provide an higher level of granularity
-> than the current authorization interface.
+> Creation of a new LSM hook to check if a given configuration of vmflags,
+> for a new memory allocation request, should be allowed or not.
+> It's placed in "do_mmap", "do_brk_flags" and "__install_special_mapping".
 >
 > Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-> Cc: linux-usb@vger.kernel.org
-> Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> Cc: linux-mm@kvack.org
 > ---
->  drivers/usb/core/hub.c    | 4 ++++
->  drivers/usb/core/sysfs.c  | 6 +++++-
 >  include/linux/lsm_hooks.h | 6 ++++++
->  include/linux/security.h  | 7 +++++++
+>  include/linux/security.h  | 6 ++++++
+>  mm/mmap.c                 | 9 +++++++++
 >  security/security.c       | 5 +++++
->  5 files changed, 27 insertions(+), 1 deletion(-)
+>  4 files changed, 26 insertions(+)
 >
-> diff --git a/drivers/usb/core/hub.c b/drivers/usb/core/hub.c
-> index b8bb20d..58be4f0 100644
-> --- a/drivers/usb/core/hub.c
-> +++ b/drivers/usb/core/hub.c
-> @@ -28,6 +28,7 @@
->  #include <linux/mutex.h>
->  #include <linux/random.h>
->  #include <linux/pm_qos.h>
-> +#include <linux/security.h>
->  
->  #include <linux/uaccess.h>
->  #include <asm/byteorder.h>
-> @@ -4831,6 +4832,9 @@ static void hub_port_connect(struct usb_hub *hub, int port1, u16 portstatus,
->  		if (udev->quirks & USB_QUIRK_DELAY_INIT)
->  			msleep(1000);
->  
-> +		if (security_usb_device_auth(udev))
-> +			usb_deauthorize_device(udev);
-> +
->  		/* consecutive bus-powered hubs aren't reliable; they can
->  		 * violate the voltage drop budget.  if the new child has
->  		 * a "powered" LED, users should notice we didn't enable it
-> diff --git a/drivers/usb/core/sysfs.c b/drivers/usb/core/sysfs.c
-> index dfc68ed..fce9d39 100644
-> --- a/drivers/usb/core/sysfs.c
-> +++ b/drivers/usb/core/sysfs.c
-> @@ -17,6 +17,7 @@
->  #include <linux/usb.h>
->  #include <linux/usb/quirks.h>
->  #include <linux/of.h>
-> +#include <linux/security.h>
->  #include "usb.h"
->  
->  /* Active configuration fields */
-> @@ -742,8 +743,11 @@ static ssize_t authorized_store(struct device *dev,
->  		result = -EINVAL;
->  	else if (val == 0)
->  		result = usb_deauthorize_device(usb_dev);
-> -	else
-> +	else {
-> +		if (security_usb_device_auth(usb_dev))
-> +			return -EPERM;
-
-Return the error reported by the hook rather than -EPERM.
-
->  		result = usb_authorize_device(usb_dev);
-> +	}
->  	return result < 0 ? result : size;
->  }
->  static DEVICE_ATTR_IGNORE_LOCKDEP(authorized, S_IRUGO | S_IWUSR,
 > diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
-> index bd274db..cc0937e 100644
+> index cc0937e..6934cc5 100644
 > --- a/include/linux/lsm_hooks.h
 > +++ b/include/linux/lsm_hooks.h
-> @@ -1189,6 +1189,10 @@
->   *	to the @parent process for tracing.
->   *	@parent contains the task_struct structure for debugger process.
+> @@ -483,6 +483,10 @@
+>   *	@reqprot contains the protection requested by the application.
+>   *	@prot contains the protection that will be applied by the kernel.
 >   *	Return 0 if permission is granted.
-> + * @usb_device_auth:
-> + *	Check if @udev device should be authorized or not.
-> + *	@udev contains the usb_device structure for the USB device.
-> + *	Return 0 if the device is allowed.
->   * @capget:
->   *	Get the @effective, @inheritable, and @permitted capability sets for
->   *	the @target process.  The hook may also perform permission checking to
-> @@ -1352,6 +1356,7 @@
->  	int (*ptrace_access_check)(struct task_struct *child,
->  					unsigned int mode);
->  	int (*ptrace_traceme)(struct task_struct *parent);
-> +	int (*usb_device_auth)(const struct usb_device *udev);
->  	int (*capget)(struct task_struct *target, kernel_cap_t *effective,
->  			kernel_cap_t *inheritable, kernel_cap_t *permitted);
->  	int (*capset)(struct cred *new, const struct cred *old,
-> @@ -1670,6 +1675,7 @@ struct security_hook_heads {
->  	struct list_head binder_transfer_file;
->  	struct list_head ptrace_access_check;
->  	struct list_head ptrace_traceme;
-> +	struct list_head usb_device_auth;
->  	struct list_head capget;
->  	struct list_head capset;
->  	struct list_head capable;
+> + * @check_vmflags:
+> + *	Check if the requested @vmflags are allowed.
+> + *	@vmflags contains requested the vmflags.
+> + *	Return 0 if the operation is allowed to continue.
+>   * @file_lock:
+>   *	Check permission before performing file locking operations.
+>   *	Note: this hook mediates both flock and fcntl style locks.
+> @@ -1482,6 +1486,7 @@
+>  				unsigned long prot, unsigned long flags);
+>  	int (*file_mprotect)(struct vm_area_struct *vma, unsigned long reqprot,
+>  				unsigned long prot);
+> +	int (*check_vmflags)(vm_flags_t vmflags);
+>  	int (*file_lock)(struct file *file, unsigned int cmd);
+>  	int (*file_fcntl)(struct file *file, unsigned int cmd,
+>  				unsigned long arg);
+> @@ -1753,6 +1758,7 @@ struct security_hook_heads {
+>  	struct list_head mmap_addr;
+>  	struct list_head mmap_file;
+>  	struct list_head file_mprotect;
+> +	struct list_head check_vmflags;
+>  	struct list_head file_lock;
+>  	struct list_head file_fcntl;
+>  	struct list_head file_set_fowner;
 > diff --git a/include/linux/security.h b/include/linux/security.h
-> index af675b5..19bc364 100644
+> index 19bc364..67e33b6 100644
 > --- a/include/linux/security.h
 > +++ b/include/linux/security.h
-> @@ -30,6 +30,7 @@
->  #include <linux/string.h>
->  #include <linux/mm.h>
->  #include <linux/fs.h>
-> +#include <linux/usb.h>
->  
->  struct linux_binprm;
->  struct cred;
-> @@ -196,6 +197,7 @@ int security_binder_transfer_file(struct task_struct *from,
->  				  struct task_struct *to, struct file *file);
->  int security_ptrace_access_check(struct task_struct *child, unsigned int mode);
->  int security_ptrace_traceme(struct task_struct *parent);
-> +int security_usb_device_auth(const struct usb_device *udev);
->  int security_capget(struct task_struct *target,
->  		    kernel_cap_t *effective,
->  		    kernel_cap_t *inheritable,
-> @@ -434,6 +436,11 @@ static inline int security_ptrace_traceme(struct task_struct *parent)
->  	return cap_ptrace_traceme(parent);
+> @@ -302,6 +302,7 @@ int security_mmap_file(struct file *file, unsigned long prot,
+>  int security_mmap_addr(unsigned long addr);
+>  int security_file_mprotect(struct vm_area_struct *vma, unsigned long reqprot,
+>  			   unsigned long prot);
+> +int security_check_vmflags(vm_flags_t vmflags);
+>  int security_file_lock(struct file *file, unsigned int cmd);
+>  int security_file_fcntl(struct file *file, unsigned int cmd, unsigned long arg);
+>  void security_file_set_fowner(struct file *file);
+> @@ -830,6 +831,11 @@ static inline int security_file_mprotect(struct vm_area_struct *vma,
+>  	return 0;
 >  }
 >  
-> +static inline int security_usb_device_auth(const struct usb_device *udev)
+> +static inline int security_check_vmflags(vm_flags_t vmflags)
 > +{
 > +	return 0;
 > +}
 > +
->  static inline int security_capget(struct task_struct *target,
->  				   kernel_cap_t *effective,
->  				   kernel_cap_t *inheritable,
+>  static inline int security_file_lock(struct file *file, unsigned int cmd)
+>  {
+>  	return 0;
+> diff --git a/mm/mmap.c b/mm/mmap.c
+> index f82741e..e19f04e 100644
+> --- a/mm/mmap.c
+> +++ b/mm/mmap.c
+> @@ -1363,6 +1363,9 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
+>  	vm_flags |= calc_vm_prot_bits(prot, pkey) | calc_vm_flag_bits(flags) |
+>  			mm->def_flags | VM_MAYREAD | VM_MAYWRITE | VM_MAYEXEC;
+>  
+> +	if (security_check_vmflags(vm_flags))
+> +		return -EPERM;
+> +
+
+Have the hook return a value and return that rather
+than -EPERM. That way a security module can choose an
+error that it determines is appropriate. It is possible
+that a module might want to deny the access for a reason
+other than lack of privilege. 
+
+>  	if (flags & MAP_LOCKED)
+>  		if (!can_do_mlock())
+>  			return -EPERM;
+> @@ -2833,6 +2836,9 @@ static int do_brk_flags(unsigned long addr, unsigned long request, unsigned long
+>  		return -EINVAL;
+>  	flags |= VM_DATA_DEFAULT_FLAGS | VM_ACCOUNT | mm->def_flags;
+>  
+> +	if (security_check_vmflags(flags))
+> +		return -EPERM;
+> +
+
+Same here
+
+>  	error = get_unmapped_area(NULL, addr, len, 0, MAP_FIXED);
+>  	if (offset_in_page(error))
+>  		return error;
+> @@ -3208,6 +3214,9 @@ static struct vm_area_struct *__install_special_mapping(
+>  	int ret;
+>  	struct vm_area_struct *vma;
+>  
+> +	if (security_check_vmflags(vm_flags))
+> +		return ERR_PTR(-EPERM);
+> +
+
+And here.
+
+>  	vma = kmem_cache_zalloc(vm_area_cachep, GFP_KERNEL);
+>  	if (unlikely(vma == NULL))
+>  		return ERR_PTR(-ENOMEM);
 > diff --git a/security/security.c b/security/security.c
-> index 42c8028..e390f99 100644
+> index e390f99..25d58f0 100644
 > --- a/security/security.c
 > +++ b/security/security.c
-> @@ -214,6 +214,11 @@ int security_ptrace_traceme(struct task_struct *parent)
->  	return call_int_hook(ptrace_traceme, 0, parent);
+> @@ -905,6 +905,11 @@ int security_file_mprotect(struct vm_area_struct *vma, unsigned long reqprot,
+>  	return call_int_hook(file_mprotect, 0, vma, reqprot, prot);
 >  }
 >  
-> +int security_usb_device_auth(const struct usb_device *udev)
+> +int security_check_vmflags(vm_flags_t vmflags)
 > +{
-> +	return call_int_hook(usb_device_auth, 0, udev);
+> +	return call_int_hook(check_vmflags, 0, vmflags);
 > +}
 > +
->  int security_capget(struct task_struct *target,
->  		     kernel_cap_t *effective,
->  		     kernel_cap_t *inheritable,
+>  int security_file_lock(struct file *file, unsigned int cmd)
+>  {
+>  	return call_int_hook(file_lock, 0, file, cmd);
