@@ -1,93 +1,41 @@
-From: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Date: Sun, 11 Jun 2017 22:32:37 -0400
-In-Reply-To: <d9aca46b-97c6-4faf-b559-484feb4aa640@digikod.net>
-References: <201706100041.GFH78616.OFtOHFJSLQOMVF@I-love.SAKURA.ne.jp>
-	 <754b78d1-f7f9-58bd-bf74-fea9e105649a@nmatt.com>
-	 <20170609164315.GA1141@meriadoc.perfinion.com>
-	 <d84aaf19-307b-4b60-df74-4fb43a218c9c@nmatt.com>
-	 <CAGXu5jJt5MRU3ZdKABEbLt4qe-cCLxEm5tMH9SdUh=rtdLUV1w@mail.gmail.com>
-	 <201706101427.EEG90168.OtFFHSFMOVOJQL@I-love.SAKURA.ne.jp>
-	 <d9aca46b-97c6-4faf-b559-484feb4aa640@digikod.net>
+MIME-Version: 1.0
+In-Reply-To: <CAO1O6see6yDr-hDVNPi9Kv9wO6p-98w7YhsnnwnVOVCSEGVksw@mail.gmail.com>
+References: <20170610025912.6499-1-Jason@zx2c4.com> <878tkzq6wi.fsf@purkki.adurom.net>
+ <CAGXu5jKp=X7-eKo+HgzS3uqncx5yy-u=tJNqV9K8GOgJ=-C7iA@mail.gmail.com>
+ <CANUX_P2b0Bx+-E_OBQ0reGW0=d6819qc=r83K0kTv0xMo8mtLQ@mail.gmail.com> <CAO1O6see6yDr-hDVNPi9Kv9wO6p-98w7YhsnnwnVOVCSEGVksw@mail.gmail.com>
+From: Emmanuel Grumbach <egrumbach@gmail.com>
+Date: Mon, 12 Jun 2017 08:03:33 +0300
+Message-ID: <CANUX_P1n0=rK+biS7M0-vxP5Uhk5rU+qj4_9jtdRF9Yh219PVA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <1497234757.21594.280.camel@linux.vnet.ibm.com>
-Subject: [kernel-hardening] Re: [PATCH v1] shebang: restrict python interactive
- prompt/interpreter
-To: =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, keescook@chromium.org, matt@nmatt.com
-Cc: jason@perfinion.com, linux-security-module@vger.kernel.org, Daniel Micay <danielmicay@gmail.com>, kernel-hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH 0/6] Constant Time Memory Comparisons Are Important
+To: Emil Lenngren <emil.lenngren@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, Kalle Valo <kvalo@codeaurora.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Anna Schumaker <anna.schumaker@netapp.com>, David Howells <dhowells@redhat.com>, David Safford <safford@us.ibm.com>, "David S. Miller" <davem@davemloft.net>, Gilad Ben-Yossef <gilad@benyossef.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Gustavo Padovan <gustavo@padovan.org>, "J. Bruce Fields" <bfields@fieldses.org>, Jeff Layton <jlayton@poochiereds.net>, Johan Hedberg <johan.hedberg@gmail.com>, Johannes Berg <johannes@sipsolutions.net>, Marcel Holtmann <marcel@holtmann.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Trond Myklebust <trond.myklebust@primarydata.com>, keyrings@vger.kernel.org, Bluez mailing list <linux-bluetooth@vger.kernel.org>, "open list:NFS, SUNRPC, AND..." <linux-nfs@vger.kernel.org>, linux-wireless <linux-wireless@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, 2017-06-11 at 13:44 +0200, Mickaël Salaün wrote:
-> On 10/06/2017 07:27, Tetsuo Handa wrote:
-> > Kees Cook wrote:
-> >> On Fri, Jun 9, 2017 at 10:23 AM, Matt Brown <matt@nmatt.com> wrote:
-> >>> what does everyone thing about a envp_blacklist option that is a list of
-> >>> environmental variables that will be stripped from exec calls. This can
-> >>> be done in the LSM hook bprm_check_security.
-> >>>
-> >>> Is there any reason on a hardened system why you would need the
-> >>> PYTHONINSPECT environmental variable?
-> >>
-> >> As part of shebang, it likely makes sense to whitelist (rather than
-> >> blacklist) the env of the restricted interpreters. Though this is
-> >> starting to get complex. :P
-> > 
-> > Blacklisting environment variables is dangerous. I think that
-> > administrators can afford whitelisting environment variable names.
-> > I think that implementing whitelist of environment variable names
-> > as an independent LSM module would be fine.
-> > 
-> > While it is true that things starts getting complex if we check environment
-> > variables, shebang will already become complex if it starts worrying about
-> > updating inode number list in order to close the race window between doing
-> > creat()+write()+close()+chmod()+rename() by the package manager and teaching
-> > the kernel the new inode number determined by creat(). We will need an
-> > interface for allowing the package manager to teach the kernel the new inode
-> > number and modification of the package manager, for the kernel side is doing
-> > inode number based blacklisting while user side can execute it before rename().
+On Mon, Jun 12, 2017 at 12:30 AM, Emil Lenngren <emil.lenngren@gmail.com> wrote:
+> 2017-06-11 22:48 GMT+02:00 Emmanuel Grumbach <egrumbach@gmail.com>:
+>> On Sun, Jun 11, 2017 at 4:36 PM, Kees Cook <keescook@chromium.org> wrote:
+>>>
+>>> On Sun, Jun 11, 2017 at 1:13 AM, Kalle Valo <kvalo@codeaurora.org> wrote:
+>>> > "Jason A. Donenfeld" <Jason@zx2c4.com> writes:
+>>> >
+>>> >> Whenever you're comparing two MACs, it's important to do this using
+>>> >> crypto_memneq instead of memcmp. With memcmp, you leak timing information,
+>>> >> which could then be used to iteratively forge a MAC.
+>>> >
+>>> > Do you have any pointers where I could learn more about this?
+>>>
+>>> While not using C specifically, this talks about the problem generally:
+>>> https://www.chosenplaintext.ca/articles/beginners-guide-constant-time-cryptography.html
+>>>
+>>
+>> Sorry for the stupid question, but the MAC address is in plaintext in
+>> the air anyway or easily accessible via user space tools. I fail to
+>> see what it is so secret about a MAC address in that code where that
+>> same MAC address is accessible via myriads of ways.
+>
+> I think you're mixing up Media Access Control (MAC) addresses with
+> Message Authentication Code (MAC). The second one is a cryptographic
+> signature of a message.
 
-I don't think we're trying to protect against executing the
-interpreter prior to the rename.  Rename, itself, would trigger
-associating the interpreter name with an inode number.
-
-> > --
-> > To unsubscribe from this list: send the line "unsubscribe linux-security-module" in
-> > the body of a message to majordomo@vger.kernel.org
-> > More majordomo info at  http://vger.kernel.org/majordomo-info.html
-> > 
-> 
-> Using filesystem xattr seems like a good idea for this kind of
-> exceptions and instead of a hardcoded interpreter path. Something like
-> "security.tpe.interpreter=1|2" (bitmask for interpreter-only and/or CLI)
-> and "security.tpe.environment=HOME,LOGNAME" would be quite flexible to
-> configure a security policy for some binaries. This could also be
-> protected by IMA/EVM, if needed.
-
-Checking for the existence of an xattr without caching is relatively
-slow.  I'm not sure that we would want to go this route.
-
-> This kind of xattr should be writable by the owner of the file. The TPE
-> LSM [1] could then take these xattr into account according to the TPE
-> policy.
-
-Security xattrs are only writable by root.
-
-Mimi
-
-> The "security.tpe.environment" could also be set on a script file to be
-> part of the union with the interpreter's environment whitelist. This may
-> be needed to be able to use environment variables as configuration in a
-> script.
-> 
-> In the future, a "security.tpe.memory" could contain a set of flags as
-> PaX uses for mprotect-like exceptions (user.pax.flags).
-> 
-> Userland daemons such as paxctld or paxrat could be used (with some
-> tweaks) to keep a consistent TPE policy over time.
-> 
->  Mickaël
-> 
-> 
-> [1] https://lkml.kernel.org/r/1497015878.21594.201.camel@linux.vnet.ibm.com
-> 
+Obviously... Sorry for the noise.
