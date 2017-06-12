@@ -1,67 +1,150 @@
-MIME-Version: 1.0
-In-Reply-To: <CAG48ez2eLfZLyhX2m9PaAOBY3As+vovkmr914u06Qd2Z240mgA@mail.gmail.com>
-References: <20170612152556.133240249@linuxfoundation.org> <20170612152559.204034809@linuxfoundation.org>
- <CAG48ez2eLfZLyhX2m9PaAOBY3As+vovkmr914u06Qd2Z240mgA@mail.gmail.com>
-From: Jann Horn <jannh@google.com>
-Date: Mon, 12 Jun 2017 17:45:54 +0200
-Message-ID: <CAG48ez0uv_jmhjJrjzESmc_98VQKh3OiFLTT3KOW_uWbr639MA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH 4.4 47/90] stackprotector: Increase the
- per-task stack canarys random range from 32 bits to 64 bits on 64-bit platforms
-To: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Cc: kernel list <linux-kernel@vger.kernel.org>, stable@vger.kernel.org, Daniel Micay <danielmicay@gmail.com>, Arjan van de Ven <arjan@linux.intel.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@kernel.org>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Mon, 12 Jun 2017 18:56:49 +0200
+Message-Id: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
+Subject: [kernel-hardening] [PATCH 00/11] S.A.R.A. a new stacked LSM
+To: linux-kernel@vger.kernel.org
+Cc: linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, Salvatore Mesoraca <s.mesoraca16@gmail.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Ah, nevermind, I just saw that this was changed in
-https://git.kernel.org/pub/scm/linux/kernel/git/stable/stable-queue.git/tree/queue-4.4/drivers-char-random-add-get_random_long.patch
-.
+S.A.R.A. (S.A.R.A. is Another Recursive Acronym) is a stacked Linux
+Security Module that aims to collect heterogeneous security measures,
+providing a common interface to manage them.
+It can be useful to allow minor security features to use advanced
+management options, like user-space configuration files and tools, without
+too much overhead.
+Some submodules that use this framework are also introduced.
+The code is quite long, I apologize for this. Thank you in advance to
+anyone who will take the time to review this patchset.
 
-On Mon, Jun 12, 2017 at 5:41 PM, Jann Horn <jannh@google.com> wrote:
-> AFAICS get_random_long() doesn't exist in 4.4 (except in
-> arch/x86/boot/compressed/aslr.c)? IIRC the same problem already
-> occured with another kernel version?
->
-> On Mon, Jun 12, 2017 at 5:25 PM, Greg Kroah-Hartman
-> <gregkh@linuxfoundation.org> wrote:
->> 4.4-stable review patch.  If anyone has any objections, please let me know.
->>
->> ------------------
->>
->> From: Daniel Micay <danielmicay@gmail.com>
->>
->> commit 5ea30e4e58040cfd6434c2f33dc3ea76e2c15b05 upstream.
->>
->> The stack canary is an 'unsigned long' and should be fully initialized to
->> random data rather than only 32 bits of random data.
->>
->> Signed-off-by: Daniel Micay <danielmicay@gmail.com>
->> Acked-by: Arjan van de Ven <arjan@linux.intel.com>
->> Acked-by: Rik van Riel <riel@redhat.com>
->> Acked-by: Kees Cook <keescook@chromium.org>
->> Cc: Arjan van Ven <arjan@linux.intel.com>
->> Cc: Linus Torvalds <torvalds@linux-foundation.org>
->> Cc: Peter Zijlstra <peterz@infradead.org>
->> Cc: Thomas Gleixner <tglx@linutronix.de>
->> Cc: kernel-hardening@lists.openwall.com
->> Cc: stable@vger.kernel.org
->> Link: http://lkml.kernel.org/r/20170504133209.3053-1-danielmicay@gmail.com
->> Signed-off-by: Ingo Molnar <mingo@kernel.org>
->> Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
->>
->> ---
->>  kernel/fork.c |    2 +-
->>  1 file changed, 1 insertion(+), 1 deletion(-)
->>
->> --- a/kernel/fork.c
->> +++ b/kernel/fork.c
->> @@ -368,7 +368,7 @@ static struct task_struct *dup_task_stru
->>         set_task_stack_end_magic(tsk);
->>
->>  #ifdef CONFIG_CC_STACKPROTECTOR
->> -       tsk->stack_canary = get_random_int();
->> +       tsk->stack_canary = get_random_long();
->>  #endif
->>
->>         /*
->>
->>
+S.A.R.A. is meant to be stacked but it needs cred blobs and the procattr
+interface, so I temporarily implemented those parts in a way that won't
+be acceptable for upstream, but it works for now. I know that there
+is some ongoing work to make cred blobs and procattr stackable, as soon
+as the new interfaces will be available I'll reimplement the involved
+parts.
+At the moment I've been able to test it only on x86.
+
+S.A.R.A. submodules introduced in this patchset are: USB Filtering and
+WX Protection.
+
+The kernel-space part is complemented by its user-space counterpart:
+saractl [1].
+A test suite for WX Protection, called sara-test [2], is also available.
+
+USB Filtering aims to provide a mechanism to decide which USB devices
+should be authorized to connect to the system and which shouldn't. The main
+goal is to narrow the attack surface for custom USB devices designed to
+exploit vulnerabilities found in some USB device drivers.
+Via configuration it's possible to allow or to deny authorization, based
+on one or more of: Vendor ID, Product ID, bus name and port number. There
+is also limited support for wildcards.
+Depending on the configuration, it can work both as a white list or as a
+black list.
+With the help of "saractl" it's also possible to completely disable new
+USB devices when the screen is "locked".
+The original idea is inspired by the Grsecurity "Deny USB" feature.
+
+WX Protection aims to improve user-space programs security by applying:
+- W^X enforcement: program can't have a page of memory that is marked, at
+		   the same time, writable and executable.
+- W!->X restriction: any page that could have been marked as writable in
+		     the past won't ever be allowed to be marked as
+		     executable.
+- Executable MMAP prevention: prevents the creation of new executable mmaps
+			      after the dynamic libraries have been loaded.
+All of the above features can be enabled or disabled both system wide
+or on a per executable basis through the use of configuration files managed
+by "saractl".
+It is important to note that some programs may have issues working with
+WX Protection. In particular:
+- W^X enforcement will cause problems to any programs that needs
+  memory pages mapped both as writable and executable at the same time e.g.
+  programs with executable stack markings in the PT_GNU_STACK segment.
+- W!->X restriction will cause problems to any program that
+  needs to generate executable code at run time or to modify executable
+  pages e.g. programs with a JIT compiler built-in or linked against a
+  non-PIC library.
+- Executable MMAP prevention can work only with programs that have at least
+  partial RELRO support. It's disabled automatically for programs that
+  lack this feature. It will cause problems to any program that uses dlopen
+  or tries to do an executable mmap. Unfortunately this feature is the one
+  that could create most problems and should be enabled only after careful
+  evaluation.
+To extend the scope of the above features, despite the issues that they may
+cause, they are complemented by:
+- procattr interface: can be used by a program to discover which WX
+		      Protection features are enabled and/or to tighten
+		      them.
+- Trampoline emulation: emulates the execution of well-known "trampolines"
+			even when they are placed in non-executable memory.
+Parts of WX Protection are inspired by some of the features available in
+PaX.
+
+More information can be found in the documentation introduced in the first
+patch and in the "commit message" of the following emails.
+
+[1] https://github.com/smeso/saractl
+[2] https://github.com/smeso/sara-test
+
+Salvatore Mesoraca (11):
+  S.A.R.A. Documentation
+  S.A.R.A. framework creation
+  Creation of "usb_device_auth" LSM hook
+  S.A.R.A. USB Filtering
+  Creation of "check_vmflags" LSM hook
+  S.A.R.A. cred blob management
+  S.A.R.A. WX Protection
+  Creation of "pagefault_handler_x86" LSM hook
+  Trampoline emulation
+  Allowing for stacking procattr support in S.A.R.A.
+  S.A.R.A. WX Protection procattr interface
+
+ Documentation/admin-guide/kernel-parameters.txt |  40 ++
+ Documentation/security/00-INDEX                 |   2 +
+ Documentation/security/SARA.rst                 | 192 +++++
+ arch/x86/mm/fault.c                             |   6 +
+ drivers/usb/core/hub.c                          |   4 +
+ drivers/usb/core/sysfs.c                        |   6 +-
+ fs/proc/base.c                                  |  38 +
+ include/linux/cred.h                            |   3 +
+ include/linux/lsm_hooks.h                       |  26 +
+ include/linux/security.h                        |  24 +
+ mm/mmap.c                                       |   9 +
+ security/Kconfig                                |   1 +
+ security/Makefile                               |   2 +
+ security/sara/Kconfig                           | 175 +++++
+ security/sara/Makefile                          |   5 +
+ security/sara/include/sara.h                    |  29 +
+ security/sara/include/sara_data.h               |  47 ++
+ security/sara/include/securityfs.h              |  59 ++
+ security/sara/include/trampolines.h             | 171 +++++
+ security/sara/include/usb_filtering.h           |  27 +
+ security/sara/include/utils.h                   |  69 ++
+ security/sara/include/wxprot.h                  |  27 +
+ security/sara/main.c                            | 113 +++
+ security/sara/sara_data.c                       |  79 +++
+ security/sara/securityfs.c                      | 558 +++++++++++++++
+ security/sara/usb_filtering.c                   | 410 +++++++++++
+ security/sara/utils.c                           | 151 ++++
+ security/sara/wxprot.c                          | 902 ++++++++++++++++++++++++
+ security/security.c                             |  42 +-
+ 29 files changed, 3214 insertions(+), 3 deletions(-)
+ create mode 100644 Documentation/security/SARA.rst
+ create mode 100644 security/sara/Kconfig
+ create mode 100644 security/sara/Makefile
+ create mode 100644 security/sara/include/sara.h
+ create mode 100644 security/sara/include/sara_data.h
+ create mode 100644 security/sara/include/securityfs.h
+ create mode 100644 security/sara/include/trampolines.h
+ create mode 100644 security/sara/include/usb_filtering.h
+ create mode 100644 security/sara/include/utils.h
+ create mode 100644 security/sara/include/wxprot.h
+ create mode 100644 security/sara/main.c
+ create mode 100644 security/sara/sara_data.c
+ create mode 100644 security/sara/securityfs.c
+ create mode 100644 security/sara/usb_filtering.c
+ create mode 100644 security/sara/utils.c
+ create mode 100644 security/sara/wxprot.c
+
+-- 
+1.9.1
