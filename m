@@ -1,80 +1,41 @@
-From: Kalle Valo <kvalo@codeaurora.org>
-References: <20170610025912.6499-1-Jason@zx2c4.com>
-	<878tkzq6wi.fsf@purkki.adurom.net>
-	<CAGXu5jKp=X7-eKo+HgzS3uqncx5yy-u=tJNqV9K8GOgJ=-C7iA@mail.gmail.com>
-	<CANUX_P2b0Bx+-E_OBQ0reGW0=d6819qc=r83K0kTv0xMo8mtLQ@mail.gmail.com>
-	<CAO1O6see6yDr-hDVNPi9Kv9wO6p-98w7YhsnnwnVOVCSEGVksw@mail.gmail.com>
-	<5595d4bc-a43e-7a89-eb86-fa77556cd7af@broadcom.com>
-Date: Mon, 12 Jun 2017 16:46:47 +0300
-In-Reply-To: <5595d4bc-a43e-7a89-eb86-fa77556cd7af@broadcom.com> (Arend van
-	Spriel's message of "Mon, 12 Jun 2017 09:33:24 +0200")
-Message-ID: <87lgox8gjc.fsf@kamboji.qca.qualcomm.com>
-MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] Re: [PATCH 0/6] Constant Time Memory Comparisons Are Important
-To: Arend van Spriel <arend.vanspriel@broadcom.com>
-Cc: Emil Lenngren <emil.lenngren@gmail.com>, Emmanuel Grumbach <egrumbach@gmail.com>, Kees Cook <keescook@chromium.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Anna Schumaker <anna.schumaker@netapp.com>, David Howells <dhowells@redhat.com>, David Safford <safford@us.ibm.com>, "David S. Miller" <davem@davemloft.net>, Gilad Ben-Yossef <gilad@benyossef.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Gustavo Padovan <gustavo@padovan.org>, "J. Bruce Fields" <bfields@fieldses.org>, Jeff Layton <jlayton@poochiereds.net>, Johan Hedberg <johan.hedberg@gmail.com>, Johannes Berg <johannes@sipsolutions.net>, Marcel Holtmann <marcel@holtmann.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Trond Myklebust <trond.myklebust@primarydata.com>, keyrings@vger.kernel.org, Bluez mailing list <linux-bluetooth@vger.kernel.org>, "open list:NFS, SUNRPC, AND..." <linu x-nfs@vger.kernel.org>, linux-wireless <linux-wireless@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
+From: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Date: Mon, 12 Jun 2017 10:27:24 -0400
+In-Reply-To: <1497234757.21594.280.camel@linux.vnet.ibm.com>
+References: <201706100041.GFH78616.OFtOHFJSLQOMVF@I-love.SAKURA.ne.jp>
+	 <754b78d1-f7f9-58bd-bf74-fea9e105649a@nmatt.com>
+	 <20170609164315.GA1141@meriadoc.perfinion.com>
+	 <d84aaf19-307b-4b60-df74-4fb43a218c9c@nmatt.com>
+	 <CAGXu5jJt5MRU3ZdKABEbLt4qe-cCLxEm5tMH9SdUh=rtdLUV1w@mail.gmail.com>
+	 <201706101427.EEG90168.OtFFHSFMOVOJQL@I-love.SAKURA.ne.jp>
+	 <d9aca46b-97c6-4faf-b559-484feb4aa640@digikod.net>
+	 <1497234757.21594.280.camel@linux.vnet.ibm.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Message-Id: <1497277644.21594.319.camel@linux.vnet.ibm.com>
+Subject: [kernel-hardening] Re: [PATCH v1] shebang: restrict python interactive
+ prompt/interpreter
+To: =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, keescook@chromium.org, matt@nmatt.com
+Cc: jason@perfinion.com, linux-security-module@vger.kernel.org, Daniel Micay <danielmicay@gmail.com>, kernel-hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Arend van Spriel <arend.vanspriel@broadcom.com> writes:
+On Sun, 2017-06-11 at 22:32 -0400, Mimi Zohar wrote:
+> On Sun, 2017-06-11 at 13:44 +0200, Mickaël Salaün wrote:
+ 
+> > Using filesystem xattr seems like a good idea for this kind of
+> > exceptions and instead of a hardcoded interpreter path. Something like
+> > "security.tpe.interpreter=1|2" (bitmask for interpreter-only and/or CLI)
+> > and "security.tpe.environment=HOME,LOGNAME" would be quite flexible to
+> > configure a security policy for some binaries. This could also be
+> > protected by IMA/EVM, if needed.
+> 
+> Checking for the existence of an xattr without caching is relatively
+> slow.  I'm not sure that we would want to go this route.
+ 
+For identifying interpreters, xattrs would be too slow (without
+caching results), but once identified, using xattrs as you suggested,
+for specifying how interpreters can be invoked and limiting
+environment variables, is a good idea.  Perhaps the two xattrs could
+be combined?
 
-> On 6/11/2017 11:30 PM, Emil Lenngren wrote:
->> 2017-06-11 22:48 GMT+02:00 Emmanuel Grumbach <egrumbach@gmail.com>:
->>> On Sun, Jun 11, 2017 at 4:36 PM, Kees Cook <keescook@chromium.org> wrote:
->>>>
->>>> On Sun, Jun 11, 2017 at 1:13 AM, Kalle Valo <kvalo@codeaurora.org> wrote:
->>>>> "Jason A. Donenfeld" <Jason@zx2c4.com> writes:
->>>>>
->>>>>> Whenever you're comparing two MACs, it's important to do this using
->>>>>> crypto_memneq instead of memcmp. With memcmp, you leak timing information,
->>>>>> which could then be used to iteratively forge a MAC.
->>>>>
->>>>> Do you have any pointers where I could learn more about this?
->>>>
->>>> While not using C specifically, this talks about the problem generally:
->>>> https://www.chosenplaintext.ca/articles/beginners-guide-constant-time-cryptography.html
->>>>
->>>
->>> Sorry for the stupid question, but the MAC address is in plaintext in
->>> the air anyway or easily accessible via user space tools. I fail to
->>> see what it is so secret about a MAC address in that code where that
->>> same MAC address is accessible via myriads of ways.
->>
->> I think you're mixing up Media Access Control (MAC) addresses with
->> Message Authentication Code (MAC). The second one is a cryptographic
->> signature of a message.
->
-> While this may be obvious to those who are in the know this mixup is
-> easily made outside the crypto domain and especially in the (wireless)
-> networking domain (my mind wandered towards the same error path).
-
-I did realise that this was about Message Authentication Code (yay!) but
-I got lost because I thought this is somehow related to timestamps :)
-Thanks to Kees I now understand this is about revealing execution time
-to the attacker, not timestamps or anything like that.
-
-> As this series is touching stuff outside crypto it is good to be
-> explicit and not use such abbreviations that can be misinterpreted.
-> The article Kees referred to is also useful to get into the proper
-> context here and at least worth mentioning this or other useful
-> references in the cover letter.
-
-And the kernel documentation we have is not really helping much:
-
-/**
- * crypto_memneq - Compare two areas of memory without leaking
- *		   timing information.
- *
- * @a: One area of memory
- * @b: Another area of memory
- * @size: The size of the area.
- *
- * Returns 0 when data is equal, 1 otherwise.
- */
-
-For most people "leaking timing information" does not tell much. Adding
-a sentence or two _why_ this function should be used would be very
-helpful.
-
--- 
-Kalle Valo
+Mimi
