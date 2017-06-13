@@ -1,29 +1,26 @@
 MIME-Version: 1.0
-In-Reply-To: <CAG48ez1DBG9cwGtcwKmrL9tSfi4vvNk-X07jnUmzv81RM4Po_Q@mail.gmail.com>
+In-Reply-To: <75f33a0f-4643-fe17-fc35-b60b48efd499@samsung.com>
 References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
- <1497286620-15027-2-git-send-email-s.mesoraca16@gmail.com> <CAG48ez1DBG9cwGtcwKmrL9tSfi4vvNk-X07jnUmzv81RM4Po_Q@mail.gmail.com>
+ <CGME20170612170045epcas2p2889350eed8fb2caaa592ef8e6e2c12bf@epcas2p2.samsung.com>
+ <1497286620-15027-4-git-send-email-s.mesoraca16@gmail.com> <75f33a0f-4643-fe17-fc35-b60b48efd499@samsung.com>
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Tue, 13 Jun 2017 09:43:16 +0200
-Message-ID: <CAJHCu1JGyW6AasQ=VSLDVv9S2u7mf9SxgGX8H7KBnjHKvfsjkA@mail.gmail.com>
+Date: Tue, 13 Jun 2017 09:47:33 +0200
+Message-ID: <CAJHCu1KORP9vKTSRCVNUBP3dfgiL6yg3DDEpuBjPc4r-iA3DEg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH 01/11] S.A.R.A. Documentation
-To: Jann Horn <jannh@google.com>
-Cc: kernel list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
+Subject: [kernel-hardening] Re: [PATCH 03/11] Creation of "usb_device_auth" LSM hook
+To: Krzysztof Opasiak <k.opasiak@samsung.com>
+Cc: kernel list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-usb@vger.kernel.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2017-06-12 19:49 GMT+02:00 Jann Horn <jannh@google.com>:
-> On Mon, Jun 12, 2017 at 6:56 PM, Salvatore Mesoraca
-> As far as I can tell, the wxprot interface in procfs, when used as
-> /proc/PID/attr/sara/wxprot, actually only sets restrictions on one of the
-> threads.
-> The documentation doesn't seem to mention this.
-
-Yes, you are right. I'll change it.
-
->> +.. [3] `saralib                <https://github.com/smeso/saralib>`_
+2017-06-12 19:35 GMT+02:00 Krzysztof Opasiak <k.opasiak@samsung.com>:
+> Could you please explain me why we need LSM for this?
 >
-> This link is broken.
+> There are tools like usbguard[1] and as far as I can tell it looks like they
+> can do everything for you...
 
-Oops, the correct link is https://github.com/smeso/libsara
+I have to admit that this is the first time I read about usbguard and it made
+me realize that this feature can be implemented in userspace, so no need
+to modify the kernel. :)
+You are right.
 
-Thank you very much for your time.
+Thank you very much for taking the time to answer me.
