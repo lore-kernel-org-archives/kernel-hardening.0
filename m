@@ -1,101 +1,77 @@
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-References: <201706100041.GFH78616.OFtOHFJSLQOMVF@I-love.SAKURA.ne.jp>
- <754b78d1-f7f9-58bd-bf74-fea9e105649a@nmatt.com>
- <20170609164315.GA1141@meriadoc.perfinion.com>
- <d84aaf19-307b-4b60-df74-4fb43a218c9c@nmatt.com>
- <CAGXu5jJt5MRU3ZdKABEbLt4qe-cCLxEm5tMH9SdUh=rtdLUV1w@mail.gmail.com>
- <201706101427.EEG90168.OtFFHSFMOVOJQL@I-love.SAKURA.ne.jp>
- <d9aca46b-97c6-4faf-b559-484feb4aa640@digikod.net>
- <1497234757.21594.280.camel@linux.vnet.ibm.com>
- <1497277644.21594.319.camel@linux.vnet.ibm.com>
-Message-ID: <9e17ed9e-7322-559f-052f-ce809025e64f@digikod.net>
-Date: Tue, 13 Jun 2017 22:59:59 +0200
-MIME-Version: 1.0
-In-Reply-To: <1497277644.21594.319.camel@linux.vnet.ibm.com>
-Content-Type: multipart/signed; micalg=pgp-sha512;
- protocol="application/pgp-signature";
- boundary="UCnGu2jiColSsbarRrPd8uan8Ue1FbgL5"
-Subject: [kernel-hardening] Re: [PATCH v1] shebang: restrict python interactive
- prompt/interpreter
-To: Mimi Zohar <zohar@linux.vnet.ibm.com>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, keescook@chromium.org, matt@nmatt.com
-Cc: jason@perfinion.com, linux-security-module@vger.kernel.org, Daniel Micay <danielmicay@gmail.com>, kernel-hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Date: Tue, 13 Jun 2017 23:27:04 +0200
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20170613212704.GA16726@openwall.com>
+References: <20170608034349.31876-1-matt@nmatt.com> <20170608034349.31876-2-matt@nmatt.com> <CAGXu5jLsrTZV_xDR_MPZdkT44P1MpbDiF3Kk2HNWBXKsdY+fzg@mail.gmail.com> <94ba5ebb-952b-2037-799e-07306629a6f9@nmatt.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <94ba5ebb-952b-2037-799e-07306629a6f9@nmatt.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v2 1/1] Add Trusted Path Execution as a stackable LSM
+To: Matt Brown <matt@nmatt.com>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---UCnGu2jiColSsbarRrPd8uan8Ue1FbgL5
-Content-Type: multipart/mixed; boundary="enRIifCn2VmD0bvf6o9ROeEacqQvXS3DW";
- protected-headers="v1"
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: Mimi Zohar <zohar@linux.vnet.ibm.com>,
- Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, keescook@chromium.org,
- matt@nmatt.com
-Cc: jason@perfinion.com, linux-security-module@vger.kernel.org,
- Daniel Micay <danielmicay@gmail.com>,
- kernel-hardening <kernel-hardening@lists.openwall.com>,
- LKML <linux-kernel@vger.kernel.org>
-Message-ID: <9e17ed9e-7322-559f-052f-ce809025e64f@digikod.net>
-Subject: Re: [PATCH v1] shebang: restrict python interactive
- prompt/interpreter
-References: <201706100041.GFH78616.OFtOHFJSLQOMVF@I-love.SAKURA.ne.jp>
- <754b78d1-f7f9-58bd-bf74-fea9e105649a@nmatt.com>
- <20170609164315.GA1141@meriadoc.perfinion.com>
- <d84aaf19-307b-4b60-df74-4fb43a218c9c@nmatt.com>
- <CAGXu5jJt5MRU3ZdKABEbLt4qe-cCLxEm5tMH9SdUh=rtdLUV1w@mail.gmail.com>
- <201706101427.EEG90168.OtFFHSFMOVOJQL@I-love.SAKURA.ne.jp>
- <d9aca46b-97c6-4faf-b559-484feb4aa640@digikod.net>
- <1497234757.21594.280.camel@linux.vnet.ibm.com>
- <1497277644.21594.319.camel@linux.vnet.ibm.com>
-In-Reply-To: <1497277644.21594.319.camel@linux.vnet.ibm.com>
+Matt,
 
---enRIifCn2VmD0bvf6o9ROeEacqQvXS3DW
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
+I removed most CC's like before, as I don't want my voice on this to be
+too loud.
 
+On Thu, Jun 08, 2017 at 11:50:32PM -0400, Matt Brown wrote:
+> On 06/08/2017 10:38 PM, Kees Cook wrote:
+> >On Wed, Jun 7, 2017 at 8:43 PM, Matt Brown <matt@nmatt.com> wrote:
+> >>*  Issues:
+> >>   *  Can be bypassed by interpreted languages such as python. You can run
+> >>      malicious code by doing: python -c 'evil code'
+> >
+> >What's the recommendation for people interested in using TPE but
+> >having interpreters installed?
+> 
+> If you don't need a given interpreter installed, uninstall it. While
+> this is common sense system hardening it especially would make a
+> difference under the TPE threat model.
+> 
+> I don't have a knock down answer for this. Interpreters are a hard
+> problem for TPE.
 
-On 12/06/2017 16:27, Mimi Zohar wrote:
-> On Sun, 2017-06-11 at 22:32 -0400, Mimi Zohar wrote:
->> On Sun, 2017-06-11 at 13:44 +0200, Micka=C3=ABl Sala=C3=BCn wrote:
-> =20
->>> Using filesystem xattr seems like a good idea for this kind of
->>> exceptions and instead of a hardcoded interpreter path. Something lik=
-e
->>> "security.tpe.interpreter=3D1|2" (bitmask for interpreter-only and/or=
- CLI)
->>> and "security.tpe.environment=3DHOME,LOGNAME" would be quite flexible=
- to
->>> configure a security policy for some binaries. This could also be
->>> protected by IMA/EVM, if needed.
->>
->> Checking for the existence of an xattr without caching is relatively
->> slow.  I'm not sure that we would want to go this route.
-> =20
-> For identifying interpreters, xattrs would be too slow (without
-> caching results), but once identified, using xattrs as you suggested,
-> for specifying how interpreters can be invoked and limiting
-> environment variables, is a good idea.  Perhaps the two xattrs could
-> be combined?
+Interpreters are only a tip of the iceberg.
 
-Yes, caching results is definitely interesting. I think using one
-variable per usage is cleaner, though.
+With TPE, every program invocation becomes similar to a SUID/SGID one as
+it relates to TPE's newly introduced security barrier.  However, the
+dynamic linker and libc have no idea of this, and will happily grant
+arbitrary code execution in context of those programs via LD_PRELOAD and
+such.  Even if this is somehow dealt with (how would you do that in the
+kernel alone? filter typical env var names? it quickly becomes way too
+hackish and blacklistish, thus imperfect), then there's still:
 
+I think many, and maybe most, binaries on a system will contain buffer
+overflows and such that also allow for arbitrary code execution.  Those
+programs were not written as carefully as SUID/SGID ones are supposed to
+be.  They don't treat their input and environment as untrusted.
 
---enRIifCn2VmD0bvf6o9ROeEacqQvXS3DW--
+Closer to the topic of interpreters, there's also this old trick:
 
---UCnGu2jiColSsbarRrPd8uan8Ue1FbgL5
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
+$ strace -e execve /lib/ld-linux.so.2 /bin/uname -ms
+execve("/lib/ld-linux.so.2", ["/lib/ld-linux.so.2", "/bin/uname", "-ms"], [/* 28 vars */]) = 0
+Linux i686
++++ exited with 0 +++
 
------BEGIN PGP SIGNATURE-----
+As you can see, the only execve(2) is of the dynamic linker.  Will /lib
+or/and /lib64 be among trusted paths in a typical setup?  Well, maybe
+not, although not including them will break ldd(1) on the more security
+conscious distros, where it uses a similar trick of invoking the dynamic
+linker explicitly (rather than the historical unsafe way of invoking the
+binary being ldd'ed with some env vars set to tell its dynamic linker to
+do the magic rather than proceed to execute the program).
 
-iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAllAUk8ACgkQIt7+33O9
-apX+Twf6A7n+BteDbBUMLamSznAUIkkfJ6boucLsdOjva/rbbRoI8MbZwSKJoPwl
-JAYC3EKMpHEq8jBThDCB4UEZpFkPlmBBGbd0a6RR8ZLdgXHNaNrSt+7RqXSqqWRV
-RPoE/089awoiI9VSuYrxdNXEEYQcESfrQdVNOj74AeVG1yOKvuDHP2fJP8LAPfiy
-IFUC6KwDtbn7Mjqmjw5suAV5Lqs8YRMjkorpk+q2pk8txqAJSL4g+YTdWDmrFoBN
-lZaSW37OU8kQa6EV+TZgGL+/SeaEC12xq9IgGz+AtbxGHnKEVvU721mxh1zglP77
-Jo5HKWO3Yw2p6F6TeYmlMW3icug1Fw==
-=8gVN
------END PGP SIGNATURE-----
+But this last one is relatively minor.  The real big issue is that TPE
+is either inherently fairly easily bypassable (and should be documented
+as such) via many of the installed programs (by far not just explicit
+interpreters, but also any programs containing "weird machines", which
+is probably most non-trivial programs out there, and some trivial ones),
+or it relies on all programs in the trusted paths being written as if
+they were SUID/SGID (unrealistic for non-trivial systems).
 
---UCnGu2jiColSsbarRrPd8uan8Ue1FbgL5--
+Just so that you know what you're getting into, and so that you don't
+mislead your users.
+
+Alexander
