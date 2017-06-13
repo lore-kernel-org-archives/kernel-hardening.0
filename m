@@ -1,77 +1,80 @@
-Date: Tue, 13 Jun 2017 23:27:04 +0200
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20170613212704.GA16726@openwall.com>
-References: <20170608034349.31876-1-matt@nmatt.com> <20170608034349.31876-2-matt@nmatt.com> <CAGXu5jLsrTZV_xDR_MPZdkT44P1MpbDiF3Kk2HNWBXKsdY+fzg@mail.gmail.com> <94ba5ebb-952b-2037-799e-07306629a6f9@nmatt.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <94ba5ebb-952b-2037-799e-07306629a6f9@nmatt.com>
-Subject: Re: [kernel-hardening] Re: [PATCH v2 1/1] Add Trusted Path Execution as a stackable LSM
-To: Matt Brown <matt@nmatt.com>
-Cc: kernel-hardening@lists.openwall.com
+References: <201706100041.GFH78616.OFtOHFJSLQOMVF@I-love.SAKURA.ne.jp>
+ <754b78d1-f7f9-58bd-bf74-fea9e105649a@nmatt.com>
+ <20170609164315.GA1141@meriadoc.perfinion.com>
+ <d84aaf19-307b-4b60-df74-4fb43a218c9c@nmatt.com>
+ <CAGXu5jJt5MRU3ZdKABEbLt4qe-cCLxEm5tMH9SdUh=rtdLUV1w@mail.gmail.com>
+ <201706101427.EEG90168.OtFFHSFMOVOJQL@I-love.SAKURA.ne.jp>
+ <d9aca46b-97c6-4faf-b559-484feb4aa640@digikod.net>
+ <1497234757.21594.280.camel@linux.vnet.ibm.com>
+ <8a2300ef-1462-0e1f-2d6a-81e6020bc71f@digikod.net>
+From: Casey Schaufler <casey@schaufler-ca.com>
+Message-ID: <9564a13e-3007-4cd8-5c7f-7127333da93f@schaufler-ca.com>
+Date: Tue, 13 Jun 2017 14:44:31 -0700
+MIME-Version: 1.0
+In-Reply-To: <8a2300ef-1462-0e1f-2d6a-81e6020bc71f@digikod.net>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] Re: [PATCH v1] shebang: restrict python
+ interactive prompt/interpreter
+To: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, keescook@chromium.org, matt@nmatt.com
+Cc: jason@perfinion.com, linux-security-module@vger.kernel.org, Daniel Micay <danielmicay@gmail.com>, kernel-hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Matt,
+On 6/13/2017 1:59 PM, Mickaël Salaün wrote:
+> On 12/06/2017 04:32, Mimi Zohar wrote:
+>> On Sun, 2017-06-11 at 13:44 +0200, Mickaël Salaün wrote:
+>>> On 10/06/2017 07:27, Tetsuo Handa wrote:
+>>>> Kees Cook wrote:
+>>>>> On Fri, Jun 9, 2017 at 10:23 AM, Matt Brown <matt@nmatt.com> wrote:
+>>>>>> what does everyone thing about a envp_blacklist option that is a list of
+>>>>>> environmental variables that will be stripped from exec calls. This can
+>>>>>> be done in the LSM hook bprm_check_security.
+>>>>>>
+>>>>>> Is there any reason on a hardened system why you would need the
+>>>>>> PYTHONINSPECT environmental variable?
+>>>>> As part of shebang, it likely makes sense to whitelist (rather than
+>>>>> blacklist) the env of the restricted interpreters. Though this is
+>>>>> starting to get complex. :P
+>>>> Blacklisting environment variables is dangerous. I think that
+>>>> administrators can afford whitelisting environment variable names.
+>>>> I think that implementing whitelist of environment variable names
+>>>> as an independent LSM module would be fine.
+>>>>
+>>>> While it is true that things starts getting complex if we check environment
+>>>> variables, shebang will already become complex if it starts worrying about
+>>>> updating inode number list in order to close the race window between doing
+>>>> creat()+write()+close()+chmod()+rename() by the package manager and teaching
+>>>> the kernel the new inode number determined by creat(). We will need an
+>>>> interface for allowing the package manager to teach the kernel the new inode
+>>>> number and modification of the package manager, for the kernel side is doing
+>>>> inode number based blacklisting while user side can execute it before rename().
+>> I don't think we're trying to protect against executing the
+>> interpreter prior to the rename.  Rename, itself, would trigger
+>> associating the interpreter name with an inode number.
+>>
+>>>> --
+>>>> To unsubscribe from this list: send the line "unsubscribe linux-security-module" in
+>>>> the body of a message to majordomo@vger.kernel.org
+>>>> More majordomo info at  http://vger.kernel.org/majordomo-info.html
+>>>>
+>>> Using filesystem xattr seems like a good idea for this kind of
+>>> exceptions and instead of a hardcoded interpreter path. Something like
+>>> "security.tpe.interpreter=1|2" (bitmask for interpreter-only and/or CLI)
+>>> and "security.tpe.environment=HOME,LOGNAME" would be quite flexible to
+>>> configure a security policy for some binaries. This could also be
+>>> protected by IMA/EVM, if needed.
+>> Checking for the existence of an xattr without caching is relatively
+>> slow.  I'm not sure that we would want to go this route.
+>>
+>>> This kind of xattr should be writable by the owner of the file. The TPE
+>>> LSM [1] could then take these xattr into account according to the TPE
+>>> policy.
+>> Security xattrs are only writable by root.
+> This is currently the case but an exception for this kind of LSM could
+> be allowed, or another dedicated prefix could be used.
 
-I removed most CC's like before, as I don't want my voice on this to be
-too loud.
-
-On Thu, Jun 08, 2017 at 11:50:32PM -0400, Matt Brown wrote:
-> On 06/08/2017 10:38 PM, Kees Cook wrote:
-> >On Wed, Jun 7, 2017 at 8:43 PM, Matt Brown <matt@nmatt.com> wrote:
-> >>*  Issues:
-> >>   *  Can be bypassed by interpreted languages such as python. You can run
-> >>      malicious code by doing: python -c 'evil code'
-> >
-> >What's the recommendation for people interested in using TPE but
-> >having interpreters installed?
-> 
-> If you don't need a given interpreter installed, uninstall it. While
-> this is common sense system hardening it especially would make a
-> difference under the TPE threat model.
-> 
-> I don't have a knock down answer for this. Interpreters are a hard
-> problem for TPE.
-
-Interpreters are only a tip of the iceberg.
-
-With TPE, every program invocation becomes similar to a SUID/SGID one as
-it relates to TPE's newly introduced security barrier.  However, the
-dynamic linker and libc have no idea of this, and will happily grant
-arbitrary code execution in context of those programs via LD_PRELOAD and
-such.  Even if this is somehow dealt with (how would you do that in the
-kernel alone? filter typical env var names? it quickly becomes way too
-hackish and blacklistish, thus imperfect), then there's still:
-
-I think many, and maybe most, binaries on a system will contain buffer
-overflows and such that also allow for arbitrary code execution.  Those
-programs were not written as carefully as SUID/SGID ones are supposed to
-be.  They don't treat their input and environment as untrusted.
-
-Closer to the topic of interpreters, there's also this old trick:
-
-$ strace -e execve /lib/ld-linux.so.2 /bin/uname -ms
-execve("/lib/ld-linux.so.2", ["/lib/ld-linux.so.2", "/bin/uname", "-ms"], [/* 28 vars */]) = 0
-Linux i686
-+++ exited with 0 +++
-
-As you can see, the only execve(2) is of the dynamic linker.  Will /lib
-or/and /lib64 be among trusted paths in a typical setup?  Well, maybe
-not, although not including them will break ldd(1) on the more security
-conscious distros, where it uses a similar trick of invoking the dynamic
-linker explicitly (rather than the historical unsafe way of invoking the
-binary being ldd'ed with some env vars set to tell its dynamic linker to
-do the magic rather than proceed to execute the program).
-
-But this last one is relatively minor.  The real big issue is that TPE
-is either inherently fairly easily bypassable (and should be documented
-as such) via many of the installed programs (by far not just explicit
-interpreters, but also any programs containing "weird machines", which
-is probably most non-trivial programs out there, and some trivial ones),
-or it relies on all programs in the trusted paths being written as if
-they were SUID/SGID (unrealistic for non-trivial systems).
-
-Just so that you know what you're getting into, and so that you don't
-mislead your users.
-
-Alexander
+Better yet, use "user.tpe.whatever" and explicitly look for that in your
+xattr hooks, denying access based on whatever criteria you like.
+You could allow it to be set, but never deleted, for example.
+You can do it all within shebang without creating exceptions or new
+prefixes. 
