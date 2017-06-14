@@ -1,50 +1,46 @@
-Date: Wed, 14 Jun 2017 15:10:08 +0100
-From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
-Message-ID: <20170614151008.42bc57a2@alans-desktop>
-In-Reply-To: <1497277644.21594.319.camel@linux.vnet.ibm.com>
-References: <201706100041.GFH78616.OFtOHFJSLQOMVF@I-love.SAKURA.ne.jp>
-	<754b78d1-f7f9-58bd-bf74-fea9e105649a@nmatt.com>
-	<20170609164315.GA1141@meriadoc.perfinion.com>
-	<d84aaf19-307b-4b60-df74-4fb43a218c9c@nmatt.com>
-	<CAGXu5jJt5MRU3ZdKABEbLt4qe-cCLxEm5tMH9SdUh=rtdLUV1w@mail.gmail.com>
-	<201706101427.EEG90168.OtFFHSFMOVOJQL@I-love.SAKURA.ne.jp>
-	<d9aca46b-97c6-4faf-b559-484feb4aa640@digikod.net>
-	<1497234757.21594.280.camel@linux.vnet.ibm.com>
-	<1497277644.21594.319.camel@linux.vnet.ibm.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v1] shebang: restrict python interactive
- prompt/interpreter
-To: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Cc: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, keescook@chromium.org, matt@nmatt.com, jason@perfinion.com, linux-security-module@vger.kernel.org, Daniel Micay <danielmicay@gmail.com>, kernel-hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Date: Wed, 14 Jun 2017 16:28:45 +0200
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20170614142845.GA18999@openwall.com>
+References: <20170608034349.31876-1-matt@nmatt.com> <20170608034349.31876-2-matt@nmatt.com> <CAGXu5jLsrTZV_xDR_MPZdkT44P1MpbDiF3Kk2HNWBXKsdY+fzg@mail.gmail.com> <94ba5ebb-952b-2037-799e-07306629a6f9@nmatt.com> <20170613212704.GA16726@openwall.com> <CAG48ez2zdf93Eh=XoRsHRbF=YX6L_6B=qX=z7rbMQ6wtj6KVjA@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAG48ez2zdf93Eh=XoRsHRbF=YX6L_6B=qX=z7rbMQ6wtj6KVjA@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v2 1/1] Add Trusted Path Execution as a stackable LSM
+To: Jann Horn <jannh@google.com>
+Cc: Matt Brown <matt@nmatt.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 12 Jun 2017 10:27:24 -0400
-Mimi Zohar <zohar@linux.vnet.ibm.com> wrote:
+On Wed, Jun 14, 2017 at 03:15:22PM +0200, Jann Horn wrote:
+> Some random related issues:
+> 
+> Scripts with shebang lines like "#!/usr/bin/env python" probably wouldn't
+> work anymore, at least not without special-case logic, because in this case,
+> env has to invoke python.
 
-> On Sun, 2017-06-11 at 22:32 -0400, Mimi Zohar wrote:
-> > On Sun, 2017-06-11 at 13:44 +0200, Micka=C3=ABl Sala=C3=BCn wrote: =20
-> =20
-> > > Using filesystem xattr seems like a good idea for this kind of
-> > > exceptions and instead of a hardcoded interpreter path. Something like
-> > > "security.tpe.interpreter=3D1|2" (bitmask for interpreter-only and/or=
- CLI)
-> > > and "security.tpe.environment=3DHOME,LOGNAME" would be quite flexible=
- to
-> > > configure a security policy for some binaries. This could also be
-> > > protected by IMA/EVM, if needed. =20
-> >=20
-> > Checking for the existence of an xattr without caching is relatively
-> > slow. =C2=A0I'm not sure that we would want to go this route. =20
-> =C2=A0
-> For identifying interpreters, xattrs would be too slow (without
-> caching results), but once identified, using xattrs as you suggested,
-> for specifying how interpreters can be invoked and limiting
-> environment variables, is a good idea. =C2=A0Perhaps the two xattrs could
-> be combined?
+Why would this break?  If both env and python are in trusted paths, it
+should work with TPE just fine.  (But then TPE is rather ineffective.)
 
-It's not just #! you need to cover. If I can run ld.so for my arch format
-then ld.so will helpfully let me load any ELF binary I like and run it.
+> ssh and ssh-agent can load libraries from paths passed on the command
+> line, by design.
+> The alsa client library loads libraries from paths specified in user-owned
+> config files.
+> 
+> If you can use dd (or anything else that permits writing to a specific
+> position in a
+> file), you should be able to directly overwrite the memory of a
+> process using something like
+> "dd of=/proc/self/mem bs=1 seek=$STARTADDRESS < new_data".
+> I think one way to do this remotely is to use SFTP.
 
-Alan
+IIRC, /proc/self/mem requires mmap() and won't work with dd's write().
+
+> Bash has a built-in named "enable" that can load shared libraries directly
+> into the shell.
+> 
+> These are just some random examples I came up with relatively quickly,
+> there are probably more.
+
+Thanks.  The ssh, alsa, and bash "enable" examples are probably valid.
+
+Alexander
