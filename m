@@ -2,7 +2,7 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII;
  format=flowed
 Content-Transfer-Encoding: 7bit
-Date: Thu, 15 Jun 2017 16:17:53 +0000
+Date: Thu, 15 Jun 2017 16:21:24 +0000
 From: aconcernedfossdev@airmail.cc
 In-Reply-To: <CAFB6qZu6xVuYJii=61Fam8rWOHtp_ECXdAGJushj6pZuP8GufA@mail.gmail.com>
 References: <f335eb911db2e2d2867a31722dd45769@airmail.cc>
@@ -10,7 +10,7 @@ References: <f335eb911db2e2d2867a31722dd45769@airmail.cc>
  <2313e2cf12f1cec8edb1b9f27928bc80@airmail.cc>
  <CAAiDhw2G4VqvdfThH3CrcX_OCw9Sg251v2NFr3vka2mROaocRA@mail.gmail.com>
  <CAFB6qZu6xVuYJii=61Fam8rWOHtp_ECXdAGJushj6pZuP8GufA@mail.gmail.com>
-Message-ID: <db2ba593cc132bdedb6274b2048be69d@airmail.cc>
+Message-ID: <0e08fbf40a9d4e36ba75d66874219924@airmail.cc>
 Subject: Re: [kernel-hardening] Why does no one care that Brad Spengler of
  GRSecurity is blatantly violating the intention of the rightsholders to the
  Linux Kernel?
@@ -18,14 +18,57 @@ To: "Ubuntu user technical support, not for general discussions" <ubuntu-users@l
 Cc: stacy@guppylog.com, ubuntu-devel-discuss@lists.ubuntu.com, kernel-hardening@lists.openwall.com, Greg KH <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Oh exaulted one, I am so sorry to have wasted your inbox space.
-You see we all live for you, exalted aryan queen!
+Nice vally-girl yawn.
 
-Some of us care about the legal aspects of "copyleft".
-Without enforcement there is no reason for anyone to contribute to 
-linux.
-There is a simple trade: we trade our labor for your labor.
+Because you are not interested in legal matters vis a vis GRSecurity, no 
+one should be and the discussion should be censored
 
+You're a real piece of work, you know.
+A real piece of work.
+
+So I ask the question again: Why does no one care that Brad Spengler of 
+GRSecurity is blatantly violating the intention of the rightsholders to 
+the Linux Kernel?
+
+Why does no one care that Brad Spengler (seemingly aswell as PaxTeam) of 
+GRSecurity is blatantly violating the intention of the rightsholders to 
+the Linux Kernel?
+
+Why does no one care that Brad Spengler of GRSecurity is blatantly 
+violating the intention of the rightsholders to the Linux Kernel?
+He is also violating the license grant, Courts would not be fooled by 
+his scheme to prevent redistribution.
+
+The license grant the Linux Kernel is distributed under disallows the 
+imposition of additional terms. The making of an understanding that the 
+derivative work must not be redistributed (lest there be retaliation) is 
+the imposition of an additional term. The communication of this threat 
+is the moment that GRSecurity violates the license grant. Thence-forth 
+modification, making of derivative works, and distribution of such is a 
+violation of the Copyright statute. The concoction of the transparent 
+scheme shows that it is a willful violation, one taken in full knowledge 
+by GRSecurity of the intention of the original grantor.
+
+
+Why does not one person here care?
+Just want to forget what holds Libre Software together and go the way of 
+BSD?
+
+
+(Note: last month the GRSecurity Team removed the public testing patch,
+they prevent the distribution of the patch by paying customers by a
+threat of no further business: they have concocted a transparent scheme
+to make sure the intention of the Linux rights-holders (thousands of
+entities) are defeated) (This is unlike RedHat who do distribute their
+patches in the form the rights-holders prefer: source code, RedHat does
+not attempt to stymie the redistribution of their derivative works,
+GRSecurity does.).
+
+------
+( This song is about GRSecurity's violation of Linus et al's 
+copyright**:
+www.youtube.com/watch?v=CYnhI3wUej8
+(A Boat Sails Away 2016 17) )
 
 On 2017-06-15 16:05, J wrote:
 > On Thu, Jun 15, 2017 at 11:58 AM, W Stacy Lockwood 
