@@ -1,173 +1,154 @@
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII;
- format=flowed
-Content-Transfer-Encoding: 7bit
-Date: Thu, 15 Jun 2017 16:21:24 +0000
-From: aconcernedfossdev@airmail.cc
-In-Reply-To: <CAFB6qZu6xVuYJii=61Fam8rWOHtp_ECXdAGJushj6pZuP8GufA@mail.gmail.com>
-References: <f335eb911db2e2d2867a31722dd45769@airmail.cc>
- <20170615154334.GA786@kroah.com>
+In-Reply-To: <2313e2cf12f1cec8edb1b9f27928bc80@airmail.cc>
+References: <f335eb911db2e2d2867a31722dd45769@airmail.cc> <20170615154334.GA786@kroah.com>
  <2313e2cf12f1cec8edb1b9f27928bc80@airmail.cc>
- <CAAiDhw2G4VqvdfThH3CrcX_OCw9Sg251v2NFr3vka2mROaocRA@mail.gmail.com>
- <CAFB6qZu6xVuYJii=61Fam8rWOHtp_ECXdAGJushj6pZuP8GufA@mail.gmail.com>
-Message-ID: <0e08fbf40a9d4e36ba75d66874219924@airmail.cc>
+From: W Stacy Lockwood <vladinator@gmail.com>
+Date: Thu, 15 Jun 2017 10:58:27 -0500
+Message-ID: <CAAiDhw2G4VqvdfThH3CrcX_OCw9Sg251v2NFr3vka2mROaocRA@mail.gmail.com>
+Content-Type: multipart/alternative; boundary="001a1143f4a44930d9055201bd12"
 Subject: Re: [kernel-hardening] Why does no one care that Brad Spengler of
  GRSecurity is blatantly violating the intention of the rightsholders to the
  Linux Kernel?
 To: "Ubuntu user technical support, not for general discussions" <ubuntu-users@lists.ubuntu.com>
-Cc: stacy@guppylog.com, ubuntu-devel-discuss@lists.ubuntu.com, kernel-hardening@lists.openwall.com, Greg KH <gregkh@linuxfoundation.org>
+Cc: kernel-hardening@lists.openwall.com, ubuntu-devel-discuss@lists.ubuntu.com, Greg KH <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Nice vally-girl yawn.
+--001a1143f4a44930d9055201bd12
+Content-Type: text/plain; charset="UTF-8"
 
-Because you are not interested in legal matters vis a vis GRSecurity, no 
-one should be and the discussion should be censored
+Did you not see Liam's reply, or do you just want to add nothing but noise
+to this list?
 
-You're a real piece of work, you know.
-A real piece of work.
+On Jun 15, 2017 10:51, <aconcernedfossdev@airmail.cc> wrote:
 
-So I ask the question again: Why does no one care that Brad Spengler of 
-GRSecurity is blatantly violating the intention of the rightsholders to 
-the Linux Kernel?
+> It's an obvious blatant violation. He is not allowed to add additional
+> terms, but being a "clever" programmer it seems that he has decided that
+> because the additional term that he (and seemingly PaxTeam) has imposed is
+> not written within the four corners of license grant document but instead
+> is communicated in some other way that """""doesn't make it an additional
+> term""""" and he has """"cleverly circumvented the linux copyright
+> terms"""", which obviously is not the case but other random programmers
+> will argue and swear it's fine till hell freezes over and get very angry
+> when someone with a legal background informs them otherwise.
+>
+> I think many people are not aware of the violation because it's only been
+> a month since GRSecurity pulled the sourcecode: it was almost a moot point
+> before then with no real damage. Such is no-longer the case.
+>
+> On 2017-06-15 15:43, Greg KH wrote:
+>
+>> On Thu, Jun 15, 2017 at 03:34:06PM +0000, aconcernedfossdev@airmail.cc
+>> wrote:
+>>
+>>> Why does no one care that Brad Spengler of GRSecurity is blatantly
+>>> violating
+>>> the intention of the rightsholders to the Linux Kernel?
+>>> He is also violating the license grant, Courts would not be fooled by his
+>>> scheme to prevent redistribution.
+>>>
+>>> The license grant the Linux Kernel is distributed under disallows the
+>>> imposition of additional terms. The making of an understanding that the
+>>> derivative work must not be redistributed (lest there be retaliation) is
+>>> the
+>>> imposition of an additional term. The communication of this threat is the
+>>> moment that GRSecurity violates the license grant. Thence-forth
+>>> modification, making of derivative works, and distribution of such is a
+>>> violation of the Copyright statute. The concoction of the transparent
+>>> scheme
+>>> shows that it is a willful violation, one taken in full knowledge by
+>>> GRSecurity of the intention of the original grantor.
+>>>
+>>
+>> If you feel that what they are doing is somehow violating your copyright
+>> on the Linux kernel, then you have the right to take legal action if you
+>> so desire.  To tell others what to do, however, is not something that
+>> usually gets you very far in the world.
+>>
+>> Best of luck!
+>>
+>> greg k-h
+>>
+>
+> --
+> ubuntu-users mailing list
+> ubuntu-users@lists.ubuntu.com
+> Modify settings or unsubscribe at: https://lists.ubuntu.com/mailm
+> an/listinfo/ubuntu-users
+>
 
-Why does no one care that Brad Spengler (seemingly aswell as PaxTeam) of 
-GRSecurity is blatantly violating the intention of the rightsholders to 
-the Linux Kernel?
+--001a1143f4a44930d9055201bd12
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-Why does no one care that Brad Spengler of GRSecurity is blatantly 
-violating the intention of the rightsholders to the Linux Kernel?
-He is also violating the license grant, Courts would not be fooled by 
-his scheme to prevent redistribution.
+<div dir=3D"auto">Did you not see Liam&#39;s reply, or do you just want to =
+add nothing but noise to this list?</div><div class=3D"gmail_extra"><br><di=
+v class=3D"gmail_quote">On Jun 15, 2017 10:51,  &lt;aconcernedfossdev@airma=
+il.cc&gt; wrote:<br type=3D"attribution"><blockquote class=3D"gmail_quote" =
+style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex">It&=
+#39;s an obvious blatant violation. He is not allowed to add additional ter=
+ms, but being a &quot;clever&quot; programmer it seems that he has decided =
+that because the additional term that he (and seemingly PaxTeam) has impose=
+d is not written within the four corners of license grant document but inst=
+ead is communicated in some other way that &quot;&quot;&quot;&quot;&quot;do=
+esn&#39;t make it an additional term&quot;&quot;&quot;&quot;&quot; and he h=
+as &quot;&quot;&quot;&quot;cleverly circumvented the linux copyright terms&=
+quot;&quot;&quot;&quot;, which obviously is not the case but other random p=
+rogrammers will argue and swear it&#39;s fine till hell freezes over and ge=
+t very angry when someone with a legal background informs them otherwise.<b=
+r>
+<br>
+I think many people are not aware of the violation because it&#39;s only be=
+en a month since GRSecurity pulled the sourcecode: it was almost a moot poi=
+nt before then with no real damage. Such is no-longer the case.<br>
+<br>
+On 2017-06-15 15:43, Greg KH wrote:<br>
+<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
+x #ccc solid;padding-left:1ex">
+On Thu, Jun 15, 2017 at 03:34:06PM +0000, aconcernedfossdev@airmail.cc wrot=
+e:<br>
+<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
+x #ccc solid;padding-left:1ex">
+Why does no one care that Brad Spengler of GRSecurity is blatantly violatin=
+g<br>
+the intention of the rightsholders to the Linux Kernel?<br>
+He is also violating the license grant, Courts would not be fooled by his<b=
+r>
+scheme to prevent redistribution.<br>
+<br>
+The license grant the Linux Kernel is distributed under disallows the<br>
+imposition of additional terms. The making of an understanding that the<br>
+derivative work must not be redistributed (lest there be retaliation) is th=
+e<br>
+imposition of an additional term. The communication of this threat is the<b=
+r>
+moment that GRSecurity violates the license grant. Thence-forth<br>
+modification, making of derivative works, and distribution of such is a<br>
+violation of the Copyright statute. The concoction of the transparent schem=
+e<br>
+shows that it is a willful violation, one taken in full knowledge by<br>
+GRSecurity of the intention of the original grantor.<br>
+</blockquote>
+<br>
+If you feel that what they are doing is somehow violating your copyright<br=
+>
+on the Linux kernel, then you have the right to take legal action if you<br=
+>
+so desire.=C2=A0 To tell others what to do, however, is not something that<=
+br>
+usually gets you very far in the world.<br>
+<br>
+Best of luck!<br>
+<br>
+greg k-h<br>
+</blockquote>
+<br>
+-- <br>
+ubuntu-users mailing list<br>
+<a href=3D"mailto:ubuntu-users@lists.ubuntu.com" target=3D"_blank">ubuntu-u=
+sers@lists.ubuntu.com</a><br>
+Modify settings or unsubscribe at: <a href=3D"https://lists.ubuntu.com/mail=
+man/listinfo/ubuntu-users" rel=3D"noreferrer" target=3D"_blank">https://lis=
+ts.ubuntu.com/mailm<wbr>an/listinfo/ubuntu-users</a><br>
+</blockquote></div></div>
 
-The license grant the Linux Kernel is distributed under disallows the 
-imposition of additional terms. The making of an understanding that the 
-derivative work must not be redistributed (lest there be retaliation) is 
-the imposition of an additional term. The communication of this threat 
-is the moment that GRSecurity violates the license grant. Thence-forth 
-modification, making of derivative works, and distribution of such is a 
-violation of the Copyright statute. The concoction of the transparent 
-scheme shows that it is a willful violation, one taken in full knowledge 
-by GRSecurity of the intention of the original grantor.
-
-
-Why does not one person here care?
-Just want to forget what holds Libre Software together and go the way of 
-BSD?
-
-
-(Note: last month the GRSecurity Team removed the public testing patch,
-they prevent the distribution of the patch by paying customers by a
-threat of no further business: they have concocted a transparent scheme
-to make sure the intention of the Linux rights-holders (thousands of
-entities) are defeated) (This is unlike RedHat who do distribute their
-patches in the form the rights-holders prefer: source code, RedHat does
-not attempt to stymie the redistribution of their derivative works,
-GRSecurity does.).
-
-------
-( This song is about GRSecurity's violation of Linus et al's 
-copyright**:
-www.youtube.com/watch?v=CYnhI3wUej8
-(A Boat Sails Away 2016 17) )
-
-On 2017-06-15 16:05, J wrote:
-> On Thu, Jun 15, 2017 at 11:58 AM, W Stacy Lockwood 
-> <vladinator@gmail.com> wrote:
->> Did you not see Liam's reply, or do you just want to add nothing but 
->> noise
->> to this list?
-> 
-> Given the repeated spamming the list, the cross posting, and replying
-> on this list to response external to this list (oh the joys of
-> crossposting), can we just chuck this account into a moderation bin
-> and let him/her rant into a bit bucket?
-> 
-> I'm on both the Ubuntu lists, so I'm getting these double... yes, I
-> can filter this myself, but that doesn't help the larger group...
-> 
->> On Jun 15, 2017 10:51, <aconcernedfossdev@airmail.cc> wrote:
->>> 
->>> It's an obvious blatant violation. He is not allowed to add 
->>> additional
->>> terms, but being a "clever" programmer it seems that he has decided 
->>> that
->>> because the additional term that he (and seemingly PaxTeam) has 
->>> imposed is
->>> not written within the four corners of license grant document but 
->>> instead is
->>> communicated in some other way that """""doesn't make it an 
->>> additional
->>> term""""" and he has """"cleverly circumvented the linux copyright
->>> terms"""", which obviously is not the case but other random 
->>> programmers will
->>> argue and swear it's fine till hell freezes over and get very angry 
->>> when
->>> someone with a legal background informs them otherwise.
->>> 
->>> I think many people are not aware of the violation because it's only 
->>> been
->>> a month since GRSecurity pulled the sourcecode: it was almost a moot 
->>> point
->>> before then with no real damage. Such is no-longer the case.
->>> 
->>> On 2017-06-15 15:43, Greg KH wrote:
->>>> 
->>>> On Thu, Jun 15, 2017 at 03:34:06PM +0000, 
->>>> aconcernedfossdev@airmail.cc
->>>> wrote:
->>>>> 
->>>>> Why does no one care that Brad Spengler of GRSecurity is blatantly
->>>>> violating
->>>>> the intention of the rightsholders to the Linux Kernel?
->>>>> He is also violating the license grant, Courts would not be fooled 
->>>>> by
->>>>> his
->>>>> scheme to prevent redistribution.
->>>>> 
->>>>> The license grant the Linux Kernel is distributed under disallows 
->>>>> the
->>>>> imposition of additional terms. The making of an understanding that 
->>>>> the
->>>>> derivative work must not be redistributed (lest there be 
->>>>> retaliation) is
->>>>> the
->>>>> imposition of an additional term. The communication of this threat 
->>>>> is
->>>>> the
->>>>> moment that GRSecurity violates the license grant. Thence-forth
->>>>> modification, making of derivative works, and distribution of such 
->>>>> is a
->>>>> violation of the Copyright statute. The concoction of the 
->>>>> transparent
->>>>> scheme
->>>>> shows that it is a willful violation, one taken in full knowledge 
->>>>> by
->>>>> GRSecurity of the intention of the original grantor.
->>>> 
->>>> 
->>>> If you feel that what they are doing is somehow violating your 
->>>> copyright
->>>> on the Linux kernel, then you have the right to take legal action if 
->>>> you
->>>> so desire.  To tell others what to do, however, is not something 
->>>> that
->>>> usually gets you very far in the world.
->>>> 
->>>> Best of luck!
->>>> 
->>>> greg k-h
->>> 
->>> 
->>> --
->>> ubuntu-users mailing list
->>> ubuntu-users@lists.ubuntu.com
->>> Modify settings or unsubscribe at:
->>> https://lists.ubuntu.com/mailman/listinfo/ubuntu-users
->> 
->> 
->> --
->> ubuntu-users mailing list
->> ubuntu-users@lists.ubuntu.com
->> Modify settings or unsubscribe at:
->> https://lists.ubuntu.com/mailman/listinfo/ubuntu-users
->> 
+--001a1143f4a44930d9055201bd12--
