@@ -1,41 +1,47 @@
-From: Stephan =?ISO-8859-1?Q?M=FCller?= <smueller@chronox.de>
-Date: Thu, 15 Jun 2017 13:59:43 +0200
-Message-ID: <1606799.lNpamfCTbW@tauon.chronox.de>
-In-Reply-To: <871sqlpl63.fsf@concordia.ellerman.id.au>
-References: <20170606174804.31124-1-Jason@zx2c4.com> <20170608081919.zbtwdjl32vbvd7jt@thunk.org> <871sqlpl63.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Subject: Re: [kernel-hardening] Re: [PATCH v4 13/13] random: warn when kernel uses unseeded randomness
-To: kernel-hardening@lists.openwall.com
-Cc: Michael Ellerman <mpe@ellerman.id.au>, Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>
+Content-Type: text/plain; charset=US-ASCII;
+ format=flowed
+Content-Transfer-Encoding: 7bit
+Date: Thu, 15 Jun 2017 15:34:06 +0000
+From: aconcernedfossdev@airmail.cc
+Message-ID: <f335eb911db2e2d2867a31722dd45769@airmail.cc>
+Subject: [kernel-hardening] Why does no one care that Brad Spengler of GRSecurity is blatantly
+ violating the intention of the rightsholders to the Linux Kernel?
+To: ubuntu-users@lists.ubuntu.com, ubuntu-devel-discuss@lists.ubuntu.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Am Donnerstag, 15. Juni 2017, 13:03:48 CEST schrieb Michael Ellerman:
+Why does no one care that Brad Spengler of GRSecurity is blatantly 
+violating the intention of the rightsholders to the Linux Kernel?
+He is also violating the license grant, Courts would not be fooled by 
+his scheme to prevent redistribution.
 
-Hi Michael,
+The license grant the Linux Kernel is distributed under disallows the 
+imposition of additional terms. The making of an understanding that the 
+derivative work must not be redistributed (lest there be retaliation) is 
+the imposition of an additional term. The communication of this threat 
+is the moment that GRSecurity violates the license grant. Thence-forth 
+modification, making of derivative works, and distribution of such is a 
+violation of the Copyright statute. The concoction of the transparent 
+scheme shows that it is a willful violation, one taken in full knowledge 
+by GRSecurity of the intention of the original grantor.
 
-> 
-> Even with this patch, it's still pretty spammy (today's linux-next):
-> 
 
-I would think that the issue regarding the logging is relevant for 
-cryptographic use cases or use cases requiring strong random numbers only. 
-Only those use cases should be fixed eventually to wait for a fully seeded 
-DRNG.
+Why does not one person here care?
+Just want to forget what holds Libre Software together and go the way of 
+BSD?
 
-The logged messages you present here indicate use cases where no strong 
-security is required. It looks like that the logs show ASLR related use of 
-random numbers. Those do not require a fully seeded ChaCha20 DRNG.
 
-IMHO, users using the get_random_u64 or get_random_u32 are use cases that do 
-not require a fully seeded DRNG thus do not need a cryptographically strong 
-random number. Hence, I would think that the logging should be removed from 
-get_random_u32/u64.
+(Note: last month the GRSecurity Team removed the public testing patch,
+they prevent the distribution of the patch by paying customers by a
+threat of no further business: they have concocted a transparent scheme
+to make sure the intention of the Linux rights-holders (thousands of
+entities) are defeated) (This is unlike RedHat who do distribute their
+patches in the form the rights-holders prefer: source code, RedHat does
+not attempt to stymie the redistribution of their derivative works,
+GRSecurity does.).
 
-Yet, logging should remain for get_random_bytes which should be denominated as 
-the interface for use cases where cryptographically strong random numbers are 
-required.
-
-Ciao
-Stephan
+------
+( This song is about GRSecurity's violation of Linus et al's 
+copyright**:
+youtube.com/watch?v=CYnhI3wUej8
+(A Boat Sails Away 2016 17) )
