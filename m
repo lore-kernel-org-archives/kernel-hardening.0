@@ -1,78 +1,80 @@
-Message-ID: <1497542336.20270.87.camel@redhat.com>
-From: Rik van Riel <riel@redhat.com>
-Date: Thu, 15 Jun 2017 11:58:56 -0400
-In-Reply-To: <f335eb911db2e2d2867a31722dd45769@airmail.cc>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII;
+ format=flowed
+Content-Transfer-Encoding: 7bit
+Date: Thu, 15 Jun 2017 16:01:43 +0000
+From: aconcernedfossdev@airmail.cc
+In-Reply-To: <c5dabd99-45fd-bb3a-20eb-d3f0fe03bf28@schaufler-ca.com>
 References: <f335eb911db2e2d2867a31722dd45769@airmail.cc>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-dFKWzpHA/bkdEIA85xoN"
-Mime-Version: 1.0
+ <c5dabd99-45fd-bb3a-20eb-d3f0fe03bf28@schaufler-ca.com>
+Message-ID: <7e150e42ab1fc4f821b60556dc62280d@airmail.cc>
 Subject: Re: [kernel-hardening] Why does no one care that Brad Spengler of
  GRSecurity is blatantly violating the intention of the rightsholders to the
  Linux Kernel?
-To: aconcernedfossdev@airmail.cc, ubuntu-users@lists.ubuntu.com, ubuntu-devel-discuss@lists.ubuntu.com, kernel-hardening@lists.openwall.com
+To: Casey Schaufler <casey@schaufler-ca.com>
+Cc: ubuntu-users@lists.ubuntu.com, ubuntu-devel-discuss@lists.ubuntu.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+If Mr Spengler would like to market a non-re-distributable hardened 
+kernel, he can write his own kernel from scratch. Currently he is 
+marketing a non-redistributable derivative work of the Linux Kernel. He 
+prevents customers of his from redistributing the derivative work by 
+threatening a non-renewal of whatever contract exists between his 
+company and the customers. This scheme has been successful. That is 
+certainly the imposition of an additional term, which the Linux 
+licensing terms forbid, when he imposed that additional term on his 
+clients he violated the licensing terms and has no right to even modify 
+the linux kernel from that point forward.
 
---=-dFKWzpHA/bkdEIA85xoN
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-
-On Thu, 2017-06-15 at 15:34 +0000, aconcernedfossdev@airmail.cc wrote:
-> Why does no one care that Brad Spengler of GRSecurity is blatantly=C2=A0
-> violating the intention of the rightsholders to the Linux Kernel?
-> He is also violating the license grant, Courts would not be fooled
-> by=C2=A0his scheme to prevent redistribution.
-
-Right now there are a few million systems that use
-grsecurity, and over a billion systems that are not
-protected by grsecurity functionality.
-
-Removing grsecurity from the community has been an
-impetus to finally get the grsecurity functionality
-into the upstream kernel, where it can benefit the
-billion systems that do not have it today.
-
-> Why does not one person here care?
-> Just want to forget what holds Libre Software together and go the way
-> of=C2=A0BSD?
-
-What holds Linux together is community. The license
-is one of many aspects to that community, but far
-from the only one.
-
-GRSecurity has been outside of the community for years,
-and their customer restriction "you can redistribute
-this code, but if you do we will on longer provide you
-with updates" does not change that.
-
-Having the remaining developers who are interested in
-hardening work on getting more functionality upstream,
-now that the grsecurity patches are no longer available
-to non-customers, is likely a good thing for everybody.
-
-Want to help out?  Join us in ##linux-hardening on
-irc.freenode.net.
-
-kind regards,
-
-Rik van Riel
---=20
-All rights reversed
---=-dFKWzpHA/bkdEIA85xoN
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQEcBAABCAAGBQJZQq7AAAoJEM553pKExN6Dt38H/ijn7eut8qRqlAHOKRY1L0GE
-cB9Iy7Nt6HlmyxkJ4EYWLUxofi/MWrIash5aM4vZZD2BMJ3SLjGeSxbk7fMNfhQ6
-vZHVZ4ZGWEkinmxjDD/Vz7n6GawssTtkLVR03/yMO65zTvs2D2QIPDPhEX3wb33d
-Gt/dQFPrbz9WvQIJZoEhQLyUcLaSsNBVmckAnxaLa9XsNwfyDeR8JoOBY1hKwszc
-WgU0Sb92miCLDvb1blkn/6T2UE4e7ev/amhdiEB0c1yXUWUM+WG9CU8KW561DTKe
-G3fMyvX9UqzkdiwksGBgMlM6d6wKM5i2G5GgcR1QXJTZSecxWMYzRMIp0Uk8miU=
-=w8A4
------END PGP SIGNATURE-----
-
---=-dFKWzpHA/bkdEIA85xoN--
+On 2017-06-15 15:53, Casey Schaufler wrote:
+> On 6/15/2017 8:34 AM, aconcernedfossdev@airmail.cc wrote:
+>> Why does no one care that Brad Spengler of GRSecurity is blatantly 
+>> violating the intention of the rightsholders to the Linux Kernel?
+>> He is also violating the license grant, Courts would not be fooled by 
+>> his scheme to prevent redistribution.
+>> 
+>> The license grant the Linux Kernel is distributed under disallows the 
+>> imposition of additional terms. The making of an understanding that 
+>> the derivative work must not be redistributed (lest there be 
+>> retaliation) is the imposition of an additional term. The 
+>> communication of this threat is the moment that GRSecurity violates 
+>> the license grant. Thence-forth modification, making of derivative 
+>> works, and distribution of such is a violation of the Copyright 
+>> statute. The concoction of the transparent scheme shows that it is a 
+>> willful violation, one taken in full knowledge by GRSecurity of the 
+>> intention of the original grantor.
+>> 
+>> 
+>> Why does not one person here care?
+> 
+> Email lists are never* the correct mechanism for the resolution
+> of legal issues. If someone from these email lists is working
+> to address a legal issue you are extremely unlikely to see any
+> evidence of it on an email list.
+> 
+> 
+> ---
+> * I am not a lawyer. Do not construe this as legal advice.
+> 
+>> Just want to forget what holds Libre Software together and go the way 
+>> of BSD?
+>> 
+>> 
+>> (Note: last month the GRSecurity Team removed the public testing 
+>> patch,
+>> they prevent the distribution of the patch by paying customers by a
+>> threat of no further business: they have concocted a transparent 
+>> scheme
+>> to make sure the intention of the Linux rights-holders (thousands of
+>> entities) are defeated) (This is unlike RedHat who do distribute their
+>> patches in the form the rights-holders prefer: source code, RedHat 
+>> does
+>> not attempt to stymie the redistribution of their derivative works,
+>> GRSecurity does.).
+>> 
+>> ------
+>> ( This song is about GRSecurity's violation of Linus et al's 
+>> copyright**:
+>> youtube.com/watch?v=CYnhI3wUej8
+>> (A Boat Sails Away 2016 17) )
+>> 
