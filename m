@@ -1,27 +1,37 @@
-Date: Fri, 16 Jun 2017 16:36:07 +0200
-From: Sebastian Andrzej Siewior <sebastian@breakpoint.cc>
-Message-ID: <20170616143606.lwvuqxvzyixnytzd@breakpoint.cc>
-References: <20170607232607.26870-1-Jason@zx2c4.com>
- <20170607232607.26870-2-Jason@zx2c4.com>
- <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
- <CAHmME9oRG4Oe4zNN4D8Nc9+A51uXPC0y3m3+ws_QK2aq=K=zwA@mail.gmail.com>
- <20170616083111.5cwwkzyauocxafou@breakpoint.cc>
- <CAHmME9q_9-zQan0um9j2deHHPejYreCCbfss0BeNuEr4_tuaKg@mail.gmail.com>
+References: <20170606174804.31124-1-Jason@zx2c4.com>
+ <20170606174804.31124-7-Jason@zx2c4.com>
+ <20170608024357.fhyyentj2qm7ti2q@thunk.org>
+ <CAHmME9pViOqqDPyjXKLfCWSTnQrcE4OLJMdK1yaTiUvrOV+ecQ@mail.gmail.com>
+From: Lee Duncan <lduncan@suse.com>
+Message-ID: <fbca1b2b-c9ae-80ce-45ef-17c3d3b93e57@suse.com>
+Date: Fri, 16 Jun 2017 14:58:10 -0700
 MIME-Version: 1.0
+In-Reply-To: <CAHmME9pViOqqDPyjXKLfCWSTnQrcE4OLJMdK1yaTiUvrOV+ecQ@mail.gmail.com>
 Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <CAHmME9q_9-zQan0um9j2deHHPejYreCCbfss0BeNuEr4_tuaKg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v5 01/13] random: invalidate batched entropy after crng
- init
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Miller <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure RNG is
+ seeded before use
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, "Nicholas A. Bellinger" <nab@linux-iscsi.org>, Chris Leech <cleech@redhat.com>, open-iscsi@googlegroups.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2017-06-16 14:12:42 [+0200], Jason A. Donenfeld wrote:
-> I actually figured that out myself after sending the initial email, so
-> then I wrote a follow-up patch which I attached to this thread. You
-> should have received it. Can you take a look?
+On 06/08/2017 05:09 AM, Jason A. Donenfeld wrote:
+> On Thu, Jun 8, 2017 at 4:43 AM, Theodore Ts'o <tytso@mit.edu> wrote:
+>> What was the testing that was done for commit?  It looks safe, but I'm
+>> unfamiliar enough with how the iSCSI authentication works that I'd
+>> prefer getting an ack'ed by from the iSCSI maintainers or
+>> alternativel, information about how to kick off some kind of automated
+>> test suite ala xfstests for file systems.
+> 
+> Only very basic testing from my end.
+> 
+> I'm thus adding the iSCSI list to see if they'll have a look (patch reattached).
+> 
+> Jason
+> 
 
-replied to the patch.
-
-Sebastian
+It seems like what you are doing is basically "good", i.e. if there is
+not enough random data, don't use it. But what happens in that case? The
+authentication fails? How does the user know to wait and try again?
+-- 
+Lee Duncan
+SUSE Labs
