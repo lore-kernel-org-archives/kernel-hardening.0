@@ -1,82 +1,141 @@
-Content-Type: text/plain; charset=us-ascii
-Mime-Version: 1.0 (Mac OS X Mail 9.3 \(3124\))
-From: Paul Koning <paulkoning@comcast.net>
-In-Reply-To: <CAH8yC8nHX2r9cfQ0gNeJAUrgSfAS8V16dVHv35BRnLn-YprZCg@mail.gmail.com>
-Date: Sat, 17 Jun 2017 14:50:50 -0400
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <46F035A7-5E63-4A96-8F45-45728222CF51@comcast.net>
-References: <20170606174804.31124-1-Jason@zx2c4.com> <20170606174804.31124-7-Jason@zx2c4.com> <20170608024357.fhyyentj2qm7ti2q@thunk.org> <CAHmME9pViOqqDPyjXKLfCWSTnQrcE4OLJMdK1yaTiUvrOV+ecQ@mail.gmail.com> <fbca1b2b-c9ae-80ce-45ef-17c3d3b93e57@suse.com> <CAHmME9rU_H6Jq7ArjDq1yByrYf1P7nyC4Y8tqkzG585U39MFLg@mail.gmail.com> <02d60ed4-4207-dd7d-8826-0f9f7f4e966d@suse.com> <CAH8yC8nHX2r9cfQ0gNeJAUrgSfAS8V16dVHv35BRnLn-YprZCg@mail.gmail.com>
-Subject: Re: [kernel-hardening] [PATCH v4 06/13] iscsi: ensure RNG is seeded before use
-To: open-iscsi@googlegroups.com
-Cc: Lee Duncan <lduncan@suse.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, "Nicholas A. Bellinger" <nab@linux-iscsi.org>, Chris Leech <cleech@redhat.com>
+From: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+Date: Sat, 17 Jun 2017 12:25:41 -0300
+Message-Id: <956283e0d9f9c01a437ab75c5c9a324959ead132.1497713142.git.mchehab@s-opensource.com>
+In-Reply-To: <f0f77a106d183325dce9eecd3c11214154050e11.1497713142.git.mchehab@s-opensource.com>
+References: <f0f77a106d183325dce9eecd3c11214154050e11.1497713142.git.mchehab@s-opensource.com>
+In-Reply-To: <f0f77a106d183325dce9eecd3c11214154050e11.1497713142.git.mchehab@s-opensource.com>
+References: <f0f77a106d183325dce9eecd3c11214154050e11.1497713142.git.mchehab@s-opensource.com>
+Sender: Mauro Carvalho Chehab <mchehab@smtp.s-opensource.com>
+Subject: [kernel-hardening] [PATCH v2 22/31] gcc-plugins.txt: standardize document format
+To: Linux Doc Mailing List <linux-doc@vger.kernel.org>
+Cc: Mauro Carvalho Chehab <mchehab@s-opensource.com>, Mauro Carvalho Chehab <mchehab@infradead.org>, linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Each text file under Documentation follows a different
+format. Some doesn't even have titles!
 
-> On Jun 17, 2017, at 10:23 AM, Jeffrey Walton <noloader@gmail.com> =
-wrote:
->=20
-> On Fri, Jun 16, 2017 at 11:45 PM, Lee Duncan <lduncan@suse.com> wrote:
->> On 06/16/2017 05:41 PM, Jason A. Donenfeld wrote:
->>> Hi Lee,
->>>=20
->>> On Fri, Jun 16, 2017 at 11:58 PM, Lee Duncan <lduncan@suse.com> =
-wrote:
->>>> It seems like what you are doing is basically "good", i.e. if there =
-is
->>>> not enough random data, don't use it. But what happens in that =
-case? The
->>>> authentication fails? How does the user know to wait and try again?
->>>=20
->>> The process just remains in interruptible (kill-able) sleep until
->>> there is enough entropy, so the process doesn't need to do anything.
->>> If the waiting is interrupted by a signal, it returns -ESYSRESTART,
->>> which follows the usual semantics of restartable syscalls.
->>>=20
->> In your testing, how long might a process have to wait? Are we =
-talking
->> seconds? Longer? What about timeouts?
->>=20
->> Sorry, but your changing something that isn't exactly broken, so I =
-just
->> want to be sure we're not introducing some regression, like clients
->> can't connect the first 5 minutes are a reboot.
->=20
-> CHAP (https://www.rfc-editor.org/rfc/rfc1994.txt) and iSCSI
-> (https://www.ietf.org/rfc/rfc3720.txt) require random values. If iSCSI
-> is operating without them, it seems like something is broken. =46rom =
-RFC
-> 3720, Section 8.2.1, CHAP Considerations:
->=20
->   When CHAP is performed over a non-encrypted channel, it is =
-vulnerable
->   to an off-line dictionary attack.  Implementations MUST support use
->   of up to 128 bit random CHAP secrets, including the means to =
-generate
->   such secrets and to accept them from an external generation source.
->   Implementations MUST NOT provide secret generation (or expansion)
->   means other than random generation.
+Change its representation to follow the adopted standard,
+using ReST markups for it to be parseable by Sphinx:
 
-That only applies to the generation of the secret, which is configured =
-into iscsi, not created by it.  A utility to generate the secret might =
-be supplied, of course, just as one might have utilities to generate =
-strong passwords, but it's not a component of the iSCSI protocol.
+- promote main title;
+- use the right markup for footnotes;
+- use bold markup for files name;
+- identify literal blocks;
+- add blank lines to avoid Sphinx to complain;
+- remove numeration from titles.
 
-> CHAP actually has a weaker requirement since it only requires _unique_
-> (and not _random_). =46rom RFC 1994, Section 2.3, Design Requirements:
->=20
->   Each challenge value SHOULD be unique, since repetition of a
->   challenge value in conjunction with the same secret would permit an
->   attacker to reply with a previously intercepted response.  Since it
->   is expected that the same secret MAY be used to authenticate with
->   servers in disparate geographic regions, the challenge SHOULD =
-exhibit
->   global and temporal uniqueness.
->=20
-> But its not clear to me how to ensure uniqueness when its based on
-> randomness from the generators.
+Signed-off-by: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+---
+ Documentation/gcc-plugins.txt | 58 ++++++++++++++++++++++++-------------------
+ 1 file changed, 32 insertions(+), 26 deletions(-)
 
-A strong RNG of length n will produce numbers likely to be unique until =
-you approach the birtday limit 2^(n/2).  So, say, a 128 bit challenge =
-will be adequate.
-
-	paul
+diff --git a/Documentation/gcc-plugins.txt b/Documentation/gcc-plugins.txt
+index 433eaefb4aa1..8502f24396fb 100644
+--- a/Documentation/gcc-plugins.txt
++++ b/Documentation/gcc-plugins.txt
+@@ -1,14 +1,15 @@
++=========================
+ GCC plugin infrastructure
+ =========================
+ 
+ 
+-1. Introduction
+-===============
++Introduction
++============
+ 
+ GCC plugins are loadable modules that provide extra features to the
+-compiler [1]. They are useful for runtime instrumentation and static analysis.
++compiler [1]_. They are useful for runtime instrumentation and static analysis.
+ We can analyse, change and add further code during compilation via
+-callbacks [2], GIMPLE [3], IPA [4] and RTL passes [5].
++callbacks [2]_, GIMPLE [3]_, IPA [4]_ and RTL passes [5]_.
+ 
+ The GCC plugin infrastructure of the kernel supports all gcc versions from
+ 4.5 to 6.0, building out-of-tree modules, cross-compilation and building in a
+@@ -21,56 +22,61 @@ and versions 4.8+ can only be compiled by a C++ compiler.
+ Currently the GCC plugin infrastructure supports only the x86, arm, arm64 and
+ powerpc architectures.
+ 
+-This infrastructure was ported from grsecurity [6] and PaX [7].
++This infrastructure was ported from grsecurity [6]_ and PaX [7]_.
+ 
+ --
+-[1] https://gcc.gnu.org/onlinedocs/gccint/Plugins.html
+-[2] https://gcc.gnu.org/onlinedocs/gccint/Plugin-API.html#Plugin-API
+-[3] https://gcc.gnu.org/onlinedocs/gccint/GIMPLE.html
+-[4] https://gcc.gnu.org/onlinedocs/gccint/IPA.html
+-[5] https://gcc.gnu.org/onlinedocs/gccint/RTL.html
+-[6] https://grsecurity.net/
+-[7] https://pax.grsecurity.net/
+ 
++.. [1] https://gcc.gnu.org/onlinedocs/gccint/Plugins.html
++.. [2] https://gcc.gnu.org/onlinedocs/gccint/Plugin-API.html#Plugin-API
++.. [3] https://gcc.gnu.org/onlinedocs/gccint/GIMPLE.html
++.. [4] https://gcc.gnu.org/onlinedocs/gccint/IPA.html
++.. [5] https://gcc.gnu.org/onlinedocs/gccint/RTL.html
++.. [6] https://grsecurity.net/
++.. [7] https://pax.grsecurity.net/
+ 
+-2. Files
+-========
+ 
+-$(src)/scripts/gcc-plugins
++Files
++=====
++
++**$(src)/scripts/gcc-plugins**
++
+ 	This is the directory of the GCC plugins.
+ 
+-$(src)/scripts/gcc-plugins/gcc-common.h
++**$(src)/scripts/gcc-plugins/gcc-common.h**
++
+ 	This is a compatibility header for GCC plugins.
+ 	It should be always included instead of individual gcc headers.
+ 
+-$(src)/scripts/gcc-plugin.sh
++**$(src)/scripts/gcc-plugin.sh**
++
+ 	This script checks the availability of the included headers in
+ 	gcc-common.h and chooses the proper host compiler to build the plugins
+ 	(gcc-4.7 can be built by either gcc or g++).
+ 
+-$(src)/scripts/gcc-plugins/gcc-generate-gimple-pass.h
+-$(src)/scripts/gcc-plugins/gcc-generate-ipa-pass.h
+-$(src)/scripts/gcc-plugins/gcc-generate-simple_ipa-pass.h
+-$(src)/scripts/gcc-plugins/gcc-generate-rtl-pass.h
++**$(src)/scripts/gcc-plugins/gcc-generate-gimple-pass.h,
++$(src)/scripts/gcc-plugins/gcc-generate-ipa-pass.h,
++$(src)/scripts/gcc-plugins/gcc-generate-simple_ipa-pass.h,
++$(src)/scripts/gcc-plugins/gcc-generate-rtl-pass.h**
++
+ 	These headers automatically generate the registration structures for
+ 	GIMPLE, SIMPLE_IPA, IPA and RTL passes. They support all gcc versions
+ 	from 4.5 to 6.0.
+ 	They should be preferred to creating the structures by hand.
+ 
+ 
+-3. Usage
+-========
++Usage
++=====
+ 
+ You must install the gcc plugin headers for your gcc version,
+-e.g., on Ubuntu for gcc-4.9:
++e.g., on Ubuntu for gcc-4.9::
+ 
+ 	apt-get install gcc-4.9-plugin-dev
+ 
+-Enable a GCC plugin based feature in the kernel config:
++Enable a GCC plugin based feature in the kernel config::
+ 
+ 	CONFIG_GCC_PLUGIN_CYC_COMPLEXITY = y
+ 
+-To compile only the plugin(s):
++To compile only the plugin(s)::
+ 
+ 	make gcc-plugins
+ 
+-- 
+2.9.4
