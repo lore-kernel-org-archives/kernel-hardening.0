@@ -1,37 +1,34 @@
-References: <20170606174804.31124-1-Jason@zx2c4.com>
- <20170606174804.31124-7-Jason@zx2c4.com>
- <20170608024357.fhyyentj2qm7ti2q@thunk.org>
- <CAHmME9pViOqqDPyjXKLfCWSTnQrcE4OLJMdK1yaTiUvrOV+ecQ@mail.gmail.com>
-From: Lee Duncan <lduncan@suse.com>
-Message-ID: <fbca1b2b-c9ae-80ce-45ef-17c3d3b93e57@suse.com>
-Date: Fri, 16 Jun 2017 14:58:10 -0700
 MIME-Version: 1.0
-In-Reply-To: <CAHmME9pViOqqDPyjXKLfCWSTnQrcE4OLJMdK1yaTiUvrOV+ecQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure RNG is
- seeded before use
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, "Nicholas A. Bellinger" <nab@linux-iscsi.org>, Chris Leech <cleech@redhat.com>, open-iscsi@googlegroups.com
+In-Reply-To: <20170616143515.yn6oo6tvmcsrxidw@linutronix.de>
+References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
+ <20170614224526.29076-1-Jason@zx2c4.com> <20170616143515.yn6oo6tvmcsrxidw@linutronix.de>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Sat, 17 Jun 2017 02:39:40 +0200
+Message-ID: <CAHmME9pLs2rKnuZ_La+PqYivEJDKEUdxUWS7eZthaw0jd8APVQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
+To: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Miller <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 06/08/2017 05:09 AM, Jason A. Donenfeld wrote:
-> On Thu, Jun 8, 2017 at 4:43 AM, Theodore Ts'o <tytso@mit.edu> wrote:
->> What was the testing that was done for commit?  It looks safe, but I'm
->> unfamiliar enough with how the iSCSI authentication works that I'd
->> prefer getting an ack'ed by from the iSCSI maintainers or
->> alternativel, information about how to kick off some kind of automated
->> test suite ala xfstests for file systems.
-> 
-> Only very basic testing from my end.
-> 
-> I'm thus adding the iSCSI list to see if they'll have a look (patch reattached).
-> 
-> Jason
-> 
+On Fri, Jun 16, 2017 at 4:35 PM, Sebastian Andrzej Siewior
+<bigeasy@linutronix.de> wrote:
+> I wouldn't just push the lock one up as is but move that write part to
+> crng_init to remain within the locked section. Like that:
 
-It seems like what you are doing is basically "good", i.e. if there is
-not enough random data, don't use it. But what happens in that case? The
-authentication fails? How does the user know to wait and try again?
--- 
-Lee Duncan
-SUSE Labs
+We can't quite do that, because invalidate_batched_entropy() needs to
+be called _before_ crng_init. Otherwise a concurrent call to
+get_random_u32/u64() will have crng_init being the wrong value when
+the batched entropy is still old.
+
+> Are use about that? I am not sure that the gcc will inline "crng_init"
+> read twice. It is not a local variable. READ_ONCE() is usually used
+> where gcc could cache a memory access but you do not want this. But hey!
+> If someone knows better I am here to learn.
+
+The whole purpose is that I _want_ it to cache the memory access so
+that it is _not_ inlined. So, based on your understanding, it does
+exactly what I intended it to do. The reason is that I'd like to avoid
+a lock imbalance, which could happen if the read is inlined.
+
+Jason
