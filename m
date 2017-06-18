@@ -1,30 +1,48 @@
-From: Stephan =?ISO-8859-1?Q?M=FCller?= <smueller@chronox.de>
-Date: Sun, 18 Jun 2017 10:04:58 +0200
-Message-ID: <2639082.PtrrGWOPPL@positron.chronox.de>
-In-Reply-To: <02d60ed4-4207-dd7d-8826-0f9f7f4e966d@suse.com>
-References: <20170606174804.31124-1-Jason@zx2c4.com> <CAHmME9rU_H6Jq7ArjDq1yByrYf1P7nyC4Y8tqkzG585U39MFLg@mail.gmail.com> <02d60ed4-4207-dd7d-8826-0f9f7f4e966d@suse.com>
+Date: Sun, 18 Jun 2017 11:46:25 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Message-ID: <20170618154625.5qu3eduqjtgk5bal@thunk.org>
+References: <20170606174804.31124-1-Jason@zx2c4.com>
+ <20170608081919.zbtwdjl32vbvd7jt@thunk.org>
+ <871sqlpl63.fsf@concordia.ellerman.id.au>
+ <1606799.lNpamfCTbW@tauon.chronox.de>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Subject: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure RNG is seeded before use
-To: Lee Duncan <lduncan@suse.com>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, "Nicholas A. Bellinger" <nab@linux-iscsi.org>, Chris Leech <cleech@redhat.com>, open-iscsi@googlegroups.com
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <1606799.lNpamfCTbW@tauon.chronox.de>
+Subject: Re: [kernel-hardening] Re: [PATCH v4 13/13] random: warn when kernel
+ uses unseeded randomness
+To: Stephan =?iso-8859-1?Q?M=FCller?= <smueller@chronox.de>
+Cc: kernel-hardening@lists.openwall.com, Michael Ellerman <mpe@ellerman.id.au>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Am Samstag, 17. Juni 2017, 05:45:57 CEST schrieb Lee Duncan:
+On Thu, Jun 15, 2017 at 01:59:43PM +0200, Stephan Müller wrote:
+> I would think that the issue regarding the logging is relevant for 
+> cryptographic use cases or use cases requiring strong random numbers only. 
+> Only those use cases should be fixed eventually to wait for a fully seeded 
+> DRNG.
+> 
+> The logged messages you present here indicate use cases where no strong 
+> security is required. It looks like that the logs show ASLR related use of 
+> random numbers. Those do not require a fully seeded ChaCha20 DRNG.
 
-Hi Lee,
+I suspect there is a range of opinions aobut whether or not ASLR
+requires strongly secure random numbers or not.  It seems pretty clear
+that if we proposed using prandom_u32 for ASLR, people would object
+very strongly indeed, since that would make it trivially easy for
+attackers to circumvent ASLR protections.
 
-> In your testing, how long might a process have to wait? Are we talking
-> seconds? Longer? What about timeouts?
->
+> IMHO, users using the get_random_u64 or get_random_u32 are use cases that do 
+> not require a fully seeded DRNG thus do not need a cryptographically strong 
+> random number. Hence, I would think that the logging should be removed from 
+> get_random_u32/u64.
 
-In current kernels (starting with 4.8) this timeout should clear within a few 
-seconds after boot.
+You are effectively proposing that there ought to be a middle range of
+security between prandom_32, get_random_u32/get_random_u64 and
+get_random_bytes().  I think that's going to lead to all sorts of
+complexity and bugs from people not understanding when they should use
+get_random_u32 vs get_random_bytes versus prandom_u32.  And then we'll
+end up needing to audit all of the callsites for get_random_u32() so
+they don't violate this new usage rule that you are proposing.
 
-In older kernels (pre 4.8), my KVM takes up to 90 seconds to reach that 
-seeding point. I have heard that on IBM System Z this trigger point requires 
-minutes to be reached.
-
-Ciao
-Stephan
+     	   	   	    	       - Ted
