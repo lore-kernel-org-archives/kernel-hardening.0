@@ -1,72 +1,41 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 19 Jun 2017 16:36:31 -0700
-Message-Id: <1497915397-93805-18-git-send-email-keescook@chromium.org>
+Date: Mon, 19 Jun 2017 16:36:35 -0700
+Message-Id: <1497915397-93805-22-git-send-email-keescook@chromium.org>
 In-Reply-To: <1497915397-93805-1-git-send-email-keescook@chromium.org>
 References: <1497915397-93805-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 17/23] dcache: define usercopy region in dentry_cache slab cache
+Subject: [kernel-hardening] [PATCH 21/23] usercopy: Restrict non-usercopy caches to size 0
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: David Windsor <dave@nullcore.net>
-
-When a dentry name is short enough, it can be stored directly in
-the dentry itself.  These dentry short names, stored in struct
-dentry.d_iname and therefore contained in the dentry_cache slab cache,
-need to be coped to/from userspace.
-
-In support of usercopy hardening, this patch defines a region in
-the dentry_cache slab cache in which userspace copy operations
-are allowed.
-
-This region is known as the slab cache's usercopy region.  Slab
-caches can now check that each copy operation involving cache-managed
-memory falls entirely within the slab's usercopy region.
+With all known usercopied cache whitelists now defined in the kernel, switch
+the default usercopy region of kmem_cache_create() to size 0. Any new caches
+with usercopy regions will now need to use kmem_cache_create_usercopy()
+instead of kmem_cache_create().
 
 This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
 whitelisting code in the last public patch of grsecurity/PaX based on my
 understanding of the code. Changes or omissions from the original code are
 mine and don't reflect the original grsecurity/PaX code.
 
-Signed-off-by: David Windsor <dave@nullcore.net>
-[kees: adjust hunks for kmalloc-specific things moved later, adjust commit log]
 Signed-off-by: Kees Cook <keescook@chromium.org>
+Cc: David Windsor <dave@nullcore.net>
 ---
- fs/dcache.c          | 5 +++--
- include/linux/slab.h | 5 +++++
- 2 files changed, 8 insertions(+), 2 deletions(-)
+ mm/slab_common.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/fs/dcache.c b/fs/dcache.c
-index f7f3c4114baa..bae2e148946c 100644
---- a/fs/dcache.c
-+++ b/fs/dcache.c
-@@ -3580,8 +3580,9 @@ static void __init dcache_init(void)
- 	 * but it is probably not worth it because of the cache nature
- 	 * of the dcache. 
- 	 */
--	dentry_cache = KMEM_CACHE(dentry,
--		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT);
-+	dentry_cache = KMEM_CACHE_USERCOPY(dentry,
-+		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
-+		d_iname);
- 
- 	/* Hash may have been set up in dcache_init_early */
- 	if (!hashdist)
-diff --git a/include/linux/slab.h b/include/linux/slab.h
-index a48f54238273..97f4a0117b3b 100644
---- a/include/linux/slab.h
-+++ b/include/linux/slab.h
-@@ -151,6 +151,11 @@ void memcg_destroy_kmem_caches(struct mem_cgroup *);
- 		sizeof(struct __struct), __alignof__(struct __struct),\
- 		(__flags), NULL)
- 
-+#define KMEM_CACHE_USERCOPY(__struct, __flags, __field) kmem_cache_create_usercopy(#__struct,\
-+		sizeof(struct __struct), __alignof__(struct __struct),\
-+		(__flags), offsetof(struct __struct, __field),\
-+		sizeof_field(struct __struct, __field), NULL)
-+
- /*
-  * Common kmalloc functions provided by all allocators
-  */
+diff --git a/mm/slab_common.c b/mm/slab_common.c
+index 685321a0d355..2365dd21623d 100644
+--- a/mm/slab_common.c
++++ b/mm/slab_common.c
+@@ -512,7 +512,7 @@ struct kmem_cache *
+ kmem_cache_create(const char *name, size_t size, size_t align,
+ 		unsigned long flags, void (*ctor)(void *))
+ {
+-	return kmem_cache_create_usercopy(name, size, align, flags, 0, size,
++	return kmem_cache_create_usercopy(name, size, align, flags, 0, 0,
+ 					  ctor);
+ }
+ EXPORT_SYMBOL(kmem_cache_create);
 -- 
 2.7.4
