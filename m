@@ -1,21 +1,21 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 19 Jun 2017 16:36:22 -0700
-Message-Id: <1497915397-93805-9-git-send-email-keescook@chromium.org>
+Date: Mon, 19 Jun 2017 16:36:23 -0700
+Message-Id: <1497915397-93805-10-git-send-email-keescook@chromium.org>
 In-Reply-To: <1497915397-93805-1-git-send-email-keescook@chromium.org>
 References: <1497915397-93805-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 08/23] ext2: define usercopy region in ext2_inode_cache slab cache
+Subject: [kernel-hardening] [PATCH 09/23] ext4: define usercopy region in ext4_inode_cache slab cache
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: David Windsor <dave@nullcore.net>
 
-The ext2 symlink pathnames, stored in struct ext2_inode_info.i_data
-and therefore contained in the ext2_inode_cache slab cache, need to be
-copied to/from userspace.
+The ext4 symlink pathnames, stored in struct ext4_inode_info.i_data
+and therefore contained in the ext4_inode_cache slab cache, need
+to be copied to/from userspace.
 
 In support of usercopy hardening, this patch defines a region in
-the ext2_inode_cache slab cache in which userspace copy operations
+the ext4_inode_cache slab cache in which userspace copy operations
 are allowed.
 
 This region is known as the slab cache's usercopy region.  Slab
@@ -31,30 +31,30 @@ Signed-off-by: David Windsor <dave@nullcore.net>
 [kees: adjust commit log]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- fs/ext2/super.c | 12 +++++++-----
+ fs/ext4/super.c | 12 +++++++-----
  1 file changed, 7 insertions(+), 5 deletions(-)
 
-diff --git a/fs/ext2/super.c b/fs/ext2/super.c
-index 9c2028b50e5c..3e2aa21bc616 100644
---- a/fs/ext2/super.c
-+++ b/fs/ext2/super.c
-@@ -219,11 +219,13 @@ static void init_once(void *foo)
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index d37c81f327e7..bd92123cf1fc 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1031,11 +1031,13 @@ static void init_once(void *foo)
  
  static int __init init_inodecache(void)
  {
--	ext2_inode_cachep = kmem_cache_create("ext2_inode_cache",
--					     sizeof(struct ext2_inode_info),
+-	ext4_inode_cachep = kmem_cache_create("ext4_inode_cache",
+-					     sizeof(struct ext4_inode_info),
 -					     0, (SLAB_RECLAIM_ACCOUNT|
 -						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
 -					     init_once);
-+	ext2_inode_cachep = kmem_cache_create_usercopy("ext2_inode_cache",
-+				sizeof(struct ext2_inode_info), 0,
++	ext4_inode_cachep = kmem_cache_create_usercopy("ext4_inode_cache",
++				sizeof(struct ext4_inode_info), 0,
 +				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
 +					SLAB_ACCOUNT),
-+				offsetof(struct ext2_inode_info, i_data),
-+				sizeof_field(struct ext2_inode_info, i_data),
++				offsetof(struct ext4_inode_info, i_data),
++				sizeof_field(struct ext4_inode_info, i_data),
 +				init_once);
- 	if (ext2_inode_cachep == NULL)
+ 	if (ext4_inode_cachep == NULL)
  		return -ENOMEM;
  	return 0;
 -- 
