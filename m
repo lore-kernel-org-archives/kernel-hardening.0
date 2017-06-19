@@ -1,108 +1,64 @@
 MIME-Version: 1.0
-In-Reply-To: <20170614224526.29076-1-Jason@zx2c4.com>
-References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc> <20170614224526.29076-1-Jason@zx2c4.com>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Mon, 19 Jun 2017 22:57:18 +0200
-Message-ID: <CAHmME9rv3EjOVF4LhYZ0VS2LYKjDr_-TxzNHvyE_mKZ_UX0+eA@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20170619024259.6560-1-danielmicay@gmail.com>
+References: <20170619024259.6560-1-danielmicay@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 19 Jun 2017 14:02:42 -0700
+Message-ID: <CAGXu5j+eyVvedBxBHhMLCx7G5V9b5T+GD4t7KXGiL03iR11z1w@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
-To: Theodore Ts'o <tytso@mit.edu>
-Cc: tglx@breakpoint.cc, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v5] add the option of fortified string.h functions
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-kernel <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Daniel Axtens <dja@axtens.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Ted,
-
-With rc6 already released and rc7 coming up, I'd really appreciate you
-stepping in here and either ACKing the above commit, or giving your
-two cents about it in case I need to roll something different.
-
-Thanks,
-Jason
-
-On Thu, Jun 15, 2017 at 12:45 AM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
-> Odd versions of gcc for the sh4 architecture will actually warn about
-> flags being used while uninitialized, so we set them to zero. Non crazy
-> gccs will optimize that out again, so it doesn't make a difference.
+On Sun, Jun 18, 2017 at 7:42 PM, Daniel Micay <danielmicay@gmail.com> wrote:
+> This adds support for compiling with a rough equivalent to the glibc
+> _FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
+> overflow checks for string.h functions when the compiler determines the
+> size of the source or destination buffer at compile-time. Unlike glibc,
+> it covers buffer reads in addition to writes.
 >
-> Next, over aggressive gccs could inline the expression that defines
-> use_lock, which could then introduce a race resulting in a lock
-> imbalance. By using READ_ONCE, we prevent that fate. Finally, we make
-> that assignment const, so that gcc can still optimize a nice amount.
+> GNU C __builtin_*_chk intrinsics are avoided because they would force a
+> much more complex implementation. They aren't designed to detect read
+> overflows and offer no real benefit when using an implementation based
+> on inline checks. Inline checks don't add up to much code size and allow
+> full use of the regular string intrinsics while avoiding the need for a
+> bunch of _chk functions and per-arch assembly to avoid wrapper overhead.
 >
-> Finally, we fix a potential deadlock between primary_crng.lock and
-> batched_entropy_reset_lock, where they could be called in opposite
-> order. Moving the call to invalidate_batched_entropy to outside the lock
-> rectifies this issue.
+> This detects various overflows at compile-time in various drivers and
+> some non-x86 core kernel code. There will likely be issues caught in
+> regular use at runtime too.
 >
-> Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+> Future improvements left out of initial implementation for simplicity,
+> as it's all quite optional and can be done incrementally:
+>
+> * Some of the fortified string functions (strncpy, strcat), don't yet
+>   place a limit on reads from the source based on __builtin_object_size of
+>   the source buffer.
+>
+> * Extending coverage to more string functions like strlcat.
+>
+> * It should be possible to optionally use __builtin_object_size(x, 1) for
+>   some functions (C strings) to detect intra-object overflows (like
+>   glibc's _FORTIFY_SOURCE=2), but for now this takes the conservative
+>   approach to avoid likely compatibility issues.
+>
+> * The compile-time checks should be made available via a separate config
+>   option which can be enabled by default (or always enabled) once enough
+>   time has passed to get the issues it catches fixed.
+>
+> Signed-off-by: Daniel Micay <danielmicay@gmail.com>
 > ---
-> Ted -- the first part of this is the fixup patch we discussed earlier.
-> Then I added on top a fix for a potentially related race.
->
-> I'm not totally convinced that moving this block to outside the spinlock
-> is 100% okay, so please give this a close look before merging.
->
->
->  drivers/char/random.c | 12 ++++++------
->  1 file changed, 6 insertions(+), 6 deletions(-)
->
-> diff --git a/drivers/char/random.c b/drivers/char/random.c
-> index e870f329db88..01a260f67437 100644
-> --- a/drivers/char/random.c
-> +++ b/drivers/char/random.c
-> @@ -803,13 +803,13 @@ static int crng_fast_load(const char *cp, size_t len)
->                 p[crng_init_cnt % CHACHA20_KEY_SIZE] ^= *cp;
->                 cp++; crng_init_cnt++; len--;
->         }
-> +       spin_unlock_irqrestore(&primary_crng.lock, flags);
->         if (crng_init_cnt >= CRNG_INIT_CNT_THRESH) {
->                 invalidate_batched_entropy();
->                 crng_init = 1;
->                 wake_up_interruptible(&crng_init_wait);
->                 pr_notice("random: fast init done\n");
->         }
-> -       spin_unlock_irqrestore(&primary_crng.lock, flags);
->         return 1;
->  }
->
-> @@ -841,6 +841,7 @@ static void crng_reseed(struct crng_state *crng, struct entropy_store *r)
->         }
->         memzero_explicit(&buf, sizeof(buf));
->         crng->init_time = jiffies;
-> +       spin_unlock_irqrestore(&primary_crng.lock, flags);
->         if (crng == &primary_crng && crng_init < 2) {
->                 invalidate_batched_entropy();
->                 crng_init = 2;
-> @@ -848,7 +849,6 @@ static void crng_reseed(struct crng_state *crng, struct entropy_store *r)
->                 wake_up_interruptible(&crng_init_wait);
->                 pr_notice("random: crng init done\n");
->         }
-> -       spin_unlock_irqrestore(&primary_crng.lock, flags);
->  }
->
->  static inline void crng_wait_ready(void)
-> @@ -2041,8 +2041,8 @@ static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u64);
->  u64 get_random_u64(void)
->  {
->         u64 ret;
-> -       bool use_lock = crng_init < 2;
-> -       unsigned long flags;
-> +       bool use_lock = READ_ONCE(crng_init) < 2;
-> +       unsigned long flags = 0;
->         struct batched_entropy *batch;
->
->  #if BITS_PER_LONG == 64
-> @@ -2073,8 +2073,8 @@ static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u32);
->  u32 get_random_u32(void)
->  {
->         u32 ret;
-> -       bool use_lock = crng_init < 2;
-> -       unsigned long flags;
-> +       bool use_lock = READ_ONCE(crng_init) < 2;
-> +       unsigned long flags = 0;
->         struct batched_entropy *batch;
->
->         if (arch_get_random_int(&ret))
-> --
-> 2.13.1
->
+> Changes since v4:
+> - avoid overly aggressive strnlen check for non-null-terminated strings
+
+Thanks! I've resent this (with my addition of ARCH_HAS_FORTIFY_SOURCE)
+and the remaining tree fixes for inclusion into -mm. I also have it
+here:
+https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=for-next/fortify
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
