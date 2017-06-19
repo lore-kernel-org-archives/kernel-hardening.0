@@ -1,52 +1,48 @@
-References: <20170607123505.16629-1-igor.stoppa@huawei.com>
- <20170607123505.16629-3-igor.stoppa@huawei.com>
- <ace6f45a-2d21-9a00-fa74-518ac727074f@redhat.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <5dfc037e-4812-898b-b173-cd0d1a61a701@huawei.com>
-Date: Mon, 19 Jun 2017 10:12:22 +0300
+Date: Mon, 19 Jun 2017 09:45:53 +0200
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Message-ID: <20170619074553.wo3ec6i2yaojn7qs@linutronix.de>
+References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
+ <20170614224526.29076-1-Jason@zx2c4.com>
+ <20170616143515.yn6oo6tvmcsrxidw@linutronix.de>
+ <CAHmME9pLs2rKnuZ_La+PqYivEJDKEUdxUWS7eZthaw0jd8APVQ@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <ace6f45a-2d21-9a00-fa74-518ac727074f@redhat.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 2/4] Protectable Memory Allocator
-To: Laura Abbott <labbott@redhat.com>, keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org
-Cc: penguin-kernel@I-love.SAKURA.ne.jp, paul@paul-moore.com, sds@tycho.nsa.gov, casey@schaufler-ca.com, hch@infradead.org, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <CAHmME9pLs2rKnuZ_La+PqYivEJDKEUdxUWS7eZthaw0jd8APVQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Miller <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 09/06/17 21:56, Laura Abbott wrote:
-> On 06/07/2017 05:35 AM, Igor Stoppa wrote:
+On 2017-06-17 02:39:40 [+0200], Jason A. Donenfeld wrote:
+> On Fri, Jun 16, 2017 at 4:35 PM, Sebastian Andrzej Siewior
+> <bigeasy@linutronix.de> wrote:
+> > I wouldn't just push the lock one up as is but move that write part to
+> > crng_init to remain within the locked section. Like that:
+>=20
+> We can't quite do that, because invalidate_batched_entropy() needs to
+> be called _before_ crng_init. Otherwise a concurrent call to
+> get_random_u32/u64() will have crng_init being the wrong value when
+> the batched entropy is still old.
 
-[...]
+ehm. You sure? I simply delayed the lock-dropping _after_ the state
+variable was been modified. So it was basically what your patch did
+except it was unlocked later=E2=80=A6
 
-> The pool logic looks remarkably similar to genalloc (lib/genalloc.c).
-> It's not a perfect 1-to-1 mapping but it's close enough to be worth
-> a look.
+>=20
+> > Are use about that? I am not sure that the gcc will inline "crng_init"
+> > read twice. It is not a local variable. READ_ONCE() is usually used
+> > where gcc could cache a memory access but you do not want this. But hey!
+> > If someone knows better I am here to learn.
+>=20
+> The whole purpose is that I _want_ it to cache the memory access so
+> that it is _not_ inlined. So, based on your understanding, it does
+> exactly what I intended it to do. The reason is that I'd like to avoid
+> a lock imbalance, which could happen if the read is inlined.
 
-Indeed. I have prepared a new incarnation of pmalloc, based on genalloc.
-There are a couple of things that I would like to adjust in genalloc,
-but I'll discuss this in the new submission.
+So it was good as it was which means you can drop that READ_ONCE().
 
->> +
->> +const char msg[] = "Not a valid Pmalloc object.";
->> +const char *__pmalloc_check_object(const void *ptr, unsigned long n)
->> +{
->> +	unsigned long p;
->> +
->> +	p = (unsigned long)ptr;
->> +	n = p + n - 1;
->> +	for (; (PAGE_MASK & p) <= (PAGE_MASK & n); p += PAGE_SIZE) {
->> +		if (is_vmalloc_addr((void *)p)) {
->> +			struct page *page;
->> +
->> +			page = vmalloc_to_page((void *)p);
->> +			if (!(page && PagePmalloc(page)))
->> +				return msg;
->> +		}
-> 
-> Should this be an error if is_vmalloc_addr returns false?
+> Jason
 
-Yes, if this function is called, at least the beginning of the range
-*is* a vmalloc address and therefore the rest should be a vmalloc
-address as well.
-
-thanks, igor
+Sebastian
