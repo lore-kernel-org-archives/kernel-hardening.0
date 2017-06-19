@@ -1,48 +1,42 @@
-Date: Mon, 19 Jun 2017 09:45:53 +0200
-From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
-Message-ID: <20170619074553.wo3ec6i2yaojn7qs@linutronix.de>
-References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
- <20170614224526.29076-1-Jason@zx2c4.com>
- <20170616143515.yn6oo6tvmcsrxidw@linutronix.de>
- <CAHmME9pLs2rKnuZ_La+PqYivEJDKEUdxUWS7eZthaw0jd8APVQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
-In-Reply-To: <CAHmME9pLs2rKnuZ_La+PqYivEJDKEUdxUWS7eZthaw0jd8APVQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Miller <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>
+Sender: keescook@google.com
+In-Reply-To: <956283e0d9f9c01a437ab75c5c9a324959ead132.1497713142.git.mchehab@s-opensource.com>
+References: <f0f77a106d183325dce9eecd3c11214154050e11.1497713142.git.mchehab@s-opensource.com>
+ <956283e0d9f9c01a437ab75c5c9a324959ead132.1497713142.git.mchehab@s-opensource.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 19 Jun 2017 11:58:24 -0700
+Message-ID: <CAGXu5jKeFVtj1ZmMW7CuZFv_QemnTG8q5jyQo7Q5ppi-AZ+MXA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v2 22/31] gcc-plugins.txt: standardize document format
+To: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+Cc: Linux Doc Mailing List <linux-doc@vger.kernel.org>, Mauro Carvalho Chehab <mchehab@infradead.org>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2017-06-17 02:39:40 [+0200], Jason A. Donenfeld wrote:
-> On Fri, Jun 16, 2017 at 4:35 PM, Sebastian Andrzej Siewior
-> <bigeasy@linutronix.de> wrote:
-> > I wouldn't just push the lock one up as is but move that write part to
-> > crng_init to remain within the locked section. Like that:
->=20
-> We can't quite do that, because invalidate_batched_entropy() needs to
-> be called _before_ crng_init. Otherwise a concurrent call to
-> get_random_u32/u64() will have crng_init being the wrong value when
-> the batched entropy is still old.
+On Sat, Jun 17, 2017 at 8:25 AM, Mauro Carvalho Chehab
+<mchehab@s-opensource.com> wrote:
+> Each text file under Documentation follows a different
+> format. Some doesn't even have titles!
+>
+> Change its representation to follow the adopted standard,
+> using ReST markups for it to be parseable by Sphinx:
+>
+> - promote main title;
+> - use the right markup for footnotes;
+> - use bold markup for files name;
+> - identify literal blocks;
+> - add blank lines to avoid Sphinx to complain;
+> - remove numeration from titles.
+>
+> Signed-off-by: Mauro Carvalho Chehab <mchehab@s-opensource.com>
 
-ehm. You sure? I simply delayed the lock-dropping _after_ the state
-variable was been modified. So it was basically what your patch did
-except it was unlocked later=E2=80=A6
+Thanks! This should maybe get moved/indexed in dev-tools/. What do you think?
 
->=20
-> > Are use about that? I am not sure that the gcc will inline "crng_init"
-> > read twice. It is not a local variable. READ_ONCE() is usually used
-> > where gcc could cache a memory access but you do not want this. But hey!
-> > If someone knows better I am here to learn.
->=20
-> The whole purpose is that I _want_ it to cache the memory access so
-> that it is _not_ inlined. So, based on your understanding, it does
-> exactly what I intended it to do. The reason is that I'd like to avoid
-> a lock imbalance, which could happen if the read is inlined.
+Regardless:
 
-So it was good as it was which means you can drop that READ_ONCE().
+Acked-by: Kees Cook <keescook@chromium.org>
 
-> Jason
+-Kees
 
-Sebastian
+-- 
+Kees Cook
+Pixel Security
