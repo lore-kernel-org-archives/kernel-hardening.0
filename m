@@ -1,56 +1,43 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <49abb4c2-e638-9657-f007-0c18ef6d0f28@linux.com>
-References: <1497018608-22168-1-git-send-email-alex.popov@linux.com>
- <CAGXu5jLcF_EHMtp+vb-zdjqKe+Z33ZKKVrx1FEVSXPyEEBa_qQ@mail.gmail.com> <49abb4c2-e638-9657-f007-0c18ef6d0f28@linux.com>
+In-Reply-To: <20170620065631.GA25354@infradead.org>
+References: <1497905801-69164-1-git-send-email-keescook@chromium.org>
+ <1497905801-69164-4-git-send-email-keescook@chromium.org> <20170620065631.GA25354@infradead.org>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 20 Jun 2017 12:20:17 -0700
-Message-ID: <CAGXu5j+S-rUQXbqyLOf2drvNvPnd1yz2VC2+UanXYo7vVTrThA@mail.gmail.com>
+Date: Tue, 20 Jun 2017 12:25:53 -0700
+Message-ID: <CAGXu5jLkvqbV1=xGrvwLZPiAbswA6M5C3BB0M5MytRabLtEfLg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH RFC v2 1/1] gcc-plugins: Add stackleak feature erasing the
- kernel stack at the end of syscalls
-To: Alexander Popov <alex.popov@linux.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>
+Subject: [kernel-hardening] Re: [PATCH 3/4] randstruct: Disable randomization of ACPICA structs
+To: Christoph Hellwig <hch@infradead.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 9, 2017 at 4:00 PM, Alexander Popov <alex.popov@linux.com> wrote:
-> On 09.06.2017 20:28, Kees Cook wrote:
->> Awesome, and thanks for the benchmarks! That should really help people
->> understand the trade-offs for using this feature (and is likely worth
->> mentioning in the Kconfig). Seems like less than 4% overhead, maybe
->> much less? Real time on build times seems like a tiny difference, but
->> hackbench shows 4%.
+On Mon, Jun 19, 2017 at 11:56 PM, Christoph Hellwig <hch@infradead.org> wrote:
+> On Mon, Jun 19, 2017 at 01:56:40PM -0700, Kees Cook wrote:
+>> Since the ACPICA source is maintained externally to the kernel, we can
+>> neither switch it to designated initializers nor mark it
+>> __no_randomize_layout. Until ACPICA-upstream changes[1] land to handle the
+>> designated initialization, explicitly skip it in the plugin.
 >
-> Yes, the performance penalty of STACKLEAK differs a lot depending on the
-> kind of load. Do you have any idea which test can give a bigger slowdown?
-> It should be some rapid syscall exhausting the kernel stack hard.
+> NAK.  ACPI has no business rejecting kernel changes to start with, but
+> independent of that your patch was complete garbage anyway.
 
-I can't think of anything off the top of my head. You could play with
-CONFIG_FRAME_WARN[1] and related tools to find a deep call path and
-try that?
+While I don't disagree with your opinion about ACPICA's inclusion in
+the kernel, that isn't a battle I want to have. The ACPI maintainers
+have a certain way of doing things, and what I need to change is tiny
+compared to that.
 
-[1] http://elinux.org/Kernel_Small_Stacks
+> There is no need for function pointers here, please include the patch
+> below instead:
 
->> Maybe specifically mention the -0xBEEF value?
->
-> Ok. Should I create some macro for it?
+Can you send the patch to https://github.com/acpica/acpica ? My change
+was finally accepted, so this whole issue will go away on the next
+refresh. Until then, I don't want to block the entire automatic
+structure selection logic of randstruct on a three-function table. :)
 
-Maybe? It's not really clear how useful that might be. If it's easy,
-then yeah, use a common macro for the value, if it creates header
-soup, leave it open-coded.
-
->> I would follow the naming of the others, and call this GCC_PLUGIN_STACKLEAK
->
-> It seems to me that GCC_PLUGIN_STACKLEAK is not a right name since the whole
-> feature consists of two parts: the arch-specific asm code actually cleaning
-> the kernel stack and the gcc plugin which helps to do it faster and more
-> reliable. What do you think?
-
-It looks like the feature requires the plugin, so I think the common
-naming (GCC_PLUGIN_STACKLEAK) would be preferred. But perhaps I'm
-overlooking something where the plugin is not used?
-
-Thanks!
+Given that it's a tiny exclusion for randstruct, and there is already
+a path in motion to fix it, I think this patch is trivial and
+sufficient.
 
 -Kees
 
