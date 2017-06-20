@@ -1,51 +1,67 @@
-Date: Tue, 20 Jun 2017 02:03:44 -0400
-From: Theodore Ts'o <tytso@mit.edu>
-Message-ID: <20170620060344.ngbnzg2mz5hvq4kw@thunk.org>
-References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
- <20170614224526.29076-1-Jason@zx2c4.com>
- <CAHmME9rv3EjOVF4LhYZ0VS2LYKjDr_-TxzNHvyE_mKZ_UX0+eA@mail.gmail.com>
+Date: Tue, 20 Jun 2017 09:07:21 +0200
+From: Pavel Machek <pavel@ucw.cz>
+Message-ID: <20170620070721.GA30728@amd>
+References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
+ <1497286620-15027-5-git-send-email-s.mesoraca16@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="azLHFNyN32YCQGCU"
 Content-Disposition: inline
-In-Reply-To: <CAHmME9rv3EjOVF4LhYZ0VS2LYKjDr_-TxzNHvyE_mKZ_UX0+eA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: tglx@breakpoint.cc, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Michael Ellerman <mpe@ellerman.id.au>
+In-Reply-To: <1497286620-15027-5-git-send-email-s.mesoraca16@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 04/11] S.A.R.A. USB Filtering
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 19, 2017 at 10:57:18PM +0200, Jason A. Donenfeld wrote:
-> 
-> With rc6 already released and rc7 coming up, I'd really appreciate you
-> stepping in here and either ACKing the above commit, or giving your
-> two cents about it in case I need to roll something different.
 
-I actually had set up an earlier version of your patch for on Saturday
-while I was in Beijing.  (Like Linus, I'm attending the LinuxCon China
-conference Monday and Tuesday.)  I had even created the signed tag,
-but I didn't send the pull request to Linus because I was waiting to
-see about how discussions over the locking strategy and the spammy log
-messages on PowerPC was going to get resolved.
+--azLHFNyN32YCQGCU
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-I've since respun the commit to reflect your newer patch (see the
-random_for_linus_stable tag on random.git) and rebased the dev branch
-on top of that.  Please take a look and comment.
+On Mon 2017-06-12 18:56:53, Salvatore Mesoraca wrote:
+> Introduction of S.A.R.A. USB Filtering.
+> It uses the "usb_device_auth" LSM hook to provide a mechanism to decide
+> which USB devices should be authorized to connect to the system and
+> which shouldn't.
+> The main goal is to narrow the attack surface for custom USB devices
+> designed to exploit vulnerabilities found in some USB device drivers.
+> Via configuration it's possible to allow or to deny authorization, based
+> on one or more of: Vendor ID, Product ID, bus name and port number. There
+> is also support for "trailing wildcards".
 
-The other open issue I want to resolve before sending a pull request
-this week is whether we want to change the default for
-CONFIG_WARN_UNSEEDED_RANDOM so that the answer is 'n'.  It *is* spammy
-for PowerPC, because they aren't getting their CRNG initialized
-quickly enough, so several userspace processes are getting
-fork/exec'ed with an uninitialized CRNG.  That being said, it is a
-valid warning because it means that the initial stack canary for the
-first couple of PowerPC processes are being created without a fully
-initialized CRNG, which may mean that an attacker might be able to
-circumvent the stack canary on the first couple of processes.  So that
-could potentially be a real security issue on Power.  OTOH, most Power
-users aren't going to be able to do anything about the fact the stack
-canaries of the system daemons started during early boot don't have
-strong randomness, so perhaps we should disable the warning by
-default.
+Hmm. Given that USB device provides vendor id/product id, this does
+not really stop anyone, right?
 
-Opinions?
+AFAICT you can still get USB stick with vid/pid of logitech keyboard,
+and kernel will recognize it as a usb stick.
 
-						- Ted
+So you should not really filter on vid/pid, but on device
+types (sha sum of USB descriptor?).
+
+> Depending on the configuration, it can work both as a white list or as a
+> black list.
+
+Blacklisting vid/pid is completely useless. Whitelisting vid/pid is
+nearly so. Attacker able to plug USB devices sees devices already
+attached, so he can guess right vid/pids quite easily.
+
+								Pavel
+--=20
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
+g.html
+
+--azLHFNyN32YCQGCU
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iEYEARECAAYFAllIyakACgkQMOfwapXb+vL77ACggGqDtQ0u6emWwkM4vRVmqRNx
+pcIAoLvy8RyhQ4r4TN3QYLLb8v2UTito
+=lPqt
+-----END PGP SIGNATURE-----
+
+--azLHFNyN32YCQGCU--
