@@ -1,39 +1,65 @@
+References: <1497018608-22168-1-git-send-email-alex.popov@linux.com>
+From: "Hector Martin \"marcan\"" <marcan@marcan.st>
+Message-ID: <dc146cb5-98fc-57f9-e4c8-3e1bd6d78acf@marcan.st>
+Date: Tue, 20 Jun 2017 18:06:18 +0900
 MIME-Version: 1.0
-In-Reply-To: <CAH8yC8kLHL80_i2WRssgE3chL3iU-6dwvdkM-MoaPx4mtjx-kg@mail.gmail.com>
-References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
- <20170614224526.29076-1-Jason@zx2c4.com> <CAHmME9rv3EjOVF4LhYZ0VS2LYKjDr_-TxzNHvyE_mKZ_UX0+eA@mail.gmail.com>
- <20170620060344.ngbnzg2mz5hvq4kw@thunk.org> <CAHmME9oHZz44uQ1tq=M=Vrxc5NY-2r4xFjbwge-Hp=U-cCEYfQ@mail.gmail.com>
- <CAH8yC8kLHL80_i2WRssgE3chL3iU-6dwvdkM-MoaPx4mtjx-kg@mail.gmail.com>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue, 20 Jun 2017 10:53:35 +0200
-Message-ID: <CAHmME9rk-qrjJs6ZXQPoWV0sKBK_juq18tcE1h+pX8zSJJK1iQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
-To: noloader@gmail.com
-Cc: Theodore Ts'o <tytso@mit.edu>, tglx@breakpoint.cc, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Michael Ellerman <mpe@ellerman.id.au>
+In-Reply-To: <1497018608-22168-1-git-send-email-alex.popov@linux.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [PATCH RFC v2 1/1] gcc-plugins: Add stackleak
+ feature erasing the kernel stack at the end of syscalls
+To: Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, tycho@docker.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 20, 2017 at 10:33 AM, Jeffrey Walton <noloader@gmail.com> wrote:
-> I think it is a bad idea to suppress all messages from a security
-> engineering point of view.
->
-> Many folks don't run debug kernels. Most of the users who want or need
-> to know of the issues won't realize its happening. Consider, the
-> reason we learned of systemd's problems was due to dmesg's.
->
-> Suppressing all messages for all configurations cast a wider net than
-> necessary. Configurations that could potentially be detected and fixed
-> likely will go unnoticed. If the problem is not brought to light, then
-> it won't be fixed.
+On 09/06/17 23:30, Alexander Popov wrote:
+> +/*
+> + * Copyright 2011-2017 by the PaX Team <pageexec@freemail.hu>
+> + * Licensed under the GPL v2
+> + *
+> + * Note: the choice of the license means that the compilation process is
+> + *       NOT 'eligible' as defined by gcc's library exception to the GPL v3,
+> + *       but for the kernel it doesn't matter since it doesn't link against
+> + *       any of the gcc libraries
 
-I more or less agree with you that we should just turn this on for all
-users and they'll just have to live with the spam and report odd
-entries, and overtime we'll fix all the violations.
+I know this isn't the first time I've mentioned this, but I think it 
+bears repeating that, as far as I understand the licensing (IANAL), GCC 
+plug-ins licensed as GPLv2 are in violation of the GCC license.
 
-But I think there's another camp that would mutiny in the face of this
-kind of hubris.
+See [1], which says that this plug-in and GCC form a "single combined 
+program", and [2], which says that in this case the plug-in must be 
+GPL-compatible. Though not specified in this informal FAQ entry, for 
+GPLv3-licensed GCC, this obviously means GPLv3-compatible, and the GPLv2 
+is *not* GPLv3-compatible ([3], especially the second paragraph).
 
-That's why I moved pretty readily toward the compromise position of
-default y, but depends on DEBUG_KERNEL. My hope was that it'd to an
-extent satisfy both camps, and also disappoint both camps in an equal
-way.
+In addition, orthogonally, the motivation behind this licensing 
+(preventing userspace code from using these plug-ins through a gross 
+abuse of the anti-proprietary-plugin licensing that libgcc uses) also 
+prevents them from being used with some kernel architectures that *do* 
+link against libgcc.
+
+This can all be fixed by requesting that the plug-ins be relicensed as 
+"GPLv2 or later", although evidently this goes against the interests of 
+the original author (PaX team) of restricting usage of these plug-ins, 
+so I doubt they will do that.
+
+Alternatively, the plug-in can be rewritten to operate on an *extracted* 
+intermediate representation of the GCC internal state, with a 
+GPLv3-compatible shim used as a GCC plug-in to extract said state, and 
+the actual core of the transformation done in a separate binary that 
+does not link with GCC and may use any license. This approach is what 
+PaX team *should* have done from the beginning in order to use their 
+anti-userspace licensing hack without violating any licenses, IMO. This 
+would still disallow the plug-in from being used on kernel architectures 
+that do link libgcc, and on userspace code that does the same.
+
+Failing those, the only remaining option I see is a clean rewrite of the 
+plug-ins without using any of the original code, and licensing that as 
+GPLv2+.
+
+[1] https://www.gnu.org/licenses/gpl-faq.en.html#GPLPlugins
+[2] https://www.gnu.org/licenses/gpl-faq.en.html#GPLAndPlugins
+[3] https://www.gnu.org/licenses/gpl-faq.en.html#v2v3Compatibility
+
+-- 
+Hector Martin "marcan"
+Public key: https://mrcn.st/pub
