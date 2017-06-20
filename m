@@ -1,69 +1,34 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
-In-Reply-To: <20170620060344.ngbnzg2mz5hvq4kw@thunk.org>
-References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc> <20170614224526.29076-1-Jason@zx2c4.com> <CAHmME9rv3EjOVF4LhYZ0VS2LYKjDr_-TxzNHvyE_mKZ_UX0+eA@mail.gmail.com> <20170620060344.ngbnzg2mz5hvq4kw@thunk.org>
-Date: Tue, 20 Jun 2017 16:59:49 +1000
-Message-ID: <871sqfuot6.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: Re: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
-To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: tglx@breakpoint.cc, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>
+In-Reply-To: <20170620070721.GA30728@amd>
+References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
+ <1497286620-15027-5-git-send-email-s.mesoraca16@gmail.com> <20170620070721.GA30728@amd>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Tue, 20 Jun 2017 09:53:37 +0200
+Message-ID: <CAJHCu1KujgnTsyRBRCk2LXFFdRZKWVRHmdV3nPPiUanXsLq=sg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH 04/11] S.A.R.A. USB Filtering
+To: Pavel Machek <pavel@ucw.cz>
+Cc: kernel list <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Theodore Ts'o <tytso@mit.edu> writes:
-
-> On Mon, Jun 19, 2017 at 10:57:18PM +0200, Jason A. Donenfeld wrote:
->> 
->> With rc6 already released and rc7 coming up, I'd really appreciate you
->> stepping in here and either ACKing the above commit, or giving your
->> two cents about it in case I need to roll something different.
+2017-06-20 9:07 GMT+02:00 Pavel Machek <pavel@ucw.cz>:
+> Hmm. Given that USB device provides vendor id/product id, this does
+> not really stop anyone, right?
 >
-> I actually had set up an earlier version of your patch for on Saturday
-> while I was in Beijing.  (Like Linus, I'm attending the LinuxCon China
-> conference Monday and Tuesday.)  I had even created the signed tag,
-> but I didn't send the pull request to Linus because I was waiting to
-> see about how discussions over the locking strategy and the spammy log
-> messages on PowerPC was going to get resolved.
->
-> I've since respun the commit to reflect your newer patch (see the
-> random_for_linus_stable tag on random.git) and rebased the dev branch
-> on top of that.  Please take a look and comment.
->
-> The other open issue I want to resolve before sending a pull request
-> this week is whether we want to change the default for
-> CONFIG_WARN_UNSEEDED_RANDOM so that the answer is 'n'.
+> AFAICT you can still get USB stick with vid/pid of logitech keyboard,
+> and kernel will recognize it as a usb stick.
 
-Yes please.
+There are a number of ways by which a device can be assigned to a driver.
+vid/pid is the most common for the most esoteric devices: i.e. less used/most
+dangerous.
+However you are right, a final version of this feature should have included
+"interface matching" too and even something much more specific like serial
+matching.
+Anyway, because of lack of interest in having this feature included in kernel
+space (something similar can already be done in user-space) it has been
+abandoned.
+You are answering to an old version of S.A.R.A. that can now be considered
+obsolete.
+Thank you anyway for your comment.
 
-> It *is* spammy for PowerPC, because they aren't getting their CRNG
-
-*some* powerpc machines ...
-
-> initialized quickly enough, so several userspace processes are getting
-> fork/exec'ed with an uninitialized CRNG.  That being said, it is a
-> valid warning because it means that the initial stack canary for the
-> first couple of PowerPC processes are being created without a fully
-> initialized CRNG, which may mean that an attacker might be able to
-> circumvent the stack canary on the first couple of processes.  So that
-> could potentially be a real security issue on Power.  OTOH, most Power
-> users aren't going to be able to do anything about the fact the stack
-> canaries of the system daemons started during early boot don't have
-> strong randomness, so perhaps we should disable the warning by
-> default.
-
-powerpc supports a wide range of hardware platforms, some of which are
-10-15 years old, and don't have a hardware RNG.
-
-Is there anything we can do on those machines? Seems like our only
-option would be to block the boot while some more "entropy" builds up,
-but that's unlikely to be popular with users.
-
-On our newer machines (>= Power8) we have a hardware RNG which we wire
-up to arch_get_random_seed_long(), so on those machines the warnings
-would be valid, because they'd indicate a bug.
-
-So I think it should be up to arches to decide whether this is turned on
-via their defconfigs, and the default should be 'n' because a lot of old
-hardware won't be able to do anything useful with the warnings.
-
-cheers
+Salvatore
