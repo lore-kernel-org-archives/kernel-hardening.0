@@ -1,68 +1,50 @@
-References: <1497018608-22168-1-git-send-email-alex.popov@linux.com>
- <dc146cb5-98fc-57f9-e4c8-3e1bd6d78acf@marcan.st>
- <CAGXu5j++EC_HSjrHJ1=ax=8WMooNpd3o2U=+csUp2mgWyunsmQ@mail.gmail.com>
-From: "Hector Martin \"marcan\"" <marcan@marcan.st>
-Message-ID: <abfbcf83-3879-910b-aa56-30ab40e61648@marcan.st>
-Date: Wed, 21 Jun 2017 05:22:40 +0900
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j++EC_HSjrHJ1=ax=8WMooNpd3o2U=+csUp2mgWyunsmQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] [PATCH RFC v2 1/1] gcc-plugins: Add stackleak
- feature erasing the kernel stack at the end of syscalls
-To: Kees Cook <keescook@chromium.org>
-Cc: Alexander Popov <alex.popov@linux.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>
+Sender: keescook@google.com
+In-Reply-To: <20170615011203.144108-1-thgarnie@google.com>
+References: <20170615011203.144108-1-thgarnie@google.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 20 Jun 2017 13:24:07 -0700
+Message-ID: <CAGXu5j+byHUn_rb9jOTZqMYrc4ngmDj=a3k8QRTYrZYNSjhCkw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v10 1/3] x86/syscalls: Check address limit on user-mode return
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Petr Mladek <pmladek@suse.com>, Miroslav Benes <mbenes@suse.cz>, Al Viro <viro@zeniv.linux.org.uk>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2017-06-21 04:07, Kees Cook wrote:
-> On Tue, Jun 20, 2017 at 2:06 AM, Hector Martin "marcan"
-> <marcan@marcan.st> wrote:
->> I know this isn't the first time I've mentioned this, but I think it bears
->> repeating that, as far as I understand the licensing (IANAL), GCC plug-ins
->> licensed as GPLv2 are in violation of the GCC license.
-> 
-> I continue to think that the wording is unclear and that rational
-> people can come to different conclusions. To guide me I try to look at
-> the intent of the license ("stay Free Software") and the decisions of
-> the author ("this should be GPLv2"). Since the authors are quite clear
-> about their rationale, and I don't see anything that appears to be
-> trying to dodge the plugin being Free Software, I stand by my earlier
-> conclusion[1].
+On Wed, Jun 14, 2017 at 6:12 PM, Thomas Garnier <thgarnie@google.com> wrote:
+> Ensure the address limit is a user-mode segment before returning to
+> user-mode. Otherwise a process can corrupt kernel-mode memory and elevate
+> privileges [1].
+>
+> The set_fs function sets the TIF_SETFS flag to force a slow path on
+> return. In the slow path, the address limit is checked to be USER_DS if
+> needed.
+>
+> The addr_limit_user_check function is added as a cross-architecture
+> function to check the address limit.
+>
+> [1] https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+>
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
 
-I think this is a somewhat naive view. Even if we ignore the letter of
-the license (which I do believe we shouldn't, to keep us out of legal
-hot water) and focus on the spirit/intent, what is going on here has a
-seriously strange smell.
+Thanks for reworking this series!
 
-For one, the GPLv2 license has been chosen *explicitly* to re-target a
-licensing scheme intended to prevent usage of GCC with non-free plugins
-to, instead, limit usage of the plug-in to only certain kinds of
-software (namely the kernel). This was done in order to effectively use
-the free plug-in as an advertisement for a (AIUI) GPLv3-licensed "full"
-version that is (AIUI) distributed under a wrapper contract that
-attempts to discourage redistribution (i.e. exercising the user's rights
-under the license) under threat of contract discontinuation. Whether
-this is legal or not (and I believe it is, at least this part of the
-story), it's certainly not what the GCC authors had in mind when they
-developed the plug-in interface and very much violates the intent of the
-libgcc exception mechanism (which is just to discourage proprietary
-plug-ins).
+The bad state correctly BUGs under the LKDTM test:
 
-Additionally, the simple fact that the plug-in is not GPLv3-compatible
-means it cannot be upstreamed into GCC itself. This prevents GCC itself
-from benefiting from this usage of its plug-in API, and is also clearly
-not what the GCC authors intend.
+[   21.171586] lkdtm: Performing direct entry CORRUPT_USER_DS
+[   21.172791] lkdtm: setting bad task size limit
+[   21.173742] ------------[ cut here ]------------
+[   21.174641] kernel BUG at ./include/linux/syscalls.h:220!
+...
+[   21.193166] Call Trace:
+[   21.193617]  ? trace_hardirqs_on_thunk+0x1a/0x1c
+[   21.194443]  entry_SYSCALL64_slow_path+0x25/0x25
 
-Ultimately, the GCC authors laid out a simple rule with their license
-choice: "keep plug-ins GPLv3-compatible", and this plug-in violates that
-rule - worse, does so in order to explicitly limit users' freedom. I
-think it's easy to argue that this violates the spirit of free software
-and the intent of the FSF.
 
-For what it's worth, I did ask a GCC developer and he agrees with my
-analysis (though obviously this is a single data point and does not
-represent the view of the FSF's lawyers).
+Tested-by: Kees Cook <keescook@chromium.org>
+
+-Kees
 
 -- 
-Hector Martin "marcan" (marcan@marcan.st)
-Public Key: https://mrcn.st/pub
+Kees Cook
+Pixel Security
