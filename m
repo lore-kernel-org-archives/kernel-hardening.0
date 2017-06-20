@@ -1,60 +1,35 @@
-Message-ID: <1497987673.20270.107.camel@redhat.com>
-From: Rik van Riel <riel@redhat.com>
-Date: Tue, 20 Jun 2017 15:41:13 -0400
-In-Reply-To: <1497915397-93805-1-git-send-email-keescook@chromium.org>
-References: <1497915397-93805-1-git-send-email-keescook@chromium.org>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-3ihE6/2MaQiT3iOQ6Gtk"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] [PATCH 00/23] Hardened usercopy whitelisting
-To: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
-Cc: David Windsor <dave@nullcore.net>, linux-mm@kvack.org, linux-kernel@vger.kernel.org
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5j+PQ1unqbJa6hh9OMxBx3+sKUmfycjFAb1FFH0e5C0FtQ@mail.gmail.com>
+References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
+ <20170614224526.29076-1-Jason@zx2c4.com> <CAHmME9rv3EjOVF4LhYZ0VS2LYKjDr_-TxzNHvyE_mKZ_UX0+eA@mail.gmail.com>
+ <20170620060344.ngbnzg2mz5hvq4kw@thunk.org> <CAHmME9oHZz44uQ1tq=M=Vrxc5NY-2r4xFjbwge-Hp=U-cCEYfQ@mail.gmail.com>
+ <CAH8yC8kLHL80_i2WRssgE3chL3iU-6dwvdkM-MoaPx4mtjx-kg@mail.gmail.com>
+ <CAHmME9rk-qrjJs6ZXQPoWV0sKBK_juq18tcE1h+pX8zSJJK1iQ@mail.gmail.com>
+ <20170620093642.3ri6dct5qkf7vhuc@thunk.org> <CAH8yC8nD3kn1DZVzvruvq3tMZ=JLED_9RWkfRGUWgsNx-gBKCQ@mail.gmail.com>
+ <CACXcFmkdMbn6xHnJvwtkPJQ0ZSUUK26-9DB+V0oq6Sj6U+gMTA@mail.gmail.com> <CAGXu5j+PQ1unqbJa6hh9OMxBx3+sKUmfycjFAb1FFH0e5C0FtQ@mail.gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue, 20 Jun 2017 22:09:06 +0200
+Message-ID: <CAHmME9qNSUFr+NsmzELJM49pkHUnuZpRFhW4v5N7XcVn0c06rw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: [PATCH] random: silence compiler warnings
+ and fix race
+To: Kees Cook <keescook@chromium.org>
+Cc: Sandy Harris <sandyinchina@gmail.com>, Jeffrey Walton <noloader@gmail.com>, Theodore Ts'o <tytso@mit.edu>, tglx@breakpoint.cc, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Michael Ellerman <mpe@ellerman.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Jun 20, 2017 at 8:14 PM, Kees Cook <keescook@chromium.org> wrote:
+> How about doing this:
+>
+>    default DEBUG_KERNEL
+>
+> Most distro kernel select DEBUG_KERNEL because it unhides a bunch of
+> other useful configs. Since it doesn't strictly _depend_ on
+> DEBUG_KERNEL, I think it's probably a mistake to enforce a false
+> dependency. Using it as a hint for the default seems maybe like a good
+> middle ground. (And if people can't agree on that, then I guess
+> "default n"...)
 
---=-3ihE6/2MaQiT3iOQ6Gtk
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+I didn't know you could do that with Kconfig. Great idea. I'll make
+this change and submit a new patch to Ted.
 
-On Mon, 2017-06-19 at 16:36 -0700, Kees Cook wrote:
-> This series is modified from Brad Spengler/PaX Team's PAX_USERCOPY
-> code
-> in the last public patch of grsecurity/PaX based on our understanding
-> of the code. Changes or omissions from the original code are ours and
-> don't reflect the original grsecurity/PaX code.
->=20
-> David Windsor did the bulk of the porting, refactoring, splitting,
-> testing, etc; I just did some extra tweaks, hunk moving, and small
-> extra patches.
->=20
->=20
-> This updates the slab allocator to add annotations (useroffset and
-> usersize) to define allowed usercopy regions.
-
-This is a great improvement over the old system
-of having a few whitelisted kmalloc caches, and
-bounce buffering to copy data from caches that
-are not whitelisted!
-
-I like it.
-
---=20
-All rights reversed
---=-3ihE6/2MaQiT3iOQ6Gtk
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQEcBAABCAAGBQJZSXpZAAoJEM553pKExN6DM4UH/1B6tlBjRtn/7Ce6np+or7Cm
-bmHL8dw81Dgbs4sjkA/yPZVcnunN8v5KsWpqTuDuU0V6by+b+zt0lao5vMn1gRuW
-YgGucAs6+EGuwWOw6dH8BYoUTO6DCDi16W8yKMIjXKeY0ORmGWC5+5EfCNvJUr7H
-NzaQb+Io/iJxIllc1iTXchRHRuZYvN7pSJtaxI8oukbkuibs01QC7s04YxLUQEef
-MEkNBRimVgxulFdr1YVgFlZ5U8Tun26aWXP3APGGH7dg4HsZo1JsqvVshXUytcvQ
-pBJywFWStinKDkiHrBKvqh4VUkAS0chlyujCuVtnKYPMQRs0m1iZCwmmwHLSJZA=
-=dguK
------END PGP SIGNATURE-----
-
---=-3ihE6/2MaQiT3iOQ6Gtk--
+Jason
