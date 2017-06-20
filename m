@@ -1,57 +1,195 @@
-Date: Tue, 20 Jun 2017 08:44:38 +0200
-From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
-Message-ID: <20170620064438.fcfnyklbhf7pqrc3@linutronix.de>
-References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
- <20170614224526.29076-1-Jason@zx2c4.com>
- <20170616143515.yn6oo6tvmcsrxidw@linutronix.de>
- <CAHmME9pLs2rKnuZ_La+PqYivEJDKEUdxUWS7eZthaw0jd8APVQ@mail.gmail.com>
- <20170619074553.wo3ec6i2yaojn7qs@linutronix.de>
- <CAHmME9rnSaB+wqrhefhPPNOPOK-zVCvdFQAxmKtPajD97mYqNw@mail.gmail.com>
+Date: Mon, 19 Jun 2017 23:56:31 -0700
+From: Christoph Hellwig <hch@infradead.org>
+Message-ID: <20170620065631.GA25354@infradead.org>
+References: <1497905801-69164-1-git-send-email-keescook@chromium.org>
+ <1497905801-69164-4-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
-In-Reply-To: <CAHmME9rnSaB+wqrhefhPPNOPOK-zVCvdFQAxmKtPajD97mYqNw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Miller <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>
+In-Reply-To: <1497905801-69164-4-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH 3/4] randstruct: Disable randomization of ACPICA structs
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2017-06-19 22:55:37 [+0200], Jason A. Donenfeld wrote:
-> On Mon, Jun 19, 2017 at 9:45 AM, Sebastian Andrzej Siewior
-> <bigeasy@linutronix.de> wrote:
-> > ehm. You sure? I simply delayed the lock-dropping _after_ the state
-> > variable was been modified. So it was basically what your patch did
-> > except it was unlocked later=E2=80=A6
->=20
-> Yes, I'm sure. You moved the call to invalidate_batched_entropy() to
-> be after the assignment of crng_init. However, the call to
-> invalidate_batched_entropy() must be made _before_ the assignment of
-> crng_init.
+On Mon, Jun 19, 2017 at 01:56:40PM -0700, Kees Cook wrote:
+> Since the ACPICA source is maintained externally to the kernel, we can
+> neither switch it to designated initializers nor mark it
+> __no_randomize_layout. Until ACPICA-upstream changes[1] land to handle the
+> designated initialization, explicitly skip it in the plugin.
 
-so you need to find a another way then. Doing the assignment after
-dropping the lock opens another race.
+NAK.  ACPI has no business rejecting kernel changes to start with, but
+independent of that your patch was complete garbage anyway.
 
-> >> > Are use about that? I am not sure that the gcc will inline "crng_ini=
-t"
-> >> > read twice. It is not a local variable. READ_ONCE() is usually used
-> >> > where gcc could cache a memory access but you do not want this. But =
-hey!
-> >> > If someone knows better I am here to learn.
-> >>
-> >> The whole purpose is that I _want_ it to cache the memory access so
-> >> that it is _not_ inlined. So, based on your understanding, it does
-> >> exactly what I intended it to do. The reason is that I'd like to avoid
-> >> a lock imbalance, which could happen if the read is inlined.
-> >
-> > So it was good as it was which means you can drop that READ_ONCE().
->=20
-> Except READ_ONCE ensures that the compiler will never inline it, so it
-> actually needs to stay.
+There is no need for function pointers here, please include the patch
+below instead:
 
-I don't think the compiler is allowed to inline it the way you describe
-it. This would render any assignment to local variable useless. Also
-the READ_ONCE creates worse code in this case (because the read can not
-be delayed).
+---
+>From e8046f6507c2ed60bc501a0c0caa5a3f15f5e3e4 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Sun, 28 May 2017 09:53:45 +0300
+Subject: acpi: get rid of acpi_sleep_dispatch
 
-Sebastian
+No need for the array of structs of function pointers when we can just
+call the handfull of functions directly.
+
+This could be further cleaned up if acpi_gbl_reduced_hardware was defined
+true in the ACPI_REDUCED_HARDWARE case, but that's material for the next
+round.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+---
+ drivers/acpi/acpica/hwxfsleep.c | 89 +++++++++--------------------------------
+ include/acpi/actypes.h          |  9 -----
+ 2 files changed, 18 insertions(+), 80 deletions(-)
+
+diff --git a/drivers/acpi/acpica/hwxfsleep.c b/drivers/acpi/acpica/hwxfsleep.c
+index 5733b1167e46..66fa3ebddd57 100644
+--- a/drivers/acpi/acpica/hwxfsleep.c
++++ b/drivers/acpi/acpica/hwxfsleep.c
+@@ -57,26 +57,6 @@ acpi_hw_set_firmware_waking_vector(struct acpi_table_facs *facs,
+ 				   acpi_physical_address physical_address64);
+ #endif
+ 
+-static acpi_status acpi_hw_sleep_dispatch(u8 sleep_state, u32 function_id);
+-
+-/*
+- * Dispatch table used to efficiently branch to the various sleep
+- * functions.
+- */
+-#define ACPI_SLEEP_FUNCTION_ID         0
+-#define ACPI_WAKE_PREP_FUNCTION_ID     1
+-#define ACPI_WAKE_FUNCTION_ID          2
+-
+-/* Legacy functions are optional, based upon ACPI_REDUCED_HARDWARE */
+-
+-static struct acpi_sleep_functions acpi_sleep_dispatch[] = {
+-	{ACPI_HW_OPTIONAL_FUNCTION(acpi_hw_legacy_sleep),
+-	 acpi_hw_extended_sleep},
+-	{ACPI_HW_OPTIONAL_FUNCTION(acpi_hw_legacy_wake_prep),
+-	 acpi_hw_extended_wake_prep},
+-	{ACPI_HW_OPTIONAL_FUNCTION(acpi_hw_legacy_wake), acpi_hw_extended_wake}
+-};
+-
+ /*
+  * These functions are removed for the ACPI_REDUCED_HARDWARE case:
+  *      acpi_set_firmware_waking_vector
+@@ -236,53 +216,6 @@ acpi_status acpi_enter_sleep_state_s4bios(void)
+ 
+ ACPI_EXPORT_SYMBOL(acpi_enter_sleep_state_s4bios)
+ #endif				/* !ACPI_REDUCED_HARDWARE */
+-/*******************************************************************************
+- *
+- * FUNCTION:    acpi_hw_sleep_dispatch
+- *
+- * PARAMETERS:  sleep_state         - Which sleep state to enter/exit
+- *              function_id         - Sleep, wake_prep, or Wake
+- *
+- * RETURN:      Status from the invoked sleep handling function.
+- *
+- * DESCRIPTION: Dispatch a sleep/wake request to the appropriate handling
+- *              function.
+- *
+- ******************************************************************************/
+-static acpi_status acpi_hw_sleep_dispatch(u8 sleep_state, u32 function_id)
+-{
+-	acpi_status status;
+-	struct acpi_sleep_functions *sleep_functions =
+-	    &acpi_sleep_dispatch[function_id];
+-
+-#if (!ACPI_REDUCED_HARDWARE)
+-	/*
+-	 * If the Hardware Reduced flag is set (from the FADT), we must
+-	 * use the extended sleep registers (FADT). Note: As per the ACPI
+-	 * specification, these extended registers are to be used for HW-reduced
+-	 * platforms only. They are not general-purpose replacements for the
+-	 * legacy PM register sleep support.
+-	 */
+-	if (acpi_gbl_reduced_hardware) {
+-		status = sleep_functions->extended_function(sleep_state);
+-	} else {
+-		/* Legacy sleep */
+-
+-		status = sleep_functions->legacy_function(sleep_state);
+-	}
+-
+-	return (status);
+-
+-#else
+-	/*
+-	 * For the case where reduced-hardware-only code is being generated,
+-	 * we know that only the extended sleep registers are available
+-	 */
+-	status = sleep_functions->extended_function(sleep_state);
+-	return (status);
+-
+-#endif				/* !ACPI_REDUCED_HARDWARE */
+-}
+ 
+ /*******************************************************************************
+  *
+@@ -389,7 +322,12 @@ acpi_status acpi_enter_sleep_state(u8 sleep_state)
+ 		return_ACPI_STATUS(AE_AML_OPERAND_VALUE);
+ 	}
+ 
+-	status = acpi_hw_sleep_dispatch(sleep_state, ACPI_SLEEP_FUNCTION_ID);
++#if !ACPI_REDUCED_HARDWARE
++	if (!acpi_gbl_reduced_hardware)
++		status = acpi_hw_legacy_sleep(sleep_state);
++	else
++#endif
++		status = acpi_hw_extended_sleep(sleep_state);
+ 	return_ACPI_STATUS(status);
+ }
+ 
+@@ -415,8 +353,12 @@ acpi_status acpi_leave_sleep_state_prep(u8 sleep_state)
+ 
+ 	ACPI_FUNCTION_TRACE(acpi_leave_sleep_state_prep);
+ 
+-	status =
+-	    acpi_hw_sleep_dispatch(sleep_state, ACPI_WAKE_PREP_FUNCTION_ID);
++#if !ACPI_REDUCED_HARDWARE
++	if (!acpi_gbl_reduced_hardware)
++		status = acpi_hw_legacy_wake_prep(sleep_state);
++	else
++#endif
++		status = acpi_hw_extended_wake_prep(sleep_state);
+ 	return_ACPI_STATUS(status);
+ }
+ 
+@@ -440,7 +382,12 @@ acpi_status acpi_leave_sleep_state(u8 sleep_state)
+ 
+ 	ACPI_FUNCTION_TRACE(acpi_leave_sleep_state);
+ 
+-	status = acpi_hw_sleep_dispatch(sleep_state, ACPI_WAKE_FUNCTION_ID);
++#if !ACPI_REDUCED_HARDWARE
++	if (!acpi_gbl_reduced_hardware)
++		status = acpi_hw_legacy_wake(sleep_state);
++	else
++#endif
++		status = acpi_hw_extended_wake(sleep_state);
+ 	return_ACPI_STATUS(status);
+ }
+ 
+diff --git a/include/acpi/actypes.h b/include/acpi/actypes.h
+index d549e31c6d18..cfcb3abc65b9 100644
+--- a/include/acpi/actypes.h
++++ b/include/acpi/actypes.h
+@@ -894,15 +894,6 @@ typedef u8 acpi_adr_space_type;
+ #define ACPI_ENABLE_EVENT                       1
+ #define ACPI_DISABLE_EVENT                      0
+ 
+-/* Sleep function dispatch */
+-
+-typedef acpi_status (*acpi_sleep_function) (u8 sleep_state);
+-
+-struct acpi_sleep_functions {
+-	acpi_sleep_function legacy_function;
+-	acpi_sleep_function extended_function;
+-};
+-
+ /*
+  * External ACPI object definition
+  */
+-- 
+2.11.0
