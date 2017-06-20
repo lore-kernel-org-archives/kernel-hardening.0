@@ -1,67 +1,44 @@
-Date: Tue, 20 Jun 2017 09:07:21 +0200
-From: Pavel Machek <pavel@ucw.cz>
-Message-ID: <20170620070721.GA30728@amd>
-References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
- <1497286620-15027-5-git-send-email-s.mesoraca16@gmail.com>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="azLHFNyN32YCQGCU"
-Content-Disposition: inline
-In-Reply-To: <1497286620-15027-5-git-send-email-s.mesoraca16@gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 04/11] S.A.R.A. USB Filtering
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
+In-Reply-To: <CAHmME9oHZz44uQ1tq=M=Vrxc5NY-2r4xFjbwge-Hp=U-cCEYfQ@mail.gmail.com>
+References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
+ <20170614224526.29076-1-Jason@zx2c4.com> <CAHmME9rv3EjOVF4LhYZ0VS2LYKjDr_-TxzNHvyE_mKZ_UX0+eA@mail.gmail.com>
+ <20170620060344.ngbnzg2mz5hvq4kw@thunk.org> <CAHmME9oHZz44uQ1tq=M=Vrxc5NY-2r4xFjbwge-Hp=U-cCEYfQ@mail.gmail.com>
+From: Jeffrey Walton <noloader@gmail.com>
+Date: Tue, 20 Jun 2017 04:33:37 -0400
+Message-ID: <CAH8yC8kLHL80_i2WRssgE3chL3iU-6dwvdkM-MoaPx4mtjx-kg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Theodore Ts'o <tytso@mit.edu>, tglx@breakpoint.cc, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Michael Ellerman <mpe@ellerman.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Jun 20, 2017 at 4:14 AM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+>...
+> Specifically, I added `depends on DEBUG_KERNEL`. This means that these
+> useful warnings will only poke other kernel developers. This is probably
+> exactly what we want. If the various associated developers see a warning
+> coming from their particular subsystem, they'll be more motivated to
+> fix it. Ordinary users on distribution kernels shouldn't see the
+> warnings or the spam at all, since typically users aren't using
+> DEBUG_KERNEL.
 
---azLHFNyN32YCQGCU
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+I think it is a bad idea to suppress all messages from a security
+engineering point of view.
 
-On Mon 2017-06-12 18:56:53, Salvatore Mesoraca wrote:
-> Introduction of S.A.R.A. USB Filtering.
-> It uses the "usb_device_auth" LSM hook to provide a mechanism to decide
-> which USB devices should be authorized to connect to the system and
-> which shouldn't.
-> The main goal is to narrow the attack surface for custom USB devices
-> designed to exploit vulnerabilities found in some USB device drivers.
-> Via configuration it's possible to allow or to deny authorization, based
-> on one or more of: Vendor ID, Product ID, bus name and port number. There
-> is also support for "trailing wildcards".
+Many folks don't run debug kernels. Most of the users who want or need
+to know of the issues won't realize its happening. Consider, the
+reason we learned of systemd's problems was due to dmesg's.
 
-Hmm. Given that USB device provides vendor id/product id, this does
-not really stop anyone, right?
+Suppressing all messages for all configurations cast a wider net than
+necessary. Configurations that could potentially be detected and fixed
+likely will go unnoticed. If the problem is not brought to light, then
+it won't be fixed.
 
-AFAICT you can still get USB stick with vid/pid of logitech keyboard,
-and kernel will recognize it as a usb stick.
+I feel like the kernel is making policy decisions for some
+organizations. For those who have hardware that is effectively
+unfixable, then organization has to decide what to do based on their
+risk adversity. They may decide to live with the risk, or they may
+decide to refresh the hardware. However, without information on the
+issue, they may not even realize they have an actionable item.
 
-So you should not really filter on vid/pid, but on device
-types (sha sum of USB descriptor?).
-
-> Depending on the configuration, it can work both as a white list or as a
-> black list.
-
-Blacklisting vid/pid is completely useless. Whitelisting vid/pid is
-nearly so. Attacker able to plug USB devices sees devices already
-attached, so he can guess right vid/pids quite easily.
-
-								Pavel
---=20
-(english) http://www.livejournal.com/~pavelmachek
-(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
-g.html
-
---azLHFNyN32YCQGCU
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iEYEARECAAYFAllIyakACgkQMOfwapXb+vL77ACggGqDtQ0u6emWwkM4vRVmqRNx
-pcIAoLvy8RyhQ4r4TN3QYLLb8v2UTito
-=lPqt
------END PGP SIGNATURE-----
-
---azLHFNyN32YCQGCU--
+Jeff
