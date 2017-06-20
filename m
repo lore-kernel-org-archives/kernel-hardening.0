@@ -1,31 +1,38 @@
+Date: Tue, 20 Jun 2017 12:20:41 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170620112040.GE28157@leverpostej>
+References: <1497018608-22168-1-git-send-email-alex.popov@linux.com>
+ <CAGXu5jLcF_EHMtp+vb-zdjqKe+Z33ZKKVrx1FEVSXPyEEBa_qQ@mail.gmail.com>
+ <995f7cdd-9894-5daf-2910-c2aba980302c@redhat.com>
 MIME-Version: 1.0
-In-Reply-To: <20170620093642.3ri6dct5qkf7vhuc@thunk.org>
-References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
- <20170614224526.29076-1-Jason@zx2c4.com> <CAHmME9rv3EjOVF4LhYZ0VS2LYKjDr_-TxzNHvyE_mKZ_UX0+eA@mail.gmail.com>
- <20170620060344.ngbnzg2mz5hvq4kw@thunk.org> <CAHmME9oHZz44uQ1tq=M=Vrxc5NY-2r4xFjbwge-Hp=U-cCEYfQ@mail.gmail.com>
- <CAH8yC8kLHL80_i2WRssgE3chL3iU-6dwvdkM-MoaPx4mtjx-kg@mail.gmail.com>
- <CAHmME9rk-qrjJs6ZXQPoWV0sKBK_juq18tcE1h+pX8zSJJK1iQ@mail.gmail.com> <20170620093642.3ri6dct5qkf7vhuc@thunk.org>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue, 20 Jun 2017 11:49:07 +0200
-Message-ID: <CAHmME9oOUo-A-0NA5qPvcbTRf+xYKxmOtXb9fXVCmLwLcWPWug@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
-To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, noloader@gmail.com, tglx@breakpoint.cc, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Michael Ellerman <mpe@ellerman.id.au>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <995f7cdd-9894-5daf-2910-c2aba980302c@redhat.com>
+Subject: Re: [kernel-hardening] Re: [PATCH RFC v2 1/1] gcc-plugins: Add
+ stackleak feature erasing the kernel stack at the end of syscalls
+To: Laura Abbott <labbott@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>, ard.biesheuvel@linaro.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 20, 2017 at 11:36 AM, Theodore Ts'o <tytso@mit.edu> wrote:
->> But I think there's another camp that would mutiny in the face of this
->> kind of hubris.
->
-> Blocking the boot for hours and hours until we have enough entropy to
-> initialize the CRNG is ***not*** an acceptable way of making the
-> warning messages go away.  Do that and the users **will** mutiny.
->
-> It's this sort of attitude which is why Linus has in the past said
-> that security people are sometimes insane....
+On Tue, Jun 13, 2017 at 02:51:59PM -0700, Laura Abbott wrote:
+> On 06/09/2017 10:28 AM, Kees Cook wrote:
+> > It seems like it shouldn't be too hard to add on-user-return erasure
+> > code to other architectures too.
+> 
+> I played around getting this to compile for arm64 with a dummy
+> stack clearing function. arm64 is doing something special with the
+> efistub so it fails to link with
+> 
+> drivers/firmware/efi/libstub/arm-stub.c:45:(.init.text+0x54): relocation
+> 	truncated to fit: R_AARCH64_CALL26 against undefined symbol `__efistub_track_stack'
+> 
+> The relocation to the .init.text section and appending __efistub happens after
+> compilation so the checks in the plugin itself don't work. I haven't come up
+> with a solution to not have the plugin run on the stub yet.
 
-Uh, talk about a totally unnecessary punch... In case my last email
-wasn't clear, I fully recognize that `default y` is a tad too extreme,
-which is why from one of the earliest revisions in this series, I
-moved directly to the compromise solution (`depends DEBUG_KERNEL`)
-without even waiting for people to complain first.
+Can we do something like what we do for KCOV, and (only) place the
+plugin-invoking flags to into CFLAGS_STACKLEAK, which we can filter out
+in scripts/Makefile.lib?
+
+Thanks,
+Mark.
