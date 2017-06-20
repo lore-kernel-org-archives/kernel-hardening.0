@@ -1,46 +1,60 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170620065631.GA25354@infradead.org>
-References: <1497905801-69164-1-git-send-email-keescook@chromium.org>
- <1497905801-69164-4-git-send-email-keescook@chromium.org> <20170620065631.GA25354@infradead.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 20 Jun 2017 12:25:53 -0700
-Message-ID: <CAGXu5jLkvqbV1=xGrvwLZPiAbswA6M5C3BB0M5MytRabLtEfLg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 3/4] randstruct: Disable randomization of ACPICA structs
-To: Christoph Hellwig <hch@infradead.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Message-ID: <1497987673.20270.107.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Tue, 20 Jun 2017 15:41:13 -0400
+In-Reply-To: <1497915397-93805-1-git-send-email-keescook@chromium.org>
+References: <1497915397-93805-1-git-send-email-keescook@chromium.org>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-3ihE6/2MaQiT3iOQ6Gtk"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] [PATCH 00/23] Hardened usercopy whitelisting
+To: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+Cc: David Windsor <dave@nullcore.net>, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 19, 2017 at 11:56 PM, Christoph Hellwig <hch@infradead.org> wrote:
-> On Mon, Jun 19, 2017 at 01:56:40PM -0700, Kees Cook wrote:
->> Since the ACPICA source is maintained externally to the kernel, we can
->> neither switch it to designated initializers nor mark it
->> __no_randomize_layout. Until ACPICA-upstream changes[1] land to handle the
->> designated initialization, explicitly skip it in the plugin.
->
-> NAK.  ACPI has no business rejecting kernel changes to start with, but
-> independent of that your patch was complete garbage anyway.
 
-While I don't disagree with your opinion about ACPICA's inclusion in
-the kernel, that isn't a battle I want to have. The ACPI maintainers
-have a certain way of doing things, and what I need to change is tiny
-compared to that.
+--=-3ihE6/2MaQiT3iOQ6Gtk
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-> There is no need for function pointers here, please include the patch
-> below instead:
+On Mon, 2017-06-19 at 16:36 -0700, Kees Cook wrote:
+> This series is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+> code
+> in the last public patch of grsecurity/PaX based on our understanding
+> of the code. Changes or omissions from the original code are ours and
+> don't reflect the original grsecurity/PaX code.
+>=20
+> David Windsor did the bulk of the porting, refactoring, splitting,
+> testing, etc; I just did some extra tweaks, hunk moving, and small
+> extra patches.
+>=20
+>=20
+> This updates the slab allocator to add annotations (useroffset and
+> usersize) to define allowed usercopy regions.
 
-Can you send the patch to https://github.com/acpica/acpica ? My change
-was finally accepted, so this whole issue will go away on the next
-refresh. Until then, I don't want to block the entire automatic
-structure selection logic of randstruct on a three-function table. :)
+This is a great improvement over the old system
+of having a few whitelisted kmalloc caches, and
+bounce buffering to copy data from caches that
+are not whitelisted!
 
-Given that it's a tiny exclusion for randstruct, and there is already
-a path in motion to fix it, I think this patch is trivial and
-sufficient.
+I like it.
 
--Kees
+--=20
+All rights reversed
+--=-3ihE6/2MaQiT3iOQ6Gtk
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
--- 
-Kees Cook
-Pixel Security
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQEcBAABCAAGBQJZSXpZAAoJEM553pKExN6DM4UH/1B6tlBjRtn/7Ce6np+or7Cm
+bmHL8dw81Dgbs4sjkA/yPZVcnunN8v5KsWpqTuDuU0V6by+b+zt0lao5vMn1gRuW
+YgGucAs6+EGuwWOw6dH8BYoUTO6DCDi16W8yKMIjXKeY0ORmGWC5+5EfCNvJUr7H
+NzaQb+Io/iJxIllc1iTXchRHRuZYvN7pSJtaxI8oukbkuibs01QC7s04YxLUQEef
+MEkNBRimVgxulFdr1YVgFlZ5U8Tun26aWXP3APGGH7dg4HsZo1JsqvVshXUytcvQ
+pBJywFWStinKDkiHrBKvqh4VUkAS0chlyujCuVtnKYPMQRs0m1iZCwmmwHLSJZA=
+=dguK
+-----END PGP SIGNATURE-----
+
+--=-3ihE6/2MaQiT3iOQ6Gtk--
