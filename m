@@ -1,42 +1,154 @@
+References: <20170620030112.GA140256@beast>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <505961f9-b266-191a-f4b7-931410a55149@redhat.com>
+Date: Tue, 20 Jun 2017 11:05:17 -0700
 MIME-Version: 1.0
-In-Reply-To: <20170620112040.GE28157@leverpostej>
-References: <1497018608-22168-1-git-send-email-alex.popov@linux.com>
- <CAGXu5jLcF_EHMtp+vb-zdjqKe+Z33ZKKVrx1FEVSXPyEEBa_qQ@mail.gmail.com>
- <995f7cdd-9894-5daf-2910-c2aba980302c@redhat.com> <20170620112040.GE28157@leverpostej>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Tue, 20 Jun 2017 16:13:44 +0200
-Message-ID: <CAKv+Gu-mmYJKLjszHgWxviFdWDYre2fGV1Og6jwqatFMbWRA0A@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCH RFC v2 1/1] gcc-plugins: Add
- stackleak feature erasing the kernel stack at the end of syscalls
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>
+In-Reply-To: <20170620030112.GA140256@beast>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH] mm: Add SLUB free list pointer obfuscation
+To: Kees Cook <keescook@chromium.org>, Christoph Lameter <cl@linux.com>
+Cc: Daniel Micay <danielmicay@gmail.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 20 June 2017 at 13:20, Mark Rutland <mark.rutland@arm.com> wrote:
-> On Tue, Jun 13, 2017 at 02:51:59PM -0700, Laura Abbott wrote:
->> On 06/09/2017 10:28 AM, Kees Cook wrote:
->> > It seems like it shouldn't be too hard to add on-user-return erasure
->> > code to other architectures too.
->>
->> I played around getting this to compile for arm64 with a dummy
->> stack clearing function. arm64 is doing something special with the
->> efistub so it fails to link with
->>
->> drivers/firmware/efi/libstub/arm-stub.c:45:(.init.text+0x54): relocation
->>       truncated to fit: R_AARCH64_CALL26 against undefined symbol `__efistub_track_stack'
->>
->> The relocation to the .init.text section and appending __efistub happens after
->> compilation so the checks in the plugin itself don't work. I haven't come up
->> with a solution to not have the plugin run on the stub yet.
->
-> Can we do something like what we do for KCOV, and (only) place the
-> plugin-invoking flags to into CFLAGS_STACKLEAK, which we can filter out
-> in scripts/Makefile.lib?
->
+On 06/19/2017 08:01 PM, Kees Cook wrote:
+> This SLUB free list pointer obfuscation code is modified from Brad
+> Spengler/PaX Team's code in the last public patch of grsecurity/PaX based
+> on my understanding of the code. Changes or omissions from the original
+> code are mine and don't reflect the original grsecurity/PaX code.
+> 
+> This adds a per-cache random value to SLUB caches that is XORed with
+> their freelist pointers. This adds nearly zero overhead and frustrates the
+> very common heap overflow exploitation method of overwriting freelist
+> pointers. A recent example of the attack is written up here:
+> http://cyseclabs.com/blog/cve-2016-6187-heap-off-by-one-exploit
+> 
+> This is based on patches by Daniel Micay, and refactored to avoid lots
+> of #ifdef code.
+> 
+> Suggested-by: Daniel Micay <danielmicay@gmail.com>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  include/linux/slub_def.h |  4 ++++
+>  init/Kconfig             | 10 ++++++++++
+>  mm/slub.c                | 32 +++++++++++++++++++++++++++-----
+>  3 files changed, 41 insertions(+), 5 deletions(-)
+> 
+> diff --git a/include/linux/slub_def.h b/include/linux/slub_def.h
+> index 07ef550c6627..0258d6d74e9c 100644
+> --- a/include/linux/slub_def.h
+> +++ b/include/linux/slub_def.h
+> @@ -93,6 +93,10 @@ struct kmem_cache {
+>  #endif
+>  #endif
+>  
+> +#ifdef CONFIG_SLAB_HARDENED
+> +	unsigned long random;
+> +#endif
+> +
+>  #ifdef CONFIG_NUMA
+>  	/*
+>  	 * Defragmentation by allocating from a remote node.
+> diff --git a/init/Kconfig b/init/Kconfig
+> index 1d3475fc9496..eb91082546bf 100644
+> --- a/init/Kconfig
+> +++ b/init/Kconfig
+> @@ -1900,6 +1900,16 @@ config SLAB_FREELIST_RANDOM
+>  	  security feature reduces the predictability of the kernel slab
+>  	  allocator against heap overflows.
+>  
+> +config SLAB_HARDENED
+> +	bool "Harden slab cache infrastructure"
+> +	default y
+> +	depends on SLAB_FREELIST_RANDOM && SLUB> +	help
+> +	  Many kernel heap attacks try to target slab cache metadata and
+> +	  other infrastructure. This options makes minor performance
+> +	  sacrifies to harden the kernel slab allocator against common
+> +	  exploit methods.
+> +
 
-I agree. This instrumentation serves no purpose in the EFI stub, given
-that there are no syscalls to return from, and so it would be better
-if we could prevent the plugin from seeing these source files to begin
-with. In fact, I could imagine that there are certain hot paths in
-kthreads that would benefit from having this disabled as well.
+Going to bikeshed on SLAB_HARDENED unless this is intended to be used for
+more things. Perhaps SLAB_FREELIST_HARDENED?
+
+What's the reason for the dependency on SLAB_FREELIST_RANDOM?
+
+>  config SLUB_CPU_PARTIAL
+>  	default y
+>  	depends on SLUB && SMP
+> diff --git a/mm/slub.c b/mm/slub.c
+> index 57e5156f02be..ffede2e0c5c1 100644
+> --- a/mm/slub.c
+> +++ b/mm/slub.c
+> @@ -34,6 +34,7 @@
+>  #include <linux/stacktrace.h>
+>  #include <linux/prefetch.h>
+>  #include <linux/memcontrol.h>
+> +#include <linux/random.h>
+>  
+>  #include <trace/events/kmem.h>
+>  
+> @@ -238,30 +239,50 @@ static inline void stat(const struct kmem_cache *s, enum stat_item si)
+>   * 			Core slab cache functions
+>   *******************************************************************/
+>  
+> +#ifdef CONFIG_SLAB_HARDENED
+> +# define initialize_random(s)					\
+> +		do {						\
+> +			s->random = get_random_long();		\
+> +		} while (0)
+> +# define FREEPTR_VAL(ptr, ptr_addr, s)	\
+> +		(void *)((unsigned long)(ptr) ^ s->random ^ (ptr_addr))
+> +#else
+> +# define initialize_random(s)		do { } while (0)
+> +# define FREEPTR_VAL(ptr, addr, s)	((void *)(ptr))
+> +#endif
+> +#define FREELIST_ENTRY(ptr_addr, s)				\
+> +		FREEPTR_VAL(*(unsigned long *)(ptr_addr),	\
+> +			    (unsigned long)ptr_addr, s)
+> +
+>  static inline void *get_freepointer(struct kmem_cache *s, void *object)
+>  {
+> -	return *(void **)(object + s->offset);
+> +	return FREELIST_ENTRY(object + s->offset, s);
+>  }
+>  
+>  static void prefetch_freepointer(const struct kmem_cache *s, void *object)
+>  {
+> -	prefetch(object + s->offset);
+> +	if (object)
+> +		prefetch(FREELIST_ENTRY(object + s->offset, s));
+>  }
+>  
+>  static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
+>  {
+> +	unsigned long freepointer_addr;
+>  	void *p;
+>  
+>  	if (!debug_pagealloc_enabled())
+>  		return get_freepointer(s, object);
+>  
+> -	probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
+> -	return p;
+> +	freepointer_addr = (unsigned long)object + s->offset;
+> +	probe_kernel_read(&p, (void **)freepointer_addr, sizeof(p));
+> +	return FREEPTR_VAL(p, freepointer_addr, s);
+>  }
+>  
+>  static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
+>  {
+> -	*(void **)(object + s->offset) = fp;
+> +	unsigned long freeptr_addr = (unsigned long)object + s->offset;
+> +
+> +	*(void **)freeptr_addr = FREEPTR_VAL(fp, freeptr_addr, s);
+>  }
+>  
+>  /* Loop over all objects in a slab */
+> @@ -3536,6 +3557,7 @@ static int kmem_cache_open(struct kmem_cache *s, unsigned long flags)
+>  {
+>  	s->flags = kmem_cache_flags(s->size, flags, s->name, s->ctor);
+>  	s->reserved = 0;
+> +	initialize_random(s);
+>  
+>  	if (need_reserve_slab_rcu && (s->flags & SLAB_TYPESAFE_BY_RCU))
+>  		s->reserved = sizeof(struct rcu_head);
+> 
