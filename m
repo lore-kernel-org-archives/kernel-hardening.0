@@ -1,152 +1,30 @@
-Date: Mon, 19 Jun 2017 20:01:12 -0700
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20170620030112.GA140256@beast>
+Date: Tue, 20 Jun 2017 11:38:09 +0800
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Message-ID: <20170620033809.GC17764@gondor.apana.org.au>
+References: <20170610025912.6499-1-Jason@zx2c4.com>
+ <20170611212023.31101-1-Jason@zx2c4.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] mm: Add SLUB free list pointer obfuscation
-To: Christoph Lameter <cl@linux.com>
-Cc: Daniel Micay <danielmicay@gmail.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <20170611212023.31101-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] Re: [PATCH] rsa-pkcs1pad: use constant time memory comparison for
+ MACs
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, stable@vger.kernel.org, linux-crypto@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This SLUB free list pointer obfuscation code is modified from Brad
-Spengler/PaX Team's code in the last public patch of grsecurity/PaX based
-on my understanding of the code. Changes or omissions from the original
-code are mine and don't reflect the original grsecurity/PaX code.
+On Sun, Jun 11, 2017 at 11:20:23PM +0200, Jason A. Donenfeld wrote:
+> Otherwise, we enable all sorts of forgeries via timing attack.
+> 
+> Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+> Suggested-by: Stephan Müller <smueller@chronox.de>
+> Cc: stable@vger.kernel.org
+> Cc: Herbert Xu <herbert@gondor.apana.org.au>
+> Cc: linux-crypto@vger.kernel.org
 
-This adds a per-cache random value to SLUB caches that is XORed with
-their freelist pointers. This adds nearly zero overhead and frustrates the
-very common heap overflow exploitation method of overwriting freelist
-pointers. A recent example of the attack is written up here:
-http://cyseclabs.com/blog/cve-2016-6187-heap-off-by-one-exploit
-
-This is based on patches by Daniel Micay, and refactored to avoid lots
-of #ifdef code.
-
-Suggested-by: Daniel Micay <danielmicay@gmail.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- include/linux/slub_def.h |  4 ++++
- init/Kconfig             | 10 ++++++++++
- mm/slub.c                | 32 +++++++++++++++++++++++++++-----
- 3 files changed, 41 insertions(+), 5 deletions(-)
-
-diff --git a/include/linux/slub_def.h b/include/linux/slub_def.h
-index 07ef550c6627..0258d6d74e9c 100644
---- a/include/linux/slub_def.h
-+++ b/include/linux/slub_def.h
-@@ -93,6 +93,10 @@ struct kmem_cache {
- #endif
- #endif
- 
-+#ifdef CONFIG_SLAB_HARDENED
-+	unsigned long random;
-+#endif
-+
- #ifdef CONFIG_NUMA
- 	/*
- 	 * Defragmentation by allocating from a remote node.
-diff --git a/init/Kconfig b/init/Kconfig
-index 1d3475fc9496..eb91082546bf 100644
---- a/init/Kconfig
-+++ b/init/Kconfig
-@@ -1900,6 +1900,16 @@ config SLAB_FREELIST_RANDOM
- 	  security feature reduces the predictability of the kernel slab
- 	  allocator against heap overflows.
- 
-+config SLAB_HARDENED
-+	bool "Harden slab cache infrastructure"
-+	default y
-+	depends on SLAB_FREELIST_RANDOM && SLUB
-+	help
-+	  Many kernel heap attacks try to target slab cache metadata and
-+	  other infrastructure. This options makes minor performance
-+	  sacrifies to harden the kernel slab allocator against common
-+	  exploit methods.
-+
- config SLUB_CPU_PARTIAL
- 	default y
- 	depends on SLUB && SMP
-diff --git a/mm/slub.c b/mm/slub.c
-index 57e5156f02be..ffede2e0c5c1 100644
---- a/mm/slub.c
-+++ b/mm/slub.c
-@@ -34,6 +34,7 @@
- #include <linux/stacktrace.h>
- #include <linux/prefetch.h>
- #include <linux/memcontrol.h>
-+#include <linux/random.h>
- 
- #include <trace/events/kmem.h>
- 
-@@ -238,30 +239,50 @@ static inline void stat(const struct kmem_cache *s, enum stat_item si)
-  * 			Core slab cache functions
-  *******************************************************************/
- 
-+#ifdef CONFIG_SLAB_HARDENED
-+# define initialize_random(s)					\
-+		do {						\
-+			s->random = get_random_long();		\
-+		} while (0)
-+# define FREEPTR_VAL(ptr, ptr_addr, s)	\
-+		(void *)((unsigned long)(ptr) ^ s->random ^ (ptr_addr))
-+#else
-+# define initialize_random(s)		do { } while (0)
-+# define FREEPTR_VAL(ptr, addr, s)	((void *)(ptr))
-+#endif
-+#define FREELIST_ENTRY(ptr_addr, s)				\
-+		FREEPTR_VAL(*(unsigned long *)(ptr_addr),	\
-+			    (unsigned long)ptr_addr, s)
-+
- static inline void *get_freepointer(struct kmem_cache *s, void *object)
- {
--	return *(void **)(object + s->offset);
-+	return FREELIST_ENTRY(object + s->offset, s);
- }
- 
- static void prefetch_freepointer(const struct kmem_cache *s, void *object)
- {
--	prefetch(object + s->offset);
-+	if (object)
-+		prefetch(FREELIST_ENTRY(object + s->offset, s));
- }
- 
- static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
- {
-+	unsigned long freepointer_addr;
- 	void *p;
- 
- 	if (!debug_pagealloc_enabled())
- 		return get_freepointer(s, object);
- 
--	probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
--	return p;
-+	freepointer_addr = (unsigned long)object + s->offset;
-+	probe_kernel_read(&p, (void **)freepointer_addr, sizeof(p));
-+	return FREEPTR_VAL(p, freepointer_addr, s);
- }
- 
- static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
- {
--	*(void **)(object + s->offset) = fp;
-+	unsigned long freeptr_addr = (unsigned long)object + s->offset;
-+
-+	*(void **)freeptr_addr = FREEPTR_VAL(fp, freeptr_addr, s);
- }
- 
- /* Loop over all objects in a slab */
-@@ -3536,6 +3557,7 @@ static int kmem_cache_open(struct kmem_cache *s, unsigned long flags)
- {
- 	s->flags = kmem_cache_flags(s->size, flags, s->name, s->ctor);
- 	s->reserved = 0;
-+	initialize_random(s);
- 
- 	if (need_reserve_slab_rcu && (s->flags & SLAB_TYPESAFE_BY_RCU))
- 		s->reserved = sizeof(struct rcu_head);
+Patch applied.  Thanks.
 -- 
-2.7.4
-
-
--- 
-Kees Cook
-Pixel Security
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
