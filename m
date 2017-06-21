@@ -1,90 +1,68 @@
-References: <1497018608-22168-1-git-send-email-alex.popov@linux.com>
- <CAGXu5jLcF_EHMtp+vb-zdjqKe+Z33ZKKVrx1FEVSXPyEEBa_qQ@mail.gmail.com>
- <995f7cdd-9894-5daf-2910-c2aba980302c@redhat.com>
- <20170620112040.GE28157@leverpostej>
- <CAGXu5j+Vpp60YSoPZUEGA-nFBLVUZSi-+itM7U9auSaWc0cBog@mail.gmail.com>
- <20170621092456.GA11903@leverpostej>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <2ade4e6b-fb40-091e-28eb-343a08925649@redhat.com>
-Date: Wed, 21 Jun 2017 08:54:58 -0700
 MIME-Version: 1.0
-In-Reply-To: <20170621092456.GA11903@leverpostej>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] Re: [PATCH RFC v2 1/1] gcc-plugins: Add
- stackleak feature erasing the kernel stack at the end of syscalls
-To: Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>
-Cc: Alexander Popov <alex.popov@linux.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Sender: keescook@google.com
+In-Reply-To: <1498046876.13083.17.camel@redhat.com>
+References: <20170621055835.GA27467@beast> <1498046876.13083.17.camel@redhat.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 21 Jun 2017 10:23:52 -0700
+Message-ID: <CAGXu5j+LJ7241o9xoXrorc-Wt9Z7YWOvkPjkxSMuGn6TtCFkgQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [PATCH] [RFC] binfmt_elf: Use ELF_ET_DYN_BASE
+ only for PIE
+To: Rik van Riel <riel@redhat.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Daniel Micay <danielmicay@gmail.com>, Qualys Security Advisory <qsa@qualys.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Dmitry Safonov <dsafonov@virtuozzo.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 06/21/2017 02:24 AM, Mark Rutland wrote:
-> On Tue, Jun 20, 2017 at 12:11:56PM -0700, Kees Cook wrote:
->> On Tue, Jun 20, 2017 at 4:20 AM, Mark Rutland <mark.rutland@arm.com> wrote:
->>> On Tue, Jun 13, 2017 at 02:51:59PM -0700, Laura Abbott wrote:
->>>> On 06/09/2017 10:28 AM, Kees Cook wrote:
->>>>> It seems like it shouldn't be too hard to add on-user-return erasure
->>>>> code to other architectures too.
->>>>
->>>> I played around getting this to compile for arm64 with a dummy
->>>> stack clearing function. arm64 is doing something special with the
->>>> efistub so it fails to link with
->>>>
->>>> drivers/firmware/efi/libstub/arm-stub.c:45:(.init.text+0x54): relocation
->>>>       truncated to fit: R_AARCH64_CALL26 against undefined symbol `__efistub_track_stack'
->>>>
->>>> The relocation to the .init.text section and appending __efistub happens after
->>>> compilation so the checks in the plugin itself don't work. I haven't come up
->>>> with a solution to not have the plugin run on the stub yet.
->>>
->>> Can we do something like what we do for KCOV, and (only) place the
->>> plugin-invoking flags to into CFLAGS_STACKLEAK, which we can filter out
->>> in scripts/Makefile.lib?
->>
->> That seems fine to me, though plugins have tended to provide a
->> DISABLE_foo_bar_PLUGIN export (like used in ppc for turning off the
->> latent entropy plugin):
->>
->> scripts/Makefile.gcc-plugins:    DISABLE_LATENT_ENTROPY_PLUGIN +=
->> -fplugin-arg-latent_entropy_plugin-disable
->>
->> arch/powerpc/kernel/Makefile:CFLAGS_cputable.o +=
->> $(DISABLE_LATENT_ENTROPY_PLUGIN)
->> arch/powerpc/kernel/Makefile:CFLAGS_prom_init.o +=
->> $(DISABLE_LATENT_ENTROPY_PLUGIN)
->> ...
-> 
-> Interesting. I hadn't encountered that style before.
-> 
-> I'd seen the per-makefile config disables:
-> 
-> drivers/firmware/efi/libstub/Makefile:GCOV_PROFILE                      := n
-> drivers/firmware/efi/libstub/Makefile:KASAN_SANITIZE                    := n
-> drivers/firmware/efi/libstub/Makefile:UBSAN_SANITIZE                    := n
-> drivers/firmware/efi/libstub/Makefile:KCOV_INSTRUMENT                   := n
-> 
-> ... and per-object config disables:
-> 
-> arch/arm64/mm/Makefile:KASAN_SANITIZE_physaddr.o        += n
-> arch/arm64/mm/Makefile:KASAN_SANITIZE_kasan_init.o      := n
-> 
-> ... which AFAICT are both handled by the standard scripts/Makefile.lib idiom:
-> 
-> ifeq ($(CONFIG_KASAN),y)
-> _c_flags += $(if $(patsubst n%,, \
->                 $(KASAN_SANITIZE_$(basetarget).o)$(KASAN_SANITIZE)y), \
->                 $(CFLAGS_KASAN))
-> endif
-> 
-> ... it seems a shame for plugins to follow a different pattern.
-> 
-> Thanks,
-> Mark.
-> 
+On Wed, Jun 21, 2017 at 5:07 AM, Rik van Riel <riel@redhat.com> wrote:
+> On Tue, 2017-06-20 at 22:58 -0700, Kees Cook wrote:
+>> +/* This is the base location for PIE (ET_DYN with INTERP) loads. */
+>> +#define ELF_ET_DYN_BASE              0x400000UL
+>
+> This value is good for 32 bit binaries, but for 64
+> bit binaries you probably want to put ELF_ET_DYN_BASE
+> at 4GB or higher.
+>
+> The latter is necessary because Android uses the
+> lower 4GB of address space for its JVM runtime,
+> with 32 bit pointers inside that part of the otherwise
+> 64 bit address space.
+>
+> In other words:
+>
+> #define ELF_ET_DYN_BASE (mmap_is_ia32() ? 0x400000UL : 0x100000000UL)
 
-That's what I tried to do as a first attempt but I got bogged down
-in Makefiles and figuring out how to not pass the plugin flags to
-specific files. Agreed it would be good to have the plugins follow
-a similar pattern.
+Ah, interesting. Okay, that should be fine. I'll adjust it.
 
-Thanks,
-Laura
+>> +++ b/fs/binfmt_elf.c
+>>
+>> +                      * Therefore, programs are loaded offset
+>> from
+>> +                      * ELF_ET_DYN_BASE and loaders are loaded
+>> into the
+>> +                      * independently randomized mmap region (0
+>> load_bias
+>> +                      * without MAP_FIXED).
+>> +                      */
+>> +                     if (elf_interpreter) {
+>> +                             load_bias = ELF_ET_DYN_BASE;
+>> +                             if (current->flags & PF_RANDOMIZE)
+>> +                                     load_bias +=
+>> arch_mmap_rnd();
+>> +                             elf_flags |= MAP_FIXED;
+>> +                     } else
+>> +                             load_bias = 0;
+>> +
+>> +                     load_bias -= vaddr;
+>
+> I like this, and the big comment telling people how it
+> works :)
+
+Thanks! It looks like your patch for commenting load_bias never got
+picked up, so I've added some more comments for that and some other
+things too. (Mostly for all the stuff I have to read a few times when
+I look at this code.)
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
