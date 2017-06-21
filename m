@@ -1,49 +1,79 @@
-Date: Wed, 21 Jun 2017 10:08:15 +0100
-From: Will Deacon <will.deacon@arm.com>
-Message-ID: <20170621090815.GC3768@arm.com>
-References: <20170615011203.144108-1-thgarnie@google.com>
- <20170615011203.144108-2-thgarnie@google.com>
- <CAGXu5jLR7io8u-M8tqbYW22C+sb2a2wSYLRBqJ_dguT4x+1tsQ@mail.gmail.com>
- <CAJcbSZG8KH7kw5HMP-7HvfHh2RdAfGnOqjOibHr5H42tORRGCw@mail.gmail.com>
+Date: Wed, 21 Jun 2017 10:24:56 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170621092456.GA11903@leverpostej>
+References: <1497018608-22168-1-git-send-email-alex.popov@linux.com>
+ <CAGXu5jLcF_EHMtp+vb-zdjqKe+Z33ZKKVrx1FEVSXPyEEBa_qQ@mail.gmail.com>
+ <995f7cdd-9894-5daf-2910-c2aba980302c@redhat.com>
+ <20170620112040.GE28157@leverpostej>
+ <CAGXu5j+Vpp60YSoPZUEGA-nFBLVUZSi-+itM7U9auSaWc0cBog@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAJcbSZG8KH7kw5HMP-7HvfHh2RdAfGnOqjOibHr5H42tORRGCw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v10 2/3] arm/syscalls: Check address limit on user-mode
- return
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Petr Mladek <pmladek@suse.com>, Miroslav Benes <mbenes@suse.cz>, Al Viro <viro@zeniv.linux.org.uk>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAGXu5j+Vpp60YSoPZUEGA-nFBLVUZSi-+itM7U9auSaWc0cBog@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH RFC v2 1/1] gcc-plugins: Add
+ stackleak feature erasing the kernel stack at the end of syscalls
+To: Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@redhat.com>, Alexander Popov <alex.popov@linux.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 20, 2017 at 01:31:14PM -0700, Thomas Garnier wrote:
-> On Tue, Jun 20, 2017 at 1:18 PM, Kees Cook <keescook@chromium.org> wrote:
-> > On Wed, Jun 14, 2017 at 6:12 PM, Thomas Garnier <thgarnie@google.com> wrote:
-> >> diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
-> >> index eb5cd77bf1d8..e33c32d56193 100644
-> >> --- a/arch/arm/kernel/entry-common.S
-> >> +++ b/arch/arm/kernel/entry-common.S
-> >> @@ -41,7 +41,9 @@ ret_fast_syscall:
-> >>   UNWIND(.cantunwind    )
-> >>         disable_irq_notrace                     @ disable interrupts
-> >>         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
-> >> -       tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
-> >> +       tst     r1, #_TIF_SYSCALL_WORK
-> >> +       bne     fast_work_pending
-> >> +       tst     r1, #_TIF_WORK_MASK
+On Tue, Jun 20, 2017 at 12:11:56PM -0700, Kees Cook wrote:
+> On Tue, Jun 20, 2017 at 4:20 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> > On Tue, Jun 13, 2017 at 02:51:59PM -0700, Laura Abbott wrote:
+> >> On 06/09/2017 10:28 AM, Kees Cook wrote:
+> >> > It seems like it shouldn't be too hard to add on-user-return erasure
+> >> > code to other architectures too.
+> >>
+> >> I played around getting this to compile for arm64 with a dummy
+> >> stack clearing function. arm64 is doing something special with the
+> >> efistub so it fails to link with
+> >>
+> >> drivers/firmware/efi/libstub/arm-stub.c:45:(.init.text+0x54): relocation
+> >>       truncated to fit: R_AARCH64_CALL26 against undefined symbol `__efistub_track_stack'
+> >>
+> >> The relocation to the .init.text section and appending __efistub happens after
+> >> compilation so the checks in the plugin itself don't work. I haven't come up
+> >> with a solution to not have the plugin run on the stub yet.
 > >
-> > (IIUC) MOV32 is 2 cycles (MOVW, MOVT), and each TST above is 1 cycle
-> > and each BNE is 1 cycle (when not taken). So:
-> >
-> > mov32 r2, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
-> > tst r1, r2
-> > bne fast_work_pending
-> >
-> > is 4 cycles and tst, bne, tst, bne is also 4 cycles. Would mov32 be
-> > more readable (since it keeps the flags together)?
+> > Can we do something like what we do for KCOV, and (only) place the
+> > plugin-invoking flags to into CFLAGS_STACKLEAK, which we can filter out
+> > in scripts/Makefile.lib?
 > 
-> I guess it would be more readable. Any opinion from the arm folks?
+> That seems fine to me, though plugins have tended to provide a
+> DISABLE_foo_bar_PLUGIN export (like used in ppc for turning off the
+> latent entropy plugin):
+> 
+> scripts/Makefile.gcc-plugins:    DISABLE_LATENT_ENTROPY_PLUGIN +=
+> -fplugin-arg-latent_entropy_plugin-disable
+> 
+> arch/powerpc/kernel/Makefile:CFLAGS_cputable.o +=
+> $(DISABLE_LATENT_ENTROPY_PLUGIN)
+> arch/powerpc/kernel/Makefile:CFLAGS_prom_init.o +=
+> $(DISABLE_LATENT_ENTROPY_PLUGIN)
+> ...
 
-The mov32 sequence is probably better, but statically attributing cycles
-on a per instruction basis is pretty futile on modern CPUs.
+Interesting. I hadn't encountered that style before.
 
-Will
+I'd seen the per-makefile config disables:
+
+drivers/firmware/efi/libstub/Makefile:GCOV_PROFILE                      := n
+drivers/firmware/efi/libstub/Makefile:KASAN_SANITIZE                    := n
+drivers/firmware/efi/libstub/Makefile:UBSAN_SANITIZE                    := n
+drivers/firmware/efi/libstub/Makefile:KCOV_INSTRUMENT                   := n
+
+... and per-object config disables:
+
+arch/arm64/mm/Makefile:KASAN_SANITIZE_physaddr.o        += n
+arch/arm64/mm/Makefile:KASAN_SANITIZE_kasan_init.o      := n
+
+... which AFAICT are both handled by the standard scripts/Makefile.lib idiom:
+
+ifeq ($(CONFIG_KASAN),y)
+_c_flags += $(if $(patsubst n%,, \
+                $(KASAN_SANITIZE_$(basetarget).o)$(KASAN_SANITIZE)y), \
+                $(CFLAGS_KASAN))
+endif
+
+... it seems a shame for plugins to follow a different pattern.
+
+Thanks,
+Mark.
