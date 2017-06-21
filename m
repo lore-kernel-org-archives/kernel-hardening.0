@@ -1,79 +1,113 @@
-Date: Wed, 21 Jun 2017 10:24:56 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170621092456.GA11903@leverpostej>
-References: <1497018608-22168-1-git-send-email-alex.popov@linux.com>
- <CAGXu5jLcF_EHMtp+vb-zdjqKe+Z33ZKKVrx1FEVSXPyEEBa_qQ@mail.gmail.com>
- <995f7cdd-9894-5daf-2910-c2aba980302c@redhat.com>
- <20170620112040.GE28157@leverpostej>
- <CAGXu5j+Vpp60YSoPZUEGA-nFBLVUZSi-+itM7U9auSaWc0cBog@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5j+Vpp60YSoPZUEGA-nFBLVUZSi-+itM7U9auSaWc0cBog@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH RFC v2 1/1] gcc-plugins: Add
- stackleak feature erasing the kernel stack at the end of syscalls
-To: Kees Cook <keescook@chromium.org>
-Cc: Laura Abbott <labbott@redhat.com>, Alexander Popov <alex.popov@linux.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Message-ID: <1498046876.13083.17.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Wed, 21 Jun 2017 08:07:56 -0400
+In-Reply-To: <20170621055835.GA27467@beast>
+References: <20170621055835.GA27467@beast>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] [PATCH] [RFC] binfmt_elf: Use
+ ELF_ET_DYN_BASE only for PIE
+To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
+Cc: Daniel Micay <danielmicay@gmail.com>, Qualys Security Advisory <qsa@qualys.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Dmitry Safonov <dsafonov@virtuozzo.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 20, 2017 at 12:11:56PM -0700, Kees Cook wrote:
-> On Tue, Jun 20, 2017 at 4:20 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> > On Tue, Jun 13, 2017 at 02:51:59PM -0700, Laura Abbott wrote:
-> >> On 06/09/2017 10:28 AM, Kees Cook wrote:
-> >> > It seems like it shouldn't be too hard to add on-user-return erasure
-> >> > code to other architectures too.
-> >>
-> >> I played around getting this to compile for arm64 with a dummy
-> >> stack clearing function. arm64 is doing something special with the
-> >> efistub so it fails to link with
-> >>
-> >> drivers/firmware/efi/libstub/arm-stub.c:45:(.init.text+0x54): relocation
-> >>       truncated to fit: R_AARCH64_CALL26 against undefined symbol `__efistub_track_stack'
-> >>
-> >> The relocation to the .init.text section and appending __efistub happens after
-> >> compilation so the checks in the plugin itself don't work. I haven't come up
-> >> with a solution to not have the plugin run on the stub yet.
-> >
-> > Can we do something like what we do for KCOV, and (only) place the
-> > plugin-invoking flags to into CFLAGS_STACKLEAK, which we can filter out
-> > in scripts/Makefile.lib?
+On Tue, 2017-06-20 at 22:58 -0700, Kees Cook wrote:
+> The ELF_ET_DYN_BASE position was originally intended to keep loaders
+> away from ET_EXEC binaries. (For example, running "/lib/ld-linux.so.2
+> /bin/cat" might cause the subsequent load of /bin/cat into where the
+> loader had been loaded.) With the advent of PIE (ET_DYN binaries with
+> an INTERP Program Header), ELF_ET_DYN_BASE continued to be used since
+> the kernel was only looking at ET_DYN. However, since ELF_ET_DYN_BASE
+> is traditionally set at the top 1/3rd of the TASK_SIZE, a substantial
+> portion of the address space is unused.
 > 
-> That seems fine to me, though plugins have tended to provide a
-> DISABLE_foo_bar_PLUGIN export (like used in ppc for turning off the
-> latent entropy plugin):
+> For 32-bit tasks when RLIMIT_STACK is set to RLIM_INFINITY, programs
+> are loaded below the mmap region. This means they can be made to
+> collide
+> (CVE-2017-1000370) or nearly collide (CVE-2017-1000371) with
+> pathological
+> stack regions. Lowering ELF_ET_DYN_BASE solves both by moving
+> programs
+> above the mmap region in all cases, and will now additionally avoid
+> programs falling back to the mmap region by enforcing MAP_FIXED for
+> program loads (i.e. if it would have collided with the stack, now it
+> will fail to load instead of falling back to the mmap region).
 > 
-> scripts/Makefile.gcc-plugins:    DISABLE_LATENT_ENTROPY_PLUGIN +=
-> -fplugin-arg-latent_entropy_plugin-disable
+> To allow for a lower ELF_ET_DYN_BASE, loaders (ET_DYN without INTERP)
+> are loaded into the mmap region, leaving space available for either
+> an
+> ET_EXEC binary with a fixed location or PIE being loaded into mmap by
+> the
+> loader. Only PIE programs are loaded offset from ELF_ET_DYN_BASE,
+> which
+> means architectures can now safely lower their values without risk of
+> loaders colliding with their subsequently loaded programs.
 > 
-> arch/powerpc/kernel/Makefile:CFLAGS_cputable.o +=
-> $(DISABLE_LATENT_ENTROPY_PLUGIN)
-> arch/powerpc/kernel/Makefile:CFLAGS_prom_init.o +=
-> $(DISABLE_LATENT_ENTROPY_PLUGIN)
-> ...
+> Thanks go to PaX for inspiration on how to approach this solution.
+> 
+> Fixes: d1fd836dcf00 ("mm: split ET_DYN ASLR from mmap ASLR")
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  arch/x86/include/asm/elf.h |  8 ++------
+>  fs/binfmt_elf.c            | 38 +++++++++++++++++++++++++++++++-----
+> --
+>  2 files changed, 33 insertions(+), 13 deletions(-)
+> 
+> diff --git a/arch/x86/include/asm/elf.h b/arch/x86/include/asm/elf.h
+> index e8ab9a46bc68..46549973ea98 100644
+> --- a/arch/x86/include/asm/elf.h
+> +++ b/arch/x86/include/asm/elf.h
+> @@ -245,12 +245,8 @@ extern int force_personality32;
+>  #define CORE_DUMP_USE_REGSET
+>  #define ELF_EXEC_PAGESIZE	4096
+>  
+> -/* This is the location that an ET_DYN program is loaded if
+> exec'ed.  Typical
+> -   use of this is to invoke "./ld.so someprog" to test out a new
+> version of
+> -   the loader.  We need to make sure that it is out of the way of
+> the program
+> -   that it will "exec", and that there is sufficient room for the
+> brk.  */
+> -
+> -#define ELF_ET_DYN_BASE		(TASK_SIZE / 3 * 2)
+> +/* This is the base location for PIE (ET_DYN with INTERP) loads. */
+> +#define ELF_ET_DYN_BASE		0x400000UL
 
-Interesting. I hadn't encountered that style before.
+This value is good for 32 bit binaries, but for 64
+bit binaries you probably want to put ELF_ET_DYN_BASE
+at 4GB or higher.
 
-I'd seen the per-makefile config disables:
+The latter is necessary because Android uses the
+lower 4GB of address space for its JVM runtime,
+with 32 bit pointers inside that part of the otherwise
+64 bit address space.
 
-drivers/firmware/efi/libstub/Makefile:GCOV_PROFILE                      := n
-drivers/firmware/efi/libstub/Makefile:KASAN_SANITIZE                    := n
-drivers/firmware/efi/libstub/Makefile:UBSAN_SANITIZE                    := n
-drivers/firmware/efi/libstub/Makefile:KCOV_INSTRUMENT                   := n
+In other words:
 
-... and per-object config disables:
+#define ELF_ET_DYN_BASE (mmap_is_ia32() ? 0x400000UL : 0x100000000UL)
 
-arch/arm64/mm/Makefile:KASAN_SANITIZE_physaddr.o        += n
-arch/arm64/mm/Makefile:KASAN_SANITIZE_kasan_init.o      := n
+> +++ b/fs/binfmt_elf.c
+> 
+> +			 * Therefore, programs are loaded offset
+> from
+> +			 * ELF_ET_DYN_BASE and loaders are loaded
+> into the
+> +			 * independently randomized mmap region (0
+> load_bias
+> +			 * without MAP_FIXED).
+> +			 */
+> +			if (elf_interpreter) {
+> +				load_bias = ELF_ET_DYN_BASE;
+> +				if (current->flags & PF_RANDOMIZE)
+> +					load_bias +=
+> arch_mmap_rnd();
+> +				elf_flags |= MAP_FIXED;
+> +			} else
+> +				load_bias = 0;
+> +
+> +			load_bias -= vaddr;
 
-... which AFAICT are both handled by the standard scripts/Makefile.lib idiom:
-
-ifeq ($(CONFIG_KASAN),y)
-_c_flags += $(if $(patsubst n%,, \
-                $(KASAN_SANITIZE_$(basetarget).o)$(KASAN_SANITIZE)y), \
-                $(CFLAGS_KASAN))
-endif
-
-... it seems a shame for plugins to follow a different pattern.
-
-Thanks,
-Mark.
+I like this, and the big comment telling people how it
+works :)
