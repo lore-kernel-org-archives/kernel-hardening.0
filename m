@@ -1,46 +1,90 @@
+References: <1497018608-22168-1-git-send-email-alex.popov@linux.com>
+ <CAGXu5jLcF_EHMtp+vb-zdjqKe+Z33ZKKVrx1FEVSXPyEEBa_qQ@mail.gmail.com>
+ <995f7cdd-9894-5daf-2910-c2aba980302c@redhat.com>
+ <20170620112040.GE28157@leverpostej>
+ <CAGXu5j+Vpp60YSoPZUEGA-nFBLVUZSi-+itM7U9auSaWc0cBog@mail.gmail.com>
+ <20170621092456.GA11903@leverpostej>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <2ade4e6b-fb40-091e-28eb-343a08925649@redhat.com>
+Date: Wed, 21 Jun 2017 08:54:58 -0700
 MIME-Version: 1.0
-In-Reply-To: <20170621081601.g6fsf6i3mxzar5sn@localhost>
-References: <20170615011203.144108-1-thgarnie@google.com> <20170615011203.144108-3-thgarnie@google.com>
- <20170621081601.g6fsf6i3mxzar5sn@localhost>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed, 21 Jun 2017 06:57:44 -0700
-Message-ID: <CAJcbSZGbO+FJjZay+XTZ5JbSS9cq3iEw-Mew4PkFeqhBw0ViKg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v10 3/3] arm64/syscalls: Check address limit on user-mode return
-To: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Petr Mladek <pmladek@suse.com>, Miroslav Benes <mbenes@suse.cz>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20170621092456.GA11903@leverpostej>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] Re: [PATCH RFC v2 1/1] gcc-plugins: Add
+ stackleak feature erasing the kernel stack at the end of syscalls
+To: Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>
+Cc: Alexander Popov <alex.popov@linux.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 21, 2017 at 1:16 AM, Catalin Marinas
-<catalin.marinas@arm.com> wrote:
-> On Wed, Jun 14, 2017 at 06:12:03PM -0700, Thomas Garnier wrote:
->> Ensure the address limit is a user-mode segment before returning to
->> user-mode. Otherwise a process can corrupt kernel-mode memory and
->> elevate privileges [1].
+On 06/21/2017 02:24 AM, Mark Rutland wrote:
+> On Tue, Jun 20, 2017 at 12:11:56PM -0700, Kees Cook wrote:
+>> On Tue, Jun 20, 2017 at 4:20 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+>>> On Tue, Jun 13, 2017 at 02:51:59PM -0700, Laura Abbott wrote:
+>>>> On 06/09/2017 10:28 AM, Kees Cook wrote:
+>>>>> It seems like it shouldn't be too hard to add on-user-return erasure
+>>>>> code to other architectures too.
+>>>>
+>>>> I played around getting this to compile for arm64 with a dummy
+>>>> stack clearing function. arm64 is doing something special with the
+>>>> efistub so it fails to link with
+>>>>
+>>>> drivers/firmware/efi/libstub/arm-stub.c:45:(.init.text+0x54): relocation
+>>>>       truncated to fit: R_AARCH64_CALL26 against undefined symbol `__efistub_track_stack'
+>>>>
+>>>> The relocation to the .init.text section and appending __efistub happens after
+>>>> compilation so the checks in the plugin itself don't work. I haven't come up
+>>>> with a solution to not have the plugin run on the stub yet.
+>>>
+>>> Can we do something like what we do for KCOV, and (only) place the
+>>> plugin-invoking flags to into CFLAGS_STACKLEAK, which we can filter out
+>>> in scripts/Makefile.lib?
 >>
->> The set_fs function sets the TIF_SETFS flag to force a slow path on
->> return. In the slow path, the address limit is checked to be USER_DS if
->> needed.
+>> That seems fine to me, though plugins have tended to provide a
+>> DISABLE_foo_bar_PLUGIN export (like used in ppc for turning off the
+>> latent entropy plugin):
 >>
->> [1] https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+>> scripts/Makefile.gcc-plugins:    DISABLE_LATENT_ENTROPY_PLUGIN +=
+>> -fplugin-arg-latent_entropy_plugin-disable
 >>
->> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> ---
->> v10 redesigns the change to use work flags on set_fs as recommended by
->> Linus and agreed by others.
->>
->> Based on next-20170609
->> ---
->>  arch/arm64/include/asm/thread_info.h | 4 +++-
->>  arch/arm64/include/asm/uaccess.h     | 3 +++
->>  arch/arm64/kernel/signal.c           | 5 +++++
->>  3 files changed, 11 insertions(+), 1 deletion(-)
->
-> For arm64:
->
-> Reviewed-by: Catalin Marinas <catalin.marinas@arm.com>
+>> arch/powerpc/kernel/Makefile:CFLAGS_cputable.o +=
+>> $(DISABLE_LATENT_ENTROPY_PLUGIN)
+>> arch/powerpc/kernel/Makefile:CFLAGS_prom_init.o +=
+>> $(DISABLE_LATENT_ENTROPY_PLUGIN)
+>> ...
+> 
+> Interesting. I hadn't encountered that style before.
+> 
+> I'd seen the per-makefile config disables:
+> 
+> drivers/firmware/efi/libstub/Makefile:GCOV_PROFILE                      := n
+> drivers/firmware/efi/libstub/Makefile:KASAN_SANITIZE                    := n
+> drivers/firmware/efi/libstub/Makefile:UBSAN_SANITIZE                    := n
+> drivers/firmware/efi/libstub/Makefile:KCOV_INSTRUMENT                   := n
+> 
+> ... and per-object config disables:
+> 
+> arch/arm64/mm/Makefile:KASAN_SANITIZE_physaddr.o        += n
+> arch/arm64/mm/Makefile:KASAN_SANITIZE_kasan_init.o      := n
+> 
+> ... which AFAICT are both handled by the standard scripts/Makefile.lib idiom:
+> 
+> ifeq ($(CONFIG_KASAN),y)
+> _c_flags += $(if $(patsubst n%,, \
+>                 $(KASAN_SANITIZE_$(basetarget).o)$(KASAN_SANITIZE)y), \
+>                 $(CFLAGS_KASAN))
+> endif
+> 
+> ... it seems a shame for plugins to follow a different pattern.
+> 
+> Thanks,
+> Mark.
+> 
 
-Thanks Catalin
+That's what I tried to do as a first attempt but I got bogged down
+in Makefiles and figuring out how to not pass the plugin flags to
+specific files. Agreed it would be good to have the plugins follow
+a similar pattern.
 
--- 
-Thomas
+Thanks,
+Laura
