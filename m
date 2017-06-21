@@ -1,51 +1,121 @@
-MIME-Version: 1.0
-In-Reply-To: <20170620233836.75k5usug5w3xhwlw@thunk.org>
-References: <20170614192838.3jz4sxpcuhxygx4z@breakpoint.cc>
- <20170614224526.29076-1-Jason@zx2c4.com> <CAHmME9rv3EjOVF4LhYZ0VS2LYKjDr_-TxzNHvyE_mKZ_UX0+eA@mail.gmail.com>
- <20170620060344.ngbnzg2mz5hvq4kw@thunk.org> <CAHmME9oHZz44uQ1tq=M=Vrxc5NY-2r4xFjbwge-Hp=U-cCEYfQ@mail.gmail.com>
- <CAH8yC8kLHL80_i2WRssgE3chL3iU-6dwvdkM-MoaPx4mtjx-kg@mail.gmail.com>
- <CAHmME9rk-qrjJs6ZXQPoWV0sKBK_juq18tcE1h+pX8zSJJK1iQ@mail.gmail.com>
- <20170620093642.3ri6dct5qkf7vhuc@thunk.org> <CAHmME9oOUo-A-0NA5qPvcbTRf+xYKxmOtXb9fXVCmLwLcWPWug@mail.gmail.com>
- <20170620233836.75k5usug5w3xhwlw@thunk.org>
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Wed, 21 Jun 2017 01:54:05 +0200
-Message-ID: <CAHmME9qvPL+vdY16SgV2VzuDDyM4r+hkYy8yGG3LJaa-3igxfA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] random: silence compiler warnings and fix race
+Date: Wed, 21 Jun 2017 02:03:00 +0200
+Message-Id: <20170621000300.11646-1-Jason@zx2c4.com>
+In-Reply-To: <CAHmME9qvPL+vdY16SgV2VzuDDyM4r+hkYy8yGG3LJaa-3igxfA@mail.gmail.com>
+References: <CAHmME9qvPL+vdY16SgV2VzuDDyM4r+hkYy8yGG3LJaa-3igxfA@mail.gmail.com>
+Subject: [kernel-hardening] [PATCH] random: warn when kernel uses unseeded randomness
 To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Jeffrey Walton <noloader@gmail.com>, tglx@breakpoint.cc, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Michael Ellerman <mpe@ellerman.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 21, 2017 at 1:38 AM, Theodore Ts'o <tytso@mit.edu> wrote:
-> The punch was in response to this statement, which I personally found
-> fairly infuriating:
->
->>> I more or less agree with you that we should just turn this on for all
->>> users and they'll just have to live with the spam and report odd
->>> entries, and overtime we'll fix all the violations.
+This enables an important dmesg notification about when drivers have
+used the crng without it being seeded first. Prior, these errors would
+occur silently, and so there hasn't been a great way of diagnosing these
+types of bugs for obscure setups. By adding this as a config option, we
+can leave it on by default, so that we learn where these issues happen,
+in the field, will still allowing some people to turn it off, if they
+really know what they're doing and do not want the log entries.
 
-Holy cow, please cool it. I think the "or less" part was relevant, as
-was the subsequent sentence which characterized that sentiment as
-"hubris". Also, the subsequent email when I made explicit the fact
-that I was more in agreement with you than you interpreted. So, in
-case you're really really really not getting the message I'm trying to
-make so explicitly clear to you: I AGREE WITH YOU. So, no more
-punching, pretty please?
+However, we don't leave it _completely_ by default. An earlier version
+of this patch simply had `default y`. I'd really love that, but it turns
+out, this problem with unseeded randomness being used is really quite
+present and is going to take a long time to fix. Thus, as a compromise
+between log-messages-for-all and nobody-knows, this is `default y`,
+except it is also `depends on DEBUG_KERNEL`. This will ensure that the
+curious see the messages while others don't have to.
 
->
-> There seems to be a fundamental misapprehension that it will be easy
-> to "fix all the violations".
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+Signed-off-by: Theodore Ts'o <tytso@mit.edu>
+---
+Hi Ted,
 
-I don't think it will be easy. I agree with you.
+This patch is meant to replace d06bfd1989fe97623b32d6df4ffa6e4338c99dc8,
+which is currently in your dev tree. It switches from using `default y`
+and `depends on DEBUG_KERNEL` to using the more simple `default DEBUG_KERNEL`.
+This kind of change I think should satisfy most potential objections, by
+being present for those who might find it useful, but invisble for those
+who don't want the spam.
 
-> But for other
-> platforms, it really, REALLY isn't that easy to fix.
-
-Other platforms will be hard. I agree with you.
-
-> So personally, I think
-
-I'm going to roll Kees' suggestion into a PATCH and send it to you.
-You can decide if you want to apply it. I'll be satisfied with
-whatever you choose and will follow your lead.
+If you'd like to replace the earlier commit with this one, feel free. If
+not, that's fine too.
 
 Jason
+
+ drivers/char/random.c | 15 +++++++++++++--
+ lib/Kconfig.debug     | 15 +++++++++++++++
+ 2 files changed, 28 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index 3853dd4f92e7..fa5bbd5a7ca0 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -288,7 +288,6 @@
+ #define SEC_XFER_SIZE		512
+ #define EXTRACT_SIZE		10
+ 
+-#define DEBUG_RANDOM_BOOT 0
+ 
+ #define LONGS(x) (((x) + sizeof(unsigned long) - 1)/sizeof(unsigned long))
+ 
+@@ -1481,7 +1480,7 @@ void get_random_bytes(void *buf, int nbytes)
+ {
+ 	__u8 tmp[CHACHA20_BLOCK_SIZE];
+ 
+-#if DEBUG_RANDOM_BOOT > 0
++#ifdef CONFIG_WARN_UNSEEDED_RANDOM
+ 	if (!crng_ready())
+ 		printk(KERN_NOTICE "random: %pF get_random_bytes called "
+ 		       "with crng_init = %d\n", (void *) _RET_IP_, crng_init);
+@@ -2075,6 +2074,12 @@ u64 get_random_u64(void)
+ 	    return ret;
+ #endif
+ 
++#ifdef CONFIG_WARN_UNSEEDED_RANDOM
++	if (!crng_ready())
++		printk(KERN_NOTICE "random: %pF get_random_u64 called "
++		       "with crng_init = %d\n", (void *) _RET_IP_, crng_init);
++#endif
++
+ 	batch = &get_cpu_var(batched_entropy_u64);
+ 	if (use_lock)
+ 		read_lock_irqsave(&batched_entropy_reset_lock, flags);
+@@ -2101,6 +2106,12 @@ u32 get_random_u32(void)
+ 	if (arch_get_random_int(&ret))
+ 		return ret;
+ 
++#ifdef CONFIG_WARN_UNSEEDED_RANDOM
++	if (!crng_ready())
++		printk(KERN_NOTICE "random: %pF get_random_u32 called "
++		       "with crng_init = %d\n", (void *) _RET_IP_, crng_init);
++#endif
++
+ 	batch = &get_cpu_var(batched_entropy_u32);
+ 	if (use_lock)
+ 		read_lock_irqsave(&batched_entropy_reset_lock, flags);
+diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
+index e4587ebe52c7..41cf12288369 100644
+--- a/lib/Kconfig.debug
++++ b/lib/Kconfig.debug
+@@ -1209,6 +1209,21 @@ config STACKTRACE
+ 	  It is also used by various kernel debugging features that require
+ 	  stack trace generation.
+ 
++config WARN_UNSEEDED_RANDOM
++	bool "Warn when kernel uses unseeded randomness"
++	default DEBUG_KERNEL
++	help
++	  Some parts of the kernel contain bugs relating to their use of
++	  cryptographically secure random numbers before it's actually possible
++	  to generate those numbers securely. This setting ensures that these
++	  flaws don't go unnoticed, by enabling a message, should this ever
++	  occur. This will allow people with obscure setups to know when things
++	  are going wrong, so that they might contact developers about fixing
++	  it.
++
++	  Say Y here, unless you simply do not care about using unseeded
++	  randomness and do not want a potential warning message in your logs.
++
+ config DEBUG_KOBJECT
+ 	bool "kobject debugging"
+ 	depends on DEBUG_KERNEL
+-- 
+2.13.1
