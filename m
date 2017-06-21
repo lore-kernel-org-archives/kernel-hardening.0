@@ -1,42 +1,41 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
-In-Reply-To: <20170621000300.11646-1-Jason@zx2c4.com>
-References: <CAHmME9qvPL+vdY16SgV2VzuDDyM4r+hkYy8yGG3LJaa-3igxfA@mail.gmail.com> <20170621000300.11646-1-Jason@zx2c4.com>
-Date: Wed, 21 Jun 2017 16:06:49 +1000
-Message-ID: <87k245ub5y.fsf@concordia.ellerman.id.au>
+Date: Wed, 21 Jun 2017 09:16:01 +0100
+From: Catalin Marinas <catalin.marinas@arm.com>
+Message-ID: <20170621081601.g6fsf6i3mxzar5sn@localhost>
+References: <20170615011203.144108-1-thgarnie@google.com>
+ <20170615011203.144108-3-thgarnie@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: Re: [kernel-hardening] [PATCH] random: warn when kernel uses unseeded randomness
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>"Jason A. Donenfeld" <Jason@zx2c4.com>, Jeffrey Walton <noloader@gmail.com>, tglx@breakpoint.cc, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170615011203.144108-3-thgarnie@google.com>
+Subject: [kernel-hardening] Re: [PATCH v10 3/3] arm64/syscalls: Check address limit on user-mode
+ return
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Petr Mladek <pmladek@suse.com>, Miroslav Benes <mbenes@suse.cz>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, linux-api@vger.kernel.org, x86@kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-"Jason A. Donenfeld" <Jason@zx2c4.com> writes:
+On Wed, Jun 14, 2017 at 06:12:03PM -0700, Thomas Garnier wrote:
+> Ensure the address limit is a user-mode segment before returning to
+> user-mode. Otherwise a process can corrupt kernel-mode memory and
+> elevate privileges [1].
+> 
+> The set_fs function sets the TIF_SETFS flag to force a slow path on
+> return. In the slow path, the address limit is checked to be USER_DS if
+> needed.
+> 
+> [1] https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+> 
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> ---
+> v10 redesigns the change to use work flags on set_fs as recommended by
+> Linus and agreed by others.
+> 
+> Based on next-20170609
+> ---
+>  arch/arm64/include/asm/thread_info.h | 4 +++-
+>  arch/arm64/include/asm/uaccess.h     | 3 +++
+>  arch/arm64/kernel/signal.c           | 5 +++++
+>  3 files changed, 11 insertions(+), 1 deletion(-)
 
-> This enables an important dmesg notification about when drivers have
-> used the crng without it being seeded first. Prior, these errors would
-> occur silently, and so there hasn't been a great way of diagnosing these
-> types of bugs for obscure setups. By adding this as a config option, we
-> can leave it on by default, so that we learn where these issues happen,
-> in the field, will still allowing some people to turn it off, if they
-> really know what they're doing and do not want the log entries.
->
-> However, we don't leave it _completely_ by default. An earlier version
-> of this patch simply had `default y`. I'd really love that, but it turns
-> out, this problem with unseeded randomness being used is really quite
-> present and is going to take a long time to fix. Thus, as a compromise
-> between log-messages-for-all and nobody-knows, this is `default y`,
-> except it is also `depends on DEBUG_KERNEL`. This will ensure that the
-> curious see the messages while others don't have to.
+For arm64:
 
-All the distro kernels I'm aware of have DEBUG_KERNEL=y.
-
-Where all includes at least RHEL, SLES, Fedora, Ubuntu & Debian.
-
-So it's still essentially default y.
-
-Emitting *one* warning by default would be reasonable. That gives users
-who are interested something to chase, they can then turn on the option
-to get the full story.
-
-Filling the dmesg buffer with repeated warnings is really not helpful.
-
-cheers
+Reviewed-by: Catalin Marinas <catalin.marinas@arm.com>
