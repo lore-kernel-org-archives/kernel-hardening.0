@@ -1,80 +1,157 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1498066040.27465.7.camel@gmail.com>
-References: <20170621055835.GA27467@beast> <1498046876.13083.17.camel@redhat.com>
- <CAGXu5j+LJ7241o9xoXrorc-Wt9Z7YWOvkPjkxSMuGn6TtCFkgQ@mail.gmail.com> <1498066040.27465.7.camel@gmail.com>
+Date: Wed, 21 Jun 2017 10:32:01 -0700
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 21 Jun 2017 10:28:11 -0700
-Message-ID: <CAGXu5jJGD5md4YZXadcFnw2WogoXfKtBSQmMa=Mm+CNe309F6w@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH] [RFC] binfmt_elf: Use ELF_ET_DYN_BASE
- only for PIE
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Qualys Security Advisory <qsa@qualys.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Dmitry Safonov <dsafonov@virtuozzo.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Message-ID: <20170621173201.GA114489@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH v2] binfmt_elf: Use ELF_ET_DYN_BASE only for PIE
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Rik van Riel <riel@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Qualys Security Advisory <qsa@qualys.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Dmitry Safonov <dsafonov@virtuozzo.com>, Andy Lutomirski <luto@amacapital.net>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 21, 2017 at 10:27 AM, Daniel Micay <danielmicay@gmail.com> wrote:
-> On Wed, 2017-06-21 at 10:23 -0700, Kees Cook wrote:
->> On Wed, Jun 21, 2017 at 5:07 AM, Rik van Riel <riel@redhat.com> wrote:
->> > On Tue, 2017-06-20 at 22:58 -0700, Kees Cook wrote:
->> > > +/* This is the base location for PIE (ET_DYN with INTERP) loads.
->> > > */
->> > > +#define ELF_ET_DYN_BASE              0x400000UL
->> >
->> > This value is good for 32 bit binaries, but for 64
->> > bit binaries you probably want to put ELF_ET_DYN_BASE
->> > at 4GB or higher.
->> >
->> > The latter is necessary because Android uses the
->> > lower 4GB of address space for its JVM runtime,
->> > with 32 bit pointers inside that part of the otherwise
->> > 64 bit address space.
->> >
->> > In other words:
->> >
->> > #define ELF_ET_DYN_BASE (mmap_is_ia32() ? 0x400000UL :
->> > 0x100000000UL)
->>
->> Ah, interesting. Okay, that should be fine. I'll adjust it.
->>
->> > > +++ b/fs/binfmt_elf.c
->> > >
->> > > +                      * Therefore, programs are loaded offset
->> > > from
->> > > +                      * ELF_ET_DYN_BASE and loaders are loaded
->> > > into the
->> > > +                      * independently randomized mmap region (0
->> > > load_bias
->> > > +                      * without MAP_FIXED).
->> > > +                      */
->> > > +                     if (elf_interpreter) {
->> > > +                             load_bias = ELF_ET_DYN_BASE;
->> > > +                             if (current->flags & PF_RANDOMIZE)
->> > > +                                     load_bias +=
->> > > arch_mmap_rnd();
->> > > +                             elf_flags |= MAP_FIXED;
->> > > +                     } else
->> > > +                             load_bias = 0;
->> > > +
->> > > +                     load_bias -= vaddr;
->> >
->> > I like this, and the big comment telling people how it
->> > works :)
->>
->> Thanks! It looks like your patch for commenting load_bias never got
->> picked up, so I've added some more comments for that and some other
->> things too. (Mostly for all the stuff I have to read a few times when
->> I look at this code.)
->>
->> -Kees
->>
->
-> The stack rlimit calculation fix for space potentially lost to ASLR is
-> probably still needed too, right?
+The ELF_ET_DYN_BASE position was originally intended to keep loaders
+away from ET_EXEC binaries. (For example, running "/lib/ld-linux.so.2
+/bin/cat" might cause the subsequent load of /bin/cat into where the
+loader had been loaded.) With the advent of PIE (ET_DYN binaries with
+an INTERP Program Header), ELF_ET_DYN_BASE continued to be used since
+the kernel was only looking at ET_DYN. However, since ELF_ET_DYN_BASE
+is traditionally set at the top 1/3rd of the TASK_SIZE, a substantial
+portion of the address space is unused.
 
-Yes. Was that picked up by akpm already?
+For 32-bit tasks when RLIMIT_STACK is set to RLIM_INFINITY, programs
+are loaded below the mmap region. This means they can be made to collide
+(CVE-2017-1000370) or nearly collide (CVE-2017-1000371) with pathological
+stack regions. Lowering ELF_ET_DYN_BASE solves both by moving programs
+above the mmap region in all cases, and will now additionally avoid
+programs falling back to the mmap region by enforcing MAP_FIXED for
+program loads (i.e. if it would have collided with the stack, now it
+will fail to load instead of falling back to the mmap region).
 
--Kees
+To allow for a lower ELF_ET_DYN_BASE, loaders (ET_DYN without INTERP)
+are loaded into the mmap region, leaving space available for either an
+ET_EXEC binary with a fixed location or PIE being loaded into mmap by the
+loader. Only PIE programs are loaded offset from ELF_ET_DYN_BASE, which
+means architectures can now safely lower their values without risk of
+loaders colliding with their subsequently loaded programs.
+
+For 64-bit, ELF_ET_DYN_BASE is best set to 4GB to allow runtimes to use
+the entire 32-bit address space for 32-bit pointers.
+
+Thanks to PaX Team, Daniel Micay, and Rik van Riel for inspiration and
+suggestions on how to implement this solution.
+
+Fixes: d1fd836dcf00 ("mm: split ET_DYN ASLR from mmap ASLR")
+Cc: stable@vger.kernel.org
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+v2:
+- bump x86_64 ELF_ET_DYN_BASE to 4GB, riel.
+- moar comments
+---
+ arch/x86/include/asm/elf.h | 13 +++++-----
+ fs/binfmt_elf.c            | 59 +++++++++++++++++++++++++++++++++++++++-------
+ 2 files changed, 58 insertions(+), 14 deletions(-)
+
+diff --git a/arch/x86/include/asm/elf.h b/arch/x86/include/asm/elf.h
+index e8ab9a46bc68..1c18d83d3f09 100644
+--- a/arch/x86/include/asm/elf.h
++++ b/arch/x86/include/asm/elf.h
+@@ -245,12 +245,13 @@ extern int force_personality32;
+ #define CORE_DUMP_USE_REGSET
+ #define ELF_EXEC_PAGESIZE	4096
+ 
+-/* This is the location that an ET_DYN program is loaded if exec'ed.  Typical
+-   use of this is to invoke "./ld.so someprog" to test out a new version of
+-   the loader.  We need to make sure that it is out of the way of the program
+-   that it will "exec", and that there is sufficient room for the brk.  */
+-
+-#define ELF_ET_DYN_BASE		(TASK_SIZE / 3 * 2)
++/*
++ * This is the base location for PIE (ET_DYN with INTERP) loads. On
++ * 64-bit, this is raised to 4GB to leave the entire 32-bit address
++ * space open for things that want to use the area for 32-bit pointers.
++ */
++#define ELF_ET_DYN_BASE		(mmap_is_ia32() ? 0x000400000UL : \
++						  0x100000000UL)
+ 
+ /* This yields a mask that user programs can use to figure out what
+    instruction set this CPU supports.  This could be done in user space,
+diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
+index 5075fd5c62c8..7465c3ea5dd5 100644
+--- a/fs/binfmt_elf.c
++++ b/fs/binfmt_elf.c
+@@ -927,17 +927,60 @@ static int load_elf_binary(struct linux_binprm *bprm)
+ 		elf_flags = MAP_PRIVATE | MAP_DENYWRITE | MAP_EXECUTABLE;
+ 
+ 		vaddr = elf_ppnt->p_vaddr;
++		/*
++		 * If we are loading ET_EXEC or we have already performed
++		 * the ET_DYN load_addr calculations, proceed normally.
++		 */
+ 		if (loc->elf_ex.e_type == ET_EXEC || load_addr_set) {
+ 			elf_flags |= MAP_FIXED;
+ 		} else if (loc->elf_ex.e_type == ET_DYN) {
+-			/* Try and get dynamic programs out of the way of the
+-			 * default mmap base, as well as whatever program they
+-			 * might try to exec.  This is because the brk will
+-			 * follow the loader, and is not movable.  */
+-			load_bias = ELF_ET_DYN_BASE - vaddr;
+-			if (current->flags & PF_RANDOMIZE)
+-				load_bias += arch_mmap_rnd();
+-			load_bias = ELF_PAGESTART(load_bias);
++			/*
++			 * This logic is run once for the first LOAD Program
++			 * Header for ET_DYN binaries to calculate the
++			 * randomization (load_bias) for all the LOAD
++			 * Program Headers, and to calculate the entire
++			 * size of the ELF mapping (total_size). (Note that
++			 * load_addr_set is set to true later once the
++			 * initial mapping is performed.)
++			 *
++			 * There are effectively two types of ET_DYN
++			 * binaries: programs (i.e. PIE: ET_DYN with INTERP)
++			 * and loaders (ET_DYN without INTERP, since they
++			 * _are_ the ELF interpreter). The loaders must
++			 * be loaded away from programs since the program
++			 * may otherwise collide with the loader (especially
++			 * for ET_EXEC which does not have a randomized
++			 * position). For example to handle invocations of
++			 * "./ld.so someprog" to test out a new version of
++			 * the loader, the subsequent program that the
++			 * loader loads must avoid the loader itself, so
++			 * they cannot share the same load range. Sufficient
++			 * room for the brk must be allocated with the
++			 * loader as well, since brk must be available with
++			 * the loader.
++			 *
++			 * Therefore, programs are loaded offset from
++			 * ELF_ET_DYN_BASE and loaders are loaded into the
++			 * independently randomized mmap region (0 load_bias
++			 * without MAP_FIXED).
++			 */
++			if (elf_interpreter) {
++				load_bias = ELF_ET_DYN_BASE;
++				if (current->flags & PF_RANDOMIZE)
++					load_bias += arch_mmap_rnd();
++				elf_flags |= MAP_FIXED;
++			} else
++				load_bias = 0;
++
++			/*
++			 * Since load_bias is used for all subsequent loading
++			 * calculations, we must lower it by the first vaddr
++			 * so that the remaining calculations based on the
++			 * ELF vaddrs will be correctly offset. The result
++			 * is then page aligned.
++			 */
++			load_bias = ELF_PAGESTART(load_bias - vaddr);
++
+ 			total_size = total_mapping_size(elf_phdata,
+ 							loc->elf_ex.e_phnum);
+ 			if (!total_size) {
+-- 
+2.7.4
+
 
 -- 
 Kees Cook
