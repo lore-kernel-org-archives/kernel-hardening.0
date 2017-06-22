@@ -1,91 +1,55 @@
-Date: Thu, 22 Jun 2017 10:38:38 -0700
 From: Kees Cook <keescook@chromium.org>
-Message-ID: <20170622173838.GA43308@beast>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] binfmt_elf: Safely increment argv pointers
+Date: Thu, 22 Jun 2017 11:06:30 -0700
+Message-Id: <1498154792-49952-3-git-send-email-keescook@chromium.org>
+In-Reply-To: <1498154792-49952-1-git-send-email-keescook@chromium.org>
+References: <1498154792-49952-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH 2/4] arm64: Reduce ELF_ET_DYN_BASE
 To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Rik van Riel <riel@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Qualys Security Advisory <qsa@qualys.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Dmitry Safonov <dsafonov@virtuozzo.com>, Andy Lutomirski <luto@amacapital.net>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, James Hogan <james.hogan@imgtec.com>, Pratyush Anand <panand@redhat.com>, Ingo Molnar <mingo@kernel.org>, linux-arm-kernel@lists.infradead.org, linuxppc-dev@lists.ozlabs.org, linux-s390@vger.kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-When building the argv/envp pointers, the envp is needlessly
-pre-incremented instead of just continuing after the argv pointers are
-finished. In some (likely impossible) race where the strings could
-be changed from userspace between copy_strings() and here, it might
-be possible to confuse the envp position. Instead, just use sp like
-everything else.
+Now that explicitly executed loaders are loaded in the mmap region,
+position PIE binaries lower in the address space to avoid possible
+collisions with mmap or stack regions. For 64-bit, align to 4GB to
+allow runtimes to use the entire 32-bit address space for 32-bit
+pointers.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- fs/binfmt_elf.c | 20 +++++++++-----------
- 1 file changed, 9 insertions(+), 11 deletions(-)
+ arch/arm64/include/asm/elf.h | 13 ++++++-------
+ 1 file changed, 6 insertions(+), 7 deletions(-)
 
-diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
-index 7465c3ea5dd5..879ff9c7ffd0 100644
---- a/fs/binfmt_elf.c
-+++ b/fs/binfmt_elf.c
-@@ -163,8 +163,6 @@ create_elf_tables(struct linux_binprm *bprm, struct elfhdr *exec,
- 	unsigned long p = bprm->p;
- 	int argc = bprm->argc;
- 	int envc = bprm->envc;
--	elf_addr_t __user *argv;
--	elf_addr_t __user *envp;
- 	elf_addr_t __user *sp;
- 	elf_addr_t __user *u_platform;
- 	elf_addr_t __user *u_base_platform;
-@@ -304,38 +302,38 @@ create_elf_tables(struct linux_binprm *bprm, struct elfhdr *exec,
- 	/* Now, let's put argc (and argv, envp if appropriate) on the stack */
- 	if (__put_user(argc, sp++))
- 		return -EFAULT;
--	argv = sp;
--	envp = argv + argc + 1;
+diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
+index 5d1700425efe..f742af8f7c42 100644
+--- a/arch/arm64/include/asm/elf.h
++++ b/arch/arm64/include/asm/elf.h
+@@ -113,12 +113,13 @@
+ #define ELF_EXEC_PAGESIZE	PAGE_SIZE
  
--	/* Populate argv and envp */
-+	/* Populate list of argv pointers back to argv strings. */
- 	p = current->mm->arg_end = current->mm->arg_start;
- 	while (argc-- > 0) {
- 		size_t len;
--		if (__put_user((elf_addr_t)p, argv++))
-+		if (__put_user((elf_addr_t)p, sp++))
- 			return -EFAULT;
- 		len = strnlen_user((void __user *)p, MAX_ARG_STRLEN);
- 		if (!len || len > MAX_ARG_STRLEN)
- 			return -EINVAL;
- 		p += len;
- 	}
--	if (__put_user(0, argv))
-+	if (__put_user(0, sp++))
- 		return -EFAULT;
--	current->mm->arg_end = current->mm->env_start = p;
-+	current->mm->arg_end = p;
-+
-+	/* Populate list of envp pointers back to envp strings. */
-+	current->mm->env_end = current->mm->env_start = p;
- 	while (envc-- > 0) {
- 		size_t len;
--		if (__put_user((elf_addr_t)p, envp++))
-+		if (__put_user((elf_addr_t)p, sp++))
- 			return -EFAULT;
- 		len = strnlen_user((void __user *)p, MAX_ARG_STRLEN);
- 		if (!len || len > MAX_ARG_STRLEN)
- 			return -EINVAL;
- 		p += len;
- 	}
--	if (__put_user(0, envp))
-+	if (__put_user(0, sp++))
- 		return -EFAULT;
- 	current->mm->env_end = p;
+ /*
+- * This is the location that an ET_DYN program is loaded if exec'ed.  Typical
+- * use of this is to invoke "./ld.so someprog" to test out a new version of
+- * the loader.  We need to make sure that it is out of the way of the program
+- * that it will "exec", and that there is sufficient room for the brk.
++ * This is the base location for PIE (ET_DYN with INTERP) loads. On
++ * 64-bit, this is raised to 4GB to leave the entire 32-bit address
++ * space open for things that want to use the area for 32-bit pointers.
+  */
+-#define ELF_ET_DYN_BASE	(2 * TASK_SIZE_64 / 3)
++#define ELF_ET_DYN_BASE		(test_thread_flag(TIF_32BIT) ?	\
++					0x000400000UL :		\
++					0x100000000UL)
  
- 	/* Put the elf_info on the stack in the right place.  */
--	sp = (elf_addr_t __user *)envp + 1;
- 	if (copy_to_user(sp, elf_info, ei_index * sizeof(elf_addr_t)))
- 		return -EFAULT;
- 	return 0;
+ #ifndef __ASSEMBLY__
+ 
+@@ -173,8 +174,6 @@ extern int arch_setup_additional_pages(struct linux_binprm *bprm,
+ 
+ #ifdef CONFIG_COMPAT
+ 
+-#define COMPAT_ELF_ET_DYN_BASE		(2 * TASK_SIZE_32 / 3)
+-
+ /* AArch32 registers. */
+ #define COMPAT_ELF_NGREG		18
+ typedef unsigned int			compat_elf_greg_t;
 -- 
 2.7.4
-
-
--- 
-Kees Cook
-Pixel Security
