@@ -1,32 +1,80 @@
+Date: Wed, 21 Jun 2017 17:17:20 -0700
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20170622001720.GA32173@beast>
 MIME-Version: 1.0
-In-Reply-To: <20170621203824.khyt6uqxghhdromi@thunk.org>
-References: <CAHmME9qvPL+vdY16SgV2VzuDDyM4r+hkYy8yGG3LJaa-3igxfA@mail.gmail.com>
- <20170621000300.11646-1-Jason@zx2c4.com> <87k245ub5y.fsf@concordia.ellerman.id.au>
- <20170621203824.khyt6uqxghhdromi@thunk.org>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 22 Jun 2017 02:04:57 +0200
-Message-ID: <CAHmME9rObcSGQ9AQOe=4OMK1eszGMgchBznzAZwAO3aaGbo0gQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH] random: warn when kernel uses unseeded randomness
-To: Theodore Ts'o <tytso@mit.edu>, Michael Ellerman <mpe@ellerman.id.au>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Jeffrey Walton <noloader@gmail.com>, tglx@breakpoint.cc, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] exec: Account for argv/envp pointers
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Alexander Viro <viro@zeniv.linux.org.uk>, Qualys Security Advisory <qsa@qualys.com>, linux-mm@kvack.org, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Ted,
+When limiting the argv/envp strings during exec to 1/4 of the stack limit,
+the storage of the pointers to the strings was not included. This means
+that an exec with huge numbers of tiny strings could eat 1/4 of the
+stack limit in strings and then additional space would be later used
+by the pointers to the strings. For example, on 32-bit with a 8MB stack
+rlimit, an exec with 1677721 single-byte strings would consume less than
+2MB of stack, the max (8MB / 4) amount allowed, but the pointers to the
+strings would consume the remaining additional stack space (1677721 *
+4 == 6710884). The result (1677721 + 6710884 == 8388605) would exhaust
+stack space entirely. Controlling this stack exhaustion could result in
+pathological behavior in setuid binaries (CVE-2017-1000365).
 
-On Wed, Jun 21, 2017 at 10:38 PM, Theodore Ts'o <tytso@mit.edu> wrote:
-> I agree completely with all of this.  The following patch replaces the
-> current topmost patch on the random.git tree:
-> For developers who want to work on improving this situation,
-> CONFIG_WARN_UNSEEDED_RANDOM has been renamed to
-> CONFIG_WARN_ALL_UNSEEDED_RANDOM.  By default the kernel will always
-> print the first use of unseeded randomness.  This way, hopefully the
-> security obsessed will be happy that there is _some_ indication when
-> the kernel boots there may be a potential issue with that architecture
-> or subarchitecture.  To see all uses of unseeded randomness,
-> developers can enable CONFIG_WARN_ALL_UNSEEDED_RANDOM.
+Fixes: b6a2fea39318 ("mm: variable length argument support")
+Cc: stable@vger.kernel.org
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ fs/exec.c | 20 ++++++++++++++++----
+ 1 file changed, 16 insertions(+), 4 deletions(-)
 
-Seems fine to me.
+diff --git a/fs/exec.c b/fs/exec.c
+index 72934df68471..8079ca70cfda 100644
+--- a/fs/exec.c
++++ b/fs/exec.c
+@@ -220,8 +220,18 @@ static struct page *get_arg_page(struct linux_binprm *bprm, unsigned long pos,
+ 
+ 	if (write) {
+ 		unsigned long size = bprm->vma->vm_end - bprm->vma->vm_start;
++		unsigned long ptr_size;
+ 		struct rlimit *rlim;
+ 
++		/*
++		 * Since the stack will hold pointers to the strings, we
++		 * must account for them as well.
++		 */
++		ptr_size = (bprm->argc + bprm->envc) * sizeof(void *);
++		if (ptr_size > ULONG_MAX - size)
++			goto fail;
++		size += ptr_size;
++
+ 		acct_arg_size(bprm, size / PAGE_SIZE);
+ 
+ 		/*
+@@ -239,13 +249,15 @@ static struct page *get_arg_page(struct linux_binprm *bprm, unsigned long pos,
+ 		 *    to work from.
+ 		 */
+ 		rlim = current->signal->rlim;
+-		if (size > ACCESS_ONCE(rlim[RLIMIT_STACK].rlim_cur) / 4) {
+-			put_page(page);
+-			return NULL;
+-		}
++		if (size > READ_ONCE(rlim[RLIMIT_STACK].rlim_cur) / 4)
++			goto fail;
+ 	}
+ 
+ 	return page;
++
++fail:
++	put_page(page);
++	return NULL;
+ }
+ 
+ static void put_arg_page(struct page *page)
+-- 
+2.7.4
 
-Acked-by: Jason A. Donenfeld <Jason@zx2c4.com>
 
-Jason
+-- 
+Kees Cook
+Pixel Security
