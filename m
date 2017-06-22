@@ -1,38 +1,91 @@
-Message-ID: <1498095554.13083.25.camel@redhat.com>
-From: Rik van Riel <riel@redhat.com>
-Date: Wed, 21 Jun 2017 21:39:14 -0400
-In-Reply-To: <20170622001720.GA32173@beast>
-References: <20170622001720.GA32173@beast>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH] exec: Account for argv/envp pointers
-To: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>
-Cc: Alexander Viro <viro@zeniv.linux.org.uk>, Qualys Security Advisory <qsa@qualys.com>, linux-mm@kvack.org, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Thu, 22 Jun 2017 10:38:38 -0700
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20170622173838.GA43308@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] binfmt_elf: Safely increment argv pointers
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Rik van Riel <riel@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Qualys Security Advisory <qsa@qualys.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Dmitry Safonov <dsafonov@virtuozzo.com>, Andy Lutomirski <luto@amacapital.net>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2017-06-21 at 17:17 -0700, Kees Cook wrote:
-> When limiting the argv/envp strings during exec to 1/4 of the stack
-> limit,
-> the storage of the pointers to the strings was not included. This
-> means
-> that an exec with huge numbers of tiny strings could eat 1/4 of the
-> stack limit in strings and then additional space would be later used
-> by the pointers to the strings. For example, on 32-bit with a 8MB
-> stack
-> rlimit, an exec with 1677721 single-byte strings would consume less
-> than
-> 2MB of stack, the max (8MB / 4) amount allowed, but the pointers to
-> the
-> strings would consume the remaining additional stack space (1677721 *
-> 4 == 6710884). The result (1677721 + 6710884 == 8388605) would
-> exhaust
-> stack space entirely. Controlling this stack exhaustion could result
-> in
-> pathological behavior in setuid binaries (CVE-2017-1000365).
-> 
-> Fixes: b6a2fea39318 ("mm: variable length argument support")
-> Cc: stable@vger.kernel.org
-> Signed-off-by: Kees Cook <keescook@chromium.org>
+When building the argv/envp pointers, the envp is needlessly
+pre-incremented instead of just continuing after the argv pointers are
+finished. In some (likely impossible) race where the strings could
+be changed from userspace between copy_strings() and here, it might
+be possible to confuse the envp position. Instead, just use sp like
+everything else.
 
-Acked-by: Rik van Riel <riel@redhat.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ fs/binfmt_elf.c | 20 +++++++++-----------
+ 1 file changed, 9 insertions(+), 11 deletions(-)
+
+diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
+index 7465c3ea5dd5..879ff9c7ffd0 100644
+--- a/fs/binfmt_elf.c
++++ b/fs/binfmt_elf.c
+@@ -163,8 +163,6 @@ create_elf_tables(struct linux_binprm *bprm, struct elfhdr *exec,
+ 	unsigned long p = bprm->p;
+ 	int argc = bprm->argc;
+ 	int envc = bprm->envc;
+-	elf_addr_t __user *argv;
+-	elf_addr_t __user *envp;
+ 	elf_addr_t __user *sp;
+ 	elf_addr_t __user *u_platform;
+ 	elf_addr_t __user *u_base_platform;
+@@ -304,38 +302,38 @@ create_elf_tables(struct linux_binprm *bprm, struct elfhdr *exec,
+ 	/* Now, let's put argc (and argv, envp if appropriate) on the stack */
+ 	if (__put_user(argc, sp++))
+ 		return -EFAULT;
+-	argv = sp;
+-	envp = argv + argc + 1;
+ 
+-	/* Populate argv and envp */
++	/* Populate list of argv pointers back to argv strings. */
+ 	p = current->mm->arg_end = current->mm->arg_start;
+ 	while (argc-- > 0) {
+ 		size_t len;
+-		if (__put_user((elf_addr_t)p, argv++))
++		if (__put_user((elf_addr_t)p, sp++))
+ 			return -EFAULT;
+ 		len = strnlen_user((void __user *)p, MAX_ARG_STRLEN);
+ 		if (!len || len > MAX_ARG_STRLEN)
+ 			return -EINVAL;
+ 		p += len;
+ 	}
+-	if (__put_user(0, argv))
++	if (__put_user(0, sp++))
+ 		return -EFAULT;
+-	current->mm->arg_end = current->mm->env_start = p;
++	current->mm->arg_end = p;
++
++	/* Populate list of envp pointers back to envp strings. */
++	current->mm->env_end = current->mm->env_start = p;
+ 	while (envc-- > 0) {
+ 		size_t len;
+-		if (__put_user((elf_addr_t)p, envp++))
++		if (__put_user((elf_addr_t)p, sp++))
+ 			return -EFAULT;
+ 		len = strnlen_user((void __user *)p, MAX_ARG_STRLEN);
+ 		if (!len || len > MAX_ARG_STRLEN)
+ 			return -EINVAL;
+ 		p += len;
+ 	}
+-	if (__put_user(0, envp))
++	if (__put_user(0, sp++))
+ 		return -EFAULT;
+ 	current->mm->env_end = p;
+ 
+ 	/* Put the elf_info on the stack in the right place.  */
+-	sp = (elf_addr_t __user *)envp + 1;
+ 	if (copy_to_user(sp, elf_info, ei_index * sizeof(elf_addr_t)))
+ 		return -EFAULT;
+ 	return 0;
+-- 
+2.7.4
+
+
+-- 
+Kees Cook
+Pixel Security
