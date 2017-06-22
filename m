@@ -1,49 +1,65 @@
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <CAJZ5v0hqRbsivmnG5iKMsR_ZMg+i_vxA7n-NOkuu3jh-TJ6pHw@mail.gmail.com>
+References: <1497905801-69164-1-git-send-email-keescook@chromium.org>
+ <1497905801-69164-4-git-send-email-keescook@chromium.org> <20170620065631.GA25354@infradead.org>
+ <CAGXu5jLkvqbV1=xGrvwLZPiAbswA6M5C3BB0M5MytRabLtEfLg@mail.gmail.com>
+ <20170620203549.GA4049@infradead.org> <CAJZ5v0hqRbsivmnG5iKMsR_ZMg+i_vxA7n-NOkuu3jh-TJ6pHw@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 22 Jun 2017 11:06:32 -0700
-Message-Id: <1498154792-49952-5-git-send-email-keescook@chromium.org>
-In-Reply-To: <1498154792-49952-1-git-send-email-keescook@chromium.org>
-References: <1498154792-49952-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 4/4] s390: Reduce ELF_ET_DYN_BASE
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Kees Cook <keescook@chromium.org>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, James Hogan <james.hogan@imgtec.com>, Pratyush Anand <panand@redhat.com>, Ingo Molnar <mingo@kernel.org>, linux-arm-kernel@lists.infradead.org, linuxppc-dev@lists.ozlabs.org, linux-s390@vger.kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Thu, 22 Jun 2017 16:57:39 -0700
+Message-ID: <CAGXu5jJWZos+uUgyc6hiHko=ei4b_6aCyZqRLDESfih1ybxR=w@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH 3/4] randstruct: Disable randomization of ACPICA structs
+To: "Rafael J. Wysocki" <rafael@kernel.org>
+Cc: Christoph Hellwig <hch@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <lenb@kernel.org>, ACPI Devel Maling List <linux-acpi@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Robert Moore <robert.moore@intel.com>, Lv Zheng <lv.zheng@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Now that explicitly executed loaders are loaded in the mmap region,
-position PIE binaries lower in the address space to avoid possible
-collisions with mmap or stack regions. For 64-bit, align to 4GB to
-allow runtimes to use the entire 32-bit address space for 32-bit
-pointers.
+On Tue, Jun 20, 2017 at 2:34 PM, Rafael J. Wysocki <rafael@kernel.org> wrote:
+> On Tue, Jun 20, 2017 at 10:35 PM, Christoph Hellwig <hch@infradead.org> wrote:
+>> On Tue, Jun 20, 2017 at 12:25:53PM -0700, Kees Cook wrote:
+>>> Can you send the patch to https://github.com/acpica/acpica ? My change
+>>> was finally accepted, so this whole issue will go away on the next
+>>> refresh. Until then, I don't want to block the entire automatic
+>>> structure selection logic of randstruct on a three-function table. :)
+>>
+>> I do not have a github account and no such thing is required for kernel
+>> development.
+>
+> It isn't required for the ACPICA material either.
+>
+> You just need to CC the ACPICA maintainers, as per MAINTAINERS, on
+> your ACPICA patches.  They pick up stuff that looks good to them.
+>
+> And we tend to prefer routing ACPICA changes through the upstream,
+> because failing to do so usually turns out to be painful in the long
+> term.  I don't think it is unreasonable to ask for cooperation in that
+> respect.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- arch/s390/include/asm/elf.h | 15 +++++++--------
- 1 file changed, 7 insertions(+), 8 deletions(-)
+I'd like to unblock randstruct, so what's the easiest way to move
+this? My version of changes have already landed upstream in ACPICA,
+but I don't know how frequently they get flushed back into the kernel.
 
-diff --git a/arch/s390/include/asm/elf.h b/arch/s390/include/asm/elf.h
-index e8f623041769..7c58d599f91b 100644
---- a/arch/s390/include/asm/elf.h
-+++ b/arch/s390/include/asm/elf.h
-@@ -161,14 +161,13 @@ extern unsigned int vdso_enabled;
- #define CORE_DUMP_USE_REGSET
- #define ELF_EXEC_PAGESIZE	4096
- 
--/* This is the location that an ET_DYN program is loaded if exec'ed.  Typical
--   use of this is to invoke "./ld.so someprog" to test out a new version of
--   the loader.  We need to make sure that it is out of the way of the program
--   that it will "exec", and that there is sufficient room for the brk. 64-bit
--   tasks are aligned to 4GB. */
--#define ELF_ET_DYN_BASE (is_compat_task() ? \
--				(STACK_TOP / 3 * 2) : \
--				(STACK_TOP / 3 * 2) & ~((1UL << 32) - 1))
-+/*
-+ * This is the base location for PIE (ET_DYN with INTERP) loads. On
-+ * 64-bit, this is raised to 4GB to leave the entire 32-bit address
-+ * space open for things that want to use the area for 32-bit pointers.
-+ */
-+#define ELF_ET_DYN_BASE		(is_compat_task() ? 0x000400000UL : \
-+						    0x100000000UL)
- 
- /* This yields a mask that user programs can use to figure out what
-    instruction set this CPU supports. */
+I can't turn on randstruct auto-selection in -next without either
+ACPICA using (or not needing) designated initializers or just
+blacklisting it in the randstruct plugin itself. I would much prefer
+the latter as the problem is solved in ACPICA upstream already but
+just isn't in the kernel yet, and I want to get testing of the
+auto-selection ASAP. Once it's in the kernel I can drop the blacklist.
+
+Christoph: how about a middle ground where randstruct blacklists
+ACPICA in -next and if ACPICA is fixed by the time the merge window
+opens, I'll drop the blacklist. That gets the testing coverage without
+what you see as an ugly hack right now. I just really don't want to
+waste any more time on this since there are SO many other randomized
+structures I'd like to be sure are getting testing.
+
+Alternatively, if the ACPICA folks Ack Christoph's patch, I can carry
+that in the randstruct tree for -next instead?
+
+Thanks,
+
+-Kees
+
 -- 
-2.7.4
+Kees Cook
+Pixel Security
