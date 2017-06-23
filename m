@@ -1,67 +1,60 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKt_=aV-=bDREOhKLpi2GX9aEO5Gk-+vhk-ZphLJJ3K-g@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <87podvp4q1.fsf@concordia.ellerman.id.au>
 References: <1498154792-49952-1-git-send-email-keescook@chromium.org>
- <1498154792-49952-3-git-send-email-keescook@chromium.org> <CAKv+Gu_2Wg_D+4c3-iqMr9hbKkGVdBtW6Bmxj-4=FOG9hVN5vA@mail.gmail.com>
- <CAGXu5jLHOjg9+8xDSzs2nLKjoqUf3NAc_0a1Coo+4WnDYRT3=g@mail.gmail.com> <CAGXu5jKt_=aV-=bDREOhKLpi2GX9aEO5Gk-+vhk-ZphLJJ3K-g@mail.gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Fri, 23 Jun 2017 15:04:24 +0000
-Message-ID: <CAKv+Gu8-N6UO2_v3vFRbgjEjWG+ipVA=H6nEB=m3gXyN=HGVow@mail.gmail.com>
+ <1498154792-49952-4-git-send-email-keescook@chromium.org> <87podvp4q1.fsf@concordia.ellerman.id.au>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 23 Jun 2017 13:08:00 -0700
+Message-ID: <CAGXu5jK7aHHRMZyZyrviBF+cLghWcH_D4PX_vMFOycHuF7EdLA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH 2/4] arm64: Reduce ELF_ET_DYN_BASE
-To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, James Hogan <james.hogan@imgtec.com>, Pratyush Anand <panand@redhat.com>, Ingo Molnar <mingo@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linuxppc-dev <linuxppc-dev@lists.ozlabs.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH 3/4] powerpc: Reduce ELF_ET_DYN_BASE
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, James Hogan <james.hogan@imgtec.com>, Pratyush Anand <panand@redhat.com>, Ingo Molnar <mingo@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 23 June 2017 at 14:02, Kees Cook <keescook@chromium.org> wrote:
-> On Fri, Jun 23, 2017 at 6:52 AM, Kees Cook <keescook@chromium.org> wrote:
->> On Thu, Jun 22, 2017 at 11:57 PM, Ard Biesheuvel
->> <ard.biesheuvel@linaro.org> wrote:
->>> Hi Kees,
->>>
->>> On 22 June 2017 at 18:06, Kees Cook <keescook@chromium.org> wrote:
->>>> Now that explicitly executed loaders are loaded in the mmap region,
->>>> position PIE binaries lower in the address space to avoid possible
->>>> collisions with mmap or stack regions. For 64-bit, align to 4GB to
->>>> allow runtimes to use the entire 32-bit address space for 32-bit
->>>> pointers.
->>>>
->>>> Signed-off-by: Kees Cook <keescook@chromium.org>
->>>> ---
->>>>  arch/arm64/include/asm/elf.h | 13 ++++++-------
->>>>  1 file changed, 6 insertions(+), 7 deletions(-)
->>>>
->>>> diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
->>>> index 5d1700425efe..f742af8f7c42 100644
->>>> --- a/arch/arm64/include/asm/elf.h
->>>> +++ b/arch/arm64/include/asm/elf.h
->>>> @@ -113,12 +113,13 @@
->>>>  #define ELF_EXEC_PAGESIZE      PAGE_SIZE
->>>>
->>>>  /*
->>>> - * This is the location that an ET_DYN program is loaded if exec'ed.  Typical
->>>> - * use of this is to invoke "./ld.so someprog" to test out a new version of
->>>> - * the loader.  We need to make sure that it is out of the way of the program
->>>> - * that it will "exec", and that there is sufficient room for the brk.
->>>> + * This is the base location for PIE (ET_DYN with INTERP) loads. On
->>>> + * 64-bit, this is raised to 4GB to leave the entire 32-bit address
->>>> + * space open for things that want to use the area for 32-bit pointers.
->>>>   */
->>>> -#define ELF_ET_DYN_BASE        (2 * TASK_SIZE_64 / 3)
->>>> +#define ELF_ET_DYN_BASE                (test_thread_flag(TIF_32BIT) ?  \
->>>> +                                       0x000400000UL :         \
->>>> +                                       0x100000000UL)
->>>>
->>>
->>> Why are you merging this with the COMPAT definition?
->>
->> It seemed like the right thing to do since a single definition could
->> handle both cases. Is there something I'm overlooking in the arm64
->> case?
+On Fri, Jun 23, 2017 at 12:01 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+> Kees Cook <keescook@chromium.org> writes:
 >
-> And like 5 minutes later there was a loud head-slapping noise in my
-> office. Durr, yeah, arm64 doesn't have to deal with a "native 32-bit"
-> mode, so the merge isn't needed. Yes yes, I will split it back up and
-> drop the thread flag test.
+>> Now that explicitly executed loaders are loaded in the mmap region,
+>> position PIE binaries lower in the address space to avoid possible
+>> collisions with mmap or stack regions. For 64-bit, align to 4GB to
+>> allow runtimes to use the entire 32-bit address space for 32-bit
+>> pointers.
 >
+> The change log and subject are a bit out of whack with the actual patch
+> because previously we used 512MB.
+>
+> How about?
+>
+>   powerpc: Move ELF_ET_DYN_BASE to 4GB / 4MB
+>
+>   Now that explicitly executed loaders are loaded in the mmap region,
+>   we have more freedom to decide where we position PIE binaries in the
+>   address space to avoid possible collisions with mmap or stack regions.
+>
+>   For 64-bit, align to 4GB to allow runtimes to use the entire 32-bit
+>   address space for 32-bit pointers. On 32-bit use 4MB.
 
-Oh, is that what I heard?
+Good idea, thanks. I'll resend the series with the commit logs updated.
+
+> Is there any particular reasoning behind the 4MB value on 32-bit?
+
+So, I've dug around a bit on this, and I *think* the rationale is to
+avoid mapping a possible 4MB page table entry when it won't be using
+at least a portion near the lower end (NULL address area covered
+blocked by mmap_min_addr). It seems to be mainly tradition, though.
+
+> I gave this a quick spin and it booted OK on all my test boxes, which
+> covers 64-bit/32-bit kernel and userspace. So seems to work!
+
+Awesome, thanks for the testing!
+
+> Acked-by: Michael Ellerman <mpe@ellerman.id.au>
+>
+> cheers
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
