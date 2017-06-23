@@ -1,65 +1,67 @@
-Date: Fri, 23 Jun 2017 16:18:37 +0200
-From: Michal Hocko <mhocko@kernel.org>
-Message-ID: <20170623141837.GD5308@dhcp22.suse.cz>
-References: <20170622001720.GA32173@beast>
- <20170623135924.GC5314@dhcp22.suse.cz>
- <CAGXu5jJB-DKWLVPKL5-BiCF5Rmn3M_Q5yTPxtn8HW-2VekBaXg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJB-DKWLVPKL5-BiCF5Rmn3M_Q5yTPxtn8HW-2VekBaXg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH] exec: Account for argv/envp pointers
+In-Reply-To: <CAGXu5jKt_=aV-=bDREOhKLpi2GX9aEO5Gk-+vhk-ZphLJJ3K-g@mail.gmail.com>
+References: <1498154792-49952-1-git-send-email-keescook@chromium.org>
+ <1498154792-49952-3-git-send-email-keescook@chromium.org> <CAKv+Gu_2Wg_D+4c3-iqMr9hbKkGVdBtW6Bmxj-4=FOG9hVN5vA@mail.gmail.com>
+ <CAGXu5jLHOjg9+8xDSzs2nLKjoqUf3NAc_0a1Coo+4WnDYRT3=g@mail.gmail.com> <CAGXu5jKt_=aV-=bDREOhKLpi2GX9aEO5Gk-+vhk-ZphLJJ3K-g@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Fri, 23 Jun 2017 15:04:24 +0000
+Message-ID: <CAKv+Gu8-N6UO2_v3vFRbgjEjWG+ipVA=H6nEB=m3gXyN=HGVow@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [PATCH 2/4] arm64: Reduce ELF_ET_DYN_BASE
 To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Qualys Security Advisory <qsa@qualys.com>, Linux-MM <linux-mm@kvack.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, James Hogan <james.hogan@imgtec.com>, Pratyush Anand <panand@redhat.com>, Ingo Molnar <mingo@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linuxppc-dev <linuxppc-dev@lists.ozlabs.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri 23-06-17 07:05:37, Kees Cook wrote:
-> On Fri, Jun 23, 2017 at 6:59 AM, Michal Hocko <mhocko@kernel.org> wrote:
-[...]
-> >> --- a/fs/exec.c
-> >> +++ b/fs/exec.c
-> >> @@ -220,8 +220,18 @@ static struct page *get_arg_page(struct linux_binprm *bprm, unsigned long pos,
-> >>
-> >>       if (write) {
-> >>               unsigned long size = bprm->vma->vm_end - bprm->vma->vm_start;
-> >> +             unsigned long ptr_size;
-> >>               struct rlimit *rlim;
-> >>
-> >> +             /*
-> >> +              * Since the stack will hold pointers to the strings, we
-> >> +              * must account for them as well.
-> >> +              */
-> >> +             ptr_size = (bprm->argc + bprm->envc) * sizeof(void *);
-> >> +             if (ptr_size > ULONG_MAX - size)
-> >> +                     goto fail;
-> >> +             size += ptr_size;
-> >> +
-> >>               acct_arg_size(bprm, size / PAGE_SIZE);
-> >
-> > Doesn't this over account? I mean this gets called for partial arguments
-> > as they fit into a page so a single argument can get into this function
-> > multiple times AFAIU. I also do not understand why would you want to
-> > account bprm->argc + bprm->envc pointers for each argument.
-> 
-> Based on what I could understand in acct_arg_size(), this is called
-> repeatedly with with the "current" size (it handles the difference
-> between prior calls, see calls like acct_arg_size(bprm, 0)).
-> 
-> The size calculation is the entire vma while each arg page is built,
-> so each time we get here it's calculating how far it is currently
-> (rather than each call being just the newly added size from the arg
-> page). As a result, we need to always add the entire size of the
-> pointers, so that on the last call to get_arg_page() we'll actually
-> have the entire correct size.
+On 23 June 2017 at 14:02, Kees Cook <keescook@chromium.org> wrote:
+> On Fri, Jun 23, 2017 at 6:52 AM, Kees Cook <keescook@chromium.org> wrote:
+>> On Thu, Jun 22, 2017 at 11:57 PM, Ard Biesheuvel
+>> <ard.biesheuvel@linaro.org> wrote:
+>>> Hi Kees,
+>>>
+>>> On 22 June 2017 at 18:06, Kees Cook <keescook@chromium.org> wrote:
+>>>> Now that explicitly executed loaders are loaded in the mmap region,
+>>>> position PIE binaries lower in the address space to avoid possible
+>>>> collisions with mmap or stack regions. For 64-bit, align to 4GB to
+>>>> allow runtimes to use the entire 32-bit address space for 32-bit
+>>>> pointers.
+>>>>
+>>>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>>>> ---
+>>>>  arch/arm64/include/asm/elf.h | 13 ++++++-------
+>>>>  1 file changed, 6 insertions(+), 7 deletions(-)
+>>>>
+>>>> diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
+>>>> index 5d1700425efe..f742af8f7c42 100644
+>>>> --- a/arch/arm64/include/asm/elf.h
+>>>> +++ b/arch/arm64/include/asm/elf.h
+>>>> @@ -113,12 +113,13 @@
+>>>>  #define ELF_EXEC_PAGESIZE      PAGE_SIZE
+>>>>
+>>>>  /*
+>>>> - * This is the location that an ET_DYN program is loaded if exec'ed.  Typical
+>>>> - * use of this is to invoke "./ld.so someprog" to test out a new version of
+>>>> - * the loader.  We need to make sure that it is out of the way of the program
+>>>> - * that it will "exec", and that there is sufficient room for the brk.
+>>>> + * This is the base location for PIE (ET_DYN with INTERP) loads. On
+>>>> + * 64-bit, this is raised to 4GB to leave the entire 32-bit address
+>>>> + * space open for things that want to use the area for 32-bit pointers.
+>>>>   */
+>>>> -#define ELF_ET_DYN_BASE        (2 * TASK_SIZE_64 / 3)
+>>>> +#define ELF_ET_DYN_BASE                (test_thread_flag(TIF_32BIT) ?  \
+>>>> +                                       0x000400000UL :         \
+>>>> +                                       0x100000000UL)
+>>>>
+>>>
+>>> Why are you merging this with the COMPAT definition?
+>>
+>> It seemed like the right thing to do since a single definition could
+>> handle both cases. Is there something I'm overlooking in the arm64
+>> case?
+>
+> And like 5 minutes later there was a loud head-slapping noise in my
+> office. Durr, yeah, arm64 doesn't have to deal with a "native 32-bit"
+> mode, so the merge isn't needed. Yes yes, I will split it back up and
+> drop the thread flag test.
+>
 
-Ohh, I forgot about this tricky part. The code just looks confusing
-becauser we are mixing 2 things together here. This deserves a comment I
-guess.
-
-Other than that feel free to add
-Acked-by: Michal Hocko <mhocko@suse.com>
-
-Thanks!
--- 
-Michal Hocko
-SUSE Labs
+Oh, is that what I heard?
