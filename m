@@ -1,76 +1,153 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <3395263.N2PfeMfNmG@aspire.rjw.lan>
-References: <1497905801-69164-1-git-send-email-keescook@chromium.org>
- <CAJZ5v0hqRbsivmnG5iKMsR_ZMg+i_vxA7n-NOkuu3jh-TJ6pHw@mail.gmail.com>
- <CAGXu5jJWZos+uUgyc6hiHko=ei4b_6aCyZqRLDESfih1ybxR=w@mail.gmail.com> <3395263.N2PfeMfNmG@aspire.rjw.lan>
+Date: Thu, 22 Jun 2017 18:50:10 -0700
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 22 Jun 2017 17:20:31 -0700
-Message-ID: <CAGXu5jLr5mS0x6faLm-XM3G18vShjuGgjd0OcdTRn=qxgsXtwQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 3/4] randstruct: Disable randomization of ACPICA structs
-To: "Rafael J. Wysocki" <rjw@rjwysocki.net>
-Cc: Lv Zheng <lv.zheng@intel.com>, "Rafael J. Wysocki" <rafael@kernel.org>, Christoph Hellwig <hch@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Len Brown <lenb@kernel.org>, ACPI Devel Maling List <linux-acpi@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Robert Moore <robert.moore@intel.com>
+Message-ID: <20170623015010.GA137429@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH v2] mm: Add SLUB free list pointer obfuscation
+To: Christoph Lameter <cl@linux.com>, Andrew Morton <akpm@linux-foundation.org>
+Cc: Laura Abbott <labbott@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Josh Triplett <josh@joshtriplett.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 22, 2017 at 4:59 PM, Rafael J. Wysocki <rjw@rjwysocki.net> wrote:
-> On Thursday, June 22, 2017 04:57:39 PM Kees Cook wrote:
->> On Tue, Jun 20, 2017 at 2:34 PM, Rafael J. Wysocki <rafael@kernel.org> wrote:
->> > On Tue, Jun 20, 2017 at 10:35 PM, Christoph Hellwig <hch@infradead.org> wrote:
->> >> On Tue, Jun 20, 2017 at 12:25:53PM -0700, Kees Cook wrote:
->> >>> Can you send the patch to https://github.com/acpica/acpica ? My change
->> >>> was finally accepted, so this whole issue will go away on the next
->> >>> refresh. Until then, I don't want to block the entire automatic
->> >>> structure selection logic of randstruct on a three-function table. :)
->> >>
->> >> I do not have a github account and no such thing is required for kernel
->> >> development.
->> >
->> > It isn't required for the ACPICA material either.
->> >
->> > You just need to CC the ACPICA maintainers, as per MAINTAINERS, on
->> > your ACPICA patches.  They pick up stuff that looks good to them.
->> >
->> > And we tend to prefer routing ACPICA changes through the upstream,
->> > because failing to do so usually turns out to be painful in the long
->> > term.  I don't think it is unreasonable to ask for cooperation in that
->> > respect.
->>
->> I'd like to unblock randstruct, so what's the easiest way to move
->> this? My version of changes have already landed upstream in ACPICA,
->> but I don't know how frequently they get flushed back into the kernel.
->
-> Usually, when there's a new ACPICA release, but occasionally that happens
-> faster.
->
-> Which commit in upstream ACPICA is this?
+This SLUB free list pointer obfuscation code is modified from Brad
+Spengler/PaX Team's code in the last public patch of grsecurity/PaX based
+on my understanding of the code. Changes or omissions from the original
+code are mine and don't reflect the original grsecurity/PaX code.
 
-https://github.com/acpica/acpica/commit/2058b3bf5deecb9644d676703bd97d1bce5e612a
+This adds a per-cache random value to SLUB caches that is XORed with
+their freelist pointers. This adds nearly zero overhead and frustrates the
+very common heap overflow exploitation method of overwriting freelist
+pointers. A recent example of the attack is written up here:
+http://cyseclabs.com/blog/cve-2016-6187-heap-off-by-one-exploit
 
->> I can't turn on randstruct auto-selection in -next without either
->> ACPICA using (or not needing) designated initializers or just
->> blacklisting it in the randstruct plugin itself. I would much prefer
->> the latter as the problem is solved in ACPICA upstream already but
->> just isn't in the kernel yet, and I want to get testing of the
->> auto-selection ASAP. Once it's in the kernel I can drop the blacklist.
->>
->> Christoph: how about a middle ground where randstruct blacklists
->> ACPICA in -next and if ACPICA is fixed by the time the merge window
->> opens, I'll drop the blacklist. That gets the testing coverage without
->> what you see as an ugly hack right now. I just really don't want to
->> waste any more time on this since there are SO many other randomized
->> structures I'd like to be sure are getting testing.
->>
->> Alternatively, if the ACPICA folks Ack Christoph's patch, I can carry
->> that in the randstruct tree for -next instead?
->
-> Maybe we can simply forward port the ACPICA commit right away.
->
-> Lv, can you take care of this, please?
+This is based on patches by Daniel Micay, and refactored to avoid lots
+of #ifdef code.
 
-That would be great, thanks!
+Suggested-by: Daniel Micay <danielmicay@gmail.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+v2:
+- renamed Kconfig to SLAB_FREELIST_HARDENED; labbott.
+---
+ include/linux/slub_def.h |  4 ++++
+ init/Kconfig             |  9 +++++++++
+ mm/slub.c                | 32 +++++++++++++++++++++++++++-----
+ 3 files changed, 40 insertions(+), 5 deletions(-)
 
--Kees
+diff --git a/include/linux/slub_def.h b/include/linux/slub_def.h
+index 07ef550c6627..d7990a83b416 100644
+--- a/include/linux/slub_def.h
++++ b/include/linux/slub_def.h
+@@ -93,6 +93,10 @@ struct kmem_cache {
+ #endif
+ #endif
+ 
++#ifdef CONFIG_SLAB_FREELIST_HARDENED
++	unsigned long random;
++#endif
++
+ #ifdef CONFIG_NUMA
+ 	/*
+ 	 * Defragmentation by allocating from a remote node.
+diff --git a/init/Kconfig b/init/Kconfig
+index 1d3475fc9496..04ee3e507b9e 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -1900,6 +1900,15 @@ config SLAB_FREELIST_RANDOM
+ 	  security feature reduces the predictability of the kernel slab
+ 	  allocator against heap overflows.
+ 
++config SLAB_FREELIST_HARDENED
++	bool "Harden slab freelist metadata"
++	depends on SLUB
++	help
++	  Many kernel heap attacks try to target slab cache metadata and
++	  other infrastructure. This options makes minor performance
++	  sacrifies to harden the kernel slab allocator against common
++	  freelist exploit methods.
++
+ config SLUB_CPU_PARTIAL
+ 	default y
+ 	depends on SLUB && SMP
+diff --git a/mm/slub.c b/mm/slub.c
+index 57e5156f02be..590e7830aaed 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -34,6 +34,7 @@
+ #include <linux/stacktrace.h>
+ #include <linux/prefetch.h>
+ #include <linux/memcontrol.h>
++#include <linux/random.h>
+ 
+ #include <trace/events/kmem.h>
+ 
+@@ -238,30 +239,50 @@ static inline void stat(const struct kmem_cache *s, enum stat_item si)
+  * 			Core slab cache functions
+  *******************************************************************/
+ 
++#ifdef CONFIG_SLAB_FREELIST_HARDENED
++# define initialize_random(s)					\
++		do {						\
++			s->random = get_random_long();		\
++		} while (0)
++# define FREEPTR_VAL(ptr, ptr_addr, s)	\
++		(void *)((unsigned long)(ptr) ^ s->random ^ (ptr_addr))
++#else
++# define initialize_random(s)		do { } while (0)
++# define FREEPTR_VAL(ptr, addr, s)	((void *)(ptr))
++#endif
++#define FREELIST_ENTRY(ptr_addr, s)				\
++		FREEPTR_VAL(*(unsigned long *)(ptr_addr),	\
++			    (unsigned long)ptr_addr, s)
++
+ static inline void *get_freepointer(struct kmem_cache *s, void *object)
+ {
+-	return *(void **)(object + s->offset);
++	return FREELIST_ENTRY(object + s->offset, s);
+ }
+ 
+ static void prefetch_freepointer(const struct kmem_cache *s, void *object)
+ {
+-	prefetch(object + s->offset);
++	if (object)
++		prefetch(FREELIST_ENTRY(object + s->offset, s));
+ }
+ 
+ static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
+ {
++	unsigned long freepointer_addr;
+ 	void *p;
+ 
+ 	if (!debug_pagealloc_enabled())
+ 		return get_freepointer(s, object);
+ 
+-	probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
+-	return p;
++	freepointer_addr = (unsigned long)object + s->offset;
++	probe_kernel_read(&p, (void **)freepointer_addr, sizeof(p));
++	return FREEPTR_VAL(p, freepointer_addr, s);
+ }
+ 
+ static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
+ {
+-	*(void **)(object + s->offset) = fp;
++	unsigned long freeptr_addr = (unsigned long)object + s->offset;
++
++	*(void **)freeptr_addr = FREEPTR_VAL(fp, freeptr_addr, s);
+ }
+ 
+ /* Loop over all objects in a slab */
+@@ -3536,6 +3557,7 @@ static int kmem_cache_open(struct kmem_cache *s, unsigned long flags)
+ {
+ 	s->flags = kmem_cache_flags(s->size, flags, s->name, s->ctor);
+ 	s->reserved = 0;
++	initialize_random(s);
+ 
+ 	if (need_reserve_slab_rcu && (s->flags & SLAB_TYPESAFE_BY_RCU))
+ 		s->reserved = sizeof(struct rcu_head);
+-- 
+2.7.4
+
 
 -- 
 Kees Cook
