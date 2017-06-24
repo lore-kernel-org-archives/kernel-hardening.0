@@ -1,56 +1,107 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170624091110.GX4902@n2100.armlinux.org.uk>
-References: <1498251600-132458-1-git-send-email-keescook@chromium.org> <20170624091110.GX4902@n2100.armlinux.org.uk>
-From: Kees Cook <keescook@chromium.org>
-Date: Sat, 24 Jun 2017 06:58:59 -0700
-Message-ID: <CAGXu5jKPu3NS5i3eAa6QhMHE_r6Z6U7d5bGsNfp25N3=04hszQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 0/5] Use ELF_ET_DYN_BASE only for PIE
-To: Russell King - ARM Linux <linux@armlinux.org.uk>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Rik van Riel <riel@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Daniel Micay <danielmicay@gmail.com>, Qualys Security Advisory <qsa@qualys.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Pratyush Anand <panand@redhat.com>, James Hogan <james.hogan@imgtec.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Date: Sat, 24 Jun 2017 16:43:44 +0200
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20170624144343.GA29589@openwall.com>
+References: <20170606215534.GA13126@openwall.com> <CAGXu5j+tMVT2uQMP74KsYfvN-uFtQmjin-mON9gAs-qAMUq52Q@mail.gmail.com> <20170607120606.GA15236@openwall.com> <CAGXu5jJ80=ujcXw_QUPy5bbq8vse=5eDviH4Px_ja6=XTuDuBg@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jJ80=ujcXw_QUPy5bbq8vse=5eDviH4Px_ja6=XTuDuBg@mail.gmail.com>
+Subject: Re: [kernel-hardening] symlink/hardlink/FIFO restrictions
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Jun 24, 2017 at 2:11 AM, Russell King - ARM Linux
-<linux@armlinux.org.uk> wrote:
-> On Fri, Jun 23, 2017 at 01:59:55PM -0700, Kees Cook wrote:
->> This is v2 (to refresh the 5 patches in -mm) for moving ELF_ET_DYN_BASE
->> safely lower. Changes are clarifications in the commit logs (suggested
->> by mpe), a compat think-o fix for arm64 (thanks to Ard), and to add
->> Rik and mpe's Acks.
->>
->> Quoting patch 1/5:
->>
->> The ELF_ET_DYN_BASE position was originally intended to keep loaders
->> away from ET_EXEC binaries. (For example, running "/lib/ld-linux.so.2
->> /bin/cat" might cause the subsequent load of /bin/cat into where the
->> loader had been loaded.) With the advent of PIE (ET_DYN binaries with
->> an INTERP Program Header), ELF_ET_DYN_BASE continued to be used since
->> the kernel was only looking at ET_DYN. However, since ELF_ET_DYN_BASE
->> is traditionally set at the top 1/3rd of the TASK_SIZE, a substantial
->> portion of the address space is unused.
->
-> With existing kernels on ARM:
->
-> 00010000-00017000 r-xp 00000000 08:01 270810     /bin/cat
-> 00026000-00027000 r--p 00006000 08:01 270810     /bin/cat
-> 00027000-00028000 rw-p 00007000 08:01 270810     /bin/cat
-> 7f661000-7f679000 r-xp 00000000 08:01 281659     /lib/arm-linux-gnueabihf/ld-2.23.so
-> 7f688000-7f689000 r--p 00017000 08:01 281659     /lib/arm-linux-gnueabihf/ld-2.23.so
-> 7f689000-7f68a000 rw-p 00018000 08:01 281659     /lib/arm-linux-gnueabihf/ld-2.23.so
->
-> If the loader is loaded at 4MB, this means the size of an ET_EXEC
-> program is limited to less than 4MB - and distros aren't yet
-> building everything as PIE on ARM.
+On Thu, Jun 22, 2017 at 09:27:10PM -0700, Kees Cook wrote:
+> On Wed, Jun 7, 2017 at 5:06 AM, Solar Designer <solar@openwall.com> wrote:
+> > On Tue, Jun 06, 2017 at 09:10:43PM -0700, Kees Cook wrote:
+> >> On Tue, Jun 6, 2017 at 2:55 PM, Solar Designer <solar@openwall.com> wrote:
+> >> > As to the FIFO restrictions, those don't appear to have been merged
+> >> > upstream yet.
+> >>
+> >> Do the FIFO restrictions exist in -ow too?
+> >
+> > Yes, and they pre-date grsecurity too.
+> >
+> >> I wonder what enabling that protection might break...
+> >
+> > I was adding notes on what broke to the -ow patch FAQ, but it lists
+> > nothing for the FIFOs.  So apparently nothing of note broke, maybe
+> > because the restrictions were limited to what was required (e.g., didn't
+> > apply to FIFOs opened without O_CREAT).
+> >
+> > +Restricted FIFOs in /tmp
+> > +CONFIG_HARDEN_FIFO
+> > +  In addition to restricting links, you might also want to restrict
+> > +  writes into untrusted FIFOs (named pipes), to make data spoofing
+> > +  attacks harder. Enabling this option disallows writing into FIFOs
+> > +  not owned by the user in +t directories, unless the owner is the
+> > +  same as that of the directory or the FIFO is opened without the
+> > +  O_CREAT flag.
+> >
+> > @@ -1084,6 +1126,32 @@ do_last:
+> >         /*
+> >          * It already exists.
+> >          */
+> > +
+> > +#ifdef CONFIG_HARDEN_FIFO
+> > +       /*
+> > +        * Don't write to FIFOs that we don't own in +t directories,
+> > +        * unless the FIFO is owned by the owner of the directory.
+> > +        *
+> > +        * Do this check early while we hold the directory.
+> > +        */
+> > +       inode = dentry->d_inode;
+> > +       if (S_ISFIFO(inode->i_mode) && !(flag & O_EXCL) &&
+> > +           (dir->d_inode->i_mode & S_ISVTX) &&
+> > +           inode->i_uid != dir->d_inode->i_uid &&
+> > +           current->fsuid != inode->i_uid) {
+> > +               up(&dir->d_inode->i_sem);
+> > +               if (!permission(inode, acc_mode))
+> > +               security_alert("denied writing FIFO of %d.%d "
+> > +                       "by UID %d, EUID %d, process %s:%d",
+> > +                       "writes into a FIFO denied",
+> > +                       inode->i_uid, inode->i_gid,
+> > +                       current->uid, current->euid,
+> > +                       current->comm, current->pid);
+> > +               error = -EACCES;
+> > +               goto exit_dput;
+> > +       }
+> > +#endif
+> >
+> > The intent was to detect unintentional writes to FIFOs, where the
+> > program expected to create a regular file with this very same call.
+> >
+> > An argument against restricting this is that similar attacks are also
+> > possible via attacker-created regular files, especially now that we have
+> > inotify, although FIFOs made the attacks particularly simple and
+> > reliable (no need to win a race).
+> 
+> [trying to get back to older emails...]
+> 
+> Looks reasonable. Do you want to put together a patch for this?
 
-The loader isn't loaded at 4MB; that's what patch 1 changes: loaders
-are moved into the mmap region so they will not collide with either
-ET_EXEC nor PIE (ET_DYN-with-INTERP).
+No, I'd prefer that someone else does.  If a new KSPP contributor does,
+then we need to provide some mentoring and be especially careful with
+patch review - perhaps you'd help with that.  I lack time and I'm not up
+to date with latest kernels.
 
-(After this patch, the name "ELF_ET_DYN_BASE" becomes a bit misleading...)
+> It seems like it'd be a useful addition to complement the link
+> restrictions.
 
--Kees
+Yes, although not as useful as it used to be, unless:
 
--- 
-Kees Cook
-Pixel Security
+Maybe at this time we can also afford a restriction on regular files,
+even if perhaps disabled by default?  Disallow O_CREAT without O_EXCL in
++t directories, even for regular files.  A separate knob from the FIFOs,
+but sharing code with them (skip the S_ISFIFO() check).
+
+The primary thing I expect this to break is people's manual misuse of
+/tmp and the like.  Maybe those trying to get rid of this bad habit will
+enable this policy enforcement.  Then these people's use of the systems
+and their problem reports will also uncover some issues and hardening
+opportunities(*) in programs.
+
+(*) Not every +t directory is world-writable - some are group-writable,
+where the issues aren't directly exposed.
+
+Alexander
