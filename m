@@ -1,46 +1,43 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1498251600-132458-2-git-send-email-keescook@chromium.org>
-References: <1498251600-132458-1-git-send-email-keescook@chromium.org> <1498251600-132458-2-git-send-email-keescook@chromium.org>
+In-Reply-To: <20170623015010.GA137429@beast>
+References: <20170623015010.GA137429@beast>
 From: Kees Cook <keescook@chromium.org>
-Date: Sat, 24 Jun 2017 12:16:42 -0700
-Message-ID: <CAGXu5jL7cYJT6n8w8egOuLOH6QHAp8X=+s3B+hB_sdNb8ub=5Q@mail.gmail.com>
+Date: Sun, 25 Jun 2017 12:56:21 -0700
+Message-ID: <CAGXu5jJEi_CS-CB=-4369TFRyeN4oQdmGS+HV-zoi4rSPpq3Jw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 1/5] binfmt_elf: Use ELF_ET_DYN_BASE only for PIE
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Kees Cook <keescook@chromium.org>, "# 3.4.x" <stable@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, Rik van Riel <riel@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Daniel Micay <danielmicay@gmail.com>, Qualys Security Advisory <qsa@qualys.com>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Alexander Viro <viro@zeniv.linux.org.uk>, Pratyush Anand <panand@redhat.com>, James Hogan <james.hogan@imgtec.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v2] mm: Add SLUB free list pointer obfuscation
+To: Christoph Lameter <cl@linux.com>, Andrew Morton <akpm@linux-foundation.org>
+Cc: Laura Abbott <labbott@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Josh Triplett <josh@joshtriplett.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 23, 2017 at 1:59 PM, Kees Cook <keescook@chromium.org> wrote:
-> For 32-bit tasks when RLIMIT_STACK is set to RLIM_INFINITY, programs
-> are loaded below the mmap region. This means they can be made to collide
-> (CVE-2017-1000370) or nearly collide (CVE-2017-1000371) with pathological
-> stack regions. Lowering ELF_ET_DYN_BASE solves both by moving programs
-> above the mmap region in all cases, and will now additionally avoid
-> programs falling back to the mmap region by enforcing MAP_FIXED for
-> program loads (i.e. if it would have collided with the stack, now it
-> will fail to load instead of falling back to the mmap region).
+On Thu, Jun 22, 2017 at 6:50 PM, Kees Cook <keescook@chromium.org> wrote:
+> This SLUB free list pointer obfuscation code is modified from Brad
+> Spengler/PaX Team's code in the last public patch of grsecurity/PaX based
+> on my understanding of the code. Changes or omissions from the original
+> code are mine and don't reflect the original grsecurity/PaX code.
+>
+> This adds a per-cache random value to SLUB caches that is XORed with
+> their freelist pointers. This adds nearly zero overhead and frustrates the
+> very common heap overflow exploitation method of overwriting freelist
+> pointers. A recent example of the attack is written up here:
+> http://cyseclabs.com/blog/cve-2016-6187-heap-off-by-one-exploit
 
-It was pointed out by rmk that I described this inaccurately. I mix up
-my own visualization of the address space (above/below in
-/proc/$pid/maps) with actual value comparisons (above/below
-numerically). This paragraph should read:
+BTW, to quantify "nearly zero overhead", I ran multiple 200-run cycles
+of "hackbench -g 20 -l 1000", and saw:
 
+before:
+mean 10.11882499999999999995
+variance .03320378329145728642
+stdev .18221905304181911048
 
-For 32-bit tasks when RLIMIT_STACK is set to RLIM_INFINITY, programs
-are loaded above the mmap region. This means they can be made to collide
-(CVE-2017-1000370) or nearly collide (CVE-2017-1000371) with pathological
-stack regions. Lowering ELF_ET_DYN_BASE solves both by moving programs
-below the mmap region in all cases, and will now additionally avoid
-programs falling back to the mmap region by enforcing MAP_FIXED for
-program loads (i.e. if it would have collided with the stack, now it
-will fail to load instead of falling back to the mmap region).
+after:
+mean 10.12654000000000000014
+variance .04700556623115577889
+stdev .21680767106160192064
 
-
-Andrew, are you able to manually adjust this commit log in -mm, or
-should I resend the patch with this paragraph corrected?
-
-Thanks!
+The difference gets lost in the noise, but if the above is sensible,
+it's 0.07% slower. ;)
 
 -Kees
 
