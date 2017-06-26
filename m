@@ -1,94 +1,96 @@
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Date: Mon, 26 Jun 2017 17:41:16 +0300
-Message-ID: <20170626144116.27599-4-igor.stoppa@huawei.com>
-In-Reply-To: <20170626144116.27599-1-igor.stoppa@huawei.com>
-References: <20170626144116.27599-1-igor.stoppa@huawei.com>
+From: Stephan =?ISO-8859-1?Q?M=FCller?= <smueller@chronox.de>
+Date: Mon, 26 Jun 2017 19:38:06 +0200
+Message-ID: <1678474.GnYBdSlWgs@tauon.chronox.de>
+In-Reply-To: <1498440189.26123.85.camel@haakon3.risingtidesystems.com>
+References: <20170606174804.31124-1-Jason@zx2c4.com> <2639082.PtrrGWOPPL@positron.chronox.de> <1498440189.26123.85.camel@haakon3.risingtidesystems.com>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] [PATCH 3/3] Make LSM Writable Hooks a command line option
-To: keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org, labbott@redhat.com
-Cc: penguin-kernel@I-love.SAKURA.ne.jp, paul@paul-moore.com, sds@tycho.nsa.gov, casey@schaufler-ca.com, hch@infradead.org, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor
- Stoppa <igor.stoppa@gmail.com>, Igor Stoppa <igor.stoppa@huawei.com>
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="iso-8859-1"
+Subject: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure RNG is seeded before use
+To: "Nicholas A. Bellinger" <nab@linux-iscsi.org>
+Cc: Lee Duncan <lduncan@suse.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, Chris Leech <cleech@redhat.com>, open-iscsi@googlegroups.com, target-devel <target-devel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Igor Stoppa <igor.stoppa@gmail.com>
+Am Montag, 26. Juni 2017, 03:23:09 CEST schrieb Nicholas A. Bellinger:
 
-This patch shows how it is possible to take advantage of pmalloc:
-instead of using the build-time option __lsm_ro_after_init, to decide if
-it is possible to keep the hooks modifiable, now this becomes a
-boot-time decision, based on the kernel command line.
+Hi Nicholas,
 
-This patch relies on:
+> Hi Stephan, Lee & Jason,
+>=20
+> (Adding target-devel CC')
+>=20
+> Apologies for coming late to the discussion.  Comments below.
+>=20
+> On Sun, 2017-06-18 at 10:04 +0200, Stephan M=FCller wrote:
+> > Am Samstag, 17. Juni 2017, 05:45:57 CEST schrieb Lee Duncan:
+> >=20
+> > Hi Lee,
+> >=20
+> > > In your testing, how long might a process have to wait? Are we talking
+> > > seconds? Longer? What about timeouts?
+> >=20
+> > In current kernels (starting with 4.8) this timeout should clear within=
+ a
+> > few seconds after boot.
+> >=20
+> > In older kernels (pre 4.8), my KVM takes up to 90 seconds to reach that
+> > seeding point. I have heard that on IBM System Z this trigger point
+> > requires minutes to be reached.
+>=20
+> I share the same concern as Lee wrt to introducing latency into the
+> existing iscsi-target login sequence.
+>=20
+> Namely in the use-cases where a single node is supporting ~1K unique
+> iscsi-target IQNs, and fail-over + re-balancing of IQNs where 100s of
+> login attempts are expected to occur in parallel.
+>=20
+> If environments exist that require non trivial amounts of time for RNG
+> seeding to be ready for iscsi-target usage, then enforcing this
+> requirement at iscsi login time can open up problems, especially when
+> iscsi host environments may be sensitive to login timeouts, I/O
+> timeouts, et al.
+>=20
+> That said, I'd prefer to simply wait for RNG to be seeded at modprobe
+> iscsi_target_mod time, instead of trying to enforce randomness during
+> login.
+>=20
+> This way, those of use who have distributed storage platforms can know
+> to avoid putting a node into a state to accept iscsi-target IQN export
+> migration, before modprobe iscsi_target_mod has successfully loaded and
+> RNG seeding has been confirmed.
+>=20
+> WDYT..?
 
-"Convert security_hook_heads into explicit array of struct list_head"
-Author: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
+We may have a chicken and egg problem when the wait is at the modprobe time=
+=2E=20
+Assume the modprobe happens during initramfs time to get access to the root=
+=20
+file system. In this case, you entire boot process will lock up for an=20
+indefinite amount of time. The reason is that in order to obtain events=20
+detected by the RNG, devices need to be initialized and working. Such devic=
+es=20
+commonly start working after the the root partition is mounted as it contai=
+ns=20
+all drivers, all configuration information etc.
 
-to break free from the static constraint imposed by the previous
-hardening model, based on __ro_after_init.
+Note, during the development of my /dev/random implementation, I added the=
+=20
+getrandom-like blocking behavior to /dev/urandom (which is the equivalent t=
+o=20
+Jason's patch except that it applies to user space). The boot process locke=
+d=20
+up since systemd wanted data from /dev/urandom while it processed the=20
+initramfs. As it did not get any, the boot process did not commence that co=
+uld=20
+deliver new events to be picked up by the RNG.
 
-The default value is disabled, unless SE Linux debugging is turned on.
+As I do not have such an iscsi system, I cannot test Jason's patch. But may=
+be=20
+the mentioned chicken-and-egg problem I mentioned above is already visible=
+=20
+with the current patch as it will lead to a blocking of the mounting of the=
+=20
+root partition in case the root partition is on an iscsi target.
 
-Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
-CC: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
----
- security/security.c | 22 +++++++++++++++++++---
- 1 file changed, 19 insertions(+), 3 deletions(-)
-
-diff --git a/security/security.c b/security/security.c
-index 44c47b6..c7b4670 100644
---- a/security/security.c
-+++ b/security/security.c
-@@ -27,6 +27,7 @@
- #include <linux/personality.h>
- #include <linux/backing-dev.h>
- #include <linux/string.h>
-+#include <linux/pmalloc.h>
- #include <net/flow.h>
- 
- #define MAX_LSM_EVM_XATTR	2
-@@ -34,10 +35,19 @@
- /* Maximum number of letters for an LSM name string */
- #define SECURITY_NAME_MAX	10
- 
--static struct list_head hook_heads[LSM_MAX_HOOK_INDEX]
--	__lsm_ro_after_init;
- static ATOMIC_NOTIFIER_HEAD(lsm_notifier_chain);
- 
-+static int dynamic_lsm = IS_ENABLED(CONFIG_SECURITY_SELINUX_DISABLE);
-+
-+static __init int set_dynamic_lsm(char *str)
-+{
-+	get_option(&str, &dynamic_lsm);
-+	return 0;
-+}
-+early_param("dynamic_lsm", set_dynamic_lsm);
-+
-+static struct list_head *hook_heads;
-+static struct gen_pool *sec_pool;
- char *lsm_names;
- /* Boot-time LSM user choice */
- static __initdata char chosen_lsm[SECURITY_NAME_MAX + 1] =
-@@ -62,6 +72,11 @@ int __init security_init(void)
- {
- 	enum security_hook_index i;
- 
-+	sec_pool = pmalloc_create_pool("security", PMALLOC_DEFAULT_ALLOC_ORDER);
-+	BUG_ON(!sec_pool);
-+	hook_heads = pmalloc(sec_pool,
-+			     sizeof(struct list_head) * LSM_MAX_HOOK_INDEX);
-+	BUG_ON(!hook_heads);
- 	for (i = 0; i < LSM_MAX_HOOK_INDEX; i++)
- 		INIT_LIST_HEAD(&hook_heads[i]);
- 	pr_info("Security Framework initialized\n");
-@@ -77,7 +92,8 @@ int __init security_init(void)
- 	 * Load all the remaining security modules.
- 	 */
- 	do_security_initcalls();
--
-+	if (!dynamic_lsm)
-+		pmalloc_protect_pool(sec_pool);
- 	return 0;
- }
- 
--- 
-2.9.3
+Ciao
+Stephan
