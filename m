@@ -1,96 +1,66 @@
-From: Stephan =?ISO-8859-1?Q?M=FCller?= <smueller@chronox.de>
-Date: Mon, 26 Jun 2017 19:38:06 +0200
-Message-ID: <1678474.GnYBdSlWgs@tauon.chronox.de>
-In-Reply-To: <1498440189.26123.85.camel@haakon3.risingtidesystems.com>
-References: <20170606174804.31124-1-Jason@zx2c4.com> <2639082.PtrrGWOPPL@positron.chronox.de> <1498440189.26123.85.camel@haakon3.risingtidesystems.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset="iso-8859-1"
-Subject: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure RNG is seeded before use
-To: "Nicholas A. Bellinger" <nab@linux-iscsi.org>
-Cc: Lee Duncan <lduncan@suse.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, Chris Leech <cleech@redhat.com>, open-iscsi@googlegroups.com, target-devel <target-devel@vger.kernel.org>
+Sender: keescook@google.com
+In-Reply-To: <8737amew79.fsf@concordia.ellerman.id.au>
+References: <1498154792-49952-1-git-send-email-keescook@chromium.org>
+ <1498154792-49952-4-git-send-email-keescook@chromium.org> <87podvp4q1.fsf@concordia.ellerman.id.au>
+ <CAGXu5jK7aHHRMZyZyrviBF+cLghWcH_D4PX_vMFOycHuF7EdLA@mail.gmail.com> <8737amew79.fsf@concordia.ellerman.id.au>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 26 Jun 2017 11:26:59 -0700
+Message-ID: <CAGXu5jJKtdgRzdiDhA7XBcsaLQhmFgyQahk1F-zscFQY3pNBUQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH 3/4] powerpc: Reduce ELF_ET_DYN_BASE
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, James Hogan <james.hogan@imgtec.com>, Pratyush Anand <panand@redhat.com>, Ingo Molnar <mingo@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Am Montag, 26. Juni 2017, 03:23:09 CEST schrieb Nicholas A. Bellinger:
+On Mon, Jun 26, 2017 at 6:04 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+> Kees Cook <keescook@chromium.org> writes:
+>
+>> On Fri, Jun 23, 2017 at 12:01 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+>>> Kees Cook <keescook@chromium.org> writes:
+>>>
+>>>> Now that explicitly executed loaders are loaded in the mmap region,
+>>>> position PIE binaries lower in the address space to avoid possible
+>>>> collisions with mmap or stack regions. For 64-bit, align to 4GB to
+>>>> allow runtimes to use the entire 32-bit address space for 32-bit
+>>>> pointers.
+>>>
+>>> The change log and subject are a bit out of whack with the actual patch
+>>> because previously we used 512MB.
+>>>
+>>> How about?
+>>>
+>>>   powerpc: Move ELF_ET_DYN_BASE to 4GB / 4MB
+>>>
+>>>   Now that explicitly executed loaders are loaded in the mmap region,
+>>>   we have more freedom to decide where we position PIE binaries in the
+>>>   address space to avoid possible collisions with mmap or stack regions.
+>>>
+>>>   For 64-bit, align to 4GB to allow runtimes to use the entire 32-bit
+>>>   address space for 32-bit pointers. On 32-bit use 4MB.
+>>
+>> Good idea, thanks. I'll resend the series with the commit logs updated.
+>>
+>>> Is there any particular reasoning behind the 4MB value on 32-bit?
+>>
+>> So, I've dug around a bit on this, and I *think* the rationale is to
+>> avoid mapping a possible 4MB page table entry when it won't be using
+>> at least a portion near the lower end (NULL address area covered
+>> blocked by mmap_min_addr). It seems to be mainly tradition, though.
+>
+> OK, that is obscure, especially for CPUs that don't have a 4MB page
+> size. But consistency across arches is probably best regardless.
 
-Hi Nicholas,
+Yeah, I like being not "close" to the NULL address, though the
+definition of "close" has been various values like 64K (mmap_min_addr)
+and 1M (x86 BIOS junk and new stack-gap size). 4MB is above even that,
+so, I think we're fine there. It's what Windows has used, so it's
+familiar and any new attack methodologies would at least be shared
+across OSes and architectures, so we should "notice" any problem with
+the value, and then we can adjust it if we need to.
 
-> Hi Stephan, Lee & Jason,
->=20
-> (Adding target-devel CC')
->=20
-> Apologies for coming late to the discussion.  Comments below.
->=20
-> On Sun, 2017-06-18 at 10:04 +0200, Stephan M=FCller wrote:
-> > Am Samstag, 17. Juni 2017, 05:45:57 CEST schrieb Lee Duncan:
-> >=20
-> > Hi Lee,
-> >=20
-> > > In your testing, how long might a process have to wait? Are we talking
-> > > seconds? Longer? What about timeouts?
-> >=20
-> > In current kernels (starting with 4.8) this timeout should clear within=
- a
-> > few seconds after boot.
-> >=20
-> > In older kernels (pre 4.8), my KVM takes up to 90 seconds to reach that
-> > seeding point. I have heard that on IBM System Z this trigger point
-> > requires minutes to be reached.
->=20
-> I share the same concern as Lee wrt to introducing latency into the
-> existing iscsi-target login sequence.
->=20
-> Namely in the use-cases where a single node is supporting ~1K unique
-> iscsi-target IQNs, and fail-over + re-balancing of IQNs where 100s of
-> login attempts are expected to occur in parallel.
->=20
-> If environments exist that require non trivial amounts of time for RNG
-> seeding to be ready for iscsi-target usage, then enforcing this
-> requirement at iscsi login time can open up problems, especially when
-> iscsi host environments may be sensitive to login timeouts, I/O
-> timeouts, et al.
->=20
-> That said, I'd prefer to simply wait for RNG to be seeded at modprobe
-> iscsi_target_mod time, instead of trying to enforce randomness during
-> login.
->=20
-> This way, those of use who have distributed storage platforms can know
-> to avoid putting a node into a state to accept iscsi-target IQN export
-> migration, before modprobe iscsi_target_mod has successfully loaded and
-> RNG seeding has been confirmed.
->=20
-> WDYT..?
+-Kees
 
-We may have a chicken and egg problem when the wait is at the modprobe time=
-=2E=20
-Assume the modprobe happens during initramfs time to get access to the root=
-=20
-file system. In this case, you entire boot process will lock up for an=20
-indefinite amount of time. The reason is that in order to obtain events=20
-detected by the RNG, devices need to be initialized and working. Such devic=
-es=20
-commonly start working after the the root partition is mounted as it contai=
-ns=20
-all drivers, all configuration information etc.
-
-Note, during the development of my /dev/random implementation, I added the=
-=20
-getrandom-like blocking behavior to /dev/urandom (which is the equivalent t=
-o=20
-Jason's patch except that it applies to user space). The boot process locke=
-d=20
-up since systemd wanted data from /dev/urandom while it processed the=20
-initramfs. As it did not get any, the boot process did not commence that co=
-uld=20
-deliver new events to be picked up by the RNG.
-
-As I do not have such an iscsi system, I cannot test Jason's patch. But may=
-be=20
-the mentioned chicken-and-egg problem I mentioned above is already visible=
-=20
-with the current patch as it will lead to a blocking of the mounting of the=
-=20
-root partition in case the root partition is on an iscsi target.
-
-Ciao
-Stephan
+-- 
+Kees Cook
+Pixel Security
