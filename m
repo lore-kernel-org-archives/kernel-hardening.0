@@ -1,50 +1,58 @@
-Message-ID: <1498517551.22457.7.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Mon, 26 Jun 2017 18:52:31 -0400
-In-Reply-To: <CAGXu5jLCAdPOKZFotaWZ8MjwqW8Eq9_tLc_fgbYsTcbVWv77AQ@mail.gmail.com>
-References: 
-	<CAGXu5jLCAdPOKZFotaWZ8MjwqW8Eq9_tLc_fgbYsTcbVWv77AQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] non-x86 per-task stack canaries
-To: Kees Cook <keescook@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Mark Rutland <mark.rutland@arm.com>
+Date: Mon, 26 Jun 2017 16:30:38 -0700
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20170626233038.GA48751@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] random: Do not ignore early device randomness
+To: Theodore Ts'o <tytso@mit.edu>
+Cc: Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Jessica Yu <jeyu@redhat.com>, "Steven Rostedt (VMware)" <rostedt@goodmis.org>, Viresh Kumar <viresh.kumar@linaro.org>, Tejun Heo <tj@kernel.org>, Prarit Bhargava <prarit@redhat.com>, Lokesh Vutla <lokeshvutla@ti.com>, Nicholas Piggin <npiggin@gmail.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 2017-06-26 at 14:04 -0700, Kees Cook wrote:
-> Hi,
-> 
-> The stack protector functionality on x86_64 uses %gs:0x28 (%gs is the
-> percpu area) for __stack_chk_guard, and all other architectures use a
-> global variable instead. This means we never change the stack canary
-> on non-x86 architectures which allows for a leak in one task to expose
-> the canary in another task.
-> 
-> I'm curious what thoughts people may have about how to get this
-> correctly implemented. Teaching the compiler about per-cpu data sounds
-> exciting. :)
-> 
-> -Kees
+The add_device_randomness() function would ignore incoming bytes if the
+crng wasn't ready. This additionally makes sure to make an early enough
+call to add_latent_entropy() to influence the initial stack canary, which
+is especially important on non-x86 systems where it stays the same through
+the life of the boot.
 
-arm64 has many integer registers so I don't think reserving one would
-hurt performance, especially in the kernel where hot numeric loops
-barely exist. It would reduce the cost of SSP by getting rid of the
-memory read for the canary value. On the other hand, using per-cpu data
-would likely be higher cost than the global. x86 has segment registers
-but most archs probably need to do something more painful.
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ drivers/char/random.c | 5 +++++
+ init/main.c           | 1 +
+ 2 files changed, 6 insertions(+)
 
-It's safe as long as it's a callee-saved register. It should be enforced
-that there's no assembly spilling it and calling into C code without the
-random canary. There's very little assembly using registers like x28 so
-it wouldn't be that bad. It's possible there's one where nothing needs
-to be changed, there only needs to be a check to make sure it stays that
-way.
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index 01a260f67437..23cab7a8c1c1 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -987,6 +987,11 @@ void add_device_randomness(const void *buf, unsigned int size)
+ 	unsigned long time = random_get_entropy() ^ jiffies;
+ 	unsigned long flags;
+ 
++	if (!crng_ready()) {
++		crng_fast_load(buf, size);
++		return;
++	}
++
+ 	trace_add_device_randomness(size, _RET_IP_);
+ 	spin_lock_irqsave(&input_pool.lock, flags);
+ 	_mix_pool_bytes(&input_pool, buf, size);
+diff --git a/init/main.c b/init/main.c
+index f866510472d7..6b2c3ab7d76b 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -497,6 +497,7 @@ asmlinkage __visible void __init start_kernel(void)
+ 	/*
+ 	 * Set up the initial canary ASAP:
+ 	 */
++	add_latent_entropy();
+ 	boot_init_stack_canary();
+ 
+ 	cgroup_init_early();
+-- 
+2.7.4
 
-It would be a step towards making SSP cheap enough to expand it into a
-feature like the StackGuard XOR canaries.
 
-Samsung has a return address XOR feature based on reserving a register
-and while RAP's probabilistic return address mitigation isn't open-
-source, it was stated that it reserves a register on x86_64 where they
-aren't as plentiful as arm64.
+-- 
+Kees Cook
+Pixel Security
