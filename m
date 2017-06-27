@@ -1,49 +1,97 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170627073132.GC28078@dhcp22.suse.cz>
-References: <1497915397-93805-1-git-send-email-keescook@chromium.org>
- <1497915397-93805-23-git-send-email-keescook@chromium.org>
- <06bde73d-ca3c-8f91-0142-ddf3af99875e@redhat.com> <CAGXu5jKBB8TF7e74QkuxOu0iy6TZe3Q_0Fs21tbyq23Js3v3Mw@mail.gmail.com>
- <20170627073132.GC28078@dhcp22.suse.cz>
+In-Reply-To: <1497286620-15027-2-git-send-email-s.mesoraca16@gmail.com>
+References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com> <1497286620-15027-2-git-send-email-s.mesoraca16@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 27 Jun 2017 15:07:17 -0700
-Message-ID: <CAGXu5jK5L8ZhMAHEMBDWhnDMDS-Wt-aNMUbOMrMHT25qWqNoRA@mail.gmail.com>
+Date: Tue, 27 Jun 2017 15:51:35 -0700
+Message-ID: <CAGXu5jLHps6z7nnwHwDv7kW9b21b4hPD_XmgKY1OjfNa0H-dKg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 22/23] usercopy: split user-controlled slabs to separate caches
-To: Michal Hocko <mhocko@kernel.org>
-Cc: Laura Abbott <labbott@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dave@nullcore.net>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH 01/11] S.A.R.A. Documentation
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 27, 2017 at 12:31 AM, Michal Hocko <mhocko@kernel.org> wrote:
-> But I am not really sure I understand consequences of this patch. So how
-> do those attacks look like. Do you have an example of a CVE which would
-> be prevented by this measure?
-
-It's a regular practice, especially for heap grooming. You can see an
-example here:
-http://cyseclabs.com/blog/cve-2016-6187-heap-off-by-one-exploit
-which even recognizes this as a common method, saying "the standard
-msgget() technique". Having the separate caches doesn't strictly
-_stop_ some attacks, but it changes the nature of what the attacker
-has to do. Instead of having a universal way to groom the heap, they
-must be forced into other paths. Generally speaking this can reduce
-what's possible making the attack either impossible, more expensive to
-develop, or less reliable.
-
->> This would mean building out *_user() versions for all the various
->> *alloc() functions, though. That gets kind of long/ugly.
+On Mon, Jun 12, 2017 at 9:56 AM, Salvatore Mesoraca
+<s.mesoraca16@gmail.com> wrote:
+> Adding documentation for S.A.R.A. LSM.
 >
-> Only prepare those which are really needed. It seems only handful of
-> them in your patch.
+> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+> ---
+>  Documentation/admin-guide/kernel-parameters.txt |  40 +++++
+>  Documentation/security/00-INDEX                 |   2 +
+>  Documentation/security/SARA.rst                 | 192 ++++++++++++++++++++++++
+>  3 files changed, 234 insertions(+)
+>  create mode 100644 Documentation/security/SARA.rst
+>
+> diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
+> index 0f5c3b4..f3ee12d 100644
+> --- a/Documentation/admin-guide/kernel-parameters.txt
+> +++ b/Documentation/admin-guide/kernel-parameters.txt
+> @@ -3702,6 +3702,46 @@
+>                         1 -- enable.
+>                         Default value is set via kernel config option.
+>
+> +       sara=           [SARA] Disable or enable S.A.R.A. at boot time.
+> +                       If disabled this way S.A.R.A. can't be enabled
+> +                       again.
+> +                       Format: { "0" | "1" }
+> +                       See security/sara/Kconfig help text
+> +                       0 -- disable.
+> +                       1 -- enable.
+> +                       Default value is set via kernel config option.
+> +
+> +       sara_usb_filtering= [SARA]
+> +                       Disable or enable S.A.R.A. USB Filtering at boot
+> +                       time.
+> +                       Format: { "0" | "1" }
+> +                       See security/sara/Kconfig help text
+> +                       0 -- disable.
+> +                       1 -- enable.
+> +                       Default value is 1.
+> +
+> +       sara_usb_filtering_default= [SARA]
+> +                       Set S.A.R.A. USB Filtering default action.
+> +                       Format: { "a" | "d" }
+> +                       See security/sara/Kconfig help text
+> +                       a -- allow.
+> +                       d -- deny.
+> +                       Default value is set via kernel config option.
+> +
+> +       sara_wxprot=    [SARA] Disable or enable S.A.R.A. WX Protection
+> +                       at boot time.
+> +                       Format: { "0" | "1" }
+> +                       See security/sara/Kconfig help text
+> +                       0 -- disable.
+> +                       1 -- enable.
+> +                       Default value is 1.
+> +
+> +       sara_wxprot_default_flags= [SARA]
+> +                       Set S.A.R.A. WX Protection default flags.
+> +                       Format: <integer>
+> +                       See S.A.R.A. documentation.
+> +                       Default value is set via kernel config option.
+> +
 
-Okay, if that's the desired approach, we can do that.
+As an organizational note, I would suggest making these all regular
+"module parameters", which would let them be automatically namespaced
+under "sara". For example "sara.enabled", "sara.wxprot", etc. For
+example, this is how LoadPin does it for "loadpin.enabled":
 
-> OK, I was about to ask about vmalloc fallbacks. So this is not
-> implemented in your patch. Does it metter from the security point of
-> view?
+/* Should not be mutable after boot, so not listed in sysfs (perm == 0). */
+module_param(enabled, int, 0);
+MODULE_PARM_DESC(enabled, "Pin module/firmware loading (default: true)");
 
-Right, the HIDESYM-like feature hasn't been ported by anyone yet, so
-this hasn't happened. It would simply build on similar logic.
+> +S.A.R.A. (S.A.R.A. is Another Recursive Acronym) is a stacked Linux Security
+> +Module that aims to collect heterogeneous security measures, providing a common
+> +interface to manage them.
+> +As of today it consists of two main submodules:
+> +
+> +- USB Filtering
+> +- WX Protection
+
+The USB Filtering of SARA seems kind of out of place. Does it have
+infrastructure in common with the WX protections? Should it be its own
+stackable LSM?
 
 -Kees
 
