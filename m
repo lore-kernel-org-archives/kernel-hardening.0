@@ -1,49 +1,73 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170627144948.GD28078@dhcp22.suse.cz>
-References: <20170621173201.GA114489@beast> <20170627144948.GD28078@dhcp22.suse.cz>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 27 Jun 2017 13:08:39 -0700
-Message-ID: <CAGXu5jKaGjuq6s8XF+mctaL1Ckr2HtKgCnty2p6rUFQSmc-xHQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2] binfmt_elf: Use ELF_ET_DYN_BASE only for PIE
-To: Michal Hocko <mhocko@kernel.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Rik van Riel <riel@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Qualys Security Advisory <qsa@qualys.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Dmitry Safonov <dsafonov@virtuozzo.com>, Andy Lutomirski <luto@amacapital.net>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, LKML <linux-kernel@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20170627175118.GA14286@infradead.org>
+References: <20170627173323.11287-1-igor.stoppa@huawei.com>
+ <20170627173323.11287-4-igor.stoppa@huawei.com> <20170627175118.GA14286@infradead.org>
+From: "igor.stoppa@gmail.com" <igor.stoppa@gmail.com>
+Date: Tue, 27 Jun 2017 23:07:17 +0300
+Message-ID: <CAH2bzCQQyCEkBEe5tWRLnXek=L6MUJai1D77ogjaBjW7wJJmfA@mail.gmail.com>
+Content-Type: multipart/alternative; boundary="94eb2c047dc68424bb0552f69e2c"
+Subject: [kernel-hardening] Re: [PATCH 3/3] Make LSM Writable Hooks a command line option
+To: Christoph Hellwig <hch@infradead.org>
+Cc: Igor Stoppa <igor.stoppa@huawei.com>, keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org, penguin-kernel@i-love.sakura.ne.jp, paul@paul-moore.com, sds@tycho.nsa.gov, casey@schaufler-ca.com, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 27, 2017 at 7:49 AM, Michal Hocko <mhocko@kernel.org> wrote:
-> On Wed 21-06-17 10:32:01, Kees Cook wrote:
->> The ELF_ET_DYN_BASE position was originally intended to keep loaders
->> away from ET_EXEC binaries. (For example, running "/lib/ld-linux.so.2
->> /bin/cat" might cause the subsequent load of /bin/cat into where the
->> loader had been loaded.) With the advent of PIE (ET_DYN binaries with
->> an INTERP Program Header), ELF_ET_DYN_BASE continued to be used since
->> the kernel was only looking at ET_DYN. However, since ELF_ET_DYN_BASE
->> is traditionally set at the top 1/3rd of the TASK_SIZE, a substantial
->> portion of the address space is unused.
->>
->> For 32-bit tasks when RLIMIT_STACK is set to RLIM_INFINITY, programs
->> are loaded below the mmap region. This means they can be made to collide
->> (CVE-2017-1000370) or nearly collide (CVE-2017-1000371) with pathological
->> stack regions. Lowering ELF_ET_DYN_BASE solves both by moving programs
->> above the mmap region in all cases, and will now additionally avoid
->> programs falling back to the mmap region by enforcing MAP_FIXED for
->> program loads (i.e. if it would have collided with the stack, now it
->> will fail to load instead of falling back to the mmap region).
+--94eb2c047dc68424bb0552f69e2c
+Content-Type: text/plain; charset="UTF-8"
+
+On 27 June 2017 at 20:51, Christoph Hellwig <hch@infradead.org> wrote:
+
+> On Tue, Jun 27, 2017 at 08:33:23PM +0300, Igor Stoppa wrote:
 >
-> I do not understand this part. MAP_FIXED will simply unmap whatever
-> was under the requested range, how it could help failing anything? So
-> what would happen if something was mapped in that region, or is this
-> impossible? Moreover MAP_FIXED close to stack will inhibit the stack gap
-> protection.
+> [...]
 
-Hmm, well, that's my misunderstanding. Regardless, it should still use
-MAP_FIXED otherwise we end up with potentially unpredictable results.
-(Note that MAP_FIXED is already used all all remaining allocations, it
-was just missing on the first one.)
 
--Kees
+> > The default value is disabled, unless SE Linux debugging is turned on.
+>
+> Can we please just force it to be read-only?
+>
 
--- 
-Kees Cook
-Pixel Security
+I'm sorry, I'm not quite sure I understand your comment.
+
+I'm trying to replicate the behavior of __lsm_ro_after_init:
+
+line 1967 @ [1]   - Did I get it wrong?
+
+thanks, igor
+
+
+
+[1]
+https://kernel.googlesource.com/pub/scm/linux/kernel/git/jmorris/linux-security/+/5965453d5e3fb425e6f9d6b4fec403bda3f33107/include/linux/lsm_hooks.h
+
+--94eb2c047dc68424bb0552f69e2c
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><div class=3D"gmail_extra"><div class=3D"gmail_quote">On 2=
+7 June 2017 at 20:51, Christoph Hellwig <span dir=3D"ltr">&lt;<a href=3D"ma=
+ilto:hch@infradead.org" target=3D"_blank">hch@infradead.org</a>&gt;</span> =
+wrote:<br><blockquote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8=
+ex;border-left:1px solid rgb(204,204,204);padding-left:1ex"><span class=3D"=
+gmail-">On Tue, Jun 27, 2017 at 08:33:23PM +0300, Igor Stoppa wrote:<br><br=
+></span></blockquote><div>[...]</div><div>=C2=A0</div><blockquote class=3D"=
+gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(20=
+4,204,204);padding-left:1ex"><span class=3D"gmail-">
+&gt; The default value is disabled, unless SE Linux debugging is turned on.=
+<br>
+<br>
+</span>Can we please just force it to be read-only?<br>
+</blockquote></div><br>I&#39;m sorry, I&#39;m not quite sure I understand y=
+our comment.
+</div><div class=3D"gmail_extra"><br></div><div class=3D"gmail_extra">I&#39=
+;m trying to replicate the behavior of __lsm_ro_after_init:</div><div class=
+=3D"gmail_extra"><br></div><div class=3D"gmail_extra">line 1967 @ [1] =C2=
+=A0 - Did I get it wrong?</div><div class=3D"gmail_extra"><br></div><div cl=
+ass=3D"gmail_extra">thanks, igor</div><div class=3D"gmail_extra"><br></div>=
+<div class=3D"gmail_extra"><br></div><div class=3D"gmail_extra"><br></div><=
+div class=3D"gmail_extra">[1] <a href=3D"https://kernel.googlesource.com/pu=
+b/scm/linux/kernel/git/jmorris/linux-security/+/5965453d5e3fb425e6f9d6b4fec=
+403bda3f33107/include/linux/lsm_hooks.h">https://kernel.googlesource.com/pu=
+b/scm/linux/kernel/git/jmorris/linux-security/+/5965453d5e3fb425e6f9d6b4fec=
+403bda3f33107/include/linux/lsm_hooks.h</a><br></div></div>
+
+--94eb2c047dc68424bb0552f69e2c--
