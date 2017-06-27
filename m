@@ -1,144 +1,103 @@
-Date: Tue, 27 Jun 2017 09:31:32 +0200
-From: Michal Hocko <mhocko@kernel.org>
-Message-ID: <20170627073132.GC28078@dhcp22.suse.cz>
-References: <1497915397-93805-1-git-send-email-keescook@chromium.org>
- <1497915397-93805-23-git-send-email-keescook@chromium.org>
- <06bde73d-ca3c-8f91-0142-ddf3af99875e@redhat.com>
- <CAGXu5jKBB8TF7e74QkuxOu0iy6TZe3Q_0Fs21tbyq23Js3v3Mw@mail.gmail.com>
+Date: Tue, 27 Jun 2017 11:06:32 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170627100631.GA30002@leverpostej>
+References: <CAGXu5jLCAdPOKZFotaWZ8MjwqW8Eq9_tLc_fgbYsTcbVWv77AQ@mail.gmail.com>
+ <1498517551.22457.7.camel@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jKBB8TF7e74QkuxOu0iy6TZe3Q_0Fs21tbyq23Js3v3Mw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 22/23] usercopy: split user-controlled slabs to separate
- caches
-To: Kees Cook <keescook@chromium.org>
-Cc: Laura Abbott <labbott@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dave@nullcore.net>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <1498517551.22457.7.camel@gmail.com>
+Subject: Re: [kernel-hardening] non-x86 per-task stack canaries
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: Kees Cook <keescook@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue 20-06-17 15:22:58, Kees Cook wrote:
-> On Tue, Jun 20, 2017 at 1:24 PM, Laura Abbott <labbott@redhat.com> wrote:
-> > On 06/19/2017 04:36 PM, Kees Cook wrote:
-> >> From: David Windsor <dave@nullcore.net>
-> >>
-> >> Some userspace APIs (e.g. ipc, seq_file) provide precise control over
-> >> the size of kernel kmallocs, which provides a trivial way to perform
-> >> heap overflow attacks where the attacker must control neighboring
-> >> allocations of a specific size. Instead, move these APIs into their own
-> >> cache so they cannot interfere with standard kmallocs. This is enabled
-> >> with CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC.
-> >>
-> >> This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY_SLABS
-> >> code in the last public patch of grsecurity/PaX based on my understanding
-> >> of the code. Changes or omissions from the original code are mine and
-> >> don't reflect the original grsecurity/PaX code.
-> >>
-> >> Signed-off-by: David Windsor <dave@nullcore.net>
-> >> [kees: added SLAB_NO_MERGE flag to allow split of future no-merge Kconfig]
-> >> Signed-off-by: Kees Cook <keescook@chromium.org>
-> >
-> > I just did a quick test of kspp/usercopy-whitelist/lateston my arm64 machine and got some spew:
-> >
-> > [   21.818719] Unexpected gfp: 0x4000000 (0x4000000). Fixing up to gfp: 0x14000c0 (GFP_KERNEL). Fix your code!
-> > [   21.828427] CPU: 7 PID: 652 Comm: irqbalance Tainted: G        W       4.12.0-rc5-whitelist+ #236
-> > [   21.837259] Hardware name: AppliedMicro X-Gene Mustang Board/X-Gene Mustang Board, BIOS 3.06.12 Aug 12 2016
-> > [   21.846955] Call trace:
-> > [   21.849396] [<ffff000008089b18>] dump_backtrace+0x0/0x210
-> > [   21.854770] [<ffff000008089d4c>] show_stack+0x24/0x30
-> > [   21.859798] [<ffff00000845b7bc>] dump_stack+0x90/0xb4
-> > [   21.864827] [<ffff00000826ff40>] new_slab+0x88/0x90
-> > [   21.869681] [<ffff000008272218>] ___slab_alloc+0x428/0x6b0
-> > [   21.875141] [<ffff0000082724f0>] __slab_alloc+0x50/0x68
-> > [   21.880341] [<ffff000008273208>] __kmalloc_node+0xd0/0x348
-> > [   21.885800] [<ffff000008223af0>] kvmalloc_node+0xa0/0xb8
-> > [   21.891088] [<ffff0000082bb400>] single_open_size+0x40/0xb0
-> > [   21.896636] [<ffff000008315a9c>] stat_open+0x54/0x60
-> > [   21.901576] [<ffff00000830adf8>] proc_reg_open+0x90/0x168
-> > [   21.906950] [<ffff00000828def4>] do_dentry_open+0x1c4/0x328
-> > [   21.912496] [<ffff00000828f470>] vfs_open+0x58/0x88
-> > [   21.917351] [<ffff0000082a1f14>] do_last+0x3d4/0x770
-> > [   21.922292] [<ffff0000082a233c>] path_openat+0x8c/0x2e8
-> > [   21.927492] [<ffff0000082a3888>] do_filp_open+0x70/0xe8
-> > [   21.932692] [<ffff00000828f940>] do_sys_open+0x178/0x208
-> > [   21.937977] [<ffff00000828fa54>] SyS_openat+0x3c/0x50
-> > [   21.943005] [<ffff0000080835f0>] el0_svc_naked+0x24/0x28
-> >
-> >
-> > I don't think 7e7844226f10 ("lockdep: allow to disable reclaim lockup detection")
-> > is correct after new flags are added because we will still need space
-> > for another bit even if lockdep is disabled. That might need to
-> > be fixed separately.
+On Mon, Jun 26, 2017 at 06:52:31PM -0400, Daniel Micay wrote:
+> On Mon, 2017-06-26 at 14:04 -0700, Kees Cook wrote:
+> > Hi,
+> > 
+> > The stack protector functionality on x86_64 uses %gs:0x28 (%gs is the
+> > percpu area) for __stack_chk_guard, and all other architectures use a
+> > global variable instead. This means we never change the stack canary
+> > on non-x86 architectures which allows for a leak in one task to expose
+> > the canary in another task.
+
+FWIW, I'd love to have per-task canaries on arm64.
+
+> > I'm curious what thoughts people may have about how to get this
+> > correctly implemented. Teaching the compiler about per-cpu data sounds
+> > exciting. :)
+
+On concern I'd have is that it's possible/likely that we'll want to
+change the way we handle per-cpu offsets in future.
+
+One specific reason is that we may need to shuffle the way we use
+TPIDR_EL1 and SP_EL0 to allow us to implement stack overflow handling on
+arm64 usnig EL1t mode.
+
+It would be beneficial if we could somehow avoid baking this detail into
+the compiler. For example, by having an inlinable callback to load the
+canary, or adding the protection using a plugin that we control.
+
+> arm64 has many integer registers so I don't think reserving one would
+> hurt performance, especially in the kernel where hot numeric loops
+> barely exist. 
+
+A while back I did experiments with an ancient GCC, reserving single
+GPRs with -ffixed. For a kernel compile workload, with said ancient GCC,
+reserving the register had a small, but noisy impact.
+
+With more recent GCCs it was much more noisy, and it looked like it was
+liable to adversely affect performance.
+
+We'd need numbers across a few GCC versions (and clang too, I guess).
+
+> It would reduce the cost of SSP by getting rid of the memory read for
+> the canary value. On the other hand, using per-cpu data would likely
+> be higher cost than the global. x86 has segment registers but most
+> archs probably need to do something more painful.
+
+I had a prototype [1] that used the reserved GPR to hold the per-cpu
+offset. That allow access to per-cpu data using plain loads/stores with
+a register-offset addressing mode.
+
+If your arch has an addressing mode that takes a base register and an
+offset register, you can use a GPR in place of x86's segment register.
+
+That should benefit most this_cpu_*() ops, as it's no longer necessary
+to disable preemption for address generation, and is likely preferable
+to using it for the canary alone.
+
+Atomics are more complex, as those can be LL/SC and/or have limited
+addressing modes, but those are both solvable.
+
+> It's safe as long as it's a callee-saved register. It should be enforced
+> that there's no assembly spilling it and calling into C code without the
+> random canary. There's very little assembly using registers like x28 so
+> it wouldn't be that bad. It's possible there's one where nothing needs
+> to be changed, there only needs to be a check to make sure it stays that
+> way.
+
+IIRC, the exception entry paths need to be altered to set up the GPR,
+but that was about it. EFI runtime services are outside of our control
+and might spill any callee-saved registers, so we'd need to restore the
+GPR upon exceptions from EL1. Luckily (AFAIK) those don't call back into
+the kernel otherwise.
+
+The AAPCS reserves x18 as a platform register for special usage, and
+this might be the best choice. For example the EFI spec says that
+runtime services mustn't touch this (though I can believe there's buggy
+code which does).
+
+> It would be a step towards making SSP cheap enough to expand it into a
+> feature like the StackGuard XOR canaries.
 > 
-> Err... that commit has "___GFP_NOLOCKDEP       0x4000000u", but my
-> tree shows it as 0x2000000u? Hmm, looks like 1bde33e05123
-> ("include/linux/gfp.h: fix ___GFP_NOLOCKDEP value") fixed that?
+> Samsung has a return address XOR feature based on reserving a register
+> and while RAP's probabilistic return address mitigation isn't open-
+> source, it was stated that it reserves a register on x86_64 where they
+> aren't as plentiful as arm64.
 
-yes
+Thanks,
+Mark.
 
-> Oh, or
-> I have misread it. It looks like new GFP flags need to be added
-> _above_ GFP_NOLOCKDEP and have to bump GFP_NOLOCKDEP's value too? Like
-> this:
-> 
-> diff --git a/include/linux/gfp.h b/include/linux/gfp.h
-> index ff4f4a698ad0..deb8ac39fba5 100644
-> --- a/include/linux/gfp.h
-> +++ b/include/linux/gfp.h
-> @@ -40,12 +40,12 @@ struct vm_area_struct;
->  #define ___GFP_DIRECT_RECLAIM  0x400000u
->  #define ___GFP_WRITE           0x800000u
->  #define ___GFP_KSWAPD_RECLAIM  0x1000000u
-> +#define ___GFP_USERCOPY                0x2000000u
->  #ifdef CONFIG_LOCKDEP
-> -#define ___GFP_NOLOCKDEP       0x2000000u
-> +#define ___GFP_NOLOCKDEP       0x4000000u
->  #else
->  #define ___GFP_NOLOCKDEP       0
->  #endif
-> -#define ___GFP_USERCOPY                0x4000000u
->  /* If the above are modified, __GFP_BITS_SHIFT may need updating */
-
-yes, this would work for your case. But...
-
-> > I'm really not a fan the GFP approach though since the flags tend
-> > to be a little bit fragile to manage. If we're going to have to
-> > add something to callsites anyway, maybe we could just have an
-> > alternate function (kmalloc_user?) instead of a GFP flag.
-
-I agree. One additional concern I would have is that people tend to
-propagate gfp maks down different layers. What would happen if such a
-flag gets to a caller which doesn't expect it. Couldn't it reduce the
-whole security point of this excercise?
-
-But I am not really sure I understand consequences of this patch. So how
-do those attacks look like. Do you have an example of a CVE which would
-be prevented by this measure?
-
-> This would mean building out *_user() versions for all the various
-> *alloc() functions, though. That gets kind of long/ugly.
-
-Only prepare those which are really needed. It seems only handful of
-them in your patch.
-
-> The other reason to use a GFP flag is to be able to interrogate a
-> cache later, which will be handy for doing things like %p and kernel
-> symbol censorship (this is what grsecurity does with their HIDESYM
-> logic). "If this would write to a usercopy-whitelisted object, censor
-> it" etc. Though now that I go double-check, it looks like grsecurity
-> uses cache->usersize as an indicator of censorship-need on slab
-> caches, not the GFP flag, which is only used to use the split kmalloc
-> cache.
-
-which sounds like a separate kmalloc API would do the trick without a new
-gfp mask.
-
-> (Though as far as flags go, there is also VM_USERCOPY for what
-> are now the kvmalloc*() cases.)
-
-OK, I was about to ask about vmalloc fallbacks. So this is not
-implemented in your patch. Does it metter from the security point of
-view?
-
-> Perhaps this should be named GFP_USERSIZED or so?
--- 
-Michal Hocko
-SUSE Labs
+[1] git://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git arm64/this-cpu-reg
