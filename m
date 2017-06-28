@@ -1,50 +1,51 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170620040403.GA610@zzz.localdomain>
-References: <1497915397-93805-1-git-send-email-keescook@chromium.org>
- <1497915397-93805-22-git-send-email-keescook@chromium.org> <20170620040403.GA610@zzz.localdomain>
+In-Reply-To: <CAGXu5j+byHUn_rb9jOTZqMYrc4ngmDj=a3k8QRTYrZYNSjhCkw@mail.gmail.com>
+References: <20170615011203.144108-1-thgarnie@google.com> <CAGXu5j+byHUn_rb9jOTZqMYrc4ngmDj=a3k8QRTYrZYNSjhCkw@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 28 Jun 2017 10:03:09 -0700
-Message-ID: <CAGXu5jLcZO3XHBd7i7Gnww4vwRpH10m2FvczEecnC_ars-N+Ow@mail.gmail.com>
+Date: Wed, 28 Jun 2017 10:52:55 -0700
+Message-ID: <CAGXu5jKrJv0y70e5JiafKGcGzWoJPZM_HruZ=Y0rM1m0J4tZAA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH 21/23] usercopy: Restrict non-usercopy
- caches to size 0
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dave@nullcore.net>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v10 1/3] x86/syscalls: Check address limit on user-mode return
+To: Thomas Garnier <thgarnie@google.com>, Ingo Molnar <mingo@redhat.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Petr Mladek <pmladek@suse.com>, Miroslav Benes <mbenes@suse.cz>, Al Viro <viro@zeniv.linux.org.uk>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 19, 2017 at 9:04 PM, Eric Biggers <ebiggers3@gmail.com> wrote:
-> Hi David + Kees,
->
-> On Mon, Jun 19, 2017 at 04:36:35PM -0700, Kees Cook wrote:
->> With all known usercopied cache whitelists now defined in the kernel, switch
->> the default usercopy region of kmem_cache_create() to size 0. Any new caches
->> with usercopy regions will now need to use kmem_cache_create_usercopy()
->> instead of kmem_cache_create().
+On Tue, Jun 20, 2017 at 1:24 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Jun 14, 2017 at 6:12 PM, Thomas Garnier <thgarnie@google.com> wrote:
+>> Ensure the address limit is a user-mode segment before returning to
+>> user-mode. Otherwise a process can corrupt kernel-mode memory and elevate
+>> privileges [1].
 >>
+>> The set_fs function sets the TIF_SETFS flag to force a slow path on
+>> return. In the slow path, the address limit is checked to be USER_DS if
+>> needed.
+>>
+>> The addr_limit_user_check function is added as a cross-architecture
+>> function to check the address limit.
+>>
+>> [1] https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+>>
+>> Signed-off-by: Thomas Garnier <thgarnie@google.com>
 >
-> While I'd certainly like to see the caches be whitelisted, it needs to be made
-> very clear that it's being done (the cover letter for this series falsely claims
-> that kmem_cache_create() is unchanged) and what the consequences are.  Is there
+> Thanks for reworking this series!
+>
+> The bad state correctly BUGs under the LKDTM test:
+>
+> [   21.171586] lkdtm: Performing direct entry CORRUPT_USER_DS
+> [   21.172791] lkdtm: setting bad task size limit
+> [   21.173742] ------------[ cut here ]------------
+> [   21.174641] kernel BUG at ./include/linux/syscalls.h:220!
+> ...
+> [   21.193166] Call Trace:
+> [   21.193617]  ? trace_hardirqs_on_thunk+0x1a/0x1c
+> [   21.194443]  entry_SYSCALL64_slow_path+0x25/0x25
+>
+>
+> Tested-by: Kees Cook <keescook@chromium.org>
 
-Well, in the first patch it is semantically unchanged: calls to
-kmem_cache_create() after the first patch whitelist the entire cache
-object. Only from this patch on does it change behavior to no longer
-whitelist the object.
-
-> any specific plan for identifying caches that were missed?  If it's expected for
-
-The plan for finding caches needing whitelisting is mainly code audit
-and operational testing. Encountering it is quite loud in that it BUGs
-the kernel during the hardened usercopy checks.
-
-> people to just fix them as they are found, then they need to be helped a little
-> --- at the very least by putting a big comment above report_usercopy() that
-> explains the possible reasons why the error might have triggered and what to do
-> about it.
-
-That sounds reasonable. It should have a comment even for the existing
-protections.
+Is everyone happy with this patch for x86? Does this need anything
+more/different?
 
 Thanks!
 
