@@ -1,53 +1,55 @@
-Date: Wed, 28 Jun 2017 09:55:20 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Message-ID: <20170628165520.GA129364@gmail.com>
-References: <1497915397-93805-1-git-send-email-keescook@chromium.org>
- <1497915397-93805-18-git-send-email-keescook@chromium.org>
- <20170620040834.GB610@zzz.localdomain>
- <CAGXu5jJyyO8CmukmmZdfmt34pubr8EzRJ4H2AMjc15UpLzrGcQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJyyO8CmukmmZdfmt34pubr8EzRJ4H2AMjc15UpLzrGcQ@mail.gmail.com>
-Subject: Re: [kernel-hardening] [PATCH 17/23] dcache: define usercopy region
- in dentry_cache slab cache
-To: Kees Cook <keescook@chromium.org>
+Sender: keescook@google.com
+In-Reply-To: <20170620040403.GA610@zzz.localdomain>
+References: <1497915397-93805-1-git-send-email-keescook@chromium.org>
+ <1497915397-93805-22-git-send-email-keescook@chromium.org> <20170620040403.GA610@zzz.localdomain>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 28 Jun 2017 10:03:09 -0700
+Message-ID: <CAGXu5jLcZO3XHBd7i7Gnww4vwRpH10m2FvczEecnC_ars-N+Ow@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [PATCH 21/23] usercopy: Restrict non-usercopy
+ caches to size 0
+To: Eric Biggers <ebiggers3@gmail.com>
 Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dave@nullcore.net>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 28, 2017 at 09:44:13AM -0700, Kees Cook wrote:
-> On Mon, Jun 19, 2017 at 9:08 PM, Eric Biggers <ebiggers3@gmail.com> wrote:
-> > On Mon, Jun 19, 2017 at 04:36:31PM -0700, Kees Cook wrote:
-> >> From: David Windsor <dave@nullcore.net>
-> >>
-> >> When a dentry name is short enough, it can be stored directly in
-> >> the dentry itself.  These dentry short names, stored in struct
-> >> dentry.d_iname and therefore contained in the dentry_cache slab cache,
-> >> need to be coped to/from userspace.
-> >>
-> >> In support of usercopy hardening, this patch defines a region in
-> >> the dentry_cache slab cache in which userspace copy operations
-> >> are allowed.
-> >>
-> >> This region is known as the slab cache's usercopy region.  Slab
-> >> caches can now check that each copy operation involving cache-managed
-> >> memory falls entirely within the slab's usercopy region.
-> >>
-> >> This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
-> >> whitelisting code in the last public patch of grsecurity/PaX based on my
-> >> understanding of the code. Changes or omissions from the original code are
-> >> mine and don't reflect the original grsecurity/PaX code.
-> >>
-> >
-> > For all these patches please mention *where* the data is being copied to/from
-> > userspace.
-> 
-> Can you explain what you mean here? The field being copied is already
-> mentioned in the commit log; do you mean where in the kernel source
-> does the copy happen?
-> 
+On Mon, Jun 19, 2017 at 9:04 PM, Eric Biggers <ebiggers3@gmail.com> wrote:
+> Hi David + Kees,
+>
+> On Mon, Jun 19, 2017 at 04:36:35PM -0700, Kees Cook wrote:
+>> With all known usercopied cache whitelists now defined in the kernel, switch
+>> the default usercopy region of kmem_cache_create() to size 0. Any new caches
+>> with usercopy regions will now need to use kmem_cache_create_usercopy()
+>> instead of kmem_cache_create().
+>>
+>
+> While I'd certainly like to see the caches be whitelisted, it needs to be made
+> very clear that it's being done (the cover letter for this series falsely claims
+> that kmem_cache_create() is unchanged) and what the consequences are.  Is there
 
-Yes, for the ones where it isn't obvious, mentioning a syscall or ioctl might be
-sufficient.  Others may need more explanation.
+Well, in the first patch it is semantically unchanged: calls to
+kmem_cache_create() after the first patch whitelist the entire cache
+object. Only from this patch on does it change behavior to no longer
+whitelist the object.
 
-Eric
+> any specific plan for identifying caches that were missed?  If it's expected for
+
+The plan for finding caches needing whitelisting is mainly code audit
+and operational testing. Encountering it is quite loud in that it BUGs
+the kernel during the hardened usercopy checks.
+
+> people to just fix them as they are found, then they need to be helped a little
+> --- at the very least by putting a big comment above report_usercopy() that
+> explains the possible reasons why the error might have triggered and what to do
+> about it.
+
+That sounds reasonable. It should have a comment even for the existing
+protections.
+
+Thanks!
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
