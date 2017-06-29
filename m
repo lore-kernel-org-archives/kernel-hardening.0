@@ -1,68 +1,20 @@
-References: <1498717781-29151-1-git-send-email-mpe@ellerman.id.au>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <0ebcc89e-8230-defa-8c15-0d673505db29@redhat.com>
-Date: Thu, 29 Jun 2017 09:45:16 -0700
-MIME-Version: 1.0
-In-Reply-To: <1498717781-29151-1-git-send-email-mpe@ellerman.id.au>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC PATCH 1/4] Provide linux/set_memory.h
-To: Michael Ellerman <mpe@ellerman.id.au>, kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, akpm@linux-foundation.org, linux-kernel@vger.kernel.org
+Date: Thu, 29 Jun 2017 12:05:50 -0500 (CDT)
+From: Christoph Lameter <cl@linux.com>
+In-Reply-To: <CAGXu5jJEi_CS-CB=-4369TFRyeN4oQdmGS+HV-zoi4rSPpq3Jw@mail.gmail.com>
+Message-ID: <alpine.DEB.2.20.1706291204460.17478@east.gentwo.org>
+References: <20170623015010.GA137429@beast> <CAGXu5jJEi_CS-CB=-4369TFRyeN4oQdmGS+HV-zoi4rSPpq3Jw@mail.gmail.com>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH v2] mm: Add SLUB free list pointer obfuscation
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Laura Abbott <labbott@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Josh Triplett <josh@joshtriplett.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 06/28/2017 11:29 PM, Michael Ellerman wrote:
-> Currently code that wants to use set_memory_ro() etc, needs to include
-> asm/set_memory.h, which doesn't exist on all arches. Some code knows
-> it only builds on arches which have the header, other code guards the
-> inclusion with an #ifdef, neither is ideal.
-> 
-> So create linux/set_memory.h. This always exists, so users don't need
-> an #ifdef just to include the header.
-> 
-> When CONFIG_ARCH_HAS_SET_MEMORY=y it includes asm/set_memory.h,
-> otherwise it provides empty non-failing implementations.
-> 
-> Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
-> ---
->  include/linux/set_memory.h | 20 ++++++++++++++++++++
->  1 file changed, 20 insertions(+)
->  create mode 100644 include/linux/set_memory.h
-> 
-> 
-> Does this look OK to people? If so it would be great if someone, Kees?,
-> Andrew?, could pick up patch 1 (it's a nop by itself) and then we can send the
-> conversions separately later in the merge window?
-> 
+On Sun, 25 Jun 2017, Kees Cook wrote:
 
-Acked-by: Laura Abbott <labbott@redhat.com>
+> The difference gets lost in the noise, but if the above is sensible,
+> it's 0.07% slower. ;)
 
-> cheers
-> 
-> diff --git a/include/linux/set_memory.h b/include/linux/set_memory.h
-> new file mode 100644
-> index 000000000000..e5140648f638
-> --- /dev/null
-> +++ b/include/linux/set_memory.h
-> @@ -0,0 +1,20 @@
-> +/*
-> + * Copyright 2017, Michael Ellerman, IBM Corporation.
-> + *
-> + * This program is free software; you can redistribute it and/or
-> + * modify it under the terms of the GNU General Public License version
-> + * 2 as published by the Free Software Foundation;
-> + */
-> +#ifndef _LINUX_SET_MEMORY_H_
-> +#define _LINUX_SET_MEMORY_H_
-> +
-> +#ifdef CONFIG_ARCH_HAS_SET_MEMORY
-> +#include <asm/set_memory.h>
-> +#else
-> +static inline int set_memory_ro(unsigned long addr, int numpages) { return 0; }
-> +static inline int set_memory_rw(unsigned long addr, int numpages) { return 0; }
-> +static inline int set_memory_x(unsigned long addr,  int numpages) { return 0; }
-> +static inline int set_memory_nx(unsigned long addr, int numpages) { return 0; }
-> +#endif
-> +
-> +#endif /* _LINUX_SET_MEMORY_H_ */
-> 
+Hmmm... These differences add up. Also in a repetative benchmark like that
+you do not see the impact that the additional cacheline use in the cpu
+cache has on larger workloads. Those may be pushed over the edge of l1 or
+l2 capacity at some point which then causes drastic regressions.
