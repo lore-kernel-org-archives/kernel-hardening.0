@@ -1,68 +1,54 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <3812aec2-682f-e95c-4d61-8e7eac33cc88@huawei.com>
-References: <1496180392-98718-1-git-send-email-keescook@chromium.org>
- <1496180392-98718-4-git-send-email-keescook@chromium.org> <3812aec2-682f-e95c-4d61-8e7eac33cc88@huawei.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 29 Jun 2017 15:05:44 -0700
-Message-ID: <CAGXu5jLzL3URMvF81EbH1Bt74MnwL9-25AU41yQnbEBcWA7J8Q@mail.gmail.com>
+Sender: arndbergmann@gmail.com
+In-Reply-To: <1495829844-69341-5-git-send-email-keescook@chromium.org>
+References: <1495829844-69341-1-git-send-email-keescook@chromium.org> <1495829844-69341-5-git-send-email-keescook@chromium.org>
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Fri, 30 Jun 2017 00:08:57 +0200
+Message-ID: <CAK8P3a0beV+ZUUKxzufXtZRszbXvgC3eQO4Rc1+ZYo_nAmcaaA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] [PATCH v5 3/3] x86/refcount: Implement fast
- refcount overflow protection
-To: Li Kun <hw.likun@huawei.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, Christoph Hellwig <hch@infradead.org>, Peter Zijlstra <peterz@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@redhat.com>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Wangkai (Morgan, Euler)" <morgan.wang@huawei.com>
+Subject: [kernel-hardening] Re: [PATCH v2 04/20] gcc-plugins: Add the randstruct plugin
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Laura Abbott <labbott@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 28, 2017 at 9:13 PM, Li Kun <hw.likun@huawei.com> wrote:
-> =E5=9C=A8 2017/5/31 5:39, Kees Cook =E5=86=99=E9=81=93:
->> +bool ex_handler_refcount(const struct exception_table_entry *fixup,
->> +                        struct pt_regs *regs, int trapnr)
->> +{
->> +       int reset;
->> +
->> +       /*
->> +        * If we crossed from INT_MAX to INT_MIN, the OF flag (result
->> +        * wrapped around) and the SF flag (result is negative) will be
->> +        * set. In this case, reset to INT_MAX in an attempt to leave th=
-e
->> +        * refcount usable. Otherwise, we've landed here due to producin=
-g
->> +        * a negative result from either decrementing zero or operating =
-on
->> +        * a negative value. In this case things are badly broken, so we
->> +        * we saturate to INT_MIN / 2.
->> +        */
->> +       if (regs->flags & (X86_EFLAGS_OF | X86_EFLAGS_SF))
->> +               reset =3D INT_MAX;
->
->     Should it be like this to indicate that the refcount is wapped from
-> INT_MAX to INT_MIN ?
->         if (regs->flags & (X86_EFLAGS_OF | X86_EFLAGS_SF)
->                 =3D=3D (X86_EFLAGS_OF | X86_EFLAGS_SF))
->
->                 reset =3D INT_MAX;
+On Fri, May 26, 2017 at 10:17 PM, Kees Cook <keescook@chromium.org> wrote:
+> This feature is ported from grsecurity. The implementation is almost
+> entirely identical to the original code written by the PaX Team and
+> Brad Spengler.
 
-Ah yes, thanks for the catch. Yeah, that test is expecting both
-condition flags to be set.
+Hi Kees,
 
-I'm still on the fence about the best way to deal with the bad states.
-I've been pondering just strictly using a saturation value (INT_MIN /
-2), which should offer the same system state protection (except for
-the inherent resource leak), but that means there isn't really a good
-way to kill an offending process (since after saturation ALL processes
-will look like violators). It can be argued that killing the process
-doesn't actually provide any benefit since the system is still safe,
-though.
+I noticed new build errors that bisected back to this patch, which has
+now showed up
+in linux-next again:
 
->> +       else
->> +               reset =3D INT_MIN / 2;
->> +       *(int *)regs->cx =3D reset;
 
-Thanks for looking at this!
+/git/arm-soc/arch/arm/kernel/entry-armv.S: Assembler messages:
+/git/arm-soc/arch/arm/kernel/entry-armv.S:800: Error: bad immediate
+value for offset (4644)
+/git/arm-soc/scripts/Makefile.build:403: recipe for target
+'arch/arm/kernel/entry-armv.o' failed
+make[3]: *** [arch/arm/kernel/entry-armv.o] Error 1
+/git/arm-soc/arch/arm/kernel/entry-armv.S: Assembler messages:
+/git/arm-soc/arch/arm/kernel/entry-armv.S:800: Error: bad immediate
+value for offset (5584)
+/git/arm-soc/scripts/Makefile.build:403: recipe for target
+'arch/arm/kernel/entry-armv.o' failed
+make[3]: *** [arch/arm/kernel/entry-armv.o] Error 1
+/git/arm-soc/arch/arm/mm/tlb-v4.S: Assembler messages:
+/git/arm-soc/arch/arm/mm/tlb-v4.S:35: Error: bad immediate value for
+offset (4928)
+/git/arm-soc/scripts/Makefile.build:403: recipe for target
+'arch/arm/mm/tlb-v4.o' failed
+make[3]: *** [arch/arm/mm/tlb-v4.o] Error 1
+/git/arm-soc/arch/arm/mm/tlb-v4wbi.S: Assembler messages:
+/git/arm-soc/arch/arm/mm/tlb-v4wbi.S:34: Error: bad immediate value
+for offset (4928)
+/git/arm-soc/scripts/Makefile.build:403: recipe for target
+'arch/arm/mm/tlb-v4wbi.o' failed
 
--Kees
+So far, that's the only thing that goes wrong for me though, and this
+is probably
+easy to fix.
 
---=20
-Kees Cook
-Pixel Security
+        Arnd
