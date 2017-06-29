@@ -1,75 +1,67 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jJuQx2qOt_aDqDQDcqGOZ5kmr5rQ9Zjv=MRRCJ65ERfGw@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <CAJHCu1JxUA0b3mu4Z=NPBdCRv6SfmCKEQ5jGaMsLg2Q_9tm25g@mail.gmail.com>
 References: <1497544976-7856-1-git-send-email-s.mesoraca16@gmail.com>
- <1497544976-7856-6-git-send-email-s.mesoraca16@gmail.com> <CAGXu5jJuQx2qOt_aDqDQDcqGOZ5kmr5rQ9Zjv=MRRCJ65ERfGw@mail.gmail.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Thu, 29 Jun 2017 21:39:20 +0200
-Message-ID: <CAJHCu1Lr9KOdheHMO6tkaatizDpcgjAd3ouxiUxSeVyQPpkXOg@mail.gmail.com>
+ <1497544976-7856-7-git-send-email-s.mesoraca16@gmail.com> <CAGXu5jJ2DykaU6bbFGRcOaZK9nn5dFUYQ6UjXCq9Y97DwYpCyA@mail.gmail.com>
+ <CAJHCu1JxUA0b3mu4Z=NPBdCRv6SfmCKEQ5jGaMsLg2Q_9tm25g@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 29 Jun 2017 13:20:00 -0700
+Message-ID: <CAGXu5jKiip2t8PpDJCnrCiakf_yWqxDsig-XfPOQHwD=G2N7eA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [RFC v2 5/9] S.A.R.A. WX Protection
-To: Kees Cook <keescook@chromium.org>
+Subject: [kernel-hardening] Re: [RFC v2 6/9] Creation of "pagefault_handler_x86" LSM hook
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 Cc: LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Linux-MM <linux-mm@kvack.org>, "x86@kernel.org" <x86@kernel.org>, Jann Horn <jannh@google.com>, Christoph Hellwig <hch@infradead.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2017-06-28 1:04 GMT+02:00 Kees Cook <keescook@chromium.org>:
-> On Thu, Jun 15, 2017 at 9:42 AM, Salvatore Mesoraca
-> <s.mesoraca16@gmail.com> wrote:
->> +static int sara_check_vmflags(vm_flags_t vm_flags)
->> +{
->> +       u16 sara_wxp_flags = get_current_sara_wxp_flags();
->> +
->> +       if (sara_enabled && wxprot_enabled) {
->> +               if (sara_wxp_flags & SARA_WXP_WXORX &&
->> +                   vm_flags & VM_WRITE &&
->> +                   vm_flags & VM_EXEC) {
->> +                       if ((sara_wxp_flags & SARA_WXP_VERBOSE))
->> +                               pr_wxp("W^X");
->> +                       if (!(sara_wxp_flags & SARA_WXP_COMPLAIN))
->> +                               return -EPERM;
->> +               }
->> +               if (sara_wxp_flags & SARA_WXP_MMAP &&
->> +                   (vm_flags & VM_EXEC ||
->> +                    (!(vm_flags & VM_MAYWRITE) && (vm_flags & VM_MAYEXEC))) &&
->> +                   get_current_sara_mmap_blocked()) {
->> +                       if ((sara_wxp_flags & SARA_WXP_VERBOSE))
->> +                               pr_wxp("executable mmap");
->> +                       if (!(sara_wxp_flags & SARA_WXP_COMPLAIN))
->> +                               return -EPERM;
->> +               }
->> +       }
+On Thu, Jun 29, 2017 at 12:30 PM, Salvatore Mesoraca
+<s.mesoraca16@gmail.com> wrote:
+> 2017-06-28 1:07 GMT+02:00 Kees Cook <keescook@chromium.org>:
+>> On Thu, Jun 15, 2017 at 9:42 AM, Salvatore Mesoraca
+>> <s.mesoraca16@gmail.com> wrote:
+>>> Creation of a new hook to let LSM modules handle user-space pagefaults on
+>>> x86.
+>>> It can be used to avoid segfaulting the originating process.
+>>> If it's the case it can modify process registers before returning.
+>>> This is not a security feature by itself, it's a way to soften some
+>>> unwanted side-effects of restrictive security features.
+>>> In particular this is used by S.A.R.A. can be used to implement what
+>>> PaX call "trampoline emulation" that, in practice, allow for some specific
+>>> code sequences to be executed even if they are in non executable memory.
+>>> This may look like a bad thing at first, but you have to consider
+>>> that:
+>>> - This allows for strict memory restrictions (e.g. W^X) to stay on even
+>>>   when they should be turned off. And, even if this emulation
+>>>   makes those features less effective, it's still better than having
+>>>   them turned off completely.
+>>> - The only code sequences emulated are trampolines used to make
+>>>   function calls. In many cases, when you have the chance to
+>>>   make arbitrary memory writes, you can already manipulate the
+>>>   control flow of the program by overwriting function pointers or
+>>>   return values. So, in many cases, the "trampoline emulation"
+>>>   doesn't introduce new exploit vectors.
+>>> - It's a feature that can be turned on only if needed, on a per
+>>>   executable file basis.
+>>
+>> Can this be made arch-agnostic? It seems a per-arch register-handling
+>> routine would be needed, though. :(
 >
-> Given the subtle differences between these various if blocks (here and
-> in the other hook), I think it would be nice to have some beefy
-> comments here to describe specifically what's being checked (and why).
-> It'll help others review this code, and help validate code against
-> intent.
->
-> I would also try to minimize the written code by creating a macro for
-> a repeated pattern here:
->
->> +                               if ((sara_wxp_flags & SARA_WXP_VERBOSE))
->> +                                       pr_wxp("mprotect on file mmap");
->> +                               if (!(sara_wxp_flags & SARA_WXP_COMPLAIN))
->> +                                       return -EACCES;
->
-> These four lines are repeated several times with only the const char *
-> and return value changing. Perhaps something like:
->
-> #define sara_return(err, msg) do { \
->                                if ((sara_wxp_flags & SARA_WXP_VERBOSE)) \
->                                        pr_wxp(err); \
->                                if (!(sara_wxp_flags & SARA_WXP_COMPLAIN)) \
->                                        return -err; \
-> } while (0)
->
-> Then each if block turns into something quite easier to parse:
->
->                if (sara_wxp_flags & SARA_WXP_WXORX &&
->                    vm_flags & VM_WRITE &&
->                    vm_flags & VM_EXEC)
->                        sara_return(EPERM, "W^X");
+> S.A.R.A.'s "pagefault_handler_x86" implementation is fully arch specific
+> so it won't benefit too much from this change.
+> Anyway having a single hook for all archs is probably a cleaner solution,
+> I'll change it in the v3.
+> Would it be OK if I make it arch-agnostic while I actually keep it only
+> in arch/x86/mm/fault.c?
+> Thank you for your help.
 
-I absolutely agree with all of the above. These issues will be addressed in v3.
-Thank you for your contribution.
+It'd be nicer to wire it up unconditionally to all architectures, but
+I'm not entirely sure if that's feasible. Perhaps SARA (or this LSM
+hook) would be hidden behind some CONFIG_ARCH_HAS_LSM_PAGEFAULT or
+something that each architecture could "select" in its Kconfig.
 
-Salvatore
+Perhaps some other LSM folks have some better ideas?
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
