@@ -1,38 +1,60 @@
 From: Michael Ellerman <mpe@ellerman.id.au>
-Date: Thu, 29 Jun 2017 16:29:40 +1000
-Message-Id: <1498717781-29151-3-git-send-email-mpe@ellerman.id.au>
-In-Reply-To: <1498717781-29151-1-git-send-email-mpe@ellerman.id.au>
-References: <1498717781-29151-1-git-send-email-mpe@ellerman.id.au>
-Subject: [kernel-hardening] [RFC PATCH 3/4] module: Use linux/set_memory.h
+Date: Thu, 29 Jun 2017 16:29:38 +1000
+Message-Id: <1498717781-29151-1-git-send-email-mpe@ellerman.id.au>
+Subject: [kernel-hardening] [RFC PATCH 1/4] Provide linux/set_memory.h
 To: kernel-hardening@lists.openwall.com
 Cc: keescook@chromium.org, akpm@linux-foundation.org, linux-kernel@vger.kernel.org, labbott@redhat.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This header always exists, so doesn't require an ifdef around its
-inclusion. When CONFIG_ARCH_HAS_SET_MEMORY=y it includes the asm header,
-otherwise it provides empty versions of the set_memory_xx() routines.
+Currently code that wants to use set_memory_ro() etc, needs to include
+asm/set_memory.h, which doesn't exist on all arches. Some code knows
+it only builds on arches which have the header, other code guards the
+inclusion with an #ifdef, neither is ideal.
 
-The usages of set_memory_xx() are still guarded by CONFIG_STRICT_MODULE_RWX.
+So create linux/set_memory.h. This always exists, so users don't need
+an #ifdef just to include the header.
+
+When CONFIG_ARCH_HAS_SET_MEMORY=y it includes asm/set_memory.h,
+otherwise it provides empty non-failing implementations.
 
 Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
 ---
- kernel/module.c | 4 +---
- 1 file changed, 1 insertion(+), 3 deletions(-)
+ include/linux/set_memory.h | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+ create mode 100644 include/linux/set_memory.h
 
-diff --git a/kernel/module.c b/kernel/module.c
-index d0a723ebe75c..e7696b25db30 100644
---- a/kernel/module.c
-+++ b/kernel/module.c
-@@ -49,9 +49,7 @@
- #include <linux/rculist.h>
- #include <linux/uaccess.h>
- #include <asm/cacheflush.h>
--#ifdef CONFIG_STRICT_MODULE_RWX
--#include <asm/set_memory.h>
--#endif
-+#include <linux/set_memory.h>
- #include <asm/mmu_context.h>
- #include <linux/license.h>
- #include <asm/sections.h>
+
+Does this look OK to people? If so it would be great if someone, Kees?,
+Andrew?, could pick up patch 1 (it's a nop by itself) and then we can send the
+conversions separately later in the merge window?
+
+cheers
+
+diff --git a/include/linux/set_memory.h b/include/linux/set_memory.h
+new file mode 100644
+index 000000000000..e5140648f638
+--- /dev/null
++++ b/include/linux/set_memory.h
+@@ -0,0 +1,20 @@
++/*
++ * Copyright 2017, Michael Ellerman, IBM Corporation.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License version
++ * 2 as published by the Free Software Foundation;
++ */
++#ifndef _LINUX_SET_MEMORY_H_
++#define _LINUX_SET_MEMORY_H_
++
++#ifdef CONFIG_ARCH_HAS_SET_MEMORY
++#include <asm/set_memory.h>
++#else
++static inline int set_memory_ro(unsigned long addr, int numpages) { return 0; }
++static inline int set_memory_rw(unsigned long addr, int numpages) { return 0; }
++static inline int set_memory_x(unsigned long addr,  int numpages) { return 0; }
++static inline int set_memory_nx(unsigned long addr, int numpages) { return 0; }
++#endif
++
++#endif /* _LINUX_SET_MEMORY_H_ */
 -- 
 2.7.4
