@@ -1,56 +1,32 @@
-Date: Thu, 29 Jun 2017 11:56:47 -0600
-From: Tycho Andersen <tycho@docker.com>
-Message-ID: <20170629175647.pufnks75fqy627jv@smitten>
-References: <20170623015010.GA137429@beast>
- <CAGXu5jJEi_CS-CB=-4369TFRyeN4oQdmGS+HV-zoi4rSPpq3Jw@mail.gmail.com>
- <alpine.DEB.2.20.1706291204460.17478@east.gentwo.org>
- <CAGXu5jLLFKnboaLJKGcGT-Ra80ZzAf3jZ=zex6vd8uDQamBJxg@mail.gmail.com>
- <1498758853.6130.2.camel@redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1498758853.6130.2.camel@redhat.com>
-Subject: Re: [kernel-hardening] Re: [PATCH v2] mm: Add SLUB free list pointer
- obfuscation
-To: Rik van Riel <riel@redhat.com>
-Cc: Kees Cook <keescook@chromium.org>, Christoph Lameter <cl@linux.com>, Andrew Morton <akpm@linux-foundation.org>, Laura Abbott <labbott@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Josh Triplett <josh@joshtriplett.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAGXu5jJTEoeGs8uBdHYdBJwacOp2b22ySrn-V8T93qaD4cv65A@mail.gmail.com>
+References: <1497544976-7856-1-git-send-email-s.mesoraca16@gmail.com>
+ <1497544976-7856-4-git-send-email-s.mesoraca16@gmail.com> <CAGXu5jJTEoeGs8uBdHYdBJwacOp2b22ySrn-V8T93qaD4cv65A@mail.gmail.com>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Thu, 29 Jun 2017 21:28:11 +0200
+Message-ID: <CAJHCu1JMdBCPgpL=vCqOKD1y4fK5Y3qoWOdXCy-qDw-ixV0Lmg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC v2 3/9] Creation of "check_vmflags" LSM hook
+To: Kees Cook <keescook@chromium.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Linux-MM <linux-mm@kvack.org>, "x86@kernel.org" <x86@kernel.org>, Jann Horn <jannh@google.com>, Christoph Hellwig <hch@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Stephen Smalley <sds@tycho.nsa.gov>, John Johansen <john.johansen@canonical.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 29, 2017 at 01:54:13PM -0400, Rik van Riel wrote:
-> On Thu, 2017-06-29 at 10:47 -0700, Kees Cook wrote:
-> > On Thu, Jun 29, 2017 at 10:05 AM, Christoph Lameter <cl@linux.com>
-> > wrote:
-> > > On Sun, 25 Jun 2017, Kees Cook wrote:
-> > > 
-> > > > The difference gets lost in the noise, but if the above is
-> > > > sensible,
-> > > > it's 0.07% slower. ;)
-> > > 
-> > > Hmmm... These differences add up. Also in a repetative benchmark
-> > > like that
-> > > you do not see the impact that the additional cacheline use in the
-> > > cpu
-> > > cache has on larger workloads. Those may be pushed over the edge of
-> > > l1 or
-> > > l2 capacity at some point which then causes drastic regressions.
-> > 
-> > Even if that is true, it may be worth it to some people to have the
-> > protection. Given that is significantly hampers a large class of heap
-> > overflow attacks[1], I think it's an important change to have. I'm
-> > not
-> > suggesting this be on by default, it's cleanly behind
-> > CONFIG-controlled macros, and is very limited in scope. If you can
-> > Ack
-> > it we can let system builders decide if they want to risk a possible
-> > performance hit. I'm pretty sure most distros would like to have this
-> > protection.
-> 
-> I could certainly see it being useful for all kinds of portable
-> and network-connected systems where security is simply much
-> more important than performance.
+2017-06-28 1:05 GMT+02:00 Kees Cook <keescook@chromium.org>:
+> On Thu, Jun 15, 2017 at 9:42 AM, Salvatore Mesoraca
+> <s.mesoraca16@gmail.com> wrote:
+>> Creation of a new LSM hook to check if a given configuration of vmflags,
+>> for a new memory allocation request, should be allowed or not.
+>> It's placed in "do_mmap", "do_brk_flags" and "__install_special_mapping".
+>
+> I like this. I think this is something the other LSMs should be
+> checking too. (Though I wonder if it would be helpful to include the
+> VMA in the hook, though it does exist yet, so... hmm.)
 
-Indeed, I believe we would enable this in our kernels.
+For the particular case of my LSM and the type of check it does, the VMA
+isn't needed, of course.
+Maybe some other LSM can benefit from it, but it depends on what they
+want to do with this hook.
+Looking forward to feedback from potential future users.
+Thank you for your interest.
 
-Cheers,
-
-Tycho
+Salvatore
