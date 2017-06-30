@@ -1,49 +1,74 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
-In-Reply-To: <CAGXu5jKFq5hO7Z0YD797X6a0i-4=yD_wL5is3J6FyjEGj9msMg@mail.gmail.com>
-References: <1498717781-29151-1-git-send-email-mpe@ellerman.id.au> <5954C262.9000502@iogearbox.net> <CAGXu5jKFq5hO7Z0YD797X6a0i-4=yD_wL5is3J6FyjEGj9msMg@mail.gmail.com>
-Date: Fri, 30 Jun 2017 11:43:18 +1000
-Message-ID: <87d19mqmh5.fsf@concordia.ellerman.id.au>
+References: <1496180392-98718-1-git-send-email-keescook@chromium.org>
+ <1496180392-98718-4-git-send-email-keescook@chromium.org>
+ <3812aec2-682f-e95c-4d61-8e7eac33cc88@huawei.com>
+ <CAGXu5jLzL3URMvF81EbH1Bt74MnwL9-25AU41yQnbEBcWA7J8Q@mail.gmail.com>
+From: Li Kun <hw.likun@huawei.com>
+Message-ID: <afcc7ab0-c1ca-e89d-169c-66be444274e4@huawei.com>
+Date: Fri, 30 Jun 2017 10:42:05 +0800
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: Re: [kernel-hardening] [RFC PATCH 1/4] Provide linux/set_memory.h
-To: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>
-Cc: Daniel Borkmann <daniel@iogearbox.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Laura Abbott <labbott@redhat.com>
+In-Reply-To: <CAGXu5jLzL3URMvF81EbH1Bt74MnwL9-25AU41yQnbEBcWA7J8Q@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"; format=flowed
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] [PATCH v5 3/3] x86/refcount: Implement fast
+ refcount overflow protection
+To: Kees Cook <keescook@chromium.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, Christoph Hellwig <hch@infradead.org>, Peter Zijlstra <peterz@infradead.org>, "Eric W.
+ Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans
+ Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@redhat.com>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S.
+ Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Wangkai (Morgan, Euler)" <morgan.wang@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook <keescook@chromium.org> writes:
 
-> On Thu, Jun 29, 2017 at 2:03 AM, Daniel Borkmann <daniel@iogearbox.net> wrote:
->> On 06/29/2017 08:29 AM, Michael Ellerman wrote:
->>>
->>> Currently code that wants to use set_memory_ro() etc, needs to include
->>> asm/set_memory.h, which doesn't exist on all arches. Some code knows
->>> it only builds on arches which have the header, other code guards the
->>> inclusion with an #ifdef, neither is ideal.
->>>
->>> So create linux/set_memory.h. This always exists, so users don't need
->>> an #ifdef just to include the header.
->>>
->>> When CONFIG_ARCH_HAS_SET_MEMORY=y it includes asm/set_memory.h,
->>> otherwise it provides empty non-failing implementations.
->>>
->>> Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+
+on 2017/6/30 6:05, Kees Cook wrote:
+> On Wed, Jun 28, 2017 at 9:13 PM, Li Kun <hw.likun@huawei.com> wrote:
+>> 在 2017/5/31 5:39, Kees Cook 写道:
+>>> +bool ex_handler_refcount(const struct exception_table_entry *fixup,
+>>> +                        struct pt_regs *regs, int trapnr)
+>>> +{
+>>> +       int reset;
+>>> +
+>>> +       /*
+>>> +        * If we crossed from INT_MAX to INT_MIN, the OF flag (result
+>>> +        * wrapped around) and the SF flag (result is negative) will be
+>>> +        * set. In this case, reset to INT_MAX in an attempt to leave the
+>>> +        * refcount usable. Otherwise, we've landed here due to producing
+>>> +        * a negative result from either decrementing zero or operating on
+>>> +        * a negative value. In this case things are badly broken, so we
+>>> +        * we saturate to INT_MIN / 2.
+>>> +        */
+>>> +       if (regs->flags & (X86_EFLAGS_OF | X86_EFLAGS_SF))
+>>> +               reset = INT_MAX;
+>>      Should it be like this to indicate that the refcount is wapped from
+>> INT_MAX to INT_MIN ?
+>>          if (regs->flags & (X86_EFLAGS_OF | X86_EFLAGS_SF)
+>>                  == (X86_EFLAGS_OF | X86_EFLAGS_SF))
 >>
->>
->> Looks good to me, thanks!
->>
->> Acked-by: Daniel Borkmann <daniel@iogearbox.net>
->>
->> I'm fine if Andrew or Kees picks up the bpf patch as well, I think
->> there shouldn't be any conflict with net-next on this one (and even
->> if so, then looks trivial to resolve).
+>>                  reset = INT_MAX;
+> Ah yes, thanks for the catch. Yeah, that test is expecting both
+> condition flags to be set.
 >
-> I nominate Andrew. ;) This should go in early in the merge window and
-> the users can go late in the window. If Andrew has enough to do, I can
-> carry it too; just say the word.
+> I'm still on the fence about the best way to deal with the bad states.
+> I've been pondering just strictly using a saturation value (INT_MIN /
+> 2), which should offer the same system state protection (except for
+> the inherent resource leak), but that means there isn't really a good
+> way to kill an offending process (since after saturation ALL processes
+> will look like violators). It can be argued that killing the process
+> doesn't actually provide any benefit since the system is still safe,
+> though.
+An immature idea,can we set the count to INT_MAX/2 when we detect and 
+kill the offending process,
+and wait to see if there will be another offender touching the fence. 
+Er,not very acurate,but better than
+killing all the processes doing refcount_add ,i think.
+>>> +       else
+>>> +               reset = INT_MIN / 2;
+>>> +       *(int *)regs->cx = reset;
+> Thanks for looking at this!
 >
-> This is a sane addition and allows for lines-of-code reduction in a
-> few places. Thanks!
+> -Kees
+>
 
-Andrew's picked them up in mmotm, thanks everyone.
-
-cheers
+-- 
+Best Regards
+Li Kun
