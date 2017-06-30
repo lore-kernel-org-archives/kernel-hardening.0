@@ -1,96 +1,80 @@
-Message-ID: <1498802567.24896.12.camel@haakon3.risingtidesystems.com>
-From: "Nicholas A. Bellinger" <nab@linux-iscsi.org>
-Date: Thu, 29 Jun 2017 23:02:47 -0700
-In-Reply-To: <1678474.GnYBdSlWgs@tauon.chronox.de>
-References: <20170606174804.31124-1-Jason@zx2c4.com>
-	 <2639082.PtrrGWOPPL@positron.chronox.de>
-	 <1498440189.26123.85.camel@haakon3.risingtidesystems.com>
-	 <1678474.GnYBdSlWgs@tauon.chronox.de>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <CAK8P3a076DEDpzRgTRBNLWan-KZyD0LkauWpuO8RFCf-9i1mhA@mail.gmail.com>
+References: <1495829844-69341-1-git-send-email-keescook@chromium.org>
+ <1495829844-69341-5-git-send-email-keescook@chromium.org> <CAK8P3a0beV+ZUUKxzufXtZRszbXvgC3eQO4Rc1+ZYo_nAmcaaA@mail.gmail.com>
+ <CAGXu5jJHRC83YSDKVfm4_41k0wgqfG=wpqPQss-ce77SRNkwRA@mail.gmail.com>
+ <CAK8P3a0HeP0ekoZCu9+d-4y0dUz2=-Nn53=fTHPKSJao2NMU5Q@mail.gmail.com>
+ <CAKv+Gu-EWyfB3zbPwT9=bLwR0GDtg5mwKaD0p5AbssjbxU7sMA@mail.gmail.com> <CAK8P3a076DEDpzRgTRBNLWan-KZyD0LkauWpuO8RFCf-9i1mhA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 30 Jun 2017 07:41:34 -0700
+Message-ID: <CAGXu5jJq-1Tkfzkh_Na9dGVVi=hARz5yDX68MZoN_KPiNBX5LQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure RNG is
- seeded before use
-To: Stephan =?ISO-8859-1?Q?M=FCller?= <smueller@chronox.de>
-Cc: Lee Duncan <lduncan@suse.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, Chris Leech <cleech@redhat.com>, open-iscsi@googlegroups.com, target-devel <target-devel@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v2 04/20] gcc-plugins: Add the randstruct plugin
+To: Arnd Bergmann <arnd@arndb.de>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Laura Abbott <labbott@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Russell King - ARM Linux <linux@armlinux.org.uk>, Nicolas Pitre <nicolas.pitre@linaro.org>, Will Deacon <will.deacon@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 2017-06-26 at 19:38 +0200, Stephan Müller wrote:
-> Am Montag, 26. Juni 2017, 03:23:09 CEST schrieb Nicholas A. Bellinger:
-> 
-> Hi Nicholas,
-> 
-> > Hi Stephan, Lee & Jason,
-> > 
-> > (Adding target-devel CC')
-> > 
-> > Apologies for coming late to the discussion.  Comments below.
-> > 
-> > On Sun, 2017-06-18 at 10:04 +0200, Stephan Müller wrote:
-> > > Am Samstag, 17. Juni 2017, 05:45:57 CEST schrieb Lee Duncan:
-> > > 
-> > > Hi Lee,
-> > > 
-> > > > In your testing, how long might a process have to wait? Are we talking
-> > > > seconds? Longer? What about timeouts?
-> > > 
-> > > In current kernels (starting with 4.8) this timeout should clear within a
-> > > few seconds after boot.
-> > > 
-> > > In older kernels (pre 4.8), my KVM takes up to 90 seconds to reach that
-> > > seeding point. I have heard that on IBM System Z this trigger point
-> > > requires minutes to be reached.
-> > 
-> > I share the same concern as Lee wrt to introducing latency into the
-> > existing iscsi-target login sequence.
-> > 
-> > Namely in the use-cases where a single node is supporting ~1K unique
-> > iscsi-target IQNs, and fail-over + re-balancing of IQNs where 100s of
-> > login attempts are expected to occur in parallel.
-> > 
-> > If environments exist that require non trivial amounts of time for RNG
-> > seeding to be ready for iscsi-target usage, then enforcing this
-> > requirement at iscsi login time can open up problems, especially when
-> > iscsi host environments may be sensitive to login timeouts, I/O
-> > timeouts, et al.
-> > 
-> > That said, I'd prefer to simply wait for RNG to be seeded at modprobe
-> > iscsi_target_mod time, instead of trying to enforce randomness during
-> > login.
-> > 
-> > This way, those of use who have distributed storage platforms can know
-> > to avoid putting a node into a state to accept iscsi-target IQN export
-> > migration, before modprobe iscsi_target_mod has successfully loaded and
-> > RNG seeding has been confirmed.
-> > 
-> > WDYT..?
-> 
-> We may have a chicken and egg problem when the wait is at the modprobe time. 
-> Assume the modprobe happens during initramfs time to get access to the root 
-> file system. In this case, you entire boot process will lock up for an 
-> indefinite amount of time. The reason is that in order to obtain events 
-> detected by the RNG, devices need to be initialized and working. Such devices 
-> commonly start working after the the root partition is mounted as it contains 
-> all drivers, all configuration information etc.
-> 
-> Note, during the development of my /dev/random implementation, I added the 
-> getrandom-like blocking behavior to /dev/urandom (which is the equivalent to 
-> Jason's patch except that it applies to user space). The boot process locked 
-> up since systemd wanted data from /dev/urandom while it processed the 
-> initramfs. As it did not get any, the boot process did not commence that could 
-> deliver new events to be picked up by the RNG.
-> 
-> As I do not have such an iscsi system, I cannot test Jason's patch. But maybe 
-> the mentioned chicken-and-egg problem I mentioned above is already visible 
-> with the current patch as it will lead to a blocking of the mounting of the 
-> root partition in case the root partition is on an iscsi target.
+On Fri, Jun 30, 2017 at 1:27 AM, Arnd Bergmann <arnd@arndb.de> wrote:
+> On Fri, Jun 30, 2017 at 9:55 AM, Ard Biesheuvel
+> <ard.biesheuvel@linaro.org> wrote:
+>> On 30 June 2017 at 07:35, Arnd Bergmann <arnd@arndb.de> wrote:
+>>> On Fri, Jun 30, 2017 at 12:53 AM, Kees Cook <keescook@chromium.org> wrote:
+>>>> The first obviously won't fly. The second just bypasses the problem
+>>>> forcing it to be exposed by other people later. The third is likely
+>>>> easiest to do now, but reduces the effectiveness of randomization for
+>>>> architectures that don't have sensitive immediate values. The fourth
+>>>> sounds not generally useful. The fifth may be unacceptable to arm
+>>>> maintainers due to performance impacts.
+>>>
+>>> I was thinking of the fifth solution, but don't know exactly how to
+>>> do it. If performance is a concern, I guess we could have separate
+>>> implementations for randstruct and traditional builds.
+>>>
+>>
+>> Does this not apply to *all* entries in asm-offsets? If so, I don't
+>> see how it is tractable to fix this in the code, unless we add some
+>> instrumentation to asm-offsets to whitelist some huge structs and
+>> error out on new ones. Or perhaps there's really only a handful?
+>
+> I think the other structs are all small enough:
+>
+> * thread_info is at most 720 bytes (including crunch+vfp3, which
+>   you wouldn't find in one combined kernel) and not randomized
+>   at the moment
+> * pt_regs is 72 bytes and I don't see how that would be randomized
+> * machine_desc would be a candidate for randomizing, but is only
+>   108 bytes
+> * proc_info_list is 52 bytes and not currently randomized
+> * vm_area_struct is randomized but only 96 bytes.
+> * task_struct is clearly large enough, but we only use TSK_ACTIVE_MM
+>   and TSK_STACK_CANARY, both can be fixed with your trick.
 
-AFAIK, there are no distro initramfs dependencies for iscsi_target_mod,
-and every environment I've ever seen loads iscsi_target_mod after
-switching to the real rootfs.
+Yup, that matches what I found. task_struct is the only truly giant struct.
 
-For an iscsi initiator that might not been the case, especially if the
-rootfs is running atop a iscsi LUN.
+>> In any case, these particular examples are fairly straightforward,
+>> since there is no need to preserve the register's value.
+>>
+>> ldr     r7, [r7, #TSK_STACK_CANARY]
+>>
+>> could be replaced with
+>>
+>> .if TSK_STACK_CANARAY >= PAGE_SIZE
+>> add r7, r7, #TSK_STACK_CANARY & PAGE_MASK
+>> .endif
+>> ldr r7, [r7, #TSK_STACK_CANARY & ~PAGE_MASK]
+>
+> Nice!
 
-But at least for iscsi-target mode, any blocking during modprobe waiting
-for RNG seeding would happen outside of initramfs.
+Oh, very cool. This'll make it only an asm change in the case where
+it's required for randstruct. Perfect. I'll send a patch and carry it
+in the randstruct tree.
+
+(In looking at this, it seems tsk_mm is unused in mm/proc-macros.S, so
+I'll remove that code unless someone sees something I don't.)
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
