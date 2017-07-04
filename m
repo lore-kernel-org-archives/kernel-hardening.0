@@ -1,73 +1,87 @@
-Return-Path: 
- <oss-security-return-22608-ydroneaud=opteya.com@lists.openwall.com>
-List-Post: <mailto:oss-security@lists.openwall.com>
-List-Help: <mailto:oss-security-help@lists.openwall.com>
-List-Unsubscribe: <mailto:oss-security-unsubscribe@lists.openwall.com>
-List-Subscribe: <mailto:oss-security-subscribe@lists.openwall.com>
-Reply-To: oss-security@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CAADWXX8JYe-AewtzoY6VBVLPTs+UvnfZst76vL4tccf6x9cY=g@mail.gmail.com>
-References: <20170624005003.GB27479@grsecurity.net>
-	 <CAADWXX8JYe-AewtzoY6VBVLPTs+UvnfZst76vL4tccf6x9cY=g@mail.gmail.com>
-From: Shawn <citypw@gmail.com>
-Date: Sat, 24 Jun 2017 23:26:00 +0800
-Message-ID: <CABniQZPtHV+-XiHPRUGcDe+KwEd1JpPdcDb2Xn63t2Z_Os6ETQ@mail.gmail.com>
+In-Reply-To: <CAGXu5jLHps6z7nnwHwDv7kW9b21b4hPD_XmgKY1OjfNa0H-dKg@mail.gmail.com>
+References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
+ <1497286620-15027-2-git-send-email-s.mesoraca16@gmail.com> <CAGXu5jLHps6z7nnwHwDv7kW9b21b4hPD_XmgKY1OjfNa0H-dKg@mail.gmail.com>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Tue, 4 Jul 2017 12:12:34 +0200
+Message-ID: <CAJHCu1K4g2==1oVosOHQeL251ct42tdo3MBUO84riYBBtQ8=oA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [oss-security] Re: More CONFIG_VMAP_STACK vulnerabilities,
- refcount_t UAF, and an ignored Secure Boot bypass / rootkit method
-Content-Transfer-Encoding: 8bit
-To: oss-security@lists.openwall.com
-Cc: Brad Spengler <spender@grsecurity.net>, pageexec@freemail.hu, kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] Re: [PATCH 01/11] S.A.R.A. Documentation
+To: Kees Cook <keescook@chromium.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Linus,
-
-Not sure how you got the conclusion like "Their patches are pure
-garbage."( https://www.spinics.net/lists/kernel/msg2540934.html). I'm
-wondering why there's a group of ppl called themselves KSPP got paid
-by big corps are still trying to copy+paste PaX/Grsecurity to the
-upstream if you think it's a garbage? Did you try to tell KSPP guys to
-stop their work( cc'ing kernel-hardening mailinglist)? It's so obvious
-to see the most security work( more than just a specific OS)
-originally done by PaX/Grsecurity:
-
-https://github.com/hardenedlinux/grsecurity-101-tutorials/blob/master/kernel_mitigation.md
-
-And my customers has been suffering from your philosophical ideas of
-"A bug is bug" for too long. I really respect your contributions(
-linux kernel/git) to the FLOSS world. But even the open source king
-can't change the truth:
-
-https://github.com/hardenedlinux/grsecurity-101-tutorials/blob/master/kernel_vuln_exp.md
-
-btw: You didn't answer Brad's question.
-
-
-On Sat, Jun 24, 2017 at 9:04 AM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Fri, Jun 23, 2017 at 5:50 PM, Brad Spengler <spender@grsecurity.net> wrote:
+2017-06-28 0:51 GMT+02:00 Kees Cook <keescook@chromium.org>:
+> On Mon, Jun 12, 2017 at 9:56 AM, Salvatore Mesoraca
+> <s.mesoraca16@gmail.com> wrote:
+>> Adding documentation for S.A.R.A. LSM.
 >>
->> BTW, we're happy to go toe-to-toe with you here in public on actual facts
->> instead of pathetic ad hominems.
+>> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+>> ---
+>>  Documentation/admin-guide/kernel-parameters.txt |  40 +++++
+>>  Documentation/security/00-INDEX                 |   2 +
+>>  Documentation/security/SARA.rst                 | 192 ++++++++++++++++++++++++
+>>  3 files changed, 234 insertions(+)
+>>  create mode 100644 Documentation/security/SARA.rst
+>>
+>> diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
+>> index 0f5c3b4..f3ee12d 100644
+>> --- a/Documentation/admin-guide/kernel-parameters.txt
+>> +++ b/Documentation/admin-guide/kernel-parameters.txt
+>> @@ -3702,6 +3702,46 @@
+>>                         1 -- enable.
+>>                         Default value is set via kernel config option.
+>>
+>> +       sara=           [SARA] Disable or enable S.A.R.A. at boot time.
+>> +                       If disabled this way S.A.R.A. can't be enabled
+>> +                       again.
+>> +                       Format: { "0" | "1" }
+>> +                       See security/sara/Kconfig help text
+>> +                       0 -- disable.
+>> +                       1 -- enable.
+>> +                       Default value is set via kernel config option.
+>> +
+>> +       sara_usb_filtering= [SARA]
+>> +                       Disable or enable S.A.R.A. USB Filtering at boot
+>> +                       time.
+>> +                       Format: { "0" | "1" }
+>> +                       See security/sara/Kconfig help text
+>> +                       0 -- disable.
+>> +                       1 -- enable.
+>> +                       Default value is 1.
+>> +
+>> +       sara_usb_filtering_default= [SARA]
+>> +                       Set S.A.R.A. USB Filtering default action.
+>> +                       Format: { "a" | "d" }
+>> +                       See security/sara/Kconfig help text
+>> +                       a -- allow.
+>> +                       d -- deny.
+>> +                       Default value is set via kernel config option.
+>> +
+>> +       sara_wxprot=    [SARA] Disable or enable S.A.R.A. WX Protection
+>> +                       at boot time.
+>> +                       Format: { "0" | "1" }
+>> +                       See security/sara/Kconfig help text
+>> +                       0 -- disable.
+>> +                       1 -- enable.
+>> +                       Default value is 1.
+>> +
+>> +       sara_wxprot_default_flags= [SARA]
+>> +                       Set S.A.R.A. WX Protection default flags.
+>> +                       Format: <integer>
+>> +                       See S.A.R.A. documentation.
+>> +                       Default value is set via kernel config option.
+>> +
 >
-> Quite frankly, I'd much rather see *you* actually send in patches that
-> are acceptable for inclusion, something you've never done.
+> As an organizational note, I would suggest making these all regular
+> "module parameters", which would let them be automatically namespaced
+> under "sara". For example "sara.enabled", "sara.wxprot", etc. For
+> example, this is how LoadPin does it for "loadpin.enabled":
 >
-> As it is, other people have tried to clean up parts of the grsecurity
-> patches, and tried to make them acceptable.
->
-> Wouldn't it be nice if you actually tried to make the baseline actually better?
->
-> Please.
->
->                 Linus
+> /* Should not be mutable after boot, so not listed in sysfs (perm == 0). */
+> module_param(enabled, int, 0);
+> MODULE_PARM_DESC(enabled, "Pin module/firmware loading (default: true)");
 
-
-
--- 
-GNU powered it...
-GPL protect it...
-God blessing it...
-
-regards
-Shawn
+I apologize to be so late to answer you.
+I completely missed this email.
+I'll follow your suggestion in v3, thank you.
