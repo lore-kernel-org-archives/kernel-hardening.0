@@ -1,87 +1,61 @@
+Date: Tue, 4 Jul 2017 15:12:26 +0200
+From: Michal Hocko <mhocko@kernel.org>
+Message-ID: <20170704131225.GQ14722@dhcp22.suse.cz>
+References: <20170621173201.GA114489@beast>
+ <20170627144948.GD28078@dhcp22.suse.cz>
+ <CAGXu5jKaGjuq6s8XF+mctaL1Ckr2HtKgCnty2p6rUFQSmc-xHQ@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jLHps6z7nnwHwDv7kW9b21b4hPD_XmgKY1OjfNa0H-dKg@mail.gmail.com>
-References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
- <1497286620-15027-2-git-send-email-s.mesoraca16@gmail.com> <CAGXu5jLHps6z7nnwHwDv7kW9b21b4hPD_XmgKY1OjfNa0H-dKg@mail.gmail.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Tue, 4 Jul 2017 12:12:34 +0200
-Message-ID: <CAJHCu1K4g2==1oVosOHQeL251ct42tdo3MBUO84riYBBtQ8=oA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 01/11] S.A.R.A. Documentation
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jKaGjuq6s8XF+mctaL1Ckr2HtKgCnty2p6rUFQSmc-xHQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v2] binfmt_elf: Use ELF_ET_DYN_BASE only for PIE
 To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Rik van Riel <riel@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Qualys Security Advisory <qsa@qualys.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Dmitry Safonov <dsafonov@virtuozzo.com>, Andy Lutomirski <luto@amacapital.net>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, LKML <linux-kernel@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2017-06-28 0:51 GMT+02:00 Kees Cook <keescook@chromium.org>:
-> On Mon, Jun 12, 2017 at 9:56 AM, Salvatore Mesoraca
-> <s.mesoraca16@gmail.com> wrote:
->> Adding documentation for S.A.R.A. LSM.
->>
->> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
->> ---
->>  Documentation/admin-guide/kernel-parameters.txt |  40 +++++
->>  Documentation/security/00-INDEX                 |   2 +
->>  Documentation/security/SARA.rst                 | 192 ++++++++++++++++++++++++
->>  3 files changed, 234 insertions(+)
->>  create mode 100644 Documentation/security/SARA.rst
->>
->> diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
->> index 0f5c3b4..f3ee12d 100644
->> --- a/Documentation/admin-guide/kernel-parameters.txt
->> +++ b/Documentation/admin-guide/kernel-parameters.txt
->> @@ -3702,6 +3702,46 @@
->>                         1 -- enable.
->>                         Default value is set via kernel config option.
->>
->> +       sara=           [SARA] Disable or enable S.A.R.A. at boot time.
->> +                       If disabled this way S.A.R.A. can't be enabled
->> +                       again.
->> +                       Format: { "0" | "1" }
->> +                       See security/sara/Kconfig help text
->> +                       0 -- disable.
->> +                       1 -- enable.
->> +                       Default value is set via kernel config option.
->> +
->> +       sara_usb_filtering= [SARA]
->> +                       Disable or enable S.A.R.A. USB Filtering at boot
->> +                       time.
->> +                       Format: { "0" | "1" }
->> +                       See security/sara/Kconfig help text
->> +                       0 -- disable.
->> +                       1 -- enable.
->> +                       Default value is 1.
->> +
->> +       sara_usb_filtering_default= [SARA]
->> +                       Set S.A.R.A. USB Filtering default action.
->> +                       Format: { "a" | "d" }
->> +                       See security/sara/Kconfig help text
->> +                       a -- allow.
->> +                       d -- deny.
->> +                       Default value is set via kernel config option.
->> +
->> +       sara_wxprot=    [SARA] Disable or enable S.A.R.A. WX Protection
->> +                       at boot time.
->> +                       Format: { "0" | "1" }
->> +                       See security/sara/Kconfig help text
->> +                       0 -- disable.
->> +                       1 -- enable.
->> +                       Default value is 1.
->> +
->> +       sara_wxprot_default_flags= [SARA]
->> +                       Set S.A.R.A. WX Protection default flags.
->> +                       Format: <integer>
->> +                       See S.A.R.A. documentation.
->> +                       Default value is set via kernel config option.
->> +
->
-> As an organizational note, I would suggest making these all regular
-> "module parameters", which would let them be automatically namespaced
-> under "sara". For example "sara.enabled", "sara.wxprot", etc. For
-> example, this is how LoadPin does it for "loadpin.enabled":
->
-> /* Should not be mutable after boot, so not listed in sysfs (perm == 0). */
-> module_param(enabled, int, 0);
-> MODULE_PARM_DESC(enabled, "Pin module/firmware loading (default: true)");
+[Sorry for a late reply]
 
-I apologize to be so late to answer you.
-I completely missed this email.
-I'll follow your suggestion in v3, thank you.
+On Tue 27-06-17 13:08:39, Kees Cook wrote:
+> On Tue, Jun 27, 2017 at 7:49 AM, Michal Hocko <mhocko@kernel.org> wrote:
+> > On Wed 21-06-17 10:32:01, Kees Cook wrote:
+> >> The ELF_ET_DYN_BASE position was originally intended to keep loaders
+> >> away from ET_EXEC binaries. (For example, running "/lib/ld-linux.so.2
+> >> /bin/cat" might cause the subsequent load of /bin/cat into where the
+> >> loader had been loaded.) With the advent of PIE (ET_DYN binaries with
+> >> an INTERP Program Header), ELF_ET_DYN_BASE continued to be used since
+> >> the kernel was only looking at ET_DYN. However, since ELF_ET_DYN_BASE
+> >> is traditionally set at the top 1/3rd of the TASK_SIZE, a substantial
+> >> portion of the address space is unused.
+> >>
+> >> For 32-bit tasks when RLIMIT_STACK is set to RLIM_INFINITY, programs
+> >> are loaded below the mmap region. This means they can be made to collide
+> >> (CVE-2017-1000370) or nearly collide (CVE-2017-1000371) with pathological
+> >> stack regions. Lowering ELF_ET_DYN_BASE solves both by moving programs
+> >> above the mmap region in all cases, and will now additionally avoid
+> >> programs falling back to the mmap region by enforcing MAP_FIXED for
+> >> program loads (i.e. if it would have collided with the stack, now it
+> >> will fail to load instead of falling back to the mmap region).
+> >
+> > I do not understand this part. MAP_FIXED will simply unmap whatever
+> > was under the requested range, how it could help failing anything? So
+> > what would happen if something was mapped in that region, or is this
+> > impossible? Moreover MAP_FIXED close to stack will inhibit the stack gap
+> > protection.
+> 
+> Hmm, well, that's my misunderstanding. Regardless, it should still use
+> MAP_FIXED otherwise we end up with potentially unpredictable results.
+
+Why that matters? The base is random, right? This is quite early in
+the initialization so the address space should be pretty empty at this
+stage.
+
+> (Note that MAP_FIXED is already used all all remaining allocations, it
+> was just missing on the first one.)
+
+OK, so what happens when there was an existing mapping at the requested
+address and we just punched it off? Will things work properly?
+I can see some MAP_FIXED users in load_elf_binary but the function is
+simply unparsable for me, unfortunatelly.
+-- 
+Michal Hocko
+SUSE Labs
