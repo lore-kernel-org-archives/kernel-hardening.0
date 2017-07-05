@@ -1,61 +1,121 @@
-Date: Tue, 4 Jul 2017 15:12:26 +0200
-From: Michal Hocko <mhocko@kernel.org>
-Message-ID: <20170704131225.GQ14722@dhcp22.suse.cz>
-References: <20170621173201.GA114489@beast>
- <20170627144948.GD28078@dhcp22.suse.cz>
- <CAGXu5jKaGjuq6s8XF+mctaL1Ckr2HtKgCnty2p6rUFQSmc-xHQ@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Message-Id: <595C8F4F020000A100026F29@gwsmtp1.uni-regensburg.de>
+Date: Wed, 05 Jul 2017 09:03:43 +0200
+From: "Ulrich Windl" <Ulrich.Windl@rz.uni-regensburg.de>
+References: <20170606174804.31124-1-Jason@zx2c4.com>
+ <2639082.PtrrGWOPPL@positron.chronox.de>
+ <1498440189.26123.85.camel@haakon3.risingtidesystems.com>
+ <1678474.GnYBdSlWgs@tauon.chronox.de>
+In-Reply-To: <1678474.GnYBdSlWgs@tauon.chronox.de>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jKaGjuq6s8XF+mctaL1Ckr2HtKgCnty2p6rUFQSmc-xHQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2] binfmt_elf: Use ELF_ET_DYN_BASE only for PIE
-To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Rik van Riel <riel@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Qualys Security Advisory <qsa@qualys.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Dmitry Safonov <dsafonov@virtuozzo.com>, Andy Lutomirski <luto@amacapital.net>, Grzegorz Andrejczuk <grzegorz.andrejczuk@intel.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, LKML <linux-kernel@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: Antw: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi:
+ ensure RNG is seeded before use
+To: "Nicholas A.Bellinger" <nab@linux-iscsi.org>
+Cc: David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, open-iscsi <open-iscsi@googlegroups.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ted Ts'o <tytso@mit.edu>, Chris Leech <cleech@redhat.com>, Lee Duncan <lduncan@suse.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-kernel@vger.kernel.org, target-devel <target-devel@vger.kernel.org>, "Jason A.Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-[Sorry for a late reply]
-
-On Tue 27-06-17 13:08:39, Kees Cook wrote:
-> On Tue, Jun 27, 2017 at 7:49 AM, Michal Hocko <mhocko@kernel.org> wrote:
-> > On Wed 21-06-17 10:32:01, Kees Cook wrote:
-> >> The ELF_ET_DYN_BASE position was originally intended to keep loaders
-> >> away from ET_EXEC binaries. (For example, running "/lib/ld-linux.so.2
-> >> /bin/cat" might cause the subsequent load of /bin/cat into where the
-> >> loader had been loaded.) With the advent of PIE (ET_DYN binaries with
-> >> an INTERP Program Header), ELF_ET_DYN_BASE continued to be used since
-> >> the kernel was only looking at ET_DYN. However, since ELF_ET_DYN_BASE
-> >> is traditionally set at the top 1/3rd of the TASK_SIZE, a substantial
-> >> portion of the address space is unused.
-> >>
-> >> For 32-bit tasks when RLIMIT_STACK is set to RLIM_INFINITY, programs
-> >> are loaded below the mmap region. This means they can be made to collide
-> >> (CVE-2017-1000370) or nearly collide (CVE-2017-1000371) with pathological
-> >> stack regions. Lowering ELF_ET_DYN_BASE solves both by moving programs
-> >> above the mmap region in all cases, and will now additionally avoid
-> >> programs falling back to the mmap region by enforcing MAP_FIXED for
-> >> program loads (i.e. if it would have collided with the stack, now it
-> >> will fail to load instead of falling back to the mmap region).
-> >
-> > I do not understand this part. MAP_FIXED will simply unmap whatever
-> > was under the requested range, how it could help failing anything? So
-> > what would happen if something was mapped in that region, or is this
-> > impossible? Moreover MAP_FIXED close to stack will inhibit the stack gap
-> > protection.
+>>> Stephan Müller <smueller@chronox.de> schrieb am 26.06.2017 um 19:38 in
+Nachricht <1678474.GnYBdSlWgs@tauon.chronox.de>:
+> Am Montag, 26. Juni 2017, 03:23:09 CEST schrieb Nicholas A. Bellinger:
 > 
-> Hmm, well, that's my misunderstanding. Regardless, it should still use
-> MAP_FIXED otherwise we end up with potentially unpredictable results.
+> Hi Nicholas,
+> 
+>> Hi Stephan, Lee & Jason,
+>> 
+>> (Adding target-devel CC')
+>> 
+>> Apologies for coming late to the discussion.  Comments below.
+>> 
+>> On Sun, 2017-06-18 at 10:04 +0200, Stephan Müller wrote:
+>> > Am Samstag, 17. Juni 2017, 05:45:57 CEST schrieb Lee Duncan:
+>> > 
+>> > Hi Lee,
+>> > 
+>> > > In your testing, how long might a process have to wait? Are we talking
+>> > > seconds? Longer? What about timeouts?
+>> > 
+>> > In current kernels (starting with 4.8) this timeout should clear within
+a
+>> > few seconds after boot.
+>> > 
+>> > In older kernels (pre 4.8), my KVM takes up to 90 seconds to reach that
+>> > seeding point. I have heard that on IBM System Z this trigger point
+>> > requires minutes to be reached.
+>> 
+>> I share the same concern as Lee wrt to introducing latency into the
+>> existing iscsi-target login sequence.
+>> 
+>> Namely in the use-cases where a single node is supporting ~1K unique
+>> iscsi-target IQNs, and fail-over + re-balancing of IQNs where 100s of
+>> login attempts are expected to occur in parallel.
+>> 
+>> If environments exist that require non trivial amounts of time for RNG
+>> seeding to be ready for iscsi-target usage, then enforcing this
+>> requirement at iscsi login time can open up problems, especially when
+>> iscsi host environments may be sensitive to login timeouts, I/O
+>> timeouts, et al.
+>> 
+>> That said, I'd prefer to simply wait for RNG to be seeded at modprobe
+>> iscsi_target_mod time, instead of trying to enforce randomness during
+>> login.
+>> 
+>> This way, those of use who have distributed storage platforms can know
+>> to avoid putting a node into a state to accept iscsi-target IQN export
+>> migration, before modprobe iscsi_target_mod has successfully loaded and
+>> RNG seeding has been confirmed.
+>> 
+>> WDYT..?
+> 
+> We may have a chicken and egg problem when the wait is at the modprobe time.
 
-Why that matters? The base is random, right? This is quite early in
-the initialization so the address space should be pretty empty at this
-stage.
+> 
+> Assume the modprobe happens during initramfs time to get access to the root
 
-> (Note that MAP_FIXED is already used all all remaining allocations, it
-> was just missing on the first one.)
+> file system. In this case, you entire boot process will lock up for an 
+> indefinite amount of time. The reason is that in order to obtain events 
+> detected by the RNG, devices need to be initialized and working. Such 
+> devices 
+> commonly start working after the the root partition is mounted as it 
+> contains 
+> all drivers, all configuration information etc.
+> 
+> Note, during the development of my /dev/random implementation, I added the 
+> getrandom-like blocking behavior to /dev/urandom (which is the equivalent to
 
-OK, so what happens when there was an existing mapping at the requested
-address and we just punched it off? Will things work properly?
-I can see some MAP_FIXED users in load_elf_binary but the function is
-simply unparsable for me, unfortunatelly.
--- 
-Michal Hocko
-SUSE Labs
+> 
+> Jason's patch except that it applies to user space). The boot process locked
+
+
+I thought reads from urandom never block by definition. An older manual page
+(man urandom) also says: "A  read  from  the  /dev/urandom device will not
+block waiting for more entropy."
+
+Regards,
+Ulrich
+
+> 
+> up since systemd wanted data from /dev/urandom while it processed the 
+> initramfs. As it did not get any, the boot process did not commence that 
+> could 
+> deliver new events to be picked up by the RNG.
+> 
+> As I do not have such an iscsi system, I cannot test Jason's patch. But 
+> maybe 
+> the mentioned chicken-and-egg problem I mentioned above is already visible 
+> with the current patch as it will lead to a blocking of the mounting of the
+
+> root partition in case the root partition is on an iscsi target.
+> 
+> Ciao
+> Stephan
+> 
+> -- 
+> You received this message because you are subscribed to the Google Groups 
+> "open-iscsi" group.
+> To unsubscribe from this group and stop receiving emails from it, send an 
+> email to open-iscsi+unsubscribe@googlegroups.com.
+> To post to this group, send email to open-iscsi@googlegroups.com.
+> Visit this group at https://groups.google.com/group/open-iscsi.
+> For more options, visit https://groups.google.com/d/optout.
