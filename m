@@ -1,51 +1,45 @@
-Date: Wed, 5 Jul 2017 08:35:21 -0400
-From: Theodore Ts'o <tytso@mit.edu>
-Message-ID: <20170705123521.hr662wo5c2ksc3se@thunk.org>
-References: <20170606174804.31124-1-Jason@zx2c4.com>
- <2639082.PtrrGWOPPL@positron.chronox.de>
- <1498440189.26123.85.camel@haakon3.risingtidesystems.com>
- <1678474.GnYBdSlWgs@tauon.chronox.de>
- <595C8F4F020000A100026F29@gwsmtp1.uni-regensburg.de>
-MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <595C8F4F020000A100026F29@gwsmtp1.uni-regensburg.de>
-Subject: Re: Antw: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure
- RNG is seeded before use
-To: Ulrich Windl <Ulrich.Windl@rz.uni-regensburg.de>
-Cc: "Nicholas A.Bellinger" <nab@linux-iscsi.org>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, open-iscsi <open-iscsi@googlegroups.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Chris Leech <cleech@redhat.com>, Lee Duncan <lduncan@suse.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-kernel@vger.kernel.org, target-devel <target-devel@vger.kernel.org>, "Jason A.Donenfeld" <Jason@zx2c4.com>
+Mime-Version: 1.0 (Mac OS X Mail 9.3 \(3124\))
+From: Paul Koning <paulkoning@comcast.net>
+In-Reply-To: <595C9079020000A100026F37@gwsmtp1.uni-regensburg.de>
+Date: Wed, 5 Jul 2017 09:16:09 -0400
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <8CC15605-CFF3-4D6E-ADBE-5EFC9F8E7CE7@comcast.net>
+References: <20170606174804.31124-1-Jason@zx2c4.com> <20170606174804.31124-7-Jason@zx2c4.com> <20170608024357.fhyyentj2qm7ti2q@thunk.org> <CAHmME9pViOqqDPyjXKLfCWSTnQrcE4OLJMdK1yaTiUvrOV+ecQ@mail.gmail.com> <fbca1b2b-c9ae-80ce-45ef-17c3d3b93e57@suse.com> <CAHmME9rU_H6Jq7ArjDq1yByrYf1P7nyC4Y8tqkzG585U39MFLg@mail.gmail.com> <02d60ed4-4207-dd7d-8826-0f9f7f4e966d@suse.com> <CAH8yC8nHX2r9cfQ0gNeJAUrgSfAS8V16dVHv35BRnLn-YprZCg@mail.gmail.com> <595C9079020000A100026F37@gwsmtp1.uni-regensburg.de>
+Subject: Re: Antw: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure RNG is seeded before use
+To: open-iscsi@googlegroups.com
+Cc: Lee Duncan <lduncan@suse.com>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, "Nicholas A.Bellinger" <nab@linux-iscsi.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ted Ts'o <tytso@mit.edu>, Chris Leech <cleech@redhat.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-kernel@vger.kernel.org, "Jason A.Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 05, 2017 at 09:03:43AM +0200, Ulrich Windl wrote:
-> > Note, during the development of my /dev/random implementation, I added the 
-> > getrandom-like blocking behavior to /dev/urandom (which is the equivalent to
-> > Jason's patch except that it applies to user space). The boot process locked
-> 
-> I thought reads from urandom never block by definition. An older manual page
-> (man urandom) also says: "A  read  from  the  /dev/urandom device will not
-> block waiting for more entropy."
 
-As I said in my original message, I *tried* this as an experiment.
-Because lots of security-obsessed people were disputing my
-intelligence, my judgement, and in some cases, my paternity becuase I
-wouldn't change /dev/urandom not to block.
+> On Jul 5, 2017, at 3:08 AM, Ulrich Windl =
+<Ulrich.Windl@rz.uni-regensburg.de> wrote:
+>=20
+>>>> Jeffrey Walton <noloader@gmail.com> schrieb am 17.06.2017 um 16:23 =
+in Nachricht
+> <CAH8yC8nHX2r9cfQ0gNeJAUrgSfAS8V16dVHv35BRnLn-YprZCg@mail.gmail.com>:
+>=20
+> [...]
+>> But its not clear to me how to ensure uniqueness when its based on
+>> randomness from the generators.
+>=20
+> Even with a perfect random generator non-unique values are possible =
+(that's why it's random). It's unlikely, but it can happen. The question =
+is whether the probability of non-unique values from /dev/urandom is any =
+higher than that for values read from /dev/random. One _might_ be able =
+to predict the values from /dev/urandom.
 
-So I did the experiment so I could give them hard data about why we
-couldn't go down that path.
+In the implementations I know, /dev/random and /dev/urandom are the same =
+driver, the only difference is that when you read from /dev/random =
+there's a check for the current entropy level.
 
-> > up since systemd wanted data from /dev/urandom while it processed the 
-> > initramfs. As it did not get any, the boot process did not commence that 
-> > could 
-> > deliver new events to be picked up by the RNG.
+If you haven't fed enough entropy yet to the driver since startup, and =
+you read /dev/urandom, you get a value that isn't sufficiently secure. =20=
 
-And indeed, making this change brick'ed at least one version of Ubuntu
-and one version of CeroWRT, as reported by the kernel's 0-day testing
-system.  As a result, this patch (which was always a proof of concept,
-not anything I thought had any chance of going upstream), was dropped.
 
-Since in the kernel, We Do Not Break Backwards Compatibility, this is
-why we have a new interface --- getrandom(2) --- instead of changing
-an existing interface.  (Well, there were multiple good reasons for
-getrandom, but this was definitely one of them.)
+If you have a properly constructed RNG, as soon as it's been fed enough =
+entropy it is secure (at least for the next 2^64 bits or so).  The =
+notion of "using up entropy" is not meaningful for a good generator.   =
+See Bruce Schneier's "Yarrow" paper for the details.
 
-	    	       	   	    - Ted
+	paul
