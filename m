@@ -1,45 +1,91 @@
-Content-Type: text/plain; charset=us-ascii
-Mime-Version: 1.0 (Mac OS X Mail 9.3 \(3124\))
-From: Paul Koning <paulkoning@comcast.net>
-In-Reply-To: <595C9079020000A100026F37@gwsmtp1.uni-regensburg.de>
-Date: Wed, 5 Jul 2017 09:16:09 -0400
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <8CC15605-CFF3-4D6E-ADBE-5EFC9F8E7CE7@comcast.net>
-References: <20170606174804.31124-1-Jason@zx2c4.com> <20170606174804.31124-7-Jason@zx2c4.com> <20170608024357.fhyyentj2qm7ti2q@thunk.org> <CAHmME9pViOqqDPyjXKLfCWSTnQrcE4OLJMdK1yaTiUvrOV+ecQ@mail.gmail.com> <fbca1b2b-c9ae-80ce-45ef-17c3d3b93e57@suse.com> <CAHmME9rU_H6Jq7ArjDq1yByrYf1P7nyC4Y8tqkzG585U39MFLg@mail.gmail.com> <02d60ed4-4207-dd7d-8826-0f9f7f4e966d@suse.com> <CAH8yC8nHX2r9cfQ0gNeJAUrgSfAS8V16dVHv35BRnLn-YprZCg@mail.gmail.com> <595C9079020000A100026F37@gwsmtp1.uni-regensburg.de>
-Subject: Re: Antw: Re: [kernel-hardening] Re: [PATCH v4 06/13] iscsi: ensure RNG is seeded before use
-To: open-iscsi@googlegroups.com
-Cc: Lee Duncan <lduncan@suse.com>, David Miller <davem@davemloft.net>, Eric Biggers <ebiggers3@gmail.com>, "Nicholas A.Bellinger" <nab@linux-iscsi.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ted Ts'o <tytso@mit.edu>, Chris Leech <cleech@redhat.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-kernel@vger.kernel.org, "Jason A.Donenfeld" <Jason@zx2c4.com>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Date: Wed, 5 Jul 2017 16:46:25 +0300
+Message-ID: <20170705134628.3803-1-igor.stoppa@huawei.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+Subject: [kernel-hardening] [PATCH v9 0/3]  mm: security: ro protection for dynamic data
+To: keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org, labbott@redhat.com, hch@infradead.org
+Cc: penguin-kernel@I-love.SAKURA.ne.jp, paul@paul-moore.com, sds@tycho.nsa.gov, casey@schaufler-ca.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor
+ Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Hi,
+please consider this patch-set for inclusion.
 
-> On Jul 5, 2017, at 3:08 AM, Ulrich Windl =
-<Ulrich.Windl@rz.uni-regensburg.de> wrote:
->=20
->>>> Jeffrey Walton <noloader@gmail.com> schrieb am 17.06.2017 um 16:23 =
-in Nachricht
-> <CAH8yC8nHX2r9cfQ0gNeJAUrgSfAS8V16dVHv35BRnLn-YprZCg@mail.gmail.com>:
->=20
-> [...]
->> But its not clear to me how to ensure uniqueness when its based on
->> randomness from the generators.
->=20
-> Even with a perfect random generator non-unique values are possible =
-(that's why it's random). It's unlikely, but it can happen. The question =
-is whether the probability of non-unique values from /dev/urandom is any =
-higher than that for values read from /dev/random. One _might_ be able =
-to predict the values from /dev/urandom.
+This patch-set introduces the possibility of protecting memory that has
+been allocated dynamically.
 
-In the implementations I know, /dev/random and /dev/urandom are the same =
-driver, the only difference is that when you read from /dev/random =
-there's a check for the current entropy level.
+The memory is managed in pools: when a memory pool is turned into R/O,
+all the memory that is part of it, will become R/O.
 
-If you haven't fed enough entropy yet to the driver since startup, and =
-you read /dev/urandom, you get a value that isn't sufficiently secure. =20=
+A R/O pool can be destroyed, to recover its memory, but it cannot be
+turned back into R/W mode.
+
+This is intentional. This feature is meant for data that doesn't need
+further modifications after initialization.
+
+However the data might need to be released, as part of module unloading.
+To do this, the memory must first be freed, then the pool can be destroyed.
+
+An example is provided, showing how to turn into a boot-time option the
+writable state of the security hooks.
+Prior to this patch, it was a compile-time option.
+
+This is made possible, thanks to Tetsuo Handa's rework of the hooks
+structure (included in the patchset).
+
+Changes since the v8 version:
+- do not abuse devres, but manage the pools in a normal list
+- added one sysfs attribute, showing the number of chnks in each pool
+
+Question still open:
+- should it be possibile to unprotect a pool for rewrite?
+
+The only cases found for this topic are:
+- protecting the LSM header structure between creation and insertion of a
+  security module that was not built as part of the kernel
+  (but the module can protect the headers after it has loaded)
+
+- unloading SELinux from RedHat, if the system has booted, but no policy
+  has been loaded yet - this feature is going away, according to Casey.
+
+Regarding the last point, there was a comment from Christoph Hellwig,
+for which I asked for clarifications, but it's still pending:
+
+https://marc.info/?l=linux-mm&m=149863848120692&w=2
 
 
-If you have a properly constructed RNG, as soon as it's been fed enough =
-entropy it is secure (at least for the next 2^64 bits or so).  The =
-notion of "using up entropy" is not meaningful for a good generator.   =
-See Bruce Schneier's "Yarrow" paper for the details.
+Notes:
 
-	paul
+- The patch is larg-ish, but I was not sure what criteria to use for
+  splitting it. If it helps the reviewing, please do let me know how I
+  should split it and I will comply.
+- I had to rebase Tetsuo Handa's patch because it didn't apply cleanly
+  anymore, I would appreciate an ACK to that or a revised patch, whatever 
+  comes easier.
+
+
+Igor Stoppa (2):
+  Protectable memory support
+  Make LSM Writable Hooks a command line option
+
+Tetsuo Handa (1):
+  LSM: Convert security_hook_heads into explicit array of struct
+    list_head
+
+ arch/Kconfig                   |   1 +
+ include/linux/lsm_hooks.h      | 420 ++++++++++++++++++++---------------------
+ include/linux/page-flags.h     |   2 +
+ include/linux/pmalloc.h        | 127 +++++++++++++
+ include/trace/events/mmflags.h |   1 +
+ lib/Kconfig                    |   1 +
+ mm/Makefile                    |   1 +
+ mm/pmalloc.c                   | 356 ++++++++++++++++++++++++++++++++++
+ mm/usercopy.c                  |  24 ++-
+ security/security.c            |  49 +++--
+ 10 files changed, 748 insertions(+), 234 deletions(-)
+ create mode 100644 include/linux/pmalloc.h
+ create mode 100644 mm/pmalloc.c
+
+-- 
+2.9.3
