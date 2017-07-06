@@ -1,70 +1,92 @@
 MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.20.1707062247520.3239@nanos>
-References: <20170615011203.144108-1-thgarnie@google.com> <CAGXu5j+byHUn_rb9jOTZqMYrc4ngmDj=a3k8QRTYrZYNSjhCkw@mail.gmail.com>
- <CAGXu5jKrJv0y70e5JiafKGcGzWoJPZM_HruZ=Y0rM1m0J4tZAA@mail.gmail.com>
- <CAJcbSZE6Og4gwhFwhy_-Jaq6GovwN3y1B6O89JmkpXHtVfDLBA@mail.gmail.com> <alpine.DEB.2.20.1707062247520.3239@nanos>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 6 Jul 2017 13:52:24 -0700
-Message-ID: <CAJcbSZGSqm8HYMv8biOQEWvan1nma3vjKNJ1mgMz52AyJ5adGA@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <CAK8P3a3-yd3c_Psi5zo1yug5eJvADYxHkfWTa4++_5WFuENo7g@mail.gmail.com>
+References: <20170706101317.10382-1-ard.biesheuvel@linaro.org> <CAK8P3a3-yd3c_Psi5zo1yug5eJvADYxHkfWTa4++_5WFuENo7g@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 6 Jul 2017 14:44:14 -0700
+Message-ID: <CAGXu5j+FDprZBxBKPoBV0mw_oAEG+6Rh-8QNBcniVPxVTQ5gaQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v10 1/3] x86/syscalls: Check address limit on user-mode return
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Petr Mladek <pmladek@suse.com>, Miroslav Benes <mbenes@suse.cz>, Al Viro <viro@zeniv.linux.org.uk>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [RFC/RFT PATCH] gcc-plugins: force initialize auto variables
+ whose addresses are taken
+To: Arnd Bergmann <arnd@arndb.de>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jul 6, 2017 at 1:48 PM, Thomas Gleixner <tglx@linutronix.de> wrote:
-> On Thu, 6 Jul 2017, Thomas Garnier wrote:
->> On Wed, Jun 28, 2017 at 10:52 AM, Kees Cook <keescook@chromium.org> wrote:
->> >
->> > On Tue, Jun 20, 2017 at 1:24 PM, Kees Cook <keescook@chromium.org> wrote:
->> > > On Wed, Jun 14, 2017 at 6:12 PM, Thomas Garnier <thgarnie@google.com> wrote:
->> > >> Ensure the address limit is a user-mode segment before returning to
->> > >> user-mode. Otherwise a process can corrupt kernel-mode memory and elevate
->> > >> privileges [1].
->> > >>
->> > >> The set_fs function sets the TIF_SETFS flag to force a slow path on
->> > >> return. In the slow path, the address limit is checked to be USER_DS if
->> > >> needed.
->> > >>
->> > >> The addr_limit_user_check function is added as a cross-architecture
->> > >> function to check the address limit.
->> > >>
->> > >> [1] https://bugs.chromium.org/p/project-zero/issues/detail?id=990
->> > >>
->> > >> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> > >
->> > > Thanks for reworking this series!
->> > >
->> > > The bad state correctly BUGs under the LKDTM test:
->> > >
->> > > [   21.171586] lkdtm: Performing direct entry CORRUPT_USER_DS
->> > > [   21.172791] lkdtm: setting bad task size limit
->> > > [   21.173742] ------------[ cut here ]------------
->> > > [   21.174641] kernel BUG at ./include/linux/syscalls.h:220!
->> > > ...
->> > > [   21.193166] Call Trace:
->> > > [   21.193617]  ? trace_hardirqs_on_thunk+0x1a/0x1c
->> > > [   21.194443]  entry_SYSCALL64_slow_path+0x25/0x25
->> > >
->> > >
->> > > Tested-by: Kees Cook <keescook@chromium.org>
->> >
->> > Is everyone happy with this patch for x86? Does this need anything
->> > more/different?
+On Thu, Jul 6, 2017 at 4:09 AM, Arnd Bergmann <arnd@arndb.de> wrote:
+> On Thu, Jul 6, 2017 at 12:13 PM, Ard Biesheuvel
+> <ard.biesheuvel@linaro.org> wrote:
+>> To prevent leaking stack contents in cases where it is not possible
+>> for the compiler to figure out whether an automatic variable has been
+>> initialized or not, add a plugin that forcibly initializes all automatic
+>> variables of struct/union types if their address is taken at any point.
 >>
->> Asking again. Additional feedback? Anyone wants to pick-it up?
+>> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 >
-> Can do. This needs to be a combo of all 3 I assume as the x86 one contains
-> the function used by all of them, right?
-
-That is correct.
-
+> If we only do this for variables that have their address taken, we miss
+> a lot of cases that the compiler (both clang and gcc) decide not to warn
+> about but that can still cause undefined behavior, e.g.:
 >
-> Thanks,
+> extern int g(void);
+> int f(void)
+> {
+>         int i;
 >
->         tglx
+>         switch (g()) {
+>         case 1:
+>                 i = 0;
+>         }
+>
+>         return i;
+> }
+>
+> which gets compiled without warning under the assumption that
+> g() always returns '1':
+>
+> 0000000000000000 <f>:
+>    0: 48 83 ec 08           sub    $0x8,%rsp
+>    4: e8 00 00 00 00       callq  9 <f+0x9>
+> 5: R_X86_64_PC32 g-0x4
+>    9: b8 00 00 00 00       mov    $0x0,%eax
+>    e: 48 83 c4 08           add    $0x8,%rsp
+>   12: c3                   retq
+>
+> Detecting those cases from the plugin may be a lot harder.
+>
+>> --- a/arch/Kconfig
+>> +++ b/arch/Kconfig
+>> @@ -443,6 +443,15 @@ config GCC_PLUGIN_STRUCTLEAK_VERBOSE
+>>           initialized. Since not all existing initializers are detected
+>>           by the plugin, this can produce false positive warnings.
+>>
+>> +config GCC_PLUGIN_INITAUTOBYREF
+>> +       bool "Force initialization of auto variables that have their address taken"
+>> +       depends on GCC_PLUGINS
+>> +       help
+>> +
+>> +config GCC_PLUGIN_INITAUTOBYREF_VERBOSE
+>> +       bool "Report uninitialized auto variables that have their address taken"
+>> +       depends on GCC_PLUGIN_INITAUTOBYREF
+>
+> I think this should be
+>
+>       depends on GCC_PLUGIN_INITAUTOBYREF || COMPILE_TEST
+>
+> to avoid producing output in an allmodconfig build.
 
+Err, surely you mean:
 
+depends on GCC_PLUGIN_INITAUTOBYREF && !COMPILE_TEST
+
+?
+
+I've done this with the other _VERBOSE settings, and yeah, this one
+should do it too.
+
+Ard, I'd be curious what you see for "size" difference between builds
+and if it's visible with hackbench or other things?
+
+-Kees
 
 -- 
-Thomas
+Kees Cook
+Pixel Security
