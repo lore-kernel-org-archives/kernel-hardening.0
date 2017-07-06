@@ -1,34 +1,33 @@
 MIME-Version: 1.0
 Sender: arndbergmann@gmail.com
-In-Reply-To: <CAGXu5j+FDprZBxBKPoBV0mw_oAEG+6Rh-8QNBcniVPxVTQ5gaQ@mail.gmail.com>
+In-Reply-To: <CAK8P3a3Xra=9aTRAWJ8DbRRYL4J2ieMDveeV9Ahp6dE9xXqsrg@mail.gmail.com>
 References: <20170706101317.10382-1-ard.biesheuvel@linaro.org>
- <CAK8P3a3-yd3c_Psi5zo1yug5eJvADYxHkfWTa4++_5WFuENo7g@mail.gmail.com> <CAGXu5j+FDprZBxBKPoBV0mw_oAEG+6Rh-8QNBcniVPxVTQ5gaQ@mail.gmail.com>
+ <CAK8P3a3-yd3c_Psi5zo1yug5eJvADYxHkfWTa4++_5WFuENo7g@mail.gmail.com> <CAK8P3a3Xra=9aTRAWJ8DbRRYL4J2ieMDveeV9Ahp6dE9xXqsrg@mail.gmail.com>
 From: Arnd Bergmann <arnd@arndb.de>
-Date: Fri, 7 Jul 2017 00:00:59 +0200
-Message-ID: <CAK8P3a2otwdQvy9oXzZ_88nTwU5e1KHsYqfPDzLBiSQQ4+e_Tg@mail.gmail.com>
+Date: Fri, 7 Jul 2017 00:08:47 +0200
+Message-ID: <CAK8P3a1ppGV9MuvkMxZkXmmmt_QrD3TA8CX8KTNHnNMgKrmKzw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: [kernel-hardening] Re: [RFC/RFT PATCH] gcc-plugins: force initialize auto variables
  whose addresses are taken
-To: Kees Cook <keescook@chromium.org>
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jul 6, 2017 at 11:44 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Thu, Jul 6, 2017 at 4:09 AM, Arnd Bergmann <arnd@arndb.de> wrote:
+On Thu, Jul 6, 2017 at 1:25 PM, Arnd Bergmann <arnd@arndb.de> wrote:
+> On Thu, Jul 6, 2017 at 1:09 PM, Arnd Bergmann <arnd@arndb.de> wrote:
 >> On Thu, Jul 6, 2017 at 12:13 PM, Ard Biesheuvel
-
->> I think this should be
->>
->>       depends on GCC_PLUGIN_INITAUTOBYREF || COMPILE_TEST
->>
->> to avoid producing output in an allmodconfig build.
 >
-> Err, surely you mean:
->
-> depends on GCC_PLUGIN_INITAUTOBYREF && !COMPILE_TEST
->
-> ?
+> Sorry, bad example, that one is a bit less undefined than
+> I thought, as it will produce the same result every time,
+> regardless of the stack contents. I'll try to come up
+> with another test program instead.
 
-Yes, sorry for the confusion.
+I've tried a few more things, but couldn't actually come up with an example
+that ends up using uninitialized stack values without also warning about it,
+so your plugin may actually cover the most important cases.
 
-        Arnd
+The remaining cases I found are either uninitialized uses that we get
+a compile-time warning for, or other kinds of undefined behavior
+(as in my earlier example).
+
+         Arnd
