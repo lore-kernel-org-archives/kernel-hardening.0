@@ -1,78 +1,67 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1499363602.26846.3.camel@redhat.com>
-References: <20170706002718.GA102852@beast> <alpine.DEB.2.20.1707060841170.23867@east.gentwo.org>
- <CAGXu5jKHkKgF90LXbFvrc3fa2PAaaaYHvCbiBM-9aN16TrHL=g@mail.gmail.com>
- <alpine.DEB.2.20.1707061052380.26079@east.gentwo.org> <1499363602.26846.3.camel@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 6 Jul 2017 11:50:07 -0700
-Message-ID: <CAGXu5jKQJ=9B-uXV-+BB7Y0EQJ_Xpr3OvUHr6c57TceFvNkxbw@mail.gmail.com>
+In-Reply-To: <CAGXu5jKrJv0y70e5JiafKGcGzWoJPZM_HruZ=Y0rM1m0J4tZAA@mail.gmail.com>
+References: <20170615011203.144108-1-thgarnie@google.com> <CAGXu5j+byHUn_rb9jOTZqMYrc4ngmDj=a3k8QRTYrZYNSjhCkw@mail.gmail.com>
+ <CAGXu5jKrJv0y70e5JiafKGcGzWoJPZM_HruZ=Y0rM1m0J4tZAA@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Thu, 6 Jul 2017 13:38:19 -0700
+Message-ID: <CAJcbSZE6Og4gwhFwhy_-Jaq6GovwN3y1B6O89JmkpXHtVfDLBA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v3] mm: Add SLUB free list pointer obfuscation
-To: Rik van Riel <riel@redhat.com>
-Cc: Christoph Lameter <cl@linux.com>, Andrew Morton <akpm@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Josh Triplett <josh@joshtriplett.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Linux-MM <linux-mm@kvack.org>, Tycho Andersen <tycho@docker.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v10 1/3] x86/syscalls: Check address limit on user-mode return
+To: Kees Cook <keescook@chromium.org>
+Cc: Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Petr Mladek <pmladek@suse.com>, Miroslav Benes <mbenes@suse.cz>, Al Viro <viro@zeniv.linux.org.uk>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jul 6, 2017 at 10:53 AM, Rik van Riel <riel@redhat.com> wrote:
-> On Thu, 2017-07-06 at 10:55 -0500, Christoph Lameter wrote:
->> On Thu, 6 Jul 2017, Kees Cook wrote:
->> > That requires a series of arbitrary reads. This is protecting
->> > against
->> > attacks that use an adjacent slab object write overflow to write
->> > the
->> > freelist pointer. This internal structure is very reliable, and has
->> > been the basis of freelist attacks against the kernel for a decade.
->>
->> These reads are not arbitrary. You can usually calculate the page struct
->> address easily from the address and then do a couple of loads to get
->> there.
->>
->> Ok so you get rid of the old attacks because we did not have that
->> hardening in effect when they designed their approaches?
+On Wed, Jun 28, 2017 at 10:52 AM, Kees Cook <keescook@chromium.org> wrote:
 >
-> The hardening protects against situations where
-> people do not have arbitrary code execution and
-> memory read access in the kernel, with the goal
-> of protecting people from acquiring those abilities.
-
-Right. This is about blocking the escalation of attack capability. For
-slab object overflow flaws, there are mainly two exploitation methods:
-adjacent allocated object overwrite and adjacent freed object
-overwrite (i.e. a freelist pointer overwrite). The first attack
-depends heavily on which slab cache (and therefore which structures)
-has been exposed by the bug. It's a very narrow and specific attack
-method. The freelist attack is entirely general purpose since it
-provides a reliable way to gain arbitrary write capabilities.
-Protecting against that attack greatly narrows the options for an
-attacker which makes attacks more expensive to create and possibly
-less reliable (and reliability is crucial to successful attacks).
-
->> > It is a probabilistic defense, but then so is the stack protector.
->> > This is a similar defense; while not perfect it makes the class of
->> > attack much more difficult to mount.
->>
->> Na I am not convinced of the "much more difficult". Maybe they will just
->> have to upgrade their approaches to fetch the proper values to
->> decode.
+> On Tue, Jun 20, 2017 at 1:24 PM, Kees Cook <keescook@chromium.org> wrote:
+> > On Wed, Jun 14, 2017 at 6:12 PM, Thomas Garnier <thgarnie@google.com> wrote:
+> >> Ensure the address limit is a user-mode segment before returning to
+> >> user-mode. Otherwise a process can corrupt kernel-mode memory and elevate
+> >> privileges [1].
+> >>
+> >> The set_fs function sets the TIF_SETFS flag to force a slow path on
+> >> return. In the slow path, the address limit is checked to be USER_DS if
+> >> needed.
+> >>
+> >> The addr_limit_user_check function is added as a cross-architecture
+> >> function to check the address limit.
+> >>
+> >> [1] https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+> >>
+> >> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> >
+> > Thanks for reworking this series!
+> >
+> > The bad state correctly BUGs under the LKDTM test:
+> >
+> > [   21.171586] lkdtm: Performing direct entry CORRUPT_USER_DS
+> > [   21.172791] lkdtm: setting bad task size limit
+> > [   21.173742] ------------[ cut here ]------------
+> > [   21.174641] kernel BUG at ./include/linux/syscalls.h:220!
+> > ...
+> > [   21.193166] Call Trace:
+> > [   21.193617]  ? trace_hardirqs_on_thunk+0x1a/0x1c
+> > [   21.194443]  entry_SYSCALL64_slow_path+0x25/0x25
+> >
+> >
+> > Tested-by: Kees Cook <keescook@chromium.org>
 >
-> Easier said than done. Most of the time there is an
-> unpatched vulnerability outstanding, there is only
-> one known issue, before the kernel is updated by the
-> user, to a version that does not have that issue.
->
-> Bypassing kernel hardening typically requires the
-> use of multiple vulnerabilities, and the absence of
-> roadblocks (like hardening) that make a type of
-> vulnerability exploitable.
->
-> Between usercopy hardening, and these slub freelist
-> canaries (which is what they effectively are), several
-> classes of exploits are no longer usable.
+> Is everyone happy with this patch for x86? Does this need anything
+> more/different?
 
-Yup. I've been thinking of this patch kind of like glibc's PTR_MANGLE feature.
+Asking again. Additional feedback? Anyone wants to pick-it up?
 
--Kees
+>
+> Thanks!
+>
+> -Kees
+>
+> --
+> Kees Cook
+> Pixel Security
+
+
+
 
 -- 
-Kees Cook
-Pixel Security
+Thomas
