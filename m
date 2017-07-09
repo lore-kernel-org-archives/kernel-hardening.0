@@ -1,43 +1,53 @@
-Date: Fri, 7 Jul 2017 14:48:44 -0400
-From: Jerome Glisse <jglisse@redhat.com>
-Message-ID: <20170707184843.GA3113@redhat.com>
-References: <20170705134628.3803-1-igor.stoppa@huawei.com>
- <20170705134628.3803-2-igor.stoppa@huawei.com>
- <20170706162742.GA2919@redhat.com>
- <1665fd00-5908-2399-577d-1972c7d1c63b@huawei.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <1665fd00-5908-2399-577d-1972c7d1c63b@huawei.com>
-Subject: [kernel-hardening] Re: [PATCH 1/3] Protectable memory support
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org, labbott@redhat.com, hch@infradead.org, penguin-kernel@I-love.SAKURA.ne.jp, paul@paul-moore.com, sds@tycho.nsa.gov, casey@schaufler-ca.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Message-ID: <1499576440.1220.1.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Sun, 09 Jul 2017 01:00:40 -0400
+In-Reply-To: <CAK8P3a1ppGV9MuvkMxZkXmmmt_QrD3TA8CX8KTNHnNMgKrmKzw@mail.gmail.com>
+References: <20170706101317.10382-1-ard.biesheuvel@linaro.org>
+	 <CAK8P3a3-yd3c_Psi5zo1yug5eJvADYxHkfWTa4++_5WFuENo7g@mail.gmail.com>
+	 <CAK8P3a3Xra=9aTRAWJ8DbRRYL4J2ieMDveeV9Ahp6dE9xXqsrg@mail.gmail.com>
+	 <CAK8P3a1ppGV9MuvkMxZkXmmmt_QrD3TA8CX8KTNHnNMgKrmKzw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [RFC/RFT PATCH] gcc-plugins: force
+ initialize auto variables whose addresses are taken
+To: Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jul 07, 2017 at 11:42:09AM +0300, Igor Stoppa wrote:
-> On 06/07/17 19:27, Jerome Glisse wrote:
-> > On Wed, Jul 05, 2017 at 04:46:26PM +0300, Igor Stoppa wrote:
-
-[...]
-
-> > Yet another way is to use some of the free struct page fields ie
-> > when a page is allocated for vmalloc i think most of struct page
-> > fields are unuse (mapping, index, lru, ...). It would be better
-> > to use those rather than adding a page flag.
+On Fri, 2017-07-07 at 00:08 +0200, Arnd Bergmann wrote:
+> On Thu, Jul 6, 2017 at 1:25 PM, Arnd Bergmann <arnd@arndb.de> wrote:
+> > On Thu, Jul 6, 2017 at 1:09 PM, Arnd Bergmann <arnd@arndb.de> wrote:
+> > > On Thu, Jul 6, 2017 at 12:13 PM, Ard Biesheuvel
+> > 
+> > Sorry, bad example, that one is a bit less undefined than
+> > I thought, as it will produce the same result every time,
+> > regardless of the stack contents. I'll try to come up
+> > with another test program instead.
 > 
-> Like introducing an unnamed union? Some sort of vmalloc_page_subtype?
-> If that is what you are proposing, I agree that it would work in a
-> similar fashion as what I have now, but without introducing the overhead
-> of the extra page flag.
+> I've tried a few more things, but couldn't actually come up with an
+> example
+> that ends up using uninitialized stack values without also warning
+> about it,
+> so your plugin may actually cover the most important cases.
+> 
+> The remaining cases I found are either uninitialized uses that we get
+> a compile-time warning for, or other kinds of undefined behavior
+> (as in my earlier example).
+> 
+>          Arnd
 
-No need to introduce unamed union or anything. Just use one of the
-existing field for install you can make page->mapping point to the
-pmalloc pool structure. Or you can store a unique key value.
+The compiler will optimize out zeroing that's clearly redundant, so zero
+initialization of all uninitialized variables is not really all of them
+but rather the set that the compiler thinks could be used before they
+get initialized. It makes sense to have that as an option. It's an
+aggressive non-heuristic-based approach and yet it isn't as heavy as it
+seems due to optimization.
 
-I believe there is enough unuse field that for vmalloc pages that
-you should find one you can use. Just add some documentation in
-mm_types.h so people are aware of alternate use for the field you
-are using.
-
-Jérôme
+It also provides another baseline to compare a heuristic against. No
+automatic zeroing vs. all uninitialized variables zeroed vs. proposed
+heuristic. Definitely worth including even if the main purpose is to
+figure what's *not* being covered by chosen heuristics, especially after
+optimization where they'll be more similar. You could find the cases
+you're talking about by comparing the generated code with the zeroing
+guided by the reference taken heuristic.
