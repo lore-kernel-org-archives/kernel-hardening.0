@@ -1,34 +1,33 @@
-References: <20170705134628.3803-1-igor.stoppa@huawei.com>
- <20170705134628.3803-2-igor.stoppa@huawei.com>
- <20170706162742.GA2919@redhat.com>
- <1665fd00-5908-2399-577d-1972c7d1c63b@huawei.com>
- <20170707184843.GA3113@redhat.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <774d9fc1-4caf-a6c9-3693-a90b5b954645@huawei.com>
-Date: Mon, 10 Jul 2017 18:15:53 +0300
-MIME-Version: 1.0
-In-Reply-To: <20170707184843.GA3113@redhat.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 1/3] Protectable memory support
-To: Jerome Glisse <jglisse@redhat.com>
-Cc: keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org, labbott@redhat.com, hch@infradead.org, penguin-kernel@I-love.SAKURA.ne.jp, paul@paul-moore.com, sds@tycho.nsa.gov, casey@schaufler-ca.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Laura Abbott <labbott@redhat.com>
+Date: Mon, 10 Jul 2017 15:04:41 -0700
+Message-Id: <1499724283-30719-1-git-send-email-labbott@redhat.com>
+In-Reply-To: <2ade4e6b-fb40-091e-28eb-343a08925649@redhat.com>
+Subject: [kernel-hardening] [RFC][PATCH 0/2] draft of stack clearing for arm64
+To: Kees Cook <keescook@chromium.org>, Alex Popov <alex.popov@linux.com>
+Cc: Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 07/07/17 21:48, Jerome Glisse wrote:
+I made an attempt at implementing stack clearing for arm64 using roughly
+the same algorithm as x86. It passes some level of basic tests but it definitely
+needs more careful review and thought ("submit early and often").
 
-> I believe there is enough unuse field that for vmalloc pages that
-> you should find one you can use. Just add some documentation in
-> mm_types.h so people are aware of alternate use for the field you
-> are using.
+As an added follow up, self-protection.rst should also be updated with some
+details about how stackleak actually works for people who want to follow on
+for other arches.
 
+Laura Abbott (2):
+  stackleak: Update for arm64
+  arm64: Clear the stack
 
-I ended up using page->private and the corresponding bit.
-Because page-private is an opaque field, specifically reserved for the
-allocator, I think it should not be necessary to modify mm_types.h
+ arch/arm64/Kconfig                     |  1 +
+ arch/arm64/include/asm/processor.h     |  3 ++
+ arch/arm64/kernel/asm-offsets.c        |  3 ++
+ arch/arm64/kernel/entry.S              | 92 ++++++++++++++++++++++++++++++++++
+ arch/arm64/kernel/process.c            | 18 +++++++
+ drivers/firmware/efi/libstub/Makefile  |  3 +-
+ scripts/Makefile.gcc-plugins           |  5 +-
+ scripts/gcc-plugins/stackleak_plugin.c | 25 +++++++--
+ 8 files changed, 143 insertions(+), 7 deletions(-)
 
-The reworked patch is here:
-https://marc.info/?l=linux-mm&m=149969928920772&w=2
-
---
-thanks, igor
+-- 
+2.7.5
