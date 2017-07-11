@@ -1,66 +1,34 @@
-Date: Tue, 11 Jul 2017 21:04:04 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170711200404.GA7472@leverpostej>
 References: <1499724283-30719-1-git-send-email-labbott@redhat.com>
- <1499724283-30719-3-git-send-email-labbott@redhat.com>
- <20170711195154.GA7124@leverpostej>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <2b98d0c4-f40a-4407-47b8-611f12c2f96e@linux.com>
+Date: Wed, 12 Jul 2017 01:56:42 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170711195154.GA7124@leverpostej>
-Subject: Re: [kernel-hardening] Re: [RFC][PATCH 2/2] arm64: Clear the stack
-To: Laura Abbott <labbott@redhat.com>
-Cc: Kees Cook <keescook@chromium.org>, Alex Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+In-Reply-To: <1499724283-30719-1-git-send-email-labbott@redhat.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC][PATCH 0/2] draft of stack clearing for arm64
+To: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, pageexec@freemail.hu, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jul 11, 2017 at 08:51:55PM +0100, Mark Rutland wrote:
-> On Mon, Jul 10, 2017 at 03:04:43PM -0700, Laura Abbott wrote:
-> > +	/* Reset the lowest stack to the top of the stack */
-> > +7:
-> > +	ldr	x1, [x0, TSK_STACK]
-> > +	add	x1, x1, #THREAD_SIZE
-> > +	sub	x1, x1, #256
-> > +	str	x1, [x0, #TSK_TI_LOWEST_STACK]
-> 
-> I take it this is the offsetting you were querying?
-> 
-> I don't think it's quite right. Our stack looks like:
-> 
-> +---+ <- task_stack_page(p) + THREAD_SIZE
-> |   |
-> +---+ <- task_stack_page(p) + THREAD_START_SP
-> |   |
-> |   |
-> +---+ <- task_pt_regs(p)
-> |   |
-> |   |
-> |   |
-> ~~~~~
-> 
-> ~~~~~
-> |   |
-> |   |
-> |   |
-> +---+ <- task_stack_page(p)
-> 
-> At the point we return to userspace, sp == task_pt_regs(p).
-> 
-> Judging by a generated asm-offsets.h, sizeof(struct_pt_regs) is 304
-> bytes currently. THREAD_SIZE - THREAD_START_SP == 16.
-> 
-> We probably want to give that 16 a mnemonic (e.g FRAME_PADDING), and
-> have something like:
-> 
-> 	ldr     x1, [x0, TSK_STACK]
-> 	add	x1, x1, #THREAD_SIZE
-> 	sub	x1, x1, #(S_FRAME_SIZE + FRAME_PADDING)
-> 	str	x1, [x0, #TSK_TI_LOWEST_STACK]
+Hello Laura,
 
-Thinking about it, given that sp == task_pt_regs(p), we could just do:
+On 11.07.2017 01:04, Laura Abbott wrote:
+> I made an attempt at implementing stack clearing for arm64 using roughly
+> the same algorithm as x86. It passes some level of basic tests but it definitely
+> needs more careful review and thought ("submit early and often").
 
-	mov	x1, sp
-	str     x1, [x0, #TSK_TI_LOWEST_STACK]
+Thank you for joining that fun!
 
-... unless I've managed to lose the plot here.
+I will send the third version of the STACKLEAK patch shortly, please see the
+changes. I'm going to CC x86@kernel.org. Hope they will have a look at the stack
+erasing, and we will gain better understanding.
 
-Mark.
+> As an added follow up, self-protection.rst should also be updated with some
+> details about how stackleak actually works for people who want to follow on
+> for other arches.
+
+Thanks, I've added this to the TODO.
+
+Best regards,
+Alexander
