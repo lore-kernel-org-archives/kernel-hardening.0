@@ -1,32 +1,56 @@
-From: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
 References: <20170710150603.387-1-igor.stoppa@huawei.com>
-In-Reply-To: <20170710150603.387-1-igor.stoppa@huawei.com>
-Message-Id: <201707112012.GBC05774.QOtOSLJVFHFOFM@I-love.SAKURA.ne.jp>
-Date: Tue, 11 Jul 2017 20:12:14 +0900
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+ <201707112012.GBC05774.QOtOSLJVFHFOFM@I-love.SAKURA.ne.jp>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <4821f909-8885-654d-701e-3044c79d055f@huawei.com>
+Date: Tue, 11 Jul 2017 14:37:39 +0300
+MIME-Version: 1.0
+In-Reply-To: <201707112012.GBC05774.QOtOSLJVFHFOFM@I-love.SAKURA.ne.jp>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
 Subject: [kernel-hardening] Re: [PATCH v10 0/3] mm: security: ro protection for dynamic data
-To: igor.stoppa@huawei.com, jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org, labbott@redhat.com, hch@infradead.org
-Cc: paul@paul-moore.com, sds@tycho.nsa.gov, casey@schaufler-ca.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, jmorris@namei.org, labbott@redhat.com, hch@infradead.org, casey@schaufler-ca.com
+Cc: paul@paul-moore.com, sds@tycho.nsa.gov, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Igor Stoppa wrote:
-> - I had to rebase Tetsuo Handa's patch because it didn't apply cleanly
->   anymore, I would appreciate an ACK to that or a revised patch, whatever 
->   comes easier.
 
-Since we are getting several proposals of changing LSM hooks and both your proposal
-and Casey's "LSM: Security module blob management" proposal touch same files, I think
-we can break these changes into small pieces so that both you and Casey can make
-future versions smaller.
+On 11/07/17 14:12, Tetsuo Handa wrote:
+> Igor Stoppa wrote:
+>> - I had to rebase Tetsuo Handa's patch because it didn't apply cleanly
+>>   anymore, I would appreciate an ACK to that or a revised patch, whatever 
+>>   comes easier.
+> 
+> Since we are getting several proposals of changing LSM hooks and both your proposal
+> and Casey's "LSM: Security module blob management" proposal touch same files, I think
+> we can break these changes into small pieces so that both you and Casey can make
+> future versions smaller.
+> 
+> If nobody has objections about direction of Igor's proposal and Casey's proposal,
+> I think merging only "[PATCH 2/3] LSM: Convert security_hook_heads into explicit
+> array of struct list_head" from Igor's proposal and ->security accessor wrappers (e.g.
 
-If nobody has objections about direction of Igor's proposal and Casey's proposal,
-I think merging only "[PATCH 2/3] LSM: Convert security_hook_heads into explicit
-array of struct list_head" from Igor's proposal and ->security accessor wrappers (e.g.
+I would like to understand if there is still interest about:
 
-  #define selinux_security(obj) (obj->security)
-  #define smack_security(obj) (obj->security)
-  #define tomoyo_security(obj) (obj->security)
-  #define apparmor_security(obj) (obj->security)
+* "[PATCH 1/3] Protectable memory support"  which was my main interest
+* "[PATCH 3/3] Make LSM Writable Hooks a command line option"
+  which was the example of how to use [1/3]
 
-) from Casey's proposal now helps solving deadlocked situation.
+>   #define selinux_security(obj) (obj->security)
+>   #define smack_security(obj) (obj->security)
+>   #define tomoyo_security(obj) (obj->security)
+>   #define apparmor_security(obj) (obj->security)
+
+For example, I see that there are various kzalloc calls that might be
+useful to turn into pmalloc ones.
+
+In general, I'd think that, after a transient is complete, where modules
+are loaded by allocating dynamic data structures, they could be locked
+down in read-only mode.
+
+I have the feeling that, now that I have polished up the pmalloc patch,
+the proposed use case is fading away.
+
+Can it be adjusted to the new situation or should I look elsewhere for
+an example that would justify merging pmalloc?
+
+
+thanks, igor
