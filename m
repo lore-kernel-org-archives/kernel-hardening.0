@@ -1,124 +1,89 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed, 12 Jul 2017 15:44:16 +0100
-Message-Id: <20170712144424.19528-4-ard.biesheuvel@linaro.org>
+Date: Wed, 12 Jul 2017 15:44:15 +0100
+Message-Id: <20170712144424.19528-3-ard.biesheuvel@linaro.org>
 In-Reply-To: <20170712144424.19528-1-ard.biesheuvel@linaro.org>
 References: <20170712144424.19528-1-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [RFC PATCH 03/10] arm64: crypto: avoid register x18 in scalar AES code
+Subject: [kernel-hardening] [RFC PATCH 02/10] arm64/lib: copy_page: avoid x18 register in assembler code
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 Cc: mark.rutland@arm.com, labbott@fedoraproject.org, will.deacon@arm.com, dave.martin@arm.com, catalin.marinas@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Register x18 is the platform register, and is not unconditionally
-classified as a caller save register by the AAPCS64 ABI. So avoid
-using it in our AES assembler code, to allow the kernel to use it
-as a task_struct pointer.
+Register x18 will no longer be used as a caller save register in the
+future, so stop using it in the copy_page() code.
 
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/crypto/aes-cipher-core.S | 55 ++++++++++----------
- 1 file changed, 28 insertions(+), 27 deletions(-)
+ arch/arm64/lib/copy_page.S | 38 ++++++++++----------
+ 1 file changed, 19 insertions(+), 19 deletions(-)
 
-diff --git a/arch/arm64/crypto/aes-cipher-core.S b/arch/arm64/crypto/aes-cipher-core.S
-index f2f9cc519309..62c91b9fcd56 100644
---- a/arch/arm64/crypto/aes-cipher-core.S
-+++ b/arch/arm64/crypto/aes-cipher-core.S
-@@ -17,8 +17,7 @@
- 	out		.req	x1
- 	in		.req	x2
- 	rounds		.req	x3
--	tt		.req	x4
--	lt		.req	x2
-+	tt		.req	x2
+diff --git a/arch/arm64/lib/copy_page.S b/arch/arm64/lib/copy_page.S
+index 076c43715e64..ba84a992b362 100644
+--- a/arch/arm64/lib/copy_page.S
++++ b/arch/arm64/lib/copy_page.S
+@@ -45,45 +45,45 @@ alternative_else_nop_endif
+ 	ldp	x14, x15, [x1, #96]
+ 	ldp	x16, x17, [x1, #112]
  
- 	.macro		__pair, enc, reg0, reg1, in0, in1e, in1d, shift
- 	ubfx		\reg0, \in0, #\shift, #8
-@@ -34,17 +33,17 @@
- 	.macro		__hround, out0, out1, in0, in1, in2, in3, t0, t1, enc
- 	ldp		\out0, \out1, [rk], #8
+-	mov	x18, #(PAGE_SIZE - 128)
++	add	x0, x0, #256
+ 	add	x1, x1, #128
+ 1:
+-	subs	x18, x18, #128
++	tst	x0, #(PAGE_SIZE - 1)
  
--	__pair		\enc, w13, w14, \in0, \in1, \in3, 0
--	__pair		\enc, w15, w16, \in1, \in2, \in0, 8
--	__pair		\enc, w17, w18, \in2, \in3, \in1, 16
-+	__pair		\enc, w12, w13, \in0, \in1, \in3, 0
-+	__pair		\enc, w14, w15, \in1, \in2, \in0, 8
-+	__pair		\enc, w16, w17, \in2, \in3, \in1, 16
- 	__pair		\enc, \t0, \t1, \in3, \in0, \in2, 24
+ alternative_if ARM64_HAS_NO_HW_PREFETCH
+ 	prfm	pldl1strm, [x1, #384]
+ alternative_else_nop_endif
  
--	eor		\out0, \out0, w13
--	eor		\out1, \out1, w14
--	eor		\out0, \out0, w15, ror #24
--	eor		\out1, \out1, w16, ror #24
--	eor		\out0, \out0, w17, ror #16
--	eor		\out1, \out1, w18, ror #16
-+	eor		\out0, \out0, w12
-+	eor		\out1, \out1, w13
-+	eor		\out0, \out0, w14, ror #24
-+	eor		\out1, \out1, w15, ror #24
-+	eor		\out0, \out0, w16, ror #16
-+	eor		\out1, \out1, w17, ror #16
- 	eor		\out0, \out0, \t0, ror #8
- 	eor		\out1, \out1, \t1, ror #8
- 	.endm
-@@ -60,42 +59,44 @@
- 	.endm
+-	stnp	x2, x3, [x0]
++	stnp	x2, x3, [x0, #-256]
+ 	ldp	x2, x3, [x1]
+-	stnp	x4, x5, [x0, #16]
++	stnp	x4, x5, [x0, #-240]
+ 	ldp	x4, x5, [x1, #16]
+-	stnp	x6, x7, [x0, #32]
++	stnp	x6, x7, [x0, #-224]
+ 	ldp	x6, x7, [x1, #32]
+-	stnp	x8, x9, [x0, #48]
++	stnp	x8, x9, [x0, #-208]
+ 	ldp	x8, x9, [x1, #48]
+-	stnp	x10, x11, [x0, #64]
++	stnp	x10, x11, [x0, #-192]
+ 	ldp	x10, x11, [x1, #64]
+-	stnp	x12, x13, [x0, #80]
++	stnp	x12, x13, [x0, #-176]
+ 	ldp	x12, x13, [x1, #80]
+-	stnp	x14, x15, [x0, #96]
++	stnp	x14, x15, [x0, #-160]
+ 	ldp	x14, x15, [x1, #96]
+-	stnp	x16, x17, [x0, #112]
++	stnp	x16, x17, [x0, #-144]
+ 	ldp	x16, x17, [x1, #112]
  
- 	.macro		do_crypt, round, ttab, ltab
--	ldp		w5, w6, [in]
--	ldp		w7, w8, [in, #8]
--	ldp		w9, w10, [rk], #16
--	ldp		w11, w12, [rk, #-8]
-+	ldp		w4, w5, [in]
-+	ldp		w6, w7, [in, #8]
-+	ldp		w8, w9, [rk], #16
-+	ldp		w10, w11, [rk, #-8]
+ 	add	x0, x0, #128
+ 	add	x1, x1, #128
  
-+CPU_BE(	rev		w4, w4		)
- CPU_BE(	rev		w5, w5		)
- CPU_BE(	rev		w6, w6		)
- CPU_BE(	rev		w7, w7		)
--CPU_BE(	rev		w8, w8		)
+-	b.gt	1b
++	b.ne	1b
  
-+	eor		w4, w4, w8
- 	eor		w5, w5, w9
- 	eor		w6, w6, w10
- 	eor		w7, w7, w11
--	eor		w8, w8, w12
+-	stnp	x2, x3, [x0]
+-	stnp	x4, x5, [x0, #16]
+-	stnp	x6, x7, [x0, #32]
+-	stnp	x8, x9, [x0, #48]
+-	stnp	x10, x11, [x0, #64]
+-	stnp	x12, x13, [x0, #80]
+-	stnp	x14, x15, [x0, #96]
+-	stnp	x16, x17, [x0, #112]
++	stnp	x2, x3, [x0, #-256]
++	stnp	x4, x5, [x0, #-240]
++	stnp	x6, x7, [x0, #-224]
++	stnp	x8, x9, [x0, #-208]
++	stnp	x10, x11, [x0, #-192]
++	stnp	x12, x13, [x0, #-176]
++	stnp	x14, x15, [x0, #-160]
++	stnp	x16, x17, [x0, #-144]
  
- 	adr_l		tt, \ttab
--	adr_l		lt, \ltab
- 
- 	tbnz		rounds, #1, 1f
- 
--0:	\round		w9, w10, w11, w12, w5, w6, w7, w8
--	\round		w5, w6, w7, w8, w9, w10, w11, w12
-+0:	\round		w8, w9, w10, w11, w4, w5, w6, w7
-+	\round		w4, w5, w6, w7, w8, w9, w10, w11
- 
- 1:	subs		rounds, rounds, #4
--	\round		w9, w10, w11, w12, w5, w6, w7, w8
--	csel		tt, tt, lt, hi
--	\round		w5, w6, w7, w8, w9, w10, w11, w12
--	b.hi		0b
-+	\round		w8, w9, w10, w11, w4, w5, w6, w7
-+	b.ls		2f
-+	\round		w4, w5, w6, w7, w8, w9, w10, w11
-+	b		0b
- 
-+2:	adr_l		tt, \ltab
-+	\round		w4, w5, w6, w7, w8, w9, w10, w11
-+
-+CPU_BE(	rev		w4, w4		)
- CPU_BE(	rev		w5, w5		)
- CPU_BE(	rev		w6, w6		)
- CPU_BE(	rev		w7, w7		)
--CPU_BE(	rev		w8, w8		)
- 
--	stp		w5, w6, [out]
--	stp		w7, w8, [out, #8]
-+	stp		w4, w5, [out]
-+	stp		w6, w7, [out, #8]
  	ret
- 	.endm
- 
+ ENDPROC(copy_page)
 -- 
 2.9.3
