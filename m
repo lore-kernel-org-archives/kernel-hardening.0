@@ -1,119 +1,121 @@
 From: Mark Rutland <mark.rutland@arm.com>
-Date: Wed, 12 Jul 2017 23:33:02 +0100
-Message-Id: <1499898783-25732-6-git-send-email-mark.rutland@arm.com>
+Date: Wed, 12 Jul 2017 23:33:03 +0100
+Message-Id: <1499898783-25732-7-git-send-email-mark.rutland@arm.com>
 In-Reply-To: <1499898783-25732-1-git-send-email-mark.rutland@arm.com>
 References: <1499898783-25732-1-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] [RFC PATCH 5/6] arm64: keep track of current stack
+Subject: [kernel-hardening] [RFC PATCH 6/6] arm64: add VMAP_STACK and detect out-of-bounds SP
 To: ard.biesheuvel@linaro.org, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
 Cc: akashi.takahiro@linaro.org, catalin.marinas@arm.com, dave.martin@arm.com, james.morse@arm.com, labbott@fedoraproject.org, will.deacon@arm.com, keescook@chromium.org, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-To reliably check stack bounds, we'll need to know whether we're on a
-task stack, or an IRQ stack.
-
-Stash the base of the current stack in thread_info so that we have this
-information.
-
 Signed-off-by: Mark Rutland <mark.rutland@arm.com>
 ---
- arch/arm64/include/asm/thread_info.h | 3 +++
- arch/arm64/kernel/asm-offsets.c      | 3 +++
- arch/arm64/kernel/entry.S            | 7 +++++++
- arch/arm64/kernel/head.S             | 6 ++++++
- arch/arm64/kernel/process.c          | 4 ++++
- 5 files changed, 23 insertions(+)
+ arch/arm64/Kconfig        |  1 +
+ arch/arm64/kernel/entry.S | 43 +++++++++++++++++++++++++++++++++++++++++++
+ arch/arm64/kernel/traps.c | 21 +++++++++++++++++++++
+ 3 files changed, 65 insertions(+)
 
-diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
-index 3684f86..ae4f44b 100644
---- a/arch/arm64/include/asm/thread_info.h
-+++ b/arch/arm64/include/asm/thread_info.h
-@@ -62,6 +62,9 @@ struct thread_info {
- #endif
- 	unsigned long		pcp_offset;
- 	int			preempt_count;	/* 0 => preemptable, <0 => bug */
-+#ifdef CONFIG_VMAP_STACK
-+	unsigned long		current_stack;
-+#endif
- };
- 
- #define INIT_THREAD_INFO(tsk)						\
-diff --git a/arch/arm64/kernel/asm-offsets.c b/arch/arm64/kernel/asm-offsets.c
-index 17001be..10c8ffa 100644
---- a/arch/arm64/kernel/asm-offsets.c
-+++ b/arch/arm64/kernel/asm-offsets.c
-@@ -40,6 +40,9 @@ int main(void)
-   DEFINE(TSK_TI_PREEMPT,	offsetof(struct task_struct, thread_info.preempt_count));
-   DEFINE(TSK_TI_PCP,		offsetof(struct task_struct, thread_info.pcp_offset));
-   DEFINE(TSK_TI_ADDR_LIMIT,	offsetof(struct task_struct, thread_info.addr_limit));
-+#ifdef CONFIG_VMAP_STACK
-+  DEFINE(TSK_TI_CUR_STK,	offsetof(struct task_struct, thread_info.current_stack));
-+#endif
- #ifdef CONFIG_ARM64_SW_TTBR0_PAN
-   DEFINE(TSK_TI_TTBR0,		offsetof(struct task_struct, thread_info.ttbr0));
- #endif
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index b2024db..5cbd961 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -1,5 +1,6 @@
+ config ARM64
+ 	def_bool y
++	select HAVE_ARCH_VMAP_STACK
+ 	select ACPI_CCA_REQUIRED if ACPI
+ 	select ACPI_GENERIC_GSI if ACPI
+ 	select ACPI_GTDT if ACPI
 diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-index 773b3fea..7c8b164 100644
+index 7c8b164..e0fdb65 100644
 --- a/arch/arm64/kernel/entry.S
 +++ b/arch/arm64/kernel/entry.S
-@@ -258,6 +258,9 @@ alternative_else_nop_endif
- 
- 	/* switch to the irq stack */
- 	mov	sp, x26
-+#ifdef CONFIG_VMAP_STACK
-+	str	x25, [tsk, #TSK_TI_CUR_STK]
-+#endif
- 
- 	/*
- 	 * Add a dummy stack frame, this non-standard format is fixed up
-@@ -275,6 +278,10 @@ alternative_else_nop_endif
- 	 */
- 	.macro	irq_stack_exit
- 	mov	sp, x19
-+#ifdef CONFIG_VMAP_STACK
-+	and	x19, x19, #~(THREAD_SIZE - 1)
-+	str	x19, [tsk, #TSK_TI_CUR_STK]
-+#endif
- 	.endm
- 
- /*
-diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
-index db77cac..3363846 100644
---- a/arch/arm64/kernel/head.S
-+++ b/arch/arm64/kernel/head.S
-@@ -325,6 +325,9 @@ __primary_switched:
- 	add	sp, x4, #THREAD_SIZE
- 	adr_l	x5, init_task
- 	msr	tpidr_el1, x5			// Save thread_info
-+#ifdef CONFIG_VMAP_STACK
-+	str	x4, [x5, #TSK_TI_CUR_STK]
-+#endif
- 
- 	adr_l	x8, vectors			// load VBAR_EL1 with virtual
- 	msr	vbar_el1, x8			// vector table address
-@@ -616,6 +619,9 @@ __secondary_switched:
- 	mov	x3, #THREAD_START_SP
- 	add	sp, x1, x3
- 	ldr	x2, [x0, #CPU_BOOT_TASK]
-+#ifdef CONFIG_VMAP_STACK
-+	str	x1, [x2, #TSK_TI_CUR_STK]
-+#endif
- 	msr	tpidr_el1, x2
- 	mov	x29, #0
- 	b	secondary_start_kernel
-diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
-index 4212da3..5dc5797 100644
---- a/arch/arm64/kernel/process.c
-+++ b/arch/arm64/kernel/process.c
-@@ -294,6 +294,10 @@ int copy_thread(unsigned long clone_flags, unsigned long stack_start,
- 
- 	ptrace_hw_copy_thread(p);
+@@ -396,11 +396,54 @@ el1_error_invalid:
+ 	inv_entry 1, BAD_ERROR
+ ENDPROC(el1_error_invalid)
  
 +#ifdef CONFIG_VMAP_STACK
-+	p->thread_info.current_stack = (unsigned long)p->stack;
++.macro detect_bad_stack
++	msr	sp_el0, x0
++	get_thread_info	x0
++	ldr	x0, [x0, #TSK_TI_CUR_STK]
++	sub	x0, sp, x0
++	and	x0, x0, #~(THREAD_SIZE - 1)
++	cbnz	x0, __bad_stack
++	mrs	x0, sp_el0
++.endm
++
++__bad_stack:
++	/*
++	 * Stash the bad SP, and free up another GPR. We no longer care about
++	 * EL0 state, since this thread cannot recover.
++	 */
++	mov	x0, sp
++	msr	tpidrro_el0, x0
++	msr	tpidr_el0, x1
++
++	/* Move to the emergency stack */
++	adr_this_cpu	x0, bad_stack, x1
++	mov	x1, #THREAD_START_SP
++	add	sp, x0, x1
++
++	/* Restore GPRs and log them to pt_regs */
++	mrs	x0, sp_el0
++	mrs	x1, tpidr_el0
++	kernel_entry 1
++
++	/* restore the bad SP to pt_regs */
++	mrs	x1, tpidrro_el0
++	str	x1, [sp, #S_SP]
++
++	/* Time to die */
++	mov	x0, sp
++	b	handle_bad_stack
++#else
++.macro detect_bad_stack
++.endm
 +#endif
 +
- 	return 0;
+ /*
+  * EL1 mode handlers.
+  */
+ 	.align	6
+ el1_sync:
++	detect_bad_stack
+ 	kernel_entry 1
+ 	mrs	x1, esr_el1			// read the syndrome register
+ 	lsr	x24, x1, #ESR_ELx_EC_SHIFT	// exception class
+diff --git a/arch/arm64/kernel/traps.c b/arch/arm64/kernel/traps.c
+index 0805b44..84b00e3 100644
+--- a/arch/arm64/kernel/traps.c
++++ b/arch/arm64/kernel/traps.c
+@@ -683,6 +683,27 @@ asmlinkage void bad_el0_sync(struct pt_regs *regs, int reason, unsigned int esr)
+ 	force_sig_info(info.si_signo, &info, current);
  }
  
++#ifdef CONFIG_VMAP_STACK
++DEFINE_PER_CPU(unsigned long [IRQ_STACK_SIZE/sizeof(long)], bad_stack) __aligned(16);
++
++asmlinkage void handle_bad_stack(struct pt_regs *regs)
++{
++	unsigned long tsk_stk = (unsigned long)current->stack;
++	unsigned long irq_stk = (unsigned long)per_cpu(irq_stack, smp_processor_id());
++
++	console_verbose();
++	pr_emerg("Stack out-of-bounds!\n"
++		 "\tsp: 0x%016lx\n"
++		 "\ttsk stack: [0x%016lx..0x%016lx]\n"
++		 "\tirq stack: [0x%016lx..0x%016lx]\n",
++		 kernel_stack_pointer(regs),
++		 tsk_stk, tsk_stk + THREAD_SIZE,
++		 irq_stk, irq_stk + THREAD_SIZE);
++	show_regs(regs);
++	panic("stack out-of-bounds");
++}
++#endif
++
+ void __pte_error(const char *file, int line, unsigned long val)
+ {
+ 	pr_err("%s:%d: bad pte %016lx.\n", file, line, val);
 -- 
 1.9.1
