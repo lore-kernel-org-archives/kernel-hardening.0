@@ -1,195 +1,77 @@
-MIME-Version: 1.0
-In-Reply-To: <CAKv+Gu8EY0C96d8VVy28JCsxZ8KX95gG8RwF5uyRUJHFaeqF4Q@mail.gmail.com>
-References: <20170712144424.19528-1-ard.biesheuvel@linaro.org>
- <5b94a765-ca82-9cc4-fc91-ef959f658b04@redhat.com> <CAKv+Gu8EY0C96d8VVy28JCsxZ8KX95gG8RwF5uyRUJHFaeqF4Q@mail.gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Wed, 12 Jul 2017 14:32:55 -0700
-Message-ID: <CALCETrVEju2wXcUsQe1SXj7vaFgcMLr4w55wO6Hz0A_CEs78Ww@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [RFC PATCH 00/10] arm64: allow virtually mapped stacks to be enabled
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Laura Abbott <labbott@redhat.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@fedoraproject.org>, Will Deacon <will.deacon@arm.com>, Dave Martin <dave.martin@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Andy Lutomirski <luto@kernel.org>
+From: Mark Rutland <mark.rutland@arm.com>
+Date: Wed, 12 Jul 2017 23:32:57 +0100
+Message-Id: <1499898783-25732-1-git-send-email-mark.rutland@arm.com>
+Subject: [kernel-hardening] [RFC PATCH 0/6] arm64: alternative VMAP_STACK implementation
+To: ard.biesheuvel@linaro.org, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+Cc: akashi.takahiro@linaro.org, catalin.marinas@arm.com, dave.martin@arm.com, james.morse@arm.com, labbott@fedoraproject.org, will.deacon@arm.com, keescook@chromium.org, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 12, 2017 at 1:49 PM, Ard Biesheuvel
-<ard.biesheuvel@linaro.org> wrote:
-> On 12 July 2017 at 21:12, Laura Abbott <labbott@redhat.com> wrote:
->> On 07/12/2017 07:44 AM, Ard Biesheuvel wrote:
->>> This is a fairly quick'n'dirty attempt at enabling virtually mapped
->>> stacks for arm64, after learning from Mark yesterday that progress
->>> had more or less stalled on that front.
->>>
->>> Since having actual patches to poke at is infinitely better than having
->>> abstract discussions about how to approach it, I threw some code togeth=
-er
->>> that:
->>> 1. frees up sp_el0 by promoting register x18 to 'current' pointer while=
- in
->>>    the kernel; flames welcome :-) (#7)
->>> 2. preparatory work to allow 1., i.e., to free up x18 and preserve/rest=
-ore it
->>>    correctly as a platform register (#2, #3, #4, #5, #6)
->>> 3. dump the entire task stack if regs->sp points elsewhere (#8)
->>> 4. add the code that checks for a stack overflow and dumps the task con=
-text
->>>    before panic()king (#9, #10)
->>>
->>> (#1 is an unrelated cleanup patch for copy_page())
->>>
->>> So instead of unconditionally switching between stacks, this code simpl=
-y uses
->>> tpidrro_el0 and sp_el0 as scratch registers in the entry-from-el1 code =
-so that
->>> we have a couple of general purpose registers to play with.
->>>
->>> Tested with the following hunk applied
->>>
->>> --- a/arch/arm64/crypto/aes-cipher-core.S
->>> +++ b/arch/arm64/crypto/aes-cipher-core.S
->>> @@ -102,6 +102,11 @@ CPU_BE(    rev             w7, w7          )
->>>
->>>         .align          5
->>>  ENTRY(__aes_arm64_encrypt)
->>> +       stp             x29, x30, [sp, #-400]!
->>> +       mov             x29, sp
->>> +
->>> +       bl              __aes_arm64_encrypt
->>> +
->>>         do_crypt        fround, crypto_ft_tab, crypto_fl_tab
->>>  ENDPROC(__aes_arm64_encrypt)
->>>
->>> which produces the output below at boot (provided that CONFIG_CRYPTO_AE=
-S_ARM64=3Dy
->>> and CONFIG_CRYPTO_MANAGER_DISABLE_TESTS is not set). Note that the call=
- stack is
->>> missing: I suppose it should be possible to display something meaningfu=
-l if x29
->>> still points to a valid location, but I haven't looked into it yet.
->>>
->>>   BUG: stack guard page was hit at ffff000009bdbf90 (stack is ffff00000=
-9bdc000..ffff000009bdffff)
->>>   Internal error: Oops: 96000047 [#1] PREEMPT SMP
->>>   Modules linked in:
->>>   CPU: 0 PID: 613 Comm: cryptomgr_test Not tainted 4.12.0-rc4-00119-g1f=
-b2159e248e-dirty #520
->>>   Hardware name: linux,dummy-virt (DT)
->>>   task: ffff80007c031a00 task.stack: ffff000009bdc000
->>>   PC is at __aes_arm64_encrypt+0x0/0x440
->>>   LR is at __aes_arm64_encrypt+0xc/0x440
->>>   pc : [<ffff0000080c5760>] lr : [<ffff0000080c576c>] pstate: 80000145
->>>   sp : ffff000009bdc120
->>>   x29: ffff000009bdc120 x28: ffff80007c181c00
->>>   x27: 0000000000000000 x26: 0000000000000100
->>>   x25: ffff0000089a52e8 x24: ffff000009bdfd10
->>>   x23: 0000000000000001 x22: ffff0000089a5408
->>>   x21: 0000000000000001 x20: ffff80007c181c08
->>>   x19: ffff80007c220000 x18: ffff80007c031a00
->>>   x17: 00000000002f0000 x16: ffff80007c181d24
->>>   x15: ffff0000089b2a68 x14: 00000000000003be
->>>   x13: 0000000000000071 x12: 00000000bf5fe8a9
->>>   x11: 0000000000000028 x10: 000000000000002c
->>>   x9 : ffff80007c181d20 x8 : 000000000000001b
->>>   x7 : 0000000046d4609c x6 : ffff0000080c5fd8
->>>   x5 : 0000000000000043 x4 : 0000000046d47b87
->>>   x3 : 000000000000000a x2 : ffff80007c220000
->>>   x1 : ffff80007c220000 x0 : ffff80007c181c80
->>>   Process cryptomgr_test (pid: 613, stack limit =3D 0xffff000009bdc000)
->>>   Stack: (0xffff000009bdc120 to 0xffff000009be0000)
->>>   c120: ffff000009bdc2b0 ffff0000080c576c 0000000000000000 000000000000=
-0000
->>>   c140: 0000000000000000 0000000000000000 0000000000000000 000000000000=
-0000
->>>   <snipped ...>
->>>   ffc0: 0000000000000000 0000000000000005 0000000000000000 000000000000=
-0000
->>>   ffe0: 0000000000000000 0000000000000000 0000000000000000 000000000000=
-0000
->>>   Call trace:
->>>   Exception stack(0xffff80007efd0ad0 to 0xffff80007efd0c00)
->>>   0ac0:                                   ffff80007c220000 000100000000=
-0000
->>>   0ae0: ffff80007efd0ca0 ffff0000080c5760 0000000000000000 000000000000=
-0000
->>>   0b00: 0000000000000000 0000000000000000 0000000000000000 000000000000=
-0000
->>>   0b20: 0000000000000000 0000000000000000 0000000000000000 000000000000=
-0000
->>>   0b40: 0000000000000000 0000000000000000 0000000000000000 000000000000=
-0000
->>>   0b60: 0000000000000000 0000000000000000 ffff80007c181c80 ffff80007c22=
-0000
->>>   0b80: ffff80007c220000 000000000000000a 0000000046d47b87 000000000000=
-0043
->>>   0ba0: ffff0000080c5fd8 0000000046d4609c 000000000000001b ffff80007c18=
-1d20
->>>   0bc0: 000000000000002c 0000000000000028 00000000bf5fe8a9 000000000000=
-0071
->>>   0be0: 00000000000003be ffff0000089b2a68 ffff80007c181d24 00000000002f=
-0000
->>>   [<ffff0000080c5760>] __aes_arm64_encrypt+0x0/0x440
->>>   Code: 00000000 00000000 00000000 00000000 (a9a77bfd)
->>>   ---[ end trace 2c6304a96ec827cb ]---
->>>
->>> Ard Biesheuvel (10):
->>>   arm64/lib: copy_page: use consistent prefetch stride
->>>   arm64/lib: copy_page: avoid x18 register in assembler code
->>>   arm64: crypto: avoid register x18 in scalar AES code
->>>   arm64: kvm: stop treating register x18 as caller save
->>>   arm64: kernel: avoid x18 as an arbitrary temp register
->>>   arm64: kbuild: reserve reg x18 from general allocation by the compile=
-r
->>>   arm64: kernel: switch to register x18 as a task struct pointer
->>>   arm64/kernel: dump entire stack if sp points elsewhere
->>>   arm64: mm: add C level handling for stack overflows
->>>   arm64: kernel: add support for virtually mapped stacks
->>>
->>>  arch/arm64/Kconfig                   |  1 +
->>>  arch/arm64/Makefile                  |  2 +-
->>>  arch/arm64/crypto/aes-cipher-core.S  | 55 ++++++++---------
->>>  arch/arm64/include/asm/asm-uaccess.h |  3 +-
->>>  arch/arm64/include/asm/assembler.h   |  8 +--
->>>  arch/arm64/include/asm/current.h     |  6 +-
->>>  arch/arm64/include/asm/thread_info.h |  2 +
->>>  arch/arm64/kernel/cpu-reset.S        |  4 +-
->>>  arch/arm64/kernel/entry.S            | 63 ++++++++++++++++----
->>>  arch/arm64/kernel/head.S             |  6 +-
->>>  arch/arm64/kernel/process.c          |  2 +-
->>>  arch/arm64/kernel/traps.c            |  9 ++-
->>>  arch/arm64/kvm/hyp/entry.S           | 12 ++--
->>>  arch/arm64/lib/Makefile              |  3 +-
->>>  arch/arm64/lib/copy_page.S           | 47 ++++++++-------
->>>  arch/arm64/mm/fault.c                | 24 ++++++++
->>>  16 files changed, 154 insertions(+), 93 deletions(-)
->>>
->>
->> This fails to compile with 64K pages
->>
->> kernel/fork.c: In function =E2=80=98free_thread_stack=E2=80=99:
->> kernel/fork.c:267:41: error: =E2=80=98THREAD_SIZE_ORDER=E2=80=99 undecla=
-red (first use in this function); did you mean =E2=80=98THREAD_SIZE=E2=80=
-=99?
->>   __free_pages(virt_to_page(tsk->stack), THREAD_SIZE_ORDER);
->>                                          ^~~~~~~~~~~~~~~~~
->>                                          THREAD_SIZE
->>
->> Because THREAD_SIZE_ORDER isn't defined at all for 64K pages
->>
->> #ifdef CONFIG_ARM64_4K_PAGES
->> #define THREAD_SIZE_ORDER       2
->> #elif defined(CONFIG_ARM64_16K_PAGES)
->> #define THREAD_SIZE_ORDER       0
->> #endif
->>
->> I think this should just be dead code on arm64 but the asymmetric
->> #ifdef looks fishy to me.
->>
->
-> I guess this is because 16 KB cannot be expressed as PAGE_SIZE <<
-> THREAD_SIZE_ORDER for sane values of the latter.
->
-> For vmap stack, we should just switch to THREAD_SIZE_ORDER =3D=3D 0 and
-> hence THREAD_SIZE =3D=3D PAGE_SIZE
+Hi,
 
-Agreed.  Using 16k virtually mapped stacks with a 64k page size seems point=
-less.
+While reviewing Ard's VMAP_STACK series [1], I tried to put together some notes
+based on my prior aborted attempts, and tricked myself into turning them into
+this series. I suspect we'll want bits of both.
+
+Like Ard's series, this doesn't use EL1t mode, and instead performs a check
+early in el1_sync. However, there are a few differences:
+
+* This series frees up SP_EL0, and inverts the current<->percpu relationship
+  rather than using a GPR for current.
+
+* The out-of-bounds detection *only* considers the SP. Stray accesses below the
+  SP will be handled as regular faults, unless handling these triggers a stack
+  overflow. 
+
+* There is a dedicated handler for the stack out-of-bounds case (as with x86),
+  rather than piggy-backing on the usual fault handling code.
+
+* The overflow checks consider IRQ stacks, by keeping track of which stack a
+  task is currently using. This assumes all stacks are the same size (which
+  happens to be true today), but we should make that explicit by using common
+  definitions. Thanks to James Morse for pointing out that we need to handle
+  this.
+
+Currently the IRQ stacks don't have a guaranteed guard pages, as they're
+regular compile-time percpu reservations. We'll want to rework those so that
+they have guards.
+
+I haven't audited the backtracing code, but I suspect we'll need to fix up any
+stack walking code up so that it understands there are now three possible
+stacks that a task may be using, and so that we can walk emergency->irq->task
+stack traces.
+
+Otherwise, this series is rough around the seams, and has seen only the most
+trivial of testing on a Juno platform (booting 4K and 64K kernels with and
+without a deliberate overflow).
+
+I've pushed the series out to my git repo as arm64/vmap-stack [2].
+
+Thanks,
+Mark.
+
+[1] http://lists.infradead.org/pipermail/linux-arm-kernel/2017-July/518368.html
+[2] git://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git arm64/vmap-stack
+
+Mark Rutland (6):
+  arm64: use tpidr_el1 for current, free sp_el0
+  arm64: avoid open-coding THREAD_SIZE{,_ORDER}
+  arm64: pad stacks to PAGE_SIZE for VMAP_STACK
+  arm64: pass stack base to secondary_start_kernel
+  arm64: keep track of current stack
+  arm64: add VMAP_STACK and detect out-of-bounds SP
+
+ arch/arm64/Kconfig                   |  1 +
+ arch/arm64/include/asm/assembler.h   | 11 +++++--
+ arch/arm64/include/asm/current.h     |  6 ++--
+ arch/arm64/include/asm/percpu.h      | 15 +++------
+ arch/arm64/include/asm/thread_info.h | 22 ++++++++++---
+ arch/arm64/kernel/asm-offsets.c      |  4 +++
+ arch/arm64/kernel/entry.S            | 61 ++++++++++++++++++++++++++++++------
+ arch/arm64/kernel/head.S             | 13 ++++++--
+ arch/arm64/kernel/process.c          | 20 +++++-------
+ arch/arm64/kernel/smp.c              |  2 +-
+ arch/arm64/kernel/traps.c            | 21 +++++++++++++
+ 11 files changed, 130 insertions(+), 46 deletions(-)
+
+-- 
+1.9.1
