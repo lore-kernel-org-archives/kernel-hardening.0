@@ -1,34 +1,37 @@
 References: <1499724283-30719-1-git-send-email-labbott@redhat.com>
+ <1499724283-30719-3-git-send-email-labbott@redhat.com>
+ <20170711195154.GA7124@leverpostej>
 From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <2b98d0c4-f40a-4407-47b8-611f12c2f96e@linux.com>
-Date: Wed, 12 Jul 2017 01:56:42 +0300
+Message-ID: <fb9f92d2-6737-d9ae-ed49-fa61a089c727@linux.com>
+Date: Wed, 12 Jul 2017 09:01:04 +0300
 MIME-Version: 1.0
-In-Reply-To: <1499724283-30719-1-git-send-email-labbott@redhat.com>
+In-Reply-To: <20170711195154.GA7124@leverpostej>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC][PATCH 0/2] draft of stack clearing for arm64
-To: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, pageexec@freemail.hu, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>
+Subject: [kernel-hardening] Re: [RFC][PATCH 2/2] arm64: Clear the stack
+To: Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Laura,
+Hello Mark,
 
-On 11.07.2017 01:04, Laura Abbott wrote:
-> I made an attempt at implementing stack clearing for arm64 using roughly
-> the same algorithm as x86. It passes some level of basic tests but it definitely
-> needs more careful review and thought ("submit early and often").
+On 11.07.2017 22:51, Mark Rutland wrote:
+> On Mon, Jul 10, 2017 at 03:04:43PM -0700, Laura Abbott wrote:
+>> - Where else do we need to clear the stack?
+> 
+> I guess we might need to clear (all of the remainder of) the stack after
+> invoking EFI runtime services -- those can run in task context, might
+> leave sensitive values on the stack, and they're uninstrumented. The
+> same would apply for x86.
 
-Thank you for joining that fun!
+Thanks, I've added this to the TODO list.
 
-I will send the third version of the STACKLEAK patch shortly, please see the
-changes. I'm going to CC x86@kernel.org. Hope they will have a look at the stack
-erasing, and we will gain better understanding.
+> I think we can ignore garbage left on the stack by idle/hotplug, since
+> that happens in the idle thread, so we shouldn't be doing uaccess
+> transfers on those stacks.
 
-> As an added follow up, self-protection.rst should also be updated with some
-> details about how stackleak actually works for people who want to follow on
-> for other arches.
-
-Thanks, I've added this to the TODO.
+Excuse me, I didn't understand what you mean. erase_kstack() is called at the
+end of syscall before returning to the userspace.
 
 Best regards,
 Alexander
