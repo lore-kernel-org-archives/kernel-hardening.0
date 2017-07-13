@@ -1,107 +1,129 @@
-From: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Date: Thu, 13 Jul 2017 11:19:39 -0400
-In-Reply-To: <988555a2-bed9-234c-843c-0bb68dc60d3f@nmatt.com>
-References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
-	 <53a2d710-b0f0-cdf9-e7ad-cd8d03fc835a@digikod.net>
-	 <CAJHCu1+=uYQ-N7CH4KfmTHrN2hJjwzN0tgg4sWHU0LjVr+uGGA@mail.gmail.com>
-	 <c19917fa-f62c-b7e0-8cbd-f10a96f686ba@digikod.net>
-	 <CAJHCu1K1Hg5M2HhJxN_aj2P_S8Pez9+8KL=wHKBgAN0jN1+mLg@mail.gmail.com>
-	 <69ff2195-d0e1-8a0f-b80e-5d8d55947907@nmatt.com>
-	 <1499801476.6034.265.camel@linux.vnet.ibm.com>
-	 <988555a2-bed9-234c-843c-0bb68dc60d3f@nmatt.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <1499959179.4220.45.camel@linux.vnet.ibm.com>
-Subject: Re: [kernel-hardening] [PATCH 00/11] S.A.R.A. a new stacked LSM
-To: Matt Brown <matt@nmatt.com>, Salvatore Mesoraca <s.mesoraca16@gmail.com>, =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
+Date: Thu, 13 Jul 2017 17:10:50 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170713161050.GG26194@leverpostej>
+References: <1499898783-25732-1-git-send-email-mark.rutland@arm.com>
+ <1499898783-25732-7-git-send-email-mark.rutland@arm.com>
+ <CAKv+Gu8jey+uPSFoCsjQn9BeGiChZpS=iZ0v9nEWvkwcO1gFYg@mail.gmail.com>
+ <20170713104950.GB26194@leverpostej>
+ <CAKv+Gu9eSX-f4uv3gaNw9_eKV0soe2-CqSnMaTjjEhMifxe_8g@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAKv+Gu9eSX-f4uv3gaNw9_eKV0soe2-CqSnMaTjjEhMifxe_8g@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFC PATCH 6/6] arm64: add VMAP_STACK and detect out-of-bounds SP
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Takahiro Akashi <akashi.takahiro@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Dave Martin <dave.martin@arm.com>, James Morse <james.morse@arm.com>, Laura Abbott <labbott@fedoraproject.org>, Will Deacon <will.deacon@arm.com>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2017-07-13 at 08:39 -0400, Matt Brown wrote:
-> On 7/11/17 3:31 PM, Mimi Zohar wrote:
-> > On Tue, 2017-07-11 at 13:49 -0400, Matt Brown wrote:
-> > 
-> >> I have merged my TPE LSM with Mimi Zohar's shebang LSM and will be
-> >> releasing a version 3 soon. I have also added securityfs support to
-> >> shebang that will allow users to update the interpreter list at run
-> >> time. This allows for user's to configure TPE/Shebang without any
-> >> xattrs. For a preview of my version 3 you can check out my dev tree
-> >> here:
-> >> https://github.com/nmatt0/linux-security/tree/tpe/security/tpe
+On Thu, Jul 13, 2017 at 12:49:48PM +0100, Ard Biesheuvel wrote:
+> On 13 July 2017 at 11:49, Mark Rutland <mark.rutland@arm.com> wrote:
+> > On Thu, Jul 13, 2017 at 07:58:50AM +0100, Ard Biesheuvel wrote:
+> >> On 12 July 2017 at 23:33, Mark Rutland <mark.rutland@arm.com> wrote:
+
+> >> The typical prologue looks like
 > >>
-> >> Note: that git tree is WIP and may not have all of the attribution and
-> >> documentation needed.
-> > 
-> > You'll want to detect when an interpreter is deleted or renamed.  I
-> > would define security_inode_rename, security_path_rename,
-> > security_inode_unlink and security_path_unlink hooks.
-> > 
-> > "rename" could be an indication that the existing interpreter is being
-> > updated. "unlink" indicates that the interpreter has been deleted.  At
-> > either of these points, you'll want to start checking for the creation
-> > of a new file with the expected pathname.
-> > 
-> > Mimi
-> > 
+> >> stp x29, x30, [sp, #-xxx]!
+> >> stp x27, x28, [sp, #xxx]
+> >> ...
+> >> mov x29, sp
+> >>
+> >> which means that in most cases where we do run off the stack, sp will
+> >> still be pointing into it when the exception is taken. This means we
+> >> will fault recursively in the handler before having had the chance to
+> >> accurately record the exception context.
+
+> >> Given that the max displacement of a store instruction is 512 bytes,
+> >> and that the frame size we are about to stash exceeds that, should we
+> >> already consider it a stack fault if sp is within 512 bytes (or
+> >> S_FRAME_SIZE) of the base of the stack?
+
+> > My original line of thinking was that it was best to rely on the
+> > recursive fault to push the SP out-of-bounds. That keeps the overflow
+> > detection simple/fast, and hopefully robust to unexpected exceptions,
+> > (expected?) probes to the guard page, etc.
+> >
+> > I also agree that it's annoying to lose the information associated with the
+> > initial fault.
+> >
+> > My fear is that we can't catch those cases robustly and efficiently. At
+> > minimum, I believe we'd need to check:
+> >
+> > * FAR_EL1 is out-of-bounds for the stack. You have a suitable check for
+> >   this.
+> >
+> > * FAR_EL1 is valid (looking at the ESR_ELx.{EC,ISS}, etc). I'm not sure
+> >   exactly what we need to check here, and I'm not sure what we want to
+> >   do about reserved ESR_ELx encodings.
+> >
+> > * The base register for the access was the SP (e.g. so this isn't a
+> >   probe_kernel_read() or similar).
+> >
+> > ... so my current feeling is that relying on the recursive fault is the
+> > best bet, even if we lose some information from the initial fault.
 > 
-> Would it be better just to check for paths rather than inodes?
+> There are two related issues at play here that we shouldn't conflate:
+> - checking whether we have sufficient stack space left to be able to
+> handle the exception in the first place,
+> - figuring out whether *this* exception was caused by a faulting
+> dereference of the stack pointer (which could be with writeback, or
+> even via some intermediate register: x29 is often used as a pseudo
+> stack pointer IIRC, although it should never point below sp itself)
 
-Below is a simple example on my laptop of the same inode with
-different path names.  In this case, a list of pathnames would be
-double the number of inodes.  I'm not sure from a performance
-perspective if this really matters, or if doing string compares
-matters.  We're not talking about thousands or even hundreds of files,
-though this is on the LSM bprm check hook.
+Sure; I agree these are separate properties (my robustness and
+efficiency concerns fall with the latter).
 
-The question is really from a security perspective which is better?
- Obviously, as v2 of the patch set changed from using pathnames to
-inodes, it's pretty clear that I think inodes would be better.  Kees,
-Serge, Casey any comments?
+> Given that the very first stp in kernel_entry will fault if we have
+> less than S_FRAME_SIZE bytes of stack left, I think we should check
+> that we have at least that much space available. 
 
-example:
-$ rpm -qf /usr/bin/bash
-bash-4.3.42-7.fc24.x86_64
+I was going to reply saying that I didn't agree, but in writing up
+examples, I mostly convinced myself that this is the right thing to do.
+So I mostly agree!
 
-$ rpm -q --dump bash | grep \/bin\/bash
-/usr/bin/bash 1071984 1475233750
-84c7d10de5f9c729f9d60e95bc97197a5e029a14e07820bc45ad309da91703f9
-0100755 root root 0 0 0 X
-/usr/bin/bashbug 10 1475233749
-0000000000000000000000000000000000000000000000000000000000000000
-0120777 root root 0 0 0 bashbug-64
-/usr/bin/bashbug-64 7110 1475233745
-0dd706d221569a7966f0246fcb40dd7f3bff4550c4ad0ee70ae8b0c6bc350157
-0100755 root root 0 0 0 X
+This would mean we treat the first impossible-to-handle exception as
+that fatal case, which is similar to x86's double-fault, triggered when
+the HW can't stack the regs. All other cases are just arbitrary faults.
 
-$ stat /bin/bash
-  File: '/bin/bash'
-  Size: 1071984   	Blocks: 2104       IO Block: 4096   regular
-file
-Device: 804h/2052d	Inode: 1180420     Links: 1
-Access: (0755/-rwxr-xr-x)  Uid: (    0/    root)   Gid:
-(    0/    root)
-Context: system_u:object_r:shell_exec_t:s0
-Access: 2017-07-12 21:56:28.125594261 -0400
-Modify: 2016-09-30 07:09:10.000000000 -0400
-Change: 2017-01-25 10:10:18.784719749 -0500
- Birth: -
+However, to provide that consistently, we'll need to perform this check
+at every exception boundary, or some of those cases will result in a
+recursive fault first.
 
-$ stat /usr/bin/bash
-  File: '/usr/bin/bash'
-  Size: 1071984   	Blocks: 2104       IO Block: 4096   regular
-file
-Device: 804h/2052d	Inode: 1180420     Links: 1
-Access: (0755/-rwxr-xr-x)  Uid: (    0/    root)   Gid:
-(    0/    root)
-Context: system_u:object_r:shell_exec_t:s0
-Access: 2017-07-12 21:56:28.125594261 -0400
-Modify: 2016-09-30 07:09:10.000000000 -0400
-Change: 2017-01-25 10:10:18.784719749 -0500
- Birth: -
+So I think there are three choices:
 
-$ ls -lat / | grep bin
-lrwxrwxrwx.   1 root root     7 Feb  3  2016 bin -> usr/bin
-lrwxrwxrwx.   1 root root     8 Feb  3  2016 sbin -> usr/sbin
+1) In el1_sync, only check SP bounds, and live with the recursive
+   faults.
 
-Mimi
+2) in el1_sync, check there's room for the regs, and live with the
+   recursive faults for overflow on other exceptions.
+
+3) In all EL1 entry paths, check there's room for the regs.
+
+> That way, the context is preserved, and we could restart the outer
+> exception if we wanted to, or point our pt_regs pointer to it etc.
+> 
+> When and how we diagnose the condition as a kernel stack overflow is a
+> separate issue, and can well wait until we're in C code.
+
+I believe that determining whether the exception was caused by a stack
+overflow is not something we can do robustly or efficiently.
+
+You mentioned the x29 pseudo-sp case, and there are other cases where
+the SP value is proxied:
+
+	mov	x0, sp
+	ldr	x0, [x0, x1]
+
+Or unrelated accesses that hit the guard page:
+	
+	adrp	x0, some_vmalloc_object
+	add	x0, x0, #:lo12:some_vmalloc_object
+	mov	x1, #bogus_offset
+	ldr	x0, [x0, x1]
+
+As above, I think it's helpful to think of this as something closer to a
+double-fault handler (i.e. aiming to catch when we can't take the
+exception safely), rather than something that's trying to catch logical
+stack overflows.
+
+Thanks,
+Mark.
