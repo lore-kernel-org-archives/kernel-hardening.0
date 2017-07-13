@@ -1,148 +1,30 @@
+Date: Thu, 13 Jul 2017 14:51:06 -0500
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20170713195106.GD4895@mail.hallyn.com>
+References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
+ <53a2d710-b0f0-cdf9-e7ad-cd8d03fc835a@digikod.net>
+ <CAJHCu1+=uYQ-N7CH4KfmTHrN2hJjwzN0tgg4sWHU0LjVr+uGGA@mail.gmail.com>
+ <c19917fa-f62c-b7e0-8cbd-f10a96f686ba@digikod.net>
+ <CAJHCu1K1Hg5M2HhJxN_aj2P_S8Pez9+8KL=wHKBgAN0jN1+mLg@mail.gmail.com>
+ <69ff2195-d0e1-8a0f-b80e-5d8d55947907@nmatt.com>
+ <1499801476.6034.265.camel@linux.vnet.ibm.com>
+ <988555a2-bed9-234c-843c-0bb68dc60d3f@nmatt.com>
+ <1499959179.4220.45.camel@linux.vnet.ibm.com>
 MIME-Version: 1.0
-In-Reply-To: <20170713175543.GA32528@leverpostej>
-References: <1499898783-25732-1-git-send-email-mark.rutland@arm.com>
- <1499898783-25732-7-git-send-email-mark.rutland@arm.com> <CAKv+Gu8jey+uPSFoCsjQn9BeGiChZpS=iZ0v9nEWvkwcO1gFYg@mail.gmail.com>
- <20170713104950.GB26194@leverpostej> <CAKv+Gu9eSX-f4uv3gaNw9_eKV0soe2-CqSnMaTjjEhMifxe_8g@mail.gmail.com>
- <20170713161050.GG26194@leverpostej> <20170713175543.GA32528@leverpostej>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu, 13 Jul 2017 19:28:48 +0100
-Message-ID: <CAKv+Gu_v3PO7=JSgCTb3aZu3sg4cwYYjy68VJnr58vzaMYvhTw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 6/6] arm64: add VMAP_STACK and
- detect out-of-bounds SP
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Takahiro Akashi <akashi.takahiro@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Dave Martin <dave.martin@arm.com>, James Morse <james.morse@arm.com>, Laura Abbott <labbott@fedoraproject.org>, Will Deacon <will.deacon@arm.com>, Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <1499959179.4220.45.camel@linux.vnet.ibm.com>
+Subject: Re: [kernel-hardening] [PATCH 00/11] S.A.R.A. a new stacked LSM
+To: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Cc: Matt Brown <matt@nmatt.com>, Salvatore Mesoraca <s.mesoraca16@gmail.com>, =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 13 July 2017 at 18:55, Mark Rutland <mark.rutland@arm.com> wrote:
-> On Thu, Jul 13, 2017 at 05:10:50PM +0100, Mark Rutland wrote:
->> On Thu, Jul 13, 2017 at 12:49:48PM +0100, Ard Biesheuvel wrote:
->> > On 13 July 2017 at 11:49, Mark Rutland <mark.rutland@arm.com> wrote:
->> > > On Thu, Jul 13, 2017 at 07:58:50AM +0100, Ard Biesheuvel wrote:
->> > >> On 12 July 2017 at 23:33, Mark Rutland <mark.rutland@arm.com> wrote:
->
->> > Given that the very first stp in kernel_entry will fault if we have
->> > less than S_FRAME_SIZE bytes of stack left, I think we should check
->> > that we have at least that much space available.
->>
->> I was going to reply saying that I didn't agree, but in writing up
->> examples, I mostly convinced myself that this is the right thing to do.
->> So I mostly agree!
->>
->> This would mean we treat the first impossible-to-handle exception as
->> that fatal case, which is similar to x86's double-fault, triggered when
->> the HW can't stack the regs. All other cases are just arbitrary faults.
->>
->> However, to provide that consistently, we'll need to perform this check
->> at every exception boundary, or some of those cases will result in a
->> recursive fault first.
->>
->> So I think there are three choices:
->>
->> 1) In el1_sync, only check SP bounds, and live with the recursive
->>    faults.
->>
->> 2) in el1_sync, check there's room for the regs, and live with the
->>    recursive faults for overflow on other exceptions.
->>
->> 3) In all EL1 entry paths, check there's room for the regs.
->
-> FWIW, for the moment I've applied (2), as you suggested, to my
-> arm64/vmap-stack branch, adding an additional:
->
->         sub     x0, x0, #S_FRAME_SIZE
->
-> ... to the entry path.
->
-> I think it's worth trying (3) so that we consistently report these
-> cases, benchmarks permitting.
->
+Quoting Mimi Zohar (zohar@linux.vnet.ibm.com):
+> On Thu, 2017-07-13 at 08:39 -0400, Matt Brown wrote:
+> The question is really from a security perspective which is better?
+>  Obviously, as v2 of the patch set changed from using pathnames to
+> inodes, it's pretty clear that I think inodes would be better.  Kees,
+> Serge, Casey any comments?
 
-OK, so here's a crazy idea: what if we
-a) carve out a dedicated range in the VMALLOC area for stacks
-b) for each stack, allocate a naturally aligned window of 2x the stack
-size, and map the stack inside it, leaving the remaining space
-unmapped
-
-That way, we can compare SP (minus S_FRAME_SIZE) against a mask that
-is a build time constant, to decide whether its value points into a
-stack or not. Of course, it may be pointing into the wrong stack, but
-that should not prevent us from taking the exception, and we can deal
-with that later. It would give us a very cheap way to perform this
-test on the hot paths.
-
->> I believe that determining whether the exception was caused by a stack
->> overflow is not something we can do robustly or efficiently.
->>
-
-Actually, if the stack pointer is within S_FRAME_SIZE of the base, and
-the faulting address points into the guard page, that is a pretty
-strong indicator that the stack overflowed. That shouldn't be too
-costly?
-
-> It's probably worth putting the fast-path check directly into the
-> vectors, where we currently only use 1/32 of the instruction slots
-> available to us.
->
->> As above, I think it's helpful to think of this as something closer to a
->> double-fault handler (i.e. aiming to catch when we can't take the
->> exception safely), rather than something that's trying to catch logical
->> stack overflows.
->
-> Does this make sense to you?
->
-> I've tried to reword the log output, as below, to give this impression.
->
-> [   49.288232] Insufficient stack space to handle exception!
-
-This could be a separate warning, if we find out that the actual
-exception was caused by something else.
-
-> [   49.288245] CPU: 5 PID: 2208 Comm: bash Not tainted 4.12.0-00005-ga781af2 #81
-> [   49.300680] Hardware name: ARM Juno development board (r1) (DT)
-> [   49.306549] task: ffff800974955100 task.stack: ffff00000d6f0000
-> [   49.312426] PC is at recursive_loop+0x10/0x50
-> [   49.316747] LR is at recursive_loop+0x34/0x50
-> [   49.321066] pc : [<ffff000008588aa0>] lr : [<ffff000008588ac4>] pstate: 40000145
-> [   49.328398] sp : ffff00000d6eff30
-> [   49.331682] x29: ffff00000d6f0350 x28: ffff800974955100
-> [   49.336953] x27: ffff000008942000 x26: ffff000008f0d758
-> [   49.342223] x25: ffff00000d6f3eb8 x24: ffff00000d6f3eb8
-> [   49.347493] x23: ffff000008f0d490 x22: 0000000000000009
-> [   49.352764] x21: ffff800974a57000 x20: ffff000008f0d4e0
-> [   49.358034] x19: 0000000000000013 x18: 0000ffffe7e2e4f0
-> [   49.363304] x17: 0000ffff9c1256a4 x16: ffff0000081f8b88
-> [   49.368574] x15: 00002a81b8000000 x14: 00000000fffffff0
-> [   49.373845] x13: ffff000008f6278a x12: ffff000008e62818
-> [   49.379115] x11: 0000000000000000 x10: 000000000000019e
-> [   49.384385] x9 : 0000000000000004 x8 : ffff00000d6f0770
-> [   49.389656] x7 : 1313131313131313 x6 : 000000000000019e
-> [   49.394925] x5 : 0000000000000000 x4 : 0000000000000000
-> [   49.400205] x3 : 0000000000000000 x2 : 0000000000000400
-> [   49.405484] x1 : 0000000000000013 x0 : 0000000000000012
-> [   49.410764] Task stack: [0xffff00000d6f0000..0xffff00000d6f4000]
-> [   49.416728] IRQ stack:  [0xffff80097ffb90a0..0xffff80097ffbd0a0]
-> [   49.422692] ESR: 0x96000047 -- DABT (current EL)
-> [   49.427277] FAR: 0xffff00000d6eff30
-> [   49.430742] Kernel panic - not syncing: kernel stack overflow
-> [   49.436451] CPU: 5 PID: 2208 Comm: bash Not tainted 4.12.0-00005-ga781af2 #81
-> [   49.443534] Hardware name: ARM Juno development board (r1) (DT)
-> [   49.449412] Call trace:
-> [   49.451852] [<ffff0000080885f0>] dump_backtrace+0x0/0x230
-> [   49.457218] [<ffff0000080888e4>] show_stack+0x14/0x20
-> [   49.462240] [<ffff00000839be0c>] dump_stack+0x9c/0xc0
-> [   49.467261] [<ffff000008175218>] panic+0x11c/0x294
-> [   49.472024] [<ffff000008089184>] handle_bad_stack+0xe4/0xe8
-> [   49.477561] [<ffff000008588ac4>] recursive_loop+0x34/0x50
-> [   49.482926] SMP: stopping secondary CPUs
-> [   49.487145] Kernel Offset: disabled
-> [   49.490609] Memory Limit: none
-> [   49.493649] ---[ end Kernel panic - not syncing: kernel stack overflow
->
-
-Yes, this looks nice.
-
-> ... I still need to attack the backtracing to walk across stacks.
->
-
-Yup
+Yes, inode seems clearly better.  Paths are too easily worked around.
