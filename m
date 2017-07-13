@@ -1,58 +1,107 @@
-Date: Thu, 13 Jul 2017 10:12:59 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170713091259.GA26194@leverpostej>
-References: <20170712144424.19528-1-ard.biesheuvel@linaro.org>
- <20170712144424.19528-11-ard.biesheuvel@linaro.org>
- <20170712225937.GA25816@leverpostej>
+Message-ID: <596748FB.20902@arm.com>
+Date: Thu, 13 Jul 2017 11:18:35 +0100
+From: James Morse <james.morse@arm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170712225937.GA25816@leverpostej>
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 10/10] arm64: kernel: add
- support for virtually mapped stacks
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, labbott@fedoraproject.org, will.deacon@arm.com, dave.martin@arm.com, catalin.marinas@arm.com
+References: <1499898783-25732-1-git-send-email-mark.rutland@arm.com> <1499898783-25732-3-git-send-email-mark.rutland@arm.com>
+In-Reply-To: <1499898783-25732-3-git-send-email-mark.rutland@arm.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC PATCH 2/6] arm64: avoid open-coding THREAD_SIZE{,_ORDER}
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: ard.biesheuvel@linaro.org, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, akashi.takahiro@linaro.org, catalin.marinas@arm.com, dave.martin@arm.com, labbott@fedoraproject.org, will.deacon@arm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 12, 2017 at 11:59:38PM +0100, Mark Rutland wrote:
-> On Wed, Jul 12, 2017 at 03:44:23PM +0100, Ard Biesheuvel wrote:
-> > diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-> > index 2ba3185b1c78..4c3e82d6e2f2 100644
-> > --- a/arch/arm64/kernel/entry.S
-> > +++ b/arch/arm64/kernel/entry.S
-> > @@ -392,6 +392,20 @@ ENDPROC(el1_error_invalid)
-> >   */
-> >  	.align	6
-> >  el1_sync:
-> > +#ifdef CONFIG_VMAP_STACK
-> > +	/*
-> > +	 * When taking an exception from EL1, we need to check whether it is
-> > +	 * caused by a faulting out-of-bounds access to the virtually mapped
-> > +	 * stack before we can attempt to preserve the interrupted context.
-> > +	 */
-> > +	msr	tpidrro_el0, x0			// stash x0
-> > +	mrs	x0, far_el1			// get faulting address
-> > +	tbnz	x0, #63, .Lcheck_stack_ovf	// check if not user address
+Hi Mark,
+
+On 12/07/17 23:32, Mark Rutland wrote:
+> Currently we define THREAD_SIZE_ORDER dependent on which arm64-specific
+> page size kconfig symbol was selected. This is unfortunate, as it hides
+> the relationship between THREAD_SIZE_ORDER and THREAD_SIZE, and makes it
+> painful more painful than necessary to modify the thread size as we will
+> need to do for some debug configurations.
 > 
-> One thing I don't like about this is that we're reading FAR_EL1 even
-> though we don't know whether it's valid. It could contain junk, and we
-> could spuriously jump into the slow path. That's liable to make
-> performance erratic.
+> This patch follows arch/metag's approach of consistently defining
+> THREAD_SIZE in terms of THREAD_SIZE_ORDER. This avoids having ifdefs for
+> particular page size configurations, and allows us to change a single
+> definition to change the thread size.
 
-Once I sent this, I realised what I said wasn't quite right.
+I think this has unintended side effects for 64K page systems.  (or at least not
+yet intended)
 
-It's true that FAR_EL1 is UNKNOWN in some cases, but today those are all
-fatal (e.g. if we take an UNDEFINED exception due to a bad instruction
-at EL1).
+Today:
+> #ifdef CONFIG_ARM64_4K_PAGES
+> #define THREAD_SIZE_ORDER	2
+> #elif defined(CONFIG_ARM64_16K_PAGES)
+> #define THREAD_SIZE_ORDER	0
+> #endif
 
-So my performance concern was spurious; sorry for the noise.
+Means THREAD_SIZE_ORDER is unset on 64K, and THREAD_SIZE is always:
+> #define THREAD_SIZE		16384
 
-However, so as to not mis-report those fatal cases, we either need to
-inspect the SP or ESR_EL1 to determine that FAR_EL1 is valid and/or this
-was a stack-overflow
+/kernel/fork.c matches this with its:
+> # if THREAD_SIZE >= PAGE_SIZE || defined(CONFIG_VMAP_STACK)
+[...]
+> #else
+[...]
+> void thread_stack_cache_init(void)
+> {
+>	thread_stack_cache = kmem_cache_create("thread_stack", THREAD_SIZE,
+> 					      THREAD_SIZE, 0, NULL);
+> 	BUG_ON(thread_stack_cache == NULL);
+> }
+> #endif
 
-If we follow the approach of this series, we can move those checks into
-the check_stack_ovf slow path.
+To create a kmemcache to share 64K pages as 16K stacks.
+
+
+After this patch:
+> #define THREAD_SHIFT		14
+>
+> #if THREAD_SHIFT >= PAGE_SHIFT
+> #define THREAD_SIZE_ORDER	(THREAD_SHIFT - PAGE_SHIFT)
+> #else
+> #define THREAD_SIZE_ORDER	0
+> #endif
+
+Means THREAD_SIZE_ORDER is 0, and:
+> #define THREAD_SIZE		(PAGE_SIZE << THREAD_SIZE_ORDER)
+
+gives us a 64K THREAD_SIZE.
+
+
 
 Thanks,
-Mark.
+
+James
+
+
+
+
+
+> diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
+> index 141f13e9..6d0c59a 100644
+> --- a/arch/arm64/include/asm/thread_info.h
+> +++ b/arch/arm64/include/asm/thread_info.h
+> @@ -23,13 +23,17 @@
+>  
+>  #include <linux/compiler.h>
+>  
+> -#ifdef CONFIG_ARM64_4K_PAGES
+> -#define THREAD_SIZE_ORDER	2
+> -#elif defined(CONFIG_ARM64_16K_PAGES)
+> +#include <asm/page.h>
+> +
+> +#define THREAD_SHIFT		14
+> +
+> +#if THREAD_SHIFT >= PAGE_SHIFT
+> +#define THREAD_SIZE_ORDER	(THREAD_SHIFT - PAGE_SHIFT)
+> +#else
+>  #define THREAD_SIZE_ORDER	0
+>  #endif
+>  
+> -#define THREAD_SIZE		16384
+> +#define THREAD_SIZE		(PAGE_SIZE << THREAD_SIZE_ORDER)
+>  #define THREAD_START_SP		(THREAD_SIZE - 16)
+>  
+>  #ifndef __ASSEMBLY__
+> 
