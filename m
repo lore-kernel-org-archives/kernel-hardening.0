@@ -1,37 +1,31 @@
-References: <1497286620-15027-1-git-send-email-s.mesoraca16@gmail.com>
- <53a2d710-b0f0-cdf9-e7ad-cd8d03fc835a@digikod.net>
- <CAJHCu1+=uYQ-N7CH4KfmTHrN2hJjwzN0tgg4sWHU0LjVr+uGGA@mail.gmail.com>
- <c19917fa-f62c-b7e0-8cbd-f10a96f686ba@digikod.net>
- <CAJHCu1K1Hg5M2HhJxN_aj2P_S8Pez9+8KL=wHKBgAN0jN1+mLg@mail.gmail.com>
- <69ff2195-d0e1-8a0f-b80e-5d8d55947907@nmatt.com>
- <1499801476.6034.265.camel@linux.vnet.ibm.com>
- <988555a2-bed9-234c-843c-0bb68dc60d3f@nmatt.com>
- <1499959179.4220.45.camel@linux.vnet.ibm.com>
- <20170713195106.GD4895@mail.hallyn.com>
-From: Matt Brown <matt@nmatt.com>
-Message-ID: <89afb299-6830-cc77-50ea-7edb17f3ca60@nmatt.com>
-Date: Thu, 13 Jul 2017 18:33:47 -0400
+Date: Fri, 14 Jul 2017 02:30:54 +0100
+From: Will Deacon <will.deacon@arm.com>
+Message-ID: <20170714013054.GE22336@arm.com>
+References: <1499898783-25732-1-git-send-email-mark.rutland@arm.com>
+ <1499898783-25732-2-git-send-email-mark.rutland@arm.com>
 MIME-Version: 1.0
-In-Reply-To: <20170713195106.GD4895@mail.hallyn.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH 00/11] S.A.R.A. a new stacked LSM
-To: "Serge E. Hallyn" <serge@hallyn.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>
-Cc: Salvatore Mesoraca <s.mesoraca16@gmail.com>, =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1499898783-25732-2-git-send-email-mark.rutland@arm.com>
+Subject: [kernel-hardening] Re: [RFC PATCH 1/6] arm64: use tpidr_el1 for current, free sp_el0
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: ard.biesheuvel@linaro.org, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, akashi.takahiro@linaro.org, catalin.marinas@arm.com, dave.martin@arm.com, james.morse@arm.com, labbott@fedoraproject.org, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 7/13/17 3:51 PM, Serge E. Hallyn wrote:
-> Quoting Mimi Zohar (zohar@linux.vnet.ibm.com):
->> On Thu, 2017-07-13 at 08:39 -0400, Matt Brown wrote:
->> The question is really from a security perspective which is better?
->>  Obviously, as v2 of the patch set changed from using pathnames to
->> inodes, it's pretty clear that I think inodes would be better.  Kees,
->> Serge, Casey any comments?
+On Wed, Jul 12, 2017 at 11:32:58PM +0100, Mark Rutland wrote:
+> Today we use TPIDR_EL1 for our percpu offset, and SP_EL0 for current
+> (and current::thread_info, which is at offset 0).
 > 
-> Yes, inode seems clearly better.  Paths are too easily worked around.
+> Using SP_EL0 in this way prevents us from using EL1 thread mode, where
+> SP_EL0 is not addressable (since it's used as the active SP). It also
+> means we can't use SP_EL0 for other purposes (e.g. as a
+> scratch-register).
 > 
+> This patch frees up SP_EL0 for such usage, by storing the percpu offset
+> in current::thread_info, and using TPIDR_EL1 to store current. As we no
+> longer need to update SP_EL0 at EL0 exception boundaries, this allows us
+> to delete some code.
 
-Sounds good. Do we think a rb_tree would be better than a list to store
-the inodes in?
+Does this mean we can just use asm-generic/percpu.h?
 
-Matt
+Will
