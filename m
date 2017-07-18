@@ -1,90 +1,118 @@
-References: <CAKv+Gu8jey+uPSFoCsjQn9BeGiChZpS=iZ0v9nEWvkwcO1gFYg@mail.gmail.com>
- <20170713104950.GB26194@leverpostej>
- <CAKv+Gu9eSX-f4uv3gaNw9_eKV0soe2-CqSnMaTjjEhMifxe_8g@mail.gmail.com>
- <20170713161050.GG26194@leverpostej> <20170713175543.GA32528@leverpostej>
- <CAKv+Gu_v3PO7=JSgCTb3aZu3sg4cwYYjy68VJnr58vzaMYvhTw@mail.gmail.com>
- <20170714103258.GA16128@leverpostej>
- <CAKv+Gu-FvfPFQooCie6HwP=mBng3C0jp9p8WMkFwTxctDu4JBA@mail.gmail.com>
- <CAKv+Gu96YHXDta7=YdYO4=wtR3mGVdkzAkG6tSzS-vo7toiPXA@mail.gmail.com>
- <20170714140605.GB16687@leverpostej> <20170714212717.GB1086@leverpostej>
- <CAKv+Gu9EB1nJPwvZh1Nti8tPVivqbwrE60t2v5zZp02DyaScxA@mail.gmail.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <39a5ad84-4124-5b33-146a-cd4e48f3762f@redhat.com>
-Date: Tue, 18 Jul 2017 14:53:40 -0700
-MIME-Version: 1.0
-In-Reply-To: <CAKv+Gu9EB1nJPwvZh1Nti8tPVivqbwrE60t2v5zZp02DyaScxA@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 6/6] arm64: add VMAP_STACK and
- detect out-of-bounds SP
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Mark Rutland <mark.rutland@arm.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Takahiro Akashi <akashi.takahiro@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Dave Martin <dave.martin@arm.com>, James Morse <james.morse@arm.com>, Laura Abbott <labbott@fedoraproject.org>, Will Deacon <will.deacon@arm.com>, Kees Cook <keescook@chromium.org>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Tue, 18 Jul 2017 15:33:11 -0700
+Message-Id: <20170718223333.110371-1-thgarnie@google.com>
+Subject: [kernel-hardening] x86: PIE support and option to extend KASLR randomization
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Thomas Garnier <thgarnie@google.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Christopher Li <sparse@chrisli.org>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Peter Foley <pefoley2@pefoley.com>, Steven Rostedt <rostedt@goodmis.org>, Tim Chen <tim.c.chen@linux.intel.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>
+Cc: x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, xen-devel@lists.xenproject.org, kvm@vger.kernel.org, linux-pm@vger.kernel.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 07/15/2017 05:03 PM, Ard Biesheuvel wrote:
-> On 14 July 2017 at 22:27, Mark Rutland <mark.rutland@arm.com> wrote:
->> On Fri, Jul 14, 2017 at 03:06:06PM +0100, Mark Rutland wrote:
->>> On Fri, Jul 14, 2017 at 01:27:14PM +0100, Ard Biesheuvel wrote:
->>>> On 14 July 2017 at 11:48, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
->>>>> On 14 July 2017 at 11:32, Mark Rutland <mark.rutland@arm.com> wrote:
->>>>>> On Thu, Jul 13, 2017 at 07:28:48PM +0100, Ard Biesheuvel wrote:
->>>
->>>>>>> OK, so here's a crazy idea: what if we
->>>>>>> a) carve out a dedicated range in the VMALLOC area for stacks
->>>>>>> b) for each stack, allocate a naturally aligned window of 2x the stack
->>>>>>> size, and map the stack inside it, leaving the remaining space
->>>>>>> unmapped
->>>
->>>>>> The logical ops (TST) and conditional branches (TB(N)Z, CB(N)Z) operate
->>>>>> on XZR rather than SP, so to do this we need to get the SP value into a
->>>>>> GPR.
->>>>>>
->>>>>> Previously, I assumed this meant we needed to corrupt a GPR (and hence
->>>>>> stash that GPR in a sysreg), so I started writing code to free sysregs.
->>>>>>
->>>>>> However, I now realise I was being thick, since we can stash the GPR
->>>>>> in the SP:
->>>>>>
->>>>>>         sub     sp, sp, x0      // sp = orig_sp - x0
->>>>>>         add     x0, sp, x0      // x0 = x0 - (orig_sp - x0) == orig_sp
->>>
->>> That comment is off, and should say     x0 = x0 + (orig_sp - x0) == orig_sp
->>>
->>>>>>         sub     x0, x0, #S_FRAME_SIZE
->>>>>>         tb(nz)  x0, #THREAD_SHIFT, overflow
->>>>>>         add     x0, x0, #S_FRAME_SIZE
->>>>>>         sub     x0, sp, x0
->>>>
->>>> You need a neg x0, x0 here I think
->>>
->>> Oh, whoops. I'd mis-simplified things.
->>>
->>> We can avoid that by storing orig_sp + orig_x0 in sp:
->>>
->>>       add     sp, sp, x0      // sp = orig_sp + orig_x0
->>>       sub     x0, sp, x0      // x0 = orig_sp
->>>       < check >
->>>       sub     x0, sp, x0      // x0 = orig_x0
->>>       sub     sp, sp, x0      // sp = orig_sp
->>>
->>> ... which works in a locally-built kernel where I've aligned all the
->>> stacks.
->>
->> FWIW, I've pushed out a somewhat cleaned-up (and slightly broken!)
->> version of said kernel source to my arm64/vmap-stack-align branch [1].
->> That's still missing the backtrace handling, IRQ stack alignment is
->> broken at least on 64K pages, and there's still more cleanup and rework
->> to do.
->>
-> 
-> I have spent some time addressing the issues mentioned in the commit
-> log. Please take a look.
-> 
-> git://git.kernel.org/pub/scm/linux/kernel/git/ardb/linux.git vmap-arm64-mark
-> 
+These patches make the changes necessary to build the kernel as Position
+Independent Executable (PIE) on x86_64. A PIE kernel can be relocated below
+the top 2G of the virtual address space. It allows to optionally extend the
+KASLR randomization range from 1G to 3G.
 
-I used vmap-arm64-mark to compile kernels for a few days. It seemed to
-work well enough.
+Thanks a lot to Ard Biesheuvel & Kees Cook on their feedback on compiler
+changes, PIE support and KASLR in general.
 
-Thanks,
-Laura
+The patches:
+ - 1-3, 5-15: Change in assembly code to be PIE compliant.
+ - 4: Add a new _ASM_GET_PTR macro to fetch a symbol address generically.
+ - 16: Adapt percpu design to work correctly when PIE is enabled.
+ - 17: Provide an option to default visibility to hidden except for key symbols.
+       It removes errors between compilation units.
+ - 18: Adapt relocation tool to handle PIE binary correctly.
+ - 19: Add the CONFIG_X86_PIE option (off by default)
+ - 20: Adapt relocation tool to generate a 64-bit relocation table.
+ - 21: Add options to build modules as mcmodel=large and dynamically create a
+       PLT for relative references out of range (adapted from arm64).
+ - 22: Add the CONFIG_RANDOMIZE_BASE_LARGE option to increase relocation range
+       from 1G to 3G (off by default).
+
+Performance/Size impact:
+
+Hackbench (50% and 1600% loads):
+ - PIE disabled: no significant change (-0.50% / +0.50%)
+ - PIE enabled: 7% to 8% on half load, 10% on heavy load.
+
+These results are aligned with the different research on user-mode PIE
+impact on cpu intensive benchmarks (around 10% on x86_64).
+
+slab_test (average of 10 runs):
+ - PIE disabled: no significant change (-1% / +1%)
+ - PIE enabled: 3% to 4%
+
+Kernbench (average of 10 Half and Optimal runs):
+ Elapsed Time:
+ - PIE disabled: no significant change (-0.22% / +0.06%)
+ - PIE enabled: around 0.50%
+ System Time:
+ - PIE disabled: no significant change (-0.99% / -1.28%)
+ - PIE enabled: 5% to 6%
+
+Size of vmlinux (Ubuntu configuration):
+ File size:
+ - PIE disabled: 472928672 bytes (-0.000169% from baseline)
+ - PIE enabled: 216878461 bytes (-54.14% from baseline)
+ .text sections:
+ - PIE disabled: 9373572 bytes (+0.04% from baseline)
+ - PIE enabled: 9499138 bytes (+1.38% from baseline)
+
+The big decrease in vmlinux file size is due to the lower number of
+relocations appended to the file.
+
+diffstat:
+ arch/x86/Kconfig                             |   37 +++++
+ arch/x86/Makefile                            |   17 ++
+ arch/x86/boot/boot.h                         |    2 
+ arch/x86/boot/compressed/Makefile            |    5 
+ arch/x86/boot/compressed/misc.c              |   10 +
+ arch/x86/crypto/aes-x86_64-asm_64.S          |   45 +++---
+ arch/x86/crypto/aesni-intel_asm.S            |   14 +
+ arch/x86/crypto/aesni-intel_avx-x86_64.S     |    6 
+ arch/x86/crypto/camellia-aesni-avx-asm_64.S  |   42 ++---
+ arch/x86/crypto/camellia-aesni-avx2-asm_64.S |   44 +++---
+ arch/x86/crypto/camellia-x86_64-asm_64.S     |    8 -
+ arch/x86/crypto/cast5-avx-x86_64-asm_64.S    |   50 +++---
+ arch/x86/crypto/cast6-avx-x86_64-asm_64.S    |   44 +++---
+ arch/x86/crypto/des3_ede-asm_64.S            |   96 ++++++++-----
+ arch/x86/crypto/ghash-clmulni-intel_asm.S    |    4 
+ arch/x86/crypto/glue_helper-asm-avx.S        |    4 
+ arch/x86/crypto/glue_helper-asm-avx2.S       |    6 
+ arch/x86/entry/entry_64.S                    |   26 ++-
+ arch/x86/include/asm/asm.h                   |   13 +
+ arch/x86/include/asm/bug.h                   |    2 
+ arch/x86/include/asm/jump_label.h            |    8 -
+ arch/x86/include/asm/kvm_host.h              |    6 
+ arch/x86/include/asm/module.h                |   16 ++
+ arch/x86/include/asm/page_64_types.h         |    9 +
+ arch/x86/include/asm/paravirt_types.h        |   12 +
+ arch/x86/include/asm/percpu.h                |   25 ++-
+ arch/x86/include/asm/pm-trace.h              |    2 
+ arch/x86/include/asm/processor.h             |    8 -
+ arch/x86/include/asm/setup.h                 |    2 
+ arch/x86/kernel/Makefile                     |    2 
+ arch/x86/kernel/acpi/wakeup_64.S             |   31 ++--
+ arch/x86/kernel/cpu/common.c                 |    4 
+ arch/x86/kernel/head64.c                     |   28 +++
+ arch/x86/kernel/head_64.S                    |   47 +++++-
+ arch/x86/kernel/kvm.c                        |    6 
+ arch/x86/kernel/module-plts.c                |  198 +++++++++++++++++++++++++++
+ arch/x86/kernel/module.c                     |   18 +-
+ arch/x86/kernel/module.lds                   |    4 
+ arch/x86/kernel/relocate_kernel_64.S         |    2 
+ arch/x86/kernel/setup_percpu.c               |    2 
+ arch/x86/kernel/vmlinux.lds.S                |   13 +
+ arch/x86/kvm/svm.c                           |    4 
+ arch/x86/lib/cmpxchg16b_emu.S                |    8 -
+ arch/x86/power/hibernate_asm_64.S            |    4 
+ arch/x86/tools/relocs.c                      |  134 +++++++++++++++---
+ arch/x86/tools/relocs.h                      |    4 
+ arch/x86/tools/relocs_common.c               |   15 +-
+ arch/x86/xen/xen-asm.S                       |   12 -
+ arch/x86/xen/xen-asm.h                       |    3 
+ arch/x86/xen/xen-head.S                      |    9 -
+ include/asm-generic/sections.h               |    6 
+ include/linux/compiler.h                     |    8 +
+ init/Kconfig                                 |    9 +
+ kernel/kallsyms.c                            |   16 +-
+ 54 files changed, 868 insertions(+), 282 deletions(-)
