@@ -1,62 +1,33 @@
-Date: Tue, 18 Jul 2017 02:46:38 -0400
-From: Cleric John Preston <Cleric.John.Preston@protonmail.com>
-Message-ID: <1WzwohmrS5BCBWVRHghDWZLcRvSX1dfUVqv_EAukcB1RdMdq-KUG6jjVFSQVaR1iWKToJORgS7yUXKg6JhR_n0zRILrxvKqoIIOwKbC_b_8=@protonmail.com>
-In-Reply-To: <20170717150110.GA32089@kroah.com>
-References: <s-RLZ9Rez7ayjezQ5oIB5j2qnFqI2e7U7CQf9iGc882wCJB0ZBY7O3xqUyjgqkt3tIthstuRtaPsV_iombyZBru2qIZyjWPyDP7Xj7j9_cQ=@protonmail.com>
- <20170717150110.GA32089@kroah.com>
 MIME-Version: 1.0
-Content-Type: multipart/alternative;
-	boundary="b1_2b5f272a3902aade2156a226ce0b788c"
-Subject: [kernel-hardening] Re : Re: Compilation error and probable exploit
-To: "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>
-Cc: "keescook@chromium.org" <keescook@chromium.org>, "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <1WzwohmrS5BCBWVRHghDWZLcRvSX1dfUVqv_EAukcB1RdMdq-KUG6jjVFSQVaR1iWKToJORgS7yUXKg6JhR_n0zRILrxvKqoIIOwKbC_b_8=@protonmail.com>
+References: <s-RLZ9Rez7ayjezQ5oIB5j2qnFqI2e7U7CQf9iGc882wCJB0ZBY7O3xqUyjgqkt3tIthstuRtaPsV_iombyZBru2qIZyjWPyDP7Xj7j9_cQ=@protonmail.com>
+ <20170717150110.GA32089@kroah.com> <1WzwohmrS5BCBWVRHghDWZLcRvSX1dfUVqv_EAukcB1RdMdq-KUG6jjVFSQVaR1iWKToJORgS7yUXKg6JhR_n0zRILrxvKqoIIOwKbC_b_8=@protonmail.com>
+From: Mathias Krause <minipli@googlemail.com>
+Date: Tue, 18 Jul 2017 13:20:18 +0200
+Message-ID: <CA+rthh8rBse+W_n80y2V48pK-LsiwSZj-Ysq1=RrTA4jyWwo7g@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re : Re: Compilation error and probable exploit
+To: Cleric John Preston <Cleric.John.Preston@protonmail.com>
+Cc: "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "keescook@chromium.org" <keescook@chromium.org>, "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a multi-part message in MIME format.
+On 18 July 2017 at 08:46, Cleric John Preston
+<Cleric.John.Preston@protonmail.com> wrote:
+>> On Mon, Jul 17, 2017 at 10:26:53AM -0400, Cleric John Preston wrote:
+>>> In compiling linux 4.9.38 I have a lot of error ...
+>>> I do not think anything is wanted.
+>>
+>> Are you using gcc-7? Was this different from 4.9.37?
+>
+> No I use gcc-5.3.1 and because this is the latest unofficial version of
+> grsec that I can use. See
+> https://github.com/minipli/linux-unofficial_grsec/releases
 
---b1_2b5f272a3902aade2156a226ce0b788c
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: base64
+In this case you should complain at [1] instead, not here, as your
+problem (which one, btw?) is not related to the upstream kernel
+v4.9.38 but a heavily patched one.
 
-PiBPbiBNb24sIEp1bCAxNywgMjAxNyBhdCAxMDoyNjo1M0FNIC0wNDAwLCBDbGVyaWMgSm9obiBQ
-cmVzdG9uIHdyb3RlOgo+PiBIZWxsbywKPj4KPj4gSW4gY29tcGlsaW5nIGxpbnV4IDQuOS4zOCBJ
-IGhhdmUgYSBsb3Qgb2YgZXJyb3IgLi4uCj4+IEkgZG8gbm90IHRoaW5rIGFueXRoaW5nIGlzIHdh
-bnRlZC4KPiBBcmUgeW91IHVzaW5nIGdjYy03PyBXYXMgdGhpcyBkaWZmZXJlbnQgZnJvbSA0Ljku
-Mzc/Cj4gdGhhbmtzLAo+IGdyZWcgay1oCgpObyBJIHVzZSBnY2MtNS4zLjEgYW5kIGJlY2F1c2Ug
-dGhpcyBpcyB0aGUgbGF0ZXN0IHVub2ZmaWNpYWwgdmVyc2lvbiBvZiBncnNlYyB0aGF0IEkgY2Fu
-IHVzZS4gU2VlCmh0dHBzOi8vZ2l0aHViLmNvbS9taW5pcGxpL2xpbnV4LXVub2ZmaWNpYWxfZ3Jz
-ZWMvcmVsZWFzZXMKU28gSSdtIG5vdCByZWFkeSBmb3IgYSByZWNlbnQgdmVyc2lvbiBvZiBMaW51
-eC4gVGhlIGtzcHAgcHJvamVjdCBpcyBzdGlsbCBmYXIgZnJvbSBwcm92aWRpbmcgbWUgd2l0aCBz
-dWZmaWNpZW50IHNlY3VyaXR5LgpNb3Jlb3Zlciwgbm8gcHJvamVjdCBvZmZlcnMgYSBzb2x1dGlv
-biBhZ2FpbnN0IHJhbnNvbXdhcmVzIHdoaWNoIGlzIHRoZSBtb3N0IGZyZXF1ZW50IHRocmVhdCBm
-b3IgdXNlcnMu
+Cheers,
+Mathias
 
-
---b1_2b5f272a3902aade2156a226ce0b788c
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: base64
-
-PGRpdj48YnI+PC9kaXY+PGJsb2NrcXVvdGUgY2xhc3M9InByb3Rvbm1haWxfcXVvdGUiIHR5cGU9
-ImNpdGUiPjxkaXY+T24gTW9uLCBKdWwgMTcsIDIwMTcgYXQgMTA6MjY6NTNBTSAtMDQwMCwgQ2xl
-cmljIEpvaG4gUHJlc3RvbiB3cm90ZTo8YnI+PC9kaXY+PGRpdj4mZ3Q7IEhlbGxvLDxicj48L2Rp
-dj48ZGl2PiZndDsgPGJyPjwvZGl2PjxkaXY+Jmd0OyBJbiBjb21waWxpbmcgbGludXggNC45LjM4
-IEkgaGF2ZSBhIGxvdCBvZiBlcnJvciAuLi48YnI+PC9kaXY+PGRpdj4mZ3Q7IEkgZG8gbm90IHRo
-aW5rIGFueXRoaW5nIGlzIHdhbnRlZC48YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+PGRpdj5BcmUg
-eW91IHVzaW5nIGdjYy03PyAgV2FzIHRoaXMgZGlmZmVyZW50IGZyb20gNC45LjM3Pzxicj48L2Rp
-dj48ZGl2Pjxicj48L2Rpdj48ZGl2Pjxicj48L2Rpdj48ZGl2PnRoYW5rcyw8YnI+PC9kaXY+PGRp
-dj48YnI+PC9kaXY+PGRpdj5ncmVnIGstaDxicj48L2Rpdj48L2Jsb2NrcXVvdGU+PGRpdj48YnI+
-PC9kaXY+PGRpdj5ObyBJIHVzZSBnY2MtNS4zLjEgYW5kIGJlY2F1c2UgdGhpcyBpcyB0aGUgbGF0
-ZXN0IHVub2ZmaWNpYWwgdmVyc2lvbiBvZiBncnNlYyB0aGF0IEkgY2FuIHVzZS4gU2VlPGJyPjwv
-ZGl2PjxkaXY+aHR0cHM6Ly9naXRodWIuY29tL21pbmlwbGkvbGludXgtdW5vZmZpY2lhbF9ncnNl
-Yy9yZWxlYXNlczxicj48L2Rpdj48ZGl2Pjxicj48L2Rpdj48ZGl2PlNvIEknbSBub3QgcmVhZHkg
-Zm9yIGEgcmVjZW50IHZlcnNpb24gb2YgTGludXguIDxzcGFuIGNsYXNzPSIiIGlkPSJyZXN1bHRf
-Ym94IiBsYW5nPSJlbiI+PHNwYW4gY2xhc3M9IiI+VGhlIGtzcHAgcHJvamVjdCBpcyBzdGlsbCBm
-YXIgZnJvbSBwcm92aWRpbmcgbWUgd2l0aCBzdWZmaWNpZW50IHNlY3VyaXR5Ljwvc3Bhbj48L3Nw
-YW4+PGJyPjwvZGl2PjxkaXY+PHNwYW4gY2xhc3M9IiIgaWQ9InJlc3VsdF9ib3giIGxhbmc9ImVu
-Ij48c3BhbiBjbGFzcz0iIj5Nb3Jlb3Zlciwgbm8gcHJvamVjdCBvZmZlcnMgYSBzb2x1dGlvbiBh
-Z2FpbnN0IHJhbnNvbXdhcmVzIHdoaWNoIGlzIHRoZSBtb3N0IGZyZXF1ZW50IHRocmVhdCBmb3Ig
-dXNlcnMuPC9zcGFuPjwvc3Bhbj48YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+
-
-
-
---b1_2b5f272a3902aade2156a226ce0b788c--
+[1] https://github.com/minipli/linux-unofficial_grsec/issues
