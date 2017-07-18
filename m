@@ -1,69 +1,62 @@
+Date: Tue, 18 Jul 2017 02:46:38 -0400
+From: Cleric John Preston <Cleric.John.Preston@protonmail.com>
+Message-ID: <1WzwohmrS5BCBWVRHghDWZLcRvSX1dfUVqv_EAukcB1RdMdq-KUG6jjVFSQVaR1iWKToJORgS7yUXKg6JhR_n0zRILrxvKqoIIOwKbC_b_8=@protonmail.com>
+In-Reply-To: <20170717150110.GA32089@kroah.com>
+References: <s-RLZ9Rez7ayjezQ5oIB5j2qnFqI2e7U7CQf9iGc882wCJB0ZBY7O3xqUyjgqkt3tIthstuRtaPsV_iombyZBru2qIZyjWPyDP7Xj7j9_cQ=@protonmail.com>
+ <20170717150110.GA32089@kroah.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <c86c66c3-29d8-0b04-b4d1-f9f8192d8c4a@linux.com>
-References: <1500309907-9357-1-git-send-email-alex.popov@linux.com>
- <20170717175459.GC14983@bombadil.infradead.org> <alpine.DEB.2.20.1707171303230.12109@nuc-kabylake>
- <c86c66c3-29d8-0b04-b4d1-f9f8192d8c4a@linux.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 17 Jul 2017 12:11:40 -0700
-Message-ID: <CAGXu5jK5j2pSVca9XGJhJ6pnF04p7S=K1Z432nzG2y4LfKhYjg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 1/1] mm/slub.c: add a naive detection of double free or corruption
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: multipart/alternative;
+	boundary="b1_2b5f272a3902aade2156a226ce0b788c"
+Subject: [kernel-hardening] Re : Re: Compilation error and probable exploit
+To: "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>
+Cc: "keescook@chromium.org" <keescook@chromium.org>, "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jul 17, 2017 at 12:01 PM, Alexander Popov <alex.popov@linux.com> wrote:
-> Hello Christopher,
->
-> Thanks for your reply.
->
-> On 17.07.2017 21:04, Christopher Lameter wrote:
->> On Mon, 17 Jul 2017, Matthew Wilcox wrote:
->>
->>> On Mon, Jul 17, 2017 at 07:45:07PM +0300, Alexander Popov wrote:
->>>> Add an assertion similar to "fasttop" check in GNU C Library allocator:
->>>> an object added to a singly linked freelist should not point to itself.
->>>> That helps to detect some double free errors (e.g. CVE-2017-2636) without
->>>> slub_debug and KASAN. Testing with hackbench doesn't show any noticeable
->>>> performance penalty.
->>>
->>>>  {
->>>> +   BUG_ON(object == fp); /* naive detection of double free or corruption */
->>>>     *(void **)(object + s->offset) = fp;
->>>>  }
->>>
->>> Is BUG() the best response to this situation?  If it's a corruption, then
->>> yes, but if we spot a double-free, then surely we should WARN() and return
->>> without doing anything?
->>
->> The double free debug checking already does the same thing in a more
->> thourough way (this one only checks if the last free was the same
->> address). So its duplicating a check that already exists.
->
-> Yes, absolutely. Enabled slub_debug (or KASAN with its quarantine) can detect
-> more double-free errors. But it introduces much bigger performance penalty and
-> it's disabled by default.
->
->> However, this one is always on.
->
-> Yes, I would propose to have this relatively cheap check enabled by default. I
-> think it will block a good share of double-free errors. Currently it's really
-> easy to turn such a double-free into use-after-free and exploit it, since, as I
-> wrote, next two kmalloc() calls return the same address. So we could make
-> exploiting harder for a relatively low price.
->
-> Christopher, if I change BUG_ON() to VM_BUG_ON(), it will be disabled by default
-> again, right?
+This is a multi-part message in MIME format.
 
-Let's merge this with the proposed CONFIG_FREELIST_HARDENED, then the
-performance change is behind a config, and we gain the rest of the
-freelist protections at the same time:
+--b1_2b5f272a3902aade2156a226ce0b788c
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: base64
 
-http://www.openwall.com/lists/kernel-hardening/2017/07/06/1
+PiBPbiBNb24sIEp1bCAxNywgMjAxNyBhdCAxMDoyNjo1M0FNIC0wNDAwLCBDbGVyaWMgSm9obiBQ
+cmVzdG9uIHdyb3RlOgo+PiBIZWxsbywKPj4KPj4gSW4gY29tcGlsaW5nIGxpbnV4IDQuOS4zOCBJ
+IGhhdmUgYSBsb3Qgb2YgZXJyb3IgLi4uCj4+IEkgZG8gbm90IHRoaW5rIGFueXRoaW5nIGlzIHdh
+bnRlZC4KPiBBcmUgeW91IHVzaW5nIGdjYy03PyBXYXMgdGhpcyBkaWZmZXJlbnQgZnJvbSA0Ljku
+Mzc/Cj4gdGhhbmtzLAo+IGdyZWcgay1oCgpObyBJIHVzZSBnY2MtNS4zLjEgYW5kIGJlY2F1c2Ug
+dGhpcyBpcyB0aGUgbGF0ZXN0IHVub2ZmaWNpYWwgdmVyc2lvbiBvZiBncnNlYyB0aGF0IEkgY2Fu
+IHVzZS4gU2VlCmh0dHBzOi8vZ2l0aHViLmNvbS9taW5pcGxpL2xpbnV4LXVub2ZmaWNpYWxfZ3Jz
+ZWMvcmVsZWFzZXMKU28gSSdtIG5vdCByZWFkeSBmb3IgYSByZWNlbnQgdmVyc2lvbiBvZiBMaW51
+eC4gVGhlIGtzcHAgcHJvamVjdCBpcyBzdGlsbCBmYXIgZnJvbSBwcm92aWRpbmcgbWUgd2l0aCBz
+dWZmaWNpZW50IHNlY3VyaXR5LgpNb3Jlb3Zlciwgbm8gcHJvamVjdCBvZmZlcnMgYSBzb2x1dGlv
+biBhZ2FpbnN0IHJhbnNvbXdhcmVzIHdoaWNoIGlzIHRoZSBtb3N0IGZyZXF1ZW50IHRocmVhdCBm
+b3IgdXNlcnMu
 
--Kees
 
--- 
-Kees Cook
-Pixel Security
+--b1_2b5f272a3902aade2156a226ce0b788c
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: base64
+
+PGRpdj48YnI+PC9kaXY+PGJsb2NrcXVvdGUgY2xhc3M9InByb3Rvbm1haWxfcXVvdGUiIHR5cGU9
+ImNpdGUiPjxkaXY+T24gTW9uLCBKdWwgMTcsIDIwMTcgYXQgMTA6MjY6NTNBTSAtMDQwMCwgQ2xl
+cmljIEpvaG4gUHJlc3RvbiB3cm90ZTo8YnI+PC9kaXY+PGRpdj4mZ3Q7IEhlbGxvLDxicj48L2Rp
+dj48ZGl2PiZndDsgPGJyPjwvZGl2PjxkaXY+Jmd0OyBJbiBjb21waWxpbmcgbGludXggNC45LjM4
+IEkgaGF2ZSBhIGxvdCBvZiBlcnJvciAuLi48YnI+PC9kaXY+PGRpdj4mZ3Q7IEkgZG8gbm90IHRo
+aW5rIGFueXRoaW5nIGlzIHdhbnRlZC48YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+PGRpdj5BcmUg
+eW91IHVzaW5nIGdjYy03PyAgV2FzIHRoaXMgZGlmZmVyZW50IGZyb20gNC45LjM3Pzxicj48L2Rp
+dj48ZGl2Pjxicj48L2Rpdj48ZGl2Pjxicj48L2Rpdj48ZGl2PnRoYW5rcyw8YnI+PC9kaXY+PGRp
+dj48YnI+PC9kaXY+PGRpdj5ncmVnIGstaDxicj48L2Rpdj48L2Jsb2NrcXVvdGU+PGRpdj48YnI+
+PC9kaXY+PGRpdj5ObyBJIHVzZSBnY2MtNS4zLjEgYW5kIGJlY2F1c2UgdGhpcyBpcyB0aGUgbGF0
+ZXN0IHVub2ZmaWNpYWwgdmVyc2lvbiBvZiBncnNlYyB0aGF0IEkgY2FuIHVzZS4gU2VlPGJyPjwv
+ZGl2PjxkaXY+aHR0cHM6Ly9naXRodWIuY29tL21pbmlwbGkvbGludXgtdW5vZmZpY2lhbF9ncnNl
+Yy9yZWxlYXNlczxicj48L2Rpdj48ZGl2Pjxicj48L2Rpdj48ZGl2PlNvIEknbSBub3QgcmVhZHkg
+Zm9yIGEgcmVjZW50IHZlcnNpb24gb2YgTGludXguIDxzcGFuIGNsYXNzPSIiIGlkPSJyZXN1bHRf
+Ym94IiBsYW5nPSJlbiI+PHNwYW4gY2xhc3M9IiI+VGhlIGtzcHAgcHJvamVjdCBpcyBzdGlsbCBm
+YXIgZnJvbSBwcm92aWRpbmcgbWUgd2l0aCBzdWZmaWNpZW50IHNlY3VyaXR5Ljwvc3Bhbj48L3Nw
+YW4+PGJyPjwvZGl2PjxkaXY+PHNwYW4gY2xhc3M9IiIgaWQ9InJlc3VsdF9ib3giIGxhbmc9ImVu
+Ij48c3BhbiBjbGFzcz0iIj5Nb3Jlb3Zlciwgbm8gcHJvamVjdCBvZmZlcnMgYSBzb2x1dGlvbiBh
+Z2FpbnN0IHJhbnNvbXdhcmVzIHdoaWNoIGlzIHRoZSBtb3N0IGZyZXF1ZW50IHRocmVhdCBmb3Ig
+dXNlcnMuPC9zcGFuPjwvc3Bhbj48YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+
+
+
+
+--b1_2b5f272a3902aade2156a226ce0b788c--
