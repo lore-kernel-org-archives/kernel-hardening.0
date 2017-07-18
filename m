@@ -1,184 +1,111 @@
 From: Thomas Garnier <thgarnie@google.com>
-Date: Tue, 18 Jul 2017 15:33:29 -0700
-Message-Id: <20170718223333.110371-19-thgarnie@google.com>
+Date: Tue, 18 Jul 2017 15:33:30 -0700
+Message-Id: <20170718223333.110371-20-thgarnie@google.com>
 In-Reply-To: <20170718223333.110371-1-thgarnie@google.com>
 References: <20170718223333.110371-1-thgarnie@google.com>
-Subject: [kernel-hardening] [RFC 18/22] x86/relocs: Handle DYN relocations for PIE support
+Subject: [kernel-hardening] [RFC 19/22] x86/pie: Add option to build the kernel as PIE for x86_64
 To: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Thomas Garnier <thgarnie@google.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Christopher Li <sparse@chrisli.org>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Peter Foley <pefoley2@pefoley.com>, Steven Rostedt <rostedt@goodmis.org>, Tim Chen <tim.c.chen@linux.intel.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>
 Cc: x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, xen-devel@lists.xenproject.org, kvm@vger.kernel.org, linux-pm@vger.kernel.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Change the relocation tool to correctly handle DYN/PIE kernel where
-the relocation table does not reference symbols and percpu support is
-not needed. Also add support for R_X86_64_RELATIVE relocations that can
-be handled like a 64-bit relocation due to the usage of -Bsymbolic.
+Add the CONFIG_X86_PIE option which builds the kernel as a Position
+Independent Executable (PIE). The kernel is currently build with the
+mcmodel=kernel option which forces it to stay on the top 2G of the
+virtual address space. With PIE, the kernel will be able to move below
+the -2G limit increasing the KASLR range from 1GB to 3GB.
 
-Position Independent Executable (PIE) support will allow to extended the
-KASLR randomization range below the -2G memory limit.
+The modules do not support PIE due to how they are linked. Disable PIE
+for them and default to mcmodel=kernel for now.
+
+The PIE configuration is not yet compatible with XEN_PVH. Xen PVH
+generates 32-bit assembly and uses a long jump to transition to 64-bit.
+A long jump require an absolute reference that is not compatible with
+PIE.
+
+Performance/Size impact:
+
+Hackbench (50% and 1600% loads):
+ - PIE disabled: no significant change (-0.50% / +0.50%)
+ - PIE enabled: 7% to 8% on half load, 10% on heavy load.
+
+These results are aligned with the different research on user-mode PIE
+impact on cpu intensive benchmarks (around 10% on x86_64).
+
+slab_test (average of 10 runs):
+ - PIE disabled: no significant change (-1% / +1%)
+ - PIE enabled: 3% to 4%
+
+Kernbench (average of 10 Half and Optimal runs):
+ Elapsed Time:
+ - PIE disabled: no significant change (-0.22% / +0.06%)
+ - PIE enabled: around 0.50%
+ System Time:
+ - PIE disabled: no significant change (-0.99% / -1.28%)
+ - PIE enabled: 5% to 6%
+
+Size of vmlinux (Ubuntu configuration):
+ File size:
+ - PIE disabled: 472928672 bytes (-0.000169% from baseline)
+ - PIE enabled: 216878461 bytes (-54.14% from baseline)
+ .text sections:
+ - PIE disabled: 9373572 bytes (+0.04% from baseline)
+ - PIE enabled: 9499138 bytes (+1.38% from baseline)
+
+The big decrease in vmlinux file size is due to the lower number of
+relocations appended to the file.
 
 Signed-off-by: Thomas Garnier <thgarnie@google.com>
 ---
- arch/x86/tools/relocs.c | 74 +++++++++++++++++++++++++++++++++++++++++++------
- 1 file changed, 65 insertions(+), 9 deletions(-)
+ arch/x86/Kconfig  | 6 ++++++
+ arch/x86/Makefile | 9 +++++++++
+ 2 files changed, 15 insertions(+)
 
-diff --git a/arch/x86/tools/relocs.c b/arch/x86/tools/relocs.c
-index 73eb7fd4aec4..70f523dd68ff 100644
---- a/arch/x86/tools/relocs.c
-+++ b/arch/x86/tools/relocs.c
-@@ -642,6 +642,13 @@ static void add_reloc(struct relocs *r, uint32_t offset)
- 	r->offset[r->count++] = offset;
- }
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 781521b7cf9e..b26ee6751021 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -2080,6 +2080,12 @@ config RANDOMIZE_MEMORY_PHYSICAL_PADDING
  
-+/* Relocation found in a DYN binary, support only for 64-bit PIE */
-+static int is_dyn_reloc(struct section *sec)
-+{
-+	return ELF_BITS == 64 && ehdr.e_type == ET_DYN &&
-+		sec->shdr.sh_info == SHT_NULL;
-+}
+ 	   If unsure, leave at the default value.
+ 
++config X86_PIE
++	bool
++	depends on X86_64 && !XEN_PVH
++	select DEFAULT_HIDDEN
++	select MODULE_REL_CRCS if MODVERSIONS
 +
- static void walk_relocs(int (*process)(struct section *sec, Elf_Rel *rel,
- 			Elf_Sym *sym, const char *symname))
- {
-@@ -652,6 +659,7 @@ static void walk_relocs(int (*process)(struct section *sec, Elf_Rel *rel,
- 		Elf_Sym *sh_symtab;
- 		struct section *sec_applies, *sec_symtab;
- 		int j;
-+		int dyn_reloc = 0;
- 		struct section *sec = &secs[i];
+ config HOTPLUG_CPU
+ 	bool "Support for hot-pluggable CPUs"
+ 	depends on SMP
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index 1e902f926be3..452a9621af8f 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -45,8 +45,12 @@ export REALMODE_CFLAGS
+ export BITS
  
- 		if (sec->shdr.sh_type != SHT_REL_TYPE) {
-@@ -660,14 +668,20 @@ static void walk_relocs(int (*process)(struct section *sec, Elf_Rel *rel,
- 		sec_symtab  = sec->link;
- 		sec_applies = &secs[sec->shdr.sh_info];
- 		if (!(sec_applies->shdr.sh_flags & SHF_ALLOC)) {
--			continue;
-+			if (!is_dyn_reloc(sec_applies))
-+				continue;
-+			dyn_reloc = 1;
- 		}
- 		sh_symtab = sec_symtab->symtab;
- 		sym_strtab = sec_symtab->link->strtab;
- 		for (j = 0; j < sec->shdr.sh_size/sizeof(Elf_Rel); j++) {
- 			Elf_Rel *rel = &sec->reltab[j];
--			Elf_Sym *sym = &sh_symtab[ELF_R_SYM(rel->r_info)];
--			const char *symname = sym_name(sym_strtab, sym);
-+			Elf_Sym *sym = NULL;
-+			const char *symname = NULL;
-+			if (!dyn_reloc) {
-+				sym = &sh_symtab[ELF_R_SYM(rel->r_info)];
-+				symname = sym_name(sym_strtab, sym);
-+			}
+ ifdef CONFIG_X86_NEED_RELOCS
++ifdef CONFIG_X86_PIE
++        LDFLAGS_vmlinux := -pie -shared -Bsymbolic
++else
+         LDFLAGS_vmlinux := --emit-relocs
+ endif
++endif
  
- 			process(sec, rel, sym, symname);
- 		}
-@@ -746,16 +760,21 @@ static int is_percpu_sym(ElfW(Sym) *sym, const char *symname)
- 		strncmp(symname, "init_per_cpu_", 13);
- }
+ #
+ # Prevent GCC from generating any FP code by mistake.
+@@ -132,7 +136,12 @@ else
+         KBUILD_CFLAGS += $(cflags-y)
  
--
- static int do_reloc64(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
- 		      const char *symname)
- {
- 	unsigned r_type = ELF64_R_TYPE(rel->r_info);
- 	ElfW(Addr) offset = rel->r_offset;
--	int shn_abs = (sym->st_shndx == SHN_ABS) && !is_reloc(S_REL, symname);
-+	int shn_abs = 0;
-+	int dyn_reloc = is_dyn_reloc(sec);
+         KBUILD_CFLAGS += -mno-red-zone
++ifdef CONFIG_X86_PIE
++        KBUILD_CFLAGS += -fPIC
++        KBUILD_CFLAGS_MODULE += -fno-PIC -mcmodel=kernel
++else
+         KBUILD_CFLAGS += -mcmodel=kernel
++endif
  
--	if (sym->st_shndx == SHN_UNDEF)
--		return 0;
-+	if (!dyn_reloc) {
-+		shn_abs = (sym->st_shndx == SHN_ABS) &&
-+			!is_reloc(S_REL, symname);
-+
-+		if (sym->st_shndx == SHN_UNDEF)
-+			return 0;
-+	}
- 
- 	/*
- 	 * Adjust the offset if this reloc applies to the percpu section.
-@@ -769,6 +788,9 @@ static int do_reloc64(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
- 		break;
- 
- 	case R_X86_64_PC32:
-+		if (dyn_reloc)
-+			die("PC32 reloc in PIE DYN binary");
-+
- 		/*
- 		 * PC relative relocations don't need to be adjusted unless
- 		 * referencing a percpu symbol.
-@@ -783,7 +805,7 @@ static int do_reloc64(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
- 		/*
- 		 * References to the percpu area don't need to be adjusted.
- 		 */
--		if (is_percpu_sym(sym, symname))
-+		if (!dyn_reloc && is_percpu_sym(sym, symname))
- 			break;
- 
- 		if (shn_abs) {
-@@ -814,6 +836,14 @@ static int do_reloc64(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
- 			add_reloc(&relocs32, offset);
- 		break;
- 
-+	case R_X86_64_RELATIVE:
-+		/*
-+		 * -Bsymbolic means we don't need the addend and we can reuse
-+		 * the original relocs64.
-+		 */
-+		add_reloc(&relocs64, offset);
-+		break;
-+
- 	default:
- 		die("Unsupported relocation type: %s (%d)\n",
- 		    rel_type(r_type), r_type);
-@@ -1044,6 +1074,21 @@ static void emit_relocs(int as_text, int use_real_mode)
- 	}
- }
- 
-+/* Print a different header based on the type of relocation */
-+static void print_reloc_header(struct section *sec) {
-+	static int header_printed = 0;
-+	int header_type = is_dyn_reloc(sec) ? 2 : 1;
-+
-+	if (header_printed == header_type)
-+		return;
-+	header_printed = header_type;
-+
-+	if (header_type == 2)
-+		printf("reloc type\toffset\tvalue\n");
-+	else
-+		printf("reloc section\treloc type\tsymbol\tsymbol section\n");
-+}
-+
- /*
-  * As an aid to debugging problems with different linkers
-  * print summary information about the relocs.
-@@ -1053,6 +1098,18 @@ static void emit_relocs(int as_text, int use_real_mode)
- static int do_reloc_info(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
- 				const char *symname)
- {
-+
-+	print_reloc_header(sec);
-+
-+#if ELF_BITS == 64
-+	if (is_dyn_reloc(sec)) {
-+		printf("%s\t0x%lx\t0x%lx\n",
-+		       rel_type(ELF_R_TYPE(rel->r_info)),
-+		       rel->r_offset,
-+		       rel->r_addend);
-+		return 0;
-+	}
-+#endif
- 	printf("%s\t%s\t%s\t%s\n",
- 		sec_name(sec->shdr.sh_info),
- 		rel_type(ELF_R_TYPE(rel->r_info)),
-@@ -1063,7 +1120,6 @@ static int do_reloc_info(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
- 
- static void print_reloc_info(void)
- {
--	printf("reloc section\treloc type\tsymbol\tsymbol section\n");
- 	walk_relocs(do_reloc_info);
- }
- 
+         # -funit-at-a-time shrinks the kernel .text considerably
+         # unfortunately it makes reading oopses harder.
 -- 
 2.13.2.932.g7449e964c-goog
