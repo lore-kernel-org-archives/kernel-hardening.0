@@ -1,235 +1,118 @@
-From: Thomas Garnier <thgarnie@google.com>
-Date: Tue, 18 Jul 2017 15:33:33 -0700
-Message-Id: <20170718223333.110371-23-thgarnie@google.com>
-In-Reply-To: <20170718223333.110371-1-thgarnie@google.com>
-References: <20170718223333.110371-1-thgarnie@google.com>
-Subject: [kernel-hardening] [RFC 22/22] x86/kaslr: Add option to extend KASLR range from 1GB to 3GB
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Thomas Garnier <thgarnie@google.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Christopher Li <sparse@chrisli.org>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Peter Foley <pefoley2@pefoley.com>, Steven Rostedt <rostedt@goodmis.org>, Tim Chen <tim.c.chen@linux.intel.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>
-Cc: x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, xen-devel@lists.xenproject.org, kvm@vger.kernel.org, linux-pm@vger.kernel.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 18 Jul 2017 17:03:32 -0700
+Message-Id: <1500422614-94821-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v6 0/2] x86: Implement fast refcount overflow protection
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-kernel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a new CONFIG_RANDOMIZE_BASE_LARGE option to benefit from PIE
-support. It increases the KASLR range from 1GB to 3GB. The new range
-stars at 0xffffffff00000000 just above the EFI memory region. This
-option is off by default.
+This series implements a fast refcount overflow protection for x86, which is
+needed to provide coverage for the several refcount-overflow use-after-free
+flaws the kernel has seen over the last many years. For example, here are
+two from 2016:
 
-The boot code is adapted to create the appropriate page table spanning
-three PUD pages.
+http://perception-point.io/2016/01/14/analysis-and-exploitation-of-a-linux-kernel-vulnerability-cve-2016-0728/
 
-The relocation table uses 64-bit integers generated with the updated
-relocation tool with the large-reloc option.
+http://cyseclabs.com/page?n=02012016
 
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
----
- arch/x86/Kconfig                     | 21 +++++++++++++++++++++
- arch/x86/boot/compressed/Makefile    |  5 +++++
- arch/x86/boot/compressed/misc.c      | 10 +++++++++-
- arch/x86/include/asm/page_64_types.h |  9 +++++++++
- arch/x86/kernel/head64.c             | 18 ++++++++++++++----
- arch/x86/kernel/head_64.S            | 11 ++++++++++-
- 6 files changed, 68 insertions(+), 6 deletions(-)
+Patch 1 provides support for adding additional assembly to the GEN_*_RMWcc
+macros, and patch 2 does the real work. (I left Josh's Reviewed-by since
+the exception handler code has remained the same.)
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 60d161391d5a..8054eef76dfc 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -2096,6 +2096,27 @@ config X86_MODULE_PLTS
- 	select X86_MODULE_MODEL_LARGE
- 	select HAVE_MOD_ARCH_SPECIFIC
- 
-+config RANDOMIZE_BASE_LARGE
-+	bool "Increase the randomization range of the kernel image"
-+	depends on X86_64 && RANDOMIZE_BASE
-+	select X86_PIE
-+	select X86_MODULE_PLTS if MODULES
-+	default n
-+	---help---
-+	  Build the kernel as a Position Independent Executable (PIE) and
-+	  increase the available randomization range from 1GB to 3GB.
-+
-+	  This option impacts performance on kernel CPU intensive workloads up
-+	  to 10% due to PIE generated code. Impact on user-mode processes and
-+	  typical usage would be significantly less (0.50% when you build the
-+	  kernel).
-+
-+	  The kernel and modules will generate slightly more assembly (1 to 2%
-+	  increase on the .text sections). The vmlinux binary will be
-+	  significantly smaller due to less relocations.
-+
-+	  If unsure say N
-+
- config HOTPLUG_CPU
- 	bool "Support for hot-pluggable CPUs"
- 	depends on SMP
-diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
-index 2c860ad4fe06..8f4317864e98 100644
---- a/arch/x86/boot/compressed/Makefile
-+++ b/arch/x86/boot/compressed/Makefile
-@@ -111,7 +111,12 @@ $(obj)/vmlinux.bin: vmlinux FORCE
- 
- targets += $(patsubst $(obj)/%,%,$(vmlinux-objs-y)) vmlinux.bin.all vmlinux.relocs
- 
-+# Large randomization require bigger relocation table
-+ifeq ($(CONFIG_RANDOMIZE_BASE_LARGE),y)
-+CMD_RELOCS = arch/x86/tools/relocs --large-reloc
-+else
- CMD_RELOCS = arch/x86/tools/relocs
-+endif
- quiet_cmd_relocs = RELOCS  $@
-       cmd_relocs = $(CMD_RELOCS) $< > $@;$(CMD_RELOCS) --abs-relocs $<
- $(obj)/vmlinux.relocs: vmlinux FORCE
-diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
-index a0838ab929f2..0a0c80ab1842 100644
---- a/arch/x86/boot/compressed/misc.c
-+++ b/arch/x86/boot/compressed/misc.c
-@@ -170,10 +170,18 @@ void __puthex(unsigned long value)
- }
- 
- #if CONFIG_X86_NEED_RELOCS
-+
-+/* Large randomization go lower than -2G and use large relocation table */
-+#ifdef CONFIG_RANDOMIZE_BASE_LARGE
-+typedef long rel_t;
-+#else
-+typedef int rel_t;
-+#endif
-+
- static void handle_relocations(void *output, unsigned long output_len,
- 			       unsigned long virt_addr)
- {
--	int *reloc;
-+	rel_t *reloc;
- 	unsigned long delta, map, ptr;
- 	unsigned long min_addr = (unsigned long)output;
- 	unsigned long max_addr = min_addr + (VO___bss_start - VO__text);
-diff --git a/arch/x86/include/asm/page_64_types.h b/arch/x86/include/asm/page_64_types.h
-index 3f5f08b010d0..6b65f846dd64 100644
---- a/arch/x86/include/asm/page_64_types.h
-+++ b/arch/x86/include/asm/page_64_types.h
-@@ -48,7 +48,11 @@
- #define __PAGE_OFFSET           __PAGE_OFFSET_BASE
- #endif /* CONFIG_RANDOMIZE_MEMORY */
- 
-+#ifdef CONFIG_RANDOMIZE_BASE_LARGE
-+#define __START_KERNEL_map	_AC(0xffffffff00000000, UL)
-+#else
- #define __START_KERNEL_map	_AC(0xffffffff80000000, UL)
-+#endif /* CONFIG_RANDOMIZE_BASE_LARGE */
- 
- /* See Documentation/x86/x86_64/mm.txt for a description of the memory map. */
- #ifdef CONFIG_X86_5LEVEL
-@@ -65,9 +69,14 @@
-  * 512MiB by default, leaving 1.5GiB for modules once the page tables
-  * are fully set up. If kernel ASLR is configured, it can extend the
-  * kernel page table mapping, reducing the size of the modules area.
-+ * On PIE, we relocate the binary 2G lower so add this extra space.
-  */
- #if defined(CONFIG_RANDOMIZE_BASE)
-+#ifdef CONFIG_RANDOMIZE_BASE_LARGE
-+#define KERNEL_IMAGE_SIZE	(_AC(3, UL) * 1024 * 1024 * 1024)
-+#else
- #define KERNEL_IMAGE_SIZE	(1024 * 1024 * 1024)
-+#endif
- #else
- #define KERNEL_IMAGE_SIZE	(512 * 1024 * 1024)
- #endif
-diff --git a/arch/x86/kernel/head64.c b/arch/x86/kernel/head64.c
-index 4103e90ff128..235c3f7b46c7 100644
---- a/arch/x86/kernel/head64.c
-+++ b/arch/x86/kernel/head64.c
-@@ -39,6 +39,7 @@ static unsigned int __initdata next_early_pgt;
- pmdval_t early_pmd_flags = __PAGE_KERNEL_LARGE & ~(_PAGE_GLOBAL | _PAGE_NX);
- 
- #define __head	__section(.head.text)
-+#define pud_count(x)   (((x + (PUD_SIZE - 1)) & ~(PUD_SIZE - 1)) >> PUD_SHIFT)
- 
- static void __head *fixup_pointer(void *ptr, unsigned long physaddr)
- {
-@@ -54,6 +55,8 @@ unsigned long _text_offset = (unsigned long)(_text - __START_KERNEL_map);
- void __head notrace __startup_64(unsigned long physaddr)
- {
- 	unsigned long load_delta, *p;
-+	unsigned long level3_kernel_start, level3_kernel_count;
-+	unsigned long level3_fixmap_start;
- 	pgdval_t *pgd;
- 	p4dval_t *p4d;
- 	pudval_t *pud;
-@@ -74,6 +77,11 @@ void __head notrace __startup_64(unsigned long physaddr)
- 	if (load_delta & ~PMD_PAGE_MASK)
- 		for (;;);
- 
-+	/* Look at the randomization spread to adapt page table used */
-+	level3_kernel_start = pud_index(__START_KERNEL_map);
-+	level3_kernel_count = pud_count(KERNEL_IMAGE_SIZE);
-+	level3_fixmap_start = level3_kernel_start + level3_kernel_count;
-+
- 	/* Fixup the physical addresses in the page table */
- 
- 	pgd = fixup_pointer(&early_top_pgt, physaddr);
-@@ -85,8 +93,9 @@ void __head notrace __startup_64(unsigned long physaddr)
- 	}
- 
- 	pud = fixup_pointer(&level3_kernel_pgt, physaddr);
--	pud[510] += load_delta;
--	pud[511] += load_delta;
-+	for (i = 0; i < level3_kernel_count; i++)
-+		pud[level3_kernel_start + i] += load_delta;
-+	pud[level3_fixmap_start] += load_delta;
- 
- 	pmd = fixup_pointer(level2_fixmap_pgt, physaddr);
- 	pmd[506] += load_delta;
-@@ -137,7 +146,7 @@ void __head notrace __startup_64(unsigned long physaddr)
- 	 */
- 
- 	pmd = fixup_pointer(level2_kernel_pgt, physaddr);
--	for (i = 0; i < PTRS_PER_PMD; i++) {
-+	for (i = 0; i < PTRS_PER_PMD * level3_kernel_count; i++) {
- 		if (pmd[i] & _PAGE_PRESENT)
- 			pmd[i] += load_delta;
- 	}
-@@ -268,7 +277,8 @@ asmlinkage __visible void __init x86_64_start_kernel(char * real_mode_data)
- 	 */
- 	BUILD_BUG_ON(MODULES_VADDR < __START_KERNEL_map);
- 	BUILD_BUG_ON(MODULES_VADDR - __START_KERNEL_map < KERNEL_IMAGE_SIZE);
--	BUILD_BUG_ON(MODULES_LEN + KERNEL_IMAGE_SIZE > 2*PUD_SIZE);
-+	BUILD_BUG_ON(!IS_ENABLED(CONFIG_RANDOMIZE_BASE_LARGE) &&
-+		     MODULES_LEN + KERNEL_IMAGE_SIZE > 2*PUD_SIZE);
- 	BUILD_BUG_ON((__START_KERNEL_map & ~PMD_MASK) != 0);
- 	BUILD_BUG_ON((MODULES_VADDR & ~PMD_MASK) != 0);
- 	BUILD_BUG_ON(!(MODULES_VADDR > __START_KERNEL));
-diff --git a/arch/x86/kernel/head_64.S b/arch/x86/kernel/head_64.S
-index 4d0a7e68bfe8..e8b2d6706eca 100644
---- a/arch/x86/kernel/head_64.S
-+++ b/arch/x86/kernel/head_64.S
-@@ -39,11 +39,15 @@
- 
- #define p4d_index(x)	(((x) >> P4D_SHIFT) & (PTRS_PER_P4D-1))
- #define pud_index(x)	(((x) >> PUD_SHIFT) & (PTRS_PER_PUD-1))
-+#define pud_count(x)   (((x + (PUD_SIZE - 1)) & ~(PUD_SIZE - 1)) >> PUD_SHIFT)
- 
- PGD_PAGE_OFFSET = pgd_index(__PAGE_OFFSET_BASE)
- PGD_START_KERNEL = pgd_index(__START_KERNEL_map)
- L3_START_KERNEL = pud_index(__START_KERNEL_map)
- 
-+/* Adapt page table L3 space based on range of randomization */
-+L3_KERNEL_ENTRY_COUNT = pud_count(KERNEL_IMAGE_SIZE)
-+
- 	.text
- 	__HEAD
- 	.code64
-@@ -396,7 +400,12 @@ NEXT_PAGE(level4_kernel_pgt)
- NEXT_PAGE(level3_kernel_pgt)
- 	.fill	L3_START_KERNEL,8,0
- 	/* (2^48-(2*1024*1024*1024)-((2^39)*511))/(2^30) = 510 */
--	.quad	level2_kernel_pgt - __START_KERNEL_map + _KERNPG_TABLE
-+	i = 0
-+	.rept	L3_KERNEL_ENTRY_COUNT
-+	.quad	level2_kernel_pgt - __START_KERNEL_map + _KERNPG_TABLE \
-+		+ PAGE_SIZE*i
-+	i = i + 1
-+	.endr
- 	.quad	level2_fixmap_pgt - __START_KERNEL_map + _PAGE_TABLE
- 
- NEXT_PAGE(level2_kernel_pgt)
--- 
-2.13.2.932.g7449e964c-goog
+Here is patch 2's full commit log:
+
+
+This implements refcount_t overflow protection on x86 without a noticeable
+performance impact, though without the fuller checking of REFCOUNT_FULL.
+This is done by duplicating the existing atomic_t refcount implementation
+but with normally a single instruction added to detect if the refcount
+has gone negative (i.e. wrapped past INT_MAX or below zero). When
+detected, the handler saturates the refcount_t to INT_MIN / 2. With this
+overflow protection, the erroneous reference release that would follow
+a wrap back to zero is blocked from happening, avoiding the class of
+refcount-over-increment use-after-free vulnerabilities entirely.
+
+Only the overflow case of refcounting can be perfectly protected, since it
+can be detected and stopped before the reference is freed and left to be
+abused by an attacker. This implementation also notices some of the "dec
+to 0 without test", and "below 0" cases. However, these only indicate that
+a use-after-free may have already happened. Such notifications are likely
+avoidable by an attacker that has already exploited a use-after-free
+vulnerability, but it's better to have them than allow such conditions to
+remain universally silent.
+
+On first overflow detection, the refcount value is reset to INT_MIN / 2
+(which serves as a saturation value), the offending process is killed,
+and a report and stack trace are produced. When operations detect only
+negative value results (such as changing an already saturated value),
+saturation still happens but no notification is performed (since the
+value was already saturated).
+
+On the matter of races, since the entire range beyond INT_MAX but before
+0 is negative, every operation at INT_MIN / 2 will trap, leaving no
+overflow-only race condition.
+
+As for performance, this implementation adds a single "js" instruction
+to the regular execution flow of a copy of the standard atomic_t refcount
+operations. (The non-"and_test" refcount_dec() function, which is uncommon
+in regular refcount design patterns, has an additional "jz" instruction
+to detect reaching exactly zero.) Since this is a forward jump, it is by
+default the non-predicted path, which will be reinforced by dynamic branch
+prediction. The result is this protection having virtually no measurable
+change in performance over standard atomic_t operations. The error path,
+located in .text.unlikely, saves the refcount location and then uses UD0
+to fire a refcount exception handler, which resets the refcount, handles
+reporting, and returns to regular execution. This keeps the changes to
+.text size minimal, avoiding return jumps and open-coded calls to the
+error reporting routine.
+
+Example assembly comparison:
+
+refcount_inc before
+.text:
+ffffffff81546149:       f0 ff 45 f4             lock incl -0xc(%rbp)
+
+refcount_inc after
+.text:
+ffffffff81546149:       f0 ff 45 f4             lock incl -0xc(%rbp)
+ffffffff8154614d:       0f 88 80 d5 17 00       js     ffffffff816c36d3
+...
+.text.unlikely:
+ffffffff816c36d3:       48 8d 4d f4             lea    -0xc(%rbp),%rcx
+ffffffff816c36d7:       0f ff                   (bad)
+
+This protection is a modified version of the x86 PAX_REFCOUNT defense
+from the last public patch of PaX/grsecurity, based on my understanding of
+the code. Changes or omissions from the original code are mine and don't
+reflect the original grsecurity/PaX code. Thanks to PaX Team for various
+suggestions for improvement.
+
+
+Thanks!
+
+-Kees
+
+v6:
+- use single saturation value (INT_MIN / 2)
+- detect refcount_dec() to zero and saturate
+
+v5:
+- add unchecked atomic_t implementation when !CONFIG_REFCOUNT_FULL
+- use "leal" again, as in v3 for more flexible reset handling
+- provide better underflow detection, with saturation
+
+v4:
+- switch to js from jns to gain static branch prediction benefits
+- use .text.unlikely for js target, effectively making handler __cold
+- use UD0 with refcount exception handler instead of int 0x81
+- Kconfig defaults on when arch has support
+
+v3:
+- drop named text sections until we need to distinguish sizes/directions
+- reset value immediately instead of passing back to handler
+- drop needless export; josh
+
+v2:
+- fix instruction pointer decrement bug; thejh
+- switch to js; pax-team
+- improve commit log
