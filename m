@@ -1,89 +1,69 @@
+References: <1500309907-9357-1-git-send-email-alex.popov@linux.com>
+ <20170717175459.GC14983@bombadil.infradead.org>
+ <alpine.DEB.2.20.1707171303230.12109@nuc-kabylake>
+ <c86c66c3-29d8-0b04-b4d1-f9f8192d8c4a@linux.com>
+ <CAGXu5jK5j2pSVca9XGJhJ6pnF04p7S=K1Z432nzG2y4LfKhYjg@mail.gmail.com>
+ <1edb137c-356f-81d6-4592-f5dfc68e8ea9@linux.com>
+ <CAGXu5jL0bFpWqUm9d2X7zpTO_CwPp94ywcLYoFyNcLuiwX8qAQ@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <5f0ec56c-5cf1-58f7-5652-a5caedf3df88@linux.com>
+Date: Wed, 19 Jul 2017 11:38:57 +0300
 MIME-Version: 1.0
-In-Reply-To: <39a5ad84-4124-5b33-146a-cd4e48f3762f@redhat.com>
-References: <CAKv+Gu8jey+uPSFoCsjQn9BeGiChZpS=iZ0v9nEWvkwcO1gFYg@mail.gmail.com>
- <20170713104950.GB26194@leverpostej> <CAKv+Gu9eSX-f4uv3gaNw9_eKV0soe2-CqSnMaTjjEhMifxe_8g@mail.gmail.com>
- <20170713161050.GG26194@leverpostej> <20170713175543.GA32528@leverpostej>
- <CAKv+Gu_v3PO7=JSgCTb3aZu3sg4cwYYjy68VJnr58vzaMYvhTw@mail.gmail.com>
- <20170714103258.GA16128@leverpostej> <CAKv+Gu-FvfPFQooCie6HwP=mBng3C0jp9p8WMkFwTxctDu4JBA@mail.gmail.com>
- <CAKv+Gu96YHXDta7=YdYO4=wtR3mGVdkzAkG6tSzS-vo7toiPXA@mail.gmail.com>
- <20170714140605.GB16687@leverpostej> <20170714212717.GB1086@leverpostej>
- <CAKv+Gu9EB1nJPwvZh1Nti8tPVivqbwrE60t2v5zZp02DyaScxA@mail.gmail.com> <39a5ad84-4124-5b33-146a-cd4e48f3762f@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed, 19 Jul 2017 09:08:37 +0100
-Message-ID: <CAKv+Gu8vPNCK0J_bgfPDyos_hDrir_rKc154wfKtF_NqJ0LywQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 6/6] arm64: add VMAP_STACK and
- detect out-of-bounds SP
-To: Laura Abbott <labbott@redhat.com>
-Cc: Mark Rutland <mark.rutland@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Takahiro Akashi <akashi.takahiro@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Dave Martin <dave.martin@arm.com>, James Morse <james.morse@arm.com>, Laura Abbott <labbott@fedoraproject.org>, Will Deacon <will.deacon@arm.com>, Kees Cook <keescook@chromium.org>
+In-Reply-To: <CAGXu5jL0bFpWqUm9d2X7zpTO_CwPp94ywcLYoFyNcLuiwX8qAQ@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 1/1] mm/slub.c: add a naive detection of double free or
+ corruption
+To: Kees Cook <keescook@chromium.org>
+Cc: Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 18 July 2017 at 22:53, Laura Abbott <labbott@redhat.com> wrote:
-> On 07/15/2017 05:03 PM, Ard Biesheuvel wrote:
->> On 14 July 2017 at 22:27, Mark Rutland <mark.rutland@arm.com> wrote:
->>> On Fri, Jul 14, 2017 at 03:06:06PM +0100, Mark Rutland wrote:
->>>> On Fri, Jul 14, 2017 at 01:27:14PM +0100, Ard Biesheuvel wrote:
->>>>> On 14 July 2017 at 11:48, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
->>>>>> On 14 July 2017 at 11:32, Mark Rutland <mark.rutland@arm.com> wrote:
->>>>>>> On Thu, Jul 13, 2017 at 07:28:48PM +0100, Ard Biesheuvel wrote:
->>>>
->>>>>>>> OK, so here's a crazy idea: what if we
->>>>>>>> a) carve out a dedicated range in the VMALLOC area for stacks
->>>>>>>> b) for each stack, allocate a naturally aligned window of 2x the stack
->>>>>>>> size, and map the stack inside it, leaving the remaining space
->>>>>>>> unmapped
->>>>
->>>>>>> The logical ops (TST) and conditional branches (TB(N)Z, CB(N)Z) operate
->>>>>>> on XZR rather than SP, so to do this we need to get the SP value into a
->>>>>>> GPR.
->>>>>>>
->>>>>>> Previously, I assumed this meant we needed to corrupt a GPR (and hence
->>>>>>> stash that GPR in a sysreg), so I started writing code to free sysregs.
->>>>>>>
->>>>>>> However, I now realise I was being thick, since we can stash the GPR
->>>>>>> in the SP:
->>>>>>>
->>>>>>>         sub     sp, sp, x0      // sp = orig_sp - x0
->>>>>>>         add     x0, sp, x0      // x0 = x0 - (orig_sp - x0) == orig_sp
->>>>
->>>> That comment is off, and should say     x0 = x0 + (orig_sp - x0) == orig_sp
->>>>
->>>>>>>         sub     x0, x0, #S_FRAME_SIZE
->>>>>>>         tb(nz)  x0, #THREAD_SHIFT, overflow
->>>>>>>         add     x0, x0, #S_FRAME_SIZE
->>>>>>>         sub     x0, sp, x0
->>>>>
->>>>> You need a neg x0, x0 here I think
->>>>
->>>> Oh, whoops. I'd mis-simplified things.
->>>>
->>>> We can avoid that by storing orig_sp + orig_x0 in sp:
->>>>
->>>>       add     sp, sp, x0      // sp = orig_sp + orig_x0
->>>>       sub     x0, sp, x0      // x0 = orig_sp
->>>>       < check >
->>>>       sub     x0, sp, x0      // x0 = orig_x0
->>>>       sub     sp, sp, x0      // sp = orig_sp
->>>>
->>>> ... which works in a locally-built kernel where I've aligned all the
->>>> stacks.
+On 18.07.2017 23:04, Kees Cook wrote:
+> On Tue, Jul 18, 2017 at 12:56 PM, Alexander Popov <alex.popov@linux.com> wrote:
+>> On 17.07.2017 22:11, Kees Cook wrote:
+>>> Let's merge this with the proposed CONFIG_FREELIST_HARDENED, then the
+>>> performance change is behind a config, and we gain the rest of the
+>>> freelist protections at the same time:
 >>>
->>> FWIW, I've pushed out a somewhat cleaned-up (and slightly broken!)
->>> version of said kernel source to my arm64/vmap-stack-align branch [1].
->>> That's still missing the backtrace handling, IRQ stack alignment is
->>> broken at least on 64K pages, and there's still more cleanup and rework
->>> to do.
->>>
+>>> http://www.openwall.com/lists/kernel-hardening/2017/07/06/1
 >>
->> I have spent some time addressing the issues mentioned in the commit
->> log. Please take a look.
+>> Hello Kees,
 >>
->> git://git.kernel.org/pub/scm/linux/kernel/git/ardb/linux.git vmap-arm64-mark
->>
->
-> I used vmap-arm64-mark to compile kernels for a few days. It seemed to
-> work well enough.
->
+>> If I change BUG_ON() to VM_BUG_ON(), this check will work at least on Fedora
+>> since it has CONFIG_DEBUG_VM enabled. Debian based distros have this option
+>> disabled. Do you like that more than having this check under
+>> CONFIG_FREELIST_HARDENED?
+> 
+> I think there are two issues: first, this should likely be under
+> CONFIG_FREELIST_HARDENED since Christoph hasn't wanted to make these
+> changes enabled by default (if I'm understanding his earlier review
+> comments to me).
 
-Thanks for giving this a spin. Any comments on the performance impact?
-(if you happened to notice any)
+Ok, I'll rebase onto FREELIST_HARDENED and test it all together.
+
+> The second issue is what to DO when a double-free is
+> discovered. Is there any way to make it safe/survivable? If not, I
+> think it should just be BUG_ON(). If it can be made safe, then likely
+> a WARN_ONCE and do whatever is needed to prevent the double-free.
+
+Please correct me if I'm wrong. It seems to me that double-free is a dangerous
+situation that indicates some serious kernel bug (which might be maliciously
+exploited). So I would not trust / rely on the process which experiences a
+double-free error in the kernel mode.
+
+But I guess the reaction to it should depend on the Linux kernel policy of
+handling faults. Is it defined explicitly?
+
+Anyway, if we try to mitigate the effect from a double-free error _here_ (for
+example, skip putting the duplicated object to the freelist), I think we should
+do the same for other cases of double-free and memory corruptions.
+
+>> If you insist on putting this check under CONFIG_FREELIST_HARDENED, should I
+>> rebase onto your patch and send again?
+> 
+> That would be preferred for me -- I'd like to have both checks. :)
+
+Ok.
+
+Best regards,
+Alexander
