@@ -1,174 +1,134 @@
 From: Mark Rutland <mark.rutland@arm.com>
-Date: Wed, 19 Jul 2017 17:01:29 +0100
-Message-Id: <1500480092-28480-9-git-send-email-mark.rutland@arm.com>
+Date: Wed, 19 Jul 2017 17:01:30 +0100
+Message-Id: <1500480092-28480-10-git-send-email-mark.rutland@arm.com>
 In-Reply-To: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
 References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] [PATCH 08/11] arm64: expose user PAC bit positions via ptrace
+Subject: [kernel-hardening] [PATCH 09/11] arm64/kvm: preserve host HCR_EL2 value
 To: linux-arm-kernel@lists.infradead.org
 Cc: arnd@arndb.de, catalin.marinas@arm.com, christoffer.dall@linaro.org, Dave.Martin@arm.com, jiong.wang@arm.com, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, mark.rutland@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, yao.qi@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-When pointer authentication is in use, data/instruction pointers have a
-number of PAC bits inserted into them. The number and position of these
-bits depends on the configured TCR_ELx.TxSZ and whether tagging is
-enabled. ARMv8.3 allows tagging to differ for instruction and data
-pointers.
+When restoring HCR_EL2 for the host, KVM uses HCR_HOST_VHE_FLAGS, which
+is a constant value. This works today, as the host HCR_EL2 value is
+always the same, but this will get in the way of supporting extensions
+that require HCR_EL2 bits to be set conditionally for the host.
 
-For userspace debuggers to unwind the stack and/or to follow pointer
-chains, they need to be able to remove the PAC bits before attempting to
-use a pointer.
+To allow such features to work without KVM having to explicitly handle
+every possible host feature combination, this patch has KVM save/restore
+the host HCR when switching to/from a guest HCR.
 
-This patch adds a new structure with masks describing the location of
-the PAC bits in userspace instruction and data pointers (i.e. those
-addressable via TTBR0), which userspace can query via PTRACE_GETREGSET.
-By clearing these bits from pointers, userspace can acquire the PAC-less
-versions.
+For __{activate,deactivate}_traps(), the HCR save/restore is made common
+across the !VHE and VHE paths. As the host and guest HCR values must
+have E2H set when VHE is in use, register redirection should always be
+in effect at EL2, and this change should not adversely affect the VHE
+code.
 
-This new regset is exposed when the kernel is built with (user) pointer
-authentication support, and the feature is enabled. Otherwise, it is
-hidden.
+For the hyp TLB maintenance code, __tlb_switch_to_host_vhe() is updated
+to toggle the TGE bit with a RMW sequence, as we already do in
+__tlb_switch_to_guest_vhe().
+
+The now unused HCR_HOST_VHE_FLAGS definition is removed.
 
 Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-Cc: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Jiong Wang <jiong.wang@arm.com>
-Cc: Will Deacon <will.deacon@arm.com>
-Cc: Yao Qi <yao.qi@arm.com>
+Cc: Christoffer Dall <christoffer.dall@linaro.org>
+Cc: Marc Zyngier <marc.zyngier@arm.com>
+Cc: kvmarm@lists.cs.columbia.edu
 ---
- arch/arm64/include/asm/pointer_auth.h |  8 +++++++
- arch/arm64/include/uapi/asm/ptrace.h  |  5 +++++
- arch/arm64/kernel/ptrace.c            | 39 +++++++++++++++++++++++++++++++++++
- include/uapi/linux/elf.h              |  1 +
- 4 files changed, 53 insertions(+)
+ arch/arm64/include/asm/kvm_arm.h  | 1 -
+ arch/arm64/include/asm/kvm_host.h | 5 ++++-
+ arch/arm64/kvm/hyp/switch.c       | 5 +++--
+ arch/arm64/kvm/hyp/tlb.c          | 6 +++++-
+ 4 files changed, 12 insertions(+), 5 deletions(-)
 
-diff --git a/arch/arm64/include/asm/pointer_auth.h b/arch/arm64/include/asm/pointer_auth.h
-index 964da0c..ae72c7c 100644
---- a/arch/arm64/include/asm/pointer_auth.h
-+++ b/arch/arm64/include/asm/pointer_auth.h
-@@ -16,9 +16,11 @@
- #ifndef __ASM_POINTER_AUTH_H
- #define __ASM_POINTER_AUTH_H
+diff --git a/arch/arm64/include/asm/kvm_arm.h b/arch/arm64/include/asm/kvm_arm.h
+index c1267e8..7b9c898 100644
+--- a/arch/arm64/include/asm/kvm_arm.h
++++ b/arch/arm64/include/asm/kvm_arm.h
+@@ -84,7 +84,6 @@
+ 			 HCR_AMO | HCR_SWIO | HCR_TIDCP | HCR_RW)
+ #define HCR_VIRT_EXCP_MASK (HCR_VSE | HCR_VI | HCR_VF)
+ #define HCR_INT_OVERRIDE   (HCR_FMO | HCR_IMO)
+-#define HCR_HOST_VHE_FLAGS (HCR_RW | HCR_TGE | HCR_E2H)
  
-+#include <linux/bitops.h>
- #include <linux/random.h>
+ /* TCR_EL2 Registers bits */
+ #define TCR_EL2_RES1		((1 << 31) | (1 << 23))
+diff --git a/arch/arm64/include/asm/kvm_host.h b/arch/arm64/include/asm/kvm_host.h
+index d686300..0d7c3dd 100644
+--- a/arch/arm64/include/asm/kvm_host.h
++++ b/arch/arm64/include/asm/kvm_host.h
+@@ -198,10 +198,13 @@ struct kvm_cpu_context {
+ struct kvm_vcpu_arch {
+ 	struct kvm_cpu_context ctxt;
  
- #include <asm/cpufeature.h>
-+#include <asm/memory.h>
- #include <asm/sysreg.h>
+-	/* HYP configuration */
++	/* Guest HYP configuration */
+ 	u64 hcr_el2;
+ 	u32 mdcr_el2;
  
- #ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
-@@ -71,6 +73,12 @@ static inline void ptrauth_keys_dup(struct ptrauth_keys *old,
- 	*new = *old;
++	/* Host HYP configuration */
++	u64 host_hcr_el2;
++
+ 	/* Exception Information */
+ 	struct kvm_vcpu_fault_info fault;
+ 
+diff --git a/arch/arm64/kvm/hyp/switch.c b/arch/arm64/kvm/hyp/switch.c
+index 945e79c..6108813 100644
+--- a/arch/arm64/kvm/hyp/switch.c
++++ b/arch/arm64/kvm/hyp/switch.c
+@@ -71,6 +71,8 @@ static void __hyp_text __activate_traps(struct kvm_vcpu *vcpu)
+ {
+ 	u64 val;
+ 
++	vcpu->arch.host_hcr_el2 = read_sysreg(hcr_el2);
++
+ 	/*
+ 	 * We are about to set CPTR_EL2.TFP to trap all floating point
+ 	 * register accesses to EL2, however, the ARM ARM clearly states that
+@@ -110,7 +112,6 @@ static void __hyp_text __deactivate_traps_vhe(void)
+ 		    MDCR_EL2_TPMS;
+ 
+ 	write_sysreg(mdcr_el2, mdcr_el2);
+-	write_sysreg(HCR_HOST_VHE_FLAGS, hcr_el2);
+ 	write_sysreg(CPACR_EL1_FPEN, cpacr_el1);
+ 	write_sysreg(vectors, vbar_el1);
+ }
+@@ -123,7 +124,6 @@ static void __hyp_text __deactivate_traps_nvhe(void)
+ 	mdcr_el2 |= MDCR_EL2_E2PB_MASK << MDCR_EL2_E2PB_SHIFT;
+ 
+ 	write_sysreg(mdcr_el2, mdcr_el2);
+-	write_sysreg(HCR_RW, hcr_el2);
+ 	write_sysreg(CPTR_EL2_DEFAULT, cptr_el2);
  }
  
-+/*
-+ * The pointer bits used by a pointer authentication code.
-+ * If we were to use tagged pointers, bits 63:56 would also apply.
-+ */
-+#define ptrauth_pac_mask() 	GENMASK(54, VA_BITS)
-+
- #define mm_ctx_ptrauth_init(ctx) \
- 	ptrauth_keys_init(&(ctx)->ptrauth_keys)
- 
-diff --git a/arch/arm64/include/uapi/asm/ptrace.h b/arch/arm64/include/uapi/asm/ptrace.h
-index d1ff83d..5092fbf 100644
---- a/arch/arm64/include/uapi/asm/ptrace.h
-+++ b/arch/arm64/include/uapi/asm/ptrace.h
-@@ -90,6 +90,11 @@ struct user_hwdebug_state {
- 	}		dbg_regs[16];
- };
- 
-+struct user_pac_mask {
-+	__u64		data_mask;
-+	__u64		insn_mask;
-+};
-+
- #endif /* __ASSEMBLY__ */
- 
- #endif /* _UAPI__ASM_PTRACE_H */
-diff --git a/arch/arm64/kernel/ptrace.c b/arch/arm64/kernel/ptrace.c
-index 1b38c01..fae9d50 100644
---- a/arch/arm64/kernel/ptrace.c
-+++ b/arch/arm64/kernel/ptrace.c
-@@ -40,8 +40,10 @@
- #include <linux/elf.h>
- 
- #include <asm/compat.h>
-+#include <asm/cpufeature.h>
- #include <asm/debug-monitors.h>
- #include <asm/pgtable.h>
-+#include <asm/pointer_auth.h>
- #include <asm/syscall.h>
- #include <asm/traps.h>
- #include <asm/system_misc.h>
-@@ -701,6 +703,30 @@ static int system_call_set(struct task_struct *target,
- 	return ret;
+@@ -145,6 +145,7 @@ static void __hyp_text __deactivate_traps(struct kvm_vcpu *vcpu)
+ 	__deactivate_traps_arch()();
+ 	write_sysreg(0, hstr_el2);
+ 	write_sysreg(0, pmuserenr_el0);
++	write_sysreg(vcpu->arch.host_hcr_el2, hcr_el2);
  }
  
-+#ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
-+static int pac_mask_get(struct task_struct *target,
-+			const struct user_regset *regset,
-+			unsigned int pos, unsigned int count,
-+			void *kbuf, void __user *ubuf)
-+{
-+	/*
-+	 * The PAC bits can differ across data and instruction pointers
-+	 * depending on TCR_EL1.TBID*, which we may make use of in future, so
-+	 * we expose separate masks.
-+	 */
-+	unsigned long mask = ptrauth_pac_mask();
-+	struct user_pac_mask uregs = {
-+		.data_mask = mask,
-+		.insn_mask = mask,
-+	};
-+
-+	if (!cpus_have_cap(ARM64_HAS_ADDRESS_AUTH))
-+		return -EINVAL;
-+
-+	return user_regset_copyout(&pos, &count, &kbuf, &ubuf, &uregs, 0, -1);
-+}
-+#endif
-+
- enum aarch64_regset {
- 	REGSET_GPR,
- 	REGSET_FPR,
-@@ -710,6 +736,9 @@ enum aarch64_regset {
- 	REGSET_HW_WATCH,
- #endif
- 	REGSET_SYSTEM_CALL,
-+#ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
-+	REGSET_PAC_MASK,
-+#endif
- };
+ static void __hyp_text __activate_vm(struct kvm_vcpu *vcpu)
+diff --git a/arch/arm64/kvm/hyp/tlb.c b/arch/arm64/kvm/hyp/tlb.c
+index 73464a9..c2b0680 100644
+--- a/arch/arm64/kvm/hyp/tlb.c
++++ b/arch/arm64/kvm/hyp/tlb.c
+@@ -49,12 +49,16 @@ static hyp_alternate_select(__tlb_switch_to_guest,
  
- static const struct user_regset aarch64_regsets[] = {
-@@ -767,6 +796,16 @@ enum aarch64_regset {
- 		.get = system_call_get,
- 		.set = system_call_set,
- 	},
-+#ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
-+	[REGSET_PAC_MASK] = {
-+		.core_note_type = NT_ARM_PAC_MASK,
-+		.n = sizeof(struct user_pac_mask) / sizeof(u64),
-+		.size = sizeof(u64),
-+		.align = sizeof(u64),
-+		.get = pac_mask_get,
-+		/* this cannot be set dynamically */
-+	},
-+#endif
- };
+ static void __hyp_text __tlb_switch_to_host_vhe(struct kvm *kvm)
+ {
++	u64 val;
++
+ 	/*
+ 	 * We're done with the TLB operation, let's restore the host's
+ 	 * view of HCR_EL2.
+ 	 */
+ 	write_sysreg(0, vttbr_el2);
+-	write_sysreg(HCR_HOST_VHE_FLAGS, hcr_el2);
++	val = read_sysreg(hcr_el2);
++	val |= HCR_TGE;
++	write_sysreg(val, hcr_el2);
+ }
  
- static const struct user_regset_view user_aarch64_view = {
-diff --git a/include/uapi/linux/elf.h b/include/uapi/linux/elf.h
-index b5280db..60652f1 100644
---- a/include/uapi/linux/elf.h
-+++ b/include/uapi/linux/elf.h
-@@ -416,6 +416,7 @@
- #define NT_ARM_HW_BREAK	0x402		/* ARM hardware breakpoint registers */
- #define NT_ARM_HW_WATCH	0x403		/* ARM hardware watchpoint registers */
- #define NT_ARM_SYSTEM_CALL	0x404	/* ARM system call number */
-+#define NT_ARM_PAC_MASK		0x406	/* ARM pointer authentication code masks */
- #define NT_METAG_CBUF	0x500		/* Metag catch buffer registers */
- #define NT_METAG_RPIPE	0x501		/* Metag read pipeline state */
- #define NT_METAG_TLS	0x502		/* Metag TLS pointer */
+ static void __hyp_text __tlb_switch_to_host_nvhe(struct kvm *kvm)
 -- 
 1.9.1
