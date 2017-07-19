@@ -1,125 +1,82 @@
-Message-ID: <1500476300.22834.13.camel@nxp.com>
-From: Leonard Crestez <leonard.crestez@nxp.com>
-Date: Wed, 19 Jul 2017 17:58:20 +0300
-In-Reply-To: <CAJcbSZFr9KJTfGfiZo2fThoDkAE-D1OFf2YtELq4P6jX8syesQ@mail.gmail.com>
-References: <20170615011203.144108-1-thgarnie@google.com>
-	 <20170615011203.144108-2-thgarnie@google.com>
-	 <1500388566.11612.74.camel@nxp.com>
-	 <CAJcbSZEr8HPBwH1oVaHqPzAY4MS_=yqMoqPhcauuKu3cikB3uQ@mail.gmail.com>
-	 <1500398311.12096.30.camel@nxp.com>
-	 <CAJcbSZFr9KJTfGfiZo2fThoDkAE-D1OFf2YtELq4P6jX8syesQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH v10 2/3] arm/syscalls: Check address limit on user-mode
- return
-To: Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Stephen Rothwell <sfr@canb.auug.org.au>
-Cc: Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy
- Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van
- Riel <riel@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Petr Mladek <pmladek@suse.com>, Miroslav Benes <mbenes@suse.cz>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush
- Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Octavian Purdila <octavian.purdila@nxp.com>
+In-Reply-To: <CAMzpN2gF7QxDbVG-6ad3Qarcn1N_JT5tit9CMvQL95LQGeZivA@mail.gmail.com>
+References: <20170718223333.110371-1-thgarnie@google.com> <20170718223333.110371-7-thgarnie@google.com>
+ <CAMzpN2gF7QxDbVG-6ad3Qarcn1N_JT5tit9CMvQL95LQGeZivA@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Wed, 19 Jul 2017 08:40:14 -0700
+Message-ID: <CAJcbSZGqY=btU=+eWfgdhF0je0Yn_GxkymFHn+OV-1BuzgbRYw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC 06/22] kvm: Adapt assembly for PIE support
+To: Brian Gerst <brgerst@gmail.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Christopher Li <sparse@chrisli.org>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Peter Foley <pefoley2@pefoley.com>, Steven Rostedt <rostedt@goodmis.org>, Tim Chen <tim.c.chen@linux.intel.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, linux-pm <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 2017-07-18 at 12:04 -0700, Thomas Garnier wrote:
-> On Tue, Jul 18, 2017 at 10:18 AM, Leonard Crestez <leonard.crestez@nxp.com> wrote:
-> > On Tue, 2017-07-18 at 09:04 -0700, Thomas Garnier wrote:
-> > > On Tue, Jul 18, 2017 at 7:36 AM, Leonard Crestez <leonard.crestez@nxp.com> wrote:
-> > > > On Wed, 2017-06-14 at 18:12 -0700, Thomas Garnier wrote:
-> > > > > 
-> > > > > Ensure the address limit is a user-mode segment before returning to
-> > > > > user-mode. Otherwise a process can corrupt kernel-mode memory and
-> > > > > elevate privileges [1].
-> > > > > 
-> > > > > The set_fs function sets the TIF_SETFS flag to force a slow path on
-> > > > > return. In the slow path, the address limit is checked to be USER_DS if
-> > > > > needed.
-> > > > > 
-> > > > > The TIF_SETFS flag is added to _TIF_WORK_MASK shifting _TIF_SYSCALL_WORK
-> > > > > for arm instruction immediate support. The global work mask is too big
-> > > > > to used on a single instruction so adapt ret_fast_syscall.
-> > > > > 
-> > > > > @@ -571,6 +572,10 @@ do_work_pending(struct pt_regs *regs, unsigned int thread_flags, int syscall)
-> > > > >        * Update the trace code with the current status.
-> > > > >        */
-> > > > >       trace_hardirqs_off();
-> > > > > +
-> > > > > +     /* Check valid user FS if needed */
-> > > > > +     addr_limit_user_check();
-> > > > > +
-> > > > >       do {
-> > > > >               if (likely(thread_flags & _TIF_NEED_RESCHED)) {
-> > > > >                       schedule();
-> > > > This patch made it's way into linux-next next-20170717 and it seems to
-> > > > cause hangs when booting some boards over NFS (found via bisection). I
-> > > > don't know exactly what determines the issue but I can reproduce hangs
-> > > > if even if I just boot with init=/bin/bash and do stuff like
-> > > > 
-> > > > # sleep 1 & sleep 1 & sleep 1 & wait; wait; wait; echo done!
-> > > > 
-> > > > When this happens sysrq-t shows a sleep task hung in the 'R' state
-> > > > spinning in do_work_pending, so maybe there is a potential infinite
-> > > > loop here?
-> > > > 
-> > > > The addr_limit_user_check at the start of do_work_pending will check
-> > > > for TIF_FSCHECK once and clear it but the function loops while
-> > > > (thread_flags & _TIF_WORK_MASK), so it if TIF_FSCHECK is set again then
-> > > > the loop will never terminate. Does this make sense?
-> > > 
-> > > Yes, it does. Thanks for looking into this.
-> > > 
-> > > Can you try this change?
-> > > 
-> > > diff --git a/arch/arm/kernel/signal.c b/arch/arm/kernel/signal.c
-> > > index 3a48b54c6405..bc6ad7789568 100644
-> > > --- a/arch/arm/kernel/signal.c
-> > > +++ b/arch/arm/kernel/signal.c
-> > > @@ -573,12 +573,11 @@ do_work_pending(struct pt_regs *regs, unsigned
-> > > int thread_flags, int syscall)
-> > >   */
-> > >   trace_hardirqs_off();
-> > > 
-> > > - /* Check valid user FS if needed */
-> > > - addr_limit_user_check();
-> > > -
-> > >   do {
-> > >   if (likely(thread_flags & _TIF_NEED_RESCHED)) {
-> > >   schedule();
-> > > + } else if (thread_flags & _TIF_FSCHECK) {
-> > > + addr_limit_user_check();
-> > >   } else {
-> > >   if (unlikely(!user_mode(regs)))
-> > >   return 0;
-> > This does seem to work, it no longer hangs on boot in my setup. This is
-> > obviously only a very superficial test.
-> > 
-> > The new location of this check seems weird, it's not clear why it
-> > should be on an else path. Perhaps it should be moved to right before
-> > where current_thread_info()->flags is fetched again?
+On Tue, Jul 18, 2017 at 7:49 PM, Brian Gerst <brgerst@gmail.com> wrote:
+> On Tue, Jul 18, 2017 at 6:33 PM, Thomas Garnier <thgarnie@google.com> wrote:
+>> Change the assembly code to use only relative references of symbols for the
+>> kernel to be PIE compatible. The new __ASM_GET_PTR_PRE macro is used to
+>> get the address of a symbol on both 32 and 64-bit with PIE support.
+>>
+>> Position Independent Executable (PIE) support will allow to extended the
+>> KASLR randomization range below the -2G memory limit.
+>>
+>> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+>> ---
+>>  arch/x86/include/asm/kvm_host.h | 6 ++++--
+>>  arch/x86/kernel/kvm.c           | 6 ++++--
+>>  arch/x86/kvm/svm.c              | 4 ++--
+>>  3 files changed, 10 insertions(+), 6 deletions(-)
+>>
+>> diff --git a/arch/x86/include/asm/kvm_host.h b/arch/x86/include/asm/kvm_host.h
+>> index 87ac4fba6d8e..3041201a3aeb 100644
+>> --- a/arch/x86/include/asm/kvm_host.h
+>> +++ b/arch/x86/include/asm/kvm_host.h
+>> @@ -1352,9 +1352,11 @@ asmlinkage void kvm_spurious_fault(void);
+>>         ".pushsection .fixup, \"ax\" \n" \
+>>         "667: \n\t" \
+>>         cleanup_insn "\n\t"                   \
+>> -       "cmpb $0, kvm_rebooting \n\t"         \
+>> +       "cmpb $0, kvm_rebooting" __ASM_SEL(,(%%rip)) " \n\t" \
+>>         "jne 668b \n\t"                       \
+>> -       __ASM_SIZE(push) " $666b \n\t"        \
+>> +       __ASM_SIZE(push) "%%" _ASM_AX " \n\t"           \
+>> +       __ASM_GET_PTR_PRE(666b) "%%" _ASM_AX "\n\t"     \
+>> +       "xchg %%" _ASM_AX ", (%%" _ASM_SP ") \n\t"      \
+>>         "call kvm_spurious_fault \n\t"        \
+>>         ".popsection \n\t" \
+>>         _ASM_EXTABLE(666b, 667b)
+>> diff --git a/arch/x86/kernel/kvm.c b/arch/x86/kernel/kvm.c
+>> index 71c17a5be983..53b8ad162589 100644
+>> --- a/arch/x86/kernel/kvm.c
+>> +++ b/arch/x86/kernel/kvm.c
+>> @@ -618,8 +618,10 @@ asm(
+>>  ".global __raw_callee_save___kvm_vcpu_is_preempted;"
+>>  ".type __raw_callee_save___kvm_vcpu_is_preempted, @function;"
+>>  "__raw_callee_save___kvm_vcpu_is_preempted:"
+>> -"movq  __per_cpu_offset(,%rdi,8), %rax;"
+>> -"cmpb  $0, " __stringify(KVM_STEAL_TIME_preempted) "+steal_time(%rax);"
+>> +"leaq  __per_cpu_offset(%rip), %rax;"
+>> +"movq  (%rax,%rdi,8), %rax;"
+>> +"addq  " __stringify(KVM_STEAL_TIME_preempted) "+steal_time(%rip), %rax;"
+>
+> This doesn't look right.  It's accessing a per-cpu variable.  The
+> per-cpu section is an absolute, zero-based section and not subject to
+> relocation.
+>
 
-> I was hitting bug when I tried that.I think that's because you
-> basically let the signal handler do pending work before you check the
-> flag, that's not a good idea.
+PIE does not respect the zero-based section, it tries to have
+everything relative. Patch 16/22 also adapt per-cpu to work with PIE
+(while keeping the zero absolute design by default).
 
-> > If the purpose is hardening against buggy kernel code doing bad set_fs
-> > calls shouldn't this flag also be checked before looking at
-> > TIF_NEED_RESCHED and calling schedule()?
-> I am not sure to be honest. I expected schedule to only schedule the
-> processor to another task which would be fine given only the current
-> task have a bogus fs. I will put it first in case there is an edge
-> case scenario I missed.
-> 
-> What do you think? Let me know and I will look at changes all
-> architectures and testing them.
+>> +"cmpb  $0, (%rax);
+>>  "setne %al;"
+>>  "ret;"
+>>  ".popsection");
+>
+> --
+> Brian Gerst
 
-I don't know and I'd rather not guess on security issues. It's better
-if someone else reviews the code.
 
-Unless there is a very quick fix maybe this series should be removed or
-reverted from linux-next? A diagnosis of "system calls can sometimes
-hang on return" seems serious even for linux-next. Since it happens
-very rarely in most setups I can easily imagine somebody spending a lot
-of time digging at this.
 
---
-Regards,
-Leonard
+-- 
+Thomas
