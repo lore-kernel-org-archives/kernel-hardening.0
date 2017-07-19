@@ -1,25 +1,32 @@
-Date: Wed, 19 Jul 2017 09:02:27 -0500 (CDT)
+Date: Wed, 19 Jul 2017 09:08:55 -0500 (CDT)
 From: Christopher Lameter <cl@linux.com>
-In-Reply-To: <CAGXu5jL0bFpWqUm9d2X7zpTO_CwPp94ywcLYoFyNcLuiwX8qAQ@mail.gmail.com>
-Message-ID: <alpine.DEB.2.20.1707190901260.17716@nuc-kabylake>
-References: <1500309907-9357-1-git-send-email-alex.popov@linux.com> <20170717175459.GC14983@bombadil.infradead.org> <alpine.DEB.2.20.1707171303230.12109@nuc-kabylake> <c86c66c3-29d8-0b04-b4d1-f9f8192d8c4a@linux.com> <CAGXu5jK5j2pSVca9XGJhJ6pnF04p7S=K1Z432nzG2y4LfKhYjg@mail.gmail.com>
- <1edb137c-356f-81d6-4592-f5dfc68e8ea9@linux.com> <CAGXu5jL0bFpWqUm9d2X7zpTO_CwPp94ywcLYoFyNcLuiwX8qAQ@mail.gmail.com>
+In-Reply-To: <20170718223333.110371-1-thgarnie@google.com>
+Message-ID: <alpine.DEB.2.20.1707190906490.17764@nuc-kabylake>
+References: <20170718223333.110371-1-thgarnie@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH 1/1] mm/slub.c: add a naive detection of double free or
- corruption
-To: Kees Cook <keescook@chromium.org>
-Cc: Alexander Popov <alex.popov@linux.com>, Matthew Wilcox <willy@infradead.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: x86: PIE support and option to extend KASLR randomization
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?ISO-8859-2?Q?Radim_Kr=E8m=E1=F8?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Kees Cook <keescook@chromium.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Christopher Li <sparse@chrisli.org>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Peter Foley <pefoley2@pefoley.com>, Steven Rostedt <rostedt@goodmis.org>, Tim Chen <tim.c.chen@linux.intel.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, xen-devel@lists.xenproject.org, kvm@vger.kernel.org, linux-pm@vger.kernel.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 18 Jul 2017, Kees Cook wrote:
+On Tue, 18 Jul 2017, Thomas Garnier wrote:
 
-> I think there are two issues: first, this should likely be under
-> CONFIG_FREELIST_HARDENED since Christoph hasn't wanted to make these
-> changes enabled by default (if I'm understanding his earlier review
-> comments to me). The second issue is what to DO when a double-free is
-> discovered. Is there any way to make it safe/survivable? If not, I
+> Performance/Size impact:
+> Hackbench (50% and 1600% loads):
+>  - PIE enabled: 7% to 8% on half load, 10% on heavy load.
+> slab_test (average of 10 runs):
+>  - PIE enabled: 3% to 4%
+> Kernbench (average of 10 Half and Optimal runs):
+>  - PIE enabled: 5% to 6%
+>
+> Size of vmlinux (Ubuntu configuration):
+>  File size:
+>  - PIE disabled: 472928672 bytes (-0.000169% from baseline)
+>  - PIE enabled: 216878461 bytes (-54.14% from baseline)
 
-The simple thing is to not free the object when you discover this. That is
-what the existing debugging code does. But you do not have an easy way to
-fail at the point in the code that is patched here.
+Maybe we need something like CONFIG_PARANOIA so that we can determine at
+build time how much performance we want to sacrifice for performance?
+
+Its going to be difficult to understand what all these hardening config
+options do.
