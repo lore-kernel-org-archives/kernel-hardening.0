@@ -1,82 +1,32 @@
+References: <20170718223333.110371-1-thgarnie@google.com>
+ <20170718223333.110371-7-thgarnie@google.com>
+ <CAMzpN2gF7QxDbVG-6ad3Qarcn1N_JT5tit9CMvQL95LQGeZivA@mail.gmail.com>
+ <CAJcbSZGqY=btU=+eWfgdhF0je0Yn_GxkymFHn+OV-1BuzgbRYw@mail.gmail.com>
+From: "H. Peter Anvin" <hpa@zytor.com>
+Message-ID: <0cdd02e1-8bf2-41cd-f085-c338c2fd8e25@zytor.com>
+Date: Wed, 19 Jul 2017 15:27:20 -0700
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170719195249.akr6m2x65mhtsyvf@treble>
-References: <1500422614-94821-1-git-send-email-keescook@chromium.org>
- <1500422614-94821-3-git-send-email-keescook@chromium.org> <20170719193718.bvkkde5apbboudrk@treble>
- <CAGXu5jKqqRJ3H0fwwc5W14U14p-QzTe1=UWJggA2yxLuj23ZTA@mail.gmail.com> <20170719195249.akr6m2x65mhtsyvf@treble>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 19 Jul 2017 15:50:14 -0700
-Message-ID: <CAGXu5j+zeCU083g6fDEcXM-CYEHYfbkd1cbWoUTJP_0WtyYRpA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v6 2/2] x86/refcount: Implement fast refcount overflow protection
-To: Josh Poimboeuf <jpoimboe@redhat.com>
-Cc: Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAJcbSZGqY=btU=+eWfgdhF0je0Yn_GxkymFHn+OV-1BuzgbRYw@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC 06/22] kvm: Adapt assembly for PIE support
+To: Thomas Garnier <thgarnie@google.com>, Brian Gerst <brgerst@gmail.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Christopher Li <sparse@chrisli.org>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Peter Foley <pefoley2@pefoley.com>, Steven Rostedt <rostedt@goodmis.org>, Tim Chen <tim.c.chen@linux.intel.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, linux-pm <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 19, 2017 at 12:52 PM, Josh Poimboeuf <jpoimboe@redhat.com> wrote:
-> On Wed, Jul 19, 2017 at 12:45:19PM -0700, Kees Cook wrote:
->> > diff --git a/arch/x86/include/asm/refcount.h b/arch/x86/include/asm/refcount.h
->> > index 13b91e850a02..e7587db3487c 100644
->> > --- a/arch/x86/include/asm/refcount.h
->> > +++ b/arch/x86/include/asm/refcount.h
->> > @@ -15,6 +15,7 @@
->> >         ".pushsection .text.unlikely\n"                 \
->> >         "111:\tlea %[counter], %%" _ASM_CX "\n"         \
->> >         "112:\t" ASM_UD0 "\n"                           \
->> > +       ASM_UNREACHABLE                                 \
->> >         ".popsection\n"                                 \
->> >         "113:\n"                                        \
->> >         _ASM_EXTABLE_REFCOUNT(112b, 113b)
->> > diff --git a/include/linux/compiler-gcc.h b/include/linux/compiler-gcc.h
->> > index cd4bbe8242bd..85e0b8f42ca0 100644
->> > --- a/include/linux/compiler-gcc.h
->> > +++ b/include/linux/compiler-gcc.h
->> > @@ -202,15 +202,25 @@
->> >  #endif
->> >
->> >  #ifdef CONFIG_STACK_VALIDATION
->> > +
->> >  #define annotate_unreachable() ({                                      \
->> >         asm("%c0:\t\n"                                                  \
->> > -           ".pushsection .discard.unreachable\t\n"                     \
->> > -           ".long %c0b - .\t\n"                                        \
->> > -           ".popsection\t\n" : : "i" (__LINE__));                      \
->> > +           ".pushsection .discard.unreachable\n\t"                     \
->> > +           ".long %c0b - .\n\t"                                        \
->> > +           ".popsection\n\t" : : "i" (__LINE__));                      \
+On 07/19/17 08:40, Thomas Garnier wrote:
 >>
->> Is this just an indentation change?
->
-> This was sneaking in a fix to put the tab after the newline instead of
-> before it.  I figured it's not worth its own commit.
+>> This doesn't look right.  It's accessing a per-cpu variable.  The
+>> per-cpu section is an absolute, zero-based section and not subject to
+>> relocation.
+> 
+> PIE does not respect the zero-based section, it tries to have
+> everything relative. Patch 16/22 also adapt per-cpu to work with PIE
+> (while keeping the zero absolute design by default).
+> 
 
-Ah! Now I see it. Gotcha.
+This is silly.  The right thing is for PIE is to be explicitly absolute,
+without (%rip).  The use of (%rip) memory references for percpu is just
+an optimization.
 
->> >  })
->> > +
->> > +#define ASM_UNREACHABLE                                                        \
->> > +       "999: .pushsection .discard.unreachable\n\t"                    \
->> > +       ".long 999b - .\n\t"                                            \
->> > +       ".popsection\n\t"
->>
->> Just so I understand, we'll get a single byte added for each exception
->> case, but it'll get discarded during final link?
->
-> I think it's four bytes actually, but yeah, the section gets stripped at
-> vmlinux link time.
-
-Right, yes.
-
-BTW, I think this needs compiler.h coverage instead of the #else in
-compiler-gcc.h (since it's different from how annotate_unreachable is
-used only in compiler-gcc.h. I'll adjust.
-
-Also, in looking at CONFIG_STACK_VALIDATION, do you want it to just
-warn and skip, or do you want to error out the build if validation
-isn't available but it's in the .config?
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+	-hpa
