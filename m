@@ -1,15 +1,32 @@
 From: Mark Rutland <mark.rutland@arm.com>
-Date: Wed, 19 Jul 2017 17:01:32 +0100
-Message-Id: <1500480092-28480-12-git-send-email-mark.rutland@arm.com>
+Date: Wed, 19 Jul 2017 17:01:29 +0100
+Message-Id: <1500480092-28480-9-git-send-email-mark.rutland@arm.com>
 In-Reply-To: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
 References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] [PATCH 11/11] arm64: docs: document pointer authentication
+Subject: [kernel-hardening] [PATCH 08/11] arm64: expose user PAC bit positions via ptrace
 To: linux-arm-kernel@lists.infradead.org
 Cc: arnd@arndb.de, catalin.marinas@arm.com, christoffer.dall@linaro.org, Dave.Martin@arm.com, jiong.wang@arm.com, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, mark.rutland@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, yao.qi@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Now that we've added code to support pointer authentication, add some
-documentation so that people can figure out if/how to use it.
+When pointer authentication is in use, data/instruction pointers have a
+number of PAC bits inserted into them. The number and position of these
+bits depends on the configured TCR_ELx.TxSZ and whether tagging is
+enabled. ARMv8.3 allows tagging to differ for instruction and data
+pointers.
+
+For userspace debuggers to unwind the stack and/or to follow pointer
+chains, they need to be able to remove the PAC bits before attempting to
+use a pointer.
+
+This patch adds a new structure with masks describing the location of
+the PAC bits in userspace instruction and data pointers (i.e. those
+addressable via TTBR0), which userspace can query via PTRACE_GETREGSET.
+By clearing these bits from pointers, userspace can acquire the PAC-less
+versions.
+
+This new regset is exposed when the kernel is built with (user) pointer
+authentication support, and the feature is enabled. Otherwise, it is
+hidden.
 
 Signed-off-by: Mark Rutland <mark.rutland@arm.com>
 Cc: Catalin Marinas <catalin.marinas@arm.com>
@@ -17,134 +34,141 @@ Cc: Jiong Wang <jiong.wang@arm.com>
 Cc: Will Deacon <will.deacon@arm.com>
 Cc: Yao Qi <yao.qi@arm.com>
 ---
- Documentation/arm64/booting.txt                |  8 +++
- Documentation/arm64/elf_hwcaps.txt             |  5 ++
- Documentation/arm64/pointer-authentication.txt | 85 ++++++++++++++++++++++++++
- 3 files changed, 98 insertions(+)
- create mode 100644 Documentation/arm64/pointer-authentication.txt
+ arch/arm64/include/asm/pointer_auth.h |  8 +++++++
+ arch/arm64/include/uapi/asm/ptrace.h  |  5 +++++
+ arch/arm64/kernel/ptrace.c            | 39 +++++++++++++++++++++++++++++++++++
+ include/uapi/linux/elf.h              |  1 +
+ 4 files changed, 53 insertions(+)
 
-diff --git a/Documentation/arm64/booting.txt b/Documentation/arm64/booting.txt
-index 8d0df62..8df9f46 100644
---- a/Documentation/arm64/booting.txt
-+++ b/Documentation/arm64/booting.txt
-@@ -205,6 +205,14 @@ Before jumping into the kernel, the following conditions must be met:
-     ICC_SRE_EL2.SRE (bit 0) must be initialised to 0b0.
-   - The DT or ACPI tables must describe a GICv2 interrupt controller.
+diff --git a/arch/arm64/include/asm/pointer_auth.h b/arch/arm64/include/asm/pointer_auth.h
+index 964da0c..ae72c7c 100644
+--- a/arch/arm64/include/asm/pointer_auth.h
++++ b/arch/arm64/include/asm/pointer_auth.h
+@@ -16,9 +16,11 @@
+ #ifndef __ASM_POINTER_AUTH_H
+ #define __ASM_POINTER_AUTH_H
  
-+  For CPUs with pointer authentication functionality:
-+  - If EL3 is present:
-+    SCR_EL3.APK (bit 16) must be initialised to 0b1
-+    SCR_EL3.API (bit 17) must be initialised to 0b1
-+  - If the kernel is entered at EL1:
-+    HCR_EL2.APK (bit 40) must be initialised to 0b1
-+    HCR_EL2.API (bit 41) must be initialised to 0b1
-+
- The requirements described above for CPU mode, caches, MMUs, architected
- timers, coherency and system registers apply to all CPUs.  All CPUs must
- enter the kernel in the same exception level.
-diff --git a/Documentation/arm64/elf_hwcaps.txt b/Documentation/arm64/elf_hwcaps.txt
-index 7bc2921..91c4441 100644
---- a/Documentation/arm64/elf_hwcaps.txt
-+++ b/Documentation/arm64/elf_hwcaps.txt
-@@ -131,3 +131,8 @@ HWCAP_LRCPC
++#include <linux/bitops.h>
+ #include <linux/random.h>
  
-     Functionality implied by ID_AA64ISAR1_EL1.LRCPC == 0b0001.
+ #include <asm/cpufeature.h>
++#include <asm/memory.h>
+ #include <asm/sysreg.h>
  
-+HWCAP_APIA
+ #ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
+@@ -71,6 +73,12 @@ static inline void ptrauth_keys_dup(struct ptrauth_keys *old,
+ 	*new = *old;
+ }
+ 
++/*
++ * The pointer bits used by a pointer authentication code.
++ * If we were to use tagged pointers, bits 63:56 would also apply.
++ */
++#define ptrauth_pac_mask() 	GENMASK(54, VA_BITS)
 +
-+    EL0 AddPac and Auth functionality using APIAKey_EL1 is enabled, as
-+    described by Documentation/arm64/pointer-authentication.txt.
+ #define mm_ctx_ptrauth_init(ctx) \
+ 	ptrauth_keys_init(&(ctx)->ptrauth_keys)
+ 
+diff --git a/arch/arm64/include/uapi/asm/ptrace.h b/arch/arm64/include/uapi/asm/ptrace.h
+index d1ff83d..5092fbf 100644
+--- a/arch/arm64/include/uapi/asm/ptrace.h
++++ b/arch/arm64/include/uapi/asm/ptrace.h
+@@ -90,6 +90,11 @@ struct user_hwdebug_state {
+ 	}		dbg_regs[16];
+ };
+ 
++struct user_pac_mask {
++	__u64		data_mask;
++	__u64		insn_mask;
++};
 +
-diff --git a/Documentation/arm64/pointer-authentication.txt b/Documentation/arm64/pointer-authentication.txt
-new file mode 100644
-index 0000000..e9b5c6b
---- /dev/null
-+++ b/Documentation/arm64/pointer-authentication.txt
-@@ -0,0 +1,85 @@
-+Pointer authentication in AArch64 Linux
-+=======================================
+ #endif /* __ASSEMBLY__ */
+ 
+ #endif /* _UAPI__ASM_PTRACE_H */
+diff --git a/arch/arm64/kernel/ptrace.c b/arch/arm64/kernel/ptrace.c
+index 1b38c01..fae9d50 100644
+--- a/arch/arm64/kernel/ptrace.c
++++ b/arch/arm64/kernel/ptrace.c
+@@ -40,8 +40,10 @@
+ #include <linux/elf.h>
+ 
+ #include <asm/compat.h>
++#include <asm/cpufeature.h>
+ #include <asm/debug-monitors.h>
+ #include <asm/pgtable.h>
++#include <asm/pointer_auth.h>
+ #include <asm/syscall.h>
+ #include <asm/traps.h>
+ #include <asm/system_misc.h>
+@@ -701,6 +703,30 @@ static int system_call_set(struct task_struct *target,
+ 	return ret;
+ }
+ 
++#ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
++static int pac_mask_get(struct task_struct *target,
++			const struct user_regset *regset,
++			unsigned int pos, unsigned int count,
++			void *kbuf, void __user *ubuf)
++{
++	/*
++	 * The PAC bits can differ across data and instruction pointers
++	 * depending on TCR_EL1.TBID*, which we may make use of in future, so
++	 * we expose separate masks.
++	 */
++	unsigned long mask = ptrauth_pac_mask();
++	struct user_pac_mask uregs = {
++		.data_mask = mask,
++		.insn_mask = mask,
++	};
 +
-+Author: Mark Rutland <mark.rutland@arm.com>
-+Date: 2017-07-19
++	if (!cpus_have_cap(ARM64_HAS_ADDRESS_AUTH))
++		return -EINVAL;
 +
-+This document briefly describes the provision of pointer authentication
-+functionality in AArch64 Linux.
++	return user_regset_copyout(&pos, &count, &kbuf, &ubuf, &uregs, 0, -1);
++}
++#endif
 +
-+
-+Architecture overview
-+---------------------
-+
-+The ARMv8.3 Pointer Authentication extension adds primitives that can be
-+used to mitigate certain classes of attack where an attacker can corrupt
-+the contents of some memory (e.g. the stack).
-+
-+The extension uses a Pointer Authentication Code (PAC) to determine
-+whether pointers have been modified unexpectedly. A PAC is derived from
-+a pointer, another value (such as the stack pointer), and a secret key
-+held in system registers.
-+
-+The extension adds instructions to insert a valid PAC into a pointer,
-+and to verify/remove the PAC from a pointer. The PAC occupies a number
-+of high-order bits of the pointer, which varies dependent on the
-+configured virtual address size and whether pointer tagging is in use.
-+
-+A subset of these instructions have been allocated from the HINT
-+encoding space. In the absence of the extension (or when disabled),
-+these instructions behave as NOPs. Applications and libraries using
-+these instructions operate correctly regardless of the presence of the
-+extension.
-+
-+
-+Basic support
-+-------------
-+
-+When CONFIG_ARM64_POINTER_AUTHENTICATION is selected, and relevant HW
-+support is present, the kernel will assign a random APIAKey value to
-+each process at exec*() time. This key is shared by all threads within
-+the process, and the key is preserved across fork(). Presence of
-+functionality using APIAKey is advertised via HWCAP_APIA.
-+
-+Recent versions of GCC can compile code with APIAKey-based return
-+address protection when passed the -msign-return-address option. This
-+uses instructions in the HINT space, and such code can run on systems
-+without the pointer authentication extension.
-+
-+The remaining instruction and data keys (APIBKey, APDAKey, APDBKey) are
-+reserved for future use, and instructions using these keys must not be
-+used by software until a purpose and scope for their use has been
-+decided. To enable future software using these keys to function on
-+contemporary kernels, where possible, instructions using these keys are
-+made to behave as NOPs.
-+
-+The generic key (APGAKey) is currently unsupported. Instructions using
-+the generic key must not be used by software.
-+
-+
-+Debugging
-+---------
-+
-+When CONFIG_ARM64_POINTER_AUTHENTICATION is selected, and relevant HW
-+support is present, the kernel will expose the position of TTBR0 PAC
-+bits in the NT_ARM_PAC_MASK regset (struct user_pac_mask), which
-+userspace can acqure via PTRACE_GETREGSET.
-+
-+Separate masks are exposed for data pointers and instruction pointers,
-+as the set of PAC bits can vary between the two. Debuggers should not
-+expect that HWCAP_APIA implies the presence (or non-presence) of this
-+regset -- in future the kernel may support the use of APIBKey, APDAKey,
-+and/or APBAKey, even in the absence of APIAKey.
-+
-+Note that the masks apply to TTBR0 addresses, and are not valid to apply
-+to TTBR1 addresses (e.g. kernel pointers).
-+
-+
-+Virtualization
-+--------------
-+
-+When CONFIG_ARM64_POINTER_AUTHENTICATION is selected, and uniform HW
-+support is present, KVM will context switch all keys used by vCPUs.
-+Otherwise, the feature is disabled. When disabled, accesses to keys, or
-+use of instructions enabled within the guest will trap to EL2, and an
-+UNDEFINED exception will be injected into the guest.
+ enum aarch64_regset {
+ 	REGSET_GPR,
+ 	REGSET_FPR,
+@@ -710,6 +736,9 @@ enum aarch64_regset {
+ 	REGSET_HW_WATCH,
+ #endif
+ 	REGSET_SYSTEM_CALL,
++#ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
++	REGSET_PAC_MASK,
++#endif
+ };
+ 
+ static const struct user_regset aarch64_regsets[] = {
+@@ -767,6 +796,16 @@ enum aarch64_regset {
+ 		.get = system_call_get,
+ 		.set = system_call_set,
+ 	},
++#ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
++	[REGSET_PAC_MASK] = {
++		.core_note_type = NT_ARM_PAC_MASK,
++		.n = sizeof(struct user_pac_mask) / sizeof(u64),
++		.size = sizeof(u64),
++		.align = sizeof(u64),
++		.get = pac_mask_get,
++		/* this cannot be set dynamically */
++	},
++#endif
+ };
+ 
+ static const struct user_regset_view user_aarch64_view = {
+diff --git a/include/uapi/linux/elf.h b/include/uapi/linux/elf.h
+index b5280db..60652f1 100644
+--- a/include/uapi/linux/elf.h
++++ b/include/uapi/linux/elf.h
+@@ -416,6 +416,7 @@
+ #define NT_ARM_HW_BREAK	0x402		/* ARM hardware breakpoint registers */
+ #define NT_ARM_HW_WATCH	0x403		/* ARM hardware watchpoint registers */
+ #define NT_ARM_SYSTEM_CALL	0x404	/* ARM system call number */
++#define NT_ARM_PAC_MASK		0x406	/* ARM pointer authentication code masks */
+ #define NT_METAG_CBUF	0x500		/* Metag catch buffer registers */
+ #define NT_METAG_RPIPE	0x501		/* Metag read pipeline state */
+ #define NT_METAG_TLS	0x502		/* Metag TLS pointer */
 -- 
 1.9.1
