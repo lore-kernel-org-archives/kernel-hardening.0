@@ -1,109 +1,45 @@
-Date: Wed, 19 Jul 2017 02:23:37 -0400
-From: Cleric John Preston <Cleric.John.Preston@protonmail.com>
-Message-ID: <ARSpoDx2fffI86-jLgtoDl0FAjcdXuQ5baKGiHWJXZJq4bJdxv8MXVWhtWlPkToi7VG7bPPMTeD-DWeX9IVXc3MXb93aThPhTJ_xRuDCPHI=@protonmail.com>
-In-Reply-To: <CA+rthh8rBse+W_n80y2V48pK-LsiwSZj-Ysq1=RrTA4jyWwo7g@mail.gmail.com>
-References: <s-RLZ9Rez7ayjezQ5oIB5j2qnFqI2e7U7CQf9iGc882wCJB0ZBY7O3xqUyjgqkt3tIthstuRtaPsV_iombyZBru2qIZyjWPyDP7Xj7j9_cQ=@protonmail.com>
- <20170717150110.GA32089@kroah.com>
- <1WzwohmrS5BCBWVRHghDWZLcRvSX1dfUVqv_EAukcB1RdMdq-KUG6jjVFSQVaR1iWKToJORgS7yUXKg6JhR_n0zRILrxvKqoIIOwKbC_b_8=@protonmail.com>
- <CA+rthh8rBse+W_n80y2V48pK-LsiwSZj-Ysq1=RrTA4jyWwo7g@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: multipart/alternative;
-	boundary="b1_f02955a2e7a43eaf986a70aeaa40ae2f"
-Subject: [kernel-hardening] Re : Re: [kernel-hardening] Re : Re: Compilation error and probable exploit
-To: Mathias Krause <minipli@googlemail.com>
+In-Reply-To: <ARSpoDx2fffI86-jLgtoDl0FAjcdXuQ5baKGiHWJXZJq4bJdxv8MXVWhtWlPkToi7VG7bPPMTeD-DWeX9IVXc3MXb93aThPhTJ_xRuDCPHI=@protonmail.com>
+References: <s-RLZ9Rez7ayjezQ5oIB5j2qnFqI2e7U7CQf9iGc882wCJB0ZBY7O3xqUyjgqkt3tIthstuRtaPsV_iombyZBru2qIZyjWPyDP7Xj7j9_cQ=@protonmail.com>
+ <20170717150110.GA32089@kroah.com> <1WzwohmrS5BCBWVRHghDWZLcRvSX1dfUVqv_EAukcB1RdMdq-KUG6jjVFSQVaR1iWKToJORgS7yUXKg6JhR_n0zRILrxvKqoIIOwKbC_b_8=@protonmail.com>
+ <CA+rthh8rBse+W_n80y2V48pK-LsiwSZj-Ysq1=RrTA4jyWwo7g@mail.gmail.com> <ARSpoDx2fffI86-jLgtoDl0FAjcdXuQ5baKGiHWJXZJq4bJdxv8MXVWhtWlPkToi7VG7bPPMTeD-DWeX9IVXc3MXb93aThPhTJ_xRuDCPHI=@protonmail.com>
+From: Mathias Krause <minipli@googlemail.com>
+Date: Wed, 19 Jul 2017 10:30:43 +0200
+Message-ID: <CA+rthh9fhZCPL7kKxbpewewQw9ziNg_RxLLDvUbYuB_QZAAZBg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: Re : Re: [kernel-hardening] Re : Re: Compilation error and
+ probable exploit
+To: Cleric John Preston <Cleric.John.Preston@protonmail.com>
 Cc: "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "keescook@chromium.org" <keescook@chromium.org>, "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a multi-part message in MIME format.
+On 19 July 2017 at 08:23, Cleric John Preston
+<Cleric.John.Preston@protonmail.com> wrote:
+> OK but otherwise
+>
+> linux-4.13-rc1$ grep "warning:" file | grep "uninitialized"
+> drivers/net/wireless/wl3501_cs.c:665:9: warning: =E2=80=98sig.status=E2=
+=80=99 is used uninitialized in this function [-Wuninitialized]
+> drivers/net/wireless/wl3501_cs.c:668:12: warning: =E2=80=98sig.cap_info=
+=E2=80=99 may be used uninitialized in this function [-Wmaybe-uninitialized=
+]
+> drivers/net/wireless/wl3501_cs.c:670:12: warning: =E2=80=98sig.cap_info=
+=E2=80=99 may be used uninitialized in this function [-Wmaybe-uninitialized=
+]
+> ./include/linux/etherdevice.h:321:39: warning: =E2=80=98*((void *)&sig+29=
+)=E2=80=99 may be used uninitialized in this function [-Wmaybe-uninitialize=
+d]
+> ./include/linux/etherdevice.h:322:38: warning: =E2=80=98*((void *)&sig+33=
+)=E2=80=99 may be used uninitialized in this function [-Wmaybe-uninitialize=
+d]
+> drivers/net/wireless/wl3501_cs.c:677:46: warning: =E2=80=98sig.ssid.el.le=
+n=E2=80=99 may be used uninitialized in this function [-Wmaybe-uninitialize=
+d]
 
---b1_f02955a2e7a43eaf986a70aeaa40ae2f
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: base64
+False positive from what I can tell as gcc apparently cannot deduce
+that the insb() in wl3501_get_from_wla() will fill 'sig' completely,
+i.e. will initialize it.
 
-PiAtLS0tLS0tLSBPcmlnaW5hbCBNZXNzYWdlIC0tLS0tLS0tCj4gU3ViamVjdDogUmU6IFtrZXJu
-ZWwtaGFyZGVuaW5nXSBSZSA6IFJlOiBDb21waWxhdGlvbiBlcnJvciBhbmQgcHJvYmFibGUgZXhw
-bG9pdAo+IE9uIDE4IEp1bHkgMjAxNyBhdCAwODo0NiwgQ2xlcmljIEpvaG4gUHJlc3Rvbgo+IDxD
-bGVyaWMuSm9obi5QcmVzdG9uQHByb3Rvbm1haWwuY29tPiB3cm90ZToKPj4+IE9uIE1vbiwgSnVs
-IDE3LCAyMDE3IGF0IDEwOjI2OjUzQU0gLTA0MDAsIENsZXJpYyBKb2huIFByZXN0b24gd3JvdGU6
-Cj4+Pj4gSW4gY29tcGlsaW5nIGxpbnV4IDQuOS4zOCBJIGhhdmUgYSBsb3Qgb2YgZXJyb3IgLi4u
-Cj4+Pj4gSSBkbyBub3QgdGhpbmsgYW55dGhpbmcgaXMgd2FudGVkLgo+Pj4KPj4+IEFyZSB5b3Ug
-dXNpbmcgZ2NjLTc/IFdhcyB0aGlzIGRpZmZlcmVudCBmcm9tIDQuOS4zNz8KPj4KPj4gTm8gSSB1
-c2UgZ2NjLTUuMy4xIGFuZCBiZWNhdXNlIHRoaXMgaXMgdGhlIGxhdGVzdCB1bm9mZmljaWFsIHZl
-cnNpb24gb2YKPj4gZ3JzZWMgdGhhdCBJIGNhbiB1c2UuIFNlZQo+PiBodHRwczovL2dpdGh1Yi5j
-b20vbWluaXBsaS9saW51eC11bm9mZmljaWFsX2dyc2VjL3JlbGVhc2VzCj4gSW4gdGhpcyBjYXNl
-IHlvdSBzaG91bGQgY29tcGxhaW4gYXQgWzFdIGluc3RlYWQsIG5vdCBoZXJlLCBhcyB5b3VyCj4g
-cHJvYmxlbSAod2hpY2ggb25lLCBidHc/KSBpcyBub3QgcmVsYXRlZCB0byB0aGUgdXBzdHJlYW0g
-a2VybmVsCj4gdjQuOS4zOCBidXQgYSBoZWF2aWx5IHBhdGNoZWQgb25lLgo+IENoZWVycywKPiBN
-YXRoaWFzCgpPSyBidXQgb3RoZXJ3aXNlCmxpbnV4LTQuMTMtcmMxJCBncmVwICJ3YXJuaW5nOiIg
-ZmlsZSB8IGdyZXAgInVuaW5pdGlhbGl6ZWQiCmRyaXZlcnMvbmV0L3dpcmVsZXNzL3dsMzUwMV9j
-cy5jOjY2NTo5OiB3YXJuaW5nOiDigJhzaWcuc3RhdHVz4oCZIGlzIHVzZWQgdW5pbml0aWFsaXpl
-ZCBpbiB0aGlzIGZ1bmN0aW9uIFstV3VuaW5pdGlhbGl6ZWRdCmRyaXZlcnMvbmV0L3dpcmVsZXNz
-L3dsMzUwMV9jcy5jOjY2ODoxMjogd2FybmluZzog4oCYc2lnLmNhcF9pbmZv4oCZIG1heSBiZSB1
-c2VkIHVuaW5pdGlhbGl6ZWQgaW4gdGhpcyBmdW5jdGlvbiBbLVdtYXliZS11bmluaXRpYWxpemVk
-XQpkcml2ZXJzL25ldC93aXJlbGVzcy93bDM1MDFfY3MuYzo2NzA6MTI6IHdhcm5pbmc6IOKAmHNp
-Zy5jYXBfaW5mb+KAmSBtYXkgYmUgdXNlZCB1bmluaXRpYWxpemVkIGluIHRoaXMgZnVuY3Rpb24g
-Wy1XbWF5YmUtdW5pbml0aWFsaXplZF0KLi9pbmNsdWRlL2xpbnV4L2V0aGVyZGV2aWNlLmg6MzIx
-OjM5OiB3YXJuaW5nOiDigJgqKCh2b2lkICopJnNpZysyOSnigJkgbWF5IGJlIHVzZWQgdW5pbml0
-aWFsaXplZCBpbiB0aGlzIGZ1bmN0aW9uIFstV21heWJlLXVuaW5pdGlhbGl6ZWRdCi4vaW5jbHVk
-ZS9saW51eC9ldGhlcmRldmljZS5oOjMyMjozODogd2FybmluZzog4oCYKigodm9pZCAqKSZzaWcr
-MzMp4oCZIG1heSBiZSB1c2VkIHVuaW5pdGlhbGl6ZWQgaW4gdGhpcyBmdW5jdGlvbiBbLVdtYXli
-ZS11bmluaXRpYWxpemVkXQpkcml2ZXJzL25ldC93aXJlbGVzcy93bDM1MDFfY3MuYzo2Nzc6NDY6
-IHdhcm5pbmc6IOKAmHNpZy5zc2lkLmVsLmxlbuKAmSBtYXkgYmUgdXNlZCB1bmluaXRpYWxpemVk
-IGluIHRoaXMgZnVuY3Rpb24gWy1XbWF5YmUtdW5pbml0aWFsaXplZF0KCi0tLQoKUGxlYXNlIHVz
-ZSBhIFByb3ppdW0gSUk=
-
-
---b1_f02955a2e7a43eaf986a70aeaa40ae2f
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: base64
-
-PGRpdj48YnI+PC9kaXY+PGJsb2NrcXVvdGUgY2xhc3M9InByb3Rvbm1haWxfcXVvdGUiIHR5cGU9
-ImNpdGUiPjxkaXY+LS0tLS0tLS0gT3JpZ2luYWwgTWVzc2FnZSAtLS0tLS0tLTxicj48L2Rpdj48
-ZGl2PlN1YmplY3Q6IFJlOiBba2VybmVsLWhhcmRlbmluZ10gUmUgOiBSZTogQ29tcGlsYXRpb24g
-ZXJyb3IgYW5kIHByb2JhYmxlIGV4cGxvaXQ8YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+PGRpdj5P
-biAxOCBKdWx5IDIwMTcgYXQgMDg6NDYsIENsZXJpYyBKb2huIFByZXN0b248YnI+PC9kaXY+PGRp
-dj4mbHQ7Q2xlcmljLkpvaG4uUHJlc3RvbkBwcm90b25tYWlsLmNvbSZndDsgd3JvdGU6PGJyPjwv
-ZGl2PjxkaXY+Jmd0OyZndDsgT24gTW9uLCBKdWwgMTcsIDIwMTcgYXQgMTA6MjY6NTNBTSAtMDQw
-MCwgQ2xlcmljIEpvaG4gUHJlc3RvbiB3cm90ZTo8YnI+PC9kaXY+PGRpdj4mZ3Q7Jmd0OyZndDsg
-SW4gY29tcGlsaW5nIGxpbnV4IDQuOS4zOCBJIGhhdmUgYSBsb3Qgb2YgZXJyb3IgLi4uPGJyPjwv
-ZGl2PjxkaXY+Jmd0OyZndDsmZ3Q7IEkgZG8gbm90IHRoaW5rIGFueXRoaW5nIGlzIHdhbnRlZC48
-YnI+PC9kaXY+PGRpdj4mZ3Q7Jmd0Ozxicj48L2Rpdj48ZGl2PiZndDsmZ3Q7IEFyZSB5b3UgdXNp
-bmcgZ2NjLTc/IFdhcyB0aGlzIGRpZmZlcmVudCBmcm9tIDQuOS4zNz88YnI+PC9kaXY+PGRpdj4m
-Z3Q7PGJyPjwvZGl2PjxkaXY+Jmd0OyBObyBJIHVzZSBnY2MtNS4zLjEgYW5kIGJlY2F1c2UgdGhp
-cyBpcyB0aGUgbGF0ZXN0IHVub2ZmaWNpYWwgdmVyc2lvbiBvZjxicj48L2Rpdj48ZGl2PiZndDsg
-Z3JzZWMgdGhhdCBJIGNhbiB1c2UuIFNlZTxicj48L2Rpdj48ZGl2PiZndDsgaHR0cHM6Ly9naXRo
-dWIuY29tL21pbmlwbGkvbGludXgtdW5vZmZpY2lhbF9ncnNlYy9yZWxlYXNlczxicj48L2Rpdj48
-ZGl2Pjxicj48L2Rpdj48ZGl2PkluIHRoaXMgY2FzZSB5b3Ugc2hvdWxkIGNvbXBsYWluIGF0IFsx
-XSBpbnN0ZWFkLCBub3QgaGVyZSwgYXMgeW91cjxicj48L2Rpdj48ZGl2PnByb2JsZW0gKHdoaWNo
-IG9uZSwgYnR3PykgaXMgbm90IHJlbGF0ZWQgdG8gdGhlIHVwc3RyZWFtIGtlcm5lbDxicj48L2Rp
-dj48ZGl2PnY0LjkuMzggYnV0IGEgaGVhdmlseSBwYXRjaGVkIG9uZS48YnI+PC9kaXY+PGRpdj48
-YnI+PC9kaXY+PGRpdj5DaGVlcnMsPGJyPjwvZGl2PjxkaXY+TWF0aGlhczxicj48L2Rpdj48L2Js
-b2NrcXVvdGU+PGRpdj48YnI+PC9kaXY+PGRpdj48c3BhbiBjbGFzcz0ic2hvcnRfdGV4dCIgaWQ9
-InJlc3VsdF9ib3giIGxhbmc9ImVuIj48c3BhbiBjbGFzcz0iIj5PSyBidXQgb3RoZXJ3aXNlPC9z
-cGFuPjwvc3Bhbj48YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+PGRpdj5saW51eC00LjEzLXJjMSQg
-Z3JlcCAid2FybmluZzoiIGZpbGUgfCBncmVwICJ1bmluaXRpYWxpemVkIjxicj48L2Rpdj48ZGl2
-PmRyaXZlcnMvbmV0L3dpcmVsZXNzL3dsMzUwMV9jcy5jOjY2NTo5OiB3YXJuaW5nOiDigJhzaWcu
-c3RhdHVz4oCZIGlzIHVzZWQgdW5pbml0aWFsaXplZCBpbiB0aGlzIGZ1bmN0aW9uIFstV3VuaW5p
-dGlhbGl6ZWRdPGJyPjwvZGl2PjxkaXY+ZHJpdmVycy9uZXQvd2lyZWxlc3Mvd2wzNTAxX2NzLmM6
-NjY4OjEyOiB3YXJuaW5nOiDigJhzaWcuY2FwX2luZm/igJkgbWF5IGJlIHVzZWQgdW5pbml0aWFs
-aXplZCBpbiB0aGlzIGZ1bmN0aW9uIFstV21heWJlLXVuaW5pdGlhbGl6ZWRdPGJyPjwvZGl2Pjxk
-aXY+ZHJpdmVycy9uZXQvd2lyZWxlc3Mvd2wzNTAxX2NzLmM6NjcwOjEyOiB3YXJuaW5nOiDigJhz
-aWcuY2FwX2luZm/igJkgbWF5IGJlIHVzZWQgdW5pbml0aWFsaXplZCBpbiB0aGlzIGZ1bmN0aW9u
-IFstV21heWJlLXVuaW5pdGlhbGl6ZWRdPGJyPjwvZGl2PjxkaXY+Li9pbmNsdWRlL2xpbnV4L2V0
-aGVyZGV2aWNlLmg6MzIxOjM5OiB3YXJuaW5nOiDigJgqKCh2b2lkICopJmFtcDtzaWcrMjkp4oCZ
-IG1heSBiZSB1c2VkIHVuaW5pdGlhbGl6ZWQgaW4gdGhpcyBmdW5jdGlvbiBbLVdtYXliZS11bmlu
-aXRpYWxpemVkXTxicj48L2Rpdj48ZGl2Pi4vaW5jbHVkZS9saW51eC9ldGhlcmRldmljZS5oOjMy
-MjozODogd2FybmluZzog4oCYKigodm9pZCAqKSZhbXA7c2lnKzMzKeKAmSBtYXkgYmUgdXNlZCB1
-bmluaXRpYWxpemVkIGluIHRoaXMgZnVuY3Rpb24gWy1XbWF5YmUtdW5pbml0aWFsaXplZF08YnI+
-PC9kaXY+PGRpdj5kcml2ZXJzL25ldC93aXJlbGVzcy93bDM1MDFfY3MuYzo2Nzc6NDY6IHdhcm5p
-bmc6IOKAmHNpZy5zc2lkLmVsLmxlbuKAmSBtYXkgYmUgdXNlZCB1bmluaXRpYWxpemVkIGluIHRo
-aXMgZnVuY3Rpb24gWy1XbWF5YmUtdW5pbml0aWFsaXplZF08YnI+PC9kaXY+PGRpdj48YnI+PC9k
-aXY+PGRpdj48ZGl2PjxkaXY+PGJyPjwvZGl2PjwvZGl2PjxkaXY+LS0tPGJyPjwvZGl2PjxkaXY+
-PGRpdj48YnI+PC9kaXY+PC9kaXY+PGRpdiBjbGFzcz0icHJvdG9ubWFpbF9zaWduYXR1cmVfYmxv
-Y2sgIj48ZGl2IGNsYXNzPSJwcm90b25tYWlsX3NpZ25hdHVyZV9ibG9jay11c2VyICI+PGRpdj5Q
-bGVhc2UgdXNlIGEgUHJveml1bSBJSTxicj48L2Rpdj48L2Rpdj48L2Rpdj48ZGl2Pjxicj48L2Rp
-dj48L2Rpdj4=
-
-
-
---b1_f02955a2e7a43eaf986a70aeaa40ae2f--
+Cheers,
+Mathias
