@@ -1,29 +1,80 @@
+References: <20170718223333.110371-1-thgarnie@google.com>
+ <20170718223333.110371-8-thgarnie@google.com>
+From: "H. Peter Anvin" <hpa@zytor.com>
+Message-ID: <73652a62-579d-a28a-dc89-0ff8795f0f00@zytor.com>
+Date: Wed, 19 Jul 2017 15:58:41 -0700
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170719193718.bvkkde5apbboudrk@treble>
-References: <1500422614-94821-1-git-send-email-keescook@chromium.org>
- <1500422614-94821-3-git-send-email-keescook@chromium.org> <20170719193718.bvkkde5apbboudrk@treble>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 19 Jul 2017 16:12:37 -0700
-Message-ID: <CAGXu5j+EkpmO2tB71n9rEjb_6GfWza3qBLUDTuhjZwnAYTX5WA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v6 2/2] x86/refcount: Implement fast refcount overflow protection
-To: Josh Poimboeuf <jpoimboe@redhat.com>
-Cc: Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20170718223333.110371-8-thgarnie@google.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC 07/22] x86: relocate_kernel - Adapt assembly for PIE support
+To: Thomas Garnier <thgarnie@google.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Christopher Li <sparse@chrisli.org>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Peter Foley <pefoley2@pefoley.com>, Steven Rostedt <rostedt@goodmis.org>, Tim Chen <tim.c.chen@linux.intel.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>
+Cc: x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, xen-devel@lists.xenproject.org, kvm@vger.kernel.org, linux-pm@vger.kernel.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 19, 2017 at 12:37 PM, Josh Poimboeuf <jpoimboe@redhat.com> wrote:
-> +#define ASM_UNREACHABLE                                                        \
-> +       "999: .pushsection .discard.unreachable\n\t"                    \
-> +       ".long 999b - .\n\t"                                            \
-> +       ".popsection\n\t"
+On 07/18/17 15:33, Thomas Garnier wrote:
+> Change the assembly code to use only relative references of symbols for the
+> kernel to be PIE compatible.
+> 
+> Position Independent Executable (PIE) support will allow to extended the
+> KASLR randomization range below the -2G memory limit.
+> 
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> ---
+>  arch/x86/kernel/relocate_kernel_64.S | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/arch/x86/kernel/relocate_kernel_64.S b/arch/x86/kernel/relocate_kernel_64.S
+> index 98111b38ebfd..da817d1628ac 100644
+> --- a/arch/x86/kernel/relocate_kernel_64.S
+> +++ b/arch/x86/kernel/relocate_kernel_64.S
+> @@ -186,7 +186,7 @@ identity_mapped:
+>  	movq	%rax, %cr3
+>  	lea	PAGE_SIZE(%r8), %rsp
+>  	call	swap_pages
+> -	movq	$virtual_mapped, %rax
+> +	leaq	virtual_mapped(%rip), %rax
+>  	pushq	%rax
+>  	ret
+>  
 
-Will this end up running into the same bug fixed with
-3d1e236022cc1426b0834565995ddee2ca231cee and the __LINE__ macro? I
-could tell under which conditions gcc would do this kind of merging...
+This is completely wrong.  The whole point is that %rip here is on an
+identity-mapped page, which means that its offset to the actual symbol
+is ill-defined.
 
--Kees
+The use of pushq/ret to do an indirect jump is bizarre, though, instead of:
 
--- 
-Kees Cook
-Pixel Security
+	pushq %r8
+	ret
+
+one ought to simply do
+
+	jmpq *%r8
+
+I think the author of this code was confused by the fact that we have to
+use this construct to do a *far* jump.
+
+There are some other very bizarre constructs in this file, that I can
+only assume comes from clumsy porting from 32 bits, for example:
+
+	call 1f
+1:
+	popq %r8
+	subq $(1b - relocate_kernel), %r8
+
+... instead of the much simpler ...
+
+	leaq relocate_kernel(%rip), %r8
+
+With this value in %r8 anyway, you can simply do:
+
+	leaq (virtual_mapped - relocate_kernel)(%r8), %rax
+	jmpq *%rax
+
+This patchset scares me.  There seems to be a lot of places where you
+have not been very aware of what is actually happening in the code, nor
+have done research about how the ABIs actually work and affect things.
+
+Sorry.
+
+	-hpa
