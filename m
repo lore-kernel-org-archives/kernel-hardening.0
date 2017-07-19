@@ -1,44 +1,51 @@
+MIME-Version: 1.0
+In-Reply-To: <CAMzpN2g5YkFZTY7yfvG03QUKc-=asKMZbqke9g4e2oT_pgg7Yw@mail.gmail.com>
+References: <20170718223333.110371-1-thgarnie@google.com> <20170718223333.110371-17-thgarnie@google.com>
+ <CAMzpN2g5YkFZTY7yfvG03QUKc-=asKMZbqke9g4e2oT_pgg7Yw@mail.gmail.com>
 From: Thomas Garnier <thgarnie@google.com>
-Date: Wed, 19 Jul 2017 10:59:00 -0700
-Message-Id: <20170719175900.124074-3-thgarnie@google.com>
-In-Reply-To: <20170719175900.124074-1-thgarnie@google.com>
-References: <20170719175900.124074-1-thgarnie@google.com>
-Subject: [kernel-hardening] [PATCH 3/3] arm64/syscalls: Move address limit check in loop
-To: Russell King <linux@armlinux.org.uk>, Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Dave Martin <Dave.Martin@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Pratyush Anand <panand@redhat.com>, leonard.crestez@nxp.com
-Cc: linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Wed, 19 Jul 2017 11:26:32 -0700
+Message-ID: <CAJcbSZFXrDZikh9P5M81ztkiMv7EhO4x0bzBdYE8RYC=HMZgqg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC 16/22] x86/percpu: Adapt percpu for PIE support
+To: Brian Gerst <brgerst@gmail.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Christopher Li <sparse@chrisli.org>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Peter Foley <pefoley2@pefoley.com>, Steven Rostedt <rostedt@goodmis.org>, Tim Chen <tim.c.chen@linux.intel.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, linux-pm <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The original bug was reported on arm but I am fixing arm64 too because
-it has a similar code pattern.
+On Tue, Jul 18, 2017 at 8:08 PM, Brian Gerst <brgerst@gmail.com> wrote:
+> On Tue, Jul 18, 2017 at 6:33 PM, Thomas Garnier <thgarnie@google.com> wrote:
+>> Perpcu uses a clever design where the .percu ELF section has a virtual
+>> address of zero and the relocation code avoid relocating specific
+>> symbols. It makes the code simple and easily adaptable with or without
+>> SMP support.
+>>
+>> This design is incompatible with PIE because generated code always try to
+>> access the zero virtual address relative to the default mapping address.
+>> It becomes impossible when KASLR is configured to go below -2G. This
+>> patch solves this problem by removing the zero mapping and adapting the GS
+>> base to be relative to the expected address. These changes are done only
+>> when PIE is enabled. The original implementation is kept as-is
+>> by default.
+>
+> The reason the per-cpu section is zero-based on x86-64 is to
+> workaround GCC hardcoding the stack protector canary at %gs:40.  So
+> this patch is incompatible with CONFIG_STACK_PROTECTOR.
 
-The work pending loop can call set_fs after addr_limit_user_check
-removed the _TIF_FSCHECK flag. To prevent the infinite loop, move the
-addr_limit_user_check call at the beginning of the loop.
+Ok, that make sense. I don't want this feature to not work with
+CONFIG_CC_STACKPROTECTOR*. One way to fix that would be adding a GDT
+entry for gs so gs:40 points to the correct memory address and
+gs:[rip+XX] works correctly through the MSR. Given the separate
+discussion on mcmodel, I am going first to check if we can move from
+PIE to PIC with a mcmodel=small or medium that would remove the percpu
+change requirement. I tried before without success but I understand
+better percpu and other components so maybe I can make it work.
 
-Fixes: cf7de27ab351 ("arm64/syscalls: Check address limit on user-mode return")
-Reported-by: Leonard Crestez <leonard.crestez@nxp.com>
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
----
- arch/arm64/kernel/signal.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+Thanks a lot for the feedback.
 
-diff --git a/arch/arm64/kernel/signal.c b/arch/arm64/kernel/signal.c
-index e3e3293d1123..8e2705983e1d 100644
---- a/arch/arm64/kernel/signal.c
-+++ b/arch/arm64/kernel/signal.c
-@@ -751,10 +751,10 @@ asmlinkage void do_notify_resume(struct pt_regs *regs,
- 	 */
- 	trace_hardirqs_off();
- 
--	/* Check valid user FS if needed */
--	addr_limit_user_check();
--
- 	do {
-+		/* Check valid user FS if needed */
-+		addr_limit_user_check();
-+
- 		if (thread_flags & _TIF_NEED_RESCHED) {
- 			schedule();
- 		} else {
+>
+> --
+> Brian Gerst
+
+
+
 -- 
-2.14.0.rc0.284.gd933b75aa4-goog
+Thomas
