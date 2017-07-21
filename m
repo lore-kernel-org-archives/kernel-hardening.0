@@ -1,91 +1,113 @@
-Date: Fri, 21 Jul 2017 18:05:09 +0100
+Date: Fri, 21 Jul 2017 18:05:24 +0100
 From: Dave Martin <Dave.Martin@arm.com>
-Message-ID: <20170721170509.GC1538@e103592.cambridge.arm.com>
+Message-ID: <20170721170523.GD1538@e103592.cambridge.arm.com>
 References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
+ <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] Re: [PATCH 00/11] ARMv8.3 pointer authentication userspace support
+In-Reply-To: <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
+Subject: [kernel-hardening] Re: [PATCH 01/11] arm64: docs: describe ELF hwcaps
 To: Mark Rutland <mark.rutland@arm.com>
 Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, arnd@arndb.de, jiong.wang@arm.com, marc.zyngier@arm.com, catalin.marinas@arm.com, yao.qi@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, kvmarm@lists.cs.columbia.edu, christoffer.dall@linaro.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 19, 2017 at 05:01:21PM +0100, Mark Rutland wrote:
-> This series adds support for the ARMv8.3 pointer authentication extension.
+On Wed, Jul 19, 2017 at 05:01:22PM +0100, Mark Rutland wrote:
+> We don't document our ELF hwcaps, leaving developers to interpret them
+> according to hearsay, guesswork, or (in exceptional cases) inspection of
+> the current kernel code.
 > 
-> Since RFC [1]:
-> * Make the KVM context switch (semi-lazy)
-> * Rebase to v4.13-rc1
-> * Improve pointer authentication documentation
-> * Add hwcap documentation
-> * Various minor cleanups
+> This is less than optimal, and it would be far better if we had some
+> definitive description of each of the ELF hwcaps that developers could
+> refer to.
 > 
-> I've pushed the series to the arm64/pointer-auth branch [2] of my linux tree.
-> I've also pushed out a necessary bootwrapper patch to the pointer-auth branch
-> [3] of my bootwrapper repo.
+> This patch adds a document describing the (native) arm64 ELF hwcaps.
+
+Minor nit: what do the hwcaps have to do with ELF really?  Can we just
+call them "hwcaps"?
+
+I'm not sure of the history here.
+
+> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+> Cc: Catalin Marinas <catalin.marinas@arm.com>
+> Cc: Dave Martin <Dave.Martin@arm.com>
+> Cc: Suzuki K Poulose <suzuki.poulose@arm.com>
+> Cc: Will Deacon <will.deacon@arm.com>
+> ---
+>  Documentation/arm64/elf_hwcaps.txt | 133 +++++++++++++++++++++++++++++++++++++
+>  1 file changed, 133 insertions(+)
+>  create mode 100644 Documentation/arm64/elf_hwcaps.txt
+> 
+> diff --git a/Documentation/arm64/elf_hwcaps.txt b/Documentation/arm64/elf_hwcaps.txt
+> new file mode 100644
+> index 0000000..7bc2921
+> --- /dev/null
+> +++ b/Documentation/arm64/elf_hwcaps.txt
+> @@ -0,0 +1,133 @@
+> +ARM64 ELF hwcaps
+> +================
+> +
+> +This document describes the usage and semantics of the arm64 ELF hwcaps.
+> +
+> +
+> +1. Introduction
+> +---------------
+> +
+> +Some hardware or software features are only available on some CPU
+> +implementations, and/or with certain kernel configurations, but have no
+> +architected discovery mechanism available to userspace code at EL0. The
+> +kernel exposes the presence of these features to userspace through a set
+> +of flags called hwcaps, exposed in the auxilliary vector.
+> +
+> +Userspace software can test for features by acquiring the AT_HWCAP entry
+> +of the auxilliary vector, and testing whether the relevant flags are
+> +set, e.g.
+> +
+> +bool floating_point_is_present(void)
+> +{
+> +	unsigned long hwcaps = getauxval(AT_HWCAP);
+> +	if (hwcaps & HWCAP_FP)
+> +		return true;
+> +
+> +	return false;
+> +}
+> +
+> +Where software relies on a feature described by a hwcap, it should check
+> +the relevant hwcap flag to verify that the feature is present before
+> +attempting to make use of the feature.
+> +
+> +Features cannot be probed reliably through other means. When a feature
+> +is not available, attempting to use it may result in unpredictable
+
+This says that features cannot be probed reliably via the (emulated) ID
+registers available with HWCAP_CPUID.
+
+So, what use is the ID register emulation?
+
+For each of hwcaps and cpuid, a particular feature may be reported as
+present (y), absent (n), or not described at all (x):
+
+hwcap>    x n y
+cpuid:
+   x      N N Y
+   n      N N
+   y      Y   Y
+
+I've filled in the straightforward cases, where software may (Y) or must
+not (N) use the feature.
+
+In the cases left blank, hwcap and cpuid disagree.
+
+Are we confident that should never be observed -- i.e., it's a kernel
+bug if seen?  If so, we can fill Ys in there.  But we need to be clear
+about cases where the hwcap doesn't mean exactly the same as the
+corresponding CPUID feature.  The hwcap may tell software it can assume
+that certain kernel ABI extensions related to that CPU feature are
+available for example.
+
+This also affects how HWCAP_CPUID is described below.
 
 [...]
-
-> Open questions
-> ==============
-> 
-> * Should keys be per-thread rather than per-process?
-> 
->   My understanding is that glibc can't (currently) handle threads having
->   different keys, but it might be that another libc would prefer per-thread
-
-Can you elaborate?
-
-It's not valid to do a function return from one thread to another.
-
->   keys. If desired, we could add a mechanism for a thread to re-initialize its
->   keys without an exec*().
-
-Switching from per-process to per-thread keys would be an ABI break
-unless it's opt-in.
-
-> * Do we need a separate hwcap for XPAC* instructions?
-> 
->   Library code performing stack unwinding may need to interoperate with other
->   code which may or may not be using pointer authentication. It may be
->   desirable to use XPAC* rather than attempting authentication and/or acquiring
->   the PAC masks via ptrace.
-> 
->   As we may expose APIBKey (potentially separately from APIAKey) in future,
->   HWCAP_APIA cannot be used to determine when these instruction can/should be
->   used.
-
-Can the availability of XPAC* be determined from the feature regs, or
-is that insufficient?
-
-This is a little different from the keys, which the kernel must
-provision / allow to be set in order for them to be useful.
-
-> * Should we expose a per-process data key now, to go with the insn key?
-> 
->   I don't currently have a use-case for this.
-> 
-> * Should we expose generic authentication (i.e. APGAKey)?
-> 
->   I don't currently have a use-case for this.
-
-I guess there's no ABI impact for adding these later, so maybe it's not
-urgent if nobody shouts.
-
-> * Should the kernel remove PACs when unwinding user stacks?
-> 
->   This is simple to do, but it's arguably placing a policy in the kernel as to
->   what we expect user stacks to look like. Regardless, userspace will have to
->   perform this when unwinding with DWARF.
-
-Not sure.  This is arguably not more gross than related things the
-kernel already does, and may be inefficient for userspace to do e.g.,
-when capturing perf backtraces.  Still gross though.
-
-Side question: do you know whether there will be DWARF / ELF annotations
-for this?  Since ptr auth is a compile-time option, it is plausible that
-an attribute could be added to indicate that an image uses it.
 
 Cheers
 ---Dave
