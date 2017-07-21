@@ -1,113 +1,70 @@
-Date: Fri, 21 Jul 2017 18:05:24 +0100
-From: Dave Martin <Dave.Martin@arm.com>
-Message-ID: <20170721170523.GD1538@e103592.cambridge.arm.com>
-References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
- <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] Re: [PATCH 01/11] arm64: docs: describe ELF hwcaps
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, arnd@arndb.de, jiong.wang@arm.com, marc.zyngier@arm.com, catalin.marinas@arm.com, yao.qi@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, kvmarm@lists.cs.columbia.edu, christoffer.dall@linaro.org
+Date: Fri, 21 Jul 2017 14:22:55 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Message-Id: <20170721142255.586224f0db9cf0714e654859@linux-foundation.org>
+In-Reply-To: <20170720091106.kigtr6zy7pjgk2s6@gmail.com>
+References: <1500422614-94821-1-git-send-email-keescook@chromium.org>
+	<20170720091106.kigtr6zy7pjgk2s6@gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v6 0/2] x86: Implement fast refcount overflow protection
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-kernel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 19, 2017 at 05:01:22PM +0100, Mark Rutland wrote:
-> We don't document our ELF hwcaps, leaving developers to interpret them
-> according to hearsay, guesswork, or (in exceptional cases) inspection of
-> the current kernel code.
+On Thu, 20 Jul 2017 11:11:06 +0200 Ingo Molnar <mingo@kernel.org> wrote:
+
 > 
-> This is less than optimal, and it would be far better if we had some
-> definitive description of each of the ELF hwcaps that developers could
-> refer to.
+> * Kees Cook <keescook@chromium.org> wrote:
 > 
-> This patch adds a document describing the (native) arm64 ELF hwcaps.
-
-Minor nit: what do the hwcaps have to do with ELF really?  Can we just
-call them "hwcaps"?
-
-I'm not sure of the history here.
-
-> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-> Cc: Catalin Marinas <catalin.marinas@arm.com>
-> Cc: Dave Martin <Dave.Martin@arm.com>
-> Cc: Suzuki K Poulose <suzuki.poulose@arm.com>
-> Cc: Will Deacon <will.deacon@arm.com>
-> ---
->  Documentation/arm64/elf_hwcaps.txt | 133 +++++++++++++++++++++++++++++++++++++
->  1 file changed, 133 insertions(+)
->  create mode 100644 Documentation/arm64/elf_hwcaps.txt
+> > This implements refcount_t overflow protection on x86 without a noticeable
+> > performance impact, though without the fuller checking of REFCOUNT_FULL.
+> > This is done by duplicating the existing atomic_t refcount implementation
+> > but with normally a single instruction added to detect if the refcount
+> > has gone negative (i.e. wrapped past INT_MAX or below zero). When
+> > detected, the handler saturates the refcount_t to INT_MIN / 2. With this
+> > overflow protection, the erroneous reference release that would follow
+> > a wrap back to zero is blocked from happening, avoiding the class of
+> > refcount-over-increment use-after-free vulnerabilities entirely.
+> > 
+> > Only the overflow case of refcounting can be perfectly protected, since it
+> > can be detected and stopped before the reference is freed and left to be
+> > abused by an attacker. This implementation also notices some of the "dec
+> > to 0 without test", and "below 0" cases. However, these only indicate that
+> > a use-after-free may have already happened. Such notifications are likely
+> > avoidable by an attacker that has already exploited a use-after-free
+> > vulnerability, but it's better to have them than allow such conditions to
+> > remain universally silent.
+> > 
+> > On first overflow detection, the refcount value is reset to INT_MIN / 2
+> > (which serves as a saturation value), the offending process is killed,
+> > and a report and stack trace are produced. When operations detect only
+> > negative value results (such as changing an already saturated value),
+> > saturation still happens but no notification is performed (since the
+> > value was already saturated).
+> > 
+> > On the matter of races, since the entire range beyond INT_MAX but before
+> > 0 is negative, every operation at INT_MIN / 2 will trap, leaving no
+> > overflow-only race condition.
+> > 
+> > As for performance, this implementation adds a single "js" instruction
+> > to the regular execution flow of a copy of the standard atomic_t refcount
+> > operations. (The non-"and_test" refcount_dec() function, which is uncommon
+> > in regular refcount design patterns, has an additional "jz" instruction
+> > to detect reaching exactly zero.) Since this is a forward jump, it is by
+> > default the non-predicted path, which will be reinforced by dynamic branch
+> > prediction. The result is this protection having virtually no measurable
+> > change in performance over standard atomic_t operations. The error path,
+> > located in .text.unlikely, saves the refcount location and then uses UD0
+> > to fire a refcount exception handler, which resets the refcount, handles
+> > reporting, and returns to regular execution. This keeps the changes to
+> > .text size minimal, avoiding return jumps and open-coded calls to the
+> > error reporting routine.
 > 
-> diff --git a/Documentation/arm64/elf_hwcaps.txt b/Documentation/arm64/elf_hwcaps.txt
-> new file mode 100644
-> index 0000000..7bc2921
-> --- /dev/null
-> +++ b/Documentation/arm64/elf_hwcaps.txt
-> @@ -0,0 +1,133 @@
-> +ARM64 ELF hwcaps
-> +================
-> +
-> +This document describes the usage and semantics of the arm64 ELF hwcaps.
-> +
-> +
-> +1. Introduction
-> +---------------
-> +
-> +Some hardware or software features are only available on some CPU
-> +implementations, and/or with certain kernel configurations, but have no
-> +architected discovery mechanism available to userspace code at EL0. The
-> +kernel exposes the presence of these features to userspace through a set
-> +of flags called hwcaps, exposed in the auxilliary vector.
-> +
-> +Userspace software can test for features by acquiring the AT_HWCAP entry
-> +of the auxilliary vector, and testing whether the relevant flags are
-> +set, e.g.
-> +
-> +bool floating_point_is_present(void)
-> +{
-> +	unsigned long hwcaps = getauxval(AT_HWCAP);
-> +	if (hwcaps & HWCAP_FP)
-> +		return true;
-> +
-> +	return false;
-> +}
-> +
-> +Where software relies on a feature described by a hwcap, it should check
-> +the relevant hwcap flag to verify that the feature is present before
-> +attempting to make use of the feature.
-> +
-> +Features cannot be probed reliably through other means. When a feature
-> +is not available, attempting to use it may result in unpredictable
+> Pretty nice!
+> 
 
-This says that features cannot be probed reliably via the (emulated) ID
-registers available with HWCAP_CPUID.
+Yes, this is a relief.
 
-So, what use is the ID register emulation?
-
-For each of hwcaps and cpuid, a particular feature may be reported as
-present (y), absent (n), or not described at all (x):
-
-hwcap>    x n y
-cpuid:
-   x      N N Y
-   n      N N
-   y      Y   Y
-
-I've filled in the straightforward cases, where software may (Y) or must
-not (N) use the feature.
-
-In the cases left blank, hwcap and cpuid disagree.
-
-Are we confident that should never be observed -- i.e., it's a kernel
-bug if seen?  If so, we can fill Ys in there.  But we need to be clear
-about cases where the hwcap doesn't mean exactly the same as the
-corresponding CPUID feature.  The hwcap may tell software it can assume
-that certain kernel ABI extensions related to that CPU feature are
-available for example.
-
-This also affects how HWCAP_CPUID is described below.
-
-[...]
-
-Cheers
----Dave
+Do we have a feeling for how feasible/difficult it will be for other
+architectures to implement such a thing?
