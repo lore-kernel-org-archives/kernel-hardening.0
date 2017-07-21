@@ -1,94 +1,91 @@
-References: <1499724283-30719-1-git-send-email-labbott@redhat.com>
- <1499724283-30719-3-git-send-email-labbott@redhat.com>
- <20170711195154.GA7124@leverpostej>
- <2f24df9e-64b1-ffef-ddbb-08f7fe8d2a96@redhat.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <f100d5f3-fabc-a6b4-ef5f-91fc5f123299@linux.com>
-Date: Fri, 21 Jul 2017 19:56:13 +0300
+Date: Fri, 21 Jul 2017 18:05:09 +0100
+From: Dave Martin <Dave.Martin@arm.com>
+Message-ID: <20170721170509.GC1538@e103592.cambridge.arm.com>
+References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
 MIME-Version: 1.0
-In-Reply-To: <2f24df9e-64b1-ffef-ddbb-08f7fe8d2a96@redhat.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC][PATCH 2/2] arm64: Clear the stack
-To: Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Tycho Andersen <tycho@docker.com>, PaX Team <pageexec@freemail.hu>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
+Subject: [kernel-hardening] Re: [PATCH 00/11] ARMv8.3 pointer authentication userspace support
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, arnd@arndb.de, jiong.wang@arm.com, marc.zyngier@arm.com, catalin.marinas@arm.com, yao.qi@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, kvmarm@lists.cs.columbia.edu, christoffer.dall@linaro.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Laura and Mark,
-
-[+ Tycho Andersen and Pax Team]
-
-On 14.07.2017 23:51, Laura Abbott wrote:
-> On 07/11/2017 12:51 PM, Mark Rutland wrote:
->> On Mon, Jul 10, 2017 at 03:04:43PM -0700, Laura Abbott wrote:
->>> +	/* The poison function */
->>> +4:
->>> +	/* Generate the address we found */
->>> +	add     x5, x1, x3, lsl #3
->>> +	orr     x5, x5, #16
->>
->> Have you figured out what the forced 16 byte offset is for?
->>
->> I've not managed to figure out why it's there, and it looks like
->> Alexander couldn't either, judging by his comments in the x86 asm.
+On Wed, Jul 19, 2017 at 05:01:21PM +0100, Mark Rutland wrote:
+> This series adds support for the ARMv8.3 pointer authentication extension.
 > 
-> From get_wchan in arch/x86/kernel/process.c, it might be be to
-> account for the start of the frame correctly? I don't have a
-> definitive answer though and plan on just removing this for the
-> next version.
+> Since RFC [1]:
+> * Make the KVM context switch (semi-lazy)
+> * Rebase to v4.13-rc1
+> * Improve pointer authentication documentation
+> * Add hwcap documentation
+> * Various minor cleanups
+> 
+> I've pushed the series to the arm64/pointer-auth branch [2] of my linux tree.
+> I've also pushed out a necessary bootwrapper patch to the pointer-auth branch
+> [3] of my bootwrapper repo.
 
-I've investigated it carefully: we should not remove this 16-byte offset.
+[...]
 
-I looked at the bottom of the kernel stack with the debugger and found a
-non-zero value 0x57AC6E9D. It is STACK_END_MAGIC, which is defined in
-include/uapi/linux/magic.h. This value is checked if we enable
-CONFIG_SCHED_STACK_END_CHECK.
+> Open questions
+> ==============
+> 
+> * Should keys be per-thread rather than per-process?
+> 
+>   My understanding is that glibc can't (currently) handle threads having
+>   different keys, but it might be that another libc would prefer per-thread
 
-Then I removed this 16-byte offset in stackleak patch (including the OR
-instruction in erase_kstack()) to see how the first erase_kstack() call happily
-overwrites that magic value:
+Can you elaborate?
 
-[    1.574655] Freeing unused kernel memory: 1244K
-[    1.575026] Kernel memory protection disabled.
-[    1.578575] Kernel panic - not syncing: corrupted stack end detected inside
-scheduler
-[    1.578575]
-[    1.579420] CPU: 0 PID: 1 Comm: init Not tainted 4.12.0+ #9
-[    1.579420] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS
-Ubuntu-1.8.2-1ubuntu1 04/01/2014
-[    1.579420] Call Trace:
-[    1.579420]  dump_stack+0x63/0x81
-[    1.579420]  panic+0xd0/0x212
-[    1.579420]  __schedule+0x6d8/0x6e0
-[    1.579420]  schedule+0x31/0x80
-[    1.579420]  io_schedule+0x11/0x40
-[    1.579420]  __lock_page_or_retry+0x17d/0x2b0
-[    1.579420]  ? page_cache_tree_insert+0x90/0x90
-[    1.579420]  filemap_fault+0x3aa/0x5c0
-[    1.579420]  ? filemap_map_pages+0x1a6/0x280
-[    1.579420]  ext4_filemap_fault+0x2d/0x40
-[    1.579420]  __do_fault+0x1b/0x60
-[    1.579420]  __handle_mm_fault+0x641/0x8b0
-[    1.579420]  handle_mm_fault+0x87/0x130
-[    1.579420]  __do_page_fault+0x25f/0x4a0
-[    1.579420]  trace_do_page_fault+0x37/0xd0
-[    1.579420]  do_async_page_fault+0x23/0x80
-[    1.579420]  async_page_fault+0x28/0x30
-[    1.579420] RIP: 0033:0x7f81be514ab0
-[    1.579420] RSP: 002b:00007ffc8de73768 EFLAGS: 00010202
-[    1.579420] RAX: 0000000000000000 RBX: 0000000000000000 RCX: 0000000000000000
-[    1.579420] RDX: 0000000000000000 RSI: 0000000000000000 RDI: 00007ffc8de73770
-[    1.579420] RBP: 0000000000000000 R08: 0000000000000000 R09: 0000000000000000
-[    1.579420] R10: 0000000000000000 R11: 0000000000000000 R12: 0000000000000000
-[    1.579420] R13: 0000000000000000 R14: 0000000000000000 R15: 0000000000000000
-[    1.579420] Dumping ftrace buffer:
-[    1.579420]    (ftrace buffer empty)
-[    1.579420] Kernel Offset: disabled
-[    1.579420] Rebooting in 86400 seconds..
+It's not valid to do a function return from one thread to another.
 
+>   keys. If desired, we could add a mechanism for a thread to re-initialize its
+>   keys without an exec*().
 
-So let's keep it not to break CONFIG_SCHED_STACK_END_CHECK.
+Switching from per-process to per-thread keys would be an ABI break
+unless it's opt-in.
 
-Again, I want to say kudos to PaX Team for his awesome code.
-Best regards,
-Alexander
+> * Do we need a separate hwcap for XPAC* instructions?
+> 
+>   Library code performing stack unwinding may need to interoperate with other
+>   code which may or may not be using pointer authentication. It may be
+>   desirable to use XPAC* rather than attempting authentication and/or acquiring
+>   the PAC masks via ptrace.
+> 
+>   As we may expose APIBKey (potentially separately from APIAKey) in future,
+>   HWCAP_APIA cannot be used to determine when these instruction can/should be
+>   used.
+
+Can the availability of XPAC* be determined from the feature regs, or
+is that insufficient?
+
+This is a little different from the keys, which the kernel must
+provision / allow to be set in order for them to be useful.
+
+> * Should we expose a per-process data key now, to go with the insn key?
+> 
+>   I don't currently have a use-case for this.
+> 
+> * Should we expose generic authentication (i.e. APGAKey)?
+> 
+>   I don't currently have a use-case for this.
+
+I guess there's no ABI impact for adding these later, so maybe it's not
+urgent if nobody shouts.
+
+> * Should the kernel remove PACs when unwinding user stacks?
+> 
+>   This is simple to do, but it's arguably placing a policy in the kernel as to
+>   what we expect user stacks to look like. Regardless, userspace will have to
+>   perform this when unwinding with DWARF.
+
+Not sure.  This is arguably not more gross than related things the
+kernel already does, and may be inefficient for userspace to do e.g.,
+when capturing perf backtraces.  Still gross though.
+
+Side question: do you know whether there will be DWARF / ELF annotations
+for this?  Since ptr auth is a compile-time option, it is plausible that
+an attribute could be added to indicate that an image uses it.
+
+Cheers
+---Dave
