@@ -1,112 +1,86 @@
-References: <1499724283-30719-1-git-send-email-labbott@redhat.com>
- <1499724283-30719-3-git-send-email-labbott@redhat.com>
- <20170711195154.GA7124@leverpostej>
- <2f24df9e-64b1-ffef-ddbb-08f7fe8d2a96@redhat.com>
- <f100d5f3-fabc-a6b4-ef5f-91fc5f123299@linux.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <160e3088-b8e0-513b-8c1a-ce22ce598d5a@redhat.com>
-Date: Fri, 21 Jul 2017 17:23:06 -0700
 MIME-Version: 1.0
-In-Reply-To: <f100d5f3-fabc-a6b4-ef5f-91fc5f123299@linux.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [RFC][PATCH 2/2] arm64: Clear the stack
-To: alex.popov@linux.com, Mark Rutland <mark.rutland@arm.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Tycho Andersen <tycho@docker.com>, PaX Team <pageexec@freemail.hu>
+Sender: keescook@google.com
+In-Reply-To: <20170721142255.586224f0db9cf0714e654859@linux-foundation.org>
+References: <1500422614-94821-1-git-send-email-keescook@chromium.org>
+ <20170720091106.kigtr6zy7pjgk2s6@gmail.com> <20170721142255.586224f0db9cf0714e654859@linux-foundation.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 21 Jul 2017 20:33:17 -0700
+Message-ID: <CAGXu5j+QU7OXWA_oMaLUsDnS4yyfNx8-1f_ywHX=o88kqE7=JQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v6 0/2] x86: Implement fast refcount overflow protection
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 07/21/2017 09:56 AM, Alexander Popov wrote:
-> Hello Laura and Mark,
-> 
-> [+ Tycho Andersen and Pax Team]
-> 
-> On 14.07.2017 23:51, Laura Abbott wrote:
->> On 07/11/2017 12:51 PM, Mark Rutland wrote:
->>> On Mon, Jul 10, 2017 at 03:04:43PM -0700, Laura Abbott wrote:
->>>> +	/* The poison function */
->>>> +4:
->>>> +	/* Generate the address we found */
->>>> +	add     x5, x1, x3, lsl #3
->>>> +	orr     x5, x5, #16
->>>
->>> Have you figured out what the forced 16 byte offset is for?
->>>
->>> I've not managed to figure out why it's there, and it looks like
->>> Alexander couldn't either, judging by his comments in the x86 asm.
+On Fri, Jul 21, 2017 at 2:22 PM, Andrew Morton
+<akpm@linux-foundation.org> wrote:
+> On Thu, 20 Jul 2017 11:11:06 +0200 Ingo Molnar <mingo@kernel.org> wrote:
+>
 >>
->> From get_wchan in arch/x86/kernel/process.c, it might be be to
->> account for the start of the frame correctly? I don't have a
->> definitive answer though and plan on just removing this for the
->> next version.
-> 
-> I've investigated it carefully: we should not remove this 16-byte offset.
-> 
-> I looked at the bottom of the kernel stack with the debugger and found a
-> non-zero value 0x57AC6E9D. It is STACK_END_MAGIC, which is defined in
-> include/uapi/linux/magic.h. This value is checked if we enable
-> CONFIG_SCHED_STACK_END_CHECK.
-> 
-> Then I removed this 16-byte offset in stackleak patch (including the OR
-> instruction in erase_kstack()) to see how the first erase_kstack() call happily
-> overwrites that magic value:
-> 
-> [    1.574655] Freeing unused kernel memory: 1244K
-> [    1.575026] Kernel memory protection disabled.
-> [    1.578575] Kernel panic - not syncing: corrupted stack end detected inside
-> scheduler
-> [    1.578575]
-> [    1.579420] CPU: 0 PID: 1 Comm: init Not tainted 4.12.0+ #9
-> [    1.579420] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS
-> Ubuntu-1.8.2-1ubuntu1 04/01/2014
-> [    1.579420] Call Trace:
-> [    1.579420]  dump_stack+0x63/0x81
-> [    1.579420]  panic+0xd0/0x212
-> [    1.579420]  __schedule+0x6d8/0x6e0
-> [    1.579420]  schedule+0x31/0x80
-> [    1.579420]  io_schedule+0x11/0x40
-> [    1.579420]  __lock_page_or_retry+0x17d/0x2b0
-> [    1.579420]  ? page_cache_tree_insert+0x90/0x90
-> [    1.579420]  filemap_fault+0x3aa/0x5c0
-> [    1.579420]  ? filemap_map_pages+0x1a6/0x280
-> [    1.579420]  ext4_filemap_fault+0x2d/0x40
-> [    1.579420]  __do_fault+0x1b/0x60
-> [    1.579420]  __handle_mm_fault+0x641/0x8b0
-> [    1.579420]  handle_mm_fault+0x87/0x130
-> [    1.579420]  __do_page_fault+0x25f/0x4a0
-> [    1.579420]  trace_do_page_fault+0x37/0xd0
-> [    1.579420]  do_async_page_fault+0x23/0x80
-> [    1.579420]  async_page_fault+0x28/0x30
-> [    1.579420] RIP: 0033:0x7f81be514ab0
-> [    1.579420] RSP: 002b:00007ffc8de73768 EFLAGS: 00010202
-> [    1.579420] RAX: 0000000000000000 RBX: 0000000000000000 RCX: 0000000000000000
-> [    1.579420] RDX: 0000000000000000 RSI: 0000000000000000 RDI: 00007ffc8de73770
-> [    1.579420] RBP: 0000000000000000 R08: 0000000000000000 R09: 0000000000000000
-> [    1.579420] R10: 0000000000000000 R11: 0000000000000000 R12: 0000000000000000
-> [    1.579420] R13: 0000000000000000 R14: 0000000000000000 R15: 0000000000000000
-> [    1.579420] Dumping ftrace buffer:
-> [    1.579420]    (ftrace buffer empty)
-> [    1.579420] Kernel Offset: disabled
-> [    1.579420] Rebooting in 86400 seconds..
-> 
-> 
-> So let's keep it not to break CONFIG_SCHED_STACK_END_CHECK.
-> 
+>> * Kees Cook <keescook@chromium.org> wrote:
+>>
+>> > This implements refcount_t overflow protection on x86 without a noticeable
+>> > performance impact, though without the fuller checking of REFCOUNT_FULL.
+>> > This is done by duplicating the existing atomic_t refcount implementation
+>> > but with normally a single instruction added to detect if the refcount
+>> > has gone negative (i.e. wrapped past INT_MAX or below zero). When
+>> > detected, the handler saturates the refcount_t to INT_MIN / 2. With this
+>> > overflow protection, the erroneous reference release that would follow
+>> > a wrap back to zero is blocked from happening, avoiding the class of
+>> > refcount-over-increment use-after-free vulnerabilities entirely.
+>> >
+>> > Only the overflow case of refcounting can be perfectly protected, since it
+>> > can be detected and stopped before the reference is freed and left to be
+>> > abused by an attacker. This implementation also notices some of the "dec
+>> > to 0 without test", and "below 0" cases. However, these only indicate that
+>> > a use-after-free may have already happened. Such notifications are likely
+>> > avoidable by an attacker that has already exploited a use-after-free
+>> > vulnerability, but it's better to have them than allow such conditions to
+>> > remain universally silent.
+>> >
+>> > On first overflow detection, the refcount value is reset to INT_MIN / 2
+>> > (which serves as a saturation value), the offending process is killed,
+>> > and a report and stack trace are produced. When operations detect only
+>> > negative value results (such as changing an already saturated value),
+>> > saturation still happens but no notification is performed (since the
+>> > value was already saturated).
+>> >
+>> > On the matter of races, since the entire range beyond INT_MAX but before
+>> > 0 is negative, every operation at INT_MIN / 2 will trap, leaving no
+>> > overflow-only race condition.
+>> >
+>> > As for performance, this implementation adds a single "js" instruction
+>> > to the regular execution flow of a copy of the standard atomic_t refcount
+>> > operations. (The non-"and_test" refcount_dec() function, which is uncommon
+>> > in regular refcount design patterns, has an additional "jz" instruction
+>> > to detect reaching exactly zero.) Since this is a forward jump, it is by
+>> > default the non-predicted path, which will be reinforced by dynamic branch
+>> > prediction. The result is this protection having virtually no measurable
+>> > change in performance over standard atomic_t operations. The error path,
+>> > located in .text.unlikely, saves the refcount location and then uses UD0
+>> > to fire a refcount exception handler, which resets the refcount, handles
+>> > reporting, and returns to regular execution. This keeps the changes to
+>> > .text size minimal, avoiding return jumps and open-coded calls to the
+>> > error reporting routine.
+>>
+>> Pretty nice!
+>>
+>
+> Yes, this is a relief.
+>
+> Do we have a feeling for how feasible/difficult it will be for other
+> architectures to implement such a thing?
 
+The PaX atomic_t overflow protection this is heavily based on was
+ported to a number of architectures (arm, powerpc, mips, sparc), so I
+suspect it shouldn't be too hard to adapt those for the more narrow
+refcount_t protection:
+https://forums.grsecurity.net/viewtopic.php?f=7&t=4173
 
-That makes sense, good find! I wonder if CONFIG_SCHED_STACK_END_CHECK
-should go on the list of hardening options and/or if we can enhance
-it somehow?
+And an arm64 port of the fast refcount_t protection is already happening too.
 
-I'm not sure why it requires two words though since the
-poison only seems to be 32-bits?
+-Kees
 
-> Again, I want to say kudos to PaX Team for his awesome code.
-
-Agreed!
-
-> Best regards,
-> Alexander
-> 
-
-Thanks,
-Laura
+-- 
+Kees Cook
+Pixel Security
