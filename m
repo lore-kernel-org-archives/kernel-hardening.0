@@ -1,47 +1,87 @@
-Date: Mon, 24 Jul 2017 14:23:27 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20170724122327.z6p4w5yvirnbuvfd@hirez.programming.kicks-ass.net>
-References: <1500422614-94821-1-git-send-email-keescook@chromium.org>
- <20170720091106.kigtr6zy7pjgk2s6@gmail.com>
- <20170721142255.586224f0db9cf0714e654859@linux-foundation.org>
- <CAGXu5j+QU7OXWA_oMaLUsDnS4yyfNx8-1f_ywHX=o88kqE7=JQ@mail.gmail.com>
- <87zibujq5t.fsf@concordia.ellerman.id.au>
- <20170724084455.o5asa55fckgyjri2@hirez.programming.kicks-ass.net>
- <87k22yjatf.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <87k22yjatf.fsf@concordia.ellerman.id.au>
-Subject: [kernel-hardening] Re: [PATCH v6 0/2] x86: Implement fast refcount overflow protection
-To: Michael Ellerman <mpe@ellerman.id.au>
-Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAMzpN2jWTS8R5V6i5q=bq4NGW_svELw5bjgWTOX=Ow3ddWx-6Q@mail.gmail.com>
+References: <20170718223333.110371-1-thgarnie@google.com> <20170718223333.110371-22-thgarnie@google.com>
+ <c0bc2d98-d6eb-e3db-3799-2e28e9919f3d@zytor.com> <CAMzpN2j+Z27uudHXqqMhbk=s=pnk7LdA2FPkgmsdZzO3ysemsQ@mail.gmail.com>
+ <CAJcbSZFphkF8bcodkcwpK-oi3D7GTQXyTkOLPkmtWSPLPkvB0Q@mail.gmail.com> <CAMzpN2jWTS8R5V6i5q=bq4NGW_svELw5bjgWTOX=Ow3ddWx-6Q@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Mon, 24 Jul 2017 09:32:58 -0700
+Message-ID: <CAJcbSZF=gCLRzqAzPgb46CJ6YDibUK0bG0NsVsAqV6jOHzZskA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC 21/22] x86/module: Add support for mcmodel large and PLTs
+To: Brian Gerst <brgerst@gmail.com>
+Cc: "H. Peter Anvin" <hpa@zytor.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Christopher Li <sparse@chrisli.org>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Peter Foley <pefoley2@pefoley.com>, Steven Rostedt <rostedt@goodmis.org>, Tim Chen <tim.c.chen@linux.intel.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, linux-pm <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jul 24, 2017 at 10:09:32PM +1000, Michael Ellerman wrote:
-> Peter Zijlstra <peterz@infradead.org> writes:
-> > anyway, and the fact that your LL/SC is horrendously slow in any case.
-> 
-> Boo :/
+On Wed, Jul 19, 2017 at 10:34 AM, Brian Gerst <brgerst@gmail.com> wrote:
+> On Wed, Jul 19, 2017 at 11:58 AM, Thomas Garnier <thgarnie@google.com> wrote:
+>> On Tue, Jul 18, 2017 at 8:59 PM, Brian Gerst <brgerst@gmail.com> wrote:
+>>> On Tue, Jul 18, 2017 at 9:35 PM, H. Peter Anvin <hpa@zytor.com> wrote:
+>>>> On 07/18/17 15:33, Thomas Garnier wrote:
+>>>>> With PIE support and KASLR extended range, the modules may be further
+>>>>> away from the kernel than before breaking mcmodel=kernel expectations.
+>>>>>
+>>>>> Add an option to build modules with mcmodel=large. The modules generated
+>>>>> code will make no assumptions on placement in memory.
+>>>>>
+>>>>> Despite this option, modules still expect kernel functions to be within
+>>>>> 2G and generate relative calls. To solve this issue, the PLT arm64 code
+>>>>> was adapted for x86_64. When a relative relocation go outside its range,
+>>>>> a dynamic PLT entry is used to correctly jump to the destination.
+>>>>
+>>>> Why large as opposed to medium or medium-PIC?
+>>>
+>>> Or for that matter, why not small-PIC?  We aren't changing the size of
+>>> the kernel to be larger than 2G text or data.  Small-PIC would still
+>>> allow it to be placed anywhere in the address space, and would
+>>> generate far better code.
+>>
+>> My understanding was that small=PIC and medium=PIC assume that the
+>> module code is in the lower 2G of memory. I will do additional testing
+>> on the modules to confirm that.
+>
+> That is only for small/medium absolute (non-PIC) code.  Think about
+> userspace shared libraries.  They are not limited to being mapped in
+> the lower 2G of the address space.
 
-:-)
+I built lkdtm with mcmodel=(kernel, small, medium & large).
 
-> Just kidding. I suspect you're right that we can probably pack a
-> reasonable amount of tests in the body of the LL/SC and not notice.
-> 
-> > Also, I still haven't seen an actual benchmark where our cmpxchg loop
-> > actually regresses anything, just a lot of yelling about potential
-> > regressions :/
-> 
-> Heh yeah. Though I have looked at the code it generates on PPC and it's
-> not sleek, though I guess that's not a benchmark is it :)
+Comparing the same instruction and its relocation in lkdtm
+(lkdtm_register_cpoint).
 
-Oh for sure, GCC still can't sanely convert a cmpxchg loop (esp. if the
-cmpxchg is implemented using asm) into a native LL/SC sequence, so the
-generic code will end up looking pretty horrendous.
+On mcmodel=kernel:
 
-A native implementation of the same semantics should look loads better.
+     1b8:       48 c7 c7 00 00 00 00    mov    $0x0,%rdi
+                        1bb: R_X86_64_32S       .rodata.str1.8+0x50
+
+On mcmodel=small and mcmodel=medium:
+
+     1b8:       bf 00 00 00 00          mov    $0x0,%edi
+     1b9: R_X86_64_32        .rodata.str1.8+0x50
+
+On mcmodel=large:
+
+     235:       48 bf 00 00 00 00 00    movabs $0x0,%rdi
+     23c:       00 00 00
+                        237: R_X86_64_64        .rodata.str1.8+0x50
+
+The kernel mcmodel extends the sign of the address. It assumes you are
+in the top 2G of the address space. So the relocated pointer
+0x8XXXXXXX becomes 0xFFFFFFFF8XXXXXXX.
+
+The small and medium mcmodels assume the pointer is within the lower
+part of the address space. The generate pointer has the 32-bit high
+part to zero. You can only map the module between 0 and 0xFFFFFFFF.
+
+The large mcmodel can handle a full 64-bit pointer.
+
+That's why I use the large mcmodel on modules. I cannot use PIE due to
+how the modules are linked.
+
+>
+> --
+> Brian Gerst
 
 
-One thing that might help you is that refcount_dec_and_test() is weaker
-than atomic_dec_and_test() wrt ordering, so that might help some
-(RELEASE vs fully ordered).
+
+-- 
+Thomas
