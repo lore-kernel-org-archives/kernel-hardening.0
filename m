@@ -1,292 +1,70 @@
-Sender: Hans Liljestrand <ishkamiel@gmail.com>
-From: Hans Liljestrand <liljestrandh@gmail.com>
-Date: Mon, 24 Jul 2017 16:38:24 +0300
-Message-Id: <20170724133824.27223-6-LiljestrandH@gmail.com>
-In-Reply-To: <20170724133824.27223-1-LiljestrandH@gmail.com>
-References: <20170724133824.27223-1-LiljestrandH@gmail.com>
-Subject: [kernel-hardening] [RFC PATCH 5/5] lkdtm: Add kernel MPX testing
-To: kernel-hardening@lists.openwall.com
-Cc: elena.reshetova@intel.com, dave.hansen@intel.com, keescook@chromium.org, hpa@zytor.com, Hans Liljestrand <LiljestrandH@gmail.com>
+References: <20170706002718.GA102852@beast>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <cdd42a1b-ce15-df8c-6bd1-b0943275986f@linux.com>
+Date: Tue, 25 Jul 2017 00:17:11 +0300
+MIME-Version: 1.0
+In-Reply-To: <20170706002718.GA102852@beast>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [v3] mm: Add SLUB free list pointer obfuscation
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Josh Triplett <josh@joshtriplett.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, linux-mm@kvack.org, Tycho Andersen <tycho@docker.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Tests MPXK functionality via lkdtm test cases. Currently tests basic
-bound propagation and instrumentation for memcpy and kmalloc.
+>From 86f4f1f6deb76849e00c761fa30eeb479f789c35 Mon Sep 17 00:00:00 2001
+From: Alexander Popov <alex.popov@linux.com>
+Date: Mon, 24 Jul 2017 23:16:28 +0300
+Subject: [PATCH 2/2] mm/slub.c: add a naive detection of double free or
+ corruption
 
-Signed-off-by: Hans Liljestrand <LiljestrandH@gmail.com>
-Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
+On 06.07.2017 03:27, Kees Cook wrote:
+> This SLUB free list pointer obfuscation code is modified from Brad
+> Spengler/PaX Team's code in the last public patch of grsecurity/PaX based
+> on my understanding of the code. Changes or omissions from the original
+> code are mine and don't reflect the original grsecurity/PaX code.
+> 
+> This adds a per-cache random value to SLUB caches that is XORed with
+> their freelist pointer address and value. This adds nearly zero overhead
+> and frustrates the very common heap overflow exploitation method of
+> overwriting freelist pointers. A recent example of the attack is written
+> up here: http://cyseclabs.com/blog/cve-2016-6187-heap-off-by-one-exploit
+> 
+> This is based on patches by Daniel Micay, and refactored to minimize the
+> use of #ifdef.
+
+Hello!
+
+This is an addition to the SLAB_FREELIST_HARDENED feature. I'm sending it
+according the discussion here:
+http://www.openwall.com/lists/kernel-hardening/2017/07/17/9
+
+-- >8 --
+
+Add an assertion similar to "fasttop" check in GNU C Library allocator
+as a part of SLAB_FREELIST_HARDENED feature. An object added to a singly
+linked freelist should not point to itself. That helps to detect some
+double free errors (e.g. CVE-2017-2636) without slub_debug and KASAN.
+
+Signed-off-by: Alexander Popov <alex.popov@linux.com>
 ---
- drivers/misc/Makefile          |   7 +++
- drivers/misc/lkdtm.h           |   7 +++
- drivers/misc/lkdtm_core.c      |   6 +++
- drivers/misc/lkdtm_mpxk.c      | 115 +++++++++++++++++++++++++++++++++++++++++
- drivers/misc/lkdtm_mpxk.h      |  11 ++++
- drivers/misc/lkdtm_mpxk_base.c |  65 +++++++++++++++++++++++
- 6 files changed, 211 insertions(+)
- create mode 100644 drivers/misc/lkdtm_mpxk.c
- create mode 100644 drivers/misc/lkdtm_mpxk.h
- create mode 100644 drivers/misc/lkdtm_mpxk_base.c
+ mm/slub.c | 4 ++++
+ 1 file changed, 4 insertions(+)
 
-diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
-index 81ef3e67acc9..58d9ba43e081 100644
---- a/drivers/misc/Makefile
-+++ b/drivers/misc/Makefile
-@@ -64,6 +64,13 @@ lkdtm-$(CONFIG_LKDTM)		+= lkdtm_usercopy.o
- 
- KCOV_INSTRUMENT_lkdtm_rodata.o	:= n
- 
-+ifdef CONFIG_X86_INTEL_MPX_KERNEL
-+	lkdtm-$(CONFIG_LKDTM)		+= lkdtm_mpxk.o
-+	lkdtm-$(CONFIG_LKDTM)		+= lkdtm_mpxk_base.o
-+	CFLAGS_lkdtm_mpxk.o		+= $(MPXK_CFLAGS)
-+	CFLAGS_lkdtm_mpxk_base.o	+= $(MPXK_CFLAGS)
-+endif
-+
- OBJCOPYFLAGS :=
- OBJCOPYFLAGS_lkdtm_rodata_objcopy.o := \
- 			--set-section-flags .text=alloc,readonly \
-diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
-index 3b4976396ec4..46cecd01db92 100644
---- a/drivers/misc/lkdtm.h
-+++ b/drivers/misc/lkdtm.h
-@@ -29,6 +29,13 @@ void lkdtm_CORRUPT_LIST_ADD(void);
- void lkdtm_CORRUPT_LIST_DEL(void);
- void lkdtm_CORRUPT_USER_DS(void);
- 
-+#ifdef CONFIG_X86_INTEL_MPX_KERNEL
-+void lkdtm_MPXK_LOAD_BOUNDS(void);
-+void lkdtm_MPXK_FUNCTION_ARGS(void);
-+void lkdtm_MPXK_KMALLOC(void);
-+void lkdtm_MPXK_MEMCPY(void);
+diff --git a/mm/slub.c b/mm/slub.c
+index c92d636..f39d06e 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -290,6 +290,10 @@ static inline void set_freepointer(struct kmem_cache *s,
+void *object, void *fp)
+ {
+ 	unsigned long freeptr_addr = (unsigned long)object + s->offset;
+
++#ifdef CONFIG_SLAB_FREELIST_HARDENED
++	BUG_ON(object == fp); /* naive detection of double free or corruption */
 +#endif
 +
- /* lkdtm_heap.c */
- void lkdtm_OVERWRITE_ALLOCATION(void);
- void lkdtm_WRITE_AFTER_FREE(void);
-diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
-index 42d2b8e31e6b..74e258ddc5fe 100644
---- a/drivers/misc/lkdtm_core.c
-+++ b/drivers/misc/lkdtm_core.c
-@@ -235,6 +235,12 @@ struct crashtype crashtypes[] = {
- 	CRASHTYPE(USERCOPY_STACK_FRAME_FROM),
- 	CRASHTYPE(USERCOPY_STACK_BEYOND),
- 	CRASHTYPE(USERCOPY_KERNEL),
-+#ifdef CONFIG_X86_INTEL_MPX_KERNEL
-+	CRASHTYPE(MPXK_LOAD_BOUNDS),
-+	CRASHTYPE(MPXK_FUNCTION_ARGS),
-+	CRASHTYPE(MPXK_KMALLOC),
-+	CRASHTYPE(MPXK_MEMCPY)
-+#endif
- };
- 
- 
-diff --git a/drivers/misc/lkdtm_mpxk.c b/drivers/misc/lkdtm_mpxk.c
-new file mode 100644
-index 000000000000..b957d3641378
---- /dev/null
-+++ b/drivers/misc/lkdtm_mpxk.c
-@@ -0,0 +1,115 @@
-+#undef pr_fmt
-+#include "lkdtm_mpxk.h"
-+#include <linux/list.h>
-+#include <linux/sched.h>
-+#include <linux/time.h>
-+#include <linux/slab.h>
-+#include <linux/printk.h>
-+#include <asm/mpxk.h>
-+
-+/** lkdtm_MPXK_LOAD_BOUNDS - test mpxk_bound_load
-+ *
-+ * Tests mpxk_load_bounds function by passing pointers into function via an
-+ * array. The bounds for the array itself are passed via the bnd0 register, but
-+ * MPX cannot do that for the internal pointers, hence it uses BNDSTX+BNDLDX.
-+ * MPXK therefore must use mpxk_load_bounds to retrieve the bounds inside the
-+ * called function.
-+ */
-+void lkdtm_MPXK_LOAD_BOUNDS(void)
-+{
-+	int i;
-+	char *arr[10];
-+
-+	for (i = 0; i < 10; i++)
-+		arr[i] = kmalloc(16, GFP_KERNEL);
-+
-+	pr_info("attempting good ptr write\n");
-+	mpxk_write_arr_i(arr, 2, 0);
-+
-+	/* This could succeed because mpxk_load_bounds retrieved the size based
-+	 * on the pointer value via ksize, which in turn doesn't necessarily
-+	 * return the exact size that was passed into kmalloc. The size is none
-+	 * the less guaranteed to be "safe" in that it will not be reserved
-+	 * elsewhere.
-+	 */
-+	pr_info("attempting exact (+1) bad ptr write (can succeed)");
-+	mpxk_write_arr_i(arr, 4, 16);
-+
-+	pr_info("attempting real bad ptr write (should be caught)\n");
-+	mpxk_write_arr_i(arr, 5, 1024);
-+
-+	for (i = 0; i < 10; i++)
-+		kfree(arr[i]);
-+}
-+
-+/** lkdtm_MPXK_FUNCTION_ARGS - test function argument bound propagation
-+ *
-+ * Note that the four first pointers will have their bounds passed into the
-+ * function via the bnd0-bnd3 registers. The rest are in vanilla MPX passed in
-+ * via BNDSTX+BNDLDX, but in the case of MPXK they are simply loaded inside the
-+ * called function using mpxk_load_bounds.
-+ */
-+void lkdtm_MPXK_FUNCTION_ARGS(void)
-+{
-+	int i;
-+	char *arr[10];
-+
-+	for (i = 0; i < 10; i++)
-+		arr[i] = kmalloc(16, GFP_KERNEL);
-+
-+	pr_info("attempting good ptr write\n");
-+	mpxk_write_10_i(8, 0,
-+			arr[0], arr[1], arr[2], arr[3], arr[4],
-+			arr[5], arr[6], arr[7], arr[8], arr[9]);
-+
-+	pr_info("attempting exact bad ptr write\n");
-+	mpxk_write_10_i(9, 2,
-+			arr[0], arr[1], arr[2], arr[3], arr[4],
-+			arr[5], arr[6], arr[7], arr[8], arr[9]);
-+
-+	pr_info("attempting real bad ptr write\n");
-+	mpxk_write_10_i(7, 1024,
-+			arr[0], arr[1], arr[2], arr[3], arr[4],
-+			arr[5], arr[6], arr[7], arr[8], arr[9]);
-+
-+	for (i = 0; i < 10; i++)
-+		kfree(arr[i]);
-+}
-+
-+/** lkdtm_MPXK_KMALLOC
-+ *
-+ * Make suer kmalloc is properly instrumented, i.e. it returns proper pointer
-+ * bounds on allocation.
-+ */
-+void lkdtm_MPXK_KMALLOC(void)
-+{
-+	void *ptr = kmalloc(10, GFP_KERNEL);
-+
-+	pr_info("attempting good write\n");
-+	try_write(ptr, 1);
-+
-+	pr_info("attempting bad write\n");
-+	try_write(ptr, 11);
-+
-+	kfree(ptr);
-+}
-+
-+
-+/** lkdtm_MPXK_MEMCPY - test memcpy instrumentation
-+ *
-+ * Test memcpy instrumentation, which should check that both target and source
-+ * are within bounds (this exercises only destination bounds).
-+ */
-+void lkdtm_MPXK_MEMCPY(void)
-+{
-+	char *s  = "123456789";
-+	char *s_big = "12345678901234567890123456789012";
-+	char *d = kmalloc(4 * sizeof(char), GFP_KERNEL);
-+
-+	pr_info("performing okay memcpy\n");
-+	memcpy(d, s, 1);
-+
-+	/* The source is okay, but target is too small. */
-+	pr_info("performing bad memcpy\n");
-+	memcpy(d, s_big, 32 * sizeof(char));
-+}
-diff --git a/drivers/misc/lkdtm_mpxk.h b/drivers/misc/lkdtm_mpxk.h
-new file mode 100644
-index 000000000000..197bdca2c10c
---- /dev/null
-+++ b/drivers/misc/lkdtm_mpxk.h
-@@ -0,0 +1,11 @@
-+#undef pr_fmt
-+#include "lkdtm.h"
-+#include <asm/mpxk.h>
-+
-+/* #define SOFT_TEST */
-+
-+void try_write(void *ptr, int i);
-+void mpxk_write_arr_i(char **arr, int i, int j);
-+noinline void mpxk_write_10_i(int i, int j,
-+		void *s0, void *s1, void *s2, void *s3, void *s4,
-+		void *s5, void *s6, void *s7, void *s8, void *s9);
-diff --git a/drivers/misc/lkdtm_mpxk_base.c b/drivers/misc/lkdtm_mpxk_base.c
-new file mode 100644
-index 000000000000..938aa5c78211
---- /dev/null
-+++ b/drivers/misc/lkdtm_mpxk_base.c
-@@ -0,0 +1,65 @@
-+#undef pr_fmt
-+#include "lkdtm_mpxk.h"
-+#include <linux/printk.h>
-+
-+/**
-+ * try_write - Attempt write at pointed memory
-+ *
-+ * On bad writes this will either cause a bound violation, or
-+ * when SOFT_TEST is set pritn out "fail".
-+ */
-+noinline void try_write(void *ptr, int i)
-+{
-+#ifdef SOFT_TEST
-+	const void *ubound = __bnd_get_ptr_ubound(ptr);
-+	const void *lbound = __bnd_get_ptr_lbound(ptr);
-+
-+	if (ptr < lbound || (ptr+i) > ubound)
-+		pr_info("fail\n");
-+	else
-+		pr_info("ok\n");
-+#else
-+	((char *)ptr)[i] = '\0';
-+#endif /* SOFT_TEST */
-+}
-+
-+/**
-+ * mpxk_write_arr_i - Test function that writes to array.
-+ *
-+ * The boudns for the inner array cannot be passed in via stack/registers and
-+ * are therefore loaded with mpxk_load_bounds (and would have been passed in
-+ * vanilla MPX with BNDSTX+BNDLDX).
-+ */
-+noinline void mpxk_write_arr_i(char **arr, int i, int j)
-+{
-+	try_write(arr[i], j);
-+}
-+
-+
-+/**
-+ * mpxk_write_10_i - Test function that writes to function arg strings.
-+ *
-+ * Because bounds cannot be passed beyond the sixth argument (or the fourth
-+ * bound) this forces MPXK to use mpxk_load_bounds for the latter pointers.
-+ */
-+noinline void mpxk_write_10_i(int i, int j,
-+		void *s0, void *s1, void *s2, void *s3, void *s4,
-+		void *s5, void *s6, void *s7, void *s8, void *s9)
-+{
-+
-+#define mpxk_func_case(x) do {		\
-+	if (i == x)			\
-+		try_write(s##x, j);	\
-+} while (0)
-+	mpxk_func_case(0);
-+	mpxk_func_case(1);
-+	mpxk_func_case(2);
-+	mpxk_func_case(3);
-+	mpxk_func_case(4);
-+	mpxk_func_case(5);
-+	mpxk_func_case(6);
-+	mpxk_func_case(7);
-+	mpxk_func_case(8);
-+	mpxk_func_case(9);
-+#undef mpxk_func_case
-+}
+ 	*(void **)freeptr_addr = freelist_ptr(s, fp, freeptr_addr);
+ }
+
 -- 
-2.11.0
+2.7.4
