@@ -1,203 +1,252 @@
 Sender: Hans Liljestrand <ishkamiel@gmail.com>
 From: Hans Liljestrand <liljestrandh@gmail.com>
-Date: Mon, 24 Jul 2017 16:38:22 +0300
-Message-Id: <20170724133824.27223-4-LiljestrandH@gmail.com>
+Date: Mon, 24 Jul 2017 16:38:23 +0300
+Message-Id: <20170724133824.27223-5-LiljestrandH@gmail.com>
 In-Reply-To: <20170724133824.27223-1-LiljestrandH@gmail.com>
 References: <20170724133824.27223-1-LiljestrandH@gmail.com>
-Subject: [kernel-hardening] [RFC PATCH 3/5] x86: add mpxk-wrappers
+Subject: [kernel-hardening] [RFC PATCH 4/5] x86: MPXK base
 To: kernel-hardening@lists.openwall.com
-Cc: elena.reshetova@intel.com, dave.hansen@intel.com, keescook@chromium.org, hpa@zytor.com, Hans Liljestrand <LiljestrandH@gmail.com>, Hans Liljestrand <liljestrandh@gmail.com>
+Cc: elena.reshetova@intel.com, dave.hansen@intel.com, keescook@chromium.org, hpa@zytor.com, Hans Liljestrand <LiljestrandH@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This adds actual implementation for mpxk-wrapper functions. The wrapper
-function are used by the instrumentation to update and check pointer bounds
-on functions that alter memory, e.g. kmalloc and memcpy. The kmalloc
-wrapper function for instance simply executes kmalloc, associates bounds
-with the returned pointer, and returns both. Other wrapper functions, such
-as for memcpy, also check the bounds of incoming arguments.
+Enable and add needed support functionality for ring 0 MPX. MPXK is
+enabled in init/main.c by setting the BNDCFGS MSR registers. This also
+includes the mpxk_load_bounds implementation and error handling code for
+MPX errors, i.e. bound violations.
 
-For future work these wrappers could potentially be replaced by direct
-instrumentation without the need to incur the cost of calling the wrapper
-function. In this scenario every kmalloc would simply be preceded by an
-appropriate mkbnd instruction, and memcpy preceded by bndcu+bndcl
-instructions.
-
-The wrappers are added by the MPXK gcc-plugin, and as such work on
-preprocessed code. This introduces another problem with our
-implementation since macros might actually be used to direct "base
-functions" into specific implementations (e.g. memcpy might be a macro
-pointing to __memcpy). One solution is covering all possibilities, but
-this might introduce unwanted code bloat.
-
-Signed-off-by: Hans Liljestrand <liljestrandh@gmail.com>
+Signed-off-by: Hans Liljestrand <LiljestrandH@gmail.com>
 Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 ---
- arch/x86/lib/mpxk-wrappers.c | 157 +++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 157 insertions(+)
- create mode 100644 arch/x86/lib/mpxk-wrappers.c
+ arch/x86/include/asm/mpxk.h | 18 ++++++++++++
+ arch/x86/kernel/traps.c     | 44 ++++++++++++++++++++++++++++-
+ arch/x86/lib/Makefile       |  5 ++++
+ arch/x86/lib/mpxk.c         | 69 +++++++++++++++++++++++++++++++++++++++++++++
+ include/asm-generic/mpxk.h  | 20 +++++++++++++
+ init/main.c                 |  2 ++
+ 6 files changed, 157 insertions(+), 1 deletion(-)
+ create mode 100644 arch/x86/include/asm/mpxk.h
+ create mode 100644 arch/x86/lib/mpxk.c
+ create mode 100644 include/asm-generic/mpxk.h
 
-diff --git a/arch/x86/lib/mpxk-wrappers.c b/arch/x86/lib/mpxk-wrappers.c
+diff --git a/arch/x86/include/asm/mpxk.h b/arch/x86/include/asm/mpxk.h
 new file mode 100644
-index 000000000000..0b0fe235c90f
+index 000000000000..b5cb684e24c6
 --- /dev/null
-+++ b/arch/x86/lib/mpxk-wrappers.c
-@@ -0,0 +1,157 @@
++++ b/arch/x86/include/asm/mpxk.h
+@@ -0,0 +1,18 @@
 +/*
-+ * arch/x86/lib/mpxk-wrappers.h
++ * arch/x86/include/asm/mpxk.h
 + *
 + * Copyright (C) 2017 Aalto University
 + */
-+#include <linux/page-flags.h>
++#ifndef _X86_INCLUDE_ASM_MPXK_H_
++#define _X86_INCLUDE_ASM_MPXK_H_
++
++#ifndef CONFIG_X86_INTEL_MPX_KERNEL
++/* Use the generic header that provides empty definitions */
++#include <asm-generic/mpxk.h>
++#else /*CONFIG_X86_INTEL_MPX_KERNEL */
++
++extern void mpxk_enable_mpx(void);
++extern void mpxk_print_bounds(const char *str, const void *ptr);
++
++#endif /*CONFIG_X86_INTEL_MPX_KERNEL */
++#endif /* _X86_INCLUDE_ASM_MPXK_H_ */
+diff --git a/arch/x86/kernel/traps.c b/arch/x86/kernel/traps.c
+index bf54309b85da..8291f57d4727 100644
+--- a/arch/x86/kernel/traps.c
++++ b/arch/x86/kernel/traps.c
+@@ -440,6 +440,48 @@ dotraplinkage void do_double_fault(struct pt_regs *regs, long error_code)
+ }
+ #endif
+ 
++inline bool do_bounds_kernel(struct pt_regs *regs, long error_code)
++{
++#ifndef CONFIG_X86_INTEL_MPX_KERNEL
++	die("bounds", regs, error_code);
++#else
++	const struct mpx_bndcsr *bndcsr;
++	const char *err = NULL;
++
++	if (!cpu_feature_enabled(X86_FEATURE_MPX)) {
++		err = "cpu_feature_enabled(X86_FEATURE_MPX)";
++	} else {
++		bndcsr = get_xsave_field_ptr(XFEATURE_MASK_BNDCSR);
++		if (!bndcsr) {
++			err = "get_xsave_field_ptr failed";
++		} else {
++			trace_bounds_exception_mpx(bndcsr);
++
++			switch (bndcsr->bndstatus & MPX_BNDSTA_ERROR_CODE) {
++			case 2:	/* Bound directory has invalid entry. */
++				err = "invalid bound directory entry";
++				break;
++			case 1: /* Bound violation. */
++				err = "bounds violation!!!!";
++				break;
++			case 0: /* No exception caused by Intel MPX. */
++				err = "no Intel MPX exception found!?!";
++				break;
++			default:
++				err = "unrecognized bounds(?) error";
++				break;
++			}
++		}
++	}
++
++	if (err != NULL) {
++		pr_err("mpxk: %s\n", err);
++		BUG();
++	}
++	return true;
++#endif /* CONFIG_X86_INTEL_MPX_KERNEL */
++}
++
+ dotraplinkage void do_bounds(struct pt_regs *regs, long error_code)
+ {
+ 	const struct mpx_bndcsr *bndcsr;
+@@ -452,7 +494,7 @@ dotraplinkage void do_bounds(struct pt_regs *regs, long error_code)
+ 	cond_local_irq_enable(regs);
+ 
+ 	if (!user_mode(regs))
+-		die("bounds", regs, error_code);
++		do_bounds_kernel(regs, error_code);
+ 
+ 	if (!cpu_feature_enabled(X86_FEATURE_MPX)) {
+ 		/* The exception is not from Intel MPX */
+diff --git a/arch/x86/lib/Makefile b/arch/x86/lib/Makefile
+index 34a74131a12c..7024c4848181 100644
+--- a/arch/x86/lib/Makefile
++++ b/arch/x86/lib/Makefile
+@@ -46,3 +46,8 @@ else
+         lib-y += copy_user_64.o
+ 	lib-y += cmpxchg16b_emu.o
+ endif
++
++lib-$(CONFIG_X86_INTEL_MPX_KERNEL) += mpxk.o
++lib-$(CONFIG_X86_INTEL_MPX_KERNEL) += mpxk-wrappers.o
++CFLAGS_mpxk.o 		+= $(MPXK_LIB_CFLAGS)
++CFLAGS_mpxk-wrappers.o 	+= $(MPXK_LIB_CFLAGS)
+diff --git a/arch/x86/lib/mpxk.c b/arch/x86/lib/mpxk.c
+new file mode 100644
+index 000000000000..69a7dae3f200
+--- /dev/null
++++ b/arch/x86/lib/mpxk.c
+@@ -0,0 +1,69 @@
++/*
++ * arch/x86/lib/mpxk.c
++ *
++ * Copyright (C) 2017 Aalto University
++ */
++#include <asm/siginfo.h>
 +#include <linux/vmalloc.h>
 +#include <linux/slab.h>
 +#include <linux/mm.h>
-+#include <asm/page.h>
 +#include <asm/pgtable_64.h>
 +
-+#define MPXK_BUILTIN_DEF(r, f, ...) extern r f(__VA_ARGS__);
-+#define MPXK_WRAPPER_DEF(r, f, ...) extern r mpxk_wrapper_##f(__VA_ARGS__);
++#include <asm/mpx.h>
++#include <asm/mpxk.h>
 +
-+#include "../../../../scripts/gcc-plugins/mpxk_builtins.def"
++static struct msr bnd_cfg_s;
 +
-+#undef MPXK_WRAPPER_DEF
-+#undef MPXK_BUILTIN_DEF
-+
-+void *mpxk_wrapper_kmalloc(size_t s, gfp_t f)
++__attribute__((bnd_legacy))
++static void mpxk_enable_mpx_cfgs_cpu(void *info)
 +{
-+	void *p = kmalloc(s, f);
-+
-+	if (p)
-+		return __bnd_set_ptr_bounds(p, s);
-+	return __bnd_null_ptr_bounds(p);
++	(void) info;
++	wrmsrl(MSR_IA32_BNDCFGS, bnd_cfg_s.q);
 +}
 +
-+void *mpxk_wrapper_krealloc(void *p, size_t s, gfp_t f)
++__attribute__((bnd_legacy))
++void mpxk_enable_mpx(void)
 +{
-+	if (!p)
-+		return mpxk_wrapper_kmalloc(s, f);
++	void *ptr = get_vm_area(MPX_BD_SIZE_BYTES_64 + PAGE_SIZE, VM_MAP);
 +
-+	__bnd_chk_ptr_lbounds(p);
-+	p = krealloc(p, s, f);
++	bnd_cfg_s.q = PAGE_ALIGN((unsigned long) ptr);
++	bnd_cfg_s.q |= MPX_BNDCFG_ENABLE_FLAG;
 +
-+	if (p)
-+		return __bnd_set_ptr_bounds(p, s);
-+	return __bnd_null_ptr_bounds(p);
++	pr_info("mpxk: Setting up Intel MPX for kernel\n");
++
++	/* Config is passed via the global bnd_cfg_s.q */
++	on_each_cpu(mpxk_enable_mpx_cfgs_cpu, NULL, 1);
 +}
 +
-+void *mpxk_wrapper_memmove(void *d, const void *s, size_t c)
++void mpxk_print_bounds(const char *str, const void *ptr)
 +{
-+	if (c == 0)
-+		return d;
++	const unsigned long range = (((unsigned long)__bnd_get_ptr_ubound(ptr))
++			- ((unsigned long)__bnd_get_ptr_lbound(ptr)));
 +
-+	__bnd_chk_ptr_bounds(d, c);
-+	__bnd_chk_ptr_bounds(s, c);
-+
-+	return memmove(d, s, c);
++	pr_info("%s: pointer %pK (bounds %pK + %ld\n",
++			str, ptr, __bnd_get_ptr_lbound(ptr), range);
 +}
 +
-+void *mpxk_wrapper_memcpy(void *d, const void *s, size_t c)
++void *mpxk_load_bounds(void *ptr)
 +{
-+	if (c == 0)
-+		return d;
++	size_t size;
 +
-+	__bnd_chk_ptr_bounds(d, c);
-+	__bnd_chk_ptr_bounds(s, c);
++	do {
++		if (ptr == NULL)
++			break;
 +
-+	return memcpy(d, s, c);
++		if (!virt_addr_valid(ptr))
++			break;
++
++		if (!PageSlab(virt_to_page(ptr)))
++			break;
++
++		size = ksize(ptr);
++
++		if (size == 0)
++			return __bnd_null_ptr_bounds(ptr);
++		return __bnd_set_ptr_bounds(ptr, size);
++	} while (0);
++
++	return __bnd_init_ptr_bounds(ptr);
 +}
-+
-+/* Because the MPXK gcc-plugin works on preprocessed code it cannot properly
-+ * handle macro expanded calls such as potential memcpy -> __memcpy changes.
-+ * This probably needs to be solved in some cleaner way, and probably also
-+ * affects other function besides memcpy.
+diff --git a/include/asm-generic/mpxk.h b/include/asm-generic/mpxk.h
+new file mode 100644
+index 000000000000..0d3af7e12901
+--- /dev/null
++++ b/include/asm-generic/mpxk.h
+@@ -0,0 +1,20 @@
++/*
++ * include/asm-generic/mpxk.h
++ *
++ * Copyright (C) 2017 Aalto University
 + */
-+void *mpxk_wrapper___inline_memcpy(void *d, const void *s, size_t c)
++#ifndef _ASM_MPXK_H_
++#define _ASM_MPXK_H_
++
++#include <asm/mpx.h>
++#include <linux/types.h>
++
++static inline void mpxk_enable_mpx(void)
++{}
++
++static inline void mpxk_print_bounds(const char *str, const void *ptr)
 +{
-+	if (c == 0)
-+		return d;
-+
-+	__bnd_chk_ptr_bounds(d, c);
-+	__bnd_chk_ptr_bounds(s, c);
-+
-+	return __inline_memcpy(d, s, c);
++	pr_info("%s: MPXK disabled, no bounds for pointer %pK\n", str, ptr);
 +}
 +
-+void *mpxk_wrapper___memcpy(void *d, const void *s, size_t c)
-+{
-+	if (c == 0)
-+		return d;
-+
-+	__bnd_chk_ptr_bounds(d, c);
-+	__bnd_chk_ptr_bounds(s, c);
-+
-+	return __memcpy(d, s, c);
-+}
-+
-+void *mpxk_wrapper_memset(void *s, int c, size_t l)
-+{
-+	if (l > 0) {
-+		__bnd_chk_ptr_bounds(s, l);
-+		memset(s, c, l);
-+	}
-+	return s;
-+}
-+
-+char *mpxk_wrapper_strcat(char *d, const char *s)
-+{
-+	size_t ds = mpxk_wrapper_strlen(d);
-+	size_t ss = mpxk_wrapper_strlen(s);
-+
-+	__bnd_chk_ptr_bounds(d, ds + ss + 1);
-+	__bnd_chk_ptr_bounds(s, ss + 1);
-+
-+	return strcat(d, s);
-+}
-+
-+char *mpxk_wrapper_strncat(char *d, const char *s, size_t c)
-+{
-+	size_t ds = mpxk_wrapper_strlen(d);
-+	size_t ss = mpxk_wrapper_strnlen(s, c);
-+
-+	__bnd_chk_ptr_bounds(d, ds + ss + 1);
-+	__bnd_chk_ptr_bounds(s, (ss < c ? ss + 1 : ss));
-+
-+	return strncat(d, s, c);
-+}
-+
-+char *mpxk_wrapper_strcpy(char *d, const char *s)
-+{
-+	size_t ss = mpxk_wrapper_strlen(s);
-+
-+	__bnd_chk_ptr_bounds(d, ss + 1);
-+	__bnd_chk_ptr_bounds(s, ss + 1);
-+
-+	return strcpy(d, s);
-+}
-+
-+char *mpxk_wrapper_strncpy(char *d, const char *s, size_t c)
-+{
-+	size_t ss = strnlen(s, c);
-+
-+	__bnd_chk_ptr_bounds(d, c);
-+	__bnd_chk_ptr_bounds(s, (ss < c ? ss + 1 : ss));
-+
-+	return strncpy(d, s, c);
-+}
-+
-+size_t mpxk_wrapper_strlen(const char *s)
-+{
-+	const size_t l = strlen(s);
-+
-+	__bnd_chk_ptr_bounds(s, l + 1);
-+	return l;
-+}
-+
-+size_t mpxk_wrapper_strnlen(const char *s, size_t c)
-+{
-+	const size_t l = strnlen(s, c);
-+
-+	__bnd_chk_ptr_bounds(s, l + 1);
-+	return l;
-+}
++#endif /* _ASM_MPXK_H_ */
+diff --git a/init/main.c b/init/main.c
+index f866510472d7..eea12c81e7a9 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -94,6 +94,7 @@
+ #include <asm/setup.h>
+ #include <asm/sections.h>
+ #include <asm/cacheflush.h>
++#include <asm/mpxk.h>
+ 
+ static int kernel_init(void *);
+ 
+@@ -883,6 +884,7 @@ static void __init do_basic_setup(void)
+ 	driver_init();
+ 	init_irq_proc();
+ 	do_ctors();
++	mpxk_enable_mpx();
+ 	usermodehelper_enable();
+ 	do_initcalls();
+ }
 -- 
 2.11.0
