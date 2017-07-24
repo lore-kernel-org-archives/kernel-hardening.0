@@ -1,252 +1,292 @@
 Sender: Hans Liljestrand <ishkamiel@gmail.com>
 From: Hans Liljestrand <liljestrandh@gmail.com>
-Date: Mon, 24 Jul 2017 16:38:23 +0300
-Message-Id: <20170724133824.27223-5-LiljestrandH@gmail.com>
+Date: Mon, 24 Jul 2017 16:38:24 +0300
+Message-Id: <20170724133824.27223-6-LiljestrandH@gmail.com>
 In-Reply-To: <20170724133824.27223-1-LiljestrandH@gmail.com>
 References: <20170724133824.27223-1-LiljestrandH@gmail.com>
-Subject: [kernel-hardening] [RFC PATCH 4/5] x86: MPXK base
+Subject: [kernel-hardening] [RFC PATCH 5/5] lkdtm: Add kernel MPX testing
 To: kernel-hardening@lists.openwall.com
 Cc: elena.reshetova@intel.com, dave.hansen@intel.com, keescook@chromium.org, hpa@zytor.com, Hans Liljestrand <LiljestrandH@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Enable and add needed support functionality for ring 0 MPX. MPXK is
-enabled in init/main.c by setting the BNDCFGS MSR registers. This also
-includes the mpxk_load_bounds implementation and error handling code for
-MPX errors, i.e. bound violations.
+Tests MPXK functionality via lkdtm test cases. Currently tests basic
+bound propagation and instrumentation for memcpy and kmalloc.
 
 Signed-off-by: Hans Liljestrand <LiljestrandH@gmail.com>
 Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 ---
- arch/x86/include/asm/mpxk.h | 18 ++++++++++++
- arch/x86/kernel/traps.c     | 44 ++++++++++++++++++++++++++++-
- arch/x86/lib/Makefile       |  5 ++++
- arch/x86/lib/mpxk.c         | 69 +++++++++++++++++++++++++++++++++++++++++++++
- include/asm-generic/mpxk.h  | 20 +++++++++++++
- init/main.c                 |  2 ++
- 6 files changed, 157 insertions(+), 1 deletion(-)
- create mode 100644 arch/x86/include/asm/mpxk.h
- create mode 100644 arch/x86/lib/mpxk.c
- create mode 100644 include/asm-generic/mpxk.h
+ drivers/misc/Makefile          |   7 +++
+ drivers/misc/lkdtm.h           |   7 +++
+ drivers/misc/lkdtm_core.c      |   6 +++
+ drivers/misc/lkdtm_mpxk.c      | 115 +++++++++++++++++++++++++++++++++++++++++
+ drivers/misc/lkdtm_mpxk.h      |  11 ++++
+ drivers/misc/lkdtm_mpxk_base.c |  65 +++++++++++++++++++++++
+ 6 files changed, 211 insertions(+)
+ create mode 100644 drivers/misc/lkdtm_mpxk.c
+ create mode 100644 drivers/misc/lkdtm_mpxk.h
+ create mode 100644 drivers/misc/lkdtm_mpxk_base.c
 
-diff --git a/arch/x86/include/asm/mpxk.h b/arch/x86/include/asm/mpxk.h
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 81ef3e67acc9..58d9ba43e081 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -64,6 +64,13 @@ lkdtm-$(CONFIG_LKDTM)		+= lkdtm_usercopy.o
+ 
+ KCOV_INSTRUMENT_lkdtm_rodata.o	:= n
+ 
++ifdef CONFIG_X86_INTEL_MPX_KERNEL
++	lkdtm-$(CONFIG_LKDTM)		+= lkdtm_mpxk.o
++	lkdtm-$(CONFIG_LKDTM)		+= lkdtm_mpxk_base.o
++	CFLAGS_lkdtm_mpxk.o		+= $(MPXK_CFLAGS)
++	CFLAGS_lkdtm_mpxk_base.o	+= $(MPXK_CFLAGS)
++endif
++
+ OBJCOPYFLAGS :=
+ OBJCOPYFLAGS_lkdtm_rodata_objcopy.o := \
+ 			--set-section-flags .text=alloc,readonly \
+diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+index 3b4976396ec4..46cecd01db92 100644
+--- a/drivers/misc/lkdtm.h
++++ b/drivers/misc/lkdtm.h
+@@ -29,6 +29,13 @@ void lkdtm_CORRUPT_LIST_ADD(void);
+ void lkdtm_CORRUPT_LIST_DEL(void);
+ void lkdtm_CORRUPT_USER_DS(void);
+ 
++#ifdef CONFIG_X86_INTEL_MPX_KERNEL
++void lkdtm_MPXK_LOAD_BOUNDS(void);
++void lkdtm_MPXK_FUNCTION_ARGS(void);
++void lkdtm_MPXK_KMALLOC(void);
++void lkdtm_MPXK_MEMCPY(void);
++#endif
++
+ /* lkdtm_heap.c */
+ void lkdtm_OVERWRITE_ALLOCATION(void);
+ void lkdtm_WRITE_AFTER_FREE(void);
+diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
+index 42d2b8e31e6b..74e258ddc5fe 100644
+--- a/drivers/misc/lkdtm_core.c
++++ b/drivers/misc/lkdtm_core.c
+@@ -235,6 +235,12 @@ struct crashtype crashtypes[] = {
+ 	CRASHTYPE(USERCOPY_STACK_FRAME_FROM),
+ 	CRASHTYPE(USERCOPY_STACK_BEYOND),
+ 	CRASHTYPE(USERCOPY_KERNEL),
++#ifdef CONFIG_X86_INTEL_MPX_KERNEL
++	CRASHTYPE(MPXK_LOAD_BOUNDS),
++	CRASHTYPE(MPXK_FUNCTION_ARGS),
++	CRASHTYPE(MPXK_KMALLOC),
++	CRASHTYPE(MPXK_MEMCPY)
++#endif
+ };
+ 
+ 
+diff --git a/drivers/misc/lkdtm_mpxk.c b/drivers/misc/lkdtm_mpxk.c
 new file mode 100644
-index 000000000000..b5cb684e24c6
+index 000000000000..b957d3641378
 --- /dev/null
-+++ b/arch/x86/include/asm/mpxk.h
-@@ -0,0 +1,18 @@
-+/*
-+ * arch/x86/include/asm/mpxk.h
-+ *
-+ * Copyright (C) 2017 Aalto University
-+ */
-+#ifndef _X86_INCLUDE_ASM_MPXK_H_
-+#define _X86_INCLUDE_ASM_MPXK_H_
-+
-+#ifndef CONFIG_X86_INTEL_MPX_KERNEL
-+/* Use the generic header that provides empty definitions */
-+#include <asm-generic/mpxk.h>
-+#else /*CONFIG_X86_INTEL_MPX_KERNEL */
-+
-+extern void mpxk_enable_mpx(void);
-+extern void mpxk_print_bounds(const char *str, const void *ptr);
-+
-+#endif /*CONFIG_X86_INTEL_MPX_KERNEL */
-+#endif /* _X86_INCLUDE_ASM_MPXK_H_ */
-diff --git a/arch/x86/kernel/traps.c b/arch/x86/kernel/traps.c
-index bf54309b85da..8291f57d4727 100644
---- a/arch/x86/kernel/traps.c
-+++ b/arch/x86/kernel/traps.c
-@@ -440,6 +440,48 @@ dotraplinkage void do_double_fault(struct pt_regs *regs, long error_code)
- }
- #endif
- 
-+inline bool do_bounds_kernel(struct pt_regs *regs, long error_code)
-+{
-+#ifndef CONFIG_X86_INTEL_MPX_KERNEL
-+	die("bounds", regs, error_code);
-+#else
-+	const struct mpx_bndcsr *bndcsr;
-+	const char *err = NULL;
-+
-+	if (!cpu_feature_enabled(X86_FEATURE_MPX)) {
-+		err = "cpu_feature_enabled(X86_FEATURE_MPX)";
-+	} else {
-+		bndcsr = get_xsave_field_ptr(XFEATURE_MASK_BNDCSR);
-+		if (!bndcsr) {
-+			err = "get_xsave_field_ptr failed";
-+		} else {
-+			trace_bounds_exception_mpx(bndcsr);
-+
-+			switch (bndcsr->bndstatus & MPX_BNDSTA_ERROR_CODE) {
-+			case 2:	/* Bound directory has invalid entry. */
-+				err = "invalid bound directory entry";
-+				break;
-+			case 1: /* Bound violation. */
-+				err = "bounds violation!!!!";
-+				break;
-+			case 0: /* No exception caused by Intel MPX. */
-+				err = "no Intel MPX exception found!?!";
-+				break;
-+			default:
-+				err = "unrecognized bounds(?) error";
-+				break;
-+			}
-+		}
-+	}
-+
-+	if (err != NULL) {
-+		pr_err("mpxk: %s\n", err);
-+		BUG();
-+	}
-+	return true;
-+#endif /* CONFIG_X86_INTEL_MPX_KERNEL */
-+}
-+
- dotraplinkage void do_bounds(struct pt_regs *regs, long error_code)
- {
- 	const struct mpx_bndcsr *bndcsr;
-@@ -452,7 +494,7 @@ dotraplinkage void do_bounds(struct pt_regs *regs, long error_code)
- 	cond_local_irq_enable(regs);
- 
- 	if (!user_mode(regs))
--		die("bounds", regs, error_code);
-+		do_bounds_kernel(regs, error_code);
- 
- 	if (!cpu_feature_enabled(X86_FEATURE_MPX)) {
- 		/* The exception is not from Intel MPX */
-diff --git a/arch/x86/lib/Makefile b/arch/x86/lib/Makefile
-index 34a74131a12c..7024c4848181 100644
---- a/arch/x86/lib/Makefile
-+++ b/arch/x86/lib/Makefile
-@@ -46,3 +46,8 @@ else
-         lib-y += copy_user_64.o
- 	lib-y += cmpxchg16b_emu.o
- endif
-+
-+lib-$(CONFIG_X86_INTEL_MPX_KERNEL) += mpxk.o
-+lib-$(CONFIG_X86_INTEL_MPX_KERNEL) += mpxk-wrappers.o
-+CFLAGS_mpxk.o 		+= $(MPXK_LIB_CFLAGS)
-+CFLAGS_mpxk-wrappers.o 	+= $(MPXK_LIB_CFLAGS)
-diff --git a/arch/x86/lib/mpxk.c b/arch/x86/lib/mpxk.c
-new file mode 100644
-index 000000000000..69a7dae3f200
---- /dev/null
-+++ b/arch/x86/lib/mpxk.c
-@@ -0,0 +1,69 @@
-+/*
-+ * arch/x86/lib/mpxk.c
-+ *
-+ * Copyright (C) 2017 Aalto University
-+ */
-+#include <asm/siginfo.h>
-+#include <linux/vmalloc.h>
++++ b/drivers/misc/lkdtm_mpxk.c
+@@ -0,0 +1,115 @@
++#undef pr_fmt
++#include "lkdtm_mpxk.h"
++#include <linux/list.h>
++#include <linux/sched.h>
++#include <linux/time.h>
 +#include <linux/slab.h>
-+#include <linux/mm.h>
-+#include <asm/pgtable_64.h>
-+
-+#include <asm/mpx.h>
++#include <linux/printk.h>
 +#include <asm/mpxk.h>
 +
-+static struct msr bnd_cfg_s;
-+
-+__attribute__((bnd_legacy))
-+static void mpxk_enable_mpx_cfgs_cpu(void *info)
-+{
-+	(void) info;
-+	wrmsrl(MSR_IA32_BNDCFGS, bnd_cfg_s.q);
-+}
-+
-+__attribute__((bnd_legacy))
-+void mpxk_enable_mpx(void)
-+{
-+	void *ptr = get_vm_area(MPX_BD_SIZE_BYTES_64 + PAGE_SIZE, VM_MAP);
-+
-+	bnd_cfg_s.q = PAGE_ALIGN((unsigned long) ptr);
-+	bnd_cfg_s.q |= MPX_BNDCFG_ENABLE_FLAG;
-+
-+	pr_info("mpxk: Setting up Intel MPX for kernel\n");
-+
-+	/* Config is passed via the global bnd_cfg_s.q */
-+	on_each_cpu(mpxk_enable_mpx_cfgs_cpu, NULL, 1);
-+}
-+
-+void mpxk_print_bounds(const char *str, const void *ptr)
-+{
-+	const unsigned long range = (((unsigned long)__bnd_get_ptr_ubound(ptr))
-+			- ((unsigned long)__bnd_get_ptr_lbound(ptr)));
-+
-+	pr_info("%s: pointer %pK (bounds %pK + %ld\n",
-+			str, ptr, __bnd_get_ptr_lbound(ptr), range);
-+}
-+
-+void *mpxk_load_bounds(void *ptr)
-+{
-+	size_t size;
-+
-+	do {
-+		if (ptr == NULL)
-+			break;
-+
-+		if (!virt_addr_valid(ptr))
-+			break;
-+
-+		if (!PageSlab(virt_to_page(ptr)))
-+			break;
-+
-+		size = ksize(ptr);
-+
-+		if (size == 0)
-+			return __bnd_null_ptr_bounds(ptr);
-+		return __bnd_set_ptr_bounds(ptr, size);
-+	} while (0);
-+
-+	return __bnd_init_ptr_bounds(ptr);
-+}
-diff --git a/include/asm-generic/mpxk.h b/include/asm-generic/mpxk.h
-new file mode 100644
-index 000000000000..0d3af7e12901
---- /dev/null
-+++ b/include/asm-generic/mpxk.h
-@@ -0,0 +1,20 @@
-+/*
-+ * include/asm-generic/mpxk.h
++/** lkdtm_MPXK_LOAD_BOUNDS - test mpxk_bound_load
 + *
-+ * Copyright (C) 2017 Aalto University
++ * Tests mpxk_load_bounds function by passing pointers into function via an
++ * array. The bounds for the array itself are passed via the bnd0 register, but
++ * MPX cannot do that for the internal pointers, hence it uses BNDSTX+BNDLDX.
++ * MPXK therefore must use mpxk_load_bounds to retrieve the bounds inside the
++ * called function.
 + */
-+#ifndef _ASM_MPXK_H_
-+#define _ASM_MPXK_H_
-+
-+#include <asm/mpx.h>
-+#include <linux/types.h>
-+
-+static inline void mpxk_enable_mpx(void)
-+{}
-+
-+static inline void mpxk_print_bounds(const char *str, const void *ptr)
++void lkdtm_MPXK_LOAD_BOUNDS(void)
 +{
-+	pr_info("%s: MPXK disabled, no bounds for pointer %pK\n", str, ptr);
++	int i;
++	char *arr[10];
++
++	for (i = 0; i < 10; i++)
++		arr[i] = kmalloc(16, GFP_KERNEL);
++
++	pr_info("attempting good ptr write\n");
++	mpxk_write_arr_i(arr, 2, 0);
++
++	/* This could succeed because mpxk_load_bounds retrieved the size based
++	 * on the pointer value via ksize, which in turn doesn't necessarily
++	 * return the exact size that was passed into kmalloc. The size is none
++	 * the less guaranteed to be "safe" in that it will not be reserved
++	 * elsewhere.
++	 */
++	pr_info("attempting exact (+1) bad ptr write (can succeed)");
++	mpxk_write_arr_i(arr, 4, 16);
++
++	pr_info("attempting real bad ptr write (should be caught)\n");
++	mpxk_write_arr_i(arr, 5, 1024);
++
++	for (i = 0; i < 10; i++)
++		kfree(arr[i]);
 +}
 +
-+#endif /* _ASM_MPXK_H_ */
-diff --git a/init/main.c b/init/main.c
-index f866510472d7..eea12c81e7a9 100644
---- a/init/main.c
-+++ b/init/main.c
-@@ -94,6 +94,7 @@
- #include <asm/setup.h>
- #include <asm/sections.h>
- #include <asm/cacheflush.h>
++/** lkdtm_MPXK_FUNCTION_ARGS - test function argument bound propagation
++ *
++ * Note that the four first pointers will have their bounds passed into the
++ * function via the bnd0-bnd3 registers. The rest are in vanilla MPX passed in
++ * via BNDSTX+BNDLDX, but in the case of MPXK they are simply loaded inside the
++ * called function using mpxk_load_bounds.
++ */
++void lkdtm_MPXK_FUNCTION_ARGS(void)
++{
++	int i;
++	char *arr[10];
++
++	for (i = 0; i < 10; i++)
++		arr[i] = kmalloc(16, GFP_KERNEL);
++
++	pr_info("attempting good ptr write\n");
++	mpxk_write_10_i(8, 0,
++			arr[0], arr[1], arr[2], arr[3], arr[4],
++			arr[5], arr[6], arr[7], arr[8], arr[9]);
++
++	pr_info("attempting exact bad ptr write\n");
++	mpxk_write_10_i(9, 2,
++			arr[0], arr[1], arr[2], arr[3], arr[4],
++			arr[5], arr[6], arr[7], arr[8], arr[9]);
++
++	pr_info("attempting real bad ptr write\n");
++	mpxk_write_10_i(7, 1024,
++			arr[0], arr[1], arr[2], arr[3], arr[4],
++			arr[5], arr[6], arr[7], arr[8], arr[9]);
++
++	for (i = 0; i < 10; i++)
++		kfree(arr[i]);
++}
++
++/** lkdtm_MPXK_KMALLOC
++ *
++ * Make suer kmalloc is properly instrumented, i.e. it returns proper pointer
++ * bounds on allocation.
++ */
++void lkdtm_MPXK_KMALLOC(void)
++{
++	void *ptr = kmalloc(10, GFP_KERNEL);
++
++	pr_info("attempting good write\n");
++	try_write(ptr, 1);
++
++	pr_info("attempting bad write\n");
++	try_write(ptr, 11);
++
++	kfree(ptr);
++}
++
++
++/** lkdtm_MPXK_MEMCPY - test memcpy instrumentation
++ *
++ * Test memcpy instrumentation, which should check that both target and source
++ * are within bounds (this exercises only destination bounds).
++ */
++void lkdtm_MPXK_MEMCPY(void)
++{
++	char *s  = "123456789";
++	char *s_big = "12345678901234567890123456789012";
++	char *d = kmalloc(4 * sizeof(char), GFP_KERNEL);
++
++	pr_info("performing okay memcpy\n");
++	memcpy(d, s, 1);
++
++	/* The source is okay, but target is too small. */
++	pr_info("performing bad memcpy\n");
++	memcpy(d, s_big, 32 * sizeof(char));
++}
+diff --git a/drivers/misc/lkdtm_mpxk.h b/drivers/misc/lkdtm_mpxk.h
+new file mode 100644
+index 000000000000..197bdca2c10c
+--- /dev/null
++++ b/drivers/misc/lkdtm_mpxk.h
+@@ -0,0 +1,11 @@
++#undef pr_fmt
++#include "lkdtm.h"
 +#include <asm/mpxk.h>
- 
- static int kernel_init(void *);
- 
-@@ -883,6 +884,7 @@ static void __init do_basic_setup(void)
- 	driver_init();
- 	init_irq_proc();
- 	do_ctors();
-+	mpxk_enable_mpx();
- 	usermodehelper_enable();
- 	do_initcalls();
- }
++
++/* #define SOFT_TEST */
++
++void try_write(void *ptr, int i);
++void mpxk_write_arr_i(char **arr, int i, int j);
++noinline void mpxk_write_10_i(int i, int j,
++		void *s0, void *s1, void *s2, void *s3, void *s4,
++		void *s5, void *s6, void *s7, void *s8, void *s9);
+diff --git a/drivers/misc/lkdtm_mpxk_base.c b/drivers/misc/lkdtm_mpxk_base.c
+new file mode 100644
+index 000000000000..938aa5c78211
+--- /dev/null
++++ b/drivers/misc/lkdtm_mpxk_base.c
+@@ -0,0 +1,65 @@
++#undef pr_fmt
++#include "lkdtm_mpxk.h"
++#include <linux/printk.h>
++
++/**
++ * try_write - Attempt write at pointed memory
++ *
++ * On bad writes this will either cause a bound violation, or
++ * when SOFT_TEST is set pritn out "fail".
++ */
++noinline void try_write(void *ptr, int i)
++{
++#ifdef SOFT_TEST
++	const void *ubound = __bnd_get_ptr_ubound(ptr);
++	const void *lbound = __bnd_get_ptr_lbound(ptr);
++
++	if (ptr < lbound || (ptr+i) > ubound)
++		pr_info("fail\n");
++	else
++		pr_info("ok\n");
++#else
++	((char *)ptr)[i] = '\0';
++#endif /* SOFT_TEST */
++}
++
++/**
++ * mpxk_write_arr_i - Test function that writes to array.
++ *
++ * The boudns for the inner array cannot be passed in via stack/registers and
++ * are therefore loaded with mpxk_load_bounds (and would have been passed in
++ * vanilla MPX with BNDSTX+BNDLDX).
++ */
++noinline void mpxk_write_arr_i(char **arr, int i, int j)
++{
++	try_write(arr[i], j);
++}
++
++
++/**
++ * mpxk_write_10_i - Test function that writes to function arg strings.
++ *
++ * Because bounds cannot be passed beyond the sixth argument (or the fourth
++ * bound) this forces MPXK to use mpxk_load_bounds for the latter pointers.
++ */
++noinline void mpxk_write_10_i(int i, int j,
++		void *s0, void *s1, void *s2, void *s3, void *s4,
++		void *s5, void *s6, void *s7, void *s8, void *s9)
++{
++
++#define mpxk_func_case(x) do {		\
++	if (i == x)			\
++		try_write(s##x, j);	\
++} while (0)
++	mpxk_func_case(0);
++	mpxk_func_case(1);
++	mpxk_func_case(2);
++	mpxk_func_case(3);
++	mpxk_func_case(4);
++	mpxk_func_case(5);
++	mpxk_func_case(6);
++	mpxk_func_case(7);
++	mpxk_func_case(8);
++	mpxk_func_case(9);
++#undef mpxk_func_case
++}
 -- 
 2.11.0
