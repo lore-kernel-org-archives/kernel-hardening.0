@@ -1,100 +1,96 @@
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Mon, 24 Jul 2017 11:07:10 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20170724090710.o66r5r2pwxgwor7t@gmail.com>
-References: <1500855620-73004-1-git-send-email-keescook@chromium.org>
- <1500855620-73004-4-git-send-email-keescook@chromium.org>
+Date: Mon, 24 Jul 2017 11:37:24 +0100
+From: Dave Martin <Dave.Martin@arm.com>
+Message-ID: <20170724103648.GA6321@e103592.cambridge.arm.com>
+References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
+ <1500480092-28480-7-git-send-email-mark.rutland@arm.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1500855620-73004-4-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v7 3/3] x86/refcount: Implement fast refcount overflow
- protection
-To: Kees Cook <keescook@chromium.org>
-Cc: Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-kernel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>
+In-Reply-To: <1500480092-28480-7-git-send-email-mark.rutland@arm.com>
+Subject: [kernel-hardening] Re: [PATCH 06/11] arm64: Don't trap host pointer auth use to EL2
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, arnd@arndb.de, jiong.wang@arm.com, marc.zyngier@arm.com, catalin.marinas@arm.com, yao.qi@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, kvmarm@lists.cs.columbia.edu, christoffer.dall@linaro.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Wed, Jul 19, 2017 at 05:01:27PM +0100, Mark Rutland wrote:
+> To allow EL0 (and/or EL1) to use pointer authentication functionality,
+> we must ensure that pointer authentication instructions and accesses to
+> pointer authentication keys are not trapped to EL2 (where we will not be
+> able to handle them).
+> 
+> This patch ensures that HCR_EL2 is configured appropriately when the
+> kernel is booted at EL2. For non-VHE kernels we set HCR_EL2.{API,APK},
+> ensuring that EL1 can access keys and permit EL0 use of instructions.
+> For VHE kernels, EL2 access is controlled by EL3, and we need not set
+> anything.
+> 
+> This does not enable support for KVM guests, since KVM manages HCR_EL2
+> itself.
+> 
+> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+> Cc: Catalin Marinas <catalin.marinas@arm.com>
+> Cc: Christoffer Dall <christoffer.dall@linaro.org>
+> Cc: Marc Zyngier <marc.zyngier@arm.com>
+> Cc: Will Deacon <will.deacon@arm.com>
+> Cc: kvmarm@lists.cs.columbia.edu
+> ---
+>  arch/arm64/include/asm/kvm_arm.h |  2 ++
+>  arch/arm64/kernel/head.S         | 19 +++++++++++++++++--
+>  2 files changed, 19 insertions(+), 2 deletions(-)
+> 
+> diff --git a/arch/arm64/include/asm/kvm_arm.h b/arch/arm64/include/asm/kvm_arm.h
+> index 61d694c..c1267e8 100644
+> --- a/arch/arm64/include/asm/kvm_arm.h
+> +++ b/arch/arm64/include/asm/kvm_arm.h
+> @@ -23,6 +23,8 @@
+>  #include <asm/types.h>
+>  
+>  /* Hyp Configuration Register (HCR) bits */
+> +#define HCR_API		(UL(1) << 41)
+> +#define HCR_APK		(UL(1) << 40)
+>  #define HCR_E2H		(UL(1) << 34)
+>  #define HCR_ID		(UL(1) << 33)
+>  #define HCR_CD		(UL(1) << 32)
+> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+> index 973df7d..8b8e8d7 100644
+> --- a/arch/arm64/kernel/head.S
+> +++ b/arch/arm64/kernel/head.S
+> @@ -412,10 +412,25 @@ CPU_LE(	bic	x0, x0, #(1 << 25)	)	// Clear the EE bit for EL2
+>  
+>  	/* Hyp configuration. */
+>  	mov	x0, #HCR_RW			// 64-bit EL1
+> -	cbz	x2, set_hcr
+> +	cbz	x2, 1f
 
-* Kees Cook <keescook@chromium.org> wrote:
+Can we keep the label name here?  It still seems appropriate.
 
-> +config ARCH_HAS_REFCOUNT
-> +     bool
-> +     help
-> +       An architecture selects this when it has implemented refcount_t
-> +       using primitizes that provide a faster runtime at the expense
-> +       of some full refcount state checks. The refcount overflow condition,
-> +       however, must be retained. Catching overflows is the primary
-> +       security concern for protecting against bugs in reference counts.
-
-s/primitizes/primitives
-
-also, the 'faster runtime' and the whole explanation reads a bit weird to me,
-how about something like:
-
-       An architecture selects this when it has implemented refcount_t
-       using open coded assembly primitives that provide an optimized
-       refcount_t implementation, possibly at the expense of some full
-       refcount state checks of CONFIG_REFCOUNT_FULL=y.
-
-       The refcount overflow check behavior, however, must be retained.
-       Catching overflows is the primary security concern for protecting
-       against bugs in reference counts.
-
-> --- a/arch/x86/Kconfig
-> +++ b/arch/x86/Kconfig
-> @@ -55,6 +55,7 @@ config X86
->  	select ARCH_HAS_KCOV			if X86_64
->  	select ARCH_HAS_MMIO_FLUSH
->  	select ARCH_HAS_PMEM_API		if X86_64
-> +	select ARCH_HAS_REFCOUNT
->  	select ARCH_HAS_UACCESS_FLUSHCACHE	if X86_64
->  	select ARCH_HAS_SET_MEMORY
->  	select ARCH_HAS_SG_CHAIN
-
-Just wonderin, how was the 32-bit kernel tested?
-
-> +/*
-> + * Body of refcount error handling: in .text.unlikely, saved into CX the
-> + * address of the refcount that has entered a bad state, and trigger an
-> + * exception. Fixup address is back in regular execution flow in .text.
-
-I had to read this 4 times to parse it (and even now I'm unsure whether I parsed 
-it correctly) - could this explanation be transformed to simpler, more 
-straightforward English?
-
-> + */
-> +#define _REFCOUNT_EXCEPTION				\
-> +	".pushsection .text.unlikely\n"			\
-> +	"111:\tlea %[counter], %%" _ASM_CX "\n"		\
-> +	"112:\t" ASM_UD0 "\n"				\
-> +	ASM_UNREACHABLE					\
-> +	".popsection\n"					\
-> +	"113:\n"					\
-> +	_ASM_EXTABLE_REFCOUNT(112b, 113b)
-
-Would it be technically possible to use named labels instead of these random 
-numbered labels?
-
+>  	orr	x0, x0, #HCR_TGE		// Enable Host Extensions
+>  	orr	x0, x0, #HCR_E2H
+> -set_hcr:
+> +1:
+> +#ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
 > +	/*
-> +	 * This function has been called because either a negative refcount
-> +	 * value was seen by any of the refcount functions, or a zero
-> +	 * refcount value was seen by refcount_dec().
-> +	 *
-> +	 * If we crossed from INT_MAX to INT_MIN, the OF flag (result
-> +	 * wrapped around) will be set. Additionally, seeing the refcount
-> +	 * reach 0 will set the ZF flag. In each of these cases we want a
-> +	 * report, since it's a boundary condition.
+> +	 * Disable pointer authentication traps to EL2. The HCR_EL2.{APK,API}
+> +	 * bits exist iff at least one authentication mechanism is implemented.
+> +	 */
+> +	mrs	x1, id_aa64isar1_el1
+> +	mov_q	x3, ((0xf << ID_AA64ISAR1_GPI_SHIFT) | \
+> +		     (0xf << ID_AA64ISAR1_GPA_SHIFT) | \
+> +		     (0xf << ID_AA64ISAR1_API_SHIFT) | \
+> +		     (0xf << ID_AA64ISAR1_APA_SHIFT))
 
-Small nit: 'ZF' stands for 'zero flag' - so we should either write 'zero flag' or 
-'ZF' - 'ZF flag' is kind of redundant.
+Redundant outer (), I think -- mov_q protects its argument.
 
-> +#else
-> +static inline void refcount_error_report(struct pt_regs *regs,
-> +					 const char *msg) { }
+> +	and	x1, x1, x3
+> +	cbz	x1, 1f
 
-By now you should know that for x86 code you should not break lines in such an 
-ugly fashion, right? :-)
+tst + b.eq?
 
-Thanks,
+> +	orr	x0, x0, #(HCR_APK | HCR_API)
+> +1:
+> +#endif
+>  	msr	hcr_el2, x0
+>  	isb
 
-	Ingo
+Cheers
+---Dave
