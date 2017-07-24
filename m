@@ -1,96 +1,143 @@
-Date: Mon, 24 Jul 2017 11:37:24 +0100
-From: Dave Martin <Dave.Martin@arm.com>
-Message-ID: <20170724103648.GA6321@e103592.cambridge.arm.com>
 References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
- <1500480092-28480-7-git-send-email-mark.rutland@arm.com>
+ <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
+ <20170721170523.GD1538@e103592.cambridge.arm.com>
+From: Suzuki K Poulose <Suzuki.Poulose@arm.com>
+Message-ID: <fcf947a4-3670-3b1e-fc5a-f5da8a58e7ba@arm.com>
+Date: Mon, 24 Jul 2017 11:47:29 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1500480092-28480-7-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] Re: [PATCH 06/11] arm64: Don't trap host pointer auth use to EL2
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, arnd@arndb.de, jiong.wang@arm.com, marc.zyngier@arm.com, catalin.marinas@arm.com, yao.qi@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, kvmarm@lists.cs.columbia.edu, christoffer.dall@linaro.org
+In-Reply-To: <20170721170523.GD1538@e103592.cambridge.arm.com>
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 01/11] arm64: docs: describe ELF hwcaps
+To: Dave Martin <Dave.Martin@arm.com>, Mark Rutland <mark.rutland@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, arnd@arndb.de, jiong.wang@arm.com, marc.zyngier@arm.com, catalin.marinas@arm.com, yao.qi@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, kvmarm@lists.cs.columbia.edu, christoffer.dall@linaro.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 19, 2017 at 05:01:27PM +0100, Mark Rutland wrote:
-> To allow EL0 (and/or EL1) to use pointer authentication functionality,
-> we must ensure that pointer authentication instructions and accesses to
-> pointer authentication keys are not trapped to EL2 (where we will not be
-> able to handle them).
-> 
-> This patch ensures that HCR_EL2 is configured appropriately when the
-> kernel is booted at EL2. For non-VHE kernels we set HCR_EL2.{API,APK},
-> ensuring that EL1 can access keys and permit EL0 use of instructions.
-> For VHE kernels, EL2 access is controlled by EL3, and we need not set
-> anything.
-> 
-> This does not enable support for KVM guests, since KVM manages HCR_EL2
-> itself.
-> 
-> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-> Cc: Catalin Marinas <catalin.marinas@arm.com>
-> Cc: Christoffer Dall <christoffer.dall@linaro.org>
-> Cc: Marc Zyngier <marc.zyngier@arm.com>
-> Cc: Will Deacon <will.deacon@arm.com>
-> Cc: kvmarm@lists.cs.columbia.edu
-> ---
->  arch/arm64/include/asm/kvm_arm.h |  2 ++
->  arch/arm64/kernel/head.S         | 19 +++++++++++++++++--
->  2 files changed, 19 insertions(+), 2 deletions(-)
-> 
-> diff --git a/arch/arm64/include/asm/kvm_arm.h b/arch/arm64/include/asm/kvm_arm.h
-> index 61d694c..c1267e8 100644
-> --- a/arch/arm64/include/asm/kvm_arm.h
-> +++ b/arch/arm64/include/asm/kvm_arm.h
-> @@ -23,6 +23,8 @@
->  #include <asm/types.h>
->  
->  /* Hyp Configuration Register (HCR) bits */
-> +#define HCR_API		(UL(1) << 41)
-> +#define HCR_APK		(UL(1) << 40)
->  #define HCR_E2H		(UL(1) << 34)
->  #define HCR_ID		(UL(1) << 33)
->  #define HCR_CD		(UL(1) << 32)
-> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
-> index 973df7d..8b8e8d7 100644
-> --- a/arch/arm64/kernel/head.S
-> +++ b/arch/arm64/kernel/head.S
-> @@ -412,10 +412,25 @@ CPU_LE(	bic	x0, x0, #(1 << 25)	)	// Clear the EE bit for EL2
->  
->  	/* Hyp configuration. */
->  	mov	x0, #HCR_RW			// 64-bit EL1
-> -	cbz	x2, set_hcr
-> +	cbz	x2, 1f
+On 21/07/17 18:05, Dave Martin wrote:
+> On Wed, Jul 19, 2017 at 05:01:22PM +0100, Mark Rutland wrote:
+>> We don't document our ELF hwcaps, leaving developers to interpret them
+>> according to hearsay, guesswork, or (in exceptional cases) inspection of
+>> the current kernel code.
+>>
+>> This is less than optimal, and it would be far better if we had some
+>> definitive description of each of the ELF hwcaps that developers could
+>> refer to.
+>>
+>> This patch adds a document describing the (native) arm64 ELF hwcaps.
+>
+> Minor nit: what do the hwcaps have to do with ELF really?  Can we just
+> call them "hwcaps"?
+>
+> I'm not sure of the history here.
 
-Can we keep the label name here?  It still seems appropriate.
+Dave,
 
->  	orr	x0, x0, #HCR_TGE		// Enable Host Extensions
->  	orr	x0, x0, #HCR_E2H
-> -set_hcr:
-> +1:
-> +#ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
-> +	/*
-> +	 * Disable pointer authentication traps to EL2. The HCR_EL2.{APK,API}
-> +	 * bits exist iff at least one authentication mechanism is implemented.
-> +	 */
-> +	mrs	x1, id_aa64isar1_el1
-> +	mov_q	x3, ((0xf << ID_AA64ISAR1_GPI_SHIFT) | \
-> +		     (0xf << ID_AA64ISAR1_GPA_SHIFT) | \
-> +		     (0xf << ID_AA64ISAR1_API_SHIFT) | \
-> +		     (0xf << ID_AA64ISAR1_APA_SHIFT))
+This is something that I requested to avoid confusing it with the CPU hwcaps,
+(stored in the variable named hwcaps), we maintain in the kernel for capabilities.
+Though, what we describe in this document is not specific to ELF format as
+you have mentioned, it is easy to get confused with the former.
 
-Redundant outer (), I think -- mov_q protects its argument.
+>
+>> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+>> Cc: Catalin Marinas <catalin.marinas@arm.com>
+>> Cc: Dave Martin <Dave.Martin@arm.com>
+>> Cc: Suzuki K Poulose <suzuki.poulose@arm.com>
+>> Cc: Will Deacon <will.deacon@arm.com>
+>> ---
+>>  Documentation/arm64/elf_hwcaps.txt | 133 +++++++++++++++++++++++++++++++++++++
+>>  1 file changed, 133 insertions(+)
+>>  create mode 100644 Documentation/arm64/elf_hwcaps.txt
+>>
+>> diff --git a/Documentation/arm64/elf_hwcaps.txt b/Documentation/arm64/elf_hwcaps.txt
+>> new file mode 100644
+>> index 0000000..7bc2921
+>> --- /dev/null
+>> +++ b/Documentation/arm64/elf_hwcaps.txt
+>> @@ -0,0 +1,133 @@
+>> +ARM64 ELF hwcaps
+>> +================
+>> +
+>> +This document describes the usage and semantics of the arm64 ELF hwcaps.
+>> +
+>> +
+>> +1. Introduction
+>> +---------------
+>> +
+>> +Some hardware or software features are only available on some CPU
+>> +implementations, and/or with certain kernel configurations, but have no
+>> +architected discovery mechanism available to userspace code at EL0. The
+>> +kernel exposes the presence of these features to userspace through a set
+>> +of flags called hwcaps, exposed in the auxilliary vector.
+>> +
+>> +Userspace software can test for features by acquiring the AT_HWCAP entry
+>> +of the auxilliary vector, and testing whether the relevant flags are
+>> +set, e.g.
+>> +
+>> +bool floating_point_is_present(void)
+>> +{
+>> +	unsigned long hwcaps = getauxval(AT_HWCAP);
+>> +	if (hwcaps & HWCAP_FP)
+>> +		return true;
+>> +
+>> +	return false;
+>> +}
+>> +
+>> +Where software relies on a feature described by a hwcap, it should check
+>> +the relevant hwcap flag to verify that the feature is present before
+>> +attempting to make use of the feature.
+>> +
+>> +Features cannot be probed reliably through other means. When a feature
+>> +is not available, attempting to use it may result in unpredictable
+>
+> This says that features cannot be probed reliably via the (emulated) ID
+> registers available with HWCAP_CPUID.
+>
+> So, what use is the ID register emulation?
+>
+> For each of hwcaps and cpuid, a particular feature may be reported as
+> present (y), absent (n), or not described at all (x):
+>
+> hwcap>    x n y
+> cpuid:
+>    x      N N Y
+>    n      N N
+>    y      Y   Y
+>
+> I've filled in the straightforward cases, where software may (Y) or must
+> not (N) use the feature.
+>
+> In the cases left blank, hwcap and cpuid disagree.
+>
+> Are we confident that should never be observed -- i.e., it's a kernel
+> bug if seen?  If so, we can fill Ys in there.  But we need to be clear
 
-> +	and	x1, x1, x3
-> +	cbz	x1, 1f
+CPUID=> n and HWCAP=> Y is Kernel bug, indeed, as both HWCAP and CPUID uses the
+same underlying data for the decision. However, the other case is a bit complicated,
+depending on whether we decide to continue adding (we do add at the moment) "new HWCAP"
+bits for the newer features.
+If we do add the new HWCAPs, that could possible create conflicts on older kernels
+which doesn't know about the feature, while the CPUID could expose the feature.
+If we don't add the HWCAP, there is no reliable way for the userspace to decide if
+the kernel supports the feature or not.
 
-tst + b.eq?
+So, in either case, we need to cap the value exposed by CPUID to the "kernel supported
+feature level" to avoid problems like this.
 
-> +	orr	x0, x0, #(HCR_APK | HCR_API)
-> +1:
-> +#endif
->  	msr	hcr_el2, x0
->  	isb
+Thoughts ?
 
-Cheers
----Dave
+Suzuki
+
+
+
+> about cases where the hwcap doesn't mean exactly the same as the
+> corresponding CPUID feature.  The hwcap may tell software it can assume
+> that certain kernel ABI extensions related to that CPU feature are
+> available for example.
+>
+> This also affects how HWCAP_CPUID is described below.
+>
+> [...]
+>
+> Cheers
+> ---Dave
+>
