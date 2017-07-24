@@ -1,38 +1,31 @@
-References: <1499724283-30719-1-git-send-email-labbott@redhat.com>
- <1499724283-30719-3-git-send-email-labbott@redhat.com>
- <20170711195154.GA7124@leverpostej>
- <2f24df9e-64b1-ffef-ddbb-08f7fe8d2a96@redhat.com>
- <f100d5f3-fabc-a6b4-ef5f-91fc5f123299@linux.com>
- <160e3088-b8e0-513b-8c1a-ce22ce598d5a@redhat.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <44d0ad13-6362-6224-ae64-d1848d217f0b@linux.com>
-Date: Mon, 24 Jul 2017 11:19:26 +0300
+Date: Mon, 24 Jul 2017 10:44:55 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20170724084455.o5asa55fckgyjri2@hirez.programming.kicks-ass.net>
+References: <1500422614-94821-1-git-send-email-keescook@chromium.org>
+ <20170720091106.kigtr6zy7pjgk2s6@gmail.com>
+ <20170721142255.586224f0db9cf0714e654859@linux-foundation.org>
+ <CAGXu5j+QU7OXWA_oMaLUsDnS4yyfNx8-1f_ywHX=o88kqE7=JQ@mail.gmail.com>
+ <87zibujq5t.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-In-Reply-To: <160e3088-b8e0-513b-8c1a-ce22ce598d5a@redhat.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC][PATCH 2/2] arm64: Clear the stack
-To: Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Tycho Andersen <tycho@docker.com>, PaX Team <pageexec@freemail.hu>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <87zibujq5t.fsf@concordia.ellerman.id.au>
+Subject: [kernel-hardening] Re: [PATCH v6 0/2] x86: Implement fast refcount overflow protection
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 22.07.2017 03:23, Laura Abbott wrote:
-> On 07/21/2017 09:56 AM, Alexander Popov wrote:
->> So let's keep it not to break CONFIG_SCHED_STACK_END_CHECK.
-> 
-> That makes sense, good find! I wonder if CONFIG_SCHED_STACK_END_CHECK
-> should go on the list of hardening options and/or if we can enhance
-> it somehow?
+On Mon, Jul 24, 2017 at 04:38:06PM +1000, Michael Ellerman wrote:
 
-Do you mean this list?
-http://www.kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings
+> What I'm not entirely clear on is what the best trade off is in terms of
+> overhead vs checks. The summary of behaviour between the fast and full
+> versions you promised Ingo will help there I think.
 
-> I'm not sure why it requires two words though since the
-> poison only seems to be 32-bits?
+That's something that's probably completely different for PPC than it is
+for x86. Both because your primitive is LL/SC and thus the saturation
+semantics we need a cmpxchg loop for are more natural in your case
+anyway, and the fact that your LL/SC is horrendously slow in any case.
 
-On x86_64 end_of_stack() returns the pointer to unsigned long, so we need at
-least 8 bytes to avoid breaking CONFIG_SCHED_STACK_END_CHECK. Don't know about 8
-more bytes.
-
-Best regards,
-Alexander
+Also, I still haven't seen an actual benchmark where our cmpxchg loop
+actually regresses anything, just a lot of yelling about potential
+regressions :/
