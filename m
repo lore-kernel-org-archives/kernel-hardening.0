@@ -1,41 +1,45 @@
-From: valdis.kletnieks@vt.edu
-Mime-Version: 1.0
-Content-Type: multipart/signed; boundary="==_Exmh_1500952905_2037P";
-	 micalg=pgp-sha1; protocol="application/pgp-signature"
-Content-Transfer-Encoding: 7bit
-Date: Mon, 24 Jul 2017 23:21:46 -0400
-Message-ID: <91431.1500952906@turing-police.cc.vt.edu>
-Subject: [kernel-hardening] Issue with CONFIG_GCC_PLUGIN_RANDSTRUCT=y and out of tree modules..
-To: kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <44d0ad13-6362-6224-ae64-d1848d217f0b@linux.com>
+References: <1499724283-30719-1-git-send-email-labbott@redhat.com>
+ <1499724283-30719-3-git-send-email-labbott@redhat.com> <20170711195154.GA7124@leverpostej>
+ <2f24df9e-64b1-ffef-ddbb-08f7fe8d2a96@redhat.com> <f100d5f3-fabc-a6b4-ef5f-91fc5f123299@linux.com>
+ <160e3088-b8e0-513b-8c1a-ce22ce598d5a@redhat.com> <44d0ad13-6362-6224-ae64-d1848d217f0b@linux.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 24 Jul 2017 20:34:31 -0700
+Message-ID: <CAGXu5jKp0J_6+upysRXbc1Khjzr20DrdM6As8ZS=QcccN7jpfg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC][PATCH 2/2] arm64: Clear the stack
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Tycho Andersen <tycho@docker.com>, PaX Team <pageexec@freemail.hu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---==_Exmh_1500952905_2037P
-Content-Type: text/plain; charset=us-ascii
+On Mon, Jul 24, 2017 at 1:19 AM, Alexander Popov <alex.popov@linux.com> wrote:
+> On 22.07.2017 03:23, Laura Abbott wrote:
+>> On 07/21/2017 09:56 AM, Alexander Popov wrote:
+>>> So let's keep it not to break CONFIG_SCHED_STACK_END_CHECK.
+>>
+>> That makes sense, good find! I wonder if CONFIG_SCHED_STACK_END_CHECK
+>> should go on the list of hardening options and/or if we can enhance
+>> it somehow?
+>
+> Do you mean this list?
+> http://www.kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings
+>
+>> I'm not sure why it requires two words though since the
+>> poison only seems to be 32-bits?
+>
+> On x86_64 end_of_stack() returns the pointer to unsigned long, so we need at
+> least 8 bytes to avoid breaking CONFIG_SCHED_STACK_END_CHECK. Don't know about 8
+> more bytes.
 
-I discovered the hard way that changing that config variable from n to y
-and then doing a 'make' of an out of tree module resulted in it not working.
+Seems like this should be a random value like the per-frame stack
+canary, but it looks like a relatively cheap check. It's probably not
+in the cache, though, since most stack operations should be pretty far
+from the end of the stack...
 
-Once I did a 'make clean', the next 'make' resulted in a working module.
-So I'm guessing that the kernel dependencies were too subtle for
-the 'make' to notice that the structures had changed logically, if not
-source code wise.  Probably not fixable, but could probably use
-a line or two in the Kconfig help for the item.
+-Kees
 
-I'll code a patch if that seems like a good idea...
-
---==_Exmh_1500952905_2037P
-Content-Type: application/pgp-signature
-
------BEGIN PGP SIGNATURE-----
-Comment: Exmh version 2.8.0 04/21/2017
-
-iQEVAwUBWXa5SY0DS38y7CIcAQJtDwgAjji1Kwo7/g7plleSkIE/wUN+yijEHO55
-HFoYbuAgAPOalv5XEGFKXVqlFPn45ojGpapZU0gbAmksTv253mQ44riQW2iV920B
-vHcLBSPG31J86gQTIpclAftPeakwHbqRSiFBeS2+6YBvI2NaHkOouyFKePyI/lQj
-SosQOTsuiqN1wnf/ogcVdgpV4I6NVKDbslVMJihkiF+ZZ41XaAd2WJ5QP+oV0s1G
-Tp9uc2iPLDG5eCY6KSW7Q5kxv37zUrD1SLhOmTXEmhwhSANYHGnYKYKdHt2DVR6f
-mwzTTWds+KJRDhbzXtXfXTnSnazcQIwwSE6e3gpL68H7Q79JhMUGug==
-=/ajn
------END PGP SIGNATURE-----
-
---==_Exmh_1500952905_2037P--
+-- 
+Kees Cook
+Pixel Security
