@@ -1,61 +1,39 @@
-Date: Tue, 25 Jul 2017 17:01:16 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170725160116.GB12749@leverpostej>
-References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
- <bb507ee1-c7ba-4c73-0d0f-058c4821793c@arm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <bb507ee1-c7ba-4c73-0d0f-058c4821793c@arm.com>
-Subject: [kernel-hardening] Re: [PATCH 00/11] ARMv8.3 pointer authentication userspace support
-To: Yao Qi <yao.qi@arm.com>
-Cc: linux-arm-kernel@lists.infradead.org, arnd@arndb.de, catalin.marinas@arm.com, christoffer.dall@linaro.org, Dave.Martin@arm.com, jiong.wang@arm.com, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <20170725114901.31403-1-ard.biesheuvel@linaro.org>
+References: <20170725114901.31403-1-ard.biesheuvel@linaro.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 25 Jul 2017 10:13:19 -0700
+Message-ID: <CAGXu5jLNB5dmA0o=n_nn=4NRu3LjuNf5PGRopATuRiq0aJ1ECA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC PATCH untested] arm64: kernel: implement fast refcount checking
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Li Kun <hw.likun@huawei.com>
+Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On Tue, Jul 25, 2017 at 4:49 AM, Ard Biesheuvel
+<ard.biesheuvel@linaro.org> wrote:
+> Hi all,
+>
+> I had a stab at porting the fast refcount checks to arm64. It is slightly
+> less straight-forward than x86 given that we need to support both LSE and
+> LL/SC, and fallback to the latter if running a kernel built with support
+> for the former on hardware that does not support it.
+>
+> It is build tested with and without LSE support, and boots fine on non-LSE
+> hardware in both cases.
 
-On Tue, Jul 25, 2017 at 12:32:10PM +0100, Yao Qi wrote:
-> On 19/07/17 17:01, Mark Rutland wrote:
-> > If authentication fails, bits are set in the pointer such that it is
-> > guaranteed to cause a fault if used.
-> 
-> How does user space know the fault is caused by authentication fail?
+Ah! Very cool. Hopefully you and Li can compare notes; I think they've
+been working on an implementation too.
 
-Strictly speaking, it does not, and neither does the kernel.
+> Suggestions welcome as to how to test and/or benchmark this,
 
-In general, it cannot know whether this is the case, as an
-authentication failure does not result in an immediate exception.
+I'll post a patch for LKDTM that I've been using. It's more
+comprehensive than the existing ATOMIC checks (which predated the
+refcount-only protection).
 
-> When GDB is debugging a program, and it failed in pointer
-> authentication, I assume GDB only knows that the program receives signal
-> SIGSEGV, but how does GDB or user know why does the program get SIGSEGV?
+-Kees
 
-I think in practice, the user has to determine this for themselves. I do
-not believe that it is possible to reliably determine whether a given
-fault was caused by an authentication failure.
-
-For example, consider an authentication failure in a function epilogue:
-
-	ldp	x29, x30, [sp], #FRAME_SIZE
-	autiasp
-	ret
-
-When AUTIASP fails to authenticate the x30 value, it ensures that x30 is
-a faulting value, by forcing some of the high bits to particular values,
-but that's all. A user can set those bits in the same way.
-
-The RET loads the LR value into the PC, which subsequently triggers an
-instruction abort for the PC value (i.e. we branch to the bogus address
-*then* take a fault at that address).
-
-At that point, we have no information to determine what the CPU was
-executing before it branched to the bogus address. So we cannot know how
-the address was generated, and therefore cannot know if it was an
-authentication failure.
-
-For data pointers, you could generate bogus pointers with a large
-out-of-bounds array index, whereby the bogus pointer looked like the
-result of a pointer authentication failure.
-
-Thanks,
-Mark.
+-- 
+Kees Cook
+Pixel Security
