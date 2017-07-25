@@ -1,63 +1,58 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <7e7918c6-7186-47f4-4b37-2fc55db1e678@huawei.com>
-References: <1500921349-10803-1-git-send-email-keescook@chromium.org>
- <1500921349-10803-4-git-send-email-keescook@chromium.org> <7e7918c6-7186-47f4-4b37-2fc55db1e678@huawei.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 25 Jul 2017 12:11:08 -0700
-Message-ID: <CAGXu5jLD-ju_XHppVgDgUo1eSPoYKMqrzKS0PguvMAt5ddOoOw@mail.gmail.com>
+In-Reply-To: <20170725103828.GJ31807@n2100.armlinux.org.uk>
+References: <20170719175900.124074-1-thgarnie@google.com> <CAJcbSZFw9GhVvNfYi1oHhpintHSzGcHvGjg5LtRViNBPDzLHaA@mail.gmail.com>
+ <1500978481.30745.10.camel@nxp.com> <20170725103828.GJ31807@n2100.armlinux.org.uk>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Tue, 25 Jul 2017 13:01:17 -0700
+Message-ID: <CAJcbSZF1ddWuQ-c2Xyr1Nvrjzg2TZZNHPfSo7R6Vqg2mnhiPOg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH v8 3/3] x86/refcount: Implement fast
- refcount overflow protection
-To: Li Kun <hw.likun@huawei.com>
-Cc: Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH 1/3] arm/syscalls: Move address limit check in loop
+To: Russell King - ARM Linux <linux@armlinux.org.uk>
+Cc: Leonard Crestez <leonard.crestez@nxp.com>, Thomas Gleixner <tglx@linutronix.de>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Dave Martin <Dave.Martin@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Pratyush Anand <panand@redhat.com>, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jul 25, 2017 at 5:03 AM, Li Kun <hw.likun@huawei.com> wrote:
-> Hi Kees,
->
->
-> on 2017/7/25 2:35, Kees Cook wrote:
+On Tue, Jul 25, 2017 at 3:38 AM, Russell King - ARM Linux
+<linux@armlinux.org.uk> wrote:
+> On Tue, Jul 25, 2017 at 01:28:01PM +0300, Leonard Crestez wrote:
+>> On Mon, 2017-07-24 at 10:07 -0700, Thomas Garnier wrote:
+>> > On Wed, Jul 19, 2017 at 10:58 AM, Thomas Garnier <thgarnie@google.com
+>> > > wrote:
+>> > >
+>> > > The work pending loop can call set_fs after addr_limit_user_check
+>> > > removed the _TIF_FSCHECK flag. To prevent the infinite loop, move
+>> > > the addr_limit_user_check call at the beginning of the loop.
+>> > >
+>> > > Fixes: 73ac5d6a2b6a ("arm/syscalls: Check address limit on user-
+>> > > mode return")
+>> > > Reported-by: Leonard Crestez <leonard.crestez@nxp.com>
+>> > > Signed-off-by: Thomas Garnier <thgarnie@google.com>
 >>
->> +static __always_inline __must_check
->> +int __refcount_add_unless(refcount_t *r, int a, int u)
->> +{
->> +       int c, new;
->> +
->> +       c = atomic_read(&(r->refs));
->> +       do {
->> +               if (unlikely(c == u))
->> +                       break;
->> +
->> +               asm volatile("addl %2,%0\n\t"
->> +                       REFCOUNT_CHECK_LT_ZERO
->> +                       : "=r" (new)
->> +                       : "0" (c), "ir" (a),
->> +                         [counter] "m" (r->refs.counter)
->> +                       : "cc", "cx");
->> +
->> +       } while (!atomic_try_cmpxchg(&(r->refs), &c, new));
->> +
->> +       return c;
->> +}
+>> > Any comments on this patch set?
+>>
+>> Tested-by: Leonard Crestez <leonard.crestez@nxp.com>
+>>
+>> This appears to fix the original issue of failing to boot from NFS when
+>> there are lots of alignment faults. But this is a very basic test
+>> relative to the reach of this change.
+>>
+>> However the original patch has been in linux-next for a while and
+>> apparently nobody else noticed system calls randomly hanging on arm.
+>>
+>> I assume maintainers need to give their opinion.
 >
-> here when the result LT_ZERO, you will saturate the r->refs.counter and make
-> the
+> I've already stated my opinion, which is different from what Linus has
+> requested of Thomas.  IMHO, the current approach is going to keep on
+> causing problems along the lines that I've already pointed out.
+
+I understand. Do you think this problem apply to arm64 as well?
+
 >
-> atomic_try_cmpxchg(&(r->refs), &c, new) bound to fail first time.
->
-> maybe we can just saturate the value of variable "new" ?
+> --
+> RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+> FTTC broadband for 0.8mile line: currently at 9.6Mbps down 400kbps up
+> according to speedtest.net.
 
-Oh, good catch! Thanks. Actually, it's even worse than that: we'll
-exit this function without the refcount being correctly saturated. The
-final result will be INT_MIN / 2 + a. It's not terrible, but I should
-have noticed this in testing. (There was a gap in my testing for the
-_not_zero() overflows, which I've fixed now...)
 
-I'll figure this out or revert to the logic I was using in v6...
-
--Kees
 
 -- 
-Kees Cook
-Pixel Security
+Thomas
