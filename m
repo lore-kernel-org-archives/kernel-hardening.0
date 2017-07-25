@@ -1,57 +1,92 @@
-References: <1500921349-10803-1-git-send-email-keescook@chromium.org>
- <1500921349-10803-4-git-send-email-keescook@chromium.org>
-From: Li Kun <hw.likun@huawei.com>
-Message-ID: <7e7918c6-7186-47f4-4b37-2fc55db1e678@huawei.com>
-Date: Tue, 25 Jul 2017 20:03:08 +0800
+Date: Tue, 25 Jul 2017 13:06:43 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170725120630.GA8116@leverpostej>
+References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
+ <20170721170509.GC1538@e103592.cambridge.arm.com>
 MIME-Version: 1.0
-In-Reply-To: <1500921349-10803-4-git-send-email-keescook@chromium.org>
-Content-Type: text/plain; charset="windows-1252"; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH v8 3/3] x86/refcount: Implement fast
- refcount overflow protection
-To: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>
-Cc: Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Christoph Hellwig <hch@infradead.org>, "Eric W.
- Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans
- Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James
- Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-kernel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170721170509.GC1538@e103592.cambridge.arm.com>
+Subject: [kernel-hardening] Re: [PATCH 00/11] ARMv8.3 pointer authentication userspace support
+To: Dave Martin <Dave.Martin@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, arnd@arndb.de, jiong.wang@arm.com, marc.zyngier@arm.com, catalin.marinas@arm.com, yao.qi@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, kvmarm@lists.cs.columbia.edu, christoffer.dall@linaro.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
+On Fri, Jul 21, 2017 at 06:05:09PM +0100, Dave Martin wrote:
+> On Wed, Jul 19, 2017 at 05:01:21PM +0100, Mark Rutland wrote:
+> > This series adds support for the ARMv8.3 pointer authentication extension.
 
+> > Open questions
+> > ==============
+> > 
+> > * Should keys be per-thread rather than per-process?
+> > 
+> >   My understanding is that glibc can't (currently) handle threads having
+> >   different keys, but it might be that another libc would prefer per-thread
+> 
+> Can you elaborate?
+> 
+> It's not valid to do a function return from one thread to another.
 
-on 2017/7/25 2:35, Kees Cook wrote:
-> +static __always_inline __must_check
-> +int __refcount_add_unless(refcount_t *r, int a, int u)
-> +{
-> +	int c, new;
-> +
-> +	c = atomic_read(&(r->refs));
-> +	do {
-> +		if (unlikely(c == u))
-> +			break;
-> +
-> +		asm volatile("addl %2,%0\n\t"
-> +			REFCOUNT_CHECK_LT_ZERO
-> +			: "=r" (new)
-> +			: "0" (c), "ir" (a),
-> +			  [counter] "m" (r->refs.counter)
-> +			: "cc", "cx");
-here when the result LT_ZERO, you will saturate the r->refs.counter and 
-make the
+Regardless of whether it's valid per the C spec or POSIX, some people
+use {set,get}context and {set,long}jmp in this manner (IIRC, QEMU does
+this), and my understanding is that similar tricks are in use in the
+bowels of glibc.
 
-atomic_try_cmpxchg(&(r->refs), &c, new) bound to fail first time.
+Otherwise, my preference would be to have per-thread keys from day one.
 
-maybe we can just saturate the value of variable "new" ?
-  
+> >   keys. If desired, we could add a mechanism for a thread to re-initialize its
+> >   keys without an exec*().
+> 
+> Switching from per-process to per-thread keys would be an ABI break
+> unless it's opt-in.
 
+Indeed, which is why I suggested an opt-in mechanism.
 
-> +
-> +	} while (!atomic_try_cmpxchg(&(r->refs), &c, new));
-> +
-> +	return c;
-> +}
-> +
+> > * Do we need a separate hwcap for XPAC* instructions?
+> > 
+> >   Library code performing stack unwinding may need to interoperate with other
+> >   code which may or may not be using pointer authentication. It may be
+> >   desirable to use XPAC* rather than attempting authentication and/or acquiring
+> >   the PAC masks via ptrace.
+> > 
+> >   As we may expose APIBKey (potentially separately from APIAKey) in future,
+> >   HWCAP_APIA cannot be used to determine when these instruction can/should be
+> >   used.
+> 
+> Can the availability of XPAC* be determined from the feature regs, or
+> is that insufficient?
 
--- 
-Best Regards
-Li Kun
+I'd forgotten to fix up the id reg emulation to enable this, but this
+should be sufficient when wired up.
+
+The painful part is that there are several fields which can imply XPAC*
+are present, so userspace has to remember to check all of those fields.
+
+[...]
+
+> > * Should the kernel remove PACs when unwinding user stacks?
+> > 
+> >   This is simple to do, but it's arguably placing a policy in the kernel as to
+> >   what we expect user stacks to look like. Regardless, userspace will have to
+> >   perform this when unwinding with DWARF.
+> 
+> Not sure.  This is arguably not more gross than related things the
+> kernel already does, and may be inefficient for userspace to do e.g.,
+> when capturing perf backtraces.  Still gross though.
+> 
+> Side question: do you know whether there will be DWARF / ELF annotations
+> for this?  Since ptr auth is a compile-time option, it is plausible that
+> an attribute could be added to indicate that an image uses it.
+
+Jiong, Yao, can you answer this?
+
+I think that there's DWARF metadata for unwinding, but I'm not sure
+there's an ELF annotation on an image.
+
+Note that you may link with libraries which may or may not use pointer
+auth, so a single process can have a mixture of code using pointer auth,
+and code which does not.
+
+Thanks,
+Mark.
