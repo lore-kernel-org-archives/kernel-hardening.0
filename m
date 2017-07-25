@@ -1,41 +1,27 @@
-Message-ID: <1500978481.30745.10.camel@nxp.com>
-From: Leonard Crestez <leonard.crestez@nxp.com>
-Date: Tue, 25 Jul 2017 13:28:01 +0300
-In-Reply-To: <CAJcbSZFw9GhVvNfYi1oHhpintHSzGcHvGjg5LtRViNBPDzLHaA@mail.gmail.com>
-References: <20170719175900.124074-1-thgarnie@google.com>
-	 <CAJcbSZFw9GhVvNfYi1oHhpintHSzGcHvGjg5LtRViNBPDzLHaA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
+References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
+From: Yao Qi <yao.qi@arm.com>
+Message-ID: <bb507ee1-c7ba-4c73-0d0f-058c4821793c@arm.com>
+Date: Tue, 25 Jul 2017 12:32:10 +0100
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 1/3] arm/syscalls: Move address limit check in loop
-To: Thomas Garnier <thgarnie@google.com>, Russell King <linux@armlinux.org.uk>, Thomas Gleixner <tglx@linutronix.de>, Catalin
- Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Dave
- Martin <Dave.Martin@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Pratyush Anand <panand@redhat.com>
-Cc: linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH 00/11] ARMv8.3 pointer authentication userspace support
+To: Mark Rutland <mark.rutland@arm.com>, linux-arm-kernel@lists.infradead.org
+Cc: arnd@arndb.de, catalin.marinas@arm.com, christoffer.dall@linaro.org, Dave.Martin@arm.com, jiong.wang@arm.com, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 2017-07-24 at 10:07 -0700, Thomas Garnier wrote:
-> On Wed, Jul 19, 2017 at 10:58 AM, Thomas Garnier <thgarnie@google.com
-> > wrote:
-> > 
-> > The work pending loop can call set_fs after addr_limit_user_check
-> > removed the _TIF_FSCHECK flag. To prevent the infinite loop, move
-> > the addr_limit_user_check call at the beginning of the loop.
-> > 
-> > Fixes: 73ac5d6a2b6a ("arm/syscalls: Check address limit on user-
-> > mode return")
-> > Reported-by: Leonard Crestez <leonard.crestez@nxp.com>
-> > Signed-off-by: Thomas Garnier <thgarnie@google.com>
+On 19/07/17 17:01, Mark Rutland wrote:
+> If authentication fails, bits are set in the pointer such that it is guar=
+anteed
+> to cause a fault if used.
 
-> Any comments on this patch set?
-
-Tested-by: Leonard Crestez <leonard.crestez@nxp.com>
-
-This appears to fix the original issue of failing to boot from NFS when
-there are lots of alignment faults. But this is a very basic test
-relative to the reach of this change.
-
-However the original patch has been in linux-next for a while and
-apparently nobody else noticed system calls randomly hanging on arm.
-
-I assume maintainers need to give their opinion.
+How does user space know the fault is caused by authentication fail?
+When GDB is debugging a program, and it failed in pointer
+authentication, I assume GDB only knows that the program receives signal
+SIGSEGV, but how does GDB or user know why does the program get SIGSEGV?
+IMPORTANT NOTICE: The contents of this email and any attachments are confid=
+ential and may also be privileged. If you are not the intended recipient, p=
+lease notify the sender immediately and do not disclose the contents to any=
+ other person, use it for any purpose, or store or copy the information in =
+any medium. Thank you.
