@@ -1,88 +1,60 @@
-From: Jiong Wang <Jiong.Wang@arm.com>
-Date: Tue, 25 Jul 2017 14:00:56 +0000
-Message-ID: <DB6PR0802MB2405BBA6E6D545F35F0154A39FB80@DB6PR0802MB2405.eurprd08.prod.outlook.com>
-References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
- <20170721170509.GC1538@e103592.cambridge.arm.com>,<20170725120630.GA8116@leverpostej>
-In-Reply-To: <20170725120630.GA8116@leverpostej>
-Content-Type: text/plain; charset="iso-8859-1"
-Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Subject: [kernel-hardening] Re: [PATCH 00/11] ARMv8.3 pointer authentication userspace support
-To: Dave P Martin <Dave.Martin@arm.com>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, "arnd@arndb.de" <arnd@arndb.de>, Marc Zyngier <Marc.Zyngier@arm.com>, Catalin Marinas <Catalin.Marinas@arm.com>, Yao Qi <Yao.Qi@arm.com>, Suzuki Poulose <Suzuki.Poulose@arm.com>, Will Deacon <Will.Deacon@arm.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "kvmarm@lists.cs.columbia.edu" <kvmarm@lists.cs.columbia.edu>, "christoffer.dall@linaro.org" <christoffer.dall@linaro.org>, Mark Rutland <Mark.Rutland@arm.com>
+Sender: keescook@google.com
+In-Reply-To: <CAKv+Gu8L1M6iO-pELrVvouxgh+t1qjzD4fOu3Fw+LeiWMZWzpA@mail.gmail.com>
+References: <20170725114901.31403-1-ard.biesheuvel@linaro.org>
+ <CAGXu5jLNB5dmA0o=n_nn=4NRu3LjuNf5PGRopATuRiq0aJ1ECA@mail.gmail.com> <CAKv+Gu8L1M6iO-pELrVvouxgh+t1qjzD4fOu3Fw+LeiWMZWzpA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 25 Jul 2017 10:50:20 -0700
+Message-ID: <CAGXu5jJzz69cGv-nJt_GaGuOiv4Et2K9ahGEmg282ySPGhbKPw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC PATCH untested] arm64: kernel: implement fast refcount checking
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Li Kun <hw.likun@huawei.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> > * Should the kernel remove PACs when unwinding user stacks?
-> >
-> >   This is simple to do, but it's arguably placing a policy in the kerne=
-l as to
-> >   what we expect user stacks to look like. Regardless, userspace will h=
-ave to
-> >   perform this when unwinding with DWARF.
+On Tue, Jul 25, 2017 at 10:20 AM, Ard Biesheuvel
+<ard.biesheuvel@linaro.org> wrote:
+> On 25 July 2017 at 18:13, Kees Cook <keescook@chromium.org> wrote:
+>> On Tue, Jul 25, 2017 at 4:49 AM, Ard Biesheuvel
+>> <ard.biesheuvel@linaro.org> wrote:
+>>> Hi all,
+>>>
+>>> I had a stab at porting the fast refcount checks to arm64. It is slightly
+>>> less straight-forward than x86 given that we need to support both LSE and
+>>> LL/SC, and fallback to the latter if running a kernel built with support
+>>> for the former on hardware that does not support it.
+>>>
+>>> It is build tested with and without LSE support, and boots fine on non-LSE
+>>> hardware in both cases.
 >>
->> Not sure.  This is arguably not more gross than related things the
->> kernel already does, and may be inefficient for userspace to do e.g.,
->> when capturing perf backtraces.  Still gross though.
+>> Ah! Very cool. Hopefully you and Li can compare notes; I think they've
+>> been working on an implementation too.
 >>
->> Side question: do you know whether there will be DWARF / ELF annotations
->> for this?  Since ptr auth is a compile-time option, it is plausible that
->> an attribute could be added to indicate that an image uses it.
-
-> Jiong, Yao, can you answer this?
 >
-> I think that there's DWARF metadata for unwinding, but I'm not sure
-> there's an ELF annotation on an image.
+> I wasn't aware of that.
 >
-> Note that you may link with libraries which may or may not use pointer
-> auth, so a single process can have a mixture of code using pointer auth,
-> and code which does not.
+>>> Suggestions welcome as to how to test and/or benchmark this,
+>>
+>> I'll post a patch for LKDTM that I've been using. It's more
+>> comprehensive than the existing ATOMIC checks (which predated the
+>> refcount-only protection).
+>>
+>
+> OK. One thing I couldn't figure out: is refcount_t signed or not? The
+> saturate tests set the initial value to UINT_MAX - 1, but this is
+> interpreted as a negative value and so the refcount manipulations that
+> are expected to succeed also fail in my case.
 
-Yes, there is new DWARF frame information for pointer authentication to des=
-cribe
-the signing status at instruction level.  There is no ELF annotation on an =
-image.
+refcount_t under REFCOUNT_FULL is unsigned. Under the x86 fast
+refcount, it's signed to gain the CPU flag detection for overflow. The
+understanding is basically "omg, if you've got INT_MAX-many references
+to something you already DoSed your machine".
 
-As the use cases of pointer authentication extension in GCC are about retur=
-n
-address signing.  The DWARF extension is mostly around describing signed LR=
- so
-the unwinder could have a way to figure out the original value of it to con=
-tinue
-unwinding.
+I'll have the full LKDTM tests up in a moment here, just doing another
+pass on them now...
 
-In general, whenever return address, i.e. LR register, is mangled or restor=
-ed by
-hardware instruction, compiler (or assembly writer) is expected to generate=
- a
-DW_CFA_AARCH64_negate_ra_state CFA instruction.
+-Kees
 
-For DWARF unwinder, during unwinding, whenever a DW_CFA_AARCH64_negate_ra_s=
-tate
-is hit, the unwinder toggle the LR signing status and kept it in bit zero (=
-lsb)
-of a new DWARF register AARCH64_DWARF_PAUTH_RA_STATE whose value must be ho=
-nored
-later when unwinding the value of LR. If the lsb of AARCH64_DWARF_PAUTH_RA_=
-STATE
-is set, it means the return address is mangled, then the unwinder needs to
-restore LR by either masking off the signature (userspace unwinders need pt=
-race
-interface to get this) or executing signature strip instruction (can only b=
-e
-done by native unwinder) or executing authentication instruction (can only =
-be
-done by native unwinder).
-
-Please see the following links for more details:
-  https://gcc.gnu.org/ml/gcc-patches/2017-01/msg00376.html
-  https://gcc.gnu.org/ml/gcc-patches/2016-11/msg03010.html
-
-
-Regards,
-Jiong
-
-IMPORTANT NOTICE: The contents of this email and any attachments are confid=
-ential and may also be privileged. If you are not the intended recipient, p=
-lease notify the sender immediately and do not disclose the contents to any=
- other person, use it for any purpose, or store or copy the information in =
-any medium. Thank you.
+-- 
+Kees Cook
+Pixel Security
