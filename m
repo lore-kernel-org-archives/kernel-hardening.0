@@ -1,81 +1,33 @@
+Date: Wed, 26 Jul 2017 09:08:01 -0500 (CDT)
+From: Christopher Lameter <cl@linux.com>
+In-Reply-To: <CAGXu5jKRDhvqj0TU10W10hsdixN2P+hHzpYfSVvOFZy=hW72Mg@mail.gmail.com>
+Message-ID: <alpine.DEB.2.20.1707260906230.6341@nuc-kabylake>
+References: <20170706002718.GA102852@beast> <cdd42a1b-ce15-df8c-6bd1-b0943275986f@linux.com> <CAGXu5jKRDhvqj0TU10W10hsdixN2P+hHzpYfSVvOFZy=hW72Mg@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20170726120208.GB2115@arm.com>
-References: <20170719175900.124074-1-thgarnie@google.com> <CAJcbSZFw9GhVvNfYi1oHhpintHSzGcHvGjg5LtRViNBPDzLHaA@mail.gmail.com>
- <1500978481.30745.10.camel@nxp.com> <20170725103828.GJ31807@n2100.armlinux.org.uk>
- <CAJcbSZF1ddWuQ-c2Xyr1Nvrjzg2TZZNHPfSo7R6Vqg2mnhiPOg@mail.gmail.com> <20170726120208.GB2115@arm.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed, 26 Jul 2017 07:20:22 -0700
-Message-ID: <CAJcbSZG6qsaVGY7Weh6n+xs5XaDg+=h8SDUYJfMUTWbdYOd7rA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 1/3] arm/syscalls: Move address limit check in loop
-To: Will Deacon <will.deacon@arm.com>
-Cc: Russell King - ARM Linux <linux@armlinux.org.uk>, Leonard Crestez <leonard.crestez@nxp.com>, Thomas Gleixner <tglx@linutronix.de>, Catalin Marinas <catalin.marinas@arm.com>, Dave Martin <Dave.Martin@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Pratyush Anand <panand@redhat.com>, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [v3] mm: Add SLUB free list pointer obfuscation
+To: Kees Cook <keescook@chromium.org>
+Cc: Alexander Popov <alex.popov@linux.com>, Andrew Morton <akpm@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Josh Triplett <josh@joshtriplett.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Linux-MM <linux-mm@kvack.org>, Tycho Andersen <tycho@docker.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 26, 2017 at 5:02 AM, Will Deacon <will.deacon@arm.com> wrote:
-> On Tue, Jul 25, 2017 at 01:01:17PM -0700, Thomas Garnier wrote:
->> On Tue, Jul 25, 2017 at 3:38 AM, Russell King - ARM Linux
->> <linux@armlinux.org.uk> wrote:
->> > On Tue, Jul 25, 2017 at 01:28:01PM +0300, Leonard Crestez wrote:
->> >> On Mon, 2017-07-24 at 10:07 -0700, Thomas Garnier wrote:
->> >> > On Wed, Jul 19, 2017 at 10:58 AM, Thomas Garnier <thgarnie@google.com
->> >> > > wrote:
->> >> > >
->> >> > > The work pending loop can call set_fs after addr_limit_user_check
->> >> > > removed the _TIF_FSCHECK flag. To prevent the infinite loop, move
->> >> > > the addr_limit_user_check call at the beginning of the loop.
->> >> > >
->> >> > > Fixes: 73ac5d6a2b6a ("arm/syscalls: Check address limit on user-
->> >> > > mode return")
->> >> > > Reported-by: Leonard Crestez <leonard.crestez@nxp.com>
->> >> > > Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> >>
->> >> > Any comments on this patch set?
->> >>
->> >> Tested-by: Leonard Crestez <leonard.crestez@nxp.com>
->> >>
->> >> This appears to fix the original issue of failing to boot from NFS when
->> >> there are lots of alignment faults. But this is a very basic test
->> >> relative to the reach of this change.
->> >>
->> >> However the original patch has been in linux-next for a while and
->> >> apparently nobody else noticed system calls randomly hanging on arm.
->> >>
->> >> I assume maintainers need to give their opinion.
->> >
->> > I've already stated my opinion, which is different from what Linus has
->> > requested of Thomas.  IMHO, the current approach is going to keep on
->> > causing problems along the lines that I've already pointed out.
->>
->> I understand. Do you think this problem apply to arm64 as well?
+On Tue, 25 Jul 2017, Kees Cook wrote:
+
+> > @@ -290,6 +290,10 @@ static inline void set_freepointer(struct kmem_cache *s,
+> > void *object, void *fp)
+> >  {
+> >         unsigned long freeptr_addr = (unsigned long)object + s->offset;
+> >
+> > +#ifdef CONFIG_SLAB_FREELIST_HARDENED
+> > +       BUG_ON(object == fp); /* naive detection of double free or corruption */
+> > +#endif
+> > +
+> >         *(void **)freeptr_addr = freelist_ptr(s, fp, freeptr_addr);
 >
-> It's probably less of an issue for arm64 because we don't take alignment
-> faults from the kernel and I think the perf case would resolve itself by
-> throttling the event. However, I also don't see the advantage of doing
-> this in the work loop as opposed to leaving it until we're actually doing
-> the return to userspace.
-
-I think the idea is doing the check as early as possible to catch any
-error before any additional logic.
-
+> What happens if, instead of BUG_ON, we do:
 >
-> I looked to see what you've done for x86, but it looks like you check/clear
-> the flag before the work pending loop (exit_to_usermode_loop), which
-> subsequently re-enables interrupts and exits when
-> EXIT_TO_USERMODE_LOOP_FLAGS are all clear. Since TIF_FSCHECK isn't included
-> in those flags, what stops it being set again by an irq and remaining set
-> for the return to userspace?
+> if (unlikely(WARN_RATELIMIT(object == fp, "double-free detected"))
+>         return;
 
-Nothing, I plan to improve the x86 logic later. I focused on ARM/ARM64
-right now based on Leonard report.
-
-For the next iteration, I plan on having an updated version of the
-previous implementation for ARM. I will send it soon.
-
->
-> Will
-
-
-
--- 
-Thomas
+This may work for the free fastpath but the set_freepointer function is
+use in multiple other locations. Maybe just add this to the fastpath
+instead of to this fucnction?
