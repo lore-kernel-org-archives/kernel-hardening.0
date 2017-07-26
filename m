@@ -1,85 +1,67 @@
-References: <20170725181536.21092-1-ard.biesheuvel@linaro.org>
- <0816933d-7e58-0773-1441-891823983ff9@huawei.com>
- <CAKv+Gu8djcgmovajhUUpniHwEVDupCWW3L__3JtqZ0GCM3=U2w@mail.gmail.com>
-From: Li Kun <hw.likun@huawei.com>
-Message-ID: <34605822-8f95-f963-48c4-65d724eae0c7@huawei.com>
-Date: Wed, 26 Jul 2017 17:21:38 +0800
+Date: Wed, 26 Jul 2017 13:02:08 +0100
+From: Will Deacon <will.deacon@arm.com>
+Message-ID: <20170726120208.GB2115@arm.com>
+References: <20170719175900.124074-1-thgarnie@google.com>
+ <CAJcbSZFw9GhVvNfYi1oHhpintHSzGcHvGjg5LtRViNBPDzLHaA@mail.gmail.com>
+ <1500978481.30745.10.camel@nxp.com>
+ <20170725103828.GJ31807@n2100.armlinux.org.uk>
+ <CAJcbSZF1ddWuQ-c2Xyr1Nvrjzg2TZZNHPfSo7R6Vqg2mnhiPOg@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CAKv+Gu8djcgmovajhUUpniHwEVDupCWW3L__3JtqZ0GCM3=U2w@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"; format=flowed
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH v2] arm64: kernel: implement fast refcount checking
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Laura Abbott <labbott@fedoraproject.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAJcbSZF1ddWuQ-c2Xyr1Nvrjzg2TZZNHPfSo7R6Vqg2mnhiPOg@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 1/3] arm/syscalls: Move address limit check in loop
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Russell King - ARM Linux <linux@armlinux.org.uk>, Leonard Crestez <leonard.crestez@nxp.com>, Thomas Gleixner <tglx@linutronix.de>, Catalin Marinas <catalin.marinas@arm.com>, Dave Martin <Dave.Martin@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Pratyush Anand <panand@redhat.com>, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Jul 25, 2017 at 01:01:17PM -0700, Thomas Garnier wrote:
+> On Tue, Jul 25, 2017 at 3:38 AM, Russell King - ARM Linux
+> <linux@armlinux.org.uk> wrote:
+> > On Tue, Jul 25, 2017 at 01:28:01PM +0300, Leonard Crestez wrote:
+> >> On Mon, 2017-07-24 at 10:07 -0700, Thomas Garnier wrote:
+> >> > On Wed, Jul 19, 2017 at 10:58 AM, Thomas Garnier <thgarnie@google.com
+> >> > > wrote:
+> >> > >
+> >> > > The work pending loop can call set_fs after addr_limit_user_check
+> >> > > removed the _TIF_FSCHECK flag. To prevent the infinite loop, move
+> >> > > the addr_limit_user_check call at the beginning of the loop.
+> >> > >
+> >> > > Fixes: 73ac5d6a2b6a ("arm/syscalls: Check address limit on user-
+> >> > > mode return")
+> >> > > Reported-by: Leonard Crestez <leonard.crestez@nxp.com>
+> >> > > Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> >>
+> >> > Any comments on this patch set?
+> >>
+> >> Tested-by: Leonard Crestez <leonard.crestez@nxp.com>
+> >>
+> >> This appears to fix the original issue of failing to boot from NFS when
+> >> there are lots of alignment faults. But this is a very basic test
+> >> relative to the reach of this change.
+> >>
+> >> However the original patch has been in linux-next for a while and
+> >> apparently nobody else noticed system calls randomly hanging on arm.
+> >>
+> >> I assume maintainers need to give their opinion.
+> >
+> > I've already stated my opinion, which is different from what Linus has
+> > requested of Thomas.  IMHO, the current approach is going to keep on
+> > causing problems along the lines that I've already pointed out.
+> 
+> I understand. Do you think this problem apply to arm64 as well?
 
+It's probably less of an issue for arm64 because we don't take alignment
+faults from the kernel and I think the perf case would resolve itself by
+throttling the event. However, I also don't see the advantage of doing
+this in the work loop as opposed to leaving it until we're actually doing
+the return to userspace.
 
-在 2017/7/26 16:40, Ard Biesheuvel 写道:
-> On 26 July 2017 at 05:11, Li Kun <hw.likun@huawei.com> wrote:
->> Hi Ard，
->>
->>
->> on 2017/7/26 2:15, Ard Biesheuvel wrote:
->>> +#define REFCOUNT_OP(op, asm_op, cond, l, clobber...)                   \
->>> +__LL_SC_INLINE int                                                     \
->>> +__LL_SC_PREFIX(__refcount_##op(int i, atomic_t *r))                    \
->>> +{                                                                      \
->>> +       unsigned long tmp;                                              \
->>> +       int result;                                                     \
->>> +                                                                       \
->>> +       asm volatile("// refcount_" #op "\n"                            \
->>> +"      prfm            pstl1strm, %2\n"                                \
->>> +"1:    ldxr            %w0, %2\n"                                      \
->>> +"      " #asm_op "     %w0, %w0, %w[i]\n"                              \
->>> +"      st" #l "xr      %w1, %w0, %2\n"                                 \
->>> +"      cbnz            %w1, 1b\n"                                      \
->>> +       REFCOUNT_CHECK(cond)                                            \
->>> +       : "=&r" (result), "=&r" (tmp), "+Q" (r->counter)                \
->>> +       : REFCOUNT_INPUTS(r) [i] "Ir" (i)                               \
->>> +       clobber);                                                       \
->>> +                                                                       \
->>> +       return result;                                                  \
->>> +}                                                                      \
->>> +__LL_SC_EXPORT(__refcount_##op);
->>> +
->>> +REFCOUNT_OP(add_lt, adds, mi,  , REFCOUNT_CLOBBERS);
->>> +REFCOUNT_OP(sub_lt_neg, adds, mi, l, REFCOUNT_CLOBBERS);
->>> +REFCOUNT_OP(sub_le_neg, adds, ls, l, REFCOUNT_CLOBBERS);
->>> +REFCOUNT_OP(sub_lt, subs, mi, l, REFCOUNT_CLOBBERS);
->>> +REFCOUNT_OP(sub_le, subs, ls, l, REFCOUNT_CLOBBERS);
->>> +
->> I'm not quite sure if we use b.lt to judge whether the result of adds is
->> less than zero is correct or not.
->> The b.lt means N!=V, take an extreme example, if we operate like below, the
->> b.lt will also be true.
->>
->> refcount_set(&ref_c,0x80000000);
->> refcount_dec_and_test(&ref_c);
->>
->> maybe we should use PL/NE/MI/EQ to judge the LT_ZERO or LE_ZERO condition ?
->>
-> The lt/le is confusing here: the actual condition coded used are mi
-> for negative and ls for negative or zero.
->
-> I started out using lt and le, because it matches the x86 code, but I
-> moved to mi and ls instead. (I don't think it makes sense to deviate
-> from that just because the flags and predicates work a bit
-> differently.)
->
-> However, I see now that there is one instance of REFCOUNT_CHECK(lt)
-> remaining (in refcount.h). That should mi as well.
-Sorry for having  misunderstood your implementation.
-If we want to catch the refcount_sub operate on negetive value(like -1 
-to -2 ), i think b.ls can't achieve that.
-I think (b.eq || b.mi ) may be better than b.ls for this case.
+I looked to see what you've done for x86, but it looks like you check/clear
+the flag before the work pending loop (exit_to_usermode_loop), which
+subsequently re-enables interrupts and exits when
+EXIT_TO_USERMODE_LOOP_FLAGS are all clear. Since TIF_FSCHECK isn't included
+in those flags, what stops it being set again by an irq and remaining set
+for the return to userspace?
 
-Best Regards,
-Li Kun
->
-> Thanks,
-> Ard.
-
--- 
-Best Regards
-Li Kun
+Will
