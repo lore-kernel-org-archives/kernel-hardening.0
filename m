@@ -1,190 +1,94 @@
-Date: Tue, 25 Jul 2017 21:12:50 -0700
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20170726041250.GA76741@beast>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH v4] mm: Add SLUB free list pointer obfuscation
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Tejun Heo <tj@kernel.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, linux-mm@kvack.org, Rik van Riel <riel@redhat.com>, Tycho Andersen <tycho@docker.com>, Alexander Popov <alex.popov@linux.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <0816933d-7e58-0773-1441-891823983ff9@huawei.com>
+References: <20170725181536.21092-1-ard.biesheuvel@linaro.org> <0816933d-7e58-0773-1441-891823983ff9@huawei.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Wed, 26 Jul 2017 09:40:41 +0100
+Message-ID: <CAKv+Gu8djcgmovajhUUpniHwEVDupCWW3L__3JtqZ0GCM3=U2w@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v2] arm64: kernel: implement fast refcount checking
+To: Li Kun <hw.likun@huawei.com>
+Cc: Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Laura Abbott <labbott@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This SLUB free list pointer obfuscation code is modified from Brad
-Spengler/PaX Team's code in the last public patch of grsecurity/PaX based
-on my understanding of the code. Changes or omissions from the original
-code are mine and don't reflect the original grsecurity/PaX code.
+On 26 July 2017 at 05:11, Li Kun <hw.likun@huawei.com> wrote:
+> Hi Ard=EF=BC=8C
+>
+>
+> on 2017/7/26 2:15, Ard Biesheuvel wrote:
+>>
+>> +#define REFCOUNT_OP(op, asm_op, cond, l, clobber...)                   =
+\
+>> +__LL_SC_INLINE int                                                     =
+\
+>> +__LL_SC_PREFIX(__refcount_##op(int i, atomic_t *r))                    =
+\
+>> +{                                                                      =
+\
+>> +       unsigned long tmp;                                              =
+\
+>> +       int result;                                                     =
+\
+>> +                                                                       =
+\
+>> +       asm volatile("// refcount_" #op "\n"                            =
+\
+>> +"      prfm            pstl1strm, %2\n"                                =
+\
+>> +"1:    ldxr            %w0, %2\n"                                      =
+\
+>> +"      " #asm_op "     %w0, %w0, %w[i]\n"                              =
+\
+>> +"      st" #l "xr      %w1, %w0, %2\n"                                 =
+\
+>> +"      cbnz            %w1, 1b\n"                                      =
+\
+>> +       REFCOUNT_CHECK(cond)                                            =
+\
+>> +       : "=3D&r" (result), "=3D&r" (tmp), "+Q" (r->counter)            =
+    \
+>> +       : REFCOUNT_INPUTS(r) [i] "Ir" (i)                               =
+\
+>> +       clobber);                                                       =
+\
+>> +                                                                       =
+\
+>> +       return result;                                                  =
+\
+>> +}                                                                      =
+\
+>> +__LL_SC_EXPORT(__refcount_##op);
+>> +
+>> +REFCOUNT_OP(add_lt, adds, mi,  , REFCOUNT_CLOBBERS);
+>> +REFCOUNT_OP(sub_lt_neg, adds, mi, l, REFCOUNT_CLOBBERS);
+>> +REFCOUNT_OP(sub_le_neg, adds, ls, l, REFCOUNT_CLOBBERS);
+>> +REFCOUNT_OP(sub_lt, subs, mi, l, REFCOUNT_CLOBBERS);
+>> +REFCOUNT_OP(sub_le, subs, ls, l, REFCOUNT_CLOBBERS);
+>> +
+>
+> I'm not quite sure if we use b.lt to judge whether the result of adds is
+> less than zero is correct or not.
+> The b.lt means N!=3DV, take an extreme example, if we operate like below,=
+ the
+> b.lt will also be true.
+>
+> refcount_set(&ref_c,0x80000000);
+> refcount_dec_and_test(&ref_c);
+>
+> maybe we should use PL/NE/MI/EQ to judge the LT_ZERO or LE_ZERO condition=
+ ?
+>
 
-This adds a per-cache random value to SLUB caches that is XORed with
-their freelist pointer address and value. This adds nearly zero overhead
-and frustrates the very common heap overflow exploitation method of
-overwriting freelist pointers. A recent example of the attack is written
-up here: http://cyseclabs.com/blog/cve-2016-6187-heap-off-by-one-exploit
-and there is a section dedicated to the technique the book "A Guide to
-Kernel Exploitation: Attacking the Core", from 2010.
+The lt/le is confusing here: the actual condition coded used are mi
+for negative and ls for negative or zero.
 
-This is based on patches by Daniel Micay, and refactored to minimize the
-use of #ifdef.
+I started out using lt and le, because it matches the x86 code, but I
+moved to mi and ls instead. (I don't think it makes sense to deviate
+from that just because the flags and predicates work a bit
+differently.)
 
-Under 200-count cycles of "hackbench -g 20 -l 1000" I saw the following
-run times:
+However, I see now that there is one instance of REFCOUNT_CHECK(lt)
+remaining (in refcount.h). That should mi as well.
 
-before:
-	mean 10.11882499999999999995
-	variance .03320378329145728642
-	stdev .18221905304181911048
-
-after:
-	mean 10.12654000000000000014
-	variance .04700556623115577889
-	stdev .21680767106160192064
-
-The difference gets lost in the noise, but if the above is to be taken
-literally, using CONFIG_FREELIST_HARDENED is 0.07% slower.
-
-Suggested-by: Daniel Micay <danielmicay@gmail.com>
-Cc: Christoph Lameter <cl@linux.com>
-Cc: Rik van Riel <riel@redhat.com>
-Cc: Tycho Andersen <tycho@docker.com>
-Cc: Alexander Popov <alex.popov@linux.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-v4:
-- add another reference to how common this exploit technique is.
-v3:
-- use static inlines instead of macros (akpm).
-v2:
-- rename CONFIG_SLAB_HARDENED to CONFIG_FREELIST_HARDENED (labbott).
----
- include/linux/slub_def.h |  4 ++++
- init/Kconfig             |  9 +++++++++
- mm/slub.c                | 42 +++++++++++++++++++++++++++++++++++++-----
- 3 files changed, 50 insertions(+), 5 deletions(-)
-
-diff --git a/include/linux/slub_def.h b/include/linux/slub_def.h
-index cc0faf3a90be..0783b622311e 100644
---- a/include/linux/slub_def.h
-+++ b/include/linux/slub_def.h
-@@ -115,6 +115,10 @@ struct kmem_cache {
- #endif
- #endif
- 
-+#ifdef CONFIG_SLAB_FREELIST_HARDENED
-+	unsigned long random;
-+#endif
-+
- #ifdef CONFIG_NUMA
- 	/*
- 	 * Defragmentation by allocating from a remote node.
-diff --git a/init/Kconfig b/init/Kconfig
-index 8514b25db21c..3dbb980cb70b 100644
---- a/init/Kconfig
-+++ b/init/Kconfig
-@@ -1571,6 +1571,15 @@ config SLAB_FREELIST_RANDOM
- 	  security feature reduces the predictability of the kernel slab
- 	  allocator against heap overflows.
- 
-+config SLAB_FREELIST_HARDENED
-+	bool "Harden slab freelist metadata"
-+	depends on SLUB
-+	help
-+	  Many kernel heap attacks try to target slab cache metadata and
-+	  other infrastructure. This options makes minor performance
-+	  sacrifies to harden the kernel slab allocator against common
-+	  freelist exploit methods.
-+
- config SLUB_CPU_PARTIAL
- 	default y
- 	depends on SLUB && SMP
-diff --git a/mm/slub.c b/mm/slub.c
-index 1d3f9835f4ea..c92d6369f5e0 100644
---- a/mm/slub.c
-+++ b/mm/slub.c
-@@ -34,6 +34,7 @@
- #include <linux/stacktrace.h>
- #include <linux/prefetch.h>
- #include <linux/memcontrol.h>
-+#include <linux/random.h>
- 
- #include <trace/events/kmem.h>
- 
-@@ -238,30 +239,58 @@ static inline void stat(const struct kmem_cache *s, enum stat_item si)
-  * 			Core slab cache functions
-  *******************************************************************/
- 
-+/*
-+ * Returns freelist pointer (ptr). With hardening, this is obfuscated
-+ * with an XOR of the address where the pointer is held and a per-cache
-+ * random number.
-+ */
-+static inline void *freelist_ptr(const struct kmem_cache *s, void *ptr,
-+				 unsigned long ptr_addr)
-+{
-+#ifdef CONFIG_SLAB_FREELIST_HARDENED
-+	return (void *)((unsigned long)ptr ^ s->random ^ ptr_addr);
-+#else
-+	return ptr;
-+#endif
-+}
-+
-+/* Returns the freelist pointer recorded at location ptr_addr. */
-+static inline void *freelist_dereference(const struct kmem_cache *s,
-+					 void *ptr_addr)
-+{
-+	return freelist_ptr(s, (void *)*(unsigned long *)(ptr_addr),
-+			    (unsigned long)ptr_addr);
-+}
-+
- static inline void *get_freepointer(struct kmem_cache *s, void *object)
- {
--	return *(void **)(object + s->offset);
-+	return freelist_dereference(s, object + s->offset);
- }
- 
- static void prefetch_freepointer(const struct kmem_cache *s, void *object)
- {
--	prefetch(object + s->offset);
-+	if (object)
-+		prefetch(freelist_dereference(s, object + s->offset));
- }
- 
- static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
- {
-+	unsigned long freepointer_addr;
- 	void *p;
- 
- 	if (!debug_pagealloc_enabled())
- 		return get_freepointer(s, object);
- 
--	probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
--	return p;
-+	freepointer_addr = (unsigned long)object + s->offset;
-+	probe_kernel_read(&p, (void **)freepointer_addr, sizeof(p));
-+	return freelist_ptr(s, p, freepointer_addr);
- }
- 
- static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
- {
--	*(void **)(object + s->offset) = fp;
-+	unsigned long freeptr_addr = (unsigned long)object + s->offset;
-+
-+	*(void **)freeptr_addr = freelist_ptr(s, fp, freeptr_addr);
- }
- 
- /* Loop over all objects in a slab */
-@@ -3563,6 +3592,9 @@ static int kmem_cache_open(struct kmem_cache *s, unsigned long flags)
- {
- 	s->flags = kmem_cache_flags(s->size, flags, s->name, s->ctor);
- 	s->reserved = 0;
-+#ifdef CONFIG_SLAB_FREELIST_HARDENED
-+	s->random = get_random_long();
-+#endif
- 
- 	if (need_reserve_slab_rcu && (s->flags & SLAB_TYPESAFE_BY_RCU))
- 		s->reserved = sizeof(struct rcu_head);
--- 
-2.7.4
-
-
--- 
-Kees Cook
-Pixel Security
+Thanks,
+Ard.
