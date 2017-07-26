@@ -1,53 +1,94 @@
-References: <20170725114901.31403-1-ard.biesheuvel@linaro.org>
- <CAGXu5jLNB5dmA0o=n_nn=4NRu3LjuNf5PGRopATuRiq0aJ1ECA@mail.gmail.com>
- <CAKv+Gu8L1M6iO-pELrVvouxgh+t1qjzD4fOu3Fw+LeiWMZWzpA@mail.gmail.com>
+References: <20170725181536.21092-1-ard.biesheuvel@linaro.org>
 From: Li Kun <hw.likun@huawei.com>
-Message-ID: <c89c560c-c8b5-2079-6e19-0b85d9658ca3@huawei.com>
-Date: Wed, 26 Jul 2017 09:47:35 +0800
+Message-ID: <b3c2f9b4-8cf2-6290-ad2b-2acbbb3b28cd@huawei.com>
+Date: Wed, 26 Jul 2017 11:32:55 +0800
 MIME-Version: 1.0
-In-Reply-To: <CAKv+Gu8L1M6iO-pELrVvouxgh+t1qjzD4fOu3Fw+LeiWMZWzpA@mail.gmail.com>
+In-Reply-To: <20170725181536.21092-1-ard.biesheuvel@linaro.org>
 Content-Type: text/plain; charset="windows-1252"; format=flowed
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC PATCH untested] arm64: kernel: implement fast refcount
- checking
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kees Cook <keescook@chromium.org>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@fedoraproject.org>
+Subject: [kernel-hardening] Re: [PATCH v2] arm64: kernel: implement fast refcount checking
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, keescook@chromium.org, mark.rutland@arm.com, labbott@fedoraproject.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Ard and Kees,
+Hi Ard,
 
-Yes, i have been working on this for several days, but i think Ard's 
-patch is better than mine in some ways.
-So i'll help reviewing the patch and try to give some suggestions.
-Never mind:)
+on 2017/7/26 2:15, Ard Biesheuvel wrote:
+> +static __always_inline __must_check int __refcount_add_unless(refcount_t *r,
+> +							      int a, int u)
+> +{
+> +	int c, new;
+> +
+> +	c = atomic_read(&(r->refs));
+> +	do {
+> +		if (unlikely(c == u))
+> +			break;
+> +
+> +		asm volatile(
+> +			"adds	%0, %0, %2	;"
+> +			REFCOUNT_CHECK(lt)
+> +			: "=r" (new)
+> +			: "0" (c), "Ir" (a),
+> +			  [counter] "r" (&r->refs.counter),
+> +			  [brk_imm] "i" (REFCOUNT_BRK_IMM)
+> +			: "cc", "x16", "x17");
+> +
+> +	} while (!atomic_try_cmpxchg(&(r->refs), &c, new));
+> +
+> +	return c;
+> +}
+> +
+As my reply to Kee's v8 patch,  the logic here is a little incorrect, if 
+we saturate the
 
-on 2017/7/26 1:20, Ard Biesheuvel wrote:
-> On 25 July 2017 at 18:13, Kees Cook <keescook@chromium.org> wrote:
->> On Tue, Jul 25, 2017 at 4:49 AM, Ard Biesheuvel
->> <ard.biesheuvel@linaro.org> wrote:
->>> Hi all,
->>>
->>> I had a stab at porting the fast refcount checks to arm64. It is slightly
->>> less straight-forward than x86 given that we need to support both LSE and
->>> LL/SC, and fallback to the latter if running a kernel built with support
->>> for the former on hardware that does not support it.
->>>
->>> It is build tested with and without LSE support, and boots fine on non-LSE
->>> hardware in both cases.
->> Ah! Very cool. Hopefully you and Li can compare notes; I think they've
->> been working on an implementation too.
->>
-> I wasn't aware of that.
->
->>> Suggestions welcome as to how to test and/or benchmark this,
->> I'll post a patch for LKDTM that I've been using. It's more
->> comprehensive than the existing ATOMIC checks (which predated the
->> refcount-only protection).
->>
-> OK. One thing I couldn't figure out: is refcount_t signed or not? The
-> saturate tests set the initial value to UINT_MAX - 1, but this is
-> interpreted as a negative value and so the refcount manipulations that
-> are expected to succeed also fail in my case.
+r->refs.counter and return from the exception, the value of "new" is not changed
+and will be written back to the refcount.
+I implement the logic like this, maybe you can take some reference if you find it usefull.
+
+int __refcount_add_unless(refcount_t *r, int a, int u)
+{
+	int c;
+	volatile int new;
+
+	c = atomic_read(&(r->refs));
+	do {
+		if (unlikely(c == u))
+			break;
+
+		asm volatile("adds %w0,%w1,%w2\n"
+			: "=&r" (new)
+			: "r" (c), "Ir" (a)
+			: "memory");
+		asm volatile(REFCOUNT_CHECK_LT_ZERO
+			::[imm] "i"(REFCOUNT_BRK_IMM),[counter] "r" (&new)
+			: "cc", "x19");
+
+	} while (!atomic_try_cmpxchg(&(r->refs), &c, new));
+
+	return c;
+}
+
+
+>   /* This registration must happen early, before debug_traps_init(). */
+>   void __init trap_init(void)
+>   {
+>   	register_break_hook(&bug_break_hook);
+> +	register_break_hook(&refcount_break_hook);
+>   }
+> diff --git a/arch/arm64/lib/atomic_ll_sc.c b/arch/arm64/lib/atomic_ll_sc.c
+> index b0c538b0da28..5f038abdc635 100644
+> --- a/arch/arm64/lib/atomic_ll_sc.c
+> +++ b/arch/arm64/lib/atomic_ll_sc.c
+> @@ -1,3 +1,9 @@
+>   #include <asm/atomic.h>
+>   #define __ARM64_IN_ATOMIC_IMPL
+> +#undef REFCOUNT_CHECK
+> +#undef REFCOUNT_INPUTS
+> +#undef REFCOUNT_CLOBBERS
+> +#define REFCOUNT_CHECK(cond)
+> +#define REFCOUNT_INPUTS(r)
+> +#define REFCOUNT_CLOBBERS : "cc"
+>   #include <asm/atomic_ll_sc.h>
 
 -- 
 Best Regards
