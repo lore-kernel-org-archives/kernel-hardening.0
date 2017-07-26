@@ -1,84 +1,54 @@
+References: <20170725114901.31403-1-ard.biesheuvel@linaro.org>
+ <CAGXu5jLNB5dmA0o=n_nn=4NRu3LjuNf5PGRopATuRiq0aJ1ECA@mail.gmail.com>
+ <CAKv+Gu8L1M6iO-pELrVvouxgh+t1qjzD4fOu3Fw+LeiWMZWzpA@mail.gmail.com>
+From: Li Kun <hw.likun@huawei.com>
+Message-ID: <c89c560c-c8b5-2079-6e19-0b85d9658ca3@huawei.com>
+Date: Wed, 26 Jul 2017 09:47:35 +0800
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <cdd42a1b-ce15-df8c-6bd1-b0943275986f@linux.com>
-References: <20170706002718.GA102852@beast> <cdd42a1b-ce15-df8c-6bd1-b0943275986f@linux.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 25 Jul 2017 17:21:15 -0700
-Message-ID: <CAGXu5jKRDhvqj0TU10W10hsdixN2P+hHzpYfSVvOFZy=hW72Mg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [v3] mm: Add SLUB free list pointer obfuscation
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Josh Triplett <josh@joshtriplett.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Linux-MM <linux-mm@kvack.org>, Tycho Andersen <tycho@docker.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAKv+Gu8L1M6iO-pELrVvouxgh+t1qjzD4fOu3Fw+LeiWMZWzpA@mail.gmail.com>
+Content-Type: text/plain; charset="windows-1252"; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC PATCH untested] arm64: kernel: implement fast refcount
+ checking
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kees Cook <keescook@chromium.org>
+Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jul 24, 2017 at 2:17 PM, Alexander Popov <alex.popov@linux.com> wrote:
-> From 86f4f1f6deb76849e00c761fa30eeb479f789c35 Mon Sep 17 00:00:00 2001
-> From: Alexander Popov <alex.popov@linux.com>
-> Date: Mon, 24 Jul 2017 23:16:28 +0300
-> Subject: [PATCH 2/2] mm/slub.c: add a naive detection of double free or
->  corruption
->
-> On 06.07.2017 03:27, Kees Cook wrote:
->> This SLUB free list pointer obfuscation code is modified from Brad
->> Spengler/PaX Team's code in the last public patch of grsecurity/PaX based
->> on my understanding of the code. Changes or omissions from the original
->> code are mine and don't reflect the original grsecurity/PaX code.
+Hi Ard and Kees,
+
+Yes, i have been working on this for several days, but i think Ard's 
+patch is better than mine in some ways.
+So i'll help reviewing the patch and try to give some suggestions.
+Never mind:)
+
+on 2017/7/26 1:20, Ard Biesheuvel wrote:
+> On 25 July 2017 at 18:13, Kees Cook <keescook@chromium.org> wrote:
+>> On Tue, Jul 25, 2017 at 4:49 AM, Ard Biesheuvel
+>> <ard.biesheuvel@linaro.org> wrote:
+>>> Hi all,
+>>>
+>>> I had a stab at porting the fast refcount checks to arm64. It is slightly
+>>> less straight-forward than x86 given that we need to support both LSE and
+>>> LL/SC, and fallback to the latter if running a kernel built with support
+>>> for the former on hardware that does not support it.
+>>>
+>>> It is build tested with and without LSE support, and boots fine on non-LSE
+>>> hardware in both cases.
+>> Ah! Very cool. Hopefully you and Li can compare notes; I think they've
+>> been working on an implementation too.
 >>
->> This adds a per-cache random value to SLUB caches that is XORed with
->> their freelist pointer address and value. This adds nearly zero overhead
->> and frustrates the very common heap overflow exploitation method of
->> overwriting freelist pointers. A recent example of the attack is written
->> up here: http://cyseclabs.com/blog/cve-2016-6187-heap-off-by-one-exploit
+> I wasn't aware of that.
+>
+>>> Suggestions welcome as to how to test and/or benchmark this,
+>> I'll post a patch for LKDTM that I've been using. It's more
+>> comprehensive than the existing ATOMIC checks (which predated the
+>> refcount-only protection).
 >>
->> This is based on patches by Daniel Micay, and refactored to minimize the
->> use of #ifdef.
->
-> Hello!
->
-> This is an addition to the SLAB_FREELIST_HARDENED feature. I'm sending it
-> according the discussion here:
-> http://www.openwall.com/lists/kernel-hardening/2017/07/17/9
->
-> -- >8 --
->
-> Add an assertion similar to "fasttop" check in GNU C Library allocator
-> as a part of SLAB_FREELIST_HARDENED feature. An object added to a singly
-> linked freelist should not point to itself. That helps to detect some
-> double free errors (e.g. CVE-2017-2636) without slub_debug and KASAN.
->
-> Signed-off-by: Alexander Popov <alex.popov@linux.com>
-> ---
->  mm/slub.c | 4 ++++
->  1 file changed, 4 insertions(+)
->
-> diff --git a/mm/slub.c b/mm/slub.c
-> index c92d636..f39d06e 100644
-> --- a/mm/slub.c
-> +++ b/mm/slub.c
-> @@ -290,6 +290,10 @@ static inline void set_freepointer(struct kmem_cache *s,
-> void *object, void *fp)
->  {
->         unsigned long freeptr_addr = (unsigned long)object + s->offset;
->
-> +#ifdef CONFIG_SLAB_FREELIST_HARDENED
-> +       BUG_ON(object == fp); /* naive detection of double free or corruption */
-> +#endif
-> +
->         *(void **)freeptr_addr = freelist_ptr(s, fp, freeptr_addr);
-
-What happens if, instead of BUG_ON, we do:
-
-if (unlikely(WARN_RATELIMIT(object == fp, "double-free detected"))
-        return;
-
-That would ignore adding it back to the list, since it's already
-there, yes? Or would this make SLUB go crazy? I can't tell from the
-accounting details around callers to set_freepointer(). I assume it's
-correct, since it's close to the same effect as BUG (i.e. we don't do
-the update, but the cache remains visible to the system)
-
--Kees
+> OK. One thing I couldn't figure out: is refcount_t signed or not? The
+> saturate tests set the initial value to UINT_MAX - 1, but this is
+> interpreted as a negative value and so the refcount manipulations that
+> are expected to succeed also fail in my case.
 
 -- 
-Kees Cook
-Pixel Security
+Best Regards
+Li Kun
