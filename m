@@ -1,49 +1,47 @@
+Date: Wed, 26 Jul 2017 19:25:34 +0100
+From: Russell King - ARM Linux <linux@armlinux.org.uk>
+Message-ID: <20170726182534.GQ31807@n2100.armlinux.org.uk>
+References: <20170719175900.124074-1-thgarnie@google.com>
+ <CAJcbSZFw9GhVvNfYi1oHhpintHSzGcHvGjg5LtRViNBPDzLHaA@mail.gmail.com>
+ <1500978481.30745.10.camel@nxp.com>
+ <20170725103828.GJ31807@n2100.armlinux.org.uk>
+ <CAJcbSZF1ddWuQ-c2Xyr1Nvrjzg2TZZNHPfSo7R6Vqg2mnhiPOg@mail.gmail.com>
+ <20170726120208.GB2115@arm.com>
+ <CAJcbSZG6qsaVGY7Weh6n+xs5XaDg+=h8SDUYJfMUTWbdYOd7rA@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <alpine.DEB.2.20.1707261154140.9167@nuc-kabylake>
-References: <20170706002718.GA102852@beast> <cdd42a1b-ce15-df8c-6bd1-b0943275986f@linux.com>
- <CAGXu5jKRDhvqj0TU10W10hsdixN2P+hHzpYfSVvOFZy=hW72Mg@mail.gmail.com>
- <alpine.DEB.2.20.1707260906230.6341@nuc-kabylake> <CAGXu5jLkOjDKSZ48jOyh2voP17xXMeEnqzV_=8dGSvFmqdCZCA@mail.gmail.com>
- <alpine.DEB.2.20.1707261154140.9167@nuc-kabylake>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 26 Jul 2017 10:13:59 -0700
-Message-ID: <CAGXu5jLNeO-WmaQXp9z-+iw2sha-DXixtQ-fjQmahUkh0Hvxeg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [v3] mm: Add SLUB free list pointer obfuscation
-To: Christopher Lameter <cl@linux.com>
-Cc: Alexander Popov <alex.popov@linux.com>, Andrew Morton <akpm@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Josh Triplett <josh@joshtriplett.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Linux-MM <linux-mm@kvack.org>, Tycho Andersen <tycho@docker.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAJcbSZG6qsaVGY7Weh6n+xs5XaDg+=h8SDUYJfMUTWbdYOd7rA@mail.gmail.com>
+Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
+Subject: [kernel-hardening] Re: [PATCH 1/3] arm/syscalls: Move address limit check in loop
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Will Deacon <will.deacon@arm.com>, Leonard Crestez <leonard.crestez@nxp.com>, Thomas Gleixner <tglx@linutronix.de>, Catalin Marinas <catalin.marinas@arm.com>, Dave Martin <Dave.Martin@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Pratyush Anand <panand@redhat.com>, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 26, 2017 at 9:55 AM, Christopher Lameter <cl@linux.com> wrote:
-> On Wed, 26 Jul 2017, Kees Cook wrote:
->
->> >> What happens if, instead of BUG_ON, we do:
->> >>
->> >> if (unlikely(WARN_RATELIMIT(object == fp, "double-free detected"))
->> >>         return;
->> >
->> > This may work for the free fastpath but the set_freepointer function is
->> > use in multiple other locations. Maybe just add this to the fastpath
->> > instead of to this fucnction?
->>
->> Do you mean do_slab_free()?
->
-> Yes inserting these lines into do_slab_free() would simple ignore the
-> double free operation in the fast path and that would be safe.
->
-> Although in either case we are adding code to the fastpath...
+On Wed, Jul 26, 2017 at 07:20:22AM -0700, Thomas Garnier wrote:
+> On Wed, Jul 26, 2017 at 5:02 AM, Will Deacon <will.deacon@arm.com> wrote:
+> > I looked to see what you've done for x86, but it looks like you check/clear
+> > the flag before the work pending loop (exit_to_usermode_loop), which
+> > subsequently re-enables interrupts and exits when
+> > EXIT_TO_USERMODE_LOOP_FLAGS are all clear. Since TIF_FSCHECK isn't included
+> > in those flags, what stops it being set again by an irq and remaining set
+> > for the return to userspace?
+> 
+> Nothing, I plan to improve the x86 logic later. I focused on ARM/ARM64
+> right now based on Leonard report.
 
-While I'd like it unconditionally, I think Alexander's proposal was to
-put it behind CONFIG_SLAB_FREELIST_HARDENED.
+Hmm.  In this case, I'd suggest concentrating on x86 and getting the
+implementation correct there before porting it to other architectures.
 
-BTW, while I've got your attention, can you Ack the other patch? I
-sent a v4 for the pointer obfuscation, which we really need:
-https://lkml.org/lkml/2017/7/26/4
+If x86 were to check TIF_FSCHECK in the loop, and repeat until clear,
+would x86 also end up in these infinite loops that have been reported
+on ARM as well?
 
-Thanks!
-
--Kees
+I strongly suggest testing the behaviour with kprobes/tracing enabled
+for a function called from the work pending loop, and checking how
+that behaves.
 
 -- 
-Kees Cook
-Pixel Security
+RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+FTTC broadband for 0.8mile line: currently at 9.6Mbps down 400kbps up
+according to speedtest.net.
