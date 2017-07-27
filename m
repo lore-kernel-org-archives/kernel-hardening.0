@@ -1,58 +1,98 @@
+References: <20170725181536.21092-1-ard.biesheuvel@linaro.org>
+ <0816933d-7e58-0773-1441-891823983ff9@huawei.com>
+ <CAKv+Gu8djcgmovajhUUpniHwEVDupCWW3L__3JtqZ0GCM3=U2w@mail.gmail.com>
+ <34605822-8f95-f963-48c4-65d724eae0c7@huawei.com>
+ <48B13266-4D48-40AD-A205-169D907FAD68@linaro.org>
+From: Li Kun <hw.likun@huawei.com>
+Message-ID: <db288c30-5111-18e3-caf9-8df25508b523@huawei.com>
+Date: Thu, 27 Jul 2017 10:11:16 +0800
 MIME-Version: 1.0
-In-Reply-To: <20170726182534.GQ31807@n2100.armlinux.org.uk>
-References: <20170719175900.124074-1-thgarnie@google.com> <CAJcbSZFw9GhVvNfYi1oHhpintHSzGcHvGjg5LtRViNBPDzLHaA@mail.gmail.com>
- <1500978481.30745.10.camel@nxp.com> <20170725103828.GJ31807@n2100.armlinux.org.uk>
- <CAJcbSZF1ddWuQ-c2Xyr1Nvrjzg2TZZNHPfSo7R6Vqg2mnhiPOg@mail.gmail.com>
- <20170726120208.GB2115@arm.com> <CAJcbSZG6qsaVGY7Weh6n+xs5XaDg+=h8SDUYJfMUTWbdYOd7rA@mail.gmail.com>
- <20170726182534.GQ31807@n2100.armlinux.org.uk>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed, 26 Jul 2017 11:29:02 -0700
-Message-ID: <CAJcbSZHrh_z1QGPe41OfbEFfR552FgK668JiP3xJjGRddF9AzQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 1/3] arm/syscalls: Move address limit check in loop
-To: Russell King - ARM Linux <linux@armlinux.org.uk>
-Cc: Will Deacon <will.deacon@arm.com>, Leonard Crestez <leonard.crestez@nxp.com>, Thomas Gleixner <tglx@linutronix.de>, Catalin Marinas <catalin.marinas@arm.com>, Dave Martin <Dave.Martin@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Pratyush Anand <panand@redhat.com>, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <48B13266-4D48-40AD-A205-169D907FAD68@linaro.org>
+Content-Type: text/plain; charset="UTF-8"; format=flowed
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v2] arm64: kernel: implement fast refcount checking
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kees Cook <keescook@chromium.org>
+Cc: Mark Rutland <mark.rutland@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Laura Abbott <labbott@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 26, 2017 at 11:25 AM, Russell King - ARM Linux
-<linux@armlinux.org.uk> wrote:
-> On Wed, Jul 26, 2017 at 07:20:22AM -0700, Thomas Garnier wrote:
->> On Wed, Jul 26, 2017 at 5:02 AM, Will Deacon <will.deacon@arm.com> wrote:
->> > I looked to see what you've done for x86, but it looks like you check/clear
->> > the flag before the work pending loop (exit_to_usermode_loop), which
->> > subsequently re-enables interrupts and exits when
->> > EXIT_TO_USERMODE_LOOP_FLAGS are all clear. Since TIF_FSCHECK isn't included
->> > in those flags, what stops it being set again by an irq and remaining set
->> > for the return to userspace?
+
+
+在 2017/7/26 21:25, Ard Biesheuvel 写道:
+>> On 26 Jul 2017, at 10:21, Li Kun <hw.likun@huawei.com> wrote:
 >>
->> Nothing, I plan to improve the x86 logic later. I focused on ARM/ARM64
->> right now based on Leonard report.
+>>
+>>
+>>> 在 2017/7/26 16:40, Ard Biesheuvel 写道:
+>>>> On 26 July 2017 at 05:11, Li Kun <hw.likun@huawei.com> wrote:
+>>>> Hi Ard，
+>>>>
+>>>>
+>>>>> on 2017/7/26 2:15, Ard Biesheuvel wrote:
+>>>>> +#define REFCOUNT_OP(op, asm_op, cond, l, clobber...)                   \
+>>>>> +__LL_SC_INLINE int                                                     \
+>>>>> +__LL_SC_PREFIX(__refcount_##op(int i, atomic_t *r))                    \
+>>>>> +{                                                                      \
+>>>>> +       unsigned long tmp;                                              \
+>>>>> +       int result;                                                     \
+>>>>> +                                                                       \
+>>>>> +       asm volatile("// refcount_" #op "\n"                            \
+>>>>> +"      prfm            pstl1strm, %2\n"                                \
+>>>>> +"1:    ldxr            %w0, %2\n"                                      \
+>>>>> +"      " #asm_op "     %w0, %w0, %w[i]\n"                              \
+>>>>> +"      st" #l "xr      %w1, %w0, %2\n"                                 \
+>>>>> +"      cbnz            %w1, 1b\n"                                      \
+>>>>> +       REFCOUNT_CHECK(cond)                                            \
+>>>>> +       : "=&r" (result), "=&r" (tmp), "+Q" (r->counter)                \
+>>>>> +       : REFCOUNT_INPUTS(r) [i] "Ir" (i)                               \
+>>>>> +       clobber);                                                       \
+>>>>> +                                                                       \
+>>>>> +       return result;                                                  \
+>>>>> +}                                                                      \
+>>>>> +__LL_SC_EXPORT(__refcount_##op);
+>>>>> +
+>>>>> +REFCOUNT_OP(add_lt, adds, mi,  , REFCOUNT_CLOBBERS);
+>>>>> +REFCOUNT_OP(sub_lt_neg, adds, mi, l, REFCOUNT_CLOBBERS);
+>>>>> +REFCOUNT_OP(sub_le_neg, adds, ls, l, REFCOUNT_CLOBBERS);
+>>>>> +REFCOUNT_OP(sub_lt, subs, mi, l, REFCOUNT_CLOBBERS);
+>>>>> +REFCOUNT_OP(sub_le, subs, ls, l, REFCOUNT_CLOBBERS);
+>>>>> +
+>>>> I'm not quite sure if we use b.lt to judge whether the result of adds is
+>>>> less than zero is correct or not.
+>>>> The b.lt means N!=V, take an extreme example, if we operate like below, the
+>>>> b.lt will also be true.
+>>>>
+>>>> refcount_set(&ref_c,0x80000000);
+>>>> refcount_dec_and_test(&ref_c);
+>>>>
+>>>> maybe we should use PL/NE/MI/EQ to judge the LT_ZERO or LE_ZERO condition ?
+>>>>
+>>> The lt/le is confusing here: the actual condition coded used are mi
+>>> for negative and ls for negative or zero.
+>>>
+>>> I started out using lt and le, because it matches the x86 code, but I
+>>> moved to mi and ls instead. (I don't think it makes sense to deviate
+>>> from that just because the flags and predicates work a bit
+>>> differently.)
+>>>
+>>> However, I see now that there is one instance of REFCOUNT_CHECK(lt)
+>>> remaining (in refcount.h). That should mi as well.
+>> Sorry for having  misunderstood your implementation.
+>> If we want to catch the refcount_sub operate on negetive value(like -1 to -2 ), i think b.ls can't achieve that.
+> You are right. Decrementing a refcount which is already negative will not be caught. Is that a problem?
+I think it will be, when we saturate the refcount to INT_MIN/2 and 
+return from the exception, we should catch every operation next.
 >
-> Hmm.  In this case, I'd suggest concentrating on x86 and getting the
-> implementation correct there before porting it to other architectures.
-
-I think the ARM architecture is different.
-
+>> I think (b.eq || b.mi ) may be better than b.ls for this case.
+>>
+> At the expense of one more instruction, yes. I tend to agree, though. The atomics are fairly costly to begin with, so one more predicted non-taken branch won't really make a difference.
 >
-> If x86 were to check TIF_FSCHECK in the loop, and repeat until clear,
-> would x86 also end up in these infinite loops that have been reported
-> on ARM as well?
-
-If for every loop set_fs was called. I think the idea is that at some
-point only the TIF_FSCHECK remain. I don't think x86 suffers from the
-same issue than ARM.
-
+> In fact, I realised that we could easily implement the add-from-zero case as well: both ll/sc and lse versions have the old count in a register already, so all we need is a cbz in the right place.
+I agree with you. One thing we should care about is we should check the 
+refcount against zero before sc or use 'CAS' to do it, and we should 
+modify the procedure in refcount_exception_handler.
+@Kees, should we implement the add-from-zero case ? What do you think?
 >
-> I strongly suggest testing the behaviour with kprobes/tracing enabled
-> for a function called from the work pending loop, and checking how
-> that behaves.
->
-> --
-> RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
-> FTTC broadband for 0.8mile line: currently at 9.6Mbps down 400kbps up
-> according to speedtest.net.
-
-
 
 -- 
-Thomas
+Best Regards
+Li Kun
