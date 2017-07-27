@@ -1,34 +1,75 @@
+Date: Thu, 27 Jul 2017 10:14:18 -0500 (CDT)
+From: Christopher Lameter <cl@linux.com>
+In-Reply-To: <20170726041250.GA76741@beast>
+Message-ID: <alpine.DEB.2.20.1707271003370.15126@nuc-kabylake>
+References: <20170726041250.GA76741@beast>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <db288c30-5111-18e3-caf9-8df25508b523@huawei.com>
-References: <20170725181536.21092-1-ard.biesheuvel@linaro.org>
- <0816933d-7e58-0773-1441-891823983ff9@huawei.com> <CAKv+Gu8djcgmovajhUUpniHwEVDupCWW3L__3JtqZ0GCM3=U2w@mail.gmail.com>
- <34605822-8f95-f963-48c4-65d724eae0c7@huawei.com> <48B13266-4D48-40AD-A205-169D907FAD68@linaro.org>
- <db288c30-5111-18e3-caf9-8df25508b523@huawei.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 26 Jul 2017 21:16:10 -0700
-Message-ID: <CAGXu5jLFAOhs0eak9BfNP=3XLwtHxdSqNF+AB_yjcWyX1=SoNQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2] arm64: kernel: implement fast refcount checking
-To: Li Kun <hw.likun@huawei.com>
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@fedoraproject.org>, Will Deacon <will.deacon@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH v4] mm: Add SLUB free list pointer obfuscation
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Tejun Heo <tj@kernel.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, linux-mm@kvack.org, Rik van Riel <riel@redhat.com>, Tycho Andersen <tycho@docker.com>, Alexander Popov <alex.popov@linux.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 26, 2017 at 7:11 PM, Li Kun <hw.likun@huawei.com> wrote:
-> @Kees, should we implement the add-from-zero case ? What do you think?
+On Tue, 25 Jul 2017, Kees Cook wrote:
 
-If it can be done efficiently, yes. In the x86 case, it would
-basically change "lock inc" into a huge cmpxchg loop, and it almost
-doubled the cycles for the operation. Since
-refcount_inc()/refcount_dec_and_test() is the primary code pattern,
-it's not a good idea to mess with performance on especially those.
-This LKDTM series should provide a good perf target to compare
-against:
+> +/*
+> + * Returns freelist pointer (ptr). With hardening, this is obfuscated
+> + * with an XOR of the address where the pointer is held and a per-cache
+> + * random number.
+> + */
+> +static inline void *freelist_ptr(const struct kmem_cache *s, void *ptr,
+> +				 unsigned long ptr_addr)
+> +{
+> +#ifdef CONFIG_SLAB_FREELIST_HARDENED
+> +	return (void *)((unsigned long)ptr ^ s->random ^ ptr_addr);
+> +#else
+> +	return ptr;
+> +#endif
+> +}
 
-https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=lkdtm/refcount
+Weird function. Why pass both the pointer as well as the address of the
+pointer? The address of the pointer would be sufficient I think. Compiler
+can optimize the refs on its own. OK ptr_addr is really the obfuscation
+value. Maybe a bit confusing to call this ptr_addr and also pass this as
+a long. xor_value? If it is a pointer address the it should be void ** or
+so.
 
--Kees
+>  static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
+>  {
+> +	unsigned long freepointer_addr;
+>  	void *p;
+>
+>  	if (!debug_pagealloc_enabled())
+>  		return get_freepointer(s, object);
+>
+> -	probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
+> -	return p;
+> +	freepointer_addr = (unsigned long)object + s->offset;
 
--- 
-Kees Cook
-Pixel Security
+converts the void ** to unsigned long.... which requires another cast in
+the following line.
+
+> +	probe_kernel_read(&p, (void **)freepointer_addr, sizeof(p));
+> +	return freelist_ptr(s, p, freepointer_addr);
+>  }
+>
+>  static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
+>  {
+> -	*(void **)(object + s->offset) = fp;
+> +	unsigned long freeptr_addr = (unsigned long)object + s->offset;
+> +
+> +	*(void **)freeptr_addr = freelist_ptr(s, fp, freeptr_addr);
+>  }
+>
+>  /* Loop over all objects in a slab */
+> @@ -3563,6 +3592,9 @@ static int kmem_cache_open(struct kmem_cache *s, unsigned long flags)
+>  {
+>  	s->flags = kmem_cache_flags(s->size, flags, s->name, s->ctor);
+>  	s->reserved = 0;
+> +#ifdef CONFIG_SLAB_FREELIST_HARDENED
+> +	s->random = get_random_long();
+> +#endif
+>
+>  	if (need_reserve_slab_rcu && (s->flags & SLAB_TYPESAFE_BY_RCU))
+>  		s->reserved = sizeof(struct rcu_head);
+>
