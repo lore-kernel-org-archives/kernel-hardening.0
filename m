@@ -1,52 +1,36 @@
-References: <20170706002718.GA102852@beast>
- <cdd42a1b-ce15-df8c-6bd1-b0943275986f@linux.com>
- <CAGXu5jKRDhvqj0TU10W10hsdixN2P+hHzpYfSVvOFZy=hW72Mg@mail.gmail.com>
- <alpine.DEB.2.20.1707260906230.6341@nuc-kabylake>
- <CAGXu5jLkOjDKSZ48jOyh2voP17xXMeEnqzV_=8dGSvFmqdCZCA@mail.gmail.com>
- <alpine.DEB.2.20.1707261154140.9167@nuc-kabylake>
- <515333f5-1815-8591-503e-c0cf6941670e@linux.com>
- <alpine.DEB.2.20.1707271851390.17228@nuc-kabylake>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <4a6c0105-b084-aa87-6a2b-0650613df6ac@linux.com>
-Date: Mon, 31 Jul 2017 23:17:19 +0300
 MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.20.1707271851390.17228@nuc-kabylake>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [v3] mm: Add SLUB free list pointer obfuscation
-To: Christopher Lameter <cl@linux.com>, Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Josh Triplett <josh@joshtriplett.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Tejun Heo <tj@kernel.org>, Daniel Mack <daniel@zonque.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Linux-MM <linux-mm@kvack.org>, Tycho Andersen <tycho@docker.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Sender: keescook@google.com
+In-Reply-To: <20170731192251.12491-1-ard.biesheuvel@linaro.org>
+References: <20170731192251.12491-1-ard.biesheuvel@linaro.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 31 Jul 2017 14:16:21 -0700
+Message-ID: <CAGXu5jLZw1aK_wqSiAi3ddxPavOC1i47q4ahnwVnja=gsrLs2w@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v4] arm64: kernel: implement fast refcount checking
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@fedoraproject.org>, Li Kun <hw.likun@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Christopher and Kees,
+On Mon, Jul 31, 2017 at 12:22 PM, Ard Biesheuvel
+<ard.biesheuvel@linaro.org> wrote:
+> v4: Implement add-from-zero checking using a conditional compare rather than
+>     a conditional branch, which I omitted from v3 due to the 10% performance
+>     hit: this will result in the new refcount to be written back to memory
+>     before invoking the handler, which is more in line with the other checks,
+>     and is apparently much easier on the branch predictor, given that there
+>     is no performance hit whatsoever.
 
-Excuse me for the delayed reply.
+So refcount_inc() and refcount_add(n, ...) will write 1 and n
+respectively, then hit the handler to saturate? That seems entirely
+fine to me: checking inc-from-zero is just a protection against a
+possible double-free condition. It's still technically a race, but a
+narrow race on a rare condition is better than being able to always
+win it.
 
-On 28.07.2017 02:53, Christopher Lameter wrote:
-> On Fri, 28 Jul 2017, Alexander Popov wrote:
-> 
->> I don't really like ignoring double-free. I think, that:
->>   - it will hide dangerous bugs in the kernel,
->>   - it can make some kernel exploits more stable.
->> I would rather add BUG_ON to set_freepointer() behind SLAB_FREELIST_HARDENED. Is
->> it fine?
-> 
-> I think Kees already added some logging output.
+Nice!
 
-Hm, I don't see anything like that in v4 of "SLUB free list pointer
-obfuscation": https://patchwork.kernel.org/patch/9864165/
+-Kees
 
->> At the same time avoiding the consequences of some double-free errors is better
->> than not doing that. It may be considered as kernel "self-healing", I don't
->> know. I can prepare a second patch for do_slab_free(), as you described. Would
->> you like it?
-> 
-> The SLUB allocator is already self healing if you enable the option to do
-> so on bootup (covers more than just the double free case). What you
-> propose here is no different than that and just another way of having
-> similar functionality. In the best case it would work the same way.
-
-Ok, I see. Thanks.
-
-Best regards,
-Alexander
+-- 
+Kees Cook
+Pixel Security
