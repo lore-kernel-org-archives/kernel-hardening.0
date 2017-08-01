@@ -1,64 +1,60 @@
+References: <20170731120144.14214-1-ard.biesheuvel@linaro.org>
+ <a0b6690d-039e-04ed-9847-b4521935375f@huawei.com>
+ <CAKv+Gu9nQf=+HcN0c3Uy3YjDqnh0Xci3N-LqyAVw-gjRPRWmXw@mail.gmail.com>
+From: Li Kun <hw.likun@huawei.com>
+Message-ID: <e1fa5c49-fb8d-f7c1-8530-562a28d8910c@huawei.com>
+Date: Tue, 1 Aug 2017 09:41:15 +0800
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAKv+Gu-TH6qeotkYF+w+KcVJ6pavOYYEkmLKEQTUiDVAcQ1REQ@mail.gmail.com>
-References: <20170731192251.12491-1-ard.biesheuvel@linaro.org>
- <CAGXu5jLZw1aK_wqSiAi3ddxPavOC1i47q4ahnwVnja=gsrLs2w@mail.gmail.com> <CAKv+Gu-TH6qeotkYF+w+KcVJ6pavOYYEkmLKEQTUiDVAcQ1REQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 31 Jul 2017 14:36:04 -0700
-Message-ID: <CAGXu5j+M3zVxZRXLw_e1yAS29=eB823+jeidiXX9eUbSR=ZePg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v4] arm64: kernel: implement fast refcount checking
+In-Reply-To: <CAKv+Gu9nQf=+HcN0c3Uy3YjDqnh0Xci3N-LqyAVw-gjRPRWmXw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"; format=flowed
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v3] arm64: kernel: implement fast refcount checking
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@fedoraproject.org>, Li Kun <hw.likun@huawei.com>
+Cc: Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Laura Abbott <labbott@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jul 31, 2017 at 2:21 PM, Ard Biesheuvel
-<ard.biesheuvel@linaro.org> wrote:
-> On 31 July 2017 at 22:16, Kees Cook <keescook@chromium.org> wrote:
->> On Mon, Jul 31, 2017 at 12:22 PM, Ard Biesheuvel
->> <ard.biesheuvel@linaro.org> wrote:
->>> v4: Implement add-from-zero checking using a conditional compare rather than
->>>     a conditional branch, which I omitted from v3 due to the 10% performance
->>>     hit: this will result in the new refcount to be written back to memory
->>>     before invoking the handler, which is more in line with the other checks,
->>>     and is apparently much easier on the branch predictor, given that there
->>>     is no performance hit whatsoever.
+
+
+在 2017/7/31 21:59, Ard Biesheuvel 写道:
+> On 31 July 2017 at 14:17, Li Kun <hw.likun@huawei.com> wrote:
 >>
->> So refcount_inc() and refcount_add(n, ...) will write 1 and n
->> respectively, then hit the handler to saturate?
+>> 在 2017/7/31 20:01, Ard Biesheuvel 写道:
+>>> +static __always_inline __must_check bool refcount_add_not_zero(unsigned
+>>> int i,
+>>> +                                                              refcount_t
+>>> *r)
+>>> +{
+>>> +       unsigned long tmp;
+>>> +       int result;
+>>> +
+>>> +       asm volatile("// refcount_add_not_zero \n"
+>>> +"      prfm            pstl1strm, %2\n"
+>>> +"1:    ldxr            %w[val], %2\n"
+>>> +"      cbz             %w[val], 2f\n"
+>>> +"      adds            %w[val], %w[val], %w[i]\n"
+>>> +"      stxr            %w1, %w[val], %2\n"
+>>> +"      cbnz            %w1, 1b\n"
+>>> +       REFCOUNT_POST_CHECK_NEG
+>>> +"2:"
+>>> +       : [val] "=&r" (result), "=&r" (tmp), "+Q" (r->refs.counter)
+>>> +       : REFCOUNT_INPUTS(&r->refs) [i] "Ir" (i)
+>>> +       : REFCOUNT_CLOBBERS);
+>>> +
+>>> +       return result != 0;
+>>> +}
+>>> +
+>> Could we use "cas" here instead of ll/sc ?
+>>
+> I don't see how, to be honest.
 >
-> Yes, but this is essentially what occurs on overflow and sub-to-zero
-> as well: the result is always stored before hitting the handler. Isn't
-> this the case for x86 as well?
-
-On x86, there's no check for inc/add-from-zero. Double-free would be:
-
-- refcount_dec_and_test() to 0, free
-- refcount_inc() to 1,
-- refcount_dec_and_test() to 0, free again
-
-Compared to the atomic_t implementation, this risk is unchanged. Also
-this case is an "over decrement" which we can't actually protect
-against. If the refcount_inc() above happens that means something is
-still tracking the object (but it's already been freed, so the
-use-after-free has already happened).
-
-x86 refcount_dec() to zero is checked, but this is mainly to find bad
-counting in "over decrement" cases, when the code pattern around the
-object is using unchecked refcount_dec() instead of
-refcount_dec_and_test(). (Frankly, I'd like to see refcount_dec()
-entirely removed from the refcount API...)
-
-On overflow, though, no, since we haven't yet reached all the way
-around to zero (i.e. it's caught before we can get all the way through
-the negative space back through zero to 1 and have a
-refcount_dec_and_test() trigger a free).
-
-If I could find a fast way to do the precheck for zero on x86, though,
-I'd like to have it, just to be extra-sure.
-
--Kees
+> Compare and swap only performs the store if the expected value is in
+> the memory location. In this case, we don't know the old value, we
+> only know we need to do something special if it is 0.
+I think you are right:)
+I thought wrongly, we could get the old value only after the 'cas' has 
+excuted successfully.
+Thanks a lot.
 
 -- 
-Kees Cook
-Pixel Security
+Best Regards
+Li Kun
