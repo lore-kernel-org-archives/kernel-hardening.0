@@ -1,104 +1,140 @@
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <07063abd-2f5d-20d9-a182-8ae9ead26c3c@huawei.com>
+Date: Wed, 2 Aug 2017 18:14:28 +0300
 MIME-Version: 1.0
-In-Reply-To: <20170726170051.28328-2-thgarnie@google.com>
-References: <20170726170051.28328-1-thgarnie@google.com> <20170726170051.28328-2-thgarnie@google.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed, 2 Aug 2017 07:10:52 -0700
-Message-ID: <CAJcbSZHq3FLvfm+7jODmqOCYOGh2ZDF8A4ZnihvkdwbMA7GGRQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 2/3] arm/syscalls: Optimize address limit check
-To: Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, Dave Martin <Dave.Martin@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, Leonard Crestez <leonard.crestez@nxp.com>
-Cc: linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] [RFC] Tagging of vmalloc pages for supporting the pmalloc allocator
+To: Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>, Kees
+ Cook <keescook@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 26, 2017 at 10:00 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> Disable the generic address limit check in favor of an architecture
-> specific optimized implementation. The generic implementation using
-> pending work flags did not work well with ARM and alignment faults.
->
-> The address limit is checked on each syscall return path to user-mode
-> path as well as the irq user-mode return function. If the address limit
-> was changed, a function is called to stop the kernel with an explicit
-> message.
->
-> The address limit check has to be done before any pending work because
-> they can reset the address limit. For example the lkdtm address limit
-> check does not work because the signal to kill the process will reset
-> the user-mode address limit.
->
-> Signed-off-by: Thomas Garnier <thgarnie@google.com>
-> ---
+Hi,
+while I am working to another example of using pmalloc [1],
+it was pointed out to me that:
 
-Russel: What do you think about this patch set?
+1) I had introduced a bug when I switched to using a field of the page
+structure [2]
 
->  arch/arm/kernel/entry-common.S | 11 +++++++++++
->  arch/arm/kernel/signal.c       |  5 +++++
->  2 files changed, 16 insertions(+)
->
-> diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
-> index 0b60adf4a5d9..99c908226065 100644
-> --- a/arch/arm/kernel/entry-common.S
-> +++ b/arch/arm/kernel/entry-common.S
-> @@ -12,6 +12,7 @@
->  #include <asm/unistd.h>
->  #include <asm/ftrace.h>
->  #include <asm/unwind.h>
-> +#include <asm/memory.h>
->  #ifdef CONFIG_AEABI
->  #include <asm/unistd-oabi.h>
->  #endif
-> @@ -48,10 +49,14 @@ ret_fast_syscall:
->   UNWIND(.fnstart       )
->   UNWIND(.cantunwind    )
->         disable_irq_notrace                     @ disable interrupts
-> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
-> +       cmp     r2, #TASK_SIZE
-> +       blne    addr_limit_check_failed
->         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
->         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
->         bne     fast_work_pending
->
-> +
->         /* perform architecture specific actions before user return */
->         arch_ret_to_user r1, lr
->
-> @@ -74,6 +79,9 @@ ret_fast_syscall:
->   UNWIND(.cantunwind    )
->         str     r0, [sp, #S_R0 + S_OFF]!        @ save returned r0
->         disable_irq_notrace                     @ disable interrupts
-> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
-> +       cmp     r2, #TASK_SIZE
-> +       blne    addr_limit_check_failed
->         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
->         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
->         beq     no_work_pending
-> @@ -106,6 +114,9 @@ ENTRY(ret_to_user)
->  ret_slow_syscall:
->         disable_irq_notrace                     @ disable interrupts
->  ENTRY(ret_to_user_from_irq)
-> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
-> +       cmp     r2, #TASK_SIZE
-> +       blne    addr_limit_check_failed
->         ldr     r1, [tsk, #TI_FLAGS]
->         tst     r1, #_TIF_WORK_MASK
->         bne     slow_work_pending
-> diff --git a/arch/arm/kernel/signal.c b/arch/arm/kernel/signal.c
-> index 5814298ef0b7..5769c15cff89 100644
-> --- a/arch/arm/kernel/signal.c
-> +++ b/arch/arm/kernel/signal.c
-> @@ -673,3 +673,8 @@ struct page *get_signal_page(void)
->
->         return page;
->  }
-> +
-> +asmlinkage void addr_limit_check_failed(void)
-> +{
-> +       panic("Incorrect address limit while returning to user-mode.");
-> +}
-> --
-> 2.14.0.rc0.400.g1c36432dff-goog
->
+2) I was also committing a layer violation in the way I was tagging the
+pages.
+
+I am seeking help to understand what would be the correct way to do the
+tagging.
+
+Here are snippets describing the problems:
 
 
+1) from pmalloc.c:
 
--- 
-Thomas
+...
+
++static const unsigned long pmalloc_signature = (unsigned
+long)&pmalloc_mutex;
+
+...
+
++int __pmalloc_tag_pages(void *base, const size_t size, const bool set_tag)
++{
++	void *end = base + size - 1;
++
++	do {
++		struct page *page;
++
++		if (!is_vmalloc_addr(base))
++			return -EINVAL;
++		page = vmalloc_to_page(base);
++		if (set_tag) {
++			BUG_ON(page_private(page) || page->private);
++			set_page_private(page, 1);
++			page->private = pmalloc_signature;
++		} else {
++			BUG_ON(!(page_private(page) &&
++				 page->private == pmalloc_signature));
++			set_page_private(page, 0);
++			page->private = 0;
++		}
++		base += PAGE_SIZE;
++	} while ((PAGE_MASK & (unsigned long)base) <=
++		 (PAGE_MASK & (unsigned long)end));
++	return 0;
++}
+
+...
+
++static const char msg[] = "Not a valid Pmalloc object.";
++const char *pmalloc_check_range(const void *ptr, unsigned long n)
++{
++	unsigned long p;
++
++	p = (unsigned long)ptr;
++	n = p + n - 1;
++	for (; (PAGE_MASK & p) <= (PAGE_MASK & n); p += PAGE_SIZE) {
++		struct page *page;
++
++		if (!is_vmalloc_addr((void *)p))
++			return msg;
++		page = vmalloc_to_page((void *)p);
++		if (!(page && page_private(page) &&
++		      page->private == pmalloc_signature))
++			return msg;
++	}
++	return NULL;
++}
+
+
+The problem here comes from the way I am using page->private:
+the fact that the page is marked as private means only that someone is
+using it, and the way it is used could create (spoiler: it happens) a
+collision with pmalloc_signature, which can generate false positives.
+
+A way to ensure that the address really belongs to pmalloc would be to
+pre-screen it, against either the signature or some magic number and,
+if such test is passed, then compare the address against those really
+available in the pmalloc pools.
+
+This would be slower, but it would be limited only to those cases where
+the signature/magic number matches and the answer is likely to be true.
+
+2) However, both the current (incorrect) implementation and the one I am
+considering, are abusing something that should be used otherwise (see
+the following snippet):
+
+from include/linux/mm_types.h:
+
+struct page {
+...
+  union {
+    unsigned long private;		/* Mapping-private opaque data:
+				 	 * usually used for buffer_heads
+					 * if PagePrivate set; used for
+					 * swp_entry_t if PageSwapCache;
+					 * indicates order in the buddy
+					 * system if PG_buddy is set.
+					 */
+#if USE_SPLIT_PTE_PTLOCKS
+#if ALLOC_SPLIT_PTLOCKS
+		spinlock_t *ptl;
+#else
+		spinlock_t ptl;
+#endif
+#endif
+		struct kmem_cache *slab_cache;	/* SL[AU]B: Pointer to slab */
+	};
+...
+}
+
+
+The "private" field is meant for mapping-private opaque data, which is
+not how I am using it.
+
+Yet it seems the least harmful field to choose.
+Is this acceptable?
+Otherwise, what would be the best course of action?
+
+
+thanks, igor
+
+
+[1] https://lkml.org/lkml/2017/7/10/400
+[2] https://lkml.org/lkml/2017/7/6/573
