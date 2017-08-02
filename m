@@ -1,195 +1,34 @@
-Date: Wed, 2 Aug 2017 11:06:09 -0700
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20170802180609.GA66807@beast>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [RESEND][PATCH v4] mm: Add SLUB free list pointer obfuscation
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Tejun Heo <tj@kernel.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, linux-mm@kvack.org, Rik van Riel <riel@redhat.com>, Tycho Andersen <tycho@docker.com>, Alexander Popov <alex.popov@linux.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <20170725205514.GA71165@beast>
+References: <20170725205514.GA71165@beast>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 2 Aug 2017 11:54:24 -0700
+Message-ID: <CAGXu5j+BRkTM3X6NuHoyU4FTs154wQtunOKF2cQDaHKyKNzpFQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v9] x86/asm: Implement fast refcount overflow protection
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This SLUB free list pointer obfuscation code is modified from Brad
-Spengler/PaX Team's code in the last public patch of grsecurity/PaX based
-on my understanding of the code. Changes or omissions from the original
-code are mine and don't reflect the original grsecurity/PaX code.
+On Tue, Jul 25, 2017 at 1:55 PM, Kees Cook <keescook@chromium.org> wrote:
+> This implements refcount_t overflow protection on x86 without a noticeable
+> performance impact, though without the fuller checking of REFCOUNT_FULL.
+> This is done by duplicating the existing atomic_t refcount implementation
+> but with normally a single instruction added to detect if the refcount
+> has gone negative (e.g. wrapped past INT_MAX or below zero). When detected,
+> the handler saturates the refcount_t to INT_MIN / 2. With this overflow
+> protection, the erroneous reference release that would follow a wrap back
+> to zero is blocked from happening, avoiding the class of refcount-overflow
+> use-after-free vulnerabilities entirely.
 
-This adds a per-cache random value to SLUB caches that is XORed with
-their freelist pointer address and value. This adds nearly zero overhead
-and frustrates the very common heap overflow exploitation method of
-overwriting freelist pointers. A recent example of the attack is written
-up here: http://cyseclabs.com/blog/cve-2016-6187-heap-off-by-one-exploit
-and there is a section dedicated to the technique the book "A Guide to
-Kernel Exploitation: Attacking the Core".
+Hi Ingo,
 
-This is based on patches by Daniel Micay, and refactored to minimize the
-use of #ifdef.
+Friendly ping. Is there anything remaining for this patch to go into -tip?
 
-With 200-count cycles of "hackbench -g 20 -l 1000" I saw the following
-run times:
+Thanks!
 
-before:
-	mean 10.11882499999999999995
-	variance .03320378329145728642
-	stdev .18221905304181911048
-
-after:
-	mean 10.12654000000000000014
-	variance .04700556623115577889
-	stdev .21680767106160192064
-
-The difference gets lost in the noise, but if the above is to be taken
-literally, using CONFIG_FREELIST_HARDENED is 0.07% slower.
-
-Suggested-by: Daniel Micay <danielmicay@gmail.com>
-Cc: Christoph Lameter <cl@linux.com>
-Cc: Rik van Riel <riel@redhat.com>
-Cc: Tycho Andersen <tycho@docker.com>
-Cc: Alexander Popov <alex.popov@linux.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-Andrew, can you please take this for -mm? It is a simple solution to a
-common heap attack, and several people have already spoken up about how
-they'd also like to be using it. (This is a distinct and non-overlapping
-protection separate from the double-free protection proposed, which would
-just be using the same CONFIG for toggling enablement.)
-
-v4:
-- add another reference to how common this exploit technique is.
-v3:
-- use static inlines instead of macros (akpm).
-v2:
-- rename CONFIG_SLAB_HARDENED to CONFIG_FREELIST_HARDENED (labbott).
----
- include/linux/slub_def.h |  4 ++++
- init/Kconfig             |  9 +++++++++
- mm/slub.c                | 42 +++++++++++++++++++++++++++++++++++++-----
- 3 files changed, 50 insertions(+), 5 deletions(-)
-
-diff --git a/include/linux/slub_def.h b/include/linux/slub_def.h
-index cc0faf3a90be..0783b622311e 100644
---- a/include/linux/slub_def.h
-+++ b/include/linux/slub_def.h
-@@ -115,6 +115,10 @@ struct kmem_cache {
- #endif
- #endif
- 
-+#ifdef CONFIG_SLAB_FREELIST_HARDENED
-+	unsigned long random;
-+#endif
-+
- #ifdef CONFIG_NUMA
- 	/*
- 	 * Defragmentation by allocating from a remote node.
-diff --git a/init/Kconfig b/init/Kconfig
-index 8514b25db21c..3dbb980cb70b 100644
---- a/init/Kconfig
-+++ b/init/Kconfig
-@@ -1571,6 +1571,15 @@ config SLAB_FREELIST_RANDOM
- 	  security feature reduces the predictability of the kernel slab
- 	  allocator against heap overflows.
- 
-+config SLAB_FREELIST_HARDENED
-+	bool "Harden slab freelist metadata"
-+	depends on SLUB
-+	help
-+	  Many kernel heap attacks try to target slab cache metadata and
-+	  other infrastructure. This options makes minor performance
-+	  sacrifies to harden the kernel slab allocator against common
-+	  freelist exploit methods.
-+
- config SLUB_CPU_PARTIAL
- 	default y
- 	depends on SLUB && SMP
-diff --git a/mm/slub.c b/mm/slub.c
-index 1d3f9835f4ea..c92d6369f5e0 100644
---- a/mm/slub.c
-+++ b/mm/slub.c
-@@ -34,6 +34,7 @@
- #include <linux/stacktrace.h>
- #include <linux/prefetch.h>
- #include <linux/memcontrol.h>
-+#include <linux/random.h>
- 
- #include <trace/events/kmem.h>
- 
-@@ -238,30 +239,58 @@ static inline void stat(const struct kmem_cache *s, enum stat_item si)
-  * 			Core slab cache functions
-  *******************************************************************/
- 
-+/*
-+ * Returns freelist pointer (ptr). With hardening, this is obfuscated
-+ * with an XOR of the address where the pointer is held and a per-cache
-+ * random number.
-+ */
-+static inline void *freelist_ptr(const struct kmem_cache *s, void *ptr,
-+				 unsigned long ptr_addr)
-+{
-+#ifdef CONFIG_SLAB_FREELIST_HARDENED
-+	return (void *)((unsigned long)ptr ^ s->random ^ ptr_addr);
-+#else
-+	return ptr;
-+#endif
-+}
-+
-+/* Returns the freelist pointer recorded at location ptr_addr. */
-+static inline void *freelist_dereference(const struct kmem_cache *s,
-+					 void *ptr_addr)
-+{
-+	return freelist_ptr(s, (void *)*(unsigned long *)(ptr_addr),
-+			    (unsigned long)ptr_addr);
-+}
-+
- static inline void *get_freepointer(struct kmem_cache *s, void *object)
- {
--	return *(void **)(object + s->offset);
-+	return freelist_dereference(s, object + s->offset);
- }
- 
- static void prefetch_freepointer(const struct kmem_cache *s, void *object)
- {
--	prefetch(object + s->offset);
-+	if (object)
-+		prefetch(freelist_dereference(s, object + s->offset));
- }
- 
- static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
- {
-+	unsigned long freepointer_addr;
- 	void *p;
- 
- 	if (!debug_pagealloc_enabled())
- 		return get_freepointer(s, object);
- 
--	probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
--	return p;
-+	freepointer_addr = (unsigned long)object + s->offset;
-+	probe_kernel_read(&p, (void **)freepointer_addr, sizeof(p));
-+	return freelist_ptr(s, p, freepointer_addr);
- }
- 
- static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
- {
--	*(void **)(object + s->offset) = fp;
-+	unsigned long freeptr_addr = (unsigned long)object + s->offset;
-+
-+	*(void **)freeptr_addr = freelist_ptr(s, fp, freeptr_addr);
- }
- 
- /* Loop over all objects in a slab */
-@@ -3563,6 +3592,9 @@ static int kmem_cache_open(struct kmem_cache *s, unsigned long flags)
- {
- 	s->flags = kmem_cache_flags(s->size, flags, s->name, s->ctor);
- 	s->reserved = 0;
-+#ifdef CONFIG_SLAB_FREELIST_HARDENED
-+	s->random = get_random_long();
-+#endif
- 
- 	if (need_reserve_slab_rcu && (s->flags & SLAB_TYPESAFE_BY_RCU))
- 		s->reserved = sizeof(struct rcu_head);
--- 
-2.7.4
-
+-Kees
 
 -- 
 Kees Cook
