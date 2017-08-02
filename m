@@ -1,45 +1,166 @@
+Date: Wed, 2 Aug 2017 13:08:48 -0400
+From: Jerome Glisse <jglisse@redhat.com>
+Message-ID: <20170802170848.GA3240@redhat.com>
+References: <07063abd-2f5d-20d9-a182-8ae9ead26c3c@huawei.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAJcbSZF5-gVg=Q6yAV2ymHo+SC6Go=vQHXMR0UTdKH2Jbe-s-g@mail.gmail.com>
-References: <20170718223333.110371-1-thgarnie@google.com> <20170718223333.110371-17-thgarnie@google.com>
- <CAMzpN2g5YkFZTY7yfvG03QUKc-=asKMZbqke9g4e2oT_pgg7Yw@mail.gmail.com>
- <CAJcbSZFXrDZikh9P5M81ztkiMv7EhO4x0bzBdYE8RYC=HMZgqg@mail.gmail.com>
- <25a2974a-fbb4-ea4b-d090-582d6d0de7fd@zytor.com> <CAJcbSZHuOhMHW6OTyt7-vZkPLS3XRQ48gpkF-TyohXpDW+825w@mail.gmail.com>
- <CAJcbSZF5-gVg=Q6yAV2ymHo+SC6Go=vQHXMR0UTdKH2Jbe-s-g@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 2 Aug 2017 09:56:32 -0700
-Message-ID: <CAGXu5jLhg5d0rxkfTGDjNxcsqd9BH8BSOPEOn=PBKx_dYeq8ow@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [RFC 16/22] x86/percpu: Adapt percpu for PIE support
-To: Thomas Garnier <thgarnie@google.com>
-Cc: "H. Peter Anvin" <hpa@zytor.com>, Brian Gerst <brgerst@gmail.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Christopher Li <sparse@chrisli.org>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Peter Foley <pefoley2@pefoley.com>, Steven Rostedt <rostedt@goodmis.org>, Tim Chen <tim.c.chen@linux.intel.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, linux-pm <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <07063abd-2f5d-20d9-a182-8ae9ead26c3c@huawei.com>
+Subject: [kernel-hardening] Re: [RFC] Tagging of vmalloc pages for supporting the pmalloc
+ allocator
+To: Igor Stoppa <igor.stoppa@huawei.com>
+Cc: Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Michal Hocko <mhocko@kernel.org>, Kees Cook <keescook@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Aug 2, 2017 at 9:42 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> I noticed that not only we have the problem of gs:0x40 not being
-> accessible. The compiler will default to the fs register if
-> mcmodel=kernel is not set.
->
-> On the next patch set, I am going to add support for
-> -mstack-protector-guard=global so a global variable can be used
-> instead of the segment register. Similar approach than ARM/ARM64.
+On Wed, Aug 02, 2017 at 06:14:28PM +0300, Igor Stoppa wrote:
+> Hi,
+> while I am working to another example of using pmalloc [1],
+> it was pointed out to me that:
+> 
+> 1) I had introduced a bug when I switched to using a field of the page
+> structure [2]
+> 
+> 2) I was also committing a layer violation in the way I was tagging the
+> pages.
+> 
+> I am seeking help to understand what would be the correct way to do the
+> tagging.
+> 
+> Here are snippets describing the problems:
+> 
+> 
+> 1) from pmalloc.c:
+> 
+> ...
+> 
+> +static const unsigned long pmalloc_signature = (unsigned
+> long)&pmalloc_mutex;
+> 
+> ...
+> 
+> +int __pmalloc_tag_pages(void *base, const size_t size, const bool set_tag)
+> +{
+> +	void *end = base + size - 1;
+> +
+> +	do {
+> +		struct page *page;
+> +
+> +		if (!is_vmalloc_addr(base))
+> +			return -EINVAL;
+> +		page = vmalloc_to_page(base);
+> +		if (set_tag) {
+> +			BUG_ON(page_private(page) || page->private);
+> +			set_page_private(page, 1);
 
-While this is probably understood, I have to point out that this would
-be a major regression for the stack protection on x86.
+Above line is pointless you overwrite value right below
 
-> Following this patch, I will work with gcc and llvm to add
-> -mstack-protector-reg=<segment register> support similar to PowerPC.
-> This way we can have gs used even without mcmodel=kernel. Once that's
-> an option, I can setup the GDT as described in the previous email
-> (similar to RFG).
+> +			page->private = pmalloc_signature;
+> +		} else {
+> +			BUG_ON(!(page_private(page) &&
+> +				 page->private == pmalloc_signature));
+> +			set_page_private(page, 0);
 
-It would be much nicer if we could teach gcc about the percpu area
-instead. This would let us solve the global stack protector problem on
-the other architectures:
-http://www.openwall.com/lists/kernel-hardening/2017/06/27/6
+Same as above
 
--Kees
+> +			page->private = 0;
+> +		}
+> +		base += PAGE_SIZE;
+> +	} while ((PAGE_MASK & (unsigned long)base) <=
+> +		 (PAGE_MASK & (unsigned long)end));
+> +	return 0;
+> +}
+> 
+> ...
+> 
+> +static const char msg[] = "Not a valid Pmalloc object.";
+> +const char *pmalloc_check_range(const void *ptr, unsigned long n)
+> +{
+> +	unsigned long p;
+> +
+> +	p = (unsigned long)ptr;
+> +	n = p + n - 1;
+> +	for (; (PAGE_MASK & p) <= (PAGE_MASK & n); p += PAGE_SIZE) {
+> +		struct page *page;
+> +
+> +		if (!is_vmalloc_addr((void *)p))
+> +			return msg;
+> +		page = vmalloc_to_page((void *)p);
+> +		if (!(page && page_private(page) &&
+> +		      page->private == pmalloc_signature))
+> +			return msg;
+> +	}
+> +	return NULL;
+> +}
+> 
+> 
+> The problem here comes from the way I am using page->private:
+> the fact that the page is marked as private means only that someone is
+> using it, and the way it is used could create (spoiler: it happens) a
+> collision with pmalloc_signature, which can generate false positives.
 
--- 
-Kees Cook
-Pixel Security
+Is page->private use for vmalloc memory ? If so then pick another field.
+Thought i doubt it is use i would need to check. What was the exact
+objection made ?
+
+> 
+> A way to ensure that the address really belongs to pmalloc would be to
+> pre-screen it, against either the signature or some magic number and,
+> if such test is passed, then compare the address against those really
+> available in the pmalloc pools.
+> 
+> This would be slower, but it would be limited only to those cases where
+> the signature/magic number matches and the answer is likely to be true.
+> 
+> 2) However, both the current (incorrect) implementation and the one I am
+> considering, are abusing something that should be used otherwise (see
+> the following snippet):
+> 
+> from include/linux/mm_types.h:
+> 
+> struct page {
+> ...
+>   union {
+>     unsigned long private;		/* Mapping-private opaque data:
+> 				 	 * usually used for buffer_heads
+> 					 * if PagePrivate set; used for
+> 					 * swp_entry_t if PageSwapCache;
+> 					 * indicates order in the buddy
+> 					 * system if PG_buddy is set.
+> 					 */
+> #if USE_SPLIT_PTE_PTLOCKS
+> #if ALLOC_SPLIT_PTLOCKS
+> 		spinlock_t *ptl;
+> #else
+> 		spinlock_t ptl;
+> #endif
+> #endif
+> 		struct kmem_cache *slab_cache;	/* SL[AU]B: Pointer to slab */
+> 	};
+> ...
+> }
+> 
+> 
+> The "private" field is meant for mapping-private opaque data, which is
+> not how I am using it.
+
+As you can see this is an union and thus the meaning of that field depends
+on how the page is use. The private comment you see is only meaningfull for
+page that are in the page cache and are coming from a file system ie when
+a process does an mmap of a file. When page is use by sl[au]b the slab_cache
+field is how it is interpreted ... Context in which a page is use do matter.
+
+Here we are talking about memory that is allocated to back vmalloc area so
+the private field is unuse AFAICR and it is safe to use it while the page
+is use for vmalloc.
+
+Note that i don't think anyone is doing vmap() of pages that are in the page
+cache that would seem wrong from my point of view but maybe some one is.
+Thought someone might be doing vmap() of pages in which the private field is
+use for something (like a device driver private field) in which case you might
+still have false positive. You might want to simply add something either to
+vm_struct or vmap_area to know if a range of vmalloc area has been created
+by pmalloc or not. Maybe you don't even need to tag page and storing flag
+in vmap_area or vm_struct would be enough.
+
+Jérôme
