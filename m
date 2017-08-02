@@ -1,194 +1,104 @@
-Date: Tue, 1 Aug 2017 10:02:19 -0700
-From: Christoffer Dall <christoffer.dall@linaro.org>
-Message-ID: <20170801170219.GB4033@lvm>
-References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
- <1500480092-28480-11-git-send-email-mark.rutland@arm.com>
- <20170801110014.GA5176@cbox>
- <20170801142603.GE9347@leverpostej>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170801142603.GE9347@leverpostej>
-Subject: [kernel-hardening] Re: [PATCH 10/11] arm64/kvm: context-switch ptrauth registers
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Christoffer Dall <cdall@linaro.org>, linux-arm-kernel@lists.infradead.org, arnd@arndb.de, catalin.marinas@arm.com, Dave.Martin@arm.com, jiong.wang@arm.com, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, yao.qi@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20170726170051.28328-2-thgarnie@google.com>
+References: <20170726170051.28328-1-thgarnie@google.com> <20170726170051.28328-2-thgarnie@google.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Wed, 2 Aug 2017 07:10:52 -0700
+Message-ID: <CAJcbSZHq3FLvfm+7jODmqOCYOGh2ZDF8A4ZnihvkdwbMA7GGRQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v2 2/3] arm/syscalls: Optimize address limit check
+To: Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, Dave Martin <Dave.Martin@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, Leonard Crestez <leonard.crestez@nxp.com>
+Cc: linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Aug 01, 2017 at 03:26:07PM +0100, Mark Rutland wrote:
-> On Tue, Aug 01, 2017 at 01:00:14PM +0200, Christoffer Dall wrote:
-> > On Wed, Jul 19, 2017 at 05:01:31PM +0100, Mark Rutland wrote:
-> > > When pointer authentication is supported, a guest may wish to use it.
-> > > This patch adds the necessary KVM infrastructure for this to work, with
-> > > a semi-lazy context switch of the pointer auth state.
-> > > 
-> > > When we schedule a vcpu, we disable guest usage of pointer
-> > > authentication instructions and accesses to the keys. While these are
-> > > disabled, we avoid context-switching the keys. When we trap the guest
-> > > trying to use pointer authentication functionality, we change to eagerly
-> > > context-switching the keys, and enable the feature. The next time the
-> > > vcpu is scheduled out/in, we start again.
-> > > 
-> > > This is sufficient for systems with uniform pointer authentication
-> > > support. For systems with mismatched support, it will be necessary to
-> > 
-> > What is mismatched support?  You mean systems where one CPU has ptrauth
-> > and another one doesn't (or if they both have it but in different ways)?
-> 
-> Both! Any case where the support is not uniform across all CPUs.
-> 
-> A CPU can implement address auth and/or generic auth, and either may use
-> an architected algorithm or an IMP DEF algorithm.
-> 
-> Even if all CPUs report an IMP DEF algorithm, the particular algorithm
-> may differ across CPUs.
-> 
-> > > hide the feature from the guest's view of the ID registers.
-> > 
-> > I think the work Drew is pondering to allow userspace more control of
-> > what we emulate to the guest can semi-automatically take care of this as
-> > well.
-> 
-> I'll take a look.
-> 
-> [...]
-> 
-> > > +static inline void kvm_arch_sched_in(struct kvm_vcpu *vcpu, int cpu)
-> > > +{
-> > > +	kvm_arm_vcpu_ptrauth_disable(vcpu);
-> > > +}
-> > > +
-> > 
-> > why sched_in and not vcpu_load?  (vcpu_load happens whenever you're
-> > returning from userspace for example, and not only when you've been
-> > scheduled away and are coming back).
-> 
-> I think this is the result of going searching for similar lazy context
-> switching, and stumbling on some (fairly different) code on x86.
-> 
-> It looks like I can use vcpu_load() instead, so I'll give that a shot
-> for v2.
-> 
-> > And why do we want to 'reset' the behavior of KVM when the host
-> > schedules a VCPU thread?
-> > 
-> > If I understand the logic correctly, what you're establishing with the
-> > appraoch of initially trapping use of ptrauth is to avoid
-> > saving/restoring the state if the guest dosn't use ptrauth, but then if
-> > the guest starts using it, it's likely to keep using it, and therefore
-> > we start saving/restoring the registers.
-> 
-> Yes.
-> 
-> > Why is the host's decision to schedule something else on this physical
-> > CPU a good indication that we should no longer save/restore these
-> > registers for the VCPU?
-> 
-> I guess it's not.
-> 
-> Initially, I was followed the same approach we take for fpsimd, leaving
-> the feature trapped until we take a shallow trap to hyp. Handing all the
-> sysreg traps in hyp was unwieldy, so I moved that down to the kernel
-> proper. That meant I couldn't enable the trap when switching from host
-> to guest, and doing so in the regular context switch seemed like the
-> next best option.
-> 
-> > Wouldn't it make more sense to have a flag on the VCPU, and
-> > potentially a counter, so that if you switch X times without ever
-> > touching the registers again, you can stop saving/restoring the state,
-> > if that's even something we care about?
-> 
-> Something like that could make more sense. It should be fairly simple to
-> implement a decaying counter to determine when to trap.
-> 
-> I'd steered clear of optimising the lazy heuristic as I'm testing with
-> models, and I don't have numbers that would be representative of real
-> HW.
-> 
-> > Another thing that comes to mind; does the kernel running a KVM's VCPU
-> > thread (and handling softirqs, ISRs, etc.) ever use the ptrauth system,
-> > or does that only happen when we go to userspace? 
-> 
-> Today, only userspace uses pointer auth, and the kernel does not.
-> However, in-kernel usage is on the cards.
-> 
-> > If the latter, we could handle the save/restore entirely in
-> > vcpu_put/vcpu_load instead. I don't mind picking up that bit as part
-> > of my ongoing optimization work later though, if you're eager to get
-> > these patches merged.
-> 
-> I'd avoided that so far, since it would be undone when in-kernel usage
-> is implemented. If you prefer, I can implement that for now.
-> 
-> [...]
-> 
+On Wed, Jul 26, 2017 at 10:00 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> Disable the generic address limit check in favor of an architecture
+> specific optimized implementation. The generic implementation using
+> pending work flags did not work well with ARM and alignment faults.
+>
+> The address limit is checked on each syscall return path to user-mode
+> path as well as the irq user-mode return function. If the address limit
+> was changed, a function is called to stop the kernel with an explicit
+> message.
+>
+> The address limit check has to be done before any pending work because
+> they can reset the address limit. For example the lkdtm address limit
+> check does not work because the signal to kill the process will reset
+> the user-mode address limit.
+>
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> ---
 
-I think we should just do a simple flag for now, and once we have
-hardware and can measure things, we can add more advanced support like a
-decaying counter or a doing this at vcpu_put/vcpu_load instead.
+Russel: What do you think about this patch set?
 
-I can then deal with the headache of making sure this performs well on
-systems that don't have the hardware support once things are merged,
-because I'm looking at that already.
+>  arch/arm/kernel/entry-common.S | 11 +++++++++++
+>  arch/arm/kernel/signal.c       |  5 +++++
+>  2 files changed, 16 insertions(+)
+>
+> diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
+> index 0b60adf4a5d9..99c908226065 100644
+> --- a/arch/arm/kernel/entry-common.S
+> +++ b/arch/arm/kernel/entry-common.S
+> @@ -12,6 +12,7 @@
+>  #include <asm/unistd.h>
+>  #include <asm/ftrace.h>
+>  #include <asm/unwind.h>
+> +#include <asm/memory.h>
+>  #ifdef CONFIG_AEABI
+>  #include <asm/unistd-oabi.h>
+>  #endif
+> @@ -48,10 +49,14 @@ ret_fast_syscall:
+>   UNWIND(.fnstart       )
+>   UNWIND(.cantunwind    )
+>         disable_irq_notrace                     @ disable interrupts
+> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
+> +       cmp     r2, #TASK_SIZE
+> +       blne    addr_limit_check_failed
+>         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
+>         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
+>         bne     fast_work_pending
+>
+> +
+>         /* perform architecture specific actions before user return */
+>         arch_ret_to_user r1, lr
+>
+> @@ -74,6 +79,9 @@ ret_fast_syscall:
+>   UNWIND(.cantunwind    )
+>         str     r0, [sp, #S_R0 + S_OFF]!        @ save returned r0
+>         disable_irq_notrace                     @ disable interrupts
+> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
+> +       cmp     r2, #TASK_SIZE
+> +       blne    addr_limit_check_failed
+>         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
+>         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
+>         beq     no_work_pending
+> @@ -106,6 +114,9 @@ ENTRY(ret_to_user)
+>  ret_slow_syscall:
+>         disable_irq_notrace                     @ disable interrupts
+>  ENTRY(ret_to_user_from_irq)
+> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
+> +       cmp     r2, #TASK_SIZE
+> +       blne    addr_limit_check_failed
+>         ldr     r1, [tsk, #TI_FLAGS]
+>         tst     r1, #_TIF_WORK_MASK
+>         bne     slow_work_pending
+> diff --git a/arch/arm/kernel/signal.c b/arch/arm/kernel/signal.c
+> index 5814298ef0b7..5769c15cff89 100644
+> --- a/arch/arm/kernel/signal.c
+> +++ b/arch/arm/kernel/signal.c
+> @@ -673,3 +673,8 @@ struct page *get_signal_page(void)
+>
+>         return page;
+>  }
+> +
+> +asmlinkage void addr_limit_check_failed(void)
+> +{
+> +       panic("Incorrect address limit while returning to user-mode.");
+> +}
+> --
+> 2.14.0.rc0.400.g1c36432dff-goog
+>
 
-> > > +/*
-> > > + * Handle the guest trying to use a ptrauth instruction, or trying to access a
-> > > + * ptrauth register.
-> > > + */
-> > > +void kvm_arm_vcpu_ptrauth_trap(struct kvm_vcpu *vcpu)
-> > > +{
-> > > +	if (cpus_have_const_cap(ARM64_HAS_ADDRESS_AUTH) &&
-> > > +	    cpus_have_const_cap(ARM64_HAS_GENERIC_AUTH)) {
-> > > +		kvm_arm_vcpu_ptrauth_enable(vcpu);
-> > > +	} else {
-> > > +		kvm_inject_undefined(vcpu);
-> > 
-> > How can we trap here without having ARM64_HAS_[ADDRESS,GENERIC]_AUTH ?
-> 
-> We'll trap if the current CPU supports one of the two (with an
-> architected algorithm), but some other CPU does not (or uses an IMP DEF
-> algorithm). Note that we're checking that all CPUs have the feature.
-> 
-> > If this to cover the case if we only have one of the two or is there a
-> > case where we trap ptrauth registers/instructions even though the CPU
-> > doesn't have the support?
-> 
-> It's there to cater for the case that some CPUs lack a feature that
-> others have, so that we expose a uniform view to guests.
-> 
-> There's a single control to trap both address/generic authentication, so
-> it has to check that support is uniform for both. 
-> 
-> I'd meant to fix this up to not be so pessimistic -- we could support
-> one without that other, so long as it is uniformly absent. e.g. if all
-> CPUs support address auth and all CPUs have no support for generic auth.
-> 
-> I'll need to add negative cpucaps to detect that. I'll try to sort that
-> out for v2.
-> 
-> [...]
-> 
-> > > +static void __hyp_text __ptrauth_save_state(struct kvm_cpu_context *ctxt)
-> > > +{
-> > > +	if (cpus_have_const_cap(ARM64_HAS_ADDRESS_AUTH)) {
-> > > +		__ptrauth_save_key(ctxt->sys_regs, APIA);
-> > > +		__ptrauth_save_key(ctxt->sys_regs, APIB);
-> > > +		__ptrauth_save_key(ctxt->sys_regs, APDA);
-> > > +		__ptrauth_save_key(ctxt->sys_regs, APDB);
-> > > +	}
-> > > +
-> > > +	if (cpus_have_const_cap(ARM64_HAS_GENERIC_AUTH)) {
-> > > +		__ptrauth_save_key(ctxt->sys_regs, APGA);
-> > > +	}
-> > 
-> > Aren't we ever only enabling the save/restore if we have both caps, so
-> > why are we checking it here again?
-> 
-> Sorry; I'd meant to fix things up so that we could support one without
-> the other. Likewise for __ptrauth_restore_state().
-> 
-> I'll try to fix this up for v2.
-> 
 
-Sounds good.  Thanks for otherwise producing a well-readable patch.
 
--Christoffer
+-- 
+Thomas
