@@ -1,56 +1,44 @@
-Date: Thu, 3 Aug 2017 17:15:50 +0200
-From: Michal Hocko <mhocko@kernel.org>
-Message-ID: <20170803151550.GX12521@dhcp22.suse.cz>
-References: <07063abd-2f5d-20d9-a182-8ae9ead26c3c@huawei.com>
- <20170802170848.GA3240@redhat.com>
- <8e82639c-40db-02ce-096a-d114b0436d3c@huawei.com>
- <20170803114844.GO12521@dhcp22.suse.cz>
- <c3a250a6-ad4d-d24d-d0bf-4c43c467ebe6@huawei.com>
- <20170803135549.GW12521@dhcp22.suse.cz>
- <20170803144746.GA9501@redhat.com>
- <ab4809cd-0efc-a79d-6852-4bd2349a2b3f@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <ab4809cd-0efc-a79d-6852-4bd2349a2b3f@huawei.com>
-Subject: [kernel-hardening] Re: [RFC] Tagging of vmalloc pages for supporting the pmalloc
- allocator
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Jerome Glisse <jglisse@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@google.com>
+Sender: keescook@google.com
+In-Reply-To: <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
+References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com> <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 3 Aug 2017 10:57:08 -0700
+Message-ID: <CAGXu5jJnhy5F698QFmXrMb3szmtXnfzqc+=QsukG4+p2k9xEdg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH 01/11] arm64: docs: describe ELF hwcaps
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Arnd Bergmann <arnd@arndb.de>, Catalin Marinas <catalin.marinas@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Martin <Dave.Martin@arm.com>, jiong.wang@arm.com, kvmarm@lists.cs.columbia.edu, linux-arch <linux-arch@vger.kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, "Suzuki K. Poulose" <suzuki.poulose@arm.com>, Will Deacon <will.deacon@arm.com>, yao.qi@arm.com, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu 03-08-17 18:06:11, Igor Stoppa wrote:
-> 
-> 
-> On 03/08/17 17:47, Jerome Glisse wrote:
-> > On Thu, Aug 03, 2017 at 03:55:50PM +0200, Michal Hocko wrote:
-> >> On Thu 03-08-17 15:20:31, Igor Stoppa wrote:
-> 
-> [...]
-> 
-> >>> I am confused about this: if "private2" is a pointer, but when I get an
-> >>> address, I do not even know if the address represents a valid pmalloc
-> >>> page, how can i know when it's ok to dereference "private2"?
-> >>
-> >> because you can make all pages which back vmalloc mappings have vm_area
-> >> pointer set.
-> > 
-> > Note that i think this might break some device driver that use vmap()
-> > i think some of them use private field to store device driver specific
-> > informations. But there likely is an unuse field in struct page that
-> > can be use for that.
-> 
-> This increases the unease from my side ... it looks like there is no way
-> to fully understand if a field is really used or not, without having
-> deep intimate knowledge of lots of code that is only marginally involved :-/
+On Wed, Jul 19, 2017 at 9:01 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> We don't document our ELF hwcaps, leaving developers to interpret them
+> according to hearsay, guesswork, or (in exceptional cases) inspection of
+> the current kernel code.
+>
+> This is less than optimal, and it would be far better if we had some
+> definitive description of each of the ELF hwcaps that developers could
+> refer to.
+>
+> This patch adds a document describing the (native) arm64 ELF hwcaps.
+>
+> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+> Cc: Catalin Marinas <catalin.marinas@arm.com>
+> Cc: Dave Martin <Dave.Martin@arm.com>
+> Cc: Suzuki K Poulose <suzuki.poulose@arm.com>
+> Cc: Will Deacon <will.deacon@arm.com>
+> ---
+>  Documentation/arm64/elf_hwcaps.txt | 133 +++++++++++++++++++++++++++++++++++++
 
-welcome to the struct page heaven...
- 
-> Similarly, how would I be able to specify what would be the correct way
-> to decide the member of the union to use for handling the field?
+With the kernel docs moving to ReST markup[1], perhaps reformat this
+to a .rst file and link to it from somewhere sensible in the ReST
+tree, perhaps the userspace API section in
+Documentation/userspace-api/index.rst?
 
-I would check the one where we have mapping. It is rather unlikely
-vmalloc users would touch this one.
+-Kees
+
+[1] https://www.kernel.org/doc/html/latest/doc-guide/sphinx.html
+
 -- 
-Michal Hocko
-SUSE Labs
+Kees Cook
+Pixel Security
