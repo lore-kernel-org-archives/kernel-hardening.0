@@ -1,35 +1,62 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170725205514.GA71165@beast>
-References: <20170725205514.GA71165@beast>
+In-Reply-To: <CAGXu5jJJ4FY1BZrA6X2zKe92oJfcGBXqZr6OMx+4mXX34psrKg@mail.gmail.com>
+References: <20170706101317.10382-1-ard.biesheuvel@linaro.org>
+ <CAK8P3a3-yd3c_Psi5zo1yug5eJvADYxHkfWTa4++_5WFuENo7g@mail.gmail.com>
+ <CAGXu5j+FDprZBxBKPoBV0mw_oAEG+6Rh-8QNBcniVPxVTQ5gaQ@mail.gmail.com> <CAGXu5jJJ4FY1BZrA6X2zKe92oJfcGBXqZr6OMx+4mXX34psrKg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 2 Aug 2017 11:54:24 -0700
-Message-ID: <CAGXu5j+BRkTM3X6NuHoyU4FTs154wQtunOKF2cQDaHKyKNzpFQ@mail.gmail.com>
+Date: Wed, 2 Aug 2017 21:35:04 -0700
+Message-ID: <CAGXu5jL2TobMXH_UXasHCC2GrGrie7GOYn_J_=E23Qn_J66Ziw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v9] x86/asm: Implement fast refcount overflow protection
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Christoph Hellwig <hch@infradead.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Serge E. Hallyn" <serge@hallyn.com>, arozansk@redhat.com, Davidlohr Bueso <dave@stgolabs.net>, Manfred Spraul <manfred@colorfullife.com>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [RFC/RFT PATCH] gcc-plugins: force initialize auto variables
+ whose addresses are taken
+To: Arnd Bergmann <arnd@arndb.de>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jul 25, 2017 at 1:55 PM, Kees Cook <keescook@chromium.org> wrote:
-> This implements refcount_t overflow protection on x86 without a noticeable
-> performance impact, though without the fuller checking of REFCOUNT_FULL.
-> This is done by duplicating the existing atomic_t refcount implementation
-> but with normally a single instruction added to detect if the refcount
-> has gone negative (e.g. wrapped past INT_MAX or below zero). When detected,
-> the handler saturates the refcount_t to INT_MIN / 2. With this overflow
-> protection, the erroneous reference release that would follow a wrap back
-> to zero is blocked from happening, avoiding the class of refcount-overflow
-> use-after-free vulnerabilities entirely.
+On Thu, Jul 6, 2017 at 4:16 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Thu, Jul 6, 2017 at 2:44 PM, Kees Cook <keescook@chromium.org> wrote:
+>> On Thu, Jul 6, 2017 at 4:09 AM, Arnd Bergmann <arnd@arndb.de> wrote:
+>>> On Thu, Jul 6, 2017 at 12:13 PM, Ard Biesheuvel
+>>> <ard.biesheuvel@linaro.org> wrote:
+>>>> To prevent leaking stack contents in cases where it is not possible
+>>>> for the compiler to figure out whether an automatic variable has been
+>>>> initialized or not, add a plugin that forcibly initializes all automat=
+ic
+>>>> variables of struct/union types if their address is taken at any point=
+.
+>>>>
+>>>> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+>>
+>> Ard, I'd be curious what you see for "size" difference between builds
+>> and if it's visible with hackbench or other things?
+>
+> Hm, not all that bad on the size front:
+>
+>    text                 data            bss                 dec
+>             hex filename
+> 10950705        5592525 13955072        30498302        1d15dfe vmlinux
+> 11048035        5592365 13955072        30595472        1d2d990
+> vmlinux.initautobyref
+>
+> And yes, as expected, wow there are a lot of notices in verbose mode. ;)
+>
+> My pet favorite, from the NAKed patch I sent forever ago, is covered
+> (as expected):
+>
+> net/socket.c: In function =E2=80=98SYSC_getsockname=E2=80=99:
+> net/socket.c:1605:26: note: auto variable will be forcibly initialized
+>   struct sockaddr_storage address;
+>                           ^~~~~~~
 
-Hi Ingo,
-
-Friendly ping. Is there anything remaining for this patch to go into -tip?
-
-Thanks!
+While this was an RFC, it seems to work well and, as Daniel mentioned,
+provides another benchmark for future optimizations of this kind of
+protection. Besides the COMPILE_TEST change already discussed, any
+other changes or objections before I carry this in -next?
 
 -Kees
 
--- 
+--=20
 Kees Cook
 Pixel Security
