@@ -1,30 +1,53 @@
-Date: Thu, 3 Aug 2017 15:49:27 +0100
-From: Catalin Marinas <catalin.marinas@arm.com>
-Message-ID: <20170803144926.7eankdjmnyxw3zru@armageddon.cambridge.arm.com>
-References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com>
- <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
+References: <07063abd-2f5d-20d9-a182-8ae9ead26c3c@huawei.com>
+ <20170802170848.GA3240@redhat.com>
+ <8e82639c-40db-02ce-096a-d114b0436d3c@huawei.com>
+ <20170803114844.GO12521@dhcp22.suse.cz>
+ <c3a250a6-ad4d-d24d-d0bf-4c43c467ebe6@huawei.com>
+ <20170803135549.GW12521@dhcp22.suse.cz> <20170803144746.GA9501@redhat.com>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <ab4809cd-0efc-a79d-6852-4bd2349a2b3f@huawei.com>
+Date: Thu, 3 Aug 2017 18:06:11 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] Re: [PATCH 01/11] arm64: docs: describe ELF hwcaps
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, arnd@arndb.de, jiong.wang@arm.com, marc.zyngier@arm.com, yao.qi@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, Dave.Martin@arm.com, kernel-hardening@lists.openwall.com, kvmarm@lists.cs.columbia.edu, christoffer.dall@linaro.org
+In-Reply-To: <20170803144746.GA9501@redhat.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC] Tagging of vmalloc pages for supporting the pmalloc
+ allocator
+To: Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>
+Cc: Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 19, 2017 at 05:01:22PM +0100, Mark Rutland wrote:
-> +3. The hwcaps exposed in AT_HWCAP
-> +---------------------------------
-> +
-> +HWCAP_FP
-> +
-> +    Functionality implied by ID_AA64PFR0_EL1.FP == 0b0000.
 
-Aren't these too restrictive? Linux would still present HWCAP_FP even
-when ID_AA64PFR0_EL1.FP == 1. I think we should replace the strict
-equal with greater than or equal, also mentioning that the field is
-signed (or refer to the cpuid where the sign of the fields is
-described).
 
--- 
-Catalin
+On 03/08/17 17:47, Jerome Glisse wrote:
+> On Thu, Aug 03, 2017 at 03:55:50PM +0200, Michal Hocko wrote:
+>> On Thu 03-08-17 15:20:31, Igor Stoppa wrote:
+
+[...]
+
+>>> I am confused about this: if "private2" is a pointer, but when I get an
+>>> address, I do not even know if the address represents a valid pmalloc
+>>> page, how can i know when it's ok to dereference "private2"?
+>>
+>> because you can make all pages which back vmalloc mappings have vm_area
+>> pointer set.
+> 
+> Note that i think this might break some device driver that use vmap()
+> i think some of them use private field to store device driver specific
+> informations. But there likely is an unuse field in struct page that
+> can be use for that.
+
+This increases the unease from my side ... it looks like there is no way
+to fully understand if a field is really used or not, without having
+deep intimate knowledge of lots of code that is only marginally involved :-/
+
+Similarly, how would I be able to specify what would be the correct way
+to decide the member of the union to use for handling the field?
+
+If there were either some sort of non-multiplexed tag/cookie field or a
+function, that would specify how to treat the various unions, then it
+would be easier to multiplex the remaining data, according to how the
+page is used.
+
+--
+igor
