@@ -1,44 +1,60 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
-References: <1500480092-28480-1-git-send-email-mark.rutland@arm.com> <1500480092-28480-2-git-send-email-mark.rutland@arm.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 3 Aug 2017 10:57:08 -0700
-Message-ID: <CAGXu5jJnhy5F698QFmXrMb3szmtXnfzqc+=QsukG4+p2k9xEdg@mail.gmail.com>
+In-Reply-To: <CAGXu5jL2TobMXH_UXasHCC2GrGrie7GOYn_J_=E23Qn_J66Ziw@mail.gmail.com>
+References: <20170706101317.10382-1-ard.biesheuvel@linaro.org>
+ <CAK8P3a3-yd3c_Psi5zo1yug5eJvADYxHkfWTa4++_5WFuENo7g@mail.gmail.com>
+ <CAGXu5j+FDprZBxBKPoBV0mw_oAEG+6Rh-8QNBcniVPxVTQ5gaQ@mail.gmail.com>
+ <CAGXu5jJJ4FY1BZrA6X2zKe92oJfcGBXqZr6OMx+4mXX34psrKg@mail.gmail.com> <CAGXu5jL2TobMXH_UXasHCC2GrGrie7GOYn_J_=E23Qn_J66Ziw@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Thu, 3 Aug 2017 19:27:25 +0100
+Message-ID: <CAKv+Gu_AiynfdBVvm6fbFX8sRi7ZwWGFGG9rUhoVCP0Bc-EaZg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 01/11] arm64: docs: describe ELF hwcaps
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Arnd Bergmann <arnd@arndb.de>, Catalin Marinas <catalin.marinas@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Martin <Dave.Martin@arm.com>, jiong.wang@arm.com, kvmarm@lists.cs.columbia.edu, linux-arch <linux-arch@vger.kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, "Suzuki K. Poulose" <suzuki.poulose@arm.com>, Will Deacon <will.deacon@arm.com>, yao.qi@arm.com, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [RFC/RFT PATCH] gcc-plugins: force initialize auto variables
+ whose addresses are taken
+To: Kees Cook <keescook@chromium.org>
+Cc: Arnd Bergmann <arnd@arndb.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 19, 2017 at 9:01 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> We don't document our ELF hwcaps, leaving developers to interpret them
-> according to hearsay, guesswork, or (in exceptional cases) inspection of
-> the current kernel code.
+On 3 August 2017 at 05:35, Kees Cook <keescook@chromium.org> wrote:
+> On Thu, Jul 6, 2017 at 4:16 PM, Kees Cook <keescook@chromium.org> wrote:
+>> On Thu, Jul 6, 2017 at 2:44 PM, Kees Cook <keescook@chromium.org> wrote:
+>>> On Thu, Jul 6, 2017 at 4:09 AM, Arnd Bergmann <arnd@arndb.de> wrote:
+>>>> On Thu, Jul 6, 2017 at 12:13 PM, Ard Biesheuvel
+>>>> <ard.biesheuvel@linaro.org> wrote:
+>>>>> To prevent leaking stack contents in cases where it is not possible
+>>>>> for the compiler to figure out whether an automatic variable has been
+>>>>> initialized or not, add a plugin that forcibly initializes all automa=
+tic
+>>>>> variables of struct/union types if their address is taken at any poin=
+t.
+>>>>>
+>>>>> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+>>>
+>>> Ard, I'd be curious what you see for "size" difference between builds
+>>> and if it's visible with hackbench or other things?
+>>
+>> Hm, not all that bad on the size front:
+>>
+>>    text                 data            bss                 dec
+>>             hex filename
+>> 10950705        5592525 13955072        30498302        1d15dfe vmlinux
+>> 11048035        5592365 13955072        30595472        1d2d990
+>> vmlinux.initautobyref
+>>
+>> And yes, as expected, wow there are a lot of notices in verbose mode. ;)
+>>
+>> My pet favorite, from the NAKed patch I sent forever ago, is covered
+>> (as expected):
+>>
+>> net/socket.c: In function =E2=80=98SYSC_getsockname=E2=80=99:
+>> net/socket.c:1605:26: note: auto variable will be forcibly initialized
+>>   struct sockaddr_storage address;
+>>                           ^~~~~~~
 >
-> This is less than optimal, and it would be far better if we had some
-> definitive description of each of the ELF hwcaps that developers could
-> refer to.
+> While this was an RFC, it seems to work well and, as Daniel mentioned,
+> provides another benchmark for future optimizations of this kind of
+> protection. Besides the COMPILE_TEST change already discussed, any
+> other changes or objections before I carry this in -next?
 >
-> This patch adds a document describing the (native) arm64 ELF hwcaps.
->
-> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-> Cc: Catalin Marinas <catalin.marinas@arm.com>
-> Cc: Dave Martin <Dave.Martin@arm.com>
-> Cc: Suzuki K Poulose <suzuki.poulose@arm.com>
-> Cc: Will Deacon <will.deacon@arm.com>
-> ---
->  Documentation/arm64/elf_hwcaps.txt | 133 +++++++++++++++++++++++++++++++++++++
 
-With the kernel docs moving to ReST markup[1], perhaps reformat this
-to a .rst file and link to it from somewhere sensible in the ReST
-tree, perhaps the userspace API section in
-Documentation/userspace-api/index.rst?
-
--Kees
-
-[1] https://www.kernel.org/doc/html/latest/doc-guide/sphinx.html
-
--- 
-Kees Cook
-Pixel Security
+Sounds reasonable to me.
