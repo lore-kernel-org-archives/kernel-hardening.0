@@ -1,103 +1,21 @@
+From: Li Kun <hw.likun@huawei.com>
+Message-ID: <2feb9661-9236-cdaf-a371-2fea80372aff@huawei.com>
+Date: Fri, 4 Aug 2017 12:23:23 +0800
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAKv+Gu_ss7a4putFyStN6RaK_OM3fFezB3MhF1O1+9=0RaupZA@mail.gmail.com>
-References: <20170706101317.10382-1-ard.biesheuvel@linaro.org>
- <CAK8P3a3-yd3c_Psi5zo1yug5eJvADYxHkfWTa4++_5WFuENo7g@mail.gmail.com>
- <CAGXu5j+FDprZBxBKPoBV0mw_oAEG+6Rh-8QNBcniVPxVTQ5gaQ@mail.gmail.com>
- <CAGXu5jJJ4FY1BZrA6X2zKe92oJfcGBXqZr6OMx+4mXX34psrKg@mail.gmail.com>
- <CAGXu5jL2TobMXH_UXasHCC2GrGrie7GOYn_J_=E23Qn_J66Ziw@mail.gmail.com>
- <CAKv+Gu_AiynfdBVvm6fbFX8sRi7ZwWGFGG9rUhoVCP0Bc-EaZg@mail.gmail.com>
- <CAGXu5j+3EEeVqS7ZpBb=Gp-ex1Rjcyku7OZx3qm6pOmemY04iQ@mail.gmail.com> <CAKv+Gu_ss7a4putFyStN6RaK_OM3fFezB3MhF1O1+9=0RaupZA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 3 Aug 2017 15:43:40 -0700
-Message-ID: <CAGXu5jJ=_zS3U_NgpC8xpQokXXch6Z-rz0LVLWS2z6XS0POKuw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [RFC/RFT PATCH] gcc-plugins: force initialize auto variables
- whose addresses are taken
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Arnd Bergmann <arnd@arndb.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: text/plain; charset="windows-1252"; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening][RFD] Is there any plan to port the RAP feature
+ from PAX/Grsecurity to main line ?
+To: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Aug 3, 2017 at 3:42 PM, Ard Biesheuvel
-<ard.biesheuvel@linaro.org> wrote:
-> On 3 August 2017 at 23:14, Kees Cook <keescook@chromium.org> wrote:
->> On Thu, Aug 3, 2017 at 11:27 AM, Ard Biesheuvel
->> <ard.biesheuvel@linaro.org> wrote:
->>> On 3 August 2017 at 05:35, Kees Cook <keescook@chromium.org> wrote:
->>>> On Thu, Jul 6, 2017 at 4:16 PM, Kees Cook <keescook@chromium.org> wrot=
-e:
->>>>> On Thu, Jul 6, 2017 at 2:44 PM, Kees Cook <keescook@chromium.org> wro=
-te:
->>>>>> On Thu, Jul 6, 2017 at 4:09 AM, Arnd Bergmann <arnd@arndb.de> wrote:
->>>>>>> On Thu, Jul 6, 2017 at 12:13 PM, Ard Biesheuvel
->>>>>>> <ard.biesheuvel@linaro.org> wrote:
->>>>>>>> To prevent leaking stack contents in cases where it is not possibl=
-e
->>>>>>>> for the compiler to figure out whether an automatic variable has b=
-een
->>>>>>>> initialized or not, add a plugin that forcibly initializes all aut=
-omatic
->>>>>>>> variables of struct/union types if their address is taken at any p=
-oint.
->>>>>>>>
->>>>>>>> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
->>>>>>
->>>>>> Ard, I'd be curious what you see for "size" difference between build=
-s
->>>>>> and if it's visible with hackbench or other things?
->>>>>
->>>>> Hm, not all that bad on the size front:
->>>>>
->>>>>    text                 data            bss                 dec
->>>>>             hex filename
->>>>> 10950705        5592525 13955072        30498302        1d15dfe vmlin=
-ux
->>>>> 11048035        5592365 13955072        30595472        1d2d990
->>>>> vmlinux.initautobyref
->>>>>
->>>>> And yes, as expected, wow there are a lot of notices in verbose mode.=
- ;)
->>>>>
->>>>> My pet favorite, from the NAKed patch I sent forever ago, is covered
->>>>> (as expected):
->>>>>
->>>>> net/socket.c: In function =E2=80=98SYSC_getsockname=E2=80=99:
->>>>> net/socket.c:1605:26: note: auto variable will be forcibly initialize=
-d
->>>>>   struct sockaddr_storage address;
->>>>>                           ^~~~~~~
->>>>
->>>> While this was an RFC, it seems to work well and, as Daniel mentioned,
->>>> provides another benchmark for future optimizations of this kind of
->>>> protection. Besides the COMPILE_TEST change already discussed, any
->>>> other changes or objections before I carry this in -next?
->>>>
->>>
->>> Sounds reasonable to me.
->>
->> Actually, I just looked at the diff between structleak and
->> initautobyref, and it's essentially 1 test (and the removal of all the
->> __user-detection code):
->>
->> -               /* if the type is of interest, examine the variable */
->> -               if (TYPE_USERSPACE(type))
->> +               /* initialize the variable if its address is taken */
->> +               if (TREE_ADDRESSABLE (var))
->>
->> Perhaps instead of a whole new plugin, could we just add the
->> functionality to the existing structleak plugin as a Kconfig option?
->> Like maybe CONFIG_GCC_PLUGIN_STRUCTLEAK_TAKEN?
->>
->
-> Yeah, it is mostly the same code. As you know, it was mainly intended
-> as a PoC but given the interest to merge this functionality for real,
-> I will do another pass and try to incorporate it more cleanly.
+Hi all,
 
-Yup, I just hadn't actually looked to see how much was reused. :) Thanks!
+Is there any plan to port the RAP feature from PAX/Grsecurity to main line ?
 
--Kees
+I think that will be a realy effective approach to protect against ROP/JOP.
 
---=20
-Kees Cook
-Pixel Security
+
+-- 
+Best Regards
+Li Kun
