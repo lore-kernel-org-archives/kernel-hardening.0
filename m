@@ -1,135 +1,117 @@
+Date: Mon, 7 Aug 2017 18:55:33 +0100
+From: Russell King - ARM Linux <linux@armlinux.org.uk>
+Message-ID: <20170807175533.GA20805@n2100.armlinux.org.uk>
+References: <20170726170051.28328-1-thgarnie@google.com>
+ <20170726170051.28328-2-thgarnie@google.com>
+ <CAGXu5jLbJuokv+B_Nn8uRDVadi05ywJM7FSgpOr+maO2pQrd0w@mail.gmail.com>
+ <CAJcbSZHfoHNPv3tk11iCj49UkLGU-QdeyMj2BS60wng5z5L4pg@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170806110627.16242-1-ard.biesheuvel@linaro.org>
-References: <20170806110627.16242-1-ard.biesheuvel@linaro.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 7 Aug 2017 10:45:56 -0700
-Message-ID: <CAGXu5j+Zz0F_Co+2LtFp6fGc5NnJF=j6NPr-xuFpqQ71eiad-w@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: structleak: add option to init all vars used
- as byref args
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Daniel Micay <danielmicay@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, PaX Team <pageexec@freemail.hu>, Arnd Bergmann <arnd@arndb.de>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAJcbSZHfoHNPv3tk11iCj49UkLGU-QdeyMj2BS60wng5z5L4pg@mail.gmail.com>
+Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
+Subject: [kernel-hardening] Re: [PATCH v2 2/3] arm/syscalls: Optimize address limit check
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, Dave Martin <Dave.Martin@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, Leonard Crestez <leonard.crestez@nxp.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Aug 6, 2017 at 4:06 AM, Ard Biesheuvel
-<ard.biesheuvel@linaro.org> wrote:
-> In the Linux kernel, struct type variables are rarely passed by-value,
-> and so functions that initialize such variables typically take an input
-> reference to the variable rather than returning a value that can
-> subsequently be used in an assignment.
->
-> If the initalization function is not part of the same compilation unit,
-> the lack of an assignment operation defeats any analysis the compiler
-> can perform as to whether the variable may be used before having been
-> initialized. This means we may end up passing on such variables
-> uninitialized, resulting in potential information leaks.
->
-> So extend the existing structleak GCC plugin so it will [optionally]
-> apply to all struct type variables that have their address taken at any
-> point, rather than only to variables of struct types that have a __user
-> annotation.
->
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+On Mon, Aug 07, 2017 at 10:42:14AM -0700, Thomas Garnier wrote:
+> On Mon, Aug 7, 2017 at 10:35 AM, Kees Cook <keescook@chromium.org> wrote:
+> > On Wed, Jul 26, 2017 at 10:00 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> >> Disable the generic address limit check in favor of an architecture
+> >> specific optimized implementation. The generic implementation using
+> >> pending work flags did not work well with ARM and alignment faults.
+> >>
+> >> The address limit is checked on each syscall return path to user-mode
+> >> path as well as the irq user-mode return function. If the address limit
+> >> was changed, a function is called to stop the kernel with an explicit
+> >> message.
+> >>
+> >> The address limit check has to be done before any pending work because
+> >> they can reset the address limit. For example the lkdtm address limit
+> >> check does not work because the signal to kill the process will reset
+> >> the user-mode address limit.
+> >>
+> >> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> >> ---
+> >>  arch/arm/kernel/entry-common.S | 11 +++++++++++
+> >>  arch/arm/kernel/signal.c       |  5 +++++
+> >>  2 files changed, 16 insertions(+)
+> >>
+> >> diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
+> >> index 0b60adf4a5d9..99c908226065 100644
+> >> --- a/arch/arm/kernel/entry-common.S
+> >> +++ b/arch/arm/kernel/entry-common.S
+> >> @@ -12,6 +12,7 @@
+> >>  #include <asm/unistd.h>
+> >>  #include <asm/ftrace.h>
+> >>  #include <asm/unwind.h>
+> >> +#include <asm/memory.h>
+> >>  #ifdef CONFIG_AEABI
+> >>  #include <asm/unistd-oabi.h>
+> >>  #endif
+> >> @@ -48,10 +49,14 @@ ret_fast_syscall:
+> >>   UNWIND(.fnstart       )
+> >>   UNWIND(.cantunwind    )
+> >>         disable_irq_notrace                     @ disable interrupts
+> >> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
+> >> +       cmp     r2, #TASK_SIZE
+> >> +       blne    addr_limit_check_failed
+> >>         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
+> >>         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
+> >>         bne     fast_work_pending
+> >>
+> >> +
+> >>         /* perform architecture specific actions before user return */
+> >>         arch_ret_to_user r1, lr
+> >>
+> >> @@ -74,6 +79,9 @@ ret_fast_syscall:
+> >>   UNWIND(.cantunwind    )
+> >>         str     r0, [sp, #S_R0 + S_OFF]!        @ save returned r0
+> >>         disable_irq_notrace                     @ disable interrupts
+> >> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
+> >> +       cmp     r2, #TASK_SIZE
+> >> +       blne    addr_limit_check_failed
+> >>         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
+> >>         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
+> >>         beq     no_work_pending
+> >> @@ -106,6 +114,9 @@ ENTRY(ret_to_user)
+> >>  ret_slow_syscall:
+> >>         disable_irq_notrace                     @ disable interrupts
+> >>  ENTRY(ret_to_user_from_irq)
+> >> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
+> >> +       cmp     r2, #TASK_SIZE
+> >> +       blne    addr_limit_check_failed
+> >>         ldr     r1, [tsk, #TI_FLAGS]
+> >>         tst     r1, #_TIF_WORK_MASK
+> >>         bne     slow_work_pending
+> >
+> > Instead of taking the entire system down, how about a WARN/kill combo
+> > instead? If it's too late for "force_sig(SIGKILL, current)", then
+> > likely we should perform a "do_group_exit(SIGKILL)".
+> 
+> Sure, why not. I can also change the others architectures to move to a
+> do_group_exit(SIGKILL).
+> 
+> Before the next iteration, I want to know if Russel has any feedback
+> on this implementation, given the previous thread.
 
-Thanks! This looks good to me; I'll get it into -next.
+It's better in so far as it avoids the problems previously highlighted.
 
--Kees
+However, it depends how efficient we want these paths to be - the
+difference between your assembly and the assembly I've previously
+supplied is that mine fills in any delay slots with some useful work
+and avoids adding extra delay slots in this path.
 
-> ---
->  arch/Kconfig                            |  7 +++++++
->  scripts/Makefile.gcc-plugins            |  1 +
->  scripts/gcc-plugins/structleak_plugin.c | 13 +++++++++++--
->  3 files changed, 19 insertions(+), 2 deletions(-)
->
-> diff --git a/arch/Kconfig b/arch/Kconfig
-> index 21d0089117fe..edc6fd41b7ea 100644
-> --- a/arch/Kconfig
-> +++ b/arch/Kconfig
-> @@ -468,6 +468,13 @@ config GCC_PLUGIN_STRUCTLEAK_VERBOSE
->           initialized. Since not all existing initializers are detected
->           by the plugin, this can produce false positive warnings.
->
-> +config GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
-> +       bool "Force initialize all struct type variables passed by reference"
-> +       depends on GCC_PLUGIN_STRUCTLEAK
-> +       help
-> +         Zero initialize any struct type local variable that may be passed by
-> +         reference without having been initialized.
-> +
->  config GCC_PLUGIN_RANDSTRUCT
->         bool "Randomize layout of sensitive kernel structures"
->         depends on GCC_PLUGINS
-> diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-> index 2e0e2eaa397f..d1f7b0d6be66 100644
-> --- a/scripts/Makefile.gcc-plugins
-> +++ b/scripts/Makefile.gcc-plugins
-> @@ -27,6 +27,7 @@ ifdef CONFIG_GCC_PLUGINS
->
->    gcc-plugin-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)   += structleak_plugin.so
->    gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE)    += -fplugin-arg-structleak_plugin-verbose
-> +  gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL)  += -fplugin-arg-structleak_plugin-byref-all
->    gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)    += -DSTRUCTLEAK_PLUGIN
->
->    gcc-plugin-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)   += randomize_layout_plugin.so
-> diff --git a/scripts/gcc-plugins/structleak_plugin.c b/scripts/gcc-plugins/structleak_plugin.c
-> index fa3d7a4b26f2..3f8dd4868178 100644
-> --- a/scripts/gcc-plugins/structleak_plugin.c
-> +++ b/scripts/gcc-plugins/structleak_plugin.c
-> @@ -16,6 +16,7 @@
->   * Options:
->   * -fplugin-arg-structleak_plugin-disable
->   * -fplugin-arg-structleak_plugin-verbose
-> + * -fplugin-arg-structleak_plugin-byref-all
->   *
->   * Usage:
->   * $ # for 4.5/4.6/C based 4.7
-> @@ -42,6 +43,7 @@ static struct plugin_info structleak_plugin_info = {
->  };
->
->  static bool verbose;
-> +static bool byref_all;
->
->  static tree handle_user_attribute(tree *node, tree name, tree args, int flags, bool *no_add_attrs)
->  {
-> @@ -150,7 +152,9 @@ static void initialize(tree var)
->         /* these aren't the 0days you're looking for */
->         if (verbose)
->                 inform(DECL_SOURCE_LOCATION(var),
-> -                       "userspace variable will be forcibly initialized");
-> +                       "%s variable will be forcibly initialized",
-> +                       (byref_all && TREE_ADDRESSABLE(var)) ? "byref"
-> +                                                            : "userspace");
->
->         /* build the initializer expression */
->         initializer = build_constructor(TREE_TYPE(var), NULL);
-> @@ -190,7 +194,8 @@ static unsigned int structleak_execute(void)
->                         continue;
->
->                 /* if the type is of interest, examine the variable */
-> -               if (TYPE_USERSPACE(type))
-> +               if (TYPE_USERSPACE(type) ||
-> +                   (byref_all && TREE_ADDRESSABLE(var)))
->                         initialize(var);
->         }
->
-> @@ -232,6 +237,10 @@ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gc
->                         verbose = true;
->                         continue;
->                 }
-> +               if (!strcmp(argv[i].key, "byref-all")) {
-> +                       byref_all = true;
-> +                       continue;
-> +               }
->                 error(G_("unknown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
->         }
->
-> --
-> 2.11.0
->
+Arguably, the system call exit path is as important as the system
+call entry path for OS performance, so I think we should strive to
+make it as efficient as possible - much as I already did when I
+posted code on this topic previously.
 
-
+I think that code can simply be adapted to call your C function
+instead of the assembly "addr_limit_fail" label.
 
 -- 
-Kees Cook
-Pixel Security
+RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+FTTC broadband for 0.8mile line in suburbia: sync at 8.8Mbps down 630kbps up
+According to speedtest.net: 8.21Mbps down 510kbps up
