@@ -1,183 +1,88 @@
 From: Mark Rutland <mark.rutland@arm.com>
-Date: Mon,  7 Aug 2017 19:36:03 +0100
-Message-Id: <1502130965-18710-13-git-send-email-mark.rutland@arm.com>
+Date: Mon,  7 Aug 2017 19:36:04 +0100
+Message-Id: <1502130965-18710-14-git-send-email-mark.rutland@arm.com>
 In-Reply-To: <1502130965-18710-1-git-send-email-mark.rutland@arm.com>
 References: <1502130965-18710-1-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] [PATCH 12/14] arm64: add basic VMAP_STACK support
+Subject: [kernel-hardening] [PATCH 13/14] arm64: add on_accessible_stack()
 To: linux-arm-kernel@lists.infradead.org
 Cc: ard.biesheuvel@linaro.org, catalin.marinas@arm.com, james.morse@arm.com, labbott@redhat.com, linux-kernel@vger.kernel.org, luto@amacapital.net, mark.rutland@arm.com, matt@codeblueprint.co.uk, will.deacon@arm.com, kernel-hardening@lists.openwall.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This path enables arm64 to be built with vmap'd task and IRQ stacks.
+Both unwind_frame() and dump_backtrace() try to check whether a stack
+address is sane to access, with very similar logic. Both will need
+updating in order to handle overflow stacks.
 
-As vmap'd stacks are mapped at page granularity, stacks must be a multiple of
-PAGE_SIZE. This means that a 64K page kernel must use stacks of at least 64K in
-size.
+Factor out this logic into a helper, so that we can avoid further
+duplication when we add overflow stacks.
 
-To minimize the increase in Image size, IRQ stacks are dynamically allocated at
-boot time, rather than embedding the boot CPU's IRQ stack in the kernel image.
-
-This patch was co-authored by Ard Biesheuvel and Mark Rutland.
-
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 Cc: Catalin Marinas <catalin.marinas@arm.com>
 Cc: James Morse <james.morse@arm.com>
 Cc: Laura Abbott <labbott@redhat.com>
 Cc: Will Deacon <will.deacon@arm.com>
 ---
- arch/arm64/Kconfig              |  1 +
- arch/arm64/include/asm/efi.h    |  7 ++++++-
- arch/arm64/include/asm/memory.h | 23 ++++++++++++++++++++++-
- arch/arm64/kernel/irq.c         | 30 ++++++++++++++++++++++++++++--
- arch/arm64/kernel/vmlinux.lds.S |  2 +-
- 5 files changed, 58 insertions(+), 5 deletions(-)
+ arch/arm64/include/asm/stacktrace.h | 16 ++++++++++++++++
+ arch/arm64/kernel/stacktrace.c      |  7 +------
+ arch/arm64/kernel/traps.c           |  3 +--
+ 3 files changed, 18 insertions(+), 8 deletions(-)
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index dfd9086..d66f9db 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -75,6 +75,7 @@ config ARM64
- 	select HAVE_ARCH_SECCOMP_FILTER
- 	select HAVE_ARCH_TRACEHOOK
- 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
-+	select HAVE_ARCH_VMAP_STACK
- 	select HAVE_ARM_SMCCC
- 	select HAVE_EBPF_JIT
- 	select HAVE_C_RECORDMCOUNT
-diff --git a/arch/arm64/include/asm/efi.h b/arch/arm64/include/asm/efi.h
-index 0e8cc3b..2b1e5de 100644
---- a/arch/arm64/include/asm/efi.h
-+++ b/arch/arm64/include/asm/efi.h
-@@ -49,7 +49,12 @@
-  */
- #define EFI_FDT_ALIGN	SZ_2M   /* used by allocate_new_fdt_and_exit_boot() */
- 
--#define EFI_KIMG_ALIGN	SEGMENT_ALIGN
-+/*
-+ * In some configurations (e.g. VMAP_STACK && 64K pages), stacks built into the
-+ * kernel need greater alignment than we require the segments to be padded to.
-+ */
-+#define EFI_KIMG_ALIGN	\
-+	(SEGMENT_ALIGN > THREAD_ALIGN ? SEGMENT_ALIGN : THREAD_ALIGN)
- 
- /* on arm64, the FDT may be located anywhere in system RAM */
- static inline unsigned long efi_get_max_fdt_addr(unsigned long dram_base)
-diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
-index 7fa6ad4..c5cd2c5 100644
---- a/arch/arm64/include/asm/memory.h
-+++ b/arch/arm64/include/asm/memory.h
-@@ -102,7 +102,17 @@
- #define KASAN_SHADOW_SIZE	(0)
- #endif
- 
--#define THREAD_SHIFT		14
-+#define MIN_THREAD_SHIFT	14
-+
-+/*
-+ * VMAP'd stacks are allocated at page granularity, so we must ensure that such
-+ * stacks are a multiple of page size.
-+ */
-+#if defined(CONFIG_VMAP_STACK) && (MIN_THREAD_SHIFT < PAGE_SHIFT)
-+#define THREAD_SHIFT		PAGE_SHIFT
-+#else
-+#define THREAD_SHIFT		MIN_THREAD_SHIFT
-+#endif
- 
- #if THREAD_SHIFT >= PAGE_SHIFT
- #define THREAD_SIZE_ORDER	(THREAD_SHIFT - PAGE_SHIFT)
-@@ -110,6 +120,17 @@
- 
- #define THREAD_SIZE		(UL(1) << THREAD_SHIFT)
- 
-+/*
-+ * By aligning VMAP'd stacks to 2 * THREAD_SIZE, we can detect overflow by
-+ * checking sp & (1 << THREAD_SHIFT), which we can do cheaply in the entry
-+ * assembly.
-+ */
-+#ifdef CONFIG_VMAP_STACK
-+#define THREAD_ALIGN		(2 * THREAD_SIZE)
-+#else
-+#define THREAD_ALIGN		THREAD_SIZE
-+#endif
-+
- #define IRQ_STACK_SIZE		THREAD_SIZE
- 
- /*
-diff --git a/arch/arm64/kernel/irq.c b/arch/arm64/kernel/irq.c
-index 5141282..713561e 100644
---- a/arch/arm64/kernel/irq.c
-+++ b/arch/arm64/kernel/irq.c
-@@ -23,15 +23,15 @@
- 
- #include <linux/kernel_stat.h>
- #include <linux/irq.h>
-+#include <linux/memory.h>
- #include <linux/smp.h>
- #include <linux/init.h>
- #include <linux/irqchip.h>
- #include <linux/seq_file.h>
-+#include <linux/vmalloc.h>
- 
- unsigned long irq_err_count;
- 
--/* irq stack only needs to be 16 byte aligned - not IRQ_STACK_SIZE aligned. */
--DEFINE_PER_CPU(unsigned long [IRQ_STACK_SIZE/sizeof(long)], irq_stack) __aligned(16);
- DEFINE_PER_CPU(unsigned long *, irq_stack_ptr);
- 
- int arch_show_interrupts(struct seq_file *p, int prec)
-@@ -51,6 +51,31 @@ void __init set_handle_irq(void (*handle_irq)(struct pt_regs *))
- 	handle_arch_irq = handle_irq;
+diff --git a/arch/arm64/include/asm/stacktrace.h b/arch/arm64/include/asm/stacktrace.h
+index 4c68d8a..92ddb6d 100644
+--- a/arch/arm64/include/asm/stacktrace.h
++++ b/arch/arm64/include/asm/stacktrace.h
+@@ -57,4 +57,20 @@ static inline bool on_task_stack(struct task_struct *tsk, unsigned long sp)
+ 	return (low <= sp && sp < high);
  }
  
-+#ifdef CONFIG_VMAP_STACK
-+static void init_irq_stacks(void)
++/*
++ * We can only safely access per-cpu stacks from current in a non-preemptible
++ * context.
++ */
++static inline bool on_accessible_stack(struct task_struct *tsk, unsigned long sp)
 +{
-+	int cpu;
-+	unsigned long *p;
++	if (on_task_stack(tsk, sp))
++		return true;
++	if (tsk != current || preemptible())
++		return false;
++	if (on_irq_stack(sp))
++		return true;
 +
-+	for_each_possible_cpu(cpu) {
-+		/*
-+		* To ensure that VMAP'd stack overflow detection works
-+		* correctly, the IRQ stacks need to have the same
-+		* alignment as other stacks.
-+		*/
-+		p = __vmalloc_node_range(IRQ_STACK_SIZE, THREAD_ALIGN,
-+					 VMALLOC_START, VMALLOC_END,
-+					 THREADINFO_GFP, PAGE_KERNEL,
-+					 0, cpu_to_node(cpu),
-+					 __builtin_return_address(0));
-+
-+		per_cpu(irq_stack_ptr, cpu) = p;
-+	}
++	return false;
 +}
-+#else
-+/* irq stack only needs to be 16 byte aligned - not IRQ_STACK_SIZE aligned. */
-+DEFINE_PER_CPU_ALIGNED(unsigned long [IRQ_STACK_SIZE/sizeof(long)], irq_stack);
 +
- static void init_irq_stacks(void)
- {
- 	int cpu;
-@@ -58,6 +83,7 @@ static void init_irq_stacks(void)
- 	for_each_possible_cpu(cpu)
- 		per_cpu(irq_stack_ptr, cpu) = per_cpu(irq_stack, cpu);
- }
-+#endif
+ #endif	/* __ASM_STACKTRACE_H */
+diff --git a/arch/arm64/kernel/stacktrace.c b/arch/arm64/kernel/stacktrace.c
+index 54f3463..d9b80eb 100644
+--- a/arch/arm64/kernel/stacktrace.c
++++ b/arch/arm64/kernel/stacktrace.c
+@@ -50,12 +50,7 @@ int notrace unwind_frame(struct task_struct *tsk, struct stackframe *frame)
+ 	if (!tsk)
+ 		tsk = current;
  
- void __init init_IRQ(void)
- {
-diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
-index 7156538..fe56c26 100644
---- a/arch/arm64/kernel/vmlinux.lds.S
-+++ b/arch/arm64/kernel/vmlinux.lds.S
-@@ -176,7 +176,7 @@ SECTIONS
+-	/*
+-	 * Switching between stacks is valid when tracing current and in
+-	 * non-preemptible context.
+-	 */
+-	if (!(tsk == current && !preemptible() && on_irq_stack(fp)) &&
+-	    !on_task_stack(tsk, fp))
++	if (!on_accessible_stack(tsk, fp))
+ 		return -EINVAL;
  
- 	_data = .;
- 	_sdata = .;
--	RW_DATA_SECTION(L1_CACHE_BYTES, PAGE_SIZE, THREAD_SIZE)
-+	RW_DATA_SECTION(L1_CACHE_BYTES, PAGE_SIZE, THREAD_ALIGN)
+ 	frame->fp = READ_ONCE_NOCHECK(*(unsigned long *)(fp));
+diff --git a/arch/arm64/kernel/traps.c b/arch/arm64/kernel/traps.c
+index 9633773..d01c598 100644
+--- a/arch/arm64/kernel/traps.c
++++ b/arch/arm64/kernel/traps.c
+@@ -193,8 +193,7 @@ void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
+ 		if (in_entry_text(frame.pc)) {
+ 			stack = frame.fp - offsetof(struct pt_regs, stackframe);
  
- 	/*
- 	 * Data written with the MMU off but read with the MMU on requires
+-			if (on_task_stack(tsk, stack) ||
+-			    (tsk == current && !preemptible() && on_irq_stack(stack)))
++			if (on_accessible_stack(tsk, stack))
+ 				dump_mem("", "Exception stack", stack,
+ 					 stack + sizeof(struct pt_regs));
+ 		}
 -- 
 1.9.1
