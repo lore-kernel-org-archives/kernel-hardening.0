@@ -1,117 +1,133 @@
-Date: Mon, 7 Aug 2017 18:55:33 +0100
-From: Russell King - ARM Linux <linux@armlinux.org.uk>
-Message-ID: <20170807175533.GA20805@n2100.armlinux.org.uk>
-References: <20170726170051.28328-1-thgarnie@google.com>
- <20170726170051.28328-2-thgarnie@google.com>
- <CAGXu5jLbJuokv+B_Nn8uRDVadi05ywJM7FSgpOr+maO2pQrd0w@mail.gmail.com>
- <CAJcbSZHfoHNPv3tk11iCj49UkLGU-QdeyMj2BS60wng5z5L4pg@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAJcbSZHfoHNPv3tk11iCj49UkLGU-QdeyMj2BS60wng5z5L4pg@mail.gmail.com>
-Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
-Subject: [kernel-hardening] Re: [PATCH v2 2/3] arm/syscalls: Optimize address limit check
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, Dave Martin <Dave.Martin@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, Leonard Crestez <leonard.crestez@nxp.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Mark Rutland <mark.rutland@arm.com>
+Date: Mon,  7 Aug 2017 19:35:51 +0100
+Message-Id: <1502130965-18710-1-git-send-email-mark.rutland@arm.com>
+Subject: [kernel-hardening] [PATCH 00/14] arm64: VMAP_STACK support
+To: linux-arm-kernel@lists.infradead.org
+Cc: ard.biesheuvel@linaro.org, catalin.marinas@arm.com, james.morse@arm.com, labbott@redhat.com, linux-kernel@vger.kernel.org, luto@amacapital.net, mark.rutland@arm.com, matt@codeblueprint.co.uk, will.deacon@arm.com, kernel-hardening@lists.openwall.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 07, 2017 at 10:42:14AM -0700, Thomas Garnier wrote:
-> On Mon, Aug 7, 2017 at 10:35 AM, Kees Cook <keescook@chromium.org> wrote:
-> > On Wed, Jul 26, 2017 at 10:00 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> >> Disable the generic address limit check in favor of an architecture
-> >> specific optimized implementation. The generic implementation using
-> >> pending work flags did not work well with ARM and alignment faults.
-> >>
-> >> The address limit is checked on each syscall return path to user-mode
-> >> path as well as the irq user-mode return function. If the address limit
-> >> was changed, a function is called to stop the kernel with an explicit
-> >> message.
-> >>
-> >> The address limit check has to be done before any pending work because
-> >> they can reset the address limit. For example the lkdtm address limit
-> >> check does not work because the signal to kill the process will reset
-> >> the user-mode address limit.
-> >>
-> >> Signed-off-by: Thomas Garnier <thgarnie@google.com>
-> >> ---
-> >>  arch/arm/kernel/entry-common.S | 11 +++++++++++
-> >>  arch/arm/kernel/signal.c       |  5 +++++
-> >>  2 files changed, 16 insertions(+)
-> >>
-> >> diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
-> >> index 0b60adf4a5d9..99c908226065 100644
-> >> --- a/arch/arm/kernel/entry-common.S
-> >> +++ b/arch/arm/kernel/entry-common.S
-> >> @@ -12,6 +12,7 @@
-> >>  #include <asm/unistd.h>
-> >>  #include <asm/ftrace.h>
-> >>  #include <asm/unwind.h>
-> >> +#include <asm/memory.h>
-> >>  #ifdef CONFIG_AEABI
-> >>  #include <asm/unistd-oabi.h>
-> >>  #endif
-> >> @@ -48,10 +49,14 @@ ret_fast_syscall:
-> >>   UNWIND(.fnstart       )
-> >>   UNWIND(.cantunwind    )
-> >>         disable_irq_notrace                     @ disable interrupts
-> >> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
-> >> +       cmp     r2, #TASK_SIZE
-> >> +       blne    addr_limit_check_failed
-> >>         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
-> >>         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
-> >>         bne     fast_work_pending
-> >>
-> >> +
-> >>         /* perform architecture specific actions before user return */
-> >>         arch_ret_to_user r1, lr
-> >>
-> >> @@ -74,6 +79,9 @@ ret_fast_syscall:
-> >>   UNWIND(.cantunwind    )
-> >>         str     r0, [sp, #S_R0 + S_OFF]!        @ save returned r0
-> >>         disable_irq_notrace                     @ disable interrupts
-> >> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
-> >> +       cmp     r2, #TASK_SIZE
-> >> +       blne    addr_limit_check_failed
-> >>         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
-> >>         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
-> >>         beq     no_work_pending
-> >> @@ -106,6 +114,9 @@ ENTRY(ret_to_user)
-> >>  ret_slow_syscall:
-> >>         disable_irq_notrace                     @ disable interrupts
-> >>  ENTRY(ret_to_user_from_irq)
-> >> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
-> >> +       cmp     r2, #TASK_SIZE
-> >> +       blne    addr_limit_check_failed
-> >>         ldr     r1, [tsk, #TI_FLAGS]
-> >>         tst     r1, #_TIF_WORK_MASK
-> >>         bne     slow_work_pending
-> >
-> > Instead of taking the entire system down, how about a WARN/kill combo
-> > instead? If it's too late for "force_sig(SIGKILL, current)", then
-> > likely we should perform a "do_group_exit(SIGKILL)".
-> 
-> Sure, why not. I can also change the others architectures to move to a
-> do_group_exit(SIGKILL).
-> 
-> Before the next iteration, I want to know if Russel has any feedback
-> on this implementation, given the previous thread.
+Hi,
 
-It's better in so far as it avoids the problems previously highlighted.
+Ard and I have worked together to implement vmap stack support for
+arm64. This supersedes our earlier vmap stack RFCs [0,1]. The git author
+stats are a little misleading, as I've teased parts out into smaller
+patches for review.
 
-However, it depends how efficient we want these paths to be - the
-difference between your assembly and the assembly I've previously
-supplied is that mine fills in any delay slots with some useful work
-and avoids adding extra delay slots in this path.
+The series is based on our stack dump rework [2,3], which can be found
+in the arm64/exception-stack branch [4] of my kernel.org repo. This
+series can be found in the arm64/vmap-stack branch [5] of the same repo.
 
-Arguably, the system call exit path is as important as the system
-call entry path for OS performance, so I think we should strive to
-make it as efficient as possible - much as I already did when I
-posted code on this topic previously.
+On arm64, there is no double-fault exception, as software saves
+exception context to the stack. An erroneous memory access taken during
+exception handling results in a data abort, as with any other erroneous
+memory access. To avoid taking these recursively, we must detect
+overflow by checking the SP before we attempt to store any context to
+the stack. Doing this efficiently requires a couple of tricks.
 
-I think that code can simply be adapted to call your C function
-instead of the assembly "addr_limit_fail" label.
+For a naturally aligned stack, bits THREAD_SHIFT-1:0 of a valid SP may
+contain any arbitrary value:
+
+	0bXX .. 11111111111111
+	0bXX .. 11011001011100
+	0bXX .. 00000000000000
+
+By aligning stacks to double their natural alignment, we know that the
+THREAD_SHIFT bit of any valid SP must be zero:
+
+	0bXX .. 0 11111111111111
+	0bXX .. 0 11011001011100
+	0bXX .. 0 00000000000000
+
+... while an overflow will result in this bit flipping, along with
+(some) other high-order bits:
+
+	0bXX .. 0 00000000000000
+	< SP -= 1 >
+	0bXX .. 1 11111111111111
+
+... and thus, we can detect overflows of up to THREAD_SIZE by testing
+the THREAD_SHIFT bit of the SP value.
+
+Provided we can get the SP into a general purpose register, we can
+perform this test with a single TBNZ instruction. We don't have scratch
+space to store a GPR, but we can (partially) swap the SP with a GPR
+using arithmetic to perform the test:
+
+	add	sp, sp, x0		// sp' = sp + x0
+	sub	x0, sp, x0		// x0' = sp' - x0 = (sp + x0) - x0 = sp
+	tbnz	x0, #THREAD_SHIFT, overflow_handler
+	sub	x0, sp, x0		// sp' - x0' = (sp + x0) - sp = x0
+	sub	sp, sp, x0		// sp' - x0 = (sp + x0) - x0 = sp
+
+This series implements this approach, along with the other requisite
+changes required to make this work.
+
+The SP test is performed for all exceptions, after compensating for the
+size of the exception registers, allowing the original exception context
+to be preserved in entirety. The tests themselves are folded into the
+exception vectors, minimizing their impact.
+
+To ensure that IRQ stack overflows are detected and handled, IRQ stacks
+are now dynamically allocated, with guard pages.
+
+I've given the series some light testing with LKDTM, Syzkaller, Vince
+Weaver's perf fuzzer, and a few combinations of debug options. I haven't
+compared performance of the entire series to a baseline kernel, but from
+testing so far the cost of the SP test falls in the noise for a kernel
+build workload on Cortex-A57.
+
+Many thanks to Ard for putting up with my meddling, and also to Laura
+and James for their testing and comments on prior patches.
+
+Thanks,
+Mark.
+
+[0] http://lists.infradead.org/pipermail/linux-arm-kernel/2017-July/518368.html
+[1] http://lists.infradead.org/pipermail/linux-arm-kernel/2017-July/518434.html
+[2] http://lists.infradead.org/pipermail/linux-arm-kernel/2017-July/520705.html
+[3] http://lists.infradead.org/pipermail/linux-arm-kernel/2017-July/521435.html
+[4] git://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git arm64/exception-stack
+[5] git://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git arm64/vmap-stack
+
+Ard Biesheuvel (2):
+  arm64: kernel: remove {THREAD,IRQ_STACK}_START_SP
+  arm64: assembler: allow adr_this_cpu to use the stack pointer
+
+Mark Rutland (12):
+  arm64: remove __die()'s stack dump
+  fork: allow arch-override of VMAP stack alignment
+  arm64: factor out PAGE_* and CONT_* definitions
+  arm64: clean up THREAD_* definitions
+  arm64: clean up irq stack definitions
+  arm64: move SEGMENT_ALIGN to <asm/memory.h>
+  efi/arm64: add EFI_KIMG_ALIGN
+  arm64: factor out entry stack manipulation
+  arm64: use an irq stack pointer
+  arm64: add basic VMAP_STACK support
+  arm64: add on_accessible_stack()
+  arm64: add VMAP_STACK overflow detection
+
+ arch/arm64/Kconfig                        |   1 +
+ arch/arm64/include/asm/assembler.h        |   3 +-
+ arch/arm64/include/asm/efi.h              |   8 +++
+ arch/arm64/include/asm/irq.h              |  25 -------
+ arch/arm64/include/asm/memory.h           |  53 ++++++++++++++
+ arch/arm64/include/asm/page-def.h         |  34 +++++++++
+ arch/arm64/include/asm/page.h             |  12 +---
+ arch/arm64/include/asm/processor.h        |   2 +-
+ arch/arm64/include/asm/stacktrace.h       |  62 ++++++++++++++++-
+ arch/arm64/include/asm/thread_info.h      |  10 +--
+ arch/arm64/kernel/entry.S                 | 110 +++++++++++++++++++++++-------
+ arch/arm64/kernel/irq.c                   |  40 ++++++++++-
+ arch/arm64/kernel/ptrace.c                |   1 +
+ arch/arm64/kernel/smp.c                   |   2 +-
+ arch/arm64/kernel/stacktrace.c            |   7 +-
+ arch/arm64/kernel/traps.c                 |  44 ++++++++++--
+ arch/arm64/kernel/vmlinux.lds.S           |  18 +----
+ drivers/firmware/efi/libstub/arm64-stub.c |   6 +-
+ kernel/fork.c                             |   5 +-
+ 19 files changed, 339 insertions(+), 104 deletions(-)
+ create mode 100644 arch/arm64/include/asm/page-def.h
 
 -- 
-RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
-FTTC broadband for 0.8mile line in suburbia: sync at 8.8Mbps down 630kbps up
-According to speedtest.net: 8.21Mbps down 510kbps up
+1.9.1
