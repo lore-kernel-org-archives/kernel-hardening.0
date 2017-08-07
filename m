@@ -1,109 +1,88 @@
-Date: Mon, 7 Aug 2017 13:39:48 -0700
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20170807203948.GA22298@beast>
+References: <b1ddb305-bffd-0bbe-e38d-8213bbb1f9ee@embeddedor.com>
+ <CAJcbSZEWZm3umjDF8wvnbih-nkwoBH4hQkFmnbAhHbREnBPYew@mail.gmail.com>
+From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Message-ID: <992b014d-3421-c9f8-33bf-334e06a58ca2@embeddedor.com>
+Date: Mon, 7 Aug 2017 15:52:31 -0500
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] lkdtm: Test VMAP_STACK allocates leading/trailing guard pages
-To: linux-kernel@vger.kernel.org
-Cc: Mark Rutland <mark.rutland@arm.com>, ard.biesheuvel@linaro.org, catalin.marinas@arm.com, james.morse@arm.com, labbott@redhat.com, luto@amacapital.net, matt@codeblueprint.co.uk, will.deacon@arm.com, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org
+In-Reply-To: <CAJcbSZEWZm3umjDF8wvnbih-nkwoBH4hQkFmnbAhHbREnBPYew@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] I want to help out
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Two new tests STACK_GUARD_PAGE_LEADING and STACK_GUARD_PAGE_TRAILING
-attempt to read the byte before and after, respectively, of the current
-stack frame, which should fault under VMAP_STACK.
+Hi Thomas,
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-Do these tests both trip with the new arm64 VMAP_STACK code?
----
- drivers/misc/lkdtm.h      |  2 ++
- drivers/misc/lkdtm_bugs.c | 30 ++++++++++++++++++++++++++++++
- drivers/misc/lkdtm_core.c |  2 ++
- 3 files changed, 34 insertions(+)
+On 08/07/2017 10:31 AM, Thomas Garnier wrote:
+> Hey Gustavo, welcome!
+>
 
-diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
-index 063f5d651076..3c8627ca5f42 100644
---- a/drivers/misc/lkdtm.h
-+++ b/drivers/misc/lkdtm.h
-@@ -22,6 +22,8 @@ void lkdtm_HUNG_TASK(void);
- void lkdtm_CORRUPT_LIST_ADD(void);
- void lkdtm_CORRUPT_LIST_DEL(void);
- void lkdtm_CORRUPT_USER_DS(void);
-+void lkdtm_STACK_GUARD_PAGE_LEADING(void);
-+void lkdtm_STACK_GUARD_PAGE_TRAILING(void);
- 
- /* lkdtm_heap.c */
- void lkdtm_OVERWRITE_ALLOCATION(void);
-diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c
-index ef3d06f901fc..041fe6e9532a 100644
---- a/drivers/misc/lkdtm_bugs.c
-+++ b/drivers/misc/lkdtm_bugs.c
-@@ -8,6 +8,7 @@
- #include <linux/list.h>
- #include <linux/sched.h>
- #include <linux/sched/signal.h>
-+#include <linux/sched/task_stack.h>
- #include <linux/uaccess.h>
- 
- struct lkdtm_list {
-@@ -199,6 +200,7 @@ void lkdtm_CORRUPT_LIST_DEL(void)
- 		pr_err("list_del() corruption not detected!\n");
- }
- 
-+/* Test if unbalanced set_fs(KERNEL_DS)/set_fs(USER_DS) check exists. */
- void lkdtm_CORRUPT_USER_DS(void)
- {
- 	pr_info("setting bad task size limit\n");
-@@ -207,3 +209,31 @@ void lkdtm_CORRUPT_USER_DS(void)
- 	/* Make sure we do not keep running with a KERNEL_DS! */
- 	force_sig(SIGKILL, current);
- }
-+
-+/* Test that VMAP_STACK is actually allocating with a leading guard page */
-+void lkdtm_STACK_GUARD_PAGE_LEADING(void)
-+{
-+	const unsigned char *stack = task_stack_page(current);
-+	const unsigned char *ptr = stack - 1;
-+	volatile unsigned char byte;
-+
-+	pr_info("attempting bad read from page below current stack\n");
-+
-+	byte = *ptr;
-+
-+	pr_err("FAIL: accessed page before stack!\n");
-+}
-+
-+/* Test that VMAP_STACK is actually allocating with a trailing guard page */
-+void lkdtm_STACK_GUARD_PAGE_TRAILING(void)
-+{
-+	const unsigned char *stack = task_stack_page(current);
-+	const unsigned char *ptr = stack + THREAD_SIZE;
-+	volatile unsigned char byte;
-+
-+	pr_info("attempting bad read from page above current stack\n");
-+
-+	byte = *ptr;
-+
-+	pr_err("FAIL: accessed page after stack!\n");
-+}
-diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
-index 51decc07eeda..9e98d7ef5503 100644
---- a/drivers/misc/lkdtm_core.c
-+++ b/drivers/misc/lkdtm_core.c
-@@ -201,6 +201,8 @@ struct crashtype crashtypes[] = {
- 	CRASHTYPE(CORRUPT_LIST_DEL),
- 	CRASHTYPE(CORRUPT_USER_DS),
- 	CRASHTYPE(CORRUPT_STACK),
-+	CRASHTYPE(STACK_GUARD_PAGE_LEADING),
-+	CRASHTYPE(STACK_GUARD_PAGE_TRAILING),
- 	CRASHTYPE(UNALIGNED_LOAD_STORE_WRITE),
- 	CRASHTYPE(OVERWRITE_ALLOCATION),
- 	CRASHTYPE(WRITE_AFTER_FREE),
+Thanks!
+
+> That's a lot of changes, thanks for sharing.
+>
+
+I'm glad to help. :)
+
+> You can take a look at this page [1] to get an idea on things to do.
+> You can also look at the difference patches coming and going on the
+> mailing list to see if anything interest you.
+>
+> Anything in particular you wanted to prototype?
+>
+
+I'm interested in mitigation efforts towards control flow infection, as 
+function pointer poisoning for both .init_array (I know there is some 
+ongoing work here) and .fini_array.
+
+ From the TODO list I think the following tasks are interesting:
+
+* Split thread_info off of kernel stack.
+* Move kernel stack to vmap area.
+* Implement kernel relocation and KASLR for ARM
+
+If there is already some work in progress and there are some small tasks 
+pending to be completed, I'd like to help.
+
+I might need someone to point me out to the work already in place and, 
+after reading some code and asking some questions I might be able to 
+take it from there.
+
+I have to say that by no means I'm an expert in any of those areas, but 
+I'm willing to learn and become a long term contributor.
+
+Recently, I've been using Coccinelle to constify structures, and fixing 
+a variety of Coverity issues (API usage errors, NULL pointer 
+dereferences, control flow and code maintainability issues, etc..). I'm 
+also using Coccinelle to identify lock/unlock issues.
+
+Thank you!
 -- 
-2.7.4
+Gustavo A. R. Silva
 
-
--- 
-Kees Cook
-Pixel Security
+> Thanks,
+>
+> [1] https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Work
+>
+> On Sun, Aug 6, 2017 at 9:22 PM, Gustavo A. R. Silva
+> <gustavo@embeddedor.com> wrote:
+>> Hello everybody,
+>>
+>> I'm new in the mailing list.
+>>
+>> I've been working on kernel hardening activities during the last three
+>> months
+>> https://github.com/GustavoARSilva/linux-hardening/blob/master/cii/2017/reports/mayjunjul_detailed
+>>
+>> I'd be more than happy to dedicate time and help out with any coding
+>> activities you may need help with. In particular related to x86 and ARM
+>> architectures (that's the hardware I have at hand).
+>>
+>> Thank you
+>> --
+>> Gustavo A. R. Silva
+>> @embeddedgus
+>
+>
+>
