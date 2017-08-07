@@ -1,56 +1,65 @@
+Date: Mon, 7 Aug 2017 23:00:56 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170807220056.GA29059@remoulade>
+References: <20170807203948.GA22298@beast>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAKv+Gu9QPnSwOqtBkg9kPq2_UONRfOOJusw0_U59BWLW2=YbUw@mail.gmail.com>
-References: <20170807203948.GA22298@beast> <CAKv+Gu-DUk9xqzpWt_FNBzpbLhdi9Cc5vU5J-tZZ4b8wD87UTQ@mail.gmail.com>
- <CAGXu5jL27FsZLi_L-mJnySe3H_3LiyFr2Odav+Xm=xhOHc25uw@mail.gmail.com> <CAKv+Gu9QPnSwOqtBkg9kPq2_UONRfOOJusw0_U59BWLW2=YbUw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 7 Aug 2017 14:47:08 -0700
-Message-ID: <CAGXu5jLtJYQAdJWM_bAsEOEOLCQMmNM1CrHhuvbNZzTvx=O1tA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH] lkdtm: Test VMAP_STACK allocates
- leading/trailing guard pages
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, James Morse <james.morse@arm.com>, Laura Abbott <labbott@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Matt Fleming <matt@codeblueprint.co.uk>, Will Deacon <will.deacon@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170807203948.GA22298@beast>
+Subject: [kernel-hardening] Re: [PATCH] lkdtm: Test VMAP_STACK allocates leading/trailing guard
+ pages
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, ard.biesheuvel@linaro.org, catalin.marinas@arm.com, james.morse@arm.com, labbott@redhat.com, luto@amacapital.net, matt@codeblueprint.co.uk, will.deacon@arm.com, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 7, 2017 at 2:46 PM, Ard Biesheuvel
-<ard.biesheuvel@linaro.org> wrote:
-> On 7 August 2017 at 22:44, Kees Cook <keescook@chromium.org> wrote:
->> On Mon, Aug 7, 2017 at 2:27 PM, Ard Biesheuvel
->> <ard.biesheuvel@linaro.org> wrote:
->>> On 7 August 2017 at 21:39, Kees Cook <keescook@chromium.org> wrote:
->>>> Two new tests STACK_GUARD_PAGE_LEADING and STACK_GUARD_PAGE_TRAILING
->>>> attempt to read the byte before and after, respectively, of the current
->>>> stack frame, which should fault under VMAP_STACK.
->>>>
->>>> Signed-off-by: Kees Cook <keescook@chromium.org>
->>>> ---
->>>> Do these tests both trip with the new arm64 VMAP_STACK code?
->>>
->>> Probably not. On arm64, the registers are stacked by software at
->>> exception entry,  and so we decrement the sp first by the size of the
->>> register file, and if the resulting value overflows the stack, the
->>> situation is handled as if the exception was caused by a faulting
->>> stack access while it may be caused by something else in reality.
->>> Since the act of handling the exception is guaranteed to overflow the
->>> stack anyway, this does not really make a huge difference, and it
->>> prevents the recursive fault from wiping the context that we need to
->>> produce the diagnostics.
->>>
->>> This means an illegal access right above the stack will go undetected.
->>
->> I thought vmap entries provided guard pages around allocations?
->> Shouldn't that catch it?
->>
->
-> Ah yes, so we will fault. We should probably double check whether we
-> will not misidentify the fault because of the subtraction we do first,
-> but that should be trivial to add.
+Hi,
 
-Okay, cool. I'd be curious to see what the lkdtm tests show for you.
+On Mon, Aug 07, 2017 at 01:39:48PM -0700, Kees Cook wrote:
+> Two new tests STACK_GUARD_PAGE_LEADING and STACK_GUARD_PAGE_TRAILING
+> attempt to read the byte before and after, respectively, of the current
+> stack frame, which should fault under VMAP_STACK.
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+> Do these tests both trip with the new arm64 VMAP_STACK code?
 
--Kees
+> +/* Test that VMAP_STACK is actually allocating with a leading guard page */
+> +void lkdtm_STACK_GUARD_PAGE_LEADING(void)
+> +{
+> +	const unsigned char *stack = task_stack_page(current);
+> +	const unsigned char *ptr = stack - 1;
+> +	volatile unsigned char byte;
+> +
+> +	pr_info("attempting bad read from page below current stack\n");
+> +
+> +	byte = *ptr;
+> +
+> +	pr_err("FAIL: accessed page before stack!\n");
+> +}
+> +
+> +/* Test that VMAP_STACK is actually allocating with a trailing guard page */
+> +void lkdtm_STACK_GUARD_PAGE_TRAILING(void)
+> +{
+> +	const unsigned char *stack = task_stack_page(current);
+> +	const unsigned char *ptr = stack + THREAD_SIZE;
+> +	volatile unsigned char byte;
+> +
+> +	pr_info("attempting bad read from page above current stack\n");
+> +
+> +	byte = *ptr;
+> +
+> +	pr_err("FAIL: accessed page after stack!\n");
+> +}
 
--- 
-Kees Cook
-Pixel Security
+I can give these a go tomorrow.
+
+These *should* fault, and IIUC should trigger the usual "Unable to handle
+kernel %s at virtual address %08lx\n" splat from arm64's __do_kernel_fault(),
+which should end up with an Oops().
+
+Since these don't mess with the SP, they shouldn't trigger the overflow
+detection, which detects whether we have sufficient stack space to store the
+exception context to the stack. That caught the LKDTM overflow test reliably.
+
+Thanks,
+Mark.
