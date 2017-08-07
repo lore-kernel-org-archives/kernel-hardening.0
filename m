@@ -1,90 +1,109 @@
-Date: Mon, 7 Aug 2017 15:12:36 -0400
-From: Jerome Glisse <jglisse@redhat.com>
-Message-ID: <20170807191235.GE16616@redhat.com>
-References: <c3a250a6-ad4d-d24d-d0bf-4c43c467ebe6@huawei.com>
- <20170803135549.GW12521@dhcp22.suse.cz>
- <20170803144746.GA9501@redhat.com>
- <ab4809cd-0efc-a79d-6852-4bd2349a2b3f@huawei.com>
- <20170803151550.GX12521@dhcp22.suse.cz>
- <abe0c086-8c5a-d6fb-63c4-bf75528d0ec5@huawei.com>
- <20170804081240.GF26029@dhcp22.suse.cz>
- <7733852a-67c9-17a3-4031-cb08520b9ad2@huawei.com>
- <20170807133107.GA16616@redhat.com>
- <555dc453-3028-199a-881a-3ddeb41e4d6d@huawei.com>
+Date: Mon, 7 Aug 2017 13:39:48 -0700
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20170807203948.GA22298@beast>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <555dc453-3028-199a-881a-3ddeb41e4d6d@huawei.com>
-Subject: [kernel-hardening] Re: [RFC] Tagging of vmalloc pages for supporting the pmalloc
- allocator
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Michal Hocko <mhocko@kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@google.com>
+Subject: [kernel-hardening] [PATCH] lkdtm: Test VMAP_STACK allocates leading/trailing guard pages
+To: linux-kernel@vger.kernel.org
+Cc: Mark Rutland <mark.rutland@arm.com>, ard.biesheuvel@linaro.org, catalin.marinas@arm.com, james.morse@arm.com, labbott@redhat.com, luto@amacapital.net, matt@codeblueprint.co.uk, will.deacon@arm.com, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 07, 2017 at 05:13:00PM +0300, Igor Stoppa wrote:
-> 
-> 
-> On 07/08/17 16:31, Jerome Glisse wrote:
-> > On Mon, Aug 07, 2017 at 02:26:21PM +0300, Igor Stoppa wrote:
-> 
-> [...]
-> 
-> >> I'll add a vm_area field as you advised.
-> >>
-> >> Is this something I could send as standalone patch?
-> > 
-> > Note that vmalloc() is not the only thing that use vmalloc address
-> > space. There is also vmap() and i know one set of drivers that use
-> > vmap() and also use the mapping field of struct page namely GPU
-> > drivers.
-> 
-> Ah, yes, you mentioned this.
-> 
-> > So like i said previously i would store a flag inside vm_struct to
-> > know if page you are looking at are pmalloc or not.
-> 
-> And I was planning to follow your advice, using one of the flags.
-> But ...
-> 
-> > Again do you
-> > need to store something per page ? Would storing it per vm_struct
-> > not be enough ?
-> 
-> ... there was this further comment, about speeding up the access to
-> vm_area, which seemed good from performance perspective.
-> 
-> ---8<--------------8<--------------8<--------------8<--------------8<---
-> On 03/08/17 14:48, Michal Hocko wrote:
-> > On Thu 03-08-17 13:11:45, Igor Stoppa wrote:
-> 
-> [...]
-> 
-> >> But, to reply more specifically to your advice, yes, I think I could
-> >> add a flag to vm_struct and then retrieve its value, for the address
-> >> being processed, by passing through find_vm_area().
-> >
-> > ... and you can store vm_struct pointer to the struct page there and
-> > you won't need to do the slow find_vm_area. I haven't checked very
-> > closely but this should be possible in principle. I guess other
-> > callers might benefit from this as well.
-> ---8<--------------8<--------------8<--------------8<--------------8<---
-> 
-> I do not strictly need to modify the page struct, but it seems it might
-> harm performance, if it is added on the path of hardened usercopy.
-> 
-> I have an updated version of the old proposal:
-> 
-> * put a magic number in the private field, during initialization of
-> pmalloc pages
-> 
-> * during hardened usercopy verification, when I have to assess if a page
-> is of pmalloc type, compare the private field against the magic number
-> 
-> * if and only if the private field matches the magic number, then invoke
-> find_vm_area(), so that the slowness affects only a possibly limited
-> amount of false positives.
+Two new tests STACK_GUARD_PAGE_LEADING and STACK_GUARD_PAGE_TRAILING
+attempt to read the byte before and after, respectively, of the current
+stack frame, which should fault under VMAP_STACK.
 
-This all sounds good to me.
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+Do these tests both trip with the new arm64 VMAP_STACK code?
+---
+ drivers/misc/lkdtm.h      |  2 ++
+ drivers/misc/lkdtm_bugs.c | 30 ++++++++++++++++++++++++++++++
+ drivers/misc/lkdtm_core.c |  2 ++
+ 3 files changed, 34 insertions(+)
 
-Jérôme
+diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+index 063f5d651076..3c8627ca5f42 100644
+--- a/drivers/misc/lkdtm.h
++++ b/drivers/misc/lkdtm.h
+@@ -22,6 +22,8 @@ void lkdtm_HUNG_TASK(void);
+ void lkdtm_CORRUPT_LIST_ADD(void);
+ void lkdtm_CORRUPT_LIST_DEL(void);
+ void lkdtm_CORRUPT_USER_DS(void);
++void lkdtm_STACK_GUARD_PAGE_LEADING(void);
++void lkdtm_STACK_GUARD_PAGE_TRAILING(void);
+ 
+ /* lkdtm_heap.c */
+ void lkdtm_OVERWRITE_ALLOCATION(void);
+diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c
+index ef3d06f901fc..041fe6e9532a 100644
+--- a/drivers/misc/lkdtm_bugs.c
++++ b/drivers/misc/lkdtm_bugs.c
+@@ -8,6 +8,7 @@
+ #include <linux/list.h>
+ #include <linux/sched.h>
+ #include <linux/sched/signal.h>
++#include <linux/sched/task_stack.h>
+ #include <linux/uaccess.h>
+ 
+ struct lkdtm_list {
+@@ -199,6 +200,7 @@ void lkdtm_CORRUPT_LIST_DEL(void)
+ 		pr_err("list_del() corruption not detected!\n");
+ }
+ 
++/* Test if unbalanced set_fs(KERNEL_DS)/set_fs(USER_DS) check exists. */
+ void lkdtm_CORRUPT_USER_DS(void)
+ {
+ 	pr_info("setting bad task size limit\n");
+@@ -207,3 +209,31 @@ void lkdtm_CORRUPT_USER_DS(void)
+ 	/* Make sure we do not keep running with a KERNEL_DS! */
+ 	force_sig(SIGKILL, current);
+ }
++
++/* Test that VMAP_STACK is actually allocating with a leading guard page */
++void lkdtm_STACK_GUARD_PAGE_LEADING(void)
++{
++	const unsigned char *stack = task_stack_page(current);
++	const unsigned char *ptr = stack - 1;
++	volatile unsigned char byte;
++
++	pr_info("attempting bad read from page below current stack\n");
++
++	byte = *ptr;
++
++	pr_err("FAIL: accessed page before stack!\n");
++}
++
++/* Test that VMAP_STACK is actually allocating with a trailing guard page */
++void lkdtm_STACK_GUARD_PAGE_TRAILING(void)
++{
++	const unsigned char *stack = task_stack_page(current);
++	const unsigned char *ptr = stack + THREAD_SIZE;
++	volatile unsigned char byte;
++
++	pr_info("attempting bad read from page above current stack\n");
++
++	byte = *ptr;
++
++	pr_err("FAIL: accessed page after stack!\n");
++}
+diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
+index 51decc07eeda..9e98d7ef5503 100644
+--- a/drivers/misc/lkdtm_core.c
++++ b/drivers/misc/lkdtm_core.c
+@@ -201,6 +201,8 @@ struct crashtype crashtypes[] = {
+ 	CRASHTYPE(CORRUPT_LIST_DEL),
+ 	CRASHTYPE(CORRUPT_USER_DS),
+ 	CRASHTYPE(CORRUPT_STACK),
++	CRASHTYPE(STACK_GUARD_PAGE_LEADING),
++	CRASHTYPE(STACK_GUARD_PAGE_TRAILING),
+ 	CRASHTYPE(UNALIGNED_LOAD_STORE_WRITE),
+ 	CRASHTYPE(OVERWRITE_ALLOCATION),
+ 	CRASHTYPE(WRITE_AFTER_FREE),
+-- 
+2.7.4
+
+
+-- 
+Kees Cook
+Pixel Security
