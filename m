@@ -1,83 +1,109 @@
 From: Mark Rutland <mark.rutland@arm.com>
-Date: Mon,  7 Aug 2017 19:35:59 +0100
-Message-Id: <1502130965-18710-9-git-send-email-mark.rutland@arm.com>
+Date: Mon,  7 Aug 2017 19:36:00 +0100
+Message-Id: <1502130965-18710-10-git-send-email-mark.rutland@arm.com>
 In-Reply-To: <1502130965-18710-1-git-send-email-mark.rutland@arm.com>
 References: <1502130965-18710-1-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] [PATCH 08/14] efi/arm64: add EFI_KIMG_ALIGN
+Subject: [kernel-hardening] [PATCH 09/14] arm64: factor out entry stack manipulation
 To: linux-arm-kernel@lists.infradead.org
 Cc: ard.biesheuvel@linaro.org, catalin.marinas@arm.com, james.morse@arm.com, labbott@redhat.com, linux-kernel@vger.kernel.org, luto@amacapital.net, mark.rutland@arm.com, matt@codeblueprint.co.uk, will.deacon@arm.com, kernel-hardening@lists.openwall.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The EFI stub is intimately coupled with the kernel, and takes advantage
-of this by relocating the kernel at a weaker alignment than the
-documented boot protocol mandates.
+In subsequent patches, we will detect stack overflow in our exception
+entry code, by verifying the SP after it has been decremented to make
+space for the exception regs.
 
-However, it does so by assuming it can align the kernel to the segment
-alignment, and assumes that this is 64K. In subsequent patches, we'll
-have to consider other details to determine this de-facto alignment
-constraint.
+This verification code is small, and we can minimize its impact by
+placing it directly in the vectors. To avoid redundant modification of
+the SP, we also need to move the initial decrement of the SP into the
+vectors.
 
-This patch adds a new EFI_KIMG_ALIGN definition that will track the
-kernel's de-facto alignment requirements. Subsequent patches will modify
-this as required.
+As a preparatory step, this patch introduces kernel_ventry, which
+performs this decrement, and updates the entry code accordingly.
+Subsequent patches will fold SP verification into kernel_ventry.
 
+There should be no functional change as a result of this patch.
+
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+[Mark: turn into prep patch, expand commit msg]
 Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 Cc: Catalin Marinas <catalin.marinas@arm.com>
 Cc: James Morse <james.morse@arm.com>
 Cc: Laura Abbott <labbott@redhat.com>
-Cc: Matt Fleming <matt@codeblueprint.co.uk>
 Cc: Will Deacon <will.deacon@arm.com>
 ---
- arch/arm64/include/asm/efi.h              | 3 +++
- drivers/firmware/efi/libstub/arm64-stub.c | 6 ++++--
- 2 files changed, 7 insertions(+), 2 deletions(-)
+ arch/arm64/kernel/entry.S | 47 ++++++++++++++++++++++++++---------------------
+ 1 file changed, 26 insertions(+), 21 deletions(-)
 
-diff --git a/arch/arm64/include/asm/efi.h b/arch/arm64/include/asm/efi.h
-index 8f3043a..0e8cc3b 100644
---- a/arch/arm64/include/asm/efi.h
-+++ b/arch/arm64/include/asm/efi.h
-@@ -4,6 +4,7 @@
- #include <asm/boot.h>
- #include <asm/cpufeature.h>
- #include <asm/io.h>
-+#include <asm/memory.h>
- #include <asm/mmu_context.h>
- #include <asm/neon.h>
- #include <asm/ptrace.h>
-@@ -48,6 +49,8 @@
-  */
- #define EFI_FDT_ALIGN	SZ_2M   /* used by allocate_new_fdt_and_exit_boot() */
+diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+index 1c0f787..bd3b6de 100644
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -69,8 +69,13 @@
+ #define BAD_FIQ		2
+ #define BAD_ERROR	3
  
-+#define EFI_KIMG_ALIGN	SEGMENT_ALIGN
+-	.macro	kernel_entry, el, regsize = 64
++	.macro kernel_ventry	label
++	.align 7
+ 	sub	sp, sp, #S_FRAME_SIZE
++	b	\label
++	.endm
 +
- /* on arm64, the FDT may be located anywhere in system RAM */
- static inline unsigned long efi_get_max_fdt_addr(unsigned long dram_base)
- {
-diff --git a/drivers/firmware/efi/libstub/arm64-stub.c b/drivers/firmware/efi/libstub/arm64-stub.c
-index b4c2589..af6ae95 100644
---- a/drivers/firmware/efi/libstub/arm64-stub.c
-+++ b/drivers/firmware/efi/libstub/arm64-stub.c
-@@ -11,6 +11,7 @@
-  */
- #include <linux/efi.h>
- #include <asm/efi.h>
-+#include <asm/memory.h>
- #include <asm/sections.h>
- #include <asm/sysreg.h>
++	.macro	kernel_entry, el, regsize = 64
+ 	.if	\regsize == 32
+ 	mov	w0, w0				// zero upper 32 bits of x0
+ 	.endif
+@@ -315,31 +320,31 @@ tsk	.req	x28		// current thread_info
  
-@@ -81,9 +82,10 @@ efi_status_t handle_kernel_image(efi_system_table_t *sys_table_arg,
- 		/*
- 		 * If CONFIG_DEBUG_ALIGN_RODATA is not set, produce a
- 		 * displacement in the interval [0, MIN_KIMG_ALIGN) that
--		 * is a multiple of the minimal segment alignment (SZ_64K)
-+		 * doesn't violate this kernel's de-facto alignment
-+		 * constraints.
- 		 */
--		u32 mask = (MIN_KIMG_ALIGN - 1) & ~(SZ_64K - 1);
-+		u32 mask = (MIN_KIMG_ALIGN - 1) & ~(EFI_KIMG_ALIGN - 1);
- 		u32 offset = !IS_ENABLED(CONFIG_DEBUG_ALIGN_RODATA) ?
- 			     (phys_seed >> 32) & mask : TEXT_OFFSET;
+ 	.align	11
+ ENTRY(vectors)
+-	ventry	el1_sync_invalid		// Synchronous EL1t
+-	ventry	el1_irq_invalid			// IRQ EL1t
+-	ventry	el1_fiq_invalid			// FIQ EL1t
+-	ventry	el1_error_invalid		// Error EL1t
++	kernel_ventry	el1_sync_invalid		// Synchronous EL1t
++	kernel_ventry	el1_irq_invalid			// IRQ EL1t
++	kernel_ventry	el1_fiq_invalid			// FIQ EL1t
++	kernel_ventry	el1_error_invalid		// Error EL1t
+ 
+-	ventry	el1_sync			// Synchronous EL1h
+-	ventry	el1_irq				// IRQ EL1h
+-	ventry	el1_fiq_invalid			// FIQ EL1h
+-	ventry	el1_error_invalid		// Error EL1h
++	kernel_ventry	el1_sync			// Synchronous EL1h
++	kernel_ventry	el1_irq				// IRQ EL1h
++	kernel_ventry	el1_fiq_invalid			// FIQ EL1h
++	kernel_ventry	el1_error_invalid		// Error EL1h
+ 
+-	ventry	el0_sync			// Synchronous 64-bit EL0
+-	ventry	el0_irq				// IRQ 64-bit EL0
+-	ventry	el0_fiq_invalid			// FIQ 64-bit EL0
+-	ventry	el0_error_invalid		// Error 64-bit EL0
++	kernel_ventry	el0_sync			// Synchronous 64-bit EL0
++	kernel_ventry	el0_irq				// IRQ 64-bit EL0
++	kernel_ventry	el0_fiq_invalid			// FIQ 64-bit EL0
++	kernel_ventry	el0_error_invalid		// Error 64-bit EL0
+ 
+ #ifdef CONFIG_COMPAT
+-	ventry	el0_sync_compat			// Synchronous 32-bit EL0
+-	ventry	el0_irq_compat			// IRQ 32-bit EL0
+-	ventry	el0_fiq_invalid_compat		// FIQ 32-bit EL0
+-	ventry	el0_error_invalid_compat	// Error 32-bit EL0
++	kernel_ventry	el0_sync_compat			// Synchronous 32-bit EL0
++	kernel_ventry	el0_irq_compat			// IRQ 32-bit EL0
++	kernel_ventry	el0_fiq_invalid_compat		// FIQ 32-bit EL0
++	kernel_ventry	el0_error_invalid_compat	// Error 32-bit EL0
+ #else
+-	ventry	el0_sync_invalid		// Synchronous 32-bit EL0
+-	ventry	el0_irq_invalid			// IRQ 32-bit EL0
+-	ventry	el0_fiq_invalid			// FIQ 32-bit EL0
+-	ventry	el0_error_invalid		// Error 32-bit EL0
++	kernel_ventry	el0_sync_invalid		// Synchronous 32-bit EL0
++	kernel_ventry	el0_irq_invalid			// IRQ 32-bit EL0
++	kernel_ventry	el0_fiq_invalid			// FIQ 32-bit EL0
++	kernel_ventry	el0_error_invalid		// Error 32-bit EL0
+ #endif
+ END(vectors)
  
 -- 
 1.9.1
