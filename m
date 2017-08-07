@@ -1,26 +1,71 @@
-From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Message-ID: <b1ddb305-bffd-0bbe-e38d-8213bbb1f9ee@embeddedor.com>
-Date: Sun, 6 Aug 2017 23:22:06 -0500
+Date: Mon, 7 Aug 2017 09:31:07 -0400
+From: Jerome Glisse <jglisse@redhat.com>
+Message-ID: <20170807133107.GA16616@redhat.com>
+References: <8e82639c-40db-02ce-096a-d114b0436d3c@huawei.com>
+ <20170803114844.GO12521@dhcp22.suse.cz>
+ <c3a250a6-ad4d-d24d-d0bf-4c43c467ebe6@huawei.com>
+ <20170803135549.GW12521@dhcp22.suse.cz>
+ <20170803144746.GA9501@redhat.com>
+ <ab4809cd-0efc-a79d-6852-4bd2349a2b3f@huawei.com>
+ <20170803151550.GX12521@dhcp22.suse.cz>
+ <abe0c086-8c5a-d6fb-63c4-bf75528d0ec5@huawei.com>
+ <20170804081240.GF26029@dhcp22.suse.cz>
+ <7733852a-67c9-17a3-4031-cb08520b9ad2@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] I want to help out
-To: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <7733852a-67c9-17a3-4031-cb08520b9ad2@huawei.com>
+Subject: [kernel-hardening] Re: [RFC] Tagging of vmalloc pages for supporting the pmalloc
+ allocator
+To: Igor Stoppa <igor.stoppa@huawei.com>
+Cc: Michal Hocko <mhocko@kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello everybody,
+On Mon, Aug 07, 2017 at 02:26:21PM +0300, Igor Stoppa wrote:
+> On 04/08/17 11:12, Michal Hocko wrote:
+> > On Fri 04-08-17 11:02:46, Igor Stoppa wrote:
+> 
+> [...]
+> 
+> >> struct page {
+> >>   /* First double word block */
+> >>   unsigned long flags;		/* Atomic flags, some possibly
+> >> 				 * updated asynchronously */
+> >> union {
+> >> 	struct address_space *mapping;	/* If low bit clear, points to
+> >> 					 * inode address_space, or NULL.
+> >> 					 * If page mapped as anonymous
+> >> 					 * memory, low bit is set, and
+> >> 					 * it points to anon_vma object:
+> >> 					 * see PAGE_MAPPING_ANON below.
+> >> 					 */
+> >> ...
+> >> }
+> >>
+> >> mapping seems to be used exclusively in 2 ways, based on the value of
+> >> its lower bit.
+> > 
+> > Not really. The above applies to LRU pages. Please note that Slab pages
+> > use s_mem and huge pages use compound_mapcount. If vmalloc pages are
+> > using none of those already you can add a new field there.
+> 
+> Yes, both from reading the code and some experimentation, it seems that
+> vmalloc is not using either field.
+> 
+> I'll add a vm_area field as you advised.
+> 
+> Is this something I could send as standalone patch?
 
-I'm new in the mailing list.
+Note that vmalloc() is not the only thing that use vmalloc address
+space. There is also vmap() and i know one set of drivers that use
+vmap() and also use the mapping field of struct page namely GPU
+drivers.
 
-I've been working on kernel hardening activities during the last three 
-months 
-https://github.com/GustavoARSilva/linux-hardening/blob/master/cii/2017/reports/mayjunjul_detailed
+So like i said previously i would store a flag inside vm_struct to
+know if page you are looking at are pmalloc or not. Again do you
+need to store something per page ? Would storing it per vm_struct
+not be enough ?
 
-I'd be more than happy to dedicate time and help out with any coding 
-activities you may need help with. In particular related to x86 and ARM 
-architectures (that's the hardware I have at hand).
-
-Thank you
--- 
-Gustavo A. R. Silva
-@embeddedgus
+Cheers,
+Jérôme
