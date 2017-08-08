@@ -1,87 +1,53 @@
-References: <c3a250a6-ad4d-d24d-d0bf-4c43c467ebe6@huawei.com>
- <20170803135549.GW12521@dhcp22.suse.cz> <20170803144746.GA9501@redhat.com>
- <ab4809cd-0efc-a79d-6852-4bd2349a2b3f@huawei.com>
- <20170803151550.GX12521@dhcp22.suse.cz>
- <abe0c086-8c5a-d6fb-63c4-bf75528d0ec5@huawei.com>
- <20170804081240.GF26029@dhcp22.suse.cz>
- <7733852a-67c9-17a3-4031-cb08520b9ad2@huawei.com>
- <20170807133107.GA16616@redhat.com>
- <555dc453-3028-199a-881a-3ddeb41e4d6d@huawei.com>
- <20170807191235.GE16616@redhat.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <c06fdd1a-fb18-8e17-b4fb-ea73ccd93f90@huawei.com>
-Date: Tue, 8 Aug 2017 15:59:36 +0300
 MIME-Version: 1.0
-In-Reply-To: <20170807191235.GE16616@redhat.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC] Tagging of vmalloc pages for supporting the pmalloc
- allocator
-To: Jerome Glisse <jglisse@redhat.com>
-Cc: Michal Hocko <mhocko@kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@google.com>
+In-Reply-To: <20170807175533.GA20805@n2100.armlinux.org.uk>
+References: <20170726170051.28328-1-thgarnie@google.com> <20170726170051.28328-2-thgarnie@google.com>
+ <CAGXu5jLbJuokv+B_Nn8uRDVadi05ywJM7FSgpOr+maO2pQrd0w@mail.gmail.com>
+ <CAJcbSZHfoHNPv3tk11iCj49UkLGU-QdeyMj2BS60wng5z5L4pg@mail.gmail.com> <20170807175533.GA20805@n2100.armlinux.org.uk>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Tue, 8 Aug 2017 09:06:13 -0700
+Message-ID: <CAJcbSZHkWXeLwBj+HOzmEhZCqgyawytgn8PMseTvtb-he5nq6Q@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v2 2/3] arm/syscalls: Optimize address limit check
+To: Russell King - ARM Linux <linux@armlinux.org.uk>
+Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, Dave Martin <Dave.Martin@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Pratyush Anand <panand@redhat.com>, Chris Metcalf <cmetcalf@mellanox.com>, Leonard Crestez <leonard.crestez@nxp.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 07/08/17 22:12, Jerome Glisse wrote:
-> On Mon, Aug 07, 2017 at 05:13:00PM +0300, Igor Stoppa wrote:
+On Mon, Aug 7, 2017 at 10:55 AM, Russell King - ARM Linux
+<linux@armlinux.org.uk> wrote:
+>
+> It's better in so far as it avoids the problems previously highlighted.
+>
+> However, it depends how efficient we want these paths to be - the
+> difference between your assembly and the assembly I've previously
+> supplied is that mine fills in any delay slots with some useful work
+> and avoids adding extra delay slots in this path.
 
-[...]
+The previous assembly implementation we did was design as you
+described but all checks were done after the pending work was managed.
+I would like the address limit check to be done before, especially if
+we move from panic to a SIGKILL approach.
 
->> I have an updated version of the old proposal:
->>
->> * put a magic number in the private field, during initialization of
->> pmalloc pages
->>
->> * during hardened usercopy verification, when I have to assess if a page
->> is of pmalloc type, compare the private field against the magic number
->>
->> * if and only if the private field matches the magic number, then invoke
->> find_vm_area(), so that the slowness affects only a possibly limited
->> amount of false positives.
-> 
-> This all sounds good to me.
+>
+> Arguably, the system call exit path is as important as the system
+> call entry path for OS performance, so I think we should strive to
+> make it as efficient as possible - much as I already did when I
+> posted code on this topic previously.
 
-ok, I still have one doubt wrt defining the flag.
-Where should I do it?
+How do you think it could improve while keeping the check before pending work?
 
-vmalloc.h has the following:
+>
+> I think that code can simply be adapted to call your C function
+> instead of the assembly "addr_limit_fail" label.
 
-/* bits in flags of vmalloc's vm_struct below */
-#define VM_IOREMAP		0x00000001	/* ioremap() and friends
-						*/
-#define VM_ALLOC		0x00000002	/* vmalloc() */
-#define VM_MAP			0x00000004	/* vmap()ed pages */
-#define VM_USERMAP		0x00000008	/* suitable for
-						   remap_vmalloc_range
-						*/
-#define VM_UNINITIALIZED	0x00000020	/* vm_struct is not
-						   fully initialized */
-#define VM_NO_GUARD		0x00000040      /* don't add guard page
-						*/
-#define VM_KASAN		0x00000080      /* has allocated kasan
-						shadow memory */
-/* bits [20..32] reserved for arch specific ioremap internals */
+I don't use the label anymore on this version.
+
+>
+> --
+> RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+> FTTC broadband for 0.8mile line in suburbia: sync at 8.8Mbps down 630kbps up
+> According to speedtest.net: 8.21Mbps down 510kbps up
 
 
 
-I am tempted to add
-
-#define VM_PMALLOC		0x00000100
-
-But would it be acceptable, to mention pmalloc into vmalloc?
-
-Should I name it VM_PRIVATE bit, instead?
-
-Using VM_PRIVATE would avoid contaminating vmalloc with something that
-depends on it (like VM_PMALLOC would do).
-
-But using VM_PRIVATE will likely add tracking issues, if someone else
-wants to use the same bit and it's not clear who is the user, if any.
-
-Unless it's acceptable to check the private field in the page struct.
-It would bear the pmalloc magic number.
-
-I'm thinking to use a pointer to one of pmalloc data items, as signature.
-
-
---
-igor
+-- 
+Thomas
