@@ -1,184 +1,87 @@
-From: Matt Redfearn <matt.redfearn@imgtec.com>
-Date: Tue, 8 Aug 2017 13:23:42 +0100
-Message-ID: <1502195022-18161-1-git-send-email-matt.redfearn@imgtec.com>
+References: <c3a250a6-ad4d-d24d-d0bf-4c43c467ebe6@huawei.com>
+ <20170803135549.GW12521@dhcp22.suse.cz> <20170803144746.GA9501@redhat.com>
+ <ab4809cd-0efc-a79d-6852-4bd2349a2b3f@huawei.com>
+ <20170803151550.GX12521@dhcp22.suse.cz>
+ <abe0c086-8c5a-d6fb-63c4-bf75528d0ec5@huawei.com>
+ <20170804081240.GF26029@dhcp22.suse.cz>
+ <7733852a-67c9-17a3-4031-cb08520b9ad2@huawei.com>
+ <20170807133107.GA16616@redhat.com>
+ <555dc453-3028-199a-881a-3ddeb41e4d6d@huawei.com>
+ <20170807191235.GE16616@redhat.com>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <c06fdd1a-fb18-8e17-b4fb-ea73ccd93f90@huawei.com>
+Date: Tue, 8 Aug 2017 15:59:36 +0300
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] [PATCH] MIPS: usercopy: Implement stack frame object validation
-To: Ralf Baechle <ralf@linux-mips.org>
-Cc: linux-mips@linux-mips.org, kernel-hardening@lists.openwall.com, Matt Redfearn <matt.redfearn@imgtec.com>, linux-kernel@vger.kernel.org, James Hogan <james.hogan@imgtec.com>, Paul Burton <paul.burton@imgtec.com>
+In-Reply-To: <20170807191235.GE16616@redhat.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC] Tagging of vmalloc pages for supporting the pmalloc
+ allocator
+To: Jerome Glisse <jglisse@redhat.com>
+Cc: Michal Hocko <mhocko@kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This implements arch_within_stack_frames() for MIPS that validates if an
-object is wholly contained by a kernel stack frame.
+On 07/08/17 22:12, Jerome Glisse wrote:
+> On Mon, Aug 07, 2017 at 05:13:00PM +0300, Igor Stoppa wrote:
 
-With CONFIG_HARDENED_USERCOPY enabled, MIPS now passes the LKDTM tests
-USERCOPY_STACK_FRAME_TO, USERCOPY_STACK_FRAME_FROM and
-USERCOPY_STACK_BEYOND on a Creator Ci40.
+[...]
 
-Since the MIPS kernel does not use frame pointers, we re-use the MIPS
-kernels stack frame unwinder which uses instruction inspection to deduce
-the stack frame size. As such it introduces a larger performance penalty
-than on arches which use the frame pointer.
+>> I have an updated version of the old proposal:
+>>
+>> * put a magic number in the private field, during initialization of
+>> pmalloc pages
+>>
+>> * during hardened usercopy verification, when I have to assess if a page
+>> is of pmalloc type, compare the private field against the magic number
+>>
+>> * if and only if the private field matches the magic number, then invoke
+>> find_vm_area(), so that the slowness affects only a possibly limited
+>> amount of false positives.
+> 
+> This all sounds good to me.
 
-On qemu, before this patch, hackbench gives:
-Running with 10*40 (== 400) tasks.
-Time: 5.484
-Running with 10*40 (== 400) tasks.
-Time: 4.039
-Running with 10*40 (== 400) tasks.
-Time: 3.908
-Running with 10*40 (== 400) tasks.
-Time: 3.955
-Running with 10*40 (== 400) tasks.
-Time: 4.185
-Running with 10*40 (== 400) tasks.
-Time: 4.497
-Running with 10*40 (== 400) tasks.
-Time: 3.980
-Running with 10*40 (== 400) tasks.
-Time: 4.078
-Running with 10*40 (== 400) tasks.
-Time: 4.219
-Running with 10*40 (== 400) tasks.
-Time: 4.026
+ok, I still have one doubt wrt defining the flag.
+Where should I do it?
 
-Giving an average of 4.2371
+vmalloc.h has the following:
 
-With this patch, hackbench gives:
-Running with 10*40 (== 400) tasks.
-Time: 5.671
-Running with 10*40 (== 400) tasks.
-Time: 4.282
-Running with 10*40 (== 400) tasks.
-Time: 4.101
-Running with 10*40 (== 400) tasks.
-Time: 4.040
-Running with 10*40 (== 400) tasks.
-Time: 4.683
-Running with 10*40 (== 400) tasks.
-Time: 4.387
-Running with 10*40 (== 400) tasks.
-Time: 4.289
-Running with 10*40 (== 400) tasks.
-Time: 4.027
-Running with 10*40 (== 400) tasks.
-Time: 4.048
-Running with 10*40 (== 400) tasks.
-Time: 4.079
+/* bits in flags of vmalloc's vm_struct below */
+#define VM_IOREMAP		0x00000001	/* ioremap() and friends
+						*/
+#define VM_ALLOC		0x00000002	/* vmalloc() */
+#define VM_MAP			0x00000004	/* vmap()ed pages */
+#define VM_USERMAP		0x00000008	/* suitable for
+						   remap_vmalloc_range
+						*/
+#define VM_UNINITIALIZED	0x00000020	/* vm_struct is not
+						   fully initialized */
+#define VM_NO_GUARD		0x00000040      /* don't add guard page
+						*/
+#define VM_KASAN		0x00000080      /* has allocated kasan
+						shadow memory */
+/* bits [20..32] reserved for arch specific ioremap internals */
 
-Giving an average of 4.3607
 
-This indicates an additional 3% overhead for inspecting the kernel stack
-when CONFIG_HARDENED_USERCOPY is enabled.
 
-This patch is based on Linux v4.13-rc4, and for correct operation on
-microMIPS depends on my series "MIPS: Further microMIPS stack unwinding
-fixes"
+I am tempted to add
 
-Signed-off-by: Matt Redfearn <matt.redfearn@imgtec.com>
-Reviewed-by: James Hogan <james.hogan@imgtec.com>
----
+#define VM_PMALLOC		0x00000100
 
- arch/mips/Kconfig                   |  1 +
- arch/mips/include/asm/thread_info.h | 74 +++++++++++++++++++++++++++++++++++++
- 2 files changed, 75 insertions(+)
+But would it be acceptable, to mention pmalloc into vmalloc?
 
-diff --git a/arch/mips/Kconfig b/arch/mips/Kconfig
-index 8dd20358464f..6cbf2d525c8d 100644
---- a/arch/mips/Kconfig
-+++ b/arch/mips/Kconfig
-@@ -35,6 +35,7 @@ config MIPS
- 	select HAVE_ARCH_SECCOMP_FILTER
- 	select HAVE_ARCH_TRACEHOOK
- 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE if CPU_SUPPORTS_HUGEPAGES && 64BIT
-+	select HAVE_ARCH_WITHIN_STACK_FRAMES if KALLSYMS
- 	select HAVE_CBPF_JIT if (!64BIT && !CPU_MICROMIPS)
- 	select HAVE_EBPF_JIT if (64BIT && !CPU_MICROMIPS)
- 	select HAVE_CC_STACKPROTECTOR
-diff --git a/arch/mips/include/asm/thread_info.h b/arch/mips/include/asm/thread_info.h
-index b439e512792b..931652460393 100644
---- a/arch/mips/include/asm/thread_info.h
-+++ b/arch/mips/include/asm/thread_info.h
-@@ -14,6 +14,80 @@
- 
- #include <asm/processor.h>
- 
-+#ifdef CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES
-+
-+/*
-+ * Walks up the stack frames to make sure that the specified object is
-+ * entirely contained by a single stack frame.
-+ *
-+ * Returns:
-+ *	GOOD_FRAME	if within a frame
-+ *	BAD_STACK	if placed across a frame boundary (or outside stack)
-+ *	NOT_STACK	unable to determine
-+ */
-+static inline int arch_within_stack_frames(const void *const stack,
-+					   const void *const stackend,
-+					   const void *obj, unsigned long len)
-+{
-+	/* Avoid header recursion by just declaring this here */
-+	extern unsigned long unwind_stack_by_address(
-+						unsigned long stack_page,
-+						unsigned long *sp,
-+						unsigned long pc,
-+						unsigned long *ra);
-+	unsigned long sp, lastsp, ra, pc;
-+	int skip_frames;
-+
-+	/* Get this frame's details */
-+	sp = (unsigned long)__builtin_frame_address(0);
-+	pc = (unsigned long)current_text_addr();
-+
-+	/*
-+	 * Skip initial frames to get back the function requesting the copy.
-+	 * Unwind the frames of:
-+	 *   arch_within_stack_frames (inlined into check_stack_object)
-+	 *   __check_object_size
-+	 * This leaves sp & pc in the frame associated with
-+	 *   copy_{to,from}_user() (inlined into do_usercopy_stack)
-+	 */
-+	for (skip_frames = 0; skip_frames < 2; skip_frames++) {
-+		pc = unwind_stack_by_address((unsigned long)stack, &sp, pc, &ra);
-+		if (!pc)
-+			return BAD_STACK;
-+	}
-+
-+	if ((unsigned long)obj < sp) {
-+		/* obj is not in the frame of the requestor or it's callers */
-+		return BAD_STACK;
-+	}
-+
-+	/*
-+	 * low ---------------------------------------> high
-+	 * [local vars][saved regs][ra][local vars']
-+	 * ^                           ^
-+	 * lastsp                      sp
-+	 * ^----------------------^
-+	 *  allow copies only within here
-+	 */
-+	do {
-+		lastsp = sp;
-+		pc = unwind_stack_by_address((unsigned long)stack, &sp, pc, &ra);
-+		if ((((unsigned long)obj) >= lastsp) &&
-+		    (((unsigned long)obj + len) <= (sp - sizeof(void *)))) {
-+			/* obj is entirely within this stack frame */
-+			return GOOD_FRAME;
-+		}
-+	} while (pc);
-+
-+	/*
-+	 * We can't unwind any further. If we haven't found the object entirely
-+	 * within one of our callers frames, it must be a bad object.
-+	 */
-+	return BAD_STACK;
-+}
-+
-+#endif /* CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES */
-+
- /*
-  * low level task data that entry.S needs immediate access to
-  * - this struct should fit entirely inside of one cache line
--- 
-2.7.4
+Should I name it VM_PRIVATE bit, instead?
+
+Using VM_PRIVATE would avoid contaminating vmalloc with something that
+depends on it (like VM_PMALLOC would do).
+
+But using VM_PRIVATE will likely add tracking issues, if someone else
+wants to use the same bit and it's not clear who is the user, if any.
+
+Unless it's acceptable to check the private field in the page struct.
+It would bear the pmalloc magic number.
+
+I'm thinking to use a pointer to one of pmalloc data items, as signature.
+
+
+--
+igor
