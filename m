@@ -1,39 +1,45 @@
-Date: Tue, 8 Aug 2017 18:28:41 +0200
-From: Helge Deller <deller@gmx.de>
-Message-ID: <20170808162841.GA8668@p100.box>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] random: fix warning message on ia64 and parisc
-To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, linux-kernel@vger.kernel.org, linux-parisc@vger.kernel.org, torvalds@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-ia64@vger.kernel.org
+Sender: keescook@google.com
+In-Reply-To: <20170808003345.GA107289@beast>
+References: <20170808003345.GA107289@beast>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 8 Aug 2017 10:59:49 -0700
+Message-ID: <CAGXu5jLruATwoSODWrj8oFX67OFaSTCygDXW0t2Ht7EX-M=bog@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC][PATCH] timer: Add function-change canary
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, John Stultz <john.stultz@linaro.org>, Stephen Boyd <sboyd@codeaurora.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Fix the warning message on the parisc and IA64 architectures to show the
-correct function name of the caller by using %pS instead of %pF. The
-message is printed with the value of _RET_IP_ which calls
-__builtin_return_address(0) and as such returns the IP address caller
-instead of pointer to a function descriptor of the caller.
+On Mon, Aug 7, 2017 at 5:33 PM, Kees Cook <keescook@chromium.org> wrote:
+> This introduces canaries to struct timer_list in an effort to protect the
+> function callback pointer from getting rewritten during stack or heap
+> overflow attacks. The struct timer_list has become a recent target for
+> security flaw exploitation because it includes the "data" argument in
+> the structure, along with the function callback. This provides attackers
+> with a ROP-like primitive for performing limited kernel function calls
+> without needing all the prerequisites to stage a ROP attack.
+>
+> Recent examples of exploits using struct timer_list attacks:
+>
+> http://www.openwall.com/lists/oss-security/2016/12/06/1
+> (https://www.exploit-db.com/exploits/40871/)
+>
+> https://googleprojectzero.blogspot.com/2017/05/exploiting-linux-kernel-via-packet.html
+> (https://www.exploit-db.com/exploits/41458/)
+>
+> Timers normally have their callback functions initialized either via
+> the setup_timer_*() macros or manually before calls to add_timer(). The
+> per-timer canary gets set in either case, and then checked at timer
+> expiration time before calling the function.
 
-The effect of this patch is visible on the parisc and ia64 architectures
-only since those are the ones which use function descriptors while on
-all others %pS and %pF will behave the same.
+Har har, I missed DEFINE_TIMER() which is rather widely used. :P
 
-Cc: Theodore Ts'o <tytso@mit.edu>
-Cc: Jason A. Donenfeld <Jason@zx2c4.com>
-Signed-off-by: Helge Deller <deller@gmx.de>
-Fixes: eecabf567422 ("random: suppress spammy warnings about unseeded randomness")
-Fixes: d06bfd1989fe ("random: warn when kernel uses unseeded randomness")
+I'll send a v2, though the canary may end up being a bit weaker to
+deal with static initializers.
 
-diff --git a/drivers/char/random.c b/drivers/char/random.c
-index afa3ce7..8ad9270 100644
---- a/drivers/char/random.c
-+++ b/drivers/char/random.c
-@@ -1492,7 +1492,7 @@ static void _warn_unseeded_randomness(const char *func_name, void *caller,
- #ifndef CONFIG_WARN_ALL_UNSEEDED_RANDOM
- 	print_once = true;
- #endif
--	pr_notice("random: %s called from %pF with crng_init=%d\n",
-+	pr_notice("random: %s called from %pS with crng_init=%d\n",
- 		  func_name, caller, crng_init);
- }
- 
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
