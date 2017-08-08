@@ -1,58 +1,184 @@
-Date: Tue, 8 Aug 2017 10:23:48 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170808092348.GA19207@leverpostej>
-References: <20170807203948.GA22298@beast>
- <20170807220056.GA29059@remoulade>
- <0e9a80c2-3e5e-db98-dff6-b45e9e4817fd@redhat.com>
+From: Matt Redfearn <matt.redfearn@imgtec.com>
+Date: Tue, 8 Aug 2017 13:23:42 +0100
+Message-ID: <1502195022-18161-1-git-send-email-matt.redfearn@imgtec.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <0e9a80c2-3e5e-db98-dff6-b45e9e4817fd@redhat.com>
-Subject: [kernel-hardening] Re: [PATCH] lkdtm: Test VMAP_STACK allocates leading/trailing guard
- pages
-To: Laura Abbott <labbott@redhat.com>
-Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, ard.biesheuvel@linaro.org, catalin.marinas@arm.com, james.morse@arm.com, luto@amacapital.net, matt@codeblueprint.co.uk, will.deacon@arm.com, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org
+Content-Type: text/plain
+Subject: [kernel-hardening] [PATCH] MIPS: usercopy: Implement stack frame object validation
+To: Ralf Baechle <ralf@linux-mips.org>
+Cc: linux-mips@linux-mips.org, kernel-hardening@lists.openwall.com, Matt Redfearn <matt.redfearn@imgtec.com>, linux-kernel@vger.kernel.org, James Hogan <james.hogan@imgtec.com>, Paul Burton <paul.burton@imgtec.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 07, 2017 at 03:55:22PM -0700, Laura Abbott wrote:
-> On 08/07/2017 03:00 PM, Mark Rutland wrote:
-> > On Mon, Aug 07, 2017 at 01:39:48PM -0700, Kees Cook wrote:
+This implements arch_within_stack_frames() for MIPS that validates if an
+object is wholly contained by a kernel stack frame.
 
-> >> Do these tests both trip with the new arm64 VMAP_STACK code?
-> > 
-> >> +/* Test that VMAP_STACK is actually allocating with a leading guard page */
-> >> +void lkdtm_STACK_GUARD_PAGE_LEADING(void)
+With CONFIG_HARDENED_USERCOPY enabled, MIPS now passes the LKDTM tests
+USERCOPY_STACK_FRAME_TO, USERCOPY_STACK_FRAME_FROM and
+USERCOPY_STACK_BEYOND on a Creator Ci40.
 
-> >> +/* Test that VMAP_STACK is actually allocating with a trailing guard page */
-> >> +void lkdtm_STACK_GUARD_PAGE_TRAILING(void)
+Since the MIPS kernel does not use frame pointers, we re-use the MIPS
+kernels stack frame unwinder which uses instruction inspection to deduce
+the stack frame size. As such it introduces a larger performance penalty
+than on arches which use the frame pointer.
 
-> > I can give these a go tomorrow.
-> > 
-> > These *should* fault, and IIUC should trigger the usual "Unable to handle
-> > kernel %s at virtual address %08lx\n" splat from arm64's __do_kernel_fault(),
-> > which should end up with an Oops().
+On qemu, before this patch, hackbench gives:
+Running with 10*40 (== 400) tasks.
+Time: 5.484
+Running with 10*40 (== 400) tasks.
+Time: 4.039
+Running with 10*40 (== 400) tasks.
+Time: 3.908
+Running with 10*40 (== 400) tasks.
+Time: 3.955
+Running with 10*40 (== 400) tasks.
+Time: 4.185
+Running with 10*40 (== 400) tasks.
+Time: 4.497
+Running with 10*40 (== 400) tasks.
+Time: 3.980
+Running with 10*40 (== 400) tasks.
+Time: 4.078
+Running with 10*40 (== 400) tasks.
+Time: 4.219
+Running with 10*40 (== 400) tasks.
+Time: 4.026
 
-> I gave these a quick test in QEMU and they seem to do the correct thing:
+Giving an average of 4.2371
 
-> # echo STACK_GUARD_PAGE_LEADING > /sys/kernel/debug/provoke-crash/DIRECT 
-> [   24.593306] lkdtm: Performing direct entry STACK_GUARD_PAGE_LEADING
-> [   24.593780] lkdtm: attempting bad read from page below current stack
-> [   24.594289] Unable to handle kernel paging request at virtual address ffff000009b77fff
-> [   24.594747] swapper pgtable: 4k pages, 48-bit VAs, pgd = ffff000009050000
-> [   24.595443] [ffff000009b77fff] *pgd=000000007effe003, *pud=000000007effd003, *pmd=000000007cc43003, *pte=0000000000000000
-> [   24.596743] Internal error: Oops: 96000007 [#1] PREEMPT SMP
+With this patch, hackbench gives:
+Running with 10*40 (== 400) tasks.
+Time: 5.671
+Running with 10*40 (== 400) tasks.
+Time: 4.282
+Running with 10*40 (== 400) tasks.
+Time: 4.101
+Running with 10*40 (== 400) tasks.
+Time: 4.040
+Running with 10*40 (== 400) tasks.
+Time: 4.683
+Running with 10*40 (== 400) tasks.
+Time: 4.387
+Running with 10*40 (== 400) tasks.
+Time: 4.289
+Running with 10*40 (== 400) tasks.
+Time: 4.027
+Running with 10*40 (== 400) tasks.
+Time: 4.048
+Running with 10*40 (== 400) tasks.
+Time: 4.079
 
-> # echo STACK_GUARD_PAGE_TRAILING > /sys/kernel/debug/provoke-crash/DIRECT 
-> [  103.144313] lkdtm: Performing direct entry STACK_GUARD_PAGE_TRAILING
-> [  103.144749] lkdtm: attempting bad read from page above current stack
-> [  103.145100] Unable to handle kernel paging request at virtual address ffff000009c2c000
-> [  103.145477] swapper pgtable: 4k pages, 48-bit VAs, pgd = ffff000009050000
-> [  103.145836] [ffff000009c2c000] *pgd=000000007effe003, *pud=000000007effd003, *pmd=000000007d014003, *pte=0000000000000000
-> [  103.146445] Internal error: Oops: 96000007 [#2] PREEMPT SMP
+Giving an average of 4.3607
 
-Great! thanks for giving those a spin.
+This indicates an additional 3% overhead for inspecting the kernel stack
+when CONFIG_HARDENED_USERCOPY is enabled.
 
-I can confirm likewise on Juno with 64K pages (not that this should make
-any difference).
+This patch is based on Linux v4.13-rc4, and for correct operation on
+microMIPS depends on my series "MIPS: Further microMIPS stack unwinding
+fixes"
 
-Mark.
+Signed-off-by: Matt Redfearn <matt.redfearn@imgtec.com>
+Reviewed-by: James Hogan <james.hogan@imgtec.com>
+---
+
+ arch/mips/Kconfig                   |  1 +
+ arch/mips/include/asm/thread_info.h | 74 +++++++++++++++++++++++++++++++++++++
+ 2 files changed, 75 insertions(+)
+
+diff --git a/arch/mips/Kconfig b/arch/mips/Kconfig
+index 8dd20358464f..6cbf2d525c8d 100644
+--- a/arch/mips/Kconfig
++++ b/arch/mips/Kconfig
+@@ -35,6 +35,7 @@ config MIPS
+ 	select HAVE_ARCH_SECCOMP_FILTER
+ 	select HAVE_ARCH_TRACEHOOK
+ 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE if CPU_SUPPORTS_HUGEPAGES && 64BIT
++	select HAVE_ARCH_WITHIN_STACK_FRAMES if KALLSYMS
+ 	select HAVE_CBPF_JIT if (!64BIT && !CPU_MICROMIPS)
+ 	select HAVE_EBPF_JIT if (64BIT && !CPU_MICROMIPS)
+ 	select HAVE_CC_STACKPROTECTOR
+diff --git a/arch/mips/include/asm/thread_info.h b/arch/mips/include/asm/thread_info.h
+index b439e512792b..931652460393 100644
+--- a/arch/mips/include/asm/thread_info.h
++++ b/arch/mips/include/asm/thread_info.h
+@@ -14,6 +14,80 @@
+ 
+ #include <asm/processor.h>
+ 
++#ifdef CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES
++
++/*
++ * Walks up the stack frames to make sure that the specified object is
++ * entirely contained by a single stack frame.
++ *
++ * Returns:
++ *	GOOD_FRAME	if within a frame
++ *	BAD_STACK	if placed across a frame boundary (or outside stack)
++ *	NOT_STACK	unable to determine
++ */
++static inline int arch_within_stack_frames(const void *const stack,
++					   const void *const stackend,
++					   const void *obj, unsigned long len)
++{
++	/* Avoid header recursion by just declaring this here */
++	extern unsigned long unwind_stack_by_address(
++						unsigned long stack_page,
++						unsigned long *sp,
++						unsigned long pc,
++						unsigned long *ra);
++	unsigned long sp, lastsp, ra, pc;
++	int skip_frames;
++
++	/* Get this frame's details */
++	sp = (unsigned long)__builtin_frame_address(0);
++	pc = (unsigned long)current_text_addr();
++
++	/*
++	 * Skip initial frames to get back the function requesting the copy.
++	 * Unwind the frames of:
++	 *   arch_within_stack_frames (inlined into check_stack_object)
++	 *   __check_object_size
++	 * This leaves sp & pc in the frame associated with
++	 *   copy_{to,from}_user() (inlined into do_usercopy_stack)
++	 */
++	for (skip_frames = 0; skip_frames < 2; skip_frames++) {
++		pc = unwind_stack_by_address((unsigned long)stack, &sp, pc, &ra);
++		if (!pc)
++			return BAD_STACK;
++	}
++
++	if ((unsigned long)obj < sp) {
++		/* obj is not in the frame of the requestor or it's callers */
++		return BAD_STACK;
++	}
++
++	/*
++	 * low ---------------------------------------> high
++	 * [local vars][saved regs][ra][local vars']
++	 * ^                           ^
++	 * lastsp                      sp
++	 * ^----------------------^
++	 *  allow copies only within here
++	 */
++	do {
++		lastsp = sp;
++		pc = unwind_stack_by_address((unsigned long)stack, &sp, pc, &ra);
++		if ((((unsigned long)obj) >= lastsp) &&
++		    (((unsigned long)obj + len) <= (sp - sizeof(void *)))) {
++			/* obj is entirely within this stack frame */
++			return GOOD_FRAME;
++		}
++	} while (pc);
++
++	/*
++	 * We can't unwind any further. If we haven't found the object entirely
++	 * within one of our callers frames, it must be a bad object.
++	 */
++	return BAD_STACK;
++}
++
++#endif /* CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES */
++
+ /*
+  * low level task data that entry.S needs immediate access to
+  * - this struct should fit entirely inside of one cache line
+-- 
+2.7.4
