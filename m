@@ -1,112 +1,223 @@
 From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 10 Aug 2017 10:26:12 -0700
-Message-Id: <20170810172615.51965-21-thgarnie@google.com>
+Date: Thu, 10 Aug 2017 10:26:13 -0700
+Message-Id: <20170810172615.51965-22-thgarnie@google.com>
 In-Reply-To: <20170810172615.51965-1-thgarnie@google.com>
 References: <20170810172615.51965-1-thgarnie@google.com>
-Subject: [kernel-hardening] [RFC v2 20/23] x86/pie: Add option to build the kernel as PIE for x86_64
+Subject: [kernel-hardening] [RFC v2 21/23] x86/relocs: Add option to generate 64-bit relocations
 To: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Garnier <thgarnie@google.com>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>
 Cc: x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, xen-devel@lists.xenproject.org, kvm@vger.kernel.org, linux-pm@vger.kernel.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add the CONFIG_X86_PIE option which builds the kernel as a Position
-Independent Executable (PIE). The kernel is currently build with the
-mcmodel=kernel option which forces it to stay on the top 2G of the
-virtual address space. With PIE, the kernel will be able to move below
-the -2G limit increasing the KASLR range from 1GB to 3GB.
+The x86 relocation tool generates a list of 32-bit signed integers. There
+was no need to use 64-bit integers because all addresses where above the 2G
+top of the memory.
 
-The modules do not support PIE due to how they are linked. Disable PIE
-for them and default to mcmodel=kernel for now.
-
-The PIE configuration is not yet compatible with XEN_PVH. Xen PVH
-generates 32-bit assembly and uses a long jump to transition to 64-bit.
-A long jump require an absolute reference that is not compatible with
-PIE.
-
-Performance/Size impact:
-
-Hackbench (50% and 1600% loads):
- - PIE disabled: no significant change (-0.50% / +0.50%)
- - PIE enabled: 7% to 8% on half load, 10% on heavy load.
-
-These results are aligned with the different research on user-mode PIE
-impact on cpu intensive benchmarks (around 10% on x86_64).
-
-slab_test (average of 10 runs):
- - PIE disabled: no significant change (-1% / +1%)
- - PIE enabled: 3% to 4%
-
-Kernbench (average of 10 Half and Optimal runs):
- Elapsed Time:
- - PIE disabled: no significant change (-0.22% / +0.06%)
- - PIE enabled: around 0.50%
- System Time:
- - PIE disabled: no significant change (-0.99% / -1.28%)
- - PIE enabled: 5% to 6%
-
-Size of vmlinux (Ubuntu configuration):
- File size:
- - PIE disabled: 472928672 bytes (-0.000169% from baseline)
- - PIE enabled: 216878461 bytes (-54.14% from baseline)
- .text sections:
- - PIE disabled: 9373572 bytes (+0.04% from baseline)
- - PIE enabled: 9499138 bytes (+1.38% from baseline)
-
-The big decrease in vmlinux file size is due to the lower number of
-relocations appended to the file.
+This change add a large-reloc option to generate 64-bit unsigned integers.
+It can be used when the kernel plan to go below the top 2G and 32-bit
+integers are not enough.
 
 Signed-off-by: Thomas Garnier <thgarnie@google.com>
 ---
- arch/x86/Kconfig  | 7 +++++++
- arch/x86/Makefile | 9 +++++++++
- 2 files changed, 16 insertions(+)
+ arch/x86/tools/relocs.c        | 60 +++++++++++++++++++++++++++++++++---------
+ arch/x86/tools/relocs.h        |  4 +--
+ arch/x86/tools/relocs_common.c | 15 +++++++----
+ 3 files changed, 60 insertions(+), 19 deletions(-)
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 2632fa8e8945..a419f4110872 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -2132,6 +2132,13 @@ config X86_GLOBAL_STACKPROTECTOR
- 	bool
- 	depends on CC_STACKPROTECTOR
+diff --git a/arch/x86/tools/relocs.c b/arch/x86/tools/relocs.c
+index 70f523dd68ff..19b3e6c594b1 100644
+--- a/arch/x86/tools/relocs.c
++++ b/arch/x86/tools/relocs.c
+@@ -12,8 +12,14 @@
  
-+config X86_PIE
-+	bool
-+	depends on X86_64 && !XEN_PVH
-+	select DEFAULT_HIDDEN
-+	select MODULE_REL_CRCS if MODVERSIONS
-+	select X86_GLOBAL_STACKPROTECTOR if CC_STACKPROTECTOR
+ static Elf_Ehdr ehdr;
+ 
++#if ELF_BITS == 64
++typedef uint64_t rel_off_t;
++#else
++typedef uint32_t rel_off_t;
++#endif
 +
- config HOTPLUG_CPU
- 	bool "Support for hot-pluggable CPUs"
- 	depends on SMP
-diff --git a/arch/x86/Makefile b/arch/x86/Makefile
-index 66af2704f096..05e01588b5af 100644
---- a/arch/x86/Makefile
-+++ b/arch/x86/Makefile
-@@ -45,8 +45,12 @@ export REALMODE_CFLAGS
- export BITS
+ struct relocs {
+-	uint32_t	*offset;
++	rel_off_t	*offset;
+ 	unsigned long	count;
+ 	unsigned long	size;
+ };
+@@ -627,7 +633,7 @@ static void print_absolute_relocs(void)
+ 		printf("\n");
+ }
  
- ifdef CONFIG_X86_NEED_RELOCS
-+ifdef CONFIG_X86_PIE
-+        LDFLAGS_vmlinux := -pie -shared -Bsymbolic
-+else
-         LDFLAGS_vmlinux := --emit-relocs
- endif
-+endif
+-static void add_reloc(struct relocs *r, uint32_t offset)
++static void add_reloc(struct relocs *r, rel_off_t offset)
+ {
+ 	if (r->count == r->size) {
+ 		unsigned long newsize = r->size + 50000;
+@@ -983,26 +989,48 @@ static void sort_relocs(struct relocs *r)
+ 	qsort(r->offset, r->count, sizeof(r->offset[0]), cmp_relocs);
+ }
  
- #
- # Prevent GCC from generating any FP code by mistake.
-@@ -141,7 +145,12 @@ else
-         KBUILD_CFLAGS += $(cflags-y)
+-static int write32(uint32_t v, FILE *f)
++static int write32(rel_off_t rel, FILE *f)
+ {
+-	unsigned char buf[4];
++	unsigned char buf[sizeof(uint32_t)];
++	uint32_t v = (uint32_t)rel;
  
-         KBUILD_CFLAGS += -mno-red-zone
-+ifdef CONFIG_X86_PIE
-+        KBUILD_CFLAGS += -fPIC
-+        KBUILD_CFLAGS_MODULE += -fno-PIC -mcmodel=kernel
-+else
-         KBUILD_CFLAGS += -mcmodel=kernel
-+endif
+ 	put_unaligned_le32(v, buf);
+-	return fwrite(buf, 1, 4, f) == 4 ? 0 : -1;
++	return fwrite(buf, 1, sizeof(buf), f) == sizeof(buf) ? 0 : -1;
+ }
  
-         # -funit-at-a-time shrinks the kernel .text considerably
-         # unfortunately it makes reading oopses harder.
+-static int write32_as_text(uint32_t v, FILE *f)
++static int write32_as_text(rel_off_t rel, FILE *f)
+ {
++	uint32_t v = (uint32_t)rel;
+ 	return fprintf(f, "\t.long 0x%08"PRIx32"\n", v) > 0 ? 0 : -1;
+ }
+ 
+-static void emit_relocs(int as_text, int use_real_mode)
++static int write64(rel_off_t rel, FILE *f)
++{
++	unsigned char buf[sizeof(uint64_t)];
++	uint64_t v = (uint64_t)rel;
++
++	put_unaligned_le64(v, buf);
++	return fwrite(buf, 1, sizeof(buf), f) == sizeof(buf) ? 0 : -1;
++}
++
++static int write64_as_text(rel_off_t rel, FILE *f)
++{
++	uint64_t v = (uint64_t)rel;
++	return fprintf(f, "\t.quad 0x%016"PRIx64"\n", v) > 0 ? 0 : -1;
++}
++
++static void emit_relocs(int as_text, int use_real_mode, int use_large_reloc)
+ {
+ 	int i;
+-	int (*write_reloc)(uint32_t, FILE *) = write32;
++	int (*write_reloc)(rel_off_t, FILE *);
+ 	int (*do_reloc)(struct section *sec, Elf_Rel *rel, Elf_Sym *sym,
+ 			const char *symname);
+ 
++	if (use_large_reloc)
++		write_reloc = write64;
++	else
++		write_reloc = write32;
++
+ #if ELF_BITS == 64
+ 	if (!use_real_mode)
+ 		do_reloc = do_reloc64;
+@@ -1013,6 +1041,9 @@ static void emit_relocs(int as_text, int use_real_mode)
+ 		do_reloc = do_reloc32;
+ 	else
+ 		do_reloc = do_reloc_real;
++
++	/* Large relocations only for 64-bit */
++	use_large_reloc = 0;
+ #endif
+ 
+ 	/* Collect up the relocations */
+@@ -1036,8 +1067,13 @@ static void emit_relocs(int as_text, int use_real_mode)
+ 		 * gas will like.
+ 		 */
+ 		printf(".section \".data.reloc\",\"a\"\n");
+-		printf(".balign 4\n");
+-		write_reloc = write32_as_text;
++		if (use_large_reloc) {
++			printf(".balign 8\n");
++			write_reloc = write64_as_text;
++		} else {
++			printf(".balign 4\n");
++			write_reloc = write32_as_text;
++		}
+ 	}
+ 
+ 	if (use_real_mode) {
+@@ -1131,7 +1167,7 @@ static void print_reloc_info(void)
+ 
+ void process(FILE *fp, int use_real_mode, int as_text,
+ 	     int show_absolute_syms, int show_absolute_relocs,
+-	     int show_reloc_info)
++	     int show_reloc_info, int use_large_reloc)
+ {
+ 	regex_init(use_real_mode);
+ 	read_ehdr(fp);
+@@ -1153,5 +1189,5 @@ void process(FILE *fp, int use_real_mode, int as_text,
+ 		print_reloc_info();
+ 		return;
+ 	}
+-	emit_relocs(as_text, use_real_mode);
++	emit_relocs(as_text, use_real_mode, use_large_reloc);
+ }
+diff --git a/arch/x86/tools/relocs.h b/arch/x86/tools/relocs.h
+index 1d23bf953a4a..cb771cc4412d 100644
+--- a/arch/x86/tools/relocs.h
++++ b/arch/x86/tools/relocs.h
+@@ -30,8 +30,8 @@ enum symtype {
+ 
+ void process_32(FILE *fp, int use_real_mode, int as_text,
+ 		int show_absolute_syms, int show_absolute_relocs,
+-		int show_reloc_info);
++		int show_reloc_info, int use_large_reloc);
+ void process_64(FILE *fp, int use_real_mode, int as_text,
+ 		int show_absolute_syms, int show_absolute_relocs,
+-		int show_reloc_info);
++		int show_reloc_info, int use_large_reloc);
+ #endif /* RELOCS_H */
+diff --git a/arch/x86/tools/relocs_common.c b/arch/x86/tools/relocs_common.c
+index acab636bcb34..9cf1391af50a 100644
+--- a/arch/x86/tools/relocs_common.c
++++ b/arch/x86/tools/relocs_common.c
+@@ -11,14 +11,14 @@ void die(char *fmt, ...)
+ 
+ static void usage(void)
+ {
+-	die("relocs [--abs-syms|--abs-relocs|--reloc-info|--text|--realmode]" \
+-	    " vmlinux\n");
++	die("relocs [--abs-syms|--abs-relocs|--reloc-info|--text|--realmode|" \
++	    "--large-reloc]  vmlinux\n");
+ }
+ 
+ int main(int argc, char **argv)
+ {
+ 	int show_absolute_syms, show_absolute_relocs, show_reloc_info;
+-	int as_text, use_real_mode;
++	int as_text, use_real_mode, use_large_reloc;
+ 	const char *fname;
+ 	FILE *fp;
+ 	int i;
+@@ -29,6 +29,7 @@ int main(int argc, char **argv)
+ 	show_reloc_info = 0;
+ 	as_text = 0;
+ 	use_real_mode = 0;
++	use_large_reloc = 0;
+ 	fname = NULL;
+ 	for (i = 1; i < argc; i++) {
+ 		char *arg = argv[i];
+@@ -53,6 +54,10 @@ int main(int argc, char **argv)
+ 				use_real_mode = 1;
+ 				continue;
+ 			}
++			if (strcmp(arg, "--large-reloc") == 0) {
++				use_large_reloc = 1;
++				continue;
++			}
+ 		}
+ 		else if (!fname) {
+ 			fname = arg;
+@@ -74,11 +79,11 @@ int main(int argc, char **argv)
+ 	if (e_ident[EI_CLASS] == ELFCLASS64)
+ 		process_64(fp, use_real_mode, as_text,
+ 			   show_absolute_syms, show_absolute_relocs,
+-			   show_reloc_info);
++			   show_reloc_info, use_large_reloc);
+ 	else
+ 		process_32(fp, use_real_mode, as_text,
+ 			   show_absolute_syms, show_absolute_relocs,
+-			   show_reloc_info);
++			   show_reloc_info, use_large_reloc);
+ 	fclose(fp);
+ 	return 0;
+ }
 -- 
 2.14.0.434.g98096fd7a8-goog
