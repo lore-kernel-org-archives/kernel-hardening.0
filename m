@@ -1,215 +1,88 @@
-References: <1502195022-18161-1-git-send-email-matt.redfearn@imgtec.com>
- <CAGXu5j+nF5sAO=NMLq2Oh2aHJRxGVED93oCH0GK28yU0SXQ=MA@mail.gmail.com>
-From: Matt Redfearn <matt.redfearn@imgtec.com>
-Message-ID: <28ab1c38-f8a7-3fca-7a5a-e44248bec69f@imgtec.com>
-Date: Thu, 10 Aug 2017 09:24:38 +0100
+Sender: Konrad Rzeszutek Wilk <konrad.r.wilk@gmail.com>
+Date: Thu, 10 Aug 2017 09:01:06 -0400
+From: Konrad Rzeszutek Wilk <konrad@darnok.org>
+Message-ID: <20170810130104.GB2413@localhost.localdomain>
+References: <20170809200755.11234-1-tycho@docker.com>
+ <20170809200755.11234-4-tycho@docker.com>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+nF5sAO=NMLq2Oh2aHJRxGVED93oCH0GK28yU0SXQ=MA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] MIPS: usercopy: Implement stack frame object validation
-To: Kees Cook <keescook@chromium.org>
-Cc: Ralf Baechle <ralf@linux-mips.org>, Linux MIPS Mailing List <linux-mips@linux-mips.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, James Hogan <james.hogan@imgtec.com>, Paul Burton <paul.burton@imgtec.com>, Josh Poimboeuf <jpoimboe@redhat.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170809200755.11234-4-tycho@docker.com>
+Subject: [kernel-hardening] Re: [PATCH v5 03/10] swiotlb: Map the buffer if it was unmapped by
+ XPFO
+To: Tycho Andersen <tycho@docker.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Juerg Haefliger <juerg.haefliger@hpe.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
+On Wed, Aug 09, 2017 at 02:07:48PM -0600, Tycho Andersen wrote:
+> From: Juerg Haefliger <juerg.haefliger@hpe.com>
+> 
+> Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
+> Tested-by: Tycho Andersen <tycho@docker.com>
+> ---
+>  include/linux/xpfo.h | 4 ++++
+>  lib/swiotlb.c        | 3 ++-
+>  mm/xpfo.c            | 9 +++++++++
+>  3 files changed, 15 insertions(+), 1 deletion(-)
+> 
+> diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
+> index 1ff2d1976837..6b61f7b820f4 100644
+> --- a/include/linux/xpfo.h
+> +++ b/include/linux/xpfo.h
+> @@ -27,6 +27,8 @@ void xpfo_kunmap(void *kaddr, struct page *page);
+>  void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp);
+>  void xpfo_free_pages(struct page *page, int order);
+>  
+> +bool xpfo_page_is_unmapped(struct page *page);
+> +
+>  #else /* !CONFIG_XPFO */
+>  
+>  static inline void xpfo_kmap(void *kaddr, struct page *page) { }
+> @@ -34,6 +36,8 @@ static inline void xpfo_kunmap(void *kaddr, struct page *page) { }
+>  static inline void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp) { }
+>  static inline void xpfo_free_pages(struct page *page, int order) { }
+>  
+> +static inline bool xpfo_page_is_unmapped(struct page *page) { return false; }
+> +
+>  #endif /* CONFIG_XPFO */
+>  
+>  #endif /* _LINUX_XPFO_H */
+> diff --git a/lib/swiotlb.c b/lib/swiotlb.c
+> index a8d74a733a38..d4fee5ca2d9e 100644
+> --- a/lib/swiotlb.c
+> +++ b/lib/swiotlb.c
+> @@ -420,8 +420,9 @@ static void swiotlb_bounce(phys_addr_t orig_addr, phys_addr_t tlb_addr,
+>  {
+>  	unsigned long pfn = PFN_DOWN(orig_addr);
+>  	unsigned char *vaddr = phys_to_virt(tlb_addr);
+> +	struct page *page = pfn_to_page(pfn);
+>  
+> -	if (PageHighMem(pfn_to_page(pfn))) {
+> +	if (PageHighMem(page) || xpfo_page_is_unmapped(page)) {
+>  		/* The buffer does not have a mapping.  Map it in and copy */
+>  		unsigned int offset = orig_addr & ~PAGE_MASK;
+>  		char *buffer;
+> diff --git a/mm/xpfo.c b/mm/xpfo.c
+> index 3cd45f68b5ad..3f305f31a072 100644
+> --- a/mm/xpfo.c
+> +++ b/mm/xpfo.c
+> @@ -206,3 +206,12 @@ void xpfo_kunmap(void *kaddr, struct page *page)
+>  	spin_unlock_irqrestore(&xpfo->maplock, flags);
+>  }
+>  EXPORT_SYMBOL(xpfo_kunmap);
+> +
+> +inline bool xpfo_page_is_unmapped(struct page *page)
+> +{
+> +	if (!static_branch_unlikely(&xpfo_inited))
+> +		return false;
+> +
+> +	return test_bit(XPFO_PAGE_UNMAPPED, &lookup_xpfo(page)->flags);
+> +}
+> +EXPORT_SYMBOL(xpfo_page_is_unmapped);
 
+How can it be inline and 'EXPORT_SYMBOL' ? And why make it inline? It
+surely does not need to be access that often?
 
-On 08/08/17 20:11, Kees Cook wrote:
-> On Tue, Aug 8, 2017 at 5:23 AM, Matt Redfearn <matt.redfearn@imgtec.com> wrote:
->> This implements arch_within_stack_frames() for MIPS that validates if an
->> object is wholly contained by a kernel stack frame.
->>
->> With CONFIG_HARDENED_USERCOPY enabled, MIPS now passes the LKDTM tests
->> USERCOPY_STACK_FRAME_TO, USERCOPY_STACK_FRAME_FROM and
->> USERCOPY_STACK_BEYOND on a Creator Ci40.
->>
->> Since the MIPS kernel does not use frame pointers, we re-use the MIPS
->> kernels stack frame unwinder which uses instruction inspection to deduce
->> the stack frame size. As such it introduces a larger performance penalty
->> than on arches which use the frame pointer.
-> Hmm, given x86's plans to drop the frame pointer, I wonder if the
-> inter-frame checking code should be gated by a CONFIG. This (3%) is a
-> rather high performance hit to take for a relatively small protection
-> (it's mainly about catching too-large-reads, since most
-> too-large-writes will be caught by the stack canary).
->
-> What do you think?
-
-If x86 is going to move to a more expensive stack unwinding method than 
-the frame pointer then I guess it may end up seeing a similar 
-performance hit to what we see on MIPS. In that case it might make sense 
-to add a CONFIG for this such that only those who wish to make the trade 
-off of performance for the added protection need enable it.
-
-Thanks,
-Matt
-
->
-> -Kees
->
->> On qemu, before this patch, hackbench gives:
->> Running with 10*40 (== 400) tasks.
->> Time: 5.484
->> Running with 10*40 (== 400) tasks.
->> Time: 4.039
->> Running with 10*40 (== 400) tasks.
->> Time: 3.908
->> Running with 10*40 (== 400) tasks.
->> Time: 3.955
->> Running with 10*40 (== 400) tasks.
->> Time: 4.185
->> Running with 10*40 (== 400) tasks.
->> Time: 4.497
->> Running with 10*40 (== 400) tasks.
->> Time: 3.980
->> Running with 10*40 (== 400) tasks.
->> Time: 4.078
->> Running with 10*40 (== 400) tasks.
->> Time: 4.219
->> Running with 10*40 (== 400) tasks.
->> Time: 4.026
->>
->> Giving an average of 4.2371
->>
->> With this patch, hackbench gives:
->> Running with 10*40 (== 400) tasks.
->> Time: 5.671
->> Running with 10*40 (== 400) tasks.
->> Time: 4.282
->> Running with 10*40 (== 400) tasks.
->> Time: 4.101
->> Running with 10*40 (== 400) tasks.
->> Time: 4.040
->> Running with 10*40 (== 400) tasks.
->> Time: 4.683
->> Running with 10*40 (== 400) tasks.
->> Time: 4.387
->> Running with 10*40 (== 400) tasks.
->> Time: 4.289
->> Running with 10*40 (== 400) tasks.
->> Time: 4.027
->> Running with 10*40 (== 400) tasks.
->> Time: 4.048
->> Running with 10*40 (== 400) tasks.
->> Time: 4.079
->>
->> Giving an average of 4.3607
->>
->> This indicates an additional 3% overhead for inspecting the kernel stack
->> when CONFIG_HARDENED_USERCOPY is enabled.
->>
->> This patch is based on Linux v4.13-rc4, and for correct operation on
->> microMIPS depends on my series "MIPS: Further microMIPS stack unwinding
->> fixes"
->>
->> Signed-off-by: Matt Redfearn <matt.redfearn@imgtec.com>
->> Reviewed-by: James Hogan <james.hogan@imgtec.com>
->> ---
->>
->>   arch/mips/Kconfig                   |  1 +
->>   arch/mips/include/asm/thread_info.h | 74 +++++++++++++++++++++++++++++++++++++
->>   2 files changed, 75 insertions(+)
->>
->> diff --git a/arch/mips/Kconfig b/arch/mips/Kconfig
->> index 8dd20358464f..6cbf2d525c8d 100644
->> --- a/arch/mips/Kconfig
->> +++ b/arch/mips/Kconfig
->> @@ -35,6 +35,7 @@ config MIPS
->>          select HAVE_ARCH_SECCOMP_FILTER
->>          select HAVE_ARCH_TRACEHOOK
->>          select HAVE_ARCH_TRANSPARENT_HUGEPAGE if CPU_SUPPORTS_HUGEPAGES && 64BIT
->> +       select HAVE_ARCH_WITHIN_STACK_FRAMES if KALLSYMS
->>          select HAVE_CBPF_JIT if (!64BIT && !CPU_MICROMIPS)
->>          select HAVE_EBPF_JIT if (64BIT && !CPU_MICROMIPS)
->>          select HAVE_CC_STACKPROTECTOR
->> diff --git a/arch/mips/include/asm/thread_info.h b/arch/mips/include/asm/thread_info.h
->> index b439e512792b..931652460393 100644
->> --- a/arch/mips/include/asm/thread_info.h
->> +++ b/arch/mips/include/asm/thread_info.h
->> @@ -14,6 +14,80 @@
->>
->>   #include <asm/processor.h>
->>
->> +#ifdef CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES
->> +
->> +/*
->> + * Walks up the stack frames to make sure that the specified object is
->> + * entirely contained by a single stack frame.
->> + *
->> + * Returns:
->> + *     GOOD_FRAME      if within a frame
->> + *     BAD_STACK       if placed across a frame boundary (or outside stack)
->> + *     NOT_STACK       unable to determine
->> + */
->> +static inline int arch_within_stack_frames(const void *const stack,
->> +                                          const void *const stackend,
->> +                                          const void *obj, unsigned long len)
->> +{
->> +       /* Avoid header recursion by just declaring this here */
->> +       extern unsigned long unwind_stack_by_address(
->> +                                               unsigned long stack_page,
->> +                                               unsigned long *sp,
->> +                                               unsigned long pc,
->> +                                               unsigned long *ra);
->> +       unsigned long sp, lastsp, ra, pc;
->> +       int skip_frames;
->> +
->> +       /* Get this frame's details */
->> +       sp = (unsigned long)__builtin_frame_address(0);
->> +       pc = (unsigned long)current_text_addr();
->> +
->> +       /*
->> +        * Skip initial frames to get back the function requesting the copy.
->> +        * Unwind the frames of:
->> +        *   arch_within_stack_frames (inlined into check_stack_object)
->> +        *   __check_object_size
->> +        * This leaves sp & pc in the frame associated with
->> +        *   copy_{to,from}_user() (inlined into do_usercopy_stack)
->> +        */
->> +       for (skip_frames = 0; skip_frames < 2; skip_frames++) {
->> +               pc = unwind_stack_by_address((unsigned long)stack, &sp, pc, &ra);
->> +               if (!pc)
->> +                       return BAD_STACK;
->> +       }
->> +
->> +       if ((unsigned long)obj < sp) {
->> +               /* obj is not in the frame of the requestor or it's callers */
->> +               return BAD_STACK;
->> +       }
->> +
->> +       /*
->> +        * low ---------------------------------------> high
->> +        * [local vars][saved regs][ra][local vars']
->> +        * ^                           ^
->> +        * lastsp                      sp
->> +        * ^----------------------^
->> +        *  allow copies only within here
->> +        */
->> +       do {
->> +               lastsp = sp;
->> +               pc = unwind_stack_by_address((unsigned long)stack, &sp, pc, &ra);
->> +               if ((((unsigned long)obj) >= lastsp) &&
->> +                   (((unsigned long)obj + len) <= (sp - sizeof(void *)))) {
->> +                       /* obj is entirely within this stack frame */
->> +                       return GOOD_FRAME;
->> +               }
->> +       } while (pc);
->> +
->> +       /*
->> +        * We can't unwind any further. If we haven't found the object entirely
->> +        * within one of our callers frames, it must be a bad object.
->> +        */
->> +       return BAD_STACK;
->> +}
->> +
->> +#endif /* CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES */
->> +
->>   /*
->>    * low level task data that entry.S needs immediate access to
->>    * - this struct should fit entirely inside of one cache line
->> --
->> 2.7.4
->>
->
->
+> -- 
+> 2.11.0
+> 
