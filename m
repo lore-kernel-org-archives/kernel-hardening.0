@@ -1,67 +1,21 @@
-References: <20170809200755.11234-1-tycho@docker.com>
- <20170809200755.11234-7-tycho@docker.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <f6a42032-d4e5-f488-3d55-1da4c8a4dbaf@redhat.com>
-Date: Fri, 11 Aug 2017 10:25:14 -0700
+Date: Fri, 11 Aug 2017 12:26:19 -0500 (CDT)
+From: Christopher Lameter <cl@linux.com>
+In-Reply-To: <1502468246-1262-1-git-send-email-alex.popov@linux.com>
+Message-ID: <alpine.DEB.2.20.1708111225560.3131@nuc-kabylake>
+References: <1502468246-1262-1-git-send-email-alex.popov@linux.com>
 MIME-Version: 1.0
-In-Reply-To: <20170809200755.11234-7-tycho@docker.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH v5 06/10] arm64/mm: Disable section
- mappings if XPFO is enabled
-To: Tycho Andersen <tycho@docker.com>, linux-kernel@vger.kernel.org
-Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Juerg Haefliger <juerg.haefliger@hpe.com>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [linux-next][PATCH v2] mm/slub.c: add a naive detection of double
+ free or corruption
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Paul E McKenney <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Tejun Heo <tj@kernel.org>, Andy Lutomirski <luto@kernel.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, linux-mm@kvack.org, Rik van Riel <riel@redhat.com>, Tycho Andersen <tycho@docker.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 08/09/2017 01:07 PM, Tycho Andersen wrote:
-> From: Juerg Haefliger <juerg.haefliger@hpe.com>
-> 
-> XPFO (eXclusive Page Frame Ownership) doesn't support section mappings
-> yet, so disable it if XPFO is turned on.
-> 
-> Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
-> Tested-by: Tycho Andersen <tycho@docker.com>
-> ---
->  arch/arm64/mm/mmu.c | 14 +++++++++++++-
->  1 file changed, 13 insertions(+), 1 deletion(-)
-> 
-> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-> index f1eb15e0e864..38026b3ccb46 100644
-> --- a/arch/arm64/mm/mmu.c
-> +++ b/arch/arm64/mm/mmu.c
-> @@ -176,6 +176,18 @@ static void alloc_init_cont_pte(pmd_t *pmd, unsigned long addr,
->  	} while (addr = next, addr != end);
->  }
->  
-> +static inline bool use_section_mapping(unsigned long addr, unsigned long next,
-> +				unsigned long phys)
-> +{
-> +	if (IS_ENABLED(CONFIG_XPFO))
-> +		return false;
-> +
-> +	if (((addr | next | phys) & ~SECTION_MASK) != 0)
-> +		return false;
-> +
-> +	return true;
-> +}
-> +
->  static void init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
->  		     phys_addr_t phys, pgprot_t prot,
->  		     phys_addr_t (*pgtable_alloc)(void), int flags)
-> @@ -190,7 +202,7 @@ static void init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
->  		next = pmd_addr_end(addr, end);
->  
->  		/* try section mapping first */
-> -		if (((addr | next | phys) & ~SECTION_MASK) == 0 &&
-> +		if (use_section_mapping(addr, next, phys) &&
->  		    (flags & NO_BLOCK_MAPPINGS) == 0) {
->  			pmd_set_huge(pmd, phys, prot);
->  
-> 
+On Fri, 11 Aug 2017, Alexander Popov wrote:
 
-There is already similar logic to disable section mappings for
-debug_pagealloc at the start of map_mem, can you take advantage
-of that?
+> Add an assertion similar to "fasttop" check in GNU C Library allocator
+> as a part of SLAB_FREELIST_HARDENED feature. An object added to a singly
+> linked freelist should not point to itself. That helps to detect some
+> double free errors (e.g. CVE-2017-2636) without slub_debug and KASAN.
 
-Thanks,
-Laura
+Acked-by: Christoph Lameter <cl@linux.com>
