@@ -1,84 +1,67 @@
-Date: Mon, 14 Aug 2017 14:37:51 -0400 (EDT)
-From: Nicolas Pitre <nicolas.pitre@linaro.org>
-In-Reply-To: <CAKv+Gu-k4vUHDz92dsy-d15aBh61-pcGDi3GbX9pmBCbY21SsQ@mail.gmail.com>
-Message-ID: <alpine.LFD.2.20.1708141434240.17016@knanqh.ubzr>
-References: <20170814125411.22604-1-ard.biesheuvel@linaro.org> <20170814125411.22604-21-ard.biesheuvel@linaro.org> <alpine.LFD.2.20.1708141158070.17016@knanqh.ubzr> <CAKv+Gu-k4vUHDz92dsy-d15aBh61-pcGDi3GbX9pmBCbY21SsQ@mail.gmail.com>
+References: <20170809200755.11234-1-tycho@docker.com>
+ <20170809200755.11234-7-tycho@docker.com>
+ <f6a42032-d4e5-f488-3d55-1da4c8a4dbaf@redhat.com>
+ <20170811211302.limmjv4rmq23b25b@smitten> <20170812111733.GA16374@remoulade>
+ <20170814162219.h2lcmli677bx2lwh@smitten>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <86105819-3ec6-e220-5ba3-787bbeecb6ba@redhat.com>
+Date: Mon, 14 Aug 2017 11:42:45 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH 20/30] ARM: kernel: use PC relative symbol references in
- suspend/resume code
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Arnd Bergmann <arnd@arndb.de>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
+In-Reply-To: <20170814162219.h2lcmli677bx2lwh@smitten>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] [PATCH v5 06/10] arm64/mm: Disable section
+ mappings if XPFO is enabled
+To: Tycho Andersen <tycho@docker.com>, Mark Rutland <mark.rutland@arm.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 14 Aug 2017, Ard Biesheuvel wrote:
-
-> On 14 August 2017 at 17:02, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
-> > On Mon, 14 Aug 2017, Ard Biesheuvel wrote:
-> >
-> >> Replace some unnecessary absolute references with relative ones. Also,
-> >> to prepare for runtime relocation, which occurs with the caches on,
-> >> defer taking the absolute address of cpu_resume_after_mmu() until after
-> >> the MMU is enabled.
-> >>
-> >> Cc: Russell King <linux@armlinux.org.uk>
-> >> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> >> ---
-> >>  arch/arm/kernel/sleep.S | 11 +++++------
-> >>  1 file changed, 5 insertions(+), 6 deletions(-)
-> >>
-> >> diff --git a/arch/arm/kernel/sleep.S b/arch/arm/kernel/sleep.S
-> >> index 3026b119d3ff..9efd1c7d3552 100644
-> >> --- a/arch/arm/kernel/sleep.S
-> >> +++ b/arch/arm/kernel/sleep.S
-> >> @@ -60,18 +60,17 @@
-> >>  ENTRY(__cpu_suspend)
-> >>       stmfd   sp!, {r4 - r11, lr}
-> >>  #ifdef MULTI_CPU
-> >> -     ldr     r10, =processor
-> >> -     ldr     r4, [r10, #CPU_SLEEP_SIZE] @ size of CPU sleep state
-> >> +     ldr_l   r4, processor + CPU_SLEEP_SIZE  @ size of CPU sleep state
-> >>  #else
-> >> -     ldr     r4, =cpu_suspend_size
-> >> +     adr_l   r4, cpu_suspend_size
-> >>  #endif
-> >>       mov     r5, sp                  @ current virtual SP
-> >>       add     r4, r4, #12             @ Space for pgd, virt sp, phys resume fn
-> >>       sub     sp, sp, r4              @ allocate CPU state on stack
-> >> -     ldr     r3, =sleep_save_sp
-> >> +     adr_l   r3, sleep_save_sp
-> >>       stmfd   sp!, {r0, r1}           @ save suspend func arg and pointer
-> >>       ldr     r3, [r3, #SLEEP_SAVE_SP_VIRT]
-> >> -     ALT_SMP(ldr r0, =mpidr_hash)
-> >> +     ALT_SMP(adr_l r0, mpidr_hash)
-> >>       ALT_UP_B(1f)
-> >
-> > The above is dangerous. adr_l expands to more than one instruction which
-> > is not what ALT_SMP() was designed for. Here it might happen to work
-> > anyway because it is combined with ALT_UP_B() but with ALT_UP() it
-> > wouldn't. This is a mistake waiting to happen.
-> >
+On 08/14/2017 09:22 AM, Tycho Andersen wrote:
+> On Sat, Aug 12, 2017 at 12:17:34PM +0100, Mark Rutland wrote:
+>> Hi,
+>>
+>> On Fri, Aug 11, 2017 at 03:13:02PM -0600, Tycho Andersen wrote:
+>>> On Fri, Aug 11, 2017 at 10:25:14AM -0700, Laura Abbott wrote:
+>>>> On 08/09/2017 01:07 PM, Tycho Andersen wrote:
+>>>>> @@ -190,7 +202,7 @@ static void init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
+>>>>>  		next = pmd_addr_end(addr, end);
+>>>>>  
+>>>>>  		/* try section mapping first */
+>>>>> -		if (((addr | next | phys) & ~SECTION_MASK) == 0 &&
+>>>>> +		if (use_section_mapping(addr, next, phys) &&
+>>>>>  		    (flags & NO_BLOCK_MAPPINGS) == 0) {
+>>>>>  			pmd_set_huge(pmd, phys, prot);
+>>>>>  
+>>>>>
+>>>>
+>>>> There is already similar logic to disable section mappings for
+>>>> debug_pagealloc at the start of map_mem, can you take advantage
+>>>> of that?
+>>>
+>>> You're suggesting something like this instead? Seems to work fine.
+>>>
+>>> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+>>> index 38026b3ccb46..3b2c17bbbf12 100644
+>>> --- a/arch/arm64/mm/mmu.c
+>>> +++ b/arch/arm64/mm/mmu.c
+>>> @@ -434,6 +434,8 @@ static void __init map_mem(pgd_t *pgd)
+>>>  
+>>>  	if (debug_pagealloc_enabled())
+>>>  		flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
+>>> +	if (IS_ENABLED(CONFIG_XPFO))
+>>> +		flags |= NO_BLOCK_MAPPINGS;
+>>>  
+>>
+>> IIUC, XPFO carves out individual pages just like DEBUG_PAGEALLOC, so you'll
+>> also need NO_CONT_MAPPINGS.
 > 
-> OK. I will use the opencoded sequence instead in this case. I.e.,
+> Yes, thanks!
 > 
-> -       ALT_SMP(ldr r0, =mpidr_hash)
-> +0:     ALT_SMP(adr r0, 2f)
->         ALT_UP_B(1f)
-> +       ldr     r1, [r0]
-> +       add     r0, r0, r1
-> 
-> and
-> 
->  ENDPROC(__cpu_suspend)
-> +       .align  2
-> +2:     .long   mpidr_hash - .
->         .ltorg
+> Tycho
 > 
 
-Yeah... I see no way around it.
+Setting NO_CONT_MAPPINGS fixes the TLB conflict aborts I was seeing
+on my machine.
 
-And if you make this particular case into a commit of its own, then the 
-commit log may carry the above reasoning.
-
-
-Nicolas
+Thanks,
+Laura
