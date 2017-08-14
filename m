@@ -1,148 +1,127 @@
-References: <2feb9661-9236-cdaf-a371-2fea80372aff@huawei.com>
- <CAGXu5jJwCx=LhvJGgNxD9Wu1NCTBb=yn0MQW05GSdocvqZf2Gg@mail.gmail.com>
- <0eb1d2c0-79ae-b2c9-4802-9104ec3db8ee@huawei.com>
- <5d2fd950-98ec-440d-bed2-3f3f60c4c4f6@suse.de>
- <CAGXu5jJXLD4n2pGYfc0mkyrCLcBXZGAk8sMX6QsWOUH_jV0jTA@mail.gmail.com>
-From: Joao Moreira <jmoreira@suse.de>
-Message-ID: <167bfe00-6a19-9c15-8e8b-e5f39f6667b8@suse.de>
-Date: Mon, 14 Aug 2017 14:44:46 -0300
+Date: Mon, 14 Aug 2017 14:01:32 -0400 (EDT)
+From: Nicolas Pitre <nicolas.pitre@linaro.org>
+In-Reply-To: <CAKv+Gu_he5AFct0MzNcbZT-ynp_NRSkRpmNTpbfk1BuUS9+aGw@mail.gmail.com>
+Message-ID: <alpine.LFD.2.20.1708141333540.17016@knanqh.ubzr>
+References: <20170814125411.22604-1-ard.biesheuvel@linaro.org> <CAK8P3a1zJPsHphvoOitQbTaY-7rzFndGKatM2=aeUphkG+3T_A@mail.gmail.com> <CAKv+Gu_-O5ZW=SzXe=0nRExfYWjyMWoJ3eObaZiiftPVNojibw@mail.gmail.com> <CAK8P3a1rV5yXm0CSZOx0ZVUiLENe=gBtn-9XUdHQmC2mPRwXOA@mail.gmail.com>
+ <alpine.LFD.2.20.1708141220540.17016@knanqh.ubzr> <CAKv+Gu_he5AFct0MzNcbZT-ynp_NRSkRpmNTpbfk1BuUS9+aGw@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jJXLD4n2pGYfc0mkyrCLcBXZGAk8sMX6QsWOUH_jV0jTA@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening][RFD] Is there any plan to port the RAP feature
- from PAX/Grsecurity to main line ?
-To: Kees Cook <keescook@chromium.org>
-Cc: Li Kun <hw.likun@huawei.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH 00/30] implement KASLR for ARM
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Arnd Bergmann <arnd@arndb.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux ARM <linux-arm-kernel@lists.infradead.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Mon, 14 Aug 2017, Ard Biesheuvel wrote:
+
+> On 14 August 2017 at 17:28, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+> > On Mon, 14 Aug 2017, Arnd Bergmann wrote:
+> >
+> >> On Mon, Aug 14, 2017 at 5:49 PM, Ard Biesheuvel
+> >> <ard.biesheuvel@linaro.org> wrote:
+> >> > On 14 August 2017 at 16:30, Arnd Bergmann <arnd@arndb.de> wrote:
+> >>
+> >>
+> >> >> Can you explain how the random seed is passed from the bootloader
+> >> >> to the kernel when we don't use EFI? Is this implemented at all? I see
+> >> >> that you add a seed to "/chosen/kaslr-seed" in the EFI stub when using
+> >> >> the EFI boot services, but I don't see where that value gets read again
+> >> >> when we relocate the kernel.
+> >>
+> >> > To allow other bootloaders to do the same, the kaslr metadata is
+> >> > exposed via a zImage header, containing the values of PAGE_OFFSET, the
+> >> > base of the vmalloc area and the randomization granularity. A
+> >> > bootloader can read these values, and taking the size of DRAM and the
+> >> > placement of initrd and DTB into account, it can choose a value for
+> >> > kaslr offset and write it back into the zImage header.
+> >> >
+> >> > This is a bit involved, but it is really difficult to make these
+> >> > things backward compatible, i.e., passing something in a register is
+> >> > not possible if that register was not mandated to be zero initially.
+> >> >
+> >> > Similarly, the decompressor passed the kaslr offset to the startup
+> >> > code in the core kernel. It does so by passing it in r3 and jumping 4
+> >> > bytes past the entry point. This way, we are backward compatible with
+> >> > configurations where the decompressor is not used, because in that
+> >> > case, you always jump to the first instruction, which zeroes r3.
+> >>
+> >> There are two ideas we discussed in the past (but never implemented
+> >> them obviously):
+> >>
+> >> - instead of reading the "kaslr-seed" in the decompressor, it could
+> >>   simply hash all of the DT blob to get the seed. This way the bootloader
+> >>   can put the random see anywhere it likes, and as an added bonus,
+> >>   we also get a little bit more random behavior on machines that have
+> >>   no entropy source at all but that do have things like a serial number or
+> >>   mac address in DT. Obviously those would be constant across boots
+> >>   but different between machines. The OS can also store a random
+> >>   seed during shutdown in a location that the bootloader uses to
+> >>   initialize /chosen/kaslr-seed or another property that we use to seed
+> >>   the kernel PRNG at boot time.
+> >>
+> >> - If we have a random number at boot but no way to pass it through
+> >>   the DT, I think we actually /can/ pass it through registers: the
+> >>   register state is undefined, so in the worst case using the XOR of
+> >>   all registers gives us the same number on each boot, but the
+> >>   if the loader is modified to store a random 32-bit number in any
+> >>   of the registers that don't pass other information, we can use that
+> >>   to calculate the kaslr-base.
+> >
+> > I really like the later. This way there is no hard protocol to define
+> > and follow. The bootloader may exploit any source of randomness it can
+> > find, including the RTC in addition to the serial number for example. So
+> > doing both on the kernel side might actually be the best approach,
+> > giving the boot environment all the flexibility it wants and being
+> > compatible with all of them.
+> >
+> 
+> Finding a source of entropy is not trivial, but it is not the difficult part.
+> 
+> So when we pass some random seed to the decompressor, what will it do
+> with it? In order to find a suitable KASLR offset, it needs to know
+> the size of DRAM, the placement of the DT and potentially an initrd,
+> and the size of the vmalloc region in order to decide where it can put
+> the kernel.
+> 
+> In my implementation, the decompressor simply receives the offset from
+> the bootloader, and exposes the value of PAGE_OFFSET, the base of  the
+> vmalloc region and the kaslr granularity supported by the kernel. The
+> bootloader should already know the size of DRAM and where it loaded
+> the DT and initrd, so it can roll the dice in an informed manner.
+> 
+> Note that my UEFI stub implementation essentially does the same, which
+> was trivial to implement because UEFI already keeps track of all
+> allocations in DRAM. Note that this version simply disables KASLR if
+> it encounters a vmalloc= command line argument, given that it affects
+> the size of the lowmem region. We could enhance that to actually parse
+> the value, but I kept it simple for now.
+
+What I dislike about such an arrangement (and I've brought up this 
+argument forward in a different context before) is that you create a lot 
+of additional dependencies between the kernel and the boot environment. 
+The kernel is no longer self-sufficient and all this boot preparation 
+has to be duplicated in all boot environments from UEFI to U-Boot to 
+qemu. The fact that the bootloader now has to care about very Linux 
+internal concepts such as vmalloc_start makes it rather inelegant to me.
+
+I'm even wondering if, design wise, the best solution wouldn't be for 
+the actual kernel to move itself during the boot process and reboot 
+itself without any external help. Not necessarily go as far as the full 
+kexec danse , but boot far enough to parse the DT, initialize the 
+bootmem allocator, then find a new location for itself, move it there, 
+do the relocs and restart the boot process.  For this to work well, you 
+would have to make a copy of the .data section so to reboot again with a 
+pristine version except for one flag indicating that the move has been 
+done.
+
+Doing it this way gives you a full kernel environment to work from and 
+be completely self-sufficient with zero reliance on any boot 
+environment. This would even make it compatible with Image i.e. the 
+compressor-less kernel. And if the DT and/or initrd is in the way then 
+you could even go as far as moving them away if you wanted.
+
+This would add some boot latency of course, but certainly in the 
+sub-second range. That is negligible for those systems where KASLR is 
+most relevant.
 
 
-On 08/09/2017 09:06 PM, Kees Cook wrote:
-> On Fri, Aug 4, 2017 at 5:30 PM, Joao Moreira <jmoreira@suse.de> wrote:
->> hi, I'm Joao, I talk for kCFI :)
-> 
-> Hi! Thanks for the reply!
-> 
->>
->> On 08/04/2017 07:31 AM, Li Kun wrote:
->>>
->>>
->>>
->>> 在 2017/8/4 13:13, Kees Cook 写道:
->>>>
->>>> On Thu, Aug 3, 2017 at 9:23 PM, Li Kun <hw.likun@huawei.com> wrote:
->>>>>
->>>>> Is there any plan to port the RAP feature from PAX/Grsecurity to main
->>>>> line ?
->>>>> I think that will be a realy effective approach to protect against
->>>>> ROP/JOP.
->>>>
->>>> Yeah, RAP is pretty great! I'm not aware of anyone working on
->>>> upstreaming the plugin (and its many function declaration fixes and
->>>> other adjustments) currently, though.
->>>
->>> I will try to upstream it.
->>> If i have any progress or trouble, i will show it here:)
->>>>
->>>>
->>>> I've also been interested to see if kCFI[1] will be published soon,
->>>> which would be another option (it needs fewer kernel changes, but has
->>>> limitations like needing to build the kernel twice). While the code
->>>> isn't released yet, they did provide a comparison[2] to RAP which is
->>>> an interesting read.
->>
->>
->> So, we wanted to have it released some time ago, but life happened and
->> unfortunately, I had to share my time between this and other projects.
-> 
-> Is there anything specifically stopping release? Even getting
-> something that is just "works only kernel version X.Y" would be
-> excellent to have for people to examine.
-> 
-
-We mostly search for false-positives dynamically. So we started running 
-some different workloads and we spotted some more cases of unmatching 
-prototypes (kCFI is a showed to be a great tool for dynamically hunting 
-these cases, so it might be useful in this sense too).
-
-While the false-positives aren't that much complicated to fix, I'm 
-currently in the middle of many different work threads, so I have to 
-find time every now and then to work on these, and pack everything as a 
-proper release.
-
->> As you are speaking of "upstreamability", I see kCFI as an interesting
->> start-point, but it is blurry to believe that it would be mergeable into the
->> kernel. kCFI was/is a research project, willing to enable CFI
->> experimentation in the kernel space. It never was understood as a product.
->> Because of that, we took many decisions in the past that would benefit this
->> aspect of the work, instead of making it super maintainable or attachable.
->> Some of these decisions were: 1st, kCFI is implemented on top of LLVM; 2nd,
->> some of the most interesting features of kCFI require two compilation rounds
->> (and we didn't even care about it, because we were just trying to prove a
->> point in making achievable kernel CFI more fine-grained); 3rd, we never
->> ported it to newer kernel versions, instead we preferred to evaluate
->> different approaches and solutions in that very same code-base (Linux kernel
->> 3.19); 4th, kCFI requires many external tools (which perform binary
->> analyses, CFG fixes, etc).
-> 
-> That's fine -- I never expect large changes to the kernel to land in
-> one giant splash. Getting things into upstream in pieces tends to be
-> much saner. Having something to work from means people can help chip
-> away at the final goal.
-> 
->> Just to illustrate why we took these paths think about, for example, not
->> tagging all functions uniquely based on their prototype. I mean, if you have
->> a function FOO and a function BAR, both with the same prototype, but such
->> prototype never appears in a pointer declaration throughout source code, why
->> do you need them having the same tags? This would allow FOO returning to a
->> BAR's call-site, and BAR returning to a FOO's call-site. Yet, to know that
->> such function pointer does not exist, we had to run a full compilation round
->> before instrumenting, performing a source-code analysis.
-> 
-> Yup, exactly. I like this feature. What's the right term for this?
-> "Cluster splitting"?
-
-That one fits :)
-
-> 
->> Given all the above I would say that someone interested in making CFI
->> upstream, should not get demotivated by kCFI.
->>
->>> That looks awsome. Does it have any schedule to release the code?
->>
->>
->> No, we don't have a release schedule. Our current plans are to finish some
->> final tests that we are doing, run some more benchmarks/use-cases so we can
->> extend a bit our false-positive coverage, and then have it out as soon as
->> possible... but well, tbh, it may take some time.
->>
->> If someone wants to make CFI “upstreamable”, I'm in for helping in any way I
->> can. I would suggest that anyone willing to achieve it should first try to
->> implement a coarse-grained scheme, have it booting and running, and only
->> after that, think about the best way of organizing the tags so you
->> minimize/cease the false-positives.
-> 
-> I'd love to not have to have people start from scratch (hint hint). :)
-> 
-
-I'll try to finish whatever is open in my todo list and have it released 
-in the following weeks. Then, hopefully, we can keep up the pass with 
-some community assistance.
-
->> If there is anything I can do, I’m lvwr in ##kernel-hardened or, just reach
->> me through mail.
-> 
-> (For anyone following the thread, Joao pointed out to me on IRC that
-> the above was a typo. This should be ##linux-hardened on freenode.)
-> 
-
-Indeed. ##linux-hardened. Sorry for the typo.
-
-Tks,
-Joao.
-
-> Thanks!
-> 
-> -Kees
-> 
+Nicolas
