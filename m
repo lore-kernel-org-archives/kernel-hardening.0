@@ -1,101 +1,32 @@
-Date: Mon, 14 Aug 2017 12:16:04 -0400 (EDT)
+Date: Mon, 14 Aug 2017 12:18:59 -0400 (EDT)
 From: Nicolas Pitre <nicolas.pitre@linaro.org>
-In-Reply-To: <CAKv+Gu_-O5ZW=SzXe=0nRExfYWjyMWoJ3eObaZiiftPVNojibw@mail.gmail.com>
-Message-ID: <alpine.LFD.2.20.1708141204470.17016@knanqh.ubzr>
-References: <20170814125411.22604-1-ard.biesheuvel@linaro.org> <CAK8P3a1zJPsHphvoOitQbTaY-7rzFndGKatM2=aeUphkG+3T_A@mail.gmail.com> <CAKv+Gu_-O5ZW=SzXe=0nRExfYWjyMWoJ3eObaZiiftPVNojibw@mail.gmail.com>
+In-Reply-To: <20170814155002.GV6321@e103592.cambridge.arm.com>
+Message-ID: <alpine.LFD.2.20.1708141217150.17016@knanqh.ubzr>
+References: <20170814125411.22604-1-ard.biesheuvel@linaro.org> <20170814125411.22604-3-ard.biesheuvel@linaro.org> <20170814152950.GT6321@e103592.cambridge.arm.com> <CAKv+Gu87G93X36TdAEiMC46Uz_PqXEi_4LSftnUdkQ8HRCxWiA@mail.gmail.com>
+ <20170814155002.GV6321@e103592.cambridge.arm.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH 00/30] implement KASLR for ARM
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Arnd Bergmann <arnd@arndb.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux ARM <linux-arm-kernel@lists.infradead.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
+Subject: [kernel-hardening] Re: [PATCH 02/30] ARM: assembler: introduce adr_l, ldr_l and str_l
+ macros
+To: Dave Martin <Dave.Martin@arm.com>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Russell King <linux@armlinux.org.uk>, Tony Lindgren <tony@atomide.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Thomas Garnier <thgarnie@google.com>, Matt Fleming <matt@codeblueprint.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 14 Aug 2017, Ard Biesheuvel wrote:
+On Mon, 14 Aug 2017, Dave Martin wrote:
 
-> On 14 August 2017 at 16:30, Arnd Bergmann <arnd@arndb.de> wrote:
-> > On Mon, Aug 14, 2017 at 2:53 PM, Ard Biesheuvel
-> > <ard.biesheuvel@linaro.org> wrote:
-> >> This series implements randomization of the placement of the core ARM kernel
-> >> inside the lowmem region. It consists of the following parts:
-> >>
-> >> - changes that allow us to build vmlinux as a PIE executable which retains
-> >>   the metadata required to fix up all absolute symbol references at runtime
-> >> - changes that eliminate absolute references from low-level code that may
-> >>   execute with the MMU off: this removes the need to perform explicit cache
-> >>   maintenance after the absolute references have been fixed up at runtime with
-> >>   the caches enabled
-> >> - changes to the core kernel startup code to take the physical offset into
-> >>   account when creating the virtual mapping (the pa-to-va mapping remains
-> >>   unchanged)
-> >> - changes to the decompressor to take the KASLR offset into account when
-> >>   placing the kernel in physical memory
-> >> - changes to the UEFI stub code to choose the KASLR offset and communicate
-> >>   it to the decompressor
-> >
-> > Would it make sense to also randomize the pa-to-va mapping on top of this?
-> > That can certainly be a later follow-up, I'm just trying to think of the options
-> > we have, given that the kernel is now relocatable and we can support arbitrary
-> > pa-to-va mappings already.
-> >
-> 
-> We could randomize PAGE_OFFSET as well. That allows you to build a
-> 3g/1g split kernel and execute it as 2g/2g split. Pretty neat!
+> On Mon, Aug 14, 2017 at 04:38:02PM +0100, Ard Biesheuvel wrote:
+> > That's a trick, actually, which I failed to add a comment for.
 
-This is going to break existing user space binaries at some point. Some 
-applications pretty much always assumed 3g space and are likely to fail 
-otherwise. The 2g/2g config is good for people wanting to dispense with 
-highmem and the ability to test their user space with it before 
-deployment.
+Shame shame shame !
 
-Also, this is a lot of complexity added to the kernel for a very 
-negligible security gain. It is trivial from user space to determine 
-what the actual PAGE_OFFSET is, so that won't be a serious deterrent.
+> > We use .arm sections in the thumb2 kernel, and using these macros
+> > there would result in the wrong offset to be used. Adding the .w
+> > suffix forces an error in the assembler which even results in a fairly
+> > meaningful error message complaining about using .w in ARM code.
+> 
+> Ewww... I think it'd be best to add a comment explaining that.
 
-> Randomizing the VA to PA mapping while keep PAGE_OFFSET constant will
-> result in either memory to be thrown away (because it is virtually
-> mapped below PAGE_OFFSET) or lowmem space to be wasted (because there
-> is a hole between PAGE_OFFSET and the VA of the lowest lowmem address)
-> 
-> So i think there may be opportunities, but I haven't quite figured
-> them out myself yet.
-> 
-> > Can you explain how the random seed is passed from the bootloader
-> > to the kernel when we don't use EFI? Is this implemented at all? I see
-> > that you add a seed to "/chosen/kaslr-seed" in the EFI stub when using
-> > the EFI boot services, but I don't see where that value gets read again
-> > when we relocate the kernel.
-> 
-> /chosen/kaslr-seed is only used on arm64, not on ARM. We could add
-> code to the decompressor that uses /chosen/kaslr-seed, but it is a bit
-> fiddly because the execution environment is so constrained, and there
-> is no simple access to symbols defined by the core kernel's linker
-> script.
-> 
-> On UEFI systems, the kaslr offset is calculated based on the UEFI
-> memory map, which describes all of memory and has reservations for the
-> DTB, the initrd etc. The EFI stub is linked together with the
-> decompressor, so passing the kaslr offset simply involves setting a
-> variable.
-> 
-> To allow other bootloaders to do the same, the kaslr metadata is
-> exposed via a zImage header, containing the values of PAGE_OFFSET, the
-> base of the vmalloc area and the randomization granularity. A
-> bootloader can read these values, and taking the size of DRAM and the
-> placement of initrd and DTB into account, it can choose a value for
-> kaslr offset and write it back into the zImage header.
-> 
-> This is a bit involved, but it is really difficult to make these
-> things backward compatible, i.e., passing something in a register is
-> not possible if that register was not mandated to be zero initially.
-> 
-> Similarly, the decompressor passed the kaslr offset to the startup
-> code in the core kernel. It does so by passing it in r3 and jumping 4
-> bytes past the entry point. This way, we are backward compatible with
-> configurations where the decompressor is not used, because in that
-> case, you always jump to the first instruction, which zeroes r3.
-
-Please capture all this somewhere. Either in the commit log, or in the 
-Booting document, or both.
+Absolutely!
 
 
 Nicolas
