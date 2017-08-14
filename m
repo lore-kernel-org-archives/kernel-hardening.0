@@ -1,59 +1,58 @@
-Date: Mon, 14 Aug 2017 11:01:25 -0600
-From: Tycho Andersen <tycho@docker.com>
-Message-ID: <20170814170125.ledrnrik3km66y33@smitten>
-References: <20170809200755.11234-1-tycho@docker.com>
- <20170809200755.11234-5-tycho@docker.com>
- <20170812112603.GB16374@remoulade>
- <20170814163536.6njceqc3dip5lrlu@smitten>
- <20170814165047.GB23428@leverpostej>
+Date: Mon, 14 Aug 2017 18:13:39 +0100
+From: Catalin Marinas <catalin.marinas@arm.com>
+Message-ID: <20170814171338.gvtn76awussgxctn@armageddon.cambridge.arm.com>
+References: <1502130965-18710-1-git-send-email-mark.rutland@arm.com>
+ <1502130965-18710-11-git-send-email-mark.rutland@arm.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170814165047.GB23428@leverpostej>
-Subject: Re: [kernel-hardening] [PATCH v5 04/10] arm64: Add __flush_tlb_one()
+In-Reply-To: <1502130965-18710-11-git-send-email-mark.rutland@arm.com>
+Subject: [kernel-hardening] Re: [PATCH 10/14] arm64: assembler: allow adr_this_cpu to use the
+ stack pointer
 To: Mark Rutland <mark.rutland@arm.com>
-Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Juerg Haefliger <juerg.haefliger@hpe.com>
+Cc: linux-arm-kernel@lists.infradead.org, keescook@chromium.org, ard.biesheuvel@linaro.org, matt@codeblueprint.co.uk, kernel-hardening@lists.openwall.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, luto@amacapital.net, james.morse@arm.com, labbott@redhat.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 14, 2017 at 05:50:47PM +0100, Mark Rutland wrote:
-> On Mon, Aug 14, 2017 at 10:35:36AM -0600, Tycho Andersen wrote:
-> > Hi Mark,
-> > 
-> > On Sat, Aug 12, 2017 at 12:26:03PM +0100, Mark Rutland wrote:
-> > > On Wed, Aug 09, 2017 at 02:07:49PM -0600, Tycho Andersen wrote:
-> > > > +static inline void __flush_tlb_one(unsigned long addr)
-> > > > +{
-> > > > +	dsb(ishst);
-> > > > +	__tlbi(vaae1is, addr >> 12);
-> > > > +	dsb(ish);
-> > > > +	isb();
-> > > > +}
-> > > 
-> > > Is this going to be called by generic code?
-> > 
-> > Yes, it's called in mm/xpfo.c:xpfo_kunmap.
-> > 
-> > > It would be nice if we could drop 'kernel' into the name, to make it clear this
-> > > is intended to affect the kernel mappings, which have different maintenance
-> > > requirements to user mappings.
+On Mon, Aug 07, 2017 at 07:36:01PM +0100, Mark Rutland wrote:
+> From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 > 
-> > It's named __flush_tlb_one after the x86 (and a few other arches)
-> > function of the same name. I can change it to flush_tlb_kernel_page,
-> > but then we'll need some x86-specific code to map the name as well.
-> > 
-> > Maybe since it's called from generic code that's warranted though?
-> > I'll change the implementation for now, let me know what you want to
-> > do about the name.
+> Given that adr_this_cpu already requires a temp register in addition
+> to the destination register, tweak the instruction sequence so that sp
+> may be used as well.
 > 
-> I think it would be preferable to do so, to align with 
-> flush_tlb_kernel_range(), which is an existing generic interface.
+> This will simplify switching to per-cpu stacks in subsequent patches. While
+> this limits the range of adr_this_cpu, to +/-4GiB, we don't currently use
+> adr_this_cpu in modules, and this is not problematic for the main kernel image.
 > 
-> That said, is there any reason not to use flush_tlb_kernel_range()
-> directly?
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> [Mark: add more commit text]
+> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+> Cc: Catalin Marinas <catalin.marinas@arm.com>
+> Cc: James Morse <james.morse@arm.com>
+> Cc: Laura Abbott <labbott@redhat.com>
+> Cc: Will Deacon <will.deacon@arm.com>
+> ---
+>  arch/arm64/include/asm/assembler.h | 3 ++-
+>  1 file changed, 2 insertions(+), 1 deletion(-)
+> 
+> diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
+> index 610a420..4775af5 100644
+> --- a/arch/arm64/include/asm/assembler.h
+> +++ b/arch/arm64/include/asm/assembler.h
+> @@ -235,7 +235,8 @@
+>  	 * @tmp: scratch register
+>  	 */
+>  	.macro adr_this_cpu, dst, sym, tmp
+> -	adr_l	\dst, \sym
+> +	adrp	\tmp, \sym
+> +	add	\dst, \tmp, #:lo12:\sym
+>  	mrs	\tmp, tpidr_el1
+>  	add	\dst, \dst, \tmp
+>  	.endm
 
-I don't think so, I'll change the generic code to that and drop this
-patch.
+Nitpick: it may be worth adding an #ifndef MODULE around these macros,
+together with a comment, just in case. There are other macros in this
+file like adr_l which are used in modules (crypto).
 
-Thanks!
-
-Tycho
+-- 
+Catalin
