@@ -1,32 +1,42 @@
-Date: Mon, 14 Aug 2017 12:18:59 -0400 (EDT)
-From: Nicolas Pitre <nicolas.pitre@linaro.org>
-In-Reply-To: <20170814155002.GV6321@e103592.cambridge.arm.com>
-Message-ID: <alpine.LFD.2.20.1708141217150.17016@knanqh.ubzr>
-References: <20170814125411.22604-1-ard.biesheuvel@linaro.org> <20170814125411.22604-3-ard.biesheuvel@linaro.org> <20170814152950.GT6321@e103592.cambridge.arm.com> <CAKv+Gu87G93X36TdAEiMC46Uz_PqXEi_4LSftnUdkQ8HRCxWiA@mail.gmail.com>
- <20170814155002.GV6321@e103592.cambridge.arm.com>
+Date: Mon, 14 Aug 2017 10:21:50 -0600
+From: Tycho Andersen <tycho@docker.com>
+Message-ID: <20170814162150.ccq574wyt5ucuazn@smitten>
+References: <20170809200755.11234-11-tycho@docker.com>
+ <201708130449.P9mhc7yi%fengguang.wu@intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH 02/30] ARM: assembler: introduce adr_l, ldr_l and str_l
- macros
-To: Dave Martin <Dave.Martin@arm.com>
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Russell King <linux@armlinux.org.uk>, Tony Lindgren <tony@atomide.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Thomas Garnier <thgarnie@google.com>, Matt Fleming <matt@codeblueprint.co.uk>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <201708130449.P9mhc7yi%fengguang.wu@intel.com>
+Subject: [kernel-hardening] Re: [PATCH v5 10/10] lkdtm: Add test for XPFO
+To: kbuild test robot <lkp@intel.com>
+Cc: kbuild-all@01.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 14 Aug 2017, Dave Martin wrote:
-
-> On Mon, Aug 14, 2017 at 04:38:02PM +0100, Ard Biesheuvel wrote:
-> > That's a trick, actually, which I failed to add a comment for.
-
-Shame shame shame !
-
-> > We use .arm sections in the thumb2 kernel, and using these macros
-> > there would result in the wrong offset to be used. Adding the .w
-> > suffix forces an error in the assembler which even results in a fairly
-> > meaningful error message complaining about using .w in ARM code.
+On Sun, Aug 13, 2017 at 04:24:23AM +0800, kbuild test robot wrote:
+> Hi Juerg,
 > 
-> Ewww... I think it'd be best to add a comment explaining that.
+> [auto build test ERROR on arm64/for-next/core]
+> [also build test ERROR on v4.13-rc4]
+> [cannot apply to next-20170811]
+> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
+> 
+> url:    https://github.com/0day-ci/linux/commits/Tycho-Andersen/Add-support-for-eXclusive-Page-Frame-Ownership/20170813-035705
+> base:   https://git.kernel.org/pub/scm/linux/kernel/git/arm64/linux.git for-next/core
+> config: x86_64-randconfig-x016-201733 (attached as .config)
+> compiler: gcc-6 (Debian 6.2.0-3) 6.2.0 20160901
+> reproduce:
+>         # save the attached .config to linux build tree
+>         make ARCH=x86_64 
+> 
+> All errors (new ones prefixed by >>):
+> 
+>    drivers/misc/lkdtm_xpfo.c: In function 'read_user_with_flags':
+> >> drivers/misc/lkdtm_xpfo.c:31:14: error: implicit declaration of function 'user_virt_to_phys' [-Werror=implicit-function-declaration]
+>      phys_addr = user_virt_to_phys(user_addr);
+>                  ^~~~~~~~~~~~~~~~~
+>    cc1: some warnings being treated as errors
 
-Absolutely!
+These are both the same error, looks like I forgot a dummy prototype
+in the non CONFIG_XPFO case, I'll fix it in the next version.
 
-
-Nicolas
+Tycho
