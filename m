@@ -1,186 +1,102 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 14 Aug 2017 13:54:10 +0100
-Message-Id: <20170814125411.22604-30-ard.biesheuvel@linaro.org>
+Date: Mon, 14 Aug 2017 13:54:11 +0100
+Message-Id: <20170814125411.22604-31-ard.biesheuvel@linaro.org>
 In-Reply-To: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
 References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH 29/30] efi/libstub: arm: reserve bootloader supplied initrd in memory map
+Subject: [kernel-hardening] [PATCH 30/30] efi/libstub: arm: implement KASLR
 To: kernel-hardening@lists.openwall.com
 Cc: linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Under KASLR, the EFI stub may allocate the kernel anywhere in the
-physical address space, which could be right on top of an initrd
-if it was supplied by the bootloader (i.e., GRUB) in /chosen rather
-than passed via the initrd= command line option. So allocate the
-pages explicitly, this ensures that the random memory allocation
-routine will disregard the region.
+This wires up the new KASLR implementation for ARM to the random number
+generator and memory allocation routines in the UEFI stub.
 
-Note that this means that we need to defer the handle_kernel_image()
-call.
+Given how the UEFI stub keeps track of the placement of the DTB and
+potentially an initrd via its memory map, we can quite simply use
+efi_random_alloc() to carve out a window for the kernel proper, and
+inform the decompressor about this by setting the kaslr_offset variable
+directly.
+
+Since the presence of a vmalloc= command line option complicates the
+calculations involved, let's just disable KASLR for now if a vmalloc=
+command line argument was provided.
 
 Cc: Matt Fleming <matt@codeblueprint.co.uk>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- drivers/firmware/efi/libstub/arm-stub.c | 51 ++++++++++++--------
- drivers/firmware/efi/libstub/efistub.h  |  3 ++
- drivers/firmware/efi/libstub/fdt.c      | 42 ++++++++++++++++
- 3 files changed, 75 insertions(+), 21 deletions(-)
+ drivers/firmware/efi/libstub/arm32-stub.c | 46 +++++++++++++++++++-
+ 1 file changed, 44 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/firmware/efi/libstub/arm-stub.c b/drivers/firmware/efi/libstub/arm-stub.c
-index 8181ac179d14..f5ef5ccd5f45 100644
---- a/drivers/firmware/efi/libstub/arm-stub.c
-+++ b/drivers/firmware/efi/libstub/arm-stub.c
-@@ -133,6 +133,7 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
- 	unsigned long reserve_size = 0;
- 	enum efi_secureboot_mode secure_boot;
- 	struct screen_info *si;
-+	bool have_chosen_initrd;
+diff --git a/drivers/firmware/efi/libstub/arm32-stub.c b/drivers/firmware/efi/libstub/arm32-stub.c
+index becbda445913..f812cbca08ee 100644
+--- a/drivers/firmware/efi/libstub/arm32-stub.c
++++ b/drivers/firmware/efi/libstub/arm32-stub.c
+@@ -8,6 +8,8 @@
+  */
+ #include <linux/efi.h>
+ #include <asm/efi.h>
++#include <asm/pgtable.h>
++#include <asm/zimage.h>
  
- 	/* Check if we were booted by the EFI firmware */
- 	if (sys_table->hdr.signature != EFI_SYSTEM_TABLE_SIGNATURE)
-@@ -183,15 +184,6 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
+ #include "efistub.h"
  
- 	si = setup_graphics(sys_table);
- 
--	status = handle_kernel_image(sys_table, image_addr, &image_size,
--				     &reserve_addr,
--				     &reserve_size,
--				     dram_base, image);
--	if (status != EFI_SUCCESS) {
--		pr_efi_err(sys_table, "Failed to relocate kernel\n");
--		goto fail_free_cmdline;
--	}
--
- 	secure_boot = efi_get_secureboot(sys_table);
+@@ -200,6 +202,29 @@ efi_status_t handle_kernel_image(efi_system_table_t *sys_table,
+ 				 efi_loaded_image_t *image)
+ {
+ 	efi_status_t status;
++	u32 phys_seed = 0;
++
++	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE)) {
++		if (have_vmalloc()) {
++			pr_efi(sys_table,
++			       "vmalloc= command line argument found, disabling KASLR\n");
++		} else if (!nokaslr()) {
++			status = efi_get_random_bytes(sys_table,
++						      sizeof(phys_seed),
++						      (u8 *)&phys_seed);
++			if (status == EFI_NOT_FOUND) {
++				pr_efi(sys_table,
++				       "EFI_RNG_PROTOCOL unavailable, no randomness supplied\n");
++			} else if (status != EFI_SUCCESS) {
++				pr_efi_err(sys_table,
++					   "efi_get_random_bytes() failed\n");
++				return status;
++			}
++		} else {
++			pr_efi(sys_table,
++			       "KASLR disabled on kernel command line\n");
++		}
++	}
  
  	/*
-@@ -209,7 +201,7 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
+ 	 * Verify that the DRAM base address is compatible with the ARM
+@@ -210,8 +235,25 @@ efi_status_t handle_kernel_image(efi_system_table_t *sys_table,
+ 	 */
+ 	dram_base = round_up(dram_base, SZ_128M);
  
- 		if (status != EFI_SUCCESS) {
- 			pr_efi_err(sys_table, "Failed to load device tree!\n");
--			goto fail_free_image;
-+			goto fail_free_cmdline;
- 		}
- 	}
- 
-@@ -222,16 +214,33 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
- 			pr_efi(sys_table, "Using DTB from configuration table\n");
- 	}
- 
--	if (!fdt_addr)
-+	if (!fdt_addr) {
- 		pr_efi(sys_table, "Generating empty DTB\n");
-+		have_chosen_initrd = false;
+-	status = reserve_kernel_base(sys_table, dram_base, reserve_addr,
+-				     reserve_size);
++	if (!IS_ENABLED(CONFIG_RANDOMIZE_BASE) || phys_seed == 0) {
++		status = reserve_kernel_base(sys_table, dram_base, reserve_addr,
++					     reserve_size);
 +	} else {
-+		status = efi_reserve_dtb_initrd(sys_table, (void *)fdt_addr);
-+		have_chosen_initrd = (status != EFI_NOT_FOUND);
-+	}
- 
--	status = handle_cmdline_files(sys_table, image, cmdline_ptr, "initrd=",
--				      efi_get_max_initrd_addr(dram_base,
--							      *image_addr),
--				      (unsigned long *)&initrd_addr,
--				      (unsigned long *)&initrd_size);
--	if (status != EFI_SUCCESS)
--		pr_efi_err(sys_table, "Failed initrd from command line!\n");
-+	status = handle_kernel_image(sys_table, image_addr, &image_size,
-+				     &reserve_addr, &reserve_size,
-+				     dram_base, image);
-+	if (status != EFI_SUCCESS) {
-+		pr_efi_err(sys_table, "Failed to relocate kernel\n");
-+		goto fail_free_fdt;
++		/* the end of the lowmem region */
++		unsigned long max = dram_base + VMALLOC_DEFAULT_BASE
++				    - PAGE_OFFSET - 1;
++		/*
++		 * The DTB and initrd are covered by allocations in the UEFI
++		 * memory map, so we can create a random allocation for the
++		 * uncompressed kernel, and inform the decompressor about the
++		 * offset with respect to the base of memory.
++		 */
++		*reserve_size = MAX_UNCOMP_KERNEL_SIZE;
++		status = efi_random_alloc(sys_table, *reserve_size, SZ_2M,
++					  reserve_addr, phys_seed, max);
++		kaslr_offset = *reserve_addr - dram_base;
 +	}
 +
-+	if (!have_chosen_initrd) {
-+		status = handle_cmdline_files(sys_table, image, cmdline_ptr,
-+					      "initrd=",
-+					      efi_get_max_initrd_addr(dram_base,
-+								      *image_addr),
-+					      (unsigned long *)&initrd_addr,
-+					      (unsigned long *)&initrd_size);
-+		if (status != EFI_SUCCESS)
-+			pr_efi_err(sys_table,
-+				   "Failed initrd from command line!\n");
-+	}
- 
- 	efi_random_get_seed(sys_table);
- 
-@@ -272,11 +281,11 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
- 	pr_efi_err(sys_table, "Failed to update FDT and exit boot services\n");
- 
- 	efi_free(sys_table, initrd_size, initrd_addr);
--	efi_free(sys_table, fdt_size, fdt_addr);
--
--fail_free_image:
- 	efi_free(sys_table, image_size, *image_addr);
- 	efi_free(sys_table, reserve_size, reserve_addr);
-+
-+fail_free_fdt:
-+	efi_free(sys_table, fdt_size, fdt_addr);
- fail_free_cmdline:
- 	free_screen_info(sys_table, si);
- 	efi_free(sys_table, cmdline_size, (unsigned long)cmdline_ptr);
-diff --git a/drivers/firmware/efi/libstub/efistub.h b/drivers/firmware/efi/libstub/efistub.h
-index aaf2aeb785ea..35b514d7d962 100644
---- a/drivers/firmware/efi/libstub/efistub.h
-+++ b/drivers/firmware/efi/libstub/efistub.h
-@@ -68,4 +68,7 @@ efi_status_t check_platform_features(efi_system_table_t *sys_table_arg);
- 
- efi_status_t efi_random_get_seed(efi_system_table_t *sys_table_arg);
- 
-+efi_status_t efi_reserve_dtb_initrd(efi_system_table_t *sys_table_arg,
-+				    const void *fdt);
-+
- #endif
-diff --git a/drivers/firmware/efi/libstub/fdt.c b/drivers/firmware/efi/libstub/fdt.c
-index 8830fa601e45..54408c95e094 100644
---- a/drivers/firmware/efi/libstub/fdt.c
-+++ b/drivers/firmware/efi/libstub/fdt.c
-@@ -385,3 +385,45 @@ void *get_fdt(efi_system_table_t *sys_table, unsigned long *fdt_size)
- 
- 	return fdt;
- }
-+
-+efi_status_t efi_reserve_dtb_initrd(efi_system_table_t *sys_table_arg,
-+				    const void *fdt)
-+{
-+	int chosen, len;
-+	const void *prop;
-+	efi_physical_addr_t start, end;
-+	unsigned long num_pages;
-+	efi_status_t status;
-+
-+	chosen = fdt_path_offset(fdt, "/chosen");
-+	if (chosen == -FDT_ERR_NOTFOUND)
-+		return EFI_NOT_FOUND;
-+
-+	prop = fdt_getprop(fdt, chosen, "linux,initrd-start", &len);
-+	if (!prop)
-+		return EFI_NOT_FOUND;
-+
-+	start = (len == sizeof(fdt32_t)) ? fdt32_to_cpu(*(fdt32_t *)prop)
-+					 : fdt64_to_cpu(*(fdt64_t *)prop);
-+
-+	prop = fdt_getprop(fdt, chosen, "linux,initrd-end", &len);
-+	if (!prop)
-+		return EFI_NOT_FOUND;
-+
-+	end = (len == sizeof(fdt32_t)) ? fdt32_to_cpu(*(fdt32_t *)prop)
-+				       : fdt64_to_cpu(*(fdt64_t *)prop);
-+
-+	start = round_down(start, EFI_PAGE_SIZE);
-+	num_pages = round_up(end - start, EFI_PAGE_SIZE) / EFI_PAGE_SIZE;
-+
-+	status = efi_call_early(allocate_pages, EFI_ALLOCATE_ADDRESS,
-+				EFI_LOADER_DATA, num_pages, &start);
-+
-+	if (status != EFI_SUCCESS)
-+		pr_efi_err(sys_table_arg,
-+			   "Failed to reserve initrd area found in /chosen\n");
-+	else
-+		pr_efi(sys_table_arg, "Using initrd found in /chosen\n");
-+
-+	return status;
-+}
+ 	if (status != EFI_SUCCESS) {
+ 		pr_efi_err(sys_table, "Unable to allocate memory for uncompressed kernel.\n");
+ 		return status;
 -- 
 2.11.0
