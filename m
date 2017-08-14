@@ -1,83 +1,135 @@
+Date: Mon, 14 Aug 2017 16:50:02 +0100
+From: Dave Martin <Dave.Martin@arm.com>
+Message-ID: <20170814155002.GV6321@e103592.cambridge.arm.com>
+References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
+ <20170814125411.22604-3-ard.biesheuvel@linaro.org>
+ <20170814152950.GT6321@e103592.cambridge.arm.com>
+ <CAKv+Gu87G93X36TdAEiMC46Uz_PqXEi_4LSftnUdkQ8HRCxWiA@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CAK8P3a1zJPsHphvoOitQbTaY-7rzFndGKatM2=aeUphkG+3T_A@mail.gmail.com>
-References: <20170814125411.22604-1-ard.biesheuvel@linaro.org> <CAK8P3a1zJPsHphvoOitQbTaY-7rzFndGKatM2=aeUphkG+3T_A@mail.gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 14 Aug 2017 16:49:22 +0100
-Message-ID: <CAKv+Gu_-O5ZW=SzXe=0nRExfYWjyMWoJ3eObaZiiftPVNojibw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 00/30] implement KASLR for ARM
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux ARM <linux-arm-kernel@lists.infradead.org>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAKv+Gu87G93X36TdAEiMC46Uz_PqXEi_4LSftnUdkQ8HRCxWiA@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 02/30] ARM: assembler: introduce adr_l, ldr_l and str_l
+ macros
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Russell King <linux@armlinux.org.uk>, Tony Lindgren <tony@atomide.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Thomas Garnier <thgarnie@google.com>, Matt Fleming <matt@codeblueprint.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 14 August 2017 at 16:30, Arnd Bergmann <arnd@arndb.de> wrote:
-> On Mon, Aug 14, 2017 at 2:53 PM, Ard Biesheuvel
-> <ard.biesheuvel@linaro.org> wrote:
->> This series implements randomization of the placement of the core ARM kernel
->> inside the lowmem region. It consists of the following parts:
->>
->> - changes that allow us to build vmlinux as a PIE executable which retains
->>   the metadata required to fix up all absolute symbol references at runtime
->> - changes that eliminate absolute references from low-level code that may
->>   execute with the MMU off: this removes the need to perform explicit cache
->>   maintenance after the absolute references have been fixed up at runtime with
->>   the caches enabled
->> - changes to the core kernel startup code to take the physical offset into
->>   account when creating the virtual mapping (the pa-to-va mapping remains
->>   unchanged)
->> - changes to the decompressor to take the KASLR offset into account when
->>   placing the kernel in physical memory
->> - changes to the UEFI stub code to choose the KASLR offset and communicate
->>   it to the decompressor
->
-> Would it make sense to also randomize the pa-to-va mapping on top of this?
-> That can certainly be a later follow-up, I'm just trying to think of the options
-> we have, given that the kernel is now relocatable and we can support arbitrary
-> pa-to-va mappings already.
->
+On Mon, Aug 14, 2017 at 04:38:02PM +0100, Ard Biesheuvel wrote:
+> On 14 August 2017 at 16:29, Dave Martin <Dave.Martin@arm.com> wrote:
+> > On Mon, Aug 14, 2017 at 01:53:43PM +0100, Ard Biesheuvel wrote:
+> >> Like arm64, ARM supports position independent code sequences that
+> >> produce symbol references with a greater reach than the ordinary
+> >> adr/ldr instructions.
+> >>
+> >> Currently, we use open coded instruction sequences involving literals
+> >> and arithmetic operations. Instead, we can use movw/movt pairs on v7
+> >> CPUs, circumventing the D-cache entirely. For older CPUs, we can emit
+> >> the literal into a subsection, allowing it to be emitted out of line
+> >> while retaining the ability to perform arithmetic on label offsets.
+> >>
+> >> E.g., on pre-v7 CPUs, we can emit a PC-relative reference as follows:
+> >>
+> >>        ldr          <reg>, 222f
+> >>   111: add          <reg>, <reg>, pc
+> >>        .subsection  1
+> >>   222: .long        <sym> - (111b + 8)
+> >>        .previous
+> >>
+> >> This is allowed by the assembler because, unlike ordinary sections,
+> >> subsections are combined into a single section into the object file,
+> >> and so the label references are not true cross-section references that
+> >> are visible as relocations. Note that we could even do something like
+> >>
+> >>        add          <reg>, pc, #(222f - 111f) & ~0xfff
+> >>        ldr          <reg>, [<reg>, #(222f - 111f) & 0xfff]
+> >>   111: add          <reg>, <reg>, pc
+> >>        .subsection  1
+> >>   222: .long        <sym> - (111b + 8)
+> >>        .previous
+> >
+> > This is reinventing ldr=
+> >
+> > I seem to remember ldr= barfing on things that .long happily accepts
+> > though, was this the reason?
+> >
+> 
+> Yes. ldr = does not accept expressions involving symbols, only plain
+> symbols or expressions that evaluate to constants.
+> 
+> So something like
+> 
+> ldr <reg>, =<sym> - <label>
+> 
+> is rejected while the equivalent
+> 
+> ldr <reg>, 0f
+> 0: .long <sym> - <label>
+> 
+> does work.
 
-We could randomize PAGE_OFFSET as well. That allows you to build a
-3g/1g split kernel and execute it as 2g/2g split. Pretty neat!
+I wouldn't bother trying to rationalise gas' behaviour here.  I think
+it's an accident of implementation rather than there being some
+fundamental reason for it.
 
-Randomizing the VA to PA mapping while keep PAGE_OFFSET constant will
-result in either memory to be thrown away (because it is virtually
-mapped below PAGE_OFFSET) or lowmem space to be wasted (because there
-is a hole between PAGE_OFFSET and the VA of the lowest lowmem address)
+AFAICT gas could quite happily resolve ldr= in exactly the same way as
+.long and thus not have this problem.  But we can't rewrite history.
 
-So i think there may be opportunities, but I haven't quite figured
-them out myself yet.
+[...]
 
-> Can you explain how the random seed is passed from the bootloader
-> to the kernel when we don't use EFI? Is this implemented at all? I see
-> that you add a seed to "/chosen/kaslr-seed" in the EFI stub when using
-> the EFI boot services, but I don't see where that value gets read again
-> when we relocate the kernel.
+> >> +     .macro          __adldst_l, op, reg, sym, tmp, c
+> >> +     .if             __LINUX_ARM_ARCH__ < 7
+> >> +     ldr\c           \tmp, 111f
+> >> +     .subsection     1
+> >> +     .align          2
+> >> +111: .long           \sym - (222f + ARM_PC_BIAS)
+> >
+> > See above comment about ldr=.
+> >
+> >> +     .previous
+> >> +     .else
+> >> +     W(movw\c\())    \tmp, #:lower16:\sym - (222f + ARM_PC_BIAS)
+> >> +     W(movt\c\())    \tmp, #:upper16:\sym - (222f + ARM_PC_BIAS)
+> >
+> > Why W()?
+> >
+> > There are no narrow forms of these instructions anyway -- if there were
+> > then they couldn't accommodate a 16-bit immediate.
+> >
+> 
+> That's a trick, actually, which I failed to add a comment for.
+> 
+> We use .arm sections in the thumb2 kernel, and using these macros
+> there would result in the wrong offset to be used. Adding the .w
+> suffix forces an error in the assembler which even results in a fairly
+> meaningful error message complaining about using .w in ARM code.
 
-/chosen/kaslr-seed is only used on arm64, not on ARM. We could add
-code to the decompressor that uses /chosen/kaslr-seed, but it is a bit
-fiddly because the execution environment is so constrained, and there
-is no simple access to symbols defined by the core kernel's linker
-script.
+Ewww... I think it'd be best to add a comment explaining that.
 
-On UEFI systems, the kaslr offset is calculated based on the UEFI
-memory map, which describes all of memory and has reservations for the
-DTB, the initrd etc. The EFI stub is linked together with the
-decompressor, so passing the kaslr offset simply involves setting a
-variable.
+There's a fair change someone will trip over this at some point (or
+worse, "fix" the assembly errors).
 
-To allow other bootloaders to do the same, the kaslr metadata is
-exposed via a zImage header, containing the values of PAGE_OFFSET, the
-base of the vmalloc area and the randomization granularity. A
-bootloader can read these values, and taking the size of DRAM and the
-placement of initrd and DTB into account, it can choose a value for
-kaslr offset and write it back into the zImage header.
+> 
+> >> +     .endif
+> >> +222:
+> >> +     .ifc            \op, add
+> >> +     add\c           \reg, \tmp, pc
+> >> +     .elseif         CONFIG_THUMB2_KERNEL == 1
+> >> +     add             \tmp, \tmp, pc
+> >> +     \op\c           \reg, [\tmp]
+> >
+> > Shame
+> >         \op\c           \reg, [pc, \tmp]
+> > doesn't work.
+> >
+> > But it doesn't, apparently.
+> >
+> 
+> No, thumb2 does not allow that
 
-This is a bit involved, but it is really difficult to make these
-things backward compatible, i.e., passing something in a register is
-not possible if that register was not mandated to be zero initially.
+Meh.  Oh well.
 
-Similarly, the decompressor passed the kaslr offset to the startup
-code in the core kernel. It does so by passing it in r3 and jumping 4
-bytes past the entry point. This way, we are backward compatible with
-configurations where the decompressor is not used, because in that
-case, you always jump to the first instruction, which zeroes r3.
+[...]
+
+Cheers
+---Dave
