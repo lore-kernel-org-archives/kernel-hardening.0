@@ -1,49 +1,60 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 14 Aug 2017 13:54:02 +0100
-Message-Id: <20170814125411.22604-22-ard.biesheuvel@linaro.org>
+Date: Mon, 14 Aug 2017 13:54:03 +0100
+Message-Id: <20170814125411.22604-23-ard.biesheuvel@linaro.org>
 In-Reply-To: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
 References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH 21/30] ARM: mm: export default vmalloc base address
+Subject: [kernel-hardening] [PATCH 22/30] ARM: kernel: refer to swapper_pg_dir via its symbol
 To: kernel-hardening@lists.openwall.com
 Cc: linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In order for the EFI stub to be able to decide over what range to
-randomize the load address of the kernel, expose the definition of
-the default vmalloc base address as VMALLOC_DEFAULT_BASE.
+The location of swapper_pg_dir is relative to the kernel, not to
+PAGE_OFFSET or PHYS_OFFSET. So define the symbol relative to the
+start of the kernel image, and refer to it via its name.
 
 Cc: Russell King <linux@armlinux.org.uk>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm/include/asm/pgtable.h | 1 +
- arch/arm/mm/mmu.c              | 3 +--
- 2 files changed, 2 insertions(+), 2 deletions(-)
+ arch/arm/kernel/head.S | 13 ++++---------
+ 1 file changed, 4 insertions(+), 9 deletions(-)
 
-diff --git a/arch/arm/include/asm/pgtable.h b/arch/arm/include/asm/pgtable.h
-index 1c462381c225..a0d4a63a6516 100644
---- a/arch/arm/include/asm/pgtable.h
-+++ b/arch/arm/include/asm/pgtable.h
-@@ -45,6 +45,7 @@
- #define VMALLOC_OFFSET		(8*1024*1024)
- #define VMALLOC_START		(((unsigned long)high_memory + VMALLOC_OFFSET) & ~(VMALLOC_OFFSET-1))
- #define VMALLOC_END		0xff800000UL
-+#define VMALLOC_DEFAULT_BASE	(VMALLOC_END - (240 << 20) - VMALLOC_OFFSET)
- 
- #define LIBRARY_TEXT_START	0x0c000000
- 
-diff --git a/arch/arm/mm/mmu.c b/arch/arm/mm/mmu.c
-index e46a6a446cdd..566f7e657931 100644
---- a/arch/arm/mm/mmu.c
-+++ b/arch/arm/mm/mmu.c
-@@ -1128,8 +1128,7 @@ void __init debug_ll_io_init(void)
- }
+diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
+index 5d685e86148c..71bc0d037bc9 100644
+--- a/arch/arm/kernel/head.S
++++ b/arch/arm/kernel/head.S
+@@ -48,14 +48,6 @@
+ #define PMD_ORDER	2
  #endif
  
--static void * __initdata vmalloc_min =
--	(void *)(VMALLOC_END - (240 << 20) - VMALLOC_OFFSET);
-+static void * __initdata vmalloc_min = (void *)VMALLOC_DEFAULT_BASE;
- 
+-	.globl	swapper_pg_dir
+-	.equ	swapper_pg_dir, KERNEL_RAM_VADDR - PG_DIR_SIZE
+-
+-	.macro	pgtbl, rd, phys
+-	add	\rd, \phys, #TEXT_OFFSET
+-	sub	\rd, \rd, #PG_DIR_SIZE
+-	.endm
+-
  /*
-  * vmalloc=size forces the vmalloc area to be exactly 'size'
+  * Kernel startup entry point.
+  * ---------------------------
+@@ -77,6 +69,9 @@
+ 	.arm
+ 
+ 	__HEAD
++	.globl	swapper_pg_dir
++	.equ	swapper_pg_dir, . - PG_DIR_SIZE
++
+ ENTRY(stext)
+  ARM_BE8(setend	be )			@ ensure we are in BE8 mode
+ 
+@@ -172,7 +167,7 @@ ENDPROC(stext)
+  *  r4 = physical page table address
+  */
+ __create_page_tables:
+-	pgtbl	r4, r8				@ page table address
++	adr_l	r4, swapper_pg_dir		@ page table address
+ 
+ 	/*
+ 	 * Clear the swapper page table
 -- 
 2.11.0
