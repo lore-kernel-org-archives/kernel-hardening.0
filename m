@@ -1,59 +1,36 @@
-Date: Mon, 14 Aug 2017 10:22:19 -0600
-From: Tycho Andersen <tycho@docker.com>
-Message-ID: <20170814162219.h2lcmli677bx2lwh@smitten>
-References: <20170809200755.11234-1-tycho@docker.com>
- <20170809200755.11234-7-tycho@docker.com>
- <f6a42032-d4e5-f488-3d55-1da4c8a4dbaf@redhat.com>
- <20170811211302.limmjv4rmq23b25b@smitten>
- <20170812111733.GA16374@remoulade>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170812111733.GA16374@remoulade>
-Subject: Re: [kernel-hardening] [PATCH v5 06/10] arm64/mm: Disable section
- mappings if XPFO is enabled
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Laura Abbott <labbott@redhat.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>
+In-Reply-To: <alpine.LFD.2.20.1708141217150.17016@knanqh.ubzr>
+References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
+ <20170814125411.22604-3-ard.biesheuvel@linaro.org> <20170814152950.GT6321@e103592.cambridge.arm.com>
+ <CAKv+Gu87G93X36TdAEiMC46Uz_PqXEi_4LSftnUdkQ8HRCxWiA@mail.gmail.com>
+ <20170814155002.GV6321@e103592.cambridge.arm.com> <alpine.LFD.2.20.1708141217150.17016@knanqh.ubzr>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Mon, 14 Aug 2017 17:22:39 +0100
+Message-ID: <CAKv+Gu_3gb4K_2=igLWMjtXuEcdhnqeoVgaW7Lvqx56AQU-VZg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH 02/30] ARM: assembler: introduce adr_l, ldr_l and str_l macros
+To: Nicolas Pitre <nicolas.pitre@linaro.org>
+Cc: Dave Martin <Dave.Martin@arm.com>, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Russell King <linux@armlinux.org.uk>, Tony Lindgren <tony@atomide.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Thomas Garnier <thgarnie@google.com>, Matt Fleming <matt@codeblueprint.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Aug 12, 2017 at 12:17:34PM +0100, Mark Rutland wrote:
-> Hi,
-> 
-> On Fri, Aug 11, 2017 at 03:13:02PM -0600, Tycho Andersen wrote:
-> > On Fri, Aug 11, 2017 at 10:25:14AM -0700, Laura Abbott wrote:
-> > > On 08/09/2017 01:07 PM, Tycho Andersen wrote:
-> > > > @@ -190,7 +202,7 @@ static void init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
-> > > >  		next = pmd_addr_end(addr, end);
-> > > >  
-> > > >  		/* try section mapping first */
-> > > > -		if (((addr | next | phys) & ~SECTION_MASK) == 0 &&
-> > > > +		if (use_section_mapping(addr, next, phys) &&
-> > > >  		    (flags & NO_BLOCK_MAPPINGS) == 0) {
-> > > >  			pmd_set_huge(pmd, phys, prot);
-> > > >  
-> > > > 
-> > > 
-> > > There is already similar logic to disable section mappings for
-> > > debug_pagealloc at the start of map_mem, can you take advantage
-> > > of that?
-> > 
-> > You're suggesting something like this instead? Seems to work fine.
-> > 
-> > diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-> > index 38026b3ccb46..3b2c17bbbf12 100644
-> > --- a/arch/arm64/mm/mmu.c
-> > +++ b/arch/arm64/mm/mmu.c
-> > @@ -434,6 +434,8 @@ static void __init map_mem(pgd_t *pgd)
-> >  
-> >  	if (debug_pagealloc_enabled())
-> >  		flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
-> > +	if (IS_ENABLED(CONFIG_XPFO))
-> > +		flags |= NO_BLOCK_MAPPINGS;
-> >  
-> 
-> IIUC, XPFO carves out individual pages just like DEBUG_PAGEALLOC, so you'll
-> also need NO_CONT_MAPPINGS.
+On 14 August 2017 at 17:18, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+> On Mon, 14 Aug 2017, Dave Martin wrote:
+>
+>> On Mon, Aug 14, 2017 at 04:38:02PM +0100, Ard Biesheuvel wrote:
+>> > That's a trick, actually, which I failed to add a comment for.
+>
+> Shame shame shame !
+>
+>> > We use .arm sections in the thumb2 kernel, and using these macros
+>> > there would result in the wrong offset to be used. Adding the .w
+>> > suffix forces an error in the assembler which even results in a fairly
+>> > meaningful error message complaining about using .w in ARM code.
+>>
+>> Ewww... I think it'd be best to add a comment explaining that.
+>
+> Absolutely!
+>
 
-Yes, thanks!
+Yeah, mea culpa.
 
-Tycho
+But if people have better ideas how to avoid this situation, I am all ears.
