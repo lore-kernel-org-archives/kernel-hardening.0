@@ -1,119 +1,172 @@
-Date: Mon, 14 Aug 2017 16:29:15 +0100
+Date: Mon, 14 Aug 2017 16:29:51 +0100
 From: Dave Martin <Dave.Martin@arm.com>
-Message-ID: <20170814152915.GS6321@e103592.cambridge.arm.com>
+Message-ID: <20170814152950.GT6321@e103592.cambridge.arm.com>
 References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
- <20170814125411.22604-18-ard.biesheuvel@linaro.org>
- <20170814144209.GR6321@e103592.cambridge.arm.com>
- <CAKv+Gu8v7yKzxgmsjwBvPP=4riJ7QKj96vvQ2KMmBaHDmHXe7Q@mail.gmail.com>
+ <20170814125411.22604-3-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAKv+Gu8v7yKzxgmsjwBvPP=4riJ7QKj96vvQ2KMmBaHDmHXe7Q@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 17/30] arm-soc: tegra: make sleep asm code runtime
- relocatable
+In-Reply-To: <20170814125411.22604-3-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH 02/30] ARM: assembler: introduce adr_l, ldr_l and str_l
+ macros
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Russell King <linux@armlinux.org.uk>, Tony Lindgren <tony@atomide.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Thomas Garnier <thgarnie@google.com>, Matt Fleming <matt@codeblueprint.co.uk>
+Cc: kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Russell King <linux@armlinux.org.uk>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Thomas Garnier <thgarnie@google.com>, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 14, 2017 at 03:49:15PM +0100, Ard Biesheuvel wrote:
-> On 14 August 2017 at 15:42, Dave Martin <Dave.Martin@arm.com> wrote:
-> > On Mon, Aug 14, 2017 at 01:53:58PM +0100, Ard Biesheuvel wrote:
-> >> The PIE kernel build does not allow absolute references encoded in
-> >> movw/movt instruction pairs, so use our mov_l macro instead (which
-> >> will still use such a pair unless CONFIG_RELOCATABLE is defined)
-> >>
-> >> Also, avoid 32-bit absolute literals to refer to absolute symbols.
-> >> Instead, use a 16 bit reference so that PIE linker cannot get
-> >> confused whether the symbol reference is subject to relocation at
-> >> runtime.
-> >
-> > This sounds like we're papering over something.
-> >
-> > If the linker is "confused", that sounds like we are either abusing
-> > it somehow, or the linker is broken.
-> >
+On Mon, Aug 14, 2017 at 01:53:43PM +0100, Ard Biesheuvel wrote:
+> Like arm64, ARM supports position independent code sequences that
+> produce symbol references with a greater reach than the ordinary
+> adr/ldr instructions.
 > 
-> There is some ambiguity in how SHN_ABS symbols are treated in shared
-> libraries and PIE executables.
+> Currently, we use open coded instruction sequences involving literals
+> and arithmetic operations. Instead, we can use movw/movt pairs on v7
+> CPUs, circumventing the D-cache entirely. For older CPUs, we can emit
+> the literal into a subsection, allowing it to be emitted out of line
+> while retaining the ability to perform arithmetic on label offsets.
 > 
-> https://sourceware.org/ml/binutils/2012-05/msg00019.html
+> E.g., on pre-v7 CPUs, we can emit a PC-relative reference as follows:
 > 
-> I haven't confirmed whether it actually causes problems in this
-> particular case, but it is safer (and not entirely inappropriate) to
-> use a 16-bit field for a quantity that can easily fit one.
-
-OK, so, fundamental linker design flaw that cannot be fixed for
-historical reasons.  Gotcha.
-
-This "fix" feels like a bit of a hack, since it relies on the absence of
-a certain relocation type that could be added later (though it seems
-highly unlikely).
-
-
-Cleaner options would be to expose both symbols that are subtracted,
-rather than the result, or to do the subtraction at build time and
-generate a header that affected files include (though that's more
-invasive on the Makefile side).
-
-May be overkill though.
-
+>        ldr          <reg>, 222f
+>   111: add          <reg>, <reg>, pc
+>        .subsection  1
+>   222: .long        <sym> - (111b + 8)
+>        .previous
 > 
-> >
-> >> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> >> ---
-> >>  arch/arm/mach-tegra/sleep-tegra20.S | 22 ++++++++++++--------
-> >>  arch/arm/mach-tegra/sleep-tegra30.S |  6 +++---
-> >>  arch/arm/mach-tegra/sleep.S         |  4 ++--
-> >>  3 files changed, 18 insertions(+), 14 deletions(-)
-> >>
-> >> diff --git a/arch/arm/mach-tegra/sleep-tegra20.S b/arch/arm/mach-tegra/sleep-tegra20.S
-> >> index 5c8e638ee51a..cab95de5c8f1 100644
-> >> --- a/arch/arm/mach-tegra/sleep-tegra20.S
-> >> +++ b/arch/arm/mach-tegra/sleep-tegra20.S
-> >> @@ -99,7 +99,7 @@ ENTRY(tegra20_cpu_shutdown)
-> >>       cmp     r0, #0
-> >>       reteq   lr                      @ must not be called for CPU 0
-> >>       mov32   r1, TEGRA_IRAM_RESET_BASE_VIRT
-> >> -     ldr     r2, =__tegra20_cpu1_resettable_status_offset
-> >> +     ldrh    r2, 0f
-> >>       mov     r12, #CPU_RESETTABLE
-> >>       strb    r12, [r1, r2]
-> >>
-> >> @@ -121,6 +121,7 @@ ENTRY(tegra20_cpu_shutdown)
-> >>       beq     .
-> >>       ret     lr
-> >>  ENDPROC(tegra20_cpu_shutdown)
-> >> +0:   .short  __tegra20_cpu1_resettable_status_offset
-> >>  #endif
-> >>
-> >>  #ifdef CONFIG_PM_SLEEP
-> >> @@ -181,6 +182,9 @@ ENTRY(tegra_pen_unlock)
-> >>       ret     lr
-> >>  ENDPROC(tegra_pen_unlock)
-> >>
-> >> +.L__tegra20_cpu1_resettable_status_offset:
-> >> +     .short  __tegra20_cpu1_resettable_status_offset
-> >> +
-> >>  /*
-> >>   * tegra20_cpu_clear_resettable(void)
-> >>   *
-> >> @@ -189,7 +193,7 @@ ENDPROC(tegra_pen_unlock)
-> >>   */
-> >>  ENTRY(tegra20_cpu_clear_resettable)
-> >>       mov32   r1, TEGRA_IRAM_RESET_BASE_VIRT
-> >
-> > Can we simply port mov32 to mov_l?  Or do we hit a problem with
-> > multiplatform kernels where mov_l may involve a literal pool entry
-> > (and does it matter)?
-> >
+> This is allowed by the assembler because, unlike ordinary sections,
+> subsections are combined into a single section into the object file,
+> and so the label references are not true cross-section references that
+> are visible as relocations. Note that we could even do something like
 > 
-> The only place where it matters is in code that lives in idmap.text,
-> since the relative reference will point to the ID mapped alias of a
-> section that is not covered by the ID ID map. I think we should be
-> able to use mov_l everywhere else, and it should do the right thing
-> for ordinary and PIE builds
+>        add          <reg>, pc, #(222f - 111f) & ~0xfff
+>        ldr          <reg>, [<reg>, #(222f - 111f) & 0xfff]
+>   111: add          <reg>, <reg>, pc
+>        .subsection  1
+>   222: .long        <sym> - (111b + 8)
+>        .previous
 
-Fair enough.
+This is reinventing ldr=
+
+I seem to remember ldr= barfing on things that .long happily accepts
+though, was this the reason?
+
+
+> if it turns out that the 4 KB range of the ldr instruction is insufficient
+> to reach the literal in the subsection, although this is currently not a
+> problem (of the 98 objects built from .S files in a multi_v7_defconfig
+> build, only 11 have .text sections that are over 1 KB, and the largest one
+> [entry-armv.o] is 3308 bytes)
+> 
+> Subsections have been available in binutils since 2004 at least, so
+> they should not cause any issues with older toolchains.
+
+(I also believe this to be an ancient feature, but I've not done the
+digging to prove it.)
+
+> So use the above to implement the macros mov_l, adr_l, adrm_l (using ldm
+> to load multiple literals at once), ldr_l and str_l, all of which will
+> use movw/movt pairs on v7 and later CPUs, and use PC-relative literals
+> otherwise.
+> 
+> Cc: Russell King <linux@armlinux.org.uk>
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> ---
+>  arch/arm/include/asm/assembler.h | 71 ++++++++++++++++++++
+>  1 file changed, 71 insertions(+)
+> 
+> diff --git a/arch/arm/include/asm/assembler.h b/arch/arm/include/asm/assembler.h
+> index ad301f107dd2..516ebaf4ff38 100644
+> --- a/arch/arm/include/asm/assembler.h
+> +++ b/arch/arm/include/asm/assembler.h
+> @@ -518,4 +518,75 @@ THUMB(	orr	\reg , \reg , #PSR_T_BIT	)
+>  #endif
+>  	.endm
+>  
+> +#ifdef CONFIG_THUMB2_KERNEL
+> +#define	ARM_PC_BIAS		4
+> +#else
+> +#define	ARM_PC_BIAS		8
+> +#endif
+> +
+> +	.macro		__adldst_l, op, reg, sym, tmp, c
+> +	.if		__LINUX_ARM_ARCH__ < 7
+> +	ldr\c		\tmp, 111f
+> +	.subsection	1
+> +	.align		2
+> +111:	.long		\sym - (222f + ARM_PC_BIAS)
+
+See above comment about ldr=.
+
+> +	.previous
+> +	.else
+> +	W(movw\c\())	\tmp, #:lower16:\sym - (222f + ARM_PC_BIAS)
+> +	W(movt\c\())	\tmp, #:upper16:\sym - (222f + ARM_PC_BIAS)
+
+Why W()?
+
+There are no narrow forms of these instructions anyway -- if there were
+then they couldn't accommodate a 16-bit immediate.
+
+> +	.endif
+> +222:
+> +	.ifc		\op, add
+> +	add\c		\reg, \tmp, pc
+> +	.elseif		CONFIG_THUMB2_KERNEL == 1
+> +	add		\tmp, \tmp, pc
+> +	\op\c		\reg, [\tmp]
+
+Shame 
+	\op\c		\reg, [pc, \tmp]
+doesn't work.
+
+But it doesn't, apparently.
+
+> +	.else
+> +	\op\c		\reg, [pc, \tmp]
+> +	.endif
+> +	.endm
+> +
+> +	/*
+> +	 * mov_l - move a constant value or [relocated] address into a register
+> +	 */
+> +	.macro		mov_l, dst:req, imm:req, cond
+> +	.if		__LINUX_ARM_ARCH__ < 7
+> +	ldr\cond	\dst, =\imm
+> +	.else
+> +	W(movw\cond\())	\dst, #:lower16:\imm
+> +	W(movt\cond\())	\dst, #:upper16:\imm
+> +	.endif
+> +	.endm
+> +
+> +	/*
+> +	 * adr_l - adr pseudo-op with unlimited range
+> +	 *
+> +	 * @dst: destination register
+> +	 * @sym: name of the symbol
+> +	 */
+> +	.macro		adr_l, dst:req, sym:req, cond
+> +	__adldst_l	add, \dst, \sym, \dst, \cond
+> +	.endm
+> +
+> +	/*
+> +	 * ldr_l - ldr <literal> pseudo-op with unlimited range
+> +	 *
+> +	 * @dst: destination register
+> +	 * @sym: name of the symbol
+> +	 */
+> +	.macro		ldr_l, dst:req, sym:req, cond
+> +	__adldst_l	ldr, \dst, \sym, \dst, \cond
+> +	.endm
+> +
+> +	/*
+> +	 * str_l - str <literal> pseudo-op with unlimited range
+> +	 *
+> +	 * @src: source register
+> +	 * @sym: name of the symbol
+> +	 * @tmp: mandatory scratch register
+> +	 */
+> +	.macro		str_l, src:req, sym:req, tmp:req, cond
+> +	__adldst_l	str, \src, \sym, \tmp, \cond
+> +	.endm
 
 Cheers
 ---Dave
