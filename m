@@ -1,71 +1,51 @@
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 14 Aug 2017 13:54:09 +0100
-Message-Id: <20170814125411.22604-29-ard.biesheuvel@linaro.org>
-In-Reply-To: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
-References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH 28/30] efi/libstub: check for vmalloc= command line argument
-To: kernel-hardening@lists.openwall.com
-Cc: linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
+Date: Mon, 14 Aug 2017 14:10:24 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170814131023.GA23428@leverpostej>
+References: <1502130965-18710-1-git-send-email-mark.rutland@arm.com>
+ <1502130965-18710-6-git-send-email-mark.rutland@arm.com>
+ <20170814115958.dqg2xrobls4jcgx3@armageddon.cambridge.arm.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170814115958.dqg2xrobls4jcgx3@armageddon.cambridge.arm.com>
+Subject: [kernel-hardening] Re: [PATCH 05/14] arm64: clean up THREAD_* definitions
+To: Catalin Marinas <catalin.marinas@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, keescook@chromium.org, ard.biesheuvel@linaro.org, matt@codeblueprint.co.uk, kernel-hardening@lists.openwall.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, luto@amacapital.net, james.morse@arm.com, labbott@redhat.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Check for and record the presence of a vmalloc= argument on the
-kernel command line. We need this information on ARM systems when
-implementing KASLR, given that the size of the vmalloc region will
-affect the size of the lowmem region, therefore affecting the
-available randomization range as well.
+On Mon, Aug 14, 2017 at 12:59:59PM +0100, Catalin Marinas wrote:
+> On Mon, Aug 07, 2017 at 07:35:56PM +0100, Mark Rutland wrote:
+> > Currently we define THREAD_SIZE and THREAD_SIZE order separately, with
+> 
+> s/THREAD_SIZE order/THREAD_SIZE_ORDER/
 
-Cc: Matt Fleming <matt@codeblueprint.co.uk>
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- drivers/firmware/efi/libstub/efi-stub-helper.c | 9 +++++++++
- drivers/firmware/efi/libstub/efistub.h         | 1 +
- 2 files changed, 10 insertions(+)
+Whoops; I'll fix that up now.
 
-diff --git a/drivers/firmware/efi/libstub/efi-stub-helper.c b/drivers/firmware/efi/libstub/efi-stub-helper.c
-index b0184360efc6..f3e9d43030ac 100644
---- a/drivers/firmware/efi/libstub/efi-stub-helper.c
-+++ b/drivers/firmware/efi/libstub/efi-stub-helper.c
-@@ -34,6 +34,7 @@ static unsigned long __chunk_size = EFI_READ_CHUNK_SIZE;
- 
- static int __section(.data) __nokaslr;
- static int __section(.data) __quiet;
-+static int __section(.data) __vmalloc_arg;
- 
- int __pure nokaslr(void)
- {
-@@ -43,6 +44,10 @@ int __pure is_quiet(void)
- {
- 	return __quiet;
- }
-+int __pure have_vmalloc(void)
-+{
-+	return __vmalloc_arg;
-+}
- 
- #define EFI_MMAP_NR_SLACK_SLOTS	8
- 
-@@ -433,6 +438,10 @@ efi_status_t efi_parse_options(char const *cmdline)
- 	if (str == cmdline || (str && str > cmdline && *(str - 1) == ' '))
- 		__quiet = 1;
- 
-+	str = strstr(cmdline, "vmalloc=");
-+	if (str == cmdline || (str && str > cmdline && *(str - 1) == ' '))
-+		__vmalloc_arg = 1;
-+
- 	/*
- 	 * If no EFI parameters were specified on the cmdline we've got
- 	 * nothing to do.
-diff --git a/drivers/firmware/efi/libstub/efistub.h b/drivers/firmware/efi/libstub/efistub.h
-index 3a670a5f759f..aaf2aeb785ea 100644
---- a/drivers/firmware/efi/libstub/efistub.h
-+++ b/drivers/firmware/efi/libstub/efistub.h
-@@ -26,6 +26,7 @@
- 
- extern int __pure nokaslr(void);
- extern int __pure is_quiet(void);
-+extern int __pure have_vmalloc(void);
- 
- #define pr_efi(sys_table, msg)		do {				\
- 	if (!is_quiet()) efi_printk(sys_table, "EFI stub: "msg);	\
--- 
-2.11.0
+> > +#define THREAD_SHIFT		14
+> > +
+> > +#if THREAD_SHIFT >= PAGE_SHIFT
+> > +#define THREAD_SIZE_ORDER	(THREAD_SHIFT - PAGE_SHIFT)
+> > +#endif
+> > +
+> > +#define THREAD_SIZE		(UL(1) << THREAD_SHIFT)
+> 
+> I haven't tried the series to this patch but it seems to me that
+> THREAD_SIZE_ORDER is undefined for a PAGE_SHIFT of 16. 
+
+That is already the case without these patches, as we have:
+
+#ifdef CONFIG_ARM64_4K_PAGES
+#define THREAD_SIZE_ORDER       2
+#elif defined(CONFIG_ARM64_16K_PAGES)
+#define THREAD_SIZE_ORDER       0
+#endif
+
+... this is also deliberate, as we'd need an order of -2 with 16K stacks and
+64K pages, and this doesn't make sense.
+
+THREAD_SIZE_ORDER only matters if THREAD_SIZE >= PAGE_SIZE (or if we're using a
+VMAP'd stack). For 64K pages && VMAP_STACK, we'll use a 64K stack, avoiding the
+problem.
+
+Thanks,
+Mark.
