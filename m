@@ -1,59 +1,79 @@
-Date: Mon, 14 Aug 2017 16:53:25 +0100
-From: Dave Martin <Dave.Martin@arm.com>
-Message-ID: <20170814155325.GW6321@e103592.cambridge.arm.com>
-References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
- <20170814125411.22604-3-ard.biesheuvel@linaro.org>
- <20170814153213.GU6321@e103592.cambridge.arm.com>
- <CAKv+Gu83nTRAqqT_AzQZubPVCt69tUdHy1oK7bPaYvHFmnihkw@mail.gmail.com>
+Date: Mon, 14 Aug 2017 12:02:42 -0400 (EDT)
+From: Nicolas Pitre <nicolas.pitre@linaro.org>
+In-Reply-To: <20170814125411.22604-21-ard.biesheuvel@linaro.org>
+Message-ID: <alpine.LFD.2.20.1708141158070.17016@knanqh.ubzr>
+References: <20170814125411.22604-1-ard.biesheuvel@linaro.org> <20170814125411.22604-21-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAKv+Gu83nTRAqqT_AzQZubPVCt69tUdHy1oK7bPaYvHFmnihkw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 02/30] ARM: assembler: introduce adr_l, ldr_l and str_l
- macros
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH 20/30] ARM: kernel: use PC relative symbol references in
+ suspend/resume code
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Russell King <linux@armlinux.org.uk>, Tony Lindgren <tony@atomide.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Thomas Garnier <thgarnie@google.com>, Matt Fleming <matt@codeblueprint.co.uk>
+Cc: kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, Arnd Bergmann <arnd@arndb.de>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 14, 2017 at 04:40:55PM +0100, Ard Biesheuvel wrote:
-> On 14 August 2017 at 16:32, Dave Martin <Dave.Martin@arm.com> wrote:
-> > On Mon, Aug 14, 2017 at 01:53:43PM +0100, Ard Biesheuvel wrote:
+On Mon, 14 Aug 2017, Ard Biesheuvel wrote:
 
-[...]
-
-> >> So use the above to implement the macros mov_l, adr_l, adrm_l (using ldm
-> >
-> > I don't see adrm_l in this patch.
-> >
+> Replace some unnecessary absolute references with relative ones. Also,
+> to prepare for runtime relocation, which occurs with the caches on,
+> defer taking the absolute address of cpu_resume_after_mmu() until after
+> the MMU is enabled.
 > 
-> Oops (2)
+> Cc: Russell King <linux@armlinux.org.uk>
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> ---
+>  arch/arm/kernel/sleep.S | 11 +++++------
+>  1 file changed, 5 insertions(+), 6 deletions(-)
 > 
-> Nico already mentioned that, and I failed to fix the commit log. I
-> added it at some point, but it wasn't really useful
+> diff --git a/arch/arm/kernel/sleep.S b/arch/arm/kernel/sleep.S
+> index 3026b119d3ff..9efd1c7d3552 100644
+> --- a/arch/arm/kernel/sleep.S
+> +++ b/arch/arm/kernel/sleep.S
+> @@ -60,18 +60,17 @@
+>  ENTRY(__cpu_suspend)
+>  	stmfd	sp!, {r4 - r11, lr}
+>  #ifdef MULTI_CPU
+> -	ldr	r10, =processor
+> -	ldr	r4, [r10, #CPU_SLEEP_SIZE] @ size of CPU sleep state
+> +	ldr_l	r4, processor + CPU_SLEEP_SIZE	@ size of CPU sleep state
+>  #else
+> -	ldr	r4, =cpu_suspend_size
+> +	adr_l	r4, cpu_suspend_size
+>  #endif
+>  	mov	r5, sp			@ current virtual SP
+>  	add	r4, r4, #12		@ Space for pgd, virt sp, phys resume fn
+>  	sub	sp, sp, r4		@ allocate CPU state on stack
+> -	ldr	r3, =sleep_save_sp
+> +	adr_l	r3, sleep_save_sp
+>  	stmfd	sp!, {r0, r1}		@ save suspend func arg and pointer
+>  	ldr	r3, [r3, #SLEEP_SAVE_SP_VIRT]
+> -	ALT_SMP(ldr r0, =mpidr_hash)
+> +	ALT_SMP(adr_l r0, mpidr_hash)
+>  	ALT_UP_B(1f)
 
-Thought it might be something like that.
+The above is dangerous. adr_l expands to more than one instruction which 
+is not what ALT_SMP() was designed for. Here it might happen to work 
+anyway because it is combined with ALT_UP_B() but with ALT_UP() it 
+wouldn't. This is a mistake waiting to happen.
 
-> >> to load multiple literals at once), ldr_l and str_l, all of which will
-> >> use movw/movt pairs on v7 and later CPUs, and use PC-relative literals
-> >> otherwise.
-> >
-> > Also...
-> >
-> > By default, I'd assume that we should port _all_ uses of :upper16:/
-> > :lower16: to use these.  Does this series consciously do that?  Are
-> > there any exceptions?
-> >
+
+>  	/* This ldmia relies on the memory layout of the mpidr_hash struct */
+>  	ldmia	r0, {r1, r6-r8}	@ r1 = mpidr mask (r6,r7,r8) = l[0,1,2] shifts
+> @@ -100,13 +99,13 @@ ENDPROC(cpu_suspend_abort)
+>  	.align	5
+>  	.pushsection	.idmap.text,"ax"
+>  ENTRY(cpu_resume_mmu)
+> -	ldr	r3, =cpu_resume_after_mmu
+>  	instr_sync
+>  	mcr	p15, 0, r0, c1, c0, 0	@ turn on MMU, I-cache, etc
+>  	mrc	p15, 0, r0, c0, c0, 0	@ read id reg
+>  	instr_sync
+>  	mov	r0, r0
+>  	mov	r0, r0
+> +	ldr	r3, =cpu_resume_after_mmu
+>  	ret	r3			@ jump to virtual address
+>  ENDPROC(cpu_resume_mmu)
+>  	.popsection
+> -- 
+> 2.11.0
 > 
-> There aren't that many. Anything that refers to absolute symbols will
-> break under CONFIG_RELOCATABLE and I haven't noticed any issues (I
-> tested extensively with Thumb2)
 > 
-> I don't mind open coded movw/movt for relative references in code that
-> is tightly coupled to a platform that guarantees v7+ so I didn't do a
-> full sweep. Also, I started with 50+ patches and tried to remove the
-> ones that are mostly orthogonal to the KASLR stuff.
-
-OK, that sounds reasonable.
-
-Cheers
----Dave
