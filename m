@@ -1,52 +1,53 @@
-Date: Mon, 14 Aug 2017 17:42:27 +0100
-From: Russell King - ARM Linux <linux@armlinux.org.uk>
-Message-ID: <20170814164227.GJ20805@n2100.armlinux.org.uk>
-References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
- <20170814125411.22604-3-ard.biesheuvel@linaro.org>
- <20170814152950.GT6321@e103592.cambridge.arm.com>
- <CAKv+Gu87G93X36TdAEiMC46Uz_PqXEi_4LSftnUdkQ8HRCxWiA@mail.gmail.com>
- <20170814155002.GV6321@e103592.cambridge.arm.com>
- <alpine.LFD.2.20.1708141217150.17016@knanqh.ubzr>
- <CAKv+Gu_3gb4K_2=igLWMjtXuEcdhnqeoVgaW7Lvqx56AQU-VZg@mail.gmail.com>
+Date: Mon, 14 Aug 2017 17:50:47 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170814165047.GB23428@leverpostej>
+References: <20170809200755.11234-1-tycho@docker.com>
+ <20170809200755.11234-5-tycho@docker.com>
+ <20170812112603.GB16374@remoulade>
+ <20170814163536.6njceqc3dip5lrlu@smitten>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAKv+Gu_3gb4K_2=igLWMjtXuEcdhnqeoVgaW7Lvqx56AQU-VZg@mail.gmail.com>
-Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
-Subject: [kernel-hardening] Re: [PATCH 02/30] ARM: assembler: introduce adr_l, ldr_l and str_l
- macros
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Nicolas Pitre <nicolas.pitre@linaro.org>, Dave Martin <Dave.Martin@arm.com>, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Tony Lindgren <tony@atomide.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Thomas Garnier <thgarnie@google.com>, Matt Fleming <matt@codeblueprint.co.uk>
+In-Reply-To: <20170814163536.6njceqc3dip5lrlu@smitten>
+Subject: Re: [kernel-hardening] [PATCH v5 04/10] arm64: Add __flush_tlb_one()
+To: Tycho Andersen <tycho@docker.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Juerg Haefliger <juerg.haefliger@hpe.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 14, 2017 at 05:22:39PM +0100, Ard Biesheuvel wrote:
-> On 14 August 2017 at 17:18, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
-> > On Mon, 14 Aug 2017, Dave Martin wrote:
-> >
-> >> On Mon, Aug 14, 2017 at 04:38:02PM +0100, Ard Biesheuvel wrote:
-> >> > That's a trick, actually, which I failed to add a comment for.
-> >
-> > Shame shame shame !
-> >
-> >> > We use .arm sections in the thumb2 kernel, and using these macros
-> >> > there would result in the wrong offset to be used. Adding the .w
-> >> > suffix forces an error in the assembler which even results in a fairly
-> >> > meaningful error message complaining about using .w in ARM code.
-> >>
-> >> Ewww... I think it'd be best to add a comment explaining that.
-> >
-> > Absolutely!
-> >
+On Mon, Aug 14, 2017 at 10:35:36AM -0600, Tycho Andersen wrote:
+> Hi Mark,
 > 
-> Yeah, mea culpa.
+> On Sat, Aug 12, 2017 at 12:26:03PM +0100, Mark Rutland wrote:
+> > On Wed, Aug 09, 2017 at 02:07:49PM -0600, Tycho Andersen wrote:
+> > > +static inline void __flush_tlb_one(unsigned long addr)
+> > > +{
+> > > +	dsb(ishst);
+> > > +	__tlbi(vaae1is, addr >> 12);
+> > > +	dsb(ish);
+> > > +	isb();
+> > > +}
+> > 
+> > Is this going to be called by generic code?
 > 
-> But if people have better ideas how to avoid this situation, I am all ears.
+> Yes, it's called in mm/xpfo.c:xpfo_kunmap.
+> 
+> > It would be nice if we could drop 'kernel' into the name, to make it clear this
+> > is intended to affect the kernel mappings, which have different maintenance
+> > requirements to user mappings.
 
-Have you tested building an ARMv7M kernel with your patches - ARMv7M is
-Thumb only, so can't contain any ARM code.  If not, please try
-mps2_defconfig.
+> It's named __flush_tlb_one after the x86 (and a few other arches)
+> function of the same name. I can change it to flush_tlb_kernel_page,
+> but then we'll need some x86-specific code to map the name as well.
+> 
+> Maybe since it's called from generic code that's warranted though?
+> I'll change the implementation for now, let me know what you want to
+> do about the name.
 
--- 
-RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
-FTTC broadband for 0.8mile line in suburbia: sync at 8.8Mbps down 630kbps up
-According to speedtest.net: 8.21Mbps down 510kbps up
+I think it would be preferable to do so, to align with 
+flush_tlb_kernel_range(), which is an existing generic interface.
+
+That said, is there any reason not to use flush_tlb_kernel_range()
+directly?
+
+Thanks,
+Mark.
