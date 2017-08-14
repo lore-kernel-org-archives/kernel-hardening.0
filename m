@@ -1,35 +1,55 @@
-Date: Mon, 14 Aug 2017 14:29:47 -0600
-From: Tycho Andersen <tycho@docker.com>
-Message-ID: <20170814202947.er7uparyhplm77ei@smitten>
-References: <20170809200755.11234-1-tycho@docker.com>
- <20170809200755.11234-11-tycho@docker.com>
- <CAGXu5jLp11wqM04L5bWbmSVZBTOYnuGNjsjTitzUOFJm=pn9Fg@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jLp11wqM04L5bWbmSVZBTOYnuGNjsjTitzUOFJm=pn9Fg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v5 10/10] lkdtm: Add test for XPFO
-To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Mon, 14 Aug 2017 14:37:29 -0700
+Message-Id: <20170814213732.104301-1-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v3 1/4] syscalls: Use CHECK_DATA_CORRUPTION for addr_limit_user_check
+To: Al Viro <viro@zeniv.linux.org.uk>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Thomas Garnier <thgarnie@google.com>, Yonghong Song <yhs@fb.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Dave Martin <Dave.Martin@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>
+Cc: linux-api@vger.kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 14, 2017 at 12:10:47PM -0700, Kees Cook wrote:
-> On Wed, Aug 9, 2017 at 1:07 PM, Tycho Andersen <tycho@docker.com> wrote:
-> > From: Juerg Haefliger <juerg.haefliger@hpe.com>
-> >
-> > This test simply reads from userspace memory via the kernel's linear
-> > map.
-> >
-> > hugepages is only supported on x86 right now, hence the ifdef.
-> 
-> I'd prefer that the #ifdef is handled in the .c file. The result is
-> that all architectures will have the XPFO_READ_USER_HUGE test, but it
-> can just fail when not available. This means no changes are needed for
-> lkdtm in the future and the test provides an actual test of hugepages
-> coverage.
+Use CHECK_DATA_CORRUPTION instead of BUG_ON to provide more flexibility
+on address limit failures. By default, send a SIGKILL signal to kill the
+current process preventing exploitation of a bad address limit.
 
-If failing tests is okay, I think we can just drop that hunk entirely.
-Everything compiles fine, it just doesn't work :). I'll do that for
-the next version.
+Make the TIF_FSCHECK flag optional so ARM can use this function.
 
-Tycho
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+ include/linux/syscalls.h | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
+index 88951b795ee3..65e273aadada 100644
+--- a/include/linux/syscalls.h
++++ b/include/linux/syscalls.h
+@@ -219,21 +219,25 @@ static inline int is_syscall_trace_event(struct trace_event_call *tp_event)
+ 	}								\
+ 	static inline long SYSC##name(__MAP(x,__SC_DECL,__VA_ARGS__))
+ 
+-#ifdef TIF_FSCHECK
+ /*
+  * Called before coming back to user-mode. Returning to user-mode with an
+  * address limit different than USER_DS can allow to overwrite kernel memory.
+  */
+ static inline void addr_limit_user_check(void)
+ {
+-
++#ifdef TIF_FSCHECK
+ 	if (!test_thread_flag(TIF_FSCHECK))
+ 		return;
++#endif
+ 
+-	BUG_ON(!segment_eq(get_fs(), USER_DS));
++	if (CHECK_DATA_CORRUPTION(!segment_eq(get_fs(), USER_DS),
++				  "Invalid address limit on user-mode return"))
++		force_sig(SIGKILL, current);
++
++#ifdef TIF_FSCHECK
+ 	clear_thread_flag(TIF_FSCHECK);
+-}
+ #endif
++}
+ 
+ asmlinkage long sys32_quotactl(unsigned int cmd, const char __user *special,
+ 			       qid_t id, void __user *addr);
+-- 
+2.14.1.480.gb18f417b89-goog
