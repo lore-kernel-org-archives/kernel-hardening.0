@@ -1,108 +1,92 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 14 Aug 2017 13:54:07 +0100
-Message-Id: <20170814125411.22604-27-ard.biesheuvel@linaro.org>
+Date: Mon, 14 Aug 2017 13:54:08 +0100
+Message-Id: <20170814125411.22604-28-ard.biesheuvel@linaro.org>
 In-Reply-To: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
 References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH 26/30] ARM: decompressor: add KASLR support
+Subject: [kernel-hardening] [PATCH 27/30] efi/libstub: add 'max' parameter to efi_random_alloc()
 To: kernel-hardening@lists.openwall.com
 Cc: linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add support to the decompressor to load the kernel at a randomized
-offset, and invoke the kernel proper while passing on the information
-about the offset at which the kernel was loaded.
+Add an upper limit to efi_random_alloc() so we can use it to randomly
+allocate the ARM kernel in lowmem.
 
-This implementation was created with the UEFI stub in mind (which has
-a rich execution environment that provides access to the platforms
-random number generators), which will assign the kaslr_offset variable
-directly. However, to allow other bootloaders to use this facility,
-the KASLR offset is exposed via a zImage header field as well.
-
-Cc: Russell King <linux@armlinux.org.uk>
+Cc: Matt Fleming <matt@codeblueprint.co.uk>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm/boot/compressed/head.S |  8 ++++++
- arch/arm/include/asm/zimage.h   | 30 ++++++++++++++++++--
- 2 files changed, 36 insertions(+), 2 deletions(-)
+ drivers/firmware/efi/libstub/arm64-stub.c |  2 +-
+ drivers/firmware/efi/libstub/efistub.h    |  3 ++-
+ drivers/firmware/efi/libstub/random.c     | 10 ++++++----
+ 3 files changed, 9 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
-index e451738d8954..7111a2cbef95 100644
---- a/arch/arm/boot/compressed/head.S
-+++ b/arch/arm/boot/compressed/head.S
-@@ -200,6 +200,10 @@ not_angel:
- 		 */
- 		mov	r4, pc
- 		and	r4, r4, #0xf8000000
-+#ifdef CONFIG_RANDOMIZE_BASE
-+		ldr_l	r0, kaslr_offset
-+		add	r4, r4, r0
-+#endif
- 		/* Determine final kernel image address. */
- 		add	r4, r4, #TEXT_OFFSET
- #else
-@@ -1353,6 +1357,10 @@ __hyp_reentry_vectors:
+diff --git a/drivers/firmware/efi/libstub/arm64-stub.c b/drivers/firmware/efi/libstub/arm64-stub.c
+index b4c2589d7c91..940766f90adb 100644
+--- a/drivers/firmware/efi/libstub/arm64-stub.c
++++ b/drivers/firmware/efi/libstub/arm64-stub.c
+@@ -94,7 +94,7 @@ efi_status_t handle_kernel_image(efi_system_table_t *sys_table_arg,
+ 		*reserve_size = kernel_memsize + offset;
+ 		status = efi_random_alloc(sys_table_arg, *reserve_size,
+ 					  MIN_KIMG_ALIGN, reserve_addr,
+-					  (u32)phys_seed);
++					  (u32)phys_seed, ULONG_MAX);
  
- __enter_kernel:
- 		mov	r0, #0			@ must be 0
-+#ifdef CONFIG_RANDOMIZE_BASE
-+		ldr_l	r3, kaslr_offset
-+		add	r4, r4, #4		@ skip first instruction
-+#endif
-  ARM(		mov	pc, r4		)	@ call kernel
-  M_CLASS(	add	r4, r4, #1	)	@ enter in Thumb mode for M class
-  THUMB(		bx	r4		)	@ entry point is always ARM for A/R classes
-diff --git a/arch/arm/include/asm/zimage.h b/arch/arm/include/asm/zimage.h
-index ff65cc3bb716..554a48ddcfd8 100644
---- a/arch/arm/include/asm/zimage.h
-+++ b/arch/arm/include/asm/zimage.h
-@@ -10,10 +10,15 @@
- #ifndef __ASM_ZIMAGE_H
- #define __ASM_ZIMAGE_H
+ 		*image_addr = *reserve_addr + offset;
+ 	} else {
+diff --git a/drivers/firmware/efi/libstub/efistub.h b/drivers/firmware/efi/libstub/efistub.h
+index 83f268c05007..3a670a5f759f 100644
+--- a/drivers/firmware/efi/libstub/efistub.h
++++ b/drivers/firmware/efi/libstub/efistub.h
+@@ -60,7 +60,8 @@ efi_status_t efi_get_random_bytes(efi_system_table_t *sys_table,
  
-+#include <asm/pgtable.h>
-+
- #define ZIMAGE_HEADER_MAGIC		0x016f2818
- #define ZIMAGE_OPTIONAL_HEADER_MAGIC	0xe7fedef0
+ efi_status_t efi_random_alloc(efi_system_table_t *sys_table_arg,
+ 			      unsigned long size, unsigned long align,
+-			      unsigned long *addr, unsigned long random_seed);
++			      unsigned long *addr, unsigned long random_seed,
++			      unsigned long max);
  
--#if defined(__ASSEMBLY__) && !defined(LINKER_SCRIPT)
-+#define ZIMAGE_OPT_HDR_ID_KASLR		0x1
-+
-+#ifndef LINKER_SCRIPT
-+#ifdef __ASSEMBLY__
+ efi_status_t check_platform_features(efi_system_table_t *sys_table_arg);
  
- 	.macro		__ZIMAGE_HEADER
- 	.word		_magic_sig	@ Magic numbers to help the loader
-@@ -31,9 +36,30 @@
- 	 * Each header starts with a u16[2] containing id and size of the
- 	 * entire header, including the u16[] itself.
- 	 */
-+
-+#ifdef CONFIG_RANDOMIZE_BASE
-+0:	.short		ZIMAGE_OPT_HDR_ID_KASLR
-+	.short		__kaslr_hdr_size
-+
-+	/*
-+	 * The KASLR header carries the information needed by the bootloader
-+	 * to choose a randomization offset, and record it in the offset
-+	 * field below.
-+	 */
-+ENTRY(kaslr_offset)
-+	.long		0				@ kaslr offset
-+	.long		CONFIG_PAGE_OFFSET		@ page offset
-+	.long		VMALLOC_DEFAULT_BASE		@ start of vmalloc area
-+	.long		SECTION_SIZE			@ kaslr granularity
-+	.set		__kaslr_hdr_size, . - 0b
-+#endif
-+
- 	.long		0xffffffff	@ end of optional headers
- 	.popsection
- 	.endm
+diff --git a/drivers/firmware/efi/libstub/random.c b/drivers/firmware/efi/libstub/random.c
+index 7e72954d5860..85b80a4a85b3 100644
+--- a/drivers/firmware/efi/libstub/random.c
++++ b/drivers/firmware/efi/libstub/random.c
+@@ -42,7 +42,8 @@ efi_status_t efi_get_random_bytes(efi_system_table_t *sys_table_arg,
+  */
+ static unsigned long get_entry_num_slots(efi_memory_desc_t *md,
+ 					 unsigned long size,
+-					 unsigned long align_shift)
++					 unsigned long align_shift,
++					 unsigned long max)
+ {
+ 	unsigned long align = 1UL << align_shift;
+ 	u64 first_slot, last_slot, region_end;
+@@ -50,7 +51,7 @@ static unsigned long get_entry_num_slots(efi_memory_desc_t *md,
+ 	if (md->type != EFI_CONVENTIONAL_MEMORY)
+ 		return 0;
  
--#endif
-+#else /* __ASSEMBLY__ */
-+extern u32 kaslr_offset;
-+#endif /* __ASSEMBLY__ */
-+#endif /* LINKER_SCRIPT */
- #endif
+-	region_end = min((u64)ULONG_MAX, md->phys_addr + md->num_pages*EFI_PAGE_SIZE - 1);
++	region_end = min((u64)max, md->phys_addr + md->num_pages*EFI_PAGE_SIZE - 1);
+ 
+ 	first_slot = round_up(md->phys_addr, align);
+ 	last_slot = round_down(region_end - size + 1, align);
+@@ -73,7 +74,8 @@ efi_status_t efi_random_alloc(efi_system_table_t *sys_table_arg,
+ 			      unsigned long size,
+ 			      unsigned long align,
+ 			      unsigned long *addr,
+-			      unsigned long random_seed)
++			      unsigned long random_seed,
++			      unsigned long max)
+ {
+ 	unsigned long map_size, desc_size, total_slots = 0, target_slot;
+ 	unsigned long buff_size;
+@@ -101,7 +103,7 @@ efi_status_t efi_random_alloc(efi_system_table_t *sys_table_arg,
+ 		efi_memory_desc_t *md = (void *)memory_map + map_offset;
+ 		unsigned long slots;
+ 
+-		slots = get_entry_num_slots(md, size, ilog2(align));
++		slots = get_entry_num_slots(md, size, ilog2(align), max);
+ 		MD_NUM_SLOTS(md) = slots;
+ 		total_slots += slots;
+ 	}
 -- 
 2.11.0
