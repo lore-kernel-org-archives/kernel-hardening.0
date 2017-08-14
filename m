@@ -1,59 +1,121 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 14 Aug 2017 13:54:05 +0100
-Message-Id: <20170814125411.22604-25-ard.biesheuvel@linaro.org>
+Date: Mon, 14 Aug 2017 13:54:06 +0100
+Message-Id: <20170814125411.22604-26-ard.biesheuvel@linaro.org>
 In-Reply-To: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
 References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH 24/30] ARM: decompressor: explicitly map decompressor binary cacheable
+Subject: [kernel-hardening] [PATCH 25/30] ARM: compressed: factor out zImage header and make it extensible
 To: kernel-hardening@lists.openwall.com
 Cc: linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-When randomizing the kernel load address, there may be a large
-distance in memory between the decompressor binary and its payload
-and the destination area in memory. Ensure that the decompressor
-itself is mapped cacheable in this case, by tweaking the existing
-routine that takes care of this for XIP decompressors.
+To prepare for adding metadata to the zImage to put KASLR randomization
+under the control of the bootloader, factor out the zImage header, and
+make it extensible by adding two new fields: a magic number that cannot
+be mistaken for a valid instruction, to prevent misidentification, and
+an offset into the binary where an array of optional headers is placed.
 
 Cc: Russell King <linux@armlinux.org.uk>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm/boot/compressed/head.S | 16 ++++++++++------
- 1 file changed, 10 insertions(+), 6 deletions(-)
+ arch/arm/boot/compressed/head.S        |  7 +---
+ arch/arm/boot/compressed/vmlinux.lds.S |  5 ++-
+ arch/arm/include/asm/zimage.h          | 39 ++++++++++++++++++++
+ 3 files changed, 45 insertions(+), 6 deletions(-)
 
 diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
-index 5884e8151376..583cc6899d98 100644
+index 583cc6899d98..e451738d8954 100644
 --- a/arch/arm/boot/compressed/head.S
 +++ b/arch/arm/boot/compressed/head.S
-@@ -706,20 +706,24 @@ __setup_mmu:	sub	r3, r4, #16384		@ Page directory size
- 		teq	r0, r2
- 		bne	1b
- /*
-- * If ever we are running from Flash, then we surely want the cache
-- * to be enabled also for our execution instance...  We map 2MB of it
-- * so there is no map overlap problem for up to 1 MB compressed kernel.
-- * If the execution is in RAM then we would only be duplicating the above.
-+ * Make sure our entire executable image (including payload) is mapped
-+ * cacheable, in case it is located outside the region we covered above.
-+ * (This may be the case if running from flash or with randomization enabled)
-+ * If the regions happen to overlap, we just duplicate some of the above.
-  */
- 		orr	r1, r6, #0x04		@ ensure B is set for this
- 		orr	r1, r1, #3 << 10
- 		mov	r2, pc
-+		adr_l	r9, _end
- 		mov	r2, r2, lsr #20
-+		mov	r9, r9, lsr #20
- 		orr	r1, r1, r2, lsl #20
- 		add	r0, r3, r2, lsl #2
--		str	r1, [r0], #4
-+		add	r9, r3, r9, lsl #2
-+0:		str	r1, [r0], #4
- 		add	r1, r1, #1048576
--		str	r1, [r0]
-+		cmp	r0, r9
-+		bls	0b
- 		mov	pc, lr
- ENDPROC(__setup_mmu)
+@@ -11,6 +11,7 @@
+ #include <linux/linkage.h>
+ #include <asm/assembler.h>
+ #include <asm/v7m.h>
++#include <asm/zimage.h>
  
+ #include "efi-header.S"
+ 
+@@ -139,11 +140,7 @@ start:
+ #endif
+ 		W(b)	1f
+ 
+-		.word	_magic_sig	@ Magic numbers to help the loader
+-		.word	_magic_start	@ absolute load/run zImage address
+-		.word	_magic_end	@ zImage end address
+-		.word	0x04030201	@ endianness flag
+-
++		__ZIMAGE_HEADER
+ 		__EFI_HEADER
+ 1:
+  ARM_BE8(	setend	be		)	@ go BE8 if compiled for BE8
+diff --git a/arch/arm/boot/compressed/vmlinux.lds.S b/arch/arm/boot/compressed/vmlinux.lds.S
+index 81c493156ce8..27696bc315d3 100644
+--- a/arch/arm/boot/compressed/vmlinux.lds.S
++++ b/arch/arm/boot/compressed/vmlinux.lds.S
+@@ -6,6 +6,8 @@
+  * published by the Free Software Foundation.
+  */
+ 
++#include <asm/zimage.h>
++
+ #ifdef CONFIG_CPU_ENDIAN_BE8
+ #define ZIMAGE_MAGIC(x) ( (((x) >> 24) & 0x000000ff) | \
+ 			  (((x) >>  8) & 0x0000ff00) | \
+@@ -72,9 +74,10 @@ SECTIONS
+   .pad			: { BYTE(0); . = ALIGN(8); }
+   _edata = .;
+ 
+-  _magic_sig = ZIMAGE_MAGIC(0x016f2818);
++  _magic_sig = ZIMAGE_MAGIC(ZIMAGE_HEADER_MAGIC);
+   _magic_start = ZIMAGE_MAGIC(_start);
+   _magic_end = ZIMAGE_MAGIC(_edata);
++  _magic_opt_sig = ZIMAGE_MAGIC(ZIMAGE_OPTIONAL_HEADER_MAGIC);
+ 
+   . = BSS_START;
+   __bss_start = .;
+diff --git a/arch/arm/include/asm/zimage.h b/arch/arm/include/asm/zimage.h
+new file mode 100644
+index 000000000000..ff65cc3bb716
+--- /dev/null
++++ b/arch/arm/include/asm/zimage.h
+@@ -0,0 +1,39 @@
++/*
++ * Copyright (C) 2017 Linaro Ltd;  <ard.biesheuvel@linaro.org>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ */
++
++#ifndef __ASM_ZIMAGE_H
++#define __ASM_ZIMAGE_H
++
++#define ZIMAGE_HEADER_MAGIC		0x016f2818
++#define ZIMAGE_OPTIONAL_HEADER_MAGIC	0xe7fedef0
++
++#if defined(__ASSEMBLY__) && !defined(LINKER_SCRIPT)
++
++	.macro		__ZIMAGE_HEADER
++	.word		_magic_sig	@ Magic numbers to help the loader
++	.word		_magic_start	@ absolute load/run zImage address
++	.word		_magic_end	@ zImage end address
++	.word		0x04030201	@ endianness flag
++
++	/* optional headers */
++	.word		_magic_opt_sig	@ optional header magic number
++	.word		__zimage_opt_header - .
++
++	.pushsection	".rodata", "a", %progbits
++__zimage_opt_header:
++	/*
++	 * Each header starts with a u16[2] containing id and size of the
++	 * entire header, including the u16[] itself.
++	 */
++	.long		0xffffffff	@ end of optional headers
++	.popsection
++	.endm
++
++#endif
++#endif
 -- 
 2.11.0
