@@ -1,74 +1,42 @@
-Date: Mon, 14 Aug 2017 12:28:42 -0400 (EDT)
+Date: Mon, 14 Aug 2017 12:33:05 -0400 (EDT)
 From: Nicolas Pitre <nicolas.pitre@linaro.org>
-In-Reply-To: <CAK8P3a1rV5yXm0CSZOx0ZVUiLENe=gBtn-9XUdHQmC2mPRwXOA@mail.gmail.com>
-Message-ID: <alpine.LFD.2.20.1708141220540.17016@knanqh.ubzr>
-References: <20170814125411.22604-1-ard.biesheuvel@linaro.org> <CAK8P3a1zJPsHphvoOitQbTaY-7rzFndGKatM2=aeUphkG+3T_A@mail.gmail.com> <CAKv+Gu_-O5ZW=SzXe=0nRExfYWjyMWoJ3eObaZiiftPVNojibw@mail.gmail.com>
- <CAK8P3a1rV5yXm0CSZOx0ZVUiLENe=gBtn-9XUdHQmC2mPRwXOA@mail.gmail.com>
+In-Reply-To: <CAKv+Gu_3gb4K_2=igLWMjtXuEcdhnqeoVgaW7Lvqx56AQU-VZg@mail.gmail.com>
+Message-ID: <alpine.LFD.2.20.1708141231110.17016@knanqh.ubzr>
+References: <20170814125411.22604-1-ard.biesheuvel@linaro.org> <20170814125411.22604-3-ard.biesheuvel@linaro.org> <20170814152950.GT6321@e103592.cambridge.arm.com> <CAKv+Gu87G93X36TdAEiMC46Uz_PqXEi_4LSftnUdkQ8HRCxWiA@mail.gmail.com>
+ <20170814155002.GV6321@e103592.cambridge.arm.com> <alpine.LFD.2.20.1708141217150.17016@knanqh.ubzr> <CAKv+Gu_3gb4K_2=igLWMjtXuEcdhnqeoVgaW7Lvqx56AQU-VZg@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH 00/30] implement KASLR for ARM
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux ARM <linux-arm-kernel@lists.infradead.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
+Subject: [kernel-hardening] Re: [PATCH 02/30] ARM: assembler: introduce adr_l, ldr_l and str_l
+ macros
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Dave Martin <Dave.Martin@arm.com>, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Russell King <linux@armlinux.org.uk>, Tony Lindgren <tony@atomide.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Thomas Garnier <thgarnie@google.com>, Matt Fleming <matt@codeblueprint.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 14 Aug 2017, Arnd Bergmann wrote:
+On Mon, 14 Aug 2017, Ard Biesheuvel wrote:
 
-> On Mon, Aug 14, 2017 at 5:49 PM, Ard Biesheuvel
-> <ard.biesheuvel@linaro.org> wrote:
-> > On 14 August 2017 at 16:30, Arnd Bergmann <arnd@arndb.de> wrote:
-> 
-> 
-> >> Can you explain how the random seed is passed from the bootloader
-> >> to the kernel when we don't use EFI? Is this implemented at all? I see
-> >> that you add a seed to "/chosen/kaslr-seed" in the EFI stub when using
-> >> the EFI boot services, but I don't see where that value gets read again
-> >> when we relocate the kernel.
-> 
-> > To allow other bootloaders to do the same, the kaslr metadata is
-> > exposed via a zImage header, containing the values of PAGE_OFFSET, the
-> > base of the vmalloc area and the randomization granularity. A
-> > bootloader can read these values, and taking the size of DRAM and the
-> > placement of initrd and DTB into account, it can choose a value for
-> > kaslr offset and write it back into the zImage header.
+> On 14 August 2017 at 17:18, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+> > On Mon, 14 Aug 2017, Dave Martin wrote:
 > >
-> > This is a bit involved, but it is really difficult to make these
-> > things backward compatible, i.e., passing something in a register is
-> > not possible if that register was not mandated to be zero initially.
+> >> On Mon, Aug 14, 2017 at 04:38:02PM +0100, Ard Biesheuvel wrote:
+> >> > That's a trick, actually, which I failed to add a comment for.
 > >
-> > Similarly, the decompressor passed the kaslr offset to the startup
-> > code in the core kernel. It does so by passing it in r3 and jumping 4
-> > bytes past the entry point. This way, we are backward compatible with
-> > configurations where the decompressor is not used, because in that
-> > case, you always jump to the first instruction, which zeroes r3.
+> > Shame shame shame !
+> >
+> >> > We use .arm sections in the thumb2 kernel, and using these macros
+> >> > there would result in the wrong offset to be used. Adding the .w
+> >> > suffix forces an error in the assembler which even results in a fairly
+> >> > meaningful error message complaining about using .w in ARM code.
+> >>
+> >> Ewww... I think it'd be best to add a comment explaining that.
+> >
+> > Absolutely!
+> >
 > 
-> There are two ideas we discussed in the past (but never implemented
-> them obviously):
+> Yeah, mea culpa.
 > 
-> - instead of reading the "kaslr-seed" in the decompressor, it could
->   simply hash all of the DT blob to get the seed. This way the bootloader
->   can put the random see anywhere it likes, and as an added bonus,
->   we also get a little bit more random behavior on machines that have
->   no entropy source at all but that do have things like a serial number or
->   mac address in DT. Obviously those would be constant across boots
->   but different between machines. The OS can also store a random
->   seed during shutdown in a location that the bootloader uses to
->   initialize /chosen/kaslr-seed or another property that we use to seed
->   the kernel PRNG at boot time.
-> 
-> - If we have a random number at boot but no way to pass it through
->   the DT, I think we actually /can/ pass it through registers: the
->   register state is undefined, so in the worst case using the XOR of
->   all registers gives us the same number on each boot, but the
->   if the loader is modified to store a random 32-bit number in any
->   of the registers that don't pass other information, we can use that
->   to calculate the kaslr-base.
+> But if people have better ideas how to avoid this situation, I am all ears.
 
-I really like the later. This way there is no hard protocol to define 
-and follow. The bootloader may exploit any source of randomness it can 
-find, including the RTC in addition to the serial number for example. So 
-doing both on the kernel side might actually be the best approach, 
-giving the boot environment all the flexibility it wants and being 
-compatible with all of them.
+Just document it.  ;-)
 
 
 Nicolas
