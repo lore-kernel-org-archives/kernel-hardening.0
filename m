@@ -1,25 +1,28 @@
 From: Mark Rutland <mark.rutland@arm.com>
-Date: Tue, 15 Aug 2017 13:50:39 +0100
-Message-Id: <1502801449-29246-5-git-send-email-mark.rutland@arm.com>
+Date: Tue, 15 Aug 2017 13:50:40 +0100
+Message-Id: <1502801449-29246-6-git-send-email-mark.rutland@arm.com>
 In-Reply-To: <1502801449-29246-1-git-send-email-mark.rutland@arm.com>
 References: <1502801449-29246-1-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] [PATCHv2 04/14] arm64: factor out PAGE_* and CONT_* definitions
+Subject: [kernel-hardening] [PATCHv2 05/14] arm64: clean up THREAD_* definitions
 To: linux-arm-kernel@lists.infradead.org
 Cc: ard.biesheuvel@linaro.org, catalin.marinas@arm.com, james.morse@arm.com, labbott@redhat.com, linux-kernel@vger.kernel.org, luto@amacapital.net, mark.rutland@arm.com, matt@codeblueprint.co.uk, will.deacon@arm.com, kernel-hardening@lists.openwall.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Some headers rely on PAGE_* definitions from <asm/page.h>, but cannot
-include this due to potential circular includes. For example, a number
-of definitions in <asm/memory.h> rely on PAGE_SHIFT, and <asm/page.h>
-includes <asm/memory.h>.
+Currently we define THREAD_SIZE and THREAD_SIZE_ORDER separately, with
+the latter dependent on particular CONFIG_ARM64_*K_PAGES definitions.
+This is somewhat opaque, and will get in the way of future modifications
+to THREAD_SIZE.
 
-This requires users of these definitions to include both headers, which
-is fragile and error-prone.
+This patch cleans this up, defining both in terms of a common
+THREAD_SHIFT, and using PAGE_SHIFT to calculate THREAD_SIZE_ORDER,
+rather than using a number of definitions dependent on config symbols.
+Subsequent patches will make use of this to alter the stack size used in
+some configurations.
 
-This patch ameliorates matters by moving the basic definitions out to a
-new header, <asm/page-def.h>. Both <asm/page.h> and <asm/memory.h> are
-updated to include this, avoiding this fragility, and avoiding the
-possibility of circular include dependencies.
+At the same time, these are moved into <asm/memory.h>, which will avoid
+circular include issues in subsequent patches. To ensure that existing
+code isn't adversely affected, <asm/thread_info.h> is updated to
+transitively include these definitions.
 
 Signed-off-by: Mark Rutland <mark.rutland@arm.com>
 Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>
@@ -28,86 +31,52 @@ Cc: James Morse <james.morse@arm.com>
 Cc: Laura Abbott <labbott@redhat.com>
 Cc: Will Deacon <will.deacon@arm.com>
 ---
- arch/arm64/include/asm/memory.h   |  1 +
- arch/arm64/include/asm/page-def.h | 34 ++++++++++++++++++++++++++++++++++
- arch/arm64/include/asm/page.h     | 12 +-----------
- 3 files changed, 36 insertions(+), 11 deletions(-)
- create mode 100644 arch/arm64/include/asm/page-def.h
+ arch/arm64/include/asm/memory.h      | 8 ++++++++
+ arch/arm64/include/asm/thread_info.h | 9 +--------
+ 2 files changed, 9 insertions(+), 8 deletions(-)
 
 diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
-index 32f827233..77d55dc 100644
+index 77d55dc..8ab4774 100644
 --- a/arch/arm64/include/asm/memory.h
 +++ b/arch/arm64/include/asm/memory.h
-@@ -25,6 +25,7 @@
- #include <linux/const.h>
- #include <linux/types.h>
- #include <asm/bug.h>
-+#include <asm/page-def.h>
- #include <asm/sizes.h>
+@@ -102,6 +102,14 @@
+ #define KASAN_SHADOW_SIZE	(0)
+ #endif
  
++#define THREAD_SHIFT		14
++
++#if THREAD_SHIFT >= PAGE_SHIFT
++#define THREAD_SIZE_ORDER	(THREAD_SHIFT - PAGE_SHIFT)
++#endif
++
++#define THREAD_SIZE		(UL(1) << THREAD_SHIFT)
++
  /*
-diff --git a/arch/arm64/include/asm/page-def.h b/arch/arm64/include/asm/page-def.h
-new file mode 100644
-index 0000000..01591a2
---- /dev/null
-+++ b/arch/arm64/include/asm/page-def.h
-@@ -0,0 +1,34 @@
-+/*
-+ * Based on arch/arm/include/asm/page.h
-+ *
-+ * Copyright (C) 1995-2003 Russell King
-+ * Copyright (C) 2017 ARM Ltd.
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2 as
-+ * published by the Free Software Foundation.
-+ *
-+ * This program is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-+ * GNU General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU General Public License
-+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-+ */
-+#ifndef __ASM_PAGE_DEF_H
-+#define __ASM_PAGE_DEF_H
-+
-+#include <linux/const.h>
-+
-+/* PAGE_SHIFT determines the page size */
-+/* CONT_SHIFT determines the number of pages which can be tracked together  */
-+#define PAGE_SHIFT		CONFIG_ARM64_PAGE_SHIFT
-+#define CONT_SHIFT		CONFIG_ARM64_CONT_SHIFT
-+#define PAGE_SIZE		(_AC(1, UL) << PAGE_SHIFT)
-+#define PAGE_MASK		(~(PAGE_SIZE-1))
-+
-+#define CONT_SIZE		(_AC(1, UL) << (CONT_SHIFT + PAGE_SHIFT))
-+#define CONT_MASK		(~(CONT_SIZE-1))
-+
-+#endif /* __ASM_PAGE_DEF_H */
-diff --git a/arch/arm64/include/asm/page.h b/arch/arm64/include/asm/page.h
-index 8472c6d..60d02c8 100644
---- a/arch/arm64/include/asm/page.h
-+++ b/arch/arm64/include/asm/page.h
-@@ -19,17 +19,7 @@
- #ifndef __ASM_PAGE_H
- #define __ASM_PAGE_H
+  * Memory types available.
+  */
+diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
+index b29ab0e..aa04b73 100644
+--- a/arch/arm64/include/asm/thread_info.h
++++ b/arch/arm64/include/asm/thread_info.h
+@@ -23,18 +23,11 @@
  
--#include <linux/const.h>
--
--/* PAGE_SHIFT determines the page size */
--/* CONT_SHIFT determines the number of pages which can be tracked together  */
--#define PAGE_SHIFT		CONFIG_ARM64_PAGE_SHIFT
--#define CONT_SHIFT		CONFIG_ARM64_CONT_SHIFT
--#define PAGE_SIZE		(_AC(1, UL) << PAGE_SHIFT)
--#define PAGE_MASK		(~(PAGE_SIZE-1))
--
--#define CONT_SIZE		(_AC(1, UL) << (CONT_SHIFT + PAGE_SHIFT))
--#define CONT_MASK		(~(CONT_SIZE-1))
-+#include <asm/page-def.h>
+ #include <linux/compiler.h>
  
+-#ifdef CONFIG_ARM64_4K_PAGES
+-#define THREAD_SIZE_ORDER	2
+-#elif defined(CONFIG_ARM64_16K_PAGES)
+-#define THREAD_SIZE_ORDER	0
+-#endif
+-
+-#define THREAD_SIZE		16384
+-
  #ifndef __ASSEMBLY__
+ 
+ struct task_struct;
+ 
++#include <asm/memory.h>
+ #include <asm/stack_pointer.h>
+ #include <asm/types.h>
  
 -- 
 1.9.1
