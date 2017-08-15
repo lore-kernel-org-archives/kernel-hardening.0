@@ -1,69 +1,97 @@
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Tue, 15 Aug 2017 09:56:09 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20170815075609.mmzbfwritjzvrpsn@gmail.com>
-References: <20170810172615.51965-1-thgarnie@google.com>
- <20170811124127.kkb5pnkljz4umxuj@gmail.com>
- <CAJcbSZFTX3uiS2g8JriS6+z_+WrG8z3hrQo4OSuyHpiyUDJWYA@mail.gmail.com>
+Date: Tue, 15 Aug 2017 10:39:01 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170815093900.GA6090@leverpostej>
+References: <20170809200755.11234-1-tycho@docker.com>
+ <20170809200755.11234-8-tycho@docker.com>
+ <20170812115736.GC16374@remoulade>
+ <20170814202727.5jm5ndd3nzlwftfb@smitten>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAJcbSZFTX3uiS2g8JriS6+z_+WrG8z3hrQo4OSuyHpiyUDJWYA@mail.gmail.com>
-Subject: [kernel-hardening] Re: x86: PIE support and option to extend KASLR randomization
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, linux-crypto@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Borislav Petkov <bp@alien8.de>
+In-Reply-To: <20170814202727.5jm5ndd3nzlwftfb@smitten>
+Subject: Re: [kernel-hardening] [PATCH v5 07/10] arm64/mm: Don't flush the
+ data cache if the page is unmapped by XPFO
+To: Tycho Andersen <tycho@docker.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Juerg Haefliger <juerg.haefliger@hpe.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-* Thomas Garnier <thgarnie@google.com> wrote:
-
-> > Do these changes get us closer to being able to build the kernel as truly 
-> > position independent, i.e. to place it anywhere in the valid x86-64 address 
-> > space? Or any other advantages?
+On Mon, Aug 14, 2017 at 02:27:27PM -0600, Tycho Andersen wrote:
+> Hi Mark,
 > 
-> Yes, PIE allows us to put the kernel anywhere in memory. It will allow us to 
-> have a full randomized address space where position and order of sections are 
-> completely random. There is still some work to get there but being able to build 
-> a PIE kernel is a significant step.
+> First, thanks for taking a look!
+> 
+> On Sat, Aug 12, 2017 at 12:57:37PM +0100, Mark Rutland wrote:
+> > On Wed, Aug 09, 2017 at 02:07:52PM -0600, Tycho Andersen wrote:
+> > > From: Juerg Haefliger <juerg.haefliger@hpe.com>
+> > > 
+> > > If the page is unmapped by XPFO, a data cache flush results in a fatal
+> > > page fault. So don't flush in that case.
+> > 
+> > Do you have an example callchain where that happens? We might need to shuffle
+> > things around to cater for that case.
+> 
+> Here's one from the other branch (i.e. xpfo_page_is_unmapped() is true):
+> 
+> [   15.487293] CPU: 2 PID: 1633 Comm: plymouth Not tainted 4.13.0-rc4-c2+ #242
+> [   15.487295] Hardware name: Hardkernel ODROID-C2 (DT)
+> [   15.487297] Call trace:
+> [   15.487313] [<ffff0000080884f0>] dump_backtrace+0x0/0x248
+> [   15.487317] [<ffff00000808878c>] show_stack+0x14/0x20
+> [   15.487324] [<ffff000008b3e1b8>] dump_stack+0x98/0xb8
+> [   15.487329] [<ffff000008098bb4>] sync_icache_aliases+0x84/0x98
+> [   15.487332] [<ffff000008098c74>] __sync_icache_dcache+0x64/0x88
+> [   15.487337] [<ffff0000081d4814>] alloc_set_pte+0x4ec/0x6b8
+> [   15.487342] [<ffff00000819d920>] filemap_map_pages+0x350/0x360
+> [   15.487344] [<ffff0000081d4ccc>] do_fault+0x28c/0x568
+> [   15.487347] [<ffff0000081d67a0>] __handle_mm_fault+0x410/0xd08
+> [   15.487350] [<ffff0000081d7164>] handle_mm_fault+0xcc/0x1a8
+> [   15.487352] [<ffff000008098580>] do_page_fault+0x270/0x380
+> [   15.487355] [<ffff00000808128c>] do_mem_abort+0x3c/0x98
+> [   15.487358] Exception stack(0xffff800061dabe20 to 0xffff800061dabf50)
+> [   15.487362] be20: 0000000000000000 0000800062e19000 ffffffffffffffff 0000ffff8f64ddc8
+> [   15.487365] be40: ffff800061dabe80 ffff000008238810 ffff800061d80330 0000000000000018
+> [   15.487368] be60: ffffffffffffffff 0000ffff8f5ba958 ffff800061d803d0 ffff800067132e18
+> [   15.487370] be80: 0000000000000000 ffff800061d80d08 0000000000000000 0000000000000019
+> [   15.487373] bea0: 000000002bd3d0f0 0000000000000000 0000000000000019 ffff800067132e00
+> [   15.487376] bec0: 0000000000000000 0000ffff8f657220 0000000000000000 0000000000000000
+> [   15.487379] bee0: 8080808000000000 0000000000000000 0000000080808080 fefefeff6f6b6467
+> [   15.487381] bf00: 7f7f7f7f7f7f7f7f 000000002bd3fb40 0101010101010101 0000000000000020
+> [   15.487384] bf20: 00000000004072b0 00000000004072e0 0000000000000000 0000ffff8f6b2000
+> [   15.487386] bf40: 0000ffff8f66b190 0000ffff8f576380
+> [   15.487389] [<ffff000008082b74>] el0_da+0x20/0x24
+> 
+> > > @@ -30,7 +31,9 @@ void sync_icache_aliases(void *kaddr, unsigned long len)
+> > >  	unsigned long addr = (unsigned long)kaddr;
+> > >  
+> > >  	if (icache_is_aliasing()) {
+> > > -		__clean_dcache_area_pou(kaddr, len);
+> > > +		/* Don't flush if the page is unmapped by XPFO */
+> > > +		if (!xpfo_page_is_unmapped(virt_to_page(kaddr)))
+> > > +			__clean_dcache_area_pou(kaddr, len);
+> > >  		__flush_icache_all();
+> > >  	} else {
+> > >  		flush_icache_range(addr, addr + len);
+> > 
+> > I don't think this patch is correct. If data cache maintenance is required in
+> > the absence of XPFO, I don't see why it wouldn't be required in the presence of
+> > XPFO.
+> 
+> Ok. I suppose we could do re-map like we do for dma; or is there some
+> re-arrangement of things you can see that would help?
 
-So I _really_ dislike the whole PIE approach, because of the huge slowdown:
+Creating a temporary mapping (which I guess you do for DMA) should work.
 
-+config RANDOMIZE_BASE_LARGE
-+       bool "Increase the randomization range of the kernel image"
-+       depends on X86_64 && RANDOMIZE_BASE
-+       select X86_PIE
-+       select X86_MODULE_PLTS if MODULES
-+       default n
-+       ---help---
-+         Build the kernel as a Position Independent Executable (PIE) and
-+         increase the available randomization range from 1GB to 3GB.
-+
-+         This option impacts performance on kernel CPU intensive workloads up
-+         to 10% due to PIE generated code. Impact on user-mode processes and
-+         typical usage would be significantly less (0.50% when you build the
-+         kernel).
-+
-+         The kernel and modules will generate slightly more assembly (1 to 2%
-+         increase on the .text sections). The vmlinux binary will be
-+         significantly smaller due to less relocations.
+We might be able to perform the maintenance before we unmap the linear
+map alias, but I guess this might not be possible if the that logic is
+too far removed from the PTE manipulation.
 
-To put 10% kernel overhead into perspective: enabling this option wipes out about 
-5-10 years worth of painstaking optimizations we've done to keep the kernel fast 
-... (!!)
+> > On a more general note, in future it would be good to Cc the arm64 maintainers
+> > and the linux-arm-kernel mailing list for patches affecting arm64.
+> 
+> Yes, I thought about doing that for the series, but since it has x86 patches
+> too, I didn't want to spam everyone :). I'll just add x86/arm lists to CC in
+> the patches in the future. If there's some better way, let me know.
 
-I think the fundamental flaw is the assumption that we need a PIE executable to 
-have a freely relocatable kernel on 64-bit CPUs.
+That sounds fine; thanks.
 
-Have you considered a kernel with -mcmodel=small (or medium) instead of -fpie 
--mcmodel=large? We can pick a random 2GB window in the (non-kernel) canonical 
-x86-64 address space to randomize the location of kernel text. The location of 
-modules can be further randomized within that 2GB window.
-
-It should have far less performance impact than the register-losing and 
-overhead-inducing -fpie / -mcmodel=large (for modules) execution models.
-
-My quick guess is tha the performance impact might be close to zero in fact.
-
-Thanks,
-
-	Ingo
+Mark.
