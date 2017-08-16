@@ -1,31 +1,57 @@
 From: Laura Abbott <labbott@redhat.com>
-Date: Wed, 16 Aug 2017 15:46:48 -0700
-Message-Id: <20170816224650.1089-1-labbott@redhat.com>
-Subject: [kernel-hardening] [PATCHv2 0/2] Command line randomness
+Date: Wed, 16 Aug 2017 15:46:49 -0700
+Message-Id: <20170816224650.1089-2-labbott@redhat.com>
+In-Reply-To: <20170816224650.1089-1-labbott@redhat.com>
+References: <20170816224650.1089-1-labbott@redhat.com>
+Subject: [kernel-hardening] [PATCHv2 1/2] init: Move stack canary initialization after setup_arch
 To: Kees Cook <keescook@chromium.org>
-Cc: Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Andrew Morton <akpm@linux-foundation.org>, Daniel Micay <danielmicay@gmail.com>
+Cc: Laura Abbott <lauraa@codeaurora.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Andrew Morton <akpm@linux-foundation.org>, Daniel Micay <danielmicay@gmail.com>, Laura Abbott <labbott@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+From: Laura Abbott <lauraa@codeaurora.org>
 
-This is a series to add the kernel command line as a source of randomness.
-The first patch is an (old) prepatory patch from me to move the stack canary
-initialization later. The second patch is from Daniel Micay to actually
-add the command line to the pool.
+Stack canary intialization involves getting a random number.
+Getting this random number may involve accessing caches or other
+architectural specific features which are not available until
+after the architecture is setup. Move the stack canary initialization
+later to accomodate this.
 
-Kees suggested this go through -mm.
+Signed-off-by: Laura Abbott <lauraa@codeaurora.org>
+Signed-off-by: Laura Abbott <labbott@redhat.com>
+---
+v2: Also moved add_latent_entropy per suggestion of Kees.
+---
+ init/main.c | 11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
 
-Thanks,
-Laura
-
-Daniel Micay (1):
-  extract early boot entropy from the passed cmdline
-
-Laura Abbott (1):
-  init: Move stack canary initialization after setup_arch
-
- init/main.c | 12 ++++++------
- 1 file changed, 6 insertions(+), 6 deletions(-)
-
+diff --git a/init/main.c b/init/main.c
+index 052481fbe363..21d599eaad06 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -515,12 +515,6 @@ asmlinkage __visible void __init start_kernel(void)
+ 	smp_setup_processor_id();
+ 	debug_objects_early_init();
+ 
+-	/*
+-	 * Set up the initial canary ASAP:
+-	 */
+-	add_latent_entropy();
+-	boot_init_stack_canary();
+-
+ 	cgroup_init_early();
+ 
+ 	local_irq_disable();
+@@ -534,6 +528,11 @@ asmlinkage __visible void __init start_kernel(void)
+ 	page_address_init();
+ 	pr_notice("%s", linux_banner);
+ 	setup_arch(&command_line);
++	/*
++	 * Set up the the initial canary and entropy after arch
++	 */
++	add_latent_entropy();
++	boot_init_stack_canary();
+ 	mm_init_cpumask(&init_mm);
+ 	setup_command_line(command_line);
+ 	setup_nr_cpu_ids();
 -- 
 2.13.0
