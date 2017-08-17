@@ -1,56 +1,84 @@
-Date: Thu, 17 Aug 2017 17:44:29 -0400
-From: Theodore Ts'o <tytso@mit.edu>
-Message-ID: <20170817214429.wt7zly2e3bmnlfyp@thunk.org>
-References: <20170816231458.2299-1-labbott@redhat.com>
- <20170816231458.2299-3-labbott@redhat.com>
- <20170817033148.ownsmbdzk2vhupme@thunk.org>
- <1502943802.3986.38.camel@gmail.com>
- <1503003427.1514.6.camel@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1503003427.1514.6.camel@gmail.com>
-Subject: [kernel-hardening] Re: [PATCHv3 2/2] extract early boot entropy from the passed cmdline
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Andrew Morton <akpm@linux-foundation.org>
+Sender: keescook@google.com
+In-Reply-To: <CAKv+Gu-g+0E=b1G+0mfZOHP0iEsD14VMCtJy0fXnbhwoOc-8oA@mail.gmail.com>
+References: <20170815201544.8479-1-ard.biesheuvel@linaro.org>
+ <CAGXu5jJprvbsa2o_Tazw3XNO1QQQw2d_XcDfzZhkDcXR9BfFew@mail.gmail.com> <CAKv+Gu-g+0E=b1G+0mfZOHP0iEsD14VMCtJy0fXnbhwoOc-8oA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 17 Aug 2017 15:05:19 -0700
+Message-ID: <CAGXu5jLOKPB1FYrO_HeFZAkmo+0zoagAL=nR1SPBX01pPg7MAA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC PATCH] ARM: decompressor: implement autonomous KASLR offset calculation
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Daniel Micay <danielmicay@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Aug 17, 2017 at 04:57:07PM -0400, Daniel Micay wrote:
-> > I did say 'external attacker' but it could be made clearer.
-> 
-> Er, s/say/mean to imply/
+On Thu, Aug 17, 2017 at 12:22 PM, Ard Biesheuvel
+<ard.biesheuvel@linaro.org> wrote:
+> On 15 August 2017 at 21:29, Kees Cook <keescook@chromium.org> wrote:
+>> On Tue, Aug 15, 2017 at 1:15 PM, Ard Biesheuvel
+>> <ard.biesheuvel@linaro.org> wrote:
+>>> This enables KASLR for environments that are not KASLR-aware, or only
+>>> to a limited extent. The decompressor collects information about the
+>>> placement of the zImage, DTB and initrd, and parses the /memory DT
+>>> node and the /memreserve/s and /reserved-memory node, and combines this
+>>> information to select a suitable KASLR offset, and proceeds to decompress
+>>> the kernel at this offset in physical memory. It then invoked the kernel
+>>> proper while passing on this information, so that it can be taken into
+>>> account to create the virtual mapping.
+>>>
+>>> This code shuffles some registers together to create a poor man's seed,
+>>> which will be superseded by the value of /chosen/kaslr-seed if present.
+>>>
+> [...]
+>>
+>> Without kaslr-seed, perhaps also include build-time entropy (as I did
+>> in x86's decompressor with build_str):
+>>
+>> static unsigned long get_boot_seed(void)
+>> {
+>>         unsigned long hash = 0;
+>>
+>>         hash = rotate_xor(hash, build_str, sizeof(build_str));
+>>         hash = rotate_xor(hash, boot_params, sizeof(*boot_params));
+>>
+>>         return hash;
+>> }
+>>
+>
+> Shouldn't we use something with better diffusion than rotate and xor?
+> If we can afford to decompress ~10 MB worth of vmlinux, I'm sure we
+> can afford to crc() the device tree blob.
 
-Right, that's why I had suggested modifying the first few lines of the
-commit description to read something like this:
+The final kaslr_get_random_long() (in arch/x86/lib/kaslr.c) uses a
+circular multiply. That could be done earlier, I suppose, but I wasn't
+too concerned given common the availability of RDRAND on x86 has
+become.
 
-  Feed the boot command-line as to the /dev/random entropy pool
+>> You're effectively starting with hash == r3. This could be further
+>> enhanced with a __latent_entropy string when that plugin is enabled:
+>>
+>> static u8 compile_time_entropy[32] __latent_entropy;
+>>
+>> ...
+>>
+>> seed = rotate_xor(seed, compile_time_entropy, sizeof(compile_time_entropy));
+>>
+>> And toss in the fdt too? (I have no idea if this is the correct way to
+>> do this....)
+>>
+>> seed = rotate_xor(seed, fdt, fdt_totalsize(fdt));
+>>
+>
+> As mentioned by several people, this is a nice way to add
+> /chosen/kaslr-seed to the mix if it is there, and still have some
+> pseudo=entropy otherwise, especially given the fact (as Daniel figured
+> out) that Android puts device serials and some boot timing related
+> variables on the kernel command line.
 
-  Existing Android bootloaders usually pass data which may not be known
-  by an external attacker on the kernel command-line.  It may also be
-  the case on other embedded systems.  Sample command-line from a Google
-  Pixel running CopperheadOS:
+Cool, yeah.
 
-(Or something like that.)
+-Kees
 
-> I'll look into having the kernel stash some entropy in pstore soon since
-> that seems like it could be a great improvement. I'm not sure how often
-> / where it should hook into for regularly refreshing it though. Doing it
-> only on powering down isn't ideal.
-
-One thing we could do is to agree on a standard place where the
-entropy would be stashed, and then have the kernel remove it from
-being visible in /proc/cmdline.  That's not a perfect answer, since
-the user might be able to look at the command line via other
-mechanisms.  (For example, on x86, by looking at GRUB while the system
-is booting.)
-
-However, an attacker who is merely running code on the local system is
-not likely to be gain access to that value --- so it's definitely an
-improvement.
-
-Refreshing the entry immediately after boot, and before a clean
-shutdown would be ideal from a security perspective.  I don't know if
-there are write endurance issues with updating the pstore that
-frequently, though.
-
-						- Ted
+-- 
+Kees Cook
+Pixel Security
