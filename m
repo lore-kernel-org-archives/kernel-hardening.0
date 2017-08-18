@@ -1,196 +1,97 @@
+References: <299c22f9-2e34-36dc-a6da-22eadbc0a59d@huawei.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <bea38f28-b311-dd54-9323-f90e2b157e35@redhat.com>
+Date: Fri, 18 Aug 2017 06:57:37 -0700
 MIME-Version: 1.0
-In-Reply-To: <20170814125411.22604-30-ard.biesheuvel@linaro.org>
-References: <20170814125411.22604-1-ard.biesheuvel@linaro.org> <20170814125411.22604-30-ard.biesheuvel@linaro.org>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Fri, 18 Aug 2017 12:48:49 +0100
-Message-ID: <CAKv+Gu-jPao1zUrZPH3BMqvTrRY9QmXdTNcoG3Y2mpVx3zjL4A@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 29/30] efi/libstub: arm: reserve bootloader supplied
- initrd in memory map
-To: Kernel Hardening <kernel-hardening@lists.openwall.com>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
+In-Reply-To: <299c22f9-2e34-36dc-a6da-22eadbc0a59d@huawei.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] [RFC] memory allocations in genalloc
+To: Igor Stoppa <igor.stoppa@huawei.com>, Jes Sorensen <jes@trained-monkey.org>
+Cc: Michal Hocko <mhocko@kernel.org>, James Morris <james.l.morris@oracle.com>, Jerome Glisse <jglisse@redhat.com>, Paul Moore <paul@paul-moore.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 14 August 2017 at 13:54, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
-> Under KASLR, the EFI stub may allocate the kernel anywhere in the
-> physical address space, which could be right on top of an initrd
-> if it was supplied by the bootloader (i.e., GRUB) in /chosen rather
-> than passed via the initrd= command line option. So allocate the
-> pages explicitly, this ensures that the random memory allocation
-> routine will disregard the region.
->
-> Note that this means that we need to defer the handle_kernel_image()
-> call.
->
-> Cc: Matt Fleming <matt@codeblueprint.co.uk>
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+On 08/17/2017 09:26 AM, Igor Stoppa wrote:
+> Foreword:
+> If I should direct this message to someone else, please let me know.
+> I couldn't get a clear idea, by looking at both MAINTAINERS and git blame.
+> 
+> ****
+> 
+> Hi,
+> 
+> I'm currently trying to convert the SE Linux policy db into using a
+> protectable memory allocator (pmalloc) that I have developed.
+> 
+> Such allocator is based on genalloc: I had come up with an
+> implementation that was pretty similar to what genalloc already does, so
+> it was pointed out to me that I could have a look at it.
+> 
+> And, indeed, it seemed a perfect choice.
+> 
+> But ... when freeing memory, genalloc wants that the caller also states
+> how large each specific memory allocation is.
+> 
+> This, per se, is not an issue, although genalloc doesn't seen to check
+> if the memory being freed is really matching a previous allocation request.
+> 
+> However, this design doesn't sit well with the use case I have in mind.
+> 
+> In particular, when the SE Linux policy db is populated, the creation of
+> one or more specific entry of the db might fail.
+> In this case, the memory previously allocated for said entry, is
+> released with kfree, which doesn't need to know the size of the chunk
+> being freed.
+> 
+> I would like to add similar capability to genalloc.
+> 
+> genalloc already uses bitmaps, to track what words are allocated (1) and
+> which are free (0)
+> 
+> What I would like to do is to add another bitmap, which would track the
+> beginning of each individual allocation (1 on the first allocation unit
+> of each allocation, 0 otherwise).
+> 
+> Such enhancement would enable also the detection of calls to free with
+> incorrect / misaligned addresses - right now it is possible to
+> successfully free a memory area that overlaps the interface of two
+> adjacent allocations, without fully covering either of them.
+> 
+> Would this change be acceptable?
+> Is there any better way to achieve what I want?
+> 
 
-If nobody objects, I will take this patch through the EFI tree
-separately for v4.14, given that it fixes an issue that may affect
-arm64 as well.
+In general, I don't see anything wrong with wanting to let gen_pool_free
+not take a size. It's hard to say anything more without a patch to review.
+My biggest concern would be keeping existing behavior and managing two
+bitmaps locklessly.
 
+
+> 
 > ---
->  drivers/firmware/efi/libstub/arm-stub.c | 51 ++++++++++++--------
->  drivers/firmware/efi/libstub/efistub.h  |  3 ++
->  drivers/firmware/efi/libstub/fdt.c      | 42 ++++++++++++++++
->  3 files changed, 75 insertions(+), 21 deletions(-)
->
-> diff --git a/drivers/firmware/efi/libstub/arm-stub.c b/drivers/firmware/efi/libstub/arm-stub.c
-> index 8181ac179d14..f5ef5ccd5f45 100644
-> --- a/drivers/firmware/efi/libstub/arm-stub.c
-> +++ b/drivers/firmware/efi/libstub/arm-stub.c
-> @@ -133,6 +133,7 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
->         unsigned long reserve_size = 0;
->         enum efi_secureboot_mode secure_boot;
->         struct screen_info *si;
-> +       bool have_chosen_initrd;
->
->         /* Check if we were booted by the EFI firmware */
->         if (sys_table->hdr.signature != EFI_SYSTEM_TABLE_SIGNATURE)
-> @@ -183,15 +184,6 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
->
->         si = setup_graphics(sys_table);
->
-> -       status = handle_kernel_image(sys_table, image_addr, &image_size,
-> -                                    &reserve_addr,
-> -                                    &reserve_size,
-> -                                    dram_base, image);
-> -       if (status != EFI_SUCCESS) {
-> -               pr_efi_err(sys_table, "Failed to relocate kernel\n");
-> -               goto fail_free_cmdline;
-> -       }
-> -
->         secure_boot = efi_get_secureboot(sys_table);
->
->         /*
-> @@ -209,7 +201,7 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
->
->                 if (status != EFI_SUCCESS) {
->                         pr_efi_err(sys_table, "Failed to load device tree!\n");
-> -                       goto fail_free_image;
-> +                       goto fail_free_cmdline;
->                 }
->         }
->
-> @@ -222,16 +214,33 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
->                         pr_efi(sys_table, "Using DTB from configuration table\n");
->         }
->
-> -       if (!fdt_addr)
-> +       if (!fdt_addr) {
->                 pr_efi(sys_table, "Generating empty DTB\n");
-> +               have_chosen_initrd = false;
-> +       } else {
-> +               status = efi_reserve_dtb_initrd(sys_table, (void *)fdt_addr);
-> +               have_chosen_initrd = (status != EFI_NOT_FOUND);
-> +       }
->
-> -       status = handle_cmdline_files(sys_table, image, cmdline_ptr, "initrd=",
-> -                                     efi_get_max_initrd_addr(dram_base,
-> -                                                             *image_addr),
-> -                                     (unsigned long *)&initrd_addr,
-> -                                     (unsigned long *)&initrd_size);
-> -       if (status != EFI_SUCCESS)
-> -               pr_efi_err(sys_table, "Failed initrd from command line!\n");
-> +       status = handle_kernel_image(sys_table, image_addr, &image_size,
-> +                                    &reserve_addr, &reserve_size,
-> +                                    dram_base, image);
-> +       if (status != EFI_SUCCESS) {
-> +               pr_efi_err(sys_table, "Failed to relocate kernel\n");
-> +               goto fail_free_fdt;
-> +       }
-> +
-> +       if (!have_chosen_initrd) {
-> +               status = handle_cmdline_files(sys_table, image, cmdline_ptr,
-> +                                             "initrd=",
-> +                                             efi_get_max_initrd_addr(dram_base,
-> +                                                                     *image_addr),
-> +                                             (unsigned long *)&initrd_addr,
-> +                                             (unsigned long *)&initrd_size);
-> +               if (status != EFI_SUCCESS)
-> +                       pr_efi_err(sys_table,
-> +                                  "Failed initrd from command line!\n");
-> +       }
->
->         efi_random_get_seed(sys_table);
->
-> @@ -272,11 +281,11 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
->         pr_efi_err(sys_table, "Failed to update FDT and exit boot services\n");
->
->         efi_free(sys_table, initrd_size, initrd_addr);
-> -       efi_free(sys_table, fdt_size, fdt_addr);
-> -
-> -fail_free_image:
->         efi_free(sys_table, image_size, *image_addr);
->         efi_free(sys_table, reserve_size, reserve_addr);
-> +
-> +fail_free_fdt:
-> +       efi_free(sys_table, fdt_size, fdt_addr);
->  fail_free_cmdline:
->         free_screen_info(sys_table, si);
->         efi_free(sys_table, cmdline_size, (unsigned long)cmdline_ptr);
-> diff --git a/drivers/firmware/efi/libstub/efistub.h b/drivers/firmware/efi/libstub/efistub.h
-> index aaf2aeb785ea..35b514d7d962 100644
-> --- a/drivers/firmware/efi/libstub/efistub.h
-> +++ b/drivers/firmware/efi/libstub/efistub.h
-> @@ -68,4 +68,7 @@ efi_status_t check_platform_features(efi_system_table_t *sys_table_arg);
->
->  efi_status_t efi_random_get_seed(efi_system_table_t *sys_table_arg);
->
-> +efi_status_t efi_reserve_dtb_initrd(efi_system_table_t *sys_table_arg,
-> +                                   const void *fdt);
-> +
->  #endif
-> diff --git a/drivers/firmware/efi/libstub/fdt.c b/drivers/firmware/efi/libstub/fdt.c
-> index 8830fa601e45..54408c95e094 100644
-> --- a/drivers/firmware/efi/libstub/fdt.c
-> +++ b/drivers/firmware/efi/libstub/fdt.c
-> @@ -385,3 +385,45 @@ void *get_fdt(efi_system_table_t *sys_table, unsigned long *fdt_size)
->
->         return fdt;
->  }
-> +
-> +efi_status_t efi_reserve_dtb_initrd(efi_system_table_t *sys_table_arg,
-> +                                   const void *fdt)
-> +{
-> +       int chosen, len;
-> +       const void *prop;
-> +       efi_physical_addr_t start, end;
-> +       unsigned long num_pages;
-> +       efi_status_t status;
-> +
-> +       chosen = fdt_path_offset(fdt, "/chosen");
-> +       if (chosen == -FDT_ERR_NOTFOUND)
-> +               return EFI_NOT_FOUND;
-> +
-> +       prop = fdt_getprop(fdt, chosen, "linux,initrd-start", &len);
-> +       if (!prop)
-> +               return EFI_NOT_FOUND;
-> +
-> +       start = (len == sizeof(fdt32_t)) ? fdt32_to_cpu(*(fdt32_t *)prop)
-> +                                        : fdt64_to_cpu(*(fdt64_t *)prop);
-> +
-> +       prop = fdt_getprop(fdt, chosen, "linux,initrd-end", &len);
-> +       if (!prop)
-> +               return EFI_NOT_FOUND;
-> +
-> +       end = (len == sizeof(fdt32_t)) ? fdt32_to_cpu(*(fdt32_t *)prop)
-> +                                      : fdt64_to_cpu(*(fdt64_t *)prop);
-> +
-> +       start = round_down(start, EFI_PAGE_SIZE);
-> +       num_pages = round_up(end - start, EFI_PAGE_SIZE) / EFI_PAGE_SIZE;
-> +
-> +       status = efi_call_early(allocate_pages, EFI_ALLOCATE_ADDRESS,
-> +                               EFI_LOADER_DATA, num_pages, &start);
-> +
-> +       if (status != EFI_SUCCESS)
-> +               pr_efi_err(sys_table_arg,
-> +                          "Failed to reserve initrd area found in /chosen\n");
-> +       else
-> +               pr_efi(sys_table_arg, "Using initrd found in /chosen\n");
-> +
-> +       return status;
-> +}
+> 
+> I have also a question wrt the use of spinlocks in genalloc.
+> Why a spinlock?
+> 
+> Freeing a chunk of memory previously allocated with vmalloc requires
+> invoking vfree_atomic, instead of vfree, because the list of chunks is
+> walked with the spinlock held, and vfree can sleep.
+> 
+> Why not using a mutex?
+> 
+
+>From the git history, gen_pool used to use a reader/writer lock and
+was switched to be lockless so it could be used in NMI contexts
+7f184275aa30 ("lib, Make gen_pool memory allocator lockless").
+This looks to be an intentional choice, presumably so regions can be
+added in atomic contexts. Again, if you have a specific patch or
+proposal this would be easier to review.
+
+Thanks,
+Laura
+
+
+> 
 > --
-> 2.11.0
->
+> TIA, igor
+> 
