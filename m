@@ -1,84 +1,74 @@
+References: <1499724283-30719-1-git-send-email-labbott@redhat.com>
+ <1499724283-30719-3-git-send-email-labbott@redhat.com>
+ <20170711195154.GA7124@leverpostej>
+ <2f24df9e-64b1-ffef-ddbb-08f7fe8d2a96@redhat.com>
+ <f100d5f3-fabc-a6b4-ef5f-91fc5f123299@linux.com>
+ <160e3088-b8e0-513b-8c1a-ce22ce598d5a@redhat.com>
+ <44d0ad13-6362-6224-ae64-d1848d217f0b@linux.com>
+ <CAGXu5jKp0J_6+upysRXbc1Khjzr20DrdM6As8ZS=QcccN7jpfg@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <b8be6867-40aa-86bb-dc9b-ad591f2026f5@linux.com>
+Date: Fri, 18 Aug 2017 11:07:08 +0300
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAKv+Gu-g+0E=b1G+0mfZOHP0iEsD14VMCtJy0fXnbhwoOc-8oA@mail.gmail.com>
-References: <20170815201544.8479-1-ard.biesheuvel@linaro.org>
- <CAGXu5jJprvbsa2o_Tazw3XNO1QQQw2d_XcDfzZhkDcXR9BfFew@mail.gmail.com> <CAKv+Gu-g+0E=b1G+0mfZOHP0iEsD14VMCtJy0fXnbhwoOc-8oA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 17 Aug 2017 15:05:19 -0700
-Message-ID: <CAGXu5jLOKPB1FYrO_HeFZAkmo+0zoagAL=nR1SPBX01pPg7MAA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [RFC PATCH] ARM: decompressor: implement autonomous KASLR offset calculation
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Daniel Micay <danielmicay@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Mark Rutland <mark.rutland@arm.com>
+In-Reply-To: <CAGXu5jKp0J_6+upysRXbc1Khjzr20DrdM6As8ZS=QcccN7jpfg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC][PATCH 2/2] arm64: Clear the stack
+To: Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Tycho Andersen <tycho@docker.com>, PaX Team <pageexec@freemail.hu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Aug 17, 2017 at 12:22 PM, Ard Biesheuvel
-<ard.biesheuvel@linaro.org> wrote:
-> On 15 August 2017 at 21:29, Kees Cook <keescook@chromium.org> wrote:
->> On Tue, Aug 15, 2017 at 1:15 PM, Ard Biesheuvel
->> <ard.biesheuvel@linaro.org> wrote:
->>> This enables KASLR for environments that are not KASLR-aware, or only
->>> to a limited extent. The decompressor collects information about the
->>> placement of the zImage, DTB and initrd, and parses the /memory DT
->>> node and the /memreserve/s and /reserved-memory node, and combines this
->>> information to select a suitable KASLR offset, and proceeds to decompress
->>> the kernel at this offset in physical memory. It then invoked the kernel
->>> proper while passing on this information, so that it can be taken into
->>> account to create the virtual mapping.
+Hello Kees and Laura,
+
+On 25.07.2017 06:34, Kees Cook wrote:
+> On Mon, Jul 24, 2017 at 1:19 AM, Alexander Popov <alex.popov@linux.com> wrote:
+>> On 22.07.2017 03:23, Laura Abbott wrote:
+>>> On 07/21/2017 09:56 AM, Alexander Popov wrote:
+>>>> So let's keep it not to break CONFIG_SCHED_STACK_END_CHECK.
 >>>
->>> This code shuffles some registers together to create a poor man's seed,
->>> which will be superseded by the value of /chosen/kaslr-seed if present.
->>>
-> [...]
+>>> That makes sense, good find! I wonder if CONFIG_SCHED_STACK_END_CHECK
+>>> should go on the list of hardening options and/or if we can enhance
+>>> it somehow?
 >>
->> Without kaslr-seed, perhaps also include build-time entropy (as I did
->> in x86's decompressor with build_str):
+>> Do you mean this list?
+>> http://www.kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Recommended_Settings
 >>
->> static unsigned long get_boot_seed(void)
->> {
->>         unsigned long hash = 0;
+>>> I'm not sure why it requires two words though since the
+>>> poison only seems to be 32-bits?
 >>
->>         hash = rotate_xor(hash, build_str, sizeof(build_str));
->>         hash = rotate_xor(hash, boot_params, sizeof(*boot_params));
->>
->>         return hash;
->> }
->>
->
-> Shouldn't we use something with better diffusion than rotate and xor?
-> If we can afford to decompress ~10 MB worth of vmlinux, I'm sure we
-> can afford to crc() the device tree blob.
+>> On x86_64 end_of_stack() returns the pointer to unsigned long, so we need at
+>> least 8 bytes to avoid breaking CONFIG_SCHED_STACK_END_CHECK. Don't know about 8
+>> more bytes.
+> 
+> Seems like this should be a random value like the per-frame stack
+> canary, but it looks like a relatively cheap check. It's probably not
+> in the cache, though, since most stack operations should be pretty far
+> from the end of the stack...
 
-The final kaslr_get_random_long() (in arch/x86/lib/kaslr.c) uses a
-circular multiply. That could be done earlier, I suppose, but I wasn't
-too concerned given common the availability of RDRAND on x86 has
-become.
+It seems that the idea you describe is not implemented in Grsecurity/PaX patch.
 
->> You're effectively starting with hash == r3. This could be further
->> enhanced with a __latent_entropy string when that plugin is enabled:
->>
->> static u8 compile_time_entropy[32] __latent_entropy;
->>
->> ...
->>
->> seed = rotate_xor(seed, compile_time_entropy, sizeof(compile_time_entropy));
->>
->> And toss in the fdt too? (I have no idea if this is the correct way to
->> do this....)
->>
->> seed = rotate_xor(seed, fdt, fdt_totalsize(fdt));
->>
->
-> As mentioned by several people, this is a nice way to add
-> /chosen/kaslr-seed to the mix if it is there, and still have some
-> pseudo=entropy otherwise, especially given the fact (as Daniel figured
-> out) that Android puts device serials and some boot timing related
-> variables on the kernel command line.
+On x86_64 the bottom of the stack for the mainline kernel looks like that:
+0xffffc900004c8000: 0x57ac6e9d 0x00000000 0x00000000 0x00000000
+0xffffc900004c8010: 0xffff4111 0xffffffff 0xffff4111 0xffffffff
+...
 
-Cool, yeah.
+But for the Grsecurity kernel it looks like that:
+0xffffc90000324000: 0x00000000 0x00000000 0x57ac6e9d 0x00000000
+0xffffc90000324010: 0xffff4111 0xffffffff 0xffff4111 0xffffffff
+...
 
--Kees
+Because Grsecurity/PaX patch has that change:
+ static inline unsigned long *end_of_stack(const struct task_struct *task)
+ {
+-	return task->stack;
++	return (unsigned long *)task->stack + 1;
+ }
 
--- 
-Kees Cook
-Pixel Security
+So that is their reason of having 16 bytes reserved at the bottom of the kernel
+stack.
+
+However, right now I don't understand the purpose of patching end_of_stack().
+What do you think? Should mainline have it?
+
+Best regards,
+Alexander
