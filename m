@@ -1,30 +1,38 @@
-References: <299c22f9-2e34-36dc-a6da-22eadbc0a59d@huawei.com>
- <bea38f28-b311-dd54-9323-f90e2b157e35@redhat.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <2d087abd-1bf4-55aa-ac92-67a9b8f9d177@huawei.com>
-Date: Fri, 18 Aug 2017 17:47:16 +0300
 MIME-Version: 1.0
-In-Reply-To: <bea38f28-b311-dd54-9323-f90e2b157e35@redhat.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [RFC] memory allocations in genalloc
-To: Laura Abbott <labbott@redhat.com>, Jes Sorensen <jes@trained-monkey.org>
-Cc: Michal Hocko <mhocko@kernel.org>, James Morris <james.l.morris@oracle.com>, Jerome Glisse <jglisse@redhat.com>, Paul Moore <paul@paul-moore.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module@vger.kernel.org
+Sender: keescook@google.com
+In-Reply-To: <CAJ2oMhLanOniQHJ79LkwGB8ctaJKKc73+iGmnvo5RX4x1PHpsA@mail.gmail.com>
+References: <CAJ2oMhLanOniQHJ79LkwGB8ctaJKKc73+iGmnvo5RX4x1PHpsA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 18 Aug 2017 13:44:05 -0700
+Message-ID: <CAGXu5j+_AwCDAqbNsH-nEZM3NhSq8jU1BbRZQJ041aab9nrF+g@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] hardening mmc driver
+To: Ran Shalit <ranshalit@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On Thu, Aug 17, 2017 at 10:57 PM, Ran Shalit <ranshalit@gmail.com> wrote:
+> Hello,
 
-On 18/08/17 16:57, Laura Abbott wrote:
-> Again, if you have a specific patch or
-> proposal this would be easier to review.
+Hi!
 
+> What action should be taken to make mmc driver secured ?
+>
+> If there any wiki or document, which can help to understand better
+> when a driver (like mmc)  is considered secured ?
 
-yes, I'm preparing it and will send it out soon,
-but it was somehow surprising to me that it was chosen to implement free
-with the size parameter.
+I don't have any specific pointers at the moment, but I think the main
+focus for drivers (or really any software) is being extremely careful
+with data processing and the validation of command arguments. Never
+assume the commands you're getting will follow an expected protocol:
+pretend the device at the other end of the bus (or the bus itself!) is
+trying to attack the driver. Same for any commands coming from
+userspace.
 
-It made me think that I was overlooking some obvious reason behind the
-choice :-S
+Are there particular things you're concerned about for MMC security?
 
---
-thanks for answering, igor
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
