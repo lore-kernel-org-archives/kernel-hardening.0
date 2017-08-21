@@ -1,547 +1,204 @@
-From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Mon, 21 Aug 2017 02:09:33 +0200
-Message-Id: <20170821000933.13024-11-mic@digikod.net>
-In-Reply-To: <20170821000933.13024-1-mic@digikod.net>
-References: <20170821000933.13024-1-mic@digikod.net>
+Date: Mon, 21 Aug 2017 11:37:09 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170821103708.GD3028@leverpostej>
+References: <20170814125411.22604-1-ard.biesheuvel@linaro.org>
+ <20170814125411.22604-30-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH net-next v7 10/10] landlock: Add user and kernel documentation for Landlock
-To: linux-kernel@vger.kernel.org
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170814125411.22604-30-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH 29/30] efi/libstub: arm: reserve bootloader supplied
+ initrd in memory map
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This documentation can be built with the Sphinx framework.
+On Mon, Aug 14, 2017 at 01:54:10PM +0100, Ard Biesheuvel wrote:
+> Under KASLR, the EFI stub may allocate the kernel anywhere in the
+> physical address space, which could be right on top of an initrd
+> if it was supplied by the bootloader (i.e., GRUB) in /chosen rather
+> than passed via the initrd= command line option. So allocate the
+> pages explicitly, this ensures that the random memory allocation
+> routine will disregard the region.
 
-Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Cc: Alexei Starovoitov <ast@kernel.org>
-Cc: Andy Lutomirski <luto@amacapital.net>
-Cc: Daniel Borkmann <daniel@iogearbox.net>
-Cc: David S. Miller <davem@davemloft.net>
-Cc: James Morris <james.l.morris@oracle.com>
-Cc: Jonathan Corbet <corbet@lwn.net>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Serge E. Hallyn <serge@hallyn.com>
----
+I'm a little confused. Shouldn't the bootloader have allocated that
+memory, leaving it reserved?
 
-Changes since v6:
-* add a check for ctx->event
-* rename BPF_PROG_TYPE_LANDLOCK to BPF_PROG_TYPE_LANDLOCK_RULE
-* rename Landlock version to ABI to better reflect its purpose and add a
-  dedicated changelog section
-* update tables
-* relax no_new_privs recommendations
-* remove ABILITY_WRITE related functions
-* reword rule "appending" to "prepending" and explain it
-* cosmetic fixes
+If it hasn't, then that region could be allcoated by anything else at
+any time (e.g. by the code which loads the kernel, or some EFI timer
+callback), so that sounds like a bootloader bug that we can't fix.
 
-Changes since v5:
-* update the rule hierarchy inheritance explanation
-* briefly explain ctx->arg2
-* add ptrace restrictions
-* explain EPERM
-* update example (subtype)
-* use ":manpage:"
----
- Documentation/security/index.rst           |   1 +
- Documentation/security/landlock/index.rst  |  19 ++
- Documentation/security/landlock/kernel.rst | 132 ++++++++++++
- Documentation/security/landlock/user.rst   | 313 +++++++++++++++++++++++++++++
- 4 files changed, 465 insertions(+)
- create mode 100644 Documentation/security/landlock/index.rst
- create mode 100644 Documentation/security/landlock/kernel.rst
- create mode 100644 Documentation/security/landlock/user.rst
+Thanks,
+Mark.
 
-diff --git a/Documentation/security/index.rst b/Documentation/security/index.rst
-index 298a94a33f05..1db294025d0f 100644
---- a/Documentation/security/index.rst
-+++ b/Documentation/security/index.rst
-@@ -11,3 +11,4 @@ Security Documentation
-    LSM
-    self-protection
-    tpm/index
-+   landlock/index
-diff --git a/Documentation/security/landlock/index.rst b/Documentation/security/landlock/index.rst
-new file mode 100644
-index 000000000000..8afde6a5805c
---- /dev/null
-+++ b/Documentation/security/landlock/index.rst
-@@ -0,0 +1,19 @@
-+=========================================
-+Landlock LSM: programmatic access control
-+=========================================
-+
-+Landlock is a stackable Linux Security Module (LSM) that makes it possible to
-+create security sandboxes.  This kind of sandbox is expected to help mitigate
-+the security impact of bugs or unexpected/malicious behaviors in user-space
-+applications.  The current version allows only a process with the global
-+CAP_SYS_ADMIN capability to create such sandboxes but the ultimate goal of
-+Landlock is to empower any process, including unprivileged ones, to securely
-+restrict themselves.  Landlock is inspired by seccomp-bpf but instead of
-+filtering syscalls and their raw arguments, a Landlock rule can inspect the use
-+of kernel objects like files and hence make a decision according to the kernel
-+semantic.
-+
-+.. toctree::
-+
-+    user
-+    kernel
-diff --git a/Documentation/security/landlock/kernel.rst b/Documentation/security/landlock/kernel.rst
-new file mode 100644
-index 000000000000..560711835ce8
---- /dev/null
-+++ b/Documentation/security/landlock/kernel.rst
-@@ -0,0 +1,132 @@
-+==============================
-+Landlock: kernel documentation
-+==============================
-+
-+eBPF properties
-+===============
-+
-+To get an expressive language while still being safe and small, Landlock is
-+based on eBPF. Landlock should be usable by untrusted processes and must
-+therefore expose a minimal attack surface. The eBPF bytecode is minimal,
-+powerful, widely used and designed to be used by untrusted applications. Thus,
-+reusing the eBPF support in the kernel enables a generic approach while
-+minimizing new code.
-+
-+An eBPF program has access to an eBPF context containing some fields including
-+event arguments (i.e. arg1 and arg2). These arguments can be used directly or
-+passed to helper functions according to their types. It is then possible to do
-+complex access checks without race conditions or inconsistent evaluation (i.e.
-+`incorrect mirroring of the OS code and state
-+<https://www.internetsociety.org/doc/traps-and-pitfalls-practical-problems-system-call-interposition-based-security-tools>`_).
-+
-+A Landlock event describes a particular access type.  For now, there is only
-+one event type dedicated to filesystem related operations:
-+LANDLOCK_SUBTYPE_EVENT_FS.  A Landlock rule is tied to one event type.  This
-+makes it possible to statically check context accesses, potentially performed
-+by such rule, and hence prevents kernel address leaks and ensure the right use
-+of event arguments with eBPF functions.  Any user can add multiple Landlock
-+rules per Landlock event.  They are stacked and evaluated one after the other,
-+starting from the most recent rule, as seccomp-bpf does with its filters.
-+Underneath, an event is an abstraction over a set of LSM hooks.
-+
-+
-+Guiding principles
-+==================
-+
-+Unprivileged use
-+----------------
-+
-+* Everything potentially security sensitive which is exposed to a Landlock
-+  rule, through functions or context, shall have an associated ability flag to
-+  specify which kind of privilege a process must have to load such a rule.
-+* Every ability flag expresses a semantic goal (e.g. debug, process
-+  introspection, process modification) potentially tied to a set of
-+  capabilities.
-+* Landlock helpers and context should be usable by any unprivileged and
-+  untrusted rule while following the system security policy enforced by other
-+  access control mechanisms (e.g. DAC, LSM).
-+
-+
-+Landlock event and context
-+--------------------------
-+
-+* A Landlock event shall be focused on access control on kernel objects instead
-+  of syscall filtering (i.e. syscall arguments), which is the purpose of
-+  seccomp-bpf.
-+* A Landlock context provided by an event shall express the minimal interface
-+  to control an access for a kernel object. This can be achieved by wrapping
-+  this raw object (e.g. file, inode, path, dentry) with an abstract
-+  representation (i.e. handle) for userland/bpfland.
-+* An evolution of a context's field (e.g. new flags in the status field) shall
-+  only be activated for a rule if the ABI specified by the loading thread imply
-+  this behavior.  This makes it possible to ensure that the rule code make
-+  sense (e.g. only watch flags which may be activated).
-+* An event type shall guaranty that all the BPF function calls from a rule are
-+  safe.  Thus, the related Landlock context arguments shall always be of the
-+  same type for a particular event type.  For example, a network event could
-+  share helpers with a file event because of UNIX socket.  However, the same
-+  helpers may not be compatible for a FS handle and a net handle.
-+* Multiple event types may use the same context interface.
-+
-+
-+Landlock helpers
-+----------------
-+
-+* Landlock helpers shall be as generic as possible (i.e. using handles) while
-+  at the same time being as simple as possible and following the syscall
-+  creation principles (cf.  *Documentation/adding-syscalls.txt*).
-+* The only behavior change allowed on a helper is to fix a (logical) bug to
-+  match the initial semantic.
-+* Helpers shall be reentrant, i.e. only take inputs from arguments (e.g. from
-+  the BPF context) or from the current thread, to allow an event type to use a
-+  cache.  Future rule options might change this cache behavior (e.g. invalidate
-+  cache after some time).
-+* It is quite easy to add new helpers to extend Landlock.  The main concern
-+  should be about the possibility to leak information from a landlocked process
-+  to another (e.g. through maps) to not reproduce the same security sensitive
-+  behavior as :manpage:`ptrace(2).`
-+
-+
-+Rule addition and propagation
-+=============================
-+
-+See :ref:`Documentation/security/landlock/user <inherited_rules>` for the
-+intended goal of rule propagation.
-+
-+Structure definitions
-+---------------------
-+
-+.. kernel-doc:: security/landlock/common.h
-+
-+
-+Functions for rule addition
-+---------------------------
-+
-+.. kernel-doc:: security/landlock/providers.c
-+
-+
-+Questions and answers
-+=====================
-+
-+Why not create a custom event type for each kind of action?
-+-----------------------------------------------------------
-+
-+Landlock rules can handle these checks.  Adding more exceptions to the kernel
-+code would lead to more code complexity.  A decision to ignore a kind of action
-+can and should be done at the beginning of a Landlock rule.
-+
-+
-+Why a rule does not return an errno or a kill code?
-+---------------------------------------------------
-+
-+seccomp filters can return multiple kind of code, including an errno value or a
-+kill signal, which may be convenient for access control.  Those return codes
-+are hardwired in the userland ABI.  Instead, Landlock's approach is to return a
-+boolean to allow or deny an action, which is much simpler and more generic.
-+Moreover, we do not really have a choice because, unlike to seccomp, Landlock
-+rules are not enforced at the syscall entry point but may be executed at any
-+point in the kernel (through LSM hooks) where an errno return code may not make
-+sense.  However, with this simple ABI and with the ability to call helpers,
-+Landlock may gain features similar to seccomp-bpf in the future while being
-+compatible with previous rules.
-+
-diff --git a/Documentation/security/landlock/user.rst b/Documentation/security/landlock/user.rst
-new file mode 100644
-index 000000000000..00a792d6b1cc
---- /dev/null
-+++ b/Documentation/security/landlock/user.rst
-@@ -0,0 +1,313 @@
-+================================
-+Landlock: userland documentation
-+================================
-+
-+Landlock rules
-+==============
-+
-+eBPF programs are used to create security rules.  They are contained and can
-+call only a whitelist of dedicated functions. Moreover, they cannot loop, which
-+protects from denial of service.  More information on BPF can be found in
-+*Documentation/networking/filter.txt*.
-+
-+
-+Writing a rule
-+--------------
-+
-+To enforce a security policy, a thread first needs to create a Landlock rule.
-+The easiest way to write an eBPF program depicting a security rule is to write
-+it in the C language.  As described in *samples/bpf/README.rst*, LLVM can
-+compile such programs.  Files *samples/bpf/landlock1_kern.c* and those in
-+*tools/testing/selftests/landlock/rules/* can be used as examples.  The
-+following example is a simple rule to forbid file creation, whatever syscall
-+may be used (e.g. open, mkdir, link...).  The *ctx->event* contains the event
-+ID for which the rule is actually ran.  The *ctx->arg2* contains the action
-+type performed on the file (cf. :ref:`fs_actions`).
-+
-+.. code-block:: c
-+
-+    static int deny_file_creation(struct landlock_context *ctx)
-+    {
-+        if (ctx->event != LANDLOCK_SUBTYPE_EVENT_FS)
-+            return 1;
-+        if (ctx->arg2 & LANDLOCK_ACTION_FS_NEW)
-+            return 1;
-+        return 0;
-+    }
-+
-+Once the eBPF program is created, the next step is to create the metadata
-+describing the Landlock rule.  This metadata includes a subtype which contains
-+the minimal ABI version that must be supported by the kernel, the event to
-+which the rule is tied, and optional Landlock rule abilities.
-+
-+.. code-block:: c
-+
-+    static union bpf_prog_subtype subtype = {
-+        .landlock_rule = {
-+            .abi = 1,
-+            .event = LANDLOCK_SUBTYPE_EVENT_FS,
-+        }
-+    };
-+
-+The Landlock ABI is important to inform the kernel which features or behavior
-+the rule can handle.  The user-space thread should set the lowest possible ABI
-+to be as compatible as possible with older kernels.  For the list of features
-+provided by ABI, see :ref:`features`.
-+
-+A Landlock event describes the kind of kernel object for which a rule will be
-+triggered to allow or deny an action.  For example, the event
-+LANDLOCK_SUBTYPE_EVENT_FS is triggered every time a landlocked thread performs
-+an action related to the filesystem (e.g. open, read, write, mount...).
-+
-+The Landlock rule abilities should only be used if the rule needs a specific
-+feature such as debugging.  This should be avoided if not strictly necessary.
-+
-+The next step is to fill a :c:type:`union bpf_attr <bpf_attr>` with
-+BPF_PROG_TYPE_LANDLOCK_RULE, the previously created subtype and other BPF
-+program metadata.  This bpf_attr must then be passed to the :manpage:`bpf(2)`
-+syscall alongside the BPF_PROG_LOAD command.  If everything is deemed correct
-+by the kernel, the thread gets a file descriptor referring to this rule.
-+
-+In the following code, the *insn* variable is an array of BPF instructions
-+which can be extracted from an ELF file as is done in bpf_load_file() from
-+*samples/bpf/bpf_load.c*.
-+
-+.. code-block:: c
-+
-+    union bpf_attr attr = {
-+        .prog_type = BPF_PROG_TYPE_LANDLOCK_RULE,
-+        .insn_cnt = sizeof(insn) / sizeof(struct bpf_insn),
-+        .insns = (__u64) (unsigned long) insn,
-+        .license = (__u64) (unsigned long) "GPL",
-+        .prog_subtype = &subtype,
-+        .prog_subtype_size = sizeof(subtype),
-+    };
-+    int rule = bpf(BPF_PROG_LOAD, &attr, sizeof(attr));
-+    if (rule == -1)
-+        exit(1);
-+
-+
-+Enforcing a rule
-+----------------
-+
-+Once the Landlock rule has been created or received (e.g. through a UNIX
-+socket), the thread willing to sandbox itself (and its future children) should
-+perform the following two steps to properly sandbox itself with a rule.
-+
-+The thread should first request to never be allowed to get new privileges with a
-+call to :manpage:`prctl(2)` and the PR_SET_NO_NEW_PRIVS option.  More
-+information can be found in *Documentation/prctl/no_new_privs.txt*.
-+
-+.. code-block:: c
-+
-+    if (prctl(PR_SET_NO_NEW_PRIVS, 1, NULL, 0, 0))
-+        exit(1);
-+
-+A thread can apply a rule to itself by using the :manpage:`seccomp(2)` syscall.
-+The operation is SECCOMP_PREPEND_LANDLOCK_RULE, the flags must be empty and the
-+*args* argument must point to a valid Landlock rule file descriptor.
-+
-+.. code-block:: c
-+
-+    if (seccomp(SECCOMP_PREPEND_LANDLOCK_RULE, 0, &rule))
-+        exit(1);
-+
-+If the syscall succeeds, the rule is now enforced on the calling thread and
-+will be enforced on all its subsequently created children of the thread as
-+well.  Once a thread is landlocked, there is no way to remove this security
-+policy, only stacking more restrictions is allowed.  The rule evaluation is
-+performed from the newest to the oldest.
-+
-+When a syscall ask for an action on a kernel object, if this action is denied,
-+then an EPERM errno code is returned through the syscall.
-+
-+
-+.. _inherited_rules:
-+
-+Inherited rules
-+---------------
-+
-+Every new thread resulting from a :manpage:`clone(2)` inherits Landlock rule
-+restrictions from its parent.  This is similar to the seccomp inheritance as
-+described in *Documentation/prctl/seccomp_filter.txt*.
-+
-+
-+Ptrace restrictions
-+-------------------
-+
-+A landlocked process has less privileges than a non-landlocked process and must
-+then be subject to additional restrictions when manipulating another process.
-+To be allowed to use :manpage:`ptrace(2)` and related syscalls on a target
-+process, a landlocked process must have a subset of the target process rules.
-+
-+
-+.. _features:
-+
-+Landlock features
-+=================
-+
-+In order to support new features over time without changing a rule behavior,
-+every context field, flag or helpers has a minimal Landlock ABI in which they
-+are available.  A thread needs to specify this minimal ABI number in the
-+subtype :c:type:`struct landlock_rule <landlock_rule>` defined in
-+*include/uapi/linux/bpf.h*.
-+
-+
-+Context
-+-------
-+
-+The arch and syscall_nr fields may be useful to tighten an access control, but
-+care must be taken to avoid pitfalls as explain in
-+*Documentation/prctl/seccomp_filter.txt*.
-+
-+.. kernel-doc:: include/uapi/linux/bpf.h
-+    :functions: landlock_context
-+
-+
-+Landlock event types
-+--------------------
-+
-+.. kernel-doc:: include/uapi/linux/bpf.h
-+    :functions: landlock_subtype_event
-+
-+.. flat-table:: Event types availability and optional arguments from :c:type:`struct landlock_context <landlock_context>`
-+
-+    * - Event type
-+      - Minimal ABI
-+      - Optional *arg1*
-+      - Optional *arg2*
-+
-+    * - LANDLOCK_SUBTYPE_EVENT_FS
-+      - 1
-+      - filesystem handle
-+      - :ref:`fs_actions`
-+
-+    * - LANDLOCK_SUBTYPE_EVENT_FS_IOCTL
-+      - 1
-+      - filesystem handle
-+      - :manpage:`ioctl(2)` request
-+
-+    * - LANDLOCK_SUBTYPE_EVENT_FS_LOCK
-+      - 1
-+      - filesystem handle
-+      - :manpage:`flock(2)` operation
-+
-+    * - LANDLOCK_SUBTYPE_EVENT_FS_FCNTL
-+      - 1
-+      - filesystem handle
-+      - :manpage:`fcntl(2)` command
-+
-+
-+.. _fs_actions:
-+
-+File system action types
-+------------------------
-+
-+Flags are used to express actions.  This makes it possible to compose actions
-+and leaves room for future improvements to add more fine-grained action types.
-+
-+.. kernel-doc:: include/uapi/linux/bpf.h
-+    :doc: landlock_action_fs
-+
-+.. flat-table:: FS action types availability
-+
-+    * - Action flag
-+      - Minimal ABI
-+
-+    * - LANDLOCK_ACTION_FS_EXEC
-+      - 1
-+
-+    * - LANDLOCK_ACTION_FS_WRITE
-+      - 1
-+
-+    * - LANDLOCK_ACTION_FS_READ
-+      - 1
-+
-+    * - LANDLOCK_ACTION_FS_NEW
-+      - 1
-+
-+    * - LANDLOCK_ACTION_FS_GET
-+      - 1
-+
-+    * - LANDLOCK_ACTION_FS_REMOVE
-+      - 1
-+
-+    * - LANDLOCK_ACTION_FS_IOCTL
-+      - 1
-+
-+    * - LANDLOCK_ACTION_FS_LOCK
-+      - 1
-+
-+    * - LANDLOCK_ACTION_FS_FCNTL
-+      - 1
-+
-+
-+Ability types
-+-------------
-+
-+The ability of a Landlock rule describes the available features (i.e. context
-+fields and available helpers).  This is useful to abstract user-space
-+privileges for Landlock rules, which may not need all abilities (e.g. debug).
-+Only the minimal set of abilities should be used (e.g. disable debug once in
-+production).
-+
-+
-+.. kernel-doc:: include/uapi/linux/bpf.h
-+    :doc: landlock_subtype_ability
-+
-+.. flat-table:: Ability types availability
-+
-+    * - Ability type
-+      - Minimal ABI
-+      - Capability
-+
-+    * - LANDLOCK_SUBTYPE_ABILITY_DEBUG
-+      - 1
-+      - CAP_SYS_ADMIN
-+
-+
-+Helper functions
-+----------------
-+
-+See *include/uapi/linux/bpf.h* for functions documentation.
-+
-+.. flat-table:: Generic functions availability
-+
-+    * - Helper
-+      - Minimal ABI
-+      - Ability
-+
-+    * - bpf_get_current_comm
-+      - 1
-+      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
-+
-+    * - bpf_get_current_pid_tgid
-+      - 1
-+      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
-+
-+    * - bpf_get_current_uid_gid
-+      - 1
-+      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
-+
-+    * - bpf_get_trace_printk
-+      - 1
-+      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
-+
-+.. flat-table:: File system functions availability
-+
-+    * - Helper
-+      - Minimal ABI
-+      - Ability
-+
-+    * - bpf_handle_fs_get_mode
-+      - 1
-+      - (none)
-+
-+
-+Landlock ABI changelog
-+======================
-+
-+ABI 1
-+-----
-+
-+Initial version.
--- 
-2.14.1
+> 
+> Note that this means that we need to defer the handle_kernel_image()
+> call.
+> 
+> Cc: Matt Fleming <matt@codeblueprint.co.uk>
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> ---
+>  drivers/firmware/efi/libstub/arm-stub.c | 51 ++++++++++++--------
+>  drivers/firmware/efi/libstub/efistub.h  |  3 ++
+>  drivers/firmware/efi/libstub/fdt.c      | 42 ++++++++++++++++
+>  3 files changed, 75 insertions(+), 21 deletions(-)
+> 
+> diff --git a/drivers/firmware/efi/libstub/arm-stub.c b/drivers/firmware/efi/libstub/arm-stub.c
+> index 8181ac179d14..f5ef5ccd5f45 100644
+> --- a/drivers/firmware/efi/libstub/arm-stub.c
+> +++ b/drivers/firmware/efi/libstub/arm-stub.c
+> @@ -133,6 +133,7 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
+>  	unsigned long reserve_size = 0;
+>  	enum efi_secureboot_mode secure_boot;
+>  	struct screen_info *si;
+> +	bool have_chosen_initrd;
+>  
+>  	/* Check if we were booted by the EFI firmware */
+>  	if (sys_table->hdr.signature != EFI_SYSTEM_TABLE_SIGNATURE)
+> @@ -183,15 +184,6 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
+>  
+>  	si = setup_graphics(sys_table);
+>  
+> -	status = handle_kernel_image(sys_table, image_addr, &image_size,
+> -				     &reserve_addr,
+> -				     &reserve_size,
+> -				     dram_base, image);
+> -	if (status != EFI_SUCCESS) {
+> -		pr_efi_err(sys_table, "Failed to relocate kernel\n");
+> -		goto fail_free_cmdline;
+> -	}
+> -
+>  	secure_boot = efi_get_secureboot(sys_table);
+>  
+>  	/*
+> @@ -209,7 +201,7 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
+>  
+>  		if (status != EFI_SUCCESS) {
+>  			pr_efi_err(sys_table, "Failed to load device tree!\n");
+> -			goto fail_free_image;
+> +			goto fail_free_cmdline;
+>  		}
+>  	}
+>  
+> @@ -222,16 +214,33 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
+>  			pr_efi(sys_table, "Using DTB from configuration table\n");
+>  	}
+>  
+> -	if (!fdt_addr)
+> +	if (!fdt_addr) {
+>  		pr_efi(sys_table, "Generating empty DTB\n");
+> +		have_chosen_initrd = false;
+> +	} else {
+> +		status = efi_reserve_dtb_initrd(sys_table, (void *)fdt_addr);
+> +		have_chosen_initrd = (status != EFI_NOT_FOUND);
+> +	}
+>  
+> -	status = handle_cmdline_files(sys_table, image, cmdline_ptr, "initrd=",
+> -				      efi_get_max_initrd_addr(dram_base,
+> -							      *image_addr),
+> -				      (unsigned long *)&initrd_addr,
+> -				      (unsigned long *)&initrd_size);
+> -	if (status != EFI_SUCCESS)
+> -		pr_efi_err(sys_table, "Failed initrd from command line!\n");
+> +	status = handle_kernel_image(sys_table, image_addr, &image_size,
+> +				     &reserve_addr, &reserve_size,
+> +				     dram_base, image);
+> +	if (status != EFI_SUCCESS) {
+> +		pr_efi_err(sys_table, "Failed to relocate kernel\n");
+> +		goto fail_free_fdt;
+> +	}
+> +
+> +	if (!have_chosen_initrd) {
+> +		status = handle_cmdline_files(sys_table, image, cmdline_ptr,
+> +					      "initrd=",
+> +					      efi_get_max_initrd_addr(dram_base,
+> +								      *image_addr),
+> +					      (unsigned long *)&initrd_addr,
+> +					      (unsigned long *)&initrd_size);
+> +		if (status != EFI_SUCCESS)
+> +			pr_efi_err(sys_table,
+> +				   "Failed initrd from command line!\n");
+> +	}
+>  
+>  	efi_random_get_seed(sys_table);
+>  
+> @@ -272,11 +281,11 @@ unsigned long efi_entry(void *handle, efi_system_table_t *sys_table,
+>  	pr_efi_err(sys_table, "Failed to update FDT and exit boot services\n");
+>  
+>  	efi_free(sys_table, initrd_size, initrd_addr);
+> -	efi_free(sys_table, fdt_size, fdt_addr);
+> -
+> -fail_free_image:
+>  	efi_free(sys_table, image_size, *image_addr);
+>  	efi_free(sys_table, reserve_size, reserve_addr);
+> +
+> +fail_free_fdt:
+> +	efi_free(sys_table, fdt_size, fdt_addr);
+>  fail_free_cmdline:
+>  	free_screen_info(sys_table, si);
+>  	efi_free(sys_table, cmdline_size, (unsigned long)cmdline_ptr);
+> diff --git a/drivers/firmware/efi/libstub/efistub.h b/drivers/firmware/efi/libstub/efistub.h
+> index aaf2aeb785ea..35b514d7d962 100644
+> --- a/drivers/firmware/efi/libstub/efistub.h
+> +++ b/drivers/firmware/efi/libstub/efistub.h
+> @@ -68,4 +68,7 @@ efi_status_t check_platform_features(efi_system_table_t *sys_table_arg);
+>  
+>  efi_status_t efi_random_get_seed(efi_system_table_t *sys_table_arg);
+>  
+> +efi_status_t efi_reserve_dtb_initrd(efi_system_table_t *sys_table_arg,
+> +				    const void *fdt);
+> +
+>  #endif
+> diff --git a/drivers/firmware/efi/libstub/fdt.c b/drivers/firmware/efi/libstub/fdt.c
+> index 8830fa601e45..54408c95e094 100644
+> --- a/drivers/firmware/efi/libstub/fdt.c
+> +++ b/drivers/firmware/efi/libstub/fdt.c
+> @@ -385,3 +385,45 @@ void *get_fdt(efi_system_table_t *sys_table, unsigned long *fdt_size)
+>  
+>  	return fdt;
+>  }
+> +
+> +efi_status_t efi_reserve_dtb_initrd(efi_system_table_t *sys_table_arg,
+> +				    const void *fdt)
+> +{
+> +	int chosen, len;
+> +	const void *prop;
+> +	efi_physical_addr_t start, end;
+> +	unsigned long num_pages;
+> +	efi_status_t status;
+> +
+> +	chosen = fdt_path_offset(fdt, "/chosen");
+> +	if (chosen == -FDT_ERR_NOTFOUND)
+> +		return EFI_NOT_FOUND;
+> +
+> +	prop = fdt_getprop(fdt, chosen, "linux,initrd-start", &len);
+> +	if (!prop)
+> +		return EFI_NOT_FOUND;
+> +
+> +	start = (len == sizeof(fdt32_t)) ? fdt32_to_cpu(*(fdt32_t *)prop)
+> +					 : fdt64_to_cpu(*(fdt64_t *)prop);
+> +
+> +	prop = fdt_getprop(fdt, chosen, "linux,initrd-end", &len);
+> +	if (!prop)
+> +		return EFI_NOT_FOUND;
+> +
+> +	end = (len == sizeof(fdt32_t)) ? fdt32_to_cpu(*(fdt32_t *)prop)
+> +				       : fdt64_to_cpu(*(fdt64_t *)prop);
+> +
+> +	start = round_down(start, EFI_PAGE_SIZE);
+> +	num_pages = round_up(end - start, EFI_PAGE_SIZE) / EFI_PAGE_SIZE;
+> +
+> +	status = efi_call_early(allocate_pages, EFI_ALLOCATE_ADDRESS,
+> +				EFI_LOADER_DATA, num_pages, &start);
+> +
+> +	if (status != EFI_SUCCESS)
+> +		pr_efi_err(sys_table_arg,
+> +			   "Failed to reserve initrd area found in /chosen\n");
+> +	else
+> +		pr_efi(sys_table_arg, "Using initrd found in /chosen\n");
+> +
+> +	return status;
+> +}
+> -- 
+> 2.11.0
+> 
