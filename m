@@ -1,114 +1,177 @@
+References: <20170821000933.13024-1-mic@digikod.net>
+ <20170821000933.13024-6-mic@digikod.net>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <753a3a91-23a4-bc63-27cb-12e764d3d5fc@digikod.net>
+Date: Tue, 22 Aug 2017 23:59:33 +0200
 MIME-Version: 1.0
-In-Reply-To: <20170814213732.104301-3-thgarnie@google.com>
-References: <20170814213732.104301-1-thgarnie@google.com> <20170814213732.104301-3-thgarnie@google.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Tue, 22 Aug 2017 09:42:25 -0700
-Message-ID: <CAJcbSZG1b7ObJAv6Kmp-fR3vZRg7AdbcgqDceGB95r-72Yv0yg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v3 3/4] arm/syscalls: Optimize address limit check
-To: Al Viro <viro@zeniv.linux.org.uk>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Thomas Garnier <thgarnie@google.com>, Yonghong Song <yhs@fb.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Dave Martin <Dave.Martin@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>
-Cc: Linux API <linux-api@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20170821000933.13024-6-mic@digikod.net>
+Content-Type: multipart/signed; micalg=pgp-sha512;
+ protocol="application/pgp-signature";
+ boundary="Dnvdt9AH49AkVNNJiXKdkOvxXQXGi39Ck"
+Subject: [kernel-hardening] Re: [PATCH net-next v7 05/10] landlock: Add LSM hooks related to
+ filesystem
+To: linux-kernel@vger.kernel.org
+Cc: Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 14, 2017 at 2:37 PM, Thomas Garnier <thgarnie@google.com> wrote:
-> Disable the generic address limit check in favor of an architecture
-> specific optimized implementation. The generic implementation using
-> pending work flags did not work well with ARM and alignment faults.
->
-> The address limit is checked on each syscall return path to user-mode
-> path as well as the irq user-mode return function. If the address limit
-> was changed, a function is called to report data corruption (stopping
-> the kernel or process based on configuration).
->
-> The address limit check has to be done before any pending work because
-> they can reset the address limit and the process is killed using a
-> SIGKILL signal. For example the lkdtm address limit check does not work
-> because the signal to kill the process will reset the user-mode address
-> limit.
->
-> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--Dnvdt9AH49AkVNNJiXKdkOvxXQXGi39Ck
+Content-Type: multipart/mixed; boundary="ibiW1j3iD6nWvBmPbJaOUn4pko8Ovx8GU";
+ protected-headers="v1"
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+To: linux-kernel@vger.kernel.org
+Cc: Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski
+ <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>,
+ Casey Schaufler <casey@schaufler-ca.com>,
+ Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
+ <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>,
+ "Eric W . Biederman" <ebiederm@xmission.com>,
+ James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
+ Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>,
+ Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>,
+ Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
+ "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
+ Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>,
+ Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com,
+ linux-api@vger.kernel.org, linux-security-module@vger.kernel.org,
+ netdev@vger.kernel.org
+Message-ID: <753a3a91-23a4-bc63-27cb-12e764d3d5fc@digikod.net>
+Subject: Re: [PATCH net-next v7 05/10] landlock: Add LSM hooks related to
+ filesystem
+References: <20170821000933.13024-1-mic@digikod.net>
+ <20170821000933.13024-6-mic@digikod.net>
+In-Reply-To: <20170821000933.13024-6-mic@digikod.net>
 
-Any feedback?
+--ibiW1j3iD6nWvBmPbJaOUn4pko8Ovx8GU
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+
+On 21/08/2017 02:09, Micka=C3=ABl Sala=C3=BCn wrote:
+> Handle 33 filesystem-related LSM hooks for the Landlock filesystem
+> event: LANDLOCK_SUBTYPE_EVENT_FS.
+>=20
+> A Landlock event wrap LSM hooks for similar kernel object types (e.g.
+> struct file, struct path...). Multiple LSM hooks can trigger the same
+> Landlock event.
+>=20
+> Landlock handle nine coarse-grained actions: read, write, execute, new,=
+
+> get, remove, ioctl, lock and fcntl. Each of them abstract LSM hook
+> access control in a way that can be extended in the future.
+>=20
+> The Landlock LSM hook registration is done after other LSM to only run
+> actions from user-space, via eBPF programs, if the access was granted b=
+y
+> major (privileged) LSMs.
+>=20
+> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
+> Cc: Alexei Starovoitov <ast@kernel.org>
+> Cc: Andy Lutomirski <luto@amacapital.net>
+> Cc: Daniel Borkmann <daniel@iogearbox.net>
+> Cc: David S. Miller <davem@davemloft.net>
+> Cc: James Morris <james.l.morris@oracle.com>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Serge E. Hallyn <serge@hallyn.com>
+> ---
+>=20
+> Changes since v6:
+> * add 3 more sub-events: IOCTL, LOCK, FCNTL
+>   https://lkml.kernel.org/r/2fbc99a6-f190-f335-bd14-04bdeed35571@digiko=
+d.net
+> * use the new security_add_hooks()
+> * explain the -Werror=3Dunused-function
+> * constify pointers
+> * cleanup headers
+>=20
+> Changes since v5:
+> * split hooks.[ch] into hooks.[ch] and hooks_fs.[ch]
+> * add more documentation
+> * cosmetic fixes
+> * rebase (SCALAR_VALUE)
+>=20
+> Changes since v4:
+> * add LSM hook abstraction called Landlock event
+>   * use the compiler type checking to verify hooks use by an event
+>   * handle all filesystem related LSM hooks (e.g. file_permission,
+>     mmap_file, sb_mount...)
+> * register BPF programs for Landlock just after LSM hooks registration
+> * move hooks registration after other LSMs
+> * add failsafes to check if a hook is not used by the kernel
+> * allow partial raw value access form the context (needed for programs
+>   generated by LLVM)
+>=20
+> Changes since v3:
+> * split commit
+> * add hooks dealing with struct inode and struct path pointers:
+>   inode_permission and inode_getattr
+> * add abstraction over eBPF helper arguments thanks to wrapping structs=
 
 > ---
->  arch/arm/kernel/entry-common.S | 11 +++++++++++
->  arch/arm/kernel/signal.c       |  7 +++++++
->  2 files changed, 18 insertions(+)
->
-> diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
-> index 0b60adf4a5d9..99c908226065 100644
-> --- a/arch/arm/kernel/entry-common.S
-> +++ b/arch/arm/kernel/entry-common.S
-> @@ -12,6 +12,7 @@
->  #include <asm/unistd.h>
->  #include <asm/ftrace.h>
->  #include <asm/unwind.h>
-> +#include <asm/memory.h>
->  #ifdef CONFIG_AEABI
->  #include <asm/unistd-oabi.h>
->  #endif
-> @@ -48,10 +49,14 @@ ret_fast_syscall:
->   UNWIND(.fnstart       )
->   UNWIND(.cantunwind    )
->         disable_irq_notrace                     @ disable interrupts
-> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
-> +       cmp     r2, #TASK_SIZE
-> +       blne    addr_limit_check_failed
->         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
->         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
->         bne     fast_work_pending
->
-> +
->         /* perform architecture specific actions before user return */
->         arch_ret_to_user r1, lr
->
-> @@ -74,6 +79,9 @@ ret_fast_syscall:
->   UNWIND(.cantunwind    )
->         str     r0, [sp, #S_R0 + S_OFF]!        @ save returned r0
->         disable_irq_notrace                     @ disable interrupts
-> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
-> +       cmp     r2, #TASK_SIZE
-> +       blne    addr_limit_check_failed
->         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
->         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
->         beq     no_work_pending
-> @@ -106,6 +114,9 @@ ENTRY(ret_to_user)
->  ret_slow_syscall:
->         disable_irq_notrace                     @ disable interrupts
->  ENTRY(ret_to_user_from_irq)
-> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
-> +       cmp     r2, #TASK_SIZE
-> +       blne    addr_limit_check_failed
->         ldr     r1, [tsk, #TI_FLAGS]
->         tst     r1, #_TIF_WORK_MASK
->         bne     slow_work_pending
-> diff --git a/arch/arm/kernel/signal.c b/arch/arm/kernel/signal.c
-> index 5814298ef0b7..b67ae12503f3 100644
-> --- a/arch/arm/kernel/signal.c
-> +++ b/arch/arm/kernel/signal.c
-> @@ -14,6 +14,7 @@
->  #include <linux/uaccess.h>
->  #include <linux/tracehook.h>
->  #include <linux/uprobes.h>
-> +#include <linux/syscalls.h>
->
->  #include <asm/elf.h>
->  #include <asm/cacheflush.h>
-> @@ -673,3 +674,9 @@ struct page *get_signal_page(void)
->
->         return page;
->  }
-> +
-> +/* Defer to generic check */
-> +asmlinkage void addr_limit_check_failed(void)
-> +{
-> +       addr_limit_user_check();
-> +}
-> --
-> 2.14.1.480.gb18f417b89-goog
->
+>  include/linux/lsm_hooks.h    |   5 +
+>  security/landlock/Makefile   |   7 +-
+>  security/landlock/common.h   |   2 +
+>  security/landlock/hooks.c    |  83 ++++++
+>  security/landlock/hooks.h    | 177 +++++++++++++
+>  security/landlock/hooks_fs.c | 586 +++++++++++++++++++++++++++++++++++=
+++++++++
+>  security/landlock/hooks_fs.h |  19 ++
+>  security/landlock/init.c     |  10 +
+>  security/security.c          |  12 +-
+>  9 files changed, 899 insertions(+), 2 deletions(-)
+>  create mode 100644 security/landlock/hooks.c
+>  create mode 100644 security/landlock/hooks.h
+>  create mode 100644 security/landlock/hooks_fs.c
+>  create mode 100644 security/landlock/hooks_fs.h
+
+> diff --git a/security/landlock/init.c b/security/landlock/init.c
+> index 09acbc74abd6..1e6660fed697 100644
+> --- a/security/landlock/init.c
+> +++ b/security/landlock/init.c
+> @@ -10,8 +10,10 @@
+> =20
+>  #include <linux/bpf.h> /* enum bpf_access_type */
+>  #include <linux/capability.h> /* capable */
+> +#include <linux/lsm_hooks.h>
+> =20
+>  #include "common.h" /* LANDLOCK_* */
+> +#include "hooks_fs.h"
+> =20
+> =20
+>  static inline bool bpf_landlock_is_valid_access(int off, int size,
+> @@ -23,6 +25,8 @@ static inline bool bpf_landlock_is_valid_access(int o=
+ff, int size,
+> =20
+>  	switch (prog_subtype->landlock_rule.event) {
+>  	case LANDLOCK_SUBTYPE_EVENT_FS:
+> +		return landlock_is_valid_access_event_FS(off, size, type,
+> +				&info->reg_type, prog_subtype);
+
+I forgot to handle LANDLOCK_SUBTYPE_EVENT_FS_{IOCTL,LOCK_FCNTL} here and
+I included some hunks in the wrong patches. I will fix this in the next
+series and add tests for those anyway. :)
+
+Regards,
+ Micka=C3=ABl
 
 
+--ibiW1j3iD6nWvBmPbJaOUn4pko8Ovx8GU--
 
--- 
-Thomas
+--Dnvdt9AH49AkVNNJiXKdkOvxXQXGi39Ck
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAlmcqUUACgkQIt7+33O9
+apVSrQgAkpiEGSlcj4s42B8EP98Wq5IkvJbLVitw/iMEiWsXDO2vDp+9aWG1tXDB
+lKSPkE/FdU6GCG8Unk0AETiDkG2zkcygiaOu1apcJ90V7ByVmvUUfT1EoRiYmam7
+D75lEcqaP3tycXecTlAlTr3OQkE12HiZ2PscRt8HYZ/UIf6EeSDFwhOEUTH2YioW
+osemeTd/DkNO6PEzJ9NrAkBsFn3jc9pi5b0+994N3ATTOxCPTcDSOGZ09zGrx9ni
+RWVYsFZwpGCtYyKEFagP/vI0BRTlkM9Bh6ha3hpwi06s7St7JPuqZokL0/aHcikS
++n/4+J1x4kU9ydOoD/KuXXZ5NkdJdw==
+=dAlT
+-----END PGP SIGNATURE-----
+
+--Dnvdt9AH49AkVNNJiXKdkOvxXQXGi39Ck--
