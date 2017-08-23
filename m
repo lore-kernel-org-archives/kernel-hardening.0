@@ -1,237 +1,398 @@
-References: <20170821000933.13024-1-mic@digikod.net>
- <20170821000933.13024-3-mic@digikod.net>
- <20170823024452.zvizovwfd7xjucsx@ast-mbp>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <607ceb21-5aa5-678b-4438-0d8dcb69fc3c@digikod.net>
-Date: Wed, 23 Aug 2017 09:45:24 +0200
+Date: Wed, 23 Aug 2017 15:58:12 +0100
+From: Will Deacon <will.deacon@arm.com>
+Message-ID: <20170823145811.GA30753@arm.com>
+References: <20170731192251.12491-1-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-In-Reply-To: <20170823024452.zvizovwfd7xjucsx@ast-mbp>
-Content-Type: multipart/signed; micalg=pgp-sha512;
- protocol="application/pgp-signature";
- boundary="dc498IRvWhCt2a6PiN3lujbkK7OfPNenW"
-Subject: [kernel-hardening] Re: [PATCH net-next v7 02/10] bpf: Add eBPF program subtype and
- is_valid_subtype() verifier
-To: Alexei Starovoitov <alexei.starovoitov@gmail.com>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170731192251.12491-1-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH v4] arm64: kernel: implement fast refcount checking
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, keescook@chromium.org, mark.rutland@arm.com, labbott@fedoraproject.org, hw.likun@huawei.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---dc498IRvWhCt2a6PiN3lujbkK7OfPNenW
-Content-Type: multipart/mixed; boundary="G2rKILCtqUU5sFWsp9kh7wNaCuoCtpL5w";
- protected-headers="v1"
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: Alexei Starovoitov <alexei.starovoitov@gmail.com>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>,
- Andy Lutomirski <luto@amacapital.net>,
- Arnaldo Carvalho de Melo <acme@kernel.org>,
- Casey Schaufler <casey@schaufler-ca.com>,
- Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
- <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>,
- "Eric W . Biederman" <ebiederm@xmission.com>,
- James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
- Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>,
- Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
- "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
- Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>,
- Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com,
- linux-api@vger.kernel.org, linux-security-module@vger.kernel.org,
- netdev@vger.kernel.org
-Message-ID: <607ceb21-5aa5-678b-4438-0d8dcb69fc3c@digikod.net>
-Subject: Re: [PATCH net-next v7 02/10] bpf: Add eBPF program subtype and
- is_valid_subtype() verifier
-References: <20170821000933.13024-1-mic@digikod.net>
- <20170821000933.13024-3-mic@digikod.net>
- <20170823024452.zvizovwfd7xjucsx@ast-mbp>
-In-Reply-To: <20170823024452.zvizovwfd7xjucsx@ast-mbp>
+Hi Ard,
 
---G2rKILCtqUU5sFWsp9kh7wNaCuoCtpL5w
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: quoted-printable
+Comments of varying quality inline...
 
+On Mon, Jul 31, 2017 at 08:22:51PM +0100, Ard Biesheuvel wrote:
+> This adds support to arm64 for fast refcount checking, as proposed by
+> Kees for x86 based on the implementation by grsecurity/PaX.
+> 
+> The general approach is identical: the existing atomic_t helpers are
+> cloned for refcount_t, with the arithmetic instruction modified to set
+> the PSTATE flags, and one or two branch instructions added that jump to
+> an out of line handler if overflow, decrement to zero or increment from
+> zero are detected.
+> 
+> One complication that we have to deal with on arm64 is the fact that
+> it has two atomics implementations: the original LL/SC implementation
+> using load/store exclusive loops, and the newer LSE one that does mostly
+> the same in a single instruction. So we need to clone some parts of
+> both for the refcount handlers, but we also need to deal with the way
+> LSE builds fall back to LL/SC at runtime if the hardware does not
+> support it. (The only exception is refcount_add_not_zero(), which
+> updates the refcount conditionally, so it is only implemented using
+> a load/store exclusive loop)
+> 
+> As is the case with the x86 version, the performance delta is in the
+> noise (Cortex-A57 @ 2 GHz, using LL/SC not LSE), even though the arm64
+> implementation incorporates an add-from-zero check as well:
 
-On 23/08/2017 04:44, Alexei Starovoitov wrote:
-> On Mon, Aug 21, 2017 at 02:09:25AM +0200, Micka=EBl Sala=FCn wrote:
->> The goal of the program subtype is to be able to have different static=
+How does this compare to versions built using cmpxchg?
 
->> fine-grained verifications for a unique program type.
->>
->> The struct bpf_verifier_ops gets a new optional function:
->> is_valid_subtype(). This new verifier is called at the beginning of th=
-e
->> eBPF program verification to check if the (optional) program subtype i=
-s
->> valid.
->>
->> For now, only Landlock eBPF programs are using a program subtype (see
->> next commit) but this could be used by other program types in the futu=
-re.
->>
->> Signed-off-by: Micka=EBl Sala=FCn <mic@digikod.net>
->> Cc: Alexei Starovoitov <ast@kernel.org>
->> Cc: Arnaldo Carvalho de Melo <acme@kernel.org>
->> Cc: Daniel Borkmann <daniel@iogearbox.net>
->> Cc: David S. Miller <davem@davemloft.net>
->> Link: https://lkml.kernel.org/r/20160827205559.GA43880@ast-mbp.theface=
-book.com
->> ---
->>
->> Changes since v6:
->> * rename Landlock version to ABI to better reflect its purpose
->> * fix unsigned integer checks
->> * fix pointer cast
->> * constify pointers
->> * rebase
->>
->> Changes since v5:
->> * use a prog_subtype pointer and make it future-proof
->> * add subtype test
->> * constify bpf_load_program()'s subtype argument
->> * cleanup subtype initialization
->> * rebase
->>
->> Changes since v4:
->> * replace the "status" field with "version" (more generic)
->> * replace the "access" field with "ability" (less confusing)
->>
->> Changes since v3:
->> * remove the "origin" field
->> * add an "option" field
->> * cleanup comments
->> ---
->>  include/linux/bpf.h                         |  7 ++-
->>  include/linux/filter.h                      |  2 +
->>  include/uapi/linux/bpf.h                    | 11 +++++
->>  kernel/bpf/syscall.c                        | 22 ++++++++-
->>  kernel/bpf/verifier.c                       | 17 +++++--
->>  kernel/trace/bpf_trace.c                    | 15 ++++--
->>  net/core/filter.c                           | 71 ++++++++++++++++++--=
----------
->>  samples/bpf/bpf_load.c                      |  3 +-
->>  samples/bpf/cookie_uid_helper_example.c     |  2 +-
->>  samples/bpf/fds_example.c                   |  2 +-
->>  samples/bpf/sock_example.c                  |  3 +-
->>  samples/bpf/test_cgrp2_attach.c             |  2 +-
->>  samples/bpf/test_cgrp2_attach2.c            |  2 +-
->>  samples/bpf/test_cgrp2_sock.c               |  2 +-
->>  tools/include/uapi/linux/bpf.h              | 11 +++++
->>  tools/lib/bpf/bpf.c                         | 10 +++-
->>  tools/lib/bpf/bpf.h                         |  5 +-
->>  tools/lib/bpf/libbpf.c                      |  4 +-
->>  tools/perf/tests/bpf.c                      |  2 +-
->>  tools/testing/selftests/bpf/test_align.c    |  2 +-
->>  tools/testing/selftests/bpf/test_tag.c      |  2 +-
->>  tools/testing/selftests/bpf/test_verifier.c | 17 ++++++-
->>  22 files changed, 158 insertions(+), 56 deletions(-)
->=20
-> ...
->=20
->> diff --git a/include/linux/filter.h b/include/linux/filter.h
->> index 7015116331af..0c3fadbb5a58 100644
->> --- a/include/linux/filter.h
->> +++ b/include/linux/filter.h
->> @@ -464,6 +464,8 @@ struct bpf_prog {
->>  	u32			len;		/* Number of filter blocks */
->>  	u32			jited_len;	/* Size of jited insns in bytes */
->>  	u8			tag[BPF_TAG_SIZE];
->> +	u8			has_subtype;
->> +	union bpf_prog_subtype	subtype;	/* Fine-grained verifications */
->=20
-> these burn a hole in very performance sensitive structure.
-> Also there are bits rigth above. use them instead of u8 has_subtype?
-> or can these two fields be part of bpf_prog_aux ?
+> 
+> perf stat -B -- cat <(echo ATOMIC_TIMING) >/sys/kernel/debug/provoke-crash/DIRECT
+> 
+>  Performance counter stats for 'cat /dev/fd/63':
+> 
+>       65758.632112      task-clock (msec)         #    1.000 CPUs utilized
+>                  2      context-switches          #    0.000 K/sec
+>                  0      cpu-migrations            #    0.000 K/sec
+>                 47      page-faults               #    0.001 K/sec
+>       131421735632      cycles                    #    1.999 GHz
+>        36752227542      instructions              #    0.28  insn per cycle
+>    <not supported>      branches
+>             961008      branch-misses
+> 
+>       65.785264736 seconds time elapsed
+> 
+> perf stat -B -- cat <(echo REFCOUNT_TIMING) >/sys/kernel/debug/provoke-crash/DIRECT
+> 
+>  Performance counter stats for 'cat /dev/fd/63':
+> 
+>       65734.255992      task-clock (msec)         #    1.000 CPUs utilized
+>                  2      context-switches          #    0.000 K/sec
+>                  0      cpu-migrations            #    0.000 K/sec
+>                 46      page-faults               #    0.001 K/sec
+>       131376830467      cycles                    #    1.999 GHz
+>        43183673156      instructions              #    0.33  insn per cycle
+>    <not supported>      branches
+>             879345      branch-misses
+> 
+>       65.735309648 seconds time elapsed
+> 
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> ---
+> v4: Implement add-from-zero checking using a conditional compare rather than
+>     a conditional branch, which I omitted from v3 due to the 10% performance
+>     hit: this will result in the new refcount to be written back to memory
+>     before invoking the handler, which is more in line with the other checks,
+>     and is apparently much easier on the branch predictor, given that there
+>     is no performance hit whatsoever.
+> 
+>  arch/arm64/Kconfig                    |  1 +
+>  arch/arm64/include/asm/atomic.h       | 25 +++++++
+>  arch/arm64/include/asm/atomic_ll_sc.h | 29 ++++++++
+>  arch/arm64/include/asm/atomic_lse.h   | 56 +++++++++++++++
+>  arch/arm64/include/asm/brk-imm.h      |  1 +
+>  arch/arm64/include/asm/refcount.h     | 71 ++++++++++++++++++++
+>  arch/arm64/kernel/traps.c             | 29 ++++++++
+>  arch/arm64/lib/atomic_ll_sc.c         | 16 +++++
+>  8 files changed, 228 insertions(+)
+> 
+> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+> index dfd908630631..53b9a8f5277b 100644
+> --- a/arch/arm64/Kconfig
+> +++ b/arch/arm64/Kconfig
+> @@ -16,6 +16,7 @@ config ARM64
+>  	select ARCH_HAS_GCOV_PROFILE_ALL
+>  	select ARCH_HAS_GIGANTIC_PAGE if (MEMORY_ISOLATION && COMPACTION) || CMA
+>  	select ARCH_HAS_KCOV
+> +	select ARCH_HAS_REFCOUNT
+>  	select ARCH_HAS_SET_MEMORY
+>  	select ARCH_HAS_SG_CHAIN
+>  	select ARCH_HAS_STRICT_KERNEL_RWX
+> diff --git a/arch/arm64/include/asm/atomic.h b/arch/arm64/include/asm/atomic.h
+> index c0235e0ff849..ded9bde5f08f 100644
+> --- a/arch/arm64/include/asm/atomic.h
+> +++ b/arch/arm64/include/asm/atomic.h
+> @@ -24,10 +24,35 @@
+>  #include <linux/types.h>
+>  
+>  #include <asm/barrier.h>
+> +#include <asm/brk-imm.h>
+>  #include <asm/lse.h>
+>  
+>  #ifdef __KERNEL__
+>  
+> +#define REFCOUNT_CHECK_TAIL						\
+> +"	.subsection	1\n"						\
+> +"33:	mov		x16, %[counter]\n"				\
+> +"	adr		x17, 44f\n"					\
+> +"	brk		%[brk_imm]\n"					\
+> +"44:	.long		22b - .\n"					\
+> +"	.previous\n"
+> +
+> +#define REFCOUNT_POST_CHECK_NEG						\
+> +"22:	b.mi		33f\n"						\
+> +	REFCOUNT_CHECK_TAIL
+> +
+> +#define REFCOUNT_POST_CHECK_NEG_OR_ZERO					\
+> +"	b.eq		33f\n"						\
+> +	REFCOUNT_POST_CHECK_NEG
+> +
+> +#define REFCOUNT_PRE_CHECK_ZERO(reg)	"ccmp " #reg ", wzr, #8, pl\n"
 
-OK, I'll create one bit variable and a bpf_prog_subtype field in the
-bpf_prog_aux struct then.
+How does this work for the add_lt case if we compute negative counter
+value? afaict, we'll set the flags to #8 (HI), which won't get picked up
+by the NEG_OR_ZERO post check.
 
+> +#define REFCOUNT_PRE_CHECK_NONE(reg)
+> +
+> +#define REFCOUNT_INPUTS(r)						\
+> +	[counter] "r" (&(r)->counter), [brk_imm] "i" (REFCOUNT_BRK_IMM),
+> +
+> +#define REFCOUNT_CLOBBERS	"cc", "x16", "x17"
 
->=20
->>  	struct bpf_prog_aux	*aux;		/* Auxiliary fields */
->>  	struct sock_fprog_kern	*orig_prog;	/* Original BPF program */
->>  	unsigned int		(*bpf_func)(const void *ctx,
->> diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
->> index 843818dff96d..8541ab85e432 100644
->> --- a/include/uapi/linux/bpf.h
->> +++ b/include/uapi/linux/bpf.h
->> @@ -177,6 +177,15 @@ enum bpf_attach_type {
->>  /* Specify numa node during map creation */
->>  #define BPF_F_NUMA_NODE		(1U << 2)
->> =20
->> +union bpf_prog_subtype {
->> +	struct {
->> +		__u32		abi; /* minimal ABI version, cf. user doc */
->=20
-> the concept of abi (version) sounds a bit weird to me.
-> Why bother with it at all?
-> Once the first set of patches lands the kernel as whole will have landl=
-ock feature
-> with a set of helpers, actions, event types.
-> Some future patches will extend the landlock feature step by step.
-> This abi concept assumes that anyone who adds new helper would need
-> to keep incrementing this 'abi'. What value does it give to user or to =
-kernel?
-> The users will already know that landlock is present in kernel 4.14 or =
-whatever
-> and the kernel 4.18 has more landlock features. Why bother with extra a=
-bi number?
+It would be better to just have "cc" here, and then let the compiler
+allocate the registers for the normal cases. That would allow us to use
+__LL_SC_CLOBBERS for the LSE versions.
 
-That's right for helpers and context fields, but we can't check the use
-of one field's content. The status field is intended to be a bitfield
-extendable in the future. For example, one use case is to set a flag to
-inform the eBPF program that it was already called with the same context
-and can skip most of its check (if not related to maps). Same goes for
-the FS action bitfield, one may want to add more of them. Another
-example may be the check for abilities. We may want to relax/remove the
-capability require to set one of them. With an ABI version, the user can
-easily check if the current kernel support that.
+> +
+>  #define __ARM64_IN_ATOMIC_IMPL
+>  
+>  #if defined(CONFIG_ARM64_LSE_ATOMICS) && defined(CONFIG_AS_LSE)
+> diff --git a/arch/arm64/include/asm/atomic_ll_sc.h b/arch/arm64/include/asm/atomic_ll_sc.h
+> index f5a2d09afb38..7037428b7efb 100644
+> --- a/arch/arm64/include/asm/atomic_ll_sc.h
+> +++ b/arch/arm64/include/asm/atomic_ll_sc.h
+> @@ -327,4 +327,33 @@ __CMPXCHG_DBL(_mb, dmb ish, l, "memory")
+>  
+>  #undef __CMPXCHG_DBL
+>  
+> +#define REFCOUNT_OP(op, asm_op, pre, post, l)				\
+> +__LL_SC_INLINE int							\
+> +__LL_SC_PREFIX(__refcount_##op(int i, atomic_t *r))			\
+> +{									\
+> +	unsigned long tmp;						\
 
->=20
->> +		__u32		event; /* enum landlock_subtype_event */
->> +		__aligned_u64	ability; /* LANDLOCK_SUBTYPE_ABILITY_* */
->> +		__aligned_u64	option; /* LANDLOCK_SUBTYPE_OPTION_* */
->> +	} landlock_rule;
->> +} __attribute__((aligned(8)));
->> +
->>  union bpf_attr {
->>  	struct { /* anonymous struct used by BPF_MAP_CREATE command */
->>  		__u32	map_type;	/* one of enum bpf_map_type */
->> @@ -212,6 +221,8 @@ union bpf_attr {
->>  		__aligned_u64	log_buf;	/* user supplied buffer */
->>  		__u32		kern_version;	/* checked when prog_type=3Dkprobe */
->>  		__u32		prog_flags;
->> +		__aligned_u64	prog_subtype;	/* bpf_prog_subtype address */
->> +		__u32		prog_subtype_size;
->>  	};
->=20
-> more general question: what is the status of security/ bits?
-> I'm assuming they still need to be reviewed and explicitly acked by Jam=
-es, right?
+This can be unsigned int.
 
-Right, the review process is ongoing. :)
-BTW, I'll be at Linux Security Summit (co-located with Plumbers) next
-month. We'll be able to clarify some points there too.
+> +	int result;							\
+> +									\
+> +	asm volatile("// refcount_" #op "\n"				\
+> +"	prfm		pstl1strm, %2\n"				\
+> +"1:	ldxr		%w1, %2\n"					\
+> +"	" #asm_op "	%w[val], %w1, %w[i]\n"				\
+> +	REFCOUNT_PRE_CHECK_ ## pre (%w1)				\
+> +"	st" #l "xr	%w1, %w[val], %2\n"				\
 
-Regards,
- Micka=EBl
+Given that you don't avoid the store here, how do you ensure that the
+counter saturates?
 
+> +"	cbnz		%w1, 1b\n"					\
+> +	REFCOUNT_POST_CHECK_ ## post					\
+> +	: [val] "=&r" (result), "=&r" (tmp), "+Q" (r->counter)		\
+> +	: REFCOUNT_INPUTS(r) [i] "Ir" (i)				\
+> +	: REFCOUNT_CLOBBERS);						\
+> +									\
+> +	return result;							\
 
---G2rKILCtqUU5sFWsp9kh7wNaCuoCtpL5w--
+We're back in C here, so I don't think we can safely assume that the
+compiler won't nobble the condition flags as part of the return. If it
+does that, then the post-check in the caller for the case that the LL/SC
+atomics are out-of-line won't necessary work correctly.
 
---dc498IRvWhCt2a6PiN3lujbkK7OfPNenW
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
+> +}									\
+> +__LL_SC_EXPORT(__refcount_##op);
+> +
+> +REFCOUNT_OP(add_lt,     adds, ZERO, NEG_OR_ZERO,  );
+> +REFCOUNT_OP(sub_lt_neg, adds, NONE, NEG,         l);
+> +REFCOUNT_OP(sub_le_neg, adds, NONE, NEG_OR_ZERO, l);
 
------BEGIN PGP SIGNATURE-----
+Where are sub_{lt,le}_neg used?  (gah, I just spotted this!).
 
-iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAlmdMpQACgkQIt7+33O9
-apW0wQf/cmXegTc3ivIldx6YfIgWy4Z2SuztNbSY/kWqkRCnPPE+wan+BiPBWrQO
-DG104uZfqU8iRJVoOUL3/JyxA6apqdAlz6ueH/36rFFJzV+CGo8M40Xu1OK44uju
-iaAhvhHu70u771+xVqCMRB94ydYxNdM+Op1JfTR96khPnlVkr5cs7V8DSWkRbikY
-CxCAKIE1x5gmCkA4+M6ARTazLDjXU/k3yf/tlofmw3cGd9el7paek9TwYTLy17/e
-gaDxuN4CoKZcuB/QORbjyh43OK7hTWdGq5sJ3xtlVXuaC8Q7X5r9hTDO3JZxWdzX
-dYw1WgJpsFx3q2Au2yVGz/Jbft23Yg==
-=LHVF
------END PGP SIGNATURE-----
+> +REFCOUNT_OP(sub_lt,     subs, NONE, NEG,         l);
+> +REFCOUNT_OP(sub_le,     subs, NONE, NEG_OR_ZERO, l);
+> +
+>  #endif	/* __ASM_ATOMIC_LL_SC_H */
+> diff --git a/arch/arm64/include/asm/atomic_lse.h b/arch/arm64/include/asm/atomic_lse.h
+> index 99fa69c9c3cf..c00e02edc589 100644
+> --- a/arch/arm64/include/asm/atomic_lse.h
+> +++ b/arch/arm64/include/asm/atomic_lse.h
+> @@ -531,4 +531,60 @@ __CMPXCHG_DBL(_mb, al, "memory")
+>  #undef __LL_SC_CMPXCHG_DBL
+>  #undef __CMPXCHG_DBL
+>  
+> +#define REFCOUNT_ADD_OP(op, rel, pre, nops, post)			\
+> +static inline int __refcount_##op(int i, atomic_t *r)			\
+> +{									\
+> +	register int w0 asm ("w0") = i;					\
+> +	register atomic_t *x1 asm ("x1") = r;				\
+> +	register int w30 asm ("w30");					\
+> +									\
+> +	asm volatile(ARM64_LSE_ATOMIC_INSN(				\
+> +	/* LL/SC */							\
+> +	__LL_SC_CALL(__refcount_##op)					\
+> +	__nops(nops),							\
+> +	/* LSE atomics */						\
+> +	"	ldadd" #rel "	%w[i], %w[val], %[v]\n"			\
+> +	"	adds		%w[i], %w[i], %w[val]\n"		\
+> +	REFCOUNT_PRE_CHECK_ ## pre (%w[val]))				\
+> +	REFCOUNT_POST_CHECK_ ## post					\
+> +	: [i] "+r" (w0), [v] "+Q" (r->counter), [val] "=&r" (w30)	\
+> +	: REFCOUNT_INPUTS(r) "r" (x1)					\
+> +	: REFCOUNT_CLOBBERS);						\
+> +									\
+> +	return w0;							\
+> +}
+> +
+> +REFCOUNT_ADD_OP(add_lt,      , ZERO, 2, NEG_OR_ZERO);
+> +REFCOUNT_ADD_OP(sub_lt_neg, l, NONE, 1, NEG        );
+> +REFCOUNT_ADD_OP(sub_le_neg, l, NONE, 1, NEG_OR_ZERO);
 
---dc498IRvWhCt2a6PiN3lujbkK7OfPNenW--
+Hmm, this is really horrible to read. If we can get rid of the _neg variants
+it would be nice, because the interaction between the choice of PRE handler
+and the number of nops is subtle.
+
+> +
+> +#define REFCOUNT_SUB_OP(op, post, fbop)					\
+> +static inline int __refcount_##op(int i, atomic_t *r)			\
+> +{									\
+> +	register int w0 asm ("w0") = i;					\
+> +	register atomic_t *x1 asm ("x1") = r;				\
+> +	register int w30 asm ("w30");					\
+> +									\
+> +	if (__builtin_constant_p(i))					\
+> +		return __refcount_##fbop(-i, r);			\
+
+Why is this worthwhile?
+
+> +									\
+> +	asm volatile(ARM64_LSE_ATOMIC_INSN(				\
+> +	/* LL/SC */							\
+> +	__LL_SC_CALL(__refcount_##op)					\
+> +	__nops(2),							\
+> +	/* LSE atomics */						\
+> +	"	neg	%w[i], %w[i]\n"					\
+> +	"	ldaddl	%w[i], %w[val], %[v]\n"				\
+> +	"	adds	%w[i], %w[i], %w[val]")				\
+> +	REFCOUNT_POST_CHECK_ ## post					\
+> +	: [i] "+r" (w0), [v] "+Q" (r->counter), [val] "=&r" (w30)	\
+> +	: REFCOUNT_INPUTS(r) "r" (x1)					\
+> +	: REFCOUNT_CLOBBERS);						\
+> +									\
+> +	return w0;							\
+> +}
+> +
+> +REFCOUNT_SUB_OP(sub_lt, NEG,         sub_lt_neg);
+> +REFCOUNT_SUB_OP(sub_le, NEG_OR_ZERO, sub_le_neg);
+> +
+>  #endif	/* __ASM_ATOMIC_LSE_H */
+> diff --git a/arch/arm64/include/asm/brk-imm.h b/arch/arm64/include/asm/brk-imm.h
+> index ed693c5bcec0..0bce57737ff1 100644
+> --- a/arch/arm64/include/asm/brk-imm.h
+> +++ b/arch/arm64/include/asm/brk-imm.h
+> @@ -18,6 +18,7 @@
+>   * 0x800: kernel-mode BUG() and WARN() traps
+>   */
+>  #define FAULT_BRK_IMM			0x100
+> +#define REFCOUNT_BRK_IMM		0x101
+>  #define KGDB_DYN_DBG_BRK_IMM		0x400
+>  #define KGDB_COMPILED_DBG_BRK_IMM	0x401
+>  #define BUG_BRK_IMM			0x800
+> diff --git a/arch/arm64/include/asm/refcount.h b/arch/arm64/include/asm/refcount.h
+> new file mode 100644
+> index 000000000000..ceb2fe713b80
+> --- /dev/null
+> +++ b/arch/arm64/include/asm/refcount.h
+> @@ -0,0 +1,71 @@
+> +/*
+> + * arm64-specific implementation of refcount_t. Based on x86 version and
+> + * PAX_REFCOUNT from PaX/grsecurity.
+> + *
+> + * This program is free software; you can redistribute it and/or modify
+> + * it under the terms of the GNU General Public License version 2 as
+> + * published by the Free Software Foundation.
+> + */
+> +
+> +#ifndef __ASM_REFCOUNT_H
+> +#define __ASM_REFCOUNT_H
+> +
+> +#include <linux/refcount.h>
+> +
+> +#include <asm/atomic.h>
+> +#include <asm/uaccess.h>
+> +
+> +static __always_inline void refcount_add(int i, refcount_t *r)
+> +{
+> +	__refcount_add_lt(i, &r->refs);
+> +}
+> +
+> +static __always_inline void refcount_inc(refcount_t *r)
+> +{
+> +	__refcount_add_lt(1, &r->refs);
+> +}
+> +
+> +static __always_inline void refcount_dec(refcount_t *r)
+> +{
+> +	__refcount_sub_le(1, &r->refs);
+> +}
+> +
+> +static __always_inline __must_check bool refcount_sub_and_test(unsigned int i,
+> +							       refcount_t *r)
+> +{
+> +	return __refcount_sub_lt(i, &r->refs) == 0;
+> +}
+> +
+> +static __always_inline __must_check bool refcount_dec_and_test(refcount_t *r)
+> +{
+> +	return __refcount_sub_lt(1, &r->refs) == 0;
+> +}
+
+Nit, but we can just follow the lib/refcount.c implementation here.
+
+> +
+> +static __always_inline __must_check bool refcount_add_not_zero(unsigned int i,
+> +							       refcount_t *r)
+> +{
+> +	unsigned long tmp;
+> +	int result;
+> +
+> +	asm volatile("// refcount_add_not_zero \n"
+> +"	prfm		pstl1strm, %2\n"
+> +"1:	ldxr		%w[val], %2\n"
+> +"	cbz		%w[val], 2f\n"
+> +"	adds		%w[val], %w[val], %w[i]\n"
+> +"	stxr		%w1, %w[val], %2\n"
+> +"	cbnz		%w1, 1b\n"
+> +	REFCOUNT_POST_CHECK_NEG
+> +"2:"
+> +	: [val] "=&r" (result), "=&r" (tmp), "+Q" (r->refs.counter)
+> +	: REFCOUNT_INPUTS(&r->refs) [i] "Ir" (i)
+> +	: REFCOUNT_CLOBBERS);
+> +
+> +	return result != 0;
+> +}
+
+We could implement this using CAS for LSE (like we do for things like
+deC_if_positive). Alternatively, define a shared version using cmpxchg.
+
+> +
+> +static __always_inline __must_check bool refcount_inc_not_zero(refcount_t *r)
+> +{
+> +	return refcount_add_not_zero(1, r);
+> +}
+> +
+> +#endif
+> diff --git a/arch/arm64/kernel/traps.c b/arch/arm64/kernel/traps.c
+> index c7c7088097be..07bd026ec71d 100644
+> --- a/arch/arm64/kernel/traps.c
+> +++ b/arch/arm64/kernel/traps.c
+> @@ -758,8 +758,37 @@ int __init early_brk64(unsigned long addr, unsigned int esr,
+>  	return bug_handler(regs, esr) != DBG_HOOK_HANDLED;
+>  }
+>  
+> +static int refcount_overflow_handler(struct pt_regs *regs, unsigned int esr)
+> +{
+> +	bool zero = regs->pstate & PSR_Z_BIT;
+> +
+> +	/* First unconditionally saturate the refcount. */
+> +	*(int *)regs->regs[16] = INT_MIN / 2;
+
+Does this work even when racing against a concurrent refcount operation 
+that doesn't have a pre-check? I can't figure out how something like a
+sub_lt operation on a saturated counter couldn't reset the value to zero.
+
+Will
