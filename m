@@ -1,39 +1,149 @@
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Fri, 25 Aug 2017 10:04:43 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20170825080443.tvvr6wzs362cjcuu@gmail.com>
-References: <20170810172615.51965-1-thgarnie@google.com>
- <20170811124127.kkb5pnkljz4umxuj@gmail.com>
- <CAJcbSZFTX3uiS2g8JriS6+z_+WrG8z3hrQo4OSuyHpiyUDJWYA@mail.gmail.com>
- <20170815075609.mmzbfwritjzvrpsn@gmail.com>
- <CAJcbSZE+TiY2whT94WqCJNXzR=2ATOHcQ10H5RqBZA1j=k1VHQ@mail.gmail.com>
- <20170816151235.oamkdva6cwpc4cex@gmail.com>
- <CAJcbSZFM_zpL1av1JVaow8NdsGeH+6oZKeDnMPdXR0PGfynzsg@mail.gmail.com>
- <20170817080920.5ljlkktngw2cisfg@gmail.com>
- <CAJcbSZGbtc-i0X1NiBAvZA7cxpGkwSLKNB7oDNCsFxOCdhkR_g@mail.gmail.com>
- <CAJcbSZGhvwt=5ERtBHLJnwS=6AXBZLTMfrafzeUCqYy=-MKWDg@mail.gmail.com>
+References: <20170821000933.13024-1-mic@digikod.net>
+ <20170821000933.13024-6-mic@digikod.net>
+ <20170824025030.sxl2hkpcbzipb47y@ast-mbp>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <22d09137-7212-5803-af64-0964fad875c7@digikod.net>
+Date: Fri, 25 Aug 2017 10:16:39 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAJcbSZGhvwt=5ERtBHLJnwS=6AXBZLTMfrafzeUCqYy=-MKWDg@mail.gmail.com>
-Subject: [kernel-hardening] Re: x86: PIE support and option to extend KASLR randomization
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Borislav Petkov <bp@alien8.de>
+In-Reply-To: <20170824025030.sxl2hkpcbzipb47y@ast-mbp>
+Content-Type: multipart/signed; micalg=pgp-sha512;
+ protocol="application/pgp-signature";
+ boundary="s04RxWkgoJ7sRIkvbQdeJm2sAVwVhjKNQ"
+Subject: [kernel-hardening] Re: [PATCH net-next v7 05/10] landlock: Add LSM hooks related to
+ filesystem
+To: Alexei Starovoitov <alexei.starovoitov@gmail.com>
+Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--s04RxWkgoJ7sRIkvbQdeJm2sAVwVhjKNQ
+Content-Type: multipart/mixed; boundary="LLTwOboxMdBfWGKTTV3lgbHVGUtSCXOHC";
+ protected-headers="v1"
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+To: Alexei Starovoitov <alexei.starovoitov@gmail.com>
+Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>,
+ Andy Lutomirski <luto@amacapital.net>,
+ Arnaldo Carvalho de Melo <acme@kernel.org>,
+ Casey Schaufler <casey@schaufler-ca.com>,
+ Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
+ <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>,
+ "Eric W . Biederman" <ebiederm@xmission.com>,
+ James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
+ Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>,
+ Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>,
+ Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
+ "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
+ Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>,
+ Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com,
+ linux-api@vger.kernel.org, linux-security-module@vger.kernel.org,
+ netdev@vger.kernel.org
+Message-ID: <22d09137-7212-5803-af64-0964fad875c7@digikod.net>
+Subject: Re: [PATCH net-next v7 05/10] landlock: Add LSM hooks related to
+ filesystem
+References: <20170821000933.13024-1-mic@digikod.net>
+ <20170821000933.13024-6-mic@digikod.net>
+ <20170824025030.sxl2hkpcbzipb47y@ast-mbp>
+In-Reply-To: <20170824025030.sxl2hkpcbzipb47y@ast-mbp>
 
-* Thomas Garnier <thgarnie@google.com> wrote:
+--LLTwOboxMdBfWGKTTV3lgbHVGUtSCXOHC
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: quoted-printable
 
-> With the fix for function tracing, the hackbench results have an
-> average of +0.8 to +1.4% (from +8% to +10% before). With a default
-> configuration, the numbers are closer to 0.8%.
-> 
-> On the .text size, with gcc 4.9 I see +0.8% on default configuration
-> and +1.180% on the ubuntu configuration.
 
-A 1% text size increase is still significant. Could you look at the disassembly, 
-where does the size increase come from?
+On 24/08/2017 04:50, Alexei Starovoitov wrote:
+> On Mon, Aug 21, 2017 at 02:09:28AM +0200, Micka=EBl Sala=FCn wrote:
+>> Handle 33 filesystem-related LSM hooks for the Landlock filesystem
+>> event: LANDLOCK_SUBTYPE_EVENT_FS.
+>>
+>> A Landlock event wrap LSM hooks for similar kernel object types (e.g.
+>> struct file, struct path...). Multiple LSM hooks can trigger the same
+>> Landlock event.
+>>
+>> Landlock handle nine coarse-grained actions: read, write, execute, new=
+,
+>> get, remove, ioctl, lock and fcntl. Each of them abstract LSM hook
+>> access control in a way that can be extended in the future.
+>>
+>> The Landlock LSM hook registration is done after other LSM to only run=
 
-Thanks,
+>> actions from user-space, via eBPF programs, if the access was granted =
+by
+>> major (privileged) LSMs.
+>>
+>> Signed-off-by: Micka=EBl Sala=FCn <mic@digikod.net>
+>=20
+> ...
+>=20
+>> +/* WRAP_ARG_SB */
+>> +#define WRAP_ARG_SB_TYPE	WRAP_TYPE_FS
+>> +#define WRAP_ARG_SB_DEC(arg)					\
+>> +	EXPAND_C(WRAP_TYPE_FS) wrap_##arg =3D			\
+>> +	{ .type =3D BPF_HANDLE_FS_TYPE_DENTRY, .dentry =3D arg->s_root };
+>> +#define WRAP_ARG_SB_VAL(arg)	((uintptr_t)&wrap_##arg)
+>> +#define WRAP_ARG_SB_OK(arg)	(arg && arg->s_root)
+> ...
+>=20
+>> +HOOK_NEW_FS(sb_remount, 2,
+>> +	struct super_block *, sb,
+>> +	void *, data,
+>> +	WRAP_ARG_SB, sb,
+>> +	WRAP_ARG_RAW, LANDLOCK_ACTION_FS_WRITE
+>> +);
+>=20
+> this looks wrong. casting super_block to dentry?
 
-	Ingo
+This is called when remounting a block device. The WRAP_ARG_SB take the
+sb->s_root as a dentry, it is not a cast. What do you expect from this ho=
+ok?
+
+>=20
+>> +/* a directory inode contains only one dentry */
+>> +HOOK_NEW_FS(inode_create, 3,
+>> +	struct inode *, dir,
+>> +	struct dentry *, dentry,
+>> +	umode_t, mode,
+>> +	WRAP_ARG_INODE, dir,
+>> +	WRAP_ARG_RAW, LANDLOCK_ACTION_FS_WRITE
+>> +);
+>=20
+> more general question: why you're not wrapping all useful
+> arguments? Like in the above dentry can be acted upon
+> by the landlock rule and it's readily available...
+
+The context used for the FS event must have the exact same types for all
+calls. This event is meant to be generic but we can add more specific
+ones if needed, like I do with FS_IOCTL.
+
+The idea is to enable people to write simple rules, while being able to
+write fine grain rules for special cases (e.g. IOCTL) if needed.
+
+>=20
+> The limitation of only 2 args looks odd.
+> Is it a hard limitation ? how hard to extend?
+
+It's not a hard limit at all. Actually, the FS_FNCTL event should have
+three arguments (I'll add them in the next series): FS handle, FCNTL
+command and FCNTL argument. I made sure that it's really easy to add
+more arguments to the context of an event.
+
+
+--LLTwOboxMdBfWGKTTV3lgbHVGUtSCXOHC--
+
+--s04RxWkgoJ7sRIkvbQdeJm2sAVwVhjKNQ
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAlmf3OgACgkQIt7+33O9
+apWYEwf+LLl/uJngJV/UmbXlLh/xSWLS91mygv8YmLO64XSOVZjMSvqsX6NMiDgK
+Ciqqj0Ps/VvD7YHFR1Zpul0ND6mPdodh4Wp4kt5OPX2NRTqGLafp/TQciszkzFqp
+Iv4nvbQpN9kgPecsqlgrVc6kUQfa+S/5Day5ZxLJs7qGtZzIxZbUYOHJjhB41iPS
+X1Xa6Vii9iPzu7eX7hxe+O85SHT+xydtbcUR1u9vQB1tSv7AgnshvdRy3LSxC9Yf
+FjmK6DxQ/KQx0C/lZx5kYz/7NST5JXgR8PHS6diW0DBtbFt+DXDtIEierQD6H7Oo
+s+9/9QEpMeFn9WeWqvQ8+CVfNoiG+w==
+=bU84
+-----END PGP SIGNATURE-----
+
+--s04RxWkgoJ7sRIkvbQdeJm2sAVwVhjKNQ--
