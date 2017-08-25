@@ -1,174 +1,46 @@
-References: <20170821000933.13024-1-mic@digikod.net>
- <20170821000933.13024-9-mic@digikod.net>
- <20170824025901.cpppy4nn5xv2ao24@ast-mbp>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <c1245df5-aeef-0406-d4cd-781d65ecf3a7@digikod.net>
-Date: Fri, 25 Aug 2017 10:17:58 +0200
 MIME-Version: 1.0
-In-Reply-To: <20170824025901.cpppy4nn5xv2ao24@ast-mbp>
-Content-Type: multipart/signed; micalg=pgp-sha512;
- protocol="application/pgp-signature";
- boundary="CnOi2Bia59nwOIPisNK4aTcM4t2rfO9OW"
-Subject: [kernel-hardening] Re: [PATCH net-next v7 08/10] bpf: Add a Landlock sandbox example
-To: Alexei Starovoitov <alexei.starovoitov@gmail.com>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
+In-Reply-To: <20170825080443.tvvr6wzs362cjcuu@gmail.com>
+References: <20170810172615.51965-1-thgarnie@google.com> <20170811124127.kkb5pnkljz4umxuj@gmail.com>
+ <CAJcbSZFTX3uiS2g8JriS6+z_+WrG8z3hrQo4OSuyHpiyUDJWYA@mail.gmail.com>
+ <20170815075609.mmzbfwritjzvrpsn@gmail.com> <CAJcbSZE+TiY2whT94WqCJNXzR=2ATOHcQ10H5RqBZA1j=k1VHQ@mail.gmail.com>
+ <20170816151235.oamkdva6cwpc4cex@gmail.com> <CAJcbSZFM_zpL1av1JVaow8NdsGeH+6oZKeDnMPdXR0PGfynzsg@mail.gmail.com>
+ <20170817080920.5ljlkktngw2cisfg@gmail.com> <CAJcbSZGbtc-i0X1NiBAvZA7cxpGkwSLKNB7oDNCsFxOCdhkR_g@mail.gmail.com>
+ <CAJcbSZGhvwt=5ERtBHLJnwS=6AXBZLTMfrafzeUCqYy=-MKWDg@mail.gmail.com> <20170825080443.tvvr6wzs362cjcuu@gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 25 Aug 2017 08:05:52 -0700
+Message-ID: <CAJcbSZFJQMKw21kLwr4QGoSM7DMgKRzzjWxkYBF2c1HciCzvGg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: x86: PIE support and option to extend KASLR randomization
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---CnOi2Bia59nwOIPisNK4aTcM4t2rfO9OW
-Content-Type: multipart/mixed; boundary="hcAH3FSfGN3wdBxfR5wTdbTVIut1JDQab";
- protected-headers="v1"
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: Alexei Starovoitov <alexei.starovoitov@gmail.com>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>,
- Andy Lutomirski <luto@amacapital.net>,
- Arnaldo Carvalho de Melo <acme@kernel.org>,
- Casey Schaufler <casey@schaufler-ca.com>,
- Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
- <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>,
- "Eric W . Biederman" <ebiederm@xmission.com>,
- James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
- Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>,
- Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
- "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
- Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>,
- Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com,
- linux-api@vger.kernel.org, linux-security-module@vger.kernel.org,
- netdev@vger.kernel.org
-Message-ID: <c1245df5-aeef-0406-d4cd-781d65ecf3a7@digikod.net>
-Subject: Re: [PATCH net-next v7 08/10] bpf: Add a Landlock sandbox example
-References: <20170821000933.13024-1-mic@digikod.net>
- <20170821000933.13024-9-mic@digikod.net>
- <20170824025901.cpppy4nn5xv2ao24@ast-mbp>
-In-Reply-To: <20170824025901.cpppy4nn5xv2ao24@ast-mbp>
-
---hcAH3FSfGN3wdBxfR5wTdbTVIut1JDQab
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: quoted-printable
-
-
-
-On 24/08/2017 04:59, Alexei Starovoitov wrote:
-> On Mon, Aug 21, 2017 at 02:09:31AM +0200, Micka=EBl Sala=FCn wrote:
->> Add a basic sandbox tool to create a process isolated from some part o=
-f
->> the system. This sandbox create a read-only environment. It is only
->> allowed to write to a character device such as a TTY:
+On Fri, Aug 25, 2017 at 1:04 AM, Ingo Molnar <mingo@kernel.org> wrote:
+>
+> * Thomas Garnier <thgarnie@google.com> wrote:
+>
+>> With the fix for function tracing, the hackbench results have an
+>> average of +0.8 to +1.4% (from +8% to +10% before). With a default
+>> configuration, the numbers are closer to 0.8%.
 >>
->>   # :> X
->>   # echo $?
->>   0
->>   # ./samples/bpf/landlock1 /bin/sh -i
->>   Launching a new sandboxed process.
->>   # :> Y
->>   cannot create Y: Operation not permitted
->>
->> Signed-off-by: Micka=EBl Sala=FCn <mic@digikod.net>
->=20
-> ...
->=20
->> +SEC("landlock1")
->> +static int landlock_fs_prog1(struct landlock_context *ctx)
->> +{
->> +	char fmt_error_mode[] =3D "landlock1: error: get_mode:%lld\n";
->> +	char fmt_error_access[] =3D "landlock1: error: access denied\n";
->> +	long long ret;
->> +
->> +	/*
->> +	 * The argument ctx->arg2 contains bitflags of actions for which the=
+>> On the .text size, with gcc 4.9 I see +0.8% on default configuration
+>> and +1.180% on the ubuntu configuration.
+>
+> A 1% text size increase is still significant. Could you look at the disassembly,
+> where does the size increase come from?
 
->> +	 * rule is run.  The flag LANDLOCK_ACTION_FS_WRITE means that a writ=
-e
->> +	 * is requested by one of the userspace processes restricted by this=
+I will take a look, in this current iteration I added the .got and
+.got.plt so removing them will remove a big (even if they are small,
+we don't use them to increase perf).
 
->> +	 * rule. The following test allows any actions which does not includ=
-e a
->> +	 * write.
->> +	 */
->> +	if (!(ctx->arg2 & LANDLOCK_ACTION_FS_WRITE))
->> +		return 0;
->> +
->> +	/*
->> +	 * The argument ctx->arg1 is a file handle for which the process wan=
-t
->> +	 * to access. The function bpf_handle_fs_get_mode() return the mode =
-of
->> +	 * a file (e.g. S_IFBLK, S_IFDIR, S_IFREG...). If there is an error,=
+What do you think about the perf numbers in general so far?
 
->> +	 * for example if the argument is not a file handle, then an
->> +	 * -errno value is returned. Otherwise the caller get the file mode =
-as
->> +	 *  with stat(2).
->> +	 */
->> +	ret =3D bpf_handle_fs_get_mode((void *)ctx->arg1);
->> +	if (ret < 0) {
->> +
->> +		/*
->> +		 * The bpf_trace_printk() function enable to write in the
->> +		 * kernel eBPF debug log, accessible through
->> +		 * /sys/kernel/debug/tracing/trace_pipe . To be allowed to call
->> +		 * this function, a Landlock rule must have the
->> +		 * LANDLOCK_SUBTYPE_ABILITY_DEBUG ability, which is only
->> +		 * allowed for CAP_SYS_ADMIN.
->> +		 */
->> +		bpf_trace_printk(fmt_error_mode, sizeof(fmt_error_mode), ret);
->> +		return 1;
->> +	}
->> +
->> +	/*
->> +	 * This check allows the action on the file if it is a directory or =
-a
->> +	 * pipe. Otherwise, a message is printed to the eBPF log.
->> +	 */
->> +	if (S_ISCHR(ret) || S_ISFIFO(ret))
->> +		return 0;
->> +	bpf_trace_printk(fmt_error_access, sizeof(fmt_error_access));
->> +	return 1;
->> +}
->> +
->> +/*
->> + * This subtype enable to set the ABI, which ensure that the eBPF con=
-text and
->> + * program behavior will be compatible with this Landlock rule.
->> + */
->> +SEC("subtype")
->> +static const union bpf_prog_subtype _subtype =3D {
->> +	.landlock_rule =3D {
->> +		.abi =3D 1,
->> +		.event =3D LANDLOCK_SUBTYPE_EVENT_FS,
->> +		.ability =3D LANDLOCK_SUBTYPE_ABILITY_DEBUG,
->> +	}
->> +};
->=20
-> from rule writer perspective can you somehow merge subtype definition
-> with the program? It seems they go hand in hand.
-> Like section name of the program can be:
-> SEC("landlock_rule1/event=3Dfs/ability=3Ddebug")
-> static int landlock_fs_prog1(struct landlock_context *ctx)...
-> and the loader can parse this string and prepare appropriate
-> data structures for the kernel.
-
-Right, I'll try that.
+>
+> Thanks,
+>
+>         Ingo
 
 
---hcAH3FSfGN3wdBxfR5wTdbTVIut1JDQab--
 
---CnOi2Bia59nwOIPisNK4aTcM4t2rfO9OW
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-
-iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAlmf3TYACgkQIt7+33O9
-apUZ1Af+PQHJukWpBulhEXFta88prqo9xcx/Gp9C1R8htzmvbJ1W6iHePaPuAiJI
-ZaVjeRoiOIkIc3Bzs8a2MMZpzHWfpqMyq0vFFAlybmGAcB5nSkZvJQClzN/O4G2C
-13/LuQi8AH0PNIPphrxZumjyk3vs31KogU2ezxYMsHJghKSkFE1a0CFTai1GBvVM
-IjNckIZYYFJ+uH7iJ2vWzC/4G0EtU0sJm9/Sg94egtClOZ8m4RdQtMVWcWRkSyB0
-DxkLgKmbcXvCVrwqkFG83qKqd208cskhWmahTdseQhXNGWumDy5qXL1Eo3aKuyHY
-Lx1ZZbb4j101qkis/WD3nowWfbJ1gw==
-=4A9z
------END PGP SIGNATURE-----
-
---CnOi2Bia59nwOIPisNK4aTcM4t2rfO9OW--
+-- 
+Thomas
