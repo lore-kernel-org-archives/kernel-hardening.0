@@ -1,123 +1,56 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 28 Aug 2017 14:34:56 -0700
-Message-Id: <1503956111-36652-16-git-send-email-keescook@chromium.org>
+Date: Mon, 28 Aug 2017 14:35:10 -0700
+Message-Id: <1503956111-36652-30-git-send-email-keescook@chromium.org>
 In-Reply-To: <1503956111-36652-1-git-send-email-keescook@chromium.org>
 References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 15/30] xfs: Define usercopy region in xfs_inode slab cache
+Subject: [kernel-hardening] [PATCH v2 29/30] arm: Implement thread_struct whitelist for hardened usercopy
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, "Darrick J. Wong" <darrick.wong@oracle.com>, linux-xfs@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@kernel.org>, Christian Borntraeger <borntraeger@de.ibm.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, linux-arm-kernel@lists.infradead.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, David Windsor <dave@nullcore.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: David Windsor <dave@nullcore.net>
+ARM does not carry FPU state in the thread structure, so it can declare
+no usercopy whitelist at all.
 
-The XFS inline inode data, stored in struct xfs_inode_t field
-i_df.if_u2.if_inline_data and therefore contained in the xfs_inode slab
-cache, needs to be copied to/from userspace.
-
-cache object allocation:
-    fs/xfs/xfs_icache.c:
-        xfs_inode_alloc(...):
-            ...
-            ip = kmem_zone_alloc(xfs_inode_zone, KM_SLEEP);
-
-    fs/xfs/libxfs/xfs_inode_fork.c:
-        xfs_init_local_fork(...):
-            ...
-            if (mem_size <= sizeof(ifp->if_u2.if_inline_data))
-                    ifp->if_u1.if_data = ifp->if_u2.if_inline_data;
-            ...
-
-    fs/xfs/xfs_symlink.c:
-        xfs_symlink(...):
-            ...
-            xfs_init_local_fork(ip, XFS_DATA_FORK, target_path, pathlen);
-
-example usage trace:
-    readlink_copy+0x43/0x70
-    vfs_readlink+0x62/0x110
-    SyS_readlinkat+0x100/0x130
-
-    fs/xfs/xfs_iops.c:
-        (via inode->i_op->get_link)
-        xfs_vn_get_link_inline(...):
-            ...
-            return XFS_I(inode)->i_df.if_u1.if_data;
-
-    fs/namei.c:
-        readlink_copy(..., link):
-            ...
-            copy_to_user(..., link, len);
-
-        generic_readlink(dentry, ...):
-            struct inode *inode = d_inode(dentry);
-            const char *link = inode->i_link;
-            ...
-            if (!link) {
-                    link = inode->i_op->get_link(dentry, inode, &done);
-            ...
-            readlink_copy(..., link);
-
-In support of usercopy hardening, this patch defines a region in the
-xfs_inode slab cache in which userspace copy operations are allowed.
-
-This region is known as the slab cache's usercopy region. Slab caches can
-now check that each copy operation involving cache-managed memory falls
-entirely within the slab's usercopy region.
-
-This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
-whitelisting code in the last public patch of grsecurity/PaX based on my
-understanding of the code. Changes or omissions from the original code are
-mine and don't reflect the original grsecurity/PaX code.
-
-Signed-off-by: David Windsor <dave@nullcore.net>
-[kees: adjust commit log, provide usage trace]
-Cc: "Darrick J. Wong" <darrick.wong@oracle.com>
-Cc: linux-xfs@vger.kernel.org
+Cc: Russell King <linux@armlinux.org.uk>
+Cc: Ingo Molnar <mingo@kernel.org>
+Cc: Christian Borntraeger <borntraeger@de.ibm.com>
+Cc: "Peter Zijlstra (Intel)" <peterz@infradead.org>
+Cc: linux-arm-kernel@lists.infradead.org
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- fs/xfs/kmem.h      | 10 ++++++++++
- fs/xfs/xfs_super.c |  7 +++++--
- 2 files changed, 15 insertions(+), 2 deletions(-)
+ arch/arm/Kconfig                 | 1 +
+ arch/arm/include/asm/processor.h | 7 +++++++
+ 2 files changed, 8 insertions(+)
 
-diff --git a/fs/xfs/kmem.h b/fs/xfs/kmem.h
-index 4d85992d75b2..08358f38dee6 100644
---- a/fs/xfs/kmem.h
-+++ b/fs/xfs/kmem.h
-@@ -110,6 +110,16 @@ kmem_zone_init_flags(int size, char *zone_name, unsigned long flags,
- 	return kmem_cache_create(zone_name, size, 0, flags, construct);
- }
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index a208bfe367b5..3781f08d00fa 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -48,6 +48,7 @@ config ARM
+ 	select HAVE_ARCH_KGDB if !CPU_ENDIAN_BE32 && MMU
+ 	select HAVE_ARCH_MMAP_RND_BITS if MMU
+ 	select HAVE_ARCH_SECCOMP_FILTER if (AEABI && !OABI_COMPAT)
++	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
+ 	select HAVE_ARCH_TRACEHOOK
+ 	select HAVE_ARM_SMCCC if CPU_V7
+ 	select HAVE_CBPF_JIT
+diff --git a/arch/arm/include/asm/processor.h b/arch/arm/include/asm/processor.h
+index c3d5fc124a05..d6dc45c92ee5 100644
+--- a/arch/arm/include/asm/processor.h
++++ b/arch/arm/include/asm/processor.h
+@@ -45,6 +45,13 @@ struct thread_struct {
+ 	struct debug_info	debug;
+ };
  
-+static inline kmem_zone_t *
-+kmem_zone_init_flags_usercopy(int size, char *zone_name, unsigned long flags,
-+				size_t useroffset, size_t usersize,
-+				void (*construct)(void *))
++/* Nothing needs to be usercopy-whitelisted from thread_struct. */
++static inline void arch_thread_struct_whitelist(unsigned long *offset,
++						unsigned long *size)
 +{
-+	return kmem_cache_create_usercopy(zone_name, size, 0, flags,
-+				useroffset, usersize, construct);
++	*offset = *size = 0;
 +}
 +
-+
- static inline void
- kmem_zone_free(kmem_zone_t *zone, void *ptr)
- {
-diff --git a/fs/xfs/xfs_super.c b/fs/xfs/xfs_super.c
-index 38aaacdbb8b3..6ca428c6f943 100644
---- a/fs/xfs/xfs_super.c
-+++ b/fs/xfs/xfs_super.c
-@@ -1829,9 +1829,12 @@ xfs_init_zones(void)
- 		goto out_destroy_efd_zone;
+ #define INIT_THREAD  {	}
  
- 	xfs_inode_zone =
--		kmem_zone_init_flags(sizeof(xfs_inode_t), "xfs_inode",
-+		kmem_zone_init_flags_usercopy(sizeof(xfs_inode_t), "xfs_inode",
- 			KM_ZONE_HWALIGN | KM_ZONE_RECLAIM | KM_ZONE_SPREAD |
--			KM_ZONE_ACCOUNT, xfs_fs_inode_init_once);
-+				KM_ZONE_ACCOUNT,
-+			offsetof(xfs_inode_t, i_df.if_u2.if_inline_data),
-+			sizeof_field(xfs_inode_t, i_df.if_u2.if_inline_data),
-+			xfs_fs_inode_init_once);
- 	if (!xfs_inode_zone)
- 		goto out_destroy_efi_zone;
- 
+ #ifdef CONFIG_MMU
 -- 
 2.7.4
