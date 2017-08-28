@@ -1,96 +1,83 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 28 Aug 2017 14:34:54 -0700
-Message-Id: <1503956111-36652-14-git-send-email-keescook@chromium.org>
+Date: Mon, 28 Aug 2017 14:34:57 -0700
+Message-Id: <1503956111-36652-17-git-send-email-keescook@chromium.org>
 In-Reply-To: <1503956111-36652-1-git-send-email-keescook@chromium.org>
 References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 13/30] ufs: Define usercopy region in ufs_inode_cache slab cache
+Subject: [kernel-hardening] [PATCH v2 16/30] cifs: Define usercopy region in cifs_request slab cache
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Evgeniy Dushistov <dushistov@mail.ru>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Steve French <sfrench@samba.org>, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: David Windsor <dave@nullcore.net>
 
-The ufs symlink pathnames, stored in struct ufs_inode_info.i_u1.i_symlink
-and therefore contained in the ufs_inode_cache slab cache, need to be
+CIFS request buffers, stored in the cifs_request slab cache, need to be
 copied to/from userspace.
 
 cache object allocation:
-    fs/ufs/super.c:
-        ufs_alloc_inode(...):
+    fs/cifs/cifsfs.c:
+        cifs_init_request_bufs():
             ...
-            ei = kmem_cache_alloc(ufs_inode_cachep, GFP_NOFS);
+            cifs_req_poolp = mempool_create_slab_pool(cifs_min_rcv,
+                                                      cifs_req_cachep);
+
+    fs/cifs/misc.c:
+        cifs_buf_get():
             ...
-            return &ei->vfs_inode;
-
-    fs/ufs/ufs.h:
-        UFS_I(struct inode *inode):
-            return container_of(inode, struct ufs_inode_info, vfs_inode);
-
-    fs/ufs/namei.c:
-        ufs_symlink(...):
+            ret_buf = mempool_alloc(cifs_req_poolp, GFP_NOFS);
             ...
-            inode->i_link = (char *)UFS_I(inode)->i_u1.i_symlink;
-
-example usage trace:
-    readlink_copy+0x43/0x70
-    vfs_readlink+0x62/0x110
-    SyS_readlinkat+0x100/0x130
-
-    fs/namei.c:
-        readlink_copy(..., link):
-            ...
-            copy_to_user(..., link, len);
-
-        (inlined in vfs_readlink)
-        generic_readlink(dentry, ...):
-            struct inode *inode = d_inode(dentry);
-            const char *link = inode->i_link;
-            ...
-            readlink_copy(..., link);
+            return ret_buf;
 
 In support of usercopy hardening, this patch defines a region in the
-ufs_inode_cache slab cache in which userspace copy operations are allowed.
+cifs_request slab cache in which userspace copy operations are allowed.
 
-This region is known as the slab cache's usercopy region. Slab caches can
-now check that each copy operation involving cache-managed memory falls
-entirely within the slab's usercopy region.
+This region is known as the slab cache's usercopy region.  Slab
+caches can now check that each copy operation involving cache-managed
+memory falls entirely within the slab's usercopy region.
 
-This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+This patch is verbatim from Brad Spengler/PaX Team's PAX_USERCOPY
 whitelisting code in the last public patch of grsecurity/PaX based on my
 understanding of the code. Changes or omissions from the original code are
 mine and don't reflect the original grsecurity/PaX code.
 
 Signed-off-by: David Windsor <dave@nullcore.net>
 [kees: adjust commit log, provide usage trace]
-Cc: Evgeniy Dushistov <dushistov@mail.ru>
+Cc: Steve French <sfrench@samba.org>
+Cc: linux-cifs@vger.kernel.org
+Cc: samba-technical@lists.samba.org
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- fs/ufs/super.c | 13 ++++++++-----
- 1 file changed, 8 insertions(+), 5 deletions(-)
+ fs/cifs/cifsfs.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
 
-diff --git a/fs/ufs/super.c b/fs/ufs/super.c
-index 0a4f58a5073c..646f971067bc 100644
---- a/fs/ufs/super.c
-+++ b/fs/ufs/super.c
-@@ -1466,11 +1466,14 @@ static void init_once(void *foo)
- 
- static int __init init_inodecache(void)
- {
--	ufs_inode_cachep = kmem_cache_create("ufs_inode_cache",
--					     sizeof(struct ufs_inode_info),
--					     0, (SLAB_RECLAIM_ACCOUNT|
--						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
--					     init_once);
-+	ufs_inode_cachep = kmem_cache_create_usercopy("ufs_inode_cache",
-+				sizeof(struct ufs_inode_info), 0,
-+				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
-+					SLAB_ACCOUNT),
-+				offsetof(struct ufs_inode_info, i_u1.i_symlink),
-+				sizeof_field(struct ufs_inode_info,
-+					i_u1.i_symlink),
-+				init_once);
- 	if (ufs_inode_cachep == NULL)
+diff --git a/fs/cifs/cifsfs.c b/fs/cifs/cifsfs.c
+index 180b3356ff86..09dfdf76c738 100644
+--- a/fs/cifs/cifsfs.c
++++ b/fs/cifs/cifsfs.c
+@@ -1229,9 +1229,11 @@ cifs_init_request_bufs(void)
+ 	cifs_dbg(VFS, "CIFSMaxBufSize %d 0x%x\n",
+ 		 CIFSMaxBufSize, CIFSMaxBufSize);
+ */
+-	cifs_req_cachep = kmem_cache_create("cifs_request",
++	cifs_req_cachep = kmem_cache_create_usercopy("cifs_request",
+ 					    CIFSMaxBufSize + max_hdr_size, 0,
+-					    SLAB_HWCACHE_ALIGN, NULL);
++					    SLAB_HWCACHE_ALIGN, 0,
++					    CIFSMaxBufSize + max_hdr_size,
++					    NULL);
+ 	if (cifs_req_cachep == NULL)
  		return -ENOMEM;
- 	return 0;
+ 
+@@ -1257,9 +1259,9 @@ cifs_init_request_bufs(void)
+ 	more SMBs to use small buffer alloc and is still much more
+ 	efficient to alloc 1 per page off the slab compared to 17K (5page)
+ 	alloc of large cifs buffers even when page debugging is on */
+-	cifs_sm_req_cachep = kmem_cache_create("cifs_small_rq",
++	cifs_sm_req_cachep = kmem_cache_create_usercopy("cifs_small_rq",
+ 			MAX_CIFS_SMALL_BUFFER_SIZE, 0, SLAB_HWCACHE_ALIGN,
+-			NULL);
++			0, MAX_CIFS_SMALL_BUFFER_SIZE, NULL);
+ 	if (cifs_sm_req_cachep == NULL) {
+ 		mempool_destroy(cifs_req_poolp);
+ 		kmem_cache_destroy(cifs_req_cachep);
 -- 
 2.7.4
