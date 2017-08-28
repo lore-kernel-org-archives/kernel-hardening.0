@@ -1,57 +1,90 @@
-Date: Sun, 27 Aug 2017 22:26:22 -0700
-From: Alexei Starovoitov <alexei.starovoitov@gmail.com>
-Message-ID: <20170828052620.kn5zq2q6dm3iud6g@ast-mbp>
-References: <20170821000933.13024-1-mic@digikod.net>
- <20170821000933.13024-6-mic@digikod.net>
- <20170824025030.sxl2hkpcbzipb47y@ast-mbp>
- <22d09137-7212-5803-af64-0964fad875c7@digikod.net>
- <20170826011614.iqya5dqii3n7dtdb@ast-mbp>
- <3325bd7d-f3d8-2f51-384c-b5e8cee5cb91@digikod.net>
+Date: Mon, 28 Aug 2017 11:59:23 +0200
+From: Pavel Machek <pavel@ucw.cz>
+Message-ID: <20170828095922.GA18012@amd>
+References: <20170810172615.51965-1-thgarnie@google.com>
+ <20170811124127.kkb5pnkljz4umxuj@gmail.com>
+ <CAJcbSZFTX3uiS2g8JriS6+z_+WrG8z3hrQo4OSuyHpiyUDJWYA@mail.gmail.com>
+ <20170815075609.mmzbfwritjzvrpsn@gmail.com>
+ <CAJcbSZE+TiY2whT94WqCJNXzR=2ATOHcQ10H5RqBZA1j=k1VHQ@mail.gmail.com>
+ <20170816151235.oamkdva6cwpc4cex@gmail.com>
+ <CAJcbSZFM_zpL1av1JVaow8NdsGeH+6oZKeDnMPdXR0PGfynzsg@mail.gmail.com>
+ <20170817080920.5ljlkktngw2cisfg@gmail.com>
+ <CAFUG7CdUEFYANSGRuNX0Xt1TJ0Z7f+M_ERgR03dUVxVqLENLpw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="WIyZ46R2i8wDzkSu"
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <3325bd7d-f3d8-2f51-384c-b5e8cee5cb91@digikod.net>
-Subject: [kernel-hardening] Re: [PATCH net-next v7 05/10] landlock: Add LSM hooks related to
- filesystem
-To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
+In-Reply-To: <CAFUG7CdUEFYANSGRuNX0Xt1TJ0Z7f+M_ERgR03dUVxVqLENLpw@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: x86: PIE support and option to extend
+ KASLR randomization
+To: Boris Lukashev <blukashev@sempervictus.com>
+Cc: Ingo Molnar <mingo@kernel.org>, Thomas Garnier <thgarnie@google.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Aug 27, 2017 at 03:31:35PM +0200, Mickaël Salaün wrote:
-> 
-> > How can you add 3rd argument? All FS events would have to get it,
-> > but in some LSM hooks such argument will be meaningless, whereas
-> > in other places it will carry useful info that rule can operate on.
-> > Would that mean that we'll have FS_3 event type and only few LSM
-> > hooks will be converted to it. That works, but then we'll lose
-> > compatiblity with old rules written for FS event and that given hook.
-> > Otherwise we'd need to have fancy logic to accept old FS event
-> > into FS_3 LSM hook.
-> 
-> If we want to add a third argument to the FS event, then it will become
-> accessible because its type will be different than NOT_INIT. This keep
-> the compatibility with old rules because this new field was then denied.
-> 
-> If we want to add a new argument but only for a subset of the hooks used
-> by the FS event, then we need to create a new event, like FS_FCNTL. For
-> example, we may want to add a FS_RENAME event to be able to tie the
-> source file and the destination file of a rename call.
 
-that's exactly my point. To add another argument FS event
-to a subset of hooks will require either new FS_FOO and
-to be backwards compatible these hooks will call _both_ FS and FS_FOO
-or some magic logic on kernel side that will allow old FS rules
-to be attached to FS_FOO hooks?
-Two calls doesn't scale and if we do 'magic logic' can we do it now
-and avoid introducing events altogether?
-Like all landlock programs can be landlock type and they would need
-to declare what arg1, arg2, argN they expect. Then at attach
-time the kernel only needs to verify that hook arg types match
-what program requested.
+--WIyZ46R2i8wDzkSu
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-> Anyway, I added the subtype/ABI version as a safeguard in case of
-> unexpected future evolution.
+Hi!
 
-I don't think that abi/version field adds anything in this context.
-I still think it should simply be removed.
+> > +         The kernel and modules will generate slightly more assembly (=
+1 to 2%
+> > +         increase on the .text sections). The vmlinux binary will be
+> > +         significantly smaller due to less relocations.
+> >
+> > ... but describing a 1-2% kernel text size increase as "slightly more a=
+ssembly"
+> > shows a gratituous disregard to kernel code generation quality! In real=
+ity that's
+> > a huge size increase that in most cases will almost directly transfer t=
+o a 1-2%
+> > slowdown for kernel intense workloads.
+> >
+> > Where does that size increase come from, if PIE is capable of using rel=
+ative
+> > instructins well? Does it come from the loss of a generic register and =
+the
+> > resulting increase in register pressure, stack spills, etc.?
+> >
+> > So I'm still unhappy about this all, and about the attitude surrounding=
+ it.
+>=20
+> Is the expectation then to have security functions also decrease size
+> and operational latency? Seems a bit unrealistic if so.
+> 1-2% performance hit on systems which have become at least several
+> hundred % faster over recent years is not a significant performance
+> regression compared to the baseline before.
+
+We are probably willing to trade security for 2% performance impact...
+if you can show that same security advantage can't be achieved without
+the impact (and it is opt-in and documented and so on).
+
+Kernel is not really a bottleneck for many people. For me, even CPUs
+are not bottleneck, disk is.
+
+But what is not okay is "hey, this is security, I can slow things
+down. Merge it, because... security!".
+
+Best regards,
+
+									Pavel
+--=20
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
+g.html
+
+--WIyZ46R2i8wDzkSu
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iEYEARECAAYFAlmj6XoACgkQMOfwapXb+vKoAQCgxGEhuA4qK9TP8Gv7ryOV8XoZ
+v6QAoLsAwustidDVeUK6439ZUkIuqVMe
+=EZIN
+-----END PGP SIGNATURE-----
+
+--WIyZ46R2i8wDzkSu--
