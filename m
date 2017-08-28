@@ -1,61 +1,30 @@
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 28 Aug 2017 14:35:09 -0700
-Message-Id: <1503956111-36652-29-git-send-email-keescook@chromium.org>
-In-Reply-To: <1503956111-36652-1-git-send-email-keescook@chromium.org>
+From: Bart Van Assche <Bart.VanAssche@wdc.com>
+Date: Mon, 28 Aug 2017 21:42:32 +0000
+Message-ID: <1503956551.2841.70.camel@wdc.com>
 References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 28/30] arm64: Implement thread_struct whitelist for hardened usercopy
-To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Ingo Molnar <mingo@kernel.org>, James Morse <james.morse@arm.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Dave Martin <Dave.Martin@arm.com>, zijun_hu <zijun_hu@htc.com>, linux-arm-kernel@lists.infradead.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, David Windsor <dave@nullcore.net>
+	 <1503956111-36652-18-git-send-email-keescook@chromium.org>
+In-Reply-To: <1503956111-36652-18-git-send-email-keescook@chromium.org>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <99A2AF1448B43B4DAD1BCE1FA28710ED@namprd04.prod.outlook.com>
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: [kernel-hardening] Re: [PATCH v2 17/30] scsi: Define usercopy region in scsi_sense_cache
+ slab cache
+To: "keescook@chromium.org" <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Cc: "jejb@linux.vnet.ibm.com" <jejb@linux.vnet.ibm.com>, "linux-scsi@vger.kernel.org" <linux-scsi@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "martin.petersen@oracle.com" <martin.petersen@oracle.com>, "dave@nullcore.net" <dave@nullcore.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This whitelists the FPU register state portion of the thread_struct for
-copying to userspace, instead of the default entire structure.
-
-Cc: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Will Deacon <will.deacon@arm.com>
-Cc: Christian Borntraeger <borntraeger@de.ibm.com>
-Cc: Ingo Molnar <mingo@kernel.org>
-Cc: James Morse <james.morse@arm.com>
-Cc: "Peter Zijlstra (Intel)" <peterz@infradead.org>
-Cc: Dave Martin <Dave.Martin@arm.com>
-Cc: zijun_hu <zijun_hu@htc.com>
-Cc: linux-arm-kernel@lists.infradead.org
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- arch/arm64/Kconfig                 | 1 +
- arch/arm64/include/asm/processor.h | 8 ++++++++
- 2 files changed, 9 insertions(+)
-
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index dfd908630631..b773299bc4e3 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -73,6 +73,7 @@ config ARM64
- 	select HAVE_ARCH_MMAP_RND_BITS
- 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
- 	select HAVE_ARCH_SECCOMP_FILTER
-+	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
- 	select HAVE_ARCH_TRACEHOOK
- 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
- 	select HAVE_ARM_SMCCC
-diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
-index 64c9e78f9882..799f112e5ff7 100644
---- a/arch/arm64/include/asm/processor.h
-+++ b/arch/arm64/include/asm/processor.h
-@@ -90,6 +90,14 @@ struct thread_struct {
- 	struct debug_info	debug;		/* debugging */
- };
- 
-+/* Whitelist the fpsimd_state for copying to userspace. */
-+static inline void arch_thread_struct_whitelist(unsigned long *offset,
-+						unsigned long *size)
-+{
-+	*offset = offsetof(struct thread_struct, fpsimd_state);
-+	*size = sizeof(struct fpsimd_state);
-+}
-+
- #ifdef CONFIG_COMPAT
- #define task_user_tls(t)						\
- ({									\
--- 
-2.7.4
+T24gTW9uLCAyMDE3LTA4LTI4IGF0IDE0OjM0IC0wNzAwLCBLZWVzIENvb2sgd3JvdGU6DQo+IGRp
+ZmYgLS1naXQgYS9kcml2ZXJzL3Njc2kvc2NzaV9saWIuYyBiL2RyaXZlcnMvc2NzaS9zY3NpX2xp
+Yi5jDQo+IGluZGV4IGY2MDk3Yjg5ZDVkMy4uZjFjNmJkNTZkZDViIDEwMDY0NA0KPiAtLS0gYS9k
+cml2ZXJzL3Njc2kvc2NzaV9saWIuYw0KPiArKysgYi9kcml2ZXJzL3Njc2kvc2NzaV9saWIuYw0K
+PiBAQCAtNzcsMTQgKzc3LDE1IEBAIGludCBzY3NpX2luaXRfc2Vuc2VfY2FjaGUoc3RydWN0IFNj
+c2lfSG9zdCAqc2hvc3QpDQo+ICAJaWYgKHNob3N0LT51bmNoZWNrZWRfaXNhX2RtYSkgew0KPiAg
+CQlzY3NpX3NlbnNlX2lzYWRtYV9jYWNoZSA9DQo+ICAJCQlrbWVtX2NhY2hlX2NyZWF0ZSgic2Nz
+aV9zZW5zZV9jYWNoZShETUEpIiwNCj4gLQkJCVNDU0lfU0VOU0VfQlVGRkVSU0laRSwgMCwNCj4g
+LQkJCVNMQUJfSFdDQUNIRV9BTElHTiB8IFNMQUJfQ0FDSEVfRE1BLCBOVUxMKTsNCj4gKwkJCQlT
+Q1NJX1NFTlNFX0JVRkZFUlNJWkUsIDAsDQo+ICsJCQkJU0xBQl9IV0NBQ0hFX0FMSUdOIHwgU0xB
+Ql9DQUNIRV9ETUEsIE5VTEwpOw0KPiAgCQlpZiAoIXNjc2lfc2Vuc2VfaXNhZG1hX2NhY2hlKQ0K
+PiAgCQkJcmV0ID0gLUVOT01FTTsNCg0KQWxsIHRoaXMgcGFydCBvZiB0aGlzIHBhdGNoIGRvZXMg
+aXMgdG8gY2hhbmdlIHNvdXJjZSBjb2RlIGluZGVudGF0aW9uLiBTaG91bGQNCnRoZXNlIGNoYW5n
+ZXMgcmVhbGx5IGJlIGluY2x1ZGVkIGluIHRoaXMgcGF0Y2g/DQoNClRoYW5rcywNCg0KQmFydC4=
