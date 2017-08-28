@@ -1,69 +1,84 @@
-References: <20170821000933.13024-1-mic@digikod.net>
- <20170821000933.13024-2-mic@digikod.net>
- <20170824023105.gt6lyn2snhczryik@ast-mbp>
- <0e15da13-fad0-ba01-053c-1b4853e2bd6f@digikod.net>
- <20170826010711.dksmgg4mcni5q2xd@ast-mbp>
-From: Shuah Khan <shuah@kernel.org>
-Message-ID: <af24658e-4225-118e-59aa-0b78d6227cb8@kernel.org>
-Date: Mon, 28 Aug 2017 12:01:08 -0600
-MIME-Version: 1.0
-In-Reply-To: <20170826010711.dksmgg4mcni5q2xd@ast-mbp>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH net-next v7 01/10] selftest: Enhance kselftest_harness.h
- with a step mechanism
-To: Alexei Starovoitov <alexei.starovoitov@gmail.com>, =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, Shuah Khan <shuahkh@osg.samsung.com>, Shuah Khan <shuah@kernel.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 28 Aug 2017 14:34:45 -0700
+Message-Id: <1503956111-36652-5-git-send-email-keescook@chromium.org>
+In-Reply-To: <1503956111-36652-1-git-send-email-keescook@chromium.org>
+References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v2 04/30] dcache: Define usercopy region in dentry_cache slab cache
+To: linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 08/25/2017 07:07 PM, Alexei Starovoitov wrote:
-> On Fri, Aug 25, 2017 at 09:58:33AM +0200, Mickaël Salaün wrote:
->>
->>
->> On 24/08/2017 04:31, Alexei Starovoitov wrote:
->>> On Mon, Aug 21, 2017 at 02:09:24AM +0200, Mickaël Salaün wrote:
->>>> This step mechanism may be useful to return an information about the
->>>> error without being able to write to TH_LOG_STREAM.
->>>>
->>>> Set _metadata->no_print to true to print this counter.
->>>>
->>>> Signed-off-by: Mickaël Salaün <mic@digikod.net>
->>>> Cc: Andy Lutomirski <luto@amacapital.net>
->>>> Cc: Arnaldo Carvalho de Melo <acme@kernel.org>
->>>> Cc: Kees Cook <keescook@chromium.org>
->>>> Cc: Shuah Khan <shuah@kernel.org>
->>>> Cc: Will Drewry <wad@chromium.org>
->>>> Link: https://lkml.kernel.org/r/CAGXu5j+D-FP8Kt9unNOqKrQJP4DYTpmgkJxWykZyrYiVPz3Y3Q@mail.gmail.com
->>>> ---
->>>>
->>>> This patch is intended to the kselftest tree:
->>>> https://lkml.kernel.org/r/20170806232337.4191-1-mic@digikod.net
->>>>
->>>> Changes since v6:
->>>> * add the step counter in assert/expect macros and use _metadata to
->>>>   enable the counter (suggested by Kees Cook)
->>>> ---
->>>>  tools/testing/selftests/kselftest_harness.h   | 31 ++++++++++++++++++++++-----
->>>>  tools/testing/selftests/seccomp/seccomp_bpf.c |  2 +-
->>>>  2 files changed, 27 insertions(+), 6 deletions(-)
->>>
->>> is there a dependency on this in patches 2+ ?
->>> if not, I would send this patch to selftests right away.
->>>
->>>
->>
->> The Landlock tests [patch 9/10] rely on it for now.
->>
->> I sent it three weeks ago:
->> https://lkml.kernel.org/r/20170806232337.4191-1-mic@digikod.net
->>
->> Anyway, until this patch is merged in the kselftest tree and then
->> available to net-next, I'll have to keep it here.
-> 
-> Shuah,
-> could you please pick up this patch into your tree?
-> 
+From: David Windsor <dave@nullcore.net>
 
-Thanks. Applied to linux-kselftest next for 4.14-rc1.
+When a dentry name is short enough, it can be stored directly in the
+dentry itself (instead in a separate kmalloc allocation). These dentry
+short names, stored in struct dentry.d_iname and therefore contained in
+the dentry_cache slab cache, need to be coped to userspace.
 
--- Shuah
+cache object allocation:
+    fs/dcache.c:
+        __d_alloc(...):
+            ...
+            dentry = kmem_cache_alloc(dentry_cache, ...);
+            ...
+            dentry->d_name.name = dentry->d_iname;
+
+example usage trace:
+    filldir+0xb0/0x140
+    dcache_readdir+0x82/0x170
+    iterate_dir+0x142/0x1b0
+    SyS_getdents+0xb5/0x160
+
+    fs/readdir.c:
+        (called via ctx.actor by dir_emit)
+        filldir(..., const char *name, ...):
+            ...
+            copy_to_user(..., name, namlen)
+
+    fs/libfs.c:
+        dcache_readdir(...):
+            ...
+            next = next_positive(dentry, p, 1)
+            ...
+            dir_emit(..., next->d_name.name, ...)
+
+In support of usercopy hardening, this patch defines a region in the
+dentry_cache slab cache in which userspace copy operations are allowed.
+
+This region is known as the slab cache's usercopy region. Slab caches can
+now check that each copy operation involving cache-managed memory falls
+entirely within the slab's usercopy region.
+
+This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+whitelisting code in the last public patch of grsecurity/PaX based on my
+understanding of the code. Changes or omissions from the original code are
+mine and don't reflect the original grsecurity/PaX code.
+
+Signed-off-by: David Windsor <dave@nullcore.net>
+[kees: adjust hunks for kmalloc-specific things moved later]
+[kees: adjust commit log, provide usage trace]
+Cc: Alexander Viro <viro@zeniv.linux.org.uk>
+Cc: linux-fsdevel@vger.kernel.org
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ fs/dcache.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/fs/dcache.c b/fs/dcache.c
+index f90141387f01..5f5e7c1fcf4b 100644
+--- a/fs/dcache.c
++++ b/fs/dcache.c
+@@ -3603,8 +3603,9 @@ static void __init dcache_init(void)
+ 	 * but it is probably not worth it because of the cache nature
+ 	 * of the dcache.
+ 	 */
+-	dentry_cache = KMEM_CACHE(dentry,
+-		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT);
++	dentry_cache = KMEM_CACHE_USERCOPY(dentry,
++		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
++		d_iname);
+ 
+ 	/* Hash may have been set up in dcache_init_early */
+ 	if (!hashdist)
+-- 
+2.7.4
