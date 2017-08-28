@@ -1,44 +1,39 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 28 Aug 2017 14:35:06 -0700
-Message-Id: <1503956111-36652-26-git-send-email-keescook@chromium.org>
+Date: Mon, 28 Aug 2017 14:35:02 -0700
+Message-Id: <1503956111-36652-22-git-send-email-keescook@chromium.org>
 In-Reply-To: <1503956111-36652-1-git-send-email-keescook@chromium.org>
 References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 25/30] fork: Define usercopy region in thread_stack slab caches
+Subject: [kernel-hardening] [PATCH v2 21/30] sctp: Define usercopy region in SCTP proto slab cache
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Ingo Molnar <mingo@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@kernel.org>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Vlad Yasevich <vyasevich@gmail.com>, Neil Horman <nhorman@tuxdriver.com>, "David S. Miller" <davem@davemloft.net>, linux-sctp@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: David Windsor <dave@nullcore.net>
 
-In support of usercopy hardening, this patch defines a region in the
-thread_stack slab caches in which userspace copy operations are allowed.
-Since the entire thread_stack needs to be available to userspace, the
-entire slab contents are whitelisted. Note that the slab-based thread
-stack is only present on systems with THREAD_SIZE < PAGE_SIZE and
-!CONFIG_VMAP_STACK.
+The SCTP socket event notification subscription information need to be
+copied to/from userspace. In support of usercopy hardening, this patch
+defines a region in the struct proto slab cache in which userspace copy
+operations are allowed. Additionally moves the usercopy fields to be
+adjacent for the region to cover both.
 
-cache object allocation:
-    kernel/fork.c:
-        alloc_thread_stack_node(...):
-            return kmem_cache_alloc_node(thread_stack_cache, ...)
+example usage trace:
 
-        dup_task_struct(...):
+    net/sctp/socket.c:
+        sctp_getsockopt_events(...):
             ...
-            stack = alloc_thread_stack_node(...)
-            ...
-            tsk->stack = stack;
+            copy_to_user(..., &sctp_sk(sk)->subscribe, len)
 
-        copy_process(...):
+        sctp_setsockopt_events(...):
             ...
-            dup_task_struct(...)
+            copy_from_user(&sctp_sk(sk)->subscribe, ..., optlen)
 
-        _do_fork(...):
+        sctp_getsockopt_initmsg(...):
             ...
-            copy_process(...)
+            copy_to_user(..., &sctp_sk(sk)->initmsg, len)
 
-This region is known as the slab cache's usercopy region. Slab caches
-can now check that each copy operation involving cache-managed memory
-falls entirely within the slab's usercopy region.
+This region is known as the slab cache's usercopy region. Slab caches can
+now check that each copy operation involving cache-managed memory falls
+entirely within the slab's usercopy region.
 
 This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
 whitelisting code in the last public patch of grsecurity/PaX based on my
@@ -46,31 +41,56 @@ understanding of the code. Changes or omissions from the original code are
 mine and don't reflect the original grsecurity/PaX code.
 
 Signed-off-by: David Windsor <dave@nullcore.net>
-[kees: adjust commit log, split patch, provide usage trace]
-Cc: Ingo Molnar <mingo@kernel.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: Andy Lutomirski <luto@kernel.org>
+[kees: split from network patch, move struct member adjacent, provide usage]
+Cc: Vlad Yasevich <vyasevich@gmail.com>
+Cc: Neil Horman <nhorman@tuxdriver.com>
+Cc: "David S. Miller" <davem@davemloft.net>
+Cc: linux-sctp@vger.kernel.org
+Cc: netdev@vger.kernel.org
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- kernel/fork.c | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
+ include/net/sctp/structs.h | 9 +++++++--
+ net/sctp/socket.c          | 4 ++++
+ 2 files changed, 11 insertions(+), 2 deletions(-)
 
-diff --git a/kernel/fork.c b/kernel/fork.c
-index d8ebf755a47b..0f33fb1aabbf 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -276,8 +276,9 @@ static void free_thread_stack(struct task_struct *tsk)
+diff --git a/include/net/sctp/structs.h b/include/net/sctp/structs.h
+index 5ab29af8ca8a..f1d7810e200e 100644
+--- a/include/net/sctp/structs.h
++++ b/include/net/sctp/structs.h
+@@ -202,12 +202,17 @@ struct sctp_sock {
+ 	/* Flags controlling Heartbeat, SACK delay, and Path MTU Discovery. */
+ 	__u32 param_flags;
  
- void thread_stack_cache_init(void)
- {
--	thread_stack_cache = kmem_cache_create("thread_stack", THREAD_SIZE,
--					      THREAD_SIZE, 0, NULL);
-+	thread_stack_cache = kmem_cache_create_usercopy("thread_stack",
-+					THREAD_SIZE, THREAD_SIZE, 0, 0,
-+					THREAD_SIZE, NULL);
- 	BUG_ON(thread_stack_cache == NULL);
- }
- # endif
+-	struct sctp_initmsg initmsg;
+ 	struct sctp_rtoinfo rtoinfo;
+ 	struct sctp_paddrparams paddrparam;
+-	struct sctp_event_subscribe subscribe;
+ 	struct sctp_assocparams assocparams;
+ 
++	/*
++	 * These two structures must be grouped together for the usercopy
++	 * whitelist region.
++	 */
++	struct sctp_event_subscribe subscribe;
++	struct sctp_initmsg initmsg;
++
+ 	int user_frag;
+ 
+ 	__u32 autoclose;
+diff --git a/net/sctp/socket.c b/net/sctp/socket.c
+index 1db478e34520..c8784cb216e4 100644
+--- a/net/sctp/socket.c
++++ b/net/sctp/socket.c
+@@ -8235,6 +8235,10 @@ struct proto sctp_prot = {
+ 	.unhash      =	sctp_unhash,
+ 	.get_port    =	sctp_get_port,
+ 	.obj_size    =  sizeof(struct sctp_sock),
++	.useroffset  =  offsetof(struct sctp_sock, subscribe),
++	.usersize    =  offsetof(struct sctp_sock, initmsg) -
++				offsetof(struct sctp_sock, subscribe) +
++				sizeof_field(struct sctp_sock, initmsg),
+ 	.sysctl_mem  =  sysctl_sctp_mem,
+ 	.sysctl_rmem =  sysctl_sctp_rmem,
+ 	.sysctl_wmem =  sysctl_sctp_wmem,
 -- 
 2.7.4
