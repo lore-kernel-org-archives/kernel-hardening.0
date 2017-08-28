@@ -1,36 +1,33 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 28 Aug 2017 14:34:48 -0700
-Message-Id: <1503956111-36652-8-git-send-email-keescook@chromium.org>
+Date: Mon, 28 Aug 2017 14:34:51 -0700
+Message-Id: <1503956111-36652-11-git-send-email-keescook@chromium.org>
 In-Reply-To: <1503956111-36652-1-git-send-email-keescook@chromium.org>
 References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 07/30] ext4: Define usercopy region in ext4_inode_cache slab cache
+Subject: [kernel-hardening] [PATCH v2 10/30] befs: Define usercopy region in befs_inode_cache slab cache
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Theodore Ts'o <tytso@mit.edu>, Andreas Dilger <adilger.kernel@dilger.ca>, linux-ext4@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Luis de Bethencourt <luisbg@kernel.org>, Salah Triki <salah.triki@gmail.com>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: David Windsor <dave@nullcore.net>
 
-The ext4 symlink pathnames, stored in struct ext4_inode_info.i_data
-and therefore contained in the ext4_inode_cache slab cache, need
-to be copied to/from userspace.
+befs symlink pathnames, stored in struct befs_inode_info.i_data.symlink
+and therefore contained in the befs_inode_cache slab cache, need to be
+copied to/from userspace.
 
 cache object allocation:
-    fs/ext4/super.c:
-        ext4_alloc_inode(...):
-            struct ext4_inode_info *ei;
+    fs/befs/linuxvfs.c:
+        befs_alloc_inode(...):
             ...
-            ei = kmem_cache_alloc(ext4_inode_cachep, GFP_NOFS);
+            bi = kmem_cache_alloc(befs_inode_cachep, GFP_KERNEL);
             ...
-            return &ei->vfs_inode;
+            return &bi->vfs_inode;
 
-    include/trace/events/ext4.h:
-            #define EXT4_I(inode) \
-                (container_of(inode, struct ext4_inode_info, vfs_inode))
-
-    fs/ext4/namei.c:
-        ext4_symlink(...):
+        befs_iget(...):
             ...
-            inode->i_link = (char *)&EXT4_I(inode)->i_data;
+            strlcpy(befs_ino->i_data.symlink, raw_inode->data.symlink,
+                    BEFS_SYMLINK_LEN);
+            ...
+            inode->i_link = befs_ino->i_data.symlink;
 
 example usage trace:
     readlink_copy+0x43/0x70
@@ -40,9 +37,9 @@ example usage trace:
     fs/namei.c:
         readlink_copy(..., link):
             ...
-            copy_to_user(..., link, len)
+            copy_to_user(..., link, len);
 
-        (inlined into vfs_readlink)
+        (inlined in vfs_readlink)
         generic_readlink(dentry, ...):
             struct inode *inode = d_inode(dentry);
             const char *link = inode->i_link;
@@ -50,7 +47,7 @@ example usage trace:
             readlink_copy(..., link);
 
 In support of usercopy hardening, this patch defines a region in the
-ext4_inode_cache slab cache in which userspace copy operations are
+befs_inode_cache slab cache in which userspace copy operations are
 allowed.
 
 This region is known as the slab cache's usercopy region. Slab caches can
@@ -64,36 +61,37 @@ mine and don't reflect the original grsecurity/PaX code.
 
 Signed-off-by: David Windsor <dave@nullcore.net>
 [kees: adjust commit log, provide usage trace]
-Cc: "Theodore Ts'o" <tytso@mit.edu>
-Cc: Andreas Dilger <adilger.kernel@dilger.ca>
-Cc: linux-ext4@vger.kernel.org
+Cc: Luis de Bethencourt <luisbg@kernel.org>
+Cc: Salah Triki <salah.triki@gmail.com>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- fs/ext4/super.c | 12 +++++++-----
- 1 file changed, 7 insertions(+), 5 deletions(-)
+ fs/befs/linuxvfs.c | 14 +++++++++-----
+ 1 file changed, 9 insertions(+), 5 deletions(-)
 
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 0886fe82e9c4..79c3b1b11364 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -1038,11 +1038,13 @@ static void init_once(void *foo)
- 
- static int __init init_inodecache(void)
+diff --git a/fs/befs/linuxvfs.c b/fs/befs/linuxvfs.c
+index 4a4a5a366158..1c2dcbee79dd 100644
+--- a/fs/befs/linuxvfs.c
++++ b/fs/befs/linuxvfs.c
+@@ -444,11 +444,15 @@ static struct inode *befs_iget(struct super_block *sb, unsigned long ino)
+ static int __init
+ befs_init_inodecache(void)
  {
--	ext4_inode_cachep = kmem_cache_create("ext4_inode_cache",
--					     sizeof(struct ext4_inode_info),
--					     0, (SLAB_RECLAIM_ACCOUNT|
+-	befs_inode_cachep = kmem_cache_create("befs_inode_cache",
+-					      sizeof (struct befs_inode_info),
+-					      0, (SLAB_RECLAIM_ACCOUNT|
 -						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
--					     init_once);
-+	ext4_inode_cachep = kmem_cache_create_usercopy("ext4_inode_cache",
-+				sizeof(struct ext4_inode_info), 0,
+-					      init_once);
++	befs_inode_cachep = kmem_cache_create_usercopy("befs_inode_cache",
++				sizeof(struct befs_inode_info), 0,
 +				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
 +					SLAB_ACCOUNT),
-+				offsetof(struct ext4_inode_info, i_data),
-+				sizeof_field(struct ext4_inode_info, i_data),
++				offsetof(struct befs_inode_info,
++					i_data.symlink),
++				sizeof_field(struct befs_inode_info,
++					i_data.symlink),
 +				init_once);
- 	if (ext4_inode_cachep == NULL)
+ 	if (befs_inode_cachep == NULL)
  		return -ENOMEM;
- 	return 0;
+ 
 -- 
 2.7.4
