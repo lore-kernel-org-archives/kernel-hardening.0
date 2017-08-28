@@ -1,59 +1,57 @@
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 28 Aug 2017 14:35:08 -0700
-Message-Id: <1503956111-36652-28-git-send-email-keescook@chromium.org>
-In-Reply-To: <1503956111-36652-1-git-send-email-keescook@chromium.org>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20170828214957.GJ4757@magnolia>
 References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 27/30] x86: Implement thread_struct whitelist for hardened usercopy
-To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Mathias Krause <minipli@googlemail.com>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, David Windsor <dave@nullcore.net>
+ <1503956111-36652-16-git-send-email-keescook@chromium.org> <20170828214957.GJ4757@magnolia>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 28 Aug 2017 14:57:14 -0700
+Message-ID: <CAGXu5j+pvxRjASUuBE49+uH34Mw26a4mtcWrZd=CEqcRHjetvA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v2 15/30] xfs: Define usercopy region in xfs_inode slab cache
+To: "Darrick J. Wong" <darrick.wong@oracle.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, David Windsor <dave@nullcore.net>, linux-xfs@vger.kernel.org, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This whitelists the FPU register state portion of the thread_struct for
-copying to userspace, instead of the default entire struct.
+On Mon, Aug 28, 2017 at 2:49 PM, Darrick J. Wong
+<darrick.wong@oracle.com> wrote:
+> On Mon, Aug 28, 2017 at 02:34:56PM -0700, Kees Cook wrote:
+>> From: David Windsor <dave@nullcore.net>
+>>
+>> The XFS inline inode data, stored in struct xfs_inode_t field
+>> i_df.if_u2.if_inline_data and therefore contained in the xfs_inode slab
+>> cache, needs to be copied to/from userspace.
+>>
+>> cache object allocation:
+>>     fs/xfs/xfs_icache.c:
+>>         xfs_inode_alloc(...):
+>>             ...
+>>             ip = kmem_zone_alloc(xfs_inode_zone, KM_SLEEP);
+>>
+>>     fs/xfs/libxfs/xfs_inode_fork.c:
+>>         xfs_init_local_fork(...):
+>>             ...
+>>             if (mem_size <= sizeof(ifp->if_u2.if_inline_data))
+>>                     ifp->if_u1.if_data = ifp->if_u2.if_inline_data;
+>
+> Hmm, what happens when mem_size > sizeof(if_inline_data)?  A slab object
+> will be allocated for ifp->if_u1.if_data which can then be used for
+> readlink in the same manner as the example usage trace below.  Does
+> that allocated object have a need for a usercopy annotation like
+> the one we're adding for if_inline_data?  Or is that already covered
+> elsewhere?
 
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: Ingo Molnar <mingo@redhat.com>
-Cc: "H. Peter Anvin" <hpa@zytor.com>
-Cc: x86@kernel.org
-Cc: Borislav Petkov <bp@suse.de>
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Mathias Krause <minipli@googlemail.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- arch/x86/Kconfig                 | 1 +
- arch/x86/include/asm/processor.h | 8 ++++++++
- 2 files changed, 9 insertions(+)
+Yeah, the xfs helper kmem_alloc() is used in the other case, which
+ultimately boils down to a call to kmalloc(), which is entirely
+whitelisted by an earlier patch in the series:
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 781521b7cf9e..a8793721483c 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -113,6 +113,7 @@ config X86
- 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS	if MMU && COMPAT
- 	select HAVE_ARCH_COMPAT_MMAP_BASES	if MMU && COMPAT
- 	select HAVE_ARCH_SECCOMP_FILTER
-+	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
- 	select HAVE_ARCH_TRACEHOOK
- 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
- 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE_PUD if X86_64
-diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
-index 028245e1c42b..dc52ba90f090 100644
---- a/arch/x86/include/asm/processor.h
-+++ b/arch/x86/include/asm/processor.h
-@@ -481,6 +481,14 @@ struct thread_struct {
- 	 */
- };
- 
-+/* Whitelist the FPU state from the task_struct for hardened usercopy. */
-+static inline void arch_thread_struct_whitelist(unsigned long *offset,
-+						unsigned long *size)
-+{
-+	*offset = offsetof(struct thread_struct, fpu.state);
-+	*size = fpu_kernel_xstate_size;
-+}
-+
- /*
-  * Thread-synchronous status.
-  *
+https://lkml.org/lkml/2017/8/28/1026
+
+(It's possible that at some future time we can start segregating
+kernel-only kmallocs from usercopy-able kmallocs, but for now, there
+are no plans for this.)
+
+-Kees
+
 -- 
-2.7.4
+Kees Cook
+Pixel Security
