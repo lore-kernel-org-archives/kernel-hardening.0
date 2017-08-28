@@ -1,86 +1,96 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 28 Aug 2017 14:34:58 -0700
-Message-Id: <1503956111-36652-18-git-send-email-keescook@chromium.org>
+Date: Mon, 28 Aug 2017 14:34:54 -0700
+Message-Id: <1503956111-36652-14-git-send-email-keescook@chromium.org>
 In-Reply-To: <1503956111-36652-1-git-send-email-keescook@chromium.org>
 References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 17/30] scsi: Define usercopy region in scsi_sense_cache slab cache
+Subject: [kernel-hardening] [PATCH v2 13/30] ufs: Define usercopy region in ufs_inode_cache slab cache
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-scsi@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Evgeniy Dushistov <dushistov@mail.ru>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: David Windsor <dave@nullcore.net>
 
-SCSI sense buffers, stored in struct scsi_cmnd.sense and therefore
-contained in the scsi_sense_cache slab cache, need to be copied to/from
-userspace.
+The ufs symlink pathnames, stored in struct ufs_inode_info.i_u1.i_symlink
+and therefore contained in the ufs_inode_cache slab cache, need to be
+copied to/from userspace.
 
 cache object allocation:
-    drivers/scsi/scsi_lib.c:
-        scsi_select_sense_cache(...):
-            return ... ? scsi_sense_isadma_cache : scsi_sense_cache
-
-        scsi_alloc_sense_buffer(...):
-            return kmem_cache_alloc_node(scsi_select_sense_cache(), ...);
-
-        scsi_init_request(...):
+    fs/ufs/super.c:
+        ufs_alloc_inode(...):
             ...
-            cmd->sense_buffer = scsi_alloc_sense_buffer(...);
+            ei = kmem_cache_alloc(ufs_inode_cachep, GFP_NOFS);
             ...
-            cmd->req.sense = cmd->sense_buffer
+            return &ei->vfs_inode;
+
+    fs/ufs/ufs.h:
+        UFS_I(struct inode *inode):
+            return container_of(inode, struct ufs_inode_info, vfs_inode);
+
+    fs/ufs/namei.c:
+        ufs_symlink(...):
+            ...
+            inode->i_link = (char *)UFS_I(inode)->i_u1.i_symlink;
 
 example usage trace:
+    readlink_copy+0x43/0x70
+    vfs_readlink+0x62/0x110
+    SyS_readlinkat+0x100/0x130
 
-    block/scsi_ioctl.c:
-        (inline from sg_io)
-        blk_complete_sghdr_rq(...):
-            struct scsi_request *req = scsi_req(rq);
+    fs/namei.c:
+        readlink_copy(..., link):
             ...
-            copy_to_user(..., req->sense, len)
+            copy_to_user(..., link, len);
 
-        scsi_cmd_ioctl(...):
-            sg_io(...);
+        (inlined in vfs_readlink)
+        generic_readlink(dentry, ...):
+            struct inode *inode = d_inode(dentry);
+            const char *link = inode->i_link;
+            ...
+            readlink_copy(..., link);
 
-In support of usercopy hardening, this patch defines a region in
-the scsi_sense_cache slab cache in which userspace copy operations
-are allowed.
+In support of usercopy hardening, this patch defines a region in the
+ufs_inode_cache slab cache in which userspace copy operations are allowed.
 
-This region is known as the slab cache's usercopy region.  Slab
-caches can now check that each copy operation involving cache-managed
-memory falls entirely within the slab's usercopy region.
+This region is known as the slab cache's usercopy region. Slab caches can
+now check that each copy operation involving cache-managed memory falls
+entirely within the slab's usercopy region.
+
+This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+whitelisting code in the last public patch of grsecurity/PaX based on my
+understanding of the code. Changes or omissions from the original code are
+mine and don't reflect the original grsecurity/PaX code.
 
 Signed-off-by: David Windsor <dave@nullcore.net>
 [kees: adjust commit log, provide usage trace]
-Cc: "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>
-Cc: "Martin K. Petersen" <martin.petersen@oracle.com>
-Cc: linux-scsi@vger.kernel.org
+Cc: Evgeniy Dushistov <dushistov@mail.ru>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- drivers/scsi/scsi_lib.c | 9 +++++----
- 1 file changed, 5 insertions(+), 4 deletions(-)
+ fs/ufs/super.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/scsi/scsi_lib.c b/drivers/scsi/scsi_lib.c
-index f6097b89d5d3..f1c6bd56dd5b 100644
---- a/drivers/scsi/scsi_lib.c
-+++ b/drivers/scsi/scsi_lib.c
-@@ -77,14 +77,15 @@ int scsi_init_sense_cache(struct Scsi_Host *shost)
- 	if (shost->unchecked_isa_dma) {
- 		scsi_sense_isadma_cache =
- 			kmem_cache_create("scsi_sense_cache(DMA)",
--			SCSI_SENSE_BUFFERSIZE, 0,
--			SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA, NULL);
-+				SCSI_SENSE_BUFFERSIZE, 0,
-+				SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA, NULL);
- 		if (!scsi_sense_isadma_cache)
- 			ret = -ENOMEM;
- 	} else {
- 		scsi_sense_cache =
--			kmem_cache_create("scsi_sense_cache",
--			SCSI_SENSE_BUFFERSIZE, 0, SLAB_HWCACHE_ALIGN, NULL);
-+			kmem_cache_create_usercopy("scsi_sense_cache",
-+				SCSI_SENSE_BUFFERSIZE, 0, SLAB_HWCACHE_ALIGN,
-+				0, SCSI_SENSE_BUFFERSIZE, NULL);
- 		if (!scsi_sense_cache)
- 			ret = -ENOMEM;
- 	}
+diff --git a/fs/ufs/super.c b/fs/ufs/super.c
+index 0a4f58a5073c..646f971067bc 100644
+--- a/fs/ufs/super.c
++++ b/fs/ufs/super.c
+@@ -1466,11 +1466,14 @@ static void init_once(void *foo)
+ 
+ static int __init init_inodecache(void)
+ {
+-	ufs_inode_cachep = kmem_cache_create("ufs_inode_cache",
+-					     sizeof(struct ufs_inode_info),
+-					     0, (SLAB_RECLAIM_ACCOUNT|
+-						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
+-					     init_once);
++	ufs_inode_cachep = kmem_cache_create_usercopy("ufs_inode_cache",
++				sizeof(struct ufs_inode_info), 0,
++				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
++					SLAB_ACCOUNT),
++				offsetof(struct ufs_inode_info, i_u1.i_symlink),
++				sizeof_field(struct ufs_inode_info,
++					i_u1.i_symlink),
++				init_once);
+ 	if (ufs_inode_cachep == NULL)
+ 		return -ENOMEM;
+ 	return 0;
 -- 
 2.7.4
