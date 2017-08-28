@@ -1,36 +1,34 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 28 Aug 2017 14:35:07 -0700
-Message-Id: <1503956111-36652-27-git-send-email-keescook@chromium.org>
+Date: Mon, 28 Aug 2017 14:35:05 -0700
+Message-Id: <1503956111-36652-25-git-send-email-keescook@chromium.org>
 In-Reply-To: <1503956111-36652-1-git-send-email-keescook@chromium.org>
 References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH v2 26/30] fork: Provide usercopy whitelisting for task_struct
+Subject: [kernel-hardening] [PATCH v2 24/30] fork: Define usercopy region in mm_struct slab caches
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Nicholas Piggin <npiggin@gmail.com>, Laura Abbott <labbott@redhat.com>, =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@kernel.org>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, David Windsor <dave@nullcore.net>
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Ingo Molnar <mingo@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@kernel.org>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-While the blocked and saved_sigmask fields of task_struct are copied to
-userspace (via sigmask_to_save() and setup_rt_frame()), it is always
-copied with a static length (i.e. sizeof(sigset_t)).
+From: David Windsor <dave@nullcore.net>
 
-The only portion of task_struct that is potentially dynamically sized and
-may be copied to userspace is in the architecture-specific thread_struct
-at the end of task_struct.
+In support of usercopy hardening, this patch defines a region in the
+mm_struct slab caches in which userspace copy operations are allowed.
+Only the auxv field is copied to userspace.
 
 cache object allocation:
     kernel/fork.c:
-        alloc_task_struct_node(...):
-            return kmem_cache_alloc_node(task_struct_cachep, ...);
+        #define allocate_mm()     (kmem_cache_alloc(mm_cachep, GFP_KERNEL))
 
-        dup_task_struct(...):
+        dup_mm():
             ...
-            tsk = alloc_task_struct_node(node);
+            mm = allocate_mm();
+
+        copy_mm(...):
+            ...
+            dup_mm();
 
         copy_process(...):
             ...
-            dup_task_struct(...)
+            copy_mm(...)
 
         _do_fork(...):
             ...
@@ -38,130 +36,53 @@ cache object allocation:
 
 example usage trace:
 
-    arch/x86/kernel/fpu/signal.c:
-        __fpu__restore_sig(...):
+    fs/binfmt_elf.c:
+        create_elf_tables(...):
             ...
-            struct task_struct *tsk = current;
-            struct fpu *fpu = &tsk->thread.fpu;
+            elf_info = (elf_addr_t *)current->mm->saved_auxv;
             ...
-            __copy_from_user(&fpu->state.xsave, ..., state_size);
+            copy_to_user(..., elf_info, ei_index * sizeof(elf_addr_t))
 
-        fpu__restore_sig(...):
+        load_elf_binary(...):
             ...
-            return __fpu__restore_sig(...);
+            create_elf_tables(...);
 
-    arch/x86/kernel/signal.c:
-        restore_sigcontext(...):
-            ...
-            fpu__restore_sig(...)
+This region is known as the slab cache's usercopy region. Slab caches can
+now check that each copy operation involving cache-managed memory falls
+entirely within the slab's usercopy region.
 
-This introduces arch_thread_struct_whitelist() to let an architecture
-declare specifically where the whitelist should be within thread_struct.
-If undefined, the entire thread_struct field is left whitelisted.
+This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+whitelisting code in the last public patch of grsecurity/PaX based on my
+understanding of the code. Changes or omissions from the original code are
+mine and don't reflect the original grsecurity/PaX code.
 
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Nicholas Piggin <npiggin@gmail.com>
-Cc: Laura Abbott <labbott@redhat.com>
-Cc: "Mickaël Salaün" <mic@digikod.net>
+Signed-off-by: David Windsor <dave@nullcore.net>
+[kees: adjust commit log, split patch, provide usage trace]
 Cc: Ingo Molnar <mingo@kernel.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>
 Cc: Thomas Gleixner <tglx@linutronix.de>
 Cc: Andy Lutomirski <luto@kernel.org>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/Kconfig               | 11 +++++++++++
- include/linux/sched/task.h | 14 ++++++++++++++
- kernel/fork.c              | 22 ++++++++++++++++++++--
- 3 files changed, 45 insertions(+), 2 deletions(-)
+ kernel/fork.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 21d0089117fe..380d2bc2001b 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -241,6 +241,17 @@ config ARCH_INIT_TASK
- config ARCH_TASK_STRUCT_ALLOCATOR
- 	bool
- 
-+config HAVE_ARCH_THREAD_STRUCT_WHITELIST
-+	bool
-+	depends on !ARCH_TASK_STRUCT_ALLOCATOR
-+	help
-+	  An architecture should select this to provide hardened usercopy
-+	  knowledge about what region of the thread_struct should be
-+	  whitelisted for copying to userspace. Normally this is only the
-+	  FPU registers. Specifically, arch_thread_struct_whitelist()
-+	  should be implemented. Without this, the entire thread_struct
-+	  field in task_struct will be left whitelisted.
-+
- # Select if arch has its private alloc_thread_stack() function
- config ARCH_THREAD_STACK_ALLOCATOR
- 	bool
-diff --git a/include/linux/sched/task.h b/include/linux/sched/task.h
-index c97e5f096927..60f36adaa504 100644
---- a/include/linux/sched/task.h
-+++ b/include/linux/sched/task.h
-@@ -104,6 +104,20 @@ extern int arch_task_struct_size __read_mostly;
- # define arch_task_struct_size (sizeof(struct task_struct))
- #endif
- 
-+#ifndef CONFIG_HAVE_ARCH_THREAD_STRUCT_WHITELIST
-+/*
-+ * If an architecture has not declared a thread_struct whitelist we
-+ * must assume something there may need to be copied to userspace.
-+ */
-+static inline void arch_thread_struct_whitelist(unsigned long *offset,
-+						unsigned long *size)
-+{
-+	*offset = 0;
-+	/* Handle dynamically sized thread_struct. */
-+	*size = arch_task_struct_size - offsetof(struct task_struct, thread);
-+}
-+#endif
-+
- #ifdef CONFIG_VMAP_STACK
- static inline struct vm_struct *task_stack_vm_area(const struct task_struct *t)
- {
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 0f33fb1aabbf..4fcc9cc8e108 100644
+index 17921b0390b4..d8ebf755a47b 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -452,6 +452,21 @@ static void set_max_threads(unsigned int max_threads_suggested)
- int arch_task_struct_size __read_mostly;
- #endif
- 
-+static void task_struct_whitelist(unsigned long *offset, unsigned long *size)
-+{
-+	/* Fetch thread_struct whitelist for the architecture. */
-+	arch_thread_struct_whitelist(offset, size);
-+
-+	/*
-+	 * Handle zero-sized whitelist or empty thread_struct, otherwise
-+	 * adjust offset to position of thread_struct in task_struct.
-+	 */
-+	if (unlikely(*size == 0))
-+		*offset = 0;
-+	else
-+		*offset += offsetof(struct task_struct, thread);
-+}
-+
- void __init fork_init(void)
- {
- 	int i;
-@@ -460,11 +475,14 @@ void __init fork_init(void)
- #define ARCH_MIN_TASKALIGN	0
- #endif
- 	int align = max_t(int, L1_CACHE_BYTES, ARCH_MIN_TASKALIGN);
-+	unsigned long useroffset, usersize;
- 
- 	/* create a slab on which task_structs can be allocated */
--	task_struct_cachep = kmem_cache_create("task_struct",
-+	task_struct_whitelist(&useroffset, &usersize);
-+	task_struct_cachep = kmem_cache_create_usercopy("task_struct",
- 			arch_task_struct_size, align,
--			SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT, NULL);
-+			SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT,
-+			useroffset, usersize, NULL);
- #endif
- 
- 	/* do the arch specific task caches init */
+@@ -2206,9 +2206,11 @@ void __init proc_caches_init(void)
+ 	 * maximum number of CPU's we can ever have.  The cpumask_allocation
+ 	 * is at the end of the structure, exactly for that reason.
+ 	 */
+-	mm_cachep = kmem_cache_create("mm_struct",
++	mm_cachep = kmem_cache_create_usercopy("mm_struct",
+ 			sizeof(struct mm_struct), ARCH_MIN_MMSTRUCT_ALIGN,
+ 			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT,
++			offsetof(struct mm_struct, saved_auxv),
++			sizeof_field(struct mm_struct, saved_auxv),
+ 			NULL);
+ 	vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT);
+ 	mmap_init();
 -- 
 2.7.4
