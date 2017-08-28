@@ -1,9 +1,9 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 28 Aug 2017 14:35:05 -0700
-Message-Id: <1503956111-36652-25-git-send-email-keescook@chromium.org>
+Date: Mon, 28 Aug 2017 14:35:06 -0700
+Message-Id: <1503956111-36652-26-git-send-email-keescook@chromium.org>
 In-Reply-To: <1503956111-36652-1-git-send-email-keescook@chromium.org>
 References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 24/30] fork: Define usercopy region in mm_struct slab caches
+Subject: [kernel-hardening] [PATCH v2 25/30] fork: Define usercopy region in thread_stack slab caches
 To: linux-kernel@vger.kernel.org
 Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Ingo Molnar <mingo@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@kernel.org>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
@@ -11,45 +11,34 @@ List-ID: <kernel-hardening.lists.openwall.com>
 From: David Windsor <dave@nullcore.net>
 
 In support of usercopy hardening, this patch defines a region in the
-mm_struct slab caches in which userspace copy operations are allowed.
-Only the auxv field is copied to userspace.
+thread_stack slab caches in which userspace copy operations are allowed.
+Since the entire thread_stack needs to be available to userspace, the
+entire slab contents are whitelisted. Note that the slab-based thread
+stack is only present on systems with THREAD_SIZE < PAGE_SIZE and
+!CONFIG_VMAP_STACK.
 
 cache object allocation:
     kernel/fork.c:
-        #define allocate_mm()     (kmem_cache_alloc(mm_cachep, GFP_KERNEL))
+        alloc_thread_stack_node(...):
+            return kmem_cache_alloc_node(thread_stack_cache, ...)
 
-        dup_mm():
+        dup_task_struct(...):
             ...
-            mm = allocate_mm();
-
-        copy_mm(...):
+            stack = alloc_thread_stack_node(...)
             ...
-            dup_mm();
+            tsk->stack = stack;
 
         copy_process(...):
             ...
-            copy_mm(...)
+            dup_task_struct(...)
 
         _do_fork(...):
             ...
             copy_process(...)
 
-example usage trace:
-
-    fs/binfmt_elf.c:
-        create_elf_tables(...):
-            ...
-            elf_info = (elf_addr_t *)current->mm->saved_auxv;
-            ...
-            copy_to_user(..., elf_info, ei_index * sizeof(elf_addr_t))
-
-        load_elf_binary(...):
-            ...
-            create_elf_tables(...);
-
-This region is known as the slab cache's usercopy region. Slab caches can
-now check that each copy operation involving cache-managed memory falls
-entirely within the slab's usercopy region.
+This region is known as the slab cache's usercopy region. Slab caches
+can now check that each copy operation involving cache-managed memory
+falls entirely within the slab's usercopy region.
 
 This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
 whitelisting code in the last public patch of grsecurity/PaX based on my
@@ -64,25 +53,24 @@ Cc: Thomas Gleixner <tglx@linutronix.de>
 Cc: Andy Lutomirski <luto@kernel.org>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- kernel/fork.c | 4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
+ kernel/fork.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 17921b0390b4..d8ebf755a47b 100644
+index d8ebf755a47b..0f33fb1aabbf 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -2206,9 +2206,11 @@ void __init proc_caches_init(void)
- 	 * maximum number of CPU's we can ever have.  The cpumask_allocation
- 	 * is at the end of the structure, exactly for that reason.
- 	 */
--	mm_cachep = kmem_cache_create("mm_struct",
-+	mm_cachep = kmem_cache_create_usercopy("mm_struct",
- 			sizeof(struct mm_struct), ARCH_MIN_MMSTRUCT_ALIGN,
- 			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT,
-+			offsetof(struct mm_struct, saved_auxv),
-+			sizeof_field(struct mm_struct, saved_auxv),
- 			NULL);
- 	vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT);
- 	mmap_init();
+@@ -276,8 +276,9 @@ static void free_thread_stack(struct task_struct *tsk)
+ 
+ void thread_stack_cache_init(void)
+ {
+-	thread_stack_cache = kmem_cache_create("thread_stack", THREAD_SIZE,
+-					      THREAD_SIZE, 0, NULL);
++	thread_stack_cache = kmem_cache_create_usercopy("thread_stack",
++					THREAD_SIZE, THREAD_SIZE, 0, 0,
++					THREAD_SIZE, NULL);
+ 	BUG_ON(thread_stack_cache == NULL);
+ }
+ # endif
 -- 
 2.7.4
