@@ -1,65 +1,76 @@
+Date: Wed, 30 Aug 2017 07:51:57 +1000
+From: Dave Chinner <david@fromorbit.com>
+Message-ID: <20170829215157.GC10621@dastard>
+References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
+ <1503956111-36652-16-git-send-email-keescook@chromium.org>
+ <20170829081453.GA10196@infradead.org>
+ <20170829123126.GB10621@dastard>
+ <20170829124536.GA26339@infradead.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAJcbSZEd10fMp6OSgSYv_Wmt=wX5fw_Gu-_N=fM_QmP==wUMew@mail.gmail.com>
-References: <20170814213732.104301-1-thgarnie@google.com> <20170814213732.104301-3-thgarnie@google.com>
- <CAJcbSZG1b7ObJAv6Kmp-fR3vZRg7AdbcgqDceGB95r-72Yv0yg@mail.gmail.com> <CAJcbSZEd10fMp6OSgSYv_Wmt=wX5fw_Gu-_N=fM_QmP==wUMew@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 29 Aug 2017 12:54:43 -0700
-Message-ID: <CAGXu5jKuk9589qap=74kPtefm=xKY0ORDH37W_3iZPd_7yc8VQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v3 3/4] arm/syscalls: Optimize address limit check
-To: Thomas Gleixner <tglx@linutronix.de>, Thomas Garnier <thgarnie@google.com>, Russell King <linux@armlinux.org.uk>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Yonghong Song <yhs@fb.com>, David Howells <dhowells@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Dave Martin <Dave.Martin@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Linux API <linux-api@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux ARM <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, =?UTF-8?Q?Lothar_Wa=C3=9Fmann?= <LW@karo-electronics.de>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170829124536.GA26339@infradead.org>
+Subject: [kernel-hardening] Re: [PATCH v2 15/30] xfs: Define usercopy region in xfs_inode slab
+ cache
+To: Christoph Hellwig <hch@infradead.org>
+Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, David Windsor <dave@nullcore.net>, "Darrick J. Wong" <darrick.wong@oracle.com>, linux-xfs@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Aug 29, 2017 at 7:32 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> On Tue, Aug 22, 2017 at 9:42 AM, Thomas Garnier <thgarnie@google.com> wrote:
->> On Mon, Aug 14, 2017 at 2:37 PM, Thomas Garnier <thgarnie@google.com> wrote:
->>> Disable the generic address limit check in favor of an architecture
->>> specific optimized implementation. The generic implementation using
->>> pending work flags did not work well with ARM and alignment faults.
->>>
->>> The address limit is checked on each syscall return path to user-mode
->>> path as well as the irq user-mode return function. If the address limit
->>> was changed, a function is called to report data corruption (stopping
->>> the kernel or process based on configuration).
->>>
->>> The address limit check has to be done before any pending work because
->>> they can reset the address limit and the process is killed using a
->>> SIGKILL signal. For example the lkdtm address limit check does not work
->>> because the signal to kill the process will reset the user-mode address
->>> limit.
->>>
->>> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->>
->> Any feedback?
->
-> CCing LW@karo-electronics.de who experienced the same issue this patch
-> proposal fix.
->
-> Russell: Any feedback?
+On Tue, Aug 29, 2017 at 05:45:36AM -0700, Christoph Hellwig wrote:
+> On Tue, Aug 29, 2017 at 10:31:26PM +1000, Dave Chinner wrote:
+> > Probably should.  I've already been looking at killing the inline
+> > extents array to simplify the management of the extent list (much
+> > simpler to index by rbtree when we don't have direct/indirect
+> > structures), so killing the inline data would get rid of the other
+> > part of the union the inline data sits in.
+> 
+> That's exactly where I came form with my extent list work.  Although
+> the rbtree performance was horrible due to the memory overhead and
+> I've switched to a modified b+tree at the moment..
 
-These implement Russell's suggestion. An Ack here would be nice. :) I
-can't throw these into the ARM patch tracker because they depend on
-stuff in -next (and the commit that needs to be reverted is in tglx's
-tree).
+Right, I've looked at btrees, too, but it's more complex than just
+using an rbtree. I originally looked at using Peter Z's old
+RCU-aware btree code, but it doesn't hold data in the tree leaves.
+So that needed significant modification to make work without a
+memory alloc per extent and that didn't work with original aim of
+RCU-safe extent lookups.  I also looked at that "generic" btree
+stuff that came from logfs, and after a little while ran away
+screaming. So if we are going to use a b+tree, it sounds like you
+are probably going the right way.
 
-Regardless, these all test out correctly for me, so:
+As it is, I've been looking at using interval tree - I have kinda
+working code - which basically leaves the page based extent arrays
+intact but adds an rbnode/interval state header to the start of each
+page to track the offsets within the node and propagate them back up
+to the root for fast offset based extent lookups. With a lookaside
+cache on the root, it should behave and perform almost identically
+to the current indirect array and should have very little extra
+overhead....
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Tested-by: Kees Cook <keescook@chromium.org>
+The sticking point, IMO, is the extent array index based lookups in
+all the bmbt code.  I've been looking at converting all that to use
+offset based lookups and a cursor w/ lookup/inc/dec/insert/delete
+ioperations wrapping xfs_iext_lookup_ext() and friends. This means
+the modifications are pretty much identical to the on-disk extent
+btree, so they can be abstracted out into a single extent update
+interface for both trees.  Have you planned/done any cleanup/changes
+with this code?
 
-In a perfect world, these 4 patches should go together with the other
-address limit check patches in tglx's tree. Thomas (Gleixner), can you
-update your tree for the merge window? At the very least, we need to
-revert 73ac5d6a2b6ac ("arm/syscalls: Check address limit on user-mode
-return"), which has caused infinite loops in some cases. Better to
-take all 4 patches in this series, though.
+> > OTOH, if we're going to have to dynamically allocate the memory for
+> > the extent/inline data for the data fork, it may just be easier to
+> > make the entire data fork a dynamic allocation (like the attr fork).
+> 
+> I though about this a bit, but it turned out that we basically
+> always need the data anyway, so I don't think it's going to buy
+> us much unless we shrink the inode enough so that they better fit
+> into a page.
 
-Thanks!
+True. Keep it mind for when we've shrunk the inode by another
+100 bytes...
 
--Kees
+Cheers,
 
+Dave.
 -- 
-Kees Cook
-Pixel Security
+Dave Chinner
+david@fromorbit.com
