@@ -1,36 +1,132 @@
-Date: Tue, 29 Aug 2017 05:45:36 -0700
-From: Christoph Hellwig <hch@infradead.org>
-Message-ID: <20170829124536.GA26339@infradead.org>
-References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
- <1503956111-36652-16-git-send-email-keescook@chromium.org>
- <20170829081453.GA10196@infradead.org>
- <20170829123126.GB10621@dastard>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170829123126.GB10621@dastard>
-Subject: [kernel-hardening] Re: [PATCH v2 15/30] xfs: Define usercopy region in xfs_inode slab
- cache
-To: Dave Chinner <david@fromorbit.com>
-Cc: Christoph Hellwig <hch@infradead.org>, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, David Windsor <dave@nullcore.net>, "Darrick J. Wong" <darrick.wong@oracle.com>, linux-xfs@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <4bcfaf44-a951-f730-638c-65e44bb2cec4@kernel.org>
+References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
+ <1503956111-36652-11-git-send-email-keescook@chromium.org> <4bcfaf44-a951-f730-638c-65e44bb2cec4@kernel.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 29 Aug 2017 08:36:15 -0700
+Message-ID: <CAGXu5jKdO8igDTjazoD4GEqQgv9cSKczYLysXx5Ctiv7YDspfQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v2 10/30] befs: Define usercopy region in befs_inode_cache
+ slab cache
+To: Luis de Bethencourt <luisbg@kernel.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, David Windsor <dave@nullcore.net>, Salah Triki <salah.triki@gmail.com>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Aug 29, 2017 at 10:31:26PM +1000, Dave Chinner wrote:
-> Probably should.  I've already been looking at killing the inline
-> extents array to simplify the management of the extent list (much
-> simpler to index by rbtree when we don't have direct/indirect
-> structures), so killing the inline data would get rid of the other
-> part of the union the inline data sits in.
+On Tue, Aug 29, 2017 at 3:12 AM, Luis de Bethencourt <luisbg@kernel.org> wrote:
+> Hello Kees,
+>
+> This is great. Thanks :)
+>
+> Will merge into my befs tree.
 
-That's exactly where I came form with my extent list work.  Although
-the rbtree performance was horrible due to the memory overhead and
-I've switched to a modified b+tree at the moment..
+Hi! Actually, this depends on the rest of the series, which should be
+merged together. If you can Ack this, I'll include it in my usercopy
+tree.
 
-> OTOH, if we're going to have to dynamically allocate the memory for
-> the extent/inline data for the data fork, it may just be easier to
-> make the entire data fork a dynamic allocation (like the attr fork).
+Thanks!
 
-I though about this a bit, but it turned out that we basically
-always need the data anyway, so I don't think it's going to buy
-us much unless we shrink the inode enough so that they better fit
-into a page.
+-Kees
+
+>
+> Luis
+>
+>
+> On 08/28/2017 10:34 PM, Kees Cook wrote:
+>>
+>> From: David Windsor <dave@nullcore.net>
+>>
+>> befs symlink pathnames, stored in struct befs_inode_info.i_data.symlink
+>> and therefore contained in the befs_inode_cache slab cache, need to be
+>> copied to/from userspace.
+>>
+>> cache object allocation:
+>>      fs/befs/linuxvfs.c:
+>>          befs_alloc_inode(...):
+>>              ...
+>>              bi = kmem_cache_alloc(befs_inode_cachep, GFP_KERNEL);
+>>              ...
+>>              return &bi->vfs_inode;
+>>
+>>          befs_iget(...):
+>>              ...
+>>              strlcpy(befs_ino->i_data.symlink, raw_inode->data.symlink,
+>>                      BEFS_SYMLINK_LEN);
+>>              ...
+>>              inode->i_link = befs_ino->i_data.symlink;
+>>
+>> example usage trace:
+>>      readlink_copy+0x43/0x70
+>>      vfs_readlink+0x62/0x110
+>>      SyS_readlinkat+0x100/0x130
+>>
+>>      fs/namei.c:
+>>          readlink_copy(..., link):
+>>              ...
+>>              copy_to_user(..., link, len);
+>>
+>>          (inlined in vfs_readlink)
+>>          generic_readlink(dentry, ...):
+>>              struct inode *inode = d_inode(dentry);
+>>              const char *link = inode->i_link;
+>>              ...
+>>              readlink_copy(..., link);
+>>
+>> In support of usercopy hardening, this patch defines a region in the
+>> befs_inode_cache slab cache in which userspace copy operations are
+>> allowed.
+>>
+>> This region is known as the slab cache's usercopy region. Slab caches can
+>> now check that each copy operation involving cache-managed memory falls
+>> entirely within the slab's usercopy region.
+>>
+>> This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+>> whitelisting code in the last public patch of grsecurity/PaX based on my
+>> understanding of the code. Changes or omissions from the original code are
+>> mine and don't reflect the original grsecurity/PaX code.
+>>
+>> Signed-off-by: David Windsor <dave@nullcore.net>
+>> [kees: adjust commit log, provide usage trace]
+>> Cc: Luis de Bethencourt <luisbg@kernel.org>
+>> Cc: Salah Triki <salah.triki@gmail.com>
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> ---
+>>   fs/befs/linuxvfs.c | 14 +++++++++-----
+>>   1 file changed, 9 insertions(+), 5 deletions(-)
+>>
+>> diff --git a/fs/befs/linuxvfs.c b/fs/befs/linuxvfs.c
+>> index 4a4a5a366158..1c2dcbee79dd 100644
+>> --- a/fs/befs/linuxvfs.c
+>> +++ b/fs/befs/linuxvfs.c
+>> @@ -444,11 +444,15 @@ static struct inode *befs_iget(struct super_block
+>> *sb, unsigned long ino)
+>>   static int __init
+>>   befs_init_inodecache(void)
+>>   {
+>> -       befs_inode_cachep = kmem_cache_create("befs_inode_cache",
+>> -                                             sizeof (struct
+>> befs_inode_info),
+>> -                                             0, (SLAB_RECLAIM_ACCOUNT|
+>> -
+>> SLAB_MEM_SPREAD|SLAB_ACCOUNT),
+>> -                                             init_once);
+>> +       befs_inode_cachep = kmem_cache_create_usercopy("befs_inode_cache",
+>> +                               sizeof(struct befs_inode_info), 0,
+>> +                               (SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
+>> +                                       SLAB_ACCOUNT),
+>> +                               offsetof(struct befs_inode_info,
+>> +                                       i_data.symlink),
+>> +                               sizeof_field(struct befs_inode_info,
+>> +                                       i_data.symlink),
+>> +                               init_once);
+>>         if (befs_inode_cachep == NULL)
+>>                 return -ENOMEM;
+>>
+>
+>
+
+
+
+-- 
+Kees Cook
+Pixel Security
