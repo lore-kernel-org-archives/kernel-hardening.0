@@ -1,104 +1,123 @@
-Date: Tue, 29 Aug 2017 12:00:36 -0700
-From: "Darrick J. Wong" <darrick.wong@oracle.com>
-Message-ID: <20170829190036.GD4757@magnolia>
-References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
- <1503956111-36652-16-git-send-email-keescook@chromium.org>
- <20170828214957.GJ4757@magnolia>
- <CAGXu5j+pvxRjASUuBE49+uH34Mw26a4mtcWrZd=CEqcRHjetvA@mail.gmail.com>
- <20170829044707.GP4757@magnolia>
- <CAGXu5jJX1DA9D1LtrKkNoBXKZEYhbSE148YmUOP=WXsBCFsCyw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJX1DA9D1LtrKkNoBXKZEYhbSE148YmUOP=WXsBCFsCyw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 15/30] xfs: Define usercopy region in xfs_inode slab
- cache
-To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, David Windsor <dave@nullcore.net>, linux-xfs@vger.kernel.org, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAJcbSZFJQMKw21kLwr4QGoSM7DMgKRzzjWxkYBF2c1HciCzvGg@mail.gmail.com>
+References: <20170810172615.51965-1-thgarnie@google.com> <20170811124127.kkb5pnkljz4umxuj@gmail.com>
+ <CAJcbSZFTX3uiS2g8JriS6+z_+WrG8z3hrQo4OSuyHpiyUDJWYA@mail.gmail.com>
+ <20170815075609.mmzbfwritjzvrpsn@gmail.com> <CAJcbSZE+TiY2whT94WqCJNXzR=2ATOHcQ10H5RqBZA1j=k1VHQ@mail.gmail.com>
+ <20170816151235.oamkdva6cwpc4cex@gmail.com> <CAJcbSZFM_zpL1av1JVaow8NdsGeH+6oZKeDnMPdXR0PGfynzsg@mail.gmail.com>
+ <20170817080920.5ljlkktngw2cisfg@gmail.com> <CAJcbSZGbtc-i0X1NiBAvZA7cxpGkwSLKNB7oDNCsFxOCdhkR_g@mail.gmail.com>
+ <CAJcbSZGhvwt=5ERtBHLJnwS=6AXBZLTMfrafzeUCqYy=-MKWDg@mail.gmail.com>
+ <20170825080443.tvvr6wzs362cjcuu@gmail.com> <CAJcbSZFJQMKw21kLwr4QGoSM7DMgKRzzjWxkYBF2c1HciCzvGg@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Tue, 29 Aug 2017 12:34:04 -0700
+Message-ID: <CAJcbSZH6hwaWKrvUZR33ExYaZaWKMSv4tJJA3yZkniLvLbTFMw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: x86: PIE support and option to extend KASLR randomization
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, xen-devel <xen-devel@lists.xenproject.org>, kvm list <kvm@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Sparse Mailing-list <linux-sparse@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Aug 29, 2017 at 11:48:49AM -0700, Kees Cook wrote:
-> On Mon, Aug 28, 2017 at 9:47 PM, Darrick J. Wong
-> <darrick.wong@oracle.com> wrote:
-> > On Mon, Aug 28, 2017 at 02:57:14PM -0700, Kees Cook wrote:
-> >> On Mon, Aug 28, 2017 at 2:49 PM, Darrick J. Wong
-> >> <darrick.wong@oracle.com> wrote:
-> >> > On Mon, Aug 28, 2017 at 02:34:56PM -0700, Kees Cook wrote:
-> >> >> From: David Windsor <dave@nullcore.net>
-> >> >>
-> >> >> The XFS inline inode data, stored in struct xfs_inode_t field
-> >> >> i_df.if_u2.if_inline_data and therefore contained in the xfs_inode slab
-> >> >> cache, needs to be copied to/from userspace.
-> >> >>
-> >> >> cache object allocation:
-> >> >>     fs/xfs/xfs_icache.c:
-> >> >>         xfs_inode_alloc(...):
-> >> >>             ...
-> >> >>             ip = kmem_zone_alloc(xfs_inode_zone, KM_SLEEP);
-> >> >>
-> >> >>     fs/xfs/libxfs/xfs_inode_fork.c:
-> >> >>         xfs_init_local_fork(...):
-> >> >>             ...
-> >> >>             if (mem_size <= sizeof(ifp->if_u2.if_inline_data))
-> >> >>                     ifp->if_u1.if_data = ifp->if_u2.if_inline_data;
-> >> >
-> >> > Hmm, what happens when mem_size > sizeof(if_inline_data)?  A slab object
-> >> > will be allocated for ifp->if_u1.if_data which can then be used for
-> >> > readlink in the same manner as the example usage trace below.  Does
-> >> > that allocated object have a need for a usercopy annotation like
-> >> > the one we're adding for if_inline_data?  Or is that already covered
-> >> > elsewhere?
-> >>
-> >> Yeah, the xfs helper kmem_alloc() is used in the other case, which
-> >> ultimately boils down to a call to kmalloc(), which is entirely
-> >> whitelisted by an earlier patch in the series:
-> >>
-> >> https://lkml.org/lkml/2017/8/28/1026
-> >
-> > Ah.  It would've been helpful to have the first three patches cc'd to
-> > the xfs list.  So basically this series establishes the ability to set
-> 
-> I went back and forth on that, and given all the things it touched, it
-> seemed like too large a CC list. :) I can explicitly add the xfs list
-> to the first three for any future versions.
-> 
-> > regions within a slab object into which copy_to_user can copy memory
-> > contents, and vice versa.  Have you seen any runtime performance impact?
-> > The overhead looks like it ought to be minimal.
-> 
-> Under CONFIG_HARDENED_USERCOPY, there's no difference in performance
-> between the earlier bounds checking (of the whole slab object) vs the
-> new bounds checking (of the useroffset/usersize portion of the slab
-> object). Perf difference of CONFIG_HARDENED_USERCOPY itself has proven
-> hard to measure, which likely means it's very minimal.
-> 
-> >> (It's possible that at some future time we can start segregating
-> >> kernel-only kmallocs from usercopy-able kmallocs, but for now, there
-> >> are no plans for this.)
-> >
-> > A pity.  It would be interesting to create no-usercopy versions of the
-> > kmalloc-* slabs and see how much of XFS' memory consumption never
-> > touches userspace buffers. :)
-> 
-> There are plans for building either a new helper (kmalloc_usercopy())
-> or adding a new flag (GFP_USERCOPY), but I haven't had time yet to
-> come back around to it. I wanted to land this step first, and we could
-> then move forward on the rest in future.
+On Fri, Aug 25, 2017 at 8:05 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> On Fri, Aug 25, 2017 at 1:04 AM, Ingo Molnar <mingo@kernel.org> wrote:
+>>
+>> * Thomas Garnier <thgarnie@google.com> wrote:
+>>
+>>> With the fix for function tracing, the hackbench results have an
+>>> average of +0.8 to +1.4% (from +8% to +10% before). With a default
+>>> configuration, the numbers are closer to 0.8%.
+>>>
+>>> On the .text size, with gcc 4.9 I see +0.8% on default configuration
+>>> and +1.180% on the ubuntu configuration.
+>>
+>> A 1% text size increase is still significant. Could you look at the disassembly,
+>> where does the size increase come from?
+>
+> I will take a look, in this current iteration I added the .got and
+> .got.plt so removing them will remove a big (even if they are small,
+> we don't use them to increase perf).
+>
+> What do you think about the perf numbers in general so far?
 
-Heh, fair enough.
+I looked at the size increase. I could identify two common cases:
 
-For the XFS bits,
-Reviewed-by: Darrick J. Wong <darrick.wong@oracle.com>
+1) PIE sometime needs two instructions to represent a single
+instruction on mcmodel=kernel.
 
---D
+For example, this instruction plays on the sign extension (mcmodel=kernel):
 
-> 
-> -Kees
-> 
-> -- 
-> Kees Cook
-> Pixel Security
+mov    r9,QWORD PTR [r11*8-0x7e3da060] (8 bytes)
+
+The address 0xffffffff81c25fa0 can be represented as -0x7e3da060 using
+a 32S relocation.
+
+with PIE:
+
+lea    rbx,[rip+<off>] (7 bytes)
+mov    r9,QWORD PTR [rbx+r11*8] (6 bytes)
+
+2) GCC does not optimize switches in PIE in order to reduce relocations:
+
+For example the switch in phy_modes [1]:
+
+static inline const char *phy_modes(phy_interface_t interface)
+{
+    switch (interface) {
+    case PHY_INTERFACE_MODE_NA:
+        return "";
+    case PHY_INTERFACE_MODE_INTERNAL:
+        return "internal";
+    case PHY_INTERFACE_MODE_MII:
+        return "mii";
+
+Without PIE (gcc 7.2.0), the whole table is optimize to be one instruction:
+
+   0x000000000040045b <+27>:    mov    rdi,QWORD PTR [rax*8+0x400660]
+
+With PIE (gcc 7.2.0):
+
+   0x0000000000000641 <+33>:    movsxd rax,DWORD PTR [rdx+rax*4]
+   0x0000000000000645 <+37>:    add    rax,rdx
+   0x0000000000000648 <+40>:    jmp    rax
+....
+   0x000000000000065d <+61>:    lea    rdi,[rip+0x264]        # 0x8c8
+   0x0000000000000664 <+68>:    jmp    0x651 <main+49>
+   0x0000000000000666 <+70>:    lea    rdi,[rip+0x2bc]        # 0x929
+   0x000000000000066d <+77>:    jmp    0x651 <main+49>
+   0x000000000000066f <+79>:    lea    rdi,[rip+0x2a8]        # 0x91e
+   0x0000000000000676 <+86>:    jmp    0x651 <main+49>
+   0x0000000000000678 <+88>:    lea    rdi,[rip+0x294]        # 0x913
+   0x000000000000067f <+95>:    jmp    0x651 <main+49>
+
+That's a deliberate choice, clang is able to optimize it (clang-3.8):
+
+   0x0000000000000963 <+19>:    lea    rcx,[rip+0x200406]        # 0x200d70
+   0x000000000000096a <+26>:    mov    rdi,QWORD PTR [rcx+rax*8]
+
+I checked gcc and the code deciding to fold the switch basically do
+not do it for pic to reduce relocations [2].
+
+The switches are the biggest increase on small functions but I don't
+think they represent a large portion of the difference (number 1 is).
+
+A side note, while testing gcc 7.2.0 on hackbench I have seen the PIE
+kernel being faster by 1% across multiple runs (comparing 50 runs done
+across 5 reboots twice). I don't think PIE is faster than a
+mcmodel=kernel but recent versions of gcc makes them fairly similar.
+
+[1] http://elixir.free-electrons.com/linux/v4.13-rc7/source/include/linux/phy.h#L113
+[2] https://github.com/gcc-mirror/gcc/blob/7977b0509f07e42fbe0f06efcdead2b7e4a5135f/gcc/tree-switch-conversion.c#L828
+
+>
+>>
+>> Thanks,
+>>
+>>         Ingo
+>
+>
+>
 > --
-> To unsubscribe from this list: send the line "unsubscribe linux-xfs" in
-> the body of a message to majordomo@vger.kernel.org
-> More majordomo info at  http://vger.kernel.org/majordomo-info.html
+> Thomas
+
+
+
+-- 
+Thomas
