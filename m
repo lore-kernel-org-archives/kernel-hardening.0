@@ -1,25 +1,110 @@
-Date: Tue, 29 Aug 2017 01:14:53 -0700
-From: Christoph Hellwig <hch@infradead.org>
-Message-ID: <20170829081453.GA10196@infradead.org>
 References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
- <1503956111-36652-16-git-send-email-keescook@chromium.org>
+ <1503956111-36652-11-git-send-email-keescook@chromium.org>
+From: Luis de Bethencourt <luisbg@kernel.org>
+Message-ID: <4bcfaf44-a951-f730-638c-65e44bb2cec4@kernel.org>
+Date: Tue, 29 Aug 2017 11:12:47 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1503956111-36652-16-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v2 15/30] xfs: Define usercopy region in xfs_inode slab
- cache
-To: Kees Cook <keescook@chromium.org>
-Cc: linux-kernel@vger.kernel.org, David Windsor <dave@nullcore.net>, "Darrick J. Wong" <darrick.wong@oracle.com>, linux-xfs@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <1503956111-36652-11-git-send-email-keescook@chromium.org>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 10/30] befs: Define usercopy region in befs_inode_cache
+ slab cache
+To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
+Cc: David Windsor <dave@nullcore.net>, Salah Triki <salah.triki@gmail.com>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-One thing I've been wondering is wether we should actually just
-get rid of the online area.  Compared to reading an inode from
-disk a single additional kmalloc is negligible, and not having the
-inline data / extent list would allow us to reduce the inode size
-significantly.
+Hello Kees,
 
-Kees/David:  how many of these patches are file systems with some
-sort of inline data?  Given that it's only about 30 patches declaring
-allocations either entirely valid for user copy or not might end up
-being nicer in many ways than these offsets.
+This is great. Thanks :)
+
+Will merge into my befs tree.
+
+Luis
+
+On 08/28/2017 10:34 PM, Kees Cook wrote:
+> From: David Windsor <dave@nullcore.net>
+> 
+> befs symlink pathnames, stored in struct befs_inode_info.i_data.symlink
+> and therefore contained in the befs_inode_cache slab cache, need to be
+> copied to/from userspace.
+> 
+> cache object allocation:
+>      fs/befs/linuxvfs.c:
+>          befs_alloc_inode(...):
+>              ...
+>              bi = kmem_cache_alloc(befs_inode_cachep, GFP_KERNEL);
+>              ...
+>              return &bi->vfs_inode;
+> 
+>          befs_iget(...):
+>              ...
+>              strlcpy(befs_ino->i_data.symlink, raw_inode->data.symlink,
+>                      BEFS_SYMLINK_LEN);
+>              ...
+>              inode->i_link = befs_ino->i_data.symlink;
+> 
+> example usage trace:
+>      readlink_copy+0x43/0x70
+>      vfs_readlink+0x62/0x110
+>      SyS_readlinkat+0x100/0x130
+> 
+>      fs/namei.c:
+>          readlink_copy(..., link):
+>              ...
+>              copy_to_user(..., link, len);
+> 
+>          (inlined in vfs_readlink)
+>          generic_readlink(dentry, ...):
+>              struct inode *inode = d_inode(dentry);
+>              const char *link = inode->i_link;
+>              ...
+>              readlink_copy(..., link);
+> 
+> In support of usercopy hardening, this patch defines a region in the
+> befs_inode_cache slab cache in which userspace copy operations are
+> allowed.
+> 
+> This region is known as the slab cache's usercopy region. Slab caches can
+> now check that each copy operation involving cache-managed memory falls
+> entirely within the slab's usercopy region.
+> 
+> This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+> whitelisting code in the last public patch of grsecurity/PaX based on my
+> understanding of the code. Changes or omissions from the original code are
+> mine and don't reflect the original grsecurity/PaX code.
+> 
+> Signed-off-by: David Windsor <dave@nullcore.net>
+> [kees: adjust commit log, provide usage trace]
+> Cc: Luis de Bethencourt <luisbg@kernel.org>
+> Cc: Salah Triki <salah.triki@gmail.com>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>   fs/befs/linuxvfs.c | 14 +++++++++-----
+>   1 file changed, 9 insertions(+), 5 deletions(-)
+> 
+> diff --git a/fs/befs/linuxvfs.c b/fs/befs/linuxvfs.c
+> index 4a4a5a366158..1c2dcbee79dd 100644
+> --- a/fs/befs/linuxvfs.c
+> +++ b/fs/befs/linuxvfs.c
+> @@ -444,11 +444,15 @@ static struct inode *befs_iget(struct super_block *sb, unsigned long ino)
+>   static int __init
+>   befs_init_inodecache(void)
+>   {
+> -	befs_inode_cachep = kmem_cache_create("befs_inode_cache",
+> -					      sizeof (struct befs_inode_info),
+> -					      0, (SLAB_RECLAIM_ACCOUNT|
+> -						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
+> -					      init_once);
+> +	befs_inode_cachep = kmem_cache_create_usercopy("befs_inode_cache",
+> +				sizeof(struct befs_inode_info), 0,
+> +				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
+> +					SLAB_ACCOUNT),
+> +				offsetof(struct befs_inode_info,
+> +					i_data.symlink),
+> +				sizeof_field(struct befs_inode_info,
+> +					i_data.symlink),
+> +				init_once);
+>   	if (befs_inode_cachep == NULL)
+>   		return -ENOMEM;
+>   
+> 
