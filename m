@@ -1,110 +1,127 @@
-References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
- <1503956111-36652-11-git-send-email-keescook@chromium.org>
-From: Luis de Bethencourt <luisbg@kernel.org>
-Message-ID: <4bcfaf44-a951-f730-638c-65e44bb2cec4@kernel.org>
-Date: Tue, 29 Aug 2017 11:12:47 +0100
 MIME-Version: 1.0
-In-Reply-To: <1503956111-36652-11-git-send-email-keescook@chromium.org>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 10/30] befs: Define usercopy region in befs_inode_cache
- slab cache
-To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
-Cc: David Windsor <dave@nullcore.net>, Salah Triki <salah.triki@gmail.com>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CAJcbSZG1b7ObJAv6Kmp-fR3vZRg7AdbcgqDceGB95r-72Yv0yg@mail.gmail.com>
+References: <20170814213732.104301-1-thgarnie@google.com> <20170814213732.104301-3-thgarnie@google.com>
+ <CAJcbSZG1b7ObJAv6Kmp-fR3vZRg7AdbcgqDceGB95r-72Yv0yg@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Tue, 29 Aug 2017 07:32:39 -0700
+Message-ID: <CAJcbSZEd10fMp6OSgSYv_Wmt=wX5fw_Gu-_N=fM_QmP==wUMew@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v3 3/4] arm/syscalls: Optimize address limit check
+To: Al Viro <viro@zeniv.linux.org.uk>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Thomas Garnier <thgarnie@google.com>, Yonghong Song <yhs@fb.com>, David Howells <dhowells@redhat.com>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, Dave Martin <Dave.Martin@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>
+Cc: Linux API <linux-api@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux ARM <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, =?UTF-8?Q?Lothar_Wa=C3=9Fmann?= <LW@karo-electronics.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Kees,
+On Tue, Aug 22, 2017 at 9:42 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> On Mon, Aug 14, 2017 at 2:37 PM, Thomas Garnier <thgarnie@google.com> wrote:
+>> Disable the generic address limit check in favor of an architecture
+>> specific optimized implementation. The generic implementation using
+>> pending work flags did not work well with ARM and alignment faults.
+>>
+>> The address limit is checked on each syscall return path to user-mode
+>> path as well as the irq user-mode return function. If the address limit
+>> was changed, a function is called to report data corruption (stopping
+>> the kernel or process based on configuration).
+>>
+>> The address limit check has to be done before any pending work because
+>> they can reset the address limit and the process is killed using a
+>> SIGKILL signal. For example the lkdtm address limit check does not work
+>> because the signal to kill the process will reset the user-mode address
+>> limit.
+>>
+>> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+>
+> Any feedback?
 
-This is great. Thanks :)
+CCing LW@karo-electronics.de who experienced the same issue this patch
+proposal fix.
 
-Will merge into my befs tree.
+Russel: Any feedback?
 
-Luis
+>
+>> ---
+>>  arch/arm/kernel/entry-common.S | 11 +++++++++++
+>>  arch/arm/kernel/signal.c       |  7 +++++++
+>>  2 files changed, 18 insertions(+)
+>>
+>> diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
+>> index 0b60adf4a5d9..99c908226065 100644
+>> --- a/arch/arm/kernel/entry-common.S
+>> +++ b/arch/arm/kernel/entry-common.S
+>> @@ -12,6 +12,7 @@
+>>  #include <asm/unistd.h>
+>>  #include <asm/ftrace.h>
+>>  #include <asm/unwind.h>
+>> +#include <asm/memory.h>
+>>  #ifdef CONFIG_AEABI
+>>  #include <asm/unistd-oabi.h>
+>>  #endif
+>> @@ -48,10 +49,14 @@ ret_fast_syscall:
+>>   UNWIND(.fnstart       )
+>>   UNWIND(.cantunwind    )
+>>         disable_irq_notrace                     @ disable interrupts
+>> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
+>> +       cmp     r2, #TASK_SIZE
+>> +       blne    addr_limit_check_failed
+>>         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
+>>         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
+>>         bne     fast_work_pending
+>>
+>> +
+>>         /* perform architecture specific actions before user return */
+>>         arch_ret_to_user r1, lr
+>>
+>> @@ -74,6 +79,9 @@ ret_fast_syscall:
+>>   UNWIND(.cantunwind    )
+>>         str     r0, [sp, #S_R0 + S_OFF]!        @ save returned r0
+>>         disable_irq_notrace                     @ disable interrupts
+>> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
+>> +       cmp     r2, #TASK_SIZE
+>> +       blne    addr_limit_check_failed
+>>         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
+>>         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
+>>         beq     no_work_pending
+>> @@ -106,6 +114,9 @@ ENTRY(ret_to_user)
+>>  ret_slow_syscall:
+>>         disable_irq_notrace                     @ disable interrupts
+>>  ENTRY(ret_to_user_from_irq)
+>> +       ldr     r2, [tsk, #TI_ADDR_LIMIT]
+>> +       cmp     r2, #TASK_SIZE
+>> +       blne    addr_limit_check_failed
+>>         ldr     r1, [tsk, #TI_FLAGS]
+>>         tst     r1, #_TIF_WORK_MASK
+>>         bne     slow_work_pending
+>> diff --git a/arch/arm/kernel/signal.c b/arch/arm/kernel/signal.c
+>> index 5814298ef0b7..b67ae12503f3 100644
+>> --- a/arch/arm/kernel/signal.c
+>> +++ b/arch/arm/kernel/signal.c
+>> @@ -14,6 +14,7 @@
+>>  #include <linux/uaccess.h>
+>>  #include <linux/tracehook.h>
+>>  #include <linux/uprobes.h>
+>> +#include <linux/syscalls.h>
+>>
+>>  #include <asm/elf.h>
+>>  #include <asm/cacheflush.h>
+>> @@ -673,3 +674,9 @@ struct page *get_signal_page(void)
+>>
+>>         return page;
+>>  }
+>> +
+>> +/* Defer to generic check */
+>> +asmlinkage void addr_limit_check_failed(void)
+>> +{
+>> +       addr_limit_user_check();
+>> +}
+>> --
+>> 2.14.1.480.gb18f417b89-goog
+>>
+>
+>
+>
+> --
+> Thomas
 
-On 08/28/2017 10:34 PM, Kees Cook wrote:
-> From: David Windsor <dave@nullcore.net>
-> 
-> befs symlink pathnames, stored in struct befs_inode_info.i_data.symlink
-> and therefore contained in the befs_inode_cache slab cache, need to be
-> copied to/from userspace.
-> 
-> cache object allocation:
->      fs/befs/linuxvfs.c:
->          befs_alloc_inode(...):
->              ...
->              bi = kmem_cache_alloc(befs_inode_cachep, GFP_KERNEL);
->              ...
->              return &bi->vfs_inode;
-> 
->          befs_iget(...):
->              ...
->              strlcpy(befs_ino->i_data.symlink, raw_inode->data.symlink,
->                      BEFS_SYMLINK_LEN);
->              ...
->              inode->i_link = befs_ino->i_data.symlink;
-> 
-> example usage trace:
->      readlink_copy+0x43/0x70
->      vfs_readlink+0x62/0x110
->      SyS_readlinkat+0x100/0x130
-> 
->      fs/namei.c:
->          readlink_copy(..., link):
->              ...
->              copy_to_user(..., link, len);
-> 
->          (inlined in vfs_readlink)
->          generic_readlink(dentry, ...):
->              struct inode *inode = d_inode(dentry);
->              const char *link = inode->i_link;
->              ...
->              readlink_copy(..., link);
-> 
-> In support of usercopy hardening, this patch defines a region in the
-> befs_inode_cache slab cache in which userspace copy operations are
-> allowed.
-> 
-> This region is known as the slab cache's usercopy region. Slab caches can
-> now check that each copy operation involving cache-managed memory falls
-> entirely within the slab's usercopy region.
-> 
-> This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
-> whitelisting code in the last public patch of grsecurity/PaX based on my
-> understanding of the code. Changes or omissions from the original code are
-> mine and don't reflect the original grsecurity/PaX code.
-> 
-> Signed-off-by: David Windsor <dave@nullcore.net>
-> [kees: adjust commit log, provide usage trace]
-> Cc: Luis de Bethencourt <luisbg@kernel.org>
-> Cc: Salah Triki <salah.triki@gmail.com>
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
->   fs/befs/linuxvfs.c | 14 +++++++++-----
->   1 file changed, 9 insertions(+), 5 deletions(-)
-> 
-> diff --git a/fs/befs/linuxvfs.c b/fs/befs/linuxvfs.c
-> index 4a4a5a366158..1c2dcbee79dd 100644
-> --- a/fs/befs/linuxvfs.c
-> +++ b/fs/befs/linuxvfs.c
-> @@ -444,11 +444,15 @@ static struct inode *befs_iget(struct super_block *sb, unsigned long ino)
->   static int __init
->   befs_init_inodecache(void)
->   {
-> -	befs_inode_cachep = kmem_cache_create("befs_inode_cache",
-> -					      sizeof (struct befs_inode_info),
-> -					      0, (SLAB_RECLAIM_ACCOUNT|
-> -						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
-> -					      init_once);
-> +	befs_inode_cachep = kmem_cache_create_usercopy("befs_inode_cache",
-> +				sizeof(struct befs_inode_info), 0,
-> +				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
-> +					SLAB_ACCOUNT),
-> +				offsetof(struct befs_inode_info,
-> +					i_data.symlink),
-> +				sizeof_field(struct befs_inode_info,
-> +					i_data.symlink),
-> +				init_once);
->   	if (befs_inode_cachep == NULL)
->   		return -ENOMEM;
->   
-> 
+
+
+-- 
+Thomas
