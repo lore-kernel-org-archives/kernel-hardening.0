@@ -1,72 +1,54 @@
-Date: Wed, 30 Aug 2017 09:47:24 -0700
-From: Tycho Andersen <tycho@docker.com>
-Message-ID: <20170830164724.m6bbogd46ix4qp4o@docker>
-References: <20170809200755.11234-1-tycho@docker.com>
- <20170809200755.11234-5-tycho@docker.com>
- <20170812112603.GB16374@remoulade>
- <20170814163536.6njceqc3dip5lrlu@smitten>
- <20170814165047.GB23428@leverpostej>
- <20170823165842.k5lbxom45avvd7g2@smitten>
- <20170823170443.GD12567@leverpostej>
- <2428d66f-3c31-fa73-0d6a-c16fafa99455@canonical.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <2428d66f-3c31-fa73-0d6a-c16fafa99455@canonical.com>
-Subject: Re: [kernel-hardening] [PATCH v5 04/10] arm64: Add __flush_tlb_one()
-To: Juerg Haefliger <juerg.haefliger@canonical.com>
-Cc: Mark Rutland <mark.rutland@arm.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>
+Message-ID: <1504119302.26846.77.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Wed, 30 Aug 2017 14:55:02 -0400
+In-Reply-To: <1503956111-36652-27-git-send-email-keescook@chromium.org>
+References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
+	 <1503956111-36652-27-git-send-email-keescook@chromium.org>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-gDrkBpl1tnRDV5mbeNIO"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] [PATCH v2 26/30] fork: Provide usercopy
+ whitelisting for task_struct
+To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
+Cc: Andrew Morton <akpm@linux-foundation.org>, Nicholas Piggin <npiggin@gmail.com>, Laura Abbott <labbott@redhat.com>, =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@kernel.org>, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, David Windsor <dave@nullcore.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Aug 30, 2017 at 07:31:25AM +0200, Juerg Haefliger wrote:
-> 
-> 
-> On 08/23/2017 07:04 PM, Mark Rutland wrote:
-> > On Wed, Aug 23, 2017 at 10:58:42AM -0600, Tycho Andersen wrote:
-> >> Hi Mark,
-> >>
-> >> On Mon, Aug 14, 2017 at 05:50:47PM +0100, Mark Rutland wrote:
-> >>> That said, is there any reason not to use flush_tlb_kernel_range()
-> >>> directly?
-> >>
-> >> So it turns out that there is a difference between __flush_tlb_one() and
-> >> flush_tlb_kernel_range() on x86: flush_tlb_kernel_range() flushes all the TLBs
-> >> via on_each_cpu(), where as __flush_tlb_one() only flushes the local TLB (which
-> >> I think is enough here).
-> > 
-> > That sounds suspicious; I don't think that __flush_tlb_one() is
-> > sufficient.
-> > 
-> > If you only do local TLB maintenance, then the page is left accessible
-> > to other CPUs via the (stale) kernel mappings. i.e. the page isn't
-> > exclusively mapped by userspace.
-> 
-> We flush all CPUs to get rid of stale entries when a new page is
-> allocated to userspace that was previously allocated to the kernel.
-> Is that the scenario you were thinking of?
 
-I think there are two cases, the one you describe above, where the
-pages are first allocated, and a second one, where e.g. the pages are
-mapped into the kernel because of DMA or whatever. In the case you
-describe above, I think we're doing the right thing (which is why my
-test worked correctly, because it tested this case).
+--=-gDrkBpl1tnRDV5mbeNIO
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-In the second case, when the pages are unmapped (i.e. the kernel is
-done doing DMA), do we need to flush the other CPUs TLBs? I think the
-current code is not quite correct, because if multiple tasks (CPUs)
-map the pages, only the TLB of the last one is flushed when the
-mapping is cleared, because the tlb is only flushed when ->mapcount
-drops to zero, leaving stale entries in the other TLBs. It's not clear
-to me what to do about this case.
+On Mon, 2017-08-28 at 14:35 -0700, Kees Cook wrote:
+> While the blocked and saved_sigmask fields of task_struct are copied
+> to
+> userspace (via sigmask_to_save() and setup_rt_frame()), it is always
+> copied with a static length (i.e. sizeof(sigset_t)).
+>=20
+> The only portion of task_struct that is potentially dynamically sized
+> and
+> may be copied to userspace is in the architecture-specific
+> thread_struct
+> at the end of task_struct.
+>=20
+Acked-by: Rik van Riel <riel@redhat.com>
 
-Thoughts?
+--=20
+All rights reversed
+--=-gDrkBpl1tnRDV5mbeNIO
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
-Tycho
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
 
-> ...Juerg
-> 
-> 
-> > Thanks,
-> > Mark.
-> > 
-> 
+iQEcBAABCAAGBQJZpwoGAAoJEM553pKExN6DkMUH/jqMAHuDXRsICKlav1+hX4Na
+v5WTBKlFUC6rzz+SSInr4t67RfGP6c8EhcaZdwpi4A/xyqL9ZAMzaEMK9uVGNZoN
+93qbNj3QtYdmu9xJF5JmfLr3+TRuK7HEkAcpCF0Um4yCpH79XsWtc2sbfFbK0+HC
+V5rRv2sCM4OWiR9czzDNYiE82c+F5gdAgTnF4lEnrkKvmqKMVT+T36XvK6F1qoa+
+ExAhSVC8iyXnIowea+zBa5Rw5JxGFy/TclpSxsBEj4V4/Mv1X58V0eLgjP/kVSVg
+Tcp4JnLHholSfSklqWMkgyq3Do+lPIlorAQqos8OFvwyuYNdg6JYEiTgUED/pUY=
+=9/Pr
+-----END PGP SIGNATURE-----
+
+--=-gDrkBpl1tnRDV5mbeNIO--
