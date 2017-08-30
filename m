@@ -1,75 +1,116 @@
-Date: Wed, 30 Aug 2017 11:57:35 +0200
-From: Pavel Machek <pavel@ucw.cz>
-Message-ID: <20170830095735.GB31503@amd>
-References: <20170816231458.2299-1-labbott@redhat.com>
- <20170816231458.2299-3-labbott@redhat.com>
- <20170817033148.ownsmbdzk2vhupme@thunk.org>
+Date: Wed, 30 Aug 2017 13:22:47 +0200
+From: Jan Kara <jack@suse.cz>
+Message-ID: <20170830112247.GA30640@quack2.suse.cz>
+References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
+ <1503956111-36652-9-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="RASg3xLB4tUQ4RcS"
-Content-Disposition: inline
-In-Reply-To: <20170817033148.ownsmbdzk2vhupme@thunk.org>
-Subject: [kernel-hardening] Re: [PATCHv3 2/2] extract early boot entropy from the passed cmdline
-To: Theodore Ts'o <tytso@mit.edu>, Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Daniel Micay <danielmicay@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Andrew Morton <akpm@linux-foundation.org>
-List-ID: <kernel-hardening.lists.openwall.com>
-
-
---RASg3xLB4tUQ4RcS
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <1503956111-36652-9-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v2 08/30] ext2: Define usercopy region in
+ ext2_inode_cache slab cache
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, David Windsor <dave@nullcore.net>, Jan Kara <jack@suse.com>, linux-ext4@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed 2017-08-16 23:31:48, Theodore Ts'o wrote:
-> On Wed, Aug 16, 2017 at 04:14:58PM -0700, Laura Abbott wrote:
-> > From: Daniel Micay <danielmicay@gmail.com>
-> >=20
-> > Existing Android bootloaders usually pass data useful as early entropy
-> > on the kernel command-line. It may also be the case on other embedded
-> > systems.....
->=20
-> May I suggest a slight adjustment to the beginning commit description?
->=20
->    Feed the boot command-line as to the /dev/random entropy pool
->=20
->    Existing Android bootloaders usually pass data which may not be
->    known by an external attacker on the kernel command-line.  It may
->    also be the case on other embedded systems.  Sample command-line
->    from a Google Pixel running CopperheadOS....
->=20
-> The idea here is to if anything, err on the side of under-promising
-> the amount of security we can guarantee that this technique will
-> provide.  For example, how hard is it really for an attacker who has
-> an APK installed locally to get the device serial number?  Or the OS
-> version?  And how much variability is there in the bootloader stages
-> in milliseconds?
->=20
-> I think we should definitely do this.  So this is more of a request to
-> be very careful what we promise in the commit description, not an
-> objection to the change itself.
+On Mon 28-08-17 14:34:49, Kees Cook wrote:
+> From: David Windsor <dave@nullcore.net>
+> 
+> The ext2 symlink pathnames, stored in struct ext2_inode_info.i_data and
+> therefore contained in the ext2_inode_cache slab cache, need to be copied
+> to/from userspace.
+> 
+> cache object allocation:
+>     fs/ext2/super.c:
+>         ext2_alloc_inode(...):
+>             struct ext2_inode_info *ei;
+>             ...
+>             ei = kmem_cache_alloc(ext2_inode_cachep, GFP_NOFS);
+>             ...
+>             return &ei->vfs_inode;
+> 
+>     fs/ext2/ext2.h:
+>         EXT2_I(struct inode *inode):
+>             return container_of(inode, struct ext2_inode_info, vfs_inode);
+> 
+>     fs/ext2/namei.c:
+>         ext2_symlink(...):
+>             ...
+>             inode->i_link = (char *)&EXT2_I(inode)->i_data;
+> 
+> example usage trace:
+>     readlink_copy+0x43/0x70
+>     vfs_readlink+0x62/0x110
+>     SyS_readlinkat+0x100/0x130
+> 
+>     fs/namei.c:
+>         readlink_copy(..., link):
+>             ...
+>             copy_to_user(..., link, len);
+> 
+>         (inlined into vfs_readlink)
+>         generic_readlink(dentry, ...):
+>             struct inode *inode = d_inode(dentry);
+>             const char *link = inode->i_link;
+>             ...
+>             readlink_copy(..., link);
+> 
+> In support of usercopy hardening, this patch defines a region in the
+> ext2_inode_cache slab cache in which userspace copy operations are
+> allowed.
+> 
+> This region is known as the slab cache's usercopy region. Slab caches can
+> now check that each copy operation involving cache-managed memory falls
+> entirely within the slab's usercopy region.
+> 
+> This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+> whitelisting code in the last public patch of grsecurity/PaX based on my
+> understanding of the code. Changes or omissions from the original code are
+> mine and don't reflect the original grsecurity/PaX code.
+> 
+> Signed-off-by: David Windsor <dave@nullcore.net>
+> [kees: adjust commit log, provide usage trace]
+> Cc: Jan Kara <jack@suse.com>
+> Cc: linux-ext4@vger.kernel.org
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
-The command line is visible to unpriviledged userspace (/proc/cmdline,
-dmesg). Is that a problem?
+Looks good. You can add:
 
-U-boot already does some crypto stuff, so it may have some
-randomness. Should we create parameter random=3Dxxxxxxxxxxx that is
-"censored" during kernel boot?
+Acked-by: Jan Kara <jack@suse.cz>
 
-									Pavel
---=20
-(english) http://www.livejournal.com/~pavelmachek
-(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
-g.html
+								Honza
 
---RASg3xLB4tUQ4RcS
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iEYEARECAAYFAlmmjA8ACgkQMOfwapXb+vJx+gCfbuzNxz5YCVMu8ZMV0UZgXiRB
-JRsAoLojraEOtgUHHZR5Yk4VSfVR5Ijw
-=3UhI
------END PGP SIGNATURE-----
-
---RASg3xLB4tUQ4RcS--
+> ---
+>  fs/ext2/super.c | 12 +++++++-----
+>  1 file changed, 7 insertions(+), 5 deletions(-)
+> 
+> diff --git a/fs/ext2/super.c b/fs/ext2/super.c
+> index 7b1bc9059863..670142cde59d 100644
+> --- a/fs/ext2/super.c
+> +++ b/fs/ext2/super.c
+> @@ -219,11 +219,13 @@ static void init_once(void *foo)
+>  
+>  static int __init init_inodecache(void)
+>  {
+> -	ext2_inode_cachep = kmem_cache_create("ext2_inode_cache",
+> -					     sizeof(struct ext2_inode_info),
+> -					     0, (SLAB_RECLAIM_ACCOUNT|
+> -						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
+> -					     init_once);
+> +	ext2_inode_cachep = kmem_cache_create_usercopy("ext2_inode_cache",
+> +				sizeof(struct ext2_inode_info), 0,
+> +				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
+> +					SLAB_ACCOUNT),
+> +				offsetof(struct ext2_inode_info, i_data),
+> +				sizeof_field(struct ext2_inode_info, i_data),
+> +				init_once);
+>  	if (ext2_inode_cachep == NULL)
+>  		return -ENOMEM;
+>  	return 0;
+> -- 
+> 2.7.4
+> 
+> 
+-- 
+Jan Kara <jack@suse.com>
+SUSE Labs, CR
