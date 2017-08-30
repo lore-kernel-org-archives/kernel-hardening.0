@@ -1,227 +1,104 @@
-Date: Wed, 30 Aug 2017 18:05:58 +1000
-From: Dave Chinner <david@fromorbit.com>
-Message-ID: <20170830080558.GK10621@dastard>
-References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
- <1503956111-36652-16-git-send-email-keescook@chromium.org>
- <20170829081453.GA10196@infradead.org>
- <20170829123126.GB10621@dastard>
- <20170829124536.GA26339@infradead.org>
- <20170829215157.GC10621@dastard>
- <20170830071403.GA8904@infradead.org>
+References: <20170809200755.11234-1-tycho@docker.com>
+ <20170809200755.11234-5-tycho@docker.com> <20170812112603.GB16374@remoulade>
+ <20170814163536.6njceqc3dip5lrlu@smitten>
+ <20170814165047.GB23428@leverpostej>
+ <20170823165842.k5lbxom45avvd7g2@smitten>
+ <20170823170443.GD12567@leverpostej>
+From: Juerg Haefliger <juerg.haefliger@canonical.com>
+Message-ID: <2428d66f-3c31-fa73-0d6a-c16fafa99455@canonical.com>
+Date: Wed, 30 Aug 2017 07:31:25 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170830071403.GA8904@infradead.org>
-Subject: [kernel-hardening] Re: [PATCH v2 15/30] xfs: Define usercopy region in xfs_inode slab
- cache
-To: Christoph Hellwig <hch@infradead.org>
-Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, David Windsor <dave@nullcore.net>, "Darrick J. Wong" <darrick.wong@oracle.com>, linux-xfs@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20170823170443.GD12567@leverpostej>
+Content-Type: multipart/signed; micalg=pgp-sha256;
+ protocol="application/pgp-signature";
+ boundary="A6exSVd4e9U3pOIGSQJPXxWSpn5KhIE8w"
+Subject: Re: [kernel-hardening] [PATCH v5 04/10] arm64: Add __flush_tlb_one()
+To: Mark Rutland <mark.rutland@arm.com>, Tycho Andersen <tycho@docker.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Aug 30, 2017 at 12:14:03AM -0700, Christoph Hellwig wrote:
-> On Wed, Aug 30, 2017 at 07:51:57AM +1000, Dave Chinner wrote:
-> > Right, I've looked at btrees, too, but it's more complex than just
-> > using an rbtree. I originally looked at using Peter Z's old
-> > RCU-aware btree code, but it doesn't hold data in the tree leaves.
-> > So that needed significant modification to make work without a
-> > memory alloc per extent and that didn't work with original aim of
-> > RCU-safe extent lookups.  I also looked at that "generic" btree
-> > stuff that came from logfs, and after a little while ran away
-> > screaming.
-> 
-> I started with the latter, but it's not really looking like it any more:
-> there nodes are formatted as a series of u64s instead of all the
-> long magic,
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--A6exSVd4e9U3pOIGSQJPXxWSpn5KhIE8w
+Content-Type: multipart/mixed; boundary="irH4NmKN7wMDrNE8J2tbOkjU4JO732xNG";
+ protected-headers="v1"
+From: Juerg Haefliger <juerg.haefliger@canonical.com>
+To: Mark Rutland <mark.rutland@arm.com>, Tycho Andersen <tycho@docker.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org,
+ kernel-hardening@lists.openwall.com,
+ Marco Benatto <marco.antonio.780@gmail.com>
+Message-ID: <2428d66f-3c31-fa73-0d6a-c16fafa99455@canonical.com>
+Subject: Re: [kernel-hardening] [PATCH v5 04/10] arm64: Add __flush_tlb_one()
+References: <20170809200755.11234-1-tycho@docker.com>
+ <20170809200755.11234-5-tycho@docker.com> <20170812112603.GB16374@remoulade>
+ <20170814163536.6njceqc3dip5lrlu@smitten>
+ <20170814165047.GB23428@leverpostej>
+ <20170823165842.k5lbxom45avvd7g2@smitten>
+ <20170823170443.GD12567@leverpostej>
+In-Reply-To: <20170823170443.GD12567@leverpostej>
 
-Yeah, that was about where I started to run away and look for
-something nicer....
+--irH4NmKN7wMDrNE8J2tbOkjU4JO732xNG
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: quoted-printable
 
-> and the data is stored inline - in fact I use a cute
-> trick to keep the size down, derived from our "compressed" on disk
-> extent format:
-> 
-> Key:
-> 
->  +-------+----------------------------+
->  | 00:51 | all 52 bits of startoff    |
->  | 52:63 | low 12 bits of startblock  |
->  +-------+----------------------------+
-> 
-> Value
-> 
->  +-------+----------------------------+
->  | 00:20 | all 21 bits of length      |
->  |    21 | unwritten extent bit       |
->  | 22:63 | high 42 bits of startblock |
->  +-------+----------------------------+
-> 
-> So we only need a 64-bit key and a 64-bit value by abusing parts
-> of the key to store bits of the startblock.
 
-Neat! :)
 
-> For non-leaf nodes we iterate through the keys only, never touching
-> the cache lines for the value.  For the leaf nodes we have to touch
-> the value anyway because we have to do a range lookup to find the
-> exact record.
-> 
-> This works fine so far in an isolated simulator, and now I'm ammending
-> it to be a b+tree with pointers to the previous and next node so
-> that we can nicely implement our extent iterators instead of doing
-> full lookups.
+On 08/23/2017 07:04 PM, Mark Rutland wrote:
+> On Wed, Aug 23, 2017 at 10:58:42AM -0600, Tycho Andersen wrote:
+>> Hi Mark,
+>>
+>> On Mon, Aug 14, 2017 at 05:50:47PM +0100, Mark Rutland wrote:
+>>> That said, is there any reason not to use flush_tlb_kernel_range()
+>>> directly?
+>>
+>> So it turns out that there is a difference between __flush_tlb_one() a=
+nd
+>> flush_tlb_kernel_range() on x86: flush_tlb_kernel_range() flushes all =
+the TLBs
+>> via on_each_cpu(), where as __flush_tlb_one() only flushes the local T=
+LB (which
+>> I think is enough here).
+>=20
+> That sounds suspicious; I don't think that __flush_tlb_one() is
+> sufficient.
+>=20
+> If you only do local TLB maintenance, then the page is left accessible
+> to other CPUs via the (stale) kernel mappings. i.e. the page isn't
+> exclusively mapped by userspace.
 
-Ok, that sounds exactly what I have been looking towards....
+We flush all CPUs to get rid of stale entries when a new page is
+allocated to userspace that was previously allocated to the kernel.
+Is that the scenario you were thinking of?
 
-> > The sticking point, IMO, is the extent array index based lookups in
-> > all the bmbt code.  I've been looking at converting all that to use
-> > offset based lookups and a cursor w/ lookup/inc/dec/insert/delete
-> > ioperations wrapping xfs_iext_lookup_ext() and friends. This means
-> > the modifications are pretty much identical to the on-disk extent
-> > btree, so they can be abstracted out into a single extent update
-> > interface for both trees.  Have you planned/done any cleanup/changes
-> > with this code?
-> 
-> I've done various cleanups, but I've not yet consolidated the two.
-> Basically step one at the moment is to move everyone to
-> xfs_iext_lookup_extent + xfs_iext_get_extent that removes all the
-> bad intrusion.
+=2E..Juerg
 
-Yup.
 
-> Once we move to the actual b+trees the extnum_t cursor will be replaced
-> with a real cursor structure that contains a pointer to the current
-> b+tree leaf node, and an index inside that, which will allows us very
-> efficient iteration.  The xfs_iext_get_extent calls will be replaced
-> with more specific xfs_iext_prev_extent, xfs_iext_next_extent calls
-> that include the now slightly more complex cursor decrement, increment
-> as well as a new xfs_iext_last_extent helper for the last extent
-> that we need in a few places.
+> Thanks,
+> Mark.
+>=20
 
-Ok, that's sounds like it'll fit right in with what I've been
-prototyping for the extent code in xfs_bmap.c. I can make that work
-with a cursor-based lookup/inc/dec/ins/del API similar to the bmbt
-API. I've been looking to abstract the extent manipulations out into
-functions that modify both trees like this:
 
-[note: just put template code in to get my thoughts straight, it's
-not working code]
+--irH4NmKN7wMDrNE8J2tbOkjU4JO732xNG--
 
-+static int
-+xfs_bmex_delete(
-+       struct xfs_iext_cursor          *icur,
-+       struct xfs_btree_cursor         *cur,
-+       int                             *nextents)
-+{
-+       int                             i;
-+
-+       xfs_iext_remove(bma->ip, bma->idx + 1, 2, state);
-+       if (nextents)
-+               (*nextents)--;
-+       if (!cur)
-+               return 0;
-+       error = xfs_btree_delete(cur, &i);
-+       if (error)
-+               return error;
-+       XFS_WANT_CORRUPTED_RETURN(cur->bc_mp, i == 1);
-+       return 0;
-+}
-+
-+static int
-+xfs_bmex_increment(
-+       struct xfs_iext_cursor          *icur,
-+       struct xfs_btree_cursor         *cur)
-+{
-+       int                             i;
-+
-+       icur->ep = xfs_iext_get_right_ext(icur->ep);
-+       if (!cur)
-+               return 0;
-+       error = xfs_btree_increment(cur, 0, &i);
-+       if (error)
-+               return error;
-+       XFS_WANT_CORRUPTED_RETURN(cur->bc_mp, i == 1);
-+       return 0;
-+}
-+
-+static int
-+xfs_bmex_decrement(
-+       struct xfs_iext_cursor          *icur,
-+       struct xfs_btree_cursor         *cur)
-+{
-+       int                             i;
-+
-+       icur->ep = xfs_iext_get_left_ext(icur->ep);
-+       if (!cur)
-+               return 0;
-+       error = xfs_btree_decrement(cur, 0, &i);
-+       if (error)
-+               return error;
-+       XFS_WANT_CORRUPTED_RETURN(cur->bc_mp, i == 1);
-+       return 0;
-+}
+--A6exSVd4e9U3pOIGSQJPXxWSpn5KhIE8w
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
 
-And so what you're doing would fit straight into that. I'm
-ending up with is extent operations that look like this:
+-----BEGIN PGP SIGNATURE-----
 
-xfs_bmap_add_extent_delay_real()
-.....
-	case BMAP_LEFT_FILLING | BMAP_LEFT_CONTIG |
-             BMAP_RIGHT_FILLING | BMAP_RIGHT_CONTIG:
-                /*
-                 * Filling in all of a previously delayed allocation extent.
-                 * The left and right neighbors are both contiguous with new.
-                 */
-+               rval |= XFS_ILOG_CORE;
-+
-+               /* remove the incore delalloc extent first */
-+               error = xfs_bmex_delete(&icur, NULL, nextents);
-+               if (error)
-+                       goto done;
-+
-+               /*
-+                * update incore and bmap extent trees
-+                *      1. set cursors to the right extent
-+                *      2. remove the right extent
-+                *      3. update the left extent to span all 3 extent ranges
-+                */
-+               error = xfs_bmex_lookup_eq(&icur, bma->cur, RIGHT.br_startoff,
-+                               RIGHT.br_startblock, RIGHT.br_blockcount, 1);
-+               if (error)
-+                       goto done;
-+               error = xfs_bmex_delete(&icur, bma->cur, NULL);
-+               if (error)
-+                       goto done;
-+               error = xfs_bmex_decrement(&icur, bma->cur);
-+               if (error)
-+                       goto done;
-+               error = xfs_bmex_update(&icur, bma->cur, LEFT.br_startoff,
-+                               LEFT.br_startblock,
-+                               LEFT.br_blockcount + PREV.br_blockcount +
-+                                       RIGHT.br_blockcount,
-+                               LEFT.br_state);
-+               if (error)
-+                       goto done;
- 		break;
-....
+iQI7BAEBCAAlBQJZpk2tHhxqdWVyZy5oYWVmbGlnZXJAY2Fub25pY2FsLmNvbQAK
+CRB1TDqW+fi0jDAIEACVZxelTLbWy+NwTXC/GcrJ9nHlD6y65VQ3czwQhdSOdY6K
+QfzpYKvXVbxYhf+2zqEacg3mSskZs5XU6p9wVjf6JLmNulDJLJxpNYyMYTSIm4oh
+O/EBDMiQTpACQXzPWZwgOYhviepx022E37Soonp3r8PlAeRvJWXlpITP4sDEDDB6
+3dVHAciqdgihh2kbtY93G/uiHAS44CBKis93IWKXLorXLuKu21DJzk2GSwLfUINq
+ZdbDsbjAUWxjrOS479BZJKp4X3/zigP8vNLBF8qx6Z+6WwwYLQzQD+0hHmXTa5GL
+VND4FqWU9y9U9ORwOI7cVYS+S/00PNA9jAvwm4Qm1oQUDX+bHHSuXgDK79wgAsr0
+9caduoFoPlsPtF/MlfEgVOjYTWEY040IEFGJQyIZIauGUqWe/4Z1IsokuS0qIJJt
+252lXFh6qfXu7A6W+fQ4kSED57gD4t/pJAT1c7MansvGl2q+W2qIC7QjWrmqSKD2
++Rk5GsIWAND0wSOz+O/2pM4KTwrDRlMutiTSlsueqEFwNmO6V+UTKLOz5nTwEAU0
+uhBLctbblPLEjXpZv38H3heN8qTpwz2g98hv0hf8sa7D7FHaYuTd2/Zn2QNmhRC8
+O0AiPoc6FxyJwj2VWYigF6YDZecP9FOB+C+t8pbLKaSdepfL/BF/rjU+bC6P7g==
+=+9Xg
+-----END PGP SIGNATURE-----
 
-And I'm starting to see where there are common extent manipulations
-being done so there's probably a fair amount of further factoring
-that can be done on top of this....
-
-> insert/delete remain very similar to what they do right now, they'll
-> get a different cursor type, and the manual xfs_iext_add calls will
-> go away.  The new xfs_iext_update_extent helper I posted to the list
-> yesterday will become a bit more complex, as changing the startoff
-> will have to be propagated up the tree.
-
-I've had a quick look at them and pulled it down into my tree for
-testing (which had a cpu burning hang on xfs/020 a few minutes ago),
-but I'll spend more time grokking them tomorrow.
-
-Cheers,
-
-Dave.
-
--- 
-Dave Chinner
-david@fromorbit.com
+--A6exSVd4e9U3pOIGSQJPXxWSpn5KhIE8w--
