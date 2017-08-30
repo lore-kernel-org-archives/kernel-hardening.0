@@ -1,22 +1,72 @@
+Date: Wed, 30 Aug 2017 09:47:24 -0700
+From: Tycho Andersen <tycho@docker.com>
+Message-ID: <20170830164724.m6bbogd46ix4qp4o@docker>
+References: <20170809200755.11234-1-tycho@docker.com>
+ <20170809200755.11234-5-tycho@docker.com>
+ <20170812112603.GB16374@remoulade>
+ <20170814163536.6njceqc3dip5lrlu@smitten>
+ <20170814165047.GB23428@leverpostej>
+ <20170823165842.k5lbxom45avvd7g2@smitten>
+ <20170823170443.GD12567@leverpostej>
+ <2428d66f-3c31-fa73-0d6a-c16fafa99455@canonical.com>
 MIME-Version: 1.0
-In-Reply-To: <20170830095735.GB31503@amd>
-References: <20170816231458.2299-1-labbott@redhat.com> <20170816231458.2299-3-labbott@redhat.com>
- <20170817033148.ownsmbdzk2vhupme@thunk.org> <20170830095735.GB31503@amd>
-From: Nick Kralevich <nnk@google.com>
-Date: Wed, 30 Aug 2017 06:27:40 -0700
-Message-ID: <CAFJ0LnEduPL4RJLyJv-pZdrncfwS0r1mQ_26tKASDB4nf-Xjjw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCHv3 2/2] extract early boot entropy
- from the passed cmdline
-To: Pavel Machek <pavel@ucw.cz>
-Cc: Theodore Ts'o <tytso@mit.edu>, Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Daniel Micay <danielmicay@gmail.com>, kernel-hardening@lists.openwall.com, lkml <linux-kernel@vger.kernel.org>, linux-mm@kvack.org, Andrew Morton <akpm@linux-foundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <2428d66f-3c31-fa73-0d6a-c16fafa99455@canonical.com>
+Subject: Re: [kernel-hardening] [PATCH v5 04/10] arm64: Add __flush_tlb_one()
+To: Juerg Haefliger <juerg.haefliger@canonical.com>
+Cc: Mark Rutland <mark.rutland@arm.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Aug 30, 2017 at 2:57 AM, Pavel Machek <pavel@ucw.cz> wrote:
-> The command line is visible to unpriviledged userspace (/proc/cmdline,
-> dmesg). Is that a problem?
+On Wed, Aug 30, 2017 at 07:31:25AM +0200, Juerg Haefliger wrote:
+> 
+> 
+> On 08/23/2017 07:04 PM, Mark Rutland wrote:
+> > On Wed, Aug 23, 2017 at 10:58:42AM -0600, Tycho Andersen wrote:
+> >> Hi Mark,
+> >>
+> >> On Mon, Aug 14, 2017 at 05:50:47PM +0100, Mark Rutland wrote:
+> >>> That said, is there any reason not to use flush_tlb_kernel_range()
+> >>> directly?
+> >>
+> >> So it turns out that there is a difference between __flush_tlb_one() and
+> >> flush_tlb_kernel_range() on x86: flush_tlb_kernel_range() flushes all the TLBs
+> >> via on_each_cpu(), where as __flush_tlb_one() only flushes the local TLB (which
+> >> I think is enough here).
+> > 
+> > That sounds suspicious; I don't think that __flush_tlb_one() is
+> > sufficient.
+> > 
+> > If you only do local TLB maintenance, then the page is left accessible
+> > to other CPUs via the (stale) kernel mappings. i.e. the page isn't
+> > exclusively mapped by userspace.
+> 
+> We flush all CPUs to get rid of stale entries when a new page is
+> allocated to userspace that was previously allocated to the kernel.
+> Is that the scenario you were thinking of?
 
-These files are not exposed to untrusted processes on Android.
+I think there are two cases, the one you describe above, where the
+pages are first allocated, and a second one, where e.g. the pages are
+mapped into the kernel because of DMA or whatever. In the case you
+describe above, I think we're doing the right thing (which is why my
+test worked correctly, because it tested this case).
 
--- 
-Nick Kralevich | Android Security | nnk@google.com | 650.214.4037
+In the second case, when the pages are unmapped (i.e. the kernel is
+done doing DMA), do we need to flush the other CPUs TLBs? I think the
+current code is not quite correct, because if multiple tasks (CPUs)
+map the pages, only the TLB of the last one is flushed when the
+mapping is cleared, because the tlb is only flushed when ->mapcount
+drops to zero, leaving stale entries in the other TLBs. It's not clear
+to me what to do about this case.
+
+Thoughts?
+
+Tycho
+
+> ...Juerg
+> 
+> 
+> > Thanks,
+> > Mark.
+> > 
+> 
