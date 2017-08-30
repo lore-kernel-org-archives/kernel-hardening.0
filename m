@@ -1,40 +1,75 @@
-Date: Wed, 30 Aug 2017 01:33:44 -0700
-From: Christoph Hellwig <hch@infradead.org>
-Message-ID: <20170830083344.GA30197@infradead.org>
-References: <1503956111-36652-1-git-send-email-keescook@chromium.org>
- <1503956111-36652-16-git-send-email-keescook@chromium.org>
- <20170829081453.GA10196@infradead.org>
- <20170829123126.GB10621@dastard>
- <20170829124536.GA26339@infradead.org>
- <20170829215157.GC10621@dastard>
- <20170830071403.GA8904@infradead.org>
- <20170830080558.GK10621@dastard>
+Date: Wed, 30 Aug 2017 11:57:35 +0200
+From: Pavel Machek <pavel@ucw.cz>
+Message-ID: <20170830095735.GB31503@amd>
+References: <20170816231458.2299-1-labbott@redhat.com>
+ <20170816231458.2299-3-labbott@redhat.com>
+ <20170817033148.ownsmbdzk2vhupme@thunk.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="RASg3xLB4tUQ4RcS"
 Content-Disposition: inline
-In-Reply-To: <20170830080558.GK10621@dastard>
-Subject: [kernel-hardening] Re: [PATCH v2 15/30] xfs: Define usercopy region in xfs_inode slab
- cache
-To: Dave Chinner <david@fromorbit.com>
-Cc: Christoph Hellwig <hch@infradead.org>, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, David Windsor <dave@nullcore.net>, "Darrick J. Wong" <darrick.wong@oracle.com>, linux-xfs@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20170817033148.ownsmbdzk2vhupme@thunk.org>
+Subject: [kernel-hardening] Re: [PATCHv3 2/2] extract early boot entropy from the passed cmdline
+To: Theodore Ts'o <tytso@mit.edu>, Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Daniel Micay <danielmicay@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Aug 30, 2017 at 06:05:58PM +1000, Dave Chinner wrote:
-> Ok, that's sounds like it'll fit right in with what I've been
-> prototyping for the extent code in xfs_bmap.c. I can make that work
-> with a cursor-based lookup/inc/dec/ins/del API similar to the bmbt
-> API. I've been looking to abstract the extent manipulations out into
-> functions that modify both trees like this:
-> 
-> [note: just put template code in to get my thoughts straight, it's
-> not working code]
 
-FYI, I've got somewhat working changes in that area (still has bugs
-but a few tests pass :)), what I'm doing is to make sure all of
-the xfs_bmap_{add,del}_extent_* routines fully operate on xfs_bmbt_irec
-structures that they acquire through the xfs_bmalloca structure or
-from xfs_iext_get_extent and update using xfs_iext_update_extent.
-A nice fallout from that is that we can change the prototypes for
-xfs_bmbt_lookup_* and xfs_bmbt_update to take a xfs_bmbt_irec
-as well instead of taking the individual arguments.  That should
-help with your next step cleanups a bit.
+--RASg3xLB4tUQ4RcS
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
+
+On Wed 2017-08-16 23:31:48, Theodore Ts'o wrote:
+> On Wed, Aug 16, 2017 at 04:14:58PM -0700, Laura Abbott wrote:
+> > From: Daniel Micay <danielmicay@gmail.com>
+> >=20
+> > Existing Android bootloaders usually pass data useful as early entropy
+> > on the kernel command-line. It may also be the case on other embedded
+> > systems.....
+>=20
+> May I suggest a slight adjustment to the beginning commit description?
+>=20
+>    Feed the boot command-line as to the /dev/random entropy pool
+>=20
+>    Existing Android bootloaders usually pass data which may not be
+>    known by an external attacker on the kernel command-line.  It may
+>    also be the case on other embedded systems.  Sample command-line
+>    from a Google Pixel running CopperheadOS....
+>=20
+> The idea here is to if anything, err on the side of under-promising
+> the amount of security we can guarantee that this technique will
+> provide.  For example, how hard is it really for an attacker who has
+> an APK installed locally to get the device serial number?  Or the OS
+> version?  And how much variability is there in the bootloader stages
+> in milliseconds?
+>=20
+> I think we should definitely do this.  So this is more of a request to
+> be very careful what we promise in the commit description, not an
+> objection to the change itself.
+
+The command line is visible to unpriviledged userspace (/proc/cmdline,
+dmesg). Is that a problem?
+
+U-boot already does some crypto stuff, so it may have some
+randomness. Should we create parameter random=3Dxxxxxxxxxxx that is
+"censored" during kernel boot?
+
+									Pavel
+--=20
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
+g.html
+
+--RASg3xLB4tUQ4RcS
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iEYEARECAAYFAlmmjA8ACgkQMOfwapXb+vJx+gCfbuzNxz5YCVMu8ZMV0UZgXiRB
+JRsAoLojraEOtgUHHZR5Yk4VSfVR5Ijw
+=3UhI
+-----END PGP SIGNATURE-----
+
+--RASg3xLB4tUQ4RcS--
