@@ -1,64 +1,91 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sun,  3 Sep 2017 13:07:34 +0100
-Message-Id: <20170903120757.14968-7-ard.biesheuvel@linaro.org>
+Date: Sun,  3 Sep 2017 13:07:35 +0100
+Message-Id: <20170903120757.14968-8-ard.biesheuvel@linaro.org>
 In-Reply-To: <20170903120757.14968-1-ard.biesheuvel@linaro.org>
 References: <20170903120757.14968-1-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v2 06/29] ARM: head.S: use PC-relative insn sequence for secondary_data
+Subject: [kernel-hardening] [PATCH v2 07/29] ARM: kernel: use relative references for UP/SMP alternatives
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Replace the open coded PC relative offset calculations with adr_l
-and ldr_l invocations. This ensures these quantities are invariant
-under runtime relocation.
+To avoid absolute references that are subject to runtime relocation
+when running a kernel built with CONFIG_RELOCATABLE=y, use relative
+references in the smp.alt entries.
 
 Cc: Russell King <linux@armlinux.org.uk>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm/kernel/head.S | 19 ++++---------------
- 1 file changed, 4 insertions(+), 15 deletions(-)
+ arch/arm/include/asm/assembler.h |  4 ++--
+ arch/arm/include/asm/processor.h |  2 +-
+ arch/arm/kernel/head.S           | 10 +++++-----
+ 3 files changed, 8 insertions(+), 8 deletions(-)
 
+diff --git a/arch/arm/include/asm/assembler.h b/arch/arm/include/asm/assembler.h
+index 341e4ed1ef84..a0906c1fc65d 100644
+--- a/arch/arm/include/asm/assembler.h
++++ b/arch/arm/include/asm/assembler.h
+@@ -260,7 +260,7 @@
+  */
+ #define ALT_UP(instr...)					\
+ 	.pushsection ".alt.smp.init", "a"			;\
+-	.long	9998b						;\
++	.long	9998b - .					;\
+ 9997:	instr							;\
+ 	.if . - 9997b == 2					;\
+ 		nop						;\
+@@ -272,7 +272,7 @@
+ #define ALT_UP_B(label)					\
+ 	.equ	up_b_offset, label - 9998b			;\
+ 	.pushsection ".alt.smp.init", "a"			;\
+-	.long	9998b						;\
++	.long	9998b - .					;\
+ 	W(b)	. + up_b_offset					;\
+ 	.popsection
+ #else
+diff --git a/arch/arm/include/asm/processor.h b/arch/arm/include/asm/processor.h
+index c3d5fc124a05..3667b395bb17 100644
+--- a/arch/arm/include/asm/processor.h
++++ b/arch/arm/include/asm/processor.h
+@@ -92,7 +92,7 @@ unsigned long get_wchan(struct task_struct *p);
+ #define __ALT_SMP_ASM(smp, up)						\
+ 	"9998:	" smp "\n"						\
+ 	"	.pushsection \".alt.smp.init\", \"a\"\n"		\
+-	"	.long	9998b\n"					\
++	"	.long	9998b - .\n"					\
+ 	"	" up "\n"						\
+ 	"	.popsection\n"
+ #else
 diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
-index 0a98aec0e39d..6e9df3663a57 100644
+index 6e9df3663a57..ec22f42fd8bb 100644
 --- a/arch/arm/kernel/head.S
 +++ b/arch/arm/kernel/head.S
-@@ -386,10 +386,8 @@ ENTRY(secondary_startup)
- 	/*
- 	 * Use the page tables supplied from  __cpu_up.
- 	 */
--	adr	r4, __secondary_data
--	ldmia	r4, {r5, r7, r12}		@ address to jump to after
--	sub	lr, r4, r5			@ mmu has been enabled
--	add	r3, r7, lr
-+	adr_l	r3, secondary_data
-+	mov_l	r12, __secondary_switched
- 	ldrd	r4, [r3, #0]			@ get secondary_data.pgdir
- ARM_BE8(eor	r4, r4, r5)			@ Swap r5 and r4 in BE:
- ARM_BE8(eor	r5, r4, r5)			@ it can be done in 3 steps
-@@ -404,22 +402,13 @@ ARM_BE8(eor	r4, r4, r5)			@ without using a temp reg.
- ENDPROC(secondary_startup)
- ENDPROC(secondary_startup_arm)
- 
--	/*
--	 * r6  = &secondary_data
--	 */
- ENTRY(__secondary_switched)
--	ldr	sp, [r7, #12]			@ get secondary_data.stack
-+	ldr_l	r7, secondary_data + 12		@ get secondary_data.stack
-+	mov	sp, r7
- 	mov	fp, #0
- 	b	secondary_start_kernel
- ENDPROC(__secondary_switched)
- 
--	.align
--
--	.type	__secondary_data, %object
--__secondary_data:
--	.long	.
--	.long	secondary_data
--	.long	__secondary_switched
- #endif /* defined(CONFIG_SMP) */
- 
- 
+@@ -548,14 +548,15 @@ smp_on_up:
+ __do_fixup_smp_on_up:
+ 	cmp	r4, r5
+ 	reths	lr
+-	ldmia	r4!, {r0, r6}
+- ARM(	str	r6, [r0, r3]	)
+- THUMB(	add	r0, r0, r3	)
++	ldmia	r4, {r0, r6}
++ ARM(	str	r6, [r0, r4]	)
++ THUMB(	add	r0, r0, r4	)
++	add	r4, r4, #8
+ #ifdef __ARMEB__
+  THUMB(	mov	r6, r6, ror #16	)	@ Convert word order for big-endian.
+ #endif
+  THUMB(	strh	r6, [r0], #2	)	@ For Thumb-2, store as two halfwords
+- THUMB(	mov	r6, r6, lsr #16	)	@ to be robust against misaligned r3.
++ THUMB(	mov	r6, r6, lsr #16	)	@ to be robust against misaligned r0.
+  THUMB(	strh	r6, [r0]	)
+ 	b	__do_fixup_smp_on_up
+ ENDPROC(__do_fixup_smp_on_up)
+@@ -564,7 +565,6 @@ ENTRY(fixup_smp)
+ 	stmfd	sp!, {r4 - r6, lr}
+ 	mov	r4, r0
+ 	add	r5, r0, r1
+-	mov	r3, #0
+ 	bl	__do_fixup_smp_on_up
+ 	ldmfd	sp!, {r4 - r6, pc}
+ ENDPROC(fixup_smp)
 -- 
 2.11.0
