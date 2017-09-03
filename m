@@ -1,73 +1,80 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sun,  3 Sep 2017 13:07:37 +0100
-Message-Id: <20170903120757.14968-10-ard.biesheuvel@linaro.org>
+Date: Sun,  3 Sep 2017 13:07:38 +0100
+Message-Id: <20170903120757.14968-11-ard.biesheuvel@linaro.org>
 In-Reply-To: <20170903120757.14968-1-ard.biesheuvel@linaro.org>
 References: <20170903120757.14968-1-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v2 09/29] ARM: sleep.S: use PC-relative insn sequence for sleep_save_sp/mpidr_hash
+Subject: [kernel-hardening] [PATCH v2 10/29] ARM: head.S: use PC-relative insn sequences for __fixup_pv_table
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Replace the open coded PC relative offset calculations with adr_l and
-ldr_l invocations. Note that ALT_SMP() expects a single instruction
-so move the macro invocation after it.
+Replace the open coded PC relative offset calculations with adr_l
+and mov_l invocations. This ensures these quantities are invariant
+under runtime relocation.
 
+Cc: Russell King <linux@armlinux.org.uk>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm/kernel/sleep.S | 19 +++++--------------
- 1 file changed, 5 insertions(+), 14 deletions(-)
+ arch/arm/kernel/head.S | 27 ++++++--------------
+ 1 file changed, 8 insertions(+), 19 deletions(-)
 
-diff --git a/arch/arm/kernel/sleep.S b/arch/arm/kernel/sleep.S
-index 0f6c1000582c..f4920b5d0fc4 100644
---- a/arch/arm/kernel/sleep.S
-+++ b/arch/arm/kernel/sleep.S
-@@ -71,8 +71,9 @@ ENTRY(__cpu_suspend)
- 	ldr	r3, =sleep_save_sp
- 	stmfd	sp!, {r0, r1}		@ save suspend func arg and pointer
- 	ldr	r3, [r3, #SLEEP_SAVE_SP_VIRT]
--	ALT_SMP(ldr r0, =mpidr_hash)
-+	ALT_SMP(W(nop))			@ don't use adr_l inside ALT_SMP()
- 	ALT_UP_B(1f)
-+	adr_l	r0, mpidr_hash
- 	/* This ldmia relies on the memory layout of the mpidr_hash struct */
- 	ldmia	r0, {r1, r6-r8}	@ r1 = mpidr mask (r6,r7,r8) = l[0,1,2] shifts
- 	compute_mpidr_hash	r0, r6, r7, r8, r2, r1
-@@ -137,9 +138,8 @@ ARM_BE8(setend be)			@ ensure we are in BE mode
- 	mov	r1, #0
- 	ALT_SMP(mrc p15, 0, r0, c0, c0, 5)
- 	ALT_UP_B(1f)
--	adr	r2, mpidr_hash_ptr
--	ldr	r3, [r2]
--	add	r2, r2, r3		@ r2 = struct mpidr_hash phys address
-+	adr_l	r2, mpidr_hash		@ r2 = struct mpidr_hash phys address
-+
- 	/*
- 	 * This ldmia relies on the memory layout of the mpidr_hash
- 	 * struct mpidr_hash.
-@@ -147,10 +147,7 @@ ARM_BE8(setend be)			@ ensure we are in BE mode
- 	ldmia	r2, { r3-r6 }	@ r3 = mpidr mask (r4,r5,r6) = l[0,1,2] shifts
- 	compute_mpidr_hash	r1, r4, r5, r6, r0, r3
- 1:
--	adr	r0, _sleep_save_sp
--	ldr	r2, [r0]
--	add	r0, r0, r2
--	ldr	r0, [r0, #SLEEP_SAVE_SP_PHYS]
-+	ldr_l	r0, sleep_save_sp + SLEEP_SAVE_SP_PHYS
- 	ldr	r0, [r0, r1, lsl #2]
- 
- 	@ load phys pgd, stack, resume fn
-@@ -164,12 +161,6 @@ ENDPROC(cpu_resume)
- ENDPROC(cpu_resume_arm)
- #endif
- 
--	.align 2
--_sleep_save_sp:
--	.long	sleep_save_sp - .
--mpidr_hash_ptr:
--	.long	mpidr_hash - .			@ mpidr_hash struct offset
+diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
+index db6b823f20a4..f607e290ef4b 100644
+--- a/arch/arm/kernel/head.S
++++ b/arch/arm/kernel/head.S
+@@ -578,14 +578,11 @@ ENDPROC(fixup_smp)
+  */
+ 	__HEAD
+ __fixup_pv_table:
+-	adr	r0, 1f
+-	ldmia	r0, {r3-r7}
++	adr_l	r6, __pv_phys_pfn_offset
++	adr_l	r7, __pv_offset			@ __pa(__pv_offset)
++	mov_l	r3, __pv_offset			@ __va(__pv_offset)
+ 	mvn	ip, #0
+-	subs	r3, r0, r3	@ PHYS_OFFSET - PAGE_OFFSET
+-	add	r4, r4, r3	@ adjust table start address
+-	add	r5, r5, r3	@ adjust table end address
+-	add	r6, r6, r3	@ adjust __pv_phys_pfn_offset address
+-	add	r7, r7, r3	@ adjust __pv_offset address
++	subs	r3, r7, r3	@ PHYS_OFFSET - PAGE_OFFSET
+ 	mov	r0, r8, lsr #PAGE_SHIFT	@ convert to PFN
+ 	str	r0, [r6]	@ save computed PHYS_OFFSET to __pv_phys_pfn_offset
+ 	strcc	ip, [r7, #HIGH_OFFSET]	@ save to __pv_offset high bits
+@@ -594,20 +591,15 @@ __fixup_pv_table:
+ THUMB(	it	ne		@ cross section branch )
+ 	bne	__error
+ 	str	r3, [r7, #LOW_OFFSET]	@ save to __pv_offset low bits
++	adr_l	r4, __pv_table_begin
++	adr_l	r5, __pv_table_end
+ 	b	__fixup_a_pv_table
+ ENDPROC(__fixup_pv_table)
 -
- 	.data
- 	.type	sleep_save_sp, #object
- ENTRY(sleep_save_sp)
+-	.align
+-1:	.long	.
+-	.long	__pv_table_begin
+-	.long	__pv_table_end
+-2:	.long	__pv_phys_pfn_offset
+-	.long	__pv_offset
++	.ltorg
+ 
+ 	.text
+ __fixup_a_pv_table:
+-	adr	r0, 3f
+-	ldr	r6, [r0]
++	mov_l	r6, __pv_offset
+ 	add	r6, r6, r3
+ 	ldr	r0, [r6, #HIGH_OFFSET]	@ pv_offset high word
+ 	ldr	r6, [r6, #LOW_OFFSET]	@ pv_offset low word
+@@ -676,9 +668,6 @@ ARM_BE8(rev16	ip, ip)
+ #endif
+ ENDPROC(__fixup_a_pv_table)
+ 
+-	.align
+-3:	.long __pv_offset
+-
+ ENTRY(fixup_pv_table)
+ 	stmfd	sp!, {r4 - r7, lr}
+ 	mov	r3, #0			@ no offset
 -- 
 2.11.0
