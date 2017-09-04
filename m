@@ -1,74 +1,267 @@
-Date: Mon, 4 Sep 2017 14:30:13 -0400 (EDT)
+Date: Mon, 4 Sep 2017 14:44:15 -0400 (EDT)
 From: Nicolas Pitre <nicolas.pitre@linaro.org>
-In-Reply-To: <20170903120757.14968-24-ard.biesheuvel@linaro.org>
-Message-ID: <nycvar.YSQ.7.76.1709041427300.8603@knanqh.ubzr>
-References: <20170903120757.14968-1-ard.biesheuvel@linaro.org> <20170903120757.14968-24-ard.biesheuvel@linaro.org>
+In-Reply-To: <20170903120757.14968-25-ard.biesheuvel@linaro.org>
+Message-ID: <nycvar.YSQ.7.76.1709041431320.8603@knanqh.ubzr>
+References: <20170903120757.14968-1-ard.biesheuvel@linaro.org> <20170903120757.14968-25-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v2 23/29] ARM: kernel: refer to swapper_pg_dir via its
- symbol
+Subject: [kernel-hardening] Re: [PATCH v2 24/29] ARM: kernel: implement randomization of the
+ kernel load address
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, Arnd Bergmann <arnd@arndb.de>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Sun, 3 Sep 2017, Ard Biesheuvel wrote:
 
-> The location of swapper_pg_dir is relative to the kernel, not to
-> PAGE_OFFSET or PHYS_OFFSET. So define the symbol relative to the
-> start of the kernel image, and refer to it via its name.
-
-Could it cause a section access mismatch if defined in the __HEAD 
-section?
-
-Otherwise
-
-Acked-by: Nicolas Pitre <nico@linaro.org>
-
+> This implements randomization of the placement of the kernel image
+> inside the lowmem region. It is intended to work together with the
+> decompressor to place the kernel at an offset in physical memory
+> that is a multiple of 2 MB, and to take the same offset into account
+> when creating the virtual mapping.
+> 
+> This uses runtime relocation of the kernel built as a PIE binary, to
+> fix up all absolute symbol references to refer to their runtime virtual
+> address. The physical-to-virtual mapping remains unchanged.
+> 
+> In order to allow the decompressor to hand over to the core kernel
+> without making assumptions that are not guaranteed to hold when
+> invoking the core kernel directly using bootloaders that are not
+> KASLR aware, the KASLR offset is expected to be placed in r3 when
+> entering the kernel 4 bytes past the entry point, skipping the first
+> instruction.
 > 
 > Cc: Russell King <linux@armlinux.org.uk>
 > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 > ---
->  arch/arm/kernel/head.S | 13 ++++---------
->  1 file changed, 4 insertions(+), 9 deletions(-)
+>  arch/arm/Kconfig       |  15 +++
+>  arch/arm/kernel/head.S | 103 ++++++++++++++++++--
+>  2 files changed, 109 insertions(+), 9 deletions(-)
 > 
+> diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+> index 300add3b8023..fe4a2cd1f15c 100644
+> --- a/arch/arm/Kconfig
+> +++ b/arch/arm/Kconfig
+> @@ -1825,6 +1825,21 @@ config XEN
+>  	help
+>  	  Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
+>  
+> +config RANDOMIZE_BASE
+> +	bool "Randomize the address of the kernel image"
+> +	depends on MMU && AUTO_ZRELADDR
+> +	depends on !XIP_KERNEL && !ZBOOT_ROM
+
+This should work even if ZBOOT_ROM is selected. The ZBOOT_ROM option 
+allows for the decompressor executing directly from ROM and 
+decompressing the kernel anywhere in RAM.
+
+
+> +	select RELOCATABLE
+> +	help
+> +	  Randomizes the virtual and physical address at which the kernel
+> +	  image is loaded, as a security feature that deters exploit attempts
+> +	  relying on knowledge of the location of kernel internals.
+> +
+> +	  This relies on the UEFI stub to invoke the EFI_RNG_PROTOCOL to
+> +	  randomize the load address of the decompressed kernel in the
+> +	  physical space. The same offset is applied to the virtual mapping
+> +	  of the kernel in the virtual space by the kernel proper.
+> +
+>  endmenu
+>  
+>  menu "Boot options"
 > diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
-> index 5d685e86148c..71bc0d037bc9 100644
+> index 71bc0d037bc9..0795da990dde 100644
 > --- a/arch/arm/kernel/head.S
 > +++ b/arch/arm/kernel/head.S
-> @@ -48,14 +48,6 @@
+> @@ -48,6 +48,28 @@
 >  #define PMD_ORDER	2
 >  #endif
 >  
-> -	.globl	swapper_pg_dir
-> -	.equ	swapper_pg_dir, KERNEL_RAM_VADDR - PG_DIR_SIZE
-> -
-> -	.macro	pgtbl, rd, phys
-> -	add	\rd, \phys, #TEXT_OFFSET
-> -	sub	\rd, \rd, #PG_DIR_SIZE
-> -	.endm
-> -
+> +	.macro	get_kaslr_offset, reg
+> +#ifdef CONFIG_RANDOMIZE_BASE
+> +	ldr_l			\reg, __kaslr_offset
+> +#else
+> +	mov			\reg, #0
+> +#endif
+> +	.endm
+> +
+> +	.macro	add_kaslr_offset, reg, tmp
+> +#ifdef CONFIG_RANDOMIZE_BASE
+> +	get_kaslr_offset	\tmp
+> +	add			\reg, \reg, \tmp
+> +#endif
+> +	.endm
+> +
+> +	.macro	sub_kaslr_offset, reg, tmp
+> +#ifdef CONFIG_RANDOMIZE_BASE
+> +	get_kaslr_offset	\tmp
+> +	sub			\reg, \reg, \tmp
+> +#endif
+> +	.endm
+> +
 >  /*
 >   * Kernel startup entry point.
 >   * ---------------------------
-> @@ -77,6 +69,9 @@
->  	.arm
+> @@ -73,6 +95,7 @@
+>  	.equ	swapper_pg_dir, . - PG_DIR_SIZE
 >  
->  	__HEAD
-> +	.globl	swapper_pg_dir
-> +	.equ	swapper_pg_dir, . - PG_DIR_SIZE
-> +
 >  ENTRY(stext)
+> +	mov	r3, #0			@ normal entry point - clear r3
 >   ARM_BE8(setend	be )			@ ensure we are in BE8 mode
 >  
-> @@ -172,7 +167,7 @@ ENDPROC(stext)
->   *  r4 = physical page table address
->   */
->  __create_page_tables:
-> -	pgtbl	r4, r8				@ page table address
-> +	adr_l	r4, swapper_pg_dir		@ page table address
+>   THUMB(	badr	r9, 1f		)	@ Kernel is always entered in ARM.
+> @@ -80,6 +103,16 @@ ENTRY(stext)
+>   THUMB(	.thumb			)	@ switch to Thumb now.
+>   THUMB(1:			)
 >  
+> +#ifdef CONFIG_RANDOMIZE_BASE
+> +	str_l	r3, __kaslr_offset, r9	@ offset in r3 if entered via kaslr ep
+> +
+> +	.section ".bss", "aw", %nobits
+> +	.align	2
+> +__kaslr_offset:
+> +	.long	0			@ will be wiped before entering C code
+> +	.previous
+> +#endif
+> +
+>  #ifdef CONFIG_ARM_VIRT_EXT
+>  	bl	__hyp_stub_install
+>  #endif
+> @@ -103,6 +136,7 @@ ENTRY(stext)
+>  #ifndef CONFIG_XIP_KERNEL
+>  	adr_l	r8, _text			@ __pa(_text)
+>  	sub	r8, r8, #TEXT_OFFSET		@ PHYS_OFFSET
+> +	sub_kaslr_offset r8, r12
+>  #else
+>  	ldr	r8, =PLAT_PHYS_OFFSET		@ always constant in this case
+>  #endif
+> @@ -139,8 +173,8 @@ ENTRY(stext)
+>  	 * r0 will hold the CPU control register value, r1, r2, r4, and
+>  	 * r9 will be preserved.  r5 will also be preserved if LPAE.
+>  	 */
+> -	ldr	r13, =__mmap_switched		@ address to jump to after
+> -						@ mmu has been enabled
+> +	adr_l	lr, __primary_switch		@ address to jump to after
+> +	mov	r13, lr				@ mmu has been enabled
+>  	badr	lr, 1f				@ return (PIC) address
+>  #ifdef CONFIG_ARM_LPAE
+>  	mov	r5, #0				@ high TTBR0
+> @@ -151,7 +185,8 @@ ENTRY(stext)
+>  	ldr	r12, [r10, #PROCINFO_INITFUNC]
+>  	add	r12, r12, r10
+>  	ret	r12
+> -1:	b	__enable_mmu
+> +1:	get_kaslr_offset r12			@ get before turning MMU on
+> +	b	__enable_mmu
+>  ENDPROC(stext)
+>  	.ltorg
+>  
+> @@ -230,9 +265,14 @@ __create_page_tables:
 >  	/*
->  	 * Clear the swapper page table
+>  	 * Map our RAM from the start to the end of the kernel .bss section.
+>  	 */
+> -	add	r0, r4, #PAGE_OFFSET >> (SECTION_SHIFT - PMD_ORDER)
+> -	ldr	r6, =(_end - 1)
+> -	orr	r3, r8, r7
+> +	get_kaslr_offset r3
+> +	add	r0, r3, #PAGE_OFFSET
+> +	add	r0, r4, r0, lsr #(SECTION_SHIFT - PMD_ORDER)
+> +	adr_l	r6, _end - 1
+> +	sub	r6, r6, r8
+> +	add	r6, r6, #PAGE_OFFSET
+> +	add	r3, r3, r8
+> +	orr	r3, r3, r7
+>  	add	r6, r4, r6, lsr #(SECTION_SHIFT - PMD_ORDER)
+>  1:	str	r3, [r0], #1 << PMD_ORDER
+>  	add	r3, r3, #1 << SECTION_SHIFT
+> @@ -376,7 +416,7 @@ ENTRY(secondary_startup)
+>  	 * Use the page tables supplied from  __cpu_up.
+>  	 */
+>  	adr_l	r3, secondary_data
+> -	mov_l	r12, __secondary_switched
+> +	adr_l	r12, __secondary_switch
+>  	ldrd	r4, [r3, #0]			@ get secondary_data.pgdir
+>  ARM_BE8(eor	r4, r4, r5)			@ Swap r5 and r4 in BE:
+>  ARM_BE8(eor	r5, r4, r5)			@ it can be done in 3 steps
+> @@ -414,6 +454,7 @@ ENDPROC(__secondary_switched)
+>   *  r4  = TTBR pointer (low word)
+>   *  r5  = TTBR pointer (high word if LPAE)
+>   *  r9  = processor ID
+> + *  r12 = KASLR offset
+>   *  r13 = *virtual* address to jump to upon completion
+>   */
+>  __enable_mmu:
+> @@ -451,6 +492,7 @@ ENDPROC(__enable_mmu)
+>   *  r1  = machine ID
+>   *  r2  = atags or dtb pointer
+>   *  r9  = processor ID
+> + *  r12 = KASLR offset
+>   *  r13 = *virtual* address to jump to upon completion
+>   *
+>   * other registers depend on the function called upon completion
+> @@ -466,10 +508,52 @@ ENTRY(__turn_mmu_on)
+>  	mov	r3, r3
+>  	mov	r3, r13
+>  	ret	r3
+> -__turn_mmu_on_end:
+>  ENDPROC(__turn_mmu_on)
+> -	.popsection
+>  
+> +__primary_switch:
+> +#ifdef CONFIG_RELOCATABLE
+> +	adr_l	r7, _text			@ r7 := __pa(_text)
+> +	sub	r7, r7, #TEXT_OFFSET		@ r7 := PHYS_OFFSET
+> +
+> +	adr_l	r5, __rel_begin
+> +	adr_l	r6, __rel_end
+> +	sub	r5, r5, r7
+> +	sub	r6, r6, r7
+> +
+> +	add	r5, r5, #PAGE_OFFSET
+> +	add	r6, r6, #PAGE_OFFSET
+> +	add	r5, r5, r12
+> +	add	r6, r6, r12
+> +
+> +	adr_l	r3, __stubs_start		@ __pa(__stubs_start)
+> +	sub	r3, r3, r7			@ offset of __stubs_start
+> +	add	r3, r3, #PAGE_OFFSET		@ __va(__stubs_start)
+> +	sub	r3, r3, #0xffff1000		@ subtract VA of stubs section
+> +
+> +0:	cmp	r5, r6
+> +	bge	1f
+> +	ldm	r5!, {r7, r8}			@ load next relocation entry
+> +	cmp	r8, #23				@ R_ARM_RELATIVE
+> +	bne	0b
+> +	cmp	r7, #0xff000000			@ vector page?
+> +	addgt	r7, r7, r3			@ fix up VA offset
+> +	ldr	r8, [r7, r12]
+> +	add	r8, r8, r12
+> +	str	r8, [r7, r12]
+> +	b	0b
+> +1:
+> +#endif
+> +	ldr	pc, =__mmap_switched
+> +ENDPROC(__primary_switch)
+> +
+> +#ifdef CONFIG_SMP
+> +__secondary_switch:
+> +	ldr	pc, =__secondary_switched
+> +ENDPROC(__secondary_switch)
+> +#endif
+> +	.ltorg
+> +__turn_mmu_on_end:
+> +	.popsection
+>  
+>  #ifdef CONFIG_SMP_ON_UP
+>  	__HEAD
+> @@ -570,6 +654,7 @@ __fixup_pv_table:
+>  	adr_l	r6, __pv_phys_pfn_offset
+>  	adr_l	r7, __pv_offset			@ __pa(__pv_offset)
+>  	mov_l	r3, __pv_offset			@ __va(__pv_offset)
+> +	add_kaslr_offset r3, ip
+>  	mvn	ip, #0
+>  	subs	r3, r7, r3	@ PHYS_OFFSET - PAGE_OFFSET
+>  	mov	r0, r8, lsr #PAGE_SHIFT	@ convert to PFN
 > -- 
 > 2.11.0
 > 
