@@ -1,21 +1,21 @@
-Date: Mon, 4 Sep 2017 12:08:25 -0400 (EDT)
+Date: Mon, 4 Sep 2017 12:09:55 -0400 (EDT)
 From: Nicolas Pitre <nicolas.pitre@linaro.org>
-In-Reply-To: <20170903120757.14968-6-ard.biesheuvel@linaro.org>
-Message-ID: <nycvar.YSQ.7.76.1709041208020.8603@knanqh.ubzr>
-References: <20170903120757.14968-1-ard.biesheuvel@linaro.org> <20170903120757.14968-6-ard.biesheuvel@linaro.org>
+In-Reply-To: <20170903120757.14968-7-ard.biesheuvel@linaro.org>
+Message-ID: <nycvar.YSQ.7.76.1709041209470.8603@knanqh.ubzr>
+References: <20170903120757.14968-1-ard.biesheuvel@linaro.org> <20170903120757.14968-7-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v2 05/29] ARM: head-common.S: use PC-relative insn sequence
- for idmap creation
+Subject: [kernel-hardening] Re: [PATCH v2 06/29] ARM: head.S: use PC-relative insn sequence for
+ secondary_data
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, Arnd Bergmann <arnd@arndb.de>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Sun, 3 Sep 2017, Ard Biesheuvel wrote:
 
-> Replace the open coded PC relative offset calculations involving
-> __turn_mmu_on and __turn_mmu_on_end with a pair of adr_l invocations.
-> This ensures these quantities are invariant under runtime relocation.
+> Replace the open coded PC relative offset calculations with adr_l
+> and ldr_l invocations. This ensures these quantities are invariant
+> under runtime relocation.
 > 
 > Cc: Russell King <linux@armlinux.org.uk>
 > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
@@ -23,39 +23,51 @@ On Sun, 3 Sep 2017, Ard Biesheuvel wrote:
 Acked-by: Nicolas Pitre <nico@linaro.org>
 
 > ---
->  arch/arm/kernel/head.S | 12 ++----------
->  1 file changed, 2 insertions(+), 10 deletions(-)
+>  arch/arm/kernel/head.S | 19 ++++---------------
+>  1 file changed, 4 insertions(+), 15 deletions(-)
 > 
 > diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
-> index 04286fd9e09c..0a98aec0e39d 100644
+> index 0a98aec0e39d..6e9df3663a57 100644
 > --- a/arch/arm/kernel/head.S
 > +++ b/arch/arm/kernel/head.S
-> @@ -227,11 +227,8 @@ __create_page_tables:
->  	 * Create identity mapping to cater for __enable_mmu.
->  	 * This identity mapping will be removed by paging_init().
+> @@ -386,10 +386,8 @@ ENTRY(secondary_startup)
+>  	/*
+>  	 * Use the page tables supplied from  __cpu_up.
 >  	 */
-> -	adr	r0, __turn_mmu_on_loc
-> -	ldmia	r0, {r3, r5, r6}
-> -	sub	r0, r0, r3			@ virt->phys offset
-> -	add	r5, r5, r0			@ phys __turn_mmu_on
-> -	add	r6, r6, r0			@ phys __turn_mmu_on_end
-> +	adr_l	r5, __turn_mmu_on		@ _pa(__turn_mmu_on)
-> +	adr_l	r6, __turn_mmu_on_end		@ _pa(__turn_mmu_on_end)
->  	mov	r5, r5, lsr #SECTION_SHIFT
->  	mov	r6, r6, lsr #SECTION_SHIFT
+> -	adr	r4, __secondary_data
+> -	ldmia	r4, {r5, r7, r12}		@ address to jump to after
+> -	sub	lr, r4, r5			@ mmu has been enabled
+> -	add	r3, r7, lr
+> +	adr_l	r3, secondary_data
+> +	mov_l	r12, __secondary_switched
+>  	ldrd	r4, [r3, #0]			@ get secondary_data.pgdir
+>  ARM_BE8(eor	r4, r4, r5)			@ Swap r5 and r4 in BE:
+>  ARM_BE8(eor	r5, r4, r5)			@ it can be done in 3 steps
+> @@ -404,22 +402,13 @@ ARM_BE8(eor	r4, r4, r5)			@ without using a temp reg.
+>  ENDPROC(secondary_startup)
+>  ENDPROC(secondary_startup_arm)
 >  
-> @@ -354,11 +351,6 @@ __create_page_tables:
->  	ret	lr
->  ENDPROC(__create_page_tables)
->  	.ltorg
+> -	/*
+> -	 * r6  = &secondary_data
+> -	 */
+>  ENTRY(__secondary_switched)
+> -	ldr	sp, [r7, #12]			@ get secondary_data.stack
+> +	ldr_l	r7, secondary_data + 12		@ get secondary_data.stack
+> +	mov	sp, r7
+>  	mov	fp, #0
+>  	b	secondary_start_kernel
+>  ENDPROC(__secondary_switched)
+>  
 > -	.align
-> -__turn_mmu_on_loc:
+> -
+> -	.type	__secondary_data, %object
+> -__secondary_data:
 > -	.long	.
-> -	.long	__turn_mmu_on
-> -	.long	__turn_mmu_on_end
+> -	.long	secondary_data
+> -	.long	__secondary_switched
+>  #endif /* defined(CONFIG_SMP) */
 >  
->  #if defined(CONFIG_SMP)
->  	.text
+>  
 > -- 
 > 2.11.0
 > 
