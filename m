@@ -1,70 +1,36 @@
 MIME-Version: 1.0
-In-Reply-To: <nycvar.YSQ.7.76.1709041412160.8603@knanqh.ubzr>
+In-Reply-To: <nycvar.YSQ.7.76.1709041417250.8603@knanqh.ubzr>
 References: <20170903120757.14968-1-ard.biesheuvel@linaro.org>
- <20170903120757.14968-21-ard.biesheuvel@linaro.org> <nycvar.YSQ.7.76.1709041412160.8603@knanqh.ubzr>
+ <20170903120757.14968-22-ard.biesheuvel@linaro.org> <nycvar.YSQ.7.76.1709041417250.8603@knanqh.ubzr>
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 4 Sep 2017 20:14:54 +0100
-Message-ID: <CAKv+Gu_mrngkDQY8YzjhEgfS_UZz3n0deVjXvkzb1XuAvUn4ag@mail.gmail.com>
+Date: Mon, 4 Sep 2017 20:17:40 +0100
+Message-ID: <CAKv+Gu9w6DH9o6-hBRzEKcsovd5TK_NzpygnugnrSMNFrkww+g@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 20/29] ARM: kernel: use PC-relative symbol references
- in MMU switch code
+Subject: [kernel-hardening] Re: [PATCH v2 21/29] ARM: kernel: use PC relative symbol references
+ in suspend/resume code
 To: Nicolas Pitre <nicolas.pitre@linaro.org>
 Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 4 September 2017 at 19:15, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+On 4 September 2017 at 19:24, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
 > On Sun, 3 Sep 2017, Ard Biesheuvel wrote:
 >
->> To prepare for adding support for KASLR, which relocates all absolute
->> symbol references at runtime after the caches have been enabled,
->> update the MMU switch code to avoid using absolute symbol references
->> where possible. This ensures these quantities are invariant under
->> runtime relocation.
+>> Replace some unnecessary absolute references with relative ones. Also,
+>> to prepare for runtime relocation, which occurs with the caches on,
+>> defer taking the absolute address of cpu_resume_after_mmu() until after
+>> the MMU is enabled.
 >>
 >> Cc: Russell King <linux@armlinux.org.uk>
 >> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
->> ---
->>  arch/arm/kernel/head-common.S | 39 ++++++++------------
->>  1 file changed, 15 insertions(+), 24 deletions(-)
->>
->> diff --git a/arch/arm/kernel/head-common.S b/arch/arm/kernel/head-common.S
->> index 06035488130c..b74477507a12 100644
->> --- a/arch/arm/kernel/head-common.S
->> +++ b/arch/arm/kernel/head-common.S
->> @@ -79,9 +79,10 @@ ENDPROC(__vet_atags)
->>   */
->>       __INIT
->>  __mmap_switched:
->> -     adr     r3, __mmap_switched_data
->> -
->> -     ldmia   r3!, {r4, r5, r6, r7}
->> +     adr_l   r4, __data_loc
->> +     adr_l   r5, _sdata
->> +     adr_l   r6, __bss_start
->> +     adr_l   r7, _end
->>       cmp     r4, r5                          @ Copy data segment if needed
->>  1:   cmpne   r5, r6
->>       ldrne   fp, [r4], #4
->> @@ -93,9 +94,17 @@ __mmap_switched:
->>       strcc   fp, [r6],#4
->>       bcc     1b
->>
->> - ARM(        ldmia   r3, {r4, r5, r6, r7, sp})
->> - THUMB(      ldmia   r3, {r4, r5, r6, r7}    )
->> - THUMB(      ldr     sp, [r3, #16]           )
->> +     adr_l   r3, init_thread_union + THREAD_START_SP
->> +     mov     sp, r3
->> +     adr_l   r4, processor_id
->> +     adr_l   r5, __machine_arch_type
->> +     adr_l   r6, __atags_pointer
->> +#ifdef CONFIG_CPU_CP15
->> +     adr_l   r7, cr_alignment
->> +#else
->> +     mov     r7, #0
->> +#endif
 >
-> The code that follows is testing for a non-zero r7 value to store r0 so
-> you could make that code conditional rather than loading 0 here.
+> What's the point of that last hunk? I understand you load the address
+> after the mMU is on. But you should be coming back from a sleep and
+> caches ought to be clean at that point. Not that it is a bad thing to do
+> but I don't understand your reason for it.
 >
 
-OK, I will look into that.
+I simply attempted to eliminate all uses of relocated quantities with
+the caches off, but you are correct that this is only necessary for
+boot and not for suspend/resume. This is actually somewhat of a
+relief, since there is so much SOC specific suspend/resume code under
+arch/arm, and the boot code is mostly shared.
