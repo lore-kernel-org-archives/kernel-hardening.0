@@ -1,56 +1,70 @@
 MIME-Version: 1.0
-In-Reply-To: <nycvar.YSQ.7.76.1709041409530.8603@knanqh.ubzr>
+In-Reply-To: <nycvar.YSQ.7.76.1709041412160.8603@knanqh.ubzr>
 References: <20170903120757.14968-1-ard.biesheuvel@linaro.org>
- <20170903120757.14968-20-ard.biesheuvel@linaro.org> <nycvar.YSQ.7.76.1709041409530.8603@knanqh.ubzr>
+ <20170903120757.14968-21-ard.biesheuvel@linaro.org> <nycvar.YSQ.7.76.1709041412160.8603@knanqh.ubzr>
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 4 Sep 2017 20:10:00 +0100
-Message-ID: <CAKv+Gu8TSBAz5vykf6iseYeGOaKYNYay-YMRH0_dKAg8JbTiiQ@mail.gmail.com>
+Date: Mon, 4 Sep 2017 20:14:54 +0100
+Message-ID: <CAKv+Gu_mrngkDQY8YzjhEgfS_UZz3n0deVjXvkzb1XuAvUn4ag@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 19/29] ARM: kernel: make vmlinux buildable as a PIE executable
+Subject: [kernel-hardening] Re: [PATCH v2 20/29] ARM: kernel: use PC-relative symbol references
+ in MMU switch code
 To: Nicolas Pitre <nicolas.pitre@linaro.org>
 Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Tony Lindgren <tony@atomide.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 4 September 2017 at 19:11, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+On 4 September 2017 at 19:15, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
 > On Sun, 3 Sep 2017, Ard Biesheuvel wrote:
 >
->> Update the build flags and linker script to allow vmlinux to be built
->> as a PIE  binary, which retains relocation information about absolute
->> symbol references so that they can be fixed up at runtime. This will
->> be used for implementing KASLR,
+>> To prepare for adding support for KASLR, which relocates all absolute
+>> symbol references at runtime after the caches have been enabled,
+>> update the MMU switch code to avoid using absolute symbol references
+>> where possible. This ensures these quantities are invariant under
+>> runtime relocation.
 >>
 >> Cc: Russell King <linux@armlinux.org.uk>
 >> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 >> ---
->>  arch/arm/Kconfig                 |  4 ++++
->>  arch/arm/Makefile                |  5 +++++
->>  arch/arm/include/asm/assembler.h |  2 +-
->>  arch/arm/kernel/vmlinux.lds.S    |  9 +++++++++
->>  include/linux/hidden.h           | 20 ++++++++++++++++++++
->>  scripts/module-common.lds        |  1 +
->>  6 files changed, 40 insertions(+), 1 deletion(-)
+>>  arch/arm/kernel/head-common.S | 39 ++++++++------------
+>>  1 file changed, 15 insertions(+), 24 deletions(-)
 >>
->> diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
->> index 61a0cb15067e..300add3b8023 100644
->> --- a/arch/arm/Kconfig
->> +++ b/arch/arm/Kconfig
->> @@ -2085,6 +2085,10 @@ config DMI
->>         firmware need to be enabled. This would require the DMI subsystem
->>         to be enabled much earlier than we do on ARM, which is non-trivial.
+>> diff --git a/arch/arm/kernel/head-common.S b/arch/arm/kernel/head-common.S
+>> index 06035488130c..b74477507a12 100644
+>> --- a/arch/arm/kernel/head-common.S
+>> +++ b/arch/arm/kernel/head-common.S
+>> @@ -79,9 +79,10 @@ ENDPROC(__vet_atags)
+>>   */
+>>       __INIT
+>>  __mmap_switched:
+>> -     adr     r3, __mmap_switched_data
+>> -
+>> -     ldmia   r3!, {r4, r5, r6, r7}
+>> +     adr_l   r4, __data_loc
+>> +     adr_l   r5, _sdata
+>> +     adr_l   r6, __bss_start
+>> +     adr_l   r7, _end
+>>       cmp     r4, r5                          @ Copy data segment if needed
+>>  1:   cmpne   r5, r6
+>>       ldrne   fp, [r4], #4
+>> @@ -93,9 +94,17 @@ __mmap_switched:
+>>       strcc   fp, [r6],#4
+>>       bcc     1b
 >>
->> +config RELOCATABLE
->> +     bool
->> +     select HAVE_ARCH_PREL32_RELOCATIONS
->> +
+>> - ARM(        ldmia   r3, {r4, r5, r6, r7, sp})
+>> - THUMB(      ldmia   r3, {r4, r5, r6, r7}    )
+>> - THUMB(      ldr     sp, [r3, #16]           )
+>> +     adr_l   r3, init_thread_union + THREAD_START_SP
+>> +     mov     sp, r3
+>> +     adr_l   r4, processor_id
+>> +     adr_l   r5, __machine_arch_type
+>> +     adr_l   r6, __atags_pointer
+>> +#ifdef CONFIG_CPU_CP15
+>> +     adr_l   r7, cr_alignment
+>> +#else
+>> +     mov     r7, #0
+>> +#endif
 >
-> You should probably make it depend on !XIP_KERNEL.
+> The code that follows is testing for a non-zero r7 value to store r0 so
+> you could make that code conditional rather than loading 0 here.
 >
 
-Indeed.
-
-> Other than that
->
-> Acked-by: Nicolas Pitre <nico@linaro.org>
->
-
-Thanks.
+OK, I will look into that.
