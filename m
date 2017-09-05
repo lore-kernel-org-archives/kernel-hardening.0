@@ -1,85 +1,56 @@
-Message-ID: <1504608384.22554.17.camel@nxp.com>
-From: Leonard Crestez <leonard.crestez@nxp.com>
-Date: Tue, 5 Sep 2017 13:46:24 +0300
-In-Reply-To: <CAGXu5jKuk9589qap=74kPtefm=xKY0ORDH37W_3iZPd_7yc8VQ@mail.gmail.com>
-References: <20170814213732.104301-1-thgarnie@google.com>
-	 <20170814213732.104301-3-thgarnie@google.com>
-	 <CAJcbSZG1b7ObJAv6Kmp-fR3vZRg7AdbcgqDceGB95r-72Yv0yg@mail.gmail.com>
-	 <CAJcbSZEd10fMp6OSgSYv_Wmt=wX5fw_Gu-_N=fM_QmP==wUMew@mail.gmail.com>
-	 <CAGXu5jKuk9589qap=74kPtefm=xKY0ORDH37W_3iZPd_7yc8VQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
+Date: Tue, 5 Sep 2017 09:45:48 -0700
+From: Tony Lindgren <tony@atomide.com>
+Message-ID: <20170905164547.GA5024@atomide.com>
+References: <20170903120757.14968-1-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH v3 3/4] arm/syscalls: Optimize address limit check
-To: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Thomas Garnier <thgarnie@google.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>
-Cc: Will Drewry <wad@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Kernel
- Hardening <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, David Howells <dhowells@redhat.com>, Dave Hansen <dave.hansen@intel.com>, Al Viro <viro@zeniv.linux.org.uk>, Linux API <linux-api@vger.kernel.org>, Yonghong Song <yhs@fb.com>, Dave Martin <Dave.Martin@arm.com>, Linux ARM <linux-arm-kernel@lists.infradead.org>, Lothar =?ISO-8859-1?Q?Wa=DFmann?= <LW@karo-electronics.de>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170903120757.14968-1-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH v2 00/29] implement KASLR for ARM
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 2017-08-29 at 12:54 -0700, Kees Cook wrote:
-> On Tue, Aug 29, 2017 at 7:32 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> > On Tue, Aug 22, 2017 at 9:42 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> > > On Mon, Aug 14, 2017 at 2:37 PM, Thomas Garnier <thgarnie@google.com> wrote:
-> > > > 
-> > > > Disable the generic address limit check in favor of an architecture
-> > > > specific optimized implementation. The generic implementation using
-> > > > pending work flags did not work well with ARM and alignment faults.
-> > > > 
-> > > > The address limit is checked on each syscall return path to user-mode
-> > > > path as well as the irq user-mode return function. If the address limit
-> > > > was changed, a function is called to report data corruption (stopping
-> > > > the kernel or process based on configuration).
-> > > > 
-> > > > The address limit check has to be done before any pending work because
-> > > > they can reset the address limit and the process is killed using a
-> > > > SIGKILL signal. For example the lkdtm address limit check does not work
-> > > > because the signal to kill the process will reset the user-mode address
-> > > > limit.
-> > > > 
-> > > > Signed-off-by: Thomas Garnier <thgarnie@google.com>
+Hi,
 
-> > > Any feedback?
-
-> > CCing LW@karo-electronics.de who experienced the same issue this patch
-> > proposal fix.
-> > 
-> > Russell: Any feedback?
-
-> These implement Russell's suggestion. An Ack here would be nice. :) I
-> can't throw these into the ARM patch tracker because they depend on
-> stuff in -next (and the commit that needs to be reverted is in tglx's
-> tree).
+* Ard Biesheuvel <ard.biesheuvel@linaro.org> [170903 05:08]:
+> This series implements randomization of the placement of the core ARM kernel
+> inside the lowmem region. It consists of the following parts:
 > 
-> Regardless, these all test out correctly for me, so:
+> - changes that allow us to build vmlinux as a PIE executable which retains
+>   the metadata required to fix up all absolute symbol references at runtime
+> - changes that eliminate absolute references from low-level code that may
+>   execute with the MMU off: this removes the need to perform explicit cache
+>   maintenance after the absolute references have been fixed up at runtime with
+>   the caches enabled
+> - changes to the core kernel startup code to take the physical offset into
+>   account when creating the virtual mapping (the pa-to-va mapping remains
+>   unchanged)
+> - changes to the decompressor to collect some pseudo-entropy, and randomize
+>   the physical offset of the decompressed kernel, taking placement of DTB,
+>   initrd and reserved regions into account
+> - changes to the UEFI stub code to choose the KASLR offset and communicate
+>   it to the decompressor
 > 
-> Reviewed-by: Kees Cook <keescook@chromium.org>
-> Tested-by: Kees Cook <keescook@chromium.org>
-> 
-> In a perfect world, these 4 patches should go together with the other
-> address limit check patches in tglx's tree. Thomas (Gleixner), can you
-> update your tree for the merge window? At the very least, we need to
-> revert 73ac5d6a2b6ac ("arm/syscalls: Check address limit on user-mode
-> return"), which has caused infinite loops in some cases. Better to
-> take all 4 patches in this series, though.
+> To test these changes, boot a multi_v7_defconfig+CONFIG_RANDOMIZE_BASE=y
 
-I also reported this infinite loop issue, several weeks ago:
+I gave a quick try using your arm-kaslr-v3 branch, hopefully that's
+the right one.
 
-https://lkml.org/lkml/2017/7/18/702
+The good news is that now omap3 boots with omap2plus_defconfig with
+and without CONFIG_RANDOMIZE_BASE=y and I did not see any compiler
+errors with my gcc 6.2.0 like earlier :)
 
-It seems that no fix was committed since then and the buggy patch made
-it's way into Linus's tree after the 4.13 release.
+I did see boot attempts fail with randomize enable where no output
+was produced. It seems this is happening for me maybe 1 out of 5 boots.
+Enabling DEBUG_LL did not show anything either.
 
-Perhaps when there is long debate about the "proper" fix the original
-patch should be reverted first, separately? In this particular case the
-series fixing the bug actually includes the revert.
+Then loading modules with CONFIG_RANDOMIZE_BASE=y seems to fail with:
 
-Anyway, I check that this v3 works on my board which was reproducing
-the issue while booting from nfs (imx6sl-evk). The most likely reason
-it's easy to reproduce here is a network driver issue where headers are
-not correctly aligned to 4. This causes lots of alignment faults.
+$ sudo modprobe rtc-twl
+rtc_twl: disagrees about version of symbol module_layout
+modprobe: ERROR: could not insert 'rtc_twl': Exec format error
 
-Tested-by: Leonard Crestez <leonard.crestez@nxp.com>
-
---
 Regards,
-Leonard
+
+Tony
