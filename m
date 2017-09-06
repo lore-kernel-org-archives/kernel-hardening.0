@@ -1,44 +1,51 @@
+Date: Wed, 6 Sep 2017 13:08:05 -0700
+From: Tony Lindgren <tony@atomide.com>
+Message-ID: <20170906200805.GN5024@atomide.com>
+References: <20170906162222.GI5024@atomide.com>
+ <CAKv+Gu__-WeHKDGwg4rNM9Dw8V471wNQX=J3mfz_AUKHVUza_g@mail.gmail.com>
+ <20170906163100.GJ5024@atomide.com>
+ <CAKv+Gu-HGM6T6cV25bo6_bBcZaV-x3qpc9XoYUA4AEx68Joz=A@mail.gmail.com>
+ <20170906171253.GK5024@atomide.com>
+ <CAKv+Gu8ngWMvkmNr77SzL8fEvSc5K-OntoZQ53vgWVLHhAajaw@mail.gmail.com>
+ <20170906175308.GL5024@atomide.com>
+ <CAKv+Gu8qd8oz4wuEjAaR1E3ZUxt4Xr-j4NcLidRrNisVFefzCQ@mail.gmail.com>
+ <20170906182247.GM5024@atomide.com>
+ <CAKv+Gu8N_cjm_5aH=kWt6EKc6sGgQoWDVmdVAVw1Ru_xz1UWEw@mail.gmail.com>
 MIME-Version: 1.0
-From: Sandy Harris <sandyinchina@gmail.com>
-Date: Wed, 6 Sep 2017 14:37:51 -0400
-Message-ID: <CACXcFm=9WzW4H+7u6M6QTF=LzYUx+GKMVndvPj+z2QhzJote3w@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] ME and PSP
-To: kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAKv+Gu8N_cjm_5aH=kWt6EKc6sGgQoWDVmdVAVw1Ru_xz1UWEw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v2 00/29] implement KASLR for ARM
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Recently a few things have been revealed about how to disable the
-Intel Management Engine (ME).
+* Ard Biesheuvel <ard.biesheuvel@linaro.org> [170906 11:25]:
+> Did you capture the image_size and pa_start/pa_end as well?
 
-http://blog.ptsecurity.com/2017/08/disabling-intel-me.html
-https://www.theregister.co.uk/2017/08/29/intel_management_engine_can_be_disabled/
+Sorry I guess that was an incomplete copy & paste, but here's
+another one:
 
-I have not seen anything on disabling the similar AMD feature called
-PSP. Either appears to be a huge security hazard -- a device you have
-little choice but to trust but that you have little control over, that
-operates below the level of the main CPU & OS, that has access to
-everything & that is Turing complete so it can do anything.
+regions.image_size:00e08000
+regions.pa_start:80000000
+regions.pa_end:871f8000
+regions.zimage_start:81000000
+regions.zimage_size:004379e8
+regions.dtb_start:86feb000
+regions.dtb_size:00012000
+regions.initrd_start:00000000
+regions.initrd_size:00000000
+count:00000028
+num:00000025
+*kaslr_offset:05e00000
+Uncompressing Linux... done, booting the kernel.
+Warning: Neither atags nor dtb found
 
-By the time a hardened kernel loads, it may be too late to prevent ME
-entirely, but are there other things the kernel could do? Issue a
-syslog warning? Monitor ME activity somehow? Restrict its access to
-the network so at least external attacks are blocked?
+> In any case, this is the exact same offset that failed before, so the
+> rounding of pa_start wasn't the problem.
 
-There are several different utilities to reduce ME danger, though I
-have not looked at details & I have the impression most do not disable
-it completely. Will current hardened kernels run on a system with ME
-disabled? Is that tested?
+OK
 
-The best summary of the issue I have seen -- though it is neither
-up-to-date nor devoted to only the one issue is:
-https://blog.invisiblethings.org/papers/2015/x86_harmful.pdf
+Regards,
 
-There has been discussion on the Qubes users list:
-https://groups.google.com/forum/#!forum/qubes-users
-
-The only plausible solutions suggested there boil down to not using
-recent x86 chips at all. Either use older Intel/AMD parts without the
-feature or go to IBM Power CPUs.
-
-No-one has mentioned ARM in that discussion & I am not sure where they
-would fit in.
+Tony
