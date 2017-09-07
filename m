@@ -1,85 +1,108 @@
 From: Tycho Andersen <tycho@docker.com>
-Date: Thu,  7 Sep 2017 11:36:02 -0600
-Message-Id: <20170907173609.22696-5-tycho@docker.com>
+Date: Thu,  7 Sep 2017 11:36:04 -0600
+Message-Id: <20170907173609.22696-7-tycho@docker.com>
 In-Reply-To: <20170907173609.22696-1-tycho@docker.com>
 References: <20170907173609.22696-1-tycho@docker.com>
-Subject: [kernel-hardening] [PATCH v6 04/11] swiotlb: Map the buffer if it was unmapped by XPFO
+Subject: [kernel-hardening] [PATCH v6 06/11] xpfo: add primitives for mapping underlying memory
 To: linux-kernel@vger.kernel.org
-Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, Tycho Andersen <tycho@docker.com>
+Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Tycho Andersen <tycho@docker.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Juerg Haefliger <juerg.haefliger@canonical.com>
+In some cases (on arm64 DMA and data cache flushes) we may have unmapped
+the underlying pages needed for something via XPFO. Here are some
+primitives useful for ensuring the underlying memory is mapped/unmapped in
+the face of xpfo.
 
-v6: * guard against lookup_xpfo() returning NULL
-
-CC: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
 Signed-off-by: Tycho Andersen <tycho@docker.com>
 ---
- include/linux/xpfo.h |  4 ++++
- lib/swiotlb.c        |  3 ++-
- mm/xpfo.c            | 15 +++++++++++++++
- 3 files changed, 21 insertions(+), 1 deletion(-)
+ include/linux/xpfo.h | 22 ++++++++++++++++++++++
+ mm/xpfo.c            | 30 ++++++++++++++++++++++++++++++
+ 2 files changed, 52 insertions(+)
 
 diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
-index 442c58ee930e..04590d1dcefa 100644
+index 04590d1dcefa..304b104ec637 100644
 --- a/include/linux/xpfo.h
 +++ b/include/linux/xpfo.h
-@@ -30,6 +30,8 @@ void xpfo_kunmap(void *kaddr, struct page *page);
- void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp);
- void xpfo_free_pages(struct page *page, int order);
+@@ -32,6 +32,15 @@ void xpfo_free_pages(struct page *page, int order);
  
-+bool xpfo_page_is_unmapped(struct page *page);
+ bool xpfo_page_is_unmapped(struct page *page);
+ 
++#define XPFO_NUM_PAGES(addr, size) \
++	(PFN_UP((unsigned long) (addr) + (size)) - \
++		PFN_DOWN((unsigned long) (addr)))
++
++void xpfo_temp_map(const void *addr, size_t size, void **mapping,
++		   size_t mapping_len);
++void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
++		     size_t mapping_len);
 +
  #else /* !CONFIG_XPFO */
  
  static inline void xpfo_kmap(void *kaddr, struct page *page) { }
-@@ -37,6 +39,8 @@ static inline void xpfo_kunmap(void *kaddr, struct page *page) { }
- static inline void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp) { }
- static inline void xpfo_free_pages(struct page *page, int order) { }
+@@ -41,6 +50,19 @@ static inline void xpfo_free_pages(struct page *page, int order) { }
  
-+static inline bool xpfo_page_is_unmapped(struct page *page) { return false; }
+ static inline bool xpfo_page_is_unmapped(struct page *page) { return false; }
+ 
++#define XPFO_NUM_PAGES(addr, size) 0
++
++static inline void xpfo_temp_map(const void *addr, size_t size, void **mapping,
++				 size_t mapping_len)
++{
++}
++
++static inline void xpfo_temp_unmap(const void *addr, size_t size,
++				   void **mapping, size_t mapping_len)
++{
++}
++
 +
  #endif /* CONFIG_XPFO */
  
  #endif /* _LINUX_XPFO_H */
-diff --git a/lib/swiotlb.c b/lib/swiotlb.c
-index a8d74a733a38..d4fee5ca2d9e 100644
---- a/lib/swiotlb.c
-+++ b/lib/swiotlb.c
-@@ -420,8 +420,9 @@ static void swiotlb_bounce(phys_addr_t orig_addr, phys_addr_t tlb_addr,
- {
- 	unsigned long pfn = PFN_DOWN(orig_addr);
- 	unsigned char *vaddr = phys_to_virt(tlb_addr);
-+	struct page *page = pfn_to_page(pfn);
- 
--	if (PageHighMem(pfn_to_page(pfn))) {
-+	if (PageHighMem(page) || xpfo_page_is_unmapped(page)) {
- 		/* The buffer does not have a mapping.  Map it in and copy */
- 		unsigned int offset = orig_addr & ~PAGE_MASK;
- 		char *buffer;
 diff --git a/mm/xpfo.c b/mm/xpfo.c
-index bff24afcaa2e..cdbcbac582d5 100644
+index cdbcbac582d5..f79075bf7d65 100644
 --- a/mm/xpfo.c
 +++ b/mm/xpfo.c
-@@ -220,3 +220,18 @@ void xpfo_kunmap(void *kaddr, struct page *page)
- 	spin_unlock(&xpfo->maplock);
+@@ -13,6 +13,7 @@
+  * the Free Software Foundation.
+  */
+ 
++#include <linux/highmem.h>
+ #include <linux/mm.h>
+ #include <linux/module.h>
+ #include <linux/page_ext.h>
+@@ -235,3 +236,32 @@ bool xpfo_page_is_unmapped(struct page *page)
+ 	return test_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags);
  }
- EXPORT_SYMBOL(xpfo_kunmap);
+ EXPORT_SYMBOL(xpfo_page_is_unmapped);
 +
-+bool xpfo_page_is_unmapped(struct page *page)
++void xpfo_temp_map(const void *addr, size_t size, void **mapping,
++		   size_t mapping_len)
 +{
-+	struct xpfo *xpfo;
++	struct page *page = virt_to_page(addr);
++	int i, num_pages = mapping_len / sizeof(mapping[0]);
 +
-+	if (!static_branch_unlikely(&xpfo_inited))
-+		return false;
++	memset(mapping, 0, mapping_len);
 +
-+	xpfo = lookup_xpfo(page);
-+	if (unlikely(!xpfo) && !xpfo->inited)
-+		return false;
++	for (i = 0; i < num_pages; i++) {
++		if (page_to_virt(page + i) >= addr + size)
++			break;
 +
-+	return test_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags);
++		if (xpfo_page_is_unmapped(page + i))
++			mapping[i] = kmap_atomic(page + i);
++	}
 +}
-+EXPORT_SYMBOL(xpfo_page_is_unmapped);
++EXPORT_SYMBOL(xpfo_temp_map);
++
++void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
++		     size_t mapping_len)
++{
++	int i, num_pages = mapping_len / sizeof(mapping[0]);
++
++	for (i = 0; i < num_pages; i++)
++		if (mapping[i])
++			kunmap_atomic(mapping[i]);
++}
++EXPORT_SYMBOL(xpfo_temp_unmap);
 -- 
 2.11.0
