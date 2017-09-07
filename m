@@ -1,114 +1,304 @@
-From: Ralph Campbell <rcampbell@nvidia.com>
-Date: Thu, 7 Sep 2017 18:33:09 +0000
-Message-ID: <c08ca2d4ac7f4b9a8987f282e697d30c@HQMAIL105.nvidia.com>
-References: <20170907173609.22696-1-tycho@docker.com>
- <20170907173609.22696-4-tycho@docker.com>
-In-Reply-To: <20170907173609.22696-4-tycho@docker.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] RE: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
- Ownership (XPFO)
-To: Tycho Andersen <tycho@docker.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
-Cc: "linux-mm@kvack.org" <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, "x86@kernel.org" <x86@kernel.org>
+Sender: keescook@google.com
+In-Reply-To: <20170907173609.22696-12-tycho@docker.com>
+References: <20170907173609.22696-1-tycho@docker.com> <20170907173609.22696-12-tycho@docker.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 7 Sep 2017 12:08:14 -0700
+Message-ID: <CAGXu5jJSp+8_AgGiG8f8ZaJvCzyk-jTumTAxcVc9yRm_z0OWCw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v6 11/11] lkdtm: Add test for XPFO
+To: Tycho Andersen <tycho@docker.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-> -----Original Message-----
-> From: owner-linux-mm@kvack.org [mailto:owner-linux-mm@kvack.org] On
-> Behalf Of Tycho Andersen
-> Sent: Thursday, September 7, 2017 10:36 AM
-> To: linux-kernel@vger.kernel.org
-> Cc: linux-mm@kvack.org; kernel-hardening@lists.openwall.com; Marco Benatt=
-o
-> <marco.antonio.780@gmail.com>; Juerg Haefliger
-> <juerg.haefliger@canonical.com>; x86@kernel.org; Tycho Andersen
-> <tycho@docker.com>
-> Subject: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
-> Ownership (XPFO)
->=20
+On Thu, Sep 7, 2017 at 10:36 AM, Tycho Andersen <tycho@docker.com> wrote:
 > From: Juerg Haefliger <juerg.haefliger@canonical.com>
->=20
-> This patch adds support for XPFO which protects against 'ret2dir' kernel =
-attacks.
-> The basic idea is to enforce exclusive ownership of page frames by either=
- the
-> kernel or userspace, unless explicitly requested by the kernel. Whenever =
-a page
-> destined for userspace is allocated, it is unmapped from physmap (the ker=
-nel's
-> page table). When such a page is reclaimed from userspace, it is mapped b=
-ack to
-> physmap.
->=20
-> Additional fields in the page_ext struct are used for XPFO housekeeping,
-> specifically:
->   - two flags to distinguish user vs. kernel pages and to tag unmapped
->     pages.
->   - a reference counter to balance kmap/kunmap operations.
->   - a lock to serialize access to the XPFO fields.
->=20
-> This patch is based on the work of Vasileios P. Kemerlis et al. who publi=
-shed their
-> work in this paper:
->   http://www.cs.columbia.edu/~vpk/papers/ret2dir.sec14.pdf
->=20
-> v6: * use flush_tlb_kernel_range() instead of __flush_tlb_one, so we flus=
-h
->       the tlb entry on all CPUs when unmapping it in kunmap
->     * handle lookup_page_ext()/lookup_xpfo() returning NULL
->     * drop lots of BUG()s in favor of WARN()
->     * don't disable irqs in xpfo_kmap/xpfo_kunmap, export
->       __split_large_page so we can do our own alloc_pages(GFP_ATOMIC) to
->       pass it
->=20
-> CC: x86@kernel.org
-> Suggested-by: Vasileios P. Kemerlis <vpk@cs.columbia.edu>
+>
+> This test simply reads from userspace memory via the kernel's linear
+> map.
+>
+> v6: * drop an #ifdef, just let the test fail if XPFO is not supported
+>     * add XPFO_SMP test to try and test the case when one CPU does an xpfo
+>       unmap of an address, that it can't be used accidentally by other
+>       CPUs.
+
+This is very close! Thanks for the updates. :) Notes below...
+
+>
 > Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
 > Signed-off-by: Tycho Andersen <tycho@docker.com>
-> Signed-off-by: Marco Benatto <marco.antonio.780@gmail.com>
+> Tested-by: Marco Benatto <marco.antonio.780@gmail.com>
 > ---
->  Documentation/admin-guide/kernel-parameters.txt |   2 +
->  arch/x86/Kconfig                                |   1 +
->  arch/x86/include/asm/pgtable.h                  |  25 +++
->  arch/x86/mm/Makefile                            |   1 +
->  arch/x86/mm/pageattr.c                          |  22 +--
->  arch/x86/mm/xpfo.c                              | 114 ++++++++++++
->  include/linux/highmem.h                         |  15 +-
->  include/linux/xpfo.h                            |  42 +++++
->  mm/Makefile                                     |   1 +
->  mm/page_alloc.c                                 |   2 +
->  mm/page_ext.c                                   |   4 +
->  mm/xpfo.c                                       | 222 ++++++++++++++++++=
-++++++
->  security/Kconfig                                |  19 ++
->  13 files changed, 449 insertions(+), 21 deletions(-)
->=20
-> diff --git a/Documentation/admin-guide/kernel-parameters.txt
-> b/Documentation/admin-guide/kernel-parameters.txt
-> index d9c171ce4190..444d83183f75 100644
-> --- a/Documentation/admin-guide/kernel-parameters.txt
-> +++ b/Documentation/admin-guide/kernel-parameters.txt
-> @@ -2736,6 +2736,8 @@
->=20
->  	nox2apic	[X86-64,APIC] Do not enable x2APIC mode.
->=20
-> +	noxpfo		[X86-64] Disable XPFO when CONFIG_XPFO is on.
+>  drivers/misc/Makefile     |   1 +
+>  drivers/misc/lkdtm.h      |   5 ++
+>  drivers/misc/lkdtm_core.c |   3 +
+>  drivers/misc/lkdtm_xpfo.c | 194 ++++++++++++++++++++++++++++++++++++++++++++++
+>  4 files changed, 203 insertions(+)
+>
+> diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+> index b0b766416306..8447b42a447d 100644
+> --- a/drivers/misc/Makefile
+> +++ b/drivers/misc/Makefile
+> @@ -62,6 +62,7 @@ lkdtm-$(CONFIG_LKDTM)         += lkdtm_heap.o
+>  lkdtm-$(CONFIG_LKDTM)          += lkdtm_perms.o
+>  lkdtm-$(CONFIG_LKDTM)          += lkdtm_rodata_objcopy.o
+>  lkdtm-$(CONFIG_LKDTM)          += lkdtm_usercopy.o
+> +lkdtm-$(CONFIG_LKDTM)          += lkdtm_xpfo.o
+>
+>  KCOV_INSTRUMENT_lkdtm_rodata.o := n
+>
+> diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+> index 3b4976396ec4..34a6ee37f216 100644
+> --- a/drivers/misc/lkdtm.h
+> +++ b/drivers/misc/lkdtm.h
+> @@ -64,4 +64,9 @@ void lkdtm_USERCOPY_STACK_FRAME_FROM(void);
+>  void lkdtm_USERCOPY_STACK_BEYOND(void);
+>  void lkdtm_USERCOPY_KERNEL(void);
+>
+> +/* lkdtm_xpfo.c */
+> +void lkdtm_XPFO_READ_USER(void);
+> +void lkdtm_XPFO_READ_USER_HUGE(void);
+> +void lkdtm_XPFO_SMP(void);
 > +
->  	cpu0_hotplug	[X86] Turn on CPU0 hotplug feature when
->  			CONFIG_BOOTPARAM_HOTPLUG_CPU0 is off.
->  			Some features depend on CPU0. Known dependencies
-<... snip>
+>  #endif
+> diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
+> index 42d2b8e31e6b..9544e329de4b 100644
+> --- a/drivers/misc/lkdtm_core.c
+> +++ b/drivers/misc/lkdtm_core.c
+> @@ -235,6 +235,9 @@ struct crashtype crashtypes[] = {
+>         CRASHTYPE(USERCOPY_STACK_FRAME_FROM),
+>         CRASHTYPE(USERCOPY_STACK_BEYOND),
+>         CRASHTYPE(USERCOPY_KERNEL),
+> +       CRASHTYPE(XPFO_READ_USER),
+> +       CRASHTYPE(XPFO_READ_USER_HUGE),
+> +       CRASHTYPE(XPFO_SMP),
+>  };
+>
+>
+> diff --git a/drivers/misc/lkdtm_xpfo.c b/drivers/misc/lkdtm_xpfo.c
+> new file mode 100644
+> index 000000000000..d903063bdd0b
+> --- /dev/null
+> +++ b/drivers/misc/lkdtm_xpfo.c
+> @@ -0,0 +1,194 @@
+> +/*
+> + * This is for all the tests related to XPFO (eXclusive Page Frame Ownership).
+> + */
+> +
+> +#include "lkdtm.h"
+> +
+> +#include <linux/cpumask.h>
+> +#include <linux/mman.h>
+> +#include <linux/uaccess.h>
+> +#include <linux/xpfo.h>
+> +#include <linux/kthread.h>
+> +
+> +#include <linux/delay.h>
+> +#include <linux/sched/task.h>
+> +
+> +#define XPFO_DATA 0xdeadbeef
+> +
+> +static unsigned long do_map(unsigned long flags)
+> +{
+> +       unsigned long user_addr, user_data = XPFO_DATA;
+> +
+> +       user_addr = vm_mmap(NULL, 0, PAGE_SIZE,
+> +                           PROT_READ | PROT_WRITE | PROT_EXEC,
+> +                           flags, 0);
+> +       if (user_addr >= TASK_SIZE) {
+> +               pr_warn("Failed to allocate user memory\n");
+> +               return 0;
+> +       }
+> +
+> +       if (copy_to_user((void __user *)user_addr, &user_data,
+> +                        sizeof(user_data))) {
+> +               pr_warn("copy_to_user failed\n");
+> +               goto free_user;
+> +       }
+> +
+> +       return user_addr;
+> +
+> +free_user:
+> +       vm_munmap(user_addr, PAGE_SIZE);
+> +       return 0;
+> +}
+> +
+> +static unsigned long *user_to_kernel(unsigned long user_addr)
+> +{
+> +       phys_addr_t phys_addr;
+> +       void *virt_addr;
+> +
+> +       phys_addr = user_virt_to_phys(user_addr);
+> +       if (!phys_addr) {
+> +               pr_warn("Failed to get physical address of user memory\n");
+> +               return NULL;
+> +       }
+> +
+> +       virt_addr = phys_to_virt(phys_addr);
+> +       if (phys_addr != virt_to_phys(virt_addr)) {
+> +               pr_warn("Physical address of user memory seems incorrect\n");
+> +               return NULL;
+> +       }
+> +
+> +       return virt_addr;
+> +}
+> +
+> +static void read_map(unsigned long *virt_addr)
+> +{
+> +       pr_info("Attempting bad read from kernel address %p\n", virt_addr);
+> +       if (*(unsigned long *)virt_addr == XPFO_DATA)
+> +               pr_err("FAIL: Bad read succeeded?!\n");
+> +       else
+> +               pr_err("FAIL: Bad read didn't fail but data is incorrect?!\n");
+> +}
+> +
+> +static void read_user_with_flags(unsigned long flags)
+> +{
+> +       unsigned long user_addr, *kernel;
+> +
+> +       user_addr = do_map(flags);
+> +       if (!user_addr) {
+> +               pr_err("FAIL: map failed\n");
+> +               return;
+> +       }
+> +
+> +       kernel = user_to_kernel(user_addr);
+> +       if (!kernel) {
+> +               pr_err("FAIL: user to kernel conversion failed\n");
+> +               goto free_user;
+> +       }
+> +
+> +       read_map(kernel);
+> +
+> +free_user:
+> +       vm_munmap(user_addr, PAGE_SIZE);
+> +}
+> +
+> +/* Read from userspace via the kernel's linear map. */
+> +void lkdtm_XPFO_READ_USER(void)
+> +{
+> +       read_user_with_flags(MAP_PRIVATE | MAP_ANONYMOUS);
+> +}
+> +
+> +void lkdtm_XPFO_READ_USER_HUGE(void)
+> +{
+> +       read_user_with_flags(MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB);
+> +}
+> +
+> +struct smp_arg {
+> +       unsigned long *virt_addr;
+> +       unsigned int cpu;
+> +};
+> +
+> +static int smp_reader(void *parg)
+> +{
+> +       struct smp_arg *arg = parg;
+> +       unsigned long *virt_addr;
+> +
+> +       if (arg->cpu != smp_processor_id()) {
+> +               pr_err("FAIL: scheduled on wrong CPU?\n");
+> +               return 0;
+> +       }
+> +
+> +       virt_addr = smp_cond_load_acquire(&arg->virt_addr, VAL != NULL);
+> +       read_map(virt_addr);
+> +
+> +       return 0;
+> +}
+> +
+> +#ifdef CONFIG_X86
+> +#define XPFO_SMP_KILLED SIGKILL
+> +#elif CONFIG_ARM64
+> +#define XPFO_SMP_KILLED SIGSEGV
+> +#else
+> +#error unsupported arch
+> +#endif
 
-A bit more description for system administrators would be very useful.
-Perhaps something like:
+This will fail the build for other architectures, so I would just do
+this as an single if/else:
 
-noxpfo		[XPFO,X86-64] Disable eXclusive Page Frame Ownership (XPFO)
-                             Physical pages mapped into user applications w=
-ill also be mapped
-                             in the kernel's address space as if CONFIG_XPF=
-O was not enabled.
+#ifdef CONFIG_ARM64
+# define XPFO_SMP_KILLED SIGSEGV
+#else
+# define XPFO_SMP_KILLED SIGKILL
+#endif
 
-Patch 05 should also update kernel-parameters.txt and add "ARM64" to the co=
-nfig option list for noxpfo.
+> +
+> +/* The idea here is to read from the kernel's map on a different thread than
+
+Comment style nit: leading /*\n please...
+
+> + * did the mapping (and thus the TLB flushing), to make sure that the page
+> + * faults on other cores too.
+> + */
+> +void lkdtm_XPFO_SMP(void)
+> +{
+> +       unsigned long user_addr, *virt_addr;
+> +       struct task_struct *thread;
+> +       int ret;
+> +       struct smp_arg arg;
+> +
+> +       if (num_online_cpus() < 2) {
+> +               pr_err("not enough to do a multi cpu test\n");
+> +               return;
+> +       }
+> +
+> +       arg.virt_addr = NULL;
+> +       arg.cpu = (smp_processor_id() + 1) % num_online_cpus();
+> +       thread = kthread_create(smp_reader, &arg, "lkdtm_xpfo_test");
+> +       if (IS_ERR(thread)) {
+> +               pr_err("couldn't create kthread? %ld\n", PTR_ERR(thread));
+> +               return;
+> +       }
+> +
+> +       kthread_bind(thread, arg.cpu);
+> +       get_task_struct(thread);
+> +       wake_up_process(thread);
+> +
+> +       user_addr = do_map(MAP_PRIVATE | MAP_ANONYMOUS);
+> +       if (!user_addr)
+> +               goto kill_thread;
+> +
+> +       virt_addr = user_to_kernel(user_addr);
+> +       if (!virt_addr) {
+> +               /*
+> +                * let's store something that will fail, so we can unblock the
+> +                * thread
+> +                */
+> +               smp_store_release(&arg.virt_addr, &arg);
+> +               goto free_user;
+> +       }
+> +
+> +       smp_store_release(&arg.virt_addr, virt_addr);
+> +
+> +       /* there must be a better way to do this. */
+> +       while (1) {
+> +               if (thread->exit_state)
+> +                       break;
+> +               msleep_interruptible(100);
+> +       }
+
+I don't like infinite loops. How about giving this a 1 second max runtime?
+
+> +
+> +free_user:
+> +       if (user_addr)
+> +               vm_munmap(user_addr, PAGE_SIZE);
+> +
+> +kill_thread:
+> +       ret = kthread_stop(thread);
+> +       if (ret != XPFO_SMP_KILLED)
+> +               pr_err("FAIL: thread wasn't killed: %d\n", ret);
+> +       put_task_struct(thread);
+> +}
+> --
+> 2.11.0
+>
+
+Otherwise it looks great, thanks!
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
