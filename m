@@ -1,56 +1,78 @@
 From: Tycho Andersen <tycho@docker.com>
-Date: Thu,  7 Sep 2017 11:36:05 -0600
-Message-Id: <20170907173609.22696-8-tycho@docker.com>
+Date: Thu,  7 Sep 2017 11:36:07 -0600
+Message-Id: <20170907173609.22696-10-tycho@docker.com>
 In-Reply-To: <20170907173609.22696-1-tycho@docker.com>
 References: <20170907173609.22696-1-tycho@docker.com>
-Subject: [kernel-hardening] [PATCH v6 07/11] arm64/mm, xpfo: temporarily map dcache regions
+Subject: [kernel-hardening] [PATCH v6 09/11] arm64/mm: disable section/contiguous mappings if XPFO is enabled
 To: linux-kernel@vger.kernel.org
-Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, linux-arm-kernel@lists.infradead.org, Tycho Andersen <tycho@docker.com>
+Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Tycho Andersen <tycho@docker.com>, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Juerg Haefliger <juerg.haefliger@canonical.com>
+XPFO doesn't support section/contiguous mappings yet, so let's disable it
+if XPFO is turned on.
 
-If the page is unmapped by XPFO, a data cache flush results in a fatal
-page fault, so let's temporarily map the region, flush the cache, and then
-unmap it.
-
-v6: actually flush in the face of xpfo, and temporarily map the underlying
-    memory so it can be flushed correctly
+Thanks to Laura Abbot for the simplification from v5, and Mark Rutland for
+pointing out we need NO_CONT_MAPPINGS too.
 
 CC: linux-arm-kernel@lists.infradead.org
-Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
 Signed-off-by: Tycho Andersen <tycho@docker.com>
 ---
- arch/arm64/mm/flush.c | 7 +++++++
- 1 file changed, 7 insertions(+)
+ arch/arm64/mm/mmu.c  | 2 +-
+ include/linux/xpfo.h | 4 ++++
+ mm/xpfo.c            | 6 ++++++
+ 3 files changed, 11 insertions(+), 1 deletion(-)
 
-diff --git a/arch/arm64/mm/flush.c b/arch/arm64/mm/flush.c
-index 21a8d828cbf4..e335e3fd4fca 100644
---- a/arch/arm64/mm/flush.c
-+++ b/arch/arm64/mm/flush.c
-@@ -20,6 +20,7 @@
- #include <linux/export.h>
- #include <linux/mm.h>
- #include <linux/pagemap.h>
-+#include <linux/xpfo.h>
+diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+index f1eb15e0e864..34bb95303cce 100644
+--- a/arch/arm64/mm/mmu.c
++++ b/arch/arm64/mm/mmu.c
+@@ -420,7 +420,7 @@ static void __init map_mem(pgd_t *pgd)
+ 	struct memblock_region *reg;
+ 	int flags = 0;
  
- #include <asm/cacheflush.h>
- #include <asm/cache.h>
-@@ -28,9 +29,15 @@
- void sync_icache_aliases(void *kaddr, unsigned long len)
+-	if (debug_pagealloc_enabled())
++	if (debug_pagealloc_enabled() || xpfo_enabled())
+ 		flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
+ 
+ 	/*
+diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
+index d37a06c9d62c..1693af1a0293 100644
+--- a/include/linux/xpfo.h
++++ b/include/linux/xpfo.h
+@@ -43,6 +43,8 @@ void xpfo_temp_map(const void *addr, size_t size, void **mapping,
+ void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
+ 		     size_t mapping_len);
+ 
++bool xpfo_enabled(void);
++
+ #else /* !CONFIG_XPFO */
+ 
+ static inline void xpfo_kmap(void *kaddr, struct page *page) { }
+@@ -65,6 +67,8 @@ static inline void xpfo_temp_unmap(const void *addr, size_t size,
+ }
+ 
+ 
++static inline bool xpfo_enabled(void) { return false; }
++
+ #endif /* CONFIG_XPFO */
+ 
+ #endif /* _LINUX_XPFO_H */
+diff --git a/mm/xpfo.c b/mm/xpfo.c
+index f79075bf7d65..25fba05d01bd 100644
+--- a/mm/xpfo.c
++++ b/mm/xpfo.c
+@@ -70,6 +70,12 @@ struct page_ext_operations page_xpfo_ops = {
+ 	.init = init_xpfo,
+ };
+ 
++bool __init xpfo_enabled(void)
++{
++	return !xpfo_disabled;
++}
++EXPORT_SYMBOL(xpfo_enabled);
++
+ static inline struct xpfo *lookup_xpfo(struct page *page)
  {
- 	unsigned long addr = (unsigned long)kaddr;
-+	unsigned long num_pages = XPFO_NUM_PAGES(addr, len);
-+	void *mapping[num_pages];
- 
- 	if (icache_is_aliasing()) {
-+		xpfo_temp_map(kaddr, len, mapping,
-+			      sizeof(mapping[0]) * num_pages);
- 		__clean_dcache_area_pou(kaddr, len);
-+		xpfo_temp_unmap(kaddr, len, mapping,
-+			        sizeof(mapping[0]) * num_pages);
- 		__flush_icache_all();
- 	} else {
- 		flush_icache_range(addr, addr + len);
+ 	struct page_ext *page_ext = lookup_page_ext(page);
 -- 
 2.11.0
