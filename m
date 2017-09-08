@@ -1,40 +1,27 @@
-Date: Fri, 8 Sep 2017 00:13:35 -0700
+Date: Fri, 8 Sep 2017 00:42:16 -0700
 From: Christoph Hellwig <hch@infradead.org>
-Message-ID: <20170908071334.GA9869@infradead.org>
+Message-ID: <20170908074216.GA4957@infradead.org>
 References: <20170907173609.22696-1-tycho@docker.com>
- <20170907173609.22696-5-tycho@docker.com>
- <20170907181015.GA9557@infradead.org>
- <20170907184414.ow7av6wt5vht6pnd@docker>
+ <20170907173609.22696-2-tycho@docker.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170907184414.ow7av6wt5vht6pnd@docker>
-Subject: [kernel-hardening] Re: [PATCH v6 04/11] swiotlb: Map the buffer if it was unmapped by
- XPFO
+In-Reply-To: <20170907173609.22696-2-tycho@docker.com>
+Subject: [kernel-hardening] Re: [PATCH v6 01/11] mm: add MAP_HUGETLB support to vm_mmap
 To: Tycho Andersen <tycho@docker.com>
-Cc: Christoph Hellwig <hch@infradead.org>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Sep 07, 2017 at 12:44:14PM -0600, Tycho Andersen wrote:
-> On Thu, Sep 07, 2017 at 11:10:15AM -0700, Christoph Hellwig wrote:
-> > > -	if (PageHighMem(pfn_to_page(pfn))) {
-> > > +	if (PageHighMem(page) || xpfo_page_is_unmapped(page)) {
-> > 
-> > Please don't sprinkle xpfo details over various bits of code.
-> > 
-> > Just add a helper with a descriptive name, e.g.
-> > 
-> > page_is_unmapped()
-> > 
-> > that also includes the highmem case, as that will easily document
-> > what this check is doing.
-> 
-> Will do, thanks.
-> 
-> Patch 7 has a similar feel to this one, I can add a wrapper around
-> __clean_dcache_area_pou() if that makes sense?
+On Thu, Sep 07, 2017 at 11:35:59AM -0600, Tycho Andersen wrote:
+> vm_mmap is exported, which means kernel modules can use it. In particular,
+> for testing XPFO support, we want to use it with the MAP_HUGETLB flag, so
+> let's support it via vm_mmap.
 
-That one is in low-level ARM code so I'm not that worried.
-But in general it seems like we should simply have one interface
-to check if a page has a kernel mapping or not, nad map/unmap it
-if not instead of distinguishing between highmem and xpfo.
+>  	} else if (flags & MAP_HUGETLB) {
+> +		file = map_hugetlb_setup(&len, flags);
+>  		if (IS_ERR(file))
+>  			return PTR_ERR(file);
+>  	}
+
+It seems like you should remove this hunk entirely and make all
+MAP_HUGETLB calls go through vm_mmap.
