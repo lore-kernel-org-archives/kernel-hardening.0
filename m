@@ -1,187 +1,114 @@
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Mon, 11 Sep 2017 21:50:24 +0200
-Message-Id: <1505159427-11747-7-git-send-email-s.mesoraca16@gmail.com>
+Date: Mon, 11 Sep 2017 21:50:26 +0200
+Message-Id: <1505159427-11747-9-git-send-email-s.mesoraca16@gmail.com>
 In-Reply-To: <1505159427-11747-1-git-send-email-s.mesoraca16@gmail.com>
 References: <1505159427-11747-1-git-send-email-s.mesoraca16@gmail.com>
-Subject: [kernel-hardening] [RFC v3 6/9] Creation of "pagefault_handler" LSM hook
+Subject: [kernel-hardening] [RFC v3 8/9] Allowing for stacking procattr support in S.A.R.A.
 To: linux-kernel@vger.kernel.org
 Cc: linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, Salvatore Mesoraca <s.mesoraca16@gmail.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey@schaufler-ca.com>, Kees Cook <keescook@chromium.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Creation of a new hook to let LSM modules handle user-space pagefaults on
-x86.
-It can be used to avoid segfaulting the originating process.
-If it's the case it can modify process registers before returning.
-This is not a security feature by itself, it's a way to soften some
-unwanted side-effects of restrictive security features.
-In particular this is used by S.A.R.A. to implement what PaX call
-"trampoline emulation" that, in practice, allows for some specific
-code sequences to be executed even if they are in non executable memory.
-This may look like a bad thing at first, but you have to consider
-that:
-- This allows for strict memory restrictions (e.g. W^X) to stay on even
-  when they should be turned off. And, even if this emulation
-  makes those features less effective, it's still better than having
-  them turned off completely.
-- The only code sequences emulated are trampolines used to make
-  function calls. In many cases, when you have the chance to
-  make arbitrary memory writes, you can already manipulate the
-  control flow of the program by overwriting function pointers or
-  return values. So, in many cases, "trampoline emulation"
-  doesn't introduce new exploit vectors.
-- It's a feature that can be turned on only if needed, on a per
-  executable file basis.
+This allow S.A.R.A. to use the procattr interface without interfering
+with other LSMs.
+This part should be reimplemented as soon as upstream procattr stacking
+support is available.
 
 Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 ---
- arch/Kconfig              |  6 ++++++
- arch/x86/Kconfig          |  1 +
- arch/x86/mm/fault.c       |  6 ++++++
- include/linux/lsm_hooks.h | 12 ++++++++++++
- include/linux/security.h  | 11 +++++++++++
- security/security.c       | 11 +++++++++++
- 6 files changed, 47 insertions(+)
+ fs/proc/base.c      | 38 ++++++++++++++++++++++++++++++++++++++
+ security/security.c | 20 ++++++++++++++++++--
+ 2 files changed, 56 insertions(+), 2 deletions(-)
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 1aafb4e..4146f79 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -229,6 +229,12 @@ config ARCH_HAS_FORTIFY_SOURCE
- 	  An architecture should select this when it can successfully
- 	  build and run with CONFIG_FORTIFY_SOURCE.
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index e5d89a0..3b10452 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -2559,6 +2559,40 @@ static ssize_t proc_pid_attr_write(struct file * file, const char __user * buf,
+ 	.llseek		= generic_file_llseek,
+ };
  
-+config ARCH_HAS_LSM_PAGEFAULT
-+	bool
-+	help
-+	  An architecture should select this if it supports
-+	  "pagefault_handler" LSM hook.
++#ifdef CONFIG_SECURITY_SARA
++static const struct pid_entry sara_attr_dir_stuff[] = {
++	REG("wxprot", 0666, proc_pid_attr_operations),
++};
 +
- # Select if arch has all set_memory_ro/rw/x/nx() functions in asm/cacheflush.h
- config ARCH_HAS_SET_MEMORY
- 	bool
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index a3e6e61..a62bf85 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -53,6 +53,7 @@ config X86
- 	select ARCH_HAS_FORTIFY_SOURCE
- 	select ARCH_HAS_GCOV_PROFILE_ALL
- 	select ARCH_HAS_KCOV			if X86_64
-+	select ARCH_HAS_LSM_PAGEFAULT
- 	select ARCH_HAS_MMIO_FLUSH
- 	select ARCH_HAS_PMEM_API		if X86_64
- 	# Causing hangs/crashes, see the commit that added this change for details.
-diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
-index b836a72..96fbd63 100644
---- a/arch/x86/mm/fault.c
-+++ b/arch/x86/mm/fault.c
-@@ -15,6 +15,7 @@
- #include <linux/prefetch.h>		/* prefetchw			*/
- #include <linux/context_tracking.h>	/* exception_enter(), ...	*/
- #include <linux/uaccess.h>		/* faulthandler_disabled()	*/
-+#include <linux/security.h>		/* security_pagefault_handler	*/
- 
- #include <asm/cpufeature.h>		/* boot_cpu_has, ...		*/
- #include <asm/traps.h>			/* dotraplinkage, ...		*/
-@@ -1358,6 +1359,11 @@ static inline bool smap_violation(int error_code, struct pt_regs *regs)
- 			local_irq_enable();
- 	}
- 
-+	if (unlikely(security_pagefault_handler(regs,
-+						error_code,
-+						address)))
-+		return;
-+
- 	perf_sw_event(PERF_COUNT_SW_PAGE_FAULTS, 1, regs, address);
- 
- 	if (error_code & PF_WRITE)
-diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
-index 2fb5c51f..601cf42 100644
---- a/include/linux/lsm_hooks.h
-+++ b/include/linux/lsm_hooks.h
-@@ -489,6 +489,14 @@
-  *	@vmflags contains the requested vmflags.
-  *	Return 0 if the operation is allowed to continue otherwise return
-  *	the appropriate error code.
-+ * @pagefault_handler:
-+ *	Handle pagefaults on supported architectures, that is any architecture
-+ *	which defines CONFIG_ARCH_HAS_LSM_PAGEFAULT.
-+ *	@regs contains process' registers.
-+ *	@error_code contains error code for the pagefault.
-+ *	@address contains the address that caused the pagefault.
-+ *	Return 0 to let the kernel handle the pagefault as usually, any other
-+ *	value to let the process continue its execution.
-  * @file_lock:
-  *	Check permission before performing file locking operations.
-  *	Note: this hook mediates both flock and fcntl style locks.
-@@ -1502,6 +1510,9 @@
- 	int (*file_mprotect)(struct vm_area_struct *vma, unsigned long reqprot,
- 				unsigned long prot);
- 	int (*check_vmflags)(vm_flags_t vmflags);
-+	int (*pagefault_handler)(struct pt_regs *regs,
-+				 unsigned long error_code,
-+				 unsigned long address);
- 	int (*file_lock)(struct file *file, unsigned int cmd);
- 	int (*file_fcntl)(struct file *file, unsigned int cmd,
- 				unsigned long arg);
-@@ -1780,6 +1791,7 @@ struct security_hook_heads {
- 	struct list_head mmap_file;
- 	struct list_head file_mprotect;
- 	struct list_head check_vmflags;
-+	struct list_head pagefault_handler;
- 	struct list_head file_lock;
- 	struct list_head file_fcntl;
- 	struct list_head file_set_fowner;
-diff --git a/include/linux/security.h b/include/linux/security.h
-index 59840a5..0761c89 100644
---- a/include/linux/security.h
-+++ b/include/linux/security.h
-@@ -310,6 +310,9 @@ int security_mmap_file(struct file *file, unsigned long prot,
- int security_file_mprotect(struct vm_area_struct *vma, unsigned long reqprot,
- 			   unsigned long prot);
- int security_check_vmflags(vm_flags_t vmflags);
-+int __maybe_unused security_pagefault_handler(struct pt_regs *regs,
-+					      unsigned long error_code,
-+					      unsigned long address);
- int security_file_lock(struct file *file, unsigned int cmd);
- int security_file_fcntl(struct file *file, unsigned int cmd, unsigned long arg);
- void security_file_set_fowner(struct file *file);
-@@ -850,6 +853,14 @@ static inline int security_check_vmflags(vm_flags_t vmflags)
- 	return 0;
- }
- 
-+static inline int __maybe_unused security_pagefault_handler(
-+						struct pt_regs *regs,
-+						unsigned long error_code,
-+						unsigned long address)
++static int proc_sara_attr_dir_readdir(struct file *file,
++				      struct dir_context *ctx)
 +{
-+	return 0;
++	return proc_pident_readdir(file, ctx,
++				   sara_attr_dir_stuff,
++				   ARRAY_SIZE(sara_attr_dir_stuff));
 +}
 +
- static inline int security_file_lock(struct file *file, unsigned int cmd)
- {
- 	return 0;
++static const struct file_operations proc_sara_attr_dir_ops = {
++	.read		= generic_read_dir,
++	.iterate_shared	= proc_sara_attr_dir_readdir,
++	.llseek		= generic_file_llseek,
++};
++
++static struct dentry *proc_sara_attr_dir_lookup(struct inode *dir,
++				struct dentry *dentry, unsigned int flags)
++{
++	return proc_pident_lookup(dir, dentry,
++				  sara_attr_dir_stuff,
++				  ARRAY_SIZE(sara_attr_dir_stuff));
++};
++
++static const struct inode_operations proc_sara_attr_dir_inode_ops = {
++	.lookup		= proc_sara_attr_dir_lookup,
++	.getattr	= pid_getattr,
++	.setattr	= proc_setattr,
++};
++#endif /* CONFIG_SECURITY_SARA */
++
+ static const struct pid_entry attr_dir_stuff[] = {
+ 	REG("current",    S_IRUGO|S_IWUGO, proc_pid_attr_operations),
+ 	REG("prev",       S_IRUGO,	   proc_pid_attr_operations),
+@@ -2566,6 +2600,10 @@ static ssize_t proc_pid_attr_write(struct file * file, const char __user * buf,
+ 	REG("fscreate",   S_IRUGO|S_IWUGO, proc_pid_attr_operations),
+ 	REG("keycreate",  S_IRUGO|S_IWUGO, proc_pid_attr_operations),
+ 	REG("sockcreate", S_IRUGO|S_IWUGO, proc_pid_attr_operations),
++#ifdef CONFIG_SECURITY_SARA
++	DIR("sara", 0555, proc_sara_attr_dir_inode_ops,
++				proc_sara_attr_dir_ops),
++#endif
+ };
+ 
+ static int proc_attr_dir_readdir(struct file *file, struct dir_context *ctx)
 diff --git a/security/security.c b/security/security.c
-index 484143f..4f50dc5 100644
+index 4f50dc5..a27cfa8 100644
 --- a/security/security.c
 +++ b/security/security.c
-@@ -943,6 +943,17 @@ int security_check_vmflags(vm_flags_t vmflags)
- 	return call_int_hook(check_vmflags, 0, vmflags);
+@@ -1277,12 +1277,28 @@ void security_d_instantiate(struct dentry *dentry, struct inode *inode)
+ 
+ int security_getprocattr(struct task_struct *p, char *name, char **value)
+ {
+-	return call_int_hook(getprocattr, -EINVAL, p, name, value);
++	struct security_hook_list *hp;
++	int rc;
++
++	list_for_each_entry(hp, &security_hook_heads.getprocattr, list) {
++		rc = hp->hook.getprocattr(p, name, value);
++		if (rc != -EINVAL)
++			return rc;
++	}
++	return -EINVAL;
  }
  
-+int __maybe_unused security_pagefault_handler(struct pt_regs *regs,
-+					      unsigned long error_code,
-+					      unsigned long address)
-+{
-+	return call_int_hook(pagefault_handler,
-+			     0,
-+			     regs,
-+			     error_code,
-+			     address);
-+}
-+
- int security_file_lock(struct file *file, unsigned int cmd)
+ int security_setprocattr(const char *name, void *value, size_t size)
  {
- 	return call_int_hook(file_lock, 0, file, cmd);
+-	return call_int_hook(setprocattr, -EINVAL, name, value, size);
++	struct security_hook_list *hp;
++	int rc;
++
++	list_for_each_entry(hp, &security_hook_heads.setprocattr, list) {
++		rc = hp->hook.setprocattr(name, value, size);
++		if (rc != -EINVAL)
++			return rc;
++	}
++	return -EINVAL;
+ }
+ 
+ int security_netlink_send(struct sock *sk, struct sk_buff *skb)
 -- 
 1.9.1
