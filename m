@@ -1,60 +1,51 @@
-Date: Mon, 11 Sep 2017 07:50:20 -0700
+Date: Mon, 11 Sep 2017 08:02:04 -0700
 From: Tycho Andersen <tycho@docker.com>
-Message-ID: <20170911145020.fat456njvyagcomu@docker>
+Message-ID: <20170911150204.nn5v5olbxyzfafou@docker>
 References: <20170907173609.22696-1-tycho@docker.com>
- <20170907173609.22696-4-tycho@docker.com>
- <302be94d-7e44-001d-286c-2b0cd6098f7b@huawei.com>
+ <23e5bac9-329a-3a32-049e-7e7c9751abd0@huawei.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <302be94d-7e44-001d-286c-2b0cd6098f7b@huawei.com>
-Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
- Ownership (XPFO)
+In-Reply-To: <23e5bac9-329a-3a32-049e-7e7c9751abd0@huawei.com>
+Subject: [kernel-hardening] Re: [PATCH v6 00/11] Add support for eXclusive Page Frame Ownership
 To: Yisheng Xie <xieyisheng1@huawei.com>
-Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Hi Yisheng,
 
-On Mon, Sep 11, 2017 at 03:24:09PM +0800, Yisheng Xie wrote:
-> > +void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp)
-> > +{
-> > +	int i, flush_tlb = 0;
-> > +	struct xpfo *xpfo;
-> > +
-> > +	if (!static_branch_unlikely(&xpfo_inited))
-> > +		return;
-> > +
-> > +	for (i = 0; i < (1 << order); i++)  {
-> > +		xpfo = lookup_xpfo(page + i);
-> > +		if (!xpfo)
-> > +			continue;
-> > +
-> > +		WARN(test_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags),
-> > +		     "xpfo: unmapped page being allocated\n");
-> > +
-> > +		/* Initialize the map lock and map counter */
-> > +		if (unlikely(!xpfo->inited)) {
-> > +			spin_lock_init(&xpfo->maplock);
-> > +			atomic_set(&xpfo->mapcount, 0);
-> > +			xpfo->inited = true;
-> > +		}
-> > +		WARN(atomic_read(&xpfo->mapcount),
-> > +		     "xpfo: already mapped page being allocated\n");
-> > +
-> > +		if ((gfp & GFP_HIGHUSER) == GFP_HIGHUSER) {
-> > +			/*
-> > +			 * Tag the page as a user page and flush the TLB if it
-> > +			 * was previously allocated to the kernel.
-> > +			 */
-> > +			if (!test_and_set_bit(XPFO_PAGE_USER, &xpfo->flags))
-> > +				flush_tlb = 1;
+On Mon, Sep 11, 2017 at 06:34:45PM +0800, Yisheng Xie wrote:
+> Hi Tycho ,
 > 
-> I'm not sure whether I am miss anything, however, when the page was previously allocated
-> to kernel,  should we unmap the physmap (the kernel's page table) here? For we allocate
-> the page to user now
+> On 2017/9/8 1:35, Tycho Andersen wrote:
+> > Hi all,
+> > 
+> > Here is v6 of the XPFO set; see v5 discussion here:
+> > https://lkml.org/lkml/2017/8/9/803
+> > 
+> > Changelogs are in the individual patch notes, but the highlights are:
+> > * add primitives for ensuring memory areas are mapped (although these are quite
+> >   ugly, using stack allocation; I'm open to better suggestions)
+> > * instead of not flushing caches, re-map pages using the above
+> > * TLB flushing is much more correct (i.e. we're always flushing everything
+> >   everywhere). I suspect we may be able to back this off in some cases, but I'm
+> >   still trying to collect performance numbers to prove this is worth doing.
+> > 
+> > I have no TODOs left for this set myself, other than fixing whatever review
+> > feedback people have. Thoughts and testing welcome!
+> 
+> According to the paper of Vasileios P. Kemerlis et al, the mainline kernel
+> will not set the Pro. of physmap(direct map area) to RW(X), so do we really
+> need XPFO to protect from ret2dir attack?
 
-Yes, I think you're right. Oddly, the XPFO_READ_USER test works
-correctly for me, but I think (?) should not because of this bug...
+I guess you're talking about section 4.3? They mention that that x86
+only gets rw, but that aarch64 is rwx still.
+
+But in either case this still provides access protection, similar to
+SMAP. Also, if I understand things correctly the protections are
+unmanaged, so a page that had the +x bit set at some point, it could
+be used for ret2dir.
+
+Cheers,
 
 Tycho
