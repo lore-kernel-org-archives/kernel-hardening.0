@@ -1,48 +1,75 @@
+References: <20170907173609.22696-1-tycho@docker.com>
+ <23e5bac9-329a-3a32-049e-7e7c9751abd0@huawei.com>
+ <20170911150204.nn5v5olbxyzfafou@docker>
+ <60c4ad22-d920-2754-30dd-b1f228c0a87d@huawei.com>
+From: Juerg Haefliger <juerg.haefliger@canonical.com>
+Message-ID: <5af82d7a-474f-aba7-d58e-f028627f8723@canonical.com>
+Date: Tue, 12 Sep 2017 09:40:14 +0200
 MIME-Version: 1.0
-In-Reply-To: <20170906200805.GN5024@atomide.com>
-References: <20170906162222.GI5024@atomide.com> <CAKv+Gu__-WeHKDGwg4rNM9Dw8V471wNQX=J3mfz_AUKHVUza_g@mail.gmail.com>
- <20170906163100.GJ5024@atomide.com> <CAKv+Gu-HGM6T6cV25bo6_bBcZaV-x3qpc9XoYUA4AEx68Joz=A@mail.gmail.com>
- <20170906171253.GK5024@atomide.com> <CAKv+Gu8ngWMvkmNr77SzL8fEvSc5K-OntoZQ53vgWVLHhAajaw@mail.gmail.com>
- <20170906175308.GL5024@atomide.com> <CAKv+Gu8qd8oz4wuEjAaR1E3ZUxt4Xr-j4NcLidRrNisVFefzCQ@mail.gmail.com>
- <20170906182247.GM5024@atomide.com> <CAKv+Gu8N_cjm_5aH=kWt6EKc6sGgQoWDVmdVAVw1Ru_xz1UWEw@mail.gmail.com>
- <20170906200805.GN5024@atomide.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Tue, 12 Sep 2017 07:51:06 +0100
-Message-ID: <CAKv+Gu8mT_2+Rom627pZZ0x=KU=ddR8nobWgfWVNtvxC1BgZvA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 00/29] implement KASLR for ARM
-To: Tony Lindgren <tony@atomide.com>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nico@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Marc Zyngier <marc.zyngier@arm.com>, Mark Rutland <mark.rutland@arm.com>, Matt Fleming <matt@codeblueprint.co.uk>, Dave Martin <dave.martin@arm.com>
+In-Reply-To: <60c4ad22-d920-2754-30dd-b1f228c0a87d@huawei.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v6 00/11] Add support for eXclusive Page Frame Ownership
+To: Yisheng Xie <xieyisheng1@huawei.com>, Tycho Andersen <tycho@docker.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 6 September 2017 at 21:08, Tony Lindgren <tony@atomide.com> wrote:
-> * Ard Biesheuvel <ard.biesheuvel@linaro.org> [170906 11:25]:
->> Did you capture the image_size and pa_start/pa_end as well?
->
-> Sorry I guess that was an incomplete copy & paste, but here's
-> another one:
->
-> regions.image_size:00e08000
-> regions.pa_start:80000000
-> regions.pa_end:871f8000
-> regions.zimage_start:81000000
-> regions.zimage_size:004379e8
-> regions.dtb_start:86feb000
-> regions.dtb_size:00012000
-> regions.initrd_start:00000000
-> regions.initrd_size:00000000
-> count:00000028
-> num:00000025
-> *kaslr_offset:05e00000
-> Uncompressing Linux... done, booting the kernel.
-> Warning: Neither atags nor dtb found
->
->> In any case, this is the exact same offset that failed before, so the
->> rounding of pa_start wasn't the problem.
->
-> OK
->
 
-I am pretty sure this is an issue with .bss, which is not covered by
-image_size (and which is absolutely *huge* btw [8+ MB] on
-omap2plus_defconfig, due to lockdep being enabled by default)
+
+On 09/12/2017 09:07 AM, Yisheng Xie wrote:
+> Hi Tycho,
+> 
+> On 2017/9/11 23:02, Tycho Andersen wrote:
+>> Hi Yisheng,
+>>
+>> On Mon, Sep 11, 2017 at 06:34:45PM +0800, Yisheng Xie wrote:
+>>> Hi Tycho ,
+>>>
+>>> On 2017/9/8 1:35, Tycho Andersen wrote:
+>>>> Hi all,
+>>>>
+>>>> Here is v6 of the XPFO set; see v5 discussion here:
+>>>> https://lkml.org/lkml/2017/8/9/803
+>>>>
+>>>> Changelogs are in the individual patch notes, but the highlights are:
+>>>> * add primitives for ensuring memory areas are mapped (although these are quite
+>>>>   ugly, using stack allocation; I'm open to better suggestions)
+>>>> * instead of not flushing caches, re-map pages using the above
+>>>> * TLB flushing is much more correct (i.e. we're always flushing everything
+>>>>   everywhere). I suspect we may be able to back this off in some cases, but I'm
+>>>>   still trying to collect performance numbers to prove this is worth doing.
+>>>>
+>>>> I have no TODOs left for this set myself, other than fixing whatever review
+>>>> feedback people have. Thoughts and testing welcome!
+>>>
+>>> According to the paper of Vasileios P. Kemerlis et al, the mainline kernel
+>>> will not set the Pro. of physmap(direct map area) to RW(X), so do we really
+>>> need XPFO to protect from ret2dir attack?
+>>
+>> I guess you're talking about section 4.3? 
+> Yes
+> 
+>> They mention that that x86
+>> only gets rw, but that aarch64 is rwx still.
+> IIRC, the in kernel of v4.13 the aarch64 is not rwx, I will check it.
+> 
+>>
+>> But in either case this still provides access protection, similar to
+>> SMAP. Also, if I understand things correctly the protections are
+>> unmanaged, so a page that had the +x bit set at some point, it could
+>> be used for ret2dir.
+> So you means that the Pro. of direct map area maybe changed to +x, then ret2dir attack can use it?
+
+XPFO protects against malicious reads from userspace (potentially
+accessing sensitive data). I've also been told by a security expert that
+ROP attacks are still possible even if user space memory is
+non-executable. XPFO is supposed to prevent that but I haven't been able
+to confirm this. It's way out of my comfort zone.
+
+...Juerg
+
+
+> Thanks
+> Yisheng Xie
+> 
+> 
