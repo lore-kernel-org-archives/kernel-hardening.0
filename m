@@ -1,60 +1,112 @@
 References: <20170907173609.22696-1-tycho@docker.com>
- <23e5bac9-329a-3a32-049e-7e7c9751abd0@huawei.com>
- <20170911150204.nn5v5olbxyzfafou@docker>
+ <20170907173609.22696-4-tycho@docker.com>
+ <302be94d-7e44-001d-286c-2b0cd6098f7b@huawei.com>
+ <20170911145020.fat456njvyagcomu@docker>
+ <57e95ad2-81d8-bf83-3e78-1313daa1bb80@canonical.com>
 From: Yisheng Xie <xieyisheng1@huawei.com>
-Message-ID: <60c4ad22-d920-2754-30dd-b1f228c0a87d@huawei.com>
-Date: Tue, 12 Sep 2017 15:07:29 +0800
+Message-ID: <431e2567-7600-3186-1489-93b855c395bd@huawei.com>
+Date: Tue, 12 Sep 2017 16:05:22 +0800
 MIME-Version: 1.0
-In-Reply-To: <20170911150204.nn5v5olbxyzfafou@docker>
+In-Reply-To: <57e95ad2-81d8-bf83-3e78-1313daa1bb80@canonical.com>
 Content-Type: text/plain; charset="windows-1252"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v6 00/11] Add support for eXclusive Page Frame Ownership
-To: Tycho Andersen <tycho@docker.com>
-Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>
+Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
+ Ownership (XPFO)
+To: Juerg Haefliger <juerg.haefliger@canonical.com>, Tycho Andersen <tycho@docker.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+
+
+On 2017/9/12 0:03, Juerg Haefliger wrote:
+> 
+> 
+> On 09/11/2017 04:50 PM, Tycho Andersen wrote:
+>> Hi Yisheng,
+>>
+>> On Mon, Sep 11, 2017 at 03:24:09PM +0800, Yisheng Xie wrote:
+>>>> +void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp)
+>>>> +{
+>>>> +	int i, flush_tlb = 0;
+>>>> +	struct xpfo *xpfo;
+>>>> +
+>>>> +	if (!static_branch_unlikely(&xpfo_inited))
+>>>> +		return;
+>>>> +
+>>>> +	for (i = 0; i < (1 << order); i++)  {
+>>>> +		xpfo = lookup_xpfo(page + i);
+>>>> +		if (!xpfo)
+>>>> +			continue;
+>>>> +
+>>>> +		WARN(test_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags),
+>>>> +		     "xpfo: unmapped page being allocated\n");
+>>>> +
+>>>> +		/* Initialize the map lock and map counter */
+>>>> +		if (unlikely(!xpfo->inited)) {
+>>>> +			spin_lock_init(&xpfo->maplock);
+>>>> +			atomic_set(&xpfo->mapcount, 0);
+>>>> +			xpfo->inited = true;
+>>>> +		}
+>>>> +		WARN(atomic_read(&xpfo->mapcount),
+>>>> +		     "xpfo: already mapped page being allocated\n");
+>>>> +
+>>>> +		if ((gfp & GFP_HIGHUSER) == GFP_HIGHUSER) {
+>>>> +			/*
+>>>> +			 * Tag the page as a user page and flush the TLB if it
+>>>> +			 * was previously allocated to the kernel.
+>>>> +			 */
+>>>> +			if (!test_and_set_bit(XPFO_PAGE_USER, &xpfo->flags))
+>>>> +				flush_tlb = 1;
+>>>
+>>> I'm not sure whether I am miss anything, however, when the page was previously allocated
+>>> to kernel,  should we unmap the physmap (the kernel's page table) here? For we allocate
+>>> the page to user now
+>>>
+>> Yes, I think you're right. Oddly, the XPFO_READ_USER test works
+
 Hi Tycho,
+Could you share this test? I'd like to know how it works.
 
-On 2017/9/11 23:02, Tycho Andersen wrote:
-> Hi Yisheng,
-> 
-> On Mon, Sep 11, 2017 at 06:34:45PM +0800, Yisheng Xie wrote:
->> Hi Tycho ,
->>
->> On 2017/9/8 1:35, Tycho Andersen wrote:
->>> Hi all,
->>>
->>> Here is v6 of the XPFO set; see v5 discussion here:
->>> https://lkml.org/lkml/2017/8/9/803
->>>
->>> Changelogs are in the individual patch notes, but the highlights are:
->>> * add primitives for ensuring memory areas are mapped (although these are quite
->>>   ugly, using stack allocation; I'm open to better suggestions)
->>> * instead of not flushing caches, re-map pages using the above
->>> * TLB flushing is much more correct (i.e. we're always flushing everything
->>>   everywhere). I suspect we may be able to back this off in some cases, but I'm
->>>   still trying to collect performance numbers to prove this is worth doing.
->>>
->>> I have no TODOs left for this set myself, other than fixing whatever review
->>> feedback people have. Thoughts and testing welcome!
->>
->> According to the paper of Vasileios P. Kemerlis et al, the mainline kernel
->> will not set the Pro. of physmap(direct map area) to RW(X), so do we really
->> need XPFO to protect from ret2dir attack?
-> 
-> I guess you're talking about section 4.3? 
-Yes
+Thanks
 
-> They mention that that x86
-> only gets rw, but that aarch64 is rwx still.
-IIRC, the in kernel of v4.13 the aarch64 is not rwx, I will check it.
-
+>> correctly for me, but I think (?) should not because of this bug...
 > 
-> But in either case this still provides access protection, similar to
-> SMAP. Also, if I understand things correctly the protections are
-> unmanaged, so a page that had the +x bit set at some point, it could
-> be used for ret2dir.
-So you means that the Pro. of direct map area maybe changed to +x, then ret2dir attack can use it?
+> IIRC, this is an optimization carried forward from the initial
+> implementation. 
+Hi Juerg,
+
+hmm.. If below is the first version, then it seems this exist from the first version:
+https://patchwork.kernel.org/patch/8437451/
+
+> The assumption is that the kernel will map the user
+> buffer so it's not unmapped on allocation but only on the first (and
+> subsequent) call of kunmap.
+
+IMO, before a page is allocated, it is in buddy system, which means it is free
+and no other 'map' on the page except direct map. Then if the page is allocated
+to user, XPFO should unmap the direct map. otherwise the ret2dir may works at
+this window before it is freed. Or maybe I'm still missing anything.
 
 Thanks
 Yisheng Xie
+
+>  I.e.:
+>  - alloc  -> noop
+>  - kmap   -> noop
+>  - kunmap -> unmapped from the kernel
+>  - kmap   -> mapped into the kernel
+>  - kunmap -> unmapped from the kernel
+> and so on until:
+>  - free   -> mapped back into the kernel
+> 
+> I'm not sure if that make sense though since it leaves a window.
+> 
+> ...Juerg
+> 
+> 
+> 
+>> Tycho
+>>
+> 
+> .
+> 
