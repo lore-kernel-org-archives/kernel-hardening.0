@@ -1,196 +1,83 @@
 References: <20170907173609.22696-1-tycho@docker.com>
- <20170907173609.22696-4-tycho@docker.com>
- <302be94d-7e44-001d-286c-2b0cd6098f7b@huawei.com>
- <20170911145020.fat456njvyagcomu@docker>
- <57e95ad2-81d8-bf83-3e78-1313daa1bb80@canonical.com>
- <431e2567-7600-3186-1489-93b855c395bd@huawei.com>
- <20170912143636.avc3ponnervs43kj@docker>
- <20170912181303.aqjj5ri3mhscw63t@docker>
-From: Yisheng Xie <xieyisheng1@huawei.com>
-Message-ID: <689b2f87-46c5-b4be-67e0-a6639c420191@huawei.com>
-Date: Thu, 14 Sep 2017 14:15:25 +0800
+ <20170907173609.22696-6-tycho@docker.com>
+ <20170908075347.GC4957@infradead.org>
+ <20170908172422.rxmhwd2vl6eye2or@docker>
+From: Julien Grall <julien.grall@arm.com>
+Message-ID: <d637a56d-399d-fefa-806b-a9e2b0babb75@arm.com>
+Date: Thu, 14 Sep 2017 11:41:34 +0100
 MIME-Version: 1.0
-In-Reply-To: <20170912181303.aqjj5ri3mhscw63t@docker>
-Content-Type: text/plain; charset="windows-1252"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
- Ownership (XPFO)
-To: Tycho Andersen <tycho@docker.com>
-Cc: Juerg Haefliger <juerg.haefliger@canonical.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, x86@kernel.org
+In-Reply-To: <20170908172422.rxmhwd2vl6eye2or@docker>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v6 05/11] arm64/mm: Add support for XPFO
+To: Tycho Andersen <tycho@docker.com>, Christoph Hellwig <hch@infradead.org>
+Cc: Marco Benatto <marco.antonio.780@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Juerg Haefliger <juerg.haefliger@canonical.com>, xen-devel@lists.xenproject.org, linux-arm-kernel@lists.infradead.org, Juergen Gross <jgross@suse.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Stefano Stabellini <sstabellini@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Tycho,
+Hi,
 
-On 2017/9/13 2:13, Tycho Andersen wrote:
-> Hi Yisheng,
-> 
->> On Tue, Sep 12, 2017 at 04:05:22PM +0800, Yisheng Xie wrote:
->>> IMO, before a page is allocated, it is in buddy system, which means it is free
->>> and no other 'map' on the page except direct map. Then if the page is allocated
->>> to user, XPFO should unmap the direct map. otherwise the ret2dir may works at
->>> this window before it is freed. Or maybe I'm still missing anything.
+CC Juergen, Boris and Stefano.
+
+On 08/09/17 18:24, Tycho Andersen wrote:
+> On Fri, Sep 08, 2017 at 12:53:47AM -0700, Christoph Hellwig wrote:
+>>> +/*
+>>> + * Lookup the page table entry for a virtual address and return a pointer to
+>>> + * the entry. Based on x86 tree.
+>>> + */
+>>> +static pte_t *lookup_address(unsigned long addr)
 >>
->> I agree that it seems broken. I'm just not sure why the test doesn't
->> fail. It's certainly worth understanding.
+>> Seems like this should be moved to common arm64 mm code and used by
+>> kernel_page_present.
 > 
-> Ok, so I think what's going on is that the page *is* mapped and unmapped by the
-> kernel as Juerg described, but only in certain cases. See prep_new_page(),
-> which has the following:
+> Sounds good, I'll include something like the patch below in the next
+> series.
 > 
-> 	if (!free_pages_prezeroed() && (gfp_flags & __GFP_ZERO))
-> 		for (i = 0; i < (1 << order); i++)
-> 			clear_highpage(page + i);
+> Unfortunately, adding an implementation of lookup_address seems to be
+> slightly more complicated than necessary, because of the xen piece. We
+> have to define lookup_address() with the level parameter, but it's not
+> obvious to me to name the page levels. So for now I've just left it as
+> a WARN() if someone supplies it.
 > 
-> clear_highpage() maps and unmaps the pages, so that's why xpfo works with this
-> set.
-Oh, I really missed this point. For we need zero the memory before user get them.
+> It seems like xen still does need this to be defined, because if I
+> define it without level:
+> 
+> drivers/xen/xenbus/xenbus_client.c: In function ‘xenbus_unmap_ring_vfree_pv’:
+> drivers/xen/xenbus/xenbus_client.c:760:4: error: too many arguments to function ‘lookup_address’
+>      lookup_address(addr, &level)).maddr;
+>      ^~~~~~~~~~~~~~
+> In file included from ./arch/arm64/include/asm/page.h:37:0,
+>                   from ./include/linux/mmzone.h:20,
+>                   from ./include/linux/gfp.h:5,
+>                   from ./include/linux/mm.h:9,
+>                   from drivers/xen/xenbus/xenbus_client.c:33:
+> ./arch/arm64/include/asm/pgtable-types.h:67:15: note: declared here
+>   extern pte_t *lookup_address(unsigned long addr);
+>                 ^~~~~~~~~~~~~~
+> 
+> I've cc-d the xen folks, maybe they can suggest a way to untangle it?
+> Alternatively, if someone can suggest a good naming scheme for the
+> page levels, I can just do that.
 
-Thanks a lot for figuring out.
+The implementation of lookup_address(...) on ARM for Xen (see 
+include/xen/arm/page.h) is just a BUG(). This is because this code 
+should never be called (only used for x86 PV code).
 
-> 
-> I tried with CONFIG_PAGE_POISONING_ZERO=y and page_poison=y, and the
-> XPFO_READ_USER test does not fail, i.e. the read succeeds. So, I think we need
-> to include this zeroing condition in xpfo_alloc_pages(), something like the
-> patch below. Unfortunately, this fails to boot for me, probably for an
-> unrelated reason that I'll look into.
-Yes, seems need to fix in this case, and I also a litter puzzle about why boot fail.
+Furthermore, xenbus client does not use at all the level. It is just to 
+cope with the x86 version of lookup_address.
 
-Thanks
-Yisheng Xie
+So one way to solve the problem would be to introduce 
+xen_lookup_address(addr) that would be implemented as:
+	- on x86
+		unsigned int level;
 
-> 
-> Thanks a lot!
-> 
-> Tycho
-> 
-> 
->>>From bfc21a6438cf8c56741af94cac939f1b0f63752c Mon Sep 17 00:00:00 2001
-> From: Tycho Andersen <tycho@docker.com>
-> Date: Tue, 12 Sep 2017 12:06:41 -0600
-> Subject: [PATCH] draft of unmapping patch
-> 
-> Signed-off-by: Tycho Andersen <tycho@docker.com>
-> ---
->  include/linux/xpfo.h |  5 +++--
->  mm/compaction.c      |  2 +-
->  mm/internal.h        |  2 +-
->  mm/page_alloc.c      | 10 ++++++----
->  mm/xpfo.c            | 10 ++++++++--
->  5 files changed, 19 insertions(+), 10 deletions(-)
-> 
-> diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
-> index b24be9ac4a2d..c991bf7f051d 100644
-> --- a/include/linux/xpfo.h
-> +++ b/include/linux/xpfo.h
-> @@ -29,7 +29,7 @@ void xpfo_flush_kernel_tlb(struct page *page, int order);
->  
->  void xpfo_kmap(void *kaddr, struct page *page);
->  void xpfo_kunmap(void *kaddr, struct page *page);
-> -void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp);
-> +void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp, bool will_map);
->  void xpfo_free_pages(struct page *page, int order);
->  
->  bool xpfo_page_is_unmapped(struct page *page);
-> @@ -49,7 +49,8 @@ void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
->  
->  static inline void xpfo_kmap(void *kaddr, struct page *page) { }
->  static inline void xpfo_kunmap(void *kaddr, struct page *page) { }
-> -static inline void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp) { }
-> +static inline void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp,
-> +				    bool will_map) { }
->  static inline void xpfo_free_pages(struct page *page, int order) { }
->  
->  static inline bool xpfo_page_is_unmapped(struct page *page) { return false; }
-> diff --git a/mm/compaction.c b/mm/compaction.c
-> index fb548e4c7bd4..9a222258e65c 100644
-> --- a/mm/compaction.c
-> +++ b/mm/compaction.c
-> @@ -76,7 +76,7 @@ static void map_pages(struct list_head *list)
->  		order = page_private(page);
->  		nr_pages = 1 << order;
->  
-> -		post_alloc_hook(page, order, __GFP_MOVABLE);
-> +		post_alloc_hook(page, order, __GFP_MOVABLE, false);
->  		if (order)
->  			split_page(page, order);
->  
-> diff --git a/mm/internal.h b/mm/internal.h
-> index 4ef49fc55e58..1a0331ec2b2d 100644
-> --- a/mm/internal.h
-> +++ b/mm/internal.h
-> @@ -165,7 +165,7 @@ extern void __free_pages_bootmem(struct page *page, unsigned long pfn,
->  					unsigned int order);
->  extern void prep_compound_page(struct page *page, unsigned int order);
->  extern void post_alloc_hook(struct page *page, unsigned int order,
-> -					gfp_t gfp_flags);
-> +					gfp_t gfp_flags, bool will_map);
->  extern int user_min_free_kbytes;
->  
->  #if defined CONFIG_COMPACTION || defined CONFIG_CMA
-> diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-> index 09fdf1bad21f..f73809847c58 100644
-> --- a/mm/page_alloc.c
-> +++ b/mm/page_alloc.c
-> @@ -1750,7 +1750,7 @@ static bool check_new_pages(struct page *page, unsigned int order)
->  }
->  
->  inline void post_alloc_hook(struct page *page, unsigned int order,
-> -				gfp_t gfp_flags)
-> +				gfp_t gfp_flags, bool will_map)
->  {
->  	set_page_private(page, 0);
->  	set_page_refcounted(page);
-> @@ -1759,18 +1759,20 @@ inline void post_alloc_hook(struct page *page, unsigned int order,
->  	kernel_map_pages(page, 1 << order, 1);
->  	kernel_poison_pages(page, 1 << order, 1);
->  	kasan_alloc_pages(page, order);
-> -	xpfo_alloc_pages(page, order, gfp_flags);
-> +	xpfo_alloc_pages(page, order, gfp_flags, will_map);
->  	set_page_owner(page, order, gfp_flags);
->  }
->  
-> +extern bool xpfo_test;
->  static void prep_new_page(struct page *page, unsigned int order, gfp_t gfp_flags,
->  							unsigned int alloc_flags)
->  {
->  	int i;
-> +	bool needs_zero = !free_pages_prezeroed() && (gfp_flags & __GFP_ZERO);
->  
-> -	post_alloc_hook(page, order, gfp_flags);
-> +	post_alloc_hook(page, order, gfp_flags, needs_zero);
->  
-> -	if (!free_pages_prezeroed() && (gfp_flags & __GFP_ZERO))
-> +	if (needs_zero)
->  		for (i = 0; i < (1 << order); i++)
->  			clear_highpage(page + i);
->  
-> diff --git a/mm/xpfo.c b/mm/xpfo.c
-> index ca5d4d1838f9..dd25e24213fe 100644
-> --- a/mm/xpfo.c
-> +++ b/mm/xpfo.c
-> @@ -86,7 +86,7 @@ static inline struct xpfo *lookup_xpfo(struct page *page)
->  	return (void *)page_ext + page_xpfo_ops.offset;
->  }
->  
-> -void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp)
-> +void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp, bool will_map)
->  {
->  	int i, flush_tlb = 0;
->  	struct xpfo *xpfo;
-> @@ -116,8 +116,14 @@ void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp)
->  			 * Tag the page as a user page and flush the TLB if it
->  			 * was previously allocated to the kernel.
->  			 */
-> -			if (!test_and_set_bit(XPFO_PAGE_USER, &xpfo->flags))
-> +			bool was_user = !test_and_set_bit(XPFO_PAGE_USER,
-> +							  &xpfo->flags);
-> +
-> +			if (was_user || !will_map) {
-> +				set_kpte(page_address(page + i), page + i,
-> +					 __pgprot(0));
->  				flush_tlb = 1;
-> +			}
->  		} else {
->  			/* Tag the page as a non-user (kernel) page */
->  			clear_bit(XPFO_PAGE_USER, &xpfo->flags);
-> 
+		return lookup_address(addr, &level).maddr;
+	- on ARM
+		BUG();
+
+With that there would be no prototype clash and avoid introducing a 
+level parameter.
+
+Cheers,
+
+-- 
+Julien Grall
