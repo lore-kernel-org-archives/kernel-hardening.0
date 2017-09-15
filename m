@@ -1,98 +1,164 @@
-Date: Thu, 14 Sep 2017 19:34:02 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170914183401.GC1711@remoulade>
-References: <20170907173609.22696-1-tycho@docker.com>
- <20170907173609.22696-11-tycho@docker.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170907173609.22696-11-tycho@docker.com>
-Subject: Re: [kernel-hardening] [PATCH v6 10/11] mm: add a user_virt_to_phys
- symbol
-To: Tycho Andersen <tycho@docker.com>
-Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, linux-arm-kernel@lists.infradead.org, x86@kernel.org
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Fri, 15 Sep 2017 10:43:48 +0200
+Message-Id: <1505465028-15256-1-git-send-email-s.mesoraca16@gmail.com>
+Subject: [kernel-hardening] [RFC] Restrict writes into untrusted FIFOs and regular files
+To: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, Alexander Viro <viro@zeniv.linux.org.uk>, "Eric W. Biederman" <ebiederm@xmission.com>, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, Salvatore Mesoraca <s.mesoraca16@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Sep 07, 2017 at 11:36:08AM -0600, Tycho Andersen wrote:
-> We need someting like this for testing XPFO. Since it's architecture
-> specific, putting it in the test code is slightly awkward, so let's make it
-> an arch-specific symbol and export it for use in LKDTM.
-> 
-> v6: * add a definition of user_virt_to_phys in the !CONFIG_XPFO case
-> 
-> CC: linux-arm-kernel@lists.infradead.org
-> CC: x86@kernel.org
-> Signed-off-by: Tycho Andersen <tycho@docker.com>
-> Tested-by: Marco Benatto <marco.antonio.780@gmail.com>
-> ---
->  arch/arm64/mm/xpfo.c | 51 ++++++++++++++++++++++++++++++++++++++++++++++
->  arch/x86/mm/xpfo.c   | 57 ++++++++++++++++++++++++++++++++++++++++++++++++++++
->  include/linux/xpfo.h |  5 +++++
->  3 files changed, 113 insertions(+)
-> 
-> diff --git a/arch/arm64/mm/xpfo.c b/arch/arm64/mm/xpfo.c
-> index 342a9ccb93c1..94a667d94e15 100644
-> --- a/arch/arm64/mm/xpfo.c
-> +++ b/arch/arm64/mm/xpfo.c
-> @@ -74,3 +74,54 @@ void xpfo_dma_map_unmap_area(bool map, const void *addr, size_t size,
->  
->  	xpfo_temp_unmap(addr, size, mapping, sizeof(mapping[0]) * num_pages);
->  }
-> +
-> +/* Convert a user space virtual address to a physical address.
-> + * Shamelessly copied from slow_virt_to_phys() and lookup_address() in
-> + * arch/x86/mm/pageattr.c
-> + */
+Disallows writing into FIFOs or regular files not owned by the user
+in world writable sticky directories, unless the owner is the same as
+that of the directory or the file is opened without the O_CREAT flag.
+The purpose is to make data spoofing attacks harder.
+This protection can be turned on and off separately for FIFOs and regular
+files via sysctl, just like the symlinks/hardlinks protection.
+This patch is based on Openwall's "HARDEN_FIFO" feature by Solar
+Designer <solar at openwall.com>.
 
-When can this be called? What prevents concurrent modification of the user page
-tables?
+Suggested-by: Solar Designer <solar@openwall.com>
+Suggested-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+---
+ Documentation/sysctl/fs.txt | 34 ++++++++++++++++++++++++++++++++++
+ fs/namei.c                  | 23 +++++++++++++++++++++++
+ include/linux/fs.h          |  2 ++
+ kernel/sysctl.c             | 18 ++++++++++++++++++
+ 4 files changed, 77 insertions(+)
 
-i.e. must mmap_sem be held?
-
-> +phys_addr_t user_virt_to_phys(unsigned long addr)
-
-Does this really need to be architecture specific?
-
-Core mm code manages to walk user page tables just fine...
-
-> +{
-> +	phys_addr_t phys_addr;
-> +	unsigned long offset;
-> +	pgd_t *pgd;
-> +	p4d_t *p4d;
-> +	pud_t *pud;
-> +	pmd_t *pmd;
-> +	pte_t *pte;
-> +
-> +	pgd = pgd_offset(current->mm, addr);
-> +	if (pgd_none(*pgd))
-> +		return 0;
-
-Can we please separate the address and return value? e.g. pass the PA by
-reference and return an error code.
-
-AFAIK, zero is a valid PA, and even if the tables exist, they might point there
-in the presence of an error.
-
-> +
-> +	p4d = p4d_offset(pgd, addr);
-> +	if (p4d_none(*p4d))
-> +		return 0;
-> +
-> +	pud = pud_offset(p4d, addr);
-> +	if (pud_none(*pud))
-> +		return 0;
-> +
-> +	if (pud_sect(*pud) || !pud_present(*pud)) {
-> +		phys_addr = (unsigned long)pud_pfn(*pud) << PAGE_SHIFT;
-
-Was there some problem with:
-
-	phys_addr = pmd_page_paddr(*pud);
-
-... and similar for the other levels?
-
-... I'd rather introduce new helpers than more open-coded calculations.
-
-Thanks,
-Mark.
+diff --git a/Documentation/sysctl/fs.txt b/Documentation/sysctl/fs.txt
+index 35e17f7..18e16b7 100644
+--- a/Documentation/sysctl/fs.txt
++++ b/Documentation/sysctl/fs.txt
+@@ -36,6 +36,8 @@ Currently, these files are in /proc/sys/fs:
+ - pipe-user-pages-soft
+ - protected_hardlinks
+ - protected_symlinks
++- protected_fifos
++- protected_regular_files
+ - suid_dumpable
+ - super-max
+ - super-nr
+@@ -222,6 +224,38 @@ This protection is based on the restrictions in Openwall and grsecurity.
+ 
+ ==============================================================
+ 
++protected_fifos:
++
++The intent of this protection is to avoid unintentional writes to
++an attacker-controlled FIFO, where program expected to create a regular
++file.
++
++When set to "0", FIFOs writing is unrestricted.
++
++When set to "1" don't allow O_CREAT open on FIFOs that we don't own
++in world writable sticky directories, unless they are owned by the
++owner of the directory.
++
++This protection is based on the restrictions in Openwall.
++
++==============================================================
++
++protected_regular_files:
++
++This protection is similar to protected_fifos, but it
++avoids writes to an attacker-controlled regular file, where program
++expected to create one.
++
++When set to "0", regular files writing is unrestricted.
++
++When set to "1" don't allow O_CREAT open on regular files that we
++don't own in world writable sticky directories, unless they are
++owned by the owner of the directory.
++
++This protection is based on the restrictions in Openwall.
++
++==============================================================
++
+ suid_dumpable:
+ 
+ This value can be used to query and set the core dump mode for setuid
+diff --git a/fs/namei.c b/fs/namei.c
+index c75ea03..5459dbc 100644
+--- a/fs/namei.c
++++ b/fs/namei.c
+@@ -3225,6 +3225,9 @@ static int lookup_open(struct nameidata *nd, struct path *path,
+ 	return error;
+ }
+ 
++int sysctl_protected_fifos __read_mostly;
++int sysctl_protected_regular_files __read_mostly;
++
+ /*
+  * Handle the last step of open()
+  */
+@@ -3354,6 +3357,26 @@ static int do_last(struct nameidata *nd,
+ 
+ 	seq = 0;	/* out of RCU mode, so the value doesn't matter */
+ 	inode = d_backing_inode(path.dentry);
++	/*
++	 * When this protection is turned on via sysctl:
++	 * don't allow "O_CREAT" open on FIFOs or regular files that we
++	 * don't own in world writable sticky directories, unless they
++	 * are owned by the owner of the directory.
++	 */
++	if (((sysctl_protected_fifos && S_ISFIFO(inode->i_mode)) ||
++	     (sysctl_protected_regular_files && S_ISREG(inode->i_mode))) &&
++	    (dir->d_inode->i_mode & (S_ISVTX|S_IWOTH) == (S_ISVTX|S_IWOTH)) &&
++	    !uid_eq(inode->i_uid, dir->d_inode->i_uid) &&
++	    !uid_eq(current_fsuid(), inode->i_uid)) {
++		pr_notice_ratelimited("denied writing in file of %d.%d in a sticky directory by UID %d, EUID %d, process %s:%d.",
++				from_kuid(&init_user_ns, inode->i_uid),
++				from_kgid(&init_user_ns, inode->i_gid),
++				from_kuid(&init_user_ns, current_uid()),
++				from_kuid(&init_user_ns, current_euid()),
++				current->comm, current->pid);
++		path_to_nameidata(&path, nd);
++		return -EACCES;
++	}
+ finish_lookup:
+ 	error = step_into(nd, &path, 0, inode, seq);
+ 	if (unlikely(error))
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 339e737..591ae87 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -71,6 +71,8 @@
+ extern int leases_enable, lease_break_time;
+ extern int sysctl_protected_symlinks;
+ extern int sysctl_protected_hardlinks;
++extern int sysctl_protected_fifos;
++extern int sysctl_protected_regular_files;
+ 
+ typedef __kernel_rwf_t rwf_t;
+ 
+diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+index 6648fbb..b18d500 100644
+--- a/kernel/sysctl.c
++++ b/kernel/sysctl.c
+@@ -1807,6 +1807,24 @@ static int sysrq_sysctl_handler(struct ctl_table *table, int write,
+ 		.extra2		= &one,
+ 	},
+ 	{
++		.procname	= "protected_fifos",
++		.data		= &sysctl_protected_fifos,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec_minmax,
++		.extra1		= &zero,
++		.extra2		= &one,
++	},
++	{
++		.procname	= "protected_regular_files",
++		.data		= &sysctl_protected_regular_files,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec_minmax,
++		.extra1		= &zero,
++		.extra2		= &one,
++	},
++	{
+ 		.procname	= "suid_dumpable",
+ 		.data		= &suid_dumpable,
+ 		.maxlen		= sizeof(int),
+-- 
+1.9.1
