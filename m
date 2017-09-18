@@ -1,215 +1,182 @@
+Date: Mon, 18 Sep 2017 15:27:34 -0600
+From: Tycho Andersen <tycho@docker.com>
+Message-ID: <20170918212734.6ympyqfqzyd6kv35@docker>
+References: <20170907173609.22696-1-tycho@docker.com>
+ <20170907173609.22696-6-tycho@docker.com>
+ <20170914182205.GA1711@remoulade>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1505465028-15256-1-git-send-email-s.mesoraca16@gmail.com>
-References: <1505465028-15256-1-git-send-email-s.mesoraca16@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 18 Sep 2017 14:00:50 -0700
-Message-ID: <CAGXu5jLRn3_gCb4F5EyUXSk=JOW-yzftST3z2XA3Kner21d=bw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [RFC] Restrict writes into untrusted FIFOs and regular files
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Solar Designer <solar@openwall.com>, Alexander Viro <viro@zeniv.linux.org.uk>, "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170914182205.GA1711@remoulade>
+Subject: Re: [kernel-hardening] [PATCH v6 05/11] arm64/mm: Add support for
+ XPFO
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Sep 15, 2017 at 1:43 AM, Salvatore Mesoraca
-<s.mesoraca16@gmail.com> wrote:
-> Disallows writing into FIFOs or regular files not owned by the user
-> in world writable sticky directories, unless the owner is the same as
-> that of the directory or the file is opened without the O_CREAT flag.
+Hi Mark,
 
-Thanks for working on this!
+On Thu, Sep 14, 2017 at 07:22:08PM +0100, Mark Rutland wrote:
+> Hi,
+> 
+> On Thu, Sep 07, 2017 at 11:36:03AM -0600, Tycho Andersen wrote:
+> > From: Juerg Haefliger <juerg.haefliger@canonical.com>
+> > 
+> > Enable support for eXclusive Page Frame Ownership (XPFO) for arm64 and
+> > provide a hook for updating a single kernel page table entry (which is
+> > required by the generic XPFO code).
+> > 
+> > v6: use flush_tlb_kernel_range() instead of __flush_tlb_one()
+> > 
+> > CC: linux-arm-kernel@lists.infradead.org
+> > Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
+> > Signed-off-by: Tycho Andersen <tycho@docker.com>
+> > ---
+> >  arch/arm64/Kconfig     |  1 +
+> >  arch/arm64/mm/Makefile |  2 ++
+> >  arch/arm64/mm/xpfo.c   | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++
+> >  3 files changed, 61 insertions(+)
+> > 
+> > diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+> > index dfd908630631..44fa44ef02ec 100644
+> > --- a/arch/arm64/Kconfig
+> > +++ b/arch/arm64/Kconfig
+> > @@ -121,6 +121,7 @@ config ARM64
+> >  	select SPARSE_IRQ
+> >  	select SYSCTL_EXCEPTION_TRACE
+> >  	select THREAD_INFO_IN_TASK
+> > +	select ARCH_SUPPORTS_XPFO
+> 
+> A bit of a nit, but this list is (intended to be) organised alphabetically.
+> Could you please try to retain that?
+> 
+> i.e. place this between ARCH_SUPPORTS_NUMA_BALANCING and
+> ARCH_WANT_COMPAT_IPC_PARSE_VERSION.
 
-> The purpose is to make data spoofing attacks harder.
+Will do.
 
-Do you have any examples of attacks (CVEs, blog posts, etc) that you
-could link to in this commit?
+> >  	help
+> >  	  ARM 64-bit (AArch64) Linux support.
+> >  
+> > diff --git a/arch/arm64/mm/Makefile b/arch/arm64/mm/Makefile
+> > index 9b0ba191e48e..22e5cab543d8 100644
+> > --- a/arch/arm64/mm/Makefile
+> > +++ b/arch/arm64/mm/Makefile
+> > @@ -11,3 +11,5 @@ KASAN_SANITIZE_physaddr.o	+= n
+> >  
+> >  obj-$(CONFIG_KASAN)		+= kasan_init.o
+> >  KASAN_SANITIZE_kasan_init.o	:= n
+> > +
+> > +obj-$(CONFIG_XPFO)		+= xpfo.o
+> > diff --git a/arch/arm64/mm/xpfo.c b/arch/arm64/mm/xpfo.c
+> > new file mode 100644
+> > index 000000000000..678e2be848eb
+> > --- /dev/null
+> > +++ b/arch/arm64/mm/xpfo.c
+> > @@ -0,0 +1,58 @@
+> > +/*
+> > + * Copyright (C) 2017 Hewlett Packard Enterprise Development, L.P.
+> > + * Copyright (C) 2016 Brown University. All rights reserved.
+> > + *
+> > + * Authors:
+> > + *   Juerg Haefliger <juerg.haefliger@hpe.com>
+> > + *   Vasileios P. Kemerlis <vpk@cs.brown.edu>
+> > + *
+> > + * This program is free software; you can redistribute it and/or modify it
+> > + * under the terms of the GNU General Public License version 2 as published by
+> > + * the Free Software Foundation.
+> > + */
+> > +
+> > +#include <linux/mm.h>
+> > +#include <linux/module.h>
+> > +
+> > +#include <asm/tlbflush.h>
+> > +
+> > +/*
+> > + * Lookup the page table entry for a virtual address and return a pointer to
+> > + * the entry. Based on x86 tree.
+> > + */
+> 
+> Is this intended for kernel VAs, user VAs, or both?
+> 
+> There are different constraints for fiddling with either (e.g. holding
+> mmap_sem), so we should be clear regarding the intended use-case.
 
-> This protection can be turned on and off separately for FIFOs and regular
-> files via sysctl, just like the symlinks/hardlinks protection.
-> This patch is based on Openwall's "HARDEN_FIFO" feature by Solar
-> Designer <solar at openwall.com>.
+kernel only; I can add a comment noting this.
 
-The email address obfuscation can be dropped here, it's already listed
-in the "Suggested-by". :)
+> > +static pte_t *lookup_address(unsigned long addr)
+> > +{
+> > +	pgd_t *pgd;
+> > +	pud_t *pud;
+> > +	pmd_t *pmd;
+> > +
+> > +	pgd = pgd_offset_k(addr);
+> > +	if (pgd_none(*pgd))
+> > +		return NULL;
+> > +
+> > +	pud = pud_offset(pgd, addr);
+> > +	if (pud_none(*pud))
+> > +		return NULL;
+> 
+> What if it's not none, but not a table?
+> 
+> I think we chould check pud_sect() here, and/or pud_bad().
+> 
+> > +
+> > +	pmd = pmd_offset(pud, addr);
+> > +	if (pmd_none(*pmd))
+> > +		return NULL;
+> 
+> Likewise.
 
->
-> Suggested-by: Solar Designer <solar@openwall.com>
-> Suggested-by: Kees Cook <keescook@chromium.org>
-> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-> ---
->  Documentation/sysctl/fs.txt | 34 ++++++++++++++++++++++++++++++++++
->  fs/namei.c                  | 23 +++++++++++++++++++++++
->  include/linux/fs.h          |  2 ++
->  kernel/sysctl.c             | 18 ++++++++++++++++++
->  4 files changed, 77 insertions(+)
->
-> diff --git a/Documentation/sysctl/fs.txt b/Documentation/sysctl/fs.txt
-> index 35e17f7..18e16b7 100644
-> --- a/Documentation/sysctl/fs.txt
-> +++ b/Documentation/sysctl/fs.txt
-> @@ -36,6 +36,8 @@ Currently, these files are in /proc/sys/fs:
->  - pipe-user-pages-soft
->  - protected_hardlinks
->  - protected_symlinks
-> +- protected_fifos
-> +- protected_regular_files
+In principle pud_sect() should be okay, because we say that XPFO
+doesn't support section mappings yet. I'll add a check for pud_bad().
 
-bike shed: I think "_files" is redundant, since we're already in proc/sys/fs/
+However, Christoph suggested that we move this to common code and
+there it won't be okay.
 
-Also, here and later, keep this list alphabetized (fifos, hardlinks,
-regular_files, symlinks).
+> > +
+> > +	return pte_offset_kernel(pmd, addr);
+> > +}
+> 
+> Given this expects a pte, it might make more sense to call this
+> lookup_address_pte() to make that clear.
+> 
+> > +
+> > +/* Update a single kernel page table entry */
+> > +inline void set_kpte(void *kaddr, struct page *page, pgprot_t prot)
+> > +{
+> > +	pte_t *pte = lookup_address((unsigned long)kaddr);
+> > +
+> > +	set_pte(pte, pfn_pte(page_to_pfn(page), prot));
+> 
+> We can get NULL from lookup_address(), so this doesn't look right.
+> 
+> If NULL implies an error, drop a BUG_ON(!pte) before the set_pte.
 
->  - suid_dumpable
->  - super-max
->  - super-nr
-> @@ -222,6 +224,38 @@ This protection is based on the restrictions in Openwall and grsecurity.
->
->  ==============================================================
->
-> +protected_fifos:
-> +
-> +The intent of this protection is to avoid unintentional writes to
-> +an attacker-controlled FIFO, where program expected to create a regular
-> +file.
+It does, I'll add this (as a WARN() and then no-op), thanks.
 
-Typo: "a program" or "programs", instead of "program".
+> > +}
+> > +
+> > +inline void xpfo_flush_kernel_tlb(struct page *page, int order)
+> > +{
+> > +	unsigned long kaddr = (unsigned long)page_address(page);
+> > +	unsigned long size = PAGE_SIZE;
+> 
+> unsigned long size = PAGE_SIZE << order;
+> 
+> > +
+> > +	flush_tlb_kernel_range(kaddr, kaddr + (1 << order) * size);
+> 
+> ... and this can be simpler.
+> 
+> I haven't brought myself back up to speed, so it might not be possible, but I
+> still think it would be preferable for XPFO to call flush_tlb_kernel_range()
+> directly.
 
-> +
-> +When set to "0", FIFOs writing is unrestricted.
-> +
-> +When set to "1" don't allow O_CREAT open on FIFOs that we don't own
-> +in world writable sticky directories, unless they are owned by the
-> +owner of the directory.
-> +
-> +This protection is based on the restrictions in Openwall.
-> +
-> +==============================================================
-> +
-> +protected_regular_files:
-> +
-> +This protection is similar to protected_fifos, but it
-> +avoids writes to an attacker-controlled regular file, where program
-> +expected to create one.
-> +
-> +When set to "0", regular files writing is unrestricted.
-> +
-> +When set to "1" don't allow O_CREAT open on regular files that we
-> +don't own in world writable sticky directories, unless they are
-> +owned by the owner of the directory.
-> +
-> +This protection is based on the restrictions in Openwall.
-> +
-> +==============================================================
-> +
->  suid_dumpable:
->
->  This value can be used to query and set the core dump mode for setuid
-> diff --git a/fs/namei.c b/fs/namei.c
-> index c75ea03..5459dbc 100644
-> --- a/fs/namei.c
-> +++ b/fs/namei.c
-> @@ -3225,6 +3225,9 @@ static int lookup_open(struct nameidata *nd, struct path *path,
->         return error;
->  }
->
-> +int sysctl_protected_fifos __read_mostly;
-> +int sysctl_protected_regular_files __read_mostly;
-> +
->  /*
->   * Handle the last step of open()
->   */
-> @@ -3354,6 +3357,26 @@ static int do_last(struct nameidata *nd,
->
->         seq = 0;        /* out of RCU mode, so the value doesn't matter */
->         inode = d_backing_inode(path.dentry);
-> +       /*
-> +        * When this protection is turned on via sysctl:
-> +        * don't allow "O_CREAT" open on FIFOs or regular files that we
-> +        * don't own in world writable sticky directories, unless they
-> +        * are owned by the owner of the directory.
-> +        */
-> +       if (((sysctl_protected_fifos && S_ISFIFO(inode->i_mode)) ||
-> +            (sysctl_protected_regular_files && S_ISREG(inode->i_mode))) &&
-> +           (dir->d_inode->i_mode & (S_ISVTX|S_IWOTH) == (S_ISVTX|S_IWOTH)) &&
-> +           !uid_eq(inode->i_uid, dir->d_inode->i_uid) &&
-> +           !uid_eq(current_fsuid(), inode->i_uid)) {
-> +               pr_notice_ratelimited("denied writing in file of %d.%d in a sticky directory by UID %d, EUID %d, process %s:%d.",
-> +                               from_kuid(&init_user_ns, inode->i_uid),
-> +                               from_kgid(&init_user_ns, inode->i_gid),
-> +                               from_kuid(&init_user_ns, current_uid()),
-> +                               from_kuid(&init_user_ns, current_euid()),
-> +                               current->comm, current->pid);
-> +               path_to_nameidata(&path, nd);
-> +               return -EACCES;
-> +       }
+I don't think we can, since on x86 it uses smp functions, and in some
+cases those aren't safe.
 
-I think instead of putting this inline in do_last(), you can make a
-helper function (e.g. may_creat()), as done for the hardlink and
-symlink restrictions. Also, I think you'll need to do this check later
-and merge with with the existing O_CREAT flag sanity check:
+Cheers,
 
-        if (open_flag & O_CREAT) {
-                error = -EISDIR;
-                if (d_is_dir(nd->path.dentry))
-                    goto out;
-                error = may_creat(dir, inode);
-                if (unlikely(error))
-                    goto out;
-        }
-
->  finish_lookup:
->         error = step_into(nd, &path, 0, inode, seq);
->         if (unlikely(error))
-> diff --git a/include/linux/fs.h b/include/linux/fs.h
-> index 339e737..591ae87 100644
-> --- a/include/linux/fs.h
-> +++ b/include/linux/fs.h
-> @@ -71,6 +71,8 @@
->  extern int leases_enable, lease_break_time;
->  extern int sysctl_protected_symlinks;
->  extern int sysctl_protected_hardlinks;
-> +extern int sysctl_protected_fifos;
-> +extern int sysctl_protected_regular_files;
->
->  typedef __kernel_rwf_t rwf_t;
->
-> diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-> index 6648fbb..b18d500 100644
-> --- a/kernel/sysctl.c
-> +++ b/kernel/sysctl.c
-> @@ -1807,6 +1807,24 @@ static int sysrq_sysctl_handler(struct ctl_table *table, int write,
->                 .extra2         = &one,
->         },
->         {
-> +               .procname       = "protected_fifos",
-> +               .data           = &sysctl_protected_fifos,
-> +               .maxlen         = sizeof(int),
-> +               .mode           = 0600,
-> +               .proc_handler   = proc_dointvec_minmax,
-> +               .extra1         = &zero,
-> +               .extra2         = &one,
-> +       },
-> +       {
-> +               .procname       = "protected_regular_files",
-> +               .data           = &sysctl_protected_regular_files,
-> +               .maxlen         = sizeof(int),
-> +               .mode           = 0600,
-> +               .proc_handler   = proc_dointvec_minmax,
-> +               .extra1         = &zero,
-> +               .extra2         = &one,
-> +       },
-> +       {
->                 .procname       = "suid_dumpable",
->                 .data           = &suid_dumpable,
->                 .maxlen         = sizeof(int),
-> --
-> 1.9.1
->
-
-Otherwise, yeah, looks good! :)
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+Tycho
