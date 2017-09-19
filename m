@@ -1,116 +1,50 @@
-Date: Tue, 19 Sep 2017 02:37:07 +0200
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20170919003707.GA25217@openwall.com>
-References: <1505465028-15256-1-git-send-email-s.mesoraca16@gmail.com> <CAGXu5jLRn3_gCb4F5EyUXSk=JOW-yzftST3z2XA3Kner21d=bw@mail.gmail.com>
-Mime-Version: 1.0
+Date: Tue, 19 Sep 2017 09:39:59 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Message-ID: <20170919133959.5fgtioyonlsdyjf5@thunk.org>
+References: <20170916130034.17706-1-Jason@zx2c4.com>
+ <2681038.03lnYPhpsa@tauon.chronox.de>
+ <CAHmME9p6uq0ELtgxB94bc4bUppa7UogWSEgj_9o8p2xXQfrz5A@mail.gmail.com>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jLRn3_gCb4F5EyUXSk=JOW-yzftST3z2XA3Kner21d=bw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [RFC] Restrict writes into untrusted FIFOs and regular files
-To: Kees Cook <keescook@chromium.org>
-Cc: Salvatore Mesoraca <s.mesoraca16@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Alexander Viro <viro@zeniv.linux.org.uk>, "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>
+In-Reply-To: <CAHmME9p6uq0ELtgxB94bc4bUppa7UogWSEgj_9o8p2xXQfrz5A@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v4] security/keys: rewrite all of big_key crypto
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Stephan Mueller <smueller@chronox.de>, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, David Howells <dhowells@redhat.com>, Eric Biggers <ebiggers3@gmail.com>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Ilhan Gurel <ilhan.gurel@gmail.com>, security@kernel.org, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Sep 18, 2017 at 02:00:50PM -0700, Kees Cook wrote:
-> On Fri, Sep 15, 2017 at 1:43 AM, Salvatore Mesoraca <s.mesoraca16@gmail.com> wrote:
-> > The purpose is to make data spoofing attacks harder.
-> 
-> Do you have any examples of attacks (CVEs, blog posts, etc) that you
-> could link to in this commit?
+On Mon, Sep 18, 2017 at 01:24:18PM +0200, Jason A. Donenfeld wrote:
+> Good luck with getting approval... While Ted and I have our
+> differences like any two kernel developers, I really tend agree with
+> him in his attitude about this FIPS silliness. It's unlikely you're
+> going to be able to shovel this stuff into random.c, and I think doing
+> so will undermine your entire LRNG effort.
 
-I doubt there are (m)any examples of attacks and blog posts on this,
-because most systems didn't have similar (sym)link restrictions until
-recently and those attacks are simpler.  As to CVEs, I expect that a
-large subset of CVEs assigned to "improper usage of temporary files" or
-"symlink attacks" or such are about vulnerabilities that are also
-exploitable into data spoofing, even if perhaps with different (and
-often lesser) impact than they are when exploited via (sym)links.
+Let me add one more reason why FIPS compliance for the kernel is just
+***stupid***.  The way FIPS compliance works, you have to pay hundreds
+of thousands of dollars to a FIPS certification lab to certify a
+specific binary, complete with the exact build environment (compiler,
+binutils, etc.) used to build that kernel binary.
 
-IIRC, the attacks were first pointed out on LKML circa 1997 as an
-argument against (sym)link restrictions - that they're not enough on
-their own against some attacks anyway, because FIFOs and even regular
-files could also be used for those.  My response was to include FIFO
-restrictions (on top of (sym)link restrictions) into -ow patches, and
-now the same became relevant for mainline (as it has the optional
-(sym)link restrictions now).
+The moment you need to make a change --- say, to fix a critical
+zero-day security bug --- this breaks the FIPS certification, and you
+then have to go back to the FIPS certification lab, and pay another
+hundreds of thousands of dollars for another certification.  This will
+take weeks/months, and while you are waiting for the results to come
+back from the FIPS certification lab, the hackers will be busy
+extracting another 143 million credit histories, or another 4.1
+million SF-86 Security Clearance Forms from the systems involved.  :-)
 
-One thing that has changed since is the addition of inotify, which
-probably made use of regular files for similar attacks much more
-practical.  This is one reason why we might also protect against
-maybe-maliciously pre-created regular files now.
+You might say that FIPS certification != FIPS compliance.  Sure, but
+the only silly people who care about FIPS compliance also need FIPS
+certification, for the US Goverment signoff.
 
-Another reason is that we, or at least some users/sysadmins, may want to
-discourage misuse of /tmp, /dev/shm, and similar directories in general.
-Those directories are supposed to only be accessed through appropriate
-library interfaces, or using specific known-safe procedures.  Trying to
-O_CREAT a file in there without O_EXCL is almost never right.  It makes
-sense to provide an easy way to disallow that as policy enforcement.
+Realistically, people who need FIPS certification will need to use
+FIPS certified crypto in hardware.  In which case the FIPS certified
+RNG, as well as the FIPS certified crypto, will all be in a single
+certified lump of hardware, which doesn't have to change when we need
+to fix various kernel bugs.
 
-> bike shed: I think "_files" is redundant, since we're already in proc/sys/fs/
+Cheers,
 
-+1
-
-> > +protected_regular_files:
-> > +
-> > +This protection is similar to protected_fifos, but it
-> > +avoids writes to an attacker-controlled regular file, where program
-> > +expected to create one.
-> > +
-> > +When set to "0", regular files writing is unrestricted.
-> > +
-> > +When set to "1" don't allow O_CREAT open on regular files that we
-> > +don't own in world writable sticky directories, unless they are
-> > +owned by the owner of the directory.
-> > +
-> > +This protection is based on the restrictions in Openwall.
-
-While symlink/hardlink/FIFO restrictions were in -ow patches, the
-regular file restriction was not - we're just inventing it now, even if
-upon my suggestion.
-
-Although this is sufficient against attacks (if the kernel's check for
-these properties is not racy; I don't know if it is), for the policy
-enforcement use case and reason we might want to support a simpler mode
-where O_CREAT without O_EXCL would be disallowed in sticky directories
-(only world writable? or also writable by anyone other than us? - e.g.,
-it'd catch some unsafe uses of mail spools) regardless of whether a
-file of that name already exists or not.  Maybe extra settings:
-
-When set to "2" also don't allow O_CREAT open without O_EXCL in
-world-writable sticky directories (even if the files don't already
-exist, for consistent policy enforcement)
-
-When set to "3" also don't allow O_CREAT open on regular files that we
-don't own in sticky directories writable by anyone else, unless the
-files are owned by the owner of the directory.
-
-When set to "4" also don't allow O_CREAT open without O_EXCL in
-sticky directories writable by anyone else (even if the files don't
-already exist, for consistent policy enforcement)
-
-Or maybe "2" and "4" should be a separate knob, so that "3" could be
-used without the policy enforcement aspect of "2", although enabling
-this separate knob at the highest level would make protected_regular
-redundant.
-
-I could envision further levels for non-sticky world-writable and
-writable-by-others directories, and even for unsafe writes without
-O_CREAT and unsafe reads, but then the protected_regular name would
-become even more misleading as without O_CREAT the program could
-actually intend to work with a non-regular file.
-
-Let's avoid further scope creep for now, but have this in mind.  As I
-had mentioned in another thread on kernel-hardening, policy enforcement
-like this implemented in a kernel module helped me find weaknesses in
-old Postfix' privsep implementation, which were promptly patched (that
-was many years ago).  Having this generally available and easy to enable
-could result in more findings like this by more people.
-
-A setting similar to "3" above should probably also exist for
-protected_fifos (would be "2" there).
-
-> Otherwise, yeah, looks good! :)
-
-+1
-
-Alexander
+						- Ted
