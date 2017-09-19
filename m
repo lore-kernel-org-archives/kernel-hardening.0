@@ -1,59 +1,54 @@
-Date: Tue, 19 Sep 2017 19:16:00 +0200
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20170919171600.GA31441@openwall.com>
-References: <20170524155751.424-1-riel@redhat.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170524155751.424-1-riel@redhat.com>
-Subject: Re: [kernel-hardening] [PATCH v2 0/5] stackprotector: ascii armor the stack canary
-To: riel@redhat.com
-Cc: linux-kernel@vger.kernel.org, danielmicay@gmail.com, tytso@mit.edu, keescook@chromium.org, hpa@zytor.com, luto@amacapital.net, mingo@kernel.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, catalin.marinas@arm.com, linux-sh@vger.kernel.org, ysato@users.sourceforge.jp, kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+In-Reply-To: <20170919133959.5fgtioyonlsdyjf5@thunk.org>
+References: <20170916130034.17706-1-Jason@zx2c4.com> <2681038.03lnYPhpsa@tauon.chronox.de>
+ <CAHmME9p6uq0ELtgxB94bc4bUppa7UogWSEgj_9o8p2xXQfrz5A@mail.gmail.com> <20170919133959.5fgtioyonlsdyjf5@thunk.org>
+From: Sandy Harris <sandyinchina@gmail.com>
+Date: Tue, 19 Sep 2017 15:04:29 -0400
+Message-ID: <CACXcFmmBzHu-9sCs+gJDbjeR4MTdOfMtUaBr+YjkwyfFquQMBA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: [PATCH v4] security/keys: rewrite all of
+ big_key crypto
+To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Stephan Mueller <smueller@chronox.de>, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, David Howells <dhowells@redhat.com>, Eric Biggers <ebiggers3@gmail.com>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Ilhan Gurel <ilhan.gurel@gmail.com>, security@kernel.org, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 24, 2017 at 11:57:46AM -0400, riel@redhat.com wrote:
-> Zero out the first byte of the stack canary value on 64 bit systems,
-> in order to mitigate unterminated C string overflows.
-> 
-> The null byte both prevents C string functions from reading the
-> canary, and from writing it if the canary value were guessed or
-> obtained through some other means.
->     
-> Reducing the entropy by 8 bits is acceptable on 64-bit systems,
-> which will still have 56 bits of entropy left, but not on 32
-> bit systems, so the "ascii armor" canary is only implemented on
-> 64-bit systems.
-> 
-> Inspired by the "ascii armor" code in execshield and Daniel Micay's
-> linux-hardened tree.
-> 
-> Also see https://github.com/thestinger/linux-hardened/
+On Tue, Sep 19, 2017 at 9:39 AM, Theodore Ts'o <tytso@mit.edu> wrote:
 
-Brad trolls us all lightly with this trivia question:
+> On Mon, Sep 18, 2017 at 01:24:18PM +0200, Jason A. Donenfeld wrote:
+>> Good luck with getting approval... While Ted and I have our
+>> differences like any two kernel developers, I really tend agree with
+>> him in his attitude about this FIPS silliness. ...
+>
+> Let me add one more reason why FIPS compliance for the kernel is just
+> ***stupid***.  The way FIPS compliance works, you have to pay hundreds
+> of thousands of dollars to a FIPS certification lab to certify a
+> specific binary, complete with the exact build environment (compiler,
+> binutils, etc.) used to build that kernel binary.
+>
+> The moment you need to make a change --- say, to fix a critical
+> zero-day security bug --- this breaks the FIPS certification, ...
+>
+> You might say that FIPS certification != FIPS compliance.  Sure, but
+> the only silly people who care about FIPS compliance also need FIPS
+> certification, for the US Goverment signoff.
 
-https://twitter.com/grsecurity/status/905246423591084033
+I do not think it is just the US that matters here. If I understand
+Stefan correctly, one of his concerns is German (or EU?) gov't
+standards that are somehow related. I'm very hazy on details.
 
-"For #trivia can you describe one scenario where this change actually
-helps exploitation using similar C string funcs?"
+I emphatically agree with Ted on some points here. Making
+FIPS certification a goal for kernel development would be
+really dumb. Having multiple RNGs available & compile-time
+options to select among them also looks silly to me; we just
+need one good one.
 
-I suppose the expected answer is:
+On the other hand, I do not see why the driver should not
+use a FIPS-compliant PRNG where it can. This would make
+things easier for anyone who does seek certification. One
+of the big distro vendors? A gov't department or contractor
+that wants to use Linux? A corporation's sys admin or
+security reviewer? Stefan?
 
-The change helps exploitation when the overwriting string ends just
-before the canary.  Its NUL overwriting the NUL byte in the canary would
-go undetected.  Before this change, there would be a 255/256 chance of
-detection.
-
-I hope this was considered.  The change might still be a good tradeoff,
-or it might not, depending on which scenarios are more likely (leak of
-canary value or the string required in an exploit ending at that exact
-byte location), and we probably lack such statistics.
-
-I am not proposing to revert the change.  I had actually contemplated
-speaking up when this was discussed, but did not for lack of a better
-suggestion.  We could put/require a NUL in the middle of the canary, but
-with the full canary being only 64-bit at most that would also make some
-attacks easier.
-
-So this is JFYI.  No action needed on it, I think.
-
-Alexander
+I cannot see much downside to this. Is the current PRNG
+more efficient? More easily maintained? Is it still the case
+that random(4) must use only hashes, not ciphers, to
+avoid restrictions under export laws?
