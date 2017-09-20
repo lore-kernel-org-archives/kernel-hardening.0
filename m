@@ -1,26 +1,76 @@
-MIME-Version: 1.0
-In-Reply-To: <27444.1505835505@warthog.procyon.org.uk>
-References: <CAHmME9rjrz2Pn39ay3myApBeBtQAPNt0C+NvmFoV28NeT4_zLg@mail.gmail.com>
- <20170917115217.15805-1-Jason@zx2c4.com> <27444.1505835505@warthog.procyon.org.uk>
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Wed, 20 Sep 2017 16:56:06 +0200
-Message-ID: <CAHmME9pSfXZC6QGsGs6Qax9q8QeKxGJSJonA8gXyYDqjvTRY=A@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v6] security/keys: rewrite all of big_key crypto
-To: David Howells <dhowells@redhat.com>
-Cc: linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Eric Biggers <ebiggers3@gmail.com>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, security@kernel.org, stable@vger.kernel.org
+Date: Wed, 20 Sep 2017 16:58:38 +0200
+Message-Id: <20170920145839.27511-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH v7 1/2] security/keys: properly zero out sensitive key material in big_key
+To: linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, dhowells@redhat.com, ebiggers3@gmail.com
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, security@kernel.org, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Sep 19, 2017 at 5:38 PM, David Howells <dhowells@redhat.com> wrote:
-> Jason A. Donenfeld <Jason@zx2c4.com> wrote:
->
->> And, some error paths forgot to zero out sensitive
->> material, so this patch changes a kfree into a kzfree.
->
-> Can you split that out into a separate preparatory patch?
->
-> Also, I recommend limiting the lines in your patch description to 75 chars
-> lest you get people who run checkpatch on everything pestering you ;-)
+Error paths forgot to zero out sensitive material, so this patch changes
+some kfrees into a kzfrees.
 
-No problem. Will split that out, then fix the description, and
-resubmit as v7. Coming your way shortly.
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+Reviewed-by: Eric Biggers <ebiggers3@gmail.com>
+Cc: David Howells <dhowells@redhat.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: Kirill Marinushkin <k.marinushkin@gmail.com>
+Cc: security@kernel.org
+Cc: stable@vger.kernel.org
+---
+ security/keys/big_key.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/security/keys/big_key.c b/security/keys/big_key.c
+index 6acb00f6f22c..507d6fb86a4f 100644
+--- a/security/keys/big_key.c
++++ b/security/keys/big_key.c
+@@ -195,7 +195,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ 		*path = file->f_path;
+ 		path_get(path);
+ 		fput(file);
+-		kfree(data);
++		kzfree(data);
+ 	} else {
+ 		/* Just store the data in a buffer */
+ 		void *data = kmalloc(datalen, GFP_KERNEL);
+@@ -211,9 +211,9 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ err_fput:
+ 	fput(file);
+ err_enckey:
+-	kfree(enckey);
++	kzfree(enckey);
+ error:
+-	kfree(data);
++	kzfree(data);
+ 	return ret;
+ }
+ 
+@@ -227,7 +227,7 @@ void big_key_free_preparse(struct key_preparsed_payload *prep)
+ 
+ 		path_put(path);
+ 	}
+-	kfree(prep->payload.data[big_key_data]);
++	kzfree(prep->payload.data[big_key_data]);
+ }
+ 
+ /*
+@@ -259,7 +259,7 @@ void big_key_destroy(struct key *key)
+ 		path->mnt = NULL;
+ 		path->dentry = NULL;
+ 	}
+-	kfree(key->payload.data[big_key_data]);
++	kzfree(key->payload.data[big_key_data]);
+ 	key->payload.data[big_key_data] = NULL;
+ }
+ 
+@@ -328,7 +328,7 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
+ err_fput:
+ 		fput(file);
+ error:
+-		kfree(data);
++		kzfree(data);
+ 	} else {
+ 		ret = datalen;
+ 		if (copy_to_user(buffer, key->payload.data[big_key_data],
+-- 
+2.14.1
