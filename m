@@ -1,112 +1,36 @@
-References: <20170907173609.22696-1-tycho@docker.com>
- <20170907173609.22696-4-tycho@docker.com>
- <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
- <20170920223452.vam3egenc533rcta@smitten>
+References: <20170809200755.11234-1-tycho@docker.com>
+ <20170809200755.11234-4-tycho@docker.com>
+ <5877eed8-0e8e-0dec-fdc7-de01bdbdafa8@intel.com>
+ <20170920224739.3kgzmntabmkedohw@smitten>
 From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <97475308-1f3d-ea91-5647-39231f3b40e5@intel.com>
-Date: Wed, 20 Sep 2017 16:21:15 -0700
+Message-ID: <370bb00d-8c1c-1a69-7c7f-f6135b16b4fa@intel.com>
+Date: Wed, 20 Sep 2017 16:25:48 -0700
 MIME-Version: 1.0
-In-Reply-To: <20170920223452.vam3egenc533rcta@smitten>
+In-Reply-To: <20170920224739.3kgzmntabmkedohw@smitten>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
- Ownership (XPFO)
+Subject: [kernel-hardening] Re: [PATCH v5 03/10] swiotlb: Map the buffer if it was unmapped by
+ XPFO
 To: Tycho Andersen <tycho@docker.com>
-Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Juerg Haefliger <juerg.haefliger@hpe.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 09/20/2017 03:34 PM, Tycho Andersen wrote:
->> I really have to wonder whether there are better ret2dir defenses than
->> this.  The allocator just seems like the *wrong* place to be doing this
->> because it's such a hot path.
+On 09/20/2017 03:47 PM, Tycho Andersen wrote:
 > 
-> This might be crazy, but what if we defer flushing of the kernel
-> ranges until just before we return to userspace? We'd still manipulate
-> the prot/xpfo bits for the pages, but then just keep a list of which
-> ranges need to be flushed, and do the right thing before we return.
-> This leaves a little window between the actual allocation and the
-> flush, but userspace would need another thread in its threadgroup to
-> predict the next allocation, write the bad stuff there, and do the
-> exploit all in that window.
+>>> static inline void *skcipher_map(struct scatter_walk *walk)
+>>> {
+>>>         struct page *page = scatterwalk_page(walk);
+>>>
+>>>         return (PageHighMem(page) ? kmap_atomic(page) : page_address(page)) +
+>>>                offset_in_page(walk->offset);
+>>> }
+>> Is there any better way to catch these?  Like, can we add some debugging
+>> to check for XPFO pages in __va()?
+> Yes, and perhaps also a debugging check in PageHighMem?
 
-I think the common case is still that you enter the kernel, allocate a
-single page (or very few) and then exit.  So, you don't really reduce
-the total number of flushes.
-
-Just think of this in terms of IPIs to do the remote TLB flushes.  A CPU
-can do roughly 1 million page faults and allocations a second.  Say you
-have a 2-socket x 28-core x 2 hyperthead system = 112 CPU threads.
-That's 111M IPI interrupts/second, just for the TLB flushes, *ON* *EACH*
-*CPU*.
-
-I think the only thing that will really help here is if you batch the
-allocations.  For instance, you could make sure that the per-cpu-pageset
-lists always contain either all kernel or all user data.  Then remap the
-entire list at once and do a single flush after the entire list is consumed.
-
->> Why do you even bother keeping large pages around?  Won't the entire
->> kernel just degrade to using 4k everywhere, eventually?
-> 
-> Isn't that true of large pages in general? Is there something about
-> xpfo that makes this worse? I thought this would only split things if
-> they had already been split somewhere else, and the protection can't
-> apply to the whole huge page.
-
-Even though the kernel gives out 4k pages, it still *maps* them in the
-kernel linear direct map with the largest size available.  My 16GB
-laptop, for instance, has 3GB of 2MB transparent huge pages, but the
-rest is used as 4k pages.  Yet, from /proc/meminfo:
-
-DirectMap4k:      665280 kB
-DirectMap2M:    11315200 kB
-DirectMap1G:     4194304 kB
-
-Your code pretty much forces 4k pages coming out of the allocator to be
-mapped with 4k mappings.
->>> +inline void xpfo_flush_kernel_tlb(struct page *page, int order)
->>> +{
->>> +	int level;
->>> +	unsigned long size, kaddr;
->>> +
->>> +	kaddr = (unsigned long)page_address(page);
->>> +
->>> +	if (unlikely(!lookup_address(kaddr, &level))) {
->>> +		WARN(1, "xpfo: invalid address to flush %lx %d\n", kaddr, level);
->>> +		return;
->>> +	}
->>> +
->>> +	switch (level) {
->>> +	case PG_LEVEL_4K:
->>> +		size = PAGE_SIZE;
->>> +		break;
->>> +	case PG_LEVEL_2M:
->>> +		size = PMD_SIZE;
->>> +		break;
->>> +	case PG_LEVEL_1G:
->>> +		size = PUD_SIZE;
->>> +		break;
->>> +	default:
->>> +		WARN(1, "xpfo: unsupported page level %x\n", level);
->>> +		return;
->>> +	}
->>> +
->>> +	flush_tlb_kernel_range(kaddr, kaddr + (1 << order) * size);
->>> +}
->>
->> I'm not sure flush_tlb_kernel_range() is the best primitive to be
->> calling here.
->>
->> Let's say you walk the page tables and find level=PG_LEVEL_1G.  You call
->> flush_tlb_kernel_range(), you will be above
->> tlb_single_page_flush_ceiling, and you will do a full TLB flush.  But,
->> with a 1GB page, you could have just used a single INVLPG and skipped
->> the global flush.
->>
->> I guess the cost of the IPI is way more than the flush itself, but it's
->> still a shame to toss the entire TLB when you don't have to.
-> 
-> Ok, do you think it's worth making a new helper for others to use? Or
-> should I just keep the logic in this function?
-
-I'd just leave it in place.  Most folks already have a PTE when they do
-the invalidation, so this is a bit of a weirdo.
+I'm not sure what PageHighMem() would check.  It's OK to use as long as
+you don't depend on the contents of the page.
+		
+> Would __va have caught either of the two cases you've pointed out?
+Yes.  __va() is what is eventually called by lowmem_page_address(),
+which is only OK to call on things that are actually mapped into the kernel.
