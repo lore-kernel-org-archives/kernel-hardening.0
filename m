@@ -1,32 +1,20 @@
-Message-ID: <1505906284.3490.5.camel@opteya.com>
-From: Yann Droneaud <ydroneaud@opteya.com>
-Date: Wed, 20 Sep 2017 13:18:04 +0200
-In-Reply-To: <20170919171600.GA31441@openwall.com>
-References: <20170524155751.424-1-riel@redhat.com>
-	 <20170919171600.GA31441@openwall.com>
+MIME-Version: 1.0
+In-Reply-To: <2545404.XUVGGHhd0i@tauon.chronox.de>
+References: <CAHmME9rjrz2Pn39ay3myApBeBtQAPNt0C+NvmFoV28NeT4_zLg@mail.gmail.com>
+ <1593673.B5xods8kYN@tauon.chronox.de> <CAHmME9pvZ-Q8qoUGjQjXX_DYNVv43C7MJRDzKZAAotM5UZircA@mail.gmail.com>
+ <2545404.XUVGGHhd0i@tauon.chronox.de>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Wed, 20 Sep 2017 16:01:21 +0200
+Message-ID: <CAHmME9pLF7cdm3RuOa-k8knsikNwU-5BVsnoHNEYw-xpuhW0tg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] [PATCH v2 0/5] stackprotector: ascii armor
- the stack canary
-To: Solar Designer <solar@openwall.com>, riel@redhat.com
-Cc: linux-kernel@vger.kernel.org, danielmicay@gmail.com, tytso@mit.edu, keescook@chromium.org, hpa@zytor.com, luto@amacapital.net, mingo@kernel.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, catalin.marinas@arm.com, linux-sh@vger.kernel.org, ysato@users.sourceforge.jp, kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] Re: [PATCH v6] security/keys: rewrite all of big_key crypto
+To: Stephan Mueller <smueller@chronox.de>
+Cc: linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, David Howells <dhowells@redhat.com>, Eric Biggers <ebiggers3@gmail.com>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, security@kernel.org, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On Wed, Sep 20, 2017 at 3:45 PM, Stephan Mueller <smueller@chronox.de> wrote:
+> http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/Joux_comments.pdf
 
-Le mardi 19 septembre 2017 à 19:16 +0200, Solar Designer a écrit :
->
-> We could put/require a NUL in the middle of the canary,
-> but with the full canary being only 64-bit at most that would also
-> make some attacks easier.
-> 
+Section 3 shows an attack with repeated nonces, which we don't do here.
 
-Are you suggesting to randomly select which byte to set to 0 in each
-canary ?
-
-Regards.
-
--- 
-Yann Droneaud
-OPTEYA
+Section 4 shows an attack using a non-96-bit nonce, which we also don't do here.
