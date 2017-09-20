@@ -1,46 +1,43 @@
-References: <20170920004434.35308-1-ebiggers3@gmail.com>
- <20170920004434.35308-3-ebiggers3@gmail.com>
-From: Dave Hansen <dave.hansen@linux.intel.com>
-Message-ID: <f5387b72-0c2d-0603-b630-2aca25d16ccb@linux.intel.com>
-Date: Wed, 20 Sep 2017 08:54:33 -0700
+References: <20170809200755.11234-1-tycho@docker.com>
+ <20170809200755.11234-4-tycho@docker.com>
+From: Dave Hansen <dave.hansen@intel.com>
+Message-ID: <5877eed8-0e8e-0dec-fdc7-de01bdbdafa8@intel.com>
+Date: Wed, 20 Sep 2017 09:19:56 -0700
 MIME-Version: 1.0
-In-Reply-To: <20170920004434.35308-3-ebiggers3@gmail.com>
+In-Reply-To: <20170809200755.11234-4-tycho@docker.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 2/3] x86/fpu: tighten validation of user-supplied
- xstate_header
-To: Eric Biggers <ebiggers3@gmail.com>, x86@kernel.org
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Dmitry Vyukov <dvyukov@google.com>, Fenghua Yu <fenghua.yu@intel.com>, Ingo Molnar <mingo@kernel.org>, Kevin Hao <haokexin@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Subject: [kernel-hardening] Re: [PATCH v5 03/10] swiotlb: Map the buffer if it was unmapped by
+ XPFO
+To: Tycho Andersen <tycho@docker.com>, linux-kernel@vger.kernel.org
+Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, Juerg Haefliger <juerg.haefliger@hpe.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 09/19/2017 05:44 PM, Eric Biggers wrote:
-> +static inline int validate_xstate_header(const struct xstate_header *hdr)
-> +{
-> +	/* No unknown or supervisor features may be set */
-> +	if (hdr->xfeatures & (~xfeatures_mask | XFEATURE_MASK_SUPERVISOR))
-> +		return -EINVAL;
-> +
-> +	/* Userspace must use the uncompacted format */
-> +	if (hdr->xcomp_bv)
-> +		return -EINVAL;
-> +
-> +	/* No reserved bits may be set */
-> +	if (memchr_inv(hdr->reserved, 0, sizeof(hdr->reserved)))
-> +		return -EINVAL;
-> +
-> +	return 0;
-> +}
+On 08/09/2017 01:07 PM, Tycho Andersen wrote:
+> --- a/lib/swiotlb.c
+> +++ b/lib/swiotlb.c
+> @@ -420,8 +420,9 @@ static void swiotlb_bounce(phys_addr_t orig_addr, phys_addr_t tlb_addr,
+>  {
+>  	unsigned long pfn = PFN_DOWN(orig_addr);
+>  	unsigned char *vaddr = phys_to_virt(tlb_addr);
+> +	struct page *page = pfn_to_page(pfn);
+>  
+> -	if (PageHighMem(pfn_to_page(pfn))) {
+> +	if (PageHighMem(page) || xpfo_page_is_unmapped(page)) {
+>  		/* The buffer does not have a mapping.  Map it in and copy */
+>  		unsigned int offset = orig_addr & ~PAGE_MASK;
+>  		char *buffer;
 
-BTW, the whole series looks pretty sane to me.  Tou're definitely
-leaving the code better than you found it.  Feel free to add my acked-by
-on all 3 patches.
+This is a little scary.  I wonder how many more of these are in the
+kernel, like:
 
-One nit about this validate function, though.  Let's say we go and
-change 'struct xstate_header' and shrink ->reserved because we add a new
-field.  This validator will silently break.
+> static inline void *skcipher_map(struct scatter_walk *walk)
+> {
+>         struct page *page = scatterwalk_page(walk);
+> 
+>         return (PageHighMem(page) ? kmap_atomic(page) : page_address(page)) +
+>                offset_in_page(walk->offset);
+> }
 
-Could we add a
-
-	BUILD_BUG_ON(sizeof(hdr->reserved) != 48);
-
-That way, the next hapless kernel developer can't miss updating this.
+Is there any better way to catch these?  Like, can we add some debugging
+to check for XPFO pages in __va()?
