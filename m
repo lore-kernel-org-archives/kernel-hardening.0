@@ -1,80 +1,61 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 20 Sep 2017 13:45:31 -0700
-Message-Id: <1505940337-79069-26-git-send-email-keescook@chromium.org>
+Date: Wed, 20 Sep 2017 13:45:29 -0700
+Message-Id: <1505940337-79069-24-git-send-email-keescook@chromium.org>
 In-Reply-To: <1505940337-79069-1-git-send-email-keescook@chromium.org>
 References: <1505940337-79069-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v3 25/31] fork: Define usercopy region in thread_stack slab caches
+Subject: [kernel-hardening] [PATCH v3 23/31] net: Restrict unwhitelisted proto caches to size 0
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Ingo Molnar <mingo@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@kernel.org>, linux-fsdevel@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, "David S. Miller" <davem@davemloft.net>, Eric Dumazet <edumazet@google.com>, Paolo Abeni <pabeni@redhat.com>, David Howells <dhowells@redhat.com>, netdev@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, David Windsor <dave@nullcore.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: David Windsor <dave@nullcore.net>
+Now that protocols have been annotated (the copy of icsk_ca_ops->name
+is of an ops field from outside the slab cache):
 
-In support of usercopy hardening, this patch defines a region in the
-thread_stack slab caches in which userspace copy operations are allowed.
-Since the entire thread_stack needs to be available to userspace, the
-entire slab contents are whitelisted. Note that the slab-based thread
-stack is only present on systems with THREAD_SIZE < PAGE_SIZE and
-!CONFIG_VMAP_STACK.
+$ git grep 'copy_.*_user.*sk.*->'
+caif/caif_socket.c: copy_from_user(&cf_sk->conn_req.param.data, ov, ol)) {
+ipv4/raw.c:   if (copy_from_user(&raw_sk(sk)->filter, optval, optlen))
+ipv4/raw.c:       copy_to_user(optval, &raw_sk(sk)->filter, len))
+ipv4/tcp.c:       if (copy_to_user(optval, icsk->icsk_ca_ops->name, len))
+ipv4/tcp.c:       if (copy_to_user(optval, icsk->icsk_ulp_ops->name, len))
+ipv6/raw.c:       if (copy_from_user(&raw6_sk(sk)->filter, optval, optlen))
+ipv6/raw.c:           if (copy_to_user(optval, &raw6_sk(sk)->filter, len))
+sctp/socket.c: if (copy_from_user(&sctp_sk(sk)->subscribe, optval, optlen))
+sctp/socket.c: if (copy_to_user(optval, &sctp_sk(sk)->subscribe, len))
+sctp/socket.c: if (copy_to_user(optval, &sctp_sk(sk)->initmsg, len))
 
-cache object allocation:
-    kernel/fork.c:
-        alloc_thread_stack_node(...):
-            return kmem_cache_alloc_node(thread_stack_cache, ...)
-
-        dup_task_struct(...):
-            ...
-            stack = alloc_thread_stack_node(...)
-            ...
-            tsk->stack = stack;
-
-        copy_process(...):
-            ...
-            dup_task_struct(...)
-
-        _do_fork(...):
-            ...
-            copy_process(...)
-
-This region is known as the slab cache's usercopy region. Slab caches
-can now check that each copy operation involving cache-managed memory
-falls entirely within the slab's usercopy region.
+we can switch the default proto usercopy region to size 0. Any protocols
+needing to add whitelisted regions must annotate the fields with the
+useroffset and usersize fields of struct proto.
 
 This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
 whitelisting code in the last public patch of grsecurity/PaX based on my
 understanding of the code. Changes or omissions from the original code are
 mine and don't reflect the original grsecurity/PaX code.
 
-Signed-off-by: David Windsor <dave@nullcore.net>
-[kees: adjust commit log, split patch, provide usage trace]
-Cc: Ingo Molnar <mingo@kernel.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: Andy Lutomirski <luto@kernel.org>
+Cc: "David S. Miller" <davem@davemloft.net>
+Cc: Eric Dumazet <edumazet@google.com>
+Cc: Paolo Abeni <pabeni@redhat.com>
+Cc: David Howells <dhowells@redhat.com>
+Cc: netdev@vger.kernel.org
 Signed-off-by: Kees Cook <keescook@chromium.org>
-Acked-by: Rik van Riel <riel@redhat.com>
 ---
-I wasn't able to test this, so anyone with a system that can try running
-with a large PAGE_SIZE and without VMAP_STACK would be appreciated.
----
- kernel/fork.c | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
+ net/core/sock.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
 
-diff --git a/kernel/fork.c b/kernel/fork.c
-index dc1437f8b702..720109dc723a 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -278,8 +278,9 @@ static void free_thread_stack(struct task_struct *tsk)
+diff --git a/net/core/sock.c b/net/core/sock.c
+index 832dfb03102e..84cd0b362a02 100644
+--- a/net/core/sock.c
++++ b/net/core/sock.c
+@@ -3168,9 +3168,7 @@ int proto_register(struct proto *prot, int alloc_slab)
+ 		prot->slab = kmem_cache_create_usercopy(prot->name,
+ 					prot->obj_size, 0,
+ 					SLAB_HWCACHE_ALIGN | prot->slab_flags,
+-					prot->usersize ? prot->useroffset : 0,
+-					prot->usersize ? prot->usersize
+-						       : prot->obj_size,
++					prot->useroffset, prot->usersize,
+ 					NULL);
  
- void thread_stack_cache_init(void)
- {
--	thread_stack_cache = kmem_cache_create("thread_stack", THREAD_SIZE,
--					      THREAD_SIZE, 0, NULL);
-+	thread_stack_cache = kmem_cache_create_usercopy("thread_stack",
-+					THREAD_SIZE, THREAD_SIZE, 0, 0,
-+					THREAD_SIZE, NULL);
- 	BUG_ON(thread_stack_cache == NULL);
- }
- # endif
+ 		if (prot->slab == NULL) {
 -- 
 2.7.4
