@@ -1,109 +1,39 @@
+Date: Wed, 20 Sep 2017 16:22:21 -0700
+From: Christoph Hellwig <hch@infradead.org>
+Message-ID: <20170920232221.GA18311@infradead.org>
 References: <1505940337-79069-1-git-send-email-keescook@chromium.org>
- <1505940337-79069-11-git-send-email-keescook@chromium.org>
-From: Luis de Bethencourt <luisbg@kernel.org>
-Message-ID: <89dd1d4e-9486-51a2-3500-ac85f947b145@kernel.org>
-Date: Thu, 21 Sep 2017 10:34:55 +0100
+ <1505940337-79069-15-git-send-email-keescook@chromium.org>
+ <20170920205642.GA20023@infradead.org>
+ <CAGXu5j+hr0UwB5NsvPSKVVfM6NFHHhnNeUZbuwyTRppSOx9Ucw@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <1505940337-79069-11-git-send-email-keescook@chromium.org>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v3 10/31] befs: Define usercopy region in befs_inode_cache
- slab cache
-To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
-Cc: David Windsor <dave@nullcore.net>, Salah Triki <salah.triki@gmail.com>, linux-fsdevel@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+hr0UwB5NsvPSKVVfM6NFHHhnNeUZbuwyTRppSOx9Ucw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v3 14/31] vxfs: Define usercopy region in vxfs_inode slab
+ cache
+To: Kees Cook <keescook@chromium.org>
+Cc: Christoph Hellwig <hch@infradead.org>, LKML <linux-kernel@vger.kernel.org>, David Windsor <dave@nullcore.net>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 09/20/2017 09:45 PM, Kees Cook wrote:
-> From: David Windsor <dave@nullcore.net>
-> 
-> befs symlink pathnames, stored in struct befs_inode_info.i_data.symlink
-> and therefore contained in the befs_inode_cache slab cache, need to be
-> copied to/from userspace.
-> 
-> cache object allocation:
->      fs/befs/linuxvfs.c:
->          befs_alloc_inode(...):
->              ...
->              bi = kmem_cache_alloc(befs_inode_cachep, GFP_KERNEL);
->              ...
->              return &bi->vfs_inode;
-> 
->          befs_iget(...):
->              ...
->              strlcpy(befs_ino->i_data.symlink, raw_inode->data.symlink,
->                      BEFS_SYMLINK_LEN);
->              ...
->              inode->i_link = befs_ino->i_data.symlink;
-> 
-> example usage trace:
->      readlink_copy+0x43/0x70
->      vfs_readlink+0x62/0x110
->      SyS_readlinkat+0x100/0x130
-> 
->      fs/namei.c:
->          readlink_copy(..., link):
->              ...
->              copy_to_user(..., link, len);
-> 
->          (inlined in vfs_readlink)
->          generic_readlink(dentry, ...):
->              struct inode *inode = d_inode(dentry);
->              const char *link = inode->i_link;
->              ...
->              readlink_copy(..., link);
-> 
-> In support of usercopy hardening, this patch defines a region in the
-> befs_inode_cache slab cache in which userspace copy operations are
-> allowed.
-> 
-> This region is known as the slab cache's usercopy region. Slab caches can
-> now check that each copy operation involving cache-managed memory falls
-> entirely within the slab's usercopy region.
-> 
-> This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
-> whitelisting code in the last public patch of grsecurity/PaX based on my
-> understanding of the code. Changes or omissions from the original code are
-> mine and don't reflect the original grsecurity/PaX code.
-> 
-> Signed-off-by: David Windsor <dave@nullcore.net>
-> [kees: adjust commit log, provide usage trace]
-> Cc: Luis de Bethencourt <luisbg@kernel.org>
-> Cc: Salah Triki <salah.triki@gmail.com>
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> Acked-by: Luis de Bethencourt <luisbg@kernel.org>
-> ---
->   fs/befs/linuxvfs.c | 14 +++++++++-----
->   1 file changed, 9 insertions(+), 5 deletions(-)
-> 
-> diff --git a/fs/befs/linuxvfs.c b/fs/befs/linuxvfs.c
-> index a92355cc453b..e5dcd26003dc 100644
-> --- a/fs/befs/linuxvfs.c
-> +++ b/fs/befs/linuxvfs.c
-> @@ -444,11 +444,15 @@ static struct inode *befs_iget(struct super_block *sb, unsigned long ino)
->   static int __init
->   befs_init_inodecache(void)
->   {
-> -	befs_inode_cachep = kmem_cache_create("befs_inode_cache",
-> -					      sizeof (struct befs_inode_info),
-> -					      0, (SLAB_RECLAIM_ACCOUNT|
-> -						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
-> -					      init_once);
-> +	befs_inode_cachep = kmem_cache_create_usercopy("befs_inode_cache",
-> +				sizeof(struct befs_inode_info), 0,
-> +				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
-> +					SLAB_ACCOUNT),
-> +				offsetof(struct befs_inode_info,
-> +					i_data.symlink),
-> +				sizeof_field(struct befs_inode_info,
-> +					i_data.symlink),
-> +				init_once);
->   	if (befs_inode_cachep == NULL)
->   		return -ENOMEM;
->   
-> 
+On Wed, Sep 20, 2017 at 02:21:45PM -0700, Kees Cook wrote:
+> This is why I included several other lists on the full CC (am I
+> unlucky enough to have you not subscribed to any of them?). Adding a
+> CC for everyone can result in a huge CC list, especially for the
+> forth-coming 300-patch timer_list series. ;)
 
-No changes in the befs patch in v3. It goes without saying I continue to 
-Ack this.
+If you think the lists are enough to review changes include only
+the lists, but don't add CCs for individual patches, that's what
+I usually do for cleanups that touch a lot of drivers, but don't
+really change actual logic in ever little driver touched.
 
-Thanks Kees and David,
-Luis
+> Do you want me to resend the full series to you, or would you prefer
+> something else like a patchwork bundle? (I'll explicitly add you to CC
+> for any future versions, though.)
+
+I'm fine with not being Cced at all if there isn't anything requiring
+my urgent personal attention.  It's up to you whom you want to Cc,
+but my preference is generally for rather less than more people, and
+rather more than less mailing lists.
+
+But the important bit is to Cc a person or mailinglist either on
+all patches or on none, otherwise a good review isn't possible.
