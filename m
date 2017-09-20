@@ -1,63 +1,155 @@
+References: <20170907173609.22696-1-tycho@docker.com>
+ <20170907173609.22696-4-tycho@docker.com>
+From: Dave Hansen <dave.hansen@intel.com>
+Message-ID: <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
+Date: Wed, 20 Sep 2017 08:48:36 -0700
 MIME-Version: 1.0
-In-Reply-To: <20170920004434.35308-4-ebiggers3@gmail.com>
-References: <20170920004434.35308-1-ebiggers3@gmail.com> <20170920004434.35308-4-ebiggers3@gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Wed, 20 Sep 2017 08:41:00 -0700
-Message-ID: <CALCETrWUHx7_Xo2dDXzxUUxQ=-qea2UN4yDT-hGi4CzGbr6npQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 3/3] x86/fpu: reinitialize FPU registers if restoring
- FPU state fails
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Dmitry Vyukov <dvyukov@google.com>, Fenghua Yu <fenghua.yu@intel.com>, Ingo Molnar <mingo@kernel.org>, Kevin Hao <haokexin@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+In-Reply-To: <20170907173609.22696-4-tycho@docker.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
+ Ownership (XPFO)
+To: Tycho Andersen <tycho@docker.com>, linux-kernel@vger.kernel.org
+Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> On Sep 19, 2017, at 5:44 PM, Eric Biggers <ebiggers3@gmail.com> wrote:
->
-> From: Eric Biggers <ebiggers@google.com>
->
-> Userspace can change the FPU state of a task using the ptrace() or
-> rt_sigreturn() system calls.  Because reserved bits in the FPU state can
-> cause the XRSTOR instruction to fail, the kernel has to carefully
-> validate that no reserved bits or other invalid values are being set.
->
-> Unfortunately, there have been bugs in this validation code.  For
-> example, we were not checking that the 'xcomp_bv' field in the
-> xstate_header was 0.  As-is, such bugs are exploitable to read the FPU
-> registers of other processes on the system.  To do so, an attacker can
-> create a task, assign to it an invalid FPU state, then spin in a loop
-> and monitor the values of the FPU registers.  Because the task's FPU
-> registers are not being restored, sometimes the FPU registers will have
-> the values from another process.
->
-> This is likely to continue to be a problem in the future because the
-> validation done by the CPU instructions like XRSTOR is not immediately
-> visible to kernel developers.  Nor will invalid FPU states ever be
-> encountered during ordinary use --- they will only be seen during
-> fuzzing or exploits.  There can even be reserved bits outside the
-> xstate_header which are easy to forget about.  For example, the MXCSR
-> register contains reserved bits, which were not validated by the
-> KVM_SET_XSAVE ioctl until commit a575813bfe4b ("KVM: x86: Fix load
-> damaged SSEx MXCSR register").
->
-> Therefore, mitigate this class of vulnerability by restoring the FPU
-> registers from init_fpstate if restoring from the task's state fails.
->
-> We actually used to do this, but it was (perhaps unwisely) removed by
-> commit 9ccc27a5d297 ("x86/fpu: Remove error return values from
-> copy_kernel_to_*regs() functions").  This new patch is also a bit
-> different in that it only clears the registers, not also the bad
-> in-memory state.  This is simpler and makes it easier to make the
-> mitigation cover all callers of __copy_kernel_to_fpregs().
->
+On 09/07/2017 10:36 AM, Tycho Andersen wrote:
+...
+> Whenever a page destined for userspace is allocated, it is
+> unmapped from physmap (the kernel's page table). When such a page is
+> reclaimed from userspace, it is mapped back to physmap.
 
-I think this code could be cleaned up a lot in the process rather than
-adding even more complexity.  What if you added an
-ex_handler_fprestore() in arch/x86/mm/extable.c and changed all the
-xrstor, etc users to invoke it via _ASM_HANDLE_EXTABLE?  I don't even
-thing you'd need to have the C wrappers return a value --
-ex_handler_fprestore() could do a WARN_ON_ONCE().
+I'm looking for the code where it's unmapped at allocation to userspace.
+ I see TLB flushing and 'struct xpfo' manipulation, but I don't see the
+unmapping.  Where is that occurring?
 
-This would get rid of a few layers of wrappers and would get rid of
-branches and code size in the success path.
+How badly does this hurt performance?  Since we (generally) have
+different migrate types for user and kernel allocation, I can imagine
+that a given page *generally* doesn't oscillate between user and
+kernel-allocated, but I'm curious how it works in practice.  Doesn't the
+IPI load from the TLB flushes eat you alive?
 
---Andy
+It's a bit scary to have such a deep code path under the main allocator.
+
+This all seems insanely expensive.  It will *barely* work on an
+allocation-heavy workload on a desktop.  I'm pretty sure the locking
+will just fall over entirely on any reasonably-sized server.
+
+I really have to wonder whether there are better ret2dir defenses than
+this.  The allocator just seems like the *wrong* place to be doing this
+because it's such a hot path.
+
+> +		cpa.vaddr = kaddr;
+> +		cpa.pages = &page;
+> +		cpa.mask_set = prot;
+> +		cpa.mask_clr = msk_clr;
+> +		cpa.numpages = 1;
+> +		cpa.flags = 0;
+> +		cpa.curpage = 0;
+> +		cpa.force_split = 0;
+> +
+> +
+> +		do_split = try_preserve_large_page(pte, (unsigned 
+
+Is this safe to do without a TLB flush?  I thought we had plenty of bugs
+in CPUs around having multiple entries for the same page in the TLB at
+once.  We're *REALLY* careful when we split large pages for THP, and I'm
+surprised we don't do the same here.
+
+Why do you even bother keeping large pages around?  Won't the entire
+kernel just degrade to using 4k everywhere, eventually?
+
+> +		if (do_split) {
+> +			struct page *base;
+> +
+> +			base = alloc_pages(GFP_ATOMIC | __GFP_NOTRACK, 
+
+Ugh, GFP_ATOMIC.  That's nasty.  Do you really want this allocation to
+fail all the time?  GFP_ATOMIC could really be called
+GFP_YOU_BETTER_BE_OK_WITH_THIS_FAILING. :)
+
+You probably want to do what the THP code does here and keep a spare
+page around, then allocate it before you take the locks.
+
+> +inline void xpfo_flush_kernel_tlb(struct page *page, int order)
+> +{
+> +	int level;
+> +	unsigned long size, kaddr;
+> +
+> +	kaddr = (unsigned long)page_address(page);
+> +
+> +	if (unlikely(!lookup_address(kaddr, &level))) {
+> +		WARN(1, "xpfo: invalid address to flush %lx %d\n", kaddr, level);
+> +		return;
+> +	}
+> +
+> +	switch (level) {
+> +	case PG_LEVEL_4K:
+> +		size = PAGE_SIZE;
+> +		break;
+> +	case PG_LEVEL_2M:
+> +		size = PMD_SIZE;
+> +		break;
+> +	case PG_LEVEL_1G:
+> +		size = PUD_SIZE;
+> +		break;
+> +	default:
+> +		WARN(1, "xpfo: unsupported page level %x\n", level);
+> +		return;
+> +	}
+> +
+> +	flush_tlb_kernel_range(kaddr, kaddr + (1 << order) * size);
+> +}
+
+I'm not sure flush_tlb_kernel_range() is the best primitive to be
+calling here.
+
+Let's say you walk the page tables and find level=PG_LEVEL_1G.  You call
+flush_tlb_kernel_range(), you will be above
+tlb_single_page_flush_ceiling, and you will do a full TLB flush.  But,
+with a 1GB page, you could have just used a single INVLPG and skipped
+the global flush.
+
+I guess the cost of the IPI is way more than the flush itself, but it's
+still a shame to toss the entire TLB when you don't have to.
+
+I also think the TLB flush should be done closer to the page table
+manipulation that it is connected to.  It's hard to figure out whether
+the flush is the right one otherwise.
+
+Also, the "(1 << order) * size" thing looks goofy to me.  Let's say you
+are flushing a order=1 (8k) page and its mapped in a 1GB mapping.  You
+flush 2GB.  Is that intentional?
+
+> +
+> +void xpfo_free_pages(struct page *page, int order)
+> +{
+...
+> +		/*
+> +		 * Map the page back into the kernel if it was previously
+> +		 * allocated to user space.
+> +		 */
+> +		if (test_and_clear_bit(XPFO_PAGE_USER, &xpfo->flags)) {
+> +			clear_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags);
+> +			set_kpte(page_address(page + i), page + i,
+> +				 PAGE_KERNEL);
+> +		}
+> +	}
+> +}
+
+This seems like a bad idea, performance-wise.  Kernel and userspace
+pages tend to be separated by migrate types.  So, a given physical page
+will tend to be used as kernel *or* for userspace.  With this nugget,
+every time a userspace page is freed, we will go to the trouble of
+making it *back* into a kernel page.  Then, when it is allocated again
+(probably as userspace), we will re-make it into a userspace page.  That
+seems horribly inefficient.
+
+Also, this weakens the security guarantees.  Let's say you're mounting a
+ret2dir attack.  You populate a page with your evil data and you know
+the kernel address for the page.  All you have to do is coordinate your
+attack with freeing the page.  You can control when it gets freed.  Now,
+the xpfo_free_pages() helpfully just mapped your attack code back into
+the kernel.
+
+Why not *just* do these moves at allocation time?
