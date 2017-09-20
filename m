@@ -1,169 +1,124 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 20 Sep 2017 13:45:32 -0700
-Message-Id: <1505940337-79069-27-git-send-email-keescook@chromium.org>
+Date: Wed, 20 Sep 2017 13:45:21 -0700
+Message-Id: <1505940337-79069-16-git-send-email-keescook@chromium.org>
 In-Reply-To: <1505940337-79069-1-git-send-email-keescook@chromium.org>
 References: <1505940337-79069-1-git-send-email-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH v3 26/31] fork: Provide usercopy whitelisting for task_struct
+Subject: [kernel-hardening] [PATCH v3 15/31] xfs: Define usercopy region in xfs_inode slab cache
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Nicholas Piggin <npiggin@gmail.com>, Laura Abbott <labbott@redhat.com>, =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@kernel.org>, linux-fsdevel@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, David Windsor <dave@nullcore.net>
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, "Darrick J. Wong" <darrick.wong@oracle.com>, linux-xfs@vger.kernel.org, linux-fsdevel@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-While the blocked and saved_sigmask fields of task_struct are copied to
-userspace (via sigmask_to_save() and setup_rt_frame()), it is always
-copied with a static length (i.e. sizeof(sigset_t)), so they are implictly
-whitelisted.
+From: David Windsor <dave@nullcore.net>
 
-The only portion of task_struct that is potentially dynamically sized and
-may be copied to userspace is in the architecture-specific thread_struct
-at the end of task_struct.
+The XFS inline inode data, stored in struct xfs_inode_t field
+i_df.if_u2.if_inline_data and therefore contained in the xfs_inode slab
+cache, needs to be copied to/from userspace.
 
 cache object allocation:
-    kernel/fork.c:
-        alloc_task_struct_node(...):
-            return kmem_cache_alloc_node(task_struct_cachep, ...);
-
-        dup_task_struct(...):
+    fs/xfs/xfs_icache.c:
+        xfs_inode_alloc(...):
             ...
-            tsk = alloc_task_struct_node(node);
+            ip = kmem_zone_alloc(xfs_inode_zone, KM_SLEEP);
 
-        copy_process(...):
+    fs/xfs/libxfs/xfs_inode_fork.c:
+        xfs_init_local_fork(...):
             ...
-            dup_task_struct(...)
+            if (mem_size <= sizeof(ifp->if_u2.if_inline_data))
+                    ifp->if_u1.if_data = ifp->if_u2.if_inline_data;
+            ...
 
-        _do_fork(...):
+    fs/xfs/xfs_symlink.c:
+        xfs_symlink(...):
             ...
-            copy_process(...)
+            xfs_init_local_fork(ip, XFS_DATA_FORK, target_path, pathlen);
 
 example usage trace:
+    readlink_copy+0x43/0x70
+    vfs_readlink+0x62/0x110
+    SyS_readlinkat+0x100/0x130
 
-    arch/x86/kernel/fpu/signal.c:
-        __fpu__restore_sig(...):
+    fs/xfs/xfs_iops.c:
+        (via inode->i_op->get_link)
+        xfs_vn_get_link_inline(...):
             ...
-            struct task_struct *tsk = current;
-            struct fpu *fpu = &tsk->thread.fpu;
+            return XFS_I(inode)->i_df.if_u1.if_data;
+
+    fs/namei.c:
+        readlink_copy(..., link):
             ...
-            __copy_from_user(&fpu->state.xsave, ..., state_size);
+            copy_to_user(..., link, len);
 
-        fpu__restore_sig(...):
+        generic_readlink(dentry, ...):
+            struct inode *inode = d_inode(dentry);
+            const char *link = inode->i_link;
             ...
-            return __fpu__restore_sig(...);
-
-    arch/x86/kernel/signal.c:
-        restore_sigcontext(...):
+            if (!link) {
+                    link = inode->i_op->get_link(dentry, inode, &done);
             ...
-            fpu__restore_sig(...)
+            readlink_copy(..., link);
 
-This introduces arch_thread_struct_whitelist() to let an architecture
-declare specifically where the whitelist should be within thread_struct.
-If undefined, the entire thread_struct field is left whitelisted.
+In support of usercopy hardening, this patch defines a region in the
+xfs_inode slab cache in which userspace copy operations are allowed.
 
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Nicholas Piggin <npiggin@gmail.com>
-Cc: Laura Abbott <labbott@redhat.com>
-Cc: "Mickaël Salaün" <mic@digikod.net>
-Cc: Ingo Molnar <mingo@kernel.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: Andy Lutomirski <luto@kernel.org>
+This region is known as the slab cache's usercopy region. Slab caches can
+now check that each copy operation involving cache-managed memory falls
+entirely within the slab's usercopy region.
+
+This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+whitelisting code in the last public patch of grsecurity/PaX based on my
+understanding of the code. Changes or omissions from the original code are
+mine and don't reflect the original grsecurity/PaX code.
+
+Signed-off-by: David Windsor <dave@nullcore.net>
+[kees: adjust commit log, provide usage trace]
+Cc: "Darrick J. Wong" <darrick.wong@oracle.com>
+Cc: linux-xfs@vger.kernel.org
 Signed-off-by: Kees Cook <keescook@chromium.org>
-Acked-by: Rik van Riel <riel@redhat.com>
+Reviewed-by: Darrick J. Wong <darrick.wong@oracle.com>
 ---
- arch/Kconfig               | 11 +++++++++++
- include/linux/sched/task.h | 14 ++++++++++++++
- kernel/fork.c              | 22 ++++++++++++++++++++--
- 3 files changed, 45 insertions(+), 2 deletions(-)
+ fs/xfs/kmem.h      | 10 ++++++++++
+ fs/xfs/xfs_super.c |  7 +++++--
+ 2 files changed, 15 insertions(+), 2 deletions(-)
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 1aafb4efbb51..43f2e7b033ca 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -241,6 +241,17 @@ config ARCH_INIT_TASK
- config ARCH_TASK_STRUCT_ALLOCATOR
- 	bool
+diff --git a/fs/xfs/kmem.h b/fs/xfs/kmem.h
+index 4d85992d75b2..08358f38dee6 100644
+--- a/fs/xfs/kmem.h
++++ b/fs/xfs/kmem.h
+@@ -110,6 +110,16 @@ kmem_zone_init_flags(int size, char *zone_name, unsigned long flags,
+ 	return kmem_cache_create(zone_name, size, 0, flags, construct);
+ }
  
-+config HAVE_ARCH_THREAD_STRUCT_WHITELIST
-+	bool
-+	depends on !ARCH_TASK_STRUCT_ALLOCATOR
-+	help
-+	  An architecture should select this to provide hardened usercopy
-+	  knowledge about what region of the thread_struct should be
-+	  whitelisted for copying to userspace. Normally this is only the
-+	  FPU registers. Specifically, arch_thread_struct_whitelist()
-+	  should be implemented. Without this, the entire thread_struct
-+	  field in task_struct will be left whitelisted.
-+
- # Select if arch has its private alloc_thread_stack() function
- config ARCH_THREAD_STACK_ALLOCATOR
- 	bool
-diff --git a/include/linux/sched/task.h b/include/linux/sched/task.h
-index 79a2a744648d..a5e6f0913f74 100644
---- a/include/linux/sched/task.h
-+++ b/include/linux/sched/task.h
-@@ -103,6 +103,20 @@ extern int arch_task_struct_size __read_mostly;
- # define arch_task_struct_size (sizeof(struct task_struct))
- #endif
- 
-+#ifndef CONFIG_HAVE_ARCH_THREAD_STRUCT_WHITELIST
-+/*
-+ * If an architecture has not declared a thread_struct whitelist we
-+ * must assume something there may need to be copied to userspace.
-+ */
-+static inline void arch_thread_struct_whitelist(unsigned long *offset,
-+						unsigned long *size)
++static inline kmem_zone_t *
++kmem_zone_init_flags_usercopy(int size, char *zone_name, unsigned long flags,
++				size_t useroffset, size_t usersize,
++				void (*construct)(void *))
 +{
-+	*offset = 0;
-+	/* Handle dynamically sized thread_struct. */
-+	*size = arch_task_struct_size - offsetof(struct task_struct, thread);
-+}
-+#endif
-+
- #ifdef CONFIG_VMAP_STACK
- static inline struct vm_struct *task_stack_vm_area(const struct task_struct *t)
- {
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 720109dc723a..d8dcd8f8e82f 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -454,6 +454,21 @@ static void set_max_threads(unsigned int max_threads_suggested)
- int arch_task_struct_size __read_mostly;
- #endif
- 
-+static void task_struct_whitelist(unsigned long *offset, unsigned long *size)
-+{
-+	/* Fetch thread_struct whitelist for the architecture. */
-+	arch_thread_struct_whitelist(offset, size);
-+
-+	/*
-+	 * Handle zero-sized whitelist or empty thread_struct, otherwise
-+	 * adjust offset to position of thread_struct in task_struct.
-+	 */
-+	if (unlikely(*size == 0))
-+		*offset = 0;
-+	else
-+		*offset += offsetof(struct task_struct, thread);
++	return kmem_cache_create_usercopy(zone_name, size, 0, flags,
++				useroffset, usersize, construct);
 +}
 +
- void __init fork_init(void)
++
+ static inline void
+ kmem_zone_free(kmem_zone_t *zone, void *ptr)
  {
- 	int i;
-@@ -462,11 +477,14 @@ void __init fork_init(void)
- #define ARCH_MIN_TASKALIGN	0
- #endif
- 	int align = max_t(int, L1_CACHE_BYTES, ARCH_MIN_TASKALIGN);
-+	unsigned long useroffset, usersize;
+diff --git a/fs/xfs/xfs_super.c b/fs/xfs/xfs_super.c
+index c996f4ae4a5f..1b4b67194538 100644
+--- a/fs/xfs/xfs_super.c
++++ b/fs/xfs/xfs_super.c
+@@ -1846,9 +1846,12 @@ xfs_init_zones(void)
+ 		goto out_destroy_efd_zone;
  
- 	/* create a slab on which task_structs can be allocated */
--	task_struct_cachep = kmem_cache_create("task_struct",
-+	task_struct_whitelist(&useroffset, &usersize);
-+	task_struct_cachep = kmem_cache_create_usercopy("task_struct",
- 			arch_task_struct_size, align,
--			SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT, NULL);
-+			SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT,
-+			useroffset, usersize, NULL);
- #endif
+ 	xfs_inode_zone =
+-		kmem_zone_init_flags(sizeof(xfs_inode_t), "xfs_inode",
++		kmem_zone_init_flags_usercopy(sizeof(xfs_inode_t), "xfs_inode",
+ 			KM_ZONE_HWALIGN | KM_ZONE_RECLAIM | KM_ZONE_SPREAD |
+-			KM_ZONE_ACCOUNT, xfs_fs_inode_init_once);
++				KM_ZONE_ACCOUNT,
++			offsetof(xfs_inode_t, i_df.if_u2.if_inline_data),
++			sizeof_field(xfs_inode_t, i_df.if_u2.if_inline_data),
++			xfs_fs_inode_init_once);
+ 	if (!xfs_inode_zone)
+ 		goto out_destroy_efi_zone;
  
- 	/* do the arch specific task caches init */
 -- 
 2.7.4
