@@ -1,40 +1,180 @@
 From: Eric Biggers <ebiggers3@gmail.com>
-Date: Thu, 21 Sep 2017 11:52:36 -0700
-Message-Id: <20170921185239.88398-1-ebiggers3@gmail.com>
-Subject: [kernel-hardening] [PATCH v3 0/3] x86/fpu: prevent leaking FPU registers via invalid FPU state
+Date: Thu, 21 Sep 2017 11:52:37 -0700
+Message-Id: <20170921185239.88398-2-ebiggers3@gmail.com>
+In-Reply-To: <20170921185239.88398-1-ebiggers3@gmail.com>
+References: <20170921185239.88398-1-ebiggers3@gmail.com>
+Subject: [kernel-hardening] [PATCH v3 1/3] x86/fpu: don't let userspace set bogus xcomp_bv
 To: x86@kernel.org
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Dmitry Vyukov <dvyukov@google.com>, Fenghua Yu <fenghua.yu@intel.com>, Ingo Molnar <mingo@kernel.org>, Kevin Hao <haokexin@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Dmitry Vyukov <dvyukov@google.com>, Fenghua Yu <fenghua.yu@intel.com>, Ingo Molnar <mingo@kernel.org>, Kevin Hao <haokexin@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Eric Biggers <ebiggers@google.com>
 
-This series fixes the bug found by syzkaller where the ptrace syscall
-can be used to set invalid bits in a task's FPU state.  I also found
-that an equivalent bug was reachable using the sigreturn syscall, so the
-first patch fixes the bug in both cases.
+On x86, userspace can use the ptrace() or rt_sigreturn() system calls to
+set a task's extended state (xstate) or "FPU" registers.  ptrace() can
+set them for another task using the PTRACE_SETREGSET request with
+NT_X86_XSTATE, while rt_sigreturn() can set them for the current task.
+In either case, registers can be set to any value, but the kernel
+assumes that the XSAVE area itself remains valid in the sense that the
+CPU can restore it.
 
-The other two patches start validating the other parts of the
-xstate_header and make it so that invalid FPU states can no longer be
-abused to leak the FPU registers of other processes.
+However, in the case where the kernel is using the uncompacted xstate
+format (which it does whenever the XSAVES instruction is unavailable),
+it was possible for userspace to set the xcomp_bv field in the
+xstate_header to an arbitrary value.  However, all bits in that field
+are reserved in the uncompacted case, so when switching to a task with
+nonzero xcomp_bv, the XRSTOR instruction failed with a #GP fault.  This
+caused the WARN_ON_FPU(err) in copy_kernel_to_xregs() to be hit.  In
+addition, since the error is otherwise ignored, the FPU registers from
+the task previously executing on the CPU were leaked.
 
-Changes since v2:
-    - Use an exception handler to handle invalid FPU states
-      (suggested by Andy Lutomirski)
-    - Check the size of xstate_header.reserved at build time
-      (suggested by Dave Hansen)
+Fix the bug by checking that the user-supplied value of xcomp_bv is 0 in
+the uncompacted case, and returning an error otherwise.
 
-Eric Biggers (3):
-  x86/fpu: don't let userspace set bogus xcomp_bv
-  x86/fpu: tighten validation of user-supplied xstate_header
-  x86/fpu: reinitialize FPU registers if restoring FPU state fails
+The reason for validating xcomp_bv rather than simply overwriting it
+with 0 is that we want userspace to see an error if it (incorrectly)
+provides an XSAVE area in compacted format rather than in uncompacted
+format.
 
- arch/x86/include/asm/fpu/internal.h | 51 +++++++++++--------------------------
- arch/x86/include/asm/fpu/xstate.h   | 25 ++++++++++++++++++
- arch/x86/kernel/fpu/regset.c        | 20 +++++++--------
- arch/x86/kernel/fpu/signal.c        | 15 ++++++++---
- arch/x86/kernel/fpu/xstate.c        | 27 ++++++++------------
- arch/x86/mm/extable.c               | 24 +++++++++++++++++
- 6 files changed, 94 insertions(+), 68 deletions(-)
+Note that as before, in case of error we clear the task's FPU state.
+This is perhaps non-ideal, especially for PTRACE_SETREGSET; it might be
+better to return an error before changing anything.  But it seems the
+"clear on error" behavior is fine for now, and it's a little tricky to
+do otherwise because it would mean we couldn't simply copy the full
+userspace state into kernel memory in one __copy_from_user().
 
+This bug was found by syzkaller, which hit the above-mentioned
+WARN_ON_FPU():
+
+    WARNING: CPU: 1 PID: 0 at ./arch/x86/include/asm/fpu/internal.h:373 __switch_to+0x5b5/0x5d0
+    CPU: 1 PID: 0 Comm: swapper/1 Not tainted 4.13.0 #453
+    Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Bochs 01/01/2011
+    task: ffff9ba2bc8e42c0 task.stack: ffffa78cc036c000
+    RIP: 0010:__switch_to+0x5b5/0x5d0
+    RSP: 0000:ffffa78cc08bbb88 EFLAGS: 00010082
+    RAX: 00000000fffffffe RBX: ffff9ba2b8bf2180 RCX: 00000000c0000100
+    RDX: 00000000ffffffff RSI: 000000005cb10700 RDI: ffff9ba2b8bf36c0
+    RBP: ffffa78cc08bbbd0 R08: 00000000929fdf46 R09: 0000000000000001
+    R10: 0000000000000000 R11: 0000000000000000 R12: ffff9ba2bc8e42c0
+    R13: 0000000000000000 R14: ffff9ba2b8bf3680 R15: ffff9ba2bf5d7b40
+    FS:  00007f7e5cb10700(0000) GS:ffff9ba2bf400000(0000) knlGS:0000000000000000
+    CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+    CR2: 00000000004005cc CR3: 0000000079fd5000 CR4: 00000000001406e0
+    Call Trace:
+    Code: 84 00 00 00 00 00 e9 11 fd ff ff 0f ff 66 0f 1f 84 00 00 00 00 00 e9 e7 fa ff ff 0f ff 66 0f 1f 84 00 00 00 00 00 e9 c2 fa ff ff <0f> ff 66 0f 1f 84 00 00 00 00 00 e9 d4 fc ff ff 66 66 2e 0f 1f
+
+Here is a C reproducer.  The expected behavior is that the program spin
+forever with no output.  However, on a buggy kernel running on a
+processor with the "xsave" feature but without the "xsaves" feature
+(e.g. Sandy Bridge through Broadwell for Intel), within a second or two
+the program reports that the xmm registers were corrupted, i.e. were not
+restored correctly.  With CONFIG_X86_DEBUG_FPU=y it also hits the above
+kernel warning.
+
+    #define _GNU_SOURCE
+    #include <stdbool.h>
+    #include <inttypes.h>
+    #include <linux/elf.h>
+    #include <stdio.h>
+    #include <sys/ptrace.h>
+    #include <sys/uio.h>
+    #include <sys/wait.h>
+    #include <unistd.h>
+
+    int main(void)
+    {
+        int pid = fork();
+        uint64_t xstate[512];
+        struct iovec iov = { .iov_base = xstate, .iov_len = sizeof(xstate) };
+
+        if (pid == 0) {
+            bool tracee = true;
+            for (int i = 0; i < sysconf(_SC_NPROCESSORS_ONLN) && tracee; i++)
+                tracee = (fork() != 0);
+            uint32_t xmm0[4] = { [0 ... 3] = tracee ? 0x00000000 : 0xDEADBEEF };
+            asm volatile("   movdqu %0, %%xmm0\n"
+                         "   mov %0, %%rbx\n"
+                         "1: movdqu %%xmm0, %0\n"
+                         "   mov %0, %%rax\n"
+                         "   cmp %%rax, %%rbx\n"
+                         "   je 1b\n"
+                         : "+m" (xmm0) : : "rax", "rbx", "xmm0");
+            printf("BUG: xmm registers corrupted!  tracee=%d, xmm0=%08X%08X%08X%08X\n",
+                   tracee, xmm0[0], xmm0[1], xmm0[2], xmm0[3]);
+        } else {
+            usleep(100000);
+            ptrace(PTRACE_ATTACH, pid, 0, 0);
+            wait(NULL);
+            ptrace(PTRACE_GETREGSET, pid, NT_X86_XSTATE, &iov);
+            xstate[65] = -1;
+            ptrace(PTRACE_SETREGSET, pid, NT_X86_XSTATE, &iov);
+            ptrace(PTRACE_CONT, pid, 0, 0);
+            wait(NULL);
+        }
+        return 1;
+    }
+
+Note: the program only tests for the bug using the ptrace() system call.
+The bug can also be reproduced using the rt_sigreturn() system call, but
+only when called from a 32-bit program, since for 64-bit programs the
+kernel restores the FPU state from the signal frame by doing XRSTOR
+directly from userspace memory (with proper error checking).
+
+Fixes: 0b29643a5843 ("x86/xsaves: Change compacted format xsave area header")
+Reported-by: Dmitry Vyukov <dvyukov@google.com>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+Acked-by: Dave Hansen <dave.hansen@linux.intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Fenghua Yu <fenghua.yu@intel.com>
+Cc: Ingo Molnar <mingo@kernel.org>
+Cc: Kevin Hao <haokexin@gmail.com>
+Cc: Oleg Nesterov <oleg@redhat.com>
+Cc: Wanpeng Li <wanpeng.li@hotmail.com>
+Cc: Yu-cheng Yu <yu-cheng.yu@intel.com>
+Cc: <stable@vger.kernel.org>    [v3.17+]
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ arch/x86/kernel/fpu/regset.c | 9 +++++++--
+ arch/x86/kernel/fpu/signal.c | 4 ++++
+ 2 files changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/arch/x86/kernel/fpu/regset.c b/arch/x86/kernel/fpu/regset.c
+index b188b16841e3..8ab1a1f4d1c1 100644
+--- a/arch/x86/kernel/fpu/regset.c
++++ b/arch/x86/kernel/fpu/regset.c
+@@ -131,11 +131,16 @@ int xstateregs_set(struct task_struct *target, const struct user_regset *regset,
+ 
+ 	fpu__activate_fpstate_write(fpu);
+ 
+-	if (boot_cpu_has(X86_FEATURE_XSAVES))
++	if (boot_cpu_has(X86_FEATURE_XSAVES)) {
+ 		ret = copyin_to_xsaves(kbuf, ubuf, xsave);
+-	else
++	} else {
+ 		ret = user_regset_copyin(&pos, &count, &kbuf, &ubuf, xsave, 0, -1);
+ 
++		/* xcomp_bv must be 0 when using uncompacted format */
++		if (!ret && xsave->header.xcomp_bv)
++			ret = -EINVAL;
++	}
++
+ 	/*
+ 	 * In case of failure, mark all states as init:
+ 	 */
+diff --git a/arch/x86/kernel/fpu/signal.c b/arch/x86/kernel/fpu/signal.c
+index 83c23c230b4c..169d6e001d32 100644
+--- a/arch/x86/kernel/fpu/signal.c
++++ b/arch/x86/kernel/fpu/signal.c
+@@ -329,6 +329,10 @@ static int __fpu__restore_sig(void __user *buf, void __user *buf_fx, int size)
+ 		} else {
+ 			err = __copy_from_user(&fpu->state.xsave,
+ 					       buf_fx, state_size);
++
++			/* xcomp_bv must be 0 when using uncompacted format */
++			if (!err && fpu->state.xsave.header.xcomp_bv)
++				err = -EINVAL;
+ 		}
+ 
+ 		if (err || __copy_from_user(&env, buf, sizeof(env))) {
 -- 
 2.14.1.821.g8fa685d3b7-goog
