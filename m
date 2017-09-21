@@ -1,54 +1,68 @@
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Thu, 21 Sep 2017 17:59:19 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20170921155919.skpyt7dutod5ul4t@gmail.com>
+References: <20170815075609.mmzbfwritjzvrpsn@gmail.com>
+ <CAJcbSZE+TiY2whT94WqCJNXzR=2ATOHcQ10H5RqBZA1j=k1VHQ@mail.gmail.com>
+ <20170816151235.oamkdva6cwpc4cex@gmail.com>
+ <CAJcbSZFM_zpL1av1JVaow8NdsGeH+6oZKeDnMPdXR0PGfynzsg@mail.gmail.com>
+ <20170817080920.5ljlkktngw2cisfg@gmail.com>
+ <CAJcbSZGbtc-i0X1NiBAvZA7cxpGkwSLKNB7oDNCsFxOCdhkR_g@mail.gmail.com>
+ <CAJcbSZGhvwt=5ERtBHLJnwS=6AXBZLTMfrafzeUCqYy=-MKWDg@mail.gmail.com>
+ <20170825080443.tvvr6wzs362cjcuu@gmail.com>
+ <CAJcbSZFJQMKw21kLwr4QGoSM7DMgKRzzjWxkYBF2c1HciCzvGg@mail.gmail.com>
+ <CAJcbSZH6hwaWKrvUZR33ExYaZaWKMSv4tJJA3yZkniLvLbTFMw@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <alpine.DEB.2.20.1709211024120.14427@nuc-kabylake>
-References: <1505940337-79069-1-git-send-email-keescook@chromium.org>
- <1505940337-79069-4-git-send-email-keescook@chromium.org> <alpine.DEB.2.20.1709211024120.14427@nuc-kabylake>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 21 Sep 2017 08:40:00 -0700
-Message-ID: <CAGXu5j+X6dWCGocG=P7pszTY-5OZ6Jmp-RsnDKox75M5rmVe4g@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCH v3 03/31] usercopy: Mark kmalloc
- caches as usercopy caches
-To: Christopher Lameter <cl@linux.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, David Windsor <dave@nullcore.net>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, linux-xfs@vger.kernel.org, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAJcbSZH6hwaWKrvUZR33ExYaZaWKMSv4tJJA3yZkniLvLbTFMw@mail.gmail.com>
+Subject: [kernel-hardening] Re: x86: PIE support and option to extend KASLR randomization
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, xen-devel <xen-devel@lists.xenproject.org>, kvm list <kvm@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Sparse Mailing-list <linux-sparse@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Sep 21, 2017 at 8:27 AM, Christopher Lameter <cl@linux.com> wrote:
-> On Wed, 20 Sep 2017, Kees Cook wrote:
->
->> --- a/mm/slab.c
->> +++ b/mm/slab.c
->> @@ -1291,7 +1291,8 @@ void __init kmem_cache_init(void)
->>        */
->>       kmalloc_caches[INDEX_NODE] = create_kmalloc_cache(
->>                               kmalloc_info[INDEX_NODE].name,
->> -                             kmalloc_size(INDEX_NODE), ARCH_KMALLOC_FLAGS);
->> +                             kmalloc_size(INDEX_NODE), ARCH_KMALLOC_FLAGS,
->> +                             0, kmalloc_size(INDEX_NODE));
->>       slab_state = PARTIAL_NODE;
->>       setup_kmalloc_cache_index_table();
->
-> Ok this presumes that at some point we will be able to restrict the number
-> of bytes writeable and thus set the offset and size field to different
-> values. Is that realistic?
->
-> We already whitelist all kmalloc caches (see first patch).
->
-> So what is the point of this patch?
 
-The DMA kmalloc caches are not whitelisted:
+( Sorry about the delay in answering this. I could blame the delay on the merge 
+  window, but in reality I've been procrastinating this is due to the permanent,
+  non-trivial impact PIE has on generated C code. )
 
->>                         kmalloc_dma_caches[i] = create_kmalloc_cache(n,
->> -                               size, SLAB_CACHE_DMA | flags);
->> +                               size, SLAB_CACHE_DMA | flags, 0, 0);
+* Thomas Garnier <thgarnie@google.com> wrote:
 
-So this is creating the distinction between the kmallocs that go to
-userspace and those that don't. The expectation is that future work
-can start to distinguish between "for userspace" and "only kernel"
-kmalloc allocations, as is already done here for DMA.
+> 1) PIE sometime needs two instructions to represent a single
+> instruction on mcmodel=kernel.
 
--Kees
+What again is the typical frequency of this occurring in an x86-64 defconfig 
+kernel, with the very latest GCC?
 
--- 
-Kees Cook
-Pixel Security
+Also, to make sure: which unwinder did you use for your measurements, 
+frame-pointers or ORC? Please use ORC only for future numbers, as
+frame-pointers is obsolete from a performance measurement POV.
+
+> 2) GCC does not optimize switches in PIE in order to reduce relocations:
+
+Hopefully this can either be fixed in GCC or at least influenced via a compiler 
+switch in the future.
+
+> The switches are the biggest increase on small functions but I don't
+> think they represent a large portion of the difference (number 1 is).
+
+Ok.
+
+> A side note, while testing gcc 7.2.0 on hackbench I have seen the PIE
+> kernel being faster by 1% across multiple runs (comparing 50 runs done
+> across 5 reboots twice). I don't think PIE is faster than a
+> mcmodel=kernel but recent versions of gcc makes them fairly similar.
+
+So I think we are down to an overhead range where the inherent noise (both random 
+and systematic one) in 'hackbench' overwhelms the signal we are trying to measure.
+
+So I think it's the kernel .text size change that is the best noise-free proxy for 
+the overhead impact of PIE.
+
+It doesn't hurt to double check actual real performance as well, just don't expect 
+there to be much of a signal for anything but fully cached microbenchmark 
+workloads.
+
+Thanks,
+
+	Ingo
