@@ -1,31 +1,55 @@
 From: Eric Biggers <ebiggers3@gmail.com>
-Date: Thu, 21 Sep 2017 11:52:38 -0700
-Message-Id: <20170921185239.88398-3-ebiggers3@gmail.com>
+Date: Thu, 21 Sep 2017 11:52:39 -0700
+Message-Id: <20170921185239.88398-4-ebiggers3@gmail.com>
 In-Reply-To: <20170921185239.88398-1-ebiggers3@gmail.com>
 References: <20170921185239.88398-1-ebiggers3@gmail.com>
-Subject: [kernel-hardening] [PATCH v3 2/3] x86/fpu: tighten validation of user-supplied xstate_header
+Subject: [kernel-hardening] [PATCH v3 3/3] x86/fpu: reinitialize FPU registers if restoring FPU state fails
 To: x86@kernel.org
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Dmitry Vyukov <dvyukov@google.com>, Fenghua Yu <fenghua.yu@intel.com>, Ingo Molnar <mingo@kernel.org>, Kevin Hao <haokexin@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Move validation of user-supplied xstate_headers into a helper function
-and call it from both the ptrace and sigreturn syscall paths.  The new
-function also considers it to be an error if *any* reserved bits are
-set, whereas before we were just clearing most of them.
+Userspace can change the FPU state of a task using the ptrace() or
+rt_sigreturn() system calls.  Because reserved bits in the FPU state can
+cause the XRSTOR instruction to fail, the kernel has to carefully
+validate that no reserved bits or other invalid values are being set.
 
-This should reduce the chance of bugs that fail to correctly validate
-user-supplied XSAVE areas.  It also will expose any broken userspace
-programs that set the other reserved bits; this is desirable because
-such programs will lose compatibility with future CPUs and kernels if
-those bits are ever used for anything.  (There shouldn't be any such
-programs, and in fact in the case where the compacted format is in use
-we were already validating xfeatures.  But you never know...)
+Unfortunately, there have been bugs in this validation code.  For
+example, we were not checking that the 'xcomp_bv' field in the
+xstate_header was 0.  As-is, such bugs are exploitable to read the FPU
+registers of other processes on the system.  To do so, an attacker can
+create a task, assign to it an invalid FPU state, then spin in a loop
+and monitor the values of the FPU registers.  Because the task's FPU
+registers are not being restored, sometimes the FPU registers will have
+the values from another process.
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Acked-by: Dave Hansen <dave.hansen@linux.intel.com>
+This is likely to continue to be a problem in the future because the
+validation done by the CPU instructions like XRSTOR is not immediately
+visible to kernel developers.  Nor will invalid FPU states ever be
+encountered during ordinary use --- they will only be seen during
+fuzzing or exploits.  There can even be reserved bits outside the
+xstate_header which are easy to forget about.  For example, the MXCSR
+register contains reserved bits, which were not validated by the
+KVM_SET_XSAVE ioctl until commit a575813bfe4b ("KVM: x86: Fix load
+damaged SSEx MXCSR register").
+
+Therefore, mitigate this class of vulnerability by restoring the FPU
+registers from init_fpstate if restoring from the task's state fails.
+
+We actually used to do this, but it was (perhaps unwisely) removed by
+commit 9ccc27a5d297 ("x86/fpu: Remove error return values from
+copy_kernel_to_*regs() functions").  This new patch is also a bit
+different.  First, it only clears the registers, not also the bad
+in-memory state; this is simpler and makes it easier to make the
+mitigation cover all callers of __copy_kernel_to_fpregs().  Second, it
+does the register clearing in an exception handler so that no extra
+instructions are added to context switches.  In fact, we *remove*
+instructions, since previously we were always zeroing the register
+containing 'err' even if CONFIG_X86_DEBUG_FPU was disabled.
+
 Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Dave Hansen <dave.hansen@linux.intel.com>
 Cc: Dmitry Vyukov <dvyukov@google.com>
 Cc: Fenghua Yu <fenghua.yu@intel.com>
 Cc: Ingo Molnar <mingo@kernel.org>
@@ -35,203 +59,162 @@ Cc: Wanpeng Li <wanpeng.li@hotmail.com>
 Cc: Yu-cheng Yu <yu-cheng.yu@intel.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- arch/x86/include/asm/fpu/xstate.h | 25 +++++++++++++++++++++++++
- arch/x86/kernel/fpu/regset.c      | 21 +++++++--------------
- arch/x86/kernel/fpu/signal.c      | 19 +++++++++++--------
- arch/x86/kernel/fpu/xstate.c      | 27 ++++++++++-----------------
- 4 files changed, 53 insertions(+), 39 deletions(-)
+ arch/x86/include/asm/fpu/internal.h | 51 +++++++++++--------------------------
+ arch/x86/mm/extable.c               | 24 +++++++++++++++++
+ 2 files changed, 39 insertions(+), 36 deletions(-)
 
-diff --git a/arch/x86/include/asm/fpu/xstate.h b/arch/x86/include/asm/fpu/xstate.h
-index 1b2799e0699a..cf6542b76996 100644
---- a/arch/x86/include/asm/fpu/xstate.h
-+++ b/arch/x86/include/asm/fpu/xstate.h
-@@ -52,4 +52,29 @@ int copyout_from_xsaves(unsigned int pos, unsigned int count, void *kbuf,
- 			void __user *ubuf, struct xregs_state *xsave);
- int copyin_to_xsaves(const void *kbuf, const void __user *ubuf,
- 		     struct xregs_state *xsave);
-+
-+/* Validate an xstate header supplied by userspace (ptrace or sigreturn) */
-+static inline int validate_xstate_header(const struct xstate_header *hdr)
-+{
-+	/* No unknown or supervisor features may be set */
-+	if (hdr->xfeatures & (~xfeatures_mask | XFEATURE_MASK_SUPERVISOR))
-+		return -EINVAL;
-+
-+	/* Userspace must use the uncompacted format */
-+	if (hdr->xcomp_bv)
-+		return -EINVAL;
-+
-+	/*
-+	 * If 'reserved' is shrunken to add a new field, make sure to validate
-+	 * that new field here!
-+	 */
-+	BUILD_BUG_ON(sizeof(hdr->reserved) != 48);
-+
-+	/* No reserved bits may be set */
-+	if (memchr_inv(hdr->reserved, 0, sizeof(hdr->reserved)))
-+		return -EINVAL;
-+
-+	return 0;
-+}
-+
- #endif
-diff --git a/arch/x86/kernel/fpu/regset.c b/arch/x86/kernel/fpu/regset.c
-index 8ab1a1f4d1c1..3fd3a2f4f591 100644
---- a/arch/x86/kernel/fpu/regset.c
-+++ b/arch/x86/kernel/fpu/regset.c
-@@ -131,31 +131,24 @@ int xstateregs_set(struct task_struct *target, const struct user_regset *regset,
+diff --git a/arch/x86/include/asm/fpu/internal.h b/arch/x86/include/asm/fpu/internal.h
+index 554cdb205d17..719b8cc5fd01 100644
+--- a/arch/x86/include/asm/fpu/internal.h
++++ b/arch/x86/include/asm/fpu/internal.h
+@@ -120,20 +120,11 @@ extern void fpstate_sanitize_xstate(struct fpu *fpu);
+ 	err;								\
+ })
  
- 	fpu__activate_fpstate_write(fpu);
+-#define check_insn(insn, output, input...)				\
+-({									\
+-	int err;							\
++#define kernel_insn(insn, output, input...)				\
+ 	asm volatile("1:" #insn "\n\t"					\
+ 		     "2:\n"						\
+-		     ".section .fixup,\"ax\"\n"				\
+-		     "3:  movl $-1,%[err]\n"				\
+-		     "    jmp  2b\n"					\
+-		     ".previous\n"					\
+-		     _ASM_EXTABLE(1b, 3b)				\
+-		     : [err] "=r" (err), output				\
+-		     : "0"(0), input);					\
+-	err;								\
+-})
++		     _ASM_EXTABLE_HANDLE(1b, 2b, ex_handler_fprestore)	\
++		     : output : input)
  
--	if (boot_cpu_has(X86_FEATURE_XSAVES)) {
-+	if (using_compacted_format()) {
- 		ret = copyin_to_xsaves(kbuf, ubuf, xsave);
+ static inline int copy_fregs_to_user(struct fregs_state __user *fx)
+ {
+@@ -153,20 +144,16 @@ static inline int copy_fxregs_to_user(struct fxregs_state __user *fx)
+ 
+ static inline void copy_kernel_to_fxregs(struct fxregs_state *fx)
+ {
+-	int err;
+-
+ 	if (IS_ENABLED(CONFIG_X86_32)) {
+-		err = check_insn(fxrstor %[fx], "=m" (*fx), [fx] "m" (*fx));
++		kernel_insn(fxrstor %[fx], "=m" (*fx), [fx] "m" (*fx));
  	} else {
- 		ret = user_regset_copyin(&pos, &count, &kbuf, &ubuf, xsave, 0, -1);
--
--		/* xcomp_bv must be 0 when using uncompacted format */
--		if (!ret && xsave->header.xcomp_bv)
--			ret = -EINVAL;
-+		if (!ret)
-+			ret = validate_xstate_header(&xsave->header);
- 	}
- 
--	/*
--	 * In case of failure, mark all states as init:
--	 */
--	if (ret)
--		fpstate_init(&fpu->state);
--
- 	/*
- 	 * mxcsr reserved bits must be masked to zero for security reasons.
- 	 */
- 	xsave->i387.mxcsr &= mxcsr_feature_mask;
--	xsave->header.xfeatures &= xfeatures_mask;
-+
- 	/*
--	 * These bits must be zero.
-+	 * In case of failure, mark all states as init:
- 	 */
--	memset(&xsave->header.reserved, 0, 48);
-+	if (ret)
-+		fpstate_init(&fpu->state);
- 
- 	return ret;
- }
-diff --git a/arch/x86/kernel/fpu/signal.c b/arch/x86/kernel/fpu/signal.c
-index 169d6e001d32..a325f0b25456 100644
---- a/arch/x86/kernel/fpu/signal.c
-+++ b/arch/x86/kernel/fpu/signal.c
-@@ -213,8 +213,11 @@ sanitize_restored_xstate(struct task_struct *tsk,
- 	struct xstate_header *header = &xsave->header;
- 
- 	if (use_xsave()) {
--		/* These bits must be zero. */
--		memset(header->reserved, 0, 48);
-+		/*
-+		 * Note: we don't need to zero the reserved bits in the
-+		 * xstate_header here because we either didn't copy them at all,
-+		 * or we checked earlier that they aren't set.
-+		 */
- 
- 		/*
- 		 * Init the state that is not present in the memory
-@@ -223,7 +226,7 @@ sanitize_restored_xstate(struct task_struct *tsk,
- 		if (fx_only)
- 			header->xfeatures = XFEATURE_MASK_FPSSE;
- 		else
--			header->xfeatures &= (xfeatures_mask & xfeatures);
-+			header->xfeatures &= xfeatures;
- 	}
- 
- 	if (use_fxsr()) {
-@@ -307,7 +310,7 @@ static int __fpu__restore_sig(void __user *buf, void __user *buf_fx, int size)
- 		/*
- 		 * For 32-bit frames with fxstate, copy the user state to the
- 		 * thread's fpu state, reconstruct fxstate from the fsave
--		 * header. Sanitize the copied state etc.
-+		 * header. Validate and sanitize the copied state.
- 		 */
- 		struct fpu *fpu = &tsk->thread.fpu;
- 		struct user_i387_ia32_struct env;
-@@ -329,10 +332,10 @@ static int __fpu__restore_sig(void __user *buf, void __user *buf_fx, int size)
+ 		if (IS_ENABLED(CONFIG_AS_FXSAVEQ)) {
+-			err = check_insn(fxrstorq %[fx], "=m" (*fx), [fx] "m" (*fx));
++			kernel_insn(fxrstorq %[fx], "=m" (*fx), [fx] "m" (*fx));
  		} else {
- 			err = __copy_from_user(&fpu->state.xsave,
- 					       buf_fx, state_size);
--
--			/* xcomp_bv must be 0 when using uncompacted format */
--			if (!err && fpu->state.xsave.header.xcomp_bv)
--				err = -EINVAL;
-+			if (!err) {
-+				err = validate_xstate_header(
-+						&fpu->state.xsave.header);
-+			}
+ 			/* See comment in copy_fxregs_to_kernel() below. */
+-			err = check_insn(rex64/fxrstor (%[fx]), "=m" (*fx), [fx] "R" (fx), "m" (*fx));
++			kernel_insn(rex64/fxrstor (%[fx]), "=m" (*fx), [fx] "R" (fx), "m" (*fx));
  		}
+ 	}
+-	/* Copying from a kernel buffer to FPU registers should never fail: */
+-	WARN_ON_FPU(err);
+ }
  
- 		if (err || __copy_from_user(&env, buf, sizeof(env))) {
-diff --git a/arch/x86/kernel/fpu/xstate.c b/arch/x86/kernel/fpu/xstate.c
-index c24ac1efb12d..52018be79e27 100644
---- a/arch/x86/kernel/fpu/xstate.c
-+++ b/arch/x86/kernel/fpu/xstate.c
-@@ -1018,41 +1018,34 @@ int copyout_from_xsaves(unsigned int pos, unsigned int count, void *kbuf,
+ static inline int copy_user_to_fxregs(struct fxregs_state __user *fx)
+@@ -183,9 +170,7 @@ static inline int copy_user_to_fxregs(struct fxregs_state __user *fx)
+ 
+ static inline void copy_kernel_to_fregs(struct fregs_state *fx)
+ {
+-	int err = check_insn(frstor %[fx], "=m" (*fx), [fx] "m" (*fx));
+-
+-	WARN_ON_FPU(err);
++	kernel_insn(frstor %[fx], "=m" (*fx), [fx] "m" (*fx));
+ }
+ 
+ static inline int copy_user_to_fregs(struct fregs_state __user *fx)
+@@ -281,18 +266,13 @@ static inline void copy_fxregs_to_kernel(struct fpu *fpu)
+  * Use XRSTORS to restore context if it is enabled. XRSTORS supports compact
+  * XSAVE area format.
+  */
+-#define XSTATE_XRESTORE(st, lmask, hmask, err)				\
++#define XSTATE_XRESTORE(st, lmask, hmask)				\
+ 	asm volatile(ALTERNATIVE(XRSTOR,				\
+ 				 XRSTORS, X86_FEATURE_XSAVES)		\
+ 		     "\n"						\
+-		     "xor %[err], %[err]\n"				\
+ 		     "3:\n"						\
+-		     ".pushsection .fixup,\"ax\"\n"			\
+-		     "4: movl $-2, %[err]\n"				\
+-		     "jmp 3b\n"						\
+-		     ".popsection\n"					\
+-		     _ASM_EXTABLE(661b, 4b)				\
+-		     : [err] "=r" (err)					\
++		     _ASM_EXTABLE_HANDLE(661b, 3b, ex_handler_fprestore)\
++		     :							\
+ 		     : "D" (st), "m" (*st), "a" (lmask), "d" (hmask)	\
+ 		     : "memory")
+ 
+@@ -336,7 +316,10 @@ static inline void copy_kernel_to_xregs_booting(struct xregs_state *xstate)
+ 	else
+ 		XSTATE_OP(XRSTOR, xstate, lmask, hmask, err);
+ 
+-	/* We should never fault when copying from a kernel buffer: */
++	/*
++	 * We should never fault when copying from a kernel buffer, and the FPU
++	 * state we set at boot time should be valid.
++	 */
+ 	WARN_ON_FPU(err);
+ }
+ 
+@@ -365,12 +348,8 @@ static inline void copy_kernel_to_xregs(struct xregs_state *xstate, u64 mask)
+ {
+ 	u32 lmask = mask;
+ 	u32 hmask = mask >> 32;
+-	int err;
+-
+-	XSTATE_XRESTORE(xstate, lmask, hmask, err);
+ 
+-	/* We should never fault when copying from a kernel buffer: */
+-	WARN_ON_FPU(err);
++	XSTATE_XRESTORE(xstate, lmask, hmask);
  }
  
  /*
-- * Convert from a ptrace standard-format buffer to kernel XSAVES format
-- * and copy to the target thread. This is called from xstateregs_set() and
-- * there we check the CPU has XSAVES and a whole standard-sized buffer
-- * exists.
-+ * Convert from a ptrace or sigreturn standard-format buffer to kernel XSAVES
-+ * format and copy to the target thread.  This is called from xstateregs_set(),
-+ * as well as potentially from the sigreturn() and rt_sigreturn() system calls.
-  */
- int copyin_to_xsaves(const void *kbuf, const void __user *ubuf,
- 		     struct xregs_state *xsave)
- {
- 	unsigned int offset, size;
- 	int i;
--	u64 xfeatures;
--	u64 allowed_features;
-+	struct xstate_header hdr;
+diff --git a/arch/x86/mm/extable.c b/arch/x86/mm/extable.c
+index c076f710de4c..c3521e2be396 100644
+--- a/arch/x86/mm/extable.c
++++ b/arch/x86/mm/extable.c
+@@ -2,6 +2,7 @@
+ #include <linux/uaccess.h>
+ #include <linux/sched/debug.h>
  
- 	offset = offsetof(struct xregs_state, header);
--	size = sizeof(xfeatures);
-+	size = sizeof(hdr);
++#include <asm/fpu/internal.h>
+ #include <asm/traps.h>
+ #include <asm/kdebug.h>
  
- 	if (kbuf) {
--		memcpy(&xfeatures, kbuf + offset, size);
-+		memcpy(&hdr, kbuf + offset, size);
- 	} else {
--		if (__copy_from_user(&xfeatures, ubuf + offset, size))
-+		if (__copy_from_user(&hdr, ubuf + offset, size))
- 			return -EFAULT;
- 	}
- 
--	/*
--	 * Reject if the user sets any disabled or supervisor features:
--	 */
--	allowed_features = xfeatures_mask & ~XFEATURE_MASK_SUPERVISOR;
--
--	if (xfeatures & ~allowed_features)
-+	if (validate_xstate_header(&hdr) != 0)
- 		return -EINVAL;
- 
- 	for (i = 0; i < XFEATURE_MAX; i++) {
- 		u64 mask = ((u64)1 << i);
- 
--		if (xfeatures & mask) {
-+		if (hdr.xfeatures & mask) {
- 			void *dst = __raw_xsave_addr(xsave, 1 << i);
- 
- 			offset = xstate_offsets[i];
-@@ -1076,7 +1069,7 @@ int copyin_to_xsaves(const void *kbuf, const void __user *ubuf,
- 	/*
- 	 * Add back in the features that came in from userspace:
- 	 */
--	xsave->header.xfeatures |= xfeatures;
-+	xsave->header.xfeatures |= hdr.xfeatures;
- 
- 	return 0;
+@@ -78,6 +79,29 @@ bool ex_handler_refcount(const struct exception_table_entry *fixup,
  }
+ EXPORT_SYMBOL_GPL(ex_handler_refcount);
+ 
++/*
++ * Handler for when we fail to restore a task's FPU state.  We should never get
++ * here because the FPU state of a task using the FPU (task->thread.fpu.state)
++ * should always be valid.  However, past bugs have allowed userspace to set
++ * reserved bits in the XSAVE area using PTRACE_SETREGSET or sys_rt_sigreturn().
++ * These caused XRSTOR to fail when switching to the task, leaking the FPU
++ * registers of the task previously executing on the CPU.  Mitigate this class
++ * of vulnerability by restoring from the initial state (essentially, zeroing
++ * out all the FPU registers) if we can't restore from the task's FPU state.
++ */
++bool ex_handler_fprestore(const struct exception_table_entry *fixup,
++			  struct pt_regs *regs, int trapnr)
++{
++	regs->ip = ex_fixup_addr(fixup);
++
++	WARN_ONCE(1, "Bad FPU state detected at %pB, reinitializing FPU registers.",
++		  (void *)instruction_pointer(regs));
++
++	__copy_kernel_to_fpregs(&init_fpstate, -1);
++	return true;
++}
++EXPORT_SYMBOL_GPL(ex_handler_fprestore);
++
+ bool ex_handler_ext(const struct exception_table_entry *fixup,
+ 		   struct pt_regs *regs, int trapnr)
+ {
 -- 
 2.14.1.821.g8fa685d3b7-goog
