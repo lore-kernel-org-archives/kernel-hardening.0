@@ -1,39 +1,78 @@
-Date: Wed, 20 Sep 2017 16:22:21 -0700
-From: Christoph Hellwig <hch@infradead.org>
-Message-ID: <20170920232221.GA18311@infradead.org>
-References: <1505940337-79069-1-git-send-email-keescook@chromium.org>
- <1505940337-79069-15-git-send-email-keescook@chromium.org>
- <20170920205642.GA20023@infradead.org>
- <CAGXu5j+hr0UwB5NsvPSKVVfM6NFHHhnNeUZbuwyTRppSOx9Ucw@mail.gmail.com>
+References: <1499883471-23822-1-git-send-email-alex.popov@linux.com>
+ <20170815033834.2qbjj2of62udqyz3@smitten>
+ <93382ef8-105f-eed4-0d97-0b1a66a047e6@linux.com>
+ <20170816211636.4zwublkvpn6hbo5n@smitten>
+ <CAGXu5j+qe052JAcZUe7mOBHAXNCdLT1z4U-2kRxoeJXyL6VxDQ@mail.gmail.com>
+ <20170817175807.ejgsrfdgojgbtkwf@smitten>
+ <1d0963e6-4a89-9859-5379-8575a925ef08@linux.com>
+ <20170920141309.gbrx53xahjmyrv6c@docker>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <a2f61f3d-9c94-f44f-32e3-9563ecccee89@linux.com>
+Date: Thu, 21 Sep 2017 16:26:03 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5j+hr0UwB5NsvPSKVVfM6NFHHhnNeUZbuwyTRppSOx9Ucw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v3 14/31] vxfs: Define usercopy region in vxfs_inode slab
- cache
-To: Kees Cook <keescook@chromium.org>
-Cc: Christoph Hellwig <hch@infradead.org>, LKML <linux-kernel@vger.kernel.org>, David Windsor <dave@nullcore.net>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20170920141309.gbrx53xahjmyrv6c@docker>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH RFC v3 1/1] gcc-plugins: Add stackleak feature erasing the
+ kernel stack at the end of syscalls
+To: Tycho Andersen <tycho@docker.com>
+Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "x86@kernel.org" <x86@kernel.org>, Andy Lutomirski <luto@amacapital.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Sep 20, 2017 at 02:21:45PM -0700, Kees Cook wrote:
-> This is why I included several other lists on the full CC (am I
-> unlucky enough to have you not subscribed to any of them?). Adding a
-> CC for everyone can result in a huge CC list, especially for the
-> forth-coming 300-patch timer_list series. ;)
+On 20.09.2017 17:13, Tycho Andersen wrote:
+> On Wed, Sep 20, 2017 at 02:27:05PM +0300, Alexander Popov wrote:
+>>> +/*
+>>> + * Note that the way this test fails is kind of ugly; it hits the BUG() in
+>>> + * track_stack, but then the BUG() handler blows the stack and hits the stack
+>>> + * guard page.
+>>> + */
+>>
+>> Yes, actually, the reason is deeper.
+>>
+>> When there are less than (THREAD_SIZE / 16) bytes left in the kernel stack, the
+>> BUG() in track_stack() is hit. But do_error_trap(), which handles the invalid
+>> opcode, has a big stack frame. So it is instrumented by the STACKLEAK gcc plugin
+>> and itself calls track_stack() at the beginning. Hence we have a recursive
+>> BUG(), which eventually hits the guard page.
+>>
+>> I banned the instrumentation of do_error_trap() in the plugin, but it didn't
+>> really help, since there are several other instrumented functions called during
+>> BUG() handling.
+>>
+>> So it seems to me that this BUG() in track_stack() is really useless and can be
+>> dropped. Moreover:
+>>  - it is not a part of the PaX patch;
+>>  - it never worked in Grsecurity kernel because of the error spotted by Tycho.
+>>
+>> What do you think about it?
+> 
+> We'll only have a stack guard page in the case of vmap stack, so maybe
 
-If you think the lists are enough to review changes include only
-the lists, but don't add CCs for individual patches, that's what
-I usually do for cleanups that touch a lot of drivers, but don't
-really change actual logic in ever little driver touched.
+Thanks, that's an important aspect.
 
-> Do you want me to resend the full series to you, or would you prefer
-> something else like a patchwork bundle? (I'll explicitly add you to CC
-> for any future versions, though.)
+> we can do:
+> 
+> diff --git a/fs/exec.c b/fs/exec.c
+> index 8333c4dce59b..8351369cd1e4 100644
+> --- a/fs/exec.c
+> +++ b/fs/exec.c
+> @@ -1960,7 +1960,8 @@ void __used track_stack(void)
+>  		current->thread.lowest_stack = sp;
+>  	}
+>  
+> -	if (unlikely((sp & (THREAD_SIZE - 1)) < (THREAD_SIZE / 16)))
+> +	if (!IS_ENABLED(CONFIG_VMAP_STACK) &&
+> +	    unlikely((sp & (THREAD_SIZE - 1)) < (THREAD_SIZE / 16)))
+>  		BUG();
+>  }
+>  EXPORT_SYMBOL(track_stack);
 
-I'm fine with not being Cced at all if there isn't anything requiring
-my urgent personal attention.  It's up to you whom you want to Cc,
-but my preference is generally for rather less than more people, and
-rather more than less mailing lists.
+In that case the recursive BUG() in track_stack() will happen anyway. You know,
+I would better make CONFIG_GCC_PLUGIN_STACKLEAK depend on CONFIG_VMAP_STACK.
 
-But the important bit is to Cc a person or mailinglist either on
-all patches or on none, otherwise a good review isn't possible.
+> Anyway, thanks for the reviews, I'll post an updated version shortly.
+
+You're welcome.
+
+Best regards,
+Alexander
