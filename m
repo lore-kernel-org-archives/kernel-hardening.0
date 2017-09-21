@@ -1,65 +1,109 @@
-Date: Wed, 20 Sep 2017 19:37:12 -0600
-From: Tycho Andersen <tycho@docker.com>
-Message-ID: <20170921013712.lznwkkmdmp64vaiq@docker>
-References: <20170907173609.22696-1-tycho@docker.com>
- <20170907173609.22696-4-tycho@docker.com>
- <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
- <20170920223452.vam3egenc533rcta@smitten>
- <97475308-1f3d-ea91-5647-39231f3b40e5@intel.com>
- <20170921000901.v7zo4g5edhqqfabm@docker>
- <d1a35583-8225-2ab3-d9fa-273482615d09@intel.com>
+References: <1505940337-79069-1-git-send-email-keescook@chromium.org>
+ <1505940337-79069-11-git-send-email-keescook@chromium.org>
+From: Luis de Bethencourt <luisbg@kernel.org>
+Message-ID: <89dd1d4e-9486-51a2-3500-ac85f947b145@kernel.org>
+Date: Thu, 21 Sep 2017 10:34:55 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <d1a35583-8225-2ab3-d9fa-273482615d09@intel.com>
-Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
- Ownership (XPFO)
-To: Dave Hansen <dave.hansen@intel.com>
-Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
+In-Reply-To: <1505940337-79069-11-git-send-email-keescook@chromium.org>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v3 10/31] befs: Define usercopy region in befs_inode_cache
+ slab cache
+To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
+Cc: David Windsor <dave@nullcore.net>, Salah Triki <salah.triki@gmail.com>, linux-fsdevel@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Sep 20, 2017 at 05:27:02PM -0700, Dave Hansen wrote:
-> On 09/20/2017 05:09 PM, Tycho Andersen wrote:
-> >> I think the only thing that will really help here is if you batch the
-> >> allocations.  For instance, you could make sure that the per-cpu-pageset
-> >> lists always contain either all kernel or all user data.  Then remap the
-> >> entire list at once and do a single flush after the entire list is consumed.
-> > Just so I understand, the idea would be that we only flush when the
-> > type of allocation alternates, so:
-> > 
-> > kmalloc(..., GFP_KERNEL);
-> > kmalloc(..., GFP_KERNEL);
-> > /* remap+flush here */
-> > kmalloc(..., GFP_HIGHUSER);
-> > /* remap+flush here */
-> > kmalloc(..., GFP_KERNEL);
+On 09/20/2017 09:45 PM, Kees Cook wrote:
+> From: David Windsor <dave@nullcore.net>
 > 
-> Not really.  We keep a free list per migrate type, and a per_cpu_pages
-> (pcp) list per migratetype:
+> befs symlink pathnames, stored in struct befs_inode_info.i_data.symlink
+> and therefore contained in the befs_inode_cache slab cache, need to be
+> copied to/from userspace.
 > 
-> > struct per_cpu_pages {
-> >         int count;              /* number of pages in the list */
-> >         int high;               /* high watermark, emptying needed */
-> >         int batch;              /* chunk size for buddy add/remove */
-> > 
-> >         /* Lists of pages, one per migrate type stored on the pcp-lists */
-> >         struct list_head lists[MIGRATE_PCPTYPES];
-> > };
+> cache object allocation:
+>      fs/befs/linuxvfs.c:
+>          befs_alloc_inode(...):
+>              ...
+>              bi = kmem_cache_alloc(befs_inode_cachep, GFP_KERNEL);
+>              ...
+>              return &bi->vfs_inode;
 > 
-> The migratetype is derived from the GFP flags in
-> gfpflags_to_migratetype().  In general, GFP_HIGHUSER and GFP_KERNEL come
-> from different migratetypes, so they come from different free lists.
+>          befs_iget(...):
+>              ...
+>              strlcpy(befs_ino->i_data.symlink, raw_inode->data.symlink,
+>                      BEFS_SYMLINK_LEN);
+>              ...
+>              inode->i_link = befs_ino->i_data.symlink;
 > 
-> In your case above, the GFP_HIGHUSER allocation come through the
-> MIGRATE_MOVABLE pcp list while the GFP_KERNEL ones come from the
-> MIGRATE_UNMOVABLE one.  Since we add a bunch of pages to those lists at
-> once, you could do all the mapping/unmapping/flushing on a bunch of
-> pages at once
+> example usage trace:
+>      readlink_copy+0x43/0x70
+>      vfs_readlink+0x62/0x110
+>      SyS_readlinkat+0x100/0x130
 > 
-> Or, you could hook your code into the places where the migratetype of
-> memory is changed (set_pageblock_migratetype(), plus where we fall
-> back).  Those changes are much more rare than page allocation.
+>      fs/namei.c:
+>          readlink_copy(..., link):
+>              ...
+>              copy_to_user(..., link, len);
+> 
+>          (inlined in vfs_readlink)
+>          generic_readlink(dentry, ...):
+>              struct inode *inode = d_inode(dentry);
+>              const char *link = inode->i_link;
+>              ...
+>              readlink_copy(..., link);
+> 
+> In support of usercopy hardening, this patch defines a region in the
+> befs_inode_cache slab cache in which userspace copy operations are
+> allowed.
+> 
+> This region is known as the slab cache's usercopy region. Slab caches can
+> now check that each copy operation involving cache-managed memory falls
+> entirely within the slab's usercopy region.
+> 
+> This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+> whitelisting code in the last public patch of grsecurity/PaX based on my
+> understanding of the code. Changes or omissions from the original code are
+> mine and don't reflect the original grsecurity/PaX code.
+> 
+> Signed-off-by: David Windsor <dave@nullcore.net>
+> [kees: adjust commit log, provide usage trace]
+> Cc: Luis de Bethencourt <luisbg@kernel.org>
+> Cc: Salah Triki <salah.triki@gmail.com>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> Acked-by: Luis de Bethencourt <luisbg@kernel.org>
+> ---
+>   fs/befs/linuxvfs.c | 14 +++++++++-----
+>   1 file changed, 9 insertions(+), 5 deletions(-)
+> 
+> diff --git a/fs/befs/linuxvfs.c b/fs/befs/linuxvfs.c
+> index a92355cc453b..e5dcd26003dc 100644
+> --- a/fs/befs/linuxvfs.c
+> +++ b/fs/befs/linuxvfs.c
+> @@ -444,11 +444,15 @@ static struct inode *befs_iget(struct super_block *sb, unsigned long ino)
+>   static int __init
+>   befs_init_inodecache(void)
+>   {
+> -	befs_inode_cachep = kmem_cache_create("befs_inode_cache",
+> -					      sizeof (struct befs_inode_info),
+> -					      0, (SLAB_RECLAIM_ACCOUNT|
+> -						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
+> -					      init_once);
+> +	befs_inode_cachep = kmem_cache_create_usercopy("befs_inode_cache",
+> +				sizeof(struct befs_inode_info), 0,
+> +				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
+> +					SLAB_ACCOUNT),
+> +				offsetof(struct befs_inode_info,
+> +					i_data.symlink),
+> +				sizeof_field(struct befs_inode_info,
+> +					i_data.symlink),
+> +				init_once);
+>   	if (befs_inode_cachep == NULL)
+>   		return -ENOMEM;
+>   
+> 
 
-I see, thanks for all this discussion. It has been very helpful!
+No changes in the befs patch in v3. It goes without saying I continue to 
+Ack this.
 
-Tycho
+Thanks Kees and David,
+Luis
