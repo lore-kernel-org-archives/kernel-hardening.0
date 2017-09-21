@@ -1,220 +1,268 @@
-From: Eric Biggers <ebiggers3@gmail.com>
-Date: Thu, 21 Sep 2017 11:52:39 -0700
-Message-Id: <20170921185239.88398-4-ebiggers3@gmail.com>
-In-Reply-To: <20170921185239.88398-1-ebiggers3@gmail.com>
-References: <20170921185239.88398-1-ebiggers3@gmail.com>
-Subject: [kernel-hardening] [PATCH v3 3/3] x86/fpu: reinitialize FPU registers if restoring FPU state fails
-To: x86@kernel.org
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Dmitry Vyukov <dvyukov@google.com>, Fenghua Yu <fenghua.yu@intel.com>, Ingo Molnar <mingo@kernel.org>, Kevin Hao <haokexin@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+References: <1499883471-23822-1-git-send-email-alex.popov@linux.com>
+ <20170815033834.2qbjj2of62udqyz3@smitten>
+ <93382ef8-105f-eed4-0d97-0b1a66a047e6@linux.com>
+ <20170816211636.4zwublkvpn6hbo5n@smitten>
+ <CAGXu5j+qe052JAcZUe7mOBHAXNCdLT1z4U-2kRxoeJXyL6VxDQ@mail.gmail.com>
+ <20170817175807.ejgsrfdgojgbtkwf@smitten>
+ <1d0963e6-4a89-9859-5379-8575a925ef08@linux.com>
+ <20170920211814.pq43vq3o53nh2xcn@smitten>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <499874eb-48bb-f7f7-176a-b0b1e37cc9c6@linux.com>
+Date: Thu, 21 Sep 2017 22:39:02 +0300
+MIME-Version: 1.0
+In-Reply-To: <20170920211814.pq43vq3o53nh2xcn@smitten>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH RFC v3 1/1] gcc-plugins: Add stackleak feature erasing the
+ kernel stack at the end of syscalls
+To: Tycho Andersen <tycho@docker.com>
+Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "x86@kernel.org" <x86@kernel.org>, Andy Lutomirski <luto@amacapital.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Eric Biggers <ebiggers@google.com>
+On 21.09.2017 00:18, Tycho Andersen wrote:
+> On Wed, Sep 20, 2017 at 02:27:05PM +0300, Alexander Popov wrote:
+>> On 17.08.2017 20:58, Tycho Andersen wrote:
+>>> From 5cae1f904cd3d813628a5b22ca5fe054b5eb7378 Mon Sep 17 00:00:00 2001
+>>> From: Tycho Andersen <tycho@docker.com>
+>>> Date: Thu, 8 Jun 2017 12:43:07 -0600
+>>> Subject: [PATCH] lkdtm: add a test for STACKLEAK plugin
+>>>
+>>> There are two tests here, one to test that the BUG() in check_alloca is hit
+>>> correctly, and the other to test that the BUG() in track_stack is hit
+>>> correctly.
+>>>
+>>> Ideally we'd also be able to check end-to-end that a syscall results in an
+>>> entirely poisoned stack, but I'm not sure how to do a syscall from lkdtm.
+>>
+>> Could you please elaborate on this? I didn't get the idea.
+> 
+> Sorry, I realized I never replied to this comment. The idea would be
+> to simulate an entire syscall as a user would do, from beginning to
+> end, so that we can ensure all the machinery works as it is supposed
+> to (i.e. when the syscall returns, we can check that the task's stack
+> is completely poisoned).
 
-Userspace can change the FPU state of a task using the ptrace() or
-rt_sigreturn() system calls.  Because reserved bits in the FPU state can
-cause the XRSTOR instruction to fail, the kernel has to carefully
-validate that no reserved bits or other invalid values are being set.
+A quick search gives that Greg's article:
+https://www.linuxjournal.com/article/8110
+He shows the examples of syscalls from the kernelspace. But it might not be
+enough, since the actual stack erasing is happening during kernel -> user
+context switch. Do you think the idea is possible at all?
 
-Unfortunately, there have been bugs in this validation code.  For
-example, we were not checking that the 'xcomp_bv' field in the
-xstate_header was 0.  As-is, such bugs are exploitable to read the FPU
-registers of other processes on the system.  To do so, an attacker can
-create a task, assign to it an invalid FPU state, then spin in a loop
-and monitor the values of the FPU registers.  Because the task's FPU
-registers are not being restored, sometimes the FPU registers will have
-the values from another process.
+> Below is an updated patch based on your feedback. Thanks!
 
-This is likely to continue to be a problem in the future because the
-validation done by the CPU instructions like XRSTOR is not immediately
-visible to kernel developers.  Nor will invalid FPU states ever be
-encountered during ordinary use --- they will only be seen during
-fuzzing or exploits.  There can even be reserved bits outside the
-xstate_header which are easy to forget about.  For example, the MXCSR
-register contains reserved bits, which were not validated by the
-KVM_SET_XSAVE ioctl until commit a575813bfe4b ("KVM: x86: Fix load
-damaged SSEx MXCSR register").
+Please see the comments below.
 
-Therefore, mitigate this class of vulnerability by restoring the FPU
-registers from init_fpstate if restoring from the task's state fails.
+> From 34f68b92ac2f2a8d770765e47ae3612d5bb29fae Mon Sep 17 00:00:00 2001
+> From: Tycho Andersen <tycho@docker.com>
+> Date: Thu, 8 Jun 2017 12:43:07 -0600
+> Subject: [PATCH] lkdtm: add a test for STACKLEAK plugin
+> 
+> There are two tests here, one to test that the BUG() in check_alloca is hit
+> correctly, and the other to test that the BUG() in track_stack is hit
+> correctly.
+> 
+> Ideally we'd also be able to check end-to-end that a syscall results in an
+> entirely poisoned stack, but I'm not sure how to do a syscall from lkdtm.
+> 
+> v3: * fix whitespace in casts
+>     * consistently use FAIL for errors
+>     * drop extra whitespace
+>     * fix up unaligned stack logic
+>     * print the number of unpoisoned bytes on successful check
+> v2: * use good comment style
+>     * drop references to lowest_stack, and #define STACKLEAK_POISON if
+>       necessary
+>     * drop unnecessary warning about canary space
+>     * add error messages, make them explicit, and use pr_err()
+> 
+> Signed-off-by: Tycho Andersen <tycho@docker.com>
 
-We actually used to do this, but it was (perhaps unwisely) removed by
-commit 9ccc27a5d297 ("x86/fpu: Remove error return values from
-copy_kernel_to_*regs() functions").  This new patch is also a bit
-different.  First, it only clears the registers, not also the bad
-in-memory state; this is simpler and makes it easier to make the
-mitigation cover all callers of __copy_kernel_to_fpregs().  Second, it
-does the register clearing in an exception handler so that no extra
-instructions are added to context switches.  In fact, we *remove*
-instructions, since previously we were always zeroing the register
-containing 'err' even if CONFIG_X86_DEBUG_FPU was disabled.
+[...]
 
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Dave Hansen <dave.hansen@linux.intel.com>
-Cc: Dmitry Vyukov <dvyukov@google.com>
-Cc: Fenghua Yu <fenghua.yu@intel.com>
-Cc: Ingo Molnar <mingo@kernel.org>
-Cc: Kevin Hao <haokexin@gmail.com>
-Cc: Oleg Nesterov <oleg@redhat.com>
-Cc: Wanpeng Li <wanpeng.li@hotmail.com>
-Cc: Yu-cheng Yu <yu-cheng.yu@intel.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- arch/x86/include/asm/fpu/internal.h | 51 +++++++++++--------------------------
- arch/x86/mm/extable.c               | 24 +++++++++++++++++
- 2 files changed, 39 insertions(+), 36 deletions(-)
+> diff --git a/drivers/misc/lkdtm_stackleak.c b/drivers/misc/lkdtm_stackleak.c
+> new file mode 100644
+> index 000000000000..8849500e7bc9
+> --- /dev/null
+> +++ b/drivers/misc/lkdtm_stackleak.c
+> @@ -0,0 +1,142 @@
+> +/*
+> + * This file tests a few aspects of the stackleak compiler plugin:
+> + *   - the current task stack is properly canaried
 
-diff --git a/arch/x86/include/asm/fpu/internal.h b/arch/x86/include/asm/fpu/internal.h
-index 554cdb205d17..719b8cc5fd01 100644
---- a/arch/x86/include/asm/fpu/internal.h
-+++ b/arch/x86/include/asm/fpu/internal.h
-@@ -120,20 +120,11 @@ extern void fpstate_sanitize_xstate(struct fpu *fpu);
- 	err;								\
- })
- 
--#define check_insn(insn, output, input...)				\
--({									\
--	int err;							\
-+#define kernel_insn(insn, output, input...)				\
- 	asm volatile("1:" #insn "\n\t"					\
- 		     "2:\n"						\
--		     ".section .fixup,\"ax\"\n"				\
--		     "3:  movl $-1,%[err]\n"				\
--		     "    jmp  2b\n"					\
--		     ".previous\n"					\
--		     _ASM_EXTABLE(1b, 3b)				\
--		     : [err] "=r" (err), output				\
--		     : "0"(0), input);					\
--	err;								\
--})
-+		     _ASM_EXTABLE_HANDLE(1b, 2b, ex_handler_fprestore)	\
-+		     : output : input)
- 
- static inline int copy_fregs_to_user(struct fregs_state __user *fx)
- {
-@@ -153,20 +144,16 @@ static inline int copy_fxregs_to_user(struct fxregs_state __user *fx)
- 
- static inline void copy_kernel_to_fxregs(struct fxregs_state *fx)
- {
--	int err;
--
- 	if (IS_ENABLED(CONFIG_X86_32)) {
--		err = check_insn(fxrstor %[fx], "=m" (*fx), [fx] "m" (*fx));
-+		kernel_insn(fxrstor %[fx], "=m" (*fx), [fx] "m" (*fx));
- 	} else {
- 		if (IS_ENABLED(CONFIG_AS_FXSAVEQ)) {
--			err = check_insn(fxrstorq %[fx], "=m" (*fx), [fx] "m" (*fx));
-+			kernel_insn(fxrstorq %[fx], "=m" (*fx), [fx] "m" (*fx));
- 		} else {
- 			/* See comment in copy_fxregs_to_kernel() below. */
--			err = check_insn(rex64/fxrstor (%[fx]), "=m" (*fx), [fx] "R" (fx), "m" (*fx));
-+			kernel_insn(rex64/fxrstor (%[fx]), "=m" (*fx), [fx] "R" (fx), "m" (*fx));
- 		}
- 	}
--	/* Copying from a kernel buffer to FPU registers should never fail: */
--	WARN_ON_FPU(err);
- }
- 
- static inline int copy_user_to_fxregs(struct fxregs_state __user *fx)
-@@ -183,9 +170,7 @@ static inline int copy_user_to_fxregs(struct fxregs_state __user *fx)
- 
- static inline void copy_kernel_to_fregs(struct fregs_state *fx)
- {
--	int err = check_insn(frstor %[fx], "=m" (*fx), [fx] "m" (*fx));
--
--	WARN_ON_FPU(err);
-+	kernel_insn(frstor %[fx], "=m" (*fx), [fx] "m" (*fx));
- }
- 
- static inline int copy_user_to_fregs(struct fregs_state __user *fx)
-@@ -281,18 +266,13 @@ static inline void copy_fxregs_to_kernel(struct fpu *fpu)
-  * Use XRSTORS to restore context if it is enabled. XRSTORS supports compact
-  * XSAVE area format.
-  */
--#define XSTATE_XRESTORE(st, lmask, hmask, err)				\
-+#define XSTATE_XRESTORE(st, lmask, hmask)				\
- 	asm volatile(ALTERNATIVE(XRSTOR,				\
- 				 XRSTORS, X86_FEATURE_XSAVES)		\
- 		     "\n"						\
--		     "xor %[err], %[err]\n"				\
- 		     "3:\n"						\
--		     ".pushsection .fixup,\"ax\"\n"			\
--		     "4: movl $-2, %[err]\n"				\
--		     "jmp 3b\n"						\
--		     ".popsection\n"					\
--		     _ASM_EXTABLE(661b, 4b)				\
--		     : [err] "=r" (err)					\
-+		     _ASM_EXTABLE_HANDLE(661b, 3b, ex_handler_fprestore)\
-+		     :							\
- 		     : "D" (st), "m" (*st), "a" (lmask), "d" (hmask)	\
- 		     : "memory")
- 
-@@ -336,7 +316,10 @@ static inline void copy_kernel_to_xregs_booting(struct xregs_state *xstate)
- 	else
- 		XSTATE_OP(XRSTOR, xstate, lmask, hmask, err);
- 
--	/* We should never fault when copying from a kernel buffer: */
-+	/*
-+	 * We should never fault when copying from a kernel buffer, and the FPU
-+	 * state we set at boot time should be valid.
-+	 */
- 	WARN_ON_FPU(err);
- }
- 
-@@ -365,12 +348,8 @@ static inline void copy_kernel_to_xregs(struct xregs_state *xstate, u64 mask)
- {
- 	u32 lmask = mask;
- 	u32 hmask = mask >> 32;
--	int err;
--
--	XSTATE_XRESTORE(xstate, lmask, hmask, err);
- 
--	/* We should never fault when copying from a kernel buffer: */
--	WARN_ON_FPU(err);
-+	XSTATE_XRESTORE(xstate, lmask, hmask);
- }
- 
- /*
-diff --git a/arch/x86/mm/extable.c b/arch/x86/mm/extable.c
-index c076f710de4c..c3521e2be396 100644
---- a/arch/x86/mm/extable.c
-+++ b/arch/x86/mm/extable.c
-@@ -2,6 +2,7 @@
- #include <linux/uaccess.h>
- #include <linux/sched/debug.h>
- 
-+#include <asm/fpu/internal.h>
- #include <asm/traps.h>
- #include <asm/kdebug.h>
- 
-@@ -78,6 +79,29 @@ bool ex_handler_refcount(const struct exception_table_entry *fixup,
- }
- EXPORT_SYMBOL_GPL(ex_handler_refcount);
- 
-+/*
-+ * Handler for when we fail to restore a task's FPU state.  We should never get
-+ * here because the FPU state of a task using the FPU (task->thread.fpu.state)
-+ * should always be valid.  However, past bugs have allowed userspace to set
-+ * reserved bits in the XSAVE area using PTRACE_SETREGSET or sys_rt_sigreturn().
-+ * These caused XRSTOR to fail when switching to the task, leaking the FPU
-+ * registers of the task previously executing on the CPU.  Mitigate this class
-+ * of vulnerability by restoring from the initial state (essentially, zeroing
-+ * out all the FPU registers) if we can't restore from the task's FPU state.
-+ */
-+bool ex_handler_fprestore(const struct exception_table_entry *fixup,
-+			  struct pt_regs *regs, int trapnr)
-+{
-+	regs->ip = ex_fixup_addr(fixup);
-+
-+	WARN_ONCE(1, "Bad FPU state detected at %pB, reinitializing FPU registers.",
-+		  (void *)instruction_pointer(regs));
-+
-+	__copy_kernel_to_fpregs(&init_fpstate, -1);
-+	return true;
-+}
-+EXPORT_SYMBOL_GPL(ex_handler_fprestore);
-+
- bool ex_handler_ext(const struct exception_table_entry *fixup,
- 		   struct pt_regs *regs, int trapnr)
- {
--- 
-2.14.1.821.g8fa685d3b7-goog
+Here and further: maybe "poisoned" or "erased" is better than "canaried" since
+STACKLEAK_POISON is not used as a canary.
+
+> + *   - small allocas are allowed properly via check_alloca()
+> + *   - big allocations that exhaust the stack are BUG()s
+> + *   - function calls whose stack frames blow the stack are BUG()s
+> + *
+> + * Copyright (C) Docker, Inc. 2017
+> + *
+> + * Author: Tycho Andersen <tycho@docker.com>
+> + */
+> +
+> +#include "lkdtm.h"
+> +
+> +#include <linux/sched.h>
+> +#include <linux/compiler.h>
+> +
+> +/* for security_inode_init_security */
+> +#include <linux/security.h>
+> +
+> +#ifndef STACKLEAK_POISON
+> +# define STACKLEAK_POISON -0xBEEF
+> +#endif
+> +
+> +static noinline bool check_poison(unsigned long *ptr, unsigned long n)
+> +{
+> +	unsigned long i;
+> +
+> +	for (i = 0; i < n; i++) {
+> +		if (*(ptr - i) != STACKLEAK_POISON)
+> +			return false;
+> +	}
+> +
+> +	return true;
+> +}
+> +
+> +static bool check_my_stack(void)
+> +{
+> +	unsigned long *lowest, canaries, left, i;
+> +
+> +	lowest = &i;
+> +	left = (unsigned long)lowest % THREAD_SIZE;
+> +
+> +	/*
+> +	 * See note in arch/x86/entry/entry_64.S about the or; the bottom two
+> +	 * qwords are not canaried.
+> +	 */
+
+Do you mean "are not poisoned" here? STACK_END_MAGIC at the bottom of the stack
+is indeed used as canary.
+
+I would also suggest to make this comment less x86_64-specific, since your test
+will be used on other platforms too.
+
+> +	left -= 2 * sizeof(unsigned long);
+> +
+> +	/*
+> +	 * Check each byte, as we don't know the current stack alignment.
+> +	 */
+
+Excuse me, what do you mean by the "current stack alignment"?
+
+The STACKLEAK_POISON position is always 8-byte aligned for x86_64 and 4-byte
+aligned for x86 (see the shr instruction in the asm implementation).
+
+I would suggest to simply align lowest. In case of unaligned poison, the test
+will not find it and report the FAIL (which is correct).
+
+> +	for (i = 0; i < left; i++) {
+> +		if (*(lowest - i) != STACKLEAK_POISON)
+> +			continue;
+> +
+> +		if (!check_poison((void *)lowest - i, 16))
+> +			continue;
+> +
+> +		break;
+> +	}
+
+You've dropped "left /= sizeof(unsigned long)" and now the logic in this loop is
+broken - it gives the kernel crash with disabled STACKLEAK.
+
+IMHO counting like in your v2 is better, you just need to fix the off-by-one error.
+
+> +
+> +	if (i == left) {
+> +		pr_err("FAIL: didn't find canary?\n");
+> +		return false;
+> +	}
+> +
+> +	if (i % sizeof(unsigned long)) {
+> +		pr_err("FAIL: unaligned canary?\n");
+> +		return false;
+> +	}
+> +
+> +	/*
+> +	 * How many canaries (not bytes) do we actually need to check?
+> +	 */
+
+Ditto about canaries vs poison values.
+
+> +	canaries = (left - i) / sizeof(unsigned long *);
+> +
+> +	if (check_poison((void *)lowest - i, canaries)) {
+> +		pr_info("stack poisoned correctly, %lu unpoisoned bytes\n", i);
+> +		return true;
+> +	} else {
+> +		pr_err("FAIL: stack not poisoned correctly\n");
+> +		return false;
+> +	}
+> +}
+> +
+> +static noinline void do_alloca(unsigned long size, void (*todo)(void))
+> +{
+> +	char buf[size];
+> +
+> +	if (todo)
+> +		todo();
+> +
+> +	/* so this doesn't get inlined or optimized out */
+> +	snprintf(buf, size, "hello world\n");
+> +}
+> +
+> +/* Check the BUG() in check_alloca() */
+> +void lkdtm_STACKLEAK_ALLOCA(void)
+> +{
+> +	unsigned long left = (unsigned long)&left % THREAD_SIZE;
+> +
+> +	if (!check_my_stack())
+> +		return;
+> +
+> +	/* try a small allocation to see if it works */
+> +	do_alloca(16, NULL);
+> +	pr_info("small allocation successful\n");
+> +
+> +	pr_info("attempting large alloca of %lu\n", left);
+> +	do_alloca(left, NULL);
+> +	pr_err("FAIL: large alloca succeded!\n");
+> +}
+> +
+> +static void use_some_stack(void) {
+> +
+> +	/*
+> +	 * Note: this needs to be a(n exported) function that has track_stack
+> +	 * inserted, i.e. it isn't in the various sections restricted by
+> +	 * stackleak_track_stack_gate.
+> +	 */
+> +	security_inode_init_security(NULL, NULL, NULL, NULL, NULL);
+> +}
+> +
+> +/*
+> + * Note that the way this test fails is kind of ugly; it hits the BUG() in
+> + * track_stack, but then the BUG() handler blows the stack and hits the stack
+> + * guard page.
+> + */
+
+If we agree on making CONFIG_GCC_PLUGIN_STACKLEAK depend on CONFIG_VMAP_STACK
+(and dropping the BUG() in track_stack()), the STACKLEAK_BIG_FRAME test case can
+be omitted and there will be only one lkdtm_STACKLEAK test.
+
+> +void lkdtm_STACKLEAK_BIG_FRAME(void)
+> +{
+> +	unsigned long left = (unsigned long)&left % THREAD_SIZE;
+> +
+> +	if (!check_my_stack())
+> +		return;
+> +
+> +	/*
+> +	 * use almost all of the stack up to the padding allowed by track_stack
+> +	 */
+> +	do_alloca(left - THREAD_SIZE / 16 - 1, use_some_stack);
+> +	pr_err("FAIL: stack frame should have blown stack!\n");
+> +}
+> 
+
+Thanks.
+Best regards,
+Alexander
