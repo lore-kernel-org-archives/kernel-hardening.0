@@ -1,58 +1,40 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <alpine.DEB.2.20.1709211102320.14742@nuc-kabylake>
-References: <1505940337-79069-1-git-send-email-keescook@chromium.org>
- <1505940337-79069-4-git-send-email-keescook@chromium.org> <alpine.DEB.2.20.1709211024120.14427@nuc-kabylake>
- <CAGXu5j+X6dWCGocG=P7pszTY-5OZ6Jmp-RsnDKox75M5rmVe4g@mail.gmail.com> <alpine.DEB.2.20.1709211102320.14742@nuc-kabylake>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 21 Sep 2017 11:26:43 -0700
-Message-ID: <CAGXu5jKqWShVMqm6-moqgO7JUaJuFxw-9mMKak+WG1HgNJqc1Q@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCH v3 03/31] usercopy: Mark kmalloc
- caches as usercopy caches
-To: Christopher Lameter <cl@linux.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, David Windsor <dave@nullcore.net>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, linux-xfs@vger.kernel.org, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Date: Thu, 21 Sep 2017 11:52:36 -0700
+Message-Id: <20170921185239.88398-1-ebiggers3@gmail.com>
+Subject: [kernel-hardening] [PATCH v3 0/3] x86/fpu: prevent leaking FPU registers via invalid FPU state
+To: x86@kernel.org
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Dmitry Vyukov <dvyukov@google.com>, Fenghua Yu <fenghua.yu@intel.com>, Ingo Molnar <mingo@kernel.org>, Kevin Hao <haokexin@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Sep 21, 2017 at 9:04 AM, Christopher Lameter <cl@linux.com> wrote:
-> On Thu, 21 Sep 2017, Kees Cook wrote:
->
->> > So what is the point of this patch?
->>
->> The DMA kmalloc caches are not whitelisted:
->
-> The DMA kmalloc caches are pretty obsolete and mostly there for obscure
-> drivers.
->
-> ??
+From: Eric Biggers <ebiggers@google.com>
 
-They may be obsolete, but they're still in the kernel, and they aren't
-copied to userspace, so we can mark them.
+This series fixes the bug found by syzkaller where the ptrace syscall
+can be used to set invalid bits in a task's FPU state.  I also found
+that an equivalent bug was reachable using the sigreturn syscall, so the
+first patch fixes the bug in both cases.
 
->> >>                         kmalloc_dma_caches[i] = create_kmalloc_cache(n,
->> >> -                               size, SLAB_CACHE_DMA | flags);
->> >> +                               size, SLAB_CACHE_DMA | flags, 0, 0);
->>
->> So this is creating the distinction between the kmallocs that go to
->> userspace and those that don't. The expectation is that future work
->> can start to distinguish between "for userspace" and "only kernel"
->> kmalloc allocations, as is already done here for DMA.
->
-> The creation of the kmalloc caches in earlier patches already setup the
-> "whitelisting". Why do it twice?
+The other two patches start validating the other parts of the
+xstate_header and make it so that invalid FPU states can no longer be
+abused to leak the FPU registers of other processes.
 
-Patch 1 is to allow for things to mark their whitelists. Patch 30
-disables the full whitelisting, since then we've defined them all, so
-the kmalloc caches need to mark themselves as whitelisted.
+Changes since v2:
+    - Use an exception handler to handle invalid FPU states
+      (suggested by Andy Lutomirski)
+    - Check the size of xstate_header.reserved at build time
+      (suggested by Dave Hansen)
 
-Patch 1 leaves unmarked things whitelisted so we can progressively
-tighten the restriction and have a bisectable series. (i.e. if there
-is something wrong with one of the whitelists in the series, it will
-bisect to that one, not the one that removes the global whitelist from
-patch 1.)
+Eric Biggers (3):
+  x86/fpu: don't let userspace set bogus xcomp_bv
+  x86/fpu: tighten validation of user-supplied xstate_header
+  x86/fpu: reinitialize FPU registers if restoring FPU state fails
 
--Kees
+ arch/x86/include/asm/fpu/internal.h | 51 +++++++++++--------------------------
+ arch/x86/include/asm/fpu/xstate.h   | 25 ++++++++++++++++++
+ arch/x86/kernel/fpu/regset.c        | 20 +++++++--------
+ arch/x86/kernel/fpu/signal.c        | 15 ++++++++---
+ arch/x86/kernel/fpu/xstate.c        | 27 ++++++++------------
+ arch/x86/mm/extable.c               | 24 +++++++++++++++++
+ 6 files changed, 94 insertions(+), 68 deletions(-)
 
 -- 
-Kees Cook
-Pixel Security
+2.14.1.821.g8fa685d3b7-goog
