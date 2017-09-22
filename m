@@ -1,221 +1,75 @@
-From: Eric Biggers <ebiggers3@gmail.com>
-Date: Fri, 22 Sep 2017 10:41:56 -0700
-Message-Id: <20170922174156.16780-4-ebiggers3@gmail.com>
-In-Reply-To: <20170922174156.16780-1-ebiggers3@gmail.com>
-References: <20170922174156.16780-1-ebiggers3@gmail.com>
-Subject: [kernel-hardening] [PATCH v4 3/3] x86/fpu: reinitialize FPU registers if restoring FPU state fails
-To: x86@kernel.org
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Dmitry Vyukov <dvyukov@google.com>, Fenghua Yu <fenghua.yu@intel.com>, Ingo Molnar <mingo@kernel.org>, Kevin Hao <haokexin@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+MIME-Version: 1.0
+In-Reply-To: <20170922163225.bfrd5myl6d7deiim@gmail.com>
+References: <20170816151235.oamkdva6cwpc4cex@gmail.com> <CAJcbSZFM_zpL1av1JVaow8NdsGeH+6oZKeDnMPdXR0PGfynzsg@mail.gmail.com>
+ <20170817080920.5ljlkktngw2cisfg@gmail.com> <CAJcbSZGbtc-i0X1NiBAvZA7cxpGkwSLKNB7oDNCsFxOCdhkR_g@mail.gmail.com>
+ <CAJcbSZGhvwt=5ERtBHLJnwS=6AXBZLTMfrafzeUCqYy=-MKWDg@mail.gmail.com>
+ <20170825080443.tvvr6wzs362cjcuu@gmail.com> <CAJcbSZFJQMKw21kLwr4QGoSM7DMgKRzzjWxkYBF2c1HciCzvGg@mail.gmail.com>
+ <CAJcbSZH6hwaWKrvUZR33ExYaZaWKMSv4tJJA3yZkniLvLbTFMw@mail.gmail.com>
+ <20170921155919.skpyt7dutod5ul4t@gmail.com> <CAJcbSZHOuxy5BVxD0xJUdQfB-OMgbvfiP-2CJzf52K-7JZAy-A@mail.gmail.com>
+ <20170922163225.bfrd5myl6d7deiim@gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 22 Sep 2017 11:08:02 -0700
+Message-ID: <CAJcbSZFbNACVrSQ7yFkDMs+4L56_4e73kvdesSdD5W4bdBoOpg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: x86: PIE support and option to extend KASLR randomization
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, xen-devel <xen-devel@lists.xenproject.org>, kvm list <kvm@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Sparse Mailing-list <linux-sparse@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Eric Biggers <ebiggers@google.com>
+On Fri, Sep 22, 2017 at 9:32 AM, Ingo Molnar <mingo@kernel.org> wrote:
+>
+> * Thomas Garnier <thgarnie@google.com> wrote:
+>
+>> On Thu, Sep 21, 2017 at 8:59 AM, Ingo Molnar <mingo@kernel.org> wrote:
+>> >
+>> > ( Sorry about the delay in answering this. I could blame the delay on the merge
+>> >   window, but in reality I've been procrastinating this is due to the permanent,
+>> >   non-trivial impact PIE has on generated C code. )
+>> >
+>> > * Thomas Garnier <thgarnie@google.com> wrote:
+>> >
+>> >> 1) PIE sometime needs two instructions to represent a single
+>> >> instruction on mcmodel=kernel.
+>> >
+>> > What again is the typical frequency of this occurring in an x86-64 defconfig
+>> > kernel, with the very latest GCC?
+>>
+>> I am not sure what is the best way to measure that.
+>
+> If this is the dominant factor then 'sizeof vmlinux' ought to be enough:
+>
+>> With ORC: PIE .text is 0.814224% than baseline
+>
+> I.e. the overhead is +0.81% in both size and (roughly) in number of instructions
+> executed.
+>
+> BTW., I think things improved with ORC because with ORC we have RBP as an extra
+> register and with PIE we lose RBX - so register pressure in code generation is
+> lower.
 
-Userspace can change the FPU state of a task using the ptrace() or
-rt_sigreturn() system calls.  Because reserved bits in the FPU state can
-cause the XRSTOR instruction to fail, the kernel has to carefully
-validate that no reserved bits or other invalid values are being set.
+That make sense.
 
-Unfortunately, there have been bugs in this validation code.  For
-example, we were not checking that the 'xcomp_bv' field in the
-xstate_header was 0.  As-is, such bugs are exploitable to read the FPU
-registers of other processes on the system.  To do so, an attacker can
-create a task, assign to it an invalid FPU state, then spin in a loop
-and monitor the values of the FPU registers.  Because the task's FPU
-registers are not being restored, sometimes the FPU registers will have
-the values from another process.
+>
+> Ok, I suspect we can try it, but my preconditions for merging it would be:
+>
+>   1) Linus doesn't NAK it (obviously)
 
-This is likely to continue to be a problem in the future because the
-validation done by the CPU instructions like XRSTOR is not immediately
-visible to kernel developers.  Nor will invalid FPU states ever be
-encountered during ordinary use --- they will only be seen during
-fuzzing or exploits.  There can even be reserved bits outside the
-xstate_header which are easy to forget about.  For example, the MXCSR
-register contains reserved bits, which were not validated by the
-KVM_SET_XSAVE ioctl until commit a575813bfe4b ("KVM: x86: Fix load
-damaged SSEx MXCSR register").
+Of course.
 
-Therefore, mitigate this class of vulnerability by restoring the FPU
-registers from init_fpstate if restoring from the task's state fails.
+>   2) we first implement the additional entropy bits that Linus suggested.
+>
+> does this work for you?
 
-We actually used to do this, but it was (perhaps unwisely) removed by
-commit 9ccc27a5d297 ("x86/fpu: Remove error return values from
-copy_kernel_to_*regs() functions").  This new patch is also a bit
-different.  First, it only clears the registers, not also the bad
-in-memory state; this is simpler and makes it easier to make the
-mitigation cover all callers of __copy_kernel_to_fpregs().  Second, it
-does the register clearing in an exception handler so that no extra
-instructions are added to context switches.  In fact, we *remove*
-instructions, since previously we were always zeroing the register
-containing 'err' even if CONFIG_X86_DEBUG_FPU was disabled.
+Sure, I can look at how feasible that is. If it is, can I send
+everything as part of the same patch set? The additional entropy would
+be enabled for all KASLR but PIE will be off-by-default of course.
 
-Reviewed-by: Rik van Riel <riel@redhat.com>
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Dave Hansen <dave.hansen@linux.intel.com>
-Cc: Dmitry Vyukov <dvyukov@google.com>
-Cc: Fenghua Yu <fenghua.yu@intel.com>
-Cc: Ingo Molnar <mingo@kernel.org>
-Cc: Kevin Hao <haokexin@gmail.com>
-Cc: Oleg Nesterov <oleg@redhat.com>
-Cc: Wanpeng Li <wanpeng.li@hotmail.com>
-Cc: Yu-cheng Yu <yu-cheng.yu@intel.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- arch/x86/include/asm/fpu/internal.h | 51 +++++++++++--------------------------
- arch/x86/mm/extable.c               | 24 +++++++++++++++++
- 2 files changed, 39 insertions(+), 36 deletions(-)
+>
+> Thanks,
+>
+>         Ingo
 
-diff --git a/arch/x86/include/asm/fpu/internal.h b/arch/x86/include/asm/fpu/internal.h
-index 53461be20767..8bee5f1a42e7 100644
---- a/arch/x86/include/asm/fpu/internal.h
-+++ b/arch/x86/include/asm/fpu/internal.h
-@@ -120,20 +120,11 @@ extern void fpstate_sanitize_xstate(struct fpu *fpu);
- 	err;								\
- })
- 
--#define check_insn(insn, output, input...)				\
--({									\
--	int err;							\
-+#define kernel_insn(insn, output, input...)				\
- 	asm volatile("1:" #insn "\n\t"					\
- 		     "2:\n"						\
--		     ".section .fixup,\"ax\"\n"				\
--		     "3:  movl $-1,%[err]\n"				\
--		     "    jmp  2b\n"					\
--		     ".previous\n"					\
--		     _ASM_EXTABLE(1b, 3b)				\
--		     : [err] "=r" (err), output				\
--		     : "0"(0), input);					\
--	err;								\
--})
-+		     _ASM_EXTABLE_HANDLE(1b, 2b, ex_handler_fprestore)	\
-+		     : output : input)
- 
- static inline int copy_fregs_to_user(struct fregs_state __user *fx)
- {
-@@ -153,20 +144,16 @@ static inline int copy_fxregs_to_user(struct fxregs_state __user *fx)
- 
- static inline void copy_kernel_to_fxregs(struct fxregs_state *fx)
- {
--	int err;
--
- 	if (IS_ENABLED(CONFIG_X86_32)) {
--		err = check_insn(fxrstor %[fx], "=m" (*fx), [fx] "m" (*fx));
-+		kernel_insn(fxrstor %[fx], "=m" (*fx), [fx] "m" (*fx));
- 	} else {
- 		if (IS_ENABLED(CONFIG_AS_FXSAVEQ)) {
--			err = check_insn(fxrstorq %[fx], "=m" (*fx), [fx] "m" (*fx));
-+			kernel_insn(fxrstorq %[fx], "=m" (*fx), [fx] "m" (*fx));
- 		} else {
- 			/* See comment in copy_fxregs_to_kernel() below. */
--			err = check_insn(rex64/fxrstor (%[fx]), "=m" (*fx), [fx] "R" (fx), "m" (*fx));
-+			kernel_insn(rex64/fxrstor (%[fx]), "=m" (*fx), [fx] "R" (fx), "m" (*fx));
- 		}
- 	}
--	/* Copying from a kernel buffer to FPU registers should never fail: */
--	WARN_ON_FPU(err);
- }
- 
- static inline int copy_user_to_fxregs(struct fxregs_state __user *fx)
-@@ -183,9 +170,7 @@ static inline int copy_user_to_fxregs(struct fxregs_state __user *fx)
- 
- static inline void copy_kernel_to_fregs(struct fregs_state *fx)
- {
--	int err = check_insn(frstor %[fx], "=m" (*fx), [fx] "m" (*fx));
--
--	WARN_ON_FPU(err);
-+	kernel_insn(frstor %[fx], "=m" (*fx), [fx] "m" (*fx));
- }
- 
- static inline int copy_user_to_fregs(struct fregs_state __user *fx)
-@@ -281,18 +266,13 @@ static inline void copy_fxregs_to_kernel(struct fpu *fpu)
-  * Use XRSTORS to restore context if it is enabled. XRSTORS supports compact
-  * XSAVE area format.
-  */
--#define XSTATE_XRESTORE(st, lmask, hmask, err)				\
-+#define XSTATE_XRESTORE(st, lmask, hmask)				\
- 	asm volatile(ALTERNATIVE(XRSTOR,				\
- 				 XRSTORS, X86_FEATURE_XSAVES)		\
- 		     "\n"						\
--		     "xor %[err], %[err]\n"				\
- 		     "3:\n"						\
--		     ".pushsection .fixup,\"ax\"\n"			\
--		     "4: movl $-2, %[err]\n"				\
--		     "jmp 3b\n"						\
--		     ".popsection\n"					\
--		     _ASM_EXTABLE(661b, 4b)				\
--		     : [err] "=r" (err)					\
-+		     _ASM_EXTABLE_HANDLE(661b, 3b, ex_handler_fprestore)\
-+		     :							\
- 		     : "D" (st), "m" (*st), "a" (lmask), "d" (hmask)	\
- 		     : "memory")
- 
-@@ -336,7 +316,10 @@ static inline void copy_kernel_to_xregs_booting(struct xregs_state *xstate)
- 	else
- 		XSTATE_OP(XRSTOR, xstate, lmask, hmask, err);
- 
--	/* We should never fault when copying from a kernel buffer: */
-+	/*
-+	 * We should never fault when copying from a kernel buffer, and the FPU
-+	 * state we set at boot time should be valid.
-+	 */
- 	WARN_ON_FPU(err);
- }
- 
-@@ -365,12 +348,8 @@ static inline void copy_kernel_to_xregs(struct xregs_state *xstate, u64 mask)
- {
- 	u32 lmask = mask;
- 	u32 hmask = mask >> 32;
--	int err;
--
--	XSTATE_XRESTORE(xstate, lmask, hmask, err);
- 
--	/* We should never fault when copying from a kernel buffer: */
--	WARN_ON_FPU(err);
-+	XSTATE_XRESTORE(xstate, lmask, hmask);
- }
- 
- /*
-diff --git a/arch/x86/mm/extable.c b/arch/x86/mm/extable.c
-index c076f710de4c..c3521e2be396 100644
---- a/arch/x86/mm/extable.c
-+++ b/arch/x86/mm/extable.c
-@@ -2,6 +2,7 @@
- #include <linux/uaccess.h>
- #include <linux/sched/debug.h>
- 
-+#include <asm/fpu/internal.h>
- #include <asm/traps.h>
- #include <asm/kdebug.h>
- 
-@@ -78,6 +79,29 @@ bool ex_handler_refcount(const struct exception_table_entry *fixup,
- }
- EXPORT_SYMBOL_GPL(ex_handler_refcount);
- 
-+/*
-+ * Handler for when we fail to restore a task's FPU state.  We should never get
-+ * here because the FPU state of a task using the FPU (task->thread.fpu.state)
-+ * should always be valid.  However, past bugs have allowed userspace to set
-+ * reserved bits in the XSAVE area using PTRACE_SETREGSET or sys_rt_sigreturn().
-+ * These caused XRSTOR to fail when switching to the task, leaking the FPU
-+ * registers of the task previously executing on the CPU.  Mitigate this class
-+ * of vulnerability by restoring from the initial state (essentially, zeroing
-+ * out all the FPU registers) if we can't restore from the task's FPU state.
-+ */
-+bool ex_handler_fprestore(const struct exception_table_entry *fixup,
-+			  struct pt_regs *regs, int trapnr)
-+{
-+	regs->ip = ex_fixup_addr(fixup);
-+
-+	WARN_ONCE(1, "Bad FPU state detected at %pB, reinitializing FPU registers.",
-+		  (void *)instruction_pointer(regs));
-+
-+	__copy_kernel_to_fpregs(&init_fpstate, -1);
-+	return true;
-+}
-+EXPORT_SYMBOL_GPL(ex_handler_fprestore);
-+
- bool ex_handler_ext(const struct exception_table_entry *fixup,
- 		   struct pt_regs *regs, int trapnr)
- {
+
+
 -- 
-2.14.1.821.g8fa685d3b7-goog
+Thomas
