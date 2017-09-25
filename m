@@ -1,65 +1,28 @@
-From: Alexander Popov <alex.popov@linux.com>
-References: <1499883471-23822-1-git-send-email-alex.popov@linux.com>
- <20170815033834.2qbjj2of62udqyz3@smitten>
- <93382ef8-105f-eed4-0d97-0b1a66a047e6@linux.com>
- <20170816211636.4zwublkvpn6hbo5n@smitten>
- <CAGXu5j+qe052JAcZUe7mOBHAXNCdLT1z4U-2kRxoeJXyL6VxDQ@mail.gmail.com>
- <20170817175807.ejgsrfdgojgbtkwf@smitten>
- <1d0963e6-4a89-9859-5379-8575a925ef08@linux.com>
- <20170920211814.pq43vq3o53nh2xcn@smitten>
- <499874eb-48bb-f7f7-176a-b0b1e37cc9c6@linux.com>
-Message-ID: <7bf586cc-527c-eb3c-b86a-2adbbb7fdfda@linux.com>
-Date: Mon, 25 Sep 2017 19:17:32 +0300
 MIME-Version: 1.0
-In-Reply-To: <499874eb-48bb-f7f7-176a-b0b1e37cc9c6@linux.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v3 1/1] gcc-plugins: Add stackleak feature erasing the
- kernel stack at the end of syscalls
-To: Tycho Andersen <tycho@docker.com>
-Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "x86@kernel.org" <x86@kernel.org>, Andy Lutomirski <luto@amacapital.net>
+In-Reply-To: <32200.1506350639@warthog.procyon.org.uk>
+References: <20170920145839.27511-1-Jason@zx2c4.com> <20170920145839.27511-2-Jason@zx2c4.com>
+ <32200.1506350639@warthog.procyon.org.uk>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Mon, 25 Sep 2017 18:38:13 +0200
+Message-ID: <CAHmME9qUnYHYvgExmscQ91D-hsQApSk6FzmBG0cSUraLbQNYRQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v7 2/2] security/keys: rewrite all of big_key crypto
+To: David Howells <dhowells@redhat.com>
+Cc: linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Eric Biggers <ebiggers3@gmail.com>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, security@kernel.org, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Tycho,
+On Mon, Sep 25, 2017 at 4:43 PM, David Howells <dhowells@redhat.com> wrote:
+> Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+>
+>> +     /* no ->update(); don't add it without changing big_key_crypt() nonce */
+>
+> Should update be a problem.  It's should be a complete payload replacement -
+> kind of like unlink and add, but keeping the same key ID and description.
 
-On 21.09.2017 22:39, Alexander Popov wrote:
-> On 21.09.2017 00:18, Tycho Andersen wrote:
->> +	/*
->> +	 * Check each byte, as we don't know the current stack alignment.
->> +	 */
-> 
-> Excuse me, what do you mean by the "current stack alignment"?
-
-I guess I got it now. For x86 and x86_64 the stack alignment is controlled by
-cc_stack_align in arch/x86/Makefile (-mpreferred-stack-boundary in case of gcc).
-The stack is 4-byte aligned for x86 and 8-byte aligned for x86_64.
-
-> The STACKLEAK_POISON position is always 8-byte aligned for x86_64 and 4-byte
-> aligned for x86 (see the shr instruction in the asm implementation).
-
-Eh, my statement is wrong. I've made a simple experiment: this change makes the
-poison be unaligned:
-
-diff --git a/fs/exec.c b/fs/exec.c
-index 56bdc19..893d2e4 100644
---- a/fs/exec.c
-+++ b/fs/exec.c
-@@ -1961,7 +1961,7 @@ COMPAT_SYSCALL_DEFINE5(execveat, int, fd,
- #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
- void __used track_stack(void)
- {
--       unsigned long sp = (unsigned long)&sp;
-+       unsigned long sp = (unsigned long)&sp + 1;
-
-        if (sp < current->thread.lowest_stack &&
-            sp >= (unsigned long)task_stack_page(current) +
-
-
-So your idea to check each byte at first should work fine.
-
-Would you allow me to make the next version of your test and include it into the
-fourth version of the STACKLEAK patch? I'll show it to you before sending to the
-mailing list.
-
-Best regards,
-Alexander
+Not sure I parsed your message correctly, but that comment there was a
+suggestion from Eric several months ago when I first posted it. The
+idea is that the key shouldn't be reused with the same nonce, so in
+case somebody ambitious comes along and tries to add an .update
+function, they'll be reminded to take this into account. Alternatively
+they might choose to just generate a new key, which is fine too.
+Either way, it's a useful warning to have in place.
