@@ -1,42 +1,21 @@
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Mon, 25 Sep 2017 09:33:42 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20170925073342.2yoghmanhx6c75ho@gmail.com>
-References: <20170811124127.kkb5pnkljz4umxuj@gmail.com>
- <CAJcbSZFTX3uiS2g8JriS6+z_+WrG8z3hrQo4OSuyHpiyUDJWYA@mail.gmail.com>
- <20170815075609.mmzbfwritjzvrpsn@gmail.com>
- <CAJcbSZE+TiY2whT94WqCJNXzR=2ATOHcQ10H5RqBZA1j=k1VHQ@mail.gmail.com>
- <20170816151235.oamkdva6cwpc4cex@gmail.com>
- <20170821133222.2ek6bhqgdeoymxsg@hirez.programming.kicks-ass.net>
- <20170821142854.dmuusnbc2tsrai3v@hirez.programming.kicks-ass.net>
- <c830ba59-65d3-187f-3868-732059269f28@zytor.com>
- <20170923100029.6nzpui6c3ke76bbs@gmail.com>
- <20170924223708.GA12616@amd>
+From: David Howells <dhowells@redhat.com>
+In-Reply-To: <20170920145839.27511-2-Jason@zx2c4.com>
+References: <20170920145839.27511-2-Jason@zx2c4.com> <20170920145839.27511-1-Jason@zx2c4.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170924223708.GA12616@amd>
-Subject: [kernel-hardening] Re: x86: PIE support and option to extend KASLR randomization
-To: Pavel Machek <pavel@ucw.cz>
-Cc: "H. Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Garnier <thgarnie@google.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, linux-crypto@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Borislav Petkov <bp@alien8.de>
+Content-Type: text/plain; charset="us-ascii"
+Content-ID: <32199.1506350639.1@warthog.procyon.org.uk>
+Date: Mon, 25 Sep 2017 15:43:59 +0100
+Message-ID: <32200.1506350639@warthog.procyon.org.uk>
+Subject: [kernel-hardening] Re: [PATCH v7 2/2] security/keys: rewrite all of big_key crypto
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: dhowells@redhat.com, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, ebiggers3@gmail.com, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, security@kernel.org, stable@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Jason A. Donenfeld <Jason@zx2c4.com> wrote:
 
-* Pavel Machek <pavel@ucw.cz> wrote:
+> +	/* no ->update(); don't add it without changing big_key_crypt() nonce */
 
-> > For example, there would be collision with regular user-space mappings, right? 
-> > Can local unprivileged users use mmap(MAP_FIXED) probing to figure out where 
-> > the kernel lives?
-> 
-> Local unpriviledged users can probably get your secret bits using cache probing 
-> and jump prediction buffers.
-> 
-> Yes, you don't want to leak the information using mmap(MAP_FIXED), but CPU will 
-> leak it for you, anyway.
+Should update be a problem.  It's should be a complete payload replacement -
+kind of like unlink and add, but keeping the same key ID and description.
 
-Depends on the CPU I think, and CPU vendors are busy trying to mitigate this 
-angle.
-
-Thanks,
-
-	Ingo
+David
