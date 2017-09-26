@@ -1,73 +1,49 @@
-Date: Mon, 25 Sep 2017 11:23:23 -0600
-From: Tycho Andersen <tycho@docker.com>
-Message-ID: <20170925172323.zw5pgotm6b3gqoqv@smitten>
-References: <1499883471-23822-1-git-send-email-alex.popov@linux.com>
- <20170815033834.2qbjj2of62udqyz3@smitten>
- <93382ef8-105f-eed4-0d97-0b1a66a047e6@linux.com>
- <20170816211636.4zwublkvpn6hbo5n@smitten>
- <CAGXu5j+qe052JAcZUe7mOBHAXNCdLT1z4U-2kRxoeJXyL6VxDQ@mail.gmail.com>
- <20170817175807.ejgsrfdgojgbtkwf@smitten>
- <1d0963e6-4a89-9859-5379-8575a925ef08@linux.com>
- <20170920211814.pq43vq3o53nh2xcn@smitten>
- <499874eb-48bb-f7f7-176a-b0b1e37cc9c6@linux.com>
- <7bf586cc-527c-eb3c-b86a-2adbbb7fdfda@linux.com>
+Date: Mon, 25 Sep 2017 20:02:39 -0700
+From: Eric Biggers <ebiggers3@gmail.com>
+Message-ID: <20170926030239.GA2623@zzz.localdomain>
+References: <20170920004434.35308-2-ebiggers3@gmail.com>
+ <20170926021536.GD17200@yexl-desktop>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <7bf586cc-527c-eb3c-b86a-2adbbb7fdfda@linux.com>
-Subject: [kernel-hardening] Re: [PATCH RFC v3 1/1] gcc-plugins: Add stackleak feature erasing
- the kernel stack at the end of syscalls
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "x86@kernel.org" <x86@kernel.org>, Andy Lutomirski <luto@amacapital.net>
+In-Reply-To: <20170926021536.GD17200@yexl-desktop>
+Subject: [kernel-hardening] Re: [lkp-robot] [x86/fpu]  14e633085a:
+ Kernel_panic-not_syncing:Attempted_to_kill_init!exitcode=
+To: kernel test robot <xiaolong.ye@intel.com>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Dmitry Vyukov <dvyukov@google.com>, Fenghua Yu <fenghua.yu@intel.com>, Ingo Molnar <mingo@kernel.org>, Kevin Hao <haokexin@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org, lkp@01.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Alexander,
+On Tue, Sep 26, 2017 at 10:15:36AM +0800, kernel test robot wrote:
+> [    7.286014] init[1] bad frame in 32bit sigreturn frame:00000000fff5eb2c ip:f7f369b5 sp:fff5f08c orax:ffffffffffffffff in libuClibc-0.9.33.2.so[f7f2c000+4f000]
+> [    7.288482] Kernel panic - not syncing: Attempted to kill init! exitcode=0x0000000b
+> [    7.288482] 
+> [    7.289898] CPU: 0 PID: 1 Comm: init Not tainted 4.14.0-rc1-00021-g14e6330 #38
+> [    7.290988] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.9.3-20161025_171302-gandalf 04/01/2014
+> [    7.292562] Call Trace:
+> [    7.292960]  dump_stack+0x61/0x7e
+> [    7.293485]  panic+0xd3/0x20f
+> [    7.293967]  do_exit+0x4f2/0x983
+> [    7.294440]  do_group_exit+0x45/0xb0
+> [    7.294966]  get_signal+0x4b8/0x4e4
+> [    7.295483]  do_signal+0x23/0x5bc
+> [    7.295964]  ? force_sig_info+0xc6/0xd5
+> [    7.296521]  ? force_sig+0x11/0x13
+> [    7.297027]  ? signal_fault+0xb8/0xc1
+> [    7.297557]  exit_to_usermode_loop+0x3a/0x72
+> [    7.298178]  do_int80_syscall_32+0xe9/0xfe
+> [    7.298784]  entry_INT80_compat+0x2a/0x40
+> [    7.299374] RIP: 0023:0xf7f369b5
+> [    7.299848] RSP: 002b:00000000fff5f08c EFLAGS: 00000246
+> [    7.300587] RAX: 0000000000000000 RBX: 0000000000000004 RCX: 00000000f7fb670c
+> [    7.301609] RDX: 000000000000000a RSI: 0000000000000f9f RDI: 0000000000000fa0
+> [    7.302624] RBP: 00000000fff5f0f8 R08: 0000000000000000 R09: 0000000000000000
+> [    7.303631] R10: 0000000000000000 R11: 0000000000000000 R12: 0000000000000000
+> [    7.304666] R13: 0000000000000000 R14: 0000000000000000 R15: 0000000000000000
+> [    7.305677] Kernel Offset: 0x7000000 from 0xffffffff81000000 (relocation range: 0xffffffff80000000-0xffffffffbfffffff)
+> 
+> Elapsed time: 10
 
-On Mon, Sep 25, 2017 at 07:17:32PM +0300, Alexander Popov wrote:
-> Hello Tycho,
-> 
-> On 21.09.2017 22:39, Alexander Popov wrote:
-> > On 21.09.2017 00:18, Tycho Andersen wrote:
-> >> +	/*
-> >> +	 * Check each byte, as we don't know the current stack alignment.
-> >> +	 */
-> > 
-> > Excuse me, what do you mean by the "current stack alignment"?
-> 
-> I guess I got it now. For x86 and x86_64 the stack alignment is controlled by
-> cc_stack_align in arch/x86/Makefile (-mpreferred-stack-boundary in case of gcc).
-> The stack is 4-byte aligned for x86 and 8-byte aligned for x86_64.
-> 
-> > The STACKLEAK_POISON position is always 8-byte aligned for x86_64 and 4-byte
-> > aligned for x86 (see the shr instruction in the asm implementation).
-> 
-> Eh, my statement is wrong. I've made a simple experiment: this change makes the
-> poison be unaligned:
-> 
-> diff --git a/fs/exec.c b/fs/exec.c
-> index 56bdc19..893d2e4 100644
-> --- a/fs/exec.c
-> +++ b/fs/exec.c
-> @@ -1961,7 +1961,7 @@ COMPAT_SYSCALL_DEFINE5(execveat, int, fd,
->  #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
->  void __used track_stack(void)
->  {
-> -       unsigned long sp = (unsigned long)&sp;
-> +       unsigned long sp = (unsigned long)&sp + 1;
+Thanks for testing!  This should already be fixed by the version of the patch in
+tip/master (commit 814fb7bb7db543); there was a missing check for 'state_size'.
 
-Yep, this is the case I was talking about with alignment.
-
-> 
->         if (sp < current->thread.lowest_stack &&
->             sp >= (unsigned long)task_stack_page(current) +
-> 
-> 
-> So your idea to check each byte at first should work fine.
-> 
-> Would you allow me to make the next version of your test and include it into the
-> fourth version of the STACKLEAK patch? I'll show it to you before sending to the
-> mailing list.
-
-Sure, that works for me.
-
-Tycho
+Eric
