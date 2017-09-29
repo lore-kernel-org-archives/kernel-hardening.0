@@ -1,80 +1,118 @@
-From: Alexander Popov <alex.popov@linux.com>
-References: <1499883471-23822-1-git-send-email-alex.popov@linux.com>
- <20170815033834.2qbjj2of62udqyz3@smitten>
- <93382ef8-105f-eed4-0d97-0b1a66a047e6@linux.com>
- <20170816211636.4zwublkvpn6hbo5n@smitten>
- <CAGXu5j+qe052JAcZUe7mOBHAXNCdLT1z4U-2kRxoeJXyL6VxDQ@mail.gmail.com>
- <20170817175807.ejgsrfdgojgbtkwf@smitten>
- <1d0963e6-4a89-9859-5379-8575a925ef08@linux.com>
- <20170920141309.gbrx53xahjmyrv6c@docker>
- <a2f61f3d-9c94-f44f-32e3-9563ecccee89@linux.com>
-Message-ID: <f1e8d1f3-a7fc-553c-f892-02a09e859248@linux.com>
-Date: Fri, 29 Sep 2017 00:17:25 +0300
-MIME-Version: 1.0
-In-Reply-To: <a2f61f3d-9c94-f44f-32e3-9563ecccee89@linux.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v3 1/1] gcc-plugins: Add stackleak feature erasing the
- kernel stack at the end of syscalls
-To: Tycho Andersen <tycho@docker.com>, Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "x86@kernel.org" <x86@kernel.org>, Andy Lutomirski <luto@amacapital.net>
+From: Mahesh Bandewar <mahesh@bandewar.net>
+Date: Fri, 29 Sep 2017 16:09:52 -0700
+Message-Id: <20170929230952.29673-1-mahesh@bandewar.net>
+Subject: [kernel-hardening] [PATCH 0/2] capability controlled user-namespaces
+To: LKML <linux-kernel@vger.kernel.org>
+Cc: Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <mahesh@bandewar.net>, Mahesh Bandewar <maheshb@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 21.09.2017 16:26, Alexander Popov wrote:
-> On 20.09.2017 17:13, Tycho Andersen wrote:
->> On Wed, Sep 20, 2017 at 02:27:05PM +0300, Alexander Popov wrote:
->>>> +/*
->>>> + * Note that the way this test fails is kind of ugly; it hits the BUG() in
->>>> + * track_stack, but then the BUG() handler blows the stack and hits the stack
->>>> + * guard page.
->>>> + */
->>>
->>> Yes, actually, the reason is deeper.
->>>
->>> When there are less than (THREAD_SIZE / 16) bytes left in the kernel stack, the
->>> BUG() in track_stack() is hit. But do_error_trap(), which handles the invalid
->>> opcode, has a big stack frame. So it is instrumented by the STACKLEAK gcc plugin
->>> and itself calls track_stack() at the beginning. Hence we have a recursive
->>> BUG(), which eventually hits the guard page.
->>>
->>> I banned the instrumentation of do_error_trap() in the plugin, but it didn't
->>> really help, since there are several other instrumented functions called during
->>> BUG() handling.
->>>
->>> So it seems to me that this BUG() in track_stack() is really useless and can be
->>> dropped. Moreover:
->>>  - it is not a part of the PaX patch;
->>>  - it never worked in Grsecurity kernel because of the error spotted by Tycho.
->>>
->>> What do you think about it?
->>
->> We'll only have a stack guard page in the case of vmap stack, so maybe
-> 
-> Thanks, that's an important aspect.
-> 
->> we can do:
->>
->> diff --git a/fs/exec.c b/fs/exec.c
->> index 8333c4dce59b..8351369cd1e4 100644
->> --- a/fs/exec.c
->> +++ b/fs/exec.c
->> @@ -1960,7 +1960,8 @@ void __used track_stack(void)
->>  		current->thread.lowest_stack = sp;
->>  	}
->>  
->> -	if (unlikely((sp & (THREAD_SIZE - 1)) < (THREAD_SIZE / 16)))
->> +	if (!IS_ENABLED(CONFIG_VMAP_STACK) &&
->> +	    unlikely((sp & (THREAD_SIZE - 1)) < (THREAD_SIZE / 16)))
->>  		BUG();
->>  }
->>  EXPORT_SYMBOL(track_stack);
-> 
-> In that case the recursive BUG() in track_stack() will happen anyway. You know,
-> I would better make CONFIG_GCC_PLUGIN_STACKLEAK depend on CONFIG_VMAP_STACK.
+From: Mahesh Bandewar <maheshb@google.com>
 
-That turned out to be a bad idea. Unfortunately, VMAP_STACK is not available on
-x86_32, but STACKLEAK works on that platform. So I'll put the check behind
-#ifdef. Maybe having it is better than having a silent stack overflow.
+[Same as the previous RFC series sent on 9/21]
 
-Best regards,
-Alexander
+TL;DR version
+-------------
+Creating a sandbox environment with namespaces is challenging
+considering what these sandboxed processes can engage into. e.g.
+CVE-2017-6074, CVE-2017-7184, CVE-2017-7308 etc. just to name few.
+Current form of user-namespaces, however, if changed a bit can allow
+us to create a sandbox environment without locking down user-
+namespaces.
+
+Detailed version
+----------------
+
+Problem
+-------
+User-namespaces in the current form have increased the attack surface as
+any process can acquire capabilities which are not available to them (by
+default) by performing combination of clone()/unshare()/setns() syscalls.
+
+    #define _GNU_SOURCE
+    #include <stdio.h>
+    #include <sched.h>
+    #include <netinet/in.h>
+
+    int main(int ac, char **av)
+    {
+        int sock = -1;
+
+        printf("Attempting to open RAW socket before unshare()...\n");
+        sock = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+        if (sock < 0) {
+            perror("socket() SOCK_RAW failed: ");
+        } else {
+            printf("Successfully opened RAW-Sock before unshare().\n");
+            close(sock);
+            sock = -1;
+        }
+
+        if (unshare(CLONE_NEWUSER | CLONE_NEWNET) < 0) {
+            perror("unshare() failed: ");
+            return 1;
+        }
+
+        printf("Attempting to open RAW socket after unshare()...\n");
+        sock = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+        if (sock < 0) {
+            perror("socket() SOCK_RAW failed: ");
+        } else {
+            printf("Successfully opened RAW-Sock after unshare().\n");
+            close(sock);
+            sock = -1;
+        }
+
+        return 0;
+    }
+
+The above example shows how easy it is to acquire NET_RAW capabilities
+and once acquired, these processes could take benefit of above mentioned
+or similar issues discovered/undiscovered with malicious intent. Note
+that this is just an example and the problem/solution is not limited
+to NET_RAW capability *only*. 
+
+The easiest fix one can apply here is to lock-down user-namespaces which
+many of the distros do (i.e. don't allow users to create user namespaces),
+but unfortunately that prevents everyone from using them.
+
+Approach
+--------
+Introduce a notion of 'controlled' user-namespaces. Every process on
+the host is allowed to create user-namespaces (governed by the limit
+imposed by per-ns sysctl) however, mark user-namespaces created by
+sandboxed processes as 'controlled'. Use this 'mark' at the time of
+capability check in conjunction with a global capability whitelist.
+If the capability is not whitelisted, processes that belong to 
+controlled user-namespaces will not be allowed.
+
+Once a user-ns is marked as 'controlled'; all its child user-
+namespaces are marked as 'controlled' too.
+
+A global whitelist is list of capabilities governed by the
+sysctl which is available to (privileged) user in init-ns to modify
+while it's applicable to all controlled user-namespaces on the host.
+
+Marking user-namespaces controlled without modifying the whitelist is
+equivalent of the current behavior. The default value of whitelist includes
+all capabilities so that the compatibility is maintained. However it gives
+admins fine-grained ability to control various capabilities system wide
+without locking down user-namespaces.
+
+Please see individual patches in this series.
+
+Mahesh Bandewar (2):
+  capability: introduce sysctl for controlled user-ns capability
+    whitelist
+  userns: control capabilities of some user namespaces
+
+ Documentation/sysctl/kernel.txt | 21 +++++++++++++++++
+ include/linux/capability.h      |  4 ++++
+ include/linux/user_namespace.h  | 20 ++++++++++++++++
+ kernel/capability.c             | 52 +++++++++++++++++++++++++++++++++++++++++
+ kernel/sysctl.c                 |  5 ++++
+ kernel/user_namespace.c         |  3 +++
+ security/commoncap.c            |  8 +++++++
+ 7 files changed, 113 insertions(+)
+
+-- 
+2.14.2.822.g60be5d43e6-goog
