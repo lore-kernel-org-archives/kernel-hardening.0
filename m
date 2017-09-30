@@ -1,148 +1,98 @@
-From: Mahesh Bandewar <mahesh@bandewar.net>
-Date: Fri, 29 Sep 2017 16:10:08 -0700
-Message-Id: <20170929231008.29834-1-mahesh@bandewar.net>
-Subject: [kernel-hardening] [PATCH 2/2] userns: control capabilities of some user namespaces
-To: LKML <linux-kernel@vger.kernel.org>
-Cc: Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <mahesh@bandewar.net>, Mahesh Bandewar <maheshb@google.com>
+Date: Sun, 1 Oct 2017 00:00:11 +0200
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20170930220011.GA19418@openwall.com>
+References: <D6DDBEC5E2802849A9493717C9A419C3E5343C1C@GSjpTK1DCembx17.service.hitachi.net>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <D6DDBEC5E2802849A9493717C9A419C3E5343C1C@GSjpTK1DCembx17.service.hitachi.net>
+Subject: Re: [kernel-hardening] [RFC] A method to prevent priviledge escalation
+To: "?$BCfB<M:0l / NAKAMURA?$B!$YUUICHI" <yuichi.nakamura.fe@hitachi.com>
+Cc: kernel-hardening@lists.openwall.com, "yamauchi@cs.okayama-u.ac.jp" <yamauchi@cs.okayama-u.ac.jp>, Adam Zabrocki <pi3@pi3.com.pl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Mahesh Bandewar <maheshb@google.com>
+Hi,
 
-With this new notion of "controlled" user-namespaces, the controlled
-user-namespaces are marked at the time of their creation while the
-capabilities of processes that belong to them are controlled using the
-global mask.
+On Fri, Sep 22, 2017 at 02:49:59AM +0000, ?$BCfB<M:0l / NAKAMURA?$B!$YUUICHI wrote:
+> As we said in Linux Security Summit 2017, 
+> we would like to post a patch to prevent privilege escalation attack.
+> 
+> The concept is here:
+> http://events.linuxfoundation.org/sites/events/files/slides/nakamura_20170831_1.pdf
 
-Init-user-ns is always uncontrolled and a process that has SYS_ADMIN
-that belongs to uncontrolled user-ns can create another (child) user-
-namespace that is uncontrolled. Any other process (that either does
-not have SYS_ADMIN or belongs to a controlled user-ns) can only
-create a user-ns that is controlled.
+We were not aware of your work, but FWIW we happen to have similar
+functionality, also in early development/testing stage, in LKRG by Adam
+Zabrocki (who is CC'ed on this reply, so he might chime in):
 
-global-capability-whitelist (controlled_userns_caps_whitelist) is used
-at the capability check-time and keeps the semantics for the processes
-that belong to uncontrolled user-ns as it is. Processes that belong to
-controlled user-ns however are subjected to different checks-
+http://openwall.info/wiki/p_lkrg/Main#Exploit-Detection
 
-   (a) if the capability in question is controlled and process belongs
-       to controlled user-ns, then it's always denied.
-   (b) if the capability in question is NOT controlled then fall back
-       to the traditional check.
+LKRG is not publicly available yet, but it probably will be soon.
 
-Signed-off-by: Mahesh Bandewar <maheshb@google.com>
----
- include/linux/capability.h     |  1 +
- include/linux/user_namespace.h | 20 ++++++++++++++++++++
- kernel/capability.c            |  5 +++++
- kernel/user_namespace.c        |  3 +++
- security/commoncap.c           |  8 ++++++++
- 5 files changed, 37 insertions(+)
+Unlike your implementation, LKRG is a kernel module, not a patch.
+LKRG can be built for and loaded on top of a wide range of mainline and
+distros' kernels, without needing to patch those.  There are other
+implementation differences as well - indeed, hopefully we are not
+actually introducing vulnerabilities with our code, although the risk is
+always there, so it would need to be justified.  And this brings us to:
 
-diff --git a/include/linux/capability.h b/include/linux/capability.h
-index 6c0b9677c03f..b8c6cac18658 100644
---- a/include/linux/capability.h
-+++ b/include/linux/capability.h
-@@ -250,6 +250,7 @@ extern bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns);
- extern int get_vfs_caps_from_disk(const struct dentry *dentry, struct cpu_vfs_cap_data *cpu_caps);
- int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
- 				 void __user *buff, size_t *lenp, loff_t *ppos);
-+bool is_capability_controlled(int cap);
- 
- extern int cap_convert_nscap(struct dentry *dentry, void **ivalue, size_t size);
- 
-diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
-index c18e01252346..e890fe81b47e 100644
---- a/include/linux/user_namespace.h
-+++ b/include/linux/user_namespace.h
-@@ -22,6 +22,7 @@ struct uid_gid_map {	/* 64 bytes -- 1 cache line */
- };
- 
- #define USERNS_SETGROUPS_ALLOWED 1UL
-+#define USERNS_CONTROLLED	 2UL
- 
- #define USERNS_INIT_FLAGS USERNS_SETGROUPS_ALLOWED
- 
-@@ -102,6 +103,16 @@ static inline void put_user_ns(struct user_namespace *ns)
- 		__put_user_ns(ns);
- }
- 
-+static inline bool is_user_ns_controlled(const struct user_namespace *ns)
-+{
-+	return ns->flags & USERNS_CONTROLLED;
-+}
-+
-+static inline void mark_user_ns_controlled(struct user_namespace *ns)
-+{
-+	ns->flags |= USERNS_CONTROLLED;
-+}
-+
- struct seq_operations;
- extern const struct seq_operations proc_uid_seq_operations;
- extern const struct seq_operations proc_gid_seq_operations;
-@@ -160,6 +171,15 @@ static inline struct ns_common *ns_get_owner(struct ns_common *ns)
- {
- 	return ERR_PTR(-EPERM);
- }
-+
-+static inline bool is_user_ns_controlled(const struct user_namespace *ns)
-+{
-+	return false;
-+}
-+
-+static inline void mark_user_ns_controlled(struct user_namespace *ns)
-+{
-+}
- #endif
- 
- #endif /* _LINUX_USER_H */
-diff --git a/kernel/capability.c b/kernel/capability.c
-index 62dbe3350c1b..40a38cc4ff43 100644
---- a/kernel/capability.c
-+++ b/kernel/capability.c
-@@ -510,6 +510,11 @@ bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns)
- }
- 
- /* Controlled-userns capabilities routines */
-+bool is_capability_controlled(int cap)
-+{
-+	return !cap_raised(controlled_userns_caps_whitelist, cap);
-+}
-+
- #ifdef CONFIG_SYSCTL
- int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
- 				 void __user *buff, size_t *lenp, loff_t *ppos)
-diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
-index c490f1e4313b..f393ea5108f0 100644
---- a/kernel/user_namespace.c
-+++ b/kernel/user_namespace.c
-@@ -53,6 +53,9 @@ static void set_cred_user_ns(struct cred *cred, struct user_namespace *user_ns)
- 	cred->cap_effective = CAP_FULL_SET;
- 	cred->cap_ambient = CAP_EMPTY_SET;
- 	cred->cap_bset = CAP_FULL_SET;
-+	if (!ns_capable(user_ns->parent, CAP_SYS_ADMIN) ||
-+	    is_user_ns_controlled(user_ns->parent))
-+		mark_user_ns_controlled(user_ns);
- #ifdef CONFIG_KEYS
- 	key_put(cred->request_key_auth);
- 	cred->request_key_auth = NULL;
-diff --git a/security/commoncap.c b/security/commoncap.c
-index 6bf72b175b49..26f41602da10 100644
---- a/security/commoncap.c
-+++ b/security/commoncap.c
-@@ -73,6 +73,14 @@ int cap_capable(const struct cred *cred, struct user_namespace *targ_ns,
- {
- 	struct user_namespace *ns = targ_ns;
- 
-+	/* If the capability is controlled and user-ns that process
-+	 * belongs-to is 'controlled' then return EPERM and no need
-+	 * to check the user-ns hierarchy.
-+	 */
-+	if (is_user_ns_controlled(cred->user_ns) &&
-+	    is_capability_controlled(cap))
-+		return -EPERM;
-+
- 	/* See if cred has the capability in the target user namespace
- 	 * by examining the target user namespace and all of the target
- 	 * user namespace's parents.
--- 
-2.14.2.822.g60be5d43e6-goog
+Frankly, we're skeptical about the value that this approach provides.
+Much of the value could be in diversity - if most systems do not have
+this sort of runtime checks, then canned exploits and even some capable
+human attackers would not care or know to try and bypass the checks.
+However, if this functionality becomes standard, so will the bypasses.
+Now, are there cases (such as specific kernel vulnerabilities) where a
+bypass is not possible, not practical, not reliable, or would complicate
+the exploit so much it becomes less generic and/or less reliable?
+Perhaps yes, and this would mean there's some value in this approach
+even if it becomes standard.  Another option may be to have a lighter
+standard version and a heavier and more extensive limited distribution
+version (which could also be a way to receive funding for the project).
+
+Speaking of addressing a sensible threat model, I suggested to Adam that
+we add validation of credentials right after the kernel's original
+permissions check on the module loading syscalls.  (Or we might
+duplicate those permission checks first, since that's easier to do when
+we're also a kernel module rather than a patch.)  Then we'll achieve
+sensible overall functionality: can't use those unauthorized credentials
+for much time, and can't easily backdoor the running kernel through
+having exploited a typical kernel vulnerability (due to LKRG's integrity
+checking of the rest of the kernel and, with this extra check, not being
+able to perform an unauthorized kernel module load by official means,
+which LKRG's integrity checking wouldn't otherwise catch).
+
+The credentials checks would need to be extended to cover cap_*, etc. -
+there's already a (partial?) list of those other credential-like data
+items on the wiki page above.  And they will need to be performed in
+more places - I think in particular on open(), as otherwise even a very
+brief exposure of the unauthorized credentials would let the attacker
+retain an fd e.g. to a block device corresponding to the root filesystem
+and then install persistent backdoors in there without hurry (e.g.,
+pattern-match a critical system binary and introduce own code in there).
+
+Of course, the action on detected integrity violation (of the kernel
+itself or of its critical data) should not be limited to logging a
+warning, as we do for testing now.  What exact action is best might be a
+non-trivial question.  Panic the kernel?  Lock the kernel from any
+further syscalls, log what happened, sync the disks, and then panic?
+
+Attempt to undo the unauthorized change whenever possible - e.g.,
+restore the credentials from our shadow copy that couldn't be tampered
+with as easily?  But then an alternative would appear to be to protect
+the main credentials to the same extent, e.g. keeping them read-only
+most of the time or/and encrypted with a per-boot key (trickier to do
+when we're a kernel module, though).  This undoing the damage is
+probably bad as it'd allow the attack to repeat until all races are won,
+unless we combine it e.g. with blacklisting of attack sources such as by
+uid when a threshold is reached.  It's also bad in that it requires
+exploits to replace just one set of credentials - the more trusted
+(and better protected?) one - rather than both, as would be the case if
+we choose panic.  For some vulnerabilities, an exploit would probably
+only be able to perform one write in a while (e.g., per syscall), so
+needing to replace both sets of credentials improves the chances of
+detection.
+
+We welcome any other thoughts - be it criticism, feedback, or anything.
+
+Thanks,
+
+Alexander
