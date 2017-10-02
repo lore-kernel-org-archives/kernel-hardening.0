@@ -1,200 +1,70 @@
-From: Eric Biggers <ebiggers3@gmail.com>
-Date: Mon,  2 Oct 2017 11:10:07 -0700
-Message-Id: <20171002181007.19371-1-ebiggers3@gmail.com>
-Subject: [kernel-hardening] [PATCH] x86/fpu: Don't let userspace set bogus xcomp_bv
-To: stable@vger.kernel.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Cc: Eric Biggers <ebiggers@google.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Eric Biggers <ebiggers3@gmail.com>, Fenghua Yu <fenghua.yu@intel.com>, Kevin Hao <haokexin@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Michael Halcrow <mhalcrow@google.com>, Oleg Nesterov <oleg@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, kernel-hardening@lists.openwall.com, Ingo Molnar <mingo@kernel.org>
+MIME-Version: 1.0
+In-Reply-To: <20171002171410.GA19611@mail.hallyn.com>
+References: <20170929230952.29673-1-mahesh@bandewar.net> <20171002171410.GA19611@mail.hallyn.com>
+From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
+Date: Mon, 2 Oct 2017 11:12:09 -0700
+Message-ID: <CAF2d9jjc6z_cO7co_C7L7xPujqA2npa2nXpUHZbE-Le6BSGFNg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [PATCH 0/2] capability controlled user-namespaces
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Eric Biggers <ebiggers@google.com>
+On Mon, Oct 2, 2017 at 10:14 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> Quoting Mahesh Bandewar (mahesh@bandewar.net):
+>> From: Mahesh Bandewar <maheshb@google.com>
+>>
+>> [Same as the previous RFC series sent on 9/21]
+>>
+>> TL;DR version
+>> -------------
+>> Creating a sandbox environment with namespaces is challenging
+>> considering what these sandboxed processes can engage into. e.g.
+>> CVE-2017-6074, CVE-2017-7184, CVE-2017-7308 etc. just to name few.
+>> Current form of user-namespaces, however, if changed a bit can allow
+>> us to create a sandbox environment without locking down user-
+>> namespaces.
+>>
+>> Detailed version
+>> ----------------
+>
+> Hi,
+>
+> still struggling with how I feel about the idea in general.
+>
+> So is the intent mainly that if/when there comes an 0-day which allows
+> users with CAP_NET_ADMIN in any namespace to gain privilege on the host,
+> then this can be used as a stop-gap measure until there is a proper fix?
+>
+Thank for looking at this Serge.
 
-commit 814fb7bb7db5433757d76f4c4502c96fc53b0b5e upstream.  [Please apply
-to 3.18-stable.  Note: the backport includes the fpu_finit() call in
-xstateregs_set(), since fix is useless without it.  It was added by
-commit 91c3dba7dbc1 ("x86/fpu/xstate: Fix PTRACE frames for XSAVES"),
-but it doesn't make sense to backport that whole commit.]
+Yes, but at the same time it's not just limited to NET_ADMIN but could
+be any of the current capabilities.
 
-On x86, userspace can use the ptrace() or rt_sigreturn() system calls to
-set a task's extended state (xstate) or "FPU" registers.  ptrace() can
-set them for another task using the PTRACE_SETREGSET request with
-NT_X86_XSTATE, while rt_sigreturn() can set them for the current task.
-In either case, registers can be set to any value, but the kernel
-assumes that the XSAVE area itself remains valid in the sense that the
-CPU can restore it.
+> Otherwise, do you have any guidance for how people should use this?
+>
+> IMO it should be heavily discouraged to use this tool as a regular
+> day to day configuration, as I'm not sure there is any "educated"
+> decision to be made, even by those who are in the know, about what
+> to put in this set.
+>
+I think that really depends on the environment. e.g. in certain
+sandboxes third-part / semi-trusted workload is executed where network
+resource is not used. In that environment I can easily take off
+NET_ADMIN and NET_RAW without affecting anything there. At the same
+time I wont have to worry about 0-day related to these two
+capabilities. I would say the Admins at these places are in the best
+place to decide what they can take-off safely and what they cannot.
+Even if they decide not to take-off anything, having a tool at hand to
+gain control is important when the next 0-day strikes us that can be
+exploited using any of the currently used capabilities.
 
-However, in the case where the kernel is using the uncompacted xstate
-format (which it does whenever the XSAVES instruction is unavailable),
-it was possible for userspace to set the xcomp_bv field in the
-xstate_header to an arbitrary value.  However, all bits in that field
-are reserved in the uncompacted case, so when switching to a task with
-nonzero xcomp_bv, the XRSTOR instruction failed with a #GP fault.  This
-caused the WARN_ON_FPU(err) in copy_kernel_to_xregs() to be hit.  In
-addition, since the error is otherwise ignored, the FPU registers from
-the task previously executing on the CPU were leaked.
+However, you are absolutely right in terms of using it as a stop-gap
+measure to protect environment until it's fixed and the capability in
+question can not be safely taken off permanently without hampering
+operations.
 
-Fix the bug by checking that the user-supplied value of xcomp_bv is 0 in
-the uncompacted case, and returning an error otherwise.
+thanks,
+--mahesh..
 
-The reason for validating xcomp_bv rather than simply overwriting it
-with 0 is that we want userspace to see an error if it (incorrectly)
-provides an XSAVE area in compacted format rather than in uncompacted
-format.
-
-Note that as before, in case of error we clear the task's FPU state.
-This is perhaps non-ideal, especially for PTRACE_SETREGSET; it might be
-better to return an error before changing anything.  But it seems the
-"clear on error" behavior is fine for now, and it's a little tricky to
-do otherwise because it would mean we couldn't simply copy the full
-userspace state into kernel memory in one __copy_from_user().
-
-This bug was found by syzkaller, which hit the above-mentioned
-WARN_ON_FPU():
-
-    WARNING: CPU: 1 PID: 0 at ./arch/x86/include/asm/fpu/internal.h:373 __switch_to+0x5b5/0x5d0
-    CPU: 1 PID: 0 Comm: swapper/1 Not tainted 4.13.0 #453
-    Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Bochs 01/01/2011
-    task: ffff9ba2bc8e42c0 task.stack: ffffa78cc036c000
-    RIP: 0010:__switch_to+0x5b5/0x5d0
-    RSP: 0000:ffffa78cc08bbb88 EFLAGS: 00010082
-    RAX: 00000000fffffffe RBX: ffff9ba2b8bf2180 RCX: 00000000c0000100
-    RDX: 00000000ffffffff RSI: 000000005cb10700 RDI: ffff9ba2b8bf36c0
-    RBP: ffffa78cc08bbbd0 R08: 00000000929fdf46 R09: 0000000000000001
-    R10: 0000000000000000 R11: 0000000000000000 R12: ffff9ba2bc8e42c0
-    R13: 0000000000000000 R14: ffff9ba2b8bf3680 R15: ffff9ba2bf5d7b40
-    FS:  00007f7e5cb10700(0000) GS:ffff9ba2bf400000(0000) knlGS:0000000000000000
-    CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
-    CR2: 00000000004005cc CR3: 0000000079fd5000 CR4: 00000000001406e0
-    Call Trace:
-    Code: 84 00 00 00 00 00 e9 11 fd ff ff 0f ff 66 0f 1f 84 00 00 00 00 00 e9 e7 fa ff ff 0f ff 66 0f 1f 84 00 00 00 00 00 e9 c2 fa ff ff <0f> ff 66 0f 1f 84 00 00 00 00 00 e9 d4 fc ff ff 66 66 2e 0f 1f
-
-Here is a C reproducer.  The expected behavior is that the program spin
-forever with no output.  However, on a buggy kernel running on a
-processor with the "xsave" feature but without the "xsaves" feature
-(e.g. Sandy Bridge through Broadwell for Intel), within a second or two
-the program reports that the xmm registers were corrupted, i.e. were not
-restored correctly.  With CONFIG_X86_DEBUG_FPU=y it also hits the above
-kernel warning.
-
-    #define _GNU_SOURCE
-    #include <stdbool.h>
-    #include <inttypes.h>
-    #include <linux/elf.h>
-    #include <stdio.h>
-    #include <sys/ptrace.h>
-    #include <sys/uio.h>
-    #include <sys/wait.h>
-    #include <unistd.h>
-
-    int main(void)
-    {
-        int pid = fork();
-        uint64_t xstate[512];
-        struct iovec iov = { .iov_base = xstate, .iov_len = sizeof(xstate) };
-
-        if (pid == 0) {
-            bool tracee = true;
-            for (int i = 0; i < sysconf(_SC_NPROCESSORS_ONLN) && tracee; i++)
-                tracee = (fork() != 0);
-            uint32_t xmm0[4] = { [0 ... 3] = tracee ? 0x00000000 : 0xDEADBEEF };
-            asm volatile("   movdqu %0, %%xmm0\n"
-                         "   mov %0, %%rbx\n"
-                         "1: movdqu %%xmm0, %0\n"
-                         "   mov %0, %%rax\n"
-                         "   cmp %%rax, %%rbx\n"
-                         "   je 1b\n"
-                         : "+m" (xmm0) : : "rax", "rbx", "xmm0");
-            printf("BUG: xmm registers corrupted!  tracee=%d, xmm0=%08X%08X%08X%08X\n",
-                   tracee, xmm0[0], xmm0[1], xmm0[2], xmm0[3]);
-        } else {
-            usleep(100000);
-            ptrace(PTRACE_ATTACH, pid, 0, 0);
-            wait(NULL);
-            ptrace(PTRACE_GETREGSET, pid, NT_X86_XSTATE, &iov);
-            xstate[65] = -1;
-            ptrace(PTRACE_SETREGSET, pid, NT_X86_XSTATE, &iov);
-            ptrace(PTRACE_CONT, pid, 0, 0);
-            wait(NULL);
-        }
-        return 1;
-    }
-
-Note: the program only tests for the bug using the ptrace() system call.
-The bug can also be reproduced using the rt_sigreturn() system call, but
-only when called from a 32-bit program, since for 64-bit programs the
-kernel restores the FPU state from the signal frame by doing XRSTOR
-directly from userspace memory (with proper error checking).
-
-Reported-by: Dmitry Vyukov <dvyukov@google.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Reviewed-by: Rik van Riel <riel@redhat.com>
-Acked-by: Dave Hansen <dave.hansen@linux.intel.com>
-Cc: <stable@vger.kernel.org> [v3.17+]
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Andy Lutomirski <luto@amacapital.net>
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Borislav Petkov <bp@alien8.de>
-Cc: Eric Biggers <ebiggers3@gmail.com>
-Cc: Fenghua Yu <fenghua.yu@intel.com>
-Cc: Kevin Hao <haokexin@gmail.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Michael Halcrow <mhalcrow@google.com>
-Cc: Oleg Nesterov <oleg@redhat.com>
-Cc: Peter Zijlstra <peterz@infradead.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: Wanpeng Li <wanpeng.li@hotmail.com>
-Cc: Yu-cheng Yu <yu-cheng.yu@intel.com>
-Cc: kernel-hardening@lists.openwall.com
-Fixes: 0b29643a5843 ("x86/xsaves: Change compacted format xsave area header")
-Link: http://lkml.kernel.org/r/20170922174156.16780-2-ebiggers3@gmail.com
-Link: http://lkml.kernel.org/r/20170923130016.21448-25-mingo@kernel.org
-Signed-off-by: Ingo Molnar <mingo@kernel.org>
----
- arch/x86/kernel/i387.c  | 11 +++++++++++
- arch/x86/kernel/xsave.c |  4 +++-
- 2 files changed, 14 insertions(+), 1 deletion(-)
-
-diff --git a/arch/x86/kernel/i387.c b/arch/x86/kernel/i387.c
-index 8d6e954db2a7..9c9f4c0b0106 100644
---- a/arch/x86/kernel/i387.c
-+++ b/arch/x86/kernel/i387.c
-@@ -388,11 +388,22 @@ int xstateregs_set(struct task_struct *target, const struct user_regset *regset,
- 	xsave_hdr = &target->thread.fpu.state->xsave.xsave_hdr;
- 
- 	xsave_hdr->xstate_bv &= pcntxt_mask;
-+
-+	/* xcomp_bv must be 0 when using uncompacted format */
-+	if (!ret && xsave_hdr->xcomp_bv)
-+		ret = -EINVAL;
-+
- 	/*
- 	 * These bits must be zero.
- 	 */
- 	memset(xsave_hdr->reserved, 0, 48);
- 
-+	/*
-+	 * In case of failure, mark all states as init:
-+	 */
-+	if (ret)
-+		fpu_finit(&target->thread.fpu);
-+
- 	return ret;
- }
- 
-diff --git a/arch/x86/kernel/xsave.c b/arch/x86/kernel/xsave.c
-index cdc6cf903078..460e72155f51 100644
---- a/arch/x86/kernel/xsave.c
-+++ b/arch/x86/kernel/xsave.c
-@@ -394,7 +394,9 @@ int __restore_xstate_sig(void __user *buf, void __user *buf_fx, int size)
- 		drop_fpu(tsk);
- 
- 		if (__copy_from_user(&fpu->state->xsave, buf_fx, state_size) ||
--		    __copy_from_user(&env, buf, sizeof(env))) {
-+		    __copy_from_user(&env, buf, sizeof(env)) ||
-+		    (state_size > offsetof(struct xsave_struct, xsave_hdr) &&
-+		     fpu->state->xsave.xsave_hdr.xcomp_bv)) {
- 			fpu_finit(fpu);
- 			err = -1;
- 		} else {
--- 
-2.14.2.822.g60be5d43e6-goog
+[...]
