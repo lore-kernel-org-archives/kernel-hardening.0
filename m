@@ -1,6 +1,6 @@
 From: Eric Biggers <ebiggers3@gmail.com>
-Date: Mon,  2 Oct 2017 11:04:09 -0700
-Message-Id: <20171002180409.143085-1-ebiggers3@gmail.com>
+Date: Mon,  2 Oct 2017 11:10:07 -0700
+Message-Id: <20171002181007.19371-1-ebiggers3@gmail.com>
 Subject: [kernel-hardening] [PATCH] x86/fpu: Don't let userspace set bogus xcomp_bv
 To: stable@vger.kernel.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 Cc: Eric Biggers <ebiggers@google.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Eric Biggers <ebiggers3@gmail.com>, Fenghua Yu <fenghua.yu@intel.com>, Kevin Hao <haokexin@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Michael Halcrow <mhalcrow@google.com>, Oleg Nesterov <oleg@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, kernel-hardening@lists.openwall.com, Ingo Molnar <mingo@kernel.org>
@@ -9,7 +9,7 @@ List-ID: <kernel-hardening.lists.openwall.com>
 From: Eric Biggers <ebiggers@google.com>
 
 commit 814fb7bb7db5433757d76f4c4502c96fc53b0b5e upstream.  [Please apply
-to 4.4-stable.  Note: the backport includes the fpstate_init() call in
+to 3.18-stable.  Note: the backport includes the fpu_finit() call in
 xstateregs_set(), since fix is useless without it.  It was added by
 commit 91c3dba7dbc1 ("x86/fpu/xstate: Fix PTRACE frames for XSAVES"),
 but it doesn't make sense to backport that whole commit.]
@@ -150,52 +150,50 @@ Link: http://lkml.kernel.org/r/20170922174156.16780-2-ebiggers3@gmail.com
 Link: http://lkml.kernel.org/r/20170923130016.21448-25-mingo@kernel.org
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
 ---
- arch/x86/kernel/fpu/regset.c | 11 +++++++++++
- arch/x86/kernel/fpu/signal.c |  4 +++-
+ arch/x86/kernel/i387.c  | 11 +++++++++++
+ arch/x86/kernel/xsave.c |  4 +++-
  2 files changed, 14 insertions(+), 1 deletion(-)
 
-diff --git a/arch/x86/kernel/fpu/regset.c b/arch/x86/kernel/fpu/regset.c
-index 0bc3490420c5..72a483c295f2 100644
---- a/arch/x86/kernel/fpu/regset.c
-+++ b/arch/x86/kernel/fpu/regset.c
-@@ -116,6 +116,11 @@ int xstateregs_set(struct task_struct *target, const struct user_regset *regset,
- 	xsave = &fpu->state.xsave;
+diff --git a/arch/x86/kernel/i387.c b/arch/x86/kernel/i387.c
+index 8d6e954db2a7..9c9f4c0b0106 100644
+--- a/arch/x86/kernel/i387.c
++++ b/arch/x86/kernel/i387.c
+@@ -388,11 +388,22 @@ int xstateregs_set(struct task_struct *target, const struct user_regset *regset,
+ 	xsave_hdr = &target->thread.fpu.state->xsave.xsave_hdr;
  
- 	ret = user_regset_copyin(&pos, &count, &kbuf, &ubuf, xsave, 0, -1);
+ 	xsave_hdr->xstate_bv &= pcntxt_mask;
 +
 +	/* xcomp_bv must be 0 when using uncompacted format */
-+	if (!ret && xsave->header.xcomp_bv)
++	if (!ret && xsave_hdr->xcomp_bv)
 +		ret = -EINVAL;
 +
  	/*
- 	 * mxcsr reserved bits must be masked to zero for security reasons.
+ 	 * These bits must be zero.
  	 */
-@@ -126,6 +131,12 @@ int xstateregs_set(struct task_struct *target, const struct user_regset *regset,
- 	 */
- 	memset(&xsave->header.reserved, 0, 48);
+ 	memset(xsave_hdr->reserved, 0, 48);
  
 +	/*
 +	 * In case of failure, mark all states as init:
 +	 */
 +	if (ret)
-+		fpstate_init(&fpu->state);
++		fpu_finit(&target->thread.fpu);
 +
  	return ret;
  }
  
-diff --git a/arch/x86/kernel/fpu/signal.c b/arch/x86/kernel/fpu/signal.c
-index 31c6a60505e6..3de077116218 100644
---- a/arch/x86/kernel/fpu/signal.c
-+++ b/arch/x86/kernel/fpu/signal.c
-@@ -309,7 +309,9 @@ static int __fpu__restore_sig(void __user *buf, void __user *buf_fx, int size)
- 		fpu__drop(fpu);
+diff --git a/arch/x86/kernel/xsave.c b/arch/x86/kernel/xsave.c
+index cdc6cf903078..460e72155f51 100644
+--- a/arch/x86/kernel/xsave.c
++++ b/arch/x86/kernel/xsave.c
+@@ -394,7 +394,9 @@ int __restore_xstate_sig(void __user *buf, void __user *buf_fx, int size)
+ 		drop_fpu(tsk);
  
- 		if (__copy_from_user(&fpu->state.xsave, buf_fx, state_size) ||
+ 		if (__copy_from_user(&fpu->state->xsave, buf_fx, state_size) ||
 -		    __copy_from_user(&env, buf, sizeof(env))) {
 +		    __copy_from_user(&env, buf, sizeof(env)) ||
-+		    (state_size > offsetof(struct xregs_state, header) &&
-+		     fpu->state.xsave.header.xcomp_bv)) {
- 			fpstate_init(&fpu->state);
++		    (state_size > offsetof(struct xsave_struct, xsave_hdr) &&
++		     fpu->state->xsave.xsave_hdr.xcomp_bv)) {
+ 			fpu_finit(fpu);
  			err = -1;
  		} else {
 -- 
