@@ -1,48 +1,140 @@
-Date: Mon, 2 Oct 2017 10:01:11 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Message-ID: <20171002170111.GA6713@gmail.com>
-References: <CAMuHMdWd3ttH7Zdpo=bodkOBw2xiyeX_R9MhPf=Bcf0-QLhOiQ@mail.gmail.com>
+Date: Mon, 2 Oct 2017 12:14:10 -0500
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20171002171410.GA19611@mail.hallyn.com>
+References: <20170929230952.29673-1-mahesh@bandewar.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAMuHMdWd3ttH7Zdpo=bodkOBw2xiyeX_R9MhPf=Bcf0-QLhOiQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: Modular BIG_KEYS (was: Re: [PATCH v4] security/keys: rewrite all
- of big_key crypto)
-To: Geert Uytterhoeven <geert@linux-m68k.org>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, David Howells <dhowells@redhat.com>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Ilhan Gurel <ilhan.gurel@gmail.com>, security@kernel.org, stable <stable@vger.kernel.org>
+In-Reply-To: <20170929230952.29673-1-mahesh@bandewar.net>
+Subject: Re: [kernel-hardening] [PATCH 0/2] capability controlled
+ user-namespaces
+To: Mahesh Bandewar <mahesh@bandewar.net>
+Cc: LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <maheshb@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 02, 2017 at 09:14:36AM +0200, Geert Uytterhoeven wrote:
-> Now this has hit mainline, the "BIG_KEYS" Kconfig symbol appeared on my
-> radar. Is there any reason this cannot be tristate?
+Quoting Mahesh Bandewar (mahesh@bandewar.net):
+> From: Mahesh Bandewar <maheshb@google.com>
 > 
-> The help text says:
+> [Same as the previous RFC series sent on 9/21]
 > 
->     This option provides support for holding large keys within the kernel
->     (for example Kerberos ticket caches).  The data may be stored out to
->     swapspace by tmpfs.
+> TL;DR version
+> -------------
+> Creating a sandbox environment with namespaces is challenging
+> considering what these sandboxed processes can engage into. e.g.
+> CVE-2017-6074, CVE-2017-7184, CVE-2017-7308 etc. just to name few.
+> Current form of user-namespaces, however, if changed a bit can allow
+> us to create a sandbox environment without locking down user-
+> namespaces.
 > 
->     If you are unsure as to whether this is required, answer N.
-> 
-> So to save kernel size, I wan't to save N, but for a distro kernel that might
-> have Kerberos users, you currently need to say Y, while M would be nicer.
-> 
-> The symbol seems to just control the build of security/keys/big_key.c,
-> which could use module_init() in the modular case.
-> I'm not sending a patch to change BIG_KEYS from bool to tristate, as this is
-> crypto, and I don't understand the full implications.
-> 
+> Detailed version
+> ----------------
 
-It's possible to have a key type in a module.  In fact, some of the existing key
-types such as key_type_rxrpc can already be modular.  But I don't think it
-really works as intended currently because there is no autoloading of key type
-modules.  That is, if big_key was a module and you tried to add a key of type
-"big_key", the big_key module would *not* be automatically loaded, so the call
-would return -ENODEV.  This could be fixed, I believe.
+Hi,
 
-(I also still need to convince myself that there aren't any race conditions in
-key type unregistering.  It's a little weird how it changes the key type to the
-".dead" key type, rather than pinning the key type in memory while it's still
-used.)
+still struggling with how I feel about the idea in general.
 
-Eric
+So is the intent mainly that if/when there comes an 0-day which allows
+users with CAP_NET_ADMIN in any namespace to gain privilege on the host,
+then this can be used as a stop-gap measure until there is a proper fix?
+
+Otherwise, do you have any guidance for how people should use this?
+
+IMO it should be heavily discouraged to use this tool as a regular
+day to day configuration, as I'm not sure there is any "educated"
+decision to be made, even by those who are in the know, about what
+to put in this set.
+
+> Problem
+> -------
+> User-namespaces in the current form have increased the attack surface as
+> any process can acquire capabilities which are not available to them (by
+> default) by performing combination of clone()/unshare()/setns() syscalls.
+> 
+>     #define _GNU_SOURCE
+>     #include <stdio.h>
+>     #include <sched.h>
+>     #include <netinet/in.h>
+> 
+>     int main(int ac, char **av)
+>     {
+>         int sock = -1;
+> 
+>         printf("Attempting to open RAW socket before unshare()...\n");
+>         sock = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+>         if (sock < 0) {
+>             perror("socket() SOCK_RAW failed: ");
+>         } else {
+>             printf("Successfully opened RAW-Sock before unshare().\n");
+>             close(sock);
+>             sock = -1;
+>         }
+> 
+>         if (unshare(CLONE_NEWUSER | CLONE_NEWNET) < 0) {
+>             perror("unshare() failed: ");
+>             return 1;
+>         }
+> 
+>         printf("Attempting to open RAW socket after unshare()...\n");
+>         sock = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+>         if (sock < 0) {
+>             perror("socket() SOCK_RAW failed: ");
+>         } else {
+>             printf("Successfully opened RAW-Sock after unshare().\n");
+>             close(sock);
+>             sock = -1;
+>         }
+> 
+>         return 0;
+>     }
+> 
+> The above example shows how easy it is to acquire NET_RAW capabilities
+> and once acquired, these processes could take benefit of above mentioned
+> or similar issues discovered/undiscovered with malicious intent. Note
+> that this is just an example and the problem/solution is not limited
+> to NET_RAW capability *only*. 
+> 
+> The easiest fix one can apply here is to lock-down user-namespaces which
+> many of the distros do (i.e. don't allow users to create user namespaces),
+> but unfortunately that prevents everyone from using them.
+> 
+> Approach
+> --------
+> Introduce a notion of 'controlled' user-namespaces. Every process on
+> the host is allowed to create user-namespaces (governed by the limit
+> imposed by per-ns sysctl) however, mark user-namespaces created by
+> sandboxed processes as 'controlled'. Use this 'mark' at the time of
+> capability check in conjunction with a global capability whitelist.
+> If the capability is not whitelisted, processes that belong to 
+> controlled user-namespaces will not be allowed.
+> 
+> Once a user-ns is marked as 'controlled'; all its child user-
+> namespaces are marked as 'controlled' too.
+> 
+> A global whitelist is list of capabilities governed by the
+> sysctl which is available to (privileged) user in init-ns to modify
+> while it's applicable to all controlled user-namespaces on the host.
+> 
+> Marking user-namespaces controlled without modifying the whitelist is
+> equivalent of the current behavior. The default value of whitelist includes
+> all capabilities so that the compatibility is maintained. However it gives
+> admins fine-grained ability to control various capabilities system wide
+> without locking down user-namespaces.
+> 
+> Please see individual patches in this series.
+> 
+> Mahesh Bandewar (2):
+>   capability: introduce sysctl for controlled user-ns capability
+>     whitelist
+>   userns: control capabilities of some user namespaces
+> 
+>  Documentation/sysctl/kernel.txt | 21 +++++++++++++++++
+>  include/linux/capability.h      |  4 ++++
+>  include/linux/user_namespace.h  | 20 ++++++++++++++++
+>  kernel/capability.c             | 52 +++++++++++++++++++++++++++++++++++++++++
+>  kernel/sysctl.c                 |  5 ++++
+>  kernel/user_namespace.c         |  3 +++
+>  security/commoncap.c            |  8 +++++++
+>  7 files changed, 113 insertions(+)
+> 
+> -- 
+> 2.14.2.822.g60be5d43e6-goog
