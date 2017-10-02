@@ -1,57 +1,48 @@
-Date: Mon, 2 Oct 2017 11:42:05 +0100
-From: Will Deacon <will.deacon@arm.com>
-Message-ID: <20171002104205.GC3823@arm.com>
-References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <1506816410-10230-3-git-send-email-me@tobin.cc>
+Date: Mon, 2 Oct 2017 10:01:11 -0700
+From: Eric Biggers <ebiggers3@gmail.com>
+Message-ID: <20171002170111.GA6713@gmail.com>
+References: <CAMuHMdWd3ttH7Zdpo=bodkOBw2xiyeX_R9MhPf=Bcf0-QLhOiQ@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1506816410-10230-3-git-send-email-me@tobin.cc>
-Subject: Re: [kernel-hardening] [RFC V2 2/6] lib: vsprintf: whitelist stack
- traces
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+In-Reply-To: <CAMuHMdWd3ttH7Zdpo=bodkOBw2xiyeX_R9MhPf=Bcf0-QLhOiQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: Modular BIG_KEYS (was: Re: [PATCH v4] security/keys: rewrite all
+ of big_key crypto)
+To: Geert Uytterhoeven <geert@linux-m68k.org>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, David Howells <dhowells@redhat.com>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Ilhan Gurel <ilhan.gurel@gmail.com>, security@kernel.org, stable <stable@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Oct 01, 2017 at 11:06:46AM +1100, Tobin C. Harding wrote:
-> Use the %pP functionality to explicitly allow kernel
-> pointers to be logged for stack traces.
+On Mon, Oct 02, 2017 at 09:14:36AM +0200, Geert Uytterhoeven wrote:
+> Now this has hit mainline, the "BIG_KEYS" Kconfig symbol appeared on my
+> radar. Is there any reason this cannot be tristate?
 > 
-> Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> ---
->  arch/arm64/kernel/traps.c | 4 ++--
->  kernel/printk/printk.c    | 2 +-
->  2 files changed, 3 insertions(+), 3 deletions(-)
+> The help text says:
 > 
-> diff --git a/arch/arm64/kernel/traps.c b/arch/arm64/kernel/traps.c
-> index 5ea4b85..fe09660 100644
-> --- a/arch/arm64/kernel/traps.c
-> +++ b/arch/arm64/kernel/traps.c
-> @@ -147,7 +147,7 @@ void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
->  	struct stackframe frame;
->  	int skip;
->  
-> -	pr_debug("%s(regs = %p tsk = %p)\n", __func__, regs, tsk);
-> +	pr_debug("%s(regs = %pP tsk = %pP)\n", __func__, regs, tsk);
+>     This option provides support for holding large keys within the kernel
+>     (for example Kerberos ticket caches).  The data may be stored out to
+>     swapspace by tmpfs.
+> 
+>     If you are unsure as to whether this is required, answer N.
+> 
+> So to save kernel size, I wan't to save N, but for a distro kernel that might
+> have Kerberos users, you currently need to say Y, while M would be nicer.
+> 
+> The symbol seems to just control the build of security/keys/big_key.c,
+> which could use module_init() in the modular case.
+> I'm not sending a patch to change BIG_KEYS from bool to tristate, as this is
+> crypto, and I don't understand the full implications.
+> 
 
-Why do we care for pr_debug?
+It's possible to have a key type in a module.  In fact, some of the existing key
+types such as key_type_rxrpc can already be modular.  But I don't think it
+really works as intended currently because there is no autoloading of key type
+modules.  That is, if big_key was a module and you tried to add a key of type
+"big_key", the big_key module would *not* be automatically loaded, so the call
+would return -ENODEV.  This could be fixed, I believe.
 
->  	if (!tsk)
->  		tsk = current;
-> @@ -233,7 +233,7 @@ static int __die(const char *str, int err, struct pt_regs *regs)
->  
->  	print_modules();
->  	__show_regs(regs);
-> -	pr_emerg("Process %.*s (pid: %d, stack limit = 0x%p)\n",
-> +	pr_emerg("Process %.*s (pid: %d, stack limit = 0x%pP)\n",
->  		 TASK_COMM_LEN, tsk->comm, task_pid_nr(tsk),
->  		 end_of_stack(tsk));
->  
-> diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-> index 512f7c2..af0bc8e 100644
-> --- a/kernel/printk/printk.c
-> +++ b/kernel/printk/printk.c
+(I also still need to convince myself that there aren't any race conditions in
+key type unregistering.  It's a little weird how it changes the key type to the
+".dead" key type, rather than pinning the key type in memory while it's still
+used.)
 
-It probably makes sense to keep this separate from arch/ changes
-
-Will
+Eric
