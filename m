@@ -1,42 +1,58 @@
-From: David Howells <dhowells@redhat.com>
-In-Reply-To: <20171002170111.GA6713@gmail.com>
-References: <20171002170111.GA6713@gmail.com> <CAMuHMdWd3ttH7Zdpo=bodkOBw2xiyeX_R9MhPf=Bcf0-QLhOiQ@mail.gmail.com>
+Date: Tue, 3 Oct 2017 11:04:33 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20171003100433.GA4931@leverpostej>
+References: <1506972007-80614-1-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <22432.1507021470.1@warthog.procyon.org.uk>
-Date: Tue, 03 Oct 2017 10:04:30 +0100
-Message-ID: <22433.1507021470@warthog.procyon.org.uk>
-Subject: [kernel-hardening] Re: Modular BIG_KEYS (was: Re: [PATCH v4] security/keys: rewrite all of big_key crypto)
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: dhowells@redhat.com, Geert Uytterhoeven <geert@linux-m68k.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, linux-security-module@vger.kernel.org, keyrings@vger.kernel.org, kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, Kirill Marinushkin <k.marinushkin@gmail.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Ilhan Gurel <ilhan.gurel@gmail.com>, security@kernel.org, stable <stable@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1506972007-80614-1-git-send-email-keescook@chromium.org>
+Subject: Re: [kernel-hardening] [PATCH 0/3] Makefile: Introduce
+ CONFIG_CC_STACKPROTECTOR_AUTO
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Marek <mmarek@suse.com>, Yoshinori Sato <ysato@users.sourceforge.jp>, Rich Felker <dalias@libc.org>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Laura Abbott <labbott@redhat.com>, linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org, linux-sh@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Eric Biggers <ebiggers3@gmail.com> wrote:
+Hi Kees,
 
-> (I also still need to convince myself that there aren't any race conditions
-> in key type unregistering.  It's a little weird how it changes the key type
-> to the ".dead" key type, rather than pinning the key type in memory while
-> it's still used.)
+On Mon, Oct 02, 2017 at 12:20:04PM -0700, Kees Cook wrote:
+> As described in the final patch:
+> 
+> Nearly all modern compilers support a stack-protector option, and nearly
+> all modern distributions enable the kernel stack-protector, so enabling
+> this by default in kernel builds would make sense. However, Kconfig does
+> not have knowledge of available compiler features, so it isn't safe to
+> force on, as this would unconditionally break builds for the compilers
+> or architectures that don't have support. Instead, this introduces a new
+> option, CONFIG_CC_STACKPROTECTOR_AUTO, which attempts to discover the best
+> possible stack-protector available, and will allow builds to proceed even
+> if the compiler doesn't support any stack-protector.
+> 
+> This option is made the default so that kernels built with modern
+> compilers will be protected-by-default against stack buffer overflows,
+> avoiding things like the recent BlueBorne attack. Selection of a specific
+> stack-protector option remains available, including disabling it.
 
-Keys are converted to the dead type and their destructors called by the gc
-whilst it holds a write lock on the key's semaphore, so keyctl() calls
-shouldn't be a problem as they all hold a read-lock or a write-lock on the
-content.
+I gave this a spin atop of v4.14-rc3 with a few arm64 toolchains I had
+installed:
 
-/proc/keys does things under the key_serial_lock and RCU, so if a key type's
-->describe() function looks at the payload, then it should use RCU conditions.
-Note that this doesn't affect the keyring_describe() as that only looks at a
-value that is stored in the key struct - and the same for user_describe() and
-big_key_describe().  asymmetric_key_describe(), OTOH...  Maybe the simplest
-thing to do is to take key_serial_lock in key_garbage_collector() around the
-code that changes the key type.
+* Linaro 17.08 GCC 7.1    // strong
+* Linaro 17.05 GCC 6.1    // strong
+* Linaro 15.08 GCC 5.1    // strong
+* Linaro 14.09 GCC 4.9    // strong
+* Linaro 13.06 GCC 4.8    // none
+* Linaro 13.01 GCC 4.7    // none
 
-Inside the kernel, things are murkier as the kernel can reach inside a key
-without taking the semaphore.  If it does so, it must use RCU or some other
-mechanism to prevent the key payload from being destroyed under it.
+AFAICT, the detection is correct, and arm64 toolchains only gained stack
+protector support in GCC 4.9. I manually tested GCC 4.8 and 4.7, and
+got:
 
-With AF_RXRPC, I think I'm doing this wrong.  I think I need to move the
-destruction of the key type to after I've unregistered the network namespace
-handling as the latter destroys connections which might be using the key.
+  warning: -fstack-protector not supported for this target [enabled by default]
 
-David
+... so that looks good to me.
+
+One thing I noticed was taht even when the build system detects no
+support for stack-protector, it still passes -DCONFIG_CC_STACKPROTECTOR
+to the toolchain. Is that expected?
+
+Thanks,
+Mark.
