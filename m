@@ -1,63 +1,57 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20171003100433.GA4931@leverpostej>
-References: <1506972007-80614-1-git-send-email-keescook@chromium.org> <20171003100433.GA4931@leverpostej>
+Date: Tue, 3 Oct 2017 11:32:28 -0700
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 3 Oct 2017 08:51:12 -0700
-Message-ID: <CAGXu5jKuGuP4FJVEbWbMfwkoqFvS22d6HpFhqbxcz8vys0yByg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH 0/3] Makefile: Introduce CONFIG_CC_STACKPROTECTOR_AUTO
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Marek <mmarek@suse.com>, Yoshinori Sato <ysato@users.sourceforge.jp>, Rich Felker <dalias@libc.org>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Laura Abbott <labbott@redhat.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-sh <linux-sh@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Message-ID: <20171003183228.GA142273@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] Makefile: Fix CONFIG_CC_STACKPROTECTOR_AUTO to not enable SSP
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Mark Rutland <mark.rutland@arm.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 3, 2017 at 3:04 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> Hi Kees,
->
-> On Mon, Oct 02, 2017 at 12:20:04PM -0700, Kees Cook wrote:
->> As described in the final patch:
->>
->> Nearly all modern compilers support a stack-protector option, and nearly
->> all modern distributions enable the kernel stack-protector, so enabling
->> this by default in kernel builds would make sense. However, Kconfig does
->> not have knowledge of available compiler features, so it isn't safe to
->> force on, as this would unconditionally break builds for the compilers
->> or architectures that don't have support. Instead, this introduces a new
->> option, CONFIG_CC_STACKPROTECTOR_AUTO, which attempts to discover the best
->> possible stack-protector available, and will allow builds to proceed even
->> if the compiler doesn't support any stack-protector.
->>
->> This option is made the default so that kernels built with modern
->> compilers will be protected-by-default against stack buffer overflows,
->> avoiding things like the recent BlueBorne attack. Selection of a specific
->> stack-protector option remains available, including disabling it.
->
-> I gave this a spin atop of v4.14-rc3 with a few arm64 toolchains I had
-> installed:
->
-> * Linaro 17.08 GCC 7.1    // strong
-> * Linaro 17.05 GCC 6.1    // strong
-> * Linaro 15.08 GCC 5.1    // strong
-> * Linaro 14.09 GCC 4.9    // strong
-> * Linaro 13.06 GCC 4.8    // none
-> * Linaro 13.01 GCC 4.7    // none
->
-> AFAICT, the detection is correct, and arm64 toolchains only gained stack
-> protector support in GCC 4.9. I manually tested GCC 4.8 and 4.7, and
-> got:
->
->   warning: -fstack-protector not supported for this target [enabled by default]
->
-> ... so that looks good to me.
->
-> One thing I noticed was taht even when the build system detects no
-> support for stack-protector, it still passes -DCONFIG_CC_STACKPROTECTOR
-> to the toolchain. Is that expected?
+There was a think-o in the logic for CONFIG_CC_STACKPROTECTOR_AUTO, which
+would leave CONFIG_CC_STACKPROTECTOR defined when a compiler didn't support
+stack-protector. This usually won't cause a problem with a build, but it's
+not correct, and shouldn't happen.
 
-Oops, that's a mistake. I had a think-o in the Makefile logic. I will
-send a follow-up to fix it.
+Reported-by: Mark Rutland <mark.rutland@arm.com>
+Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: linux-kbuild@vger.kernel.org
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+Andrew, if possible, can you squash this as a fix for the mmots patch
+"makefile-introduce-config_cc_stackprotector_auto.patch"? If not, that's fine.
+---
+ Makefile | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
 
--Kees
+diff --git a/Makefile b/Makefile
+index 9bd334b35003..2f8ff79fa9a5 100644
+--- a/Makefile
++++ b/Makefile
+@@ -693,14 +693,18 @@ else
+ endif
+ endif
+ endif
++# If stack-protection was requested (and available, in the case of _AUTO),
++# then prepare the build for it being enabled.
+ ifdef stackp-name
+-  # If the stack protector has been selected, inform the rest of the build.
++ifneq ($(stackp-flag),)
++  # If the stack protector is active, enable code that depends on it.
+   KBUILD_CFLAGS += -DCONFIG_CC_STACKPROTECTOR
+   KBUILD_AFLAGS += -DCONFIG_CC_STACKPROTECTOR
+   # Find arch-specific stack protector compiler sanity-checking script.
+   stackp-path := $(srctree)/scripts/gcc-$(SRCARCH)_$(BITS)-has-stack-protector.sh
+   stackp-check := $(wildcard $(stackp-path))
+ endif
++endif
+ KBUILD_CFLAGS += $(stackp-flag)
+ 
+ ifeq ($(cc-name),clang)
+-- 
+2.7.4
+
 
 -- 
 Kees Cook
