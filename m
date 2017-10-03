@@ -1,16 +1,16 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Date: Tue,  3 Oct 2017 14:23:48 +0200
-Message-Id: <20171003114231.688527810@linuxfoundation.org>
-In-Reply-To: <20171003114228.884821129@linuxfoundation.org>
-References: <20171003114228.884821129@linuxfoundation.org>
+Date: Tue,  3 Oct 2017 14:30:08 +0200
+Message-Id: <20171003114245.512074175@linuxfoundation.org>
+In-Reply-To: <20171003114241.408583531@linuxfoundation.org>
+References: <20171003114241.408583531@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] [PATCH 4.9 56/64] x86/fpu: Dont let userspace set bogus xcomp_bv
+Subject: [kernel-hardening] [PATCH 4.13 106/110] x86/fpu: Dont let userspace set bogus xcomp_bv
 To: linux-kernel@vger.kernel.org
 Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Dmitry Vyukov <dvyukov@google.com>, Eric Biggers <ebiggers@google.com>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Eric Biggers <ebiggers3@gmail.com>, Fenghua Yu <fenghua.yu@intel.com>, Kevin Hao <haokexin@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Michael Halcrow <mhalcrow@google.com>, Oleg Nesterov <oleg@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Wanpeng Li <wanpeng.li@hotmail.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, kernel-hardening@lists.openwall.com, Ingo Molnar <mingo@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-4.9-stable review patch.  If anyone has any objections, please let me know.
+4.13-stable review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
@@ -161,7 +161,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 --- a/arch/x86/kernel/fpu/regset.c
 +++ b/arch/x86/kernel/fpu/regset.c
-@@ -130,11 +130,16 @@ int xstateregs_set(struct task_struct *t
+@@ -131,11 +131,16 @@ int xstateregs_set(struct task_struct *t
  
  	fpu__activate_fpstate_write(fpu);
  
