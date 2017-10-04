@@ -1,72 +1,75 @@
+From: "Roberts, William C" <william.c.roberts@intel.com>
+Date: Wed, 4 Oct 2017 16:48:08 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC563EAF4D93@ORSMSX103.amr.corp.intel.com>
+References: <1506816410-10230-1-git-send-email-me@tobin.cc>
+ <1506816410-10230-5-git-send-email-me@tobin.cc>
+ <CAGXu5jJQOduZ5evB=1w5NymUFbDNoeB4Y4u2a7zJ8k8vsAojRQ@mail.gmail.com>
+In-Reply-To: <CAGXu5jJQOduZ5evB=1w5NymUFbDNoeB4Y4u2a7zJ8k8vsAojRQ@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1506816410-10230-5-git-send-email-me@tobin.cc>
-References: <1506816410-10230-1-git-send-email-me@tobin.cc> <1506816410-10230-5-git-send-email-me@tobin.cc>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 4 Oct 2017 09:42:51 -0700
-Message-ID: <CAGXu5jJQOduZ5evB=1w5NymUFbDNoeB4Y4u2a7zJ8k8vsAojRQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [RFC V2 4/6] lib: vsprintf: default
+Subject: RE: [kernel-hardening] [RFC V2 4/6] lib: vsprintf: default
  kptr_restrict to the maximum value
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Linus Torvalds <torvalds@linux-foundation.org>
+To: Kees Cook <keescook@chromium.org>, "Tobin C. Harding" <me@tobin.cc>
+Cc: Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey
+ Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Sep 30, 2017 at 5:06 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> Set the initial value of kptr_restrict to the maximum
-> setting rather than the minimum setting, to ensure that
-> early boot logging is not leaking information.
->
-> Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> ---
->  lib/vsprintf.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
->
-> diff --git a/lib/vsprintf.c b/lib/vsprintf.c
-> index 0271223..e009325 100644
-> --- a/lib/vsprintf.c
-> +++ b/lib/vsprintf.c
-> @@ -396,7 +396,7 @@ struct printf_spec {
->  #define FIELD_WIDTH_MAX ((1 << 23) - 1)
->  #define PRECISION_MAX ((1 << 15) - 1)
->
-> -int kptr_restrict __read_mostly;
-> +int kptr_restrict __read_mostly = 4; /* maximum setting */
->
->  /*
->   * return non-zero if we should cleanse pointers for %p and %pK specifiers.
-
-I share Linus's concern that making this the unconditional default
-will break some people. The intention here (as stated in the
-changelog) is to cover anything leaked during early boot before sysctl
-settings can change this value. That shouldn't break perf (which
-should happen after sysctl settings), but it _may_ break debugging of
-early boot. I would hope that nothing would be needed there, but if we
-want to make this more configurable, we may want to consider a Kconfig
-for the default. Perhaps:
-
--int kptr_restrict __read_mostly;
-+int kptr_restrict __read_mostly = CONFIG_KPTR_RESTRICT_DEFAULT;
-
-...
-
-+config KPTR_RESTRICT_DEFAULT
-+ bool "Avoid leaking kernel pointers to userspace"
-+ default 0
-+ range 0 4
-+ help
-+   This specifies the initial value of the kptr_restrict sysctl, which
-+   controls the level of kernel pointers removed from display
-+   to userspace. 0 = off, 1 = %pK not visible to non-root, 2 = %pK
-+   not visible for any user, 3 = %p also not visible, 4 = physical and
-+   resource addresses also not visible.
-
-
-I'd argue that a default of "1" would be a sensible starting place,
-but that can be a separate patch, IMO.
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbToga2Vlc2Nvb2tAZ29vZ2xl
+LmNvbSBbbWFpbHRvOmtlZXNjb29rQGdvb2dsZS5jb21dIE9uIEJlaGFsZiBPZiBLZWVzDQo+IENv
+b2sNCj4gU2VudDogV2VkbmVzZGF5LCBPY3RvYmVyIDQsIDIwMTcgOTo0MyBBTQ0KPiBUbzogVG9i
+aW4gQy4gSGFyZGluZyA8bWVAdG9iaW4uY2M+DQo+IENjOiBHcmVnIEtIIDxncmVna2hAbGludXhm
+b3VuZGF0aW9uLm9yZz47IFBldHIgTWxhZGVrIDxwbWxhZGVrQHN1c2UuY29tPjsNCj4gSm9lIFBl
+cmNoZXMgPGpvZUBwZXJjaGVzLmNvbT47IElhbiBDYW1wYmVsbCA8aWpjQGhlbGxpb24ub3JnLnVr
+PjsgU2VyZ2V5DQo+IFNlbm96aGF0c2t5IDxzZXJnZXkuc2Vub3poYXRza3lAZ21haWwuY29tPjsg
+a2VybmVsLQ0KPiBoYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tOyBMS01MIDxsaW51eC1rZXJu
+ZWxAdmdlci5rZXJuZWwub3JnPjsgQ2F0YWxpbg0KPiBNYXJpbmFzIDxjYXRhbGluLm1hcmluYXNA
+YXJtLmNvbT47IFdpbGwgRGVhY29uIDx3aWxsLmRlYWNvbkBhcm0uY29tPjsNCj4gU3RldmVuIFJv
+c3RlZHQgPHJvc3RlZHRAZ29vZG1pcy5vcmc+OyBSb2JlcnRzLCBXaWxsaWFtIEMNCj4gPHdpbGxp
+YW0uYy5yb2JlcnRzQGludGVsLmNvbT47IENocmlzIEZyaWVzIDxjZnJpZXNAZ29vZ2xlLmNvbT47
+IERhdmUgV2VpbnN0ZWluDQo+IDxvbG9yaW5AZ29vZ2xlLmNvbT47IExpbnVzIFRvcnZhbGRzIDx0
+b3J2YWxkc0BsaW51eC1mb3VuZGF0aW9uLm9yZz4NCj4gU3ViamVjdDogUmU6IFtrZXJuZWwtaGFy
+ZGVuaW5nXSBbUkZDIFYyIDQvNl0gbGliOiB2c3ByaW50ZjogZGVmYXVsdCBrcHRyX3Jlc3RyaWN0
+IHRvDQo+IHRoZSBtYXhpbXVtIHZhbHVlDQo+IA0KPiBPbiBTYXQsIFNlcCAzMCwgMjAxNyBhdCA1
+OjA2IFBNLCBUb2JpbiBDLiBIYXJkaW5nIDxtZUB0b2Jpbi5jYz4gd3JvdGU6DQo+ID4gU2V0IHRo
+ZSBpbml0aWFsIHZhbHVlIG9mIGtwdHJfcmVzdHJpY3QgdG8gdGhlIG1heGltdW0gc2V0dGluZyBy
+YXRoZXINCj4gPiB0aGFuIHRoZSBtaW5pbXVtIHNldHRpbmcsIHRvIGVuc3VyZSB0aGF0IGVhcmx5
+IGJvb3QgbG9nZ2luZyBpcyBub3QNCj4gPiBsZWFraW5nIGluZm9ybWF0aW9uLg0KPiA+DQo+ID4g
+U2lnbmVkLW9mZi1ieTogVG9iaW4gQy4gSGFyZGluZyA8bWVAdG9iaW4uY2M+DQo+ID4gLS0tDQo+
+ID4gIGxpYi92c3ByaW50Zi5jIHwgMiArLQ0KPiA+ICAxIGZpbGUgY2hhbmdlZCwgMSBpbnNlcnRp
+b24oKyksIDEgZGVsZXRpb24oLSkNCj4gPg0KPiA+IGRpZmYgLS1naXQgYS9saWIvdnNwcmludGYu
+YyBiL2xpYi92c3ByaW50Zi5jIGluZGV4IDAyNzEyMjMuLmUwMDkzMjUNCj4gPiAxMDA2NDQNCj4g
+PiAtLS0gYS9saWIvdnNwcmludGYuYw0KPiA+ICsrKyBiL2xpYi92c3ByaW50Zi5jDQo+ID4gQEAg
+LTM5Niw3ICszOTYsNyBAQCBzdHJ1Y3QgcHJpbnRmX3NwZWMgeyAgI2RlZmluZSBGSUVMRF9XSURU
+SF9NQVggKCgxDQo+ID4gPDwgMjMpIC0gMSkgICNkZWZpbmUgUFJFQ0lTSU9OX01BWCAoKDEgPDwg
+MTUpIC0gMSkNCj4gPg0KPiA+IC1pbnQga3B0cl9yZXN0cmljdCBfX3JlYWRfbW9zdGx5Ow0KPiA+
+ICtpbnQga3B0cl9yZXN0cmljdCBfX3JlYWRfbW9zdGx5ID0gNDsgLyogbWF4aW11bSBzZXR0aW5n
+ICovDQo+ID4NCj4gPiAgLyoNCj4gPiAgICogcmV0dXJuIG5vbi16ZXJvIGlmIHdlIHNob3VsZCBj
+bGVhbnNlIHBvaW50ZXJzIGZvciAlcCBhbmQgJXBLIHNwZWNpZmllcnMuDQo+IA0KPiBJIHNoYXJl
+IExpbnVzJ3MgY29uY2VybiB0aGF0IG1ha2luZyB0aGlzIHRoZSB1bmNvbmRpdGlvbmFsIGRlZmF1
+bHQgd2lsbCBicmVhayBzb21lDQo+IHBlb3BsZS4gVGhlIGludGVudGlvbiBoZXJlIChhcyBzdGF0
+ZWQgaW4gdGhlDQo+IGNoYW5nZWxvZykgaXMgdG8gY292ZXIgYW55dGhpbmcgbGVha2VkIGR1cmlu
+ZyBlYXJseSBib290IGJlZm9yZSBzeXNjdGwgc2V0dGluZ3MgY2FuDQo+IGNoYW5nZSB0aGlzIHZh
+bHVlLiBUaGF0IHNob3VsZG4ndCBicmVhayBwZXJmICh3aGljaCBzaG91bGQgaGFwcGVuIGFmdGVy
+IHN5c2N0bA0KPiBzZXR0aW5ncyksIGJ1dCBpdCBfbWF5XyBicmVhayBkZWJ1Z2dpbmcgb2YgZWFy
+bHkgYm9vdC4gSSB3b3VsZCBob3BlIHRoYXQgbm90aGluZw0KPiB3b3VsZCBiZSBuZWVkZWQgdGhl
+cmUsIGJ1dCBpZiB3ZSB3YW50IHRvIG1ha2UgdGhpcyBtb3JlIGNvbmZpZ3VyYWJsZSwgd2UgbWF5
+DQo+IHdhbnQgdG8gY29uc2lkZXIgYSBLY29uZmlnIGZvciB0aGUgZGVmYXVsdC4gUGVyaGFwczoN
+Cj4gDQo+IC1pbnQga3B0cl9yZXN0cmljdCBfX3JlYWRfbW9zdGx5Ow0KPiAraW50IGtwdHJfcmVz
+dHJpY3QgX19yZWFkX21vc3RseSA9IENPTkZJR19LUFRSX1JFU1RSSUNUX0RFRkFVTFQ7DQo+IA0K
+PiAuLi4NCj4gDQo+ICtjb25maWcgS1BUUl9SRVNUUklDVF9ERUZBVUxUDQo+ICsgYm9vbCAiQXZv
+aWQgbGVha2luZyBrZXJuZWwgcG9pbnRlcnMgdG8gdXNlcnNwYWNlIg0KPiArIGRlZmF1bHQgMA0K
+PiArIHJhbmdlIDAgNA0KPiArIGhlbHANCj4gKyAgIFRoaXMgc3BlY2lmaWVzIHRoZSBpbml0aWFs
+IHZhbHVlIG9mIHRoZSBrcHRyX3Jlc3RyaWN0IHN5c2N0bCwgd2hpY2gNCj4gKyAgIGNvbnRyb2xz
+IHRoZSBsZXZlbCBvZiBrZXJuZWwgcG9pbnRlcnMgcmVtb3ZlZCBmcm9tIGRpc3BsYXkNCj4gKyAg
+IHRvIHVzZXJzcGFjZS4gMCA9IG9mZiwgMSA9ICVwSyBub3QgdmlzaWJsZSB0byBub24tcm9vdCwg
+MiA9ICVwSw0KPiArICAgbm90IHZpc2libGUgZm9yIGFueSB1c2VyLCAzID0gJXAgYWxzbyBub3Qg
+dmlzaWJsZSwgNCA9IHBoeXNpY2FsIGFuZA0KPiArICAgcmVzb3VyY2UgYWRkcmVzc2VzIGFsc28g
+bm90IHZpc2libGUuDQo+IA0KPiANCj4gSSdkIGFyZ3VlIHRoYXQgYSBkZWZhdWx0IG9mICIxIiB3
+b3VsZCBiZSBhIHNlbnNpYmxlIHN0YXJ0aW5nIHBsYWNlLCBidXQgdGhhdCBjYW4gYmUgYQ0KPiBz
+ZXBhcmF0ZSBwYXRjaCwgSU1PLg0KPiANCg0KSSBtaWdodCBiZSBjcmF6eSwgYXMgb2Z0ZW4gdGhl
+IGNhc2UsIGJ1dCBhICBjb21tYW5kIGxpbmUgb3B0aW9uIG1pZ2h0IGJlIHVzZWZ1bCBoZXJlDQpz
+byB5b3UgY2FuIGJvb3QgdGhlIHNhbWUga2VybmVsIHdpdGggS3B0ciA8IDQgaWYgeW91IHJlYWxs
+eSBuZWVkIHRvIGdldCBhdCBhbnkgaW5mb3JtYXRpb24NCmhpZGRlbiBieSBhIGNvbmZpZ3VyZSB0
+aW1lIHZhbHVlIG9mIDQuDQoNCj4gLUtlZXMNCj4gDQo+IC0tDQo+IEtlZXMgQ29vaw0KPiBQaXhl
+bCBTZWN1cml0eQ0K
