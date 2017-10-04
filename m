@@ -1,44 +1,74 @@
-Date: Wed, 4 Oct 2017 10:56:57 +0200
+Date: Wed, 4 Oct 2017 10:57:56 +0200
 From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20171004085657.GC28247@kroah.com>
+Message-ID: <20171004085756.GD28247@kroah.com>
 References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <1506816410-10230-3-git-send-email-me@tobin.cc>
- <20171002104205.GC3823@arm.com>
+ <20171001001105.GA10409@eros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171002104205.GC3823@arm.com>
-Subject: Re: [kernel-hardening] [RFC V2 2/6] lib: vsprintf: whitelist stack
- traces
-To: Will Deacon <will.deacon@arm.com>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+In-Reply-To: <20171001001105.GA10409@eros>
+Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
+ options
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 02, 2017 at 11:42:05AM +0100, Will Deacon wrote:
-> On Sun, Oct 01, 2017 at 11:06:46AM +1100, Tobin C. Harding wrote:
-> > Use the %pP functionality to explicitly allow kernel
-> > pointers to be logged for stack traces.
-> > 
-> > Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> > ---
-> >  arch/arm64/kernel/traps.c | 4 ++--
-> >  kernel/printk/printk.c    | 2 +-
-> >  2 files changed, 3 insertions(+), 3 deletions(-)
-> > 
-> > diff --git a/arch/arm64/kernel/traps.c b/arch/arm64/kernel/traps.c
-> > index 5ea4b85..fe09660 100644
-> > --- a/arch/arm64/kernel/traps.c
-> > +++ b/arch/arm64/kernel/traps.c
-> > @@ -147,7 +147,7 @@ void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
-> >  	struct stackframe frame;
-> >  	int skip;
-> >  
-> > -	pr_debug("%s(regs = %p tsk = %p)\n", __func__, regs, tsk);
-> > +	pr_debug("%s(regs = %pP tsk = %pP)\n", __func__, regs, tsk);
+On Sun, Oct 01, 2017 at 11:11:05AM +1100, Tobin C. Harding wrote:
+> On Sun, Oct 01, 2017 at 11:06:44AM +1100, Tobin C. Harding wrote:
+> > Version 2 of Greg's patch series with changes made as suggested by comments to V1.
 > 
-> Why do we care for pr_debug?
+> Patch set tested by setting /proc/sys/kernel/kptr_restrict and inserting the following module
+> 
+> #include <linux/init.h>
+> #include <linux/module.h>
+> 
+> #define DRIVER_AUTHOR "Tobin C. Harding <me@tobin.cc>"
+> #define DRIVER_DESC "Testing module"
+> 
+> static void test_printk(void)
+> {
+> 	char *ptr = "";
+> 
+> 	pr_alert("printing with p: %p\n", ptr);
+> 	pr_alert("printing with pK: %pK\n", ptr);
+> 	pr_alert("printing with pP: %pP\n", ptr);
+> 
+> 	pr_alert("printing with pa: %pa\n", ptr);
+> 	pr_alert("printing with pad: %pad\n", ptr);
+> 	pr_alert("printing with pap: %pap\n", ptr);
+> 
+> 	pr_alert("printing with paP: %paP\n", ptr);
+> 	pr_alert("printing with padP: %padP\n", ptr);
+> 	pr_alert("printing with papP: %papP\n", ptr);
+> 
+> 	pr_alert("printing with pr: %pr\n", ptr);
+> 	pr_alert("printing with pR: %pR\n", ptr);
+> }
+> 
+> static int hello_init(void)
+> {
+> 	pr_alert("Hello, world\n");
+> 
+> 	test_printk();
+> 
+> 	return 0;
+> }
+> module_init(hello_init);
+> 
+> static void hello_exit(void)
+> {
+> 	pr_alert("Goodbye, world\n");
+> }
+> module_exit(hello_exit);
+> 
+> MODULE_DESCRIPTION(DRIVER_DESC);
+> MODULE_AUTHOR(DRIVER_AUTHOR);
+> MODULE_LICENSE("GPL");
 
-Because you really want the real value?  Seems to make sense to me...
+
+Hm, any way to add something like this to the testing infrastructure?
+Or maybe just at boot time?  It's nice to keep tests around to ensure
+things do not break :)
 
 thanks,
 
