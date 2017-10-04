@@ -1,33 +1,42 @@
-Date: Wed, 4 Oct 2017 12:54:00 -0400
-From: Steven Rostedt <rostedt@goodmis.org>
-Message-ID: <20171004125400.36a8e8f7@gandalf.local.home>
-In-Reply-To: <CA+55aFwmVdeLFs1-HJGXeOBz5WgJinCDNAu7mcr+fJhjQp+mEg@mail.gmail.com>
-References: <1506816410-10230-1-git-send-email-me@tobin.cc>
-	<CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
-	<CAFUG7CcQoJZ9SyGnD61xjkc6nCQhbgnqBJ0k-PkQxE9iTo2+SA@mail.gmail.com>
-	<CA+55aFwmVdeLFs1-HJGXeOBz5WgJinCDNAu7mcr+fJhjQp+mEg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
- options
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Boris Lukashev <blukashev@sempervictus.com>, "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+Sender: linus971@gmail.com
+In-Reply-To: <CA+55aFxBrFsN0wm1_SyafNZ6GHxCLBvwmRaAzfKD9xnS7K3XGg@mail.gmail.com>
+References: <1506816410-10230-1-git-send-email-me@tobin.cc>
+ <1506816410-10230-5-git-send-email-me@tobin.cc> <CAGXu5jJQOduZ5evB=1w5NymUFbDNoeB4Y4u2a7zJ8k8vsAojRQ@mail.gmail.com>
+ <CA+55aFxBrFsN0wm1_SyafNZ6GHxCLBvwmRaAzfKD9xnS7K3XGg@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Wed, 4 Oct 2017 10:28:13 -0700
+Message-ID: <CA+55aFw-MCtMHb6mAoTXU8dJCRNfwzrV7tS=aQZXryfeB9TExg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [RFC V2 4/6] lib: vsprintf: default
+ kptr_restrict to the maximum value
+To: Kees Cook <keescook@chromium.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 4 Oct 2017 09:29:16 -0700
-Linus Torvalds <torvalds@linux-foundation.org> wrote:
+On Wed, Oct 4, 2017 at 10:08 AM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+>
+> So I honestly doubt the value of kptr_restrict. Any *sane* policy
+> pretty much has to be in the caller, and by thinking about what you
+> print out. IOW, things like proc_pid_wchan().
 
-> If this is seriously the quality of excuses for this patch-series, I
-> never ever want to see those patches again.
+Looking at /proc/kallsyms is actually a prime example of this.
 
-Note, the one you are replying to isn't the author of the patches nor
-was he even Cc'd in the patch series.
+IOW, the old "open /proc/kallsyms as a normal user, then make it stdin
+for some suid-root program that can be fooled to output it probably
+works on it.
 
-I wouldn't judge the quality of these patches on some random reply from
-someone.
+So kptr_restrict ends up being entirely the wrong thing to do there.
 
-I have no skin in this game, but I don't want the developers of a
-series to be judged by random emails in the thread.
+The only value in kptr_restrict ends up being as a complete hack,
+where you say "I trust nobody" and make %p almost entirely useless.
 
--- Steve
+And as mentioned, that will just make people use %x instead, or
+randomly sprinkle the new "I didn't really mean this" modifiers like
+the already discussed pr_debug() case.
+
+So even when kptr_restrict "works", it ends up just fighting itself.
+And most of the time it just doesn't work.
+
+                Linus
