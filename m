@@ -1,225 +1,85 @@
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed,  4 Oct 2017 14:20:03 -0700
-Message-Id: <20171004212003.28296-28-thgarnie@google.com>
-In-Reply-To: <20171004212003.28296-1-thgarnie@google.com>
-References: <20171004212003.28296-1-thgarnie@google.com>
-Subject: [kernel-hardening] [RFC v3 27/27] x86/kaslr: Add option to extend KASLR range from 1GB to 3GB
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Thomas Garnier <thgarnie@google.com>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Matthias Kaehlcke <mka@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Chris Wright <chrisw@sous-sol.org>, Alok Kataria <akataria@vmware.com>, Rusty Russell <rusty@rustcorp.com.au>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Alexey Dobriyan <adobriyan@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Borislav Petkov <bp@alien8.de>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Christopher Li <sparse@chrisli.org>, Steven Rostedt <rostedt@goodmis.org>, Jason Baron <jbaron@akamai.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Lukas Wunner <lukas@wunner.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Jonathan Corbet <corbet@lwn.net>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Peter Foley <pefoley2@pefoley.com>, Paul Bolle <pebolle@tiscali.nl>, Jiri Kosina <jkosina@suse.cz>, Rob Landley <rob@landley.net>, "H . J . Lu" <hjl.tools@gmail.com>, Baoquan He <bhe@redhat.com>, =?UTF-8?q?Jan=20H=20=2E=20Sch=C3=B6nherr?= <jschoenh@amazon.de>, Daniel Micay <danielmicay@gmail.com>
-Cc: x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux-pm@vger.kernel.org, virtualization@lists.linux-foundation.org, xen-devel@lists.xenproject.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: "Roberts, William C" <william.c.roberts@intel.com>
+Date: Wed, 4 Oct 2017 21:58:24 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC563EAF4F29@ORSMSX103.amr.corp.intel.com>
+References: <1506816410-10230-1-git-send-email-me@tobin.cc>
+ <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
+ <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
+ <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
+In-Reply-To: <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: RE: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
+ options
+To: Linus Torvalds <torvalds@linux-foundation.org>, Jordan Glover <Golden_Miller83@protonmail.ch>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave
+ Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a new CONFIG_RANDOMIZE_BASE_LARGE option to benefit from PIE
-support. It increases the KASLR range from 1GB to 3GB. The new range
-stars at 0xffffffff00000000 just above the EFI memory region. This
-option is off by default.
-
-The boot code is adapted to create the appropriate page table spanning
-three PUD pages.
-
-The relocation table uses 64-bit integers generated with the updated
-relocation tool with the large-reloc option.
-
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
----
- arch/x86/Kconfig                     | 21 +++++++++++++++++++++
- arch/x86/boot/compressed/Makefile    |  5 +++++
- arch/x86/boot/compressed/misc.c      | 10 +++++++++-
- arch/x86/include/asm/page_64_types.h |  9 +++++++++
- arch/x86/kernel/head64.c             | 15 ++++++++++++---
- arch/x86/kernel/head_64.S            | 11 ++++++++++-
- 6 files changed, 66 insertions(+), 5 deletions(-)
-
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index b92f96923712..81f4512549d1 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -2149,6 +2149,27 @@ config X86_PIE
- 	select MODULE_REL_CRCS if MODVERSIONS
- 	select X86_GLOBAL_STACKPROTECTOR if CC_STACKPROTECTOR
- 
-+config RANDOMIZE_BASE_LARGE
-+	bool "Increase the randomization range of the kernel image"
-+	depends on X86_64 && RANDOMIZE_BASE
-+	select X86_PIE
-+	select X86_MODULE_PLTS if MODULES
-+	default n
-+	---help---
-+	  Build the kernel as a Position Independent Executable (PIE) and
-+	  increase the available randomization range from 1GB to 3GB.
-+
-+	  This option impacts performance on kernel CPU intensive workloads up
-+	  to 10% due to PIE generated code. Impact on user-mode processes and
-+	  typical usage would be significantly less (0.50% when you build the
-+	  kernel).
-+
-+	  The kernel and modules will generate slightly more assembly (1 to 2%
-+	  increase on the .text sections). The vmlinux binary will be
-+	  significantly smaller due to less relocations.
-+
-+	  If unsure say N
-+
- config HOTPLUG_CPU
- 	bool "Support for hot-pluggable CPUs"
- 	depends on SMP
-diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
-index 8a958274b54c..94dfee5a7cd2 100644
---- a/arch/x86/boot/compressed/Makefile
-+++ b/arch/x86/boot/compressed/Makefile
-@@ -112,7 +112,12 @@ $(obj)/vmlinux.bin: vmlinux FORCE
- 
- targets += $(patsubst $(obj)/%,%,$(vmlinux-objs-y)) vmlinux.bin.all vmlinux.relocs
- 
-+# Large randomization require bigger relocation table
-+ifeq ($(CONFIG_RANDOMIZE_BASE_LARGE),y)
-+CMD_RELOCS = arch/x86/tools/relocs --large-reloc
-+else
- CMD_RELOCS = arch/x86/tools/relocs
-+endif
- quiet_cmd_relocs = RELOCS  $@
-       cmd_relocs = $(CMD_RELOCS) $< > $@;$(CMD_RELOCS) --abs-relocs $<
- $(obj)/vmlinux.relocs: vmlinux FORCE
-diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
-index c14217cd0155..c1ac9f2e283d 100644
---- a/arch/x86/boot/compressed/misc.c
-+++ b/arch/x86/boot/compressed/misc.c
-@@ -169,10 +169,18 @@ void __puthex(unsigned long value)
- }
- 
- #if CONFIG_X86_NEED_RELOCS
-+
-+/* Large randomization go lower than -2G and use large relocation table */
-+#ifdef CONFIG_RANDOMIZE_BASE_LARGE
-+typedef long rel_t;
-+#else
-+typedef int rel_t;
-+#endif
-+
- static void handle_relocations(void *output, unsigned long output_len,
- 			       unsigned long virt_addr)
- {
--	int *reloc;
-+	rel_t *reloc;
- 	unsigned long delta, map, ptr;
- 	unsigned long min_addr = (unsigned long)output;
- 	unsigned long max_addr = min_addr + (VO___bss_start - VO__text);
-diff --git a/arch/x86/include/asm/page_64_types.h b/arch/x86/include/asm/page_64_types.h
-index 3f5f08b010d0..6b65f846dd64 100644
---- a/arch/x86/include/asm/page_64_types.h
-+++ b/arch/x86/include/asm/page_64_types.h
-@@ -48,7 +48,11 @@
- #define __PAGE_OFFSET           __PAGE_OFFSET_BASE
- #endif /* CONFIG_RANDOMIZE_MEMORY */
- 
-+#ifdef CONFIG_RANDOMIZE_BASE_LARGE
-+#define __START_KERNEL_map	_AC(0xffffffff00000000, UL)
-+#else
- #define __START_KERNEL_map	_AC(0xffffffff80000000, UL)
-+#endif /* CONFIG_RANDOMIZE_BASE_LARGE */
- 
- /* See Documentation/x86/x86_64/mm.txt for a description of the memory map. */
- #ifdef CONFIG_X86_5LEVEL
-@@ -65,9 +69,14 @@
-  * 512MiB by default, leaving 1.5GiB for modules once the page tables
-  * are fully set up. If kernel ASLR is configured, it can extend the
-  * kernel page table mapping, reducing the size of the modules area.
-+ * On PIE, we relocate the binary 2G lower so add this extra space.
-  */
- #if defined(CONFIG_RANDOMIZE_BASE)
-+#ifdef CONFIG_RANDOMIZE_BASE_LARGE
-+#define KERNEL_IMAGE_SIZE	(_AC(3, UL) * 1024 * 1024 * 1024)
-+#else
- #define KERNEL_IMAGE_SIZE	(1024 * 1024 * 1024)
-+#endif
- #else
- #define KERNEL_IMAGE_SIZE	(512 * 1024 * 1024)
- #endif
-diff --git a/arch/x86/kernel/head64.c b/arch/x86/kernel/head64.c
-index b6363f0d11a7..d603d0f5a40a 100644
---- a/arch/x86/kernel/head64.c
-+++ b/arch/x86/kernel/head64.c
-@@ -39,6 +39,7 @@ static unsigned int __initdata next_early_pgt;
- pmdval_t early_pmd_flags = __PAGE_KERNEL_LARGE & ~(_PAGE_GLOBAL | _PAGE_NX);
- 
- #define __head	__section(.head.text)
-+#define pud_count(x)   (((x + (PUD_SIZE - 1)) & ~(PUD_SIZE - 1)) >> PUD_SHIFT)
- 
- static void __head *fixup_pointer(void *ptr, unsigned long physaddr)
- {
-@@ -56,6 +57,8 @@ unsigned long __head notrace __startup_64(unsigned long physaddr,
- {
- 	unsigned long load_delta, *p;
- 	unsigned long pgtable_flags;
-+	unsigned long level3_kernel_start, level3_kernel_count;
-+	unsigned long level3_fixmap_start;
- 	pgdval_t *pgd;
- 	p4dval_t *p4d;
- 	pudval_t *pud;
-@@ -83,6 +86,11 @@ unsigned long __head notrace __startup_64(unsigned long physaddr,
- 	/* Include the SME encryption mask in the fixup value */
- 	load_delta += sme_get_me_mask();
- 
-+	/* Look at the randomization spread to adapt page table used */
-+	level3_kernel_start = pud_index(__START_KERNEL_map);
-+	level3_kernel_count = pud_count(KERNEL_IMAGE_SIZE);
-+	level3_fixmap_start = level3_kernel_start + level3_kernel_count;
-+
- 	/* Fixup the physical addresses in the page table */
- 
- 	pgd = fixup_pointer(&early_top_pgt, physaddr);
-@@ -94,8 +102,9 @@ unsigned long __head notrace __startup_64(unsigned long physaddr,
- 	}
- 
- 	pud = fixup_pointer(&level3_kernel_pgt, physaddr);
--	pud[510] += load_delta;
--	pud[511] += load_delta;
-+	for (i = 0; i < level3_kernel_count; i++)
-+		pud[level3_kernel_start + i] += load_delta;
-+	pud[level3_fixmap_start] += load_delta;
- 
- 	pmd = fixup_pointer(level2_fixmap_pgt, physaddr);
- 	pmd[506] += load_delta;
-@@ -150,7 +159,7 @@ unsigned long __head notrace __startup_64(unsigned long physaddr,
- 	 */
- 
- 	pmd = fixup_pointer(level2_kernel_pgt, physaddr);
--	for (i = 0; i < PTRS_PER_PMD; i++) {
-+	for (i = 0; i < PTRS_PER_PMD * level3_kernel_count; i++) {
- 		if (pmd[i] & _PAGE_PRESENT)
- 			pmd[i] += load_delta;
- 	}
-diff --git a/arch/x86/kernel/head_64.S b/arch/x86/kernel/head_64.S
-index df5198e310fc..7918ffefc9c9 100644
---- a/arch/x86/kernel/head_64.S
-+++ b/arch/x86/kernel/head_64.S
-@@ -39,11 +39,15 @@
- 
- #define p4d_index(x)	(((x) >> P4D_SHIFT) & (PTRS_PER_P4D-1))
- #define pud_index(x)	(((x) >> PUD_SHIFT) & (PTRS_PER_PUD-1))
-+#define pud_count(x)   (((x + (PUD_SIZE - 1)) & ~(PUD_SIZE - 1)) >> PUD_SHIFT)
- 
- PGD_PAGE_OFFSET = pgd_index(__PAGE_OFFSET_BASE)
- PGD_START_KERNEL = pgd_index(__START_KERNEL_map)
- L3_START_KERNEL = pud_index(__START_KERNEL_map)
- 
-+/* Adapt page table L3 space based on range of randomization */
-+L3_KERNEL_ENTRY_COUNT = pud_count(KERNEL_IMAGE_SIZE)
-+
- 	.text
- 	__HEAD
- 	.code64
-@@ -413,7 +417,12 @@ NEXT_PAGE(level4_kernel_pgt)
- NEXT_PAGE(level3_kernel_pgt)
- 	.fill	L3_START_KERNEL,8,0
- 	/* (2^48-(2*1024*1024*1024)-((2^39)*511))/(2^30) = 510 */
--	.quad	level2_kernel_pgt - __START_KERNEL_map + _KERNPG_TABLE_NOENC
-+	i = 0
-+	.rept	L3_KERNEL_ENTRY_COUNT
-+	.quad	level2_kernel_pgt - __START_KERNEL_map + _KERNPG_TABLE_NOENC \
-+		+ PAGE_SIZE*i
-+	i = i + 1
-+	.endr
- 	.quad	level2_fixmap_pgt - __START_KERNEL_map + _PAGE_TABLE_NOENC
- 
- NEXT_PAGE(level2_kernel_pgt)
--- 
-2.14.2.920.gcf0c67979c-goog
+DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbTogbGludXM5NzFAZ21haWwu
+Y29tIFttYWlsdG86bGludXM5NzFAZ21haWwuY29tXSBPbiBCZWhhbGYgT2YgTGludXMNCj4gVG9y
+dmFsZHMNCj4gU2VudDogV2VkbmVzZGF5LCBPY3RvYmVyIDQsIDIwMTcgMTI6MTkgUE0NCj4gVG86
+IEpvcmRhbiBHbG92ZXIgPEdvbGRlbl9NaWxsZXI4M0Bwcm90b25tYWlsLmNoPg0KPiBDYzogVG9i
+aW4gQy4gSGFyZGluZyA8bWVAdG9iaW4uY2M+OyBHcmVnIEtIIDxncmVna2hAbGludXhmb3VuZGF0
+aW9uLm9yZz47DQo+IFBldHIgTWxhZGVrIDxwbWxhZGVrQHN1c2UuY29tPjsgSm9lIFBlcmNoZXMg
+PGpvZUBwZXJjaGVzLmNvbT47IElhbg0KPiBDYW1wYmVsbCA8aWpjQGhlbGxpb24ub3JnLnVrPjsg
+U2VyZ2V5IFNlbm96aGF0c2t5DQo+IDxzZXJnZXkuc2Vub3poYXRza3lAZ21haWwuY29tPjsga2Vy
+bmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2FsbC5jb207DQo+IENhdGFsaW4gTWFyaW5hcyA8Y2F0
+YWxpbi5tYXJpbmFzQGFybS5jb20+OyBXaWxsIERlYWNvbg0KPiA8d2lsbC5kZWFjb25AYXJtLmNv
+bT47IFN0ZXZlbiBSb3N0ZWR0IDxyb3N0ZWR0QGdvb2RtaXMub3JnPjsgUm9iZXJ0cywNCj4gV2ls
+bGlhbSBDIDx3aWxsaWFtLmMucm9iZXJ0c0BpbnRlbC5jb20+OyBDaHJpcyBGcmllcyA8Y2ZyaWVz
+QGdvb2dsZS5jb20+OyBEYXZlDQo+IFdlaW5zdGVpbiA8b2xvcmluQGdvb2dsZS5jb20+DQo+IFN1
+YmplY3Q6IFJlOiBba2VybmVsLWhhcmRlbmluZ10gW1JGQyBWMiAwLzZdIGFkZCBtb3JlIGtlcm5l
+bCBwb2ludGVyIGZpbHRlcg0KPiBvcHRpb25zDQo+IA0KPiBPbiBXZWQsIE9jdCA0LCAyMDE3IGF0
+IDExOjU4IEFNLCBKb3JkYW4gR2xvdmVyDQo+IDxHb2xkZW5fTWlsbGVyODNAcHJvdG9ubWFpbC5j
+aD4gd3JvdGU6DQo+ID4gSWYgd2Uga25ldyB3aGVyZSB0aG9zZSBsZWFrcyBhcmUgaGlkaW5nIHRo
+ZXkgd2lsbCBiZSBmaXhlZCBhbHJlYWR5Lg0KPiA+IFRoZSBvbmx5IHRoaW5nIHdlIGtuZXcgaXMg
+dGhhdCBidWdzL2xlYWtzIGFyZSB0aGVyZS4gSXQncyBhbHdheXMNCj4gPiBiZXR0ZXIgdG8ganVz
+dCBmaXggYWxsIHRoZSBjb2RlIGJ1dCBpdCBpc24ndCByZWFsaXN0aWMuDQo+IA0KPiBIb25lc3Rs
+eSwgd2hhdCdzIHRoZSBkaWZmZXJlbmNlIGJldHdlZW4gc2V0dGluZyBrcHRyX3Jlc3RyaWN0IHRv
+IDQgYW5kIGp1c3QgdXNpbmcNCj4gYSBzZWQtc2NyaXB0IChvciBtYXliZSBzb21lIGNvY2NpbmVs
+bGUpIHRvIHJlbW92ZSBhbGwgZXhpc3RpbmcgcGxhaW4gJXAgdXNlcnM/DQoNCkkgY2FuIGFscmVh
+ZHkgc2VlIHRoZSBoYXRlIGZpbGxlZCBpcmF0ZSByZXNwb25zZSBJJ2xsIGdldCB0byB0aGlzIHN0
+YXRlbWVudCwgdGhhbmtmdWxseSBJIHdpbGwNCmJlIGF3YXkgbm90IGNhcmluZy4NCg0KVGhlIGtl
+cm5lbCBwcm9wZXIgaXMgaW4gYSBwbGFjZSB3aGVyZSBpdCBjYW4gYXR0ZW1wdCB0byBkZWZlbmQg
+aXRzZWxmIGFnYWluc3Qgc3R1cGlkaXR5LCBlaXRoZXIgaW4NCnRyZWUgb3Igb3V0IG9mIHRyZWUu
+IFdpbGwgaXQgc3RvcCBldmVyeXRoaW5nPyBPYnZpb3VzbHkgbm90LCBsaWtlIHlvdSBzYWlkICV4
+IG9yIGRpc2FibGluZy4NCg0KSSBhZ3JlZSB3aXRoIHlvdSAxMDAlIGtwdHIgcmVzdHJpY3QgaXMg
+b2RkLCBhbmQgSSBkb24ndCB0aGluayBhbnlvbmUgc2hvdWxkIGhhdmUgaGFkIHRvIG9wdCBpbiB0
+byBiZQ0KY2xlYW5zZWQgdmlhIGtwdHJfcmVzdHJpY3QgdmFsdWUgdmlhICVwSy4gT3B0LWluIG5l
+dmVyIHdvcmtzLiBPbmUgbmljZSB0aGluZyBub3csIGlzIHRoYXQgY2hlY2twYXRjaA0KaGFzIGNo
+ZWNraW5nIG9mICVwIHVzYWdlcyBhbmQgd2FybnMuDQogDQpBcyBmYXIgYXMgYnJva2VuIHRoaW5n
+cywgSSBjYW4ndCBjb21tZW50IG9uIGRlc2t0b3Agc3lzdGVtcyB3aGVyZSBJIHRoaW5rIGl0J3Mg
+aGFyZGVyIHRvIG1ha2UgdGhhdCBjbGFpbS4NCkkgc2VlIHZhbHVlIGluIGVtYmVkZGVkIHN5c3Rl
+bXMgd2hlcmUgSSBhbSBzaGlwcGluZyB0aGUgd2hvbGUgaW1hZ2UsIFNvIEkga25vdyB3aGVuL3do
+YXQgd2lsbA0KYnJlYWsuDQoNCklmIHRoaXMgd2FzIGluLXRyZWUsIEFuZHJvaWQgd291bGQgYmUg
+c2V0dGluZyB0aGlzIHRvIDQgaW1tZWRpYXRlbHkgRldJVy4NCg0KPiANCj4gT25lIGp1c3QgaGlk
+ZXMgdGhlIGlzc3VlIGFuZCB3aWxsIG1ha2UgcGVvcGxlIHdvcmsgYXJvdW5kIGl0IChsaWtlbHkg
+b24gYSBnbG9iYWwNCj4gbGV2ZWwgYnkganVzdCB1bmRvaW5nIGl0KS4NCj4gDQo+IFRoZSBvdGhl
+ciB3b3VsZCAqYWxzbyogbWFrZSBwZW9wbGUgd29yayBhcm91bmQgaXQgZm9yIHdoZW4gdGhleSBu
+b3RpY2UNCj4gYnJlYWthZ2UsIGJ1dCB3b3VsZCBhY3R1YWxseSBmb3JjZSBwZW9wbGUgdG8gZG8g
+aXQgb24gYSBjYXNlLWJ5LWNhc2UgYmFzaXMgKGFuZA0KPiB0aHVzIGhvcGVmdWxseSBfcHJvcGVy
+bHlfKSByYXRoZXIgdGhhbiBqdXN0IHNldHRpbmcga3B0cl9yZXN0cmljdCBiYWNrIHRvIDAuDQo+
+IA0KPiBCdHcsIHRoaXMgaXMgKm5vdCogYSB0aGVvcmV0aWNhbCBhcmd1bWVudC4NCj4gDQo+IFdF
+IEhBVkUgQkVFTiBIRVJFLCBET05FIFRISVMhDQo+IA0KPiBrcHRyX3Jlc3RyaWN0IGdvZXMgYmFj
+ayB0byA2KyB5ZWFycyBhZ28sIGFuZCB3YXMgYWN0dWFsbHkgaW5pdGlhbGx5IHNldCB0byBhDQo+
+IHJlc3RyaWN0aXZlIHZhbHVlLiBJdCBnb3QgdW5kb25lLCBleGFjdGx5IGJlY2F1c2UgaXQgY2F1
+c2VkIHByb2JsZW1zLiBJdCdzIHRvbyBiaWcgb2YNCj4gYSBoYW1tZXIsIGFuZCBpdCdzIHRvbyAq
+YnJva2VuKiBvZiBhIGhhbW1lci4NCj4gDQo+IEFuZCBleGFjdGx5IGJlY2F1c2Uga3B0cl9yZXN0
+cmljdCB3YXMgcHJldHR5IG11Y2ggYW4gImFsbCBvciBub3RoaW5nIg0KPiB0aGluZywgYWJzb2x1
+dGVseSAqTk9USElORyogaGFzIGltcHJvdmVkIGluIHRoZSA2KyB5ZWFycyBzaW5jZSBpdCB3YXMN
+Cj4gaW50cm9kdWNlZC4NCj4gDQo+IFdlIGhhdmUgaGFkIGltcHJvdmVtZW50cyBpbiBvdXIgcG9p
+bnRlciBwcmludGluZyB0aGF0IHdlcmUgX25vdF8gcmVsYXRlZCB0bw0KPiBrcHRyX3Jlc3RyaWN0
+LCB0aG91Z2gsIFNlZSBmb3IgZXhhbXBsZSBjb21taXQgYmI1ZTVjZTU0NWYyDQo+ICgieDg2L2R1
+bXBzdGFjazogUmVtb3ZlIGtlcm5lbCB0ZXh0IGFkZHJlc3NlcyBmcm9tIHN0YWNrIGR1bXAiKS4N
+Cj4gDQo+IFRob3NlIGhhdmUgYWN0dWFsbHkgYmVlbiBfcmVhbF8gZml4ZXMgZm9yIGxlYWtpbmcg
+dGhpbmdzLCB1bmxpa2Uga3B0cl9yZXN0cmljdC4NCj4gDQo+IFRoaXMgaXMgd2h5IEkgbWFpbnRh
+aW4gdGhhdCBrcHRyX3Jlc3RyaWN0IGlzIGJhZC4gSXQncyBhIGJhZGx5IHRob3VnaHQgb3V0IGlu
+dGVyZmFjZS4NCj4gSXQncyB3cm9uZy4NCj4gDQo+IFdlIGtub3cgaXQgaXMgY3JhcCwgZXhhY3Rs
+eSBiZWNhdXNlIHdlJ3ZlIGFscmVhZHkgYmVlbiB0aGVyZS4gVGhlIHdob2xlIG5vdGlvbg0KPiBv
+ZiBhIGdsb2JhbCBzd2l0Y2ggaXMgc2VyaW91c2x5IG1pcy1kZXNpZ25lZC4NCj4gDQo+IFNvIEkg
+cmVhbGx5IGRvIHRoaW5rIHRoYXQgaXQgd291bGQgYmUgYmV0dGVyIHRvIGp1c3Qgd3JpdGUgYSBz
+Y3JpcHQgdG8gZ2V0IHJpZCBvZiBhbGwgcmF3DQo+ICVwIHVzZXJzLCBhbmQgdGhlbiBwdXQgdGhl
+IG9uZXMgdGhhdCBhcmUgbmVlZGVkIChob3BlZnVsbHkgdmVyeSBmZXcpIGJhY2suDQo+IA0KPiBJ
+dCB3b3VsZG4ndCByZXF1aXJlIG9kZCBuZXcgbWFnaWMgc2VxdWVuY2VzIHRvIG92ZXJyaWRlICJJ
+IGFjdHVhbGx5IF9kb18gd2FudA0KPiAlcCIuDQo+IA0KPiAgICAgICAgICAgICAgIExpbnVzDQo=
