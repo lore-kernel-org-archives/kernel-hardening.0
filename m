@@ -1,42 +1,116 @@
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CA+55aFxBrFsN0wm1_SyafNZ6GHxCLBvwmRaAzfKD9xnS7K3XGg@mail.gmail.com>
+Date: Wed, 04 Oct 2017 14:58:31 -0400
+From: Jordan Glover <Golden_Miller83@protonmail.ch>
+Message-ID: <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
+In-Reply-To: <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
 References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <1506816410-10230-5-git-send-email-me@tobin.cc> <CAGXu5jJQOduZ5evB=1w5NymUFbDNoeB4Y4u2a7zJ8k8vsAojRQ@mail.gmail.com>
- <CA+55aFxBrFsN0wm1_SyafNZ6GHxCLBvwmRaAzfKD9xnS7K3XGg@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Wed, 4 Oct 2017 10:28:13 -0700
-Message-ID: <CA+55aFw-MCtMHb6mAoTXU8dJCRNfwzrV7tS=aQZXryfeB9TExg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [RFC V2 4/6] lib: vsprintf: default
- kptr_restrict to the maximum value
-To: Kees Cook <keescook@chromium.org>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+ <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+	boundary="b1_6593c363725eb8bf57fac569ae415a26"
+Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 4, 2017 at 10:08 AM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
->
-> So I honestly doubt the value of kptr_restrict. Any *sane* policy
-> pretty much has to be in the caller, and by thinking about what you
-> print out. IOW, things like proc_pid_wchan().
+This is a multi-part message in MIME format.
 
-Looking at /proc/kallsyms is actually a prime example of this.
+--b1_6593c363725eb8bf57fac569ae415a26
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: base64
 
-IOW, the old "open /proc/kallsyms as a normal user, then make it stdin
-for some suid-root program that can be fooled to output it probably
-works on it.
+SWYgd2Uga25ldyB3aGVyZSB0aG9zZSBsZWFrcyBhcmUgaGlkaW5nIHRoZXkgd2lsbCBiZSBmaXhl
+ZCBhbHJlYWR5LiBUaGUgb25seSB0aGluZyB3ZSBrbmV3IGlzIHRoYXQgYnVncy9sZWFrcyBhcmUg
+dGhlcmUuIEl0J3MgYWx3YXlzIGJldHRlciB0byBqdXN0IGZpeCBhbGwgdGhlIGNvZGUgYnV0IGl0
+IGlzbid0IHJlYWxpc3RpYy4gVGhhdCdzIHdoYXQgMjUgeWVhcnMgb2Yga2VybmVsIGRldmVsb3Bt
+ZW50IHRlYWNoZXMgdXMuIFByb2FjdGl2ZSBkZWZlbnNlIGlzIGltcGVyZmVjdCwgb2JzY3VyZSwg
+c29tZXRpbWVzIHVnbHkgYnV0IGl0J3Mgb2Z0ZW4gYmVzdCBvcHRpb24gd2UgaGF2ZSB3aGljaCBi
+dXkgdXMgbW9yZSB0aW1lIGZvciBmaXhpbmcgYWN0dWFsIGJ1Z3MvbGVha3MuIEJlaW5nIGhvbmVz
+dCB0byBvdXIgdXNlcnMgd2UgY2FuJ3QgcHJldGVuZCB0aGF0IGtlcm5lbCBjb2RlIGlzIGJ1Zy9s
+ZWFrZnJlZS4gVGhleSBkZXNlcnZlIHNvbWV0aGluZyBiZXR0ZXIuCgpZb3VycyBzaW5jZXJlbHks
+CgpKb3JkYW4KCj4gLS0tLS0tLS0gT3JpZ2luYWwgTWVzc2FnZSAtLS0tLS0tLQo+IFN1YmplY3Q6
+IFJlOiBba2VybmVsLWhhcmRlbmluZ10gW1JGQyBWMiAwLzZdIGFkZCBtb3JlIGtlcm5lbCBwb2lu
+dGVyIGZpbHRlciBvcHRpb25zCj4gTG9jYWwgVGltZTogT2N0b2JlciA0LCAyMDE3IDM6NDEgUE0K
+PiBVVEMgVGltZTogT2N0b2JlciA0LCAyMDE3IDM6NDEgUE0KPiBGcm9tOiB0b3J2YWxkc0BsaW51
+eC1mb3VuZGF0aW9uLm9yZwo+IFRvOiBUb2JpbiBDLiBIYXJkaW5nIDxtZUB0b2Jpbi5jYz4KPiBH
+cmVnIEtIIDxncmVna2hAbGludXhmb3VuZGF0aW9uLm9yZz4sIFBldHIgTWxhZGVrIDxwbWxhZGVr
+QHN1c2UuY29tPiwgSm9lIFBlcmNoZXMgPGpvZUBwZXJjaGVzLmNvbT4sIElhbiBDYW1wYmVsbCA8
+aWpjQGhlbGxpb24ub3JnLnVrPiwgU2VyZ2V5IFNlbm96aGF0c2t5IDxzZXJnZXkuc2Vub3poYXRz
+a3lAZ21haWwuY29tPiwga2VybmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2FsbC5jb20gPGtlcm5l
+bC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tPiwgTGludXggS2VybmVsIE1haWxpbmcgTGlz
+dCA8bGludXgta2VybmVsQHZnZXIua2VybmVsLm9yZz4sIENhdGFsaW4gTWFyaW5hcyA8Y2F0YWxp
+bi5tYXJpbmFzQGFybS5jb20+LCBXaWxsIERlYWNvbiA8d2lsbC5kZWFjb25AYXJtLmNvbT4sIFN0
+ZXZlbiBSb3N0ZWR0IDxyb3N0ZWR0QGdvb2RtaXMub3JnPiwgV2lsbGlhbSBSb2JlcnRzIDx3aWxs
+aWFtLmMucm9iZXJ0c0BpbnRlbC5jb20+LCBDaHJpcyBGcmllcyA8Y2ZyaWVzQGdvb2dsZS5jb20+
+LCBEYXZlIFdlaW5zdGVpbiA8b2xvcmluQGdvb2dsZS5jb20+Cj4KPiBPbiBTYXQsIFNlcCAzMCwg
+MjAxNyBhdCA1OjA2IFBNLCBUb2JpbiBDLiBIYXJkaW5nIDxtZUB0b2Jpbi5jYz4gd3JvdGU6Cj4+
+IGxpYjogdnNwcmludGY6IGRlZmF1bHQga3B0cl9yZXN0cmljdCB0byB0aGUgbWF4aW11bSB2YWx1
+ZQo+Cj4gU28gSSJtIG5vdCBjb252aW5jZWQgYWJvdXQgdGhpcyBvbmUuCj4KPiBJdCByZW1vdmVz
+IGtlcm5lbCBwb2ludGVycyBldmVuIGZvciByb290LCB3aGljaCBpcyBhbm5veWluZyBmb3IgdGhp
+bmdzCj4gbGlrZSBwZXJmLgo+Cj4gQW5kIHRoZSBvbmx5IHBoeXNpY2FsIHBvaW50ZXJzIHdlIHNo
+b3VsZCBwcmludCBvdXQgZHVyaW5nIGJvb3QgZXRjIGFyZQo+IHRoaW5ncyB3ZSAqbmVlZCouCj4K
+PiBTbyBrcHRyX3Jlc3RyaWN0IGlzIHdyb25nIGZvciB0aGF0LCBiZXJjYXVzZSBlaXRoZXIgd2Ug
+cG90ZW50aWFsbHkKPiBuZWVkIHRob3NlIHZhbHVlcyBmb3IgZGVidWdnaW5nICgid2h5IGRvZXMg
+bXkga2VybmVsIG5vdCBib290IiksIG9yCj4gdGhleSBzaG91bGRuInQgYmUgcHJpbnRlZCBhdCBh
+bGwuCj4KPiBBbmQgSSB0aGluayBfdGhhdF8gaXMgdGhlIHJlYWwgaXNzdWUuIElmIHRoZXJlIGFy
+ZSBwbGFjZXMgdGhhdCBsZWFrLAo+IHdlIHNob3VsZCBsb29rIGF0IHRob3NlLCByYXRoZXIgdGhh
+biBqdXN0IHNheSAia3B0cl9yZXN0cmljdCIuCj4KPiBMaW51cw==
 
-So kptr_restrict ends up being entirely the wrong thing to do there.
 
-The only value in kptr_restrict ends up being as a complete hack,
-where you say "I trust nobody" and make %p almost entirely useless.
+--b1_6593c363725eb8bf57fac569ae415a26
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: base64
 
-And as mentioned, that will just make people use %x instead, or
-randomly sprinkle the new "I didn't really mean this" modifiers like
-the already discussed pr_debug() case.
+PGRpdj5JZiB3ZSBrbmV3IHdoZXJlIHRob3NlIGxlYWtzIGFyZSBoaWRpbmcgdGhleSB3aWxsIGJl
+IGZpeGVkIGFscmVhZHkuIFRoZSBvbmx5IHRoaW5nIHdlIGtuZXcgaXMgdGhhdCBidWdzL2xlYWtz
+IGFyZSB0aGVyZS4gSXQncyBhbHdheXMgYmV0dGVyIHRvIGp1c3QgZml4IGFsbCB0aGUgY29kZSBi
+dXQgaXQgaXNuJ3QgcmVhbGlzdGljLiBUaGF0J3Mgd2hhdCAyNSB5ZWFycyBvZiBrZXJuZWwgZGV2
+ZWxvcG1lbnQgdGVhY2hlcyB1cy4gUHJvYWN0aXZlIGRlZmVuc2UgaXMgaW1wZXJmZWN0LCBvYnNj
+dXJlLCBzb21ldGltZXMgdWdseSBidXQgaXQncyBvZnRlbiBiZXN0IG9wdGlvbiB3ZSBoYXZlIHdo
+aWNoIGJ1eSB1cyBtb3JlIHRpbWUgZm9yIGZpeGluZyBhY3R1YWwgYnVncy9sZWFrcy4gQmVpbmcg
+aG9uZXN0IHRvIG91ciB1c2VycyB3ZSBjYW4ndCBwcmV0ZW5kIHRoYXQga2VybmVsIGNvZGUgaXMg
+YnVnL2xlYWtmcmVlLiBUaGV5IGRlc2VydmUgc29tZXRoaW5nIGJldHRlci48YnI+PC9kaXY+PGRp
+dj48YnI+PC9kaXY+PGRpdj5Zb3VycyBzaW5jZXJlbHksPGJyPjwvZGl2PjxkaXY+PGJyPjwvZGl2
+PjxkaXY+Sm9yZGFuPGJyPjwvZGl2PjxkaXY+PGJyPjwvZGl2PjxkaXYgY2xhc3M9InByb3Rvbm1h
+aWxfc2lnbmF0dXJlX2Jsb2NrIj48ZGl2IGNsYXNzPSJwcm90b25tYWlsX3NpZ25hdHVyZV9ibG9j
+ay11c2VyIHByb3Rvbm1haWxfc2lnbmF0dXJlX2Jsb2NrLWVtcHR5Ij48YnI+PC9kaXY+PGRpdiBj
+bGFzcz0icHJvdG9ubWFpbF9zaWduYXR1cmVfYmxvY2stcHJvdG9uIj48YnI+PC9kaXY+PC9kaXY+
+PGJsb2NrcXVvdGUgY2xhc3M9InByb3Rvbm1haWxfcXVvdGUiIHR5cGU9ImNpdGUiPjxkaXY+LS0t
+LS0tLS0gT3JpZ2luYWwgTWVzc2FnZSAtLS0tLS0tLTxicj48L2Rpdj48ZGl2PlN1YmplY3Q6IFJl
+OiBba2VybmVsLWhhcmRlbmluZ10gW1JGQyBWMiAwLzZdIGFkZCBtb3JlIGtlcm5lbCBwb2ludGVy
+IGZpbHRlciBvcHRpb25zPGJyPjwvZGl2PjxkaXY+TG9jYWwgVGltZTogT2N0b2JlciA0LCAyMDE3
+IDM6NDEgUE08YnI+PC9kaXY+PGRpdj5VVEMgVGltZTogT2N0b2JlciA0LCAyMDE3IDM6NDEgUE08
+YnI+PC9kaXY+PGRpdj5Gcm9tOiB0b3J2YWxkc0BsaW51eC1mb3VuZGF0aW9uLm9yZzxicj48L2Rp
+dj48ZGl2PlRvOiBUb2JpbiBDLiBIYXJkaW5nICZsdDttZUB0b2Jpbi5jYyZndDs8YnI+PC9kaXY+
+PGRpdj5HcmVnIEtIICZsdDtncmVna2hAbGludXhmb3VuZGF0aW9uLm9yZyZndDssIFBldHIgTWxh
+ZGVrICZsdDtwbWxhZGVrQHN1c2UuY29tJmd0OywgSm9lIFBlcmNoZXMgJmx0O2pvZUBwZXJjaGVz
+LmNvbSZndDssIElhbiBDYW1wYmVsbCAmbHQ7aWpjQGhlbGxpb24ub3JnLnVrJmd0OywgU2VyZ2V5
+IFNlbm96aGF0c2t5ICZsdDtzZXJnZXkuc2Vub3poYXRza3lAZ21haWwuY29tJmd0Oywga2VybmVs
+LWhhcmRlbmluZ0BsaXN0cy5vcGVud2FsbC5jb20gJmx0O2tlcm5lbC1oYXJkZW5pbmdAbGlzdHMu
+b3BlbndhbGwuY29tJmd0OywgTGludXggS2VybmVsIE1haWxpbmcgTGlzdCAmbHQ7bGludXgta2Vy
+bmVsQHZnZXIua2VybmVsLm9yZyZndDssIENhdGFsaW4gTWFyaW5hcyAmbHQ7Y2F0YWxpbi5tYXJp
+bmFzQGFybS5jb20mZ3Q7LCBXaWxsIERlYWNvbiAmbHQ7d2lsbC5kZWFjb25AYXJtLmNvbSZndDss
+IFN0ZXZlbiBSb3N0ZWR0ICZsdDtyb3N0ZWR0QGdvb2RtaXMub3JnJmd0OywgV2lsbGlhbSBSb2Jl
+cnRzICZsdDt3aWxsaWFtLmMucm9iZXJ0c0BpbnRlbC5jb20mZ3Q7LCBDaHJpcyBGcmllcyAmbHQ7
+Y2ZyaWVzQGdvb2dsZS5jb20mZ3Q7LCBEYXZlIFdlaW5zdGVpbiAmbHQ7b2xvcmluQGdvb2dsZS5j
+b20mZ3Q7PGJyPjwvZGl2PjxkaXY+PGJyPjwvZGl2PjxkaXY+T24gU2F0LCBTZXAgMzAsIDIwMTcg
+YXQgNTowNiBQTSwgVG9iaW4gQy4gSGFyZGluZyAmbHQ7bWVAdG9iaW4uY2MmZ3Q7IHdyb3RlOjxi
+cj48L2Rpdj48ZGl2PiZndDsgICBsaWI6IHZzcHJpbnRmOiBkZWZhdWx0IGtwdHJfcmVzdHJpY3Qg
+dG8gdGhlIG1heGltdW0gdmFsdWU8YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+PGRpdj5TbyBJIm0g
+bm90IGNvbnZpbmNlZCBhYm91dCB0aGlzIG9uZS48YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+PGRp
+dj5JdCByZW1vdmVzIGtlcm5lbCBwb2ludGVycyBldmVuIGZvciByb290LCB3aGljaCBpcyBhbm5v
+eWluZyBmb3IgdGhpbmdzPGJyPjwvZGl2PjxkaXY+bGlrZSBwZXJmLjxicj48L2Rpdj48ZGl2Pjxi
+cj48L2Rpdj48ZGl2PkFuZCB0aGUgb25seSBwaHlzaWNhbCBwb2ludGVycyB3ZSBzaG91bGQgcHJp
+bnQgb3V0IGR1cmluZyBib290IGV0YyBhcmU8YnI+PC9kaXY+PGRpdj50aGluZ3Mgd2UgKm5lZWQq
+Ljxicj48L2Rpdj48ZGl2Pjxicj48L2Rpdj48ZGl2PlNvIGtwdHJfcmVzdHJpY3QgaXMgd3Jvbmcg
+Zm9yIHRoYXQsIGJlcmNhdXNlIGVpdGhlciB3ZSBwb3RlbnRpYWxseTxicj48L2Rpdj48ZGl2Pm5l
+ZWQgdGhvc2UgdmFsdWVzIGZvciBkZWJ1Z2dpbmcgKCJ3aHkgZG9lcyBteSBrZXJuZWwgbm90IGJv
+b3QiKSwgb3I8YnI+PC9kaXY+PGRpdj50aGV5IHNob3VsZG4idCBiZSBwcmludGVkIGF0IGFsbC48
+YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+PGRpdj5BbmQgSSB0aGluayBfdGhhdF8gaXMgdGhlIHJl
+YWwgaXNzdWUuIElmIHRoZXJlIGFyZSBwbGFjZXMgdGhhdCBsZWFrLDxicj48L2Rpdj48ZGl2Pndl
+IHNob3VsZCBsb29rIGF0IHRob3NlLCByYXRoZXIgdGhhbiBqdXN0IHNheSAia3B0cl9yZXN0cmlj
+dCIuPGJyPjwvZGl2PjxkaXY+PGJyPjwvZGl2PjxkaXY+IExpbnVzPGJyPjwvZGl2PjwvYmxvY2tx
+dW90ZT48ZGl2Pjxicj48L2Rpdj4=
 
-So even when kptr_restrict "works", it ends up just fighting itself.
-And most of the time it just doesn't work.
 
-                Linus
+
+--b1_6593c363725eb8bf57fac569ae415a26--
