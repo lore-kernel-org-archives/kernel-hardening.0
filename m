@@ -1,69 +1,129 @@
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Wed, 4 Oct 2017 16:17:54 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC563EAF4C9D@ORSMSX103.amr.corp.intel.com>
-References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <20171004085850.GH28247@kroah.com>
-In-Reply-To: <20171004085850.GH28247@kroah.com>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
- options
-To: Greg KH <gregkh@linuxfoundation.org>, "Tobin C. Harding" <me@tobin.cc>
-Cc: Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian
- Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+Sender: keescook@google.com
+In-Reply-To: <20171004151312.GA20938@kroah.com>
+References: <1506972007-80614-1-git-send-email-keescook@chromium.org>
+ <1506972007-80614-3-git-send-email-keescook@chromium.org> <CAK7LNARhoqX0Z--gFEP1xbvcEeg4aDD9rkV0SeUCa3icc1MN8g@mail.gmail.com>
+ <20171004151312.GA20938@kroah.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 4 Oct 2017 09:22:24 -0700
+Message-ID: <CAGXu5jKqt=DgMVKS8znL05scbXdxRhgkaf7D5ipYA3Q=csLB5A@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: [PATCH 2/3] Makefile: Move stackprotector
+ availability out of Kconfig
+To: Greg KH <greg@kroah.com>
+Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, Andrew Morton <akpm@linux-foundation.org>, Michal Marek <mmarek@suse.com>, Ingo Molnar <mingo@kernel.org>, Laura Abbott <labbott@redhat.com>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Yoshinori Sato <ysato@users.sourceforge.jp>, Rich Felker <dalias@libc.org>, "David S. Miller" <davem@davemloft.net>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-sh <linux-sh@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Wed, Oct 4, 2017 at 8:13 AM, Greg KH <greg@kroah.com> wrote:
+> On Wed, Oct 04, 2017 at 11:33:38PM +0900, Masahiro Yamada wrote:
+>> Hi Kees,
+>>
+>>
+>> 2017-10-03 4:20 GMT+09:00 Kees Cook <keescook@chromium.org>:
+>> > Various portions of the kernel, especially per-architecture pieces,
+>> > need to know if the compiler is building it with the stack protector.
+>> > This was done in the arch/Kconfig with 'select', but this doesn't
+>> > allow a way to do auto-detected compiler support. In preparation for
+>> > creating an on-if-available default, move the logic for the definition of
+>> > CONFIG_CC_STACKPROTECTOR into the Makefile.
+>> >
+>> > Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
+>> > Cc: Michal Marek <mmarek@suse.com>
+>> > Cc: Andrew Morton <akpm@linux-foundation.org>
+>> > Cc: Ingo Molnar <mingo@kernel.org>
+>> > Cc: Laura Abbott <labbott@redhat.com>
+>> > Cc: Nicholas Piggin <npiggin@gmail.com>
+>> > Cc: Al Viro <viro@zeniv.linux.org.uk>
+>> > Cc: linux-kbuild@vger.kernel.org
+>> > Signed-off-by: Kees Cook <keescook@chromium.org>
+>> > ---
+>> >  Makefile     | 7 +++++--
+>> >  arch/Kconfig | 8 --------
+>> >  2 files changed, 5 insertions(+), 10 deletions(-)
+>> >
+>> > diff --git a/Makefile b/Makefile
+>> > index d1119941261c..e122a9cf0399 100644
+>> > --- a/Makefile
+>> > +++ b/Makefile
+>> > @@ -688,8 +688,11 @@ else
+>> >    stackp-flag := $(call cc-option, -fno-stack-protector)
+>> >  endif
+>> >  endif
+>> > -# Find arch-specific stack protector compiler sanity-checking script.
+>> > -ifdef CONFIG_CC_STACKPROTECTOR
+>> > +ifdef stackp-name
+>> > +  # If the stack protector has been selected, inform the rest of the build.
+>> > +  KBUILD_CFLAGS += -DCONFIG_CC_STACKPROTECTOR
+>> > +  KBUILD_AFLAGS += -DCONFIG_CC_STACKPROTECTOR
+>> > +  # Find arch-specific stack protector compiler sanity-checking script.
+>> >    stackp-path := $(srctree)/scripts/gcc-$(SRCARCH)_$(BITS)-has-stack-protector.sh
+>> >    stackp-check := $(wildcard $(stackp-path))
+>> >  endif
+>>
+>>
+>> I have not tested this series,
+>> but I think this commit is bad (with the follow-up patch applied).
+>>
+>>
+>> I thought of this scenario:
+>>
+>> [1] Kernel is configured with CONFIG_CC_STACKPROTECTOR_AUTO
+>>
+>> [2] Kernel is built with a compiler without stack protector support.
+>>
+>> [3] CONFIG_CC_STACKPROTECTOR is not defined,
+>>     so __stack_chk_fail() is not compiled.
+>>
+>> [4] Out-of-tree modules are compiled with a compiler with
+>>     stack protector support.
+>>     __stack_chk_fail() is inserted to functions of the modules.
+>
+> We don't ever support the system of loading a module built with anything
+> other than the _exact_ same compiler than the kernel was.  So this will
+> not happen (well, if someone tries it, they get to keep the pieces their
+> kernel image is now in...)
+>
+>> [5] insmod fails because reference to __stack_chk_fail()
+>>     can not be resolved.
+>
+> Even nicer, we failed "cleanly" :)
+>
+> This isn't a real-world issue, sorry.
+
+If we wanted a slightly different failure, we could simply add the
+stack protection feature to the VERMAGIC_STRING define:
+
+diff --git a/include/linux/vermagic.h b/include/linux/vermagic.h
+index af6c03f7f986..300163aba666 100644
+--- a/include/linux/vermagic.h
++++ b/include/linux/vermagic.h
+@@ -30,11 +30,19 @@
+ #else
+ #define MODULE_RANDSTRUCT_PLUGIN
+ #endif
++#if defined(__SSP__)
++#define MODULE_STACKPROTECTOR "stack-protector "
++#elif define (__SSP_STRONG__)
++#define MODULE_STACKPROTECTOR "stack-protector-strong "
++#else
++#define MODULE_STACKPROTECTOR ""
++#endif
+
+ #define VERMAGIC_STRING                                                \
+        UTS_RELEASE " "                                                 \
+        MODULE_VERMAGIC_SMP MODULE_VERMAGIC_PREEMPT                     \
+        MODULE_VERMAGIC_MODULE_UNLOAD MODULE_VERMAGIC_MODVERSIONS       \
+        MODULE_ARCH_VERMAGIC                                            \
++       MODULE_STACKPROTECTOR                                           \
+        MODULE_RANDSTRUCT_PLUGIN
 
 
-> -----Original Message-----
-> From: Greg KH [mailto:gregkh@linuxfoundation.org]
-> Sent: Wednesday, October 4, 2017 1:59 AM
-> To: Tobin C. Harding <me@tobin.cc>
-> Cc: Petr Mladek <pmladek@suse.com>; Joe Perches <joe@perches.com>; Ian
-> Campbell <ijc@hellion.org.uk>; Sergey Senozhatsky
-> <sergey.senozhatsky@gmail.com>; kernel-hardening@lists.openwall.com; linu=
-x-
-> kernel@vger.kernel.org; Catalin Marinas <catalin.marinas@arm.com>; Will
-> Deacon <will.deacon@arm.com>; Steven Rostedt <rostedt@goodmis.org>;
-> Roberts, William C <william.c.roberts@intel.com>; Chris Fries
-> <cfries@google.com>; Dave Weinstein <olorin@google.com>
-> Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filt=
-er
-> options
->=20
-> On Sun, Oct 01, 2017 at 11:06:44AM +1100, Tobin C. Harding wrote:
-> > Version 2 of Greg's patch series with changes made as suggested by comm=
-ents
-> to V1.
-> >
-> > Applies on top of Linus' current development tree
-> >
-> > a8c964eacb21288b2dbfa9d80cee5968a3b8fb21
-> >
-> > V1 cover letter:
-> >
-> > Here's a short patch series from Chris Fries and Dave Weinstein that
-> > implements some new restrictions when printing out kernel pointers, as
-> > well as the ability to whitelist kernel pointers where needed.
-> >
-> > These patches are based on work from William Roberts, and also are
-> > inspired by grsecurity's %pP to specifically whitelist a kernel
-> > pointer, where it is always needed, like the last patch in the series
-> > shows, in the UIO drivers (UIO requires that you know the address,
-> > it's a hardware address, nothing wrong with seeing that...)
-> >
-> > I haven't done much to this patch series, only forward porting it from
-> > an older kernel release (4.4) and a few minor tweaks. [snip]
->=20
-> Nice!  Thanks for doing this work, looks great to me.  Care to resend the=
- next
-> version as a "real" one (i.e. no RFC)?
+Do you want me to send this patch, or should we allow it to fail with
+the "missing reference" (which may actually be more expressive...) I
+think the way it is right now is better, but I'm open to either.
 
-It looks like the only gripe from others was on the debug output change, so
-I'd drop that change out of the series. Otherwise, LGTM.
+-Kees
 
->=20
-> thanks,
->=20
-> greg k-h
+-- 
+Kees Cook
+Pixel Security
