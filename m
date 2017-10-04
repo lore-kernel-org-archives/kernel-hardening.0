@@ -1,79 +1,51 @@
-Date: Wed, 4 Oct 2017 21:45:49 +1100
+Date: Wed, 4 Oct 2017 21:50:51 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171004104549.GD16685@eros>
+Message-ID: <20171004105051.GE16685@eros>
 References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <20171001001105.GA10409@eros>
- <20171004085756.GD28247@kroah.com>
+ <20171004085850.GH28247@kroah.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171004085756.GD28247@kroah.com>
+In-Reply-To: <20171004085850.GH28247@kroah.com>
 Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
  options
 To: Greg KH <gregkh@linuxfoundation.org>
 Cc: Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 04, 2017 at 10:57:56AM +0200, Greg KH wrote:
-> On Sun, Oct 01, 2017 at 11:11:05AM +1100, Tobin C. Harding wrote:
-> > On Sun, Oct 01, 2017 at 11:06:44AM +1100, Tobin C. Harding wrote:
-> > > Version 2 of Greg's patch series with changes made as suggested by comments to V1.
+On Wed, Oct 04, 2017 at 10:58:50AM +0200, Greg KH wrote:
+> On Sun, Oct 01, 2017 at 11:06:44AM +1100, Tobin C. Harding wrote:
+> > Version 2 of Greg's patch series with changes made as suggested by comments to V1.
 > > 
-> > Patch set tested by setting /proc/sys/kernel/kptr_restrict and inserting the following module
+> > Applies on top of Linus' current development tree
 > > 
-> > #include <linux/init.h>
-> > #include <linux/module.h>
+> > a8c964eacb21288b2dbfa9d80cee5968a3b8fb21
 > > 
-> > #define DRIVER_AUTHOR "Tobin C. Harding <me@tobin.cc>"
-> > #define DRIVER_DESC "Testing module"
+> > V1 cover letter:
 > > 
-> > static void test_printk(void)
-> > {
-> > 	char *ptr = "";
+> > Here's a short patch series from Chris Fries and Dave Weinstein that
+> > implements some new restrictions when printing out kernel pointers, as
+> > well as the ability to whitelist kernel pointers where needed.
 > > 
-> > 	pr_alert("printing with p: %p\n", ptr);
-> > 	pr_alert("printing with pK: %pK\n", ptr);
-> > 	pr_alert("printing with pP: %pP\n", ptr);
+> > These patches are based on work from William Roberts, and also are
+> > inspired by grsecurity's %pP to specifically whitelist a kernel pointer,
+> > where it is always needed, like the last patch in the series shows, in
+> > the UIO drivers (UIO requires that you know the address, it's a hardware
+> > address, nothing wrong with seeing that...)
 > > 
-> > 	pr_alert("printing with pa: %pa\n", ptr);
-> > 	pr_alert("printing with pad: %pad\n", ptr);
-> > 	pr_alert("printing with pap: %pap\n", ptr);
-> > 
-> > 	pr_alert("printing with paP: %paP\n", ptr);
-> > 	pr_alert("printing with padP: %padP\n", ptr);
-> > 	pr_alert("printing with papP: %papP\n", ptr);
-> > 
-> > 	pr_alert("printing with pr: %pr\n", ptr);
-> > 	pr_alert("printing with pR: %pR\n", ptr);
-> > }
-> > 
-> > static int hello_init(void)
-> > {
-> > 	pr_alert("Hello, world\n");
-> > 
-> > 	test_printk();
-> > 
-> > 	return 0;
-> > }
-> > module_init(hello_init);
-> > 
-> > static void hello_exit(void)
-> > {
-> > 	pr_alert("Goodbye, world\n");
-> > }
-> > module_exit(hello_exit);
-> > 
-> > MODULE_DESCRIPTION(DRIVER_DESC);
-> > MODULE_AUTHOR(DRIVER_AUTHOR);
-> > MODULE_LICENSE("GPL");
+> > I haven't done much to this patch series, only forward porting it from
+> > an older kernel release (4.4) and a few minor tweaks. [snip]
 > 
-> 
-> Hm, any way to add something like this to the testing infrastructure?
-> Or maybe just at boot time?  It's nice to keep tests around to ensure
-> things do not break :)
+> Nice!  Thanks for doing this work, looks great to me.  Care to resend
+> the next version as a "real" one (i.e. no RFC)?
 
-Sure, good idea, I'll look into it. It will be my first attempt at adding tests to the kernel so
-will come as a separate patch set some time soon.
+First thing tomorrow!
+
+Is correct protocol for me to add your Signed-off-by tag to each patch from this RFC? Or is the
+protocol for you to add the tag yourself when the real version is posted? 
+
+I intend splitting one of the patches into two as suggested by Will.
+
 
 thanks,
 Tobin.
