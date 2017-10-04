@@ -1,75 +1,26 @@
-Date: Wed, 4 Oct 2017 10:57:56 +0200
+Date: Wed, 4 Oct 2017 10:58:05 +0200
 From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20171004085756.GD28247@kroah.com>
+Message-ID: <20171004085805.GE28247@kroah.com>
 References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <20171001001105.GA10409@eros>
+ <1506816410-10230-4-git-send-email-me@tobin.cc>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171001001105.GA10409@eros>
-Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
- options
+In-Reply-To: <1506816410-10230-4-git-send-email-me@tobin.cc>
+Subject: Re: [kernel-hardening] [RFC V2 3/6] lib: vsprintf: physical address
+ kernel pointer filtering options
 To: "Tobin C. Harding" <me@tobin.cc>
 Cc: Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Oct 01, 2017 at 11:11:05AM +1100, Tobin C. Harding wrote:
-> On Sun, Oct 01, 2017 at 11:06:44AM +1100, Tobin C. Harding wrote:
-> > Version 2 of Greg's patch series with changes made as suggested by comments to V1.
+On Sun, Oct 01, 2017 at 11:06:47AM +1100, Tobin C. Harding wrote:
+> Add the kptr_restrict setting of 4 which results in %pa and
+> %p[rR] values being cleansed.
 > 
-> Patch set tested by setting /proc/sys/kernel/kptr_restrict and inserting the following module
+> Address types printed with %pa are replaced by zeros. Resources printed
+> with %p[rR] have the starting address replaced by zeros, resource size
+> is still shown.
 > 
-> #include <linux/init.h>
-> #include <linux/module.h>
-> 
-> #define DRIVER_AUTHOR "Tobin C. Harding <me@tobin.cc>"
-> #define DRIVER_DESC "Testing module"
-> 
-> static void test_printk(void)
-> {
-> 	char *ptr = "";
-> 
-> 	pr_alert("printing with p: %p\n", ptr);
-> 	pr_alert("printing with pK: %pK\n", ptr);
-> 	pr_alert("printing with pP: %pP\n", ptr);
-> 
-> 	pr_alert("printing with pa: %pa\n", ptr);
-> 	pr_alert("printing with pad: %pad\n", ptr);
-> 	pr_alert("printing with pap: %pap\n", ptr);
-> 
-> 	pr_alert("printing with paP: %paP\n", ptr);
-> 	pr_alert("printing with padP: %padP\n", ptr);
-> 	pr_alert("printing with papP: %papP\n", ptr);
-> 
-> 	pr_alert("printing with pr: %pr\n", ptr);
-> 	pr_alert("printing with pR: %pR\n", ptr);
-> }
-> 
-> static int hello_init(void)
-> {
-> 	pr_alert("Hello, world\n");
-> 
-> 	test_printk();
-> 
-> 	return 0;
-> }
-> module_init(hello_init);
-> 
-> static void hello_exit(void)
-> {
-> 	pr_alert("Goodbye, world\n");
-> }
-> module_exit(hello_exit);
-> 
-> MODULE_DESCRIPTION(DRIVER_DESC);
-> MODULE_AUTHOR(DRIVER_AUTHOR);
-> MODULE_LICENSE("GPL");
+> Signed-off-by: Tobin C. Harding <me@tobin.cc>
 
-
-Hm, any way to add something like this to the testing infrastructure?
-Or maybe just at boot time?  It's nice to keep tests around to ensure
-things do not break :)
-
-thanks,
-
-greg k-h
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
