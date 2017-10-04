@@ -1,58 +1,30 @@
-Date: Tue, 3 Oct 2017 11:32:28 -0700
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20171003183228.GA142273@beast>
+Date: Wed, 4 Oct 2017 10:55:42 +0200
+From: Greg KH <gregkh@linuxfoundation.org>
+Message-ID: <20171004085542.GA28247@kroah.com>
+References: <1506816410-10230-1-git-send-email-me@tobin.cc>
+ <1506816410-10230-2-git-send-email-me@tobin.cc>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] Makefile: Fix CONFIG_CC_STACKPROTECTOR_AUTO to not enable SSP
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Mark Rutland <mark.rutland@arm.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <1506816410-10230-2-git-send-email-me@tobin.cc>
+Subject: Re: [kernel-hardening] [RFC V2 1/6] lib: vsprintf: additional kernel
+ pointer filtering options
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-There was a think-o in the logic for CONFIG_CC_STACKPROTECTOR_AUTO, which
-would leave CONFIG_CC_STACKPROTECTOR defined when a compiler didn't support
-stack-protector. This usually won't cause a problem with a build, but it's
-not correct, and shouldn't happen.
+On Sun, Oct 01, 2017 at 11:06:45AM +1100, Tobin C. Harding wrote:
+> Add the kptr_restrict setting of 3 which results in both
+> %p and %pK values being replaced by zeros.
+> 
+> Add an additional %pP value inspired by the Grsecurity
+> option which explicitly whitelists pointers for output.
+> 
+> Amend scripts/checkpatch.pl to handle %pP.
+> 
+> This patch is based on work by William Roberts
+> <william.c.roberts@intel.com>
+> 
+> Signed-off-by: Tobin C. Harding <me@tobin.cc>
 
-Reported-by: Mark Rutland <mark.rutland@arm.com>
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: linux-kbuild@vger.kernel.org
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-Andrew, if possible, can you squash this as a fix for the mmots patch
-"makefile-introduce-config_cc_stackprotector_auto.patch"? If not, that's fine.
----
- Makefile | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
-
-diff --git a/Makefile b/Makefile
-index 9bd334b35003..2f8ff79fa9a5 100644
---- a/Makefile
-+++ b/Makefile
-@@ -693,14 +693,18 @@ else
- endif
- endif
- endif
-+# If stack-protection was requested (and available, in the case of _AUTO),
-+# then prepare the build for it being enabled.
- ifdef stackp-name
--  # If the stack protector has been selected, inform the rest of the build.
-+ifneq ($(stackp-flag),)
-+  # If the stack protector is active, enable code that depends on it.
-   KBUILD_CFLAGS += -DCONFIG_CC_STACKPROTECTOR
-   KBUILD_AFLAGS += -DCONFIG_CC_STACKPROTECTOR
-   # Find arch-specific stack protector compiler sanity-checking script.
-   stackp-path := $(srctree)/scripts/gcc-$(SRCARCH)_$(BITS)-has-stack-protector.sh
-   stackp-check := $(wildcard $(stackp-path))
- endif
-+endif
- KBUILD_CFLAGS += $(stackp-flag)
- 
- ifeq ($(cc-name),clang)
--- 
-2.7.4
-
-
--- 
-Kees Cook
-Pixel Security
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
