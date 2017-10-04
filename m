@@ -1,85 +1,111 @@
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Wed, 4 Oct 2017 21:58:24 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC563EAF4F29@ORSMSX103.amr.corp.intel.com>
-References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
- <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
- <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
-In-Reply-To: <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
- options
-To: Linus Torvalds <torvalds@linux-foundation.org>, Jordan Glover <Golden_Miller83@protonmail.ch>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave
- Weinstein <olorin@google.com>
+From: Alexander Popov <alex.popov@linux.com>
+Date: Thu,  5 Oct 2017 01:55:00 +0300
+Message-Id: <1507157703-14972-1-git-send-email-alex.popov@linux.com>
+Subject: [kernel-hardening] [PATCH RFC v4 0/3] Introduce the STACKLEAK feature and a test for it
+To: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, tycho@docker.com, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Andy Lutomirski <luto@amacapital.net>, x86@kernel.org, alex.popov@linux.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbTogbGludXM5NzFAZ21haWwu
-Y29tIFttYWlsdG86bGludXM5NzFAZ21haWwuY29tXSBPbiBCZWhhbGYgT2YgTGludXMNCj4gVG9y
-dmFsZHMNCj4gU2VudDogV2VkbmVzZGF5LCBPY3RvYmVyIDQsIDIwMTcgMTI6MTkgUE0NCj4gVG86
-IEpvcmRhbiBHbG92ZXIgPEdvbGRlbl9NaWxsZXI4M0Bwcm90b25tYWlsLmNoPg0KPiBDYzogVG9i
-aW4gQy4gSGFyZGluZyA8bWVAdG9iaW4uY2M+OyBHcmVnIEtIIDxncmVna2hAbGludXhmb3VuZGF0
-aW9uLm9yZz47DQo+IFBldHIgTWxhZGVrIDxwbWxhZGVrQHN1c2UuY29tPjsgSm9lIFBlcmNoZXMg
-PGpvZUBwZXJjaGVzLmNvbT47IElhbg0KPiBDYW1wYmVsbCA8aWpjQGhlbGxpb24ub3JnLnVrPjsg
-U2VyZ2V5IFNlbm96aGF0c2t5DQo+IDxzZXJnZXkuc2Vub3poYXRza3lAZ21haWwuY29tPjsga2Vy
-bmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2FsbC5jb207DQo+IENhdGFsaW4gTWFyaW5hcyA8Y2F0
-YWxpbi5tYXJpbmFzQGFybS5jb20+OyBXaWxsIERlYWNvbg0KPiA8d2lsbC5kZWFjb25AYXJtLmNv
-bT47IFN0ZXZlbiBSb3N0ZWR0IDxyb3N0ZWR0QGdvb2RtaXMub3JnPjsgUm9iZXJ0cywNCj4gV2ls
-bGlhbSBDIDx3aWxsaWFtLmMucm9iZXJ0c0BpbnRlbC5jb20+OyBDaHJpcyBGcmllcyA8Y2ZyaWVz
-QGdvb2dsZS5jb20+OyBEYXZlDQo+IFdlaW5zdGVpbiA8b2xvcmluQGdvb2dsZS5jb20+DQo+IFN1
-YmplY3Q6IFJlOiBba2VybmVsLWhhcmRlbmluZ10gW1JGQyBWMiAwLzZdIGFkZCBtb3JlIGtlcm5l
-bCBwb2ludGVyIGZpbHRlcg0KPiBvcHRpb25zDQo+IA0KPiBPbiBXZWQsIE9jdCA0LCAyMDE3IGF0
-IDExOjU4IEFNLCBKb3JkYW4gR2xvdmVyDQo+IDxHb2xkZW5fTWlsbGVyODNAcHJvdG9ubWFpbC5j
-aD4gd3JvdGU6DQo+ID4gSWYgd2Uga25ldyB3aGVyZSB0aG9zZSBsZWFrcyBhcmUgaGlkaW5nIHRo
-ZXkgd2lsbCBiZSBmaXhlZCBhbHJlYWR5Lg0KPiA+IFRoZSBvbmx5IHRoaW5nIHdlIGtuZXcgaXMg
-dGhhdCBidWdzL2xlYWtzIGFyZSB0aGVyZS4gSXQncyBhbHdheXMNCj4gPiBiZXR0ZXIgdG8ganVz
-dCBmaXggYWxsIHRoZSBjb2RlIGJ1dCBpdCBpc24ndCByZWFsaXN0aWMuDQo+IA0KPiBIb25lc3Rs
-eSwgd2hhdCdzIHRoZSBkaWZmZXJlbmNlIGJldHdlZW4gc2V0dGluZyBrcHRyX3Jlc3RyaWN0IHRv
-IDQgYW5kIGp1c3QgdXNpbmcNCj4gYSBzZWQtc2NyaXB0IChvciBtYXliZSBzb21lIGNvY2NpbmVs
-bGUpIHRvIHJlbW92ZSBhbGwgZXhpc3RpbmcgcGxhaW4gJXAgdXNlcnM/DQoNCkkgY2FuIGFscmVh
-ZHkgc2VlIHRoZSBoYXRlIGZpbGxlZCBpcmF0ZSByZXNwb25zZSBJJ2xsIGdldCB0byB0aGlzIHN0
-YXRlbWVudCwgdGhhbmtmdWxseSBJIHdpbGwNCmJlIGF3YXkgbm90IGNhcmluZy4NCg0KVGhlIGtl
-cm5lbCBwcm9wZXIgaXMgaW4gYSBwbGFjZSB3aGVyZSBpdCBjYW4gYXR0ZW1wdCB0byBkZWZlbmQg
-aXRzZWxmIGFnYWluc3Qgc3R1cGlkaXR5LCBlaXRoZXIgaW4NCnRyZWUgb3Igb3V0IG9mIHRyZWUu
-IFdpbGwgaXQgc3RvcCBldmVyeXRoaW5nPyBPYnZpb3VzbHkgbm90LCBsaWtlIHlvdSBzYWlkICV4
-IG9yIGRpc2FibGluZy4NCg0KSSBhZ3JlZSB3aXRoIHlvdSAxMDAlIGtwdHIgcmVzdHJpY3QgaXMg
-b2RkLCBhbmQgSSBkb24ndCB0aGluayBhbnlvbmUgc2hvdWxkIGhhdmUgaGFkIHRvIG9wdCBpbiB0
-byBiZQ0KY2xlYW5zZWQgdmlhIGtwdHJfcmVzdHJpY3QgdmFsdWUgdmlhICVwSy4gT3B0LWluIG5l
-dmVyIHdvcmtzLiBPbmUgbmljZSB0aGluZyBub3csIGlzIHRoYXQgY2hlY2twYXRjaA0KaGFzIGNo
-ZWNraW5nIG9mICVwIHVzYWdlcyBhbmQgd2FybnMuDQogDQpBcyBmYXIgYXMgYnJva2VuIHRoaW5n
-cywgSSBjYW4ndCBjb21tZW50IG9uIGRlc2t0b3Agc3lzdGVtcyB3aGVyZSBJIHRoaW5rIGl0J3Mg
-aGFyZGVyIHRvIG1ha2UgdGhhdCBjbGFpbS4NCkkgc2VlIHZhbHVlIGluIGVtYmVkZGVkIHN5c3Rl
-bXMgd2hlcmUgSSBhbSBzaGlwcGluZyB0aGUgd2hvbGUgaW1hZ2UsIFNvIEkga25vdyB3aGVuL3do
-YXQgd2lsbA0KYnJlYWsuDQoNCklmIHRoaXMgd2FzIGluLXRyZWUsIEFuZHJvaWQgd291bGQgYmUg
-c2V0dGluZyB0aGlzIHRvIDQgaW1tZWRpYXRlbHkgRldJVy4NCg0KPiANCj4gT25lIGp1c3QgaGlk
-ZXMgdGhlIGlzc3VlIGFuZCB3aWxsIG1ha2UgcGVvcGxlIHdvcmsgYXJvdW5kIGl0IChsaWtlbHkg
-b24gYSBnbG9iYWwNCj4gbGV2ZWwgYnkganVzdCB1bmRvaW5nIGl0KS4NCj4gDQo+IFRoZSBvdGhl
-ciB3b3VsZCAqYWxzbyogbWFrZSBwZW9wbGUgd29yayBhcm91bmQgaXQgZm9yIHdoZW4gdGhleSBu
-b3RpY2UNCj4gYnJlYWthZ2UsIGJ1dCB3b3VsZCBhY3R1YWxseSBmb3JjZSBwZW9wbGUgdG8gZG8g
-aXQgb24gYSBjYXNlLWJ5LWNhc2UgYmFzaXMgKGFuZA0KPiB0aHVzIGhvcGVmdWxseSBfcHJvcGVy
-bHlfKSByYXRoZXIgdGhhbiBqdXN0IHNldHRpbmcga3B0cl9yZXN0cmljdCBiYWNrIHRvIDAuDQo+
-IA0KPiBCdHcsIHRoaXMgaXMgKm5vdCogYSB0aGVvcmV0aWNhbCBhcmd1bWVudC4NCj4gDQo+IFdF
-IEhBVkUgQkVFTiBIRVJFLCBET05FIFRISVMhDQo+IA0KPiBrcHRyX3Jlc3RyaWN0IGdvZXMgYmFj
-ayB0byA2KyB5ZWFycyBhZ28sIGFuZCB3YXMgYWN0dWFsbHkgaW5pdGlhbGx5IHNldCB0byBhDQo+
-IHJlc3RyaWN0aXZlIHZhbHVlLiBJdCBnb3QgdW5kb25lLCBleGFjdGx5IGJlY2F1c2UgaXQgY2F1
-c2VkIHByb2JsZW1zLiBJdCdzIHRvbyBiaWcgb2YNCj4gYSBoYW1tZXIsIGFuZCBpdCdzIHRvbyAq
-YnJva2VuKiBvZiBhIGhhbW1lci4NCj4gDQo+IEFuZCBleGFjdGx5IGJlY2F1c2Uga3B0cl9yZXN0
-cmljdCB3YXMgcHJldHR5IG11Y2ggYW4gImFsbCBvciBub3RoaW5nIg0KPiB0aGluZywgYWJzb2x1
-dGVseSAqTk9USElORyogaGFzIGltcHJvdmVkIGluIHRoZSA2KyB5ZWFycyBzaW5jZSBpdCB3YXMN
-Cj4gaW50cm9kdWNlZC4NCj4gDQo+IFdlIGhhdmUgaGFkIGltcHJvdmVtZW50cyBpbiBvdXIgcG9p
-bnRlciBwcmludGluZyB0aGF0IHdlcmUgX25vdF8gcmVsYXRlZCB0bw0KPiBrcHRyX3Jlc3RyaWN0
-LCB0aG91Z2gsIFNlZSBmb3IgZXhhbXBsZSBjb21taXQgYmI1ZTVjZTU0NWYyDQo+ICgieDg2L2R1
-bXBzdGFjazogUmVtb3ZlIGtlcm5lbCB0ZXh0IGFkZHJlc3NlcyBmcm9tIHN0YWNrIGR1bXAiKS4N
-Cj4gDQo+IFRob3NlIGhhdmUgYWN0dWFsbHkgYmVlbiBfcmVhbF8gZml4ZXMgZm9yIGxlYWtpbmcg
-dGhpbmdzLCB1bmxpa2Uga3B0cl9yZXN0cmljdC4NCj4gDQo+IFRoaXMgaXMgd2h5IEkgbWFpbnRh
-aW4gdGhhdCBrcHRyX3Jlc3RyaWN0IGlzIGJhZC4gSXQncyBhIGJhZGx5IHRob3VnaHQgb3V0IGlu
-dGVyZmFjZS4NCj4gSXQncyB3cm9uZy4NCj4gDQo+IFdlIGtub3cgaXQgaXMgY3JhcCwgZXhhY3Rs
-eSBiZWNhdXNlIHdlJ3ZlIGFscmVhZHkgYmVlbiB0aGVyZS4gVGhlIHdob2xlIG5vdGlvbg0KPiBv
-ZiBhIGdsb2JhbCBzd2l0Y2ggaXMgc2VyaW91c2x5IG1pcy1kZXNpZ25lZC4NCj4gDQo+IFNvIEkg
-cmVhbGx5IGRvIHRoaW5rIHRoYXQgaXQgd291bGQgYmUgYmV0dGVyIHRvIGp1c3Qgd3JpdGUgYSBz
-Y3JpcHQgdG8gZ2V0IHJpZCBvZiBhbGwgcmF3DQo+ICVwIHVzZXJzLCBhbmQgdGhlbiBwdXQgdGhl
-IG9uZXMgdGhhdCBhcmUgbmVlZGVkIChob3BlZnVsbHkgdmVyeSBmZXcpIGJhY2suDQo+IA0KPiBJ
-dCB3b3VsZG4ndCByZXF1aXJlIG9kZCBuZXcgbWFnaWMgc2VxdWVuY2VzIHRvIG92ZXJyaWRlICJJ
-IGFjdHVhbGx5IF9kb18gd2FudA0KPiAlcCIuDQo+IA0KPiAgICAgICAgICAgICAgIExpbnVzDQo=
+This is the 4th version of the patch introducing STACKLEAK to the mainline
+kernel. STACKLEAK is a security feature developed by Grsecurity/PaX (kudos
+to them), which:
+ - reduces the information that can be revealed by some kernel stack leak bugs
+    (e.g. CVE-2016-4569 and CVE-2016-4578);
+ - blocks some uninitialized stack variable attacks (e.g. CVE-2010-2963);
+ - introduces some runtime checks for kernel stack overflow detection.
+
+Further work:
+ - think of erasing the kernel stack after invoking EFI runtime services;
+ - try to port STACKLEAK to arm64 (Laura Abbott is working on it).
+
+Changes in v4
+
+1. Introduced the CONFIG_STACKLEAK_TRACK_MIN_SIZE parameter instead of
+   hard-coded track-lowest-sp.
+
+2. Carefully looked into the assertions in track_stack() and check_alloca().
+    - Fixed the incorrect BUG() condition in track_stack(), thanks to Tycho
+       Andersen. Also disabled that check if CONFIG_VMAP_STACK is enabled.
+    - Fixed the surplus and erroneous code for calculating stack_left in
+       check_alloca() on x86_64. That code repeats the work which is already
+       done in get_stack_info() and it misses the fact that different
+       exception stacks on x86_64 have different size.
+
+3. Introduced two lkdtm tests for the STACKLEAK feature (developed together
+   with Tycho).
+
+4. Added info about STACKLEAK to Documentation/security/self-protection.rst.
+
+5. Improved the comments.
+
+6. Decided not to change "unsigned long sp = (unsigned long)&sp" to
+   current_stack_pointer. The original variant is more platform independent
+   since current_stack_pointer has different type on x86 and arm.
+
+Changes in v3
+
+1. Added the detailed comments describing the STACKLEAK gcc plugin.
+   Read the plugin from bottom up, like you do for Linux kernel drivers.
+   Additional information:
+    - gcc internals documentation, which is available from gcc sources;
+    - wonderful slides by Diego Novillo
+       https://www.airs.com/dnovillo/200711-GCC-Internals/
+    - nice introduction to gcc plugins at LWN
+       https://lwn.net/Articles/457543/
+
+2. Improved the commit message and Kconfig description according the
+   feedback from Kees Cook. Also added the original notice describing
+   the performance impact of the STACKLEAK feature.
+
+3. Removed arch-specific ix86_cmodel check from stackleak_track_stack_gate().
+   It caused skipping the kernel code instrumentation for i386.
+
+4. Fixed a minor mistake in stackleak_tree_instrument_execute().
+   First versions of the plugin used ENTRY_BLOCK_PTR_FOR_FN(cfun)->next_bb
+   to get the basic block with the function prologue. That was not correct
+   since the control flow graph edge from the ENTRY_BLOCK_PTR doesn't always
+   go to that basic block.
+
+   So later it was changed it to single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun)),
+   but not completely. next_bb was still used for entry_bb assignment,
+   which could cause the wrong value of the prologue_instrumented variable.
+
+   I've reported this issue to Grsecurity and proposed the fix for it, but
+   unfortunately didn't get any reply.
+
+5. Introduced the STACKLEAK_POISON macro and renamed the config option
+   according the feedback from Kees Cook.
+
+
+Alexander Popov (3):
+  gcc-plugins: Add STACKLEAK erasing the kernel stack at the end of
+    syscalls
+  lkdtm: Add a test for STACKLEAK
+  doc: self-protection: Add information about STACKLEAK feature
+
+ Documentation/security/self-protection.rst |  23 +-
+ arch/Kconfig                               |  39 +++
+ arch/x86/Kconfig                           |   1 +
+ arch/x86/entry/common.c                    |  17 +-
+ arch/x86/entry/entry_32.S                  |  69 +++++
+ arch/x86/entry/entry_64.S                  |  95 +++++++
+ arch/x86/entry/entry_64_compat.S           |   8 +
+ arch/x86/include/asm/processor.h           |   4 +
+ arch/x86/kernel/asm-offsets.c              |   9 +
+ arch/x86/kernel/dumpstack_32.c             |  12 +
+ arch/x86/kernel/dumpstack_64.c             |  15 ++
+ arch/x86/kernel/process_32.c               |   5 +
+ arch/x86/kernel/process_64.c               |   5 +
+ drivers/misc/Makefile                      |   3 +
+ drivers/misc/lkdtm.h                       |   4 +
+ drivers/misc/lkdtm_core.c                  |   2 +
+ drivers/misc/lkdtm_stackleak.c             | 139 ++++++++++
+ fs/exec.c                                  |  30 +++
+ include/linux/compiler.h                   |   4 +
+ scripts/Makefile.gcc-plugins               |   3 +
+ scripts/gcc-plugins/stackleak_plugin.c     | 397 +++++++++++++++++++++++++++++
+ 21 files changed, 872 insertions(+), 12 deletions(-)
+ create mode 100644 drivers/misc/lkdtm_stackleak.c
+ create mode 100644 scripts/gcc-plugins/stackleak_plugin.c
+
+-- 
+2.7.4
