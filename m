@@ -1,23 +1,33 @@
-Message-ID: <1507134757.25548.20.camel@hellion.org.uk>
-From: Ian Campbell <ijc@hellion.org.uk>
-Date: Wed, 04 Oct 2017 17:32:37 +0100
-In-Reply-To: <1506816410-10230-1-git-send-email-me@tobin.cc>
+Date: Wed, 4 Oct 2017 12:54:00 -0400
+From: Steven Rostedt <rostedt@goodmis.org>
+Message-ID: <20171004125400.36a8e8f7@gandalf.local.home>
+In-Reply-To: <CA+55aFwmVdeLFs1-HJGXeOBz5WgJinCDNAu7mcr+fJhjQp+mEg@mail.gmail.com>
 References: <1506816410-10230-1-git-send-email-me@tobin.cc>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
+	<CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
+	<CAFUG7CcQoJZ9SyGnD61xjkc6nCQhbgnqBJ0k-PkQxE9iTo2+SA@mail.gmail.com>
+	<CA+55aFwmVdeLFs1-HJGXeOBz5WgJinCDNAu7mcr+fJhjQp+mEg@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
 Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
  options
-To: "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Boris Lukashev <blukashev@sempervictus.com>, "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, 2017-10-01 at 11:06 +1100, Tobin C. Harding wrote:
-> Suggestion by Ian Campbell to add comments on the threat model being mitigated
-> by use of %pa vs %paP etc is not implemented because I do not know the threat
-> model (I'm only the janitor). Happy to add them if someone writes them.
+On Wed, 4 Oct 2017 09:29:16 -0700
+Linus Torvalds <torvalds@linux-foundation.org> wrote:
 
-Thanks for the CC on this repost, but no need for it for V3 onwards.
+> If this is seriously the quality of excuses for this patch-series, I
+> never ever want to see those patches again.
 
-Thanks,
-Ian.
+Note, the one you are replying to isn't the author of the patches nor
+was he even Cc'd in the patch series.
+
+I wouldn't judge the quality of these patches on some random reply from
+someone.
+
+I have no skin in this game, but I don't want the developers of a
+series to be judged by random emails in the thread.
+
+-- Steve
