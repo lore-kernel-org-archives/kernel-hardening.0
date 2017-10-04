@@ -1,28 +1,23 @@
-Date: Wed, 4 Oct 2017 19:15:54 +0200
-From: Greg KH <greg@kroah.com>
-Message-ID: <20171004171554.GA10047@kroah.com>
-References: <1506972007-80614-1-git-send-email-keescook@chromium.org>
- <1506972007-80614-3-git-send-email-keescook@chromium.org>
- <CAK7LNARhoqX0Z--gFEP1xbvcEeg4aDD9rkV0SeUCa3icc1MN8g@mail.gmail.com>
- <20171004151312.GA20938@kroah.com>
- <CAGXu5jKqt=DgMVKS8znL05scbXdxRhgkaf7D5ipYA3Q=csLB5A@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jKqt=DgMVKS8znL05scbXdxRhgkaf7D5ipYA3Q=csLB5A@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH 2/3] Makefile: Move stackprotector
- availability out of Kconfig
-To: Kees Cook <keescook@chromium.org>
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, Andrew Morton <akpm@linux-foundation.org>, Michal Marek <mmarek@suse.com>, Ingo Molnar <mingo@kernel.org>, Laura Abbott <labbott@redhat.com>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Yoshinori Sato <ysato@users.sourceforge.jp>, Rich Felker <dalias@libc.org>, "David S. Miller" <davem@davemloft.net>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-sh <linux-sh@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>
+Message-ID: <1507134757.25548.20.camel@hellion.org.uk>
+From: Ian Campbell <ijc@hellion.org.uk>
+Date: Wed, 04 Oct 2017 17:32:37 +0100
+In-Reply-To: <1506816410-10230-1-git-send-email-me@tobin.cc>
+References: <1506816410-10230-1-git-send-email-me@tobin.cc>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
+ options
+To: "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 04, 2017 at 09:22:24AM -0700, Kees Cook wrote:
-> Do you want me to send this patch, or should we allow it to fail with
-> the "missing reference" (which may actually be more expressive...) I
-> think the way it is right now is better, but I'm open to either.
+On Sun, 2017-10-01 at 11:06 +1100, Tobin C. Harding wrote:
+> Suggestion by Ian Campbell to add comments on the threat model being mitigated
+> by use of %pa vs %paP etc is not implemented because I do not know the threat
+> model (I'm only the janitor). Happy to add them if someone writes them.
 
-I think the current way is fine.
+Thanks for the CC on this repost, but no need for it for V3 onwards.
 
-And nice work on the patchset.
-
-greg k-h
+Thanks,
+Ian.
