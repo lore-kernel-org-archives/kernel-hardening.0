@@ -1,58 +1,49 @@
-Date: Wed, 4 Oct 2017 14:42:33 +0200
-From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20171004124233.GA19372@kroah.com>
+Date: Wed, 4 Oct 2017 09:08:57 -0400
+From: Steven Rostedt <rostedt@goodmis.org>
+Message-ID: <20171004090857.019a1235@gandalf.local.home>
+In-Reply-To: <20171004085542.GA28247@kroah.com>
 References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <20171004085850.GH28247@kroah.com>
- <20171004105051.GE16685@eros>
+	<1506816410-10230-2-git-send-email-me@tobin.cc>
+	<20171004085542.GA28247@kroah.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171004105051.GE16685@eros>
-Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
- options
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [RFC V2 1/6] lib: vsprintf: additional
+ kernel pointer filtering options
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 04, 2017 at 09:50:51PM +1100, Tobin C. Harding wrote:
-> On Wed, Oct 04, 2017 at 10:58:50AM +0200, Greg KH wrote:
-> > On Sun, Oct 01, 2017 at 11:06:44AM +1100, Tobin C. Harding wrote:
-> > > Version 2 of Greg's patch series with changes made as suggested by comments to V1.
-> > > 
-> > > Applies on top of Linus' current development tree
-> > > 
-> > > a8c964eacb21288b2dbfa9d80cee5968a3b8fb21
-> > > 
-> > > V1 cover letter:
-> > > 
-> > > Here's a short patch series from Chris Fries and Dave Weinstein that
-> > > implements some new restrictions when printing out kernel pointers, as
-> > > well as the ability to whitelist kernel pointers where needed.
-> > > 
-> > > These patches are based on work from William Roberts, and also are
-> > > inspired by grsecurity's %pP to specifically whitelist a kernel pointer,
-> > > where it is always needed, like the last patch in the series shows, in
-> > > the UIO drivers (UIO requires that you know the address, it's a hardware
-> > > address, nothing wrong with seeing that...)
-> > > 
-> > > I haven't done much to this patch series, only forward porting it from
-> > > an older kernel release (4.4) and a few minor tweaks. [snip]
+On Wed, 4 Oct 2017 10:55:42 +0200
+Greg KH <gregkh@linuxfoundation.org> wrote:
+
+> On Sun, Oct 01, 2017 at 11:06:45AM +1100, Tobin C. Harding wrote:
+> > Add the kptr_restrict setting of 3 which results in both
+> > %p and %pK values being replaced by zeros.
 > > 
-> > Nice!  Thanks for doing this work, looks great to me.  Care to resend
-> > the next version as a "real" one (i.e. no RFC)?
+> > Add an additional %pP value inspired by the Grsecurity
+> > option which explicitly whitelists pointers for output.
+> > 
+> > Amend scripts/checkpatch.pl to handle %pP.
+> > 
+> > This patch is based on work by William Roberts
+> > <william.c.roberts@intel.com>
+> > 
+> > Signed-off-by: Tobin C. Harding <me@tobin.cc>  
 > 
-> First thing tomorrow!
-> 
-> Is correct protocol for me to add your Signed-off-by tag to each patch from this RFC? Or is the
-> protocol for you to add the tag yourself when the real version is posted? 
+> Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
-You can add my signed-off-by to your new patches, they shouldn't change
-much with the exception of:
+Greg,
 
-> I intend splitting one of the patches into two as suggested by Will.
+I'm curious to why you are adding a "Signed-off-by"? That usually means
+that you either help author it, or it is going through your tree. I've
+never seen a "Signed-off-by" in passing. That's usually a "Acked-by" or
+"Reviewed-by".
 
-And that's fine to keep my s-o-b for.
+In other words, I was told that a "Signed-off-by" should never be added
+by anyone but the one who writes it. The original author adds it to the
+patch they send, and the maintainer adds it when they pull in that
+patch. But sending out a "Signed-off-by" like this, to be added, would
+require someone else writing it for you. Which I was told was a no-no.
 
-thanks for asking,
-
-greg k-h
+-- Steve
