@@ -1,42 +1,50 @@
-Date: Wed, 4 Oct 2017 10:58:50 +0200
+Date: Wed, 4 Oct 2017 11:02:55 +0200
 From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20171004085850.GH28247@kroah.com>
+Message-ID: <20171004090255.GA29316@kroah.com>
 References: <1506816410-10230-1-git-send-email-me@tobin.cc>
+ <1506816410-10230-3-git-send-email-me@tobin.cc>
+ <20171002104205.GC3823@arm.com>
+ <20171004085657.GC28247@kroah.com>
+ <20171004085810.GA14022@arm.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1506816410-10230-1-git-send-email-me@tobin.cc>
-Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
- options
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+In-Reply-To: <20171004085810.GA14022@arm.com>
+Subject: Re: [kernel-hardening] [RFC V2 2/6] lib: vsprintf: whitelist stack
+ traces
+To: Will Deacon <will.deacon@arm.com>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Steven Rostedt <rostedt@goodmis.org>, William Roberts <william.c.roberts@intel.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Oct 01, 2017 at 11:06:44AM +1100, Tobin C. Harding wrote:
-> Version 2 of Greg's patch series with changes made as suggested by comments to V1.
+On Wed, Oct 04, 2017 at 09:58:10AM +0100, Will Deacon wrote:
+> On Wed, Oct 04, 2017 at 10:56:57AM +0200, Greg KH wrote:
+> > On Mon, Oct 02, 2017 at 11:42:05AM +0100, Will Deacon wrote:
+> > > On Sun, Oct 01, 2017 at 11:06:46AM +1100, Tobin C. Harding wrote:
+> > > > Use the %pP functionality to explicitly allow kernel
+> > > > pointers to be logged for stack traces.
+> > > > 
+> > > > Signed-off-by: Tobin C. Harding <me@tobin.cc>
+> > > > ---
+> > > >  arch/arm64/kernel/traps.c | 4 ++--
+> > > >  kernel/printk/printk.c    | 2 +-
+> > > >  2 files changed, 3 insertions(+), 3 deletions(-)
+> > > > 
+> > > > diff --git a/arch/arm64/kernel/traps.c b/arch/arm64/kernel/traps.c
+> > > > index 5ea4b85..fe09660 100644
+> > > > --- a/arch/arm64/kernel/traps.c
+> > > > +++ b/arch/arm64/kernel/traps.c
+> > > > @@ -147,7 +147,7 @@ void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
+> > > >  	struct stackframe frame;
+> > > >  	int skip;
+> > > >  
+> > > > -	pr_debug("%s(regs = %p tsk = %p)\n", __func__, regs, tsk);
+> > > > +	pr_debug("%s(regs = %pP tsk = %pP)\n", __func__, regs, tsk);
+> > > 
+> > > Why do we care for pr_debug?
+> > 
+> > Because you really want the real value?  Seems to make sense to me...
 > 
-> Applies on top of Linus' current development tree
-> 
-> a8c964eacb21288b2dbfa9d80cee5968a3b8fb21
-> 
-> V1 cover letter:
-> 
-> Here's a short patch series from Chris Fries and Dave Weinstein that
-> implements some new restrictions when printing out kernel pointers, as
-> well as the ability to whitelist kernel pointers where needed.
-> 
-> These patches are based on work from William Roberts, and also are
-> inspired by grsecurity's %pP to specifically whitelist a kernel pointer,
-> where it is always needed, like the last patch in the series shows, in
-> the UIO drivers (UIO requires that you know the address, it's a hardware
-> address, nothing wrong with seeing that...)
-> 
-> I haven't done much to this patch series, only forward porting it from
-> an older kernel release (4.4) and a few minor tweaks. [snip]
+> Just seems like anybody debugging the kernel using pr_debug can probably
+> change /proc/sys/kernel/kptr_restrict...
 
-Nice!  Thanks for doing this work, looks great to me.  Care to resend
-the next version as a "real" one (i.e. no RFC)?
-
-thanks,
-
-greg k-h
+Ok, fair enough :)
