@@ -1,19 +1,231 @@
-MIME-Version: 1.0
-In-Reply-To: <1507157703-14972-1-git-send-email-alex.popov@linux.com>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Thu, 5 Oct 2017 09:27:51 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20171005072751.lhf7kamzfw4sdhbo@gmail.com>
 References: <1507157703-14972-1-git-send-email-alex.popov@linux.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Wed, 4 Oct 2017 21:40:48 -0700
-Message-ID: <CALCETrWhzZF0St_=xVQvntcDt4Hc9qYkXZ6dyhK+NTAy7-dVEA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH RFC v4 0/3] Introduce the STACKLEAK feature and a test for it
+ <1507157703-14972-2-git-send-email-alex.popov@linux.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1507157703-14972-2-git-send-email-alex.popov@linux.com>
+Subject: [kernel-hardening] Re: [PATCH RFC v4 1/3] gcc-plugins: Add STACKLEAK erasing the kernel
+ stack at the end of syscalls
 To: Alexander Popov <alex.popov@linux.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, X86 ML <x86@kernel.org>
+Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, tycho@docker.com, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Andy Lutomirski <luto@amacapital.net>, x86@kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 4, 2017 at 3:55 PM, Alexander Popov <alex.popov@linux.com> wrote:
-> This is the 4th version of the patch introducing STACKLEAK to the mainline
-> kernel. STACKLEAK is a security feature developed by Grsecurity/PaX (kudos
-> to them), which:
 
-I'm working on some entry changes that could potentially interact with
-this.  I'll try to get them out for review soon.
+* Alexander Popov <alex.popov@linux.com> wrote:
+
+> diff --git a/arch/x86/entry/entry_32.S b/arch/x86/entry/entry_32.S
+> index 8a13d46..06bc57b 100644
+> --- a/arch/x86/entry/entry_32.S
+> +++ b/arch/x86/entry/entry_32.S
+> @@ -75,6 +75,71 @@
+>  #endif
+>  .endm
+>  
+> +.macro erase_kstack
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +	call erase_kstack
+> +#endif
+> +.endm
+> +
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +/* For the detailed comments, see erase_kstack in entry_64.S */
+> +ENTRY(erase_kstack)
+> +	pushl	%edi
+> +	pushl	%ecx
+> +	pushl	%eax
+> +	pushl	%ebp
+> +
+> +	movl	PER_CPU_VAR(current_task), %ebp
+> +	mov	TASK_lowest_stack(%ebp), %edi
+> +	mov	$STACKLEAK_POISON, %eax
+> +	std
+> +
+> +1:
+> +	mov	%edi, %ecx
+> +	and	$THREAD_SIZE_asm - 1, %ecx
+> +	shr	$2, %ecx
+> +	repne	scasl
+> +	jecxz	2f
+> +
+> +	cmp	$2*16, %ecx
+> +	jc	2f
+> +
+> +	mov	$2*16, %ecx
+> +	repe	scasl
+> +	jecxz	2f
+> +	jne	1b
+> +
+> +2:
+> +	cld
+> +	or	$2*4, %edi
+> +	mov	%esp, %ecx
+> +	sub	%edi, %ecx
+> +
+> +	cmp	$THREAD_SIZE_asm, %ecx
+> +	jb	3f
+> +	ud2
+> +
+> +3:
+> +	shr	$2, %ecx
+> +	rep	stosl
+> +
+> +	/*
+> +	 * TODO: sp0 on x86_32 is not reliable, right?
+> +	 * Doubt because of the definition of cpu_current_top_of_stack
+> +	 * in arch/x86/kernel/cpu/common.c.
+> +	 */
+> +	mov	TASK_thread_sp0(%ebp), %edi
+> +	sub	$128, %edi
+> +	mov	%edi, TASK_lowest_stack(%ebp)
+> +
+> +	popl	%ebp
+> +	popl	%eax
+> +	popl	%ecx
+> +	popl	%edi
+> +	ret
+> +ENDPROC(erase_kstack)
+> +#endif
+> +
+>  /*
+>   * User gs save/restore
+>   *
+> @@ -445,6 +510,8 @@ ENTRY(entry_SYSENTER_32)
+>  	ALTERNATIVE "testl %eax, %eax; jz .Lsyscall_32_done", \
+>  		    "jmp .Lsyscall_32_done", X86_FEATURE_XENPV
+>  
+> +	erase_kstack
+> +
+>  /* Opportunistic SYSEXIT */
+>  	TRACE_IRQS_ON			/* User mode traces as IRQs on. */
+>  	movl	PT_EIP(%esp), %edx	/* pt_regs->ip */
+> @@ -531,6 +598,8 @@ ENTRY(entry_INT80_32)
+>  	call	do_int80_syscall_32
+>  .Lsyscall_32_done:
+>  
+> +	erase_kstack
+> +
+>  restore_all:
+>  	TRACE_IRQS_IRET
+>  .Lrestore_all_notrace:
+> diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
+> index 4916725..189d843 100644
+> --- a/arch/x86/entry/entry_64.S
+> +++ b/arch/x86/entry/entry_64.S
+> @@ -59,6 +59,90 @@ END(native_usergs_sysret64)
+>  #endif
+>  .endm
+>  
+> +.macro erase_kstack
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +	call erase_kstack
+> +#endif
+> +.endm
+> +
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +ENTRY(erase_kstack)
+> +	pushq	%rdi
+> +	pushq	%rcx
+> +	pushq	%rax
+> +	pushq	%r11
+> +
+> +	movq	PER_CPU_VAR(current_task), %r11
+> +	mov	TASK_lowest_stack(%r11), %rdi
+> +	mov	$STACKLEAK_POISON, %rax
+> +	std
+> +
+> +	/*
+> +	 * Let's search for the poison value in the stack.
+> +	 * Start from the lowest_stack and go to the bottom (see std above).
+> +	 */
+> +1:
+> +	mov	%edi, %ecx
+> +	and	$THREAD_SIZE_asm - 1, %ecx
+> +	shr	$3, %ecx
+> +	repne	scasq
+> +	jecxz	2f	/* Didn't find it. Go to poisoning. */
+> +
+> +	/*
+> +	 * Found the poison value in the stack. Go to poisoning if there are
+> +	 * less than 16 qwords left.
+> +	 */
+> +	cmp	$2*8, %ecx
+> +	jc	2f
+> +
+> +	/*
+> +	 * Check that 16 further qwords contain poison (avoid false positives).
+> +	 * If so, the part of the stack below the address in %rdi is likely
+> +	 * to be poisoned. Otherwise we need to search deeper.
+> +	 */
+> +	mov	$2*8, %ecx
+> +	repe	scasq
+> +	jecxz	2f	/* Poison the upper part of the stack. */
+> +	jne	1b	/* Search deeper. */
+> +
+> +2:
+> +	/*
+> +	 * Prepare the counter for poisoning the kernel stack between
+> +	 * %rdi and %rsp. Two qwords at the bottom of the stack are reserved
+> +	 * and should not be poisoned (see CONFIG_SCHED_STACK_END_CHECK).
+> +	 */
+> +	cld
+> +	or	$2*8, %rdi
+> +	mov	%esp, %ecx
+> +	sub	%edi, %ecx
+> +
+> +	/* Check that the counter value is sane. */
+> +	cmp	$THREAD_SIZE_asm, %rcx
+> +	jb	3f
+> +	ud2
+> +
+> +3:
+> +	/*
+> +	 * So let's write the poison value to the kernel stack. Start from the
+> +	 * address in %rdi and move up (see cld above) to the address in %rsp
+> +	 * (not included, used memory).
+> +	 */
+> +	shr	$3, %ecx
+> +	rep	stosq
+> +
+> +	/* Set the lowest_stack value to the top_of_stack - 256. */
+> +	mov	TASK_thread_sp0(%r11), %rdi
+> +	sub	$256, %rdi
+> +	mov	%rdi, TASK_lowest_stack(%r11)
+> +
+> +	popq	%r11
+> +	popq	%rax
+> +	popq	%rcx
+> +	popq	%rdi
+> +	ret
+> +ENDPROC(erase_kstack)
+
+A couple of (first round) review observations:
+
+- Why is the erase_kstack() function written in assembly, instead of plain C?
+  The complexity and fragility of this patch could be reduced if it was moved to C.
+
+- The GCC plugin adds instrumentation in form of extra 'track_stack()' and
+  'check_alloca()' calls. Could you please provide a frequency analysis of the
+  impact of this: x86-64 defconfig vmlinux size before/after the patch, and the
+  number of instrumentation function calls inserted, compared to the number of
+  functions?
+
+- Is there a debug facility to query the current (latest) lowest_stack value of
+  any task in the system, via /proc? Observing this threshold over time would give 
+  a good idea about the typical work the clearing function has to perform for
+  every system call.
+
+- Please clean up the GCC plugin code to follow proper kernel coding style.
+  The '//' comment lines in particular are a big eyesore, plus there are a lot of 
+  other stylistic variations as well that make the code unnecessarily difficult to 
+  read.
+
+- Also, this patch is way too big - there's no reason why the GCC plugin and
+  the stack erasure features should be introduced in the same patch, etc.
+
+Thanks,
+
+	Ingo
