@@ -1,37 +1,47 @@
-Date: Thu, 5 Oct 2017 09:06:33 -0400
-From: Steven Rostedt <rostedt@goodmis.org>
-Message-ID: <20171005090633.5a6ce840@gandalf.local.home>
-In-Reply-To: <20171004212003.28296-21-thgarnie@google.com>
-References: <20171004212003.28296-1-thgarnie@google.com>
-	<20171004212003.28296-21-thgarnie@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC v3 20/27] x86/ftrace: Adapt function tracing for PIE
- support
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Matthias Kaehlcke <mka@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Chris Wright <chrisw@sous-sol.org>, Alok Kataria <akataria@vmware.com>, Rusty Russell <rusty@rustcorp.com.au>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Alexey Dobriyan <adobriyan@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Borislav Petkov <bp@alien8.de>, "Luis R .
- Rodriguez" <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Christopher Li <sparse@chrisli.org>, Jason Baron <jbaron@akamai.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, "Rafael
- J . Wysocki" <rafael.j.wysocki@intel.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Lukas Wunner <lukas@wunner.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?UTF-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Jonathan Corbet <corbet@lwn.net>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Peter Foley <pefoley2@pefoley.com>, Paul Bolle <pebolle@tiscali.nl>, Jiri Kosina <jkosina@suse.cz>, Rob Landley <rob@landley.net>, "H . J . Lu" <hjl.tools@gmail.com>, Baoquan He <bhe@redhat.com>, "Jan H .
- =?UTF-8?B?U2Now7ZuaGVycg==?=" <jschoenh@amazon.de>, Daniel Micay <danielmicay@gmail.com>, x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux-pm@vger.kernel.org, virtualization@lists.linux-foundation.org, xen-devel@lists.xenproject.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CA+55aFxhnwjyLsVc54UVKCSm+-DSkOar5XV919J-Cg6i3NXC5Q@mail.gmail.com>
+References: <1506816410-10230-1-git-send-email-me@tobin.cc>
+ <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
+ <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
+ <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
+ <476DC76E7D1DF2438D32BFADF679FC563EAF4F29@ORSMSX103.amr.corp.intel.com>
+ <CA+55aFwEZCT6=BCdmaNn5LGeU8g-2qi4OnM9MTOep3NOZVXjMg@mail.gmail.com> <CA+55aFxhnwjyLsVc54UVKCSm+-DSkOar5XV919J-Cg6i3NXC5Q@mail.gmail.com>
+From: Bjorn Helgaas <bhelgaas@google.com>
+Date: Thu, 5 Oct 2017 08:55:26 -0500
+Message-ID: <CAErSpo4JfDPUnK4LhU=5GN7KVhWRatcEnu5VCsMwrEh6f9St5w@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed,  4 Oct 2017 14:19:56 -0700
-Thomas Garnier <thgarnie@google.com> wrote:
+On Wed, Oct 4, 2017 at 7:09 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Wed, Oct 4, 2017 at 4:52 PM, Linus Torvalds
+> <torvalds@linux-foundation.org> wrote:
+>>
+>> It also shows
+>>
+>>     software IO TLB [mem PA-PB] (64MB) mapped at [VA-VB]
+>>
+>> for example.  And THIS IS IMPORTANT! The physical address is shown
+>> with "%#010llx".
+>
+> Oh, and I added Tejun for the percpu printout, but didn't add Bjorn
+> for this one.
+>
+> Like the percpu one, I suspect that this pr_info() isn't really
+> important enough to stay, and while it doesn't sound nearly as
+> interesting as the percpu virtual address to an attacker, it probably
+> isn't important enough to leak kernel (and hardware) data for.
+>
+> Bjorn?
 
-> When using -fPIE/PIC with function tracing, the compiler generates a
-> call through the GOT (call *__fentry__@GOTPCREL). This instruction
-> takes 6 bytes instead of 5 on the usual relative call.
-> 
-> With this change, function tracing supports 6 bytes on traceable
-> function and can still replace relative calls on the ftrace assembly
-> functions.
-> 
-> Position Independent Executable (PIE) support will allow to extended the
-> KASLR randomization range below the -2G memory limit.
+My only interest in the "software IO TLB" message was to make the
+style match other similar things; I personally don't care whether this
+message exists at all.
 
-Question: This 6 bytes is only the initial call that gcc creates. When
-function tracing is enabled, the calls are back to the normal call to
-the ftrace trampoline?
+I haven't seen the whole series, but I do hope %pR remains useful.  We
+use it often to analyze PCI BAR assignment issues.
 
--- Steve
+Bjorn
