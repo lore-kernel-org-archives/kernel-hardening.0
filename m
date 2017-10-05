@@ -1,99 +1,42 @@
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Thu, 5 Oct 2017 15:12:45 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC563F4AD0AF@ORSMSX115.amr.corp.intel.com>
-References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
- <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
- <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
- <476DC76E7D1DF2438D32BFADF679FC563EAF4F29@ORSMSX103.amr.corp.intel.com>
- <CA+55aFwEZCT6=BCdmaNn5LGeU8g-2qi4OnM9MTOep3NOZVXjMg@mail.gmail.com>
- <20171005021915.GK16685@eros>
- <CA+55aFwac2BzgZs-X1_VhekkuGfuLqNui2+2DbvLiDyptS-rXQ@mail.gmail.com>
-In-Reply-To: <CA+55aFwac2BzgZs-X1_VhekkuGfuLqNui2+2DbvLiDyptS-rXQ@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
- options
-To: Linus Torvalds <torvalds@linux-foundation.org>, "Tobin C. Harding" <me@tobin.cc>
-Cc: Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe
- Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey
- Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave
- Weinstein <olorin@google.com>
+In-Reply-To: <20171005090633.5a6ce840@gandalf.local.home>
+References: <20171004212003.28296-1-thgarnie@google.com> <20171004212003.28296-21-thgarnie@google.com>
+ <20171005090633.5a6ce840@gandalf.local.home>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Thu, 5 Oct 2017 09:01:14 -0700
+Message-ID: <CAJcbSZHa3SyCR8zEm-Yor9CmBUfcjr0eE_6HMnaeq83gitdJNQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC v3 20/27] x86/ftrace: Adapt function tracing for PIE support
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Matthias Kaehlcke <mka@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Chris Wright <chrisw@sous-sol.org>, Alok Kataria <akataria@vmware.com>, Rusty Russell <rusty@rustcorp.com.au>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Alexey Dobriyan <adobriyan@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Borislav Petkov <bp@alien8.de>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Christopher Li <sparse@chrisli.org>, Jason Baron <jbaron@akamai.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Lukas Wunner <lukas@wunner.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Jonathan Corbet <corbet@lwn.net>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Peter Foley <pefoley2@pefoley.com>, Paul Bolle <pebolle@tiscali.nl>, Jiri Kosina <jkosina@suse.cz>, Rob Landley <rob@landley.net>, "H . J . Lu" <hjl.tools@gmail.com>, Baoquan He <bhe@redhat.com>, =?UTF-8?B?SmFuIEggLiBTY2jDtm5oZXJy?= <jschoenh@amazon.de>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, virtualization@lists.linux-foundation.org, xen-devel <xen-devel@lists.xenproject.org>, linux-arch <linux-arch@vger.kernel.org>, Sparse Mailing-list <linux-sparse@vger.kernel.org>, kvm list <kvm@vger.kernel.org>, linux-doc@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbTogbGludXM5NzFAZ21haWwu
-Y29tIFttYWlsdG86bGludXM5NzFAZ21haWwuY29tXSBPbiBCZWhhbGYgT2YgTGludXMNCj4gVG9y
-dmFsZHMNCj4gU2VudDogV2VkbmVzZGF5LCBPY3RvYmVyIDQsIDIwMTcgODoxMSBQTQ0KPiBUbzog
-VG9iaW4gQy4gSGFyZGluZyA8bWVAdG9iaW4uY2M+DQo+IENjOiBSb2JlcnRzLCBXaWxsaWFtIEMg
-PHdpbGxpYW0uYy5yb2JlcnRzQGludGVsLmNvbT47IFRlanVuIEhlbw0KPiA8dGpAa2VybmVsLm9y
-Zz47IEpvcmRhbiBHbG92ZXIgPEdvbGRlbl9NaWxsZXI4M0Bwcm90b25tYWlsLmNoPjsgR3JlZyBL
-SA0KPiA8Z3JlZ2toQGxpbnV4Zm91bmRhdGlvbi5vcmc+OyBQZXRyIE1sYWRlayA8cG1sYWRla0Bz
-dXNlLmNvbT47IEpvZQ0KPiBQZXJjaGVzIDxqb2VAcGVyY2hlcy5jb20+OyBJYW4gQ2FtcGJlbGwg
-PGlqY0BoZWxsaW9uLm9yZy51az47IFNlcmdleQ0KPiBTZW5vemhhdHNreSA8c2VyZ2V5LnNlbm96
-aGF0c2t5QGdtYWlsLmNvbT47IGtlcm5lbC0NCj4gaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNv
-bTsgQ2F0YWxpbiBNYXJpbmFzIDxjYXRhbGluLm1hcmluYXNAYXJtLmNvbT47IFdpbGwNCj4gRGVh
-Y29uIDx3aWxsLmRlYWNvbkBhcm0uY29tPjsgU3RldmVuIFJvc3RlZHQgPHJvc3RlZHRAZ29vZG1p
-cy5vcmc+OyBDaHJpcw0KPiBGcmllcyA8Y2ZyaWVzQGdvb2dsZS5jb20+OyBEYXZlIFdlaW5zdGVp
-biA8b2xvcmluQGdvb2dsZS5jb20+DQo+IFN1YmplY3Q6IFJlOiBba2VybmVsLWhhcmRlbmluZ10g
-W1JGQyBWMiAwLzZdIGFkZCBtb3JlIGtlcm5lbCBwb2ludGVyIGZpbHRlcg0KPiBvcHRpb25zDQo+
-IA0KPiBPbiBXZWQsIE9jdCA0LCAyMDE3IGF0IDc6MTkgUE0sIFRvYmluIEMuIEhhcmRpbmcgPG1l
-QHRvYmluLmNjPiB3cm90ZToNCj4gPg0KPiA+IFRoaXMgc291bmRzIGxpa2UganVzdCB0aGUgam9i
-IGZvciBhbiB1cGNvbWluZyBrZXJuZWwgaGFja2VyLCB3aXRoIGENCj4gPiBsb3Qgb2YgdGltZSBh
-bmQgbm90IG11Y2ggZXhwZXJpZW5jZSwgdG8gZG8gc29tZXRoaW5nIGxhYm9yaW91cyB0aGF0IG5v
-DQo+ID4gb25lIGVsc2Ugd2FudHMgdG8gZG8gYW5kIGxlYXJuIGEgYnVuY2ggYWJvdXQgdGhlIGtl
-cm5lbC4NCj4gDQo+IEhlaC4NCj4gDQo+IFdlIF9oYXZlXyBiZWVuIGRvaW5nIGl0LCBidXQgd2Ug
-ZGVmaW5pdGVseSBoYXZlIG9ubHkgZG9uZSBpdCBvbiBhIHJhbmRvbSBjYXNlLQ0KPiBieS1jYXNl
-ZCBiYXNpcyBhcyBzb21ldGhpbmcgY29tZXMgdXAuDQo+IA0KPiBTbyB3aGF0IHdvdWxkIGJlIGdy
-ZWF0IGlzIHRvIGhhdmUgc29tZXRoaW5nIGFjdGl2ZWx5IGxvb2tpbmcgZm9yIHRoZXNlIHRoaW5n
-cyAtDQo+IGFuZCBieSAic29tZXRoaW5nIiBJIG1lYW4gbW9zdGx5IHNjcmlwdGluZy4NCj4gDQo+
-IEFuZCB5ZXMsIGFzIEtlZXMgYW5kIERhbmllbCBtZW50aW9uZWQsIGl0J3MgZGVmaW5pdGVseSBu
-b3QganVzdCBkbWVzZy4NCj4gSW4gZmFjdCwgdGhlIHByaW1hcnkgdGhpbmdzIHRlbmQgdG8gYmUg
-L3Byb2MgYW5kIC9zeXMsIG5vdCBkbWVzZyBpdHNlbGYuDQo+IA0KPiBBbm90aGVyIGV4YW1wbGUg
-b2YgdGhpcyB3b3VsZCBiZSBjb21taXQgMzFiMGIzODVmNjlkICgibmZfY29ubnRyYWNrOg0KPiBh
-dm9pZCBrZXJuZWwgcG9pbnRlciB2YWx1ZSBsZWFrIGluIHNsYWIgbmFtZSIpLCB3aGVyZSB0aGUg
-ZmFjdCB0aGF0IHRoZSBzbGFiIG5hbWUNCj4gaGFkIGEgcG9pbnRlciBpbiBpdCBsZWFrZWQgaXQg
-aW4gdGhlIF9maWxlbmFtZXNfIGluIC9zeXMsIGJlY2F1c2Ugd2UgZXhwb3J0IHNsYWINCj4gc3Rh
-dGlzdGljcyB1bmRlciAvc3lzL2tlcm5lbC9zbGFiLy4gQW5kIGVhY2ggZmlsZSB3YXMgcmVhZGFi
-bGUgb25seSBieSByb290LCBidXQNCj4gdGhlIGZpbGUgKm5hbWVzKiB3ZXJlIHJlYWRhYmxlIGJ5
-IGV2ZXJ5Ym9keS4NCj4gDQo+IChUaGF0IHNlcGFyYXRlIHNsYWIgdGhpbmcgdGhlbiBnb3QgcmVt
-b3ZlZCBlbnRpcmVseSBsYXRlciwgc28gdGhhdCBzbGFiIG5vIGxvbmdlcg0KPiBleGlzdHMgYXQg
-YWxsLCBidXQgaXQncyBhbiBvZGQgZXhhbXBsZSBvZiBob3cgdGhlIGxlYWtzIGNhbiBiZSBpbiB0
-aGUgbWV0YS1kYXRhLCBub3QNCj4gaW4gdGhlIGZpbGUgY29udGVudHMgdGhlbXNlbHZlcy4NCj4g
-DQo+IEJ1dCBhZ2FpbiwgSSB0aGluayB0aGF0IGtpbmQgb2YgbGVhayB3b3VsZCBoYXZlIGJlZW4g
-ZmFpcmx5IG9idmlvdXMgaWYgd2UganVzdCBoYWQNCj4gc29tZSBzY3JpcHRpbmcgdGhhdCBsb29r
-ZWQgZm9yIGludGVyZmFjZXMgdGhhdCB0aGUga2VybmVsIGV4cG9zZWQsIGFuZCBsb29rZWQgZm9y
-DQo+IHRoYXQgaGV4IHBhdHRlcm4uDQo+IA0KPiBJbiBmYWN0LCB0aGF0IHdhcyBob3cgSSBub3Rp
-Y3ZlZCB0aGF0IG9uZTogbm90IGEgZ3JlcCwgYnV0IGFuIGVudGlyZWx5IHVucmVsYXRlZA0KPiAi
-ZmluZCAvc3lzLi4uIiB0aGF0IG1hZGUgbWUgZ28gIndoeSBhcmUgdGhlcmUga2VybmVsIGFkZHJl
-c3NlcyBpbiB0aGVyZS4uIg0KPiANCj4gU28gd2UndmUgZm91bmQgdGhlbSBvY2Nhc2lvbmFsbHkg
-c2ltcGx5IGJ5IG1pc3Rha2UgLSBhbmQgaXQgd291bGQgYmUgZ3JlYXQgaWYgd2UNCj4gZm91bmQg
-dGhlbSBiZWNhdXNlIHdlIGFjdGl2ZWx5IHdlbnQgX2xvb2tpbmdfIGZvciB0aGVtLg0KPiANCj4g
-PiBTbyB3aGF0IGlmIHdlIGRyb3AgdGhpcyBwYXRjaCBzZXQgYW5kDQo+ID4NCj4gPiAxLiBGaW5k
-IGFuZCBmaXggZXZlcnkgcGxhY2UgaW4gdGhlIGtlcm5lbCB0aGF0IGxlYWtzIGFkZHJlc3Nlcy4N
-Cj4gPiAyLiBWZXJpZnkgdGhhdCBjaGVja3BhdGNoLnBsIHdhcm5zIGZvciBhbGwgcG90ZW50aWFs
-IGZ1dHVyZSBsZWFrYWdlLg0KPiA+IDIuIEFkZCBhIHNjcmlwdCB0byBjaGVjayBkbWVzZyBvdXRw
-dXQgZm9yIGZ1dHVyZSBoYXJkZW5pbmcuDQo+IA0KPiBWZXJ5IGFtYml0aW91cyAocGFydGljdWxh
-cmx5IHRoYXQgIipldmVyeSogcGxhY2UiKSwgYnV0IEkgY2VydGFpbmx5IHRoaW5rIGl0IHdvdWxk
-IGJlDQo+IHRoZSBiZXR0ZXIgZW5kIHJlc3VsdCwgeWVzLg0KPiANCj4gQW5kIEkgZG8gdGhpbmsg
-d2Ugd291bGQgYmUgcmVhbGx5IHdlbGwgb2ZmIGlmIHdlIGFpbWVkIGZvciBzaW1wbHkgZ2V0dGlu
-ZyByaWQgb2YgYWxsDQo+IHRoZSB2YXJpYXRpb25zIG9mICVwIHRoYXQgb3V0cHV0IGhleCBhZGRy
-ZXNzZXMgZW50aXJlbHkuDQo+IA0KPiBEb24ndCBnZXQgbWUgd3Jvbmc6IEkgdGhpbmsgdGhlIHZh
-cmlvdXMgX2ZhbmN5XyB2ZXJzaW9ucyBvZiAiJXBYWVoiDQo+IGFyZSBncmVhdCwgaWUgdGhpbmdz
-IGxpa2UgIiVwUyIgdG8gc2hvdyB0aGUgc3ltYm9sIG5hbWUgZXRjLg0KPiANCj4gQnV0IHBsYWlu
-ICVwIGhhcyBkZWZpbml0ZWx5IGJlZW4gYSBwcm9ibGVtLCBhbmQgSSBkb24ndCB0aGluayAlcGEg
-aXMgZ3JlYXQgZWl0aGVyLg0KPiBTbyBhaW1pbmcgdG8gZ2V0IHJpZCBvZiB0aGVtIGVudGlyZWx5
-IGlzIHByb2JhYmx5IGEgZ29vZCBpZGVhLg0KPiANCj4gU28gSSBhbSBub3Qgb3Bwb3NlZCB0byBo
-b2JibGluZyAlcCBwZXIgc2UuIEl0J3MgbGl0ZXJhbGx5IGp1c3QgdGhlICdrcHRyX3Jlc3RyaWN0
-Jw0KPiBtb2RlbCBJIGRldGVzdC4gSSdkIHJhdGhlciBnZXQgcmlkIG9mICVwIChhbmQgJXBhKSBf
-ZW50aXJlbHlfIGFuZCBtYWtlIHZhbGlkIHVzZXJzDQo+IGhhdmUgdG8gd29yayBhIGJpdCBleHRy
-YSBmb3IgaXQsIGJlY2F1c2UgSSB0aGluayB0aGUgNisgeWVhcnMgb2Yga3B0cl9yZXN0cmljdCBo
-YXMNCj4gc2hvd24gdGhhdCBtb2RlbCBvZiAibGV0IHBlb3BsZSB3aG8gY2FyZSBqdXN0IGVuYWJs
-ZSBpdCBhZ2FpbiIgdG8gc2ltcGx5IG5vdA0KPiB3b3JrLg0KDQpJIHRoaW5rIG9uZSBvZiB0aGUg
-cmVhc29ucyBpdCBkaWRuJ3Qgd29yayB3YXMgdGhhdCBpdCB3YXMgb3B0LWluIHZpYSAlcEsuIEl0
-IHNob3VsZCBoYXZlDQphbHdheXMgYmVlbiBmaWx0ZXIgdW5sZXNzIG9uZSBvcHRzLW91dCwgYXQg
-dGhhdCBwb2ludCwgeW91IHNob3QgeW91cnNlbGYgYW5kIEkgY291bGQNCmNhcmUgbGVzcyBhYm91
-dCB0aG9zZS4gS2lsbGluZyAlcCBqdXN0IG1lYW5zIHRoZXJlIHdpbGwgYmUgYSBsb3Qgb2YgJWx1
-IHVzZXJzIChhcyBhbiBleGFtcGxlKQ0Kd2hpY2ggbWVhbnMgdGhleSB3b3VsZCBiZSBoYXJkZXIg
-dG8gYXVkaXQuIEknbSBzdXJlLCBzb21ld2hlcmUsIHNvbWVvbmUgaXMgZG9pbmcgdGhhdA0KYWxy
-ZWFkeS4NCg0KPiANCj4gICAgICAgICAgICAgICAgICAgIExpbnVzDQo=
+On Thu, Oct 5, 2017 at 6:06 AM, Steven Rostedt <rostedt@goodmis.org> wrote:
+> On Wed,  4 Oct 2017 14:19:56 -0700
+> Thomas Garnier <thgarnie@google.com> wrote:
+>
+>> When using -fPIE/PIC with function tracing, the compiler generates a
+>> call through the GOT (call *__fentry__@GOTPCREL). This instruction
+>> takes 6 bytes instead of 5 on the usual relative call.
+>>
+>> With this change, function tracing supports 6 bytes on traceable
+>> function and can still replace relative calls on the ftrace assembly
+>> functions.
+>>
+>> Position Independent Executable (PIE) support will allow to extended the
+>> KASLR randomization range below the -2G memory limit.
+>
+> Question: This 6 bytes is only the initial call that gcc creates. When
+> function tracing is enabled, the calls are back to the normal call to
+> the ftrace trampoline?
+
+That is correct.
+
+>
+> -- Steve
+>
+
+
+
+-- 
+Thomas
