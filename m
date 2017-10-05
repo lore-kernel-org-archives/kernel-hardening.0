@@ -1,262 +1,37 @@
-References: <1507157703-14972-1-git-send-email-alex.popov@linux.com>
- <1507157703-14972-2-git-send-email-alex.popov@linux.com>
- <20171005072751.lhf7kamzfw4sdhbo@gmail.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <a3074303-d61f-342a-af8a-64013557c816@linux.com>
-Date: Thu, 5 Oct 2017 15:31:56 +0300
+Date: Thu, 5 Oct 2017 09:06:33 -0400
+From: Steven Rostedt <rostedt@goodmis.org>
+Message-ID: <20171005090633.5a6ce840@gandalf.local.home>
+In-Reply-To: <20171004212003.28296-21-thgarnie@google.com>
+References: <20171004212003.28296-1-thgarnie@google.com>
+	<20171004212003.28296-21-thgarnie@google.com>
 MIME-Version: 1.0
-In-Reply-To: <20171005072751.lhf7kamzfw4sdhbo@gmail.com>
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v4 1/3] gcc-plugins: Add STACKLEAK erasing the kernel
- stack at the end of syscalls
-To: Ingo Molnar <mingo@kernel.org>
-Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, tycho@docker.com, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Andy Lutomirski <luto@amacapital.net>, x86@kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+Subject: [kernel-hardening] Re: [RFC v3 20/27] x86/ftrace: Adapt function tracing for PIE
+ support
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Matthias Kaehlcke <mka@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Chris Wright <chrisw@sous-sol.org>, Alok Kataria <akataria@vmware.com>, Rusty Russell <rusty@rustcorp.com.au>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Alexey Dobriyan <adobriyan@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Borislav Petkov <bp@alien8.de>, "Luis R .
+ Rodriguez" <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Christopher Li <sparse@chrisli.org>, Jason Baron <jbaron@akamai.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, "Rafael
+ J . Wysocki" <rafael.j.wysocki@intel.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Lukas Wunner <lukas@wunner.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?UTF-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Jonathan Corbet <corbet@lwn.net>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Peter Foley <pefoley2@pefoley.com>, Paul Bolle <pebolle@tiscali.nl>, Jiri Kosina <jkosina@suse.cz>, Rob Landley <rob@landley.net>, "H . J . Lu" <hjl.tools@gmail.com>, Baoquan He <bhe@redhat.com>, "Jan H .
+ =?UTF-8?B?U2Now7ZuaGVycg==?=" <jschoenh@amazon.de>, Daniel Micay <danielmicay@gmail.com>, x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux-pm@vger.kernel.org, virtualization@lists.linux-foundation.org, xen-devel@lists.xenproject.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 05.10.2017 10:27, Ingo Molnar wrote:
+On Wed,  4 Oct 2017 14:19:56 -0700
+Thomas Garnier <thgarnie@google.com> wrote:
+
+> When using -fPIE/PIC with function tracing, the compiler generates a
+> call through the GOT (call *__fentry__@GOTPCREL). This instruction
+> takes 6 bytes instead of 5 on the usual relative call.
 > 
-> * Alexander Popov <alex.popov@linux.com> wrote:
+> With this change, function tracing supports 6 bytes on traceable
+> function and can still replace relative calls on the ftrace assembly
+> functions.
 > 
->> diff --git a/arch/x86/entry/entry_32.S b/arch/x86/entry/entry_32.S
->> index 8a13d46..06bc57b 100644
->> --- a/arch/x86/entry/entry_32.S
->> +++ b/arch/x86/entry/entry_32.S
->> @@ -75,6 +75,71 @@
->>  #endif
->>  .endm
->>  
->> +.macro erase_kstack
->> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
->> +	call erase_kstack
->> +#endif
->> +.endm
->> +
->> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
->> +/* For the detailed comments, see erase_kstack in entry_64.S */
->> +ENTRY(erase_kstack)
->> +	pushl	%edi
->> +	pushl	%ecx
->> +	pushl	%eax
->> +	pushl	%ebp
->> +
->> +	movl	PER_CPU_VAR(current_task), %ebp
->> +	mov	TASK_lowest_stack(%ebp), %edi
->> +	mov	$STACKLEAK_POISON, %eax
->> +	std
->> +
->> +1:
->> +	mov	%edi, %ecx
->> +	and	$THREAD_SIZE_asm - 1, %ecx
->> +	shr	$2, %ecx
->> +	repne	scasl
->> +	jecxz	2f
->> +
->> +	cmp	$2*16, %ecx
->> +	jc	2f
->> +
->> +	mov	$2*16, %ecx
->> +	repe	scasl
->> +	jecxz	2f
->> +	jne	1b
->> +
->> +2:
->> +	cld
->> +	or	$2*4, %edi
->> +	mov	%esp, %ecx
->> +	sub	%edi, %ecx
->> +
->> +	cmp	$THREAD_SIZE_asm, %ecx
->> +	jb	3f
->> +	ud2
->> +
->> +3:
->> +	shr	$2, %ecx
->> +	rep	stosl
->> +
->> +	/*
->> +	 * TODO: sp0 on x86_32 is not reliable, right?
->> +	 * Doubt because of the definition of cpu_current_top_of_stack
->> +	 * in arch/x86/kernel/cpu/common.c.
->> +	 */
->> +	mov	TASK_thread_sp0(%ebp), %edi
->> +	sub	$128, %edi
->> +	mov	%edi, TASK_lowest_stack(%ebp)
->> +
->> +	popl	%ebp
->> +	popl	%eax
->> +	popl	%ecx
->> +	popl	%edi
->> +	ret
->> +ENDPROC(erase_kstack)
->> +#endif
->> +
->>  /*
->>   * User gs save/restore
->>   *
->> @@ -445,6 +510,8 @@ ENTRY(entry_SYSENTER_32)
->>  	ALTERNATIVE "testl %eax, %eax; jz .Lsyscall_32_done", \
->>  		    "jmp .Lsyscall_32_done", X86_FEATURE_XENPV
->>  
->> +	erase_kstack
->> +
->>  /* Opportunistic SYSEXIT */
->>  	TRACE_IRQS_ON			/* User mode traces as IRQs on. */
->>  	movl	PT_EIP(%esp), %edx	/* pt_regs->ip */
->> @@ -531,6 +598,8 @@ ENTRY(entry_INT80_32)
->>  	call	do_int80_syscall_32
->>  .Lsyscall_32_done:
->>  
->> +	erase_kstack
->> +
->>  restore_all:
->>  	TRACE_IRQS_IRET
->>  .Lrestore_all_notrace:
->> diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
->> index 4916725..189d843 100644
->> --- a/arch/x86/entry/entry_64.S
->> +++ b/arch/x86/entry/entry_64.S
->> @@ -59,6 +59,90 @@ END(native_usergs_sysret64)
->>  #endif
->>  .endm
->>  
->> +.macro erase_kstack
->> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
->> +	call erase_kstack
->> +#endif
->> +.endm
->> +
->> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
->> +ENTRY(erase_kstack)
->> +	pushq	%rdi
->> +	pushq	%rcx
->> +	pushq	%rax
->> +	pushq	%r11
->> +
->> +	movq	PER_CPU_VAR(current_task), %r11
->> +	mov	TASK_lowest_stack(%r11), %rdi
->> +	mov	$STACKLEAK_POISON, %rax
->> +	std
->> +
->> +	/*
->> +	 * Let's search for the poison value in the stack.
->> +	 * Start from the lowest_stack and go to the bottom (see std above).
->> +	 */
->> +1:
->> +	mov	%edi, %ecx
->> +	and	$THREAD_SIZE_asm - 1, %ecx
->> +	shr	$3, %ecx
->> +	repne	scasq
->> +	jecxz	2f	/* Didn't find it. Go to poisoning. */
->> +
->> +	/*
->> +	 * Found the poison value in the stack. Go to poisoning if there are
->> +	 * less than 16 qwords left.
->> +	 */
->> +	cmp	$2*8, %ecx
->> +	jc	2f
->> +
->> +	/*
->> +	 * Check that 16 further qwords contain poison (avoid false positives).
->> +	 * If so, the part of the stack below the address in %rdi is likely
->> +	 * to be poisoned. Otherwise we need to search deeper.
->> +	 */
->> +	mov	$2*8, %ecx
->> +	repe	scasq
->> +	jecxz	2f	/* Poison the upper part of the stack. */
->> +	jne	1b	/* Search deeper. */
->> +
->> +2:
->> +	/*
->> +	 * Prepare the counter for poisoning the kernel stack between
->> +	 * %rdi and %rsp. Two qwords at the bottom of the stack are reserved
->> +	 * and should not be poisoned (see CONFIG_SCHED_STACK_END_CHECK).
->> +	 */
->> +	cld
->> +	or	$2*8, %rdi
->> +	mov	%esp, %ecx
->> +	sub	%edi, %ecx
->> +
->> +	/* Check that the counter value is sane. */
->> +	cmp	$THREAD_SIZE_asm, %rcx
->> +	jb	3f
->> +	ud2
->> +
->> +3:
->> +	/*
->> +	 * So let's write the poison value to the kernel stack. Start from the
->> +	 * address in %rdi and move up (see cld above) to the address in %rsp
->> +	 * (not included, used memory).
->> +	 */
->> +	shr	$3, %ecx
->> +	rep	stosq
->> +
->> +	/* Set the lowest_stack value to the top_of_stack - 256. */
->> +	mov	TASK_thread_sp0(%r11), %rdi
->> +	sub	$256, %rdi
->> +	mov	%rdi, TASK_lowest_stack(%r11)
->> +
->> +	popq	%r11
->> +	popq	%rax
->> +	popq	%rcx
->> +	popq	%rdi
->> +	ret
->> +ENDPROC(erase_kstack)
+> Position Independent Executable (PIE) support will allow to extended the
+> KASLR randomization range below the -2G memory limit.
 
+Question: This 6 bytes is only the initial call that gcc creates. When
+function tracing is enabled, the calls are back to the normal call to
+the ftrace trampoline?
 
-Hello Ingo,
-
-Thanks a lot for your review.
-
-> A couple of (first round) review observations:
-> 
-> - Why is the erase_kstack() function written in assembly, instead of plain C?
->   The complexity and fragility of this patch could be reduced if it was moved to C.
-
-Let me shortly describe my tactics.
-
-Initially the erase_kstack() function is written in assembly in Grsecurity/PaX
-patch. I've extracted the STACKLEAK feature from that huge patch and carefully
-learned it bit by bit (it's quite complex). There are several bugs which I've
-found and fixed in it (they are listed in the cover letter), but generally I
-stick to the initial implementation in order not to accidentally break it.
-
-I've added the detailed comments describing erase_kstack() for x86_64. IMO this
-code is really cool (my respect to PaX Team). However, if you think that
-rewriting it in C is obligatory, I'll do that. But let me at first fix the other
-issues which you listed below.
-
-> - The GCC plugin adds instrumentation in form of extra 'track_stack()' and
->   'check_alloca()' calls. Could you please provide a frequency analysis of the
->   impact of this: x86-64 defconfig vmlinux size before/after the patch, and the
->   number of instrumentation function calls inserted, compared to the number of
->   functions?
-
-Ok, I'll provide that information.
-
-> - Is there a debug facility to query the current (latest) lowest_stack value of
->   any task in the system, via /proc? Observing this threshold over time would give 
->   a good idea about the typical work the clearing function has to perform for
->   every system call.
-
-Yes, I'll create a PoC for it and maybe return with some questions.
-
-> - Please clean up the GCC plugin code to follow proper kernel coding style.
->   The '//' comment lines in particular are a big eyesore, plus there are a lot of 
->   other stylistic variations as well that make the code unnecessarily difficult to 
->   read.
-
-Yes, sure, I'll fix it.
-
-Which line length limit should I use? I'm asking because GCC plugins are written
-in C++ and, as I see, other plugins in scripts/gcc-plugins/ have some very long
-lines.
-
-> - Also, this patch is way too big - there's no reason why the GCC plugin and
->   the stack erasure features should be introduced in the same patch, etc.
-
-Ok, I'll split it.
-
-Thanks again.
-Best regards,
-Alexander
+-- Steve
