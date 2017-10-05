@@ -1,68 +1,93 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1507163355.1273.63.camel@gmail.com>
+Date: Thu, 5 Oct 2017 13:19:15 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171005021915.GK16685@eros>
 References: <1506816410-10230-1-git-send-email-me@tobin.cc>
  <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
  <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
  <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
  <476DC76E7D1DF2438D32BFADF679FC563EAF4F29@ORSMSX103.amr.corp.intel.com>
- <CA+55aFwEZCT6=BCdmaNn5LGeU8g-2qi4OnM9MTOep3NOZVXjMg@mail.gmail.com> <1507163355.1273.63.camel@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 4 Oct 2017 17:35:42 -0700
-Message-ID: <CAGXu5j+R0-_k0jWHMWxxytEUgmJDxKyifjj5gC13dMebSLQ3Vw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+ <CA+55aFwEZCT6=BCdmaNn5LGeU8g-2qi4OnM9MTOep3NOZVXjMg@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CA+55aFwEZCT6=BCdmaNn5LGeU8g-2qi4OnM9MTOep3NOZVXjMg@mail.gmail.com>
+Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
+ options
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 4, 2017 at 5:29 PM, Daniel Micay <danielmicay@gmail.com> wrote:
-> On Wed, 2017-10-04 at 16:52 -0700, Linus Torvalds wrote:
->> On Wed, Oct 4, 2017 at 2:58 PM, Roberts, William C
->> <william.c.roberts@intel.com> wrote:
->> >
->> > I agree with you 100% kptr restrict is odd, and I don't think anyone
->> > should have had to opt in to be
->> > cleansed via kptr_restrict value via %pK. Opt-in never works. One
->> > nice thing now, is that checkpatch
->> > has checking of %p usages and warns.
->>
->> Yeah, the checkpatch thing may help for future patches.
->>
->> > As far as broken things, I can't comment on desktop systems where I
->> > think it's harder to make that claim.
->> > I see value in embedded systems where I am shipping the whole image,
->> > So I know when/what will
->> > break.
->> >
->> > If this was in-tree, Android would be setting this to 4 immediately
->> > FWIW.
->>
->> Does android set it to 2 right now?
->
-> Yes, as the universal baseline.
->
-> On Google Pixels it's set to this 4 level since August (Android 8.0)
-> which indicates they plan on moving to that universally.
+On Wed, Oct 04, 2017 at 04:52:58PM -0700, Linus Torvalds wrote:
+> On Wed, Oct 4, 2017 at 2:58 PM, Roberts, William C
+> <william.c.roberts@intel.com> wrote:
+> >
+> > I agree with you 100% kptr restrict is odd, and I don't think anyone should have had to opt in to be
+> > cleansed via kptr_restrict value via %pK. Opt-in never works. One nice thing now, is that checkpatch
+> > has checking of %p usages and warns.
+> 
+> Yeah, the checkpatch thing may help for future patches.
+> 
+> > As far as broken things, I can't comment on desktop systems where I think it's harder to make that claim.
+> > I see value in embedded systems where I am shipping the whole image, So I know when/what will
+> > break.
+> >
+> > If this was in-tree, Android would be setting this to 4 immediately FWIW.
+> 
+> Does android set it to 2 right now?
+> 
+> But even if it does, my point is that we've had this thing for 6+
+> years, and it really hasn't helped fix our code much at all.
+> 
+> In fact, I think the opposite is true. I think it *hurts*. It hurts
+> exactly because it's a hack, and it makes people not bother to fix the
+> real problems.
+> 
+> I think we'd be better off just fixing code.
+> 
+> One thing you can do today is just look through your 'dmesg' for what
+> looks like kernel addresses (if virtual addresses is what you're
+> interested in - obviously physical addresses will look different). On
+> x86-64, for example, something like this:
+> 
+>     dmesg | egrep 'ffff[0-9a-f]{12}'
+> 
+> might be interesting to look at. It shows (for me) that we show the
+> percpu address mapping, for example. That certainly sounds interesting
+> to a potential attacker, and I suspect Tejun isn't really interested
+> in that information any more. Added to Cc.
+> 
+> It also shows
+> 
+>     software IO TLB [mem PA-PB] (64MB) mapped at [VA-VB]
+> 
+> for example.  And THIS IS IMPORTANT! The physical address is shown
+> with "%#010llx".
+> 
+> See what I'm saying? The kptr_restrict games are just that: games and
+> security theater. If you actually care about things like physical
+> addresses, you don't say "let's hide %pa". Because that's not how the
+> real world works. I found one case that would entirely have missed
+> with the very first trivial grep I did.
+> 
+> So I'm claiming that anybody who says "it's too hard to fix it for
+> real, let's just paper over it in vsprintf.c" is fundamentally going
+> to miss things like this. I agree that it might be painful to try to
+> figure out where the problems are, but somebody like google probably
+> has a lot of dmesg output, and it should not be that hard to do the
+> above kinds of "let's just see what leaks, and FIX it".
 
-Yup, which is what triggered working to upstream a solution. (As
-mentioned in the changelogs, this series has gone through a number of
-hands including Intel and Google folks.)
+This sounds like just the job for an upcoming kernel hacker, with a lot of time
+and not much experience, to do something laborious that no one else wants to do
+and learn a bunch about the kernel.
 
-> They only allow dmesg access for core system services so I think their
-> concern is with formatted strings leaking it elsewhere, not to dmesg.
+So what if we drop this patch set and
 
-One of the paths is via seq_file and it's many outputs in procfs,
-debugfs, etc etc. The %x issue exists there too, but it's relatively
-rare compared to %p and family.
+1. Find and fix every place in the kernel that leaks addresses.
+2. Verify that checkpatch.pl warns for all potential future leakage.
+2. Add a script to check dmesg output for future hardening.
 
-Just looking at the %p case, an alternative might be to follow
-grsecurity's method here, which is to examine where v*printf is
-writing. They perform the censorship in the case of seq_file buffers,
-or memory destined for userspace.
+I'm super keen to work. I would have to get everyone to dump their ideas/demands 
+onto me if we are to get this fixed fully.
 
--Kees
-
--- 
-Kees Cook
-Pixel Security
+thanks,
+Tobin.
