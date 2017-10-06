@@ -1,79 +1,76 @@
+Date: Fri, 6 Oct 2017 12:39:33 +0200
+From: Pavel Machek <pavel@ucw.cz>
+Message-ID: <20171006103933.GA9497@amd>
+References: <CAJcbSZFTX3uiS2g8JriS6+z_+WrG8z3hrQo4OSuyHpiyUDJWYA@mail.gmail.com>
+ <20170815075609.mmzbfwritjzvrpsn@gmail.com>
+ <CAJcbSZE+TiY2whT94WqCJNXzR=2ATOHcQ10H5RqBZA1j=k1VHQ@mail.gmail.com>
+ <20170816151235.oamkdva6cwpc4cex@gmail.com>
+ <20170821133222.2ek6bhqgdeoymxsg@hirez.programming.kicks-ass.net>
+ <20170821142854.dmuusnbc2tsrai3v@hirez.programming.kicks-ass.net>
+ <c830ba59-65d3-187f-3868-732059269f28@zytor.com>
+ <20170923100029.6nzpui6c3ke76bbs@gmail.com>
+ <20170924223708.GA12616@amd>
+ <20170925073342.2yoghmanhx6c75ho@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+R0-_k0jWHMWxxytEUgmJDxKyifjj5gC13dMebSLQ3Vw@mail.gmail.com>
-References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
- <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
- <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
- <476DC76E7D1DF2438D32BFADF679FC563EAF4F29@ORSMSX103.amr.corp.intel.com>
- <CA+55aFwEZCT6=BCdmaNn5LGeU8g-2qi4OnM9MTOep3NOZVXjMg@mail.gmail.com>
- <1507163355.1273.63.camel@gmail.com> <CAGXu5j+R0-_k0jWHMWxxytEUgmJDxKyifjj5gC13dMebSLQ3Vw@mail.gmail.com>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Fri, 6 Oct 2017 09:33:14 +0100
-Message-ID: <CAEiveUeLExH1R+TVO1TRCEVc4RasuPeOFJzg3Kp-rzjit3szPg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
-To: Kees Cook <keescook@chromium.org>
-Cc: Daniel Micay <danielmicay@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, "Tobin C. Harding" <me@tobin.cc>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="fUYQa+Pmc3FrFX/N"
+Content-Disposition: inline
+In-Reply-To: <20170925073342.2yoghmanhx6c75ho@gmail.com>
+Subject: [kernel-hardening] Re: x86: PIE support and option to extend KASLR randomization
+To: Ingo Molnar <mingo@kernel.org>
+Cc: "H. Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Garnier <thgarnie@google.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, linux-crypto@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
 
-On Thu, Oct 5, 2017 at 1:35 AM, Kees Cook <keescook@chromium.org> wrote:
-> On Wed, Oct 4, 2017 at 5:29 PM, Daniel Micay <danielmicay@gmail.com> wrote:
->> On Wed, 2017-10-04 at 16:52 -0700, Linus Torvalds wrote:
->>> On Wed, Oct 4, 2017 at 2:58 PM, Roberts, William C
->>> <william.c.roberts@intel.com> wrote:
->>> >
->>> > I agree with you 100% kptr restrict is odd, and I don't think anyone
->>> > should have had to opt in to be
->>> > cleansed via kptr_restrict value via %pK. Opt-in never works. One
->>> > nice thing now, is that checkpatch
->>> > has checking of %p usages and warns.
->>>
->>> Yeah, the checkpatch thing may help for future patches.
->>>
->>> > As far as broken things, I can't comment on desktop systems where I
->>> > think it's harder to make that claim.
->>> > I see value in embedded systems where I am shipping the whole image,
->>> > So I know when/what will
->>> > break.
->>> >
->>> > If this was in-tree, Android would be setting this to 4 immediately
->>> > FWIW.
->>>
->>> Does android set it to 2 right now?
->>
->> Yes, as the universal baseline.
->>
->> On Google Pixels it's set to this 4 level since August (Android 8.0)
->> which indicates they plan on moving to that universally.
->
-> Yup, which is what triggered working to upstream a solution. (As
-> mentioned in the changelogs, this series has gone through a number of
-> hands including Intel and Google folks.)
->
->> They only allow dmesg access for core system services so I think their
->> concern is with formatted strings leaking it elsewhere, not to dmesg.
->
-> One of the paths is via seq_file and it's many outputs in procfs,
-> debugfs, etc etc. The %x issue exists there too, but it's relatively
-> rare compared to %p and family.
+--fUYQa+Pmc3FrFX/N
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-I think the kptr_restrict solution is not enough since you will have
-to continue to track all call sites.
+On Mon 2017-09-25 09:33:42, Ingo Molnar wrote:
+>=20
+> * Pavel Machek <pavel@ucw.cz> wrote:
+>=20
+> > > For example, there would be collision with regular user-space mapping=
+s, right?=20
+> > > Can local unprivileged users use mmap(MAP_FIXED) probing to figure ou=
+t where=20
+> > > the kernel lives?
+> >=20
+> > Local unpriviledged users can probably get your secret bits using cache=
+ probing=20
+> > and jump prediction buffers.
+> >=20
+> > Yes, you don't want to leak the information using mmap(MAP_FIXED), but =
+CPU will=20
+> > leak it for you, anyway.
+>=20
+> Depends on the CPU I think, and CPU vendors are busy trying to mitigate t=
+his=20
+> angle.
 
-Anyway for procfs as you know Kees, we have patches to modernize it
-based on Andy Lutomirski suggestions.
-There is this branch [1] that allows only to access pids in
-/proc/<pids>/ and block the rest that is kernel data.
+I believe any x86 CPU running Linux will leak it. And with CPU vendors
+putting "artifical inteligence" into branch prediction, no, I don't
+think it is going to get better.
 
-It can be used by any sandbox solution to allow glibc and others work
-on /proc/self/ access and block the rest, or for other embedded
-systems sandboxes.
-I updated the patches to post them but there is a bug with some other
-kernel changes + dracut that I am still tracking.
+That does not mean we shoudl not prevent mmap() info leak, but...
 
-[1] https://github.com/legionus/linux/commits/pidfs-v4
+									Pavel
+--=20
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
+g.html
 
--- 
-tixxdz
+--fUYQa+Pmc3FrFX/N
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iEYEARECAAYFAlnXXWUACgkQMOfwapXb+vLHdQCfT0gtt1DcnPzO7HUoTmQNbTIP
+73cAn2DmS20EcLXQtKA4VV7Dur1vaFqH
+=9iUT
+-----END PGP SIGNATURE-----
+
+--fUYQa+Pmc3FrFX/N--
