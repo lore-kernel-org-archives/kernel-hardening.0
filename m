@@ -1,50 +1,43 @@
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <20171007234453.vojizsbxec4gygku@thunk.org>
-References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
- <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
- <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
- <476DC76E7D1DF2438D32BFADF679FC563EAF4F29@ORSMSX103.amr.corp.intel.com>
- <CA+55aFwEZCT6=BCdmaNn5LGeU8g-2qi4OnM9MTOep3NOZVXjMg@mail.gmail.com>
- <20171005021915.GK16685@eros> <CA+55aFwac2BzgZs-X1_VhekkuGfuLqNui2+2DbvLiDyptS-rXQ@mail.gmail.com>
- <476DC76E7D1DF2438D32BFADF679FC563F4AD0AF@ORSMSX115.amr.corp.intel.com>
- <CA+55aFxjsKRhuzpQjRff6b6emJBFHtefUwnDfv+zgrxmUDvqkw@mail.gmail.com> <20171007234453.vojizsbxec4gygku@thunk.org>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Sat, 7 Oct 2017 17:08:29 -0700
-Message-ID: <CA+55aFy2CQ_AFahTQynumDL6ocZD5R23v=HXLYS6w_E1tpY-1Q@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
-To: Theodore Ts'o <tytso@mit.edu>
-Cc: "Roberts, William C" <william.c.roberts@intel.com>, "Tobin C. Harding" <me@tobin.cc>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>
+From: "Tobin C. Harding" <me@tobin.cc>
+Date: Mon,  9 Oct 2017 13:59:05 +1100
+Message-Id: <1507517945-27155-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] [PATCH] lib/vsprintf: add default case to 'i' specifier
+To: kernel-hardening@lists.openwall.com
+Cc: "Tobin C. Harding" <me@tobin.cc>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Oct 7, 2017 at 4:44 PM, Theodore Ts'o <tytso@mit.edu> wrote:
->
-> Maybe this is overkill, but what about *encrypting* the pointer using
-> fixed, per-boot random key?  It would have to be a block crypto
-> algorithm, like Tea/XXTea/XXTEA or Speck.  That has all of the
-> benefits of hashing, plus if the key is available (only to privileged
-> users, of course), then it would be possible to get the pointer for
-> debugging purposes.
+%pi leaks kernel addresses if incorrectly specified.
 
-I doubt it's going to be used enough to be worth it.
+Currently the printk specifier %pi (%pI) contains a switch statement
+without a default clause. The %pi specifier requires a subsequent
+character (4, 6, or S) controlling the output. If the specifier is
+incomplete the switch statement will fall through and print the variable
+argument address in hex instead of the value of the argument (as an IP
+address).
 
-So I'd rather just make it a hash that gives you that identity for
-people who want it, and then people who actually need the address
-would need to decide whether they _really_ need it in the first place,
-or whether they would use %lx instead together with stricty security
-rules.
+If uncaught this leaks kernel addresses into dmesg. We can return an
+error string to make the bug visible and stop addresses leaking.
 
-I did test the patch I sent out (using jhash - so not a cryptographic
-hash, and with a "random value" that was just a constant) just to see
-that it doesn't break anything obvious. As expected, it did break
-kernel profiling (which uses /proc/kallsyms), and it obviously made
-the kernel pointers I'd already found in dmesg be just garbage, but it
-didn't seem insurmountable. More like a "with a couple of fixup cases,
-it might all work fine".
+Add a default clause returning an error string, stops leaking addresses
+and makes the buggy code
 
-So I'd be willing to try it for the next merge window, and see if it
-causes unexpected problems..
+Signed-off-by: Tobin C. Harding <me@tobin.cc>
+---
+ lib/vsprintf.c | 2 ++
+ 1 file changed, 2 insertions(+)
 
-                Linus
+diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+index 86c3385b9eb3..155702f05b14 100644
+--- a/lib/vsprintf.c
++++ b/lib/vsprintf.c
+@@ -1775,6 +1775,8 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
+ 			default:
+ 				return string(buf, end, "(invalid address)", spec);
+ 			}}
++		default:
++			return string(buf, end, "(invalid specifier, form: %pi4)", spec);
+ 		}
+ 		break;
+ 	case 'E':
+-- 
+2.7.4
