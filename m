@@ -3,8 +3,8 @@ Sender: linus971@gmail.com
 In-Reply-To: <1507676974-1298-1-git-send-email-me@tobin.cc>
 References: <1507676974-1298-1-git-send-email-me@tobin.cc>
 From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Tue, 10 Oct 2017 16:15:01 -0700
-Message-ID: <CA+55aFx56_4ERvNfdvQUk4yFF5UXWPkwg5g=QwS820nxAK0Bcg@mail.gmail.com>
+Date: Tue, 10 Oct 2017 16:16:55 -0700
+Message-ID: <CA+55aFyH5X2nx0kf_hPeOjMQYF-UX6r3ov61=VqTOLLZLE3-vQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: [kernel-hardening] Re: [PATCH 0/3] add %pX specifier
 To: "Tobin C. Harding" <me@tobin.cc>
@@ -13,21 +13,16 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 On Tue, Oct 10, 2017 at 4:09 PM, Tobin C. Harding <me@tobin.cc> wrote:
 >
-> I did not understand the code (specifically why the right shift of 16 twice?)
+> This patch is a softer version of Linus' suggestion because it does not change the behaviour of the
+> %p specifier. I don't see the benefit in making such a breaking change without addressing the issue
+> of %x (and I don't the balls to right now).
 
-It's a traditional trick to get the upper 32 bits.
+The thing is, this continues to have the exact same issue that %pK has
+- because it is opt-in, effectively nobody will actually use it.
 
-So it basically splits the (possibly 64-bit) pointer into the lower 32
-bits and the upper 32 bits for a hash such as "jhash()" that takes
-data that is "unsigned int".
+That's why I would suggest that if we do this way, we really change %p
+and %pa to use the hashed value, to convert *everybody*. And then
+people who have a good reason to actually expose the pointer have to
+do the extra work and opt out.
 
-(NOTE! Using jhash here is not acceptable, since it's not
-cryptographically safe, but think of it as an example of a hash that
-takes 32-bit input).
-
-Doing ">> 32" is undefined on 32-bit architectures, and wouldn't work.
-
-But doing >> 16 >> 16 is a fine way to say "shift right by 32 on a
-64-bit architecture" while also being well-defined on a 32-bit one.
-
-               Linus
+                  Linus
