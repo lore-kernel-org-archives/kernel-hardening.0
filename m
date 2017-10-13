@@ -1,119 +1,126 @@
-Date: Thu, 12 Oct 2017 22:02:01 +0200
-From: "Luis R. Rodriguez" <mcgrof@kernel.org>
-Message-ID: <20171012200201.GW11645@wotan.suse.de>
-References: <20171011203027.11248-1-thgarnie@google.com>
- <20171011203027.11248-16-thgarnie@google.com>
+From: "Roberts, William C" <william.c.roberts@intel.com>
+Date: Fri, 13 Oct 2017 16:14:43 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC563F4AF172@ORSMSX115.amr.corp.intel.com>
+References: <1506816410-10230-1-git-send-email-me@tobin.cc>
+ <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
+ <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
+ <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
+ <476DC76E7D1DF2438D32BFADF679FC563EAF4F29@ORSMSX103.amr.corp.intel.com>
+ <CA+55aFwEZCT6=BCdmaNn5LGeU8g-2qi4OnM9MTOep3NOZVXjMg@mail.gmail.com>
+ <20171005021915.GK16685@eros>
+In-Reply-To: <20171005021915.GK16685@eros>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171011203027.11248-16-thgarnie@google.com>
-Subject: [kernel-hardening] Re: [PATCH v1 15/27] compiler: Option to default to hidden symbols
-To: Thomas Garnier <thgarnie@google.com>, Guenter Roeck <linux@roeck-us.net>, Nicholas Piggin <npiggin@gmail.com>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Matthias Kaehlcke <mka@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Chris Wright <chrisw@sous-sol.org>, Alok Kataria <akataria@vmware.com>, Rusty Russell <rusty@rustcorp.com.au>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Borislav Petkov <bp@alien8.de>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Christopher Li <sparse@chrisli.org>, Steven Rostedt <rostedt@goodmis.org>, Jason Baron <jbaron@akamai.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@suse.com>, Peter Foley <pefoley2@pefoley.com>, Paul Bolle <pebolle@tiscali.nl>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Jan H =?iso-8859-1?Q?=2E_Sch=F6nherr?= <jschoenh@amazon.de>, Daniel Micay <danielmicay@gmail.com>, x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux-pm@vger.kernel.org, virtualization@lists.linux-foundation.org, xen-devel@lists.xenproject.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
+Subject: RE: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
+ options
+To: "Tobin C. Harding" <me@tobin.cc>, Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe
+ Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey
+ Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave
+ Weinstein <olorin@google.com>Joe Perches <joe@perches.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 11, 2017 at 01:30:15PM -0700, Thomas Garnier wrote:
-> Provide an option to default visibility to hidden except for key
-> symbols. This option is disabled by default and will be used by x86_64
-> PIE support to remove errors between compilation units.
-> 
-> The default visibility is also enabled for external symbols that are
-> compared as they maybe equals (start/end of sections). In this case,
-> older versions of GCC will remove the comparison if the symbols are
-> hidden. This issue exists at least on gcc 4.9 and before.
-> 
-> Signed-off-by: Thomas Garnier <thgarnie@google.com>
 
-<-- snip -->
 
-> diff --git a/arch/x86/kernel/cpu/microcode/core.c b/arch/x86/kernel/cpu/microcode/core.c
-> index 86e8f0b2537b..8f021783a929 100644
-> --- a/arch/x86/kernel/cpu/microcode/core.c
-> +++ b/arch/x86/kernel/cpu/microcode/core.c
-> @@ -144,8 +144,8 @@ static bool __init check_loader_disabled_bsp(void)
->  	return *res;
->  }
->  
-> -extern struct builtin_fw __start_builtin_fw[];
-> -extern struct builtin_fw __end_builtin_fw[];
-> +extern struct builtin_fw __start_builtin_fw[] __default_visibility;
-> +extern struct builtin_fw __end_builtin_fw[] __default_visibility;
->  
->  bool get_builtin_firmware(struct cpio_data *cd, const char *name)
->  {
+> -----Original Message-----
+> From: Tobin C. Harding [mailto:me@tobin.cc]
+> Sent: Wednesday, October 4, 2017 7:19 PM
+> To: Linus Torvalds <torvalds@linux-foundation.org>
+> Cc: Roberts, William C <william.c.roberts@intel.com>; Tejun Heo
+> <tj@kernel.org>; Jordan Glover <Golden_Miller83@protonmail.ch>; Greg KH
+> <gregkh@linuxfoundation.org>; Petr Mladek <pmladek@suse.com>; Joe
+> Perches <joe@perches.com>; Ian Campbell <ijc@hellion.org.uk>; Sergey
+> Senozhatsky <sergey.senozhatsky@gmail.com>; kernel-
+> hardening@lists.openwall.com; Catalin Marinas <catalin.marinas@arm.com>; =
+Will
+> Deacon <will.deacon@arm.com>; Steven Rostedt <rostedt@goodmis.org>; Chris
+> Fries <cfries@google.com>; Dave Weinstein <olorin@google.com>
+> Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filt=
+er
+> options
+>=20
+> On Wed, Oct 04, 2017 at 04:52:58PM -0700, Linus Torvalds wrote:
+> > On Wed, Oct 4, 2017 at 2:58 PM, Roberts, William C
+> > <william.c.roberts@intel.com> wrote:
+> > >
+> > > I agree with you 100% kptr restrict is odd, and I don't think anyone
+> > > should have had to opt in to be cleansed via kptr_restrict value via
+> > > %pK. Opt-in never works. One nice thing now, is that checkpatch has c=
+hecking
+> of %p usages and warns.
+> >
+> > Yeah, the checkpatch thing may help for future patches.
+> >
+> > > As far as broken things, I can't comment on desktop systems where I t=
+hink it's
+> harder to make that claim.
+> > > I see value in embedded systems where I am shipping the whole image,
+> > > So I know when/what will break.
+> > >
+> > > If this was in-tree, Android would be setting this to 4 immediately F=
+WIW.
+> >
+> > Does android set it to 2 right now?
+> >
+> > But even if it does, my point is that we've had this thing for 6+
+> > years, and it really hasn't helped fix our code much at all.
+> >
+> > In fact, I think the opposite is true. I think it *hurts*. It hurts
+> > exactly because it's a hack, and it makes people not bother to fix the
+> > real problems.
+> >
+> > I think we'd be better off just fixing code.
+> >
+> > One thing you can do today is just look through your 'dmesg' for what
+> > looks like kernel addresses (if virtual addresses is what you're
+> > interested in - obviously physical addresses will look different). On
+> > x86-64, for example, something like this:
+> >
+> >     dmesg | egrep 'ffff[0-9a-f]{12}'
+> >
+> > might be interesting to look at. It shows (for me) that we show the
+> > percpu address mapping, for example. That certainly sounds interesting
+> > to a potential attacker, and I suspect Tejun isn't really interested
+> > in that information any more. Added to Cc.
+> >
+> > It also shows
+> >
+> >     software IO TLB [mem PA-PB] (64MB) mapped at [VA-VB]
+> >
+> > for example.  And THIS IS IMPORTANT! The physical address is shown
+> > with "%#010llx".
+> >
+> > See what I'm saying? The kptr_restrict games are just that: games and
+> > security theater. If you actually care about things like physical
+> > addresses, you don't say "let's hide %pa". Because that's not how the
+> > real world works. I found one case that would entirely have missed
+> > with the very first trivial grep I did.
+> >
+> > So I'm claiming that anybody who says "it's too hard to fix it for
+> > real, let's just paper over it in vsprintf.c" is fundamentally going
+> > to miss things like this. I agree that it might be painful to try to
+> > figure out where the problems are, but somebody like google probably
+> > has a lot of dmesg output, and it should not be that hard to do the
+> > above kinds of "let's just see what leaks, and FIX it".
+>=20
+> This sounds like just the job for an upcoming kernel hacker, with a lot o=
+f time and
+> not much experience, to do something laborious that no one else wants to =
+do
+> and learn a bunch about the kernel.
+>=20
+> So what if we drop this patch set and
+>=20
+> 1. Find and fix every place in the kernel that leaks addresses.
+> 2. Verify that checkpatch.pl warns for all potential future leakage.
 
-<-- snip -->
+FYI: This was done in commit 0b523769ebb by Joe Perches. Added to CC line.
 
-> diff --git a/include/asm-generic/sections.h b/include/asm-generic/sections.h
-> index e5da44eddd2f..1aa5d6dac9e1 100644
-> --- a/include/asm-generic/sections.h
-> +++ b/include/asm-generic/sections.h
-> @@ -30,6 +30,9 @@
->   *	__irqentry_text_start, __irqentry_text_end
->   *	__softirqentry_text_start, __softirqentry_text_end
->   */
-> +#ifdef CONFIG_DEFAULT_HIDDEN
-> +#pragma GCC visibility push(default)
-> +#endif
->  extern char _text[], _stext[], _etext[];
->  extern char _data[], _sdata[], _edata[];
->  extern char __bss_start[], __bss_stop[];
-> @@ -46,6 +49,9 @@ extern char __softirqentry_text_start[], __softirqentry_text_end[];
->  
->  /* Start and end of .ctors section - used for constructor calls. */
->  extern char __ctors_start[], __ctors_end[];
-> +#ifdef CONFIG_DEFAULT_HIDDEN
-> +#pragma GCC visibility pop
-> +#endif
->  
->  extern __visible const void __nosave_begin, __nosave_end;
->  
-> diff --git a/include/linux/compiler.h b/include/linux/compiler.h
-> index e95a2631e545..6997716f73bf 100644
-> --- a/include/linux/compiler.h
-> +++ b/include/linux/compiler.h
-> @@ -78,6 +78,14 @@ extern void __chk_io_ptr(const volatile void __iomem *);
->  #include <linux/compiler-clang.h>
->  #endif
->  
-> +/* Useful for Position Independent Code to reduce global references */
-> +#ifdef CONFIG_DEFAULT_HIDDEN
-> +#pragma GCC visibility push(hidden)
-> +#define __default_visibility  __attribute__((visibility ("default")))
-
-Does this still work with CONFIG_LD_DEAD_CODE_DATA_ELIMINATION ?
-
-> +#else
-> +#define __default_visibility
-> +#endif
-> +
->  /*
->   * Generic compiler-dependent macros required for kernel
->   * build go below this comment. Actual compiler/compiler version
-> diff --git a/init/Kconfig b/init/Kconfig
-> index ccb1d8daf241..b640201fcff7 100644
-> --- a/init/Kconfig
-> +++ b/init/Kconfig
-> @@ -1649,6 +1649,13 @@ config PROFILING
->  config TRACEPOINTS
->  	bool
->  
-> +#
-> +# Default to hidden visibility for all symbols.
-> +# Useful for Position Independent Code to reduce global references.
-> +#
-> +config DEFAULT_HIDDEN
-> +	bool
-
-Note it is default.
-
-Has 0-day ran through this git tree? It should be easy to get it added for
-testing. Also, even though most changes are x86 based there are some generic
-changes and I'd love a warm fuzzy this won't break odd / random builds.
-Although 0-day does cover a lot of test cases, it only has limited run time
-tests. There are some other test beds which also cover some more obscure
-architectures. Having a test pass on Guenter's test bed would be nice to
-see. For that please coordinate with Guenter if he's willing to run this
-a test for you.
-
-  Luis
+> 2. Add a script to check dmesg output for future hardening.
+>=20
+> I'm super keen to work. I would have to get everyone to dump their
+> ideas/demands onto me if we are to get this fixed fully.
+>=20
+> thanks,
+> Tobin.
