@@ -1,6 +1,6 @@
 From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Fri, 13 Oct 2017 16:14:43 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC563F4AF172@ORSMSX115.amr.corp.intel.com>
+Date: Fri, 13 Oct 2017 16:32:40 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC563F4AF1B4@ORSMSX115.amr.corp.intel.com>
 References: <1506816410-10230-1-git-send-email-me@tobin.cc>
  <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
  <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
@@ -8,119 +8,75 @@ References: <1506816410-10230-1-git-send-email-me@tobin.cc>
  <476DC76E7D1DF2438D32BFADF679FC563EAF4F29@ORSMSX103.amr.corp.intel.com>
  <CA+55aFwEZCT6=BCdmaNn5LGeU8g-2qi4OnM9MTOep3NOZVXjMg@mail.gmail.com>
  <20171005021915.GK16685@eros>
-In-Reply-To: <20171005021915.GK16685@eros>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+ <CA+55aFwac2BzgZs-X1_VhekkuGfuLqNui2+2DbvLiDyptS-rXQ@mail.gmail.com>
+ <476DC76E7D1DF2438D32BFADF679FC563F4AD0AF@ORSMSX115.amr.corp.intel.com>
+ <CA+55aFxjsKRhuzpQjRff6b6emJBFHtefUwnDfv+zgrxmUDvqkw@mail.gmail.com>
+ <20171007234453.vojizsbxec4gygku@thunk.org>
+ <CA+55aFy2CQ_AFahTQynumDL6ocZD5R23v=HXLYS6w_E1tpY-1Q@mail.gmail.com>
+In-Reply-To: <CA+55aFy2CQ_AFahTQynumDL6ocZD5R23v=HXLYS6w_E1tpY-1Q@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
 Subject: RE: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
  options
-To: "Tobin C. Harding" <me@tobin.cc>, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe
- Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey
- Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave
- Weinstein <olorin@google.com>Joe Perches <joe@perches.com>
+To: Linus Torvalds <torvalds@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr
+ Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave
+ Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-> -----Original Message-----
-> From: Tobin C. Harding [mailto:me@tobin.cc]
-> Sent: Wednesday, October 4, 2017 7:19 PM
-> To: Linus Torvalds <torvalds@linux-foundation.org>
-> Cc: Roberts, William C <william.c.roberts@intel.com>; Tejun Heo
-> <tj@kernel.org>; Jordan Glover <Golden_Miller83@protonmail.ch>; Greg KH
-> <gregkh@linuxfoundation.org>; Petr Mladek <pmladek@suse.com>; Joe
-> Perches <joe@perches.com>; Ian Campbell <ijc@hellion.org.uk>; Sergey
-> Senozhatsky <sergey.senozhatsky@gmail.com>; kernel-
-> hardening@lists.openwall.com; Catalin Marinas <catalin.marinas@arm.com>; =
-Will
-> Deacon <will.deacon@arm.com>; Steven Rostedt <rostedt@goodmis.org>; Chris
-> Fries <cfries@google.com>; Dave Weinstein <olorin@google.com>
-> Subject: Re: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filt=
-er
-> options
->=20
-> On Wed, Oct 04, 2017 at 04:52:58PM -0700, Linus Torvalds wrote:
-> > On Wed, Oct 4, 2017 at 2:58 PM, Roberts, William C
-> > <william.c.roberts@intel.com> wrote:
-> > >
-> > > I agree with you 100% kptr restrict is odd, and I don't think anyone
-> > > should have had to opt in to be cleansed via kptr_restrict value via
-> > > %pK. Opt-in never works. One nice thing now, is that checkpatch has c=
-hecking
-> of %p usages and warns.
-> >
-> > Yeah, the checkpatch thing may help for future patches.
-> >
-> > > As far as broken things, I can't comment on desktop systems where I t=
-hink it's
-> harder to make that claim.
-> > > I see value in embedded systems where I am shipping the whole image,
-> > > So I know when/what will break.
-> > >
-> > > If this was in-tree, Android would be setting this to 4 immediately F=
-WIW.
-> >
-> > Does android set it to 2 right now?
-> >
-> > But even if it does, my point is that we've had this thing for 6+
-> > years, and it really hasn't helped fix our code much at all.
-> >
-> > In fact, I think the opposite is true. I think it *hurts*. It hurts
-> > exactly because it's a hack, and it makes people not bother to fix the
-> > real problems.
-> >
-> > I think we'd be better off just fixing code.
-> >
-> > One thing you can do today is just look through your 'dmesg' for what
-> > looks like kernel addresses (if virtual addresses is what you're
-> > interested in - obviously physical addresses will look different). On
-> > x86-64, for example, something like this:
-> >
-> >     dmesg | egrep 'ffff[0-9a-f]{12}'
-> >
-> > might be interesting to look at. It shows (for me) that we show the
-> > percpu address mapping, for example. That certainly sounds interesting
-> > to a potential attacker, and I suspect Tejun isn't really interested
-> > in that information any more. Added to Cc.
-> >
-> > It also shows
-> >
-> >     software IO TLB [mem PA-PB] (64MB) mapped at [VA-VB]
-> >
-> > for example.  And THIS IS IMPORTANT! The physical address is shown
-> > with "%#010llx".
-> >
-> > See what I'm saying? The kptr_restrict games are just that: games and
-> > security theater. If you actually care about things like physical
-> > addresses, you don't say "let's hide %pa". Because that's not how the
-> > real world works. I found one case that would entirely have missed
-> > with the very first trivial grep I did.
-> >
-> > So I'm claiming that anybody who says "it's too hard to fix it for
-> > real, let's just paper over it in vsprintf.c" is fundamentally going
-> > to miss things like this. I agree that it might be painful to try to
-> > figure out where the problems are, but somebody like google probably
-> > has a lot of dmesg output, and it should not be that hard to do the
-> > above kinds of "let's just see what leaks, and FIX it".
->=20
-> This sounds like just the job for an upcoming kernel hacker, with a lot o=
-f time and
-> not much experience, to do something laborious that no one else wants to =
-do
-> and learn a bunch about the kernel.
->=20
-> So what if we drop this patch set and
->=20
-> 1. Find and fix every place in the kernel that leaks addresses.
-> 2. Verify that checkpatch.pl warns for all potential future leakage.
-
-FYI: This was done in commit 0b523769ebb by Joe Perches. Added to CC line.
-
-> 2. Add a script to check dmesg output for future hardening.
->=20
-> I'm super keen to work. I would have to get everyone to dump their
-> ideas/demands onto me if we are to get this fixed fully.
->=20
-> thanks,
-> Tobin.
+DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbTogbGludXM5NzFAZ21haWwu
+Y29tIFttYWlsdG86bGludXM5NzFAZ21haWwuY29tXSBPbiBCZWhhbGYgT2YgTGludXMNCj4gVG9y
+dmFsZHMNCj4gU2VudDogU2F0dXJkYXksIE9jdG9iZXIgNywgMjAxNyA1OjA4IFBNDQo+IFRvOiBU
+aGVvZG9yZSBUcydvIDx0eXRzb0BtaXQuZWR1Pg0KPiBDYzogUm9iZXJ0cywgV2lsbGlhbSBDIDx3
+aWxsaWFtLmMucm9iZXJ0c0BpbnRlbC5jb20+OyBUb2JpbiBDLiBIYXJkaW5nDQo+IDxtZUB0b2Jp
+bi5jYz47IFRlanVuIEhlbyA8dGpAa2VybmVsLm9yZz47IEpvcmRhbiBHbG92ZXINCj4gPEdvbGRl
+bl9NaWxsZXI4M0Bwcm90b25tYWlsLmNoPjsgR3JlZyBLSCA8Z3JlZ2toQGxpbnV4Zm91bmRhdGlv
+bi5vcmc+Ow0KPiBQZXRyIE1sYWRlayA8cG1sYWRla0BzdXNlLmNvbT47IEpvZSBQZXJjaGVzIDxq
+b2VAcGVyY2hlcy5jb20+OyBJYW4NCj4gQ2FtcGJlbGwgPGlqY0BoZWxsaW9uLm9yZy51az47IFNl
+cmdleSBTZW5vemhhdHNreQ0KPiA8c2VyZ2V5LnNlbm96aGF0c2t5QGdtYWlsLmNvbT47IGtlcm5l
+bC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tOw0KPiBDYXRhbGluIE1hcmluYXMgPGNhdGFs
+aW4ubWFyaW5hc0Bhcm0uY29tPjsgV2lsbCBEZWFjb24NCj4gPHdpbGwuZGVhY29uQGFybS5jb20+
+OyBTdGV2ZW4gUm9zdGVkdCA8cm9zdGVkdEBnb29kbWlzLm9yZz47IENocmlzIEZyaWVzDQo+IDxj
+ZnJpZXNAZ29vZ2xlLmNvbT47IERhdmUgV2VpbnN0ZWluIDxvbG9yaW5AZ29vZ2xlLmNvbT4NCj4g
+U3ViamVjdDogUmU6IFtrZXJuZWwtaGFyZGVuaW5nXSBbUkZDIFYyIDAvNl0gYWRkIG1vcmUga2Vy
+bmVsIHBvaW50ZXIgZmlsdGVyDQo+IG9wdGlvbnMNCj4gDQo+IE9uIFNhdCwgT2N0IDcsIDIwMTcg
+YXQgNDo0NCBQTSwgVGhlb2RvcmUgVHMnbyA8dHl0c29AbWl0LmVkdT4gd3JvdGU6DQo+ID4NCj4g
+PiBNYXliZSB0aGlzIGlzIG92ZXJraWxsLCBidXQgd2hhdCBhYm91dCAqZW5jcnlwdGluZyogdGhl
+IHBvaW50ZXIgdXNpbmcNCj4gPiBmaXhlZCwgcGVyLWJvb3QgcmFuZG9tIGtleT8gIEl0IHdvdWxk
+IGhhdmUgdG8gYmUgYSBibG9jayBjcnlwdG8NCj4gPiBhbGdvcml0aG0sIGxpa2UgVGVhL1hYVGVh
+L1hYVEVBIG9yIFNwZWNrLiAgVGhhdCBoYXMgYWxsIG9mIHRoZQ0KPiA+IGJlbmVmaXRzIG9mIGhh
+c2hpbmcsIHBsdXMgaWYgdGhlIGtleSBpcyBhdmFpbGFibGUgKG9ubHkgdG8gcHJpdmlsZWdlZA0K
+PiA+IHVzZXJzLCBvZiBjb3Vyc2UpLCB0aGVuIGl0IHdvdWxkIGJlIHBvc3NpYmxlIHRvIGdldCB0
+aGUgcG9pbnRlciBmb3INCj4gPiBkZWJ1Z2dpbmcgcHVycG9zZXMuDQo+IA0KPiBJIGRvdWJ0IGl0
+J3MgZ29pbmcgdG8gYmUgdXNlZCBlbm91Z2ggdG8gYmUgd29ydGggaXQuDQo+IA0KPiBTbyBJJ2Qg
+cmF0aGVyIGp1c3QgbWFrZSBpdCBhIGhhc2ggdGhhdCBnaXZlcyB5b3UgdGhhdCBpZGVudGl0eSBm
+b3IgcGVvcGxlIHdobyB3YW50DQo+IGl0LCBhbmQgdGhlbiBwZW9wbGUgd2hvIGFjdHVhbGx5IG5l
+ZWQgdGhlIGFkZHJlc3Mgd291bGQgbmVlZCB0byBkZWNpZGUNCj4gd2hldGhlciB0aGV5IF9yZWFs
+bHlfIG5lZWQgaXQgaW4gdGhlIGZpcnN0IHBsYWNlLCBvciB3aGV0aGVyIHRoZXkgd291bGQgdXNl
+ICVseA0KPiBpbnN0ZWFkIHRvZ2V0aGVyIHdpdGggc3RyaWN0eSBzZWN1cml0eSBydWxlcy4NCj4g
+DQo+IEkgZGlkIHRlc3QgdGhlIHBhdGNoIEkgc2VudCBvdXQgKHVzaW5nIGpoYXNoIC0gc28gbm90
+IGEgY3J5cHRvZ3JhcGhpYyBoYXNoLCBhbmQgd2l0aA0KPiBhICJyYW5kb20gdmFsdWUiIHRoYXQg
+d2FzIGp1c3QgYSBjb25zdGFudCkganVzdCB0byBzZWUgdGhhdCBpdCBkb2Vzbid0IGJyZWFrDQo+
+IGFueXRoaW5nIG9idmlvdXMuIEFzIGV4cGVjdGVkLCBpdCBkaWQgYnJlYWsga2VybmVsIHByb2Zp
+bGluZyAod2hpY2ggdXNlcw0KPiAvcHJvYy9rYWxsc3ltcyksIGFuZCBpdCBvYnZpb3VzbHkgbWFk
+ZSB0aGUga2VybmVsIHBvaW50ZXJzIEknZCBhbHJlYWR5IGZvdW5kIGluDQo+IGRtZXNnIGJlIGp1
+c3QgZ2FyYmFnZSwgYnV0IGl0IGRpZG4ndCBzZWVtIGluc3VybW91bnRhYmxlLiBNb3JlIGxpa2Ug
+YSAid2l0aCBhDQo+IGNvdXBsZSBvZiBmaXh1cCBjYXNlcywgaXQgbWlnaHQgYWxsIHdvcmsgZmlu
+ZSIuDQo+IA0KPiBTbyBJJ2QgYmUgd2lsbGluZyB0byB0cnkgaXQgZm9yIHRoZSBuZXh0IG1lcmdl
+IHdpbmRvdywgYW5kIHNlZSBpZiBpdCBjYXVzZXMNCj4gdW5leHBlY3RlZCBwcm9ibGVtcy4uDQoN
+CkkgZG9uJ3QgcGFydGljdWxhcmx5IGhhdGUgdGhpcyBpZGVhLCBhbmQgSSBhY3R1YWxseSBkaXNj
+dXNzZWQgdGhpcyBiZWZvcmUgd2l0aCBvdGhlcnMgKG5vdCBvbiB0aGUgbGlzdCkNCmJlZm9yZSBh
+cHByb2FjaGluZyBpdCB1c2luZyBrcHRyX3Jlc3RyaWN0LiBUaGUgYXJndW1lbnQgdGhhdCB3ZSBo
+YWQgYWdhaW5zdCB0aGlzIGFwcHJvYWNoIHdhcw0KdGhhdCBpdCB3b3VsZCBwdXNoIHBlb3BsZSBh
+d2F5IGZyb20gdXNpbmcgJXAgYW5kIG1ha2UgaXQgZXZlbiB0aGF0IG11Y2ggaGFyZGVyIHRvIGF1
+ZGl0LiBCdXQsDQpJJ20gbm90IHN1cmUgaWYgdGhhdCdzIHJlYWxseSB0aGF0IHZhbGlkIG9yIHN0
+cm9uZyBvZiBhbiBhcmd1bWVudC4gSSB3b3VsZCBzYXkgZ28gZm9yIHRoYXQgYXBwcm9hY2gNCndp
+dGggYW4gdGltZWxpbmUvYWdyZWVtZW50IHRvIGtpbGwga3B0cl9yZXN0cmljdC4NCg0KQW5vdGhl
+ciBwb3NzaWJsZSBzb2x1dGlvbiBkaXNjdXNzZWQgd291bGQgYmUgdG8gZW5hYmxlIGFuIG9wdGlv
+biB0byBlbmNyeXB0IGRtZXNnLiBCdXQgSQ0Kc3RlZXJlZCBhd2F5IGZyb20gdGhhdC4NCg0KSSBz
+ZXR0bGVkIG9uIHVzaW5nIGtwdHJfcmVzdHJpY3QgZm9yIHRoZSBhYmlsaXR5IHRvIGVuYWJsZS9k
+aXNhYmxlLiBPbmUgb2YgdGhlIHVzZSBjYXNlcw0Kd2UgaGFkIHdhcyB0aGF0IGEgZHJpdmVyIGlz
+IGZvdW5kIHRvIGJlIGRvaW5nIHRoaXMgc2lsbHkgdGhpbmcsIGFuZCBhbiBhZG1pbi91c2VyIHdh
+bnRzDQp0byB0dXJuIGl0IG9mZiBpbiBkbWVzZyB1bnRpbCBpdHMgZml4ZWQuDQoNCj4gDQo+ICAg
+ICAgICAgICAgICAgICBMaW51cw0K
