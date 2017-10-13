@@ -1,82 +1,44 @@
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Fri, 13 Oct 2017 16:32:40 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC563F4AF1B4@ORSMSX115.amr.corp.intel.com>
-References: <1506816410-10230-1-git-send-email-me@tobin.cc>
- <CA+55aFxzD=+H_M+Sg_8YRf-JYV-+-yn1c=dFhJWFzSh5yWt9Gg@mail.gmail.com>
- <ArOl6I7GkZ912O0tP7uFPe5JRJTftclvQHVtSHw0hsmxk5IJXexp9M3zQPefcGCXcx27lzX7A1s74XFa9gXEA5yRA5hC1BaNqhD7QgN3JRo=@protonmail.ch>
- <CA+55aFzGsRFPtMFRv3G0FPNs6YAD3S2U94o58Lgg1MnmHwCxvA@mail.gmail.com>
- <476DC76E7D1DF2438D32BFADF679FC563EAF4F29@ORSMSX103.amr.corp.intel.com>
- <CA+55aFwEZCT6=BCdmaNn5LGeU8g-2qi4OnM9MTOep3NOZVXjMg@mail.gmail.com>
- <20171005021915.GK16685@eros>
- <CA+55aFwac2BzgZs-X1_VhekkuGfuLqNui2+2DbvLiDyptS-rXQ@mail.gmail.com>
- <476DC76E7D1DF2438D32BFADF679FC563F4AD0AF@ORSMSX115.amr.corp.intel.com>
- <CA+55aFxjsKRhuzpQjRff6b6emJBFHtefUwnDfv+zgrxmUDvqkw@mail.gmail.com>
- <20171007234453.vojizsbxec4gygku@thunk.org>
- <CA+55aFy2CQ_AFahTQynumDL6ocZD5R23v=HXLYS6w_E1tpY-1Q@mail.gmail.com>
-In-Reply-To: <CA+55aFy2CQ_AFahTQynumDL6ocZD5R23v=HXLYS6w_E1tpY-1Q@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+References: <1507157703-14972-1-git-send-email-alex.popov@linux.com>
+ <1507157703-14972-2-git-send-email-alex.popov@linux.com>
+ <20171005072751.lhf7kamzfw4sdhbo@gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <ac934200-74e0-3e0d-fd14-dff64197c03a@linux.com>
+Date: Fri, 13 Oct 2017 20:03:59 +0300
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter
- options
-To: Linus Torvalds <torvalds@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr
- Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave
- Weinstein <olorin@google.com>
+In-Reply-To: <20171005072751.lhf7kamzfw4sdhbo@gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH RFC v4 1/3] gcc-plugins: Add STACKLEAK erasing the kernel
+ stack at the end of syscalls
+To: Ingo Molnar <mingo@kernel.org>
+Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, tycho@docker.com, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Andy Lutomirski <luto@amacapital.net>, x86@kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbTogbGludXM5NzFAZ21haWwu
-Y29tIFttYWlsdG86bGludXM5NzFAZ21haWwuY29tXSBPbiBCZWhhbGYgT2YgTGludXMNCj4gVG9y
-dmFsZHMNCj4gU2VudDogU2F0dXJkYXksIE9jdG9iZXIgNywgMjAxNyA1OjA4IFBNDQo+IFRvOiBU
-aGVvZG9yZSBUcydvIDx0eXRzb0BtaXQuZWR1Pg0KPiBDYzogUm9iZXJ0cywgV2lsbGlhbSBDIDx3
-aWxsaWFtLmMucm9iZXJ0c0BpbnRlbC5jb20+OyBUb2JpbiBDLiBIYXJkaW5nDQo+IDxtZUB0b2Jp
-bi5jYz47IFRlanVuIEhlbyA8dGpAa2VybmVsLm9yZz47IEpvcmRhbiBHbG92ZXINCj4gPEdvbGRl
-bl9NaWxsZXI4M0Bwcm90b25tYWlsLmNoPjsgR3JlZyBLSCA8Z3JlZ2toQGxpbnV4Zm91bmRhdGlv
-bi5vcmc+Ow0KPiBQZXRyIE1sYWRlayA8cG1sYWRla0BzdXNlLmNvbT47IEpvZSBQZXJjaGVzIDxq
-b2VAcGVyY2hlcy5jb20+OyBJYW4NCj4gQ2FtcGJlbGwgPGlqY0BoZWxsaW9uLm9yZy51az47IFNl
-cmdleSBTZW5vemhhdHNreQ0KPiA8c2VyZ2V5LnNlbm96aGF0c2t5QGdtYWlsLmNvbT47IGtlcm5l
-bC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tOw0KPiBDYXRhbGluIE1hcmluYXMgPGNhdGFs
-aW4ubWFyaW5hc0Bhcm0uY29tPjsgV2lsbCBEZWFjb24NCj4gPHdpbGwuZGVhY29uQGFybS5jb20+
-OyBTdGV2ZW4gUm9zdGVkdCA8cm9zdGVkdEBnb29kbWlzLm9yZz47IENocmlzIEZyaWVzDQo+IDxj
-ZnJpZXNAZ29vZ2xlLmNvbT47IERhdmUgV2VpbnN0ZWluIDxvbG9yaW5AZ29vZ2xlLmNvbT4NCj4g
-U3ViamVjdDogUmU6IFtrZXJuZWwtaGFyZGVuaW5nXSBbUkZDIFYyIDAvNl0gYWRkIG1vcmUga2Vy
-bmVsIHBvaW50ZXIgZmlsdGVyDQo+IG9wdGlvbnMNCj4gDQo+IE9uIFNhdCwgT2N0IDcsIDIwMTcg
-YXQgNDo0NCBQTSwgVGhlb2RvcmUgVHMnbyA8dHl0c29AbWl0LmVkdT4gd3JvdGU6DQo+ID4NCj4g
-PiBNYXliZSB0aGlzIGlzIG92ZXJraWxsLCBidXQgd2hhdCBhYm91dCAqZW5jcnlwdGluZyogdGhl
-IHBvaW50ZXIgdXNpbmcNCj4gPiBmaXhlZCwgcGVyLWJvb3QgcmFuZG9tIGtleT8gIEl0IHdvdWxk
-IGhhdmUgdG8gYmUgYSBibG9jayBjcnlwdG8NCj4gPiBhbGdvcml0aG0sIGxpa2UgVGVhL1hYVGVh
-L1hYVEVBIG9yIFNwZWNrLiAgVGhhdCBoYXMgYWxsIG9mIHRoZQ0KPiA+IGJlbmVmaXRzIG9mIGhh
-c2hpbmcsIHBsdXMgaWYgdGhlIGtleSBpcyBhdmFpbGFibGUgKG9ubHkgdG8gcHJpdmlsZWdlZA0K
-PiA+IHVzZXJzLCBvZiBjb3Vyc2UpLCB0aGVuIGl0IHdvdWxkIGJlIHBvc3NpYmxlIHRvIGdldCB0
-aGUgcG9pbnRlciBmb3INCj4gPiBkZWJ1Z2dpbmcgcHVycG9zZXMuDQo+IA0KPiBJIGRvdWJ0IGl0
-J3MgZ29pbmcgdG8gYmUgdXNlZCBlbm91Z2ggdG8gYmUgd29ydGggaXQuDQo+IA0KPiBTbyBJJ2Qg
-cmF0aGVyIGp1c3QgbWFrZSBpdCBhIGhhc2ggdGhhdCBnaXZlcyB5b3UgdGhhdCBpZGVudGl0eSBm
-b3IgcGVvcGxlIHdobyB3YW50DQo+IGl0LCBhbmQgdGhlbiBwZW9wbGUgd2hvIGFjdHVhbGx5IG5l
-ZWQgdGhlIGFkZHJlc3Mgd291bGQgbmVlZCB0byBkZWNpZGUNCj4gd2hldGhlciB0aGV5IF9yZWFs
-bHlfIG5lZWQgaXQgaW4gdGhlIGZpcnN0IHBsYWNlLCBvciB3aGV0aGVyIHRoZXkgd291bGQgdXNl
-ICVseA0KPiBpbnN0ZWFkIHRvZ2V0aGVyIHdpdGggc3RyaWN0eSBzZWN1cml0eSBydWxlcy4NCj4g
-DQo+IEkgZGlkIHRlc3QgdGhlIHBhdGNoIEkgc2VudCBvdXQgKHVzaW5nIGpoYXNoIC0gc28gbm90
-IGEgY3J5cHRvZ3JhcGhpYyBoYXNoLCBhbmQgd2l0aA0KPiBhICJyYW5kb20gdmFsdWUiIHRoYXQg
-d2FzIGp1c3QgYSBjb25zdGFudCkganVzdCB0byBzZWUgdGhhdCBpdCBkb2Vzbid0IGJyZWFrDQo+
-IGFueXRoaW5nIG9idmlvdXMuIEFzIGV4cGVjdGVkLCBpdCBkaWQgYnJlYWsga2VybmVsIHByb2Zp
-bGluZyAod2hpY2ggdXNlcw0KPiAvcHJvYy9rYWxsc3ltcyksIGFuZCBpdCBvYnZpb3VzbHkgbWFk
-ZSB0aGUga2VybmVsIHBvaW50ZXJzIEknZCBhbHJlYWR5IGZvdW5kIGluDQo+IGRtZXNnIGJlIGp1
-c3QgZ2FyYmFnZSwgYnV0IGl0IGRpZG4ndCBzZWVtIGluc3VybW91bnRhYmxlLiBNb3JlIGxpa2Ug
-YSAid2l0aCBhDQo+IGNvdXBsZSBvZiBmaXh1cCBjYXNlcywgaXQgbWlnaHQgYWxsIHdvcmsgZmlu
-ZSIuDQo+IA0KPiBTbyBJJ2QgYmUgd2lsbGluZyB0byB0cnkgaXQgZm9yIHRoZSBuZXh0IG1lcmdl
-IHdpbmRvdywgYW5kIHNlZSBpZiBpdCBjYXVzZXMNCj4gdW5leHBlY3RlZCBwcm9ibGVtcy4uDQoN
-CkkgZG9uJ3QgcGFydGljdWxhcmx5IGhhdGUgdGhpcyBpZGVhLCBhbmQgSSBhY3R1YWxseSBkaXNj
-dXNzZWQgdGhpcyBiZWZvcmUgd2l0aCBvdGhlcnMgKG5vdCBvbiB0aGUgbGlzdCkNCmJlZm9yZSBh
-cHByb2FjaGluZyBpdCB1c2luZyBrcHRyX3Jlc3RyaWN0LiBUaGUgYXJndW1lbnQgdGhhdCB3ZSBo
-YWQgYWdhaW5zdCB0aGlzIGFwcHJvYWNoIHdhcw0KdGhhdCBpdCB3b3VsZCBwdXNoIHBlb3BsZSBh
-d2F5IGZyb20gdXNpbmcgJXAgYW5kIG1ha2UgaXQgZXZlbiB0aGF0IG11Y2ggaGFyZGVyIHRvIGF1
-ZGl0LiBCdXQsDQpJJ20gbm90IHN1cmUgaWYgdGhhdCdzIHJlYWxseSB0aGF0IHZhbGlkIG9yIHN0
-cm9uZyBvZiBhbiBhcmd1bWVudC4gSSB3b3VsZCBzYXkgZ28gZm9yIHRoYXQgYXBwcm9hY2gNCndp
-dGggYW4gdGltZWxpbmUvYWdyZWVtZW50IHRvIGtpbGwga3B0cl9yZXN0cmljdC4NCg0KQW5vdGhl
-ciBwb3NzaWJsZSBzb2x1dGlvbiBkaXNjdXNzZWQgd291bGQgYmUgdG8gZW5hYmxlIGFuIG9wdGlv
-biB0byBlbmNyeXB0IGRtZXNnLiBCdXQgSQ0Kc3RlZXJlZCBhd2F5IGZyb20gdGhhdC4NCg0KSSBz
-ZXR0bGVkIG9uIHVzaW5nIGtwdHJfcmVzdHJpY3QgZm9yIHRoZSBhYmlsaXR5IHRvIGVuYWJsZS9k
-aXNhYmxlLiBPbmUgb2YgdGhlIHVzZSBjYXNlcw0Kd2UgaGFkIHdhcyB0aGF0IGEgZHJpdmVyIGlz
-IGZvdW5kIHRvIGJlIGRvaW5nIHRoaXMgc2lsbHkgdGhpbmcsIGFuZCBhbiBhZG1pbi91c2VyIHdh
-bnRzDQp0byB0dXJuIGl0IG9mZiBpbiBkbWVzZyB1bnRpbCBpdHMgZml4ZWQuDQoNCj4gDQo+ICAg
-ICAgICAgICAgICAgICBMaW51cw0K
+Hello Ingo,
+
+On 05.10.2017 10:27, Ingo Molnar wrote:
+> - The GCC plugin adds instrumentation in form of extra 'track_stack()' and
+>   'check_alloca()' calls. Could you please provide a frequency analysis of the
+>   impact of this: x86-64 defconfig vmlinux size before/after the patch, and the
+>   number of instrumentation function calls inserted, compared to the number of
+>   functions?
+
+Size of vmlinux (x86_64_defconfig):
+ file size:
+  - STACKLEAK disabled: 35014784 bytes
+  - STACKLEAK enabled: 35044952 bytes (+0.086%)
+ .text section size (calculated by size utility):
+  - STACKLEAK disabled: 10752983
+  - STACKLEAK enabled: 11062221 (+2.876%)
+
+The readelf utility shows 45602 functions in vmlinux.
+
+The STACKLEAK gcc plugin inserted 36 check_alloca() calls and 1265 track_stack()
+calls (42274 calls are inserted during GIMPLE pass and 41009 calls are deleted
+during RTL pass). So 2.853% of functions are instrumented.
+
+I will add this information to the cover letter of the 5'th version, which I'm
+currently preparing.
+
+Best regards,
+Alexander
