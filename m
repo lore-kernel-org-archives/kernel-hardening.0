@@ -1,17 +1,20 @@
-Message-ID: <1508217608.6530.20.camel@perches.com>
-From: Joe Perches <joe@perches.com>
-Date: Mon, 16 Oct 2017 22:20:08 -0700
+Date: Tue, 17 Oct 2017 09:31:19 -0400
+From: Steven Rostedt <rostedt@goodmis.org>
+Message-ID: <20171017093119.6dd98919@gandalf.local.home>
 In-Reply-To: <1508215972-7769-1-git-send-email-me@tobin.cc>
 References: <1508215972-7769-1-git-send-email-me@tobin.cc>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
 Subject: [kernel-hardening] Re: [PATCH v2] printk: hash addresses printed with %p
-To: "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts,
+ William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 2017-10-17 at 15:52 +1100, Tobin C. Harding wrote:
+On Tue, 17 Oct 2017 15:52:51 +1100
+"Tobin C. Harding" <me@tobin.cc> wrote:
+
 > Currently there are many places in the kernel where addresses are being
 > printed using an unadorned %p. Kernel pointers should be printed using
 > %pK allowing some control via the kptr_restrict sysctl. Exposing addresses
@@ -25,30 +28,32 @@ On Tue, 2017-10-17 at 15:52 +1100, Tobin C. Harding wrote:
 > 
 >     git grep '%p[^KFfSsBRrbMmIiEUVKNhdDgCGO]' | wc -l
 
-Not really.
-There are many asm uses included there
+Does %p[FfSs] leak addresses? Well, I guess it does if they are not
+found in kallsyms, but otherwise you have:
 
-I think a better grep is:
+  function+0x<offset>
 
-$ git grep -E '%p[^A-Za-z0-9]' | cut -f1 -d"/" | sort | uniq -c
-   1084 arch
-     20 block
-     10 crypto
-     32 Documentation
-   8121 drivers
-   1221 fs
-    143 include
-    101 kernel
-     69 lib
-    100 mm
-   1510 net
-     40 samples
-      7 scripts
-     11 security
-    166 sound
-    152 tools
-      2 virt
+-- Steve
 
+
+> 
 > arch: 2512
-
-arch is especially overestimated.
+> block: 20
+> crypto: 12
+> fs: 1221
+> include: 147
+> kernel: 109
+> lib: 77
+> mm: 120
+> net: 1516
+> security: 11
+> sound: 168
+> virt: 2
+> drivers: 8420
+> 
+> Add helper function siphash_1ulong(). Add function ptr_to_id() to map an
+> address to a 32 bit unique identifier.
+> 
+> Signed-off-by: Tobin C. Harding <me@tobin.cc>
+> ---
+>
