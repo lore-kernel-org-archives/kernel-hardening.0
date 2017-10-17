@@ -1,167 +1,44 @@
-Date: Wed, 18 Oct 2017 09:11:46 +1100
+Date: Wed, 18 Oct 2017 10:15:59 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171017221146.GC8001@eros>
+Message-ID: <20171017231559.GD8001@eros>
 References: <1508215972-7769-1-git-send-email-me@tobin.cc>
- <476DC76E7D1DF2438D32BFADF679FC563F4B0FB8@ORSMSX115.amr.corp.intel.com>
+ <20171017093119.6dd98919@gandalf.local.home>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <476DC76E7D1DF2438D32BFADF679FC563F4B0FB8@ORSMSX115.amr.corp.intel.com>
+In-Reply-To: <20171017093119.6dd98919@gandalf.local.home>
 Subject: [kernel-hardening] Re: [PATCH v2] printk: hash addresses printed with %p
-To: "Roberts, William C" <william.c.roberts@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 17, 2017 at 05:27:15PM +0000, Roberts, William C wrote:
+On Tue, Oct 17, 2017 at 09:31:19AM -0400, Steven Rostedt wrote:
+> On Tue, 17 Oct 2017 15:52:51 +1100
+> "Tobin C. Harding" <me@tobin.cc> wrote:
 > 
-> 
-> > -----Original Message-----
-> > From: Tobin C. Harding [mailto:me@tobin.cc]
-> > Sent: Monday, October 16, 2017 9:53 PM
-> > To: kernel-hardening@lists.openwall.com
-> > Cc: Tobin C. Harding <me@tobin.cc>; Linus Torvalds <torvalds@linux-
-> > foundation.org>; Kees Cook <keescook@chromium.org>; Paolo Bonzini
-> > <pbonzini@redhat.com>; Tycho Andersen <tycho@docker.com>; Roberts,
-> > William C <william.c.roberts@intel.com>; Tejun Heo <tj@kernel.org>; Jordan
-> > Glover <Golden_Miller83@protonmail.ch>; Greg KH
-> > <gregkh@linuxfoundation.org>; Petr Mladek <pmladek@suse.com>; Joe
-> > Perches <joe@perches.com>; Ian Campbell <ijc@hellion.org.uk>; Sergey
-> > Senozhatsky <sergey.senozhatsky@gmail.com>; Catalin Marinas
-> > <catalin.marinas@arm.com>; Will Deacon <will.deacon@arm.com>; Steven
-> > Rostedt <rostedt@goodmis.org>; Chris Fries <cfries@google.com>; Dave
-> > Weinstein <olorin@google.com>; Daniel Micay <danielmicay@gmail.com>; Djalal
-> > Harouni <tixxdz@gmail.com>; linux-kernel@vger.kernel.org
-> > Subject: [PATCH v2] printk: hash addresses printed with %p
+> > Currently there are many places in the kernel where addresses are being
+> > printed using an unadorned %p. Kernel pointers should be printed using
+> > %pK allowing some control via the kptr_restrict sysctl. Exposing addresses
+> > gives attackers sensitive information about the kernel layout in memory.
 > > 
-> > Currently there are many places in the kernel where addresses are being printed
-> > using an unadorned %p. Kernel pointers should be printed using %pK allowing
-> > some control via the kptr_restrict sysctl. Exposing addresses gives attackers
-> > sensitive information about the kernel layout in memory.
-> > 
-> > We can reduce the attack surface by hashing all addresses printed with %p. This
-> > will of course break some users, forcing code printing needed addresses to be
-> > updated.
+> > We can reduce the attack surface by hashing all addresses printed with
+> > %p. This will of course break some users, forcing code printing needed
+> > addresses to be updated.
 > > 
 > > For what it's worth, usage of unadorned %p can be broken down as follows
 > > 
 > >     git grep '%p[^KFfSsBRrbMmIiEUVKNhdDgCGO]' | wc -l
-> > 
-> > arch: 2512
-> > block: 20
-> > crypto: 12
-> > fs: 1221
-> > include: 147
-> > kernel: 109
-> > lib: 77
-> > mm: 120
-> > net: 1516
-> > security: 11
-> > sound: 168
-> > virt: 2
-> > drivers: 8420
-> > 
-> > Add helper function siphash_1ulong(). Add function ptr_to_id() to map an
-> > address to a 32 bit unique identifier.
-> > 
-> > Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> > ---
-> > 
-> > V2:
-> >  - Use SipHash to do the hashing
-> > 
-> > The discussion related to this patch has been fragmented. There are three other
-> > threads associated with this patch. Email threads by
-> > subject:
-> > 
-> > [PATCH] printk: hash addresses printed with %p [PATCH 0/3] add %pX specifier
-> > [kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
-> > 
-> >  include/linux/siphash.h |  2 ++
-> >  lib/siphash.c           | 13 +++++++++++++
-> >  lib/vsprintf.c          | 32 +++++++++++++++++++++++++++++---
-> >  3 files changed, 44 insertions(+), 3 deletions(-)
-> > 
-> > diff --git a/include/linux/siphash.h b/include/linux/siphash.h index
-> > fa7a6b9cedbf..a9392568c8b8 100644
-> > --- a/include/linux/siphash.h
-> > +++ b/include/linux/siphash.h
-> > @@ -26,6 +26,8 @@ u64 __siphash_aligned(const void *data, size_t len, const
-> > siphash_key_t *key);
-> >  u64 __siphash_unaligned(const void *data, size_t len, const siphash_key_t
-> > *key);  #endif
-> > 
-> > +unsigned long siphash_1ulong(const unsigned long a, const siphash_key_t
-> > +*key);
-> > +
-> >  u64 siphash_1u64(const u64 a, const siphash_key_t *key);
-> >  u64 siphash_2u64(const u64 a, const u64 b, const siphash_key_t *key);
-> >  u64 siphash_3u64(const u64 a, const u64 b, const u64 c, diff --git a/lib/siphash.c
-> > b/lib/siphash.c index 3ae58b4edad6..63f4ff57c9ce 100644
-> > --- a/lib/siphash.c
-> > +++ b/lib/siphash.c
-> > @@ -116,6 +116,19 @@ EXPORT_SYMBOL(__siphash_unaligned);
-> >  #endif
-> > 
-> >  /**
-> > + * siphash_1ulong - computes siphash PRF value
-> > + * @first: value to hash
-> > + * @key: the siphash key
-> > + */
-> > +unsigned long siphash_1ulong(const unsigned long first, const
-> > +siphash_key_t *key) { #ifdef CONFIG_64BIT
-> > +	return (unsigned long)siphash_1u64((u64)first, key); #endif
-> > +	return (unsigned long)siphash_1u32((u32)first, key); }
-> > +
-> > +/**
-> >   * siphash_1u64 - compute 64-bit siphash PRF value of a u64
-> >   * @first: first u64
-> >   * @key: the siphash key
-> > diff --git a/lib/vsprintf.c b/lib/vsprintf.c index 86c3385b9eb3..afd1c835b0f6 100644
-> > --- a/lib/vsprintf.c
-> > +++ b/lib/vsprintf.c
-> > @@ -33,6 +33,7 @@
-> >  #include <linux/uuid.h>
-> >  #include <linux/of.h>
-> >  #include <net/addrconf.h>
-> > +#include <linux/siphash.h>
-> >  #ifdef CONFIG_BLOCK
-> >  #include <linux/blkdev.h>
-> >  #endif
-> > @@ -503,6 +504,7 @@ char *number(char *buf, char *end, unsigned long long
-> > num,
-> >  			*buf = '0';
-> >  		++buf;
-> >  	}
-> > +
 > 
-> Unneeded whitespace change?
-
-:) thanks
-
+> Does %p[FfSs] leak addresses? Well, I guess it does if they are not
+> found in kallsyms, but otherwise you have:
 > 
-> >  	/* actual digits of result */
-> >  	while (--i >= 0) {
-> >  		if (buf < end)
-> > @@ -1591,6 +1593,28 @@ char *device_node_string(char *buf, char *end, struct
-> > device_node *dn,
-> >  	return widen_string(buf, buf - buf_start, end, spec);  }
-> > 
-> > +/* Maps a pointer to a 32 bit unique identifier. */ static char
-> > +*ptr_to_id(char *buf, char *end, void *ptr, struct printf_spec spec) {
-> > +	static siphash_key_t ptr_secret __read_mostly;
-> > +	static bool have_key = false;
-> > +	unsigned long hashval;
-> > +
-> > +	/* Kernel doesn't boot if we use get_random_once() */
-> > +	if (!have_key) {
-> > +		get_random_bytes(&ptr_secret, sizeof(ptr_secret));
-> > +		have_key = true;
-> 
-> Wouldn't one want to use an atomic test and swap for this
-> block?
+>   function+0x<offset>
 
-Great, thanks for the pointer.
+You are correct %pF and %pS print an offset. Does this provide an attack vector,
+I didn't think so but I'm no security expert. If they do then we need to amend
+those calls also.
 
-Thanks for the review William.
+We still have %pa[pd] to see to as well obviously.
 
+thanks for the review,
 Tobin.
