@@ -1,69 +1,172 @@
-Message-Id: <1508119775.3619640.1139764440.2F1A81C9@webmail.messagingengine.com>
-From: Tobin Harding <me@tobin.cc>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Type: text/plain; charset="utf-8"
-References: <1507676974-1298-1-git-send-email-me@tobin.cc>
- <CA+55aFyH5X2nx0kf_hPeOjMQYF-UX6r3ov61=VqTOLLZLE3-vQ@mail.gmail.com>
- <476DC76E7D1DF2438D32BFADF679FC563F4AF591@ORSMSX115.amr.corp.intel.com>
-Date: Mon, 16 Oct 2017 13:09:35 +1100
-In-Reply-To: <476DC76E7D1DF2438D32BFADF679FC563F4AF591@ORSMSX115.amr.corp.intel.com>
-Subject: [kernel-hardening] Re: [PATCH 0/3] add %pX specifier
-To: "Roberts, William C" <william.c.roberts@intel.com>, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: kernel-hardening@lists.openwall.com, KVM list <kvm@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>
+From: "Tobin C. Harding" <me@tobin.cc>
+Date: Tue, 17 Oct 2017 15:52:51 +1100
+Message-Id: <1508215972-7769-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] [PATCH v2] printk: hash addresses printed with %p
+To: kernel-hardening@lists.openwall.com
+Cc: "Tobin C. Harding" <me@tobin.cc>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Oct 14, 2017, at 04:54, Roberts, William C wrote:
-> 
-> 
-> > -----Original Message-----
-> > From: linus971@gmail.com [mailto:linus971@gmail.com] On Behalf Of Linus
-> > Torvalds
-> > Sent: Tuesday, October 10, 2017 4:17 PM
-> > To: Tobin C. Harding <me@tobin.cc>
-> > Cc: kernel-hardening@lists.openwall.com; KVM list <kvm@vger.kernel.org>;
-> > Linux Kernel Mailing List <linux-kernel@vger.kernel.org>; Kees Cook
-> > <keescook@chromium.org>; Paolo Bonzini <pbonzini@redhat.com>; Tycho
-> > Andersen <tycho@docker.com>; Roberts, William C
-> > <william.c.roberts@intel.com>; Tejun Heo <tj@kernel.org>; Jordan Glover
-> > <Golden_Miller83@protonmail.ch>; Greg KH <gregkh@linuxfoundation.org>;
-> > Petr Mladek <pmladek@suse.com>; Joe Perches <joe@perches.com>; Ian
-> > Campbell <ijc@hellion.org.uk>; Sergey Senozhatsky
-> > <sergey.senozhatsky@gmail.com>; Catalin Marinas <catalin.marinas@arm.com>;
-> > Will Deacon <will.deacon@arm.com>; Steven Rostedt <rostedt@goodmis.org>;
-> > Chris Fries <cfries@google.com>; Dave Weinstein <olorin@google.com>; Daniel
-> > Micay <danielmicay@gmail.com>; Djalal Harouni <tixxdz@gmail.com>
-> > Subject: Re: [PATCH 0/3] add %pX specifier
-> > 
-> > On Tue, Oct 10, 2017 at 4:09 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> > >
-> > > This patch is a softer version of Linus' suggestion because it does
-> > > not change the behaviour of the %p specifier. I don't see the benefit
-> > > in making such a breaking change without addressing the issue of %x (and I
-> > don't the balls to right now).
-> > 
-> > The thing is, this continues to have the exact same issue that %pK has
-> > - because it is opt-in, effectively nobody will actually use it.
-> > 
-> > That's why I would suggest that if we do this way, we really change %p and %pa
-> > to use the hashed value, to convert *everybody*. And then people who have a
-> > good reason to actually expose the pointer have to do the extra work and opt
-> > out.
-> 
-> Yes we cannot make this opt in or there is really no point in doing it.
-> %pK and mistakes
-> got us here to this point. I see there is multiple threads, this getting
-> really fun to follow.
+Currently there are many places in the kernel where addresses are being
+printed using an unadorned %p. Kernel pointers should be printed using
+%pK allowing some control via the kptr_restrict sysctl. Exposing addresses
+gives attackers sensitive information about the kernel layout in memory.
 
-The threading split is my fault. I have never worked on a patch series
-with this many comments. How could I have gone about things differently
-to prevent the thread separation? Should I have posted the second patch
-set as a reply to the first (I did not because it was not a version 2). 
-Further splitting occurred because I botched the `git send-email` and
-sent only a cover-letter, this got some replies that lead to another
-single patch (again it was quite different and seemed not to be a
-version 2)? So we are left with three threads all discussing the same
-changes. Is there anything one can do to rectify this position now?
+We can reduce the attack surface by hashing all addresses printed with
+%p. This will of course break some users, forcing code printing needed
+addresses to be updated.
 
-thanks,
-Tobin.
+For what it's worth, usage of unadorned %p can be broken down as follows
+
+    git grep '%p[^KFfSsBRrbMmIiEUVKNhdDgCGO]' | wc -l
+
+arch: 2512
+block: 20
+crypto: 12
+fs: 1221
+include: 147
+kernel: 109
+lib: 77
+mm: 120
+net: 1516
+security: 11
+sound: 168
+virt: 2
+drivers: 8420
+
+Add helper function siphash_1ulong(). Add function ptr_to_id() to map an
+address to a 32 bit unique identifier.
+
+Signed-off-by: Tobin C. Harding <me@tobin.cc>
+---
+
+V2:
+ - Use SipHash to do the hashing
+
+The discussion related to this patch has been fragmented. There are
+three other threads associated with this patch. Email threads by
+subject:
+
+[PATCH] printk: hash addresses printed with %p
+[PATCH 0/3] add %pX specifier
+[kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
+
+ include/linux/siphash.h |  2 ++
+ lib/siphash.c           | 13 +++++++++++++
+ lib/vsprintf.c          | 32 +++++++++++++++++++++++++++++---
+ 3 files changed, 44 insertions(+), 3 deletions(-)
+
+diff --git a/include/linux/siphash.h b/include/linux/siphash.h
+index fa7a6b9cedbf..a9392568c8b8 100644
+--- a/include/linux/siphash.h
++++ b/include/linux/siphash.h
+@@ -26,6 +26,8 @@ u64 __siphash_aligned(const void *data, size_t len, const siphash_key_t *key);
+ u64 __siphash_unaligned(const void *data, size_t len, const siphash_key_t *key);
+ #endif
+ 
++unsigned long siphash_1ulong(const unsigned long a, const siphash_key_t *key);
++
+ u64 siphash_1u64(const u64 a, const siphash_key_t *key);
+ u64 siphash_2u64(const u64 a, const u64 b, const siphash_key_t *key);
+ u64 siphash_3u64(const u64 a, const u64 b, const u64 c,
+diff --git a/lib/siphash.c b/lib/siphash.c
+index 3ae58b4edad6..63f4ff57c9ce 100644
+--- a/lib/siphash.c
++++ b/lib/siphash.c
+@@ -116,6 +116,19 @@ EXPORT_SYMBOL(__siphash_unaligned);
+ #endif
+ 
+ /**
++ * siphash_1ulong - computes siphash PRF value
++ * @first: value to hash
++ * @key: the siphash key
++ */
++unsigned long siphash_1ulong(const unsigned long first, const siphash_key_t *key)
++{
++#ifdef CONFIG_64BIT
++	return (unsigned long)siphash_1u64((u64)first, key);
++#endif
++	return (unsigned long)siphash_1u32((u32)first, key);
++}
++
++/**
+  * siphash_1u64 - compute 64-bit siphash PRF value of a u64
+  * @first: first u64
+  * @key: the siphash key
+diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+index 86c3385b9eb3..afd1c835b0f6 100644
+--- a/lib/vsprintf.c
++++ b/lib/vsprintf.c
+@@ -33,6 +33,7 @@
+ #include <linux/uuid.h>
+ #include <linux/of.h>
+ #include <net/addrconf.h>
++#include <linux/siphash.h>
+ #ifdef CONFIG_BLOCK
+ #include <linux/blkdev.h>
+ #endif
+@@ -503,6 +504,7 @@ char *number(char *buf, char *end, unsigned long long num,
+ 			*buf = '0';
+ 		++buf;
+ 	}
++
+ 	/* actual digits of result */
+ 	while (--i >= 0) {
+ 		if (buf < end)
+@@ -1591,6 +1593,28 @@ char *device_node_string(char *buf, char *end, struct device_node *dn,
+ 	return widen_string(buf, buf - buf_start, end, spec);
+ }
+ 
++/* Maps a pointer to a 32 bit unique identifier. */
++static char *ptr_to_id(char *buf, char *end, void *ptr, struct printf_spec spec)
++{
++	static siphash_key_t ptr_secret __read_mostly;
++	static bool have_key = false;
++	unsigned long hashval;
++
++	/* Kernel doesn't boot if we use get_random_once() */
++	if (!have_key) {
++		get_random_bytes(&ptr_secret, sizeof(ptr_secret));
++		have_key = true;
++	}
++
++	hashval = siphash_1ulong((unsigned long)ptr, &ptr_secret);
++
++	spec.field_width = 2 + 2 * sizeof(unsigned int); /* 0x + hex */
++	spec.flags = SPECIAL | SMALL | ZEROPAD;
++	spec.base = 16;
++
++	return number(buf, end, (u32)hashval, spec);
++}
++
+ int kptr_restrict __read_mostly;
+ 
+ /*
+@@ -1703,6 +1727,9 @@ int kptr_restrict __read_mostly;
+  * Note: The difference between 'S' and 'F' is that on ia64 and ppc64
+  * function pointers are really function descriptors, which contain a
+  * pointer to the real address.
++ *
++ * Default behaviour (unadorned %p) is to hash the address, rendering it useful
++ * as a unique identifier.
+  */
+ static noinline_for_stack
+ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
+@@ -1858,14 +1885,13 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
+ 			return device_node_string(buf, end, ptr, spec, fmt + 1);
+ 		}
+ 	}
+-	spec.flags |= SMALL;
++
+ 	if (spec.field_width == -1) {
+ 		spec.field_width = default_width;
+ 		spec.flags |= ZEROPAD;
+ 	}
+-	spec.base = 16;
+ 
+-	return number(buf, end, (unsigned long) ptr, spec);
++	return ptr_to_id(buf, end, ptr, spec);
+ }
+ 
+ /*
+-- 
+2.7.4
