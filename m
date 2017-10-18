@@ -1,179 +1,75 @@
-From: "Tobin C. Harding" <me@tobin.cc>
-Date: Wed, 18 Oct 2017 15:21:55 +1100
-Message-Id: <1508300515-28824-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [PATCH v4] printk: hash addresses printed with %p
-To: kernel-hardening@lists.openwall.com
-Cc: "Tobin C. Harding" <me@tobin.cc>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
+Date: Wed, 18 Oct 2017 14:44:31 +0900
+From: Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>
+Message-ID: <20171018054431.GA597@jagdpanzerIV>
+References: <1508300515-28824-1-git-send-email-me@tobin.cc>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1508300515-28824-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] Re: [PATCH v4] printk: hash addresses printed with %p
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently there are many places in the kernel where addresses are being
-printed using an unadorned %p. Kernel pointers should be printed using
-%pK allowing some control via the kptr_restrict sysctl. Exposing addresses
-gives attackers sensitive information about the kernel layout in memory.
+On (10/18/17 15:21), Tobin C. Harding wrote:
+[..]
+> diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+> index 86c3385b9eb3..4609738cd2cd 100644
+> --- a/lib/vsprintf.c
+> +++ b/lib/vsprintf.c
+> @@ -33,6 +33,8 @@
+>  #include <linux/uuid.h>
+>  #include <linux/of.h>
+>  #include <net/addrconf.h>
+> +#include <linux/siphash.h>
+> +#include <linux/spinlock.h>
+>  #ifdef CONFIG_BLOCK
+>  #include <linux/blkdev.h>
+>  #endif
+> @@ -1591,6 +1593,70 @@ char *device_node_string(char *buf, char *end, struct device_node *dn,
+>  	return widen_string(buf, buf - buf_start, end, spec);
+>  }
+>  
+> +/* protects ptr_secret and have_key */
+> +DEFINE_SPINLOCK(key_lock);
+> +static siphash_key_t ptr_secret __read_mostly;
+> +static atomic_t have_key = ATOMIC_INIT(0);
+> +
+> +static int initialize_ptr_secret(void)
+> +{
+> +	spin_lock(&key_lock);
+> +	if (atomic_read(&have_key) == 1)
+> +		goto unlock;
+> +
+> +	get_random_bytes(&ptr_secret, sizeof(ptr_secret));
+> +	atomic_set(&have_key, 1);
+> +
+> +unlock:
+> +	spin_unlock(&key_lock);
+> +	return 0;
+> +}
 
-We can reduce the attack surface by hashing all addresses printed with
-%p. This will of course break some users, forcing code printing needed
-addresses to be updated.
+is this spinlock legal? what happens if we are getting interrupted by NMI?
 
-For what it's worth, usage of unadorned %p can be broken down as
-follows (thanks to Joe Perches).
+printk()
+ vprintk_emit()
+  vscnprintf()
+   pointer()
+    ptr_to_id()
+     initialize_ptr_secret()
+      spin_lock(&key_lock)
 
-$ git grep -E '%p[^A-Za-z0-9]' | cut -f1 -d"/" | sort | uniq -c
-   1084 arch
-     20 block
-     10 crypto
-     32 Documentation
-   8121 drivers
-   1221 fs
-    143 include
-    101 kernel
-     69 lib
-    100 mm
-   1510 net
-     40 samples
-      7 scripts
-     11 security
-    166 sound
-    152 tools
-      2 virt
+----> NMI
 
-Add function ptr_to_id() to map an address to a 32 bit unique identifier.
+      printk()
+       printk_safe_log_store()
+        vscnprintf()
+         pointer()
+          ptr_to_id()
+           initialize_ptr_secret()
+            spin_lock(&key_lock)   <<<<
 
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
----
 
-V4:
- - Remove changes to siphash.{ch}        
- - Do word size check, and return value cast, directly in ptr_to_id().
- - Use add_ready_random_callback() to guard call to get_random_bytes()
+or am I completely misreading the patch? sorry if so.
 
-V3:
- - Use atomic_xchg() to guard setting [random] key.
- - Remove erroneous white space change.
-
-V2:
- - Use SipHash to do the hashing.
-
-The discussion related to this patch has been fragmented. There are
-three threads associated with this patch. Email threads by subject:
-
-[PATCH] printk: hash addresses printed with %p
-[PATCH 0/3] add %pX specifier
-[kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
-
- lib/vsprintf.c | 74 +++++++++++++++++++++++++++++++++++++++++++++++++++++++---
- 1 file changed, 71 insertions(+), 3 deletions(-)
-
-diff --git a/lib/vsprintf.c b/lib/vsprintf.c
-index 86c3385b9eb3..4609738cd2cd 100644
---- a/lib/vsprintf.c
-+++ b/lib/vsprintf.c
-@@ -33,6 +33,8 @@
- #include <linux/uuid.h>
- #include <linux/of.h>
- #include <net/addrconf.h>
-+#include <linux/siphash.h>
-+#include <linux/spinlock.h>
- #ifdef CONFIG_BLOCK
- #include <linux/blkdev.h>
- #endif
-@@ -1591,6 +1593,70 @@ char *device_node_string(char *buf, char *end, struct device_node *dn,
- 	return widen_string(buf, buf - buf_start, end, spec);
- }
- 
-+/* protects ptr_secret and have_key */
-+DEFINE_SPINLOCK(key_lock);
-+static siphash_key_t ptr_secret __read_mostly;
-+static atomic_t have_key = ATOMIC_INIT(0);
-+
-+static int initialize_ptr_secret(void)
-+{
-+	spin_lock(&key_lock);
-+	if (atomic_read(&have_key) == 1)
-+		goto unlock;
-+
-+	get_random_bytes(&ptr_secret, sizeof(ptr_secret));
-+	atomic_set(&have_key, 1);
-+
-+unlock:
-+	spin_unlock(&key_lock);
-+	return 0;
-+}
-+
-+static void schedule_async_key_init(struct random_ready_callback *rdy)
-+{
-+	initialize_ptr_secret();
-+}
-+
-+/* Maps a pointer to a 32 bit unique identifier. */
-+static char *ptr_to_id(char *buf, char *end, void *ptr, struct printf_spec spec)
-+{
-+	static struct random_ready_callback random_ready;
-+	unsigned int hashval;
-+	int err;
-+
-+	if (atomic_read(&have_key) == 0) {
-+		random_ready.owner = NULL;
-+		random_ready.func = schedule_async_key_init;
-+
-+		err = add_random_ready_callback(&random_ready);
-+
-+		switch (err) {
-+		case 0:
-+			return "(pointer value)";
-+
-+		case -EALREADY:
-+			initialize_ptr_secret();
-+			break;
-+
-+		default:
-+			/* shouldn't get here */
-+			return "(ptr_to_id() error)";
-+		}
-+	}
-+
-+#ifdef CONFIG_64BIT
-+	hashval = (unsigned int)siphash_1u64((u64)ptr, &ptr_secret);
-+#else
-+	hashval = (unsigned int)siphash_1u32((u32)ptr, &ptr_secret);
-+#endif
-+
-+	spec.field_width = 2 + 2 * sizeof(unsigned int); /* 0x + hex */
-+	spec.flags = SPECIAL | SMALL | ZEROPAD;
-+	spec.base = 16;
-+
-+	return number(buf, end, hashval, spec);
-+}
-+
- int kptr_restrict __read_mostly;
- 
- /*
-@@ -1703,6 +1769,9 @@ int kptr_restrict __read_mostly;
-  * Note: The difference between 'S' and 'F' is that on ia64 and ppc64
-  * function pointers are really function descriptors, which contain a
-  * pointer to the real address.
-+ *
-+ * Default behaviour (unadorned %p) is to hash the address, rendering it useful
-+ * as a unique identifier.
-  */
- static noinline_for_stack
- char *pointer(const char *fmt, char *buf, char *end, void *ptr,
-@@ -1858,14 +1927,13 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
- 			return device_node_string(buf, end, ptr, spec, fmt + 1);
- 		}
- 	}
--	spec.flags |= SMALL;
-+
- 	if (spec.field_width == -1) {
- 		spec.field_width = default_width;
- 		spec.flags |= ZEROPAD;
- 	}
--	spec.base = 16;
- 
--	return number(buf, end, (unsigned long) ptr, spec);
-+	return ptr_to_id(buf, end, ptr, spec);
- }
- 
- /*
--- 
-2.7.4
+	-ss
