@@ -1,79 +1,51 @@
 MIME-Version: 1.0
-In-Reply-To: <CAF2d9jjc6z_cO7co_C7L7xPujqA2npa2nXpUHZbE-Le6BSGFNg@mail.gmail.com>
-References: <20170929230952.29673-1-mahesh@bandewar.net> <20171002171410.GA19611@mail.hallyn.com>
- <CAF2d9jjc6z_cO7co_C7L7xPujqA2npa2nXpUHZbE-Le6BSGFNg@mail.gmail.com>
-From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
-Date: Thu, 19 Oct 2017 09:15:06 -0700
-Message-ID: <CAF2d9jgkKtKUnO6vH1QNLynQs5rh3rhHOFSA9gVNo4KRnBdECg@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <CAHmME9qV-f1pvW0iC2cYU71PA+YUf0YpR=06T+FCFxywRhvjEw@mail.gmail.com>
+References: <1508362242-12857-1-git-send-email-me@tobin.cc>
+ <CAHmME9oawjpRQEqo_rHgqjC6S8pSrEr2sbr06Gkhm93DXq9kqA@mail.gmail.com>
+ <20171019013106.GE604@jagdpanzerIV> <CAHmME9oDWRo2CYMoF+frqypje4DEBFchEoX-j19jkHNybkGUrQ@mail.gmail.com>
+ <20171019014429.GG31318@eros> <CAHmME9qV-f1pvW0iC2cYU71PA+YUf0YpR=06T+FCFxywRhvjEw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 19 Oct 2017 10:18:01 -0700
+Message-ID: <CAGXu5jKfeQm6ygxN7yvXs3nhLbi0EK+LbQhuEc0mKgSN-BZHZw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] [PATCH 0/2] capability controlled user-namespaces
-To: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
+Subject: [kernel-hardening] Re: [PATCH v5] printk: hash addresses printed with %p
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 2, 2017 at 11:12 AM, Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=
-=87=E0=A4=B6 =E0=A4=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=
-=B0)
-<maheshb@google.com> wrote:
-> On Mon, Oct 2, 2017 at 10:14 AM, Serge E. Hallyn <serge@hallyn.com> wrote=
-:
->> Quoting Mahesh Bandewar (mahesh@bandewar.net):
->>> From: Mahesh Bandewar <maheshb@google.com>
->>>
->>> [Same as the previous RFC series sent on 9/21]
->>>
->>> TL;DR version
->>> -------------
->>> Creating a sandbox environment with namespaces is challenging
->>> considering what these sandboxed processes can engage into. e.g.
->>> CVE-2017-6074, CVE-2017-7184, CVE-2017-7308 etc. just to name few.
->>> Current form of user-namespaces, however, if changed a bit can allow
->>> us to create a sandbox environment without locking down user-
->>> namespaces.
->>>
->>> Detailed version
->>> ----------------
->>
->> Hi,
->>
->> still struggling with how I feel about the idea in general.
->>
->> So is the intent mainly that if/when there comes an 0-day which allows
->> users with CAP_NET_ADMIN in any namespace to gain privilege on the host,
->> then this can be used as a stop-gap measure until there is a proper fix?
->>
-> Thank for looking at this Serge.
+On Wed, Oct 18, 2017 at 10:49 PM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+> static void fill_random_ptr_key(struct random_ready_callback *rdy)
+> {
+>     get_random_bytes(&ptr_secret, sizeof(ptr_secret));
+>     static_branch_disable(&no_ptr_secret);
+> }
 >
-> Yes, but at the same time it's not just limited to NET_ADMIN but could
-> be any of the current capabilities.
+> static struct random_ready_callback random_ready = {
+>     .func = fill_random_ptr_key
+> };
 >
->> Otherwise, do you have any guidance for how people should use this?
->>
->> IMO it should be heavily discouraged to use this tool as a regular
->> day to day configuration, as I'm not sure there is any "educated"
->> decision to be made, even by those who are in the know, about what
->> to put in this set.
->>
-> I think that really depends on the environment. e.g. in certain
-> sandboxes third-part / semi-trusted workload is executed where network
-> resource is not used. In that environment I can easily take off
-> NET_ADMIN and NET_RAW without affecting anything there. At the same
-> time I wont have to worry about 0-day related to these two
-> capabilities. I would say the Admins at these places are in the best
-> place to decide what they can take-off safely and what they cannot.
-> Even if they decide not to take-off anything, having a tool at hand to
-> gain control is important when the next 0-day strikes us that can be
-> exploited using any of the currently used capabilities.
+> static int __init initialize_ptr_random(void)
+> {
+>     int ret = add_random_ready_callback(&random_ready);
 >
-> However, you are absolutely right in terms of using it as a stop-gap
-> measure to protect environment until it's fixed and the capability in
-> question can not be safely taken off permanently without hampering
-> operations.
+>     if (!ret)
+>         return 0;
+>     else if (ret == -EALREADY) {
+>         fill_random_ptr_key(&random_ready);
+>         return 0;
+>     }
 >
-> thanks,
-> --mahesh..
->
-> [...]
+>     return ret;
+> }
+> early_initcall(initialize_ptr_random);
 
-friendly ping.
+Tangent: why is the random_ready API designed with -EALREADY? Couldn't
+add_random_ready_callback() just perform the call itself and avoid
+needing all the callers to check for -EALREADY?
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
