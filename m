@@ -3,9 +3,9 @@ Content-Type: text/plain;
 Mime-Version: 1.0 (1.0)
 From: Andy Lutomirski <luto@amacapital.net>
 In-Reply-To: <20171020152028.syq6woeet6it3z3h@gmail.com>
-Date: Fri, 20 Oct 2017 18:27:24 +0200
+Date: Fri, 20 Oct 2017 19:52:17 +0200
 Content-Transfer-Encoding: quoted-printable
-Message-Id: <1F0B8A18-092F-42AF-91B4-7A5D414ED83D@amacapital.net>
+Message-Id: <3EA62B98-ED93-48BC-9113-05CA09E6FC5E@amacapital.net>
 References: <20171011203027.11248-1-thgarnie@google.com> <20171011203027.11248-7-thgarnie@google.com> <20171020082646.bkxrps35sb3gq2nr@gmail.com> <CAJcbSZFScsqOORMGXFQdsqcN5xbfHWpzSHGdxQB=45zgSDryLw@mail.gmail.com> <20171020152028.syq6woeet6it3z3h@gmail.com>
 Subject: [kernel-hardening] Re: [PATCH v1 06/27] x86/entry/64: Adapt assembly for PIE support
 To: Ingo Molnar <mingo@kernel.org>
@@ -38,12 +38,10 @@ prinking=20
 >=20
 > I have no good idea how to solve this.
 >=20
-
-How about:
-
-.macro JMP_TO_LABEL ...
-
-
 > Thanks,
+
+Ugh, brain was off.  This is a bit messy. We could use a macro for this, too=
+, I suppose.
+
 >=20
 >    Ingo
