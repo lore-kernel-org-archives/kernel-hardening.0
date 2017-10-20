@@ -1,17 +1,17 @@
 MIME-Version: 1.0
-In-Reply-To: <20171020082420.lsvu7mqjrgnahm5t@gmail.com>
-References: <20171011203027.11248-1-thgarnie@google.com> <20171011203027.11248-2-thgarnie@google.com>
- <20171020082420.lsvu7mqjrgnahm5t@gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Fri, 20 Oct 2017 09:28:00 +0100
-Message-ID: <CAKv+Gu9XMnNA0UoGfFMQmC9=Ryh6dcOduxH+tq49bcdvBwhyQw@mail.gmail.com>
+In-Reply-To: <20171020082646.bkxrps35sb3gq2nr@gmail.com>
+References: <20171011203027.11248-1-thgarnie@google.com> <20171011203027.11248-7-thgarnie@google.com>
+ <20171020082646.bkxrps35sb3gq2nr@gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 20 Oct 2017 07:47:44 -0700
+Message-ID: <CAJcbSZFScsqOORMGXFQdsqcN5xbfHWpzSHGdxQB=45zgSDryLw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v1 01/27] x86/crypto: Adapt assembly for PIE support
+Subject: [kernel-hardening] Re: [PATCH v1 06/27] x86/entry/64: Adapt assembly for PIE support
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Thomas Garnier <thgarnie@google.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Matthias Kaehlcke <mka@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Chris Wright <chrisw@sous-sol.org>, Alok Kataria <akataria@vmware.com>, Rusty Russell <rusty@rustcorp.com.au>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Borislav Petkov <bp@alien8.de>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Christopher Li <sparse@chrisli.org>, Steven Rostedt <rostedt@goodmis.org>, Jason Baron <jbaron@akamai.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@suse.com>, Peter Foley <pefoley2@pefoley.com>, Paul Bolle <pebolle@tiscali.nl>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, =?UTF-8?B?SmFuIEggLiBTY2jDtm5oZXJy?= <jschoenh@amazon.de>, Daniel Micay <danielmicay@gmail.com>, "x86@kernel.org" <x86@kernel.org>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-pm <linux-pm@vger.kernel.org>, virtualization@lists.linux-foundation.org, xen-devel <xen-devel@lists.xenproject.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Linux-Sparse <linux-sparse@vger.kernel.org>, KVM devel mailing list <kvm@vger.kernel.org>, Linux Doc Mailing List <linux-doc@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Matthias Kaehlcke <mka@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Chris Wright <chrisw@sous-sol.org>, Alok Kataria <akataria@vmware.com>, Rusty Russell <rusty@rustcorp.com.au>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Borislav Petkov <bp@alien8.de>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Christopher Li <sparse@chrisli.org>, Steven Rostedt <rostedt@goodmis.org>, Jason Baron <jbaron@akamai.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@suse.com>, Peter Foley <pefoley2@pefoley.com>, Paul Bolle <pebolle@tiscali.nl>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, =?UTF-8?B?SmFuIEggLiBTY2jDtm5oZXJy?= <jschoenh@amazon.de>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, virtualization@lists.linux-foundation.org, xen-devel <xen-devel@lists.xenproject.org>, linux-arch <linux-arch@vger.kernel.org>, Sparse Mailing-list <linux-sparse@vger.kernel.org>, kvm list <kvm@vger.kernel.org>, linux-doc@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 20 October 2017 at 09:24, Ingo Molnar <mingo@kernel.org> wrote:
+On Fri, Oct 20, 2017 at 1:26 AM, Ingo Molnar <mingo@kernel.org> wrote:
 >
 > * Thomas Garnier <thgarnie@google.com> wrote:
 >
@@ -20,107 +20,99 @@ On 20 October 2017 at 09:24, Ingo Molnar <mingo@kernel.org> wrote:
 >>
 >> Position Independent Executable (PIE) support will allow to extended the
 >> KASLR randomization range below the -2G memory limit.
->
->> diff --git a/arch/x86/crypto/aes-x86_64-asm_64.S b/arch/x86/crypto/aes-x86_64-asm_64.S
->> index 8739cf7795de..86fa068e5e81 100644
->> --- a/arch/x86/crypto/aes-x86_64-asm_64.S
->> +++ b/arch/x86/crypto/aes-x86_64-asm_64.S
->> @@ -48,8 +48,12 @@
->>  #define R10  %r10
->>  #define R11  %r11
 >>
->> +/* Hold global for PIE suport */
->> +#define RBASE        %r12
->> +
->>  #define prologue(FUNC,KEY,B128,B192,r1,r2,r5,r6,r7,r8,r9,r10,r11) \
->>       ENTRY(FUNC);                    \
->> +     pushq   RBASE;                  \
->>       movq    r1,r2;                  \
->>       leaq    KEY+48(r8),r9;          \
->>       movq    r10,r11;                \
->> @@ -74,54 +78,63 @@
->>       movl    r6 ## E,4(r9);          \
->>       movl    r7 ## E,8(r9);          \
->>       movl    r8 ## E,12(r9);         \
->> +     popq    RBASE;                  \
->>       ret;                            \
->>       ENDPROC(FUNC);
+>> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+>> ---
+>>  arch/x86/entry/entry_64.S | 22 +++++++++++++++-------
+>>  1 file changed, 15 insertions(+), 7 deletions(-)
 >>
->> +#define round_mov(tab_off, reg_i, reg_o) \
->> +     leaq    tab_off(%rip), RBASE; \
->> +     movl    (RBASE,reg_i,4), reg_o;
+>> diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
+>> index 49167258d587..15bd5530d2ae 100644
+>> --- a/arch/x86/entry/entry_64.S
+>> +++ b/arch/x86/entry/entry_64.S
+>> @@ -194,12 +194,15 @@ entry_SYSCALL_64_fastpath:
+>>       ja      1f                              /* return -ENOSYS (already in pt_regs->ax) */
+>>       movq    %r10, %rcx
+>>
+>> +     /* Ensures the call is position independent */
+>> +     leaq    sys_call_table(%rip), %r11
 >> +
->> +#define round_xor(tab_off, reg_i, reg_o) \
->> +     leaq    tab_off(%rip), RBASE; \
->> +     xorl    (RBASE,reg_i,4), reg_o;
->> +
->>  #define round(TAB,OFFSET,r1,r2,r3,r4,r5,r6,r7,r8,ra,rb,rc,rd) \
->>       movzbl  r2 ## H,r5 ## E;        \
->>       movzbl  r2 ## L,r6 ## E;        \
->> -     movl    TAB+1024(,r5,4),r5 ## E;\
->> +     round_mov(TAB+1024, r5, r5 ## E)\
->>       movw    r4 ## X,r2 ## X;        \
->> -     movl    TAB(,r6,4),r6 ## E;     \
->> +     round_mov(TAB, r6, r6 ## E)     \
->>       roll    $16,r2 ## E;            \
->>       shrl    $16,r4 ## E;            \
->>       movzbl  r4 ## L,r7 ## E;        \
->>       movzbl  r4 ## H,r4 ## E;        \
->>       xorl    OFFSET(r8),ra ## E;     \
->>       xorl    OFFSET+4(r8),rb ## E;   \
->> -     xorl    TAB+3072(,r4,4),r5 ## E;\
->> -     xorl    TAB+2048(,r7,4),r6 ## E;\
->> +     round_xor(TAB+3072, r4, r5 ## E)\
->> +     round_xor(TAB+2048, r7, r6 ## E)\
->>       movzbl  r1 ## L,r7 ## E;        \
->>       movzbl  r1 ## H,r4 ## E;        \
->> -     movl    TAB+1024(,r4,4),r4 ## E;\
->> +     round_mov(TAB+1024, r4, r4 ## E)\
->>       movw    r3 ## X,r1 ## X;        \
->>       roll    $16,r1 ## E;            \
->>       shrl    $16,r3 ## E;            \
->> -     xorl    TAB(,r7,4),r5 ## E;     \
->> +     round_xor(TAB, r7, r5 ## E)     \
->>       movzbl  r3 ## L,r7 ## E;        \
->>       movzbl  r3 ## H,r3 ## E;        \
->> -     xorl    TAB+3072(,r3,4),r4 ## E;\
->> -     xorl    TAB+2048(,r7,4),r5 ## E;\
->> +     round_xor(TAB+3072, r3, r4 ## E)\
->> +     round_xor(TAB+2048, r7, r5 ## E)\
->>       movzbl  r1 ## L,r7 ## E;        \
->>       movzbl  r1 ## H,r3 ## E;        \
->>       shrl    $16,r1 ## E;            \
->> -     xorl    TAB+3072(,r3,4),r6 ## E;\
->> -     movl    TAB+2048(,r7,4),r3 ## E;\
->> +     round_xor(TAB+3072, r3, r6 ## E)\
->> +     round_mov(TAB+2048, r7, r3 ## E)\
->>       movzbl  r1 ## L,r7 ## E;        \
->>       movzbl  r1 ## H,r1 ## E;        \
->> -     xorl    TAB+1024(,r1,4),r6 ## E;\
->> -     xorl    TAB(,r7,4),r3 ## E;     \
->> +     round_xor(TAB+1024, r1, r6 ## E)\
->> +     round_xor(TAB, r7, r3 ## E)     \
->>       movzbl  r2 ## H,r1 ## E;        \
->>       movzbl  r2 ## L,r7 ## E;        \
->>       shrl    $16,r2 ## E;            \
->> -     xorl    TAB+3072(,r1,4),r3 ## E;\
->> -     xorl    TAB+2048(,r7,4),r4 ## E;\
->> +     round_xor(TAB+3072, r1, r3 ## E)\
->> +     round_xor(TAB+2048, r7, r4 ## E)\
->>       movzbl  r2 ## H,r1 ## E;        \
->>       movzbl  r2 ## L,r2 ## E;        \
->>       xorl    OFFSET+8(r8),rc ## E;   \
->>       xorl    OFFSET+12(r8),rd ## E;  \
->> -     xorl    TAB+1024(,r1,4),r3 ## E;\
->> -     xorl    TAB(,r2,4),r4 ## E;
->> +     round_xor(TAB+1024, r1, r3 ## E)\
->> +     round_xor(TAB, r2, r4 ## E)
+>>       /*
+>>        * This call instruction is handled specially in stub_ptregs_64.
+>>        * It might end up jumping to the slow path.  If it jumps, RAX
+>>        * and all argument registers are clobbered.
+>>        */
+>> -     call    *sys_call_table(, %rax, 8)
+>> +     call    *(%r11, %rax, 8)
+>>  .Lentry_SYSCALL_64_after_fastpath_call:
+>>
+>>       movq    %rax, RAX(%rsp)
+>> @@ -334,7 +337,8 @@ ENTRY(stub_ptregs_64)
+>>        * RAX stores a pointer to the C function implementing the syscall.
+>>        * IRQs are on.
+>>        */
+>> -     cmpq    $.Lentry_SYSCALL_64_after_fastpath_call, (%rsp)
+>> +     leaq    .Lentry_SYSCALL_64_after_fastpath_call(%rip), %r11
+>> +     cmpq    %r11, (%rsp)
+>>       jne     1f
+>>
+>>       /*
+>> @@ -1172,7 +1176,8 @@ ENTRY(error_entry)
+>>       movl    %ecx, %eax                      /* zero extend */
+>>       cmpq    %rax, RIP+8(%rsp)
+>>       je      .Lbstep_iret
+>> -     cmpq    $.Lgs_change, RIP+8(%rsp)
+>> +     leaq    .Lgs_change(%rip), %rcx
+>> +     cmpq    %rcx, RIP+8(%rsp)
+>>       jne     .Lerror_entry_done
+>>
+>>       /*
+>> @@ -1383,10 +1388,10 @@ ENTRY(nmi)
+>>        * resume the outer NMI.
+>>        */
+>>
+>> -     movq    $repeat_nmi, %rdx
+>> +     leaq    repeat_nmi(%rip), %rdx
+>>       cmpq    8(%rsp), %rdx
+>>       ja      1f
+>> -     movq    $end_repeat_nmi, %rdx
+>> +     leaq    end_repeat_nmi(%rip), %rdx
+>>       cmpq    8(%rsp), %rdx
+>>       ja      nested_nmi_out
+>>  1:
+>> @@ -1440,7 +1445,8 @@ nested_nmi:
+>>       pushq   %rdx
+>>       pushfq
+>>       pushq   $__KERNEL_CS
+>> -     pushq   $repeat_nmi
+>> +     leaq    repeat_nmi(%rip), %rdx
+>> +     pushq   %rdx
+>>
+>>       /* Put stack back */
+>>       addq    $(6*8), %rsp
+>> @@ -1479,7 +1485,9 @@ first_nmi:
+>>       addq    $8, (%rsp)      /* Fix up RSP */
+>>       pushfq                  /* RFLAGS */
+>>       pushq   $__KERNEL_CS    /* CS */
+>> -     pushq   $1f             /* RIP */
+>> +     pushq   %rax            /* Support Position Independent Code */
+>> +     leaq    1f(%rip), %rax  /* RIP */
+>> +     xchgq   %rax, (%rsp)    /* Restore RAX, put 1f */
+>>       INTERRUPT_RETURN        /* continues at repeat_nmi below */
+>>       UNWIND_HINT_IRET_REGS
 >
-> This appears to be adding unconditional overhead to a function that was moved to
-> assembly to improve its performance.
->
+> This patch seems to add extra overhead to the syscall fast-path even when PIE is
+> disabled, right?
 
-I did some benchmarking on this code a while ago and, interestingly,
-it was slower than the generic C implementation (on a Pentium E2200),
-so we may want to consider whether we still need this driver in the
-first place.
+It does add extra instructions when one is not possible, I preferred
+that over ifdefing but I can change it.
+
+>
+> Thanks,
+>
+>         Ingo
+
+
+
+-- 
+Thomas
