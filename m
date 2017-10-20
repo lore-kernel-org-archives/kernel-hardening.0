@@ -1,57 +1,124 @@
 Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Fri, 20 Oct 2017 10:13:20 +0200
+Date: Fri, 20 Oct 2017 10:24:21 +0200
 From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20171020081320.h5hsp46m7rgocusm@gmail.com>
-References: <20170815075609.mmzbfwritjzvrpsn@gmail.com>
- <CAJcbSZE+TiY2whT94WqCJNXzR=2ATOHcQ10H5RqBZA1j=k1VHQ@mail.gmail.com>
- <20170816151235.oamkdva6cwpc4cex@gmail.com>
- <20170821133222.2ek6bhqgdeoymxsg@hirez.programming.kicks-ass.net>
- <20170821142854.dmuusnbc2tsrai3v@hirez.programming.kicks-ass.net>
- <c830ba59-65d3-187f-3868-732059269f28@zytor.com>
- <20170923100029.6nzpui6c3ke76bbs@gmail.com>
- <20170924223708.GA12616@amd>
- <20170925073342.2yoghmanhx6c75ho@gmail.com>
- <20171006103933.GA9497@amd>
+Message-ID: <20171020082420.lsvu7mqjrgnahm5t@gmail.com>
+References: <20171011203027.11248-1-thgarnie@google.com>
+ <20171011203027.11248-2-thgarnie@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171006103933.GA9497@amd>
-Subject: [kernel-hardening] Re: x86: PIE support and option to extend KASLR randomization
-To: Pavel Machek <pavel@ucw.cz>
-Cc: "H. Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Garnier <thgarnie@google.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Matthias Kaehlcke <mka@chromium.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Christopher Li <sparse@chrisli.org>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Markus Trippelsdorf <markus@trippelsdorf.de>, Steven Rostedt <rostedt@goodmis.org>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Peter Foley <pefoley2@pefoley.com>, Tim Chen <tim.c.chen@linux.intel.com>, Catalin Marinas <catalin.marinas@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Michal Hocko <mhocko@suse.com>, Matthew Wilcox <mawilcox@microsoft.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paul Bolle <pebolle@tiscali.nl>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, the arch/x86 maintainers <x86@kernel.org>, linux-crypto@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, xen-devel@lists.xenproject.org, kvm list <kvm@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-sparse@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Borislav Petkov <bp@alien8.de>
+In-Reply-To: <20171011203027.11248-2-thgarnie@google.com>
+Subject: [kernel-hardening] Re: [PATCH v1 01/27] x86/crypto: Adapt assembly for PIE support
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Matthias Kaehlcke <mka@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andy Lutomirski <luto@kernel.org>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Chris Wright <chrisw@sous-sol.org>, Alok Kataria <akataria@vmware.com>, Rusty Russell <rusty@rustcorp.com.au>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Borislav Petkov <bp@alien8.de>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Christopher Li <sparse@chrisli.org>, Steven Rostedt <rostedt@goodmis.org>, Jason Baron <jbaron@akamai.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lukas Wunner <lukas@wunner.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Markus Trippelsdorf <markus@trippelsdorf.de>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Rik van Riel <riel@redhat.com>, David Howells <dhowells@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Waiman Long <longman@redhat.com>, Kyle Huey <me@kylehuey.com>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@suse.com>, Peter Foley <pefoley2@pefoley.com>, Paul Bolle <pebolle@tiscali.nl>, Jiri Kosina <jkosina@suse.cz>, "H . J . Lu" <hjl.tools@gmail.com>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Jan H =?iso-8859-1?Q?=2E_Sch=F6nherr?= <jschoenh@amazon.de>, Daniel Micay <danielmicay@gmail.com>, x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux-pm@vger.kernel.org, virtualization@lists.linux-foundation.org, xen-devel@lists.xenproject.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-* Pavel Machek <pavel@ucw.cz> wrote:
+* Thomas Garnier <thgarnie@google.com> wrote:
 
-> On Mon 2017-09-25 09:33:42, Ingo Molnar wrote:
-> > 
-> > * Pavel Machek <pavel@ucw.cz> wrote:
-> > 
-> > > > For example, there would be collision with regular user-space mappings, right? 
-> > > > Can local unprivileged users use mmap(MAP_FIXED) probing to figure out where 
-> > > > the kernel lives?
-> > > 
-> > > Local unpriviledged users can probably get your secret bits using cache probing 
-> > > and jump prediction buffers.
-> > > 
-> > > Yes, you don't want to leak the information using mmap(MAP_FIXED), but CPU will 
-> > > leak it for you, anyway.
-> > 
-> > Depends on the CPU I think, and CPU vendors are busy trying to mitigate this 
-> > angle.
+> Change the assembly code to use only relative references of symbols for the
+> kernel to be PIE compatible.
 > 
-> I believe any x86 CPU running Linux will leak it. And with CPU vendors
-> putting "artifical inteligence" into branch prediction, no, I don't
-> think it is going to get better.
-> 
-> That does not mean we shoudl not prevent mmap() info leak, but...
+> Position Independent Executable (PIE) support will allow to extended the
+> KASLR randomization range below the -2G memory limit.
 
-That might or might not be so, but there's a world of a difference between
-running a relatively long statistical attack figuring out the kernel's
-location, versus being able to programmatically probe the kernel's location
-by using large MAP_FIXED user-space mmap()s, within a few dozen microseconds
-or so and a 100% guaranteed, non-statistical result.
+> diff --git a/arch/x86/crypto/aes-x86_64-asm_64.S b/arch/x86/crypto/aes-x86_64-asm_64.S
+> index 8739cf7795de..86fa068e5e81 100644
+> --- a/arch/x86/crypto/aes-x86_64-asm_64.S
+> +++ b/arch/x86/crypto/aes-x86_64-asm_64.S
+> @@ -48,8 +48,12 @@
+>  #define R10	%r10
+>  #define R11	%r11
+>  
+> +/* Hold global for PIE suport */
+> +#define RBASE	%r12
+> +
+>  #define prologue(FUNC,KEY,B128,B192,r1,r2,r5,r6,r7,r8,r9,r10,r11) \
+>  	ENTRY(FUNC);			\
+> +	pushq	RBASE;			\
+>  	movq	r1,r2;			\
+>  	leaq	KEY+48(r8),r9;		\
+>  	movq	r10,r11;		\
+> @@ -74,54 +78,63 @@
+>  	movl	r6 ## E,4(r9);		\
+>  	movl	r7 ## E,8(r9);		\
+>  	movl	r8 ## E,12(r9);		\
+> +	popq	RBASE;			\
+>  	ret;				\
+>  	ENDPROC(FUNC);
+>  
+> +#define round_mov(tab_off, reg_i, reg_o) \
+> +	leaq	tab_off(%rip), RBASE; \
+> +	movl	(RBASE,reg_i,4), reg_o;
+> +
+> +#define round_xor(tab_off, reg_i, reg_o) \
+> +	leaq	tab_off(%rip), RBASE; \
+> +	xorl	(RBASE,reg_i,4), reg_o;
+> +
+>  #define round(TAB,OFFSET,r1,r2,r3,r4,r5,r6,r7,r8,ra,rb,rc,rd) \
+>  	movzbl	r2 ## H,r5 ## E;	\
+>  	movzbl	r2 ## L,r6 ## E;	\
+> -	movl	TAB+1024(,r5,4),r5 ## E;\
+> +	round_mov(TAB+1024, r5, r5 ## E)\
+>  	movw	r4 ## X,r2 ## X;	\
+> -	movl	TAB(,r6,4),r6 ## E;	\
+> +	round_mov(TAB, r6, r6 ## E)	\
+>  	roll	$16,r2 ## E;		\
+>  	shrl	$16,r4 ## E;		\
+>  	movzbl	r4 ## L,r7 ## E;	\
+>  	movzbl	r4 ## H,r4 ## E;	\
+>  	xorl	OFFSET(r8),ra ## E;	\
+>  	xorl	OFFSET+4(r8),rb ## E;	\
+> -	xorl	TAB+3072(,r4,4),r5 ## E;\
+> -	xorl	TAB+2048(,r7,4),r6 ## E;\
+> +	round_xor(TAB+3072, r4, r5 ## E)\
+> +	round_xor(TAB+2048, r7, r6 ## E)\
+>  	movzbl	r1 ## L,r7 ## E;	\
+>  	movzbl	r1 ## H,r4 ## E;	\
+> -	movl	TAB+1024(,r4,4),r4 ## E;\
+> +	round_mov(TAB+1024, r4, r4 ## E)\
+>  	movw	r3 ## X,r1 ## X;	\
+>  	roll	$16,r1 ## E;		\
+>  	shrl	$16,r3 ## E;		\
+> -	xorl	TAB(,r7,4),r5 ## E;	\
+> +	round_xor(TAB, r7, r5 ## E)	\
+>  	movzbl	r3 ## L,r7 ## E;	\
+>  	movzbl	r3 ## H,r3 ## E;	\
+> -	xorl	TAB+3072(,r3,4),r4 ## E;\
+> -	xorl	TAB+2048(,r7,4),r5 ## E;\
+> +	round_xor(TAB+3072, r3, r4 ## E)\
+> +	round_xor(TAB+2048, r7, r5 ## E)\
+>  	movzbl	r1 ## L,r7 ## E;	\
+>  	movzbl	r1 ## H,r3 ## E;	\
+>  	shrl	$16,r1 ## E;		\
+> -	xorl	TAB+3072(,r3,4),r6 ## E;\
+> -	movl	TAB+2048(,r7,4),r3 ## E;\
+> +	round_xor(TAB+3072, r3, r6 ## E)\
+> +	round_mov(TAB+2048, r7, r3 ## E)\
+>  	movzbl	r1 ## L,r7 ## E;	\
+>  	movzbl	r1 ## H,r1 ## E;	\
+> -	xorl	TAB+1024(,r1,4),r6 ## E;\
+> -	xorl	TAB(,r7,4),r3 ## E;	\
+> +	round_xor(TAB+1024, r1, r6 ## E)\
+> +	round_xor(TAB, r7, r3 ## E)	\
+>  	movzbl	r2 ## H,r1 ## E;	\
+>  	movzbl	r2 ## L,r7 ## E;	\
+>  	shrl	$16,r2 ## E;		\
+> -	xorl	TAB+3072(,r1,4),r3 ## E;\
+> -	xorl	TAB+2048(,r7,4),r4 ## E;\
+> +	round_xor(TAB+3072, r1, r3 ## E)\
+> +	round_xor(TAB+2048, r7, r4 ## E)\
+>  	movzbl	r2 ## H,r1 ## E;	\
+>  	movzbl	r2 ## L,r2 ## E;	\
+>  	xorl	OFFSET+8(r8),rc ## E;	\
+>  	xorl	OFFSET+12(r8),rd ## E;	\
+> -	xorl	TAB+1024(,r1,4),r3 ## E;\
+> -	xorl	TAB(,r2,4),r4 ## E;
+> +	round_xor(TAB+1024, r1, r3 ## E)\
+> +	round_xor(TAB, r2, r4 ## E)
+
+This appears to be adding unconditional overhead to a function that was moved to 
+assembly to improve its performance.
 
 Thanks,
 
