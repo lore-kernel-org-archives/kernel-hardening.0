@@ -1,41 +1,60 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <0015a75a-3624-2ec7-ae21-4753cf072e61@redhat.com>
-References: <1497915397-93805-1-git-send-email-keescook@chromium.org>
- <0ad1f8b1-3c9f-adb0-35c3-18619ff5aa25@redhat.com> <0015a75a-3624-2ec7-ae21-4753cf072e61@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 20 Oct 2017 20:04:11 -0700
-Message-ID: <CAGXu5jKtNqnDA_vU5KaPuVJNCK0hBMGgYh6Ut0BVHvpu315XnA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 00/23] Hardened usercopy whitelisting
-To: Paolo Bonzini <pbonzini@redhat.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dave@nullcore.net>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
+From: Nicolas Belouin <nicolas@belouin.fr>
+Date: Sat, 21 Oct 2017 15:24:46 +0200
+Message-Id: <20171021132446.17567-1-nicolas@belouin.fr>
+Subject: [kernel-hardening] [PATCH] fs: check for DAC_READ_SEARCH instead of SYS_ADMIN
+To: Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Nicolas Belouin <nicolas@belouin.fr>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Oct 20, 2017 at 4:25 PM, Paolo Bonzini <pbonzini@redhat.com> wrote:
-> On 21/10/2017 00:40, Paolo Bonzini wrote:
->> This breaks KVM completely on x86, due to two ioctls
->> (KVM_GET/SET_CPUID2) accessing the cpuid_entries field of struct
->> kvm_vcpu_arch.
->>
->> There's also another broken ioctl, KVM_XEN_HVM_CONFIG, but it is
->> obsolete and not a big deal at all.
->>
->> I can post some patches, but probably not until the beginning of
->> November due to travelling.  Please do not send this too close to the
->> beginning of the merge window.
->
-> Sleeping is overrated, sending patches now...
+These checks are meant to prevent leaks or attacks via directory
+traversal, the use of CAP_SYS_ADMIN here is a misuse,
+CAP_DAC_READ_SEARCH being way more appropriate as a process
+with CAP_DAC_READ_SEARCH is entrusted with going trough all directories.
+CAP_SYS_ADMIN is not meant to flag such a process.
 
-Oh awesome, thank you very much for tracking this down and building fixes!
+Signed-off-by: Nicolas Belouin <nicolas@belouin.fr>
+---
+ fs/dcookies.c  | 2 +-
+ fs/proc/base.c | 8 ++++----
+ 2 files changed, 5 insertions(+), 5 deletions(-)
 
-I'll insert these into the usercopy whitelisting series, and see if I
-can find any similar cases.
-
-Thanks!
-
--Kees
-
+diff --git a/fs/dcookies.c b/fs/dcookies.c
+index 0d0461cf2431..48491299a183 100644
+--- a/fs/dcookies.c
++++ b/fs/dcookies.c
+@@ -158,7 +158,7 @@ SYSCALL_DEFINE3(lookup_dcookie, u64, cookie64, char __user *, buf, size_t, len)
+ 	/* we could leak path information to users
+ 	 * without dir read permission without this
+ 	 */
+-	if (!capable(CAP_SYS_ADMIN))
++	if (!capable(CAP_SYS_ADMIN) && !capable(CAP_DAC_READ_SEARCH))
+ 		return -EPERM;
+ 
+ 	mutex_lock(&dcookie_mutex);
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index ad3b0762cc3e..965a3aa1a77f 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -2006,16 +2006,16 @@ struct map_files_info {
+ };
+ 
+ /*
+- * Only allow CAP_SYS_ADMIN to follow the links, due to concerns about how the
+- * symlinks may be used to bypass permissions on ancestor directories in the
+- * path to the file in question.
++ * Only allow CAP_SYS_ADMIN or CAP_DAC_READ_SEARCH to follow the links, due
++ * to concerns about how the symlinks may be used to bypass permissions on
++ * ancestor directories in the path to the file in question.
+  */
+ static const char *
+ proc_map_files_get_link(struct dentry *dentry,
+ 			struct inode *inode,
+ 		        struct delayed_call *done)
+ {
+-	if (!capable(CAP_SYS_ADMIN))
++	if (!capable(CAP_SYS_ADMIN) && !capable(CAP_DAC_READ_SEARCH))
+ 		return ERR_PTR(-EPERM);
+ 
+ 	return proc_pid_get_link(dentry, inode, done);
 -- 
-Kees Cook
-Pixel Security
+2.14.2
