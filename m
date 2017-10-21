@@ -1,60 +1,61 @@
-Date: Sat, 21 Oct 2017 21:40:14 +0200
-In-Reply-To: <CAFJ0LnGjhjm9iswxh-naLM9qZq-fQ_a0MdyVDsmRUk4ME0xuNA@mail.gmail.com>
-References: <20171021132806.18086-1-nicolas@belouin.fr> <CAFJ0LnGjhjm9iswxh-naLM9qZq-fQ_a0MdyVDsmRUk4ME0xuNA@mail.gmail.com>
+References: <1507157703-14972-1-git-send-email-alex.popov@linux.com>
+ <0bb962c4-92fb-156b-cee3-df48aff0552d@redhat.com>
+ <53E66B61-665C-48A3-B266-863C5BAA6B6A@amacapital.net>
+ <babc5b86-f625-bb28-d49e-9f34c3ca6726@linux.com>
+ <CALCETrVF0-bz3A_8T-nghD_h8rs0N6NJBOM04scjMJdQq9ZLCA@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <4ec7b323-1de5-0de0-d196-4cb7f2d09ef4@linux.com>
+Date: Sun, 22 Oct 2017 00:56:44 +0300
 MIME-Version: 1.0
-Content-Type: text/plain;
- charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-From: Nicolas Belouin <nicolas@belouin.fr>
-Message-ID: <A9CEA82D-DEC7-4F4F-AF16-68CFF5DA203A@belouin.fr>
-Subject: Re: [kernel-hardening] [PATCH] fs: Use CAP_DAC_OVERRIDE to allow for file dedupe
-To: Nick Kralevich <nnk@google.com>
-Cc: Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, lkml <linux-kernel@vger.kernel.org>, linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CALCETrVF0-bz3A_8T-nghD_h8rs0N6NJBOM04scjMJdQq9ZLCA@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH RFC v4 0/3] Introduce the STACKLEAK feature and a test for
+ it
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Laura Abbott <labbott@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Tycho Andersen <tycho@docker.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, X86 ML <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-On October 21, 2017 4:08:31 PM GMT+02:00, Nick Kralevich <nnk@google=2Ecom=
-> wrote:
->On Sat, Oct 21, 2017 at 6:28 AM, Nicolas Belouin <nicolas@belouin=2Efr>
->wrote:
->> In its current implementation the check is against CAP_SYS_ADMIN,
->> however this capability is bloated and inapropriate for this use=2E
->> Indeed the check aims to avoid dedupe against non writable files,
->> falling directly in the use case of CAP_DAC_OVERRIDE=2E
+On 13.10.2017 20:26, Andy Lutomirski wrote:
+> On Wed, Oct 11, 2017 at 9:29 AM, Alexander Popov <alex.popov@linux.com> wrote:
+>> On 11.10.2017 05:31, Andy Lutomirski wrote:
+>>> On Oct 10, 2017, at 6:19 PM, Laura Abbott <labbott@redhat.com> wrote:
+>>>> I tried this series with CVE-2017-14954 . That particular bug
+>>>> is not helped here because the poisoning has already been
+>>>> overwritten by other leaf functions. Given the call stack this
+>>>> may be a particularly bad case but I'm wondering how common
+>>>> this might be if we're only erasing at the end of a system
+>>>> call. One previous copy_to_user which has to go through the
+>>>> fault path can get fairly deep.
 >>
->> Signed-off-by: Nicolas Belouin <nicolas@belouin=2Efr>
->> ---
->>  fs/read_write=2Ec | 2 +-
->>  1 file changed, 1 insertion(+), 1 deletion(-)
+>> Laura, thanks for your observation. I've tested Brad's PoC with STACKLEAK too
+>> and see similar results. There is only one STACKLEAK_POISON value in the leaked
+>> data. Other leaked data is put on the stack by the current syscall.
 >>
->> diff --git a/fs/read_write=2Ec b/fs/read_write=2Ec
->> index f0d4b16873e8=2E=2E43cc7e84e29e 100644
->> --- a/fs/read_write=2Ec
->> +++ b/fs/read_write=2Ec
->> @@ -1965,7 +1965,7 @@ int vfs_dedupe_file_range(struct file *file,
->struct file_dedupe_range *same)
->>         u64 len;
->>         int i;
->>         int ret;
->> -       bool is_admin =3D capable(CAP_SYS_ADMIN);
->> +       bool is_admin =3D capable(CAP_SYS_ADMIN) ||
->capable(CAP_DAC_OVERRIDE);
->
->Can you please reverse the order of the checks? In particular, on an
->SELinux based system, a capable() call generates an SELinux denial,
->and people often instinctively allow the first operation performed=2E
->Reordering the elements will ensure that the CAP_DAC_OVERRIDE denial
->(least permissive) is generated first=2E
-
-Will do in the v2 of every concerned patch=2E
-
->
->>         u16 count =3D same->dest_count;
->>         struct file *dst_file;
->>         loff_t dst_off;
->> --
->> 2=2E14=2E2
+>> I don't know any statistics on infoleaks and I can't say how many of them would
+>> be neutralized by STACKLEAK. But, anyway, it is be better than nothing for those
+>> who accept the STACKLEAK performance penalty.
 >>
+>>> On x86, the bad guys can force this is using 32-bit fast syscalls for *any*
+>>> syscall.  I suppose we could wipe the stack on the way out of exception
+>>> handlers, too...
+>>
+>> Andy, excuse me, could you elaborate on that? Do you mean that there are some
+>> more cases when erase_kstack() should be called?
+> 
+> Kinda.  I was thinking that certain exception handlers should erase
+> their portion of the stack (i.e. from their entry frame to the bottom)
+> when they return back to *kernel* mode. 
 
-Nicolas
+Andy, if we return to the kernel mode, which profit would we make out of
+cleaning exception stacks?
+
+I've spent some time learning arch/x86/entry/. But, honestly, I need help with
+checking that erase_kstack() is called at the right places.
+
+Anyway, I'll shortly send the 5-th version of the STACKLEAK patch series. And
+I'll include your idea into the "further work" section in the cover letter.
+Thank you.
+
+Best regards,
+Alexander
