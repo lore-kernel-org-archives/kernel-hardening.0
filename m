@@ -1,169 +1,60 @@
-From: Christoffer Dall <christoffer.dall@linaro.org>
-Date: Sat, 21 Oct 2017 20:45:45 +0200
-Message-Id: <20171021184545.2497-1-christoffer.dall@linaro.org>
+Date: Sat, 21 Oct 2017 21:40:14 +0200
+In-Reply-To: <CAFJ0LnGjhjm9iswxh-naLM9qZq-fQ_a0MdyVDsmRUk4ME0xuNA@mail.gmail.com>
+References: <20171021132806.18086-1-nicolas@belouin.fr> <CAFJ0LnGjhjm9iswxh-naLM9qZq-fQ_a0MdyVDsmRUk4ME0xuNA@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20171020232525.7387-1-pbonzini@redhat.com>
-References: <20171020232525.7387-1-pbonzini@redhat.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH] KVM: arm/arm64: Allow usercopy to vcpu->arch.ctxt and arm64 debug
-To: kvmarm@lists.cs.columbia.edu
-Cc: linux-arm-kernel@lists.infradead.org, kvm@vger.kernel.org, Christoffer Dall <christoffer.dall@linaro.org>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Marc Zyngier <marc.zyngier@arm.com>
+Content-Type: text/plain;
+ charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+From: Nicolas Belouin <nicolas@belouin.fr>
+Message-ID: <A9CEA82D-DEC7-4F4F-AF16-68CFF5DA203A@belouin.fr>
+Subject: Re: [kernel-hardening] [PATCH] fs: Use CAP_DAC_OVERRIDE to allow for file dedupe
+To: Nick Kralevich <nnk@google.com>
+Cc: Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, lkml <linux-kernel@vger.kernel.org>, linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-We do direct useraccess copying to the kvm_cpu_context structure
-embedded in the kvm_vcpu_arch structure, and to the vcpu debug register
-state.  Everything else (timer, PMU, vgic) goes through a temporary
-indirection.
 
-Fixing all accesses to kvm_cpu_context is massively invasive, and we'd
-like to avoid that, so we tell kvm_init_usercopy to whitelist accesses
-to out context structure.
 
-The debug system register accesses on arm64 are modified to work through
-an indirection instead.
+On October 21, 2017 4:08:31 PM GMT+02:00, Nick Kralevich <nnk@google=2Ecom=
+> wrote:
+>On Sat, Oct 21, 2017 at 6:28 AM, Nicolas Belouin <nicolas@belouin=2Efr>
+>wrote:
+>> In its current implementation the check is against CAP_SYS_ADMIN,
+>> however this capability is bloated and inapropriate for this use=2E
+>> Indeed the check aims to avoid dedupe against non writable files,
+>> falling directly in the use case of CAP_DAC_OVERRIDE=2E
+>>
+>> Signed-off-by: Nicolas Belouin <nicolas@belouin=2Efr>
+>> ---
+>>  fs/read_write=2Ec | 2 +-
+>>  1 file changed, 1 insertion(+), 1 deletion(-)
+>>
+>> diff --git a/fs/read_write=2Ec b/fs/read_write=2Ec
+>> index f0d4b16873e8=2E=2E43cc7e84e29e 100644
+>> --- a/fs/read_write=2Ec
+>> +++ b/fs/read_write=2Ec
+>> @@ -1965,7 +1965,7 @@ int vfs_dedupe_file_range(struct file *file,
+>struct file_dedupe_range *same)
+>>         u64 len;
+>>         int i;
+>>         int ret;
+>> -       bool is_admin =3D capable(CAP_SYS_ADMIN);
+>> +       bool is_admin =3D capable(CAP_SYS_ADMIN) ||
+>capable(CAP_DAC_OVERRIDE);
+>
+>Can you please reverse the order of the checks? In particular, on an
+>SELinux based system, a capable() call generates an SELinux denial,
+>and people often instinctively allow the first operation performed=2E
+>Reordering the elements will ensure that the CAP_DAC_OVERRIDE denial
+>(least permissive) is generated first=2E
 
-Cc: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Paolo Bonzini <pbonzini@redhat.com>
-Cc: Radim Krčmář <rkrcmar@redhat.com>
-Cc: Marc Zyngier <marc.zyngier@arm.com>
-Signed-off-by: Christoffer Dall <christoffer.dall@linaro.org>
----
-This fixes KVM/ARM on today's linux next with CONFIG_HARDENED_USERCOPY.
+Will do in the v2 of every concerned patch=2E
 
-The patch is based on linux-next plus Paolo's x86 patch which introduces
-kvm_init_usercopy.  Not sure how this needs to get merged, but it would
-potentially make sense for Paolo to put together a set of the patches
-needed for this.
+>
+>>         u16 count =3D same->dest_count;
+>>         struct file *dst_file;
+>>         loff_t dst_off;
+>> --
+>> 2=2E14=2E2
+>>
 
-Thanks,
--Christoffer
-
- arch/arm64/kvm/sys_regs.c | 36 ++++++++++++++++++++----------------
- virt/kvm/arm/arm.c        |  5 ++++-
- 2 files changed, 24 insertions(+), 17 deletions(-)
-
-diff --git a/arch/arm64/kvm/sys_regs.c b/arch/arm64/kvm/sys_regs.c
-index 2e070d3baf9f..cdf47a9108fe 100644
---- a/arch/arm64/kvm/sys_regs.c
-+++ b/arch/arm64/kvm/sys_regs.c
-@@ -293,19 +293,20 @@ static bool trap_bvr(struct kvm_vcpu *vcpu,
- static int set_bvr(struct kvm_vcpu *vcpu, const struct sys_reg_desc *rd,
- 		const struct kvm_one_reg *reg, void __user *uaddr)
- {
--	__u64 *r = &vcpu->arch.vcpu_debug_state.dbg_bvr[rd->reg];
-+	__u64 r;
- 
--	if (copy_from_user(r, uaddr, KVM_REG_SIZE(reg->id)) != 0)
-+	if (copy_from_user(&r, uaddr, KVM_REG_SIZE(reg->id)) != 0)
- 		return -EFAULT;
-+	vcpu->arch.vcpu_debug_state.dbg_bvr[rd->reg] = r;
- 	return 0;
- }
- 
- static int get_bvr(struct kvm_vcpu *vcpu, const struct sys_reg_desc *rd,
- 	const struct kvm_one_reg *reg, void __user *uaddr)
- {
--	__u64 *r = &vcpu->arch.vcpu_debug_state.dbg_bvr[rd->reg];
-+	__u64 r = vcpu->arch.vcpu_debug_state.dbg_bvr[rd->reg];
- 
--	if (copy_to_user(uaddr, r, KVM_REG_SIZE(reg->id)) != 0)
-+	if (copy_to_user(uaddr, &r, KVM_REG_SIZE(reg->id)) != 0)
- 		return -EFAULT;
- 	return 0;
- }
-@@ -335,10 +336,11 @@ static bool trap_bcr(struct kvm_vcpu *vcpu,
- static int set_bcr(struct kvm_vcpu *vcpu, const struct sys_reg_desc *rd,
- 		const struct kvm_one_reg *reg, void __user *uaddr)
- {
--	__u64 *r = &vcpu->arch.vcpu_debug_state.dbg_bcr[rd->reg];
-+	__u64 r;
- 
--	if (copy_from_user(r, uaddr, KVM_REG_SIZE(reg->id)) != 0)
-+	if (copy_from_user(&r, uaddr, KVM_REG_SIZE(reg->id)) != 0)
- 		return -EFAULT;
-+	vcpu->arch.vcpu_debug_state.dbg_bcr[rd->reg] = r;
- 
- 	return 0;
- }
-@@ -346,9 +348,9 @@ static int set_bcr(struct kvm_vcpu *vcpu, const struct sys_reg_desc *rd,
- static int get_bcr(struct kvm_vcpu *vcpu, const struct sys_reg_desc *rd,
- 	const struct kvm_one_reg *reg, void __user *uaddr)
- {
--	__u64 *r = &vcpu->arch.vcpu_debug_state.dbg_bcr[rd->reg];
-+	__u64 r = vcpu->arch.vcpu_debug_state.dbg_bcr[rd->reg];
- 
--	if (copy_to_user(uaddr, r, KVM_REG_SIZE(reg->id)) != 0)
-+	if (copy_to_user(uaddr, &r, KVM_REG_SIZE(reg->id)) != 0)
- 		return -EFAULT;
- 	return 0;
- }
-@@ -379,19 +381,20 @@ static bool trap_wvr(struct kvm_vcpu *vcpu,
- static int set_wvr(struct kvm_vcpu *vcpu, const struct sys_reg_desc *rd,
- 		const struct kvm_one_reg *reg, void __user *uaddr)
- {
--	__u64 *r = &vcpu->arch.vcpu_debug_state.dbg_wvr[rd->reg];
-+	__u64 r;
- 
--	if (copy_from_user(r, uaddr, KVM_REG_SIZE(reg->id)) != 0)
-+	if (copy_from_user(&r, uaddr, KVM_REG_SIZE(reg->id)) != 0)
- 		return -EFAULT;
-+	vcpu->arch.vcpu_debug_state.dbg_wvr[rd->reg] = r;
- 	return 0;
- }
- 
- static int get_wvr(struct kvm_vcpu *vcpu, const struct sys_reg_desc *rd,
- 	const struct kvm_one_reg *reg, void __user *uaddr)
- {
--	__u64 *r = &vcpu->arch.vcpu_debug_state.dbg_wvr[rd->reg];
-+	__u64 r = vcpu->arch.vcpu_debug_state.dbg_wvr[rd->reg];
- 
--	if (copy_to_user(uaddr, r, KVM_REG_SIZE(reg->id)) != 0)
-+	if (copy_to_user(uaddr, &r, KVM_REG_SIZE(reg->id)) != 0)
- 		return -EFAULT;
- 	return 0;
- }
-@@ -421,19 +424,20 @@ static bool trap_wcr(struct kvm_vcpu *vcpu,
- static int set_wcr(struct kvm_vcpu *vcpu, const struct sys_reg_desc *rd,
- 		const struct kvm_one_reg *reg, void __user *uaddr)
- {
--	__u64 *r = &vcpu->arch.vcpu_debug_state.dbg_wcr[rd->reg];
-+	__u64 r;
- 
--	if (copy_from_user(r, uaddr, KVM_REG_SIZE(reg->id)) != 0)
-+	if (copy_from_user(&r, uaddr, KVM_REG_SIZE(reg->id)) != 0)
- 		return -EFAULT;
-+	vcpu->arch.vcpu_debug_state.dbg_wcr[rd->reg] = r;
- 	return 0;
- }
- 
- static int get_wcr(struct kvm_vcpu *vcpu, const struct sys_reg_desc *rd,
- 	const struct kvm_one_reg *reg, void __user *uaddr)
- {
--	__u64 *r = &vcpu->arch.vcpu_debug_state.dbg_wcr[rd->reg];
-+	__u64 r = vcpu->arch.vcpu_debug_state.dbg_wcr[rd->reg];
- 
--	if (copy_to_user(uaddr, r, KVM_REG_SIZE(reg->id)) != 0)
-+	if (copy_to_user(uaddr, &r, KVM_REG_SIZE(reg->id)) != 0)
- 		return -EFAULT;
- 	return 0;
- }
-diff --git a/virt/kvm/arm/arm.c b/virt/kvm/arm/arm.c
-index b9f68e4add71..639e388678ff 100644
---- a/virt/kvm/arm/arm.c
-+++ b/virt/kvm/arm/arm.c
-@@ -1502,7 +1502,10 @@ void kvm_arch_exit(void)
- 
- static int arm_init(void)
- {
--	int rc = kvm_init(NULL, sizeof(struct kvm_vcpu), 0, THIS_MODULE);
-+	int rc = kvm_init_usercopy(NULL, sizeof(struct kvm_vcpu), 0,
-+				   offsetof(struct kvm_vcpu_arch, ctxt),
-+				   sizeof_field(struct kvm_vcpu_arch, ctxt),
-+				   THIS_MODULE);
- 	return rc;
- }
- 
--- 
-2.14.2
+Nicolas
