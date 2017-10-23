@@ -1,71 +1,151 @@
-Message-ID: <1508763459.24902.1.camel@tycho.nsa.gov>
-From: Stephen Smalley <sds@tycho.nsa.gov>
-Date: Mon, 23 Oct 2017 08:57:39 -0400
-In-Reply-To: <20171021134303.20685-1-nicolas@belouin.fr>
-References: <20171021134303.20685-1-nicolas@belouin.fr>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [RFC PATCH 1/2] security, capabilities: Add CAP_SYS_MOUNT
-To: Nicolas Belouin <nicolas@belouin.fr>, David Howells <dhowells@redhat.com>, Theodore Ts'o <tytso@mit.edu>, Andreas Dilger <adilger.kernel@dilger.ca>, Alexander Viro <viro@zeniv.linux.org.uk>, Serge Hallyn <serge@hallyn.com>, Paul Moore <paul@paul-moore.com>, Eric Paris <eparis@parisplace.org>, James Morris <james.l.morris@oracle.com>, linux-cachefs@redhat.com, linux-kernel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-security-module@vger.kernel.org, selinux@tycho.nsa.gov, linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Mon, 23 Oct 2017 15:17:30 +0200
+From: Tycho Andersen <tycho@docker.com>
+Message-ID: <20171023131730.2r5imit2hzpxq2vg@docker>
+References: <1508631773-2502-1-git-send-email-alex.popov@linux.com>
+ <1508631773-2502-2-git-send-email-alex.popov@linux.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1508631773-2502-2-git-send-email-alex.popov@linux.com>
+Subject: [kernel-hardening] Re: [PATCH RFC v5 1/5] x86/entry: Add STACKLEAK erasing the kernel
+ stack at the end of syscalls
+To: Alexander Popov <alex.popov@linux.com>
+Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, 2017-10-21 at 15:43 +0200, Nicolas Belouin wrote:
-> With CAP_SYS_ADMIN being bloated and inapropriate for actions such
-> as mounting/unmounting filesystems, the creation of a new capability
-> is needed.
-> CAP_SYS_MOUNT is meant to give a process the ability to call for
-> mount,
-> umount and umount2 syscalls.
-
-If adding a new capability isn't deemed acceptable, then another option
-would be to introduce LSM hooks where there isn't already coverage and
-implement finer-grained permission checks there.  In some cases, that
-already occurs for mount and umount*.  That also offers the possibility
-of taking the object of the operation into account, unlike capabilities
-which are only subject/process-based.
-
-
+On Sun, Oct 22, 2017 at 03:22:49AM +0300, Alexander Popov wrote:
+> The STACKLEAK feature erases the kernel stack before returning from
+> syscalls. That reduces the information which kernel stack leak bugs can
+> reveal and blocks some uninitialized stack variable attacks. Moreover,
+> STACKLEAK provides runtime checks for kernel stack overflow detection.
 > 
-> Signed-off-by: Nicolas Belouin <nicolas@belouin.fr>
+> This commit introduces the architecture-specific code filling the used
+> part of the kernel stack with a poison value before returning to the
+> userspace. Full STACKLEAK feature also contains the gcc plugin which
+> comes in a separate commit.
+> 
+> The STACKLEAK feature is ported from grsecurity/PaX. More information at:
+>   https://grsecurity.net/
+>   https://pax.grsecurity.net/
+> 
+> This code is modified from Brad Spengler/PaX Team's code in the last
+> public patch of grsecurity/PaX based on our understanding of the code.
+> Changes or omissions from the original code are ours and don't reflect
+> the original grsecurity/PaX code.
+> 
+> Signed-off-by: Alexander Popov <alex.popov@linux.com>
 > ---
->  include/uapi/linux/capability.h     | 5 ++++-
->  security/selinux/include/classmap.h | 4 ++--
->  2 files changed, 6 insertions(+), 3 deletions(-)
+>  arch/Kconfig                     | 27 ++++++++++++
+>  arch/x86/Kconfig                 |  1 +
+>  arch/x86/entry/common.c          | 17 +++++--
+>  arch/x86/entry/entry_32.S        | 69 +++++++++++++++++++++++++++++
+>  arch/x86/entry/entry_64.S        | 95 ++++++++++++++++++++++++++++++++++++++++
+>  arch/x86/entry/entry_64_compat.S |  8 ++++
+>  arch/x86/include/asm/processor.h |  4 ++
+>  arch/x86/kernel/asm-offsets.c    |  9 ++++
+>  arch/x86/kernel/process_32.c     |  5 +++
+>  arch/x86/kernel/process_64.c     |  5 +++
+>  include/linux/compiler.h         |  4 ++
+>  11 files changed, 241 insertions(+), 3 deletions(-)
 > 
-> diff --git a/include/uapi/linux/capability.h
-> b/include/uapi/linux/capability.h
-> index 230e05d35191..ce230aa6d928 100644
-> --- a/include/uapi/linux/capability.h
-> +++ b/include/uapi/linux/capability.h
-> @@ -365,8 +365,11 @@ struct vfs_ns_cap_data {
->  
->  #define CAP_AUDIT_READ		37
->  
-> +/* Allow mounting, unmounting filesystems */
->  
-> -#define CAP_LAST_CAP         CAP_AUDIT_READ
-> +#define CAP_SYS_MOUNT		38
+> diff --git a/arch/Kconfig b/arch/Kconfig
+> index d789a89..e9ec94c 100644
+> --- a/arch/Kconfig
+> +++ b/arch/Kconfig
+> @@ -386,6 +386,13 @@ config SECCOMP_FILTER
+>  
+>  	  See Documentation/prctl/seccomp_filter.txt for details.
+>  
+> +config HAVE_ARCH_STACKLEAK
+> +	bool
+> +	help
+> +	  An architecture should select this if it has the code which
+> +	  fills the used part of the kernel stack with the STACKLEAK_POISON
+> +	  value before returning from system calls.
 > +
-> +#define CAP_LAST_CAP         CAP_SYS_MOUNT
->  
->  #define cap_valid(x) ((x) >= 0 && (x) <= CAP_LAST_CAP)
->  
-> diff --git a/security/selinux/include/classmap.h
-> b/security/selinux/include/classmap.h
-> index 35ffb29a69cb..a873dce97fd5 100644
-> --- a/security/selinux/include/classmap.h
-> +++ b/security/selinux/include/classmap.h
-> @@ -24,9 +24,9 @@
->  	    "audit_control", "setfcap"
->  
->  #define COMMON_CAP2_PERMS  "mac_override", "mac_admin", "syslog", \
-> -		"wake_alarm", "block_suspend", "audit_read"
-> +		"wake_alarm", "block_suspend", "audit_read",
-> "sys_mount"
->  
-> -#if CAP_LAST_CAP > CAP_AUDIT_READ
-> +#if CAP_LAST_CAP > CAP_SYS_MOUNT
->  #error New capability defined, please update COMMON_CAP2_PERMS.
->  #endif
->  
+>  config HAVE_GCC_PLUGINS
+>  	bool
+>  	help
+> @@ -516,6 +523,26 @@ config GCC_PLUGIN_RANDSTRUCT_PERFORMANCE
+>  	  in structures.  This reduces the performance hit of RANDSTRUCT
+>  	  at the cost of weakened randomization.
+>  
+> +config GCC_PLUGIN_STACKLEAK
+> +	bool "Erase the kernel stack before returning from syscalls"
+> +	depends on GCC_PLUGINS
+> +	depends on HAVE_ARCH_STACKLEAK
+> +	help
+> +	  This option makes the kernel erase the kernel stack before it
+> +	  returns from a system call. That reduces the information which
+> +	  kernel stack leak bugs can reveal and blocks some uninitialized
+> +	  stack variable attacks. This option also provides runtime checks
+> +	  for kernel stack overflow detection.
+> +
+> +	  The tradeoff is the performance impact: on a single CPU system kernel
+> +	  compilation sees a 1% slowdown, other systems and workloads may vary
+> +	  and you are advised to test this feature on your expected workload
+> +	  before deploying it.
+> +
+> +	  This plugin was ported from grsecurity/PaX. More information at:
+> +	   * https://grsecurity.net/
+> +	   * https://pax.grsecurity.net/
+> +
+>  config HAVE_CC_STACKPROTECTOR
+>  	bool
+>  	help
+> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+> index 971feac..b7da58f 100644
+> --- a/arch/x86/Kconfig
+> +++ b/arch/x86/Kconfig
+> @@ -114,6 +114,7 @@ config X86
+>  	select HAVE_ARCH_MMAP_RND_COMPAT_BITS	if MMU && COMPAT
+>  	select HAVE_ARCH_COMPAT_MMAP_BASES	if MMU && COMPAT
+>  	select HAVE_ARCH_SECCOMP_FILTER
+> +	select HAVE_ARCH_STACKLEAK
+>  	select HAVE_ARCH_TRACEHOOK
+>  	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+>  	select HAVE_ARCH_TRANSPARENT_HUGEPAGE_PUD if X86_64
+> diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
+> index 03505ff..075487e 100644
+> --- a/arch/x86/entry/common.c
+> +++ b/arch/x86/entry/common.c
+> @@ -45,6 +45,12 @@ __visible inline void enter_from_user_mode(void)
+>  static inline void enter_from_user_mode(void) {}
+>  #endif
+>  
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +asmlinkage void erase_kstack(void);
+> +#else
+> +static void erase_kstack(void) {}
+> +#endif
+> +
+>  static void do_audit_syscall_entry(struct pt_regs *regs, u32 arch)
+>  {
+>  #ifdef CONFIG_X86_64
+> @@ -81,8 +87,10 @@ static long syscall_trace_enter(struct pt_regs *regs)
+>  		emulated = true;
+>  
+>  	if ((emulated || (work & _TIF_SYSCALL_TRACE)) &&
+> -	    tracehook_report_syscall_entry(regs))
+> +	    tracehook_report_syscall_entry(regs)) {
+> +		erase_kstack();
+>  		return -1L;
+> +	}
+>  
+>  	if (emulated)
+>  		return -1L;
+> @@ -116,9 +124,11 @@ static long syscall_trace_enter(struct pt_regs *regs)
+>  			sd.args[5] = regs->bp;
+>  		}
+>  
+> -		ret = __secure_computing(&sd);
+> -		if (ret == -1)
+> +		ret = secure_computing(&sd);
+
+Is there any reason to switch this from the __ version? This basically
+adds an additional check on the TIF_SECCOMP flag, but I'm not sure
+that's intentional with this patch.
+
+Cheers,
+
+Tycho
