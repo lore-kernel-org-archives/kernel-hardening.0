@@ -1,32 +1,57 @@
 References: <20171020232525.7387-1-pbonzini@redhat.com>
- <20171021184545.2497-1-christoffer.dall@linaro.org>
- <CAGXu5jKJ2jPz2540ZLCwmcdVZxrgnhVPHs0uumiJm2o0ZgpVag@mail.gmail.com>
- <20171022074418.GA3805@cbox>
+ <f13340f5-4027-181b-7e41-e9bc434b195c@redhat.com>
+ <20171023143918.21112222.cohuck@redhat.com>
 From: Paolo Bonzini <pbonzini@redhat.com>
-Message-ID: <d2a7dcec-060b-6279-1c1d-a18b3eedb394@redhat.com>
-Date: Mon, 23 Oct 2017 16:14:35 +0200
+Message-ID: <6fbcdbac-a717-def4-1864-6426d58986fc@redhat.com>
+Date: Mon, 23 Oct 2017 16:15:32 +0200
 MIME-Version: 1.0
-In-Reply-To: <20171022074418.GA3805@cbox>
+In-Reply-To: <20171023143918.21112222.cohuck@redhat.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] KVM: arm/arm64: Allow usercopy to vcpu->arch.ctxt and
- arm64 debug
-To: Christoffer Dall <cdall@linaro.org>, Kees Cook <keescook@chromium.org>
-Cc: Christoffer Dall <christoffer.dall@linaro.org>, kvmarm@lists.cs.columbia.edu, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, KVM <kvm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Marc Zyngier <marc.zyngier@arm.com>
+Subject: [kernel-hardening] Re: [PATCH 0/2] KVM: fixes for the kernel-hardening tree
+To: Cornelia Huck <cohuck@redhat.com>, David Hildenbrand <david@redhat.com>
+Cc: linux-kernel@vger.kernel.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Christoffer Dall <christoffer.dall@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, James Hogan <james.hogan@imgtec.com>, Paul Mackerras <paulus@samba.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 22/10/2017 09:44, Christoffer Dall wrote:
-> However, I think it's much clearer if I
-> rewrite these to use get_user() and put_user().  v2 incoming.
+On 23/10/2017 14:39, Cornelia Huck wrote:
+> On Mon, 23 Oct 2017 11:52:51 +0200
+> David Hildenbrand <david@redhat.com> wrote:
+> 
+>> On 21.10.2017 01:25, Paolo Bonzini wrote:
+>>> Two KVM ioctls (KVM_GET/SET_CPUID2) directly access the cpuid_entries
+>>> field of struct kvm_vcpu_arch.  Therefore, the new usercopy hardening
+>>> work in linux-next, which forbids copies from and to slab objects
+>>> unless they are from kmalloc or explicitly whitelisted, breaks KVM
+>>> completely.
+>>>
+>>> This series fixes it by adding the two new usercopy arguments
+>>> to kvm_init (more precisely to a new function kvm_init_usercopy,
+>>> while kvm_init passes zeroes as a default).
+>>>
+>>> There's also another broken ioctl, KVM_XEN_HVM_CONFIG, but it is
+>>> obsolete and not a big deal at all.
+>>>
+>>> I'm Ccing all submaintainers in case they have something similar
+>>> going on in their kvm_arch and kvm_vcpu_arch structs.  KVM has a
+>>> pretty complex userspace API, so thorough with linux-next is highly
+>>> recommended.  
+>>
+>> I assume on s390x, at least
+>>
+>> kvm_arch_vcpu_ioctl_get_one_reg() and
+>> kvm_arch_vcpu_ioctl_set_one_reg()
+>>
+>> have to be fixed.
+> 
+> At a glance, seems like it.
+> 
+>>
+>> Christian, are you already looking into this?
+> 
+> I'm afraid I'm also busy with travel preparation/travel, so I'd be glad
+> for any takers.
 
-I'd actually prefer if you all do a trivial conversion to
-kvm_init_usercopy to begin with.  In fact, we could just change the
-default from "0, 0" to "0, sizeof (kvm_arch_vcpu)" in kvm_init.  Any
-other change can be applied after the patches are merged to Linus's
-tree, especially with KVM Forum and the merge window both coming soon.
-
-I'll send a v2 myself later this week.
-
-Thanks all,
+Let's do a generic fix now, so that we don't need to rush the switch to
+explicit whitelisting.
 
 Paolo
