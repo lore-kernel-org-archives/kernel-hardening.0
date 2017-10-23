@@ -1,70 +1,59 @@
 References: <1508631773-2502-1-git-send-email-alex.popov@linux.com>
  <20171022131157.GB3165@worktop.lehotels.local>
+ <20171023090829.bmddmm7463yhnqaf@salmiak>
 From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <7c7fc24b-4bfb-cc8a-143e-0c28cf3247b7@linux.com>
-Date: Mon, 23 Oct 2017 14:21:27 +0300
+Message-ID: <9193330a-0272-6a52-a3fb-cb8518f8da06@linux.com>
+Date: Mon, 23 Oct 2017 15:11:44 +0300
 MIME-Version: 1.0
-In-Reply-To: <20171022131157.GB3165@worktop.lehotels.local>
+In-Reply-To: <20171023090829.bmddmm7463yhnqaf@salmiak>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
 Subject: [kernel-hardening] Re: [PATCH RFC v5 0/5] Introduce the STACKLEAK feature and a test for
  it
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, tycho@docker.com, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, x86@kernel.org
+To: Mark Rutland <mark.rutland@arm.com>, Peter Zijlstra <peterz@infradead.org>
+Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, tycho@docker.com, Laura Abbott <labbott@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 22.10.2017 16:11, Peter Zijlstra wrote:
-> On Sun, Oct 22, 2017 at 03:22:48AM +0300, Alexander Popov wrote:
->  
->> These numbers were obtained for the 4th version of the patch series.
+Hello Peter and Mark,
+
+On 23.10.2017 12:08, Mark Rutland wrote:
+> On Sun, Oct 22, 2017 at 03:11:57PM +0200, Peter Zijlstra wrote:
+>> On Sun, Oct 22, 2017 at 03:22:48AM +0300, Alexander Popov wrote:
+>>> Further work
+>>> =============
+>>>
+>>>  - Rewrite erase_kstack() in C (if Ingo Molnar insists).
 >>
->> Size of vmlinux (x86_64_defconfig):
->>  file size:
->>   - STACKLEAK disabled: 35014784 bytes
->>   - STACKLEAK enabled: 35044952 bytes (+0.086%)
->>  .text section size (calculated by size utility):
->>   - STACKLEAK disabled: 10752983
->>   - STACKLEAK enabled: 11062221 (+2.876%)
+>> Aside from legacy, is there any sane reason that stuff is in ASM? That
+>> is, I too will insist it being in C unless you can provide good
+>> arguments on why it needs be asm. All it does is memzero() right? And I
+>> would think architectures already have fairly optimized implementations
+>> of that around.
+
+I added very detailed comments describing erase_kstack() on x86_64. It is quite
+tricky for being fast.
+
+It starts from the lowest_stack address and goes down to the bottom of the stack
+searching for the poison value (-0xBEEF). If it reaches the stack bottom or
+finds 17 poison values in a row, it starts to fill the memory between the
+current position and the stack pointer with a poison value. Finally it resets
+the lowest_stack value. So only used part of the kernel stack is actually erased.
+
+I really like the PaX Team's code in erase_kstack().
+
+> One argument for this being in asm is that you can't control the stack
+> usage of a C implementation of erase_kstack(), which leaves a (small)
+> portion of the stack potentially not cleared depending on what exactly
+> the compiler does with the stack.
 > 
-> Why no runtime costs? This should not be hard to measure.
+> If it's just a call to memzero(), the asm should be very simple, and I'd
+> think it's better to err on the side of clearing as much of the stack as
+> possible.
 
-Hello Peter,
+Laura Abbott wrote about her issues with erase_kstack() and gcc in the previous
+thread: http://www.openwall.com/lists/kernel-hardening/2017/10/10/3
 
-Here are the results of a brief performance test on x86_64 (for the 2nd version
-of the patch). The numbers are very different because the STACKLEAK performance
-penalty depends on the workloads.
-
-Hardware: Intel Core i7-4770, 16 GB RAM
-
-Test #1: hackbench -s 4096 -l 2000 -g 15 -f 25 -P
-Average result on 4.11-rc8: 8.71s
-Average result on 4.11-rc8+stackleak: 9.08s (+4.29%)
-
-Test #2: building the Linux kernel with Ubuntu config (time make -j9)
-Result on 4.11-rc8:
-  real	32m14.893s
-  user	237m30.886s
-  sys	11m12.273s
-Result on 4.11-rc8+stackleak:
-  real	32m26.881s (+0.62%)
-  user	238m38.926s (+0.48%)
-  sys	11m36.426s (+3.59%)
-
-Test #3: stress-ng --cpu 4 --io 2 --vm 2 --vm-bytes 2G --timeout 300s
- --metrics-brief
-Result on 4.11-rc8:
-  cpu bogo ops 269955
-  iosync bogo ops 9809985
-  vm bogo ops 17093608
-Result on 4.11-rc8+stackleak:
-  cpu bogo ops 270106 (+0.6%)
-  iosync bogo ops 9474535 (-3.42%)
-  vm bogo ops 17093608 (the same)
-
-So the STACKLEAK description in Kconfig includes:
-"The tradeoff is the performance impact: on a single CPU system kernel
-compilation sees a 1% slowdown, other systems and workloads may vary and you are
-advised to test this feature on your expected workload before deploying it".
+Anyway, I'll obey the final decision.
 
 Best regards,
 Alexander
