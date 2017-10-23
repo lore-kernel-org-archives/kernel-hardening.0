@@ -1,67 +1,70 @@
-References: <20171020232525.7387-1-pbonzini@redhat.com>
- <f13340f5-4027-181b-7e41-e9bc434b195c@redhat.com>
-From: Christian Borntraeger <borntraeger@de.ibm.com>
-Date: Mon, 23 Oct 2017 13:10:00 +0200
+References: <1508631773-2502-1-git-send-email-alex.popov@linux.com>
+ <20171022131157.GB3165@worktop.lehotels.local>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <7c7fc24b-4bfb-cc8a-143e-0c28cf3247b7@linux.com>
+Date: Mon, 23 Oct 2017 14:21:27 +0300
 MIME-Version: 1.0
-In-Reply-To: <f13340f5-4027-181b-7e41-e9bc434b195c@redhat.com>
+In-Reply-To: <20171022131157.GB3165@worktop.lehotels.local>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Message-Id: <2a38de15-4378-d766-0f12-0d29ac17b264@de.ibm.com>
-Subject: [kernel-hardening] Re: [PATCH 0/2] KVM: fixes for the kernel-hardening tree
-To: David Hildenbrand <david@redhat.com>, Paolo Bonzini <pbonzini@redhat.com>, linux-kernel@vger.kernel.org, kvm@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Christoffer Dall <christoffer.dall@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Cornelia Huck <cohuck@redhat.com>, James Hogan <james.hogan@imgtec.com>, Paul Mackerras <paulus@samba.org>
+Subject: [kernel-hardening] Re: [PATCH RFC v5 0/5] Introduce the STACKLEAK feature and a test for
+ it
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, tycho@docker.com, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 22.10.2017 16:11, Peter Zijlstra wrote:
+> On Sun, Oct 22, 2017 at 03:22:48AM +0300, Alexander Popov wrote:
+>  
+>> These numbers were obtained for the 4th version of the patch series.
+>>
+>> Size of vmlinux (x86_64_defconfig):
+>>  file size:
+>>   - STACKLEAK disabled: 35014784 bytes
+>>   - STACKLEAK enabled: 35044952 bytes (+0.086%)
+>>  .text section size (calculated by size utility):
+>>   - STACKLEAK disabled: 10752983
+>>   - STACKLEAK enabled: 11062221 (+2.876%)
+> 
+> Why no runtime costs? This should not be hard to measure.
 
+Hello Peter,
 
-On 10/23/2017 11:52 AM, David Hildenbrand wrote:
-> On 21.10.2017 01:25, Paolo Bonzini wrote:
->> Two KVM ioctls (KVM_GET/SET_CPUID2) directly access the cpuid_entries
->> field of struct kvm_vcpu_arch.  Therefore, the new usercopy hardening
->> work in linux-next, which forbids copies from and to slab objects
->> unless they are from kmalloc or explicitly whitelisted, breaks KVM
->> completely.
->>
->> This series fixes it by adding the two new usercopy arguments
->> to kvm_init (more precisely to a new function kvm_init_usercopy,
->> while kvm_init passes zeroes as a default).
->>
->> There's also another broken ioctl, KVM_XEN_HVM_CONFIG, but it is
->> obsolete and not a big deal at all.
->>
->> I'm Ccing all submaintainers in case they have something similar
->> going on in their kvm_arch and kvm_vcpu_arch structs.  KVM has a
->> pretty complex userspace API, so thorough with linux-next is highly
->> recommended.
-> 
-> I assume on s390x, at least
-> 
-> kvm_arch_vcpu_ioctl_get_one_reg() and
-> kvm_arch_vcpu_ioctl_set_one_reg()
-> 
-> have to be fixed.
-> 
-> Christian, are you already looking into this?
+Here are the results of a brief performance test on x86_64 (for the 2nd version
+of the patch). The numbers are very different because the STACKLEAK performance
+penalty depends on the workloads.
 
-Not yet. I am in preparation for travel.
+Hardware: Intel Core i7-4770, 16 GB RAM
 
-> 
->>
->> Many thanks to Thomas Gleixner for reporting this to me.
->>
->> Paolo
->>
->> Paolo Bonzini (2):
->>   KVM: allow setting a usercopy region in struct kvm_vcpu
->>   KVM: fix KVM_XEN_HVM_CONFIG ioctl
->>
->>  arch/x86/include/asm/kvm_host.h |  3 +++
->>  arch/x86/kvm/svm.c              |  4 ++--
->>  arch/x86/kvm/vmx.c              |  4 ++--
->>  arch/x86/kvm/x86.c              | 17 ++++++++++++++---
->>  include/linux/kvm_host.h        | 13 +++++++++++--
->>  virt/kvm/kvm_main.c             | 13 ++++++++-----
->>  6 files changed, 40 insertions(+), 14 deletions(-)
->>
-> 
-> 
+Test #1: hackbench -s 4096 -l 2000 -g 15 -f 25 -P
+Average result on 4.11-rc8: 8.71s
+Average result on 4.11-rc8+stackleak: 9.08s (+4.29%)
+
+Test #2: building the Linux kernel with Ubuntu config (time make -j9)
+Result on 4.11-rc8:
+  real	32m14.893s
+  user	237m30.886s
+  sys	11m12.273s
+Result on 4.11-rc8+stackleak:
+  real	32m26.881s (+0.62%)
+  user	238m38.926s (+0.48%)
+  sys	11m36.426s (+3.59%)
+
+Test #3: stress-ng --cpu 4 --io 2 --vm 2 --vm-bytes 2G --timeout 300s
+ --metrics-brief
+Result on 4.11-rc8:
+  cpu bogo ops 269955
+  iosync bogo ops 9809985
+  vm bogo ops 17093608
+Result on 4.11-rc8+stackleak:
+  cpu bogo ops 270106 (+0.6%)
+  iosync bogo ops 9474535 (-3.42%)
+  vm bogo ops 17093608 (the same)
+
+So the STACKLEAK description in Kconfig includes:
+"The tradeoff is the performance impact: on a single CPU system kernel
+compilation sees a 1% slowdown, other systems and workloads may vary and you are
+advised to test this feature on your expected workload before deploying it".
+
+Best regards,
+Alexander
