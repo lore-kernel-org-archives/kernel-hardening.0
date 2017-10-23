@@ -1,59 +1,71 @@
-References: <1508631773-2502-1-git-send-email-alex.popov@linux.com>
- <20171022131157.GB3165@worktop.lehotels.local>
- <20171023090829.bmddmm7463yhnqaf@salmiak>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <9193330a-0272-6a52-a3fb-cb8518f8da06@linux.com>
-Date: Mon, 23 Oct 2017 15:11:44 +0300
+Date: Mon, 23 Oct 2017 14:39:18 +0200
+From: Cornelia Huck <cohuck@redhat.com>
+Message-ID: <20171023143918.21112222.cohuck@redhat.com>
+In-Reply-To: <f13340f5-4027-181b-7e41-e9bc434b195c@redhat.com>
+References: <20171020232525.7387-1-pbonzini@redhat.com>
+	<f13340f5-4027-181b-7e41-e9bc434b195c@redhat.com>
 MIME-Version: 1.0
-In-Reply-To: <20171023090829.bmddmm7463yhnqaf@salmiak>
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v5 0/5] Introduce the STACKLEAK feature and a test for
- it
-To: Mark Rutland <mark.rutland@arm.com>, Peter Zijlstra <peterz@infradead.org>
-Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, tycho@docker.com, Laura Abbott <labbott@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, x86@kernel.org
+Subject: [kernel-hardening] Re: [PATCH 0/2] KVM: fixes for the kernel-hardening tree
+To: David Hildenbrand <david@redhat.com>
+Cc: Paolo Bonzini <pbonzini@redhat.com>, linux-kernel@vger.kernel.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Radim =?UTF-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Christoffer Dall <christoffer.dall@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, James Hogan <james.hogan@imgtec.com>, Paul Mackerras <paulus@samba.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Peter and Mark,
+On Mon, 23 Oct 2017 11:52:51 +0200
+David Hildenbrand <david@redhat.com> wrote:
 
-On 23.10.2017 12:08, Mark Rutland wrote:
-> On Sun, Oct 22, 2017 at 03:11:57PM +0200, Peter Zijlstra wrote:
->> On Sun, Oct 22, 2017 at 03:22:48AM +0300, Alexander Popov wrote:
->>> Further work
->>> =============
->>>
->>>  - Rewrite erase_kstack() in C (if Ingo Molnar insists).
->>
->> Aside from legacy, is there any sane reason that stuff is in ASM? That
->> is, I too will insist it being in C unless you can provide good
->> arguments on why it needs be asm. All it does is memzero() right? And I
->> would think architectures already have fairly optimized implementations
->> of that around.
-
-I added very detailed comments describing erase_kstack() on x86_64. It is quite
-tricky for being fast.
-
-It starts from the lowest_stack address and goes down to the bottom of the stack
-searching for the poison value (-0xBEEF). If it reaches the stack bottom or
-finds 17 poison values in a row, it starts to fill the memory between the
-current position and the stack pointer with a poison value. Finally it resets
-the lowest_stack value. So only used part of the kernel stack is actually erased.
-
-I really like the PaX Team's code in erase_kstack().
-
-> One argument for this being in asm is that you can't control the stack
-> usage of a C implementation of erase_kstack(), which leaves a (small)
-> portion of the stack potentially not cleared depending on what exactly
-> the compiler does with the stack.
+> On 21.10.2017 01:25, Paolo Bonzini wrote:
+> > Two KVM ioctls (KVM_GET/SET_CPUID2) directly access the cpuid_entries
+> > field of struct kvm_vcpu_arch.  Therefore, the new usercopy hardening
+> > work in linux-next, which forbids copies from and to slab objects
+> > unless they are from kmalloc or explicitly whitelisted, breaks KVM
+> > completely.
+> > 
+> > This series fixes it by adding the two new usercopy arguments
+> > to kvm_init (more precisely to a new function kvm_init_usercopy,
+> > while kvm_init passes zeroes as a default).
+> > 
+> > There's also another broken ioctl, KVM_XEN_HVM_CONFIG, but it is
+> > obsolete and not a big deal at all.
+> > 
+> > I'm Ccing all submaintainers in case they have something similar
+> > going on in their kvm_arch and kvm_vcpu_arch structs.  KVM has a
+> > pretty complex userspace API, so thorough with linux-next is highly
+> > recommended.  
 > 
-> If it's just a call to memzero(), the asm should be very simple, and I'd
-> think it's better to err on the side of clearing as much of the stack as
-> possible.
+> I assume on s390x, at least
+> 
+> kvm_arch_vcpu_ioctl_get_one_reg() and
+> kvm_arch_vcpu_ioctl_set_one_reg()
+> 
+> have to be fixed.
 
-Laura Abbott wrote about her issues with erase_kstack() and gcc in the previous
-thread: http://www.openwall.com/lists/kernel-hardening/2017/10/10/3
+At a glance, seems like it.
 
-Anyway, I'll obey the final decision.
+> 
+> Christian, are you already looking into this?
 
-Best regards,
-Alexander
+I'm afraid I'm also busy with travel preparation/travel, so I'd be glad
+for any takers.
+
+> 
+> > 
+> > Many thanks to Thomas Gleixner for reporting this to me.
+> > 
+> > Paolo
+> > 
+> > Paolo Bonzini (2):
+> >   KVM: allow setting a usercopy region in struct kvm_vcpu
+> >   KVM: fix KVM_XEN_HVM_CONFIG ioctl
+> > 
+> >  arch/x86/include/asm/kvm_host.h |  3 +++
+> >  arch/x86/kvm/svm.c              |  4 ++--
+> >  arch/x86/kvm/vmx.c              |  4 ++--
+> >  arch/x86/kvm/x86.c              | 17 ++++++++++++++---
+> >  include/linux/kvm_host.h        | 13 +++++++++++--
+> >  virt/kvm/kvm_main.c             | 13 ++++++++-----
+> >  6 files changed, 40 insertions(+), 14 deletions(-)
+> >   
+> 
+> 
