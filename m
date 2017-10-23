@@ -1,43 +1,170 @@
-Date: Mon, 23 Oct 2017 17:06:14 -0400 (EDT)
-From: Paolo Bonzini <pbonzini@redhat.com>
-Message-ID: <1024881182.14288556.1508792774084.JavaMail.zimbra@redhat.com>
-In-Reply-To: <CAGXu5jKoLP8jN4ZtRQnFpy6RWK1JJTa7eBuA2p9huBfh11bWvg@mail.gmail.com>
-References: <20171020232525.7387-1-pbonzini@redhat.com> <20171021184545.2497-1-christoffer.dall@linaro.org> <CAGXu5jKJ2jPz2540ZLCwmcdVZxrgnhVPHs0uumiJm2o0ZgpVag@mail.gmail.com> <20171022074418.GA3805@cbox> <d2a7dcec-060b-6279-1c1d-a18b3eedb394@redhat.com> <CAGXu5jKoLP8jN4ZtRQnFpy6RWK1JJTa7eBuA2p9huBfh11bWvg@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] R: Re: [PATCH] KVM: arm/arm64: Allow usercopy to vcpu->arch.ctxt
- and arm64 debug
-To: Kees Cook <keescook@chromium.org>
-Cc: Christoffer Dall <cdall@linaro.org>, Christoffer Dall <christoffer.dall@linaro.org>, kvmarm@lists.cs.columbia.edu, linux-arm-kernel@lists.infradead.org, KVM <kvm@vger.kernel.org>, kernel-hardening@lists.openwall.com, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Marc Zyngier <marc.zyngier@arm.com>
+From: "Tobin C. Harding" <me@tobin.cc>
+Date: Tue, 24 Oct 2017 09:33:28 +1100
+Message-Id: <1508798008-1692-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] [PATCH v7] printk: hash addresses printed with %p
+To: kernel-hardening@lists.openwall.com
+Cc: "Tobin C. Harding" <me@tobin.cc>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Currently there are many places in the kernel where addresses are being
+printed using an unadorned %p. Kernel pointers should be printed using
+%pK allowing some control via the kptr_restrict sysctl. Exposing addresses
+gives attackers sensitive information about the kernel layout in memory.
 
------ Kees Cook <keescook@chromium.org> ha scritto:
-> On Mon, Oct 23, 2017 at 7:14 AM, Paolo Bonzini <pbonzini@redhat.com> wrote:
-> > On 22/10/2017 09:44, Christoffer Dall wrote:
-> >> However, I think it's much clearer if I
-> >> rewrite these to use get_user() and put_user().  v2 incoming.
-> >
-> > I'd actually prefer if you all do a trivial conversion to
-> > kvm_init_usercopy to begin with.  In fact, we could just change the
-> > default from "0, 0" to "0, sizeof (kvm_arch_vcpu)" in kvm_init.  Any
-> > other change can be applied after the patches are merged to Linus's
-> > tree, especially with KVM Forum and the merge window both coming soon.
-> >
-> > I'll send a v2 myself later this week.
-> 
-> Okay, which patches would you like me to carry in the usercopy
-> whitelisting tree for the coming merge window?
+We can reduce the attack surface by hashing all addresses printed with
+%p. This will of course break some users, forcing code printing needed
+addresses to be updated.
 
-v2 of mine, which shall come in the next couple of days.
+For what it's worth, usage of unadorned %p can be broken down as
+follows (thanks to Joe Perches).
 
-Paolo
+$ git grep -E '%p[^A-Za-z0-9]' | cut -f1 -d"/" | sort | uniq -c
+   1084 arch
+     20 block
+     10 crypto
+     32 Documentation
+   8121 drivers
+   1221 fs
+    143 include
+    101 kernel
+     69 lib
+    100 mm
+   1510 net
+     40 samples
+      7 scripts
+     11 security
+    166 sound
+    152 tools
+      2 virt
 
+Add function ptr_to_id() to map an address to a 32 bit unique identifier.
 
-> 
-> -Kees
-> 
-> -- 
-> Kees Cook
-> Pixel Security
+Signed-off-by: Tobin C. Harding <me@tobin.cc>
+---
+
+V7:
+ - Use tabs instead of spaces (ouch!).
+
+V6:
+ - Use __early_initcall() to fill the SipHash key.
+ - Use static keys to guard hashing before the key is available.
+
+V5:
+ - Remove spin lock.
+ - Add Jason A. Donenfeld to CC list by request.
+ - Add Theodore Ts'o to CC list due to comment on previous version.
+
+V4:
+ - Remove changes to siphash.{ch}
+ - Do word size check, and return value cast, directly in ptr_to_id().
+ - Use add_ready_random_callback() to guard call to get_random_bytes()
+
+V3:
+ - Use atomic_xchg() to guard setting [random] key.
+ - Remove erroneous white space change.
+
+V2:
+ - Use SipHash to do the hashing.
+
+The discussion related to this patch has been fragmented. There are
+three threads associated with this patch. Email threads by subject:
+
+[PATCH] printk: hash addresses printed with %p
+[PATCH 0/3] add %pX specifier
+[kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
+
+ lib/vsprintf.c | 57 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 57 insertions(+)
+
+diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+index 86c3385b9eb3..3faecf219412 100644
+--- a/lib/vsprintf.c
++++ b/lib/vsprintf.c
+@@ -33,6 +33,7 @@
+ #include <linux/uuid.h>
+ #include <linux/of.h>
+ #include <net/addrconf.h>
++#include <linux/siphash.h>
+ #ifdef CONFIG_BLOCK
+ #include <linux/blkdev.h>
+ #endif
+@@ -1591,6 +1592,55 @@ char *device_node_string(char *buf, char *end, struct device_node *dn,
+ 	return widen_string(buf, buf - buf_start, end, spec);
+ }
+ 
++static siphash_key_t ptr_secret __read_mostly;
++static DEFINE_STATIC_KEY_TRUE(no_ptr_secret);
++
++static void fill_random_ptr_key(struct random_ready_callback *rdy)
++{
++	get_random_bytes(&ptr_secret, sizeof(ptr_secret));
++	static_branch_disable(&no_ptr_secret);
++}
++
++static struct random_ready_callback random_ready = {
++	.func = fill_random_ptr_key
++};
++
++static int __init initialize_ptr_random(void)
++{
++	int ret = add_random_ready_callback(&random_ready);
++
++	if (!ret)
++		return 0;
++	else if (ret == -EALREADY) {
++		fill_random_ptr_key(&random_ready);
++		return 0;
++	}
++
++	return ret;
++}
++early_initcall(initialize_ptr_random);
++
++/* Maps a pointer to a 32 bit unique identifier. */
++static char *ptr_to_id(char *buf, char *end, void *ptr, struct printf_spec spec)
++{
++	unsigned int hashval;
++
++	if (static_branch_unlikely(&no_ptr_secret))
++		return "(pointer value)";
++
++#ifdef CONFIG_64BIT
++	hashval = (unsigned int)siphash_1u64((u64)ptr, &ptr_secret);
++#else
++	hashval = (unsigned int)siphash_1u32((u32)ptr, &ptr_secret);
++#endif
++
++	spec.field_width = 2 * sizeof(unsigned int);
++	spec.flags = SMALL;
++	spec.base = 16;
++
++	return number(buf, end, hashval, spec);
++}
++
+ int kptr_restrict __read_mostly;
+ 
+ /*
+@@ -1703,6 +1753,9 @@ int kptr_restrict __read_mostly;
+  * Note: The difference between 'S' and 'F' is that on ia64 and ppc64
+  * function pointers are really function descriptors, which contain a
+  * pointer to the real address.
++ *
++ * Note: The default behaviour (unadorned %p) is to hash the address,
++ * rendering it useful as a unique identifier.
+  */
+ static noinline_for_stack
+ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
+@@ -1857,7 +1910,11 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
+ 		case 'F':
+ 			return device_node_string(buf, end, ptr, spec, fmt + 1);
+ 		}
++	default:  /* default is to _not_ leak addresses, hash before printing */
++		return ptr_to_id(buf, end, ptr, spec);
+ 	}
++
++	/* OK, let's print the address */
+ 	spec.flags |= SMALL;
+ 	if (spec.field_width == -1) {
+ 		spec.field_width = default_width;
+-- 
+2.7.4
