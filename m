@@ -1,79 +1,81 @@
-References: <20171020232525.7387-1-pbonzini@redhat.com>
- <f13340f5-4027-181b-7e41-e9bc434b195c@redhat.com>
- <20171023143918.21112222.cohuck@redhat.com>
- <6fbcdbac-a717-def4-1864-6426d58986fc@redhat.com>
- <f942d9b4-6fde-267d-aa04-a64218b1391f@redhat.com>
-From: Christian Borntraeger <borntraeger@de.ibm.com>
-Date: Wed, 25 Oct 2017 12:31:43 +0200
 MIME-Version: 1.0
-In-Reply-To: <f942d9b4-6fde-267d-aa04-a64218b1391f@redhat.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Message-Id: <88d8a69a-5fe6-a38f-21c1-944ed551c2ad@de.ibm.com>
-Subject: [kernel-hardening] Re: [PATCH 0/2] KVM: fixes for the kernel-hardening tree
-To: David Hildenbrand <david@redhat.com>, Paolo Bonzini <pbonzini@redhat.com>, Cornelia Huck <cohuck@redhat.com>
-Cc: linux-kernel@vger.kernel.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Christoffer Dall <christoffer.dall@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, James Hogan <james.hogan@imgtec.com>, Paul Mackerras <paulus@samba.org>
+In-Reply-To: <20171024235755.GA15832@eros>
+References: <1508798008-1692-1-git-send-email-me@tobin.cc> <87bmkw5owv.fsf@rasmusvillemoes.dk>
+ <20171024235755.GA15832@eros>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Date: Wed, 25 Oct 2017 21:02:34 +0200
+Message-ID: <CAKwiHFgUEfXJ3TRzwD4dm6TFVM6ffdzb-riMAhnobnZrjD0ySw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v7] printk: hash addresses printed with %p
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-On 10/25/2017 11:45 AM, David Hildenbrand wrote:
-> On 23.10.2017 16:15, Paolo Bonzini wrote:
->> On 23/10/2017 14:39, Cornelia Huck wrote:
->>> On Mon, 23 Oct 2017 11:52:51 +0200
->>> David Hildenbrand <david@redhat.com> wrote:
->>>
->>>> On 21.10.2017 01:25, Paolo Bonzini wrote:
->>>>> Two KVM ioctls (KVM_GET/SET_CPUID2) directly access the cpuid_entries
->>>>> field of struct kvm_vcpu_arch.  Therefore, the new usercopy hardening
->>>>> work in linux-next, which forbids copies from and to slab objects
->>>>> unless they are from kmalloc or explicitly whitelisted, breaks KVM
->>>>> completely.
->>>>>
->>>>> This series fixes it by adding the two new usercopy arguments
->>>>> to kvm_init (more precisely to a new function kvm_init_usercopy,
->>>>> while kvm_init passes zeroes as a default).
->>>>>
->>>>> There's also another broken ioctl, KVM_XEN_HVM_CONFIG, but it is
->>>>> obsolete and not a big deal at all.
->>>>>
->>>>> I'm Ccing all submaintainers in case they have something similar
->>>>> going on in their kvm_arch and kvm_vcpu_arch structs.  KVM has a
->>>>> pretty complex userspace API, so thorough with linux-next is highly
->>>>> recommended.  
->>>>
->>>> I assume on s390x, at least
->>>>
->>>> kvm_arch_vcpu_ioctl_get_one_reg() and
->>>> kvm_arch_vcpu_ioctl_set_one_reg()
->>>>
->>>> have to be fixed.
->>>
->>> At a glance, seems like it.
->>>
->>>>
->>>> Christian, are you already looking into this?
->>>
->>> I'm afraid I'm also busy with travel preparation/travel, so I'd be glad
->>> for any takers.
+On 25 October 2017 at 01:57, Tobin C. Harding <me@tobin.cc> wrote:
+> On Tue, Oct 24, 2017 at 09:25:20PM +0200, Rasmus Villemoes wrote:
 >>
->> Let's do a generic fix now, so that we don't need to rush the switch to
->> explicit whitelisting.
-> 
-> You mean a arch specific fix (allow writes/reads to arch) or even more
-> generic?
+>> I haven't followed the discussion too closely, but has it been
+>> considered to exempt NULL from hashing?
+>
+[snip]
+>
+> The code in question is;
+>
+> static noinline_for_stack
+> char *pointer(const char *fmt, char *buf, char *end, void *ptr,
+>               struct printf_spec spec)
+> {
+>         const int default_width = 2 * sizeof(void *);
+>
+>         if (!ptr && *fmt != 'K') {
+>                 /*
+>                  * Print (null) with the same width as a pointer so it makes
+>                  * tabular output look nice.
+>                  */
+>                 if (spec.field_width == -1)
+>                         spec.field_width = default_width;
+>                 return string(buf, end, "(null)", spec);
+>         }
 
-Kees,
+Ah, yes, I should have re-read the current code before commenting. So
+we're effectively already exempting NULL due to this early handling.
+Good, let's leave that.
 
-I am somewhat worried about these changes. The onereg interface is certainly
-broken right now, but newer QEMUs will not use it. So its very likely that
-testing will not find the regression. I would assume that usercopy hardinging
-will introduce a lot of non-obvious regressions in seldomly used code. Have you
-considered some debugging aids to find "now broken" things?
-> 
-> Otherwise I can you send a patch to fix these two functions.
+Regarding the tabular output: Ignore it, it's completely irrelevant to
+the hardening efforts (good work, btw), and probably completely
+irrelevant period. If anything I'd say the comment and the attempted
+alignment should just be killed.
 
-Having said that, yes if you can send a fixup for 
-kvm_arch_vcpu_ioctl_get/set_one_reg that would be great.
+> This check and print "(null)" is at the wrong level of abstraction. If we want tabular output to be
+> correct for _all_ pointer specifiers then spec.field_width (for NULL) should be set to match whatever
+> field_width is used in the associated output function. Removing the NULL check above would require
+> NULL checks adding to at least;
+>
+> resource_string()
+> bitmap_list_string()
+> bitmap_string()
+> mac_address_string()
+> ip4_addr_string()
+> ip4_addr_string_sa()
+> ip6_addr_string_sa()
+> uuid_string()
+> netdev_bits()
+> address_val()
+> dentry_name()
+> bdev_name()
+> ptr_to_id()
 
-Christian
+No, please don't. The NULL check makes perfect sense early in
+pointer(), because many of these handlers would dereference the
+pointer, and while it's probably a bug to pass NULL to say %pD, it's
+obviously better to print (null) than crash. Adding NULL checks to
+each of these is error-prone and lots of bloat for no real value
+(consider that many of these can produce lots of variants of output,
+and e.g. dotted-decimal ip addresses don't even have a well-defined
+width at all).
+
+> My question is [snip] is it too trivial to matter?
+
+Yes.
+
+Rasmus
