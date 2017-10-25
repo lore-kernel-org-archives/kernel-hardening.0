@@ -1,73 +1,75 @@
-References: <20171020232525.7387-1-pbonzini@redhat.com>
- <f13340f5-4027-181b-7e41-e9bc434b195c@redhat.com>
- <20171023143918.21112222.cohuck@redhat.com>
- <6fbcdbac-a717-def4-1864-6426d58986fc@redhat.com>
-From: David Hildenbrand <david@redhat.com>
-Message-ID: <f942d9b4-6fde-267d-aa04-a64218b1391f@redhat.com>
-Date: Wed, 25 Oct 2017 11:45:21 +0200
+Date: Wed, 25 Oct 2017 21:05:59 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171025100559.GH15832@eros>
+References: <CAHmME9rZE0oSOq6KecY1pTMsJa4dK2sCyuMRZbFjnamZkHXViA@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <6fbcdbac-a717-def4-1864-6426d58986fc@redhat.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 0/2] KVM: fixes for the kernel-hardening tree
-To: Paolo Bonzini <pbonzini@redhat.com>, Cornelia Huck <cohuck@redhat.com>
-Cc: linux-kernel@vger.kernel.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Christoffer Dall <christoffer.dall@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, James Hogan <james.hogan@imgtec.com>, Paul Mackerras <paulus@samba.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAHmME9rZE0oSOq6KecY1pTMsJa4dK2sCyuMRZbFjnamZkHXViA@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v7] printk: hash addresses printed with %p
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: kernel-hardening@lists.openwall.com, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 23.10.2017 16:15, Paolo Bonzini wrote:
-> On 23/10/2017 14:39, Cornelia Huck wrote:
->> On Mon, 23 Oct 2017 11:52:51 +0200
->> David Hildenbrand <david@redhat.com> wrote:
->>
->>> On 21.10.2017 01:25, Paolo Bonzini wrote:
->>>> Two KVM ioctls (KVM_GET/SET_CPUID2) directly access the cpuid_entries
->>>> field of struct kvm_vcpu_arch.  Therefore, the new usercopy hardening
->>>> work in linux-next, which forbids copies from and to slab objects
->>>> unless they are from kmalloc or explicitly whitelisted, breaks KVM
->>>> completely.
->>>>
->>>> This series fixes it by adding the two new usercopy arguments
->>>> to kvm_init (more precisely to a new function kvm_init_usercopy,
->>>> while kvm_init passes zeroes as a default).
->>>>
->>>> There's also another broken ioctl, KVM_XEN_HVM_CONFIG, but it is
->>>> obsolete and not a big deal at all.
->>>>
->>>> I'm Ccing all submaintainers in case they have something similar
->>>> going on in their kvm_arch and kvm_vcpu_arch structs.  KVM has a
->>>> pretty complex userspace API, so thorough with linux-next is highly
->>>> recommended.  
->>>
->>> I assume on s390x, at least
->>>
->>> kvm_arch_vcpu_ioctl_get_one_reg() and
->>> kvm_arch_vcpu_ioctl_set_one_reg()
->>>
->>> have to be fixed.
->>
->> At a glance, seems like it.
->>
->>>
->>> Christian, are you already looking into this?
->>
->> I'm afraid I'm also busy with travel preparation/travel, so I'd be glad
->> for any takers.
+On Wed, Oct 25, 2017 at 06:00:21AM +0200, Jason A. Donenfeld wrote:
+> On Wed, Oct 25, 2017 at 5:49 AM, Tobin C. Harding <me@tobin.cc> wrote:
+> > static_branch_disable(&no_ptr_secret) : Doesn't sleep, just atomic read
+> > and set and maybe a WARN_ONCE.
 > 
-> Let's do a generic fix now, so that we don't need to rush the switch to
-> explicit whitelisting.
-
-You mean a arch specific fix (allow writes/reads to arch) or even more
-generic?
-
-Otherwise I can you send a patch to fix these two functions.
-
+> Are you sure about that? I just looked myself, and though there is a
+> !HAVE_JUMP_LABEL ifdef that does what you described, there's also a
+> HAVE_JUMP_LABEL that takes a mutex, which sleeps:
 > 
-> Paolo
+> static_branch_disable
+>   static_key_disable
+>     cpus_read_lock
+>       percpu_down_read
+>         percpu_down_read_preempt_disable
+>           might_sleep
+
+Hilarious, the actual function name is 'might_sleep' and I missed it. I
+love being wrong, it means I'm learning. Thanks for taking the time to
+point this out.
+
+> > Now for the 'executes from process context' stuff.
 > 
+> Er, sorry, I meant to write non-process context in my original
+> message, which is generally where you're worried about sleeping.
 
+Tomorrow I'm going to re-read 'sleeping' sections from ldd3 and Love.
 
--- 
+> > If the callback mechanism is utilized (i.e print before randomness is
+> > ready) then the call back will be executed the next time the randomness
+> > pool gets added to
+> 
+> So it sounds to me like this might be called in non-process context.
+> Disaster. I realize the static_key thing was my idea in the original
+> email, so sorry for leading you astray.
 
-Thanks,
+You bastard.
 
-David
+> But moving to do this in
+> early_initcall wound up fixing other issues too, so all and all a net
+> good in going this direction.
+
+I wanted to know how to do this since Linus said 'boot time variable' in
+one of the first comments on this topic. So I'm super glad you pointed
+it out.
+
+> Two options: you stick with static_branch, because it's cool and speed
+> is fun, and work around all of the above with a call to queue_work so
+> that static_branch_enable is called only from process context.
+> 
+> Or, you give up on static_key, because it's not actually super
+> necessary, and instead just use an atomic, and reason that using `if
+> (unlikely(!atomic_read(&whatever)))` is probably good enough. In this
+> option, the code would be pretty much the same as v7, except you'd
+> s/static_branch/atomic_t/, and change the helpers, etc. This is
+> probably the more reasonable way.
+
+I'm going to sleep, then re-reading these bits.
+
+thanks Jason, appreciate your input big time.
+
+Cheers,
+Tobin.
