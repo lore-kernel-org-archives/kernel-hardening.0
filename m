@@ -1,60 +1,57 @@
-MIME-Version: 1.0
-In-Reply-To: <A9CEA82D-DEC7-4F4F-AF16-68CFF5DA203A@belouin.fr>
-References: <20171021132806.18086-1-nicolas@belouin.fr> <CAFJ0LnGjhjm9iswxh-naLM9qZq-fQ_a0MdyVDsmRUk4ME0xuNA@mail.gmail.com>
- <A9CEA82D-DEC7-4F4F-AF16-68CFF5DA203A@belouin.fr>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Thu, 26 Oct 2017 00:54:42 -0700
-Message-ID: <CALCETrVaAOaQgTGiTnSoRiEX4oj1BOiKdfjsd+O8-zQd_vHk4Q@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH] fs: Use CAP_DAC_OVERRIDE to allow for
- file dedupe
-To: Nicolas Belouin <nicolas@belouin.fr>
-Cc: Nick Kralevich <nnk@google.com>, Alexander Viro <viro@zeniv.linux.org.uk>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, lkml <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Message-ID: <1509005139.10651.39.camel@perches.com>
+From: Joe Perches <joe@perches.com>
+Date: Thu, 26 Oct 2017 01:05:39 -0700
+In-Reply-To: <20171026062734.GH12341@eros>
+References: <1508986436-31966-1-git-send-email-me@tobin.cc>
+	 <1508986436-31966-2-git-send-email-me@tobin.cc>
+	 <1508993843.10651.22.camel@perches.com> <20171026062734.GH12341@eros>
+Content-Type: text/plain; charset="ISO-8859-1"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH V8 1/2] printk: remove tabular output for NULL pointer
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts,
+ William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Oct 21, 2017 at 12:40 PM, Nicolas Belouin <nicolas@belouin.fr> wrote:
+On Thu, 2017-10-26 at 17:27 +1100, Tobin C. Harding wrote:
+> Hi Joe,
+> 
+> thanks for your review.
+> 
+> On Wed, Oct 25, 2017 at 09:57:23PM -0700, Joe Perches wrote:
+> > On Thu, 2017-10-26 at 13:53 +1100, Tobin C. Harding wrote:
+> > > Currently pointer() checks for a NULL pointer argument and then if so
+> > > attempts to print "(null)" with _some_ standard width. This width cannot
+> > > correctly be ascertained here because many of the printk specifiers
+> > > print pointers of varying widths.
+> > 
+> > I believe this is not a good change.
+> > Only pointers without a <foo> extension call pointer()
 >
->
-> On October 21, 2017 4:08:31 PM GMT+02:00, Nick Kralevich <nnk@google.com> wrote:
->>On Sat, Oct 21, 2017 at 6:28 AM, Nicolas Belouin <nicolas@belouin.fr>
->>wrote:
->>> In its current implementation the check is against CAP_SYS_ADMIN,
->>> however this capability is bloated and inapropriate for this use.
->>> Indeed the check aims to avoid dedupe against non writable files,
->>> falling directly in the use case of CAP_DAC_OVERRIDE.
->>>
->>> Signed-off-by: Nicolas Belouin <nicolas@belouin.fr>
->>> ---
->>>  fs/read_write.c | 2 +-
->>>  1 file changed, 1 insertion(+), 1 deletion(-)
->>>
->>> diff --git a/fs/read_write.c b/fs/read_write.c
->>> index f0d4b16873e8..43cc7e84e29e 100644
->>> --- a/fs/read_write.c
->>> +++ b/fs/read_write.c
->>> @@ -1965,7 +1965,7 @@ int vfs_dedupe_file_range(struct file *file,
->>struct file_dedupe_range *same)
->>>         u64 len;
->>>         int i;
->>>         int ret;
->>> -       bool is_admin = capable(CAP_SYS_ADMIN);
->>> +       bool is_admin = capable(CAP_SYS_ADMIN) ||
->>capable(CAP_DAC_OVERRIDE);
->>
->>Can you please reverse the order of the checks? In particular, on an
->>SELinux based system, a capable() call generates an SELinux denial,
->>and people often instinctively allow the first operation performed.
->>Reordering the elements will ensure that the CAP_DAC_OVERRIDE denial
->>(least permissive) is generated first.
->
-> Will do in the v2 of every concerned patch.
->
+> Sorry, I don't understand what you mean here. All the %p<foo> specifier code is
+> handled by pointer()?
 
-That's still a bit wrong because of how audit works.  What you really want is:
+Sorry, I was imprecise/wrong.
 
-bool have_either_global_cap(int cap1, int cap2);
+None of the %p<foo> extensions except %pK and %p<invalid_foo>
+actually use this bit of the pointer() call.
 
-where, if neither cap is available, the audit message references cap1
-and not cap2.  Ditto for have_either_ns_cap().
+All of the other valid %p<foo> extension uses do not end up
+at this block being executed so it's effectively only regular
+pointers being output by number()
 
---Andy
+> > > Remove the attempt to print NULL pointers with a correct width.
+> > 
+> > the correct width for a %p is the default width.
+> 
+> It is the default width if we are printing addresses. Once we hash 64
+> bit address to a 32 bit identifier then we don't have a default width.
+
+Perhaps that 32 bit identifier should use leading 0's for
+the default width.
+
+aside:
+
+Why hash 64 bits to 32?
+Why shouldn't the hash width be 64 bits on 64 bit systems?
