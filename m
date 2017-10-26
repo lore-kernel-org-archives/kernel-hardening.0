@@ -1,57 +1,74 @@
-Message-ID: <1509005139.10651.39.camel@perches.com>
-From: Joe Perches <joe@perches.com>
-Date: Thu, 26 Oct 2017 01:05:39 -0700
-In-Reply-To: <20171026062734.GH12341@eros>
-References: <1508986436-31966-1-git-send-email-me@tobin.cc>
-	 <1508986436-31966-2-git-send-email-me@tobin.cc>
-	 <1508993843.10651.22.camel@perches.com> <20171026062734.GH12341@eros>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH V8 1/2] printk: remove tabular output for NULL pointer
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts,
- William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
+From: Mark Rutland <mark.rutland@arm.com>
+Date: Thu, 26 Oct 2017 10:09:40 +0100
+Message-Id: <20171026090942.7041-1-mark.rutland@arm.com>
+Subject: [kernel-hardening] [RFC PATCH 0/2] arm64: optional paranoid __{get,put}_user checks
+To: linux-arm-kernel@lists.infradead.org
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Will Deacon <will.deacon@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2017-10-26 at 17:27 +1100, Tobin C. Harding wrote:
-> Hi Joe,
-> 
-> thanks for your review.
-> 
-> On Wed, Oct 25, 2017 at 09:57:23PM -0700, Joe Perches wrote:
-> > On Thu, 2017-10-26 at 13:53 +1100, Tobin C. Harding wrote:
-> > > Currently pointer() checks for a NULL pointer argument and then if so
-> > > attempts to print "(null)" with _some_ standard width. This width cannot
-> > > correctly be ascertained here because many of the printk specifiers
-> > > print pointers of varying widths.
-> > 
-> > I believe this is not a good change.
-> > Only pointers without a <foo> extension call pointer()
->
-> Sorry, I don't understand what you mean here. All the %p<foo> specifier code is
-> handled by pointer()?
+Hi,
 
-Sorry, I was imprecise/wrong.
+In Prague, Kees mentioned that it would be nice to have a mechanism to
+catch bad __{get,put}_user uses, such as the recent CVE-2017-5123 [1,2]
+issue with unsafe_put_user() in waitid().
 
-None of the %p<foo> extensions except %pK and %p<invalid_foo>
-actually use this bit of the pointer() call.
+These patches allow an optional access_ok() check to be dropped in
+arm64's __{get,put}_user() primitives. These will then BUG() if a bad
+user pointer is passed (which should only happen in the absence of an
+earlier access_ok() check).
 
-All of the other valid %p<foo> extension uses do not end up
-at this block being executed so it's effectively only regular
-pointers being output by number()
+The first patch rewrites the arm64 access_ok() check in C. This gives
+the compiler the visibility it needs to elide redundant access_ok()
+checks, so in the common case:
 
-> > > Remove the attempt to print NULL pointers with a correct width.
-> > 
-> > the correct width for a %p is the default width.
-> 
-> It is the default width if we are printing addresses. Once we hash 64
-> bit address to a 32 bit identifier then we don't have a default width.
+  get_user()
+    access_ok()
+    __get_user()
+      BUG_ON(!access_ok())
+      <uaccess asm>
 
-Perhaps that 32 bit identifier should use leading 0's for
-the default width.
+... the compiler can determine that the second access_ok() must return
+true, and can elide it along with the BUG_ON(), leaving:
 
-aside:
+  get_user()
+    access_ok()
+      __get_user()
+        <uaccess asm>
 
-Why hash 64 bits to 32?
-Why shouldn't the hash width be 64 bits on 64 bit systems?
+... and thus this sanity check can have no cost in the common case.
+
+The compiler doesn't always have the visibility to do this (e.g. if the
+two access_ok() checks are in different compilation units), but it seems
+to manage to do this most of the time -- In testing with v4.14-rc5
+defconfig this only increases the total Image size by 4KiB.
+
+I had a go at turning this into a BUILD_BUG_ON(), to see if we could
+catch this issue at compile time. However, my GCC wasn't able to remove
+the BUILD_BUG() from some {get,put}_user cases. Maybe we can fix that,
+or maybe we can have some static analysis catch this at build time.
+
+It's entirely possible that I've made some catastrophic mistake in these
+patches; I've only build-tested them so far, and I don't currently have
+access to hardware to test on.
+
+I also haven't yet modified __copy_{to,from}_user and friends along
+similar lines, so this is incomplete. If there aren't any major
+objections to this approach, I can fold those in for the next spin.
+
+Thanks,
+Mark.
+
+[1] https://lwn.net/Articles/736348/
+[2] https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=96ca579a1ecc943b75beba58bebb0356f6cc4b51
+
+
+Mark Rutland (2):
+  arm64: write __range_ok() in C
+  arm64: allow paranoid __{get,put}user
+
+ arch/arm64/Kconfig               |  9 +++++++++
+ arch/arm64/include/asm/uaccess.h | 27 +++++++++++++++++++--------
+ 2 files changed, 28 insertions(+), 8 deletions(-)
+
+-- 
+2.11.0
