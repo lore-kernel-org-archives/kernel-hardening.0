@@ -1,76 +1,63 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20171026134547.23664-3-pbonzini@redhat.com>
-References: <20171026134547.23664-1-pbonzini@redhat.com> <20171026134547.23664-3-pbonzini@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 26 Oct 2017 15:48:53 +0200
-Message-ID: <CAGXu5jKc8zFR0q_DScdEvWfXyBR-TjefrZ6vx1VvMghE05ssiw@mail.gmail.com>
+In-Reply-To: <20171026134547.23664-2-pbonzini@redhat.com>
+References: <20171026134547.23664-1-pbonzini@redhat.com> <20171026134547.23664-2-pbonzini@redhat.com>
+From: Christoffer Dall <christoffer.dall@linaro.org>
+Date: Thu, 26 Oct 2017 16:21:59 +0200
+Message-ID: <CAMJs5B8w-G8EAXBnLUJ7YkfVExJYWtdJP0B51hactD4Eett_QQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH 2/2] kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
+Subject: [kernel-hardening] Re: [PATCH 1/2] kvm: whitelist struct kvm_vcpu_arch
 To: Paolo Bonzini <pbonzini@redhat.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, KVM <kvm@vger.kernel.org>, Christoffer Dall <christoffer.dall@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Cornelia Huck <cohuck@redhat.com>, James Hogan <james.hogan@imgtec.com>, Paul Mackerras <paulus@samba.org>, kernel-hardening@lists.openwall.com, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kvm@vger.kernel.org" <kvm@vger.kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Cornelia Huck <cohuck@redhat.com>, James Hogan <james.hogan@imgtec.com>, Paul Mackerras <paulus@samba.org>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Christian Borntraeger <borntraeger@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Thu, Oct 26, 2017 at 3:45 PM, Paolo Bonzini <pbonzini@redhat.com> wrote:
-> This ioctl is obsolete (it was used by Xenner as far as I know) but
-> still let's not break it gratuitously...  Its handler is copying
-> directly into struct kvm.  Go through a bounce buffer instead, with
-> the added benefit that we can actually do something useful with the
-> flags argument---the previous code was exiting with -EINVAL but still
-> doing the copy.
+> On x86, ARM and s390, struct kvm_vcpu_arch has a usercopy region
+> taht is read and written by the KVM_GET/SET_CPUID2 ioctls (x86)
+> or KVM_GET/SET_ONE_REG (ARM/s390).  Without whitelisting the area,
+> KVM is completely broken on those architectures with usercopy hardening
+> enabled.
 >
-> This technically is a userspace ABI breakage, but since no one should be
-> using the ioctl, it's a good occasion to see if someone actually
-> complains.
+> For now, allow writing to the entire struct on all architectures.
+> The KVM tree will not refine this to an architecture-specific
+> subset of struct kvm_vcpu_arch.
 >
 > Cc: kernel-hardening@lists.openwall.com
 > Cc: Kees Cook <keescook@chromium.org>
+> Cc: Christian Borntraeger <borntraeger@redhat.com>
+> Cc: Christoffer Dall <cdall@linaro.org>
 > Cc: Radim Kr=C4=8Dm=C3=A1=C5=99 <rkrcmar@redhat.com>
 > Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
 > ---
->  arch/x86/kvm/x86.c | 7 ++++---
->  1 file changed, 4 insertions(+), 3 deletions(-)
+>  virt/kvm/kvm_main.c | 8 ++++++--
+>  1 file changed, 6 insertions(+), 2 deletions(-)
 >
-> diff --git a/arch/x86/kvm/x86.c b/arch/x86/kvm/x86.c
-> index 272320eb328c..f32fbfb833b3 100644
-> --- a/arch/x86/kvm/x86.c
-> +++ b/arch/x86/kvm/x86.c
-> @@ -4187,13 +4187,14 @@ long kvm_arch_vm_ioctl(struct file *filp,
->                 mutex_unlock(&kvm->lock);
->                 break;
->         case KVM_XEN_HVM_CONFIG: {
-> +               struct kvm_xen_hvm_config xhc;
->                 r =3D -EFAULT;
-> -               if (copy_from_user(&kvm->arch.xen_hvm_config, argp,
-> -                                  sizeof(struct kvm_xen_hvm_config)))
-> +               if (copy_from_user(&xhc, argp, sizeof(xhc)))
-
-This is replacing a builtin_const size argument, which would already
-be allowed by usercopy hardening (const sizes are implicit whitelists,
-since they cannot change size at runtime). However, as you point out,
-this API should already have been doing a bounce copy to check the
-flags sanity.
-
-(I'll add this to the hardening series, thanks!)
-
--Kees
-
->                         goto out;
->                 r =3D -EINVAL;
-> -               if (kvm->arch.xen_hvm_config.flags)
-> +               if (xhc.flags)
->                         goto out;
-> +               memcpy(&kvm->arch.xen_hvm_config, &xhc, sizeof(xhc));
->                 r =3D 0;
->                 break;
->         }
+> diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
+> index 4d81f6ded88e..b4809ccfdfa1 100644
+> --- a/virt/kvm/kvm_main.c
+> +++ b/virt/kvm/kvm_main.c
+> @@ -4005,8 +4005,12 @@ int kvm_init(void *opaque, unsigned vcpu_size, uns=
+igned vcpu_align,
+>         /* A kmem cache lets us meet the alignment requirements of fx_sav=
+e. */
+>         if (!vcpu_align)
+>                 vcpu_align =3D __alignof__(struct kvm_vcpu);
+> -       kvm_vcpu_cache =3D kmem_cache_create("kvm_vcpu", vcpu_size, vcpu_=
+align,
+> -                                          0, NULL);
+> +       kvm_vcpu_cache =3D
+> +               kmem_cache_create_usercopy("kvm_vcpu",
+> +                                          sizeof(struct kvm_vcpu), vcpu_=
+align,
+> +                                          0, offsetof(struct kvm_vcpu, a=
+rch),
+> +                                          sizeof_field(struct kvm_vcpu, =
+arch),
+> +                                          NULL);
+>         if (!kvm_vcpu_cache) {
+>                 r =3D -ENOMEM;
+>                 goto out_free_3;
 > --
 > 2.14.2
->
 
-
-
---=20
-Kees Cook
-Pixel Security
+Acked-by: Christoffer Dall <christoffer.dall@linaro.org>
