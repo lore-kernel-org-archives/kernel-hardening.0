@@ -1,74 +1,66 @@
 From: Mark Rutland <mark.rutland@arm.com>
-Date: Thu, 26 Oct 2017 10:09:40 +0100
-Message-Id: <20171026090942.7041-1-mark.rutland@arm.com>
-Subject: [kernel-hardening] [RFC PATCH 0/2] arm64: optional paranoid __{get,put}_user checks
+Date: Thu, 26 Oct 2017 10:09:41 +0100
+Message-Id: <20171026090942.7041-2-mark.rutland@arm.com>
+In-Reply-To: <20171026090942.7041-1-mark.rutland@arm.com>
+References: <20171026090942.7041-1-mark.rutland@arm.com>
+Subject: [kernel-hardening] [RFC PATCH 1/2] arm64: write __range_ok() in C
 To: linux-arm-kernel@lists.infradead.org
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Will Deacon <will.deacon@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+Currently arm64's __range_ok() is written in assembly for efficiency.
 
-In Prague, Kees mentioned that it would be nice to have a mechanism to
-catch bad __{get,put}_user uses, such as the recent CVE-2017-5123 [1,2]
-issue with unsafe_put_user() in waitid().
+This hides the logic from the compiler, preventing the compiler from
+making some optimizations, such as re-ordering instructions or folding
+multiple calls to __range_ok().
 
-These patches allow an optional access_ok() check to be dropped in
-arm64's __{get,put}_user() primitives. These will then BUG() if a bad
-user pointer is passed (which should only happen in the absence of an
-earlier access_ok() check).
+This patch uses GCC's __builtin_uaddl_overflow() to provide an
+equivalent, efficient check, while giving the compiler the visibility it
+needs to optimize the check. In testing with v4.14-rc5 using the Linaro
+17.05 GCC 6.3.1 toolchain, this has no impact on the kernel Image size,
+(but results in a smaller vmlinux).
 
-The first patch rewrites the arm64 access_ok() check in C. This gives
-the compiler the visibility it needs to elide redundant access_ok()
-checks, so in the common case:
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Cc: Catalin Marinas <catalin.marinas@arm.com>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@redhat.com>
+Cc: Will Deacon <will.deacon@arm.com>
+---
+ arch/arm64/include/asm/uaccess.h | 19 +++++++++++--------
+ 1 file changed, 11 insertions(+), 8 deletions(-)
 
-  get_user()
-    access_ok()
-    __get_user()
-      BUG_ON(!access_ok())
-      <uaccess asm>
-
-... the compiler can determine that the second access_ok() must return
-true, and can elide it along with the BUG_ON(), leaving:
-
-  get_user()
-    access_ok()
-      __get_user()
-        <uaccess asm>
-
-... and thus this sanity check can have no cost in the common case.
-
-The compiler doesn't always have the visibility to do this (e.g. if the
-two access_ok() checks are in different compilation units), but it seems
-to manage to do this most of the time -- In testing with v4.14-rc5
-defconfig this only increases the total Image size by 4KiB.
-
-I had a go at turning this into a BUILD_BUG_ON(), to see if we could
-catch this issue at compile time. However, my GCC wasn't able to remove
-the BUILD_BUG() from some {get,put}_user cases. Maybe we can fix that,
-or maybe we can have some static analysis catch this at build time.
-
-It's entirely possible that I've made some catastrophic mistake in these
-patches; I've only build-tested them so far, and I don't currently have
-access to hardware to test on.
-
-I also haven't yet modified __copy_{to,from}_user and friends along
-similar lines, so this is incomplete. If there aren't any major
-objections to this approach, I can fold those in for the next spin.
-
-Thanks,
-Mark.
-
-[1] https://lwn.net/Articles/736348/
-[2] https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=96ca579a1ecc943b75beba58bebb0356f6cc4b51
-
-
-Mark Rutland (2):
-  arm64: write __range_ok() in C
-  arm64: allow paranoid __{get,put}user
-
- arch/arm64/Kconfig               |  9 +++++++++
- arch/arm64/include/asm/uaccess.h | 27 +++++++++++++++++++--------
- 2 files changed, 28 insertions(+), 8 deletions(-)
-
+diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
+index fc0f9eb66039..36f84ec92b9d 100644
+--- a/arch/arm64/include/asm/uaccess.h
++++ b/arch/arm64/include/asm/uaccess.h
+@@ -70,17 +70,20 @@ static inline void set_fs(mm_segment_t fs)
+  *
+  * This needs 65-bit arithmetic.
+  */
++static bool __range_ok_c(unsigned long addr, unsigned long size)
++{
++	unsigned long result;
++
++	if (__builtin_uaddl_overflow(addr, size, &result))
++		return false;
++
++	return result < current_thread_info()->addr_limit;
++}
++
+ #define __range_ok(addr, size)						\
+ ({									\
+-	unsigned long __addr = (unsigned long)(addr);			\
+-	unsigned long flag, roksum;					\
+ 	__chk_user_ptr(addr);						\
+-	asm("adds %1, %1, %3; ccmp %1, %4, #2, cc; cset %0, ls"		\
+-		: "=&r" (flag), "=&r" (roksum)				\
+-		: "1" (__addr), "Ir" (size),				\
+-		  "r" (current_thread_info()->addr_limit)		\
+-		: "cc");						\
+-	flag;								\
++	__range_ok_c((unsigned long)(addr), (unsigned long)(size));	\
+ })
+ 
+ /*
 -- 
 2.11.0
