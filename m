@@ -1,36 +1,89 @@
-Date: Thu, 26 Oct 2017 20:10:36 +1100
+Date: Thu, 26 Oct 2017 20:37:28 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171026091036.GI12341@eros>
-References: <CAHmME9rZE0oSOq6KecY1pTMsJa4dK2sCyuMRZbFjnamZkHXViA@mail.gmail.com>
- <20171025222727.GB12341@eros>
- <CAHmME9rdfLNZD1bhvA4Xh=kdEN-7-FSV8aU0y_ky3Ts2zoPd4Q@mail.gmail.com>
- <20171026070003.GA25583@kroah.com>
+Message-ID: <20171026093728.GJ12341@eros>
+References: <1508986436-31966-1-git-send-email-me@tobin.cc>
+ <1508986436-31966-2-git-send-email-me@tobin.cc>
+ <1508993843.10651.22.camel@perches.com>
+ <20171026062734.GH12341@eros>
+ <1509005139.10651.39.camel@perches.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171026070003.GA25583@kroah.com>
-Subject: [kernel-hardening] Re: [PATCH v7] printk: hash addresses printed with %p
-To: Greg KH <gregkh@linuxfoundation.org>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, kernel-hardening@lists.openwall.com, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <1509005139.10651.39.camel@perches.com>
+Subject: [kernel-hardening] Re: [PATCH V8 1/2] printk: remove tabular output for NULL pointer
+To: Joe Perches <joe@perches.com>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Oct 26, 2017 at 09:00:03AM +0200, Greg KH wrote:
-> On Thu, Oct 26, 2017 at 12:59:08AM +0200, Jason A. Donenfeld wrote:
-> > On Thu, Oct 26, 2017 at 12:27 AM, Tobin C. Harding <me@tobin.cc> wrote:
-> > > How good is unlikely()?
+On Thu, Oct 26, 2017 at 01:05:39AM -0700, Joe Perches wrote:
+> On Thu, 2017-10-26 at 17:27 +1100, Tobin C. Harding wrote:
+> > Hi Joe,
 > > 
-> > It places that branch way at the bottom of the function so that it's
-> > less likely to pollute the icache.
+> > thanks for your review.
+> > 
+> > On Wed, Oct 25, 2017 at 09:57:23PM -0700, Joe Perches wrote:
+> > > On Thu, 2017-10-26 at 13:53 +1100, Tobin C. Harding wrote:
+> > > > Currently pointer() checks for a NULL pointer argument and then if so
+> > > > attempts to print "(null)" with _some_ standard width. This width cannot
+> > > > correctly be ascertained here because many of the printk specifiers
+> > > > print pointers of varying widths.
+> > > 
+> > > I believe this is not a good change.
+> > > Only pointers without a <foo> extension call pointer()
+> >
+> > Sorry, I don't understand what you mean here. All the %p<foo> specifier code is
+> > handled by pointer()?
 > 
-> But always measure it.  Lots of times (old numbers were 90% or so), we
-> get the marking wrong, so please, always benchmark the thing to verify
-> it actually is doing what you think it should be doing, otherwise it
-> could make the code worse.
+> Sorry, I was imprecise/wrong.
+> 
+> None of the %p<foo> extensions except %pK and %p<invalid_foo>
+> actually use this bit of the pointer() call.
 
-Does this come under 'premature optimization is the root of all evil'?
+	if (!ptr && *fmt != 'K') {
+		/*
+		 * Print (null) with the same width as a pointer so it makes
+		 * tabular output look nice.
+		 */
+		if (spec.field_width == -1)
+			spec.field_width = default_width;
+		return string(buf, end, "(null)", spec);
+	}
 
-Should we be leaving out things like unlikely() and __read_only until
-the code has been profiled?
+Is there something I'm missing here? This code reads like its all %p<foo>
+(including %p and %p<invalid_foo>) except %pK that hit this block when
+a NULL pointer is passed in.
 
-thanks,
+> All of the other valid %p<foo> extension uses do not end up
+> at this block being executed so it's effectively only regular
+> pointers being output by number()
+> 
+> > > > Remove the attempt to print NULL pointers with a correct width.
+> > > 
+> > > the correct width for a %p is the default width.
+> > 
+> > It is the default width if we are printing addresses. Once we hash 64
+> > bit address to a 32 bit identifier then we don't have a default width.
+> 
+> Perhaps that 32 bit identifier should use leading 0's for
+> the default width.
+
+That's a fair comment.
+
+> aside:
+> 
+> Why hash 64 bits to 32?
+> Why shouldn't the hash width be 64 bits on 64 bit systems?
+
+Quoted from Linus in an earlier thread discussing this change
+
+	Date: Thu, 12 Oct 2017 11:37:22 -0700 Linus Torvalds wrote:
+
+	In fact, I'd prefer mapping the pointer to a 32-bit value, even on
+	64-bit architectures. When people use these things for debugging and
+	for identifying which device node or socket or whatever they are
+	tracking, we're generally talking a (small) handful of different
+	devices or whatever.
+
+
+Hope this helps,
 Tobin.
