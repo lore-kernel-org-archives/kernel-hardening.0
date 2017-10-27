@@ -1,49 +1,51 @@
-Date: Fri, 27 Oct 2017 22:33:01 +0900
-From: Sergey Senozhatsky <sergey.senozhatsky@gmail.com>
-Message-ID: <20171027133301.GA612@tigerII.localdomain>
-References: <1508986436-31966-1-git-send-email-me@tobin.cc>
+Date: Fri, 27 Oct 2017 16:41:13 +0100
+From: Will Deacon <will.deacon@arm.com>
+Message-ID: <20171027154113.GA13737@arm.com>
+References: <20171026090942.7041-1-mark.rutland@arm.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1508986436-31966-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] Re: [PATCH V8 0/2] printk: hash addresses printed with %p
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
+In-Reply-To: <20171026090942.7041-1-mark.rutland@arm.com>
+Subject: [kernel-hardening] Re: [RFC PATCH 0/2] arm64: optional paranoid __{get,put}_user checks
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Catalin Marinas <catalin.marinas@arm.com>, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On (10/26/17 13:53), Tobin C. Harding wrote:
-> Currently there are many places in the kernel where addresses are being
-> printed using an unadorned %p. Kernel pointers should be printed using
-> %pK allowing some control via the kptr_restrict sysctl. Exposing
-> addresses gives attackers sensitive information about the kernel layout
-> in memory.
+On Thu, Oct 26, 2017 at 10:09:40AM +0100, Mark Rutland wrote:
+> Hi,
 > 
-> We can reduce the attack surface by hashing all addresses printed with
-> %p. This will of course break some users, forcing code printing needed
-> addresses to be updated.
+> In Prague, Kees mentioned that it would be nice to have a mechanism to
+> catch bad __{get,put}_user uses, such as the recent CVE-2017-5123 [1,2]
+> issue with unsafe_put_user() in waitid().
 > 
-> With this version we include hashing of malformed specifiers also.
-> Malformed specifiers include incomplete (e.g %pi) and also non-existent
-> specifiers. checkpatch should warn for non-existent specifiers but
-> AFAICT won't warn for incomplete specifiers.
+> These patches allow an optional access_ok() check to be dropped in
+> arm64's __{get,put}_user() primitives. These will then BUG() if a bad
+> user pointer is passed (which should only happen in the absence of an
+> earlier access_ok() check).
 > 
-> Here is the behaviour that this set implements.
+> The first patch rewrites the arm64 access_ok() check in C. This gives
+> the compiler the visibility it needs to elide redundant access_ok()
+> checks, so in the common case:
 > 
-> For kpt_restrict==0
+>   get_user()
+>     access_ok()
+>     __get_user()
+>       BUG_ON(!access_ok())
+>       <uaccess asm>
 > 
-> Randomness not ready:
->   printed with %p: 		(pointer)          # NOTE: with padding
-> Valid pointer:
->   printed with %pK: 		deadbeefdeadbeef
->   printed with %p: 		0xdeadbeef
->   malformed specifier (eg %i):  0xdeadbeef
-> NULL pointer:
->   printed with %pK: 		0000000000000000
->   printed with %p: 		(null)               # NOTE: no padding
->   malformed specifier (eg %i):  (null)
+> ... the compiler can determine that the second access_ok() must return
+> true, and can elide it along with the BUG_ON(), leaving:
+> 
+>   get_user()
+>     access_ok()
+>       __get_user()
+>         <uaccess asm>
+> 
+> ... and thus this sanity check can have no cost in the common case.
 
-a quick question:
- do we care about cases when kernel pointers are printed with %x/%X and
- not with %p?
+Probably a stupid question, but why not just move the access_ok check
+into __{get,put}_user and remove it from {get,put}_user? We can also
+then move the uaccess_{enable,disable}_not_uao calls out from the __
+variants so that we can implement user_access_{begin,end}.
 
-	-ss
+Will
