@@ -1,359 +1,277 @@
-From: "Tobin C. Harding" <me@tobin.cc>
-Date: Mon, 30 Oct 2017 09:59:16 +1100
-Message-Id: <1509317956-28041-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [PATCH V9] printk: hash addresses printed with %p
-To: kernel-hardening@lists.openwall.com
-Cc: "Tobin C. Harding" <me@tobin.cc>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
+References: <1508631773-2502-1-git-send-email-alex.popov@linux.com>
+ <1508631773-2502-3-git-send-email-alex.popov@linux.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <d74e0d32-d794-62d1-27fa-d96f4cf37522@linux.com>
+Date: Mon, 30 Oct 2017 19:51:33 +0300
+MIME-Version: 1.0
+In-Reply-To: <1508631773-2502-3-git-send-email-alex.popov@linux.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH RFC v5 2/5] gcc-plugins: Add STACKLEAK plugin for tracking
+ the kernel stack
+To: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, tycho@docker.com, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently there are many places in the kernel where addresses are being
-printed using an unadorned %p. Kernel pointers should be printed using
-%pK allowing some control via the kptr_restrict sysctl. Exposing addresses
-gives attackers sensitive information about the kernel layout in memory.
+On 22.10.2017 03:22, Alexander Popov wrote:
+> The STACKLEAK feature erases the kernel stack before returning from
+> syscalls. That reduces the information which kernel stack leak bugs can
+> reveal and blocks some uninitialized stack variable attacks. Moreover,
+> STACKLEAK provides runtime checks for kernel stack overflow detection.
+> 
+> This commit introduces the STACKLEAK gcc plugin. It is needed for:
+>  - tracking the lowest border of the kernel stack, which is important
+>     for the code erasing the used part of the kernel stack at the end
+>     of syscalls (comes in a separate commit);
+>  - checking that alloca calls don't cause stack overflow.
+> 
+> So this plugin instruments the kernel code inserting:
+>  - the check_alloca() call before alloca and the track_stack() call
+>     after it;
+>  - the track_stack() call for the functions with a stack frame size
+>     greater than or equal to CONFIG_STACKLEAK_TRACK_MIN_SIZE.
+> 
+> The STACKLEAK feature is ported from grsecurity/PaX. More information at:
+>   https://grsecurity.net/
+>   https://pax.grsecurity.net/
+> 
+> This code is modified from Brad Spengler/PaX Team's code in the last
+> public patch of grsecurity/PaX based on our understanding of the code.
+> Changes or omissions from the original code are ours and don't reflect
+> the original grsecurity/PaX code.
+> 
+> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+> ---
+>  arch/Kconfig                           |  12 +
+>  arch/x86/kernel/dumpstack.c            |  15 ++
+>  fs/exec.c                              |  30 +++
+>  scripts/Makefile.gcc-plugins           |   3 +
+>  scripts/gcc-plugins/stackleak_plugin.c | 470 +++++++++++++++++++++++++++++++++
+>  5 files changed, 530 insertions(+)
+>  create mode 100644 scripts/gcc-plugins/stackleak_plugin.c
+> 
 
-We can reduce the attack surface by hashing all addresses printed with
-%p. This will of course break some users, forcing code printing needed
-addresses to be updated.
+[...]
 
-For what it's worth, usage of unadorned %p can be broken down as
-follows (thanks to Joe Perches).
+> diff --git a/fs/exec.c b/fs/exec.c
+> index 3e14ba2..481ef4b 100644
+> --- a/fs/exec.c
+> +++ b/fs/exec.c
+> @@ -1958,3 +1958,33 @@ COMPAT_SYSCALL_DEFINE5(execveat, int, fd,
+>  				  argv, envp, flags);
+>  }
+>  #endif
+> +
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +void __used track_stack(void)
+> +{
+> +	/*
+> +	 * N.B. The arch-specific part of the STACKLEAK feature fills the
+> +	 * kernel stack with the poison value, which has the register width.
+> +	 * That code assumes that the value of thread.lowest_stack is aligned
+> +	 * on the register width boundary.
+> +	 *
+> +	 * That is true for x86 and x86_64 because of the kernel stack
+> +	 * alignment on these platforms (for details, see cc_stack_align in
+> +	 * arch/x86/Makefile). Take care of that when you port STACKLEAK to
+> +	 * new platforms.
+> +	 */
+> +	unsigned long sp = (unsigned long)&sp;
+> +
+> +	if (sp < current->thread.lowest_stack &&
+> +	    sp >= (unsigned long)task_stack_page(current) +
+> +					2 * sizeof(unsigned long)) {
+> +		current->thread.lowest_stack = sp;
+> +	}
+> +
+> +#ifndef CONFIG_VMAP_STACK
+> +	if (unlikely((sp & (THREAD_SIZE - 1)) < (THREAD_SIZE / 16)))
+> +		BUG();
 
-$ git grep -E '%p[^A-Za-z0-9]' | cut -f1 -d"/" | sort | uniq -c
-   1084 arch
-     20 block
-     10 crypto
-     32 Documentation
-   8121 drivers
-   1221 fs
-    143 include
-    101 kernel
-     69 lib
-    100 mm
-   1510 net
-     40 samples
-      7 scripts
-     11 security
-    166 sound
-    152 tools
-      2 virt
+Hello, I need your help! I'm trying to solve the problem with the recursive
+BUG() here (currently on x86_64).
 
-Add function ptr_to_id() to map an address to a 32 bit unique
-identifier. Hash any unadorned usage of specifier %p and any malformed
-specifiers. 
+When the thread stack is exhausted, this BUG() is hit. But do_error_trap(),
+which handles the exception, calls track_stack() itself again (since it is
+instrumented by the gcc plugin). So this recursion proceeds with exhausting the
+thread stack.
 
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
+Finally the stack pointer oversteps the stack bottom and the bug is not hit
+anymore, because (sp & (THREAD_SIZE - 1)) is big again. And we have such an oops
+message printed:
 
----
+[   17.529075] ------------[ cut here ]------------
+[   17.529075] kernel BUG at fs/exec.c:1986!
+[   17.529075] invalid opcode: 0000 [#1] SMP
+[   17.529075] Dumping ftrace buffer:
+[   17.529075]    (ftrace buffer empty)
+[   17.529075] Modules linked in: lkdtm
+[   17.529075] CPU: 0 PID: 2651 Comm: sh Not tainted 4.14.0-rc5+ #10
+[   17.529075] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS
+Ubuntu-1.8.2-1ubuntu1 04/01/2014
+[   17.529075] task: ffff880079950040 task.stack: ffff88007a904000
+[   17.529075] RIP: 0010:track_stack+0x52/0x60
+[   17.529075] RSP: 0018:ffff88007a904078 EFLAGS: 00010193
+[   17.529075] RAX: 0000000000000078 RBX: 0000000000000006 RCX: ffff88007a904010
+[   17.529075] RDX: ffff880079950040 RSI: ffff88007a904000 RDI: ffff88007a904168
+[   17.529075] RBP: ffff88007a904080 R08: 0000000000000004 R09: 000000000000018c
+[   17.529075] R10: 0000000000000000 R11: 0000000000000000 R12: ffff88007a904168
+[   17.529075] R13: 0000000000000004 R14: ffffffff81bd33c9 R15: 0000000000000000
+[   17.529075] FS:  00007f469977e700(0000) GS:ffff88007fc00000(0000)
+knlGS:0000000000000000
+[   17.529075] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[   17.529075] CR2: 00000000021ab618 CR3: 000000007a404000 CR4: 00000000000006f0
+[   17.529075] Call Trace:
+[   17.529075]  do_error_trap+0x25/0xe0
+[   17.529075]  do_invalid_op+0x2a/0x30
+[   17.529075]  invalid_op+0x18/0x20
+[   17.529075] RIP: 0010:track_stack+0x52/0x60
+[   17.529075] RSP: 0018:ffff88007a904218 EFLAGS: 00010193
+[   17.529075] RAX: 0000000000000218 RBX: 0000000000000006 RCX: ffff88007a904010
+[   17.529075] RDX: ffff880079950040 RSI: ffff88007a904000 RDI: ffff88007a904308
+[   17.529075] RBP: ffff88007a904220 R08: 0000000000000004 R09: 000000000000018c
+[   17.529075] R10: 0000000000000000 R11: 0000000000000000 R12: ffff88007a904308
+[   17.529075] R13: 0000000000000004 R14: ffffffff81bd33c9 R15: 0000000000000000
+[   17.529075]  do_error_trap+0x25/0xe0
+[   17.529075]  do_invalid_op+0x2a/0x30
+[   17.529075]  invalid_op+0x18/0x20
+[   17.529075] RIP: 0010:track_stack+0x52/0x60
+[   17.529075] RSP: 0018:ffff88007a9043b8 EFLAGS: 00010393
+[   17.529075] RAX: 00000000000003b8 RBX: ffff88007a907d90 RCX: ffff88007a904010
+[   17.529075] RDX: ffff880079950040 RSI: ffff88007a904000 RDI: ffff88007a907d90
+[   17.529075] RBP: ffff88007a9043c0 R08: 0000000000000000 R09: 000000000000018c
+[   17.529075] R10: 0000000000000000 R11: 0000000000000000 R12: 00000000000003d0
+[   17.529075] R13: ffffffffc0007020 R14: 0000000000000016 R15: 000000000000003d
+[   17.529075]  recursion+0x14/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  ? put_dec+0x24/0xb0
+[   17.529075]  ? put_dec+0x24/0xb0
+[   17.529075]  ? number+0x2c5/0x2e0
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  ? vsnprintf+0xd1/0x4b0
+[   17.529075]  ? wait_for_xmitr+0x32/0x90
+[   17.529075]  ? serial8250_console_putchar+0x25/0x30
+[   17.529075]  ? wait_for_xmitr+0x90/0x90
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  ? up+0x30/0x50
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  ? vprintk_emit+0x24a/0x2d0
+[   17.529075]  recursion+0x58/0x70 [lkdtm]
+[   17.529075]  ? vprintk_func+0x31/0x80
+[   17.529075]  ? printk+0x4a/0x55
+[   17.529075]  lkdtm_STACKLEAK_TRACK_STACK+0x39/0x4d [lkdtm]
+[   17.529075]  lkdtm_do_action+0x18/0x20 [lkdtm]
+[   17.529075]  direct_entry+0xcc/0x130 [lkdtm]
+[   17.529075]  full_proxy_write+0x4f/0x90
+[   17.529075]  __vfs_write+0x36/0x140
+[   17.529075]  ? security_file_permission+0x36/0xb0
+[   17.529075]  vfs_write+0xb1/0x1a0
+[   17.529075]  SyS_write+0x46/0xa0
+[   17.529075]  entry_SYSCALL_64_fastpath+0x1a/0xaa
+[   17.529075] RIP: 0033:0x7f46992a1600
+[   17.529075] RSP: 002b:00007fffe4466838 EFLAGS: 00000246 ORIG_RAX:
+0000000000000001
+[   17.529075] RAX: ffffffffffffffda RBX: 000000000000006b RCX: 00007f46992a1600
+[   17.529075] RDX: 0000000000000016 RSI: 00000000021a9610 RDI: 0000000000000001
+[   17.529075] RBP: 0000000000002710 R08: 0000000000000003 R09: 0000000000002010
+[   17.529075] R10: 0000000000000871 R11: 0000000000000246 R12: 00007f469955eb58
+[   17.529075] R13: 0000000000002010 R14: 00000000021a9600 R15: 00007f469955eb00
+[   17.529075] Code: 8d 4e 10 48 39 c8 73 0f 25 ff 3f 00 00 48 3d ff 03 00 00 76
+16 c9 c3 48 89 82 30 0a 00 00 25 ff 3f 00 00 48 3d ff 03 00 00 77 ea <0f> 0b 66
+90 66 2e 0f 1f 84 00 00 00 00 00 55 48 89 e5 41 54 53
+[   17.529075] RIP: track_stack+0x52/0x60 RSP: ffff88007a904078
+[   17.529075] ---[ end trace 3f0d8f585f4dcc08 ]---
 
-It seems we don't have consensus on a couple of things
 
-1. The size of the hashed address on 64 bit architectures.
-2. The use of '0x' pre-fix for hashed addresses.
+But printing this message spoils the memory below the exhausted stack, right?
 
-In regards to (1), we are agreed that we only need 32 bits of
-information. There is some questions however that outputting _only_ 32
-bits may break userland.
+Can we somehow handle this BUG() in another stack to avoid the recursion?
 
-In regards to (2), irrespective of the arguments for and against, if
-point 1 is correct and changing the format will break userland then we
-can't add the '0x' suffix for the same reason.
+Thanks!
 
-Therefore this patch masks off the first 32 bits, retaining
-only 32 bits of information. We do not add a '0x' suffix. All in all,
-that results in _no_ change to the format of output only the content of
-the output.
+> +#endif /* !CONFIG_VMAP_STACK */
+> +}
+> +EXPORT_SYMBOL(track_stack);
+> +#endif /* CONFIG_GCC_PLUGIN_STACKLEAK */
 
-The leading 0's also make explicit that we have messed with the address,
-maybe this will save some debugging time by doing so. Although this
-would probably already be obvious since there is no leading 'ffff'.
+[...]
 
-We hash malformed specifiers also. Malformed specifiers include
-incomplete (e.g %pi) and also non-existent specifiers. checkpatch should
-warn for non-existent specifiers but AFAICT won't warn for incomplete
-specifiers.
-
-Here is the behaviour that this patch implements.
-
-For kpt_restrict==0
-
-Randomness not ready:
-  printed with %p: 		(pointer value)     # NOTE: with padding
-Valid pointer:
-  printed with %pK: 		deadbeefdeadbeef
-  printed with %p: 		00000000deadbeef
-  malformed specifier (eg %i):  00000000deadbeef
-NULL pointer:
-  printed with %pK: 		0000000000000000
-  printed with %p: 		         (null)     # NOTE: with padding
-  malformed specifier (eg %i):           (null)
-
-For kpt_restrict==2
-
-Valid pointer:
-  printed with %pK: 		0000000000000000
-
-All other output as for kptr_restrict==0
-
-V9:
- - Drop the initial patch from V8, leaving null pointer handling as is.
- - Print the hashed ID _without_ a '0x' suffix.
- - Mask the first 32 bits of the hashed ID to all zeros on 64 bit
-   architectures.
-
-V8:
- - Add second patch cleaning up null pointer printing in pointer()
- - Move %pK handling to separate function, further cleaning up pointer()
- - Move ptr_to_id() call outside of switch statement making hashing
-   the default behaviour (including malformed specifiers).
- - Remove use of static_key, replace with simple boolean.
-
-V7:
- - Use tabs instead of spaces (ouch!).
-
-V6:
- - Use __early_initcall() to fill the SipHash key.
- - Use static keys to guard hashing before the key is available.
-
-V5:
- - Remove spin lock.
- - Add Jason A. Donenfeld to CC list by request.
- - Add Theodore Ts'o to CC list due to comment on previous version.
-
-V4:
- - Remove changes to siphash.{ch}
- - Do word size check, and return value cast, directly in ptr_to_id().
- - Use add_ready_random_callback() to guard call to get_random_bytes()
-
-V3:
- - Use atomic_xchg() to guard setting [random] key.
- - Remove erroneous white space change.
-
-V2:
- - Use SipHash to do the hashing.
-
-The discussion related to this patch has been fragmented. There are
-three threads associated with this patch. Email threads by subject:
-
-[PATCH] printk: hash addresses printed with %p
-[PATCH 0/3] add %pX specifier
-[kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
-
- lib/vsprintf.c | 167 ++++++++++++++++++++++++++++++++++++++++-----------------
- 1 file changed, 119 insertions(+), 48 deletions(-)
-
-diff --git a/lib/vsprintf.c b/lib/vsprintf.c
-index 86c3385b9eb3..0c9a008fc256 100644
---- a/lib/vsprintf.c
-+++ b/lib/vsprintf.c
-@@ -33,6 +33,8 @@
- #include <linux/uuid.h>
- #include <linux/of.h>
- #include <net/addrconf.h>
-+#include <linux/siphash.h>
-+#include <linux/compiler.h>
- #ifdef CONFIG_BLOCK
- #include <linux/blkdev.h>
- #endif
-@@ -1344,6 +1346,57 @@ char *uuid_string(char *buf, char *end, const u8 *addr,
- }
- 
- static noinline_for_stack
-+char *kernel_pointer(char *buf, char *end, const void *ptr,
-+		     struct printf_spec spec)
-+{
-+	spec.base = 16;
-+	spec.flags |= SMALL;
-+	if (spec.field_width == -1) {
-+		spec.field_width = 2 * sizeof(void *);
-+		spec.flags |= ZEROPAD;
-+	}
-+
-+	switch (kptr_restrict) {
-+	case 0:
-+		/* Always print %pK values */
-+		break;
-+	case 1: {
-+		const struct cred *cred;
-+
-+		/*
-+		 * kptr_restrict==1 cannot be used in IRQ context
-+		 * because its test for CAP_SYSLOG would be meaningless.
-+		 */
-+		if (in_irq() || in_serving_softirq() || in_nmi())
-+			return string(buf, end, "pK-error", spec);
-+
-+		/*
-+		 * Only print the real pointer value if the current
-+		 * process has CAP_SYSLOG and is running with the
-+		 * same credentials it started with. This is because
-+		 * access to files is checked at open() time, but %pK
-+		 * checks permission at read() time. We don't want to
-+		 * leak pointer values if a binary opens a file using
-+		 * %pK and then elevates privileges before reading it.
-+		 */
-+		cred = current_cred();
-+		if (!has_capability_noaudit(current, CAP_SYSLOG) ||
-+		    !uid_eq(cred->euid, cred->uid) ||
-+		    !gid_eq(cred->egid, cred->gid))
-+			ptr = NULL;
-+		break;
-+	}
-+	case 2:
-+	default:
-+		/* Always print 0's for %pK */
-+		ptr = NULL;
-+		break;
-+	}
-+
-+	return number(buf, end, (unsigned long)ptr, spec);
-+}
-+
-+static noinline_for_stack
- char *netdev_bits(char *buf, char *end, const void *addr, const char *fmt)
- {
- 	unsigned long long num;
-@@ -1591,6 +1644,66 @@ char *device_node_string(char *buf, char *end, struct device_node *dn,
- 	return widen_string(buf, buf - buf_start, end, spec);
- }
- 
-+static bool have_filled_random_ptr_key __read_mostly;
-+static siphash_key_t ptr_key __read_mostly;
-+
-+static void fill_random_ptr_key(struct random_ready_callback *unused)
-+{
-+	get_random_bytes(&ptr_key, sizeof(ptr_key));
-+	WRITE_ONCE(have_filled_random_ptr_key, true);
-+}
-+
-+static struct random_ready_callback random_ready = {
-+	.func = fill_random_ptr_key
-+};
-+
-+static int __init initialize_ptr_random(void)
-+{
-+	int ret = add_random_ready_callback(&random_ready);
-+
-+	if (!ret)
-+		return 0;
-+	else if (ret == -EALREADY) {
-+		fill_random_ptr_key(&random_ready);
-+		return 0;
-+	}
-+
-+	return ret;
-+}
-+early_initcall(initialize_ptr_random);
-+
-+/* Maps a pointer to a 32 bit unique identifier. */
-+static char *ptr_to_id(char *buf, char *end, void *ptr, struct printf_spec spec)
-+{
-+	unsigned long hashval;
-+	const int default_width = 2 * sizeof(void *);
-+
-+	if (unlikely(!have_filled_random_ptr_key)) {
-+		spec.field_width = default_width;
-+		return string(buf, end, "(pointer value)", spec);
-+	}
-+
-+#ifdef CONFIG_64BIT
-+	hashval = (unsigned long)siphash_1u64((u64)ptr, &ptr_key);
-+	/*
-+	 * Mask off the first 32 bits, this makes explicit that we have
-+	 * modified the address (and 32 bits is plenty for a unique ID).
-+	 */
-+	hashval = hashval & 0xffffffff;
-+#else
-+	hashval = (unsigned long)siphash_1u32((u32)ptr, &ptr_key);
-+#endif
-+
-+	spec.flags |= SMALL;
-+	if (spec.field_width == -1) {
-+		spec.field_width = default_width;
-+		spec.flags |= ZEROPAD;
-+	}
-+	spec.base = 16;
-+
-+	return number(buf, end, hashval, spec);
-+}
-+
- int kptr_restrict __read_mostly;
- 
- /*
-@@ -1703,6 +1816,9 @@ int kptr_restrict __read_mostly;
-  * Note: The difference between 'S' and 'F' is that on ia64 and ppc64
-  * function pointers are really function descriptors, which contain a
-  * pointer to the real address.
-+ *
-+ * Note: The default behaviour (unadorned %p) is to hash the address,
-+ * rendering it useful as a unique identifier.
-  */
- static noinline_for_stack
- char *pointer(const char *fmt, char *buf, char *end, void *ptr,
-@@ -1792,47 +1908,7 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
- 			return buf;
- 		}
- 	case 'K':
--		switch (kptr_restrict) {
--		case 0:
--			/* Always print %pK values */
--			break;
--		case 1: {
--			const struct cred *cred;
--
--			/*
--			 * kptr_restrict==1 cannot be used in IRQ context
--			 * because its test for CAP_SYSLOG would be meaningless.
--			 */
--			if (in_irq() || in_serving_softirq() || in_nmi()) {
--				if (spec.field_width == -1)
--					spec.field_width = default_width;
--				return string(buf, end, "pK-error", spec);
--			}
--
--			/*
--			 * Only print the real pointer value if the current
--			 * process has CAP_SYSLOG and is running with the
--			 * same credentials it started with. This is because
--			 * access to files is checked at open() time, but %pK
--			 * checks permission at read() time. We don't want to
--			 * leak pointer values if a binary opens a file using
--			 * %pK and then elevates privileges before reading it.
--			 */
--			cred = current_cred();
--			if (!has_capability_noaudit(current, CAP_SYSLOG) ||
--			    !uid_eq(cred->euid, cred->uid) ||
--			    !gid_eq(cred->egid, cred->gid))
--				ptr = NULL;
--			break;
--		}
--		case 2:
--		default:
--			/* Always print 0's for %pK */
--			ptr = NULL;
--			break;
--		}
--		break;
--
-+		return kernel_pointer(buf, end, ptr, spec);
- 	case 'N':
- 		return netdev_bits(buf, end, ptr, fmt);
- 	case 'a':
-@@ -1858,14 +1934,9 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
- 			return device_node_string(buf, end, ptr, spec, fmt + 1);
- 		}
- 	}
--	spec.flags |= SMALL;
--	if (spec.field_width == -1) {
--		spec.field_width = default_width;
--		spec.flags |= ZEROPAD;
--	}
--	spec.base = 16;
- 
--	return number(buf, end, (unsigned long) ptr, spec);
-+	/* default is to _not_ leak addresses, hash before printing */
-+	return ptr_to_id(buf, end, ptr, spec);
- }
- 
- /*
--- 
-2.7.4
+Best regards,
+Alexander
