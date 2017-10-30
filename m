@@ -1,37 +1,44 @@
-Date: Mon, 30 Oct 2017 16:22:44 -0400
+Date: Mon, 30 Oct 2017 17:33:22 -0400
 From: Steven Rostedt <rostedt@goodmis.org>
-Message-ID: <20171030162244.4f55e623@gandalf.local.home>
-In-Reply-To: <20171025034934.GD15832@eros>
-References: <1508798008-1692-1-git-send-email-me@tobin.cc>
-	<CAHmME9qRroNJ1i9URtmhFmx_BDJRVdXvyRKdSZ=fAmDpOYnv8A@mail.gmail.com>
-	<20171024003158.GB1429@eros>
-	<CAHmME9ry-=Ve29eRfdMHLa0PgPqGtB=P2YuctgnVSoQN+DvN8w@mail.gmail.com>
-	<20171025034934.GD15832@eros>
+Message-ID: <20171030173322.6ebed7db@gandalf.local.home>
+In-Reply-To: <20171026025838.GG12341@eros>
+References: <1508986436-31966-1-git-send-email-me@tobin.cc>
+	<1508986436-31966-3-git-send-email-me@tobin.cc>
+	<20171026025838.GG12341@eros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v7] printk: hash addresses printed with %p
+Subject: [kernel-hardening] Re: [PATCH V8 2/2] printk: hash addresses printed with %p
 To: "Tobin C. Harding" <me@tobin.cc>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, kernel-hardening@lists.openwall.com, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts,
+ William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 25 Oct 2017 14:49:34 +1100
+On Thu, 26 Oct 2017 13:58:38 +1100
 "Tobin C. Harding" <me@tobin.cc> wrote:
-> 
-> First, the static_key stuff.
-> 
-> DEFINE_STATIC_KEY_TRUE(no_ptr_secret) : Doesn't sleep, just a
-> declaration. 
-> 
-> if (static_branch_unlikely(&no_ptr_secret)) {} : Doesn't sleep, just
-> some assembler to jump to returning true or false.
-> 
-> static_branch_disable(&no_ptr_secret) : Doesn't sleep, just atomic read
-> and set and maybe a WARN_ONCE.
 
-How quickly do you need static_branch_disable() executed? You could
-always pass the work off to a worker thread (that can schedule).
+> > +static bool have_filled_random_ptr_key;
+> > +static siphash_key_t ptr_key __read_mostly;
+> > +
+> > +static void fill_random_ptr_key(struct random_ready_callback *unused)
+> > +{
+> > +	get_random_bytes(&ptr_key, sizeof(ptr_key));
+> > +	WRITE_ONCE(have_filled_random_ptr_key, true);  
+> 
+> This usage of WRITE_ONCE was suggested by Jason A. Donenfeld. I read
+> include/linux/compiler.h but was not able to grok it. Is this enough to
+> stop the compiler re-ordering these two statements? 
+> 
+> Or do I need to read Documentation/memory-barriers.txt [again]?
 
-random_ready_callback -> initiates worker thread -> enables the static branch
+No, the WRITE_ONCE does not stop the compiler from reordering those
+statements. If you need that, then you need to do:
+
+	get_random_bytes(&ptr_key, sizeof(ptr_key));
+	barrier();
+	WRITE_ONCE(have_filled_random_ptr_key, true);
+
+and that only works against interrupts. If you need synchronization
+across CPUs, then you need smp_mb().
 
 -- Steve
