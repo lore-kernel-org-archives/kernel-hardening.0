@@ -1,47 +1,45 @@
-References: <1508631773-2502-1-git-send-email-alex.popov@linux.com>
- <1508631773-2502-3-git-send-email-alex.popov@linux.com>
- <d74e0d32-d794-62d1-27fa-d96f4cf37522@linux.com>
- <20171030173216.72y673m32gra4b55@hirez.programming.kicks-ass.net>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <586ee584-df0d-3c82-a254-16ac1573255a@linux.com>
-Date: Mon, 30 Oct 2017 21:06:30 +0300
+Date: Tue, 31 Oct 2017 08:24:28 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171030212428.GR12341@eros>
+References: <1508798008-1692-1-git-send-email-me@tobin.cc>
+ <CAHmME9qRroNJ1i9URtmhFmx_BDJRVdXvyRKdSZ=fAmDpOYnv8A@mail.gmail.com>
+ <20171024003158.GB1429@eros>
+ <CAHmME9ry-=Ve29eRfdMHLa0PgPqGtB=P2YuctgnVSoQN+DvN8w@mail.gmail.com>
+ <20171025034934.GD15832@eros>
+ <20171030162244.4f55e623@gandalf.local.home>
 MIME-Version: 1.0
-In-Reply-To: <20171030173216.72y673m32gra4b55@hirez.programming.kicks-ass.net>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v5 2/5] gcc-plugins: Add STACKLEAK plugin for tracking
- the kernel stack
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, pageexec@freemail.hu, spender@grsecurity.net, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, tycho@docker.com, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, x86@kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171030162244.4f55e623@gandalf.local.home>
+Subject: [kernel-hardening] Re: [PATCH v7] printk: hash addresses printed with %p
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, kernel-hardening@lists.openwall.com, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Peter,
-
-Thanks for your reply.
-
-On 30.10.2017 20:32, Peter Zijlstra wrote:
-> On Mon, Oct 30, 2017 at 07:51:33PM +0300, Alexander Popov wrote:
->> When the thread stack is exhausted, this BUG() is hit. But do_error_trap(),
->> which handles the exception, calls track_stack() itself again (since it is
->> instrumented by the gcc plugin). So this recursion proceeds with exhausting the
->> thread stack.
+On Mon, Oct 30, 2017 at 04:22:44PM -0400, Steven Rostedt wrote:
+> On Wed, 25 Oct 2017 14:49:34 +1100
+> "Tobin C. Harding" <me@tobin.cc> wrote:
+> > 
+> > First, the static_key stuff.
+> > 
+> > DEFINE_STATIC_KEY_TRUE(no_ptr_secret) : Doesn't sleep, just a
+> > declaration. 
+> > 
+> > if (static_branch_unlikely(&no_ptr_secret)) {} : Doesn't sleep, just
+> > some assembler to jump to returning true or false.
+> > 
+> > static_branch_disable(&no_ptr_secret) : Doesn't sleep, just atomic read
+> > and set and maybe a WARN_ONCE.
 > 
-> Add a __attribute__((nostacktrack)) on it?
+> How quickly do you need static_branch_disable() executed? You could
+> always pass the work off to a worker thread (that can schedule).
+> 
+> random_ready_callback -> initiates worker thread -> enables the static branch
+> 
+> -- Steve
 
-Yes, I already tried some blacklisting in the plugin, but it didn't really help,
-because:
+thanks Steve, v8 and onward does away with the static branch and uses a
+global boolean instead.
 
-1. there are other (more than 5) instrumented functions, that are called during
-BUG() handling too;
-
-2. decreasing CONFIG_STACKLEAK_TRACK_MIN_SIZE would add more instrumented
-functions, which should be manually blacklisted (not good).
-
-I guess handling BUG() in another stack would be a solution. For example, Andy
-Lutomirski calls handle_stack_overflow in the DOUBLEFAULT_STACK
-(arch/x86/mm/fault.c). Should I do something similar?
-
-Thanks!
-
-Best regards,
-Alexander
+thanks,
+Tobin.
