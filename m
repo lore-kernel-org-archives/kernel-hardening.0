@@ -1,54 +1,44 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20171030213345.GS12341@eros>
-References: <20171030213345.GS12341@eros>
+In-Reply-To: <1508986436-31966-1-git-send-email-me@tobin.cc>
+References: <1508986436-31966-1-git-send-email-me@tobin.cc>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 30 Oct 2017 14:52:38 -0700
-Message-ID: <CAGXu5j+3W7ZzxOK5woVkdFP+iQ_Arn9etAhMNFFi349YNey1DQ@mail.gmail.com>
+Date: Mon, 30 Oct 2017 15:03:21 -0700
+Message-ID: <CAGXu5jJvBKd2i-P4LVW_mHY9e3j4JEpaR4=a7dt3CcOvimcuTQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Merge path for KSPP patches
+Subject: [kernel-hardening] Re: [PATCH V8 0/2] printk: hash addresses printed with %p
 To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Kernel-hardening@lists.openwall.com
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 30, 2017 at 2:33 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> Does the KSP Project have a tree (and a maintainer)? I see there is this
-> tree, but it has been idle for 6 years?
+On Wed, Oct 25, 2017 at 7:53 PM, Tobin C. Harding <me@tobin.cc> wrote:
+> Here is the behaviour that this set implements.
 >
-> git://git.kernel.org/pub/scm/linux/kernel/git/arjan/linux-hardening.git
-
-The tree I carry for KSPP carries various things. Presently, gcc
-plugin and hardened usercopy changes go via that tree:
-
-https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/refs/heads
-
-https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=for-next/gcc-plugins
-https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=for-next/usercopy
-
-https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=for-next/kspp
-
-> What is the merge path for kernel hardening patches please?
-
-This depends on where stuff a change is landing. For example,
-arch-specific things (like KASLR improvements) go via the
-per-architecture trees. Smaller system-wide things go via Andrew
-Morton's "mmotm" tree. Larger system-wide things, or things without an
-obvious maintainer, go via my trees.
-
-> I am asking this because the next merge window can't be far away. The
-
-Probably a couple weeks.
-
-> patch hashing pointers printed with %p seems to have stabilized. This is
-> my first _real_ patch outside of staging though so I am not completely
-> sure of the process.
+> For kpt_restrict==0
 >
-> If this is overly pushy, please do say so, I'm new around here and keen
-> to learn the correct etiquette.
+> Randomness not ready:
+>   printed with %p:              (pointer)          # NOTE: with padding
+> Valid pointer:
+>   printed with %pK:             deadbeefdeadbeef
+>   printed with %p:              0xdeadbeef
+>   malformed specifier (eg %i):  0xdeadbeef
 
-Since it's small, I think it should likely go via akpm's tree.
-However, I tend to carry stuff in a separate kspp tree on kernel.org
-just so it can get some build and run testing by the 0day bots.
+I really think we can't include SPECIAL unless _every_ callsite of %p
+is actually doing "0x%p", and then we're replacing all of those. We're
+not doing that, though...
+
+$ git grep '%p\b' | wc -l
+12766
+$ git grep '0x%p\b' | wc -l
+1837
+
+If we need some kind of special marking that this is a hashed
+variable, that should be something other than "0x". If we're using the
+existing "(null)" and new "(pointer)" text, maybe "(hash:xxxxxx)"
+should be used instead? Then the (rare) callers with 0x become
+"0x(hash:xxxx)" and naked callers produce "(hash:xxxx)".
+
+I think the first step for this is to just leave SPECIAL out.
 
 -Kees
 
