@@ -1,58 +1,54 @@
-Date: Tue, 31 Oct 2017 09:33:46 +1100
+Date: Tue, 31 Oct 2017 09:41:02 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171030223346.GX12341@eros>
+Message-ID: <20171030224102.GY12341@eros>
 References: <1508986436-31966-1-git-send-email-me@tobin.cc>
- <CAGXu5jJvBKd2i-P4LVW_mHY9e3j4JEpaR4=a7dt3CcOvimcuTQ@mail.gmail.com>
+ <1508986436-31966-3-git-send-email-me@tobin.cc>
+ <20171026025838.GG12341@eros>
+ <20171030173322.6ebed7db@gandalf.local.home>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jJvBKd2i-P4LVW_mHY9e3j4JEpaR4=a7dt3CcOvimcuTQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH V8 0/2] printk: hash addresses printed with %p
-To: Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <20171030173322.6ebed7db@gandalf.local.home>
+Subject: [kernel-hardening] Re: [PATCH V8 2/2] printk: hash addresses printed with %p
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 30, 2017 at 03:03:21PM -0700, Kees Cook wrote:
-> On Wed, Oct 25, 2017 at 7:53 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> > Here is the behaviour that this set implements.
-> >
-> > For kpt_restrict==0
-> >
-> > Randomness not ready:
-> >   printed with %p:              (pointer)          # NOTE: with padding
-> > Valid pointer:
-> >   printed with %pK:             deadbeefdeadbeef
-> >   printed with %p:              0xdeadbeef
-> >   malformed specifier (eg %i):  0xdeadbeef
+On Mon, Oct 30, 2017 at 05:33:22PM -0400, Steven Rostedt wrote:
+> On Thu, 26 Oct 2017 13:58:38 +1100
+> "Tobin C. Harding" <me@tobin.cc> wrote:
 > 
-> I really think we can't include SPECIAL unless _every_ callsite of %p
-> is actually doing "0x%p", and then we're replacing all of those. We're
-> not doing that, though...
+> > > +static bool have_filled_random_ptr_key;
+> > > +static siphash_key_t ptr_key __read_mostly;
+> > > +
+> > > +static void fill_random_ptr_key(struct random_ready_callback *unused)
+> > > +{
+> > > +	get_random_bytes(&ptr_key, sizeof(ptr_key));
+> > > +	WRITE_ONCE(have_filled_random_ptr_key, true);  
+> > 
+> > This usage of WRITE_ONCE was suggested by Jason A. Donenfeld. I read
+> > include/linux/compiler.h but was not able to grok it. Is this enough to
+> > stop the compiler re-ordering these two statements? 
+> > 
+> > Or do I need to read Documentation/memory-barriers.txt [again]?
 > 
-> $ git grep '%p\b' | wc -l
-> 12766
-> $ git grep '0x%p\b' | wc -l
-> 1837
+> No, the WRITE_ONCE does not stop the compiler from reordering those
+> statements. If you need that, then you need to do:
 > 
-> If we need some kind of special marking that this is a hashed
-> variable, that should be something other than "0x". If we're using the
-> existing "(null)" and new "(pointer)" text, maybe "(hash:xxxxxx)"
-> should be used instead? Then the (rare) callers with 0x become
-> "0x(hash:xxxx)" and naked callers produce "(hash:xxxx)".
+> 	get_random_bytes(&ptr_key, sizeof(ptr_key));
+> 	barrier();
+> 	WRITE_ONCE(have_filled_random_ptr_key, true);
 > 
-> I think the first step for this is to just leave SPECIAL out.
+> and that only works against interrupts. If you need synchronization
+> across CPUs, then you need smp_mb().
 
-Thanks Kees. V9 leaves SPECIAL out. Also V9 prints the whole 64 bit
-address with the first 32 bits masked to zero. The intent being to _not_
-change the output format from what it currently is. So it will look like
-this; 
+Cool. So I think we need
 
-	00000000c09e81d0
+ 	get_random_bytes(&ptr_key, sizeof(ptr_key));
+	smp_mb();
+ 	WRITE_ONCE(have_filled_random_ptr_key, true);
 
-What do you think?
-
-Amusingly I think this whole conversation is going to come up again
-when we do %pa, in inverse, since %pa currently does us SPECIAL.
+V10 to include this unless I have it wrong.
 
 thanks,
 Tobin.
