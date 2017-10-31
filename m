@@ -1,91 +1,46 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20171030232849.GA8409@gmail.com>
-References: <20171026134547.23664-1-pbonzini@redhat.com> <20171026134547.23664-2-pbonzini@redhat.com>
- <20171030232849.GA8409@gmail.com>
+In-Reply-To: <20171025162213.GH3294@yexl-desktop>
+References: <1508798008-1692-1-git-send-email-me@tobin.cc> <20171025162213.GH3294@yexl-desktop>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 30 Oct 2017 16:51:52 -0700
-Message-ID: <CAGXu5jKwhXgazxj-QoAzqRpijKOxB+-xhDPuuqPfd_cX0e30Xg@mail.gmail.com>
+Date: Mon, 30 Oct 2017 17:14:59 -0700
+Message-ID: <CAGXu5jJ+oVhroQHcbbiKERqYQXmoMtsmP_QuQwJX9TdAOdtYvQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] [PATCH 1/2] kvm: whitelist struct kvm_vcpu_arch
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: Paolo Bonzini <pbonzini@redhat.com>, LKML <linux-kernel@vger.kernel.org>, KVM <kvm@vger.kernel.org>, Christoffer Dall <christoffer.dall@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Cornelia Huck <cohuck@redhat.com>, James Hogan <james.hogan@imgtec.com>, Paul Mackerras <paulus@samba.org>, kernel-hardening@lists.openwall.com, Christian Borntraeger <borntraeger@redhat.com>, Christoffer Dall <cdall@linaro.org>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>
+Subject: [kernel-hardening] Re: [lkp-robot] [printk] 7f7c60e066: BUG:KASAN:slab-out-of-bounds
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel test robot <xiaolong.ye@intel.com>, kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>, LKP <lkp@01.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 30, 2017 at 4:28 PM, Eric Biggers <ebiggers3@gmail.com> wrote:
-> On Thu, Oct 26, 2017 at 03:45:46PM +0200, Paolo Bonzini wrote:
->> On x86, ARM and s390, struct kvm_vcpu_arch has a usercopy region
->> taht is read and written by the KVM_GET/SET_CPUID2 ioctls (x86)
->> or KVM_GET/SET_ONE_REG (ARM/s390).  Without whitelisting the area,
->> KVM is completely broken on those architectures with usercopy hardening
->> enabled.
->>
->> For now, allow writing to the entire struct on all architectures.
->> The KVM tree will not refine this to an architecture-specific
->> subset of struct kvm_vcpu_arch.
->>
->> Cc: kernel-hardening@lists.openwall.com
->> Cc: Kees Cook <keescook@chromium.org>
->> Cc: Christian Borntraeger <borntraeger@redhat.com>
->> Cc: Christoffer Dall <cdall@linaro.org>
->> Cc: Radim Kr=C4=8Dm=C3=A1=C5=99 <rkrcmar@redhat.com>
->> Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
->> ---
->>  virt/kvm/kvm_main.c | 8 ++++++--
->>  1 file changed, 6 insertions(+), 2 deletions(-)
->>
->> diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
->> index 4d81f6ded88e..b4809ccfdfa1 100644
->> --- a/virt/kvm/kvm_main.c
->> +++ b/virt/kvm/kvm_main.c
->> @@ -4005,8 +4005,12 @@ int kvm_init(void *opaque, unsigned vcpu_size, un=
-signed vcpu_align,
->>       /* A kmem cache lets us meet the alignment requirements of fx_save=
-. */
->>       if (!vcpu_align)
->>               vcpu_align =3D __alignof__(struct kvm_vcpu);
->> -     kvm_vcpu_cache =3D kmem_cache_create("kvm_vcpu", vcpu_size, vcpu_a=
-lign,
->> -                                        0, NULL);
->> +     kvm_vcpu_cache =3D
->> +             kmem_cache_create_usercopy("kvm_vcpu",
->> +                                        sizeof(struct kvm_vcpu), vcpu_a=
-lign,
->> +                                        0, offsetof(struct kvm_vcpu, ar=
-ch),
->> +                                        sizeof_field(struct kvm_vcpu, a=
-rch),
->> +                                        NULL);
+On Wed, Oct 25, 2017 at 9:22 AM, kernel test robot
+<xiaolong.ye@intel.com> wrote:
 >
-> Doesn't it need to be 'vcpu_size' instead of 'sizeof(struct kvm_vcpu)'?
+> FYI, we noticed the following commit (built with gcc-4.9):
+>
+> commit: 7f7c60e0663645e757e520245606fde9c6e326bb ("printk: hash addresses printed with %p")
+> url: https://github.com/0day-ci/linux/commits/Tobin-C-Harding/printk-hash-addresses-printed-with-p/20171024-231922
 
-Oh, yikes, yes.
+It's not clear to me which of the various versions this test ran
+against, but it seems like the printf self-tests got very confused by
+the results:
 
-$ git grep '\bkvm_init('
-arch/mips/kvm/mips.c:   ret =3D kvm_init(NULL, sizeof(struct kvm_vcpu),
-0, THIS_MODULE);
-arch/powerpc/kvm/book3s.c:      r =3D kvm_init(NULL, sizeof(struct
-kvm_vcpu), 0, THIS_MODULE);
-arch/powerpc/kvm/e500.c:        r =3D kvm_init(NULL, sizeof(struct
-kvmppc_vcpu_e500), 0, THIS_MODULE);
-arch/powerpc/kvm/e500mc.c:      r =3D kvm_init(NULL, sizeof(struct
-kvmppc_vcpu_e500), 0, THIS_MODULE);
-arch/s390/kvm/kvm-s390.c:       return kvm_init(NULL, sizeof(struct
-kvm_vcpu), 0, THIS_MODULE);
-arch/x86/kvm/svm.c:     return kvm_init(&svm_x86_ops, sizeof(struct vcpu_sv=
-m),
-arch/x86/kvm/vmx.c:     int r =3D kvm_init(&vmx_x86_ops, sizeof(struct vcpu=
-_vmx),
-include/linux/kvm_host.h:int kvm_init(void *opaque, unsigned
-vcpu_size, unsigned vcpu_align,
-virt/kvm/arm/arm.c:     int rc =3D kvm_init(NULL, sizeof(struct
-kvm_vcpu), 0, THIS_MODULE);
+> [   40.275423] test_printf: kvasprintf(..., "%p %p", ...) returned '3cf9adbe eff717bf', expected '0000000001234567 fffffffffedcba98'
+> [   40.296739] test_printf: vsnprintf(buf, 256, "|%-*p|%*p|", ...) returned 19, expected 39
+> [   40.322776] test_printf: vsnprintf(buf, 16, "|%-*p|%*p|", ...) returned 19, expected 39
+> [   40.334834] test_printf: vsnprintf(buf, 0, "|%-*p|%*p|", ...) returned 19, expected 39
 
-I'll fix this up.
+I assume v10 will fix the width issues, but probably not the value tests...
+
+And it claims a use-after-free, too:
+
+> [   39.757461] The buggy address belongs to the object at 22cb34bb
+> [   39.757461]  which belongs to the cache kmalloc-32 of size 32
+> [   39.757461] The buggy address is located 0 bytes inside of
+> [   39.757461]  32-byte region [22cb34bb, 24ac3a60)
+
+Which becomes rather unreadable, since the address got hashed. :P
 
 -Kees
 
---=20
+-- 
 Kees Cook
 Pixel Security
