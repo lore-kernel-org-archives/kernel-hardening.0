@@ -1,89 +1,89 @@
-Message-ID: <1509492793.31043.12.camel@perches.com>
-From: Joe Perches <joe@perches.com>
-Date: Tue, 31 Oct 2017 16:33:13 -0700
-In-Reply-To: <20171031231619.GB3585@eros>
-References: <1508986436-31966-1-git-send-email-me@tobin.cc>
-	 <CAGXu5jJvBKd2i-P4LVW_mHY9e3j4JEpaR4=a7dt3CcOvimcuTQ@mail.gmail.com>
-	 <20171030223346.GX12341@eros> <1509415728.26592.40.camel@perches.com>
-	 <20171031231619.GB3585@eros>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH V8 0/2] printk: hash addresses printed with %p
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William
- C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Vinod Koul <vinod.koul@intel.com>, Mauro Carvalho Chehab <mchehab@kernel.org>
+References: <20171026090942.7041-1-mark.rutland@arm.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <77c80381-cf68-aa1a-9112-e057c068eeb6@redhat.com>
+Date: Tue, 31 Oct 2017 16:56:39 -0700
+MIME-Version: 1.0
+In-Reply-To: <20171026090942.7041-1-mark.rutland@arm.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [RFC PATCH 0/2] arm64: optional paranoid __{get,put}_user checks
+To: Mark Rutland <mark.rutland@arm.com>, linux-arm-kernel@lists.infradead.org
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Catalin Marinas <catalin.marinas@arm.com>, Kees Cook <keescook@chromium.org>, Will Deacon <will.deacon@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2017-11-01 at 10:16 +1100, Tobin C. Harding wrote:
-> On Mon, Oct 30, 2017 at 07:08:48PM -0700, Joe Perches wrote:
-> > On Tue, 2017-10-31 at 09:33 +1100, Tobin C. Harding wrote:
-> > > On Mon, Oct 30, 2017 at 03:03:21PM -0700, Kees Cook wrote:
-> > > > On Wed, Oct 25, 2017 at 7:53 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> > > > > Here is the behaviour that this set implements.
-> > > > > 
-> > > > > For kpt_restrict==0
-> > > > > 
-> > > > > Randomness not ready:
-> > > > >   printed with %p:              (pointer)          # NOTE: with padding
-> > > > > Valid pointer:
-> > > > >   printed with %pK:             deadbeefdeadbeef
-> > > > >   printed with %p:              0xdeadbeef
-> > > > >   malformed specifier (eg %i):  0xdeadbeef
-> > > > 
-> > > > I really think we can't include SPECIAL unless _every_ callsite of %p
-> > > > is actually doing "0x%p", and then we're replacing all of those. We're
-> > > > not doing that, though...
-> > > > 
-> > > > $ git grep '%p\b' | wc -l
-> > > > 12766
-> > > > $ git grep '0x%p\b' | wc -l
-> > > > 18370x
-> > > > 
-> > > > If we need some kind of special marking that this is a hashed
-> > > > variable, that should be something other than "0x". If we're using the
-> > > > existing "(null)" and new "(pointer)" text, maybe "(hash:xxxxxx)"
-> > > > should be used instead? Then the (rare) callers with 0x become
-> > > > "0x(hash:xxxx)" and naked callers produce "(hash:xxxx)".
-> > > > 
-> > > > I think the first step for this is to just leave SPECIAL out.
-> > > 
-> > > Thanks Kees. V9 leaves SPECIAL out. Also V9 prints the whole 64 bit
-> > > address with the first 32 bits masked to zero. The intent being to _not_
-> > > change the output format from what it currently is. So it will look like
-> > > this; 
-> > > 
-> > > 	00000000c09e81d0
-> > > 
-> > > What do you think?
-> > > 
-> > > Amusingly I think this whole conversation is going to come up again
-> > > when we do %pa, in inverse, since %pa currently does us SPECIAL.
-> > 
-> > I once sent a patch set to remove SPECIAL from %pa
-> > and add 0x where necessary.
-> > 
-> > https://patchwork.kernel.org/patch/3875471/
-> > 
-> > After that didn't happen, I removed the duplicated
-> > 0x%pa with a sed.
-> > 
-> > https://patchwork.kernel.org/patch/8509421/
-> > 
-> > Sending a treewide sed patch would be fine with me.
+On 10/26/2017 02:09 AM, Mark Rutland wrote:
+> Hi,
 > 
-> Cool, thanks Joe I'll keep this in mind for when we get to %pa.
+> In Prague, Kees mentioned that it would be nice to have a mechanism to
+> catch bad __{get,put}_user uses, such as the recent CVE-2017-5123 [1,2]
+> issue with unsafe_put_user() in waitid().
+> 
+> These patches allow an optional access_ok() check to be dropped in
+> arm64's __{get,put}_user() primitives. These will then BUG() if a bad
+> user pointer is passed (which should only happen in the absence of an
+> earlier access_ok() check).
+> 
+> The first patch rewrites the arm64 access_ok() check in C. This gives
+> the compiler the visibility it needs to elide redundant access_ok()
+> checks, so in the common case:
+> 
+>   get_user()
+>     access_ok()
+>     __get_user()
+>       BUG_ON(!access_ok())
+>       <uaccess asm>
+> 
+> ... the compiler can determine that the second access_ok() must return
+> true, and can elide it along with the BUG_ON(), leaving:
+> 
+>   get_user()
+>     access_ok()
+>       __get_user()
+>         <uaccess asm>
+> 
+> ... and thus this sanity check can have no cost in the common case.
+> 
+> The compiler doesn't always have the visibility to do this (e.g. if the
+> two access_ok() checks are in different compilation units), but it seems
+> to manage to do this most of the time -- In testing with v4.14-rc5
+> defconfig this only increases the total Image size by 4KiB.
+> 
+> I had a go at turning this into a BUILD_BUG_ON(), to see if we could
+> catch this issue at compile time. However, my GCC wasn't able to remove
+> the BUILD_BUG() from some {get,put}_user cases. Maybe we can fix that,
+> or maybe we can have some static analysis catch this at build time.
+> 
+> It's entirely possible that I've made some catastrophic mistake in these
+> patches; I've only build-tested them so far, and I don't currently have
+> access to hardware to test on.
+> 
+> I also haven't yet modified __copy_{to,from}_user and friends along
+> similar lines, so this is incomplete. If there aren't any major
+> objections to this approach, I can fold those in for the next spin.
+> 
+> Thanks,
+> Mark.
+> 
+> [1] https://lwn.net/Articles/736348/
+> [2] https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=96ca579a1ecc943b75beba58bebb0356f6cc4b51
+> 
+> 
+> Mark Rutland (2):
+>   arm64: write __range_ok() in C
+>   arm64: allow paranoid __{get,put}user
+> 
+>  arch/arm64/Kconfig               |  9 +++++++++
+>  arch/arm64/include/asm/uaccess.h | 27 +++++++++++++++++++--------
+>  2 files changed, 28 insertions(+), 8 deletions(-)
+> 
 
-fyi:  There are more of these misuses of 0x%pa now:
+Turning on the option fails as soon as we hit userspace. On my buildroot
+based environment I get the help text for ld.so (????) and then a message
+about attempting to kill init. I get a crash in init on the Hikey Android
+environment as well. It almost seems like the __range_ok re-write
+is triggering an error but it only seems to happen when the option is
+enabled even when I take out the BUG. I'll see if I can get more useful
+information.
 
-$ git grep -E -n "0[xX]%pa[dp]?\b"
-drivers/dma/at_hdmac_regs.h:388:                 "  desc: s%pad d%pad ctrl0x%x:0x%x l0x%pad\n",
-drivers/dma/coh901318.c:1322:           dev_vdbg(COHC_2_DEV(cohc), "i %d, lli %p, ctrl 0x%x, src 0x%pad"
-drivers/dma/coh901318.c:1323:                    ", dst 0x%pad, link 0x%pad virt_link_addr 0x%p\n",
-drivers/dma/coh901318.c:2234:            "[%s] channel %d src 0x%pad dest 0x%pad size %zu\n",
-drivers/media/platform/sti/delta/delta-mem.c:35:                "%s allocate %d bytes of HW memory @(virt=0x%p, phy=0x%pad): %s\n",
-drivers/media/platform/sti/delta/delta-mem.c:46:                "%s     free %d bytes of HW memory @(virt=0x%p, phy=0x%pad): %s\n",
-drivers/media/platform/sti/delta/delta-v4l2.c:1147:             dev_dbg(delta->dev, "%s au[%d] prepared; virt=0x%p, phy=0x%pad\n",
-drivers/media/platform/sti/delta/delta-v4l2.c:1503:                     "%s frame[%d] prepared; virt=0x%p, phy=0x%pad\n",
-drivers/media/platform/stm32/stm32-dcmi.c:486:          dev_dbg(dcmi->dev, "buffer[%d] phy=0x%pad size=%zu\n",
-drivers/media/platform/ti-vpe/cal.c:496:        cal_info(dev, "CAL Registers @ 0x%pa:\n", &dev->res->start);
+Thanks,
+Laura
