@@ -1,25 +1,76 @@
+Date: Wed, 1 Nov 2017 10:16:19 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171031231619.GB3585@eros>
+References: <1508986436-31966-1-git-send-email-me@tobin.cc>
+ <CAGXu5jJvBKd2i-P4LVW_mHY9e3j4JEpaR4=a7dt3CcOvimcuTQ@mail.gmail.com>
+ <20171030223346.GX12341@eros>
+ <1509415728.26592.40.camel@perches.com>
 MIME-Version: 1.0
-Sender: hansendc@gmail.com
-In-Reply-To: <1494343857.20270.23.camel@redhat.com>
-References: <9df77051-ac01-bfe9-3cf7-4c2ecbcb9292@iaik.tugraz.at>
- <20170504154717.GA24353@infradead.org> <f9a4e8ed-1b22-0d73-924c-f5bb1e18ba93@iaik.tugraz.at>
- <CAFLxGvwuMN52-Xf46j7XuG+cnJ9xnZjXWhihpgxr9_EUX0Z+Bg@mail.gmail.com>
- <cc75a38a-4ea6-e300-0370-882dfbfd7a23@iaik.tugraz.at> <6013bf3f-c3bd-3836-e5e2-ea89cc2e556a@nod.at>
- <8aecf7d4-9767-5367-1bc0-75fbd4b17e46@iaik.tugraz.at> <07322e2c-e95f-ea35-bc1f-7b05c082e287@gdata-adan.de>
- <22a14b06-9489-3494-bbb7-428d4e5fa186@nod.at> <1494343857.20270.23.camel@redhat.com>
-From: Dave Hansen <dave@sr71.net>
-Date: Tue, 31 Oct 2017 16:28:20 -0700
-Message-ID: <CABq-xd34jdmjMWn5ZM6Mj-N5tZqTObhJJmhy7LgmkQTQVWH7pg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [RFC, PATCH] x86_64: KAISER - do not
- mapkernel in user mode
-To: Rik van Riel <riel@redhat.com>
-Cc: Richard Weinberger <richard@nod.at>, "Fogh, Anders" <anders.fogh@gdata-adan.de>, Daniel Gruss <daniel.gruss@iaik.tugraz.at>, Christoph Hellwig <hch@infradead.org>, kernel list <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "clementine.maurice@iaik.tugraz.at" <clementine.maurice@iaik.tugraz.at>, "moritz.lipp@iaik.tugraz.at" <moritz.lipp@iaik.tugraz.at>, Michael Schwarz <michael.schwarz@iaik.tugraz.at>, Richard Fellner <richard.fellner@student.tugraz.at>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Ingo Molnar <mingo@kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1509415728.26592.40.camel@perches.com>
+Subject: [kernel-hardening] Re: [PATCH V8 0/2] printk: hash addresses printed with %p
+To: Joe Perches <joe@perches.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Folks,
+On Mon, Oct 30, 2017 at 07:08:48PM -0700, Joe Perches wrote:
+> On Tue, 2017-10-31 at 09:33 +1100, Tobin C. Harding wrote:
+> > On Mon, Oct 30, 2017 at 03:03:21PM -0700, Kees Cook wrote:
+> > > On Wed, Oct 25, 2017 at 7:53 PM, Tobin C. Harding <me@tobin.cc> wrote:
+> > > > Here is the behaviour that this set implements.
+> > > > 
+> > > > For kpt_restrict==0
+> > > > 
+> > > > Randomness not ready:
+> > > >   printed with %p:              (pointer)          # NOTE: with padding
+> > > > Valid pointer:
+> > > >   printed with %pK:             deadbeefdeadbeef
+> > > >   printed with %p:              0xdeadbeef
+> > > >   malformed specifier (eg %i):  0xdeadbeef
+> > > 
+> > > I really think we can't include SPECIAL unless _every_ callsite of %p
+> > > is actually doing "0x%p", and then we're replacing all of those. We're
+> > > not doing that, though...
+> > > 
+> > > $ git grep '%p\b' | wc -l
+> > > 12766
+> > > $ git grep '0x%p\b' | wc -l
+> > > 18370x
+> > > 
+> > > If we need some kind of special marking that this is a hashed
+> > > variable, that should be something other than "0x". If we're using the
+> > > existing "(null)" and new "(pointer)" text, maybe "(hash:xxxxxx)"
+> > > should be used instead? Then the (rare) callers with 0x become
+> > > "0x(hash:xxxx)" and naked callers produce "(hash:xxxx)".
+> > > 
+> > > I think the first step for this is to just leave SPECIAL out.
+> > 
+> > Thanks Kees. V9 leaves SPECIAL out. Also V9 prints the whole 64 bit
+> > address with the first 32 bits masked to zero. The intent being to _not_
+> > change the output format from what it currently is. So it will look like
+> > this; 
+> > 
+> > 	00000000c09e81d0
+> > 
+> > What do you think?
+> > 
+> > Amusingly I think this whole conversation is going to come up again
+> > when we do %pa, in inverse, since %pa currently does us SPECIAL.
+> 
+> I once sent a patch set to remove SPECIAL from %pa
+> and add 0x where necessary.
+> 
+> https://patchwork.kernel.org/patch/3875471/
+> 
+> After that didn't happen, I removed the duplicated
+> 0x%pa with a sed.
+> 
+> https://patchwork.kernel.org/patch/8509421/
+> 
+> Sending a treewide sed patch would be fine with me.
 
-I've fixed some bugs and updated the KAISER patch set on top of the
-work that was done here.  My new version is posted here:
+Cool, thanks Joe I'll keep this in mind for when we get to %pa.
 
-https://marc.info/?l=linux-kernel&m=150948911429162&w=2
+thanks,
+Tobin.
