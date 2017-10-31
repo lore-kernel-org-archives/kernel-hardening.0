@@ -1,91 +1,70 @@
+Date: Tue, 31 Oct 2017 16:39:44 +0100
+From: Petr Mladek <pmladek@suse.com>
+Message-ID: <20171031153944.GA32091@pathway.suse.cz>
+References: <1509317956-28041-1-git-send-email-me@tobin.cc>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <59b5e578-cf68-4cc2-ebb7-c2fdf873b79d@linux.com>
-References: <1508631773-2502-1-git-send-email-alex.popov@linux.com>
- <1508631773-2502-2-git-send-email-alex.popov@linux.com> <20171023131730.2r5imit2hzpxq2vg@docker>
- <59b5e578-cf68-4cc2-ebb7-c2fdf873b79d@linux.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 31 Oct 2017 08:20:42 -0700
-Message-ID: <CAGXu5jL2TTUs_LbjzVoVfP3YXsgCYcSXveo2dS9H-FiSdPVqMw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH RFC v5 1/5] x86/entry: Add STACKLEAK erasing the kernel
- stack at the end of syscalls
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Tycho Andersen <tycho@docker.com>, Andy Lutomirski <luto@kernel.org>, kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, x86@kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1509317956-28041-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] Re: [PATCH V9] printk: hash addresses printed with %p
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 24, 2017 at 2:30 PM, Alexander Popov <alex.popov@linux.com> wrote:
-> On 23.10.2017 16:17, Tycho Andersen wrote:
->> On Sun, Oct 22, 2017 at 03:22:49AM +0300, Alexander Popov wrote:
->>> The STACKLEAK feature erases the kernel stack before returning from
->>> syscalls. That reduces the information which kernel stack leak bugs can
->>> reveal and blocks some uninitialized stack variable attacks. Moreover,
->>> STACKLEAK provides runtime checks for kernel stack overflow detection.
->>>
->>> This commit introduces the architecture-specific code filling the used
->>> part of the kernel stack with a poison value before returning to the
->>> userspace. Full STACKLEAK feature also contains the gcc plugin which
->>> comes in a separate commit.
->>>
->>> The STACKLEAK feature is ported from grsecurity/PaX. More information at:
->>>   https://grsecurity.net/
->>>   https://pax.grsecurity.net/
->>>
->>> This code is modified from Brad Spengler/PaX Team's code in the last
->>> public patch of grsecurity/PaX based on our understanding of the code.
->>> Changes or omissions from the original code are ours and don't reflect
->>> the original grsecurity/PaX code.
->>>
->>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
->>> ---
->
-> [...]
->
->>> @@ -81,8 +87,10 @@ static long syscall_trace_enter(struct pt_regs *regs)
->>>              emulated = true;
->>>
->>>      if ((emulated || (work & _TIF_SYSCALL_TRACE)) &&
->>> -        tracehook_report_syscall_entry(regs))
->>> +        tracehook_report_syscall_entry(regs)) {
->>> +            erase_kstack();
->>>              return -1L;
->>> +    }
->>>
->>>      if (emulated)
->>>              return -1L;
->>> @@ -116,9 +124,11 @@ static long syscall_trace_enter(struct pt_regs *regs)
->>>                      sd.args[5] = regs->bp;
->>>              }
->>>
->>> -            ret = __secure_computing(&sd);
->>> -            if (ret == -1)
->>> +            ret = secure_computing(&sd);
->>
->> Is there any reason to switch this from the __ version? This basically
->> adds an additional check on the TIF_SECCOMP flag, but I'm not sure
->> that's intentional with this patch.
->
-> Hello Tycho, thanks for your remark!
->
-> Initially I took this change from the grsecurity patch, because it looked
-> reasonable for me at that time. But now I doubt, thank you.
+On Mon 2017-10-30 09:59:16, Tobin C. Harding wrote:
+> Currently there are many places in the kernel where addresses are being
+> printed using an unadorned %p. Kernel pointers should be printed using
+> %pK allowing some control via the kptr_restrict sysctl. Exposing addresses
+> gives attackers sensitive information about the kernel layout in memory.
+> 
+> We can reduce the attack surface by hashing all addresses printed with
+> %p. This will of course break some users, forcing code printing needed
+> addresses to be updated.
 
-Yeah, I'd prefer this stay __secure_computing().
+I am sorry for my ignorance but what is the right update, please?
+I expect that there are several possibilities:
 
-> Kees and Andy (Lutomirski), you are the authors of syscall_trace_enter(). Could
-> you please have a look at this change?
->
-> By the way, it seems that one erase_kstack() call is missing in that function.
-> Could you please have a glance at the places where erase_kstack() is called?
+  + remove the pointer at all
 
-Errr, wouldn't erase_kstack() get called outside of seccomp? (i.e. via
-syscall_return_slowpath() or something later in the return path?)
+  + replace it with %pK so that it honors kptr_restrict setting
 
-Or is there some reason for erasing the stack after seccomp processing
-but before running the syscall?
+  + any other option?
 
--Kees
+Is kptr_restrict considered a safe mechanism?
 
--- 
-Kees Cook
-Pixel Security
+Also kptr_restrict seems to be primary for the messages that are available
+via /proc and /sys. Is it good enough for the messages logged by
+printk()?
+
+Will there be a debug option that would allow to see the original
+pointers? Or what is the preferred way for debug messages?
+
+
+> For what it's worth, usage of unadorned %p can be broken down as
+> follows (thanks to Joe Perches).
+> 
+> $ git grep -E '%p[^A-Za-z0-9]' | cut -f1 -d"/" | sort | uniq -c
+>    1084 arch
+>      20 block
+>      10 crypto
+>      32 Documentation
+>    8121 drivers
+>    1221 fs
+>     143 include
+>     101 kernel
+>      69 lib
+>     100 mm
+>    1510 net
+>      40 samples
+>       7 scripts
+>      11 security
+>     166 sound
+>     152 tools
+>       2 virt
+
+It is evident that it will hit many people. I guess that they will
+be suprised and might have similar questions. It might make sense
+to decribe this in Documentation/printk-formats.txt.
+
+Best Regards,
+Petr
