@@ -1,59 +1,166 @@
-References: <20171026090942.7041-1-mark.rutland@arm.com>
- <77c80381-cf68-aa1a-9112-e057c068eeb6@redhat.com>
- <20171101120555.yvb65g3wgtxskfh3@lakrids.cambridge.arm.com>
 From: Laura Abbott <labbott@redhat.com>
-Message-ID: <0f2d5f89-2939-06ec-9b59-b19f828d8968@redhat.com>
-Date: Wed, 1 Nov 2017 14:13:45 -0700
-MIME-Version: 1.0
-In-Reply-To: <20171101120555.yvb65g3wgtxskfh3@lakrids.cambridge.arm.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [RFC PATCH 0/2] arm64: optional paranoid __{get,put}_user checks
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Catalin Marinas <catalin.marinas@arm.com>, Kees Cook <keescook@chromium.org>, Will Deacon <will.deacon@arm.com>
+Date: Wed,  1 Nov 2017 14:36:58 -0700
+Message-Id: <20171101213658.11267-1-labbott@redhat.com>
+Subject: [kernel-hardening] [PATCH] lkdtm: Add tests for put_user/get_user
+To: Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@redhat.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/01/2017 05:05 AM, Mark Rutland wrote:
-> On Tue, Oct 31, 2017 at 04:56:39PM -0700, Laura Abbott wrote:
->> On 10/26/2017 02:09 AM, Mark Rutland wrote:
->>> In Prague, Kees mentioned that it would be nice to have a mechanism to
->>> catch bad __{get,put}_user uses, such as the recent CVE-2017-5123 [1,2]
->>> issue with unsafe_put_user() in waitid().
->>>
->>> These patches allow an optional access_ok() check to be dropped in
->>> arm64's __{get,put}_user() primitives. These will then BUG() if a bad
->>> user pointer is passed (which should only happen in the absence of an
->>> earlier access_ok() check).
-> 
->> Turning on the option fails as soon as we hit userspace. On my buildroot
->> based environment I get the help text for ld.so (????) and then a message
->> about attempting to kill init. 
-> 
-> Ouch. Thanks for the report, and sorry about this.
-> 
-> The problem is that I evaluate the ptr argument twice in
-> __{get,put}_user(), and this may have side effects.
-> 
-> e.g. when the ELF loader does things like:
-> 
->   __put_user((elf_addr_t)p, sp++)
-> 
-> ... we increment sp twice, and write to the wrong user address, leaving
-> sp corrupt.
-> 
-> I have an additional patch [1] to fix this, which is in my
-> arm64/access-ok branch [2].
-> 
-> Thanks,
-> Mark.
-> 
-> [1] https://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git/commit/?h=arm64/access-ok&id=ebb7ff83eb53b8810395d5cf48712a4ae6d678543
-> [2] https://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git/log/?h=arm64/access-ok
-> 
+{get,put}_user are designed to be 'safe' access and
+verify the address passed in whereas __{get,put}_user are
+supposed to be 'unsafe'. Add a test to verify this behavior.
 
-Thanks, the updated patch works. I wrote an LKDTM test to verify
-the expected behavior (__{get,put}_user panic whereas {get,put}_user
-do not). You're welcome to add Tested-by or I can wait for v2.
+Signed-off-by: Laura Abbott <labbott@redhat.com>
+---
+Inspired by the paranoid __{get,put}_user checks for arm64.
+---
+ drivers/misc/lkdtm.h          |   2 +
+ drivers/misc/lkdtm_core.c     |   2 +
+ drivers/misc/lkdtm_usercopy.c | 107 ++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 111 insertions(+)
 
-Thanks,
-Laura
+diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+index bfb6c45b6130..c80236198c96 100644
+--- a/drivers/misc/lkdtm.h
++++ b/drivers/misc/lkdtm.h
+@@ -81,5 +81,7 @@ void lkdtm_USERCOPY_STACK_FRAME_TO(void);
+ void lkdtm_USERCOPY_STACK_FRAME_FROM(void);
+ void lkdtm_USERCOPY_STACK_BEYOND(void);
+ void lkdtm_USERCOPY_KERNEL(void);
++void lkdtm_PUT_USER(void);
++void lkdtm_GET_USER(void);
+ 
+ #endif
+diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
+index 981b3ef71e47..f0a99ccc2a5a 100644
+--- a/drivers/misc/lkdtm_core.c
++++ b/drivers/misc/lkdtm_core.c
+@@ -251,6 +251,8 @@ struct crashtype crashtypes[] = {
+ 	CRASHTYPE(USERCOPY_STACK_FRAME_FROM),
+ 	CRASHTYPE(USERCOPY_STACK_BEYOND),
+ 	CRASHTYPE(USERCOPY_KERNEL),
++	CRASHTYPE(PUT_USER),
++	CRASHTYPE(GET_USER),
+ };
+ 
+ 
+diff --git a/drivers/misc/lkdtm_usercopy.c b/drivers/misc/lkdtm_usercopy.c
+index df6ac985fbb5..3a95a85cafdb 100644
+--- a/drivers/misc/lkdtm_usercopy.c
++++ b/drivers/misc/lkdtm_usercopy.c
+@@ -310,6 +310,113 @@ void lkdtm_USERCOPY_KERNEL(void)
+ 	vm_munmap(user_addr, PAGE_SIZE);
+ }
+ 
++void lkdtm_PUT_USER(void)
++{
++	unsigned long user_addr;
++	void *kbuf;
++
++	kbuf = kmalloc(cache_size, GFP_KERNEL);
++	if (!kbuf) {
++		pr_warn("failed to allocate kernel buffer\n");
++		return;
++	}
++
++	user_addr = vm_mmap(NULL, 0, PAGE_SIZE,
++			    PROT_READ | PROT_WRITE | PROT_EXEC,
++			    MAP_ANONYMOUS | MAP_PRIVATE, 0);
++	if (user_addr >= TASK_SIZE) {
++		pr_warn("Failed to allocate user memory\n");
++		goto free_kernel;
++	}
++
++	pr_info("attempting valid put_user\n");
++	if (put_user(0x1234567, (unsigned long __user *)user_addr)) {
++		pr_warn("put_user failed unexpectedly?!\n");
++		goto free_user;
++	}
++
++
++	pr_info("attempting valid __put_user\n");
++	if (__put_user(0x1234567, (unsigned long __user *)user_addr)) {
++		pr_warn("__put_user failed unexpectedly?!\n");
++		goto free_user;
++	}
++
++	pr_info("attempting invalid put_user which should fail");
++	if (put_user(0x1234567, (unsigned long *)kbuf)) {
++		pr_warn("put_user failed correctly\n");
++	} else {
++		pr_warn("put_user succeeded unexpectedly\n");
++		goto free_user;
++	}
++
++
++	pr_info("attempting invalid __put_user which should succeed\n");
++	if (__put_user(0x1234567, (unsigned long *)kbuf)) {
++		pr_warn("__put_user failed unexpectedly\n");
++	} else {
++		pr_warn("__put_user succeeded\n");
++	}
++
++free_user:
++	vm_munmap(user_addr, PAGE_SIZE);
++free_kernel:
++	kfree(kbuf);
++}
++
++void lkdtm_GET_USER(void)
++{
++	unsigned long user_addr;
++	unsigned long a;
++	void *kbuf;
++
++	kbuf = kmalloc(cache_size, GFP_KERNEL);
++	if (!kbuf) {
++		pr_warn("failed to allocate kernel buffer\n");
++		return;
++	}
++
++	user_addr = vm_mmap(NULL, 0, PAGE_SIZE,
++			    PROT_READ | PROT_WRITE | PROT_EXEC,
++			    MAP_ANONYMOUS | MAP_PRIVATE, 0);
++	if (user_addr >= TASK_SIZE) {
++		pr_warn("Failed to allocate user memory\n");
++		goto free_kernel;
++	}
++
++	pr_info("attempting valid get_user\n");
++	if (get_user(a, (unsigned long __user *)user_addr)) {
++		pr_warn("get_user failed unexpectedly?!\n");
++		goto free_user;
++	}
++
++	pr_info("attempting valid __get_user\n");
++	if (__get_user(a, (unsigned long __user *)user_addr)) {
++		pr_warn("__get_user failed unexpectedly?!\n");
++		goto free_user;
++	}
++
++	pr_info("attempting an invalid get_user which should fail\n");
++	if (get_user(a, (unsigned long *)kbuf)) {
++		pr_warn("get_user failed correctly\n");
++	} else {
++		pr_warn("get_user succeeded unexpectedly\n");
++		goto free_user;
++	}
++
++	pr_info("attempting an invalid __get_user which should succeed\n");
++	if (__get_user(a, (unsigned long *)kbuf)) {
++		pr_warn("get_user failed unexpectedly\n");
++	} else {
++		pr_warn("get_user succeeded\n");
++	}
++
++free_user:
++	vm_munmap(user_addr, PAGE_SIZE);
++free_kernel:
++	kfree(kbuf);
++}
++
+ void __init lkdtm_usercopy_init(void)
+ {
+ 	/* Prepare cache that lacks SLAB_USERCOPY flag. */
+-- 
+2.13.5
