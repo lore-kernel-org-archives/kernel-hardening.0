@@ -1,222 +1,91 @@
-From: "Tobin C. Harding" <me@tobin.cc>
-Date: Thu,  2 Nov 2017 10:50:40 +1100
-Message-Id: <1509580240-28314-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [RFC] vla: add VLA macro and testing
-To: kernel-hardening@lists.openwall.com
-Cc: "Tobin C. Harding" <me@tobin.cc>, Kees Cook <keescook@chromium.org>
+References: <20171026090942.7041-1-mark.rutland@arm.com>
+ <77c80381-cf68-aa1a-9112-e057c068eeb6@redhat.com>
+ <20171101120555.yvb65g3wgtxskfh3@lakrids.cambridge.arm.com>
+ <0f2d5f89-2939-06ec-9b59-b19f828d8968@redhat.com>
+ <CAGXu5j+eb+41XRorgAVURKEsixiMYgtcmpKwQzJ3Mct_yw1G6Q@mail.gmail.com>
+ <57fa4bef-9540-6fb1-b2a7-5bf8b01c748a@redhat.com>
+ <CAGXu5jLhU7si5d3=e5ixhh67fY+6ZGJQBnLxQLMFfcZsB8GJvg@mail.gmail.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <dd734498-7b03-005c-647b-eec66479cfa1@redhat.com>
+Date: Wed, 1 Nov 2017 18:25:53 -0700
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5jLhU7si5d3=e5ixhh67fY+6ZGJQBnLxQLMFfcZsB8GJvg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [RFC PATCH 0/2] arm64: optional paranoid __{get,put}_user checks
+To: Kees Cook <keescook@chromium.org>
+Cc: Mark Rutland <mark.rutland@arm.com>, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Variable Length Arrays (VLA) pose a risk to the stack if the variable
-passed into the array declaration is too large. If the variable used can
-be controlled by a malicious party then this poses a security risk to
-the kernel.
+On 11/01/2017 04:29 PM, Kees Cook wrote:
+> On Wed, Nov 1, 2017 at 4:05 PM, Laura Abbott <labbott@redhat.com> wrote:
+>> On 11/01/2017 03:28 PM, Kees Cook wrote:
+>>> On Wed, Nov 1, 2017 at 2:13 PM, Laura Abbott <labbott@redhat.com> wrote:
+>>>> On 11/01/2017 05:05 AM, Mark Rutland wrote:
+>>>>> On Tue, Oct 31, 2017 at 04:56:39PM -0700, Laura Abbott wrote:
+>>>>>> On 10/26/2017 02:09 AM, Mark Rutland wrote:
+>>>>>>> In Prague, Kees mentioned that it would be nice to have a mechanism to
+>>>>>>> catch bad __{get,put}_user uses, such as the recent CVE-2017-5123 [1,2]
+>>>>>>> issue with unsafe_put_user() in waitid().
+>>>>>>>
+>>>>>>> These patches allow an optional access_ok() check to be dropped in
+>>>>>>> arm64's __{get,put}_user() primitives. These will then BUG() if a bad
+>>>>>>> user pointer is passed (which should only happen in the absence of an
+>>>>>>> earlier access_ok() check).
+>>>>>
+>>>>>> Turning on the option fails as soon as we hit userspace. On my buildroot
+>>>>>> based environment I get the help text for ld.so (????) and then a message
+>>>>>> about attempting to kill init.
+>>>>>
+>>>>> Ouch. Thanks for the report, and sorry about this.
+>>>>>
+>>>>> The problem is that I evaluate the ptr argument twice in
+>>>>> __{get,put}_user(), and this may have side effects.
+>>>>>
+>>>>> e.g. when the ELF loader does things like:
+>>>>>
+>>>>>   __put_user((elf_addr_t)p, sp++)
+>>>>>
+>>>>> ... we increment sp twice, and write to the wrong user address, leaving
+>>>>> sp corrupt.
+>>>>>
+>>>>> I have an additional patch [1] to fix this, which is in my
+>>>>> arm64/access-ok branch [2].
+>>>>>
+>>>>> Thanks,
+>>>>> Mark.
+>>>>>
+>>>>> [1] https://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git/commit/?h=arm64/access-ok&id=ebb7ff83eb53b8810395d5cf48712a4ae6d678543
+>>>>> [2] https://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git/log/?h=arm64/access-ok
+>>>>>
+>>>>
+>>>> Thanks, the updated patch works. I wrote an LKDTM test to verify
+>>>> the expected behavior (__{get,put}_user panic whereas {get,put}_user
+>>>> do not). You're welcome to add Tested-by or I can wait for v2.
+>>>
+>>> Nice. :) Out of curiosity, can you check if this correctly BUG()s on a
+>>> waitid() call when the fixes are reverted?
+>>>
+>>> 96ca579a1ecc ("waitid(): Avoid unbalanced user_access_end() on
+>>> access_ok() error")
+>>> 1c9fec470b81 ("waitid(): Add missing access_ok() checks")
+>>>
+>>> -Kees
+>>>
+>>
+>> Yep, we get a nice bug:
+>>
+>> [   34.783912] ------------[ cut here ]------------
+>> [   34.784484] kernel BUG at kernel/exit.c:1614!
+> 
+> Awesome! :)
+> 
+> I wonder how hard it might be to make this happen on x86 too (or
+> generically). Hmmm
+x86 looks like it needs the same ptr_argument fixup as arm64 but
+seems to have a separate unsafe path so it's actually easier to
+fix up. I have version of this that seems to work so I'll clean
+it up and send it out tomorrow.
 
-Add a macro for declaring VLA's. Macro includes a requested size and a
-maximum size, if requested size is larger than maximum size then
-requested size is capped at maximum. Requested size is passed by
-reference and updated by macro so caller has access to size of array
-after declaration.
-
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
-
----
-
-I was unable to get the test module to integrate with the kernel build system
-correctly. The attempt was to mirror the way `lib/test_printf.c` functions. This
-effort was unsuccessful, it is included in the patch in the hope of getting
-better suggestions. To test, the test module was built out of tree and all tests
-pass.  
-
-The macro needs some work. It functions as intended but
-
-Checkpatch emits ERROR: Macros with multiple statements should be enclosed in a
-do - while loop.
-
-Also for each use of VLA() checkpatch emits WARNING: Missing a blank line after
-declarations.
-
-Also I was unsure where to put the macro definition, appreciate any suggestions.
-
-thanks,
-Tobin.
-
- include/linux/vla.h                | 24 ++++++++++
- lib/Kconfig.debug                  |  3 ++
- lib/Makefile                       |  1 +
- lib/test_vla.c                     | 98 ++++++++++++++++++++++++++++++++++++++
- tools/testing/selftests/lib/config |  1 +
- 5 files changed, 127 insertions(+)
- create mode 100644 include/linux/vla.h
- create mode 100644 lib/test_vla.c
-
-diff --git a/include/linux/vla.h b/include/linux/vla.h
-new file mode 100644
-index 000000000000..e8f1572bbf42
---- /dev/null
-+++ b/include/linux/vla.h
-@@ -0,0 +1,24 @@
-+/*
-+ * This software is licensed under the terms of the GNU General Public
-+ * License version 2, as published by the Free Software Foundation, and
-+ * may be copied, distributed, and modified under those terms.
-+ *
-+ * This program is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-+ * GNU General Public License for more details.
-+ *
-+ */
-+#ifndef __LINUX_VLA_H
-+#define __LINUX_VLA_H
-+
-+/*
-+ * When declaring a local variable using VLA(), VLA() must be the last
-+ * declaration otherwise a compiler warning [-Wdeclaration-after-statement] will
-+ * be generated
-+ */
-+#define VLA(type, name, size, max) \
-+	type name[(*size < max ? *size : max)]; \
-+	*size = (*size < max ? *size : max)
-+
-+#endif	/* __LINUX_VLA_H */
-diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-index dfdad67d8f6c..3b8eb2789235 100644
---- a/lib/Kconfig.debug
-+++ b/lib/Kconfig.debug
-@@ -1917,6 +1917,9 @@ config TEST_DEBUG_VIRTUAL
- 
- 	  If unsure, say N.
- 
-+config TEST_VLA
-+	tristate "Test VLA macro at runtime"
-+
- endmenu # runtime tests
- 
- config MEMTEST
-diff --git a/lib/Makefile b/lib/Makefile
-index dafa79613fb4..b1e8f7c54c5b 100644
---- a/lib/Makefile
-+++ b/lib/Makefile
-@@ -63,6 +63,7 @@ obj-$(CONFIG_TEST_UUID) += test_uuid.o
- obj-$(CONFIG_TEST_PARMAN) += test_parman.o
- obj-$(CONFIG_TEST_KMOD) += test_kmod.o
- obj-$(CONFIG_TEST_DEBUG_VIRTUAL) += test_debug_virtual.o
-+obj-$(CONFIG_TEST_VLA) += test_vla.o
- 
- ifeq ($(CONFIG_DEBUG_KOBJECT),y)
- CFLAGS_kobject.o += -DDEBUG
-diff --git a/lib/test_vla.c b/lib/test_vla.c
-new file mode 100644
-index 000000000000..033aeb219062
---- /dev/null
-+++ b/lib/test_vla.c
-@@ -0,0 +1,98 @@
-+/*
-+ * Tests for VLA macro.
-+ */
-+
-+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-+
-+#include <linux/init.h>
-+#include <linux/kernel.h>
-+#include <linux/module.h>
-+#include <linux/printk.h>
-+
-+#include <linux/vla.h>
-+
-+#define MAX_VLA_SIZE 32
-+
-+static unsigned total_tests __initdata;
-+static unsigned failed_tests __initdata;
-+
-+static int __init test_vla_less_than_max(int want)
-+{
-+	int *size = &want;
-+	VLA(char, myvla, size, MAX_VLA_SIZE);
-+
-+	total_tests++;
-+
-+	if (*size != want) {
-+		pr_warn("VLA() declaration error: size=%d want=%d max=%d\n",
-+			*size, want, MAX_VLA_SIZE);
-+		return 1;
-+	}
-+
-+	/* quiet compiler warning */
-+	myvla[0] = 'a';
-+
-+	return 0;
-+}
-+
-+static int __init test_vla_greater_than_max(int want)
-+{
-+	int *size = &want;
-+	VLA(char, myvla, size, MAX_VLA_SIZE);
-+
-+	total_tests++;
-+
-+	if (*size != MAX_VLA_SIZE) {
-+		pr_warn("VLA() declaration error: size=%d want=%d max=%d\n",
-+			*size, want, MAX_VLA_SIZE);
-+		return 1;
-+	}
-+
-+	/* quiet compiler warning */
-+	myvla[0] = 'a';
-+
-+	return 0;
-+}
-+
-+static void __init test_vla_int_type_usage(int want)
-+{
-+	int *size = &want;
-+	int i;
-+	VLA(int, myvla, size, MAX_VLA_SIZE);
-+
-+	total_tests++;
-+
-+	for (i = 0; i < *size; i++)
-+		myvla[i] = 0;
-+}
-+
-+static int __init test_vla_init(void)
-+{
-+	int lt_max = MAX_VLA_SIZE / 2;
-+	int gt_max = MAX_VLA_SIZE * 2;
-+	int err;
-+
-+	err = test_vla_less_than_max(lt_max);
-+	if (err)
-+		failed_tests++;
-+
-+	err = test_vla_greater_than_max(gt_max);
-+	if (err)
-+		failed_tests++;
-+
-+	test_vla_int_type_usage(lt_max);
-+	test_vla_int_type_usage(gt_max);
-+
-+	if (failed_tests == 0)
-+		pr_info("all %u tests passed\n", total_tests);
-+	else
-+		pr_warn("failed %u out of %u tests\n",
-+			failed_tests, total_tests);
-+
-+	return failed_tests ? -EINVAL : 0;
-+}
-+
-+module_init(test_vla_init);
-+
-+MODULE_AUTHOR("Tobin C. Harding <me@tobin.cc>");
-+MODULE_LICENSE("GPL");
-diff --git a/tools/testing/selftests/lib/config b/tools/testing/selftests/lib/config
-index 126933bcc950..0776156f881d 100644
---- a/tools/testing/selftests/lib/config
-+++ b/tools/testing/selftests/lib/config
-@@ -1,3 +1,4 @@
- CONFIG_TEST_PRINTF=m
- CONFIG_TEST_BITMAP=m
- CONFIG_PRIME_NUMBERS=m
-+CONFIG_TEST_VLA=m
--- 
-2.7.4
+Thanks,
+Laura
