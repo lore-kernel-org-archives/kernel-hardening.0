@@ -1,101 +1,35 @@
-Date: Fri, 3 Nov 2017 11:44:44 +0300
-From: Tycho Andersen <tycho@docker.com>
-Message-ID: <20171103084444.r7ls2klvwk7ndq7a@docker>
-References: <1509580240-28314-1-git-send-email-me@tobin.cc>
+Date: Fri, 3 Nov 2017 10:43:35 +0530
+From: Vinod Koul <vinod.koul@intel.com>
+Message-ID: <20171103051335.GJ3187@localhost>
+References: <1508986436-31966-1-git-send-email-me@tobin.cc>
+ <CAGXu5jJvBKd2i-P4LVW_mHY9e3j4JEpaR4=a7dt3CcOvimcuTQ@mail.gmail.com>
+ <20171030223346.GX12341@eros>
+ <1509415728.26592.40.camel@perches.com>
+ <20171031231619.GB3585@eros>
+ <1509492793.31043.12.camel@perches.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1509580240-28314-1-git-send-email-me@tobin.cc>
-Subject: Re: [kernel-hardening] [RFC] vla: add VLA macro and testing
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+In-Reply-To: <1509492793.31043.12.camel@perches.com>
+Subject: [kernel-hardening] Re: [PATCH V8 0/2] printk: hash addresses printed with %p
+To: Joe Perches <joe@perches.com>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Mauro Carvalho Chehab <mchehab@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Nov 02, 2017 at 10:50:40AM +1100, Tobin C. Harding wrote:
-> Variable Length Arrays (VLA) pose a risk to the stack if the variable
-> passed into the array declaration is too large. If the variable used can
-> be controlled by a malicious party then this poses a security risk to
-> the kernel.
-> 
-> Add a macro for declaring VLA's. Macro includes a requested size and a
-> maximum size, if requested size is larger than maximum size then
-> requested size is capped at maximum. Requested size is passed by
-> reference and updated by macro so caller has access to size of array
-> after declaration.
-> 
-> Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> 
-> ---
-> 
-> I was unable to get the test module to integrate with the kernel build system
-> correctly. The attempt was to mirror the way `lib/test_printf.c` functions. This
-> effort was unsuccessful, it is included in the patch in the hope of getting
-> better suggestions. To test, the test module was built out of tree and all tests
-> pass.  
-> 
-> The macro needs some work. It functions as intended but
-> 
-> Checkpatch emits ERROR: Macros with multiple statements should be enclosed in a
-> do - while loop.
-> 
-> Also for each use of VLA() checkpatch emits WARNING: Missing a blank line after
-> declarations.
-> 
-> Also I was unsure where to put the macro definition, appreciate any suggestions.
-> 
-> thanks,
-> Tobin.
-> 
->  include/linux/vla.h                | 24 ++++++++++
->  lib/Kconfig.debug                  |  3 ++
->  lib/Makefile                       |  1 +
->  lib/test_vla.c                     | 98 ++++++++++++++++++++++++++++++++++++++
->  tools/testing/selftests/lib/config |  1 +
->  5 files changed, 127 insertions(+)
->  create mode 100644 include/linux/vla.h
->  create mode 100644 lib/test_vla.c
-> 
-> diff --git a/include/linux/vla.h b/include/linux/vla.h
-> new file mode 100644
-> index 000000000000..e8f1572bbf42
-> --- /dev/null
-> +++ b/include/linux/vla.h
-> @@ -0,0 +1,24 @@
-> +/*
-> + * This software is licensed under the terms of the GNU General Public
-> + * License version 2, as published by the Free Software Foundation, and
-> + * may be copied, distributed, and modified under those terms.
-> + *
-> + * This program is distributed in the hope that it will be useful,
-> + * but WITHOUT ANY WARRANTY; without even the implied warranty of
-> + * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-> + * GNU General Public License for more details.
-> + *
-> + */
-> +#ifndef __LINUX_VLA_H
-> +#define __LINUX_VLA_H
-> +
-> +/*
-> + * When declaring a local variable using VLA(), VLA() must be the last
-> + * declaration otherwise a compiler warning [-Wdeclaration-after-statement] will
-> + * be generated
-> + */
-> +#define VLA(type, name, size, max) \
-> +	type name[(*size < max ? *size : max)]; \
-> +	*size = (*size < max ? *size : max)
+On Tue, Oct 31, 2017 at 04:33:13PM -0700, Joe Perches wrote:
+> On Wed, 2017-11-01 at 10:16 +1100, Tobin C. Harding wrote:
 
-This requires you to have your VLAs at the end of the declarations,
-which is annoying and potentially limiting (limited to one VLA, etc.).
-I also don't think you need the pointer. Something like:
+> > Cool, thanks Joe I'll keep this in mind for when we get to %pa.
+> 
+> fyi:  There are more of these misuses of 0x%pa now:
+> 
+> $ git grep -E -n "0[xX]%pa[dp]?\b"
+> drivers/dma/at_hdmac_regs.h:388:                 "  desc: s%pad d%pad ctrl0x%x:0x%x l0x%pad\n",
+> drivers/dma/coh901318.c:1322:           dev_vdbg(COHC_2_DEV(cohc), "i %d, lli %p, ctrl 0x%x, src 0x%pad"
+> drivers/dma/coh901318.c:1323:                    ", dst 0x%pad, link 0x%pad virt_link_addr 0x%p\n",
+> drivers/dma/coh901318.c:2234:            "[%s] channel %d src 0x%pad dest 0x%pad size %zu\n",
 
-#define VLA(type, name, size, max) \
-        type name[(size < max ? max : (size = max))]
+Fixed and sent patches for these two.
 
-should work I think.
-
-It would also be nice to see some users of the VLA macro as part of
-this series.
-
-Cheers,
-
-Tycho
+-- 
+~Vinod
