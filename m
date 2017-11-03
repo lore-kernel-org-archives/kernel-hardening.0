@@ -1,111 +1,105 @@
-Date: Sat, 4 Nov 2017 09:02:00 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171103220200.GK7499@eros>
-References: <1509580240-28314-1-git-send-email-me@tobin.cc>
- <20171103084444.r7ls2klvwk7ndq7a@docker>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171103084444.r7ls2klvwk7ndq7a@docker>
-Subject: Re: [kernel-hardening] [RFC] vla: add VLA macro and testing
-To: Tycho Andersen <tycho@docker.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+From: Laura Abbott <labbott@redhat.com>
+Date: Fri,  3 Nov 2017 16:04:25 -0700
+Message-Id: <20171103230426.19114-1-labbott@redhat.com>
+In-reply-to: <20171026090942.7041-1-mark.rutland@arm.com>
+Subject: [kernel-hardening] [RFC PATCH 1/2] x86: Avoid multiple evaluations in __{get,put}_user_size
+To: kernel-hardening@lists.openwall.com
+Cc: Laura Abbott <labbott@redhat.com>, linux-kernel@vger.kernel.org, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 03, 2017 at 11:44:44AM +0300, Tycho Andersen wrote:
-> On Thu, Nov 02, 2017 at 10:50:40AM +1100, Tobin C. Harding wrote:
-> > Variable Length Arrays (VLA) pose a risk to the stack if the variable
-> > passed into the array declaration is too large. If the variable used can
-> > be controlled by a malicious party then this poses a security risk to
-> > the kernel.
-> > 
-> > Add a macro for declaring VLA's. Macro includes a requested size and a
-> > maximum size, if requested size is larger than maximum size then
-> > requested size is capped at maximum. Requested size is passed by
-> > reference and updated by macro so caller has access to size of array
-> > after declaration.
-> > 
-> > Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> > 
-> > ---
-> > 
-> > I was unable to get the test module to integrate with the kernel build system
-> > correctly. The attempt was to mirror the way `lib/test_printf.c` functions. This
-> > effort was unsuccessful, it is included in the patch in the hope of getting
-> > better suggestions. To test, the test module was built out of tree and all tests
-> > pass.  
-> > 
-> > The macro needs some work. It functions as intended but
-> > 
-> > Checkpatch emits ERROR: Macros with multiple statements should be enclosed in a
-> > do - while loop.
-> > 
-> > Also for each use of VLA() checkpatch emits WARNING: Missing a blank line after
-> > declarations.
-> > 
-> > Also I was unsure where to put the macro definition, appreciate any suggestions.
-> > 
-> > thanks,
-> > Tobin.
-> > 
-> >  include/linux/vla.h                | 24 ++++++++++
-> >  lib/Kconfig.debug                  |  3 ++
-> >  lib/Makefile                       |  1 +
-> >  lib/test_vla.c                     | 98 ++++++++++++++++++++++++++++++++++++++
-> >  tools/testing/selftests/lib/config |  1 +
-> >  5 files changed, 127 insertions(+)
-> >  create mode 100644 include/linux/vla.h
-> >  create mode 100644 lib/test_vla.c
-> > 
-> > diff --git a/include/linux/vla.h b/include/linux/vla.h
-> > new file mode 100644
-> > index 000000000000..e8f1572bbf42
-> > --- /dev/null
-> > +++ b/include/linux/vla.h
-> > @@ -0,0 +1,24 @@
-> > +/*
-> > + * This software is licensed under the terms of the GNU General Public
-> > + * License version 2, as published by the Free Software Foundation, and
-> > + * may be copied, distributed, and modified under those terms.
-> > + *
-> > + * This program is distributed in the hope that it will be useful,
-> > + * but WITHOUT ANY WARRANTY; without even the implied warranty of
-> > + * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-> > + * GNU General Public License for more details.
-> > + *
-> > + */
-> > +#ifndef __LINUX_VLA_H
-> > +#define __LINUX_VLA_H
-> > +
-> > +/*
-> > + * When declaring a local variable using VLA(), VLA() must be the last
-> > + * declaration otherwise a compiler warning [-Wdeclaration-after-statement] will
-> > + * be generated
-> > + */
-> > +#define VLA(type, name, size, max) \
-> > +	type name[(*size < max ? *size : max)]; \
-> > +	*size = (*size < max ? *size : max)
-> 
-> This requires you to have your VLAs at the end of the declarations,
-> which is annoying and potentially limiting (limited to one VLA, etc.).
-> I also don't think you need the pointer. Something like:
-> 
-> #define VLA(type, name, size, max) \
->         type name[(size < max ? max : (size = max))]
->
-> should work I think.
+Currently __{get,put}_user_size() expand their ptr argument in several
+places, and some callers pass in expressions with side effects.
 
-         type name[(size < max ? size : (size = max))]
+For example, fs/binfmt_elf.c, passes sp++ as the ptr argument to a chain
+of __put_user() calls.
 
-Oh, cool. Thanks Tycho. I'll test out your suggestion. At first glance I
-think that will remove both the checkpatch issues and the declaration
-annoyance. Nice one!
+So far this isn't a problem, as each of these uses is mutually
+exclusive. However, in subsequent patches we will need to make use of
+the ptr argument several times, and ensure that we evaluate the ptr
+expression exactly once to avoid corrupting the pointer.
 
-> It would also be nice to see some users of the VLA macro as part of
-> this series.
+In preparation for such uses, this patch reorganises
+__{get,put}_user_size to evaluate the ptr argument into a temporary
+__{gu,pu}_ptr variable, ensuring that side-effects occur exaclty once.
 
-Righto, I wondered if that was the done thing. Will add one for the next
-spin.
+There should be no functional change as a result of this patch.
 
-thanks,
-Tobin.
+Based on work done for arm64 by Mark Rutland.
+
+Signed-off-by: Laura Abbott <labbott@redhat.com>
+---
+This is setup patch for checking __{get,put}_user on x86 based on
+Mark Rutland's work for arm64
+lkml.kernel.org/r/<20171026090942.7041-1-mark.rutland@arm.com>
+---
+ arch/x86/include/asm/uaccess.h | 30 +++++++++++++++++++-----------
+ 1 file changed, 19 insertions(+), 11 deletions(-)
+
+diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
+index 574dff4d2913..d23fb5844404 100644
+--- a/arch/x86/include/asm/uaccess.h
++++ b/arch/x86/include/asm/uaccess.h
+@@ -275,21 +275,25 @@ extern void __put_user_8(void);
+ 
+ #define __put_user_size(x, ptr, size, retval, errret)			\
+ do {									\
++	typeof(ptr) __pu_ptr = (ptr);					\
+ 	retval = 0;							\
+-	__chk_user_ptr(ptr);						\
++	__chk_user_ptr(__pu_ptr);					\
+ 	switch (size) {							\
+ 	case 1:								\
+-		__put_user_asm(x, ptr, retval, "b", "b", "iq", errret);	\
++		__put_user_asm(x, __pu_ptr, retval, "b", "b", "iq",	\
++				errret);				\
+ 		break;							\
+ 	case 2:								\
+-		__put_user_asm(x, ptr, retval, "w", "w", "ir", errret);	\
++		__put_user_asm(x, __pu_ptr, retval, "w", "w", "ir",	\
++				errret);				\
+ 		break;							\
+ 	case 4:								\
+-		__put_user_asm(x, ptr, retval, "l", "k", "ir", errret);	\
++		__put_user_asm(x, __pu_ptr, retval, "l", "k", "ir",	\
++				errret);				\
+ 		break;							\
+ 	case 8:								\
+-		__put_user_asm_u64((__typeof__(*ptr))(x), ptr, retval,	\
+-				   errret);				\
++		__put_user_asm_u64((__typeof__(*ptr))(x), __pu_ptr,	\
++				retval,	\ errret);			\
+ 		break;							\
+ 	default:							\
+ 		__put_user_bad();					\
+@@ -352,20 +356,24 @@ do {									\
+ 
+ #define __get_user_size(x, ptr, size, retval, errret)			\
+ do {									\
++	typeof(ptr) __gu_ptr = (ptr);					\
+ 	retval = 0;							\
+-	__chk_user_ptr(ptr);						\
++	__chk_user_ptr(__gu_ptr);					\
+ 	switch (size) {							\
+ 	case 1:								\
+-		__get_user_asm(x, ptr, retval, "b", "b", "=q", errret);	\
++		__get_user_asm(x, __gu_ptr, retval, "b", "b", "=q",	\
++				errret);				\
+ 		break;							\
+ 	case 2:								\
+-		__get_user_asm(x, ptr, retval, "w", "w", "=r", errret);	\
++		__get_user_asm(x, __gu_ptr, retval, "w", "w", "=r",	\
++				errret);				\
+ 		break;							\
+ 	case 4:								\
+-		__get_user_asm(x, ptr, retval, "l", "k", "=r", errret);	\
++		__get_user_asm(x, __gu_ptr, retval, "l", "k", "=r",	\
++				errret);				\
+ 		break;							\
+ 	case 8:								\
+-		__get_user_asm_u64(x, ptr, retval, errret);		\
++		__get_user_asm_u64(x, __gu_ptr, retval, errret);	\
+ 		break;							\
+ 	default:							\
+ 		(x) = __get_user_bad();					\
+-- 
+2.13.5
