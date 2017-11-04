@@ -1,60 +1,32 @@
-Date: Sat, 4 Nov 2017 01:58:05 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20171104015805.o6kkoydzn7kfhiav@salmiak>
-References: <20171103230426.19114-1-labbott@redhat.com>
- <20171103230426.19114-2-labbott@redhat.com>
- <CAGXu5jJconGeCQbRX9XOpPo__dgDY5zdRtb5G6ce7Wih7SHyiQ@mail.gmail.com>
- <20171104002430.GN21978@ZenIV.linux.org.uk>
+Date: Sat, 4 Nov 2017 18:53:46 -0500
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20171104235346.GA17170@mail.hallyn.com>
+References: <20171103004436.40026-1-mahesh@bandewar.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171104002430.GN21978@ZenIV.linux.org.uk>
-Subject: [kernel-hardening] Re: [RFC PATCH 2/2] x86: Allow paranoid __{get,put}_user
-To: Al Viro <viro@ZenIV.linux.org.uk>
-Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>
+In-Reply-To: <20171103004436.40026-1-mahesh@bandewar.net>
+Subject: [kernel-hardening] Re: [PATCH resend 2/2] userns: control capabilities of some user
+ namespaces
+To: Mahesh Bandewar <mahesh@bandewar.net>
+Cc: LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <maheshb@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Nov 04, 2017 at 12:24:30AM +0000, Al Viro wrote:
-> On Fri, Nov 03, 2017 at 05:14:05PM -0700, Kees Cook wrote:
-> > > x86 turns out to be easier since the safe and unsafe paths are mostly
-> > > disjoint so we don't have to worry about gcc optimizing out access_ok.
-> > > I tweaked the Kconfig to someting a bit more generic.
-> > >
-> > > The size increase was ~8K in text with a config I tested.
-> > 
-> > Specifically, this feature would have caught the waitid() bug in 4.13
-> > immediately.
-> 
-> You mean, as soon as waitid() was given a kernel address.  At which point
-> you'd get a shiny way to generate a BUG(), and if something like that
-> happened under a mutex - it's even more fun...
+Quoting Mahesh Bandewar (mahesh@bandewar.net):
+> Init-user-ns is always uncontrolled and a process that has SYS_ADMIN
+> that belongs to uncontrolled user-ns can create another (child) user-
+> namespace that is uncontrolled. Any other process (that either does
+> not have SYS_ADMIN or belongs to a controlled user-ns) can only
+> create a user-ns that is controlled.
 
-FWIW, on the arm64 version I'd used BUG() since my initial focus was fuzzing.
+That's a huge change though.  It means that any system that previously
+used unprivileged containers will need new privileged code (which always
+risks more privilege leaks through the new code) to re-enable what was
+possible without privilege before.  That's a regression.
 
-We can make this safe for hardening by returning -EFAULT instead.
-
-> > > +config PARANOID_UACCESS
-> > > +       bool "Use paranoid uaccess primitives"
-> > > +       depends on ARCH_HAS_PARANOID_UACCESS
-> > > +       help
-> > > +         Forces access_ok() checks in __get_user(), __put_user(), and other
-> > > +         low-level uaccess primitives which usually do not have checks. This
-> > > +         can limit the effect of missing access_ok() checks in higher-level
-> > > +         primitives, with a runtime performance overhead in some cases and a
-> > > +         small code size overhead.
-> 
-> IMO that's the wrong way to go - what we need is to reduce the amount of
-> __get_user()/__put_user(), rather than "instrumenting" them that way.
-
-Certainly that's where we want to get to.
-
-However, in the mean time, I'd argue that there's little downside to providing
-the option to check the nominally unchecked primitives, provided this is
-optional.
-
-In investigating this for arm/arm64, I found at least one other bug. I would
-not be surprised to find that I had missed others, nor would I be surprised to
-find that new bugs get introduced in future.
-
-Thanks,
-Mark.
+I'm very much interested in what you want to do,  But it seems like
+it would be worth starting with some automated code analysis that shows
+exactly what code becomes accessible to unprivileged users with user
+namespaces which was accessible to unprivileged users before.  Then we
+can reason about classifying that code and perhaps limiting access to
+some of it.
