@@ -1,61 +1,51 @@
-Date: Tue, 7 Nov 2017 11:50:27 +0100
-From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20171107105027.GA1464@kroah.com>
-References: <1510050731-32446-1-git-send-email-me@tobin.cc>
+Date: Mon, 6 Nov 2017 23:42:08 +0100
+From: Christian Brauner <christian.brauner@canonical.com>
+Message-ID: <20171106224207.pdws44vorkxdf6ur@gmail.com>
+References: <20171103004436.40026-1-mahesh@bandewar.net>
+ <20171104235346.GA17170@mail.hallyn.com>
+ <CAF2d9jg1tZz-hnVBeXm3geq7jSBt5v5w6+p5B1V-7huS4qbMBA@mail.gmail.com>
+ <20171106150302.GA26634@mail.hallyn.com>
+ <1510003994.736.0.camel@gmail.com>
+ <20171106221418.GA32543@mail.hallyn.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <1510050731-32446-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] Re: [PATCH v4] scripts: add leaking_addresses.pl
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
+In-Reply-To: <20171106221418.GA32543@mail.hallyn.com>
+Subject: Re: [kernel-hardening] Re: [PATCH resend 2/2] userns: control
+ capabilities of some user namespaces
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Daniel Micay <danielmicay@gmail.com>, Mahesh Bandewar =?utf-8?B?KOCkruCkueClh+CktiDgpKzgpILgpKHgpYfgpLXgpL4=?= =?utf-8?B?4KSwKQ==?= <maheshb@google.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 07, 2017 at 09:32:11PM +1100, Tobin C. Harding wrote:
-> Currently we are leaking addresses from the kernel to user space. This
-> script is an attempt to find some of those leakages. Script parses
-> `dmesg` output and /proc and /sys files for hex strings that look like
-> kernel addresses.
+On Mon, Nov 06, 2017 at 04:14:18PM -0600, Serge Hallyn wrote:
+> Quoting Daniel Micay (danielmicay@gmail.com):
+> > Substantial added attack surface will never go away as a problem. There
+> > aren't a finite number of vulnerabilities to be found.
 > 
-> Only works for 64 bit kernels, the reason being that kernel addresses
-> on 64 bit kernels have 'ffff' as the leading bit pattern making greping
-> possible. On 32 kernels we don't have this luxury.
+> There's varying levels of usefulness and quality.  There is code which I
+> want to be able to use in a container, and code which I can't ever see a
+> reason for using there.  The latter, especially if it's also in a
+> staging driver, would be nice to have a toggle to disable.
 > 
-> Scripts is _slightly_ smarter than a straight grep, we check for false
-> positives (all 0's or all 1's, and vsyscall start/finish addresses).
+> You're not advocating dropping the added attack surface, only adding a
+> way of dealing with an 0day after the fact.  Privilege raising 0days can
+> exist anywhere, not just in code which only root in a user namespace can
+> exercise.  So from that point of view, ksplice seems a more complete
+> solution.  Why not just actually fix the bad code block when we know
+> about it?
 > 
-> Output is saved to file to expedite repeated formatting/viewing of
-> output.
-> 
-> Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> ---
-> 
-> This version outputs a report instead of the raw results by default. Designing
-> this proved to be non-trivial, the reason being that it is not immediately clear
-> what constitutes a duplicate entry (similar message, address range, same
-> file?). Also, the aim of the report is to assist users _not_ missing correct
-> results; limiting the output is inherently a trade off between noise and
-> correct, clear results.
-> 
-> Without testing on various real kernels its not clear that this reporting is any
-> good, my test cases were a bit contrived. Your usage may vary.
-> 
-> It would be super helpful to get some comments from people running this with
-> different set ups.
-> 
-> Please feel free to say 'try harder Tobin, this reporting is shit'.
-> 
-> Thanks, appreciate your time,
-> Tobin.
-> 
-> v4:
->  - Add `scan` and `format` sub-commands.
->  - Output report by default.
->  - Add command line option to send scan results (to me).
+> Finally, it has been well argued that you can gain many new caps from
+> having only a few others.  Given that, how could you ever be sure that,
+> if an 0day is found which allows root in a user ns to abuse
+> CAP_NET_ADMIN against the host, just keeping CAP_NET_ADMIN from them
+> would suffice?  It seems to me that the existing control in
+> /proc/sys/kernel/unprivileged_userns_clone might be the better duct tape
+> in that case.
 
-As the script is already in Linus's tree, you might need to send a patch
-on top of that, instead of this one, as this one will not apply anymore.
+I agree that /proc/sys/kernel/unprivileged_userns_clone is the most reasonable
+thing to do. This patch introduces a layer of complexity to fine-tune user
+namespace creation that - in the relevant security critical scenario - should
+simply be turned of entirely.
 
-thanks,
-
-greg k-h
+Is /proc/sys/kernel/unprivileged_userns_clone upstreamed or is this still only
+carried downstream?
