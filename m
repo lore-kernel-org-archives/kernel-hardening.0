@@ -1,62 +1,20 @@
-Date: Tue, 7 Nov 2017 08:15:40 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171106211540.GT18478@eros>
-References: <1509945567-11801-1-git-send-email-me@tobin.cc>
- <CA+55aFzPeCuvjscBNj6ANzfRUDsjT6Ntn9Grr915CrSpOfNSnA@mail.gmail.com>
- <CA+55aFw6A8Ta=yMGKiOdcMMV16-PuP9GZmia4yA_5zLdoJnFUQ@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+55aFw6A8Ta=yMGKiOdcMMV16-PuP9GZmia4yA_5zLdoJnFUQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v3] scripts: add leaking_addresses.pl
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts,
- William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+Message-ID: <1510003994.736.0.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Mon, 06 Nov 2017 16:33:14 -0500
+In-Reply-To: <20171106150302.GA26634@mail.hallyn.com>
+References: <20171103004436.40026-1-mahesh@bandewar.net>
+	 <20171104235346.GA17170@mail.hallyn.com>
+	 <CAF2d9jg1tZz-hnVBeXm3geq7jSBt5v5w6+p5B1V-7huS4qbMBA@mail.gmail.com>
+	 <20171106150302.GA26634@mail.hallyn.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCH resend 2/2] userns: control
+ capabilities of some user namespaces
+To: "Serge E. Hallyn" <serge@hallyn.com>, Mahesh Bandewar =?UTF-8?Q?=28=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6_?= =?UTF-8?Q?=E0=A4=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE?= =?UTF-8?Q?=E0=A4=B0=29?= <maheshb@google.com>
+Cc: Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W .
+ Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 06, 2017 at 09:41:09AM -0800, Linus Torvalds wrote:
-> On Mon, Nov 6, 2017 at 9:27 AM, Linus Torvalds
-> <torvalds@linux-foundation.org> wrote:
-> >
-> > Lovely. This is great. It shows just how much totally pointless stuff
-> > we leak, and to normal users that really shouldn't need it.
-> 
-> Side note: it would be good to have some summary view, and perhaps
-> some way to limit duplicates.
-
-This has been bothering me also.
-
-> I ended up running this command line from hell to summarize the
-> different sources:
-> 
->     perl leaking_addresses.pl |
->             cut -d: -f1 |
->             sed 's:/[0-9]*/:/X/:g' |
->             sed 's:/module/[^/]*/:/module/X/:g' |
->             sort | uniq | less -S
-> 
-> and maybe that kind of duplicate culling could be part of the script
-> itself if you pass it some summary line.
-> 
-> In particular, if would be nice to have a summary report that
-> 
->  - only shows the first address for a particular source
-> 
->  - have some logic to collapse repeated entries of "same file, just
-> different instance"
-> 
-> my sed-invocations there are obviously very ad-hoc, I'm  not actually
-> advocating that crap, it's only meant as hacky example of what I'm
-> talking about. Something smarter would be much better.
-> 
-> Because right now if some developer runs it, they might miss some case
-> that they should care about, simply because it's hidden among all the
-> thousands of essentially duplicate cases.
-
-Awesome. I'm on it. thanks.
-
-So, cull duplicates by default, add summary report to end of output, add
-'--raw' option to dump all the lines (the current output).
-
-thanks,
-Tobin.
+Substantial added attack surface will never go away as a problem. There
+aren't a finite number of vulnerabilities to be found.
