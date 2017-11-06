@@ -1,72 +1,63 @@
-Date: Mon, 6 Nov 2017 09:03:02 -0600
-From: "Serge E. Hallyn" <serge@hallyn.com>
-Message-ID: <20171106150302.GA26634@mail.hallyn.com>
-References: <20171103004436.40026-1-mahesh@bandewar.net>
- <20171104235346.GA17170@mail.hallyn.com>
- <CAF2d9jg1tZz-hnVBeXm3geq7jSBt5v5w6+p5B1V-7huS4qbMBA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAF2d9jg1tZz-hnVBeXm3geq7jSBt5v5w6+p5B1V-7huS4qbMBA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH resend 2/2] userns: control capabilities of some user
- namespaces
-To: Mahesh Bandewar =?utf-8?B?KOCkruCkueClh+CktiDgpKzgpILgpKHgpYfgpLXgpL4=?= =?utf-8?B?4KSwKQ==?= <maheshb@google.com>
-Cc: "Serge E. Hallyn" <serge@hallyn.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
+Sender: linus971@gmail.com
+In-Reply-To: <1509945567-11801-1-git-send-email-me@tobin.cc>
+References: <1509945567-11801-1-git-send-email-me@tobin.cc>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Mon, 6 Nov 2017 09:27:09 -0800
+Message-ID: <CA+55aFzPeCuvjscBNj6ANzfRUDsjT6Ntn9Grr915CrSpOfNSnA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v3] scripts: add leaking_addresses.pl
+To: "Tobin C. Harding" <me@tobin.cc>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Mahesh Bandewar (महेश बंडेवार) (maheshb@google.com):
-> On Sat, Nov 4, 2017 at 4:53 PM, Serge E. Hallyn <serge@hallyn.com> wrote:
-> >
-> > Quoting Mahesh Bandewar (mahesh@bandewar.net):
-> > > Init-user-ns is always uncontrolled and a process that has SYS_ADMIN
-> > > that belongs to uncontrolled user-ns can create another (child) user-
-> > > namespace that is uncontrolled. Any other process (that either does
-> > > not have SYS_ADMIN or belongs to a controlled user-ns) can only
-> > > create a user-ns that is controlled.
-> >
-> > That's a huge change though.  It means that any system that previously
-> > used unprivileged containers will need new privileged code (which always
-> > risks more privilege leaks through the new code) to re-enable what was
-> > possible without privilege before.  That's a regression.
-> >
-> I wouldn't call it a regression since the existing behavior is
-> preserved as it is if the default-mask is not altered. i.e.
-> uncontrolled process can create user-ns and have full control inside
-> that user-ns. The only difference is - as an example if 'something'
-> comes up which makes a specific capability expose ring-0, so admin can
-> quickly remove the capability in question from the mask, so that no
-> untrusted code can exploit that capability until either the kernel is
+On Sun, Nov 5, 2017 at 9:19 PM, Tobin C. Harding <me@tobin.cc> wrote:
+> Currently we are leaking addresses from the kernel to user space. This
+> script is an attempt to find some of those leakages. Script parses
+> `dmesg` output and /proc and /sys files for hex strings that look like
+> kernel addresses.
 
-Oh, sorry, I misread then, and missed that step.  I thought the default
-with this patchset was that there were no capabilities exposed to user
-namespaces.
+Lovely. This is great. It shows just how much totally pointless stuff
+we leak, and to normal users that really shouldn't need it.
 
-> patched or workloads are sanitized keeping in mind what was
-> discovered. (I have given some real life example vulnerabilities
-> published recently about CAP_NET_RAW in the cover letter)
-> 
-> > I'm very much interested in what you want to do,  But it seems like
-> > it would be worth starting with some automated code analysis that shows
-> > exactly what code becomes accessible to unprivileged users with user
-> > namespaces which was accessible to unprivileged users before.  Then we
-> > can reason about classifying that code and perhaps limiting access to
-> > some of it.
-> I would like to look at this as 'a tool' that is available to admins
-> who can quickly take possible-compromise-situation under-control
-> probably at the cost of some functionality-loss until kernel is
-> patched and the mask is restored to default value.
+I had planned to wait for 4.15 to look at the printk hashing stuff
+etc, but this part I think I could/should merge early just because I
+think a lot of kernel developers will go "Why the f*ck would we expose
+that kernel address there?"
 
-The thing that makes me hesitate with this set is that it is a
-permanent new feature to address what (I hope) is a temporary
-problem.  What would you think about doing this as a stackable
-(yama-style) LSM?
+The module sections stuff etc should likely be obviously root-only,
+although maybe I'm missing some tool that ends up using it and is
+useful to normal developers.
 
-> I'm not sure if automated tools could discover anything since these
-> changes should not alter behavior in any way.
+And I'm thinking we could make kallsyms smarter too, and instead of
+depending on kptr_restrict that screws over things with much too big a
+hammer, we could make it take 'perf_event_paranoid' into account. I
+suspect that's the main user of kallsyms that would still be relevant
+to non-root.
 
-Seems like there are two naive ways to do it, the first being to just
-look at all code under ns_capable() plus code called from there.  It
-seems like looking at the result of that could be fruitful.
+I really really hate kptr_restrict due to that whole "all or nothing" thing.
 
--serge
+The networking code ends up having a ton of "sk" pointers, and I
+suspect those would all be fine just using the hashed address, since
+nobody is going to care about the _actual_ kernel address, but
+matching a socket reference in one file against another one makes tons
+of sense and I would not be surprised if there's a lot of netstat-like
+tools that do that. So the whole '%pK' thing is entirely useless for
+them, but the "hash %p values" should work fine.
+
+Adding netdev and David Miller explicitly to the cc, since many of the
+kernel pointer leaks are from them, and they may not even have been
+following this discussion at all.
+
+David - you can see the patch on patchwork:
+
+    https://patchwork.kernel.org/patch/10042605/
+
+and try it out yourself.
+
+I heartily recommend other developers run it too, just to see if it
+makes you go "Oh, I didn't even realize.."
+
+This looks much more interesting than the whole "%p vs %pK vs %x" discussion.
+
+                  Linus
