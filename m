@@ -1,51 +1,30 @@
-Date: Mon, 6 Nov 2017 23:42:08 +0100
-From: Christian Brauner <christian.brauner@canonical.com>
-Message-ID: <20171106224207.pdws44vorkxdf6ur@gmail.com>
-References: <20171103004436.40026-1-mahesh@bandewar.net>
- <20171104235346.GA17170@mail.hallyn.com>
- <CAF2d9jg1tZz-hnVBeXm3geq7jSBt5v5w6+p5B1V-7huS4qbMBA@mail.gmail.com>
- <20171106150302.GA26634@mail.hallyn.com>
- <1510003994.736.0.camel@gmail.com>
- <20171106221418.GA32543@mail.hallyn.com>
+From: David Laight <David.Laight@ACULAB.COM>
+Date: Tue, 7 Nov 2017 13:56:05 +0000
+Message-ID: <063D6719AE5E284EB5DD2968C1650D6DD00B3BD1@AcuExch.aculab.com>
+References: <1510050731-32446-1-git-send-email-me@tobin.cc>
+In-Reply-To: <1510050731-32446-1-git-send-email-me@tobin.cc>
+Content-Type: text/plain; charset="Windows-1252"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <20171106221418.GA32543@mail.hallyn.com>
-Subject: Re: [kernel-hardening] Re: [PATCH resend 2/2] userns: control
- capabilities of some user namespaces
-To: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Daniel Micay <danielmicay@gmail.com>, Mahesh Bandewar =?utf-8?B?KOCkruCkueClh+CktiDgpKzgpILgpKHgpYfgpLXgpL4=?= =?utf-8?B?4KSwKQ==?= <maheshb@google.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
+Subject: [kernel-hardening] RE: [PATCH v4] scripts: add leaking_addresses.pl
+To: "'Tobin C. Harding'" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 06, 2017 at 04:14:18PM -0600, Serge Hallyn wrote:
-> Quoting Daniel Micay (danielmicay@gmail.com):
-> > Substantial added attack surface will never go away as a problem. There
-> > aren't a finite number of vulnerabilities to be found.
-> 
-> There's varying levels of usefulness and quality.  There is code which I
-> want to be able to use in a container, and code which I can't ever see a
-> reason for using there.  The latter, especially if it's also in a
-> staging driver, would be nice to have a toggle to disable.
-> 
-> You're not advocating dropping the added attack surface, only adding a
-> way of dealing with an 0day after the fact.  Privilege raising 0days can
-> exist anywhere, not just in code which only root in a user namespace can
-> exercise.  So from that point of view, ksplice seems a more complete
-> solution.  Why not just actually fix the bad code block when we know
-> about it?
-> 
-> Finally, it has been well argued that you can gain many new caps from
-> having only a few others.  Given that, how could you ever be sure that,
-> if an 0day is found which allows root in a user ns to abuse
-> CAP_NET_ADMIN against the host, just keeping CAP_NET_ADMIN from them
-> would suffice?  It seems to me that the existing control in
-> /proc/sys/kernel/unprivileged_userns_clone might be the better duct tape
-> in that case.
+From: Tobin C. Harding
+> Sent: 07 November 2017 10:32
+>
+> Currently we are leaking addresses from the kernel to user space. This
+> script is an attempt to find some of those leakages. Script parses
+> `dmesg` output and /proc and /sys files for hex strings that look like
+> kernel addresses.
+...
 
-I agree that /proc/sys/kernel/unprivileged_userns_clone is the most reasonable
-thing to do. This patch introduces a layer of complexity to fine-tune user
-namespace creation that - in the relevant security critical scenario - should
-simply be turned of entirely.
+Maybe the %p that end up in dmesg (via the kernel message buffer) should
+be converted to text in a form that allows the code that reads them to
+substitute alternate text for non-root users?
 
-Is /proc/sys/kernel/unprivileged_userns_clone upstreamed or is this still only
-carried downstream?
+Then the actual addresses will be available to root (who can probably
+get most by other means) but not to the casual observer.
+
+	David
