@@ -1,54 +1,74 @@
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CA+55aFwiaQezaPi2nzmyuFZNgR3PFcsWjjBTHJYBesKrh-Q_pQ@mail.gmail.com>
+Date: Thu, 9 Nov 2017 08:16:08 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171108211608.GC27823@eros>
 References: <1510050731-32446-1-git-send-email-me@tobin.cc>
- <ec5a3690-a8c2-0329-66c0-ed7dda5db958@redhat.com> <CA+55aFwiaQezaPi2nzmyuFZNgR3PFcsWjjBTHJYBesKrh-Q_pQ@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Wed, 8 Nov 2017 12:39:41 -0800
-Message-ID: <CA+55aFz6XYtthCgLVJY=985pedeKTwsqPLyL4VVyNpP2TjpPPg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
+ <87k1z12cof.fsf@concordia.ellerman.id.au>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <87k1z12cof.fsf@concordia.ellerman.id.au>
 Subject: Re: [kernel-hardening] [PATCH v4] scripts: add leaking_addresses.pl
-To: Laura Abbott <labbott@redhat.com>
-Cc: "Tobin C. Harding" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 7, 2017 at 4:59 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
->
-> For example, maybe /proc/kallsyms could just default to not showing
-> values to non-root users.
->
-> Something like the attached TOTALLY UNTESTED patch. It's meant more as
-> an RFC, not for application, but it's also meant to show how we can
-> tailor the behavior for specific workflow issues.
+On Wed, Nov 08, 2017 at 11:10:56PM +1100, Michael Ellerman wrote:
+> "Tobin C. Harding" <me@tobin.cc> writes:
+> > Currently we are leaking addresses from the kernel to user space. This
+> > script is an attempt to find some of those leakages. Script parses
+> > `dmesg` output and /proc and /sys files for hex strings that look like
+> > kernel addresses.
+> >
+> > Only works for 64 bit kernels, the reason being that kernel addresses
+> > on 64 bit kernels have 'ffff' as the leading bit pattern making greping
+> > possible.
+> 
+> That doesn't work super well on other architectures :D
+> 
+> I don't speak perl but presumably you can check the arch somehow and
+> customise the regex?
 
-It seems to work, except I got the condition wrong for
-sysctl_perf_event_paranoid.
+I'm on it.
 
-It should if
+> ...
+> > +# Return _all_ non false positive addresses from $line.
+> > +sub extract_addresses
+> > +{
+> > +        my ($line) = @_;
+> > +        my $address = '\b(0x)?ffff[[:xdigit:]]{12}\b';
+> 
+> On 64-bit powerpc (ppc64/ppc64le) we'd want:
+> 
+> +        my $address = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
 
-        if (sysctl_perf_event_paranoid <= 1)
-                return 1;
+This is great! Thanks a million. This gives me the idea of getting in
+contact with people who have access to other [64 bit] architectures and
+getting the address format. I guess a dump of kallsyms from each
+architecture would do the job nicely. 
 
-rather than "<= 0", because '1' still means "allow kernel profiling"
-(and the default value is "2").
+> > +# Do not parse these files (absolute path).
+> > +my @skip_parse_files_abs = ('/proc/kmsg',
+> > +			    '/proc/kcore',
+> > +			    '/proc/fs/ext4/sdb1/mb_groups',
+> > +			    '/proc/1/fd/3',
+> > +			    '/sys/kernel/debug/tracing/trace_pipe',
+> > +			    '/sys/kernel/security/apparmor/revision');
+> 
+> Can you add:
+> 
+>   /sys/firmware/devicetree
+> 
+> and/or /proc/device-tree (which is a symlink to the above).
 
-But I don't know if there is anything else than the profiling code
-that _really_ wants access to /proc/kallsyms in user space as a
-regular user.
+Can do, thanks.
 
-That said, that patch also fixes the /proc/kallsyms root check, in
-that now you can do:
+> We should also start restricting access to that because it may have
+> potentially interesting physical addresses in it, but that will break
+> existing tools, so it will need to be opt-in and done over time.
 
-    sudo head < /proc/kallsyms
+Seems like this is going to be a recurring theme if we try to stop leaks
+using file permissions. I'm interested in how we would do this, assuming
+it has to be a case by case fix but done many times.
 
-and it still shows all zeroes - because the file was *opened* as a
-normal user. That's how UNIX file access security works, and how it is
-fundamentally supposed to work (ie passing a file descriptor to a sui
-program doesn't magically make it gain privileges).
-
-Anyway, I'm obviously not going to commit that patch now, but I'd be
-happy to try it for the 4.15 merge window, to see if we can close
-/proc/kallsyms without people screaming..
-
-            Linus
+thanks,
+Tobin.
