@@ -1,115 +1,148 @@
 From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Date: Wed,  8 Nov 2017 23:30:16 +0100
-Message-Id: <20171108223020.24487-3-linux@rasmusvillemoes.dk>
+Date: Wed,  8 Nov 2017 23:30:18 +0100
+Message-Id: <20171108223020.24487-5-linux@rasmusvillemoes.dk>
 In-Reply-To: <20171108223020.24487-1-linux@rasmusvillemoes.dk>
 References: <20171108223020.24487-1-linux@rasmusvillemoes.dk>
-Subject: [kernel-hardening] [RFC 2/6] compiler.h: add __format_template
+Subject: [kernel-hardening] [RFC 4/6] lib/vsprintf.c: add fmtcheck utility
 To: kernel-hardening@lists.openwall.com
 Cc: linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Most format strings in the kernel are explicit string literals at the
-use site and can thus be checked by gcc and other static
-checkers. There are cases, however, where the format string comes from
-some struct member and is implicitly assumed to contain certain
-specifiers.
+We have a few places in the kernel where a *printf function is used with
+a non-constant format string, making the ordinary static type checking
+done by gcc et al. impossible. Some things can still be caught at build
+time with appropriate instrumentation (I'm sure one can do much better
+than the format_template plugin), but that still leaves a number of
+places unchecked. So this patch adds a function for doing run-time
+verification of a given format string against a template.
 
-A gcc plugin provides the attribute format_template for that case. One
-attaches the attribute to the struct member in question, providing a
-template consisting of the expected format specifiers. The plugin then
-checks that all static initializations of that struct member is
-consistent with the template; moreover, when the format string in a
-printf-like function call comes from such an annotated struct member,
-one cannot do static analysis of the actual runtime string, but one
-can check that the template is consistent with the actual arguments.
+The fmtcheck() function takes two format string arguments and checks
+whether they contain the same printf specifiers. If they do, the
+first (the string-to-be-checked) string is returned. If not, the
+second (the template) is returned. Regardless of which string is
+returned at run-time, the __format_arg attribute allows the compiler to
+do type-checking if the fmtcheck() function is used inside a *printf
+call, e.g.
 
-Apply the attribute to a few struct members:
+  sprintf(buf, fmtcheck(what->ever, "%d %lx", 0), i, m)
 
-struct smp_hotplug_thread::thread_comm
-struct usb_class_driver::name
-struct applesmc_node_group::format
-struct num_var_t::synth_fmt
+We actually make fmtcheck() a macro that tries very hard to ensure the
+template argument is a string literal - partly to help avoid mixing up
+the two "const char*" arguments, partly because much of the point of
+this sanity checking vanishes if the template is not a literal (e.g.,
+the __format_arg annotation becomes useless).
 
-Modifying kernel/softirq.c slightly, this is what one gets if one
-violates the template:
+We don't treat "%*.*s" and "%d %d %s" as equivalent, despite them
+taking the same vararg types, since they're morally very distinct. In
+fact, at least for now, we don't even treat "%d" and "%u" as
+equivalent. We can relax that, possibly via FMTCHECK_* flags, but let's
+first see which users there might be and what they'd want.
 
-kernel/softirq.c:751:1: error: initializer string 'ksoftirqd/%u+%d' contains extra format specifier '%d' compared to format template 'foobar/%u'
+If either string contains a %p, we really should check the following
+alphanumerics to see which (if any) extension is used and check that
+they match as well. For now, just complain loudly, partly because I'm
+lazy, partly because I don't know any in-tree code that might use
+fmtcheck() with a %p in the template, and I can't really imagine
+anyone would use a %pXX extension in a non-constant format string.
+
+I don't know if WARN is too violent; maybe just pr_warn would be ok.
+
+The BSDs (and libbsd on linux) contain a fmtcheck() function; I took the
+name and return semantics from that.
 
 Signed-off-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>
 ---
- drivers/hwmon/applesmc.c            | 2 +-
- drivers/staging/speakup/spk_types.h | 2 +-
- include/linux/compiler.h            | 6 ++++++
- include/linux/smpboot.h             | 2 +-
- include/linux/usb.h                 | 2 +-
- 5 files changed, 10 insertions(+), 4 deletions(-)
+ include/linux/kernel.h |  6 +++++
+ lib/vsprintf.c         | 63 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 69 insertions(+)
 
-diff --git a/drivers/hwmon/applesmc.c b/drivers/hwmon/applesmc.c
-index 5c677ba44014..9e6d23cba23e 100644
---- a/drivers/hwmon/applesmc.c
-+++ b/drivers/hwmon/applesmc.c
-@@ -110,7 +110,7 @@ struct applesmc_dev_attr {
+diff --git a/include/linux/kernel.h b/include/linux/kernel.h
+index 4b484ab9e163..d7c6f9a9c024 100644
+--- a/include/linux/kernel.h
++++ b/include/linux/kernel.h
+@@ -460,6 +460,12 @@ char *kvasprintf(gfp_t gfp, const char *fmt, va_list args);
+ extern __printf(2, 0)
+ const char *kvasprintf_const(gfp_t gfp, const char *fmt, va_list args);
  
- /* Dynamic device node group */
- struct applesmc_node_group {
--	char *format;				/* format string */
-+	char *format __format_template("%d");	/* format string */
- 	void *show;				/* show function */
- 	void *store;				/* store function */
- 	int option;				/* function argument */
-diff --git a/drivers/staging/speakup/spk_types.h b/drivers/staging/speakup/spk_types.h
-index c50de6035a9a..156000c0c4d3 100644
---- a/drivers/staging/speakup/spk_types.h
-+++ b/drivers/staging/speakup/spk_types.h
-@@ -108,7 +108,7 @@ struct st_var_header {
- };
- 
- struct num_var_t {
--	char *synth_fmt;
-+	char *synth_fmt __format_template("%d");
- 	int default_val;
- 	int low;
- 	int high;
-diff --git a/include/linux/compiler.h b/include/linux/compiler.h
-index 202710420d6d..478914ad280b 100644
---- a/include/linux/compiler.h
-+++ b/include/linux/compiler.h
-@@ -625,4 +625,10 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
- 	(_________p1); \
- })
- 
-+#ifdef HAVE_ATTRIBUTE_FORMAT_TEMPLATE
-+#define __format_template(x) __attribute__((__format_template__(x)))
-+#else
-+#define __format_template(x)
-+#endif
++extern __format_arg(2) __attribute_const__
++const char *_fmtcheck(const char *fmt, const char *tmpl, unsigned flags);
++#define fmtcheck(fmt, tmpl, flags) _fmtcheck(fmt, "" tmpl "", flags)
++#define FMTCHECK_SILENT        0x01
++#define FMTCHECK_NO_EXTRA_ARGS 0x02
 +
- #endif /* __LINUX_COMPILER_H */
-diff --git a/include/linux/smpboot.h b/include/linux/smpboot.h
-index c174844cf663..967285b9637d 100644
---- a/include/linux/smpboot.h
-+++ b/include/linux/smpboot.h
-@@ -42,7 +42,7 @@ struct smp_hotplug_thread {
- 	void				(*unpark)(unsigned int cpu);
- 	cpumask_var_t			cpumask;
- 	bool				selfparking;
--	const char			*thread_comm;
-+	const char			*thread_comm __format_template("foobar/%u");
- };
- 
- int smpboot_register_percpu_thread_cpumask(struct smp_hotplug_thread *plug_thread,
-diff --git a/include/linux/usb.h b/include/linux/usb.h
-index 9c63792a8134..8d48c0cd1c01 100644
---- a/include/linux/usb.h
-+++ b/include/linux/usb.h
-@@ -1236,7 +1236,7 @@ extern struct bus_type usb_bus_type;
-  * parameters used for them.
-  */
- struct usb_class_driver {
--	char *name;
-+	char *name __format_template("foobar_%d");
- 	char *(*devnode)(struct device *dev, umode_t *mode);
- 	const struct file_operations *fops;
- 	int minor_base;
+ extern __scanf(2, 3)
+ int sscanf(const char *, const char *, ...);
+ extern __scanf(2, 0)
+diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+index 86c3385b9eb3..db50acf682e7 100644
+--- a/lib/vsprintf.c
++++ b/lib/vsprintf.c
+@@ -3030,3 +3030,66 @@ int sscanf(const char *buf, const char *fmt, ...)
+ 	return i;
+ }
+ EXPORT_SYMBOL(sscanf);
++
++static int
++next_interesting_spec(const char **s, struct printf_spec *spec)
++{
++	int len;
++
++	while (1) {
++		len = format_decode(*s, spec);
++		if (!len)
++			return 0;
++		*s += len;
++		if (spec->type == FORMAT_TYPE_NONE ||
++		    spec->type == FORMAT_TYPE_PERCENT_CHAR)
++			continue;
++		return len;
++	}
++}
++
++const char *
++_fmtcheck(const char *fmt, const char *tmpl, unsigned flags)
++{
++	const char *f = fmt;
++	const char *t = tmpl;
++	struct printf_spec fspec = {0}, tspec = {0};
++	int flen, tlen;
++	int warn = !(flags & FMTCHECK_SILENT);
++
++	while (1) {
++		flen = next_interesting_spec(&f, &fspec);
++		tlen = next_interesting_spec(&t, &tspec);
++		if (!flen) {
++			/*
++			 * The given format string doesn't have any
++			 * more specifiers. It's ok from a type-safety
++			 * POV for the template to have extra, but
++			 * optionally warn about it (e.g., a single %d
++			 * may be required).
++			 */
++			if (tlen && (flags & FMTCHECK_NO_EXTRA_ARGS) && warn)
++				WARN_ONCE(warn, "template '%s' expects more arguments than '%s'\n",
++					tmpl, fmt);
++			return fmt;
++		}
++		if (!tlen) {
++			WARN_ONCE(warn, "format string '%s' expects more arguments than template '%s'",
++				  fmt, tmpl);
++			return tmpl;
++		}
++		WARN_ONCE(warn && (fspec.type == FORMAT_TYPE_PTR || tspec.type == FORMAT_TYPE_PTR),
++			  "don't use %%p in non-constant format strings");
++		/*
++		 * Should we also care about flags, field width,
++		 * precision? Should we even care about base?
++		 */
++		if (fspec.type != tspec.type ||
++		    fspec.base != tspec.base) {
++			WARN_ONCE(warn, "format string '%s' incompatible with template '%s'",
++				  fmt, tmpl);
++			return tmpl;
++		}
++	}
++}
++EXPORT_SYMBOL_GPL(_fmtcheck);
 -- 
 2.11.0
