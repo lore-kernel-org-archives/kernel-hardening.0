@@ -1,60 +1,119 @@
-Date: Tue, 7 Nov 2017 17:44:13 -0500
-From: Steven Rostedt <rostedt@goodmis.org>
-Message-ID: <20171107174413.00e51a3f@gandalf.local.home>
-In-Reply-To: <CA+55aFw-GgR7DmXsD1dmYWbxuVhg+u0oKwuwNEM4RnuVyA0NDw@mail.gmail.com>
-References: <1509945567-11801-1-git-send-email-me@tobin.cc>
-	<CA+55aFzPeCuvjscBNj6ANzfRUDsjT6Ntn9Grr915CrSpOfNSnA@mail.gmail.com>
-	<CAGXu5j+o6cf0PrnxD+W+09F7UY6JL+h7Bn5_4T2C0Z_fTZAx-w@mail.gmail.com>
-	<CA+55aFw-GgR7DmXsD1dmYWbxuVhg+u0oKwuwNEM4RnuVyA0NDw@mail.gmail.com>
+Date: Wed, 8 Nov 2017 11:42:21 +0100
+From: Petr Mladek <pmladek@suse.com>
+Message-ID: <20171108104221.GH2652@pathway.suse.cz>
+References: <1510112259-11572-1-git-send-email-me@tobin.cc>
+ <1510112259-11572-5-git-send-email-me@tobin.cc>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v3] scripts: add leaking_addresses.pl
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Kees Cook <keescook@chromium.org>, "Tobin C. Harding" <me@tobin.cc>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Joe Perches <joe@perches.com>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William
- C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1510112259-11572-5-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] Re: [PATCH 4/7] scripts/leaking_addresses: add reporting
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, kernel-hardening@lists.openwall.com, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 7 Nov 2017 13:44:01 -0800
-Linus Torvalds <torvalds@linux-foundation.org> wrote:
+On Wed 2017-11-08 14:37:36, Tobin C. Harding wrote:
+> Currently script just dumps all results found. Potentially, this risks
+> loosing single results among multiple duplicate results. We need some
+> way of restricting duplicates to assist users of the script. It would
+> also be nice if we got a report instead of raw results.
+> 
+> Duplicates can be defined in various ways, instead of trying to find a
+> single perfect solution we can present the user with various options to
+> display the output. Doing so will typically lead to users wanting to
+> view the output multiple times. Currently we scan the kernel each time,
+> this is slow and unnecessary. We can expedite the process by writing the
+> results to file for subsequent viewing.
+> 
+> Add sub-commands `scan` and `format`. Display output as a report instead
+> of raw results. Add --raw flag to view raw results. Save results to
+> file. For subsequent calls to `format` parse output file instead of
+> re-scanning.
+> 
+> Signed-off-by: Tobin C. Harding <me@tobin.cc>
+> ---
+>  scripts/leaking_addresses.pl | 201 ++++++++++++++++++++++++++++++++++++++++---
+>  1 file changed, 187 insertions(+), 14 deletions(-)
+> 
+> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
+> index 719ed0aaede7..4c31e935319b 100755
+> --- a/scripts/leaking_addresses.pl
+> +++ b/scripts/leaking_addresses.pl
+> @@ -21,14 +21,19 @@ use File::Spec;
+>  use Cwd 'abs_path';
+>  use Term::ANSIColor qw(:constants);
+>  use Getopt::Long qw(:config no_auto_abbrev);
+> +use File::Spec::Functions 'catfile';
+>  
+>  my $P = $0;
+>  my $V = '0.01';
+>  
+> -# Directories to scan.
+> +# Directories to scan (we scan `dmesg` also).
+>  my @DIRS = ('/proc', '/sys');
+>  
+>  # Command line options.
+> +my $output = "scan.out";
 
-> > Looking other places that stand out, it seems like
-> > /proc/lockdep_chains and /proc/lockdep (CONFIG_LOCKDEP=y) has a ton of
-> > %p usage. It's unclear to me if a hash is sufficient for meaningful
-> > debugging there?  
-> 
-> Maybe not, but that is also _so_ esoteric that I suspect the right fix
-> is to just make it root-only readable.
+The hard-coded filename and its use is dangerous. Nobody expects that
+this kind of script writes/re-writes a file on the system.
 
-Also note, I don't believe anyone should be running a LOCKDEP
-configured kernel in a production (secured) environment. As it adds
-quite a bit of overhead. It's something you run on test environments to
-make sure it doesn't detect any possible deadlocks.
+> +my $suppress_dmesg = 0;
+> +my $squash_by_path = 0;
+> +my $raw = 0;
+>  my $help = 0;
+>  my $debug = 0;
+>  
+> @@ -70,21 +75,34 @@ sub help
+>  	my ($exitcode) = @_;
+>  
+>  	print << "EOM";
+> -Usage: $P [OPTIONS]
+> +
+> +Usage: $P COMMAND [OPTIONS]
+>  Version: $V
+>  
+> +Commands:
+> +
+> +	scan	Scan the kernel (savesg raw results to file and runs `format`).
+> +	format	Parse results file and format output.
 
-> 
-> I've never used it, we should check with people who have. I get the
-> feeling that this is purely for PeterZ debugging.
+The later formatting/filtering might be useful but the use
+of the hard coded file is strange. Also it is pity that
+the script does not do anything useful out of box.
 
-I've used it. But then again, I also debug lockdep ;-)
+I suggest to remove the commands and do the scan out of box.
+It should not store anything on the disk by default.
 
-> 
-> The very first commit that introduced that code actually has a
-> 
->     (FIXME: should go into debugfs)
-> 
-> so I suspect it never should have been user-readable to begin with. I
-> guess it makes some things easier, but it really is *very* different
-> from things like profiling.
+Then we could define following options:
 
-Want me to whip up a patch to move the file?
+    -o, --output=<file>	 Store raw results into file for later formatting.
+    -i, --input=<file>   Read raw result from file and just format them.
 
--- Steve
+Well, it is still somehow non-intuitive. It might help to
+be more explicit:
 
-> 
-> Profiling you often *cannot* do as root - some things you profile
-> really shouldn't be run as root, and might even refuse to do so. So
-> requiring you to be root just to get a kernel profile is very bad.
-> 
-> But looking at lockdep stats? Yeah, 'sudo' isn't so big of a deal.
-> 
-> 
+    -o, --output-raw=<file>
+    -i, --input-raw=<file>
+
+
+>  Options:
+>  
+> -	-d, --debug                Display debugging output.
+> -	-h, --help, --version      Display this help and exit.
+> +	-o, --output=<file>	 Raw results output file, used for later formatting.
+> +	    --suppress-dmesg	 Do not show dmesg results.
+> +	    --squash-by-path	 Show one result per unique path.
+
+I would personally add also option for the default mode:
+
+	    --squash-by-filename Show one result per unique filename
+				 (default).
+
+In fact, I would personally use --squash-by-path or even --raw by
+default. These provide easy to understand output. While the
+--squash-by-filename mode has pretty good results but
+it is quite non-intuitive.
+
+Best Regards,
+Petr
