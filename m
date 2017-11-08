@@ -1,41 +1,81 @@
 From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Date: Wed,  8 Nov 2017 23:30:19 +0100
-Message-Id: <20171108223020.24487-6-linux@rasmusvillemoes.dk>
+Date: Wed,  8 Nov 2017 23:30:20 +0100
+Message-Id: <20171108223020.24487-7-linux@rasmusvillemoes.dk>
 In-Reply-To: <20171108223020.24487-1-linux@rasmusvillemoes.dk>
 References: <20171108223020.24487-1-linux@rasmusvillemoes.dk>
-Subject: [kernel-hardening] [RFC 5/6] kernel.h: implement fmtmatch() wrapper around fmtcheck()
+Subject: [kernel-hardening] [RFC 6/6] lib/test_printf.c: add a few fmtcheck() test cases
 To: kernel-hardening@lists.openwall.com
 Cc: linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I couldn't come up with a better name, suggestions welcome.
-
-Some users may prefer to EINVAL rather than using the the template as a
-fallback for printf'ing. fmtmatch() is simply a shorthand for
-fmtcheck(a, b, c) == a.
+It should be trivial to add more test cases, once we figure out the
+exact rules for being compatible or not. Perhaps we'll have to extend
+the struct test with a flags element if we add flags that affect the
+return value.
 
 Signed-off-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>
 ---
- include/linux/kernel.h | 7 +++++++
- 1 file changed, 7 insertions(+)
+ lib/test_printf.c | 41 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
 
-diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index d7c6f9a9c024..5eae5ecb590d 100644
---- a/include/linux/kernel.h
-+++ b/include/linux/kernel.h
-@@ -466,6 +466,13 @@ const char *_fmtcheck(const char *fmt, const char *tmpl, unsigned flags);
- #define FMTCHECK_SILENT        0x01
- #define FMTCHECK_NO_EXTRA_ARGS 0x02
+diff --git a/lib/test_printf.c b/lib/test_printf.c
+index 563f10e6876a..0c8490f3a9b3 100644
+--- a/lib/test_printf.c
++++ b/lib/test_printf.c
+@@ -483,6 +483,45 @@ test_pointer(void)
+ 	flags();
+ }
  
-+#define fmtmatch(fmt, tmpl, flags) _fmtmatch(fmt, "" tmpl "", flags)
-+static inline bool
-+_fmtmatch(const char *fmt, const char *tmpl, unsigned flags)
++static void __init
++test_fmtcheck(void)
 +{
-+	return _fmtcheck(fmt, tmpl, flags) == fmt;
++	struct test { const char *fmt; const char *tmpl; };
++	static const struct test compatible[] __initconst = {
++		{"", ""},
++		{"wlan%d", "%d"},
++		{"aa%llxbb", "cc%Lxdd%%"},
++	};
++	static const struct test incompatible[] __initconst = {
++		{"a %d b %lx", "%d %x"},
++		{"%llo", "%Lx"},
++	};
++	unsigned i;
++	const struct test *t;
++	const char *ret;
++
++	for (i = 0; i < ARRAY_SIZE(compatible); ++i) {
++		total_tests++;
++		t = &compatible[i];
++		ret = _fmtcheck(t->fmt, t->tmpl, FMTCHECK_SILENT);
++		if (ret != t->fmt) {
++			failed_tests++;
++			pr_warn("'%s' and '%s' deemed incompatible by fmtcheck()",
++				t->fmt, t->tmpl);
++		}
++	}
++	for (i = 0; i < ARRAY_SIZE(incompatible); ++i) {
++		total_tests++;
++		t = &incompatible[i];
++		ret = _fmtcheck(t->fmt, t->tmpl, FMTCHECK_SILENT);
++		if (ret != t->tmpl) {
++			failed_tests++;
++			pr_warn("'%s' and '%s' deemed compatible by fmtcheck()",
++				t->fmt, t->tmpl);
++		}
++	}
 +}
 +
- extern __scanf(2, 3)
- int sscanf(const char *, const char *, ...);
- extern __scanf(2, 0)
+ static int __init
+ test_printf_init(void)
+ {
+@@ -496,6 +535,8 @@ test_printf_init(void)
+ 	test_string();
+ 	test_pointer();
+ 
++	test_fmtcheck();
++
+ 	kfree(alloced_buffer);
+ 
+ 	if (failed_tests == 0)
 -- 
 2.11.0
