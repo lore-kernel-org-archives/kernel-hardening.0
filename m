@@ -1,74 +1,45 @@
-Date: Thu, 9 Nov 2017 08:16:08 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171108211608.GC27823@eros>
-References: <1510050731-32446-1-git-send-email-me@tobin.cc>
- <87k1z12cof.fsf@concordia.ellerman.id.au>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <87k1z12cof.fsf@concordia.ellerman.id.au>
-Subject: Re: [kernel-hardening] [PATCH v4] scripts: add leaking_addresses.pl
-To: Michael Ellerman <mpe@ellerman.id.au>
-Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Date: Wed,  8 Nov 2017 23:30:14 +0100
+Message-Id: <20171108223020.24487-1-linux@rasmusvillemoes.dk>
+Subject: [kernel-hardening] [RFC 0/6] some compile- and run-time format checking
+To: kernel-hardening@lists.openwall.com
+Cc: linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 08, 2017 at 11:10:56PM +1100, Michael Ellerman wrote:
-> "Tobin C. Harding" <me@tobin.cc> writes:
-> > Currently we are leaking addresses from the kernel to user space. This
-> > script is an attempt to find some of those leakages. Script parses
-> > `dmesg` output and /proc and /sys files for hex strings that look like
-> > kernel addresses.
-> >
-> > Only works for 64 bit kernels, the reason being that kernel addresses
-> > on 64 bit kernels have 'ffff' as the leading bit pattern making greping
-> > possible.
-> 
-> That doesn't work super well on other architectures :D
-> 
-> I don't speak perl but presumably you can check the arch somehow and
-> customise the regex?
+Consider these strictly RFC/POC.
 
-I'm on it.
+I tried resurrecting my format_template plugin from two years ago, and
+it rebased pretty cleanly. It also compiles with gcc 6.3, and has the
+expected effect when one tries to trigger it, so it seems to work ok
+(I think there was some build bot issue back then, maybe there still
+is).
 
-> ...
-> > +# Return _all_ non false positive addresses from $line.
-> > +sub extract_addresses
-> > +{
-> > +        my ($line) = @_;
-> > +        my $address = '\b(0x)?ffff[[:xdigit:]]{12}\b';
-> 
-> On 64-bit powerpc (ppc64/ppc64le) we'd want:
-> 
-> +        my $address = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
+The last four patches are something I threw together rather quickly.
+They compile and the few test cases pass, but I obviously need to find
+some places to actually use fmtcheck() to see if it's worth adding.
 
-This is great! Thanks a million. This gives me the idea of getting in
-contact with people who have access to other [64 bit] architectures and
-getting the address format. I guess a dump of kallsyms from each
-architecture would do the job nicely. 
+Rasmus Villemoes (6):
+  plugins: implement format_template attribute
+  compiler.h: add __format_template
+  compiler.h: add __attribute__((format_arg)) shorthand
+  lib/vsprintf.c: add fmtcheck utility
+  kernel.h: implement fmtmatch() wrapper around fmtcheck()
+  lib/test_printf.c: add a few fmtcheck() test cases
 
-> > +# Do not parse these files (absolute path).
-> > +my @skip_parse_files_abs = ('/proc/kmsg',
-> > +			    '/proc/kcore',
-> > +			    '/proc/fs/ext4/sdb1/mb_groups',
-> > +			    '/proc/1/fd/3',
-> > +			    '/sys/kernel/debug/tracing/trace_pipe',
-> > +			    '/sys/kernel/security/apparmor/revision');
-> 
-> Can you add:
-> 
->   /sys/firmware/devicetree
-> 
-> and/or /proc/device-tree (which is a symlink to the above).
+ arch/Kconfig                                 |  18 ++
+ drivers/hwmon/applesmc.c                     |   2 +-
+ drivers/staging/speakup/spk_types.h          |   2 +-
+ include/linux/compiler-gcc.h                 |   1 +
+ include/linux/compiler.h                     |  10 +
+ include/linux/kernel.h                       |  13 ++
+ include/linux/smpboot.h                      |   2 +-
+ include/linux/usb.h                          |   2 +-
+ lib/test_printf.c                            |  41 ++++
+ lib/vsprintf.c                               |  63 +++++
+ scripts/Makefile.gcc-plugins                 |   2 +
+ scripts/gcc-plugins/format_template_plugin.c | 331 +++++++++++++++++++++++++++
+ 12 files changed, 483 insertions(+), 4 deletions(-)
+ create mode 100644 scripts/gcc-plugins/format_template_plugin.c
 
-Can do, thanks.
-
-> We should also start restricting access to that because it may have
-> potentially interesting physical addresses in it, but that will break
-> existing tools, so it will need to be opt-in and done over time.
-
-Seems like this is going to be a recurring theme if we try to stop leaks
-using file permissions. I'm interested in how we would do this, assuming
-it has to be a case by case fix but done many times.
-
-thanks,
-Tobin.
+-- 
+2.11.0
