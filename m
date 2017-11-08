@@ -1,81 +1,31 @@
-From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Date: Wed,  8 Nov 2017 23:30:20 +0100
-Message-Id: <20171108223020.24487-7-linux@rasmusvillemoes.dk>
-In-Reply-To: <20171108223020.24487-1-linux@rasmusvillemoes.dk>
-References: <20171108223020.24487-1-linux@rasmusvillemoes.dk>
-Subject: [kernel-hardening] [RFC 6/6] lib/test_printf.c: add a few fmtcheck() test cases
-To: kernel-hardening@lists.openwall.com
-Cc: linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Date: Thu, 9 Nov 2017 09:48:32 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171108224832.GD27823@eros>
+References: <1510050731-32446-1-git-send-email-me@tobin.cc>
+ <87k1z12cof.fsf@concordia.ellerman.id.au>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <87k1z12cof.fsf@concordia.ellerman.id.au>
+Subject: Re: [kernel-hardening] [PATCH v4] scripts: add leaking_addresses.pl
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-It should be trivial to add more test cases, once we figure out the
-exact rules for being compatible or not. Perhaps we'll have to extend
-the struct test with a flags element if we add flags that affect the
-return value.
+On Wed, Nov 08, 2017 at 11:10:56PM +1100, Michael Ellerman wrote:
+> "Tobin C. Harding" <me@tobin.cc> writes:
+[snip]
 
-Signed-off-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>
----
- lib/test_printf.c | 41 +++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 41 insertions(+)
+Hi Michael,
 
-diff --git a/lib/test_printf.c b/lib/test_printf.c
-index 563f10e6876a..0c8490f3a9b3 100644
---- a/lib/test_printf.c
-+++ b/lib/test_printf.c
-@@ -483,6 +483,45 @@ test_pointer(void)
- 	flags();
- }
- 
-+static void __init
-+test_fmtcheck(void)
-+{
-+	struct test { const char *fmt; const char *tmpl; };
-+	static const struct test compatible[] __initconst = {
-+		{"", ""},
-+		{"wlan%d", "%d"},
-+		{"aa%llxbb", "cc%Lxdd%%"},
-+	};
-+	static const struct test incompatible[] __initconst = {
-+		{"a %d b %lx", "%d %x"},
-+		{"%llo", "%Lx"},
-+	};
-+	unsigned i;
-+	const struct test *t;
-+	const char *ret;
-+
-+	for (i = 0; i < ARRAY_SIZE(compatible); ++i) {
-+		total_tests++;
-+		t = &compatible[i];
-+		ret = _fmtcheck(t->fmt, t->tmpl, FMTCHECK_SILENT);
-+		if (ret != t->fmt) {
-+			failed_tests++;
-+			pr_warn("'%s' and '%s' deemed incompatible by fmtcheck()",
-+				t->fmt, t->tmpl);
-+		}
-+	}
-+	for (i = 0; i < ARRAY_SIZE(incompatible); ++i) {
-+		total_tests++;
-+		t = &incompatible[i];
-+		ret = _fmtcheck(t->fmt, t->tmpl, FMTCHECK_SILENT);
-+		if (ret != t->tmpl) {
-+			failed_tests++;
-+			pr_warn("'%s' and '%s' deemed compatible by fmtcheck()",
-+				t->fmt, t->tmpl);
-+		}
-+	}
-+}
-+
- static int __init
- test_printf_init(void)
- {
-@@ -496,6 +535,8 @@ test_printf_init(void)
- 	test_string();
- 	test_pointer();
- 
-+	test_fmtcheck();
-+
- 	kfree(alloced_buffer);
- 
- 	if (failed_tests == 0)
--- 
-2.11.0
+I'm working an adding support for ppc64 to leaking_addresses.pl, I've
+added the kernel address regular expression that you suggested. I'd like
+to add the false positive for vsyscall addresses. Excuse my ignorance
+but does PowerPC use a constant address range for vsyscall like x86_64
+does? The ppc64 machine I have access to does not output anything for
+
+	$ cat /proc/PID/tasks/PID/smaps		or
+	$ cat /proc/PID/tasks/PID/maps
+
+thanks,
+Tobin.
