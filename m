@@ -1,61 +1,50 @@
-Date: Wed, 8 Nov 2017 09:20:08 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20171108082008.GU3165@worktop.lehotels.local>
-References: <1509945567-11801-1-git-send-email-me@tobin.cc>
- <CA+55aFzPeCuvjscBNj6ANzfRUDsjT6Ntn9Grr915CrSpOfNSnA@mail.gmail.com>
- <CAGXu5j+o6cf0PrnxD+W+09F7UY6JL+h7Bn5_4T2C0Z_fTZAx-w@mail.gmail.com>
- <CA+55aFw-GgR7DmXsD1dmYWbxuVhg+u0oKwuwNEM4RnuVyA0NDw@mail.gmail.com>
- <20171107174413.00e51a3f@gandalf.local.home>
+Date: Wed, 8 Nov 2017 11:16:43 +0100
+From: Petr Mladek <pmladek@suse.com>
+Message-ID: <20171108101643.GG2652@pathway.suse.cz>
+References: <1510112259-11572-1-git-send-email-me@tobin.cc>
+ <1510112259-11572-6-git-send-email-me@tobin.cc>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171107174413.00e51a3f@gandalf.local.home>
-Subject: [kernel-hardening] Re: [PATCH v3] scripts: add leaking_addresses.pl
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, "Tobin C. Harding" <me@tobin.cc>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Joe Perches <joe@perches.com>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+In-Reply-To: <1510112259-11572-6-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] Re: [PATCH 5/7] scripts/leaking_addresses: add emailing results
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, kernel-hardening@lists.openwall.com, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 07, 2017 at 05:44:13PM -0500, Steven Rostedt wrote:
-> On Tue, 7 Nov 2017 13:44:01 -0800
-> Linus Torvalds <torvalds@linux-foundation.org> wrote:
+On Wed 2017-11-08 14:37:37, Tobin C. Harding wrote:
+> Developers may not have the time (or inclination) to investigate script
+> output. This information is, however, useful. If we add functionality to
+> the script to email results for further investigation.
 > 
-> > > Looking other places that stand out, it seems like
-> > > /proc/lockdep_chains and /proc/lockdep (CONFIG_LOCKDEP=y) has a ton of
-> > > %p usage. It's unclear to me if a hash is sufficient for meaningful
-> > > debugging there?  
-> > 
-> > Maybe not, but that is also _so_ esoteric that I suspect the right fix
-> > is to just make it root-only readable.
-> 
-> Also note, I don't believe anyone should be running a LOCKDEP
-> configured kernel in a production (secured) environment. As it adds
-> quite a bit of overhead. It's something you run on test environments to
-> make sure it doesn't detect any possible deadlocks.
-> 
-> > 
-> > I've never used it, we should check with people who have. I get the
-> > feeling that this is purely for PeterZ debugging.
-> 
-> I've used it. But then again, I also debug lockdep ;-)
-> 
-> > 
-> > The very first commit that introduced that code actually has a
-> > 
-> >     (FIXME: should go into debugfs)
-> > 
-> > so I suspect it never should have been user-readable to begin with. I
-> > guess it makes some things easier, but it really is *very* different
-> > from things like profiling.
-> 
-> Want me to whip up a patch to move the file?
+> Add --send-report flag to email scan results (to Tobin C. Harding).
 
-Fine by me; create /debug/lockdep/ for the 3 files or something like
-that.
+I am not sure that it is wise to make spaming one person
+so easy ;-)
 
-As to the actual addresses, they can be used to double check things are
-in fact the same object (in case of name collisions), are in static
-memory (as these things ought to be) etc.. But mostly they're not too
-important.
+It might make sense to add some more information into
+the message. For example:
 
-And yes, as everybody says, LOCKDEP is debug tool; you run this on your
-(local) dev kernels, anything else it out of spec.
+    + uname -a
+    + whether the log was generated using root access
+
+Also people might feel more comfortable if this feature:
+
+     + prints the message
+     + printks where it is being sent
+     + ask yes/no before doing so
+
+
+>  scripts/leaking_addresses.pl | 42 ++++++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 42 insertions(+)
+>  mode change 100755 => 100644 scripts/leaking_addresses.pl
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
+> old mode 100755
+> new mode 100644
+
+I guess that this was not intended.
+
+Best Regards,
+Petr
