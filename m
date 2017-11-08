@@ -1,119 +1,68 @@
-Date: Wed, 8 Nov 2017 11:42:21 +0100
-From: Petr Mladek <pmladek@suse.com>
-Message-ID: <20171108104221.GH2652@pathway.suse.cz>
-References: <1510112259-11572-1-git-send-email-me@tobin.cc>
- <1510112259-11572-5-git-send-email-me@tobin.cc>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1510112259-11572-5-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] Re: [PATCH 4/7] scripts/leaking_addresses: add reporting
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, kernel-hardening@lists.openwall.com, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
+In-Reply-To: <20171107032802.GA6669@mail.hallyn.com>
+References: <20171103004436.40026-1-mahesh@bandewar.net> <20171104235346.GA17170@mail.hallyn.com>
+ <CAF2d9jg1tZz-hnVBeXm3geq7jSBt5v5w6+p5B1V-7huS4qbMBA@mail.gmail.com>
+ <20171106150302.GA26634@mail.hallyn.com> <1510003994.736.0.camel@gmail.com>
+ <20171106221418.GA32543@mail.hallyn.com> <CAFUG7CcEy9a=RxBQZJR-C_2VuhZXrzJ_QxJnrSxdM=ox36DsXQ@mail.gmail.com>
+ <20171106233913.GA1518@mail.hallyn.com> <CAFUG7CcW077LHcQEqk7qy7iVvmi-3J8psD1Kwj45XvHThiZC6w@mail.gmail.com>
+ <20171107032802.GA6669@mail.hallyn.com>
+From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
+Date: Wed, 8 Nov 2017 03:09:59 -0800
+Message-ID: <CAF2d9jiwu3Ss7Dtem8qSptKgMc0Mc_o8MAAJkWM5CwJaFsbrcg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: [PATCH resend 2/2] userns: control
+ capabilities of some user namespaces
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Boris Lukashev <blukashev@sempervictus.com>, Daniel Micay <danielmicay@gmail.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed 2017-11-08 14:37:36, Tobin C. Harding wrote:
-> Currently script just dumps all results found. Potentially, this risks
-> loosing single results among multiple duplicate results. We need some
-> way of restricting duplicates to assist users of the script. It would
-> also be nice if we got a report instead of raw results.
-> 
-> Duplicates can be defined in various ways, instead of trying to find a
-> single perfect solution we can present the user with various options to
-> display the output. Doing so will typically lead to users wanting to
-> view the output multiple times. Currently we scan the kernel each time,
-> this is slow and unnecessary. We can expedite the process by writing the
-> results to file for subsequent viewing.
-> 
-> Add sub-commands `scan` and `format`. Display output as a report instead
-> of raw results. Add --raw flag to view raw results. Save results to
-> file. For subsequent calls to `format` parse output file instead of
-> re-scanning.
-> 
-> Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> ---
->  scripts/leaking_addresses.pl | 201 ++++++++++++++++++++++++++++++++++++++++---
->  1 file changed, 187 insertions(+), 14 deletions(-)
-> 
-> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-> index 719ed0aaede7..4c31e935319b 100755
-> --- a/scripts/leaking_addresses.pl
-> +++ b/scripts/leaking_addresses.pl
-> @@ -21,14 +21,19 @@ use File::Spec;
->  use Cwd 'abs_path';
->  use Term::ANSIColor qw(:constants);
->  use Getopt::Long qw(:config no_auto_abbrev);
-> +use File::Spec::Functions 'catfile';
->  
->  my $P = $0;
->  my $V = '0.01';
->  
-> -# Directories to scan.
-> +# Directories to scan (we scan `dmesg` also).
->  my @DIRS = ('/proc', '/sys');
->  
->  # Command line options.
-> +my $output = "scan.out";
+Sorry folks I was traveling and seems like lot happened on this thread. :p
 
-The hard-coded filename and its use is dangerous. Nobody expects that
-this kind of script writes/re-writes a file on the system.
+I will try to response few of these comments selectively -
 
-> +my $suppress_dmesg = 0;
-> +my $squash_by_path = 0;
-> +my $raw = 0;
->  my $help = 0;
->  my $debug = 0;
->  
-> @@ -70,21 +75,34 @@ sub help
->  	my ($exitcode) = @_;
->  
->  	print << "EOM";
-> -Usage: $P [OPTIONS]
-> +
-> +Usage: $P COMMAND [OPTIONS]
->  Version: $V
->  
-> +Commands:
-> +
-> +	scan	Scan the kernel (savesg raw results to file and runs `format`).
-> +	format	Parse results file and format output.
+> The thing that makes me hesitate with this set is that it is a
+> permanent new feature to address what (I hope) is a temporary
+> problem.
+I agree this is permanent new feature but it's not solving a temporary
+problem. It's impossible to assess what and when new vulnerability
+that could show up. I think Daniel summed it up appropriately in his
+response
 
-The later formatting/filtering might be useful but the use
-of the hard coded file is strange. Also it is pity that
-the script does not do anything useful out of box.
+> Seems like there are two naive ways to do it, the first being to just
+> look at all code under ns_capable() plus code called from there.  It
+> seems like looking at the result of that could be fruitful.
+This is really hard. The main issue that there were features designed
+and developed before user-ns days with an assumption that unprivileged
+users will never get certain capabilities which only root user gets.
+Now that is not true anymore with user-ns creation with mapping root
+for any process. Also at the same time blocking user-ns creation for
+eveyone is a big-hammer which is not needed too. So it's not that easy
+to just perform a code-walk-though and correct those decisions now.
 
-I suggest to remove the commands and do the scan out of box.
-It should not store anything on the disk by default.
+> It seems to me that the existing control in
+> /proc/sys/kernel/unprivileged_userns_clone might be the better duct tape
+> in that case.
+This solution is essentially blocking unprivileged users from using
+the user-namespaces entirely. This is not really a solution that can
+work. The solution that this patch-set adds allows unprivileged users
+to create user-namespaces. Actually the proposed solution is more
+fine-grained approach than the unprivileged_userns_clone solution
+since you can selectively block capabilities rather than completely
+blocking the functionality.
 
-Then we could define following options:
-
-    -o, --output=<file>	 Store raw results into file for later formatting.
-    -i, --input=<file>   Read raw result from file and just format them.
-
-Well, it is still somehow non-intuitive. It might help to
-be more explicit:
-
-    -o, --output-raw=<file>
-    -i, --input-raw=<file>
-
-
->  Options:
->  
-> -	-d, --debug                Display debugging output.
-> -	-h, --help, --version      Display this help and exit.
-> +	-o, --output=<file>	 Raw results output file, used for later formatting.
-> +	    --suppress-dmesg	 Do not show dmesg results.
-> +	    --squash-by-path	 Show one result per unique path.
-
-I would personally add also option for the default mode:
-
-	    --squash-by-filename Show one result per unique filename
-				 (default).
-
-In fact, I would personally use --squash-by-path or even --raw by
-default. These provide easy to understand output. While the
---squash-by-filename mode has pretty good results but
-it is quite non-intuitive.
-
-Best Regards,
-Petr
+> I meant each task has a perm_cap_bset next to the cap_bset.  So task
+> p1 (if it has privilege) can drop CAP_SYS_ADMIN from perm_cap_bset,
+> p2 (if it has privilege) can drop CAP_NET_ADMIN.  When p1 creates a
+> new user_ns, that init task has its cap_bset set to all caps but
+> CAP_SYS_ADMIN.
+>
+> I think for simplicity perm_cap_bset would *only* affect the filling
+> of cap_bset at user namespace creation.  So if you wanted to drop a
+> capability from your own cap_bset as well, you'd have to do that
+> separately.
+My original intention is to reduce the attack surface when
+vulnerabilities are discovered / published, but I don't see how this
+is solving that issue. Also the reason to have sysctl is to have
+simplistic control across the board to contain the situation. If that
+is not addressed then we might need some other solution on top of
+this.
