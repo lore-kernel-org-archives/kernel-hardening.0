@@ -1,68 +1,36 @@
+Date: Wed, 8 Nov 2017 12:51:20 +0100
+From: Greg KH <gregkh@linuxfoundation.org>
+Message-ID: <20171108115120.GA2522@kroah.com>
+References: <1510112259-11572-1-git-send-email-me@tobin.cc>
+ <1510112259-11572-6-git-send-email-me@tobin.cc>
+ <20171108101643.GG2652@pathway.suse.cz>
 MIME-Version: 1.0
-In-Reply-To: <20171107032802.GA6669@mail.hallyn.com>
-References: <20171103004436.40026-1-mahesh@bandewar.net> <20171104235346.GA17170@mail.hallyn.com>
- <CAF2d9jg1tZz-hnVBeXm3geq7jSBt5v5w6+p5B1V-7huS4qbMBA@mail.gmail.com>
- <20171106150302.GA26634@mail.hallyn.com> <1510003994.736.0.camel@gmail.com>
- <20171106221418.GA32543@mail.hallyn.com> <CAFUG7CcEy9a=RxBQZJR-C_2VuhZXrzJ_QxJnrSxdM=ox36DsXQ@mail.gmail.com>
- <20171106233913.GA1518@mail.hallyn.com> <CAFUG7CcW077LHcQEqk7qy7iVvmi-3J8psD1Kwj45XvHThiZC6w@mail.gmail.com>
- <20171107032802.GA6669@mail.hallyn.com>
-From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
-Date: Wed, 8 Nov 2017 03:09:59 -0800
-Message-ID: <CAF2d9jiwu3Ss7Dtem8qSptKgMc0Mc_o8MAAJkWM5CwJaFsbrcg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCH resend 2/2] userns: control
- capabilities of some user namespaces
-To: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Boris Lukashev <blukashev@sempervictus.com>, Daniel Micay <danielmicay@gmail.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171108101643.GG2652@pathway.suse.cz>
+Subject: [kernel-hardening] Re: [PATCH 5/7] scripts/leaking_addresses: add emailing results
+To: Petr Mladek <pmladek@suse.com>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, kernel-hardening@lists.openwall.com, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Sorry folks I was traveling and seems like lot happened on this thread. :p
+On Wed, Nov 08, 2017 at 11:16:43AM +0100, Petr Mladek wrote:
+> On Wed 2017-11-08 14:37:37, Tobin C. Harding wrote:
+> > Developers may not have the time (or inclination) to investigate script
+> > output. This information is, however, useful. If we add functionality to
+> > the script to email results for further investigation.
+> > 
+> > Add --send-report flag to email scan results (to Tobin C. Harding).
+> 
+> I am not sure that it is wise to make spaming one person
+> so easy ;-)
 
-I will try to response few of these comments selectively -
+I agree, I would strongly discourage this, as you will end up getting
+reports from really old kernels for the next 20+ years.  We have seen
+that happen for every time we have added a "report this to foo@baz" in a
+kernel log message.
 
-> The thing that makes me hesitate with this set is that it is a
-> permanent new feature to address what (I hope) is a temporary
-> problem.
-I agree this is permanent new feature but it's not solving a temporary
-problem. It's impossible to assess what and when new vulnerability
-that could show up. I think Daniel summed it up appropriately in his
-response
+If you _really_ want to do this, at least point it at a mailing list.
 
-> Seems like there are two naive ways to do it, the first being to just
-> look at all code under ns_capable() plus code called from there.  It
-> seems like looking at the result of that could be fruitful.
-This is really hard. The main issue that there were features designed
-and developed before user-ns days with an assumption that unprivileged
-users will never get certain capabilities which only root user gets.
-Now that is not true anymore with user-ns creation with mapping root
-for any process. Also at the same time blocking user-ns creation for
-eveyone is a big-hammer which is not needed too. So it's not that easy
-to just perform a code-walk-though and correct those decisions now.
+thanks,
 
-> It seems to me that the existing control in
-> /proc/sys/kernel/unprivileged_userns_clone might be the better duct tape
-> in that case.
-This solution is essentially blocking unprivileged users from using
-the user-namespaces entirely. This is not really a solution that can
-work. The solution that this patch-set adds allows unprivileged users
-to create user-namespaces. Actually the proposed solution is more
-fine-grained approach than the unprivileged_userns_clone solution
-since you can selectively block capabilities rather than completely
-blocking the functionality.
-
-> I meant each task has a perm_cap_bset next to the cap_bset.  So task
-> p1 (if it has privilege) can drop CAP_SYS_ADMIN from perm_cap_bset,
-> p2 (if it has privilege) can drop CAP_NET_ADMIN.  When p1 creates a
-> new user_ns, that init task has its cap_bset set to all caps but
-> CAP_SYS_ADMIN.
->
-> I think for simplicity perm_cap_bset would *only* affect the filling
-> of cap_bset at user namespace creation.  So if you wanted to drop a
-> capability from your own cap_bset as well, you'd have to do that
-> separately.
-My original intention is to reduce the attack surface when
-vulnerabilities are discovered / published, but I don't see how this
-is solving that issue. Also the reason to have sysctl is to have
-simplistic control across the board to contain the situation. If that
-is not addressed then we might need some other solution on top of
-this.
+greg k-h
