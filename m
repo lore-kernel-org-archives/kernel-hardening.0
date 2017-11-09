@@ -1,45 +1,47 @@
 MIME-Version: 1.0
-In-Reply-To: <CAPDLWs8jyL3W_sGmHtw4Uw=8U_OYfeWJd_BpBLE7zvO4c6Z_8g@mail.gmail.com>
-References: <1510050731-32446-1-git-send-email-me@tobin.cc>
- <ec5a3690-a8c2-0329-66c0-ed7dda5db958@redhat.com> <CA+55aFwiaQezaPi2nzmyuFZNgR3PFcsWjjBTHJYBesKrh-Q_pQ@mail.gmail.com>
- <CA+55aFz6XYtthCgLVJY=985pedeKTwsqPLyL4VVyNpP2TjpPPg@mail.gmail.com> <CAPDLWs8jyL3W_sGmHtw4Uw=8U_OYfeWJd_BpBLE7zvO4c6Z_8g@mail.gmail.com>
-From: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
-Date: Thu, 9 Nov 2017 10:24:32 +0530
-Message-ID: <CAPDLWs-yd13yh4NKpB4msAxcG6BeXMSohfpU_Vv2RJFc5ApddA@mail.gmail.com>
+In-Reply-To: <CAGXu5jKnv_mP1hGEe5FbLV_mYknCknZJjo=-Po0mjnWJSV7+_Q@mail.gmail.com>
+References: <20171108223020.24487-1-linux@rasmusvillemoes.dk> <CAGXu5jKnv_mP1hGEe5FbLV_mYknCknZJjo=-Po0mjnWJSV7+_Q@mail.gmail.com>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Date: Thu, 9 Nov 2017 15:08:39 +0100
+Message-ID: <CAKwiHFjqiK3HM2ZK-HUvKeGtbMdvGf6JQYF+SREZnDtaBqOJ2w@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH v4] scripts: add leaking_addresses.pl
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Laura Abbott <labbott@redhat.com>, "Tobin C. Harding" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
+Subject: [kernel-hardening] Re: [RFC 0/6] some compile- and run-time format checking
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Nov 9, 2017 at 10:13 AM, Kaiwan N Billimoria
-<kaiwan.billimoria@gmail.com> wrote:
->> But I don't know if there is anything else than the profiling code
->> that _really_ wants access to /proc/kallsyms in user space as a
->> regular user.
+On 9 November 2017 at 02:11, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Nov 8, 2017 at 2:30 PM, Rasmus Villemoes
+> <linux@rasmusvillemoes.dk> wrote:
+>>
+>> Rasmus Villemoes (6):
+>>   plugins: implement format_template attribute
+>>   compiler.h: add __format_template
 >
+> Could you split these two off and send separately? This seems like a
+> fine thing to get in now.
 
-Front-ends to ftrace, like trace-cmd?
-[from the trace-cmd git repo (Steve Rostedt, pl stand up, pl stand up :-)
-Documentation/trace-cmd-restore.1.txt :
-...
-*-k* kallsyms::
-    Used with *-c*, it overrides where to read the kallsyms file from.
-    By default, /proc/kallsyms is used. *-k* will override the file to
-    read the kallsyms from. This can be useful if the trace.dat file
-    to create is from another machine. Just copy the /proc/kallsyms
-    file locally, and use *-k* to point to that file.
-...
-]
+Will do.
 
-> Am unsure about this, but kprobes? (/jprobes/kretprobes), and by
-> extension, wrappers over this infra (like SystemTap)?
-> I (hazily) recollect a script I once wrote (years back though) that
-> collects kernel virtual addresses off of kallsyms for the purpose of
-> passing them to a 'helper' kernel module that uses kprobes. I realize
-> that 'modern' kprobes exposes APIs that just require the symbolic name
-> & that they're anyway at kernel privilege... but the point is, a
-> usermode script was picking up and passing the kernel addresses.
->
-> Also, what about kernel addresses exposed via System.map?
-> Oh, just checked, it's root rw only.. pl ignore.
+> Probably the second patch should be split up
+> between adding __format_template, and additions of its usage.
+
+Yeah.
+
+> Do you have any good ways to find and extract all the dynamic format strings
+> we need to mark?
+
+IIRC, I just did a git grep for designated initializers where the RHS
+was a string literal containing a % char. Not sure that counts as a
+good way :)
+
+Doing that now finds stuff like
+drivers/scsi/hisi_sas/hisi_sas_v2_hw.c, where the .msg member cannot
+be annotated with a single template. Maybe one can work around that by
+replacing .msg with an anon union of msg_onebit/msg_multibit, with
+each their own template; I don't know if that will work, or if it will
+be deemed too much churn (it doesn't provide that much safety, since
+it would then just rely on accessing the right union member). Maybe
+the run-time checking is best for that case.
+
+Rasmus
