@@ -1,224 +1,187 @@
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Thu,  9 Nov 2017 17:14:06 +0100
-Message-Id: <1510244046-3256-8-git-send-email-tixxdz@gmail.com>
-In-Reply-To: <1510244046-3256-1-git-send-email-tixxdz@gmail.com>
-References: <1510244046-3256-1-git-send-email-tixxdz@gmail.com>
-Subject: [kernel-hardening] [PATCH RFC v3 7/7] proc: flush dcache entries from all procfs instances
-To: Kees Cook <keescook@chromium.org>, Alexey Gladkov <gladkov.alexey@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-api@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Akinobu Mita <akinobu.mita@gmail.com>, me@tobin.cc, Oleg Nesterov <oleg@redhat.com>, Jeff Layton <jlayton@poochiereds.net>, Ingo Molnar <mingo@kernel.org>, Alexey Dobriyan <adobriyan@gmail.com>, ebiederm@xmission.com, Linus Torvalds <torvalds@linux-foundation.org>, Daniel Micay <danielmicay@gmail.com>, Jonathan Corbet <corbet@lwn.net>, bfields@fieldses.org, Stephen Rothwell <sfr@canb.auug.org.au>, solar@openwall.com, Djalal Harouni <tixxdz@gmail.com>
+Date: Thu, 9 Nov 2017 11:22:01 -0600
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20171109172201.GA26229@mail.hallyn.com>
+References: <20171103004433.39954-1-mahesh@bandewar.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171103004433.39954-1-mahesh@bandewar.net>
+Subject: [kernel-hardening] Re: [PATCH resend 1/2] capability: introduce sysctl for controlled
+ user-ns capability whitelist
+To: Mahesh Bandewar <mahesh@bandewar.net>
+Cc: LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <maheshb@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Flush dcache entries of a task when it terminates. The task may have
-showed up in multiple procfs mounts per pid namespace, and we need to
-walk the mounts and invalidate any left entires.
+Quoting Mahesh Bandewar (mahesh@bandewar.net):
+> From: Mahesh Bandewar <maheshb@google.com>
+> 
+> Add a sysctl variable kernel.controlled_userns_caps_whitelist. This
+> takes input as capability mask expressed as two comma separated hex
+> u32 words. The mask, however, is stored in kernel as kernel_cap_t type.
+> 
+> Any capabilities that are not part of this mask will be controlled and
+> will not be allowed to processes in controlled user-ns.
+> 
+> Signed-off-by: Mahesh Bandewar <maheshb@google.com>
+> ---
+>  Documentation/sysctl/kernel.txt | 21 ++++++++++++++++++
+>  include/linux/capability.h      |  3 +++
+>  kernel/capability.c             | 47 +++++++++++++++++++++++++++++++++++++++++
+>  kernel/sysctl.c                 |  5 +++++
+>  4 files changed, 76 insertions(+)
+> 
+> diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
+> index 694968c7523c..a1d39dbae847 100644
+> --- a/Documentation/sysctl/kernel.txt
+> +++ b/Documentation/sysctl/kernel.txt
+> @@ -25,6 +25,7 @@ show up in /proc/sys/kernel:
+>  - bootloader_version	     [ X86 only ]
+>  - callhome		     [ S390 only ]
+>  - cap_last_cap
+> +- controlled_userns_caps_whitelist
+>  - core_pattern
+>  - core_pipe_limit
+>  - core_uses_pid
+> @@ -187,6 +188,26 @@ CAP_LAST_CAP from the kernel.
+>  
+>  ==============================================================
+>  
+> +controlled_userns_caps_whitelist
+> +
+> +Capability mask that is whitelisted for "controlled" user namespaces.
+> +Any capability that is missing from this mask will not be allowed to
+> +any process that is attached to a controlled-userns. e.g. if CAP_NET_RAW
+> +is not part of this mask, then processes running inside any controlled
+> +userns's will not be allowed to perform action that needs CAP_NET_RAW
+> +capability. However, processes that are attached to a parent user-ns
+> +hierarchy that is *not* controlled and has CAP_NET_RAW can continue
+> +performing those actions. User-namespaces are marked "controlled" at
+> +the time of their creation based on the capabilities of the creator.
+> +A process that does not have CAP_SYS_ADMIN will create user-namespaces
+> +that are controlled.
 
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Alexey Gladkov <gladkov.alexey@gmail.com>
-Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
----
- fs/proc/base.c                | 27 +++++++++++++++++++-----
- fs/proc/inode.c               |  9 +++++++-
- fs/proc/root.c                | 10 +++++++++
- include/linux/pid_namespace.h | 49 +++++++++++++++++++++++++++++++++++++++++++
- include/linux/proc_fs.h       |  2 ++
- 5 files changed, 91 insertions(+), 6 deletions(-)
+Hm.  I think that's fine (the way 'controlled' user namespaces are
+defined), but that is design decision in itself, and should perhaps be
+discussed.
 
-diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 88b92bc..27e52aa 100644
---- a/fs/proc/base.c
-+++ b/fs/proc/base.c
-@@ -3034,7 +3034,8 @@ static const struct inode_operations proc_tgid_base_inode_operations = {
- 	.permission	= proc_pid_permission,
- };
- 
--static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
-+static void proc_flush_task_mnt_root(struct dentry *mnt_root,
-+				     pid_t pid, pid_t tgid)
- {
- 	struct dentry *dentry, *leader, *dir;
- 	char buf[PROC_NUMBUF];
-@@ -3043,7 +3044,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
- 	name.name = buf;
- 	name.len = snprintf(buf, sizeof(buf), "%d", pid);
- 	/* no ->d_hash() rejects on procfs */
--	dentry = d_hash_and_lookup(mnt->mnt_root, &name);
-+	dentry = d_hash_and_lookup(mnt_root, &name);
- 	if (dentry) {
- 		d_invalidate(dentry);
- 		dput(dentry);
-@@ -3054,7 +3055,7 @@ static void proc_flush_task_mnt(struct vfsmount *mnt, pid_t pid, pid_t tgid)
- 
- 	name.name = buf;
- 	name.len = snprintf(buf, sizeof(buf), "%d", tgid);
--	leader = d_hash_and_lookup(mnt->mnt_root, &name);
-+	leader = d_hash_and_lookup(mnt_root, &name);
- 	if (!leader)
- 		goto out;
- 
-@@ -3109,14 +3110,30 @@ void proc_flush_task(struct task_struct *task)
- 	int i;
- 	struct pid *pid, *tgid;
- 	struct upid *upid;
-+	struct proc_fs_info *fs_info_entry;
-+	struct pid_namespace *pid_ns;
-+	struct dentry *mnt_root;
- 
- 	pid = task_pid(task);
- 	tgid = task_tgid(task);
- 
- 	for (i = 0; i <= pid->level; i++) {
- 		upid = &pid->numbers[i];
--		proc_flush_task_mnt(upid->ns->proc_mnt, upid->nr,
--					tgid->numbers[i].nr);
-+		pid_ns = upid->ns;
-+
-+		pidns_proc_lock_shared(pid_ns);
-+		list_for_each_entry(fs_info_entry, &pid_ns->procfs_mounts,
-+				    pidns_entry) {
-+			if (proc_fs_newinstance(fs_info_entry)) {
-+				mnt_root = fs_info_entry->sb->s_root;
-+				proc_flush_task_mnt_root(mnt_root, upid->nr,
-+							 tgid->numbers[i].nr);
-+			}
-+		}
-+		pidns_proc_unlock_shared(pid_ns);
-+
-+		mnt_root = pid_ns->proc_mnt->mnt_root;
-+		proc_flush_task_mnt_root(mnt_root, upid->nr, tgid->numbers[i].nr);
- 	}
- }
- 
-diff --git a/fs/proc/inode.c b/fs/proc/inode.c
-index 2707d5f..8fcf0d7 100644
---- a/fs/proc/inode.c
-+++ b/fs/proc/inode.c
-@@ -484,10 +484,17 @@ struct inode *proc_get_inode(struct super_block *sb, struct proc_dir_entry *de)
- int proc_fill_super(struct super_block *s, void *data, int silent)
- {
- 	struct proc_fs_info *fs_info = proc_sb(s);
-+	struct pid_namespace *ns = get_pid_ns(fs_info->pid_ns);
- 	struct inode *root_inode;
- 	int ret;
- 
--	get_pid_ns(fs_info->pid_ns);
-+	fs_info->sb = s;
-+
-+	if (proc_fs_newinstance(fs_info)) {
-+		pidns_proc_lock(ns);
-+		list_add_tail(&fs_info->pidns_entry, &ns->procfs_mounts);
-+		pidns_proc_unlock(ns);
-+	}
- 
- 	if (!proc_parse_options(data, fs_info))
- 		return -EINVAL;
-diff --git a/fs/proc/root.c b/fs/proc/root.c
-index 5cdff69..5503799 100644
---- a/fs/proc/root.c
-+++ b/fs/proc/root.c
-@@ -259,6 +259,13 @@ static void proc_kill_sb(struct super_block *sb)
- 		dput(fs_info->proc_self);
- 	if (fs_info->proc_thread_self)
- 		dput(fs_info->proc_thread_self);
-+
-+	if (proc_fs_newinstance(fs_info)) {
-+		pidns_proc_lock(ns);
-+		list_del(&fs_info->pidns_entry);
-+		pidns_proc_unlock(ns);
-+	}
-+
- 	kill_anon_super(sb);
- 	put_pid_ns(ns);
- 	kfree(fs_info);
-@@ -374,6 +381,9 @@ int pid_ns_prepare_proc(struct pid_namespace *ns)
- 		return PTR_ERR(mnt);
- 
- 	ns->proc_mnt = mnt;
-+	init_rwsem(&ns->rw_procfs_mnts);
-+	INIT_LIST_HEAD(&ns->procfs_mounts);
-+
- 	return 0;
- }
- 
-diff --git a/include/linux/pid_namespace.h b/include/linux/pid_namespace.h
-index 66f47f1..9a7a28d 100644
---- a/include/linux/pid_namespace.h
-+++ b/include/linux/pid_namespace.h
-@@ -26,6 +26,15 @@ struct pid_namespace {
- 	struct pid_namespace *parent;
- #ifdef CONFIG_PROC_FS
- 	struct vfsmount *proc_mnt; /* Internal proc mounted during each new pidns */
-+
-+	/* Serialize separated procfs access from super block create/destory */
-+	struct rw_semaphore rw_procfs_mnts;
-+
-+	/*
-+	 * List of separated procfs mounts, used to invalidate task dentry
-+	 * from all the related procfs mounts.
-+	 */
-+	struct list_head procfs_mounts;
- #endif
- #ifdef CONFIG_BSD_PROCESS_ACCT
- 	struct fs_pin *bacct;
-@@ -90,4 +99,44 @@ extern struct pid_namespace *task_active_pid_ns(struct task_struct *tsk);
- void pidhash_init(void);
- void pid_idr_init(void);
- 
-+#ifdef CONFIG_PROC_FS
-+static inline void pidns_proc_lock(struct pid_namespace *pid_ns)
-+{
-+	down_write(&pid_ns->rw_procfs_mnts);
-+}
-+
-+static inline void pidns_proc_unlock(struct pid_namespace *pid_ns)
-+{
-+	up_write(&pid_ns->rw_procfs_mnts);
-+}
-+
-+static inline void pidns_proc_lock_shared(struct pid_namespace *pid_ns)
-+{
-+	down_read(&pid_ns->rw_procfs_mnts);
-+}
-+
-+static inline void pidns_proc_unlock_shared(struct pid_namespace *pid_ns)
-+{
-+	up_read(&pid_ns->rw_procfs_mnts);
-+}
-+#else /* !CONFIG_PROC_FS */
-+
-+static inline void pidns_proc_lock(struct pid_namespace *pid_ns)
-+{
-+}
-+
-+static inline void pidns_proc_unlock(struct pid_namespace *pid_ns)
-+{
-+}
-+
-+static inline void pidns_proc_lock_shared(struct pid_namespace *pid_ns)
-+{
-+}
-+
-+static inline void pidns_proc_unlock_shared(struct pid_namespace *pid_ns)
-+{
-+}
-+
-+#endif /* CONFIG_PROC_FS */
-+
- #endif /* _LINUX_PID_NS_H */
-diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
-index 0730f52..e56fbab 100644
---- a/include/linux/proc_fs.h
-+++ b/include/linux/proc_fs.h
-@@ -24,7 +24,9 @@ enum { /* definitions for 'pids' mount option */
- };
- 
- struct proc_fs_info {
-+	struct super_block *sb;
- 	struct pid_namespace *pid_ns;
-+	struct list_head pidns_entry; /* Node in procfs_mounts of pidns */
- 	struct dentry *proc_self; /* For /proc/self/ */
- 	struct dentry *proc_thread_self; /* For /proc/thread-self/ */
- 	bool newinstance; /* Flag for new separated instances */
--- 
-2.7.4
+Did you consider other ways?  What about using CAP_SETPCAP?
+
+> +The value is expressed as two comma separated hex words (u32). This
+
+Why comma separated?  whitespace ok?  Leading 0x ok?  What is the
+default at boot?  (Obviously the patch tells me, I'm asking for it
+to be spelled out in the doc)
+
+Otherwise looks good, thanks!
+
+Serge
+
+> +sysctl is avaialble in init-ns and users with CAP_SYS_ADMIN in init-ns
+> +are allowed to make changes.
+> +
+> +==============================================================
+> +
+>  core_pattern:
+>  
+>  core_pattern is used to specify a core dumpfile pattern name.
+> diff --git a/include/linux/capability.h b/include/linux/capability.h
+> index b52e278e4744..6c0b9677c03f 100644
+> --- a/include/linux/capability.h
+> +++ b/include/linux/capability.h
+> @@ -13,6 +13,7 @@
+>  #define _LINUX_CAPABILITY_H
+>  
+>  #include <uapi/linux/capability.h>
+> +#include <linux/sysctl.h>
+>  
+>  
+>  #define _KERNEL_CAPABILITY_VERSION _LINUX_CAPABILITY_VERSION_3
+> @@ -247,6 +248,8 @@ extern bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns);
+>  
+>  /* audit system wants to get cap info from files as well */
+>  extern int get_vfs_caps_from_disk(const struct dentry *dentry, struct cpu_vfs_cap_data *cpu_caps);
+> +int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
+> +				 void __user *buff, size_t *lenp, loff_t *ppos);
+>  
+>  extern int cap_convert_nscap(struct dentry *dentry, void **ivalue, size_t size);
+>  
+> diff --git a/kernel/capability.c b/kernel/capability.c
+> index f97fe77ceb88..62dbe3350c1b 100644
+> --- a/kernel/capability.c
+> +++ b/kernel/capability.c
+> @@ -28,6 +28,8 @@ EXPORT_SYMBOL(__cap_empty_set);
+>  
+>  int file_caps_enabled = 1;
+>  
+> +kernel_cap_t controlled_userns_caps_whitelist = CAP_FULL_SET;
+> +
+>  static int __init file_caps_disable(char *str)
+>  {
+>  	file_caps_enabled = 0;
+> @@ -506,3 +508,48 @@ bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns)
+>  	rcu_read_unlock();
+>  	return (ret == 0);
+>  }
+> +
+> +/* Controlled-userns capabilities routines */
+> +#ifdef CONFIG_SYSCTL
+> +int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
+> +				 void __user *buff, size_t *lenp, loff_t *ppos)
+> +{
+> +	DECLARE_BITMAP(caps_bitmap, CAP_LAST_CAP);
+> +	struct ctl_table caps_table;
+> +	char tbuf[NAME_MAX];
+> +	int ret;
+> +
+> +	ret = bitmap_from_u32array(caps_bitmap, CAP_LAST_CAP,
+> +				   controlled_userns_caps_whitelist.cap,
+> +				   _KERNEL_CAPABILITY_U32S);
+> +	if (ret != CAP_LAST_CAP)
+> +		return -1;
+> +
+> +	scnprintf(tbuf, NAME_MAX, "%*pb", CAP_LAST_CAP, caps_bitmap);
+> +
+> +	caps_table.data = tbuf;
+> +	caps_table.maxlen = NAME_MAX;
+> +	caps_table.mode = table->mode;
+> +	ret = proc_dostring(&caps_table, write, buff, lenp, ppos);
+> +	if (ret)
+> +		return ret;
+> +	if (write) {
+> +		kernel_cap_t tmp;
+> +
+> +		if (!capable(CAP_SYS_ADMIN))
+> +			return -EPERM;
+> +
+> +		ret = bitmap_parse_user(buff, *lenp, caps_bitmap, CAP_LAST_CAP);
+> +		if (ret)
+> +			return ret;
+> +
+> +		ret = bitmap_to_u32array(tmp.cap, _KERNEL_CAPABILITY_U32S,
+> +					 caps_bitmap, CAP_LAST_CAP);
+> +		if (ret != CAP_LAST_CAP)
+> +			return -1;
+> +
+> +		controlled_userns_caps_whitelist = tmp;
+> +	}
+> +	return 0;
+> +}
+> +#endif /* CONFIG_SYSCTL */
+> diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+> index d9c31bc2eaea..25c3f7b76ece 100644
+> --- a/kernel/sysctl.c
+> +++ b/kernel/sysctl.c
+> @@ -1226,6 +1226,11 @@ static struct ctl_table kern_table[] = {
+>  		.extra2		= &one,
+>  	},
+>  #endif
+> +	{
+> +		.procname	= "controlled_userns_caps_whitelist",
+> +		.mode		= 0644,
+> +		.proc_handler	= proc_douserns_caps_whitelist,
+> +	},
+>  	{ }
+>  };
+>  
+> -- 
+> 2.15.0.403.gc27cc4dac6-goog
