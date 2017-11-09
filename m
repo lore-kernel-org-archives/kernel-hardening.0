@@ -1,13 +1,13 @@
-Date: Thu, 9 Nov 2017 11:25:44 -0600
+Date: Thu, 9 Nov 2017 11:30:37 -0600
 From: "Serge E. Hallyn" <serge@hallyn.com>
-Message-ID: <20171109172544.GB26229@mail.hallyn.com>
-References: <20171103004436.40026-1-mahesh@bandewar.net>
+Message-ID: <20171109173037.GC26229@mail.hallyn.com>
+References: <20171103004433.39954-1-mahesh@bandewar.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171103004436.40026-1-mahesh@bandewar.net>
-Subject: [kernel-hardening] Re: [PATCH resend 2/2] userns: control capabilities of some user
- namespaces
+In-Reply-To: <20171103004433.39954-1-mahesh@bandewar.net>
+Subject: [kernel-hardening] Re: [PATCH resend 1/2] capability: introduce sysctl for controlled
+ user-ns capability whitelist
 To: Mahesh Bandewar <mahesh@bandewar.net>
 Cc: LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <maheshb@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
@@ -15,120 +15,24 @@ List-ID: <kernel-hardening.lists.openwall.com>
 Quoting Mahesh Bandewar (mahesh@bandewar.net):
 > From: Mahesh Bandewar <maheshb@google.com>
 > 
-> With this new notion of "controlled" user-namespaces, the controlled
-> user-namespaces are marked at the time of their creation while the
-> capabilities of processes that belong to them are controlled using the
-> global mask.
-> 
-> Init-user-ns is always uncontrolled and a process that has SYS_ADMIN
-> that belongs to uncontrolled user-ns can create another (child) user-
-> namespace that is uncontrolled. Any other process (that either does
-> not have SYS_ADMIN or belongs to a controlled user-ns) can only
-> create a user-ns that is controlled.
-> 
-> global-capability-whitelist (controlled_userns_caps_whitelist) is used
-> at the capability check-time and keeps the semantics for the processes
-> that belong to uncontrolled user-ns as it is. Processes that belong to
-> controlled user-ns however are subjected to different checks-
-> 
->    (a) if the capability in question is controlled and process belongs
->        to controlled user-ns, then it's always denied.
->    (b) if the capability in question is NOT controlled then fall back
->        to the traditional check.
-> 
-> Signed-off-by: Mahesh Bandewar <maheshb@google.com>
-> ---
->  include/linux/capability.h     |  1 +
->  include/linux/user_namespace.h | 20 ++++++++++++++++++++
->  kernel/capability.c            |  5 +++++
->  kernel/user_namespace.c        |  3 +++
->  security/commoncap.c           |  8 ++++++++
->  5 files changed, 37 insertions(+)
-> 
-> diff --git a/include/linux/capability.h b/include/linux/capability.h
-> index 6c0b9677c03f..b8c6cac18658 100644
-> --- a/include/linux/capability.h
-> +++ b/include/linux/capability.h
-> @@ -250,6 +250,7 @@ extern bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns);
->  extern int get_vfs_caps_from_disk(const struct dentry *dentry, struct cpu_vfs_cap_data *cpu_caps);
->  int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
->  				 void __user *buff, size_t *lenp, loff_t *ppos);
-> +bool is_capability_controlled(int cap);
->  
->  extern int cap_convert_nscap(struct dentry *dentry, void **ivalue, size_t size);
->  
-> diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
-> index c18e01252346..e890fe81b47e 100644
-> --- a/include/linux/user_namespace.h
-> +++ b/include/linux/user_namespace.h
-> @@ -22,6 +22,7 @@ struct uid_gid_map {	/* 64 bytes -- 1 cache line */
->  };
->  
->  #define USERNS_SETGROUPS_ALLOWED 1UL
-> +#define USERNS_CONTROLLED	 2UL
->  
->  #define USERNS_INIT_FLAGS USERNS_SETGROUPS_ALLOWED
->  
-> @@ -102,6 +103,16 @@ static inline void put_user_ns(struct user_namespace *ns)
->  		__put_user_ns(ns);
->  }
->  
-> +static inline bool is_user_ns_controlled(const struct user_namespace *ns)
-> +{
-> +	return ns->flags & USERNS_CONTROLLED;
-> +}
-> +
-> +static inline void mark_user_ns_controlled(struct user_namespace *ns)
-> +{
-> +	ns->flags |= USERNS_CONTROLLED;
-> +}
-> +
->  struct seq_operations;
->  extern const struct seq_operations proc_uid_seq_operations;
->  extern const struct seq_operations proc_gid_seq_operations;
-> @@ -160,6 +171,15 @@ static inline struct ns_common *ns_get_owner(struct ns_common *ns)
->  {
->  	return ERR_PTR(-EPERM);
->  }
-> +
-> +static inline bool is_user_ns_controlled(const struct user_namespace *ns)
-> +{
-> +	return false;
-> +}
-> +
-> +static inline void mark_user_ns_controlled(struct user_namespace *ns)
-> +{
-> +}
->  #endif
->  
->  #endif /* _LINUX_USER_H */
-> diff --git a/kernel/capability.c b/kernel/capability.c
-> index 62dbe3350c1b..40a38cc4ff43 100644
-> --- a/kernel/capability.c
-> +++ b/kernel/capability.c
-> @@ -510,6 +510,11 @@ bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns)
->  }
->  
->  /* Controlled-userns capabilities routines */
-> +bool is_capability_controlled(int cap)
-> +{
-> +	return !cap_raised(controlled_userns_caps_whitelist, cap);
-> +}
-> +
->  #ifdef CONFIG_SYSCTL
->  int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
->  				 void __user *buff, size_t *lenp, loff_t *ppos)
-> diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
-> index c490f1e4313b..f393ea5108f0 100644
-> --- a/kernel/user_namespace.c
-> +++ b/kernel/user_namespace.c
-> @@ -53,6 +53,9 @@ static void set_cred_user_ns(struct cred *cred, struct user_namespace *user_ns)
->  	cred->cap_effective = CAP_FULL_SET;
->  	cred->cap_ambient = CAP_EMPTY_SET;
->  	cred->cap_bset = CAP_FULL_SET;
-> +	if (!ns_capable(user_ns->parent, CAP_SYS_ADMIN) ||
-> +	    is_user_ns_controlled(user_ns->parent))
-> +		mark_user_ns_controlled(user_ns);
+> Add a sysctl variable kernel.controlled_userns_caps_whitelist. This
 
-Hm, why do this here, rather than at create_user_ns()?  It
-shouldn't be recalculated when someone does setns() should it?
+I understand the arguments in favor of whitelists in most cases for
+security purposes.  But given that you've said the goal here is to
+prevent use of a capability in a user namespace when a CVE has been
+found, a whitelist seems the wrong choice, since
+
+1. it means that an attacker may through some other means be able
+to add a capability back into the whitelist when you specifically
+wanted to drop it.  With a blacklist, you could say "once a cap has
+been dropped it can never be re-added without rebooting".
+2. it means by default all capabilities will be denied once the
+switch is pulled which is specifically not what you want in this
+case.
+3. the admin can't just say "drop CAP_NET_ADMIN", but needs to
+know to echo ~CAP_NET_ADMIN.
+
+Why not make it a blacklist, and once a cap is dropped it can
+never be re-added?
+
+-serge
