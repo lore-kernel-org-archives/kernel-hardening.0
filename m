@@ -1,269 +1,45 @@
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Thu,  9 Nov 2017 17:13:59 +0100
-Message-Id: <1510244046-3256-1-git-send-email-tixxdz@gmail.com>
+Date: Thu, 9 Nov 2017 10:14:22 -0600
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20171109161422.GA25835@mail.hallyn.com>
+References: <20171106221418.GA32543@mail.hallyn.com>
+ <CAFUG7CcEy9a=RxBQZJR-C_2VuhZXrzJ_QxJnrSxdM=ox36DsXQ@mail.gmail.com>
+ <20171106233913.GA1518@mail.hallyn.com>
+ <CAFUG7CcW077LHcQEqk7qy7iVvmi-3J8psD1Kwj45XvHThiZC6w@mail.gmail.com>
+ <20171107032802.GA6669@mail.hallyn.com>
+ <CAF2d9jiwu3Ss7Dtem8qSptKgMc0Mc_o8MAAJkWM5CwJaFsbrcg@mail.gmail.com>
+ <20171108190223.vdkyepcaegmub6le@gmail.com>
+ <CAF2d9jjed4Q7QvCD9Kpaa7L-Ngg3XFbJvt0jNVUUwt=52wDjjw@mail.gmail.com>
+ <20171109032134.GA15666@mail.hallyn.com>
+ <CAF2d9jgs5MYn1dMT2mbhF=6UB2Hoo5kwmJhXuE6memBfWzkWXQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH RFC v3 0/7] proc: modernize proc to support multiple private instances
-To: Kees Cook <keescook@chromium.org>, Alexey Gladkov <gladkov.alexey@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-api@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Akinobu Mita <akinobu.mita@gmail.com>, me@tobin.cc, Oleg Nesterov <oleg@redhat.com>, Jeff Layton <jlayton@poochiereds.net>, Ingo Molnar <mingo@kernel.org>, Alexey Dobriyan <adobriyan@gmail.com>, ebiederm@xmission.com, Linus Torvalds <torvalds@linux-foundation.org>, Daniel Micay <danielmicay@gmail.com>, Jonathan Corbet <corbet@lwn.net>, bfields@fieldses.org, Stephen Rothwell <sfr@canb.auug.org.au>, solar@openwall.com, Djalal Harouni <tixxdz@gmail.com>
+In-Reply-To: <CAF2d9jgs5MYn1dMT2mbhF=6UB2Hoo5kwmJhXuE6memBfWzkWXQ@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH resend 2/2] userns: control
+ capabilities of some user namespaces
+To: Mahesh Bandewar =?utf-8?B?KOCkruCkueClh+CktiDgpKzgpILgpKHgpYfgpLXgpL4=?= =?utf-8?B?4KSwKQ==?= <maheshb@google.com>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>, Christian Brauner <christian.brauner@canonical.com>, Boris Lukashev <blukashev@sempervictus.com>, Daniel Micay <danielmicay@gmail.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi list,
-
-
-Preface:
---------
-This is RFC v3 to modernize procfs and make it able to support multiple
-private instances per the same pid namespace.
-
-I have been working on this with Alexey Gladkov and Andy Lutomirski.
-
-RFC v1 is here:
-https://lkml.org/lkml/2017/3/30/670
-
-RFC v2 is here:
-https://lkml.org/lkml/2017/4/25/282
-
-This RFC v3 can be applied on top of next-20171109
-
-This RFC was tested on Ubuntu/Debian and Alexey tested it on altlinux.
-It does not work on Fedora due to a bug during boot with dracut, I did
-not have time to investigate it more. I will make sure to fix it next
-iteration. We decided to send it to get more feedback on the direction,
-we will continue to improve it.
-
-RFC v3 handles all previous comments from Andy Lutomirski, thank you for
-all the feedback.
-
-
-Procfs modernization:
----------------------
-Historically procfs was always tied to pid namespaces, during pid
-namespace creation we internally create a procfs mount for it. However,
-this has the effect that all new procfs mounts are just a mirror of the
-internal one, any change, any mount option update, any new future
-introduction will propagate to all other procfs mounts that are in the
-same pid namespace.
-
-This may have solved several use cases in that time. However today we
-face new requirements, and making procfs able to support new private
-instances inside same pid namespace seems a major point. If we want to
-to introduce new features and security mechanisms we have to make sure
-first that we do not break existing usecases. Supporting private procfs
-instances wil allow to support new features and behaviour without
-propagating it to all other procfs mounts.
-
-
-Today procfs is more of a burden especially to some Embedded, IoT,
-sandbox, container use cases. In user space we are over-mounting null
-or inaccessible files on top to hide files and information. If we want
-to hide pids we have to create PID namespaces otherwise mount options
-propagate to all other proc mounts, changing a mount option value in one
-mount will propagate to all other proc mounts. If we want to introduce
-new features, then they will propagate to all other mounts too, resulting
-either maybe new useful functionality or maybe breaking stuff. We have
-also to note that userspace should not workaround procfs, the kernel
-should just provide a sane simple interface.
-
-
-In this regard several developers and maintainers pointed out that
-there are problems with procfs and it has to be modernized:
-
-"Here's another one: split up and modernize /proc." by Andy Lutomirski [1]
-
-Discussion about kernel pointer leaks:
-"And yes, as Kees and Daniel mentioned, it's definitely not just dmesg.
-In fact, the primary things tend to be /proc and /sys, not dmesg
-itself." By Linus Torvalds [2]
-
-Lot of other areas in the kernel and filesystems have been updated to be
-able to support private instances, devpts is one major example [3]. The aim
-here is to modernize procfs without breaking userspace, or without affecting
-the shared procfs mount. Later new features will apply on the private
-instances, and after more testing, months, maybe it can be made the default
-especially for IoT.
-
-We want the possibility to do:
-
-  mount -t proc -onewinstance,newfeature none /proc
-
-newfeature: we are planning new features later for procfs, for now in
-this RFC we only introduce "pids=all|ptraceable" mount option.
-
-This allows to absorbe changes, make improvments without breaking use
-cases.
-
-
-Which will be used for:
-
-1) Embedded systems and IoT: usually we have one supervisor for
-apps, we have some lightweight sandbox support, however if we create
-pid namespaces we have to manage all the processes inside too,
-where our goal is to be able to run a bunch of apps each one inside
-its own mount namespace, maybe use network namespaces for vlans
-setups, but right now we only want mount namespaces, without all the
-other complexity. we want procfs to behave more like a real file system,
-and block access to inodes that belong to other users. 'hidepid=' will
-not work since it is a shared mount option.
-
-
-2) Containers, sandboxes and Private instances of file systems - devpts case
-Historically, lot of file systems inside Linux kernel view when instantiated
-were just a mirror of an already created and mounted filesystem. This was the
-case of devpts filesystem, it seems at that time the requirements were to
-optimize things and reuse the same memory, etc. This design used to work but not
-anymore with today’s containers, IoT, hostile environments and all the privacy
-challenges that Linux faces.
-
-In that regards, devpts was updated so that each new mounts is a total
-independent file system by the following patches:
-“devpts: Make each mount of devpts an independent filesystem” by
-Eric W. Biederman [3] [4]
-
-
-3) Linux Security Modules have multiple ptrace paths inside some
-subsystems, however inside procfs, the implementation does not guarantee
-that the ptrace() check which triggers the security_ptrace_check() hook
-will always run. We have the 'hidepid' mount option that can be used to
-force the ptrace_may_access() check inside has_pid_permissions() to run.
-The problem is that 'hidepid' is per pid namespace and not attached to
-the mount point, any remount or modification of 'hidepid' will propagate
-to all other procfs mounts.
-
-This also does not allow to support Yama LSM easily in desktop and user
-sessions. Yama ptrace scope which restricts ptrace and some other
-syscalls to be allowed only on inferiors, can be updated to have a
-per-task context, where the context will be inherited during fork(),
-clone() and preserved across execve(). If we support multiple private
-procfs instances, then we may force the ptrace_may_access() on
-/proc/<pids>/ to always run inside that new procfs instances. This will
-allow to specifiy on user sessions if we should populate procfs with
-pids that the user can ptrace or not.
-
-By using Yama ptrace scope, some restricted users will only be able to see
-inferiors inside /proc, they won't even be able to see their other
-processes. Some software like Chromium, Firefox's crash handler, Wine
-and others are already using Yama to restrict which processes can be
-ptracable. With this change this will give the possibility to restrict
-/proc/<pids>/ but more importantly this will give desktop users a
-generic and usuable way to specifiy which users should see all processes
-and which user can not.
-
-Side notes:
-* This covers the lack of seccomp where it is not able to parse
-arguments, it is easy to install a seccomp filter on direct syscalls
-that operate on pids, however /proc/<pid>/ is a Linux ABI using
-filesystem syscalls. With this change all LSMs should be able to analyze
-open/read/write/close... on /proc/<pid>/
-
-
-4) This will allow to implement new features either in kernel or
-userspace without having to worry about procfs.
-In containers, sandboxes, etc we have workarounds to hide some /proc
-inodes, this should be supported natively without doing extra complex
-work, the kernel should be able to support sane options that work with
-today and future Linux use cases.
-
-Alexey Gladkov has on top a patch [7] that allows to hide non-pid
-inodes from procfs, we are improving that patch and with 'newinstance'
-option it can be used in containers and sandboxes, as these are already
-trying to hide and block access to procfs inodes anyway.
-
-https://github.com/legionus/linux/commit/993a2a5b9af95b0ac901ff41d32124b72ed676e3
-
-
-Introduced changes:
--------------------
-This series adds two new mount options:
-
-* 'newinstance' mount option, it was also suggesed by Andy Lutomirski [5].
-When this option is passed we automatically create a private procfs instance.
-
-This is not the default behaviour since we do not want to break userspace
-and we do not want to provide different devices IDs by default when
-stat()ing inodes, I am not sure about all the use cases there [6].
-
-* 'pids' mount option, as discussed with Andy Lutomirski.
-
-  If 'pids=' is passed without 'newinstance' then it has no effect.
-
-  If 'newinstance,pids=all' then processes will be show inside the proc
-  mount.
-
-  If 'newinstance,pids=ptraceable' then only ptraceable processes will be
-  shown.
-
-This allows to support lightweight sandboxes in Embedded Linux, also
-solves the case for LSM where now with this mount option, we make sure
-that they have a ptrace path in procfs.
-
-
-Use cases of 'newinstance' mount option:
-
-* We create a private procfs instance that it is disconnected from the
-shared or other procfs instances.
-
-* "hidepid" instead of chaning all other mirrored procfs mounts, now
-it will work only on the new private instance.
-
-* "gid" instead of chaning all other mirrored procfs mounts, now it will
-work only on the new private instance.
-
-* "pids=ptraceable" mount option which will take precendence over
-"hidepid" will only work when 'newinstance' is set. Otherwise it is ignored.
-
-This should allow later after real testing to have a smooth transition
-to a procfs with default private instances.
-
-
-How to test:
-$ sudo mount -t proc -onewinstance,pids=ptraceable none /test
-
-
-Note for userspace that should be documented:
-If you are over mounting /proc, then make sure you are in a new mount
-namespace where propagation to master is disconnected. This will avoid
-to pin that new /proc mount.
-
-
-References:
------------
-[1] https://lists.linuxfoundation.org/pipermail/ksummit-discuss/2017-January/004215.html
-[2] http://www.openwall.com/lists/kernel-hardening/2017/10/05/5
-[3] https://lwn.net/Articles/689539/
-[4] http://lxr.free-electrons.com/source/Documentation/filesystems/devpts.txt?v=3.14
-[5] https://lkml.org/lkml/2017/5/2/407
-[6] https://lkml.org/lkml/2017/5/3/357
-
-
-# Changes since RFC v2:
-*) Renamed mount options to 'newinstance' and 'pids='
-   Suggested-by: Andy Lutomirski <luto@kernel.org>
-*) Fixed order of commit, Suggested-by: Andy Lutomirski <luto@kernel.org>
-*) Many bug fixes.
-
-
-# Changes since RFC v1:
-*) Removed 'unshared' mount option and replaced it with 'limit_pids'
-   which is attached to the current procfs mount.
-   Suggested-by Andy Lutomirski <luto@kernel.org>
-*) Do not fill dcache with pid entries that we can not ptrace.
-*) Many bug fixes.
-
-
-Djalal Harouni (7):
- [PATCH 1/7] proc: add proc_fs_info struct to store proc information
- [PATCH 2/7] proc: move /proc/{self|thread-self} dentries to proc_fs_info
- [PATCH 3/7] proc: add helpers to set and get proc hidepid and gid mount options
- [PATCH 4/7] proc: support mounting private procfs instances inside same pid namespace
- [PATCH 5/7] proc: move hidepid definitions to proc files
- [PATCH 6/7] proc: support new 'pids=all|ptraceable' mount option
- [patch 7/7] proc: flush dcache entries from all procfs instances
-        
-
- fs/locks.c                    |   6 +-
- fs/proc/base.c                | 103 ++++++++++++++++-------
- fs/proc/inode.c               |  34 ++++++--
- fs/proc/internal.h            |   2 +-
- fs/proc/root.c                | 188 +++++++++++
+Quoting Mahesh Bandewar (महेश बंडेवार) (maheshb@google.com):
+> Of course. Let's take an example of the CVE that I have mentioned in
+> my cover-letter -
+> CVE-2017-7308(https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-7308).
+> It's well documented and even has a
+> exploit(https://github.com/xairy/kernel-exploits/tree/master/CVE-2017-7308)
+> c-program that can demonstrate how it can be used against non-patched
+> kernel. There is very nice blog
+> post(https://googleprojectzero.blogspot.kr/2017/05/exploiting-linux-kernel-via-packet.html)
+> about this vulnerability by Andrey Konovalov.
+
+Ok, thanks.  It's a good example because the fix for this CVE actually
+came by itself (http://kernel.ubuntu.com/git/ubuntu/ubuntu-xenial.git/tree/debian.master/changelog).
+Normally multiple CVEs come at the same time, which would make a
+workaround for one now helpful.  This is a good counter-example.
+
+I'm going to maintain that I really don't like this.  But it looks
+useful, so ack on the concept, I'll just have to look again at the
+code now.  Thanks for indulging me.
+
+-serge
