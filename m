@@ -1,40 +1,75 @@
-Date: Thu, 9 Nov 2017 11:58:14 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171109005814.GG27823@eros>
-References: <1510112259-11572-1-git-send-email-me@tobin.cc>
- <1510112259-11572-6-git-send-email-me@tobin.cc>
- <20171108101643.GG2652@pathway.suse.cz>
- <20171108115120.GA2522@kroah.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171108115120.GA2522@kroah.com>
-Subject: [kernel-hardening] Re: [PATCH 5/7] scripts/leaking_addresses: add emailing results
-To: Greg KH <gregkh@linuxfoundation.org>
-Cc: Petr Mladek <pmladek@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts,
- William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, kernel-hardening@lists.openwall.com, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
+Sender: keescook@google.com
+In-Reply-To: <20171108223020.24487-5-linux@rasmusvillemoes.dk>
+References: <20171108223020.24487-1-linux@rasmusvillemoes.dk> <20171108223020.24487-5-linux@rasmusvillemoes.dk>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 8 Nov 2017 17:08:22 -0800
+Message-ID: <CAGXu5jJF6LjH8tuMNGNtb=mqwRio-xmNt9xL0-+18dQzQQZdXA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [RFC 4/6] lib/vsprintf.c: add fmtcheck utility
+To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 08, 2017 at 12:51:20PM +0100, Greg KH wrote:
-> On Wed, Nov 08, 2017 at 11:16:43AM +0100, Petr Mladek wrote:
-> > On Wed 2017-11-08 14:37:37, Tobin C. Harding wrote:
-> > > Developers may not have the time (or inclination) to investigate script
-> > > output. This information is, however, useful. If we add functionality to
-> > > the script to email results for further investigation.
-> > > 
-> > > Add --send-report flag to email scan results (to Tobin C. Harding).
-> > 
-> > I am not sure that it is wise to make spaming one person
-> > so easy ;-)
-> 
-> I agree, I would strongly discourage this, as you will end up getting
-> reports from really old kernels for the next 20+ years.  We have seen
-> that happen for every time we have added a "report this to foo@baz" in a
-> kernel log message.
-> 
-> If you _really_ want to do this, at least point it at a mailing list.
+On Wed, Nov 8, 2017 at 2:30 PM, Rasmus Villemoes
+<linux@rasmusvillemoes.dk> wrote:
+> We have a few places in the kernel where a *printf function is used with
+> a non-constant format string, making the ordinary static type checking
+> done by gcc et al. impossible. Some things can still be caught at build
+> time with appropriate instrumentation (I'm sure one can do much better
+> than the format_template plugin), but that still leaves a number of
+> places unchecked. So this patch adds a function for doing run-time
+> verification of a given format string against a template.
+>
+> The fmtcheck() function takes two format string arguments and checks
+> whether they contain the same printf specifiers. If they do, the
+> first (the string-to-be-checked) string is returned. If not, the
+> second (the template) is returned. Regardless of which string is
+> returned at run-time, the __format_arg attribute allows the compiler to
+> do type-checking if the fmtcheck() function is used inside a *printf
+> call, e.g.
+>
+>   sprintf(buf, fmtcheck(what->ever, "%d %lx", 0), i, m)
 
-Will remove --send-report for next version.
+Cool, I like this. I wonder if there are any "hot paths" that would
+actually make this runtime checking expensive? Seems like anything
+that hot shouldn't be using sprintf anyway...
 
-thanks,
-Tobin.
+>
+> We actually make fmtcheck() a macro that tries very hard to ensure the
+> template argument is a string literal - partly to help avoid mixing up
+> the two "const char*" arguments, partly because much of the point of
+> this sanity checking vanishes if the template is not a literal (e.g.,
+> the __format_arg annotation becomes useless).
+
+I wonder how much work it would be to instrument vsnprintf() to warn
+about all non-const format strings that are being processed so we
+could find all the places where fmtcheck() (and the struct annotation)
+are needed.
+
+> We don't treat "%*.*s" and "%d %d %s" as equivalent, despite them
+> taking the same vararg types, since they're morally very distinct. In
+> fact, at least for now, we don't even treat "%d" and "%u" as
+> equivalent. We can relax that, possibly via FMTCHECK_* flags, but let's
+> first see which users there might be and what they'd want.
+>
+> If either string contains a %p, we really should check the following
+> alphanumerics to see which (if any) extension is used and check that
+> they match as well. For now, just complain loudly, partly because I'm
+> lazy, partly because I don't know any in-tree code that might use
+> fmtcheck() with a %p in the template, and I can't really imagine
+> anyone would use a %pXX extension in a non-constant format string.
+
+Yeah, seems reasonable for the first pass at this.
+
+> I don't know if WARN is too violent; maybe just pr_warn would be ok.
+
+I think WARN gets noticed much more by build and runtime testing
+tools, so I think that's the right thing to do here. A mismatch really
+should be noticed.
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
