@@ -1,40 +1,73 @@
-Date: Thu, 9 Nov 2017 13:23:18 +0900
-From: Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>
-Message-ID: <20171109042318.GB775@jagdpanzerIV>
-References: <1510192229-20038-1-git-send-email-me@tobin.cc>
- <20171108223555.52c01531@vmware.local.home>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171108223555.52c01531@vmware.local.home>
-Subject: [kernel-hardening] Re: [PATCH] kallsyms: don't leak address when printing symbol
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wil.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, David Miller <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, linux-kernel@vger.kernel.org
+From: "Tobin C. Harding" <me@tobin.cc>
+Date: Thu,  9 Nov 2017 16:09:27 +1100
+Message-Id: <1510204175-10138-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] [PATCH v2 0/8] scripts/leaking_addresses: add summary reporting
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wil.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Michael Ellerman <mpe@ellerman.id.au>, David Miller <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On (11/08/17 22:35), Steven Rostedt wrote:
-> On Thu,  9 Nov 2017 12:50:29 +1100
-> "Tobin C. Harding" <me@tobin.cc> wrote:
-> 
-> > Currently if a pointer is printed using %p[ssB] and the symbol is not
-> > found (kallsyms_lookup() fails) then we print the actual address. This
-> > leaks kernel addresses. We should instead print something _safe_.
-> > 
-> > Print "<no-symbol>" instead of kernel address.
-> 
-> Ug, ftrace requires this to work as is, as it uses it to print some
-> addresses that may or may not be a symbol.
-> 
-> If anything, can this return a success or failure if it were to find a
-> symbol or not, and then something like ftrace could decide to use %x if
-> it does not.
-> 
-> And yes, ftrace leaks kernel addresses all over the place, that's just
-> the nature of tracing the kernel.
-> 
+This series adds summary reporting to the script. First we do some clean
+up. Then we implement changes that were first posted as
 
-agree, I kinda suspect that that "0x%lx" sometimes can be useful.
-at least one can tell if the frame is from modules or kernel, and
-objdump it may be.
+[PATCH v4] scripts: add leaking_addresses.pl
 
-	-ss
+Additionally; files (and paths) to skip is amended, thanks to Michael
+Ellerman and Kees Cook.
+
+Support for scanning PowerPC (64 bit) is added, with thanks to Michael
+Ellerman.
+
+File read timeout is added, we set the timer before parsing each
+file. Suggested by Kees Cook.
+
+$ perl scripts/leaking_addresses.pl --help
+
+Usage: scripts/leaking_addresses.pl [OPTIONS]
+Version: 0.01
+
+Options:
+
+	-o, --output-raw=<file>  Save results for future processing.
+	-i, --input-raw=<file>   Read results from file instead of scanning.
+	    --raw                Show raw results (default).
+	    --suppress-dmesg     Do not show dmesg results.
+	    --squash-by-path     Show one result per unique path.
+	    --squash-by-filename Show one result per unique filename.
+	-d, --debug              Display debugging output.
+	-h, --help, --version    Display this help and exit.
+
+Examples:
+
+	# Scan kernel and dump raw results.
+	scripts/leaking_addresses.pl
+
+	# Scan kernel and save results to file.
+	scripts/leaking_addresses.pl --output-raw scan.out
+
+	# View summary report.
+	scripts/leaking_addresses.pl --input-raw scan.out --squash-by-filename
+
+Scans the running (64 bit) kernel for potential leaking addresses.
+
+thanks,
+Tobin.
+
+Changes since v1:
+ - Basically everything except the summary reporting, including re-write
+   of the cover-letter. 
+
+Tobin C. Harding (8):
+  scripts/leaking_addresses: use tabs not spaces
+  scripts/leaking_addresses: remove dead code
+  scripts/leaking_addresses: remove command line options
+  scripts/leaking_addresses: fix comment typo
+  scripts/leaking_addresses: add to exclude files/paths
+  scripts/leaking_addresses: add summary reporting
+  scripts/leaking_addresses: add support for ppc64
+  scripts/leaking_addresses: add timeout on file read
+
+ scripts/leaking_addresses.pl | 369 +++++++++++++++++++++++++++++++++----------
+ 1 file changed, 282 insertions(+), 87 deletions(-)
+
+-- 
+2.7.4
