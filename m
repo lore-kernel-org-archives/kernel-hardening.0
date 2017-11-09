@@ -1,72 +1,51 @@
+Date: Thu, 9 Nov 2017 16:45:48 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Date: Thu,  9 Nov 2017 16:09:35 +1100
-Message-Id: <1510204175-10138-9-git-send-email-me@tobin.cc>
-In-Reply-To: <1510204175-10138-1-git-send-email-me@tobin.cc>
-References: <1510204175-10138-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [PATCH v2 8/8] scripts/leaking_addresses: add timeout on file read
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: "Tobin C. Harding" <me@tobin.cc>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wil.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Michael Ellerman <mpe@ellerman.id.au>, David Miller <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Message-ID: <20171109054548.GF19752@eros>
+References: <1510192229-20038-1-git-send-email-me@tobin.cc>
+ <20171108223555.52c01531@vmware.local.home>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171108223555.52c01531@vmware.local.home>
+Subject: [kernel-hardening] Re: [PATCH] kallsyms: don't leak address when printing symbol
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts,
+ William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wil.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, David Miller <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently script can stall if we read certain files (like
-/proc/kmsg). While we have a mechanism to skip these files once they are
-discovered it would be nice to not stall on as yet undiscovered files of
-this kind.
+On Wed, Nov 08, 2017 at 10:35:55PM -0500, Steven Rostedt wrote:
+> On Thu,  9 Nov 2017 12:50:29 +1100
+> "Tobin C. Harding" <me@tobin.cc> wrote:
+> 
+> > Currently if a pointer is printed using %p[ssB] and the symbol is not
+> > found (kallsyms_lookup() fails) then we print the actual address. This
+> > leaks kernel addresses. We should instead print something _safe_.
+> > 
+> > Print "<no-symbol>" instead of kernel address.
+> 
+> Ug, ftrace requires this to work as is, as it uses it to print some
+> addresses that may or may not be a symbol.
+> 
+> If anything, can this return a success or failure if it were to find a
+> symbol or not, and then something like ftrace could decide to use %x if
+> it does not.
 
-Set a timer before each file is parsed, warn user if timer expires.
+Thanks for the feed back Steve. Propagating the error back up through
+the call chain may require a little bit of thought so we don't upset the
+apple cart. sprint_symbol() never currently (as far as I can see)
+returns an error. I can go through the other callers of sprint_symbol()
+(there aren't many) and check if it is going to upset anything.
 
-Suggested-by: Kees Cook <keescook@chromium.org>
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
----
- scripts/leaking_addresses.pl | 22 +++++++++++++++++++++-
- 1 file changed, 21 insertions(+), 1 deletion(-)
+> And yes, ftrace leaks kernel addresses all over the place, that's just
+> the nature of tracing the kernel.
 
-diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-index 1d6ab7f1b10c..6efd1fdb7d25 100755
---- a/scripts/leaking_addresses.pl
-+++ b/scripts/leaking_addresses.pl
-@@ -29,6 +29,9 @@ my $V = '0.01';
- # Directories to scan.
- my @DIRS = ('/proc', '/sys');
- 
-+# Timer for parsing each file, in seconds.
-+my $TIMEOUT = 10;
-+
- # Script can only grep for kernel addresses on the following architectures. If
- # your architecture is not listed here and has a grep'able kernel address please
- # consider submitting a patch.
-@@ -284,6 +287,23 @@ sub skip_parse
- 	return skip($path, \@skip_parse_files_abs, \@skip_parse_files_any);
- }
- 
-+sub timed_parse_file
-+{
-+	my ($file) = @_;
-+
-+	eval {
-+		local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required.
-+		alarm $TIMEOUT;
-+		parse_file($file);
-+		alarm 0;
-+	};
-+
-+	if ($@) {
-+		die unless $@ eq "alarm\n";	# Propagate unexpected errors.
-+		printf STDERR "timed out parsing: %s\n", $file;
-+	}
-+}
-+
- sub parse_file
- {
- 	my ($file) = @_;
-@@ -335,7 +355,7 @@ sub walk
- 			if (-d $path) {
- 				push @dirs, $path;
- 			} else {
--				parse_file($path);
-+				timed_parse_file($path);
- 			}
- 		}
- 	}
--- 
-2.7.4
+Would it be good for you (for this change and future changes aimed at
+closing leaks) if any changes like this include patches to ftrace to
+maintain the current behaviour?
+
+You have been on the CC list for the printk hashing and what not since
+the start I believe so you know I'm a noob, feel free to scream bloody
+murder if I'm breaching protocol.
+
+thanks,
+Tobin.
