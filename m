@@ -1,64 +1,33 @@
-Date: Thu, 9 Nov 2017 13:15:23 -0500
-From: Steven Rostedt <rostedt@goodmis.org>
-Message-ID: <20171109131523.11cc8134@gandalf.local.home>
-In-Reply-To: <20171109054548.GF19752@eros>
-References: <1510192229-20038-1-git-send-email-me@tobin.cc>
-	<20171108223555.52c01531@vmware.local.home>
-	<20171109054548.GF19752@eros>
+References: <20171103004436.40026-1-mahesh@bandewar.net>
+ <20171104235346.GA17170@mail.hallyn.com>
+ <CAF2d9jg1tZz-hnVBeXm3geq7jSBt5v5w6+p5B1V-7huS4qbMBA@mail.gmail.com>
+ <20171106150302.GA26634@mail.hallyn.com> <1510003994.736.0.camel@gmail.com>
+ <20171106221418.GA32543@mail.hallyn.com> <1510020963.736.42.camel@gmail.com>
+ <20171107032310.GA6429@mail.hallyn.com>
+ <da764cbf-7522-06a0-6c21-adfa3eaac9c2@oracle.com>
+ <20171109180536.GA27994@mail.hallyn.com>
+From: chris hyser <chris.hyser@oracle.com>
+Message-ID: <6b2cbf61-f1d7-76c7-1361-7d807d05829f@oracle.com>
+Date: Thu, 9 Nov 2017 13:27:47 -0500
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+In-Reply-To: <20171109180536.GA27994@mail.hallyn.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] kallsyms: don't leak address when printing symbol
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts,
- William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wil.deacon@arm.com>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, David Miller <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, linux-kernel@vger.kernel.org
+Subject: Re: [kernel-hardening] Re: [PATCH resend 2/2] userns: control
+ capabilities of some user namespaces
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Daniel Micay <danielmicay@gmail.com>, =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+?= =?UTF-8?B?4KSwKQ==?= <maheshb@google.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 9 Nov 2017 16:45:48 +1100
-"Tobin C. Harding" <me@tobin.cc> wrote:
-
-> On Wed, Nov 08, 2017 at 10:35:55PM -0500, Steven Rostedt wrote:
-> > On Thu,  9 Nov 2017 12:50:29 +1100
-> > "Tobin C. Harding" <me@tobin.cc> wrote:
-> >   
-> > > Currently if a pointer is printed using %p[ssB] and the symbol is not
-> > > found (kallsyms_lookup() fails) then we print the actual address. This
-> > > leaks kernel addresses. We should instead print something _safe_.
-> > > 
-> > > Print "<no-symbol>" instead of kernel address.  
-> > 
-> > Ug, ftrace requires this to work as is, as it uses it to print some
-> > addresses that may or may not be a symbol.
-> > 
-> > If anything, can this return a success or failure if it were to find a
-> > symbol or not, and then something like ftrace could decide to use %x if
-> > it does not.  
+On 11/09/2017 01:05 PM, Serge E. Hallyn wrote:
+> Would the existing capability bounding set not suffice for that?
 > 
-> Thanks for the feed back Steve. Propagating the error back up through
-> the call chain may require a little bit of thought so we don't upset the
-> apple cart. sprint_symbol() never currently (as far as I can see)
-> returns an error. I can go through the other callers of sprint_symbol()
-> (there aren't many) and check if it is going to upset anything.
+> The 'permanent' bounding set turns out to not be a good fit for
+> the problem being discussed in this thread, but please feel free
+> to start a new thread if you want to discuss your use case.
 
-As the functions are currently void, adding a return value if it
-doesn't print the symbol shouldn't break anything, unless the other
-users required an address as well. Which stack traces might!
+Sure. I will formulate something for a new thread. What seems to be 
+asked for here is a way to globally patch the capability sets of a 
+entire process subtree.
 
-> 
-> > And yes, ftrace leaks kernel addresses all over the place, that's just
-> > the nature of tracing the kernel.  
-> 
-> Would it be good for you (for this change and future changes aimed at
-> closing leaks) if any changes like this include patches to ftrace to
-> maintain the current behaviour?
-> 
-> You have been on the CC list for the printk hashing and what not since
-> the start I believe so you know I'm a noob, feel free to scream bloody
-> murder if I'm breaching protocol.
-
-No, you have been fine. I've been quickly scanning your patches looking
-for things like this. Please keep Ccing me. I'm currently busy fighting
-other fires, but I try to at least take a quick look at patches like
-this. I may not reply, but you are on my radar ;-)
-
--- Steve
+-chrish
