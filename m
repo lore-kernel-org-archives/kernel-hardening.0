@@ -1,223 +1,142 @@
-Date: Thu, 9 Nov 2017 18:09:07 -0700
-From: Tycho Andersen <tycho@docker.com>
-Message-ID: <20171110010907.qfkqhrbtdkt5y3hy@smitten>
-References: <20170907173609.22696-1-tycho@docker.com>
- <20170907173609.22696-4-tycho@docker.com>
- <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
- <20170920223452.vam3egenc533rcta@smitten>
- <97475308-1f3d-ea91-5647-39231f3b40e5@intel.com>
- <20170921000901.v7zo4g5edhqqfabm@docker>
- <d1a35583-8225-2ab3-d9fa-273482615d09@intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <d1a35583-8225-2ab3-d9fa-273482615d09@intel.com>
-Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
- Ownership (XPFO)
-To: Dave Hansen <dave.hansen@intel.com>
-Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
+In-Reply-To: <20171109172544.GB26229@mail.hallyn.com>
+References: <20171103004436.40026-1-mahesh@bandewar.net> <20171109172544.GB26229@mail.hallyn.com>
+From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
+Date: Fri, 10 Nov 2017 10:49:58 +0900
+Message-ID: <CAF2d9jir4WF=YyBVbAM=WAopYukcZz_==0+LtKepv8Qv8UNaEw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH resend 2/2] userns: control capabilities of some user namespaces
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Dave,
-
-On Wed, Sep 20, 2017 at 05:27:02PM -0700, Dave Hansen wrote:
-> On 09/20/2017 05:09 PM, Tycho Andersen wrote:
-> >> I think the only thing that will really help here is if you batch the
-> >> allocations.  For instance, you could make sure that the per-cpu-pageset
-> >> lists always contain either all kernel or all user data.  Then remap the
-> >> entire list at once and do a single flush after the entire list is consumed.
-> > Just so I understand, the idea would be that we only flush when the
-> > type of allocation alternates, so:
-> > 
-> > kmalloc(..., GFP_KERNEL);
-> > kmalloc(..., GFP_KERNEL);
-> > /* remap+flush here */
-> > kmalloc(..., GFP_HIGHUSER);
-> > /* remap+flush here */
-> > kmalloc(..., GFP_KERNEL);
-> 
-> Not really.  We keep a free list per migrate type, and a per_cpu_pages
-> (pcp) list per migratetype:
-> 
-> > struct per_cpu_pages {
-> >         int count;              /* number of pages in the list */
-> >         int high;               /* high watermark, emptying needed */
-> >         int batch;              /* chunk size for buddy add/remove */
-> > 
-> >         /* Lists of pages, one per migrate type stored on the pcp-lists */
-> >         struct list_head lists[MIGRATE_PCPTYPES];
-> > };
-> 
-> The migratetype is derived from the GFP flags in
-> gfpflags_to_migratetype().  In general, GFP_HIGHUSER and GFP_KERNEL come
-> from different migratetypes, so they come from different free lists.
-> 
-> In your case above, the GFP_HIGHUSER allocation come through the
-> MIGRATE_MOVABLE pcp list while the GFP_KERNEL ones come from the
-> MIGRATE_UNMOVABLE one.  Since we add a bunch of pages to those lists at
-> once, you could do all the mapping/unmapping/flushing on a bunch of
-> pages at once
-
-So I've been playing around with an implementation of this, which is basically:
-
-diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 3d9c1b486e1f..47b46ff1148a 100644
---- a/mm/page_alloc.c
-+++ b/mm/page_alloc.c
-@@ -2348,6 +2348,7 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
- 		if (is_migrate_cma(get_pcppage_migratetype(page)))
- 			__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
- 					      -(1 << order));
-+		xpfo_pcp_refill(page, migratetype, order);
- 	}
- 
- 	/*
-diff --git a/mm/xpfo.c b/mm/xpfo.c
-index 080235a2f129..b381d83c6e78 100644
---- a/mm/xpfo.c
-+++ b/mm/xpfo.c
-@@ -260,3 +265,85 @@ void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
- 			kunmap_atomic(mapping[i]);
- }
- EXPORT_SYMBOL(xpfo_temp_unmap);
-+
-+void xpfo_pcp_refill(struct page *page, enum migratetype migratetype, int order)
-+{
-+	int i;
-+	bool flush_tlb = false;
-+
-+	if (!static_branch_unlikely(&xpfo_initialized))
-+		return;
-+
-+	for (i = 0; i < 1 << order; i++) {
-+		struct xpfo *xpfo;
-+
-+		xpfo = lookup_xpfo(page + i);
-+		if (!xpfo)
-+			continue;
-+
-+		if (unlikely(!xpfo->initialized)) {
-+			spin_lock_init(&xpfo->maplock);
-+			atomic_set(&xpfo->mapcount, 0);
-+			xpfo->initialized = true;
-+		}
-+
-+		xpfo->trace.max_entries = 20;
-+		xpfo->trace.skip = 1;
-+		xpfo->trace.entries = xpfo->entries;
-+		xpfo->trace.nr_entries = 0;
-+		xpfo->trace2.max_entries = 20;
-+		xpfo->trace2.skip = 1;
-+		xpfo->trace2.entries = xpfo->entries2;
-+		xpfo->trace2.nr_entries = 0;
-+
-+		xpfo->migratetype = migratetype;
-+
-+		save_stack_trace(&xpfo->trace);
-+
-+		if (migratetype == MIGRATE_MOVABLE) {
-+			/* GPF_HIGHUSER */
-+			set_kpte(page_address(page + i), page + i, __pgprot(0));
-+			if (!test_and_set_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags))
-+				flush_tlb = true;
-+			set_bit(XPFO_PAGE_USER, &xpfo->flags);
-+		} else {
-+			/*
-+			 * GFP_KERNEL and everything else; for now we just
-+			 * leave it mapped
-+			 */
-+			set_kpte(page_address(page + i), page + i, PAGE_KERNEL);
-+			if (test_and_clear_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags))
-+				flush_tlb = true;
-+			clear_bit(XPFO_PAGE_USER, &xpfo->flags);
-+		}
-+	}
-+
-+	if (flush_tlb)
-+		xpfo_flush_kernel_tlb(page, order);
-+}
-+
-
-But I'm getting some faults:
-
-[    1.897311] BUG: unable to handle kernel paging request at ffff880139b75012
-[    1.898244] IP: ext4_fill_super+0x2f3b/0x33c0
-[    1.898827] PGD 1ea6067 
-[    1.898828] P4D 1ea6067 
-[    1.899170] PUD 1ea9067 
-[    1.899508] PMD 119478063 
-[    1.899850] PTE 139b75000
-[    1.900211] 
-[    1.900760] Oops: 0000 [#1] SMP
-[    1.901160] Modules linked in:
-[    1.901565] CPU: 3 PID: 990 Comm: exe Not tainted 4.13.0+ #85
-[    1.902348] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1ubuntu1 04/01/2014
-[    1.903420] task: ffff88011ae7cb00 task.stack: ffffc9001a338000
-[    1.904108] RIP: 0010:ext4_fill_super+0x2f3b/0x33c0
-[    1.904649] RSP: 0018:ffffc9001a33bce0 EFLAGS: 00010246
-[    1.905240] RAX: 00000000000000f0 RBX: ffff880139b75000 RCX: ffffffff81c456b8
-[    1.906047] RDX: 0000000000000001 RSI: 0000000000000082 RDI: 0000000000000246
-[    1.906874] RBP: ffffc9001a33bda8 R08: 0000000000000000 R09: 0000000000000183
-[    1.908053] R10: ffff88011a9e0800 R11: ffffffff818493e0 R12: ffff88011a9e0800
-[    1.908920] R13: ffff88011a9e6800 R14: 000000000077fefa R15: 0000000000000000
-[    1.909775] FS:  00007f8169747700(0000) GS:ffff880139d80000(0000) knlGS:0000000000000000
-[    1.910667] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
-[    1.911293] CR2: ffff880139b75012 CR3: 000000011a965000 CR4: 00000000000006e0
-[    1.912050] Call Trace:
-[    1.912356]  ? register_shrinker+0x80/0x90
-[    1.912826]  mount_bdev+0x177/0x1b0
-[    1.913234]  ? ext4_calculate_overhead+0x4a0/0x4a0
-[    1.913744]  ext4_mount+0x10/0x20
-[    1.914115]  mount_fs+0x2d/0x140
-[    1.914490]  ? __alloc_percpu+0x10/0x20
-[    1.914903]  vfs_kern_mount.part.20+0x58/0x110
-[    1.915394]  do_mount+0x1cc/0xca0
-[    1.915758]  ? _copy_from_user+0x6b/0xa0
-[    1.916198]  ? memdup_user+0x3d/0x70
-[    1.916576]  SyS_mount+0x93/0xe0
-[    1.916915]  entry_SYSCALL_64_fastpath+0x1a/0xa5
-[    1.917401] RIP: 0033:0x7f8169264b5a
-[    1.917777] RSP: 002b:00007fff6ce82bc8 EFLAGS: 00000202 ORIG_RAX: 00000000000000a5
-[    1.918576] RAX: ffffffffffffffda RBX: 0000000000fb2030 RCX: 00007f8169264b5a
-[    1.919313] RDX: 00007fff6ce84e61 RSI: 00007fff6ce84e70 RDI: 00007fff6ce84e66
-[    1.920042] RBP: 0000000000008000 R08: 0000000000000000 R09: 0000000000000000
-[    1.920771] R10: 0000000000008001 R11: 0000000000000202 R12: 0000000000000000
-[    1.921512] R13: 0000000000000000 R14: 00007fff6ce82c70 R15: 0000000000445c20
-[    1.922254] Code: 83 ee 01 48 c7 c7 70 e6 97 81 e8 1d 0c e2 ff 48 89 de 48 c7 c7 a4 48 96 81 e8 0e 0c e2 ff 8b 85 5c ff ff ff 41 39 44 24 40 75 0e <f6> 43 12 04 41 0f 44 c7 89 85 5c ff ff ff 48 c7 c7 ad 48 96 81 
-[    1.924489] RIP: ext4_fill_super+0x2f3b/0x33c0 RSP: ffffc9001a33bce0
-[    1.925334] CR2: ffff880139b75012
-[    1.942161] ---[ end trace fe884f328a0a7338 ]---
-
-This is the code:
-
-if ((grp == sbi->s_groups_count) &&
-    !(gdp->bg_flags & cpu_to_le16(EXT4_BG_INODE_ZEROED)))
-
-in fs/ext4/super.c:ext4_check_descriptors() that's ultimately failing. It looks
-like this allocation comes from sb_bread_unmovable(), which although it says
-unmovable, seems to allocate the memory with:
-
-MOVABLE
-IO
-NOFAIL
-HARDWALL
-DIRECT_RECLAIM
-KSWAPD_RECLAIM
-
-which I guess is from the additional flags in grow_dev_page() somewhere down
-the stack. Anyway... it seems this is a kernel allocation that's using
-MIGRATE_MOVABLE, so perhaps we need some more fine tuned heuristic than just
-all MOVABLE allocations are un-mapped via xpfo, and all the others are mapped.
-
-Do you have any ideas?
-
-> Or, you could hook your code into the places where the migratetype of
-> memory is changed (set_pageblock_migratetype(), plus where we fall
-> back).  Those changes are much more rare than page allocation.
-
-I guess this has the same issue, that sometimes the kernel allocates MOVABLE
-stuff that it wants to use.
+On Fri, Nov 10, 2017 at 2:25 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> Quoting Mahesh Bandewar (mahesh@bandewar.net):
+>> From: Mahesh Bandewar <maheshb@google.com>
+>>
+>> With this new notion of "controlled" user-namespaces, the controlled
+>> user-namespaces are marked at the time of their creation while the
+>> capabilities of processes that belong to them are controlled using the
+>> global mask.
+>>
+>> Init-user-ns is always uncontrolled and a process that has SYS_ADMIN
+>> that belongs to uncontrolled user-ns can create another (child) user-
+>> namespace that is uncontrolled. Any other process (that either does
+>> not have SYS_ADMIN or belongs to a controlled user-ns) can only
+>> create a user-ns that is controlled.
+>>
+>> global-capability-whitelist (controlled_userns_caps_whitelist) is used
+>> at the capability check-time and keeps the semantics for the processes
+>> that belong to uncontrolled user-ns as it is. Processes that belong to
+>> controlled user-ns however are subjected to different checks-
+>>
+>>    (a) if the capability in question is controlled and process belongs
+>>        to controlled user-ns, then it's always denied.
+>>    (b) if the capability in question is NOT controlled then fall back
+>>        to the traditional check.
+>>
+>> Signed-off-by: Mahesh Bandewar <maheshb@google.com>
+>> ---
+>>  include/linux/capability.h     |  1 +
+>>  include/linux/user_namespace.h | 20 ++++++++++++++++++++
+>>  kernel/capability.c            |  5 +++++
+>>  kernel/user_namespace.c        |  3 +++
+>>  security/commoncap.c           |  8 ++++++++
+>>  5 files changed, 37 insertions(+)
+>>
+>> diff --git a/include/linux/capability.h b/include/linux/capability.h
+>> index 6c0b9677c03f..b8c6cac18658 100644
+>> --- a/include/linux/capability.h
+>> +++ b/include/linux/capability.h
+>> @@ -250,6 +250,7 @@ extern bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns);
+>>  extern int get_vfs_caps_from_disk(const struct dentry *dentry, struct cpu_vfs_cap_data *cpu_caps);
+>>  int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
+>>                                void __user *buff, size_t *lenp, loff_t *ppos);
+>> +bool is_capability_controlled(int cap);
+>>
+>>  extern int cap_convert_nscap(struct dentry *dentry, void **ivalue, size_t size);
+>>
+>> diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
+>> index c18e01252346..e890fe81b47e 100644
+>> --- a/include/linux/user_namespace.h
+>> +++ b/include/linux/user_namespace.h
+>> @@ -22,6 +22,7 @@ struct uid_gid_map {        /* 64 bytes -- 1 cache line */
+>>  };
+>>
+>>  #define USERNS_SETGROUPS_ALLOWED 1UL
+>> +#define USERNS_CONTROLLED     2UL
+>>
+>>  #define USERNS_INIT_FLAGS USERNS_SETGROUPS_ALLOWED
+>>
+>> @@ -102,6 +103,16 @@ static inline void put_user_ns(struct user_namespace *ns)
+>>               __put_user_ns(ns);
+>>  }
+>>
+>> +static inline bool is_user_ns_controlled(const struct user_namespace *ns)
+>> +{
+>> +     return ns->flags & USERNS_CONTROLLED;
+>> +}
+>> +
+>> +static inline void mark_user_ns_controlled(struct user_namespace *ns)
+>> +{
+>> +     ns->flags |= USERNS_CONTROLLED;
+>> +}
+>> +
+>>  struct seq_operations;
+>>  extern const struct seq_operations proc_uid_seq_operations;
+>>  extern const struct seq_operations proc_gid_seq_operations;
+>> @@ -160,6 +171,15 @@ static inline struct ns_common *ns_get_owner(struct ns_common *ns)
+>>  {
+>>       return ERR_PTR(-EPERM);
+>>  }
+>> +
+>> +static inline bool is_user_ns_controlled(const struct user_namespace *ns)
+>> +{
+>> +     return false;
+>> +}
+>> +
+>> +static inline void mark_user_ns_controlled(struct user_namespace *ns)
+>> +{
+>> +}
+>>  #endif
+>>
+>>  #endif /* _LINUX_USER_H */
+>> diff --git a/kernel/capability.c b/kernel/capability.c
+>> index 62dbe3350c1b..40a38cc4ff43 100644
+>> --- a/kernel/capability.c
+>> +++ b/kernel/capability.c
+>> @@ -510,6 +510,11 @@ bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns)
+>>  }
+>>
+>>  /* Controlled-userns capabilities routines */
+>> +bool is_capability_controlled(int cap)
+>> +{
+>> +     return !cap_raised(controlled_userns_caps_whitelist, cap);
+>> +}
+>> +
+>>  #ifdef CONFIG_SYSCTL
+>>  int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
+>>                                void __user *buff, size_t *lenp, loff_t *ppos)
+>> diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
+>> index c490f1e4313b..f393ea5108f0 100644
+>> --- a/kernel/user_namespace.c
+>> +++ b/kernel/user_namespace.c
+>> @@ -53,6 +53,9 @@ static void set_cred_user_ns(struct cred *cred, struct user_namespace *user_ns)
+>>       cred->cap_effective = CAP_FULL_SET;
+>>       cred->cap_ambient = CAP_EMPTY_SET;
+>>       cred->cap_bset = CAP_FULL_SET;
+>> +     if (!ns_capable(user_ns->parent, CAP_SYS_ADMIN) ||
+>> +         is_user_ns_controlled(user_ns->parent))
+>> +             mark_user_ns_controlled(user_ns);
+>
+> Hm, why do this here, rather than at create_user_ns()? It
+> shouldn't be recalculated when someone does setns() should it?
+>
+You are absolutely right! It doesn't make sense to recalculate for
+every setns() call. It's a side effect of couple of iterations /
+approaches that I tried before finalizing this one. I'll move this
+block to create_user_ns() after the set_cred_user_ns() call so that
+this wont be triggered in setns() path.
 
 Thanks,
-
-Tycho
+--mahesh..
