@@ -1,248 +1,223 @@
-From: ebiederm@xmission.com (Eric W. Biederman)
-References: <20171106150302.GA26634@mail.hallyn.com>
-	<1510003994.736.0.camel@gmail.com>
-	<20171106221418.GA32543@mail.hallyn.com>
-	<CAFUG7CcEy9a=RxBQZJR-C_2VuhZXrzJ_QxJnrSxdM=ox36DsXQ@mail.gmail.com>
-	<20171106233913.GA1518@mail.hallyn.com>
-	<CAFUG7CcW077LHcQEqk7qy7iVvmi-3J8psD1Kwj45XvHThiZC6w@mail.gmail.com>
-	<20171107032802.GA6669@mail.hallyn.com>
-	<CAF2d9jiwu3Ss7Dtem8qSptKgMc0Mc_o8MAAJkWM5CwJaFsbrcg@mail.gmail.com>
-	<20171108190223.vdkyepcaegmub6le@gmail.com>
-	<CAF2d9jjed4Q7QvCD9Kpaa7L-Ngg3XFbJvt0jNVUUwt=52wDjjw@mail.gmail.com>
-	<20171109032134.GA15666@mail.hallyn.com>
-	<CAF2d9jgs5MYn1dMT2mbhF=6UB2Hoo5kwmJhXuE6memBfWzkWXQ@mail.gmail.com>
-Date: Thu, 09 Nov 2017 15:58:43 -0600
-In-Reply-To: <CAF2d9jgs5MYn1dMT2mbhF=6UB2Hoo5kwmJhXuE6memBfWzkWXQ@mail.gmail.com>
-	(Mahesh Bandewar's message of "Thu, 9 Nov 2017 16:18:08 +0900")
-Message-ID: <871sl7dsh8.fsf@xmission.com>
+Date: Thu, 9 Nov 2017 18:09:07 -0700
+From: Tycho Andersen <tycho@docker.com>
+Message-ID: <20171110010907.qfkqhrbtdkt5y3hy@smitten>
+References: <20170907173609.22696-1-tycho@docker.com>
+ <20170907173609.22696-4-tycho@docker.com>
+ <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
+ <20170920223452.vam3egenc533rcta@smitten>
+ <97475308-1f3d-ea91-5647-39231f3b40e5@intel.com>
+ <20170921000901.v7zo4g5edhqqfabm@docker>
+ <d1a35583-8225-2ab3-d9fa-273482615d09@intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] Re: [PATCH resend 2/2] userns: control capabilities of some user namespaces
-To: =?utf-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS1?= =?utf-8?B?4KS+4KSwKQ==?= <maheshb@google.com>
-Cc: "Serge E. Hallyn" <serge@hallyn.com>, Christian Brauner <christian.brauner@canonical.com>, Boris Lukashev <blukashev@sempervictus.com>, Daniel Micay <danielmicay@gmail.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <d1a35583-8225-2ab3-d9fa-273482615d09@intel.com>
+Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
+ Ownership (XPFO)
+To: Dave Hansen <dave.hansen@intel.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-"Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=AC=E0=A4=82=
-=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0)" <maheshb@google.com> writes:
+Hi Dave,
 
-> [resend response as earlier one failed because of formatting issues]
->
-> On Thu, Nov 9, 2017 at 12:21 PM, Serge E. Hallyn <serge@hallyn.com> wrote:
->>
->> On Thu, Nov 09, 2017 at 09:55:41AM +0900, Mahesh Bandewar (=E0=A4=AE=E0=
-=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=
-=A4=BE=E0=A4=B0) wrote:
->> > On Thu, Nov 9, 2017 at 4:02 AM, Christian Brauner
->> > <christian.brauner@canonical.com> wrote:
->> > > On Wed, Nov 08, 2017 at 03:09:59AM -0800, Mahesh Bandewar (=E0=A4=AE=
-=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=
-=E0=A4=BE=E0=A4=B0) wrote:
->> > >> Sorry folks I was traveling and seems like lot happened on this thr=
-ead. :p
->> > >>
->> > >> I will try to response few of these comments selectively -
->> > >>
->> > >> > The thing that makes me hesitate with this set is that it is a
->> > >> > permanent new feature to address what (I hope) is a temporary
->> > >> > problem.
->> > >> I agree this is permanent new feature but it's not solving a tempor=
-ary
->> > >> problem. It's impossible to assess what and when new vulnerability
->> > >> that could show up. I think Daniel summed it up appropriately in his
->> > >> response
->> > >>
->> > >> > Seems like there are two naive ways to do it, the first being to =
-just
->> > >> > look at all code under ns_capable() plus code called from there. =
- It
->> > >> > seems like looking at the result of that could be fruitful.
->> > >> This is really hard. The main issue that there were features design=
-ed
->> > >> and developed before user-ns days with an assumption that unprivile=
-ged
->> > >> users will never get certain capabilities which only root user gets.
->> > >> Now that is not true anymore with user-ns creation with mapping root
->> > >> for any process. Also at the same time blocking user-ns creation for
->> > >> eveyone is a big-hammer which is not needed too. So it's not that e=
-asy
->> > >> to just perform a code-walk-though and correct those decisions now.
->> > >>
->> > >> > It seems to me that the existing control in
->> > >> > /proc/sys/kernel/unprivileged_userns_clone might be the better du=
-ct tape
->> > >> > in that case.
->> > >> This solution is essentially blocking unprivileged users from using
->> > >> the user-namespaces entirely. This is not really a solution that can
->> > >> work. The solution that this patch-set adds allows unprivileged use=
-rs
->> > >> to create user-namespaces. Actually the proposed solution is more
->> > >> fine-grained approach than the unprivileged_userns_clone solution
->> > >> since you can selectively block capabilities rather than completely
->> > >> blocking the functionality.
->> > >
->> > > I've been talking to St=C3=A9phane today about this and we should al=
-so keep in mind
->> > > that we have:
->> > >
->> > > chb@conventiont|~
->> > >> ls -al /proc/sys/user/
->> > > total 0
->> > > dr-xr-xr-x 1 root root 0 Nov  6 23:32 .
->> > > dr-xr-xr-x 1 root root 0 Nov  2 22:13 ..
->> > > -rw-r--r-- 1 root root 0 Nov  8 19:48 max_cgroup_namespaces
->> > > -rw-r--r-- 1 root root 0 Nov  8 19:48 max_inotify_instances
->> > > -rw-r--r-- 1 root root 0 Nov  8 19:48 max_inotify_watches
->> > > -rw-r--r-- 1 root root 0 Nov  8 19:48 max_ipc_namespaces
->> > > -rw-r--r-- 1 root root 0 Nov  8 19:48 max_mnt_namespaces
->> > > -rw-r--r-- 1 root root 0 Nov  8 19:48 max_net_namespaces
->> > > -rw-r--r-- 1 root root 0 Nov  8 19:48 max_pid_namespaces
->> > > -rw-r--r-- 1 root root 0 Nov  8 19:48 max_user_namespaces
->> > > -rw-r--r-- 1 root root 0 Nov  8 19:48 max_uts_namespaces
->> > >
->> > > These files allow you to limit the number of namespaces that can be =
-created
->> > > *per namespace* type. So let's say your system runs a bunch of user =
-namespaces
->> > > you can do:
->> > >
->> > > chb@conventiont|~
->> > >> echo 0 > /proc/sys/user/max_user_namespaces
->> > >
->> > > So that the next time you try to create a user namespaces you'd see:
->> > >
->> > > chb@conventiont|~
->> > >> unshare -U
->> > > unshare: unshare failed: No space left on device
->> > >
->> > > So there's not even a need to upstream a new sysctl since we have wa=
-ys of
->> > > blocking this.
->> > >
->> > I'm not sure how it's solving the problem that my patch-set is address=
-ing?
->> > I agree though that the need for unprivileged_userns_clone sysctl goes
->> > away as this is equivalent to setting that sysctl to 0 as you have
->> > described above.
->>
->> oh right that was the reasoning iirc for not needing the other sysctl.
->>
->> > However as I mentioned earlier, blocking processes from creating
->> > user-namespaces is not the solution. Processes should be able to
->> > create namespaces as they are designed but at the same time we need to
->> > have controls to 'contain' them if a need arise. Setting max_no to 0
->> > is not the solution that I'm looking for since it doesn't solve the
->> > problem.
->>
->> well yesterday we were told that was explicitly not the goal, but that w=
-as
->> not by you ... i just mention it to explain why we seem to be walking in
->> circles a bit.
->>
->> anyway the bounding set doesn't actually make sense so forget that.   the
->> question then is just whether it makes sense to allow things to continue
->> at all in this situation.  would you mind indulging me by giving one or =
-two
->> concrete examples in the previous known cves of what capabilities you wo=
-uld
->> have dropped tto allow the rest to continue to be safely used?
->>
-> Of course. Let's take an example of the CVE that I have mentioned in
-> my cover-letter -
-> CVE-2017-7308(https://cve.mitre.org/cgi-bin/cvename.cgi?name=3DCVE-2017-7=
-308).
-> It's well documented and even has a
-> exploit(https://github.com/xairy/kernel-exploits/tree/master/CVE-2017-730=
-8)
-> c-program that can demonstrate how it can be used against non-patched
-> kernel. There is very nice blog
-> post(https://googleprojectzero.blogspot.kr/2017/05/exploiting-linux-kerne=
-l-via-packet.html)
-> about this vulnerability by Andrey Konovalov.
->
-> This is about the AF_PACKET socket interface that is protected behind
-> NET_RAW capability. This capability is not available to unprivileged
-> user. However, any unprivileged user can get NET_RAW capability (as
-> demonstrated in the cover-letter code that I have attached in this
-> patch series) so this NET_RAW capability is available to any
-> unprivileged user on the host if the kernel has user-namespaces
-> available.
->
-> With this patch-set applied, all that is needed is to flip a bit with
-> the sysctl (kernel.controlled_userns_caps_whitelist) as demonstrated
-> below -
->
-> root@lphh6:~# uname -a
-> Linux lphh6 4.14.0-smp-DEV #97 SMP @1510203579 x86_64 GNU/Linux
-> root@lphh6:~# sysctl -q kernel.controlled_userns_caps_whitelist
-> kernel.controlled_userns_caps_whitelist =3D 1f,ffffffff
->
-> Now when I run the program (demo from the cover-letter) as a normal
-> unprivileged user I can't create a RAW socket in init-ns but I can in
-> the child-ns.
->
-> dumbo@lphh6:~$ /tmp/acquire_raw
-> Attempting to open RAW socket before unshare()...
-> socket() SOCK_RAW failed: : Operation not permitted
-> Attempting to open RAW socket after unshare()...
-> Successfully opened RAW-Sock after unshare().
-> dumbo@lphh6:~$
->
-> Now as a root user. Take off CAP_NET_RAW
->
-> root@lphh6:~# sysctl -w kernel.controlled_userns_caps_whitelist=3D1f,ffff=
-dfff
-> kernel.controlled_userns_caps_whitelist =3D 1f,ffffdfff
-> root@lphh6:~#
->
-> Now run the same program as an unprivileged user -
->
-> dumbo@lphh6:~$ /tmp/acquire_raw
-> Attempting to open RAW socket before unshare()...
-> socket() SOCK_RAW failed: : Operation not permitted
-> Attempting to open RAW socket after unshare()...
-> socket() SOCK_RAW failed: : Operation not permitted
-> dumbo@lphh6:~$
->
-> Notice that it has failed to create a raw socket in init and in child
-> namespace. It's not blocking creation of user-namespaces but allowing
-> admin turn individual capability bits on and off.
->
-> This is very simplistic example of just demonstrating how capability
-> bits turn-on/off works. So let's assume a sandboxed environment where
-> we don't know what a binary that we are about run in an environment
-> which is identified as susceptible. By turning off the NET_RAW bit,
-> the admin gets an assurance that system is safe and if binary fails
-> because it's not getting this capability then that bad but a sad
-> consequence (without compromising the host integrity) but if it
-> doesn't use the NET_RAW capability but any other combination of
-> remaining 36 capabilities, it would get whatever is necessary. This
-> means we can safely allow processes to create user-namespaces by
-> taking off certain capabilities in question for temporary/extended
-> period until proper fix is applied without compromising the system
-> integrity. The impact will vary based on which capability is taken off
-> and admin would / should be ware of for the environment that he/she is
-> dealing with.
+On Wed, Sep 20, 2017 at 05:27:02PM -0700, Dave Hansen wrote:
+> On 09/20/2017 05:09 PM, Tycho Andersen wrote:
+> >> I think the only thing that will really help here is if you batch the
+> >> allocations.  For instance, you could make sure that the per-cpu-pageset
+> >> lists always contain either all kernel or all user data.  Then remap the
+> >> entire list at once and do a single flush after the entire list is consumed.
+> > Just so I understand, the idea would be that we only flush when the
+> > type of allocation alternates, so:
+> > 
+> > kmalloc(..., GFP_KERNEL);
+> > kmalloc(..., GFP_KERNEL);
+> > /* remap+flush here */
+> > kmalloc(..., GFP_HIGHUSER);
+> > /* remap+flush here */
+> > kmalloc(..., GFP_KERNEL);
+> 
+> Not really.  We keep a free list per migrate type, and a per_cpu_pages
+> (pcp) list per migratetype:
+> 
+> > struct per_cpu_pages {
+> >         int count;              /* number of pages in the list */
+> >         int high;               /* high watermark, emptying needed */
+> >         int batch;              /* chunk size for buddy add/remove */
+> > 
+> >         /* Lists of pages, one per migrate type stored on the pcp-lists */
+> >         struct list_head lists[MIGRATE_PCPTYPES];
+> > };
+> 
+> The migratetype is derived from the GFP flags in
+> gfpflags_to_migratetype().  In general, GFP_HIGHUSER and GFP_KERNEL come
+> from different migratetypes, so they come from different free lists.
+> 
+> In your case above, the GFP_HIGHUSER allocation come through the
+> MIGRATE_MOVABLE pcp list while the GFP_KERNEL ones come from the
+> MIGRATE_UNMOVABLE one.  Since we add a bunch of pages to those lists at
+> once, you could do all the mapping/unmapping/flushing on a bunch of
+> pages at once
 
-My challenge with this reasoning is that I don't know that it meanifully
-generalizes to any other capability.
+So I've been playing around with an implementation of this, which is basically:
 
-I can in the sandbox today create a user namespace and then set
-max_net_namespaces to 0, and drop CAP_NET_RAW and that blocks
-the attack.  (Possibly with a little spice to prevent a suid root
-program from reacquiring CAP_NET_RAW).
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index 3d9c1b486e1f..47b46ff1148a 100644
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -2348,6 +2348,7 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
+ 		if (is_migrate_cma(get_pcppage_migratetype(page)))
+ 			__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
+ 					      -(1 << order));
++		xpfo_pcp_refill(page, migratetype, order);
+ 	}
+ 
+ 	/*
+diff --git a/mm/xpfo.c b/mm/xpfo.c
+index 080235a2f129..b381d83c6e78 100644
+--- a/mm/xpfo.c
++++ b/mm/xpfo.c
+@@ -260,3 +265,85 @@ void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
+ 			kunmap_atomic(mapping[i]);
+ }
+ EXPORT_SYMBOL(xpfo_temp_unmap);
++
++void xpfo_pcp_refill(struct page *page, enum migratetype migratetype, int order)
++{
++	int i;
++	bool flush_tlb = false;
++
++	if (!static_branch_unlikely(&xpfo_initialized))
++		return;
++
++	for (i = 0; i < 1 << order; i++) {
++		struct xpfo *xpfo;
++
++		xpfo = lookup_xpfo(page + i);
++		if (!xpfo)
++			continue;
++
++		if (unlikely(!xpfo->initialized)) {
++			spin_lock_init(&xpfo->maplock);
++			atomic_set(&xpfo->mapcount, 0);
++			xpfo->initialized = true;
++		}
++
++		xpfo->trace.max_entries = 20;
++		xpfo->trace.skip = 1;
++		xpfo->trace.entries = xpfo->entries;
++		xpfo->trace.nr_entries = 0;
++		xpfo->trace2.max_entries = 20;
++		xpfo->trace2.skip = 1;
++		xpfo->trace2.entries = xpfo->entries2;
++		xpfo->trace2.nr_entries = 0;
++
++		xpfo->migratetype = migratetype;
++
++		save_stack_trace(&xpfo->trace);
++
++		if (migratetype == MIGRATE_MOVABLE) {
++			/* GPF_HIGHUSER */
++			set_kpte(page_address(page + i), page + i, __pgprot(0));
++			if (!test_and_set_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags))
++				flush_tlb = true;
++			set_bit(XPFO_PAGE_USER, &xpfo->flags);
++		} else {
++			/*
++			 * GFP_KERNEL and everything else; for now we just
++			 * leave it mapped
++			 */
++			set_kpte(page_address(page + i), page + i, PAGE_KERNEL);
++			if (test_and_clear_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags))
++				flush_tlb = true;
++			clear_bit(XPFO_PAGE_USER, &xpfo->flags);
++		}
++	}
++
++	if (flush_tlb)
++		xpfo_flush_kernel_tlb(page, order);
++}
++
 
-So while your solution doesn't look horrible especially if it can be
-done at a user namespace level so the restrictions can be limited to a
-single sandbox.  I am not at all certain that the capabilities is the
-proper place to limit code reachability.
+But I'm getting some faults:
 
-I would very much like to see which capabilities that are available with
-ns_capable, are more meaningful to limit than just dropping the
-capability during sandbox creation and denying the creation of the
-corresponding namespace.
+[    1.897311] BUG: unable to handle kernel paging request at ffff880139b75012
+[    1.898244] IP: ext4_fill_super+0x2f3b/0x33c0
+[    1.898827] PGD 1ea6067 
+[    1.898828] P4D 1ea6067 
+[    1.899170] PUD 1ea9067 
+[    1.899508] PMD 119478063 
+[    1.899850] PTE 139b75000
+[    1.900211] 
+[    1.900760] Oops: 0000 [#1] SMP
+[    1.901160] Modules linked in:
+[    1.901565] CPU: 3 PID: 990 Comm: exe Not tainted 4.13.0+ #85
+[    1.902348] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1ubuntu1 04/01/2014
+[    1.903420] task: ffff88011ae7cb00 task.stack: ffffc9001a338000
+[    1.904108] RIP: 0010:ext4_fill_super+0x2f3b/0x33c0
+[    1.904649] RSP: 0018:ffffc9001a33bce0 EFLAGS: 00010246
+[    1.905240] RAX: 00000000000000f0 RBX: ffff880139b75000 RCX: ffffffff81c456b8
+[    1.906047] RDX: 0000000000000001 RSI: 0000000000000082 RDI: 0000000000000246
+[    1.906874] RBP: ffffc9001a33bda8 R08: 0000000000000000 R09: 0000000000000183
+[    1.908053] R10: ffff88011a9e0800 R11: ffffffff818493e0 R12: ffff88011a9e0800
+[    1.908920] R13: ffff88011a9e6800 R14: 000000000077fefa R15: 0000000000000000
+[    1.909775] FS:  00007f8169747700(0000) GS:ffff880139d80000(0000) knlGS:0000000000000000
+[    1.910667] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[    1.911293] CR2: ffff880139b75012 CR3: 000000011a965000 CR4: 00000000000006e0
+[    1.912050] Call Trace:
+[    1.912356]  ? register_shrinker+0x80/0x90
+[    1.912826]  mount_bdev+0x177/0x1b0
+[    1.913234]  ? ext4_calculate_overhead+0x4a0/0x4a0
+[    1.913744]  ext4_mount+0x10/0x20
+[    1.914115]  mount_fs+0x2d/0x140
+[    1.914490]  ? __alloc_percpu+0x10/0x20
+[    1.914903]  vfs_kern_mount.part.20+0x58/0x110
+[    1.915394]  do_mount+0x1cc/0xca0
+[    1.915758]  ? _copy_from_user+0x6b/0xa0
+[    1.916198]  ? memdup_user+0x3d/0x70
+[    1.916576]  SyS_mount+0x93/0xe0
+[    1.916915]  entry_SYSCALL_64_fastpath+0x1a/0xa5
+[    1.917401] RIP: 0033:0x7f8169264b5a
+[    1.917777] RSP: 002b:00007fff6ce82bc8 EFLAGS: 00000202 ORIG_RAX: 00000000000000a5
+[    1.918576] RAX: ffffffffffffffda RBX: 0000000000fb2030 RCX: 00007f8169264b5a
+[    1.919313] RDX: 00007fff6ce84e61 RSI: 00007fff6ce84e70 RDI: 00007fff6ce84e66
+[    1.920042] RBP: 0000000000008000 R08: 0000000000000000 R09: 0000000000000000
+[    1.920771] R10: 0000000000008001 R11: 0000000000000202 R12: 0000000000000000
+[    1.921512] R13: 0000000000000000 R14: 00007fff6ce82c70 R15: 0000000000445c20
+[    1.922254] Code: 83 ee 01 48 c7 c7 70 e6 97 81 e8 1d 0c e2 ff 48 89 de 48 c7 c7 a4 48 96 81 e8 0e 0c e2 ff 8b 85 5c ff ff ff 41 39 44 24 40 75 0e <f6> 43 12 04 41 0f 44 c7 89 85 5c ff ff ff 48 c7 c7 ad 48 96 81 
+[    1.924489] RIP: ext4_fill_super+0x2f3b/0x33c0 RSP: ffffc9001a33bce0
+[    1.925334] CR2: ffff880139b75012
+[    1.942161] ---[ end trace fe884f328a0a7338 ]---
 
-CAP_NET_RAW is one.  Are there any other capabilities that are
-meanginful to limit?
+This is the code:
 
-Eric
+if ((grp == sbi->s_groups_count) &&
+    !(gdp->bg_flags & cpu_to_le16(EXT4_BG_INODE_ZEROED)))
+
+in fs/ext4/super.c:ext4_check_descriptors() that's ultimately failing. It looks
+like this allocation comes from sb_bread_unmovable(), which although it says
+unmovable, seems to allocate the memory with:
+
+MOVABLE
+IO
+NOFAIL
+HARDWALL
+DIRECT_RECLAIM
+KSWAPD_RECLAIM
+
+which I guess is from the additional flags in grow_dev_page() somewhere down
+the stack. Anyway... it seems this is a kernel allocation that's using
+MIGRATE_MOVABLE, so perhaps we need some more fine tuned heuristic than just
+all MOVABLE allocations are un-mapped via xpfo, and all the others are mapped.
+
+Do you have any ideas?
+
+> Or, you could hook your code into the places where the migratetype of
+> memory is changed (set_pageblock_migratetype(), plus where we fall
+> back).  Those changes are much more rare than page allocation.
+
+I guess this has the same issue, that sometimes the kernel allocates MOVABLE
+stuff that it wants to use.
+
+Thanks,
+
+Tycho
