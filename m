@@ -1,62 +1,103 @@
-From: Hector Martin 'marcan' <marcan@marcan.st>
-Message-ID: <c6603960-c155-8f9f-6458-38e9ba6d4bdd@marcan.st>
-Date: Fri, 10 Nov 2017 19:40:30 +0900
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] vDSO maximum stack usage, stack probes, and -fstack-check
-To: luto@amacapital.net
-Cc: LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, x86@kernel.org
+In-Reply-To: <CACVxJT_cC1BZvfVxhNfa45zwUzO6=b6qef61XbnMaRLQmYtchg@mail.gmail.com>
+References: <1510244046-3256-1-git-send-email-tixxdz@gmail.com>
+ <1510244046-3256-4-git-send-email-tixxdz@gmail.com> <CACVxJT_cC1BZvfVxhNfa45zwUzO6=b6qef61XbnMaRLQmYtchg@mail.gmail.com>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Fri, 10 Nov 2017 11:41:12 +0100
+Message-ID: <CAEiveUfoU=49Ju8VOhPSYuUjCHHbUbHGn_0nApx+mrfFfCQFzQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH RFC v3 3/7] proc: add helpers to set and get proc hidepid
+ and gid mount options
+To: Alexey Dobriyan <adobriyan@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, Alexey Gladkov <gladkov.alexey@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Akinobu Mita <akinobu.mita@gmail.com>, "Tobin C. Harding" <me@tobin.cc>, Oleg Nesterov <oleg@redhat.com>, Jeff Layton <jlayton@poochiereds.net>, Ingo Molnar <mingo@kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Linus Torvalds <torvalds@linux-foundation.org>, Daniel Micay <danielmicay@gmail.com>, Jonathan Corbet <corbet@lwn.net>, "J. Bruce Fields" <bfields@fieldses.org>, Stephen Rothwell <sfr@canb.auug.org.au>, Solar Designer <solar@openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-As far as I know, the vDSO specs (both Documentation/ABI/stable/vdso and
-`man 7 vdso`) make no mention of how much stack the vDSO functions are
-allowed to use. They just say "the usual C ABI", which makes no guarantees.
+On Fri, Nov 10, 2017 at 11:36 AM, Alexey Dobriyan <adobriyan@gmail.com> wrote:
+> On 11/9/17, Djalal Harouni <tixxdz@gmail.com> wrote:
+>> --- a/fs/proc/base.c
+>> +++ b/fs/proc/base.c
+>
+>> -static bool has_pid_permissions(struct pid_namespace *pid,
+>> +static bool has_pid_permissions(struct proc_fs_info *fs_info,
+>
+> More "const".
+>
+>> diff --git a/fs/proc/inode.c b/fs/proc/inode.c
+>> index 9abc370..bdd808d 100644
+>> --- a/fs/proc/inode.c
+>> +++ b/fs/proc/inode.c
+>> @@ -476,11 +476,12 @@ struct inode *proc_get_inode(struct super_block *sb,
+>> struct proc_dir_entry *de)
+>>  int proc_fill_super(struct super_block *s, void *data, int silent)
+>>  {
+>>       struct proc_fs_info *fs_info = proc_sb(s);
+>> -     struct pid_namespace *ns = get_pid_ns(fs_info->pid_ns);
+>>       struct inode *root_inode;
+>>       int ret;
+>>
+>> -     if (!proc_parse_options(data, ns))
+>> +     get_pid_ns(fs_info->pid_ns);
+>> +
+>> +     if (!proc_parse_options(data, fs_info))
+>>               return -EINVAL;
+>>
+>>       /* User space would break if executables or devices appear on proc */
+>> diff --git a/fs/proc/internal.h b/fs/proc/internal.h
+>> index 4a67188..10bc7be 100644
+>> --- a/fs/proc/internal.h
+>> +++ b/fs/proc/internal.h
+>> @@ -240,7 +240,7 @@ static inline void proc_tty_init(void) {}
+>>   * root.c
+>>   */
+>>  extern struct proc_dir_entry proc_root;
+>> -extern int proc_parse_options(char *options, struct pid_namespace *pid);
+>> +extern int proc_parse_options(char *options, struct proc_fs_info
+>> *fs_info);
+>
+> "extern" can be dropped if you're touching prototype anyway.
+>
+>
+>
+>> +static inline int proc_fs_hide_pid(struct proc_fs_info *fs_info)
+>> +{
+>> +     return fs_info->pid_ns->hide_pid;
+>> +}
+>> +
+>> +static inline kgid_t proc_fs_pid_gid(struct proc_fs_info *fs_info)
+>> +{
+>> +     return fs_info->pid_ns->pid_gid;
+>> +}
+>
+> More "const".
+>
+>> @@ -59,6 +81,24 @@ static inline void proc_flush_task(struct task_struct
+>> *task)
+>>  {
+>>  }
+>>
+>> +static inline void proc_fs_set_hide_pid(struct proc_fs_info *fs_info, int
+>> hide_pid)
+>> +{
+>> +}
+>> +
+>> +static inline void proc_fs_set_pid_gid(struct proc_info_fs *fs_info, kgid_t
+>> gid)
+>> +{
+>> +}
+>> +
+>> +static inline int proc_fs_hide_pid(struct proc_fs_info *fs_info)
+>> +{
+>> +     return 0;
+>> +}
+>> +
+>> +extern kgid_t proc_fs_pid_gid(struct proc_fs_info *fs_info)
+>
+> ehh?
 
-It turns out that Go has been assuming that those functions use less
-than 104 bytes of stack space, because it calls them directly on its
-tiny stack allocations with no guard pages or other hardware overflow
-protection [1]. On most systems, this is fine.
+Ouch copy/past, will compile it without proc support.
 
-However, on my system the stars aligned and turned it into a
-nondeterministic crash. I use Gentoo Hardened, which builds its
-toolchain with -fstack-check on by default. It turns out that with the
-combination of GCC 6.4.0, -fstack-protect, linux-4.13.9-gentoo, and
-CONFIG_OPTIMIZE_INLINING=n, gcc decides to *not* inline vread_tsc (it's
-not marked inline, so it's perfectly within its right not to do that,
-though for some reason it does inline when CONFIG_OPTIMIZE_INLINING=y
-even though that nominally gives it greater freedom *not* to inline
-things marked inline). That turns __vdso_clock_gettime and
-__vdso_gettimeofday into non-leaf functions, and GCC then inserts a
-stack probe (full objdump at [2]):
+Will fix "const" and other comments too, thank you!
 
-0000000000000030 <__vdso_clock_gettime>:
-  30:	55                   	push   %rbp
-  31:	48 89 e5             	mov    %rsp,%rbp
-  34:	48 81 ec 20 10 00 00 	sub    $0x1020,%rsp
-  3b:	48 83 0c 24 00       	orq    $0x0,(%rsp)
-  40:	48 81 c4 20 10 00 00 	add    $0x1020,%rsp
-
-That silently overflows the Go stack. "orq 0" does nothing as long as
-the page is mapped, but it's not atomic. It turns out that sometimes
-(pretty often on my box) that races another thread accessing the same
-location and corrupts memory.
-
-The stack probe sounds unnecessary, since it only calls vread_tsc and
-that can't ever skip over more than a page of stack. In fact I don't
-even know why it does the probe; I thought the point of stack probes was
-to poke the stack on allocations >4K to ensure the guard page isn't
-skipped, but none of these functions use more than a few bytes of stack
-space. Nonetheless, none of this is wrong per se; the current vDSO spec
-makes no guarantees about stack usage.
-
-The question is, should it? Should the vDSO spec set a hard limit on
-stack consumption that userspace can rely on, and perhaps inline
-everything and/or disable -fstack-check to avoid the stack probes?
-
-[1] https://github.com/golang/go/issues/20427#issuecomment-343255844
-[2] https://marcan.st/paste/HCVuLG6T.txt
 
 -- 
-Hector Martin "marcan" (marcan@marcan.st)
-Public Key: https://mrcn.st/pub
+tixxdz
