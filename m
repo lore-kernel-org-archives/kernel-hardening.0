@@ -1,34 +1,91 @@
+References: <1510050731-32446-1-git-send-email-me@tobin.cc>
+ <87k1z12cof.fsf@concordia.ellerman.id.au>
+From: Frank Rowand <frowand.list@gmail.com>
+Message-ID: <7fa01b32-4db0-3742-067b-955969020953@gmail.com>
+Date: Fri, 10 Nov 2017 14:12:46 -0800
 MIME-Version: 1.0
-In-Reply-To: <a4f2bc2f-4d90-85fe-c0cc-d0d31551e933@marcan.st>
-References: <c6603960-c155-8f9f-6458-38e9ba6d4bdd@marcan.st>
- <CALCETrXhUdMNfC0yBah39Z=xWVe3Fix-qF922gJjqzTO1B7TSA@mail.gmail.com>
- <06a4b0b4-4b36-91b6-d146-9fc1300b785f@marcan.st> <a4f2bc2f-4d90-85fe-c0cc-d0d31551e933@marcan.st>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Fri, 10 Nov 2017 14:04:13 -0800
-Message-ID: <CALCETrVd-f-N=O6QmtdzS7oSVkXpsJhxH+=9+0fvfFmy5Cz3WQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: vDSO maximum stack usage, stack probes,
- and -fstack-check
-To: Hector Martin 'marcan' <marcan@marcan.st>
-Cc: LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>
+In-Reply-To: <87k1z12cof.fsf@concordia.ellerman.id.au>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [PATCH v4] scripts: add leaking_addresses.pl
+To: Michael Ellerman <mpe@ellerman.id.au>, "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> On Nov 10, 2017, at 8:36 AM, Hector Martin 'marcan' <marcan@marcan.st> wrote:
->
->> On 2017-11-11 01:02, Hector Martin 'marcan' wrote:
->> Not entirely sure what's going on here.
->
-> Actually, if you think about it, it doesn't matter that it skips the
-> first page, since it's probing one page more. That just means the caller
-> will have probed the previous page. So ultimately you're just probing
-> ahead of where you need to, but that should be OK.
->
+Hi Michael, Tobin,
 
-The whole point is to touch the stack pages in order.  Also, I see no
-guarantee that the function would touch the intermediate page before
-clobbering the probed page.  You're seeing exactly that behavior, in
-fact.
+On 11/08/17 04:10, Michael Ellerman wrote:
+> "Tobin C. Harding" <me@tobin.cc> writes:
+>> Currently we are leaking addresses from the kernel to user space. This
+>> script is an attempt to find some of those leakages. Script parses
+>> `dmesg` output and /proc and /sys files for hex strings that look like
+>> kernel addresses.
+>>
+>> Only works for 64 bit kernels, the reason being that kernel addresses
+>> on 64 bit kernels have 'ffff' as the leading bit pattern making greping
+>> possible.
+> 
+> That doesn't work super well on other architectures :D
+> 
+> I don't speak perl but presumably you can check the arch somehow and
+> customise the regex?
+> 
+> ...
+>> +# Return _all_ non false positive addresses from $line.
+>> +sub extract_addresses
+>> +{
+>> +        my ($line) = @_;
+>> +        my $address = '\b(0x)?ffff[[:xdigit:]]{12}\b';
+> 
+> On 64-bit powerpc (ppc64/ppc64le) we'd want:
+> 
+> +        my $address = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
+> 
+> 
+>> +# Do not parse these files (absolute path).
+>> +my @skip_parse_files_abs = ('/proc/kmsg',
+>> +			    '/proc/kcore',
+>> +			    '/proc/fs/ext4/sdb1/mb_groups',
+>> +			    '/proc/1/fd/3',
+>> +			    '/sys/kernel/debug/tracing/trace_pipe',
+>> +			    '/sys/kernel/security/apparmor/revision');
+> 
+> Can you add:
+> 
+>   /sys/firmware/devicetree
+> 
+> and/or /proc/device-tree (which is a symlink to the above).
 
-> --
-> Hector Martin "marcan" (marcan@marcan.st)
-> Public Key: https://mrcn.st/pub
+/proc/device-tree is a symlink to /sys/firmware/devicetree/base
+
+/sys/firmware contains
+   fdt              -- the flattened device tree that was passed to the
+                       kernel on boot
+   devicetree/base/ -- the data that is currently in the live device tree.
+                       This live device tree is represented as directories
+                       and files beneath base/
+
+The information in fdt is directly available in the kernel source tree
+(possible exception: the bootloader may have modified the fdt, possibly
+to add/modify the boot command line, add memory size).
+
+The information in devicetree/base/ is directly available in the kernel
+source tree for _most_ architectures, with the same possible exception
+for the bootloader.  ppc64 may also modify this information dynamically
+after the system is booted.  When overlay support is working, overlay
+device trees will also be able to modify this information dynamically
+(and again, this information will be directly available in the kernel
+source tree).
+
+Not having read the code in leaking_addresses.pl, trusting that the
+comments are correct, it seems that /sys/firmware should be in
+@skip_walk_dirs_abs instead of putting /sys/firmware/devicetree
+in @skip_parse_files_abs.
+
+
+> We should also start restricting access to that because it may have
+> potentially interesting physical addresses in it, but that will break
+> existing tools, so it will need to be opt-in and done over time.
+> 
+> cheers
+> 
