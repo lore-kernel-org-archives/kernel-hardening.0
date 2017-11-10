@@ -1,97 +1,28 @@
 MIME-Version: 1.0
-In-Reply-To: <1510244046-3256-4-git-send-email-tixxdz@gmail.com>
-References: <1510244046-3256-1-git-send-email-tixxdz@gmail.com> <1510244046-3256-4-git-send-email-tixxdz@gmail.com>
-From: Alexey Dobriyan <adobriyan@gmail.com>
-Date: Fri, 10 Nov 2017 12:36:48 +0200
-Message-ID: <CACVxJT_cC1BZvfVxhNfa45zwUzO6=b6qef61XbnMaRLQmYtchg@mail.gmail.com>
+In-Reply-To: <CALCETrWX=GN4KoxysJwDUhYs-fu3wdJU=pzTTKgQuKwa0O2k8w@mail.gmail.com>
+References: <1510244046-3256-1-git-send-email-tixxdz@gmail.com>
+ <1510244046-3256-7-git-send-email-tixxdz@gmail.com> <CALCETrWX=GN4KoxysJwDUhYs-fu3wdJU=pzTTKgQuKwa0O2k8w@mail.gmail.com>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Fri, 10 Nov 2017 11:38:00 +0100
+Message-ID: <CAEiveUe5pRBConqj_QhD6Kax2rH4nAD+=7X5kWX-+C66v-kS9g@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH RFC v3 3/7] proc: add helpers to set and get proc hidepid
- and gid mount options
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, Alexey Gladkov <gladkov.alexey@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-api@vger.kernel.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Akinobu Mita <akinobu.mita@gmail.com>, me@tobin.cc, Oleg Nesterov <oleg@redhat.com>, Jeff Layton <jlayton@poochiereds.net>, Ingo Molnar <mingo@kernel.org>, ebiederm@xmission.com, Linus Torvalds <torvalds@linux-foundation.org>, Daniel Micay <danielmicay@gmail.com>, Jonathan Corbet <corbet@lwn.net>, bfields@fieldses.org, Stephen Rothwell <sfr@canb.auug.org.au>, solar@openwall.com
+Subject: [kernel-hardening] Re: [PATCH RFC v3 6/7] proc: support new 'pids=all|ptraceable' mount option
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Alexey Gladkov <gladkov.alexey@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Akinobu Mita <akinobu.mita@gmail.com>, "Tobin C. Harding" <me@tobin.cc>, Oleg Nesterov <oleg@redhat.com>, Jeff Layton <jlayton@poochiereds.net>, Ingo Molnar <mingo@kernel.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Linus Torvalds <torvalds@linux-foundation.org>, Daniel Micay <danielmicay@gmail.com>, Jonathan Corbet <corbet@lwn.net>, "J. Bruce Fields" <bfields@fieldses.org>, Stephen Rothwell <sfr@canb.auug.org.au>, Solar Designer <solar@openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/9/17, Djalal Harouni <tixxdz@gmail.com> wrote:
-> --- a/fs/proc/base.c
-> +++ b/fs/proc/base.c
-
-> -static bool has_pid_permissions(struct pid_namespace *pid,
-> +static bool has_pid_permissions(struct proc_fs_info *fs_info,
-
-More "const".
-
-> diff --git a/fs/proc/inode.c b/fs/proc/inode.c
-> index 9abc370..bdd808d 100644
-> --- a/fs/proc/inode.c
-> +++ b/fs/proc/inode.c
-> @@ -476,11 +476,12 @@ struct inode *proc_get_inode(struct super_block *sb,
-> struct proc_dir_entry *de)
->  int proc_fill_super(struct super_block *s, void *data, int silent)
->  {
->  	struct proc_fs_info *fs_info = proc_sb(s);
-> -	struct pid_namespace *ns = get_pid_ns(fs_info->pid_ns);
->  	struct inode *root_inode;
->  	int ret;
+On Fri, Nov 10, 2017 at 3:38 AM, Andy Lutomirski <luto@kernel.org> wrote:
+> On Thu, Nov 9, 2017 at 8:14 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
+>> This patch introduces the new 'pids' mount option, as it was discussed
+>> and suggested by Andy Lutomirski [1].
+>>
+>> * If 'pids=' is passed without 'newinstance' then it has no effect.
 >
-> -	if (!proc_parse_options(data, ns))
-> +	get_pid_ns(fs_info->pid_ns);
-> +
-> +	if (!proc_parse_options(data, fs_info))
->  		return -EINVAL;
->
->  	/* User space would break if executables or devices appear on proc */
-> diff --git a/fs/proc/internal.h b/fs/proc/internal.h
-> index 4a67188..10bc7be 100644
-> --- a/fs/proc/internal.h
-> +++ b/fs/proc/internal.h
-> @@ -240,7 +240,7 @@ static inline void proc_tty_init(void) {}
->   * root.c
->   */
->  extern struct proc_dir_entry proc_root;
-> -extern int proc_parse_options(char *options, struct pid_namespace *pid);
-> +extern int proc_parse_options(char *options, struct proc_fs_info
-> *fs_info);
+> Would it be safer this were an error instead?
 
-"extern" can be dropped if you're touching prototype anyway.
+Hm, I tend to say that you are right, but I also keep your comment
+when you said that "newinstance" should be the default later and users
+won't have to explicitly pass it. What you think ?
 
-
-
-> +static inline int proc_fs_hide_pid(struct proc_fs_info *fs_info)
-> +{
-> +	return fs_info->pid_ns->hide_pid;
-> +}
-> +
-> +static inline kgid_t proc_fs_pid_gid(struct proc_fs_info *fs_info)
-> +{
-> +	return fs_info->pid_ns->pid_gid;
-> +}
-
-More "const".
-
-> @@ -59,6 +81,24 @@ static inline void proc_flush_task(struct task_struct
-> *task)
->  {
->  }
->
-> +static inline void proc_fs_set_hide_pid(struct proc_fs_info *fs_info, int
-> hide_pid)
-> +{
-> +}
-> +
-> +static inline void proc_fs_set_pid_gid(struct proc_info_fs *fs_info, kgid_t
-> gid)
-> +{
-> +}
-> +
-> +static inline int proc_fs_hide_pid(struct proc_fs_info *fs_info)
-> +{
-> +	return 0;
-> +}
-> +
-> +extern kgid_t proc_fs_pid_gid(struct proc_fs_info *fs_info)
-
-ehh?
-
-> +{
-> +	return GLOBAL_ROOT_GID;
-> +}
+-- 
+tixxdz
