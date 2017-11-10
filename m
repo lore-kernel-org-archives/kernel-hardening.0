@@ -1,110 +1,70 @@
-References: <1508631773-2502-1-git-send-email-alex.popov@linux.com>
- <1508631773-2502-2-git-send-email-alex.popov@linux.com>
- <20171023131730.2r5imit2hzpxq2vg@docker>
- <59b5e578-cf68-4cc2-ebb7-c2fdf873b79d@linux.com>
- <CAGXu5jL2TTUs_LbjzVoVfP3YXsgCYcSXveo2dS9H-FiSdPVqMw@mail.gmail.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <32f20d8a-3318-0be1-44c4-1153001e9ad8@linux.com>
-Date: Fri, 10 Nov 2017 19:59:34 +0300
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jL2TTUs_LbjzVoVfP3YXsgCYcSXveo2dS9H-FiSdPVqMw@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v5 1/5] x86/entry: Add STACKLEAK erasing the kernel
- stack at the end of syscalls
-To: Kees Cook <keescook@chromium.org>
-Cc: Tycho Andersen <tycho@docker.com>, Andy Lutomirski <luto@kernel.org>, kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, x86@kernel.org
+In-Reply-To: <06a4b0b4-4b36-91b6-d146-9fc1300b785f@marcan.st>
+References: <c6603960-c155-8f9f-6458-38e9ba6d4bdd@marcan.st>
+ <CALCETrXhUdMNfC0yBah39Z=xWVe3Fix-qF922gJjqzTO1B7TSA@mail.gmail.com> <06a4b0b4-4b36-91b6-d146-9fc1300b785f@marcan.st>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Fri, 10 Nov 2017 14:04:08 -0800
+Message-ID: <CALCETrXyzt2GEHZdXTKQZo6t08oA4wSwuooA2G_YmPPBGJMOjg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: vDSO maximum stack usage, stack probes,
+ and -fstack-check
+To: Hector Martin 'marcan' <marcan@marcan.st>
+Cc: LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Kees,
+> On Nov 10, 2017, at 8:02 AM, Hector Martin 'marcan' <marcan@marcan.st> wrote:
+>
+>> On 2017-11-10 23:57, Andy Lutomirski wrote:
+>> This code is so wrong I don't even no where to start.  Seriously, sub,
+>> orq, add?  How about just orq with an offset?  How about a *load*
+>> instead of a store?
+>
+> Stores should be cheaper than loads (since they don't stall), but
+> apparently the rationale for using orq is:
 
-On 31.10.2017 18:20, Kees Cook wrote:
-> On Tue, Oct 24, 2017 at 2:30 PM, Alexander Popov <alex.popov@linux.com> wrote:
->> On 23.10.2017 16:17, Tycho Andersen wrote:
->>> On Sun, Oct 22, 2017 at 03:22:49AM +0300, Alexander Popov wrote:
->>>> The STACKLEAK feature erases the kernel stack before returning from
->>>> syscalls. That reduces the information which kernel stack leak bugs can
->>>> reveal and blocks some uninitialized stack variable attacks. Moreover,
->>>> STACKLEAK provides runtime checks for kernel stack overflow detection.
->>>>
->>>> This commit introduces the architecture-specific code filling the used
->>>> part of the kernel stack with a poison value before returning to the
->>>> userspace. Full STACKLEAK feature also contains the gcc plugin which
->>>> comes in a separate commit.
->>>>
->>>> The STACKLEAK feature is ported from grsecurity/PaX. More information at:
->>>>   https://grsecurity.net/
->>>>   https://pax.grsecurity.net/
->>>>
->>>> This code is modified from Brad Spengler/PaX Team's code in the last
->>>> public patch of grsecurity/PaX based on our understanding of the code.
->>>> Changes or omissions from the original code are ours and don't reflect
->>>> the original grsecurity/PaX code.
->>>>
->>>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
->>>> ---
->>
->> [...]
->>
->>>> @@ -81,8 +87,10 @@ static long syscall_trace_enter(struct pt_regs *regs)
->>>>              emulated = true;
->>>>
->>>>      if ((emulated || (work & _TIF_SYSCALL_TRACE)) &&
->>>> -        tracehook_report_syscall_entry(regs))
->>>> +        tracehook_report_syscall_entry(regs)) {
->>>> +            erase_kstack();
->>>>              return -1L;
->>>> +    }
->>>>
->>>>      if (emulated)
->>>>              return -1L;
->>>> @@ -116,9 +124,11 @@ static long syscall_trace_enter(struct pt_regs *regs)
->>>>                      sd.args[5] = regs->bp;
->>>>              }
->>>>
->>>> -            ret = __secure_computing(&sd);
->>>> -            if (ret == -1)
->>>> +            ret = secure_computing(&sd);
->>>
->>> Is there any reason to switch this from the __ version? This basically
->>> adds an additional check on the TIF_SECCOMP flag, but I'm not sure
->>> that's intentional with this patch.
->>
->> Hello Tycho, thanks for your remark!
->>
->> Initially I took this change from the grsecurity patch, because it looked
->> reasonable for me at that time. But now I doubt, thank you.
-> 
-> Yeah, I'd prefer this stay __secure_computing().
+I'm having trouble imagining a CPU that would stall on an unused load
+but would not stall on an RMW.
 
-Ok.
+>
+> gcc/config/i386/i386.md: ;; Use IOR for stack probes, this is shorter.
+>
+> Saves bytes I guess? Though being read-modify-write it probably hurts
+> performance; I don't know what real CPUs would do with it.
+>
+> I suspect the sub, add is there to guarantee that the stack pointer is
+> actually below the probed location. IIRC the x86-64 ABI specifies a
+> 128-byte redzone that you can freely mess with; going beyond that would
+> require actually changing the stack pointer.
+>
 
->> Kees and Andy (Lutomirski), you are the authors of syscall_trace_enter(). Could
->> you please have a look at this change?
->>
->> By the way, it seems that one erase_kstack() call is missing in that function.
->> Could you please have a glance at the places where erase_kstack() is called?
-> 
-> Errr, wouldn't erase_kstack() get called outside of seccomp? (i.e. via
-> syscall_return_slowpath() or something later in the return path?)
+The redzone says that signals won't clobber the first 128 bytes.  For
+a stack probe, no one cares about the value at the probed address, so
+this seems moot.  Maybe there's some kernel that would object to the
+sort-of-out-of-bounds probe, but that seems unlikely.
 
-Yes, erase_kstack() is called later in entry_SYSCALL_64 just after do_syscall_64.
-
-> Or is there some reason for erasing the stack after seccomp processing
-> but before running the syscall?
-
-Ah, it seems that PaX Team is doing that intentionally. I guess I've found the
-proof in his slides for H2HC conference (slide 38):
-https://pax.grsecurity.net/docs/PaXTeam-H2HC13-PaX-gcc-plugins.pdf
-
-"- Special paths for ptrace/auditing
--- Low-level kernel entry/exit paths can diverge for ptrace/auditing and leave
-interesting information on the stack for the actual syscall code"
-
-Do you know which kind of interesting information is mentioned?
-
-And again, erase_kstack() is not called before 1 of 4 return statements in
-syscall_trace_enter(). IMHO it is a bug. Could you please verify that? Thanks!
-
-Best regards,
-Alexander
+>> But stepping back even further, an offset > 4096 is just bogus.
+>> That's big enough to skip right over the guard page.
+>
+> The code (gcc/config/i386/i386.c) says:
+>
+>  /* We skip the probe for the first interval + a small dope of 4 words
+>     and probe that many bytes past the specified size to maintain a
+>     protection area at the botton of the stack.  */
+>
+> Not entirely sure what's going on here.
+>
+> OTOH I'm not sure why it's probing at all, since AIUI it only needs to
+> probe for stack frames >4k to begin with.
+>
+>> Anyway, my recollection is that GCC's stack check code is busted until
+>> much newer gcc versions.  I suppose we could try to make the kernel
+>> fail to build at all on a broken configuration like this.
+>
+> Well, the original point still stands. Even if what GCC is doing is
+> stupid here, it's not illegal (it's just eating stack space), and the
+> kernel still currently makes no guarantees about that. So I think the
+> conversation regarding vDSO stack usage guarantees is still worth having.
+>
+> --
+> Hector Martin "marcan" (marcan@marcan.st)
+> Public Key: https://mrcn.st/pub
