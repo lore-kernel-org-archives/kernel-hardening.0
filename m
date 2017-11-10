@@ -1,142 +1,19 @@
 MIME-Version: 1.0
-In-Reply-To: <20171109172544.GB26229@mail.hallyn.com>
-References: <20171103004436.40026-1-mahesh@bandewar.net> <20171109172544.GB26229@mail.hallyn.com>
-From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
-Date: Fri, 10 Nov 2017 10:49:58 +0900
-Message-ID: <CAF2d9jir4WF=YyBVbAM=WAopYukcZz_==0+LtKepv8Qv8UNaEw@mail.gmail.com>
+In-Reply-To: <1510244046-3256-7-git-send-email-tixxdz@gmail.com>
+References: <1510244046-3256-1-git-send-email-tixxdz@gmail.com> <1510244046-3256-7-git-send-email-tixxdz@gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Thu, 9 Nov 2017 18:38:34 -0800
+Message-ID: <CALCETrWX=GN4KoxysJwDUhYs-fu3wdJU=pzTTKgQuKwa0O2k8w@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH resend 2/2] userns: control capabilities of some user namespaces
-To: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
+Subject: [kernel-hardening] Re: [PATCH RFC v3 6/7] proc: support new 'pids=all|ptraceable' mount option
+To: Djalal Harouni <tixxdz@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, Alexey Gladkov <gladkov.alexey@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Akinobu Mita <akinobu.mita@gmail.com>, me@tobin.cc, Oleg Nesterov <oleg@redhat.com>, Jeff Layton <jlayton@poochiereds.net>, Ingo Molnar <mingo@kernel.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Linus Torvalds <torvalds@linux-foundation.org>, Daniel Micay <danielmicay@gmail.com>, Jonathan Corbet <corbet@lwn.net>, "J. Bruce Fields" <bfields@fieldses.org>, Stephen Rothwell <sfr@canb.auug.org.au>, Solar Designer <solar@openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 10, 2017 at 2:25 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
-> Quoting Mahesh Bandewar (mahesh@bandewar.net):
->> From: Mahesh Bandewar <maheshb@google.com>
->>
->> With this new notion of "controlled" user-namespaces, the controlled
->> user-namespaces are marked at the time of their creation while the
->> capabilities of processes that belong to them are controlled using the
->> global mask.
->>
->> Init-user-ns is always uncontrolled and a process that has SYS_ADMIN
->> that belongs to uncontrolled user-ns can create another (child) user-
->> namespace that is uncontrolled. Any other process (that either does
->> not have SYS_ADMIN or belongs to a controlled user-ns) can only
->> create a user-ns that is controlled.
->>
->> global-capability-whitelist (controlled_userns_caps_whitelist) is used
->> at the capability check-time and keeps the semantics for the processes
->> that belong to uncontrolled user-ns as it is. Processes that belong to
->> controlled user-ns however are subjected to different checks-
->>
->>    (a) if the capability in question is controlled and process belongs
->>        to controlled user-ns, then it's always denied.
->>    (b) if the capability in question is NOT controlled then fall back
->>        to the traditional check.
->>
->> Signed-off-by: Mahesh Bandewar <maheshb@google.com>
->> ---
->>  include/linux/capability.h     |  1 +
->>  include/linux/user_namespace.h | 20 ++++++++++++++++++++
->>  kernel/capability.c            |  5 +++++
->>  kernel/user_namespace.c        |  3 +++
->>  security/commoncap.c           |  8 ++++++++
->>  5 files changed, 37 insertions(+)
->>
->> diff --git a/include/linux/capability.h b/include/linux/capability.h
->> index 6c0b9677c03f..b8c6cac18658 100644
->> --- a/include/linux/capability.h
->> +++ b/include/linux/capability.h
->> @@ -250,6 +250,7 @@ extern bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns);
->>  extern int get_vfs_caps_from_disk(const struct dentry *dentry, struct cpu_vfs_cap_data *cpu_caps);
->>  int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
->>                                void __user *buff, size_t *lenp, loff_t *ppos);
->> +bool is_capability_controlled(int cap);
->>
->>  extern int cap_convert_nscap(struct dentry *dentry, void **ivalue, size_t size);
->>
->> diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
->> index c18e01252346..e890fe81b47e 100644
->> --- a/include/linux/user_namespace.h
->> +++ b/include/linux/user_namespace.h
->> @@ -22,6 +22,7 @@ struct uid_gid_map {        /* 64 bytes -- 1 cache line */
->>  };
->>
->>  #define USERNS_SETGROUPS_ALLOWED 1UL
->> +#define USERNS_CONTROLLED     2UL
->>
->>  #define USERNS_INIT_FLAGS USERNS_SETGROUPS_ALLOWED
->>
->> @@ -102,6 +103,16 @@ static inline void put_user_ns(struct user_namespace *ns)
->>               __put_user_ns(ns);
->>  }
->>
->> +static inline bool is_user_ns_controlled(const struct user_namespace *ns)
->> +{
->> +     return ns->flags & USERNS_CONTROLLED;
->> +}
->> +
->> +static inline void mark_user_ns_controlled(struct user_namespace *ns)
->> +{
->> +     ns->flags |= USERNS_CONTROLLED;
->> +}
->> +
->>  struct seq_operations;
->>  extern const struct seq_operations proc_uid_seq_operations;
->>  extern const struct seq_operations proc_gid_seq_operations;
->> @@ -160,6 +171,15 @@ static inline struct ns_common *ns_get_owner(struct ns_common *ns)
->>  {
->>       return ERR_PTR(-EPERM);
->>  }
->> +
->> +static inline bool is_user_ns_controlled(const struct user_namespace *ns)
->> +{
->> +     return false;
->> +}
->> +
->> +static inline void mark_user_ns_controlled(struct user_namespace *ns)
->> +{
->> +}
->>  #endif
->>
->>  #endif /* _LINUX_USER_H */
->> diff --git a/kernel/capability.c b/kernel/capability.c
->> index 62dbe3350c1b..40a38cc4ff43 100644
->> --- a/kernel/capability.c
->> +++ b/kernel/capability.c
->> @@ -510,6 +510,11 @@ bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns)
->>  }
->>
->>  /* Controlled-userns capabilities routines */
->> +bool is_capability_controlled(int cap)
->> +{
->> +     return !cap_raised(controlled_userns_caps_whitelist, cap);
->> +}
->> +
->>  #ifdef CONFIG_SYSCTL
->>  int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
->>                                void __user *buff, size_t *lenp, loff_t *ppos)
->> diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
->> index c490f1e4313b..f393ea5108f0 100644
->> --- a/kernel/user_namespace.c
->> +++ b/kernel/user_namespace.c
->> @@ -53,6 +53,9 @@ static void set_cred_user_ns(struct cred *cred, struct user_namespace *user_ns)
->>       cred->cap_effective = CAP_FULL_SET;
->>       cred->cap_ambient = CAP_EMPTY_SET;
->>       cred->cap_bset = CAP_FULL_SET;
->> +     if (!ns_capable(user_ns->parent, CAP_SYS_ADMIN) ||
->> +         is_user_ns_controlled(user_ns->parent))
->> +             mark_user_ns_controlled(user_ns);
+On Thu, Nov 9, 2017 at 8:14 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
+> This patch introduces the new 'pids' mount option, as it was discussed
+> and suggested by Andy Lutomirski [1].
 >
-> Hm, why do this here, rather than at create_user_ns()? It
-> shouldn't be recalculated when someone does setns() should it?
->
-You are absolutely right! It doesn't make sense to recalculate for
-every setns() call. It's a side effect of couple of iterations /
-approaches that I tried before finalizing this one. I'll move this
-block to create_user_ns() after the set_cred_user_ns() call so that
-this wont be triggered in setns() path.
+> * If 'pids=' is passed without 'newinstance' then it has no effect.
 
-Thanks,
---mahesh..
+Would it be safer this were an error instead?
