@@ -1,91 +1,94 @@
-References: <1510050731-32446-1-git-send-email-me@tobin.cc>
- <87k1z12cof.fsf@concordia.ellerman.id.au>
-From: Frank Rowand <frowand.list@gmail.com>
-Message-ID: <7fa01b32-4db0-3742-067b-955969020953@gmail.com>
-Date: Fri, 10 Nov 2017 14:12:46 -0800
 MIME-Version: 1.0
-In-Reply-To: <87k1z12cof.fsf@concordia.ellerman.id.au>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH v4] scripts: add leaking_addresses.pl
-To: Michael Ellerman <mpe@ellerman.id.au>, "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
+Sender: linus971@gmail.com
+In-Reply-To: <ab1a286f-73dc-01aa-d797-0fef82534911@gentoo.org>
+References: <a17842c3-aae7-da98-424e-4441dd727e6d@gentoo.org>
+ <CA+55aFzGDyeJctD5Y3paBnysWXbA0cMF1_7mvvzG3n2OAnNhHw@mail.gmail.com>
+ <20171109193715.GB21978@ZenIV.linux.org.uk> <40ad7c6e-f0d7-959a-bf29-d3e3843f5d31@gentoo.org>
+ <CA+55aFwqUbd5xVno7tH+yYD=yeu4nBdY=mpZQ+3fA0OEPS_WtQ@mail.gmail.com>
+ <23f7da04-95f7-24e7-ee70-ce40c5b8fee3@gentoo.org> <CA+55aFx63wq=qN0+P+S-aahq7HzvYLi1tSxhPT9x78E8BrMNGQ@mail.gmail.com>
+ <67939ef3-29c6-762c-7afe-46cc69630d95@gentoo.org> <ab1a286f-73dc-01aa-d797-0fef82534911@gentoo.org>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Fri, 10 Nov 2017 18:36:09 -0800
+Message-ID: <CA+55aFxw-ycca8+9ywckyXxH4dTggLJi5hXGdJtCQocjM86f5g@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [nfsd4] potentially hardware breaking regression in 4.14-rc and 4.13.11
+To: Patrick McLean <chutzpah@gentoo.org>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>
+Cc: Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, stable <stable@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Michael, Tobin,
+[ Bringing in the gcc plugin people and the kernel hardening list,
+since it now is no longer even remotely looking like a nfsd, vfs or
+filesystem issue any more ]
 
-On 11/08/17 04:10, Michael Ellerman wrote:
-> "Tobin C. Harding" <me@tobin.cc> writes:
->> Currently we are leaking addresses from the kernel to user space. This
->> script is an attempt to find some of those leakages. Script parses
->> `dmesg` output and /proc and /sys files for hex strings that look like
->> kernel addresses.
+Kees, Emese,
+ the whole thread is on lkml, but there's clearly something horribly
+wrong with RANDSTRUCT, and it's not new even though it looked that way
+for a while.
+
+Patrick seems to trigger it with nfsd, so it might be specific to that.
+
+Alternatively, it might just be that very few people run
+RANDSTRUCT-built kernels, or just have been lucky with the seeding.
+
+Sorry for top-posting, but there's not really anything in the email
+itself to reply to, other than saying thanks to Patrick for narrowing
+it down like this.
+
+It would have been very interesting if it had actually bisected to
+something, but it seems that the real issue is just the choice of
+seeding for RANDSTRUCT.
+
+                 Linus
+
+On Fri, Nov 10, 2017 at 4:27 PM, Patrick McLean <chutzpah@gentoo.org> wrote:
+> On 2017-11-10 03:26 PM, Patrick McLean wrote:
+>> On 2017-11-10 10:42 AM, Linus Torvalds wrote:
+>>>
+>>> I really don't see anything that looks even half-way suspicious in
+>>> that 4.13.8..11 range. But as mentioned, compiler interactions can be
+>>> _really_ subtle.
+>>>
+>>> And hey, it can be a real kernel bug too, that just happens to be
+>>> exposed by RANDSTRUCT, so a bisect really would be very nice.
 >>
->> Only works for 64 bit kernels, the reason being that kernel addresses
->> on 64 bit kernels have 'ffff' as the leading bit pattern making greping
->> possible.
-> 
-> That doesn't work super well on other architectures :D
-> 
-> I don't speak perl but presumably you can check the arch somehow and
-> customise the regex?
-> 
-> ...
->> +# Return _all_ non false positive addresses from $line.
->> +sub extract_addresses
->> +{
->> +        my ($line) = @_;
->> +        my $address = '\b(0x)?ffff[[:xdigit:]]{12}\b';
-> 
-> On 64-bit powerpc (ppc64/ppc64le) we'd want:
-> 
-> +        my $address = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
-> 
-> 
->> +# Do not parse these files (absolute path).
->> +my @skip_parse_files_abs = ('/proc/kmsg',
->> +			    '/proc/kcore',
->> +			    '/proc/fs/ext4/sdb1/mb_groups',
->> +			    '/proc/1/fd/3',
->> +			    '/sys/kernel/debug/tracing/trace_pipe',
->> +			    '/sys/kernel/security/apparmor/revision');
-> 
-> Can you add:
-> 
->   /sys/firmware/devicetree
-> 
-> and/or /proc/device-tree (which is a symlink to the above).
-
-/proc/device-tree is a symlink to /sys/firmware/devicetree/base
-
-/sys/firmware contains
-   fdt              -- the flattened device tree that was passed to the
-                       kernel on boot
-   devicetree/base/ -- the data that is currently in the live device tree.
-                       This live device tree is represented as directories
-                       and files beneath base/
-
-The information in fdt is directly available in the kernel source tree
-(possible exception: the bootloader may have modified the fdt, possibly
-to add/modify the boot command line, add memory size).
-
-The information in devicetree/base/ is directly available in the kernel
-source tree for _most_ architectures, with the same possible exception
-for the bootloader.  ppc64 may also modify this information dynamically
-after the system is booted.  When overlay support is working, overlay
-device trees will also be able to modify this information dynamically
-(and again, this information will be directly available in the kernel
-source tree).
-
-Not having read the code in leaking_addresses.pl, trusting that the
-comments are correct, it seems that /sys/firmware should be in
-@skip_walk_dirs_abs instead of putting /sys/firmware/devicetree
-in @skip_parse_files_abs.
-
-
-> We should also start restricting access to that because it may have
-> potentially interesting physical addresses in it, but that will break
-> existing tools, so it will need to be opt-in and done over time.
-> 
-> cheers
-> 
+>> I am working on bisecting the issue now, but I think I have some more
+>> evidence pointing to a compiler issue related to RANDSTRUCT. There are
+>> actually 3 issues that we have seen. Sometimes we get the null pointer
+>> deref in the initial message, sometimes we get the GPF, and sometimes we
+>> see an issue where the NFS clients see all files as root-owned
+>> directories. Any given kernel will always see the same issue, but after
+>> a "make mrproper" and recompile (with the same .config), the issue will
+>> often change. I suspect that all 3 of these problems are actually the
+>> same issue manifesting itself in different ways depending on what seed
+>> the RANDSTRUCT gcc plugin is using.
+>
+> Further update on this, using the same seed for RANDSTRUCT, I have
+> reproduced this issue on v4.13.0, so it does not seem to be recently
+> introduced. The older kernel apparently only worked for us because we
+> were lucky. Generally we always compile new kernels from a fresh tree,
+> so they are never using the same seed.
+>
+> In case someone wants to play with this, here are some interesting seeds
+> (in include/generated/randomize_layout_hash.h):
+>
+> Produce a NULL pointer dereference (though I am not sure what the client
+> does to produce this).
+>     5970d6494d0f4236ec57147a46e700f4f501536236d96f6f68ea223e06a258bc
+>
+> All files for nfsd4 clients appear as directories owned as root, no
+> matter the real owner (this happens for all clients we have tested):
+>     3f158cd1014800ce5eb6c1f532ac64f2357fdb9a684096557d2fbb1d281f325e
+>
+> This is the seed that was breaking motherboards (make sure you have a
+> way to flash the BIOS with this one):
+>     3e32f2d1b4a3dde9f2fd95151386cd1d5bd6167597a0b868f6273aabfc5712dd
+>
+> Finally, here is a seed that produces a kernel that does not exhibit any
+> problems we are aware of:
+>     e8698c12137fcd1dcbff6d1ed97e5d766128447a27ce9f9d61e0cb8c05ad4d3b
+>
+>>>
+>>> Because in the end, compiler bugs are very rare. They are particularly
+>>> annoying when they do happen, though, so they loom big in the mind of
+>>> people who have had to chase them down.
+>>>
