@@ -1,41 +1,35 @@
+Date: Sun, 12 Nov 2017 02:10:07 +0300
+From: "Kirill A. Shutemov" <kirill@shutemov.name>
+Message-ID: <20171111231007.iirqce3r7xqqnxd3@node.shutemov.name>
+References: <1510050731-32446-1-git-send-email-me@tobin.cc>
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CAGXu5jL83V7hSpVLT69UTfgh3XkOsJw-S7Wc9_PQP7zGc8__rg@mail.gmail.com>
-References: <a17842c3-aae7-da98-424e-4441dd727e6d@gentoo.org>
- <CA+55aFzGDyeJctD5Y3paBnysWXbA0cMF1_7mvvzG3n2OAnNhHw@mail.gmail.com>
- <20171109193715.GB21978@ZenIV.linux.org.uk> <40ad7c6e-f0d7-959a-bf29-d3e3843f5d31@gentoo.org>
- <CA+55aFwqUbd5xVno7tH+yYD=yeu4nBdY=mpZQ+3fA0OEPS_WtQ@mail.gmail.com>
- <23f7da04-95f7-24e7-ee70-ce40c5b8fee3@gentoo.org> <CA+55aFx63wq=qN0+P+S-aahq7HzvYLi1tSxhPT9x78E8BrMNGQ@mail.gmail.com>
- <67939ef3-29c6-762c-7afe-46cc69630d95@gentoo.org> <ab1a286f-73dc-01aa-d797-0fef82534911@gentoo.org>
- <CA+55aFxw-ycca8+9ywckyXxH4dTggLJi5hXGdJtCQocjM86f5g@mail.gmail.com> <CAGXu5jL83V7hSpVLT69UTfgh3XkOsJw-S7Wc9_PQP7zGc8__rg@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Sat, 11 Nov 2017 09:31:34 -0800
-Message-ID: <CA+55aFytWtipkgGtkZgzRTQqLPxG+QzJ2K9+oFdo9NVNXxB69g@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [nfsd4] potentially hardware breaking regression in 4.14-rc and 4.13.11
-To: Kees Cook <keescook@chromium.org>
-Cc: Patrick McLean <chutzpah@gentoo.org>, Emese Revfy <re.emese@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, stable <stable@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1510050731-32446-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] Re: [PATCH v4] scripts: add leaking_addresses.pl
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Boris Lukashev points out that Patrick should probably check a newer
-version of gcc.
+On Tue, Nov 07, 2017 at 09:32:11PM +1100, Tobin C. Harding wrote:
+> Currently we are leaking addresses from the kernel to user space. This
+> script is an attempt to find some of those leakages. Script parses
+> `dmesg` output and /proc and /sys files for hex strings that look like
+> kernel addresses.
+> 
+> Only works for 64 bit kernels, the reason being that kernel addresses
+> on 64 bit kernels have 'ffff' as the leading bit pattern making greping
+> possible. On 32 kernels we don't have this luxury.
 
-I looked around, and in one of the emails, Patrick said:
+Well, it's not going to work as well as intented on x86 machine with
+5-level paging. Kernel address space there starts at 0xff10000000000000.
+It will still catch pointers to kernel/modules text, but the rest is
+outside of 0xffff... space. See Documentation/x86/x86_64/mm.txt.
 
-  "No changes, both the working and broken kernels were built with
-   distro-provided gcc 5.4.0 and binutils 2.28.1"
+Not sure if we care. It won't work too for other 64-bit architectrues that
+have more than 256TB of virtual address space.
 
-and gcc-5.4.0 is certainly not very recent. It's not _ancient_, but
-it's a bug-fix release to a pretty old branch that is not exactly new.
+Just wanted to point to the limitation.
 
-It would probably be good to check if the problems persist with gcc
-6.x or 7.x.. I have no idea which gcc version the randstruct people
-tend to use themselves.
-
-               Linus
-
-
-On Sat, Nov 11, 2017 at 8:13 AM, Kees Cook <keescook@chromium.org> wrote:
->
-> I'll take a closer look at this and see if I can provide something to
-> narrow it down.
+-- 
+ Kirill A. Shutemov
