@@ -1,35 +1,56 @@
-Date: Sun, 12 Nov 2017 02:10:07 +0300
-From: "Kirill A. Shutemov" <kirill@shutemov.name>
-Message-ID: <20171111231007.iirqce3r7xqqnxd3@node.shutemov.name>
-References: <1510050731-32446-1-git-send-email-me@tobin.cc>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1510050731-32446-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] Re: [PATCH v4] scripts: add leaking_addresses.pl
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
+In-Reply-To: <6dc150cb-13df-65d8-cb6e-0a522c13ae11@marcan.st>
+References: <c6603960-c155-8f9f-6458-38e9ba6d4bdd@marcan.st>
+ <CALCETrXhUdMNfC0yBah39Z=xWVe3Fix-qF922gJjqzTO1B7TSA@mail.gmail.com>
+ <06a4b0b4-4b36-91b6-d146-9fc1300b785f@marcan.st> <a4f2bc2f-4d90-85fe-c0cc-d0d31551e933@marcan.st>
+ <CALCETrVd-f-N=O6QmtdzS7oSVkXpsJhxH+=9+0fvfFmy5Cz3WQ@mail.gmail.com> <6dc150cb-13df-65d8-cb6e-0a522c13ae11@marcan.st>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Sat, 11 Nov 2017 20:21:05 -0800
+Message-ID: <CALCETrV-Q817-woi=2GqP4t46yTHF+p301C6ObFn2NDXeqfukw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: vDSO maximum stack usage, stack probes,
+ and -fstack-check
+To: Hector Martin 'marcan' <marcan@marcan.st>
+Cc: Andy Lutomirski <luto@kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 07, 2017 at 09:32:11PM +1100, Tobin C. Harding wrote:
-> Currently we are leaking addresses from the kernel to user space. This
-> script is an attempt to find some of those leakages. Script parses
-> `dmesg` output and /proc and /sys files for hex strings that look like
-> kernel addresses.
-> 
-> Only works for 64 bit kernels, the reason being that kernel addresses
-> on 64 bit kernels have 'ffff' as the leading bit pattern making greping
-> possible. On 32 kernels we don't have this luxury.
+On Fri, Nov 10, 2017 at 9:16 PM, Hector Martin 'marcan'
+<marcan@marcan.st> wrote:
+> On 2017-11-11 07:04, Andy Lutomirski wrote:
+>>> On Nov 10, 2017, at 8:36 AM, Hector Martin 'marcan' <marcan@marcan.st> wrote:
+>>>
+>>>> On 2017-11-11 01:02, Hector Martin 'marcan' wrote:
+>>>> Not entirely sure what's going on here.
+>>>
+>>> Actually, if you think about it, it doesn't matter that it skips the
+>>> first page, since it's probing one page more. That just means the caller
+>>> will have probed the previous page. So ultimately you're just probing
+>>> ahead of where you need to, but that should be OK.
+>>>
+>>
+>> The whole point is to touch the stack pages in order.  Also, I see no
+>> guarantee that the function would touch the intermediate page before
+>> clobbering the probed page.  You're seeing exactly that behavior, in
+>> fact.
+>
+> Only because Go is not C and is not compiled like this. If all the code
+> is GCC-compiled C code and built with -fstack-check, it should always
+> probe stack pages in order except for potentially the second page in the
+> stack, which may be touched after the third page (but hopefully your
+> stack is at least two pages long to begin with).
 
-Well, it's not going to work as well as intented on x86 machine with
-5-level paging. Kernel address space there starts at 0xff10000000000000.
-It will still catch pointers to kernel/modules text, but the rest is
-outside of 0xffff... space. See Documentation/x86/x86_64/mm.txt.
+If you're generating code to improve stack overflow, assuming that you
+have at least two pages left seems like an *awful* assumption to make.
 
-Not sure if we care. It won't work too for other 64-bit architectrues that
-have more than 256TB of virtual address space.
+>
+> AIUI -fstack-check was not intended for stack clash protection (the
+> latter isn't even in a GCC release yet), but in most circumstances it
+> seems to me like it's an effective mitigation if all code is compiled
+> with it. Qualys mentioned it as such in their advisory. This is probably
+> why Gentoo Hardened enables it by default globally in their toolchain.
+>
 
-Just wanted to point to the limitation.
-
--- 
- Kirill A. Shutemov
+Gentoo Hardened should seriously consider turning it back off.  Do you
+happen to know what exactly Gentoo does to cause the vdso to get build
+with -fstack-check?  I'll write a patch to either fail the build or to
+force it off.
