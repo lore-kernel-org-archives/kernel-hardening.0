@@ -1,463 +1,325 @@
-From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Date: Sun, 12 Nov 2017 22:19:07 +0100
-Message-Id: <20171112211911.27779-1-linux@rasmusvillemoes.dk>
-Subject: [kernel-hardening] [PATCH 1/5] plugins: implement format_template attribute
-To: Kees Cook <keescook@chromium.org>, Jean Delvare <jdelvare@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Thomas Gleixner <tglx@linutronix.de>
-Cc: linux-hwmon@vger.kernel.org, linux-usb@vger.kernel.org, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Emese Revfy <re.emese@gmail.com>, linux-kernel@vger.kernel.org, linux-sparse@vger.kernel.org, linux-kbuild@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Mon, 13 Nov 2017 09:21:19 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171112222119.GL19752@eros>
+References: <1510050731-32446-1-git-send-email-me@tobin.cc>
+ <1510322194.19812.3.camel@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1510322194.19812.3.camel@gmail.com>
+Subject: Re: [kernel-hardening] [PATCH v4] scripts: add leaking_addresses.pl
+To: kaiwan.billimoria@gmail.com
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Most format strings in the kernel are string literals, so the compiler
-and other static analyzers can do type checking. This plugin covers a
-few of the remaining cases, by introducing a format_template
-attribute.
+On Fri, Nov 10, 2017 at 07:26:34PM +0530, kaiwan.billimoria@gmail.com wrote:
+> On Tue, 2017-11-07 at 21:32 +1100, Tobin C. Harding wrote:
+> > Currently we are leaking addresses from the kernel to user space.
+> > This
+> > script is an attempt to find some of those leakages. Script parses
+> > `dmesg` output and /proc and /sys files for hex strings that look
+> > like
+> > kernel addresses.
+> > 
+> > Only works for 64 bit kernels, the reason being that kernel addresses
+> > on 64 bit kernels have 'ffff' as the leading bit pattern making
+> > greping
+> > possible. On 32 kernels we don't have this luxury.
+> 
+> Tobin C. Harding <me@tobin.cc> wrote:
+> >Only works for 64 bit kernels, the reason being that kernel addresses
+> >on 64 bit kernels have 'ffff' as the leading bit pattern making greping
+> >possible. On 32 kernels we don't have this luxury.
+> 
+> [RFC] leaking_addresses.pl - enhance it to work for 32-bit kernels as well
+> 
+> (Firstly, apologies if I've got the protocol horribly wrong- should this
+> be a new thread altogether?)
 
-Consider struct usb_class_driver. Its member 'name' is used as a
-format string in usb_register_dev(), and that use obviously expects
-that the format string contains a single "%d" (or maybe %u). So the
-idea is that we simply attach __format_template("%d") to the
-declaration of the name member of struct usb_class_driver. We can then
-check that any static initialization of that member is with a string
-literal with the same set of specifiers. This is what the plugin
-currently does. There are a number of things it also could/should do:
+I think this patch will need to wait until the patch set that is
+currently in flight is either merged or dropped.
 
-- Check run-time assignments of literals to a __format_template
-annotated struct member.
+> Ok so, I was interested in figuring - why not have this useful script work
+> for 32-bit kernel virtual addresses as well (and those systems by
+> extension).
 
-- Use this at call sites of *printf functions, where the format string
-argument is a __format_template annotated struct member - that is, use
-the template in lieu of a string literal. For now, this is not
-implemented - mostly because I'm lazy and don't want to write my own
-format checking code (again), and I suppose there should be an internal
-gcc function I could (ab)use to say "check this variadic function call,
-but use _this_ as format string".
+Awesome.
 
-- It should also be possible to attach it to function parameters -
-e.g. the namefmt parameter to kthread_create_on_cpu should have
-__format_template("%u"); its only caller is __smpboot_create_thread
-which passes struct smp_hotplug_thread->thread_comm, which in turn
-should also have that attribute. Combined with the above, this would
-check the entire chain from initializer to sprintf().
+> The approach am considering, pl correct me if I'm way off:
+> on 32-bit, the kernel macro PAGE_OFFSET will give us the user-kernel split;
+> (alternatively, could also script up CONFIG_VMSPLIT_[n]G and figure the
+> split from there.)
+> 
+> For the time being, lets say we go with the "use PAGE_OFFSET" approach and
+> PAGE_OFFSET = 0xc0000000 , whch implies we have a 3:1 GB user:kernel split.
+> So any virtual addresses >= PAGE_OFFSET are kernel virtual addresses (i
+> know, untrue on some ARM-32 systems!).
+> 
+> As a very early and *far-from-perfect* start, I've enhanced Tobin's Perl
+> script to take into account 32-bit address space by passing the
+> parameter '--bit-size='.
 
-While strictly speaking "%*s" and "%d %s" both expect (int, const
-char*), they're morally distinct, so I don't want to treat them as
-equivalent. If this is ever a problem, I think one should let the
-attribute take an optional flag argument, which could then control how
-strict or lax the checking should be.
+We can work this out pragmatically, Perl can give us an architecture
+string then a few regexs can ascertain which architecture we are running
+on. This is in the inflight patch set. 
 
-I'm not sure how much this affects compilation time, but there's not
-really any point in building with this all the time - it should
-suffice that the various build bots do it once in a while. Even
-without the plugin, the __format_template(...) in headers serve
-as concise documentation.
+> The patch below does Not take into account (yet) stuff like:
+>  - exactly which files & dirs should be skipped on 32-bit (will it be
+> identical to 64-bit?; unsure..)
 
-Applying this attribute to smp_hotplug_thread::thread_comm and modifying
-kernel/watchdog.c slightly, an example of the error message produced for
-violations is:
+As per discussion later in this thread we may need to consider
+architecture specific lists for files/directories to skip. 
 
-kernel/watchdog.c:528:1: error: initializer string 'watchdog/%u %d' contains extra format specifier '%d' compared to format template 'foobar/%u'
+>  - it currently hard-codes a global 'PAGE_OFFSET_32BIT=0xc0000000' , just
+>  so I can test quickly; must figure whether to query it or pass it;
+>  Suggestions?
 
-Signed-off-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>
----
- arch/Kconfig                                 |  18 ++
- include/linux/compiler.h                     |   6 +
- scripts/Makefile.gcc-plugins                 |   2 +
- scripts/gcc-plugins/format_template_plugin.c | 331 +++++++++++++++++++++++++++
- 4 files changed, 357 insertions(+)
- create mode 100644 scripts/gcc-plugins/format_template_plugin.c
+Perhaps we should have a command line option for this.
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 057370a0ac4e..71c582eaeb69 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -517,6 +517,24 @@ config GCC_PLUGIN_RANDSTRUCT_PERFORMANCE
- 	  in structures.  This reduces the performance hit of RANDSTRUCT
- 	  at the cost of weakened randomization.
- 
-+config GCC_PLUGIN_FORMAT_TEMPLATE
-+	bool "Enable format_template attribute"
-+	depends on GCC_PLUGINS
-+	help
-+	  This plugin implements a format_template attribute which can
-+	  be attached to struct members which are supposed to hold a
-+	  (printf) format string. This allows the compiler to check
-+	  that (a) any string statically assigned to such a struct
-+	  member has format specifiers compatible with those in the
-+	  template and (b) when such a struct member is used as the
-+	  format argument to a printf function, use the template in
-+	  lieu of a string literal to do type checking of the variadic
-+	  arguments.
-+
-+	  Even without using the plugin, attaching the format_template
-+	  attribute can be beneficial, since it serves as
-+	  documentation.
-+
- config HAVE_CC_STACKPROTECTOR
- 	bool
- 	help
-diff --git a/include/linux/compiler.h b/include/linux/compiler.h
-index 202710420d6d..478914ad280b 100644
---- a/include/linux/compiler.h
-+++ b/include/linux/compiler.h
-@@ -625,4 +625,10 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
- 	(_________p1); \
- })
- 
-+#ifdef HAVE_ATTRIBUTE_FORMAT_TEMPLATE
-+#define __format_template(x) __attribute__((__format_template__(x)))
-+#else
-+#define __format_template(x)
-+#endif
-+
- #endif /* __LINUX_COMPILER_H */
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index b2a95af7df18..2f9bc96aab90 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -35,6 +35,8 @@ ifdef CONFIG_GCC_PLUGINS
-   gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)	+= -DRANDSTRUCT_PLUGIN
-   gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE)	+= -fplugin-arg-randomize_layout_plugin-performance-mode
- 
-+  gcc-plugin-$(CONFIG_GCC_PLUGIN_FORMAT_TEMPLATE)	+= format_template_plugin.so
-+
-   GCC_PLUGINS_CFLAGS := $(strip $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y)) $(gcc-plugin-cflags-y))
- 
-   export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGIN GCC_PLUGIN_SUBDIR
-diff --git a/scripts/gcc-plugins/format_template_plugin.c b/scripts/gcc-plugins/format_template_plugin.c
-new file mode 100644
-index 000000000000..09a798773cfd
---- /dev/null
-+++ b/scripts/gcc-plugins/format_template_plugin.c
-@@ -0,0 +1,331 @@
-+#include <string.h>
-+#include <assert.h>
-+
-+#include "gcc-common.h"
-+#include "c-family/c-pragma.h"
-+
-+int plugin_is_GPL_compatible;
-+
-+static struct plugin_info format_template_plugin_info = {
-+	.version	= "20151209",
-+	.help		= "format_template_plugin\n",
-+};
-+
-+static tree handle_format_template_attribute(tree *node, tree name, tree args, int __unused flags, bool *no_add_attrs)
-+{
-+	tree tmpl, orig_attr;
-+
-+	*no_add_attrs = true;
-+	switch (TREE_CODE(*node)) {
-+	case FIELD_DECL:
-+		break;
-+	default:
-+		error("%qE attribute only applies to struct members", name);
-+		return NULL_TREE;
-+	}
-+
-+	tmpl = TREE_VALUE(args);
-+	if (TREE_CODE(tmpl) != STRING_CST) {
-+		error("%qE parameter of the %qE attribute is not a string constant", args, name);
-+		return NULL_TREE;
-+	}
-+
-+	orig_attr = lookup_attribute("format_template", DECL_ATTRIBUTES(*node));
-+	if (orig_attr) {
-+		error("%qE attribute applied twice", name);
-+		return NULL_TREE;
-+	}
-+	else
-+		*no_add_attrs = false;
-+
-+	return NULL_TREE;
-+}
-+
-+static struct attribute_spec format_template_attr = {
-+	.name				= "format_template",
-+	.min_length			= 1,
-+	.max_length			= 1,
-+	.decl_required			= true,
-+	.type_required			= false,
-+	.function_type_required		= false,
-+	.handler			= handle_format_template_attribute,
-+#if BUILDING_GCC_VERSION >= 4007
-+	.affects_type_identity		= false
-+#endif
-+};
-+
-+static void register_attributes(void __unused *event_data, void __unused *data)
-+{
-+	register_attribute(&format_template_attr);
-+}
-+
-+static void define_feature_macro(void __unused *event_data, void __unused *data)
-+{
-+	cpp_define(parse_in, "HAVE_ATTRIBUTE_FORMAT_TEMPLATE");
-+}
-+
-+enum {
-+	QUAL_NONE,
-+	QUAL_SHORT, /* h */
-+	QUAL_BYTE, /* hh, == QUAL_SHORT+1*/
-+	QUAL_LONG, /* l */
-+	QUAL_LONGLONG, /* ll, == QUAL_LONG+1 */
-+	QUAL_MAX, /* j */
-+	QUAL_SIZE, /* z */
-+	QUAL_PTRDIFF, /* t */
-+};
-+#define FW_P_NONE (-1)
-+#define FW_P_ARG (-2)
-+
-+struct spec_iter {
-+	const char *spec;
-+	int len;
-+
-+	int field_width;
-+	int precision;
-+	int qual;
-+	char type;
-+
-+};
-+
-+static inline void
-+spec_iter_init(struct spec_iter *spec, const char *s)
-+{
-+	spec->spec = s;
-+	spec->len = 0;
-+}
-+
-+static void get_fw_p(const char **c, int *dst, int prec)
-+{
-+	*dst = FW_P_NONE;
-+	if (prec) {
-+		if (**c != '.')
-+			return;
-+		++(*c);
-+		*dst = 0;
-+	}
-+	if (**c == '*') {
-+		++(*c);
-+		*dst = FW_P_ARG;
-+		return;
-+	}
-+	if (!ISDIGIT(**c))
-+		return;
-+	*dst = **c - '0';
-+	++(*c);
-+	while (ISDIGIT(**c)) {
-+		/* should do if (*dst > 10000) warn("insane explicit field width/precision"); */
-+		*dst *= 10;
-+		*dst += **c - '0';
-+		++(*c);
-+	}
-+}
-+
-+static int spec_next(struct spec_iter *spec)
-+{
-+	const char *c;
-+	int slen = 0;
-+
-+	spec->spec += spec->len;
-+again:
-+	c = strchrnul(spec->spec, '%');
-+	slen += c - spec->spec;
-+	if (!c[0]) {
-+		spec->spec = NULL;
-+		return slen;
-+	}
-+	assert(c[0] == '%');
-+	if (c[1] == '%') {
-+		slen++;
-+		spec->spec = c+2;
-+		goto again;
-+	}
-+
-+	spec->spec = c;
-+	++c;
-+	/* skip flags */
-+	while (strchr("#0- +", *c))
-+		++c;
-+
-+	get_fw_p(&c, &spec->field_width, 0);
-+	get_fw_p(&c, &spec->precision, 1);
-+
-+	spec->qual = QUAL_NONE;
-+	switch (*c) {
-+	case 'h': spec->qual = QUAL_SHORT; break;
-+	case 'l': spec->qual = QUAL_LONG; break;
-+#if 0 /* The kernel doesn't grok the j qualifier */
-+	case 'j': spec->qual = QUAL_MAX; break;
-+#endif
-+	case 'z': spec->qual = QUAL_SIZE; break;
-+	case 't': spec->qual = QUAL_PTRDIFF; break;
-+	}
-+	if (spec->qual) {
-+		++c;
-+		if (*c == c[-1] && (*c == 'h' || *c == 'l')) {
-+			spec->qual++;
-+			++c;
-+		}
-+	}
-+
-+	spec->type = *c++;
-+	spec->len = c - spec->spec;
-+
-+	switch (spec->type) {
-+	case 'd':
-+	case 'u':
-+	case 'x':
-+	case 'X':
-+	case 'o':
-+	case 'c':
-+	case 's':
-+		break;
-+	/*
-+	 * Disallowing %p is the safe and sane thing to do, given the
-+	 * different interpretations based on following alphanumerics.
-+	 */
-+	case 'p':
-+	/*
-+	 * Why are there two with the same meaning? %i is the lesser
-+	 * used one and should just die.
-+	 */
-+	case 'i':
-+		error("unsupported specifier '%.*s' in template or initializer", spec->len, spec->spec);
-+	default:
-+		error("invalid specifier '%.*s' in template or initializer", spec->len, spec->spec);
-+	}
-+
-+	return slen;
-+}
-+
-+static bool specs_compatible(const struct spec_iter *a, const struct spec_iter *b)
-+{
-+	if (a->qual != b->qual)
-+		return false;
-+	if (a->field_width != b->field_width)
-+		return false;
-+	if (a->precision != b->precision)
-+		return false;
-+	if (a->type != b->type)
-+		return false;
-+	return true;
-+}
-+
-+static void check_literal(tree attr, const char *str)
-+{
-+	const char *pattern = TREE_STRING_POINTER(TREE_VALUE(TREE_VALUE(attr)));
-+	struct spec_iter sp, ss;
-+	int i;
-+
-+	spec_iter_init(&sp, pattern);
-+	spec_iter_init(&ss, str);
-+
-+	/*
-+	 * Walk over the pattern and string in lockstep.
-+	 */
-+	for (i = 1; ; ++i) {
-+		spec_next(&sp);
-+		spec_next(&ss);
-+		/*
-+		 * It's ok for the template to have more specifiers
-+		 * than the actual string. But issue warning(s)
-+		 * anyway, conditional on -Wformat-extra-args.
-+		 */
-+		if (ss.spec == NULL) {
-+			while (sp.spec != NULL) {
-+			       warning(OPT_Wformat_extra_args,
-+				       "format template '%s' contains extra specifier '%.*s' compared to initializer string '%s'",
-+				       pattern, sp.len, sp.spec, str);
-+			       spec_next(&sp);
-+			}
-+			return;
-+		}
-+		/*
-+		 * It's absolutely not ok for the actual string to
-+		 * have more specifiers than the template.
-+		 */
-+		if (!sp.spec) {
-+			do {
-+				error("initializer string '%s' contains extra format specifier '%.*s' compared to format template '%s'",
-+					str, ss.len, ss.spec, pattern);
-+				spec_next(&ss);
-+			} while (ss.spec != NULL);
-+			return;
-+		}
-+		if (!specs_compatible(&ss, &sp)) {
-+			error("specifier %d in '%s' ('%.*s') incompatible with format template '%s'",
-+			      i, str, ss.len, ss.spec, pattern);
-+		}
-+	}
-+}
-+
-+static void check_declaration(void *event_data, void *data __unused)
-+{
-+	tree decl = (tree)event_data;
-+	tree ini, type;
-+	unsigned idx;
-+	tree field, value;
-+
-+	switch (TREE_CODE(decl)) {
-+	case VAR_DECL:
-+		break;
-+	default:
-+		return;
-+	}
-+
-+	ini = DECL_INITIAL(decl);
-+	if (!ini)
-+		return;
-+
-+	type = TREE_TYPE(decl);
-+	if (TREE_CODE(type) != RECORD_TYPE)
-+		return;
-+
-+	if (TREE_CODE(ini) != CONSTRUCTOR) {
-+		// warning(0, "weird, initializer is not a CONSTRUCTOR, tree_code=%d", TREE_CODE(ini));
-+		return;
-+	}
-+
-+	FOR_EACH_CONSTRUCTOR_ELT(CONSTRUCTOR_ELTS(ini), idx, field, value) {
-+		tree attr;
-+
-+		/* if (TREE_CODE(value) != STRING_CST) */
-+		/* 	continue; */
-+
-+		attr = lookup_attribute("format_template", DECL_ATTRIBUTES(field));
-+		if (!attr)
-+			continue;
-+
-+		/*
-+		 * Hm, apparently the string literal is hidden behind
-+		 * a NOP_EXPR and a ADDR_EXPR.
-+		 */
-+		STRIP_NOPS(value);
-+		if (TREE_CODE(value) == ADDR_EXPR)
-+			value = TREE_OPERAND(value, 0);
-+
-+		if (TREE_CODE(value) != STRING_CST)
-+			continue;
-+
-+		check_literal(attr, TREE_STRING_POINTER(value));
-+
-+	}
-+
-+}
-+
-+int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
-+{
-+	const char *const plugin_name = plugin_info->base_name;
-+
-+	if (!plugin_default_version_check(version, &gcc_version)) {
-+		error(G_("incompatible gcc/plugin versions"));
-+		return 1;
-+	}
-+
-+	register_callback(plugin_name, PLUGIN_INFO, NULL, &format_template_plugin_info);
-+	register_callback(plugin_name, PLUGIN_START_UNIT, &define_feature_macro, NULL);
-+	register_callback(plugin_name, PLUGIN_FINISH_DECL, &check_declaration, NULL);
-+	register_callback(plugin_name, PLUGIN_ATTRIBUTES, &register_attributes, NULL);
-+
-+	return 0;
-+}
--- 
-2.11.0
+	--kernel-base-address
+
+>  - the 'false positives'; again, what differs for 32-bit?
+>    (BTW, shouldn't the dmesg 'root=UUID=<...>' line be a false positive
+>     & skipped?).
+
+We could probably do with architecture specific false
+positives. Inflight patch set refactors false_positive() so adding to
+this should be easy.
+
+> Also, I must point out that I'm a complete newbie to Perl :-) so, pl excuse
+> my highly inadequate perl-foo; I rely on you perl gurus out there to fix
+> and optimize :)
+
+I'm no Perl guru but following are a few tips I have picked up over the
+last month.
+
+> Yes, I've **Very Minimally** tested the patch in it's current form on:
+> a) a regular (Fedora 26) x86_64 desktop,
+> b) a (Debian 7) 32-bit kernel (VM) with PAGE_OFFSET=3 Gb
+> and it seems all right, considering...
+> 
+> Some sample output from test (b), if interested:
+> =====
+> dmesg: [    0.000000] found SMP MP-table at [c00f1280] f1280
+> dmesg: [    0.000000] Base memory trampoline at [c009b000] 9b000 size 16384
+> dmesg: [    0.000000] ACPI: Local APIC address 0xfee00000
+> dmesg: [    0.000000] free_area_init_node: node 0, pgdat c1418bc0, node_mem_map dfbfa200
+> dmesg: [    0.000000] ACPI: Local APIC address 0xfee00000
+> dmesg: [    0.000000] ACPI: IOAPIC (id[0x00] address[0xfec00000] gsi_base[0])
+> dmesg: [    0.000000] IOAPIC[0]: apic_id 0, version 17, address 0xfec00000, GSI 0-23
+> dmesg: [    0.000000] PERCPU: Embedded 14 pages/cpu @dfbe8000 s33344 r0 d24000 u57344
+> dmesg: [    0.000000]     fixmap  : 0xffd36000 - 0xfffff000   (2852 kB)
+> dmesg: [    0.000000]     pkmap   : 0xffa00000 - 0xffc00000   (2048 kB)
+> dmesg: [    0.000000]     vmalloc : 0xe07fb000 - 0xff9fe000   ( 498 MB)
+> dmesg: [    0.000000]     lowmem  : 0xc0000000 - 0xdfffb000   ( 511 MB)
+> dmesg: [    0.000000]       .init : 0xc1421000 - 0xc148c000   ( 428 kB)
+> 
+> [...]
+> 
+> /proc/kallsyms: c10010e8 T _stext
+> /proc/kallsyms: c1002000 T hypercall_page
+> /proc/kallsyms: c1003000 t arch_local_save_flags
+> /proc/kallsyms: c1003007 t arch_local_irq_enable
+> /proc/kallsyms: c100300e T do_one_initcall
+> 
+> << ... plenty more kallsyms of course (92.5% of the output to be precise!) ... >>
+> 
+> /proc/modules: loop 17803 0 - Live 0xe097c000
+> /proc/modules: crc32c_intel 12659 0 - Live 0xe096e000
+> /proc/modules: snd_pcm 53461 0 - Live 0xe09f5000
+> /proc/modules: snd_page_alloc 12867 1 snd_pcm, Live 0xe0957000
+> /proc/modules: snd_timer 22401 1 snd_pcm, Live 0xe093c000
+> 
+> [...]
+> 
+> /proc/modules: usb_common 12338 1 usbcore, Live 0xe0860000
+> /proc/timer_list:   .base:       dfbeb8b0
+> /proc/timer_list:  #0: <dfbeb954>, tick_sched_timer, S:01, hrtimer_start_range_ns, swapper/0/0
+> 
+> [...]
+> 
+> /proc/iomem:   f8000000-fbffffff : 0000:00:02.0
+> /proc/iomem:   fc000000-fcffffff : 0000:00:02.0
+> /proc/iomem:   fd000000-fd03ffff : 0000:00:03.0
+> 
+> [...]
+> 
+> /proc/11422/syscall: 7 0xffffffff 0xbf814618 0xa 0xa 0x0 0x1 0xbf8145b8 0xb7780428
+> /proc/11422/stack: [<c102953f>] kmap_atomic_prot+0x2f/0xe0
+> /proc/11422/stack: [<c1125213>] security_task_wait+0xc/0xd
+> 
+> [...]
+> 
+> /proc/bus/input/devices: B: KEY=4 2000000 3803078 f800d001 feffffdf ffefffff ffffffff fffffffe
+> /proc/1/net/ipv6_route: 00000000000000000000000000000000 00 00000000000000000000000000000000 00 00000000000000000000000000000000 ffffffff 00000001 0000000f 00200200       lo
+> 
+> [...]
+> 
+> /proc/2/net/unix: dce872c0: 00000005 00000000 00000000 0002 01  4978 /dev/log
+> /proc/2/net/unix: dce87a40: 00000002 00000000 00010000 0001 01  5006 /var/run/acpid.socket
+> /proc/2/net/unix: dce87540: 00000002 00000000 00010000 0005 01  3246 /run/udev/control
+> 
+> [...]
+> =====
+> etc etc.
+> 
+> 
+> Finally, unsure if am working against the latest ver of your script Tobin, apologies if not.
+
+This was answered in private mail but for the list, v3 of this patch set
+was merged into Linus' mainline. There is a patch set inflight also
+on top of that.
+
+https://lkml.org/lkml/2017/11/9/11
+
+> Signed-off-by: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
+> ---
+> 
+> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
+> index 2977371b2956..b6280dca8c46 100755
+> --- a/scripts/leaking_addresses.pl
+> +++ b/scripts/leaking_addresses.pl
+> @@ -45,6 +45,7 @@ my $P = $0;
+>  my $V = '0.01';
+> 
+>  # Directories to scan.
+> +#my @DIRS = ('/home/kai/0tmp/addr32_pl');
+
+Cleaner without this :)
+
+>  my @DIRS = ('/proc', '/sys');
+> 
+>  # Command line options.
+> @@ -52,6 +53,7 @@ my $help = 0;
+>  my $debug = 0;
+>  my @dont_walk = ();
+>  my @dont_parse = ();
+> +my $bit_size = 64;
+
+As commented on above, it might be better to plug into the arch specific
+infrastructure implemented in the inflight patch set if it gets
+merged. If not we can still set this variable pragmatically.
+
+>  # Do not parse these files (absolute path).
+>  my @skip_parse_files_abs = ('/proc/kmsg',
+> @@ -86,6 +88,8 @@ my @skip_walk_dirs_any = ('self',
+> 			  'stdin',
+> 			  'stdout');
+> 
+> +my $PAGE_OFFSET_32BIT = 0xc0000000;
+> +
+>  sub help
+>  {
+> 	my ($exitcode) = @_;
+> @@ -96,10 +100,12 @@ Version: $V
+> 
+>  Options:
+> 
+> +	--bit-size= 32|[64]    Checks for 64-bit kernel addresses by default;
+> +                                change to check for 32-bit kernel addresses by passing 32 here
+> 	--dont-walk=<dir>      Don't walk tree starting at <dir>.
+> 	--dont-parse=<file>    Don't parse <file>.
+> -	-d, --debug                Display debugging output.
+> -	-h, --help, --version      Display this help and exit.
+> +	-d, --debug            Display debugging output.
+> +	-h, --help, --version  Display this help and exit.
+
+It is easier to read your patch if these white space changes aren't here.
+
+>  If an absolute path is passed to --dont_XXX then this path is skipped. If a
+>  single filename is passed then this file/directory will be skipped when
+> @@ -117,8 +123,9 @@ EOM
+>  }
+> 
+>  GetOptions(
+> -	'dont-walk=s'		=> \@dont_walk,
+> -	'dont-parse=s'		=> \@dont_parse,
+> +	'dont-walk=s'	=> \@dont_walk,
+> +	'dont-parse=s'	=> \@dont_parse,
+
+And these ones.
+
+> +	'bit-size=i'	=> \$bit_size,
+> 	'd|debug'		=> \$debug,
+> 	'h|help'		=> \$help,
+> 	'version'		=> \$help
+> @@ -126,6 +133,10 @@ GetOptions(
+> 
+>  help(0) if ($help);
+> 
+> +if ($bit_size != 64 && $bit_size != 32) {
+> +    help(1);
+> +}
+
+In order to make parsing easier, kernel Perl scripts tend to be written
+with the same code layout as we write C. So indentation is 8 characters.
+
+>  push_to_global();
+> 
+>  parse_dmesg();
+> @@ -168,6 +179,7 @@ sub push_to_global
+> 	push_in_abs_any(\@dont_parse, \@skip_parse_files_abs, \@skip_parse_files_any);
+>  }
+> 
+> +# NOT updated for 32-bit kernel addresses yet
+>  sub is_false_positive
+>  {
+>          my ($match) = @_;
+> @@ -183,6 +195,7 @@ sub is_false_positive
+>                  return 1;
+>          }
+> 
+> +# TODO - skip the 'root=UUID=<...>' line as well
+>          return 0;
+>  }
+> 
+> @@ -190,7 +203,8 @@ sub is_false_positive
+>  sub may_leak_address
+>  {
+>          my ($line) = @_;
+> -        my $address = '\b(0x)?ffff[[:xdigit:]]{12}\b';
+> +        my $address64 = '\b(0x)?ffff[[:xdigit:]]{12}\b';
+> +        my $address32 = '\b(0x)?[[:xdigit:]]{8}\b';
+
+Cool.
+
+>          # Signal masks.
+>          if ($line =~ '^SigBlk:' or
+> @@ -202,11 +216,23 @@ sub may_leak_address
+>              $line =~ '\b[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b') {
+> 		return 0;
+>          }
+> -
+> -        while (/($address)/g) {
+> +
+> +        if ($bit_size == 64) {
+> +            while (/($address64)/g) {
+>                  if (!is_false_positive($1)) {
+>                          return 1;
+>                  }
+> +            }
+> +        } elsif ($bit_size == 32) {
+> +            while (/($address32)/g) {
+> +		        my $addr32 = eval hex($1);
+> +		        if ($addr32 < $PAGE_OFFSET_32BIT) {
+> +                        return 0;
+> +                }
+> +                if (!is_false_positive($addr32)) {
+> +                        return 1;
+> +                }
+> +            }
+>          }
+> 
+>          return 0;
+> 
+>  scripts/leaking_addresses.pl | 40 +++++++++++++++++++++++++++++++++-------
+
+Conceptually your ideas look good to me. If there is some reason this
+approach won't work hopefully someone else will jump in and say so.
+
+Nice work, thanks for putting in effort to get 32 bit machines
+supported. Let's see what happens with the inflight patch set then work
+on getting these ideas in.
+
+thanks,
+Tobin.
