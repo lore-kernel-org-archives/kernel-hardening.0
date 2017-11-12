@@ -1,55 +1,34 @@
-Date: Mon, 13 Nov 2017 10:06:46 +1100
+Date: Mon, 13 Nov 2017 10:54:51 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171112230646.GM19752@eros>
-References: <1510050731-32446-1-git-send-email-me@tobin.cc>
- <20171111231007.iirqce3r7xqqnxd3@node.shutemov.name>
+Message-ID: <20171112235451.GB11398@eros>
+References: <1509580240-28314-1-git-send-email-me@tobin.cc>
+ <CAGXu5jLGLAWeQ28t3TiRswbfHM9F0odZia-f=-c5sVpYm+-0UA@mail.gmail.com>
+ <CAKwvOdm72j2MQPbXY5eYLj5r-9toOJd+GB2=P6z1_L7SghazZg@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171111231007.iirqce3r7xqqnxd3@node.shutemov.name>
-Subject: [kernel-hardening] Re: [PATCH v4] scripts: add leaking_addresses.pl
-To: "Kirill A. Shutemov" <kirill@shutemov.name>
-Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
+In-Reply-To: <CAKwvOdm72j2MQPbXY5eYLj5r-9toOJd+GB2=P6z1_L7SghazZg@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFC] vla: add VLA macro and testing
+To: Nick Desaulniers <ndesaulniers@google.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Josh Poimboeuf <jpoimboe@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Nov 12, 2017 at 02:10:07AM +0300, Kirill A. Shutemov wrote:
-> On Tue, Nov 07, 2017 at 09:32:11PM +1100, Tobin C. Harding wrote:
-> > Currently we are leaking addresses from the kernel to user space. This
-> > script is an attempt to find some of those leakages. Script parses
-> > `dmesg` output and /proc and /sys files for hex strings that look like
-> > kernel addresses.
-> > 
-> > Only works for 64 bit kernels, the reason being that kernel addresses
-> > on 64 bit kernels have 'ffff' as the leading bit pattern making greping
-> > possible. On 32 kernels we don't have this luxury.
+On Wed, Nov 08, 2017 at 03:04:25PM -0800, Nick Desaulniers wrote:
+> On Wed, Nov 8, 2017 at 2:58 PM, Kees Cook <keescook@chromium.org> wrote:
+> > While I'd certainly like to see SOME kind of sanity checking for VLAs,
+> > my preference would be to entirely eliminate them at get -Werror=vla
+> > added to the Makefile. Even Linus has expressed irritation over the
+> > idea of VLAs in structs in the past:
+> >
+> > https://lkml.org/lkml/2013/9/23/500
 > 
-> Well, it's not going to work as well as intented on x86 machine with
-> 5-level paging. Kernel address space there starts at 0xff10000000000000.
-> It will still catch pointers to kernel/modules text, but the rest is
-> outside of 0xffff... space. See Documentation/x86/x86_64/mm.txt.
+> VLAIS makes it difficult (impossible) to compile allyesconfig with
+> clang.  VLA on the stack is fine, but VLAIS is not.
 
-Thanks for the link. So it looks like we need to refactor the kernel
-address regular expression into a function that takes into account the
-machine architecture and the number of page table levels. We will need
-to add this to the false positive checks also.
+What is VLAIS please? I don't get any results when grepping the kernel
+tree.
 
-> Not sure if we care. It won't work too for other 64-bit architectrues that
-> have more than 256TB of virtual address space.
+$ git grep VLAIS
 
-Is this because of the virtual memory map? Did you mean 512TB?
-
-from mm.txt:
-ffd4000000000000 - ffd5ffffffffffff (=49 bits) virtual memory map (512TB)
-
-Perhaps an option (--terse) that only checks the virtual memory map
-range (above for 5-level paging) and
-
-ffffea0000000000 - ffffeaffffffffff (=40 bits) virtual memory map (1TB)
-
-for 4-level paging?
-
-> Just wanted to point to the limitation.
-
-Appreciate it, thanks.
-
+thanks,
 Tobin.
