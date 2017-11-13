@@ -1,64 +1,120 @@
-Date: Mon, 13 Nov 2017 15:35:11 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171113043511.GH11398@eros>
+Message-ID: <1510551988.30178.10.camel@gmail.com>
+From: kaiwan.billimoria@gmail.com
+Date: Mon, 13 Nov 2017 11:16:28 +0530
+In-Reply-To: <20171112222119.GL19752@eros>
 References: <1510050731-32446-1-git-send-email-me@tobin.cc>
- <20171111231007.iirqce3r7xqqnxd3@node.shutemov.name>
- <20171112230646.GM19752@eros>
- <20171113033728.wheztgb2hbc74lj2@node.shutemov.name>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171113033728.wheztgb2hbc74lj2@node.shutemov.name>
-Subject: [kernel-hardening] Re: [PATCH v4] scripts: add leaking_addresses.pl
-To: "Kirill A. Shutemov" <kirill@shutemov.name>
-Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
+	 <1510322194.19812.3.camel@gmail.com> <20171112222119.GL19752@eros>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [PATCH v4] scripts: add leaking_addresses.pl
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts,
+ William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 13, 2017 at 06:37:28AM +0300, Kirill A. Shutemov wrote:
-> On Mon, Nov 13, 2017 at 10:06:46AM +1100, Tobin C. Harding wrote:
-> > On Sun, Nov 12, 2017 at 02:10:07AM +0300, Kirill A. Shutemov wrote:
-> > > On Tue, Nov 07, 2017 at 09:32:11PM +1100, Tobin C. Harding wrote:
-> > > > Currently we are leaking addresses from the kernel to user space. This
-> > > > script is an attempt to find some of those leakages. Script parses
-> > > > `dmesg` output and /proc and /sys files for hex strings that look like
-> > > > kernel addresses.
-> > > > 
-> > > > Only works for 64 bit kernels, the reason being that kernel addresses
-> > > > on 64 bit kernels have 'ffff' as the leading bit pattern making greping
-> > > > possible. On 32 kernels we don't have this luxury.
+On Mon, 2017-11-13 at 09:21 +1100, Tobin C. Harding wrote:
+> On Fri, Nov 10, 2017 at 07:26:34PM +0530, kaiwan.billimoria@gmail.com
+>  wrote:
+> > On Tue, 2017-11-07 at 21:32 +1100, Tobin C. Harding wrote:
+> > > Currently we are leaking addresses from the kernel to user space.
+> > > This
+> > > script is an attempt to find some of those leakages. Script
+> > > parses
+> > > `dmesg` output and /proc and /sys files for hex strings that look
+> > > like
+> > > kernel addresses.
 > > > 
-> > > Well, it's not going to work as well as intented on x86 machine with
-> > > 5-level paging. Kernel address space there starts at 0xff10000000000000.
-> > > It will still catch pointers to kernel/modules text, but the rest is
-> > > outside of 0xffff... space. See Documentation/x86/x86_64/mm.txt.
+> > > Only works for 64 bit kernels, the reason being that kernel
+> > > addresses
+> > > on 64 bit kernels have 'ffff' as the leading bit pattern making
+> > > greping
+> > > possible. On 32 kernels we don't have this luxury.
 > > 
-> > Thanks for the link. So it looks like we need to refactor the kernel
-> > address regular expression into a function that takes into account the
-> > machine architecture and the number of page table levels. We will need
-> > to add this to the false positive checks also.
+> > Tobin C. Harding <me@tobin.cc> wrote:
+> > > Only works for 64 bit kernels, the reason being that kernel
+> > > addresses
+> > > on 64 bit kernels have 'ffff' as the leading bit pattern making
+> > > greping
+> > > possible. On 32 kernels we don't have this luxury.
 > > 
-> > > Not sure if we care. It won't work too for other 64-bit architectrues that
-> > > have more than 256TB of virtual address space.
+> > [RFC] leaking_addresses.pl - enhance it to work for 32-bit kernels
+> > as well
 > > 
-> > Is this because of the virtual memory map?
+> > (Firstly, apologies if I've got the protocol horribly wrong- should
+> > this
+> > be a new thread altogether?)
 > 
-> On x86 direct mapping is the nearest thing we have to userspace.
+> I think this patch will need to wait until the patch set that is
+> currently in flight is either merged or dropped.
 > 
-> > Did you mean 512TB?
-> 
-> No, I mean 256TB.
-> 
-> You have all kernel memory in the range from 0xffff000000000000 to
-> 0xffffffffffffffff if you have 256 TB of virtual address space. If you
-> hvae more, some thing might be ouside the range.
+Thanks for looking at it!
+Okay; blocking on merge || drop...  :-)
 
-Doesn't 4-level paging already limit a system to 64TB of memory? So any
-system better equipped than this will use 5-level paging right? If I am
-totally talking rubbish please ignore, I'm appreciative that you pointed
-out the limitation already. Perhaps we can add a comment to the script
+> > 
+> We can work this out pragmatically, Perl can give us an architecture
+> string then a few regexs can ascertain which architecture we are
+> running
+> on. This is in the inflight patch set. 
+> 
+> > The patch below does Not take into account (yet) stuff like:
+> >  - exactly which files & dirs should be skipped on 32-bit (will it
+> > be
+> > identical to 64-bit?; unsure..)
+> 
+> As per discussion later in this thread we may need to consider
+> architecture specific lists for files/directories to skip. 
+Right
+> 
+> >  - it currently hard-codes a global 'PAGE_OFFSET_32BIT=0xc0000000'
+> > , just
+> >  so I can test quickly; must figure whether to query it or pass it;
+> >  Suggestions?
+> 
+> Perhaps we should have a command line option for this.
+> 
+> 	--kernel-base-address
 
-# Script may miss some addresses on machines with more than 256TB of
-# memory.
+Why not just detect it programatically? We could devise a series of
+fallbacks; something like:
+- if .config exists in the kernel source tree root, grep it for
+PAGE_OFFSET
+- if not, grep the arch-specific (arch/<arch>/configs/<config-file>)
+for the same
+- if for some reason we don't have enough info regarding specific
+platform and thus the defconfig filename (could happen for ARM, PPC?),
+we then fail and request the user to pass it as a parameter.
 
-thanks,
-Tobin.
+> >  - the 'false positives'; again, what differs for 32-bit?
+> >    (BTW, shouldn't the dmesg 'root=UUID=<...>' line be a false
+> > positive
+> >     & skipped?).
+> 
+> We could probably do with architecture specific false
+> positives. Inflight patch set refactors false_positive() so adding to
+> this should be easy.
+Sure.
+> 
+> > Also, I must point out that I'm a complete newbie to Perl :-) so,
+> > pl excuse
+> > my highly inadequate perl-foo; I rely on you perl gurus out there
+> > to fix
+> > and optimize :)
+> 
+> I'm no Perl guru but following are a few tips I have picked up over
+> the
+> last month.
+Thanks, will fix the issues you point out..
+> 
+> > 
+> Conceptually your ideas look good to me. If there is some reason this
+> approach won't work hopefully someone else will jump in and say so.
+> 
+> Nice work, thanks for putting in effort to get 32 bit machines
+> supported. Let's see what happens with the inflight patch set then
+> work
+> on getting these ideas in.
+> 
+Thanks! yes..
+> thanks,
+> Tobin.
