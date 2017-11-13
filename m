@@ -1,24 +1,31 @@
-Date: Tue, 14 Nov 2017 08:00:00 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171113210000.GL11398@eros>
-References: <1509580240-28314-1-git-send-email-me@tobin.cc>
- <CAGXu5jLGLAWeQ28t3TiRswbfHM9F0odZia-f=-c5sVpYm+-0UA@mail.gmail.com>
- <CAKwvOdm72j2MQPbXY5eYLj5r-9toOJd+GB2=P6z1_L7SghazZg@mail.gmail.com>
- <20171112235451.GB11398@eros>
- <CAKwvOdnMTdb856v9xCJ_cBQZUy+zYmZT9=dvQQDNsisYM37CGg@mail.gmail.com>
+References: <20170907173609.22696-1-tycho@docker.com>
+ <20170907173609.22696-4-tycho@docker.com>
+ <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
+ <20170920223452.vam3egenc533rcta@smitten>
+ <97475308-1f3d-ea91-5647-39231f3b40e5@intel.com>
+ <20170921000901.v7zo4g5edhqqfabm@docker>
+ <d1a35583-8225-2ab3-d9fa-273482615d09@intel.com>
+ <20171110010907.qfkqhrbtdkt5y3hy@smitten>
+From: Dave Hansen <dave.hansen@intel.com>
+Message-ID: <7237ae6d-f8aa-085e-c144-9ed5583ec06b@intel.com>
+Date: Mon, 13 Nov 2017 14:20:17 -0800
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAKwvOdnMTdb856v9xCJ_cBQZUy+zYmZT9=dvQQDNsisYM37CGg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [RFC] vla: add VLA macro and testing
-To: Nick Desaulniers <ndesaulniers@google.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Josh Poimboeuf <jpoimboe@redhat.com>
+In-Reply-To: <20171110010907.qfkqhrbtdkt5y3hy@smitten>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
+ Ownership (XPFO)
+To: Tycho Andersen <tycho@docker.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 13, 2017 at 08:50:25AM -0800, Nick Desaulniers wrote:
-> Variable Length Array In Struct, a GNU C extension.
+On 11/09/2017 05:09 PM, Tycho Andersen wrote:
+> which I guess is from the additional flags in grow_dev_page() somewhere down
+> the stack. Anyway... it seems this is a kernel allocation that's using
+> MIGRATE_MOVABLE, so perhaps we need some more fine tuned heuristic than just
+> all MOVABLE allocations are un-mapped via xpfo, and all the others are mapped.
 > 
-> Think of a variable length array, as a member of a struct, but not as
-> the final member.
+> Do you have any ideas?
 
-thanks Nick
+It still has to do a kmap() or kmap_atomic() to be able to access it.  I
+thought you hooked into that.  Why isn't that path getting hit for these?
