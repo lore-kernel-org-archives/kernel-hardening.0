@@ -1,3 +1,6 @@
+Date: Tue, 14 Nov 2017 19:44:30 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Message-ID: <20171115034430.GA24257@bombadil.infradead.org>
 References: <20170907173609.22696-1-tycho@docker.com>
  <20170907173609.22696-4-tycho@docker.com>
  <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
@@ -8,29 +11,36 @@ References: <20170907173609.22696-1-tycho@docker.com>
  <20171110010907.qfkqhrbtdkt5y3hy@smitten>
  <7237ae6d-f8aa-085e-c144-9ed5583ec06b@intel.com>
  <2aa64bf6-fead-08cc-f4fe-bd353008ca59@intel.com>
- <20171115003358.r3bsukc3vlbikjef@cisco>
-From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <c9516f27-ad4c-5b65-1611-f0c3604168bf@intel.com>
-Date: Tue, 14 Nov 2017 16:37:34 -0800
 MIME-Version: 1.0
-In-Reply-To: <20171115003358.r3bsukc3vlbikjef@cisco>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for
- eXclusive Page Frame Ownership (XPFO)
-To: Tycho Andersen <tycho@tycho.ws>
-Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <2aa64bf6-fead-08cc-f4fe-bd353008ca59@intel.com>
+Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
+ Ownership (XPFO)
+To: Dave Hansen <dave.hansen@intel.com>
+Cc: Tycho Andersen <tycho@docker.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/14/2017 04:33 PM, Tycho Andersen wrote:
->>
->> void set_bh_page(struct buffer_head *bh,
->> ...
->> 	bh->b_data = page_address(page) + offset;
-> Ah, yes. I guess there will be many bugs like this :). Anyway, I'll
-> try to cook up a patch.
+On Mon, Nov 13, 2017 at 02:46:25PM -0800, Dave Hansen wrote:
+> On 11/13/2017 02:20 PM, Dave Hansen wrote:
+> > On 11/09/2017 05:09 PM, Tycho Andersen wrote:
+> >> which I guess is from the additional flags in grow_dev_page() somewhere down
+> >> the stack. Anyway... it seems this is a kernel allocation that's using
+> >> MIGRATE_MOVABLE, so perhaps we need some more fine tuned heuristic than just
+> >> all MOVABLE allocations are un-mapped via xpfo, and all the others are mapped.
+> >>
+> >> Do you have any ideas?
+> > 
+> > It still has to do a kmap() or kmap_atomic() to be able to access it.  I
+> > thought you hooked into that.  Why isn't that path getting hit for these?
+> 
+> Oh, this looks to be accessing data mapped by a buffer_head.  It
+> (rudely) accesses data via:
+> 
+> void set_bh_page(struct buffer_head *bh,
+> ...
+> 	bh->b_data = page_address(page) + offset;
 
-It won't catch all the bugs, but it might be handy to have a debugging
-mode that records the location of the last user of page_address() and
-friends.  That way, when we trip over an unmapped page, we have an
-easier time finding the offender.
+We don't need to kmap in order to access MOVABLE allocations.  kmap is
+only needed for HIGHMEM allocations.  So there's nothing wrong with ext4
+or set_bh_page().
