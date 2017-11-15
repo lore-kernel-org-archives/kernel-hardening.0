@@ -1,6 +1,6 @@
-Date: Tue, 14 Nov 2017 19:44:30 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Message-ID: <20171115034430.GA24257@bombadil.infradead.org>
+Date: Tue, 14 Nov 2017 16:33:58 -0800
+From: Tycho Andersen <tycho@tycho.ws>
+Message-ID: <20171115003358.r3bsukc3vlbikjef@cisco>
 References: <20170907173609.22696-1-tycho@docker.com>
  <20170907173609.22696-4-tycho@docker.com>
  <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
@@ -15,11 +15,13 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <2aa64bf6-fead-08cc-f4fe-bd353008ca59@intel.com>
-Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
- Ownership (XPFO)
+Subject: Re: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for
+ eXclusive Page Frame Ownership (XPFO)
 To: Dave Hansen <dave.hansen@intel.com>
-Cc: Tycho Andersen <tycho@docker.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
+
+Hi Dave,
 
 On Mon, Nov 13, 2017 at 02:46:25PM -0800, Dave Hansen wrote:
 > On 11/13/2017 02:20 PM, Dave Hansen wrote:
@@ -41,6 +43,9 @@ On Mon, Nov 13, 2017 at 02:46:25PM -0800, Dave Hansen wrote:
 > ...
 > 	bh->b_data = page_address(page) + offset;
 
-We don't need to kmap in order to access MOVABLE allocations.  kmap is
-only needed for HIGHMEM allocations.  So there's nothing wrong with ext4
-or set_bh_page().
+Ah, yes. I guess there will be many bugs like this :). Anyway, I'll
+try to cook up a patch.
+
+Thanks!
+
+Tycho
