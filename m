@@ -1,59 +1,36 @@
-References: <1508631773-2502-1-git-send-email-alex.popov@linux.com>
- <1508631773-2502-3-git-send-email-alex.popov@linux.com>
- <d74e0d32-d794-62d1-27fa-d96f4cf37522@linux.com>
- <20171030173216.72y673m32gra4b55@hirez.programming.kicks-ass.net>
- <586ee584-df0d-3c82-a254-16ac1573255a@linux.com>
- <69522d43-f1b9-48ac-6235-a237c0298a04@linux.com>
- <CALCETrUYADqoZLYxC=uMVTvSU_R5Vg_uXzs_DUZBAC_O5Wybxg@mail.gmail.com>
- <20171114163306.3pr4a4s36t7mbj2f@salmiak>
- <0bf24e38-c26a-baca-c54d-1bb0aa7b01e4@linux.com>
- <CALCETrVF4_acCKvK4C+4gNk08sQ5VrBhNFcO1agATNDuOebstQ@mail.gmail.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <dd370e28-fc68-ef6c-3c2e-3d75051140f8@linux.com>
-Date: Wed, 15 Nov 2017 01:03:58 +0300
+References: <20170907173609.22696-1-tycho@docker.com>
+ <20170907173609.22696-4-tycho@docker.com>
+ <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
+ <20170920223452.vam3egenc533rcta@smitten>
+ <97475308-1f3d-ea91-5647-39231f3b40e5@intel.com>
+ <20170921000901.v7zo4g5edhqqfabm@docker>
+ <d1a35583-8225-2ab3-d9fa-273482615d09@intel.com>
+ <20171110010907.qfkqhrbtdkt5y3hy@smitten>
+ <7237ae6d-f8aa-085e-c144-9ed5583ec06b@intel.com>
+ <2aa64bf6-fead-08cc-f4fe-bd353008ca59@intel.com>
+ <20171115003358.r3bsukc3vlbikjef@cisco>
+From: Dave Hansen <dave.hansen@intel.com>
+Message-ID: <c9516f27-ad4c-5b65-1611-f0c3604168bf@intel.com>
+Date: Tue, 14 Nov 2017 16:37:34 -0800
 MIME-Version: 1.0
-In-Reply-To: <CALCETrVF4_acCKvK4C+4gNk08sQ5VrBhNFcO1agATNDuOebstQ@mail.gmail.com>
+In-Reply-To: <20171115003358.r3bsukc3vlbikjef@cisco>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v5 2/5] gcc-plugins: Add STACKLEAK plugin for tracking
- the kernel stack
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Mark Rutland <mark.rutland@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Tycho Andersen <tycho@docker.com>, Laura Abbott <labbott@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, X86 ML <x86@kernel.org>
+Subject: Re: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for
+ eXclusive Page Frame Ownership (XPFO)
+To: Tycho Andersen <tycho@tycho.ws>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 15.11.2017 00:17, Andy Lutomirski wrote:
-> On Tue, Nov 14, 2017 at 1:09 PM, Alexander Popov <alex.popov@linux.com> wrote:
->> Thanks, Mark!
+On 11/14/2017 04:33 PM, Tycho Andersen wrote:
 >>
->> Please see my comments below.
->>
->> On 14.11.2017 19:33, Mark Rutland wrote:
->>> On Tue, Nov 14, 2017 at 08:13:43AM -0800, Andy Lutomirski wrote:
->>>> What does the STEAKLACK plugin actually do?  I haven't followed this enough.
->>>
->>> The plugin adds instrumentation to track the maximum stack depth, though only
->>> functions with a sufficiently large stackframe are instrumented.
->>
->> Yes. Functions with a big stack frame call track_stack() to update the
->> lowest_stack value. If CONFIG_VMAP_STACK is disabled, track_stack() is compiled
->> with a check for detecting stack depth overflow. This check is what I'm asking
->> about.
-> 
-> Then you'll probably have to do something like what I did in the
-> VMAP_STACK code.
+>> void set_bh_page(struct buffer_head *bh,
+>> ...
+>> 	bh->b_data = page_address(page) + offset;
+> Ah, yes. I guess there will be many bugs like this :). Anyway, I'll
+> try to cook up a patch.
 
-Yes!
-
-> That being said, I don't entirely see the point.  If you want a
-> hardened kernel, you're going to enable VMAP_STACK.  Are there really
-> users of hardened 32-bit kernels?
-
-You know, STACKLEAK already supports x86_32. It's a pity for me to make
-STACKLEAK dependent on VMAP_STACK and hence to drop STACKLEAK support for this
-platform.
-
-I hope there is a way to add a good-looking check to track_stack() and have at
-least some profit (although it will not catch all overflow cases).
-
-Best regards,
-Alexander
+It won't catch all the bugs, but it might be handy to have a debugging
+mode that records the location of the last user of page_address() and
+friends.  That way, when we trip over an unmapped page, we have an
+easier time finding the offender.
