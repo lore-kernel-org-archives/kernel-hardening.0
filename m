@@ -1,69 +1,56 @@
-Date: Wed, 15 Nov 2017 13:34:34 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Message-ID: <20171115213434.GA6982@bombadil.infradead.org>
-References: <97475308-1f3d-ea91-5647-39231f3b40e5@intel.com>
+References: <20170907173609.22696-1-tycho@docker.com>
+ <20170907173609.22696-4-tycho@docker.com>
+ <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
+ <20170920223452.vam3egenc533rcta@smitten>
+ <97475308-1f3d-ea91-5647-39231f3b40e5@intel.com>
  <20170921000901.v7zo4g5edhqqfabm@docker>
  <d1a35583-8225-2ab3-d9fa-273482615d09@intel.com>
  <20171110010907.qfkqhrbtdkt5y3hy@smitten>
  <7237ae6d-f8aa-085e-c144-9ed5583ec06b@intel.com>
  <2aa64bf6-fead-08cc-f4fe-bd353008ca59@intel.com>
  <20171115034430.GA24257@bombadil.infradead.org>
- <d1459463-061c-2aba-ff89-936284c138a3@intel.com>
- <20171115145835.GB319@bombadil.infradead.org>
- <20171115162057.iyufe2vg34d6fhhd@cisco>
+From: Dave Hansen <dave.hansen@intel.com>
+Message-ID: <d1459463-061c-2aba-ff89-936284c138a3@intel.com>
+Date: Tue, 14 Nov 2017 23:00:20 -0800
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171115162057.iyufe2vg34d6fhhd@cisco>
-Subject: Re: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for
- eXclusive Page Frame Ownership (XPFO)
-To: Tycho Andersen <tycho@tycho.ws>
-Cc: Dave Hansen <dave.hansen@intel.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
+In-Reply-To: <20171115034430.GA24257@bombadil.infradead.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
+ Ownership (XPFO)
+To: Matthew Wilcox <willy@infradead.org>
+Cc: Tycho Andersen <tycho@docker.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 15, 2017 at 08:20:57AM -0800, Tycho Andersen wrote:
-> On Wed, Nov 15, 2017 at 06:58:35AM -0800, Matthew Wilcox wrote:
-> > On Tue, Nov 14, 2017 at 11:00:20PM -0800, Dave Hansen wrote:
-> > > On 11/14/2017 07:44 PM, Matthew Wilcox wrote:
-> > > > We don't need to kmap in order to access MOVABLE allocations.  kmap is
-> > > > only needed for HIGHMEM allocations.  So there's nothing wrong with ext4
-> > > > or set_bh_page().
-> > > 
-> > > Yeah, it's definitely not _buggy_.
-> > > 
-> > > Although, I do wonder what we should do about these for XPFO.  Should we
-> > > just stick a kmap() in there and comment it?  What we really need is a
-> > > mechanism to say "use this as a kernel page" and "stop using this as a
-> > > kernel page".  kmap() does that... kinda.  It's not a perfect fit, but
-> > > it's pretty close.
-> > 
-> > It'd be kind of funny if getting XPFO working better means improving
-> > how well Linux runs on 32-bit machines with HIGHMEM.  I think there's
-> > always going to be interest in those -- ARM developed 36 bit physmem
-> > before biting the bullet and going to arm64.  Maybe OpenRISC will do
-> > that next ;-)
+On 11/14/2017 07:44 PM, Matthew Wilcox wrote:
+> On Mon, Nov 13, 2017 at 02:46:25PM -0800, Dave Hansen wrote:
+>> On 11/13/2017 02:20 PM, Dave Hansen wrote:
+>>> On 11/09/2017 05:09 PM, Tycho Andersen wrote:
+>>>> which I guess is from the additional flags in grow_dev_page() somewhere down
+>>>> the stack. Anyway... it seems this is a kernel allocation that's using
+>>>> MIGRATE_MOVABLE, so perhaps we need some more fine tuned heuristic than just
+>>>> all MOVABLE allocations are un-mapped via xpfo, and all the others are mapped.
+>>>>
+>>>> Do you have any ideas?
+>>>
+>>> It still has to do a kmap() or kmap_atomic() to be able to access it.  I
+>>> thought you hooked into that.  Why isn't that path getting hit for these?
+>>
+>> Oh, this looks to be accessing data mapped by a buffer_head.  It
+>> (rudely) accesses data via:
+>>
+>> void set_bh_page(struct buffer_head *bh,
+>> ...
+>> 	bh->b_data = page_address(page) + offset;
 > 
-> Oh, sorry, I didn't realize that this wasn't a bug. In any case, this
-> seems like sort of an uphill battle -- lots of places are going to do
-> stuff like this since it's legal, adding code to work around it just
-> for XPFO seems like a lot of burden on the kernel. (Of course, I'm
-> open to convincing :)
-> 
-> How common are these MOVABLE allocations that the kernel does? What if
-> we did some hybrid approach, where we re-map the lists based on
-> MOVABLE/UNMOVABLE, but then check the actual GFP flags on allocation
-> to see if they match what we set when populating the free list, and
-> re-map accordingly if they don't.
+> We don't need to kmap in order to access MOVABLE allocations.  kmap is
+> only needed for HIGHMEM allocations.  So there's nothing wrong with ext4
+> or set_bh_page().
 
-The assumption is that HIGHMEM allocations aren't mapped (on 32-bit
-systems) and so we always use kmap/kmap_atomic to access them.
-The emphasis has been on moving the largest consumers of memory over to
-HIGHMEM; we were trying to manage 64GB of memory in 1GB of kernel address
-space, so the page cache was the first and obvious biggest consumer to
-get booted out of the permanent mapping.  I know page tables were also
-pushed into HIGHMEM.  So large chunks of the kernel use kmap() because they
-don't know whether they'll be operating on highmem or lowmem, and it'll
-do the right thing for either kind of memory.
+Yeah, it's definitely not _buggy_.
 
-I didn't think MOVABLE allocations were particularly common.  But I haven't
-been paying close attention to MM development.
+Although, I do wonder what we should do about these for XPFO.  Should we
+just stick a kmap() in there and comment it?  What we really need is a
+mechanism to say "use this as a kernel page" and "stop using this as a
+kernel page".  kmap() does that... kinda.  It's not a perfect fit, but
+it's pretty close.
