@@ -1,56 +1,55 @@
-References: <20170907173609.22696-1-tycho@docker.com>
- <20170907173609.22696-4-tycho@docker.com>
- <34454a32-72c2-c62e-546c-1837e05327e1@intel.com>
- <20170920223452.vam3egenc533rcta@smitten>
- <97475308-1f3d-ea91-5647-39231f3b40e5@intel.com>
- <20170921000901.v7zo4g5edhqqfabm@docker>
- <d1a35583-8225-2ab3-d9fa-273482615d09@intel.com>
- <20171110010907.qfkqhrbtdkt5y3hy@smitten>
- <7237ae6d-f8aa-085e-c144-9ed5583ec06b@intel.com>
- <2aa64bf6-fead-08cc-f4fe-bd353008ca59@intel.com>
- <20171115034430.GA24257@bombadil.infradead.org>
-From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <d1459463-061c-2aba-ff89-936284c138a3@intel.com>
-Date: Tue, 14 Nov 2017 23:00:20 -0800
+Date: Thu, 16 Nov 2017 15:28:19 +0000
+From: Will Deacon <will.deacon@arm.com>
+Message-ID: <20171116152818.GM9361@arm.com>
+References: <20171026090942.7041-1-mark.rutland@arm.com>
+ <20171026090942.7041-2-mark.rutland@arm.com>
 MIME-Version: 1.0
-In-Reply-To: <20171115034430.GA24257@bombadil.infradead.org>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v6 03/11] mm, x86: Add support for eXclusive Page Frame
- Ownership (XPFO)
-To: Matthew Wilcox <willy@infradead.org>
-Cc: Tycho Andersen <tycho@docker.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, Marco Benatto <marco.antonio.780@gmail.com>, Juerg Haefliger <juerg.haefliger@canonical.com>, x86@kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171026090942.7041-2-mark.rutland@arm.com>
+Subject: [kernel-hardening] Re: [RFC PATCH 1/2] arm64: write __range_ok() in C
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Catalin Marinas <catalin.marinas@arm.com>, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/14/2017 07:44 PM, Matthew Wilcox wrote:
-> On Mon, Nov 13, 2017 at 02:46:25PM -0800, Dave Hansen wrote:
->> On 11/13/2017 02:20 PM, Dave Hansen wrote:
->>> On 11/09/2017 05:09 PM, Tycho Andersen wrote:
->>>> which I guess is from the additional flags in grow_dev_page() somewhere down
->>>> the stack. Anyway... it seems this is a kernel allocation that's using
->>>> MIGRATE_MOVABLE, so perhaps we need some more fine tuned heuristic than just
->>>> all MOVABLE allocations are un-mapped via xpfo, and all the others are mapped.
->>>>
->>>> Do you have any ideas?
->>>
->>> It still has to do a kmap() or kmap_atomic() to be able to access it.  I
->>> thought you hooked into that.  Why isn't that path getting hit for these?
->>
->> Oh, this looks to be accessing data mapped by a buffer_head.  It
->> (rudely) accesses data via:
->>
->> void set_bh_page(struct buffer_head *bh,
->> ...
->> 	bh->b_data = page_address(page) + offset;
+On Thu, Oct 26, 2017 at 10:09:41AM +0100, Mark Rutland wrote:
+> Currently arm64's __range_ok() is written in assembly for efficiency.
 > 
-> We don't need to kmap in order to access MOVABLE allocations.  kmap is
-> only needed for HIGHMEM allocations.  So there's nothing wrong with ext4
-> or set_bh_page().
+> This hides the logic from the compiler, preventing the compiler from
+> making some optimizations, such as re-ordering instructions or folding
+> multiple calls to __range_ok().
+> 
+> This patch uses GCC's __builtin_uaddl_overflow() to provide an
+> equivalent, efficient check, while giving the compiler the visibility it
+> needs to optimize the check. In testing with v4.14-rc5 using the Linaro
+> 17.05 GCC 6.3.1 toolchain, this has no impact on the kernel Image size,
+> (but results in a smaller vmlinux).
+> 
+> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+> Cc: Catalin Marinas <catalin.marinas@arm.com>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Laura Abbott <labbott@redhat.com>
+> Cc: Will Deacon <will.deacon@arm.com>
+> ---
+>  arch/arm64/include/asm/uaccess.h | 19 +++++++++++--------
+>  1 file changed, 11 insertions(+), 8 deletions(-)
+> 
+> diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
+> index fc0f9eb66039..36f84ec92b9d 100644
+> --- a/arch/arm64/include/asm/uaccess.h
+> +++ b/arch/arm64/include/asm/uaccess.h
+> @@ -70,17 +70,20 @@ static inline void set_fs(mm_segment_t fs)
+>   *
+>   * This needs 65-bit arithmetic.
+>   */
+> +static bool __range_ok_c(unsigned long addr, unsigned long size)
+> +{
+> +	unsigned long result;
+> +
+> +	if (__builtin_uaddl_overflow(addr, size, &result))
 
-Yeah, it's definitely not _buggy_.
+I'm not sure if you're planning to revisit this series, but thought I'd
+give you a heads up that apparently GCC 4.x doesn't have support for this
+builtin, so we'll need to carry the asm at least for that toolchain.
 
-Although, I do wonder what we should do about these for XPFO.  Should we
-just stick a kmap() in there and comment it?  What we really need is a
-mechanism to say "use this as a kernel page" and "stop using this as a
-kernel page".  kmap() does that... kinda.  It's not a perfect fit, but
-it's pretty close.
+Will
