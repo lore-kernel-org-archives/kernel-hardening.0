@@ -1,69 +1,24 @@
+Date: Mon, 20 Nov 2017 10:56:08 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171119235608.GH32637@eros>
+References: <1510050731-32446-1-git-send-email-me@tobin.cc>
+ <1510322194.19812.3.camel@gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CA+55aFz5Z-9RDOyQhj-oNVQdrfmW_tXPhOqCK7M8nBnUjAVrPw@mail.gmail.com>
-References: <a17842c3-aae7-da98-424e-4441dd727e6d@gentoo.org>
- <40ad7c6e-f0d7-959a-bf29-d3e3843f5d31@gentoo.org> <CA+55aFwqUbd5xVno7tH+yYD=yeu4nBdY=mpZQ+3fA0OEPS_WtQ@mail.gmail.com>
- <23f7da04-95f7-24e7-ee70-ce40c5b8fee3@gentoo.org> <CA+55aFx63wq=qN0+P+S-aahq7HzvYLi1tSxhPT9x78E8BrMNGQ@mail.gmail.com>
- <67939ef3-29c6-762c-7afe-46cc69630d95@gentoo.org> <ab1a286f-73dc-01aa-d797-0fef82534911@gentoo.org>
- <CA+55aFxw-ycca8+9ywckyXxH4dTggLJi5hXGdJtCQocjM86f5g@mail.gmail.com>
- <CAGXu5jL83V7hSpVLT69UTfgh3XkOsJw-S7Wc9_PQP7zGc8__rg@mail.gmail.com>
- <CA+55aFytWtipkgGtkZgzRTQqLPxG+QzJ2K9+oFdo9NVNXxB69g@mail.gmail.com>
- <3d948180-6bd7-c4e9-5ac8-5baef9cc15a7@gentoo.org> <CAGXu5jJBnJEPoUMQJTxxHXtHEUhpvq75xqzVdXsY5cKuHoe5Mg@mail.gmail.com>
- <09f2480f-e8e8-645b-6d94-b6ae4ca47806@gentoo.org> <CAGXu5jK=_BAKAAyhNms0MddJWPsLV2f78UWdnkxcSErmruhtNw@mail.gmail.com>
- <b2b323ae-447c-c44f-32a7-d9c1381545bf@gentoo.org> <CA+55aFwSfaqGN1R=N0c8fyFe-oengamdkTtnyomcCwG7f3HU5Q@mail.gmail.com>
- <242b16cd-056a-1499-2b65-69084dac1d8d@gentoo.org> <CAGXu5jLc_A1w4FM8FvQHGSPjLfOu80L_vbt_FkcE6+Bh_XMjxw@mail.gmail.com>
- <CA+55aFz5Z-9RDOyQhj-oNVQdrfmW_tXPhOqCK7M8nBnUjAVrPw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Sat, 18 Nov 2017 00:20:56 -0800
-Message-ID: <CAGXu5jLMCK6yudcp5kyGpC-CdHdhBFRGkzW84GfOjZPhyV2kOQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [nfsd4] potentially hardware breaking regression in 4.14-rc and 4.13.11
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Patrick McLean <chutzpah@gentoo.org>, Emese Revfy <re.emese@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, stable <stable@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1510322194.19812.3.camel@gmail.com>
+Subject: Re: [kernel-hardening] [PATCH v4] scripts: add leaking_addresses.pl
+To: kaiwan.billimoria@gmail.com
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@docker.com>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 17, 2017 at 9:29 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Fri, Nov 17, 2017 at 9:14 PM, Kees Cook <keescook@chromium.org> wrote:
->>
->> FWIW, myself doing a build at d9e12200852d with and without
->> GCC_PLUGIN_RANDSTRUCT _appears_ to produce identical objdump output
->> where I did spot-checks.
->
-> That would probably be a good thing to check anyway - check the
-> difference between GCC_PLUGIN_RANDSTRUCT on and off at that commit.
->
-> Just do
->
->    objdump --disassemble vmlinux > file
->
-> and compare the two files for where the differences start occurring.
+On Fri, Nov 10, 2017 at 07:26:34PM +0530, kaiwan.billimoria@gmail.com wrote:
+> On Tue, 2017-11-07 at 21:32 +1100, Tobin C. Harding wrote:
+[snip]
 
-Yeah, I was just doing that now. Looks like there _is_ something
-getting changed just from having the plugin enabled, but it appears
-localized. For me, the first non-offset change happens in
-lookup_user_key and persists for a while.
+> Finally, unsure if am working against the latest ver of your script Tobin, apologies if not.
 
--ffffffff813893a7:      0f 85 55 03 00 00       jne
-ffffffff81389702 <lookup_user_key+0x3f2>
--ffffffff813893ad:      f0 41 ff 06             lock incl (%r14)
--ffffffff813893b1:      83 fb 07                cmp    $0x7,%ebx
--ffffffff813893b4:      4c 89 b5 70 ff ff ff    mov    %r14,-0x90(%rbp)
-...
-+ffffffff813893a7:      0f 85 35 03 00 00       jne
-ffffffff813896e2 <lookup_user_key+0x3d2>
-+ffffffff813893ad:      4d 89 f0                mov    %r14,%r8
-+ffffffff813893b0:      f0 41 ff 06             lock incl (%r14)
-+ffffffff813893b4:      83 fb 07                cmp    $0x7,%ebx
-+ffffffff813893b7:      4c 89 b5 70 ff ff ff    mov    %r14,-0x90(%rbp)
+The latest version of leaking_addresses.pl is now in Linus' tree.
 
-And removing the TYPE_ATTRIBUTES() poking makes the register storage
-differences go away, but there's still a 0x40 byte offset delta.
-
-I'll continue looking at this tomorrow.
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+thanks,
+Tobin.
