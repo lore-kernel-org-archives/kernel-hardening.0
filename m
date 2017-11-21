@@ -1,295 +1,277 @@
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Tue, 21 Nov 2017 19:26:12 +0100
-Message-Id: <1511288772-19308-11-git-send-email-s.mesoraca16@gmail.com>
-In-Reply-To: <1511288772-19308-1-git-send-email-s.mesoraca16@gmail.com>
-References: <1511288772-19308-1-git-send-email-s.mesoraca16@gmail.com>
-Subject: [kernel-hardening] [RFC v4 10/10] XATTRs support
-To: linux-kernel@vger.kernel.org
-Cc: linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, Salvatore Mesoraca <s.mesoraca16@gmail.com>, Alexander Viro <viro@zeniv.linux.org.uk>, Brad Spengler <spender@grsecurity.net>, Casey Schaufler <casey@schaufler-ca.com>, Christoph Hellwig <hch@infradead.org>, James Morris <james.l.morris@oracle.com>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Thomas Gleixner <tglx@linutronix.de>, "Serge E. Hallyn" <serge@hallyn.com>
+Date: Wed, 22 Nov 2017 10:59:20 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171121235920.GT7472@eros>
+References: <1511251094.25970.18.camel@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1511251094.25970.18.camel@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v1] scripts: leaking_addresses.pl: add support for 32-bit
+ kernel addresses
+To: kaiwan.billimoria@gmail.com
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Adds support for extended filesystem attributes in security and user
-namespaces. They can be used to override flags set via the centralized
-configuration, even when S.A.R.A. configuration is locked or saractl
-is not used at all.
+You don't typically need [xxx v1] for version 1, the v1 is implicit.
 
-Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
----
- Documentation/admin-guide/LSM/SARA.rst          | 20 +++++
- Documentation/admin-guide/kernel-parameters.txt | 16 ++++
- include/uapi/linux/xattr.h                      |  4 +
- security/sara/Kconfig                           | 22 ++++++
- security/sara/wxprot.c                          | 97 +++++++++++++++++++++++++
- 5 files changed, 159 insertions(+)
+Please use the git brief description prefix that is already in use i.e 
 
-diff --git a/Documentation/admin-guide/LSM/SARA.rst b/Documentation/admin-guide/LSM/SARA.rst
-index de41b78..a6f32e5 100644
---- a/Documentation/admin-guide/LSM/SARA.rst
-+++ b/Documentation/admin-guide/LSM/SARA.rst
-@@ -53,6 +53,8 @@ WX Protection. In particular:
- To extend the scope of the above features, despite the issues that they may
- cause, they are complemented by **/proc/PID/attr/sara/wxprot** interface
- and **trampoline emulation**.
-+It's also possible to override the centralized configuration via `Extended
-+filesystem attributes`_.
+	leaking_addresses: add support for 32-bit kernel addresses
+
+On Tue, Nov 21, 2017 at 01:28:14PM +0530, kaiwan.billimoria@gmail.com wrote:
+> The current leaking_addresses.pl script only supports showing "leaked"
+> 64-bit kernel virtual addresses. This patch adds support for showing
+> "leaked" 32-bit kernel virtual addresses.
+
+Thanks for the patch. I like your ideas. Here are a few nitpicks to help
+us get your work merged. 
+
+> The way it currently works- once it detects we're running on an i'x'86 platform
+> (where x=3|4|5|6), it takes this arch into account for checking: the essential
+> rationale:
+>  virt-addr >= PAGE_OFFSET => it's a kernel virtual address.
+> 
+> Note- 
+> 1. It's a work in progress; some pending TODOs:
+
+We don't have 'work in progress' in the kernel, everything is a work in
+progress. We just have RFC or PATCH.
+
+> - support for ARM-32
+
+Sure, we can do this later.
+
+> - programatically query and set the PAGE_OFFSET based on arch (it's currently
+> hard-coded)
+
+Let's do this straight away, it will be much nicer.
+
+> 2. Minor edit: 
+> the '--raw', '--suppress-dmesg', '--squash-by-path' and
+> '--squash-by-filename' option switches are only meaningful
+> when the '----input-raw=' option is used. So, indent the 'Help' screen lines
+> to reflect the fact.
+
+This is a different change to the architecture stuff so should be in a
+separate patch. You could do both as a series if you like. Off the top
+of my head I have never seen options output like this, but if you have,
+I'm willing to accept your view. You are correct that the options
+mentioned are only use in conjuncture with '--input-raw' so some way of
+showing this would be nice.
+
+> Feedback welcome..
+
+Here it comes ;)
+
+> Signed-off-by: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
+> ---
+> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
+> index bc5788000018..e139de445ad1 100755
+> --- a/scripts/leaking_addresses.pl
+> +++ b/scripts/leaking_addresses.pl
+> @@ -12,7 +12,10 @@
+>  #
+>  # You may like to set kptr_restrict=2 before running script
+>  # (see Documentation/sysctl/kernel.txt).
+> -
+> +#
+> +# 32-bit kernel address support : Kaiwan N Billimoria
+> +#                       <kaiwan.billimoria@gmail.com>
+
+Cool. Can you put this up the top near the other copyright information
+please.
+
+Perhaps
+
+# (c) 2017 Kaiwan N Billimoria <kaiwan.billimoria@gmail.com> (ix86 support)
+
+>  use warnings;
+>  use strict;
+>  use POSIX;
+> @@ -35,7 +38,7 @@ my $TIMEOUT = 10;
+>  # Script can only grep for kernel addresses on the following architectures. If
+>  # your architecture is not listed here and has a grep'able kernel address please
+>  # consider submitting a patch.
+> -my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64');
+> +my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64', 'i[3456]86');
+>  
+>  # Command line options.
+>  my $help = 0;
+> @@ -48,6 +51,9 @@ my $suppress_dmesg = 0;		# Don't show dmesg in output.
+>  my $squash_by_path = 0;		# Summary report grouped by absolute path.
+>  my $squash_by_filename = 0;	# Summary report grouped by filename.
+>  
+> +my $bit_size = 64;   # Check 64-bit kernel addresses by default
+
+This global is unnecessary. You already have is_ix86_32() so you can just
+use that.
+
+> +my $PAGE_OFFSET_32BIT = 0xc0000000;
+
+As commented above, can we do this programmatically like previously discussed?
+
+>  # Do not parse these files (absolute path).
+>  my @skip_parse_files_abs = ('/proc/kmsg',
+>  			    '/proc/kcore',
+> @@ -97,10 +103,10 @@ Options:
+>  
+>  	-o, --output-raw=<file>  Save results for future processing.
+>  	-i, --input-raw=<file>   Read results from file instead of scanning.
+> -	    --raw                Show raw results (default).
+> -	    --suppress-dmesg     Do not show dmesg results.
+> -	    --squash-by-path     Show one result per unique path.
+> -	    --squash-by-filename Show one result per unique filename.
+> +	      --raw                 Show raw results (default).
+> +	      --suppress-dmesg      Do not show dmesg results.
+> +	      --squash-by-path      Show one result per unique path.
+> +	      --squash-by-filename  Show one result per unique filename.
+>  	-d, --debug              Display debugging output.
+>  	-h, --help, --version    Display this help and exit.
+
+Commented on above.
+
+> @@ -177,7 +183,7 @@ sub dprint
+>  
+>  sub is_supported_architecture
+>  {
+> -	return (is_x86_64() or is_ppc64());
+> +	return (is_x86_64() or is_ppc64() or is_ix86_32());
+>  }
+>  
+>  sub is_x86_64
+> @@ -185,6 +191,7 @@ sub is_x86_64
+>  	my $archname = $Config{archname};
+>  
+>  	if ($archname =~ m/x86_64/) {
+> +		$bit_size=64;
+
+Setting a global opaquely within an is_a_ function (or subroutine)
+violates the principle of least surprise. No one would expect an is_a
+function to do this. Either way, as commented above, we don't need this
+global anyways.
+
+>  		return 1;
+>  	}
+>  	return 0;
+> @@ -195,6 +202,19 @@ sub is_ppc64
+>  	my $archname = $Config{archname};
+>  
+>  	if ($archname =~ m/powerpc/ and $archname =~ m/64/) {
+> +		$bit_size=64;
+
+As above.
+
+> +		return 1;
+> +	}
+> +	return 0;
+> +}
+> +
+> +# 32-bit x86: is_i'x'86_32() ; where x is [3 or 4 or 5 or 6]
+
+Perhaps
+
+# true for Intel x86 32 bit architectures, x386 and above.
+
+> +sub is_ix86_32
+> +{
+> +	my $archname = $Config{archname};
+> +
+> +	if ($archname =~ m/i[3456]86-linux/) {
+> +		$bit_size=32;
+
+Please use kernel coding style
+
+		$bit_size = 32;
+
+>  		return 1;
+>  	}
+>  	return 0;
+> @@ -215,6 +235,15 @@ sub is_false_positive
+>  		    $match =~ '\bf{10}601000\b') {
+>  			return 1;
+>  		}
+> +	} elsif ($bit_size == 32) {
+
+	} elsif (is_ix86_32())
+
+Bonus points, you uncovered a bug in the current script `if (is_x86_64)`
+was missing the parenthesis!
+
+# leaking_addresses.pl: Scan 64 bit kernel for potential leaking addresses.
+@@ -209,7 +211,7 @@ sub is_false_positive
+                return 1;
+        }
  
- At the moment, WX Protection (unless specified otherwise) should work on
- any architecture supporting the NX bit, including, but not limited to:
-@@ -119,6 +121,24 @@ in your project or copy/paste parts of it.
- To make things simpler `libsara` is the only part of S.A.R.A. released under
- *CC0 - No Rights Reserved* license.
- 
-+Extended filesystem attributes
-+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-+When this functionality is enabled, it's possible to override
-+WX Protection flags set in the main configuration via extended attributes,
-+even when S.A.R.A.'s configuration is in "locked" mode.
-+If the user namespace is also enabled, its attributes will override settings
-+configured via the security namespace.
-+The xattrs currently in use are:
-+
-+- security.sara.wxprot
-+- user.sara.wxprot
-+
-+They can be manually set to the desired value as a decimal, hexadecimal or
-+octal number. When this functionality is enabled, S.A.R.A. can be easily used
-+without the help of its userspace tools. Though the preferred way to change
-+these attributes is `sara-xattr` which is part of `saractl` [2]_.
-+
-+
- Trampoline emulation
- ^^^^^^^^^^^^^^^^^^^^
- Some programs need to generate part of their code at runtime. Luckily enough,
-diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-index 20c9114..b58dcce 100644
---- a/Documentation/admin-guide/kernel-parameters.txt
-+++ b/Documentation/admin-guide/kernel-parameters.txt
-@@ -3841,6 +3841,22 @@
- 			See S.A.R.A. documentation.
- 			Default value is set via kernel config option.
- 
-+	sara.wxprot_xattrs_enabled= [SARA]
-+			Enable support for security xattrs.
-+			Format: { "0" | "1" }
-+			See security/sara/Kconfig help text
-+			0 -- disable.
-+			1 -- enable.
-+			Default value is set via kernel config option.
-+
-+	sara.wxprot_xattrs_user= [SARA]
-+			Enable support for user xattrs.
-+			Format: { "0" | "1" }
-+			See security/sara/Kconfig help text
-+			0 -- disable.
-+			1 -- enable.
-+			Default value is set via kernel config option.
-+
- 	serialnumber	[BUGS=X86-32]
- 
- 	shapers=	[NET]
-diff --git a/include/uapi/linux/xattr.h b/include/uapi/linux/xattr.h
-index c1395b5..45c0333 100644
---- a/include/uapi/linux/xattr.h
-+++ b/include/uapi/linux/xattr.h
-@@ -77,5 +77,9 @@
- #define XATTR_POSIX_ACL_DEFAULT  "posix_acl_default"
- #define XATTR_NAME_POSIX_ACL_DEFAULT XATTR_SYSTEM_PREFIX XATTR_POSIX_ACL_DEFAULT
- 
-+#define XATTR_SARA_SUFFIX "sara."
-+#define XATTR_SARA_WXP_SUFFIX XATTR_SARA_SUFFIX "wxp"
-+#define XATTR_NAME_SEC_SARA_WXP XATTR_SECURITY_PREFIX XATTR_SARA_WXP_SUFFIX
-+#define XATTR_NAME_USR_SARA_WXP XATTR_USER_PREFIX XATTR_SARA_WXP_SUFFIX
- 
- #endif /* _UAPI_LINUX_XATTR_H */
-diff --git a/security/sara/Kconfig b/security/sara/Kconfig
-index b68c246..60f629f 100644
---- a/security/sara/Kconfig
-+++ b/security/sara/Kconfig
-@@ -113,6 +113,28 @@ config SECURITY_SARA_WXPROT_EMUTRAMP
- 
- 	  If unsure, answer y.
- 
-+config SECURITY_SARA_WXPROT_XATTRS_ENABLED
-+	bool "xattrs support enabled by default."
-+	depends on SECURITY_SARA_WXPROT
-+	default n
-+	help
-+	  If you say Y here it will be possible to override WX protection
-+	  configuration via extended attributes in the security namespace.
-+	  Even when S.A.R.A.'s configuration has been locked.
-+
-+	  If unsure, answer N.
-+
-+config CONFIG_SECURITY_SARA_WXPROT_XATTRS_USER
-+	bool "'user' namespace xattrs support enabled by default."
-+	depends on SECURITY_SARA_WXPROT_XATTRS_ENABLED
-+	default n
-+	help
-+	  If you say Y here it will be possible to override WX protection
-+	  configuration via extended attributes in the user namespace.
-+	  Even when S.A.R.A.'s configuration has been locked.
-+
-+	  If unsure, answer N.
-+
- config SECURITY_SARA_WXPROT_DISABLED
- 	bool "WX protection will be disabled at boot."
- 	depends on SECURITY_SARA_WXPROT
-diff --git a/security/sara/wxprot.c b/security/sara/wxprot.c
-index c14ad27..2c8ca58 100644
---- a/security/sara/wxprot.c
-+++ b/security/sara/wxprot.c
-@@ -23,6 +23,7 @@
- #include <linux/printk.h>
- #include <linux/ratelimit.h>
- #include <linux/spinlock.h>
-+#include <linux/xattr.h>
- 
- #include "include/sara.h"
- #include "include/sara_data.h"
-@@ -88,6 +89,18 @@ struct wxprot_config_container {
- static const bool wxprot_emutramp;
- #endif
- 
-+#ifdef CONFIG_SECURITY_SARA_WXPROT_XATTRS_ENABLED
-+static bool wxprot_xattrs_enabled __read_mostly = true;
-+#else
-+static bool wxprot_xattrs_enabled __read_mostly;
-+#endif
-+
-+#ifdef CONFIG_SECURITY_SARA_WXPROT_XATTRS_USER
-+static bool wxprot_xattrs_user __read_mostly = true;
-+#else
-+static bool wxprot_xattrs_user __read_mostly;
-+#endif
-+
- static void pr_wxp(char *msg)
- {
- 	char *buf, *path;
-@@ -138,6 +151,12 @@ static bool are_flags_valid(u16 flags)
- module_param(wxprot_enabled, bool, 0);
- MODULE_PARM_DESC(wxprot_enabled, "Disable or enable S.A.R.A. WX Protection at boot time.");
- 
-+module_param(wxprot_xattrs_enabled, bool, 0);
-+MODULE_PARM_DESC(wxprot_xattrs_enabled, "Disable or enable S.A.R.A. WXP extended attributes interfaces.");
-+
-+module_param(wxprot_xattrs_user, bool, 0);
-+MODULE_PARM_DESC(wxprot_xattrs_user, "Allow normal users to override S.A.R.A. WXP settings via extended attributes.");
-+
- static int param_set_wxpflags(const char *val, const struct kernel_param *kp)
- {
- 	u16 flags;
-@@ -240,6 +259,65 @@ static inline int is_relro_page(const struct vm_area_struct *vma)
- }
- 
- /*
-+ * Extended attributes handling
-+ */
-+static int sara_wxprot_xattrs_name(struct dentry *d,
-+				   const char *name,
-+				   u16 *flags)
-+{
-+	int rc;
-+	char buffer[10];
-+	u16 tmp;
-+
-+	if (!(d->d_inode->i_opflags & IOP_XATTR))
-+		return -EOPNOTSUPP;
-+
-+	rc = __vfs_getxattr(d, d->d_inode, name, buffer, sizeof(buffer));
-+	if (rc > 0) {
-+		buffer[rc] = '\0';
-+		rc = kstrtou16(buffer, 0, &tmp);
-+		if (rc)
-+			return rc;
-+		if (!are_flags_valid(tmp))
-+			return -EINVAL;
-+		*flags = tmp;
-+		return 0;
-+	} else if (rc < 0)
-+		return rc;
-+
-+	return -ENODATA;
-+}
-+
-+#define sara_xattrs_may_return(RC, XATTRNAME, FNAME) do {	\
-+	if (RC == -EINVAL || RC == -ERANGE)			\
-+		pr_info_ratelimited(				\
-+			"WXP: malformed xattr '%s' on '%s'\n",	\
-+			XATTRNAME,				\
-+			FNAME);					\
-+	else if (RC == 0)					\
-+		return 0;					\
-+} while (0)
-+
-+static inline int sara_wxprot_xattrs(struct dentry *d,
-+				     u16 *flags)
-+{
-+	int rc;
-+
-+	if (!wxprot_xattrs_enabled)
-+		return 1;
-+	if (wxprot_xattrs_user) {
-+		rc = sara_wxprot_xattrs_name(d, XATTR_NAME_USR_SARA_WXP,
-+					     flags);
-+		sara_xattrs_may_return(rc, XATTR_NAME_USR_SARA_WXP,
-+				       d->d_name.name);
-+	}
-+	rc = sara_wxprot_xattrs_name(d, XATTR_NAME_SEC_SARA_WXP, flags);
-+	sara_xattrs_may_return(rc, XATTR_NAME_SEC_SARA_WXP, d->d_name.name);
-+	return 1;
-+}
-+
-+
-+/*
-  * LSM hooks
-  */
- static int sara_bprm_set_creds(struct linux_binprm *bprm)
-@@ -262,6 +340,10 @@ static int sara_bprm_set_creds(struct linux_binprm *bprm)
- 	if (!sara_enabled || !wxprot_enabled)
- 		return 0;
- 
-+	if (sara_wxprot_xattrs(bprm->file->f_path.dentry,
-+			       &sara_wxp_flags) == 0)
-+		goto flags_set;
-+
- 	/*
- 	 * SARA_WXP_TRANSFER means that the parent
- 	 * wants this child to inherit its flags.
-@@ -295,6 +377,7 @@ static int sara_bprm_set_creds(struct linux_binprm *bprm)
- 	} else
- 		path = (char *) bprm->interp;
- 
-+flags_set:
- 	if (sara_wxp_flags != default_flags &&
- 	    sara_wxp_flags & SARA_WXP_VERBOSE)
- 		pr_debug_ratelimited("WXP: '%s' run with flags '0x%x'.\n",
-@@ -843,6 +926,10 @@ static int config_hash(char **buf)
- 
- static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_enabled_data,
- 				   wxprot_enabled);
-+static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_xattrs_enabled_data,
-+				   wxprot_xattrs_enabled);
-+static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_xattrs_user_data,
-+				   wxprot_xattrs_user);
- 
- static struct sara_secfs_fptrs fptrs __ro_after_init = {
- 	.load = config_load,
-@@ -886,6 +973,16 @@ static DEFINE_SARA_SECFS_BOOL_FLAG(wxprot_enabled_data,
- 		.type = SARA_SECFS_CONFIG_HASH,
- 		.data = &fptrs,
- 	},
-+	{
-+		.name = "xattr_enabled",
-+		.type = SARA_SECFS_BOOL,
-+		.data = (void *) &wxprot_xattrs_enabled_data,
-+	},
-+	{
-+		.name = "xattr_user_allowed",
-+		.type = SARA_SECFS_BOOL,
-+		.data = (void *) &wxprot_xattrs_user_data,
-+	},
- };
- 
- 
--- 
-1.9.1
+-       if (is_x86_64) {
++       if (is_x86_64()) {
+
+
+Thanks. I'm guessing this is what led you to using the global :) Have
+patched dev branch (branch name: leaks).
+
+> +		my $addr32 = eval hex($match);
+> +		if ($addr32 < $PAGE_OFFSET_32BIT ) {
+> +			return 1;
+> +		}
+
+Nice.
+
+> +		if ($match =~ '\b(0x)?(f|F){8}\b') {
+> +			return 1;
+> +		}
+
+So, may_leak_address() and is_false_positive() are tightly coupled and
+not really that nice. Once we add 32 bit support it gets worse. Going
+forwards, we can either add your 32 bit work then refactor both
+functions or you can refactor them as you add the 32 bit stuff. I'm open
+to either. Some things to note
+
+- The mask stuff (all 1's) should have an all 0's regex also.
+- The mask stuff should probably be closer to the mask stuff for 64
+  bit. It's not immediately apparent a clean way to do this though. 
+- It's not immediately apparent if an address less that PAGE_OFFSET is a
+  false positive or should be caught in leaks_address().
+- Do we need 32 bit equivalents for 
+
+	if ($line =~ '\bKEY=[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b' or
+	    $line =~ '\b[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b') {
+
+  Even though this is a false positive it needs to be where it is (note
+  the 'tightly coupled' statement above).
+
+>  	}
+>  
+>  	return 0;
+> @@ -243,6 +272,8 @@ sub may_leak_address
+>  		$address_re = '\b(0x)?ffff[[:xdigit:]]{12}\b';
+>  	} elsif (is_ppc64()) {
+>  		$address_re = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
+> +	} elsif (is_ix86_32()) {
+> +		$address_re = '\b(0x)?[[:xdigit:]]{8}\b';
+>  	}
+>  
+>  	while (/($address_re)/g) {
+
+Your patch did not apply, the problem looks to be in the code section
+above. You can see that there is no removed line. For next spin please
+check your patch applies on top of the 'leaks' branch (which now
+includes the fix for the bug you found).
+
+I have one more comment that should have been at the top but I did not
+want to confuse things. Typically, the git brief description should be
+limited to 50 characters. If you do decide to split this patch into two
+and use the prefix suggested you may like to change the git brief
+description but don't feel you have to. If you do decide to do this, your
+next patch set will be a version 1 again. I may be wrong but I never
+increment a patch version if the subject line changes (excluding
+contents of [] ).
+
+I'm relatively new here so please feel free to ignore anything I've
+said. I have commented in the effort to help you learn as I am doing so
+also.
+
+I'll look forward to v2. Please ask if anything I've said is unclear.
+
+
+thanks,
+Tobin.
