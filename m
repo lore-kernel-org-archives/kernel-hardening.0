@@ -1,277 +1,209 @@
-Date: Wed, 22 Nov 2017 10:59:20 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171121235920.GT7472@eros>
-References: <1511251094.25970.18.camel@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1511251094.25970.18.camel@gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v1] scripts: leaking_addresses.pl: add support for 32-bit
- kernel addresses
-To: kaiwan.billimoria@gmail.com
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <20171122005432.4974-1-mjg59@google.com>
+References: <20171122005432.4974-1-mjg59@google.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 21 Nov 2017 17:29:29 -0800
+Message-ID: <CAGXu5jLk6NzoBf-Z_sFX3dsgks=_MaSTON4i9QnPrJ+gEi+uOw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH] usercopy: Allow runtime disabling of usercopy fallback
+To: Matthew Garrett <mjg59@google.com>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-You don't typically need [xxx v1] for version 1, the v1 is implicit.
+On Tue, Nov 21, 2017 at 4:54 PM, Matthew Garrett <mjg59@google.com> wrote:
+> Distributions are likely to build with
+> CONFIG_HARDENED_USERCOPY_FALLBACK, but individual sites may wish to
+> disable that functionality. Add a sysctl that allows the fallback to be
+> disabled and then forbids any attempt to re-enable it.
 
-Please use the git brief description prefix that is already in use i.e 
+Is it likely that distros will select FALLBACK? I figured by the time
+a kernel with this feature got to the distros it'd already gotten a
+fair bit of testing, so they'd just leave FALLBACK disabled.
 
-	leaking_addresses: add support for 32-bit kernel addresses
+I'll consider this, though I have to refactor the series a bit to move
+this patch earlier, etc.
 
-On Tue, Nov 21, 2017 at 01:28:14PM +0530, kaiwan.billimoria@gmail.com wrote:
-> The current leaking_addresses.pl script only supports showing "leaked"
-> 64-bit kernel virtual addresses. This patch adds support for showing
-> "leaked" 32-bit kernel virtual addresses.
+Thanks for looking at it!
 
-Thanks for the patch. I like your ideas. Here are a few nitpicks to help
-us get your work merged. 
+-Kees
 
-> The way it currently works- once it detects we're running on an i'x'86 platform
-> (where x=3|4|5|6), it takes this arch into account for checking: the essential
-> rationale:
->  virt-addr >= PAGE_OFFSET => it's a kernel virtual address.
-> 
-> Note- 
-> 1. It's a work in progress; some pending TODOs:
-
-We don't have 'work in progress' in the kernel, everything is a work in
-progress. We just have RFC or PATCH.
-
-> - support for ARM-32
-
-Sure, we can do this later.
-
-> - programatically query and set the PAGE_OFFSET based on arch (it's currently
-> hard-coded)
-
-Let's do this straight away, it will be much nicer.
-
-> 2. Minor edit: 
-> the '--raw', '--suppress-dmesg', '--squash-by-path' and
-> '--squash-by-filename' option switches are only meaningful
-> when the '----input-raw=' option is used. So, indent the 'Help' screen lines
-> to reflect the fact.
-
-This is a different change to the architecture stuff so should be in a
-separate patch. You could do both as a series if you like. Off the top
-of my head I have never seen options output like this, but if you have,
-I'm willing to accept your view. You are correct that the options
-mentioned are only use in conjuncture with '--input-raw' so some way of
-showing this would be nice.
-
-> Feedback welcome..
-
-Here it comes ;)
-
-> Signed-off-by: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
+>
+> Signed-off-by: Matthew Garrett <mjg59@google.com>
 > ---
-> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-> index bc5788000018..e139de445ad1 100755
-> --- a/scripts/leaking_addresses.pl
-> +++ b/scripts/leaking_addresses.pl
-> @@ -12,7 +12,10 @@
->  #
->  # You may like to set kptr_restrict=2 before running script
->  # (see Documentation/sysctl/kernel.txt).
-> -
-> +#
-> +# 32-bit kernel address support : Kaiwan N Billimoria
-> +#                       <kaiwan.billimoria@gmail.com>
-
-Cool. Can you put this up the top near the other copyright information
-please.
-
-Perhaps
-
-# (c) 2017 Kaiwan N Billimoria <kaiwan.billimoria@gmail.com> (ix86 support)
-
->  use warnings;
->  use strict;
->  use POSIX;
-> @@ -35,7 +38,7 @@ my $TIMEOUT = 10;
->  # Script can only grep for kernel addresses on the following architectures. If
->  # your architecture is not listed here and has a grep'able kernel address please
->  # consider submitting a patch.
-> -my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64');
-> +my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64', 'i[3456]86');
->  
->  # Command line options.
->  my $help = 0;
-> @@ -48,6 +51,9 @@ my $suppress_dmesg = 0;		# Don't show dmesg in output.
->  my $squash_by_path = 0;		# Summary report grouped by absolute path.
->  my $squash_by_filename = 0;	# Summary report grouped by filename.
->  
-> +my $bit_size = 64;   # Check 64-bit kernel addresses by default
-
-This global is unnecessary. You already have is_ix86_32() so you can just
-use that.
-
-> +my $PAGE_OFFSET_32BIT = 0xc0000000;
-
-As commented above, can we do this programmatically like previously discussed?
-
->  # Do not parse these files (absolute path).
->  my @skip_parse_files_abs = ('/proc/kmsg',
->  			    '/proc/kcore',
-> @@ -97,10 +103,10 @@ Options:
->  
->  	-o, --output-raw=<file>  Save results for future processing.
->  	-i, --input-raw=<file>   Read results from file instead of scanning.
-> -	    --raw                Show raw results (default).
-> -	    --suppress-dmesg     Do not show dmesg results.
-> -	    --squash-by-path     Show one result per unique path.
-> -	    --squash-by-filename Show one result per unique filename.
-> +	      --raw                 Show raw results (default).
-> +	      --suppress-dmesg      Do not show dmesg results.
-> +	      --squash-by-path      Show one result per unique path.
-> +	      --squash-by-filename  Show one result per unique filename.
->  	-d, --debug              Display debugging output.
->  	-h, --help, --version    Display this help and exit.
-
-Commented on above.
-
-> @@ -177,7 +183,7 @@ sub dprint
->  
->  sub is_supported_architecture
->  {
-> -	return (is_x86_64() or is_ppc64());
-> +	return (is_x86_64() or is_ppc64() or is_ix86_32());
+>  Documentation/sysctl/vm.txt |  9 +++++++++
+>  include/linux/mm.h          |  7 +++++++
+>  kernel/sysctl.c             | 11 +++++++++++
+>  mm/memory.c                 | 17 +++++++++++++++++
+>  mm/slab.c                   |  4 +---
+>  mm/slub.c                   |  4 +---
+>  6 files changed, 46 insertions(+), 6 deletions(-)
+>
+> diff --git a/Documentation/sysctl/vm.txt b/Documentation/sysctl/vm.txt
+> index 9baf66a9ef4e..b494b292fd93 100644
+> --- a/Documentation/sysctl/vm.txt
+> +++ b/Documentation/sysctl/vm.txt
+> @@ -60,6 +60,7 @@ Currently, these files are in /proc/sys/vm:
+>  - stat_refresh
+>  - swappiness
+>  - user_reserve_kbytes
+> +- usercopy_fallback
+>  - vfs_cache_pressure
+>  - watermark_scale_factor
+>  - zone_reclaim_mode
+> @@ -822,6 +823,14 @@ Changing this takes effect whenever an application requests memory.
+>
+>  ==============================================================
+>
+> +usercopy_fallback
+> +
+> +If 1, attempts to copy data from userland will generate a kernel warning
+> +if the target has not been whitelisted, but will still be permitted. If 0,
+> +this will result in a kernel BUG(). This may be set from 1 to 0 at runtime,
+> +but may not be modified if 0.
+> +
+> +==============================================================
+>  vfs_cache_pressure
+>  ------------------
+>
+> diff --git a/include/linux/mm.h b/include/linux/mm.h
+> index f8c10d336e42..511237addbf9 100644
+> --- a/include/linux/mm.h
+> +++ b/include/linux/mm.h
+> @@ -2456,6 +2456,8 @@ int drop_caches_sysctl_handler(struct ctl_table *, int,
+>  void drop_slab(void);
+>  void drop_slab_node(int nid);
+>
+> +extern bool usercopy_fallback;
+> +
+>  #ifndef CONFIG_MMU
+>  #define randomize_va_space 0
+>  #else
+> @@ -2602,5 +2604,10 @@ void __init setup_nr_node_ids(void);
+>  static inline void setup_nr_node_ids(void) {}
+>  #endif
+>
+> +#ifdef CONFIG_HARDENED_USERCOPY
+> +int usercopy_fallback_handler(struct ctl_table *table, int write,
+> +                           void __user *buffer, size_t *length, loff_t *ppos);
+> +#endif
+> +
+>  #endif /* __KERNEL__ */
+>  #endif /* _LINUX_MM_H */
+> diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+> index 423554ad3610..ba3366335b40 100644
+> --- a/kernel/sysctl.c
+> +++ b/kernel/sysctl.c
+> @@ -1663,6 +1663,17 @@ static struct ctl_table vm_table[] = {
+>                 .extra1         = (void *)&mmap_rnd_compat_bits_min,
+>                 .extra2         = (void *)&mmap_rnd_compat_bits_max,
+>         },
+> +#endif
+> +#ifdef CONFIG_HARDENED_USERCOPY
+> +       {
+> +               .procname       = "usercopy_fallback",
+> +               .data           = &usercopy_fallback,
+> +               .maxlen         = sizeof(int),
+> +               .mode           = 0600,
+> +               .proc_handler   = usercopy_fallback_handler,
+> +               .extra1         = &zero,
+> +               .extra2         = &one,
+> +       },
+>  #endif
+>         { }
+>  };
+> diff --git a/mm/memory.c b/mm/memory.c
+> index ec4e15494901..29ed21083a8d 100644
+> --- a/mm/memory.c
+> +++ b/mm/memory.c
+> @@ -104,6 +104,11 @@ EXPORT_SYMBOL(mem_map);
+>  void *high_memory;
+>  EXPORT_SYMBOL(high_memory);
+>
+> +#ifdef CONFIG_HARDENED_USERCOPY
+> +/* Permit non-whitelisted usercopy targets */
+> +bool usercopy_fallback = IS_ENABLED(CONFIG_HARDENED_USERCOPY_FALLBACK);
+> +#endif
+> +
+>  /*
+>   * Randomize the address space (stacks, mmaps, brk, etc.).
+>   *
+> @@ -4668,3 +4673,15 @@ void ptlock_free(struct page *page)
+>         kmem_cache_free(page_ptl_cachep, page->ptl);
 >  }
->  
->  sub is_x86_64
-> @@ -185,6 +191,7 @@ sub is_x86_64
->  	my $archname = $Config{archname};
->  
->  	if ($archname =~ m/x86_64/) {
-> +		$bit_size=64;
-
-Setting a global opaquely within an is_a_ function (or subroutine)
-violates the principle of least surprise. No one would expect an is_a
-function to do this. Either way, as commented above, we don't need this
-global anyways.
-
->  		return 1;
->  	}
->  	return 0;
-> @@ -195,6 +202,19 @@ sub is_ppc64
->  	my $archname = $Config{archname};
->  
->  	if ($archname =~ m/powerpc/ and $archname =~ m/64/) {
-> +		$bit_size=64;
-
-As above.
-
-> +		return 1;
-> +	}
-> +	return 0;
-> +}
+>  #endif
 > +
-> +# 32-bit x86: is_i'x'86_32() ; where x is [3 or 4 or 5 or 6]
-
-Perhaps
-
-# true for Intel x86 32 bit architectures, x386 and above.
-
-> +sub is_ix86_32
+> +#ifdef CONFIG_HARDENED_USERCOPY
+> +int usercopy_fallback_handler(struct ctl_table *table, int write,
+> +                           void __user *buffer, size_t *length, loff_t *ppos)
 > +{
-> +	my $archname = $Config{archname};
+> +       /* Don't allow re-enabling fallback if it's been disabled */
+> +       if (write && !usercopy_fallback)
+> +               return -EINVAL;
 > +
-> +	if ($archname =~ m/i[3456]86-linux/) {
-> +		$bit_size=32;
-
-Please use kernel coding style
-
-		$bit_size = 32;
-
->  		return 1;
->  	}
->  	return 0;
-> @@ -215,6 +235,15 @@ sub is_false_positive
->  		    $match =~ '\bf{10}601000\b') {
->  			return 1;
->  		}
-> +	} elsif ($bit_size == 32) {
-
-	} elsif (is_ix86_32())
-
-Bonus points, you uncovered a bug in the current script `if (is_x86_64)`
-was missing the parenthesis!
-
-# leaking_addresses.pl: Scan 64 bit kernel for potential leaking addresses.
-@@ -209,7 +211,7 @@ sub is_false_positive
-                return 1;
-        }
- 
--       if (is_x86_64) {
-+       if (is_x86_64()) {
-
-
-Thanks. I'm guessing this is what led you to using the global :) Have
-patched dev branch (branch name: leaks).
-
-> +		my $addr32 = eval hex($match);
-> +		if ($addr32 < $PAGE_OFFSET_32BIT ) {
-> +			return 1;
-> +		}
-
-Nice.
-
-> +		if ($match =~ '\b(0x)?(f|F){8}\b') {
-> +			return 1;
-> +		}
-
-So, may_leak_address() and is_false_positive() are tightly coupled and
-not really that nice. Once we add 32 bit support it gets worse. Going
-forwards, we can either add your 32 bit work then refactor both
-functions or you can refactor them as you add the 32 bit stuff. I'm open
-to either. Some things to note
-
-- The mask stuff (all 1's) should have an all 0's regex also.
-- The mask stuff should probably be closer to the mask stuff for 64
-  bit. It's not immediately apparent a clean way to do this though. 
-- It's not immediately apparent if an address less that PAGE_OFFSET is a
-  false positive or should be caught in leaks_address().
-- Do we need 32 bit equivalents for 
-
-	if ($line =~ '\bKEY=[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b' or
-	    $line =~ '\b[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b') {
-
-  Even though this is a false positive it needs to be where it is (note
-  the 'tightly coupled' statement above).
-
->  	}
->  
->  	return 0;
-> @@ -243,6 +272,8 @@ sub may_leak_address
->  		$address_re = '\b(0x)?ffff[[:xdigit:]]{12}\b';
->  	} elsif (is_ppc64()) {
->  		$address_re = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
-> +	} elsif (is_ix86_32()) {
-> +		$address_re = '\b(0x)?[[:xdigit:]]{8}\b';
->  	}
->  
->  	while (/($address_re)/g) {
-
-Your patch did not apply, the problem looks to be in the code section
-above. You can see that there is no removed line. For next spin please
-check your patch applies on top of the 'leaks' branch (which now
-includes the fix for the bug you found).
-
-I have one more comment that should have been at the top but I did not
-want to confuse things. Typically, the git brief description should be
-limited to 50 characters. If you do decide to split this patch into two
-and use the prefix suggested you may like to change the git brief
-description but don't feel you have to. If you do decide to do this, your
-next patch set will be a version 1 again. I may be wrong but I never
-increment a patch version if the subject line changes (excluding
-contents of [] ).
-
-I'm relatively new here so please feel free to ignore anything I've
-said. I have commented in the effort to help you learn as I am doing so
-also.
-
-I'll look forward to v2. Please ask if anything I've said is unclear.
+> +       return proc_dointvec_minmax(table, write, buffer, length, ppos);
+> +}
+> +#endif
+> diff --git a/mm/slab.c b/mm/slab.c
+> index 23c53dc46cd6..6afcac1d8b97 100644
+> --- a/mm/slab.c
+> +++ b/mm/slab.c
+> @@ -4435,21 +4435,19 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
+>         if (offset < cachep->useroffset ||
+>             offset - cachep->useroffset > cachep->usersize ||
+>             n > cachep->useroffset - offset + cachep->usersize) {
+> -#ifdef CONFIG_HARDENED_USERCOPY_FALLBACK
+>                 /*
+>                  * If no whitelist exists, and FALLBACK is set, produce
+>                  * a warning instead of rejecting the copy. This is intended
+>                  * to be a temporary method to find any missing usercopy
+>                  * whitelists.
+>                  */
+> -               if (cachep->usersize == 0 &&
+> +               if (usercopy_fallback && cachep->usersize == 0 &&
+>                     offset <= cachep->object_size &&
+>                     n <= cachep->object_size - offset) {
+>                         WARN_ONCE(1, "unexpected usercopy without slab whitelist from %s offset %lu size %lu",
+>                                   cachep->name, offset, n);
+>                         return NULL;
+>                 }
+> -#endif
+>                 return cachep->name;
+>         }
+>
+> diff --git a/mm/slub.c b/mm/slub.c
+> index 82e7f15162a8..e664c6e715e6 100644
+> --- a/mm/slub.c
+> +++ b/mm/slub.c
+> @@ -3867,7 +3867,6 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
+>         if (offset < s->useroffset ||
+>             offset - s->useroffset > s->usersize ||
+>             n > s->useroffset - offset + s->usersize) {
+> -#ifdef CONFIG_HARDENED_USERCOPY_FALLBACK
+>                 size_t object_size;
+>
+>                 object_size = slab_ksize(s);
+> @@ -3878,13 +3877,12 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
+>                  * to be a temporary method to find any missing usercopy
+>                  * whitelists.
+>                  */
+> -               if (s->usersize == 0 &&
+> +               if (usercopy_fallback && s->usersize == 0 &&
+>                     (offset <= object_size && n <= object_size - offset)) {
+>                         WARN_ONCE(1, "unexpected usercopy without slab whitelist from %s offset %lu size %lu",
+>                                   s->name, offset, n);
+>                         return NULL;
+>                 }
+> -#endif
+>                 return s->name;
+>         }
+>
+> --
+> 2.15.0.448.gf294e3d99a-goog
+>
 
 
-thanks,
-Tobin.
+
+-- 
+Kees Cook
+Pixel Security
