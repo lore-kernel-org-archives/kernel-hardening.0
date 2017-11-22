@@ -1,33 +1,51 @@
-Date: Wed, 22 Nov 2017 16:51:44 +0000
-From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
-Message-ID: <20171122165144.07aea7ac@alans-desktop>
-In-Reply-To: <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
-References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
-	<1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-fsdevel@vger.kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
+Sender: keescook@google.com
+In-Reply-To: <be5b9100-4f60-1a10-6b32-b425cb2db05e@gmail.com>
+References: <be5b9100-4f60-1a10-6b32-b425cb2db05e@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 22 Nov 2017 09:31:14 -0800
+Message-ID: <CAGXu5jLM-NUZf71UzTHqRERAb6GZNO+Yi7OOrnDRuihv+m-pzw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] a part of SLAB_FREELIST_HARDENED feature
+ doesn't work well
+To: zerons <zeronsaxm@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, Alexander Popov <alex.popov@linux.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 22 Nov 2017 09:01:46 +0100
-Salvatore Mesoraca <s.mesoraca16@gmail.com> wrote:
+On Wed, Nov 22, 2017 at 6:33 AM, zerons <zeronsaxm@gmail.com> wrote:
+> (commit-webpage)[https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ce6fa91b93630396ca220c33dd38ffc62686d499]
+>
+> Test it on kernel 4.14.0.
+>
+> When something goes like
+> kfree(a);
+> kfree(a);
+> then `insmod` crashed 'Segment Fault'
+>
+> kfree(a);kfree(b);kfree(a);
+> Got nothing.
+>
+> I add another kernel thread, just free some objects
+> very close to the target object_a;
+> kfree(a);
+>                 another thread does some kfree(...)
+> kfree(a);
+> nothing happened, this patch didn't crash the `insmod` operation.
 
-> Disallows O_CREAT open missing the O_EXCL flag, in world or
-> group writable directories, even if the file doesn't exist yet.
-> With few exceptions (e.g. shared lock files based on flock())
+Yup, that's expected and that's why it's called "naive". It's a very
+cheap check for a somewhat common condition, but it is not designed to
+catch all double-free conditions. If you want that, try booting with
+"slub_debug=FZP" (this is slower, but should catch a lot of bad
+cases).
 
-Enough exceptions to make it a bad idea.
+One thing to note is that the naive check works within a single cache,
+which means that kmalloc()/kfree() will be less likely to be protected
+by this due to the many concurrent users. Specific caches (via
+kmem_cache_alloc()kmem_cache_free()) may be more well protected by
+this since there may be less contention.
 
-Firstly if you care this much *stop* having shared writable directories.
-We have namespaces, you don't need them. You can give every user their
-own /tmp etc.
+-Kees
 
-The rest of this only make sense on a per application and directory basis
-because there are valid use cases, and that means it wants to be part of
-an existing LSM security module where you've got the context required and
-you can attach it to a specific directory and/or process.
-
-Alan
+-- 
+Kees Cook
+Pixel Security
