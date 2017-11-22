@@ -1,106 +1,45 @@
-From: zerons <zeronsaxm@gmail.com>
-Message-ID: <be5b9100-4f60-1a10-6b32-b425cb2db05e@gmail.com>
-Date: Wed, 22 Nov 2017 22:33:31 +0800
+References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
+ <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
+ <20171122132235.GA30635@bombadil.infradead.org>
+From: Pavel Vasilyev <dixlor@gmail.com>
+Message-ID: <44203c85-f64f-4ae4-e179-28d50e11c82a@gmail.com>
+Date: Wed, 22 Nov 2017 17:38:31 +0300
 MIME-Version: 1.0
-Content-Type: multipart/mixed;
- boundary="------------E9219F000EA79A6AFCAFC68F"
-Subject: [kernel-hardening] a part of SLAB_FREELIST_HARDENED feature doesn't
- work well
+In-Reply-To: <20171122132235.GA30635@bombadil.infradead.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in
+ sticky directories
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a multi-part message in MIME format.
---------------E9219F000EA79A6AFCAFC68F
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
 
-(commit-webpage)[https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ce6fa91b93630396ca220c33dd38ffc62686d499]
 
-Test it on kernel 4.14.0.
+22.11.2017 16:22, Matthew Wilcox пишет:
 
-When something goes like
-kfree(a);
-kfree(a);
-then `insmod` crashed 'Segment Fault'
+> 
+> So you'd have the following meaningful values:
+> 
+>  0 - permit all (your option 0)
+>  1 - notify world; permit group (your option 1)
+>  2 - block world; permit group
+>  3 - block,notify world; permit group
+>  4 - permit world; notify group (?)
+>  5 - notify world; notify group (your option 2)
+>  6 - block world; notify group (your option 3)
+>  7 - block,notify world; notify group
+>  8 - permit world; block group (?)
+>  9 - notify world; block group (?)
+> 10 - block world; block group (your option 4)
+> 11 - block,notify world; block group
+> 12 - permit world; block, notify group (?)
+> 13 - notify world; block, notify group (?)
+> 14 - block world; block, notify group
+> 15 - block, notify world; block, notify group
+> 
+> Some of these don't make a lot of sense (marked with ?), but I don't see
+> the harm in permitting a sysadmin to do something that seems nonsensical
+> to me.
+> 
 
-kfree(a);kfree(b);kfree(a);
-Got nothing.
-
-I add another kernel thread, just free some objects
-very close to the target object_a;
-kfree(a);
-		another thread does some kfree(...)
-kfree(a);
-nothing happened, this patch didn't crash the `insmod` operation.
-
---------------E9219F000EA79A6AFCAFC68F
-Content-Type: text/x-csrc;
- name="test.c"
-Content-Transfer-Encoding: 7bit
-Content-Disposition: inline;
- filename="test.c"
-
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/types.h>
-#include <linux/fs.h>
-#include <linux/slab.h>
-#include <linux/debugfs.h>
-#include <linux/kallsyms.h>
-#include <linux/sched.h>
-#include <linux/kthread.h>
-#include <linux/err.h>
-#include <linux/delay.h>
-#include <asm/insn.h>
-
-#define COUNT 0x20
-char *p[COUNT];
-struct task_struct *tsk;
-
-int another_thread(void *arg)
-{
-	int i = 0;
-	for (i = 0; i < COUNT-2; i+=2) {
-		pr_info("kfree i: %d, %p\n", i, p[i]);
-		kfree(p[i]);
-	}
-	msleep(10);
-	kfree(p[COUNT-2]);
-	return 0;
-}
-
-static int __init test_init(void)
-{
-	int i = 0;
-	for (i = 0; i < COUNT-1; i++)
-		p[i] = kmalloc(4096, GFP_KERNEL);
-	p[COUNT-1] = p[COUNT-3];
-
-	tsk = kthread_run(another_thread, NULL, "another_thread");
-	if (IS_ERR(tsk))
-		pr_info("kthread_run err\n");
-
-	for (i = 1; i < COUNT-1; i+=2) {
-		pr_info("kfree i: %d, %p\n", i, p[i]);
-		kfree(p[i]);
-	}
-
-	msleep(100);
-	kfree(p[COUNT-1]);
-
-	return 0;
-}
-
-static void __exit test_exit(void)
-{
-	if (!IS_ERR(tsk))
-		kthread_stop(tsk);
-	return;
-}
-
-module_init(test_init);
-module_exit(test_exit);
-MODULE_LICENSE("GPL");
-
---------------E9219F000EA79A6AFCAFC68F--
+I think that notification in block mode by default.
