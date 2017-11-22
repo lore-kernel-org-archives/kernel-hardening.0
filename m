@@ -1,56 +1,18 @@
+Date: Wed, 22 Nov 2017 05:22:36 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Message-ID: <20171122132235.GA30635@bombadil.infradead.org>
 References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
  <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
-From: Pavel Vasilyev <dixlor@gmail.com>
-Message-ID: <eaac83ad-083d-f6b1-383f-e20e73ab7e1c@gmail.com>
-Date: Wed, 22 Nov 2017 15:03:24 +0300
 MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 In-Reply-To: <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] [PATCH v3 2/2] Protected O_CREAT open in
- sticky directories
-To: kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-fsdevel@vger.kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-22.11.2017 11:01, Salvatore Mesoraca пишет:
-> Disallows O_CREAT open missing the O_EXCL flag, in world or
-> group writable directories, even if the file doesn't exist yet.
-> With few exceptions (e.g. shared lock files based on flock())
-> if a program tries to open a file, in a sticky directory,
-> with the O_CREAT flag and without the O_EXCL, it probably has a bug.
-> This feature allows to detect and potentially block programs that
-> act this way, it can be used to find vulnerabilities (like those
-> prevented by patch #1) and to do policy enforcement.
-> 
-> Suggested-by: Solar Designer <solar@openwall.com>
-> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-> ---
->  Documentation/sysctl/fs.txt | 30 ++++++++++++++++++++++++
->  fs/namei.c                  | 56 +++++++++++++++++++++++++++++++++++++++++++++
->  include/linux/fs.h          |  1 +
->  kernel/sysctl.c             |  9 ++++++++
->  4 files changed, 96 insertions(+)
-> 
-> diff --git a/Documentation/sysctl/fs.txt b/Documentation/sysctl/fs.txt
-> index f3cf2cd..7f24b4f 100644
-> --- a/Documentation/sysctl/fs.txt
-> +++ b/Documentation/sysctl/fs.txt
-> @@ -37,6 +37,7 @@ Currently, these files are in /proc/sys/fs:
->  - protected_fifos
->  - protected_hardlinks
->  - protected_regular
-> +- protected_sticky_child_create
->  - protected_symlinks
->  - suid_dumpable
->  - super-max
-> @@ -238,6 +239,35 @@ When set to "2" it also applies to group writable sticky directories.
->  
->  ==============================================================
->  
-> +protected_sticky_child_create:
-> +
+On Wed, Nov 22, 2017 at 09:01:46AM +0100, Salvatore Mesoraca wrote:
 > +An O_CREAT open missing the O_EXCL flag in a sticky directory is,
 > +often, a bug or a synthom of the fact that the program is not
 > +using appropriate procedures to access sticky directories.
@@ -76,8 +38,38 @@ List-ID: <kernel-hardening.lists.openwall.com>
 > +When set to "4", block O_CREAT open missing the O_EXCL flag
 > +in world writable and group writable sticky directories.
 
-May be add:
+This seems insufficiently flexible.  For example, there is no way for me
+to specify that I want to block O_CREAT without O_EXCL in world-writable,
+but not be notified about O_CREAT without O_EXCL in group-writable.
 
-When set to "X", notify O_CREAT open missing the O_EXCL flag
-in world writable sticky directories and notify in group
-writable sticky directories.
+And maybe I want to be notified that blocking has happened?
+
+Why not make it bits?  So:
+
+0 => notify in world
+1 => block in world
+2 => notify in group
+3 => block in group
+
+So you'd have the following meaningful values:
+
+ 0 - permit all (your option 0)
+ 1 - notify world; permit group (your option 1)
+ 2 - block world; permit group
+ 3 - block,notify world; permit group
+ 4 - permit world; notify group (?)
+ 5 - notify world; notify group (your option 2)
+ 6 - block world; notify group (your option 3)
+ 7 - block,notify world; notify group
+ 8 - permit world; block group (?)
+ 9 - notify world; block group (?)
+10 - block world; block group (your option 4)
+11 - block,notify world; block group
+12 - permit world; block, notify group (?)
+13 - notify world; block, notify group (?)
+14 - block world; block, notify group
+15 - block, notify world; block, notify group
+
+Some of these don't make a lot of sense (marked with ?), but I don't see
+the harm in permitting a sysadmin to do something that seems nonsensical
+to me.
