@@ -1,45 +1,33 @@
+Date: Wed, 22 Nov 2017 16:51:44 +0000
+From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+Message-ID: <20171122165144.07aea7ac@alans-desktop>
+In-Reply-To: <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
 References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
- <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
- <20171122132235.GA30635@bombadil.infradead.org>
-From: Pavel Vasilyev <dixlor@gmail.com>
-Message-ID: <44203c85-f64f-4ae4-e179-28d50e11c82a@gmail.com>
-Date: Wed, 22 Nov 2017 17:38:31 +0300
+	<1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20171122132235.GA30635@bombadil.infradead.org>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in
- sticky directories
-To: kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-fsdevel@vger.kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Wed, 22 Nov 2017 09:01:46 +0100
+Salvatore Mesoraca <s.mesoraca16@gmail.com> wrote:
 
+> Disallows O_CREAT open missing the O_EXCL flag, in world or
+> group writable directories, even if the file doesn't exist yet.
+> With few exceptions (e.g. shared lock files based on flock())
 
-22.11.2017 16:22, Matthew Wilcox пишет:
+Enough exceptions to make it a bad idea.
 
-> 
-> So you'd have the following meaningful values:
-> 
->  0 - permit all (your option 0)
->  1 - notify world; permit group (your option 1)
->  2 - block world; permit group
->  3 - block,notify world; permit group
->  4 - permit world; notify group (?)
->  5 - notify world; notify group (your option 2)
->  6 - block world; notify group (your option 3)
->  7 - block,notify world; notify group
->  8 - permit world; block group (?)
->  9 - notify world; block group (?)
-> 10 - block world; block group (your option 4)
-> 11 - block,notify world; block group
-> 12 - permit world; block, notify group (?)
-> 13 - notify world; block, notify group (?)
-> 14 - block world; block, notify group
-> 15 - block, notify world; block, notify group
-> 
-> Some of these don't make a lot of sense (marked with ?), but I don't see
-> the harm in permitting a sysadmin to do something that seems nonsensical
-> to me.
-> 
+Firstly if you care this much *stop* having shared writable directories.
+We have namespaces, you don't need them. You can give every user their
+own /tmp etc.
 
-I think that notification in block mode by default.
+The rest of this only make sense on a per application and directory basis
+because there are valid use cases, and that means it wants to be part of
+an existing LSM security module where you've got the context required and
+you can attach it to a specific directory and/or process.
+
+Alan
