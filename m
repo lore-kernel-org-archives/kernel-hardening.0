@@ -1,209 +1,138 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20171122005432.4974-1-mjg59@google.com>
-References: <20171122005432.4974-1-mjg59@google.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 21 Nov 2017 17:29:29 -0800
-Message-ID: <CAGXu5jLk6NzoBf-Z_sFX3dsgks=_MaSTON4i9QnPrJ+gEi+uOw@mail.gmail.com>
+In-Reply-To: <20171121235920.GT7472@eros>
+References: <1511251094.25970.18.camel@gmail.com> <20171121235920.GT7472@eros>
+From: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
+Date: Wed, 22 Nov 2017 11:41:19 +0530
+Message-ID: <CAPDLWs8G=drs5r-iHZ4YWfzFcD3YcHBJqJNLhGh2Yme=PjpssA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] usercopy: Allow runtime disabling of usercopy fallback
-To: Matthew Garrett <mjg59@google.com>
-Cc: kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] Re: [PATCH v1] scripts: leaking_addresses.pl: add support for 32-bit
+ kernel addresses
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 21, 2017 at 4:54 PM, Matthew Garrett <mjg59@google.com> wrote:
-> Distributions are likely to build with
-> CONFIG_HARDENED_USERCOPY_FALLBACK, but individual sites may wish to
-> disable that functionality. Add a sysctl that allows the fallback to be
-> disabled and then forbids any attempt to re-enable it.
+Thanks Tobin, for your detailed comments.
 
-Is it likely that distros will select FALLBACK? I figured by the time
-a kernel with this feature got to the distros it'd already gotten a
-fair bit of testing, so they'd just leave FALLBACK disabled.
+On Wed, Nov 22, 2017 at 5:29 AM, Tobin C. Harding <me@tobin.cc> wrote:
+> You don't typically need [xxx v1] for version 1, the v1 is implicit.
+>
+> Please use the git brief description prefix that is already in use i.e
+>
+>         leaking_addresses: add support for 32-bit kernel addresses
 
-I'll consider this, though I have to refactor the series a bit to move
-this patch earlier, etc.
+Ok..
 
-Thanks for looking at it!
+> On Tue, Nov 21, 2017 at 01:28:14PM +0530, kaiwan.billimoria@gmail.com wrote:
+>> - support for ARM-32
+>
+> Sure, we can do this later.
 
--Kees
+Righto
 
 >
-> Signed-off-by: Matthew Garrett <mjg59@google.com>
-> ---
->  Documentation/sysctl/vm.txt |  9 +++++++++
->  include/linux/mm.h          |  7 +++++++
->  kernel/sysctl.c             | 11 +++++++++++
->  mm/memory.c                 | 17 +++++++++++++++++
->  mm/slab.c                   |  4 +---
->  mm/slub.c                   |  4 +---
->  6 files changed, 46 insertions(+), 6 deletions(-)
+>> - programatically query and set the PAGE_OFFSET based on arch (it's currently
+>> hard-coded)
 >
-> diff --git a/Documentation/sysctl/vm.txt b/Documentation/sysctl/vm.txt
-> index 9baf66a9ef4e..b494b292fd93 100644
-> --- a/Documentation/sysctl/vm.txt
-> +++ b/Documentation/sysctl/vm.txt
-> @@ -60,6 +60,7 @@ Currently, these files are in /proc/sys/vm:
->  - stat_refresh
->  - swappiness
->  - user_reserve_kbytes
-> +- usercopy_fallback
->  - vfs_cache_pressure
->  - watermark_scale_factor
->  - zone_reclaim_mode
-> @@ -822,6 +823,14 @@ Changing this takes effect whenever an application requests memory.
->
->  ==============================================================
->
-> +usercopy_fallback
-> +
-> +If 1, attempts to copy data from userland will generate a kernel warning
-> +if the target has not been whitelisted, but will still be permitted. If 0,
-> +this will result in a kernel BUG(). This may be set from 1 to 0 at runtime,
-> +but may not be modified if 0.
-> +
-> +==============================================================
->  vfs_cache_pressure
->  ------------------
->
-> diff --git a/include/linux/mm.h b/include/linux/mm.h
-> index f8c10d336e42..511237addbf9 100644
-> --- a/include/linux/mm.h
-> +++ b/include/linux/mm.h
-> @@ -2456,6 +2456,8 @@ int drop_caches_sysctl_handler(struct ctl_table *, int,
->  void drop_slab(void);
->  void drop_slab_node(int nid);
->
-> +extern bool usercopy_fallback;
-> +
->  #ifndef CONFIG_MMU
->  #define randomize_va_space 0
->  #else
-> @@ -2602,5 +2604,10 @@ void __init setup_nr_node_ids(void);
->  static inline void setup_nr_node_ids(void) {}
->  #endif
->
-> +#ifdef CONFIG_HARDENED_USERCOPY
-> +int usercopy_fallback_handler(struct ctl_table *table, int write,
-> +                           void __user *buffer, size_t *length, loff_t *ppos);
-> +#endif
-> +
->  #endif /* __KERNEL__ */
->  #endif /* _LINUX_MM_H */
-> diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-> index 423554ad3610..ba3366335b40 100644
-> --- a/kernel/sysctl.c
-> +++ b/kernel/sysctl.c
-> @@ -1663,6 +1663,17 @@ static struct ctl_table vm_table[] = {
->                 .extra1         = (void *)&mmap_rnd_compat_bits_min,
->                 .extra2         = (void *)&mmap_rnd_compat_bits_max,
->         },
-> +#endif
-> +#ifdef CONFIG_HARDENED_USERCOPY
-> +       {
-> +               .procname       = "usercopy_fallback",
-> +               .data           = &usercopy_fallback,
-> +               .maxlen         = sizeof(int),
-> +               .mode           = 0600,
-> +               .proc_handler   = usercopy_fallback_handler,
-> +               .extra1         = &zero,
-> +               .extra2         = &one,
-> +       },
->  #endif
->         { }
->  };
-> diff --git a/mm/memory.c b/mm/memory.c
-> index ec4e15494901..29ed21083a8d 100644
-> --- a/mm/memory.c
-> +++ b/mm/memory.c
-> @@ -104,6 +104,11 @@ EXPORT_SYMBOL(mem_map);
->  void *high_memory;
->  EXPORT_SYMBOL(high_memory);
->
-> +#ifdef CONFIG_HARDENED_USERCOPY
-> +/* Permit non-whitelisted usercopy targets */
-> +bool usercopy_fallback = IS_ENABLED(CONFIG_HARDENED_USERCOPY_FALLBACK);
-> +#endif
-> +
->  /*
->   * Randomize the address space (stacks, mmaps, brk, etc.).
->   *
-> @@ -4668,3 +4673,15 @@ void ptlock_free(struct page *page)
->         kmem_cache_free(page_ptl_cachep, page->ptl);
->  }
->  #endif
-> +
-> +#ifdef CONFIG_HARDENED_USERCOPY
-> +int usercopy_fallback_handler(struct ctl_table *table, int write,
-> +                           void __user *buffer, size_t *length, loff_t *ppos)
-> +{
-> +       /* Don't allow re-enabling fallback if it's been disabled */
-> +       if (write && !usercopy_fallback)
-> +               return -EINVAL;
-> +
-> +       return proc_dointvec_minmax(table, write, buffer, length, ppos);
-> +}
-> +#endif
-> diff --git a/mm/slab.c b/mm/slab.c
-> index 23c53dc46cd6..6afcac1d8b97 100644
-> --- a/mm/slab.c
-> +++ b/mm/slab.c
-> @@ -4435,21 +4435,19 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
->         if (offset < cachep->useroffset ||
->             offset - cachep->useroffset > cachep->usersize ||
->             n > cachep->useroffset - offset + cachep->usersize) {
-> -#ifdef CONFIG_HARDENED_USERCOPY_FALLBACK
->                 /*
->                  * If no whitelist exists, and FALLBACK is set, produce
->                  * a warning instead of rejecting the copy. This is intended
->                  * to be a temporary method to find any missing usercopy
->                  * whitelists.
->                  */
-> -               if (cachep->usersize == 0 &&
-> +               if (usercopy_fallback && cachep->usersize == 0 &&
->                     offset <= cachep->object_size &&
->                     n <= cachep->object_size - offset) {
->                         WARN_ONCE(1, "unexpected usercopy without slab whitelist from %s offset %lu size %lu",
->                                   cachep->name, offset, n);
->                         return NULL;
->                 }
-> -#endif
->                 return cachep->name;
->         }
->
-> diff --git a/mm/slub.c b/mm/slub.c
-> index 82e7f15162a8..e664c6e715e6 100644
-> --- a/mm/slub.c
-> +++ b/mm/slub.c
-> @@ -3867,7 +3867,6 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
->         if (offset < s->useroffset ||
->             offset - s->useroffset > s->usersize ||
->             n > s->useroffset - offset + s->usersize) {
-> -#ifdef CONFIG_HARDENED_USERCOPY_FALLBACK
->                 size_t object_size;
->
->                 object_size = slab_ksize(s);
-> @@ -3878,13 +3877,12 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
->                  * to be a temporary method to find any missing usercopy
->                  * whitelists.
->                  */
-> -               if (s->usersize == 0 &&
-> +               if (usercopy_fallback && s->usersize == 0 &&
->                     (offset <= object_size && n <= object_size - offset)) {
->                         WARN_ONCE(1, "unexpected usercopy without slab whitelist from %s offset %lu size %lu",
->                                   s->name, offset, n);
->                         return NULL;
->                 }
-> -#endif
->                 return s->name;
->         }
->
-> --
-> 2.15.0.448.gf294e3d99a-goog
->
+> Let's do this straight away, it will be much nicer.
 
+Yes, will work on it..
 
+>> 2. Minor edit:
+>> the '--raw', '--suppress-dmesg', '--squash-by-path' and
+>> '--squash-by-filename' option switches are only meaningful
+>> when the '----input-raw=' option is used. So, indent the 'Help' screen lines
+>> to reflect the fact.
+>
+> This is a different change to the architecture stuff so should be in a
+> separate patch. You could do both as a series if you like. Off the top
+> of my head I have never seen options output like this, but if you have,
+> I'm willing to accept your view. You are correct that the options
+> mentioned are only use in conjuncture with '--input-raw' so some way of
+> showing this would be nice.
 
--- 
-Kees Cook
-Pixel Security
+I realize this; so, yeah, will make the next one a series and put this
+in the 2nd..
+
+>>
+>> +my $bit_size = 64;   # Check 64-bit kernel addresses by default
+>
+> This global is unnecessary. You already have is_ix86_32() so you can just
+> use that.
+
+>From your later comments, I think you see that using this global is necessary.
+
+> Please use kernel coding style
+>
+>                 $bit_size = 32;
+
+Ok..
+
+> Bonus points, you uncovered a bug in the current script `if (is_x86_64)`
+> was missing the parenthesis!
+
+Yeah :-)
+
+>
+>> +             if ($match =~ '\b(0x)?(f|F){8}\b') {
+>> +                     return 1;
+>> +             }
+>
+> So, may_leak_address() and is_false_positive() are tightly coupled and
+> not really that nice. Once we add 32 bit support it gets worse. Going
+> forwards, we can either add your 32 bit work then refactor both
+> functions or you can refactor them as you add the 32 bit stuff. I'm open
+> to either.
+
+Yes I agree. Having said that, I'll leave it on the back burner for now..
+
+>Some things to note
+>
+> - The mask stuff (all 1's) should have an all 0's regex also.
+
+Well, once we determine the address is >= PAGE_OFFSET, it's
+automatically apparent that it's not 0, yes?
+
+> - The mask stuff should probably be closer to the mask stuff for 64
+>   bit. It's not immediately apparent a clean way to do this though.
+> - It's not immediately apparent if an address less that PAGE_OFFSET is a
+>   false positive or should be caught in leaks_address().
+
+Hmm only thing I can think of offhand- on many ARM-32's, the kernel
+module space is below
+PAGE_OFFSET; we'd have to take that into consideration of course.
+Anything else < PAGE_OFFSET and a kernel address? Anyone?
+
+> - Do we need 32 bit equivalents for
+>
+>         if ($line =~ '\bKEY=[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b' or
+>             $line =~ '\b[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b') {
+>
+Ok am unclear on what exactly the above achieves.. could you pl throw
+some light on it, thanks..
+
+>
+> Your patch did not apply, the problem looks to be in the code section
+> above. You can see that there is no removed line. For next spin please
+> check your patch applies on top of the 'leaks' branch (which now
+> includes the fix for the bug you found).
+
+Yes, sorry about that; will do..
+
+> I have one more comment that should have been at the top but I did not
+> want to confuse things. Typically, the git brief description should be
+> limited to 50 characters. If you do decide to split this patch into two
+> and use the prefix suggested you may like to change the git brief
+> description but don't feel you have to. If you do decide to do this, your
+> next patch set will be a version 1 again. I may be wrong but I never
+> increment a patch version if the subject line changes (excluding
+> contents of [] ).
+
+Right. I plan to send the next one as a 2 patch series; will keep the
+git prefix you suggest
+(and as Sub changes, will not label the version).
+>
+> thanks,
+> Tobin.
+
+Thanks,
+Kaiwan.
