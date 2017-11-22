@@ -1,198 +1,186 @@
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Wed, 22 Nov 2017 09:01:46 +0100
-Message-Id: <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
-In-Reply-To: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
-References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
-Subject: [kernel-hardening] [PATCH v3 2/2] Protected O_CREAT open in sticky directories
-To: linux-kernel@vger.kernel.org
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-fsdevel@vger.kernel.org, Salvatore Mesoraca <s.mesoraca16@gmail.com>, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
+MIME-Version: 1.0
+Date: Tue, 21 Nov 2017 16:54:32 -0800
+Message-Id: <20171122005432.4974-1-mjg59@google.com>
+From: Matthew Garrett <mjg59@google.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] [PATCH] usercopy: Allow runtime disabling of usercopy fallback
+To: keescook@chromium.org
+Cc: kernel-hardening@lists.openwall.com, Matthew Garrett <mjg59@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Disallows O_CREAT open missing the O_EXCL flag, in world or
-group writable directories, even if the file doesn't exist yet.
-With few exceptions (e.g. shared lock files based on flock())
-if a program tries to open a file, in a sticky directory,
-with the O_CREAT flag and without the O_EXCL, it probably has a bug.
-This feature allows to detect and potentially block programs that
-act this way, it can be used to find vulnerabilities (like those
-prevented by patch #1) and to do policy enforcement.
+Distributions are likely to build with
+CONFIG_HARDENED_USERCOPY_FALLBACK, but individual sites may wish to
+disable that functionality. Add a sysctl that allows the fallback to be
+disabled and then forbids any attempt to re-enable it.
 
-Suggested-by: Solar Designer <solar@openwall.com>
-Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Signed-off-by: Matthew Garrett <mjg59@google.com>
 ---
- Documentation/sysctl/fs.txt | 30 ++++++++++++++++++++++++
- fs/namei.c                  | 56 +++++++++++++++++++++++++++++++++++++++++++++
- include/linux/fs.h          |  1 +
- kernel/sysctl.c             |  9 ++++++++
- 4 files changed, 96 insertions(+)
+ Documentation/sysctl/vm.txt |  9 +++++++++
+ include/linux/mm.h          |  7 +++++++
+ kernel/sysctl.c             | 11 +++++++++++
+ mm/memory.c                 | 17 +++++++++++++++++
+ mm/slab.c                   |  4 +---
+ mm/slub.c                   |  4 +---
+ 6 files changed, 46 insertions(+), 6 deletions(-)
 
-diff --git a/Documentation/sysctl/fs.txt b/Documentation/sysctl/fs.txt
-index f3cf2cd..7f24b4f 100644
---- a/Documentation/sysctl/fs.txt
-+++ b/Documentation/sysctl/fs.txt
-@@ -37,6 +37,7 @@ Currently, these files are in /proc/sys/fs:
- - protected_fifos
- - protected_hardlinks
- - protected_regular
-+- protected_sticky_child_create
- - protected_symlinks
- - suid_dumpable
- - super-max
-@@ -238,6 +239,35 @@ When set to "2" it also applies to group writable sticky directories.
+diff --git a/Documentation/sysctl/vm.txt b/Documentation/sysctl/vm.txt
+index 9baf66a9ef4e..b494b292fd93 100644
+--- a/Documentation/sysctl/vm.txt
++++ b/Documentation/sysctl/vm.txt
+@@ -60,6 +60,7 @@ Currently, these files are in /proc/sys/vm:
+ - stat_refresh
+ - swappiness
+ - user_reserve_kbytes
++- usercopy_fallback
+ - vfs_cache_pressure
+ - watermark_scale_factor
+ - zone_reclaim_mode
+@@ -822,6 +823,14 @@ Changing this takes effect whenever an application requests memory.
  
  ==============================================================
  
-+protected_sticky_child_create:
++usercopy_fallback
 +
-+An O_CREAT open missing the O_EXCL flag in a sticky directory is,
-+often, a bug or a synthom of the fact that the program is not
-+using appropriate procedures to access sticky directories.
-+This protection allow to detect and possibly block these unsafe
-+open invocations, even if the files don't exist yet.
-+Though should be noted that, sometimes, it's OK to open a file
-+with O_CREAT and without O_EXCL (e.g. shared lock files based
-+on flock()), for this reason values above 2 should be set
-+with care.
-+
-+When set to "0" the protection is disabled.
-+
-+When set to "1", notify about O_CREAT open missing the O_EXCL flag
-+in world writable sticky directories.
-+
-+When set to "2", notify about O_CREAT open missing the O_EXCL flag
-+in world or group writable sticky directories.
-+
-+When set to "3", block O_CREAT open missing the O_EXCL flag
-+in world writable sticky directories and notify (but don't block)
-+in group writable sticky directories.
-+
-+When set to "4", block O_CREAT open missing the O_EXCL flag
-+in world writable and group writable sticky directories.
++If 1, attempts to copy data from userland will generate a kernel warning
++if the target has not been whitelisted, but will still be permitted. If 0,
++this will result in a kernel BUG(). This may be set from 1 to 0 at runtime,
++but may not be modified if 0.
 +
 +==============================================================
+ vfs_cache_pressure
+ ------------------
+ 
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index f8c10d336e42..511237addbf9 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -2456,6 +2456,8 @@ int drop_caches_sysctl_handler(struct ctl_table *, int,
+ void drop_slab(void);
+ void drop_slab_node(int nid);
+ 
++extern bool usercopy_fallback;
 +
- protected_symlinks:
+ #ifndef CONFIG_MMU
+ #define randomize_va_space 0
+ #else
+@@ -2602,5 +2604,10 @@ void __init setup_nr_node_ids(void);
+ static inline void setup_nr_node_ids(void) {}
+ #endif
  
- A long-standing class of security issues is the symlink-based
-diff --git a/fs/namei.c b/fs/namei.c
-index 92992ad..fcee423 100644
---- a/fs/namei.c
-+++ b/fs/namei.c
-@@ -904,6 +904,7 @@ static inline void put_link(struct nameidata *nd)
- int sysctl_protected_hardlinks __read_mostly = 0;
- int sysctl_protected_fifos __read_mostly;
- int sysctl_protected_regular __read_mostly;
-+int sysctl_protected_sticky_child_create __read_mostly;
- 
- /**
-  * may_follow_link - Check symlink following for unsafe situations
-@@ -1065,6 +1066,53 @@ static int may_create_in_sticky(struct dentry * const dir,
- 	return 0;
- }
- 
-+/**
-+ * may_create_no_excl - Detect and possibly block unsafe O_CREAT open
-+ *			without O_EXCL.
-+ * @dir: the stick parent directory
-+ * @name: the file name
-+ * @inode: the inode of the file to open (can be NULL to skip uid checks)
-+ *
-+ * When sysctl_protected_sticky_child_create is set to "0" the
-+ * protection is disabled.
-+ * When it's set to "1", notify about O_CREAT open missing the O_EXCL flag
-+ * in world writable sticky directories.
-+ * When it's set to "2", notify about O_CREAT open missing the O_EXCL flag
-+ * in group writable sticky directories.
-+ * When it's set to "3", block O_CREAT open missing the O_EXCL flag
-+ * in world writable sticky directories and notify (but don't block)
-+ * in group writable sticky directories.
-+ * When it's set to "4", block O_CREAT open missing the O_EXCL flag
-+ * in world writable and group writable sticky directories.
-+ *
-+ * Returns 0 if the open is allowed, -ve on error.
-+ */
-+static int may_create_no_excl(struct dentry * const dir,
-+			      const unsigned char * const name,
-+			      struct inode * const inode)
-+{
-+	umode_t mode = dir->d_inode->i_mode;
++#ifdef CONFIG_HARDENED_USERCOPY
++int usercopy_fallback_handler(struct ctl_table *table, int write,
++			    void __user *buffer, size_t *length, loff_t *ppos);
++#endif
 +
-+	if (likely(!(mode & S_ISVTX)))
-+		return 0;
-+	if (inode && uid_eq(current_fsuid(), inode->i_uid))
-+		return 0;
-+
-+	if ((sysctl_protected_sticky_child_create && likely(mode & 0002)) ||
-+	    (sysctl_protected_sticky_child_create >= 2 && mode & 0020)) {
-+		pr_notice_ratelimited("unsafe O_CREAT open (missing O_EXCL) of '%s' in a sticky directory by UID %u, EUID %u, process %s:%d.\n",
-+				      name,
-+				      from_kuid(&init_user_ns, current_uid()),
-+				      from_kuid(&init_user_ns, current_euid()),
-+				      current->comm, current->pid);
-+		if (sysctl_protected_sticky_child_create >= 4 ||
-+		    (sysctl_protected_sticky_child_create == 3 &&
-+		     likely(mode & 0002)))
-+			return -EACCES;
-+	}
-+	return 0;
-+}
-+
- static __always_inline
- const char *get_link(struct nameidata *nd)
- {
-@@ -3256,6 +3304,11 @@ static int lookup_open(struct nameidata *nd, struct path *path,
- 			error = -EACCES;
- 			goto out_dput;
- 		}
-+		if (!(open_flag & O_EXCL)) {
-+			error = may_create_no_excl(dir, nd->last.name, NULL);
-+			if (unlikely(error))
-+				goto out_dput;
-+		}
- 		error = dir_inode->i_op->create(dir_inode, dentry, mode,
- 						open_flag & O_EXCL);
- 		if (error)
-@@ -3422,6 +3475,9 @@ static int do_last(struct nameidata *nd,
- 		error = may_create_in_sticky(dir, nd->last.name, inode);
- 		if (unlikely(error))
- 			goto out;
-+		error = may_create_no_excl(dir, nd->last.name, inode);
-+		if (unlikely(error))
-+			goto out;
- 	}
- 	error = -ENOTDIR;
- 	if ((nd->flags & LOOKUP_DIRECTORY) && !d_can_lookup(nd->path.dentry))
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 6fb45a52..3ab37e0 100644
---- a/include/linux/fs.h
-+++ b/include/linux/fs.h
-@@ -74,6 +74,7 @@
- extern int sysctl_protected_hardlinks;
- extern int sysctl_protected_fifos;
- extern int sysctl_protected_regular;
-+extern int sysctl_protected_sticky_child_create;
- 
- typedef __kernel_rwf_t rwf_t;
- 
+ #endif /* __KERNEL__ */
+ #endif /* _LINUX_MM_H */
 diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-index 590fbc9..012c739 100644
+index 423554ad3610..ba3366335b40 100644
 --- a/kernel/sysctl.c
 +++ b/kernel/sysctl.c
-@@ -1817,6 +1817,15 @@ static int sysrq_sysctl_handler(struct ctl_table *table, int write,
- 		.extra2		= &two,
+@@ -1663,6 +1663,17 @@ static struct ctl_table vm_table[] = {
+ 		.extra1		= (void *)&mmap_rnd_compat_bits_min,
+ 		.extra2		= (void *)&mmap_rnd_compat_bits_max,
  	},
- 	{
-+		.procname	= "protected_sticky_child_create",
-+		.data		= &sysctl_protected_sticky_child_create,
++#endif
++#ifdef CONFIG_HARDENED_USERCOPY
++	{
++		.procname	= "usercopy_fallback",
++		.data		= &usercopy_fallback,
 +		.maxlen		= sizeof(int),
 +		.mode		= 0600,
-+		.proc_handler	= proc_dointvec_minmax,
++		.proc_handler	= usercopy_fallback_handler,
 +		.extra1		= &zero,
-+		.extra2		= &four,
++		.extra2		= &one,
 +	},
-+	{
- 		.procname	= "suid_dumpable",
- 		.data		= &suid_dumpable,
- 		.maxlen		= sizeof(int),
+ #endif
+ 	{ }
+ };
+diff --git a/mm/memory.c b/mm/memory.c
+index ec4e15494901..29ed21083a8d 100644
+--- a/mm/memory.c
++++ b/mm/memory.c
+@@ -104,6 +104,11 @@ EXPORT_SYMBOL(mem_map);
+ void *high_memory;
+ EXPORT_SYMBOL(high_memory);
+ 
++#ifdef CONFIG_HARDENED_USERCOPY
++/* Permit non-whitelisted usercopy targets */
++bool usercopy_fallback = IS_ENABLED(CONFIG_HARDENED_USERCOPY_FALLBACK);
++#endif
++
+ /*
+  * Randomize the address space (stacks, mmaps, brk, etc.).
+  *
+@@ -4668,3 +4673,15 @@ void ptlock_free(struct page *page)
+ 	kmem_cache_free(page_ptl_cachep, page->ptl);
+ }
+ #endif
++
++#ifdef CONFIG_HARDENED_USERCOPY
++int usercopy_fallback_handler(struct ctl_table *table, int write,
++			    void __user *buffer, size_t *length, loff_t *ppos)
++{
++	/* Don't allow re-enabling fallback if it's been disabled */
++	if (write && !usercopy_fallback)
++		return -EINVAL;
++
++	return proc_dointvec_minmax(table, write, buffer, length, ppos);
++}
++#endif
+diff --git a/mm/slab.c b/mm/slab.c
+index 23c53dc46cd6..6afcac1d8b97 100644
+--- a/mm/slab.c
++++ b/mm/slab.c
+@@ -4435,21 +4435,19 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
+ 	if (offset < cachep->useroffset ||
+ 	    offset - cachep->useroffset > cachep->usersize ||
+ 	    n > cachep->useroffset - offset + cachep->usersize) {
+-#ifdef CONFIG_HARDENED_USERCOPY_FALLBACK
+ 		/*
+ 		 * If no whitelist exists, and FALLBACK is set, produce
+ 		 * a warning instead of rejecting the copy. This is intended
+ 		 * to be a temporary method to find any missing usercopy
+ 		 * whitelists.
+ 		 */
+-		if (cachep->usersize == 0 &&
++		if (usercopy_fallback && cachep->usersize == 0 &&
+ 		    offset <= cachep->object_size &&
+ 		    n <= cachep->object_size - offset) {
+ 			WARN_ONCE(1, "unexpected usercopy without slab whitelist from %s offset %lu size %lu",
+ 				  cachep->name, offset, n);
+ 			return NULL;
+ 		}
+-#endif
+ 		return cachep->name;
+ 	}
+ 
+diff --git a/mm/slub.c b/mm/slub.c
+index 82e7f15162a8..e664c6e715e6 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -3867,7 +3867,6 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
+ 	if (offset < s->useroffset ||
+ 	    offset - s->useroffset > s->usersize ||
+ 	    n > s->useroffset - offset + s->usersize) {
+-#ifdef CONFIG_HARDENED_USERCOPY_FALLBACK
+ 		size_t object_size;
+ 
+ 		object_size = slab_ksize(s);
+@@ -3878,13 +3877,12 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
+ 		 * to be a temporary method to find any missing usercopy
+ 		 * whitelists.
+ 		 */
+-		if (s->usersize == 0 &&
++		if (usercopy_fallback && s->usersize == 0 &&
+ 		    (offset <= object_size && n <= object_size - offset)) {
+ 			WARN_ONCE(1, "unexpected usercopy without slab whitelist from %s offset %lu size %lu",
+ 				  s->name, offset, n);
+ 			return NULL;
+ 		}
+-#endif
+ 		return s->name;
+ 	}
+ 
 -- 
-1.9.1
+2.15.0.448.gf294e3d99a-goog
