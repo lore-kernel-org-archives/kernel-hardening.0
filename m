@@ -1,75 +1,106 @@
-Date: Wed, 22 Nov 2017 05:22:36 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Message-ID: <20171122132235.GA30635@bombadil.infradead.org>
-References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
- <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
+From: zerons <zeronsaxm@gmail.com>
+Message-ID: <be5b9100-4f60-1a10-6b32-b425cb2db05e@gmail.com>
+Date: Wed, 22 Nov 2017 22:33:31 +0800
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-fsdevel@vger.kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
+Content-Type: multipart/mixed;
+ boundary="------------E9219F000EA79A6AFCAFC68F"
+Subject: [kernel-hardening] a part of SLAB_FREELIST_HARDENED feature doesn't
+ work well
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 22, 2017 at 09:01:46AM +0100, Salvatore Mesoraca wrote:
-> +An O_CREAT open missing the O_EXCL flag in a sticky directory is,
-> +often, a bug or a synthom of the fact that the program is not
-> +using appropriate procedures to access sticky directories.
-> +This protection allow to detect and possibly block these unsafe
-> +open invocations, even if the files don't exist yet.
-> +Though should be noted that, sometimes, it's OK to open a file
-> +with O_CREAT and without O_EXCL (e.g. shared lock files based
-> +on flock()), for this reason values above 2 should be set
-> +with care.
-> +
-> +When set to "0" the protection is disabled.
-> +
-> +When set to "1", notify about O_CREAT open missing the O_EXCL flag
-> +in world writable sticky directories.
-> +
-> +When set to "2", notify about O_CREAT open missing the O_EXCL flag
-> +in world or group writable sticky directories.
-> +
-> +When set to "3", block O_CREAT open missing the O_EXCL flag
-> +in world writable sticky directories and notify (but don't block)
-> +in group writable sticky directories.
-> +
-> +When set to "4", block O_CREAT open missing the O_EXCL flag
-> +in world writable and group writable sticky directories.
+This is a multi-part message in MIME format.
+--------------E9219F000EA79A6AFCAFC68F
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
 
-This seems insufficiently flexible.  For example, there is no way for me
-to specify that I want to block O_CREAT without O_EXCL in world-writable,
-but not be notified about O_CREAT without O_EXCL in group-writable.
+(commit-webpage)[https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ce6fa91b93630396ca220c33dd38ffc62686d499]
 
-And maybe I want to be notified that blocking has happened?
+Test it on kernel 4.14.0.
 
-Why not make it bits?  So:
+When something goes like
+kfree(a);
+kfree(a);
+then `insmod` crashed 'Segment Fault'
 
-0 => notify in world
-1 => block in world
-2 => notify in group
-3 => block in group
+kfree(a);kfree(b);kfree(a);
+Got nothing.
 
-So you'd have the following meaningful values:
+I add another kernel thread, just free some objects
+very close to the target object_a;
+kfree(a);
+		another thread does some kfree(...)
+kfree(a);
+nothing happened, this patch didn't crash the `insmod` operation.
 
- 0 - permit all (your option 0)
- 1 - notify world; permit group (your option 1)
- 2 - block world; permit group
- 3 - block,notify world; permit group
- 4 - permit world; notify group (?)
- 5 - notify world; notify group (your option 2)
- 6 - block world; notify group (your option 3)
- 7 - block,notify world; notify group
- 8 - permit world; block group (?)
- 9 - notify world; block group (?)
-10 - block world; block group (your option 4)
-11 - block,notify world; block group
-12 - permit world; block, notify group (?)
-13 - notify world; block, notify group (?)
-14 - block world; block, notify group
-15 - block, notify world; block, notify group
+--------------E9219F000EA79A6AFCAFC68F
+Content-Type: text/x-csrc;
+ name="test.c"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline;
+ filename="test.c"
 
-Some of these don't make a lot of sense (marked with ?), but I don't see
-the harm in permitting a sysadmin to do something that seems nonsensical
-to me.
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/types.h>
+#include <linux/fs.h>
+#include <linux/slab.h>
+#include <linux/debugfs.h>
+#include <linux/kallsyms.h>
+#include <linux/sched.h>
+#include <linux/kthread.h>
+#include <linux/err.h>
+#include <linux/delay.h>
+#include <asm/insn.h>
+
+#define COUNT 0x20
+char *p[COUNT];
+struct task_struct *tsk;
+
+int another_thread(void *arg)
+{
+	int i = 0;
+	for (i = 0; i < COUNT-2; i+=2) {
+		pr_info("kfree i: %d, %p\n", i, p[i]);
+		kfree(p[i]);
+	}
+	msleep(10);
+	kfree(p[COUNT-2]);
+	return 0;
+}
+
+static int __init test_init(void)
+{
+	int i = 0;
+	for (i = 0; i < COUNT-1; i++)
+		p[i] = kmalloc(4096, GFP_KERNEL);
+	p[COUNT-1] = p[COUNT-3];
+
+	tsk = kthread_run(another_thread, NULL, "another_thread");
+	if (IS_ERR(tsk))
+		pr_info("kthread_run err\n");
+
+	for (i = 1; i < COUNT-1; i+=2) {
+		pr_info("kfree i: %d, %p\n", i, p[i]);
+		kfree(p[i]);
+	}
+
+	msleep(100);
+	kfree(p[COUNT-1]);
+
+	return 0;
+}
+
+static void __exit test_exit(void)
+{
+	if (!IS_ERR(tsk))
+		kthread_stop(tsk);
+	return;
+}
+
+module_init(test_init);
+module_exit(test_exit);
+MODULE_LICENSE("GPL");
+
+--------------E9219F000EA79A6AFCAFC68F--
