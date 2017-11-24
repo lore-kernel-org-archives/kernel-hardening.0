@@ -1,32 +1,25 @@
 MIME-Version: 1.0
-In-Reply-To: <20171124055935.GB17858@eros>
-References: <1511414131.12425.14.camel@gmail.com> <20171124055935.GB17858@eros>
-From: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
-Date: Fri, 24 Nov 2017 12:51:34 +0530
-Message-ID: <CAPDLWs8+cXShyCt_AH3WgSnn6-cEgGRjJookfqWZ-Lq1Jt72_Q@mail.gmail.com>
+In-Reply-To: <20171123224354.GJ12736@eros>
+References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
+ <1511337706-8297-2-git-send-email-s.mesoraca16@gmail.com> <20171123224354.GJ12736@eros>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Fri, 24 Nov 2017 09:24:56 +0100
+Message-ID: <CAJHCu1KoHND9z4HvKRhn3o+NShXPUwfyvAT2bXgA6HKcZL=sVQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 2/2] scripts: leaking_addresses: help screen updates
+Subject: Re: [kernel-hardening] [PATCH v3 1/2] Protected FIFOs and regular files
 To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-fsdevel@vger.kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 24, 2017 at 11:29 AM, Tobin C. Harding <me@tobin.cc> wrote:
-
-> Neither of these patches applies to my tree. Are you editing the diff's
-> by hand? I noticed the patches don't end with the version signature, like this:
+2017-11-23 23:43 GMT+01:00 Tobin C. Harding <me@tobin.cc>:
+> On Wed, Nov 22, 2017 at 09:01:45AM +0100, Salvatore Mesoraca wrote:
 >
-> ----
-> 2.7.4
+> Please take these comments in all humility, my English is a long way
+> from perfect. These are English grammar comments only. If this is viewed
+> as trivial please stop reading now and ignore.
 
-I cloned your tree from here: https://github.com/tcharding/linux/tree/leaks
-is that right?
+Any help is always greatly appreciated!
+And I like your proposed changes, they sound better to me too.
+Thank you for your time,
 
-One thing i can think of: i have to copy across the script to a
-cloud-based 32-bit system, work on it there, copy it back to your tree
-on my laptop manually, then i do the 'git diff -r' and basically
-copy-paste that. Is this causing issues?
-
-thanks, Kaiwan.
-
-> thanks,
-> Tobin.
+Salvatore
