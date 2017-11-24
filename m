@@ -1,26 +1,59 @@
+Date: Fri, 24 Nov 2017 21:16:59 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171124101659.GE17858@eros>
+References: <1511414131.12425.14.camel@gmail.com>
+ <20171124055935.GB17858@eros>
+ <CAPDLWs8+cXShyCt_AH3WgSnn6-cEgGRjJookfqWZ-Lq1Jt72_Q@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20171123225706.GK12736@eros>
-References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
- <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com> <20171123225706.GK12736@eros>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Fri, 24 Nov 2017 09:34:28 +0100
-Message-ID: <CAJHCu1+wfS-rgOy8h7D84Ar0zdi+d3af_gjwLwwJynQJRaS9jQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH v3 2/2] Protected O_CREAT open in
- sticky directories
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-fsdevel@vger.kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAPDLWs8+cXShyCt_AH3WgSnn6-cEgGRjJookfqWZ-Lq1Jt72_Q@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 2/2] scripts: leaking_addresses: help screen updates
+To: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2017-11-23 23:57 GMT+01:00 Tobin C. Harding <me@tobin.cc>:
-> On Wed, Nov 22, 2017 at 09:01:46AM +0100, Salvatore Mesoraca wrote:
->
-> Same caveat about this being English language comments only as for patch
-> 1/2. Please ignore if this is too trivial. My grammar is a long way from
-> perfect, especially please feel free to ignore my placement of commas,
-> they are often wrong.
+On Fri, Nov 24, 2017 at 12:51:34PM +0530, Kaiwan N Billimoria wrote:
+> On Fri, Nov 24, 2017 at 11:29 AM, Tobin C. Harding <me@tobin.cc> wrote:
+> 
+> > Neither of these patches applies to my tree. Are you editing the diff's
+> > by hand? I noticed the patches don't end with the version signature, like this:
+> >
+> > ----
+> > 2.7.4
+> 
+> I cloned your tree from here: https://github.com/tcharding/linux/tree/leaks
+> is that right?
 
-As I wrote before: any help is always welcome.
-Thank you,
+If that gets you the tree and the branch then great. I've never done it
+that way but hey if it works it works.
 
-Salvatore
+> One thing i can think of: i have to copy across the script to a
+> cloud-based 32-bit system, work on it there, copy it back to your tree
+> on my laptop manually,
+
+That sounds fine. I'd personally work on it locally, `scp` to the remote
+host and then run it there.
+
+> then i do the 'git diff -r' and basically
+> copy-paste that. Is this causing issues?
+
+There's your problem. I'm no git expert but the format produced by that
+command is not able to be applied by `git apply` or `git am`. No doubt
+there is a command to apply it but in ten minutes playing around I
+couldn't find it.
+
+Patches can easily be generated using
+
+	git format-patch -X
+
+where X is the number of commits to include in the patch. You can then
+apply them to using `git am` or `git apply`. You can in this way verify
+that your patches apply to the tree/branch of whichever maintainer you
+are sending the patch to.
+
+If you try to patch staging with patches that don't apply you get an
+automated response saying so, I haven't got that sophisticated yet.
+
+Hope this helps,
+Tobin.
