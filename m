@@ -1,25 +1,37 @@
 MIME-Version: 1.0
-In-Reply-To: <20171123224354.GJ12736@eros>
+In-Reply-To: <eaac83ad-083d-f6b1-383f-e20e73ab7e1c@gmail.com>
 References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
- <1511337706-8297-2-git-send-email-s.mesoraca16@gmail.com> <20171123224354.GJ12736@eros>
+ <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com> <eaac83ad-083d-f6b1-383f-e20e73ab7e1c@gmail.com>
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Fri, 24 Nov 2017 09:24:56 +0100
-Message-ID: <CAJHCu1KoHND9z4HvKRhn3o+NShXPUwfyvAT2bXgA6HKcZL=sVQ@mail.gmail.com>
+Date: Fri, 24 Nov 2017 09:28:03 +0100
+Message-ID: <CAJHCu1+YMaGtwxHgAU7szqTXMs2b8o3bzVthfyaBN6Kp7co=gA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH v3 1/2] Protected FIFOs and regular files
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-fsdevel@vger.kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
+Subject: Re: [kernel-hardening] [PATCH v3 2/2] Protected O_CREAT open in
+ sticky directories
+To: Pavel Vasilyev <dixlor@gmail.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2017-11-23 23:43 GMT+01:00 Tobin C. Harding <me@tobin.cc>:
-> On Wed, Nov 22, 2017 at 09:01:45AM +0100, Salvatore Mesoraca wrote:
+2017-11-22 13:03 GMT+01:00 Pavel Vasilyev <dixlor@gmail.com>:
+> ...
+>> +
+>> +When set to "2", notify about O_CREAT open missing the O_EXCL flag
+>> +in world or group writable sticky directories.
+>> +
+>> +When set to "3", block O_CREAT open missing the O_EXCL flag
+>> +in world writable sticky directories and notify (but don't block)
+>> +in group writable sticky directories.
+>> +
+>> +When set to "4", block O_CREAT open missing the O_EXCL flag
+>> +in world writable and group writable sticky directories.
 >
-> Please take these comments in all humility, my English is a long way
-> from perfect. These are English grammar comments only. If this is viewed
-> as trivial please stop reading now and ignore.
+> May be add:
+>
+> When set to "X", notify O_CREAT open missing the O_EXCL flag
+> in world writable sticky directories and notify in group
+> writable sticky directories.
 
-Any help is always greatly appreciated!
-And I like your proposed changes, they sound better to me too.
-Thank you for your time,
+Doesn't the "2" option already do this?
+Did I misunderstood something?
 
 Salvatore
