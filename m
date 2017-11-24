@@ -1,49 +1,46 @@
-MIME-Version: 1.0
-In-Reply-To: <33dcc007e92349999ce77bf45825be22@AcuMS.aculab.com>
+From: David Laight <David.Laight@ACULAB.COM>
+Date: Fri, 24 Nov 2017 11:53:01 +0000
+Message-ID: <d1ffc1cd48b545ebb81a7f682fde9f1d@AcuMS.aculab.com>
 References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
- <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com> <20171122165144.07aea7ac@alans-desktop>
+ <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
+ <20171122165144.07aea7ac@alans-desktop>
  <33dcc007e92349999ce77bf45825be22@AcuMS.aculab.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Fri, 24 Nov 2017 12:43:47 +0100
-Message-ID: <CAJHCu1K-xZXaXh38qYaNzJBr+USVxvsaqOReZjtnchxVOyYnww@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
-To: David Laight <David.Laight@aculab.com>
-Cc: Alan Cox <gnomes@lxorguk.ukuu.org.uk>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
+ <CAJHCu1K-xZXaXh38qYaNzJBr+USVxvsaqOReZjtnchxVOyYnww@mail.gmail.com>
+In-Reply-To: <CAJHCu1K-xZXaXh38qYaNzJBr+USVxvsaqOReZjtnchxVOyYnww@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: [kernel-hardening] RE: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
+To: 'Salvatore Mesoraca' <s.mesoraca16@gmail.com>
+Cc: Alan Cox <gnomes@lxorguk.ukuu.org.uk>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar
+ Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2017-11-24 11:53 GMT+01:00 David Laight <David.Laight@aculab.com>:
-> From: Alan Cox
->> Sent: 22 November 2017 16:52
->>
->> On Wed, 22 Nov 2017 09:01:46 +0100
->> Salvatore Mesoraca <s.mesoraca16@gmail.com> wrote:
->>
->> > Disallows O_CREAT open missing the O_EXCL flag, in world or
->> > group writable directories, even if the file doesn't exist yet.
->> > With few exceptions (e.g. shared lock files based on flock())
->>
->> Enough exceptions to make it a bad idea.
->>
->> Firstly if you care this much *stop* having shared writable directories.
->> We have namespaces, you don't need them. You can give every user their
->> own /tmp etc.
->
-> Looks like a very bad idea to me as well.
->
-> Doesn't this stop all shell redirects into a shared /tmp ?
-> I'm pretty sure most programs use O_CREAT | O_TRUNC for output
-> files - they'll all stop working.
-
-If some program does such a thing, that's a potential vulnerability.
-With "protected_hardlinks" you are, in most cases, safe.
-But, still, that program has a bug and having this feature enabled will
-help you notice it soon.
-For that matter, I'm using this patch on my system and I don't have any
-program behaving like this.
-
-> If there are some directories where you need to force O_EXCL you
-> need to make it a property of the directory, not the kernel.
->
->         David
->
+RnJvbTogU2FsdmF0b3JlIE1lc29yYWNhIFttYWlsdG86cy5tZXNvcmFjYTE2QGdtYWlsLmNvbV0N
+Cj4gU2VudDogMjQgTm92ZW1iZXIgMjAxNyAxMTo0NA0KPiANCj4gMjAxNy0xMS0yNCAxMTo1MyBH
+TVQrMDE6MDAgRGF2aWQgTGFpZ2h0IDxEYXZpZC5MYWlnaHRAYWN1bGFiLmNvbT46DQo+ID4gRnJv
+bTogQWxhbiBDb3gNCj4gPj4gU2VudDogMjIgTm92ZW1iZXIgMjAxNyAxNjo1Mg0KPiA+Pg0KPiA+
+PiBPbiBXZWQsIDIyIE5vdiAyMDE3IDA5OjAxOjQ2ICswMTAwDQo+ID4+IFNhbHZhdG9yZSBNZXNv
+cmFjYSA8cy5tZXNvcmFjYTE2QGdtYWlsLmNvbT4gd3JvdGU6DQo+ID4+DQo+ID4+ID4gRGlzYWxs
+b3dzIE9fQ1JFQVQgb3BlbiBtaXNzaW5nIHRoZSBPX0VYQ0wgZmxhZywgaW4gd29ybGQgb3INCj4g
+Pj4gPiBncm91cCB3cml0YWJsZSBkaXJlY3RvcmllcywgZXZlbiBpZiB0aGUgZmlsZSBkb2Vzbid0
+IGV4aXN0IHlldC4NCj4gPj4gPiBXaXRoIGZldyBleGNlcHRpb25zIChlLmcuIHNoYXJlZCBsb2Nr
+IGZpbGVzIGJhc2VkIG9uIGZsb2NrKCkpDQo+ID4+DQo+ID4+IEVub3VnaCBleGNlcHRpb25zIHRv
+IG1ha2UgaXQgYSBiYWQgaWRlYS4NCj4gPj4NCj4gPj4gRmlyc3RseSBpZiB5b3UgY2FyZSB0aGlz
+IG11Y2ggKnN0b3AqIGhhdmluZyBzaGFyZWQgd3JpdGFibGUgZGlyZWN0b3JpZXMuDQo+ID4+IFdl
+IGhhdmUgbmFtZXNwYWNlcywgeW91IGRvbid0IG5lZWQgdGhlbS4gWW91IGNhbiBnaXZlIGV2ZXJ5
+IHVzZXIgdGhlaXINCj4gPj4gb3duIC90bXAgZXRjLg0KPiA+DQo+ID4gTG9va3MgbGlrZSBhIHZl
+cnkgYmFkIGlkZWEgdG8gbWUgYXMgd2VsbC4NCj4gPg0KPiA+IERvZXNuJ3QgdGhpcyBzdG9wIGFs
+bCBzaGVsbCByZWRpcmVjdHMgaW50byBhIHNoYXJlZCAvdG1wID8NCj4gPiBJJ20gcHJldHR5IHN1
+cmUgbW9zdCBwcm9ncmFtcyB1c2UgT19DUkVBVCB8IE9fVFJVTkMgZm9yIG91dHB1dA0KPiA+IGZp
+bGVzIC0gdGhleSdsbCBhbGwgc3RvcCB3b3JraW5nLg0KPiANCj4gSWYgc29tZSBwcm9ncmFtIGRv
+ZXMgc3VjaCBhIHRoaW5nLCB0aGF0J3MgYSBwb3RlbnRpYWwgdnVsbmVyYWJpbGl0eS4NCj4gV2l0
+aCAicHJvdGVjdGVkX2hhcmRsaW5rcyIgeW91IGFyZSwgaW4gbW9zdCBjYXNlcywgc2FmZS4NCj4g
+QnV0LCBzdGlsbCwgdGhhdCBwcm9ncmFtIGhhcyBhIGJ1ZyBhbmQgaGF2aW5nIHRoaXMgZmVhdHVy
+ZSBlbmFibGVkIHdpbGwNCj4gaGVscCB5b3Ugbm90aWNlIGl0IHNvb24uDQo+IEZvciB0aGF0IG1h
+dHRlciwgSSdtIHVzaW5nIHRoaXMgcGF0Y2ggb24gbXkgc3lzdGVtIGFuZCBJIGRvbid0IGhhdmUg
+YW55DQo+IHByb2dyYW0gYmVoYXZpbmcgbGlrZSB0aGlzLg0KDQpIbW1tLi4uLiBhIHF1aWNrIHN0
+cmFjZSBzaG93cyBjcCBhbmQgdmkgZG9pbmcgc3RhdCgiL3RtcC9mb28iKSBhbmQgdGhlbg0Kb3Bl
+bihPX1dST05MWXxPX1RSVU5DKSBpZiBpdCBleGlzdHMgYW5kIE9fQ1JFQVRFfE9fRVhDTCBpZiBp
+dCBkb2Vzbid0Lg0KSSBjYW4ndCBoZWxwIGZlZWxpbmcgdGhhdCBpcyBqdXN0IGhpZGluZyBhIHJh
+Y2UuDQoNCglEYXZpZA0KDQo=
