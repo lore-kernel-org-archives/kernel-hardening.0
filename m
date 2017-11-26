@@ -1,179 +1,61 @@
-Date: Sun, 26 Nov 2017 00:40:37 -0600
-From: "Serge E. Hallyn" <serge@hallyn.com>
-Message-ID: <20171126064037.GB30279@mail.hallyn.com>
-References: <20171110053757.21170-1-mahesh@bandewar.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171110053757.21170-1-mahesh@bandewar.net>
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] userns: control capabilities of some user
- namespaces
-To: Mahesh Bandewar <mahesh@bandewar.net>
-Cc: LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <maheshb@google.com>
+In-Reply-To: <d1ffc1cd48b545ebb81a7f682fde9f1d@AcuMS.aculab.com>
+References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
+ <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com> <20171122165144.07aea7ac@alans-desktop>
+ <33dcc007e92349999ce77bf45825be22@AcuMS.aculab.com> <CAJHCu1K-xZXaXh38qYaNzJBr+USVxvsaqOReZjtnchxVOyYnww@mail.gmail.com>
+ <d1ffc1cd48b545ebb81a7f682fde9f1d@AcuMS.aculab.com>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Sun, 26 Nov 2017 12:29:35 +0100
+Message-ID: <CAJHCu1J+=hFUZn2WsA0x-Y75Gu3Jtb8DYAf=LVu=B8nfCX_=_g@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
+To: David Laight <David.Laight@aculab.com>
+Cc: Alan Cox <gnomes@lxorguk.ukuu.org.uk>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Mahesh Bandewar (mahesh@bandewar.net):
-> From: Mahesh Bandewar <maheshb@google.com>
-> 
-> With this new notion of "controlled" user-namespaces, the controlled
-> user-namespaces are marked at the time of their creation while the
-> capabilities of processes that belong to them are controlled using the
-> global mask.
-> 
-> Init-user-ns is always uncontrolled and a process that has SYS_ADMIN
-> that belongs to uncontrolled user-ns can create another (child) user-
-> namespace that is uncontrolled. Any other process (that either does
-> not have SYS_ADMIN or belongs to a controlled user-ns) can only
-> create a user-ns that is controlled.
-> 
-> global-capability-whitelist (controlled_userns_caps_whitelist) is used
-> at the capability check-time and keeps the semantics for the processes
-> that belong to uncontrolled user-ns as it is. Processes that belong to
-> controlled user-ns however are subjected to different checks-
-> 
->    (a) if the capability in question is controlled and process belongs
->        to controlled user-ns, then it's always denied.
->    (b) if the capability in question is NOT controlled then fall back
->        to the traditional check.
-> 
-> Signed-off-by: Mahesh Bandewar <maheshb@google.com>
+2017-11-24 12:53 GMT+01:00 David Laight <David.Laight@aculab.com>:
+> From: Salvatore Mesoraca [mailto:s.mesoraca16@gmail.com]
+>> Sent: 24 November 2017 11:44
+>>
+>> 2017-11-24 11:53 GMT+01:00 David Laight <David.Laight@aculab.com>:
+>> > From: Alan Cox
+>> >> Sent: 22 November 2017 16:52
+>> >>
+>> >> On Wed, 22 Nov 2017 09:01:46 +0100
+>> >> Salvatore Mesoraca <s.mesoraca16@gmail.com> wrote:
+>> >>
+>> >> > Disallows O_CREAT open missing the O_EXCL flag, in world or
+>> >> > group writable directories, even if the file doesn't exist yet.
+>> >> > With few exceptions (e.g. shared lock files based on flock())
+>> >>
+>> >> Enough exceptions to make it a bad idea.
+>> >>
+>> >> Firstly if you care this much *stop* having shared writable directories.
+>> >> We have namespaces, you don't need them. You can give every user their
+>> >> own /tmp etc.
+>> >
+>> > Looks like a very bad idea to me as well.
+>> >
+>> > Doesn't this stop all shell redirects into a shared /tmp ?
+>> > I'm pretty sure most programs use O_CREAT | O_TRUNC for output
+>> > files - they'll all stop working.
+>>
+>> If some program does such a thing, that's a potential vulnerability.
+>> With "protected_hardlinks" you are, in most cases, safe.
+>> But, still, that program has a bug and having this feature enabled will
+>> help you notice it soon.
+>> For that matter, I'm using this patch on my system and I don't have any
+>> program behaving like this.
+>
+> Hmmm.... a quick strace shows cp and vi doing stat("/tmp/foo") and then
+> open(O_WRONLY|O_TRUNC) if it exists and O_CREATE|O_EXCL if it doesn't.
+> I can't help feeling that is just hiding a race.
 
-Acked-by: Serge Hallyn <serge@hallyn.com>
+Yes, unfortunately, doing something like "cp somefile /tmp/" is a bad
+practice that
+in most cases will go unnoticed by this feature. Nevertheless there
+are many other
+real world vulnerability that it would have been able to detect.
+Thank you very much for taking the time to do some experiments.
 
-Although a few comment addition requests below:
-
-> ---
-> v2:
->   Don't recalculate user-ns flags for every setns() call.
-> v1:
->   Initial submission.
-> 
->  include/linux/capability.h     |  1 +
->  include/linux/user_namespace.h | 20 ++++++++++++++++++++
->  kernel/capability.c            |  5 +++++
->  kernel/user_namespace.c        |  4 ++++
->  security/commoncap.c           |  8 ++++++++
->  5 files changed, 38 insertions(+)
-> 
-> diff --git a/include/linux/capability.h b/include/linux/capability.h
-> index 7d79a4689625..a1fd9e460379 100644
-> --- a/include/linux/capability.h
-> +++ b/include/linux/capability.h
-> @@ -251,6 +251,7 @@ extern bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns);
->  extern int get_vfs_caps_from_disk(const struct dentry *dentry, struct cpu_vfs_cap_data *cpu_caps);
->  int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
->  				 void __user *buff, size_t *lenp, loff_t *ppos);
-
-Here and at the definition below, please add a comment explaining
-that a controlled cap is defined as not being in the sysctl.
-
-> +bool is_capability_controlled(int cap);
->  
->  extern int cap_convert_nscap(struct dentry *dentry, void **ivalue, size_t size);
->  
-> diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
-> index 3fe714da7f5a..647f825c7b5f 100644
-> --- a/include/linux/user_namespace.h
-> +++ b/include/linux/user_namespace.h
-> @@ -23,6 +23,7 @@ struct uid_gid_map {	/* 64 bytes -- 1 cache line */
->  };
->  
->  #define USERNS_SETGROUPS_ALLOWED 1UL
-> +#define USERNS_CONTROLLED	 2UL
->  
->  #define USERNS_INIT_FLAGS USERNS_SETGROUPS_ALLOWED
->  
-> @@ -103,6 +104,16 @@ static inline void put_user_ns(struct user_namespace *ns)
->  		__put_user_ns(ns);
->  }
->  
-
-Please add a comment explaining that a controlled ns
-is one created by a user which did not have CAP_SYS_ADMIN
-(or descended from such an ns).
-
-> +static inline bool is_user_ns_controlled(const struct user_namespace *ns)
-> +{
-> +	return ns->flags & USERNS_CONTROLLED;
-> +}
-> +
-> +static inline void mark_user_ns_controlled(struct user_namespace *ns)
-> +{
-> +	ns->flags |= USERNS_CONTROLLED;
-> +}
-> +
->  struct seq_operations;
->  extern const struct seq_operations proc_uid_seq_operations;
->  extern const struct seq_operations proc_gid_seq_operations;
-> @@ -161,6 +172,15 @@ static inline struct ns_common *ns_get_owner(struct ns_common *ns)
->  {
->  	return ERR_PTR(-EPERM);
->  }
-> +
-> +static inline bool is_user_ns_controlled(const struct user_namespace *ns)
-> +{
-> +	return false;
-> +}
-> +
-> +static inline void mark_user_ns_controlled(struct user_namespace *ns)
-> +{
-> +}
->  #endif
->  
->  #endif /* _LINUX_USER_H */
-> diff --git a/kernel/capability.c b/kernel/capability.c
-> index 4a859b7d4902..bffe249922de 100644
-> --- a/kernel/capability.c
-> +++ b/kernel/capability.c
-> @@ -511,6 +511,11 @@ bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns)
->  }
->  
->  /* Controlled-userns capabilities routines */
-> +bool is_capability_controlled(int cap)
-> +{
-> +	return !cap_raised(controlled_userns_caps_whitelist, cap);
-> +}
-> +
->  #ifdef CONFIG_SYSCTL
->  int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
->  				 void __user *buff, size_t *lenp, loff_t *ppos)
-> diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
-> index c490f1e4313b..600c7dcb9ff7 100644
-> --- a/kernel/user_namespace.c
-> +++ b/kernel/user_namespace.c
-> @@ -139,6 +139,10 @@ int create_user_ns(struct cred *new)
->  		goto fail_keyring;
->  
->  	set_cred_user_ns(new, ns);
-> +	if (!ns_capable(parent_ns, CAP_SYS_ADMIN) ||
-> +	    is_user_ns_controlled(parent_ns))
-> +		mark_user_ns_controlled(ns);
-> +
->  	return 0;
->  fail_keyring:
->  #ifdef CONFIG_PERSISTENT_KEYRINGS
-> diff --git a/security/commoncap.c b/security/commoncap.c
-> index fc46f5b85251..89103f16ac37 100644
-> --- a/security/commoncap.c
-> +++ b/security/commoncap.c
-> @@ -73,6 +73,14 @@ int cap_capable(const struct cred *cred, struct user_namespace *targ_ns,
->  {
->  	struct user_namespace *ns = targ_ns;
->  
-> +	/* If the capability is controlled and user-ns that process
-> +	 * belongs-to is 'controlled' then return EPERM and no need
-> +	 * to check the user-ns hierarchy.
-> +	 */
-> +	if (is_user_ns_controlled(cred->user_ns) &&
-> +	    is_capability_controlled(cap))
-> +		return -EPERM;
-
-I'd be curious to see the performance impact on this on a regular
-workload (kernel build?) in a controlled ns.
-
-> +
->  	/* See if cred has the capability in the target user namespace
->  	 * by examining the target user namespace and all of the target
->  	 * user namespace's parents.
-> -- 
-> 2.15.0.448.gf294e3d99a-goog
+Salvatore
