@@ -1,294 +1,169 @@
 From: Djalal Harouni <tixxdz@gmail.com>
-Date: Mon, 27 Nov 2017 18:18:34 +0100
-Message-Id: <1511803118-2552-2-git-send-email-tixxdz@gmail.com>
+Date: Mon, 27 Nov 2017 18:18:35 +0100
+Message-Id: <1511803118-2552-3-git-send-email-tixxdz@gmail.com>
 In-Reply-To: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
 References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
-Subject: [kernel-hardening] [PATCH v5 next 1/5] modules:capabilities: add request_module_cap()
+Subject: [kernel-hardening] [PATCH v5 next 2/5] modules:capabilities: add cap_kernel_module_request() permission check
 To: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Luis R. Rodriguez" <mcgrof@kernel.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 Cc: Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, netdev@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>, Djalal Harouni <tixxdz@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a preparation patch to improve the module auto-load
-infrastructure.
+This is a preparation patch to improve for the module auto-load
+infrastrucutre.
 
-We need this patch to have more control on module auto-load operations.
-The operation by default is allowed unless enduser or the calling code
-requests that we need to perform futher permission checks.
+With this change, subsystems that want to autoload modules and implement
+onsite capability checks, can defer the checks to the capability
+subsystem by passing the required capabilities with the appropriate
+modules alias. The capability subsystem will trust callers about
+the passed values and perform a capability check to either allow module
+auto-loading or deny it.
 
-With this change subsystems will be able to decide if module auto-load
-feature first will have to do a capability check and load the module if
-the permission check succeeds or deny the operation.
+This patch changes:
+* Adds cap_kernel_module_request() capability hook.
+* Adds an empty may_autoload_module() that will be updated in the next
+  patch.
 
-As an example "netdev-%s" modules, they are allowed to be loaded if
-CAP_NET_ADMIN is set. Therefore, in order to not break this assumption,
-and allow userspace to load "netdev-%s" modules with CAP_NET_ADMIN,
-we have added:
-
-        request_module_cap(required_cap, prefix, fmt...)
-
-This new function will take:
-'@required_cap': Required capability to load the module
-'@prefix': The module prefix if any, otherwise NULL
-'@fmt': printf style format string for the name of the module with its
-        arguments if any
-
-ex:
-        request_module_cap(CAP_NET_ADMIN, "netdev", "%s", mod);
-
-After a discussion with Rusty Russell [1], the suggestion was to pass
-the capability from request_module() to security_kernel_module_request()
-for 'netdev-%s' modules that need CAP_NET_ADMIN, and after review from
-Kees Cook [2] and experimenting with the code, the patch now does the
-following:
-
-* Adds the request_module_cap() function.
-* Updates the __request_module() to take the "required_cap" argument
-        with the "prefix".
-
-This patch also updates SELinux which is currently the only user of
-security_kernel_module_request(), the security hook now accepts
-'required_cap' and 'prefix' as arguments.
-
-Based on patch by Rusty Russell and discussion with Kees Cook:
-[1] https://lkml.org/lkml/2017/4/26/735
-[2] https://lkml.org/lkml/2017/5/23/775
-
+Cc: James Morris <james.l.morris@oracle.com>
 Cc: Serge Hallyn <serge@hallyn.com>
 Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Ben Hutchings <ben.hutchings@codethink.co.uk>
 Suggested-by: Rusty Russell <rusty@rustcorp.com.au>
 Suggested-by: Kees Cook <keescook@chromium.org>
 Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
 ---
- include/linux/kmod.h      | 65 ++++++++++++++++++++++++++++++++++++++++++-----
- include/linux/lsm_hooks.h |  6 ++++-
- include/linux/security.h  |  7 +++--
- kernel/kmod.c             | 29 ++++++++++++++++-----
- security/security.c       |  6 +++--
- security/selinux/hooks.c  |  3 ++-
- 6 files changed, 97 insertions(+), 19 deletions(-)
+ include/linux/module.h   | 10 ++++++++++
+ include/linux/security.h |  4 +++-
+ kernel/module.c          | 23 +++++++++++++++++++++++
+ security/commoncap.c     | 26 ++++++++++++++++++++++++++
+ 4 files changed, 62 insertions(+), 1 deletion(-)
 
-diff --git a/include/linux/kmod.h b/include/linux/kmod.h
-index 40c89ad..ccd6a1c 100644
---- a/include/linux/kmod.h
-+++ b/include/linux/kmod.h
-@@ -33,16 +33,67 @@
- extern char modprobe_path[]; /* for sysctl */
- /* modprobe exit status on success, -ve on error.  Return value
-  * usually useless though. */
--extern __printf(2, 3)
--int __request_module(bool wait, const char *name, ...);
--#define request_module(mod...) __request_module(true, mod)
--#define request_module_nowait(mod...) __request_module(false, mod)
-+extern __printf(4, 5)
-+int __request_module(bool wait, int required_cap,
-+		     const char *prefix, const char *name, ...);
- #define try_then_request_module(x, mod...) \
--	((x) ?: (__request_module(true, mod), (x)))
-+	((x) ?: (__request_module(true, -1, NULL, mod), (x)))
- #else
--static inline int request_module(const char *name, ...) { return -ENOSYS; }
--static inline int request_module_nowait(const char *name, ...) { return -ENOSYS; }
-+static inline __printf(4, 5)
-+int __request_module(bool wait, int required_cap,
-+		     const char *prefix, const char *name, ...)
-+{ return -ENOSYS; }
- #define try_then_request_module(x, mod...) (x)
- #endif
+diff --git a/include/linux/module.h b/include/linux/module.h
+index c69b49a..5cbb239 100644
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -497,6 +497,10 @@ bool __is_module_percpu_address(unsigned long addr, unsigned long *can_addr);
+ bool is_module_percpu_address(unsigned long addr);
+ bool is_module_text_address(unsigned long addr);
  
-+/**
-+ * request_module  Try to load a kernel module
-+ *
-+ * Automatically loads the request module.
-+ *
-+ * @mod...: The module name
-+ */
-+#define request_module(mod...) __request_module(true, -1, NULL, mod)
++/* Determine whether a module auto-load operation is permitted. */
++int may_autoload_module(char *kmod_name, int required_cap,
++			const char *kmod_prefix);
 +
-+#define request_module_nowait(mod...) __request_module(false, -1, NULL, mod)
+ static inline bool within_module_core(unsigned long addr,
+ 				      const struct module *mod)
+ {
+@@ -643,6 +647,12 @@ bool is_module_sig_enforced(void);
+ 
+ #else /* !CONFIG_MODULES... */
+ 
++static inline int may_autoload_module(char *kmod_name, int required_cap,
++				      const char *kmod_prefix)
++{
++	return -ENOSYS;
++}
 +
-+/**
-+ * request_module_cap  Load kernel module only if the required capability is set
-+ *
-+ * Automatically load a module if the required capability is set and it
-+ * corresponds to the appropriate subsystem that is indicated by prefix.
-+ *
-+ * This allows to load aliased modules like 'netdev-%s' with CAP_NET_ADMIN.
-+ *
-+ * ex:
-+ *	request_module_cap(CAP_NET_ADMIN, "netdev", "%s", mod);
-+ *
-+ * @required_cap: Required capability to load the module
-+ * @prefix: The module prefix if any, otherwise NULL
-+ * @fmt: printf style format string for the name of the module with its
-+ *       arguments if any
-+ *
-+ * If '@required_cap' is positive, the security subsystem will check if
-+ * '@prefix' is set and if caller has the required capability then the
-+ * operation is allowed.
-+ * The security subsystem can not make assumption about the boundaries
-+ * of other subsystems, it is their responsability to make a call with
-+ * the right capability and module alias.
-+ *
-+ * If '@required_cap' is positive and '@prefix' is NULL then we assume
-+ * that the '@required_cap' is CAP_SYS_MODULE.
-+ *
-+ * If '@required_cap' is negative then there are no permission checks, this
-+ * is the equivalent to request_module() function.
-+ *
-+ * This function trust callers to pass the right capability with the
-+ * appropriate prefix.
-+ *
-+ * Note: the permission checks may still fail, even if the required
-+ * capability is negative, this is due to module loading restrictions
-+ * that are controlled by the enduser.
-+ */
-+#define request_module_cap(required_cap, prefix, fmt...) \
-+	__request_module(true, required_cap, prefix, fmt)
-+
- #endif /* __LINUX_KMOD_H__ */
-diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
-index 7161d8e..d898bd0 100644
---- a/include/linux/lsm_hooks.h
-+++ b/include/linux/lsm_hooks.h
-@@ -571,6 +571,9 @@
-  *	Ability to trigger the kernel to automatically upcall to userspace for
-  *	userspace to load a kernel module with the given name.
-  *	@kmod_name name of the module requested by the kernel
-+ *	@required_cap If positive, the required capability to automatically load
-+ *	the correspondig kernel module.
-+ *	@prefix The prefix of the module if any. Can be NULL.
-  *	Return 0 if successful.
-  * @kernel_read_file:
-  *	Read a file specified by userspace.
-@@ -1543,7 +1546,8 @@ union security_list_options {
- 	void (*cred_transfer)(struct cred *new, const struct cred *old);
- 	int (*kernel_act_as)(struct cred *new, u32 secid);
- 	int (*kernel_create_files_as)(struct cred *new, struct inode *inode);
--	int (*kernel_module_request)(char *kmod_name);
-+	int (*kernel_module_request)(char *kmod_name, int required_cap,
-+				     const char *prefix);
- 	int (*kernel_read_file)(struct file *file, enum kernel_read_file_id id);
- 	int (*kernel_post_read_file)(struct file *file, char *buf, loff_t size,
- 				     enum kernel_read_file_id id);
+ static inline struct module *__module_address(unsigned long addr)
+ {
+ 	return NULL;
 diff --git a/include/linux/security.h b/include/linux/security.h
-index 73f1ef6..41e700a 100644
+index 41e700a..9bb53b5 100644
 --- a/include/linux/security.h
 +++ b/include/linux/security.h
-@@ -326,7 +326,8 @@ int security_prepare_creds(struct cred *new, const struct cred *old, gfp_t gfp);
- void security_transfer_creds(struct cred *new, const struct cred *old);
- int security_kernel_act_as(struct cred *new, u32 secid);
- int security_kernel_create_files_as(struct cred *new, struct inode *inode);
--int security_kernel_module_request(char *kmod_name);
-+int security_kernel_module_request(char *kmod_name, int required_cap,
-+				   const char *prefix);
- int security_kernel_read_file(struct file *file, enum kernel_read_file_id id);
- int security_kernel_post_read_file(struct file *file, char *buf, loff_t size,
- 				   enum kernel_read_file_id id);
-@@ -919,7 +920,9 @@ static inline int security_kernel_create_files_as(struct cred *cred,
- 	return 0;
+@@ -102,6 +102,8 @@ extern int cap_task_setscheduler(struct task_struct *p);
+ extern int cap_task_setioprio(struct task_struct *p, int ioprio);
+ extern int cap_task_setnice(struct task_struct *p, int nice);
+ extern int cap_vm_enough_memory(struct mm_struct *mm, long pages);
++extern int cap_kernel_module_request(char *kmod_name, int required_cap,
++				     const char *kmod_prefix);
+ 
+ struct msghdr;
+ struct sk_buff;
+@@ -924,7 +926,7 @@ static inline int security_kernel_module_request(char *kmod_name,
+ 						 int required_cap,
+ 						 const char *prefix)
+ {
+-	return 0;
++	return cap_kernel_module_request(kmod_name, required_cap, prefix);
  }
  
--static inline int security_kernel_module_request(char *kmod_name)
-+static inline int security_kernel_module_request(char *kmod_name,
-+						 int required_cap,
-+						 const char *prefix)
- {
- 	return 0;
+ static inline int security_kernel_read_file(struct file *file,
+diff --git a/kernel/module.c b/kernel/module.c
+index f0411a2..3380d39 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -4340,6 +4340,29 @@ struct module *__module_text_address(unsigned long addr)
  }
-diff --git a/kernel/kmod.c b/kernel/kmod.c
-index bc6addd..679d401 100644
---- a/kernel/kmod.c
-+++ b/kernel/kmod.c
-@@ -109,6 +109,8 @@ static int call_modprobe(char *module_name, int wait)
- /**
-  * __request_module - try to load a kernel module
-  * @wait: wait (or not) for the operation to complete
-+ * @required_cap: required capability to load the module
-+ * @prefix: module prefix if any otherwise NULL
-  * @fmt: printf style format string for the name of the module
-  * @...: arguments as specified in the format string
-  *
-@@ -119,14 +121,20 @@ static int call_modprobe(char *module_name, int wait)
-  * must check that the service they requested is now available not blindly
-  * invoke it.
-  *
-- * If module auto-loading support is disabled then this function
-- * becomes a no-operation.
-+ * If "required_cap" is positive, The security subsystem will trust the caller
-+ * that if it has "required_cap" then it may allow to load some modules that
-+ * have a specific alias.
+ EXPORT_SYMBOL_GPL(__module_text_address);
+ 
++/**
++ * may_autoload_module - Determine whether a module auto-load operation
++ * is permitted
++ * @kmod_name: The module name
++ * @required_cap: if positive, may allow to auto-load the module if this
++ *	capability is set
++ * @kmod_prefix: The module prefix if any, otherwise NULL
 + *
-+ * If module auto-loading support is disabled by clearing the modprobe path
-+ * then this function becomes a no-operation.
-  */
--int __request_module(bool wait, const char *fmt, ...)
-+int __request_module(bool wait, int required_cap,
-+		     const char *prefix, const char *fmt, ...)
- {
- 	va_list args;
- 	char module_name[MODULE_NAME_LEN];
- 	int ret;
-+	int len = 0;
- 
- 	/*
- 	 * We don't allow synchronous module loading from async.  Module
-@@ -139,13 +147,22 @@ int __request_module(bool wait, const char *fmt, ...)
- 	if (!modprobe_path[0])
- 		return 0;
- 
-+	/*
-+	 * Lets attach the prefix to the module name
-+	 */
-+	if (prefix != NULL && *prefix != '\0') {
-+		len += snprintf(module_name, MODULE_NAME_LEN, "%s-", prefix);
-+		if (len >= MODULE_NAME_LEN)
-+			return -ENAMETOOLONG;
-+	}
++ * Determine whether a module auto-load operation is allowed or not.
++ *
++ * This allows to have more control on automatic module loading, and align it
++ * with explicit load/unload module operations. The kernel contains several
++ * modules, some of them are not updated often and may contain bugs and
++ * vulnerabilities.
++ *
++ * Returns 0 if the module request is allowed or -EPERM if not.
++ */
++int may_autoload_module(char *kmod_name, int required_cap,
++			const char *kmod_prefix)
++{
++	return 0;
++}
 +
- 	va_start(args, fmt);
--	ret = vsnprintf(module_name, MODULE_NAME_LEN, fmt, args);
-+	ret = vsnprintf(module_name + len, MODULE_NAME_LEN - len, fmt, args);
- 	va_end(args);
--	if (ret >= MODULE_NAME_LEN)
-+	if (ret >= MODULE_NAME_LEN - len)
- 		return -ENAMETOOLONG;
- 
--	ret = security_kernel_module_request(module_name);
-+	ret = security_kernel_module_request(module_name, required_cap, prefix);
- 	if (ret)
- 		return ret;
- 
-diff --git a/security/security.c b/security/security.c
-index 1cd8526..91ecebd 100644
---- a/security/security.c
-+++ b/security/security.c
-@@ -1015,9 +1015,11 @@ int security_kernel_create_files_as(struct cred *new, struct inode *inode)
- 	return call_int_hook(kernel_create_files_as, 0, new, inode);
- }
- 
--int security_kernel_module_request(char *kmod_name)
-+int security_kernel_module_request(char *kmod_name, int required_cap,
-+				   const char *prefix)
+ /* Don't grab lock, we're oopsing. */
+ void print_modules(void)
  {
--	return call_int_hook(kernel_module_request, 0, kmod_name);
-+	return call_int_hook(kernel_module_request, 0, kmod_name,
-+			     required_cap, prefix);
+diff --git a/security/commoncap.c b/security/commoncap.c
+index 4f8e093..236e573 100644
+--- a/security/commoncap.c
++++ b/security/commoncap.c
+@@ -1340,6 +1340,31 @@ int cap_mmap_file(struct file *file, unsigned long reqprot,
+ 	return 0;
  }
  
- int security_kernel_read_file(struct file *file, enum kernel_read_file_id id)
-diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
-index d07299d..69f25da 100644
---- a/security/selinux/hooks.c
-+++ b/security/selinux/hooks.c
-@@ -3889,7 +3889,8 @@ static int selinux_kernel_create_files_as(struct cred *new, struct inode *inode)
- 	return ret;
- }
++/**
++ * cap_kernel_module_request - Determine whether a module auto-load is permitted
++ * @kmod_name: The module name
++ * @required_cap: if positive, may allow to auto-load the module if this
++ *	capability is set
++ * @kmod_prefix: the module prefix if any, otherwise NULL
++ *
++ * Determine whether a module should be automatically loaded.
++ * Returns 0 if the module request should be allowed, -EPERM if not.
++ */
++int cap_kernel_module_request(char *kmod_name, int required_cap,
++			      const char *kmod_prefix)
++{
++	int ret;
++	char comm[sizeof(current->comm)];
++
++	ret = may_autoload_module(kmod_name, required_cap, kmod_prefix);
++	if (ret < 0)
++		pr_notice_ratelimited(
++			"module: automatic module loading of %.64s by \"%s\"[%d] was denied\n",
++			kmod_name, get_task_comm(comm, current), current->pid);
++
++	return ret;
++}
++
+ #ifdef CONFIG_SECURITY
  
--static int selinux_kernel_module_request(char *kmod_name)
-+static int selinux_kernel_module_request(char *kmod_name, int required_cap,
-+					 const char *prefix)
- {
- 	struct common_audit_data ad;
+ struct security_hook_list capability_hooks[] __lsm_ro_after_init = {
+@@ -1361,6 +1386,7 @@ struct security_hook_list capability_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(task_setioprio, cap_task_setioprio),
+ 	LSM_HOOK_INIT(task_setnice, cap_task_setnice),
+ 	LSM_HOOK_INIT(vm_enough_memory, cap_vm_enough_memory),
++	LSM_HOOK_INIT(kernel_module_request, cap_kernel_module_request),
+ };
  
+ void __init capability_add_hooks(void)
 -- 
 2.7.4
