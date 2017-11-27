@@ -1,89 +1,52 @@
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
-References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
- <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Mon, 27 Nov 2017 14:04:58 -0800
-Message-ID: <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use request_module_cap() to
- load 'netdev-%s' modules
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Luis R. Rodriguez" <mcgrof@kernel.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>
+From: "Tobin C. Harding" <me@tobin.cc>
+Date: Tue, 28 Nov 2017 09:30:16 +1100
+Message-Id: <1511821819-5496-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] [RFC 0/3] kallsyms: don't leak address when printing symbol
+To: kernel-hardening@lists.openwall.com
+Cc: "Tobin C. Harding" <me@tobin.cc>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 27, 2017 at 1:41 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
->
-> However, we are trying hard to abstract some semantics that are easy
-> to grasp, we are mutating capabilities and seccomp to have an
-> abstracted "yes/no" options for our endusers.
+This is an RFC for two reasons.
 
-Yes.
+1) I don't know who this patch set may break?
+2) Patch set includes a function that is not called. Function is there
+   to facilitate fixing breakages.
 
-Sadly, it looks like we actually do have users that just expect to
-load modules dynamically without any capabilities at all.
+_If_ no one gets broken then we can remove the unused function.
 
-So we can't actually disallow it by default at all, which imho makes
-this security option essentially useless.
+Thanks for looking at this.
 
-A security option that people can't use without breaking their system
-is pointless.
+Currently if a pointer is printed using %p[ssB] and the symbol is not
+found (kallsyms_lookup() fails) then we print the actual address. This
+potentially leaks kernel addresses. We could instead print something
+_safe_. If kallsyms is made to return an error then callers of
+sprint_symbol() can decide what to do.
 
-We saw that with SELinux - people ended up just disabling it for
-_years_, simply because it ended up breaking so much in practice. And
-yes, it got fixed eventually, but at an incredibly high maintenance
-cost of all the crazy rules databases.
+In the case of vsprintf we can print '<no-symbol>' (patch 2).
 
-> Alright, but I guess we are stuck, is there something better on how we
-> can do this or describe this ?
+In the case of trace we want the address so we can check the return code
+and print the address if no symbol is found (patch 3).
 
-So I wonder if we can perhaps look at the places that actually do
-"requerst_module()", and start filtering them on that basis.
+Design for this set loosely suggested by Steve Rostedt (so as not to
+break ftrace).
 
-Some of them will already have checked for capabilities.
 
-Others clearly expect to juist work even _without_ capabilities (ie
-the bluetoothd case).
+Patch 1 and 2 tested, patch 3 (trace stuff) untested :)
 
-So the whole "let's add a global config option" model is broken. There
-is no possible global rule. It will break things, which in turn mean
-that people won't turn it on (and we can't turn it on by default),
-which in turn makes this pointless.
+thanks,
+Tobin.
 
-In other words, I really think that anything that just adds a mode
-flag cannot work.
+Tobin C. Harding (3):
+  kallsyms: don't leak address when symbol not found
+  vsprintf: print <no-symbol> if symbol not found
+  trace: print address if symbol not found
 
-So instead of having one "modules_autoload_mode" thing, maybe the
-individual requerst_module() cases need to simply be audited.
+ include/linux/kernel.h           |  2 ++
+ kernel/kallsyms.c                |  6 ++++--
+ kernel/trace/trace.h             | 24 ++++++++++++++++++++++++
+ kernel/trace/trace_events_hist.c |  6 +++---
+ lib/vsprintf.c                   | 18 +++++++++++++++---
+ 5 files changed, 48 insertions(+), 8 deletions(-)
 
-Put another way: I think the part of your patch series that does that
-"request_module_cap()" and makes the netdev modules use it is a good
-addition.
-
-It's the "mode" part I really don't agree with, because apparently we
-really need to default it to permissive.
-
-So how about instead:
-
- - add that "request_module_cap()" and make the networking code that
-already uses CAP_ADMIN_NET use it.
-
- - make "request_module()" itself default to being
-"request_module_cap(CAP_SYS_MODULE,..)"
-
- - make sure that when the capability check fails, we print an error
-message, and then for the ones that trigger, we will audit them and
-see if it's ok.
-
-Because that "mode" flag defaulting to off will just mean that the
-default case will remain the existing unsafe one, and that's bad.
-
-Opt-in really doesn't work. We've done it.
-
-Global flags for varied behavior really doesn't work. We've done that
-too. Different cases want different behavior, the global flag is just
-fundamentally broken.
-
-              Linus
+-- 
+2.7.4
