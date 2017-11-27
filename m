@@ -1,112 +1,60 @@
 From: Mark Rutland <mark.rutland@arm.com>
-Date: Mon, 27 Nov 2017 16:37:56 +0000
-Message-Id: <20171127163806.31435-3-mark.rutland@arm.com>
+Date: Mon, 27 Nov 2017 16:37:57 +0000
+Message-Id: <20171127163806.31435-4-mark.rutland@arm.com>
 In-Reply-To: <20171127163806.31435-1-mark.rutland@arm.com>
 References: <20171127163806.31435-1-mark.rutland@arm.com>
-Subject: [kernel-hardening] [PATCHv2 02/12] arm64: add pointer authentication register bits
+Subject: [kernel-hardening] [PATCHv2 03/12] arm64/cpufeature: add ARMv8.3 id_aa64isar1 bits
 To: linux-arm-kernel@lists.infradead.org
 Cc: arnd@arndb.de, catalin.marinas@arm.com, cdall@linaro.org, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, mark.rutland@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, yao.qi@arm.com, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The ARMv8.3 pointer authentication extension adds:
+>From ARMv8.3 onwards, ID_AA64ISAR1 is no longer entirely RES0, and now
+has four fields describing the presence of pointer authentication
+functionality:
 
-* New fields in ID_AA64ISAR1 to report the presence of pointer
-  authentication functionality.
+* APA - address authentication present, using an architected algorithm
+* API - address authentication present, using an IMP DEF algorithm
+* GPA - generic authentication present, using an architected algorithm
+* GPI - generic authentication present, using an IMP DEF algorithm
 
-* New control bits in SCTLR_ELx to enable this functionality.
+This patch adds the requisite definitions so that we can identify the
+presence of this functionality.
 
-* New system registers to hold the keys necessary for this
-  functionality.
-
-* A new ESR_ELx.EC code used when the new instructions are affected by
-  configurable traps
-
-This patch adds the relevant definitions to <asm/sysreg.h> and
-<asm/esr.h> for these, to be used by subsequent patches.
+For the timebeing, the features are hidden from both KVM guests and
+userspace. As marking them with FTR_HIDDEN only hides them from
+userspace, they are also protected with ifdeffery on
+CONFIG_ARM64_POINTER_AUTHENTICATION.
 
 Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-Cc: Catalin Marinas <catalin.marinas@arm.com>
 Cc: Suzuki K Poulose <suzuki.poulose@arm.com>
+Cc: Catalin Marinas <catalin.marinas@arm.com>
 Cc: Will Deacon <will.deacon@arm.com>
+Cc: Suzuki K Poulose <suzuki.poulose@arm.com>
 ---
- arch/arm64/include/asm/esr.h    |  3 ++-
- arch/arm64/include/asm/sysreg.h | 30 ++++++++++++++++++++++++++++++
- 2 files changed, 32 insertions(+), 1 deletion(-)
+ arch/arm64/kernel/cpufeature.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
 
-diff --git a/arch/arm64/include/asm/esr.h b/arch/arm64/include/asm/esr.h
-index 014d7d8edcf9..5c628fa31cec 100644
---- a/arch/arm64/include/asm/esr.h
-+++ b/arch/arm64/include/asm/esr.h
-@@ -30,7 +30,8 @@
- #define ESR_ELx_EC_CP14_LS	(0x06)
- #define ESR_ELx_EC_FP_ASIMD	(0x07)
- #define ESR_ELx_EC_CP10_ID	(0x08)
--/* Unallocated EC: 0x09 - 0x0B */
-+#define ESR_ELx_EC_PAC		(0x09)
-+/* Unallocated EC: 0x0A - 0x0B */
- #define ESR_ELx_EC_CP14_64	(0x0C)
- /* Unallocated EC: 0x0d */
- #define ESR_ELx_EC_ILL		(0x0E)
-diff --git a/arch/arm64/include/asm/sysreg.h b/arch/arm64/include/asm/sysreg.h
-index 08cc88574659..a67cfedfa3af 100644
---- a/arch/arm64/include/asm/sysreg.h
-+++ b/arch/arm64/include/asm/sysreg.h
-@@ -170,6 +170,19 @@
- #define SYS_TTBR1_EL1			sys_reg(3, 0, 2, 0, 1)
- #define SYS_TCR_EL1			sys_reg(3, 0, 2, 0, 2)
+diff --git a/arch/arm64/kernel/cpufeature.c b/arch/arm64/kernel/cpufeature.c
+index c5ba0097887f..1883cdffcdf7 100644
+--- a/arch/arm64/kernel/cpufeature.c
++++ b/arch/arm64/kernel/cpufeature.c
+@@ -137,9 +137,17 @@ static const struct arm64_ftr_bits ftr_id_aa64isar0[] = {
+ };
  
-+#define SYS_APIAKEYLO_EL1		sys_reg(3, 0, 2, 1, 0)
-+#define SYS_APIAKEYHI_EL1		sys_reg(3, 0, 2, 1, 1)
-+#define SYS_APIBKEYLO_EL1		sys_reg(3, 0, 2, 1, 2)
-+#define SYS_APIBKEYHI_EL1		sys_reg(3, 0, 2, 1, 3)
-+
-+#define SYS_APDAKEYLO_EL1		sys_reg(3, 0, 2, 2, 0)
-+#define SYS_APDAKEYHI_EL1		sys_reg(3, 0, 2, 2, 1)
-+#define SYS_APDBKEYLO_EL1		sys_reg(3, 0, 2, 2, 2)
-+#define SYS_APDBKEYHI_EL1		sys_reg(3, 0, 2, 2, 3)
-+
-+#define SYS_APGAKEYLO_EL1		sys_reg(3, 0, 2, 3, 0)
-+#define SYS_APGAKEYHI_EL1		sys_reg(3, 0, 2, 3, 1)
-+
- #define SYS_ICC_PMR_EL1			sys_reg(3, 0, 4, 6, 0)
- 
- #define SYS_AFSR0_EL1			sys_reg(3, 0, 5, 1, 0)
-@@ -397,7 +410,11 @@
- #define SYS_ICH_LR15_EL2		__SYS__LR8_EL2(7)
- 
- /* Common SCTLR_ELx flags. */
-+#define SCTLR_ELx_ENIA	(1 << 31)
-+#define SCTLR_ELx_ENIB	(1 << 30)
-+#define SCTLR_ELx_ENDA	(1 << 27)
- #define SCTLR_ELx_EE    (1 << 25)
-+#define SCTLR_ELx_ENDB	(1 << 13)
- #define SCTLR_ELx_I	(1 << 12)
- #define SCTLR_ELx_SA	(1 << 3)
- #define SCTLR_ELx_C	(1 << 2)
-@@ -431,11 +448,24 @@
- #define ID_AA64ISAR0_AES_SHIFT		4
- 
- /* id_aa64isar1 */
-+#define ID_AA64ISAR1_GPI_SHIFT		28
-+#define ID_AA64ISAR1_GPA_SHIFT		24
- #define ID_AA64ISAR1_LRCPC_SHIFT	20
- #define ID_AA64ISAR1_FCMA_SHIFT		16
- #define ID_AA64ISAR1_JSCVT_SHIFT	12
-+#define ID_AA64ISAR1_API_SHIFT		8
-+#define ID_AA64ISAR1_APA_SHIFT		4
- #define ID_AA64ISAR1_DPB_SHIFT		0
- 
-+#define ID_AA64ISAR1_APA_NI		0x0
-+#define ID_AA64ISAR1_APA_ARCHITECTED	0x1
-+#define ID_AA64ISAR1_API_NI		0x0
-+#define ID_AA64ISAR1_API_IMP_DEF	0x1
-+#define ID_AA64ISAR1_GPA_NI		0x0
-+#define ID_AA64ISAR1_GPA_ARCHITECTED	0x1
-+#define ID_AA64ISAR1_GPI_NI		0x0
-+#define ID_AA64ISAR1_GPI_IMP_DEF	0x1
-+
- /* id_aa64pfr0 */
- #define ID_AA64PFR0_SVE_SHIFT		32
- #define ID_AA64PFR0_GIC_SHIFT		24
+ static const struct arm64_ftr_bits ftr_id_aa64isar1[] = {
++#ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
++	ARM64_FTR_BITS(FTR_HIDDEN, FTR_STRICT, FTR_LOWER_SAFE, ID_AA64ISAR1_GPI_SHIFT, 4, 0),
++	ARM64_FTR_BITS(FTR_HIDDEN, FTR_STRICT, FTR_LOWER_SAFE, ID_AA64ISAR1_GPA_SHIFT, 4, 0),
++#endif
+ 	ARM64_FTR_BITS(FTR_VISIBLE, FTR_STRICT, FTR_LOWER_SAFE, ID_AA64ISAR1_LRCPC_SHIFT, 4, 0),
+ 	ARM64_FTR_BITS(FTR_VISIBLE, FTR_STRICT, FTR_LOWER_SAFE, ID_AA64ISAR1_FCMA_SHIFT, 4, 0),
+ 	ARM64_FTR_BITS(FTR_VISIBLE, FTR_STRICT, FTR_LOWER_SAFE, ID_AA64ISAR1_JSCVT_SHIFT, 4, 0),
++#ifdef CONFIG_ARM64_POINTER_AUTHENTICATION
++	ARM64_FTR_BITS(FTR_HIDDEN, FTR_STRICT, FTR_LOWER_SAFE, ID_AA64ISAR1_API_SHIFT, 4, 0),
++	ARM64_FTR_BITS(FTR_HIDDEN, FTR_STRICT, FTR_LOWER_SAFE, ID_AA64ISAR1_APA_SHIFT, 4, 0),
++#endif
+ 	ARM64_FTR_BITS(FTR_VISIBLE, FTR_STRICT, FTR_LOWER_SAFE, ID_AA64ISAR1_DPB_SHIFT, 4, 0),
+ 	ARM64_FTR_END,
+ };
 -- 
 2.11.0
