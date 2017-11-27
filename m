@@ -1,41 +1,64 @@
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CAGXu5jJXOf_aCfvY0PQ7ESwH2r9pXrPr3XoMJ4-EQzGa3y=n0A@mail.gmail.com>
-References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
- <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
- <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
- <CAGXu5jLZcPZvmeG3=MA=2uYJMqHauvSHAWs0LcrL99N+aWBHww@mail.gmail.com>
- <CA+55aFww4rnd6+HxVVC_-JHJif0-d=61WdD=jbWVWU9Cnri_bQ@mail.gmail.com> <CAGXu5jJXOf_aCfvY0PQ7ESwH2r9pXrPr3XoMJ4-EQzGa3y=n0A@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Mon, 27 Nov 2017 15:35:17 -0800
-Message-ID: <CA+55aFxP6F0r2FJw6kzBz--9u9uHmKT47JMGi1cmHuieD3Kxkw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use request_module_cap() to
- load 'netdev-%s' modules
-To: Kees Cook <keescook@chromium.org>
-Cc: Djalal Harouni <tixxdz@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Luis R. Rodriguez" <mcgrof@kernel.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>
+From: "Tobin C. Harding" <me@tobin.cc>
+Date: Tue, 28 Nov 2017 10:40:53 +1100
+Message-Id: <1511826058-2563-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] [PATCH 0/5] add printk specifier %px, unique identifier
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, linux-kernel@vger.kernel.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 27, 2017 at 3:19 PM, Kees Cook <keescook@chromium.org> wrote:
->
-> What about exporting this entirely to userspace, giving it as much
-> context as possible? i.e. inform modprobe about the user doing it,
-> maybe the subsystem, etc?
+Linus,
 
-Yeah, except for the fact that we don't trust user-mode?
+I know you are bored of this patch set already and this pits your vast
+experience against my eight months kernel dev experience ;)
 
-We used to do that exact thing. It was a nasty disaster, and caused
-version skew and other horrible problems.
+I humbly maintain that hashing %p and suggesting people use %x
+_correctly_ isn't a WIN solution.
 
-So no. Th e"let's just let user mode sort it out" doesn't work. User
-mode doesn't sort anything out, it just makes it worse.
+Please don't go easy on me because I'm new, if I'm out of line - say
+so.
 
-It's not some made-up example when I say that user-mode has decided
-that kernel requests have to be completely serialized, and recusive
-invocations will just hang.
+This set is based on the following assumptions.
 
-So no. We do not go down that particular rat-hole. It's just a bigger
-chance of getting things wrong.
+1. We now have leaking_addresses.pl illuminating leaking addresses.
+2. We have no _clear_ strategy for fixing leaks once found.
+3. We do not have a proposed non opt-in solution.
+4. There is a distinct use case for this specifier.
 
-                Linus
+Patch 1: Corrects the docs for %pK.
+
+Patch 2: Refactors %pK code out of pointer() into helper function.
+
+Patch 3: Adds specifier %px, small 'x' was chosen because the hashed hex
+         value is printed in lower case.
+
+Patch 4/5: Provides example usage of new specifier.
+
+The hashing code is based on the work done hashing %p during 4.14 dev
+cycle.
+
+Finally, with this patch set in place, we have the added benefit that
+newbies (me) can quietly go around the kernel 'sweeping up' after
+leaking addresses. This as apposed to using a hammer and hashing all
+%p. And if this is deemed too little and too slow we can always search
+and replace '%p' with '%px'.
+
+thanks,
+Tobin.
+
+Tobin C. Harding (5):
+  docs: correct documentation for %pK
+  vsprintf: refactor pK code out of pointer()
+  vsprintf: add specifier %px, unique identifier
+  KVM: use %px to print token identifier
+  vfio_pci: use %px to print token identifier
+
+ Documentation/printk-formats.txt  |   2 +-
+ drivers/vfio/pci/vfio_pci_intrs.c |   2 +-
+ lib/test_printf.c                 |  74 +++++++++++++++++
+ lib/vsprintf.c                    | 166 ++++++++++++++++++++++++++++----------
+ scripts/checkpatch.pl             |   2 +-
+ virt/kvm/eventfd.c                |   2 +-
+ 6 files changed, 202 insertions(+), 46 deletions(-)
+
+-- 
+2.7.4
