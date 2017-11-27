@@ -1,419 +1,294 @@
 From: Djalal Harouni <tixxdz@gmail.com>
-Date: Mon, 27 Nov 2017 18:18:33 +0100
-Message-Id: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
-Subject: [kernel-hardening] [PATCH v5 next 0/5] Improve Module autoloading infrastructure
+Date: Mon, 27 Nov 2017 18:18:34 +0100
+Message-Id: <1511803118-2552-2-git-send-email-tixxdz@gmail.com>
+In-Reply-To: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
+References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
+Subject: [kernel-hardening] [PATCH v5 next 1/5] modules:capabilities: add request_module_cap()
 To: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Luis R. Rodriguez" <mcgrof@kernel.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 Cc: Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, netdev@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>, Djalal Harouni <tixxdz@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi List,
-
-This is v5 of automatic module load restriction series. I have renamed
-it to 'Improve Module autoloading infrastructure' for abvious reasons:
-
-* It is more of an infrastructure change now.
-* Reduce the use of word 'restriction' and use 'improving' maybe easy
-  to sell  ?
-
-These patches are based on next-20171127
-
-Credits:
-========
-The idea was inspired from grsecurity 'GRKERNSEC_MODHARDEN' config option.
-However, upstream Linux implementation is more focused on the run-time
-behavior with a three mode switch, plus upstream version solves Linux
-usecases with a per process tree flag that can be used in containers,
-sandboxes, etc to block direct implicit auto-load operations.
-This implementation does not share anything with grsecurity.
-
-The first RFC was as LSM, Kees Cook and others suggested that it can be
-turned as a core kernel feature and after some months, they were right.
-
-
-Previous versions:
-==================
-
-v1 RFC as an LSM:
-http://www.openwall.com/lists/kernel-hardening/2017/02/02/21
-
-v2 RFC as an LSM:
-http://www.openwall.com/lists/kernel-hardening/2017/04/09/1
-
-v3 core feature as requested by kernel maintainers:
-https://lkml.org/lkml/2017/4/19/1086
-
-v4:
-https://lkml.org/lkml/2017/5/22/312
-
-All previous feedback from: Andy Lutomirski, Solar Designer, Kees Cook,
-Rusty Russell, Ben Hutchings and Serge Hallyn is fixed in this series.
-
-Please check Changelog for details. Thank you for the feedback.
-
-
-==============
-
-Currently, an explicit call to load or unload kernel modules require
-CAP_SYS_MODULE capability. However unprivileged users have always been
-able to load some modules using the implicit auto-load operation. An
-automatic module loading happens when programs request a kernel feature
-from a module that is not loaded. In order to satisfy userspace, the
-kernel then automatically load all these required modules.
-
-Historically, the kernel was always able to automatically load modules
-if they are not blacklisted. This is one of the most important and
-transparent operations of Linux, it allows to provide numerous other
-features as they are needed which is crucial for a better user experience.
-However, as Linux is popular now and used for different appliances some
-of these may need to control such operations. For such systems, recent
-needs showed that in some cases allowing to control automatic module
-loading is as important as the operation itself. Restricting unprivileged
-programs or attackers that abuse this feature to load unused modules or
-modules that contain bugs is a significant security measure.
-
-This allows administrators or some special programs to have the
-appropriate time to update and deny module autoloading in advance, then
-blacklist the corresponding ones. Not doing so may affect the global state
-of the machine, especially containers where some apps are moved from one
-context to another and not having such mechanisms may allow to expose
-and exploit the vulnerable parts to escape the container sandbox.
-
-Embedded or IoT devices also started to ship as containers using generic
-distros, some vendors do not have the appropriate time to make their own
-OS, hence, using base images is getting popular. These setups may include
-unnecessary modules that the final applications will not need. Untrusted
-access may abuse the module auto-load feature to expose vulnerabilities.
-
-As every code contains bugs or vulnerabilties, the following
-vulnerabilities that affected some features that are often compiled as
-modules could have been completely blocked, by a better mechanism that
-handles module autoloading, especially if the system does not need them.
-
-Past months:
-* DCCP use after free CVE-2017-6074 [1] [2]
-  Unprivileged to local root.
-
-* XFRM framework CVE-2017-7184 [3]
-  As advertised it seems it was used to break Ubuntu on a security
-  contest.
-
-* n_hldc CVE-2017-2636 [4] [5]
-  Local privilege escalation. 
-
-* L2TPv3 CVE-2016-10200
-
-The list is longer.
-
-To improve the current status, this series tries to re-work how module
-autoloading is performed by adding two new properties:
-"modules_autoload_mode" sysctl flag, and a per-task one.
-
-The sysctl controls modules auto-load feature and complements
-"modules_disabled" which apply to all modules operations. This new flag
-allows to control only automatic module loading and if it is allowed or
-not, aligning in the process the implicit operation with the explicit one
-where both now are covered by capabilities checks.
-
-The three modes that "modules_autoload_mode" support allow to provide
-restrictions on automatic module loading without breaking user
-experience.
-
-The sysctl flag is available at "/proc/sys/kernel/modules_autoload_mode"
-
-When modules_autoload_mode is set to (0), the default, there are no
-restrictions.
-
-When modules_autoload_mode is set to (1), processes must have
-CAP_SYS_MODULE to be able to trigger a module auto-load operation,
-or CAP_NET_ADMIN for modules with a 'netdev-%s' alias, or other
-capabilities for specific aliased modules.
-
-When modules_autoload_mode is set to (2), automatic module loading
-is disabled for all.
-
-Notes on relation between "modules_disabled=0" and
-"modules_autoload_mode=2":
-1) Once "modules_disabled=1" set, it needs a reboot to undo the
-setting.
-
-2) Restricting automatic module loading does not interfere with
-explicit module load or unload operations.
-
-3) New features provided by modules can be made available without
-rebooting the system.
-
-4) A bad version of a module can be unloaded and replaced with a
-better one without rebooting the system.
-
-==========================
-
-The patches also support process trees, containers, and sandboxes by
-providing an inherited per-task "modules_autoload_mode" flag that cannot be
-re-enabled once disabled. This offers the following advantages:
-
-1) Automatic module loading is still available to the rest of the
-system.
-
-2) It is easy to use in containers and sandboxes. DCCP example could
-have been used to escape containers. The XFRM framework CVE-2017-7184
-needs CAP_NET_ADMIN, but attackers may start to target CAP_NET_ADMIN,
-a per-task flag will make it harder.
-
-3) Suitable for desktop and more interactive Linux systems.
-
-4) Will allow in future to implement a per user policy.
-The user database format is old and not extensible, as discussed maybe
-with a modern format we may achieve the following:
-
-User=djalal
-NewKernelFeatures=yes
-
-Which means that that interactive user will be allowed to load extra
-Linux features. Others, volatile accounts or guests can be easily
-blocked from doing so.
-
-5) CAP_NET_ADMIN is useful, it handles lot of operations, at same time it
-started to look more like CAP_SYS_ADMIN which is overloaded. We need
-CAP_NET_ADMIN, containers need it, but at same time maybe we do not
-want programs running with it to load 'netdev-%s' modules. Having an
-extra per-task flag allow to discharge a bit CAP_NET_ADMIN and clearly
-target automatic module loading operations.
-
-
-Usage:
-        prctl(PR_SET_MODULES_AUTOLOAD_mode, value, 0, 0, 0).
-
-The per-task "modules_autoload_mode" supports the following values:
-0       There are no restrictions, usually the default unless set
-        by parent.
-1       The task must have CAP_SYS_MODULE to be able to trigger a
-        module auto-load operation, or CAP_NET_ADMIN for modules with
-        a 'netdev-%s' alias.
-2       Automatic modules loading is disabled for the current task.
-
-The mode may only be increased, never decreased, thus ensuring that once
-applied, processes can never relax their setting. This make it easy for
-developers and users to handle.
-
-Note that even if the per-task "modules_autoload_mode" allows to auto-load
-the corresponding modules, automatic module loading may still fail due to
-the global sysctl "modules_autoload_mode". For more details please see
-Documentation/sysctl/kernel.txt, section "modules_autoload_mode".
-
-When a request to a kernel module is denied, the module name with the
-corresponding process name and its pid are logged. Administrators can use
-such information to explicitly load the appropriate modules.
-
-
-# Testing:
-
-##) Global sysctl "modules_autoload_mode"
-
-Before patch:
-$ lsmod | grep ipip -
-$ sudo ip tunnel add mytun mode ipip remote 10.0.2.100 local 10.0.2.15 ttl 255
-$ lsmod | grep ipip -
-ipip                   16384  0
-tunnel4                16384  1 ipip
-ip_tunnel              28672  1 ipip
-$ cat /proc/sys/kernel/modules_autoload_mode
-0
-
-After patch:
-$ lsmod | grep ipip -
-# echo 2 > /proc/sys/kernel/modules_autoload_mode
-$ sudo ip tunnel add mytun mode ipip remote 10.0.2.100 local 10.0.2.15 ttl 255
-add tunnel "tunl0" failed: No such device
-$ dmesg
-...
-[ 1876.378389] module: automatic module loading of netdev-tunl0 by "ip"[1453] was denied
-[ 1876.380994] module: automatic module loading of tunl0 by "ip"[1453] was denied
-...
-$ lsmod | grep ipip -
-
-
-##) Per-task "modules_autoload_mode" flag
-
-Here we use DCCP as an example since the public PoC was against it.
-
-The following tool can be used to test the feature:
-https://gist.githubusercontent.com/tixxdz/cf567e4275714199a32c4a80de4ea63a/raw/13e52ea0ee65772871bcf10fb6c94fedd349f5c1/pr_modules_autoload_mode_test.c
-
-DCCP use after free CVE-2017-6074 (unprivileged to local root):
-The code path can be triggered by unprivileged, using the trigger.c
-program for DCCP use after free [2] and that was fixed by
-commit 5edabca9d4cff7f "dccp: fix freeing skb too early for IPV6_RECVPKTINFO".
-
-Before patch:
-$ lsmod | grep dccp
-$ strace ./dccp_trigger
-...
-socket(AF_INET6, SOCK_DCCP, IPPROTO_IP) = 3
-...
-$ lsmod | grep dccp
-dccp_ipv6              24576  5
-dccp_ipv4              24576  5 dccp_ipv6
-dccp                  102400  2 dccp_ipv6,dccp_ipv4
-$ grep Modules /proc/self/status
-ModulesAutoloadMode:    0
-
-
-After:
-Set task "modules_autoload_mode" to 1, privileged mode.
-$ lsmod | grep dccp
-$ ./pr_set_no_new_privs
-$ grep NoNewPrivs /proc/self/status
-NoNewPrivs:     1
-$ ./pr_modules_autoload_mode_test 1
-$ grep Modules /proc/self/status
-ModulesAutoloadMode:    1
-$ strace ./dccp_trigger
-...
-socket(AF_INET6, SOCK_DCCP, IPPROTO_IP) = -1 ESOCKTNOSUPPORT (Socket type not supported)
-...
-$ lsmod | grep dccp
-$ dmesg
-...
-[ 4662.171994] module: automatic module loading of net-pf-10-proto-0-type-6 by "dccp_trigger"[1759] was denied
-[ 4662.177284] module: automatic module loading of net-pf-10-proto-0 by "dccp_trigger"[1759] was denied
-[ 4662.180181] module: automatic module loading of net-pf-10-proto-0-type-6 by "dccp_trigger"[1759] was denied
-[ 4662.181709] module: automatic module loading of net-pf-10-proto-0 by "dccp_trigger"[1759] was denied
-
-
-Now task "modules_autoload_mode" to 2, disabled mode.
-$ lsmod | grep dccp
-$ grep Modules /proc/self/status
-ModulesAutoloadMode:    0
-$ su - root
- # ./pr_modules_autoload_mode_test 2
- # grep Modules /proc/self/status
-ModulesAutoloadMode:    2
- # strace ./dccp_trigger
-
-...
-socket(AF_INET6, SOCK_DCCP, IPPROTO_IP) = -1 ESOCKTNOSUPPORT (Socket type not supported)
-...
-...
-[ 5154.218740] module: automatic module loading of net-pf-10-proto-0-type-6 by "dccp_trigger"[1873] was denied
-[ 5154.219828] module: automatic module loading of net-pf-10-proto-0 by "dccp_trigger"[1873] was denied
-[ 5154.221814] module: automatic module loading of net-pf-10-proto-0-type-6 by "dccp_trigger"[1873] was denied
-[ 5154.222731] module: automatic module loading of net-pf-10-proto-0 by "dccp_trigger"[1873] was denied
-
-
-As showed, this blocks automatic module loading per-task. This allows to
-provide a usable system, where only some sandboxed apps or containers will be
-restricted to trigger automatic module loading, other parts of the
-system can continue to use the feature as it is which is the case of the
-desktop and userfriendly machines.
-
-[1] http://www.openwall.com/lists/oss-security/2017/02/22/3
-[2] https://github.com/xairy/kernel-exploits/tree/master/CVE-2017-6074
-[3] http://www.openwall.com/lists/oss-security/2017/03/29/2
-[4] http://www.openwall.com/lists/oss-security/2017/03/07/6 
-[5] https://a13xp0p0v.github.io/2017/03/24/CVE-2017-2636.html
-
-
-Finally we already have a use case for the prctl() interface to enforce
-some systemd services, in docker and other containers, also in some
-sandboxes, etc.
-
-
-# Changes since v4:
-*) Removed the property that when the "modules_autoload_mode" sysctl is
-   set to "2" disabled mode, then that value is pinned and we can not
-   revert it. Now you can undo the value if you have the appropriate
-   privileges as it was suggested.
-
-   Suggested-by: Solar Designer <solar@openwall.com>
-   Suggested-by: Andy Lutomirski <luto@kernel.org>
-   https://lkml.org/lkml/2017/5/22/330
-
-*) Added request_module_cap() to take '@required_cap' and '@prefix'
-   arguments that will be used to check if module autoloading is allowed
-   or not.
-
-   Suggested-by: Kees Cook <keescook@chromium.org>
-
-*) More cleanups and documentation.
-
-
-# Changes since v3:
-*) Renamed the sysctl from "modules_autoload" to "modules_autoload_mode"
-   and the prctl() operation flag to "PR_{SET|GET}_MODULES_AUTOLOAD_MODE"
-   as it was requested.
-
-   Suggested-by: Ben Hutchings <ben.hutchings@codethink.co.uk>
-
-
-*) Updated __request_module() to take the capability that may allow to
-   auto-load a module with the appropriate alias. This way we never
-   parse aliases as it was requested by Rusty Russell. Security and
-   SELinux hooks were updated too.
-
-   Suggested-by: Rusty Russell <rusty@rustcorp.com.au>
-   https://lkml.org/lkml/2017/4/24/7
-
-
-*) Updated code to set prctl(PR_SET_MODULES_AUTOLOAD_MODE, 1, 0, 0, 0),
-   the task must call prctl(PR_SET_NO_NEW_PRIVS, 1) before or run with
-   CAP_SYS_ADMIN privileges in its namespace. If these are not true,
-   -EACCES will be returned.
-
-   Suggested-by: Andy Lutomirski <luto@amacapital.net>
-   https://lkml.org/lkml/2017/4/22/22
-
-
-*) Remove task initialization logic and other cleanups
-   Suggested-by: Kees Cook <keescook@chromium.org>
-
-
-*) Other code and documentation cleanups.
-   
-
-# Changes since v2:
-*) Implemented as a core kernel feature inside capabilities subsystem
-*) Renamed sysctl to "modules_autoload" to align with "modules_disabled"
-
-   Suggested-by: Kees Cook <keescook@chromium.org>
-
-*) Improved documentation.
-*) Removed unused code.
-
-
-# Changes since v1:
-*) Renamed module to ModAutoRestrict
-*) Improved documentation to explicity refer to module autoloading.
-*) Switched to use the new task_security_alloc() hook.
-*) Switched from rhash tables to use task->security since it is in
-   linux-security/next branch now.
-*) Check all parameters passed to prctl() syscall.
-*) Many other bug fixes and documentation improvements.
-
-
-Patches (5) Djalal Harouni:
- (1/5) modules:capabilities: add request_module_cap()
- (2/5) modules:capabilities: add cap_kernel_module_request() permission check
- (3/5) modules:capabilities: automatic module loading restriction
- (4/5) modules:capabilities: add a per-task modules auto-load mode
- (5/5) net: modules: use request_module_cap() to load 'netdev-%s' modules
-
- Documentation/filesystems/proc.txt                 |   3 +
- Documentation/sysctl/kernel.txt                    |  54 ++++++++
- Documentation/userspace-api/index.rst              |   1 +
- .../userspace-api/modules_autoload_mode.rst        | 116 ++++++++++++++++
- fs/proc/array.c                                    |   6 +
- include/linux/init_task.h                          |   8 ++
- include/linux/kmod.h                               |  65 ++++++++-
- include/linux/lsm_hooks.h                          |   6 +-
- include/linux/module.h                             |  41 +++++-
- include/linux/sched.h                              |   5 +
- include/linux/security.h                           |  11 +-
- include/uapi/linux/prctl.h                         |   8 ++
- kernel/kmod.c                                      |  29 +++-
- kernel/module.c                                    | 153 +++++++++++++++++++++
- kernel/sysctl.c                                    |  28 ++++
- net/core/dev_ioctl.c                               |   4 +-
- security/commoncap.c                               |  62 +++++++++
- security/security.c                                |   6 +-
- security/selinux/hooks.c                           |   3 +-
- 19 files changed, 587 insertions(+), 22 deletions(-)
+This is a preparation patch to improve the module auto-load
+infrastructure.
+
+We need this patch to have more control on module auto-load operations.
+The operation by default is allowed unless enduser or the calling code
+requests that we need to perform futher permission checks.
+
+With this change subsystems will be able to decide if module auto-load
+feature first will have to do a capability check and load the module if
+the permission check succeeds or deny the operation.
+
+As an example "netdev-%s" modules, they are allowed to be loaded if
+CAP_NET_ADMIN is set. Therefore, in order to not break this assumption,
+and allow userspace to load "netdev-%s" modules with CAP_NET_ADMIN,
+we have added:
+
+        request_module_cap(required_cap, prefix, fmt...)
+
+This new function will take:
+'@required_cap': Required capability to load the module
+'@prefix': The module prefix if any, otherwise NULL
+'@fmt': printf style format string for the name of the module with its
+        arguments if any
+
+ex:
+        request_module_cap(CAP_NET_ADMIN, "netdev", "%s", mod);
+
+After a discussion with Rusty Russell [1], the suggestion was to pass
+the capability from request_module() to security_kernel_module_request()
+for 'netdev-%s' modules that need CAP_NET_ADMIN, and after review from
+Kees Cook [2] and experimenting with the code, the patch now does the
+following:
+
+* Adds the request_module_cap() function.
+* Updates the __request_module() to take the "required_cap" argument
+        with the "prefix".
+
+This patch also updates SELinux which is currently the only user of
+security_kernel_module_request(), the security hook now accepts
+'required_cap' and 'prefix' as arguments.
+
+Based on patch by Rusty Russell and discussion with Kees Cook:
+[1] https://lkml.org/lkml/2017/4/26/735
+[2] https://lkml.org/lkml/2017/5/23/775
+
+Cc: Serge Hallyn <serge@hallyn.com>
+Cc: Andy Lutomirski <luto@kernel.org>
+Suggested-by: Rusty Russell <rusty@rustcorp.com.au>
+Suggested-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
+---
+ include/linux/kmod.h      | 65 ++++++++++++++++++++++++++++++++++++++++++-----
+ include/linux/lsm_hooks.h |  6 ++++-
+ include/linux/security.h  |  7 +++--
+ kernel/kmod.c             | 29 ++++++++++++++++-----
+ security/security.c       |  6 +++--
+ security/selinux/hooks.c  |  3 ++-
+ 6 files changed, 97 insertions(+), 19 deletions(-)
+
+diff --git a/include/linux/kmod.h b/include/linux/kmod.h
+index 40c89ad..ccd6a1c 100644
+--- a/include/linux/kmod.h
++++ b/include/linux/kmod.h
+@@ -33,16 +33,67 @@
+ extern char modprobe_path[]; /* for sysctl */
+ /* modprobe exit status on success, -ve on error.  Return value
+  * usually useless though. */
+-extern __printf(2, 3)
+-int __request_module(bool wait, const char *name, ...);
+-#define request_module(mod...) __request_module(true, mod)
+-#define request_module_nowait(mod...) __request_module(false, mod)
++extern __printf(4, 5)
++int __request_module(bool wait, int required_cap,
++		     const char *prefix, const char *name, ...);
+ #define try_then_request_module(x, mod...) \
+-	((x) ?: (__request_module(true, mod), (x)))
++	((x) ?: (__request_module(true, -1, NULL, mod), (x)))
+ #else
+-static inline int request_module(const char *name, ...) { return -ENOSYS; }
+-static inline int request_module_nowait(const char *name, ...) { return -ENOSYS; }
++static inline __printf(4, 5)
++int __request_module(bool wait, int required_cap,
++		     const char *prefix, const char *name, ...)
++{ return -ENOSYS; }
+ #define try_then_request_module(x, mod...) (x)
+ #endif
+ 
++/**
++ * request_module  Try to load a kernel module
++ *
++ * Automatically loads the request module.
++ *
++ * @mod...: The module name
++ */
++#define request_module(mod...) __request_module(true, -1, NULL, mod)
++
++#define request_module_nowait(mod...) __request_module(false, -1, NULL, mod)
++
++/**
++ * request_module_cap  Load kernel module only if the required capability is set
++ *
++ * Automatically load a module if the required capability is set and it
++ * corresponds to the appropriate subsystem that is indicated by prefix.
++ *
++ * This allows to load aliased modules like 'netdev-%s' with CAP_NET_ADMIN.
++ *
++ * ex:
++ *	request_module_cap(CAP_NET_ADMIN, "netdev", "%s", mod);
++ *
++ * @required_cap: Required capability to load the module
++ * @prefix: The module prefix if any, otherwise NULL
++ * @fmt: printf style format string for the name of the module with its
++ *       arguments if any
++ *
++ * If '@required_cap' is positive, the security subsystem will check if
++ * '@prefix' is set and if caller has the required capability then the
++ * operation is allowed.
++ * The security subsystem can not make assumption about the boundaries
++ * of other subsystems, it is their responsability to make a call with
++ * the right capability and module alias.
++ *
++ * If '@required_cap' is positive and '@prefix' is NULL then we assume
++ * that the '@required_cap' is CAP_SYS_MODULE.
++ *
++ * If '@required_cap' is negative then there are no permission checks, this
++ * is the equivalent to request_module() function.
++ *
++ * This function trust callers to pass the right capability with the
++ * appropriate prefix.
++ *
++ * Note: the permission checks may still fail, even if the required
++ * capability is negative, this is due to module loading restrictions
++ * that are controlled by the enduser.
++ */
++#define request_module_cap(required_cap, prefix, fmt...) \
++	__request_module(true, required_cap, prefix, fmt)
++
+ #endif /* __LINUX_KMOD_H__ */
+diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
+index 7161d8e..d898bd0 100644
+--- a/include/linux/lsm_hooks.h
++++ b/include/linux/lsm_hooks.h
+@@ -571,6 +571,9 @@
+  *	Ability to trigger the kernel to automatically upcall to userspace for
+  *	userspace to load a kernel module with the given name.
+  *	@kmod_name name of the module requested by the kernel
++ *	@required_cap If positive, the required capability to automatically load
++ *	the correspondig kernel module.
++ *	@prefix The prefix of the module if any. Can be NULL.
+  *	Return 0 if successful.
+  * @kernel_read_file:
+  *	Read a file specified by userspace.
+@@ -1543,7 +1546,8 @@ union security_list_options {
+ 	void (*cred_transfer)(struct cred *new, const struct cred *old);
+ 	int (*kernel_act_as)(struct cred *new, u32 secid);
+ 	int (*kernel_create_files_as)(struct cred *new, struct inode *inode);
+-	int (*kernel_module_request)(char *kmod_name);
++	int (*kernel_module_request)(char *kmod_name, int required_cap,
++				     const char *prefix);
+ 	int (*kernel_read_file)(struct file *file, enum kernel_read_file_id id);
+ 	int (*kernel_post_read_file)(struct file *file, char *buf, loff_t size,
+ 				     enum kernel_read_file_id id);
+diff --git a/include/linux/security.h b/include/linux/security.h
+index 73f1ef6..41e700a 100644
+--- a/include/linux/security.h
++++ b/include/linux/security.h
+@@ -326,7 +326,8 @@ int security_prepare_creds(struct cred *new, const struct cred *old, gfp_t gfp);
+ void security_transfer_creds(struct cred *new, const struct cred *old);
+ int security_kernel_act_as(struct cred *new, u32 secid);
+ int security_kernel_create_files_as(struct cred *new, struct inode *inode);
+-int security_kernel_module_request(char *kmod_name);
++int security_kernel_module_request(char *kmod_name, int required_cap,
++				   const char *prefix);
+ int security_kernel_read_file(struct file *file, enum kernel_read_file_id id);
+ int security_kernel_post_read_file(struct file *file, char *buf, loff_t size,
+ 				   enum kernel_read_file_id id);
+@@ -919,7 +920,9 @@ static inline int security_kernel_create_files_as(struct cred *cred,
+ 	return 0;
+ }
+ 
+-static inline int security_kernel_module_request(char *kmod_name)
++static inline int security_kernel_module_request(char *kmod_name,
++						 int required_cap,
++						 const char *prefix)
+ {
+ 	return 0;
+ }
+diff --git a/kernel/kmod.c b/kernel/kmod.c
+index bc6addd..679d401 100644
+--- a/kernel/kmod.c
++++ b/kernel/kmod.c
+@@ -109,6 +109,8 @@ static int call_modprobe(char *module_name, int wait)
+ /**
+  * __request_module - try to load a kernel module
+  * @wait: wait (or not) for the operation to complete
++ * @required_cap: required capability to load the module
++ * @prefix: module prefix if any otherwise NULL
+  * @fmt: printf style format string for the name of the module
+  * @...: arguments as specified in the format string
+  *
+@@ -119,14 +121,20 @@ static int call_modprobe(char *module_name, int wait)
+  * must check that the service they requested is now available not blindly
+  * invoke it.
+  *
+- * If module auto-loading support is disabled then this function
+- * becomes a no-operation.
++ * If "required_cap" is positive, The security subsystem will trust the caller
++ * that if it has "required_cap" then it may allow to load some modules that
++ * have a specific alias.
++ *
++ * If module auto-loading support is disabled by clearing the modprobe path
++ * then this function becomes a no-operation.
+  */
+-int __request_module(bool wait, const char *fmt, ...)
++int __request_module(bool wait, int required_cap,
++		     const char *prefix, const char *fmt, ...)
+ {
+ 	va_list args;
+ 	char module_name[MODULE_NAME_LEN];
+ 	int ret;
++	int len = 0;
+ 
+ 	/*
+ 	 * We don't allow synchronous module loading from async.  Module
+@@ -139,13 +147,22 @@ int __request_module(bool wait, const char *fmt, ...)
+ 	if (!modprobe_path[0])
+ 		return 0;
+ 
++	/*
++	 * Lets attach the prefix to the module name
++	 */
++	if (prefix != NULL && *prefix != '\0') {
++		len += snprintf(module_name, MODULE_NAME_LEN, "%s-", prefix);
++		if (len >= MODULE_NAME_LEN)
++			return -ENAMETOOLONG;
++	}
++
+ 	va_start(args, fmt);
+-	ret = vsnprintf(module_name, MODULE_NAME_LEN, fmt, args);
++	ret = vsnprintf(module_name + len, MODULE_NAME_LEN - len, fmt, args);
+ 	va_end(args);
+-	if (ret >= MODULE_NAME_LEN)
++	if (ret >= MODULE_NAME_LEN - len)
+ 		return -ENAMETOOLONG;
+ 
+-	ret = security_kernel_module_request(module_name);
++	ret = security_kernel_module_request(module_name, required_cap, prefix);
+ 	if (ret)
+ 		return ret;
+ 
+diff --git a/security/security.c b/security/security.c
+index 1cd8526..91ecebd 100644
+--- a/security/security.c
++++ b/security/security.c
+@@ -1015,9 +1015,11 @@ int security_kernel_create_files_as(struct cred *new, struct inode *inode)
+ 	return call_int_hook(kernel_create_files_as, 0, new, inode);
+ }
+ 
+-int security_kernel_module_request(char *kmod_name)
++int security_kernel_module_request(char *kmod_name, int required_cap,
++				   const char *prefix)
+ {
+-	return call_int_hook(kernel_module_request, 0, kmod_name);
++	return call_int_hook(kernel_module_request, 0, kmod_name,
++			     required_cap, prefix);
+ }
+ 
+ int security_kernel_read_file(struct file *file, enum kernel_read_file_id id)
+diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
+index d07299d..69f25da 100644
+--- a/security/selinux/hooks.c
++++ b/security/selinux/hooks.c
+@@ -3889,7 +3889,8 @@ static int selinux_kernel_create_files_as(struct cred *new, struct inode *inode)
+ 	return ret;
+ }
+ 
+-static int selinux_kernel_module_request(char *kmod_name)
++static int selinux_kernel_module_request(char *kmod_name, int required_cap,
++					 const char *prefix)
+ {
+ 	struct common_audit_data ad;
+ 
+-- 
+2.7.4
