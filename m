@@ -1,59 +1,73 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <alpine.LFD.2.20.1711280924350.11830@localhost>
+Sender: linus971@gmail.com
+In-Reply-To: <CAGXu5jLZcPZvmeG3=MA=2uYJMqHauvSHAWs0LcrL99N+aWBHww@mail.gmail.com>
 References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <CA+55aFwFEzEU9ci=mFZprjzrhG0P0XgXgqhBSWSv7vFWEAw6rQ@mail.gmail.com>
- <20171128.041426.801732093971324601.davem@davemloft.net> <alpine.LFD.2.20.1711280924350.11830@localhost>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 27 Nov 2017 15:04:32 -0800
-Message-ID: <CAGXu5j+YPMZk=TuioD216F5kiqfWTNZcNzpjwOiZRnAfbimhpg@mail.gmail.com>
+ <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
+ <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
+ <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com> <CAGXu5jLZcPZvmeG3=MA=2uYJMqHauvSHAWs0LcrL99N+aWBHww@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Mon, 27 Nov 2017 15:14:54 -0800
+Message-ID: <CA+55aFww4rnd6+HxVVC_-JHJif0-d=61WdD=jbWVWU9Cnri_bQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 next 0/5] Improve Module autoloading infrastructure
-To: James Morris <james.l.morris@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: David Miller <davem@davemloft.net>, Djalal Harouni <tixxdz@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Luis R. Rodriguez" <mcgrof@kernel.org>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, "Serge E. Hallyn" <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>
+Subject: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use request_module_cap() to
+ load 'netdev-%s' modules
+To: Kees Cook <keescook@chromium.org>
+Cc: Djalal Harouni <tixxdz@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Luis R. Rodriguez" <mcgrof@kernel.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 27, 2017 at 2:31 PM, James Morris <james.l.morris@oracle.com> wrote:
-> On Tue, 28 Nov 2017, David Miller wrote:
+On Mon, Nov 27, 2017 at 2:59 PM, Kees Cook <keescook@chromium.org> wrote:
 >
->> From: Linus Torvalds <torvalds@linux-foundation.org>
->> Date: Mon, 27 Nov 2017 10:41:30 -0800
->>
->> > What are the real life use-cases for normal users having modules
->> > auto-load?
->>
->> User opens SCTP socket, SCTP protocol module loads.
->>
->> People build test cases via namespaces, and in that namespaces normal
->> users can setup virtual tunnel devices themselves, and those configure
->> operations can bring the tunnel module in.
->
-> What about implementing a white list of modules which are able to be
-> loaded by unprivileged users?
->
-> Then, Linus' solution would look something like:
->
->         va_start(args, fmt);
->         ret = vsnprintf(module_name, MODULE_NAME_LEN, fmt, args);
->         va_end(args);
->
->         if (WARN_ON_ONCE(!capable(CAP_SYS_MODULE) ||
->                          !capable(CAP_SYS_ADMIN) ||
->                          !capable(CAP_NET_ADMIN) ||
->                          !unprivileged_autoload(module_name)))
->                 return -EPERM;
+> I don't disagree that a global should be avoided, but I'm struggling
+> to see another option here. We can't break userspace by default so we
+> can't restrict cap-less loading by default. But we can allow userspace
+> to _choose_ to break itself, especially within a container. This isn't
+> uncommon, especially for modules, where we even have the global
+> "modules_disabled" sysctl already. The level of granularity of control
+> here is the issue, and it's what this series solves.
 
-We have some of this already with the module prefixes. Doing this
-per-module would need to be exported to userspace, I think. It'd be
-way too fragile sitting in the kernel.
+So there's two "global" here
 
-To control this via modprobe, we'd need to expand modprobe to include
-the user that is trying to load the module (so it can reason about who
-is doing it), and then teach modprobe about that so the policy could
-be exported to userspace.
+ - if a container were to choose to break itself, it should damn well
+be container-specific, not some global option
 
--Kees
+   This part seems to be ok in the patch series, since the "global" is
+really per-task. So it's not global in the "system-wide" sense.
 
--- 
-Kees Cook
-Pixel Security
+ - if _one_ request_module() caller were to say "I don't want to be
+loaded by a normal user", that doesn't mean that _other_
+request_module() cases shouldn't.
+
+   This is the part I'm objecting to, because it means that we can't
+enable this stricter policy by default.
+
+And the thing is, the patch series seems to already introduce largely
+the better model of just making it site-specific. Introducing that
+request_module_cap() thing and then using it for networking is a good
+step.
+
+But I also suspect that we _could_ just make the stricter rules
+actually be default, if we just fixed the thing up to not be "every
+request_module() is the same".
+
+For example, several request_module() calls come from device node
+opens, and it makes sense that we can just say: "if you have access to
+the device node, then you have the right to request the module".
+
+But that would need to be not a global "request_module()" behavior,
+but a behavior that is tied to the particular call-site.
+
+IOW, extend on that request_module_cap() model, and introduce
+(perhaps) a "request_module_dev()" call that basically means "the user
+opened the device node for the requested module".
+
+Because those kinds of permissions aren't necessarily about
+capabilities, but about things like "I'm in the dialout group, I get
+to open tty devices and by implication request their modules".
+
+And that _really_ isn't global behavior.  The fact that I might be
+able to load a serial; module has *nothing* to do with whether I can
+load some other kind of module at all.
+
+That global mode is just wrong.
+
+                Linus
