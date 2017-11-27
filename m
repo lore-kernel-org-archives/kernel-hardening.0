@@ -1,31 +1,25 @@
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CA+55aFwhmgaoHUtCx2=m4SWBtG4dtmY3M8qHLjwe0UaLkBz_eA@mail.gmail.com>
+Date: Tue, 28 Nov 2017 04:14:26 +0900 (KST)
+Message-Id: <20171128.041426.801732093971324601.davem@davemloft.net>
+From: David Miller <davem@davemloft.net>
+In-Reply-To: <CA+55aFwFEzEU9ci=mFZprjzrhG0P0XgXgqhBSWSv7vFWEAw6rQ@mail.gmail.com>
 References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <CA+55aFwFEzEU9ci=mFZprjzrhG0P0XgXgqhBSWSv7vFWEAw6rQ@mail.gmail.com> <CA+55aFwhmgaoHUtCx2=m4SWBtG4dtmY3M8qHLjwe0UaLkBz_eA@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Mon, 27 Nov 2017 11:12:59 -0800
-Message-ID: <CA+55aFxcte0puN32cV25p8Ex2PKzb3mug-OzpzWWw1EvY35=AA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
+	<CA+55aFwFEzEU9ci=mFZprjzrhG0P0XgXgqhBSWSv7vFWEAw6rQ@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: Text/Plain; charset=us-ascii
+Content-Transfer-Encoding: 7bit
 Subject: [kernel-hardening] Re: [PATCH v5 next 0/5] Improve Module autoloading infrastructure
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Luis R. Rodriguez" <mcgrof@kernel.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>
+To: torvalds@linux-foundation.org
+Cc: tixxdz@gmail.com, keescook@chromium.org, luto@kernel.org, akpm@linux-foundation.org, mcgrof@kernel.org, james.l.morris@oracle.com, ben.hutchings@codethink.co.uk, solar@openwall.com, serge@hallyn.com, jeyu@kernel.org, rusty@rustcorp.com.au, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, corbet@lwn.net, mingo@kernel.org, netdev@vger.kernel.org, peterz@infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 27, 2017 at 11:02 AM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
->
-> Now, the above will not necessarily work with a legacy /dev/ directory
-> where al the nodes have been pre-populated, and opening the device
-> node is supposed to load the module. So _historically_ we did indeed
-> load modules as normal users. But does that really happen any more?
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Mon, 27 Nov 2017 10:41:30 -0800
 
-Sadly, it looks like bluetoothd actually does expect to load the
-bt-proto-XYZ modules with no capabilities at all.
+> What are the real life use-cases for normal users having modules
+> auto-load?
 
-So apparently we really do depend on not needing capabilities for
-module loading.
+User opens SCTP socket, SCTP protocol module loads.
 
-Oh well.
-
-                 Linus
+People build test cases via namespaces, and in that namespaces normal
+users can setup virtual tunnel devices themselves, and those configure
+operations can bring the tunnel module in.
