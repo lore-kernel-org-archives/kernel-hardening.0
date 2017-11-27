@@ -1,92 +1,46 @@
-From: "Tobin C. Harding" <me@tobin.cc>
-Date: Tue, 28 Nov 2017 09:30:19 +1100
-Message-Id: <1511821819-5496-4-git-send-email-me@tobin.cc>
-In-Reply-To: <1511821819-5496-1-git-send-email-me@tobin.cc>
-References: <1511821819-5496-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [RFC 3/3] trace: print address if symbol not found
-To: kernel-hardening@lists.openwall.com
-Cc: "Tobin C. Harding" <me@tobin.cc>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>, Ingo Molnar <mingo@redhat.com>
+Date: Tue, 28 Nov 2017 09:31:18 +1100 (AEDT)
+From: James Morris <james.l.morris@oracle.com>
+In-Reply-To: <20171128.041426.801732093971324601.davem@davemloft.net>
+Message-ID: <alpine.LFD.2.20.1711280924350.11830@localhost>
+References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>        <CA+55aFwFEzEU9ci=mFZprjzrhG0P0XgXgqhBSWSv7vFWEAw6rQ@mail.gmail.com> <20171128.041426.801732093971324601.davem@davemloft.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH v5 next 0/5] Improve Module autoloading infrastructure
+To: David Miller <davem@davemloft.net>
+Cc: torvalds@linux-foundation.org, tixxdz@gmail.com, keescook@chromium.org, luto@kernel.org, akpm@linux-foundation.org, mcgrof@kernel.org, ben.hutchings@codethink.co.uk, solar@openwall.com, serge@hallyn.com, jeyu@kernel.org, rusty@rustcorp.com.au, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, corbet@lwn.net, mingo@kernel.org, netdev@vger.kernel.org, peterz@infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Fixes behaviour modified by: commit bd6b239cdbb2 ("kallsyms: don't leak
-address when symbol not found")
+On Tue, 28 Nov 2017, David Miller wrote:
 
-Previous patch changed behaviour of kallsyms function sprint_symbol() to
-return an error code instead of printing the address if a symbol was not
-found. Ftrace relies on the original behaviour. We should not break
-tracing when applying the previous patch. We can maintain the original
-behaviour by checking the return code on calls to sprint_symbol() and
-friends.
+> From: Linus Torvalds <torvalds@linux-foundation.org>
+> Date: Mon, 27 Nov 2017 10:41:30 -0800
+> 
+> > What are the real life use-cases for normal users having modules
+> > auto-load?
+> 
+> User opens SCTP socket, SCTP protocol module loads.
+> 
+> People build test cases via namespaces, and in that namespaces normal
+> users can setup virtual tunnel devices themselves, and those configure
+> operations can bring the tunnel module in.
 
-Check return code and print actual address on error (i.e symbol not
-found).
+What about implementing a white list of modules which are able to be 
+loaded by unprivileged users?
 
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
----
- kernel/trace/trace.h             | 24 ++++++++++++++++++++++++
- kernel/trace/trace_events_hist.c |  6 +++---
- 2 files changed, 27 insertions(+), 3 deletions(-)
+Then, Linus' solution would look something like:
 
-diff --git a/kernel/trace/trace.h b/kernel/trace/trace.h
-index 2a6d0325a761..881b1a577d75 100644
---- a/kernel/trace/trace.h
-+++ b/kernel/trace/trace.h
-@@ -1814,4 +1814,28 @@ static inline void trace_event_eval_update(struct trace_eval_map **map, int len)
- 
- extern struct trace_iterator *tracepoint_print_iter;
- 
-+static inline int
-+trace_sprint_symbol(char *buffer, unsigned long address)
-+{
-+	int ret;
-+
-+	ret = sprint_symbol(buffer, address);
-+	if (ret == -1)
-+		ret = sprintf(buffer, "0x%lx", address);
-+
-+	return ret;
-+}
-+
-+static inline int
-+trace_sprint_symbol_no_offset(char *buffer, unsigned long address)
-+{
-+	int ret;
-+
-+	ret = sprint_symbol_no_offset(buffer, address);
-+	if (ret == -1)
-+		ret = sprintf(buffer, "0x%lx", address);
-+
-+	return ret;
-+}
-+
- #endif /* _LINUX_KERNEL_TRACE_H */
-diff --git a/kernel/trace/trace_events_hist.c b/kernel/trace/trace_events_hist.c
-index 1e1558c99d56..3e28522a76f4 100644
---- a/kernel/trace/trace_events_hist.c
-+++ b/kernel/trace/trace_events_hist.c
-@@ -982,7 +982,7 @@ static void hist_trigger_stacktrace_print(struct seq_file *m,
- 			return;
- 
- 		seq_printf(m, "%*c", 1 + spaces, ' ');
--		sprint_symbol(str, stacktrace_entries[i]);
-+		trace_sprint_symbol_addr(str, stacktrace_entries[i]);
- 		seq_printf(m, "%s\n", str);
- 	}
- }
-@@ -1014,12 +1014,12 @@ hist_trigger_entry_print(struct seq_file *m,
- 			seq_printf(m, "%s: %llx", field_name, uval);
- 		} else if (key_field->flags & HIST_FIELD_FL_SYM) {
- 			uval = *(u64 *)(key + key_field->offset);
--			sprint_symbol_no_offset(str, uval);
-+			trace_sprint_symbol_no_offset(str, uval);
- 			seq_printf(m, "%s: [%llx] %-45s", field_name,
- 				   uval, str);
- 		} else if (key_field->flags & HIST_FIELD_FL_SYM_OFFSET) {
- 			uval = *(u64 *)(key + key_field->offset);
--			sprint_symbol(str, uval);
-+			trace_sprint_symbol(str, uval);
- 			seq_printf(m, "%s: [%llx] %-55s", field_name,
- 				   uval, str);
- 		} else if (key_field->flags & HIST_FIELD_FL_EXECNAME) {
+	va_start(args, fmt);
+	ret = vsnprintf(module_name, MODULE_NAME_LEN, fmt, args);
+	va_end(args);
+
+	if (WARN_ON_ONCE(!capable(CAP_SYS_MODULE) ||
+                         !capable(CAP_SYS_ADMIN) ||
+                         !capable(CAP_NET_ADMIN) ||
+                         !unprivileged_autoload(module_name)))
+		return -EPERM;
+
+
+
 -- 
-2.7.4
+James Morris
+<james.l.morris@oracle.com>
