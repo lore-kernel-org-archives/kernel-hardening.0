@@ -1,120 +1,74 @@
+Date: Tue, 28 Nov 2017 12:43:43 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171128014343.GR17858@eros>
+References: <1511826058-2563-1-git-send-email-me@tobin.cc>
+ <CAGXu5jJfppOKj6pD7-ETSqqPOL1hBDQ31ZXj1damJmC4qTqvvw@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CA+55aFww4rnd6+HxVVC_-JHJif0-d=61WdD=jbWVWU9Cnri_bQ@mail.gmail.com>
-References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
- <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
- <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
- <CAGXu5jLZcPZvmeG3=MA=2uYJMqHauvSHAWs0LcrL99N+aWBHww@mail.gmail.com> <CA+55aFww4rnd6+HxVVC_-JHJif0-d=61WdD=jbWVWU9Cnri_bQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 27 Nov 2017 17:23:33 -0800
-Message-ID: <CAGXu5j+mfEXzbsxFwkv8W_sS1RdxwxNp+HnN+bfHabFXmf49FA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use request_module_cap() to
- load 'netdev-%s' modules
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Djalal Harouni <tixxdz@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Luis R. Rodriguez" <mcgrof@kernel.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jJfppOKj6pD7-ETSqqPOL1hBDQ31ZXj1damJmC4qTqvvw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 0/5] add printk specifier %px, unique identifier
+To: Kees Cook <keescook@chromium.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, LKML <linux-kernel@vger.kernel.org>, KVM <kvm@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 27, 2017 at 3:14 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Mon, Nov 27, 2017 at 2:59 PM, Kees Cook <keescook@chromium.org> wrote:
->>
->> I don't disagree that a global should be avoided, but I'm struggling
->> to see another option here. We can't break userspace by default so we
->> can't restrict cap-less loading by default. But we can allow userspace
->> to _choose_ to break itself, especially within a container. This isn't
->> uncommon, especially for modules, where we even have the global
->> "modules_disabled" sysctl already. The level of granularity of control
->> here is the issue, and it's what this series solves.
->
-> So there's two "global" here
->
->  - if a container were to choose to break itself, it should damn well
-> be container-specific, not some global option
->
->    This part seems to be ok in the patch series, since the "global" is
-> really per-task. So it's not global in the "system-wide" sense.
+On Mon, Nov 27, 2017 at 04:57:18PM -0800, Kees Cook wrote:
+> On Mon, Nov 27, 2017 at 3:40 PM, Tobin C. Harding <me@tobin.cc> wrote:
+> > Linus,
+> >
+> > I know you are bored of this patch set already and this pits your vast
+> > experience against my eight months kernel dev experience ;)
+> >
+> > I humbly maintain that hashing %p and suggesting people use %x
+> > _correctly_ isn't a WIN solution.
+> >
+> > Please don't go easy on me because I'm new, if I'm out of line - say
+> > so.
+> >
+> > This set is based on the following assumptions.
+> >
+> > 1. We now have leaking_addresses.pl illuminating leaking addresses.
+> > 2. We have no _clear_ strategy for fixing leaks once found.
+> > 3. We do not have a proposed non opt-in solution.
+> > 4. There is a distinct use case for this specifier.
+> >
+> > Patch 1: Corrects the docs for %pK.
+> >
+> > Patch 2: Refactors %pK code out of pointer() into helper function.
+> >
+> > Patch 3: Adds specifier %px, small 'x' was chosen because the hashed hex
+> >          value is printed in lower case.
+> >
+> > Patch 4/5: Provides example usage of new specifier.
+> >
+> > The hashing code is based on the work done hashing %p during 4.14 dev
+> > cycle.
+> >
+> > Finally, with this patch set in place, we have the added benefit that
+> > newbies (me) can quietly go around the kernel 'sweeping up' after
+> > leaking addresses. This as apposed to using a hammer and hashing all
+> > %p. And if this is deemed too little and too slow we can always search
+> > and replace '%p' with '%px'.
+> 
+> How does this opt-in to %px help? We'll still have %p everywhere. :(
+> Why not invert this? %p is hashed and %px is the old %p? Then we can
+> move %x users to %px.
 
-Right, though in the case of init, it could flip that toggle for
-itself and it would then effectively be system-wide.
+This is a really nice twist, I don't know why it hasn't come up
+before. For the record it
 
->  - if _one_ request_module() caller were to say "I don't want to be
-> loaded by a normal user", that doesn't mean that _other_
-> request_module() cases shouldn't.
->
->    This is the part I'm objecting to, because it means that we can't
-> enable this stricter policy by default.
+- Plugs a bunch of potential current leaks.
+- Is on by default (*not* opt-in).
+- Is easy to use (%p if you don't care, %px if you _really_ want the address).
+- Reduces risk of future developers creating grep hell by using %x
 
-Okay, I see what you mean here. You want to clearly distinguish
-between unprivileged and privileged-only. I'm unconvinced that's going
-to change much, as the bulk of the exposed request_module() users are
-already expecting to be unprivileged (and that's why they were all
-converted to requiring a named prefix).
+(- makes Linus happy because it does everything he has suggested except
+promote use of %x)
 
-> And the thing is, the patch series seems to already introduce largely
-> the better model of just making it site-specific. Introducing that
-> request_module_cap() thing and then using it for networking is a good
-> step.
->
-> But I also suspect that we _could_ just make the stricter rules
-> actually be default, if we just fixed the thing up to not be "every
-> request_module() is the same".
+> I'd still like to see a default-on solution for this class of leaks...
 
-When doing some of the older module name prefix work, I did consider
-introducing a new request_module() API that included the prefix name
-as an explicit argument (instead of embedding it in the format
-string). We could easily start there, and then have "plain"
-request_module() require privs. But we'll still need a way to say
-"admin doesn't want unpriv module auto-loading".
+I'll re-spin this tomorrow and see if we can't stop bothering everyone
+with it :)
 
-> For example, several request_module() calls come from device node
-> opens, and it makes sense that we can just say: "if you have access to
-> the device node, then you have the right to request the module".
-
-Many of these callers are using network interfaces to do this work, so
-there isn't as clean a permission model associated with those like
-there might be with a filesystem open(). But that doesn't matter (see
-below).
-
-> But that would need to be not a global "request_module()" behavior,
-> but a behavior that is tied to the particular call-site.
->
-> IOW, extend on that request_module_cap() model, and introduce
-> (perhaps) a "request_module_dev()" call that basically means "the user
-> opened the device node for the requested module".
->
-> Because those kinds of permissions aren't necessarily about
-> capabilities, but about things like "I'm in the dialout group, I get
-> to open tty devices and by implication request their modules".
-
-This really doesn't address the main concern that is the problem:
-whitelisting vs blacklisting. In your example, the dialout group gives
-access to specific ttys or serial ports, etc, but an admin may want a
-way to make sure the users don't load some buggy line discipline. Now,
-that admin could blacklist all those modules one at a time, but new
-stuff might get introduced, it doesn't handle other subsystems, etc.
-
-We need to provide a way to whitelist autoloaded modules. The
-demonstrated need (to whitelist _no_ modules, addressed by this
-series) provides that level of control on a task basis (effectively
-making it container-specific).
-
-> And that _really_ isn't global behavior.  The fact that I might be
-> able to load a serial; module has *nothing* to do with whether I can
-> load some other kind of module at all.
->
-> That global mode is just wrong.
-
-If the per-task thing stays and the global sysctl goes, that would be
-fine by me. That still gives admins a way to control the autoload
-behavior, assuming their init knows how to set the flag. The global
-sysctl, in my mind, is really more of a way for an admin to do this
-after the fact without rebooting, etc. But I don't have a strong
-opinion about the global sysctl.
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+thanks,
+Tobin.
