@@ -1,52 +1,55 @@
-Date: Tue, 28 Nov 2017 17:04:40 -0600
-From: "Serge E. Hallyn" <serge@hallyn.com>
-Message-ID: <20171128230440.GB28297@mail.hallyn.com>
-References: <20171110053757.21170-1-mahesh@bandewar.net>
- <20171126064037.GB30279@mail.hallyn.com>
- <CAF2d9jhiZFiFODNXUY13F+4Pm+59+rZW=CnLPX1VUT3BAJdeeA@mail.gmail.com>
+Date: Tue, 28 Nov 2017 18:23:20 -0500
+From: Theodore Ts'o <tytso@mit.edu>
+Message-ID: <20171128232320.22zo324g5wvo2lce@thunk.org>
+References: <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
+ <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
+ <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
+ <1100603534.56586.1511871419952@ichabod.co-bxl>
+ <20171128193243.4fymnjk7fplqw62x@thunk.org>
+ <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com>
+ <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
+ <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com>
+ <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com>
+ <CAGXu5j+V8+h6kdbz5Det=wsRKjt6Cm0-_n8soLCU2PZ=AvqpJQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAF2d9jhiZFiFODNXUY13F+4Pm+59+rZW=CnLPX1VUT3BAJdeeA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] userns: control capabilities of some user
- namespaces
-To: Mahesh Bandewar =?utf-8?B?KOCkruCkueClh+CktiDgpKzgpILgpKHgpYfgpLXgpL4=?= =?utf-8?B?4KSwKQ==?= <maheshb@google.com>
-Cc: "Serge E. Hallyn" <serge@hallyn.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
+In-Reply-To: <CAGXu5j+V8+h6kdbz5Det=wsRKjt6Cm0-_n8soLCU2PZ=AvqpJQ@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
+ request_module_cap() to load 'netdev-%s' modules
+To: Kees Cook <keescook@chromium.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Djalal Harouni <tixxdz@gmail.com>, Jonathan Corbet <corbet@lwn.net>, James Morris <james.l.morris@oracle.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Geo Kozey <geokozey@mailfence.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Mahesh Bandewar (महेश बंडेवार) (maheshb@google.com):
-...
-> >> diff --git a/security/commoncap.c b/security/commoncap.c
-> >> index fc46f5b85251..89103f16ac37 100644
-> >> --- a/security/commoncap.c
-> >> +++ b/security/commoncap.c
-> >> @@ -73,6 +73,14 @@ int cap_capable(const struct cred *cred, struct user_namespace *targ_ns,
-> >>  {
-> >>       struct user_namespace *ns = targ_ns;
-> >>
-> >> +     /* If the capability is controlled and user-ns that process
-> >> +      * belongs-to is 'controlled' then return EPERM and no need
-> >> +      * to check the user-ns hierarchy.
-> >> +      */
-> >> +     if (is_user_ns_controlled(cred->user_ns) &&
-> >> +         is_capability_controlled(cap))
-> >> +             return -EPERM;
-> >
-> > I'd be curious to see the performance impact on this on a regular
-> > workload (kernel build?) in a controlled ns.
-> >
-> Should it affect? If at all, it should be +ve since, the recursive
-> user-ns hierarchy lookup is avoided with the above check if the
-> capability is controlled.
+On Tue, Nov 28, 2017 at 01:33:40PM -0800, Kees Cook wrote:
+> As I've said before, this isn't a theoretical attack surface. This
+> year alone there have been three known-exploitable flaws exposed by
+> autoloading:
+> 
+> The exploit for CVE-2017-2636 uses int n_hdlc = N_HDLC; ioctl(fd,
+> TIOCSETD, &n_hdlc) [1]. This is using the existing "tty-ldisc-"
+> prefix, and is intentionally unprivileged.
+> 
+> The exploit for CVE-2017-6074 uses socket(PF_INET6, SOCK_DCCP,
+> IPPROTO_IP) [2]. This is using the existing proto prefix, and is
+> intentionally unprivileged.
 
-Yes but I expect that to be the rare case for normal lxc installs
-(which are of course what I am interested in)
+So in these two cases, if the kernel was built w/o modules, and HDLC
+and DCCP was built-in, you'd be screwed, then?
 
->  The additional cost otherwise is this check
-> per cap_capable() call.
+Is the goal here to protect people using distro kernels which build
+the world as modules, including dodgy pieces of kernel code that are
+bug-ridden?
 
-And pipeline refetching?
+If so, then presumably 90% of the problem you've cited can be done by
+creating a script which takes a look of the modules that are normally
+in use once the machine is in production, and then deleting everything
+else?  Correct?
 
-Capability calls also shouldn't be all that frequent, but still I'm
-left wondering...
+And yes, this will potentially break some users, but the security
+folks who are advocating for the more aggressive version of this
+change seem to be OK with breaking users, so they can do this without
+making kernel changes.  Good luck getting Red Hat and SuSE to accept
+such a change, though....
+
+						- Ted
