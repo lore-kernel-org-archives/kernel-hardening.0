@@ -1,67 +1,76 @@
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <708003731.69563.1511905898471@ichabod.co-bxl>
-References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
+In-Reply-To: <20171128232320.22zo324g5wvo2lce@thunk.org>
+References: <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
  <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
  <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
  <1100603534.56586.1511871419952@ichabod.co-bxl> <20171128193243.4fymnjk7fplqw62x@thunk.org>
  <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com>
  <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
  <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com>
- <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com> <708003731.69563.1511905898471@ichabod.co-bxl>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Tue, 28 Nov 2017 15:51:59 -0800
-Message-ID: <CA+55aFzxFQeyk6Mrk50=jzevHpZ78BXz_9nHcHabMWBdM6RC6A@mail.gmail.com>
+ <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com>
+ <CAGXu5j+V8+h6kdbz5Det=wsRKjt6Cm0-_n8soLCU2PZ=AvqpJQ@mail.gmail.com> <20171128232320.22zo324g5wvo2lce@thunk.org>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Wed, 29 Nov 2017 00:53:16 +0100
+Message-ID: <CAEiveUdrpH4qQnNX_r1EaRaH8jQwO6HsKGRnE1qY+OdCLnkGcw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
  request_module_cap() to load 'netdev-%s' modules
-To: Geo Kozey <geokozey@mailfence.com>
-Cc: LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Djalal Harouni <tixxdz@gmail.com>, Jonathan Corbet <corbet@lwn.net>, James Morris <james.l.morris@oracle.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Geo Kozey <geokozey@mailfence.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 28, 2017 at 1:51 PM, Geo Kozey <geokozey@mailfence.com> wrote:
+On Wed, Nov 29, 2017 at 12:23 AM, Theodore Ts'o <tytso@mit.edu> wrote:
+> On Tue, Nov 28, 2017 at 01:33:40PM -0800, Kees Cook wrote:
+>> As I've said before, this isn't a theoretical attack surface. This
+>> year alone there have been three known-exploitable flaws exposed by
+>> autoloading:
+>>
+>> The exploit for CVE-2017-2636 uses int n_hdlc = N_HDLC; ioctl(fd,
+>> TIOCSETD, &n_hdlc) [1]. This is using the existing "tty-ldisc-"
+>> prefix, and is intentionally unprivileged.
+>>
+>> The exploit for CVE-2017-6074 uses socket(PF_INET6, SOCK_DCCP,
+>> IPPROTO_IP) [2]. This is using the existing proto prefix, and is
+>> intentionally unprivileged.
 >
-> What about "we're insecure by default but you can't do anything to change this"? It describes current situation.
+> So in these two cases, if the kernel was built w/o modules, and HDLC
+> and DCCP was built-in, you'd be screwed, then?
+>
+> Is the goal here to protect people using distro kernels which build
+> the world as modules, including dodgy pieces of kernel code that are
+> bug-ridden?
+>
+> If so, then presumably 90% of the problem you've cited can be done by
+> creating a script which takes a look of the modules that are normally
+> in use once the machine is in production, and then deleting everything
+> else?  Correct?
+>
+> And yes, this will potentially break some users, but the security
+> folks who are advocating for the more aggressive version of this
+> change seem to be OK with breaking users, so they can do this without
+> making kernel changes.  Good luck getting Red Hat and SuSE to accept
+> such a change, though....
 
-Go away, and don't send me patches until you have dug your head out of
-whatever hole you have put it in..
+The patches does not change default and make it easy for users and we
+have request for this, not all world is Red Hat / SuSE , I build
+embedded Linux for clients when I manage to have some, and I clearly
+would have set this to my clients since most of them won't be able to
+afford all the signing and complexity, now how I should allow modules
+load/unload replace with newer versions, but restrict some of their
+apps from triggering it, "modules_disabled=1" is not practical. I
+can't build a perfect version for every usecase,  and they started to
+ship apps for IoT, even containers for IoT, yes they do it and they
+use the same os for various use cases! so it is not about those, even
+embedded vendors have one single shared layer that they use for all
+their products.
 
-If this is the kind of shit-headed responses I get from the
-"hardening" list, then I don't want to have anything to do with you
-guys.
+For distros, the target is also containers and sandboxes, and they are
+already interested in it.
 
-Seriously.
+P.S. please the cover letter already mentions that this is for Embedded and IoT.
 
-I sent out a long explanation of what's wrong with the hardening
-people last week. It made the news. If you still don't understand,
-you're simply not worth working with.
+>                                                 - Ted
 
-If you cannot help improve kernel security for the default case, and
-you can't even be bothered to try, and only want to fix some special
-case that doesn't then improve anything at all for most people, I
-really _really_ suggest you go play in your own sandbox.
 
-Because clearly, if you're not interested in improving things for
-anybody else, why the hell should you care about the upstream kernel
-anyway?
 
-That's what this boils down to: if you send me patches, you had better
-strive to improve security for everybody, not just for some little
-locked-down special case.
-
-We're not grsecurity. We never have been. We're not interested in the
-crazy people. We're interested in the kind of security that is
-generally applicable.
-
-To the mainline kernel, not breaking existing users matters, but it
-also matters that the patches make sense for everybody, because
-otherwise, why be mainline?
-
-So a patch that avoids breaking existing users, but also doesn't
-actually improve anything for existing users, simply shouldn't be part
-of the mainline kernel.
-
-Comprende?
-
-                    Linus
+-- 
+tixxdz
