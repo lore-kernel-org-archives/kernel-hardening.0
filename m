@@ -1,81 +1,116 @@
 MIME-Version: 1.0
-In-Reply-To: <20171128211659.GP729@wotan.suse.de>
+Sender: keescook@google.com
+In-Reply-To: <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com>
 References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-2-git-send-email-tixxdz@gmail.com> <20171128191405.GO729@wotan.suse.de>
- <CAGXu5jKgHWNE4NH_xqcM084-BNBPy+HmEVPbTA+w_=K3S6gC=w@mail.gmail.com> <20171128211659.GP729@wotan.suse.de>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Tue, 28 Nov 2017 22:33:27 +0100
-Message-ID: <CAEiveUf3Zdw=+MPTHRSRsNq3o9M0XOgnXBVszdsGAPvhyS5wLw@mail.gmail.com>
+ <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
+ <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
+ <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
+ <1100603534.56586.1511871419952@ichabod.co-bxl> <20171128193243.4fymnjk7fplqw62x@thunk.org>
+ <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com>
+ <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
+ <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com> <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 28 Nov 2017 13:33:40 -0800
+Message-ID: <CAGXu5j+V8+h6kdbz5Det=wsRKjt6Cm0-_n8soLCU2PZ=AvqpJQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 next 1/5] modules:capabilities: add request_module_cap()
-To: "Luis R. Rodriguez" <mcgrof@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
+Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
+ request_module_cap() to load 'netdev-%s' modules
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Theodore Ts'o <tytso@mit.edu>, Djalal Harouni <tixxdz@gmail.com>, Jonathan Corbet <corbet@lwn.net>, James Morris <james.l.morris@oracle.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Geo Kozey <geokozey@mailfence.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 28, 2017 at 10:16 PM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
-> On Tue, Nov 28, 2017 at 12:11:34PM -0800, Kees Cook wrote:
->> On Tue, Nov 28, 2017 at 11:14 AM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
->> > kmod is just a helper to poke userpsace to load a module, that's it.
->> >
->> > The old init_module() and newer finit_module() do the real handy work or
->> > module loading, and both currently only use may_init_module():
->> >
->> > static int may_init_module(void)
->> > {
->> >         if (!capable(CAP_SYS_MODULE) || modules_disabled)
->> >                 return -EPERM;
->> >
->> >         return 0;
->> > }
->> >
->> > This begs the question:
->> >
->> >   o If userspace just tries to just use raw finit_module() do we want similar
->> >     checks?
->> >
->> > Otherwise, correct me if I'm wrong this all seems pointless.
+On Tue, Nov 28, 2017 at 12:33 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Tue, Nov 28, 2017 at 12:20 PM, Kees Cook <keescook@chromium.org> wrote:
 >>
->> Hm? That's direct-loading, not auto-loading. This series is only about
->> auto-loading.
+>> So what's the right path forward for allowing a way to block
+>> autoloading? Separate existing request_module() calls into "must be
+>> privileged" and "can be unpriv" first, then rework the series to deal
+>> with the "unpriv okay" subset?
 >
-> And *all* auto-loading uses aliases? What's the difference between auto-loading
-> and direct-loading?
-
-Not all auto-loading uses aliases, auto-loading is when kernel code
-calls request_module() to loads the feature that was not present, and
-direct-loading in this thread is the direct syscalls like
-finit_module().
-
->> We already have a global sysctl for blocking direct-loading (modules_disabled).
+> So once we've taken care of the networking ones that check their own
+> different capability bit, maybe we can then make the regular
+> request_module() do a rate-limited warning for non-CAP_SYS_MODULE uses
+> that prints which module it's loading.
 >
-> My point was that even if you have a CAP_NET_ADMIN check on request_module(),
-> finit_module() will not check for it, so a crafty userspace could still try
-> to just finit_module() directly, and completely then bypass the CAP_NET_ADMIN
-> check.
+> And then just see what people report.
 
-The finit_module() uses CAP_SYS_MODULE which should allow all modules
-and in this context it should be more privileged than CAP_NET_ADMIN
-which is only for "netdev-%s" (to not load arbitrary modules with it).
+I'm fine to try this experiment. I just think it'll be very noisy. :)
 
-finit_module() coming from request_module() always has the
-CAP_NET_ADMIN, hence the check is done before.
+> Because maybe it's just a very small handful that matters, and we can
+> say "those are ok".
 
-> So unless I'm missing something, I see no point in adding extra checks for
-> request_module() but nothing for the respective load_module().
+See, that's the problem: it's not a matter of "those are ok". Those
+modules will either have bugs discovered in them or will gain bugs
+over time. The point is to provide a mechanism to block an entire
+attack surface on systems that do not need auto-loading (which is a
+lot of systems).
 
-I see, request_module() is called from kernel context which runs in
-init namespace will full capabilities, the spawned userspace modprobe
-will get CAP_SYS_MODULE and all other caps, then after comes modprobe
-and load_module().
+As I've said before, this isn't a theoretical attack surface. This
+year alone there have been three known-exploitable flaws exposed by
+autoloading:
 
-Btw as suggested by Linus I will update with request_module_cap() and
-I can offer my help maintaining these bits too.
+The exploit for CVE-2017-2636 uses int n_hdlc = N_HDLC; ioctl(fd,
+TIOCSETD, &n_hdlc) [1]. This is using the existing "tty-ldisc-"
+prefix, and is intentionally unprivileged.
 
+The exploit for CVE-2017-6074 uses socket(PF_INET6, SOCK_DCCP,
+IPPROTO_IP) [2]. This is using the existing proto prefix, and is
+intentionally unprivileged.
 
+The exploit for CVE-2017-7184 uses socket(PF_NETLINK, SOCK_RAW,
+NETLINK_XFRM) [3]. This is using existing proto prefix and became
+unprivileged by way of user namespaces (CAP_NET_ADMIN in a
+user-namespace).
+
+Concerned admins have already disabled user namespaces, so they were
+protected from the last one, but they couldn't stop the first two
+without explicit blacklists ahead of time. (Though anyone paying
+attention to vulnerability histories would have already blacklisted
+DCCP.)
+
+> And maybe that is too optimistic, and we have a lot of device driver
+> ones because people still have a static /dev and don't have udev
+> populating modules and device nodes, and then maybe we need to
+> introduce a "request_module_dev()" where the rule is that you had to
+> at least have privileges to open the device node.
 >
->   Luis
+> Because I really am *not* interested in these security flags that are
+> off by default and then get turned on by special cases. I think it's
+> completely unacceptable to say "we're insecure by default but then you
+> can do X and be secure". It doesn't work. It doesn't fix anything.
 
+I empathize with this stance, but the last many years of hardening has
+been doing this just fine, and we've progressively moved defenses from
+"off by default" to "on by default", by way of distros, etc, over
+time. But sometimes we have things that must stay off by default to
+avoid breaking rule #1, even though every distro has turned it on by
+default (e.g. link restrictions). So, saying "it must be on by default
+and not break userspace" puts us in a bit of a catch-22.
 
+It sounds like the proposed path forward is:
+
+1) convert existing privileged request_module() usage to use explicit
+permission and/or capability checks
+2) mark the remaining with WARN_RATELIMIT
+3) wait
+4) ???
+
+It's steps 3 and 4 that worry me because we have a standing need for a
+solution here, and "wait" isn't a very convincing solution and step 4
+is unknown. We know we're going to have unprivileged module loading
+(e.g. AF_ALG), even if we reduce the places where it's used. In the
+end, we will still need a way for a process to say "I don't want to
+auto-load modules from here on out". That's the part I want to figure
+out, otherwise Djalal doesn't have a way to address the attack
+surface.
+
+-Kees
+
+[1] https://github.com/snorez/exploits/blob/master/cve-2017-2636/cve-2017-2636.c
+[2] https://github.com/xairy/kernel-exploits/blob/master/CVE-2017-6074/poc.c
+[3] https://github.com/snorez/exploits/blob/master/cve-2017-7184/exp.c
 
 -- 
-tixxdz
+Kees Cook
+Pixel Security
