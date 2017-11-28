@@ -1,135 +1,49 @@
 MIME-Version: 1.0
-In-Reply-To: <20171128191405.GO729@wotan.suse.de>
+Sender: keescook@google.com
+In-Reply-To: <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
 References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-2-git-send-email-tixxdz@gmail.com> <20171128191405.GO729@wotan.suse.de>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Tue, 28 Nov 2017 21:18:38 +0100
-Message-ID: <CAEiveUf13RGv1Qf+TOmU+VKtX9_qsO5=r8zsTt6gNdorSDeLqw@mail.gmail.com>
+ <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
+ <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
+ <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
+ <1100603534.56586.1511871419952@ichabod.co-bxl> <20171128193243.4fymnjk7fplqw62x@thunk.org>
+ <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com> <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 28 Nov 2017 12:20:32 -0800
+Message-ID: <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 next 1/5] modules:capabilities: add request_module_cap()
-To: "Luis R. Rodriguez" <mcgrof@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, linux-kernel <linux-kernel@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
+Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
+ request_module_cap() to load 'netdev-%s' modules
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Theodore Ts'o <tytso@mit.edu>, Djalal Harouni <tixxdz@gmail.com>, Jonathan Corbet <corbet@lwn.net>, James Morris <james.l.morris@oracle.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Geo Kozey <geokozey@mailfence.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Luis,
-
-On Tue, Nov 28, 2017 at 8:14 PM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
-> On Mon, Nov 27, 2017 at 06:18:34PM +0100, Djalal Harouni wrote:
-> ...
->
->> After a discussion with Rusty Russell [1], the suggestion was to pass
->> the capability from request_module() to security_kernel_module_request()
->> for 'netdev-%s' modules that need CAP_NET_ADMIN, and after review from
->> Kees Cook [2] and experimenting with the code, the patch now does the
->> following:
+On Tue, Nov 28, 2017 at 12:12 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Tue, Nov 28, 2017 at 12:08 PM, Kees Cook <keescook@chromium.org> wrote:
 >>
->> * Adds the request_module_cap() function.
->> * Updates the __request_module() to take the "required_cap" argument
->>         with the "prefix".
+>> Linus, are you okay with this series if the global sysctl gets dropped?
 >
-> ...
+> So really, it's not the "global sysctl" as much as the "global
+> request_module()" that annoys me.
 >
->> Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
->> ---
->> diff --git a/kernel/kmod.c b/kernel/kmod.c
->> index bc6addd..679d401 100644
->> --- a/kernel/kmod.c
->> +++ b/kernel/kmod.c
->> @@ -139,13 +147,22 @@ int __request_module(bool wait, const char *fmt, ...)
->>       if (!modprobe_path[0])
->>               return 0;
->>
->> +     /*
->> +      * Lets attach the prefix to the module name
->> +      */
->> +     if (prefix != NULL && *prefix != '\0') {
->> +             len += snprintf(module_name, MODULE_NAME_LEN, "%s-", prefix);
->> +             if (len >= MODULE_NAME_LEN)
->> +                     return -ENAMETOOLONG;
->> +     }
->> +
->>       va_start(args, fmt);
->> -     ret = vsnprintf(module_name, MODULE_NAME_LEN, fmt, args);
->> +     ret = vsnprintf(module_name + len, MODULE_NAME_LEN - len, fmt, args);
->>       va_end(args);
->> -     if (ret >= MODULE_NAME_LEN)
->> +     if (ret >= MODULE_NAME_LEN - len)
->>               return -ENAMETOOLONG;
->>
->> -     ret = security_kernel_module_request(module_name);
->> +     ret = security_kernel_module_request(module_name, required_cap, prefix);
->>       if (ret)
->>               return ret;
->>
+> I'll happily take the request_module_cap() part and the thing that
+> makes networking use that.
 >
-> kmod is just a helper to poke userpsace to load a module, that's it.
->
-> The old init_module() and newer finit_module() do the real handy work or
-> module loading, and both currently only use may_init_module():
->
-> static int may_init_module(void)
-> {
->         if (!capable(CAP_SYS_MODULE) || modules_disabled)
->                 return -EPERM;
->
->         return 0;
-> }
->
-> This begs the question:
->
->   o If userspace just tries to just use raw finit_module() do we want similar
->     checks?
->
-> Otherwise, correct me if I'm wrong this all seems pointless.
->
-> If we want something similar I think we might need to be processing aliases and
-> check for the aliases for their desired restrictions on finit_module(),
-> otherwise userspace can skip through the checks if the module name does not
-> match the alias prefix.
->
-> To be clear, aliases are completely ignored today on load_module(), so loading
-> 'xfs' with finit_module() will just have the kernel know about 'xfs' not
-> 'fs-xfs'.
->
-> So we currently do not process aliases in kernel.
->
-> I have debugging patches to enable us to process them, but they are just for
-> debugging and I've been meaning to send them in for review. I designed them
-> only for debugging given last time someone suggested for aliases processing to
-> be added, the only use case we found was a pre-optimizations we decided to avoid
-> pursuing. Debugging is a good reason to have alias processing in-kernel though.
->
-> The pre-optimization we decided to stay away from was to check if the requested
-> module via request_module() was already loaded *and* also check if the name passed
-> matches any of the existing module aliases for currently loaded modules. Today
-> request_module() does not even check if a requested module is already loaded,
-> its a stupid loader, it just goes to userspace, and lets userspace figure it
-> out. Userspace in turn could check for aliases, but it could lie, or not be up
-> to date to do that.
->
-> The pre-optmization is a theoretical gain only then, and if userspace had
-> proper alias checking it is arguable that it may perform just as equal.
-> To help valuate these sorts of things we now have:
->
-> tools/testing/selftests/kmod/kmod.sh
->
-> So further patches can use and test impact with it.
->
-> Anyway -- so aliasing is currently only a debugging consideration, but without
-> processing aliases, all this work seems pointless to me as the real loader is
-> in finit_module().
+> But the flag that we have to default to off because it breaks every
+> single box otherwise? No. It doesn't  matter if it's one single global
+> or just a "global behavior for request_module() for this process" at
+> that point, it's still a pointless security flag that is opt-in.
 
-These patchset are about module auto-loading which is triggered from
-multiple paths in the kernel, the cover letter notes all the
-differences between the two operations and why the explicit one and
-"modules_disabled=1" is already a pain.
+To be clear: such a flag wouldn't doesn't break every system, but I
+understand your concern.
 
-The finit_module() is covered directly by CAP_SYS_MODULE, and for
-aliasing I am not sure how it will be related or how userspace will
-maintain it, we do not have a use case for it, we want a simple flag.
+So what's the right path forward for allowing a way to block
+autoloading? Separate existing request_module() calls into "must be
+privileged" and "can be unpriv" first, then rework the series to deal
+with the "unpriv okay" subset?
 
-Thank you!
-
+-Kees
 
 -- 
-tixxdz
+Kees Cook
+Pixel Security
