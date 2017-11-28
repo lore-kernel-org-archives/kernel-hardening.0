@@ -1,58 +1,67 @@
 MIME-Version: 1.0
-In-Reply-To: <20171128230440.GB28297@mail.hallyn.com>
-References: <20171110053757.21170-1-mahesh@bandewar.net> <20171126064037.GB30279@mail.hallyn.com>
- <CAF2d9jhiZFiFODNXUY13F+4Pm+59+rZW=CnLPX1VUT3BAJdeeA@mail.gmail.com> <20171128230440.GB28297@mail.hallyn.com>
-From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
-Date: Tue, 28 Nov 2017 15:50:48 -0800
-Message-ID: <CAF2d9jhCDasnf2tbaGA04MV5ygZ9o1FaVRCEU2TkHjZR7d1ifw@mail.gmail.com>
+Sender: linus971@gmail.com
+In-Reply-To: <708003731.69563.1511905898471@ichabod.co-bxl>
+References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
+ <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
+ <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
+ <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
+ <1100603534.56586.1511871419952@ichabod.co-bxl> <20171128193243.4fymnjk7fplqw62x@thunk.org>
+ <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com>
+ <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
+ <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com>
+ <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com> <708003731.69563.1511905898471@ichabod.co-bxl>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Tue, 28 Nov 2017 15:51:59 -0800
+Message-ID: <CA+55aFzxFQeyk6Mrk50=jzevHpZ78BXz_9nHcHabMWBdM6RC6A@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] userns: control capabilities of some user namespaces
-To: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
+Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
+ request_module_cap() to load 'netdev-%s' modules
+To: Geo Kozey <geokozey@mailfence.com>
+Cc: LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 28, 2017 at 3:04 PM, Serge E. Hallyn <serge@hallyn.com> wrote:
-> Quoting Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=AC=
-=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) (maheshb@google.com=
-):
-> ...
->> >> diff --git a/security/commoncap.c b/security/commoncap.c
->> >> index fc46f5b85251..89103f16ac37 100644
->> >> --- a/security/commoncap.c
->> >> +++ b/security/commoncap.c
->> >> @@ -73,6 +73,14 @@ int cap_capable(const struct cred *cred, struct us=
-er_namespace *targ_ns,
->> >>  {
->> >>       struct user_namespace *ns =3D targ_ns;
->> >>
->> >> +     /* If the capability is controlled and user-ns that process
->> >> +      * belongs-to is 'controlled' then return EPERM and no need
->> >> +      * to check the user-ns hierarchy.
->> >> +      */
->> >> +     if (is_user_ns_controlled(cred->user_ns) &&
->> >> +         is_capability_controlled(cap))
->> >> +             return -EPERM;
->> >
->> > I'd be curious to see the performance impact on this on a regular
->> > workload (kernel build?) in a controlled ns.
->> >
->> Should it affect? If at all, it should be +ve since, the recursive
->> user-ns hierarchy lookup is avoided with the above check if the
->> capability is controlled.
+On Tue, Nov 28, 2017 at 1:51 PM, Geo Kozey <geokozey@mailfence.com> wrote:
 >
-> Yes but I expect that to be the rare case for normal lxc installs
-> (which are of course what I am interested in)
->
->>  The additional cost otherwise is this check
->> per cap_capable() call.
->
-> And pipeline refetching?
->
-> Capability calls also shouldn't be all that frequent, but still I'm
-> left wondering...
+> What about "we're insecure by default but you can't do anything to change this"? It describes current situation.
 
-Correct, and capability checks are part of the control-path and not
-the data-path so shouldn't matter but I guess it doesn't hurt to
-find-out the number. Do you have any workload in mind, that we can use
-for this test/benchmark?
+Go away, and don't send me patches until you have dug your head out of
+whatever hole you have put it in..
+
+If this is the kind of shit-headed responses I get from the
+"hardening" list, then I don't want to have anything to do with you
+guys.
+
+Seriously.
+
+I sent out a long explanation of what's wrong with the hardening
+people last week. It made the news. If you still don't understand,
+you're simply not worth working with.
+
+If you cannot help improve kernel security for the default case, and
+you can't even be bothered to try, and only want to fix some special
+case that doesn't then improve anything at all for most people, I
+really _really_ suggest you go play in your own sandbox.
+
+Because clearly, if you're not interested in improving things for
+anybody else, why the hell should you care about the upstream kernel
+anyway?
+
+That's what this boils down to: if you send me patches, you had better
+strive to improve security for everybody, not just for some little
+locked-down special case.
+
+We're not grsecurity. We never have been. We're not interested in the
+crazy people. We're interested in the kind of security that is
+generally applicable.
+
+To the mainline kernel, not breaking existing users matters, but it
+also matters that the patches make sense for everybody, because
+otherwise, why be mainline?
+
+So a patch that avoids breaking existing users, but also doesn't
+actually improve anything for existing users, simply shouldn't be part
+of the mainline kernel.
+
+Comprende?
+
+                    Linus
