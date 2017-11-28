@@ -1,123 +1,52 @@
+Date: Tue, 28 Nov 2017 17:04:40 -0600
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20171128230440.GB28297@mail.hallyn.com>
+References: <20171110053757.21170-1-mahesh@bandewar.net>
+ <20171126064037.GB30279@mail.hallyn.com>
+ <CAF2d9jhiZFiFODNXUY13F+4Pm+59+rZW=CnLPX1VUT3BAJdeeA@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20171128221856.GS729@wotan.suse.de>
-References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-2-git-send-email-tixxdz@gmail.com> <20171128191405.GO729@wotan.suse.de>
- <CAGXu5jKgHWNE4NH_xqcM084-BNBPy+HmEVPbTA+w_=K3S6gC=w@mail.gmail.com>
- <20171128211659.GP729@wotan.suse.de> <CAEiveUf3Zdw=+MPTHRSRsNq3o9M0XOgnXBVszdsGAPvhyS5wLw@mail.gmail.com>
- <20171128221856.GS729@wotan.suse.de>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Tue, 28 Nov 2017 23:52:08 +0100
-Message-ID: <CAEiveUewVp_+O5vKEB34ZHzHdh5mHzr_cOaaQHbVyiJhRz_c3Q@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 next 1/5] modules:capabilities: add request_module_cap()
-To: "Luis R. Rodriguez" <mcgrof@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CAF2d9jhiZFiFODNXUY13F+4Pm+59+rZW=CnLPX1VUT3BAJdeeA@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCHv2 2/2] userns: control capabilities of some user
+ namespaces
+To: Mahesh Bandewar =?utf-8?B?KOCkruCkueClh+CktiDgpKzgpILgpKHgpYfgpLXgpL4=?= =?utf-8?B?4KSwKQ==?= <maheshb@google.com>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 28, 2017 at 11:18 PM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
-> On Tue, Nov 28, 2017 at 10:33:27PM +0100, Djalal Harouni wrote:
->> On Tue, Nov 28, 2017 at 10:16 PM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
->> > On Tue, Nov 28, 2017 at 12:11:34PM -0800, Kees Cook wrote:
->> >> On Tue, Nov 28, 2017 at 11:14 AM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
->> >> > kmod is just a helper to poke userpsace to load a module, that's it.
->> >> >
->> >> > The old init_module() and newer finit_module() do the real handy work or
->> >> > module loading, and both currently only use may_init_module():
->> >> >
->> >> > static int may_init_module(void)
->> >> > {
->> >> >         if (!capable(CAP_SYS_MODULE) || modules_disabled)
->> >> >                 return -EPERM;
->> >> >
->> >> >         return 0;
->> >> > }
->> >> >
->> >> > This begs the question:
->> >> >
->> >> >   o If userspace just tries to just use raw finit_module() do we want similar
->> >> >     checks?
->> >> >
->> >> > Otherwise, correct me if I'm wrong this all seems pointless.
->> >>
->> >> Hm? That's direct-loading, not auto-loading. This series is only about
->> >> auto-loading.
->> >
->> > And *all* auto-loading uses aliases? What's the difference between auto-loading
->> > and direct-loading?
->>
->> Not all auto-loading uses aliases, auto-loading is when kernel code
->> calls request_module() to loads the feature that was not present,
->
-> It seems the actual interest here is system call implicated request_module()
-> calls? Because there are uses of request_module() which may be module hacks,
-> and not implicated via system calls.
+Quoting Mahesh Bandewar (महेश बंडेवार) (maheshb@google.com):
+...
+> >> diff --git a/security/commoncap.c b/security/commoncap.c
+> >> index fc46f5b85251..89103f16ac37 100644
+> >> --- a/security/commoncap.c
+> >> +++ b/security/commoncap.c
+> >> @@ -73,6 +73,14 @@ int cap_capable(const struct cred *cred, struct user_namespace *targ_ns,
+> >>  {
+> >>       struct user_namespace *ns = targ_ns;
+> >>
+> >> +     /* If the capability is controlled and user-ns that process
+> >> +      * belongs-to is 'controlled' then return EPERM and no need
+> >> +      * to check the user-ns hierarchy.
+> >> +      */
+> >> +     if (is_user_ns_controlled(cred->user_ns) &&
+> >> +         is_capability_controlled(cap))
+> >> +             return -EPERM;
+> >
+> > I'd be curious to see the performance impact on this on a regular
+> > workload (kernel build?) in a controlled ns.
+> >
+> Should it affect? If at all, it should be +ve since, the recursive
+> user-ns hierarchy lookup is avoided with the above check if the
+> capability is controlled.
 
-Indeed.
+Yes but I expect that to be the rare case for normal lxc installs
+(which are of course what I am interested in)
 
+>  The additional cost otherwise is this check
+> per cap_capable() call.
 
->> and direct-loading in this thread is the direct syscalls like
->> finit_module().
->
-> OK.
->
->> >> We already have a global sysctl for blocking direct-loading (modules_disabled).
->> >
->> > My point was that even if you have a CAP_NET_ADMIN check on request_module(),
->> > finit_module() will not check for it, so a crafty userspace could still try
->> > to just finit_module() directly, and completely then bypass the CAP_NET_ADMIN
->> > check.
->>
->> The finit_module() uses CAP_SYS_MODULE which should allow all modules
->> and in this context it should be more privileged than CAP_NET_ADMIN
->> which is only for "netdev-%s" (to not load arbitrary modules with it).
->>
->> finit_module() coming from request_module() always has the
->> CAP_NET_ADMIN, hence the check is done before.
->
-> But since CAP_SYS_MODULE is more restrictive, what's the point in checking
-> for CAP_NET_ADMIN?
+And pipeline refetching?
 
-For backward compatibility with 'netdev' modules since it is for those.
-
-
->> > So unless I'm missing something, I see no point in adding extra checks for
->> > request_module() but nothing for the respective load_module().
->>
->> I see, request_module() is called from kernel context which runs in
->> init namespace will full capabilities, the spawned userspace modprobe
->> will get CAP_SYS_MODULE and all other caps, then after comes modprobe
->> and load_module().
->
-> Right, so defining the gains of adding this extra check is not very clear
-> yet. It would seem a benefit exists, what is it?
-
-it will able to filter if the request_module() should continue loading
-the module or deny it which prevents spawning the *privileged*
-usermode helper. This is all based on are we allowed to load new
-features or not, or IOW I don't want to allow new features or modules
-autoloading from now and on, as stated in the cover letter for various
-benefit including security, reduce the amount of kernel code running,
-but also do not allow new features for anyone like tunneling, etc.
-
-
->> Btw as suggested by Linus I will update with request_module_cap() and > I can
->> offer my help maintaining these bits too.
->
-> Can you start by extending lib/test_module.c and
-> tools/testing/selftests/kmod/kmod.sh with a proof of concept of the gains here,
-> as well as ensuring things work as expected ?
-
-Alright Luis, thanks for the hint, yes I will make sure to cover these.
-
-For gains, kees already answered in the other email, and please check
-the DCCP exploit and others linked in the cover letter.
-
-
-Thank you!
-
->   Luis
-
-
-
--- 
-tixxdz
+Capability calls also shouldn't be all that frequent, but still I'm
+left wondering...
