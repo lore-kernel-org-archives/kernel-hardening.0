@@ -1,352 +1,169 @@
+Date: Tue, 28 Nov 2017 16:07:26 +0100
+From: Andrew Jones <drjones@redhat.com>
+Message-ID: <20171128150726.xui5i23uigvfo52w@kamzik.brq.redhat.com>
+References: <20171127163806.31435-1-mark.rutland@arm.com>
+ <20171127163806.31435-13-mark.rutland@arm.com>
 MIME-Version: 1.0
-In-Reply-To: <1511850724-2381-1-git-send-email-me@tobin.cc>
-References: <1511850724-2381-1-git-send-email-me@tobin.cc>
-From: Alexander Kapshuk <alexander.kapshuk@gmail.com>
-Date: Tue, 28 Nov 2017 15:16:24 +0200
-Message-ID: <CAJ1xhMXjSTV92DxRz269sB=fZLEXJimr7_8PX8viamm02+xN1w@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] leaking_addresses: add support for 32-bit kernel addresses
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: kaiwan.billimoria@gmail.com, linux-kernel <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171127163806.31435-13-mark.rutland@arm.com>
+Subject: [kernel-hardening] Re: [PATCHv2 12/12] arm64: docs: document pointer authentication
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, cdall@linaro.org, arnd@arndb.de, marc.zyngier@arm.com, catalin.marinas@arm.com, yao.qi@arm.com, kernel-hardening@lists.openwall.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org, kvmarm@lists.cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 28, 2017 at 8:32 AM, Tobin C. Harding <me@tobin.cc> wrote:
-> Currently, leaking_addresses.pl only supports scanning 64 bit
-> architectures. This is due to how the regular expressions are formed. We
-> can do better than this. 32 architectures can be supported if we take
-> into consideration the kernel virtual address split.
->
-> Add support for ix86 32 bit architectures.
->  - Add command line option for page offset.
->  - Add command line option for kernel configuration file.
->  - Parse kernel config file for page offset (CONFIG_PAGE_OFFSET).
->  - Use page offset when checking for kernel virtual addresses.
->
-> Signed-off-by: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
-> Signed-off-by: Tobin C. Harding <me@tobin.cc>
+Hi Mark,
+
+On Mon, Nov 27, 2017 at 04:38:06PM +0000, Mark Rutland wrote:
+> Now that we've added code to support pointer authentication, add some
+> documentation so that people can figure out if/how to use it.
+> 
+> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+> Cc: Catalin Marinas <catalin.marinas@arm.com>
+> Cc: Will Deacon <will.deacon@arm.com>
+> Cc: Yao Qi <yao.qi@arm.com>
 > ---
->
-> As discussed this is a patch based on Kaiwan's previous patch. This
-> patch represents co development by Kaiwan and Tobin.
->
-> Applies on top of commit 4fbd8d194f06 (Linux 4.15-rc1)
->
-> thanks,
-> Tobin.
->
->  scripts/leaking_addresses.pl | 168 +++++++++++++++++++++++++++++++++++++------
->  1 file changed, 148 insertions(+), 20 deletions(-)
->
-> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-> index bc5788000018..f03f2f140e0a 100755
-> --- a/scripts/leaking_addresses.pl
-> +++ b/scripts/leaking_addresses.pl
-> @@ -1,9 +1,11 @@
->  #!/usr/bin/env perl
->  #
->  # (c) 2017 Tobin C. Harding <me@tobin.cc>
-> +# (c) 2017 Kaiwan N Billimoria <kaiwan.billimoria@gmail.com> (ix86 stuff)
-> +#
->  # Licensed under the terms of the GNU GPL License version 2
->  #
-> -# leaking_addresses.pl: Scan 64 bit kernel for potential leaking addresses.
-> +# leaking_addresses.pl: Scan the kernel for potential leaking addresses.
->  #  - Scans dmesg output.
->  #  - Walks directory tree and parses each file (for each directory in @DIRS).
->  #
-> @@ -22,6 +24,7 @@ use Cwd 'abs_path';
->  use Term::ANSIColor qw(:constants);
->  use Getopt::Long qw(:config no_auto_abbrev);
->  use Config;
-> +use feature 'state';
->
->  my $P = $0;
->  my $V = '0.01';
-> @@ -35,18 +38,19 @@ my $TIMEOUT = 10;
->  # Script can only grep for kernel addresses on the following architectures. If
->  # your architecture is not listed here and has a grep'able kernel address please
->  # consider submitting a patch.
-> -my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64');
-> +my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64', 'i[3456]86');
->
->  # Command line options.
->  my $help = 0;
->  my $debug = 0;
-> -my $raw = 0;
-> -my $output_raw = "";   # Write raw results to file.
-> -my $input_raw = "";    # Read raw results from file instead of scanning.
-> -
-> +my $raw = 0;                   # Show raw output.
-> +my $output_raw = "";           # Write raw results to file.
-> +my $input_raw = "";            # Read raw results from file instead of scanning.
->  my $suppress_dmesg = 0;                # Don't show dmesg in output.
->  my $squash_by_path = 0;                # Summary report grouped by absolute path.
->  my $squash_by_filename = 0;    # Summary report grouped by filename.
-> +my $page_offset_32bit = 0;     # 32-bit: value of CONFIG_PAGE_OFFSET
-> +my $kernel_config_file = "";   # Kernel configuration file.
->
->  # Do not parse these files (absolute path).
->  my @skip_parse_files_abs = ('/proc/kmsg',
-> @@ -95,14 +99,16 @@ Version: $V
->
->  Options:
->
-> -       -o, --output-raw=<file>  Save results for future processing.
-> -       -i, --input-raw=<file>   Read results from file instead of scanning.
-> -           --raw                Show raw results (default).
-> -           --suppress-dmesg     Do not show dmesg results.
-> -           --squash-by-path     Show one result per unique path.
-> -           --squash-by-filename Show one result per unique filename.
-> -       -d, --debug              Display debugging output.
-> -       -h, --help, --version    Display this help and exit.
-> +       -o, --output-raw=<file>         Save results for future processing.
-> +       -i, --input-raw=<file>          Read results from file instead of scanning.
-> +             --raw                       Show raw results (default).
-> +             --suppress-dmesg            Do not show dmesg results.
-> +             --squash-by-path            Show one result per unique path.
-> +             --squash-by-filename        Show one result per unique filename.
-> +           --page-offset-32bit=<hex>   PAGE_OFFSET value (for 32-bit kernels).
-> +           --kernel-config-file=<file> Kernel configuration file (e.g /boot/config)
-> +       -d, --debug                     Display debugging output.
-> +       -h, --help, --version           Display this help and exit.
->
->  Examples:
->
-> @@ -115,7 +121,10 @@ Examples:
->         # View summary report.
->         $0 --input-raw scan.out --squash-by-filename
->
-> -Scans the running (64 bit) kernel for potential leaking addresses.
-> +       # Scan kernel on a 32-bit system with a 2GB:2GB virtual address split.
-> +       $0 --page-offset-32bit=0x80000000
+>  Documentation/arm64/booting.txt                |  8 +++
+>  Documentation/arm64/elf_hwcaps.txt             |  6 ++
+>  Documentation/arm64/pointer-authentication.txt | 85 ++++++++++++++++++++++++++
+>  3 files changed, 99 insertions(+)
+>  create mode 100644 Documentation/arm64/pointer-authentication.txt
+> 
+> diff --git a/Documentation/arm64/booting.txt b/Documentation/arm64/booting.txt
+> index 8d0df62c3fe0..8df9f4658d6f 100644
+> --- a/Documentation/arm64/booting.txt
+> +++ b/Documentation/arm64/booting.txt
+> @@ -205,6 +205,14 @@ Before jumping into the kernel, the following conditions must be met:
+>      ICC_SRE_EL2.SRE (bit 0) must be initialised to 0b0.
+>    - The DT or ACPI tables must describe a GICv2 interrupt controller.
+>  
+> +  For CPUs with pointer authentication functionality:
+> +  - If EL3 is present:
+> +    SCR_EL3.APK (bit 16) must be initialised to 0b1
+> +    SCR_EL3.API (bit 17) must be initialised to 0b1
+> +  - If the kernel is entered at EL1:
+> +    HCR_EL2.APK (bit 40) must be initialised to 0b1
+> +    HCR_EL2.API (bit 41) must be initialised to 0b1
 > +
-> +Scans the running kernel for potential leaking addresses.
->
->  EOM
->         exit($exitcode);
-> @@ -131,6 +140,8 @@ GetOptions(
->         'squash-by-path'        => \$squash_by_path,
->         'squash-by-filename'    => \$squash_by_filename,
->         'raw'                   => \$raw,
-> +       'page-offset-32bit=o'   => \$page_offset_32bit,
-> +       'kernel-config-file=s'  => \$kernel_config_file,
->  ) or help(1);
->
->  help(0) if ($help);
-> @@ -146,7 +157,9 @@ if (!$input_raw and ($squash_by_path or $squash_by_filename)) {
->         exit(128);
->  }
->
-> -if (!is_supported_architecture()) {
-> +if (is_supported_architecture()) {
-> +       show_detected_architecture() if $debug;
-> +} else {
->         printf "\nScript does not support your architecture, sorry.\n";
->         printf "\nCurrently we support: \n\n";
->         foreach(@SUPPORTED_ARCHITECTURES) {
-> @@ -177,7 +190,7 @@ sub dprint
->
->  sub is_supported_architecture
->  {
-> -       return (is_x86_64() or is_ppc64());
-> +       return (is_x86_64() or is_ppc64() or is_ix86_32());
->  }
->
->  sub is_x86_64
-> @@ -200,10 +213,40 @@ sub is_ppc64
->         return 0;
->  }
->
-> +sub is_ix86_32
-> +{
-> +       my $archname = $Config{archname};
+>  The requirements described above for CPU mode, caches, MMUs, architected
+>  timers, coherency and system registers apply to all CPUs.  All CPUs must
+>  enter the kernel in the same exception level.
+> diff --git a/Documentation/arm64/elf_hwcaps.txt b/Documentation/arm64/elf_hwcaps.txt
+> index 89edba12a9e0..6cf40e419a9d 100644
+> --- a/Documentation/arm64/elf_hwcaps.txt
+> +++ b/Documentation/arm64/elf_hwcaps.txt
+> @@ -158,3 +158,9 @@ HWCAP_SHA512
+>  HWCAP_SVE
+>  
+>      Functionality implied by ID_AA64PFR0_EL1.SVE == 0b0001.
 > +
-> +       if ($archname =~ m/i[3456]86-linux/) {
-> +               return 1;
-> +       }
-> +       return 0;
-> +}
+> +HWCAP_APIA
 > +
-> +sub show_detected_architecture
-> +{
-> +       printf "Detected architecture: ";
-> +       if (is_ix86_32()) {
-> +               printf "32 bit x86\n";
-> +       } elsif (is_x86_64()) {
-> +               printf "x86_64\n";
-> +       } elsif (is_ppc64()) {
-> +               printf "ppc64\n";
-> +       } else {
-> +               printf "failed to detect architecture\n"
-> +       }
-> +}
+> +    EL0 AddPac and Auth functionality using APIAKey_EL1 is enabled, as
+> +    described by Documentation/arm64/pointer-authentication.txt.
 > +
->  sub is_false_positive
->  {
->         my ($match) = @_;
->
-> +       if (is_ix86_32()) {
-> +               return is_false_positive_ix86_32($match);
-> +       }
+> diff --git a/Documentation/arm64/pointer-authentication.txt b/Documentation/arm64/pointer-authentication.txt
+> new file mode 100644
+> index 000000000000..e9b5c6bdb84f
+> --- /dev/null
+> +++ b/Documentation/arm64/pointer-authentication.txt
+> @@ -0,0 +1,85 @@
+> +Pointer authentication in AArch64 Linux
+> +=======================================
 > +
-> +       # 64 bit architectures
+> +Author: Mark Rutland <mark.rutland@arm.com>
+> +Date: 2017-07-19
 > +
->         if ($match =~ '\b(0x)?(f|F){16}\b' or
->             $match =~ '\b(0x)?0{16}\b') {
->                 return 1;
-> @@ -220,6 +263,87 @@ sub is_false_positive
->         return 0;
->  }
->
-> +sub is_false_positive_ix86_32
-> +{
-> +       my ($match) = @_;
-> +       state $page_offset = get_page_offset(); # only gets called once
+> +This document briefly describes the provision of pointer authentication
+> +functionality in AArch64 Linux.
 > +
-> +       if ($match =~ '\b(0x)?(f|F){8}\b') {
-> +               return 1;
-> +       }
 > +
-> +       my $addr32 = eval hex($match);
-> +       if ($addr32 < $page_offset) {
-> +               return 1;
-> +       }
+> +Architecture overview
+> +---------------------
 > +
-> +       return 0;
-> +}
+> +The ARMv8.3 Pointer Authentication extension adds primitives that can be
+> +used to mitigate certain classes of attack where an attacker can corrupt
+> +the contents of some memory (e.g. the stack).
 > +
+> +The extension uses a Pointer Authentication Code (PAC) to determine
+> +whether pointers have been modified unexpectedly. A PAC is derived from
+> +a pointer, another value (such as the stack pointer), and a secret key
+> +held in system registers.
+> +
+> +The extension adds instructions to insert a valid PAC into a pointer,
+> +and to verify/remove the PAC from a pointer. The PAC occupies a number
+> +of high-order bits of the pointer, which varies dependent on the
+> +configured virtual address size and whether pointer tagging is in use.
+> +
+> +A subset of these instructions have been allocated from the HINT
+> +encoding space. In the absence of the extension (or when disabled),
+> +these instructions behave as NOPs. Applications and libraries using
+> +these instructions operate correctly regardless of the presence of the
+> +extension.
 
+Correctly, but obviously without the additional security. So I assume
+it's expected that applications that demand this security to probe for
+it themselves, presumably by the checking the HWCAP. Is that correct?
 
-
-> +sub get_page_offset
-> +{
-> +       my $page_offset;
-> +       my $default_offset = "0xc0000000";
-> +       my @config_files;
-> +
-> +       # Allow --page-offset-32bit to over ride.
-> +       if ($page_offset_32bit != 0) {
-> +               return $page_offset_32bit;
-> +       }
-> +
-> +       # Allow --kernel-config-file to over ride.
-> +       if ($kernel_config_file != "") {
-> +               @config_files = ($kernel_config_file);
-> +       } else {
-> +               my $config_file = '/boot/config-' . `uname -r`;
-> +               @config_files = ($config_file, '/boot/config');
-> +       }
-> +
-> +       if (-R "/proc/config.gz") {
-> +               my $tmp_file = "/tmp/tmpkconf";
-> +               if (system("gunzip < /proc/config.gz > $tmp_file")) {
-> +                       dprint " parse_kernel_config: system(gunzip...) failed\n";
-> +               } else {
-> +                       $page_offset = parse_kernel_config_file($tmp_file);
-> +                       if ($page_offset ne "") {
-> +                               return $page_offset;
-> +                       }
-> +               }
-> +               system("rm -f $tmp_file");
-> +       }
-> +
-> +       foreach my $config_file (@config_files) {
-> +               $page_offset = parse_kernel_config($config_file);
-> +               if ($page_offset ne "") {
-> +                       return $page_offset;
-> +               }
-> +       }
-> +
-> +       printf STDERR "Failed to parse kernel config files\n";
-> +       printf STDERR "Falling back to %s\n", $default_offset;
-> +       return $default_offset;
-> +}
-> +
-> +sub parse_kernel_config_file
-> +{
-> +       my ($file) = @_;
-> +       my $config = 'CONFIG_PAGE_OFFSET';
-> +       my $val = "";
-> +
-> +       open(my $fh, "<", $file) or return "";
-> +       while (my $line = <$fh> ) {
-> +               if ($line =~ /^$config/) {
-> +                       my ($str, $val) = split /=/, $line;
-> +                       chomp($val);
-> +                       last;
-> +               }
-> +       }
-> +
-> +       close $fh;
-> +       return $val;
-> +}
 > +
 > +
+> +Basic support
+> +-------------
+> +
+> +When CONFIG_ARM64_POINTER_AUTHENTICATION is selected, and relevant HW
+> +support is present, the kernel will assign a random APIAKey value to
+> +each process at exec*() time. This key is shared by all threads within
+> +the process, and the key is preserved across fork(). Presence of
+> +functionality using APIAKey is advertised via HWCAP_APIA.
+> +
+> +Recent versions of GCC can compile code with APIAKey-based return
+> +address protection when passed the -msign-return-address option. This
+> +uses instructions in the HINT space, and such code can run on systems
+> +without the pointer authentication extension.
+> +
+> +The remaining instruction and data keys (APIBKey, APDAKey, APDBKey) are
+> +reserved for future use, and instructions using these keys must not be
+> +used by software until a purpose and scope for their use has been
+> +decided. To enable future software using these keys to function on
+> +contemporary kernels, where possible, instructions using these keys are
+> +made to behave as NOPs.
+> +
+> +The generic key (APGAKey) is currently unsupported. Instructions using
+> +the generic key must not be used by software.
+> +
+> +
+> +Debugging
+> +---------
+> +
+> +When CONFIG_ARM64_POINTER_AUTHENTICATION is selected, and relevant HW
+> +support is present, the kernel will expose the position of TTBR0 PAC
+> +bits in the NT_ARM_PAC_MASK regset (struct user_pac_mask), which
+> +userspace can acqure via PTRACE_GETREGSET.
+> +
+> +Separate masks are exposed for data pointers and instruction pointers,
+> +as the set of PAC bits can vary between the two. Debuggers should not
+> +expect that HWCAP_APIA implies the presence (or non-presence) of this
+> +regset -- in future the kernel may support the use of APIBKey, APDAKey,
+> +and/or APBAKey, even in the absence of APIAKey.
+> +
+> +Note that the masks apply to TTBR0 addresses, and are not valid to apply
+> +to TTBR1 addresses (e.g. kernel pointers).
+> +
+> +
+> +Virtualization
+> +--------------
+> +
+> +When CONFIG_ARM64_POINTER_AUTHENTICATION is selected, and uniform HW
+> +support is present, KVM will context switch all keys used by vCPUs.
+> +Otherwise, the feature is disabled. When disabled, accesses to keys, or
+> +use of instructions enabled within the guest will trap to EL2, and an
+> +UNDEFINED exception will be injected into the guest.
 
-Get_page_offset attempts to build a list of config files, which are
-then passed into the parsing function for further processing.
-This splits up the code to do with the config files between
-get_page_offset() and parse_kernel_config_file().
-May I suggest putting the kernel config file processing code into the
-parse_kernel_config_file() instead, and let the parsing function
-handle the config files and either return the page_offset or an empty
-string.
+If host applications will just run, with the instructions behaving like
+NOPs, when the extension is either not present or not enabled, then
+shouldn't guest applications also just run? I.e. instead of injecting
+UNDEF, just treat the instructions as NOPs. Or did I misunderstand the
+trapping? Does use of the instructions at EL0 trap to EL1 or EL2?
 
-
-See below for the proposed implementation. Apologies for the absence
-of indentation.
-Disclaimer: I did not test-run the code being proposed.
-
-sub get_page_offset
-{
-my $default_offset = "0xc0000000";
-my $page_offset;
-# Allow --page-offset-32bit to over ride.
-if ($page_offset_32bit != 0) {
-return $page_offset_32bit;
-}
-
-if (($page_offset = parse_kernel_config_file()) != "") {
-return $page_offset
-}
-
-printf STDERR "Failed to parse kernel config files\n";
-printf STDERR "Falling back to %s\n", $default_offset;
-
-return $default_offset;
-}
-
-sub parse_kernel_config_file
-{
-my @config_files;
-my $config = 'CONFIG_PAGE_OFFSET';
-
-# Allow --kernel-config-file to over ride.
-if ($kernel_config_file != "") {
-@config_files = ($kernel_config_file);
-} else {
-my $config_file = '/boot/config-' . `uname -r`;
-@config_files = ($config_file, '/boot/config');
-}
-
-if (-R "/proc/config.gz") {
-if (system("gunzip < /proc/config.gz > /tmp/tmpkconf") == 0) {
-push @config_files, "/tmp/tmpkconf";
-}
-}
-
-foreach my $config_file (@config_files) {
-open(my $fh, "<", $config_file) or return "";
-while (my $line = <$fh> ) {
-if ($line =~ /^$config/) {
-my ($config_name, $page_offset) = split /=/, $line;
-chomp($page_offset);
-last;
-}
-}
-}
-system("rm -f $tmp_file");
-close $fh;
-
-return $page_offset;
-}
+Thanks,
+drew
