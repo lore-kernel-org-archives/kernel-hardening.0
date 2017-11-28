@@ -1,97 +1,58 @@
-Date: Tue, 28 Nov 2017 23:18:56 +0100
+Date: Tue, 28 Nov 2017 23:48:49 +0100
 From: "Luis R. Rodriguez" <mcgrof@kernel.org>
-Message-ID: <20171128221856.GS729@wotan.suse.de>
+Message-ID: <20171128224849.GT729@wotan.suse.de>
 References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
  <1511803118-2552-2-git-send-email-tixxdz@gmail.com>
  <20171128191405.GO729@wotan.suse.de>
  <CAGXu5jKgHWNE4NH_xqcM084-BNBPy+HmEVPbTA+w_=K3S6gC=w@mail.gmail.com>
  <20171128211659.GP729@wotan.suse.de>
- <CAEiveUf3Zdw=+MPTHRSRsNq3o9M0XOgnXBVszdsGAPvhyS5wLw@mail.gmail.com>
+ <CAGXu5j+JaFCo+pZKvet==Kh7GQgNXi30P50SMF4cpOGoUw-8ug@mail.gmail.com>
+ <20171128221237.GR729@wotan.suse.de>
+ <CAGXu5jKqMeBUB4iArqw9_iyKqm3NjpCrU_byy90kZrAHDb0c9w@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAEiveUf3Zdw=+MPTHRSRsNq3o9M0XOgnXBVszdsGAPvhyS5wLw@mail.gmail.com>
+In-Reply-To: <CAGXu5jKqMeBUB4iArqw9_iyKqm3NjpCrU_byy90kZrAHDb0c9w@mail.gmail.com>
 Subject: [kernel-hardening] Re: [PATCH v5 next 1/5] modules:capabilities: add
  request_module_cap()
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: "Luis R. Rodriguez" <mcgrof@kernel.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: "Luis R. Rodriguez" <mcgrof@kernel.org>, Djalal Harouni <tixxdz@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 28, 2017 at 10:33:27PM +0100, Djalal Harouni wrote:
-> On Tue, Nov 28, 2017 at 10:16 PM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
-> > On Tue, Nov 28, 2017 at 12:11:34PM -0800, Kees Cook wrote:
-> >> On Tue, Nov 28, 2017 at 11:14 AM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
-> >> > kmod is just a helper to poke userpsace to load a module, that's it.
-> >> >
-> >> > The old init_module() and newer finit_module() do the real handy work or
-> >> > module loading, and both currently only use may_init_module():
-> >> >
-> >> > static int may_init_module(void)
-> >> > {
-> >> >         if (!capable(CAP_SYS_MODULE) || modules_disabled)
-> >> >                 return -EPERM;
-> >> >
-> >> >         return 0;
-> >> > }
-> >> >
-> >> > This begs the question:
-> >> >
-> >> >   o If userspace just tries to just use raw finit_module() do we want similar
-> >> >     checks?
-> >> >
-> >> > Otherwise, correct me if I'm wrong this all seems pointless.
+On Tue, Nov 28, 2017 at 02:18:18PM -0800, Kees Cook wrote:
+> On Tue, Nov 28, 2017 at 2:12 PM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
+> > On Tue, Nov 28, 2017 at 01:39:58PM -0800, Kees Cook wrote:
+> >> On Tue, Nov 28, 2017 at 1:16 PM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
+> >> > And *all* auto-loading uses aliases? What's the difference between auto-loading
+> >> > and direct-loading?
 > >>
-> >> Hm? That's direct-loading, not auto-loading. This series is only about
-> >> auto-loading.
+> >> The difference is the process privileges. Unprivilged autoloading
+> >> (e.g. int n_hdlc = N_HDLC; ioctl(fd,
+> >> TIOCSETD, &n_hdlc)), triggers a privileged call to finit_module()
+> >> under CAP_SYS_MODULE.
 > >
-> > And *all* auto-loading uses aliases? What's the difference between auto-loading
-> > and direct-loading?
+> > Ah, so system call implicated request_module() calls.
 > 
-> Not all auto-loading uses aliases, auto-loading is when kernel code
-> calls request_module() to loads the feature that was not present, 
+> Yup. Unprivileged user does something that ultimately hits a
+> request_module() in the kernel. Then the kernel calls out with the
+> usermode helper (which has CAP_SYS_MODULE) and calls finit_module().
 
-It seems the actual interest here is system call implicated request_module()
-calls? Because there are uses of request_module() which may be module hacks,
-and not implicated via system calls.
+Thanks, using this terminology is much better to understand than auto-loading,
+given it does make it clear an unprivileged call was one that initiated the
+request_module() call, there are many uses of request_module() which *are*
+privileged.
 
-> and direct-loading in this thread is the direct syscalls like
-> finit_module().
-
-OK.
-
-> >> We already have a global sysctl for blocking direct-loading (modules_disabled).
-> >
-> > My point was that even if you have a CAP_NET_ADMIN check on request_module(),
-> > finit_module() will not check for it, so a crafty userspace could still try
-> > to just finit_module() directly, and completely then bypass the CAP_NET_ADMIN
-> > check.
+> > OK and since CAP_SYS_MODULE is much more restrictive one could argue, what's the
+> > point here?
 > 
-> The finit_module() uses CAP_SYS_MODULE which should allow all modules
-> and in this context it should be more privileged than CAP_NET_ADMIN
-> which is only for "netdev-%s" (to not load arbitrary modules with it).
-> 
-> finit_module() coming from request_module() always has the
-> CAP_NET_ADMIN, hence the check is done before.
+> The goal is to block an unprivileged user from being able to trigger a
+> module load without blocking root from loading modules directly.
 
-But since CAP_SYS_MODULE is more restrictive, what's the point in checking
-for CAP_NET_ADMIN?
+I see now. Do we have an audit of all system calls which implicate a
+request_module() call? Networking is a good example for sure to start
+off with but I was curious if we have a grasp of how wide spread this
+could be.
 
-> > So unless I'm missing something, I see no point in adding extra checks for
-> > request_module() but nothing for the respective load_module().
-> 
-> I see, request_module() is called from kernel context which runs in
-> init namespace will full capabilities, the spawned userspace modprobe
-> will get CAP_SYS_MODULE and all other caps, then after comes modprobe
-> and load_module().
-
-Right, so defining the gains of adding this extra check is not very clear
-yet. It would seem a benefit exists, what is it?
-
-> Btw as suggested by Linus I will update with request_module_cap() and > I can
-> offer my help maintaining these bits too.
-
-Can you start by extending lib/test_module.c and
-tools/testing/selftests/kmod/kmod.sh with a proof of concept of the gains here,
-as well as ensuring things work as expected ?
+I'll go review the patches again now with all this in mind.
 
   Luis
