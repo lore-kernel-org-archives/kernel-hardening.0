@@ -1,50 +1,47 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20171128193243.4fymnjk7fplqw62x@thunk.org>
+In-Reply-To: <20171128191405.GO729@wotan.suse.de>
 References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
- <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
- <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
- <1100603534.56586.1511871419952@ichabod.co-bxl> <20171128193243.4fymnjk7fplqw62x@thunk.org>
+ <1511803118-2552-2-git-send-email-tixxdz@gmail.com> <20171128191405.GO729@wotan.suse.de>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 28 Nov 2017 12:08:12 -0800
-Message-ID: <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com>
+Date: Tue, 28 Nov 2017 12:11:34 -0800
+Message-ID: <CAGXu5jKgHWNE4NH_xqcM084-BNBPy+HmEVPbTA+w_=K3S6gC=w@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
- request_module_cap() to load 'netdev-%s' modules
-To: Theodore Ts'o <tytso@mit.edu>, Linus Torvalds <torvalds@linux-foundation.org>, Djalal Harouni <tixxdz@gmail.com>
-Cc: Jonathan Corbet <corbet@lwn.net>, James Morris <james.l.morris@oracle.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Geo Kozey <geokozey@mailfence.com>
+Subject: [kernel-hardening] Re: [PATCH v5 next 1/5] modules:capabilities: add request_module_cap()
+To: "Luis R. Rodriguez" <mcgrof@kernel.org>
+Cc: Djalal Harouni <tixxdz@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 28, 2017 at 11:32 AM, Theodore Ts'o <tytso@mit.edu> wrote:
-> On Tue, Nov 28, 2017 at 01:16:59PM +0100, Geo Kozey wrote:
->>
->> Userspace can be configured in a way which is compatible with those
->> changes being on the same as it can be configured to work with
->> selinux. That means on distro level or sysadmin level it's a
->> valuable tool. It's better than nothing and it's better than using
->> some out-of-tree patches instead. Switching one sysctl would make
->> their life easier.
+On Tue, Nov 28, 2017 at 11:14 AM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
+> kmod is just a helper to poke userpsace to load a module, that's it.
 >
-> If *selinux* can opt-in to something more stringent, such that when
-> you upgrade to a new version of selinux which enables something which
-> breaks all modules unless you set up the rules corretly, I don't see a
-> problem with it.  It might force distributions not to go to the latest
-> version of SELinux because users get cranky when their systems get
-> broken, but for people like me, who *still* don't use SELinux because
-> every few years, i try to enable on my development laptop running
-> Debian, watch ***far*** too much stuff break. and then turn it off
-> again.  So tieing it to SELinux (as far as I am concerned) reduces it to
-> a previously unsolved problem.  :-)
+> The old init_module() and newer finit_module() do the real handy work or
+> module loading, and both currently only use may_init_module():
 >
-> But that's different from opting it on by default for non-SELinux
-> users.  To which I can only say, "Please, No."
+> static int may_init_module(void)
+> {
+>         if (!capable(CAP_SYS_MODULE) || modules_disabled)
+>                 return -EPERM;
+>
+>         return 0;
+> }
+>
+> This begs the question:
+>
+>   o If userspace just tries to just use raw finit_module() do we want similar
+>     checks?
+>
+> Otherwise, correct me if I'm wrong this all seems pointless.
 
-I don't want to see this tied to SELinux because it narrows the
-audience, and SELinux still hasn't solved their issues in containers.
-I think the per-task setting is sufficient.
+Hm? That's direct-loading, not auto-loading. This series is only about
+auto-loading.
 
-Linus, are you okay with this series if the global sysctl gets dropped?
+We already have a global sysctl for blocking direct-loading (modules_disabled).
+
+> If we want something similar I think we might need to be processing aliases and
+> check for the aliases for their desired restrictions on finit_module(),
+
+We don't need to handle aliases.
 
 -Kees
 
