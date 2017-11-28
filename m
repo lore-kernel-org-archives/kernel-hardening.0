@@ -1,47 +1,64 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1511826058-2563-2-git-send-email-me@tobin.cc>
-References: <1511826058-2563-1-git-send-email-me@tobin.cc> <1511826058-2563-2-git-send-email-me@tobin.cc>
+In-Reply-To: <1511821819-5496-1-git-send-email-me@tobin.cc>
+References: <1511821819-5496-1-git-send-email-me@tobin.cc>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 27 Nov 2017 16:46:35 -0800
-Message-ID: <CAGXu5jKurtT0ipe6V6_+9OSWQ0R=DiXz6Wxp+Bb=kjxhUxVamg@mail.gmail.com>
+Date: Mon, 27 Nov 2017 16:52:21 -0800
+Message-ID: <CAGXu5jK3hJMMrdGQsQxhyLiXhro4DYdpftvtTunM-84PkUeD_Q@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 1/5] docs: correct documentation for %pK
+Subject: [kernel-hardening] Re: [RFC 0/3] kallsyms: don't leak address when printing symbol
 To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, LKML <linux-kernel@vger.kernel.org>, KVM <kvm@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Cc: kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 27, 2017 at 3:40 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> Current documentation indicates that %pK prints a leading '0x'. This is
-> not the case.
+On Mon, Nov 27, 2017 at 2:30 PM, Tobin C. Harding <me@tobin.cc> wrote:
+> This is an RFC for two reasons.
 >
-> Correct documentation for printk specifier %pK.
+> 1) I don't know who this patch set may break?
+> 2) Patch set includes a function that is not called. Function is there
+>    to facilitate fixing breakages.
+>
+> _If_ no one gets broken then we can remove the unused function.
+>
+> Thanks for looking at this.
+>
+> Currently if a pointer is printed using %p[ssB] and the symbol is not
+> found (kallsyms_lookup() fails) then we print the actual address. This
+> potentially leaks kernel addresses. We could instead print something
+> _safe_. If kallsyms is made to return an error then callers of
+> sprint_symbol() can decide what to do.
+>
+> In the case of vsprintf we can print '<no-symbol>' (patch 2).
+>
+> In the case of trace we want the address so we can check the return code
+> and print the address if no symbol is found (patch 3).
+>
+> Design for this set loosely suggested by Steve Rostedt (so as not to
+> break ftrace).
 
-Yup, quite true. :)
-
-Acked-by: Kees Cook <keescook@chromium.org>
+If tracing is the only place this is needed, this series seems reasonable to me.
 
 -Kees
 
 >
-> Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> ---
->  Documentation/printk-formats.txt | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
 >
-> diff --git a/Documentation/printk-formats.txt b/Documentation/printk-formats.txt
-> index 361789df51ec..b4fe3c5f3b44 100644
-> --- a/Documentation/printk-formats.txt
-> +++ b/Documentation/printk-formats.txt
-> @@ -91,7 +91,7 @@ Kernel Pointers
+> Patch 1 and 2 tested, patch 3 (trace stuff) untested :)
 >
->  ::
+> thanks,
+> Tobin.
 >
-> -       %pK     0x01234567 or 0x0123456789abcdef
-> +       %pK     01234567 or 0123456789abcdef
+> Tobin C. Harding (3):
+>   kallsyms: don't leak address when symbol not found
+>   vsprintf: print <no-symbol> if symbol not found
+>   trace: print address if symbol not found
 >
->  For printing kernel pointers which should be hidden from unprivileged
->  users. The behaviour of ``%pK`` depends on the ``kptr_restrict sysctl`` - see
+>  include/linux/kernel.h           |  2 ++
+>  kernel/kallsyms.c                |  6 ++++--
+>  kernel/trace/trace.h             | 24 ++++++++++++++++++++++++
+>  kernel/trace/trace_events_hist.c |  6 +++---
+>  lib/vsprintf.c                   | 18 +++++++++++++++---
+>  5 files changed, 48 insertions(+), 8 deletions(-)
+>
 > --
 > 2.7.4
 >
