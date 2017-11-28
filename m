@@ -1,63 +1,79 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1511821819-5496-1-git-send-email-me@tobin.cc>
-References: <1511821819-5496-1-git-send-email-me@tobin.cc>
+In-Reply-To: <1511826058-2563-1-git-send-email-me@tobin.cc>
+References: <1511826058-2563-1-git-send-email-me@tobin.cc>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 27 Nov 2017 16:52:21 -0800
-Message-ID: <CAGXu5jK3hJMMrdGQsQxhyLiXhro4DYdpftvtTunM-84PkUeD_Q@mail.gmail.com>
+Date: Mon, 27 Nov 2017 16:57:18 -0800
+Message-ID: <CAGXu5jJfppOKj6pD7-ETSqqPOL1hBDQ31ZXj1damJmC4qTqvvw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [RFC 0/3] kallsyms: don't leak address when printing symbol
+Subject: [kernel-hardening] Re: [PATCH 0/5] add printk specifier %px, unique identifier
 To: "Tobin C. Harding" <me@tobin.cc>
-Cc: kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, LKML <linux-kernel@vger.kernel.org>, KVM <kvm@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 27, 2017 at 2:30 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> This is an RFC for two reasons.
+On Mon, Nov 27, 2017 at 3:40 PM, Tobin C. Harding <me@tobin.cc> wrote:
+> Linus,
 >
-> 1) I don't know who this patch set may break?
-> 2) Patch set includes a function that is not called. Function is there
->    to facilitate fixing breakages.
+> I know you are bored of this patch set already and this pits your vast
+> experience against my eight months kernel dev experience ;)
 >
-> _If_ no one gets broken then we can remove the unused function.
+> I humbly maintain that hashing %p and suggesting people use %x
+> _correctly_ isn't a WIN solution.
 >
-> Thanks for looking at this.
+> Please don't go easy on me because I'm new, if I'm out of line - say
+> so.
 >
-> Currently if a pointer is printed using %p[ssB] and the symbol is not
-> found (kallsyms_lookup() fails) then we print the actual address. This
-> potentially leaks kernel addresses. We could instead print something
-> _safe_. If kallsyms is made to return an error then callers of
-> sprint_symbol() can decide what to do.
+> This set is based on the following assumptions.
 >
-> In the case of vsprintf we can print '<no-symbol>' (patch 2).
+> 1. We now have leaking_addresses.pl illuminating leaking addresses.
+> 2. We have no _clear_ strategy for fixing leaks once found.
+> 3. We do not have a proposed non opt-in solution.
+> 4. There is a distinct use case for this specifier.
 >
-> In the case of trace we want the address so we can check the return code
-> and print the address if no symbol is found (patch 3).
+> Patch 1: Corrects the docs for %pK.
 >
-> Design for this set loosely suggested by Steve Rostedt (so as not to
-> break ftrace).
+> Patch 2: Refactors %pK code out of pointer() into helper function.
+>
+> Patch 3: Adds specifier %px, small 'x' was chosen because the hashed hex
+>          value is printed in lower case.
+>
+> Patch 4/5: Provides example usage of new specifier.
+>
+> The hashing code is based on the work done hashing %p during 4.14 dev
+> cycle.
+>
+> Finally, with this patch set in place, we have the added benefit that
+> newbies (me) can quietly go around the kernel 'sweeping up' after
+> leaking addresses. This as apposed to using a hammer and hashing all
+> %p. And if this is deemed too little and too slow we can always search
+> and replace '%p' with '%px'.
 
-If tracing is the only place this is needed, this series seems reasonable to me.
+How does this opt-in to %px help? We'll still have %p everywhere. :(
+Why not invert this? %p is hashed and %px is the old %p? Then we can
+move %x users to %px.
+
+I'd still like to see a default-on solution for this class of leaks...
 
 -Kees
 
 >
->
-> Patch 1 and 2 tested, patch 3 (trace stuff) untested :)
->
 > thanks,
 > Tobin.
 >
-> Tobin C. Harding (3):
->   kallsyms: don't leak address when symbol not found
->   vsprintf: print <no-symbol> if symbol not found
->   trace: print address if symbol not found
+> Tobin C. Harding (5):
+>   docs: correct documentation for %pK
+>   vsprintf: refactor pK code out of pointer()
+>   vsprintf: add specifier %px, unique identifier
+>   KVM: use %px to print token identifier
+>   vfio_pci: use %px to print token identifier
 >
->  include/linux/kernel.h           |  2 ++
->  kernel/kallsyms.c                |  6 ++++--
->  kernel/trace/trace.h             | 24 ++++++++++++++++++++++++
->  kernel/trace/trace_events_hist.c |  6 +++---
->  lib/vsprintf.c                   | 18 +++++++++++++++---
->  5 files changed, 48 insertions(+), 8 deletions(-)
+>  Documentation/printk-formats.txt  |   2 +-
+>  drivers/vfio/pci/vfio_pci_intrs.c |   2 +-
+>  lib/test_printf.c                 |  74 +++++++++++++++++
+>  lib/vsprintf.c                    | 166 ++++++++++++++++++++++++++++----------
+>  scripts/checkpatch.pl             |   2 +-
+>  virt/kvm/eventfd.c                |   2 +-
+>  6 files changed, 202 insertions(+), 46 deletions(-)
 >
 > --
 > 2.7.4
