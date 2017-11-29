@@ -1,6 +1,8 @@
 MIME-Version: 1.0
-In-Reply-To: <20171128232320.22zo324g5wvo2lce@thunk.org>
-References: <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
+Sender: linus971@gmail.com
+In-Reply-To: <CA+55aFzxFQeyk6Mrk50=jzevHpZ78BXz_9nHcHabMWBdM6RC6A@mail.gmail.com>
+References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
+ <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
  <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
  <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
  <1100603534.56586.1511871419952@ichabod.co-bxl> <20171128193243.4fymnjk7fplqw62x@thunk.org>
@@ -8,69 +10,77 @@ References: <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
  <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
  <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com>
  <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com>
- <CAGXu5j+V8+h6kdbz5Det=wsRKjt6Cm0-_n8soLCU2PZ=AvqpJQ@mail.gmail.com> <20171128232320.22zo324g5wvo2lce@thunk.org>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Wed, 29 Nov 2017 00:53:16 +0100
-Message-ID: <CAEiveUdrpH4qQnNX_r1EaRaH8jQwO6HsKGRnE1qY+OdCLnkGcw@mail.gmail.com>
+ <708003731.69563.1511905898471@ichabod.co-bxl> <CA+55aFzxFQeyk6Mrk50=jzevHpZ78BXz_9nHcHabMWBdM6RC6A@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Tue, 28 Nov 2017 16:17:05 -0800
+Message-ID: <CA+55aFyybavkF8ccQKJsoVAF+MG=J5=e9PxXKU=J_hqCQRZnug@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
  request_module_cap() to load 'netdev-%s' modules
-To: Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Djalal Harouni <tixxdz@gmail.com>, Jonathan Corbet <corbet@lwn.net>, James Morris <james.l.morris@oracle.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Geo Kozey <geokozey@mailfence.com>
+To: Geo Kozey <geokozey@mailfence.com>
+Cc: LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 29, 2017 at 12:23 AM, Theodore Ts'o <tytso@mit.edu> wrote:
-> On Tue, Nov 28, 2017 at 01:33:40PM -0800, Kees Cook wrote:
->> As I've said before, this isn't a theoretical attack surface. This
->> year alone there have been three known-exploitable flaws exposed by
->> autoloading:
->>
->> The exploit for CVE-2017-2636 uses int n_hdlc = N_HDLC; ioctl(fd,
->> TIOCSETD, &n_hdlc) [1]. This is using the existing "tty-ldisc-"
->> prefix, and is intentionally unprivileged.
->>
->> The exploit for CVE-2017-6074 uses socket(PF_INET6, SOCK_DCCP,
->> IPPROTO_IP) [2]. This is using the existing proto prefix, and is
->> intentionally unprivileged.
+On Tue, Nov 28, 2017 at 3:51 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
 >
-> So in these two cases, if the kernel was built w/o modules, and HDLC
-> and DCCP was built-in, you'd be screwed, then?
->
-> Is the goal here to protect people using distro kernels which build
-> the world as modules, including dodgy pieces of kernel code that are
-> bug-ridden?
->
-> If so, then presumably 90% of the problem you've cited can be done by
-> creating a script which takes a look of the modules that are normally
-> in use once the machine is in production, and then deleting everything
-> else?  Correct?
->
-> And yes, this will potentially break some users, but the security
-> folks who are advocating for the more aggressive version of this
-> change seem to be OK with breaking users, so they can do this without
-> making kernel changes.  Good luck getting Red Hat and SuSE to accept
-> such a change, though....
+> So a patch that avoids breaking existing users, but also doesn't
+> actually improve anything for existing users, simply shouldn't be part
+> of the mainline kernel.
 
-The patches does not change default and make it easy for users and we
-have request for this, not all world is Red Hat / SuSE , I build
-embedded Linux for clients when I manage to have some, and I clearly
-would have set this to my clients since most of them won't be able to
-afford all the signing and complexity, now how I should allow modules
-load/unload replace with newer versions, but restrict some of their
-apps from triggering it, "modules_disabled=1" is not practical. I
-can't build a perfect version for every usecase,  and they started to
-ship apps for IoT, even containers for IoT, yes they do it and they
-use the same os for various use cases! so it is not about those, even
-embedded vendors have one single shared layer that they use for all
-their products.
+Just to clarify: maybe it ends up being truly impossible to make the
+default be more restrictive. The default certainly won't be the most
+restrictive option.
 
-For distros, the target is also containers and sandboxes, and they are
-already interested in it.
+But at the same time, if people can't even be bothered to try to
+improve the general case, and only do things that you have to opt in
+for, it really isn't much of an improvement. We had this whole
+"opt-in" discussion for another thread entirely, and it basically
+didn't improve anything for anybody for the better half of a decade.
 
-P.S. please the cover letter already mentions that this is for Embedded and IoT.
+Hardening that only works for special cases isn't hardening at all. It
+will just mean that 99+% of all kernel developers won't see the
+fallout at all.
 
->                                                 - Ted
+Yes, something like Android may be 99% of the devices, but it's a very
+small portion of the core developer base because the hardware is all
+locked down, and it's an even smaller portion of the usage patterns.
 
+So I can see some people say "We can use this for android and protect
+the 99%". But if it then is basically invisible to the rest of the
+user base, it means that all those servers etc aren't getting the kind
+of protection they should have.
 
+Just to take that DCCP thing as an example: being a module wasn't what
+made it vulnerable. It would have been vulnerable compiled in too.
+What made it vulnerable was that the DCCP code simply isn't widely
+enough used and tested, and basically barely on life support. And it
+was available much too widely despite that.
 
--- 
-tixxdz
+So all this is about is to make for a smaller attack surface.
+
+But if it turns out that we can make the attack surface smaller by
+simply white-listing a few modules that we know are actively used and
+feel better about the quality of, that makes for a much smaller attack
+surface _too_. And it does so in general, without having to set some
+flag that 99% of all MIS people won't even really know about.
+
+So that's why I want people to look at a different approach. Yes, the
+opt-in model means that by default nothing changes. That protects
+against the whole "oops, we don't break user space". But it has a huge
+downside.
+
+The model that I am a proponent of is to take a softer approach
+initially: don't forbid module loading (because that breaks users),
+but instead _warn_ about non-root module loading. And then we can
+start fixing the cases that we find.
+
+See? This is *exactly* the same thing that the user-mode access thing
+was about. Hardening people need to get over their "hard rules"
+mindset. We don't kill processes or forbid them from doing things that
+might be bad. We start by warning about them, to see what "might be
+bad" cases are actually normal, and not actually bad at all. And then
+we use that information to guide our notion of what should actually
+trigger a stronger response.
+
+                   Linus
