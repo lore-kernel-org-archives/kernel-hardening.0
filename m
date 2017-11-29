@@ -1,38 +1,68 @@
-Date: Wed, 29 Nov 2017 11:28:52 -0600
+Date: Wed, 29 Nov 2017 11:57:12 -0600
 From: "Serge E. Hallyn" <serge@hallyn.com>
-Message-ID: <20171129172852.GA14545@mail.hallyn.com>
-References: <20171128211659.GP729@wotan.suse.de>
- <CAGXu5j+JaFCo+pZKvet==Kh7GQgNXi30P50SMF4cpOGoUw-8ug@mail.gmail.com>
- <20171129134612.72ccb53d@alans-desktop>
- <20171129.095014.1909386937628805919.davem@davemloft.net>
- <20171129155406.i2lyclquj75lvtn4@thunk.org>
+Message-ID: <20171129175712.GB14545@mail.hallyn.com>
+References: <20171110053757.21170-1-mahesh@bandewar.net>
+ <20171126064037.GB30279@mail.hallyn.com>
+ <CAF2d9jhiZFiFODNXUY13F+4Pm+59+rZW=CnLPX1VUT3BAJdeeA@mail.gmail.com>
+ <20171128230440.GB28297@mail.hallyn.com>
+ <CAF2d9jhCDasnf2tbaGA04MV5ygZ9o1FaVRCEU2TkHjZR7d1ifw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <20171129155406.i2lyclquj75lvtn4@thunk.org>
-Subject: [kernel-hardening] Re: [PATCH v5 next 1/5] modules:capabilities: add
- request_module_cap()
-To: Theodore Ts'o <tytso@mit.edu>, David Miller <davem@davemloft.net>, gnomes@lxorguk.ukuu.org.uk, keescook@chromium.org, mcgrof@kernel.org, tixxdz@gmail.com, luto@kernel.org, akpm@linux-foundation.org, james.l.morris@oracle.com, ben.hutchings@codethink.co.uk, solar@openwall.com, serge@hallyn.com, jeyu@kernel.org, rusty@rustcorp.com.au, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, corbet@lwn.net, mingo@kernel.org, netdev@vger.kernel.org, peterz@infradead.org, torvalds@linux-foundation.org
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CAF2d9jhCDasnf2tbaGA04MV5ygZ9o1FaVRCEU2TkHjZR7d1ifw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCHv2 2/2] userns: control capabilities of some user
+ namespaces
+To: Mahesh Bandewar =?utf-8?B?KOCkruCkueClh+CktiDgpKzgpILgpKHgpYfgpLXgpL4=?= =?utf-8?B?4KSwKQ==?= <maheshb@google.com>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>, Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Theodore Ts'o (tytso@mit.edu):
-> Half the problem here is that with containers, people are changing the
-> security model, because they want to let untrusted users have "root",
-> without really having "root".  Part of the fundamental problem is that
-> there are some well-meaning, but fundamentally misguided people, who
-> have been asserting: "Containers are just as secure as VM's".
+Quoting Mahesh Bandewar (महेश बंडेवार) (maheshb@google.com):
+> On Tue, Nov 28, 2017 at 3:04 PM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> > Quoting Mahesh Bandewar (महेश बंडेवार) (maheshb@google.com):
+> > ...
+> >> >> diff --git a/security/commoncap.c b/security/commoncap.c
+> >> >> index fc46f5b85251..89103f16ac37 100644
+> >> >> --- a/security/commoncap.c
+> >> >> +++ b/security/commoncap.c
+> >> >> @@ -73,6 +73,14 @@ int cap_capable(const struct cred *cred, struct user_namespace *targ_ns,
+> >> >>  {
+> >> >>       struct user_namespace *ns = targ_ns;
+> >> >>
+> >> >> +     /* If the capability is controlled and user-ns that process
+> >> >> +      * belongs-to is 'controlled' then return EPERM and no need
+> >> >> +      * to check the user-ns hierarchy.
+> >> >> +      */
+> >> >> +     if (is_user_ns_controlled(cred->user_ns) &&
+> >> >> +         is_capability_controlled(cap))
+> >> >> +             return -EPERM;
+> >> >
+> >> > I'd be curious to see the performance impact on this on a regular
+> >> > workload (kernel build?) in a controlled ns.
+> >> >
+> >> Should it affect? If at all, it should be +ve since, the recursive
+> >> user-ns hierarchy lookup is avoided with the above check if the
+> >> capability is controlled.
+> >
+> > Yes but I expect that to be the rare case for normal lxc installs
+> > (which are of course what I am interested in)
+> >
+> >>  The additional cost otherwise is this check
+> >> per cap_capable() call.
+> >
+> > And pipeline refetching?
+> >
+> > Capability calls also shouldn't be all that frequent, but still I'm
+> > left wondering...
 > 
-> Well, they are not.  And the sooner people get past this, the better
-> off they'll be....
+> Correct, and capability checks are part of the control-path and not
+> the data-path so shouldn't matter but I guess it doesn't hurt to
+> find-out the number. Do you have any workload in mind, that we can use
+> for this test/benchmark?
 
-Just to be clear, module loading requires - and must always continue to
-require - CAP_SYS_MODULE against the initial user namespace.  Containers
-in user namespaces do not have that.
+I suppose if you did both (a) a kernel build and (b) a webserver
+like https://github.com/m3ng9i/ran , being hit for a minute by a
+heavy load of requests, those two together would be re-assuring.
 
-I don't believe anyone has ever claimed that containers which are not in
-a user namespace are in any way secure.
-
-(And as for the other claim, I'd prefer to stick to "VMs are in most
-cases as insecure as properly configured containers" :)
-
+thanks,
 -serge
