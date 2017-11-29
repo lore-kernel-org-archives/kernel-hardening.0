@@ -1,110 +1,190 @@
-From: Geo Kozey <geokozey@mailfence.com>
-Message-ID: <335783839.88167.1511969309561@ichabod.co-bxl>
-In-Reply-To: <CA+55aFyybavkF8ccQKJsoVAF+MG=J5=e9PxXKU=J_hqCQRZnug@mail.gmail.com>
-References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com> <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com> <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com> <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com> <1100603534.56586.1511871419952@ichabod.co-bxl> <20171128193243.4fymnjk7fplqw62x@thunk.org> <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com> <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com> <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com> <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com> <708003731.69563.1511905898471@ichabod.co-bxl> <CA+55aFzxFQeyk6Mrk50=jzevHpZ78BXz_9nHcHabMWBdM6RC6A@mail.gmail.com> <CA+55aFyybavkF8ccQKJsoVAF+MG=J5=e9PxXKU=J_hqCQRZnug@mail.gmail.com>
+Date: Thu, 30 Nov 2017 07:48:12 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171129204812.GE6217@eros>
+References: <1511850724-2381-1-git-send-email-me@tobin.cc>
+ <CAJ1xhMXjSTV92DxRz269sB=fZLEXJimr7_8PX8viamm02+xN1w@mail.gmail.com>
+ <20171128211003.GY17858@eros>
+ <CAJ1xhMUV8G+-e8fO2MGEWvQGpLVBsETWTpyMZ5wb9evoszZEJg@mail.gmail.com>
+ <20171129101640.GC6217@eros>
+ <CAPDLWs8ooetPXhuHXyCLZ2LnPRKBf0CSMoESbXMD4sGnLLNFuA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Date: Wed, 29 Nov 2017 16:28:29 +0100 (CET)
-Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
- request_module_cap() to load 'netdev-%s' modules
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAPDLWs8ooetPXhuHXyCLZ2LnPRKBf0CSMoESbXMD4sGnLLNFuA@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] leaking_addresses: add support for 32-bit kernel
+ addresses
+To: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
+Cc: Alexander Kapshuk <alexander.kapshuk@gmail.com>, linux-kernel <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> From: Linus Torvalds <torvalds@linux-foundation.org>
-> Sent: Wed Nov 29 01:17:05 CET 2017
-> To: Geo Kozey <geokozey@mailfence.com>
-> Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use request_module_cap() to load 'netdev-%s' modules
+On Wed, Nov 29, 2017 at 04:32:54PM +0530, Kaiwan N Billimoria wrote:
+> Hi,
 > 
+> On Wed, Nov 29, 2017 at 3:46 PM, Tobin C. Harding <me@tobin.cc> wrote:
+> > On Wed, Nov 29, 2017 at 09:59:59AM +0200, Alexander Kapshuk wrote:
+> >> On Tue, Nov 28, 2017 at 11:10 PM, Tobin C. Harding <me@tobin.cc> wrote:
+> >> > On Tue, Nov 28, 2017 at 03:16:24PM +0200, Alexander Kapshuk wrote:
+> >> >> On Tue, Nov 28, 2017 at 8:32 AM, Tobin C. Harding <me@tobin.cc> wrote:
+> >> >> >  Options:
+> >> >> >
+> >> >> > -       -o, --output-raw=<file>  Save results for future processing.
+> >> >> > -       -i, --input-raw=<file>   Read results from file instead of scanning.
+> >> >> > -           --raw                Show raw results (default).
+> >> >> > -           --suppress-dmesg     Do not show dmesg results.
+> >> >> > -           --squash-by-path     Show one result per unique path.
+> >> >> > -           --squash-by-filename Show one result per unique filename.
+> >> >> > -       -d, --debug              Display debugging output.
+> >> >> > -       -h, --help, --version    Display this help and exit.
+> >> >> > +       -o, --output-raw=<file>         Save results for future processing.
+> >> >> > +       -i, --input-raw=<file>          Read results from file instead of scanning.
+> >> >> > +             --raw                       Show raw results (default).
+> >> >> > +             --suppress-dmesg            Do not show dmesg results.
+> >> >> > +             --squash-by-path            Show one result per unique path.
+> >> >> > +             --squash-by-filename        Show one result per unique filename.
+> >> >> > +           --page-offset-32bit=<hex>   PAGE_OFFSET value (for 32-bit kernels).
+> >> >> > +           --kernel-config-file=<file> Kernel configuration file (e.g /boot/config)
+> >> >> > +       -d, --debug                     Display debugging output.
+> >> >> > +       -h, --help, --version           Display this help and exit.
+> >> >> >
+> Thanks for the whitespace fixes..
 > 
-> On Tue, Nov 28, 2017 at 3:51 PM, Linus Torvalds
-> <torvalds@linux-foundation.org> wrote:
+> >> >>
+> >> >> Get_page_offset attempts to build a list of config files, which are
+> >> >> then passed into the parsing function for further processing.
+> >> >> This splits up the code to do with the config files between
+> >> >> get_page_offset() and parse_kernel_config_file().
+> >> >> May I suggest putting the kernel config file processing code into the
+> >> >> parse_kernel_config_file() instead, and let the parsing function
+> >> >> handle the config files and either return the page_offset or an empty
+> >> >> string.
+> >> >>
+> >> >> See below for the proposed implementation.
+> 
+> Thanks Alexander..
+> 
+> >> >
+> >> > Nice, this is much better! Thanks.
+> >> >
+> >> >> Apologies for the absence of indentation.
+> >> >
+> >> > Re-posting with indentation, comments in line.
+> >> >
+> >> >> Disclaimer: I did not test-run the code being proposed.
+> >> >
+> >> > I also did not test my comments ;)
+> >> >
+> >> >> sub get_page_offset
+> >> >> {
+> >> >>       my $default_offset = "0xc0000000";
+> >> >>       my $page_offset;
+> >> >>
+> >> >>       # Allow --page-offset-32bit to over ride.
+> >> >>       if ($page_offset_32bit != 0) {
+> >> >>               return $page_offset_32bit;
+> >> >>       }
+> >> >>
+> >> >>       $page_offset = parse_kernel_config_file();
+> >> >>       if ($page_offset ne "") {
+> >> >>               return $page_offset
+> >> >>       }
+> >> >>
+> >> >>       printf STDERR "Failed to parse kernel config files\n";
+> >> >>       printf STDERR "Falling back to %s\n", $default_offset;
+> >> >>
+> >> >>       return $default_offset;
+> 
+> This "fallback to 0xc0000000" I don't really agree with.
+> Obviously, there are platforms out there that do not use a PAGE_OFFSET value of
+> 0xc0000000. So I think that defaulting to this is kinda presumptive;
+> much better, IMHO,
+> if we just fail and ask the user to pass the "correct" PAGE_OFFSET value via
+> the '--page-offset-32bit=' option switch.
+> What do you say?
+
+If we fallback to some sane value (it does not have to be 0xc0000000
+but that seems the most obvious) then the script has more chance of
+running by default. Why do I think it is better to run by default even
+with the wrong virtual address spilt, well since the correct value is
+basically just eliminating false positives (non-kernel addresses) it
+seems more right to run by default with extra false positives than to
+fail and place demands on the user. This will be especially useful if we
+get the script running in any continuous integration tools.
+
+We should definitely be noisy if we fallback to the default value
+though.
+
+> >> >> }
+> >> >>
+> 
+> >> > perhaps
+> >> >                 my $tmpkconf = '/tmp/tmpkconf';
+> >>
+> >> my $tmpkconf is almost as long as /tmp/tmpkconf. The name of the tmp
+> >> file is self explanatory.
+> >> Using a variable instead of the filename in this particular context is
+> >> a matter of personal preference. If you prefer to use the variable
+> >> here, it's your call.
 > >
-> > So a patch that avoids breaking existing users, but also doesn't
-> > actually improve anything for existing users, simply shouldn't be part
-> > of the mainline kernel.
+> > I'm a stickler for no const strings or magic numbers but it's Kaiwan's
+> > patch, if he puts it in with const strings I'll apply it as is :)
 > 
-> Just to clarify: maybe it ends up being truly impossible to make the
-> default be more restrictive. The default certainly won't be the most
-> restrictive option.
+> I'd say in this case it's self-evident; IMO, we could leave it as a
+> const string..
 > 
-> But at the same time, if people can't even be bothered to try to
-> improve the general case, and only do things that you have to opt in
-> for, it really isn't much of an improvement. We had this whole
-> "opt-in" discussion for another thread entirely, and it basically
-> didn't improve anything for anybody for the better half of a decade.
+> >> >
+> >> >>               if (system("gunzip < /proc/config.gz > /tmp/tmpkconf") == 0) {
+> >> >>                       push @config_files, "/tmp/tmpkconf";
+> >> >>               }
+> >> >>       }
+> >> >
+> >> > Won't there only ever be a single config file? So if /proc/config.gz is
+> >> > readable we could do
+> >>
+> >> The code above builds a list of config files.
+> >> Assigning to @config_files as shown below would wipe out the config
+> >> files appended to the list so far, would it not?
+> >> So $tmpkconf needs appending to the list.
+> >
+> > You are correct, since the beginning of this function that has been the
+> > algorithm. My observation is that if /proc/config.gz is present then we
+> > don't need to parse the other files so it is better to blow them away.
+> >
+> > I don't know enough about the whole Linux-sphere to know if this is
+> > correct. But it seems reasonable that even if there is more than one way
+> > to look at the running kernels config file they will all be the same,
+> > the system would be pretty broken if they were different.
+> >
+> > So once we have found a readable config file just parse it and be done
+> > with it, no need to loop over any others.
 > 
-> Hardening that only works for special cases isn't hardening at all. It
-> will just mean that 99+% of all kernel developers won't see the
-> fallout at all.
+> Agreed.
 > 
-> Yes, something like Android may be 99% of the devices, but it's a very
-> small portion of the core developer base because the hardware is all
-> locked down, and it's an even smaller portion of the usage patterns.
+> > thanks,
+> > Tobin.
 > 
-> So I can see some people say "We can use this for android and protect
-> the 99%". But if it then is basically invisible to the rest of the
-> user base, it means that all those servers etc aren't getting the kind
-> of protection they should have.
+> Tobin, am unsure why but I can't seem to apply your patch (on the
+> commit you specified: 4.15-rc1).
+> So have been unable to test so far.. Am copying the patch off the
+> email, saving and trying:
 > 
-> Just to take that DCCP thing as an example: being a module wasn't what
-> made it vulnerable. It would have been vulnerable compiled in too.
-> What made it vulnerable was that the DCCP code simply isn't widely
-> enough used and tested, and basically barely on life support. And it
-> was available much too widely despite that.
-> 
-> So all this is about is to make for a smaller attack surface.
-> 
-> But if it turns out that we can make the attack surface smaller by
-> simply white-listing a few modules that we know are actively used and
-> feel better about the quality of, that makes for a much smaller attack
-> surface _too_. And it does so in general, without having to set some
-> flag that 99% of all MIS people won't even really know about.
-> 
-> So that's why I want people to look at a different approach. Yes, the
-> opt-in model means that by default nothing changes. That protects
-> against the whole "oops, we don't break user space". But it has a huge
-> downside.
-> 
-> The model that I am a proponent of is to take a softer approach
-> initially: don't forbid module loading (because that breaks users),
-> but instead _warn_ about non-root module loading. And then we can
-> start fixing the cases that we find.
-> 
-> See? This is *exactly* the same thing that the user-mode access thing
-> was about. Hardening people need to get over their "hard rules"
-> mindset. We don't kill processes or forbid them from doing things that
-> might be bad. We start by warning about them, to see what "might be
-> bad" cases are actually normal, and not actually bad at all. And then
-> we use that information to guide our notion of what should actually
-> trigger a stronger response.
-> 
->                    Linus
+> linux $ git apply --check ../tobin_patch_28nov17.patch
+> error: patch failed: scripts/leaking_addresses.pl:35
+> error: scripts/leaking_addresses.pl: patch does not apply
+> linux $
 
-I followed your last week discussion and I agreed with your arguments so
-it's unfortunate for me that You put me on the opposite side. I agree that
-improving kernel code by finding and fixing existing bugs is the ultimate
-goal for security features.
+I just tried to save and apply it on my end and it works. How are you
+saving it? What email client are you using? Perhaps try to create a
+simple patch yourself, email to yourself, save it and apply it to a
+clean branch.
 
-On the other hand the whole debugging process (find, report, wait for fix)
-takes a lot of time and work and is basically never ending story. That's why
-some kind of prevention which protects users in-between is important for
-users which priorities maximal security on their systems.
+Also, if you want the commit message also you can use
 
-I like your idea about printing warnings. What about:
+	$ git am < this.patch
 
-modules_autoload_mode =0 (default)
-_warn_ about non-root module loading and allow
+Sometimes you need to perform a 3 way merge, pass '-3' to `git am` to do
+so.
 
-modules_autoload_mode =1
-_warn_ about non-root module loading and deny
+Let me know how you go.
 
-This way we can start fixing found cases and also give users option for proactive
-defense at the same time without breaking general public. The end game (after
-a lot of fixes) would be to make 0 and 1 mostly indistinguishable from security
-perspective. 
-
-Yours sincerely
-
-G. K.
+thanks,
+Tobin.
