@@ -1,49 +1,35 @@
-Date: Wed, 29 Nov 2017 01:36:39 -0500
-From: Theodore Ts'o <tytso@mit.edu>
-Message-ID: <20171129063639.tuacfa2op6fgj6he@thunk.org>
-References: <20171128193243.4fymnjk7fplqw62x@thunk.org>
- <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com>
- <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
- <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com>
- <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com>
- <CAGXu5j+V8+h6kdbz5Det=wsRKjt6Cm0-_n8soLCU2PZ=AvqpJQ@mail.gmail.com>
- <20171128232320.22zo324g5wvo2lce@thunk.org>
- <CAGXu5j+c8AR+3KdXKO1J180ZYZOVqK=-_MGe20g8h+dgf2RWEQ@mail.gmail.com>
- <20171128234920.awfwicihuudw5ogx@thunk.org>
- <CAGXu5j+kXxkctzH79YxOu=45xgamV-5qyR2zL7OiC4POL6EcyA@mail.gmail.com>
+From: David Laight <David.Laight@ACULAB.COM>
+Date: Wed, 29 Nov 2017 10:07:27 +0000
+Message-ID: <324abe19f1ee4177911d2fc48899ac8a@AcuMS.aculab.com>
+References: <1511921105-3647-1-git-send-email-me@tobin.cc>
+ <1511921105-3647-5-git-send-email-me@tobin.cc>
+ <CA+55aFxgGb13hqoNQ8bzFn4ENZM25PBSdi5pkFUBa5Hk+j-s3Q@mail.gmail.com>
+In-Reply-To: <CA+55aFxgGb13hqoNQ8bzFn4ENZM25PBSdi5pkFUBa5Hk+j-s3Q@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5j+kXxkctzH79YxOu=45xgamV-5qyR2zL7OiC4POL6EcyA@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
- request_module_cap() to load 'netdev-%s' modules
-To: Kees Cook <keescook@chromium.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Djalal Harouni <tixxdz@gmail.com>, Jonathan Corbet <corbet@lwn.net>, James Morris <james.l.morris@oracle.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Geo Kozey <geokozey@mailfence.com>, Tycho Andersen <tycho@docker.com>
+Subject: [kernel-hardening] RE: [PATCH V11 4/5] vsprintf: add printk specifier %px
+To: 'Linus Torvalds' <torvalds@linux-foundation.org>, "Tobin C. Harding" <me@tobin.cc>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun
+ Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel
+ Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?utf-8?B?UmFkaW0gS3JjbcOhcg==?= <rkrcmar@redhat.com>, Linux Kernel Mailing
+ List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen
+ Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 28, 2017 at 04:18:59PM -0800, Kees Cook wrote:
-> There's also a difference between immutable CONFIG options that cannot
-> be disabled at runtime, those that can, global sysctls, per-namespace
-> controls, etc etc. The kernel is all about providing admins with knobs
-> to tweak their performance and security. Suddenly being told that we
-> can't create optional improvements is very odd.
-
-I just think that tweakable knobs are mostly pointless.  From my
-experience the number of sysadmins that adjust knobs is ***tiny***[1].
-Put another way, the effort to determine whether tweaking a knob will
-result in breakages or will be safe is as much work as creating a
-white list of modules that are allowed to be loaded.
-
-[1] And I say that having providing a lot of knobs for ext4.  :-)
-
-This is why some on the kernel-hardening list have argued for making
-the default to be opt-out, which means some users will be breaken (and
-their answer to that seems to be, "oh well --- gotta break some eggs
-to make an omlette".  Sucks if you're one of the eggs, though.)
-
-And I don't see how systemd magically means no one will be broken.  If
-you have a non-root process trying to invoke a line discpline which
-has to be loaded as a module, if you flip the switch, that process
-will be broken.  How does using systemd make the problem go away?
-
-					- Ted
+RnJvbTogTGludXMgVG9ydmFsZHMNCj4gU2VudDogMjkgTm92ZW1iZXIgMjAxNyAwMjoyOQ0KPiAN
+Cj4gT24gVHVlLCBOb3YgMjgsIDIwMTcgYXQgNjowNSBQTSwgVG9iaW4gQy4gSGFyZGluZyA8bWVA
+dG9iaW4uY2M+IHdyb3RlOg0KPiA+DQo+ID4gICAgTGV0J3MgYWRkIHNwZWNpZmllciAlcHggYXMg
+YQ0KPiA+IGNsZWFyLCBvcHQtaW4sIHdheSB0byBwcmludCBhIHBvaW50ZXIgYW5kIG1haW50YWlu
+IHNvbWUgbGV2ZWwgb2YNCj4gPiBpc29sYXRpb24gZnJvbSBhbGwgdGhlIG90aGVyIGhleCBpbnRl
+Z2VyIG91dHB1dCB3aXRoaW4gdGhlIEtlcm5lbC4NCj4gDQo+IFllcywgSSBsaWtlIHRoaXMgbW9k
+ZWwuIEl0J3MgZWFzeSBhbmQgaXQncyBvYnZpb3VzICgiJ3gnIGZvciBoZXgiKSwNCj4gYW5kIGl0
+IGdpdmVzIHBlb3BsZSBhIGdvb2Qgd2F5IHRvIHNheSAieWVzLCBJIHJlYWxseSB3YW50IHRoZSBh
+Y3R1YWwNCj4gYWRkcmVzcyBhcyBoZXgiIGZvciBpZi93aGVuIHRoZSBoYXNoZWQgcG9pbnRlciBk
+b2Vzbid0IHdvcmsgZm9yIHNvbWUNCj4gcmVhc29uLg0KDQpSZW1pbmQgbWUgdG8gY2hhbmdlIGV2
+ZXJ5ICVwIHRvICVweCBvbiBrZXJuZWxzIHRoYXQgc3VwcG9ydCBpdC4NCg0KQWx0aG91Z2ggdGhl
+IGFic29sdXRlIHZhbHVlcyBvZiBwb2ludGVycyBtYXkgbm90IGJlIHVzZWZ1bCwga25vd2luZw0K
+dGhhdCB0d28gcG9pbnRlciBkaWZmZXIgYnkgYSBzbWFsbCBhbW91bnQgaXMgdXNlZnVsLg0KSXQg
+aXMgYWxzbyB1c2VmdWwgdG8ga25vdyB3aGV0aGVyIHBvaW50ZXJzIGFyZSB0byBzdGFjaywgY29k
+ZSwgc3RhdGljDQpkYXRhIG9yIGhlYXAuDQoNClRoaXMgY2hhbmdlIHRvICVwIGlzIGdvaW5nIHRv
+IG1ha2UgZGVidWdnaW5nIGEgbmlnaHRtYXJlLg0KDQoJRGF2aWQNCg0K
