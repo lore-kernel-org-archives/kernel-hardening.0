@@ -1,46 +1,70 @@
+From: "Roberts, William C" <william.c.roberts@intel.com>
+Date: Wed, 29 Nov 2017 22:36:28 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC563F4C1805@ORSMSX115.amr.corp.intel.com>
+References: <1511921105-3647-1-git-send-email-me@tobin.cc>
+ <1511921105-3647-5-git-send-email-me@tobin.cc>
+ <CA+55aFxgGb13hqoNQ8bzFn4ENZM25PBSdi5pkFUBa5Hk+j-s3Q@mail.gmail.com>
+ <324abe19f1ee4177911d2fc48899ac8a@AcuMS.aculab.com>
+ <CAGXu5j+xUt+coLCKg9qeCrTzc7HEM7KP=1Z-xTiDXWSRYibJQg@mail.gmail.com>
+In-Reply-To: <CAGXu5j+xUt+coLCKg9qeCrTzc7HEM7KP=1Z-xTiDXWSRYibJQg@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <324abe19f1ee4177911d2fc48899ac8a@AcuMS.aculab.com>
-References: <1511921105-3647-1-git-send-email-me@tobin.cc> <1511921105-3647-5-git-send-email-me@tobin.cc>
- <CA+55aFxgGb13hqoNQ8bzFn4ENZM25PBSdi5pkFUBa5Hk+j-s3Q@mail.gmail.com> <324abe19f1ee4177911d2fc48899ac8a@AcuMS.aculab.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 29 Nov 2017 14:28:27 -0800
-Message-ID: <CAGXu5j+xUt+coLCKg9qeCrTzc7HEM7KP=1Z-xTiDXWSRYibJQg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH V11 4/5] vsprintf: add printk specifier %px
-To: David Laight <David.Laight@aculab.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Tobin C. Harding" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?UTF-8?Q?Radim_Krcm=C3=A1r?= <rkrcmar@redhat.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>
+Subject: [kernel-hardening] RE: [PATCH V11 4/5] vsprintf: add printk specifier %px
+To: Kees Cook <keescook@chromium.org>, David Laight <David.Laight@aculab.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Tobin C. Harding" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel
+ Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?utf-8?B?UmFkaW0gS3JjbcOhcg==?= <rkrcmar@redhat.com>, Linux Kernel Mailing
+ List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen
+ Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 29, 2017 at 2:07 AM, David Laight <David.Laight@aculab.com> wrote:
-> From: Linus Torvalds
->> Sent: 29 November 2017 02:29
->>
->> On Tue, Nov 28, 2017 at 6:05 PM, Tobin C. Harding <me@tobin.cc> wrote:
->> >
->> >    Let's add specifier %px as a
->> > clear, opt-in, way to print a pointer and maintain some level of
->> > isolation from all the other hex integer output within the Kernel.
->>
->> Yes, I like this model. It's easy and it's obvious ("'x' for hex"),
->> and it gives people a good way to say "yes, I really want the actual
->> address as hex" for if/when the hashed pointer doesn't work for some
->> reason.
->
-> Remind me to change every %p to %px on kernels that support it.
->
-> Although the absolute values of pointers may not be useful, knowing
-> that two pointer differ by a small amount is useful.
-> It is also useful to know whether pointers are to stack, code, static
-> data or heap.
->
-> This change to %p is going to make debugging a nightmare.
-
-In the future, maybe we could have a knob: unhashed, hashed (default),
-or zeroed.
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbToga2Vlc2Nvb2tAZ29vZ2xl
+LmNvbSBbbWFpbHRvOmtlZXNjb29rQGdvb2dsZS5jb21dIE9uIEJlaGFsZiBPZiBLZWVzDQo+IENv
+b2sNCj4gU2VudDogV2VkbmVzZGF5LCBOb3ZlbWJlciAyOSwgMjAxNyAyOjI4IFBNDQo+IFRvOiBE
+YXZpZCBMYWlnaHQgPERhdmlkLkxhaWdodEBhY3VsYWIuY29tPg0KPiBDYzogTGludXMgVG9ydmFs
+ZHMgPHRvcnZhbGRzQGxpbnV4LWZvdW5kYXRpb24ub3JnPjsgVG9iaW4gQy4gSGFyZGluZw0KPiA8
+bWVAdG9iaW4uY2M+OyBrZXJuZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbTsgSmFzb24g
+QS4gRG9uZW5mZWxkDQo+IDxKYXNvbkB6eDJjNC5jb20+OyBUaGVvZG9yZSBUcydvIDx0eXRzb0Bt
+aXQuZWR1PjsgUGFvbG8gQm9uemluaQ0KPiA8cGJvbnppbmlAcmVkaGF0LmNvbT47IFR5Y2hvIEFu
+ZGVyc2VuIDx0eWNob0B0eWNoby53cz47IFJvYmVydHMsIFdpbGxpYW0gQw0KPiA8d2lsbGlhbS5j
+LnJvYmVydHNAaW50ZWwuY29tPjsgVGVqdW4gSGVvIDx0akBrZXJuZWwub3JnPjsgSm9yZGFuIEds
+b3Zlcg0KPiA8R29sZGVuX01pbGxlcjgzQHByb3Rvbm1haWwuY2g+OyBHcmVnIEtIIDxncmVna2hA
+bGludXhmb3VuZGF0aW9uLm9yZz47DQo+IFBldHIgTWxhZGVrIDxwbWxhZGVrQHN1c2UuY29tPjsg
+Sm9lIFBlcmNoZXMgPGpvZUBwZXJjaGVzLmNvbT47IElhbg0KPiBDYW1wYmVsbCA8aWpjQGhlbGxp
+b24ub3JnLnVrPjsgU2VyZ2V5IFNlbm96aGF0c2t5DQo+IDxzZXJnZXkuc2Vub3poYXRza3lAZ21h
+aWwuY29tPjsgQ2F0YWxpbiBNYXJpbmFzIDxjYXRhbGluLm1hcmluYXNAYXJtLmNvbT47DQo+IFdp
+bGwgRGVhY29uIDx3aWxhbC5kZWFjb25AYXJtLmNvbT47IFN0ZXZlbiBSb3N0ZWR0IDxyb3N0ZWR0
+QGdvb2RtaXMub3JnPjsNCj4gQ2hyaXMgRnJpZXMgPGNmcmllc0Bnb29nbGUuY29tPjsgRGF2ZSBX
+ZWluc3RlaW4gPG9sb3JpbkBnb29nbGUuY29tPjsgRGFuaWVsDQo+IE1pY2F5IDxkYW5pZWxtaWNh
+eUBnbWFpbC5jb20+OyBEamFsYWwgSGFyb3VuaSA8dGl4eGR6QGdtYWlsLmNvbT47IFJhZGltDQo+
+IEtyY23DoXIgPHJrcmNtYXJAcmVkaGF0LmNvbT47IExpbnV4IEtlcm5lbCBNYWlsaW5nIExpc3Qg
+PGxpbnV4LQ0KPiBrZXJuZWxAdmdlci5rZXJuZWwub3JnPjsgTmV0d29yayBEZXZlbG9wbWVudCA8
+bmV0ZGV2QHZnZXIua2VybmVsLm9yZz47DQo+IERhdmlkIE1pbGxlciA8ZGF2ZW1AZGF2ZW1sb2Z0
+Lm5ldD47IFN0ZXBoZW4gUm90aHdlbGwNCj4gPHNmckBjYW5iLmF1dWcub3JnLmF1PjsgQW5kcmV5
+IFJ5YWJpbmluIDxhcnlhYmluaW5AdmlydHVvenpvLmNvbT47DQo+IEFsZXhhbmRlciBQb3RhcGVu
+a28gPGdsaWRlckBnb29nbGUuY29tPjsgRG1pdHJ5IFZ5dWtvdg0KPiA8ZHZ5dWtvdkBnb29nbGUu
+Y29tPjsgQW5kcmV3IE1vcnRvbiA8YWtwbUBsaW51eC1mb3VuZGF0aW9uLm9yZz4NCj4gU3ViamVj
+dDogUmU6IFtQQVRDSCBWMTEgNC81XSB2c3ByaW50ZjogYWRkIHByaW50ayBzcGVjaWZpZXIgJXB4
+DQo+IA0KPiBPbiBXZWQsIE5vdiAyOSwgMjAxNyBhdCAyOjA3IEFNLCBEYXZpZCBMYWlnaHQgPERh
+dmlkLkxhaWdodEBhY3VsYWIuY29tPg0KPiB3cm90ZToNCj4gPiBGcm9tOiBMaW51cyBUb3J2YWxk
+cw0KPiA+PiBTZW50OiAyOSBOb3ZlbWJlciAyMDE3IDAyOjI5DQo+ID4+DQo+ID4+IE9uIFR1ZSwg
+Tm92IDI4LCAyMDE3IGF0IDY6MDUgUE0sIFRvYmluIEMuIEhhcmRpbmcgPG1lQHRvYmluLmNjPiB3
+cm90ZToNCj4gPj4gPg0KPiA+PiA+ICAgIExldCdzIGFkZCBzcGVjaWZpZXIgJXB4IGFzIGENCj4g
+Pj4gPiBjbGVhciwgb3B0LWluLCB3YXkgdG8gcHJpbnQgYSBwb2ludGVyIGFuZCBtYWludGFpbiBz
+b21lIGxldmVsIG9mDQo+ID4+ID4gaXNvbGF0aW9uIGZyb20gYWxsIHRoZSBvdGhlciBoZXggaW50
+ZWdlciBvdXRwdXQgd2l0aGluIHRoZSBLZXJuZWwuDQo+ID4+DQo+ID4+IFllcywgSSBsaWtlIHRo
+aXMgbW9kZWwuIEl0J3MgZWFzeSBhbmQgaXQncyBvYnZpb3VzICgiJ3gnIGZvciBoZXgiKSwNCj4g
+Pj4gYW5kIGl0IGdpdmVzIHBlb3BsZSBhIGdvb2Qgd2F5IHRvIHNheSAieWVzLCBJIHJlYWxseSB3
+YW50IHRoZSBhY3R1YWwNCj4gPj4gYWRkcmVzcyBhcyBoZXgiIGZvciBpZi93aGVuIHRoZSBoYXNo
+ZWQgcG9pbnRlciBkb2Vzbid0IHdvcmsgZm9yIHNvbWUNCj4gPj4gcmVhc29uLg0KPiA+DQo+ID4g
+UmVtaW5kIG1lIHRvIGNoYW5nZSBldmVyeSAlcCB0byAlcHggb24ga2VybmVscyB0aGF0IHN1cHBv
+cnQgaXQuDQo+ID4NCj4gPiBBbHRob3VnaCB0aGUgYWJzb2x1dGUgdmFsdWVzIG9mIHBvaW50ZXJz
+IG1heSBub3QgYmUgdXNlZnVsLCBrbm93aW5nDQo+ID4gdGhhdCB0d28gcG9pbnRlciBkaWZmZXIg
+YnkgYSBzbWFsbCBhbW91bnQgaXMgdXNlZnVsLg0KPiA+IEl0IGlzIGFsc28gdXNlZnVsIHRvIGtu
+b3cgd2hldGhlciBwb2ludGVycyBhcmUgdG8gc3RhY2ssIGNvZGUsIHN0YXRpYw0KPiA+IGRhdGEg
+b3IgaGVhcC4NCj4gPg0KPiA+IFRoaXMgY2hhbmdlIHRvICVwIGlzIGdvaW5nIHRvIG1ha2UgZGVi
+dWdnaW5nIGEgbmlnaHRtYXJlLg0KPiANCj4gSW4gdGhlIGZ1dHVyZSwgbWF5YmUgd2UgY291bGQg
+aGF2ZSBhIGtub2I6IHVuaGFzaGVkLCBoYXNoZWQgKGRlZmF1bHQpLCBvcg0KPiB6ZXJvZWQuDQoN
+Cklzbid0IHRoYXQganVzdCBrcHRyX3Jlc3RyaWN0IGFuZCBnZXQgdXMgcmlnaHQgYmFjayB0byB0
+aGUgc2ltcGxlciBwYXRjaGVzIEkgcHJvcG9zZWQ/DQoNCj4gDQo+IC1LZWVzDQo+IA0KPiAtLQ0K
+PiBLZWVzIENvb2sNCj4gUGl4ZWwgU2VjdXJpdHkNCg==
