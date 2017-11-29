@@ -1,190 +1,208 @@
-Date: Thu, 30 Nov 2017 07:48:12 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171129204812.GE6217@eros>
-References: <1511850724-2381-1-git-send-email-me@tobin.cc>
- <CAJ1xhMXjSTV92DxRz269sB=fZLEXJimr7_8PX8viamm02+xN1w@mail.gmail.com>
- <20171128211003.GY17858@eros>
- <CAJ1xhMUV8G+-e8fO2MGEWvQGpLVBsETWTpyMZ5wb9evoszZEJg@mail.gmail.com>
- <20171129101640.GC6217@eros>
- <CAPDLWs8ooetPXhuHXyCLZ2LnPRKBf0CSMoESbXMD4sGnLLNFuA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAPDLWs8ooetPXhuHXyCLZ2LnPRKBf0CSMoESbXMD4sGnLLNFuA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH] leaking_addresses: add support for 32-bit kernel
- addresses
-To: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
-Cc: Alexander Kapshuk <alexander.kapshuk@gmail.com>, linux-kernel <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <CA+55aFxiDKfe6VCM+aV2OgnkzMpP+iz+rn2k25_Qa_QLex=pPQ@mail.gmail.com>
+References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
+ <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
+ <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
+ <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
+ <1100603534.56586.1511871419952@ichabod.co-bxl> <20171128193243.4fymnjk7fplqw62x@thunk.org>
+ <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com>
+ <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
+ <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com>
+ <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com>
+ <708003731.69563.1511905898471@ichabod.co-bxl> <CA+55aFzxFQeyk6Mrk50=jzevHpZ78BXz_9nHcHabMWBdM6RC6A@mail.gmail.com>
+ <CA+55aFyybavkF8ccQKJsoVAF+MG=J5=e9PxXKU=J_hqCQRZnug@mail.gmail.com>
+ <CAGXu5jLU8LqTYM9SYQADeH9wm2npVu4AEuSqvYqi3S+qtjC-Qw@mail.gmail.com>
+ <CA+55aFwDfBnMVGfBVkrFFr26tp1y8CUpSf154AuXH+sWyeY5FA@mail.gmail.com>
+ <CAGXu5j+Tv4KHytjOtBvG9e53o-pG7h5DjZZkATXbado-HAbKHw@mail.gmail.com> <CA+55aFxiDKfe6VCM+aV2OgnkzMpP+iz+rn2k25_Qa_QLex=pPQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 29 Nov 2017 13:17:26 -0800
+Message-ID: <CAGXu5jJQnokKL2MdbQgOhBJ_RMHVvsw4u27Ds=4Jq3Ys=mjtRg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
+ request_module_cap() to load 'netdev-%s' modules
+To: Linus Torvalds <torvalds@linux-foundation.org>, Djalal Harouni <tixxdz@gmail.com>, Jessica Yu <jeyu@kernel.org>
+Cc: LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 29, 2017 at 04:32:54PM +0530, Kaiwan N Billimoria wrote:
-> Hi,
-> 
-> On Wed, Nov 29, 2017 at 3:46 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> > On Wed, Nov 29, 2017 at 09:59:59AM +0200, Alexander Kapshuk wrote:
-> >> On Tue, Nov 28, 2017 at 11:10 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> >> > On Tue, Nov 28, 2017 at 03:16:24PM +0200, Alexander Kapshuk wrote:
-> >> >> On Tue, Nov 28, 2017 at 8:32 AM, Tobin C. Harding <me@tobin.cc> wrote:
-> >> >> >  Options:
-> >> >> >
-> >> >> > -       -o, --output-raw=<file>  Save results for future processing.
-> >> >> > -       -i, --input-raw=<file>   Read results from file instead of scanning.
-> >> >> > -           --raw                Show raw results (default).
-> >> >> > -           --suppress-dmesg     Do not show dmesg results.
-> >> >> > -           --squash-by-path     Show one result per unique path.
-> >> >> > -           --squash-by-filename Show one result per unique filename.
-> >> >> > -       -d, --debug              Display debugging output.
-> >> >> > -       -h, --help, --version    Display this help and exit.
-> >> >> > +       -o, --output-raw=<file>         Save results for future processing.
-> >> >> > +       -i, --input-raw=<file>          Read results from file instead of scanning.
-> >> >> > +             --raw                       Show raw results (default).
-> >> >> > +             --suppress-dmesg            Do not show dmesg results.
-> >> >> > +             --squash-by-path            Show one result per unique path.
-> >> >> > +             --squash-by-filename        Show one result per unique filename.
-> >> >> > +           --page-offset-32bit=<hex>   PAGE_OFFSET value (for 32-bit kernels).
-> >> >> > +           --kernel-config-file=<file> Kernel configuration file (e.g /boot/config)
-> >> >> > +       -d, --debug                     Display debugging output.
-> >> >> > +       -h, --help, --version           Display this help and exit.
-> >> >> >
-> Thanks for the whitespace fixes..
-> 
-> >> >>
-> >> >> Get_page_offset attempts to build a list of config files, which are
-> >> >> then passed into the parsing function for further processing.
-> >> >> This splits up the code to do with the config files between
-> >> >> get_page_offset() and parse_kernel_config_file().
-> >> >> May I suggest putting the kernel config file processing code into the
-> >> >> parse_kernel_config_file() instead, and let the parsing function
-> >> >> handle the config files and either return the page_offset or an empty
-> >> >> string.
-> >> >>
-> >> >> See below for the proposed implementation.
-> 
-> Thanks Alexander..
-> 
-> >> >
-> >> > Nice, this is much better! Thanks.
-> >> >
-> >> >> Apologies for the absence of indentation.
-> >> >
-> >> > Re-posting with indentation, comments in line.
-> >> >
-> >> >> Disclaimer: I did not test-run the code being proposed.
-> >> >
-> >> > I also did not test my comments ;)
-> >> >
-> >> >> sub get_page_offset
-> >> >> {
-> >> >>       my $default_offset = "0xc0000000";
-> >> >>       my $page_offset;
-> >> >>
-> >> >>       # Allow --page-offset-32bit to over ride.
-> >> >>       if ($page_offset_32bit != 0) {
-> >> >>               return $page_offset_32bit;
-> >> >>       }
-> >> >>
-> >> >>       $page_offset = parse_kernel_config_file();
-> >> >>       if ($page_offset ne "") {
-> >> >>               return $page_offset
-> >> >>       }
-> >> >>
-> >> >>       printf STDERR "Failed to parse kernel config files\n";
-> >> >>       printf STDERR "Falling back to %s\n", $default_offset;
-> >> >>
-> >> >>       return $default_offset;
-> 
-> This "fallback to 0xc0000000" I don't really agree with.
-> Obviously, there are platforms out there that do not use a PAGE_OFFSET value of
-> 0xc0000000. So I think that defaulting to this is kinda presumptive;
-> much better, IMHO,
-> if we just fail and ask the user to pass the "correct" PAGE_OFFSET value via
-> the '--page-offset-32bit=' option switch.
-> What do you say?
+On Wed, Nov 29, 2017 at 10:46 AM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Wed, Nov 29, 2017 at 10:30 AM, Kees Cook <keescook@chromium.org> wrote:
+>> On Tue, Nov 28, 2017 at 4:50 PM, Linus Torvalds
+>> <torvalds@linux-foundation.org> wrote:
+>>>
+>>> Just thinking about the DCCP case, where networking people actually
+>>> knew it was pretty deprecated and had no real maintainer, I think one
+>>> thing to look at would be simply a per-module flag.
+>>>   [ ... ]
+>>> Does that sound reasonable?
+>>
+>> Yeah, I think I see the way forward here; thanks for the discussion!
+>
+> Note: I don't want to really force that per-module flag if it ends up
+> being painful, I was really just thinking that considering the DCCP
+> case, it would be (I think) a really nice solution.
+>
+> In particular, request_module() ends up having that indirection
+> through usermode-helper, which makes it potentially very inconvenient
+> to store the "did the original caller have proper capabilities" and
+> then check it at actual module load time.
 
-If we fallback to some sane value (it does not have to be 0xc0000000
-but that seems the most obvious) then the script has more chance of
-running by default. Why do I think it is better to run by default even
-with the wrong virtual address spilt, well since the correct value is
-basically just eliminating false positives (non-kernel addresses) it
-seems more right to run by default with extra false positives than to
-fail and place demands on the user. This will be especially useful if we
-get the script running in any continuous integration tools.
+Yeah, for this it seems like the permission _evaluation_ would happen
+at request_module() time, and it could pass that as a module argument
+to the usermode-helper, so that during load_module(), it would have
+all the needed information to take an action:
 
-We should definitely be noisy if we fallback to the default value
-though.
+- was this load considered privileged?
+- is this module marked privileged-only?
+- what are we configured to do in the case of mismatches?
 
-> >> >> }
-> >> >>
-> 
-> >> > perhaps
-> >> >                 my $tmpkconf = '/tmp/tmpkconf';
-> >>
-> >> my $tmpkconf is almost as long as /tmp/tmpkconf. The name of the tmp
-> >> file is self explanatory.
-> >> Using a variable instead of the filename in this particular context is
-> >> a matter of personal preference. If you prefer to use the variable
-> >> here, it's your call.
-> >
-> > I'm a stickler for no const strings or magic numbers but it's Kaiwan's
-> > patch, if he puts it in with const strings I'll apply it as is :)
-> 
-> I'd say in this case it's self-evident; IMO, we could leave it as a
-> const string..
-> 
-> >> >
-> >> >>               if (system("gunzip < /proc/config.gz > /tmp/tmpkconf") == 0) {
-> >> >>                       push @config_files, "/tmp/tmpkconf";
-> >> >>               }
-> >> >>       }
-> >> >
-> >> > Won't there only ever be a single config file? So if /proc/config.gz is
-> >> > readable we could do
-> >>
-> >> The code above builds a list of config files.
-> >> Assigning to @config_files as shown below would wipe out the config
-> >> files appended to the list so far, would it not?
-> >> So $tmpkconf needs appending to the list.
-> >
-> > You are correct, since the beginning of this function that has been the
-> > algorithm. My observation is that if /proc/config.gz is present then we
-> > don't need to parse the other files so it is better to blow them away.
-> >
-> > I don't know enough about the whole Linux-sphere to know if this is
-> > correct. But it seems reasonable that even if there is more than one way
-> > to look at the running kernels config file they will all be the same,
-> > the system would be pretty broken if they were different.
-> >
-> > So once we have found a readable config file just parse it and be done
-> > with it, no need to loop over any others.
-> 
-> Agreed.
-> 
-> > thanks,
-> > Tobin.
-> 
-> Tobin, am unsure why but I can't seem to apply your patch (on the
-> commit you specified: 4.15-rc1).
-> So have been unable to test so far.. Am copying the patch off the
-> email, saving and trying:
-> 
-> linux $ git apply --check ../tobin_patch_28nov17.patch
-> error: patch failed: scripts/leaking_addresses.pl:35
-> error: scripts/leaking_addresses.pl: patch does not apply
-> linux $
+> So the module flag is technically easy to add, and it's technically
+> easy to read at module loading time, but I suspect that it's actually
+> annoyingly hard to pass the original request_module() capability
+> information around to where we actually read the module.
 
-I just tried to save and apply it on my end and it works. How are you
-saving it? What email client are you using? Perhaps try to create a
-simple patch yourself, email to yourself, save it and apply it to a
-clean branch.
+The clever solution grsecurity uses for this is to pass information as
+module loading arguments (mentioned above) in call_modprobe(), and
+then read them back in load_module(). This seemed like overkill to me,
+but it does allow for delaying the decision on the action.
 
-Also, if you want the commit message also you can use
+I think this would only be needed to deal with per-module markings,
+though, since all other cases the evaluation and action could happen
+at request_module() time. (More on this below.)
 
-	$ git am < this.patch
+> That's why it might be _much_ easier to try to do it per call-site
+> instead. It's not quite as fine-grained (because several call-sites do
+> things like
+>
+>         request_module("net-pf-%d-proto-%d", PF_NETLINK, protocol);
+>
+> that can load a large number of different modules), but if we can get
+> away with just saying "this particular callsite is ok, because it only
+> loads the bluetooth module that we thing is trustworthy" or "this
+> call-site is ok, because you already had to have access to the device
+> node", that is going to be much simpler and more straightforward.
 
-Sometimes you need to perform a 3 way merge, pass '-3' to `git am` to do
-so.
+This is basically what we've historically already tried to do: limit
+request_module() calls to either one or a set of const strings, or to
+load with a format template. Removing all the
+request_module(whatever_the_user_says) calls has (hopefully) been
+completed, though sometimes weird stuff sneaks by.
 
-Let me know how you go.
+The difficulty I see here is that it's not always clear which are
+expected to be privileged loads or not. Even an analysis[1] of whether
+or not request_module() is using a format template doesn't tell us
+much. Is it an unprivileged net module like your example above or is
+it some privileged device hotplug event like
+request_module("ulpi:v%04xp%04x", ulpi->id.vendor, ulpi->id.product)?
 
-thanks,
-Tobin.
+> In other words: I think there are at least two different models to go
+> after, and there may be practical reasons to prefer one over the
+> other.
+
+I would agree, and it's why I thought the original series was good: I
+feel like we've already done the harder work of narrowing
+request_module() calls by subsystem prefixes over the years, and
+separating privilege with a new API didn't make sense to me. The
+privileges are a state to check in the existing API, etc. But as I
+said, if there's a way forward you're happy with, let's do it. It just
+needs to get to the point where an admin can explicitly disable
+unprivileged module autoloading with some appropriate level of
+granularity.
+
+[email merging your later reply...]
+> One possibly interesting approach would be to run the usermode helper
+> not as root, but with the credentials of the request_module() caller.
+>
+> That's arguably the right thing to do (in that request_module() would
+> never do anything that the user wouldn't be able to do on their own)
+> and probably what we should have done originally, but while it feels
+> like a nice solution I suspect it would break pretty much every distro
+> out there.
+>
+> Because they all expect modprobe/kmod to be called as root in the
+> original init-namespace.
+
+Dropping to the request_module() privileges for the usermode helper
+would absolutely break the world. It would actually be much more
+disruptive than the proposed series. :)
+
+One of the (many) problems with module loading is that it changes the
+global features available to the kernel: suddenly all existing
+processes have access to whatever feature just got loaded (modulo a
+syscall path to touch the code). This is a rather ugly from the
+perspective of containers: unprivileged module loading can change the
+kernel globally for all containers, the load gets triggered to run in
+the init userspace, not the container, etc, etc. (Though loading from
+the container would be nonsense too.)
+
+So, what we have now is that the permission verification already
+happens at and around the existing request_module() calls. Callers are
+already checking caps within containers, for example, or isolating
+which things can be loaded with subsystem format prefixes, etc. All
+the loading logic is being done around the request_module() calls, and
+once this is deemed "safe", we explicitly elevate privileges to
+init-ns CAP_SYS_MODULE and load the module by way of the usermode
+helper's call to finit_module(). As in, we have an intentional
+CAP_SYS_MODULE privilege elevation for doing module loading.
+
+What I like about the proposed request_modue_cap() is that is codifies
+the specific privilege change "having this cap allows you to gain
+CAP_SYS_MODULE to load this possible prefixed subset of modules",
+instead of having that logic open-coded near the request_module() call
+site. And we can add more of these explicit kinds of calls, but it
+won't change the need for a way to say "no privilege elevations should
+be allowed".
+
+It still sounds like you'd like to see an explicit change, similar to
+the proposed request_module_cap(), that identifies the privilege
+expectations on a per-call-site basis. How about this plan:
+
+1) Add request_module_cap(required_cap, module_name_prefix, fmt, fmt_args...)
+
+2) Convert known privileged-but-not-CAP_SYS_MODULE request_module()
+callers to request_module_cap(the_needed_cap, prefix, ...)
+
+2) Convert known unprivileged callers to use request_module_cap(0, ...)
+
+3) Add WARN_RATELIMIT for request_module() calls without
+CAP_SYS_MODULE to shake out other places where request_module_cap() is
+needed.
+
+4) Adapt the original patch series to add the per-process flag that
+can block privilege elevations.
+
+This will get us the improvement of removing any unexpectedly
+unprivileged request_module() call sites for everyone, and still
+provide the optional process flag to mark a process as not allowed to
+make change its effective privilege to load a module.
+
+Does this sound workable?
+
+-Kees
+
+
+[1] Just some greps to see the extent of request_module() use...
+
+We've got a bit over 400 call sites:
+
+$ git grep request_module'\b' | wc -l
+438
+
+About a third aren't using a format string, so they're loading either
+a specific module or a specific alias:
+
+$ git grep request_module'\b' | grep -v % | grep '"' | wc -l
+160
+
+Another third use format strings to load some aliased subset:
+
+$ git grep request_module'\b' | grep % | wc -l
+154
+
+The rest construct their strings manually, making them less easy to
+trivially examine.
+
+-- 
+Kees Cook
+Pixel Security
