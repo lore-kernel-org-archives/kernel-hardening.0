@@ -1,48 +1,26 @@
 MIME-Version: 1.0
 Sender: linus971@gmail.com
-In-Reply-To: <20171129.105816.1108278026315471171.davem@davemloft.net>
-References: <20171129134612.72ccb53d@alans-desktop> <20171129.095014.1909386937628805919.davem@davemloft.net>
- <20171129155406.i2lyclquj75lvtn4@thunk.org> <20171129.105816.1108278026315471171.davem@davemloft.net>
+In-Reply-To: <CAGXu5j+xUt+coLCKg9qeCrTzc7HEM7KP=1Z-xTiDXWSRYibJQg@mail.gmail.com>
+References: <1511921105-3647-1-git-send-email-me@tobin.cc> <1511921105-3647-5-git-send-email-me@tobin.cc>
+ <CA+55aFxgGb13hqoNQ8bzFn4ENZM25PBSdi5pkFUBa5Hk+j-s3Q@mail.gmail.com>
+ <324abe19f1ee4177911d2fc48899ac8a@AcuMS.aculab.com> <CAGXu5j+xUt+coLCKg9qeCrTzc7HEM7KP=1Z-xTiDXWSRYibJQg@mail.gmail.com>
 From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Wed, 29 Nov 2017 14:45:35 -0800
-Message-ID: <CA+55aFyobrT7SkFC+PVX0USvRicVt_UPH_nkc-G9Bi8yrCCgPw@mail.gmail.com>
+Date: Wed, 29 Nov 2017 14:47:01 -0800
+Message-ID: <CA+55aFxmHiXJzaPyBgCMhrka88TMMedUdpK0huste3o90wL0Tw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 next 1/5] modules:capabilities: add request_module_cap()
-To: David Miller <davem@davemloft.net>
-Cc: Theodore Ts'o <tytso@mit.edu>, One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>, Kees Cook <keescook@chromium.org>, "Luis R. Rodriguez" <mcgrof@kernel.org>, Djalal Harouni <tixxdz@gmail.com>, Andrew Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, "Serge E. Hallyn" <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>
+Subject: [kernel-hardening] Re: [PATCH V11 4/5] vsprintf: add printk specifier %px
+To: Kees Cook <keescook@chromium.org>
+Cc: David Laight <David.Laight@aculab.com>, "Tobin C. Harding" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?UTF-8?Q?Radim_Krcm=C3=A1r?= <rkrcmar@redhat.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 29, 2017 at 7:58 AM, David Miller <davem@davemloft.net> wrote:
+On Wed, Nov 29, 2017 at 2:28 PM, Kees Cook <keescook@chromium.org> wrote:
 >
-> We're talking about making sure that loading "ppp.ko" really gets
-> ppp.ko rather than some_other_module.ko renamed to ppp.ko via some
-> other mechanism.
->
-> Both modules have legitimate signatures so the kernel will happily
-> load both.
+> In the future, maybe we could have a knob: unhashed, hashed (default),
+> or zeroed.
 
-Yes. We could make the module name be part of the signing process, but
-one problem with that is that at module loading time we don't actually
-have the filename any more.
+I haven't actually seen a case for that yet.
 
-User space opens the file and then just feeds the data to the kernel.
-So if you fooled modprobe into feeding the wrong module, that's it.
+Let's see if there are actually any debug issues at all, and how big
+they are before worrying about it.
 
-And yes, we can obviously embed the module name into the ELF headers
-(that is all part of the signed payload), but the module name doesn't
-actually necessarily match what we originally asked for.
-
-Why? Module aliases and module dependencies - which is why we have
-that user mode side at all. When we do "request_module(XYZ)" we don't
-necessarily know what the dependencies are, so we expect modprobe to
-just load the right modules.
-
-So if modprobe then loads some other module (dccp or whatever), the
-kernel has no real way to know "oh, that wasn't part of the dependency
-chain for the module we aked for".
-
-Now, if modprobe is taught to check that the filename of the module
-that it opens actually matches the metadata in the ELF sections, that
-would solve it, but it's out of the kernels hands..
-
-             Linus
+                   Linus
