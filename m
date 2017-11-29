@@ -1,64 +1,128 @@
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CAGXu5jLU8LqTYM9SYQADeH9wm2npVu4AEuSqvYqi3S+qtjC-Qw@mail.gmail.com>
-References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-6-git-send-email-tixxdz@gmail.com> <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
- <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
- <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
- <1100603534.56586.1511871419952@ichabod.co-bxl> <20171128193243.4fymnjk7fplqw62x@thunk.org>
- <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com>
- <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
- <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com>
- <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com>
- <708003731.69563.1511905898471@ichabod.co-bxl> <CA+55aFzxFQeyk6Mrk50=jzevHpZ78BXz_9nHcHabMWBdM6RC6A@mail.gmail.com>
- <CA+55aFyybavkF8ccQKJsoVAF+MG=J5=e9PxXKU=J_hqCQRZnug@mail.gmail.com> <CAGXu5jLU8LqTYM9SYQADeH9wm2npVu4AEuSqvYqi3S+qtjC-Qw@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Tue, 28 Nov 2017 16:50:09 -0800
-Message-ID: <CA+55aFwDfBnMVGfBVkrFFr26tp1y8CUpSf154AuXH+sWyeY5FA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
- request_module_cap() to load 'netdev-%s' modules
-To: Kees Cook <keescook@chromium.org>
-Cc: Geo Kozey <geokozey@mailfence.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: "Tobin C. Harding" <me@tobin.cc>
+Date: Wed, 29 Nov 2017 13:05:00 +1100
+Message-Id: <1511921105-3647-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] [PATCH V11 0/5] hash addresses printed with %p
+To: kernel-hardening@lists.openwall.com
+Cc: "Tobin C. Harding" <me@tobin.cc>, Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts,
+ William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 28, 2017 at 4:26 PM, Kees Cook <keescook@chromium.org> wrote:
->
->> The model that I am a proponent of is to take a softer approach
->> initially: don't forbid module loading (because that breaks users),
->> but instead _warn_ about non-root module loading. And then we can
->> start fixing the cases that we find.
->
-> I am totally fine with this. The question I'm hoping to have answered
-> is, "then what?" We already have concrete examples of module
-> autoloading that will still be need to stay unprivileged and as-is in
-> the kernel (even if we remove others). What do you see as the way to
-> allow an admin to turn those off?
+Currently there exist approximately 14 000 places in the Kernel where
+addresses are being printed using an unadorned %p. This potentially
+leaks sensitive information regarding the Kernel layout in memory. Many
+of these calls are stale, instead of fixing every call lets hash the
+address by default before printing. This will of course break some
+users, forcing code printing needed addresses to be updated. We can add
+a printk specifier for this purpose (%px) to give developers a clear
+upgrade path for breakages caused by applying this patch set.
 
-Just thinking about the DCCP case, where networking people actually
-knew it was pretty deprecated and had no real maintainer, I think one
-thing to look at would be simply a per-module flag.
+The added advantage of hashing %p is that security is now opt-out, if
+you _really_ want the address you have to work a little harder and use
+%px.
 
-That kind of thing should be fairly easy to implement, along the same
-lines as the module license - it just sets a flag in the ELF section
-headers.
+The idea for creating the printk specifier %px to print the actual
+address was suggested by Kees Cook (see below for email threads by
+subject).
 
-With something like that, we literally could make the default be "no
-autoloading except for root", and then just mark the modules that we
-think are ok and well maintained.
+Newbie question: I don't know who is potentially going to want to apply
+this, I've CC'd Andrew Morton. I'm guessing this should go into
+linux-next so we can see what breaks? I do not know exactly how code
+gets into linux-next. I've CC'd Stephen Rothwell.
 
-Sure, if you then do a lock-down mode that makes that flag parsing
-stricter, then that's a separate thing. But I suspect we definitely
-could be a lot stricter on a per-module basis, and do it in a way
-where a normal user wouldn't even notice that we've limited the
-autoloading.
+Here is the behaviour that this series implements.
 
-But the first step would be to just add some noise. And even with the
-per-module flag, at first it would only suppress the noise (ie we'd
-still _allow_ loading other modules, they'd just be noisy). Then, if
-nobody hollers, maybe the next kernel release we'll make it actually
-enforce the flag.
+For kpt_restrict==0
 
-Does that sound reasonable?
+Randomness not ready:
+  printed with %p:                     (ptrval)     # NOTE: with padding
+Valid pointer:
+  printed with %pK:             deadbeefdeadbeef
+  printed with %p:              00000000deadbeef
+  malformed specifier (eg %i):  00000000deadbeef
+NULL pointer:
+  printed with %pK:             0000000000000000
+  printed with %p:                       (null)     # NOTE: with padding
+  malformed specifier (eg %i):           (null)
 
-               Linus
+For kpt_restrict==2
+
+Valid pointer:
+  printed with %pK:             0000000000000000
+
+All other output as for kptr_restrict==0
+
+V11:
+ - Add patch fixing %pK documentation.
+ - Refactor %pK as a separate patch.
+ - Add patch adding printk specifier %px, which prints the actual
+   address (i.e replaces original %p behaviour). 
+ - Use %px for KASAN patch.
+
+V10:
+ - Add patch so KASAN uses %pK instead of %p. 
+ - Add documentation to Documentation/printk-formats.txt
+ - Add tests to lib/test_printf.c
+ - Change "(pointer value)" -> "(ptrval)" to fit within columns on 32
+   bit machines.
+
+V9:
+ - Drop the initial patch from V8, leaving null pointer handling as is.
+ - Print the hashed ID _without_ a '0x' suffix.
+ - Mask the first 32 bits of the hashed ID to all zeros on 64 bit
+   architectures.
+
+V8:
+ - Add second patch cleaning up null pointer printing in pointer()
+ - Move %pK handling to separate function, further cleaning up pointer()
+ - Move ptr_to_id() call outside of switch statement making hashing
+   the default behaviour (including malformed specifiers).
+ - Remove use of static_key, replace with simple boolean.
+
+V7:
+ - Use tabs instead of spaces (ouch!).
+
+V6:
+ - Use __early_initcall() to fill the SipHash key.
+ - Use static keys to guard hashing before the key is available.
+
+V5:
+ - Remove spin lock.
+ - Add Jason A. Donenfeld to CC list by request.
+ - Add Theodore Ts'o to CC list due to comment on previous version.
+
+V4:
+ - Remove changes to siphash.{ch}
+ - Do word size check, and return value cast, directly in ptr_to_id().
+ - Use add_ready_random_callback() to guard call to get_random_bytes()
+
+V3:
+ - Use atomic_xchg() to guard setting [random] key.
+ - Remove erroneous white space change.
+
+V2:
+ - Use SipHash to do the hashing.
+
+The discussion related to this patch has been fragmented. There are
+three threads associated with this patch. Email threads by subject:
+
+[PATCH 0/5] add printk specifier %px, unique identifier
+[PATCH] printk: hash addresses printed with %p
+[PATCH 0/3] add %pX specifier
+[kernel-hardening] [RFC V2 0/6] add more kernel pointer filter options
+
+Tobin C. Harding (5):
+  docs: correct documentation for %pK
+  vsprintf: refactor %pK code out of pointer()
+  printk: hash addresses printed with %p
+  vsprintf: add printk specifier %px
+  kasan: use %px to print addresses instead of %p
+
+ Documentation/printk-formats.txt |  31 ++++++-
+ lib/test_printf.c                | 108 ++++++++++++++--------
+ lib/vsprintf.c                   | 194 +++++++++++++++++++++++++++++----------
+ mm/kasan/report.c                |   8 +-
+ scripts/checkpatch.pl            |   2 +-
+ 5 files changed, 248 insertions(+), 95 deletions(-)
+
+-- 
+2.7.4
