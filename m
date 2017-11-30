@@ -1,32 +1,47 @@
 MIME-Version: 1.0
-In-Reply-To: <20171127131828.GA16939@openwall.com>
+In-Reply-To: <20171127002641.GA14743@openwall.com>
 References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
- <20171127011441.GA15063@openwall.com> <20171127131828.GA16939@openwall.com>
+ <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com> <20171122165144.07aea7ac@alans-desktop>
+ <33dcc007e92349999ce77bf45825be22@AcuMS.aculab.com> <CAJHCu1K-xZXaXh38qYaNzJBr+USVxvsaqOReZjtnchxVOyYnww@mail.gmail.com>
+ <20171127002641.GA14743@openwall.com>
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Thu, 30 Nov 2017 15:38:11 +0100
-Message-ID: <CAJHCu1LXh1eGu1cm+y28LC=hnvNRnkeS+a-QdFFwvVWuSWymuA@mail.gmail.com>
+Date: Thu, 30 Nov 2017 15:39:48 +0100
+Message-ID: <CAJHCu1+yjSCReBGG4=K2Kx-iTjVxbSTqacM9bNVPNdg74pGoow@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v3 0/2] Restrict dangerous open in sticky directories
+Subject: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
 To: Solar Designer <solar@openwall.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: David Laight <David.Laight@aculab.com>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2017-11-27 14:18 GMT+01:00 Solar Designer <solar@openwall.com>:
-> Salvatore,
+2017-11-27 1:26 GMT+01:00 Solar Designer <solar@openwall.com>:
+> On Fri, Nov 24, 2017 at 12:43:47PM +0100, Salvatore Mesoraca wrote:
+> > 2017-11-24 11:53 GMT+01:00 David Laight <David.Laight@aculab.com>:
+> > > From: Alan Cox
+> > >> Sent: 22 November 2017 16:52
+> > >>
+> > >> On Wed, 22 Nov 2017 09:01:46 +0100 Salvatore Mesoraca <s.mesoraca16@gmail.com> wrote:
+> > >>
+> > >> > Disallows O_CREAT open missing the O_EXCL flag, in world or
+> > >> > group writable directories, even if the file doesn't exist yet.
+> > >> > With few exceptions (e.g. shared lock files based on flock())
 >
-> On Mon, Nov 27, 2017 at 02:14:41AM +0100, Solar Designer wrote:
->> When I suggested the O_CREAT-without-O_EXCL checks, I didn't mean you'd
->> try to introduce them at the same time with the restrictions on FIFOs
->> and regular files.
->
-> I re-read what I wrote in that discussion in September, and I can see
-> how it was confusing: first I suggested those checks as possible extra
-> settings in the restrictions on FIFOs and regular files, then agreed
-> with you that we need a separate sysctl in a separate patch - but we
-> never discussed whether that separate patch should be part of the same
-> patch series or not.
+> Why would "shared lock files based on flock()" need O_CREAT without
+> O_EXCL?  Where specifically are they currently used that way?
 
-No problem, misunderstandings happen.
-I really appreciate your help with this patch!
+I don't think that they *need* to act like this, but this is how
+util-linux's flock(1) currently works.
+And it doesn't seem an unreasonable behavior from their perspective,
+so maybe other programs do that too.
+I was citing that case just to make it clear that, if someone gets
+a warning because of flock(1), they shouldn't be worried about it.
+That behavior can be certainly avoided, but of course it isn't a
+security problem per se.
+
+> If a program does
+> that, we could want to find out and revise it (if O_CREAT|O_EXCL fails,
+> retry without these to open the existing file, then flock() either way).
+
+Yes, this would probably be the best thing to do, good idea.
+Thanks again for your time,
 
 Salvatore
