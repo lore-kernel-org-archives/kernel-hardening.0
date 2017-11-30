@@ -1,64 +1,128 @@
-Date: Thu, 30 Nov 2017 18:51:47 +0100
+Date: Thu, 30 Nov 2017 20:05:39 +0100
 From: Solar Designer <solar@openwall.com>
-Message-ID: <20171130175147.GA4124@openwall.com>
-References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com> <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com> <9fe9b2cd312748ddb31f63f9dc1b1ed8@AcuMS.aculab.com>
+Message-ID: <20171130190539.GA4360@openwall.com>
+References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com> <20171127011441.GA15063@openwall.com> <CAJHCu1+wC1BsW2r77aoibFth_qtjozKZFJTaD4xCuGBzHp2s4w@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <9fe9b2cd312748ddb31f63f9dc1b1ed8@AcuMS.aculab.com>
-Subject: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
-To: David Laight <David.Laight@ACULAB.COM>
-Cc: 'Salvatore Mesoraca' <s.mesoraca16@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>
+In-Reply-To: <CAJHCu1+wC1BsW2r77aoibFth_qtjozKZFJTaD4xCuGBzHp2s4w@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v3 0/2] Restrict dangerous open in sticky directories
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Nov 30, 2017 at 04:53:06PM +0000, David Laight wrote:
-> From: Salvatore Mesoraca
-> > if a program tries to open a file, in a sticky directory,
-> > with the O_CREAT flag and without the O_EXCL, it probably has a bug.
-> > This feature allows to detect and potentially block programs that
-> > act this way, it can be used to find vulnerabilities (like those
-> > prevented by patch #1) and to do policy enforcement.
+On Thu, Nov 30, 2017 at 03:37:29PM +0100, Salvatore Mesoraca wrote:
+> 2017-11-27 2:14 GMT+01:00 Solar Designer <solar@openwall.com>:
+> > When I suggested the O_CREAT-without-O_EXCL checks, I didn't mean you'd
+> > try to introduce them at the same time with the restrictions on FIFOs
+> > and regular files.  I think that bundling these together might be a
+> > recipe for never getting any of them in, or for getting in the latter
+> > with unnecessarily limited scope.
+> 
+> Yes, I think you are right. I'll split them.
 
-> I presume the 'vulnerabilities' are related to symlinks being created
-> just before the open?
+Thanks.
 
-That's one way to exploit them.  We already have a sysctl to try and
-block that specific attack, and we're considering adding more, for other
-attacks.  But we'd also like an easy way to learn of the vulnerabilities
-without anyone trying to exploit them yet, hence this patch.
+> > I think we need an optional policy
+> > against O_CREAT-without-O_EXCL not only for sticky directories, but also
+> > for other directories writable by other than the current fsuid - there
+> > may be several levels or individual flags here.
+> >
+> > So maybe unbundle these or at least avoid forever limiting them to
+> > sticky directories (don't include "sticky" in the sysctl name).
+> 
+> Actually I never liked that sysctl name :) I'll try to come up with something
+> less ugly and that doesn't include the "sticky" word.
 
-> Trouble is this change breaks a lot of general use of /tmp.
+So the current name is "protected_sticky_child_create" (I couldn't even
+recall it, had to look it up for this reply).  This unnecessarily
+bundles this potentially more general policy stuff with the existing
+"protections" against specific attacks, unnecessarily limits scope to
+"sticky" and "create", and talks about some "child".  How about we use
+something totally different, focusing on "policy"?  It could be simply
+"policy" (we're already in "fs"), or if that won't fly then how about
+"security_policy" or "dac_policy"?  We will be imposing extra
+restrictions on top of usual Unix discretionary access control
+permission bits while not going all the way to mandatory access control
+(not tying objects to subjects).  So in a sense we'll have an extension
+of Unix DAC.
 
-That's general misuse of /tmp.  Things like "command > /tmp/file"
-without having pre-created the file with O_EXCL e.g. by mktemp(1).
+BTW, this and all of fs.protected* should be configurable per-container.
 
-> I always assumed that code that cared would use O_EXCL and
-> everything else wasn't worth subverting.
+> If I implement something like what Matthew proposed[1] it will be easy to
+> extend scope and functionalities of this feature without complicating too much
+> the interface.
 
-Opinions will vary on whether it's worth subverting or not, and someone
-may reasonably want to configure this differently on different systems.
+> [1] https://lkml.org/lkml/2017/11/22/319
 
-> I found code in vi (and elsewhere) that subverted these checks
-> by opening with O_WRONLY if stat() showed the file existed and
-> O_CREAT|O_EXCL if it didn't.
+Right.  I tried thinking of a way to specify all reasonable combinations
+without the likely unreasonable ones, but couldn't come up with anything
+elegant.  So I'm fine with Matthew's proposal as-is.
 
-Yes, such misuses of /tmp and the like by use of those programs - where
-the potential consequences would often be less severe (if your example
-above is correct, it sounds like it'd be data spoofing but not
-overwriting another file over a link) - could remain unnoticed.
+A new thought: a directory that has someone else as its owner is for our
+purposes effectively the same as a group-writable directory.  So maybe
+whatever we'll implement for group-writable directories should also be
+done for directories that have other than the current fsuid as their
+owner.  It's currently very uncommon to have directories with the sticky
+bit set that are not at least group-writable, so this will rarely make a
+difference (and when it does, that's just right), but also it provides a
+way to explicitly include any directory under this monitoring (if the
+group-writable protection is on) - e.g., if a sysadmin wants this
+monitoring for users' home directories, they can change permissions for
+those from e.g. 700 to 1700.  This could be handy for development and
+auditing of software, even though in production it could be easily
+circumvented by the directory owner (who can remove the sticky bit,
+which we should document to avoid providing a false sense of security)
+and it won't automatically apply to subdirectories.  It'd also cover
+part of what we intend to achieve later by possibly extending the
+feature to non-sticky directories, where we might also want to treat
+different owner the same as group-writable (without the circumvention).
 
-> I'm pretty sure that traditionally a lot of these opens were done
-> with O_CREAT|O_TRUNC.
-> Implementing that as unlink() followed by a create would stop
-> 'random' (ok all) symlinks being followed.
+> > Meanwhile, here's a scenario where I think the FIFO restrictions are
+> > most obviously still worthwhile: attacks on system bootup scripts, where
+> > the attacker would plant a FIFO on a persistent /tmp or the like and the
+> > system would access it on next bootup.  The attacker's exploit program
+> > would not yet be running during the bootup, so it wouldn't be able to
+> > even try winning a race, but a FIFO would be able to keep the vulnerable
+> > service (or its startup script, etc.) stuck until the attacker has
+> > access again.  On the other hand, /tmp is commonly on tmpfs these days,
+> > whereas some other shared writable directories (not necessarily world
+> > writable and not necessarily sticky) are persistent (mail and cron job
+> > spools, preformatted man page cache, etc.)  So maybe this, too, is a
+> > reason to eventually extend these protections beyond sticky directories
+> > (of course, only as an option).  We shouldn't using naming that would be
+> > against such extension, or/and we shouldn't think of the
+> > O_CREAT-without-O_EXCL checks as permanently only for extra detection
+> > and reporting - they may also prevent more attacks if we eventually
+> > extend them to non-sticky, but not (yet) similarly extent the file type
+> > specific protections.
+> 
+> So, are you suggesting that I should extend "O_CREAT-without-O_EXCL"
+> and "FIFOs restrictions" to work (optionally) on non-sticky directories too,
+> while leaving untouched (for the moment) "normal files restrictions"?
 
-That's racy.  We have O_EXCL, and it must be used along with O_CREAT
-when the directory is untrusted.  (If it were only about symlinks, we
-also already have O_NOFOLLOW.)
+No, I think all of these and the existing symlink restrictions should
+potentially be extended "to work (optionally) on non-sticky directories
+too", but perhaps with separate patches later.
 
-> Overall I'm pretty sure this change will break things badly somewhere.
+An even further extension may be to cover non-O_CREAT: writing or/and
+reading an existing file in an untrusted directory is also potentially
+unsafe.  Unfortunately, we can't reliably know whether the program
+possibly takes precautions by using lstat() and fstat() and comparing
+st_dev/st_ino, so we won't be able to distinguish likely unsafe and
+likely mostly safe accesses, but we'll be able to flag all of them for
+manual analysis on a developer's or an auditor's system.  A reasonable
+strict policy one might want to follow is to have all accesses done as
+the right fsuid, without needing those unreliable st_dev/st_ino checks.
+(They're unreliable because of potential side-effects on open() and
+inode reuse.)  For example, we chose this strict policy in Openwall's
+"tcb suite" and shadow suite patches: http://www.openwall.com/tcb/
 
-Sure.  We want it to visibly break what was subtly broken, so that the
-breakage can be seen and corrected without an attempted attack.
+Of course, then there's the question on whether something exotic(?) like
+this should be in the kernel.
+
+To me, it's like a "gcc -Wall" for filesystem accesses.  Sure it can
+"falsely" detect many technically valid uses, but it's also helpful to
+improve our filesystem access safety.
 
 Alexander
