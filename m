@@ -1,156 +1,60 @@
-Date: Thu, 30 Nov 2017 16:00:34 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171130050034.GU6217@eros>
-References: <1511921105-3647-1-git-send-email-me@tobin.cc>
- <1511921105-3647-5-git-send-email-me@tobin.cc>
- <20171129152058.389361d3576e784f47326cac@linux-foundation.org>
- <20171129232603.GO6217@eros>
- <1512014306.19952.80.camel@perches.com>
- <20171130041824.GT6217@eros>
- <1512016896.19952.86.camel@perches.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1512016896.19952.86.camel@perches.com>
-Subject: [kernel-hardening] Re: [PATCH V11 4/5] vsprintf: add printk specifier %px
-To: Joe Perches <joe@perches.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts,
- William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>
+Message-ID: <1512024677.1374.168.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Thu, 30 Nov 2017 01:51:17 -0500
+In-Reply-To: <CA+55aFzi3Qj7zOrriRvrX5F4QDWMhkNQ7Qh-0FSCZsG4qk61zg@mail.gmail.com>
+References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
+	 <1511803118-2552-6-git-send-email-tixxdz@gmail.com>
+	 <CA+55aFxfO1i1LS9dPTTCf50ovWPXcq6BE9mKiq_FxWSm4iE8Mg@mail.gmail.com>
+	 <CAEiveUcvKbuJMB5801jdRosxYn+CZ4E=pfvXNrhuOrXXbw4ZBQ@mail.gmail.com>
+	 <CA+55aFzx2eM+wVrjQEfkE-G8E9OVLcdo6vk0fDMwZNu2sh1oCQ@mail.gmail.com>
+	 <1100603534.56586.1511871419952@ichabod.co-bxl>
+	 <20171128193243.4fymnjk7fplqw62x@thunk.org>
+	 <CAGXu5jLtBjLSe5mbe5sYSao1o67ezkkQq_u3md9646rRfi3cCQ@mail.gmail.com>
+	 <CA+55aFzvaFR1skBFKwT1QPnKqxaLqCuq33FCuYz8DP7MjKkgNg@mail.gmail.com>
+	 <CAGXu5j+OzbUAcqVBuC8QoY-ZiA9Xw6Uf9kzfzpx9MQHQ1LtxVQ@mail.gmail.com>
+	 <CA+55aFz0t7cCkePJQ1w44Kw_g5nns1tYJLUOL7f-c7vriqkFig@mail.gmail.com>
+	 <708003731.69563.1511905898471@ichabod.co-bxl>
+	 <CA+55aFzxFQeyk6Mrk50=jzevHpZ78BXz_9nHcHabMWBdM6RC6A@mail.gmail.com>
+	 <CA+55aFyybavkF8ccQKJsoVAF+MG=J5=e9PxXKU=J_hqCQRZnug@mail.gmail.com>
+	 <CAGXu5jLU8LqTYM9SYQADeH9wm2npVu4AEuSqvYqi3S+qtjC-Qw@mail.gmail.com>
+	 <CA+55aFwDfBnMVGfBVkrFFr26tp1y8CUpSf154AuXH+sWyeY5FA@mail.gmail.com>
+	 <CAGXu5j+Tv4KHytjOtBvG9e53o-pG7h5DjZZkATXbado-HAbKHw@mail.gmail.com>
+	 <CA+55aFxiDKfe6VCM+aV2OgnkzMpP+iz+rn2k25_Qa_QLex=pPQ@mail.gmail.com>
+	 <CAGXu5jJQnokKL2MdbQgOhBJ_RMHVvsw4u27Ds=4Jq3Ys=mjtRg@mail.gmail.com>
+	 <CA+55aFzi3Qj7zOrriRvrX5F4QDWMhkNQ7Qh-0FSCZsG4qk61zg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
+ request_module_cap() to load 'netdev-%s' modules
+To: Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>
+Cc: Djalal Harouni <tixxdz@gmail.com>, Jessica Yu <jeyu@kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 29, 2017 at 08:41:36PM -0800, Joe Perches wrote:
-> On Thu, 2017-11-30 at 15:18 +1100, Tobin C. Harding wrote:
-> > On Wed, Nov 29, 2017 at 07:58:26PM -0800, Joe Perches wrote:
-> > > On Thu, 2017-11-30 at 10:26 +1100, Tobin C. Harding wrote:
-> > > > On Wed, Nov 29, 2017 at 03:20:58PM -0800, Andrew Morton wrote:
-> > > > > On Wed, 29 Nov 2017 13:05:04 +1100 "Tobin C. Harding" <me@tobin.cc> wrote:
-> > > > > 
-> > > > > > printk specifier %p now hashes all addresses before printing. Sometimes
-> > > > > > we need to see the actual unmodified address. This can be achieved using
-> > > > > > %lx but then we face the risk that if in future we want to change the
-> > > > > > way the Kernel handles printing of pointers we will have to grep through
-> > > > > > the already existent 50 000 %lx call sites. Let's add specifier %px as a
-> > > > > > clear, opt-in, way to print a pointer and maintain some level of
-> > > > > > isolation from all the other hex integer output within the Kernel.
-> > > > > > 
-> > > > > > Add printk specifier %px to print the actual unmodified address.
-> > > > > > 
-> > > > > > ...
-> > > > > > 
-> > > > > > +Unmodified Addresses
-> > > > > > +====================
-> > > > > > +
-> > > > > > +::
-> > > > > > +
-> > > > > > +	%px	01234567 or 0123456789abcdef
-> > > > > > +
-> > > > > > +For printing pointers when you _really_ want to print the address. Please
-> > > > > > +consider whether or not you are leaking sensitive information about the
-> > > > > > +Kernel layout in memory before printing pointers with %px. %px is
-> > > > > > +functionally equivalent to %lx. %px is preferred to %lx because it is more
-> > > > > > +uniquely grep'able. If, in the future, we need to modify the way the Kernel
-> > > > > > +handles printing pointers it will be nice to be able to find the call
-> > > > > > +sites.
-> > > > > > +
-> > > > > 
-> > > > > You might want to add a checkpatch rule which emits a stern
-> > > > > do-you-really-want-to-do-this warning when someone uses %px.
-> > > > > 
-> > > > 
-> > > > Oh, nice idea. It has to be a CHECK but right?
-> > > 
-> > > No, it has to be something that's not --strict
-> > > so a WARN would probably be best.
-> > > 
-> > > > By stern, you mean use stern language?
-> > > 
-> > > I hope he doesn't mean tweet.
-> > 
-> > /me says tweet tweet (like a bird)
-> > 
-> > > Something like:
-> > > ---
-> > >  scripts/checkpatch.pl | 31 +++++++++++++++++++++++++------
-> > >  1 file changed, 25 insertions(+), 6 deletions(-)
-> > > 
-> > > diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
-> > > index 0ce249f157a1..9d789cbe7df5 100755
-> > > --- a/scripts/checkpatch.pl
-> > > +++ b/scripts/checkpatch.pl
-> > > @@ -5758,21 +5758,40 @@ sub process {
-> > >  		    defined $stat &&
-> > >  		    $stat =~ /^\+(?![^\{]*\{\s*).*\b(\w+)\s*\(.*$String\s*,/s &&
-> > >  		    $1 !~ /^_*volatile_*$/) {
-> > > +			my $complete_extension = "";
-> > > +			my $extension = "";
-> > >  			my $bad_extension = "";
-> > >  			my $lc = $stat =~ tr@\n@@;
-> > >  			$lc = $lc + $linenr;
-> > > +			my $stat_real;
-> > >  		        for (my $count = $linenr; $count <= $lc; $count++) {
-> > >  				my $fmt = get_quoted_string($lines[$count - 1], raw_line($count, 0));
-> > >  				$fmt =~ s/%%//g;
-> > > -				if ($fmt =~ /(\%[\*\d\.]*p(?![\WFfSsBKRraEhMmIiUDdgVCbGNO]).)/) {
-> > > -					$bad_extension = $1;
-> > > -					last;
-> > > +				while ($fmt =~ /(\%[\*\d\.]*p(\w))/g) {
-> > > +					$complete_extension = $1;
-> > > +					$extension = $2;
-> > > +					if ($extension !~ /[FfSsBKRraEhMmIiUDdgVCbGNOx]/) {
-> > > +						$bad_extension = $complete_extension;
-> > > +						last;
-> > > +					}
-> > > +					if ($extension eq "x") {
-> > > +						if (!defined($stat_real)) {
-> > > +							$stat_real = raw_line($linenr, 0);
-> > > +							for (my $count = $linenr + 1; $count <= $lc; $count++) {
-> > > +								$stat_real = $stat_real . "\n" . raw_line($count, 0);
-> > > +							}
-> > > +						}
-> > > +						WARN("VSPRINTF_POINTER_PX",
-> > > +						     "Using vsprintf pointer extension '$complete_extension' exposes kernel address for possible hacking\n" . "$here\n$stat_real\n");
-> > > +					}
-> > >  				}
-> > >  			}
-> > >  			if ($bad_extension ne "") {
-> > > -				my $stat_real = raw_line($linenr, 0);
-> > > -				for (my $count = $linenr + 1; $count <= $lc; $count++) {
-> > > -					$stat_real = $stat_real . "\n" . raw_line($count, 0);
-> > > +				if (!defined($stat_real)) {
-> > > +					$stat_real = raw_line($linenr, 0);
-> > > +					for (my $count = $linenr + 1; $count <= $lc; $count++) {
-> > > +						$stat_real = $stat_real . "\n" . raw_line($count, 0);
-> > > +					}
-> > >  				}
-> > >  				WARN("VSPRINTF_POINTER_EXTENSION",
-> > >  				     "Invalid vsprintf pointer extension '$bad_extension'\n" . "$here\n$stat_real\n");
-> > > 
-> > 
-> > Awesome. So moving forward, I should apply this code. Test it,
+> And once you disable it by default, and it becomes purely opt-in, that
+> means that nothing will change for most cases. Some embedded people
+> that do their own thing (ie Android) might change, but normal
+> distributions probably won't.
 > 
-> I didn't sign it and just trivially tested it.
-> 
-> So test it locally, see if it doesn't work
-> and check if the wording could be improved.
-> 
-> One possible negative is that if the format
-> contains multiple %px uses, then each use is
-> warned.
-> 
-> Maybe it should be
-> 				if ($extension eq "x" && !defined($stat_real)) {
-> 					...
-> 					WARN("VSPRINTF_POINTER_PX", ...)
-> 				}
-> so that only the first %px is warned.
+> Yes, Android may be 99% of the users, and yes, the embedded world in
+> general needs to be secure, but I'd still like this to be something
+> that helps _everybody_.
 
-Ok, will do as suggested.
+Android devices won't get much benefit since they ship a tiny set of
+modules chosen for the device. The kernels already get very stripped
+down to the bare minimum vs. enabling every feature and driver available
+and shipping it all by default on a traditional distribution.
 
-> If/when the %px series is applied, then this
-> can go in via whatever tree.
+Lots of potential module attack surface also gets eliminated by default
+via their SELinux whitelists for /dev, /sys, /proc, debugfs, ioctl
+commands, etc. The global seccomp whitelist might be relevant in some
+cases too.
 
-The %px series is in Linus' mainline now. I'll get this stuff to you and
-Andy for ack'ing (and LKML) soon as its done.
+Android devices like to build everything into the kernel too, so even if
+they weren't using a module this feature wouldn't usually help them. It
+would need to work like this existing sysctl:
 
-thanks,
-Tobin.
+    net.ipv4.tcp_available_congestion_control = cubic reno lp
+
+i.e. whitelists for functionality offered by the modules, not just
+whether they can be loaded.
