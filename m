@@ -1,79 +1,34 @@
-Date: Thu, 30 Nov 2017 02:23:24 +0100
+Date: Thu, 30 Nov 2017 03:05:58 +0100
 From: "Luis R. Rodriguez" <mcgrof@kernel.org>
-Message-ID: <20171130012324.GZ729@wotan.suse.de>
+Message-ID: <20171130020558.GA729@wotan.suse.de>
 References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-4-git-send-email-tixxdz@gmail.com>
+ <1511803118-2552-3-git-send-email-tixxdz@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1511803118-2552-4-git-send-email-tixxdz@gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v5 next 3/5] modules:capabilities: automatic module
- loading restriction
+In-Reply-To: <1511803118-2552-3-git-send-email-tixxdz@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v5 next 2/5] modules:capabilities: add
+ cap_kernel_module_request() permission check
 To: Djalal Harouni <tixxdz@gmail.com>
 Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Luis R. Rodriguez" <mcgrof@kernel.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, netdev@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 27, 2017 at 06:18:36PM +0100, Djalal Harouni wrote:
-> diff --git a/include/linux/module.h b/include/linux/module.h
-> index 5cbb239..c36aed8 100644
-> --- a/include/linux/module.h
-> +++ b/include/linux/module.h
-> @@ -261,7 +261,16 @@ struct notifier_block;
->  
->  #ifdef CONFIG_MODULES
->  
-> -extern int modules_disabled; /* for sysctl */
-> +enum {
-> +	MODULES_AUTOLOAD_ALLOWED	= 0,
-> +	MODULES_AUTOLOAD_PRIVILEGED	= 1,
-> +	MODULES_AUTOLOAD_DISABLED	= 2,
-> +};
+On Mon, Nov 27, 2017 at 06:18:35PM +0100, Djalal Harouni wrote:
+> +/* Determine whether a module auto-load operation is permitted. */
+> +int may_autoload_module(char *kmod_name, int required_cap,
+> +			const char *kmod_prefix);
 > +
 
-Can you kdocify these and add a respective rst doc file?  Maybe stuff your
-extensive docs which you are currently adding to
-Documentation/sysctl/kernel.txt to this new file and in kernel.txt just refer
-to it. This way this can be also nicely visibly documented on the web with the
-new sphinx.
+While we are reviewing a general LSM for this, it has me wondering if an LSM or
+userspace feed info may every want to use other possible context we could add for
+free to make a determination.
 
-This way you can take advantage of the kdocs you are already adding and refer
-to them.
+For instance since all request_module() calls are in header files, we could 
+for add for free THIS_MODULE as context to may_autoload_module() as well, so
+struct module. The LSM could in theory then also help ensure only specific
+modules are allowed to request a module load. Perhaps userspace could say
+only built-in code could request certain modules.
 
-> diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-> index 2fb4e27..0b6f0c8 100644
-> --- a/kernel/sysctl.c
-> +++ b/kernel/sysctl.c
-> @@ -683,6 +688,15 @@ static struct ctl_table kern_table[] = {
->  		.extra1		= &one,
->  		.extra2		= &one,
->  	},
-> +	{
-> +		.procname	= "modules_autoload_mode",
-> +		.data		= &modules_autoload_mode,
-> +		.maxlen		= sizeof(int),
-> +		.mode		= 0644,
-> +		.proc_handler	= modules_autoload_dointvec_minmax,
-
-It would seem this is a unint ... so why not reflect that?
-
-> @@ -2499,6 +2513,20 @@ static int proc_dointvec_minmax_sysadmin(struct ctl_table *table, int write,
->  }
->  #endif
->  
-> +#ifdef CONFIG_MODULES
-> +static int modules_autoload_dointvec_minmax(struct ctl_table *table, int write,
-> +				void __user *buffer, size_t *lenp, loff_t *ppos)
-> +{
-> +	/*
-> +	 * Only CAP_SYS_MODULE in init user namespace are allowed to change this
-> +	 */
-> +	if (write && !capable(CAP_SYS_MODULE))
-> +		return -EPERM;
-> +
-> +	return proc_dointvec_minmax(table, write, buffer, lenp, ppos);
-> +}
-> +#endif
-
-We now have proc_douintvec_minmax().
+Just a thought.
 
   Luis
