@@ -1,63 +1,64 @@
-Date: Thu, 30 Nov 2017 11:17:51 -0600
-From: "Serge E. Hallyn" <serge@hallyn.com>
-Message-ID: <20171130171751.GA5521@mail.hallyn.com>
-References: <20171128211659.GP729@wotan.suse.de>
- <CAGXu5j+JaFCo+pZKvet==Kh7GQgNXi30P50SMF4cpOGoUw-8ug@mail.gmail.com>
- <20171129134612.72ccb53d@alans-desktop>
- <20171129.095014.1909386937628805919.davem@davemloft.net>
- <20171129155406.i2lyclquj75lvtn4@thunk.org>
- <20171129172852.GA14545@mail.hallyn.com>
- <20171130003531.gwpl22bxmweifjz2@thunk.org>
-MIME-Version: 1.0
+Date: Thu, 30 Nov 2017 18:51:47 +0100
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20171130175147.GA4124@openwall.com>
+References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com> <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com> <9fe9b2cd312748ddb31f63f9dc1b1ed8@AcuMS.aculab.com>
+Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171130003531.gwpl22bxmweifjz2@thunk.org>
-Subject: [kernel-hardening] Re: [PATCH v5 next 1/5] modules:capabilities: add
- request_module_cap()
-To: Theodore Ts'o <tytso@mit.edu>, "Serge E. Hallyn" <serge@hallyn.com>, David Miller <davem@davemloft.net>, gnomes@lxorguk.ukuu.org.uk, keescook@chromium.org, mcgrof@kernel.org, tixxdz@gmail.com, luto@kernel.org, akpm@linux-foundation.org, james.l.morris@oracle.com, ben.hutchings@codethink.co.uk, solar@openwall.com, jeyu@kernel.org, rusty@rustcorp.com.au, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, corbet@lwn.net, mingo@kernel.org, netdev@vger.kernel.org, peterz@infradead.org, torvalds@linux-foundation.org
+In-Reply-To: <9fe9b2cd312748ddb31f63f9dc1b1ed8@AcuMS.aculab.com>
+Subject: [kernel-hardening] Re: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
+To: David Laight <David.Laight@ACULAB.COM>
+Cc: 'Salvatore Mesoraca' <s.mesoraca16@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 29, 2017 at 07:35:31PM -0500, Theodore Ts'o wrote:
-> On Wed, Nov 29, 2017 at 11:28:52AM -0600, Serge E. Hallyn wrote:
-> > 
-> > Just to be clear, module loading requires - and must always continue to
-> > require - CAP_SYS_MODULE against the initial user namespace.  Containers
-> > in user namespaces do not have that.
-> > 
-> > I don't believe anyone has ever claimed that containers which are not in
-> > a user namespace are in any way secure.
-> 
-> Unless the container performs some action which causes the kernel to
-> call request_module(), which then loads some kernel module,
+On Thu, Nov 30, 2017 at 04:53:06PM +0000, David Laight wrote:
+> From: Salvatore Mesoraca
+> > if a program tries to open a file, in a sticky directory,
+> > with the O_CREAT flag and without the O_EXCL, it probably has a bug.
+> > This feature allows to detect and potentially block programs that
+> > act this way, it can be used to find vulnerabilities (like those
+> > prevented by patch #1) and to do policy enforcement.
 
-A local unprivileged user can do the same thing.  I reject the popular
-notion that linux is a single user operating system.  More interesting
-are the (very real) cases where root in a container can do something
-which a local unprivileged user could not do.  Since a local unprivileged
-user can always create a new namespace, *those* constitute a real and
-interesting problem.
+> I presume the 'vulnerabilities' are related to symlinks being created
+> just before the open?
 
-> potentially containing cr*p unmaintained code which was included when
-> the distro compiled the world, into the host kernel.
+That's one way to exploit them.  We already have a sysctl to try and
+block that specific attack, and we're considering adding more, for other
+attacks.  But we'd also like an easy way to learn of the vulnerabilities
+without anyone trying to exploit them yet, hence this patch.
 
-> This is an attack vector that doesn't exist if you are using VM's.
+> Trouble is this change breaks a lot of general use of /tmp.
 
-Until the vm tenant uses a trivial vm escape.
+That's general misuse of /tmp.  Things like "command > /tmp/file"
+without having pre-created the file with O_EXCL e.g. by mktemp(1).
 
-> And in general, the attack surface of the entire Linux
-> kernel<->userspace API is far larger than that which is exposed by the
-> guest<->host interface.
-> 
-> For that reason, containers are *far* more insecure than VM's, since
-> once the attacker gets root on the guest VM, they then have to attack
-> the hypervisor interface.  And if you compare the attack surface of
-> the two, it's pretty clear which is larger, and it's not the
-> hypervisor interface.
+> I always assumed that code that cared would use O_EXCL and
+> everything else wasn't worth subverting.
 
-Any time anyone spends a day looking at either the black hole that is
-the hardware emulators or the xen and kvm code itself they walk away
-with a set of cve's.  It *should* be more secure, it's not.  You're
-telling me your house is safe because you put up a no tresspassing
-sign.
+Opinions will vary on whether it's worth subverting or not, and someone
+may reasonably want to configure this differently on different systems.
 
--serge
+> I found code in vi (and elsewhere) that subverted these checks
+> by opening with O_WRONLY if stat() showed the file existed and
+> O_CREAT|O_EXCL if it didn't.
+
+Yes, such misuses of /tmp and the like by use of those programs - where
+the potential consequences would often be less severe (if your example
+above is correct, it sounds like it'd be data spoofing but not
+overwriting another file over a link) - could remain unnoticed.
+
+> I'm pretty sure that traditionally a lot of these opens were done
+> with O_CREAT|O_TRUNC.
+> Implementing that as unlink() followed by a create would stop
+> 'random' (ok all) symlinks being followed.
+
+That's racy.  We have O_EXCL, and it must be used along with O_CREAT
+when the directory is untrusted.  (If it were only about symlinks, we
+also already have O_NOFOLLOW.)
+
+> Overall I'm pretty sure this change will break things badly somewhere.
+
+Sure.  We want it to visibly break what was subtly broken, so that the
+breakage can be seen and corrected without an attempted attack.
+
+Alexander
