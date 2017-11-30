@@ -1,59 +1,45 @@
-Date: Thu, 30 Nov 2017 11:16:19 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171130001619.GR6217@eros>
-References: <1511821819-5496-1-git-send-email-me@tobin.cc>
- <1511821819-5496-2-git-send-email-me@tobin.cc>
+Date: Wed, 29 Nov 2017 19:35:31 -0500
+From: Theodore Ts'o <tytso@mit.edu>
+Message-ID: <20171130003531.gwpl22bxmweifjz2@thunk.org>
+References: <20171128211659.GP729@wotan.suse.de>
+ <CAGXu5j+JaFCo+pZKvet==Kh7GQgNXi30P50SMF4cpOGoUw-8ug@mail.gmail.com>
+ <20171129134612.72ccb53d@alans-desktop>
+ <20171129.095014.1909386937628805919.davem@davemloft.net>
+ <20171129155406.i2lyclquj75lvtn4@thunk.org>
+ <20171129172852.GA14545@mail.hallyn.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1511821819-5496-2-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] Re: [RFC 1/3] kallsyms: don't leak address when symbol not found
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: Tycho Andersen <tycho@tycho.ws>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, "David S. Miller" <davem@davemloft.net>, Alexei Starovoitov <ast@kernel.org>, Network Development <netdev@vger.kernel.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20171129172852.GA14545@mail.hallyn.com>
+Subject: [kernel-hardening] Re: [PATCH v5 next 1/5] modules:capabilities: add
+ request_module_cap()
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: David Miller <davem@davemloft.net>, gnomes@lxorguk.ukuu.org.uk, keescook@chromium.org, mcgrof@kernel.org, tixxdz@gmail.com, luto@kernel.org, akpm@linux-foundation.org, james.l.morris@oracle.com, ben.hutchings@codethink.co.uk, solar@openwall.com, jeyu@kernel.org, rusty@rustcorp.com.au, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, corbet@lwn.net, mingo@kernel.org, netdev@vger.kernel.org, peterz@infradead.org, torvalds@linux-foundation.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I reordered the To's and CC's, I hope this doesn't break
-threading. (clearly I haven't groked email yet :( ) 
+On Wed, Nov 29, 2017 at 11:28:52AM -0600, Serge E. Hallyn wrote:
+> 
+> Just to be clear, module loading requires - and must always continue to
+> require - CAP_SYS_MODULE against the initial user namespace.  Containers
+> in user namespaces do not have that.
+> 
+> I don't believe anyone has ever claimed that containers which are not in
+> a user namespace are in any way secure.
 
-On Tue, Nov 28, 2017 at 09:30:17AM +1100, Tobin C. Harding wrote:
-> Currently if kallsyms_lookup() fails to find the symbol then the address
-> is printed. This potentially leaks sensitive information. Instead of
-> printing the address we can return an error, giving the calling code the
-> option to print the address or print some sanitized message.
-> 
-> Return error instead of printing address to argument buffer. Leave
-> buffer in a sane state.
-> 
-> Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> ---
->  kernel/kallsyms.c | 6 ++++--
->  1 file changed, 4 insertions(+), 2 deletions(-)
-> 
-> diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
-> index 531ffa984bc2..4bfa4ee3ce93 100644
-> --- a/kernel/kallsyms.c
-> +++ b/kernel/kallsyms.c
-> @@ -394,8 +394,10 @@ static int __sprint_symbol(char *buffer, unsigned long address,
->  
->  	address += symbol_offset;
->  	name = kallsyms_lookup(address, &size, &offset, &modname, buffer);
-> -	if (!name)
-> -		return sprintf(buffer, "0x%lx", address - symbol_offset);
-> +	if (!name) {
-> +		buffer[0] = '\0';
-> +		return -1;
-> +	}
->  
->  	if (name != buffer)
->  		strcpy(buffer, name);
-> -- 
-> 2.7.4
-> 
+Unless the container performs some action which causes the kernel to
+call request_module(), which then loads some kernel module,
+potentially containing cr*p unmaintained code which was included when
+the distro compiled the world, into the host kernel.
 
-Do you want a Suggested-by: tag for this patch Steve? I mentioned you in
-the cover letter but as far as going into the git history I'm not
-entirely sure on the protocol for adding suggested-by. The kernel docs
-say not to add it without authorization, so ...
+This is an attack vector that doesn't exist if you are using VM's.
+And in general, the attack surface of the entire Linux
+kernel<->userspace API is far larger than that which is exposed by the
+guest<->host interface.
 
-thanks,
-Tobin.
+For that reason, containers are *far* more insecure than VM's, since
+once the attacker gets root on the guest VM, they then have to attack
+the hypervisor interface.  And if you compare the attack surface of
+the two, it's pretty clear which is larger, and it's not the
+hypervisor interface.
+
+						- Ted
