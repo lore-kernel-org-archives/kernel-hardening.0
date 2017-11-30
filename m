@@ -1,42 +1,69 @@
-Date: Thu, 30 Nov 2017 10:58:34 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171129235834.GQ6217@eros>
-References: <1511821819-5496-1-git-send-email-me@tobin.cc>
- <CAGXu5jK3hJMMrdGQsQxhyLiXhro4DYdpftvtTunM-84PkUeD_Q@mail.gmail.com>
- <20171128015041.GT17858@eros>
- <CAPDLWs8tJ5voge-gS-W+gxpRRk2GximPkGm1d9pxf5QNbCKufA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAPDLWs8tJ5voge-gS-W+gxpRRk2GximPkGm1d9pxf5QNbCKufA@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [RFC 0/3] kallsyms: don't leak address
- when printing symbol
-To: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>
+Sender: keescook@google.com
+In-Reply-To: <CA+55aFyobrT7SkFC+PVX0USvRicVt_UPH_nkc-G9Bi8yrCCgPw@mail.gmail.com>
+References: <20171129134612.72ccb53d@alans-desktop> <20171129.095014.1909386937628805919.davem@davemloft.net>
+ <20171129155406.i2lyclquj75lvtn4@thunk.org> <20171129.105816.1108278026315471171.davem@davemloft.net>
+ <CA+55aFyobrT7SkFC+PVX0USvRicVt_UPH_nkc-G9Bi8yrCCgPw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 29 Nov 2017 16:06:48 -0800
+Message-ID: <CAGXu5jL+qmekLedFxRC5O7jFdtZUh0NcnLSU7x7mC+zNORTCeg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v5 next 1/5] modules:capabilities: add request_module_cap()
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: David Miller <davem@davemloft.net>, Theodore Ts'o <tytso@mit.edu>, One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>, "Luis R. Rodriguez" <mcgrof@kernel.org>, Djalal Harouni <tixxdz@gmail.com>, Andrew Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, "Serge E. Hallyn" <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 28, 2017 at 08:58:44AM +0530, Kaiwan N Billimoria wrote:
-> On Tue, Nov 28, 2017 at 7:20 AM, Tobin C. Harding <me@tobin.cc> wrote:
-> >
-> > Noob question: how do we _know_ this. In other words how do we know no
-> > userland tools rely on the current behaviour? No stress to answer Kees,
-> > this is a pretty general kernel dev question.
-> 
-> Perhaps I'm reading this wrong, but anyway: besides ftrace, kprobes
-> will require a
-> symbol-to-address lookup. Specifically, in the function
-> kprobe_lookup_name() which
-> in turn invokes kallsyms_lookup_name().
+On Wed, Nov 29, 2017 at 2:45 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Wed, Nov 29, 2017 at 7:58 AM, David Miller <davem@davemloft.net> wrote:
+>>
+>> We're talking about making sure that loading "ppp.ko" really gets
+>> ppp.ko rather than some_other_module.ko renamed to ppp.ko via some
+>> other mechanism.
+>>
+>> Both modules have legitimate signatures so the kernel will happily
+>> load both.
+>
+> Yes. We could make the module name be part of the signing process, but
+> one problem with that is that at module loading time we don't actually
+> have the filename any more.
 
-We should be right for this call chain because the patch doesn't touch
-kallsyms_lookup_name().
+FWIW, I added this (well, KBUILD_MODNAME) to the module info just recently:
 
-> AFAIK, SystemTap (userland) is built on top of the kprobes infrastructure..
+3e2e857f9c3a ("module: Add module name to modinfo")
 
-This actually indirectly answers the concern. Since no userland tool
-should be looking up a kernel address the only code we can break is
-kernel code.
+> User space opens the file and then just feeds the data to the kernel.
+> So if you fooled modprobe into feeding the wrong module, that's it.
+>
+> And yes, we can obviously embed the module name into the ELF headers
+> (that is all part of the signed payload), but the module name doesn't
+> actually necessarily match what we originally asked for.
+>
+> Why? Module aliases and module dependencies - which is why we have
+> that user mode side at all. When we do "request_module(XYZ)" we don't
+> necessarily know what the dependencies are, so we expect modprobe to
+> just load the right modules.
+>
+> So if modprobe then loads some other module (dccp or whatever), the
+> kernel has no real way to know "oh, that wasn't part of the dependency
+> chain for the module we aked for".
+>
+> Now, if modprobe is taught to check that the filename of the module
+> that it opens actually matches the metadata in the ELF sections, that
+> would solve it, but it's out of the kernels hands..
 
+Right, the aliases are why these kinds of renaming shenanigans don't
+mean anything: it's not distinguishable from whatever modprobe.conf
+ultimately tells modprobe to do.
 
-thanks,
-Tobin
+If you can't trust your filesystem to hold your kernel modules
+correctly, you have much bigger problems. (And yes, capabilities are a
+problem here, since there are many paths to full root from individual
+capabilities, but that's a known issue that is much larger than
+tricking modprobe.)
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
