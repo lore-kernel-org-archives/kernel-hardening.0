@@ -1,93 +1,46 @@
+Date: Thu, 30 Nov 2017 09:16:36 -0500
+From: Theodore Ts'o <tytso@mit.edu>
+Message-ID: <20171130141636.k3oqybwosdogzfgg@thunk.org>
+References: <CA+55aFzxFQeyk6Mrk50=jzevHpZ78BXz_9nHcHabMWBdM6RC6A@mail.gmail.com>
+ <CA+55aFyybavkF8ccQKJsoVAF+MG=J5=e9PxXKU=J_hqCQRZnug@mail.gmail.com>
+ <CAGXu5jLU8LqTYM9SYQADeH9wm2npVu4AEuSqvYqi3S+qtjC-Qw@mail.gmail.com>
+ <CA+55aFwDfBnMVGfBVkrFFr26tp1y8CUpSf154AuXH+sWyeY5FA@mail.gmail.com>
+ <CAGXu5j+Tv4KHytjOtBvG9e53o-pG7h5DjZZkATXbado-HAbKHw@mail.gmail.com>
+ <CA+55aFxiDKfe6VCM+aV2OgnkzMpP+iz+rn2k25_Qa_QLex=pPQ@mail.gmail.com>
+ <CAGXu5jJQnokKL2MdbQgOhBJ_RMHVvsw4u27Ds=4Jq3Ys=mjtRg@mail.gmail.com>
+ <CA+55aFzi3Qj7zOrriRvrX5F4QDWMhkNQ7Qh-0FSCZsG4qk61zg@mail.gmail.com>
+ <1512024677.1374.168.camel@gmail.com>
+ <CAEiveUdgm_n-TUYGCtw_Zf24TJXrdrsFjcU8_S1M2qQUmHG+KA@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20171130012324.GZ729@wotan.suse.de>
-References: <1511803118-2552-1-git-send-email-tixxdz@gmail.com>
- <1511803118-2552-4-git-send-email-tixxdz@gmail.com> <20171130012324.GZ729@wotan.suse.de>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Thu, 30 Nov 2017 13:22:05 +0100
-Message-ID: <CAEiveUeK7UtxDdE52LOTH0cYKDOwb1hDORhSV_AWttU9VV3PfA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 next 3/5] modules:capabilities: automatic module
- loading restriction
-To: "Luis R. Rodriguez" <mcgrof@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <james.l.morris@oracle.com>, Ben Hutchings <ben.hutchings@codethink.co.uk>, Solar Designer <solar@openwall.com>, Serge Hallyn <serge@hallyn.com>, Jessica Yu <jeyu@kernel.org>, Rusty Russell <rusty@rustcorp.com.au>, linux-kernel <linux-kernel@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, Ingo Molnar <mingo@kernel.org>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAEiveUdgm_n-TUYGCtw_Zf24TJXrdrsFjcU8_S1M2qQUmHG+KA@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v5 next 5/5] net: modules: use
+ request_module_cap() to load 'netdev-%s' modules
+To: Djalal Harouni <tixxdz@gmail.com>
+Cc: Daniel Micay <danielmicay@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Jessica Yu <jeyu@kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Nov 30, 2017 at 2:23 AM, Luis R. Rodriguez <mcgrof@kernel.org> wrote:
-> On Mon, Nov 27, 2017 at 06:18:36PM +0100, Djalal Harouni wrote:
->> diff --git a/include/linux/module.h b/include/linux/module.h
->> index 5cbb239..c36aed8 100644
->> --- a/include/linux/module.h
->> +++ b/include/linux/module.h
->> @@ -261,7 +261,16 @@ struct notifier_block;
->>
->>  #ifdef CONFIG_MODULES
->>
->> -extern int modules_disabled; /* for sysctl */
->> +enum {
->> +     MODULES_AUTOLOAD_ALLOWED        = 0,
->> +     MODULES_AUTOLOAD_PRIVILEGED     = 1,
->> +     MODULES_AUTOLOAD_DISABLED       = 2,
->> +};
->> +
->
-> Can you kdocify these and add a respective rst doc file?  Maybe stuff your
-> extensive docs which you are currently adding to
-> Documentation/sysctl/kernel.txt to this new file and in kernel.txt just refer
-> to it. This way this can be also nicely visibly documented on the web with the
-> new sphinx.
->
-> This way you can take advantage of the kdocs you are already adding and refer
-> to them.
+On Thu, Nov 30, 2017 at 09:50:27AM +0100, Djalal Harouni wrote:
+> In embedded systems we can't maintain a SELinux policy, distro man
+> power hardly manage. We have abstracted seccomp etc, but the kernel
+> inherited the difficult multiplex things, plus all other paths that
+> trigger this.....
 
-Alright I'll do it in the next series next week, we'll change the
-semantics as requested by Linus and Kees here:
-http://www.openwall.com/lists/kernel-hardening/2017/11/29/38
+> Yes, but it is hard to maintain a whitelist policy, the code is hardly
+> maintained...
 
-To block the privilege escalation through the usermod helper.
+So this is the part that scares me to death about IOT, and why I tell
+everyone to ***never*** trust an IOT device on their home network, and
+***never*** trust it with anything you don't mind splattered all over
+the front page of NY Times and RT / Sputnick news.
 
+You're saying that you want to use modules (as opposed to compile
+everything tightly down to just what you need for the embedded
+system); that the code is "hardly maintained".  And yet we're supposed
+to consider it trustworthy?
 
->> diff --git a/kernel/sysctl.c b/kernel/sysctl.c
->> index 2fb4e27..0b6f0c8 100644
->> --- a/kernel/sysctl.c
->> +++ b/kernel/sysctl.c
->> @@ -683,6 +688,15 @@ static struct ctl_table kern_table[] = {
->>               .extra1         = &one,
->>               .extra2         = &one,
->>       },
->> +     {
->> +             .procname       = "modules_autoload_mode",
->> +             .data           = &modules_autoload_mode,
->> +             .maxlen         = sizeof(int),
->> +             .mode           = 0644,
->> +             .proc_handler   = modules_autoload_dointvec_minmax,
->
-> It would seem this is a unint ... so why not reflect that?
->
->> @@ -2499,6 +2513,20 @@ static int proc_dointvec_minmax_sysadmin(struct ctl_table *table, int write,
->>  }
->>  #endif
->>
->> +#ifdef CONFIG_MODULES
->> +static int modules_autoload_dointvec_minmax(struct ctl_table *table, int write,
->> +                             void __user *buffer, size_t *lenp, loff_t *ppos)
->> +{
->> +     /*
->> +      * Only CAP_SYS_MODULE in init user namespace are allowed to change this
->> +      */
->> +     if (write && !capable(CAP_SYS_MODULE))
->> +             return -EPERM;
->> +
->> +     return proc_dointvec_minmax(table, write, buffer, lenp, ppos);
->> +}
->> +#endif
->
-> We now have proc_douintvec_minmax().
->
+If that's the case, turning off implicit module loading sounds and
+thinking that this will somehow be a magic wand sounds.... crazy.
 
-Yes, however in that same response by Linus it was suggested to drop
-the sysctl completely, so next iterations will not have this code.
-
-Thank you for the review!
-
--- 
-tixxdz
+	      	   		     - Ted
