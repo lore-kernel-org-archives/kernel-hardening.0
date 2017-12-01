@@ -1,24 +1,91 @@
-References: <20171026134547.23664-1-pbonzini@redhat.com>
- <20171026134547.23664-3-pbonzini@redhat.com>
- <CAGXu5jKzA8UfV9Bfiz=1ZvHLjM+DYDiifR7e=EG956qNrS20JQ@mail.gmail.com>
-From: Paolo Bonzini <pbonzini@redhat.com>
-Message-ID: <e4b845bc-cc20-67f5-c188-334b48a11af9@redhat.com>
-Date: Fri, 1 Dec 2017 09:29:35 +0100
+From: David Laight <David.Laight@ACULAB.COM>
+Date: Fri, 1 Dec 2017 09:46:28 +0000
+Message-ID: <c5d9dd814f14467a8b756ebd27a07a75@AcuMS.aculab.com>
+References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
+ <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
+ <9fe9b2cd312748ddb31f63f9dc1b1ed8@AcuMS.aculab.com>
+ <20171130175147.GA4124@openwall.com>
+In-Reply-To: <20171130175147.GA4124@openwall.com>
+Content-Type: text/plain; charset="Windows-1252"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKzA8UfV9Bfiz=1ZvHLjM+DYDiifR7e=EG956qNrS20JQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 2/2] kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
-To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, KVM <kvm@vger.kernel.org>, Christoffer Dall <christoffer.dall@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Cornelia Huck <cohuck@redhat.com>, James Hogan <james.hogan@imgtec.com>, Paul Mackerras <paulus@samba.org>, kernel-hardening@lists.openwall.com, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>
+Subject: [kernel-hardening] RE: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
+To: 'Solar Designer' <solar@openwall.com>
+Cc: 'Salvatore Mesoraca' <s.mesoraca16@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kernel
+ Hardening <kernel-hardening@lists.openwall.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Alexander
+ Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 30/11/2017 21:40, Kees Cook wrote:
-> Hi Paolo,
-> 
-> Since this didn't make it via my usercopy tree, do you want to take it
-> via KVM? It is a stand-alone fix, AIUI.
+From: Solar Designer
+> Sent: 30 November 2017 17:52
+>=20
+> On Thu, Nov 30, 2017 at 04:53:06PM +0000, David Laight wrote:
+> > From: Salvatore Mesoraca
+> > > if a program tries to open a file, in a sticky directory,
+> > > with the O_CREAT flag and without the O_EXCL, it probably has a bug.
+> > > This feature allows to detect and potentially block programs that
+> > > act this way, it can be used to find vulnerabilities (like those
+> > > prevented by patch #1) and to do policy enforcement.
+>=20
+> > I presume the 'vulnerabilities' are related to symlinks being created
+> > just before the open?
+>=20
+> That's one way to exploit them.  We already have a sysctl to try and
+> block that specific attack, and we're considering adding more, for other
+> attacks.  But we'd also like an easy way to learn of the vulnerabilities
+> without anyone trying to exploit them yet, hence this patch.
+>=20
+> > Trouble is this change breaks a lot of general use of /tmp.
+>=20
+> That's general misuse of /tmp.  Things like "command > /tmp/file"
+> without having pre-created the file with O_EXCL e.g. by mktemp(1).
 
-Yes, will do!  Thanks,
+I'm sorry, I've been using Unix for over 30 years.
+/tmp is a place that temporary files were created - nothing special.
+Traditionally it was emptied on every boot.
+There was never anything that required files be created in any
+specific way.
 
-Paolo
+> > I always assumed that code that cared would use O_EXCL and
+> > everything else wasn't worth subverting.
+>=20
+> Opinions will vary on whether it's worth subverting or not, and someone
+> may reasonably want to configure this differently on different systems.
+>=20
+> > I found code in vi (and elsewhere) that subverted these checks
+> > by opening with O_WRONLY if stat() showed the file existed and
+> > O_CREAT|O_EXCL if it didn't.
+>=20
+> Yes, such misuses of /tmp and the like by use of those programs - where
+> the potential consequences would often be less severe (if your example
+> above is correct, it sounds like it'd be data spoofing but not
+> overwriting another file over a link) - could remain unnoticed.
+
+It seemed to me that code had been added to avoid issues caused by
+this policing of opens.
+But the code added is itself racy - so makes the whole thing pointless.
+
+> > I'm pretty sure that traditionally a lot of these opens were done
+> > with O_CREAT|O_TRUNC.
+> > Implementing that as unlink() followed by a create would stop
+> > 'random' (ok all) symlinks being followed.
+>=20
+> That's racy.  We have O_EXCL, and it must be used along with O_CREAT
+> when the directory is untrusted.  (If it were only about symlinks, we
+> also already have O_NOFOLLOW.)
+
+Not racy if done in the kernel itself.
+
+> > Overall I'm pretty sure this change will break things badly somewhere.
+>=20
+> Sure.  We want it to visibly break what was subtly broken, so that the
+> breakage can be seen and corrected without an attempted attack.
+
+Maybe, but it will break some user system when they do a kernel update.
+It won't necessarily break a developer's system first.
+
+And, AFAICT, there is already code that subverts any tests by doing
+a check for the file existing and then selecting between two different
+types on open.
+
+	David
