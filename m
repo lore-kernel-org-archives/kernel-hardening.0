@@ -1,72 +1,35 @@
+Date: Fri, 1 Dec 2017 15:15:26 +0900
+From: Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>
+Message-ID: <20171201061526.GA482@jagdpanzerIV>
+References: <1511921105-3647-1-git-send-email-me@tobin.cc>
+ <20171129152040.ed5b28c198093de8968aac9b@linux-foundation.org>
+ <28ab447e24684c58a5e03af44edd6d5a@AcuMS.aculab.com>
+ <20171130102638.GA434@jagdpanzerIV>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20171026134547.23664-3-pbonzini@redhat.com>
-References: <20171026134547.23664-1-pbonzini@redhat.com> <20171026134547.23664-3-pbonzini@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 30 Nov 2017 12:40:10 -0800
-Message-ID: <CAGXu5jKzA8UfV9Bfiz=1ZvHLjM+DYDiifR7e=EG956qNrS20JQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH 2/2] kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
-To: Paolo Bonzini <pbonzini@redhat.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, KVM <kvm@vger.kernel.org>, Christoffer Dall <christoffer.dall@linaro.org>, Marc Zyngier <marc.zyngier@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Cornelia Huck <cohuck@redhat.com>, James Hogan <james.hogan@imgtec.com>, Paul Mackerras <paulus@samba.org>, kernel-hardening@lists.openwall.com, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171130102638.GA434@jagdpanzerIV>
+Subject: [kernel-hardening] Re: [PATCH V11 0/5] hash addresses printed with %p
+To: Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>
+Cc: David Laight <David.Laight@ACULAB.COM>, 'Andrew Morton' <akpm@linux-foundation.org>, "Tobin C. Harding" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Radim =?iso-8859-1?Q?Krcm=E1r?= <rkrcmar@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Oct 26, 2017 at 6:45 AM, Paolo Bonzini <pbonzini@redhat.com> wrote:
-> This ioctl is obsolete (it was used by Xenner as far as I know) but
-> still let's not break it gratuitously...  Its handler is copying
-> directly into struct kvm.  Go through a bounce buffer instead, with
-> the added benefit that we can actually do something useful with the
-> flags argument---the previous code was exiting with -EINVAL but still
-> doing the copy.
->
-> This technically is a userspace ABI breakage, but since no one should be
-> using the ioctl, it's a good occasion to see if someone actually
-> complains.
->
-> Cc: kernel-hardening@lists.openwall.com
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Radim Kr=C4=8Dm=C3=A1=C5=99 <rkrcmar@redhat.com>
-> Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
-> ---
->  arch/x86/kvm/x86.c | 7 ++++---
->  1 file changed, 4 insertions(+), 3 deletions(-)
->
-> diff --git a/arch/x86/kvm/x86.c b/arch/x86/kvm/x86.c
-> index 272320eb328c..f32fbfb833b3 100644
-> --- a/arch/x86/kvm/x86.c
-> +++ b/arch/x86/kvm/x86.c
-> @@ -4187,13 +4187,14 @@ long kvm_arch_vm_ioctl(struct file *filp,
->                 mutex_unlock(&kvm->lock);
->                 break;
->         case KVM_XEN_HVM_CONFIG: {
-> +               struct kvm_xen_hvm_config xhc;
->                 r =3D -EFAULT;
-> -               if (copy_from_user(&kvm->arch.xen_hvm_config, argp,
-> -                                  sizeof(struct kvm_xen_hvm_config)))
-> +               if (copy_from_user(&xhc, argp, sizeof(xhc)))
->                         goto out;
->                 r =3D -EINVAL;
-> -               if (kvm->arch.xen_hvm_config.flags)
-> +               if (xhc.flags)
->                         goto out;
-> +               memcpy(&kvm->arch.xen_hvm_config, &xhc, sizeof(xhc));
->                 r =3D 0;
->                 break;
->         }
-> --
-> 2.14.2
->
+On (11/30/17 19:26), Sergey Senozhatsky wrote:
+> On (11/30/17 10:23), David Laight wrote:
+> [..]
+> > > Maybe I'm being thick, but...  if we're rendering these addresses
+> > > unusable by hashing them, why not just print something like
+> > > "<obscured>" in their place?  That loses the uniqueness thing but I
+> > > wonder how valuable that is in practice?
+> > 
+> > My worry is that is you get a kernel 'oops' print with actual register
+> > values you have no easy way of tying an address or address+offset to
+> > the corresponding hash(address) printed elsewhere.
+> 
+> print the existing hash:pointer mappings in panic()? [if we can do that]
 
-Hi Paolo,
+by this I meant
+	"when oops_in_progress == 1 then print hash:pointer for %p,
+	 not just hash".
 
-Since this didn't make it via my usercopy tree, do you want to take it
-via KVM? It is a stand-alone fix, AIUI.
-
-Thanks,
-
--Kees
-
---=20
-Kees Cook
-Pixel Security
+	-ss
