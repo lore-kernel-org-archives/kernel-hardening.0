@@ -1,91 +1,55 @@
-From: David Laight <David.Laight@ACULAB.COM>
-Date: Fri, 1 Dec 2017 09:46:28 +0000
-Message-ID: <c5d9dd814f14467a8b756ebd27a07a75@AcuMS.aculab.com>
-References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
- <1511337706-8297-3-git-send-email-s.mesoraca16@gmail.com>
- <9fe9b2cd312748ddb31f63f9dc1b1ed8@AcuMS.aculab.com>
- <20171130175147.GA4124@openwall.com>
-In-Reply-To: <20171130175147.GA4124@openwall.com>
-Content-Type: text/plain; charset="Windows-1252"
-Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH v3 2/2] Protected O_CREAT open in sticky directories
-To: 'Solar Designer' <solar@openwall.com>
-Cc: 'Salvatore Mesoraca' <s.mesoraca16@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kernel
- Hardening <kernel-hardening@lists.openwall.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Alexander
- Viro <viro@zeniv.linux.org.uk>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>
+In-Reply-To: <20171129204812.GE6217@eros>
+References: <1511850724-2381-1-git-send-email-me@tobin.cc> <CAJ1xhMXjSTV92DxRz269sB=fZLEXJimr7_8PX8viamm02+xN1w@mail.gmail.com>
+ <20171128211003.GY17858@eros> <CAJ1xhMUV8G+-e8fO2MGEWvQGpLVBsETWTpyMZ5wb9evoszZEJg@mail.gmail.com>
+ <20171129101640.GC6217@eros> <CAPDLWs8ooetPXhuHXyCLZ2LnPRKBf0CSMoESbXMD4sGnLLNFuA@mail.gmail.com>
+ <20171129204812.GE6217@eros>
+From: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
+Date: Fri, 1 Dec 2017 18:33:40 +0530
+Message-ID: <CAPDLWs9wJEyLrP7ox1AxXLRPByRvPHs=A3rw0CNTs4J+VmUboQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH] leaking_addresses: add support for 32-bit kernel addresses
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: Alexander Kapshuk <alexander.kapshuk@gmail.com>, linux-kernel <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Solar Designer
-> Sent: 30 November 2017 17:52
->=20
-> On Thu, Nov 30, 2017 at 04:53:06PM +0000, David Laight wrote:
-> > From: Salvatore Mesoraca
-> > > if a program tries to open a file, in a sticky directory,
-> > > with the O_CREAT flag and without the O_EXCL, it probably has a bug.
-> > > This feature allows to detect and potentially block programs that
-> > > act this way, it can be used to find vulnerabilities (like those
-> > > prevented by patch #1) and to do policy enforcement.
->=20
-> > I presume the 'vulnerabilities' are related to symlinks being created
-> > just before the open?
->=20
-> That's one way to exploit them.  We already have a sysctl to try and
-> block that specific attack, and we're considering adding more, for other
-> attacks.  But we'd also like an easy way to learn of the vulnerabilities
-> without anyone trying to exploit them yet, hence this patch.
->=20
-> > Trouble is this change breaks a lot of general use of /tmp.
->=20
-> That's general misuse of /tmp.  Things like "command > /tmp/file"
-> without having pre-created the file with O_EXCL e.g. by mktemp(1).
+Hi,
 
-I'm sorry, I've been using Unix for over 30 years.
-/tmp is a place that temporary files were created - nothing special.
-Traditionally it was emptied on every boot.
-There was never anything that required files be created in any
-specific way.
+Pl see my re inline below..
+Will also follow up this mail with a patch with (minor) fixes for the
+last one Tobin sent, and,
+hopefully, that should mostly have the whole thing done (for now at least!)..
 
-> > I always assumed that code that cared would use O_EXCL and
-> > everything else wasn't worth subverting.
->=20
-> Opinions will vary on whether it's worth subverting or not, and someone
-> may reasonably want to configure this differently on different systems.
->=20
-> > I found code in vi (and elsewhere) that subverted these checks
-> > by opening with O_WRONLY if stat() showed the file existed and
-> > O_CREAT|O_EXCL if it didn't.
->=20
-> Yes, such misuses of /tmp and the like by use of those programs - where
-> the potential consequences would often be less severe (if your example
-> above is correct, it sounds like it'd be data spoofing but not
-> overwriting another file over a link) - could remain unnoticed.
+Thanks,
+Kaiwan.
 
-It seemed to me that code had been added to avoid issues caused by
-this policing of opens.
-But the code added is itself racy - so makes the whole thing pointless.
+On Thu, Nov 30, 2017 at 2:18 AM, Tobin C. Harding <me@tobin.cc> wrote:
+> On Wed, Nov 29, 2017 at 04:32:54PM +0530, Kaiwan N Billimoria wrote:
 
-> > I'm pretty sure that traditionally a lot of these opens were done
-> > with O_CREAT|O_TRUNC.
-> > Implementing that as unlink() followed by a create would stop
-> > 'random' (ok all) symlinks being followed.
->=20
-> That's racy.  We have O_EXCL, and it must be used along with O_CREAT
-> when the directory is untrusted.  (If it were only about symlinks, we
-> also already have O_NOFOLLOW.)
+>> This "fallback to 0xc0000000" I don't really agree with.
+>> Obviously, there are platforms out there that do not use a PAGE_OFFSET value of
+>> 0xc0000000. So I think that defaulting to this is kinda presumptive;
+>> much better, IMHO,
+>> if we just fail and ask the user to pass the "correct" PAGE_OFFSET value via
+>> the '--page-offset-32bit=' option switch.
+>> What do you say?
+>
+> If we fallback to some sane value (it does not have to be 0xc0000000
+> but that seems the most obvious) then the script has more chance of
+> running by default. Why do I think it is better to run by default even
+> with the wrong virtual address spilt, well since the correct value is
+> basically just eliminating false positives (non-kernel addresses) it
+> seems more right to run by default with extra false positives than to
+> fail and place demands on the user. This will be especially useful if we
+> get the script running in any continuous integration tools.
+>
+> We should definitely be noisy if we fallback to the default value
+> though.
 
-Not racy if done in the kernel itself.
+Yes, that's a valid argument. Will go with this..
 
-> > Overall I'm pretty sure this change will break things badly somewhere.
->=20
-> Sure.  We want it to visibly break what was subtly broken, so that the
-> breakage can be seen and corrected without an attempted attack.
-
-Maybe, but it will break some user system when they do a kernel update.
-It won't necessarily break a developer's system first.
-
-And, AFAICT, there is already code that subverts any tests by doing
-a check for the file existing and then selecting between two different
-types on open.
-
-	David
+> I just tried to save and apply it on my end and it works. How are you
+> saving it? What email client are you using? Perhaps try to create a
+> simple patch yourself, email to yourself, save it and apply it to a
+> clean branch.
+Huh.. wierd issues on my end, I guess.. will sort it out, thanks.
