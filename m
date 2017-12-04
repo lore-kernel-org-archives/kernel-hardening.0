@@ -1,108 +1,98 @@
+Date: Mon, 4 Dec 2017 12:39:33 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20171204123932.pru4lw753xm7qlwb@lakrids.cambridge.arm.com>
+References: <20171127163806.31435-1-mark.rutland@arm.com>
+ <20171127163806.31435-13-mark.rutland@arm.com>
+ <20171128150726.xui5i23uigvfo52w@kamzik.brq.redhat.com>
 MIME-Version: 1.0
-In-Reply-To: <1512382841.17323.11.camel@gmail.com>
-References: <CAJ1xhMUV8G+-e8fO2MGEWvQGpLVBsETWTpyMZ5wb9evoszZEJg@mail.gmail.com>
- <20171129101640.GC6217@eros> <CAPDLWs8ooetPXhuHXyCLZ2LnPRKBf0CSMoESbXMD4sGnLLNFuA@mail.gmail.com>
- <20171129204812.GE6217@eros> <1512133747.17323.3.camel@gmail.com>
- <20171204001106.GB27780@eros> <1512362481.17323.9.camel@gmail.com>
- <20171204045522.GE27780@eros> <CAPDLWs8biiKptmmYj45mrc+KWrV93JNQP5eLHcgTGznMj_yBow@mail.gmail.com>
- <CAPDLWs-BFQ+NF15ntxFNS4MT2kVs+k9BUYreDZeYEP1sFLQJ+w@mail.gmail.com>
- <20171204082111.GB21565@eros> <1512382841.17323.11.camel@gmail.com>
-From: Alexander Kapshuk <alexander.kapshuk@gmail.com>
-Date: Mon, 4 Dec 2017 14:37:00 +0200
-Message-ID: <CAJ1xhMUQXEzjrCyMd9qdu5dm00Ash8d0C7n8Y9JHRg+THW-Q_w@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] leaking_addresses: add support for 32-bit kernel addresses
-To: Kaiwan Billimoria <kaiwan.billimoria@gmail.com>
-Cc: "Tobin C. Harding" <me@tobin.cc>, linux-kernel <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171128150726.xui5i23uigvfo52w@kamzik.brq.redhat.com>
+Subject: [kernel-hardening] Re: [PATCHv2 12/12] arm64: docs: document pointer authentication
+To: Andrew Jones <drjones@redhat.com>
+Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, cdall@linaro.org, arnd@arndb.de, marc.zyngier@arm.com, catalin.marinas@arm.com, yao.qi@arm.com, kernel-hardening@lists.openwall.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org, kvmarm@lists.cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 4, 2017 at 12:20 PM,  <kaiwan.billimoria@gmail.com> wrote:
-> On Mon, 2017-12-04 at 19:21 +1100, Tobin C. Harding wrote:
->> On Mon, Dec 04, 2017 at 10:51:53AM +0530, Kaiwan N Billimoria wrote:
->> > > ---
->> > diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
->> > index 9906dcf8b807..260b52e456f1 100755
->> > --- a/scripts/leaking_addresses.pl
->> > +++ b/scripts/leaking_addresses.pl
->> > @@ -266,7 +266,7 @@ sub is_false_positive
->> >  sub is_false_positive_ix86_32
->> >  {
->> >         my ($match) = @_;
->> > -       state $page_offset = eval get_page_offset(); # only gets called once
->> > +       state $page_offset = hex get_page_offset(); # only gets called once
->>
->> I don't think this is valid ;) I meant use hex() to convert the string
->> to an int so it doesn't throw the warning (inside get_page_offset()).
->
-> Yup, got it, thanks   :-p
-> Combined patch below:
->
->
-> ---
->  scripts/leaking_addresses.pl | 13 ++++++-------
->  1 file changed, 6 insertions(+), 7 deletions(-)
->
-> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-> index 9906dcf8b807..a595a2c66b12 100755
-> --- a/scripts/leaking_addresses.pl
-> +++ b/scripts/leaking_addresses.pl
-> @@ -266,8 +266,7 @@ sub is_false_positive
->  sub is_false_positive_ix86_32
->  {
->         my ($match) = @_;
-> -       state $page_offset = eval get_page_offset(); # only gets called once
-> -
-> +       state $page_offset = get_page_offset(); # only gets called once
->         if ($match =~ '\b(0x)?(f|F){8}\b') {
->                 return 1;
->         }
-> @@ -283,7 +282,7 @@ sub is_false_positive_ix86_32
->  sub get_page_offset
->  {
->         my $page_offset;
-> -       my $default_offset = "0xc0000000";
-> +       my $default_offset = hex("0xc0000000");
->         my @config_files;
->
->         # Allow --page-offset-32bit to override.
-> @@ -306,23 +305,23 @@ sub get_page_offset
->                 } else {
->                         $page_offset = parse_kernel_config_file($tmp_file);
->                         if ($page_offset ne "") {
-> -                               return $page_offset;
-> +                               return hex($page_offset);
->                         }
->                 }
->                 system("rm -f $tmp_file");
->         }
->
->         foreach my $config_file (@config_files) {
-> -               $config_file =~ s/\R*//g;
-> +               chomp $config_file;
->                 $page_offset = parse_kernel_config_file($config_file);
->                 if ($page_offset ne "") {
-> -                       return $page_offset;
-> +                       return hex($page_offset);
->                 }
->         }
->
->         printf STDERR "\nFailed to parse kernel config files\n";
->         printf STDERR "*** NOTE ***\n";
-> -       printf STDERR "Falling back to PAGE_OFFSET = %s\n\n", $default_offset;
-> +       printf STDERR "Falling back to PAGE_OFFSET = 0x%x\n\n", $default_offset;
+On Tue, Nov 28, 2017 at 04:07:26PM +0100, Andrew Jones wrote:
+> Hi Mark,
 
-Better use the '#' flag with the 'x' conversion specifier:
-perl -e 'my $default_offset = hex("0xc0000000");printf "%#x\n", $default_offset'
-0xc0000000
+Hi Drew,
 
->
->         return $default_offset;
->  }
-> --
-> 2.14.3
->
-> Thanks,
-> Kaiwan.
->
->> thanks,
->> Tobin.
+> On Mon, Nov 27, 2017 at 04:38:06PM +0000, Mark Rutland wrote:
+> > +Architecture overview
+> > +---------------------
+> > +
+> > +The ARMv8.3 Pointer Authentication extension adds primitives that can be
+> > +used to mitigate certain classes of attack where an attacker can corrupt
+> > +the contents of some memory (e.g. the stack).
+> > +
+> > +The extension uses a Pointer Authentication Code (PAC) to determine
+> > +whether pointers have been modified unexpectedly. A PAC is derived from
+> > +a pointer, another value (such as the stack pointer), and a secret key
+> > +held in system registers.
+> > +
+> > +The extension adds instructions to insert a valid PAC into a pointer,
+> > +and to verify/remove the PAC from a pointer. The PAC occupies a number
+> > +of high-order bits of the pointer, which varies dependent on the
+> > +configured virtual address size and whether pointer tagging is in use.
+> > +
+> > +A subset of these instructions have been allocated from the HINT
+> > +encoding space. In the absence of the extension (or when disabled),
+> > +these instructions behave as NOPs. Applications and libraries using
+> > +these instructions operate correctly regardless of the presence of the
+> > +extension.
+> 
+> Correctly, but obviously without the additional security. So I assume
+> it's expected that applications that demand this security to probe for
+> it themselves, presumably by the checking the HWCAP. Is that correct?
+
+Yes. Applications which wish to mandate pointer authentication
+(presumably using instructions outside of the HINT space) must check the
+relevant HWCAP first.
+
+[...]
+
+> > +Virtualization
+> > +--------------
+> > +
+> > +When CONFIG_ARM64_POINTER_AUTHENTICATION is selected, and uniform HW
+> > +support is present, KVM will context switch all keys used by vCPUs.
+> > +Otherwise, the feature is disabled. When disabled, accesses to keys, or
+> > +use of instructions enabled within the guest will trap to EL2, and an
+> > +UNDEFINED exception will be injected into the guest.
+> 
+> If host applications will just run, with the instructions behaving like
+> NOPs, when the extension is either not present or not enabled, then
+> shouldn't guest applications also just run?
+
+The enabled/disabled wording is probably the confusing bit here.
+
+At EL1 we have conditional enables for instructions using
+AP{I,D}{A,B}Key, which behave as NOPs when disabled.
+
+At EL2 we have a single conditional trap for all instructions using
+pointer authentication, that traps to EL2 when instructions are not
+NOP'd by EL1.
+
+So "disabled by EL2" is actually "trapped by EL2", and "disabled by EL1"
+is "NOP'd by EL1".
+
+> I.e. instead of injecting UNDEF, just treat the instructions as NOPs.
+> Or did I misunderstand the trapping?
+
+I think the documentation explained it poorly. Did the above help?
+
+> Does use of the instructions at EL0 trap to EL1 or EL2?
+
+If disabled by EL1, the instructions behave as NOPs (regardless of the
+EL2 traps).
+
+If enabled by EL1, but trapped by EL2, the instructions trap to EL2.
+
+If enabled by EL1, and not trapped by EL2, the instructions work as
+usual.
+
+I'll see if I can document this better.
+
+Thanks,
+Mark.
