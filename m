@@ -1,75 +1,188 @@
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <596c917e-3183-d80a-89d4-97e0eb5dc077@infradead.org>
-References: <1511921105-3647-1-git-send-email-me@tobin.cc> <1511921105-3647-5-git-send-email-me@tobin.cc>
- <CA+55aFxgGb13hqoNQ8bzFn4ENZM25PBSdi5pkFUBa5Hk+j-s3Q@mail.gmail.com>
- <324abe19f1ee4177911d2fc48899ac8a@AcuMS.aculab.com> <CAGXu5j+xUt+coLCKg9qeCrTzc7HEM7KP=1Z-xTiDXWSRYibJQg@mail.gmail.com>
- <c47f7659676246d6bbeb5230b952a5ad@AcuMS.aculab.com> <596c917e-3183-d80a-89d4-97e0eb5dc077@infradead.org>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Tue, 5 Dec 2017 13:22:47 -0800
-Message-ID: <CA+55aFw3AZtzf6KHS4desHJ3CajKs46VQxOi6-+0U8A4y0v6ug@mail.gmail.com>
+In-Reply-To: <20171129175712.GB14545@mail.hallyn.com>
+References: <20171110053757.21170-1-mahesh@bandewar.net> <20171126064037.GB30279@mail.hallyn.com>
+ <CAF2d9jhiZFiFODNXUY13F+4Pm+59+rZW=CnLPX1VUT3BAJdeeA@mail.gmail.com>
+ <20171128230440.GB28297@mail.hallyn.com> <CAF2d9jhCDasnf2tbaGA04MV5ygZ9o1FaVRCEU2TkHjZR7d1ifw@mail.gmail.com>
+ <20171129175712.GB14545@mail.hallyn.com>
+From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
+Date: Tue, 5 Dec 2017 13:55:53 -0800
+Message-ID: <CAF2d9jgsSZ6mCE8QwxPpoO7GoO4zeQzNfZuZwM9Gqqdi8uP4fw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH V11 4/5] vsprintf: add printk specifier %px
-To: Randy Dunlap <rdunlap@infradead.org>
-Cc: David Laight <David.Laight@aculab.com>, Kees Cook <keescook@chromium.org>, "Tobin C. Harding" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?UTF-8?Q?Radim_Krcm=C3=A1r?= <rkrcmar@redhat.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCHv2 2/2] userns: control capabilities of some user namespaces
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Dec 5, 2017 at 1:08 PM, Randy Dunlap <rdunlap@infradead.org> wrote:
+On Wed, Nov 29, 2017 at 9:57 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> Quoting Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=AC=
+=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) (maheshb@google.com=
+):
+>> On Tue, Nov 28, 2017 at 3:04 PM, Serge E. Hallyn <serge@hallyn.com> wrot=
+e:
+>> > Quoting Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=
+=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) (maheshb@google.=
+com):
+>> > ...
+>> >> >> diff --git a/security/commoncap.c b/security/commoncap.c
+>> >> >> index fc46f5b85251..89103f16ac37 100644
+>> >> >> --- a/security/commoncap.c
+>> >> >> +++ b/security/commoncap.c
+>> >> >> @@ -73,6 +73,14 @@ int cap_capable(const struct cred *cred, struct=
+ user_namespace *targ_ns,
+>> >> >>  {
+>> >> >>       struct user_namespace *ns =3D targ_ns;
+>> >> >>
+>> >> >> +     /* If the capability is controlled and user-ns that process
+>> >> >> +      * belongs-to is 'controlled' then return EPERM and no need
+>> >> >> +      * to check the user-ns hierarchy.
+>> >> >> +      */
+>> >> >> +     if (is_user_ns_controlled(cred->user_ns) &&
+>> >> >> +         is_capability_controlled(cap))
+>> >> >> +             return -EPERM;
+>> >> >
+>> >> > I'd be curious to see the performance impact on this on a regular
+>> >> > workload (kernel build?) in a controlled ns.
+>> >> >
+>> >> Should it affect? If at all, it should be +ve since, the recursive
+>> >> user-ns hierarchy lookup is avoided with the above check if the
+>> >> capability is controlled.
+>> >
+>> > Yes but I expect that to be the rare case for normal lxc installs
+>> > (which are of course what I am interested in)
+>> >
+>> >>  The additional cost otherwise is this check
+>> >> per cap_capable() call.
+>> >
+>> > And pipeline refetching?
+>> >
+>> > Capability calls also shouldn't be all that frequent, but still I'm
+>> > left wondering...
+>>
+>> Correct, and capability checks are part of the control-path and not
+>> the data-path so shouldn't matter but I guess it doesn't hurt to
+>> find-out the number. Do you have any workload in mind, that we can use
+>> for this test/benchmark?
 >
-> This kind of option (with default hashed) is what I was just thinking of
-> after having seen a few unhelpful traces.  But then the knob might not be
-> changed in time for the traces either. :(
+> I suppose if you did both (a) a kernel build and (b) a webserve
+> like https://github.com/m3ng9i/ran , being hit for a minute by a
+> heavy load of requests, those two together would be re-assuring.
+>
+Well, I did (a) and (b). Here are the results.
 
-.. I really dislike the idea of such a knob.
+(a0) I used the ubuntu-artful (17.10) vm instance with standard kernel
+to compile the kernel
 
-First off, the traces I've seen that had the new %p behavior, the
-hashing didn't actually matter AT ALL. The only values that were
-hashed were values that weren't actually useful for debugging the
-oops.
+mahesh@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s clean
+mahesh@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s
+real 6m47.525s
+user 22m37.424s
+sys 2m44.745s
 
-Secondly, the notion that "we want a unhashed knob for debugging" is
-exactly the wrong kind of mentality. 99% of all bug reports happen in
-the wild - not on developer boxes. So by default, those bug reports
-had better happen with hashing enabled, or it's all entirely
-pointless.
+(b0) Now in an user-namespce create by an user that does not have
+SYS_ADMIN (just for apples-to-apples comparison)
+mahesh@mahesh-vm0-artful:~$ sysctl -q kernel.controlled_userns_caps_whiteli=
+st
+sysctl: cannot stat /proc/sys/kernel/controlled_userns_caps_whitelist:
+No such file or directory
+mahesh@mahesh-vm0-artful:~$ id
+uid=3D1000(mahesh) gid=3D1000(mahesh)
+groups=3D1000(mahesh),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),118(lpa=
+dmin),128(sambashare)
+mahesh@mahesh-vm0-artful:~/Work/Linux$ unshare -Uf -- bash
+nobody@mahesh-vm0-artful:~/Work/Linux$ id
+uid=3D65534(nobody) gid=3D65534(nogroup) groups=3D65534(nogroup)
+nobody@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s clean
+nobody@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s
+real 9m10.115s
+user 25m20.984s
+sys 2m48.129s
 
-If you have an oops that happens on your own box due to code that
-you're writing yourself (and expect to debug yourself), then honestly,
-the hashing is going to be the least of your issues. If you can't find
-out the bug under those circumstances, and you're confused by the tiny
-detail of hashing, you're doing something wrong.
 
-So the case that matters is when an oops comes from some outside
-source that won't have turned the knob off anyway.
+(a1) Now patched the same kernel and built and booted with this new kernel =
+-
 
-So no. We're not adding a knob. It is fundamentally pointless.
+mahesh@mahesh-vm0-artful:~$ sysctl -q kernel.controlled_userns_caps_whiteli=
+st
+kernel.controlled_userns_caps_whitelist =3D 1f,ffffffff
+mahesh@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s clean
+mahesh@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s
+real 6m39.964s
+user 22m23.538s
+sys 2m34.258s
 
-It's not like those hex numbers were really helping people anyway.
-We've turned off most of them on x86 oops reports long ago (and
-entirely independently of the pointer hashing). Having stared at a lot
-of oopses in my time, the only hex numbers that tend to be really
-relevant are (a) the register contents (which aren't %p anyway), and
-things like the faulting address (which is not, and never has been, %p
-on x86, but might be on some other architecture).
+(b1) Now in an user-namespace created by an user that does not have SYS_ADM=
+IN
 
-Honestly, the next time anybody says "hashing makes debugging harder",
-I'm going to require some actual proof of an actual oops where it
-mattered that a particular value was hashed.
+mahesh@mahesh-vm0-artful:~$ id
+uid=3D1000(mahesh) gid=3D1000(mahesh)
+groups=3D1000(mahesh),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),118(lpa=
+dmin),128(sambashare)
+mahesh@mahesh-vm0-artful:~/Work/Linux$ unshare -Uf -- bash
+nobody@mahesh-vm0-artful:~/Work/Linux$ id
+uid=3D65534(nobody) gid=3D65534(nogroup) groups=3D65534(nogroup)
+nobody@mahesh-vm0-artful:~/Work/Linux$ make -s clean
+nobody@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s
+real 6m54.725s
+user 23m18.833s
+sys 2m38.996s
 
-Not hand-waving.
+---
 
-Not "it surprised and confused me" because it looked different. You'll
-get used to it.
+For the http-get test, I used the same 'ran' utility you have proposed
+and wrapped inside a script like -
+mahesh@mahesh-vm0-artful:~/Work/Scripts$ cat RanLauncher1m.sh
+#!/bin/bash
+set -v
+(sleep 60; killall ran) &
+time (cd ~/go/bin; ./ran -i index.html >& /dev/null)
 
-So an actual "this was critical information that mattered for this
-particular bug, and it was missing due to the hashing of this
-particular value and debugging was harder in actual reality due to
-that".
+and another script that constantly performs wget -
+mahesh@mahesh-vm0-artful:~/Work/Scripts$ cat WgetLoop.sh#!/bin/bash
+#set -v
+while true; do
+wget http://127.0.0.1:8080 >& /dev/null
 
-Because the actual example I have seen so far, not only didn't the
-hashing matter AT ALL, most of the _unhashed_ values shouldn't have
-been there either, and were due to arm still printing stuff that
-shouldn't have been printed at all and just made the oops more complex
-and harder to read and report.
+... here are the results -
+(A0) Kernel that is unpatched and comes with ubuntu-artful
 
-            Linus
+mahesh@mahesh-vm0-artful:~/Work/Scripts$ ./RanLauncher1m.sh
+(sleep 60; killall ran) &
+time (cd ~/go/bin; ./ran -i index.html >& /dev/null)
+real 1m0.009s
+user 0m2.885s
+sys 0m2.774s
+
+(B0) Now in an user-ns created by an user that does not have SYS_ADMIN
+
+mahesh@mahesh-vm0-artful:~/Work/Scripts$ unshare -Uf -- bash
+nobody@mahesh-vm0-artful:~/Work/Scripts$ ./RanLauncher1m.sh
+(sleep 60; killall ran) &
+time (cd ~/go/bin; ./ran -i index.html >& /dev/null)
+real 1m0.004s
+user 0m3.003s
+sys 0m2.737s
+
+(A1) With the patched kernel
+
+mahesh@mahesh-vm0-artful:~/Work/Scripts$ ./RanLauncher1m.sh
+(sleep 60; killall ran) &
+time (cd ~/go/bin; ./ran -i index.html >& /dev/null)
+
+real 1m0.005s
+user 0m1.941s
+sys 0m1.507s
+
+
+(B1) With patched kernel and inside user-ns
+
+mahesh@mahesh-vm0-artful:~/Work/Scripts$ unshare -Uf -- bash
+nobody@mahesh-vm0-artful:~/Work/Scripts$ ./RanLauncher1m.sh
+(sleep 60; killall ran) &
+time (cd ~/go/bin; ./ran -i index.html >& /dev/null)
+real 1m0.004s
+user 0m1.513s
+sys 0m1.254s
+
+> thanks,
+> -serge
