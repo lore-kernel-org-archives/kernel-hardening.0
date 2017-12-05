@@ -1,304 +1,125 @@
-Message-ID: <1512455204.17323.20.camel@gmail.com>
-From: kaiwan.billimoria@gmail.com
-Date: Tue, 05 Dec 2017 11:56:44 +0530
+MIME-Version: 1.0
+In-Reply-To: <20171130190539.GA4360@openwall.com>
+References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
+ <20171127011441.GA15063@openwall.com> <CAJHCu1+wC1BsW2r77aoibFth_qtjozKZFJTaD4xCuGBzHp2s4w@mail.gmail.com>
+ <20171130190539.GA4360@openwall.com>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Tue, 5 Dec 2017 11:13:50 +0100
+Message-ID: <CAJHCu1JkNJxXHXgrYLMA3Z9V_ekUCb370eG0WCUattR3AzBquA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v3] scripts: leaking_addresses: add support for 32-bit
- kernel addresses
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Alexander Kapshuk <alexander.kapshuk@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v3 0/2] Restrict dangerous open in sticky directories
+To: Solar Designer <solar@openwall.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently, leaking_addresses.pl only supports scanning 64 bit
-architectures. This is due to how the regular expressions are formed. We
-can do better than this. 32 architectures can be supported if we take
-into consideration the kernel virtual address split (via the PAGE_OFFSET
-kernel configurable).
+2017-11-30 20:05 GMT+01:00 Solar Designer <solar@openwall.com>:
+> On Thu, Nov 30, 2017 at 03:37:29PM +0100, Salvatore Mesoraca wrote:
+> > 2017-11-27 2:14 GMT+01:00 Solar Designer <solar@openwall.com>:
+> > > When I suggested the O_CREAT-without-O_EXCL checks, I didn't mean you'd
+> > > try to introduce them at the same time with the restrictions on FIFOs
+> > > and regular files.  I think that bundling these together might be a
+> > > recipe for never getting any of them in, or for getting in the latter
+> > > with unnecessarily limited scope.
+> >
+> > Yes, I think you are right. I'll split them.
+>
+> Thanks.
+>
+> > > I think we need an optional policy
+> > > against O_CREAT-without-O_EXCL not only for sticky directories, but also
+> > > for other directories writable by other than the current fsuid - there
+> > > may be several levels or individual flags here.
+> > >
+> > > So maybe unbundle these or at least avoid forever limiting them to
+> > > sticky directories (don't include "sticky" in the sysctl name).
+> >
+> > Actually I never liked that sysctl name  I'll try to come up with something
+> > less ugly and that doesn't include the "sticky" word.
+>
+> So the current name is "protected_sticky_child_create" (I couldn't even
+> recall it, had to look it up for this reply).  This unnecessarily
+> bundles this potentially more general policy stuff with the existing
+> "protections" against specific attacks, unnecessarily limits scope to
+> "sticky" and "create", and talks about some "child".  How about we use
+> something totally different, focusing on "policy"?  It could be simply
+> "policy" (we're already in "fs"), or if that won't fly then how about
+> "security_policy" or "dac_policy"?  We will be imposing extra
+> restrictions on top of usual Unix discretionary access control
+> permission bits while not going all the way to mandatory access control
+> (not tying objects to subjects).  So in a sense we'll have an extension
+> of Unix DAC.
 
-Add support for ix86 32 bit architectures.
- - Add command line option for page offset.
- - Add command line option for kernel configuration file.
- - Parse kernel config file for page offset (CONFIG_PAGE_OFFSET).
- - Use page offset when checking for kernel virtual addresses.
+Yea, I like "dac_policy" very much.
 
+> BTW, this and all of fs.protected* should be configurable per-container.
 
-Signed-off-by: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
----
+This would be a nice thing to do in the future.
 
-Note- This patch represents co development by Tobin and Kaiwan (plus suggestions from 
-Alexander Kapshuk). Applies on Tobin's tree 'leaks' branch on top of commit 680db1ef560f
-(leaking_addresses: fix typo function not called).
+> > If I implement something like what Matthew proposed[1] it will be easy to
+> > extend scope and functionalities of this feature without complicating too much
+> > the interface.
+>
+> > [1] https://lkml.org/lkml/2017/11/22/319
+>
+> Right.  I tried thinking of a way to specify all reasonable combinations
+> without the likely unreasonable ones, but couldn't come up with anything
+> elegant.  So I'm fine with Matthew's proposal as-is.
 
+Great.
 
- scripts/leaking_addresses.pl | 169 +++++++++++++++++++++++++++++++++++++------
- 1 file changed, 148 insertions(+), 21 deletions(-)
+> A new thought: a directory that has someone else as its owner is for our
+> purposes effectively the same as a group-writable directory.  So maybe
+> whatever we'll implement for group-writable directories should also be
+> done for directories that have other than the current fsuid as their
+> owner. It's currently very uncommon to have directories with the sticky
+> bit set that are not at least group-writable, so this will rarely make a
+> difference (and when it does, that's just right), but also it provides a
+> way to explicitly include any directory under this monitoring (if the
+> group-writable protection is on) - e.g., if a sysadmin wants this
+> monitoring for users' home directories, they can change permissions for
+> those from e.g. 700 to 1700.  This could be handy for development and
+> auditing of software, even though in production it could be easily
+> circumvented by the directory owner (who can remove the sticky bit,
+> which we should document to avoid providing a false sense of security)
+> and it won't automatically apply to subdirectories.  It'd also cover
+> part of what we intend to achieve later by possibly extending the
+> feature to non-sticky directories, where we might also want to treat
+> different owner the same as group-writable (without the circumvention).
 
-diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-index 2d5336b3e1ea..6b015980d117 100755
---- a/scripts/leaking_addresses.pl
-+++ b/scripts/leaking_addresses.pl
-@@ -24,6 +24,7 @@ use Cwd 'abs_path';
- use Term::ANSIColor qw(:constants);
- use Getopt::Long qw(:config no_auto_abbrev);
- use Config;
-+use feature 'state';
- 
- my $P = $0;
- my $V = '0.01';
-@@ -37,18 +38,20 @@ my $TIMEOUT = 10;
- # Script can only grep for kernel addresses on the following architectures. If
- # your architecture is not listed here and has a grep'able kernel address please
- # consider submitting a patch.
--my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64');
-+my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64',  'i[3456]86');
- 
- # Command line options.
- my $help = 0;
- my $debug = 0;
--my $raw = 0;
--my $output_raw = "";	# Write raw results to file.
--my $input_raw = "";	# Read raw results from file instead of scanning.
-+my $raw = 0;                   # Show raw output.
-+my $output_raw = "";           # Write raw results to file.
-+my $input_raw = "";            # Read raw results from file instead of scanning.
-+my $suppress_dmesg = 0;	       # Don't show dmesg in output.
-+my $squash_by_path = 0;	       # Summary report grouped by absolute path.
-+my $squash_by_filename = 0;    # Summary report grouped by filename.
- 
--my $suppress_dmesg = 0;		# Don't show dmesg in output.
--my $squash_by_path = 0;		# Summary report grouped by absolute path.
--my $squash_by_filename = 0;	# Summary report grouped by filename.
-+my $page_offset_32bit = 0;     # 32-bit: value of CONFIG_PAGE_OFFSET
-+my $kernel_config_file = "";   # Kernel configuration file.
- 
- # Do not parse these files (absolute path).
- my @skip_parse_files_abs = ('/proc/kmsg',
-@@ -97,14 +100,16 @@ Version: $V
- 
- Options:
- 
--	-o, --output-raw=<file>  Save results for future processing.
--	-i, --input-raw=<file>   Read results from file instead of scanning.
--	    --raw                Show raw results (default).
--	    --suppress-dmesg     Do not show dmesg results.
--	    --squash-by-path     Show one result per unique path.
--	    --squash-by-filename Show one result per unique filename.
--	-d, --debug              Display debugging output.
--	-h, --help, --version    Display this help and exit.
-+	-o, --output-raw=<file>         Save results for future processing.
-+	-i, --input-raw=<file>          Read results from file instead of scanning.
-+		--raw                       Show raw results (default).
-+		--suppress-dmesg            Do not show dmesg results.
-+		--squash-by-path            Show one result per unique path.
-+		--squash-by-filename        Show one result per unique filename.
-+	--page-offset-32bit=<hex>       PAGE_OFFSET value (for 32-bit kernels).
-+	--kernel-config-file=<file>     Kernel configuration file (e.g /boot/config)
-+	-d, --debug                     Display debugging output.
-+	-h, --help, --version           Display this help and exit.
- 
- Examples:
- 
-@@ -117,7 +122,10 @@ Examples:
- 	# View summary report.
- 	$0 --input-raw scan.out --squash-by-filename
- 
--Scans the running (64 bit) kernel for potential leaking addresses.
-+	# Scan kernel on a 32-bit system with a 2GB:2GB virtual address split.
-+	$0 --page-offset-32bit=0x80000000
-+
-+Scans the running kernel for potential leaking addresses.
- 
- EOM
- 	exit($exitcode);
-@@ -133,6 +141,8 @@ GetOptions(
- 	'squash-by-path'        => \$squash_by_path,
- 	'squash-by-filename'    => \$squash_by_filename,
- 	'raw'                   => \$raw,
-+	'page-offset-32bit=o'   => \$page_offset_32bit,
-+	'kernel-config-file=s'  => \$kernel_config_file,
- ) or help(1);
- 
- help(0) if ($help);
-@@ -148,6 +158,7 @@ if (!$input_raw and ($squash_by_path or $squash_by_filename)) {
- 	exit(128);
- }
- 
-+show_detected_architecture() if $debug;
- if (!is_supported_architecture()) {
- 	printf "\nScript does not support your architecture, sorry.\n";
- 	printf "\nCurrently we support: \n\n";
-@@ -179,7 +190,7 @@ sub dprint
- 
- sub is_supported_architecture
- {
--	return (is_x86_64() or is_ppc64());
-+	return (is_x86_64() or is_ppc64() or is_ix86_32());
- }
- 
- sub is_x86_64
-@@ -202,10 +213,40 @@ sub is_ppc64
- 	return 0;
- }
- 
-+sub is_ix86_32
-+{
-+	my $archname = $Config{archname};
-+
-+	if ($archname =~ m/i[3456]86-linux/) {
-+		return 1;
-+	}
-+	return 0;
-+}
-+
-+sub show_detected_architecture
-+{
-+	printf "Detected architecture: ";
-+	if (is_ix86_32()) {
-+		printf "32 bit x86\n";
-+	} elsif (is_x86_64()) {
-+		printf "x86_64\n";
-+	} elsif (is_ppc64()) {
-+		printf "ppc64\n";
-+	} else {
-+		printf "failed to detect architecture\n"
-+	}
-+}
-+
- sub is_false_positive
- {
- 	my ($match) = @_;
- 
-+	if (is_ix86_32()) {
-+		return is_false_positive_ix86_32($match);
-+	}
-+
-+	# 64 bit architectures
-+
- 	if ($match =~ '\b(0x)?(f|F){16}\b' or
- 	    $match =~ '\b(0x)?0{16}\b') {
- 		return 1;
-@@ -222,6 +263,89 @@ sub is_false_positive
- 	return 0;
- }
- 
-+sub is_false_positive_ix86_32
-+{
-+	my ($match) = @_;
-+	state $page_offset = get_page_offset(); # only gets called once
-+	if ($match =~ '\b(0x)?(f|F){8}\b') {
-+		return 1;
-+	}
-+
-+	my $addr32 = eval hex($match);
-+	if ($addr32 < $page_offset) {
-+		return 1;
-+	}
-+
-+	return 0;
-+}
-+
-+sub get_page_offset
-+{
-+	my $page_offset;
-+	my $default_offset = hex("0xc0000000");
-+	my @config_files;
-+
-+	# Allow --page-offset-32bit to override.
-+	if ($page_offset_32bit != 0) {
-+		return $page_offset_32bit;
-+	}
-+
-+	# Allow --kernel-config-file to override.
-+	if ($kernel_config_file ne "") {
-+		@config_files = ($kernel_config_file);
-+	} else {
-+		my $config_file = '/boot/config-' . `uname -r`;
-+		@config_files = ($config_file, '/boot/config');
-+	}
-+
-+	if (-R "/proc/config.gz") {
-+		my $tmp_file = "/tmp/tmpkconf";
-+		if (system("gunzip < /proc/config.gz > $tmp_file")) {
-+			dprint " parse_kernel_config: system(gunzip...) failed\n";
-+		} else {
-+			$page_offset = parse_kernel_config_file($tmp_file);
-+			if ($page_offset ne "") {
-+				return hex($page_offset);
-+			}
-+		}
-+		system("rm -f $tmp_file");
-+	}
-+
-+	foreach my $config_file (@config_files) {
-+		chomp $config_file;
-+		$page_offset = parse_kernel_config_file($config_file);
-+		if ($page_offset ne "") {
-+			return hex($page_offset);
-+		}
-+	}
-+
-+	printf STDERR "\nFailed to parse kernel config files\n";
-+	printf STDERR "*** NOTE ***\n";
-+	printf STDERR "Falling back to PAGE_OFFSET = %#x\n\n", $default_offset;
-+
-+	return $default_offset;
-+}
-+
-+sub parse_kernel_config_file
-+{
-+	my ($file) = @_;
-+	my $config = 'CONFIG_PAGE_OFFSET';
-+	my $str = "";
-+	my $val = "";
-+
-+	open(my $fh, "<", $file) or return "";
-+	while (my $line = <$fh> ) {
-+		if ($line =~ /^$config/) {
-+			($str, $val) = split /=/, $line;
-+			chomp($val);
-+			last;
-+		}
-+	}
-+
-+	close $fh;
-+	return $val;
-+}
-+
- # True if argument potentially contains a kernel address.
- sub may_leak_address
- {
-@@ -235,9 +359,11 @@ sub may_leak_address
- 		return 0;
- 	}
- 
--	if ($line =~ '\bKEY=[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b' or
--	    $line =~ '\b[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b') {
--		return 0;
-+	if (is_x86_64() or is_ppc64()) {
-+		if ($line =~ '\bKEY=[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b' or
-+		    $line =~ '\b[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b') {
-+			return 0;
-+		}
- 	}
- 
- 	# One of these is guaranteed to be true.
-@@ -245,6 +371,8 @@ sub may_leak_address
- 		$address_re = '\b(0x)?ffff[[:xdigit:]]{12}\b';
- 	} elsif (is_ppc64()) {
- 		$address_re = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
-+	} elsif (is_ix86_32()) {
-+		$address_re = '\b(0x)?[[:xdigit:]]{8}\b';
- 	}
- 
- 	while (/($address_re)/g) {
-@@ -330,7 +458,6 @@ sub parse_file
- 	close $fh;
- }
- 
--
- # True if we should skip walking this directory.
- sub skip_walk
- {
--- 
-2.14.3
+Agreed. I'll extend it to also check for the directory owner.
+Maybe I could use another bit and make this additional restriction
+independent from the "group-writable" one.
+
+> > So, are you suggesting that I should extend "O_CREAT-without-O_EXCL"
+> > and "FIFOs restrictions" to work (optionally) on non-sticky directories too,
+> > while leaving untouched (for the moment) "normal files restrictions"?
+>
+> No, I think all of these and the existing symlink restrictions should
+> potentially be extended "to work (optionally) on non-sticky directories
+> too", but perhaps with separate patches later.
+
+OK.
+
+> An even further extension may be to cover non-O_CREAT: writing or/and
+> reading an existing file in an untrusted directory is also potentially
+> unsafe.  Unfortunately, we can't reliably know whether the program
+> possibly takes precautions by using lstat() and fstat() and comparing
+> st_dev/st_ino, so we won't be able to distinguish likely unsafe and
+> likely mostly safe accesses, but we'll be able to flag all of them for
+> manual analysis on a developer's or an auditor's system.  A reasonable
+> strict policy one might want to follow is to have all accesses done as
+> the right fsuid, without needing those unreliable st_dev/st_ino checks.
+> (They're unreliable because of potential side-effects on open() and
+> inode reuse.)  For example, we chose this strict policy in Openwall's
+> "tcb suite" and shadow suite patches: http://www.openwall.com/tcb/
+>
+> Of course, then there's the question on whether something exotic(?) like
+> this should be in the kernel.
+>
+> To me, it's like a "gcc -Wall" for filesystem accesses.  Sure it can
+> "falsely" detect many technically valid uses, but it's also helpful to
+> improve our filesystem access safety.
+
+Yes, this could be a useful improvement for the future.
+
+Salvatore
