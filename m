@@ -1,63 +1,67 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20171204142458.GA3325@pjb1027-Latitude-E5410>
-References: <20171204142458.GA3325@pjb1027-Latitude-E5410>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 5 Dec 2017 11:56:07 -0800
-Message-ID: <CAGXu5jK4_A7ZxxJ_9M5auAd3=OZNMK+srcbeNRuhgwdW16qUbQ@mail.gmail.com>
+Sender: geert.uytterhoeven@gmail.com
+In-Reply-To: <1511921105-3647-4-git-send-email-me@tobin.cc>
+References: <1511921105-3647-1-git-send-email-me@tobin.cc> <1511921105-3647-4-git-send-email-me@tobin.cc>
+From: Geert Uytterhoeven <geert@linux-m68k.org>
+Date: Tue, 5 Dec 2017 21:20:57 +0100
+Message-ID: <CAMuHMdVZWUHNEbfO7OCPQV5Q3bA41c6VpwqfvT37ZEV9AR8chw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening][PATCH v3 0/3] arm: Makes ptdump resuable and
- add WX page checking
-To: Jinbum Park <jinb.park7@gmail.com>
-Cc: linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Afzal Mohammed <afzal.mohd.ma@gmail.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@redhat.com>, Russell King <linux@armlinux.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Vladimir Murzin <vladimir.murzin@arm.com>, Arnd Bergmann <arnd@arndb.de>
+Subject: [kernel-hardening] Re: [PATCH V11 3/5] printk: hash addresses printed with %p
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>, Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 4, 2017 at 6:24 AM, Jinbum Park <jinb.park7@gmail.com> wrote:
-> Hi,
->
-> Page table dumping code for arm64-x86 is reusable,
-> and they have function for WX page checking.
-> But arm doesn't have that.
->
-> This path series are to makes ptdump reusable,
-> and add WX page checking for arm.
-> This is heavily based on arm64 version.
+Hi Tobin,
 
-Thanks for working on this! I sent along a few nits.
+On Wed, Nov 29, 2017 at 3:05 AM, Tobin C. Harding <me@tobin.cc> wrote:
+> Currently there exist approximately 14 000 places in the kernel where
+> addresses are being printed using an unadorned %p. This potentially
+> leaks sensitive information regarding the Kernel layout in memory. Many
+> of these calls are stale, instead of fixing every call lets hash the
+> address by default before printing. This will of course break some
+> users, forcing code printing needed addresses to be updated.
+>
+> Code that _really_ needs the address will soon be able to use the new
+> printk specifier %px to print the address.
 
--Kees
+> --- a/lib/vsprintf.c
+> +++ b/lib/vsprintf.c
 
->
-> v2 :
-> Fix a sender name of mail header, there was an mistake.
-> (from "jinb.park" to Jinbum Park)
-> Contents of patch-set are perfectly same.
->
-> v3 :
-> Take advantage of the existing pg_level and bits arrays
-> to check ro, nx prot.
->
-> jinb.park (3):
->   arm: mm: dump: make page table dumping reusable
->   arm: mm: dump: make the page table dumping seq_file optional
->   arm: mm: dump: add checking for writable and executable pages
->
->  arch/arm/Kconfig.debug        |  33 +++++++++-
->  arch/arm/include/asm/ptdump.h |  56 ++++++++++++++++
->  arch/arm/mm/Makefile          |   3 +-
->  arch/arm/mm/dump.c            | 144 +++++++++++++++++++++++++++++-------------
->  arch/arm/mm/init.c            |   2 +
->  arch/arm/mm/ptdump_debugfs.c  |  34 ++++++++++
->  6 files changed, 226 insertions(+), 46 deletions(-)
->  create mode 100644 arch/arm/include/asm/ptdump.h
->  create mode 100644 arch/arm/mm/ptdump_debugfs.c
->
-> --
-> 1.9.1
->
+> +/* Maps a pointer to a 32 bit unique identifier. */
+> +static char *ptr_to_id(char *buf, char *end, void *ptr, struct printf_spec spec)
+> +{
+> +       unsigned long hashval;
+> +       const int default_width = 2 * sizeof(ptr);
+> +
+> +       if (unlikely(!have_filled_random_ptr_key)) {
+> +               spec.field_width = default_width;
+> +               /* string length must be less than default_width */
+> +               return string(buf, end, "(ptrval)", spec);
+> +       }
+> +
+> +#ifdef CONFIG_64BIT
+> +       hashval = (unsigned long)siphash_1u64((u64)ptr, &ptr_key);
+> +       /*
+> +        * Mask off the first 32 bits, this makes explicit that we have
+> +        * modified the address (and 32 bits is plenty for a unique ID).
+> +        */
+> +       hashval = hashval & 0xffffffff;
+> +#else
+> +       hashval = (unsigned long)siphash_1u32((u32)ptr, &ptr_key);
+> +#endif
 
+Would it make sense to keep the 3 lowest bits of the address?
 
+Currently printed pointers no longer have any correlation with the actual
+alignment in memory of the object, which is a typical cause of a class of bugs.
 
--- 
-Kees Cook
-Pixel Security
+Gr{oetje,eeting}s,
+
+                        Geert
+
+--
+Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k.org
+
+In personal conversations with technical people, I call myself a hacker. But
+when I'm talking to journalists I just say "programmer" or something like that.
+                                -- Linus Torvalds
