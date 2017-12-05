@@ -1,220 +1,169 @@
 From: Alexander Popov <alex.popov@linux.com>
-Date: Wed,  6 Dec 2017 02:33:45 +0300
-Message-Id: <1512516827-29797-5-git-send-email-alex.popov@linux.com>
+Date: Wed,  6 Dec 2017 02:33:46 +0300
+Message-Id: <1512516827-29797-6-git-send-email-alex.popov@linux.com>
 In-Reply-To: <1512516827-29797-1-git-send-email-alex.popov@linux.com>
 References: <1512516827-29797-1-git-send-email-alex.popov@linux.com>
-Subject: [kernel-hardening] [PATCH RFC v6 4/6] lkdtm: Add a test for STACKLEAK
+Subject: [kernel-hardening] [PATCH RFC v6 5/6] fs/proc: Show STACKLEAK metrics in the /proc file system
 To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, x86@kernel.org, alex.popov@linux.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Introduce two lkdtm tests for the STACKLEAK feature: STACKLEAK_CHECK_ALLOCA
-and STACKLEAK_TRACK_STACK. Both of them check that the current task stack
-is properly erased (filled with STACKLEAK_POISON).
+Introduce CONFIG_STACKLEAK_METRICS providing STACKLEAK information about
+tasks via the /proc file system. In particular, /proc/<pid>/lowest_stack
+shows the current lowest_stack value and its final value from the previous
+syscall. That information can be useful for estimating the STACKLEAK
+performance impact for different workloads.
 
-In addition, STACKLEAK_CHECK_ALLOCA tests that:
- - check_alloca() allows alloca calls which don't exhaust the kernel stack;
- - alloca calls which exhaust/overflow the kernel stack hit BUG() in
-    check_alloca().
-
-And STACKLEAK_TRACK_STACK checks that exhausting the thread stack with a
-recursion is detected:
- - it hits the BUG() in track_stack() if CONFIG_VMAP_STACK is not enabled,
- - or hits the guard page otherwise.
-
-Signed-off-by: Tycho Andersen <tycho@docker.com>
 Signed-off-by: Alexander Popov <alex.popov@linux.com>
 ---
- drivers/misc/Makefile          |   3 +
- drivers/misc/lkdtm.h           |   4 ++
- drivers/misc/lkdtm_core.c      |   2 +
- drivers/misc/lkdtm_stackleak.c | 139 +++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 148 insertions(+)
- create mode 100644 drivers/misc/lkdtm_stackleak.c
+ arch/Kconfig                     | 11 +++++++++++
+ arch/x86/entry/entry_32.S        |  4 ++++
+ arch/x86/entry/entry_64.S        |  4 ++++
+ arch/x86/include/asm/processor.h |  3 +++
+ arch/x86/kernel/asm-offsets.c    |  3 +++
+ arch/x86/kernel/process_32.c     |  3 +++
+ arch/x86/kernel/process_64.c     |  3 +++
+ fs/proc/base.c                   | 14 ++++++++++++++
+ 8 files changed, 45 insertions(+)
 
-diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
-index 5ca5f64..66c3605 100644
---- a/drivers/misc/Makefile
-+++ b/drivers/misc/Makefile
-@@ -63,6 +63,9 @@ lkdtm-$(CONFIG_LKDTM)		+= lkdtm_perms.o
- lkdtm-$(CONFIG_LKDTM)		+= lkdtm_refcount.o
- lkdtm-$(CONFIG_LKDTM)		+= lkdtm_rodata_objcopy.o
- lkdtm-$(CONFIG_LKDTM)		+= lkdtm_usercopy.o
-+lkdtm-$(CONFIG_LKDTM)		+= lkdtm_stackleak.o
+diff --git a/arch/Kconfig b/arch/Kconfig
+index ba8e67b..3d8405c 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -559,6 +559,17 @@ config STACKLEAK_TRACK_MIN_SIZE
+ 	  this setting, don't break the poison search in erase_kstack.
+ 	  If unsure, leave the default value 100.
+ 
++config STACKLEAK_METRICS
++	bool "Show STACKLEAK metrics in the /proc file system"
++	depends on GCC_PLUGIN_STACKLEAK
++	depends on PROC_FS
++	help
++	  If this is set, STACKLEAK metrics for every task are available in
++	  the /proc file system. In particular, /proc/<pid>/lowest_stack
++	  shows the current lowest_stack value and its final value from the
++	  previous syscall. That information can be useful for estimating
++	  the STACKLEAK performance impact for your workloads.
 +
-+KASAN_SANITIZE_lkdtm_stackleak.o := n
+ config HAVE_CC_STACKPROTECTOR
+ 	bool
+ 	help
+diff --git a/arch/x86/entry/entry_32.S b/arch/x86/entry/entry_32.S
+index 8e4f815..2b76020 100644
+--- a/arch/x86/entry/entry_32.S
++++ b/arch/x86/entry/entry_32.S
+@@ -116,6 +116,10 @@ ENTRY(erase_kstack)
+ 	mov	%esp, %ecx
+ 	sub	%edi, %ecx
  
- KCOV_INSTRUMENT_lkdtm_rodata.o	:= n
- 
-diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
-index 687a0db..2a0cd0d 100644
---- a/drivers/misc/lkdtm.h
-+++ b/drivers/misc/lkdtm.h
-@@ -83,4 +83,8 @@ void lkdtm_USERCOPY_STACK_FRAME_FROM(void);
- void lkdtm_USERCOPY_STACK_BEYOND(void);
- void lkdtm_USERCOPY_KERNEL(void);
- 
-+/* lkdtm_stackleak.c */
-+void lkdtm_STACKLEAK_CHECK_ALLOCA(void);
-+void lkdtm_STACKLEAK_TRACK_STACK(void);
-+
- #endif
-diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
-index ba92291..3a22ffa 100644
---- a/drivers/misc/lkdtm_core.c
-+++ b/drivers/misc/lkdtm_core.c
-@@ -183,6 +183,8 @@ static const struct crashtype crashtypes[] = {
- 	CRASHTYPE(USERCOPY_STACK_FRAME_FROM),
- 	CRASHTYPE(USERCOPY_STACK_BEYOND),
- 	CRASHTYPE(USERCOPY_KERNEL),
-+	CRASHTYPE(STACKLEAK_CHECK_ALLOCA),
-+	CRASHTYPE(STACKLEAK_TRACK_STACK),
- };
- 
- 
-diff --git a/drivers/misc/lkdtm_stackleak.c b/drivers/misc/lkdtm_stackleak.c
-new file mode 100644
-index 0000000..1f95ee3
---- /dev/null
-+++ b/drivers/misc/lkdtm_stackleak.c
-@@ -0,0 +1,139 @@
-+/*
-+ * This file tests a few aspects of the STACKLEAK feature:
-+ *   - the current task stack is properly erased (filled with STACKLEAK_POISON);
-+ *   - check_alloca() allows alloca calls which don't exhaust the kernel stack;
-+ *   - alloca calls which exhaust/overflow the kernel stack hit BUG() in
-+ *    check_alloca();
-+ *   - exhausting the thread stack with a recursion is detected: it hits the
-+ *    BUG() in track_stack() if CONFIG_VMAP_STACK is not enabled, or hits the
-+ *    guard page otherwise.
-+ *
-+ * Copyright (C) Docker, Inc. 2017
-+ *
-+ * Authors:
-+ *   Tycho Andersen <tycho@docker.com>
-+ *   Alexander Popov <alex.popov@linux.com>
-+ */
-+
-+#include "lkdtm.h"
-+#include <linux/sched.h>
-+#include <linux/compiler.h>
-+
-+#ifndef CONFIG_GCC_PLUGIN_STACKLEAK
-+# define STACKLEAK_POISON -0xBEEF
-+# define CONFIG_STACKLEAK_TRACK_MIN_SIZE 100
++#ifdef CONFIG_STACKLEAK_METRICS
++	mov	%edi, TASK_prev_lowest_stack(%ebp)
 +#endif
 +
-+static noinline bool stack_is_erased(void)
+ 	cmp	$THREAD_SIZE_asm, %ecx
+ 	jb	3f
+ 	ud2
+diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
+index 94f659d..32ee040 100644
+--- a/arch/x86/entry/entry_64.S
++++ b/arch/x86/entry/entry_64.S
+@@ -121,6 +121,10 @@ ENTRY(erase_kstack)
+ 	mov	%esp, %ecx
+ 	sub	%edi, %ecx
+ 
++#ifdef CONFIG_STACKLEAK_METRICS
++	mov	%rdi, TASK_prev_lowest_stack(%r11)
++#endif
++
+ 	/* Check that the counter value is sane. */
+ 	cmp	$THREAD_SIZE_asm, %rcx
+ 	jb	3f
+diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
+index 520508d..c94fc2f 100644
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -483,6 +483,9 @@ struct thread_struct {
+ 
+ #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+ 	unsigned long		lowest_stack;
++# ifdef CONFIG_STACKLEAK_METRICS
++	unsigned long		prev_lowest_stack;
++# endif
+ #endif
+ 
+ 	unsigned int		sig_on_uaccess_err:1;
+diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
+index 692c10e..84c5a29 100644
+--- a/arch/x86/kernel/asm-offsets.c
++++ b/arch/x86/kernel/asm-offsets.c
+@@ -43,6 +43,9 @@ void common(void) {
+ # ifdef CONFIG_X86_32
+ 	OFFSET(TASK_thread_sp0, task_struct, thread.sp0);
+ # endif
++# ifdef CONFIG_STACKLEAK_METRICS
++	OFFSET(TASK_prev_lowest_stack, task_struct, thread.prev_lowest_stack);
++# endif
+ #endif
+ 
+ 	BLANK();
+diff --git a/arch/x86/kernel/process_32.c b/arch/x86/kernel/process_32.c
+index 2bea3bf..5615b3d 100644
+--- a/arch/x86/kernel/process_32.c
++++ b/arch/x86/kernel/process_32.c
+@@ -139,6 +139,9 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
+ #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+ 	p->thread.lowest_stack = (unsigned long)task_stack_page(p) +
+ 						2 * sizeof(unsigned long);
++# ifdef CONFIG_STACKLEAK_METRICS
++	p->thread.prev_lowest_stack = p->thread.lowest_stack;
++# endif
+ #endif
+ 
+ 	if (unlikely(p->flags & PF_KTHREAD)) {
+diff --git a/arch/x86/kernel/process_64.c b/arch/x86/kernel/process_64.c
+index 1641463..d4a50ef 100644
+--- a/arch/x86/kernel/process_64.c
++++ b/arch/x86/kernel/process_64.c
+@@ -285,6 +285,9 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
+ #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+ 	p->thread.lowest_stack = (unsigned long)task_stack_page(p) +
+ 						2 * sizeof(unsigned long);
++# ifdef CONFIG_STACKLEAK_METRICS
++	p->thread.prev_lowest_stack = p->thread.lowest_stack;
++# endif
+ #endif
+ 
+ 	savesegment(gs, p->thread.gsindex);
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index 28fa852..3569446 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -2884,6 +2884,17 @@ static int proc_pid_patch_state(struct seq_file *m, struct pid_namespace *ns,
+ }
+ #endif /* CONFIG_LIVEPATCH */
+ 
++#ifdef CONFIG_STACKLEAK_METRICS
++static int proc_lowest_stack(struct seq_file *m, struct pid_namespace *ns,
++				struct pid *pid, struct task_struct *task)
 +{
-+	unsigned long *sp, left, found, i;
-+
-+	/*
-+	 * For the details about the alignment of the poison values, see
-+	 * the comment in track_stack().
-+	 */
-+	sp = PTR_ALIGN(&i, sizeof(unsigned long));
-+
-+	left = ((unsigned long)sp & (THREAD_SIZE - 1)) / sizeof(unsigned long);
-+	sp--;
-+
-+	/*
-+	 * Two unsigned long ints at the bottom of the thread stack are
-+	 * reserved and not poisoned.
-+	 */
-+	if (left <= 2)
-+		return false;
-+
-+	left -= 2;
-+	pr_info("checking unused part of the thread stack (%lu bytes)...\n",
-+					left * sizeof(unsigned long));
-+
-+	/* Search for 17 poison values in a row (like erase_kstack() does) */
-+	for (i = 0, found = 0; i < left && found < 17; i++) {
-+		if (*(sp - i) == STACKLEAK_POISON)
-+			found++;
-+		else
-+			found = 0;
-+	}
-+
-+	if (found < 17) {
-+		pr_err("FAIL: thread stack is not erased (checked %lu bytes)\n",
-+						i * sizeof(unsigned long));
-+		return false;
-+	}
-+
-+	pr_info("first %lu bytes are unpoisoned\n",
-+				(i - found) * sizeof(unsigned long));
-+
-+	/* The rest of thread stack should be erased */
-+	for (; i < left; i++) {
-+		if (*(sp - i) != STACKLEAK_POISON) {
-+			pr_err("FAIL: thread stack is NOT properly erased\n");
-+			return false;
-+		}
-+	}
-+
-+	pr_info("the rest of the thread stack is properly erased\n");
-+	return true;
++	seq_printf(m, "prev_lowest_stack: %pK\nlowest_stack: %pK\n",
++		   (void *)task->thread.prev_lowest_stack,
++		   (void *)task->thread.lowest_stack);
++	return 0;
 +}
++#endif /* CONFIG_STACKLEAK_METRICS */
 +
-+static noinline void do_alloca(unsigned long size)
-+{
-+	char buf[size];
-+
-+	/* So this doesn't get inlined or optimized out */
-+	snprintf(buf, size, "hello world\n");
-+}
-+
-+void lkdtm_STACKLEAK_CHECK_ALLOCA(void)
-+{
-+	unsigned long left = (unsigned long)&left & (THREAD_SIZE - 1);
-+
-+	if (!stack_is_erased())
-+		return;
-+
-+	/* Try a small alloca to see if it works */
-+	pr_info("try a small alloca of 16 bytes...\n");
-+	do_alloca(16);
-+	pr_info("small alloca is successful\n");
-+
-+	/* Try to hit the BUG() in check_alloca() */
-+	pr_info("try a large alloca of %lu bytes (stack overflow)...\n", left);
-+	do_alloca(left);
-+	pr_err("FAIL: large alloca overstepped the thread stack boundary\n");
-+}
-+
-+/*
-+ * The stack frame size of recursion() is bigger than the
-+ * CONFIG_STACKLEAK_TRACK_MIN_SIZE, hence that function is instrumented
-+ * by the STACKLEAK gcc plugin and it calls track_stack() at the beginning.
-+ */
-+static noinline unsigned long recursion(unsigned long prev_sp)
-+{
-+	char buf[CONFIG_STACKLEAK_TRACK_MIN_SIZE + 42];
-+	unsigned long sp = (unsigned long)&sp;
-+
-+	snprintf(buf, sizeof(buf), "hello world\n");
-+
-+	if (prev_sp < sp + THREAD_SIZE)
-+		sp = recursion(prev_sp);
-+
-+	return sp;
-+}
-+
-+void lkdtm_STACKLEAK_TRACK_STACK(void)
-+{
-+	unsigned long sp = (unsigned long)&sp;
-+
-+	if (!stack_is_erased())
-+		return;
-+
-+	/*
-+	 * Exhaust the thread stack with a recursion. It should hit the
-+	 * BUG() in track_stack() if CONFIG_VMAP_STACK is not enabled, or
-+	 * access the guard page otherwise.
-+	 */
-+	pr_info("try to exhaust the thread stack with the recursion...\n");
-+	pr_err("FAIL: thread stack exhaustion (%lu bytes) is not detected\n",
-+							sp - recursion(sp));
-+}
+ /*
+  * Thread groups
+  */
+@@ -2988,6 +2999,9 @@ static const struct pid_entry tgid_base_stuff[] = {
+ #ifdef CONFIG_LIVEPATCH
+ 	ONE("patch_state",  S_IRUSR, proc_pid_patch_state),
+ #endif
++#ifdef CONFIG_STACKLEAK_METRICS
++	ONE("lowest_stack", S_IRUGO, proc_lowest_stack),
++#endif
+ };
+ 
+ static int proc_tgid_base_readdir(struct file *file, struct dir_context *ctx)
 -- 
 2.7.4
