@@ -1,188 +1,115 @@
-MIME-Version: 1.0
-In-Reply-To: <20171129175712.GB14545@mail.hallyn.com>
-References: <20171110053757.21170-1-mahesh@bandewar.net> <20171126064037.GB30279@mail.hallyn.com>
- <CAF2d9jhiZFiFODNXUY13F+4Pm+59+rZW=CnLPX1VUT3BAJdeeA@mail.gmail.com>
- <20171128230440.GB28297@mail.hallyn.com> <CAF2d9jhCDasnf2tbaGA04MV5ygZ9o1FaVRCEU2TkHjZR7d1ifw@mail.gmail.com>
- <20171129175712.GB14545@mail.hallyn.com>
-From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
-Date: Tue, 5 Dec 2017 13:55:53 -0800
-Message-ID: <CAF2d9jgsSZ6mCE8QwxPpoO7GoO4zeQzNfZuZwM9Gqqdi8uP4fw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] userns: control capabilities of some user namespaces
-To: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>
+From: Mahesh Bandewar <mahesh@bandewar.net>
+Date: Tue,  5 Dec 2017 14:30:52 -0800
+Message-Id: <20171205223052.12687-1-mahesh@bandewar.net>
+Subject: [kernel-hardening] [PATCHv3 0/2] capability controlled user-namespaces
+To: LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>
+Cc: Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <mahesh@bandewar.net>, Mahesh Bandewar <maheshb@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 29, 2017 at 9:57 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
-> Quoting Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=AC=
-=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) (maheshb@google.com=
-):
->> On Tue, Nov 28, 2017 at 3:04 PM, Serge E. Hallyn <serge@hallyn.com> wrot=
-e:
->> > Quoting Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=
-=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) (maheshb@google.=
-com):
->> > ...
->> >> >> diff --git a/security/commoncap.c b/security/commoncap.c
->> >> >> index fc46f5b85251..89103f16ac37 100644
->> >> >> --- a/security/commoncap.c
->> >> >> +++ b/security/commoncap.c
->> >> >> @@ -73,6 +73,14 @@ int cap_capable(const struct cred *cred, struct=
- user_namespace *targ_ns,
->> >> >>  {
->> >> >>       struct user_namespace *ns =3D targ_ns;
->> >> >>
->> >> >> +     /* If the capability is controlled and user-ns that process
->> >> >> +      * belongs-to is 'controlled' then return EPERM and no need
->> >> >> +      * to check the user-ns hierarchy.
->> >> >> +      */
->> >> >> +     if (is_user_ns_controlled(cred->user_ns) &&
->> >> >> +         is_capability_controlled(cap))
->> >> >> +             return -EPERM;
->> >> >
->> >> > I'd be curious to see the performance impact on this on a regular
->> >> > workload (kernel build?) in a controlled ns.
->> >> >
->> >> Should it affect? If at all, it should be +ve since, the recursive
->> >> user-ns hierarchy lookup is avoided with the above check if the
->> >> capability is controlled.
->> >
->> > Yes but I expect that to be the rare case for normal lxc installs
->> > (which are of course what I am interested in)
->> >
->> >>  The additional cost otherwise is this check
->> >> per cap_capable() call.
->> >
->> > And pipeline refetching?
->> >
->> > Capability calls also shouldn't be all that frequent, but still I'm
->> > left wondering...
->>
->> Correct, and capability checks are part of the control-path and not
->> the data-path so shouldn't matter but I guess it doesn't hurt to
->> find-out the number. Do you have any workload in mind, that we can use
->> for this test/benchmark?
->
-> I suppose if you did both (a) a kernel build and (b) a webserve
-> like https://github.com/m3ng9i/ran , being hit for a minute by a
-> heavy load of requests, those two together would be re-assuring.
->
-Well, I did (a) and (b). Here are the results.
+From: Mahesh Bandewar <maheshb@google.com>
 
-(a0) I used the ubuntu-artful (17.10) vm instance with standard kernel
-to compile the kernel
+TL;DR version
+-------------
+Creating a sandbox environment with namespaces is challenging
+considering what these sandboxed processes can engage into. e.g.
+CVE-2017-6074, CVE-2017-7184, CVE-2017-7308 etc. just to name few.
+Current form of user-namespaces, however, if changed a bit can allow
+us to create a sandbox environment without locking down user-
+namespaces.
 
-mahesh@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s clean
-mahesh@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s
-real 6m47.525s
-user 22m37.424s
-sys 2m44.745s
+Detailed version
+----------------
 
-(b0) Now in an user-namespce create by an user that does not have
-SYS_ADMIN (just for apples-to-apples comparison)
-mahesh@mahesh-vm0-artful:~$ sysctl -q kernel.controlled_userns_caps_whiteli=
-st
-sysctl: cannot stat /proc/sys/kernel/controlled_userns_caps_whitelist:
-No such file or directory
-mahesh@mahesh-vm0-artful:~$ id
-uid=3D1000(mahesh) gid=3D1000(mahesh)
-groups=3D1000(mahesh),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),118(lpa=
-dmin),128(sambashare)
-mahesh@mahesh-vm0-artful:~/Work/Linux$ unshare -Uf -- bash
-nobody@mahesh-vm0-artful:~/Work/Linux$ id
-uid=3D65534(nobody) gid=3D65534(nogroup) groups=3D65534(nogroup)
-nobody@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s clean
-nobody@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s
-real 9m10.115s
-user 25m20.984s
-sys 2m48.129s
+Problem
+-------
+User-namespaces in the current form have increased the attack surface as
+any process can acquire capabilities which are not available to them (by
+default) by performing combination of clone()/unshare()/setns() syscalls.
 
+    #define _GNU_SOURCE
+    #include <stdio.h>
+    #include <sched.h>
+    #include <netinet/in.h>
 
-(a1) Now patched the same kernel and built and booted with this new kernel =
--
+    int main(int ac, char **av)
+    {
+        int sock = -1;
 
-mahesh@mahesh-vm0-artful:~$ sysctl -q kernel.controlled_userns_caps_whiteli=
-st
-kernel.controlled_userns_caps_whitelist =3D 1f,ffffffff
-mahesh@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s clean
-mahesh@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s
-real 6m39.964s
-user 22m23.538s
-sys 2m34.258s
+        printf("Attempting to open RAW socket before unshare()...\n");
+        sock = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+        if (sock < 0) {
+            perror("socket() SOCK_RAW failed: ");
+        } else {
+            printf("Successfully opened RAW-Sock before unshare().\n");
+            close(sock);
+            sock = -1;
+        }
 
-(b1) Now in an user-namespace created by an user that does not have SYS_ADM=
-IN
+        if (unshare(CLONE_NEWUSER | CLONE_NEWNET) < 0) {
+            perror("unshare() failed: ");
+            return 1;
+        }
 
-mahesh@mahesh-vm0-artful:~$ id
-uid=3D1000(mahesh) gid=3D1000(mahesh)
-groups=3D1000(mahesh),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),118(lpa=
-dmin),128(sambashare)
-mahesh@mahesh-vm0-artful:~/Work/Linux$ unshare -Uf -- bash
-nobody@mahesh-vm0-artful:~/Work/Linux$ id
-uid=3D65534(nobody) gid=3D65534(nogroup) groups=3D65534(nogroup)
-nobody@mahesh-vm0-artful:~/Work/Linux$ make -s clean
-nobody@mahesh-vm0-artful:~/Work/Linux$ time make -j4 -s
-real 6m54.725s
-user 23m18.833s
-sys 2m38.996s
+        printf("Attempting to open RAW socket after unshare()...\n");
+        sock = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+        if (sock < 0) {
+            perror("socket() SOCK_RAW failed: ");
+        } else {
+            printf("Successfully opened RAW-Sock after unshare().\n");
+            close(sock);
+            sock = -1;
+        }
 
----
+        return 0;
+    }
 
-For the http-get test, I used the same 'ran' utility you have proposed
-and wrapped inside a script like -
-mahesh@mahesh-vm0-artful:~/Work/Scripts$ cat RanLauncher1m.sh
-#!/bin/bash
-set -v
-(sleep 60; killall ran) &
-time (cd ~/go/bin; ./ran -i index.html >& /dev/null)
+The above example shows how easy it is to acquire NET_RAW capabilities
+and once acquired, these processes could take benefit of above mentioned
+or similar issues discovered/undiscovered with malicious intent. Note
+that this is just an example and the problem/solution is not limited
+to NET_RAW capability *only*. 
 
-and another script that constantly performs wget -
-mahesh@mahesh-vm0-artful:~/Work/Scripts$ cat WgetLoop.sh#!/bin/bash
-#set -v
-while true; do
-wget http://127.0.0.1:8080 >& /dev/null
+The easiest fix one can apply here is to lock-down user-namespaces which
+many of the distros do (i.e. don't allow users to create user namespaces),
+but unfortunately that prevents everyone from using them.
 
-... here are the results -
-(A0) Kernel that is unpatched and comes with ubuntu-artful
+Approach
+--------
+Introduce a notion of 'controlled' user-namespaces. Every process on
+the host is allowed to create user-namespaces (governed by the limit
+imposed by per-ns sysctl) however, mark user-namespaces created by
+sandboxed processes as 'controlled'. Use this 'mark' at the time of
+capability check in conjunction with a global capability whitelist.
+If the capability is not whitelisted, processes that belong to 
+controlled user-namespaces will not be allowed.
 
-mahesh@mahesh-vm0-artful:~/Work/Scripts$ ./RanLauncher1m.sh
-(sleep 60; killall ran) &
-time (cd ~/go/bin; ./ran -i index.html >& /dev/null)
-real 1m0.009s
-user 0m2.885s
-sys 0m2.774s
+Once a user-ns is marked as 'controlled'; all its child user-
+namespaces are marked as 'controlled' too.
 
-(B0) Now in an user-ns created by an user that does not have SYS_ADMIN
+A global whitelist is list of capabilities governed by the
+sysctl which is available to (privileged) user in init-ns to modify
+while it's applicable to all controlled user-namespaces on the host.
 
-mahesh@mahesh-vm0-artful:~/Work/Scripts$ unshare -Uf -- bash
-nobody@mahesh-vm0-artful:~/Work/Scripts$ ./RanLauncher1m.sh
-(sleep 60; killall ran) &
-time (cd ~/go/bin; ./ran -i index.html >& /dev/null)
-real 1m0.004s
-user 0m3.003s
-sys 0m2.737s
+Marking user-namespaces controlled without modifying the whitelist is
+equivalent of the current behavior. The default value of whitelist includes
+all capabilities so that the compatibility is maintained. However it gives
+admins fine-grained ability to control various capabilities system wide
+without locking down user-namespaces.
 
-(A1) With the patched kernel
+Please see individual patches in this series.
 
-mahesh@mahesh-vm0-artful:~/Work/Scripts$ ./RanLauncher1m.sh
-(sleep 60; killall ran) &
-time (cd ~/go/bin; ./ran -i index.html >& /dev/null)
+Mahesh Bandewar (2):
+  capability: introduce sysctl for controlled user-ns capability whitelist
+  userns: control capabilities of some user namespaces
 
-real 1m0.005s
-user 0m1.941s
-sys 0m1.507s
+ Documentation/sysctl/kernel.txt | 21 +++++++++++++++++
+ include/linux/capability.h      |  7 ++++++
+ include/linux/user_namespace.h  | 25 ++++++++++++++++++++
+ kernel/capability.c             | 52 +++++++++++++++++++++++++++++++++++++++++
+ kernel/sysctl.c                 |  5 ++++
+ kernel/user_namespace.c         |  4 ++++
+ security/commoncap.c            |  8 +++++++
+ 7 files changed, 122 insertions(+)
 
-
-(B1) With patched kernel and inside user-ns
-
-mahesh@mahesh-vm0-artful:~/Work/Scripts$ unshare -Uf -- bash
-nobody@mahesh-vm0-artful:~/Work/Scripts$ ./RanLauncher1m.sh
-(sleep 60; killall ran) &
-time (cd ~/go/bin; ./ran -i index.html >& /dev/null)
-real 1m0.004s
-user 0m1.513s
-sys 0m1.254s
-
-> thanks,
-> -serge
+-- 
+2.15.0.531.g2ccb3012c9-goog
