@@ -1,165 +1,79 @@
-From: Mahesh Bandewar <mahesh@bandewar.net>
-Date: Tue,  5 Dec 2017 14:31:05 -0800
-Message-Id: <20171205223105.12845-1-mahesh@bandewar.net>
-Subject: [kernel-hardening] [PATCHv3 2/2] userns: control capabilities of some user namespaces
-To: LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>
-Cc: Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <mahesh@bandewar.net>, Mahesh Bandewar <maheshb@google.com>
+MIME-Version: 1.0
+Sender: geert.uytterhoeven@gmail.com
+In-Reply-To: <20171205204402.GD11064@eros>
+References: <1511921105-3647-1-git-send-email-me@tobin.cc> <1511921105-3647-4-git-send-email-me@tobin.cc>
+ <CAMuHMdVZWUHNEbfO7OCPQV5Q3bA41c6VpwqfvT37ZEV9AR8chw@mail.gmail.com> <20171205204402.GD11064@eros>
+From: Geert Uytterhoeven <geert@linux-m68k.org>
+Date: Tue, 5 Dec 2017 23:57:40 +0100
+Message-ID: <CAMuHMdVuc5yUNXhShb_vaR6T=qNexXm38mqBALeWzTNyGdHe+Q@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH V11 3/5] printk: hash addresses printed with %p
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>, Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Mahesh Bandewar <maheshb@google.com>
+Hi Tobin,
 
-With this new notion of "controlled" user-namespaces, the controlled
-user-namespaces are marked at the time of their creation while the
-capabilities of processes that belong to them are controlled using the
-global mask.
+On Tue, Dec 5, 2017 at 9:44 PM, Tobin C. Harding <me@tobin.cc> wrote:
+> On Tue, Dec 05, 2017 at 09:20:57PM +0100, Geert Uytterhoeven wrote:
+>> On Wed, Nov 29, 2017 at 3:05 AM, Tobin C. Harding <me@tobin.cc> wrote:
+>> > Currently there exist approximately 14 000 places in the kernel where
+>> > addresses are being printed using an unadorned %p. This potentially
+>> > leaks sensitive information regarding the Kernel layout in memory. Many
+>> > of these calls are stale, instead of fixing every call lets hash the
+>> > address by default before printing. This will of course break some
+>> > users, forcing code printing needed addresses to be updated.
+>> >
+>> > Code that _really_ needs the address will soon be able to use the new
+>> > printk specifier %px to print the address.
+>>
+>> > --- a/lib/vsprintf.c
+>> > +++ b/lib/vsprintf.c
+>>
+>> > +/* Maps a pointer to a 32 bit unique identifier. */
+>> > +static char *ptr_to_id(char *buf, char *end, void *ptr, struct printf_spec spec)
+>> > +{
+>> > +       unsigned long hashval;
+>> > +       const int default_width = 2 * sizeof(ptr);
+>> > +
+>> > +       if (unlikely(!have_filled_random_ptr_key)) {
+>> > +               spec.field_width = default_width;
+>> > +               /* string length must be less than default_width */
+>> > +               return string(buf, end, "(ptrval)", spec);
+>> > +       }
+>> > +
+>> > +#ifdef CONFIG_64BIT
+>> > +       hashval = (unsigned long)siphash_1u64((u64)ptr, &ptr_key);
+>> > +       /*
+>> > +        * Mask off the first 32 bits, this makes explicit that we have
+>> > +        * modified the address (and 32 bits is plenty for a unique ID).
+>> > +        */
+>> > +       hashval = hashval & 0xffffffff;
+>> > +#else
+>> > +       hashval = (unsigned long)siphash_1u32((u32)ptr, &ptr_key);
+>> > +#endif
+>>
+>> Would it make sense to keep the 3 lowest bits of the address?
+>>
+>> Currently printed pointers no longer have any correlation with the actual
+>> alignment in memory of the object, which is a typical cause of a class of bugs.
+>
+> We'd have to keep the lowest 4 since we are printing in hex, right? This
+> is easy enough to add. I wasn't the architect behind the hashing but I
+> can do up a patch and see if anyone who knows crypto objects.
 
-Init-user-ns is always uncontrolled and a process that has SYS_ADMIN
-that belongs to uncontrolled user-ns can create another (child) user-
-namespace that is uncontrolled. Any other process (that either does
-not have SYS_ADMIN or belongs to a controlled user-ns) can only
-create a user-ns that is controlled.
+Lowest 3 is good enough for all natural types, up to long long.
+We may still receive complaints from people who care about seeing if
+a pointer is cacheline-aligned or not. Fixing that may need up to 7 bits, I'm
+afraid, which is a bit too much to give up.
 
-global-capability-whitelist (controlled_userns_caps_whitelist) is used
-at the capability check-time and keeps the semantics for the processes
-that belong to uncontrolled user-ns as it is. Processes that belong to
-controlled user-ns however are subjected to different checks-
+Gr{oetje,eeting}s,
 
-   (a) if the capability in question is controlled and process belongs
-       to controlled user-ns, then it's always denied.
-   (b) if the capability in question is NOT controlled then fall back
-       to the traditional check.
+                        Geert
 
-Acked-by: Serge Hallyn <serge@hallyn.com>
-Signed-off-by: Mahesh Bandewar <maheshb@google.com>
----
-v3:
-  Rebase
-v2:
-  Don't recalculate user-ns flags for every setns() call.
-v1:
-  Initial submission.
+--
+Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k.org
 
- include/linux/capability.h     |  4 ++++
- include/linux/user_namespace.h | 25 +++++++++++++++++++++++++
- kernel/capability.c            |  5 +++++
- kernel/user_namespace.c        |  4 ++++
- security/commoncap.c           |  8 ++++++++
- 5 files changed, 46 insertions(+)
-
-diff --git a/include/linux/capability.h b/include/linux/capability.h
-index 7d79a4689625..383f31f066f0 100644
---- a/include/linux/capability.h
-+++ b/include/linux/capability.h
-@@ -251,6 +251,10 @@ extern bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns);
- extern int get_vfs_caps_from_disk(const struct dentry *dentry, struct cpu_vfs_cap_data *cpu_caps);
- int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
- 				 void __user *buff, size_t *lenp, loff_t *ppos);
-+/* Controlled capability is capability that is missing from the capability-mask
-+ * controlled_userns_caps_whitelist controlled via sysctl.
-+ */
-+bool is_capability_controlled(int cap);
- 
- extern int cap_convert_nscap(struct dentry *dentry, void **ivalue, size_t size);
- 
-diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
-index d6b74b91096b..a5c48684b317 100644
---- a/include/linux/user_namespace.h
-+++ b/include/linux/user_namespace.h
-@@ -32,6 +32,7 @@ struct uid_gid_map { /* 64 bytes -- 1 cache line */
- };
- 
- #define USERNS_SETGROUPS_ALLOWED 1UL
-+#define USERNS_CONTROLLED	 2UL
- 
- #define USERNS_INIT_FLAGS USERNS_SETGROUPS_ALLOWED
- 
-@@ -112,6 +113,21 @@ static inline void put_user_ns(struct user_namespace *ns)
- 		__put_user_ns(ns);
- }
- 
-+/* Controlled user-ns is the one that is created by a process that does not
-+ * have CAP_SYS_ADMIN (or descended from such an user-ns).
-+ * For more details please see the sysctl description of
-+ * controlled_userns_caps_whitelist.
-+ */
-+static inline bool is_user_ns_controlled(const struct user_namespace *ns)
-+{
-+	return ns->flags & USERNS_CONTROLLED;
-+}
-+
-+static inline void mark_user_ns_controlled(struct user_namespace *ns)
-+{
-+	ns->flags |= USERNS_CONTROLLED;
-+}
-+
- struct seq_operations;
- extern const struct seq_operations proc_uid_seq_operations;
- extern const struct seq_operations proc_gid_seq_operations;
-@@ -170,6 +186,15 @@ static inline struct ns_common *ns_get_owner(struct ns_common *ns)
- {
- 	return ERR_PTR(-EPERM);
- }
-+
-+static inline bool is_user_ns_controlled(const struct user_namespace *ns)
-+{
-+	return false;
-+}
-+
-+static inline void mark_user_ns_controlled(struct user_namespace *ns)
-+{
-+}
- #endif
- 
- #endif /* _LINUX_USER_H */
-diff --git a/kernel/capability.c b/kernel/capability.c
-index 4a859b7d4902..bffe249922de 100644
---- a/kernel/capability.c
-+++ b/kernel/capability.c
-@@ -511,6 +511,11 @@ bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns)
- }
- 
- /* Controlled-userns capabilities routines */
-+bool is_capability_controlled(int cap)
-+{
-+	return !cap_raised(controlled_userns_caps_whitelist, cap);
-+}
-+
- #ifdef CONFIG_SYSCTL
- int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
- 				 void __user *buff, size_t *lenp, loff_t *ppos)
-diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
-index 246d4d4ce5c7..ca0556d466b6 100644
---- a/kernel/user_namespace.c
-+++ b/kernel/user_namespace.c
-@@ -141,6 +141,10 @@ int create_user_ns(struct cred *new)
- 		goto fail_keyring;
- 
- 	set_cred_user_ns(new, ns);
-+	if (!ns_capable(parent_ns, CAP_SYS_ADMIN) ||
-+	    is_user_ns_controlled(parent_ns))
-+		mark_user_ns_controlled(ns);
-+
- 	return 0;
- fail_keyring:
- #ifdef CONFIG_PERSISTENT_KEYRINGS
-diff --git a/security/commoncap.c b/security/commoncap.c
-index 4f8e09340956..5454e9c03ee8 100644
---- a/security/commoncap.c
-+++ b/security/commoncap.c
-@@ -73,6 +73,14 @@ int cap_capable(const struct cred *cred, struct user_namespace *targ_ns,
- {
- 	struct user_namespace *ns = targ_ns;
- 
-+	/* If the capability is controlled and user-ns that process
-+	 * belongs-to is 'controlled' then return EPERM and no need
-+	 * to check the user-ns hierarchy.
-+	 */
-+	if (is_user_ns_controlled(cred->user_ns) &&
-+	    is_capability_controlled(cap))
-+		return -EPERM;
-+
- 	/* See if cred has the capability in the target user namespace
- 	 * by examining the target user namespace and all of the target
- 	 * user namespace's parents.
--- 
-2.15.0.531.g2ccb3012c9-goog
+In personal conversations with technical people, I call myself a hacker. But
+when I'm talking to journalists I just say "programmer" or something like that.
+                                -- Linus Torvalds
