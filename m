@@ -1,60 +1,53 @@
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+UHqJcxygGXk0jXYkK7AHzi1rU5SqvowfYT-OVKc6r5Q@mail.gmail.com>
-References: <20171204142553.GA3344@pjb1027-Latitude-E5410> <CAGXu5j+UHqJcxygGXk0jXYkK7AHzi1rU5SqvowfYT-OVKc6r5Q@mail.gmail.com>
+Date: Wed, 6 Dec 2017 19:23:15 +0900
 From: Jinbum Park <jinb.park7@gmail.com>
-Date: Wed, 6 Dec 2017 18:45:13 +0900
-Message-ID: <CAErMHp9BBaJ8iNyjOS3nU+LUWNijL6FSOKSmVAYY_20nfB9nAQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening][PATCH v3 1/3] arm: mm: dump: make page table
- dumping reusable
-To: Kees Cook <keescook@chromium.org>
-Cc: linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Afzal Mohammed <afzal.mohd.ma@gmail.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@redhat.com>, Russell King <linux@armlinux.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Vladimir Murzin <vladimir.murzin@arm.com>, Arnd Bergmann <arnd@arndb.de>
+Message-ID: <20171206102315.GA7012@pjb1027-Latitude-E5410>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening][PATCH v4 0/3] arm: Makes ptdump resuable and add
+ WX page checking
+To: linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: afzal.mohd.ma@gmail.com, mark.rutland@arm.com, labbott@redhat.com, linux@armlinux.org.uk, gregkh@linuxfoundation.org, keescook@chromium.org, vladimir.murzin@arm.com, arnd@arndb.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
->> +#ifndef __ASM_PTDUMP_H
->> +#define __ASM_PTDUMP_H
->> +
->> +#ifdef CONFIG_ARM_PTDUMP_CORE
->
-> Is this #ifdef needed? I think this file is only included in dump.c
-> and ptdump_debugfs.c, both of which are only built when
-> CONFIG_ARM_PTDUMP_CORE is defined.
+Hi,
 
-Looking at next patch in this patch-set series ([PATCH v3 3/3] arm:
-mm: dump: add checking for writable and executable pages),
-Not only dump.c and ptdump_debugfs.c but also arch/arm/mm/init.c
-include this file (ptdump.h) to call debug_checkwx().
-mm/init.c is not built only when CONFIG_ARM_PTDUMP_CORE is defined.
-So, This #ifdef seems not be needed for this patch, but is needed for
-this patch-set series.
+Page table dumping code for arm64-x86 is reusable,
+and they have function for WX page checking.
+But arm doesn't have that.
 
+This path series are to makes ptdump reusable,
+and add WX page checking for arm.
+This is heavily based on arm64 version.
 
->> +static int ptdump_init(void)
->> +{
->> +       ptdump_initialize();
->> +       return ptdump_debugfs_register(&kernel_ptdump_info,
->> +                                       "kernel_page_tables");
->
-> This changes the return value of ptdump_init. This should do similar
-> to what was done before:
->
-> return ptdump_debugfs_register(&kernel_ptdump_info,
-> "kernel_page_tables") ? 0 : -ENOMEM;
+v2 :
+Fix a sender name of mail header, there was an mistake.
+(from "jinb.park" to Jinbum Park)
+Contents of patch-set are perfectly same.
 
+v3 :
+Take advantage of the existing pg_level and bits arrays
+to check ro, nx prot.
 
-ptdump_debugfs_register() already returns what you think.
+v4 :
+Add boolean for ro_bit, nx_bit into prot_bits
+to point ro_bit, nx_bit in pg_level.
+This change is suggested by Laura Abbott.
 
->> +int ptdump_debugfs_register(struct ptdump_info *info, const char *name)
->> +{
->> +       struct dentry *pe;
->> +
->> +       pe = debugfs_create_file(name, 0400, NULL, info, &ptdump_fops);
->> +       return pe ? 0 : -ENOMEM;
->> +
->> +}
+jinb.park (3):
+  arm: mm: dump: make page table dumping reusable
+  arm: mm: dump: make the page table dumping seq_file optional
+  arm: mm: dump: add checking for writable and executable pages
 
-So "return ptdump_debugfs_register(~~)" is fine.
+ arch/arm/Kconfig.debug        |  33 ++++++++-
+ arch/arm/include/asm/ptdump.h |  56 ++++++++++++++++
+ arch/arm/mm/Makefile          |   3 +-
+ arch/arm/mm/dump.c            | 151 +++++++++++++++++++++++++++++-------------
+ arch/arm/mm/init.c            |   2 +
+ arch/arm/mm/ptdump_debugfs.c  |  34 ++++++++++
+ 6 files changed, 232 insertions(+), 47 deletions(-)
+ create mode 100644 arch/arm/include/asm/ptdump.h
+ create mode 100644 arch/arm/mm/ptdump_debugfs.c
 
-
-Thanks.
-Jinbum Park.
+-- 
+1.9.1
