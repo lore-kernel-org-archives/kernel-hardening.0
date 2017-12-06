@@ -1,94 +1,182 @@
 References: <1512516827-29797-1-git-send-email-alex.popov@linux.com>
- <1512516827-29797-3-git-send-email-alex.popov@linux.com>
+ <1512516827-29797-6-git-send-email-alex.popov@linux.com>
 From: Laura Abbott <labbott@redhat.com>
-Message-ID: <15d83270-7a91-436f-1aab-0f6001954f4a@redhat.com>
-Date: Wed, 6 Dec 2017 10:57:19 -0800
+Message-ID: <f7c64050-bbb6-be37-ec09-cb757bad116a@redhat.com>
+Date: Wed, 6 Dec 2017 11:22:55 -0800
 MIME-Version: 1.0
-In-Reply-To: <1512516827-29797-3-git-send-email-alex.popov@linux.com>
+In-Reply-To: <1512516827-29797-6-git-send-email-alex.popov@linux.com>
 Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v6 2/6] gcc-plugins: Add STACKLEAK plugin for tracking
- the kernel stack
+Subject: [kernel-hardening] Re: [PATCH RFC v6 5/6] fs/proc: Show STACKLEAK metrics in the /proc
+ file system
 To: Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On 12/05/2017 03:33 PM, Alexander Popov wrote:
-> +__visible int plugin_init(struct plugin_name_args *plugin_info,
-> +			  struct plugin_gcc_version *version)
+> Introduce CONFIG_STACKLEAK_METRICS providing STACKLEAK information about
+> tasks via the /proc file system. In particular, /proc/<pid>/lowest_stack
+> shows the current lowest_stack value and its final value from the previous
+> syscall. That information can be useful for estimating the STACKLEAK
+> performance impact for different workloads.
+> 
+> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+> ---
+>   arch/Kconfig                     | 11 +++++++++++
+>   arch/x86/entry/entry_32.S        |  4 ++++
+>   arch/x86/entry/entry_64.S        |  4 ++++
+>   arch/x86/include/asm/processor.h |  3 +++
+>   arch/x86/kernel/asm-offsets.c    |  3 +++
+>   arch/x86/kernel/process_32.c     |  3 +++
+>   arch/x86/kernel/process_64.c     |  3 +++
+>   fs/proc/base.c                   | 14 ++++++++++++++
+>   8 files changed, 45 insertions(+)
+> 
+> diff --git a/arch/Kconfig b/arch/Kconfig
+> index ba8e67b..3d8405c 100644
+> --- a/arch/Kconfig
+> +++ b/arch/Kconfig
+> @@ -559,6 +559,17 @@ config STACKLEAK_TRACK_MIN_SIZE
+>   	  this setting, don't break the poison search in erase_kstack.
+>   	  If unsure, leave the default value 100.
+>   
+> +config STACKLEAK_METRICS
+> +	bool "Show STACKLEAK metrics in the /proc file system"
+> +	depends on GCC_PLUGIN_STACKLEAK
+> +	depends on PROC_FS
+> +	help
+> +	  If this is set, STACKLEAK metrics for every task are available in
+> +	  the /proc file system. In particular, /proc/<pid>/lowest_stack
+> +	  shows the current lowest_stack value and its final value from the
+> +	  previous syscall. That information can be useful for estimating
+> +	  the STACKLEAK performance impact for your workloads.
+> +
+>   config HAVE_CC_STACKPROTECTOR
+>   	bool
+>   	help
+> diff --git a/arch/x86/entry/entry_32.S b/arch/x86/entry/entry_32.S
+> index 8e4f815..2b76020 100644
+> --- a/arch/x86/entry/entry_32.S
+> +++ b/arch/x86/entry/entry_32.S
+> @@ -116,6 +116,10 @@ ENTRY(erase_kstack)
+>   	mov	%esp, %ecx
+>   	sub	%edi, %ecx
+>   
+> +#ifdef CONFIG_STACKLEAK_METRICS
+> +	mov	%edi, TASK_prev_lowest_stack(%ebp)
+> +#endif
+> +
+>   	cmp	$THREAD_SIZE_asm, %ecx
+>   	jb	3f
+>   	ud2
+> diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
+> index 94f659d..32ee040 100644
+> --- a/arch/x86/entry/entry_64.S
+> +++ b/arch/x86/entry/entry_64.S
+> @@ -121,6 +121,10 @@ ENTRY(erase_kstack)
+>   	mov	%esp, %ecx
+>   	sub	%edi, %ecx
+>   
+> +#ifdef CONFIG_STACKLEAK_METRICS
+> +	mov	%rdi, TASK_prev_lowest_stack(%r11)
+> +#endif
+> +
+>   	/* Check that the counter value is sane. */
+>   	cmp	$THREAD_SIZE_asm, %rcx
+>   	jb	3f
+> diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
+> index 520508d..c94fc2f 100644
+> --- a/arch/x86/include/asm/processor.h
+> +++ b/arch/x86/include/asm/processor.h
+> @@ -483,6 +483,9 @@ struct thread_struct {
+>   
+>   #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+>   	unsigned long		lowest_stack;
+> +# ifdef CONFIG_STACKLEAK_METRICS
+> +	unsigned long		prev_lowest_stack;
+> +# endif
+>   #endif
+>   
+>   	unsigned int		sig_on_uaccess_err:1;
+> diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
+> index 692c10e..84c5a29 100644
+> --- a/arch/x86/kernel/asm-offsets.c
+> +++ b/arch/x86/kernel/asm-offsets.c
+> @@ -43,6 +43,9 @@ void common(void) {
+>   # ifdef CONFIG_X86_32
+>   	OFFSET(TASK_thread_sp0, task_struct, thread.sp0);
+>   # endif
+> +# ifdef CONFIG_STACKLEAK_METRICS
+> +	OFFSET(TASK_prev_lowest_stack, task_struct, thread.prev_lowest_stack);
+> +# endif
+>   #endif
+>   
+>   	BLANK();
+> diff --git a/arch/x86/kernel/process_32.c b/arch/x86/kernel/process_32.c
+> index 2bea3bf..5615b3d 100644
+> --- a/arch/x86/kernel/process_32.c
+> +++ b/arch/x86/kernel/process_32.c
+> @@ -139,6 +139,9 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
+>   #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+>   	p->thread.lowest_stack = (unsigned long)task_stack_page(p) +
+>   						2 * sizeof(unsigned long);
+> +# ifdef CONFIG_STACKLEAK_METRICS
+> +	p->thread.prev_lowest_stack = p->thread.lowest_stack;
+> +# endif
+>   #endif
+>   
+>   	if (unlikely(p->flags & PF_KTHREAD)) {
+> diff --git a/arch/x86/kernel/process_64.c b/arch/x86/kernel/process_64.c
+> index 1641463..d4a50ef 100644
+> --- a/arch/x86/kernel/process_64.c
+> +++ b/arch/x86/kernel/process_64.c
+> @@ -285,6 +285,9 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
+>   #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+>   	p->thread.lowest_stack = (unsigned long)task_stack_page(p) +
+>   						2 * sizeof(unsigned long);
+> +# ifdef CONFIG_STACKLEAK_METRICS
+> +	p->thread.prev_lowest_stack = p->thread.lowest_stack;
+> +# endif
+>   #endif
+>   
+>   	savesegment(gs, p->thread.gsindex);
+> diff --git a/fs/proc/base.c b/fs/proc/base.c
+> index 28fa852..3569446 100644
+> --- a/fs/proc/base.c
+> +++ b/fs/proc/base.c
+> @@ -2884,6 +2884,17 @@ static int proc_pid_patch_state(struct seq_file *m, struct pid_namespace *ns,
+>   }
+>   #endif /* CONFIG_LIVEPATCH */
+>   
+> +#ifdef CONFIG_STACKLEAK_METRICS
+> +static int proc_lowest_stack(struct seq_file *m, struct pid_namespace *ns,
+> +				struct pid *pid, struct task_struct *task)
 > +{
-> +	const char * const plugin_name = plugin_info->base_name;
-> +	const int argc = plugin_info->argc;
-> +	const struct plugin_argument * const argv = plugin_info->argv;
-> +	int i;
+> +	seq_printf(m, "prev_lowest_stack: %pK\nlowest_stack: %pK\n",
+> +		   (void *)task->thread.prev_lowest_stack,
+> +		   (void *)task->thread.lowest_stack);
+> +	return 0;
+> +}
+> +#endif /* CONFIG_STACKLEAK_METRICS */
 > +
-> +	/* Extra GGC root tables describing our GTY-ed data */
-> +	static const struct ggc_root_tab gt_ggc_r_gt_stackleak[] = {
-> +		{
-> +			.base = &track_function_decl,
-> +			.nelt = 1,
-> +			.stride = sizeof(track_function_decl),
-> +			.cb = &gt_ggc_mx_tree_node,
-> +			.pchw = &gt_pch_nx_tree_node
-> +		},
-> +		{
-> +			.base = &check_function_decl,
-> +			.nelt = 1,
-> +			.stride = sizeof(check_function_decl),
-> +			.cb = &gt_ggc_mx_tree_node,
-> +			.pchw = &gt_pch_nx_tree_node
-> +		},
-> +		LAST_GGC_ROOT_TAB
-> +	};
-> +
-> +	/*
-> +	 * The stackleak_tree_instrument pass should be executed before the
-> +	 * "optimized" pass, which is the control flow graph cleanup that is
-> +	 * performed just before expanding gcc trees to the RTL. In former
-> +	 * versions of the plugin this new pass was inserted before the
-> +	 * "tree_profile" pass, which is currently called "profile".
-> +	 */
-> +	PASS_INFO(stackleak_tree_instrument, "optimized", 1,
-> +						PASS_POS_INSERT_BEFORE);
-> +
-> +	/*
-> +	 * The stackleak_final pass should be executed before the "final" pass,
-> +	 * which turns the RTL (Register Transfer Language) into assembly.
-> +	 */
-> +	PASS_INFO(stackleak_final, "final", 1, PASS_POS_INSERT_BEFORE);
-> +
-> +	if (!plugin_default_version_check(version, &gcc_version)) {
-> +		error(G_("incompatible gcc/plugin versions"));
-> +		return 1;
-> +	}
-> +
-> +	/* Parse the plugin arguments */
-> +	if (argc != 1) {
-> +		error(G_("bad number of the plugin arguments: %d"), argc);
-> +		return 1;
-> +	}
-> +
-> +	if (strcmp(argv[i].key, "track-min-size")) {
-> +		error(G_("unknown option '-fplugin-arg-%s-%s'"),
-> +				plugin_name, argv[i].key);
-> +		return 1;
-> +	}
-> +
-> +	if (!argv[i].value) {
-> +		error(G_("no value supplied for option '-fplugin-arg-%s-%s'"),
-> +				plugin_name, argv[i].key);
-> +		return 1;
-> +	}
-> +
-> +	track_frame_size = atoi(argv[i].value);
-> +	if (track_frame_size < 0) {
-> +		error(G_("invalid option argument '-fplugin-arg-%s-%s=%s'"),
-> +				plugin_name, argv[i].key, argv[i].value);
-> +		return 1;
-> +	}
 
-I don't see i getting updated anywhere, which seems to be an artifact of
-removing the for loop. I'd prefer if you just kept the loop since the
-arm64 version requires a --disable option like structleak.
+This just prints the hashed value with the new pointer leak work.
+I don't think we want to print the fully exposed value via %px so
+it's not clear how valuable this proc file is now.
 
 Thanks,
 Laura
+
+>   /*
+>    * Thread groups
+>    */
+> @@ -2988,6 +2999,9 @@ static const struct pid_entry tgid_base_stuff[] = {
+>   #ifdef CONFIG_LIVEPATCH
+>   	ONE("patch_state",  S_IRUSR, proc_pid_patch_state),
+>   #endif
+> +#ifdef CONFIG_STACKLEAK_METRICS
+> +	ONE("lowest_stack", S_IRUGO, proc_lowest_stack),
+> +#endif
+>   };
+>   
+>   static int proc_tgid_base_readdir(struct file *file, struct dir_context *ctx)
+> 
