@@ -1,56 +1,46 @@
-References: <1512516827-29797-1-git-send-email-alex.popov@linux.com>
- <1512516827-29797-6-git-send-email-alex.popov@linux.com>
- <f7c64050-bbb6-be37-ec09-cb757bad116a@redhat.com>
- <CAGXu5jKT2uCDxTCJLzoc6WhbSsT0xosnJBY9z+HAaJ_0-yRq6g@mail.gmail.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <37807af6-1743-059c-614a-1328c0c880e4@redhat.com>
-Date: Wed, 6 Dec 2017 15:06:12 -0800
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKT2uCDxTCJLzoc6WhbSsT0xosnJBY9z+HAaJ_0-yRq6g@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v6 5/6] fs/proc: Show STACKLEAK metrics in the /proc
- file system
-To: Kees Cook <keescook@chromium.org>
-Cc: Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, X86 ML <x86@kernel.org>
+Sender: keescook@google.com
+In-Reply-To: <e8dd4332196348df8938a1ad8991dc84@AcuMS.aculab.com>
+References: <1511921105-3647-1-git-send-email-me@tobin.cc> <1511921105-3647-4-git-send-email-me@tobin.cc>
+ <CAMuHMdVZWUHNEbfO7OCPQV5Q3bA41c6VpwqfvT37ZEV9AR8chw@mail.gmail.com>
+ <20171205.153120.151025775956658954.davem@davemloft.net> <e8dd4332196348df8938a1ad8991dc84@AcuMS.aculab.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 6 Dec 2017 15:21:58 -0800
+Message-ID: <CAGXu5jLYQypb=-kf9swRy8F4tSFx_R-urE2tREavOMF-OaXD8g@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH V11 3/5] printk: hash addresses printed with %p
+To: David Laight <David.Laight@aculab.com>
+Cc: David Miller <davem@davemloft.net>, "geert@linux-m68k.org" <geert@linux-m68k.org>, "me@tobin.cc" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "Jason@zx2c4.com" <Jason@zx2c4.com>, "tytso@mit.edu" <tytso@mit.edu>, "pbonzini@redhat.com" <pbonzini@redhat.com>, "tycho@tycho.ws" <tycho@tycho.ws>, "william.c.roberts@intel.com" <william.c.roberts@intel.com>, "tj@kernel.org" <tj@kernel.org>, "Golden_Miller83@protonmail.ch" <Golden_Miller83@protonmail.ch>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "pmladek@suse.com" <pmladek@suse.com>, "joe@perches.com" <joe@perches.com>, "ijc@hellion.org.uk" <ijc@hellion.org.uk>, "sergey.senozhatsky@gmail.com" <sergey.senozhatsky@gmail.com>, "catalin.marinas@arm.com" <catalin.marinas@arm.com>, "wilal.deacon@arm.com" <wilal.deacon@arm.com>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "cfries@google.com" <cfries@google.com>, "olorin@google.com" <olorin@google.com>, "danielmicay@gmail.com" <danielmicay@gmail.com>, "tixxdz@gmail.com" <tixxdz@gmail.com>, "rkrcmar@redhat.com" <rkrcmar@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "sfr@canb.auug.org.au" <sfr@canb.auug.org.au>, "aryabinin@virtuozzo.com" <aryabinin@virtuozzo.com>, "glider@google.com" <glider@google.com>, "dvyukov@google.com" <dvyukov@google.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "sergei.shtylyov@cogentembedded.com" <sergei.shtylyov@cogentembedded.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 12/06/2017 12:40 PM, Kees Cook wrote:
-> On Wed, Dec 6, 2017 at 11:22 AM, Laura Abbott <labbott@redhat.com> wrote:
->> On 12/05/2017 03:33 PM, Alexander Popov wrote:
->>> diff --git a/fs/proc/base.c b/fs/proc/base.c
->>> index 28fa852..3569446 100644
->>> --- a/fs/proc/base.c
->>> +++ b/fs/proc/base.c
->>> @@ -2884,6 +2884,17 @@ static int proc_pid_patch_state(struct seq_file *m,
->>> struct pid_namespace *ns,
->>>    }
->>>    #endif /* CONFIG_LIVEPATCH */
->>>    +#ifdef CONFIG_STACKLEAK_METRICS
->>> +static int proc_lowest_stack(struct seq_file *m, struct pid_namespace
->>> *ns,
->>> +                               struct pid *pid, struct task_struct *task)
->>> +{
->>> +       seq_printf(m, "prev_lowest_stack: %pK\nlowest_stack: %pK\n",
->>> +                  (void *)task->thread.prev_lowest_stack,
->>> +                  (void *)task->thread.lowest_stack);
->>> +       return 0;
->>> +}
->>> +#endif /* CONFIG_STACKLEAK_METRICS */
->>> +
+On Wed, Dec 6, 2017 at 2:31 AM, David Laight <David.Laight@aculab.com> wrote:
+> From: David Miller
+>> Sent: 05 December 2017 20:31
+> ...
+>> > Would it make sense to keep the 3 lowest bits of the address?
+>> >
+>> > Currently printed pointers no longer have any correlation with the actual
+>> > alignment in memory of the object, which is a typical cause of a class of bugs.
 >>
->>
->> This just prints the hashed value with the new pointer leak work.
->> I don't think we want to print the fully exposed value via %px so
->> it's not clear how valuable this proc file is now.
-> 
-> Maybe print the size, not the location?
-> 
-> -Kees
-> 
-Hmmmmm, that starts to overlap with CONFIG_DEBUG_STACK_USAGE.
-That's not a bad thing but it would be good to clarify what
-this is tracking vs. CONFIG_DEBUG_STACK_USAGE.
+>> Yeah, this is driving people nuts who wonder why pointers are aligned
+>> all weird now.
+>
+> I can also image issues where you want to know whether 2 pointers point
+> into the same structure (like an skb).
 
-Thanks,
-Laura
+This is already retained due to the hashing. i.e. the same pointer
+value will produce the same hash value, so that kind of direct
+comparison still works.
+
+> Useful if you suspect that code is using a stale pointer because the
+> skb got reallocated by some internal function.
+> I'm not sure such pointers are printed by default though.
+
+I hope not. :) skb used to be exported for INET_DIAG, but that got
+fixed a while back.
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
