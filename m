@@ -1,39 +1,55 @@
-Date: Wed, 6 Dec 2017 17:45:37 +0900
-From: Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>
-Message-ID: <20171206084537.GA462@jagdpanzerIV>
-References: <1511921105-3647-5-git-send-email-me@tobin.cc>
- <CA+55aFxgGb13hqoNQ8bzFn4ENZM25PBSdi5pkFUBa5Hk+j-s3Q@mail.gmail.com>
- <324abe19f1ee4177911d2fc48899ac8a@AcuMS.aculab.com>
- <CAGXu5j+xUt+coLCKg9qeCrTzc7HEM7KP=1Z-xTiDXWSRYibJQg@mail.gmail.com>
- <c47f7659676246d6bbeb5230b952a5ad@AcuMS.aculab.com>
- <596c917e-3183-d80a-89d4-97e0eb5dc077@infradead.org>
- <CA+55aFw3AZtzf6KHS4desHJ3CajKs46VQxOi6-+0U8A4y0v6ug@mail.gmail.com>
- <20171206013657.GA479@jagdpanzerIV>
- <CA+55aFzMydq1TizkPOjZmRb_eKtHCk3w-xdO-Ce2jw9tu3bsGg@mail.gmail.com>
- <CAMuHMdUebiN16BA6qLO+Wv2LetdYgbmd8E_e74hQj52yEUwPOQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAMuHMdUebiN16BA6qLO+Wv2LetdYgbmd8E_e74hQj52yEUwPOQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH V11 4/5] vsprintf: add printk specifier %px
-To: Geert Uytterhoeven <geert@linux-m68k.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Randy Dunlap <rdunlap@infradead.org>, David Laight <David.Laight@aculab.com>, Kees Cook <keescook@chromium.org>, "Tobin C. Harding" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Radim =?iso-8859-1?Q?Krcm=E1r?= <rkrcmar@redhat.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>
+Sender: geert.uytterhoeven@gmail.com
+In-Reply-To: <CA+55aFw3SyO7Dq5gVVyC1AahaFzvyGoZ6X8B7z2g5_4r8+GaZA@mail.gmail.com>
+References: <1511921105-3647-1-git-send-email-me@tobin.cc> <1511921105-3647-4-git-send-email-me@tobin.cc>
+ <CAMuHMdVZWUHNEbfO7OCPQV5Q3bA41c6VpwqfvT37ZEV9AR8chw@mail.gmail.com>
+ <20171205204402.GD11064@eros> <CAMuHMdVuc5yUNXhShb_vaR6T=qNexXm38mqBALeWzTNyGdHe+Q@mail.gmail.com>
+ <CA+55aFw3SyO7Dq5gVVyC1AahaFzvyGoZ6X8B7z2g5_4r8+GaZA@mail.gmail.com>
+From: Geert Uytterhoeven <geert@linux-m68k.org>
+Date: Wed, 6 Dec 2017 09:48:12 +0100
+Message-ID: <CAMuHMdV4R9ngCiho0BuDkQ2K4ivVaDHs6pxkEdj2q=J=H0RXOA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH V11 3/5] printk: hash addresses printed with %p
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>, Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On (12/06/17 09:32), Geert Uytterhoeven wrote:
-[..]
-> >> show_fault_oops(struct pt_regs *regs, unsigned long error_code,
-> >>                 unsigned long address)
-> >> ...
-> >>         printk(KERN_CONT " at %p\n", (void *) address);
-> >>         printk(KERN_ALERT "IP: %pS\n", (void *)regs->ip);
-> >
-> > So %pS isn't %p, and shows the symbolic name.
-> 
-> If the symbolic name is available.
-> Else it prints the non-hashed pointer value (FTR).
+Hi Linus,
 
-hm, indeed. and !CONFIG_KALLSYMS config turns %pS/%ps
-into special_hex_number().
+On Wed, Dec 6, 2017 at 12:33 AM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Tue, Dec 5, 2017 at 2:57 PM, Geert Uytterhoeven <geert@linux-m68k.org> wrote:
+>> Lowest 3 is good enough for all natural types, up to long long.
+>> We may still receive complaints from people who care about seeing if
+>> a pointer is cacheline-aligned or not. Fixing that may need up to 7 bits, I'm
+>> afraid, which is a bit too much to give up.
+>
+> I really think even the lowest three is a bit too much.
+>
+> Who really cares? If it's something that is particularly _about_
+> alignment (ie an alignment trap), maybe just print out those bits
+> separately.
 
-	-ss
+If I'm not mistaken, some architectures don't generate alignment traps, but
+just zero the LSBs.
+
+> And for everything else? It's purely about getting used to it.
+
+Yes, we will get used to it.
+
+I agree that for debugging during development, we will just use %px and be
+fine.
+
+Storm in a glass of water, everybody will have forgotten by the time v4.16 is
+released.
+
+Gr{oetje,eeting}s,
+
+                        Geert
+
+--
+Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k.org
+
+In personal conversations with technical people, I call myself a hacker. But
+when I'm talking to journalists I just say "programmer" or something like that.
+                                -- Linus Torvalds
