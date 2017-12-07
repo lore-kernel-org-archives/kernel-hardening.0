@@ -1,135 +1,49 @@
+Date: Thu, 7 Dec 2017 16:12:04 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Date: Thu,  7 Dec 2017 15:32:25 +1100
-Message-Id: <1512621145-4783-6-git-send-email-me@tobin.cc>
-In-Reply-To: <1512621145-4783-1-git-send-email-me@tobin.cc>
-References: <1512621145-4783-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [PATCH 5/5] leaking_addresses: add support for 5 page table levels
-To: me@tobin.cc, kaiwan.billimoria@gmail.com
-Cc: "Kirill A. Shutemov" <kirill@shutemov.name>, Alexander Kapshuk <alexander.kapshuk@gmail.com>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Message-ID: <20171207051204.GA2191@eros>
+References: <1511921105-3647-5-git-send-email-me@tobin.cc>
+ <CA+55aFxgGb13hqoNQ8bzFn4ENZM25PBSdi5pkFUBa5Hk+j-s3Q@mail.gmail.com>
+ <324abe19f1ee4177911d2fc48899ac8a@AcuMS.aculab.com>
+ <CAGXu5j+xUt+coLCKg9qeCrTzc7HEM7KP=1Z-xTiDXWSRYibJQg@mail.gmail.com>
+ <c47f7659676246d6bbeb5230b952a5ad@AcuMS.aculab.com>
+ <596c917e-3183-d80a-89d4-97e0eb5dc077@infradead.org>
+ <CA+55aFw3AZtzf6KHS4desHJ3CajKs46VQxOi6-+0U8A4y0v6ug@mail.gmail.com>
+ <20171206013657.GA479@jagdpanzerIV>
+ <CA+55aFzMydq1TizkPOjZmRb_eKtHCk3w-xdO-Ce2jw9tu3bsGg@mail.gmail.com>
+ <CAMuHMdUebiN16BA6qLO+Wv2LetdYgbmd8E_e74hQj52yEUwPOQ@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAMuHMdUebiN16BA6qLO+Wv2LetdYgbmd8E_e74hQj52yEUwPOQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH V11 4/5] vsprintf: add printk specifier %px
+To: Geert Uytterhoeven <geert@linux-m68k.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Randy Dunlap <rdunlap@infradead.org>, David Laight <David.Laight@aculab.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Radim =?iso-8859-1?Q?Krcm=E1r?= <rkrcmar@redhat.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently script only supports 4 page table levels because of the way
-the kernel address regular expression is crafted. We can do better than
-this. Using previously added support for kernel configuration options we
-can get the number of page table levels defined by
-CONFIG_PGTABLE_LEVELS. Using this value a correct regular expression can
-be crafted. This only supports 5 page tables on x86_64.
+On Wed, Dec 06, 2017 at 09:32:14AM +0100, Geert Uytterhoeven wrote:
+> Hi Linus,
+> 
+> On Wed, Dec 6, 2017 at 2:59 AM, Linus Torvalds
+> <torvalds@linux-foundation.org> wrote:
+> > On Tue, Dec 5, 2017 at 5:36 PM, Sergey Senozhatsky
+> > <sergey.senozhatsky.work@gmail.com> wrote:
+> >> I see some %p-s being used in _supposedly_ important output,
+> >> like arch/x86/mm/fault.c
+> >>
+> >> show_fault_oops(struct pt_regs *regs, unsigned long error_code,
+> >>                 unsigned long address)
+> >> ...
+> >>         printk(KERN_CONT " at %p\n", (void *) address);
+> >>         printk(KERN_ALERT "IP: %pS\n", (void *)regs->ip);
+> >
+> > So %pS isn't %p, and shows the symbolic name.
+> 
+> If the symbolic name is available.
+> Else it prints the non-hashed pointer value (FTR).
 
-Add support for 5 page table levels on x86_64.
+I'm trying to fix this :)
 
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
----
- scripts/leaking_addresses.pl | 60 ++++++++++++++++++++++++++++++++++++++------
- 1 file changed, 53 insertions(+), 7 deletions(-)
+[RFC 0/3] kallsyms: don't leak address when printing symbol
 
-diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-index 892bfe9e01fe..82be5f18ea5f 100755
---- a/scripts/leaking_addresses.pl
-+++ b/scripts/leaking_addresses.pl
-@@ -21,6 +21,7 @@ use Term::ANSIColor qw(:constants);
- use Getopt::Long qw(:config no_auto_abbrev);
- use Config;
- use bigint qw/hex/;
-+use feature 'state';
- 
- my $P = $0;
- my $V = '0.01';
-@@ -39,12 +40,14 @@ my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64');
- # Command line options.
- my $help = 0;
- my $debug = 0;
-+
- my $raw = 0;
- my $output_raw = "";	# Write raw results to file.
- my $input_raw = "";	# Read raw results from file instead of scanning.
- my $suppress_dmesg = 0;		# Don't show dmesg in output.
- my $squash_by_path = 0;		# Summary report grouped by absolute path.
- my $squash_by_filename = 0;	# Summary report grouped by filename.
-+
- my $kernel_config_file = "";	# Kernel configuration file.
- 
- # Do not parse these files (absolute path).
-@@ -212,11 +215,13 @@ sub get_kernel_config_option
- 
- 	} else {
- 		my $file = '/boot/config-' . `uname -r`;
-+		chomp $file;
- 		@config_files = ($file, '/boot/config');
- 	}
- 
- 	foreach my $file (@config_files) {
--#		chomp $config_file;
-+		printf("file: %s\n", $file);
-+
- 		$value = option_from_file($option, $file);
- 		if ($value ne "") {
- 			last;
-@@ -295,12 +300,8 @@ sub may_leak_address
- 		return 0;
- 	}
- 
--	# One of these is guaranteed to be true.
--	if (is_x86_64()) {
--		$address_re = '\b(0x)?ffff[[:xdigit:]]{12}\b';
--	} elsif (is_ppc64()) {
--		$address_re = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
--	}
-+	$address_re = get_address_re();
-+	dprint("Kernel address regular expression: %s\n", $address_re);
- 
- 	while (/($address_re)/g) {
- 		if (!is_false_positive($1)) {
-@@ -311,6 +312,51 @@ sub may_leak_address
- 	return 0;
- }
- 
-+sub get_address_re
-+{
-+	my $re;
-+
-+	if (is_x86_64()) {
-+		$re = get_x86_64_re();
-+	} elsif (is_ppc64()) {
-+		$re = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
-+	}
-+
-+	if ($re eq "") {
-+		print STDERR "$0: failed to build kernel address regular expression\n";
-+	}
-+
-+	return $re;
-+}
-+
-+sub get_x86_64_re
-+{
-+	state $ptl = get_page_table_levels();
-+	my $re;
-+
-+	if ($ptl == 5) {
-+		$re = '\b(0x)?ff[[:xdigit:]]{14}\b';
-+	} else {
-+		$re = '\b(0x)?ffff[[:xdigit:]]{12}\b';
-+	}
-+
-+	return $re;
-+}
-+
-+sub get_page_table_levels
-+{
-+	my $ptl = "";
-+	my $default_ptl = "4";
-+
-+	$ptl = get_kernel_config_option('CONFIG_PGTABLE_LEVELS');
-+	if ($ptl eq "") {
-+		$ptl = $default_ptl;
-+		printf(STDERR "$0: defaulting to %s page table levels\n", $default_ptl);
-+	}
-+
-+	return $ptl;
-+}
-+
- sub parse_dmesg
- {
- 	open my $cmd, '-|', 'dmesg';
--- 
-2.7.4
+thanks,
+Tobin.
