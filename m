@@ -1,6 +1,6 @@
-Message-ID: <1512616656.17323.50.camel@gmail.com>
+Message-ID: <1512619918.17323.66.camel@gmail.com>
 From: kaiwan.billimoria@gmail.com
-Date: Thu, 07 Dec 2017 08:47:36 +0530
+Date: Thu, 07 Dec 2017 09:41:58 +0530
 In-Reply-To: <20171206230117.GI11835@eros>
 References: <1512455204.17323.20.camel@gmail.com>
 	 <20171206040437.GB11835@eros> <1512561090.17323.32.camel@gmail.com>
@@ -8,307 +8,77 @@ References: <1512455204.17323.20.camel@gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v4] leaking_addresses: add support for x86 32-bit kernel
- addresses
+Subject: [kernel-hardening] Re: [PATCH v3] scripts: leaking_addresses: add support for 32-bit
+ kernel addresses
 To: "Tobin C. Harding" <me@tobin.cc>
 Cc: Alexander Kapshuk <alexander.kapshuk@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently, leaking_addresses.pl only supports scanning 64 bit
-architectures. This is due to how the regular expressions are formed. We
-can do better than this. 32 architectures can be supported if we take
-into consideration the kernel virtual address split (via the PAGE_OFFSET
-kernel configurable).
+On Thu, 2017-12-07 at 10:01 +1100, Tobin C. Harding wrote:
+> On Wed, Dec 06, 2017 at 05:21:30PM +0530, kaiwan.billimoria@gmail.com wrote:
+> > On Wed, 2017-12-06 at 15:04 +1100, Tobin C. Harding wrote:
+> > > 
+> > Sure, lets try for a generic ver!
+> 
+> Cool.
+> 
+> > Thanks for your help on this..
+> 
+> No problem.
+> 
+> > As your experience woth the R Pi shows, we may have to just resort to building a
+> > generic framework of sorts, letting folks "plugin" appropriate "truth values"
+> > for their particular platform; this way, we support as much as we can for now
+> > and, going forward, it's generic.
+> > As of right now though, am unsure what this "generic framework" is..
+> 
+> ATM the best I can come up with is having two flags
+> 
+> --page-offset-32bit=0xc0000000 (exactly as we have now)
+> --32-bit
+> 
+> Now for the klunky bit, I can only see two options
+> 
+> 1. Default to 64 bit, for 32 bit scan require one of the above options
+> to be set.
 
-Add support for ix86 32 bit architectures.
- - Add command line option for page offset.
- - Add command line option for kernel configuration file.
- - Parse kernel config file for page offset (CONFIG_PAGE_OFFSET).
- - Use page offset when checking for kernel virtual addresses.
+Yes, agreed..
+> 
+> 2. Parse config file for all architectures, if CONFIG_PAGE_OFFSET is set
+> us it.
+> 
+> I particularly don't like option 2. If we can find a reliable way to get
+> the architecture the we have a better option. At the moment the method
+> we use relies on the architecture of the machine that the Perl binary
+> was built on (AFAICT).
+> 
+> (/usr/bin/arch does not work on RPi either)
 
+Right, reg arch: nor on some of the Yocto platforms I tested.
+> 
+> I'm happy with option 1 unless there is a better proposal.
+> thanks,
+> Tobin.
 
-Signed-off-by: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
----
+Okay, I can start working on the approach above. So, that implies that the
+is_supported_architecture sub (and it's descendants) are now redundant, correct?
 
-Ok, this patch is the same as the previous v3, with suggestions from Tobin incorporated:
-- newline in sub is_false_positive_ix86_32
-- refactoring of code to remove the temp file in sub get_page_offset
-- git short desc delibrately modified to make it more appropriate.
+Also, I think we can perhaps still make use of the 'uname -m' to advantage:
 
-Applies on Tobin's tree branch 'leaks' on top of commit 680db1ef560f
-(leaking_addresses: fix typo function not called).
+1. A scenario: the user runs the script with no options; we default to 64-bit.
+But, the platform is actually 32-bit. So, we run a sanity check regardless - if
+we find that the platform is indeed 32-bit but the user has not run with the
+--32-bit (or --page-offset-32bit) option switch(es), we could:
+   - (a) emit a noisy Warning message to stderr and continue, ("batch mode"), OR
+   - (b) fail, with the error message and a failure code.
 
+Of course if we go with (a), the results will be meaningless; so, just failing might be better.
+Again, I realize that all this will only work if detection of 32-bit actually works!
+I'll take a stab at this..
 
- scripts/leaking_addresses.pl | 171 +++++++++++++++++++++++++++++++++++++------
- 1 file changed, 150 insertions(+), 21 deletions(-)
+2. Modify the show_detected_architecture sub to use it (for 'debug' case).
 
-diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-index 2d5336b3e1ea..beb16b697bb2 100755
---- a/scripts/leaking_addresses.pl
-+++ b/scripts/leaking_addresses.pl
-@@ -24,6 +24,7 @@ use Cwd 'abs_path';
- use Term::ANSIColor qw(:constants);
- use Getopt::Long qw(:config no_auto_abbrev);
- use Config;
-+use feature 'state';
- 
- my $P = $0;
- my $V = '0.01';
-@@ -37,18 +38,20 @@ my $TIMEOUT = 10;
- # Script can only grep for kernel addresses on the following architectures. If
- # your architecture is not listed here and has a grep'able kernel address please
- # consider submitting a patch.
--my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64');
-+my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64',  'i[3456]86');
- 
- # Command line options.
- my $help = 0;
- my $debug = 0;
--my $raw = 0;
--my $output_raw = "";	# Write raw results to file.
--my $input_raw = "";	# Read raw results from file instead of scanning.
-+my $raw = 0;                   # Show raw output.
-+my $output_raw = "";           # Write raw results to file.
-+my $input_raw = "";            # Read raw results from file instead of scanning.
-+my $suppress_dmesg = 0;	       # Don't show dmesg in output.
-+my $squash_by_path = 0;	       # Summary report grouped by absolute path.
-+my $squash_by_filename = 0;    # Summary report grouped by filename.
- 
--my $suppress_dmesg = 0;		# Don't show dmesg in output.
--my $squash_by_path = 0;		# Summary report grouped by absolute path.
--my $squash_by_filename = 0;	# Summary report grouped by filename.
-+my $page_offset_32bit = 0;     # 32-bit: value of CONFIG_PAGE_OFFSET
-+my $kernel_config_file = "";   # Kernel configuration file.
- 
- # Do not parse these files (absolute path).
- my @skip_parse_files_abs = ('/proc/kmsg',
-@@ -97,14 +100,16 @@ Version: $V
- 
- Options:
- 
--	-o, --output-raw=<file>  Save results for future processing.
--	-i, --input-raw=<file>   Read results from file instead of scanning.
--	    --raw                Show raw results (default).
--	    --suppress-dmesg     Do not show dmesg results.
--	    --squash-by-path     Show one result per unique path.
--	    --squash-by-filename Show one result per unique filename.
--	-d, --debug              Display debugging output.
--	-h, --help, --version    Display this help and exit.
-+	-o, --output-raw=<file>         Save results for future processing.
-+	-i, --input-raw=<file>          Read results from file instead of scanning.
-+		--raw                       Show raw results (default).
-+		--suppress-dmesg            Do not show dmesg results.
-+		--squash-by-path            Show one result per unique path.
-+		--squash-by-filename        Show one result per unique filename.
-+	--page-offset-32bit=<hex>       PAGE_OFFSET value (for 32-bit kernels).
-+	--kernel-config-file=<file>     Kernel configuration file (e.g /boot/config)
-+	-d, --debug                     Display debugging output.
-+	-h, --help, --version           Display this help and exit.
- 
- Examples:
- 
-@@ -117,7 +122,10 @@ Examples:
- 	# View summary report.
- 	$0 --input-raw scan.out --squash-by-filename
- 
--Scans the running (64 bit) kernel for potential leaking addresses.
-+	# Scan kernel on a 32-bit system with a 2GB:2GB virtual address split.
-+	$0 --page-offset-32bit=0x80000000
-+
-+Scans the running kernel for potential leaking addresses.
- 
- EOM
- 	exit($exitcode);
-@@ -133,6 +141,8 @@ GetOptions(
- 	'squash-by-path'        => \$squash_by_path,
- 	'squash-by-filename'    => \$squash_by_filename,
- 	'raw'                   => \$raw,
-+	'page-offset-32bit=o'   => \$page_offset_32bit,
-+	'kernel-config-file=s'  => \$kernel_config_file,
- ) or help(1);
- 
- help(0) if ($help);
-@@ -148,6 +158,7 @@ if (!$input_raw and ($squash_by_path or $squash_by_filename)) {
- 	exit(128);
- }
- 
-+show_detected_architecture() if $debug;
- if (!is_supported_architecture()) {
- 	printf "\nScript does not support your architecture, sorry.\n";
- 	printf "\nCurrently we support: \n\n";
-@@ -179,7 +190,7 @@ sub dprint
- 
- sub is_supported_architecture
- {
--	return (is_x86_64() or is_ppc64());
-+	return (is_x86_64() or is_ppc64() or is_ix86_32());
- }
- 
- sub is_x86_64
-@@ -202,10 +213,40 @@ sub is_ppc64
- 	return 0;
- }
- 
-+sub is_ix86_32
-+{
-+	my $archname = $Config{archname};
-+
-+	if ($archname =~ m/i[3456]86-linux/) {
-+		return 1;
-+	}
-+	return 0;
-+}
-+
-+sub show_detected_architecture
-+{
-+	printf "Detected architecture: ";
-+	if (is_ix86_32()) {
-+		printf "32 bit x86\n";
-+	} elsif (is_x86_64()) {
-+		printf "x86_64\n";
-+	} elsif (is_ppc64()) {
-+		printf "ppc64\n";
-+	} else {
-+		printf "failed to detect architecture\n"
-+	}
-+}
-+
- sub is_false_positive
- {
- 	my ($match) = @_;
- 
-+	if (is_ix86_32()) {
-+		return is_false_positive_ix86_32($match);
-+	}
-+
-+	# 64 bit architectures
-+
- 	if ($match =~ '\b(0x)?(f|F){16}\b' or
- 	    $match =~ '\b(0x)?0{16}\b') {
- 		return 1;
-@@ -222,6 +263,91 @@ sub is_false_positive
- 	return 0;
- }
- 
-+sub is_false_positive_ix86_32
-+{
-+	my ($match) = @_;
-+	state $page_offset = get_page_offset(); # only gets called once
-+
-+	if ($match =~ '\b(0x)?(f|F){8}\b') {
-+		return 1;
-+	}
-+
-+	my $addr32 = eval hex($match);
-+	if ($addr32 < $page_offset) {
-+		return 1;
-+	}
-+
-+	return 0;
-+}
-+
-+sub get_page_offset
-+{
-+	my $page_offset;
-+	my $default_offset = hex("0xc0000000");
-+	my @config_files;
-+
-+	# Allow --page-offset-32bit to override.
-+	if ($page_offset_32bit != 0) {
-+		return $page_offset_32bit;
-+	}
-+
-+	# Allow --kernel-config-file to override.
-+	if ($kernel_config_file ne "") {
-+		@config_files = ($kernel_config_file);
-+	} else {
-+		my $config_file = '/boot/config-' . `uname -r`;
-+		@config_files = ($config_file, '/boot/config');
-+	}
-+
-+	if (-R "/proc/config.gz") {
-+		my $tmp_file = "/tmp/tmpkconf";
-+		if (system("gunzip < /proc/config.gz > $tmp_file")) {
-+			dprint " parse_kernel_config: system(gunzip...) failed\n";
-+			system("rm -f $tmp_file 2>/dev/null");
-+		} else {
-+			$page_offset = parse_kernel_config_file($tmp_file);
-+			system("rm -f $tmp_file");
-+			if ($page_offset ne "") {
-+				return hex($page_offset);
-+			}
-+		}
-+	}
-+
-+	foreach my $config_file (@config_files) {
-+		chomp $config_file;
-+		$page_offset = parse_kernel_config_file($config_file);
-+		if ($page_offset ne "") {
-+			return hex($page_offset);
-+		}
-+	}
-+
-+	printf STDERR "\nFailed to parse kernel config files\n";
-+	printf STDERR "*** NOTE ***\n";
-+	printf STDERR "Falling back to PAGE_OFFSET = %#x\n\n", $default_offset;
-+
-+	return $default_offset;
-+}
-+
-+sub parse_kernel_config_file
-+{
-+	my ($file) = @_;
-+	my $config = 'CONFIG_PAGE_OFFSET';
-+	my $str = "";
-+	my $val = "";
-+
-+	open(my $fh, "<", $file) or return "";
-+	while (my $line = <$fh> ) {
-+		if ($line =~ /^$config/) {
-+			($str, $val) = split /=/, $line;
-+			chomp($val);
-+			last;
-+		}
-+	}
-+
-+	close $fh;
-+	return $val;
-+}
-+
- # True if argument potentially contains a kernel address.
- sub may_leak_address
- {
-@@ -235,9 +361,11 @@ sub may_leak_address
- 		return 0;
- 	}
- 
--	if ($line =~ '\bKEY=[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b' or
--	    $line =~ '\b[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b') {
--		return 0;
-+	if (is_x86_64() or is_ppc64()) {
-+		if ($line =~ '\bKEY=[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b' or
-+		    $line =~ '\b[[:xdigit:]]{14} [[:xdigit:]]{16} [[:xdigit:]]{16}\b') {
-+			return 0;
-+		}
- 	}
- 
- 	# One of these is guaranteed to be true.
-@@ -245,6 +373,8 @@ sub may_leak_address
- 		$address_re = '\b(0x)?ffff[[:xdigit:]]{12}\b';
- 	} elsif (is_ppc64()) {
- 		$address_re = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
-+	} elsif (is_ix86_32()) {
-+		$address_re = '\b(0x)?[[:xdigit:]]{8}\b';
- 	}
- 
- 	while (/($address_re)/g) {
-@@ -330,7 +460,6 @@ sub parse_file
- 	close $fh;
- }
- 
--
- # True if we should skip walking this directory.
- sub skip_walk
- {
--- 
-2.14.3
+What do you think?
+
+Thanks,
+Kaiwan.
