@@ -1,65 +1,81 @@
+Date: Fri, 8 Dec 2017 07:47:46 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171207204746.GI2191@eros>
+References: <1512516827-29797-1-git-send-email-alex.popov@linux.com>
+ <1512516827-29797-6-git-send-email-alex.popov@linux.com>
+ <f7c64050-bbb6-be37-ec09-cb757bad116a@redhat.com>
+ <5fb044ec-cf1e-6281-01a9-c845b738914e@linux.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20171206102315.GA7012@pjb1027-Latitude-E5410>
-References: <20171206102315.GA7012@pjb1027-Latitude-E5410>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 7 Dec 2017 09:45:02 -0800
-Message-ID: <CAGXu5jLcvKMOXEMXix3iMzssnN1f26GCaMMGzOK=xXze=Y07kw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening][PATCH v4 0/3] arm: Makes ptdump resuable and
- add WX page checking
-To: Jinbum Park <jinb.park7@gmail.com>
-Cc: linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Afzal Mohammed <afzal.mohd.ma@gmail.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@redhat.com>, Russell King <linux@armlinux.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Vladimir Murzin <vladimir.murzin@arm.com>, Arnd Bergmann <arnd@arndb.de>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <5fb044ec-cf1e-6281-01a9-c845b738914e@linux.com>
+Subject: [kernel-hardening] Re: [PATCH RFC v6 5/6] fs/proc: Show STACKLEAK metrics in the /proc
+ file system
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 6, 2017 at 2:23 AM, Jinbum Park <jinb.park7@gmail.com> wrote:
-> Hi,
->
-> Page table dumping code for arm64-x86 is reusable,
-> and they have function for WX page checking.
-> But arm doesn't have that.
->
-> This path series are to makes ptdump reusable,
-> and add WX page checking for arm.
-> This is heavily based on arm64 version.
->
-> v2 :
-> Fix a sender name of mail header, there was an mistake.
-> (from "jinb.park" to Jinbum Park)
-> Contents of patch-set are perfectly same.
->
-> v3 :
-> Take advantage of the existing pg_level and bits arrays
-> to check ro, nx prot.
->
-> v4 :
-> Add boolean for ro_bit, nx_bit into prot_bits
-> to point ro_bit, nx_bit in pg_level.
-> This change is suggested by Laura Abbott.
->
-> jinb.park (3):
->   arm: mm: dump: make page table dumping reusable
->   arm: mm: dump: make the page table dumping seq_file optional
->   arm: mm: dump: add checking for writable and executable pages
->
->  arch/arm/Kconfig.debug        |  33 ++++++++-
->  arch/arm/include/asm/ptdump.h |  56 ++++++++++++++++
->  arch/arm/mm/Makefile          |   3 +-
->  arch/arm/mm/dump.c            | 151 +++++++++++++++++++++++++++++-------------
->  arch/arm/mm/init.c            |   2 +
->  arch/arm/mm/ptdump_debugfs.c  |  34 ++++++++++
->  6 files changed, 232 insertions(+), 47 deletions(-)
->  create mode 100644 arch/arm/include/asm/ptdump.h
->  create mode 100644 arch/arm/mm/ptdump_debugfs.c
+On Thu, Dec 07, 2017 at 10:09:27AM +0300, Alexander Popov wrote:
+> Hello Laura and Kees,
+> 
+> [adding Tobin C. Harding]
+> 
+> On 06.12.2017 22:22, Laura Abbott wrote:
+> > On 12/05/2017 03:33 PM, Alexander Popov wrote:
+> >> Introduce CONFIG_STACKLEAK_METRICS providing STACKLEAK information about
+> >> tasks via the /proc file system. In particular, /proc/<pid>/lowest_stack
+> >> shows the current lowest_stack value and its final value from the previous
+> >> syscall. That information can be useful for estimating the STACKLEAK
+> >> performance impact for different workloads.
+> >>
+> >> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+> >> ---
+> >>   arch/Kconfig                     | 11 +++++++++++
+> >>   arch/x86/entry/entry_32.S        |  4 ++++
+> >>   arch/x86/entry/entry_64.S        |  4 ++++
+> >>   arch/x86/include/asm/processor.h |  3 +++
+> >>   arch/x86/kernel/asm-offsets.c    |  3 +++
+> >>   arch/x86/kernel/process_32.c     |  3 +++
+> >>   arch/x86/kernel/process_64.c     |  3 +++
+> >>   fs/proc/base.c                   | 14 ++++++++++++++
+> >>   8 files changed, 45 insertions(+)
+> 
+> [...]
+> 
+> >> +#ifdef CONFIG_STACKLEAK_METRICS
+> >> +static int proc_lowest_stack(struct seq_file *m, struct pid_namespace *ns,
+> >> +				struct pid *pid, struct task_struct *task)
+> >> +{
+> >> +	seq_printf(m, "prev_lowest_stack: %pK\nlowest_stack: %pK\n",
+> >> +		   (void *)task->thread.prev_lowest_stack,
+> >> +		   (void *)task->thread.lowest_stack);
+> >> +	return 0;
+> >> +}
+> >> +#endif /* CONFIG_STACKLEAK_METRICS */
+> >> +
+> > 
+> > This just prints the hashed value with the new pointer leak work.
+> > I don't think we want to print the fully exposed value via %px so
+> > it's not clear how valuable this proc file is now.
+> 
+> Yes, I tested that before sending the patch. I was confused when I saw the
+> hashed values. But setting kptr_restrict to 1 fixed that for me:
+> 
+> root@hobbit:~# cat /proc/2627/lowest_stack
+> prev_lowest_stack: 00000000ed8ca991
+> lowest_stack: 0000000040579d76
+> root@hobbit:~# echo 1 > /proc/sys/kernel/kptr_restrict
+> root@hobbit:~# cat /proc/2627/lowest_stack
+> prev_lowest_stack: ffffc9000094fdb8
+> lowest_stack: ffffc9000094f9e0
+> 
+> However, Documentation/printk-formats.txt and Documentation/sysctl/kernel.txt
+> don't specify that behaviour.
 
-Please consider this series:
+thanks for pointing this out. Yes, %pK hashes the address now when
+kptr_restrict==0
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
+And yes, I forgot to update the docs :( will amend.
 
-With Laura's review, this is probably ready to put into the ARM patch tracker.
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+thanks,
+Tobin.
