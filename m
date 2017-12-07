@@ -1,135 +1,135 @@
 From: "Tobin C. Harding" <me@tobin.cc>
-Date: Thu,  7 Dec 2017 15:32:24 +1100
-Message-Id: <1512621145-4783-5-git-send-email-me@tobin.cc>
+Date: Thu,  7 Dec 2017 15:32:25 +1100
+Message-Id: <1512621145-4783-6-git-send-email-me@tobin.cc>
 In-Reply-To: <1512621145-4783-1-git-send-email-me@tobin.cc>
 References: <1512621145-4783-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [PATCH 4/5] leaking_addresses: add support for kernel config file
+Subject: [kernel-hardening] [PATCH 5/5] leaking_addresses: add support for 5 page table levels
 To: me@tobin.cc, kaiwan.billimoria@gmail.com
 Cc: "Kirill A. Shutemov" <kirill@shutemov.name>, Alexander Kapshuk <alexander.kapshuk@gmail.com>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Features that rely on the ability to get kernel configuration options
-are ready to be implemented in script. In preparation for this we can
-add support for kernel config options as a separate patch to ease
-review.
+Currently script only supports 4 page table levels because of the way
+the kernel address regular expression is crafted. We can do better than
+this. Using previously added support for kernel configuration options we
+can get the number of page table levels defined by
+CONFIG_PGTABLE_LEVELS. Using this value a correct regular expression can
+be crafted. This only supports 5 page tables on x86_64.
 
-Add support for locating and parsing kernel configuration file.
+Add support for 5 page table levels on x86_64.
 
 Signed-off-by: Tobin C. Harding <me@tobin.cc>
-Co-Developed-by: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
 ---
-
-get_kernel_config_option() is not super clean, any improvements most welcome.
-
-Kaiwan,
-
-This needs your Signed-off-by tag if you want me to apply it with
-the Co-Developed-tag
-
-thanks,
-Tobin.
-
- scripts/leaking_addresses.pl | 64 +++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 63 insertions(+), 1 deletion(-)
+ scripts/leaking_addresses.pl | 60 ++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 53 insertions(+), 7 deletions(-)
 
 diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-index cb69ccd4153a..892bfe9e01fe 100755
+index 892bfe9e01fe..82be5f18ea5f 100755
 --- a/scripts/leaking_addresses.pl
 +++ b/scripts/leaking_addresses.pl
-@@ -42,10 +42,10 @@ my $debug = 0;
+@@ -21,6 +21,7 @@ use Term::ANSIColor qw(:constants);
+ use Getopt::Long qw(:config no_auto_abbrev);
+ use Config;
+ use bigint qw/hex/;
++use feature 'state';
+ 
+ my $P = $0;
+ my $V = '0.01';
+@@ -39,12 +40,14 @@ my @SUPPORTED_ARCHITECTURES = ('x86_64', 'ppc64');
+ # Command line options.
+ my $help = 0;
+ my $debug = 0;
++
  my $raw = 0;
  my $output_raw = "";	# Write raw results to file.
  my $input_raw = "";	# Read raw results from file instead of scanning.
--
  my $suppress_dmesg = 0;		# Don't show dmesg in output.
  my $squash_by_path = 0;		# Summary report grouped by absolute path.
  my $squash_by_filename = 0;	# Summary report grouped by filename.
-+my $kernel_config_file = "";	# Kernel configuration file.
++
+ my $kernel_config_file = "";	# Kernel configuration file.
  
  # Do not parse these files (absolute path).
- my @skip_parse_files_abs = ('/proc/kmsg',
-@@ -100,6 +100,7 @@ Options:
- 	      --suppress-dmesg		Do not show dmesg results.
- 	      --squash-by-path		Show one result per unique path.
- 	      --squash-by-filename	Show one result per unique filename.
-+	--kernel-config-file=<file>     Kernel configuration file (e.g /boot/config)
- 	-d, --debug			Display debugging output.
- 	-h, --help, --versionq		Display this help and exit.
+@@ -212,11 +215,13 @@ sub get_kernel_config_option
  
-@@ -119,6 +120,7 @@ GetOptions(
- 	'squash-by-path'        => \$squash_by_path,
- 	'squash-by-filename'    => \$squash_by_filename,
- 	'raw'                   => \$raw,
-+	'kernel-config-file=s'	=> \$kernel_config_file,
- ) or help(1);
+ 	} else {
+ 		my $file = '/boot/config-' . `uname -r`;
++		chomp $file;
+ 		@config_files = ($file, '/boot/config');
+ 	}
  
- help(0) if ($help);
-@@ -188,6 +190,66 @@ sub is_ppc64
+ 	foreach my $file (@config_files) {
+-#		chomp $config_file;
++		printf("file: %s\n", $file);
++
+ 		$value = option_from_file($option, $file);
+ 		if ($value ne "") {
+ 			last;
+@@ -295,12 +300,8 @@ sub may_leak_address
+ 		return 0;
+ 	}
+ 
+-	# One of these is guaranteed to be true.
+-	if (is_x86_64()) {
+-		$address_re = '\b(0x)?ffff[[:xdigit:]]{12}\b';
+-	} elsif (is_ppc64()) {
+-		$address_re = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
+-	}
++	$address_re = get_address_re();
++	dprint("Kernel address regular expression: %s\n", $address_re);
+ 
+ 	while (/($address_re)/g) {
+ 		if (!is_false_positive($1)) {
+@@ -311,6 +312,51 @@ sub may_leak_address
  	return 0;
  }
  
-+# gets config option value from kernel config file
-+sub get_kernel_config_option
++sub get_address_re
 +{
-+	my ($option) = @_;
-+	my $value = "";
-+	my $tmp_file = "";
-+	my @config_files;
++	my $re;
 +
-+	# Allow --kernel-config-file to override.
-+	if ($kernel_config_file ne "") {
-+		@config_files = ($kernel_config_file);
-+	} elsif (-R "/proc/config.gz") {
-+		my $tmp_file = "/tmp/tmpkconf";
++	if (is_x86_64()) {
++		$re = get_x86_64_re();
++	} elsif (is_ppc64()) {
++		$re = '\b(0x)?[89abcdef]00[[:xdigit:]]{13}\b';
++	}
 +
-+		if (system("gunzip < /proc/config.gz > $tmp_file")) {
-+			dprint "$0: system(gunzip < /proc/config.gz) failed\n";
-+		} else {
-+			@config_files = ($tmp_file);
-+		}
++	if ($re eq "") {
++		print STDERR "$0: failed to build kernel address regular expression\n";
++	}
 +
++	return $re;
++}
++
++sub get_x86_64_re
++{
++	state $ptl = get_page_table_levels();
++	my $re;
++
++	if ($ptl == 5) {
++		$re = '\b(0x)?ff[[:xdigit:]]{14}\b';
 +	} else {
-+		my $file = '/boot/config-' . `uname -r`;
-+		@config_files = ($file, '/boot/config');
++		$re = '\b(0x)?ffff[[:xdigit:]]{12}\b';
 +	}
 +
-+	foreach my $file (@config_files) {
-+#		chomp $config_file;
-+		$value = option_from_file($option, $file);
-+		if ($value ne "") {
-+			last;
-+		}
-+	}
-+
-+	if ($tmp_file ne "") {
-+		system("rm -f $tmp_file");
-+	}
-+
-+	return $value;
++	return $re;
 +}
 +
-+# Parses $file and returns kernel configuration option value.
-+sub option_from_file
++sub get_page_table_levels
 +{
-+	my ($option, $file) = @_;
-+	my $str = "";
-+	my $val = "";
++	my $ptl = "";
++	my $default_ptl = "4";
 +
-+	open(my $fh, "<", $file) or return "";
-+	while (my $line = <$fh> ) {
-+		if ($line =~ /^$option/) {
-+			($str, $val) = split /=/, $line;
-+			chomp($val);
-+			last;
-+		}
++	$ptl = get_kernel_config_option('CONFIG_PGTABLE_LEVELS');
++	if ($ptl eq "") {
++		$ptl = $default_ptl;
++		printf(STDERR "$0: defaulting to %s page table levels\n", $default_ptl);
 +	}
 +
-+	close $fh;
-+	return $val;
++	return $ptl;
 +}
 +
- sub is_false_positive
+ sub parse_dmesg
  {
- 	my ($match) = @_;
+ 	open my $cmd, '-|', 'dmesg';
 -- 
 2.7.4
