@@ -1,39 +1,73 @@
-Date: Thu, 7 Dec 2017 14:37:55 +0900
-From: Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>
-Message-ID: <20171207053755.GC6084@jagdpanzerIV>
-References: <324abe19f1ee4177911d2fc48899ac8a@AcuMS.aculab.com>
- <CAGXu5j+xUt+coLCKg9qeCrTzc7HEM7KP=1Z-xTiDXWSRYibJQg@mail.gmail.com>
- <c47f7659676246d6bbeb5230b952a5ad@AcuMS.aculab.com>
- <596c917e-3183-d80a-89d4-97e0eb5dc077@infradead.org>
- <CA+55aFw3AZtzf6KHS4desHJ3CajKs46VQxOi6-+0U8A4y0v6ug@mail.gmail.com>
- <20171206013657.GA479@jagdpanzerIV>
- <CA+55aFzMydq1TizkPOjZmRb_eKtHCk3w-xdO-Ce2jw9tu3bsGg@mail.gmail.com>
- <CAMuHMdUebiN16BA6qLO+Wv2LetdYgbmd8E_e74hQj52yEUwPOQ@mail.gmail.com>
- <20171206084537.GA462@jagdpanzerIV>
- <20171207051711.GB2191@eros>
+References: <1512516827-29797-1-git-send-email-alex.popov@linux.com>
+ <1512516827-29797-6-git-send-email-alex.popov@linux.com>
+ <f7c64050-bbb6-be37-ec09-cb757bad116a@redhat.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <5fb044ec-cf1e-6281-01a9-c845b738914e@linux.com>
+Date: Thu, 7 Dec 2017 10:09:27 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171207051711.GB2191@eros>
-Subject: [kernel-hardening] Re: [PATCH V11 4/5] vsprintf: add printk specifier %px
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Geert Uytterhoeven <geert@linux-m68k.org>, Linus Torvalds <torvalds@linux-foundation.org>, Randy Dunlap <rdunlap@infradead.org>, David Laight <David.Laight@aculab.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Theodore Ts'o <tytso@mit.edu>, Paolo Bonzini <pbonzini@redhat.com>, Tycho Andersen <tycho@tycho.ws>, "Roberts, William C" <william.c.roberts@intel.com>, Tejun Heo <tj@kernel.org>, Jordan Glover <Golden_Miller83@protonmail.ch>, Greg KH <gregkh@linuxfoundation.org>, Petr Mladek <pmladek@suse.com>, Joe Perches <joe@perches.com>, Ian Campbell <ijc@hellion.org.uk>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <wilal.deacon@arm.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Fries <cfries@google.com>, Dave Weinstein <olorin@google.com>, Daniel Micay <danielmicay@gmail.com>, Djalal Harouni <tixxdz@gmail.com>, Radim =?iso-8859-1?Q?Krcm=E1r?= <rkrcmar@redhat.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Stephen Rothwell <sfr@canb.auug.org.au>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Andrew Morton <akpm@linux-foundation.org>
+In-Reply-To: <f7c64050-bbb6-be37-ec09-cb757bad116a@redhat.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH RFC v6 5/6] fs/proc: Show STACKLEAK metrics in the /proc
+ file system
+To: Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, x86@kernel.org, "Tobin C. Harding" <me@tobin.cc>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On (12/07/17 16:17), Tobin C. Harding wrote:
-[..]
-> > hm, indeed. and !CONFIG_KALLSYMS config turns %pS/%ps
-> > into special_hex_number().
+Hello Laura and Kees,
+
+[adding Tobin C. Harding]
+
+On 06.12.2017 22:22, Laura Abbott wrote:
+> On 12/05/2017 03:33 PM, Alexander Popov wrote:
+>> Introduce CONFIG_STACKLEAK_METRICS providing STACKLEAK information about
+>> tasks via the /proc file system. In particular, /proc/<pid>/lowest_stack
+>> shows the current lowest_stack value and its final value from the previous
+>> syscall. That information can be useful for estimating the STACKLEAK
+>> performance impact for different workloads.
+>>
+>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+>> ---
+>>   arch/Kconfig                     | 11 +++++++++++
+>>   arch/x86/entry/entry_32.S        |  4 ++++
+>>   arch/x86/entry/entry_64.S        |  4 ++++
+>>   arch/x86/include/asm/processor.h |  3 +++
+>>   arch/x86/kernel/asm-offsets.c    |  3 +++
+>>   arch/x86/kernel/process_32.c     |  3 +++
+>>   arch/x86/kernel/process_64.c     |  3 +++
+>>   fs/proc/base.c                   | 14 ++++++++++++++
+>>   8 files changed, 45 insertions(+)
+
+[...]
+
+>> +#ifdef CONFIG_STACKLEAK_METRICS
+>> +static int proc_lowest_stack(struct seq_file *m, struct pid_namespace *ns,
+>> +				struct pid *pid, struct task_struct *task)
+>> +{
+>> +	seq_printf(m, "prev_lowest_stack: %pK\nlowest_stack: %pK\n",
+>> +		   (void *)task->thread.prev_lowest_stack,
+>> +		   (void *)task->thread.lowest_stack);
+>> +	return 0;
+>> +}
+>> +#endif /* CONFIG_STACKLEAK_METRICS */
+>> +
 > 
-> But totally misses this :(
-> 
-> "<no-sym>" would be better returned when !CONFIG_KALLSYMS, right?
+> This just prints the hashed value with the new pointer leak work.
+> I don't think we want to print the fully exposed value via %px so
+> it's not clear how valuable this proc file is now.
 
-I guess I'll take back my comment.
+Yes, I tested that before sending the patch. I was confused when I saw the
+hashed values. But setting kptr_restrict to 1 fixed that for me:
 
-I assume there are tons of embedded devices that have !CONFIG_KALLSYMS
-in 'release' builds, yet those devices still warn/oops sometimes; having
-pointers/hex numbers is really the only way to make any sense out of
-backtraces... yet it, basically, means that we are leaking kernel pointers.
+root@hobbit:~# cat /proc/2627/lowest_stack
+prev_lowest_stack: 00000000ed8ca991
+lowest_stack: 0000000040579d76
+root@hobbit:~# echo 1 > /proc/sys/kernel/kptr_restrict
+root@hobbit:~# cat /proc/2627/lowest_stack
+prev_lowest_stack: ffffc9000094fdb8
+lowest_stack: ffffc9000094f9e0
 
-	-ss
+However, Documentation/printk-formats.txt and Documentation/sysctl/kernel.txt
+don't specify that behaviour.
+
+Best regards,
+Alexander
