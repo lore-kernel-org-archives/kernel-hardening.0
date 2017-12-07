@@ -1,67 +1,135 @@
 From: "Tobin C. Harding" <me@tobin.cc>
-Date: Thu,  7 Dec 2017 15:32:23 +1100
-Message-Id: <1512621145-4783-4-git-send-email-me@tobin.cc>
+Date: Thu,  7 Dec 2017 15:32:24 +1100
+Message-Id: <1512621145-4783-5-git-send-email-me@tobin.cc>
 In-Reply-To: <1512621145-4783-1-git-send-email-me@tobin.cc>
 References: <1512621145-4783-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [PATCH 3/5] leaking_addresses: add range check for vsyscall memory
+Subject: [kernel-hardening] [PATCH 4/5] leaking_addresses: add support for kernel config file
 To: me@tobin.cc, kaiwan.billimoria@gmail.com
 Cc: "Kirill A. Shutemov" <kirill@shutemov.name>, Alexander Kapshuk <alexander.kapshuk@gmail.com>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently script checks only first and last address in the vsyscall
-memory range. We can do better than this.
+Features that rely on the ability to get kernel configuration options
+are ready to be implemented in script. In preparation for this we can
+add support for kernel config options as a separate patch to ease
+review.
 
-When checking for false positives against $match, convert $match to
-a hexadecimal value then check if it lies within the range of vsyscall
-addresses.
+Add support for locating and parsing kernel configuration file.
 
 Signed-off-by: Tobin C. Harding <me@tobin.cc>
+Co-Developed-by: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
 ---
- scripts/leaking_addresses.pl | 20 ++++++++++++++------
- 1 file changed, 14 insertions(+), 6 deletions(-)
+
+get_kernel_config_option() is not super clean, any improvements most welcome.
+
+Kaiwan,
+
+This needs your Signed-off-by tag if you want me to apply it with
+the Co-Developed-tag
+
+thanks,
+Tobin.
+
+ scripts/leaking_addresses.pl | 64 +++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 63 insertions(+), 1 deletion(-)
 
 diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-index 066c609b1adb..cb69ccd4153a 100755
+index cb69ccd4153a..892bfe9e01fe 100755
 --- a/scripts/leaking_addresses.pl
 +++ b/scripts/leaking_addresses.pl
-@@ -20,6 +20,7 @@ use Cwd 'abs_path';
- use Term::ANSIColor qw(:constants);
- use Getopt::Long qw(:config no_auto_abbrev);
- use Config;
-+use bigint qw/hex/;
+@@ -42,10 +42,10 @@ my $debug = 0;
+ my $raw = 0;
+ my $output_raw = "";	# Write raw results to file.
+ my $input_raw = "";	# Read raw results from file instead of scanning.
+-
+ my $suppress_dmesg = 0;		# Don't show dmesg in output.
+ my $squash_by_path = 0;		# Summary report grouped by absolute path.
+ my $squash_by_filename = 0;	# Summary report grouped by filename.
++my $kernel_config_file = "";	# Kernel configuration file.
  
- my $P = $0;
- my $V = '0.01';
-@@ -196,17 +197,24 @@ sub is_false_positive
- 		return 1;
- 	}
+ # Do not parse these files (absolute path).
+ my @skip_parse_files_abs = ('/proc/kmsg',
+@@ -100,6 +100,7 @@ Options:
+ 	      --suppress-dmesg		Do not show dmesg results.
+ 	      --squash-by-path		Show one result per unique path.
+ 	      --squash-by-filename	Show one result per unique filename.
++	--kernel-config-file=<file>     Kernel configuration file (e.g /boot/config)
+ 	-d, --debug			Display debugging output.
+ 	-h, --help, --versionq		Display this help and exit.
  
--	if (is_x86_64()) {
--		# vsyscall memory region, we should probably check against a range here.
--		if ($match =~ '\bf{10}600000\b' or
--		    $match =~ '\bf{10}601000\b') {
--			return 1;
--		}
-+	if (is_x86_64() and is_in_vsyscall_memory_region($match)) {
-+		return 1;
- 	}
+@@ -119,6 +120,7 @@ GetOptions(
+ 	'squash-by-path'        => \$squash_by_path,
+ 	'squash-by-filename'    => \$squash_by_filename,
+ 	'raw'                   => \$raw,
++	'kernel-config-file=s'	=> \$kernel_config_file,
+ ) or help(1);
  
+ help(0) if ($help);
+@@ -188,6 +190,66 @@ sub is_ppc64
  	return 0;
  }
  
-+sub is_in_vsyscall_memory_region
++# gets config option value from kernel config file
++sub get_kernel_config_option
 +{
-+	my ($match) = @_;
++	my ($option) = @_;
++	my $value = "";
++	my $tmp_file = "";
++	my @config_files;
 +
-+	my $hex = hex($match);
-+	my $region_min = hex("0xffffffffff600000");
-+	my $region_max = hex("0xffffffffff601000");
++	# Allow --kernel-config-file to override.
++	if ($kernel_config_file ne "") {
++		@config_files = ($kernel_config_file);
++	} elsif (-R "/proc/config.gz") {
++		my $tmp_file = "/tmp/tmpkconf";
 +
-+	return ($hex >= $region_min and $hex <= $region_max);
++		if (system("gunzip < /proc/config.gz > $tmp_file")) {
++			dprint "$0: system(gunzip < /proc/config.gz) failed\n";
++		} else {
++			@config_files = ($tmp_file);
++		}
++
++	} else {
++		my $file = '/boot/config-' . `uname -r`;
++		@config_files = ($file, '/boot/config');
++	}
++
++	foreach my $file (@config_files) {
++#		chomp $config_file;
++		$value = option_from_file($option, $file);
++		if ($value ne "") {
++			last;
++		}
++	}
++
++	if ($tmp_file ne "") {
++		system("rm -f $tmp_file");
++	}
++
++	return $value;
 +}
 +
- # True if argument potentially contains a kernel address.
- sub may_leak_address
++# Parses $file and returns kernel configuration option value.
++sub option_from_file
++{
++	my ($option, $file) = @_;
++	my $str = "";
++	my $val = "";
++
++	open(my $fh, "<", $file) or return "";
++	while (my $line = <$fh> ) {
++		if ($line =~ /^$option/) {
++			($str, $val) = split /=/, $line;
++			chomp($val);
++			last;
++		}
++	}
++
++	close $fh;
++	return $val;
++}
++
+ sub is_false_positive
  {
+ 	my ($match) = @_;
 -- 
 2.7.4
