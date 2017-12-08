@@ -1,55 +1,49 @@
+References: <1512516827-29797-1-git-send-email-alex.popov@linux.com>
+ <1512516827-29797-2-git-send-email-alex.popov@linux.com>
+ <20171208114431.tzteuiovgnn53t5r@hirez.programming.kicks-ass.net>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <221a291b-677a-1cc6-6270-bfc0a85ac225@linux.com>
+Date: Sat, 9 Dec 2017 00:54:21 +0300
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20171208111318.GA12346@pjb1027-Latitude-E5410>
-References: <20171208111318.GA12346@pjb1027-Latitude-E5410>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 8 Dec 2017 12:59:22 -0800
-Message-ID: <CAGXu5jJwkQCQ2c=2m8dposm8RC1VCTE83iuRR=4XN7wdXwjuyA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening][PATCH] arm: mm: idmap: Mark variables as ro_after_init
-To: Jinbum Park <jinb.park7@gmail.com>
-Cc: linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Russell King <linux@armlinux.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Thomas Gleixner <tglx@linutronix.de>, kstewart@linuxfoundation.org, Ingo Molnar <mingo@kernel.org>, pombredanne@nexb.com, Mark Rutland <mark.rutland@arm.com>
+In-Reply-To: <20171208114431.tzteuiovgnn53t5r@hirez.programming.kicks-ass.net>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH RFC v6 1/6] x86/entry: Add STACKLEAK erasing the kernel
+ stack at the end of syscalls
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Dec 8, 2017 at 3:13 AM, Jinbum Park <jinb.park7@gmail.com> wrote:
-> idmap_pgd, arch_phys_to_idmap_offset are setup once
-> while init stage, and never changed after that.
-> so, it is good candidate for __ro_after_init.
->
-> Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
+Hello Peter,
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
+On 08.12.2017 14:44, Peter Zijlstra wrote:
+> On Wed, Dec 06, 2017 at 02:33:42AM +0300, Alexander Popov wrote:
+>> The STACKLEAK feature erases the kernel stack before returning from
+>> syscalls. That reduces the information which kernel stack leak bugs can
+>> reveal and blocks some uninitialized stack variable attacks. Moreover,
+>> STACKLEAK provides runtime checks for kernel stack overflow detection.
+>>
+>> This commit introduces the architecture-specific code filling the used
+>> part of the kernel stack with a poison value before returning to the
+>> userspace. Full STACKLEAK feature also contains the gcc plugin which
+>> comes in a separate commit.
+> 
+> Have you looked at the entry rework in this series:
+> 
+>   https://lkml.kernel.org/r/20171204140706.296109558@linutronix.de
 
-Does arm64 have anything like this? Just grepping for similar names,
-idmap_t0sz looks like it could actually be const.
+Thanks for the link. I briefly looked through WIP.x86/pti branch. Should I
+rebase STACKLEAK patch series onto it?
 
--Kees
+Although I don't fully understand some of the commits, I can suppose that
+STACKLEAK stack erasing must be modified because of this trampoline stack
+introduction:
+https://git.kernel.org/pub/scm/linux/kernel/git/tip/tip.git/commit/?h=WIP.x86/pti&id=813b4125a835f2eb9aa6fb08dac0bc8eeadd69a1
 
-> ---
->  arch/arm/mm/idmap.c | 4 ++--
->  1 file changed, 2 insertions(+), 2 deletions(-)
->
-> diff --git a/arch/arm/mm/idmap.c b/arch/arm/mm/idmap.c
-> index 10bfba8..1d1edd0 100644
-> --- a/arch/arm/mm/idmap.c
-> +++ b/arch/arm/mm/idmap.c
-> @@ -16,8 +16,8 @@
->   * are not supported on any CPU using the idmap tables as its current
->   * page tables.
->   */
-> -pgd_t *idmap_pgd;
-> -long long arch_phys_to_idmap_offset;
-> +pgd_t *idmap_pgd __ro_after_init;
-> +long long arch_phys_to_idmap_offset __ro_after_init;
->
->  #ifdef CONFIG_ARM_LPAE
->  static void idmap_add_pmd(pud_t *pud, unsigned long addr, unsigned long end,
-> --
-> 1.9.1
->
+Am I right? Are there other changes which I should consider?
 
+May I also ask for your feedback on this version of the STACKLEAK patch series?
+Thanks!
 
-
--- 
-Kees Cook
-Pixel Security
+Best regards,
+Alexander
