@@ -1,58 +1,174 @@
-Date: Mon, 11 Dec 2017 10:26:45 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20171211092645.hv6m2jbycdvmfqo6@hirez.programming.kicks-ass.net>
-References: <1512516827-29797-1-git-send-email-alex.popov@linux.com>
- <1512516827-29797-2-git-send-email-alex.popov@linux.com>
- <20171208114431.tzteuiovgnn53t5r@hirez.programming.kicks-ass.net>
- <221a291b-677a-1cc6-6270-bfc0a85ac225@linux.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <221a291b-677a-1cc6-6270-bfc0a85ac225@linux.com>
-Subject: [kernel-hardening] Re: [PATCH RFC v6 1/6] x86/entry: Add STACKLEAK erasing the kernel
- stack at the end of syscalls
-To: Alexander Popov <alex.popov@linux.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, x86@kernel.org
+In-Reply-To: <20171208121719.GA10889@openwall.com>
+References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
+ <20171127011441.GA15063@openwall.com> <CAJHCu1+wC1BsW2r77aoibFth_qtjozKZFJTaD4xCuGBzHp2s4w@mail.gmail.com>
+ <20171130190539.GA4360@openwall.com> <CAJHCu1JkNJxXHXgrYLMA3Z9V_ekUCb370eG0WCUattR3AzBquA@mail.gmail.com>
+ <20171207222334.GA8632@openwall.com> <20171208121719.GA10889@openwall.com>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Mon, 11 Dec 2017 13:07:36 +0100
+Message-ID: <CAJHCu1LEF1cToDrqSh8tvZ3QG0d-0pm+VcrxqMZ8y-CvuhnAyg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v3 0/2] Restrict dangerous open in sticky directories
+To: Solar Designer <solar@openwall.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Matthew Wilcox <willy@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Dec 09, 2017 at 12:54:21AM +0300, Alexander Popov wrote:
-> Hello Peter,
-> 
-> On 08.12.2017 14:44, Peter Zijlstra wrote:
-> > On Wed, Dec 06, 2017 at 02:33:42AM +0300, Alexander Popov wrote:
-> >> The STACKLEAK feature erases the kernel stack before returning from
-> >> syscalls. That reduces the information which kernel stack leak bugs can
-> >> reveal and blocks some uninitialized stack variable attacks. Moreover,
-> >> STACKLEAK provides runtime checks for kernel stack overflow detection.
-> >>
-> >> This commit introduces the architecture-specific code filling the used
-> >> part of the kernel stack with a poison value before returning to the
-> >> userspace. Full STACKLEAK feature also contains the gcc plugin which
-> >> comes in a separate commit.
-> > 
-> > Have you looked at the entry rework in this series:
-> > 
-> >   https://lkml.kernel.org/r/20171204140706.296109558@linutronix.de
-> 
-> Thanks for the link. I briefly looked through WIP.x86/pti branch. Should I
-> rebase STACKLEAK patch series onto it?
+2017-12-08 13:17 GMT+01:00 Solar Designer <solar@openwall.com>:
+> On Thu, Dec 07, 2017 at 11:23:34PM +0100, Solar Designer wrote:
+> > On Tue, Dec 05, 2017 at 11:13:50AM +0100, Salvatore Mesoraca wrote:
+> > > 2017-11-30 20:05 GMT+01:00 Solar Designer <solar@openwall.com>:
+> > > > So the current name is "protected_sticky_child_create" (I couldn't even
+> > > > recall it, had to look it up for this reply).  This unnecessarily
+> > > > bundles this potentially more general policy stuff with the existing
+> > > > "protections" against specific attacks, unnecessarily limits scope to
+> > > > "sticky" and "create", and talks about some "child".  How about we use
+> > > > something totally different, focusing on "policy"?  It could be simply
+> > > > "policy" (we're already in "fs"), or if that won't fly then how about
+> > > > "security_policy" or "dac_policy"?  We will be imposing extra
+> > > > restrictions on top of usual Unix discretionary access control
+> > > > permission bits while not going all the way to mandatory access control
+> > > > (not tying objects to subjects).  So in a sense we'll have an extension
+> > > > of Unix DAC.
+> > >
+> > > Yea, I like "dac_policy" very much.
+> >
+> > OK.  Thinking of this further, what we might want to have is a generic
+> > policy against file accesses that would negate a privilege boundary
+> > between Unix (pseudo-)users.  And one of those would be execve(2) of a
+> > file writable by someone else, or with any of its parent directories
+> > writable by someone else (unless that's root, indeed).
 
-Probably a good idea; the tail end of that series is still somewhat in
-flux but the entry rework is fairly stable at this point.
+This looks similar to what grsecurity calls TPE, I think that there is
+already some ongoing work to port it upstream as an LSM. I don't know
+if it's still under development, I didn't heard about it in a while.
+Actually what you are proposing here is a bit different, because it will
+never prevent the user from running its own executables, so its usefulness
+isn't completely defeated by language interpreters etc. Still, scripts that
+are directly "sourced" will escape this protection, but at least we'll
+cover many other cases.
+We should add a restriction on executable mmaps, too.
 
-> Although I don't fully understand some of the commits, I can suppose that
-> STACKLEAK stack erasing must be modified because of this trampoline stack
-> introduction:
-> https://git.kernel.org/pub/scm/linux/kernel/git/tip/tip.git/commit/?h=WIP.x86/pti&id=813b4125a835f2eb9aa6fb08dac0bc8eeadd69a1
-> 
-> Am I right? Are there other changes which I should consider?
+> > I think the name
+> > "dac_policy" still fits this well, but anything with "create" or even
+> > "open" in the name would not fit it.
+> >
+> > Another way of looking at this is that we'd be creating a reverse DAC -
+> > optionally blocking unsafe accesses made possible by too permissive DAC.
+> > But I don't have a good sysctl name suggestion along these lines.
+>
+> Yet another thought is that while we won't go for MAC ("not tying
+> objects to subjects") in our additional policy against unsafe file
+> accesses, it could reasonably be extended to cover not only accesses
+> made possible by too permissive DAC, but also those made possible by too
+> permissive ACLs.  I doubt we'd want to actually add ACL support in
+> there (too obscure, unnecessary when auditing software), but if someone
+> eventually does that would fit in with our general approach (and
+> wouldn't even require separate flags, as it's conceptually similar to
+> group-writable).
 
-You're right; the trampoline stack is what I was thinking of. You can
-run the erase thing when we're on the trampoline back out.
+I'm not sure if I understood what you meant, but the "group-writable" check
+implicitly checks for permissive ACLs, because they force the group bits on.
 
-> May I also ask for your feedback on this version of the STACKLEAK patch series?
+> So an ideal name would not conflict with that.
+>
+> What would be a good short name for "file access safety policy"?  Maybe
+> we can omit "file" considering we're in "fs".  "access_safety_policy"?
+>
+> The individual flags might correspond to detecting and/or blocking:
+>
+> O_CREAT w/o O_EXCL in +t world-writable directory except if file exists
+> and is owned by root or by current fsuid and the directory owner is root
+> or current fsuid
+>
+> O_CREAT w/o O_EXCL in +t group-writable directory except if file exists
+> and is owned by root or by current fsuid and the directory owner is root
+> or current fsuid, or O_CREAT w/o O_EXCL in +t directory owned by another
+> non-root user (regardless of whether the file exists and its ownership)
+>
+> (Note: the "+t directory owned by another non-root user" case is for
+> consistency and for software testing only, not for enforcing a policy
+> like this in production, because the directory owner can remove the +t.)
+>
+> O_CREAT w/o O_EXCL in -t world-writable directory (no exceptions)
+>
+> O_CREAT w/o O_EXCL in -t group-writable directory (no exceptions), or
+> O_CREAT w/o O_EXCL in any directory owned by another non-root user
+> (regardless of the sticky bit, and also without exceptions)
+>
+> Same as above for O_WRONLY or O_RDWR, so 4 more flags.
+>
+> Same as above for O_RDONLY, so 4 more flags.
+>
+> Other unsafe file accesses via pathname, including execve(2) (would
+> consider permissions on the file itself, as well as the directory),
 
-I meant to have a look, but have not yet found the time for it, its on
-the todo list.
+I'll use the same bit used to restrict execve to restrict also
+executable mmaps.
+What do you think?
 
-Thanks!
+> chmod(2), chown(2).  That's maybe 6 more flags if we continue to
+> separate world vs. group/user, even if we don't separate by +t (but we
+> could nevertheless trust a pre-existing file in +t under the same
+> conditions listed for "O_CREAT w/o O_EXCL in +t").
+>
+> Then we could want to eventually add checking of all parent directories,
+> and this in turn would make more syscalls relevant (in the sense of
+> being usable for an immediate attack on the invoking user, making them
+> do something unintended) in the special case when an upper level
+> directory is unsafe: symlink(2), link(2), unlink(2), rename(2),
+> mkdir(2), rmdir(2), perhaps more.  Just for these 6 I quickly
+> identified, and if we continue to separate world vs. group/user, this
+> could be 12 more flags.
+>
+> So this would be 4+4+6+12 = 26 flags already.  This feels like way too
+> many, as well as not leaving enough bits e.g. in a 32-bit mask in case
+> we end up identifying many more relevant syscalls.  So perhaps the
+> approach above is too fine-grained and should be revised.  If so, maybe
+> our start with two bits for "O_CREAT w/o O_EXCL in +t" is already too
+> fine-grained and should be revised as well.
+>
+> What do you think?
+>
+> How to group these categories in fewer flags best?  Perhaps less
+> separation of the open(2) flags and/or of the syscalls relevant only
+> with unsafe upper-level directories (one flag for all of them?)
+>
+> Drop the +t / -t separation for open(2)?  (But nevertheless trust a
+> pre-existing file in +t under the same conditions as I listed for
+> "O_CREAT w/o O_EXCL in +t".)
+>
+> Drop the world vs. group/user separation?
+>
+> Introduce more sysctl's - separate for open(2) vs. other syscalls?
+>
+> And/or maybe separate for world vs. group/user-writable?  This would be
+> convenient in that the same bit positions would refer to the same
+> open(2) modes in the same directory categories, or the same syscalls.
+> Extending a previously tested policy for world-writable to cover also
+> group/user-writable would be as simple as setting the other sysctl to
+> the same value.
+>
+> Any other ideas?
+
+I'd group some of those restrictions to be controlled by the same bit,
+something like:
+ - open(2)
+ - execve(2), mmap(2)
+ - chmod(2), chown(2)
+ - mkdir(2), rmdir(2)
+ - symlink(2), link(2), unlink(2), rename(2)
+
+And I'd use the same bitmasks in the following sysctls:
+ - access_control_policy
+ - access_control_policy_notify
+ - access_control_policy_group
+ - access_control_policy_group_notify
+
+If those names are too long we could change "access_control" to just "ac".
+
+What do you think?
+
+Anyway, given that the scope of this feature is growing bigger and bigger,
+should it be reimplemented as an LSM?
+
+Salvatore
