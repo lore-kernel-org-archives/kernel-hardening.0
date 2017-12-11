@@ -1,65 +1,67 @@
-Date: Mon, 11 Dec 2017 17:07:47 +0100
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20171211160747.GA24829@openwall.com>
-References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com> <20171127011441.GA15063@openwall.com> <CAJHCu1+wC1BsW2r77aoibFth_qtjozKZFJTaD4xCuGBzHp2s4w@mail.gmail.com> <20171130190539.GA4360@openwall.com> <CAJHCu1JkNJxXHXgrYLMA3Z9V_ekUCb370eG0WCUattR3AzBquA@mail.gmail.com> <20171207222334.GA8632@openwall.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171207222334.GA8632@openwall.com>
-Subject: [kernel-hardening] Re: [PATCH v3 0/2] Restrict dangerous open in sticky directories
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Matthew Wilcox <willy@infradead.org>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20171211125043.GA17299@pjb1027-Latitude-E5410>
+References: <20171211125043.GA17299@pjb1027-Latitude-E5410>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 11 Dec 2017 11:24:06 -0800
+Message-ID: <CAGXu5jL=O6t1GyU9bO=wvX91fEjFi_M_JGxSoiM46jsZDMvDFQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening][PATCH] arm: hw_breakpoint: Mark variables as __ro_after_init
+To: Jinbum Park <jinb.park7@gmail.com>
+Cc: linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Russell King <linux@armlinux.org.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Dec 07, 2017 at 11:23:34PM +0100, Solar Designer wrote:
-> On Tue, Dec 05, 2017 at 11:13:50AM +0100, Salvatore Mesoraca wrote:
-> > 2017-11-30 20:05 GMT+01:00 Solar Designer <solar@openwall.com>:
-> > > A new thought: a directory that has someone else as its owner is for our
-> > > purposes effectively the same as a group-writable directory.  So maybe
-> > > whatever we'll implement for group-writable directories should also be
-> > > done for directories that have other than the current fsuid as their
-> > > owner. It's currently very uncommon to have directories with the sticky
-> > > bit set that are not at least group-writable, so this will rarely make a
-> > > difference (and when it does, that's just right), but also it provides a
-> > > way to explicitly include any dibrectory under this monitoring (if the
-> > > group-writable protection is on) - e.g., if a sysadmin wants this
-> > > monitoring for users' home directories, they can change permissions for
-> > > those from e.g. 700 to 1700.  This could be handy for development and
-> > > auditing of software, even though in production it could be easily
-> > > circumvented by the directory owner (who can remove the sticky bit,
-> > > which we should document to avoid providing a false sense of security)
-> > > and it won't automatically apply to subdirectories.  It'd also cover
-> > > part of what we intend to achieve later by possibly extending the
-> > > feature to non-sticky directories, where we might also want to treat
-> > > different owner the same as group-writable (without the circumvention).
-> > 
-> > Agreed. I'll extend it to also check for the directory owner.
-> > Maybe I could use another bit and make this additional restriction
-> > independent from the "group-writable" one.
-> 
-> I'd prefer not to waste a bit on this.  We'll need plenty of bits later
-> on, perhaps also in pairs or (with your suggestion to separate this one)
-> in triplets, and every extra bit complicates the calculation of the
-> bitmask value.
+On Mon, Dec 11, 2017 at 4:50 AM, Jinbum Park <jinb.park7@gmail.com> wrote:
+> core_num_brps, core_num_wrps, debug_arch, has_ossr,
+> max_watchpoint_len are setup once while init stage,
+> and never changed after that.
+> so it is good candidate for __ro_after_init.
+>
+> Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
 
-OTOH, if we were to interleave the world and group bits, then maybe
-instead of having the world and group bits as separate we could have a
-two bit number, which naturally leaves us an extra value we'd use for
-owner.  So:
+Reviewed-by: Kees Cook <keescook@chromium.org>
 
-0 - none
-1 - world
-2 - group and world
-3 - owner, group, and world
+(Probably good to toss this into the ARM patch tracker.)
 
-This would remove the ability to enable our restrictions for group (and
-owner) while disabling them for world, but that's likely just an obscure
-misconfiguration.
+-Kees
 
-Unfortunately, this is not compatible with my other idea of easily
-extending a tested policy from world onto group by simply assigning the
-same value to the other sysctl.
+> ---
+>  arch/arm/kernel/hw_breakpoint.c | 10 +++++-----
+>  1 file changed, 5 insertions(+), 5 deletions(-)
+>
+> diff --git a/arch/arm/kernel/hw_breakpoint.c b/arch/arm/kernel/hw_breakpoint.c
+> index af2a7f1..629e251 100644
+> --- a/arch/arm/kernel/hw_breakpoint.c
+> +++ b/arch/arm/kernel/hw_breakpoint.c
+> @@ -44,17 +44,17 @@
+>  static DEFINE_PER_CPU(struct perf_event *, wp_on_reg[ARM_MAX_WRP]);
+>
+>  /* Number of BRP/WRP registers on this CPU. */
+> -static int core_num_brps;
+> -static int core_num_wrps;
+> +static int core_num_brps __ro_after_init;
+> +static int core_num_wrps __ro_after_init;
+>
+>  /* Debug architecture version. */
+> -static u8 debug_arch;
+> +static u8 debug_arch __ro_after_init;
+>
+>  /* Does debug architecture support OS Save and Restore? */
+> -static bool has_ossr;
+> +static bool has_ossr __ro_after_init;
+>
+>  /* Maximum supported watchpoint length. */
+> -static u8 max_watchpoint_len;
+> +static u8 max_watchpoint_len __ro_after_init;
+>
+>  #define READ_WB_REG_CASE(OP2, M, VAL)                  \
+>         case ((OP2 << 4) + M):                          \
+> --
+> 1.9.1
+>
 
-I'm not sure which of these approaches is cleaner.
 
-Alexander
+
+-- 
+Kees Cook
+Pixel Security
