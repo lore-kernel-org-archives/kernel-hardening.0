@@ -1,120 +1,82 @@
-Date: Tue, 12 Dec 2017 03:09:12 +0300
-From: "Dmitry V. Levin" <ldv@altlinux.org>
-Message-ID: <20171212000912.GA10256@altlinux.org>
+From: Michael Ellerman <mpe@ellerman.id.au>
+In-Reply-To: <CA+55aFwQEd_d40g4mUCSsVRZzrFPUJt74vc6PPpb675hYNXcKw@mail.gmail.com>
+References: <20171201200819.GA25519@linux.vnet.ibm.com> <1512158945-27269-2-git-send-email-paulmck@linux.vnet.ibm.com> <bc07683158334e8f90573bbd77e037a3@AcuMS.aculab.com> <20171204134203.GR7829@linux.vnet.ibm.com> <f51c8864617a45d3aabef7106ae7a9f1@AcuMS.aculab.com> <20171204161100.GT7829@linux.vnet.ibm.com> <CAHp75VcJKYnW2grD6jViNFU3z6+fJoTmqs+ZP3Xm6YB3C8ZH1Q@mail.gmail.com> <CA+55aFwQEd_d40g4mUCSsVRZzrFPUJt74vc6PPpb675hYNXcKw@mail.gmail.com>
+Date: Tue, 12 Dec 2017 16:26:02 +1100
+Message-ID: <87wp1sa55h.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1512516827-29797-3-git-send-email-alex.popov@linux.com>
-Subject: Re: [kernel-hardening] [PATCH RFC v6 2/6] gcc-plugins: Add STACKLEAK
- plugin for tracking the kernel stack
-To: Alexander Popov <alex.popov@linux.com>
-Cc: kernel-hardening@lists.openwall.com, KeesCook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+Content-Type: text/plain
+Subject: [kernel-hardening] Long live %pK (was Re: [PATCH tip/core/rcu 02/20] torture: Prepare scripting for shift from %p to %pK)
+To: Linus Torvalds <torvalds@linux-foundation.org>, Andy Shevchenko <andy.shevchenko@gmail.com>, Kees Cook <keescook@chromium.org>
+Cc: "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, David Laight <David.Laight@aculab.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "mingo@kernel.org" <mingo@kernel.org>, "jiangshanlai@gmail.com" <jiangshanlai@gmail.com>, "dipankar@in.ibm.com" <dipankar@in.ibm.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "mathieu.desnoyers@efficios.com" <mathieu.desnoyers@efficios.com>, "josh@joshtriplett.org" <josh@joshtriplett.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "peterz@infradead.org" <peterz@infradead.org>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "dhowells@redhat.com" <dhowells@redhat.com>, "edumazet@google.com" <edumazet@google.com>, "fweisbec@gmail.com" <fweisbec@gmail.com>, "oleg@redhat.com" <oleg@redhat.com>, kernel-hardening@lists.openwall.comkernel-hardening@lists.openwall.com, "Tobin C. Harding" <me@tobin.cc>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 06, 2017 at 02:33:43AM +0300, Alexander Popov wrote:
-> The STACKLEAK feature erases the kernel stack before returning from
-> syscalls. That reduces the information which kernel stack leak bugs can
-> reveal and blocks some uninitialized stack variable attacks. Moreover,
-> STACKLEAK provides runtime checks for kernel stack overflow detection.
-> 
-> This commit introduces the STACKLEAK gcc plugin. It is needed for:
->  - tracking the lowest border of the kernel stack, which is important
->     for the code erasing the used part of the kernel stack at the end
->     of syscalls (comes in a separate commit);
->  - checking that alloca calls don't cause stack overflow.
-> 
-> So this plugin instruments the kernel code inserting:
->  - the check_alloca() call before alloca and the track_stack() call
->     after it;
->  - the track_stack() call for the functions with a stack frame size
->     greater than or equal to CONFIG_STACKLEAK_TRACK_MIN_SIZE.
-> 
-> The STACKLEAK feature is ported from grsecurity/PaX. More information at:
->   https://grsecurity.net/
->   https://pax.grsecurity.net/
-> 
-> This code is modified from Brad Spengler/PaX Team's code in the last
-> public patch of grsecurity/PaX based on our understanding of the code.
-> Changes or omissions from the original code are ours and don't reflect
-> the original grsecurity/PaX code.
-> 
-> Signed-off-by: Alexander Popov <alex.popov@linux.com>
-> ---
->  arch/Kconfig                           |  15 ++
->  arch/x86/kernel/dumpstack.c            |  15 ++
->  fs/exec.c                              |  25 ++
->  scripts/Makefile.gcc-plugins           |   3 +
->  scripts/gcc-plugins/stackleak_plugin.c | 470 +++++++++++++++++++++++++++++++++
->  5 files changed, 528 insertions(+)
->  create mode 100644 scripts/gcc-plugins/stackleak_plugin.c
-> 
-> diff --git a/arch/Kconfig b/arch/Kconfig
-> index 721fdae..ba8e67b 100644
-> --- a/arch/Kconfig
-> +++ b/arch/Kconfig
-> @@ -528,6 +528,8 @@ config GCC_PLUGIN_STACKLEAK
->  	bool "Erase the kernel stack before returning from syscalls"
->  	depends on GCC_PLUGINS
->  	depends on HAVE_ARCH_STACKLEAK
-> +	imply VMAP_STACK
-> +	imply SCHED_STACK_END_CHECK
->  	help
->  	  This option makes the kernel erase the kernel stack before it
->  	  returns from a system call. That reduces the information which
-> @@ -544,6 +546,19 @@ config GCC_PLUGIN_STACKLEAK
->  	   * https://grsecurity.net/
->  	   * https://pax.grsecurity.net/
->  
-> +config STACKLEAK_TRACK_MIN_SIZE
-> +	int "Minimum stack frame size of functions tracked by STACKLEAK"
-> +	default 100
-> +	range 0 4096
-> +	depends on GCC_PLUGIN_STACKLEAK
-> +	help
-> +	  The STACKLEAK gcc plugin instruments the kernel code for tracking
-> +	  the lowest border of the kernel stack (and for some other purposes).
-> +	  It inserts the track_stack() call for the functions with a stack
-> +	  frame size greater than or equal to this parameter. Be careful with
-> +	  this setting, don't break the poison search in erase_kstack.
-> +	  If unsure, leave the default value 100.
-> +
+Linus Torvalds <torvalds@linux-foundation.org> writes:
+> On Sun, Dec 10, 2017 at 4:52 AM, Andy Shevchenko
+> <andy.shevchenko@gmail.com> wrote:
+>>>
+>>>> Perhaps it should have printed a fixed, non-zero value for non-zero
+>>>> pointers.
+>>>
+>>> I must leave this to the people who have a dog in that contest.  ;-)
+>>
+>> Since there is an ongoing discussion with security people near to %pK
+>> and alike, I added Kees and Linus to Cc list.
+>>
+>> The proposed change can be done easily, though I have no knowledge
+>> about possible implications.
+>
+> I'd rather make %pK act more like %p than have gratuitous differences.
 
-I don't think the warning is scaring enough.  As erase_kstack (both 64-bit
-and 32-bit versions) checks for 128 consequent bytes of STACKLEAK_POISON,
-it would be a bad idea to raise STACKLEAK_TRACK_MIN_SIZE to a value higher
-than 120.  Perhaps there has to be a consistency check that
-STACKLEAK_TRACK_MIN_SIZE does not break assumptions made in erase_kstack.
+But %pK has one crucial feature that %p does not, which is that %pK can
+actually show the real value.
 
->  config HAVE_CC_STACKPROTECTOR
->  	bool
->  	help
-> diff --git a/arch/x86/kernel/dumpstack.c b/arch/x86/kernel/dumpstack.c
-> index f13b4c0..5a9b6cc 100644
-> --- a/arch/x86/kernel/dumpstack.c
-> +++ b/arch/x86/kernel/dumpstack.c
-> @@ -315,3 +315,18 @@ static int __init code_bytes_setup(char *s)
->  	return 1;
->  }
->  __setup("code_bytes=", code_bytes_setup);
-> +
-> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-> +void __used check_alloca(unsigned long size)
-> +{
-> +	unsigned long sp = (unsigned long)&sp;
-> +	struct stack_info stack_info = {0};
-> +	unsigned long visit_mask = 0;
-> +	unsigned long stack_left;
-> +
-> +	BUG_ON(get_stack_info(&sp, current, &stack_info, &visit_mask));
-> +	stack_left = sp - (unsigned long)stack_info.begin;
-> +	BUG_ON(stack_left < 256 || size >= stack_left - 256);
-> +}
-> +EXPORT_SYMBOL(check_alloca);
-> +#endif
+> I also think %pK is kind of pointless in general. It has not been a
+> big success, and the whole "root or not" is kind of nasty anyway. Root
+> in a container? Things like that.
 
-I think some rationale has to be given why 256 was chosen as the minimal
-size of stack space left after alloca.
+At least with docker, root in a container doesn't get CAP_SYSLOG by
+default, and so %pK works perfectly.
 
+That is, root in the container can't see %pK things, but root on the
+host can.
 
--- 
-ldv
+So consider /proc/vmallocinfo:
+
+> So I think that if people worry  about leaking pointers, they should
+> primarily go for:
+>
+>  - just use %p and now get the hashed value
+
+Hopefully we can agree that the hashed value is not very useful when
+you're looking at vmallocinfo. You're almost always trying to determine
+if a value from an oops or elsewhere is contained within one of the
+mappings, and for that you need to know the address ranges.
+
+>  - if the hashed value is pointless, ask yourself whether the pointer
+> itself is important. Maybe it should be removed?
+
+A real bug we hit yesterday, a bad page fault in a *guest* that appears
+to be trying to dereference a vmalloc address from the *host* (obviously
+that should not happen). First step in debugging is to check if the
+address lies within a valid mapping in /proc/vmallocinfo on the host. To
+do that you need the pointers.
+
+>  - as a last option, if you really  think the true pointer value is
+> important, why is root so special, and maybe you should use %px and
+> make sure you have proper sensible permissions.
+
+/proc/vmallocinfo is already 0400.
+
+But we definitely do not want to use %px for vmallocinfo, because that
+would expose the values to root in containers.
+
+> ..and %pK just isn't really the answer in any of those cases.
+
+So in this case it seems %pK is a better answer than %p or %px.
+
+I understand that the CAP_SYSLOG checking that %pK does is kind of
+gross, but it does work in at least some useful cases like this.
+
+What am I missing?
+
+cheers
