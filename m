@@ -1,71 +1,77 @@
+From: Michael Ellerman <mpe@ellerman.id.au>
+In-Reply-To: <CA+55aFxHdAX_ztDMUyXihhUv_eftntHecGUUaV3qAtGj_ZbKCg@mail.gmail.com>
+References: <20171201200819.GA25519@linux.vnet.ibm.com> <1512158945-27269-2-git-send-email-paulmck@linux.vnet.ibm.com> <bc07683158334e8f90573bbd77e037a3@AcuMS.aculab.com> <20171204134203.GR7829@linux.vnet.ibm.com> <f51c8864617a45d3aabef7106ae7a9f1@AcuMS.aculab.com> <20171204161100.GT7829@linux.vnet.ibm.com> <CAHp75VcJKYnW2grD6jViNFU3z6+fJoTmqs+ZP3Xm6YB3C8ZH1Q@mail.gmail.com> <CA+55aFwQEd_d40g4mUCSsVRZzrFPUJt74vc6PPpb675hYNXcKw@mail.gmail.com> <87wp1sa55h.fsf@concordia.ellerman.id.au> <CA+55aFxHdAX_ztDMUyXihhUv_eftntHecGUUaV3qAtGj_ZbKCg@mail.gmail.com>
+Date: Wed, 13 Dec 2017 23:59:46 +1100
+Message-ID: <87r2ryaim5.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-In-Reply-To: <20171211160747.GA24829@openwall.com>
-References: <1511337706-8297-1-git-send-email-s.mesoraca16@gmail.com>
- <20171127011441.GA15063@openwall.com> <CAJHCu1+wC1BsW2r77aoibFth_qtjozKZFJTaD4xCuGBzHp2s4w@mail.gmail.com>
- <20171130190539.GA4360@openwall.com> <CAJHCu1JkNJxXHXgrYLMA3Z9V_ekUCb370eG0WCUattR3AzBquA@mail.gmail.com>
- <20171207222334.GA8632@openwall.com> <20171211160747.GA24829@openwall.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Tue, 12 Dec 2017 19:01:06 +0100
-Message-ID: <CAJHCu1+JrpwU=KdkKtzdsL1Au7TW1uAYTxnWUKVO-W8256Ce7w@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v3 0/2] Restrict dangerous open in sticky directories
-To: Solar Designer <solar@openwall.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Matthew Wilcox <willy@infradead.org>
+Content-Type: text/plain
+Subject: [kernel-hardening] Re: Long live %pK (was Re: [PATCH tip/core/rcu 02/20] torture: Prepare scripting for shift from %p to %pK)
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Andy Shevchenko <andy.shevchenko@gmail.com>, Kees Cook <keescook@chromium.org>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, David Laight <David.Laight@aculab.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "mingo@kernel.org" <mingo@kernel.org>, "jiangshanlai@gmail.com" <jiangshanlai@gmail.com>, "dipankar@in.ibm.com" <dipankar@in.ibm.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "mathieu.desnoyers@efficios.com" <mathieu.desnoyers@efficios.com>, "josh@joshtriplett.org" <josh@joshtriplett.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "peterz@infradead.org" <peterz@infradead.org>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "dhowells@redhat.com" <dhowells@redhat.com>, "edumazet@google.com" <edumazet@google.com>, "fweisbec@gmail.com" <fweisbec@gmail.com>, "oleg@redhat.com" <oleg@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Tobin C. Harding" <me@tobin.cc>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2017-12-11 17:07 GMT+01:00 Solar Designer <solar@openwall.com>:
-> On Thu, Dec 07, 2017 at 11:23:34PM +0100, Solar Designer wrote:
-> > On Tue, Dec 05, 2017 at 11:13:50AM +0100, Salvatore Mesoraca wrote:
-> > > 2017-11-30 20:05 GMT+01:00 Solar Designer <solar@openwall.com>:
-> > > > A new thought: a directory that has someone else as its owner is for our
-> > > > purposes effectively the same as a group-writable directory.  So maybe
-> > > > whatever we'll implement for group-writable directories should also be
-> > > > done for directories that have other than the current fsuid as their
-> > > > owner. It's currently very uncommon to have directories with the sticky
-> > > > bit set that are not at least group-writable, so this will rarely make a
-> > > > difference (and when it does, that's just right), but also it provides a
-> > > > way to explicitly include any dibrectory under this monitoring (if the
-> > > > group-writable protection is on) - e.g., if a sysadmin wants this
-> > > > monitoring for users' home directories, they can change permissions for
-> > > > those from e.g. 700 to 1700.  This could be handy for development and
-> > > > auditing of software, even though in production it could be easily
-> > > > circumvented by the directory owner (who can remove the sticky bit,
-> > > > which we should document to avoid providing a false sense of security)
-> > > > and it won't automatically apply to subdirectories.  It'd also cover
-> > > > part of what we intend to achieve later by possibly extending the
-> > > > feature to non-sticky directories, where we might also want to treat
-> > > > different owner the same as group-writable (without the circumvention).
-> > >
-> > > Agreed. I'll extend it to also check for the directory owner.
-> > > Maybe I could use another bit and make this additional restriction
-> > > independent from the "group-writable" one.
+Linus Torvalds <torvalds@linux-foundation.org> writes:
+
+> This is a perfect example of just %pK being complete shit.
+>
+> %pK doesn't actually do any file permissions right. It looks like it does
+> it, but it's just a hot mess of garbage.
+>
+> And %pK doesn't even work the way you claim it does. Not in the general
+> case, and only with a particular value.
+
+Right. My email was only about the kptr_restrict = 1 case, but I didn't
+actually make that clear.
+
+But that's also sort of my point, it has multiple modes of operation,
+which is useful.
+
+> On Dec 11, 2017 21:26, "Michael Ellerman" <mpe@ellerman.id.au> wrote: I
 > >
-> > I'd prefer not to waste a bit on this.  We'll need plenty of bits later
-> > on, perhaps also in pairs or (with your suggestion to separate this one)
-> > in triplets, and every extra bit complicates the calculation of the
-> > bitmask value.
+> >
+> > I understand that the CAP_SYSLOG checking that %pK does is kind of
+> > gross, but it does work in at least some useful cases like this.
+> >
+> > What am I missing?
 >
-> OTOH, if we were to interleave the world and group bits, then maybe
-> instead of having the world and group bits as separate we could have a
-> two bit number, which naturally leaves us an extra value we'd use for
-> owner.  So:
 >
-> 0 - none
-> 1 - world
-> 2 - group and world
-> 3 - owner, group, and world
+> Just do the damn thing right, like /proc/kallsyms does these days.
 >
-> This would remove the ability to enable our restrictions for group (and
-> owner) while disabling them for world, but that's likely just an obscure
-> misconfiguration.
->
-> Unfortunately, this is not compatible with my other idea of easily
-> extending a tested policy from world onto group by simply assigning the
-> same value to the other sysctl.
->
-> I'm not sure which of these approaches is cleaner.
+> With the proper open time cred check, not the wrong one at io time.
 
-I prefer the version with separate sysctls for world/group, it seems more
-usable.
+OK, that's the piece I was missing - ie. what to do in the case where
+%px for all users is too permissive but %p is not useful.
 
-Salvatore
+> Which has the added advantage that it actually does the right thing even
+> when you don't have kptr_restrict set, or when you have patches to make it
+> print zero even for people with capabilities.
+>
+> Don't depend on some random flag that has nothing to do with your actual
+> example and that has random values for security.
+
+> Just say no to kptr_restrict "logic". Your example basically depends
+> entirely on one particular setting, when (a) real distributions have a
+> different value and expose those pointers that your claim shouldn't be
+> exposed and (b) other people are pushing for values that will hide the
+> values that you claim area needed.
+
+I'm still a bit confused by the above. Because kallsyms which is your
+example of how to do it right, still uses kptr_restrict. I get that it
+also checks kallsyms_for_perf(), but that's only in the
+kptr_restrict = 0 case.
+
+Anyway, I'll do a patch for vmallocinfo to do the CAP_SYSLOG check at
+open time, and use that to decide if it should print 0 or the address.
+
+I can't think of any other flag or setting to sensibly determine if
+vmallocinfo should be visible, so I've just done:
+
+	if (kptr_restrict < 2 && has_capability_noaudit(current, CAP_SYSLOG))
+		priv->show_addrs = true;
+	else
+		priv->show_addrs = false;
+
+So basically visible to root, unless kptr_restrict == 2, otherwise not
+visible. 
+
+cheers
