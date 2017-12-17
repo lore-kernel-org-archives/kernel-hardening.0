@@ -1,40 +1,42 @@
 From: "Tobin C. Harding" <me@tobin.cc>
-Date: Mon, 18 Dec 2017 10:53:29 +1100
-Message-Id: <1513554812-13014-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [PATCH 0/3] kallsyms: don't leak address
+Date: Mon, 18 Dec 2017 10:53:30 +1100
+Message-Id: <1513554812-13014-2-git-send-email-me@tobin.cc>
+In-Reply-To: <1513554812-13014-1-git-send-email-me@tobin.cc>
+References: <1513554812-13014-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] [PATCH 1/3] kallsyms: don't leak address when symbol not found
 To: kernel-hardening@lists.openwall.com
 Cc: "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This set plugs a kernel address leak that occurs if kallsyms symbol
-look up fails. This set was prompted by a leaking address found using
-scripts/leaking_addresses.pl on a PowerPC machine in the wild.
+Currently if kallsyms_lookup() fails to find the symbol then the address
+is printed. This potentially leaks sensitive information. Instead of
+printing the address we can return an error, giving the calling code the
+option to print the address or print some sanitized message.
 
-Patch set does not change behaviour when KALLSYMS is not defined
-(suggested by Linus).
+Return error instead of printing address to argument buffer. Leave
+buffer in a sane state.
 
-RFC has been in flight for 3 weeks with no negative response.
+Signed-off-by: Tobin C. Harding <me@tobin.cc>
+---
+ kernel/kallsyms.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
 
-Patch 1 - return error code if symbol look up fails.
-Patch 2 - print <no-symbol> to buffer if symbol look up returns an error.
-Patch 3 - maintain current behaviour in ftrace.
-
-Patch 3 (the ftrace stuff) is untested.
-
-thanks,
-Tobin.
-
-Tobin C. Harding (3):
-  kallsyms: don't leak address when symbol not found
-  vsprintf: print <no-symbol> if symbol not found
-  trace: print address if symbol not found
-
- include/linux/kernel.h           |  2 ++
- kernel/kallsyms.c                |  6 ++++--
- kernel/trace/trace.h             | 24 ++++++++++++++++++++++++
- kernel/trace/trace_events_hist.c |  6 +++---
- lib/vsprintf.c                   | 18 +++++++++++++++---
- 5 files changed, 48 insertions(+), 8 deletions(-)
-
+diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
+index d5fa4116688a..23b9336c1461 100644
+--- a/kernel/kallsyms.c
++++ b/kernel/kallsyms.c
+@@ -394,8 +394,10 @@ static int __sprint_symbol(char *buffer, unsigned long address,
+ 
+ 	address += symbol_offset;
+ 	name = kallsyms_lookup(address, &size, &offset, &modname, buffer);
+-	if (!name)
+-		return sprintf(buffer, "0x%lx", address - symbol_offset);
++	if (!name) {
++		buffer[0] = '\0';
++		return -1;
++	}
+ 
+ 	if (name != buffer)
+ 		strcpy(buffer, name);
 -- 
 2.7.4
