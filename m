@@ -1,36 +1,50 @@
 From: "Tobin C. Harding" <me@tobin.cc>
-Date: Mon, 18 Dec 2017 09:30:06 +1100
-Message-Id: <1513549807-20287-3-git-send-email-me@tobin.cc>
+Date: Mon, 18 Dec 2017 09:30:07 +1100
+Message-Id: <1513549807-20287-4-git-send-email-me@tobin.cc>
 In-Reply-To: <1513549807-20287-1-git-send-email-me@tobin.cc>
 References: <1513549807-20287-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [PATCH v2 2/3] doc: update kpt_restrict documentation
+Subject: [kernel-hardening] [PATCH v2 3/3] doc: add documentation on printing kernel addresses
 To: Jonathan Corbet <corbet@lwn.net>
 Cc: "Tobin C. Harding" <me@tobin.cc>, Randy Dunlap <rdunlap@infradead.org>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Recently the behaviour of printk specifier %pK was changed. The
-documentation does not currently mirror this.
+Hashing addresses printed with printk specifier %p was implemented
+recently. During development a number of issues were raised regarding
+leaking kernel addresses to userspace. Other documentation was updated but
+security/self-protection missed out.
 
-Update documentation for sysctl kpt_restrict.
+Add self-protection documentation regarding printing kernel addresses.
 
 Signed-off-by: Tobin C. Harding <me@tobin.cc>
 ---
- Documentation/sysctl/kernel.txt | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
+ Documentation/security/self-protection.rst | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
 
-diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
-index 63663039acb7..6b039aa1427a 100644
---- a/Documentation/sysctl/kernel.txt
-+++ b/Documentation/sysctl/kernel.txt
-@@ -391,7 +391,8 @@ kptr_restrict:
- This toggle indicates whether restrictions are placed on
- exposing kernel addresses via /proc and other interfaces.
+diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
+index 60c8bd8b77bf..0f53826c78b9 100644
+--- a/Documentation/security/self-protection.rst
++++ b/Documentation/security/self-protection.rst
+@@ -270,6 +270,21 @@ attacks, it is important to defend against exposure of both kernel memory
+ addresses and kernel memory contents (since they may contain kernel
+ addresses or other sensitive things like canary values).
  
--When kptr_restrict is set to (0), the default, there are no restrictions.
-+When kptr_restrict is set to (0), the default, the address is hashed before
-+printing. (This is the equivalent to %p.)
++Kernel addresses
++----------------
++
++Printing kernel addresses to userspace leaks sensitive information about
++the kernel memory layout. Care should be exercised when using any printk
++specifier that prints the raw address, currently %px, %p[ad], (and %p[sSb]
++in certain circumstances [*]).  Any file written to using one of these
++specifiers should be readable only by privileged processes.
++
++Kernels 4.14 and older printed the raw address using %p. As of 4.15-rc1
++addresses printed with the specifier %p are hashed before printing.
++
++[*] If KALLSYMS is enabled and symbol lookup fails, the raw address is
++printed. If KALLSYMS is not enabled the raw address is printed.
++
+ Unique identifiers
+ ------------------
  
- When kptr_restrict is set to (1), kernel pointers printed using the %pK
- format specifier will be replaced with 0's unless the user has CAP_SYSLOG
 -- 
 2.7.4
