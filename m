@@ -1,50 +1,25 @@
-From: "Tobin C. Harding" <me@tobin.cc>
-Date: Mon, 18 Dec 2017 09:30:07 +1100
-Message-Id: <1513549807-20287-4-git-send-email-me@tobin.cc>
+Message-ID: <1513550065.31581.39.camel@perches.com>
+From: Joe Perches <joe@perches.com>
+Date: Sun, 17 Dec 2017 14:34:25 -0800
 In-Reply-To: <1513549807-20287-1-git-send-email-me@tobin.cc>
 References: <1513549807-20287-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [PATCH v2 3/3] doc: add documentation on printing kernel addresses
-To: Jonathan Corbet <corbet@lwn.net>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Randy Dunlap <rdunlap@infradead.org>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset="ISO-8859-1"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 0/3] doc: update printk documentation
+To: "Tobin C. Harding" <me@tobin.cc>, Jonathan Corbet <corbet@lwn.net>
+Cc: Randy Dunlap <rdunlap@infradead.org>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hashing addresses printed with printk specifier %p was implemented
-recently. During development a number of issues were raised regarding
-leaking kernel addresses to userspace. Other documentation was updated but
-security/self-protection missed out.
+On Mon, 2017-12-18 at 09:30 +1100, Tobin C. Harding wrote:
+> This set converts printk-formats.txt -> core-api/printk-formats.rst
+> 
+> We also update the documentation around printing kernel addresses.
 
-Add self-protection documentation regarding printing kernel addresses.
+Please also update the comment in lib/vsprintf.c
 
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
----
- Documentation/security/self-protection.rst | 15 +++++++++++++++
- 1 file changed, 15 insertions(+)
+ * ** Please update also Documentation/printk-formats.txt when making changes **
 
-diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
-index 60c8bd8b77bf..0f53826c78b9 100644
---- a/Documentation/security/self-protection.rst
-+++ b/Documentation/security/self-protection.rst
-@@ -270,6 +270,21 @@ attacks, it is important to defend against exposure of both kernel memory
- addresses and kernel memory contents (since they may contain kernel
- addresses or other sensitive things like canary values).
- 
-+Kernel addresses
-+----------------
-+
-+Printing kernel addresses to userspace leaks sensitive information about
-+the kernel memory layout. Care should be exercised when using any printk
-+specifier that prints the raw address, currently %px, %p[ad], (and %p[sSb]
-+in certain circumstances [*]).  Any file written to using one of these
-+specifiers should be readable only by privileged processes.
-+
-+Kernels 4.14 and older printed the raw address using %p. As of 4.15-rc1
-+addresses printed with the specifier %p are hashed before printing.
-+
-+[*] If KALLSYMS is enabled and symbol lookup fails, the raw address is
-+printed. If KALLSYMS is not enabled the raw address is printed.
-+
- Unique identifiers
- ------------------
- 
--- 
-2.7.4
+> I'd like to get it _realy_ correct so that future
+
+sp: realy->really
