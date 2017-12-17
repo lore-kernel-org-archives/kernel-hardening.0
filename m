@@ -1,25 +1,40 @@
-Message-ID: <1513550065.31581.39.camel@perches.com>
-From: Joe Perches <joe@perches.com>
-Date: Sun, 17 Dec 2017 14:34:25 -0800
-In-Reply-To: <1513549807-20287-1-git-send-email-me@tobin.cc>
-References: <1513549807-20287-1-git-send-email-me@tobin.cc>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 0/3] doc: update printk documentation
-To: "Tobin C. Harding" <me@tobin.cc>, Jonathan Corbet <corbet@lwn.net>
-Cc: Randy Dunlap <rdunlap@infradead.org>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com
+From: "Tobin C. Harding" <me@tobin.cc>
+Date: Mon, 18 Dec 2017 10:53:29 +1100
+Message-Id: <1513554812-13014-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] [PATCH 0/3] kallsyms: don't leak address
+To: kernel-hardening@lists.openwall.com
+Cc: "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 2017-12-18 at 09:30 +1100, Tobin C. Harding wrote:
-> This set converts printk-formats.txt -> core-api/printk-formats.rst
-> 
-> We also update the documentation around printing kernel addresses.
+This set plugs a kernel address leak that occurs if kallsyms symbol
+look up fails. This set was prompted by a leaking address found using
+scripts/leaking_addresses.pl on a PowerPC machine in the wild.
 
-Please also update the comment in lib/vsprintf.c
+Patch set does not change behaviour when KALLSYMS is not defined
+(suggested by Linus).
 
- * ** Please update also Documentation/printk-formats.txt when making changes **
+RFC has been in flight for 3 weeks with no negative response.
 
-> I'd like to get it _realy_ correct so that future
+Patch 1 - return error code if symbol look up fails.
+Patch 2 - print <no-symbol> to buffer if symbol look up returns an error.
+Patch 3 - maintain current behaviour in ftrace.
 
-sp: realy->really
+Patch 3 (the ftrace stuff) is untested.
+
+thanks,
+Tobin.
+
+Tobin C. Harding (3):
+  kallsyms: don't leak address when symbol not found
+  vsprintf: print <no-symbol> if symbol not found
+  trace: print address if symbol not found
+
+ include/linux/kernel.h           |  2 ++
+ kernel/kallsyms.c                |  6 ++++--
+ kernel/trace/trace.h             | 24 ++++++++++++++++++++++++
+ kernel/trace/trace_events_hist.c |  6 +++---
+ lib/vsprintf.c                   | 18 +++++++++++++++---
+ 5 files changed, 48 insertions(+), 8 deletions(-)
+
+-- 
+2.7.4
