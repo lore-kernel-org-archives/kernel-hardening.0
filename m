@@ -1,92 +1,43 @@
-Date: Tue, 19 Dec 2017 09:35:04 +1100
+Message-Id: <1513636889.2482269.1209330464.6971721E@webmail.messagingengine.com>
 From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171218223504.GD19604@eros>
-References: <1513554812-13014-1-git-send-email-me@tobin.cc>
- <1513554812-13014-4-git-send-email-me@tobin.cc>
- <20171218114947.2c11211a@gandalf.local.home>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171218114947.2c11211a@gandalf.local.home>
-Subject: [kernel-hardening] Re: [PATCH 3/3] trace: print address if symbol not found
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
+Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Date: Tue, 19 Dec 2017 09:41:29 +1100
+References: <1513554812-13014-1-git-send-email-me@tobin.cc>
+ <1513554812-13014-2-git-send-email-me@tobin.cc>
+ <5b86abe3-2c9d-1396-777d-a5a8f19555ef@nbd.name>
+In-Reply-To: <5b86abe3-2c9d-1396-777d-a5a8f19555ef@nbd.name>
+Subject: [kernel-hardening] Re: [PATCH 1/3] kallsyms: don't leak address when symbol not found
+To: Felix Fietkau <nbd@nbd.name>, kernel-hardening@lists.openwall.com
+Cc: Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 18, 2017 at 11:49:47AM -0500, Steven Rostedt wrote:
-> On Mon, 18 Dec 2017 10:53:32 +1100
-> "Tobin C. Harding" <me@tobin.cc> wrote:
-> 
-> > Fixes behaviour modified by: commit bd6b239cdbb2 ("kallsyms: don't leak
-> > address when symbol not found")
+On Mon, Dec 18, 2017, at 20:55, Felix Fietkau wrote:
+> On 2017-12-18 00:53, Tobin C. Harding wrote:
+> > Currently if kallsyms_lookup() fails to find the symbol then the address
+> > is printed. This potentially leaks sensitive information. Instead of
+> > printing the address we can return an error, giving the calling code the
+> > option to print the address or print some sanitized message.
 > > 
-> > Previous patch changed behaviour of kallsyms function sprint_symbol() to
-> > return an error code instead of printing the address if a symbol was not
-> > found. Ftrace relies on the original behaviour. We should not break
-> > tracing when applying the previous patch. We can maintain the original
-> > behaviour by checking the return code on calls to sprint_symbol() and
-> > friends.
-> > 
-> > Check return code and print actual address on error (i.e symbol not
-> > found).
+> > Return error instead of printing address to argument buffer. Leave
+> > buffer in a sane state.
 > > 
 > > Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> > ---
-> >  kernel/trace/trace.h             | 24 ++++++++++++++++++++++++
-> >  kernel/trace/trace_events_hist.c |  6 +++---
-> >  2 files changed, 27 insertions(+), 3 deletions(-)
-> > 
-> > diff --git a/kernel/trace/trace.h b/kernel/trace/trace.h
-> > index 2a6d0325a761..881b1a577d75 100644
-> > --- a/kernel/trace/trace.h
-> > +++ b/kernel/trace/trace.h
-> > @@ -1814,4 +1814,28 @@ static inline void trace_event_eval_update(struct trace_eval_map **map, int len)
-> >  
-> >  extern struct trace_iterator *tracepoint_print_iter;
-> >  
-> > +static inline int
-> > +trace_sprint_symbol(char *buffer, unsigned long address)
-> > +{
-> > +	int ret;
-> > +
-> > +	ret = sprint_symbol(buffer, address);
-> > +	if (ret == -1)
-> > +		ret = sprintf(buffer, "0x%lx", address);
-> > +
-> > +	return ret;
-> > +}
-> > +
-> > +static inline int
-> > +trace_sprint_symbol_no_offset(char *buffer, unsigned long address)
-> > +{
-> > +	int ret;
-> > +
-> > +	ret = sprint_symbol_no_offset(buffer, address);
-> > +	if (ret == -1)
-> > +		ret = sprintf(buffer, "0x%lx", address);
-> > +
-> > +	return ret;
-> > +}
-> > +
-> >  #endif /* _LINUX_KERNEL_TRACE_H */
-> > diff --git a/kernel/trace/trace_events_hist.c b/kernel/trace/trace_events_hist.c
-> > index 1e1558c99d56..3e28522a76f4 100644
-> > --- a/kernel/trace/trace_events_hist.c
-> > +++ b/kernel/trace/trace_events_hist.c
-> > @@ -982,7 +982,7 @@ static void hist_trigger_stacktrace_print(struct seq_file *m,
-> >  			return;
-> >  
-> >  		seq_printf(m, "%*c", 1 + spaces, ' ');
-> > -		sprint_symbol(str, stacktrace_entries[i]);
-> > +		trace_sprint_symbol_addr(str, stacktrace_entries[i]);
-> 
-> Hmm, where is trace_sprint_symbol_addr() defined?
-> 
-> -- Steve
+> I think there should be a way to keep the old behavior for debugging.
 
-Also, I missed one in kernel/trace/trace_output.c
+That was the intended use of
 
-Added for next version.
+EXPORT_SYMBOL(string_is_no_symbol);
+
+in patch 2 of this series. Then if debugging behaviour is adversely
+effected one could use string_is_no_symbol() on a case by case basis to
+add back in the original behaviour. 
+
+Current suggestion on list is to remove this function. Do you have a use
+case in mind where debugging will break? We could add a fix to this
+series if so. Otherwise next version will likely drop
+string_is_no_symbol()
 
 thanks,
-Tobin.
+Tobin. 
