@@ -1,36 +1,55 @@
-Date: Mon, 18 Dec 2017 10:56:42 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171217235642.GX2191@eros>
-References: <1513549807-20287-1-git-send-email-me@tobin.cc>
- <1513550065.31581.39.camel@perches.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1513550065.31581.39.camel@perches.com>
-Subject: [kernel-hardening] Re: [PATCH v2 0/3] doc: update printk documentation
-To: Joe Perches <joe@perches.com>
-Cc: Jonathan Corbet <corbet@lwn.net>, Randy Dunlap <rdunlap@infradead.org>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com
+Message-ID: <1513555454.31581.43.camel@perches.com>
+From: Joe Perches <joe@perches.com>
+Date: Sun, 17 Dec 2017 16:04:14 -0800
+In-Reply-To: <1513554812-13014-3-git-send-email-me@tobin.cc>
+References: <1513554812-13014-1-git-send-email-me@tobin.cc>
+	 <1513554812-13014-3-git-send-email-me@tobin.cc>
+Content-Type: text/plain; charset="ISO-8859-1"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 2/3] vsprintf: print <no-symbol> if symbol not found
+To: "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com
+Cc: Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Dec 17, 2017 at 02:34:25PM -0800, Joe Perches wrote:
-> On Mon, 2017-12-18 at 09:30 +1100, Tobin C. Harding wrote:
-> > This set converts printk-formats.txt -> core-api/printk-formats.rst
-> > 
-> > We also update the documentation around printing kernel addresses.
+On Mon, 2017-12-18 at 10:53 +1100, Tobin C. Harding wrote:
+> Depends on: commit bd6b239cdbb2 ("kallsyms: don't leak address when
+> symbol not found")
 > 
-> Please also update the comment in lib/vsprintf.c
-> 
->  * ** Please update also Documentation/printk-formats.txt when making changes **
-> 
-> > I'd like to get it _realy_ correct so that future
-> 
-> sp: realy->really
-> 
+> Currently vsprintf for specifiers %p[SsB] relies on the behaviour of
+> kallsyms (sprint_symbol()) and prints the actual address if a symbol is
+> not found. Previous patch changes this behaviour so tha sprint_symbol()
 
-Damn emphasis plays havoc with the spell checker. I do believe you have
-made this comment before Joe ;) I'll learn to spell one day.
+tha->that
 
-Will fix as suggested and re-spin.
+> returns an error if symbol not found. With this patch in place we can
+> print a sanitized message '<no-symbol>' instead of leaking the address.
+> 
+> Print '<no-symbol>' for printk specifier %s[sSB] if no symbol is found.
 
-thanks,
-Tobin
+%s->%ps
+
+> diff --git a/include/linux/kernel.h b/include/linux/kernel.h
+[]
+> @@ -460,6 +460,8 @@ char *kvasprintf(gfp_t gfp, const char *fmt, va_list args);
+>  extern __printf(2, 0)
+>  const char *kvasprintf_const(gfp_t gfp, const char *fmt, va_list args);
+>  
+> +extern int string_is_no_symbol(const char *s);
+> +
+[]
+> diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+> 
+> +#define PRINTK_NO_SYMBOL_STR "<no-symbol>"
+
+"<symbol unavailable>" ?  "not found"?
+
+[]
+
+> +int string_is_no_symbol(const char *s)
+> +{
+> +	return !!strstr(s, PRINTK_NO_SYMBOL_STR);
+> +}
+> +EXPORT_SYMBOL(string_is_no_symbol);
+
+Why should string_is_no_symbol be exported?
