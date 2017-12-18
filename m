@@ -1,50 +1,92 @@
+Date: Tue, 19 Dec 2017 09:35:04 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Date: Tue, 19 Dec 2017 09:29:05 +1100
-Message-Id: <1513636145-30033-4-git-send-email-me@tobin.cc>
-In-Reply-To: <1513636145-30033-1-git-send-email-me@tobin.cc>
-References: <1513636145-30033-1-git-send-email-me@tobin.cc>
-Subject: [kernel-hardening] [PATCH v3 3/3] doc: add documentation on printing kernel addresses
-To: Jonathan Corbet <corbet@lwn.net>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Randy Dunlap <rdunlap@infradead.org>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, Joe Perches <joe@perches.com>, kernel-hardening@lists.openwall.com
+Message-ID: <20171218223504.GD19604@eros>
+References: <1513554812-13014-1-git-send-email-me@tobin.cc>
+ <1513554812-13014-4-git-send-email-me@tobin.cc>
+ <20171218114947.2c11211a@gandalf.local.home>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171218114947.2c11211a@gandalf.local.home>
+Subject: [kernel-hardening] Re: [PATCH 3/3] trace: print address if symbol not found
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hashing addresses printed with printk specifier %p was implemented
-recently. During development a number of issues were raised regarding
-leaking kernel addresses to userspace. Other documentation was updated but
-security/self-protection missed out.
+On Mon, Dec 18, 2017 at 11:49:47AM -0500, Steven Rostedt wrote:
+> On Mon, 18 Dec 2017 10:53:32 +1100
+> "Tobin C. Harding" <me@tobin.cc> wrote:
+> 
+> > Fixes behaviour modified by: commit bd6b239cdbb2 ("kallsyms: don't leak
+> > address when symbol not found")
+> > 
+> > Previous patch changed behaviour of kallsyms function sprint_symbol() to
+> > return an error code instead of printing the address if a symbol was not
+> > found. Ftrace relies on the original behaviour. We should not break
+> > tracing when applying the previous patch. We can maintain the original
+> > behaviour by checking the return code on calls to sprint_symbol() and
+> > friends.
+> > 
+> > Check return code and print actual address on error (i.e symbol not
+> > found).
+> > 
+> > Signed-off-by: Tobin C. Harding <me@tobin.cc>
+> > ---
+> >  kernel/trace/trace.h             | 24 ++++++++++++++++++++++++
+> >  kernel/trace/trace_events_hist.c |  6 +++---
+> >  2 files changed, 27 insertions(+), 3 deletions(-)
+> > 
+> > diff --git a/kernel/trace/trace.h b/kernel/trace/trace.h
+> > index 2a6d0325a761..881b1a577d75 100644
+> > --- a/kernel/trace/trace.h
+> > +++ b/kernel/trace/trace.h
+> > @@ -1814,4 +1814,28 @@ static inline void trace_event_eval_update(struct trace_eval_map **map, int len)
+> >  
+> >  extern struct trace_iterator *tracepoint_print_iter;
+> >  
+> > +static inline int
+> > +trace_sprint_symbol(char *buffer, unsigned long address)
+> > +{
+> > +	int ret;
+> > +
+> > +	ret = sprint_symbol(buffer, address);
+> > +	if (ret == -1)
+> > +		ret = sprintf(buffer, "0x%lx", address);
+> > +
+> > +	return ret;
+> > +}
+> > +
+> > +static inline int
+> > +trace_sprint_symbol_no_offset(char *buffer, unsigned long address)
+> > +{
+> > +	int ret;
+> > +
+> > +	ret = sprint_symbol_no_offset(buffer, address);
+> > +	if (ret == -1)
+> > +		ret = sprintf(buffer, "0x%lx", address);
+> > +
+> > +	return ret;
+> > +}
+> > +
+> >  #endif /* _LINUX_KERNEL_TRACE_H */
+> > diff --git a/kernel/trace/trace_events_hist.c b/kernel/trace/trace_events_hist.c
+> > index 1e1558c99d56..3e28522a76f4 100644
+> > --- a/kernel/trace/trace_events_hist.c
+> > +++ b/kernel/trace/trace_events_hist.c
+> > @@ -982,7 +982,7 @@ static void hist_trigger_stacktrace_print(struct seq_file *m,
+> >  			return;
+> >  
+> >  		seq_printf(m, "%*c", 1 + spaces, ' ');
+> > -		sprint_symbol(str, stacktrace_entries[i]);
+> > +		trace_sprint_symbol_addr(str, stacktrace_entries[i]);
+> 
+> Hmm, where is trace_sprint_symbol_addr() defined?
+> 
+> -- Steve
 
-Add self-protection documentation regarding printing kernel addresses.
+Also, I missed one in kernel/trace/trace_output.c
 
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
----
- Documentation/security/self-protection.rst | 15 +++++++++++++++
- 1 file changed, 15 insertions(+)
+Added for next version.
 
-diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
-index 60c8bd8b77bf..0f53826c78b9 100644
---- a/Documentation/security/self-protection.rst
-+++ b/Documentation/security/self-protection.rst
-@@ -270,6 +270,21 @@ attacks, it is important to defend against exposure of both kernel memory
- addresses and kernel memory contents (since they may contain kernel
- addresses or other sensitive things like canary values).
- 
-+Kernel addresses
-+----------------
-+
-+Printing kernel addresses to userspace leaks sensitive information about
-+the kernel memory layout. Care should be exercised when using any printk
-+specifier that prints the raw address, currently %px, %p[ad], (and %p[sSb]
-+in certain circumstances [*]).  Any file written to using one of these
-+specifiers should be readable only by privileged processes.
-+
-+Kernels 4.14 and older printed the raw address using %p. As of 4.15-rc1
-+addresses printed with the specifier %p are hashed before printing.
-+
-+[*] If KALLSYMS is enabled and symbol lookup fails, the raw address is
-+printed. If KALLSYMS is not enabled the raw address is printed.
-+
- Unique identifiers
- ------------------
- 
--- 
-2.7.4
+thanks,
+Tobin.
