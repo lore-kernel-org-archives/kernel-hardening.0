@@ -1,43 +1,47 @@
-Message-Id: <1513636889.2482269.1209330464.6971721E@webmail.messagingengine.com>
-From: "Tobin C. Harding" <me@tobin.cc>
+References: <1513636145-30033-1-git-send-email-me@tobin.cc>
+ <1513636145-30033-3-git-send-email-me@tobin.cc>
+From: Randy Dunlap <rdunlap@infradead.org>
+Message-ID: <064efc24-fff2-0a3b-b7af-b64d53400fc0@infradead.org>
+Date: Mon, 18 Dec 2017 15:50:06 -0800
 MIME-Version: 1.0
+In-Reply-To: <1513636145-30033-3-git-send-email-me@tobin.cc>
+Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Content-Type: text/plain; charset="utf-8"
-Date: Tue, 19 Dec 2017 09:41:29 +1100
-References: <1513554812-13014-1-git-send-email-me@tobin.cc>
- <1513554812-13014-2-git-send-email-me@tobin.cc>
- <5b86abe3-2c9d-1396-777d-a5a8f19555ef@nbd.name>
-In-Reply-To: <5b86abe3-2c9d-1396-777d-a5a8f19555ef@nbd.name>
-Subject: [kernel-hardening] Re: [PATCH 1/3] kallsyms: don't leak address when symbol not found
-To: Felix Fietkau <nbd@nbd.name>, kernel-hardening@lists.openwall.com
-Cc: Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v3 2/3] doc: update kpt_restrict documentation
+To: "Tobin C. Harding" <me@tobin.cc>, Jonathan Corbet <corbet@lwn.net>
+Cc: linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, Joe Perches <joe@perches.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 18, 2017, at 20:55, Felix Fietkau wrote:
-> On 2017-12-18 00:53, Tobin C. Harding wrote:
-> > Currently if kallsyms_lookup() fails to find the symbol then the address
-> > is printed. This potentially leaks sensitive information. Instead of
-> > printing the address we can return an error, giving the calling code the
-> > option to print the address or print some sanitized message.
-> > 
-> > Return error instead of printing address to argument buffer. Leave
-> > buffer in a sane state.
-> > 
-> > Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> I think there should be a way to keep the old behavior for debugging.
+On 12/18/2017 02:29 PM, Tobin C. Harding wrote:
+> Recently the behaviour of printk specifier %pK was changed. The
+> documentation does not currently mirror this.
+> 
+> Update documentation for sysctl kpt_restrict.
 
-That was the intended use of
+Fix subject and here ............ ^^^^^^^^^^^^.
 
-EXPORT_SYMBOL(string_is_no_symbol);
+> 
+> Signed-off-by: Tobin C. Harding <me@tobin.cc>
+> ---
+>  Documentation/sysctl/kernel.txt | 3 ++-
+>  1 file changed, 2 insertions(+), 1 deletion(-)
+> 
+> diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
+> index 63663039acb7..412314eebda6 100644
+> --- a/Documentation/sysctl/kernel.txt
+> +++ b/Documentation/sysctl/kernel.txt
+> @@ -391,7 +391,8 @@ kptr_restrict:
+>  This toggle indicates whether restrictions are placed on
+>  exposing kernel addresses via /proc and other interfaces.
+>  
+> -When kptr_restrict is set to (0), the default, there are no restrictions.
+> +When kptr_restrict is set to 0 (the default) the address is hashed before
+> +printing. (This is the equivalent to %p.)
+>  
+>  When kptr_restrict is set to (1), kernel pointers printed using the %pK
+>  format specifier will be replaced with 0's unless the user has CAP_SYSLOG
+> 
 
-in patch 2 of this series. Then if debugging behaviour is adversely
-effected one could use string_is_no_symbol() on a case by case basis to
-add back in the original behaviour. 
 
-Current suggestion on list is to remove this function. Do you have a use
-case in mind where debugging will break? We could add a fix to this
-series if so. Otherwise next version will likely drop
-string_is_no_symbol()
-
-thanks,
-Tobin. 
+-- 
+~Randy
