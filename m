@@ -1,95 +1,45 @@
-Date: Tue, 19 Dec 2017 05:32:36 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Message-ID: <20171219133236.GE13680@bombadil.infradead.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] Provide useful debugging information for VM_BUG
-To: linux-mm@kvack.org
-Cc: "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com
+In-Reply-To: <20171201201000.GA44539@beast>
+References: <20171201201000.GA44539@beast>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Tue, 19 Dec 2017 13:33:20 +0000
+Message-ID: <CAKv+Gu8Q-ui9pf_HVo0LcGBQ5fRD++NzEiQ9cEzp9k9FNXL3hQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [PATCH] Kconfig: Make STRICT_DEVMEM default-y
+ on x86 and arm64
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Will Deacon <will.deacon@arm.com>, Laura Abbott <labbott@redhat.com>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 1 December 2017 at 20:10, Kees Cook <keescook@chromium.org> wrote:
+> Distros have been shipping with CONFIG_STRICT_DEVMEM=y for years now. It
+> is probably time to flip this default for x86 and arm64.
+>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
-From: Matthew Wilcox <mawilcox@microsoft.com>
+Acked-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 
-With the recent addition of hashed kernel pointers, places which need
-to produce useful debug output have to specify %px, not %p.  This patch
-fixes all the VM debug to use %px.  This is appropriate because it's
-debug output that the user should never be able to trigger, and kernel
-developers need to see the actual pointers.
-
-Signed-off-by: Matthew Wilcox <mawilcox@microsoft.com>
-
-diff --git a/mm/debug.c b/mm/debug.c
-index d947f3e03b0d..56e2d9125ea5 100644
---- a/mm/debug.c
-+++ b/mm/debug.c
-@@ -50,7 +50,7 @@ void __dump_page(struct page *page, const char *reason)
- 	 */
- 	int mapcount = PageSlab(page) ? 0 : page_mapcount(page);
- 
--	pr_emerg("page:%p count:%d mapcount:%d mapping:%p index:%#lx",
-+	pr_emerg("page:%px count:%d mapcount:%d mapping:%px index:%#lx",
- 		  page, page_ref_count(page), mapcount,
- 		  page->mapping, page_to_pgoff(page));
- 	if (PageCompound(page))
-@@ -69,7 +69,7 @@ void __dump_page(struct page *page, const char *reason)
- 
- #ifdef CONFIG_MEMCG
- 	if (page->mem_cgroup)
--		pr_alert("page->mem_cgroup:%p\n", page->mem_cgroup);
-+		pr_alert("page->mem_cgroup:%px\n", page->mem_cgroup);
- #endif
- }
- 
-@@ -84,10 +84,10 @@ EXPORT_SYMBOL(dump_page);
- 
- void dump_vma(const struct vm_area_struct *vma)
- {
--	pr_emerg("vma %p start %p end %p\n"
--		"next %p prev %p mm %p\n"
--		"prot %lx anon_vma %p vm_ops %p\n"
--		"pgoff %lx file %p private_data %p\n"
-+	pr_emerg("vma %px start %px end %px\n"
-+		"next %px prev %px mm %px\n"
-+		"prot %lx anon_vma %px vm_ops %px\n"
-+		"pgoff %lx file %px private_data %px\n"
- 		"flags: %#lx(%pGv)\n",
- 		vma, (void *)vma->vm_start, (void *)vma->vm_end, vma->vm_next,
- 		vma->vm_prev, vma->vm_mm,
-@@ -100,27 +100,27 @@ EXPORT_SYMBOL(dump_vma);
- 
- void dump_mm(const struct mm_struct *mm)
- {
--	pr_emerg("mm %p mmap %p seqnum %d task_size %lu\n"
-+	pr_emerg("mm %px mmap %px seqnum %d task_size %lu\n"
- #ifdef CONFIG_MMU
--		"get_unmapped_area %p\n"
-+		"get_unmapped_area %px\n"
- #endif
- 		"mmap_base %lu mmap_legacy_base %lu highest_vm_end %lu\n"
--		"pgd %p mm_users %d mm_count %d pgtables_bytes %lu map_count %d\n"
-+		"pgd %px mm_users %d mm_count %d pgtables_bytes %lu map_count %d\n"
- 		"hiwater_rss %lx hiwater_vm %lx total_vm %lx locked_vm %lx\n"
- 		"pinned_vm %lx data_vm %lx exec_vm %lx stack_vm %lx\n"
- 		"start_code %lx end_code %lx start_data %lx end_data %lx\n"
- 		"start_brk %lx brk %lx start_stack %lx\n"
- 		"arg_start %lx arg_end %lx env_start %lx env_end %lx\n"
--		"binfmt %p flags %lx core_state %p\n"
-+		"binfmt %px flags %lx core_state %px\n"
- #ifdef CONFIG_AIO
--		"ioctx_table %p\n"
-+		"ioctx_table %px\n"
- #endif
- #ifdef CONFIG_MEMCG
--		"owner %p "
-+		"owner %px "
- #endif
--		"exe_file %p\n"
-+		"exe_file %px\n"
- #ifdef CONFIG_MMU_NOTIFIER
--		"mmu_notifier_mm %p\n"
-+		"mmu_notifier_mm %px\n"
- #endif
- #ifdef CONFIG_NUMA_BALANCING
- 		"numa_next_scan %lu numa_scan_offset %lu numa_scan_seq %d\n"
+> ---
+>  lib/Kconfig.debug | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+>
+> diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
+> index 947d3e2ed5c2..39b123d04a36 100644
+> --- a/lib/Kconfig.debug
+> +++ b/lib/Kconfig.debug
+> @@ -1985,7 +1985,7 @@ config STRICT_DEVMEM
+>         bool "Filter access to /dev/mem"
+>         depends on MMU && DEVMEM
+>         depends on ARCH_HAS_DEVMEM_IS_ALLOWED
+> -       default y if TILE || PPC
+> +       default y if TILE || PPC || X86 || ARM64
+>         ---help---
+>           If this option is disabled, you allow userspace (root) access to all
+>           of memory, including kernel and userspace memory. Accidental
+> --
+> 2.7.4
+>
+>
+> --
+> Kees Cook
+> Pixel Security
