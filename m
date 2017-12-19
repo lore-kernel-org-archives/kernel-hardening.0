@@ -1,48 +1,81 @@
-Date: Tue, 19 Dec 2017 15:20:09 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171219042009.GK19604@eros>
-References: <1513554812-13014-1-git-send-email-me@tobin.cc>
- <1513554812-13014-4-git-send-email-me@tobin.cc>
- <20171218114947.2c11211a@gandalf.local.home>
- <20171218211614.GC19604@eros>
- <20171218185143.4046a71b@gandalf.local.home>
- <20171219030011.GH19604@eros>
- <20171218223738.49e563c0@vmware.local.home>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171218223738.49e563c0@vmware.local.home>
-Subject: [kernel-hardening] Re: [PATCH 3/3] trace: print address if symbol not found
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
+Message-ID: <1513664307.1234.21.camel@perches.com>
+From: Joe Perches <joe@perches.com>
+In-Reply-To: <1513654094-16832-3-git-send-email-me@tobin.cc>
+References: <1513654094-16832-1-git-send-email-me@tobin.cc>
+	 <1513654094-16832-3-git-send-email-me@tobin.cc>
+Content-Type: text/plain; charset="ISO-8859-1"
+Date: Mon, 18 Dec 2017 22:18:27 -0800
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 2/3] vsprintf: print <no-symbol> if symbol not found
+To: "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com
+Cc: Steven Rostedt <rostedt@goodmis.org>, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 18, 2017 at 10:37:38PM -0500, Steven Rostedt wrote:
-> On Tue, 19 Dec 2017 14:00:11 +1100
-> "Tobin C. Harding" <me@tobin.cc> wrote:
+On Tue, 2017-12-19 at 14:28 +1100, Tobin C. Harding wrote:
+> Depends on: commit 40eee173a35e ("kallsyms: don't leak address when
+> symbol not found")
 > 
-> > I ran through these as outlined here for the new version (v4). This hits
-> > the modified code but doesn't test symbol look up failure.
+> Currently vsprintf for specifiers %p[SsB] relies on the behaviour of
+> kallsyms (sprint_symbol()) and prints the actual address if a symbol is
+> not found. Previous patch changes this behaviour so that sprint_symbol()
+> returns an error if symbol not found. With this patch in place we can
+> print a sanitized message '<symbol not found>' instead of leaking the
+> address.
 > 
-> stacktrace shouldn't post non kernel values, unless there's a frame
-> pointer that isn't handled by kallsyms.
+> Print '<symbol not found>' for printk specifier %p[sSB] if symbol look
+> up fails.
 > 
-> As for the other two, we could probably force a failure, like:
+> Signed-off-by: Tobin C. Harding <me@tobin.cc>
+> ---
+>  lib/vsprintf.c | 11 ++++++++---
+>  1 file changed, 8 insertions(+), 3 deletions(-)
 > 
->  # echo 'hist:keys=hrtimer.sym' > \
->      events/timer/hrtimer_start/trigger
->  # cat events/timer/hrtimer_start/hist
-> 
-> And then just add sym-offset too.
->
-> > I also configured kernel with 'Perform a startup test on ftrace' for
-> > good luck.
-> > 
-> > Are you happy with this level of testing?
-> 
-> Can you try the above.
+> diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+> index 01c3957b2de6..820ed4fe6e6c 100644
+> --- a/lib/vsprintf.c
+> +++ b/lib/vsprintf.c
+> @@ -674,6 +674,8 @@ char *symbol_string(char *buf, char *end, void *ptr,
+>  	unsigned long value;
+>  #ifdef CONFIG_KALLSYMS
+>  	char sym[KSYM_SYMBOL_LEN];
+> +	const char *sym_not_found = "<symbol not found>";
 
-Did both and in both cases we get the addresses as hoped :)
+This will be reinitialized on every use.
 
-thanks,
-Tobin.
+> +	int ret;
+>  #endif
+>  
+>  	if (fmt[1] == 'R')
+> @@ -682,11 +684,14 @@ char *symbol_string(char *buf, char *end, void *ptr,
+>  
+>  #ifdef CONFIG_KALLSYMS
+>  	if (*fmt == 'B')
+> -		sprint_backtrace(sym, value);
+> +		ret = sprint_backtrace(sym, value);
+>  	else if (*fmt != 'f' && *fmt != 's')
+> -		sprint_symbol(sym, value);
+> +		ret = sprint_symbol(sym, value);
+>  	else
+> -		sprint_symbol_no_offset(sym, value);
+> +		ret = sprint_symbol_no_offset(sym, value);
+> +
+> +	if (ret == -1)
+> +		strcpy(sym, sym_not_found);
+
+
+This could avoid the unnecessary strcpy if sym_not_found
+was not used at all and this was used instead
+
+	if (ret == -1)
+		return string(buf, end, "<symbol not found>", spec);
+
+	return string(buf, end, sym, spec);
+
+or maybe
+
+	return string(buf, end, ret == -1 ? "<symbol not found>" : sum, spec);
+
+>  
+>  	return string(buf, end, sym, spec);
+>  #else
