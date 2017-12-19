@@ -1,63 +1,36 @@
-Date: Tue, 19 Dec 2017 11:22:45 +1100
+Date: Tue, 19 Dec 2017 11:24:18 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171219002245.GE19604@eros>
+Message-ID: <20171219002418.GF19604@eros>
 References: <1513554812-13014-1-git-send-email-me@tobin.cc>
- <1513554812-13014-4-git-send-email-me@tobin.cc>
- <20171218114947.2c11211a@gandalf.local.home>
- <20171218211614.GC19604@eros>
- <20171218185143.4046a71b@gandalf.local.home>
+ <1513554812-13014-2-git-send-email-me@tobin.cc>
+ <5b86abe3-2c9d-1396-777d-a5a8f19555ef@nbd.name>
+ <1513636889.2482269.1209330464.6971721E@webmail.messagingengine.com>
+ <20171218184324.527ffd0e@gandalf.local.home>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171218185143.4046a71b@gandalf.local.home>
-Subject: [kernel-hardening] Re: [PATCH 3/3] trace: print address if symbol not found
+In-Reply-To: <20171218184324.527ffd0e@gandalf.local.home>
+Subject: [kernel-hardening] Re: [PATCH 1/3] kallsyms: don't leak address when symbol not found
 To: Steven Rostedt <rostedt@goodmis.org>
-Cc: kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
+Cc: Felix Fietkau <nbd@nbd.name>, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 18, 2017 at 06:51:43PM -0500, Steven Rostedt wrote:
-> On Tue, 19 Dec 2017 08:16:14 +1100
+On Mon, Dec 18, 2017 at 06:43:24PM -0500, Steven Rostedt wrote:
+> On Tue, 19 Dec 2017 09:41:29 +1100
 > "Tobin C. Harding" <me@tobin.cc> wrote:
 > 
-> > > >  #endif /* _LINUX_KERNEL_TRACE_H */
-> > > > diff --git a/kernel/trace/trace_events_hist.c b/kernel/trace/trace_events_hist.c
-> > > > index 1e1558c99d56..3e28522a76f4 100644
-> > > > --- a/kernel/trace/trace_events_hist.c
-> > > > +++ b/kernel/trace/trace_events_hist.c
-> > > > @@ -982,7 +982,7 @@ static void hist_trigger_stacktrace_print(struct seq_file *m,
-> > > >  			return;
-> > > >  
-> > > >  		seq_printf(m, "%*c", 1 + spaces, ' ');
-> > > > -		sprint_symbol(str, stacktrace_entries[i]);
-> > > > +		trace_sprint_symbol_addr(str, stacktrace_entries[i]);  
-> > > 
+> > Current suggestion on list is to remove this function. Do you have a use
+> > case in mind where debugging will break? We could add a fix to this
+> > series if so. Otherwise next version will likely drop
+> > string_is_no_symbol()
 > 
-> > 
-> > If you have the time to give me some brief pointers on how I should go
-> > about testing this I'd love to test it before the next version. I know
-> > very little about ftrace.
+> What about adding a kernel command line parameter that lets one put
+> back the old behavior.
 > 
-> For hitting the histogram stacktrace trigger (this code path), make
-> sure you have CONFIG_HIST_TRIGGERS enabled. And then do:
-> 
->  # cd /sys/kernel/debug/tracing
->  # echo 'hist:keys=common_pid.execname,stacktrace:vals=prev_state' > \
->      events/sched/sched_switch/trigger
->  # cat events/sched/sched_switch/hist
-> 
-> For the "sym" part, you can do (from the same directory):
-> 
->  # echo 'hist:keys=call_site.sym:vals=bytes_req' > \
->      events/kmem/kmalloc/trigger
->  # cat events/kmem/kmalloc/hist
-> 
-> 
-> And for sym-offset:
-> 
->  # echo 'hist:keys=call_site.sym-offset:vals=bytes_req' > \
->     events/kmem/kmalloc/trigger
->  # cat events/kmem/kmalloc/hist
-> 
-> -- Steve
+> "insecure_print_all_symbols" ?
 
-Thanks, you're the man
+Cool. I've not done that before it will be a good learning
+experience. I'll hack it up and see what people think.
+
+thanks,
+Tobin.
