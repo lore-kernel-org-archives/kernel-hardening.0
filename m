@@ -1,36 +1,30 @@
-Date: Tue, 19 Dec 2017 11:24:18 +1100
+Date: Tue, 19 Dec 2017 11:28:11 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171219002418.GF19604@eros>
-References: <1513554812-13014-1-git-send-email-me@tobin.cc>
- <1513554812-13014-2-git-send-email-me@tobin.cc>
- <5b86abe3-2c9d-1396-777d-a5a8f19555ef@nbd.name>
- <1513636889.2482269.1209330464.6971721E@webmail.messagingengine.com>
- <20171218184324.527ffd0e@gandalf.local.home>
+Message-ID: <20171219002811.GG19604@eros>
+References: <1513636145-30033-1-git-send-email-me@tobin.cc>
+ <1513636145-30033-3-git-send-email-me@tobin.cc>
+ <064efc24-fff2-0a3b-b7af-b64d53400fc0@infradead.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20171218184324.527ffd0e@gandalf.local.home>
-Subject: [kernel-hardening] Re: [PATCH 1/3] kallsyms: don't leak address when symbol not found
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: Felix Fietkau <nbd@nbd.name>, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Daniel Borkmann <daniel@iogearbox.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexei Starovoitov <ast@kernel.org>, linux-kernel@vger.kernel.org, Network Development <netdev@vger.kernel.org>
+In-Reply-To: <064efc24-fff2-0a3b-b7af-b64d53400fc0@infradead.org>
+Subject: [kernel-hardening] Re: [PATCH v3 2/3] doc: update kpt_restrict documentation
+To: Randy Dunlap <rdunlap@infradead.org>
+Cc: Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, Joe Perches <joe@perches.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 18, 2017 at 06:43:24PM -0500, Steven Rostedt wrote:
-> On Tue, 19 Dec 2017 09:41:29 +1100
-> "Tobin C. Harding" <me@tobin.cc> wrote:
+On Mon, Dec 18, 2017 at 03:50:06PM -0800, Randy Dunlap wrote:
+> On 12/18/2017 02:29 PM, Tobin C. Harding wrote:
+> > Recently the behaviour of printk specifier %pK was changed. The
+> > documentation does not currently mirror this.
+> > 
+> > Update documentation for sysctl kpt_restrict.
 > 
-> > Current suggestion on list is to remove this function. Do you have a use
-> > case in mind where debugging will break? We could add a fix to this
-> > series if so. Otherwise next version will likely drop
-> > string_is_no_symbol()
-> 
-> What about adding a kernel command line parameter that lets one put
-> back the old behavior.
-> 
-> "insecure_print_all_symbols" ?
+> Fix subject and here ............ ^^^^^^^^^^^^.
 
-Cool. I've not done that before it will be a good learning
-experience. I'll hack it up and see what people think.
+Oh thanks. Took quite a few minutes of staring to see the mistake ;)
+
+Will fix and re-spin.
 
 thanks,
 Tobin.
