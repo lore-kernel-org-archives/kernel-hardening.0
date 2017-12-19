@@ -1,51 +1,54 @@
-Date: Tue, 19 Dec 2017 07:02:12 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Message-ID: <20171219150212.GB30842@bombadil.infradead.org>
-References: <20171219133236.GE13680@bombadil.infradead.org>
- <20171219144211.GY2787@dhcp22.suse.cz>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171219144211.GY2787@dhcp22.suse.cz>
-Subject: [kernel-hardening] Re: [PATCH] Provide useful debugging information for VM_BUG
-To: Michal Hocko <mhocko@kernel.org>, Andrew Morton <akpm@linux-foundation.org>
-Cc: linux-mm@kvack.org, "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com
+From: "Tobin C. Harding" <me@tobin.cc>
+Date: Wed, 20 Dec 2017 08:17:14 +1100
+Message-Id: <1513718237-24140-1-git-send-email-me@tobin.cc>
+Subject: [kernel-hardening] [PATCH v4 0/3] doc: update printk documentation
+To: Jonathan Corbet <corbet@lwn.net>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Randy Dunlap <rdunlap@infradead.org>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, Joe Perches <joe@perches.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Dec 19, 2017 at 03:42:11PM +0100, Michal Hocko wrote:
-> On Tue 19-12-17 05:32:36, Matthew Wilcox wrote:
-> > 
-> > From: Matthew Wilcox <mawilcox@microsoft.com>
-> > 
-> > With the recent addition of hashed kernel pointers, places which need
-> > to produce useful debug output have to specify %px, not %p.  This patch
-> > fixes all the VM debug to use %px.  This is appropriate because it's
-> > debug output that the user should never be able to trigger, and kernel
-> > developers need to see the actual pointers.
-> 
-> Agreed. This is essentially a BUG_ON so we shouldn't hide information.
-> I am just wondering why %px rather than %lx (like __show_regs e.g.)?
+This set converts printk-formats.txt -> core-api/printk-formats.rst
 
-commit 7b1924a1d930eb27fc79c4e4e2a6c1c970623e68
-Author: Tobin C. Harding <me@tobin.cc>
-Date:   Thu Nov 23 10:59:45 2017 +1100
+We also update the documentation around printing kernel addresses.
 
-    vsprintf: add printk specifier %px
-    
-    printk specifier %p now hashes all addresses before printing. Sometimes
-    we need to see the actual unmodified address. This can be achieved using
-    %lx but then we face the risk that if in future we want to change the
-    way the Kernel handles printing of pointers we will have to grep through
-    the already existent 50 000 %lx call sites. Let's add specifier %px as a
-    clear, opt-in, way to print a pointer and maintain some level of
-    isolation from all the other hex integer output within the Kernel.
-    
-    Add printk specifier %px to print the actual unmodified address.
-    
-    Signed-off-by: Tobin C. Harding <me@tobin.cc>
+This is my first documentation conversion. Please do be hard on this
+patch series. I'd like to get it _really_ correct so that future
+conversions will require less review effort. Also if there are any
+peculiarities to patching docs (as apposed to C files) please say so.
 
-> > Signed-off-by: Matthew Wilcox <mawilcox@microsoft.com>
-> 
-> Acked-by: Michal Hocko <mhocko@suse.com>
+Thank you for the time already given to reviewing previous versions.
 
-Thanks.  Andrew, will you take this, or does it go through the hardening tree?
+thanks,
+Tobin.
+
+v4:
+ - fix typo 'kpt_restrict' -> 'kptr_restrict' (thanks Randy).
+
+v3:
+ - Update filename .txt -> .rst in lib/vsnprintf.c comment (Joe Perches)
+ - Remove unnecessary commas (as suggested by Randy Dunlap)
+ - Re-apply theory 'make as few changes as possible to complete the
+   conversion'
+
+v2:
+ - Remove conversion/inclusion of kernel-docs from lib/vsprintf.c
+ - Add '<>' around file name (in section 'Thanks').
+ - Remove a few more double back ticks.
+ - Apply theory 'make as few changes as possible to complete the
+   conversion'
+
+Tobin C. Harding (3):
+  doc: convert printk-formats.txt to rst
+  doc: update kptr_restrict documentation
+  doc: add documentation on printing kernel addresses
+
+ Documentation/00-INDEX                             |   2 -
+ Documentation/core-api/index.rst                   |   1 +
+ .../printk-formats.rst}                            | 229 +++++++++++----------
+ Documentation/security/self-protection.rst         |  15 ++
+ Documentation/sysctl/kernel.txt                    |   3 +-
+ lib/vsprintf.c                                     |   3 +-
+ 6 files changed, 139 insertions(+), 114 deletions(-)
+ rename Documentation/{printk-formats.txt => core-api/printk-formats.rst} (63%)
+
+-- 
+2.7.4
