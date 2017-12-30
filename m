@@ -1,204 +1,44 @@
-References: <20171205223101.12765-1-mahesh@bandewar.net>
-From: "Michael Kerrisk (man-pages)" <mtk.manpages@gmail.com>
-Message-ID: <fd118a72-ce69-99fe-1cc4-0adaee3660c9@gmail.com>
-Date: Sat, 30 Dec 2017 09:50:52 +0100
+Date: Sat, 30 Dec 2017 21:30:55 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Message-ID: <20171230103055.GC6042@caerus>
+References: <1513569287.8041.8.camel@gmail.com>
+ <20171218055746.GC4627@eros>
+ <20171226074855.43205509@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20171205223101.12765-1-mahesh@bandewar.net>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCHv3 1/2] capability: introduce sysctl for controlled user-ns
- capability whitelist
-To: Mahesh Bandewar <mahesh@bandewar.net>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>
-Cc: mtk.manpages@gmail.com, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <maheshb@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171226074855.43205509@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] leaking_addresses: add generic 32-bit support
+To: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
+Cc: linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Mahesh,
-
-On 12/05/2017 11:31 PM, Mahesh Bandewar wrote:
-> From: Mahesh Bandewar <maheshb@google.com>
+On Tue, Dec 26, 2017 at 07:48:55AM +0530, Kaiwan N Billimoria wrote:
+> The script attempts to detect the architecture it's running upon; as of now,
+> we explicitly support x86_64, PPC64 and x86_32.
+> If it's one of them, we proceed "normally". If we fail to detect the arch,
+> we fallback to 64-bit scanning, unless the user has passed either of these
+> option switches: "--opt-32bit" and/or "--page-offset-32bit=<val>".
 > 
-> Add a sysctl variable kernel.controlled_userns_caps_whitelist. This
-> takes input as capability mask expressed as two comma separated hex
-> u32 words. The mask, however, is stored in kernel as kernel_cap_t type.
-
-Just by the way, why is it not expressed as a 64 bit value? (The answer
-to that question should I think be part of this commit message.)
-
-> Any capabilities that are not part of this mask will be controlled and
-> will not be allowed to processes in controlled user-ns.
+> If so, we switch to scanning for leaked addresses based on the value of
+> PAGE_OFFSET (via an auto-detected or fallback mechanism).
 > 
-> Acked-by: Serge Hallyn <serge@hallyn.com>
-> Signed-off-by: Mahesh Bandewar <maheshb@google.com>
+> As of now, we have code (or "rules") to detect special cases for x86_64 and PPC64
+> (in the get_address_re sub). Also, we now have also builtin "stubs", for lack of a better term, where additional rules for other 64-bit arch's can be plugged into the code,
+> in future, as applicable.
+> 
+> Signed-off-by: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
+> 
 > ---
-> v3:
->   Added couple of comments as requested by Serge Hallyn
-> v2:
->   Rebase
-> v1:
->   Initial submission
+>  scripts/leaking_addresses.pl | 190 +++++++++++++++++++++++++++++++++++--------
+>  1 file changed, 156 insertions(+), 34 deletions(-)
 > 
->  Documentation/sysctl/kernel.txt | 21 ++++++++++++++++++
->  include/linux/capability.h      |  3 +++
->  kernel/capability.c             | 47 +++++++++++++++++++++++++++++++++++++++++
->  kernel/sysctl.c                 |  5 +++++
->  4 files changed, 76 insertions(+)
-> 
-> diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
-> index 694968c7523c..a1d39dbae847 100644
-> --- a/Documentation/sysctl/kernel.txt
-> +++ b/Documentation/sysctl/kernel.txt
-> @@ -25,6 +25,7 @@ show up in /proc/sys/kernel:
->  - bootloader_version	     [ X86 only ]
->  - callhome		     [ S390 only ]
->  - cap_last_cap
-> +- controlled_userns_caps_whitelist
->  - core_pattern
->  - core_pipe_limit
->  - core_uses_pid
-> @@ -187,6 +188,26 @@ CAP_LAST_CAP from the kernel.
->  
->  ==============================================================
->  
-> +controlled_userns_caps_whitelist
-> +
-> +Capability mask that is whitelisted for "controlled" user namespaces.
+> This patch is based on Tobin's suggestions and my replies to them (see prev email in this thread).
 
-How is a user-ns marked as "controlled"? Please clarify this.
+Hi,
 
-> +Any capability that is missing from this mask will not be allowed to
-> +any process that is attached to a controlled-userns. e.g. if CAP_NET_RAW
-> +is not part of this mask, then processes running inside any controlled
-> +userns's will not be allowed to perform action that needs CAP_NET_RAW
-> +capability. However, processes that are attached to a parent user-ns
-> +hierarchy that is *not* controlled and has CAP_NET_RAW can continue
-> +performing those actions. User-namespaces are marked "controlled" at
-> +the time of their creation based on the capabilities of the creator.
-> +A process that does not have CAP_SYS_ADMIN will create user-namespaces
-> +that are controlled.
-> +
-> +The value is expressed as two comma separated hex words (u32). This
-> +sysctl is avaialble in init-ns and users with CAP_SYS_ADMIN in init-ns
-> +are allowed to make changes.
-
-Could you add here a shell session that demonstrates the use of these 
-interfaces and how they allow/disallow capabilities. 
-
-Is there a way that a process can see whether it is a controlled user-ns
-vs an uncontrolled user-ns? I think it would be good to explain in this
-doc patch.
+Can you resend this with a version number please. Also can you include what testing you have done
+please. I'm away on Christmas holidays at the moment but I'll review soon as I'm back.
 
 Thanks,
-
-Michael
-
-> +==============================================================
-> +
->  core_pattern:
->  
->  core_pattern is used to specify a core dumpfile pattern name.
-> diff --git a/include/linux/capability.h b/include/linux/capability.h
-> index f640dcbc880c..7d79a4689625 100644
-> --- a/include/linux/capability.h
-> +++ b/include/linux/capability.h
-> @@ -14,6 +14,7 @@
->  #define _LINUX_CAPABILITY_H
->  
->  #include <uapi/linux/capability.h>
-> +#include <linux/sysctl.h>
->  
->  
->  #define _KERNEL_CAPABILITY_VERSION _LINUX_CAPABILITY_VERSION_3
-> @@ -248,6 +249,8 @@ extern bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns);
->  
->  /* audit system wants to get cap info from files as well */
->  extern int get_vfs_caps_from_disk(const struct dentry *dentry, struct cpu_vfs_cap_data *cpu_caps);
-> +int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
-> +				 void __user *buff, size_t *lenp, loff_t *ppos);
->  
->  extern int cap_convert_nscap(struct dentry *dentry, void **ivalue, size_t size);
->  
-> diff --git a/kernel/capability.c b/kernel/capability.c
-> index 1e1c0236f55b..4a859b7d4902 100644
-> --- a/kernel/capability.c
-> +++ b/kernel/capability.c
-> @@ -29,6 +29,8 @@ EXPORT_SYMBOL(__cap_empty_set);
->  
->  int file_caps_enabled = 1;
->  
-> +kernel_cap_t controlled_userns_caps_whitelist = CAP_FULL_SET;
-> +
->  static int __init file_caps_disable(char *str)
->  {
->  	file_caps_enabled = 0;
-> @@ -507,3 +509,48 @@ bool ptracer_capable(struct task_struct *tsk, struct user_namespace *ns)
->  	rcu_read_unlock();
->  	return (ret == 0);
->  }
-> +
-> +/* Controlled-userns capabilities routines */
-> +#ifdef CONFIG_SYSCTL
-> +int proc_douserns_caps_whitelist(struct ctl_table *table, int write,
-> +				 void __user *buff, size_t *lenp, loff_t *ppos)
-> +{
-> +	DECLARE_BITMAP(caps_bitmap, CAP_LAST_CAP);
-> +	struct ctl_table caps_table;
-> +	char tbuf[NAME_MAX];
-> +	int ret;
-> +
-> +	ret = bitmap_from_u32array(caps_bitmap, CAP_LAST_CAP,
-> +				   controlled_userns_caps_whitelist.cap,
-> +				   _KERNEL_CAPABILITY_U32S);
-> +	if (ret != CAP_LAST_CAP)
-> +		return -1;
-> +
-> +	scnprintf(tbuf, NAME_MAX, "%*pb", CAP_LAST_CAP, caps_bitmap);
-> +
-> +	caps_table.data = tbuf;
-> +	caps_table.maxlen = NAME_MAX;
-> +	caps_table.mode = table->mode;
-> +	ret = proc_dostring(&caps_table, write, buff, lenp, ppos);
-> +	if (ret)
-> +		return ret;
-> +	if (write) {
-> +		kernel_cap_t tmp;
-> +
-> +		if (!capable(CAP_SYS_ADMIN))
-> +			return -EPERM;
-> +
-> +		ret = bitmap_parse_user(buff, *lenp, caps_bitmap, CAP_LAST_CAP);
-> +		if (ret)
-> +			return ret;
-> +
-> +		ret = bitmap_to_u32array(tmp.cap, _KERNEL_CAPABILITY_U32S,
-> +					 caps_bitmap, CAP_LAST_CAP);
-> +		if (ret != CAP_LAST_CAP)
-> +			return -1;
-> +
-> +		controlled_userns_caps_whitelist = tmp;
-> +	}
-> +	return 0;
-> +}
-> +#endif /* CONFIG_SYSCTL */
-> diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-> index 557d46728577..759b6c286806 100644
-> --- a/kernel/sysctl.c
-> +++ b/kernel/sysctl.c
-> @@ -1217,6 +1217,11 @@ static struct ctl_table kern_table[] = {
->  		.extra2		= &one,
->  	},
->  #endif
-> +	{
-> +		.procname	= "controlled_userns_caps_whitelist",
-> +		.mode		= 0644,
-> +		.proc_handler	= proc_douserns_caps_whitelist,
-> +	},
->  	{ }
->  };
->  
-> 
-
-
--- 
-Michael Kerrisk
-Linux man-pages maintainer; http://www.kernel.org/doc/man-pages/
-Linux/UNIX System Programming Training: http://man7.org/training/
+Tobin.
