@@ -1,44 +1,55 @@
-Date: Sat, 30 Dec 2017 21:30:55 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20171230103055.GC6042@caerus>
-References: <1513569287.8041.8.camel@gmail.com>
- <20171218055746.GC4627@eros>
- <20171226074855.43205509@gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171226074855.43205509@gmail.com>
-Subject: [kernel-hardening] Re: [PATCH] leaking_addresses: add generic 32-bit support
-To: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
-Cc: linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Dan Aloni <dan@kernelim.com>
+Date: Sat, 30 Dec 2017 19:57:59 +0200
+Message-Id: <20171230175804.7354-1-alonid@gmail.com>
+Subject: [kernel-hardening] [PATCH 0/5] RFC: Public key encryption of dmesg by the kernel
+To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Dan Aloni <dan@kernelim.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Dec 26, 2017 at 07:48:55AM +0530, Kaiwan N Billimoria wrote:
-> The script attempts to detect the architecture it's running upon; as of now,
-> we explicitly support x86_64, PPC64 and x86_32.
-> If it's one of them, we proceed "normally". If we fail to detect the arch,
-> we fallback to 64-bit scanning, unless the user has passed either of these
-> option switches: "--opt-32bit" and/or "--page-offset-32bit=<val>".
-> 
-> If so, we switch to scanning for leaked addresses based on the value of
-> PAGE_OFFSET (via an auto-detected or fallback mechanism).
-> 
-> As of now, we have code (or "rules") to detect special cases for x86_64 and PPC64
-> (in the get_address_re sub). Also, we now have also builtin "stubs", for lack of a better term, where additional rules for other 64-bit arch's can be plugged into the code,
-> in future, as applicable.
-> 
-> Signed-off-by: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
-> 
-> ---
->  scripts/leaking_addresses.pl | 190 +++++++++++++++++++++++++++++++++++--------
->  1 file changed, 156 insertions(+), 34 deletions(-)
-> 
-> This patch is based on Tobin's suggestions and my replies to them (see prev email in this thread).
+From: Dan Aloni <dan@kernelim.com>
 
-Hi,
+Hi All,
 
-Can you resend this with a version number please. Also can you include what testing you have done
-please. I'm away on Christmas holidays at the moment but I'll review soon as I'm back.
+There has been a lot of progress in recent times regarding the removal
+of sensitive information from dmesg (pointers, etc.), so I figured - why
+not encrypt it all? However, I have not found any existing discussions
+or references regarding this technical direction.
 
-Thanks,
-Tobin.
+I am not sure that desktop and power users would like to have their
+kernel message encrypted, but there are scenarios such as in mobile
+devices, where only the developers, makers of devices, may actually
+benefit from access to kernel prints messages, and the users may be
+more protected from exploits.
+
+In its present form, it is an RFC, so that before investing more time
+developing it further, I would receive comments regarding its viability
+and suggestions for design.
+
+
+Dan Aloni (5):
+  crypto: fix memory leak in rsa-kcs1pad encryption
+  certs: allow in-kernel access of trusted keys
+  kernel/printk: allow kmsg to be encrypted using public key encryption
+  tools: add dmesg decryption program
+  docs: add dmesg encryption doc
+
+ Documentation/admin-guide/dmesg-encryption.rst |  77 +++++
+ certs/system_keyring.c                         |  56 +++-
+ crypto/rsa-pkcs1pad.c                          |   9 -
+ include/keys/system_keyring.h                  |   3 +
+ include/uapi/linux/kmsg.h                      |  18 ++
+ init/Kconfig                                   |  10 +
+ kernel/printk/printk.c                         | 422 +++++++++++++++++++++++++
+ tools/Makefile                                 |   5 +-
+ tools/kmsg/.gitignore                          |   1 +
+ tools/kmsg/Makefile                            |  14 +
+ tools/kmsg/dmesg-decipher.c                    | 316 ++++++++++++++++++
+ 11 files changed, 920 insertions(+), 11 deletions(-)
+ create mode 100644 Documentation/admin-guide/dmesg-encryption.rst
+ create mode 100644 include/uapi/linux/kmsg.h
+ create mode 100644 tools/kmsg/.gitignore
+ create mode 100644 tools/kmsg/Makefile
+ create mode 100644 tools/kmsg/dmesg-decipher.c
+
+-- 
+2.13.6
