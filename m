@@ -1,16 +1,16 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Date: Wed,  3 Jan 2018 21:11:08 +0100
-Message-Id: <20180103195056.980057902@linuxfoundation.org>
-In-Reply-To: <20180103195056.837404126@linuxfoundation.org>
-References: <20180103195056.837404126@linuxfoundation.org>
+Date: Wed,  3 Jan 2018 21:11:18 +0100
+Message-Id: <20180103195104.249882799@linuxfoundation.org>
+In-Reply-To: <20180103195104.066528044@linuxfoundation.org>
+References: <20180103195104.066528044@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] [PATCH 4.4 02/37] KAISER: Kernel Address Isolation
+Subject: [kernel-hardening] [PATCH 4.9 04/39] KAISER: Kernel Address Isolation
 To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, clementine.maurice@iaik.tugraz.at, moritz.lipp@iaik.tugraz.at, Michael Schwarz <michael.schwarz@iaik.tugraz.at>, Richard Fellner <richard.fellner@student.tugraz.at>, Ingo Molnar <mingo@kernel.org>, kirill.shutemov@linux.intel.com, anders.fogh@gdata-adan.de, Daniel Gruss <daniel.gruss@iaik.tugraz.at>, Jiri Kosina <jkosina@suse.cz>, Hugh Dickins <hughd@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-4.4-stable review patch.  If anyone has any objections, please let me know.
+4.9-stable review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
@@ -27,7 +27,7 @@ More information about the patch can be found on:
 
 From: Richard Fellner <richard.fellner@student.tugraz.at>
 From: Daniel Gruss <daniel.gruss@iaik.tugraz.at>
-X-Subject: [RFC, PATCH] x86_64: KAISER - do not map kernel in user mode
+Subject: [PATCH 4.9 04/39] [RFC, PATCH] x86_64: KAISER - do not map kernel in user mode
 Date: Thu, 4 May 2017 14:26:50 +0200
 Link: http://marc.info/?l=linux-kernel&m=149390087310405&w=2
 Kaiser-4.10-SHA1: c4b1831d44c6144d3762ccc72f0c4e71a0c713e5
@@ -74,8 +74,8 @@ Acked-by: Jiri Kosina <jkosina@suse.cz>
 Signed-off-by: Hugh Dickins <hughd@google.com>
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 ---
- arch/x86/entry/entry_64.S            |   19 +++-
- arch/x86/entry/entry_64_compat.S     |    6 +
+ arch/x86/entry/entry_64.S            |   17 +++
+ arch/x86/entry/entry_64_compat.S     |    7 +
  arch/x86/include/asm/hw_irq.h        |    2 
  arch/x86/include/asm/kaiser.h        |  113 ++++++++++++++++++++++++
  arch/x86/include/asm/pgtable.h       |    4 
@@ -87,7 +87,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  arch/x86/kernel/head_64.S            |   16 ++-
  arch/x86/kernel/irqinit.c            |    2 
  arch/x86/kernel/process.c            |    2 
- arch/x86/mm/Makefile                 |    1 
+ arch/x86/mm/Makefile                 |    2 
  arch/x86/mm/kaiser.c                 |  160 +++++++++++++++++++++++++++++++++++
  arch/x86/mm/pageattr.c               |    2 
  arch/x86/mm/pgtable.c                |   26 +++++
@@ -102,15 +102,15 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
-@@ -35,6 +35,7 @@
- #include <asm/asm.h>
+@@ -36,6 +36,7 @@
  #include <asm/smap.h>
  #include <asm/pgtable_types.h>
+ #include <asm/export.h>
 +#include <asm/kaiser.h>
  #include <linux/err.h>
  
  /* Avoid __ASSEMBLER__'ifying <linux/audit.h> just for this.  */
-@@ -135,6 +136,7 @@ ENTRY(entry_SYSCALL_64)
+@@ -146,6 +147,7 @@ ENTRY(entry_SYSCALL_64)
  	 * it is too small to ever cause noticeable irq latency.
  	 */
  	SWAPGS_UNSAFE_STACK
@@ -118,19 +118,15 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  	/*
  	 * A hypervisor implementation might want to use a label
  	 * after the swapgs, so that it can do the swapgs
-@@ -207,9 +209,10 @@ entry_SYSCALL_64_fastpath:
- 	testl	$_TIF_ALLWORK_MASK, ASM_THREAD_INFO(TI_flags, %rsp, SIZEOF_PTREGS)
- 	jnz	int_ret_from_sys_call_irqs_off	/* Go to the slow path */
- 
--	RESTORE_C_REGS_EXCEPT_RCX_R11
+@@ -228,6 +230,7 @@ entry_SYSCALL_64_fastpath:
  	movq	RIP(%rsp), %rcx
  	movq	EFLAGS(%rsp), %r11
-+	RESTORE_C_REGS_EXCEPT_RCX_R11
+ 	RESTORE_C_REGS_EXCEPT_RCX_R11
 +	SWITCH_USER_CR3
  	movq	RSP(%rsp), %rsp
- 	/*
- 	 * 64-bit SYSRET restores rip from rcx,
-@@ -347,10 +350,12 @@ GLOBAL(int_ret_from_sys_call)
+ 	USERGS_SYSRET64
+ 
+@@ -323,10 +326,12 @@ return_from_SYSCALL_64:
  syscall_return_via_sysret:
  	/* rcx and r11 are already restored (see code above) */
  	RESTORE_C_REGS_EXCEPT_RCX_R11
@@ -143,7 +139,15 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  	SWAPGS
  	jmp	restore_c_regs_and_iret
  END(entry_SYSCALL_64)
-@@ -509,6 +514,7 @@ END(irq_entries_start)
+@@ -424,6 +429,7 @@ ENTRY(ret_from_fork)
+ 	movq	%rsp, %rdi
+ 	call	syscall_return_slowpath	/* returns with IRQs disabled */
+ 	TRACE_IRQS_ON			/* user mode is traced as IRQS on */
++	SWITCH_USER_CR3
+ 	SWAPGS
+ 	jmp	restore_regs_and_iret
+ 
+@@ -478,6 +484,7 @@ END(irq_entries_start)
  	 * tracking that we're in kernel mode.
  	 */
  	SWAPGS
@@ -151,7 +155,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  
  	/*
  	 * We need to tell lockdep that IRQs are off.  We can't do this until
-@@ -568,6 +574,7 @@ GLOBAL(retint_user)
+@@ -535,6 +542,7 @@ GLOBAL(retint_user)
  	mov	%rsp,%rdi
  	call	prepare_exit_to_usermode
  	TRACE_IRQS_IRETQ
@@ -159,23 +163,23 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  	SWAPGS
  	jmp	restore_regs_and_iret
  
-@@ -625,6 +632,7 @@ native_irq_return_ldt:
- 	pushq	%rax
- 	pushq	%rdi
+@@ -612,6 +620,7 @@ native_irq_return_ldt:
+ 
+ 	pushq	%rdi				/* Stash user RDI */
  	SWAPGS
 +	SWITCH_KERNEL_CR3
  	movq	PER_CPU_VAR(espfix_waddr), %rdi
- 	movq	%rax, (0*8)(%rdi)		/* RAX */
- 	movq	(2*8)(%rsp), %rax		/* RIP */
-@@ -640,6 +648,7 @@ native_irq_return_ldt:
- 	andl	$0xffff0000, %eax
- 	popq	%rdi
+ 	movq	%rax, (0*8)(%rdi)		/* user RAX */
+ 	movq	(1*8)(%rsp), %rax		/* user RIP */
+@@ -638,6 +647,7 @@ native_irq_return_ldt:
+ 	 * still points to an RO alias of the ESPFIX stack.
+ 	 */
  	orq	PER_CPU_VAR(espfix_stack), %rax
 +	SWITCH_USER_CR3
  	SWAPGS
  	movq	%rax, %rsp
- 	popq	%rax
-@@ -1007,6 +1016,7 @@ ENTRY(paranoid_entry)
+ 
+@@ -1034,6 +1044,7 @@ ENTRY(paranoid_entry)
  	testl	%edx, %edx
  	js	1f				/* negative -> in kernel */
  	SWAPGS
@@ -183,7 +187,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  	xorl	%ebx, %ebx
  1:	ret
  END(paranoid_entry)
-@@ -1029,6 +1039,7 @@ ENTRY(paranoid_exit)
+@@ -1056,6 +1067,7 @@ ENTRY(paranoid_exit)
  	testl	%ebx, %ebx			/* swapgs needed? */
  	jnz	paranoid_exit_no_swapgs
  	TRACE_IRQS_IRETQ
@@ -191,7 +195,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  	SWAPGS_UNSAFE_STACK
  	jmp	paranoid_exit_restore
  paranoid_exit_no_swapgs:
-@@ -1058,6 +1069,7 @@ ENTRY(error_entry)
+@@ -1084,6 +1096,7 @@ ENTRY(error_entry)
  	 * from user mode due to an IRET fault.
  	 */
  	SWAPGS
@@ -199,16 +203,15 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  
  .Lerror_entry_from_usermode_after_swapgs:
  	/*
-@@ -1110,7 +1122,7 @@ ENTRY(error_entry)
+@@ -1135,6 +1148,7 @@ ENTRY(error_entry)
  	 * Switch to kernel gsbase:
  	 */
  	SWAPGS
--
 +	SWITCH_KERNEL_CR3
+ 
  	/*
  	 * Pretend that the exception came from user mode: set up pt_regs
- 	 * as if we faulted immediately after IRET and clear EBX so that
-@@ -1210,6 +1222,7 @@ ENTRY(nmi)
+@@ -1235,6 +1249,7 @@ ENTRY(nmi)
  	 */
  
  	SWAPGS_UNSAFE_STACK
@@ -216,7 +219,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  	cld
  	movq	%rsp, %rdx
  	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
-@@ -1250,6 +1263,7 @@ ENTRY(nmi)
+@@ -1275,6 +1290,7 @@ ENTRY(nmi)
  	 * work, because we don't want to enable interrupts.  Fortunately,
  	 * do_nmi doesn't modify pt_regs.
  	 */
@@ -224,7 +227,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  	SWAPGS
  	jmp	restore_c_regs_and_iret
  
-@@ -1461,6 +1475,7 @@ end_repeat_nmi:
+@@ -1486,6 +1502,7 @@ end_repeat_nmi:
  	testl	%ebx, %ebx			/* swapgs needed? */
  	jnz	nmi_restore
  nmi_swapgs:
@@ -242,7 +245,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  #include <linux/linkage.h>
  #include <linux/err.h>
  
-@@ -50,6 +51,7 @@ ENDPROC(native_usergs_sysret32)
+@@ -48,6 +49,7 @@
  ENTRY(entry_SYSENTER_compat)
  	/* Interrupts are off on entry. */
  	SWAPGS_UNSAFE_STACK
@@ -250,7 +253,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
  
  	/*
-@@ -161,6 +163,7 @@ ENDPROC(entry_SYSENTER_compat)
+@@ -184,6 +186,7 @@ ENDPROC(entry_SYSENTER_compat)
  ENTRY(entry_SYSCALL_compat)
  	/* Interrupts are off on entry. */
  	SWAPGS_UNSAFE_STACK
@@ -258,33 +261,34 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  
  	/* Stash user ESP and switch to the kernel stack. */
  	movl	%esp, %r8d
-@@ -208,6 +211,7 @@ ENTRY(entry_SYSCALL_compat)
- 	/* Opportunistic SYSRET */
- sysret32_from_system_call:
- 	TRACE_IRQS_ON			/* User mode traces as IRQs on. */
+@@ -259,6 +262,7 @@ sysret32_from_system_call:
+ 	xorq	%r8, %r8
+ 	xorq	%r9, %r9
+ 	xorq	%r10, %r10
 +	SWITCH_USER_CR3
- 	movq	RBX(%rsp), %rbx		/* pt_regs->rbx */
- 	movq	RBP(%rsp), %rbp		/* pt_regs->rbp */
- 	movq	EFLAGS(%rsp), %r11	/* pt_regs->flags (in r11) */
-@@ -269,6 +273,7 @@ ENTRY(entry_INT80_compat)
+ 	movq	RSP-ORIG_RAX(%rsp), %rsp
+ 	swapgs
+ 	sysretl
+@@ -297,7 +301,7 @@ ENTRY(entry_INT80_compat)
  	PARAVIRT_ADJUST_EXCEPTION_FRAME
  	ASM_CLAC			/* Do this early to minimize exposure */
  	SWAPGS
+-
 +	SWITCH_KERNEL_CR3_NO_STACK
- 
  	/*
  	 * User tracing code (ptrace or signal handlers) might assume that
-@@ -311,6 +316,7 @@ ENTRY(entry_INT80_compat)
+ 	 * the saved RAX contains a 32-bit number when we're invoking a 32-bit
+@@ -338,6 +342,7 @@ ENTRY(entry_INT80_compat)
  
  	/* Go back to user mode. */
  	TRACE_IRQS_ON
-+	SWITCH_USER_CR3
++	SWITCH_USER_CR3_NO_STACK
  	SWAPGS
  	jmp	restore_regs_and_iret
  END(entry_INT80_compat)
 --- a/arch/x86/include/asm/hw_irq.h
 +++ b/arch/x86/include/asm/hw_irq.h
-@@ -187,7 +187,7 @@ extern char irq_entries_start[];
+@@ -178,7 +178,7 @@ extern char irq_entries_start[];
  #define VECTOR_RETRIGGERED	((void *)~0UL)
  
  typedef struct irq_desc* vector_irq_t[NR_VECTORS];
@@ -411,7 +415,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 +#endif /* _ASM_X86_KAISER_H */
 --- a/arch/x86/include/asm/pgtable.h
 +++ b/arch/x86/include/asm/pgtable.h
-@@ -856,6 +856,10 @@ static inline void pmdp_set_wrprotect(st
+@@ -904,6 +904,10 @@ static inline void pmdp_set_wrprotect(st
  static inline void clone_pgd_range(pgd_t *dst, pgd_t *src, int count)
  {
         memcpy(dst, src, count * sizeof(pgd_t));
@@ -457,7 +461,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  static inline void native_pgd_clear(pgd_t *pgd)
 --- a/arch/x86/include/asm/pgtable_types.h
 +++ b/arch/x86/include/asm/pgtable_types.h
-@@ -39,7 +39,11 @@
+@@ -45,7 +45,11 @@
  #define _PAGE_ACCESSED	(_AT(pteval_t, 1) << _PAGE_BIT_ACCESSED)
  #define _PAGE_DIRTY	(_AT(pteval_t, 1) << _PAGE_BIT_DIRTY)
  #define _PAGE_PSE	(_AT(pteval_t, 1) << _PAGE_BIT_PSE)
@@ -470,8 +474,8 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  #define _PAGE_SOFTW1	(_AT(pteval_t, 1) << _PAGE_BIT_SOFTW1)
  #define _PAGE_SOFTW2	(_AT(pteval_t, 1) << _PAGE_BIT_SOFTW2)
  #define _PAGE_PAT	(_AT(pteval_t, 1) << _PAGE_BIT_PAT)
-@@ -89,7 +93,11 @@
- #define _PAGE_NX	(_AT(pteval_t, 0))
+@@ -119,7 +123,11 @@
+ #define _PAGE_DEVMAP	(_AT(pteval_t, 0))
  #endif
  
 -#define _PAGE_PROTNONE	(_AT(pteval_t, 1) << _PAGE_BIT_PROTNONE)
@@ -485,7 +489,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  			 _PAGE_ACCESSED | _PAGE_DIRTY)
 --- a/arch/x86/include/asm/processor.h
 +++ b/arch/x86/include/asm/processor.h
-@@ -305,7 +305,7 @@ struct tss_struct {
+@@ -308,7 +308,7 @@ struct tss_struct {
  
  } ____cacheline_aligned;
  
@@ -494,7 +498,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  
  #ifdef CONFIG_X86_32
  DECLARE_PER_CPU(unsigned long, cpu_current_top_of_stack);
-@@ -332,6 +332,11 @@ union irq_stack_union {
+@@ -335,6 +335,11 @@ union irq_stack_union {
  		char gs_base[40];
  		unsigned long stack_canary;
  	};
@@ -508,7 +512,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  DECLARE_PER_CPU_FIRST(union irq_stack_union, irq_stack_union) __visible;
 --- a/arch/x86/kernel/cpu/common.c
 +++ b/arch/x86/kernel/cpu/common.c
-@@ -92,7 +92,7 @@ static const struct cpu_dev default_cpu
+@@ -93,7 +93,7 @@ static const struct cpu_dev default_cpu
  
  static const struct cpu_dev *this_cpu = &default_cpu;
  
@@ -517,7 +521,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  #ifdef CONFIG_X86_64
  	/*
  	 * We need valid kernel segments for data and code in long mode too
-@@ -1229,7 +1229,7 @@ static const unsigned int exception_stac
+@@ -1365,7 +1365,7 @@ static const unsigned int exception_stac
  	  [DEBUG_STACK - 1]			= DEBUG_STKSZ
  };
  
@@ -550,7 +554,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  	init_espfix_random();
 --- a/arch/x86/kernel/head_64.S
 +++ b/arch/x86/kernel/head_64.S
-@@ -441,6 +441,14 @@ early_idt_ripmsg:
+@@ -405,6 +405,14 @@ GLOBAL(early_recursion_flag)
  	.balign	PAGE_SIZE; \
  GLOBAL(name)
  
@@ -565,7 +569,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  /* Automate the creation of 1 to 1 mapping pmd entries */
  #define PMDS(START, PERM, COUNT)			\
  	i = 0 ;						\
-@@ -450,7 +458,7 @@ GLOBAL(name)
+@@ -414,7 +422,7 @@ GLOBAL(name)
  	.endr
  
  	__INITDATA
@@ -574,7 +578,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  	.fill	511,8,0
  	.quad	level3_kernel_pgt - __START_KERNEL_map + _PAGE_TABLE
  
-@@ -460,10 +468,10 @@ NEXT_PAGE(early_dynamic_pgts)
+@@ -424,10 +432,10 @@ NEXT_PAGE(early_dynamic_pgts)
  	.data
  
  #ifndef CONFIG_XEN
@@ -601,7 +605,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  
 --- a/arch/x86/kernel/process.c
 +++ b/arch/x86/kernel/process.c
-@@ -39,7 +39,7 @@
+@@ -41,7 +41,7 @@
   * section. Since TSS's are completely CPU-local, we want them
   * on exact cacheline boundaries, to eliminate cacheline ping-pong.
   */
@@ -612,11 +616,12 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  #ifdef CONFIG_X86_32
 --- a/arch/x86/mm/Makefile
 +++ b/arch/x86/mm/Makefile
-@@ -32,3 +32,4 @@ obj-$(CONFIG_ACPI_NUMA)		+= srat.o
- obj-$(CONFIG_NUMA_EMU)		+= numa_emulation.o
- 
+@@ -38,4 +38,4 @@ obj-$(CONFIG_NUMA_EMU)		+= numa_emulatio
  obj-$(CONFIG_X86_INTEL_MPX)	+= mpx.o
-+obj-$(CONFIG_KAISER)		+= kaiser.o
+ obj-$(CONFIG_X86_INTEL_MEMORY_PROTECTION_KEYS) += pkeys.o
+ obj-$(CONFIG_RANDOMIZE_MEMORY) += kaslr.o
+-
++obj-$(CONFIG_KAISER) += kaiser.o
 --- /dev/null
 +++ b/arch/x86/mm/kaiser.c
 @@ -0,0 +1,160 @@
@@ -782,7 +787,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 +#endif /* CONFIG_KAISER */
 --- a/arch/x86/mm/pageattr.c
 +++ b/arch/x86/mm/pageattr.c
-@@ -829,7 +829,7 @@ static void unmap_pmd_range(pud_t *pud,
+@@ -823,7 +823,7 @@ static void unmap_pmd_range(pud_t *pud,
  			pud_clear(pud);
  }
  
@@ -793,7 +798,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  
 --- a/arch/x86/mm/pgtable.c
 +++ b/arch/x86/mm/pgtable.c
-@@ -342,12 +342,38 @@ static inline void _pgd_free(pgd_t *pgd)
+@@ -346,12 +346,38 @@ static inline void _pgd_free(pgd_t *pgd)
  #else
  static inline pgd_t *_pgd_alloc(void)
  {
@@ -834,7 +839,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  
 --- a/include/asm-generic/vmlinux.lds.h
 +++ b/include/asm-generic/vmlinux.lds.h
-@@ -725,7 +725,16 @@
+@@ -778,7 +778,16 @@
   */
  #define PERCPU_INPUT(cacheline)						\
  	VMLINUX_SYMBOL(__per_cpu_start) = .;				\
@@ -914,7 +919,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
   * Declaration/definition used for per-CPU variables that must be read mostly.
 --- a/init/main.c
 +++ b/init/main.c
-@@ -87,6 +87,9 @@
+@@ -86,6 +86,9 @@
  #include <asm/setup.h>
  #include <asm/sections.h>
  #include <asm/cacheflush.h>
@@ -924,7 +929,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  
  static int kernel_init(void *);
  
-@@ -492,6 +495,9 @@ static void __init mm_init(void)
+@@ -473,6 +476,9 @@ static void __init mm_init(void)
  	pgtable_init();
  	vmalloc_init();
  	ioremap_huge_init();
@@ -936,20 +941,20 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  asmlinkage __visible void __init start_kernel(void)
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -167,8 +167,12 @@ static struct thread_info *alloc_thread_
- 	return page ? page_address(page) : NULL;
+@@ -211,8 +211,12 @@ static unsigned long *alloc_thread_stack
+ #endif
  }
  
 +extern void kaiser_remove_mapping(unsigned long start_addr, unsigned long size);
- static inline void free_thread_info(struct thread_info *ti)
+ static inline void free_thread_stack(struct task_struct *tsk)
  {
 +#ifdef CONFIG_KAISER
-+	kaiser_remove_mapping((unsigned long)ti, THREAD_SIZE);
++	kaiser_remove_mapping((unsigned long)tsk->stack, THREAD_SIZE);
 +#endif
- 	free_kmem_pages((unsigned long)ti, THREAD_SIZE_ORDER);
- }
- # else
-@@ -331,6 +335,7 @@ void set_task_stack_end_magic(struct tas
+ #ifdef CONFIG_VMAP_STACK
+ 	if (task_stack_vm_area(tsk)) {
+ 		unsigned long flags;
+@@ -468,6 +472,7 @@ void set_task_stack_end_magic(struct tas
  	*stackend = STACK_END_MAGIC;	/* for overflow detection */
  }
  
@@ -957,16 +962,16 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
  {
  	struct task_struct *tsk;
-@@ -352,6 +357,9 @@ static struct task_struct *dup_task_stru
- 		goto free_ti;
- 
- 	tsk->stack = ti;
+@@ -495,6 +500,9 @@ static struct task_struct *dup_task_stru
+ 	 * functions again.
+ 	 */
+ 	tsk->stack = stack;
 +#ifdef CONFIG_KAISER
 +	kaiser_add_mapping((unsigned long)tsk->stack, THREAD_SIZE, __PAGE_KERNEL);
 +#endif
- #ifdef CONFIG_SECCOMP
- 	/*
- 	 * We must handle setting up seccomp filters once we're under
+ #ifdef CONFIG_VMAP_STACK
+ 	tsk->stack_vm_area = stack_vm_area;
+ #endif
 --- a/security/Kconfig
 +++ b/security/Kconfig
 @@ -30,6 +30,13 @@ config SECURITY
