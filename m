@@ -1,35 +1,45 @@
-Date: Sat, 6 Jan 2018 12:37:39 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20180106013739.GA17325@eros>
-References: <1515193172-20279-1-git-send-email-me@tobin.cc>
- <CAGXu5jJ1SfKmTtwN6JS42cXWN6v=pPrEyfcdJRH+=MTmh5hPKQ@mail.gmail.com>
+Date: Mon, 8 Jan 2018 11:35:26 +1100 (AEDT)
+From: James Morris <james.l.morris@oracle.com>
+In-Reply-To: <CAF2d9jiPYvMN=_guoZHyTA5FmMgaJb5mtxroi5D9NvcNrHc5gg@mail.gmail.com>
+Message-ID: <alpine.LFD.2.20.1801081131190.8436@localhost>
+References: <20171205223052.12687-1-mahesh@bandewar.net> <CAF2d9jit74_VCdD-pEFy3bJo2W1-0cDo0BOJC5beJiy8yFPCWg@mail.gmail.com> <alpine.LFD.2.20.1712301931360.24310@localhost> <CAF2d9jiPYvMN=_guoZHyTA5FmMgaJb5mtxroi5D9NvcNrHc5gg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJ1SfKmTtwN6JS42cXWN6v=pPrEyfcdJRH+=MTmh5hPKQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH] leaking_addresses: add files to skip
-To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, kaiwan.billimoria@gmail.com
+Content-Type: multipart/mixed; BOUNDARY="8323328-1193620534-1515371754=:8436"
+Subject: [kernel-hardening] Re: [PATCHv3 0/2] capability controlled user-namespaces
+To: =?UTF-8?Q?Mahesh_Bandewar_=28=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6_=E0=A4=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0=29?= <maheshb@google.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Serge Hallyn <serge@hallyn.com>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <mahesh@bandewar.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 05, 2018 at 04:11:07PM -0800, Kees Cook wrote:
-> On Fri, Jan 5, 2018 at 2:59 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> > Script currently times out when parsing the following files:
+--8323328-1193620534-1515371754=:8436
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: QUOTED-PRINTABLE
+
+On Tue, 2 Jan 2018, Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =
+=E0=A4=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) wrote:
+
+> On Sat, Dec 30, 2017 at 12:31 AM, James Morris
+> <james.l.morris@oracle.com> wrote:
+> > On Wed, 27 Dec 2017, Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=
+=B6 =E0=A4=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) wrote:
 > >
-> >         /proc/kallsyms
-> >         /proc/sched_debug
-> >         /proc/PID/smaps
-> 
-> Seems like kallsyms would be one to absolutely scan... it shouldn't
-> cause hangs either.
+> >> Hello James,
+> >>
+> >> Seems like I missed your name to be added into the review of this
+> >> patch series. Would you be willing be pull this into the security
+> >> tree? Serge Hallyn has already ACKed it.
+> >
+> > Sure!
+> >
+> Thank you James.
 
-Haven't we fixed kallsyms now? Do you mean that we should be checking to
-see if the scanned kernel has been patched to include the kallsysms
-fixes in 4.14? If so perhaps we should add functionality to just check
-the first line for an address and warn if one is found. No real reason
-to include ever address in kallsyms in the output.
+I'd like to see what Eric Biederman thinks of this.
 
-Script doesn't hang but it times out with the default timer (10 seconds). 
+Also, why do we need the concept of a controlled user-ns at all, if the=20
+default whitelist maintains existing behavior?
 
-thanks,
-Tobin.
+
+--=20
+James Morris
+<james.l.morris@oracle.com>
+
+--8323328-1193620534-1515371754=:8436--
