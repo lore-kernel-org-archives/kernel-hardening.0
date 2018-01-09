@@ -1,50 +1,95 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  9 Jan 2018 12:55:30 -0800
-Message-Id: <1515531365-37423-2-git-send-email-keescook@chromium.org>
+Date: Tue,  9 Jan 2018 12:55:44 -0800
+Message-Id: <1515531365-37423-16-git-send-email-keescook@chromium.org>
 In-Reply-To: <1515531365-37423-1-git-send-email-keescook@chromium.org>
 References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 01/36] usercopy: Remove pointer from overflow report
+Subject: [kernel-hardening] [PATCH 15/36] orangefs: Define usercopy region in orangefs_inode_cache slab cache
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Mike Marshall <hubcap@omnibond.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Using %p was already mostly useless in the usercopy overflow reports,
-so this removes it entirely to avoid confusion now that %p-hashing
-is enabled.
+From: David Windsor <dave@nullcore.net>
 
-Fixes: ad67b74d2469d9b8 ("printk: hash addresses printed with %p")
+orangefs symlink pathnames, stored in struct orangefs_inode_s.link_target
+and therefore contained in the orangefs_inode_cache, need to be copied
+to/from userspace.
+
+cache object allocation:
+    fs/orangefs/super.c:
+        orangefs_alloc_inode(...):
+            ...
+            orangefs_inode = kmem_cache_alloc(orangefs_inode_cache, ...);
+            ...
+            return &orangefs_inode->vfs_inode;
+
+    fs/orangefs/orangefs-utils.c:
+        exofs_symlink(...):
+            ...
+            inode->i_link = orangefs_inode->link_target;
+
+example usage trace:
+    readlink_copy+0x43/0x70
+    vfs_readlink+0x62/0x110
+    SyS_readlinkat+0x100/0x130
+
+    fs/namei.c:
+        readlink_copy(..., link):
+            ...
+            copy_to_user(..., link, len);
+
+        (inlined in vfs_readlink)
+        generic_readlink(dentry, ...):
+            struct inode *inode = d_inode(dentry);
+            const char *link = inode->i_link;
+            ...
+            readlink_copy(..., link);
+
+In support of usercopy hardening, this patch defines a region in the
+orangefs_inode_cache slab cache in which userspace copy operations are
+allowed.
+
+This region is known as the slab cache's usercopy region. Slab caches
+can now check that each dynamically sized copy operation involving
+cache-managed memory falls entirely within the slab's usercopy region.
+
+This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+whitelisting code in the last public patch of grsecurity/PaX based on my
+understanding of the code. Changes or omissions from the original code are
+mine and don't reflect the original grsecurity/PaX code.
+
+Signed-off-by: David Windsor <dave@nullcore.net>
+[kees: adjust commit log, provide usage trace]
+Cc: Mike Marshall <hubcap@omnibond.com>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- mm/usercopy.c | 9 ++++-----
- 1 file changed, 4 insertions(+), 5 deletions(-)
+ fs/orangefs/super.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
 
-diff --git a/mm/usercopy.c b/mm/usercopy.c
-index a9852b24715d..5df1e68d4585 100644
---- a/mm/usercopy.c
-+++ b/mm/usercopy.c
-@@ -58,12 +58,11 @@ static noinline int check_stack_object(const void *obj, unsigned long len)
- 	return GOOD_STACK;
- }
+diff --git a/fs/orangefs/super.c b/fs/orangefs/super.c
+index 36f1390b5ed7..62d49e53061c 100644
+--- a/fs/orangefs/super.c
++++ b/fs/orangefs/super.c
+@@ -610,11 +610,16 @@ void orangefs_kill_sb(struct super_block *sb)
  
--static void report_usercopy(const void *ptr, unsigned long len,
--			    bool to_user, const char *type)
-+static void report_usercopy(unsigned long len, bool to_user, const char *type)
+ int orangefs_inode_cache_initialize(void)
  {
--	pr_emerg("kernel memory %s attempt detected %s %p (%s) (%lu bytes)\n",
-+	pr_emerg("kernel memory %s attempt detected %s '%s' (%lu bytes)\n",
- 		to_user ? "exposure" : "overwrite",
--		to_user ? "from" : "to", ptr, type ? : "unknown", len);
-+		to_user ? "from" : "to", type ? : "unknown", len);
- 	/*
- 	 * For greater effect, it would be nice to do do_group_exit(),
- 	 * but BUG() actually hooks all the lock-breaking and per-arch
-@@ -261,6 +260,6 @@ void __check_object_size(const void *ptr, unsigned long n, bool to_user)
- 		return;
+-	orangefs_inode_cache = kmem_cache_create("orangefs_inode_cache",
+-					      sizeof(struct orangefs_inode_s),
+-					      0,
+-					      ORANGEFS_CACHE_CREATE_FLAGS,
+-					      orangefs_inode_cache_ctor);
++	orangefs_inode_cache = kmem_cache_create_usercopy(
++					"orangefs_inode_cache",
++					sizeof(struct orangefs_inode_s),
++					0,
++					ORANGEFS_CACHE_CREATE_FLAGS,
++					offsetof(struct orangefs_inode_s,
++						link_target),
++					sizeof_field(struct orangefs_inode_s,
++						link_target),
++					orangefs_inode_cache_ctor);
  
- report:
--	report_usercopy(ptr, n, to_user, err);
-+	report_usercopy(n, to_user, err);
- }
- EXPORT_SYMBOL(__check_object_size);
+ 	if (!orangefs_inode_cache) {
+ 		gossip_err("Cannot create orangefs_inode_cache\n");
 -- 
 2.7.4
