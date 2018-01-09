@@ -1,92 +1,103 @@
-MIME-Version: 1.0
-In-Reply-To: <20180108183610.GA562@mail.hallyn.com>
-References: <CAF2d9jit74_VCdD-pEFy3bJo2W1-0cDo0BOJC5beJiy8yFPCWg@mail.gmail.com>
- <alpine.LFD.2.20.1712301931360.24310@localhost> <CAF2d9jiPYvMN=_guoZHyTA5FmMgaJb5mtxroi5D9NvcNrHc5gg@mail.gmail.com>
- <alpine.LFD.2.20.1801081131190.8436@localhost> <20180108062452.GA21717@mail.hallyn.com>
- <alpine.LFD.2.20.1801082040180.12014@localhost> <20180108154733.GA29416@mail.hallyn.com>
- <CAF2d9jgVJpuAH+jgK0v7sQ9Pr75xy=GSnqKDdpeE7d97O0EbcQ@mail.gmail.com>
- <20180108181121.GA32302@mail.hallyn.com> <CAF2d9jgar8J+mQjUfF=+XdvrcS=RvtOpKysxOiZkG-rXgm0KVw@mail.gmail.com>
- <20180108183610.GA562@mail.hallyn.com>
-From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
-Date: Mon, 8 Jan 2018 10:55:56 -0800
-Message-ID: <CAF2d9jjws=jEbybHs18J_xkduAWB+bh6BA_CkD5oYRWz7PwjZA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCHv3 0/2] capability controlled user-namespaces
-To: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: James Morris <james.l.morris@oracle.com>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <mahesh@bandewar.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue,  9 Jan 2018 12:23:02 -0800
+Message-Id: <1515529383-35695-3-git-send-email-keescook@chromium.org>
+In-Reply-To: <1515529383-35695-1-git-send-email-keescook@chromium.org>
+References: <1515529383-35695-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH 2/3] exec: Introduce finalize_exec() before start_thread()
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Michal Hocko <mhocko@kernel.org>, Ben Hutchings <ben@decadent.org.uk>, Willy Tarreau <w@1wt.eu>, Hugh Dickins <hughd@google.com>, Oleg Nesterov <oleg@redhat.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Rik van Riel <riel@redhat.com>, Laura Abbott <labbott@redhat.com>, Greg KH <greg@kroah.com>, Andy Lutomirski <luto@kernel.org>, linux-mm@kvack.org, linux-arch@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 8, 2018 at 10:36 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
-> Quoting Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=AC=
-=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) (maheshb@google.com=
-):
->> On Mon, Jan 8, 2018 at 10:11 AM, Serge E. Hallyn <serge@hallyn.com> wrot=
-e:
->> > Quoting Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=
-=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) (maheshb@google.=
-com):
->> >> On Mon, Jan 8, 2018 at 7:47 AM, Serge E. Hallyn <serge@hallyn.com> wr=
-ote:
->> >> > Quoting James Morris (james.l.morris@oracle.com):
->> >> >> On Mon, 8 Jan 2018, Serge E. Hallyn wrote:
->> >> >> I meant in terms of "marking" a user ns as "controlled" type -- it=
-'s
->> >> >> unnecessary jargon from an end user point of view.
->> >> >
->> >> > Ah, yes, that was my point in
->> >> >
->> >> > http://lkml.iu.edu/hypermail/linux/kernel/1711.1/01845.html
->> >> > and
->> >> > http://lkml.iu.edu/hypermail/linux/kernel/1711.1/02276.html
->> >> >
->> >> >> This may happen internally but don't make it a special case with a
->> >> >> different name and don't bother users with internal concepts: simp=
-ly
->> >> >> implement capability whitelists with the default having equivalent
->> >
->> > So the challenge is to have unprivileged users be contained, while
->> > allowing trusted workloads in containers created by a root user to
->> > bypass the restriction.
->> >
->> > Now, the current proposal actually doesn't support a root user startin=
-g
->> > an application that it doesn't quite trust in such a way that it *is*
->> > subject to the whitelist.
->>
->> Well, this is not hard since root process can spawn another process
->> and loose privileges before creating user-ns to be controlled by the
->> whitelist.
->
-> It would have to drop cap_sys_admin for the container to be marked as
-> "controlled", which may prevent the container runtime from properly start=
-ing
-> the container.
->
-Yes, but that's a conflict of trusted operations (that requires
-SYS_ADMIN) and untrusted processes it may spawn.
+Provide a final call back into fs/exec.c before start_thread() takes
+over, to handle any last-minute changes, like the coming restoration of
+the stack limit.
 
->> You need an ability to preserve the creation of user-namespaces that
->> exhibit 'the uncontrolled behavior' and only trusted/privileged (root)
->> user should have it which is maintained here.
->>
->> > Which is unfortunate.  But apart from using
->> > ptags or a cgroup, I can't think of a good way to get us everything we
->> > want:
->> >
->> > 1. unprivileged users always restricted
->> > 2. existing unprivileged containers become restricted when whitelist
->> > is enabled
->> > 3. privileged users are able to create containers which are not restri=
-cted
->>
->> all this is achieved by the patch-set without any changes to the
->> application with the above knob.
->>
->> > 4. privileged users are able to create containers which *are* restrict=
-ed
->> >
->> With this patch-set; the root user process can fork another process
->> with less privileges before creating a user-ns if the exec-ed process
->> cannot be trusted. So there is a way with little modification as
->> opposed to nothing available at this moment for this scenario.
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ fs/binfmt_aout.c        | 1 +
+ fs/binfmt_elf.c         | 1 +
+ fs/binfmt_elf_fdpic.c   | 1 +
+ fs/binfmt_flat.c        | 1 +
+ fs/exec.c               | 6 ++++++
+ include/linux/binfmts.h | 1 +
+ 6 files changed, 11 insertions(+)
+
+diff --git a/fs/binfmt_aout.c b/fs/binfmt_aout.c
+index ce1824f47ba6..c3deb2e35f20 100644
+--- a/fs/binfmt_aout.c
++++ b/fs/binfmt_aout.c
+@@ -330,6 +330,7 @@ static int load_aout_binary(struct linux_binprm * bprm)
+ #ifdef __alpha__
+ 	regs->gp = ex.a_gpvalue;
+ #endif
++	finalize_exec(bprm);
+ 	start_thread(regs, ex.a_entry, current->mm->start_stack);
+ 	return 0;
+ }
+diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
+index 83732fef510d..b9055ff1c70e 100644
+--- a/fs/binfmt_elf.c
++++ b/fs/binfmt_elf.c
+@@ -1155,6 +1155,7 @@ static int load_elf_binary(struct linux_binprm *bprm)
+ 	ELF_PLAT_INIT(regs, reloc_func_desc);
+ #endif
+ 
++	finalize_exec(bprm);
+ 	start_thread(regs, elf_entry, bprm->p);
+ 	retval = 0;
+ out:
+diff --git a/fs/binfmt_elf_fdpic.c b/fs/binfmt_elf_fdpic.c
+index 429326b6e2e7..d90993adeffa 100644
+--- a/fs/binfmt_elf_fdpic.c
++++ b/fs/binfmt_elf_fdpic.c
+@@ -463,6 +463,7 @@ static int load_elf_fdpic_binary(struct linux_binprm *bprm)
+ 			    dynaddr);
+ #endif
+ 
++	finalize_exec(bprm);
+ 	/* everything is now ready... get the userspace context ready to roll */
+ 	entryaddr = interp_params.entry_addr ?: exec_params.entry_addr;
+ 	start_thread(regs, entryaddr, current->mm->start_stack);
+diff --git a/fs/binfmt_flat.c b/fs/binfmt_flat.c
+index 5d6b94475f27..82a48e830018 100644
+--- a/fs/binfmt_flat.c
++++ b/fs/binfmt_flat.c
+@@ -994,6 +994,7 @@ static int load_flat_binary(struct linux_binprm *bprm)
+ 	FLAT_PLAT_INIT(regs);
+ #endif
+ 
++	finalize_exec(bprm);
+ 	pr_debug("start_thread(regs=0x%p, entry=0x%lx, start_stack=0x%lx)\n",
+ 		 regs, start_addr, current->mm->start_stack);
+ 	start_thread(regs, start_addr, current->mm->start_stack);
+diff --git a/fs/exec.c b/fs/exec.c
+index 7074913ad2e7..e4ae20ff6278 100644
+--- a/fs/exec.c
++++ b/fs/exec.c
+@@ -1384,6 +1384,12 @@ void setup_new_exec(struct linux_binprm * bprm)
+ }
+ EXPORT_SYMBOL(setup_new_exec);
+ 
++/* Runs immediately before start_thread() takes over. */
++void finalize_exec(struct linux_binprm *bprm)
++{
++}
++EXPORT_SYMBOL(finalize_exec);
++
+ /*
+  * Prepare credentials and lock ->cred_guard_mutex.
+  * install_exec_creds() commits the new creds and drops the lock.
+diff --git a/include/linux/binfmts.h b/include/linux/binfmts.h
+index b0abe21d6cc9..40e52afbb2b0 100644
+--- a/include/linux/binfmts.h
++++ b/include/linux/binfmts.h
+@@ -118,6 +118,7 @@ extern int __must_check remove_arg_zero(struct linux_binprm *);
+ extern int search_binary_handler(struct linux_binprm *);
+ extern int flush_old_exec(struct linux_binprm * bprm);
+ extern void setup_new_exec(struct linux_binprm * bprm);
++extern void finalize_exec(struct linux_binprm *bprm);
+ extern void would_dump(struct linux_binprm *, struct file *);
+ 
+ extern int suid_dumpable;
+-- 
+2.7.4
