@@ -1,59 +1,46 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  9 Jan 2018 12:56:02 -0800
-Message-Id: <1515531365-37423-34-git-send-email-keescook@chromium.org>
+Date: Tue,  9 Jan 2018 12:55:38 -0800
+Message-Id: <1515531365-37423-10-git-send-email-keescook@chromium.org>
 In-Reply-To: <1515531365-37423-1-git-send-email-keescook@chromium.org>
 References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH 33/36] kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
+Subject: [kernel-hardening] [PATCH 09/36] vfs: Copy struct mount.mnt_id to userspace using put_user()
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, kernel-hardening@lists.openwall.com, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Paolo Bonzini <pbonzini@redhat.com>
+From: David Windsor <dave@nullcore.net>
 
-This ioctl is obsolete (it was used by Xenner as far as I know) but
-still let's not break it gratuitously...  Its handler is copying
-directly into struct kvm.  Go through a bounce buffer instead, with
-the added benefit that we can actually do something useful with the
-flags argument---the previous code was exiting with -EINVAL but still
-doing the copy.
+The mnt_id field can be copied with put_user(), so there is no need to
+use copy_to_user(). In both cases, hardened usercopy is being bypassed
+since the size is constant, and not open to runtime manipulation.
 
-This technically is a userspace ABI breakage, but since no one should be
-using the ioctl, it's a good occasion to see if someone actually
-complains.
+This patch is verbatim from Brad Spengler/PaX Team's PAX_USERCOPY
+whitelisting code in the last public patch of grsecurity/PaX based on my
+understanding of the code. Changes or omissions from the original code are
+mine and don't reflect the original grsecurity/PaX code.
 
-Cc: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Radim Krčmář <rkrcmar@redhat.com>
-Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: David Windsor <dave@nullcore.net>
+[kees: adjust commit log]
+Cc: Alexander Viro <viro@zeniv.linux.org.uk>
+Cc: linux-fsdevel@vger.kernel.org
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/kvm/x86.c | 7 ++++---
- 1 file changed, 4 insertions(+), 3 deletions(-)
+ fs/fhandle.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/arch/x86/kvm/x86.c b/arch/x86/kvm/x86.c
-index eee8e7faf1af..6c16461e3a86 100644
---- a/arch/x86/kvm/x86.c
-+++ b/arch/x86/kvm/x86.c
-@@ -4238,13 +4238,14 @@ long kvm_arch_vm_ioctl(struct file *filp,
- 		mutex_unlock(&kvm->lock);
- 		break;
- 	case KVM_XEN_HVM_CONFIG: {
-+		struct kvm_xen_hvm_config xhc;
- 		r = -EFAULT;
--		if (copy_from_user(&kvm->arch.xen_hvm_config, argp,
--				   sizeof(struct kvm_xen_hvm_config)))
-+		if (copy_from_user(&xhc, argp, sizeof(xhc)))
- 			goto out;
- 		r = -EINVAL;
--		if (kvm->arch.xen_hvm_config.flags)
-+		if (xhc.flags)
- 			goto out;
-+		memcpy(&kvm->arch.xen_hvm_config, &xhc, sizeof(xhc));
- 		r = 0;
- 		break;
- 	}
+diff --git a/fs/fhandle.c b/fs/fhandle.c
+index 0ace128f5d23..0ee727485615 100644
+--- a/fs/fhandle.c
++++ b/fs/fhandle.c
+@@ -69,8 +69,7 @@ static long do_sys_name_to_handle(struct path *path,
+ 	} else
+ 		retval = 0;
+ 	/* copy the mount id */
+-	if (copy_to_user(mnt_id, &real_mount(path->mnt)->mnt_id,
+-			 sizeof(*mnt_id)) ||
++	if (put_user(real_mount(path->mnt)->mnt_id, mnt_id) ||
+ 	    copy_to_user(ufh, handle,
+ 			 sizeof(struct file_handle) + handle_bytes))
+ 		retval = -EFAULT;
 -- 
 2.7.4
