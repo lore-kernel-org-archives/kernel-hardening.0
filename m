@@ -1,53 +1,20 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  9 Jan 2018 12:55:36 -0800
-Message-Id: <1515531365-37423-8-git-send-email-keescook@chromium.org>
+Date: Tue,  9 Jan 2018 12:55:35 -0800
+Message-Id: <1515531365-37423-7-git-send-email-keescook@chromium.org>
 In-Reply-To: <1515531365-37423-1-git-send-email-keescook@chromium.org>
 References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 07/36] dcache: Define usercopy region in dentry_cache slab cache
+Subject: [kernel-hardening] [PATCH 06/36] usercopy: Mark kmalloc caches as usercopy caches
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, linux-xfs@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: David Windsor <dave@nullcore.net>
 
-When a dentry name is short enough, it can be stored directly in the
-dentry itself (instead in a separate kmalloc allocation). These dentry
-short names, stored in struct dentry.d_iname and therefore contained in
-the dentry_cache slab cache, need to be coped to userspace.
-
-cache object allocation:
-    fs/dcache.c:
-        __d_alloc(...):
-            ...
-            dentry = kmem_cache_alloc(dentry_cache, ...);
-            ...
-            dentry->d_name.name = dentry->d_iname;
-
-example usage trace:
-    filldir+0xb0/0x140
-    dcache_readdir+0x82/0x170
-    iterate_dir+0x142/0x1b0
-    SyS_getdents+0xb5/0x160
-
-    fs/readdir.c:
-        (called via ctx.actor by dir_emit)
-        filldir(..., const char *name, ...):
-            ...
-            copy_to_user(..., name, namlen)
-
-    fs/libfs.c:
-        dcache_readdir(...):
-            ...
-            next = next_positive(dentry, p, 1)
-            ...
-            dir_emit(..., next->d_name.name, ...)
-
-In support of usercopy hardening, this patch defines a region in the
-dentry_cache slab cache in which userspace copy operations are allowed.
-
-This region is known as the slab cache's usercopy region. Slab caches can
-now check that each dynamic copy operation involving cache-managed memory
-falls entirely within the slab's usercopy region.
+Mark the kmalloc slab caches as entirely whitelisted. These caches
+are frequently used to fulfill kernel allocations that contain data
+to be copied to/from userspace. Internal-only uses are also common,
+but are scattered in the kernel. For now, mark all the kmalloc caches
+as whitelisted.
 
 This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
 whitelisting code in the last public patch of grsecurity/PaX based on my
@@ -55,30 +22,89 @@ understanding of the code. Changes or omissions from the original code are
 mine and don't reflect the original grsecurity/PaX code.
 
 Signed-off-by: David Windsor <dave@nullcore.net>
-[kees: adjust hunks for kmalloc-specific things moved later]
-[kees: adjust commit log, provide usage trace]
-Cc: Alexander Viro <viro@zeniv.linux.org.uk>
-Cc: linux-fsdevel@vger.kernel.org
+[kees: merged in moved kmalloc hunks, adjust commit log]
+Cc: Christoph Lameter <cl@linux.com>
+Cc: Pekka Enberg <penberg@kernel.org>
+Cc: David Rientjes <rientjes@google.com>
+Cc: Joonsoo Kim <iamjoonsoo.kim@lge.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: linux-mm@kvack.org
+Cc: linux-xfs@vger.kernel.org
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- fs/dcache.c | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
+ mm/slab.c        |  3 ++-
+ mm/slab.h        |  3 ++-
+ mm/slab_common.c | 10 ++++++----
+ 3 files changed, 10 insertions(+), 6 deletions(-)
 
-diff --git a/fs/dcache.c b/fs/dcache.c
-index 5c7df1df81ff..92ad7a2168e1 100644
---- a/fs/dcache.c
-+++ b/fs/dcache.c
-@@ -3601,8 +3601,9 @@ static void __init dcache_init(void)
- 	 * but it is probably not worth it because of the cache nature
- 	 * of the dcache.
+diff --git a/mm/slab.c b/mm/slab.c
+index d9939828f8e4..6488066e718a 100644
+--- a/mm/slab.c
++++ b/mm/slab.c
+@@ -1291,7 +1291,8 @@ void __init kmem_cache_init(void)
  	 */
--	dentry_cache = KMEM_CACHE(dentry,
--		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT);
-+	dentry_cache = KMEM_CACHE_USERCOPY(dentry,
-+		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
-+		d_iname);
+ 	kmalloc_caches[INDEX_NODE] = create_kmalloc_cache(
+ 				kmalloc_info[INDEX_NODE].name,
+-				kmalloc_size(INDEX_NODE), ARCH_KMALLOC_FLAGS);
++				kmalloc_size(INDEX_NODE), ARCH_KMALLOC_FLAGS,
++				0, kmalloc_size(INDEX_NODE));
+ 	slab_state = PARTIAL_NODE;
+ 	setup_kmalloc_cache_index_table();
  
- 	/* Hash may have been set up in dcache_init_early */
- 	if (!hashdist)
+diff --git a/mm/slab.h b/mm/slab.h
+index 8f3030788e01..1f013f7795c6 100644
+--- a/mm/slab.h
++++ b/mm/slab.h
+@@ -97,7 +97,8 @@ struct kmem_cache *kmalloc_slab(size_t, gfp_t);
+ int __kmem_cache_create(struct kmem_cache *, slab_flags_t flags);
+ 
+ extern struct kmem_cache *create_kmalloc_cache(const char *name, size_t size,
+-			slab_flags_t flags);
++			slab_flags_t flags, size_t useroffset,
++			size_t usersize);
+ extern void create_boot_cache(struct kmem_cache *, const char *name,
+ 			size_t size, slab_flags_t flags, size_t useroffset,
+ 			size_t usersize);
+diff --git a/mm/slab_common.c b/mm/slab_common.c
+index fc3e66bdce75..6c9e945907b6 100644
+--- a/mm/slab_common.c
++++ b/mm/slab_common.c
+@@ -929,14 +929,15 @@ void __init create_boot_cache(struct kmem_cache *s, const char *name, size_t siz
+ }
+ 
+ struct kmem_cache *__init create_kmalloc_cache(const char *name, size_t size,
+-				slab_flags_t flags)
++				slab_flags_t flags, size_t useroffset,
++				size_t usersize)
+ {
+ 	struct kmem_cache *s = kmem_cache_zalloc(kmem_cache, GFP_NOWAIT);
+ 
+ 	if (!s)
+ 		panic("Out of memory when creating slab %s\n", name);
+ 
+-	create_boot_cache(s, name, size, flags, 0, size);
++	create_boot_cache(s, name, size, flags, useroffset, usersize);
+ 	list_add(&s->list, &slab_caches);
+ 	memcg_link_cache(s);
+ 	s->refcount = 1;
+@@ -1090,7 +1091,8 @@ void __init setup_kmalloc_cache_index_table(void)
+ static void __init new_kmalloc_cache(int idx, slab_flags_t flags)
+ {
+ 	kmalloc_caches[idx] = create_kmalloc_cache(kmalloc_info[idx].name,
+-					kmalloc_info[idx].size, flags);
++					kmalloc_info[idx].size, flags, 0,
++					kmalloc_info[idx].size);
+ }
+ 
+ /*
+@@ -1131,7 +1133,7 @@ void __init create_kmalloc_caches(slab_flags_t flags)
+ 
+ 			BUG_ON(!n);
+ 			kmalloc_dma_caches[i] = create_kmalloc_cache(n,
+-				size, SLAB_CACHE_DMA | flags);
++				size, SLAB_CACHE_DMA | flags, 0, 0);
+ 		}
+ 	}
+ #endif
 -- 
 2.7.4
