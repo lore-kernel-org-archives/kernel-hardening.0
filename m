@@ -1,33 +1,31 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  9 Jan 2018 12:55:42 -0800
-Message-Id: <1515531365-37423-14-git-send-email-keescook@chromium.org>
+Date: Tue,  9 Jan 2018 12:55:43 -0800
+Message-Id: <1515531365-37423-15-git-send-email-keescook@chromium.org>
 In-Reply-To: <1515531365-37423-1-git-send-email-keescook@chromium.org>
 References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 13/36] befs: Define usercopy region in befs_inode_cache slab cache
+Subject: [kernel-hardening] [PATCH 14/36] exofs: Define usercopy region in exofs_inode_cache slab cache
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Luis de Bethencourt <luisbg@kernel.org>, Salah Triki <salah.triki@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Boaz Harrosh <ooo@electrozaur.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: David Windsor <dave@nullcore.net>
 
-befs symlink pathnames, stored in struct befs_inode_info.i_data.symlink
-and therefore contained in the befs_inode_cache slab cache, need to be
-copied to/from userspace.
+The exofs short symlink names, stored in struct exofs_i_info.i_data and
+therefore contained in the exofs_inode_cache slab cache, need to be copied
+to/from userspace.
 
 cache object allocation:
-    fs/befs/linuxvfs.c:
-        befs_alloc_inode(...):
+    fs/exofs/super.c:
+        exofs_alloc_inode(...):
             ...
-            bi = kmem_cache_alloc(befs_inode_cachep, GFP_KERNEL);
+            oi = kmem_cache_alloc(exofs_inode_cachep, GFP_KERNEL);
             ...
-            return &bi->vfs_inode;
+            return &oi->vfs_inode;
 
-        befs_iget(...):
+    fs/exofs/namei.c:
+        exofs_symlink(...):
             ...
-            strlcpy(befs_ino->i_data.symlink, raw_inode->data.symlink,
-                    BEFS_SYMLINK_LEN);
-            ...
-            inode->i_link = befs_ino->i_data.symlink;
+            inode->i_link = (char *)oi->i_data;
 
 example usage trace:
     readlink_copy+0x43/0x70
@@ -47,7 +45,7 @@ example usage trace:
             readlink_copy(..., link);
 
 In support of usercopy hardening, this patch defines a region in the
-befs_inode_cache slab cache in which userspace copy operations are
+exofs_inode_cache slab cache in which userspace copy operations are
 allowed.
 
 This region is known as the slab cache's usercopy region. Slab caches
@@ -61,38 +59,31 @@ mine and don't reflect the original grsecurity/PaX code.
 
 Signed-off-by: David Windsor <dave@nullcore.net>
 [kees: adjust commit log, provide usage trace]
-Cc: Luis de Bethencourt <luisbg@kernel.org>
-Cc: Salah Triki <salah.triki@gmail.com>
+Cc: Boaz Harrosh <ooo@electrozaur.com>
 Signed-off-by: Kees Cook <keescook@chromium.org>
-Acked-by: Luis de Bethencourt <luisbg@kernel.org>
 ---
- fs/befs/linuxvfs.c | 14 +++++++++-----
- 1 file changed, 9 insertions(+), 5 deletions(-)
+ fs/exofs/super.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
 
-diff --git a/fs/befs/linuxvfs.c b/fs/befs/linuxvfs.c
-index ee236231cafa..af2832aaeec5 100644
---- a/fs/befs/linuxvfs.c
-+++ b/fs/befs/linuxvfs.c
-@@ -444,11 +444,15 @@ static struct inode *befs_iget(struct super_block *sb, unsigned long ino)
- static int __init
- befs_init_inodecache(void)
+diff --git a/fs/exofs/super.c b/fs/exofs/super.c
+index 819624cfc8da..e5c532875bb7 100644
+--- a/fs/exofs/super.c
++++ b/fs/exofs/super.c
+@@ -192,10 +192,13 @@ static void exofs_init_once(void *foo)
+  */
+ static int init_inodecache(void)
  {
--	befs_inode_cachep = kmem_cache_create("befs_inode_cache",
--					      sizeof (struct befs_inode_info),
--					      0, (SLAB_RECLAIM_ACCOUNT|
--						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
--					      init_once);
-+	befs_inode_cachep = kmem_cache_create_usercopy("befs_inode_cache",
-+				sizeof(struct befs_inode_info), 0,
-+				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
-+					SLAB_ACCOUNT),
-+				offsetof(struct befs_inode_info,
-+					i_data.symlink),
-+				sizeof_field(struct befs_inode_info,
-+					i_data.symlink),
-+				init_once);
- 	if (befs_inode_cachep == NULL)
+-	exofs_inode_cachep = kmem_cache_create("exofs_inode_cache",
++	exofs_inode_cachep = kmem_cache_create_usercopy("exofs_inode_cache",
+ 				sizeof(struct exofs_i_info), 0,
+ 				SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD |
+-				SLAB_ACCOUNT, exofs_init_once);
++				SLAB_ACCOUNT,
++				offsetof(struct exofs_i_info, i_data),
++				sizeof_field(struct exofs_i_info, i_data),
++				exofs_init_once);
+ 	if (exofs_inode_cachep == NULL)
  		return -ENOMEM;
- 
+ 	return 0;
 -- 
 2.7.4
