@@ -1,88 +1,86 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  9 Jan 2018 12:55:46 -0800
-Message-Id: <1515531365-37423-18-git-send-email-keescook@chromium.org>
+Date: Tue,  9 Jan 2018 12:55:48 -0800
+Message-Id: <1515531365-37423-20-git-send-email-keescook@chromium.org>
 In-Reply-To: <1515531365-37423-1-git-send-email-keescook@chromium.org>
 References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 17/36] vxfs: Define usercopy region in vxfs_inode slab cache
+Subject: [kernel-hardening] [PATCH 19/36] scsi: Define usercopy region in scsi_sense_cache slab cache
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Christoph Hellwig <hch@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-scsi@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: David Windsor <dave@nullcore.net>
 
-vxfs symlink pathnames, stored in struct vxfs_inode_info field
-vii_immed.vi_immed and therefore contained in the vxfs_inode slab cache,
-need to be copied to/from userspace.
+SCSI sense buffers, stored in struct scsi_cmnd.sense and therefore
+contained in the scsi_sense_cache slab cache, need to be copied to/from
+userspace.
 
 cache object allocation:
-    fs/freevxfs/vxfs_super.c:
-        vxfs_alloc_inode(...):
-            ...
-            vi = kmem_cache_alloc(vxfs_inode_cachep, GFP_KERNEL);
-            ...
-            return &vi->vfs_inode;
+    drivers/scsi/scsi_lib.c:
+        scsi_select_sense_cache(...):
+            return ... ? scsi_sense_isadma_cache : scsi_sense_cache
 
-    fs/freevxfs/vxfs_inode.c:
-        cxfs_iget(...):
+        scsi_alloc_sense_buffer(...):
+            return kmem_cache_alloc_node(scsi_select_sense_cache(), ...);
+
+        scsi_init_request(...):
             ...
-            inode->i_link = vip->vii_immed.vi_immed;
+            cmd->sense_buffer = scsi_alloc_sense_buffer(...);
+            ...
+            cmd->req.sense = cmd->sense_buffer
 
 example usage trace:
-    readlink_copy+0x43/0x70
-    vfs_readlink+0x62/0x110
-    SyS_readlinkat+0x100/0x130
 
-    fs/namei.c:
-        readlink_copy(..., link):
+    block/scsi_ioctl.c:
+        (inline from sg_io)
+        blk_complete_sghdr_rq(...):
+            struct scsi_request *req = scsi_req(rq);
             ...
-            copy_to_user(..., link, len);
+            copy_to_user(..., req->sense, len)
 
-        (inlined in vfs_readlink)
-        generic_readlink(dentry, ...):
-            struct inode *inode = d_inode(dentry);
-            const char *link = inode->i_link;
-            ...
-            readlink_copy(..., link);
+        scsi_cmd_ioctl(...):
+            sg_io(...);
 
-In support of usercopy hardening, this patch defines a region in the
-vxfs_inode slab cache in which userspace copy operations are allowed.
+In support of usercopy hardening, this patch defines a region in
+the scsi_sense_cache slab cache in which userspace copy operations
+are allowed.
 
 This region is known as the slab cache's usercopy region. Slab caches
 can now check that each dynamically sized copy operation involving
 cache-managed memory falls entirely within the slab's usercopy region.
 
-This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
-whitelisting code in the last public patch of grsecurity/PaX based on my
-understanding of the code. Changes or omissions from the original code are
-mine and don't reflect the original grsecurity/PaX code.
-
 Signed-off-by: David Windsor <dave@nullcore.net>
 [kees: adjust commit log, provide usage trace]
-Cc: Christoph Hellwig <hch@infradead.org>
+Cc: "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>
+Cc: "Martin K. Petersen" <martin.petersen@oracle.com>
+Cc: linux-scsi@vger.kernel.org
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- fs/freevxfs/vxfs_super.c | 8 ++++++--
- 1 file changed, 6 insertions(+), 2 deletions(-)
+ drivers/scsi/scsi_lib.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
 
-diff --git a/fs/freevxfs/vxfs_super.c b/fs/freevxfs/vxfs_super.c
-index f989efa051a0..48b24bb50d02 100644
---- a/fs/freevxfs/vxfs_super.c
-+++ b/fs/freevxfs/vxfs_super.c
-@@ -332,9 +332,13 @@ vxfs_init(void)
- {
- 	int rv;
- 
--	vxfs_inode_cachep = kmem_cache_create("vxfs_inode",
-+	vxfs_inode_cachep = kmem_cache_create_usercopy("vxfs_inode",
- 			sizeof(struct vxfs_inode_info), 0,
--			SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD, NULL);
-+			SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD,
-+			offsetof(struct vxfs_inode_info, vii_immed.vi_immed),
-+			sizeof_field(struct vxfs_inode_info,
-+				vii_immed.vi_immed),
-+			NULL);
- 	if (!vxfs_inode_cachep)
- 		return -ENOMEM;
- 	rv = register_filesystem(&vxfs_fs_type);
+diff --git a/drivers/scsi/scsi_lib.c b/drivers/scsi/scsi_lib.c
+index 1cbc497e00bd..164d062c4d94 100644
+--- a/drivers/scsi/scsi_lib.c
++++ b/drivers/scsi/scsi_lib.c
+@@ -79,14 +79,15 @@ int scsi_init_sense_cache(struct Scsi_Host *shost)
+ 	if (shost->unchecked_isa_dma) {
+ 		scsi_sense_isadma_cache =
+ 			kmem_cache_create("scsi_sense_cache(DMA)",
+-			SCSI_SENSE_BUFFERSIZE, 0,
+-			SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA, NULL);
++				SCSI_SENSE_BUFFERSIZE, 0,
++				SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA, NULL);
+ 		if (!scsi_sense_isadma_cache)
+ 			ret = -ENOMEM;
+ 	} else {
+ 		scsi_sense_cache =
+-			kmem_cache_create("scsi_sense_cache",
+-			SCSI_SENSE_BUFFERSIZE, 0, SLAB_HWCACHE_ALIGN, NULL);
++			kmem_cache_create_usercopy("scsi_sense_cache",
++				SCSI_SENSE_BUFFERSIZE, 0, SLAB_HWCACHE_ALIGN,
++				0, SCSI_SENSE_BUFFERSIZE, NULL);
+ 		if (!scsi_sense_cache)
+ 			ret = -ENOMEM;
+ 	}
 -- 
 2.7.4
