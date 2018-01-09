@@ -1,61 +1,60 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  9 Jan 2018 12:55:54 -0800
-Message-Id: <1515531365-37423-26-git-send-email-keescook@chromium.org>
+Date: Tue,  9 Jan 2018 12:56:01 -0800
+Message-Id: <1515531365-37423-33-git-send-email-keescook@chromium.org>
 In-Reply-To: <1515531365-37423-1-git-send-email-keescook@chromium.org>
 References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 25/36] net: Restrict unwhitelisted proto caches to size 0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] [PATCH 32/36] kvm: whitelist struct kvm_vcpu_arch
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, "David S. Miller" <davem@davemloft.net>, Eric Dumazet <edumazet@google.com>, Paolo Abeni <pabeni@redhat.com>, David Howells <dhowells@redhat.com>, netdev@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Paolo Bonzini <pbonzini@redhat.com>, kernel-hardening@lists.openwall.com, Christian Borntraeger <borntraeger@redhat.com>, Christoffer Dall <cdall@linaro.org>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Now that protocols have been annotated (the copy of icsk_ca_ops->name
-is of an ops field from outside the slab cache):
+From: Paolo Bonzini <pbonzini@redhat.com>
 
-$ git grep 'copy_.*_user.*sk.*->'
-caif/caif_socket.c: copy_from_user(&cf_sk->conn_req.param.data, ov, ol)) {
-ipv4/raw.c:   if (copy_from_user(&raw_sk(sk)->filter, optval, optlen))
-ipv4/raw.c:       copy_to_user(optval, &raw_sk(sk)->filter, len))
-ipv4/tcp.c:       if (copy_to_user(optval, icsk->icsk_ca_ops->name, len))
-ipv4/tcp.c:       if (copy_to_user(optval, icsk->icsk_ulp_ops->name, len))
-ipv6/raw.c:       if (copy_from_user(&raw6_sk(sk)->filter, optval, optlen))
-ipv6/raw.c:           if (copy_to_user(optval, &raw6_sk(sk)->filter, len))
-sctp/socket.c: if (copy_from_user(&sctp_sk(sk)->subscribe, optval, optlen))
-sctp/socket.c: if (copy_to_user(optval, &sctp_sk(sk)->subscribe, len))
-sctp/socket.c: if (copy_to_user(optval, &sctp_sk(sk)->initmsg, len))
+On x86, ARM and s390, struct kvm_vcpu_arch has a usercopy region
+that is read and written by the KVM_GET/SET_CPUID2 ioctls (x86)
+or KVM_GET/SET_ONE_REG (ARM/s390).  Without whitelisting the area,
+KVM is completely broken on those architectures with usercopy hardening
+enabled.
 
-we can switch the default proto usercopy region to size 0. Any protocols
-needing to add whitelisted regions must annotate the fields with the
-useroffset and usersize fields of struct proto.
+For now, allow writing to the entire struct on all architectures.
+The KVM tree will not refine this to an architecture-specific
+subset of struct kvm_vcpu_arch.
 
-This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
-whitelisting code in the last public patch of grsecurity/PaX based on my
-understanding of the code. Changes or omissions from the original code are
-mine and don't reflect the original grsecurity/PaX code.
-
-Cc: "David S. Miller" <davem@davemloft.net>
-Cc: Eric Dumazet <edumazet@google.com>
-Cc: Paolo Abeni <pabeni@redhat.com>
-Cc: David Howells <dhowells@redhat.com>
-Cc: netdev@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Christian Borntraeger <borntraeger@redhat.com>
+Cc: Christoffer Dall <cdall@linaro.org>
+Cc: Radim Krčmář <rkrcmar@redhat.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Acked-by: Christoffer Dall <christoffer.dall@linaro.org>
+Acked-by: Marc Zyngier <marc.zyngier@arm.com>
+Acked-by: Christian Borntraeger <borntraeger@de.ibm.com>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- net/core/sock.c | 4 +---
- 1 file changed, 1 insertion(+), 3 deletions(-)
+ virt/kvm/kvm_main.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
 
-diff --git a/net/core/sock.c b/net/core/sock.c
-index 261e6dbf0259..f39206b41b32 100644
---- a/net/core/sock.c
-+++ b/net/core/sock.c
-@@ -3154,9 +3154,7 @@ int proto_register(struct proto *prot, int alloc_slab)
- 		prot->slab = kmem_cache_create_usercopy(prot->name,
- 					prot->obj_size, 0,
- 					SLAB_HWCACHE_ALIGN | prot->slab_flags,
--					prot->usersize ? prot->useroffset : 0,
--					prot->usersize ? prot->usersize
--						       : prot->obj_size,
-+					prot->useroffset, prot->usersize,
- 					NULL);
- 
- 		if (prot->slab == NULL) {
+diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
+index c422c10cd1dd..96689967f5c3 100644
+--- a/virt/kvm/kvm_main.c
++++ b/virt/kvm/kvm_main.c
+@@ -4029,8 +4029,12 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
+ 	/* A kmem cache lets us meet the alignment requirements of fx_save. */
+ 	if (!vcpu_align)
+ 		vcpu_align = __alignof__(struct kvm_vcpu);
+-	kvm_vcpu_cache = kmem_cache_create("kvm_vcpu", vcpu_size, vcpu_align,
+-					   SLAB_ACCOUNT, NULL);
++	kvm_vcpu_cache =
++		kmem_cache_create_usercopy("kvm_vcpu", vcpu_size, vcpu_align,
++					   SLAB_ACCOUNT,
++					   offsetof(struct kvm_vcpu, arch),
++					   sizeof_field(struct kvm_vcpu, arch),
++					   NULL);
+ 	if (!kvm_vcpu_cache) {
+ 		r = -ENOMEM;
+ 		goto out_free_3;
 -- 
 2.7.4
