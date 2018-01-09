@@ -1,59 +1,53 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  9 Jan 2018 12:55:41 -0800
-Message-Id: <1515531365-37423-13-git-send-email-keescook@chromium.org>
+Date: Tue,  9 Jan 2018 12:55:36 -0800
+Message-Id: <1515531365-37423-8-git-send-email-keescook@chromium.org>
 In-Reply-To: <1515531365-37423-1-git-send-email-keescook@chromium.org>
 References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 12/36] jfs: Define usercopy region in jfs_ip slab cache
+Subject: [kernel-hardening] [PATCH 07/36] dcache: Define usercopy region in dentry_cache slab cache
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Dave Kleikamp <shaggy@kernel.org>, jfs-discussion@lists.sourceforge.net, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: David Windsor <dave@nullcore.net>
 
-The jfs symlink pathnames, stored in struct jfs_inode_info.i_inline and
-therefore contained in the jfs_ip slab cache, need to be copied to/from
-userspace.
+When a dentry name is short enough, it can be stored directly in the
+dentry itself (instead in a separate kmalloc allocation). These dentry
+short names, stored in struct dentry.d_iname and therefore contained in
+the dentry_cache slab cache, need to be coped to userspace.
 
 cache object allocation:
-    fs/jfs/super.c:
-        jfs_alloc_inode(...):
+    fs/dcache.c:
+        __d_alloc(...):
             ...
-            jfs_inode = kmem_cache_alloc(jfs_inode_cachep, GFP_NOFS);
+            dentry = kmem_cache_alloc(dentry_cache, ...);
             ...
-            return &jfs_inode->vfs_inode;
-
-    fs/jfs/jfs_incore.h:
-        JFS_IP(struct inode *inode):
-            return container_of(inode, struct jfs_inode_info, vfs_inode);
-
-    fs/jfs/inode.c:
-        jfs_iget(...):
-            ...
-            inode->i_link = JFS_IP(inode)->i_inline;
+            dentry->d_name.name = dentry->d_iname;
 
 example usage trace:
-    readlink_copy+0x43/0x70
-    vfs_readlink+0x62/0x110
-    SyS_readlinkat+0x100/0x130
+    filldir+0xb0/0x140
+    dcache_readdir+0x82/0x170
+    iterate_dir+0x142/0x1b0
+    SyS_getdents+0xb5/0x160
 
-    fs/namei.c:
-        readlink_copy(..., link):
+    fs/readdir.c:
+        (called via ctx.actor by dir_emit)
+        filldir(..., const char *name, ...):
             ...
-            copy_to_user(..., link, len);
+            copy_to_user(..., name, namlen)
 
-        (inlined in vfs_readlink)
-        generic_readlink(dentry, ...):
-            struct inode *inode = d_inode(dentry);
-            const char *link = inode->i_link;
+    fs/libfs.c:
+        dcache_readdir(...):
             ...
-            readlink_copy(..., link);
+            next = next_positive(dentry, p, 1)
+            ...
+            dir_emit(..., next->d_name.name, ...)
 
 In support of usercopy hardening, this patch defines a region in the
-jfs_ip slab cache in which userspace copy operations are allowed.
+dentry_cache slab cache in which userspace copy operations are allowed.
 
-This region is known as the slab cache's usercopy region. Slab caches
-can now check that each dynamically sized copy operation involving
-cache-managed memory falls entirely within the slab's usercopy region.
+This region is known as the slab cache's usercopy region. Slab caches can
+now check that each dynamic copy operation involving cache-managed memory
+falls entirely within the slab's usercopy region.
 
 This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
 whitelisting code in the last public patch of grsecurity/PaX based on my
@@ -61,33 +55,30 @@ understanding of the code. Changes or omissions from the original code are
 mine and don't reflect the original grsecurity/PaX code.
 
 Signed-off-by: David Windsor <dave@nullcore.net>
+[kees: adjust hunks for kmalloc-specific things moved later]
 [kees: adjust commit log, provide usage trace]
-Cc: Dave Kleikamp <shaggy@kernel.org>
-Cc: jfs-discussion@lists.sourceforge.net
+Cc: Alexander Viro <viro@zeniv.linux.org.uk>
+Cc: linux-fsdevel@vger.kernel.org
 Signed-off-by: Kees Cook <keescook@chromium.org>
-Acked-by: Dave Kleikamp <dave.kleikamp@oracle.com>
 ---
- fs/jfs/super.c | 8 +++++---
- 1 file changed, 5 insertions(+), 3 deletions(-)
+ fs/dcache.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
 
-diff --git a/fs/jfs/super.c b/fs/jfs/super.c
-index 90373aebfdca..1b9264fd54b6 100644
---- a/fs/jfs/super.c
-+++ b/fs/jfs/super.c
-@@ -965,9 +965,11 @@ static int __init init_jfs_fs(void)
- 	int rc;
+diff --git a/fs/dcache.c b/fs/dcache.c
+index 5c7df1df81ff..92ad7a2168e1 100644
+--- a/fs/dcache.c
++++ b/fs/dcache.c
+@@ -3601,8 +3601,9 @@ static void __init dcache_init(void)
+ 	 * but it is probably not worth it because of the cache nature
+ 	 * of the dcache.
+ 	 */
+-	dentry_cache = KMEM_CACHE(dentry,
+-		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT);
++	dentry_cache = KMEM_CACHE_USERCOPY(dentry,
++		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
++		d_iname);
  
- 	jfs_inode_cachep =
--	    kmem_cache_create("jfs_ip", sizeof(struct jfs_inode_info), 0,
--			    SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
--			    init_once);
-+	    kmem_cache_create_usercopy("jfs_ip", sizeof(struct jfs_inode_info),
-+			0, SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
-+			offsetof(struct jfs_inode_info, i_inline),
-+			sizeof_field(struct jfs_inode_info, i_inline),
-+			init_once);
- 	if (jfs_inode_cachep == NULL)
- 		return -ENOMEM;
- 
+ 	/* Hash may have been set up in dcache_init_early */
+ 	if (!hashdist)
 -- 
 2.7.4
