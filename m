@@ -1,61 +1,86 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  9 Jan 2018 12:55:59 -0800
-Message-Id: <1515531365-37423-31-git-send-email-keescook@chromium.org>
+Date: Tue,  9 Jan 2018 12:55:50 -0800
+Message-Id: <1515531365-37423-22-git-send-email-keescook@chromium.org>
 In-Reply-To: <1515531365-37423-1-git-send-email-keescook@chromium.org>
 References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 30/36] arm64: Implement thread_struct whitelist for hardened usercopy
+Subject: [kernel-hardening] [PATCH 21/36] ip: Define usercopy region in IP proto slab cache
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Ingo Molnar <mingo@kernel.org>, James Morse <james.morse@arm.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Dave Martin <Dave.Martin@arm.com>, zijun_hu <zijun_hu@htc.com>, linux-arm-kernel@lists.infradead.org, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This whitelists the FPU register state portion of the thread_struct for
-copying to userspace, instead of the default entire structure.
+From: David Windsor <dave@nullcore.net>
 
-Cc: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Will Deacon <will.deacon@arm.com>
-Cc: Christian Borntraeger <borntraeger@de.ibm.com>
-Cc: Ingo Molnar <mingo@kernel.org>
-Cc: James Morse <james.morse@arm.com>
-Cc: "Peter Zijlstra (Intel)" <peterz@infradead.org>
-Cc: Dave Martin <Dave.Martin@arm.com>
-Cc: zijun_hu <zijun_hu@htc.com>
-Cc: linux-arm-kernel@lists.infradead.org
+The ICMP filters for IPv4 and IPv6 raw sockets need to be copied to/from
+userspace. In support of usercopy hardening, this patch defines a region
+in the struct proto slab cache in which userspace copy operations are
+allowed.
+
+example usage trace:
+
+    net/ipv4/raw.c:
+        raw_seticmpfilter(...):
+            ...
+            copy_from_user(&raw_sk(sk)->filter, ..., optlen)
+
+        raw_geticmpfilter(...):
+            ...
+            copy_to_user(..., &raw_sk(sk)->filter, len)
+
+    net/ipv6/raw.c:
+        rawv6_seticmpfilter(...):
+            ...
+            copy_from_user(&raw6_sk(sk)->filter, ..., optlen)
+
+        rawv6_geticmpfilter(...):
+            ...
+            copy_to_user(..., &raw6_sk(sk)->filter, len)
+
+This region is known as the slab cache's usercopy region. Slab caches
+can now check that each dynamically sized copy operation involving
+cache-managed memory falls entirely within the slab's usercopy region.
+
+This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+whitelisting code in the last public patch of grsecurity/PaX based on my
+understanding of the code. Changes or omissions from the original code are
+mine and don't reflect the original grsecurity/PaX code.
+
+Signed-off-by: David Windsor <dave@nullcore.net>
+[kees: split from network patch, provide usage trace]
+Cc: "David S. Miller" <davem@davemloft.net>
+Cc: Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>
+Cc: Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>
+Cc: netdev@vger.kernel.org
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/arm64/Kconfig                 | 1 +
- arch/arm64/include/asm/processor.h | 8 ++++++++
- 2 files changed, 9 insertions(+)
+ net/ipv4/raw.c | 2 ++
+ net/ipv6/raw.c | 2 ++
+ 2 files changed, 4 insertions(+)
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index a93339f5178f..c84477e6a884 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -90,6 +90,7 @@ config ARM64
- 	select HAVE_ARCH_MMAP_RND_BITS
- 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
- 	select HAVE_ARCH_SECCOMP_FILTER
-+	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
- 	select HAVE_ARCH_TRACEHOOK
- 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
- 	select HAVE_ARCH_VMAP_STACK
-diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
-index 023cacb946c3..e58a5864ec89 100644
---- a/arch/arm64/include/asm/processor.h
-+++ b/arch/arm64/include/asm/processor.h
-@@ -113,6 +113,14 @@ struct thread_struct {
- 	struct debug_info	debug;		/* debugging */
- };
- 
-+/* Whitelist the fpsimd_state for copying to userspace. */
-+static inline void arch_thread_struct_whitelist(unsigned long *offset,
-+						unsigned long *size)
-+{
-+	*offset = offsetof(struct thread_struct, fpsimd_state);
-+	*size = sizeof(struct fpsimd_state);
-+}
-+
+diff --git a/net/ipv4/raw.c b/net/ipv4/raw.c
+index 33b70bfd1122..1b6fa4195ac9 100644
+--- a/net/ipv4/raw.c
++++ b/net/ipv4/raw.c
+@@ -970,6 +970,8 @@ struct proto raw_prot = {
+ 	.hash		   = raw_hash_sk,
+ 	.unhash		   = raw_unhash_sk,
+ 	.obj_size	   = sizeof(struct raw_sock),
++	.useroffset	   = offsetof(struct raw_sock, filter),
++	.usersize	   = sizeof_field(struct raw_sock, filter),
+ 	.h.raw_hash	   = &raw_v4_hashinfo,
  #ifdef CONFIG_COMPAT
- #define task_user_tls(t)						\
- ({									\
+ 	.compat_setsockopt = compat_raw_setsockopt,
+diff --git a/net/ipv6/raw.c b/net/ipv6/raw.c
+index 761a473a07c5..08a85fabdfd1 100644
+--- a/net/ipv6/raw.c
++++ b/net/ipv6/raw.c
+@@ -1272,6 +1272,8 @@ struct proto rawv6_prot = {
+ 	.hash		   = raw_hash_sk,
+ 	.unhash		   = raw_unhash_sk,
+ 	.obj_size	   = sizeof(struct raw6_sock),
++	.useroffset	   = offsetof(struct raw6_sock, filter),
++	.usersize	   = sizeof_field(struct raw6_sock, filter),
+ 	.h.raw_hash	   = &raw_v6_hashinfo,
+ #ifdef CONFIG_COMPAT
+ 	.compat_setsockopt = compat_rawv6_setsockopt,
 -- 
 2.7.4
