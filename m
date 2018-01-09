@@ -1,117 +1,79 @@
-From: Kees Cook <keescook@chromium.org>
-Date: Tue,  9 Jan 2018 12:56:03 -0800
-Message-Id: <1515531365-37423-35-git-send-email-keescook@chromium.org>
-In-Reply-To: <1515531365-37423-1-git-send-email-keescook@chromium.org>
-References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 34/36] usercopy: Allow strict enforcement of whitelists
-To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Date: Tue, 9 Jan 2018 16:28:59 -0600
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20180109222859.GA25956@mail.hallyn.com>
+References: <CAF2d9jiPYvMN=_guoZHyTA5FmMgaJb5mtxroi5D9NvcNrHc5gg@mail.gmail.com>
+ <alpine.LFD.2.20.1801081131190.8436@localhost>
+ <20180108062452.GA21717@mail.hallyn.com>
+ <alpine.LFD.2.20.1801082040180.12014@localhost>
+ <20180108154733.GA29416@mail.hallyn.com>
+ <CAF2d9jgVJpuAH+jgK0v7sQ9Pr75xy=GSnqKDdpeE7d97O0EbcQ@mail.gmail.com>
+ <20180108181121.GA32302@mail.hallyn.com>
+ <CAF2d9jgar8J+mQjUfF=+XdvrcS=RvtOpKysxOiZkG-rXgm0KVw@mail.gmail.com>
+ <20180108183610.GA562@mail.hallyn.com>
+ <CAF2d9jjws=jEbybHs18J_xkduAWB+bh6BA_CkD5oYRWz7PwjZA@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CAF2d9jjws=jEbybHs18J_xkduAWB+bh6BA_CkD5oYRWz7PwjZA@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCHv3 0/2] capability controlled user-namespaces
+To: Mahesh Bandewar =?utf-8?B?KOCkruCkueClh+CktiDgpKzgpILgpKHgpYfgpLXgpL4=?= =?utf-8?B?4KSwKQ==?= <maheshb@google.com>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>, James Morris <james.l.morris@oracle.com>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <mahesh@bandewar.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This introduces CONFIG_HARDENED_USERCOPY_FALLBACK to control the
-behavior of hardened usercopy whitelist violations. By default, whitelist
-violations will continue to WARN() so that any bad or missing usercopy
-whitelists can be discovered without being too disruptive.
+Quoting Mahesh Bandewar (महेश बंडेवार) (maheshb@google.com):
+> On Mon, Jan 8, 2018 at 10:36 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> > Quoting Mahesh Bandewar (महेश बंडेवार) (maheshb@google.com):
+> >> On Mon, Jan 8, 2018 at 10:11 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> >> > Quoting Mahesh Bandewar (महेश बंडेवार) (maheshb@google.com):
+> >> >> On Mon, Jan 8, 2018 at 7:47 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> >> >> > Quoting James Morris (james.l.morris@oracle.com):
+> >> >> >> On Mon, 8 Jan 2018, Serge E. Hallyn wrote:
+> >> >> >> I meant in terms of "marking" a user ns as "controlled" type -- it's
+> >> >> >> unnecessary jargon from an end user point of view.
+> >> >> >
+> >> >> > Ah, yes, that was my point in
+> >> >> >
+> >> >> > http://lkml.iu.edu/hypermail/linux/kernel/1711.1/01845.html
+> >> >> > and
+> >> >> > http://lkml.iu.edu/hypermail/linux/kernel/1711.1/02276.html
+> >> >> >
+> >> >> >> This may happen internally but don't make it a special case with a
+> >> >> >> different name and don't bother users with internal concepts: simply
+> >> >> >> implement capability whitelists with the default having equivalent
+> >> >
+> >> > So the challenge is to have unprivileged users be contained, while
+> >> > allowing trusted workloads in containers created by a root user to
+> >> > bypass the restriction.
+> >> >
+> >> > Now, the current proposal actually doesn't support a root user starting
+> >> > an application that it doesn't quite trust in such a way that it *is*
+> >> > subject to the whitelist.
+> >>
+> >> Well, this is not hard since root process can spawn another process
+> >> and loose privileges before creating user-ns to be controlled by the
+> >> whitelist.
+> >
+> > It would have to drop cap_sys_admin for the container to be marked as
+> > "controlled", which may prevent the container runtime from properly starting
+> > the container.
+> >
+> Yes, but that's a conflict of trusted operations (that requires
+> SYS_ADMIN) and untrusted processes it may spawn.
 
-If this config is disabled at build time or a system is booted with
-"slab_common.usercopy_fallback=0", usercopy whitelists will BUG() instead
-of WARN(). This is useful for admins that want to use usercopy whitelists
-immediately.
+Not sure I understand what you're saying, but
 
-Suggested-by: Matthew Garrett <mjg59@google.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- include/linux/slab.h |  2 ++
- mm/slab.c            |  3 ++-
- mm/slab_common.c     |  8 ++++++++
- mm/slub.c            |  3 ++-
- security/Kconfig     | 14 ++++++++++++++
- 5 files changed, 28 insertions(+), 2 deletions(-)
+I guess that in any case the task which is doing unshare(CLONE_NEWNS)
+can drop cap_sys_admin first.  Though that is harder if using clone,
+and it is awkward because it's not the container manager, but the user,
+who will judge whether the container workload should be restricted.
+So the container driver will add a flag like "run-controlled", and
+the driver will convert that to dropping a capability; which again
+is weird.  It would seem nicer to introduce a userns flag, 'caps-controlled'
+For an unprivileged userns, it is always set to 1, and root cannot
+change it.  For a root-created userns, it stays 0, but root can set it
+to 1 (using /proc file?).  In this way a either container runtime or just an
+admin script can say "no wait I want this container to still be controlled".
 
-diff --git a/include/linux/slab.h b/include/linux/slab.h
-index 518f72bf565e..4bef1ed1daa1 100644
---- a/include/linux/slab.h
-+++ b/include/linux/slab.h
-@@ -135,6 +135,8 @@ struct mem_cgroup;
- void __init kmem_cache_init(void);
- bool slab_is_available(void);
- 
-+extern bool usercopy_fallback;
-+
- struct kmem_cache *kmem_cache_create(const char *name, size_t size,
- 			size_t align, slab_flags_t flags,
- 			void (*ctor)(void *));
-diff --git a/mm/slab.c b/mm/slab.c
-index 6488066e718a..50539a76a46a 100644
---- a/mm/slab.c
-+++ b/mm/slab.c
-@@ -4425,7 +4425,8 @@ int __check_heap_object(const void *ptr, unsigned long n, struct page *page,
- 		 * to be a temporary method to find any missing usercopy
- 		 * whitelists.
- 		 */
--		if (offset <= cachep->object_size &&
-+		if (usercopy_fallback &&
-+		    offset <= cachep->object_size &&
- 		    n <= cachep->object_size - offset) {
- 			WARN_ONCE(1, "unexpected usercopy %s with bad or missing whitelist with SLAB object '%s' (offset %lu, size %lu)",
- 				  to_user ? "exposure" : "overwrite",
-diff --git a/mm/slab_common.c b/mm/slab_common.c
-index 6c9e945907b6..8ac2a6320a6c 100644
---- a/mm/slab_common.c
-+++ b/mm/slab_common.c
-@@ -31,6 +31,14 @@ LIST_HEAD(slab_caches);
- DEFINE_MUTEX(slab_mutex);
- struct kmem_cache *kmem_cache;
- 
-+#ifdef CONFIG_HARDENED_USERCOPY
-+bool usercopy_fallback __ro_after_init =
-+		IS_ENABLED(CONFIG_HARDENED_USERCOPY_FALLBACK);
-+module_param(usercopy_fallback, bool, 0400);
-+MODULE_PARM_DESC(usercopy_fallback,
-+		"WARN instead of reject usercopy whitelist violations");
-+#endif
-+
- static LIST_HEAD(slab_caches_to_rcu_destroy);
- static void slab_caches_to_rcu_destroy_workfn(struct work_struct *work);
- static DECLARE_WORK(slab_caches_to_rcu_destroy_work,
-diff --git a/mm/slub.c b/mm/slub.c
-index 2aa4972a2058..1c0ff635d408 100644
---- a/mm/slub.c
-+++ b/mm/slub.c
-@@ -3858,7 +3858,8 @@ int __check_heap_object(const void *ptr, unsigned long n, struct page *page,
- 		 * whitelists.
- 		 */
- 		object_size = slab_ksize(s);
--		if ((offset <= object_size && n <= object_size - offset)) {
-+		if (usercopy_fallback &&
-+		    (offset <= object_size && n <= object_size - offset)) {
- 			WARN_ONCE(1, "unexpected usercopy %s with bad or missing whitelist with SLUB object '%s' (offset %lu size %lu)",
- 				  to_user ? "exposure" : "overwrite",
- 				  s->name, offset, n);
-diff --git a/security/Kconfig b/security/Kconfig
-index e8e449444e65..ae457b018da5 100644
---- a/security/Kconfig
-+++ b/security/Kconfig
-@@ -152,6 +152,20 @@ config HARDENED_USERCOPY
- 	  or are part of the kernel text. This kills entire classes
- 	  of heap overflow exploits and similar kernel memory exposures.
- 
-+config HARDENED_USERCOPY_FALLBACK
-+	bool "Allow usercopy whitelist violations to fallback to object size"
-+	depends on HARDENED_USERCOPY
-+	default y
-+	help
-+	  This is a temporary option that allows missing usercopy whitelists
-+	  to be discovered via a WARN() to the kernel log, instead of
-+	  rejecting the copy, falling back to non-whitelisted hardened
-+	  usercopy that checks the slab allocation size instead of the
-+	  whitelist size. This option will be removed once it seems like
-+	  all missing usercopy whitelists have been identified and fixed.
-+	  Booting with "slab_common.usercopy_fallback=Y/N" can change
-+	  this setting.
-+
- config HARDENED_USERCOPY_PAGESPAN
- 	bool "Refuse to copy allocations that span multiple pages"
- 	depends on HARDENED_USERCOPY
--- 
-2.7.4
+Or we could instead add a second sysctl to decide whether all or only
+'controlled' user namespaces should be controlled.  That's not pretty though.
