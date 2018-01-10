@@ -1,114 +1,42 @@
-References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
- <1515531365-37423-14-git-send-email-keescook@chromium.org>
-From: Luis de Bethencourt <luisbg@kernel.org>
-Message-ID: <490acc77-1198-e53e-c965-aef9c1ebf5fd@kernel.org>
-Date: Wed, 10 Jan 2018 10:53:23 +0000
+Date: Wed, 10 Jan 2018 09:25:20 -0600 (CST)
+From: Christopher Lameter <cl@linux.com>
+In-Reply-To: <1515531365-37423-3-git-send-email-keescook@chromium.org>
+Message-ID: <alpine.DEB.2.20.1801100921000.7926@nuc-kabylake>
+References: <1515531365-37423-1-git-send-email-keescook@chromium.org> <1515531365-37423-3-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-In-Reply-To: <1515531365-37423-14-git-send-email-keescook@chromium.org>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 13/36] befs: Define usercopy region in befs_inode_cache
- slab cache
-To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
-Cc: David Windsor <dave@nullcore.net>, Salah Triki <salah.triki@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH 02/36] usercopy: Include offset in overflow report
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/09/2018 08:55 PM, Kees Cook wrote:
-> From: David Windsor <dave@nullcore.net>
-> 
-> befs symlink pathnames, stored in struct befs_inode_info.i_data.symlink
-> and therefore contained in the befs_inode_cache slab cache, need to be
-> copied to/from userspace.
-> 
-> cache object allocation:
->     fs/befs/linuxvfs.c:
->         befs_alloc_inode(...):
->             ...
->             bi = kmem_cache_alloc(befs_inode_cachep, GFP_KERNEL);
->             ...
->             return &bi->vfs_inode;
-> 
->         befs_iget(...):
->             ...
->             strlcpy(befs_ino->i_data.symlink, raw_inode->data.symlink,
->                     BEFS_SYMLINK_LEN);
->             ...
->             inode->i_link = befs_ino->i_data.symlink;
-> 
-> example usage trace:
->     readlink_copy+0x43/0x70
->     vfs_readlink+0x62/0x110
->     SyS_readlinkat+0x100/0x130
-> 
->     fs/namei.c:
->         readlink_copy(..., link):
->             ...
->             copy_to_user(..., link, len);
-> 
->         (inlined in vfs_readlink)
->         generic_readlink(dentry, ...):
->             struct inode *inode = d_inode(dentry);
->             const char *link = inode->i_link;
->             ...
->             readlink_copy(..., link);
-> 
-> In support of usercopy hardening, this patch defines a region in the
-> befs_inode_cache slab cache in which userspace copy operations are
-> allowed.
-> 
-> This region is known as the slab cache's usercopy region. Slab caches
-> can now check that each dynamically sized copy operation involving
-> cache-managed memory falls entirely within the slab's usercopy region.
-> 
-> This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
-> whitelisting code in the last public patch of grsecurity/PaX based on my
-> understanding of the code. Changes or omissions from the original code are
-> mine and don't reflect the original grsecurity/PaX code.
-> 
-> Signed-off-by: David Windsor <dave@nullcore.net>
-> [kees: adjust commit log, provide usage trace]
-> Cc: Luis de Bethencourt <luisbg@kernel.org>
-> Cc: Salah Triki <salah.triki@gmail.com>
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> Acked-by: Luis de Bethencourt <luisbg@kernel.org>
-> ---
->  fs/befs/linuxvfs.c | 14 +++++++++-----
->  1 file changed, 9 insertions(+), 5 deletions(-)
-> 
-> diff --git a/fs/befs/linuxvfs.c b/fs/befs/linuxvfs.c
-> index ee236231cafa..af2832aaeec5 100644
-> --- a/fs/befs/linuxvfs.c
-> +++ b/fs/befs/linuxvfs.c
-> @@ -444,11 +444,15 @@ static struct inode *befs_iget(struct super_block *sb, unsigned long ino)
->  static int __init
->  befs_init_inodecache(void)
+On Tue, 9 Jan 2018, Kees Cook wrote:
+
+> -static void report_usercopy(unsigned long len, bool to_user, const char *type)
+> +int report_usercopy(const char *name, const char *detail, bool to_user,
+> +		    unsigned long offset, unsigned long len)
 >  {
-> -	befs_inode_cachep = kmem_cache_create("befs_inode_cache",
-> -					      sizeof (struct befs_inode_info),
-> -					      0, (SLAB_RECLAIM_ACCOUNT|
-> -						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
-> -					      init_once);
-> +	befs_inode_cachep = kmem_cache_create_usercopy("befs_inode_cache",
-> +				sizeof(struct befs_inode_info), 0,
-> +				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
-> +					SLAB_ACCOUNT),
-> +				offsetof(struct befs_inode_info,
-> +					i_data.symlink),
-> +				sizeof_field(struct befs_inode_info,
-> +					i_data.symlink),
-> +				init_once);
->  	if (befs_inode_cachep == NULL)
->  		return -ENOMEM;
->  
-> 
+> -	pr_emerg("kernel memory %s attempt detected %s '%s' (%lu bytes)\n",
+> +	pr_emerg("kernel memory %s attempt detected %s %s%s%s%s (offset %lu, size %lu)\n",
+>  		to_user ? "exposure" : "overwrite",
+> -		to_user ? "from" : "to", type ? : "unknown", len);
+> +		to_user ? "from" : "to",
+> +		name ? : "unknown?!",
+> +		detail ? " '" : "", detail ? : "", detail ? "'" : "",
+> +		offset, len);
+>  	/*
+>  	 * For greater effect, it would be nice to do do_group_exit(),
+>  	 * but BUG() actually hooks all the lock-breaking and per-arch
+>  	 * Oops code, so that is used here instead.
+>  	 */
+>  	BUG();
 
-Hi Kees,
+Should this be a WARN() or so? Or some configuration that changes
+BUG() behavior? Otherwise
 
-I've tested this and it works well.
+> +
+> +	return -1;
 
-You can have me as:
-Signed-off-by, Tested-by, or the current Acked-by. Whatever you think is better.
+This return code will never be returned.
 
-Thanks for the great work. Your rock!
-
-Luis
+Why a return code at all? Maybe I will see that in the following patches?
