@@ -1,106 +1,114 @@
+References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
+ <1515531365-37423-14-git-send-email-keescook@chromium.org>
+From: Luis de Bethencourt <luisbg@kernel.org>
+Message-ID: <490acc77-1198-e53e-c965-aef9c1ebf5fd@kernel.org>
+Date: Wed, 10 Jan 2018 10:53:23 +0000
 MIME-Version: 1.0
-In-Reply-To: <20180109222859.GA25956@mail.hallyn.com>
-References: <CAF2d9jiPYvMN=_guoZHyTA5FmMgaJb5mtxroi5D9NvcNrHc5gg@mail.gmail.com>
- <alpine.LFD.2.20.1801081131190.8436@localhost> <20180108062452.GA21717@mail.hallyn.com>
- <alpine.LFD.2.20.1801082040180.12014@localhost> <20180108154733.GA29416@mail.hallyn.com>
- <CAF2d9jgVJpuAH+jgK0v7sQ9Pr75xy=GSnqKDdpeE7d97O0EbcQ@mail.gmail.com>
- <20180108181121.GA32302@mail.hallyn.com> <CAF2d9jgar8J+mQjUfF=+XdvrcS=RvtOpKysxOiZkG-rXgm0KVw@mail.gmail.com>
- <20180108183610.GA562@mail.hallyn.com> <CAF2d9jjws=jEbybHs18J_xkduAWB+bh6BA_CkD5oYRWz7PwjZA@mail.gmail.com>
- <20180109222859.GA25956@mail.hallyn.com>
-From: =?UTF-8?B?TWFoZXNoIEJhbmRld2FyICjgpK7gpLngpYfgpLYg4KSs4KSC4KSh4KWH4KS14KS+4KSwKQ==?= <maheshb@google.com>
-Date: Tue, 9 Jan 2018 18:08:58 -0800
-Message-ID: <CAF2d9jh+xMW7_5dwAPkoAuDyx=k=FNh3VfiMvDkCOBD2KF5npw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCHv3 0/2] capability controlled user-namespaces
-To: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: James Morris <james.l.morris@oracle.com>, LKML <linux-kernel@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, Kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Eric Dumazet <edumazet@google.com>, David Miller <davem@davemloft.net>, Mahesh Bandewar <mahesh@bandewar.net>
+In-Reply-To: <1515531365-37423-14-git-send-email-keescook@chromium.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 13/36] befs: Define usercopy region in befs_inode_cache
+ slab cache
+To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
+Cc: David Windsor <dave@nullcore.net>, Salah Triki <salah.triki@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 9, 2018 at 2:28 PM, Serge E. Hallyn <serge@hallyn.com> wrote:
-> Quoting Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=AC=
-=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) (maheshb@google.com=
-):
->> On Mon, Jan 8, 2018 at 10:36 AM, Serge E. Hallyn <serge@hallyn.com> wrot=
-e:
->> > Quoting Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=A4=
-=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) (maheshb@google.=
-com):
->> >> On Mon, Jan 8, 2018 at 10:11 AM, Serge E. Hallyn <serge@hallyn.com> w=
-rote:
->> >> > Quoting Mahesh Bandewar (=E0=A4=AE=E0=A4=B9=E0=A5=87=E0=A4=B6 =E0=
-=A4=AC=E0=A4=82=E0=A4=A1=E0=A5=87=E0=A4=B5=E0=A4=BE=E0=A4=B0) (maheshb@goog=
-le.com):
->> >> >> On Mon, Jan 8, 2018 at 7:47 AM, Serge E. Hallyn <serge@hallyn.com>=
- wrote:
->> >> >> > Quoting James Morris (james.l.morris@oracle.com):
->> >> >> >> On Mon, 8 Jan 2018, Serge E. Hallyn wrote:
->> >> >> >> I meant in terms of "marking" a user ns as "controlled" type --=
- it's
->> >> >> >> unnecessary jargon from an end user point of view.
->> >> >> >
->> >> >> > Ah, yes, that was my point in
->> >> >> >
->> >> >> > http://lkml.iu.edu/hypermail/linux/kernel/1711.1/01845.html
->> >> >> > and
->> >> >> > http://lkml.iu.edu/hypermail/linux/kernel/1711.1/02276.html
->> >> >> >
->> >> >> >> This may happen internally but don't make it a special case wit=
-h a
->> >> >> >> different name and don't bother users with internal concepts: s=
-imply
->> >> >> >> implement capability whitelists with the default having equival=
-ent
->> >> >
->> >> > So the challenge is to have unprivileged users be contained, while
->> >> > allowing trusted workloads in containers created by a root user to
->> >> > bypass the restriction.
->> >> >
->> >> > Now, the current proposal actually doesn't support a root user star=
-ting
->> >> > an application that it doesn't quite trust in such a way that it *i=
-s*
->> >> > subject to the whitelist.
->> >>
->> >> Well, this is not hard since root process can spawn another process
->> >> and loose privileges before creating user-ns to be controlled by the
->> >> whitelist.
->> >
->> > It would have to drop cap_sys_admin for the container to be marked as
->> > "controlled", which may prevent the container runtime from properly st=
-arting
->> > the container.
->> >
->> Yes, but that's a conflict of trusted operations (that requires
->> SYS_ADMIN) and untrusted processes it may spawn.
->
-> Not sure I understand what you're saying, but
->
-> I guess that in any case the task which is doing unshare(CLONE_NEWNS)
-> can drop cap_sys_admin first.  Though that is harder if using clone,
-> and it is awkward because it's not the container manager, but the user,
-> who will judge whether the container workload should be restricted.
-> So the container driver will add a flag like "run-controlled", and
-> the driver will convert that to dropping a capability; which again
-> is weird.  It would seem nicer to introduce a userns flag, 'caps-controll=
-ed'
-> For an unprivileged userns, it is always set to 1, and root cannot
-> change it.  For a root-created userns, it stays 0, but root can set it
-> to 1 (using /proc file?).  In this way a either container runtime or just=
- an
-> admin script can say "no wait I want this container to still be controlle=
-d".
->
-> Or we could instead add a second sysctl to decide whether all or only
-> 'controlled' user namespaces should be controlled.  That's not pretty tho=
-ugh.
->
-Yes, I like your idea of a flag to clone() which will force the
-user-ns to be controlled. This will have effect only on the root user
-and any other user specifying is actually a NOP since those will be
-controlled with or without that flag. But this is still an enhancement
-to the current patch-set and I don't mind doing it as a follow-up
-after this patch-series.
+On 01/09/2018 08:55 PM, Kees Cook wrote:
+> From: David Windsor <dave@nullcore.net>
+> 
+> befs symlink pathnames, stored in struct befs_inode_info.i_data.symlink
+> and therefore contained in the befs_inode_cache slab cache, need to be
+> copied to/from userspace.
+> 
+> cache object allocation:
+>     fs/befs/linuxvfs.c:
+>         befs_alloc_inode(...):
+>             ...
+>             bi = kmem_cache_alloc(befs_inode_cachep, GFP_KERNEL);
+>             ...
+>             return &bi->vfs_inode;
+> 
+>         befs_iget(...):
+>             ...
+>             strlcpy(befs_ino->i_data.symlink, raw_inode->data.symlink,
+>                     BEFS_SYMLINK_LEN);
+>             ...
+>             inode->i_link = befs_ino->i_data.symlink;
+> 
+> example usage trace:
+>     readlink_copy+0x43/0x70
+>     vfs_readlink+0x62/0x110
+>     SyS_readlinkat+0x100/0x130
+> 
+>     fs/namei.c:
+>         readlink_copy(..., link):
+>             ...
+>             copy_to_user(..., link, len);
+> 
+>         (inlined in vfs_readlink)
+>         generic_readlink(dentry, ...):
+>             struct inode *inode = d_inode(dentry);
+>             const char *link = inode->i_link;
+>             ...
+>             readlink_copy(..., link);
+> 
+> In support of usercopy hardening, this patch defines a region in the
+> befs_inode_cache slab cache in which userspace copy operations are
+> allowed.
+> 
+> This region is known as the slab cache's usercopy region. Slab caches
+> can now check that each dynamically sized copy operation involving
+> cache-managed memory falls entirely within the slab's usercopy region.
+> 
+> This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
+> whitelisting code in the last public patch of grsecurity/PaX based on my
+> understanding of the code. Changes or omissions from the original code are
+> mine and don't reflect the original grsecurity/PaX code.
+> 
+> Signed-off-by: David Windsor <dave@nullcore.net>
+> [kees: adjust commit log, provide usage trace]
+> Cc: Luis de Bethencourt <luisbg@kernel.org>
+> Cc: Salah Triki <salah.triki@gmail.com>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> Acked-by: Luis de Bethencourt <luisbg@kernel.org>
+> ---
+>  fs/befs/linuxvfs.c | 14 +++++++++-----
+>  1 file changed, 9 insertions(+), 5 deletions(-)
+> 
+> diff --git a/fs/befs/linuxvfs.c b/fs/befs/linuxvfs.c
+> index ee236231cafa..af2832aaeec5 100644
+> --- a/fs/befs/linuxvfs.c
+> +++ b/fs/befs/linuxvfs.c
+> @@ -444,11 +444,15 @@ static struct inode *befs_iget(struct super_block *sb, unsigned long ino)
+>  static int __init
+>  befs_init_inodecache(void)
+>  {
+> -	befs_inode_cachep = kmem_cache_create("befs_inode_cache",
+> -					      sizeof (struct befs_inode_info),
+> -					      0, (SLAB_RECLAIM_ACCOUNT|
+> -						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
+> -					      init_once);
+> +	befs_inode_cachep = kmem_cache_create_usercopy("befs_inode_cache",
+> +				sizeof(struct befs_inode_info), 0,
+> +				(SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|
+> +					SLAB_ACCOUNT),
+> +				offsetof(struct befs_inode_info,
+> +					i_data.symlink),
+> +				sizeof_field(struct befs_inode_info,
+> +					i_data.symlink),
+> +				init_once);
+>  	if (befs_inode_cachep == NULL)
+>  		return -ENOMEM;
+>  
+> 
 
-At this moment James has asked for Eric's input, which I believe
-hasn't been recorded.
+Hi Kees,
+
+I've tested this and it works well.
+
+You can have me as:
+Signed-off-by, Tested-by, or the current Acked-by. Whatever you think is better.
+
+Thanks for the great work. Your rock!
+
+Luis
