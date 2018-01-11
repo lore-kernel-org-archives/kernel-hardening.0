@@ -1,47 +1,60 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 10 Jan 2018 18:03:09 -0800
-Message-Id: <1515636190-24061-38-git-send-email-keescook@chromium.org>
+Date: Wed, 10 Jan 2018 18:03:04 -0800
+Message-Id: <1515636190-24061-33-git-send-email-keescook@chromium.org>
 In-Reply-To: <1515636190-24061-1-git-send-email-keescook@chromium.org>
 References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 37/38] usercopy: Restrict non-usercopy caches to size 0
+Subject: [kernel-hardening] [PATCH 32/38] x86: Implement thread_struct whitelist for hardened usercopy
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@nullcore.net>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Mathias Krause <minipli@googlemail.com>, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-With all known usercopied cache whitelists now defined in the
-kernel, switch the default usercopy region of kmem_cache_create()
-to size 0. Any new caches with usercopy regions will now need to use
-kmem_cache_create_usercopy() instead of kmem_cache_create().
+This whitelists the FPU register state portion of the thread_struct for
+copying to userspace, instead of the default entire struct.
 
-This patch is modified from Brad Spengler/PaX Team's PAX_USERCOPY
-whitelisting code in the last public patch of grsecurity/PaX based on my
-understanding of the code. Changes or omissions from the original code are
-mine and don't reflect the original grsecurity/PaX code.
-
-Cc: David Windsor <dave@nullcore.net>
-Cc: Christoph Lameter <cl@linux.com>
-Cc: Pekka Enberg <penberg@kernel.org>
-Cc: David Rientjes <rientjes@google.com>
-Cc: Joonsoo Kim <iamjoonsoo.kim@lge.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: linux-mm@kvack.org
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: Ingo Molnar <mingo@redhat.com>
+Cc: "H. Peter Anvin" <hpa@zytor.com>
+Cc: x86@kernel.org
+Cc: Borislav Petkov <bp@suse.de>
+Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Mathias Krause <minipli@googlemail.com>
 Signed-off-by: Kees Cook <keescook@chromium.org>
+Acked-by: Rik van Riel <riel@redhat.com>
 ---
- mm/slab_common.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ arch/x86/Kconfig                 | 1 +
+ arch/x86/include/asm/processor.h | 8 ++++++++
+ 2 files changed, 9 insertions(+)
 
-diff --git a/mm/slab_common.c b/mm/slab_common.c
-index 8ac2a6320a6c..d00cd3f0f8ac 100644
---- a/mm/slab_common.c
-+++ b/mm/slab_common.c
-@@ -532,7 +532,7 @@ struct kmem_cache *
- kmem_cache_create(const char *name, size_t size, size_t align,
- 		slab_flags_t flags, void (*ctor)(void *))
- {
--	return kmem_cache_create_usercopy(name, size, align, flags, 0, size,
-+	return kmem_cache_create_usercopy(name, size, align, flags, 0, 0,
- 					  ctor);
- }
- EXPORT_SYMBOL(kmem_cache_create);
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 8eed3f94bfc7..9ac4ac1a856b 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -116,6 +116,7 @@ config X86
+ 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS	if MMU && COMPAT
+ 	select HAVE_ARCH_COMPAT_MMAP_BASES	if MMU && COMPAT
+ 	select HAVE_ARCH_SECCOMP_FILTER
++	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
+ 	select HAVE_ARCH_TRACEHOOK
+ 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+ 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE_PUD if X86_64
+diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
+index cc16fa882e3e..2b037b7fe0eb 100644
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -492,6 +492,14 @@ struct thread_struct {
+ 	 */
+ };
+ 
++/* Whitelist the FPU state from the task_struct for hardened usercopy. */
++static inline void arch_thread_struct_whitelist(unsigned long *offset,
++						unsigned long *size)
++{
++	*offset = offsetof(struct thread_struct, fpu.state);
++	*size = fpu_kernel_xstate_size;
++}
++
+ /*
+  * Thread-synchronous status.
+  *
 -- 
 2.7.4
