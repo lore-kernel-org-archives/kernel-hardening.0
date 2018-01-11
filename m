@@ -1,26 +1,59 @@
-Date: Thu, 11 Jan 2018 12:01:19 -0500
-From: Theodore Ts'o <tytso@mit.edu>
-Message-ID: <20180111170119.GB19241@thunk.org>
-References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
- <1515636190-24061-14-git-send-email-keescook@chromium.org>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Date: Thu, 11 Jan 2018 21:17:45 +0200
+Message-ID: <20180111191747.2350-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1515636190-24061-14-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH 13/38] ext4: Define usercopy region in ext4_inode_cache
- slab cache
-To: Kees Cook <keescook@chromium.org>
-Cc: linux-kernel@vger.kernel.org, David Windsor <dave@nullcore.net>, Andreas Dilger <adilger.kernel@dilger.ca>, linux-ext4@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain
+Subject: [kernel-hardening] [RESEND PATCH v2 0/2] mm: genalloc - track beginning of allocations
+To: mhocko@kernel.org, labbott@redhat.com, jes@trained-monkey.org, ying.huang@intel.com
+Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, Igor Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 10, 2018 at 06:02:45PM -0800, Kees Cook wrote:
-> The ext4 symlink pathnames, stored in struct ext4_inode_info.i_data
-> and therefore contained in the ext4_inode_cache slab cache, need
-> to be copied to/from userspace.
+This is a partial resend:
+- the primary functionality (PATCH 1/2) is unmodified
+- while waiting for review, I added selftest capability for genalloc (2/2)
 
-Symlink operations to/from userspace aren't common or in the hot path,
-and when they are in i_data, limited to at most 60 bytes.  Is it worth
-it to copy through a bounce buffer so as to disallow any usercopies
-into struct ext4_inode_info?
 
-					- Ted
+During the effort of introducing in the kernel an allocator for
+protectable memory (pmalloc), it was noticed that genalloc can be
+improved, to know how to separate the memory use by adjacent allocations
+
+However, it seems that the functionality could have a value of its own.
+
+It can:
+- verify that the freeing of memory is consistent with previous allocations
+- relieve the user of the API from tracking the size of each allocation
+- enable use cases where generic code can free memory allocations received
+  through a pointer (provided that the reference pool is known)
+
+Details about the implementation are provided in the comment for the patch.
+
+I mentioned this idea few months ago, as part of the pmalloc discussion,
+but then I did not have time to follow-up immediately, as I had hoped.
+
+This is an implementation of what I had in mind.
+It seems to withstand several test cases i put together, in the form of
+self-test, but it definitely would need thorough review.
+
+
+I hope I have added as reviewer all the relevant people.
+If I missed someone, please include them to the recipients.
+
+
+
+Igor Stoppa (2):
+  genalloc: track beginning of allocations
+  genalloc: selftest
+
+ include/linux/genalloc-selftest.h |  30 +++
+ include/linux/genalloc.h          |   3 +-
+ init/main.c                       |   2 +
+ lib/Kconfig                       |  14 ++
+ lib/Makefile                      |   1 +
+ lib/genalloc-selftest.c           | 402 ++++++++++++++++++++++++++++++++++++
+ lib/genalloc.c                    | 417 ++++++++++++++++++++++++++------------
+ 7 files changed, 738 insertions(+), 131 deletions(-)
+ create mode 100644 include/linux/genalloc-selftest.h
+ create mode 100644 lib/genalloc-selftest.c
+
+-- 
+2.9.3
