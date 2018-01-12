@@ -1,60 +1,36 @@
-From: Alexander Popov <alex.popov@linux.com>
-Date: Fri, 12 Jan 2018 17:19:29 +0300
-Message-Id: <1515766769-9120-7-git-send-email-alex.popov@linux.com>
-In-Reply-To: <1515766769-9120-1-git-send-email-alex.popov@linux.com>
-References: <1515766769-9120-1-git-send-email-alex.popov@linux.com>
-Subject: [kernel-hardening] [PATCH RFC v7 6/6] doc: self-protection: Add information about STACKLEAK feature
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, x86@kernel.org, alex.popov@linux.com
+From: David Laight <David.Laight@ACULAB.COM>
+Date: Fri, 12 Jan 2018 15:10:42 +0000
+Message-ID: <b8c3f85827ca493e9f4517f646ac97da@AcuMS.aculab.com>
+References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
+ <1515531365-37423-5-git-send-email-keescook@chromium.org>
+ <alpine.DEB.2.20.1801101219390.7926@nuc-kabylake>
+In-Reply-To: <alpine.DEB.2.20.1801101219390.7926@nuc-kabylake>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+Subject: [kernel-hardening] RE: [PATCH 04/36] usercopy: Prepare for usercopy whitelisting
+To: 'Christopher Lameter' <cl@linux.com>, Kees Cook <keescook@chromium.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, David
+ Windsor <dave@nullcore.net>, Pekka Enberg <penberg@kernel.org>, David
+ Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "linux-xfs@vger.kernel.org" <linux-xfs@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de
+ Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik
+ van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add information about STACKLEAK feature to "Stack depth overflow" and
-"Memory poisoning" sections of self-protection.rst.
+From: Christopher Lameter
+> Sent: 10 January 2018 18:28
+> On Tue, 9 Jan 2018, Kees Cook wrote:
+>=20
+> > +struct kmem_cache *kmem_cache_create_usercopy(const char *name,
+> > +			size_t size, size_t align, slab_flags_t flags,
+> > +			size_t useroffset, size_t usersize,
+> > +			void (*ctor)(void *));
+>=20
+> Hmmm... At some point we should switch kmem_cache_create to pass a struct
+> containing all the parameters. Otherwise the API will blow up with
+> additional functions.
 
-Signed-off-by: Alexander Popov <alex.popov@linux.com>
----
- Documentation/security/self-protection.rst | 23 ++++++++++++++---------
- 1 file changed, 14 insertions(+), 9 deletions(-)
+Or add an extra function to 'configure' the kmem_cache with the
+extra parameters.
 
-diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
-index 60c8bd8..9693a90 100644
---- a/Documentation/security/self-protection.rst
-+++ b/Documentation/security/self-protection.rst
-@@ -165,10 +165,15 @@ Stack depth overflow
- A less well understood attack is using a bug that triggers the
- kernel to consume stack memory with deep function calls or large stack
- allocations. With this attack it is possible to write beyond the end of
--the kernel's preallocated stack space and into sensitive structures. Two
--important changes need to be made for better protections: moving the
--sensitive thread_info structure elsewhere, and adding a faulting memory
--hole at the bottom of the stack to catch these overflows.
-+the kernel's preallocated stack space and into sensitive structures.
-+The combination of the following measures gives better protection:
-+
-+* moving the sensitive thread_info structure off the stack
-+  (``CONFIG_THREAD_INFO_IN_TASK``);
-+* adding a faulting memory hole at the bottom of the stack to catch
-+  these overflows (``CONFIG_VMAP_STACK``);
-+* runtime checking that alloca() calls don't overstep the stack boundary
-+  (``CONFIG_GCC_PLUGIN_STACKLEAK``).
- 
- Heap memory integrity
- ---------------------
-@@ -287,11 +292,11 @@ sure structure holes are cleared.
- Memory poisoning
- ----------------
- 
--When releasing memory, it is best to poison the contents (clear stack on
--syscall return, wipe heap memory on a free), to avoid reuse attacks that
--rely on the old contents of memory. This frustrates many uninitialized
--variable attacks, stack content exposures, heap content exposures, and
--use-after-free attacks.
-+When releasing memory, it is best to poison the contents, to avoid reuse
-+attacks that rely on the old contents of memory. E.g., clear stack on a
-+syscall return (``CONFIG_GCC_PLUGIN_STACKLEAK``), wipe heap memory on a
-+free. This frustrates many uninitialized variable attacks, stack content
-+exposures, heap content exposures, and use-after-free attacks.
- 
- Destination tracking
- --------------------
--- 
-2.7.4
+	David
