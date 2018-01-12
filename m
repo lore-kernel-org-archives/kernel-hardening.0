@@ -1,160 +1,182 @@
-Date: Fri, 12 Jan 2018 10:12:46 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20180112091246.GP32035@hirez.programming.kicks-ass.net>
+Date: Fri, 12 Jan 2018 10:02:08 +0000
+From: Russell King - ARM Linux <linux@armlinux.org.uk>
+Message-ID: <20180112100208.GX17719@n2100.armlinux.org.uk>
 References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151571801681.27429.15417813964230837664.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <151571801681.27429.15417813964230837664.stgit@dwillia2-desk3.amr.corp.intel.com>
-Subject: [kernel-hardening] Re: [PATCH v2 06/19] asm-generic/barrier: mask speculative execution
- flows
+In-Reply-To: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
+Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
+Subject: [kernel-hardening] Re: [PATCH v2 00/19] prevent bounds-check bypass via speculative
+ execution
 To: Dan Williams <dan.j.williams@intel.com>
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Catalin Marinas <catalin.marinas@arm.com>, x86@kernel.org, Will Deacon <will.deacon@arm.com>, Alexei Starovoitov <ast@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, alan@linux.intel.com
+Cc: linux-kernel@vger.kernel.org, Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Alan Cox <alan.cox@intel.com>, Will Deacon <will.deacon@arm.com>, Alexei Starovoitov <ast@kernel.org>, Solomon Peachy <pizza@shaftnet.org>, "H. Peter Anvin" <hpa@zytor.com>, Christian Lamparter <chunkeey@googlemail.com>, Elena Reshetova <elena.reshetova@intel.com>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, linux-scsi@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, x86@kernel.org, Ingo Molnar <mingo@redhat.com>, Catalin Marinas <catalin.marinas@arm.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, linux-media@vger.kernel.org, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Jan Kara <jack@suse.com>, Al Viro <viro@zeniv.linux.org.uk>, qla2xxx-upstream@qlogic.com, tglx@linutronix.de, Mauro Carvalho Chehab <mchehab@kernel.org>, Kalle Valo <kvalo@codeaurora.org>, alan@linux.intel.com, "Martin K. Petersen" <martin.petersen@oracle.com>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Greg KH <gregkh@linuxfoundation.org>, linux-wireless@vger.kernel.org, "Eric W. Biederman" <ebiederm@xmission.com>, netdev@vger.kernel.org, akpm@linux-foundation.org, torvalds@linux-foundation.org, "David S. Miller" <davem@davemloft.net>, Laurent Pinchart <laurent.pinchart@ideasonboard.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 11, 2018 at 04:46:56PM -0800, Dan Williams wrote:
-> diff --git a/include/linux/nospec.h b/include/linux/nospec.h
-> new file mode 100644
-> index 000000000000..5c66fc30f919
-> --- /dev/null
-> +++ b/include/linux/nospec.h
-> @@ -0,0 +1,71 @@
-> +// SPDX-License-Identifier: GPL-2.0
-> +// Copyright(c) 2018 Intel Corporation. All rights reserved.
-> +
-> +#ifndef __NOSPEC_H__
-> +#define __NOSPEC_H__
-> +
-> +#include <linux/jump_label.h>
-> +#include <asm/barrier.h>
-> +
-> +#ifndef array_ptr_mask
-> +#define array_ptr_mask(idx, sz)						\
-> +({									\
-> +	unsigned long mask;						\
-> +	unsigned long _i = (idx);					\
-> +	unsigned long _s = (sz);					\
-> +									\
-> +	mask = ~(long)(_i | (_s - 1 - _i)) >> (BITS_PER_LONG - 1);	\
-> +	mask;								\
-> +})
-> +#endif
-> +
-> +/**
-> + * __array_ptr - Generate a pointer to an array element, ensuring
-> + * the pointer is bounded under speculation to NULL.
-> + *
-> + * @base: the base of the array
-> + * @idx: the index of the element, must be less than LONG_MAX
-> + * @sz: the number of elements in the array, must be less than LONG_MAX
-> + *
-> + * If @idx falls in the interval [0, @sz), returns the pointer to
-> + * @arr[@idx], otherwise returns NULL.
-> + */
-> +#define __array_ptr(base, idx, sz)					\
-> +({									\
-> +	union { typeof(*(base)) *_ptr; unsigned long _bit; } __u;	\
-> +	typeof(*(base)) *_arr = (base);					\
-> +	unsigned long _i = (idx);					\
-> +	unsigned long _mask = array_ptr_mask(_i, (sz));			\
-> +									\
-> +	__u._ptr = _arr + (_i & _mask);					\
-> +	__u._bit &= _mask;						\
-> +	__u._ptr;							\
-> +})
-> +
-> +#ifdef CONFIG_SPECTRE1_IFENCE
-> +DECLARE_STATIC_KEY_TRUE(nospec_key);
-> +#else
-> +DECLARE_STATIC_KEY_FALSE(nospec_key);
-> +#endif
-> +
-> +#ifdef ifence_array_ptr
-> +/*
-> + * The expectation is that no compiler or cpu will mishandle __array_ptr
-> + * leading to problematic speculative execution. Bypass the ifence
-> + * based implementation by default.
-> + */
-> +#define array_ptr(base, idx, sz)				\
-> +({								\
-> +	typeof(*(base)) *__ret;					\
-> +								\
-> +	if (static_branch_unlikely(&nospec_key))		\
-> +		__ret = ifence_array_ptr(base, idx, sz);	\
-> +	else							\
-> +		__ret = __array_ptr(base, idx, sz);		\
-> +	__ret;							\
-> +})
+Do you think that the appropriate patches could be copied to the
+appropriate people please?
 
+On Thu, Jan 11, 2018 at 04:46:24PM -0800, Dan Williams wrote:
+> Changes since v1 [1]:
+> * fixup the ifence definition to use alternative_2 per recent AMD
+>   changes in tip/x86/pti (Tom)
+> 
+> * drop 'nospec_ptr' (Linus, Mark)
+> 
+> * rename 'nospec_array_ptr' to 'array_ptr' (Alexei)
+> 
+> * rename 'nospec_barrier' to 'ifence' (Peter, Ingo)
+> 
+> * clean up occasions of 'variable assignment in if()' (Sergei, Stephen)
+> 
+> * make 'array_ptr' use a mask instead of an architectural ifence by
+>   default (Linus, Alexei)
+> 
+> * provide a command line and compile-time opt-in to the ifence
+>   mechanism, if an architecture provides 'ifence_array_ptr'.
+> 
+> * provide an optimized mask generation helper, 'array_ptr_mask', for
+>   x86 (Linus)
+> 
+> * move 'get_user' hardening from '__range_not_ok' to '__uaccess_begin'
+>   (Linus)
+> 
+> * drop "Thermal/int340x: prevent bounds-check..." since userspace does
+>   not have arbitrary control over the 'trip' index (Srinivas)
+> 
+> * update the changelog of "net: mpls: prevent bounds-check..." and keep
+>   it in the series to continue the debate about Spectre hygiene patches.
+>   (Eric).
+> 
+> * record a reviewed-by from Laurent on "[media] uvcvideo: prevent
+>   bounds-check..."
+> 
+> * update the cover letter
+> 
+> [1]: https://lwn.net/Articles/743376/
+> 
+> ---
+> 
+> Quoting Mark's original RFC:
+> 
+> "Recently, Google Project Zero discovered several classes of attack
+> against speculative execution. One of these, known as variant-1, allows
+> explicit bounds checks to be bypassed under speculation, providing an
+> arbitrary read gadget. Further details can be found on the GPZ blog [2]
+> and the Documentation patch in this series."
+> 
+> This series incorporates Mark Rutland's latest ARM changes and adds
+> the x86 specific implementation of 'ifence_array_ptr'. That ifence
+> based approach is provided as an opt-in fallback, but the default
+> mitigation, '__array_ptr', uses a 'mask' approach that removes
+> conditional branches instructions, and otherwise aims to redirect
+> speculation to use a NULL pointer rather than a user controlled value.
+> 
+> The mask is generated by the following from Alexei, and Linus:
+> 
+>     mask = ~(long)(_i | (_s - 1 - _i)) >> (BITS_PER_LONG - 1);
+> 
+> ...and Linus provided an optimized mask generation helper for x86:
+> 
+>     asm ("cmpq %1,%2; sbbq %0,%0;"
+> 		:"=r" (mask)
+> 		:"r"(sz),"r" (idx)
+> 		:"cc");
+> 
+> The 'array_ptr' mechanism can be switched between 'mask' and 'ifence'
+> via the spectre_v1={mask,ifence} command line option, and the
+> compile-time default is set by selecting either CONFIG_SPECTRE1_MASK or
+> CONFIG_SPECTRE1_IFENCE.
+> 
+> The 'array_ptr' infrastructure is the primary focus this patch set. The
+> individual patches that perform 'array_ptr' conversions are a point in
+> time (i.e. earlier kernel, early analysis tooling, x86 only etc...)
+> start at finding some of these gadgets.
+> 
+> Another consideration for reviewing these patches is the 'hygiene'
+> argument. When a patch refers to hygiene it is concerned with stopping
+> speculation on an unconstrained or insufficiently constrained pointer
+> value under userspace control. That by itself is not sufficient for
+> attack (per current understanding) [3], but it is a necessary
+> pre-condition.  So 'hygiene' refers to cleaning up those suspect
+> pointers regardless of whether they are usable as a gadget.
+> 
+> These patches are also be available via the 'nospec-v2' git branch
+> here:
+> 
+>     git://git.kernel.org/pub/scm/linux/kernel/git/djbw/linux nospec-v2
+> 
+> Note that the BPF fix for Spectre variant1 is merged in the bpf.git
+> tree [4], and is not included in this branch.
+> 
+> [2]: https://googleprojectzero.blogspot.co.uk/2018/01/reading-privileged-memory-with-side.html
+> [3]: https://spectreattack.com/spectre.pdf
+> [4]: https://git.kernel.org/pub/scm/linux/kernel/git/bpf/bpf.git/commit/?id=b2157399cc98
+> 
+> ---
+> 
+> Dan Williams (16):
+>       x86: implement ifence()
+>       x86: implement ifence_array_ptr() and array_ptr_mask()
+>       asm-generic/barrier: mask speculative execution flows
+>       x86: introduce __uaccess_begin_nospec and ASM_IFENCE
+>       x86: use __uaccess_begin_nospec and ASM_IFENCE in get_user paths
+>       ipv6: prevent bounds-check bypass via speculative execution
+>       ipv4: prevent bounds-check bypass via speculative execution
+>       vfs, fdtable: prevent bounds-check bypass via speculative execution
+>       userns: prevent bounds-check bypass via speculative execution
+>       udf: prevent bounds-check bypass via speculative execution
+>       [media] uvcvideo: prevent bounds-check bypass via speculative execution
+>       carl9170: prevent bounds-check bypass via speculative execution
+>       p54: prevent bounds-check bypass via speculative execution
+>       qla2xxx: prevent bounds-check bypass via speculative execution
+>       cw1200: prevent bounds-check bypass via speculative execution
+>       net: mpls: prevent bounds-check bypass via speculative execution
+> 
+> Mark Rutland (3):
+>       Documentation: document array_ptr
+>       arm64: implement ifence_array_ptr()
+>       arm: implement ifence_array_ptr()
+> 
+>  Documentation/speculation.txt            |  142 ++++++++++++++++++++++++++++++
+>  arch/arm/Kconfig                         |    1 
+>  arch/arm/include/asm/barrier.h           |   24 +++++
+>  arch/arm64/Kconfig                       |    1 
+>  arch/arm64/include/asm/barrier.h         |   24 +++++
+>  arch/x86/Kconfig                         |    3 +
+>  arch/x86/include/asm/barrier.h           |   46 ++++++++++
+>  arch/x86/include/asm/msr.h               |    3 -
+>  arch/x86/include/asm/smap.h              |    4 +
+>  arch/x86/include/asm/uaccess.h           |   16 +++
+>  arch/x86/include/asm/uaccess_32.h        |    6 +
+>  arch/x86/include/asm/uaccess_64.h        |   12 +--
+>  arch/x86/lib/copy_user_64.S              |    3 +
+>  arch/x86/lib/usercopy_32.c               |    8 +-
+>  drivers/media/usb/uvc/uvc_v4l2.c         |    9 +-
+>  drivers/net/wireless/ath/carl9170/main.c |    7 +
+>  drivers/net/wireless/intersil/p54/main.c |    9 +-
+>  drivers/net/wireless/st/cw1200/sta.c     |   11 +-
+>  drivers/net/wireless/st/cw1200/wsm.h     |    4 -
+>  drivers/scsi/qla2xxx/qla_mr.c            |   17 ++--
+>  fs/udf/misc.c                            |   40 +++++---
+>  include/linux/fdtable.h                  |    7 +
+>  include/linux/nospec.h                   |   71 +++++++++++++++
+>  kernel/Kconfig.nospec                    |   31 +++++++
+>  kernel/Makefile                          |    1 
+>  kernel/nospec.c                          |   52 +++++++++++
+>  kernel/user_namespace.c                  |   11 +-
+>  lib/Kconfig                              |    3 +
+>  net/ipv4/raw.c                           |   10 +-
+>  net/ipv6/raw.c                           |   10 +-
+>  net/mpls/af_mpls.c                       |   12 +--
+>  31 files changed, 521 insertions(+), 77 deletions(-)
+>  create mode 100644 Documentation/speculation.txt
+>  create mode 100644 include/linux/nospec.h
+>  create mode 100644 kernel/Kconfig.nospec
+>  create mode 100644 kernel/nospec.c
+> 
 
-So I think this wants:
-
-#ifndef HAVE_JUMP_LABEL
-#error Compiler lacks asm-goto, can generate unsafe code
-#endif
-
-Suppose the generic array_ptr_mask() is unsafe on some arch and they
-only implement ifence_array_ptr() and they compile without asm-goto,
-then the above reverts to a dynamic condition, which can be speculated.
-If we then speculate into the 'bad' __array_ptr we're screwed.
-
-> +#else
-> +#define array_ptr __array_ptr
-> +#endif
-> +
-> +#endif /* __NOSPEC_H__ */
-
-
-In general I think I would write all this in a form like:
-
-#define __array_ptr(base, idx, sz)					\
-({									\
-	union { typeof(*(base)) *_ptr; unsigned long _bit; } __u;	\
-	typeof(*(base)) *_arr = (base);					\
-	unsigned long _i = (idx);					\
-	unsigned long _mask = array_ptr_mask(_i, (sz));			\
-									\
-	__u._ptr = _arr + (_i & _mask);					\
-	__u._bit &= _mask;						\
-	__u._ptr;							\
-})
-
-#if defined(array_ptr_mask) && defined(ifence_array_ptr)
-
-#ifndef HAVE_JUMP_LABEL
-#error Compiler lacks asm-goto, can generate unsafe code
-#endif
-
-#define array_ptr(base, idx, sz)				\
-({								\
-	typeof(*(base)) *__ret;					\
-								\
-	if (static_branch_unlikely(&nospec_key))		\
-		__ret = ifence_array_ptr(base, idx, sz);	\
-	else							\
-		__ret = __array_ptr(base, idx, sz);		\
-	__ret;							\
-})
-
-#elif defined(array_ptr_mask)
-
-#define array_ptr(base, idx, sz) __array_ptr(base, idx, sz)
-
-#elif defined(ifence_array_ptr)
-
-#define array_ptr(base, idx, sz) ifence_array_ptr(base, idx, sz)
-
-#else
-
-/* XXX we want a suitable warning here ? */
-
-#define array_ptr(base, idx, sz) (idx < sz ? base + idx : NULL)
-
-#endif
-
-and stick the generic array_ptr_mask into asm-generic/nospec.h or
-something.
-
-Then the static key stuff is limited to architectures that define _both_
-array_ptr_mask and ifence_array_ptr.
+-- 
+RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+FTTC broadband for 0.8mile line in suburbia: sync at 8.8Mbps down 630kbps up
+According to speedtest.net: 8.21Mbps down 510kbps up
