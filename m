@@ -1,59 +1,61 @@
-MIME-Version: 1.0
-In-Reply-To: <20180112075907.GA3391@kroah.com>
+Date: Fri, 12 Jan 2018 12:58:15 -0600
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+Message-ID: <20180112185815.meiwnnb5vmnrbsdt@treble>
 References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151571803884.27429.7578279171286065970.stgit@dwillia2-desk3.amr.corp.intel.com>
- <20180112075907.GA3391@kroah.com>
-From: Dan Williams <dan.j.williams@intel.com>
-Date: Fri, 12 Jan 2018 10:47:44 -0800
-Message-ID: <CAPcyv4js=KTb+eJjoc4_hjiJsiHr4EApJfxTjFfRBYx_CtuBKA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 10/19] ipv4: prevent bounds-check bypass via
- speculative execution
-To: Greg KH <gregkh@linuxfoundation.org>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Netdev <netdev@vger.kernel.org>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, Alan Cox <alan@linux.intel.com>
+ <151571802258.27429.932636277047687877.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <20180112175109.yoz4jaaipztdj34k@treble>
+ <CAPcyv4heW2FqxpCa0NZeTsa5V7pgpzA-MdHYJA+y9C5L2GTP9w@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <CAPcyv4heW2FqxpCa0NZeTsa5V7pgpzA-MdHYJA+y9C5L2GTP9w@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v2 07/19] x86: introduce __uaccess_begin_nospec and
+ ASM_IFENCE
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, X86 ML <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 11, 2018 at 11:59 PM, Greg KH <gregkh@linuxfoundation.org> wrote:
-> On Thu, Jan 11, 2018 at 04:47:18PM -0800, Dan Williams wrote:
->> Static analysis reports that 'offset' may be a user controlled value
->> that is used as a data dependency reading from a raw_frag_vec buffer.
->> In order to avoid potential leaks of kernel memory values, block
->> speculative execution of the instruction stream that could issue further
->> reads based on an invalid '*(rfv->c + offset)' value.
->>
->> Based on an original patch by Elena Reshetova.
->
-> There is the "Co-Developed-by:" tag now, if you want to use it...
+On Fri, Jan 12, 2018 at 10:21:43AM -0800, Dan Williams wrote:
+> > That just sounds wrong.  What if the speculation starts *after* the
+> > access_ok() check?  Then the barrier has no purpose.
+> >
+> > Most access_ok/get_user/copy_from_user calls are like this:
+> >
+> >   if (copy_from_user(...uptr..))  /* or access_ok() or get_user() */
+> >         return -EFAULT;
+> >
+> > So in other words, the usercopy function is called *before* the branch.
+> >
+> > But to halt speculation, the lfence needs to come *after* the branch.
+> > So putting lfences *before* the branch doesn't solve anything.
+> >
+> > So what am I missing?
+> 
+> We're trying to prevent a pointer under user control from being
+> de-referenced inside the kernel, before we know it has been limited to
+> something safe. In the following sequence the branch we are worried
+> about speculating is the privilege check:
+> 
+> if (access_ok(uptr))  /* <--- Privelege Check */
+>     if (copy_from_user_(uptr))
+> 
+> The cpu can speculatively skip that access_ok() check and cause a read
+> of kernel memory.
 
-Ok, thanks.
+Converting your example code to assembly:
 
->
->> Cc: "David S. Miller" <davem@davemloft.net>
->> Cc: Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>
->> Cc: Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>
->> Cc: netdev@vger.kernel.org
->> Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
->> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
->> ---
->>  net/ipv4/raw.c |   10 ++++++----
->>  1 file changed, 6 insertions(+), 4 deletions(-)
->
-> Ugh, what is this, the 4th time I've said "I don't think this is an
-> issue, so why are you changing this code." to this patch.  To be
-> followed by a "oh yeah, you are right, I'll drop it", only to see it
-> show back up in the next time this patch series is sent out?
->
-> Same for the other patches in this series that I have reviewed 4, maybe
-> 5, times already.  The "v2" is not very true here...
+	call	access_ok # no speculation which started before this point is allowed to continue past this point
+	test	%rax, %rax
+	jne	error_path
+dereference_uptr:
+	(do nefarious things with the user pointer)
 
-The theme of the review feedback on v1 was 'don't put ifence in any
-net/ code', and that was addressed.
+error_path:
+	mov -EINVAL, %rax
+	ret
 
-I honestly thought the new definition of array_ptr() changed the
-calculus on this patch. Given the same pattern appears in the ipv6
-case, and I have yet to hear that we should drop the ipv6 patch, make
-the code symmetric just for readability purposes. Otherwise we need a
-comment saying why this is safe for ipv4, but maybe not safe for ipv6,
-I think 'array_ptr' is effectively that comment. I.e. 'array_ptr()' is
-designed to be low impact for instrumenting false positives. If that
-new argument does not hold water I will definitely drop this patch.
+So the CPU is still free to speculately execute the dereference_uptr
+block because the lfence was before the 'jne error_path' branch.
+
+-- 
+Josh
