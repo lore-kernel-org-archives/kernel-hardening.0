@@ -1,43 +1,39 @@
-MIME-Version: 1.0
-In-Reply-To: <CA+55aFwu2L+YK-DtfCbtsZL+DopgksfnpazA8ja=FW9_4MNeyg@mail.gmail.com>
-References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151571802814.27429.12886210130791656117.stgit@dwillia2-desk3.amr.corp.intel.com>
- <CA+55aFwu2L+YK-DtfCbtsZL+DopgksfnpazA8ja=FW9_4MNeyg@mail.gmail.com>
-From: Dan Williams <dan.j.williams@intel.com>
-Date: Thu, 11 Jan 2018 17:14:29 -0800
-Message-ID: <CAPcyv4jVtGCmCdpE_coHYYhCqArFozsq=oX+AdtH2Ems7biPFg@mail.gmail.com>
+From: James Bottomley <jejb@linux.vnet.ibm.com>
+Date: Thu, 11 Jan 2018 17:19:16 -0800
+In-Reply-To: <151571807774.27429.7382333750792304971.stgit@dwillia2-desk3.amr.corp.intel.com>
+References: 
+	<151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
+	 <151571807774.27429.7382333750792304971.stgit@dwillia2-desk3.amr.corp.intel.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 08/19] x86: use __uaccess_begin_nospec and ASM_IFENCE
- in get_user paths
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, the arch/x86 maintainers <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Message-Id: <1515719956.3056.37.camel@linux.vnet.ibm.com>
+Subject: [kernel-hardening] Re: [PATCH v2 17/19] qla2xxx: prevent bounds-check bypass via
+ speculative execution
+To: Dan Williams <dan.j.williams@intel.com>, linux-kernel@vger.kernel.org
+Cc: linux-arch@vger.kernel.org, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-scsi@vger.kernel.org, kernel-hardening@lists.openwall.com, qla2xxx-upstream@qlogic.com, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, Elena Reshetova <elena.reshetova@intel.com>, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 11, 2018 at 5:11 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> This patch doesn't affect arch/x86/lib/getuser.S, which I find surprising.
->
-> Of all the user access functions, I actually think that get_user() is
-> the one most likely to have the result then used speculatively as an
-> index (the required second dependent read to actually leak data).
->
-> I do *not* see people doing "copy_from_user()" and then somehow using
-> the thing as an index to another array. I mean, it can happen (copy a
-> structure, use a member in that structure), but it doesn't seem to be
-> the most likely thing.
->
-> The most likely thing would seem to be some random ioctl() do a
-> "get_user()" to get an index, and then using that index. That would
-> seem to be one of the easier ways to perhaps get that kind of kernel
-> spectre attack.
->
-> Adding the ASM_IFENCE to __get_user_X() in arch/x86/lib/getuser.S
-> would seem to go naturally together with the copy_user_64.S changes in
-> this patch.
->
-> Is there some reason __get_user_X() was overlooked? Those are _the_
-> most common user accessor functions that do the address limit
-> checking.
+On Thu, 2018-01-11 at 16:47 -0800, Dan Williams wrote:
+> Static analysis reports that 'handle' may be a user controlled value
+> that is used as a data dependency to read 'sp' from the
+> 'req->outstanding_cmds' array.
 
-Oversight, I was focused on the uaccess_begin conversions. Yes, let me
-go add ASM_IFENCE after the ASM_STAC in those paths.
+Greg already told you it comes from hardware, specifically the hardware
+response queue.  If you don't believe him, I can confirm it's quite
+definitely all copied from the iomem where the mailbox response is, so
+it can't be a user controlled value (well, unless the user has some
+influence over the firmware of the qla2xxx  controller, which probably
+means you have other things to worry about than speculative information
+leaks).
+
+I think what it actually is is a handle returned in the mailbox that's
+used to find other mailbox entries in different queues (the packet
+handle actually contains an entry in the lower 16 bits and a queue
+designation in the upper).  Perhaps the qla2xxx people should comment
+on this because the code seems to check and print an error if there's a
+problem with the handle being too big, but we don't check the que value
+and use it blindly to read into the req_q_map: if handle could be
+wrong, couldn't que?
+
+James
