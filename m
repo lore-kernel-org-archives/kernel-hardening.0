@@ -1,48 +1,40 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20180111102400.GT17719@n2100.armlinux.org.uk>
-References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
- <1515636190-24061-35-git-send-email-keescook@chromium.org> <20180111102400.GT17719@n2100.armlinux.org.uk>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 11 Jan 2018 15:21:09 -0800
-Message-ID: <CAGXu5jKaz_rAi_R2x3V73306fw+1MOBN-6v-nK4_S=PU8_pzhA@mail.gmail.com>
+Sender: linus971@gmail.com
+In-Reply-To: <151571802814.27429.12886210130791656117.stgit@dwillia2-desk3.amr.corp.intel.com>
+References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151571802814.27429.12886210130791656117.stgit@dwillia2-desk3.amr.corp.intel.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Thu, 11 Jan 2018 17:11:20 -0800
+Message-ID: <CA+55aFwu2L+YK-DtfCbtsZL+DopgksfnpazA8ja=FW9_4MNeyg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 34/38] arm: Implement thread_struct whitelist for hardened usercopy
-To: Russell King - ARM Linux <linux@armlinux.org.uk>
-Cc: LKML <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@kernel.org>, Christian Borntraeger <borntraeger@de.ibm.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, linux-arm-kernel@lists.infradead.org, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] Re: [PATCH v2 08/19] x86: use __uaccess_begin_nospec and ASM_IFENCE
+ in get_user paths
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, the arch/x86 maintainers <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 11, 2018 at 2:24 AM, Russell King - ARM Linux
-<linux@armlinux.org.uk> wrote:
-> On Wed, Jan 10, 2018 at 06:03:06PM -0800, Kees Cook wrote:
->> ARM does not carry FPU state in the thread structure, so it can declare
->> no usercopy whitelist at all.
->
-> This comment seems to be misleading.  We have stored FP state in the
-> thread structure for a long time - for example, VFP state is stored
-> in thread->vfpstate.hard, so we _do_ have floating point state in
-> the thread structure.
->
-> What I think this commit message needs to describe is why we don't
-> need a whitelist _despite_ having FP state in the thread structure.
->
-> At the moment, the commit message is making me think that this patch
-> is wrong and will introduce a regression.
+This patch doesn't affect arch/x86/lib/getuser.S, which I find surprising.
 
-Yeah, I will improve this comment; it's not clear enough. The places
-where I see state copied to/from userspace are all either static sizes
-or already use bounce buffers (or both). e.g.:
+Of all the user access functions, I actually think that get_user() is
+the one most likely to have the result then used speculatively as an
+index (the required second dependent read to actually leak data).
 
-        err |= __copy_from_user(&hwstate->fpregs, &ufp->fpregs,
-                                sizeof(hwstate->fpregs));
+I do *not* see people doing "copy_from_user()" and then somehow using
+the thing as an index to another array. I mean, it can happen (copy a
+structure, use a member in that structure), but it doesn't seem to be
+the most likely thing.
 
-I will adjust the commit log and comment to more clearly describe the
-lack of whitelisting due to all-static sized copies.
+The most likely thing would seem to be some random ioctl() do a
+"get_user()" to get an index, and then using that index. That would
+seem to be one of the easier ways to perhaps get that kind of kernel
+spectre attack.
 
-Thanks!
+Adding the ASM_IFENCE to __get_user_X() in arch/x86/lib/getuser.S
+would seem to go naturally together with the copy_user_64.S changes in
+this patch.
 
--Kees
+Is there some reason __get_user_X() was overlooked? Those are _the_
+most common user accessor functions that do the address limit
+checking.
 
--- 
-Kees Cook
-Pixel Security
+            Linus
