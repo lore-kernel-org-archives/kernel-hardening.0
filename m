@@ -1,67 +1,55 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Thu, 11 Jan 2018 16:47:18 -0800
-Message-ID: <151571803884.27429.7578279171286065970.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Thu, 11 Jan 2018 16:47:24 -0800
+Message-ID: <151571804437.27429.14767161104132594707.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v2 10/19] ipv4: prevent bounds-check bypass via speculative
- execution
+Subject: [kernel-hardening] [PATCH v2 11/19] vfs,
+ fdtable: prevent bounds-check bypass via speculative execution
 To: linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, tglx@linutronix.de, torvalds@linux-foundation.org, "David S. Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, alan@linux.intel.com
+Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, akpm@linux-foundation.org, torvalds@linux-foundation.org, tglx@linutronix.de, Elena Reshetova <elena.reshetova@intel.com>, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Static analysis reports that 'offset' may be a user controlled value
-that is used as a data dependency reading from a raw_frag_vec buffer.
-In order to avoid potential leaks of kernel memory values, block
-speculative execution of the instruction stream that could issue further
-reads based on an invalid '*(rfv->c + offset)' value.
+Expectedly, static analysis reports that 'fd' is a user controlled value
+that is used as a data dependency to read from the 'fdt->fd' array.  In
+order to avoid potential leaks of kernel memory values, block
+speculative execution of the instruction stream that could issue reads
+based on an invalid 'file *' returned from __fcheck_files.
 
 Based on an original patch by Elena Reshetova.
 
-Cc: "David S. Miller" <davem@davemloft.net>
-Cc: Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>
-Cc: Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>
-Cc: netdev@vger.kernel.org
+Cc: Al Viro <viro@zeniv.linux.org.uk>
 Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- net/ipv4/raw.c |   10 ++++++----
- 1 file changed, 6 insertions(+), 4 deletions(-)
+ include/linux/fdtable.h |    7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
 
-diff --git a/net/ipv4/raw.c b/net/ipv4/raw.c
-index 125c1eab3eaa..91091a10294f 100644
---- a/net/ipv4/raw.c
-+++ b/net/ipv4/raw.c
-@@ -57,6 +57,7 @@
- #include <linux/in_route.h>
- #include <linux/route.h>
- #include <linux/skbuff.h>
+diff --git a/include/linux/fdtable.h b/include/linux/fdtable.h
+index 1c65817673db..9731f1a255db 100644
+--- a/include/linux/fdtable.h
++++ b/include/linux/fdtable.h
+@@ -10,6 +10,7 @@
+ #include <linux/compiler.h>
+ #include <linux/spinlock.h>
+ #include <linux/rcupdate.h>
 +#include <linux/nospec.h>
- #include <linux/igmp.h>
- #include <net/net_namespace.h>
- #include <net/dst.h>
-@@ -472,17 +473,18 @@ static int raw_getfrag(void *from, char *to, int offset, int len, int odd,
- 		       struct sk_buff *skb)
+ #include <linux/types.h>
+ #include <linux/init.h>
+ #include <linux/fs.h>
+@@ -81,9 +82,11 @@ struct dentry;
+ static inline struct file *__fcheck_files(struct files_struct *files, unsigned int fd)
  {
- 	struct raw_frag_vec *rfv = from;
-+	char *rfv_buf;
+ 	struct fdtable *fdt = rcu_dereference_raw(files->fdt);
++	struct file __rcu **fdp;
  
--	if (offset < rfv->hlen) {
-+	rfv_buf = array_ptr(rfv->hdr.c, offset, rfv->hlen);
-+	if (rfv_buf) {
- 		int copy = min(rfv->hlen - offset, len);
+-	if (fd < fdt->max_fds)
+-		return rcu_dereference_raw(fdt->fd[fd]);
++	fdp = array_ptr(fdt->fd, fd, fdt->max_fds);
++	if (fdp)
++		return rcu_dereference_raw(*fdp);
+ 	return NULL;
+ }
  
- 		if (skb->ip_summed == CHECKSUM_PARTIAL)
--			memcpy(to, rfv->hdr.c + offset, copy);
-+			memcpy(to, rfv_buf, copy);
- 		else
- 			skb->csum = csum_block_add(
- 				skb->csum,
--				csum_partial_copy_nocheck(rfv->hdr.c + offset,
--							  to, copy, 0),
-+				csum_partial_copy_nocheck(rfv_buf, to, copy, 0),
- 				odd);
- 
- 		odd = 0;
