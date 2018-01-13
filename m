@@ -1,53 +1,42 @@
-From: Dan Williams <dan.j.williams@intel.com>
-Date: Sat, 13 Jan 2018 10:18:16 -0800
-Message-ID: <151586749581.5820.10884753209923259828.stgit@dwillia2-desk3.amr.corp.intel.com>
-In-Reply-To: <151586744180.5820.13215059696964205856.stgit@dwillia2-desk3.amr.corp.intel.com>
-References: <151586744180.5820.13215059696964205856.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v3 9/9] vfs,
- fdtable: prevent bounds-check bypass via speculative execution
-To: linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, Al Viro <viro@zeniv.linux.org.uk>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, alan@linux.intel.com
+Sender: linus971@gmail.com
+In-Reply-To: <CA+8MBb+H0FqciBw9nSO9L0fNQtiRvc_1TREitH9z89YxhtyFAQ@mail.gmail.com>
+References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <CA+55aFzNQ8CZ8iNcPXrCfyk=1edMiRGDA0fY0rd87BsFKBxgAw@mail.gmail.com> <CA+8MBb+H0FqciBw9nSO9L0fNQtiRvc_1TREitH9z89YxhtyFAQ@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Sat, 13 Jan 2018 10:51:53 -0800
+Message-ID: <CA+55aFwUspY8DG3hRxZqQaf_n_0OZxGCd=pELc8ZVuBu+058cA@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v2 00/19] prevent bounds-check bypass via speculative execution
+To: Tony Luck <tony.luck@gmail.com>
+Cc: Dan Williams <dan.j.williams@intel.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Alan Cox <alan.cox@intel.com>, Will Deacon <will.deacon@arm.com>, Alexei Starovoitov <ast@kernel.org>, Solomon Peachy <pizza@shaftnet.org>, "H. Peter Anvin" <hpa@zytor.com>, Christian Lamparter <chunkeey@googlemail.com>, Elena Reshetova <elena.reshetova@intel.com>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Andi Kleen <ak@linux.intel.com>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, Linux SCSI List <linux-scsi@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, the arch/x86 maintainers <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Catalin Marinas <catalin.marinas@arm.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Linux Media Mailing List <linux-media@vger.kernel.org>, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Jan Kara <jack@suse.com>, Al Viro <viro@zeniv.linux.org.uk>, qla2xxx-upstream@qlogic.com, Thomas Gleixner <tglx@linutronix.de>, Mauro Carvalho Chehab <mchehab@kernel.org>, Kalle Valo <kvalo@codeaurora.org>, Alan Cox <alan@linux.intel.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Greg KH <gregkh@linuxfoundation.org>, Linux Wireless List <linux-wireless@vger.kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Network Development <netdev@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Laurent Pinchart <laurent.pinchart@ideasonboard.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Expectedly, static analysis reports that 'fd' is a user controlled value
-that is used as a data dependency to read from the 'fdt->fd' array.  In
-order to avoid potential leaks of kernel memory values, block
-speculative execution of the instruction stream that could issue reads
-based on an invalid 'file *' returned from __fcheck_files.
+On Fri, Jan 12, 2018 at 4:15 PM, Tony Luck <tony.luck@gmail.com> wrote:
+>
+> Here there isn't any reason for speculation. The core has the
+> value of 'x' in a register and the upper bound encoded into the
+> "cmp" instruction.  Both are right there, no waiting, no speculation.
 
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Co-developed-by: Elena Reshetova <elena.reshetova@intel.com>
-Signed-off-by: Dan Williams <dan.j.williams@intel.com>
----
- include/linux/fdtable.h |    7 +++++--
- 1 file changed, 5 insertions(+), 2 deletions(-)
+So this is an argument I haven't seen before (although it was brought
+up in private long ago), but that is very relevant: the actual scope
+and depth of speculation.
 
-diff --git a/include/linux/fdtable.h b/include/linux/fdtable.h
-index 1c65817673db..9731f1a255db 100644
---- a/include/linux/fdtable.h
-+++ b/include/linux/fdtable.h
-@@ -10,6 +10,7 @@
- #include <linux/compiler.h>
- #include <linux/spinlock.h>
- #include <linux/rcupdate.h>
-+#include <linux/nospec.h>
- #include <linux/types.h>
- #include <linux/init.h>
- #include <linux/fs.h>
-@@ -81,9 +82,11 @@ struct dentry;
- static inline struct file *__fcheck_files(struct files_struct *files, unsigned int fd)
- {
- 	struct fdtable *fdt = rcu_dereference_raw(files->fdt);
-+	struct file __rcu **fdp;
- 
--	if (fd < fdt->max_fds)
--		return rcu_dereference_raw(fdt->fd[fd]);
-+	fdp = array_ptr(fdt->fd, fd, fdt->max_fds);
-+	if (fdp)
-+		return rcu_dereference_raw(*fdp);
- 	return NULL;
- }
- 
+Your argument basically depends on just what gets speculated, and on
+the _actual_ order of execution.
+
+So your argument depends on "the uarch will actually run the code in
+order if there are no events that block the pipeline".
+
+Or at least it depends on a certain latency of the killing of any OoO
+execution being low enough that the cache access doesn't even begin.
+
+I realize that that is very much a particular microarchitectural
+detail, but it's actually a *big* deal. Do we have a set of rules for
+what is not a worry, simply because the speculated accesses get killed
+early enough?
+
+Apparently "test a register value against a constant" is good enough,
+assuming that register is also needed for the address of the access.
+
+            Linus
