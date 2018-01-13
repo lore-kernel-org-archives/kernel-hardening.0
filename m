@@ -1,30 +1,63 @@
-Date: Sun, 14 Jan 2018 07:28:07 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Message-ID: <20180113202807.GD32273@eros>
-References: <1515068485.3034.5.camel@gmail.com>
- <20180105221228.GB5445@eros>
- <CAPDLWs_T4aC2jWgLA6yEsQ-6e2J4rH3CniX8Dt0=-WBRK00gGg@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAPDLWs_T4aC2jWgLA6yEsQ-6e2J4rH3CniX8Dt0=-WBRK00gGg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v5] leaking_addresses: add generic 32-bit support
-To: Kaiwan N Billimoria <kaiwan.billimoria@gmail.com>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Dan Aloni <dan@kernelim.com>
+Date: Sat, 13 Jan 2018 23:34:34 +0200
+Message-Id: <20180113213441.52047-1-dan@kernelim.com>
+Subject: [kernel-hardening] [PATCHv2 0/7] RFC: Public key encryption of dmesg by the kernel
+To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Jan 13, 2018 at 10:55:26AM +0000, Kaiwan N Billimoria wrote:
-> Hi Tobin,
-> 
-> Thanks very much for your detailed review.
-> Just wanted to say that am up to my neck in work (an exceptionally busy
-> time), hence will take a while to work on this - around another 3 weeks
-> perhaps.
-> I'd like to continue, but if you feel it's too long please move ahead.
+Changes from v1 [1]:
 
-No worries Kaiwan, thanks for letting me know.  I'll cc you on any
-patches to leaking_addresses.pl for now so you can easily keep up with
-whats going on.
+ - Made suggested fixes following a review from Randy Dunlap
+ - Modified the ASCII encoding of cipher text to base64 instead of hex,
+   with newlines replaced by '~' ; updated dmesg-decipher for it too
+ - Moved base64 code from fs/ceph to lib, and improved it a bit
+ - Improved checks that we are not overflowing the user buffer when
+   using copy_to_user to in the added code
+ - Added some prints when errors in dmesg-decipher
+ - Fixes to Makefile at tools/ for building 'kmsg' (should it
+   build by default in target 'all'? There is an openssl depdendency.)
+ - checkpatch.pl linting
 
-thanks,
-Tobin.
+[1] https://lwn.net/Articles/742412/
+
+Dan Aloni (7):
+  crypto: fix memory leak in rsa-kcs1pad encryption
+  Move net/ceph/armor to lib/ and add docs
+  base64-armor: add bounds checking
+  certs: allow in-kernel access of trusted keys
+  printk: allow kmsg to be encrypted using public key encryption
+  tools: add dmesg decryption program
+  docs: add dmesg encryption doc
+
+ Documentation/admin-guide/dmesg-encryption.rst | 116 +++++++
+ Documentation/admin-guide/index.rst            |   1 +
+ Documentation/ioctl/ioctl-number.txt           |   1 +
+ certs/system_keyring.c                         |  56 ++-
+ crypto/rsa-pkcs1pad.c                          |   9 -
+ include/keys/system_keyring.h                  |   3 +
+ include/linux/base64-armor.h                   |  70 ++++
+ include/uapi/linux/kmsg.h                      |  18 +
+ init/Kconfig                                   |  11 +
+ kernel/printk/printk.c                         | 451 +++++++++++++++++++++++++
+ lib/Kconfig                                    |   7 +
+ lib/Makefile                                   |   1 +
+ net/ceph/armor.c => lib/base64-armor.c         |  29 +-
+ net/ceph/Kconfig                               |   1 +
+ net/ceph/Makefile                              |   2 +-
+ net/ceph/crypto.c                              |   3 +-
+ net/ceph/crypto.h                              |   4 -
+ tools/Makefile                                 |   9 +-
+ tools/kmsg/.gitignore                          |   1 +
+ tools/kmsg/Makefile                            |  14 +
+ tools/kmsg/dmesg-decipher.c                    | 354 +++++++++++++++++++
+ 21 files changed, 1139 insertions(+), 22 deletions(-)
+ create mode 100644 Documentation/admin-guide/dmesg-encryption.rst
+ create mode 100644 include/linux/base64-armor.h
+ create mode 100644 include/uapi/linux/kmsg.h
+ rename net/ceph/armor.c => lib/base64-armor.c (75%)
+ create mode 100644 tools/kmsg/.gitignore
+ create mode 100644 tools/kmsg/Makefile
+ create mode 100644 tools/kmsg/dmesg-decipher.c
+
+-- 
+2.14.3
