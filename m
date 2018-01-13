@@ -1,266 +1,331 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Sat, 13 Jan 2018 10:18:10 -0800
-Message-ID: <151586748981.5820.14559543798744763404.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Sat, 13 Jan 2018 10:17:58 -0800
+Message-ID: <151586747805.5820.4398196873415688758.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151586744180.5820.13215059696964205856.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151586744180.5820.13215059696964205856.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v3 8/9] x86: use __uaccess_begin_nospec and ASM_IFENCE in
- get_user paths
+Subject: [kernel-hardening] [PATCH v3 6/9] asm/nospec: mask speculative execution flows
 To: linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, x86@kernel.org, Ingo Molnar <mingo@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, "H. Peter Anvin" <hpa@zytor.com>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, alan@linux.intel.com
+Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Catalin Marinas <catalin.marinas@arm.com>, x86@kernel.org, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, gregkh@linuxfoundation.org, "H. Peter Anvin" <hpa@zytor.com>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Linus:
+'__array_ptr' is proposed as a generic mechanism to mitigate against
+Spectre-variant-1 attacks, i.e. an attack that bypasses memory bounds
+checks via speculative execution). The '__array_ptr' implementation
+appears safe for current generation cpus across multiple architectures.
 
-    I do think that it would be a good idea to very expressly document
-    the fact that it's not that the user access itself is unsafe. I do
-    agree that things like "get_user()" want to be protected, but not
-    because of any direct bugs or problems with get_user() and friends,
-    but simply because get_user() is an excellent source of a pointer
-    that is obviously controlled from a potentially attacking user
-    space. So it's a prime candidate for then finding _subsequent_
-    accesses that can then be used to perturb the cache.
+In comparison, 'ifence_array_ptr' uses a hard / architectural 'ifence'
+approach to preclude the possibility speculative execution. However, it
+is not the default given a concern for avoiding instruction-execution
+barriers in potential fast paths.
 
-Note that '__copy_user_ll' is also called in the 'put_user' case, but
-there is currently no indication that put_user in general deserves the
-same hygiene as 'get_user'.
+Based on an original implementation by Linus Torvalds, tweaked to remove
+speculative flows by Alexei Starovoitov, and tweaked again by Linus to
+introduce an x86 assembly implementation for the mask generation.
 
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-Suggested-by: Andi Kleen <ak@linux.intel.com>
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Kees Cook <keescook@chromium.org>
+Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
+Co-developed-by: Alexei Starovoitov <ast@kernel.org>
+Co-developed-by: Peter Zijlstra <peterz@infradead.org>
+Cc: Russell King <linux@armlinux.org.uk>
+Cc: Catalin Marinas <catalin.marinas@arm.com>
+Cc: Will Deacon <will.deacon@arm.com>
 Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: "H. Peter Anvin" <hpa@zytor.com>
 Cc: Ingo Molnar <mingo@redhat.com>
+Cc: "H. Peter Anvin" <hpa@zytor.com>
 Cc: x86@kernel.org
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- arch/x86/include/asm/uaccess.h    |    6 +++---
- arch/x86/include/asm/uaccess_32.h |    6 +++---
- arch/x86/include/asm/uaccess_64.h |   12 ++++++------
- arch/x86/lib/copy_user_64.S       |    3 +++
- arch/x86/lib/getuser.S            |    5 +++++
- arch/x86/lib/usercopy_32.c        |    8 ++++----
- 6 files changed, 24 insertions(+), 16 deletions(-)
+ arch/arm/Kconfig       |    1 +
+ arch/arm64/Kconfig     |    1 +
+ arch/x86/Kconfig       |    3 ++
+ include/linux/nospec.h |   92 ++++++++++++++++++++++++++++++++++++++++++++++++
+ kernel/Kconfig.nospec  |   46 ++++++++++++++++++++++++
+ kernel/Makefile        |    1 +
+ kernel/nospec.c        |   52 +++++++++++++++++++++++++++
+ lib/Kconfig            |    3 ++
+ 8 files changed, 199 insertions(+)
+ create mode 100644 include/linux/nospec.h
+ create mode 100644 kernel/Kconfig.nospec
+ create mode 100644 kernel/nospec.c
 
-diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
-index a31fd4fc6483..82c73f064e76 100644
---- a/arch/x86/include/asm/uaccess.h
-+++ b/arch/x86/include/asm/uaccess.h
-@@ -450,7 +450,7 @@ do {									\
- ({									\
- 	int __gu_err;							\
- 	__inttype(*(ptr)) __gu_val;					\
--	__uaccess_begin();						\
-+	__uaccess_begin_nospec();					\
- 	__get_user_size(__gu_val, (ptr), (size), __gu_err, -EFAULT);	\
- 	__uaccess_end();						\
- 	(x) = (__force __typeof__(*(ptr)))__gu_val;			\
-@@ -558,7 +558,7 @@ struct __large_struct { unsigned long buf[100]; };
-  *	get_user_ex(...);
-  * } get_user_catch(err)
-  */
--#define get_user_try		uaccess_try
-+#define get_user_try		uaccess_try_nospec
- #define get_user_catch(err)	uaccess_catch(err)
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 51c8df561077..fd4789ec8cac 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -7,6 +7,7 @@ config ARM
+ 	select ARCH_HAS_DEBUG_VIRTUAL
+ 	select ARCH_HAS_DEVMEM_IS_ALLOWED
+ 	select ARCH_HAS_ELF_RANDOMIZE
++	select ARCH_HAS_IFENCE
+ 	select ARCH_HAS_SET_MEMORY
+ 	select ARCH_HAS_STRICT_KERNEL_RWX if MMU && !XIP_KERNEL
+ 	select ARCH_HAS_STRICT_MODULE_RWX if MMU
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index c9a7e9e1414f..22765c4b6986 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -16,6 +16,7 @@ config ARM64
+ 	select ARCH_HAS_GCOV_PROFILE_ALL
+ 	select ARCH_HAS_GIGANTIC_PAGE if (MEMORY_ISOLATION && COMPACTION) || CMA
+ 	select ARCH_HAS_KCOV
++	select ARCH_HAS_IFENCE
+ 	select ARCH_HAS_SET_MEMORY
+ 	select ARCH_HAS_SG_CHAIN
+ 	select ARCH_HAS_STRICT_KERNEL_RWX
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index d4fc98c50378..68698289c83c 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -54,6 +54,7 @@ config X86
+ 	select ARCH_HAS_FORTIFY_SOURCE
+ 	select ARCH_HAS_GCOV_PROFILE_ALL
+ 	select ARCH_HAS_KCOV			if X86_64
++	select ARCH_HAS_IFENCE
+ 	select ARCH_HAS_PMEM_API		if X86_64
+ 	# Causing hangs/crashes, see the commit that added this change for details.
+ 	select ARCH_HAS_REFCOUNT
+@@ -442,6 +443,8 @@ config INTEL_RDT
  
- #define get_user_ex(x, ptr)	do {					\
-@@ -592,7 +592,7 @@ extern void __cmpxchg_wrong_size(void)
- 	__typeof__(ptr) __uval = (uval);				\
- 	__typeof__(*(ptr)) __old = (old);				\
- 	__typeof__(*(ptr)) __new = (new);				\
--	__uaccess_begin();						\
-+	__uaccess_begin_nospec();					\
- 	switch (size) {							\
- 	case 1:								\
- 	{								\
-diff --git a/arch/x86/include/asm/uaccess_32.h b/arch/x86/include/asm/uaccess_32.h
-index 72950401b223..ba2dc1930630 100644
---- a/arch/x86/include/asm/uaccess_32.h
-+++ b/arch/x86/include/asm/uaccess_32.h
-@@ -29,21 +29,21 @@ raw_copy_from_user(void *to, const void __user *from, unsigned long n)
- 		switch (n) {
- 		case 1:
- 			ret = 0;
--			__uaccess_begin();
-+			__uaccess_begin_nospec();
- 			__get_user_asm_nozero(*(u8 *)to, from, ret,
- 					      "b", "b", "=q", 1);
- 			__uaccess_end();
- 			return ret;
- 		case 2:
- 			ret = 0;
--			__uaccess_begin();
-+			__uaccess_begin_nospec();
- 			__get_user_asm_nozero(*(u16 *)to, from, ret,
- 					      "w", "w", "=r", 2);
- 			__uaccess_end();
- 			return ret;
- 		case 4:
- 			ret = 0;
--			__uaccess_begin();
-+			__uaccess_begin_nospec();
- 			__get_user_asm_nozero(*(u32 *)to, from, ret,
- 					      "l", "k", "=r", 4);
- 			__uaccess_end();
-diff --git a/arch/x86/include/asm/uaccess_64.h b/arch/x86/include/asm/uaccess_64.h
-index f07ef3c575db..62546b3a398e 100644
---- a/arch/x86/include/asm/uaccess_64.h
-+++ b/arch/x86/include/asm/uaccess_64.h
-@@ -55,31 +55,31 @@ raw_copy_from_user(void *dst, const void __user *src, unsigned long size)
- 		return copy_user_generic(dst, (__force void *)src, size);
- 	switch (size) {
- 	case 1:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u8 *)dst, (u8 __user *)src,
- 			      ret, "b", "b", "=q", 1);
- 		__uaccess_end();
- 		return ret;
- 	case 2:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u16 *)dst, (u16 __user *)src,
- 			      ret, "w", "w", "=r", 2);
- 		__uaccess_end();
- 		return ret;
- 	case 4:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u32 *)dst, (u32 __user *)src,
- 			      ret, "l", "k", "=r", 4);
- 		__uaccess_end();
- 		return ret;
- 	case 8:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u64 *)dst, (u64 __user *)src,
- 			      ret, "q", "", "=r", 8);
- 		__uaccess_end();
- 		return ret;
- 	case 10:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u64 *)dst, (u64 __user *)src,
- 			       ret, "q", "", "=r", 10);
- 		if (likely(!ret))
-@@ -89,7 +89,7 @@ raw_copy_from_user(void *dst, const void __user *src, unsigned long size)
- 		__uaccess_end();
- 		return ret;
- 	case 16:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u64 *)dst, (u64 __user *)src,
- 			       ret, "q", "", "=r", 16);
- 		if (likely(!ret))
-diff --git a/arch/x86/lib/copy_user_64.S b/arch/x86/lib/copy_user_64.S
-index 020f75cc8cf6..2429ca38dee6 100644
---- a/arch/x86/lib/copy_user_64.S
-+++ b/arch/x86/lib/copy_user_64.S
-@@ -31,6 +31,7 @@
-  */
- ENTRY(copy_user_generic_unrolled)
- 	ASM_STAC
-+	ASM_IFENCE
- 	cmpl $8,%edx
- 	jb 20f		/* less then 8 bytes, go to byte copy loop */
- 	ALIGN_DESTINATION
-@@ -135,6 +136,7 @@ EXPORT_SYMBOL(copy_user_generic_unrolled)
-  */
- ENTRY(copy_user_generic_string)
- 	ASM_STAC
-+	ASM_IFENCE
- 	cmpl $8,%edx
- 	jb 2f		/* less than 8 bytes, go to byte copy loop */
- 	ALIGN_DESTINATION
-@@ -175,6 +177,7 @@ EXPORT_SYMBOL(copy_user_generic_string)
-  */
- ENTRY(copy_user_enhanced_fast_string)
- 	ASM_STAC
-+	ASM_IFENCE
- 	cmpl $64,%edx
- 	jb .L_copy_short_string	/* less then 64 bytes, avoid the costly 'rep' */
- 	movl %edx,%ecx
-diff --git a/arch/x86/lib/getuser.S b/arch/x86/lib/getuser.S
-index c97d935a29e8..85f400b8ee7c 100644
---- a/arch/x86/lib/getuser.S
-+++ b/arch/x86/lib/getuser.S
-@@ -41,6 +41,7 @@ ENTRY(__get_user_1)
- 	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
- 	ASM_STAC
-+	ASM_IFENCE
- 1:	movzbl (%_ASM_AX),%edx
- 	xor %eax,%eax
- 	ASM_CLAC
-@@ -55,6 +56,7 @@ ENTRY(__get_user_2)
- 	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
- 	ASM_STAC
-+	ASM_IFENCE
- 2:	movzwl -1(%_ASM_AX),%edx
- 	xor %eax,%eax
- 	ASM_CLAC
-@@ -69,6 +71,7 @@ ENTRY(__get_user_4)
- 	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
- 	ASM_STAC
-+	ASM_IFENCE
- 3:	movl -3(%_ASM_AX),%edx
- 	xor %eax,%eax
- 	ASM_CLAC
-@@ -84,6 +87,7 @@ ENTRY(__get_user_8)
- 	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
- 	ASM_STAC
-+	ASM_IFENCE
- 4:	movq -7(%_ASM_AX),%rdx
- 	xor %eax,%eax
- 	ASM_CLAC
-@@ -95,6 +99,7 @@ ENTRY(__get_user_8)
- 	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user_8
- 	ASM_STAC
-+	ASM_IFENCE
- 4:	movl -7(%_ASM_AX),%edx
- 5:	movl -3(%_ASM_AX),%ecx
- 	xor %eax,%eax
-diff --git a/arch/x86/lib/usercopy_32.c b/arch/x86/lib/usercopy_32.c
-index 1b377f734e64..7add8ba06887 100644
---- a/arch/x86/lib/usercopy_32.c
-+++ b/arch/x86/lib/usercopy_32.c
-@@ -331,12 +331,12 @@ do {									\
+ 	  Say N if unsure.
  
- unsigned long __copy_user_ll(void *to, const void *from, unsigned long n)
- {
--	stac();
-+	__uaccess_begin_nospec();
- 	if (movsl_is_ok(to, from, n))
- 		__copy_user(to, from, n);
- 	else
- 		n = __copy_user_intel(to, from, n);
--	clac();
-+	__uaccess_end();
- 	return n;
- }
- EXPORT_SYMBOL(__copy_user_ll);
-@@ -344,7 +344,7 @@ EXPORT_SYMBOL(__copy_user_ll);
- unsigned long __copy_from_user_ll_nocache_nozero(void *to, const void __user *from,
- 					unsigned long n)
- {
--	stac();
-+	__uaccess_begin_nospec();
- #ifdef CONFIG_X86_INTEL_USERCOPY
- 	if (n > 64 && static_cpu_has(X86_FEATURE_XMM2))
- 		n = __copy_user_intel_nocache(to, from, n);
-@@ -353,7 +353,7 @@ unsigned long __copy_from_user_ll_nocache_nozero(void *to, const void __user *fr
- #else
- 	__copy_user(to, from, n);
- #endif
--	clac();
-+	__uaccess_end();
- 	return n;
- }
- EXPORT_SYMBOL(__copy_from_user_ll_nocache_nozero);
++source "kernel/Kconfig.nospec"
++
+ if X86_32
+ config X86_EXTENDED_PLATFORM
+ 	bool "Support for extended (non-PC) x86 platforms"
+diff --git a/include/linux/nospec.h b/include/linux/nospec.h
+new file mode 100644
+index 000000000000..f6e7ba7a7344
+--- /dev/null
++++ b/include/linux/nospec.h
+@@ -0,0 +1,92 @@
++// SPDX-License-Identifier: GPL-2.0
++// Copyright(c) 2018 Intel Corporation. All rights reserved.
++
++#ifndef __NOSPEC_H__
++#define __NOSPEC_H__
++
++#include <linux/jump_label.h>
++#include <asm/barrier.h>
++
++/*
++ * If idx is negative or if idx > size then bit 63 is set in the mask,
++ * and the value of ~(-1L) is zero. When the mask is zero, bounds check
++ * failed, __array_ptr will return NULL.
++ */
++#ifndef array_ptr_mask
++#define array_ptr_mask(idx, sz)						\
++({									\
++	unsigned long mask;						\
++	unsigned long _i = (idx);					\
++	unsigned long _s = (sz);					\
++									\
++	mask = ~(long)(_i | (_s - 1 - _i)) >> (BITS_PER_LONG - 1);	\
++	mask;								\
++})
++#endif
++
++/**
++ * __array_ptr - Generate a pointer to an array element, ensuring
++ * the pointer is bounded under speculation to NULL.
++ *
++ * @base: the base of the array
++ * @idx: the index of the element, must be less than LONG_MAX
++ * @sz: the number of elements in the array, must be less than LONG_MAX
++ *
++ * If @idx falls in the interval [0, @sz), returns the pointer to
++ * @arr[@idx], otherwise returns NULL.
++ */
++#define __array_ptr(base, idx, sz)					\
++({									\
++	union { typeof(*(base)) *_ptr; unsigned long _bit; } __u;	\
++	typeof(*(base)) *_arr = (base);					\
++	unsigned long _i = (idx);					\
++	unsigned long _mask = array_ptr_mask(_i, (sz));			\
++									\
++	__u._ptr = _arr + (_i & _mask);					\
++	__u._bit &= _mask;						\
++	__u._ptr;							\
++})
++
++#if defined(ARCH_HAS_IFENCE) && !defined(ifence_array_ptr)
++#error Arch claims ARCH_HAS_IFENCE, but does not implement ifence_array_ptr
++#endif
++
++#ifdef CONFIG_SPECTRE1_DYNAMIC
++#ifndef HAVE_JUMP_LABEL
++#error Compiler lacks asm-goto, can generate unsafe code
++#endif
++
++#ifdef CONFIG_SPECTRE1_IFENCE
++DECLARE_STATIC_KEY_TRUE(nospec_key);
++#else
++DECLARE_STATIC_KEY_FALSE(nospec_key);
++#endif
++
++/*
++ * The expectation is that no compiler or cpu will mishandle __array_ptr
++ * leading to problematic speculative execution. Bypass the ifence
++ * based implementation by default.
++ */
++#define array_ptr(base, idx, sz)				\
++({								\
++	typeof(*(base)) *__ret;					\
++								\
++	if (static_branch_unlikely(&nospec_key))		\
++		__ret = ifence_array_ptr(base, idx, sz);	\
++	else							\
++		__ret = __array_ptr(base, idx, sz);		\
++	__ret;							\
++})
++#else /* CONFIG_SPECTRE1_DYNAMIC */
++/*
++ * If jump labels are disabled we hard code either ifence_array_ptr or
++ * array_ptr based on the config choice
++ */
++#ifdef CONFIG_SPECTRE1_IFENCE
++#define array_ptr ifence_array_ptr
++#else
++/* fallback to __array_ptr by default */
++#define array_ptr __array_ptr
++#endif
++#endif /* CONFIG_SPECTRE1_DYNAMIC */
++#endif /* __NOSPEC_H__ */
+diff --git a/kernel/Kconfig.nospec b/kernel/Kconfig.nospec
+new file mode 100644
+index 000000000000..33e34a87d067
+--- /dev/null
++++ b/kernel/Kconfig.nospec
+@@ -0,0 +1,46 @@
++# SPDX-License-Identifier: GPL-2.0
++
++menu "Speculative execution past bounds check"
++	depends on ARCH_HAS_IFENCE
++
++choice
++        prompt "Speculative execution past bounds check"
++        default SPECTRE1_MASK
++        help
++	  Select the default mechanism for guarding against kernel
++	  memory leaks via speculative execution past a boundary-check
++	  (Spectre variant1) . This choice determines the contents of
++	  the array_ptr() helper. Note, that vulnerable code paths need
++	  to be instrumented with this helper to be protected.
++
++config SPECTRE1_MASK
++	bool "mask"
++	help
++	  Provide an array_ptr() implementation that arranges for only
++	  safe speculative flows to be exposed to the compiler/cpu. It
++	  is preferred over "ifence" since it arranges for problematic
++	  speculation to be disabled without need of an instruction
++	  barrier.
++
++config SPECTRE1_IFENCE
++	bool "ifence"
++	depends on ARCH_HAS_IFENCE
++	help
++	  Provide a array_ptr() implementation that is specified by the
++	  cpu architecture to barrier all speculative execution.  Unless
++	  you have specific knowledge of the "mask" approach being
++	  unsuitable with a given compiler/cpu, select "mask".
++
++endchoice
++
++config SPECTRE1_DYNAMIC
++	bool "Support dynamic switching of speculative execution mitigation"
++	depends on ARCH_HAS_IFENCE
++	depends on JUMP_LABEL
++	help
++	  For architectures that support the 'ifence' mitigation, allow
++	  dynamic switching between it and the 'mask' approach. This supports
++	  evaluation or emergency switching.
++
++	  If unsure, say Y
++endmenu
+diff --git a/kernel/Makefile b/kernel/Makefile
+index 172d151d429c..d5269be9d58a 100644
+--- a/kernel/Makefile
++++ b/kernel/Makefile
+@@ -101,6 +101,7 @@ obj-$(CONFIG_TRACEPOINTS) += trace/
+ obj-$(CONFIG_IRQ_WORK) += irq_work.o
+ obj-$(CONFIG_CPU_PM) += cpu_pm.o
+ obj-$(CONFIG_BPF) += bpf/
++obj-$(CONFIG_SPECTRE1_DYNAMIC) += nospec.o
+ 
+ obj-$(CONFIG_PERF_EVENTS) += events/
+ 
+diff --git a/kernel/nospec.c b/kernel/nospec.c
+new file mode 100644
+index 000000000000..992de957216d
+--- /dev/null
++++ b/kernel/nospec.c
+@@ -0,0 +1,52 @@
++// SPDX-License-Identifier: GPL-2.0
++// Copyright(c) 2018 Intel Corporation. All rights reserved.
++#include <linux/module.h>
++#include <linux/compiler.h>
++#include <linux/jump_label.h>
++#include <linux/moduleparam.h>
++
++enum {
++	F_IFENCE,
++};
++
++#ifdef CONFIG_SPECTRE1_IFENCE
++static unsigned long nospec_flag = 1 << F_IFENCE;
++DEFINE_STATIC_KEY_TRUE(nospec_key);
++#else
++static unsigned long nospec_flag;
++DEFINE_STATIC_KEY_FALSE(nospec_key);
++#endif
++
++EXPORT_SYMBOL(nospec_key);
++
++static int param_set_nospec(const char *val, const struct kernel_param *kp)
++{
++	unsigned long *flags = kp->arg;
++
++	if (strcmp(val, "ifence") == 0 || strcmp(val, "ifence\n") == 0) {
++		if (!test_and_set_bit(F_IFENCE, flags))
++			static_key_enable(&nospec_key.key);
++		return 0;
++	} else if (strcmp(val, "mask") == 0 || strcmp(val, "mask\n") == 0) {
++		if (test_and_clear_bit(F_IFENCE, flags))
++			static_key_disable(&nospec_key.key);
++		return 0;
++	}
++	return -EINVAL;
++}
++
++static int param_get_nospec(char *buffer, const struct kernel_param *kp)
++{
++	unsigned long *flags = kp->arg;
++
++	return sprintf(buffer, "%s\n", test_bit(F_IFENCE, flags)
++			? "ifence" : "mask");
++}
++
++static struct kernel_param_ops nospec_param_ops = {
++	.set = param_set_nospec,
++	.get = param_get_nospec,
++};
++
++core_param_cb(spectre_v1, &nospec_param_ops, &nospec_flag, 0600);
++MODULE_PARM_DESC(spectre_v1, "Spectre-v1 mitigation: 'mask' (default) vs 'ifence'");
+diff --git a/lib/Kconfig b/lib/Kconfig
+index c5e84fbcb30b..3cc7e7a03781 100644
+--- a/lib/Kconfig
++++ b/lib/Kconfig
+@@ -570,6 +570,9 @@ config STACKDEPOT
+ 	bool
+ 	select STACKTRACE
+ 
++config ARCH_HAS_IFENCE
++	bool
++
+ config SBITMAP
+ 	bool
+ 
