@@ -1,62 +1,80 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Sat, 13 Jan 2018 10:17:34 -0800
-Message-ID: <151586745407.5820.16345523612044599487.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Sat, 13 Jan 2018 10:17:46 -0800
+Message-ID: <151586746590.5820.13343935159472776801.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151586744180.5820.13215059696964205856.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151586744180.5820.13215059696964205856.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v3 2/9] arm64: implement ifence_array_ptr()
+Subject: [kernel-hardening] [PATCH v3 4/9] x86: implement ifence()
 To: linux-kernel@vger.kernel.org
-Cc: Mark Rutland <mark.rutland@arm.com>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, gregkh@linuxfoundation.org, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, alan@linux.intel.com
+Cc: Mark Rutland <mark.rutland@arm.com>, Tom Lendacky <thomas.lendacky@amd.com>, linux-arch@vger.kernel.org, gregkh@linuxfoundation.org, Peter Zijlstra <peterz@infradead.org>, Alan Cox <alan.cox@intel.com>, x86@kernel.org, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, kernel-hardening@lists.openwall.com, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, Elena Reshetova <elena.reshetova@intel.com>, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Mark Rutland <mark.rutland@arm.com>
+The new barrier, 'ifence', ensures that speculative execution never
+crosses the fence.
 
-This patch implements ifence_array_ptr() for arm64, using an
-LDR+CSEL+CSDB sequence to inhibit speculative use of the returned value.
+Previously the kernel only needed this fence in 'rdtsc_ordered', but now
+it is also proposed as a mitigation against Spectre variant1 attacks.
+When used it needs to be placed in the success path after a bounds check
+i.e.:
 
-Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-Signed-off-by: Will Deacon <will.deacon@arm.com>
-Cc: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Peter Zijlstra <peterz@infradead.org>
+	if (x < max) {
+		ifence();
+		val = array[x];
+	} else
+		return -EINVAL;
+
+With this change the cpu will never issue speculative reads of
+'array + x' with values of x >= max.
+
+'ifence', via 'ifence_array_ptr', is an opt-in fallback to the default
+mitigation provided by '__array_ptr'. It is also proposed for blocking
+speculation in the 'get_user' path to bypass 'access_ok' checks. For
+now, just provide the common definition for later patches to build upon.
+
+Suggested-by: Peter Zijlstra <peterz@infradead.org>
+Suggested-by: Alan Cox <alan.cox@intel.com>
+Cc: Tom Lendacky <thomas.lendacky@amd.com>
+Cc: Mark Rutland <mark.rutland@arm.com>
+Cc: Greg KH <gregkh@linuxfoundation.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: Ingo Molnar <mingo@redhat.com>
+Cc: "H. Peter Anvin" <hpa@zytor.com>
+Cc: x86@kernel.org
+Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- arch/arm64/include/asm/barrier.h |   24 ++++++++++++++++++++++++
- 1 file changed, 24 insertions(+)
+ arch/x86/include/asm/barrier.h |    4 ++++
+ arch/x86/include/asm/msr.h     |    3 +--
+ 2 files changed, 5 insertions(+), 2 deletions(-)
 
-diff --git a/arch/arm64/include/asm/barrier.h b/arch/arm64/include/asm/barrier.h
-index 77651c49ef44..74ffcddb26e6 100644
---- a/arch/arm64/include/asm/barrier.h
-+++ b/arch/arm64/include/asm/barrier.h
-@@ -40,6 +40,30 @@
- #define dma_rmb()	dmb(oshld)
- #define dma_wmb()	dmb(oshst)
+diff --git a/arch/x86/include/asm/barrier.h b/arch/x86/include/asm/barrier.h
+index 7fb336210e1b..b04f572d6d97 100644
+--- a/arch/x86/include/asm/barrier.h
++++ b/arch/x86/include/asm/barrier.h
+@@ -24,6 +24,10 @@
+ #define wmb()	asm volatile("sfence" ::: "memory")
+ #endif
  
-+#define ifence_array_ptr(arr, idx, sz)					\
-+({									\
-+	typeof(&(arr)[0]) __nap_arr = (arr);				\
-+	typeof(idx) __nap_idx = (idx);					\
-+	typeof(sz) __nap_sz = (sz);					\
-+									\
-+	unsigned long __nap_ptr = (unsigned long)__nap_arr +		\
-+				  sizeof(__nap_arr[0]) * idx;		\
-+									\
-+	asm volatile(							\
-+	"	cmp	%[i], %[s]\n"					\
-+	"	b.cs	1f\n"						\
-+	"	ldr	%[p], %[pp]\n"					\
-+	"1:	csel	%[p], %[p], xzr, cc\n"				\
-+	"	hint	#0x14 // CSDB\n"				\
-+	: [p] "=&r" (__nap_ptr)						\
-+	: [pp] "m" (__nap_ptr),						\
-+	  [i] "r" ((unsigned long)__nap_idx),				\
-+	  [s] "r" ((unsigned long)__nap_sz)				\
-+	: "cc");							\
-+									\
-+	(typeof(&(__nap_arr)[0]))__nap_ptr;				\
-+})
++/* prevent speculative execution past this barrier */
++#define ifence() alternative_2("", "mfence", X86_FEATURE_MFENCE_RDTSC, \
++				   "lfence", X86_FEATURE_LFENCE_RDTSC)
 +
- #define __smp_mb()	dmb(ish)
- #define __smp_rmb()	dmb(ishld)
- #define __smp_wmb()	dmb(ishst)
+ #ifdef CONFIG_X86_PPRO_FENCE
+ #define dma_rmb()	rmb()
+ #else
+diff --git a/arch/x86/include/asm/msr.h b/arch/x86/include/asm/msr.h
+index 07962f5f6fba..e426d2a33ff3 100644
+--- a/arch/x86/include/asm/msr.h
++++ b/arch/x86/include/asm/msr.h
+@@ -214,8 +214,7 @@ static __always_inline unsigned long long rdtsc_ordered(void)
+ 	 * that some other imaginary CPU is updating continuously with a
+ 	 * time stamp.
+ 	 */
+-	alternative_2("", "mfence", X86_FEATURE_MFENCE_RDTSC,
+-			  "lfence", X86_FEATURE_LFENCE_RDTSC);
++	ifence();
+ 	return rdtsc();
+ }
+ 
