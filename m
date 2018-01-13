@@ -1,63 +1,42 @@
 From: Dan Aloni <dan@kernelim.com>
-Date: Sat, 13 Jan 2018 23:34:34 +0200
-Message-Id: <20180113213441.52047-1-dan@kernelim.com>
-Subject: [kernel-hardening] [PATCHv2 0/7] RFC: Public key encryption of dmesg by the kernel
+Date: Sat, 13 Jan 2018 23:34:35 +0200
+Message-Id: <20180113213441.52047-2-dan@kernelim.com>
+In-Reply-To: <20180113213441.52047-1-dan@kernelim.com>
+References: <20180113213441.52047-1-dan@kernelim.com>
+Subject: [kernel-hardening] [PATCHv2 1/7] crypto: fix memory leak in rsa-kcs1pad encryption
 To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Herbert Xu <herbert@gondor.apana.org.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Changes from v1 [1]:
+The encryption mode of pkcs1pad never uses out_sg and out_buf, so
+there's no need to allocate the buffer, which presently is not even
+being freed.
 
- - Made suggested fixes following a review from Randy Dunlap
- - Modified the ASCII encoding of cipher text to base64 instead of hex,
-   with newlines replaced by '~' ; updated dmesg-decipher for it too
- - Moved base64 code from fs/ceph to lib, and improved it a bit
- - Improved checks that we are not overflowing the user buffer when
-   using copy_to_user to in the added code
- - Added some prints when errors in dmesg-decipher
- - Fixes to Makefile at tools/ for building 'kmsg' (should it
-   build by default in target 'all'? There is an openssl depdendency.)
- - checkpatch.pl linting
+CC: Herbert Xu <herbert@gondor.apana.org.au>
+Signed-off-by: Dan Aloni <dan@kernelim.com>
+---
+ crypto/rsa-pkcs1pad.c | 9 ---------
+ 1 file changed, 9 deletions(-)
 
-[1] https://lwn.net/Articles/742412/
-
-Dan Aloni (7):
-  crypto: fix memory leak in rsa-kcs1pad encryption
-  Move net/ceph/armor to lib/ and add docs
-  base64-armor: add bounds checking
-  certs: allow in-kernel access of trusted keys
-  printk: allow kmsg to be encrypted using public key encryption
-  tools: add dmesg decryption program
-  docs: add dmesg encryption doc
-
- Documentation/admin-guide/dmesg-encryption.rst | 116 +++++++
- Documentation/admin-guide/index.rst            |   1 +
- Documentation/ioctl/ioctl-number.txt           |   1 +
- certs/system_keyring.c                         |  56 ++-
- crypto/rsa-pkcs1pad.c                          |   9 -
- include/keys/system_keyring.h                  |   3 +
- include/linux/base64-armor.h                   |  70 ++++
- include/uapi/linux/kmsg.h                      |  18 +
- init/Kconfig                                   |  11 +
- kernel/printk/printk.c                         | 451 +++++++++++++++++++++++++
- lib/Kconfig                                    |   7 +
- lib/Makefile                                   |   1 +
- net/ceph/armor.c => lib/base64-armor.c         |  29 +-
- net/ceph/Kconfig                               |   1 +
- net/ceph/Makefile                              |   2 +-
- net/ceph/crypto.c                              |   3 +-
- net/ceph/crypto.h                              |   4 -
- tools/Makefile                                 |   9 +-
- tools/kmsg/.gitignore                          |   1 +
- tools/kmsg/Makefile                            |  14 +
- tools/kmsg/dmesg-decipher.c                    | 354 +++++++++++++++++++
- 21 files changed, 1139 insertions(+), 22 deletions(-)
- create mode 100644 Documentation/admin-guide/dmesg-encryption.rst
- create mode 100644 include/linux/base64-armor.h
- create mode 100644 include/uapi/linux/kmsg.h
- rename net/ceph/armor.c => lib/base64-armor.c (75%)
- create mode 100644 tools/kmsg/.gitignore
- create mode 100644 tools/kmsg/Makefile
- create mode 100644 tools/kmsg/dmesg-decipher.c
-
+diff --git a/crypto/rsa-pkcs1pad.c b/crypto/rsa-pkcs1pad.c
+index 2908f93c3e55..e8354084ef4e 100644
+--- a/crypto/rsa-pkcs1pad.c
++++ b/crypto/rsa-pkcs1pad.c
+@@ -261,15 +261,6 @@ static int pkcs1pad_encrypt(struct akcipher_request *req)
+ 	pkcs1pad_sg_set_buf(req_ctx->in_sg, req_ctx->in_buf,
+ 			ctx->key_size - 1 - req->src_len, req->src);
+ 
+-	req_ctx->out_buf = kmalloc(ctx->key_size, GFP_KERNEL);
+-	if (!req_ctx->out_buf) {
+-		kfree(req_ctx->in_buf);
+-		return -ENOMEM;
+-	}
+-
+-	pkcs1pad_sg_set_buf(req_ctx->out_sg, req_ctx->out_buf,
+-			ctx->key_size, NULL);
+-
+ 	akcipher_request_set_tfm(&req_ctx->child_req, ctx->child);
+ 	akcipher_request_set_callback(&req_ctx->child_req, req->base.flags,
+ 			pkcs1pad_encrypt_sign_complete_cb, req);
 -- 
 2.14.3
