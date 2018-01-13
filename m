@@ -1,49 +1,125 @@
+From: Dan Williams <dan.j.williams@intel.com>
+Date: Sat, 13 Jan 2018 10:17:22 -0800
+Message-ID: <151586744180.5820.13215059696964205856.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
-In-Reply-To: <CA+55aFzNQ8CZ8iNcPXrCfyk=1edMiRGDA0fY0rd87BsFKBxgAw@mail.gmail.com>
-References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
- <CA+55aFzNQ8CZ8iNcPXrCfyk=1edMiRGDA0fY0rd87BsFKBxgAw@mail.gmail.com>
-From: Tony Luck <tony.luck@gmail.com>
-Date: Fri, 12 Jan 2018 16:15:12 -0800
-Message-ID: <CA+8MBb+H0FqciBw9nSO9L0fNQtiRvc_1TREitH9z89YxhtyFAQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 00/19] prevent bounds-check bypass via speculative execution
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Dan Williams <dan.j.williams@intel.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Alan Cox <alan.cox@intel.com>, Will Deacon <will.deacon@arm.com>, Alexei Starovoitov <ast@kernel.org>, Solomon Peachy <pizza@shaftnet.org>, "H. Peter Anvin" <hpa@zytor.com>, Christian Lamparter <chunkeey@googlemail.com>, Elena Reshetova <elena.reshetova@intel.com>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Andi Kleen <ak@linux.intel.com>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, Linux SCSI List <linux-scsi@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, the arch/x86 maintainers <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Catalin Marinas <catalin.marinas@arm.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Linux Media Mailing List <linux-media@vger.kernel.org>, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Jan Kara <jack@suse.com>, Al Viro <viro@zeniv.linux.org.uk>, qla2xxx-upstream@qlogic.com, Thomas Gleixner <tglx@linutronix.de>, Mauro Carvalho Chehab <mchehab@kernel.org>, Kalle Valo <kvalo@codeaurora.org>, Alan Cox <alan@linux.intel.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Greg KH <gregkh@linuxfoundation.org>, Linux Wireless List <linux-wireless@vger.kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Network Development <netdev@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Laurent Pinchart <laurent.pinchart@ideasonboard.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] [PATCH v3 0/9] core,
+ x86: prevent bounds-check bypass via speculative execution
+To: linux-kernel@vger.kernel.org
+Cc: Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "H. Peter Anvin" <hpa@zytor.com>, Elena Reshetova <elena.reshetova@intel.com>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, x86@kernel.org, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Alan Cox <alan.cox@intel.com>, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, tglx@linutronix.de, alan@linux.intel.com, gregkh@linuxfoundation.org, akpm@linux-foundation.org, torvalds@linux-foundation.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 11, 2018 at 5:19 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> Should the array access in entry_SYSCALL_64_fastpath be made to use
-> the masking approach?
+Changes since v2 [1]:
+* style fix in Documentation/speculation.txt (Geert)
 
-That one has a bounds check for an inline constant.
+* add Russell and Catalin to the cc on the ARM patches (Russell)
 
-     cmpq    $__NR_syscall_max, %rax
+* clarify changelog for "x86: introduce __uaccess_begin_nospec and
+  ASM_IFENCE" (Eric, Linus, Josh)
 
-so should be safe.
+* fix the dynamic 'mask' / 'ifence' toggle vs CONFIG_JUMP_LABEL=n
+  (Peter)
 
-The classic Spectre variant #1 code sequence is:
+* include the get_user_{1,2,4,8} helpers in the ASM_IFENCE protections
+  (Linus)
 
-int array_size;
+* fix array_ptr_mask for ARCH=i386 builds (Kbuild robot)
 
-       if (x < array_size) {
-               something with array[x]
-       }
+* prioritize the get_user protections, and the fdtable fix
 
-which runs into problems because the array_size variable may not
-be in cache, and while the CPU core is waiting for the value it
-speculates inside the "if" body.
+[1]: https://lwn.net/Articles/744141/
 
-The syscall entry is more like:
+---
 
-#define ARRAY_SIZE 10
+Quoting Mark's original RFC:
 
-     if (x < ARRAY_SIZE) {
-          something with array[x]
-     }
+"Recently, Google Project Zero discovered several classes of attack
+against speculative execution. One of these, known as variant-1, allows
+explicit bounds checks to be bypassed under speculation, providing an
+arbitrary read gadget. Further details can be found on the GPZ blog [2]
+and the Documentation patch in this series."
 
-Here there isn't any reason for speculation. The core has the
-value of 'x' in a register and the upper bound encoded into the
-"cmp" instruction.  Both are right there, no waiting, no speculation.
+This series incorporates Mark Rutland's latest ARM changes and adds
+the x86 specific implementation of 'ifence_array_ptr'. That ifence
+based approach is provided as an opt-in fallback, but the default
+mitigation, '__array_ptr', uses a 'mask' approach that removes
+conditional branches instructions, and otherwise aims to redirect
+speculation to use a NULL pointer rather than a user controlled value.
 
--Tony
+The mask is generated by the following from Alexei, and Linus:
+
+    mask = ~(long)(_i | (_s - 1 - _i)) >> (BITS_PER_LONG - 1);
+
+...and Linus provided an optimized mask generation helper for x86:
+
+    asm ("cmpq %1,%2; sbbq %0,%0;"
+		:"=r" (mask)
+		:"r"(sz),"r" (idx)
+		:"cc");
+
+The 'array_ptr' mechanism can be switched between 'mask' and 'ifence'
+via the spectre_v1={mask,ifence} command line option if
+CONFIG_SPECTRE1_DYNAMIC=y, and the compile-time default is otherwise set
+by selecting either CONFIG_SPECTRE1_MASK or CONFIG_SPECTRE1_IFENCE. This
+level of sophistication is provided given concerns about 'value
+speculation' [3].
+
+The get_user protections and 'array_ptr' infrastructure are the only
+concern of this patch set. Going forward 'array_ptr' is a tool that
+sub-system maintainers can use to instrument array bounds checks like
+'__fcheck_files'. When to use 'array_ptr' is saved for a future patch
+set, and in the meantime the 'get_user' protections raise the bar for
+launching a Spectre-v1 attack.
+
+These patches are also available via the 'nospec-v3' git branch here:
+
+    git://git.kernel.org/pub/scm/linux/kernel/git/djbw/linux nospec-v3
+
+Note that the BPF fix for Spectre variant1 is merged for 4.15-rc8.
+
+[2]: https://googleprojectzero.blogspot.co.uk/2018/01/reading-privileged-memory-with-side.html
+[3]: https://marc.info/?l=linux-netdev&m=151527996901350&w=2
+
+---
+
+Dan Williams (6):
+      x86: implement ifence()
+      x86: implement ifence_array_ptr() and array_ptr_mask()
+      asm/nospec: mask speculative execution flows
+      x86: introduce __uaccess_begin_nospec and ASM_IFENCE
+      x86: use __uaccess_begin_nospec and ASM_IFENCE in get_user paths
+      vfs, fdtable: prevent bounds-check bypass via speculative execution
+
+Mark Rutland (3):
+      Documentation: document array_ptr
+      arm64: implement ifence_array_ptr()
+      arm: implement ifence_array_ptr()
+
+
+ Documentation/speculation.txt     |  143 +++++++++++++++++++++++++++++++++++++
+ arch/arm/Kconfig                  |    1 
+ arch/arm/include/asm/barrier.h    |   24 ++++++
+ arch/arm64/Kconfig                |    1 
+ arch/arm64/include/asm/barrier.h  |   24 ++++++
+ arch/x86/Kconfig                  |    3 +
+ arch/x86/include/asm/barrier.h    |   50 +++++++++++++
+ arch/x86/include/asm/msr.h        |    3 -
+ arch/x86/include/asm/smap.h       |    4 +
+ arch/x86/include/asm/uaccess.h    |   16 +++-
+ arch/x86/include/asm/uaccess_32.h |    6 +-
+ arch/x86/include/asm/uaccess_64.h |   12 ++-
+ arch/x86/lib/copy_user_64.S       |    3 +
+ arch/x86/lib/getuser.S            |    5 +
+ arch/x86/lib/usercopy_32.c        |    8 +-
+ include/linux/fdtable.h           |    7 +-
+ include/linux/nospec.h            |   92 ++++++++++++++++++++++++
+ kernel/Kconfig.nospec             |   46 ++++++++++++
+ kernel/Makefile                   |    1 
+ kernel/nospec.c                   |   52 +++++++++++++
+ lib/Kconfig                       |    3 +
+ 21 files changed, 484 insertions(+), 20 deletions(-)
+ create mode 100644 Documentation/speculation.txt
+ create mode 100644 include/linux/nospec.h
+ create mode 100644 kernel/Kconfig.nospec
+ create mode 100644 kernel/nospec.c
