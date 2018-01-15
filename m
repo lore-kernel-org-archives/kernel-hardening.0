@@ -1,119 +1,74 @@
-Date: Mon, 15 Jan 2018 11:32:20 +0100
-From: Jan Kara <jack@suse.cz>
-Message-ID: <20180115103220.g3xtdsybkfxqkapx@quack2.suse.cz>
-References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151571805555.27429.728109914195885407.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Mon, 15 Jan 2018 12:24:59 +0000
+From: Dave P Martin <Dave.Martin@arm.com>
+Message-ID: <20180115122458.GI12608@e103592.cambridge.arm.com>
+References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
+ <1515636190-24061-34-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <151571805555.27429.728109914195885407.stgit@dwillia2-desk3.amr.corp.intel.com>
-Subject: [kernel-hardening] Re: [PATCH v2 13/19] udf: prevent bounds-check bypass via
- speculative execution
-To: Dan Williams <dan.j.williams@intel.com>
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Jan Kara <jack@suse.com>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, Elena Reshetova <elena.reshetova@intel.com>, alan@linux.intel.com
+In-Reply-To: <1515636190-24061-34-git-send-email-keescook@chromium.org>
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH 33/38] arm64: Implement thread_struct whitelist for
+ hardened usercopy
+To: Kees Cook <keescook@chromium.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Catalin Marinas <Catalin.Marinas@arm.com>, Will Deacon <Will.Deacon@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Ingo Molnar <mingo@kernel.org>, James Morse <James.Morse@arm.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, zijun_hu <zijun_hu@htc.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <Mark.Rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <Marc.Zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu 11-01-18 16:47:35, Dan Williams wrote:
-> Static analysis reports that 'eahd->appAttrLocation' and
-> 'eahd->impAttrLocation' may be a user controlled values that are used as
-> data dependencies for calculating source and destination buffers for
-> memmove operations. In order to avoid potential leaks of kernel memory
-> values, block speculative execution of the instruction stream that could
-> issue further reads based on invalid 'aal' or 'ial' values.
-> 
-> Based on an original patch by Elena Reshetova.
-> 
-> Cc: Jan Kara <jack@suse.com>
-> Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
-> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
-
-Dan, I've already emailed to you [1] why I don't think this patch is needed
-at all. Do you disagree or did my email just get lost?
-
-[1] https://marc.info/?l=linux-arch&m=151540683024125&w=2
-
-								Honza
-
+On Thu, Jan 11, 2018 at 02:03:05AM +0000, Kees Cook wrote:
+> This whitelists the FPU register state portion of the thread_struct for
+> copying to userspace, instead of the default entire structure.
+>
+> Cc: Catalin Marinas <catalin.marinas@arm.com>
+> Cc: Will Deacon <will.deacon@arm.com>
+> Cc: Christian Borntraeger <borntraeger@de.ibm.com>
+> Cc: Ingo Molnar <mingo@kernel.org>
+> Cc: James Morse <james.morse@arm.com>
+> Cc: "Peter Zijlstra (Intel)" <peterz@infradead.org>
+> Cc: Dave Martin <Dave.Martin@arm.com>
+> Cc: zijun_hu <zijun_hu@htc.com>
+> Cc: linux-arm-kernel@lists.infradead.org
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 > ---
->  fs/udf/misc.c |   40 ++++++++++++++++++++++------------------
->  1 file changed, 22 insertions(+), 18 deletions(-)
-> 
-> diff --git a/fs/udf/misc.c b/fs/udf/misc.c
-> index 401e64cde1be..693e24699928 100644
-> --- a/fs/udf/misc.c
-> +++ b/fs/udf/misc.c
-> @@ -22,6 +22,7 @@
->  #include "udfdecl.h"
->  
->  #include <linux/fs.h>
-> +#include <linux/nospec.h>
->  #include <linux/string.h>
->  #include <linux/crc-itu-t.h>
->  
-> @@ -51,6 +52,8 @@ struct genericFormat *udf_add_extendedattr(struct inode *inode, uint32_t size,
->  	int offset;
->  	uint16_t crclen;
->  	struct udf_inode_info *iinfo = UDF_I(inode);
-> +	uint8_t *ea_dst, *ea_src;
-> +	uint32_t aal, ial;
->  
->  	ea = iinfo->i_ext.i_data;
->  	if (iinfo->i_lenEAttr) {
-> @@ -100,33 +103,34 @@ struct genericFormat *udf_add_extendedattr(struct inode *inode, uint32_t size,
->  
->  		offset = iinfo->i_lenEAttr;
->  		if (type < 2048) {
-> -			if (le32_to_cpu(eahd->appAttrLocation) <
-> -					iinfo->i_lenEAttr) {
-> -				uint32_t aal =
-> -					le32_to_cpu(eahd->appAttrLocation);
-> -				memmove(&ea[offset - aal + size],
-> -					&ea[aal], offset - aal);
-> +			aal = le32_to_cpu(eahd->appAttrLocation);
-> +			ea_dst = array_ptr(ea, offset - aal + size,
-> +					iinfo->i_lenEAttr);
-> +			ea_src = array_ptr(ea, aal, iinfo->i_lenEAttr);
-> +			if (ea_dst && ea_src) {
-> +				memmove(ea_dst, ea_src, offset - aal);
->  				offset -= aal;
->  				eahd->appAttrLocation =
->  						cpu_to_le32(aal + size);
->  			}
-> -			if (le32_to_cpu(eahd->impAttrLocation) <
-> -					iinfo->i_lenEAttr) {
-> -				uint32_t ial =
-> -					le32_to_cpu(eahd->impAttrLocation);
-> -				memmove(&ea[offset - ial + size],
-> -					&ea[ial], offset - ial);
-> +
-> +			ial = le32_to_cpu(eahd->impAttrLocation);
-> +			ea_dst = array_ptr(ea, offset - ial + size,
-> +					iinfo->i_lenEAttr);
-> +			ea_src = array_ptr(ea, ial, iinfo->i_lenEAttr);
-> +			if (ea_dst && ea_src) {
-> +				memmove(ea_dst, ea_src, offset - ial);
->  				offset -= ial;
->  				eahd->impAttrLocation =
->  						cpu_to_le32(ial + size);
->  			}
->  		} else if (type < 65536) {
-> -			if (le32_to_cpu(eahd->appAttrLocation) <
-> -					iinfo->i_lenEAttr) {
-> -				uint32_t aal =
-> -					le32_to_cpu(eahd->appAttrLocation);
-> -				memmove(&ea[offset - aal + size],
-> -					&ea[aal], offset - aal);
-> +			aal = le32_to_cpu(eahd->appAttrLocation);
-> +			ea_dst = array_ptr(ea, offset - aal + size,
-> +					iinfo->i_lenEAttr);
-> +			ea_src = array_ptr(ea, aal, iinfo->i_lenEAttr);
-> +			if (ea_dst && ea_src) {
-> +				memmove(ea_dst, ea_src, offset - aal);
->  				offset -= aal;
->  				eahd->appAttrLocation =
->  						cpu_to_le32(aal + size);
-> 
-> 
--- 
-Jan Kara <jack@suse.com>
-SUSE Labs, CR
+>  arch/arm64/Kconfig                 | 1 +
+>  arch/arm64/include/asm/processor.h | 8 ++++++++
+>  2 files changed, 9 insertions(+)
+>
+> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+> index a93339f5178f..c84477e6a884 100644
+> --- a/arch/arm64/Kconfig
+> +++ b/arch/arm64/Kconfig
+> @@ -90,6 +90,7 @@ config ARM64
+>       select HAVE_ARCH_MMAP_RND_BITS
+>       select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
+>       select HAVE_ARCH_SECCOMP_FILTER
+> +     select HAVE_ARCH_THREAD_STRUCT_WHITELIST
+>       select HAVE_ARCH_TRACEHOOK
+>       select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+>       select HAVE_ARCH_VMAP_STACK
+> diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/=
+processor.h
+> index 023cacb946c3..e58a5864ec89 100644
+> --- a/arch/arm64/include/asm/processor.h
+> +++ b/arch/arm64/include/asm/processor.h
+> @@ -113,6 +113,14 @@ struct thread_struct {
+>       struct debug_info       debug;          /* debugging */
+>  };
+>
+> +/* Whitelist the fpsimd_state for copying to userspace. */
+> +static inline void arch_thread_struct_whitelist(unsigned long *offset,
+> +                                             unsigned long *size)
+> +{
+> +     *offset =3D offsetof(struct thread_struct, fpsimd_state);
+> +     *size =3D sizeof(struct fpsimd_state);
+
+This should be fpsimd_state.user_fpsimd (fpsimd_state.cpu is important
+for correctly context switching and not supposed to be user-accessible.
+A user copy that encompasses that is definitely a bug).
+
+Cheers
+---Dave
+IMPORTANT NOTICE: The contents of this email and any attachments are confid=
+ential and may also be privileged. If you are not the intended recipient, p=
+lease notify the sender immediately and do not disclose the contents to any=
+ other person, use it for any purpose, or store or copy the information in =
+any medium. Thank you.
