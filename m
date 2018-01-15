@@ -1,278 +1,79 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1515766769-9120-1-git-send-email-alex.popov@linux.com>
-References: <1515766769-9120-1-git-send-email-alex.popov@linux.com>
+In-Reply-To: <20180115122458.GI12608@e103592.cambridge.arm.com>
+References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
+ <1515636190-24061-34-git-send-email-keescook@chromium.org> <20180115122458.GI12608@e103592.cambridge.arm.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 15 Jan 2018 11:59:30 -0800
-Message-ID: <CAGXu5jKmOn7E04Y8pR9Tgn7usJYMhqWe9x929ZwEnu21MG=mZw@mail.gmail.com>
+Date: Mon, 15 Jan 2018 12:06:17 -0800
+Message-ID: <CAGXu5jLHb3BQ9U7g6suoVZwVeETiXiCRbxsprpLNiFxcjcWk1A@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH RFC v7 0/6] Introduce the STACKLEAK feature and a test for it
-To: Alexander Popov <alex.popov@linux.com>
-Cc: kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, X86 ML <x86@kernel.org>
+Subject: [kernel-hardening] Re: [PATCH 33/38] arm64: Implement thread_struct whitelist for
+ hardened usercopy
+To: Dave P Martin <Dave.Martin@arm.com>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Catalin Marinas <Catalin.Marinas@arm.com>, Will Deacon <Will.Deacon@arm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Ingo Molnar <mingo@kernel.org>, James Morse <James.Morse@arm.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, zijun_hu <zijun_hu@htc.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>, David Windsor <dave@nullcore.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <Mark.Rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <Marc.Zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 12, 2018 at 6:19 AM, Alexander Popov <alex.popov@linux.com> wrote:
-> This is the 7th version of the patch series introducing STACKLEAK to the
-> mainline kernel. STACKLEAK is a security feature developed by Grsecurity/PaX
-> (kudos to them), which:
->  - reduces the information that can be revealed through kernel stack leak bugs;
->  - blocks some uninitialized stack variable attacks (e.g. CVE-2010-2963);
->  - introduces some runtime checks for kernel stack overflow detection.
+On Mon, Jan 15, 2018 at 4:24 AM, Dave P Martin <Dave.Martin@arm.com> wrote:
+> On Thu, Jan 11, 2018 at 02:03:05AM +0000, Kees Cook wrote:
+>> This whitelists the FPU register state portion of the thread_struct for
+>> copying to userspace, instead of the default entire structure.
+>>
+>> Cc: Catalin Marinas <catalin.marinas@arm.com>
+>> Cc: Will Deacon <will.deacon@arm.com>
+>> Cc: Christian Borntraeger <borntraeger@de.ibm.com>
+>> Cc: Ingo Molnar <mingo@kernel.org>
+>> Cc: James Morse <james.morse@arm.com>
+>> Cc: "Peter Zijlstra (Intel)" <peterz@infradead.org>
+>> Cc: Dave Martin <Dave.Martin@arm.com>
+>> Cc: zijun_hu <zijun_hu@htc.com>
+>> Cc: linux-arm-kernel@lists.infradead.org
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> ---
+>>  arch/arm64/Kconfig                 | 1 +
+>>  arch/arm64/include/asm/processor.h | 8 ++++++++
+>>  2 files changed, 9 insertions(+)
+>>
+>> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+>> index a93339f5178f..c84477e6a884 100644
+>> --- a/arch/arm64/Kconfig
+>> +++ b/arch/arm64/Kconfig
+>> @@ -90,6 +90,7 @@ config ARM64
+>>       select HAVE_ARCH_MMAP_RND_BITS
+>>       select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
+>>       select HAVE_ARCH_SECCOMP_FILTER
+>> +     select HAVE_ARCH_THREAD_STRUCT_WHITELIST
+>>       select HAVE_ARCH_TRACEHOOK
+>>       select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+>>       select HAVE_ARCH_VMAP_STACK
+>> diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
+>> index 023cacb946c3..e58a5864ec89 100644
+>> --- a/arch/arm64/include/asm/processor.h
+>> +++ b/arch/arm64/include/asm/processor.h
+>> @@ -113,6 +113,14 @@ struct thread_struct {
+>>       struct debug_info       debug;          /* debugging */
+>>  };
+>>
+>> +/* Whitelist the fpsimd_state for copying to userspace. */
+>> +static inline void arch_thread_struct_whitelist(unsigned long *offset,
+>> +                                             unsigned long *size)
+>> +{
+>> +     *offset = offsetof(struct thread_struct, fpsimd_state);
+>> +     *size = sizeof(struct fpsimd_state);
+>
+> This should be fpsimd_state.user_fpsimd (fpsimd_state.cpu is important
+> for correctly context switching and not supposed to be user-accessible.
+> A user copy that encompasses that is definitely a bug).
 
-I think this is really looking good. I had some thoughts while reading
-through the patches:
+So, I actually spent some more time looking at this due to the
+comments from rmk on arm32, and I don't think any whitelist is needed
+here at all. (i.e. it can be *offset = *size = 0) This is because all
+the usercopying I could find uses static sizes or bounce buffers, both
+of which bypass the dynamic-size hardened usercopy checks.
 
-There are really three features in this series, and it might make
-sense to separate them a bit more clearly (at least with CONFIG
-choices):
-
-1) stack clearing (with depth searching)
-
-2) runtime stack depth tracking (making 1 much more efficient)
-
-3) alloca checking (an additional feature, not strictly part of
-clearing, but needs the same plugin infrastructure)
-
-It seems like it should be possible to get 1 without 2 and 3 (both of
-which happen in the gcc plugin), and might be good to separate for
-builds that don't have gcc plugins.
-
-Once compilers are doing alloca checking (or all VLAs are removed from
-the kernel), it'd be nice to be able to avoid the redundancy of 3.
-
-Thanks for continuing to work on this!
+I've been running some arm64 builds now with this change, and I
+haven't tripped over any problems yet...
 
 -Kees
-
->
-> Changes in v7
-> =============
->
-> 1. Improved erase_kstack(). Now it detects which stack we are currently using.
->    If we are on the thread stack, erase_kstack() writes the poison value up
->    to the stack pointer. If we are not on the thread stack (we are on the
->    trampoline stack introduced by Andy Lutomirski), erase_kstack() writes
->    the poison value up to the cpu_current_top_of_stack.
->
->    N.B. Right now there are two situations when erase_kstack() is called
->    on the thread stack:
->     - from sysret32_from_system_call in entry_64_compat.S;
->     - from syscall_trace_enter() (see the 3rd patch of this series).
->
-> 2. Introduced STACKLEAK_POISON_CHECK_DEPTH macro and BUILD_BUG_ON() checking
->    its consistency with CONFIG_STACKLEAK_TRACK_MIN_SIZE.
->
-> 3. Added "disable" option for the STACKLEAK gcc plugin (asked by Laura Abbott).
->
-> 4. Improved CONFIG_STACKLEAK_METRICS. Now /proc/<pid>/stack_depth shows
->    the maximum kernel stack consumption for the current and previous syscalls.
->    Although this information is not precise, it can be useful for estimating
->    the STACKLEAK performance impact for different workloads.
->
-> 5. Removed redundant erase_kstack() calls from syscall_trace_enter().
->    There is no need to erase the stack in syscall_trace_enter() when it
->    returns -1 (thanks to Dmitry Levin for noticing that).
->
-> 6. Introduced MIN_STACK_LEFT to get rid of hardcoded numbers in check_alloca().
->
-> STACKLEAK instrumentation statistics
-> ====================================
->
-> These numbers were obtained for the 4th version of the patch series.
->
-> Size of vmlinux (x86_64_defconfig):
->  file size:
->   - STACKLEAK disabled: 35014784 bytes
->   - STACKLEAK enabled: 35044952 bytes (+0.086%)
->  .text section size (calculated by size utility):
->   - STACKLEAK disabled: 10752983
->   - STACKLEAK enabled: 11062221 (+2.876%)
->
-> The readelf utility shows 45602 functions in vmlinux. The STACKLEAK gcc plugin
-> inserted 36 check_alloca() calls and 1265 track_stack() calls (42274 calls are
-> inserted during GIMPLE pass and 41009 calls are deleted during RTL pass).
-> So 2.853% of functions are instrumented.
->
-> STACKLEAK performance impact
-> ============================
->
-> The STACKLEAK description in Kconfig includes:
-> "The tradeoff is the performance impact: on a single CPU system kernel
-> compilation sees a 1% slowdown, other systems and workloads may vary and you are
-> advised to test this feature on your expected workload before deploying it".
->
-> Here are the results of a brief performance test on x86_64 (for the 2nd version
-> of the patch). The numbers are very different because the STACKLEAK performance
-> penalty depends on the workloads.
->
-> Hardware: Intel Core i7-4770, 16 GB RAM
->
-> Test #1: building the Linux kernel with Ubuntu config (time make -j9)
-> Result on 4.11-rc8:
->   real  32m14.893s
->   user  237m30.886s
->   sys   11m12.273s
-> Result on 4.11-rc8+stackleak:
->   real  32m26.881s (+0.62%)
->   user  238m38.926s (+0.48%)
->   sys   11m36.426s (+3.59%)
->
-> Test #2: hackbench -s 4096 -l 2000 -g 15 -f 25 -P
-> Average result on 4.11-rc8: 8.71s
-> Average result on 4.11-rc8+stackleak: 9.08s (+4.29%)
->
-> Previous changes
-> ================
->
-> Changes in v6
->
-> 1. Examined syscall entry/exit paths.
->     - Added missing erase_kstack() call at ret_from_fork() for x86_32.
->     - Added missing erase_kstack() call at syscall_trace_enter().
->     - Solved questions previously marked with TODO.
->
-> 2. Rebased onto v4.15-rc2, which includes Andy Lutomirski's entry changes.
->    Andy removed sp0 from thread_struct for x86_64, which was the only issue
->    during rebasing.
->
-> 3. Removed the recursive BUG() in track_stack() that was caused by the code
->    instrumentation. Instead, CONFIG_GCC_PLUGIN_STACKLEAK now implies
->    CONFIG_VMAP_STACK and CONFIG_SCHED_STACK_END_CHECK, which seems to be
->    an optimal solution.
->
-> 4. Put stack erasing in syscall_trace_enter() into a separate patch and
->    fixed my mistake with secure_computing() (found by Tycho Andersen).
->
-> 5. After some experiments, kept the asm implementation of erase_kstack(),
->    because it gives a full control over the stack for clearing it neatly
->    and doesn't offend KASAN.
->
-> 6. Improved the comments describing STACKLEAK.
->
-> Changes in v5 (mostly according to the feedback from Ingo Molnar)
->
-> 1. Introduced the CONFIG_STACKLEAK_METRICS providing STACKLEAK information
->    about tasks via the /proc file system. That information can be useful for
->    estimating the STACKLEAK performance impact for different workloads.
->    In particular, /proc/<pid>/lowest_stack shows the current lowest_stack
->    value and its final value from the previous syscall.
->
-> 2. Introduced a single check_alloca() implementation working for both
->    x86_64 and x86_32.
->
-> 3. Fixed coding style issues and did some refactoring in the STACKLEAK
->    gcc plugin.
->
-> 4. Put the gcc plugin and the kernel stack erasing into separate (working)
->    patches.
->
-> Changes in v4
->
-> 1. Introduced the CONFIG_STACKLEAK_TRACK_MIN_SIZE parameter instead of
->    hard-coded track-lowest-sp.
->
-> 2. Carefully looked into the assertions in track_stack() and check_alloca().
->     - Fixed the incorrect BUG() condition in track_stack(), thanks to Tycho
->        Andersen. Also disabled that check if CONFIG_VMAP_STACK is enabled.
->     - Fixed the surplus and erroneous code for calculating stack_left in
->        check_alloca() on x86_64. That code repeats the work which is already
->        done in get_stack_info() and it misses the fact that different
->        exception stacks on x86_64 have different size.
->
-> 3. Introduced two lkdtm tests for the STACKLEAK feature (developed together
->    with Tycho Andersen).
->
-> 4. Added info about STACKLEAK to Documentation/security/self-protection.rst.
->
-> 5. Improved the comments.
->
-> 6. Decided not to change "unsigned long sp = (unsigned long)&sp" to
->    current_stack_pointer. The original variant is more platform independent
->    since current_stack_pointer has different type on x86 and arm.
->
-> Changes in v3
->
-> 1. Added the detailed comments describing the STACKLEAK gcc plugin.
->    Read the plugin from the bottom up, like you do for Linux kernel drivers.
->    Additional information:
->     - gcc internals documentation available from gcc sources;
->     - wonderful slides by Diego Novillo
->        https://www.airs.com/dnovillo/200711-GCC-Internals/
->     - nice introduction to gcc plugins at LWN
->        https://lwn.net/Articles/457543/
->
-> 2. Improved the commit message and Kconfig description according to the
->    feedback from Kees Cook. Also added the original notice describing
->    the performance impact of the STACKLEAK feature.
->
-> 3. Removed the arch-specific ix86_cmodel check in stackleak_track_stack_gate().
->    It caused skipping the kernel code instrumentation for i386.
->
-> 4. Fixed a minor mistake in stackleak_tree_instrument_execute().
->    First versions of the plugin used ENTRY_BLOCK_PTR_FOR_FN(cfun)->next_bb
->    to get the basic block with the function prologue. That was not correct
->    since the control flow graph edge from ENTRY_BLOCK_PTR doesn't always
->    go to that basic block.
->
->    So later it was changed to single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun)),
->    but not completely. next_bb was still used for entry_bb assignment,
->    which could cause the wrong value of the prologue_instrumented variable.
->
->    I've reported this issue to Grsecurity and proposed the fix for it, but
->    unfortunately didn't get any reply.
->
-> 5. Introduced the STACKLEAK_POISON macro and renamed the config option
->    according to the feedback from Kees Cook.
->
-> Ideas for further work
-> ======================
->
->  - Think of erasing stack on the way out of exception handlers (idea by
->    Andy Lutomirski).
->  - Think of erasing the kernel stack after invoking EFI runtime services
->    (idea by Mark Rutland).
->  - Try to port STACKLEAK to arm64 (Laura Abbott is working on it).
->
->
-> Alexander Popov (6):
->   x86/entry: Add STACKLEAK erasing the kernel stack at the end of
->     syscalls
->   gcc-plugins: Add STACKLEAK plugin for tracking the kernel stack
->   x86/entry: Erase kernel stack in syscall_trace_enter()
->   lkdtm: Add a test for STACKLEAK
->   fs/proc: Show STACKLEAK metrics in the /proc file system
->   doc: self-protection: Add information about STACKLEAK feature
->
->  Documentation/security/self-protection.rst |  23 +-
->  arch/Kconfig                               |  53 ++++
->  arch/x86/Kconfig                           |   1 +
->  arch/x86/entry/common.c                    |   7 +
->  arch/x86/entry/entry_32.S                  |  69 +++++
->  arch/x86/entry/entry_64.S                  | 113 +++++++
->  arch/x86/entry/entry_64_compat.S           |  11 +
->  arch/x86/include/asm/processor.h           |   7 +
->  arch/x86/kernel/asm-offsets.c              |  11 +
->  arch/x86/kernel/dumpstack.c                |  20 ++
->  arch/x86/kernel/process_32.c               |   8 +
->  arch/x86/kernel/process_64.c               |   8 +
->  drivers/misc/Makefile                      |   3 +
->  drivers/misc/lkdtm.h                       |   4 +
->  drivers/misc/lkdtm_core.c                  |   2 +
->  drivers/misc/lkdtm_stackleak.c             | 139 +++++++++
->  fs/exec.c                                  |  33 ++
->  fs/proc/base.c                             |  18 ++
->  include/linux/compiler.h                   |   6 +
->  scripts/Makefile.gcc-plugins               |   3 +
->  scripts/gcc-plugins/stackleak_plugin.c     | 471 +++++++++++++++++++++++++++++
->  21 files changed, 1001 insertions(+), 9 deletions(-)
->  create mode 100644 drivers/misc/lkdtm_stackleak.c
->  create mode 100644 scripts/gcc-plugins/stackleak_plugin.c
->
-> --
-> 2.7.4
->
-
-
 
 -- 
 Kees Cook
