@@ -1,18 +1,119 @@
-From: David Howells <dhowells@redhat.com>
-In-Reply-To: <20180113213441.52047-5-dan@kernelim.com>
-References: <20180113213441.52047-5-dan@kernelim.com> <20180113213441.52047-1-dan@kernelim.com>
+Date: Mon, 15 Jan 2018 11:32:20 +0100
+From: Jan Kara <jack@suse.cz>
+Message-ID: <20180115103220.g3xtdsybkfxqkapx@quack2.suse.cz>
+References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151571805555.27429.728109914195885407.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <12187.1516007490.1@warthog.procyon.org.uk>
-Date: Mon, 15 Jan 2018 09:11:30 +0000
-Message-ID: <12188.1516007490@warthog.procyon.org.uk>
-Subject: [kernel-hardening] Re: [PATCHv2 4/7] certs: allow in-kernel access of trusted keys
-To: Dan Aloni <dan@kernelim.com>
-Cc: dhowells@redhat.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <151571805555.27429.728109914195885407.stgit@dwillia2-desk3.amr.corp.intel.com>
+Subject: [kernel-hardening] Re: [PATCH v2 13/19] udf: prevent bounds-check bypass via
+ speculative execution
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Jan Kara <jack@suse.com>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, Elena Reshetova <elena.reshetova@intel.com>, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Dan,
+On Thu 11-01-18 16:47:35, Dan Williams wrote:
+> Static analysis reports that 'eahd->appAttrLocation' and
+> 'eahd->impAttrLocation' may be a user controlled values that are used as
+> data dependencies for calculating source and destination buffers for
+> memmove operations. In order to avoid potential leaks of kernel memory
+> values, block speculative execution of the instruction stream that could
+> issue further reads based on invalid 'aal' or 'ial' values.
+> 
+> Based on an original patch by Elena Reshetova.
+> 
+> Cc: Jan Kara <jack@suse.com>
+> Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
+> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 
-The patch needs a description saying what you're doing and why.
+Dan, I've already emailed to you [1] why I don't think this patch is needed
+at all. Do you disagree or did my email just get lost?
 
-David
+[1] https://marc.info/?l=linux-arch&m=151540683024125&w=2
+
+								Honza
+
+> ---
+>  fs/udf/misc.c |   40 ++++++++++++++++++++++------------------
+>  1 file changed, 22 insertions(+), 18 deletions(-)
+> 
+> diff --git a/fs/udf/misc.c b/fs/udf/misc.c
+> index 401e64cde1be..693e24699928 100644
+> --- a/fs/udf/misc.c
+> +++ b/fs/udf/misc.c
+> @@ -22,6 +22,7 @@
+>  #include "udfdecl.h"
+>  
+>  #include <linux/fs.h>
+> +#include <linux/nospec.h>
+>  #include <linux/string.h>
+>  #include <linux/crc-itu-t.h>
+>  
+> @@ -51,6 +52,8 @@ struct genericFormat *udf_add_extendedattr(struct inode *inode, uint32_t size,
+>  	int offset;
+>  	uint16_t crclen;
+>  	struct udf_inode_info *iinfo = UDF_I(inode);
+> +	uint8_t *ea_dst, *ea_src;
+> +	uint32_t aal, ial;
+>  
+>  	ea = iinfo->i_ext.i_data;
+>  	if (iinfo->i_lenEAttr) {
+> @@ -100,33 +103,34 @@ struct genericFormat *udf_add_extendedattr(struct inode *inode, uint32_t size,
+>  
+>  		offset = iinfo->i_lenEAttr;
+>  		if (type < 2048) {
+> -			if (le32_to_cpu(eahd->appAttrLocation) <
+> -					iinfo->i_lenEAttr) {
+> -				uint32_t aal =
+> -					le32_to_cpu(eahd->appAttrLocation);
+> -				memmove(&ea[offset - aal + size],
+> -					&ea[aal], offset - aal);
+> +			aal = le32_to_cpu(eahd->appAttrLocation);
+> +			ea_dst = array_ptr(ea, offset - aal + size,
+> +					iinfo->i_lenEAttr);
+> +			ea_src = array_ptr(ea, aal, iinfo->i_lenEAttr);
+> +			if (ea_dst && ea_src) {
+> +				memmove(ea_dst, ea_src, offset - aal);
+>  				offset -= aal;
+>  				eahd->appAttrLocation =
+>  						cpu_to_le32(aal + size);
+>  			}
+> -			if (le32_to_cpu(eahd->impAttrLocation) <
+> -					iinfo->i_lenEAttr) {
+> -				uint32_t ial =
+> -					le32_to_cpu(eahd->impAttrLocation);
+> -				memmove(&ea[offset - ial + size],
+> -					&ea[ial], offset - ial);
+> +
+> +			ial = le32_to_cpu(eahd->impAttrLocation);
+> +			ea_dst = array_ptr(ea, offset - ial + size,
+> +					iinfo->i_lenEAttr);
+> +			ea_src = array_ptr(ea, ial, iinfo->i_lenEAttr);
+> +			if (ea_dst && ea_src) {
+> +				memmove(ea_dst, ea_src, offset - ial);
+>  				offset -= ial;
+>  				eahd->impAttrLocation =
+>  						cpu_to_le32(ial + size);
+>  			}
+>  		} else if (type < 65536) {
+> -			if (le32_to_cpu(eahd->appAttrLocation) <
+> -					iinfo->i_lenEAttr) {
+> -				uint32_t aal =
+> -					le32_to_cpu(eahd->appAttrLocation);
+> -				memmove(&ea[offset - aal + size],
+> -					&ea[aal], offset - aal);
+> +			aal = le32_to_cpu(eahd->appAttrLocation);
+> +			ea_dst = array_ptr(ea, offset - aal + size,
+> +					iinfo->i_lenEAttr);
+> +			ea_src = array_ptr(ea, aal, iinfo->i_lenEAttr);
+> +			if (ea_dst && ea_src) {
+> +				memmove(ea_dst, ea_src, offset - aal);
+>  				offset -= aal;
+>  				eahd->appAttrLocation =
+>  						cpu_to_le32(aal + size);
+> 
+> 
+-- 
+Jan Kara <jack@suse.com>
+SUSE Labs, CR
