@@ -1,59 +1,66 @@
-Date: Tue, 16 Jan 2018 09:21:30 -0600 (CST)
-From: Christopher Lameter <cl@linux.com>
-In-Reply-To: <20180114230719.GB32027@bombadil.infradead.org>
-Message-ID: <alpine.DEB.2.20.1801160913260.3908@nuc-kabylake>
-References: <1515531365-37423-1-git-send-email-keescook@chromium.org> <1515531365-37423-5-git-send-email-keescook@chromium.org> <alpine.DEB.2.20.1801101219390.7926@nuc-kabylake> <20180114230719.GB32027@bombadil.infradead.org>
+Date: Tue, 16 Jan 2018 08:05:25 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Message-ID: <20180116160525.GF30073@bombadil.infradead.org>
+References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
+ <1515531365-37423-5-git-send-email-keescook@chromium.org>
+ <alpine.DEB.2.20.1801101219390.7926@nuc-kabylake>
+ <20180114230719.GB32027@bombadil.infradead.org>
+ <alpine.DEB.2.20.1801160913260.3908@nuc-kabylake>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] kmem_cache_attr (was Re: [PATCH 04/36] usercopy: Prepare for usercopy
- whitelisting)
-To: Matthew Wilcox <willy@infradead.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <alpine.DEB.2.20.1801160913260.3908@nuc-kabylake>
+Subject: [kernel-hardening] Re: kmem_cache_attr (was Re: [PATCH 04/36] usercopy: Prepare for
+ usercopy whitelisting)
+To: Christopher Lameter <cl@linux.com>
 Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, David Windsor <dave@nullcore.net>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, linux-xfs@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, 14 Jan 2018, Matthew Wilcox wrote:
+On Tue, Jan 16, 2018 at 09:21:30AM -0600, Christopher Lameter wrote:
+> > struct kmem_cache_attr {
+> > 	const char name[32];
+> 
+> Want to avoid the string reference mess that occurred in the past?
+> Is that really necessary? But it would limit the size of the name.
 
-> > Hmmm... At some point we should switch kmem_cache_create to pass a struct
-> > containing all the parameters. Otherwise the API will blow up with
-> > additional functions.
->
-> Obviously I agree with you.  I'm inclined to not let that delay Kees'
-> patches; we can fix the few places that use this API later.  At this
-> point, my proposal for the ultimate form would be:
+I think that's a good thing!  /proc/slabinfo really starts to get grotty
+above 16 bytes.  I'd like to chop off "_cache" from the name of every
+single slab!  If ext4_allocation_context has to become ext4_alloc_ctx,
+I don't think we're going to lose any valuable information.
 
-Right. Thats why I said "at some point"....
+My real intent was to reduce the number of allocations; if we can make
+it not necessary to kstrdup the name, I think that'd be appreciated by
+our CONFIG_TINY friends.
 
->
+> > (my rationale is that everything in attr should be const, but size, align
+> > and flags all get modified by the slab code).
+> 
+> Thought about putting all the parameters into the kmem_cache_attr struct.
+> 
+> So
+> 
 > struct kmem_cache_attr {
-> 	const char name[32];
-
-Want to avoid the string reference mess that occurred in the past?
-Is that really necessary? But it would limit the size of the name.
-
-> 	void (*ctor)(void *);
+> 	char *name;
+> 	size_t size;
+> 	size_t align;
+> 	slab_flags_t flags;
 > 	unsigned int useroffset;
-> 	unsigned int user_size;
-> };
->
-> kmem_create_cache_attr(const struct kmem_cache_attr *attr, unsigned int size,
-> 			unsigned int align, slab_flags_t flags)
->
-> (my rationale is that everything in attr should be const, but size, align
-> and flags all get modified by the slab code).
+> 	unsinged int usersize;
+> 	void (*ctor)(void *);
+> 	kmem_isolate_func *isolate;
+> 	kmem_migrate_func *migrate;
+> 	...
+> }
 
-Thought about putting all the parameters into the kmem_cache_attr struct.
+In these slightly-more-security-conscious days, it's considered poor
+practice to have function pointers in writable memory.  That was why
+I wanted to make the kmem_cache_attr const.
 
-So
-
-struct kmem_cache_attr {
-	char *name;
-	size_t size;
-	size_t align;
-	slab_flags_t flags;
-	unsigned int useroffset;
-	unsinged int usersize;
-	void (*ctor)(void *);
-	kmem_isolate_func *isolate;
-	kmem_migrate_func *migrate;
-	...
-}
+Also, there's no need for 'size' and 'align' to be size_t.  Slab should
+never support allocations above 4GB in size.  I'm not even keen on seeing
+allocations above 64kB, but I see my laptop has six 512kB allocations (!),
+three 256kB allocations and seven 128kB allocations, so I must reluctantly
+concede that using an unsigned int is necessary.  If I were really into
+bitshaving, I might force all allocations to be a multiple of 32-bytes
+in size, and then we could use 16 bits to represent an allocation between
+32 and 2MB, but I think that tips us beyond the complexity boundary.
