@@ -1,45 +1,61 @@
+Date: Tue, 16 Jan 2018 13:03:13 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Message-ID: <20180116210313.GA7791@bombadil.infradead.org>
+References: <1515531365-37423-1-git-send-email-keescook@chromium.org>
+ <1515531365-37423-5-git-send-email-keescook@chromium.org>
+ <alpine.DEB.2.20.1801101219390.7926@nuc-kabylake>
+ <20180114230719.GB32027@bombadil.infradead.org>
+ <alpine.DEB.2.20.1801160913260.3908@nuc-kabylake>
+ <20180116160525.GF30073@bombadil.infradead.org>
+ <alpine.DEB.2.20.1801161049320.5162@nuc-kabylake>
+ <20180116174315.GA10461@bombadil.infradead.org>
+ <alpine.DEB.2.20.1801161205590.1771@nuc-kabylake>
+ <alpine.DEB.2.20.1801161215500.2945@nuc-kabylake>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <151571799008.27429.12325141216769795517.stgit@dwillia2-desk3.amr.corp.intel.com>
-References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151571799008.27429.12325141216769795517.stgit@dwillia2-desk3.amr.corp.intel.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 16 Jan 2018 13:01:09 -0800
-Message-ID: <CAGXu5jKpJVAccE=Ch1=2Xx8ig-dq592gkorPNjzhQ044ORyAvw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v2 01/19] Documentation: document array_ptr
-To: Dan Williams <dan.j.williams@intel.com>, Mark Rutland <mark.rutland@arm.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Will Deacon <will.deacon@arm.com>, Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <alpine.DEB.2.20.1801161215500.2945@nuc-kabylake>
+Subject: [kernel-hardening] Re: kmem_cache_attr (was Re: [PATCH 04/36] usercopy: Prepare for
+ usercopy whitelisting)
+To: Christopher Lameter <cl@linux.com>
+Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, David Windsor <dave@nullcore.net>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, linux-xfs@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 11, 2018 at 4:46 PM, Dan Williams <dan.j.williams@intel.com> wrote:
-> From: Mark Rutland <mark.rutland@arm.com>
->
-> Document the rationale and usage of the new array_ptr() helper.
->
-> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-> Signed-off-by: Will Deacon <will.deacon@arm.com>
-> Cc: Dan Williams <dan.j.williams@intel.com>
-> Cc: Jonathan Corbet <corbet@lwn.net>
-> Cc: Peter Zijlstra <peterz@infradead.org>
-> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
-> ---
->  Documentation/speculation.txt |  142 +++++++++++++++++++++++++++++++++++++++++
-> [...]
-> +NULL is returned. Additionally, array_ptr() an out-of-bounds poitner is
-> +not propagated to code which is speculatively executed.
+On Tue, Jan 16, 2018 at 12:17:01PM -0600, Christopher Lameter wrote:
+> Draft patch of how the data structs could change. kmem_cache_attr is read
+> only.
 
-I think this meant to say:
+Looks good.  Although I would add Kees' user feature:
 
-Additionally, array_ptr() of an out-of-bounds pointer is
-not propagated to code which is speculatively executed.
+struct kmem_cache_attr {
+	char name[16];
+	unsigned int size;
+	unsigned int align;
++	unsigned int useroffset;
++	unsigned int usersize;
+	slab_flags_t flags;
+	kmem_cache_ctor ctor;
+}
 
-Other than that:
+And I'd start with 
++struct kmem_cache *kmem_cache_create_attr(const kmem_cache_attr *);
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
+leaving the old kmem_cache_create to kmalloc a kmem_cache_attr and
+initialise it.
 
--Kees
+Can we also do something like this?
 
--- 
-Kees Cook
-Pixel Security
+-#define KMEM_CACHE(__struct, __flags) kmem_cache_create(#__struct,\
+-		sizeof(struct __struct), __alignof__(struct __struct),\
+-		(__flags), NULL)
++#define KMEM_CACHE(__struct, __flags) ({				\
++	const struct kmem_cache_attr kca ## __stringify(__struct) = {	\
++		.name = #__struct,					\
++		.size = sizeof(struct __struct),			\
++		.align = __alignof__(struct __struct),			\
++		.flags = (__flags),					\
++	};								\
++	kmem_cache_create_attr(&kca ## __stringify(__struct));		\
++})
+
+That way we won't need to convert any of those users.
