@@ -1,54 +1,35 @@
-Date: Wed, 17 Jan 2018 08:46:41 -0600 (CST)
-From: Christopher Lameter <cl@linux.com>
-In-Reply-To: <20180116210313.GA7791@bombadil.infradead.org>
-Message-ID: <alpine.DEB.2.20.1801170843550.12151@nuc-kabylake>
-References: <1515531365-37423-1-git-send-email-keescook@chromium.org> <1515531365-37423-5-git-send-email-keescook@chromium.org> <alpine.DEB.2.20.1801101219390.7926@nuc-kabylake> <20180114230719.GB32027@bombadil.infradead.org> <alpine.DEB.2.20.1801160913260.3908@nuc-kabylake>
- <20180116160525.GF30073@bombadil.infradead.org> <alpine.DEB.2.20.1801161049320.5162@nuc-kabylake> <20180116174315.GA10461@bombadil.infradead.org> <alpine.DEB.2.20.1801161205590.1771@nuc-kabylake> <alpine.DEB.2.20.1801161215500.2945@nuc-kabylake>
- <20180116210313.GA7791@bombadil.infradead.org>
+Date: Wed, 17 Jan 2018 10:01:03 -0500
+From: Steven Rostedt <rostedt@goodmis.org>
+Message-ID: <20180117100103.5d91803a@gandalf.local.home>
+In-Reply-To: <CA+DvKQJM8N30PXUTVJQTWfkhGu7-3F+sy9bwK-gJhc8anmwG9g@mail.gmail.com>
+References: <20180113213441.52047-1-dan@kernelim.com>
+	<20180113213441.52047-6-dan@kernelim.com>
+	<20180114014801.GC1701@tigerII.localdomain>
+	<20180114080108.GA69022@gmail.com>
+	<20180115075231.0d435fec@gandalf.local.home>
+	<CA+DvKQJM8N30PXUTVJQTWfkhGu7-3F+sy9bwK-gJhc8anmwG9g@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: kmem_cache_attr (was Re: [PATCH 04/36] usercopy: Prepare for
- usercopy whitelisting)
-To: Matthew Wilcox <willy@infradead.org>
-Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, David Windsor <dave@nullcore.net>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, linux-xfs@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCHv2 5/7] printk: allow kmsg to be
+ encrypted using public key encryption
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: Dan Aloni <dan@kernelim.com>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Petr Mladek <pmladek@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <peterz@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 16 Jan 2018, Matthew Wilcox wrote:
+On Tue, 16 Jan 2018 18:44:45 -0500
+Daniel Micay <danielmicay@gmail.com> wrote:
 
-> On Tue, Jan 16, 2018 at 12:17:01PM -0600, Christopher Lameter wrote:
-> > Draft patch of how the data structs could change. kmem_cache_attr is read
-> > only.
->
-> Looks good.  Although I would add Kees' user feature:
+> > Do you have any backing from makers of such devices? I'd like to hear
+> > from Google's Android team or whoever that would turn this feature on.  
+> 
+> (I'm not a Google employee, but I work on Android security and
+> contribute some of that to AOSP.)
+> 
+> Android restricts [ delete what Android does ]
 
-Sure I tried to do this quickly so that the basic struct changes are
-visible.
+That doesn't answer the question if Android would enable this feature
+or not. With what you show, it sounds like they wouldn't, as they are
+already covered.
 
-> And I'd start with
-> +struct kmem_cache *kmem_cache_create_attr(const kmem_cache_attr *);
->
-> leaving the old kmem_cache_create to kmalloc a kmem_cache_attr and
-> initialise it.
-
-Well at some point we should convert the callers by putting the
-definitions into const kmem_cache_attr initializations. That way
-the callbacks function pointers are safe.
-
-> Can we also do something like this?
->
-> -#define KMEM_CACHE(__struct, __flags) kmem_cache_create(#__struct,\
-> -		sizeof(struct __struct), __alignof__(struct __struct),\
-> -		(__flags), NULL)
-> +#define KMEM_CACHE(__struct, __flags) ({				\
-> +	const struct kmem_cache_attr kca ## __stringify(__struct) = {	\
-> +		.name = #__struct,					\
-> +		.size = sizeof(struct __struct),			\
-> +		.align = __alignof__(struct __struct),			\
-> +		.flags = (__flags),					\
-> +	};								\
-> +	kmem_cache_create_attr(&kca ## __stringify(__struct));		\
-> +})
->
-> That way we won't need to convert any of those users.
-
-Yep thats what I was planning.
+-- Steve
