@@ -1,36 +1,91 @@
+Date: Tue, 16 Jan 2018 21:50:15 -0800
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20180117055015.GA15256@beast>
 MIME-Version: 1.0
-In-Reply-To: <CAPcyv4hfUx8gLScuNewY3+BWi4YBS_Z9dhvYf1D+WEWDDCShXA@mail.gmail.com>
-References: <151586744180.5820.13215059696964205856.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151586748981.5820.14559543798744763404.stgit@dwillia2-desk3.amr.corp.intel.com>
- <CA+55aFzoAR+MYX+ub0xZ32OsT7WtD5Kru2t6LhwB1buLWPResQ@mail.gmail.com>
- <CA+55aFxsg5+u7bCHj1N8xyyVf7-RMm-5ACNp=ENNrKL78omaow@mail.gmail.com> <CAPcyv4hfUx8gLScuNewY3+BWi4YBS_Z9dhvYf1D+WEWDDCShXA@mail.gmail.com>
-From: Dan Williams <dan.j.williams@intel.com>
-Date: Tue, 16 Jan 2018 20:30:17 -0800
-Message-ID: <CAPcyv4g94iysWqz64KNk=HDdx6+b2e0O-rRrnFZDqfNSR3Xrjg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v3 8/9] x86: use __uaccess_begin_nospec and ASM_IFENCE in
- get_user paths
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, the arch/x86 maintainers <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] fork: Allow stack to be wiped on fork
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Andy Lutomirski <luto@kernel.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@kernel.org>, Laura Abbott <labbott@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, Sahara <keun-o.park@darkmatter.ae>, "Levin, Alexander (Sasha Levin)" <alexander.levin@verizon.com>, Michal Hocko <mhocko@suse.com>, Andrea Arcangeli <aarcange@redhat.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 16, 2018 at 2:23 PM, Dan Williams <dan.j.williams@intel.com> wrote:
-> On Sat, Jan 13, 2018 at 11:33 AM, Linus Torvalds
-[..]
-> I'll respin this set along those lines, and drop the ifence bits.
+One of the classes of kernel stack content leaks is exposing the contents
+of prior heap or stack contents when a new process stack is allocated.
+Normally, those stacks are not zeroed, and the old contents remain in
+place. With some types of stack content exposure flaws, those contents
+can leak to userspace. Kernels built with CONFIG_CLEAR_STACK_FORK will
+no longer be vulnerable to this, as the stack will be wiped each time
+a stack is assigned to a new process. There's not a meaningful change
+in runtime performance; it almost looks like it provides a benefit.
 
-So now I'm not so sure. Yes, get_user_{1,2,4,8} can mask the pointer
-with the address limit result, but this doesn't work for the
-access_ok() + __get_user() case. We can either change the access_ok()
-calling convention to return a properly masked pointer to be used in
-subsequent calls to __get_user(), or go with lfence on every
-__get_user call. There seem to be several drivers that open code
-copy_from_user() with __get_user loops, so the 'fence every
-__get_user' approach might have noticeable overhead. On the other hand
-the access_ok conversion, while it could be scripted with coccinelle,
-is ~300 sites (VERIFY_READ), if you're concerned about having
-something small to merge for 4.15.
+Performing back-to-back kernel builds before:
+	Run times: 157.86 157.09 158.90 160.94 160.80
+	Mean: 159.12
+	Std Dev: 1.54
 
-I think the access_ok() conversion to return a speculation sanitized
-pointer or NULL is the way to go unless I'm missing something simpler.
-Other ideas?
+With CONFIG_CLEAR_STACK_FORK=y:
+	Run times: 159.31 157.34 156.71 158.15 160.81
+	Mean: 158.46
+	Std Dev: 1.46
+
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/Kconfig                | 8 ++++++++
+ include/linux/thread_info.h | 4 +++-
+ kernel/fork.c               | 2 +-
+ 3 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/arch/Kconfig b/arch/Kconfig
+index 400b9e1b2f27..42d56dad03ec 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -904,6 +904,14 @@ config VMAP_STACK
+ 	  the stack to map directly to the KASAN shadow map using a formula
+ 	  that is incorrect if the stack is in vmalloc space.
+ 
++config CLEAR_STACK_FORK
++	bool "Clear the kernel stack at each fork"
++	help
++	  To resist stack content leak flaws, this clears newly allocated
++	  kernel stacks to keep previously freed heap or stack contents
++	  from being present in the new stack. This has almost no
++	  measurable performance impact.
++
+ config ARCH_OPTIONAL_KERNEL_RWX
+ 	def_bool n
+ 
+diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
+index 34f053a150a9..091f53fe31cc 100644
+--- a/include/linux/thread_info.h
++++ b/include/linux/thread_info.h
+@@ -43,7 +43,9 @@ enum {
+ #define THREAD_ALIGN	THREAD_SIZE
+ #endif
+ 
+-#if IS_ENABLED(CONFIG_DEBUG_STACK_USAGE) || IS_ENABLED(CONFIG_DEBUG_KMEMLEAK)
++#if IS_ENABLED(CONFIG_DEBUG_STACK_USAGE) || \
++    IS_ENABLED(CONFIG_DEBUG_KMEMLEAK) || \
++    IS_ENABLED(CONFIG_CLEAR_STACK_FORK)
+ # define THREADINFO_GFP		(GFP_KERNEL_ACCOUNT | __GFP_ZERO)
+ #else
+ # define THREADINFO_GFP		(GFP_KERNEL_ACCOUNT)
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 2295fc69717f..215b1ce2b2cd 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -215,7 +215,7 @@ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
+ 		if (!s)
+ 			continue;
+ 
+-#ifdef CONFIG_DEBUG_KMEMLEAK
++#if IS_ENABLED(CONFIG_DEBUG_KMEMLEAK) || IS_ENABLED(CONFIG_CLEAR_STACK_FORK)
+ 		/* Clear stale pointers from reused stack. */
+ 		memset(s->addr, 0, THREAD_SIZE);
+ #endif
+-- 
+2.7.4
+
+
+-- 
+Kees Cook
+Pixel Security
