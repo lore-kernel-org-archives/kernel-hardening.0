@@ -1,52 +1,39 @@
+Date: Wed, 17 Jan 2018 11:31:14 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Message-ID: <20180117193114.GB25862@bombadil.infradead.org>
+References: <alpine.DEB.2.20.1801101219390.7926@nuc-kabylake>
+ <20180114230719.GB32027@bombadil.infradead.org>
+ <alpine.DEB.2.20.1801160913260.3908@nuc-kabylake>
+ <20180116160525.GF30073@bombadil.infradead.org>
+ <alpine.DEB.2.20.1801161049320.5162@nuc-kabylake>
+ <20180116174315.GA10461@bombadil.infradead.org>
+ <alpine.DEB.2.20.1801161205590.1771@nuc-kabylake>
+ <alpine.DEB.2.20.1801161215500.2945@nuc-kabylake>
+ <20180116210313.GA7791@bombadil.infradead.org>
+ <alpine.DEB.2.20.1801171141430.23209@nuc-kabylake>
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <1516198646.4184.13.camel@linux.intel.com>
-References: <151586744180.5820.13215059696964205856.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151586748981.5820.14559543798744763404.stgit@dwillia2-desk3.amr.corp.intel.com>
- <CA+55aFzoAR+MYX+ub0xZ32OsT7WtD5Kru2t6LhwB1buLWPResQ@mail.gmail.com>
- <CA+55aFxsg5+u7bCHj1N8xyyVf7-RMm-5ACNp=ENNrKL78omaow@mail.gmail.com>
- <CAPcyv4hfUx8gLScuNewY3+BWi4YBS_Z9dhvYf1D+WEWDDCShXA@mail.gmail.com>
- <CA+55aFxAFG5czVmCyhYMyHmXLNJ7pcXxWzusjZvLRh_qTGHj6Q@mail.gmail.com>
- <CA+55aFxB01XEEpdPynwYmzQMfTJdJnUrN+ZLqSV_UdnKLBgAZw@mail.gmail.com> <1516198646.4184.13.camel@linux.intel.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Wed, 17 Jan 2018 11:26:08 -0800
-Message-ID: <CA+55aFzCgqjRR=x37fzUecK5ERMBUmBOag-EpM1zQQxFeH2+bw@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v3 8/9] x86: use __uaccess_begin_nospec and ASM_IFENCE in
- get_user paths
-To: Alan Cox <alan@linux.intel.com>, Eric Dumazet <edumazet@google.com>
-Cc: Dan Williams <dan.j.williams@intel.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, the arch/x86 maintainers <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <alpine.DEB.2.20.1801171141430.23209@nuc-kabylake>
+Subject: [kernel-hardening] Re: kmem_cache_attr (was Re: [PATCH 04/36] usercopy: Prepare for
+ usercopy whitelisting)
+To: Christopher Lameter <cl@linux.com>
+Cc: Kees Cook <keescook@chromium.org>, linux-mm@kvack.org, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 17, 2018 at 6:17 AM, Alan Cox <alan@linux.intel.com> wrote:
->
-> Can we kill off the remaining users of set_fs() ?
+On Wed, Jan 17, 2018 at 11:42:34AM -0600, Christopher Lameter wrote:
+> On Tue, 16 Jan 2018, Matthew Wilcox wrote:
+> 
+> > struct kmem_cache_attr {
+> > 	char name[16];
+> 
+> That doesnt work. memcg needs long slab names. Sigh.
 
-I would love to, but it's not going to happen short-term. If ever.
+Oof.  That's ugly.  Particularly ugly in that it could actually share the
+attr with the root cache, except for the name.
 
-Some could be removed today: the code in arch/x86/net/bpf_jit_comp.c
-seems to be literally the ramblings of a diseased mind. There's no
-reason for the set_fs(), there's no reason for the
-flush_icache_range() (it's a no-op on x86 anyway), and the smp_wmb()
-looks bogus too.
+We could put a char * in the kmem_cache which (if not NULL) overrides
+the attr->name?  Probably want a helper to replace the endearingly short
+'s->name'.  Something like:
 
-I have no idea how that braindamage happened, but I assume it got
-copied from some broken source.
-
-But there are about ~100 set_fs() calls in generic code, and some of
-those really are pretty fundamental. Doing things like "kernel_read()"
-without set_fs() is basically impossible.
-
-We've had set_fs() since the beginning. The naming is obviously very
-historical. We have it for a very good reason, and I don't really see
-that reason going away.
-
-So realistically, we want to _minimize_ set_fs(), and we might want to
-make sure that it's done only in limited settings (it might, for
-example, be a good idea and a realistic goal to make sure that drivers
-and modules can't do it, and use proper helper functions like that
-"read_kernel()").
-
-But getting rid of the concept entirely? Doesn't seem likely.
-
-             Linus
+#define slab_name(s)	s->name ?: s->attr->name
