@@ -1,86 +1,48 @@
-Date: Thu, 18 Jan 2018 17:05:47 +0000
-From: Will Deacon <will.deacon@arm.com>
-Message-ID: <20180118170547.GF12394@arm.com>
-References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
- <CA+55aFzNQ8CZ8iNcPXrCfyk=1edMiRGDA0fY0rd87BsFKBxgAw@mail.gmail.com>
- <CAPcyv4gPcV7MRumSJNz6nDw=HhKO4MK2QqKbj4uc_6APsSFr+g@mail.gmail.com>
- <20180118131837.GA20783@arm.com>
- <CAPcyv4gPLx74CAHGGrC3R-fgrh0vUmCbLNXZ0f7PTiKi0f+hCQ@mail.gmail.com>
+Date: Thu, 18 Jan 2018 17:10:20 +0000
+From: Al Viro <viro@ZenIV.linux.org.uk>
+Message-ID: <20180118171020.GA13338@ZenIV.linux.org.uk>
+References: <CA+55aFxsg5+u7bCHj1N8xyyVf7-RMm-5ACNp=ENNrKL78omaow@mail.gmail.com>
+ <CAPcyv4hfUx8gLScuNewY3+BWi4YBS_Z9dhvYf1D+WEWDDCShXA@mail.gmail.com>
+ <CA+55aFxAFG5czVmCyhYMyHmXLNJ7pcXxWzusjZvLRh_qTGHj6Q@mail.gmail.com>
+ <CA+55aFxB01XEEpdPynwYmzQMfTJdJnUrN+ZLqSV_UdnKLBgAZw@mail.gmail.com>
+ <1516198646.4184.13.camel@linux.intel.com>
+ <20180117185232.GW13338@ZenIV.linux.org.uk>
+ <20180118030634.GY13338@ZenIV.linux.org.uk>
+ <CA+55aFzKPed+89wz=ajWNpsQ8Kh+AQWx61hwVqqDh7_=h4tecg@mail.gmail.com>
+ <20180118044302.GZ13338@ZenIV.linux.org.uk>
+ <20180118162957.GA16649@infradead.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAPcyv4gPLx74CAHGGrC3R-fgrh0vUmCbLNXZ0f7PTiKi0f+hCQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 00/19] prevent bounds-check bypass via speculative
- execution
-To: Dan Williams <dan.j.williams@intel.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Alan Cox <alan.cox@intel.com>, Alexei Starovoitov <ast@kernel.org>, Solomon Peachy <pizza@shaftnet.org>, "H. Peter Anvin" <hpa@zytor.com>, Christian Lamparter <chunkeey@googlemail.com>, Elena Reshetova <elena.reshetova@intel.com>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, Linux SCSI List <linux-scsi@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, the arch/x86 maintainers <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Catalin Marinas <catalin.marinas@arm.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Linux Media Mailing List <linux-media@vger.kernel.org>, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Jan Kara <jack@suse.com>, Al Viro <viro@zeniv.linux.org.uk>, qla2xxx-upstream@qlogic.com, Thomas Gleixner <tglx@linutronix.de>, Mauro Carvalho Chehab <mchehab@kernel.org>, Kalle Valo <kvalo@codeaurora.org>, Alan Cox <alan@linux.intel.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Greg KH <gregkh@linuxfoundation.org>, Linux Wireless List <linux-wireless@vger.kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Network Development <netdev@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Laurent Pinchart <laurent.pinchart@ideasonboard.com>
+In-Reply-To: <20180118162957.GA16649@infradead.org>
+Sender: Al Viro <viro@ftp.linux.org.uk>
+Subject: [kernel-hardening] Re: [RFC][PATCH] get rid of the use of set_fs() (by way of
+ kernel_recvmsg()) in sunrpc
+To: Christoph Hellwig <hch@infradead.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Network Development <netdev@vger.kernel.org>, Dan Williams <dan.j.williams@intel.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, the arch/x86 maintainers <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 18, 2018 at 08:58:08AM -0800, Dan Williams wrote:
-> On Thu, Jan 18, 2018 at 5:18 AM, Will Deacon <will.deacon@arm.com> wrote:
-> > On Thu, Jan 11, 2018 at 05:41:08PM -0800, Dan Williams wrote:
-> >> On Thu, Jan 11, 2018 at 5:19 PM, Linus Torvalds
-> >> <torvalds@linux-foundation.org> wrote:
-> >> > On Thu, Jan 11, 2018 at 4:46 PM, Dan Williams <dan.j.williams@intel.com> wrote:
-> >> >>
-> >> >> This series incorporates Mark Rutland's latest ARM changes and adds
-> >> >> the x86 specific implementation of 'ifence_array_ptr'. That ifence
-> >> >> based approach is provided as an opt-in fallback, but the default
-> >> >> mitigation, '__array_ptr', uses a 'mask' approach that removes
-> >> >> conditional branches instructions, and otherwise aims to redirect
-> >> >> speculation to use a NULL pointer rather than a user controlled value.
-> >> >
-> >> > Do you have any performance numbers and perhaps example code
-> >> > generation? Is this noticeable? Are there any microbenchmarks showing
-> >> > the difference between lfence use and the masking model?
-> >>
-> >> I don't have performance numbers, but here's a sample code generation
-> >> from __fcheck_files, where the 'and; lea; and' sequence is portion of
-> >> array_ptr() after the mask generation with 'sbb'.
-> >>
-> >>         fdp = array_ptr(fdt->fd, fd, fdt->max_fds);
-> >>      8e7:       8b 02                   mov    (%rdx),%eax
-> >>      8e9:       48 39 c7                cmp    %rax,%rdi
-> >>      8ec:       48 19 c9                sbb    %rcx,%rcx
-> >>      8ef:       48 8b 42 08             mov    0x8(%rdx),%rax
-> >>      8f3:       48 89 fe                mov    %rdi,%rsi
-> >>      8f6:       48 21 ce                and    %rcx,%rsi
-> >>      8f9:       48 8d 04 f0             lea    (%rax,%rsi,8),%rax
-> >>      8fd:       48 21 c8                and    %rcx,%rax
-> >>
-> >>
-> >> > Having both seems good for testing, but wouldn't we want to pick one in the end?
-> >>
-> >> I was thinking we'd keep it as a 'just in case' sort of thing, at
-> >> least until the 'probably safe' assumption of the 'mask' approach has
-> >> more time to settle out.
-> >
-> > From the arm64 side, the only concern I have (and this actually applies to
-> > our CSDB sequence as well) is the calculation of the array size by the
-> > caller. As Linus mentioned at the end of [1], if the determination of the
-> > size argument is based on a conditional branch, then masking doesn't help
-> > because you bound within the wrong range under speculation.
-> >
-> > We ran into this when trying to use masking to protect our uaccess routines
-> > where the conditional bound is either KERNEL_DS or USER_DS. It's possible
-> > that a prior conditional set_fs(KERNEL_DS) could defeat the masking and so
-> > we'd need to throw some heavy barriers in set_fs to make it robust.
+On Thu, Jan 18, 2018 at 08:29:57AM -0800, Christoph Hellwig wrote:
+> > 	We could turn ->msg_control/->msg_controllen into another
+> > iov_iter, but seeing that we never do scatter-gather for those
+> > IMO that would be a massive overkill.  A flag controlling whether
+> > ->msg_control is kernel or userland pointer would do, especially
+> > since we already have a flag for "do we want a native or compat
+> > layout for cmsg" in there.
 > 
-> At least in the conditional mask case near set_fs() usage the approach
-> we are taking is to use a barrier. I.e. the following guidance from
-> Linus:
-> 
-> "Basically, the rule is trivial: find all 'stac' users, and use address
-> masking if those users already integrate the limit check, and lfence
-> they don't."
-> 
-> ...which translates to narrow the pointer for get_user() and use a
-> barrier  for __get_user().
+> While your current hack seems like a nice short term improvement
+> I think we need an iov_iter or iov_iter-light there in the long run.
 
-Great, that matches my thinking re set_fs but I'm still worried about
-finding all the places where the bound is conditional for other users
-of the macro. Then again, finding the places that need this macro in the
-first place is tough enough so perhaps analysing the bound calculation
-doesn't make it much worse.
+For one caller in the entire history of the kernel?
 
-Will
+> Same for ioctl so that we can pass properly typed kernel or user
+> buffers through without all these set_fs hacks.
+
+Umm...  Most of the PITA with ioctls is due to compat ones being
+reformatted for native and fed under set_fs().  I actually have
+a series dealing with most of such places for net ioctls.  Sure,
+there's also ioctl_by_bdev(), but for those we might be better
+off exposing the things like ->get_last_session() and its ilk to
+filesystems that want to deal with cdroms...
+
+It's kernel_setsockopt() that is the real PITA...
