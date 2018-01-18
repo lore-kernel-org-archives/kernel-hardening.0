@@ -1,83 +1,95 @@
+From: Laurent Pinchart <laurent.pinchart@ideasonboard.com>
+Date: Thu, 18 Jan 2018 23:41:57 +0200
+Message-ID: <1726114.TonTVukLyd@avalon>
+In-Reply-To: <20180118170547.GF12394@arm.com>
+References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com> <CAPcyv4gPLx74CAHGGrC3R-fgrh0vUmCbLNXZ0f7PTiKi0f+hCQ@mail.gmail.com> <20180118170547.GF12394@arm.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <19a7add8-adaf-4ad4-6ae3-4a62967656b9@redhat.com>
-References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
- <1515636190-24061-28-git-send-email-keescook@chromium.org> <19a7add8-adaf-4ad4-6ae3-4a62967656b9@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 18 Jan 2018 13:36:03 -0800
-Message-ID: <CAGXu5jK_VyEM4-MaQ53o2AS8NNiTyR8X5LUrbwd=KcDWfKhGTg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH 27/38] sctp: Copy struct sctp_sock.autoclose to userspace
- using put_user()
-To: Laura Abbott <labbott@redhat.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, David Windsor <dave@nullcore.net>, Vlad Yasevich <vyasevich@gmail.com>, Neil Horman <nhorman@tuxdriver.com>, "David S. Miller" <davem@davemloft.net>, linux-sctp@vger.kernel.org, Network Development <netdev@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, Mark Rutland <mark.rutland@arm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Dave Kleikamp <dave.kleikamp@oracle.com>, Jan Kara <jack@suse.cz>, Luis de Bethencourt <luisbg@kernel.org>, Marc Zyngier <marc.zyngier@arm.com>, Rik van Riel <riel@redhat.com>, Matthew Garrett <mjg59@google.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel-hardening@lists.openwall.com
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Subject: [kernel-hardening] Re: [PATCH v2 00/19] prevent bounds-check bypass via speculative execution
+To: Will Deacon <will.deacon@arm.com>
+Cc: Dan Williams <dan.j.williams@intel.com>, Linus Torvalds <torvalds@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Alan Cox <alan.cox@intel.com>, Alexei Starovoitov <ast@kernel.org>, Solomon Peachy <pizza@shaftnet.org>, "H. Peter Anvin" <hpa@zytor.com>, Christian Lamparter <chunkeey@googlemail.com>, Elena Reshetova <elena.reshetova@intel.com>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, Linux SCSI List <linux-scsi@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, the arch/x86 maintainers <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Catalin Marinas <catalin.marinas@arm.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Linux Media Mailing List <linux-media@vger.kernel.org>, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Jan Kara <jack@suse.com>, Al Viro <viro@zeniv.linux.org.uk>, qla2xxx-upstream@qlogic.com, Thomas Gleixner <tglx@linutronix.de>, Mauro Carvalho Chehab <mchehab@kernel.org>, Kalle Valo <kvalo@codeaurora.org>, Alan Cox <alan@linux.intel.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Greg KH <gregkh@linuxfoundation.org>, Linux Wireless List <linux-wireless@vger.kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Network Development <netdev@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 18, 2018 at 1:31 PM, Laura Abbott <labbott@redhat.com> wrote:
-> On 01/10/2018 06:02 PM, Kees Cook wrote:
->>
->> From: David Windsor <dave@nullcore.net>
->>
->> The autoclose field can be copied with put_user(), so there is no need to
->> use copy_to_user(). In both cases, hardened usercopy is being bypassed
->> since the size is constant, and not open to runtime manipulation.
->>
->> This patch is verbatim from Brad Spengler/PaX Team's PAX_USERCOPY
->> whitelisting code in the last public patch of grsecurity/PaX based on my
->> understanding of the code. Changes or omissions from the original code are
->> mine and don't reflect the original grsecurity/PaX code.
->>
->
-> Just tried a quick rebase and it looks like this conflicts with
-> c76f97c99ae6 ("sctp: make use of pre-calculated len")
-> I don't think we can use put_user if we're copying via the full
-> len?
+Hi Will,
 
-It should be fine, since:
+On Thursday, 18 January 2018 19:05:47 EET Will Deacon wrote:
+> On Thu, Jan 18, 2018 at 08:58:08AM -0800, Dan Williams wrote:
+> > On Thu, Jan 18, 2018 at 5:18 AM, Will Deacon wrote:
+> >> On Thu, Jan 11, 2018 at 05:41:08PM -0800, Dan Williams wrote:
+> >>> On Thu, Jan 11, 2018 at 5:19 PM, Linus Torvalds wrote:
+> >>>> On Thu, Jan 11, 2018 at 4:46 PM, Dan Williams wrote:
+> >>>>> This series incorporates Mark Rutland's latest ARM changes and adds
+> >>>>> the x86 specific implementation of 'ifence_array_ptr'. That ifence
+> >>>>> based approach is provided as an opt-in fallback, but the default
+> >>>>> mitigation, '__array_ptr', uses a 'mask' approach that removes
+> >>>>> conditional branches instructions, and otherwise aims to redirect
+> >>>>> speculation to use a NULL pointer rather than a user controlled
+> >>>>> value.
+> >>>> 
+> >>>> Do you have any performance numbers and perhaps example code
+> >>>> generation? Is this noticeable? Are there any microbenchmarks showing
+> >>>> the difference between lfence use and the masking model?
+> >>> 
+> >>> I don't have performance numbers, but here's a sample code generation
+> >>> from __fcheck_files, where the 'and; lea; and' sequence is portion of
+> >>> array_ptr() after the mask generation with 'sbb'.
+> >>> 
+> >>>         fdp = array_ptr(fdt->fd, fd, fdt->max_fds);
+> >>>      
+> >>>      8e7:       8b 02                   mov    (%rdx),%eax
+> >>>      8e9:       48 39 c7                cmp    %rax,%rdi
+> >>>      8ec:       48 19 c9                sbb    %rcx,%rcx
+> >>>      8ef:       48 8b 42 08             mov    0x8(%rdx),%rax
+> >>>      8f3:       48 89 fe                mov    %rdi,%rsi
+> >>>      8f6:       48 21 ce                and    %rcx,%rsi
+> >>>      8f9:       48 8d 04 f0             lea    (%rax,%rsi,8),%rax
+> >>>      8fd:       48 21 c8                and    %rcx,%rax
+> >>>> 
+> >>>> Having both seems good for testing, but wouldn't we want to pick one
+> >>>> in the end?
+> >>> 
+> >>> I was thinking we'd keep it as a 'just in case' sort of thing, at
+> >>> least until the 'probably safe' assumption of the 'mask' approach has
+> >>> more time to settle out.
+> >> 
+> >> From the arm64 side, the only concern I have (and this actually applies
+> >> to our CSDB sequence as well) is the calculation of the array size by
+> >> the caller. As Linus mentioned at the end of [1], if the determination
+> >> of the size argument is based on a conditional branch, then masking
+> >> doesn't help because you bound within the wrong range under speculation.
+> >> 
+> >> We ran into this when trying to use masking to protect our uaccess
+> >> routines where the conditional bound is either KERNEL_DS or USER_DS.
+> >> It's possible that a prior conditional set_fs(KERNEL_DS) could defeat
+> >> the masking and so we'd need to throw some heavy barriers in set_fs to
+> >> make it robust.
+> > 
+> > At least in the conditional mask case near set_fs() usage the approach
+> > we are taking is to use a barrier. I.e. the following guidance from
+> > Linus:
+> > 
+> > "Basically, the rule is trivial: find all 'stac' users, and use address
+> > masking if those users already integrate the limit check, and lfence
+> > they don't."
+> > 
+> > ...which translates to narrow the pointer for get_user() and use a
+> > barrier  for __get_user().
+> 
+> Great, that matches my thinking re set_fs but I'm still worried about
+> finding all the places where the bound is conditional for other users
+> of the macro. Then again, finding the places that need this macro in the
+> first place is tough enough so perhaps analysing the bound calculation
+> doesn't make it much worse.
 
-        len = sizeof(int);
-
-c76f97c99ae6 just does a swap of sizeof(int) with len, put_user() will
-work in either case, since autoclose will always be int sized.
-
--Kees
-
->
-> Thanks,
-> Laura
->
->
->> Signed-off-by: David Windsor <dave@nullcore.net>
->> [kees: adjust commit log]
->> Cc: Vlad Yasevich <vyasevich@gmail.com>
->> Cc: Neil Horman <nhorman@tuxdriver.com>
->> Cc: "David S. Miller" <davem@davemloft.net>
->> Cc: linux-sctp@vger.kernel.org
->> Cc: netdev@vger.kernel.org
->> Signed-off-by: Kees Cook <keescook@chromium.org>
->> ---
->>   net/sctp/socket.c | 2 +-
->>   1 file changed, 1 insertion(+), 1 deletion(-)
->>
->> diff --git a/net/sctp/socket.c b/net/sctp/socket.c
->> index efbc8f52c531..15491491ec88 100644
->> --- a/net/sctp/socket.c
->> +++ b/net/sctp/socket.c
->> @@ -5011,7 +5011,7 @@ static int sctp_getsockopt_autoclose(struct sock
->> *sk, int len, char __user *optv
->>         len = sizeof(int);
->>         if (put_user(len, optlen))
->>                 return -EFAULT;
->> -       if (copy_to_user(optval, &sctp_sk(sk)->autoclose, sizeof(int)))
->> +       if (put_user(sctp_sk(sk)->autoclose, (int __user *)optval))
->>                 return -EFAULT;
->>         return 0;
->>   }
->>
->
-
-
+It might not now, but if the bound calculation changes later, I'm pretty sure 
+we'll forget to update the speculation barrier macro at least in some cases. 
+Without the help of static (or possibly dynamic) code analysis I think we're 
+bound to reintroduce problems over time, but that's true for finding places 
+where the barrier is needed, not just for barrier selection based on bound 
+calculation.
 
 -- 
-Kees Cook
-Pixel Security
+Regards,
+
+Laurent Pinchart
