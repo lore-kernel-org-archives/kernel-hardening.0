@@ -1,81 +1,72 @@
-From: Alexander Popov <alex.popov@linux.com>
-References: <1515766769-9120-1-git-send-email-alex.popov@linux.com>
- <CAGXu5jKmOn7E04Y8pR9Tgn7usJYMhqWe9x929ZwEnu21MG=mZw@mail.gmail.com>
- <0c1950e9-626d-c7b8-5551-fcc233501025@linux.com>
-Message-ID: <fb67be6f-3691-0aef-fbc6-4e1093ddb8da@linux.com>
-Date: Thu, 18 Jan 2018 16:09:23 +0300
+Date: Thu, 18 Jan 2018 13:18:37 +0000
+From: Will Deacon <will.deacon@arm.com>
+Message-ID: <20180118131837.GA20783@arm.com>
+References: <151571798296.27429.7166552848688034184.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <CA+55aFzNQ8CZ8iNcPXrCfyk=1edMiRGDA0fY0rd87BsFKBxgAw@mail.gmail.com>
+ <CAPcyv4gPcV7MRumSJNz6nDw=HhKO4MK2QqKbj4uc_6APsSFr+g@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <0c1950e9-626d-c7b8-5551-fcc233501025@linux.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v7 0/6] Introduce the STACKLEAK feature and a test for
- it
-To: Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, X86 ML <x86@kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAPcyv4gPcV7MRumSJNz6nDw=HhKO4MK2QqKbj4uc_6APsSFr+g@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v2 00/19] prevent bounds-check bypass via speculative
+ execution
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Alan Cox <alan.cox@intel.com>, Alexei Starovoitov <ast@kernel.org>, Solomon Peachy <pizza@shaftnet.org>, "H. Peter Anvin" <hpa@zytor.com>, Christian Lamparter <chunkeey@googlemail.com>, Elena Reshetova <elena.reshetova@intel.com>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, Linux SCSI List <linux-scsi@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, the arch/x86 maintainers <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Catalin Marinas <catalin.marinas@arm.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Linux Media Mailing List <linux-media@vger.kernel.org>, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Jan Kara <jack@suse.com>, Al Viro <viro@zeniv.linux.org.uk>, qla2xxx-upstream@qlogic.com, Thomas Gleixner <tglx@linutronix.de>, Mauro Carvalho Chehab <mchehab@kernel.org>, Kalle Valo <kvalo@codeaurora.org>, Alan Cox <alan@linux.intel.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Greg KH <gregkh@linuxfoundation.org>, Linux Wireless List <linux-wireless@vger.kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Network Development <netdev@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Laurent Pinchart <laurent.pinchart@ideasonboard.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Kees,
+Hi Dan, Linus,
 
-On 17.01.2018 14:37, Alexander Popov wrote:
-> On 15.01.2018 22:59, Kees Cook wrote:
->> On Fri, Jan 12, 2018 at 6:19 AM, Alexander Popov <alex.popov@linux.com> wrote:
->>> This is the 7th version of the patch series introducing STACKLEAK to the
->>> mainline kernel. STACKLEAK is a security feature developed by Grsecurity/PaX
->>> (kudos to them), which:
->>>  - reduces the information that can be revealed through kernel stack leak bugs;
->>>  - blocks some uninitialized stack variable attacks (e.g. CVE-2010-2963);
->>>  - introduces some runtime checks for kernel stack overflow detection.
->>
->> I think this is really looking good. I had some thoughts while reading
->> through the patches:
->>
->> There are really three features in this series, and it might make
->> sense to separate them a bit more clearly (at least with CONFIG
->> choices):
->>
->> 1) stack clearing (with depth searching)
->>
->> 2) runtime stack depth tracking (making 1 much more efficient)
->>
->> 3) alloca checking (an additional feature, not strictly part of
->> clearing, but needs the same plugin infrastructure)
->>
->> It seems like it should be possible to get 1 without 2 and 3 (both of
->> which happen in the gcc plugin), and might be good to separate for
->> builds that don't have gcc plugins.
->>
->> Once compilers are doing alloca checking (or all VLAs are removed from
->> the kernel), it'd be nice to be able to avoid the redundancy of 3.
+On Thu, Jan 11, 2018 at 05:41:08PM -0800, Dan Williams wrote:
+> On Thu, Jan 11, 2018 at 5:19 PM, Linus Torvalds
+> <torvalds@linux-foundation.org> wrote:
+> > On Thu, Jan 11, 2018 at 4:46 PM, Dan Williams <dan.j.williams@intel.com> wrote:
+> >>
+> >> This series incorporates Mark Rutland's latest ARM changes and adds
+> >> the x86 specific implementation of 'ifence_array_ptr'. That ifence
+> >> based approach is provided as an opt-in fallback, but the default
+> >> mitigation, '__array_ptr', uses a 'mask' approach that removes
+> >> conditional branches instructions, and otherwise aims to redirect
+> >> speculation to use a NULL pointer rather than a user controlled value.
+> >
+> > Do you have any performance numbers and perhaps example code
+> > generation? Is this noticeable? Are there any microbenchmarks showing
+> > the difference between lfence use and the masking model?
 > 
-> Agree with your point. I'll make this separation in the next version.
+> I don't have performance numbers, but here's a sample code generation
+> from __fcheck_files, where the 'and; lea; and' sequence is portion of
+> array_ptr() after the mask generation with 'sbb'.
+> 
+>         fdp = array_ptr(fdt->fd, fd, fdt->max_fds);
+>      8e7:       8b 02                   mov    (%rdx),%eax
+>      8e9:       48 39 c7                cmp    %rax,%rdi
+>      8ec:       48 19 c9                sbb    %rcx,%rcx
+>      8ef:       48 8b 42 08             mov    0x8(%rdx),%rax
+>      8f3:       48 89 fe                mov    %rdi,%rsi
+>      8f6:       48 21 ce                and    %rcx,%rsi
+>      8f9:       48 8d 04 f0             lea    (%rax,%rsi,8),%rax
+>      8fd:       48 21 c8                and    %rcx,%rax
+> 
+> 
+> > Having both seems good for testing, but wouldn't we want to pick one in the end?
+> 
+> I was thinking we'd keep it as a 'just in case' sort of thing, at
+> least until the 'probably safe' assumption of the 'mask' approach has
+> more time to settle out.
 
-I have more thoughts about this separation.
+>From the arm64 side, the only concern I have (and this actually applies to
+our CSDB sequence as well) is the calculation of the array size by the
+caller. As Linus mentioned at the end of [1], if the determination of the
+size argument is based on a conditional branch, then masking doesn't help
+because you bound within the wrong range under speculation.
 
-Splitting (1) from (2)
-----------------------
+We ran into this when trying to use masking to protect our uaccess routines
+where the conditional bound is either KERNEL_DS or USER_DS. It's possible
+that a prior conditional set_fs(KERNEL_DS) could defeat the masking and so
+we'd need to throw some heavy barriers in set_fs to make it robust.
 
-It makes the stack erasing not only slow but also unreliable. For example, an
-attacker can craft some STACKLEAK_POISON values on the thread stack to deceive
-the poison search during the erasing.
+The question then is whether or not we're likely to run into this elsewhere,
+and I don't have a good feel for that.
 
-Of course, I can increase STACKLEAK_POISON_CHECK_DEPTH or change the default
-value of lowest_stack. It will make the stack erasing even slower, but will not
-give guarantees.
+Will
 
-So I don't think that (1) without (2) is actually a good feature. I would
-propose to refrain from separating the stack erasing and the lowest_stack tracking.
-
-Splitting (2) and (3)
----------------------
-
-The STACKLEAK gcc plugin needs to search for alloca anyway (for the correct
-lowest_stack tracking). But I can introduce the "no-check-alloca" plugin
-parameter for disabling the check_alloca() call insertion.
-
-Is it worth providing something like CONFIG_GCC_PLUGIN_STACKLEAK_NO_CHECK_ALLOCA
-in the Kconfig?
-
-Thanks!
-
-Best regards,
-Alexander
+[1] http://lkml.kernel.org/r/CA+55aFz0tsreoa=5Ud2noFCpng-dizLBhT9WU9asyhpLfjdcYA@mail.gmail.com
