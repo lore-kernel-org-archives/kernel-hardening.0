@@ -1,65 +1,81 @@
-Date: Thu, 18 Jan 2018 04:43:02 +0000
-From: Al Viro <viro@ZenIV.linux.org.uk>
-Message-ID: <20180118044302.GZ13338@ZenIV.linux.org.uk>
-References: <151586748981.5820.14559543798744763404.stgit@dwillia2-desk3.amr.corp.intel.com>
- <CA+55aFzoAR+MYX+ub0xZ32OsT7WtD5Kru2t6LhwB1buLWPResQ@mail.gmail.com>
- <CA+55aFxsg5+u7bCHj1N8xyyVf7-RMm-5ACNp=ENNrKL78omaow@mail.gmail.com>
- <CAPcyv4hfUx8gLScuNewY3+BWi4YBS_Z9dhvYf1D+WEWDDCShXA@mail.gmail.com>
- <CA+55aFxAFG5czVmCyhYMyHmXLNJ7pcXxWzusjZvLRh_qTGHj6Q@mail.gmail.com>
- <CA+55aFxB01XEEpdPynwYmzQMfTJdJnUrN+ZLqSV_UdnKLBgAZw@mail.gmail.com>
- <1516198646.4184.13.camel@linux.intel.com>
- <20180117185232.GW13338@ZenIV.linux.org.uk>
- <20180118030634.GY13338@ZenIV.linux.org.uk>
- <CA+55aFzKPed+89wz=ajWNpsQ8Kh+AQWx61hwVqqDh7_=h4tecg@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+References: <1515766769-9120-1-git-send-email-alex.popov@linux.com>
+ <CAGXu5jKmOn7E04Y8pR9Tgn7usJYMhqWe9x929ZwEnu21MG=mZw@mail.gmail.com>
+ <0c1950e9-626d-c7b8-5551-fcc233501025@linux.com>
+Message-ID: <fb67be6f-3691-0aef-fbc6-4e1093ddb8da@linux.com>
+Date: Thu, 18 Jan 2018 16:09:23 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+55aFzKPed+89wz=ajWNpsQ8Kh+AQWx61hwVqqDh7_=h4tecg@mail.gmail.com>
-Sender: Al Viro <viro@ftp.linux.org.uk>
-Subject: [kernel-hardening] Re: [RFC][PATCH] get rid of the use of set_fs() (by way of
- kernel_recvmsg()) in sunrpc
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Network Development <netdev@vger.kernel.org>, Dan Williams <dan.j.williams@intel.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, the arch/x86 maintainers <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>, David Miller <davem@davemloft.net>
+In-Reply-To: <0c1950e9-626d-c7b8-5551-fcc233501025@linux.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH RFC v7 0/6] Introduce the STACKLEAK feature and a test for
+ it
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, X86 ML <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 17, 2018 at 07:16:02PM -0800, Linus Torvalds wrote:
-> On Wed, Jan 17, 2018 at 7:06 PM, Al Viro <viro@zeniv.linux.org.uk> wrote:
-> >
-> > Similar to the way put_cmsg() handles 32bit case on biarch
-> > targets, introduce a flag telling put_cmsg() to treat
-> > ->msg_control as kernel pointer, using memcpy instead of
-> > copy_to_user().  That allows to avoid the use of kernel_recvmsg()
-> > with its set_fs().
+Hello Kees,
+
+On 17.01.2018 14:37, Alexander Popov wrote:
+> On 15.01.2018 22:59, Kees Cook wrote:
+>> On Fri, Jan 12, 2018 at 6:19 AM, Alexander Popov <alex.popov@linux.com> wrote:
+>>> This is the 7th version of the patch series introducing STACKLEAK to the
+>>> mainline kernel. STACKLEAK is a security feature developed by Grsecurity/PaX
+>>> (kudos to them), which:
+>>>  - reduces the information that can be revealed through kernel stack leak bugs;
+>>>  - blocks some uninitialized stack variable attacks (e.g. CVE-2010-2963);
+>>>  - introduces some runtime checks for kernel stack overflow detection.
+>>
+>> I think this is really looking good. I had some thoughts while reading
+>> through the patches:
+>>
+>> There are really three features in this series, and it might make
+>> sense to separate them a bit more clearly (at least with CONFIG
+>> choices):
+>>
+>> 1) stack clearing (with depth searching)
+>>
+>> 2) runtime stack depth tracking (making 1 much more efficient)
+>>
+>> 3) alloca checking (an additional feature, not strictly part of
+>> clearing, but needs the same plugin infrastructure)
+>>
+>> It seems like it should be possible to get 1 without 2 and 3 (both of
+>> which happen in the gcc plugin), and might be good to separate for
+>> builds that don't have gcc plugins.
+>>
+>> Once compilers are doing alloca checking (or all VLAs are removed from
+>> the kernel), it'd be nice to be able to avoid the redundancy of 3.
 > 
-> If this is the only case that kernel_recvmsg() exists for, then by all
-> means, that patch certainly looks like a good thing.
+> Agree with your point. I'll make this separation in the next version.
 
-In -next that's the only remaining caller.  kernel_recvmsg() is
-{
-        mm_segment_t oldfs = get_fs();
-        int result;
+I have more thoughts about this separation.
 
-        iov_iter_kvec(&msg->msg_iter, READ | ITER_KVEC, vec, num, size);
-        set_fs(KERNEL_DS);
-        result = sock_recvmsg(sock, msg, flags);
-        set_fs(oldfs);
-        return result;
-}
-and 
-        iov_iter_kvec(&msg->msg_iter, READ | ITER_KVEC, vec, num, size);
-        result = sock_recvmsg(sock, msg, flags);
-works just fine for copying the data - that gets handled by copy_to_iter()
-and copy_page_to_iter().  Those don't care about set_fs(); the trouble with
-sunrpc call site is that we want to fill msg_control-pointed kernel object.
-That gets copied by put_cmsg().
+Splitting (1) from (2)
+----------------------
 
-	We could turn ->msg_control/->msg_controllen into another
-iov_iter, but seeing that we never do scatter-gather for those
-IMO that would be a massive overkill.  A flag controlling whether
-->msg_control is kernel or userland pointer would do, especially
-since we already have a flag for "do we want a native or compat
-layout for cmsg" in there.
+It makes the stack erasing not only slow but also unreliable. For example, an
+attacker can craft some STACKLEAK_POISON values on the thread stack to deceive
+the poison search during the erasing.
 
-	That's the only caller we need it for, but that thing looks cheap
-enough.  Obviously needs to pass testing, including "is it too ugly to
-live as far as Davem is concerned" test, though...
+Of course, I can increase STACKLEAK_POISON_CHECK_DEPTH or change the default
+value of lowest_stack. It will make the stack erasing even slower, but will not
+give guarantees.
+
+So I don't think that (1) without (2) is actually a good feature. I would
+propose to refrain from separating the stack erasing and the lowest_stack tracking.
+
+Splitting (2) and (3)
+---------------------
+
+The STACKLEAK gcc plugin needs to search for alloca anyway (for the correct
+lowest_stack tracking). But I can introduce the "no-check-alloca" plugin
+parameter for disabling the check_alloca() call insertion.
+
+Is it worth providing something like CONFIG_GCC_PLUGIN_STACKLEAK_NO_CHECK_ALLOCA
+in the Kconfig?
+
+Thanks!
+
+Best regards,
+Alexander
