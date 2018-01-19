@@ -1,53 +1,69 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Thu, 18 Jan 2018 16:02:26 -0800
-Message-ID: <151632014611.21271.2373946384226391096.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Thu, 18 Jan 2018 16:02:31 -0800
+Message-ID: <151632015123.21271.9060883997507739532.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v4 08/10] vfs,
- fdtable: prevent bounds-check bypass via speculative execution
+Subject: [kernel-hardening] [PATCH v4 09/10] kvm, x86: fix spectre-v1 mitigation
 To: linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, Al Viro <viro@zeniv.linux.org.uk>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, alan@linux.intel.com
+Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Honig <ahonig@google.com>, stable@vger.kernel.org, gregkh@linuxfoundation.org, Paolo Bonzini <pbonzini@redhat.com>, tglx@linutronix.de, alan@linux.intel.com, torvalds@linux-foundation.org, akpm@linux-foundation.org, Jim Mattson <jmattson@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-'fd' is a user controlled value that is used as a data dependency to
-read from the 'fdt->fd' array.  In order to avoid potential leaks of
-kernel memory values, block speculative execution of the instruction
-stream that could issue reads based on an invalid 'file *' returned from
-__fcheck_files.
+Commit 75f139aaf896 "KVM: x86: Add memory barrier on vmcs field lookup"
+added a raw 'asm("lfence");' to prevent a bounds check bypass of
+'vmcs_field_to_offset_table'. This does not work for some AMD cpus, see
+the 'ifence' helper, and it otherwise does not use the common
+'array_ptr' helper designed for these types of fixes. Convert this to
+use 'array_ptr'.
 
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Co-developed-by: Elena Reshetova <elena.reshetova@intel.com>
+Cc: Andrew Honig <ahonig@google.com>
+Cc: Jim Mattson <jmattson@google.com>
+Cc: Paolo Bonzini <pbonzini@redhat.com>
+Cc: <stable@vger.kernel.org>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- include/linux/fdtable.h |    7 +++++--
- 1 file changed, 5 insertions(+), 2 deletions(-)
+ arch/x86/kvm/vmx.c |   19 +++++++------------
+ 1 file changed, 7 insertions(+), 12 deletions(-)
 
-diff --git a/include/linux/fdtable.h b/include/linux/fdtable.h
-index 1c65817673db..9731f1a255db 100644
---- a/include/linux/fdtable.h
-+++ b/include/linux/fdtable.h
-@@ -10,6 +10,7 @@
- #include <linux/compiler.h>
- #include <linux/spinlock.h>
- #include <linux/rcupdate.h>
+diff --git a/arch/x86/kvm/vmx.c b/arch/x86/kvm/vmx.c
+index c829d89e2e63..20b9b0b5e336 100644
+--- a/arch/x86/kvm/vmx.c
++++ b/arch/x86/kvm/vmx.c
+@@ -34,6 +34,7 @@
+ #include <linux/tboot.h>
+ #include <linux/hrtimer.h>
+ #include <linux/frame.h>
 +#include <linux/nospec.h>
- #include <linux/types.h>
- #include <linux/init.h>
- #include <linux/fs.h>
-@@ -81,9 +82,11 @@ struct dentry;
- static inline struct file *__fcheck_files(struct files_struct *files, unsigned int fd)
- {
- 	struct fdtable *fdt = rcu_dereference_raw(files->fdt);
-+	struct file __rcu **fdp;
+ #include "kvm_cache_regs.h"
+ #include "x86.h"
  
--	if (fd < fdt->max_fds)
--		return rcu_dereference_raw(fdt->fd[fd]);
-+	fdp = array_ptr(fdt->fd, fd, fdt->max_fds);
-+	if (fdp)
-+		return rcu_dereference_raw(*fdp);
- 	return NULL;
+@@ -898,21 +899,15 @@ static const unsigned short vmcs_field_to_offset_table[] = {
+ 
+ static inline short vmcs_field_to_offset(unsigned long field)
+ {
+-	BUILD_BUG_ON(ARRAY_SIZE(vmcs_field_to_offset_table) > SHRT_MAX);
+-
+-	if (field >= ARRAY_SIZE(vmcs_field_to_offset_table))
+-		return -ENOENT;
++	const unsigned short *offset;
+ 
+-	/*
+-	 * FIXME: Mitigation for CVE-2017-5753.  To be replaced with a
+-	 * generic mechanism.
+-	 */
+-	asm("lfence");
++	BUILD_BUG_ON(ARRAY_SIZE(vmcs_field_to_offset_table) > SHRT_MAX);
+ 
+-	if (vmcs_field_to_offset_table[field] == 0)
++	offset = array_ptr(vmcs_field_to_offset_table, field,
++			ARRAY_SIZE(vmcs_field_to_offset_table));
++	if (!offset || *offset == 0)
+ 		return -ENOENT;
+-
+-	return vmcs_field_to_offset_table[field];
++	return *offset;
  }
  
+ static inline struct vmcs12 *get_vmcs12(struct kvm_vcpu *vcpu)
