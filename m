@@ -1,72 +1,53 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Thu, 18 Jan 2018 16:02:21 -0800
-Message-ID: <151632014097.21271.16980532033566583357.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Thu, 18 Jan 2018 16:02:26 -0800
+Message-ID: <151632014611.21271.2373946384226391096.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v4 07/10] x86: narrow out of bounds syscalls to sys_read
- under speculation
+Subject: [kernel-hardening] [PATCH v4 08/10] vfs,
+ fdtable: prevent bounds-check bypass via speculative execution
 To: linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, x86@kernel.org, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, alan@linux.intel.com
+Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, Al Viro <viro@zeniv.linux.org.uk>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The syscall table base is a user controlled function pointer in kernel
-space. Like, 'get_user, use 'MASK_NOSPEC' to prevent any out of bounds
-speculation. While retpoline prevents speculating into the user
-controlled target it does not stop the pointer de-reference, the concern
-is leaking memory relative to the syscall table base.
+'fd' is a user controlled value that is used as a data dependency to
+read from the 'fdt->fd' array.  In order to avoid potential leaks of
+kernel memory values, block speculative execution of the instruction
+stream that could issue reads based on an invalid 'file *' returned from
+__fcheck_files.
 
-Reported-by: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: Ingo Molnar <mingo@redhat.com>
-Cc: "H. Peter Anvin" <hpa@zytor.com>
-Cc: x86@kernel.org
-Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Al Viro <viro@zeniv.linux.org.uk>
+Co-developed-by: Elena Reshetova <elena.reshetova@intel.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- arch/x86/entry/entry_64.S   |    2 ++
- arch/x86/include/asm/smap.h |    9 ++++++++-
- 2 files changed, 10 insertions(+), 1 deletion(-)
+ include/linux/fdtable.h |    7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
 
-diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index 4f8e1d35a97c..2320017077d4 100644
---- a/arch/x86/entry/entry_64.S
-+++ b/arch/x86/entry/entry_64.S
-@@ -35,6 +35,7 @@
- #include <asm/asm.h>
- #include <asm/smap.h>
- #include <asm/pgtable_types.h>
-+#include <asm/smap.h>
- #include <asm/export.h>
- #include <asm/frame.h>
- #include <asm/nospec-branch.h>
-@@ -264,6 +265,7 @@ entry_SYSCALL_64_fastpath:
- 	cmpl	$__NR_syscall_max, %eax
- #endif
- 	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
-+	MASK_NOSPEC %r11 %rax			/* sanitize syscall_nr wrt speculation */
- 	movq	%r10, %rcx
+diff --git a/include/linux/fdtable.h b/include/linux/fdtable.h
+index 1c65817673db..9731f1a255db 100644
+--- a/include/linux/fdtable.h
++++ b/include/linux/fdtable.h
+@@ -10,6 +10,7 @@
+ #include <linux/compiler.h>
+ #include <linux/spinlock.h>
+ #include <linux/rcupdate.h>
++#include <linux/nospec.h>
+ #include <linux/types.h>
+ #include <linux/init.h>
+ #include <linux/fs.h>
+@@ -81,9 +82,11 @@ struct dentry;
+ static inline struct file *__fcheck_files(struct files_struct *files, unsigned int fd)
+ {
+ 	struct fdtable *fdt = rcu_dereference_raw(files->fdt);
++	struct file __rcu **fdp;
  
- 	/*
-diff --git a/arch/x86/include/asm/smap.h b/arch/x86/include/asm/smap.h
-index 2b4ad4c6a226..3b5b2cf58dc6 100644
---- a/arch/x86/include/asm/smap.h
-+++ b/arch/x86/include/asm/smap.h
-@@ -35,7 +35,14 @@
-  * this directs the cpu to speculate with a NULL ptr rather than
-  * something targeting kernel memory.
-  *
-- * assumes CF is set from a previous 'cmp TASK_addr_limit, %ptr'
-+ * In the syscall entry path it is possible to speculate past the
-+ * validation of the system call number. Use MASK_NOSPEC to sanitize the
-+ * syscall array index to zero (sys_read) rather than an arbitrary
-+ * target.
-+ *
-+ * assumes CF is set from a previous 'cmp' i.e.:
-+ *     cmp TASK_addr_limit, %ptr
-+ *     cmp __NR_syscall_max, %idx
-  */
- .macro MASK_NOSPEC mask val
- 	sbb \mask, \mask
+-	if (fd < fdt->max_fds)
+-		return rcu_dereference_raw(fdt->fd[fd]);
++	fdp = array_ptr(fdt->fd, fd, fdt->max_fds);
++	if (fdp)
++		return rcu_dereference_raw(*fdp);
+ 	return NULL;
+ }
+ 
