@@ -1,85 +1,66 @@
-References: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151632015123.21271.9060883997507739532.stgit@dwillia2-desk3.amr.corp.intel.com>
-From: Paolo Bonzini <pbonzini@redhat.com>
-Message-ID: <729b6b10-500b-3002-4051-8a1d8fe31d27@redhat.com>
-Date: Fri, 19 Jan 2018 09:42:59 +0100
 MIME-Version: 1.0
-In-Reply-To: <151632015123.21271.9060883997507739532.stgit@dwillia2-desk3.amr.corp.intel.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v4 09/10] kvm, x86: fix spectre-v1 mitigation
-To: Dan Williams <dan.j.williams@intel.com>, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Honig <ahonig@google.com>, stable@vger.kernel.org, gregkh@linuxfoundation.org, tglx@linutronix.de, alan@linux.intel.com, torvalds@linux-foundation.org, akpm@linux-foundation.org, Jim Mattson <jmattson@google.com>
+In-Reply-To: <151632010687.21271.12004432287640499992.stgit@dwillia2-desk3.amr.corp.intel.com>
+References: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151632010687.21271.12004432287640499992.stgit@dwillia2-desk3.amr.corp.intel.com>
+From: Jann Horn <jannh@google.com>
+Date: Fri, 19 Jan 2018 11:20:48 +0100
+Message-ID: <CAG48ez0Y97-gyzWBmcVbUyLuzUG42To=Mm8PAKuzWma6XbFmew@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] [PATCH v4 02/10] asm/nospec, array_ptr:
+ sanitize speculative array de-references
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: kernel list <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, the arch/x86 maintainers <x86@kernel.org>, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 19/01/2018 01:02, Dan Williams wrote:
-> Commit 75f139aaf896 "KVM: x86: Add memory barrier on vmcs field lookup"
-> added a raw 'asm("lfence");' to prevent a bounds check bypass of
-> 'vmcs_field_to_offset_table'. This does not work for some AMD cpus, see
-> the 'ifence' helper,
+On Fri, Jan 19, 2018 at 1:01 AM, Dan Williams <dan.j.williams@intel.com> wrote:
+> 'array_ptr' is proposed as a generic mechanism to mitigate against
+> Spectre-variant-1 attacks, i.e. an attack that bypasses boundary checks
+> via speculative execution). The 'array_ptr' implementation is expected
+> to be safe for current generation cpus across multiple architectures
+> (ARM, x86).
+>
+> Based on an original implementation by Linus Torvalds, tweaked to remove
+> speculative flows by Alexei Starovoitov, and tweaked again by Linus to
+> introduce an x86 assembly implementation for the mask generation.
+[...]
+> +/*
+> + * If idx is negative or if idx > size then bit 63 is set in the mask,
+> + * and the value of ~(-1L) is zero. When the mask is zero, bounds check
+> + * failed, array_ptr will return NULL.
+> + */
+> +#ifndef array_ptr_mask
+> +static inline unsigned long array_ptr_mask(unsigned long idx, unsigned long sz)
+> +{
+> +       return ~(long)(idx | (sz - 1 - idx)) >> (BITS_PER_LONG - 1);
+> +}
+> +#endif
 
-The code never runs on AMD cpus (it's for Intel virtualization
-extensions), so it'd be nice if you could fix up the commit message.
+Nit: Maybe add a comment saying that this is equivalent to
+"return ((long)idx >= 0 && idx < sz) ? ULONG_MAX : 0"?
 
-Apart from this, obviously
+> +/**
+> + * array_ptr - Generate a pointer to an array element, ensuring
+> + * the pointer is bounded under speculation to NULL.
+> + *
+> + * @base: the base of the array
+> + * @idx: the index of the element, must be less than LONG_MAX
+> + * @sz: the number of elements in the array, must be less than LONG_MAX
+> + *
+> + * If @idx falls in the interval [0, @sz), returns the pointer to
+> + * @arr[@idx], otherwise returns NULL.
+> + */
+> +#define array_ptr(base, idx, sz)                                       \
+> +({                                                                     \
+> +       union { typeof(*(base)) *_ptr; unsigned long _bit; } __u;       \
+> +       typeof(*(base)) *_arr = (base);                                 \
+> +       unsigned long _i = (idx);                                       \
+> +       unsigned long _mask = array_ptr_mask(_i, (sz));                 \
+> +                                                                       \
+> +       __u._ptr = _arr + (_i & _mask);                                 \
+> +       __u._bit &= _mask;                                              \
 
-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
-
-Thanks!
-
-Paolo
-
-> and it otherwise does not use the common
-> 'array_ptr' helper designed for these types of fixes. Convert this to
-> use 'array_ptr'.
-> 
-> Cc: Andrew Honig <ahonig@google.com>
-> Cc: Jim Mattson <jmattson@google.com>
-> Cc: Paolo Bonzini <pbonzini@redhat.com>
-> Cc: <stable@vger.kernel.org>
-> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
-> ---
->  arch/x86/kvm/vmx.c |   19 +++++++------------
->  1 file changed, 7 insertions(+), 12 deletions(-)
-> 
-> diff --git a/arch/x86/kvm/vmx.c b/arch/x86/kvm/vmx.c
-> index c829d89e2e63..20b9b0b5e336 100644
-> --- a/arch/x86/kvm/vmx.c
-> +++ b/arch/x86/kvm/vmx.c
-> @@ -34,6 +34,7 @@
->  #include <linux/tboot.h>
->  #include <linux/hrtimer.h>
->  #include <linux/frame.h>
-> +#include <linux/nospec.h>
->  #include "kvm_cache_regs.h"
->  #include "x86.h"
->  
-> @@ -898,21 +899,15 @@ static const unsigned short vmcs_field_to_offset_table[] = {
->  
->  static inline short vmcs_field_to_offset(unsigned long field)
->  {
-> -	BUILD_BUG_ON(ARRAY_SIZE(vmcs_field_to_offset_table) > SHRT_MAX);
-> -
-> -	if (field >= ARRAY_SIZE(vmcs_field_to_offset_table))
-> -		return -ENOENT;
-> +	const unsigned short *offset;
->  
-> -	/*
-> -	 * FIXME: Mitigation for CVE-2017-5753.  To be replaced with a
-> -	 * generic mechanism.
-> -	 */
-> -	asm("lfence");
-> +	BUILD_BUG_ON(ARRAY_SIZE(vmcs_field_to_offset_table) > SHRT_MAX);
->  
-> -	if (vmcs_field_to_offset_table[field] == 0)
-> +	offset = array_ptr(vmcs_field_to_offset_table, field,
-> +			ARRAY_SIZE(vmcs_field_to_offset_table));
-> +	if (!offset || *offset == 0)
->  		return -ENOENT;
-> -
-> -	return vmcs_field_to_offset_table[field];
-> +	return *offset;
->  }
->  
->  static inline struct vmcs12 *get_vmcs12(struct kvm_vcpu *vcpu)
-> 
+AFAICS, if `idx` is out of bounds, you first zero out the index
+(`_i & _mask`) and then immediately afterwards zero out
+the whole pointer (`_u._bit &= _mask`).
+Is there a reason for the `_i & _mask`, and if so, can you
+add a comment explaining that?
