@@ -1,102 +1,90 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Thu, 18 Jan 2018 16:01:36 -0800
-Message-ID: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Thu, 18 Jan 2018 16:01:46 -0800
+Message-ID: <151632010687.21271.12004432287640499992.stgit@dwillia2-desk3.amr.corp.intel.com>
+In-Reply-To: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
+References: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v4 00/10] prevent bounds-check bypass via speculative
- execution
+Subject: [kernel-hardening] [PATCH v4 02/10] asm/nospec,
+ array_ptr: sanitize speculative array de-references
 To: linux-kernel@vger.kernel.org
-Cc: Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "H. Peter Anvin" <hpa@zytor.com>, Elena Reshetova <elena.reshetova@intel.com>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, x86@kernel.org, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Andrew Honig <ahonig@google.com>, alan@linux.intel.com, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, tglx@linutronix.de, akpm@linux-foundation.org, Jim Mattson <jmattson@google.com>, Christian Lamparter <chunkeey@gmail.com>, gregkh@linuxfoundation.org, linux-wireless@vger.kernel.org, stable@vger.kernel.org, Paolo Bonzini <pbonzini@redhat.com>, Johannes Berg <johannes@sipsolutions.net>, torvalds@linux-foundation.org, "David S. Miller" <davem@davemloft.net>
+Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Catalin Marinas <catalin.marinas@arm.com>, x86@kernel.org, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, gregkh@linuxfoundation.org, "H. Peter Anvin" <hpa@zytor.com>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Changes since v3 [1]
-* Drop 'ifence_array_ptr' and associated compile-time + run-time
-  switching and just use the masking approach all the time.
+'array_ptr' is proposed as a generic mechanism to mitigate against
+Spectre-variant-1 attacks, i.e. an attack that bypasses boundary checks
+via speculative execution). The 'array_ptr' implementation is expected
+to be safe for current generation cpus across multiple architectures
+(ARM, x86).
 
-* Convert 'get_user' to use pointer sanitization via masking rather than
-  lfence. '__get_user' and associated paths still rely on
-  lfence. (Linus)
+Based on an original implementation by Linus Torvalds, tweaked to remove
+speculative flows by Alexei Starovoitov, and tweaked again by Linus to
+introduce an x86 assembly implementation for the mask generation.
 
-      "Basically, the rule is trivial: find all 'stac' users, and use
-       address masking if those users already integrate the limit
-       check, and lfence they don't."
-
-* At syscall entry sanitize the syscall number under speculation
-  to remove a user controlled pointer de-reference in kernel
-  space.  (Linus)
-
-* Fix a raw lfence in the kvm code (added for v4.15-rc8) to use
-  'array_ptr'.
-
-* Propose 'array_idx' as a way to sanitize user input that is
-  later used as an array index, but where the validation is
-  happening in a different code block than the array reference.
-  (Christian).
-
-* Fix grammar in speculation.txt (Kees)
-
+Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
+Co-developed-by: Alexei Starovoitov <ast@kernel.org>
+Co-developed-by: Peter Zijlstra <peterz@infradead.org>
+Cc: Russell King <linux@armlinux.org.uk>
+Cc: Catalin Marinas <catalin.marinas@arm.com>
+Cc: Will Deacon <will.deacon@arm.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: Ingo Molnar <mingo@redhat.com>
+Cc: "H. Peter Anvin" <hpa@zytor.com>
+Cc: x86@kernel.org
+Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
-
-Quoting Mark's original RFC:
-
-"Recently, Google Project Zero discovered several classes of attack
-against speculative execution. One of these, known as variant-1, allows
-explicit bounds checks to be bypassed under speculation, providing an
-arbitrary read gadget. Further details can be found on the GPZ blog [2]
-and the Documentation patch in this series."
-
-A precondition of using this attack on the kernel is to get a user
-controlled pointer de-referenced (under speculation) in privileged code.
-The primary source of user controlled pointers in the kernel is the
-arguments passed to 'get_user' and '__get_user'. An example of other
-user controlled pointers are user-controlled array / pointer offsets.
-
-Better tooling is needed to find more arrays / pointers with user
-controlled indices / offsets that can be converted to use 'array_ptr' or
-'array_idx'. A few are included in this set, and these are not expected
-to be complete. That said, the 'get_user' protections raise the bar on
-finding a vulnerable gadget in the kernel.
-
-These patches are also available via the 'nospec-v4' git branch here:
-
-    git://git.kernel.org/pub/scm/linux/kernel/git/djbw/linux nospec-v4
-
-Note that the BPF fix for Spectre variant1 is merged for 4.15-rc8.
-
-[2]: https://googleprojectzero.blogspot.co.uk/2018/01/reading-privileged-memory-with-side.html
-
----
-
-Dan Williams (9):
-      asm/nospec, array_ptr: sanitize speculative array de-references
-      x86: implement array_ptr_mask()
-      x86: introduce __uaccess_begin_nospec and ifence
-      x86, __get_user: use __uaccess_begin_nospec
-      x86, get_user: use pointer masking to limit speculation
-      x86: narrow out of bounds syscalls to sys_read under speculation
-      vfs, fdtable: prevent bounds-check bypass via speculative execution
-      kvm, x86: fix spectre-v1 mitigation
-      nl80211: sanitize array index in parse_txq_params
-
-Mark Rutland (1):
-      Documentation: document array_ptr
-
-
- Documentation/speculation.txt     |  143 +++++++++++++++++++++++++++++++++++++
- arch/x86/entry/entry_64.S         |    2 +
- arch/x86/include/asm/barrier.h    |   28 +++++++
- arch/x86/include/asm/msr.h        |    3 -
- arch/x86/include/asm/smap.h       |   24 ++++++
- arch/x86/include/asm/uaccess.h    |   15 +++-
- arch/x86/include/asm/uaccess_32.h |    6 +-
- arch/x86/include/asm/uaccess_64.h |   12 ++-
- arch/x86/kvm/vmx.c                |   19 ++---
- arch/x86/lib/getuser.S            |    5 +
- arch/x86/lib/usercopy_32.c        |    8 +-
- include/linux/fdtable.h           |    7 +-
- include/linux/nospec.h            |   65 +++++++++++++++++
- net/wireless/nl80211.c            |   10 ++-
- 14 files changed, 312 insertions(+), 35 deletions(-)
- create mode 100644 Documentation/speculation.txt
+ include/linux/nospec.h |   44 ++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 44 insertions(+)
  create mode 100644 include/linux/nospec.h
+
+diff --git a/include/linux/nospec.h b/include/linux/nospec.h
+new file mode 100644
+index 000000000000..f841c11f3f1f
+--- /dev/null
++++ b/include/linux/nospec.h
+@@ -0,0 +1,44 @@
++// SPDX-License-Identifier: GPL-2.0
++// Copyright(c) 2018 Intel Corporation. All rights reserved.
++
++#ifndef __NOSPEC_H__
++#define __NOSPEC_H__
++
++#include <linux/jump_label.h>
++#include <asm/barrier.h>
++
++/*
++ * If idx is negative or if idx > size then bit 63 is set in the mask,
++ * and the value of ~(-1L) is zero. When the mask is zero, bounds check
++ * failed, array_ptr will return NULL.
++ */
++#ifndef array_ptr_mask
++static inline unsigned long array_ptr_mask(unsigned long idx, unsigned long sz)
++{
++	return ~(long)(idx | (sz - 1 - idx)) >> (BITS_PER_LONG - 1);
++}
++#endif
++
++/**
++ * array_ptr - Generate a pointer to an array element, ensuring
++ * the pointer is bounded under speculation to NULL.
++ *
++ * @base: the base of the array
++ * @idx: the index of the element, must be less than LONG_MAX
++ * @sz: the number of elements in the array, must be less than LONG_MAX
++ *
++ * If @idx falls in the interval [0, @sz), returns the pointer to
++ * @arr[@idx], otherwise returns NULL.
++ */
++#define array_ptr(base, idx, sz)					\
++({									\
++	union { typeof(*(base)) *_ptr; unsigned long _bit; } __u;	\
++	typeof(*(base)) *_arr = (base);					\
++	unsigned long _i = (idx);					\
++	unsigned long _mask = array_ptr_mask(_i, (sz));			\
++									\
++	__u._ptr = _arr + (_i & _mask);					\
++	__u._bit &= _mask;						\
++	__u._ptr;							\
++})
++#endif /* __NOSPEC_H__ */
