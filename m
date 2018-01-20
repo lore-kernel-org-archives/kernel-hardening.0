@@ -1,51 +1,36 @@
-Content-Type: text/plain;
-	charset=us-ascii
-Mime-Version: 1.0 (1.0)
-From: David Windsor <dave@nullcore.net>
-In-Reply-To: <CAGXu5jJjHd9D=20jYnx4PSJHBbRsUOP3bAOJ11yyUWutqVHr2A@mail.gmail.com>
-Date: Fri, 19 Jan 2018 20:12:40 -0500
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <8BCDD560-66F5-4CF7-97DD-E2E5BE1D13F4@nullcore.net>
-References: <1515529383-35695-1-git-send-email-keescook@chromium.org> <CAGXu5jJjHd9D=20jYnx4PSJHBbRsUOP3bAOJ11yyUWutqVHr2A@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH 0/3] exec: Pin stack limit during exec
+References: <1515766769-9120-1-git-send-email-alex.popov@linux.com>
+ <CAGXu5jKmOn7E04Y8pR9Tgn7usJYMhqWe9x929ZwEnu21MG=mZw@mail.gmail.com>
+ <0c1950e9-626d-c7b8-5551-fcc233501025@linux.com>
+ <fb67be6f-3691-0aef-fbc6-4e1093ddb8da@linux.com>
+ <CAGXu5j+OSzYx61-NN8XcBAVvMpCrPc2TFN66esK+-gFQtp_5pg@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <9e6d74cf-ac51-463e-feae-b2df0e5fb85e@linux.com>
+Date: Sat, 20 Jan 2018 13:13:26 +0300
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5j+OSzYx61-NN8XcBAVvMpCrPc2TFN66esK+-gFQtp_5pg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH RFC v7 0/6] Introduce the STACKLEAK feature and a test for
+ it
 To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Michal Hocko <mhocko@kernel.org>, Ben Hutchings <ben@decadent.org.uk>, Willy Tarreau <w@1wt.eu>, Hugh Dickins <hughd@google.com>, Oleg Nesterov <oleg@redhat.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Rik van Riel <riel@redhat.com>, Laura Abbott <labbott@redhat.com>, Greg KH <greg@kroah.com>, Andy Lutomirski <luto@kernel.org>, Linux-MM <linux-mm@kvack.org>, linux-arch <linux-arch@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Cc: kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, X86 ML <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I have some spare cycles; is there any more relevant information outside of t=
-his thread?
+On 19.01.2018 00:13, Kees Cook wrote:
+> On Thu, Jan 18, 2018 at 5:09 AM, Alexander Popov <alex.popov@linux.com> wrote:
+>> So I don't think that (1) without (2) is actually a good feature. I would
+>> propose to refrain from separating the stack erasing and the lowest_stack tracking.
+> 
+> How about an option to clear the _entire_ stack, then, when the plugin
+> isn't available? That gives us a range of options and provides an easy
+> way to compare the performance of the tracking. i.e. can compare off,
+> full, and smart.
 
-Thanks,
-David
+Yes, I should try it. I'll return with the results of the performance tests.
+We'll discuss them; if full stack erasing is not too slow, I'll introduce it in
+the 8'th version of the patch series.
 
-> On Jan 19, 2018, at 5:49 PM, Kees Cook <keescook@chromium.org> wrote:
->=20
->> On Tue, Jan 9, 2018 at 12:23 PM, Kees Cook <keescook@chromium.org> wrote:=
+Thanks!
 
->> Attempts to solve problems with the stack limit changing during exec
->> continue to be frustrated[1][2]. In addition to the specific issues
->> around the Stack Clash family of flaws, Andy Lutomirski pointed out[3]
->> other places during exec where the stack limit is used and is assumed
->> to be unchanging. Given the many places it gets used and the fact that
->> it can be manipulated/raced via setrlimit() and prlimit(), I think the
->> only way to handle this is to move away from the "current" view of the
->> stack limit and instead attach it to the bprm, and plumb this down into
->> the functions that need to know the stack limits. This series implements
->> the approach. I'd be curious to hear feedback on alternatives.
->=20
-> Friendly ping -- looking for some people with spare cycles to look
-> this over. If people want, I can toss it into -next as part of my kspp
-> tree. It's been living happily in 0-day for  2 weeks...
->=20
-> Thanks!
->=20
-> -Kees
->=20
->> [1] 04e35f4495dd ("exec: avoid RLIMIT_STACK races with prlimit()")
->> [2] 779f4e1c6c7c ("Revert "exec: avoid RLIMIT_STACK races with prlimit()"=
-")
->> [3] to security@kernel.org, "Subject: existing rlimit races?"
->=20
-> --=20
-> Kees Cook
-> Pixel Security
+Best regards,
+Alexander
