@@ -1,85 +1,51 @@
-MIME-Version: 1.0
-In-Reply-To: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
-References: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
-From: Dan Williams <dan.j.williams@intel.com>
-Date: Fri, 19 Jan 2018 22:58:44 -0800
-Message-ID: <CAPcyv4iBHTahi66deUT1iSPpA2W2wjYZSaiUYUjpdK10d5Rt7g@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v4 00/10] prevent bounds-check bypass via speculative execution
-To: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
-Cc: Mark Rutland <mark.rutland@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "H. Peter Anvin" <hpa@zytor.com>, Elena Reshetova <elena.reshetova@intel.com>, linux-arch <linux-arch@vger.kernel.org>, Andi Kleen <ak@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, X86 ML <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Andrew Honig <ahonig@google.com>, Alan Cox <alan@linux.intel.com>, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jim Mattson <jmattson@google.com>, Christian Lamparter <chunkeey@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Linux Wireless List <linux-wireless@vger.kernel.org>, stable@vger.kernel.org, Paolo Bonzini <pbonzini@redhat.com>, Johannes Berg <johannes@sipsolutions.net>, Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>
+Content-Type: text/plain;
+	charset=us-ascii
+Mime-Version: 1.0 (1.0)
+From: David Windsor <dave@nullcore.net>
+In-Reply-To: <CAGXu5jJjHd9D=20jYnx4PSJHBbRsUOP3bAOJ11yyUWutqVHr2A@mail.gmail.com>
+Date: Fri, 19 Jan 2018 20:12:40 -0500
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <8BCDD560-66F5-4CF7-97DD-E2E5BE1D13F4@nullcore.net>
+References: <1515529383-35695-1-git-send-email-keescook@chromium.org> <CAGXu5jJjHd9D=20jYnx4PSJHBbRsUOP3bAOJ11yyUWutqVHr2A@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH 0/3] exec: Pin stack limit during exec
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Michal Hocko <mhocko@kernel.org>, Ben Hutchings <ben@decadent.org.uk>, Willy Tarreau <w@1wt.eu>, Hugh Dickins <hughd@google.com>, Oleg Nesterov <oleg@redhat.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Rik van Riel <riel@redhat.com>, Laura Abbott <labbott@redhat.com>, Greg KH <greg@kroah.com>, Andy Lutomirski <luto@kernel.org>, Linux-MM <linux-mm@kvack.org>, linux-arch <linux-arch@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 18, 2018 at 4:01 PM, Dan Williams <dan.j.williams@intel.com> wrote:
-> Changes since v3 [1]
-> * Drop 'ifence_array_ptr' and associated compile-time + run-time
->   switching and just use the masking approach all the time.
->
-> * Convert 'get_user' to use pointer sanitization via masking rather than
->   lfence. '__get_user' and associated paths still rely on
->   lfence. (Linus)
->
->       "Basically, the rule is trivial: find all 'stac' users, and use
->        address masking if those users already integrate the limit
->        check, and lfence they don't."
->
-> * At syscall entry sanitize the syscall number under speculation
->   to remove a user controlled pointer de-reference in kernel
->   space.  (Linus)
->
-> * Fix a raw lfence in the kvm code (added for v4.15-rc8) to use
->   'array_ptr'.
->
-> * Propose 'array_idx' as a way to sanitize user input that is
->   later used as an array index, but where the validation is
->   happening in a different code block than the array reference.
->   (Christian).
->
-> * Fix grammar in speculation.txt (Kees)
->
-> ---
->
-> Quoting Mark's original RFC:
->
-> "Recently, Google Project Zero discovered several classes of attack
-> against speculative execution. One of these, known as variant-1, allows
-> explicit bounds checks to be bypassed under speculation, providing an
-> arbitrary read gadget. Further details can be found on the GPZ blog [2]
-> and the Documentation patch in this series."
->
-> A precondition of using this attack on the kernel is to get a user
-> controlled pointer de-referenced (under speculation) in privileged code.
-> The primary source of user controlled pointers in the kernel is the
-> arguments passed to 'get_user' and '__get_user'. An example of other
-> user controlled pointers are user-controlled array / pointer offsets.
->
-> Better tooling is needed to find more arrays / pointers with user
-> controlled indices / offsets that can be converted to use 'array_ptr' or
-> 'array_idx'. A few are included in this set, and these are not expected
-> to be complete. That said, the 'get_user' protections raise the bar on
-> finding a vulnerable gadget in the kernel.
->
-> These patches are also available via the 'nospec-v4' git branch here:
->
->     git://git.kernel.org/pub/scm/linux/kernel/git/djbw/linux nospec-v4
+I have some spare cycles; is there any more relevant information outside of t=
+his thread?
 
-I've pushed out a nospec-v4.1 with the below minor cleanup, a fixup of
-the changelog for "kvm, x86: fix spectre-v1 mitigation", and added
-Paolo's ack.
+Thanks,
+David
 
-     git://git.kernel.org/pub/scm/linux/kernel/git/djbw/linux nospec-v4.1
+> On Jan 19, 2018, at 5:49 PM, Kees Cook <keescook@chromium.org> wrote:
+>=20
+>> On Tue, Jan 9, 2018 at 12:23 PM, Kees Cook <keescook@chromium.org> wrote:=
 
-diff --git a/include/linux/nospec.h b/include/linux/nospec.h
-index 8af35be1869e..b8a9222e34d1 100644
---- a/include/linux/nospec.h
-+++ b/include/linux/nospec.h
-@@ -37,7 +37,7 @@ static inline unsigned long array_ptr_mask(unsigned
-long idx, unsigned long sz)
-        unsigned long _i = (idx);                                       \
-        unsigned long _mask = array_ptr_mask(_i, (sz));                 \
-                                                                        \
--       __u._ptr = _arr + (_i & _mask);                                 \
-+       __u._ptr = _arr + _i;                                           \
-        __u._bit &= _mask;                                              \
-        __u._ptr;                                                       \
- })
+>> Attempts to solve problems with the stack limit changing during exec
+>> continue to be frustrated[1][2]. In addition to the specific issues
+>> around the Stack Clash family of flaws, Andy Lutomirski pointed out[3]
+>> other places during exec where the stack limit is used and is assumed
+>> to be unchanging. Given the many places it gets used and the fact that
+>> it can be manipulated/raced via setrlimit() and prlimit(), I think the
+>> only way to handle this is to move away from the "current" view of the
+>> stack limit and instead attach it to the bprm, and plumb this down into
+>> the functions that need to know the stack limits. This series implements
+>> the approach. I'd be curious to hear feedback on alternatives.
+>=20
+> Friendly ping -- looking for some people with spare cycles to look
+> this over. If people want, I can toss it into -next as part of my kspp
+> tree. It's been living happily in 0-day for  2 weeks...
+>=20
+> Thanks!
+>=20
+> -Kees
+>=20
+>> [1] 04e35f4495dd ("exec: avoid RLIMIT_STACK races with prlimit()")
+>> [2] 779f4e1c6c7c ("Revert "exec: avoid RLIMIT_STACK races with prlimit()"=
+")
+>> [3] to security@kernel.org, "Subject: existing rlimit races?"
+>=20
+> --=20
+> Kees Cook
+> Pixel Security
