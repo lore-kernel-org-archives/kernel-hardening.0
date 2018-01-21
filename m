@@ -1,113 +1,50 @@
-Message-ID: <1516531063.2508.2.camel@sipsolutions.net>
-From: Johannes Berg <johannes@sipsolutions.net>
-Date: Sun, 21 Jan 2018 11:37:43 +0100
-In-Reply-To: <151632015637.21271.10452415430644852207.stgit@dwillia2-desk3.amr.corp.intel.com>
-References: 
-	<151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
-	 <151632015637.21271.10452415430644852207.stgit@dwillia2-desk3.amr.corp.intel.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v4 10/10] nl80211: sanitize array index in
- parse_txq_params
-To: Dan Williams <dan.j.williams@intel.com>, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, Christian Lamparter <chunkeey@gmail.com>, linux-wireless@vger.kernel.org, tglx@linutronix.de, torvalds@linux-foundation.org, "David S. Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, alan@linux.intel.com
+Date: Sun, 21 Jan 2018 10:40:19 +0000
+From: Russell King - ARM Linux <linux@armlinux.org.uk>
+Message-ID: <20180121104019.GS17719@n2100.armlinux.org.uk>
+References: <151648235823.34747.15181877619346237802.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151648236968.34747.390507912161115784.stgit@dwillia2-desk3.amr.corp.intel.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <151648236968.34747.390507912161115784.stgit@dwillia2-desk3.amr.corp.intel.com>
+Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
+Subject: [kernel-hardening] Re: [PATCH v4.1 02/10] asm/nospec, array_ptr: sanitize speculative
+ array de-references
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: tglx@linutronix.de, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, x86@kernel.org, Will Deacon <will.deacon@arm.com>, Ingo Molnar <mingo@redhat.com>, gregkh@linuxfoundation.org, "H. Peter Anvin" <hpa@zytor.com>, torvalds@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2018-01-18 at 16:02 -0800, Dan Williams wrote:
-> Wireless drivers rely on parse_txq_params to validate that
-> txq_params->ac is less than NL80211_NUM_ACS by the time the low-level
-> driver's ->conf_tx() handler is called. Use a new helper, 'array_idx',
-> to sanitize txq_params->ac with respect to speculation. I.e. ensure that
-> any speculation into ->conf_tx() handlers is done with a value of
-> txq_params->ac that is within the bounds of [0, NL80211_NUM_ACS).
+On Sat, Jan 20, 2018 at 01:06:09PM -0800, Dan Williams wrote:
+> +/*
+> + * If idx is negative or if idx > size then bit 63 is set in the mask,
+> + * and the value of ~(-1L) is zero. When the mask is zero, bounds check
+> + * failed, array_ptr will return NULL.
 
-Sorry, I didn't realize you were waiting for me to review.
+The more times I see this the more times I'm unhappy with this comment:
 
-LGTM.
+1. does this really mean "idx > size" or "idx >= size" ?  The code
+   implements the latter not the former.
 
-Reviewed-by: Johannes Berg <johannes@sipsolutions.net>
+2. is "bit 63" relevant here - what if longs are 32-bit?  "the top bit"
+   or "the sign bit" would be better.
 
+3. "and the value of ~(-1L) is zero."  So does this mean that when
+   0 <= idx < size, somehow the rules of logic change and ~(-1L)
+   magically becomes no longer zero!
 
-> Reported-by: Christian Lamparter <chunkeey@gmail.com>
-> Reported-by: Elena Reshetova <elena.reshetova@intel.com>
-> Cc: Johannes Berg <johannes@sipsolutions.net>
-> Cc: "David S. Miller" <davem@davemloft.net>
-> Cc: linux-wireless@vger.kernel.org
-> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
-> ---
->  include/linux/nospec.h |   21 +++++++++++++++++++++
->  net/wireless/nl80211.c |   10 +++++++---
->  2 files changed, 28 insertions(+), 3 deletions(-)
-> 
-> diff --git a/include/linux/nospec.h b/include/linux/nospec.h
-> index f841c11f3f1f..8af35be1869e 100644
-> --- a/include/linux/nospec.h
-> +++ b/include/linux/nospec.h
-> @@ -41,4 +41,25 @@ static inline unsigned long array_ptr_mask(unsigned long idx, unsigned long sz)
->  	__u._bit &= _mask;						\
->  	__u._ptr;							\
->  })
-> +
-> +/**
-> + * array_idx - Generate a pointer to an array index, ensuring the
-> + * pointer is bounded under speculation to NULL.
-> + *
-> + * @idx: the index of the element, must be less than LONG_MAX
-> + * @sz: the number of elements in the array, must be less than LONG_MAX
-> + *
-> + * If @idx falls in the interval [0, @sz), returns &@idx otherwise
-> + * returns NULL.
-> + */
-> +#define array_idx(idx, sz)						\
-> +({									\
-> +	union { typeof((idx)) *_ptr; unsigned long _bit; } __u;		\
-> +	typeof(idx) *_i = &(idx);					\
-> +	unsigned long _mask = array_ptr_mask(*_i, (sz));		\
-> +									\
-> +	__u._ptr = _i;							\
-> +	__u._bit &= _mask;						\
-> +	__u._ptr;							\
-> +})
->  #endif /* __NOSPEC_H__ */
-> diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
-> index 2b3dbcd40e46..202cb1dc03ee 100644
-> --- a/net/wireless/nl80211.c
-> +++ b/net/wireless/nl80211.c
-> @@ -16,6 +16,7 @@
->  #include <linux/nl80211.h>
->  #include <linux/rtnetlink.h>
->  #include <linux/netlink.h>
-> +#include <linux/nospec.h>
->  #include <linux/etherdevice.h>
->  #include <net/net_namespace.h>
->  #include <net/genetlink.h>
-> @@ -2056,20 +2057,23 @@ static const struct nla_policy txq_params_policy[NL80211_TXQ_ATTR_MAX + 1] = {
->  static int parse_txq_params(struct nlattr *tb[],
->  			    struct ieee80211_txq_params *txq_params)
->  {
-> +	u8 ac, *idx;
-> +
->  	if (!tb[NL80211_TXQ_ATTR_AC] || !tb[NL80211_TXQ_ATTR_TXOP] ||
->  	    !tb[NL80211_TXQ_ATTR_CWMIN] || !tb[NL80211_TXQ_ATTR_CWMAX] ||
->  	    !tb[NL80211_TXQ_ATTR_AIFS])
->  		return -EINVAL;
->  
-> -	txq_params->ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
-> +	ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
->  	txq_params->txop = nla_get_u16(tb[NL80211_TXQ_ATTR_TXOP]);
->  	txq_params->cwmin = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMIN]);
->  	txq_params->cwmax = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMAX]);
->  	txq_params->aifs = nla_get_u8(tb[NL80211_TXQ_ATTR_AIFS]);
->  
-> -	if (txq_params->ac >= NL80211_NUM_ACS)
-> +	idx = array_idx(ac, NL80211_NUM_ACS);
-> +	if (!idx)
->  		return -EINVAL;
-> -
-> +	txq_params->ac = *idx;
->  	return 0;
->  }
->  
-> 
-> 
+I'd suggest changing the description to something like:
+
+  * If 0 <= idx < size, return a mask of ~0UL, otherwise return zero.
+
+or:
+
+  * When idx is out of bounds (iow, is negative or idx >= sz), the sign
+  * bit will be set. Extend the sign bit to all bits and invert, giving
+  * a result of zero for an out of bounds idx, or ~0UL if within bounds.
+
+depending on how deeply you want to describe what's going on here.
+
+-- 
+RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+FTTC broadband for 0.8mile line in suburbia: sync at 8.8Mbps down 630kbps up
+According to speedtest.net: 8.21Mbps down 510kbps up
