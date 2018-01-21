@@ -1,100 +1,34 @@
-From: Dan Williams <dan.j.williams@intel.com>
-Date: Sat, 20 Jan 2018 13:06:52 -0800
-Message-ID: <151648241217.34747.15879467952925973505.stgit@dwillia2-desk3.amr.corp.intel.com>
-In-Reply-To: <151648235823.34747.15181877619346237802.stgit@dwillia2-desk3.amr.corp.intel.com>
-References: <151648235823.34747.15181877619346237802.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v4.1 10/10] nl80211: sanitize array index in parse_txq_params
-To: tglx@linutronix.de
-Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, Christian Lamparter <chunkeey@gmail.com>, linux-wireless@vger.kernel.org, Johannes Berg <johannes@sipsolutions.net>, torvalds@linux-foundation.org, "David S. Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, alan@linux.intel.com
+Sender: keescook@google.com
+In-Reply-To: <8BCDD560-66F5-4CF7-97DD-E2E5BE1D13F4@nullcore.net>
+References: <1515529383-35695-1-git-send-email-keescook@chromium.org>
+ <CAGXu5jJjHd9D=20jYnx4PSJHBbRsUOP3bAOJ11yyUWutqVHr2A@mail.gmail.com> <8BCDD560-66F5-4CF7-97DD-E2E5BE1D13F4@nullcore.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Sat, 20 Jan 2018 17:22:07 -0800
+Message-ID: <CAGXu5jLm_SO=WV1Wg6NJ6r4CZgiuut29awBAHXhvjRprOLYEWQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: Re: [kernel-hardening] Re: [PATCH 0/3] exec: Pin stack limit during exec
+To: David Windsor <dave@nullcore.net>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Michal Hocko <mhocko@kernel.org>, Ben Hutchings <ben@decadent.org.uk>, Willy Tarreau <w@1wt.eu>, Hugh Dickins <hughd@google.com>, Oleg Nesterov <oleg@redhat.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Rik van Riel <riel@redhat.com>, Laura Abbott <labbott@redhat.com>, Greg KH <greg@kroah.com>, Andy Lutomirski <luto@kernel.org>, Linux-MM <linux-mm@kvack.org>, linux-arch <linux-arch@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Wireless drivers rely on parse_txq_params to validate that
-txq_params->ac is less than NL80211_NUM_ACS by the time the low-level
-driver's ->conf_tx() handler is called. Use a new helper, 'array_idx',
-to sanitize txq_params->ac with respect to speculation. I.e. ensure that
-any speculation into ->conf_tx() handlers is done with a value of
-txq_params->ac that is within the bounds of [0, NL80211_NUM_ACS).
+On Fri, Jan 19, 2018 at 5:12 PM, David Windsor <dave@nullcore.net> wrote:
+> I have some spare cycles; is there any more relevant information outside of this thread?
 
-Reported-by: Christian Lamparter <chunkeey@gmail.com>
-Reported-by: Elena Reshetova <elena.reshetova@intel.com>
-Cc: Johannes Berg <johannes@sipsolutions.net>
-Cc: "David S. Miller" <davem@davemloft.net>
-Cc: linux-wireless@vger.kernel.org
-Signed-off-by: Dan Williams <dan.j.williams@intel.com>
----
- include/linux/nospec.h |   21 +++++++++++++++++++++
- net/wireless/nl80211.c |   10 +++++++---
- 2 files changed, 28 insertions(+), 3 deletions(-)
+Awesome, thanks! Context is in the other commits, but mainly I want to
+double-check that nothing breaks with these changes, and that all the
+races for changing stack rlimits during exec are fixed. And then, just
+a sanity-check that the design approach to attaching the stack limit
+to the bprm isn't crazy. :)
 
-diff --git a/include/linux/nospec.h b/include/linux/nospec.h
-index dd3aa05fab87..b8a9222e34d1 100644
---- a/include/linux/nospec.h
-+++ b/include/linux/nospec.h
-@@ -41,4 +41,25 @@ static inline unsigned long array_ptr_mask(unsigned long idx, unsigned long sz)
- 	__u._bit &= _mask;						\
- 	__u._ptr;							\
- })
-+
-+/**
-+ * array_idx - Generate a pointer to an array index, ensuring the
-+ * pointer is bounded under speculation to NULL.
-+ *
-+ * @idx: the index of the element, must be less than LONG_MAX
-+ * @sz: the number of elements in the array, must be less than LONG_MAX
-+ *
-+ * If @idx falls in the interval [0, @sz), returns &@idx otherwise
-+ * returns NULL.
-+ */
-+#define array_idx(idx, sz)						\
-+({									\
-+	union { typeof((idx)) *_ptr; unsigned long _bit; } __u;		\
-+	typeof(idx) *_i = &(idx);					\
-+	unsigned long _mask = array_ptr_mask(*_i, (sz));		\
-+									\
-+	__u._ptr = _i;							\
-+	__u._bit &= _mask;						\
-+	__u._ptr;							\
-+})
- #endif /* __NOSPEC_H__ */
-diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
-index d396cb61a280..e3b3527c16d4 100644
---- a/net/wireless/nl80211.c
-+++ b/net/wireless/nl80211.c
-@@ -16,6 +16,7 @@
- #include <linux/nl80211.h>
- #include <linux/rtnetlink.h>
- #include <linux/netlink.h>
-+#include <linux/nospec.h>
- #include <linux/etherdevice.h>
- #include <net/net_namespace.h>
- #include <net/genetlink.h>
-@@ -2056,20 +2057,23 @@ static const struct nla_policy txq_params_policy[NL80211_TXQ_ATTR_MAX + 1] = {
- static int parse_txq_params(struct nlattr *tb[],
- 			    struct ieee80211_txq_params *txq_params)
- {
-+	u8 ac, *idx;
-+
- 	if (!tb[NL80211_TXQ_ATTR_AC] || !tb[NL80211_TXQ_ATTR_TXOP] ||
- 	    !tb[NL80211_TXQ_ATTR_CWMIN] || !tb[NL80211_TXQ_ATTR_CWMAX] ||
- 	    !tb[NL80211_TXQ_ATTR_AIFS])
- 		return -EINVAL;
- 
--	txq_params->ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
-+	ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
- 	txq_params->txop = nla_get_u16(tb[NL80211_TXQ_ATTR_TXOP]);
- 	txq_params->cwmin = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMIN]);
- 	txq_params->cwmax = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMAX]);
- 	txq_params->aifs = nla_get_u8(tb[NL80211_TXQ_ATTR_AIFS]);
- 
--	if (txq_params->ac >= NL80211_NUM_ACS)
-+	idx = array_idx(ac, NL80211_NUM_ACS);
-+	if (!idx)
- 		return -EINVAL;
--
-+	txq_params->ac = *idx;
- 	return 0;
- }
- 
+-Kees
+
+>>> [1] 04e35f4495dd ("exec: avoid RLIMIT_STACK races with prlimit()")
+>>> [2] 779f4e1c6c7c ("Revert "exec: avoid RLIMIT_STACK races with prlimit()"")
+>>> [3] to security@kernel.org, "Subject: existing rlimit races?"
+
+
+
+-- 
+Kees Cook
+Pixel Security
