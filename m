@@ -1,34 +1,113 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <8BCDD560-66F5-4CF7-97DD-E2E5BE1D13F4@nullcore.net>
-References: <1515529383-35695-1-git-send-email-keescook@chromium.org>
- <CAGXu5jJjHd9D=20jYnx4PSJHBbRsUOP3bAOJ11yyUWutqVHr2A@mail.gmail.com> <8BCDD560-66F5-4CF7-97DD-E2E5BE1D13F4@nullcore.net>
-From: Kees Cook <keescook@chromium.org>
-Date: Sat, 20 Jan 2018 17:22:07 -0800
-Message-ID: <CAGXu5jLm_SO=WV1Wg6NJ6r4CZgiuut29awBAHXhvjRprOLYEWQ@mail.gmail.com>
+Message-ID: <1516531063.2508.2.camel@sipsolutions.net>
+From: Johannes Berg <johannes@sipsolutions.net>
+Date: Sun, 21 Jan 2018 11:37:43 +0100
+In-Reply-To: <151632015637.21271.10452415430644852207.stgit@dwillia2-desk3.amr.corp.intel.com>
+References: 
+	<151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
+	 <151632015637.21271.10452415430644852207.stgit@dwillia2-desk3.amr.corp.intel.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] Re: [PATCH 0/3] exec: Pin stack limit during exec
-To: David Windsor <dave@nullcore.net>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Michal Hocko <mhocko@kernel.org>, Ben Hutchings <ben@decadent.org.uk>, Willy Tarreau <w@1wt.eu>, Hugh Dickins <hughd@google.com>, Oleg Nesterov <oleg@redhat.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Rik van Riel <riel@redhat.com>, Laura Abbott <labbott@redhat.com>, Greg KH <greg@kroah.com>, Andy Lutomirski <luto@kernel.org>, Linux-MM <linux-mm@kvack.org>, linux-arch <linux-arch@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v4 10/10] nl80211: sanitize array index in
+ parse_txq_params
+To: Dan Williams <dan.j.williams@intel.com>, linux-kernel@vger.kernel.org
+Cc: linux-arch@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, Christian Lamparter <chunkeey@gmail.com>, linux-wireless@vger.kernel.org, tglx@linutronix.de, torvalds@linux-foundation.org, "David S. Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 19, 2018 at 5:12 PM, David Windsor <dave@nullcore.net> wrote:
-> I have some spare cycles; is there any more relevant information outside of this thread?
+On Thu, 2018-01-18 at 16:02 -0800, Dan Williams wrote:
+> Wireless drivers rely on parse_txq_params to validate that
+> txq_params->ac is less than NL80211_NUM_ACS by the time the low-level
+> driver's ->conf_tx() handler is called. Use a new helper, 'array_idx',
+> to sanitize txq_params->ac with respect to speculation. I.e. ensure that
+> any speculation into ->conf_tx() handlers is done with a value of
+> txq_params->ac that is within the bounds of [0, NL80211_NUM_ACS).
 
-Awesome, thanks! Context is in the other commits, but mainly I want to
-double-check that nothing breaks with these changes, and that all the
-races for changing stack rlimits during exec are fixed. And then, just
-a sanity-check that the design approach to attaching the stack limit
-to the bprm isn't crazy. :)
+Sorry, I didn't realize you were waiting for me to review.
 
--Kees
+LGTM.
 
->>> [1] 04e35f4495dd ("exec: avoid RLIMIT_STACK races with prlimit()")
->>> [2] 779f4e1c6c7c ("Revert "exec: avoid RLIMIT_STACK races with prlimit()"")
->>> [3] to security@kernel.org, "Subject: existing rlimit races?"
-
+Reviewed-by: Johannes Berg <johannes@sipsolutions.net>
 
 
--- 
-Kees Cook
-Pixel Security
+> Reported-by: Christian Lamparter <chunkeey@gmail.com>
+> Reported-by: Elena Reshetova <elena.reshetova@intel.com>
+> Cc: Johannes Berg <johannes@sipsolutions.net>
+> Cc: "David S. Miller" <davem@davemloft.net>
+> Cc: linux-wireless@vger.kernel.org
+> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+> ---
+>  include/linux/nospec.h |   21 +++++++++++++++++++++
+>  net/wireless/nl80211.c |   10 +++++++---
+>  2 files changed, 28 insertions(+), 3 deletions(-)
+> 
+> diff --git a/include/linux/nospec.h b/include/linux/nospec.h
+> index f841c11f3f1f..8af35be1869e 100644
+> --- a/include/linux/nospec.h
+> +++ b/include/linux/nospec.h
+> @@ -41,4 +41,25 @@ static inline unsigned long array_ptr_mask(unsigned long idx, unsigned long sz)
+>  	__u._bit &= _mask;						\
+>  	__u._ptr;							\
+>  })
+> +
+> +/**
+> + * array_idx - Generate a pointer to an array index, ensuring the
+> + * pointer is bounded under speculation to NULL.
+> + *
+> + * @idx: the index of the element, must be less than LONG_MAX
+> + * @sz: the number of elements in the array, must be less than LONG_MAX
+> + *
+> + * If @idx falls in the interval [0, @sz), returns &@idx otherwise
+> + * returns NULL.
+> + */
+> +#define array_idx(idx, sz)						\
+> +({									\
+> +	union { typeof((idx)) *_ptr; unsigned long _bit; } __u;		\
+> +	typeof(idx) *_i = &(idx);					\
+> +	unsigned long _mask = array_ptr_mask(*_i, (sz));		\
+> +									\
+> +	__u._ptr = _i;							\
+> +	__u._bit &= _mask;						\
+> +	__u._ptr;							\
+> +})
+>  #endif /* __NOSPEC_H__ */
+> diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+> index 2b3dbcd40e46..202cb1dc03ee 100644
+> --- a/net/wireless/nl80211.c
+> +++ b/net/wireless/nl80211.c
+> @@ -16,6 +16,7 @@
+>  #include <linux/nl80211.h>
+>  #include <linux/rtnetlink.h>
+>  #include <linux/netlink.h>
+> +#include <linux/nospec.h>
+>  #include <linux/etherdevice.h>
+>  #include <net/net_namespace.h>
+>  #include <net/genetlink.h>
+> @@ -2056,20 +2057,23 @@ static const struct nla_policy txq_params_policy[NL80211_TXQ_ATTR_MAX + 1] = {
+>  static int parse_txq_params(struct nlattr *tb[],
+>  			    struct ieee80211_txq_params *txq_params)
+>  {
+> +	u8 ac, *idx;
+> +
+>  	if (!tb[NL80211_TXQ_ATTR_AC] || !tb[NL80211_TXQ_ATTR_TXOP] ||
+>  	    !tb[NL80211_TXQ_ATTR_CWMIN] || !tb[NL80211_TXQ_ATTR_CWMAX] ||
+>  	    !tb[NL80211_TXQ_ATTR_AIFS])
+>  		return -EINVAL;
+>  
+> -	txq_params->ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
+> +	ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
+>  	txq_params->txop = nla_get_u16(tb[NL80211_TXQ_ATTR_TXOP]);
+>  	txq_params->cwmin = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMIN]);
+>  	txq_params->cwmax = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMAX]);
+>  	txq_params->aifs = nla_get_u8(tb[NL80211_TXQ_ATTR_AIFS]);
+>  
+> -	if (txq_params->ac >= NL80211_NUM_ACS)
+> +	idx = array_idx(ac, NL80211_NUM_ACS);
+> +	if (!idx)
+>  		return -EINVAL;
+> -
+> +	txq_params->ac = *idx;
+>  	return 0;
+>  }
+>  
+> 
+> 
