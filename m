@@ -1,96 +1,49 @@
-From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 22 Jan 2018 10:04:29 -0800
-Message-Id: <503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast path with retpolines on
-To: x86@kernel.org, LKML <linux-kernel@vger.kernel.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alan Cox <alan@linux.intel.com>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Dan Williams <dan.j.williams@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>
+MIME-Version: 1.0
+In-Reply-To: <20180121104019.GS17719@n2100.armlinux.org.uk>
+References: <151648235823.34747.15181877619346237802.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151648236968.34747.390507912161115784.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <20180121104019.GS17719@n2100.armlinux.org.uk>
+From: Dan Williams <dan.j.williams@intel.com>
+Date: Mon, 22 Jan 2018 10:07:28 -0800
+Message-ID: <CAPcyv4iY9PWULZfGnKnTiD4tVxHSw4QfSwUBV4d=1KfnUjbgWw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v4.1 02/10] asm/nospec, array_ptr: sanitize speculative
+ array de-references
+To: Russell King - ARM Linux <linux@armlinux.org.uk>
+Cc: Thomas Gleixner <tglx@linutronix.de>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, X86 ML <x86@kernel.org>, Will Deacon <will.deacon@arm.com>, Ingo Molnar <mingo@redhat.com>, Greg KH <gregkh@linuxfoundation.org>, "H. Peter Anvin" <hpa@zytor.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alan Cox <alan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The existing retpoline code carefully and awkwardly retpolinifies
-the SYSCALL64 slow path.  This stops the fast path from being
-particularly fast, and it's IMO rather messy.
+On Sun, Jan 21, 2018 at 2:40 AM, Russell King - ARM Linux
+<linux@armlinux.org.uk> wrote:
+> On Sat, Jan 20, 2018 at 01:06:09PM -0800, Dan Williams wrote:
+>> +/*
+>> + * If idx is negative or if idx > size then bit 63 is set in the mask,
+>> + * and the value of ~(-1L) is zero. When the mask is zero, bounds check
+>> + * failed, array_ptr will return NULL.
+>
+> The more times I see this the more times I'm unhappy with this comment:
+>
+> 1. does this really mean "idx > size" or "idx >= size" ?  The code
+>    implements the latter not the former.
+>
+> 2. is "bit 63" relevant here - what if longs are 32-bit?  "the top bit"
+>    or "the sign bit" would be better.
+>
+> 3. "and the value of ~(-1L) is zero."  So does this mean that when
+>    0 <= idx < size, somehow the rules of logic change and ~(-1L)
+>    magically becomes no longer zero!
+>
+> I'd suggest changing the description to something like:
+>
+>   * If 0 <= idx < size, return a mask of ~0UL, otherwise return zero.
+>
+> or:
+>
+>   * When idx is out of bounds (iow, is negative or idx >= sz), the sign
+>   * bit will be set. Extend the sign bit to all bits and invert, giving
+>   * a result of zero for an out of bounds idx, or ~0UL if within bounds.
+>
+> depending on how deeply you want to describe what's going on here.
 
-Instead, just bypass the fast path entirely if retpolines are on.
-This seems to be a speedup on a "minimal" retpoline kernel, mainly
-because do_syscall_64() ends up calling the syscall handler without
-using a slow retpoline thunk.
-
-As an added benefit, we won't need to apply further Spectre
-mitigations to the fast path.  The current fast path spectre
-mitigations may have a hole: if the syscall nr is out of bounds, it
-is plausible that the CPU would mispredict the bounds check and,
-load a bogus function pointer, and speculatively execute it right
-though the retpoline.  If this is indeed a problem, we need to fix
-it in the slow paths anyway, but with this patch applied, we can at
-least leave the fast path alone.
-
-Cleans-up: 2641f08bb7fc ("x86/retpoline/entry: Convert entry assembler indirect jumps")
-Signed-off-by: Andy Lutomirski <luto@kernel.org>
----
- arch/x86/entry/entry_64.S | 23 +++++++++++++++++------
- 1 file changed, 17 insertions(+), 6 deletions(-)
-
-diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index 4f8e1d35a97c..b915bad58754 100644
---- a/arch/x86/entry/entry_64.S
-+++ b/arch/x86/entry/entry_64.S
-@@ -245,6 +245,9 @@ GLOBAL(entry_SYSCALL_64_after_hwframe)
- 	 * If we need to do entry work or if we guess we'll need to do
- 	 * exit work, go straight to the slow path.
- 	 */
-+#ifdef CONFIG_RETPOLINE
-+	ALTERNATIVE "", "jmp entry_SYSCALL64_slow_path", X86_FEATURE_RETPOLINE
-+#endif
- 	movq	PER_CPU_VAR(current_task), %r11
- 	testl	$_TIF_WORK_SYSCALL_ENTRY|_TIF_ALLWORK_MASK, TASK_TI_flags(%r11)
- 	jnz	entry_SYSCALL64_slow_path
-@@ -270,13 +273,11 @@ entry_SYSCALL_64_fastpath:
- 	 * This call instruction is handled specially in stub_ptregs_64.
- 	 * It might end up jumping to the slow path.  If it jumps, RAX
- 	 * and all argument registers are clobbered.
-+	 *
-+	 * NB: no retpoline needed -- we don't execute this code with
-+	 * retpolines enabled.
- 	 */
--#ifdef CONFIG_RETPOLINE
--	movq	sys_call_table(, %rax, 8), %rax
--	call	__x86_indirect_thunk_rax
--#else
- 	call	*sys_call_table(, %rax, 8)
--#endif
- .Lentry_SYSCALL_64_after_fastpath_call:
- 
- 	movq	%rax, RAX(%rsp)
-@@ -431,6 +432,9 @@ ENTRY(stub_ptregs_64)
- 	 * which we achieve by trying again on the slow path.  If we are on
- 	 * the slow path, the extra regs are already saved.
- 	 *
-+	 * This code is unreachable (even via mispredicted conditional branches)
-+	 * if we're using retpolines.
-+	 *
- 	 * RAX stores a pointer to the C function implementing the syscall.
- 	 * IRQs are on.
- 	 */
-@@ -448,12 +452,19 @@ ENTRY(stub_ptregs_64)
- 	jmp	entry_SYSCALL64_slow_path
- 
- 1:
--	JMP_NOSPEC %rax				/* Called from C */
-+	jmp	*%rax				/* Called from C */
- END(stub_ptregs_64)
- 
- .macro ptregs_stub func
- ENTRY(ptregs_\func)
- 	UNWIND_HINT_FUNC
-+#ifdef CONFIG_RETPOLINE
-+	/*
-+	 * If retpolines are enabled, we don't use the syscall fast path,
-+	 * so just jump straight to the syscall body.
-+	 */
-+	ALTERNATIVE "", __stringify(jmp \func), X86_FEATURE_RETPOLINE
-+#endif
- 	leaq	\func(%rip), %rax
- 	jmp	stub_ptregs_64
- END(ptregs_\func)
--- 
-2.13.6
+Sounds good Russell, I'll fold the longer description in for the next
+version to save the next person needing to decode this technique.
