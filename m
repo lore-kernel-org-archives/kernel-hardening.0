@@ -1,37 +1,22 @@
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
-References: <503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Mon, 22 Jan 2018 10:55:32 -0800
-Message-ID: <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
+In-Reply-To: <151648236454.34747.93245075402067564.stgit@dwillia2-desk3.amr.corp.intel.com>
+References: <151648235823.34747.15181877619346237802.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151648236454.34747.93245075402067564.stgit@dwillia2-desk3.amr.corp.intel.com>
+From: Jann Horn <jannh@google.com>
+Date: Mon, 22 Jan 2018 20:00:40 +0100
+Message-ID: <CAG48ez3SQNMKxMLNKCV4o8qAbqzB4d+EPo8a4wHzDgqkGAX8Dw@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
- path with retpolines on
-To: Andy Lutomirski <luto@kernel.org>
-Cc: the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alan Cox <alan@linux.intel.com>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Dan Williams <dan.j.williams@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
+Subject: Re: [kernel-hardening] [PATCH v4.1 01/10] Documentation: document array_ptr
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Mark Rutland <mark.rutland@arm.com>, linux-arch <linux-arch@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Will Deacon <will.deacon@arm.com>, Linus Torvalds <torvalds@linux-foundation.org>, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 22, 2018 at 10:04 AM, Andy Lutomirski <luto@kernel.org> wrote:
-> The existing retpoline code carefully and awkwardly retpolinifies
-> the SYSCALL64 slow path.  This stops the fast path from being
-> particularly fast, and it's IMO rather messy.
+On Sat, Jan 20, 2018 at 10:06 PM, Dan Williams <dan.j.williams@intel.com> wrote:
+> From: Mark Rutland <mark.rutland@arm.com>
+>
+> Document the rationale and usage of the new array_ptr() helper.
+[...]
+> +A call to array_ptr(arr, idx, sz) returns a sanitized pointer to
+> +arr[idx] only if idx falls in the [0, sz) interval. When idx < 0 or idx > sz,
 
-I'm not convinced your patch isn't messier still.. It's certainly
-subtle. I had to look at that ptregs stub generator thing twice.
-
-Honestly, I'd rather get rid of the fast-path entirely. Compared to
-all the PTI mess, it's not even noticeable.
-
-And if we ever get CPU's that have this all fixed, we can re-visit
-introducing the fastpath. But this is all very messy and it doesn't
-seem worth it right now.
-
-If we get rid of the fastpath, we can lay out the slow path slightly
-better, and get rid of some of those jump-overs. And we'd get rid of
-the ptregs hooks entirely.
-
-So we can try to make the "slow" path better while at it, but I really
-don't think it matters much now in the post-PTI era. Sadly.
-
-                     Linus
+"or idx >= sz"?
