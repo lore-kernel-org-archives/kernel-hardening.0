@@ -1,55 +1,52 @@
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Tue, 23 Jan 2018 09:01:01 +0100
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20180123080101.7udtt6wdl6jpglwa@gmail.com>
-References: <503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
- <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
+Date: Tue, 23 Jan 2018 10:17:49 +0000
+From: Will Deacon <will.deacon@arm.com>
+Message-ID: <20180123101748.GA2604@arm.com>
+References: <151648235823.34747.15181877619346237802.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151648236968.34747.390507912161115784.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <20180121104019.GS17719@n2100.armlinux.org.uk>
+ <CAPcyv4iY9PWULZfGnKnTiD4tVxHSw4QfSwUBV4d=1KfnUjbgWw@mail.gmail.com>
+ <CA+55aFyqAGRE4+QteYyvNyMzepFXHVVBn=A07Adj-yBs=tS_Ww@mail.gmail.com>
+ <CAPcyv4gjDrTnC_xeuVWjonvF7_L1Y-OOQndMRyVDdaLmcC7NMg@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
- path with retpolines on
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alan Cox <alan@linux.intel.com>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Dan Williams <dan.j.williams@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
+In-Reply-To: <CAPcyv4gjDrTnC_xeuVWjonvF7_L1Y-OOQndMRyVDdaLmcC7NMg@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v4.1 02/10] asm/nospec, array_ptr: sanitize speculative
+ array de-references
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Russell King - ARM Linux <linux@armlinux.org.uk>, Thomas Gleixner <tglx@linutronix.de>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, X86 ML <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Greg KH <gregkh@linuxfoundation.org>, "H. Peter Anvin" <hpa@zytor.com>, Alan Cox <alan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Mon, Jan 22, 2018 at 10:52:54AM -0800, Dan Williams wrote:
+> On Mon, Jan 22, 2018 at 10:37 AM, Linus Torvalds
+> <torvalds@linux-foundation.org> wrote:
+> > Note that 'idx' itself can have any range (that's kind of the _point_,
+> > after all: checking that idx is in some range). But the logic only
+> > works for a positive array size.
+> >
+> > Which honestly is not really a limitation, but it's worth spelling out, I think.
 
-* Linus Torvalds <torvalds@linux-foundation.org> wrote:
+Agreed. We should be absolutely clear about when this thing works and when
+it doesn't.
 
-> On Mon, Jan 22, 2018 at 10:04 AM, Andy Lutomirski <luto@kernel.org> wrote:
-> > The existing retpoline code carefully and awkwardly retpolinifies
-> > the SYSCALL64 slow path.  This stops the fast path from being
-> > particularly fast, and it's IMO rather messy.
+> > In particular, if you have a user pointer, and a 3G:1G split in
+> > user:kernel address space, you camn *not* do something like
+> >
+> >     uptr = array_ptr(NULL, userptr, TASK_SIZE);
+> >
+> > to get a sanitized user pointer, because TASK_SIZE is not positive in 'long'.
+> >
+> > Hmm?
 > 
-> I'm not convinced your patch isn't messier still.. It's certainly
-> subtle. I had to look at that ptregs stub generator thing twice.
-> 
-> Honestly, I'd rather get rid of the fast-path entirely. Compared to
-> all the PTI mess, it's not even noticeable.
-> 
-> And if we ever get CPU's that have this all fixed, we can re-visit
-> introducing the fastpath. But this is all very messy and it doesn't
-> seem worth it right now.
-> 
-> If we get rid of the fastpath, we can lay out the slow path slightly
-> better, and get rid of some of those jump-overs. And we'd get rid of
-> the ptregs hooks entirely.
-> 
-> So we can try to make the "slow" path better while at it, but I really
-> don't think it matters much now in the post-PTI era. Sadly.
+> We could at least have a BUILD_BUG_ON when 'size' is a
+> builtin_contstant and greater than LONG_MAX. Alternatively we could
+> require archs to provide the equivalent of the x86 array_ptr_mask()
+> that does not have the LONG_MAX limitation?
 
-Note that there's another advantage to your proposal: should other vulnerabilities 
-arise in the future, requiring changes in the syscall entry path, we'd be more 
-flexible to address them in the C space than in the assembly space.
+I'd rather avoid imposing that limitation and instead just treat uaccess
+specially. It looks like we can satisfy the current definition of
+array_ptr_mask with three instructions, but I'm not sure how we could get it
+working on arm64 if we needed to deal with arbitrary sizes (particularly as
+we're trying to avoid conditional instructions).
 
-In hindsight a _LOT_ of the PTI complexity and fragility centered around 
-interacting with x86 kernel entry assembly code - which entry code fortunately got 
-much simpler (and easier to review) in the past 1-2 years due to the thorough 
-cleanups and the conversion of most of it to C. But it was still painful.
-
-So I'm fully in favor of that.
-
-Thanks,
-
-	Ingo
+Will
