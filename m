@@ -1,25 +1,45 @@
-Message-ID: <1516732614.5438.0.camel@linux.intel.com>
-From: Alan Cox <alan@linux.intel.com>
-Date: Tue, 23 Jan 2018 18:36:54 +0000
-In-Reply-To: <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
-References: 
-	<503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
-	 <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
- path with retpolines on
-To: Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>
-Cc: the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Dan Williams <dan.j.williams@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
+Date: Tue, 23 Jan 2018 13:15:08 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Message-ID: <20180123211508.GC5565@bombadil.infradead.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] Write-once memory
+To: kernel-hardening@lists.openwall.com, Dave Chinner <dchinner@redhat.com>, Christopher Lameter <cl@linux.com>, Kees Cook <keescook@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> And if we ever get CPU's that have this all fixed, we can re-visit
-> introducing the fastpath. But this is all very messy and it doesn't
-> seem worth it right now.
 
-We already have CPUs it doesn't affect - older Atom for one and I
-believe some or all of the VIA ones (still trying to get a definitive
-confirmation).
+At the kernel hardening BOF yesterday, we came up with the concept of
+write-once memory.
 
-Alan
+The problem it's intended to solve is that XFS allocates a large amount
+of memory at filesystem mount time which is conceptually read-only until
+it's destroyed.  Protecting this by making the pages read-only would be
+a nice hardening improvement (both for security and as a defense against
+stray writes).
+
+At the moment that data is mixed in with read-write data, so XFS will need
+modifying to use this new facility.
+
+We believe that the right way to support write-once memory is through
+slab APIs.  Something like:
+
+void kmem_cache_init_once(struct kmem_cache *s, void (*init)(void *),
+		void *data);
+
+used like this:
+
+const struct my_ro_data *alloc_my_ro_data(struct my_context *context, gfp_t gfp)
+{
+	const struct my_ro_data *p = kmem_cache_alloc(cache, gfp);
+	kmem_cache_init_once(p, my_init_once, context);
+	return p;
+}
+
+The implementation would change the page protection on that slab page
+from RO to RW temporarily while my_init_once() is running.  This would
+lead to a short window of vulnerability, but that doesn't feel like
+an unreasonable tradeoff for memory efficiency (being able to allocate
+multiple my_ro_data per page).
+
+Feedback?
