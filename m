@@ -1,52 +1,25 @@
-Date: Tue, 23 Jan 2018 10:17:49 +0000
-From: Will Deacon <will.deacon@arm.com>
-Message-ID: <20180123101748.GA2604@arm.com>
-References: <151648235823.34747.15181877619346237802.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151648236968.34747.390507912161115784.stgit@dwillia2-desk3.amr.corp.intel.com>
- <20180121104019.GS17719@n2100.armlinux.org.uk>
- <CAPcyv4iY9PWULZfGnKnTiD4tVxHSw4QfSwUBV4d=1KfnUjbgWw@mail.gmail.com>
- <CA+55aFyqAGRE4+QteYyvNyMzepFXHVVBn=A07Adj-yBs=tS_Ww@mail.gmail.com>
- <CAPcyv4gjDrTnC_xeuVWjonvF7_L1Y-OOQndMRyVDdaLmcC7NMg@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAPcyv4gjDrTnC_xeuVWjonvF7_L1Y-OOQndMRyVDdaLmcC7NMg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v4.1 02/10] asm/nospec, array_ptr: sanitize speculative
- array de-references
-To: Dan Williams <dan.j.williams@intel.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Russell King - ARM Linux <linux@armlinux.org.uk>, Thomas Gleixner <tglx@linutronix.de>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, X86 ML <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Greg KH <gregkh@linuxfoundation.org>, "H. Peter Anvin" <hpa@zytor.com>, Alan Cox <alan@linux.intel.com>
+Message-ID: <1516732614.5438.0.camel@linux.intel.com>
+From: Alan Cox <alan@linux.intel.com>
+Date: Tue, 23 Jan 2018 18:36:54 +0000
+In-Reply-To: <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
+References: 
+	<503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
+	 <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
+ path with retpolines on
+To: Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>
+Cc: the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Dan Williams <dan.j.williams@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 22, 2018 at 10:52:54AM -0800, Dan Williams wrote:
-> On Mon, Jan 22, 2018 at 10:37 AM, Linus Torvalds
-> <torvalds@linux-foundation.org> wrote:
-> > Note that 'idx' itself can have any range (that's kind of the _point_,
-> > after all: checking that idx is in some range). But the logic only
-> > works for a positive array size.
-> >
-> > Which honestly is not really a limitation, but it's worth spelling out, I think.
+> And if we ever get CPU's that have this all fixed, we can re-visit
+> introducing the fastpath. But this is all very messy and it doesn't
+> seem worth it right now.
 
-Agreed. We should be absolutely clear about when this thing works and when
-it doesn't.
+We already have CPUs it doesn't affect - older Atom for one and I
+believe some or all of the VIA ones (still trying to get a definitive
+confirmation).
 
-> > In particular, if you have a user pointer, and a 3G:1G split in
-> > user:kernel address space, you camn *not* do something like
-> >
-> >     uptr = array_ptr(NULL, userptr, TASK_SIZE);
-> >
-> > to get a sanitized user pointer, because TASK_SIZE is not positive in 'long'.
-> >
-> > Hmm?
-> 
-> We could at least have a BUILD_BUG_ON when 'size' is a
-> builtin_contstant and greater than LONG_MAX. Alternatively we could
-> require archs to provide the equivalent of the x86 array_ptr_mask()
-> that does not have the LONG_MAX limitation?
-
-I'd rather avoid imposing that limitation and instead just treat uaccess
-specially. It looks like we can satisfy the current definition of
-array_ptr_mask with three instructions, but I'm not sure how we could get it
-working on arm64 if we needed to deal with arbitrary sizes (particularly as
-we're trying to avoid conditional instructions).
-
-Will
+Alan
