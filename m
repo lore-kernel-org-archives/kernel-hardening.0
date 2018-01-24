@@ -1,48 +1,47 @@
-References: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151632014097.21271.16980532033566583357.stgit@dwillia2-desk3.amr.corp.intel.com>
+References: <1516473386.30886.35.camel@intel.com>
 From: Jiri Slaby <jslaby@suse.cz>
-Message-ID: <f858abdb-f142-7157-c785-ca9eca919de1@suse.cz>
-Date: Wed, 24 Jan 2018 15:40:40 +0100
+Message-ID: <5fffd4e8-90fe-0799-adf0-5376113b268d@suse.cz>
+Date: Wed, 24 Jan 2018 15:47:11 +0100
 MIME-Version: 1.0
-In-Reply-To: <151632014097.21271.16980532033566583357.stgit@dwillia2-desk3.amr.corp.intel.com>
-Content-Type: text/plain; charset=utf-8
+In-Reply-To: <1516473386.30886.35.camel@intel.com>
+Content-Type: text/plain; charset=ISO-8859-2
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v4 07/10] x86: narrow out of bounds syscalls to sys_read
- under speculation
-To: Dan Williams <dan.j.williams@intel.com>, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, x86@kernel.org, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, tglx@linutronix.de, torvalds@linux-foundation.org, akpm@linux-foundation.org, alan@linux.intel.com
+Subject: [kernel-hardening] Re: [GIT PULL] spectre variant1 mitigations for 4.16
+To: "Williams, Dan J" <dan.j.williams@intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "alan@linux.intel.com" <alan@linux.intel.com>, "viro@zeniv.linux.org.uk" <viro@zeniv.linux.org.uk>, "Reshetova, Elena" <elena.reshetova@intel.com>, "johannes@sipsolutions.net" <johannes@sipsolutions.net>, "will.deacon@arm.com" <will.deacon@arm.com>, "luto@kernel.org" <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "davem@davemloft.net" <davem@davemloft.net>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/19/2018, 01:02 AM, Dan Williams wrote:
-> The syscall table base is a user controlled function pointer in kernel
-> space. Like, 'get_user, use 'MASK_NOSPEC' to prevent any out of bounds
-> speculation. While retpoline prevents speculating into the user
-> controlled target it does not stop the pointer de-reference, the concern
-> is leaking memory relative to the syscall table base.
+On 01/20/2018, 07:36 PM, Williams, Dan J wrote:
+> Dan Williams (9):
+>       asm/nospec, array_ptr: sanitize speculative array de-references
+>       x86: implement array_ptr_mask()
+>       x86: introduce __uaccess_begin_nospec and ifence
+>       x86, __get_user: use __uaccess_begin_nospec
+>       x86, get_user: use pointer masking to limit speculation
+>       x86: narrow out of bounds syscalls to sys_read under speculation
+>       vfs, fdtable: prevent bounds-check bypass via speculative execution
+>       kvm, x86: update spectre-v1 mitigation
+>       nl80211: sanitize array index in parse_txq_params
 > 
-> Reported-by: Linus Torvalds <torvalds@linux-foundation.org>
-> Cc: Thomas Gleixner <tglx@linutronix.de>
-> Cc: Ingo Molnar <mingo@redhat.com>
-> Cc: "H. Peter Anvin" <hpa@zytor.com>
-> Cc: x86@kernel.org
-> Cc: Andy Lutomirski <luto@kernel.org>
-> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
-> ---
->  arch/x86/entry/entry_64.S   |    2 ++
->  arch/x86/include/asm/smap.h |    9 ++++++++-
->  2 files changed, 10 insertions(+), 1 deletion(-)
+> Mark Rutland (1):
+>       Documentation: document array_ptr
 > 
-> diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-> index 4f8e1d35a97c..2320017077d4 100644
-> --- a/arch/x86/entry/entry_64.S
-> +++ b/arch/x86/entry/entry_64.S
-> @@ -35,6 +35,7 @@
->  #include <asm/asm.h>
->  #include <asm/smap.h>
->  #include <asm/pgtable_types.h>
-> +#include <asm/smap.h>
+>  Documentation/speculation.txt     | 143 ++++++++++++++++++++++++++++++++++++++
+>  arch/x86/entry/entry_64.S         |   2 +
+>  arch/x86/include/asm/barrier.h    |  28 ++++++++
+>  arch/x86/include/asm/msr.h        |   3 +-
+>  arch/x86/include/asm/smap.h       |  24 +++++++
+>  arch/x86/include/asm/uaccess.h    |  15 +++-
+>  arch/x86/include/asm/uaccess_32.h |   6 +-
+>  arch/x86/include/asm/uaccess_64.h |  12 ++--
+>  arch/x86/kvm/vmx.c                |  19 ++---
+>  arch/x86/lib/getuser.S            |   5 ++
+>  arch/x86/lib/usercopy_32.c        |   8 +--
+>  include/linux/fdtable.h           |   7 +-
+>  include/linux/nospec.h            |  65 +++++++++++++++++
+>  net/wireless/nl80211.c            |  10 ++-
 
-This is already included 2 lines above
+Could you update also cpu_show_spectre_v1?
 
 thanks,
 -- 
