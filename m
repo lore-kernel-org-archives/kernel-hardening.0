@@ -1,49 +1,97 @@
-References: <1516473386.30886.35.camel@intel.com>
-From: Jiri Slaby <jslaby@suse.cz>
-Message-ID: <5fffd4e8-90fe-0799-adf0-5376113b268d@suse.cz>
-Date: Wed, 24 Jan 2018 15:47:11 +0100
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Date: Wed, 24 Jan 2018 19:56:25 +0200
+Message-ID: <20180124175631.22925-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-In-Reply-To: <1516473386.30886.35.camel@intel.com>
-Content-Type: text/plain; charset=ISO-8859-2
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [GIT PULL] spectre variant1 mitigations for 4.16
-To: "Williams, Dan J" <dan.j.williams@intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "alan@linux.intel.com" <alan@linux.intel.com>, "viro@zeniv.linux.org.uk" <viro@zeniv.linux.org.uk>, "Reshetova, Elena" <elena.reshetova@intel.com>, "johannes@sipsolutions.net" <johannes@sipsolutions.net>, "will.deacon@arm.com" <will.deacon@arm.com>, "luto@kernel.org" <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "davem@davemloft.net" <davem@davemloft.net>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>
+Content-Type: text/plain
+Subject: [kernel-hardening] [RFC PATCH v11 0/6] mm: security: ro protection for dynamic data
+To: jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, hch@infradead.org, willy@infradead.org
+Cc: cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/20/2018, 07:36 PM, Williams, Dan J wrote:
-> Dan Williams (9):
->       asm/nospec, array_ptr: sanitize speculative array de-references
->       x86: implement array_ptr_mask()
->       x86: introduce __uaccess_begin_nospec and ifence
->       x86, __get_user: use __uaccess_begin_nospec
->       x86, get_user: use pointer masking to limit speculation
->       x86: narrow out of bounds syscalls to sys_read under speculation
->       vfs, fdtable: prevent bounds-check bypass via speculative execution
->       kvm, x86: update spectre-v1 mitigation
->       nl80211: sanitize array index in parse_txq_params
-> 
-> Mark Rutland (1):
->       Documentation: document array_ptr
-> 
->  Documentation/speculation.txt     | 143 ++++++++++++++++++++++++++++++++++++++
->  arch/x86/entry/entry_64.S         |   2 +
->  arch/x86/include/asm/barrier.h    |  28 ++++++++
->  arch/x86/include/asm/msr.h        |   3 +-
->  arch/x86/include/asm/smap.h       |  24 +++++++
->  arch/x86/include/asm/uaccess.h    |  15 +++-
->  arch/x86/include/asm/uaccess_32.h |   6 +-
->  arch/x86/include/asm/uaccess_64.h |  12 ++--
->  arch/x86/kvm/vmx.c                |  19 ++---
->  arch/x86/lib/getuser.S            |   5 ++
->  arch/x86/lib/usercopy_32.c        |   8 +--
->  include/linux/fdtable.h           |   7 +-
->  include/linux/nospec.h            |  65 +++++++++++++++++
->  net/wireless/nl80211.c            |  10 ++-
+This patch-set introduces the possibility of protecting memory that has
+been allocated dynamically.
 
-Could you update also cpu_show_spectre_v1?
+The memory is managed in pools: when a memory pool is turned into R/O,
+all the memory that is part of it, will become R/O.
 
-thanks,
+A R/O pool can be destroyed, to recover its memory, but it cannot be
+turned back into R/W mode.
+
+This is intentional. This feature is meant for data that doesn't need
+further modifications after initialization.
+
+However the data might need to be released, for example as part of module
+unloading.
+To do this, the memory must first be freed, then the pool can be destroyed.
+
+An example is provided, in the form of self-testing.
+
+Changes since the v10 version:
+
+Initially I tried to provide support for hardening the LSM hooks, but the
+LSM code was too much in a flux to have some chance to be merged.
+
+Several drop-in replacement for kmalloc based functions, for example
+kzalloc.
+
+>From this perspective I have also modified genalloc, to make its free
+functionality follow more closely the kfree, which doesn't need to be told
+the size of the allocation being released. This was sent out for review
+twice, but it has not received any feedback, so far.
+
+Also genalloc now comes with self-testing.
+
+The latest can be found also here:
+
+https://www.spinics.net/lists/kernel/msg2696152.html
+
+The need to integrate with hardened user copy has driven an optimization
+in the management of vmap_areas, where each struct page in a vmalloc area
+has a reference to it, saving the search through the various areas.
+
+I was planning - and can still do it - to provide hardening for some IMA
+data, but in the meanwhile it seems that the XFS developers might be
+interested in htis functionality:
+
+http://www.openwall.com/lists/kernel-hardening/2018/01/24/1
+
+So I'm sending it out as preview.
+
+
+Igor Stoppa (6):
+  genalloc: track beginning of allocations
+  genalloc: selftest
+  struct page: add field for vm_struct
+  Protectable Memory
+  Documentation for Pmalloc
+  Pmalloc: self-test
+
+ Documentation/core-api/pmalloc.txt | 104 ++++++++
+ include/linux/genalloc-selftest.h  |  30 +++
+ include/linux/genalloc.h           |   6 +-
+ include/linux/mm_types.h           |   1 +
+ include/linux/pmalloc.h            | 215 ++++++++++++++++
+ include/linux/vmalloc.h            |   1 +
+ init/main.c                        |   2 +
+ lib/Kconfig                        |  15 ++
+ lib/Makefile                       |   1 +
+ lib/genalloc-selftest.c            | 402 +++++++++++++++++++++++++++++
+ lib/genalloc.c                     | 444 +++++++++++++++++++++----------
+ mm/Kconfig                         |   7 +
+ mm/Makefile                        |   2 +
+ mm/pmalloc-selftest.c              |  65 +++++
+ mm/pmalloc-selftest.h              |  30 +++
+ mm/pmalloc.c                       | 516 +++++++++++++++++++++++++++++++++++++
+ mm/usercopy.c                      |  25 +-
+ mm/vmalloc.c                       |  18 +-
+ 18 files changed, 1744 insertions(+), 140 deletions(-)
+ create mode 100644 Documentation/core-api/pmalloc.txt
+ create mode 100644 include/linux/genalloc-selftest.h
+ create mode 100644 include/linux/pmalloc.h
+ create mode 100644 lib/genalloc-selftest.c
+ create mode 100644 mm/pmalloc-selftest.c
+ create mode 100644 mm/pmalloc-selftest.h
+ create mode 100644 mm/pmalloc.c
+
 -- 
-js
-suse labs
+2.9.3
