@@ -1,182 +1,212 @@
 From: Igor Stoppa <igor.stoppa@huawei.com>
-Date: Wed, 24 Jan 2018 19:56:31 +0200
-Message-ID: <20180124175631.22925-7-igor.stoppa@huawei.com>
-In-Reply-To: <20180124175631.22925-1-igor.stoppa@huawei.com>
-References: <20180124175631.22925-1-igor.stoppa@huawei.com>
+References: <20180123211508.GC5565@bombadil.infradead.org>
+ <CAGXu5jJiE2yOvCpbU6U7WijNniitwW7fz3gUXZiZUbJb91auVQ@mail.gmail.com>
+Message-ID: <be070733-71f4-b296-69c9-e0de9efdd357@huawei.com>
+Date: Wed, 24 Jan 2018 20:05:54 +0200
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] [PATCH 6/6] Pmalloc: self-test
-To: jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, hch@infradead.org, willy@infradead.org
-Cc: cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
+In-Reply-To: <CAGXu5jJiE2yOvCpbU6U7WijNniitwW7fz3gUXZiZUbJb91auVQ@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: Write-once memory
+To: Kees Cook <keescook@google.com>, Matthew Wilcox <willy@infradead.org>, Laura Abbott <labbott@redhat.com>
+Cc: kernel-hardening@lists.openwall.com, Dave Chinner <dchinner@redhat.com>, Christopher Lameter <cl@linux.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add basic self-test functionality for pmalloc.
+Hi,
 
-Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
----
- mm/Kconfig            |  7 ++++++
- mm/Makefile           |  1 +
- mm/pmalloc-selftest.c | 65 +++++++++++++++++++++++++++++++++++++++++++++++++++
- mm/pmalloc-selftest.h | 30 ++++++++++++++++++++++++
- mm/pmalloc.c          |  3 +++
- 5 files changed, 106 insertions(+)
- create mode 100644 mm/pmalloc-selftest.c
- create mode 100644 mm/pmalloc-selftest.h
++ Laura Abbott
 
-diff --git a/mm/Kconfig b/mm/Kconfig
-index c782e8f..1de6ea6 100644
---- a/mm/Kconfig
-+++ b/mm/Kconfig
-@@ -760,3 +760,10 @@ config GUP_BENCHMARK
- 	  performance of get_user_pages_fast().
- 
- 	  See tools/testing/selftests/vm/gup_benchmark.c
-+
-+config PROTECTABLE_MEMORY_SELFTEST
-+	bool "Run self test for pmalloc memory allocator"
-+	default n
-+	help
-+	  Tries to verify that pmalloc works correctly and that the memory
-+	  is effectively protected.
-diff --git a/mm/Makefile b/mm/Makefile
-index a6a47e1..1e76a9b 100644
---- a/mm/Makefile
-+++ b/mm/Makefile
-@@ -66,6 +66,7 @@ obj-$(CONFIG_SPARSEMEM_VMEMMAP) += sparse-vmemmap.o
- obj-$(CONFIG_SLOB) += slob.o
- obj-$(CONFIG_MMU_NOTIFIER) += mmu_notifier.o
- obj-$(CONFIG_ARCH_HAS_SET_MEMORY) += pmalloc.o
-+obj-$(CONFIG_PROTECTABLE_MEMORY_SELFTEST) += pmalloc-selftest.o
- obj-$(CONFIG_KSM) += ksm.o
- obj-$(CONFIG_PAGE_POISONING) += page_poison.o
- obj-$(CONFIG_SLAB) += slab.o
-diff --git a/mm/pmalloc-selftest.c b/mm/pmalloc-selftest.c
-new file mode 100644
-index 0000000..1c025f3
---- /dev/null
-+++ b/mm/pmalloc-selftest.c
-@@ -0,0 +1,65 @@
-+/*
-+ * pmalloc-selftest.c
-+ *
-+ * (C) Copyright 2018 Huawei Technologies Co. Ltd.
-+ * Author: Igor Stoppa <igor.stoppa@huawei.com>
-+ *
-+ * This program is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU General Public License
-+ * as published by the Free Software Foundation; version 2
-+ * of the License.
-+ */
-+
-+#include <linux/pmalloc.h>
-+#include <linux/mm.h>
-+
-+
-+#define SIZE_1 (PAGE_SIZE * 3)
-+#define SIZE_2 1000
-+
-+#define validate_alloc(expected, variable, size)	\
-+	pr_notice("must be " expected ": %s",		\
-+		  is_pmalloc_object(variable, size) > 0 ? "ok" : "no")
-+
-+#define is_alloc_ok(variable, size)	\
-+	validate_alloc("ok", variable, size)
-+
-+#define is_alloc_no(variable, size)	\
-+	validate_alloc("no", variable, size)
-+
-+void pmalloc_selftest(void)
-+{
-+	struct gen_pool *pool_unprot;
-+	struct gen_pool *pool_prot;
-+	void *var_prot, *var_unprot, *var_vmall;
-+
-+	pr_notice("pmalloc self-test");
-+	pool_unprot = pmalloc_create_pool("unprotected", 0);
-+	pool_prot = pmalloc_create_pool("protected", 0);
-+	BUG_ON(!(pool_unprot && pool_prot));
-+
-+	var_unprot = pmalloc(pool_unprot,  SIZE_1 - 1, GFP_KERNEL);
-+	var_prot = pmalloc(pool_prot,  SIZE_1, GFP_KERNEL);
-+	var_vmall = vmalloc(SIZE_2);
-+	is_alloc_ok(var_unprot, 10);
-+	is_alloc_ok(var_unprot, SIZE_1);
-+	is_alloc_ok(var_unprot, PAGE_SIZE);
-+	is_alloc_no(var_unprot, SIZE_1 + 1);
-+	is_alloc_no(var_vmall, 10);
-+
-+
-+	pfree(pool_unprot, var_unprot);
-+	vfree(var_vmall);
-+
-+	pmalloc_protect_pool(pool_prot);
-+
-+	/* This will intentionally trigger a WARN because the pool being
-+	 * destroyed is not protected, which is unusual and should happen
-+	 * on error paths only, where probably other warnings are already
-+	 * displayed.
-+	 */
-+	pmalloc_destroy_pool(pool_unprot);
-+
-+	/* This must not cause WARNings */
-+	pmalloc_destroy_pool(pool_prot);
-+}
-diff --git a/mm/pmalloc-selftest.h b/mm/pmalloc-selftest.h
-new file mode 100644
-index 0000000..3673d23
---- /dev/null
-+++ b/mm/pmalloc-selftest.h
-@@ -0,0 +1,30 @@
-+/*
-+ * pmalloc-selftest.h
-+ *
-+ * (C) Copyright 2018 Huawei Technologies Co. Ltd.
-+ * Author: Igor Stoppa <igor.stoppa@huawei.com>
-+ *
-+ * This program is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU General Public License
-+ * as published by the Free Software Foundation; version 2
-+ * of the License.
-+ */
-+
-+
-+#ifndef __PMALLOC_SELFTEST_H__
-+#define __PMALLOC_SELFTEST_H__
-+
-+
-+#ifdef CONFIG_PROTECTABLE_MEMORY_SELFTEST
-+
-+#include <linux/pmalloc.h>
-+
-+void pmalloc_selftest(void);
-+
-+#else
-+
-+static inline void pmalloc_selftest(void){};
-+
-+#endif
-+
-+#endif
-diff --git a/mm/pmalloc.c b/mm/pmalloc.c
-index a64ac49..a722d7b 100644
---- a/mm/pmalloc.c
-+++ b/mm/pmalloc.c
-@@ -25,6 +25,8 @@
- #include <asm/cacheflush.h>
- #include <asm/page.h>
- 
-+#include "pmalloc-selftest.h"
-+
- /**
-  * pmalloc_data contains the data specific to a pmalloc pool,
-  * in a format compatible with the design of gen_alloc.
-@@ -508,6 +510,7 @@ static int __init pmalloc_late_init(void)
- 		}
- 	}
- 	mutex_unlock(&pmalloc_mutex);
-+	pmalloc_selftest();
- 	return 0;
- }
- late_initcall(pmalloc_late_init);
--- 
-2.9.3
+On 24/01/18 02:01, Kees Cook wrote:
+> On Wed, Jan 24, 2018 at 8:15 AM, Matthew Wilcox <willy@infradead.org> wrote:
+>> At the kernel hardening BOF yesterday, we came up with the concept of
+>> write-once memory.
+> 
+> This is something Igor Stoppa has also been looking at too:
+> https://lkml.org/lkml/2017/7/10/400
+
+Yes, I still have such plan, however I had to first solve other
+problems, like improving genalloc, to have in pmalloc a drop-in
+replacement for kmalloc, mirroring the kfree signature (plus the pool).
+
+Free support is needed because in some case one might have to roll back
+the allocation, before the pool is protected.
+
+And the chunks of memory to free do not always have the same size, which
+would make it more complex to track, if the allocator doesn't have an
+internal mechanism.
+
+Unfortunately, I had some unrelated tasks that kept me from speedier
+development of this :-/   But now I have it ready for review.
+
+https://lkml.org/lkml/2018/1/24/602
+
+>> The problem it's intended to solve is that XFS allocates a large amount
+>> of memory at filesystem mount time which is conceptually read-only until
+>> it's destroyed.  Protecting this by making the pages read-only would be
+>> a nice hardening improvement (both for security and as a defense against
+>> stray writes).
+>>
+>> At the moment that data is mixed in with read-write data, so XFS will need
+>> modifying to use this new facility.
+
+This is precisely the reason why I had to come up with pmalloc, to
+segregate R/O data in a separate set of pages.
+
+Could pmalloc be of use for XFS, even if it's not a direct followup to
+the discussion in the hardening BOF?
+
+In that sense, I think it implicitly validates the idea behind my
+initial proposal :-)
+
+>> We believe that the right way to support write-once memory is through
+>> slab APIs.  Something like:
+> 
+> I do like the idea of making this part of the slab API, instead of as
+> a separate allocator.
+
+When I proposed something similar, I got this (summarized) reply:
+
+-----8<------8<------8<------8<------8<------8<------8<------8<------
+
+https://lkml.org/lkml/2017/5/4/517
+
+On 04/05/17 19:49, Laura Abbott wrote:
+
+> arm and arm64 have the added complexity of using larger
+> page sizes on the linear map so dynamic mapping/unmapping generally
+> doesn't work. arm64 supports DEBUG_PAGEALLOC by mapping with only
+> pages but this is generally only wanted as a debug mechanism.
+> I don't know if you've given this any thought at all.
+
+
+https://lkml.org/lkml/2017/5/8/340:
+
+On 08/05/17 18:25, Laura Abbott wrote:
+
+> PAGE_SIZE is still 4K/16K/64K but the underlying page table mappings
+> may use larger mappings (2MB, 32M, 512M, etc.). The ARM architecture
+> has a break-before-make requirement which requires old mappings be
+> fully torn down and invalidated to avoid TLB conflicts. This is nearly
+> impossible to do correctly on live page tables so the current policy
+> is to not break down larger mappings.
+
+-----8<------8<------8<------8<------8<------8<------8<------8<------
+
+
+So I could not use kmalloc as backend and I floated toward vmalloc.
+
+Laura Abbot was very helpful reviewing preliminary implementations and
+eventually she suggested I would switch to genalloc, since I almost came
+up with a 1:1 reimplementation of it.
+
+Using genalloc on top of vmalloc reduces significantly TLB pressure and
+allows to have (at least on 64bit arch) fairly large amounts of
+(virtually) contiguous memory, without the need for structures like
+flex_array.
+
+I have not published this yet, but I have a re-implementation of the
+SELinux policyDB which uses pmalloc, where I was able to revert the
+introduction of flex_array to kmalloc and then convert that to pmalloc.
+
+This was a good case study for me, because it pointed out the need for a
+free functionality, when reverting the allocations, in presence of a
+parsing error of the SELinux rules.
+
+>> void kmem_cache_init_once(struct kmem_cache *s, void (*init)(void *),
+>>                 void *data);
+>>
+>> used like this:
+>>
+>> const struct my_ro_data *alloc_my_ro_data(struct my_context *context, gfp_t gfp)
+>> {
+>>         const struct my_ro_data *p = kmem_cache_alloc(cache, gfp);
+>>         kmem_cache_init_once(p, my_init_once, context);
+>>         return p;
+>> }
+>>
+>> The implementation would change the page protection on that slab page
+>> from RO to RW temporarily while my_init_once() is running.  This would
+>> lead to a short window of vulnerability, but that doesn't feel like
+>> an unreasonable tradeoff for memory efficiency (being able to allocate
+>> multiple my_ro_data per page).
+> 
+> The memory permission lifetime of the allocation needs very careful
+> attention. Allowing the write permission to be visible to other CPUs
+> needs to be avoided.
+
+As we discussed, a pmalloc pool - once it is protected - stays read-only
+until it is destroyed.
+
+-----8<------8<------8<------8<------8<------8<------8<------8<------
+
+https://lkml.org/lkml/2017/5/23/1406
+
+On 23/05/17 23:11, Kees Cook wrote:
+> Ah! In that case, sure. This isn't what the proposed API provided,
+> though, so let's adjust it to only perform the unseal at destroy time.
+> That makes it much saner, IMO. "Write once" dynamic allocations
+
+-----8<------8<------8<------8<------8<------8<------8<------8<------
+
+
+
+You also mentioned integration with hardened user copy, which is now
+implemented, as requested (at that time it was called smalloc):
+
+-----8<------8<------8<------8<------8<------8<------8<------8<------
+
+https://lkml.org/lkml/2017/5/23/1406
+
+On 23/05/17 23:11, Kees Cook wrote:
+> I would want hardened usercopy support as a requirement for using
+> smalloc(). Without it, we're regressing the over-read protection that
+> already exists for slab objects, if kernel code switched from slab to
+> smalloc.
+
+-----8<------8<------8<------8<------8<------8<------8<------8<------
+
+
+We also briefly talked about write-rare for it, which is something I
+think could be implemented as COW, but there should be a way (maybe a
+parameter when creating the pool) to specify and segregate data which
+cannot be overwritten from data that can be overwritten.
+
+No need to weaken the protection of really write-once data.
+
+I do not have a patch for this yet, but if XFS needs only write-once
+dynamic memory, then pmalloc is already suitable for that purpose, IMHO.
+
+> If this is part of the design, it's likely an
+> attacker can just race an allocation (which makes the page writable)
+> with a bug that allows a write to the page from another CPU.
+> Similarly, there shouldn't be a stand-alone "make this writable"
+> function, but rather only a "free" action which makes it writable and
+> returns it to the freelist. 
+
+Yes, this is basically what you wrote to me some months ago and is
+already addressed with destroy.
+
+> To me, it seems that dealing with
+> fragmentation, then, becomes the real problem.
+
+Using vmalloc as provider, the fragmentation is not an issue and
+genalloc mitigates most of the problems related to TLB trashing.
+
+Actually, from that perspective,
+
+vmalloc + genalloc + my patch for tracking of allocation sizes
+
+should save both memory and TLB entrie.
+
+Furthermore, it simplifies code that otherwise should be implemented
+using flex_arrays or similar sparse structures, to cope with the
+fragmentation of the linear memory.
+
+I suspect that the use of pools, for indicating even more strongly the
+affinity between data structures used by the same function(s) should
+also improve the use of caches, in general, because the cache entry, if
+sufficiently large, will automatically pre-load also what is nearby the
+data that is actually being cached.
+
+--
+igor
