@@ -1,4 +1,5 @@
 MIME-Version: 1.0
+Sender: linus971@gmail.com
 In-Reply-To: <CAPcyv4hrkX-1rAJNU+Kzm2KLjgVNdCHs4no8dYQ=qnTZDDcyTw@mail.gmail.com>
 References: <503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
  <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
@@ -8,63 +9,30 @@ References: <503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel
  <CALCETrV1JHK1ovjjD1vbs08K1an6tq6nbRoAj9uyrY2GUYJJBA@mail.gmail.com>
  <CA+55aFzTXVRPo7OBPMo2OB26GisY8-dg6NaC8ackVJgS9M0+4w@mail.gmail.com>
  <CALCETrU42C1S3nvSuLuamXtp2-s1xBG3q5cSNVOfGThncHxBZA@mail.gmail.com> <CAPcyv4hrkX-1rAJNU+Kzm2KLjgVNdCHs4no8dYQ=qnTZDDcyTw@mail.gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Thu, 25 Jan 2018 13:53:09 -0800
-Message-ID: <CALCETrXYdiG87cL1n3O8v+OSM9Fc6meNXqau4qSv+5iUV=aEeg@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Thu, 25 Jan 2018 13:53:53 -0800
+Message-ID: <CA+55aFwgWqNAyZ3hVYhn_s2JgdVDeyMSRKFxaU=R3jq7GRs6Bg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Subject: [kernel-hardening] Re: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
  path with retpolines on
 To: Dan Williams <dan.j.williams@intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alan Cox <alan@linux.intel.com>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
+Cc: Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alan Cox <alan@linux.intel.com>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Thu, Jan 25, 2018 at 1:39 PM, Dan Williams <dan.j.williams@intel.com> wrote:
-> On Thu, Jan 25, 2018 at 1:31 PM, Andy Lutomirski <luto@kernel.org> wrote:
->> On Thu, Jan 25, 2018 at 1:20 PM, Linus Torvalds
->> <torvalds@linux-foundation.org> wrote:
->>> On Thu, Jan 25, 2018 at 1:08 PM, Andy Lutomirski <luto@kernel.org> wrote:
->>>>
->>>> With retpoline, the retpoline in the trampoline sucks.  I don't need
->>>> perf for that -- I've benchmarked it both ways.  It sucks.  I'll fix
->>>> it, but it'll be kind of complicated.
->>>
->>> Ahh, I'd forgotten about that (and obviously didn't see it in the profiles).
->>>
->>> But yeah, that is fixable even if it does require a page per CPU. Or
->>> did you have some clever scheme in mind?
->>
->> Nothing clever.  I was going to see if I could get actual
->> binutils-generated relocations to work in the trampoline.  We already
->> have code to parse ELF relocations and turn them into a simple table,
->> and it shouldn't be *that* hard to run a separate pass on the entry
->> trampoline.
->>
->> Another potentially useful if rather minor optimization would be to
->> rejigger the SYSCALL_DEFINE macros a bit.  Currently we treat all
->> syscalls like this:
->>
->> long func(long arg0, long arg1, long arg2, long arg3, long arg4, long arg5);
->>
->> I wonder if we'd be better off doing:
->>
->> long func(const struct pt_regs *regs);
->>
->> and autogenerating:
->>
->> static long SyS_read(const struct pt_regs *regs)
->> {
->>    return sys_reg(regs->di, ...);
->> }
 >
 > If you're rejiggering, can we also put in a mechanism for detecting
 > which registers to clear so that userspace can't inject useful values
 > into speculation paths?
->
-> https://patchwork.kernel.org/patch/10153753/
 
-My SYSCALL_DEFINE rejigger suggestion up-thread does this for free as
-a side effect.
+That actually becomes trivial with just the "no fastpath" patch I sent
+out. You can just clear all of them.
 
-That being said, I think this would be more accurately characterized
-as "so that userspace has a somewhat harder time injecting useful
-values into speculation paths".
+Sure, then do_syscall_64() will reload the six first ones, but since
+those are the argument registers anyway, and since they are
+caller-clobbered, they have very short lifetimes. So it would
+effectively not really be an issue.
+
+But yes, SYSCALL_DEFINEx() rejiggery would close even that tiny hole.
+
+                   Linus
