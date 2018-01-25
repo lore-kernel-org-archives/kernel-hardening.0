@@ -1,38 +1,126 @@
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CAPcyv4hrkX-1rAJNU+Kzm2KLjgVNdCHs4no8dYQ=qnTZDDcyTw@mail.gmail.com>
-References: <503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
- <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
- <CA+55aFyONQeyHit6LcQz_JM5+C9pr61fcWFSpdn=7K_2mZN+oA@mail.gmail.com>
- <CALCETrVUY9p9jMNhuBgM3mWATsr1Fc_ZWc=bjidBkLw7bq5Vdg@mail.gmail.com>
- <CA+55aFwUn7+WiHxL7PBWxNrGB0--HETqUjdRwxi+DkMvCP_CaA@mail.gmail.com>
- <CALCETrV1JHK1ovjjD1vbs08K1an6tq6nbRoAj9uyrY2GUYJJBA@mail.gmail.com>
- <CA+55aFzTXVRPo7OBPMo2OB26GisY8-dg6NaC8ackVJgS9M0+4w@mail.gmail.com>
- <CALCETrU42C1S3nvSuLuamXtp2-s1xBG3q5cSNVOfGThncHxBZA@mail.gmail.com> <CAPcyv4hrkX-1rAJNU+Kzm2KLjgVNdCHs4no8dYQ=qnTZDDcyTw@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Thu, 25 Jan 2018 13:53:53 -0800
-Message-ID: <CA+55aFwgWqNAyZ3hVYhn_s2JgdVDeyMSRKFxaU=R3jq7GRs6Bg@mail.gmail.com>
+In-Reply-To: <cfd29ebf-b2ac-dfba-db4d-0fd3321959ce@lynx.com>
+References: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151632010687.21271.12004432287640499992.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <cfd29ebf-b2ac-dfba-db4d-0fd3321959ce@lynx.com>
+From: Dan Williams <dan.j.williams@intel.com>
+Date: Thu, 25 Jan 2018 14:37:53 -0800
+Message-ID: <CAPcyv4hfca4pHXGqx383TirQu2YT1d4No--yQJ0MJpy8boJ5sA@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
- path with retpolines on
-To: Dan Williams <dan.j.williams@intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alan Cox <alan@linux.intel.com>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
+Subject: [kernel-hardening] Re: [PATCH v4 02/10] asm/nospec, array_ptr: sanitize speculative
+ array de-references
+To: Cyril Novikov <cnovikov@lynx.com>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, X86 ML <x86@kernel.org>, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Greg KH <gregkh@linuxfoundation.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>, Adam Sampson <ats@offog.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 25, 2018 at 1:39 PM, Dan Williams <dan.j.williams@intel.com> wrote:
+On Wed, Jan 24, 2018 at 11:09 PM, Cyril Novikov <cnovikov@lynx.com> wrote:
+> On 1/18/2018 4:01 PM, Dan Williams wrote:
+>>
+>> 'array_ptr' is proposed as a generic mechanism to mitigate against
+>> Spectre-variant-1 attacks, i.e. an attack that bypasses boundary checks
+>> via speculative execution). The 'array_ptr' implementation is expected
+>> to be safe for current generation cpus across multiple architectures
+>> (ARM, x86).
 >
-> If you're rejiggering, can we also put in a mechanism for detecting
-> which registers to clear so that userspace can't inject useful values
-> into speculation paths?
+>
+> I'm an outside reviewer, not subscribed to the list, so forgive me if I do
+> something not according to protocol. I have the following comments on this
+> change:
+>
+> After discarding the speculation barrier variant, is array_ptr() needed at
+> all? You could have a simpler sanitizing macro, say
+>
+> #define array_sanitize_idx(idx, sz) ((idx) & array_ptr_mask((idx), (sz)))
+>
+> (adjusted to not evaluate idx twice). And use it as follows:
+>
+> if (idx < array_size) {
+>     idx = array_sanitize_idx(idx, array_size);
+>     do_something(array[idx]);
+> }
+>
+> If I understand the speculation stuff correctly, unlike array_ptr(), this
+> "leaks" array[0] rather than nothing (*NULL) when executed speculatively.
+> However, it's still much better than leaking an arbitrary location in
+> memory. The attacker can likely get array[0] "leaked" by passing 0 as idx
+> anyway.
 
-That actually becomes trivial with just the "no fastpath" patch I sent
-out. You can just clear all of them.
+True, we could simplify it to just sanitize the index with the
+expectation that speculating with index 0 is safe. Although we'd want
+to document it just case there is some odd code paths where the valid
+portion of the array is offset from 0.
 
-Sure, then do_syscall_64() will reload the six first ones, but since
-those are the argument registers anyway, and since they are
-caller-clobbered, they have very short lifetimes. So it would
-effectively not really be an issue.
+I like this approach better because it handles cases where the bounds
+check is far away from the array de-reference. I.e. instead of having
+array_ptr() and array_idx() for different cases, just sanitize the
+index.
 
-But yes, SYSCALL_DEFINEx() rejiggery would close even that tiny hole.
+>
+>> +/*
+>> + * If idx is negative or if idx > size then bit 63 is set in the mask,
+>> + * and the value of ~(-1L) is zero. When the mask is zero, bounds check
+>> + * failed, array_ptr will return NULL.
+>> + */
+>> +#ifndef array_ptr_mask
+>> +static inline unsigned long array_ptr_mask(unsigned long idx, unsigned
+>> long sz)
+>> +{
+>> +       return ~(long)(idx | (sz - 1 - idx)) >> (BITS_PER_LONG - 1);
+>> +}
+>> +#endif
+>
+>
+> Why does this have to resort to the undefined behavior of shifting a
+> negative number to the right? You can do without it:
+>
+> return ((idx | (sz - 1 - idx)) >> (BITS_PER_LONG - 1)) - 1;
+>
+> Of course, you could argue that subtracting 1 from 0 to get all ones is also
+> an undefined behavior, but it's still much better than the shift, isn't it?
 
-                   Linus
+The goal is to prevent the compiler from emitting conditional
+instructions. For example, the simplest form of this sanitize
+operation from Adam:
+
+    return 0 - ((long) (idx < sz));
+
+...produces the desired "cmp, sbb" sequence on x86, but leads to a
+"csel" instruction being emitted for arm64.
+
+Stepping back and realizing that all this churn is around the
+un-optimized form of the comparison vs the inline asm that an arch can
+provide, and we're effectively handling the carry bit in software, we
+can have a WARN_ON_ONCE(idx < 0 || sz < 0) to catch places where the
+expectations of the macro are violated.
+
+Archs can remove the overhead of that extra branch with an instruction
+sequence to handle the carry bit in hardware, otherwise we get runtime
+coverage of places where array_idx() gets used incorrectly.
+
+>
+>> +#define array_ptr(base, idx, sz)                                       \
+>> +({                                                                     \
+>> +       union { typeof(*(base)) *_ptr; unsigned long _bit; } __u;       \
+>> +       typeof(*(base)) *_arr = (base);                                 \
+>> +       unsigned long _i = (idx);                                       \
+>> +       unsigned long _mask = array_ptr_mask(_i, (sz));                 \
+>> +                                                                       \
+>> +       __u._ptr = _arr + (_i & _mask);                                 \
+>> +       __u._bit &= _mask;                                              \
+>> +       __u._ptr;                                                       \
+>> +})
+>
+>
+> Call me paranoid, but I think this may actually create an exploitable bug on
+> 32-bit systems due to casting the index to an unsigned long, if the index as
+> it comes from userland is a 64-bit value. You have *replaced* the "if (idx <
+> array_size)" check with checking if array_ptr() returns NULL. Well, it
+> doesn't return NULL if the low 32 bits of the index are in-bounds, but the
+> high 32 bits are not zero. Apart from the return value pointing to the wrong
+> place, the subsequent code may then assume that the 64-bit idx is actually
+> valid and trip on it badly.
+
+Yes, I'll add some BUILD_BUG_ON safety for cases where sizeof(idx) >
+sizeof(long).
+
+Thanks for taking a look.
