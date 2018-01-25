@@ -1,49 +1,146 @@
-Date: Thu, 25 Jan 2018 10:38:39 -0500
-From: Jerome Glisse <jglisse@redhat.com>
-Message-ID: <20180125153839.GA3542@redhat.com>
-References: <20180124175631.22925-1-igor.stoppa@huawei.com>
- <20180124175631.22925-5-igor.stoppa@huawei.com>
- <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
- <6c6a3f47-fc5b-0365-4663-6908ad1fc4a7@huawei.com>
- <CAFUG7CfP_UyEH=1dmX=wsBz73+fQ0syDAy8ArKT0d4nMyf9n-g@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAFUG7CfP_UyEH=1dmX=wsBz73+fQ0syDAy8ArKT0d4nMyf9n-g@mail.gmail.com>
-Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
-To: Boris Lukashev <blukashev@sempervictus.com>
-Cc: Igor Stoppa <igor.stoppa@huawei.com>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph Hellwig <hch@infradead.org>, Matthew Wilcox <willy@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Sender: linus971@gmail.com
+In-Reply-To: <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
+References: <503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
+ <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Thu, 25 Jan 2018 10:48:01 -0800
+Message-ID: <CA+55aFyONQeyHit6LcQz_JM5+C9pr61fcWFSpdn=7K_2mZN+oA@mail.gmail.com>
+Content-Type: multipart/mixed; boundary="001a1143ce483b5a5005639e381a"
+Subject: [kernel-hardening] Re: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
+ path with retpolines on
+To: Andy Lutomirski <luto@kernel.org>
+Cc: the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alan Cox <alan@linux.intel.com>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Dan Williams <dan.j.williams@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 25, 2018 at 10:14:28AM -0500, Boris Lukashev wrote:
-> On Thu, Jan 25, 2018 at 6:59 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
+--001a1143ce483b5a5005639e381a
+Content-Type: text/plain; charset="UTF-8"
 
-[...]
+On Mon, Jan 22, 2018 at 10:55 AM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+>
+> Honestly, I'd rather get rid of the fast-path entirely. Compared to
+> all the PTI mess, it's not even noticeable.
 
-> DMA/physmap access coupled with a knowledge of which virtual mappings
-> are in the physical space should be enough for an attacker to bypass
-> the gating mechanism this work imposes. Not trivial, but not
-> impossible. Since there's no way to prevent that sort of access in
-> current hardware (especially something like a NIC or GPU working
-> independently of the CPU altogether)
+So I looked at how that would be.
 
-I am not saying this is impossible but this is unlikely they are several
-mecanisms. First you have IOMMU it has been defaulted to on by OEM for
-last few years (it use to be enabled only on server for virtualization).
+Patch attached. Not really "tested", but I'm running the kernel with
+this patch now, and 'strace' etc works, and honestly, it seems very
+obvious.
 
-Which means that a given device only can access memory that is mapped to
-it through the IOMMU page table (usualy each device get their own distinct
-IOMMU page table).
+Also, code generation for 'do_syscall_64()' does not look horrible. In
+fact, it doesn't look all that much worse than the fast-path ever did.
 
-Then on device like GPU you have an MMU (no GPU without an MMU for the
-last 10 years or more). The MMU is under the control of the kernel driver
-of the GPU and for the open source driver we try hard to make sure it can
-not be abuse and circumvent by userspace ie we restrict userspace process
-to only access memory they own.
+So the biggest impact of this is the extra register saves
+(SAVE_EXTRA_REGS) from setting up the full ptregs. And honestly, I
+hate how that stupid macro still uses "movq reg,off(%rsp)" instead of
+"pushq %reg".
 
-I am not saying that this can not happen but that we are trying our best
-to avoid it.
+Considering the diffstat:
 
-Cheers,
-Jérôme
+ 2 files changed, 2 insertions(+), 121 deletions(-)
+
+and how those 100+ lines are nasty assembly code, I do think we should
+just do it.
+
+Comments?
+
+              Linus
+
+--001a1143ce483b5a5005639e381a
+Content-Type: text/plain; charset="US-ASCII"; name="patch.diff"
+Content-Disposition: attachment; filename="patch.diff"
+Content-Transfer-Encoding: base64
+X-Attachment-Id: f_jcuupkb00
+
+IGFyY2gveDg2L2VudHJ5L2VudHJ5XzY0LlMgICB8IDExNiAtLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLQogYXJjaC94ODYvZW50cnkvc3lzY2FsbF82NC5jIHwgICA3
+ICstLQogMiBmaWxlcyBjaGFuZ2VkLCAyIGluc2VydGlvbnMoKyksIDEyMSBkZWxldGlvbnMoLSkK
+CmRpZmYgLS1naXQgYS9hcmNoL3g4Ni9lbnRyeS9lbnRyeV82NC5TIGIvYXJjaC94ODYvZW50cnkv
+ZW50cnlfNjQuUwppbmRleCBmZjZmODAyMjYxMmMuLjY1ZjRkMjliZTY5YiAxMDA2NDQKLS0tIGEv
+YXJjaC94ODYvZW50cnkvZW50cnlfNjQuUworKysgYi9hcmNoL3g4Ni9lbnRyeS9lbnRyeV82NC5T
+CkBAIC0yNDEsODAgKzI0MSw2IEBAIEdMT0JBTChlbnRyeV9TWVNDQUxMXzY0X2FmdGVyX2h3ZnJh
+bWUpCiAKIAlUUkFDRV9JUlFTX09GRgogCi0JLyoKLQkgKiBJZiB3ZSBuZWVkIHRvIGRvIGVudHJ5
+IHdvcmsgb3IgaWYgd2UgZ3Vlc3Mgd2UnbGwgbmVlZCB0byBkbwotCSAqIGV4aXQgd29yaywgZ28g
+c3RyYWlnaHQgdG8gdGhlIHNsb3cgcGF0aC4KLQkgKi8KLQltb3ZxCVBFUl9DUFVfVkFSKGN1cnJl
+bnRfdGFzayksICVyMTEKLQl0ZXN0bAkkX1RJRl9XT1JLX1NZU0NBTExfRU5UUll8X1RJRl9BTExX
+T1JLX01BU0ssIFRBU0tfVElfZmxhZ3MoJXIxMSkKLQlqbnoJZW50cnlfU1lTQ0FMTDY0X3Nsb3df
+cGF0aAotCi1lbnRyeV9TWVNDQUxMXzY0X2Zhc3RwYXRoOgotCS8qCi0JICogRWFzeSBjYXNlOiBl
+bmFibGUgaW50ZXJydXB0cyBhbmQgaXNzdWUgdGhlIHN5c2NhbGwuICBJZiB0aGUgc3lzY2FsbAot
+CSAqIG5lZWRzIHB0X3JlZ3MsIHdlJ2xsIGNhbGwgYSBzdHViIHRoYXQgZGlzYWJsZXMgaW50ZXJy
+dXB0cyBhZ2FpbgotCSAqIGFuZCBqdW1wcyB0byB0aGUgc2xvdyBwYXRoLgotCSAqLwotCVRSQUNF
+X0lSUVNfT04KLQlFTkFCTEVfSU5URVJSVVBUUyhDTEJSX05PTkUpCi0jaWYgX19TWVNDQUxMX01B
+U0sgPT0gfjAKLQljbXBxCSRfX05SX3N5c2NhbGxfbWF4LCAlcmF4Ci0jZWxzZQotCWFuZGwJJF9f
+U1lTQ0FMTF9NQVNLLCAlZWF4Ci0JY21wbAkkX19OUl9zeXNjYWxsX21heCwgJWVheAotI2VuZGlm
+Ci0JamEJMWYJCQkJLyogcmV0dXJuIC1FTk9TWVMgKGFscmVhZHkgaW4gcHRfcmVncy0+YXgpICov
+Ci0JbW92cQklcjEwLCAlcmN4Ci0KLQkvKgotCSAqIFRoaXMgY2FsbCBpbnN0cnVjdGlvbiBpcyBo
+YW5kbGVkIHNwZWNpYWxseSBpbiBzdHViX3B0cmVnc182NC4KLQkgKiBJdCBtaWdodCBlbmQgdXAg
+anVtcGluZyB0byB0aGUgc2xvdyBwYXRoLiAgSWYgaXQganVtcHMsIFJBWAotCSAqIGFuZCBhbGwg
+YXJndW1lbnQgcmVnaXN0ZXJzIGFyZSBjbG9iYmVyZWQuCi0JICovCi0jaWZkZWYgQ09ORklHX1JF
+VFBPTElORQotCW1vdnEJc3lzX2NhbGxfdGFibGUoLCAlcmF4LCA4KSwgJXJheAotCWNhbGwJX194
+ODZfaW5kaXJlY3RfdGh1bmtfcmF4Ci0jZWxzZQotCWNhbGwJKnN5c19jYWxsX3RhYmxlKCwgJXJh
+eCwgOCkKLSNlbmRpZgotLkxlbnRyeV9TWVNDQUxMXzY0X2FmdGVyX2Zhc3RwYXRoX2NhbGw6Ci0K
+LQltb3ZxCSVyYXgsIFJBWCglcnNwKQotMToKLQotCS8qCi0JICogSWYgd2UgZ2V0IGhlcmUsIHRo
+ZW4gd2Uga25vdyB0aGF0IHB0X3JlZ3MgaXMgY2xlYW4gZm9yIFNZU1JFVDY0LgotCSAqIElmIHdl
+IHNlZSB0aGF0IG5vIGV4aXQgd29yayBpcyByZXF1aXJlZCAod2hpY2ggd2UgYXJlIHJlcXVpcmVk
+Ci0JICogdG8gY2hlY2sgd2l0aCBJUlFzIG9mZiksIHRoZW4gd2UgY2FuIGdvIHN0cmFpZ2h0IHRv
+IFNZU1JFVDY0LgotCSAqLwotCURJU0FCTEVfSU5URVJSVVBUUyhDTEJSX0FOWSkKLQlUUkFDRV9J
+UlFTX09GRgotCW1vdnEJUEVSX0NQVV9WQVIoY3VycmVudF90YXNrKSwgJXIxMQotCXRlc3RsCSRf
+VElGX0FMTFdPUktfTUFTSywgVEFTS19USV9mbGFncyglcjExKQotCWpuegkxZgotCi0JTE9DS0RF
+UF9TWVNfRVhJVAotCVRSQUNFX0lSUVNfT04JCS8qIHVzZXIgbW9kZSBpcyB0cmFjZWQgYXMgSVJR
+cyBvbiAqLwotCW1vdnEJUklQKCVyc3ApLCAlcmN4Ci0JbW92cQlFRkxBR1MoJXJzcCksICVyMTEK
+LQlhZGRxCSQ2KjgsICVyc3AJLyogc2tpcCBleHRyYSByZWdzIC0tIHRoZXkgd2VyZSBwcmVzZXJ2
+ZWQgKi8KLQlVTldJTkRfSElOVF9FTVBUWQotCWptcAkuTHBvcF9jX3JlZ3NfZXhjZXB0X3JjeF9y
+MTFfYW5kX3N5c3JldAotCi0xOgotCS8qCi0JICogVGhlIGZhc3QgcGF0aCBsb29rZWQgZ29vZCB3
+aGVuIHdlIHN0YXJ0ZWQsIGJ1dCBzb21ldGhpbmcgY2hhbmdlZAotCSAqIGFsb25nIHRoZSB3YXkg
+YW5kIHdlIG5lZWQgdG8gc3dpdGNoIHRvIHRoZSBzbG93IHBhdGguICBDYWxsaW5nCi0JICogcmFp
+c2UoMykgd2lsbCB0cmlnZ2VyIHRoaXMsIGZvciBleGFtcGxlLiAgSVJRcyBhcmUgb2ZmLgotCSAq
+LwotCVRSQUNFX0lSUVNfT04KLQlFTkFCTEVfSU5URVJSVVBUUyhDTEJSX0FOWSkKLQlTQVZFX0VY
+VFJBX1JFR1MKLQltb3ZxCSVyc3AsICVyZGkKLQljYWxsCXN5c2NhbGxfcmV0dXJuX3Nsb3dwYXRo
+CS8qIHJldHVybnMgd2l0aCBJUlFzIGRpc2FibGVkICovCi0Jam1wCXJldHVybl9mcm9tX1NZU0NB
+TExfNjQKLQotZW50cnlfU1lTQ0FMTDY0X3Nsb3dfcGF0aDoKIAkvKiBJUlFzIGFyZSBvZmYuICov
+CiAJU0FWRV9FWFRSQV9SRUdTCiAJbW92cQklcnNwLCAlcmRpCkBAIC0zOTMsNyArMzE5LDYgQEAg
+c3lzY2FsbF9yZXR1cm5fdmlhX3N5c3JldDoKIAkvKiByY3ggYW5kIHIxMSBhcmUgYWxyZWFkeSBy
+ZXN0b3JlZCAoc2VlIGNvZGUgYWJvdmUpICovCiAJVU5XSU5EX0hJTlRfRU1QVFkKIAlQT1BfRVhU
+UkFfUkVHUwotLkxwb3BfY19yZWdzX2V4Y2VwdF9yY3hfcjExX2FuZF9zeXNyZXQ6CiAJcG9wcQkl
+cnNpCS8qIHNraXAgcjExICovCiAJcG9wcQklcjEwCiAJcG9wcQklcjkKQEAgLTQyNCw0NyArMzQ5
+LDYgQEAgc3lzY2FsbF9yZXR1cm5fdmlhX3N5c3JldDoKIAlVU0VSR1NfU1lTUkVUNjQKIEVORChl
+bnRyeV9TWVNDQUxMXzY0KQogCi1FTlRSWShzdHViX3B0cmVnc182NCkKLQkvKgotCSAqIFN5c2Nh
+bGxzIG1hcmtlZCBhcyBuZWVkaW5nIHB0cmVncyBsYW5kIGhlcmUuCi0JICogSWYgd2UgYXJlIG9u
+IHRoZSBmYXN0IHBhdGgsIHdlIG5lZWQgdG8gc2F2ZSB0aGUgZXh0cmEgcmVncywKLQkgKiB3aGlj
+aCB3ZSBhY2hpZXZlIGJ5IHRyeWluZyBhZ2FpbiBvbiB0aGUgc2xvdyBwYXRoLiAgSWYgd2UgYXJl
+IG9uCi0JICogdGhlIHNsb3cgcGF0aCwgdGhlIGV4dHJhIHJlZ3MgYXJlIGFscmVhZHkgc2F2ZWQu
+Ci0JICoKLQkgKiBSQVggc3RvcmVzIGEgcG9pbnRlciB0byB0aGUgQyBmdW5jdGlvbiBpbXBsZW1l
+bnRpbmcgdGhlIHN5c2NhbGwuCi0JICogSVJRcyBhcmUgb24uCi0JICovCi0JY21wcQkkLkxlbnRy
+eV9TWVNDQUxMXzY0X2FmdGVyX2Zhc3RwYXRoX2NhbGwsICglcnNwKQotCWpuZQkxZgotCi0JLyoK
+LQkgKiBDYWxsZWQgZnJvbSBmYXN0IHBhdGggLS0gZGlzYWJsZSBJUlFzIGFnYWluLCBwb3AgcmV0
+dXJuIGFkZHJlc3MKLQkgKiBhbmQganVtcCB0byBzbG93IHBhdGgKLQkgKi8KLQlESVNBQkxFX0lO
+VEVSUlVQVFMoQ0xCUl9BTlkpCi0JVFJBQ0VfSVJRU19PRkYKLQlwb3BxCSVyYXgKLQlVTldJTkRf
+SElOVF9SRUdTIGV4dHJhPTAKLQlqbXAJZW50cnlfU1lTQ0FMTDY0X3Nsb3dfcGF0aAotCi0xOgot
+CUpNUF9OT1NQRUMgJXJheAkJCQkvKiBDYWxsZWQgZnJvbSBDICovCi1FTkQoc3R1Yl9wdHJlZ3Nf
+NjQpCi0KLS5tYWNybyBwdHJlZ3Nfc3R1YiBmdW5jCi1FTlRSWShwdHJlZ3NfXGZ1bmMpCi0JVU5X
+SU5EX0hJTlRfRlVOQwotCWxlYXEJXGZ1bmMoJXJpcCksICVyYXgKLQlqbXAJc3R1Yl9wdHJlZ3Nf
+NjQKLUVORChwdHJlZ3NfXGZ1bmMpCi0uZW5kbQotCi0vKiBJbnN0YW50aWF0ZSBwdHJlZ3Nfc3R1
+YiBmb3IgZWFjaCBwdHJlZ3MtdXNpbmcgc3lzY2FsbCAqLwotI2RlZmluZSBfX1NZU0NBTExfNjRf
+UVVBTF8oc3ltKQotI2RlZmluZSBfX1NZU0NBTExfNjRfUVVBTF9wdHJlZ3Moc3ltKSBwdHJlZ3Nf
+c3R1YiBzeW0KLSNkZWZpbmUgX19TWVNDQUxMXzY0KG5yLCBzeW0sIHF1YWwpIF9fU1lTQ0FMTF82
+NF9RVUFMXyMjcXVhbChzeW0pCi0jaW5jbHVkZSA8YXNtL3N5c2NhbGxzXzY0Lmg+Ci0KIC8qCiAg
+KiAlcmRpOiBwcmV2IHRhc2sKICAqICVyc2k6IG5leHQgdGFzawpkaWZmIC0tZ2l0IGEvYXJjaC94
+ODYvZW50cnkvc3lzY2FsbF82NC5jIGIvYXJjaC94ODYvZW50cnkvc3lzY2FsbF82NC5jCmluZGV4
+IDljMDk3NzVlNTg5ZC4uYzE3NmQyZmFiMWRhIDEwMDY0NAotLS0gYS9hcmNoL3g4Ni9lbnRyeS9z
+eXNjYWxsXzY0LmMKKysrIGIvYXJjaC94ODYvZW50cnkvc3lzY2FsbF82NC5jCkBAIC03LDE0ICs3
+LDExIEBACiAjaW5jbHVkZSA8YXNtL2FzbS1vZmZzZXRzLmg+CiAjaW5jbHVkZSA8YXNtL3N5c2Nh
+bGwuaD4KIAotI2RlZmluZSBfX1NZU0NBTExfNjRfUVVBTF8oc3ltKSBzeW0KLSNkZWZpbmUgX19T
+WVNDQUxMXzY0X1FVQUxfcHRyZWdzKHN5bSkgcHRyZWdzXyMjc3ltCi0KLSNkZWZpbmUgX19TWVND
+QUxMXzY0KG5yLCBzeW0sIHF1YWwpIGV4dGVybiBhc21saW5rYWdlIGxvbmcgX19TWVNDQUxMXzY0
+X1FVQUxfIyNxdWFsKHN5bSkodW5zaWduZWQgbG9uZywgdW5zaWduZWQgbG9uZywgdW5zaWduZWQg
+bG9uZywgdW5zaWduZWQgbG9uZywgdW5zaWduZWQgbG9uZywgdW5zaWduZWQgbG9uZyk7CisjZGVm
+aW5lIF9fU1lTQ0FMTF82NChuciwgc3ltLCBxdWFsKSBleHRlcm4gYXNtbGlua2FnZSBsb25nIHN5
+bSh1bnNpZ25lZCBsb25nLCB1bnNpZ25lZCBsb25nLCB1bnNpZ25lZCBsb25nLCB1bnNpZ25lZCBs
+b25nLCB1bnNpZ25lZCBsb25nLCB1bnNpZ25lZCBsb25nKTsKICNpbmNsdWRlIDxhc20vc3lzY2Fs
+bHNfNjQuaD4KICN1bmRlZiBfX1NZU0NBTExfNjQKIAotI2RlZmluZSBfX1NZU0NBTExfNjQobnIs
+IHN5bSwgcXVhbCkgW25yXSA9IF9fU1lTQ0FMTF82NF9RVUFMXyMjcXVhbChzeW0pLAorI2RlZmlu
+ZSBfX1NZU0NBTExfNjQobnIsIHN5bSwgcXVhbCkgW25yXSA9IHN5bSwKIAogZXh0ZXJuIGxvbmcg
+c3lzX25pX3N5c2NhbGwodW5zaWduZWQgbG9uZywgdW5zaWduZWQgbG9uZywgdW5zaWduZWQgbG9u
+ZywgdW5zaWduZWQgbG9uZywgdW5zaWduZWQgbG9uZywgdW5zaWduZWQgbG9uZyk7CiAK
+--001a1143ce483b5a5005639e381a--
