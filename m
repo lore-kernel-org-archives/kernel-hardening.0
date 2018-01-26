@@ -1,109 +1,54 @@
 References: <20180124175631.22925-1-igor.stoppa@huawei.com>
  <20180124175631.22925-5-igor.stoppa@huawei.com>
  <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
- <20180126053542.GA30189@bombadil.infradead.org>
+ <6c6a3f47-fc5b-0365-4663-6908ad1fc4a7@huawei.com>
+ <CAFUG7CfP_UyEH=1dmX=wsBz73+fQ0syDAy8ArKT0d4nMyf9n-g@mail.gmail.com>
+ <20180125153839.GA3542@redhat.com>
 From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <4788245d-c8e1-3587-c1e0-09c18245fe9a@huawei.com>
-Date: Fri, 26 Jan 2018 13:46:55 +0200
+Message-ID: <8eb12a75-4957-d5eb-9a14-387788728b8a@huawei.com>
+Date: Fri, 26 Jan 2018 14:28:11 +0200
 MIME-Version: 1.0
-In-Reply-To: <20180126053542.GA30189@bombadil.infradead.org>
+In-Reply-To: <20180125153839.GA3542@redhat.com>
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
-To: Matthew Wilcox <willy@infradead.org>, Jann Horn <jannh@google.com>
-Cc: jglisse@redhat.com, Kees Cook <keescook@chromium.org>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module@vger.kernel.org, linux-mm@kvack.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Jerome Glisse <jglisse@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>
+Cc: Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Michal
+ Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph
+ Hellwig <hch@infradead.org>, Matthew Wilcox <willy@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 26/01/18 07:35, Matthew Wilcox wrote:
-> On Wed, Jan 24, 2018 at 08:10:53PM +0100, Jann Horn wrote:
->> I'm not entirely convinced by the approach of marking small parts of
->> kernel memory as readonly for hardening.
+On 25/01/18 17:38, Jerome Glisse wrote:
+> On Thu, Jan 25, 2018 at 10:14:28AM -0500, Boris Lukashev wrote:
+>> On Thu, Jan 25, 2018 at 6:59 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
 > 
-> It depends how significant the data stored in there are.  For example,
-> storing function pointers in read-only memory provides significant
-> hardening.
+> [...]
 > 
->> You're allocating with vmalloc(), which, as far as I know, establishes
->> a second mapping in the vmalloc area for pages that are already mapped
->> as RW through the physmap. AFAICS, later, when you're trying to make
->> pages readonly, you're only changing the protections on the second
->> mapping in the vmalloc area, therefore leaving the memory writable
->> through the physmap. Is that correct? If so, please either document
->> the reasoning why this is okay or change it.
-> 
-> Yes, this is still vulnerable to attacks through the physmap.  That's also
-> true for marking structs as const.  We should probably fix that at some
-> point, but at least they're not vulnerable to heap overruns by small
-> amounts ... you have to be able to overrun some other array by terabytes.
+>> DMA/physmap access coupled with a knowledge of which virtual mappings
+>> are in the physical space should be enough for an attacker to bypass
+>> the gating mechanism this work imposes. Not trivial, but not
+>> impossible. Since there's no way to prevent that sort of access in
+>> current hardware (especially something like a NIC or GPU working
+>> independently of the CPU altogether)
 
-Actually, I think there is something to say in favor of using a vmalloc
-based approach, precisely because of the physmap :-P
+[...]
 
-If I understood correctly, the physmap is primarily meant to speed up
-access to physical memory through the TLB. In particular, for kmalloc
-based allocations.
+> I am not saying that this can not happen but that we are trying our best
+> to avoid it.
 
-Which means that, to perform a physmap-based attack to a kmalloced
-allocation, one needs to know:
+How about an opt-in verification, similar to what proposed by Boris
+Lukashev?
 
-- the address of the target variable in the kmalloc range
-- the randomized offset of the kernel
-- the location of the physmap
+When reading back the data, one could access the pointer directly and
+bypass the verification, or could use a function that explicitly checks
+the integrity of the data.
 
-But, for a vmalloc based allocation, there is one extra hoop: since the
-mapping is really per page, now the attacker has actually to walk the
-page table, to figure out where to poke in the physmap.
+Starting from an unprotected kmalloc allocation, even just turning the
+data into R/O is an improvement, but if one can afford the overhead of
+performing the verification, why not?
 
-
-One more thought about physmap: does it map also code?
-Because, if it does, and one wants to use it for an attack, isn't it
-easier to look for some security test and replace a bne with be or
-equivalent?
-
-
-> It's worth having a discussion about whether we want the pmalloc API
-> or whether we want a slab-based API.
-
-pmalloc is meant to be useful where the attack surface is made up of
-lots of small allocations - my first use case was the SE Linux policy
-DB, where there is a variety of elements being allocated, in large
-amount. To the point where having ready made caches would be wasteful.
-
-
-Then there is the issue I already mentioned about arm/arm64 which would
-require to break down large mappings, which seems to be against current
-policy, as described in my previous mail:
-
-http://www.openwall.com/lists/kernel-hardening/2018/01/24/11
-
-
-I do not know exactly what you have in mind wrt slab, but my impression
-is that it will most likely gravitate toward the pmalloc implementation.
-It will need:
-
-- "pools" or anyway some means to lock only a certain group of pages,
-related to a specific kernel user
-
-- (mostly) lockless allocation
-
-- a way to manage granularity (or order of allocation)
-
-Most of this is already provided by genalloc, which is what I ended up
-almost re-implementing, before being pointed to it :-)
-
-I only had to add the tracking of end of allocations, which is what the
-patch 1/6 does - as side note, is anybody maintaining it?
-I could not find an entry in MAINTAINERS
-
-As I mentioned above, using vmalloc adds even an extra layer of protection.
-
-The major downside is the increased TLB use, however this is not so
-relevant for the volumes of data that I had to deal with so far:
-only few 4K pages.
-
-But you might have in mind something else.
-I'd be interested to know what and what would be an obstacle in using
-pmalloc. Maybe it can be solved.
+It would still be better if the service was provided by the library,
+instead than implemented by individual users, I think.
 
 --
 igor
