@@ -1,41 +1,109 @@
-From: David Laight <David.Laight@ACULAB.COM>
-Date: Fri, 26 Jan 2018 11:17:29 +0000
-Message-ID: <b8ea504729db4073abf82ebd5d8a53c6@AcuMS.aculab.com>
-References: <503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
- <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
- <CA+55aFyONQeyHit6LcQz_JM5+C9pr61fcWFSpdn=7K_2mZN+oA@mail.gmail.com>
- <CALCETrVUY9p9jMNhuBgM3mWATsr1Fc_ZWc=bjidBkLw7bq5Vdg@mail.gmail.com>
- <CA+55aFwUn7+WiHxL7PBWxNrGB0--HETqUjdRwxi+DkMvCP_CaA@mail.gmail.com>
- <CALCETrV1JHK1ovjjD1vbs08K1an6tq6nbRoAj9uyrY2GUYJJBA@mail.gmail.com>
- <CA+55aFzTXVRPo7OBPMo2OB26GisY8-dg6NaC8ackVJgS9M0+4w@mail.gmail.com>
- <CALCETrU42C1S3nvSuLuamXtp2-s1xBG3q5cSNVOfGThncHxBZA@mail.gmail.com>
-In-Reply-To: <CALCETrU42C1S3nvSuLuamXtp2-s1xBG3q5cSNVOfGThncHxBZA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+References: <20180124175631.22925-1-igor.stoppa@huawei.com>
+ <20180124175631.22925-5-igor.stoppa@huawei.com>
+ <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
+ <20180126053542.GA30189@bombadil.infradead.org>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <4788245d-c8e1-3587-c1e0-09c18245fe9a@huawei.com>
+Date: Fri, 26 Jan 2018 13:46:55 +0200
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
- path with retpolines on
-To: 'Andy Lutomirski' <luto@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alan Cox <alan@linux.intel.com>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Dan Williams <dan.j.williams@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
+In-Reply-To: <20180126053542.GA30189@bombadil.infradead.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
+To: Matthew Wilcox <willy@infradead.org>, Jann Horn <jannh@google.com>
+Cc: jglisse@redhat.com, Kees Cook <keescook@chromium.org>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module@vger.kernel.org, linux-mm@kvack.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-RnJvbTogQW5keSBMdXRvbWlyc2tpDQo+IFNlbnQ6IDI1IEphbnVhcnkgMjAxOCAyMTozMQ0KLi4u
-DQo+IEFub3RoZXIgcG90ZW50aWFsbHkgdXNlZnVsIGlmIHJhdGhlciBtaW5vciBvcHRpbWl6YXRp
-b24gd291bGQgYmUgdG8NCj4gcmVqaWdnZXIgdGhlIFNZU0NBTExfREVGSU5FIG1hY3JvcyBhIGJp
-dC4gIEN1cnJlbnRseSB3ZSB0cmVhdCBhbGwNCj4gc3lzY2FsbHMgbGlrZSB0aGlzOg0KPiANCj4g
-bG9uZyBmdW5jKGxvbmcgYXJnMCwgbG9uZyBhcmcxLCBsb25nIGFyZzIsIGxvbmcgYXJnMywgbG9u
-ZyBhcmc0LCBsb25nIGFyZzUpOw0KPiANCj4gSSB3b25kZXIgaWYgd2UnZCBiZSBiZXR0ZXIgb2Zm
-IGRvaW5nOg0KPiANCj4gbG9uZyBmdW5jKGNvbnN0IHN0cnVjdCBwdF9yZWdzICpyZWdzKTsNCj4g
-DQo+IGFuZCBhdXRvZ2VuZXJhdGluZzoNCj4gDQo+IHN0YXRpYyBsb25nIFN5U19yZWFkKGNvbnN0
-IHN0cnVjdCBwdF9yZWdzICpyZWdzKQ0KPiB7DQo+ICAgIHJldHVybiBzeXNfcmVnKHJlZ3MtPmRp
-LCAuLi4pOw0KPiB9DQoNCkhtbW0uLi4uDQpOZXRCU0QgKGFuZCB0aGUgb3RoZXIgQlNEPykgZGVm
-aW5lcyBhIHN0cnVjdHVyZSBmb3IgdGhlIGFyZ3VtZW50cyB0byBlYWNoIHN5c2NhbGwuDQpPbiBz
-eXN0ZW1zIHdoZXJlIGFsbCBmdW5jdGlvbiBhcmd1bWVudHMgYXJlIHB1dCBvbiBzdGFjayB0aGUg
-dXNlciBzdGFjayB0aGF0DQpjb250YWlucyB0aGUgYXJndW1lbnRzIGlzIGNvcGllZCBpbnRvIGEg
-a2VybmVsIGJ1ZmZlci4NCkZvciBhbWQ2NCBJIGNoYW5nZWQgdGhlIHJlZ2lzdGVyIHNhdmUgYXJl
-YSBsYXlvdXQgc28gdGhhdCB0aGUgYXJndW1lbnRzIHdlcmUgaW4NCnRoZSByaWdodCBvcmRlciBb
-MV0uIFRoZW4gYWRkZWQgYW4gZXh0cmEgYXJlYSBmb3IgdGhlIGV4dHJhIGFyZ3VtZW50cyB0aGF0
-IGhhZCB0byBiZQ0KcmVhZCBmcm9tIHRoZSB1c2VyIHN0YWNrLg0KSnVzdCBwYXNzaW5nIGEgcG9p
-bnRlciBpbnRvIHRoZSBzYXZlIGFyZWEgaGFzIHRvIGJlIGJldHRlciB0aGFuIHJlYWRpbmcNCmFs
-bCB0aGUgdmFsdWVzIGFnYWluLg0KDQpbMV0gVGhlcmUgd2FzIHNvbWUgaG9ycmlkIGZhbGxvdXQg
-ZnJvbSB0aGF0IDotKA0KDQoJRGF2aWQNCg0K
+On 26/01/18 07:35, Matthew Wilcox wrote:
+> On Wed, Jan 24, 2018 at 08:10:53PM +0100, Jann Horn wrote:
+>> I'm not entirely convinced by the approach of marking small parts of
+>> kernel memory as readonly for hardening.
+> 
+> It depends how significant the data stored in there are.  For example,
+> storing function pointers in read-only memory provides significant
+> hardening.
+> 
+>> You're allocating with vmalloc(), which, as far as I know, establishes
+>> a second mapping in the vmalloc area for pages that are already mapped
+>> as RW through the physmap. AFAICS, later, when you're trying to make
+>> pages readonly, you're only changing the protections on the second
+>> mapping in the vmalloc area, therefore leaving the memory writable
+>> through the physmap. Is that correct? If so, please either document
+>> the reasoning why this is okay or change it.
+> 
+> Yes, this is still vulnerable to attacks through the physmap.  That's also
+> true for marking structs as const.  We should probably fix that at some
+> point, but at least they're not vulnerable to heap overruns by small
+> amounts ... you have to be able to overrun some other array by terabytes.
+
+Actually, I think there is something to say in favor of using a vmalloc
+based approach, precisely because of the physmap :-P
+
+If I understood correctly, the physmap is primarily meant to speed up
+access to physical memory through the TLB. In particular, for kmalloc
+based allocations.
+
+Which means that, to perform a physmap-based attack to a kmalloced
+allocation, one needs to know:
+
+- the address of the target variable in the kmalloc range
+- the randomized offset of the kernel
+- the location of the physmap
+
+But, for a vmalloc based allocation, there is one extra hoop: since the
+mapping is really per page, now the attacker has actually to walk the
+page table, to figure out where to poke in the physmap.
+
+
+One more thought about physmap: does it map also code?
+Because, if it does, and one wants to use it for an attack, isn't it
+easier to look for some security test and replace a bne with be or
+equivalent?
+
+
+> It's worth having a discussion about whether we want the pmalloc API
+> or whether we want a slab-based API.
+
+pmalloc is meant to be useful where the attack surface is made up of
+lots of small allocations - my first use case was the SE Linux policy
+DB, where there is a variety of elements being allocated, in large
+amount. To the point where having ready made caches would be wasteful.
+
+
+Then there is the issue I already mentioned about arm/arm64 which would
+require to break down large mappings, which seems to be against current
+policy, as described in my previous mail:
+
+http://www.openwall.com/lists/kernel-hardening/2018/01/24/11
+
+
+I do not know exactly what you have in mind wrt slab, but my impression
+is that it will most likely gravitate toward the pmalloc implementation.
+It will need:
+
+- "pools" or anyway some means to lock only a certain group of pages,
+related to a specific kernel user
+
+- (mostly) lockless allocation
+
+- a way to manage granularity (or order of allocation)
+
+Most of this is already provided by genalloc, which is what I ended up
+almost re-implementing, before being pointed to it :-)
+
+I only had to add the tracking of end of allocations, which is what the
+patch 1/6 does - as side note, is anybody maintaining it?
+I could not find an entry in MAINTAINERS
+
+As I mentioned above, using vmalloc adds even an extra layer of protection.
+
+The major downside is the increased TLB use, however this is not so
+relevant for the volumes of data that I had to deal with so far:
+only few 4K pages.
+
+But you might have in mind something else.
+I'd be interested to know what and what would be an obstacle in using
+pmalloc. Maybe it can be solved.
+
+--
+igor
