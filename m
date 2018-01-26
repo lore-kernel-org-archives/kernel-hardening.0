@@ -1,63 +1,32 @@
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Fri, 26 Jan 2018 13:31:58 +0100
-Message-Id: <20180126123158.9575-1-Jason@zx2c4.com>
-In-Reply-To: <CAHmME9p7QdAZf2NR4fkheRFVUoH1a27rmRcOnzkSS+nE5gJ63Q@mail.gmail.com>
-References: <CAHmME9p7QdAZf2NR4fkheRFVUoH1a27rmRcOnzkSS+nE5gJ63Q@mail.gmail.com>
-Subject: [kernel-hardening] [PATCH v2] cpu: do not leak vulnerabilities to unprivileged users
-To: gregkh@linuxfoundation.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, gnomes@lxorguk.ukuu.org.uk
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Message-ID: <1516976647.5438.6.camel@linux.intel.com>
+From: Alan Cox <alan@linux.intel.com>
+Date: Fri, 26 Jan 2018 14:24:07 +0000
+In-Reply-To: <b8ea504729db4073abf82ebd5d8a53c6@AcuMS.aculab.com>
+References: 
+	<503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
+	 <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
+	 <CA+55aFyONQeyHit6LcQz_JM5+C9pr61fcWFSpdn=7K_2mZN+oA@mail.gmail.com>
+	 <CALCETrVUY9p9jMNhuBgM3mWATsr1Fc_ZWc=bjidBkLw7bq5Vdg@mail.gmail.com>
+	 <CA+55aFwUn7+WiHxL7PBWxNrGB0--HETqUjdRwxi+DkMvCP_CaA@mail.gmail.com>
+	 <CALCETrV1JHK1ovjjD1vbs08K1an6tq6nbRoAj9uyrY2GUYJJBA@mail.gmail.com>
+	 <CA+55aFzTXVRPo7OBPMo2OB26GisY8-dg6NaC8ackVJgS9M0+4w@mail.gmail.com>
+	 <CALCETrU42C1S3nvSuLuamXtp2-s1xBG3q5cSNVOfGThncHxBZA@mail.gmail.com>
+	 <b8ea504729db4073abf82ebd5d8a53c6@AcuMS.aculab.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
+ path with retpolines on
+To: David Laight <David.Laight@ACULAB.COM>, 'Andy Lutomirski' <luto@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>
+Cc: the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Dan Williams <dan.j.williams@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-While it's public information if the CPU in general has spectre/meltdown
-bugs, it probably shouldn't be as globally obvious to all unprivileged
-users whether or not the kernel is doing something to mitigate those
-bugs. While an attacker can obviously probe and try, there frequently is
-a trade-off attackers make of how much probing around they're willing to
-do versus the certainty of an attack working, in order to reduce
-detection. By making it loud and clear that the kernel _is_ vulnerable,
-we're simply aiding the trade-off calculations attackers have to make
-when choosing which vectors to target.
+> NetBSD (and the other BSD?) defines a structure for the arguments to
+> each syscall.
 
-So, this patch changes the permissions to 0400 to make the attacker's
-job slightly less easy. While we're at it, we clean up the leak in dmesg
-too.
+Goes back to v7 or so but they put the syscall arguments into the uarea
+so that no pointers were needed (uarea being a per process mapping at a
+fixed address) in order to also reduce pointer dereferencing costs (not
+that those matter much on modern processors)
 
-Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
----
-v2 handles dmesg too.
-
- arch/x86/kernel/cpu/bugs.c | 1 -
- drivers/base/cpu.c         | 6 +++---
- 2 files changed, 3 insertions(+), 4 deletions(-)
-
-diff --git a/arch/x86/kernel/cpu/bugs.c b/arch/x86/kernel/cpu/bugs.c
-index 390b3dc3d438..e512ae82f201 100644
---- a/arch/x86/kernel/cpu/bugs.c
-+++ b/arch/x86/kernel/cpu/bugs.c
-@@ -230,7 +230,6 @@ static void __init spectre_v2_select_mitigation(void)
- 	}
- 
- 	spectre_v2_enabled = mode;
--	pr_info("%s\n", spectre_v2_strings[mode]);
- 
- 	/*
- 	 * If neither SMEP or KPTI are available, there is a risk of
-diff --git a/drivers/base/cpu.c b/drivers/base/cpu.c
-index d99038487a0d..a3a8e008f957 100644
---- a/drivers/base/cpu.c
-+++ b/drivers/base/cpu.c
-@@ -531,9 +531,9 @@ ssize_t __weak cpu_show_spectre_v2(struct device *dev,
- 	return sprintf(buf, "Not affected\n");
- }
- 
--static DEVICE_ATTR(meltdown, 0444, cpu_show_meltdown, NULL);
--static DEVICE_ATTR(spectre_v1, 0444, cpu_show_spectre_v1, NULL);
--static DEVICE_ATTR(spectre_v2, 0444, cpu_show_spectre_v2, NULL);
-+static DEVICE_ATTR(meltdown, 0400, cpu_show_meltdown, NULL);
-+static DEVICE_ATTR(spectre_v1, 0400, cpu_show_spectre_v1, NULL);
-+static DEVICE_ATTR(spectre_v2, 0400, cpu_show_spectre_v2, NULL);
- 
- static struct attribute *cpu_root_vulnerabilities_attrs[] = {
- 	&dev_attr_meltdown.attr,
--- 
-2.16.1
+Alan.
