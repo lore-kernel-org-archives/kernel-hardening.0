@@ -1,39 +1,32 @@
-Date: Thu, 25 Jan 2018 21:35:42 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Message-ID: <20180126053542.GA30189@bombadil.infradead.org>
-References: <20180124175631.22925-1-igor.stoppa@huawei.com>
- <20180124175631.22925-5-igor.stoppa@huawei.com>
- <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
+From: Cao jin <caoj.fnst@cn.fujitsu.com>
+Message-ID: <daf68dfa-64ae-2aad-1237-fc9b7b7b6593@cn.fujitsu.com>
+Date: Fri, 26 Jan 2018 16:32:19 +0800
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
-Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
-To: Jann Horn <jannh@google.com>
-Cc: Igor Stoppa <igor.stoppa@huawei.com>, jglisse@redhat.com, Kees Cook <keescook@chromium.org>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module@vger.kernel.org, linux-mm@kvack.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] A problem met when using crash with randomized kernel
+To: keescook@chromium.org, re.emese@gmail.com
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Petr Tesarik <ptesarik@suse.cz>, Dave Anderson <anderson@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 24, 2018 at 08:10:53PM +0100, Jann Horn wrote:
-> I'm not entirely convinced by the approach of marking small parts of
-> kernel memory as readonly for hardening.
+Hi,
+  Recently I am testing crash tool with structure layout randomized
+kernel, and crash failed to work with it.
 
-It depends how significant the data stored in there are.  For example,
-storing function pointers in read-only memory provides significant
-hardening.
+When using "gdb vmlinux"to examine both the randomized and
+non-randomized vmlinux's debuginfo, take struct uts_namespace for
+example, the output of "ptype struct uts_namespace" is identical in both
+debuginfo.  And this causes a big trouble to crash utility, because
+crash uses the embedded gdb to retrieve some structure member's offset
+in debuginfo, and crash got the same offset value for every structure
+member in both condition.
 
-> You're allocating with vmalloc(), which, as far as I know, establishes
-> a second mapping in the vmalloc area for pages that are already mapped
-> as RW through the physmap. AFAICS, later, when you're trying to make
-> pages readonly, you're only changing the protections on the second
-> mapping in the vmalloc area, therefore leaving the memory writable
-> through the physmap. Is that correct? If so, please either document
-> the reasoning why this is okay or change it.
+It is believed by gcc maintainer[*] that it is a problem of the plugin,
+not gcc
 
-Yes, this is still vulnerable to attacks through the physmap.  That's also
-true for marking structs as const.  We should probably fix that at some
-point, but at least they're not vulnerable to heap overruns by small
-amounts ... you have to be able to overrun some other array by terabytes.
+[*]https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84052
 
-It's worth having a discussion about whether we want the pmalloc API
-or whether we want a slab-based API.  We can have a separate discussion
-about an API to remove pages from the physmap.
+So, could you confirm it is plugin bug or not?
+-- 
+Sincerely,
+Cao jin
