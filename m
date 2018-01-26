@@ -1,58 +1,46 @@
-Date: Fri, 26 Jan 2018 19:07:21 +0000
-From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
-Message-ID: <20180126190721.36b0f589@alans-desktop>
-In-Reply-To: <CAHmME9poivOgtCkOs5cjQXT0qxayk7MV2QLUBYhoUrKu=VUhuA@mail.gmail.com>
-References: <CAHmME9p7QdAZf2NR4fkheRFVUoH1a27rmRcOnzkSS+nE5gJ63Q@mail.gmail.com>
-	<20180126123158.9575-1-Jason@zx2c4.com>
-	<20180126164310.13a29ad2@alans-desktop>
-	<CAHmME9poivOgtCkOs5cjQXT0qxayk7MV2QLUBYhoUrKu=VUhuA@mail.gmail.com>
+References: <20180124175631.22925-1-igor.stoppa@huawei.com>
+ <20180124175631.22925-5-igor.stoppa@huawei.com>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <c5ae2b4f-4a60-1526-0512-51f1c9a5e4a8@huawei.com>
+Date: Fri, 26 Jan 2018 21:41:35 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+In-Reply-To: <20180124175631.22925-5-igor.stoppa@huawei.com>
+Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [PATCH v2] cpu: do not leak
- vulnerabilities to unprivileged users
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] Re: [PATCH 4/6] Protectable Memory
+To: jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, hch@infradead.org, willy@infradead.org
+Cc: cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 26 Jan 2018 18:47:28 +0100
-"Jason A. Donenfeld" <Jason@zx2c4.com> wrote:
+On 24/01/18 19:56, Igor Stoppa wrote:
 
-> On Fri, Jan 26, 2018 at 5:43 PM, Alan Cox <gnomes@lxorguk.ukuu.org.uk> wrote:
-> > a) The info is already trivially accessible via /proc/cpuinfo  
-> 
-> No, /proc/cpuinfo shows if the CPU itself has these bugs, but doesn't
-> show whether or not the kernel has gone to lengths to mitigate these
-> bugs.
+[...]
 
-It tells you immediately what microcode, what hardware properties. A few
-user space instructions later and you know the rest.
+> +bool pmalloc_prealloc(struct gen_pool *pool, size_t size)
+> +{
 
-> Right, so without this, an attacker has to measure. The purpose of
-> this patchset is to require the attacker to perform an additional
-> measurement. That seems worthwhile, especially if measurements are or
-> would ever become non-trivial to make.
+[...]
 
-You mean 'I'm magically going to make it secure because the attacker
-won't be smart enough to paste in a function from gitub' ?
+> +abort:
+> +	vfree(chunk);
 
-I don't buy it. Most attack tools are automated, they will contain the
-needed code.
+this should be vfree_atomic()
 
-> > b) Some JIT and other environments need to know  
-> 
-> Shouldn't JITs do the best they can with the environment they're in?
-> And for that, isn't /proc/cpuinfo enough?
+[...]
 
-No
+> +void *pmalloc(struct gen_pool *pool, size_t size, gfp_t gfp)
+> +{
 
-The JIT needs to know whether the mitigations are present because it
-needs to JIT very different code if it is responsible for generating
-things like lfence and and/mask references or can assume the CPU is
-covering some or part of it.
+[...]
 
-Likewise you can imagine other code using those files in order to figure
-out how to self patch / which library to load for performance critical
-stuff.
+> +free:
+> +	vfree(chunk);
 
-Alan
+and this one too
+
+I will fix them in the next iteration.
+I am waiting to see if any more comments arrive.
+Otherwise, I'll send it out probably next Tuesday.
+
+--
+igor
