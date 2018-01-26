@@ -1,61 +1,29 @@
+Date: Fri, 26 Jan 2018 16:43:10 +0000
+From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
+Message-ID: <20180126164310.13a29ad2@alans-desktop>
+In-Reply-To: <20180126123158.9575-1-Jason@zx2c4.com>
+References: <CAHmME9p7QdAZf2NR4fkheRFVUoH1a27rmRcOnzkSS+nE5gJ63Q@mail.gmail.com>
+	<20180126123158.9575-1-Jason@zx2c4.com>
 MIME-Version: 1.0
-In-Reply-To: <8eb12a75-4957-d5eb-9a14-387788728b8a@huawei.com>
-References: <20180124175631.22925-1-igor.stoppa@huawei.com>
- <20180124175631.22925-5-igor.stoppa@huawei.com> <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
- <6c6a3f47-fc5b-0365-4663-6908ad1fc4a7@huawei.com> <CAFUG7CfP_UyEH=1dmX=wsBz73+fQ0syDAy8ArKT0d4nMyf9n-g@mail.gmail.com>
- <20180125153839.GA3542@redhat.com> <8eb12a75-4957-d5eb-9a14-387788728b8a@huawei.com>
-From: Boris Lukashev <blukashev@sempervictus.com>
-Date: Fri, 26 Jan 2018 11:36:30 -0500
-Message-ID: <CAFUG7CeAfymvCC5jpBSM88X=8nSu-ktE0h81Ws1dAO0KrZk=9w@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Jerome Glisse <jglisse@redhat.com>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph Hellwig <hch@infradead.org>, Matthew Wilcox <willy@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2] cpu: do not leak vulnerabilities to unprivileged
+ users
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: gregkh@linuxfoundation.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 26, 2018 at 7:28 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
-> On 25/01/18 17:38, Jerome Glisse wrote:
->> On Thu, Jan 25, 2018 at 10:14:28AM -0500, Boris Lukashev wrote:
->>> On Thu, Jan 25, 2018 at 6:59 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
->>
->> [...]
->>
->>> DMA/physmap access coupled with a knowledge of which virtual mappings
->>> are in the physical space should be enough for an attacker to bypass
->>> the gating mechanism this work imposes. Not trivial, but not
->>> impossible. Since there's no way to prevent that sort of access in
->>> current hardware (especially something like a NIC or GPU working
->>> independently of the CPU altogether)
->
-> [...]
->
->> I am not saying that this can not happen but that we are trying our best
->> to avoid it.
->
-> How about an opt-in verification, similar to what proposed by Boris
-> Lukashev?
->
-> When reading back the data, one could access the pointer directly and
-> bypass the verification, or could use a function that explicitly checks
-> the integrity of the data.
->
-> Starting from an unprotected kmalloc allocation, even just turning the
-> data into R/O is an improvement, but if one can afford the overhead of
-> performing the verification, why not?
->
+On Fri, 26 Jan 2018 13:31:58 +0100
+"Jason A. Donenfeld" <Jason@zx2c4.com> wrote:
 
-I like the idea of making the verification call optional for consumers
-allowing for fast/slow+hard paths depending on their needs.
-Cant see any additional vectors for abuse (other than the original
-ones effecting out-of-band modification) introduced by having
-verify/normal callers, but i've not had enough coffee yet. Any access
-races or things like that come to mind for anyone? Shouldn't happen
-with a write-once allocation, but again, lacking coffee.
+> While it's public information if the CPU in general has spectre/meltdown
+> bugs, it probably shouldn't be as globally obvious to all unprivileged
+> users 
 
-> It would still be better if the service was provided by the library,
-> instead than implemented by individual users, I think.
->
-> --
-> igor
+As I replied to you last time you posted this
 
--Boris
+a) The info is already trivially accessible via /proc/cpuinfo or by
+measurement to an attacker
+b) Some JIT and other environments need to know
+
+Alan
