@@ -1,35 +1,61 @@
 MIME-Version: 1.0
-In-Reply-To: <1516976647.5438.6.camel@linux.intel.com>
-References: <503224b776b9513885453756e44bab235221124e.1516644136.git.luto@kernel.org>
- <CA+55aFwcU_hHz+S9ZDphBDRQLw6pMsd+6Yp_=mQA8kTcmTzWcQ@mail.gmail.com>
- <CA+55aFyONQeyHit6LcQz_JM5+C9pr61fcWFSpdn=7K_2mZN+oA@mail.gmail.com>
- <CALCETrVUY9p9jMNhuBgM3mWATsr1Fc_ZWc=bjidBkLw7bq5Vdg@mail.gmail.com>
- <CA+55aFwUn7+WiHxL7PBWxNrGB0--HETqUjdRwxi+DkMvCP_CaA@mail.gmail.com>
- <CALCETrV1JHK1ovjjD1vbs08K1an6tq6nbRoAj9uyrY2GUYJJBA@mail.gmail.com>
- <CA+55aFzTXVRPo7OBPMo2OB26GisY8-dg6NaC8ackVJgS9M0+4w@mail.gmail.com>
- <CALCETrU42C1S3nvSuLuamXtp2-s1xBG3q5cSNVOfGThncHxBZA@mail.gmail.com>
- <b8ea504729db4073abf82ebd5d8a53c6@AcuMS.aculab.com> <1516976647.5438.6.camel@linux.intel.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Fri, 26 Jan 2018 07:57:35 -0800
-Message-ID: <CALCETrXaARjGa+fCmxDDYNQCgv0ZSm+DaUFoXFmRxU9J245HxQ@mail.gmail.com>
+In-Reply-To: <8eb12a75-4957-d5eb-9a14-387788728b8a@huawei.com>
+References: <20180124175631.22925-1-igor.stoppa@huawei.com>
+ <20180124175631.22925-5-igor.stoppa@huawei.com> <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
+ <6c6a3f47-fc5b-0365-4663-6908ad1fc4a7@huawei.com> <CAFUG7CfP_UyEH=1dmX=wsBz73+fQ0syDAy8ArKT0d4nMyf9n-g@mail.gmail.com>
+ <20180125153839.GA3542@redhat.com> <8eb12a75-4957-d5eb-9a14-387788728b8a@huawei.com>
+From: Boris Lukashev <blukashev@sempervictus.com>
+Date: Fri, 26 Jan 2018 11:36:30 -0500
+Message-ID: <CAFUG7CeAfymvCC5jpBSM88X=8nSu-ktE0h81Ws1dAO0KrZk=9w@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
- path with retpolines on
-To: Alan Cox <alan@linux.intel.com>
-Cc: David Laight <David.Laight@aculab.com>, Andy Lutomirski <luto@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Dan Williams <dan.j.williams@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
+Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
+To: Igor Stoppa <igor.stoppa@huawei.com>
+Cc: Jerome Glisse <jglisse@redhat.com>, Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph Hellwig <hch@infradead.org>, Matthew Wilcox <willy@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 26, 2018 at 6:24 AM, Alan Cox <alan@linux.intel.com> wrote:
->> NetBSD (and the other BSD?) defines a structure for the arguments to
->> each syscall.
+On Fri, Jan 26, 2018 at 7:28 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
+> On 25/01/18 17:38, Jerome Glisse wrote:
+>> On Thu, Jan 25, 2018 at 10:14:28AM -0500, Boris Lukashev wrote:
+>>> On Thu, Jan 25, 2018 at 6:59 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
+>>
+>> [...]
+>>
+>>> DMA/physmap access coupled with a knowledge of which virtual mappings
+>>> are in the physical space should be enough for an attacker to bypass
+>>> the gating mechanism this work imposes. Not trivial, but not
+>>> impossible. Since there's no way to prevent that sort of access in
+>>> current hardware (especially something like a NIC or GPU working
+>>> independently of the CPU altogether)
 >
-> Goes back to v7 or so but they put the syscall arguments into the uarea
-> so that no pointers were needed (uarea being a per process mapping at a
-> fixed address) in order to also reduce pointer dereferencing costs (not
-> that those matter much on modern processors)
+> [...]
+>
+>> I am not saying that this can not happen but that we are trying our best
+>> to avoid it.
+>
+> How about an opt-in verification, similar to what proposed by Boris
+> Lukashev?
+>
+> When reading back the data, one could access the pointer directly and
+> bypass the verification, or could use a function that explicitly checks
+> the integrity of the data.
+>
+> Starting from an unprotected kmalloc allocation, even just turning the
+> data into R/O is an improvement, but if one can afford the overhead of
+> performing the verification, why not?
 >
 
-I gave the rearrangement like this a try yesterday and it's a bit of a
-mess.  Part of the problem is that there are a bunch of pieces of code
-that expect sys_xyz() to be actual callable functions.  The best way
-to deal with that is probably to switch to calling normal functions.
+I like the idea of making the verification call optional for consumers
+allowing for fast/slow+hard paths depending on their needs.
+Cant see any additional vectors for abuse (other than the original
+ones effecting out-of-band modification) introduced by having
+verify/normal callers, but i've not had enough coffee yet. Any access
+races or things like that come to mind for anyone? Shouldn't happen
+with a write-once allocation, but again, lacking coffee.
+
+> It would still be better if the service was provided by the library,
+> instead than implemented by individual users, I think.
+>
+> --
+> igor
+
+-Boris
