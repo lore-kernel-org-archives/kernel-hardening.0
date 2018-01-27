@@ -1,51 +1,30 @@
-Date: Fri, 26 Jan 2018 23:31:01 +0100 (CET)
-From: Jiri Kosina <jikos@kernel.org>
-In-Reply-To: <alpine.LRH.2.00.1801262259300.27010@gjva.wvxbf.pm>
-Message-ID: <alpine.LRH.2.00.1801262330200.27010@gjva.wvxbf.pm>
-References: <20180117055015.GA15256@beast> <alpine.LRH.2.00.1801262259300.27010@gjva.wvxbf.pm>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH] fork: Allow stack to be wiped on fork
-To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@kernel.org>, Laura Abbott <labbott@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, Sahara <keun-o.park@darkmatter.ae>, "Levin, Alexander (Sasha Levin)" <alexander.levin@verizon.com>, Michal Hocko <mhocko@suse.com>, Andrea Arcangeli <aarcange@redhat.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: linus971@gmail.com
+In-Reply-To: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
+References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Sat, 27 Jan 2018 10:52:27 -0800
+Message-ID: <CA+55aFxDua8mhjOSXTxMNw+XdnFuZSdAN=frh9B==YccgT36Yw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v5 00/12] spectre variant1 mitigations for tip/x86/pti
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Mark Rutland <mark.rutland@arm.com>, Cyril Novikov <cnovikov@lynx.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "H. Peter Anvin" <hpa@zytor.com>, Jiri Slaby <jslaby@suse.cz>, Elena Reshetova <elena.reshetova@intel.com>, linux-arch <linux-arch@vger.kernel.org>, Andi Kleen <ak@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, the arch/x86 maintainers <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Andrew Honig <ahonig@google.com>, Alan Cox <alan@linux.intel.com>, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Jim Mattson <jmattson@google.com>, Christian Lamparter <chunkeey@gmail.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Linux Wireless List <linux-wireless@vger.kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Johannes Berg <johannes@sipsolutions.net>, "David S. Miller" <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 26 Jan 2018, Jiri Kosina wrote:
+On Fri, Jan 26, 2018 at 11:55 PM, Dan Williams <dan.j.williams@intel.com> wrote:
+>
+> Here's another spin of the spectre-v1 mitigations for 4.16.
 
-> > diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
-> > index 34f053a150a9..091f53fe31cc 100644
-> > --- a/include/linux/thread_info.h
-> > +++ b/include/linux/thread_info.h
-> > @@ -43,7 +43,9 @@ enum {
-> >  #define THREAD_ALIGN	THREAD_SIZE
-> >  #endif
-> >  
-> > -#if IS_ENABLED(CONFIG_DEBUG_STACK_USAGE) || IS_ENABLED(CONFIG_DEBUG_KMEMLEAK)
-> > +#if IS_ENABLED(CONFIG_DEBUG_STACK_USAGE) || \
-> > +    IS_ENABLED(CONFIG_DEBUG_KMEMLEAK) || \
-> > +    IS_ENABLED(CONFIG_CLEAR_STACK_FORK)
-> >  # define THREADINFO_GFP		(GFP_KERNEL_ACCOUNT | __GFP_ZERO)
-> >  #else
-> >  # define THREADINFO_GFP		(GFP_KERNEL_ACCOUNT)
-> > diff --git a/kernel/fork.c b/kernel/fork.c
-> > index 2295fc69717f..215b1ce2b2cd 100644
-> > --- a/kernel/fork.c
-> > +++ b/kernel/fork.c
-> > @@ -215,7 +215,7 @@ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
-> >  		if (!s)
-> >  			continue;
-> >  
-> > -#ifdef CONFIG_DEBUG_KMEMLEAK
-> > +#if IS_ENABLED(CONFIG_DEBUG_KMEMLEAK) || IS_ENABLED(CONFIG_CLEAR_STACK_FORK)
-> >  		/* Clear stale pointers from reused stack. */
-> >  		memset(s->addr, 0, THREAD_SIZE);
-> >  #endif
-> 
-> Is there any good reason not to do it symmetricaly also for non-vmapped 
-> stacks? (by passing __GFP_ZERO to alloc_pages_node())?
+I see nothing really objectionable here.
 
-Ah, of course you already do by extending THREADINFO_GFP, sorry for the 
-noise.
+And unlike Spectre-v2 and Meltdown, I expect Spectre-v1 to be with us
+for a long time. It's not a "CPU did a bad job with checking the
+cached information it had" (whether it be from the TLB, BTB or RSB),
+it's pretty fundamental to just regular conditional branch prediction.
 
--- 
-Jiri Kosina
+So ack from me, and I don't expect this to be behind any config options.
+
+I still haven't really seen any numbers for this, but I _assume_ it's
+basically not measurable.
+
+                 Linus
