@@ -1,203 +1,60 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Fri, 26 Jan 2018 23:55:51 -0800
-Message-ID: <151703975137.26578.11230688940391207602.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Fri, 26 Jan 2018 23:55:56 -0800
+Message-ID: <151703975686.26578.8851773106290279966.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v5 07/12] x86: remove the syscall_64 fast-path
+Subject: [kernel-hardening] [PATCH v5 08/12] x86: sanitize sycall table de-references under
+ speculation
 To: tglx@linutronix.de
 Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, x86@kernel.org, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, torvalds@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Linus:
+The syscall table base is a user controlled function pointer in kernel
+space. Use 'array_idx' to prevent any out of bounds speculation. While
+retpoline prevents speculating into a userspace directed target it does
+not stop the pointer de-reference, the concern is leaking memory
+relative to the syscall table base, by observing instruction cache
+behavior.
 
-  "Honestly, I'd rather get rid of the fast-path entirely. Compared to
-   all the PTI mess, it's not even noticeable.
-
-   And if we ever get CPU's that have this all fixed, we can re-visit
-   introducing the fastpath. But this is all very messy and it doesn't
-   seem worth it right now.
-
-   If we get rid of the fastpath, we can lay out the slow path slightly
-   better, and get rid of some of those jump-overs. And we'd get rid of
-   the ptregs hooks entirely.
-
-   So we can try to make the "slow" path better while at it, but I
-   really don't think it matters much now in the post-PTI era. Sadly."
-
-Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
-Acked-by: Andy Lutomirski <luto@kernel.org>
+Reported-by: Linus Torvalds <torvalds@linux-foundation.org>
 Cc: Thomas Gleixner <tglx@linutronix.de>
 Cc: Ingo Molnar <mingo@redhat.com>
 Cc: "H. Peter Anvin" <hpa@zytor.com>
 Cc: x86@kernel.org
+Cc: Andy Lutomirski <luto@kernel.org>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- arch/x86/entry/entry_64.S   |  116 -------------------------------------------
- arch/x86/entry/syscall_64.c |    7 +--
- 2 files changed, 2 insertions(+), 121 deletions(-)
+ arch/x86/entry/common.c |    3 +++
+ 1 file changed, 3 insertions(+)
 
-diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index 63f4320602a3..0c18b127ec10 100644
---- a/arch/x86/entry/entry_64.S
-+++ b/arch/x86/entry/entry_64.S
-@@ -237,80 +237,6 @@ GLOBAL(entry_SYSCALL_64_after_hwframe)
- 	sub	$(6*8), %rsp			/* pt_regs->bp, bx, r12-15 not saved */
- 	UNWIND_HINT_REGS extra=0
+diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
+index 03505ffbe1b6..f78bf8bfdfae 100644
+--- a/arch/x86/entry/common.c
++++ b/arch/x86/entry/common.c
+@@ -21,6 +21,7 @@
+ #include <linux/export.h>
+ #include <linux/context_tracking.h>
+ #include <linux/user-return-notifier.h>
++#include <linux/nospec.h>
+ #include <linux/uprobes.h>
+ #include <linux/livepatch.h>
+ #include <linux/syscalls.h>
+@@ -284,6 +285,7 @@ __visible void do_syscall_64(struct pt_regs *regs)
+ 	 * regs->orig_ax, which changes the behavior of some syscalls.
+ 	 */
+ 	if (likely((nr & __SYSCALL_MASK) < NR_syscalls)) {
++		nr = array_idx(nr & __SYSCALL_MASK, NR_syscalls);
+ 		regs->ax = sys_call_table[nr & __SYSCALL_MASK](
+ 			regs->di, regs->si, regs->dx,
+ 			regs->r10, regs->r8, regs->r9);
+@@ -320,6 +322,7 @@ static __always_inline void do_syscall_32_irqs_on(struct pt_regs *regs)
+ 	}
  
--	/*
--	 * If we need to do entry work or if we guess we'll need to do
--	 * exit work, go straight to the slow path.
--	 */
--	movq	PER_CPU_VAR(current_task), %r11
--	testl	$_TIF_WORK_SYSCALL_ENTRY|_TIF_ALLWORK_MASK, TASK_TI_flags(%r11)
--	jnz	entry_SYSCALL64_slow_path
--
--entry_SYSCALL_64_fastpath:
--	/*
--	 * Easy case: enable interrupts and issue the syscall.  If the syscall
--	 * needs pt_regs, we'll call a stub that disables interrupts again
--	 * and jumps to the slow path.
--	 */
--	TRACE_IRQS_ON
--	ENABLE_INTERRUPTS(CLBR_NONE)
--#if __SYSCALL_MASK == ~0
--	cmpq	$__NR_syscall_max, %rax
--#else
--	andl	$__SYSCALL_MASK, %eax
--	cmpl	$__NR_syscall_max, %eax
--#endif
--	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
--	movq	%r10, %rcx
--
--	/*
--	 * This call instruction is handled specially in stub_ptregs_64.
--	 * It might end up jumping to the slow path.  If it jumps, RAX
--	 * and all argument registers are clobbered.
--	 */
--#ifdef CONFIG_RETPOLINE
--	movq	sys_call_table(, %rax, 8), %rax
--	call	__x86_indirect_thunk_rax
--#else
--	call	*sys_call_table(, %rax, 8)
--#endif
--.Lentry_SYSCALL_64_after_fastpath_call:
--
--	movq	%rax, RAX(%rsp)
--1:
--
--	/*
--	 * If we get here, then we know that pt_regs is clean for SYSRET64.
--	 * If we see that no exit work is required (which we are required
--	 * to check with IRQs off), then we can go straight to SYSRET64.
--	 */
--	DISABLE_INTERRUPTS(CLBR_ANY)
--	TRACE_IRQS_OFF
--	movq	PER_CPU_VAR(current_task), %r11
--	testl	$_TIF_ALLWORK_MASK, TASK_TI_flags(%r11)
--	jnz	1f
--
--	LOCKDEP_SYS_EXIT
--	TRACE_IRQS_ON		/* user mode is traced as IRQs on */
--	movq	RIP(%rsp), %rcx
--	movq	EFLAGS(%rsp), %r11
--	addq	$6*8, %rsp	/* skip extra regs -- they were preserved */
--	UNWIND_HINT_EMPTY
--	jmp	.Lpop_c_regs_except_rcx_r11_and_sysret
--
--1:
--	/*
--	 * The fast path looked good when we started, but something changed
--	 * along the way and we need to switch to the slow path.  Calling
--	 * raise(3) will trigger this, for example.  IRQs are off.
--	 */
--	TRACE_IRQS_ON
--	ENABLE_INTERRUPTS(CLBR_ANY)
--	SAVE_EXTRA_REGS
--	movq	%rsp, %rdi
--	call	syscall_return_slowpath	/* returns with IRQs disabled */
--	jmp	return_from_SYSCALL_64
--
--entry_SYSCALL64_slow_path:
- 	/* IRQs are off. */
- 	SAVE_EXTRA_REGS
- 	movq	%rsp, %rdi
-@@ -389,7 +315,6 @@ syscall_return_via_sysret:
- 	/* rcx and r11 are already restored (see code above) */
- 	UNWIND_HINT_EMPTY
- 	POP_EXTRA_REGS
--.Lpop_c_regs_except_rcx_r11_and_sysret:
- 	popq	%rsi	/* skip r11 */
- 	popq	%r10
- 	popq	%r9
-@@ -420,47 +345,6 @@ syscall_return_via_sysret:
- 	USERGS_SYSRET64
- END(entry_SYSCALL_64)
- 
--ENTRY(stub_ptregs_64)
--	/*
--	 * Syscalls marked as needing ptregs land here.
--	 * If we are on the fast path, we need to save the extra regs,
--	 * which we achieve by trying again on the slow path.  If we are on
--	 * the slow path, the extra regs are already saved.
--	 *
--	 * RAX stores a pointer to the C function implementing the syscall.
--	 * IRQs are on.
--	 */
--	cmpq	$.Lentry_SYSCALL_64_after_fastpath_call, (%rsp)
--	jne	1f
--
--	/*
--	 * Called from fast path -- disable IRQs again, pop return address
--	 * and jump to slow path
--	 */
--	DISABLE_INTERRUPTS(CLBR_ANY)
--	TRACE_IRQS_OFF
--	popq	%rax
--	UNWIND_HINT_REGS extra=0
--	jmp	entry_SYSCALL64_slow_path
--
--1:
--	JMP_NOSPEC %rax				/* Called from C */
--END(stub_ptregs_64)
--
--.macro ptregs_stub func
--ENTRY(ptregs_\func)
--	UNWIND_HINT_FUNC
--	leaq	\func(%rip), %rax
--	jmp	stub_ptregs_64
--END(ptregs_\func)
--.endm
--
--/* Instantiate ptregs_stub for each ptregs-using syscall */
--#define __SYSCALL_64_QUAL_(sym)
--#define __SYSCALL_64_QUAL_ptregs(sym) ptregs_stub sym
--#define __SYSCALL_64(nr, sym, qual) __SYSCALL_64_QUAL_##qual(sym)
--#include <asm/syscalls_64.h>
--
- /*
-  * %rdi: prev task
-  * %rsi: next task
-diff --git a/arch/x86/entry/syscall_64.c b/arch/x86/entry/syscall_64.c
-index 9c09775e589d..c176d2fab1da 100644
---- a/arch/x86/entry/syscall_64.c
-+++ b/arch/x86/entry/syscall_64.c
-@@ -7,14 +7,11 @@
- #include <asm/asm-offsets.h>
- #include <asm/syscall.h>
- 
--#define __SYSCALL_64_QUAL_(sym) sym
--#define __SYSCALL_64_QUAL_ptregs(sym) ptregs_##sym
--
--#define __SYSCALL_64(nr, sym, qual) extern asmlinkage long __SYSCALL_64_QUAL_##qual(sym)(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
-+#define __SYSCALL_64(nr, sym, qual) extern asmlinkage long sym(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
- #include <asm/syscalls_64.h>
- #undef __SYSCALL_64
- 
--#define __SYSCALL_64(nr, sym, qual) [nr] = __SYSCALL_64_QUAL_##qual(sym),
-+#define __SYSCALL_64(nr, sym, qual) [nr] = sym,
- 
- extern long sys_ni_syscall(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
- 
+ 	if (likely(nr < IA32_NR_syscalls)) {
++		nr = array_idx(nr, IA32_NR_syscalls);
+ 		/*
+ 		 * It's possible that a 32-bit syscall implementation
+ 		 * takes a 64-bit parameter but nonetheless assumes that
