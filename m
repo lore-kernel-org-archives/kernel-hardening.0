@@ -1,51 +1,62 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Fri, 26 Jan 2018 23:56:02 -0800
-Message-ID: <151703976200.26578.16181908340589076165.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Fri, 26 Jan 2018 23:56:07 -0800
+Message-ID: <151703976714.26578.17488222459772354305.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v5 09/12] vfs,
- fdtable: prevent bounds-check bypass via speculative execution
+Subject: [kernel-hardening] [PATCH v5 10/12] kvm, x86: update spectre-v1 mitigation
 To: tglx@linutronix.de
-Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, Al Viro <viro@zeniv.linux.org.uk>, torvalds@linux-foundation.org, alan@linux.intel.com
+Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Honig <ahonig@google.com>, gregkh@linuxfoundation.org, Paolo Bonzini <pbonzini@redhat.com>, alan@linux.intel.com, torvalds@linux-foundation.org, Jim Mattson <jmattson@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-'fd' is a user controlled value that is used as a data dependency to
-read from the 'fdt->fd' array.  In order to avoid potential leaks of
-kernel memory values, block speculative execution of the instruction
-stream that could issue reads based on an invalid 'file *' returned from
-__fcheck_files.
+Commit 75f139aaf896 "KVM: x86: Add memory barrier on vmcs field lookup"
+added a raw 'asm("lfence");' to prevent a bounds check bypass of
+'vmcs_field_to_offset_table'. We can save an lfence in this path and
+just use the common 'array_idx' helper designed for these types of
+fixes.
 
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Co-developed-by: Elena Reshetova <elena.reshetova@intel.com>
+Cc: Andrew Honig <ahonig@google.com>
+Cc: Jim Mattson <jmattson@google.com>
+Acked-by: Paolo Bonzini <pbonzini@redhat.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- include/linux/fdtable.h |    5 ++++-
- 1 file changed, 4 insertions(+), 1 deletion(-)
+ arch/x86/kvm/vmx.c |   14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
 
-diff --git a/include/linux/fdtable.h b/include/linux/fdtable.h
-index 1c65817673db..c61f06c77fdf 100644
---- a/include/linux/fdtable.h
-+++ b/include/linux/fdtable.h
-@@ -10,6 +10,7 @@
- #include <linux/compiler.h>
- #include <linux/spinlock.h>
- #include <linux/rcupdate.h>
+diff --git a/arch/x86/kvm/vmx.c b/arch/x86/kvm/vmx.c
+index 924589c53422..5345e68cc506 100644
+--- a/arch/x86/kvm/vmx.c
++++ b/arch/x86/kvm/vmx.c
+@@ -34,6 +34,7 @@
+ #include <linux/tboot.h>
+ #include <linux/hrtimer.h>
+ #include <linux/frame.h>
 +#include <linux/nospec.h>
- #include <linux/types.h>
- #include <linux/init.h>
- #include <linux/fs.h>
-@@ -82,8 +83,10 @@ static inline struct file *__fcheck_files(struct files_struct *files, unsigned i
- {
- 	struct fdtable *fdt = rcu_dereference_raw(files->fdt);
+ #include "kvm_cache_regs.h"
+ #include "x86.h"
  
--	if (fd < fdt->max_fds)
-+	if (fd < fdt->max_fds) {
-+		fd = array_idx(fd, fdt->max_fds);
- 		return rcu_dereference_raw(fdt->fd[fd]);
-+	}
- 	return NULL;
+@@ -883,13 +884,18 @@ static const unsigned short vmcs_field_to_offset_table[] = {
+ 
+ static inline short vmcs_field_to_offset(unsigned long field)
+ {
+-	BUILD_BUG_ON(ARRAY_SIZE(vmcs_field_to_offset_table) > SHRT_MAX);
++	const size_t sz = ARRAY_SIZE(vmcs_field_to_offset_table);
++	unsigned short offset;
+ 
+-	if (field >= ARRAY_SIZE(vmcs_field_to_offset_table) ||
+-	    vmcs_field_to_offset_table[field] == 0)
++	BUILD_BUG_ON(sz > SHRT_MAX);
++	if (field >= sz)
+ 		return -ENOENT;
+ 
+-	return vmcs_field_to_offset_table[field];
++	field = array_idx(field, sz);
++	offset = vmcs_field_to_offset_table[field];
++	if (offset == 0)
++		return -ENOENT;
++	return offset;
  }
  
+ static inline struct vmcs12 *get_vmcs12(struct kvm_vcpu *vcpu)
