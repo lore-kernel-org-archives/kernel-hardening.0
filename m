@@ -1,122 +1,106 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Fri, 26 Jan 2018 23:55:18 -0800
-Message-ID: <151703971882.26578.14987326469880344294.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Fri, 26 Jan 2018 23:55:34 -0800
+Message-ID: <151703973427.26578.15693075353773519333.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v5 01/12] Documentation: document array_idx
+Subject: [kernel-hardening] [PATCH v5 04/12] x86: introduce __uaccess_begin_nospec and ifence
 To: tglx@linutronix.de
-Cc: Mark Rutland <mark.rutland@arm.com>, linux-arch@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, gregkh@linuxfoundation.org, Jonathan Corbet <corbet@lwn.net>, Will Deacon <will.deacon@arm.com>, torvalds@linux-foundation.org, alan@linux.intel.com
+Cc: linux-arch@vger.kernel.org, Tom Lendacky <thomas.lendacky@amd.com>, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, x86@kernel.org, Ingo Molnar <mingo@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, "H. Peter Anvin" <hpa@zytor.com>, torvalds@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Mark Rutland <mark.rutland@arm.com>
+For '__get_user' paths, do not allow the kernel to speculate on the
+value of a user controlled pointer. In addition to the 'stac'
+instruction for Supervisor Mode Access Protection, an 'ifence' causes
+the 'access_ok' result to resolve in the pipeline before the cpu might
+take any speculative action on the pointer value.
 
-Document the rationale and usage of the new array_idx() helper.
+Since __get_user is a major kernel interface that deals with user
+controlled pointers, the '__uaccess_begin_nospec' mechanism will prevent
+speculative execution past an 'access_ok' permission check. While
+speculative execution past 'access_ok' is not enough to lead to a kernel
+memory leak, it is a necessary precondition.
 
-Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-Signed-off-by: Will Deacon <will.deacon@arm.com>
-Cc: Dan Williams <dan.j.williams@intel.com>
-Cc: Jonathan Corbet <corbet@lwn.net>
-Cc: Peter Zijlstra <peterz@infradead.org>
-Reviewed-by: Kees Cook <keescook@chromium.org>
+To be clear, '__uaccess_begin_nospec' is addressing a class of potential
+problems near '__get_user' usages.
+
+Note, that while ifence is used to protect '__get_user', pointer masking
+will be used for 'get_user' since it incorporates a bounds check near
+the usage.
+
+There are no functional changes in this patch.
+
+Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+Suggested-by: Andi Kleen <ak@linux.intel.com>
+Cc: Tom Lendacky <thomas.lendacky@amd.com>
+Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: "H. Peter Anvin" <hpa@zytor.com>
+Cc: Ingo Molnar <mingo@redhat.com>
+Cc: x86@kernel.org
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- Documentation/speculation.txt |   87 +++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 87 insertions(+)
- create mode 100644 Documentation/speculation.txt
+ arch/x86/include/asm/barrier.h |    4 ++++
+ arch/x86/include/asm/msr.h     |    3 +--
+ arch/x86/include/asm/uaccess.h |    9 +++++++++
+ 3 files changed, 14 insertions(+), 2 deletions(-)
 
-diff --git a/Documentation/speculation.txt b/Documentation/speculation.txt
-new file mode 100644
-index 000000000000..308177cab617
---- /dev/null
-+++ b/Documentation/speculation.txt
-@@ -0,0 +1,87 @@
-+This document explains potential effects of speculation, and how undesirable
-+effects can be mitigated portably using common APIs.
+diff --git a/arch/x86/include/asm/barrier.h b/arch/x86/include/asm/barrier.h
+index 30419b674ebd..5f11d4c5c862 100644
+--- a/arch/x86/include/asm/barrier.h
++++ b/arch/x86/include/asm/barrier.h
+@@ -46,6 +46,10 @@ static inline unsigned long array_idx_mask(unsigned long idx, unsigned long sz)
+ 	return mask;
+ }
+ 
++/* prevent speculative execution past this barrier */
++#define ifence() alternative_2("", "mfence", X86_FEATURE_MFENCE_RDTSC, \
++				   "lfence", X86_FEATURE_LFENCE_RDTSC)
 +
-+===========
-+Speculation
-+===========
+ #ifdef CONFIG_X86_PPRO_FENCE
+ #define dma_rmb()	rmb()
+ #else
+diff --git a/arch/x86/include/asm/msr.h b/arch/x86/include/asm/msr.h
+index 07962f5f6fba..e426d2a33ff3 100644
+--- a/arch/x86/include/asm/msr.h
++++ b/arch/x86/include/asm/msr.h
+@@ -214,8 +214,7 @@ static __always_inline unsigned long long rdtsc_ordered(void)
+ 	 * that some other imaginary CPU is updating continuously with a
+ 	 * time stamp.
+ 	 */
+-	alternative_2("", "mfence", X86_FEATURE_MFENCE_RDTSC,
+-			  "lfence", X86_FEATURE_LFENCE_RDTSC);
++	ifence();
+ 	return rdtsc();
+ }
+ 
+diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
+index 574dff4d2913..626caf58183a 100644
+--- a/arch/x86/include/asm/uaccess.h
++++ b/arch/x86/include/asm/uaccess.h
+@@ -124,6 +124,11 @@ extern int __get_user_bad(void);
+ 
+ #define __uaccess_begin() stac()
+ #define __uaccess_end()   clac()
++#define __uaccess_begin_nospec()	\
++({					\
++	stac();				\
++	ifence();			\
++})
+ 
+ /*
+  * This is a type: either unsigned long, if the argument fits into
+@@ -487,6 +492,10 @@ struct __large_struct { unsigned long buf[100]; };
+ 	__uaccess_begin();						\
+ 	barrier();
+ 
++#define uaccess_try_nospec do {						\
++	current->thread.uaccess_err = 0;				\
++	__uaccess_begin_nospec();					\
 +
-+To improve performance and minimize average latencies, many contemporary CPUs
-+employ speculative execution techniques such as branch prediction, performing
-+work which may be discarded at a later stage.
-+
-+Typically speculative execution cannot be observed from architectural state,
-+such as the contents of registers. However, in some cases it is possible to
-+observe its impact on microarchitectural state, such as the presence or
-+absence of data in caches. Such state may form side-channels which can be
-+observed to extract secret information.
-+
-+For example, in the presence of branch prediction, it is possible for bounds
-+checks to be ignored by code which is speculatively executed. Consider the
-+following code:
-+
-+	int load_array(int *array, unsigned int idx)
-+	{
-+		if (idx >= MAX_ARRAY_ELEMS)
-+			return 0;
-+		else
-+			return array[idx];
-+	}
-+
-+Which, on arm64, may be compiled to an assembly sequence such as:
-+
-+	CMP	<idx>, #MAX_ARRAY_ELEMS
-+	B.LT	less
-+	MOV	<returnval>, #0
-+	RET
-+  less:
-+	LDR	<returnval>, [<array>, <idx>]
-+	RET
-+
-+It is possible that a CPU mis-predicts the conditional branch, and
-+speculatively loads array[idx], even if idx >= MAX_ARRAY_ELEMS. This value
-+will subsequently be discarded, but the speculated load may affect
-+microarchitectural state which can be subsequently measured.
-+
-+More complex sequences involving multiple dependent memory accesses may result
-+in sensitive information being leaked. Consider the following code, building
-+on the prior example:
-+
-+	int load_dependent_arrays(int *arr1, int *arr2, int idx)
-+	{
-+		int val1, val2,
-+
-+		val1 = load_array(arr1, idx);
-+		val2 = load_array(arr2, val1);
-+
-+		return val2;
-+	}
-+
-+Under speculation, the first call to load_array() may return the value of an
-+out-of-bounds address, while the second call will influence microarchitectural
-+state dependent on this value. This may provide an arbitrary read primitive.
-+
-+====================================
-+Mitigating speculation side-channels
-+====================================
-+
-+The kernel provides a generic API to ensure that bounds checks are respected
-+even under speculation. Architectures which are affected by speculation-based
-+side-channels are expected to implement these primitives.
-+
-+The array_idx() helper in <linux/nospec.h> can be used to prevent
-+information from being leaked via side-channels.
-+
-+A call to array_idx(idx, sz) returns a sanitized index value that is
-+bounded to [0, sz) even under cpu speculation conditions.
-+
-+This can be used to protect the earlier load_array() example:
-+
-+	int load_array(int *array, unsigned int idx)
-+	{
-+		if (idx >= MAX_ARRAY_ELEMS)
-+			return 0;
-+		else {
-+			idx = array_idx(idx, MAX_ARRAY_ELEMS);
-+			return array[idx];
-+		}
-+	}
+ #define uaccess_catch(err)						\
+ 	__uaccess_end();						\
+ 	(err) |= (current->thread.uaccess_err ? -EFAULT : 0);		\
