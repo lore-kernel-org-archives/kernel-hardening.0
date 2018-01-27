@@ -1,110 +1,122 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Fri, 26 Jan 2018 23:55:24 -0800
-Message-ID: <151703972396.26578.7326612698912543866.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Fri, 26 Jan 2018 23:55:18 -0800
+Message-ID: <151703971882.26578.14987326469880344294.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v5 02/12] array_idx: sanitize speculative array de-references
+Subject: [kernel-hardening] [PATCH v5 01/12] Documentation: document array_idx
 To: tglx@linutronix.de
-Cc: linux-arch@vger.kernel.org, Cyril Novikov <cnovikov@lynx.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, x86@kernel.org, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, gregkh@linuxfoundation.org, "H. Peter Anvin" <hpa@zytor.com>, torvalds@linux-foundation.org, alan@linux.intel.com
+Cc: Mark Rutland <mark.rutland@arm.com>, linux-arch@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, gregkh@linuxfoundation.org, Jonathan Corbet <corbet@lwn.net>, Will Deacon <will.deacon@arm.com>, torvalds@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-'array_idx' is proposed as a generic mechanism to mitigate against
-Spectre-variant-1 attacks, i.e. an attack that bypasses boundary checks
-via speculative execution). The 'array_idx' implementation is expected
-to be safe for current generation cpus across multiple architectures
-(ARM, x86).
+From: Mark Rutland <mark.rutland@arm.com>
 
-Based on an original implementation by Linus Torvalds, tweaked to remove
-speculative flows by Alexei Starovoitov, and tweaked again by Linus to
-introduce an x86 assembly implementation for the mask generation.
+Document the rationale and usage of the new array_idx() helper.
 
-Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
-Co-developed-by: Alexei Starovoitov <ast@kernel.org>
-Suggested-by: Cyril Novikov <cnovikov@lynx.com>
-Cc: Russell King <linux@armlinux.org.uk>
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Cc: Dan Williams <dan.j.williams@intel.com>
+Cc: Jonathan Corbet <corbet@lwn.net>
 Cc: Peter Zijlstra <peterz@infradead.org>
-Cc: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Will Deacon <will.deacon@arm.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: Ingo Molnar <mingo@redhat.com>
-Cc: "H. Peter Anvin" <hpa@zytor.com>
-Cc: x86@kernel.org
+Reviewed-by: Kees Cook <keescook@chromium.org>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- include/linux/nospec.h |   64 ++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 64 insertions(+)
- create mode 100644 include/linux/nospec.h
+ Documentation/speculation.txt |   87 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 87 insertions(+)
+ create mode 100644 Documentation/speculation.txt
 
-diff --git a/include/linux/nospec.h b/include/linux/nospec.h
+diff --git a/Documentation/speculation.txt b/Documentation/speculation.txt
 new file mode 100644
-index 000000000000..f59f81889ba3
+index 000000000000..308177cab617
 --- /dev/null
-+++ b/include/linux/nospec.h
-@@ -0,0 +1,64 @@
-+// SPDX-License-Identifier: GPL-2.0
-+// Copyright(c) 2018 Intel Corporation. All rights reserved.
++++ b/Documentation/speculation.txt
+@@ -0,0 +1,87 @@
++This document explains potential effects of speculation, and how undesirable
++effects can be mitigated portably using common APIs.
 +
-+#ifndef __NOSPEC_H__
-+#define __NOSPEC_H__
++===========
++Speculation
++===========
 +
-+/*
-+ * When idx is out of bounds (idx >= sz), the sign bit will be set.
-+ * Extend the sign bit to all bits and invert, giving a result of zero
-+ * for an out of bounds idx, or ~0UL if within bounds [0, sz).
-+ */
-+#ifndef array_idx_mask
-+static inline unsigned long array_idx_mask(unsigned long idx, unsigned long sz)
-+{
-+	/*
-+	 * Warn developers about inappropriate array_idx usage.
-+	 *
-+	 * Even if the cpu speculates past the WARN_ONCE branch, the
-+	 * sign bit of idx is taken into account when generating the
-+	 * mask.
-+	 *
-+	 * This warning is compiled out when the compiler can infer that
-+	 * idx and sz are less than LONG_MAX.
-+	 */
-+	if (WARN_ONCE(idx > LONG_MAX || sz > LONG_MAX,
-+			"array_idx limited to range of [0, LONG_MAX]\n"))
-+		return 0;
++To improve performance and minimize average latencies, many contemporary CPUs
++employ speculative execution techniques such as branch prediction, performing
++work which may be discarded at a later stage.
 +
-+	/*
-+	 * Always calculate and emit the mask even if the compiler
-+	 * thinks the mask is not needed. The compiler does not take
-+	 * into account the value of idx under speculation.
-+	 */
-+	OPTIMIZER_HIDE_VAR(idx);
-+	return ~(long)(idx | (sz - 1UL - idx)) >> (BITS_PER_LONG - 1);
-+}
-+#endif
++Typically speculative execution cannot be observed from architectural state,
++such as the contents of registers. However, in some cases it is possible to
++observe its impact on microarchitectural state, such as the presence or
++absence of data in caches. Such state may form side-channels which can be
++observed to extract secret information.
 +
-+/*
-+ * array_idx - sanitize an array index after a bounds check
-+ *
-+ * For a code sequence like:
-+ *
-+ *     if (idx < sz) {
-+ *         idx = array_idx(idx, sz);
-+ *         val = array[idx];
-+ *     }
-+ *
-+ * ...if the cpu speculates past the bounds check then array_idx() will
-+ * clamp the index within the range of [0, sz).
-+ */
-+#define array_idx(idx, sz)						\
-+({									\
-+	typeof(idx) _i = (idx);						\
-+	typeof(sz) _s = (sz);						\
-+	unsigned long _mask = array_idx_mask(_i, _s);			\
-+									\
-+	BUILD_BUG_ON(sizeof(_i) > sizeof(long));			\
-+	BUILD_BUG_ON(sizeof(_s) > sizeof(long));			\
-+									\
-+	_i &= _mask;							\
-+	_i;								\
-+})
-+#endif /* __NOSPEC_H__ */
++For example, in the presence of branch prediction, it is possible for bounds
++checks to be ignored by code which is speculatively executed. Consider the
++following code:
++
++	int load_array(int *array, unsigned int idx)
++	{
++		if (idx >= MAX_ARRAY_ELEMS)
++			return 0;
++		else
++			return array[idx];
++	}
++
++Which, on arm64, may be compiled to an assembly sequence such as:
++
++	CMP	<idx>, #MAX_ARRAY_ELEMS
++	B.LT	less
++	MOV	<returnval>, #0
++	RET
++  less:
++	LDR	<returnval>, [<array>, <idx>]
++	RET
++
++It is possible that a CPU mis-predicts the conditional branch, and
++speculatively loads array[idx], even if idx >= MAX_ARRAY_ELEMS. This value
++will subsequently be discarded, but the speculated load may affect
++microarchitectural state which can be subsequently measured.
++
++More complex sequences involving multiple dependent memory accesses may result
++in sensitive information being leaked. Consider the following code, building
++on the prior example:
++
++	int load_dependent_arrays(int *arr1, int *arr2, int idx)
++	{
++		int val1, val2,
++
++		val1 = load_array(arr1, idx);
++		val2 = load_array(arr2, val1);
++
++		return val2;
++	}
++
++Under speculation, the first call to load_array() may return the value of an
++out-of-bounds address, while the second call will influence microarchitectural
++state dependent on this value. This may provide an arbitrary read primitive.
++
++====================================
++Mitigating speculation side-channels
++====================================
++
++The kernel provides a generic API to ensure that bounds checks are respected
++even under speculation. Architectures which are affected by speculation-based
++side-channels are expected to implement these primitives.
++
++The array_idx() helper in <linux/nospec.h> can be used to prevent
++information from being leaked via side-channels.
++
++A call to array_idx(idx, sz) returns a sanitized index value that is
++bounded to [0, sz) even under cpu speculation conditions.
++
++This can be used to protect the earlier load_array() example:
++
++	int load_array(int *array, unsigned int idx)
++	{
++		if (idx >= MAX_ARRAY_ELEMS)
++			return 0;
++		else {
++			idx = array_idx(idx, MAX_ARRAY_ELEMS);
++			return array[idx];
++		}
++	}
