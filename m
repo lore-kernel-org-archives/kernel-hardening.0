@@ -1,182 +1,104 @@
-MIME-Version: 1.0
-In-Reply-To: <20180128085500.djlm5rlbhjlpfj4i@gmail.com>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Sun, 28 Jan 2018 19:33:09 +0100
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20180128183309.j7zkoyqblich4zhq@gmail.com>
 References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
  <151703972396.26578.7326612698912543866.stgit@dwillia2-desk3.amr.corp.intel.com>
  <20180128085500.djlm5rlbhjlpfj4i@gmail.com>
-From: Dan Williams <dan.j.williams@intel.com>
-Date: Sun, 28 Jan 2018 08:28:24 -0800
-Message-ID: <CAPcyv4jTaskPT1qXhdCO2mWVkcaMDMBq12vUJ_hSfjOU49qvgQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 02/12] array_idx: sanitize speculative array de-references
-To: Ingo Molnar <mingo@kernel.org>
+ <CAPcyv4jTaskPT1qXhdCO2mWVkcaMDMBq12vUJ_hSfjOU49qvgQ@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAPcyv4jTaskPT1qXhdCO2mWVkcaMDMBq12vUJ_hSfjOU49qvgQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v5 02/12] array_idx: sanitize speculative array
+ de-references
+To: Dan Williams <dan.j.williams@intel.com>
 Cc: Thomas Gleixner <tglx@linutronix.de>, linux-arch <linux-arch@vger.kernel.org>, Cyril Novikov <cnovikov@lynx.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, X86 ML <x86@kernel.org>, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Greg KH <gregkh@linuxfoundation.org>, "H. Peter Anvin" <hpa@zytor.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alan Cox <alan@linux.intel.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jan 28, 2018 at 12:55 AM, Ingo Molnar <mingo@kernel.org> wrote:
->
-> Firstly, I only got a few patches of this series so I couldn't review all of them
-> - please Cc: me to all future Meltdown and Spectre related patches!
->
-> * Dan Williams <dan.j.williams@intel.com> wrote:
->
->> 'array_idx' is proposed as a generic mechanism to mitigate against
->> Spectre-variant-1 attacks, i.e. an attack that bypasses boundary checks
->> via speculative execution). The 'array_idx' implementation is expected
->> to be safe for current generation cpus across multiple architectures
->> (ARM, x86).
->
-> nit: Stray closing parenthesis
->
-> s/cpus/CPUs
->
->> Based on an original implementation by Linus Torvalds, tweaked to remove
->> speculative flows by Alexei Starovoitov, and tweaked again by Linus to
->> introduce an x86 assembly implementation for the mask generation.
->>
->> Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
->> Co-developed-by: Alexei Starovoitov <ast@kernel.org>
->> Suggested-by: Cyril Novikov <cnovikov@lynx.com>
->> Cc: Russell King <linux@armlinux.org.uk>
->> Cc: Peter Zijlstra <peterz@infradead.org>
->> Cc: Catalin Marinas <catalin.marinas@arm.com>
->> Cc: Will Deacon <will.deacon@arm.com>
->> Cc: Thomas Gleixner <tglx@linutronix.de>
->> Cc: Ingo Molnar <mingo@redhat.com>
->> Cc: "H. Peter Anvin" <hpa@zytor.com>
->> Cc: x86@kernel.org
->> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
->> ---
->>  include/linux/nospec.h |   64 ++++++++++++++++++++++++++++++++++++++++++++++++
->>  1 file changed, 64 insertions(+)
->>  create mode 100644 include/linux/nospec.h
->>
->> diff --git a/include/linux/nospec.h b/include/linux/nospec.h
->> new file mode 100644
->> index 000000000000..f59f81889ba3
->> --- /dev/null
->> +++ b/include/linux/nospec.h
->> @@ -0,0 +1,64 @@
->> +// SPDX-License-Identifier: GPL-2.0
->> +// Copyright(c) 2018 Intel Corporation. All rights reserved.
->
-> Given the close similarity of Linus's array_access() prototype pseudocode there
-> should probably also be:
->
->     Copyright (C) 2018 Linus Torvalds
->
-> in that file?
 
-Yes, and Alexei as well.
+* Dan Williams <dan.j.williams@intel.com> wrote:
 
->
->> +
->> +#ifndef __NOSPEC_H__
->> +#define __NOSPEC_H__
->> +
->> +/*
->> + * When idx is out of bounds (idx >= sz), the sign bit will be set.
->> + * Extend the sign bit to all bits and invert, giving a result of zero
->> + * for an out of bounds idx, or ~0UL if within bounds [0, sz).
->> + */
->> +#ifndef array_idx_mask
->> +static inline unsigned long array_idx_mask(unsigned long idx, unsigned long sz)
->> +{
->> +     /*
->> +      * Warn developers about inappropriate array_idx usage.
->> +      *
->> +      * Even if the cpu speculates past the WARN_ONCE branch, the
->
-> s/cpu/CPU
->
->> +      * sign bit of idx is taken into account when generating the
->> +      * mask.
->> +      *
->> +      * This warning is compiled out when the compiler can infer that
->> +      * idx and sz are less than LONG_MAX.
->
-> Please use 'idx' and 'sz' in quotes, to make sure they stand out more in free
-> flowing comment text. Also please use '()' to denote functions/methods.
->
-> I.e. something like:
->
->          * Warn developers about inappropriate array_idx() usage.
->          *
->          * Even if the CPU speculates past the WARN_ONCE() branch, the
->          * sign bit of 'idx' is taken into account when generating the
->          * mask.
->          *
->          * This warning is compiled out when the compiler can infer that
->          * 'idx' and 'sz' are less than LONG_MAX.
->
-> That's just one example - please apply it to all comments consistently.
->
->> +      */
->> +     if (WARN_ONCE(idx > LONG_MAX || sz > LONG_MAX,
->> +                     "array_idx limited to range of [0, LONG_MAX]\n"))
->
-> Same in user facing messages:
->
->                         "array_idx() limited to range of [0, LONG_MAX]\n"))
->
->> + * For a code sequence like:
->> + *
->> + *     if (idx < sz) {
->> + *         idx = array_idx(idx, sz);
->> + *         val = array[idx];
->> + *     }
->> + *
->> + * ...if the cpu speculates past the bounds check then array_idx() will
->> + * clamp the index within the range of [0, sz).
->
-> s/cpu/CPU
->
->> + */
->> +#define array_idx(idx, sz)                                           \
->> +({                                                                   \
->> +     typeof(idx) _i = (idx);                                         \
->> +     typeof(sz) _s = (sz);                                           \
->> +     unsigned long _mask = array_idx_mask(_i, _s);                   \
->> +                                                                     \
->> +     BUILD_BUG_ON(sizeof(_i) > sizeof(long));                        \
->> +     BUILD_BUG_ON(sizeof(_s) > sizeof(long));                        \
->> +                                                                     \
->> +     _i &= _mask;                                                    \
->> +     _i;                                                             \
->> +})
->> +#endif /* __NOSPEC_H__ */
->
-> For heaven's sake, please name a size variable as 'size', not 'sz'. We don't have
-> a shortage of characters and can deobfuscate common primitives, can we?
->
-> Also, beyond the nits, I also hate the namespace here. We have a new generic
-> header providing two new methods:
->
->         #include <linux/nospec.h>
->
->         array_idx_mask()
->         array_idx()
->
-> which is then optimized for x86 in asm/barrier.h. That's already a non-sequitor.
->
-> Then we introduce uaccess API variants with a _nospec() postfix.
->
-> Then we add ifence() to x86.
->
-> There's no naming coherency to this.
+> Thomas, Peter, and Alexei wanted s/nospec_barrier/ifence/ and 
 
-Ingo, I love you, but please take the incredulity down a bit,
-especially when I had 'nospec' in all the names in v1. Thomas, Peter,
-and Alexei wanted s/nospec_barrier/ifence/ and
-s/array_idx_nospec/array_idx/. You can always follow on with a patch
-to fix up the names and placements to your liking. While they'll pick
-on my name choices, they won't pick on yours, because I simply can't
-be bothered to care about a bikeshed color at this point after being
-bounced around for 5 revisions of this patch set.
+I just checked past discussions, and I cannot find that part, got any links or 
+message-IDs?
 
-> A better approach would be to signal the 'no speculation' aspect of the
-> array_idx() methods already: naming it array_idx_nospec() would be a solution,
-> as it clearly avoids speculation beyond the array boundaries.
+PeterZ's feedback on Jan 8 was:
+
+> On Sun, Jan 07, 2018 at 06:24:11PM -0800, Alexei Starovoitov wrote:
+> > How about:
+> > CONFIG_SPECTRE1_WORKAROUND_INDEX_MASK
+> > CONFIG_SPECTRE1_WORKAROUND_LOAD_FENCE
 >
-> Also, without seeing the full series it's hard to tell, whether the introduction
-> of linux/nospec.h is justified, but it feels somewhat suspect.
->
+> INSTRUCTION_FENCE if anything. LFENCE for Intel (and now also for AMD as
+> per 0592b0bce169) is a misnomer, IFENCE would be a better name for it.
+
+Which in that context clearly talked about the config space and how to name the 
+instruction semantics in light of the confusion of LFENCE and MFENCE opcodes on 
+Intel and AMD CPUs...
+
+Also, those early reviews were fundamentally low level feedback related to the 
+actual functionality of the barriers and their mapping to the hardware.
+
+But the fact is, the current series introduces an inconsistent barrier namespace 
+extension of:
+
+	barrier()
+	barrier_data()
+	mb()
+	rmb()
+	wmb()
+	store_mb()
+	read_barrier_depends()
+	...
++	ifence()
++	array_idx()
++	array_idx_mask()
+
+This isn't bikeshed painting: _ALL_ existing barrier API names have 'barrier' or 
+its abbreviation 'mb' (memory barrier) somewhere in their names, which makes it 
+pretty easy to recognize them at a glance.
+
+I'm giving you high level API naming feedback because we are now growing the size 
+of the barrier API.
+
+array_idx() on the other hand is pretty much close to a 'worst possible' name:
+
+ - it's named in an overly generic, opaque fashion
+ - doesn't indicate it at all that it's a barrier for something
+
+... and since we want all kernel developers to use these facilities correctly, we 
+want the names to be good and suggestive as well.
+
+I'd accept pretty much anything else that adds 'barrier' or 'nospec' to the name: 
+array_idx_barrier() or array_idx_nospec(). (I'm slightly leaning towards 'nospec' 
+because it's more indicative of what is being done, and it also is what we do for 
+get uaccess APIs.)
+
+ifence() is a similar departure from existing barrier naming nomenclature, and I'd 
+accept pretty much any other variant:
+
+	barrier_nospec()
+	ifence_nospec()
+
+The kernel namespace cleanliness rules are clear and consistent, and there's 
+nothing new about them:
+
+ - the name of the API should unambiguously refer back to the API category. For
+   barriers this common reference is 'barrier' or 'mb'.
+
+ - use postfixes or prefixes consistently: pick one and don't mix them. If we go 
+   with a _nospec() variant for the uaccess API names then we should use a similar
+   naming for array_idx() and for the new barrier as well - no mixing.
+
+> You can always follow on with a patch to fix up the names and placements to your 
+> liking. While they'll pick on my name choices, they won't pick on yours, because 
+> I simply can't be bothered to care about a bikeshed color at this point after 
+> being bounced around for 5 revisions of this patch set.
+
+Sorry, this kind of dismissive and condescending attitude won't cut it.
+
+Thanks,
+
+	Ingo
