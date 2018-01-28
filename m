@@ -1,108 +1,174 @@
-MIME-Version: 1.0
-In-Reply-To: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Sun, 28 Jan 2018 09:55:00 +0100
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20180128085500.djlm5rlbhjlpfj4i@gmail.com>
 References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
-From: Dan Williams <dan.j.williams@intel.com>
-Date: Sat, 27 Jan 2018 11:26:37 -0800
-Message-ID: <CAPcyv4hZ0axyyzpRb1+fETXZOzgzM1v4mgsYM_FKqCAdKNAbSA@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Subject: [kernel-hardening] Re: [PATCH v5 00/12] spectre variant1 mitigations for tip/x86/pti
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Mark Rutland <mark.rutland@arm.com>, Cyril Novikov <cnovikov@lynx.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "H. Peter Anvin" <hpa@zytor.com>, Jiri Slaby <jslaby@suse.cz>, Elena Reshetova <elena.reshetova@intel.com>, linux-arch <linux-arch@vger.kernel.org>, Andi Kleen <ak@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, X86 ML <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Andrew Honig <ahonig@google.com>, Alan Cox <alan@linux.intel.com>, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Jim Mattson <jmattson@google.com>, Christian Lamparter <chunkeey@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, Linux Wireless List <linux-wireless@vger.kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Johannes Berg <johannes@sipsolutions.net>, Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+ <151703972396.26578.7326612698912543866.stgit@dwillia2-desk3.amr.corp.intel.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <151703972396.26578.7326612698912543866.stgit@dwillia2-desk3.amr.corp.intel.com>
+Subject: [kernel-hardening] Re: [PATCH v5 02/12] array_idx: sanitize speculative array
+ de-references
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: tglx@linutronix.de, linux-arch@vger.kernel.org, Cyril Novikov <cnovikov@lynx.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, x86@kernel.org, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, gregkh@linuxfoundation.org, "H. Peter Anvin" <hpa@zytor.com>, torvalds@linux-foundation.org, alan@linux.intel.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-[ adding lkml ]
 
-I had inadvertently dropped lkml when sending this to Thomas. Archive here:
+Firstly, I only got a few patches of this series so I couldn't review all of them 
+- please Cc: me to all future Meltdown and Spectre related patches!
 
-https://marc.info/?l=linux-wireless&m=151704026325010&w=2
-https://marc.info/?l=linux-arch&m=151704027225013&w=2
-https://marc.info/?l=linux-arch&m=151704027225014&w=2
-https://marc.info/?l=linux-arch&m=151704027625015&w=2
-https://marc.info/?l=linux-arch&m=151704028225016&w=2
-https://marc.info/?l=linux-arch&m=151704028725019&w=2
-https://marc.info/?l=linux-arch&m=151704086725186&w=2
-https://marc.info/?l=linux-arch&m=151704030025025&w=2
-https://marc.info/?l=linux-arch&m=151704030525028&w=2
-https://marc.info/?l=linux-arch&m=151704031125029&w=2
-https://marc.info/?l=linux-arch&m=151704032225034&w=2
-https://marc.info/?l=linux-arch&m=151704032625035&w=2
-https://marc.info/?l=linux-arch&m=151704032725037&w=2
+* Dan Williams <dan.j.williams@intel.com> wrote:
 
+> 'array_idx' is proposed as a generic mechanism to mitigate against
+> Spectre-variant-1 attacks, i.e. an attack that bypasses boundary checks
+> via speculative execution). The 'array_idx' implementation is expected
+> to be safe for current generation cpus across multiple architectures
+> (ARM, x86).
 
-On Fri, Jan 26, 2018 at 11:55 PM, Dan Williams <dan.j.williams@intel.com> wrote:
-> Hi Thomas,
->
-> Here's another spin of the spectre-v1 mitigations for 4.16.
->
-> Changes since v4.1: [1]
-> * Tweak the sanitization scheme yet again to make it even simpler. Now,
->   instead of 'array_ptr' to get a sanitized pointer to an array element,
->   just provide an array index sanitization helper 'array_idx' to be called
->   after successfully validating the index is in bounds. I.e. in the
->   exact same location one would otherwise put an lfence, place this
->   sanitizer:
->
->       if (idx < sz) {
->           idx = array_idx(idx, sz);
->           val = array[idx];
->       }
->
->   This lets the implementation include more sanity checking that the
->   compiler can usually compile out. It otherwise appears to produce
->   better assembly. This also cleans up the concern about comparing the
->   value returned from array_ptr to create another speculation point.
->   (Russell, Linus, Cyril)
->
-> * Drop the syscall_64_fastpath.  This is the straightforward patch from
->   Linus that might also be in flight from Andy, but I went ahead and
->   included it since I did not see it on LKML yet.
->
-> * Kill the MASK_NOSPEC macro and just open code it. (Andy)
->
-> * Add system-call-number sanitization to the slow path syscall table
->   lookups.
->
-> * Redo the array_ptr conversions with array_idx.
->
-> * Update /sys/devices/system/cpu/vulnerabilities/spectre_v1 to indicate
->   the new protections. It now reports "Vulnerable: Minimal user pointer
->   sanitization". (Jiri)
->
+nit: Stray closing parenthesis
+
+s/cpus/CPUs
+
+> Based on an original implementation by Linus Torvalds, tweaked to remove
+> speculative flows by Alexei Starovoitov, and tweaked again by Linus to
+> introduce an x86 assembly implementation for the mask generation.
+> 
+> Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
+> Co-developed-by: Alexei Starovoitov <ast@kernel.org>
+> Suggested-by: Cyril Novikov <cnovikov@lynx.com>
+> Cc: Russell King <linux@armlinux.org.uk>
+> Cc: Peter Zijlstra <peterz@infradead.org>
+> Cc: Catalin Marinas <catalin.marinas@arm.com>
+> Cc: Will Deacon <will.deacon@arm.com>
+> Cc: Thomas Gleixner <tglx@linutronix.de>
+> Cc: Ingo Molnar <mingo@redhat.com>
+> Cc: "H. Peter Anvin" <hpa@zytor.com>
+> Cc: x86@kernel.org
+> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 > ---
->
-> Dan Williams (11):
->       array_idx: sanitize speculative array de-references
->       x86: implement array_idx_mask
->       x86: introduce __uaccess_begin_nospec and ifence
->       x86, __get_user: use __uaccess_begin_nospec
->       x86, get_user: use pointer masking to limit speculation
->       x86: remove the syscall_64 fast-path
->       x86: sanitize sycall table de-references under speculation
->       vfs, fdtable: prevent bounds-check bypass via speculative execution
->       kvm, x86: update spectre-v1 mitigation
->       nl80211: sanitize array index in parse_txq_params
->       x86/spectre: report get_user mitigation for spectre_v1
->
-> Mark Rutland (1):
->       Documentation: document array_idx
->
->
->  Documentation/speculation.txt     |   87 ++++++++++++++++++++++++++++
->  arch/x86/entry/common.c           |    3 +
->  arch/x86/entry/entry_64.S         |  116 -------------------------------------
->  arch/x86/entry/syscall_64.c       |    7 +-
->  arch/x86/include/asm/barrier.h    |   26 ++++++++
->  arch/x86/include/asm/msr.h        |    3 -
->  arch/x86/include/asm/uaccess.h    |   15 ++++-
->  arch/x86/include/asm/uaccess_32.h |    6 +-
->  arch/x86/include/asm/uaccess_64.h |   12 ++--
->  arch/x86/kernel/cpu/bugs.c        |    2 -
->  arch/x86/kvm/vmx.c                |   14 +++-
->  arch/x86/lib/getuser.S            |   10 +++
->  arch/x86/lib/usercopy_32.c        |    8 +--
->  include/linux/fdtable.h           |    5 +-
->  include/linux/nospec.h            |   64 ++++++++++++++++++++
->  net/wireless/nl80211.c            |    9 ++-
->  16 files changed, 239 insertions(+), 148 deletions(-)
->  create mode 100644 Documentation/speculation.txt
+>  include/linux/nospec.h |   64 ++++++++++++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 64 insertions(+)
 >  create mode 100644 include/linux/nospec.h
+> 
+> diff --git a/include/linux/nospec.h b/include/linux/nospec.h
+> new file mode 100644
+> index 000000000000..f59f81889ba3
+> --- /dev/null
+> +++ b/include/linux/nospec.h
+> @@ -0,0 +1,64 @@
+> +// SPDX-License-Identifier: GPL-2.0
+> +// Copyright(c) 2018 Intel Corporation. All rights reserved.
+
+Given the close similarity of Linus's array_access() prototype pseudocode there 
+should probably also be:
+
+    Copyright (C) 2018 Linus Torvalds
+
+in that file?
+
+> +
+> +#ifndef __NOSPEC_H__
+> +#define __NOSPEC_H__
+> +
+> +/*
+> + * When idx is out of bounds (idx >= sz), the sign bit will be set.
+> + * Extend the sign bit to all bits and invert, giving a result of zero
+> + * for an out of bounds idx, or ~0UL if within bounds [0, sz).
+> + */
+> +#ifndef array_idx_mask
+> +static inline unsigned long array_idx_mask(unsigned long idx, unsigned long sz)
+> +{
+> +	/*
+> +	 * Warn developers about inappropriate array_idx usage.
+> +	 *
+> +	 * Even if the cpu speculates past the WARN_ONCE branch, the
+
+s/cpu/CPU
+
+> +	 * sign bit of idx is taken into account when generating the
+> +	 * mask.
+> +	 *
+> +	 * This warning is compiled out when the compiler can infer that
+> +	 * idx and sz are less than LONG_MAX.
+
+Please use 'idx' and 'sz' in quotes, to make sure they stand out more in free 
+flowing comment text. Also please use '()' to denote functions/methods.
+
+I.e. something like:
+
+	 * Warn developers about inappropriate array_idx() usage.
+	 *
+	 * Even if the CPU speculates past the WARN_ONCE() branch, the
+	 * sign bit of 'idx' is taken into account when generating the
+	 * mask.
+	 *
+	 * This warning is compiled out when the compiler can infer that
+	 * 'idx' and 'sz' are less than LONG_MAX.
+
+That's just one example - please apply it to all comments consistently.
+
+> +	 */
+> +	if (WARN_ONCE(idx > LONG_MAX || sz > LONG_MAX,
+> +			"array_idx limited to range of [0, LONG_MAX]\n"))
+
+Same in user facing messages:
+
+			"array_idx() limited to range of [0, LONG_MAX]\n"))
+
+> + * For a code sequence like:
+> + *
+> + *     if (idx < sz) {
+> + *         idx = array_idx(idx, sz);
+> + *         val = array[idx];
+> + *     }
+> + *
+> + * ...if the cpu speculates past the bounds check then array_idx() will
+> + * clamp the index within the range of [0, sz).
+
+s/cpu/CPU
+
+> + */
+> +#define array_idx(idx, sz)						\
+> +({									\
+> +	typeof(idx) _i = (idx);						\
+> +	typeof(sz) _s = (sz);						\
+> +	unsigned long _mask = array_idx_mask(_i, _s);			\
+> +									\
+> +	BUILD_BUG_ON(sizeof(_i) > sizeof(long));			\
+> +	BUILD_BUG_ON(sizeof(_s) > sizeof(long));			\
+> +									\
+> +	_i &= _mask;							\
+> +	_i;								\
+> +})
+> +#endif /* __NOSPEC_H__ */
+
+For heaven's sake, please name a size variable as 'size', not 'sz'. We don't have 
+a shortage of characters and can deobfuscate common primitives, can we?
+
+Also, beyond the nits, I also hate the namespace here. We have a new generic 
+header providing two new methods:
+
+	#include <linux/nospec.h>
+
+	array_idx_mask()
+	array_idx()
+
+which is then optimized for x86 in asm/barrier.h. That's already a non-sequitor.
+
+Then we introduce uaccess API variants with a _nospec() postfix.
+
+Then we add ifence() to x86.
+
+There's no naming coherency to this.
+
+A better approach would be to signal the 'no speculation' aspect of the 
+array_idx() methods already: naming it array_idx_nospec() would be a solution,
+as it clearly avoids speculation beyond the array boundaries.
+
+Also, without seeing the full series it's hard to tell, whether the introduction 
+of linux/nospec.h is justified, but it feels somewhat suspect.
+
+Thanks,
+
+	Ingo
