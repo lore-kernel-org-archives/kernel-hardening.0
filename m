@@ -1,56 +1,182 @@
-Content-Type: text/plain;
-	charset=us-ascii
-Mime-Version: 1.0 (1.0)
-From: Andy Lutomirski <luto@amacapital.net>
-In-Reply-To: <20180128092914.dabnzq7arv4bebhn@gmail.com>
-Date: Sun, 28 Jan 2018 07:22:26 -0800
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <5CF96758-5FD5-49BB-80E8-951AF5AB2B68@amacapital.net>
-References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com> <151703975137.26578.11230688940391207602.stgit@dwillia2-desk3.amr.corp.intel.com> <20180128092914.dabnzq7arv4bebhn@gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v5 07/12] x86: remove the syscall_64 fast-path
+MIME-Version: 1.0
+In-Reply-To: <20180128085500.djlm5rlbhjlpfj4i@gmail.com>
+References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151703972396.26578.7326612698912543866.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <20180128085500.djlm5rlbhjlpfj4i@gmail.com>
+From: Dan Williams <dan.j.williams@intel.com>
+Date: Sun, 28 Jan 2018 08:28:24 -0800
+Message-ID: <CAPcyv4jTaskPT1qXhdCO2mWVkcaMDMBq12vUJ_hSfjOU49qvgQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH v5 02/12] array_idx: sanitize speculative array de-references
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Dan Williams <dan.j.williams@intel.com>, tglx@linutronix.de, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, x86@kernel.org, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, torvalds@linux-foundation.org, alan@linux.intel.com, linux-kernel@vger.kernel.org
+Cc: Thomas Gleixner <tglx@linutronix.de>, linux-arch <linux-arch@vger.kernel.org>, Cyril Novikov <cnovikov@lynx.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, X86 ML <x86@kernel.org>, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Greg KH <gregkh@linuxfoundation.org>, "H. Peter Anvin" <hpa@zytor.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alan Cox <alan@linux.intel.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-
-> On Jan 28, 2018, at 1:29 AM, Ingo Molnar <mingo@kernel.org> wrote:
->=20
->=20
+On Sun, Jan 28, 2018 at 12:55 AM, Ingo Molnar <mingo@kernel.org> wrote:
+>
+> Firstly, I only got a few patches of this series so I couldn't review all of them
+> - please Cc: me to all future Meltdown and Spectre related patches!
+>
 > * Dan Williams <dan.j.williams@intel.com> wrote:
->=20
->> Quoting Linus:
->>=20
->>  "Honestly, I'd rather get rid of the fast-path entirely. Compared to
->>   all the PTI mess, it's not even noticeable.
->>=20
->>   And if we ever get CPU's that have this all fixed, we can re-visit
->>   introducing the fastpath. But this is all very messy and it doesn't
->>   seem worth it right now.
->>=20
->>   If we get rid of the fastpath, we can lay out the slow path slightly
->>   better, and get rid of some of those jump-overs. And we'd get rid of
->>   the ptregs hooks entirely.
->>=20
->>   So we can try to make the "slow" path better while at it, but I
->>   really don't think it matters much now in the post-PTI era. Sadly."
->=20
-> Please fix the title to have the proper prefix and to reference the functi=
-on that=20
-> is actually modified by the patch, i.e. something like:
->=20
-> s/ x86: remove the syscall_64 fast-path
-> / x86/entry/64: Remove the entry_SYSCALL_64() fast-path
->=20
-> With the title fixed:
->=20
-> Reviewed-by: Ingo Molnar <mingo@kernel.org>
+>
+>> 'array_idx' is proposed as a generic mechanism to mitigate against
+>> Spectre-variant-1 attacks, i.e. an attack that bypasses boundary checks
+>> via speculative execution). The 'array_idx' implementation is expected
+>> to be safe for current generation cpus across multiple architectures
+>> (ARM, x86).
+>
+> nit: Stray closing parenthesis
+>
+> s/cpus/CPUs
+>
+>> Based on an original implementation by Linus Torvalds, tweaked to remove
+>> speculative flows by Alexei Starovoitov, and tweaked again by Linus to
+>> introduce an x86 assembly implementation for the mask generation.
+>>
+>> Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
+>> Co-developed-by: Alexei Starovoitov <ast@kernel.org>
+>> Suggested-by: Cyril Novikov <cnovikov@lynx.com>
+>> Cc: Russell King <linux@armlinux.org.uk>
+>> Cc: Peter Zijlstra <peterz@infradead.org>
+>> Cc: Catalin Marinas <catalin.marinas@arm.com>
+>> Cc: Will Deacon <will.deacon@arm.com>
+>> Cc: Thomas Gleixner <tglx@linutronix.de>
+>> Cc: Ingo Molnar <mingo@redhat.com>
+>> Cc: "H. Peter Anvin" <hpa@zytor.com>
+>> Cc: x86@kernel.org
+>> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+>> ---
+>>  include/linux/nospec.h |   64 ++++++++++++++++++++++++++++++++++++++++++++++++
+>>  1 file changed, 64 insertions(+)
+>>  create mode 100644 include/linux/nospec.h
+>>
+>> diff --git a/include/linux/nospec.h b/include/linux/nospec.h
+>> new file mode 100644
+>> index 000000000000..f59f81889ba3
+>> --- /dev/null
+>> +++ b/include/linux/nospec.h
+>> @@ -0,0 +1,64 @@
+>> +// SPDX-License-Identifier: GPL-2.0
+>> +// Copyright(c) 2018 Intel Corporation. All rights reserved.
+>
+> Given the close similarity of Linus's array_access() prototype pseudocode there
+> should probably also be:
+>
+>     Copyright (C) 2018 Linus Torvalds
+>
+> in that file?
 
-I have a very similar but not quite identical version I'll send out shortly.=
-  The difference is that I fixed the silly prologue.
+Yes, and Alexei as well.
 
->=20
-> Thanks,
->=20
->    Ingo
+>
+>> +
+>> +#ifndef __NOSPEC_H__
+>> +#define __NOSPEC_H__
+>> +
+>> +/*
+>> + * When idx is out of bounds (idx >= sz), the sign bit will be set.
+>> + * Extend the sign bit to all bits and invert, giving a result of zero
+>> + * for an out of bounds idx, or ~0UL if within bounds [0, sz).
+>> + */
+>> +#ifndef array_idx_mask
+>> +static inline unsigned long array_idx_mask(unsigned long idx, unsigned long sz)
+>> +{
+>> +     /*
+>> +      * Warn developers about inappropriate array_idx usage.
+>> +      *
+>> +      * Even if the cpu speculates past the WARN_ONCE branch, the
+>
+> s/cpu/CPU
+>
+>> +      * sign bit of idx is taken into account when generating the
+>> +      * mask.
+>> +      *
+>> +      * This warning is compiled out when the compiler can infer that
+>> +      * idx and sz are less than LONG_MAX.
+>
+> Please use 'idx' and 'sz' in quotes, to make sure they stand out more in free
+> flowing comment text. Also please use '()' to denote functions/methods.
+>
+> I.e. something like:
+>
+>          * Warn developers about inappropriate array_idx() usage.
+>          *
+>          * Even if the CPU speculates past the WARN_ONCE() branch, the
+>          * sign bit of 'idx' is taken into account when generating the
+>          * mask.
+>          *
+>          * This warning is compiled out when the compiler can infer that
+>          * 'idx' and 'sz' are less than LONG_MAX.
+>
+> That's just one example - please apply it to all comments consistently.
+>
+>> +      */
+>> +     if (WARN_ONCE(idx > LONG_MAX || sz > LONG_MAX,
+>> +                     "array_idx limited to range of [0, LONG_MAX]\n"))
+>
+> Same in user facing messages:
+>
+>                         "array_idx() limited to range of [0, LONG_MAX]\n"))
+>
+>> + * For a code sequence like:
+>> + *
+>> + *     if (idx < sz) {
+>> + *         idx = array_idx(idx, sz);
+>> + *         val = array[idx];
+>> + *     }
+>> + *
+>> + * ...if the cpu speculates past the bounds check then array_idx() will
+>> + * clamp the index within the range of [0, sz).
+>
+> s/cpu/CPU
+>
+>> + */
+>> +#define array_idx(idx, sz)                                           \
+>> +({                                                                   \
+>> +     typeof(idx) _i = (idx);                                         \
+>> +     typeof(sz) _s = (sz);                                           \
+>> +     unsigned long _mask = array_idx_mask(_i, _s);                   \
+>> +                                                                     \
+>> +     BUILD_BUG_ON(sizeof(_i) > sizeof(long));                        \
+>> +     BUILD_BUG_ON(sizeof(_s) > sizeof(long));                        \
+>> +                                                                     \
+>> +     _i &= _mask;                                                    \
+>> +     _i;                                                             \
+>> +})
+>> +#endif /* __NOSPEC_H__ */
+>
+> For heaven's sake, please name a size variable as 'size', not 'sz'. We don't have
+> a shortage of characters and can deobfuscate common primitives, can we?
+>
+> Also, beyond the nits, I also hate the namespace here. We have a new generic
+> header providing two new methods:
+>
+>         #include <linux/nospec.h>
+>
+>         array_idx_mask()
+>         array_idx()
+>
+> which is then optimized for x86 in asm/barrier.h. That's already a non-sequitor.
+>
+> Then we introduce uaccess API variants with a _nospec() postfix.
+>
+> Then we add ifence() to x86.
+>
+> There's no naming coherency to this.
+
+Ingo, I love you, but please take the incredulity down a bit,
+especially when I had 'nospec' in all the names in v1. Thomas, Peter,
+and Alexei wanted s/nospec_barrier/ifence/ and
+s/array_idx_nospec/array_idx/. You can always follow on with a patch
+to fix up the names and placements to your liking. While they'll pick
+on my name choices, they won't pick on yours, because I simply can't
+be bothered to care about a bikeshed color at this point after being
+bounced around for 5 revisions of this patch set.
+
+> A better approach would be to signal the 'no speculation' aspect of the
+> array_idx() methods already: naming it array_idx_nospec() would be a solution,
+> as it clearly avoids speculation beyond the array boundaries.
+>
+> Also, without seeing the full series it's hard to tell, whether the introduction
+> of linux/nospec.h is justified, but it feels somewhat suspect.
+>
