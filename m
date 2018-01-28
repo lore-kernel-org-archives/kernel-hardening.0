@@ -1,68 +1,65 @@
-Date: Sun, 28 Jan 2018 20:21:28 +0000
-From: Al Viro <viro@ZenIV.linux.org.uk>
-Message-ID: <20180128202128.GI13338@ZenIV.linux.org.uk>
-References: <cover.1517164461.git.luto@kernel.org>
- <4dd5a4d0f6b694f17eaf64c80c36a2560993b9ea.1517164461.git.luto@kernel.org>
- <CA+55aFxbE6p+3kMumsTfh_E=fR=bteKi4d6WLGaFeBP8JBv_eg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+55aFxbE6p+3kMumsTfh_E=fR=bteKi4d6WLGaFeBP8JBv_eg@mail.gmail.com>
-Sender: Al Viro <viro@ftp.linux.org.uk>
-Subject: [kernel-hardening] Re: [PATCH 3/3] syscalls: Add a bit of documentation to
- __SYSCALL_DEFINE
-To: Linus Torvalds <torvalds@linux-foundation.org>
+Sender: linus971@gmail.com
+In-Reply-To: <20180128202128.GI13338@ZenIV.linux.org.uk>
+References: <cover.1517164461.git.luto@kernel.org> <4dd5a4d0f6b694f17eaf64c80c36a2560993b9ea.1517164461.git.luto@kernel.org>
+ <CA+55aFxbE6p+3kMumsTfh_E=fR=bteKi4d6WLGaFeBP8JBv_eg@mail.gmail.com> <20180128202128.GI13338@ZenIV.linux.org.uk>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Sun, 28 Jan 2018 12:42:24 -0800
+Message-ID: <CA+55aFzScvPkO0JN_OReKMoyRC5KRbn_8bmWKkxVdi9m_X+cgQ@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Subject: [kernel-hardening] Re: [PATCH 3/3] syscalls: Add a bit of documentation to __SYSCALL_DEFINE
+To: Al Viro <viro@zeniv.linux.org.uk>
 Cc: Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jan 28, 2018 at 11:15:15AM -0800, Linus Torvalds wrote:
-> Is that "long long" part of the example on purpose? Because that's
-> likely the only really nasty part about any ptregs wrapper: some
-> arguments aren't _one_ register, they are two. And "long long" is the
-> simplest example, even though in practice the type is most often
-> "loff_t".
-> 
-> You won't see this on 64-bit architectures, but it's visible on 32-bit ones.
-> 
-> We may have to do wrappers for those, and error out for 'long long'.
-> We already do that for some cases, for compat system calls. See for
-> example
-> 
-> COMPAT_SYSCALL_DEFINE5(preadv, compat_ulong_t, fd,
->                 const struct compat_iovec __user *,vec,
->                 compat_ulong_t, vlen, u32, pos_low, u32, pos_high)
-> {
->         loff_t pos = ((loff_t)pos_high << 32) | pos_low;
-> 
->         return do_compat_preadv64(fd, vec, vlen, pos, 0);
-> }
-> 
-> where we have the issue of a 64-bit value being split over two
-> registers even on 64-bit, due to it being a compat interface for 32
-> bit.
-> 
-> But if we pick up the values by hand from ptregs in a wrapper, we'll
-> have this issue even for native calls on 32-bit.
+On Sun, Jan 28, 2018 at 12:21 PM, Al Viro <viro@zeniv.linux.org.uk> wrote:
+>
+> ... and have more of that logics arch-dependent than one might expect;
+> it's *not* just "split each 64bit argument into a pair of 32bit ones,
+> combine in the body".
 
-... and have more of that logics arch-dependent than one might expect;
-it's *not* just "split each 64bit argument into a pair of 32bit ones,
-combine in the body".  I tried to do something to reduce the amount of
-remaining wrappers several years ago.  Trying to automate that gets
-very ugly very fast - there are architectures like mips where you get
-alignment requirements ($6/$7 can hold that, $5/$6 can't), creating
-padding arguments, etc.
+Right. The paired registers tend to have special arch-specific rules,
+making this particularly painful.
 
-FWIW, that affects
-	lookup_dcookie() (64,32,32)
-	truncate64(), ftruncate64() (32,64)
-	fadvise64_64(), sync_file_range() (32,64,64,32)
-	readahead() (32,64,32)
-	fadvise64() (32,64,32,32)
-	fallocate(), sync_file_range2() (32,32,64,64)
-	fanotify_mark() (32,32,64,32,32)
-	pread64(), pwrite64() (32,32,32,64)
+I suspect that the best solution (and here "best" doesn't mean
+"pretty", but doable) is to rely on some of the limits we have:
 
-Giving each of those a compat wrapper of its own is already annoying
-(looking at that again, we should at least unify pread64() and pwrite64()
-compat wrappers - grep for sys_pread64 and you'll see), but giving
-each an explicit wrapper for native ones?  Ouch.
+In particular, we don't want to convert all architectures to the
+ptregs approach _anyway_, so we need to have a model where the
+architecture sets up some config option.
+
+End result: we don't have to handle the generic case, we just have to
+have a way for an architecture to set up for this. And for a _first_
+implementation, we can simply just limit things to x86-64 (and then
+maybe arm64) which don't even have this issue.
+
+Longer-term, the other thing that helps us is that we have already
+limited our calling convention to a maximum of six registers (NOTE!
+Not six _arguments_).
+
+So even when we want to handle the 32-bit case, the combinatorial
+space is at least fairly limited, and we can make the compiler notice
+them (ie the ptregs accessor case can simply be made to error out if
+you try to access a 64-bit type from one single register).
+
+End result: we will need the per-architecture macros that access
+arguments from the 'struct ptregs', so we'll have some macro for
+"argument1(ptregs)".
+
+The 64-bit argument for 32-bit case would end up having to have a few
+more of those architecture-specific oddities. So not just
+"argument1(ptregs)", but "argument2_32_64(ptregs)" or something that
+says "get me argument 2, when the first argument is 32-bit and I want
+a 64-bit one".
+
+So _if_ a 32-bit architecture wants this, such an architecture would
+probably have to implement 10-20 of those odd special cases. They'll
+be ugly and nasty and have little sanity to them, but they'd be simple
+one-liners.
+
+So hacky. But not necessarily even needed (I really don't think the
+kind of people who care about paranoid security are going to run
+32-bit kernels), and if people want to, not _complicated_, just
+annoying.
+
+                    Linus
