@@ -1,107 +1,87 @@
-Date: Mon, 29 Jan 2018 06:22:25 +0000
-From: Al Viro <viro@ZenIV.linux.org.uk>
-Message-ID: <20180129062225.GA29051@ZenIV.linux.org.uk>
-References: <cover.1517164461.git.luto@kernel.org>
- <4dd5a4d0f6b694f17eaf64c80c36a2560993b9ea.1517164461.git.luto@kernel.org>
- <CA+55aFxbE6p+3kMumsTfh_E=fR=bteKi4d6WLGaFeBP8JBv_eg@mail.gmail.com>
- <20180128202128.GI13338@ZenIV.linux.org.uk>
- <CA+55aFzScvPkO0JN_OReKMoyRC5KRbn_8bmWKkxVdi9m_X+cgQ@mail.gmail.com>
- <20180128225031.GJ13338@ZenIV.linux.org.uk>
+Date: Mon, 29 Jan 2018 13:19:42 +0000
+From: Will Deacon <will.deacon@arm.com>
+Message-ID: <20180129131942.GC25549@arm.com>
+References: <CALCETrV1JHK1ovjjD1vbs08K1an6tq6nbRoAj9uyrY2GUYJJBA@mail.gmail.com>
+ <CA+55aFzTXVRPo7OBPMo2OB26GisY8-dg6NaC8ackVJgS9M0+4w@mail.gmail.com>
+ <CALCETrU42C1S3nvSuLuamXtp2-s1xBG3q5cSNVOfGThncHxBZA@mail.gmail.com>
+ <b8ea504729db4073abf82ebd5d8a53c6@AcuMS.aculab.com>
+ <1516976647.5438.6.camel@linux.intel.com>
+ <CALCETrXaARjGa+fCmxDDYNQCgv0ZSm+DaUFoXFmRxU9J245HxQ@mail.gmail.com>
+ <CA+55aFzr_tvdjsq1B+N1zrprNe-qfwo0At+r8uKiS=BGN_92vQ@mail.gmail.com>
+ <20180126180722.GA13338@ZenIV.linux.org.uk>
+ <CA+55aFydRUyNWz5M2nWWMsLk5dW5JjRRNcFjP62yecAJ_bSDpQ@mail.gmail.com>
+ <CALCETrU9t1TO_Y7tmHnq0Qqrpmm3bBJzaAbPBV0vmtEvo28JCw@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180128225031.GJ13338@ZenIV.linux.org.uk>
-Sender: Al Viro <viro@ftp.linux.org.uk>
-Subject: [kernel-hardening] Re: [PATCH 3/3] syscalls: Add a bit of documentation to
- __SYSCALL_DEFINE
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
+In-Reply-To: <CALCETrU9t1TO_Y7tmHnq0Qqrpmm3bBJzaAbPBV0vmtEvo28JCw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] x86/retpoline/entry: Disable the entire SYSCALL64 fast
+ path with retpolines on
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alan Cox <alan@linux.intel.com>, David Laight <David.Laight@aculab.com>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jannh@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Dan Williams <dan.j.williams@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jan 28, 2018 at 10:50:31PM +0000, Al Viro wrote:
-> On Sun, Jan 28, 2018 at 12:42:24PM -0800, Linus Torvalds wrote:
+Hi Andy,
+
+On Fri, Jan 26, 2018 at 10:23:23AM -0800, Andy Lutomirski wrote:
+> On Fri, Jan 26, 2018 at 10:13 AM, Linus Torvalds
+> <torvalds@linux-foundation.org> wrote:
+> > On Fri, Jan 26, 2018 at 10:07 AM, Al Viro <viro@zeniv.linux.org.uk> wrote:
+> >>
+> >> Umm...  What about other architectures?  Or do you want SYSCALL_DEFINE...
+> >> to be per-arch?  I wonder how much would that "go through pt_regs" hurt
+> >> on something like sparc...
+> >
+> > No, but I just talked to Will Deacon about register clearing on entry,
+> > and so I suspect that arm64 might want something similar too.
+> >
+> > So I think some opt-in for letting architectures add their own
+> > function would be good. Because it wouldn't be all architectures, but
+> > it probably _would_ be more than just x86.
+> >
+> > You need to add architecture-specific "load argX from ptregs" macros anyway.
 > 
-> > The 64-bit argument for 32-bit case would end up having to have a few
-> > more of those architecture-specific oddities. So not just
-> > "argument1(ptregs)", but "argument2_32_64(ptregs)" or something that
-> > says "get me argument 2, when the first argument is 32-bit and I want
-> > a 64-bit one".
+> I mocked that up, and it's straightforward.  I ended up with something like:
 > 
-> Yeah, but...  You either get to give SYSCALL_DEFINE more than just
-> the number of arguments (SYSCALL_DEFINE_WDDW) or you need to go
-> for rather grotty macros to pick that information.  That's pretty
-> much what I'd tried; it hadn't been fun at all...
+> #define __ARCH_SYSCALL_ARGS(n, ...) (regs->di, ...)
+> 
+> (obviously modified so it actually compiles.)
+> 
+> The issue is that doing it this way gives us, effectively:
+> 
+> long sys_foo(int a, int b)
+> {
+>   body here;
+> }
+> 
+> long SyS_foo(const struct pt_regs *regs)
+> {
+>   return sys_foo(regs->di, regs->si);
+> }
+> 
+> whereas what we want is *static* long sys_foo(...).  So I could split
+> the macros into:
+> 
+> DEFINE_SYSCALL2(foo, ....)
+> 
+> and
+> 
+> DEFINE_EXTERN_SYSCALL2(foo, ...)
+> 
+> or I could just fix up all the code that expects calling sys_foo()
+> across files to work.
 
-FWIW, going through the notes from back then (with some personal
-comments censored - parts of that were definitely in the actionable
-territory):
+Another issue with this style of macro definition exists on architectures
+where the calling convention needs you to carry state around depending on
+how you packed the previous parameters. For example, on 32-bit ARM, 64-bit
+values are passed in adjacent pairs of registers but the low numbered
+register needs to be even. This is what stopped me from trying to use
+existing helpers such as syscall_get_arguments to unpack the pt_regs
+and it generally means that anything that says "get me argument n" is going
+to require constructing arguments 0..n-1 first.
 
-------
+To do this properly I think we'll either need to pass back the size and
+current register offset to the arch code, or just allow the thing to be
+overridden per syscall (the case above isn't especially frequent).
 
-* s390 aside, the headache comes from combination of calling conventions
-for 64bit arguments on 32bit and [speculation regarding libc maintainers
-qualities]
-
-* All architectures in question[1] treat syscall arguments as either
-32bit (arith types <= 32bit, pointers) or 64bit.  Prototypical case
-is f(int a1, int a2, ....); let L1, L2, ... be the sequence of locations
-used to pass them (might be GPR, might be stack locations).  Anything
-that doesn't involve long long uses the same sequence; in theory, we could
-have different sets of registers for e.g. pointers and integers, but nothing
-we care about seems to be doing that.
-
-* wrt 64bit ints there are two variants: one is to simply treat them as pair
-of 32bit ones (i.e. take the next two elements of the sequence), another is
-to skip an element and then use the next two.  Some architectures always
-go for the first variant; x86, s390 and, surprisingly, sparc are that way.
-arm, mips, parisc, ppc and tile go for the second variant when odd number
-of 32bit values had been passed so far.
-
-* argument passing for syscalls is something almost, but not entirely different.
-First of all, we don't want to pass them on stack (no surprise); mips o32
-ABI is trouble in that respect, everything else manages to use registers
-(so do other mips ABI variants).  Next, we are generally limited to 6 words.
-No worries, right?  We don't have syscalls with more than 6 arguments, and
-ones with 64bit args still fit into 32*6 bits.  Too fucking bad - akpm has
-introduced int sys_fadvise64(int fd, loff_t offset, size_t len, int advice)
-and then topped it with
-long sys_fadvise64_64(int fd, loff_t offset, loff_t len, int advice)
-Note that this sucker already has 32*6 bits total *AND* 64bit argument in odd
-position.  arm, mips and ppc folks were not amused (IIRC, rmk got downright
-sarcastic at the time; not quite Patrician-level, what with the lack of
-resources, but...)
-That had been compounded by sync_file_range(2), with identical braind^WAPI.
-The latter got a saner variant (sync_file_range2(2)) and newer architectures
-should take that.  fadvise64_64(2) has not.  BTW, that had been a headache
-for other 32bit architectures as well - at least c6x and metag are in the
-same boat.  Different solutions with that one - some split those 64bit into
-32bit on C level and repackage them into 64bit in stubs, some reorder the
-arguments so that 64bit ones are at good offsets.
-
-* for syscalls like pread64/pwrite64, the situation is less dire.  Some still
-pass the misaligned 64bit arg as a pair of C-level 32bit ones, some accept
-the padding.
-
-* to make things even more interesting, libc (all of them) pass a bunch of
-64bit args as explicit pairs.  Which creates no end of amusing situations -
-will this argument of this syscall end up with LSB first?  Last?  According
-to endianness?  Opposite?  Different rules for different architectures?
-Onna stick.  Inna bun.  And that's cuttin' me own throat... [speculations
-regarding various habits of libc maintainers]
-
-* it might be possible to teach COMPAT_SYSCALL_DEFINE to insert padding and
-combine the halves.  Cost: collecting the information about the number of
-words passed so far; messy, but maybe I'm missing some clever solution.
-However, that doesn't do a damn thing for libc-inflicted idiocies, so it
-might or might not be worth it.  In some cases the mapping from what
-libc is feeding to the kernel to actual long long passed from the glue
-into C side of things is just too fucking irregular[2].
-
-------
-
-[1] i.e. 32bit side of biarch ones; I was interested in COMPAT_SYSCALL_DEFINE
-back then.
-[2] looking at that now, parisc has fanotify_mark() passing halves of 64bit
-arg in the order opposite to that for truncate64().  On the same parisc.
->From the same libc.  And then there's lookup_dcookie(), which might or
-might not be correct there.
+Will
