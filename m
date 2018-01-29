@@ -1,60 +1,79 @@
 MIME-Version: 1.0
-In-Reply-To: <20180128091437.4lbll5bev7mgdpug@gmail.com>
+In-Reply-To: <20180128095027.hqrcpnholsvukdzd@gmail.com>
 References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
- <151703973427.26578.15693075353773519333.stgit@dwillia2-desk3.amr.corp.intel.com>
- <20180128091437.4lbll5bev7mgdpug@gmail.com>
+ <151703977742.26578.8362387033092864423.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <20180128095027.hqrcpnholsvukdzd@gmail.com>
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Mon, 29 Jan 2018 12:41:00 -0800
-Message-ID: <CAPcyv4hmkJyFgCBCXR8A1ykzk1tsxX-Lg4qgimhGxne=iG1Hzg@mail.gmail.com>
-Subject: Re: [PATCH v5 04/12] x86: introduce __uaccess_begin_nospec and ifence
+Date: Mon, 29 Jan 2018 14:05:51 -0800
+Message-ID: <CAPcyv4gA5eBYGsb+5WGcCnyB-8MB6qeO9Sw6aZNvaBCtb7OK1w@mail.gmail.com>
+Subject: Re: [PATCH v5 12/12] x86/spectre: report get_user mitigation for spectre_v1
 Content-Type: text/plain; charset="UTF-8"
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>, linux-arch <linux-arch@vger.kernel.org>, Tom Lendacky <thomas.lendacky@amd.com>, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, X86 ML <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, "H. Peter Anvin" <hpa@zytor.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alan Cox <alan@linux.intel.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, X86 ML <x86@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Jiri Slaby <jslaby@suse.cz>, Alan Cox <alan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jan 28, 2018 at 1:14 AM, Ingo Molnar <mingo@kernel.org> wrote:
+On Sun, Jan 28, 2018 at 1:50 AM, Ingo Molnar <mingo@kernel.org> wrote:
 >
 > * Dan Williams <dan.j.williams@intel.com> wrote:
 >
->> --- a/arch/x86/include/asm/uaccess.h
->> +++ b/arch/x86/include/asm/uaccess.h
->> @@ -124,6 +124,11 @@ extern int __get_user_bad(void);
+>> Reflect the presence of 'get_user', '__get_user', and 'syscall'
+>> protections in sysfs. Keep the "Vulnerable" distinction given the
+>> expectation that the places that have been identified for 'array_idx'
+>> usage are likely incomplete.
+>
+> (The style problems/inconsistencies of the previous patches are repeated here too,
+> please fix.)
+>
 >>
->>  #define __uaccess_begin() stac()
->>  #define __uaccess_end()   clac()
->> +#define __uaccess_begin_nospec()     \
->> +({                                   \
->> +     stac();                         \
->> +     ifence();                       \
->> +})
+>> Cc: Thomas Gleixner <tglx@linutronix.de>
+>> Cc: Ingo Molnar <mingo@redhat.com>
+>> Cc: "H. Peter Anvin" <hpa@zytor.com>
+>> Cc: x86@kernel.org
+>> Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+>> Reported-by: Jiri Slaby <jslaby@suse.cz>
+>> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+>> ---
+>>  arch/x86/kernel/cpu/bugs.c |    2 +-
+>>  1 file changed, 1 insertion(+), 1 deletion(-)
+>>
+>> diff --git a/arch/x86/kernel/cpu/bugs.c b/arch/x86/kernel/cpu/bugs.c
+>> index 390b3dc3d438..01d5ba48f745 100644
+>> --- a/arch/x86/kernel/cpu/bugs.c
+>> +++ b/arch/x86/kernel/cpu/bugs.c
+>> @@ -269,7 +269,7 @@ ssize_t cpu_show_spectre_v1(struct device *dev,
+>>  {
+>>       if (!boot_cpu_has_bug(X86_BUG_SPECTRE_V1))
+>>               return sprintf(buf, "Not affected\n");
+>> -     return sprintf(buf, "Vulnerable\n");
+>> +     return sprintf(buf, "Vulnerable: Minimal user pointer sanitization\n");
 >
-> BTW., wouldn't it be better to switch the barrier order here, i.e. to do:
+> Btw., I think this string is still somewhat passive-aggressive towards users, as
+> it doesn't really give them any idea about what is missing from their system so
+> that they can turn it into not vulnerable.
 >
->         ifence();                       \
->         stac();                         \
->
-> ?
->
-> The reason is that stac()/clac() is usually paired, so there's a chance with short
-> sequences that it would resolve with 'no externally visible changes to flags'.
->
-> Also, there's many cases where flags are modified _inside_ the STAC/CLAC section,
-> so grouping them together inside a speculation atom could be beneficial.
+> What else is missing that would turn this into a "Mitigated" entry?
 
-I'm struggling a bit to grok this. Are you referring to the state of
-the flags from the address limit comparison? That's the result that
-needs fencing before speculative execution leaks to to the user
-pointer de-reference.
+Part of the problem is that there are different sub-classes of Spectre
+variant1 vulnerabilities. For example, speculating on the value of a
+user pointer returned from get_user() is mitigated by these kernel
+changes. However, cleaning up occasions where the CPU might speculate
+on the validity of a user-controlled pointer offset, or
+user-controlled array index is only covered by manual inspection of
+some noisy / incomplete tooling results. I.e. the handful of
+array_index_nospec() usages in this series is likely incomplete.
 
-> The flip side is that if the MFENCE stalls the STAC that is ahead of it could be
-> processed for 'free' - while it's always post barrier with my suggestion.
+The usage of barrier_nospec() in __get_user() and open coded
+array_index_nospec() in get_user() does raise the bar and mitigates an
+entire class of problems. Perhaps it would be reasonable to have
+cpu_show_spectre_v1() emit:
 
-This 'for free' aspect is what I aiming for.
+    "Mitigation: __user pointer sanitization"
 
->
-> But in any case it would be nice to see a discussion of this aspect in the
-> changelog, even if the patch does not change.
+...with the expectation that the kernel community intends to use new
+and better tooling to find more places to use array_index_nospec().
+Once there is wider confidence in that tooling, or a compiler that
+does it automatically, the kernel can emit:
 
-I'll add a note to the changelog that having the fence after the
-'stac' hopefully allows some overlap of the cost of 'stac' and the
-flushing of the instruction pipeline.
+    "Mitigation: automated user input sanitization"
+
+...or something like that.
