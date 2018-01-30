@@ -1,97 +1,125 @@
-Subject: [PATCH v6 00/13] spectre variant1 mitigations for tip/x86/pti
+Subject: [PATCH v6 01/13] Documentation: document array_index_nospec
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Mon, 29 Jan 2018 17:02:10 -0800
-Message-ID: <151727412964.33451.17213780323040673404.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Mon, 29 Jan 2018 17:02:16 -0800
+Message-ID: <151727413645.33451.15878817161436755393.stgit@dwillia2-desk3.amr.corp.intel.com>
+In-Reply-To: <151727412964.33451.17213780323040673404.stgit@dwillia2-desk3.amr.corp.intel.com>
+References: <151727412964.33451.17213780323040673404.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 To: tglx@linutronix.de, mingo@kernel.org
-Cc: Mark Rutland <mark.rutland@arm.com>, Cyril Novikov <cnovikov@lynx.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "H. Peter Anvin" <hpa@zytor.com>, Jiri Slaby <jslaby@suse.cz>, Elena Reshetova <elena.reshetova@intel.com>, linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, x86@kernel.org, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Andrew Honig <ahonig@google.com>, alan@linux.intel.com, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, Jim Mattson <jmattson@google.com>, Christian Lamparter <chunkeey@gmail.com>, gregkh@linuxfoundation.org, linux-wireless@vger.kernel.org, linux-kernel@vger.kernel.org, Paolo Bonzini <pbonzini@redhat.com>, Johannes Berg <johannes@sipsolutions.net>, torvalds@linux-foundation.org, "David S. Miller" <davem@davemloft.net>
+Cc: Mark Rutland <mark.rutland@arm.com>, linux-arch@vger.kernel.org, Kees Cook <keescook@chromium.org>, Jonathan Corbet <corbet@lwn.net>, Peter Zijlstra <peterz@infradead.org>, gregkh@linuxfoundation.org, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, linux-kernel@vger.kernel.org, torvalds@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Thomas, Ingo,
+From: Mark Rutland <mark.rutland@arm.com>
 
-Here is another spin of the Spectre variant1 mitigations.
+Document the rationale and usage of the new array_index_nospec() helper.
 
-Changes since v5 [1]:
-* Use the _nospec suffix for all new infrastructure, i.e.
-  s/ifence/barrier_nospec/, s/array_idx/array_index_nospec/,
-  and s/array_idx_mask/array_index_mask_nospec/. (Ingo)
-
-* Fix up array_index_mask_nospec() to have a proper kernel doc comment
-  (Thomas)
-
-* Fix up copyright attribution in include/linux/nospec.h (Ingo)
-
-* Spell out 'index' and 'size' throughout the patch set rather than
-  'idx' and 'sz'. (Ingo).
-
-* Clarify placement of barrier_nospec() relative to stac() in
-  __uaccess_begin_nospec() (Ingo)
-
-* Drop the syscall fast path elimination patch out of this series since
-  Andy is handling that separately. (Andy)
-
-* Simplify the x86 array_index_mask_nospec() assembly, no need for a
-  separate 32-bit version (Ingo)
-
-* Clarify that the 'cmp, sbb' sequence in the get_user_<size> variants
-  are effectively open coded array_index_nospec() instances where the
-  array base is the user pointer and the array limit is the task address
-  limit. (Ingo)
-
-* Replace '<function identifier>' with <function identifier>()
-  throughout the series. (Ingo)
-
-* Comment and whitespace fixups in asm/barrier.h (Ingo)
-
-* Split the definition of barrier_nospec() into its own patch separate
-  from its new usages with __uaccess_begin_nospec(). (Ingo)
-
-* Split the __uaccess_begin_nospec() patch into one that cleans up open
-  coded stac/clac usage and one that uses the new
-  __uaccess_begin_nospec() helper. (Ingo)
-
-* Change the contents of the 'bug/spectre_v1' sysfs file to:
-  "Mitigation: __user pointer sanitization" since these changes do raise
-  the kernel's defenses. (Ingo)
-
-[1]: https://www.spinics.net/lists/linux-arch/msg44193.html
-
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Cc: Dan Williams <dan.j.williams@intel.com>
+Cc: Jonathan Corbet <corbet@lwn.net>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
-
-Dan Williams (12):
-      array_index_nospec: sanitize speculative array de-references
-      x86: implement array_index_mask_nospec
-      x86: introduce barrier_nospec
-      x86: introduce __uaccess_begin_nospec
-      x86, usercopy: replace open coded stac/clac with __uaccess_{begin,end}
-      x86, __get_user: use __uaccess_begin_nospec
-      x86, get_user: use pointer masking to limit speculation
-      x86: sanitize syscall table de-references under speculation
-      vfs, fdtable: prevent bounds-check bypass via speculative execution
-      kvm, x86: update spectre-v1 mitigation
-      nl80211: sanitize array index in parse_txq_params
-      x86/spectre: report get_user mitigation for spectre_v1
-
-Mark Rutland (1):
-      Documentation: document array_index_nospec
-
-
- Documentation/speculation.txt     |   90 +++++++++++++++++++++++++++++++++++++
- arch/x86/entry/common.c           |    5 ++
- arch/x86/include/asm/barrier.h    |   28 ++++++++++++
- arch/x86/include/asm/msr.h        |    3 -
- arch/x86/include/asm/uaccess.h    |   15 +++++-
- arch/x86/include/asm/uaccess_32.h |    6 +-
- arch/x86/include/asm/uaccess_64.h |   12 ++---
- arch/x86/kernel/cpu/bugs.c        |    2 -
- arch/x86/kvm/vmx.c                |   14 ++++--
- arch/x86/lib/getuser.S            |   10 ++++
- arch/x86/lib/usercopy_32.c        |    8 ++-
- include/linux/fdtable.h           |    5 ++
- include/linux/nospec.h            |   72 ++++++++++++++++++++++++++++++
- net/wireless/nl80211.c            |    9 ++--
- 14 files changed, 251 insertions(+), 28 deletions(-)
+ Documentation/speculation.txt |   90 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 90 insertions(+)
  create mode 100644 Documentation/speculation.txt
- create mode 100644 include/linux/nospec.h
+
+diff --git a/Documentation/speculation.txt b/Documentation/speculation.txt
+new file mode 100644
+index 000000000000..e9e6cbae2841
+--- /dev/null
++++ b/Documentation/speculation.txt
+@@ -0,0 +1,90 @@
++This document explains potential effects of speculation, and how undesirable
++effects can be mitigated portably using common APIs.
++
++===========
++Speculation
++===========
++
++To improve performance and minimize average latencies, many contemporary CPUs
++employ speculative execution techniques such as branch prediction, performing
++work which may be discarded at a later stage.
++
++Typically speculative execution cannot be observed from architectural state,
++such as the contents of registers. However, in some cases it is possible to
++observe its impact on microarchitectural state, such as the presence or
++absence of data in caches. Such state may form side-channels which can be
++observed to extract secret information.
++
++For example, in the presence of branch prediction, it is possible for bounds
++checks to be ignored by code which is speculatively executed. Consider the
++following code:
++
++	int load_array(int *array, unsigned int index)
++	{
++		if (index >= MAX_ARRAY_ELEMS)
++			return 0;
++		else
++			return array[index];
++	}
++
++Which, on arm64, may be compiled to an assembly sequence such as:
++
++	CMP	<index>, #MAX_ARRAY_ELEMS
++	B.LT	less
++	MOV	<returnval>, #0
++	RET
++  less:
++	LDR	<returnval>, [<array>, <index>]
++	RET
++
++It is possible that a CPU mis-predicts the conditional branch, and
++speculatively loads array[index], even if index >= MAX_ARRAY_ELEMS. This
++value will subsequently be discarded, but the speculated load may affect
++microarchitectural state which can be subsequently measured.
++
++More complex sequences involving multiple dependent memory accesses may
++result in sensitive information being leaked. Consider the following
++code, building on the prior example:
++
++	int load_dependent_arrays(int *arr1, int *arr2, int index)
++	{
++		int val1, val2,
++
++		val1 = load_array(arr1, index);
++		val2 = load_array(arr2, val1);
++
++		return val2;
++	}
++
++Under speculation, the first call to load_array() may return the value
++of an out-of-bounds address, while the second call will influence
++microarchitectural state dependent on this value. This may provide an
++arbitrary read primitive.
++
++====================================
++Mitigating speculation side-channels
++====================================
++
++The kernel provides a generic API to ensure that bounds checks are
++respected even under speculation. Architectures which are affected by
++speculation-based side-channels are expected to implement these
++primitives.
++
++The array_index_nospec() helper in <linux/nospec.h> can be used to
++prevent information from being leaked via side-channels.
++
++A call to array_index_nospec(index, size) returns a sanitized index
++value that is bounded to [0, size) even under cpu speculation
++conditions.
++
++This can be used to protect the earlier load_array() example:
++
++	int load_array(int *array, unsigned int index)
++	{
++		if (index >= MAX_ARRAY_ELEMS)
++			return 0;
++		else {
++			index = array_index_nospec(index, MAX_ARRAY_ELEMS);
++			return array[index];
++		}
++	}
