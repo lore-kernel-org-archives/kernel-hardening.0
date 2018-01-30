@@ -1,14 +1,15 @@
-Subject: [PATCH v6 07/13] x86, __get_user: use __uaccess_begin_nospec
+Subject: [PATCH v6 08/13] x86,
+ get_user: use pointer masking to limit speculation
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Mon, 29 Jan 2018 17:02:49 -0800
-Message-ID: <151727416953.33451.10508284228526170604.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Mon, 29 Jan 2018 17:02:54 -0800
+Message-ID: <151727417469.33451.11804043010080838495.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151727412964.33451.17213780323040673404.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151727412964.33451.17213780323040673404.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 To: tglx@linutronix.de, mingo@kernel.org
-Cc: linux-arch@vger.kernel.org, Andi Kleen <ak@linux.intel.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, x86@kernel.org, linux-kernel@vger.kernel.org, Ingo Molnar <mingo@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, "H. Peter Anvin" <hpa@zytor.com>, torvalds@linux-foundation.org, alan@linux.intel.com
+Cc: linux-arch@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, gregkh@linuxfoundation.org, x86@kernel.org, linux-kernel@vger.kernel.org, Ingo Molnar <mingo@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, torvalds@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Quoting Linus:
@@ -22,13 +23,20 @@ Quoting Linus:
     space. So it's a prime candidate for then finding _subsequent_
     accesses that can then be used to perturb the cache.
 
-__uaccess_begin_nospec() covers __get_user() and copy_from_iter() where
-the limit check is far away from the user pointer de-reference. In those
-cases a barrier_nospec() prevents speculation with a potential pointer to
-privileged memory.
+Unlike the __get_user() case get_user() includes the address limit check
+near the pointer de-reference. With that locality the speculation can be
+mitigated with pointer narrowing rather than a barrier, i.e.
+array_index_nospec(). Where the narrowing is performed by:
 
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-Suggested-by: Andi Kleen <ak@linux.intel.com>
+	cmp %limit, %ptr
+	sbb %mask, %mask
+	and %mask, %ptr
+
+With respect to speculation the value of %ptr is either less than %limit
+or NULL.
+
+Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Al Viro <viro@zeniv.linux.org.uk>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Thomas Gleixner <tglx@linutronix.de>
@@ -37,141 +45,55 @@ Cc: Ingo Molnar <mingo@redhat.com>
 Cc: x86@kernel.org
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- arch/x86/include/asm/uaccess.h    |    6 +++---
- arch/x86/include/asm/uaccess_32.h |    6 +++---
- arch/x86/include/asm/uaccess_64.h |   12 ++++++------
- arch/x86/lib/usercopy_32.c        |    4 ++--
- 4 files changed, 14 insertions(+), 14 deletions(-)
+ arch/x86/lib/getuser.S |   10 ++++++++++
+ 1 file changed, 10 insertions(+)
 
-diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
-index 663e9bde9fc9..aae77eb8491c 100644
---- a/arch/x86/include/asm/uaccess.h
-+++ b/arch/x86/include/asm/uaccess.h
-@@ -450,7 +450,7 @@ do {									\
- ({									\
- 	int __gu_err;							\
- 	__inttype(*(ptr)) __gu_val;					\
--	__uaccess_begin();						\
-+	__uaccess_begin_nospec();					\
- 	__get_user_size(__gu_val, (ptr), (size), __gu_err, -EFAULT);	\
- 	__uaccess_end();						\
- 	(x) = (__force __typeof__(*(ptr)))__gu_val;			\
-@@ -557,7 +557,7 @@ struct __large_struct { unsigned long buf[100]; };
-  *	get_user_ex(...);
-  * } get_user_catch(err)
-  */
--#define get_user_try		uaccess_try
-+#define get_user_try		uaccess_try_nospec
- #define get_user_catch(err)	uaccess_catch(err)
- 
- #define get_user_ex(x, ptr)	do {					\
-@@ -591,7 +591,7 @@ extern void __cmpxchg_wrong_size(void)
- 	__typeof__(ptr) __uval = (uval);				\
- 	__typeof__(*(ptr)) __old = (old);				\
- 	__typeof__(*(ptr)) __new = (new);				\
--	__uaccess_begin();						\
-+	__uaccess_begin_nospec();					\
- 	switch (size) {							\
- 	case 1:								\
- 	{								\
-diff --git a/arch/x86/include/asm/uaccess_32.h b/arch/x86/include/asm/uaccess_32.h
-index 72950401b223..ba2dc1930630 100644
---- a/arch/x86/include/asm/uaccess_32.h
-+++ b/arch/x86/include/asm/uaccess_32.h
-@@ -29,21 +29,21 @@ raw_copy_from_user(void *to, const void __user *from, unsigned long n)
- 		switch (n) {
- 		case 1:
- 			ret = 0;
--			__uaccess_begin();
-+			__uaccess_begin_nospec();
- 			__get_user_asm_nozero(*(u8 *)to, from, ret,
- 					      "b", "b", "=q", 1);
- 			__uaccess_end();
- 			return ret;
- 		case 2:
- 			ret = 0;
--			__uaccess_begin();
-+			__uaccess_begin_nospec();
- 			__get_user_asm_nozero(*(u16 *)to, from, ret,
- 					      "w", "w", "=r", 2);
- 			__uaccess_end();
- 			return ret;
- 		case 4:
- 			ret = 0;
--			__uaccess_begin();
-+			__uaccess_begin_nospec();
- 			__get_user_asm_nozero(*(u32 *)to, from, ret,
- 					      "l", "k", "=r", 4);
- 			__uaccess_end();
-diff --git a/arch/x86/include/asm/uaccess_64.h b/arch/x86/include/asm/uaccess_64.h
-index f07ef3c575db..62546b3a398e 100644
---- a/arch/x86/include/asm/uaccess_64.h
-+++ b/arch/x86/include/asm/uaccess_64.h
-@@ -55,31 +55,31 @@ raw_copy_from_user(void *dst, const void __user *src, unsigned long size)
- 		return copy_user_generic(dst, (__force void *)src, size);
- 	switch (size) {
- 	case 1:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u8 *)dst, (u8 __user *)src,
- 			      ret, "b", "b", "=q", 1);
- 		__uaccess_end();
- 		return ret;
- 	case 2:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u16 *)dst, (u16 __user *)src,
- 			      ret, "w", "w", "=r", 2);
- 		__uaccess_end();
- 		return ret;
- 	case 4:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u32 *)dst, (u32 __user *)src,
- 			      ret, "l", "k", "=r", 4);
- 		__uaccess_end();
- 		return ret;
- 	case 8:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u64 *)dst, (u64 __user *)src,
- 			      ret, "q", "", "=r", 8);
- 		__uaccess_end();
- 		return ret;
- 	case 10:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u64 *)dst, (u64 __user *)src,
- 			       ret, "q", "", "=r", 10);
- 		if (likely(!ret))
-@@ -89,7 +89,7 @@ raw_copy_from_user(void *dst, const void __user *src, unsigned long size)
- 		__uaccess_end();
- 		return ret;
- 	case 16:
--		__uaccess_begin();
-+		__uaccess_begin_nospec();
- 		__get_user_asm_nozero(*(u64 *)dst, (u64 __user *)src,
- 			       ret, "q", "", "=r", 16);
- 		if (likely(!ret))
-diff --git a/arch/x86/lib/usercopy_32.c b/arch/x86/lib/usercopy_32.c
-index de3436719e26..7add8ba06887 100644
---- a/arch/x86/lib/usercopy_32.c
-+++ b/arch/x86/lib/usercopy_32.c
-@@ -331,7 +331,7 @@ do {									\
- 
- unsigned long __copy_user_ll(void *to, const void *from, unsigned long n)
- {
--	__uaccess_begin();
-+	__uaccess_begin_nospec();
- 	if (movsl_is_ok(to, from, n))
- 		__copy_user(to, from, n);
- 	else
-@@ -344,7 +344,7 @@ EXPORT_SYMBOL(__copy_user_ll);
- unsigned long __copy_from_user_ll_nocache_nozero(void *to, const void __user *from,
- 					unsigned long n)
- {
--	__uaccess_begin();
-+	__uaccess_begin_nospec();
- #ifdef CONFIG_X86_INTEL_USERCOPY
- 	if (n > 64 && static_cpu_has(X86_FEATURE_XMM2))
- 		n = __copy_user_intel_nocache(to, from, n);
+diff --git a/arch/x86/lib/getuser.S b/arch/x86/lib/getuser.S
+index c97d935a29e8..49b167f73215 100644
+--- a/arch/x86/lib/getuser.S
++++ b/arch/x86/lib/getuser.S
+@@ -40,6 +40,8 @@ ENTRY(__get_user_1)
+ 	mov PER_CPU_VAR(current_task), %_ASM_DX
+ 	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
++	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
++	and %_ASM_DX, %_ASM_AX
+ 	ASM_STAC
+ 1:	movzbl (%_ASM_AX),%edx
+ 	xor %eax,%eax
+@@ -54,6 +56,8 @@ ENTRY(__get_user_2)
+ 	mov PER_CPU_VAR(current_task), %_ASM_DX
+ 	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
++	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
++	and %_ASM_DX, %_ASM_AX
+ 	ASM_STAC
+ 2:	movzwl -1(%_ASM_AX),%edx
+ 	xor %eax,%eax
+@@ -68,6 +72,8 @@ ENTRY(__get_user_4)
+ 	mov PER_CPU_VAR(current_task), %_ASM_DX
+ 	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
++	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
++	and %_ASM_DX, %_ASM_AX
+ 	ASM_STAC
+ 3:	movl -3(%_ASM_AX),%edx
+ 	xor %eax,%eax
+@@ -83,6 +89,8 @@ ENTRY(__get_user_8)
+ 	mov PER_CPU_VAR(current_task), %_ASM_DX
+ 	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
++	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
++	and %_ASM_DX, %_ASM_AX
+ 	ASM_STAC
+ 4:	movq -7(%_ASM_AX),%rdx
+ 	xor %eax,%eax
+@@ -94,6 +102,8 @@ ENTRY(__get_user_8)
+ 	mov PER_CPU_VAR(current_task), %_ASM_DX
+ 	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user_8
++	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
++	and %_ASM_DX, %_ASM_AX
+ 	ASM_STAC
+ 4:	movl -7(%_ASM_AX),%edx
+ 5:	movl -3(%_ASM_AX),%ecx
