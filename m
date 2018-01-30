@@ -1,155 +1,48 @@
-Date: Tue, 30 Jan 2018 10:08:52 -0700
-From: Jonathan Corbet <corbet@lwn.net>
-Subject: Re: [PATCH 5/6] Documentation for Pmalloc
-Message-ID: <20180130100852.2213b94d@lwn.net>
-In-Reply-To: <20180130151446.24698-6-igor.stoppa@huawei.com>
-References: <20180130151446.24698-1-igor.stoppa@huawei.com>
-	<20180130151446.24698-6-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 8bit
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, hch@infradead.org, willy@infradead.org, cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: linus971@gmail.com
+In-Reply-To: <CAPcyv4hSZ7=+076s+fmJ0HQ293H4X8829-LTrbvd8ZqJygGV6A@mail.gmail.com>
+References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151703972396.26578.7326612698912543866.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <20180128085500.djlm5rlbhjlpfj4i@gmail.com> <CAPcyv4jTaskPT1qXhdCO2mWVkcaMDMBq12vUJ_hSfjOU49qvgQ@mail.gmail.com>
+ <alpine.DEB.2.20.1801281931180.2126@nanos> <CAPcyv4hSZ7=+076s+fmJ0HQ293H4X8829-LTrbvd8ZqJygGV6A@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Tue, 30 Jan 2018 11:38:35 -0800
+Message-ID: <CA+55aFxLEL+8YA4MYkeyeUH7K8rZwBmGe6Z9V8QS=TYCREWDTQ@mail.gmail.com>
+Subject: Re: [PATCH v5 02/12] array_idx: sanitize speculative array de-references
+Content-Type: text/plain; charset="UTF-8"
+To: Dan Williams <dan.j.williams@intel.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Cyril Novikov <cnovikov@lynx.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, X86 ML <x86@kernel.org>, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Greg KH <gregkh@linuxfoundation.org>, "H. Peter Anvin" <hpa@zytor.com>, Alan Cox <alan@linux.intel.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 30 Jan 2018 17:14:45 +0200
-Igor Stoppa <igor.stoppa@huawei.com> wrote:
+On Mon, Jan 29, 2018 at 10:29 PM, Dan Williams <dan.j.williams@intel.com> wrote:
+>
+> Of course, and everything about the technical feedback and suggestions
+> was completely valid, on point, and made the patches that much better.
+> What wasn't appreciated and what I am tired of grinning and bearing is
+> the idea that it's only the maintainer that can show emotion, that
+> it's only the maintainer that can be exasperated and burnt out.
 
-> Detailed documentation about the protectable memory allocator.
-> 
-> Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
-> ---
->  Documentation/core-api/pmalloc.txt | 104 +++++++++++++++++++++++++++++++++++++
->  1 file changed, 104 insertions(+)
->  create mode 100644 Documentation/core-api/pmalloc.txt
+Yeah, I think everybody is a bit tired of - and burnt out by - these
+patches, and they are subtler and somewhat more core than most are,
+which makes the stakes a bit higher too, and the explanations can be a
+bit more difficult.
 
-Please don't put plain-text files into core-api - that's a directory full
-of RST documents.  Your document is 99.9% RST already, better to just
-finish the job and tie it into the rest of the kernel docs.
+I think everybody is entitled to being a bit snippy occasionally.
+Definitely not just maintainers.
 
-> diff --git a/Documentation/core-api/pmalloc.txt b/Documentation/core-api/pmalloc.txt
-> new file mode 100644
-> index 0000000..934d356
-> --- /dev/null
-> +++ b/Documentation/core-api/pmalloc.txt
-> @@ -0,0 +1,104 @@
+So by all means, push right back.
 
-We might as well put the SPDX tag here, it's a new file.
+Anyway, I do think the patches I've seen so far are ok, and the real
+reason I'm writing this email is actually more about future patches:
+do we have a good handle on where these array index sanitations will
+be needed?
 
-> +============================
-> +Protectable memory allocator
-> +============================
-> +
-> +Introduction
-> +------------
-> +
-> +When trying to perform an attack toward a system, the attacker typically
-> +wants to alter the execution flow, in a way that allows actions which
-> +would otherwise be forbidden.
-> +
-> +In recent years there has been lots of effort in preventing the execution
-> +of arbitrary code, so the attacker is progressively pushed to look for
-> +alternatives.
-> +
-> +If code changes are either detected or even prevented, what is left is to
-> +alter kernel data.
-> +
-> +As countermeasure, constant data is collected in a section which is then
-> +marked as readonly.
-> +To expand on this, also statically allocated variables which are tagged
-> +as __ro_after_init will receive a similar treatment.
-> +The difference from constant data is that such variables can be still
-> +altered freely during the kernel init phase.
-> +
-> +However, such solution does not address those variables which could be
-> +treated essentially as read-only, but whose size is not known at compile
-> +time or cannot be fully initialized during the init phase.
+Also, while array limit checking was obviously the official
+"spectre-v1" issue, I do wonder if there are possible other issues
+where mispredicted conditional branches can end up leaking
+information?
 
-This is all good information, but I'd suggest it belongs more in the 0/n
-patch posting than here.  The introduction of *this* document should say
-what it actually covers.
+IOW, is there some work on tooling/analysis/similar? Not asking for
+near-term, but more of a "big picture" question..
 
-> +
-> +Design
-> +------
-> +
-> +pmalloc builds on top of genalloc, using the same concept of memory pools
-> +A pool is a handle to a group of chunks of memory of various sizes.
-> +When created, a pool is empty. It will be populated by allocating chunks
-> +of memory, either when the first memory allocation request is received, or
-> +when a pre-allocation is performed.
-> +
-> +Either way, one or more memory pages will be obtained from vmalloc and
-> +registered in the pool as chunk. Subsequent requests will be satisfied by
-> +either using any available free space from the current chunks, or by
-> +allocating more vmalloc pages, should the current free space not suffice.
-> +
-> +This is the key point of pmalloc: it groups data that must be protected
-> +into a set of pages. The protection is performed through the mmu, which
-> +is a prerequisite and has a minimum granularity of one page.
-> +
-> +If the relevant variables were not grouped, there would be a problem of
-> +allowing writes to other variables that might happen to share the same
-> +page, but require further alterations over time.
-> +
-> +A pool is a group of pages that are write protected at the same time.
-> +Ideally, they have some high level correlation (ex: they belong to the
-> +same module), which justifies write protecting them all together.
-> +
-> +To keep it to a minimum, locking is left to the user of the API, in
-> +those cases where it's not strictly needed.
-
-This seems like a relevant and important aspect of the API that shouldn't
-be buried in the middle of a section talking about random things.
-
-> +Ideally, no further locking is required, since each module can have own
-> +pool (or pools), which should, for example, avoid the need for cross
-> +module or cross thread synchronization about write protecting a pool.
-> +
-> +The overhead of creating an additional pool is minimal: a handful of bytes
-> +from kmalloc space for the metadata and then what is left unused from the
-> +page(s) registered as chunks.
-> +
-> +Compared to plain use of vmalloc, genalloc has the advantage of tightly
-> +packing the allocations, reducing the number of pages used and therefore
-> +the pressure on the TLB. The slight overhead in execution time of the
-> +allocation should be mostly irrelevant, because pmalloc memory is not
-> +meant to be allocated/freed in tight loops. Rather it ought to be taken
-> +in use, initialized and write protected. Possibly destroyed.
-> +
-> +Considering that not much data is supposed to be dynamically allocated
-> +and then marked as read-only, it shouldn't be an issue that the address
-> +range for pmalloc is limited, on 32-bit systems.
-> +
-> +Regarding SMP systems, the allocations are expected to happen mostly
-> +during an initial transient, after which there should be no more need to
-> +perform cross-processor synchronizations of page tables.
-> +
-> +
-> +Use
-> +---
-> +
-> +The typical sequence, when using pmalloc, is:
-> +
-> +1. create a pool
-> +2. [optional] pre-allocate some memory in the pool
-> +3. issue one or more allocation requests to the pool
-> +4. initialize the memory obtained
-> +   - iterate over points 3 & 4 as needed -
-> +5. write protect the pool
-> +6. use in read-only mode the handlers obtained through the allocations
-> +7. [optional] destroy the pool
-
-So one gets this far, but has no actual idea of how to do these things.
-Which leads me to wonder: what is this document for?  Who are you expecting
-to read it?
-
-You could improve things a lot by (once again) going to RST and using
-directives to bring in the kerneldoc comments from the source (which, I
-note, do exist).  But I'd suggest rethinking this document and its
-audience.  Most of the people reading it are likely wanting to learn how to
-*use* this API; I think it would be best to not leave them frustrated.
-
-Thanks,
-
-jon
+            Linus
