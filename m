@@ -1,62 +1,69 @@
-Subject: [PATCH v6 11/13] kvm, x86: update spectre-v1 mitigation
+Subject: [PATCH v6 12/13] nl80211: sanitize array index in parse_txq_params
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Mon, 29 Jan 2018 17:03:10 -0800
-Message-ID: <151727419015.33451.13762926723789552997.stgit@dwillia2-desk3.amr.corp.intel.com>
+Date: Mon, 29 Jan 2018 17:03:15 -0800
+Message-ID: <151727419584.33451.7700736761686184303.stgit@dwillia2-desk3.amr.corp.intel.com>
 In-Reply-To: <151727412964.33451.17213780323040673404.stgit@dwillia2-desk3.amr.corp.intel.com>
 References: <151727412964.33451.17213780323040673404.stgit@dwillia2-desk3.amr.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 To: tglx@linutronix.de, mingo@kernel.org
-Cc: linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Honig <ahonig@google.com>, linux-kernel@vger.kernel.org, gregkh@linuxfoundation.org, Paolo Bonzini <pbonzini@redhat.com>, alan@linux.intel.com, torvalds@linux-foundation.org, Jim Mattson <jmattson@google.com>
+Cc: linux-arch@vger.kernel.org, Christian Lamparter <chunkeey@gmail.com>, gregkh@linuxfoundation.org, kernel-hardening@lists.openwall.com, linux-wireless@vger.kernel.org, linux-kernel@vger.kernel.org, Johannes Berg <johannes@sipsolutions.net>, torvalds@linux-foundation.org, "David S. Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Commit 75f139aaf896 "KVM: x86: Add memory barrier on vmcs field lookup"
-added a raw 'asm("lfence");' to prevent a bounds check bypass of
-'vmcs_field_to_offset_table'. We can save an lfence in this path and
-just use the common array_index_nospec() helper designed for these types
-of fixes.
+Wireless drivers rely on parse_txq_params to validate that
+txq_params->ac is less than NL80211_NUM_ACS by the time the low-level
+driver's ->conf_tx() handler is called. Use a new helper,
+array_index_nospec(), to sanitize txq_params->ac with respect to
+speculation. I.e. ensure that any speculation into ->conf_tx() handlers
+is done with a value of txq_params->ac that is within the bounds of [0,
+NL80211_NUM_ACS).
 
-Cc: Andrew Honig <ahonig@google.com>
-Cc: Jim Mattson <jmattson@google.com>
-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+Reported-by: Christian Lamparter <chunkeey@gmail.com>
+Reported-by: Elena Reshetova <elena.reshetova@intel.com>
+Acked-by: Johannes Berg <johannes@sipsolutions.net>
+Cc: "David S. Miller" <davem@davemloft.net>
+Cc: linux-wireless@vger.kernel.org
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 ---
- arch/x86/kvm/vmx.c |   14 ++++++++++----
- 1 file changed, 10 insertions(+), 4 deletions(-)
+ net/wireless/nl80211.c |    9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
 
-diff --git a/arch/x86/kvm/vmx.c b/arch/x86/kvm/vmx.c
-index 924589c53422..8514186241d2 100644
---- a/arch/x86/kvm/vmx.c
-+++ b/arch/x86/kvm/vmx.c
-@@ -34,6 +34,7 @@
- #include <linux/tboot.h>
- #include <linux/hrtimer.h>
- #include <linux/frame.h>
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index d396cb61a280..81bef0676e1d 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -16,6 +16,7 @@
+ #include <linux/nl80211.h>
+ #include <linux/rtnetlink.h>
+ #include <linux/netlink.h>
 +#include <linux/nospec.h>
- #include "kvm_cache_regs.h"
- #include "x86.h"
- 
-@@ -883,13 +884,18 @@ static const unsigned short vmcs_field_to_offset_table[] = {
- 
- static inline short vmcs_field_to_offset(unsigned long field)
+ #include <linux/etherdevice.h>
+ #include <net/net_namespace.h>
+ #include <net/genetlink.h>
+@@ -2056,20 +2057,22 @@ static const struct nla_policy txq_params_policy[NL80211_TXQ_ATTR_MAX + 1] = {
+ static int parse_txq_params(struct nlattr *tb[],
+ 			    struct ieee80211_txq_params *txq_params)
  {
--	BUILD_BUG_ON(ARRAY_SIZE(vmcs_field_to_offset_table) > SHRT_MAX);
-+	const size_t size = ARRAY_SIZE(vmcs_field_to_offset_table);
-+	unsigned short offset;
++	u8 ac;
++
+ 	if (!tb[NL80211_TXQ_ATTR_AC] || !tb[NL80211_TXQ_ATTR_TXOP] ||
+ 	    !tb[NL80211_TXQ_ATTR_CWMIN] || !tb[NL80211_TXQ_ATTR_CWMAX] ||
+ 	    !tb[NL80211_TXQ_ATTR_AIFS])
+ 		return -EINVAL;
  
--	if (field >= ARRAY_SIZE(vmcs_field_to_offset_table) ||
--	    vmcs_field_to_offset_table[field] == 0)
-+	BUILD_BUG_ON(size > SHRT_MAX);
-+	if (field >= size)
- 		return -ENOENT;
+-	txq_params->ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
++	ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
+ 	txq_params->txop = nla_get_u16(tb[NL80211_TXQ_ATTR_TXOP]);
+ 	txq_params->cwmin = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMIN]);
+ 	txq_params->cwmax = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMAX]);
+ 	txq_params->aifs = nla_get_u8(tb[NL80211_TXQ_ATTR_AIFS]);
  
--	return vmcs_field_to_offset_table[field];
-+	field = array_index_nospec(field, size);
-+	offset = vmcs_field_to_offset_table[field];
-+	if (offset == 0)
-+		return -ENOENT;
-+	return offset;
+-	if (txq_params->ac >= NL80211_NUM_ACS)
++	if (ac >= NL80211_NUM_ACS)
+ 		return -EINVAL;
+-
++	txq_params->ac = array_index_nospec(ac, NL80211_NUM_ACS);
+ 	return 0;
  }
  
- static inline struct vmcs12 *get_vmcs12(struct kvm_vcpu *vcpu)
