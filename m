@@ -1,78 +1,32 @@
-Date: Wed, 31 Jan 2018 15:21:38 +0100
-From: Greg KH <gregkh@linuxfoundation.org>
-Subject: Re: [PATCH v5 02/12] array_idx: sanitize speculative array
- de-references
-Message-ID: <20180131142138.GA9233@kroah.com>
-References: <151703972396.26578.7326612698912543866.stgit@dwillia2-desk3.amr.corp.intel.com>
- <20180128085500.djlm5rlbhjlpfj4i@gmail.com>
- <CAPcyv4jTaskPT1qXhdCO2mWVkcaMDMBq12vUJ_hSfjOU49qvgQ@mail.gmail.com>
- <alpine.DEB.2.20.1801281931180.2126@nanos>
- <CAPcyv4hSZ7=+076s+fmJ0HQ293H4X8829-LTrbvd8ZqJygGV6A@mail.gmail.com>
- <CA+55aFxLEL+8YA4MYkeyeUH7K8rZwBmGe6Z9V8QS=TYCREWDTQ@mail.gmail.com>
- <CAPcyv4jTbH6As_SC2Po8j5mB6jKLcwMr3Yn=19aTN2yMgBR=iw@mail.gmail.com>
- <0575AF4FD06DD142AD198903C74E1CC87A6048F5@ORSMSX103.amr.corp.intel.com>
- <20180131080310.ebqtxe5p7j54wglj@gmail.com>
- <0575AF4FD06DD142AD198903C74E1CC87A605256@ORSMSX103.amr.corp.intel.com>
+Date: Wed, 31 Jan 2018 16:42:05 +0100 (CET)
+From: Thomas Gleixner <tglx@linutronix.de>
+Subject: Re: [PATCH v6 11/13] kvm, x86: update spectre-v1 mitigation
+In-Reply-To: <376a8a99-db4f-09ec-7c1b-a35ced6209c5@redhat.com>
+Message-ID: <alpine.DEB.2.21.1801311641420.9911@nanos.tec.linutronix.de>
+References: <151727412964.33451.17213780323040673404.stgit@dwillia2-desk3.amr.corp.intel.com> <151727419015.33451.13762926723789552997.stgit@dwillia2-desk3.amr.corp.intel.com> <CAPcyv4ihnC+ALbvqUWOOZ9zwBv7iy+2pBjLn9ed_duo9Z4TGKQ@mail.gmail.com>
+ <alpine.DEB.2.20.1801310902180.2293@nanos> <376a8a99-db4f-09ec-7c1b-a35ced6209c5@redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <0575AF4FD06DD142AD198903C74E1CC87A605256@ORSMSX103.amr.corp.intel.com>
-To: "Van De Ven, Arjan" <arjan.van.de.ven@intel.com>
-Cc: Ingo Molnar <mingo@kernel.org>, "Williams, Dan J" <dan.j.williams@intel.com>, Linus Torvalds <torvalds@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>, linux-arch <linux-arch@vger.kernel.org>, Cyril Novikov <cnovikov@lynx.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, X86 ML <x86@kernel.org>, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Alan Cox <alan@linux.intel.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+Content-Type: text/plain; charset=US-ASCII
+To: Paolo Bonzini <pbonzini@redhat.com>
+Cc: Dan Williams <dan.j.williams@intel.com>, Ingo Molnar <mingo@kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Honig <ahonig@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Greg KH <gregkh@linuxfoundation.org>, Alan Cox <alan@linux.intel.com>, Linus Torvalds <torvalds@linux-foundation.org>, Jim Mattson <jmattson@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 31, 2018 at 02:13:45PM +0000, Van De Ven, Arjan wrote:
-> > > short term there was some extremely rudimentary static analysis done. clearly
-> > > that has extreme limitations both in insane rate of false positives, and missing
-> > > cases.
-> > 
-> > What was the output roughly, how many suspect places that need
-> > array_idx_nospec()
-> > handling: a few, a few dozen, a few hundred or a few thousand?
-> > 
-> > I'm guessing 'static tool emitted hundreds of sites with many false positives
-> > included, but the real sites are probably a few dozen' - but that's really just a
-> > very, very wild guess.
+On Wed, 31 Jan 2018, Paolo Bonzini wrote:
+
+> On 31/01/2018 03:07, Thomas Gleixner wrote:
+> >> Hi Thomas,
+> >>
+> >> I notice this one missing from -tip, I suspect because of the
+> >> collision with the raw 'lfence' that is in current mainline? No
+> >> worries, I'll send a rebased fixup to Paolo directly once
+> >> array_idx_nospec() goes upstream.
 > 
-> your guess is pretty accurate; we ended up with some 15 or so places
-> (the first patch kit Dan mailed out)
+> Fine by me.  Also, now that x86/pti has been rebased, a version that
+> replaces the lfence with array_idx_nospec() would apply to both tip and
+> 4.14.
 
-But in looking at that first patch set, I don't see many, if any, that
-could be solved with your proposal of copy_from_user_struct().  The two
-networking patches couldn't, the scsi one was just bizarre (seriously,
-you had to trust the input from the hardware, if not, there's worse
-things happening), and the networking drivers were dealing with other
-data streams I think.
+I'm happy to take it.
 
-So while I love the idea of copy_from_user_struct(), I don't see it as
-any type of "this will solve the issues we are trying to address here"
-solution :(
+Thanks,
 
-I've been emailing the Coverity people recently about this, and they
-say they are close to having a ruleset/test that can identify this data
-pattern better than the original tool that Intel and others came up
-with.  But as I haven't seen the output of it yet, I have no idea if
-that's true or not.  Hopefully they will release it in a few days so we
-can get an idea of if this is even going to be possible to automatically
-scan for at all with their tool.
-
-Other than Coverity, I don't know of any other tool that is trying to
-even identify this pattern :(
-
-> > Also, IMHO any tooling should very much be open source: this isn't the kind of
-> > bug
-> > that can be identified via code review, so there's no fall-back detection method
-> > like we have for buffer overflows.
-> 
-> we absolutely need some good open source tooling; my personal
-> preference will be a compiler plugin; that way you can use all the
-> fancy logic inside the compilers for analysis, and you can make a "I
-> don't care just fix it" option in addition to flagging for human
-> inspection as the kernel would.
-
-I thought gcc plugins were going to enable this type of analysis, or
-maybe clang plugins, but I have yet to hear of anyone working on this.
-
-thanks,
-
-greg k-h
+	tglx
