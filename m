@@ -1,43 +1,101 @@
-Date: Wed, 31 Jan 2018 09:07:10 +0100 (CET)
-From: Thomas Gleixner <tglx@linutronix.de>
-Subject: Re: [PATCH v6 11/13] kvm, x86: update spectre-v1 mitigation
-In-Reply-To: <CAPcyv4ihnC+ALbvqUWOOZ9zwBv7iy+2pBjLn9ed_duo9Z4TGKQ@mail.gmail.com>
-Message-ID: <alpine.DEB.2.20.1801310902180.2293@nanos>
-References: <151727412964.33451.17213780323040673404.stgit@dwillia2-desk3.amr.corp.intel.com> <151727419015.33451.13762926723789552997.stgit@dwillia2-desk3.amr.corp.intel.com> <CAPcyv4ihnC+ALbvqUWOOZ9zwBv7iy+2pBjLn9ed_duo9Z4TGKQ@mail.gmail.com>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Wed, 31 Jan 2018 09:07:15 +0100
+From: Ingo Molnar <mingo@kernel.org>
+Subject: Re: [PATCH v5 12/12] x86/spectre: report get_user mitigation for
+ spectre_v1
+Message-ID: <20180131080714.svyq34reb7d2pwmf@gmail.com>
+References: <151703971300.26578.1185595719337719486.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151703977742.26578.8362387033092864423.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <20180128095027.hqrcpnholsvukdzd@gmail.com>
+ <CAPcyv4gA5eBYGsb+5WGcCnyB-8MB6qeO9Sw6aZNvaBCtb7OK1w@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAPcyv4gA5eBYGsb+5WGcCnyB-8MB6qeO9Sw6aZNvaBCtb7OK1w@mail.gmail.com>
 To: Dan Williams <dan.j.williams@intel.com>
-Cc: Ingo Molnar <mingo@kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Honig <ahonig@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Greg KH <gregkh@linuxfoundation.org>, Paolo Bonzini <pbonzini@redhat.com>, Alan Cox <alan@linux.intel.com>, Linus Torvalds <torvalds@linux-foundation.org>, Jim Mattson <jmattson@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, X86 ML <x86@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Jiri Slaby <jslaby@suse.cz>, Alan Cox <alan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 30 Jan 2018, Dan Williams wrote:
 
-> On Mon, Jan 29, 2018 at 5:03 PM, Dan Williams <dan.j.williams@intel.com> wrote:
-> > Commit 75f139aaf896 "KVM: x86: Add memory barrier on vmcs field lookup"
-> > added a raw 'asm("lfence");' to prevent a bounds check bypass of
-> > 'vmcs_field_to_offset_table'. We can save an lfence in this path and
-> > just use the common array_index_nospec() helper designed for these types
-> > of fixes.
+* Dan Williams <dan.j.williams@intel.com> wrote:
+
+> On Sun, Jan 28, 2018 at 1:50 AM, Ingo Molnar <mingo@kernel.org> wrote:
 > >
-> > Cc: Andrew Honig <ahonig@google.com>
-> > Cc: Jim Mattson <jmattson@google.com>
-> > Acked-by: Paolo Bonzini <pbonzini@redhat.com>
-> > Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+> > * Dan Williams <dan.j.williams@intel.com> wrote:
+> >
+> >> Reflect the presence of 'get_user', '__get_user', and 'syscall'
+> >> protections in sysfs. Keep the "Vulnerable" distinction given the
+> >> expectation that the places that have been identified for 'array_idx'
+> >> usage are likely incomplete.
+> >
+> > (The style problems/inconsistencies of the previous patches are repeated here too,
+> > please fix.)
+> >
+> >>
+> >> Cc: Thomas Gleixner <tglx@linutronix.de>
+> >> Cc: Ingo Molnar <mingo@redhat.com>
+> >> Cc: "H. Peter Anvin" <hpa@zytor.com>
+> >> Cc: x86@kernel.org
+> >> Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> >> Reported-by: Jiri Slaby <jslaby@suse.cz>
+> >> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+> >> ---
+> >>  arch/x86/kernel/cpu/bugs.c |    2 +-
+> >>  1 file changed, 1 insertion(+), 1 deletion(-)
+> >>
+> >> diff --git a/arch/x86/kernel/cpu/bugs.c b/arch/x86/kernel/cpu/bugs.c
+> >> index 390b3dc3d438..01d5ba48f745 100644
+> >> --- a/arch/x86/kernel/cpu/bugs.c
+> >> +++ b/arch/x86/kernel/cpu/bugs.c
+> >> @@ -269,7 +269,7 @@ ssize_t cpu_show_spectre_v1(struct device *dev,
+> >>  {
+> >>       if (!boot_cpu_has_bug(X86_BUG_SPECTRE_V1))
+> >>               return sprintf(buf, "Not affected\n");
+> >> -     return sprintf(buf, "Vulnerable\n");
+> >> +     return sprintf(buf, "Vulnerable: Minimal user pointer sanitization\n");
+> >
+> > Btw., I think this string is still somewhat passive-aggressive towards users, as
+> > it doesn't really give them any idea about what is missing from their system so
+> > that they can turn it into not vulnerable.
+> >
+> > What else is missing that would turn this into a "Mitigated" entry?
 > 
+> Part of the problem is that there are different sub-classes of Spectre
+> variant1 vulnerabilities. For example, speculating on the value of a
+> user pointer returned from get_user() is mitigated by these kernel
+> changes. However, cleaning up occasions where the CPU might speculate
+> on the validity of a user-controlled pointer offset, or
+> user-controlled array index is only covered by manual inspection of
+> some noisy / incomplete tooling results. I.e. the handful of
+> array_index_nospec() usages in this series is likely incomplete.
 > 
-> Hi Thomas,
+> The usage of barrier_nospec() in __get_user() and open coded
+> array_index_nospec() in get_user() does raise the bar and mitigates an
+> entire class of problems. Perhaps it would be reasonable to have
+> cpu_show_spectre_v1() emit:
 > 
-> I notice this one missing from -tip, I suspect because of the
-> collision with the raw 'lfence' that is in current mainline? No
-> worries, I'll send a rebased fixup to Paolo directly once
-> array_idx_nospec() goes upstream.
+>     "Mitigation: __user pointer sanitization"
 
-It did not apply for that reason and I'm still trying to keep x86/pti as
-clean as it goes to keep GregKHs backporting hell somehow under control.
+Yeah, so I think the ideal approach would be if we emitted _both_ pieces of 
+information:
 
-Sorry, I wanted to reply on that, but then my brain shut down after pushing
-it out.
+     Mitigation: __user pointer sanitization
+     Vulnerable: incomplete array index sanitization
+
+I.e. we inform the user about the mitigation measures that are active, but we also 
+fully inform that we think it's incomplete at this stage.
+
+> ...with the expectation that the kernel community intends to use new
+> and better tooling to find more places to use array_index_nospec().
+> Once there is wider confidence in that tooling, or a compiler that
+> does it automatically, the kernel can emit:
+> 
+>     "Mitigation: automated user input sanitization"
+> 
+> ...or something like that.
+
+Yeah.
 
 Thanks,
 
-	tglx
+	Ingo
