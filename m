@@ -1,31 +1,26 @@
-Subject: Re: [PATCH 3/6] struct page: add field for vm_struct
-References: <20180130151446.24698-1-igor.stoppa@huawei.com>
- <20180130151446.24698-4-igor.stoppa@huawei.com>
- <alpine.DEB.2.20.1801311758340.21272@nuc-kabylake>
- <48fde114-d063-cfbf-e1b6-262411fcd963@huawei.com>
- <CAGXu5jKKeJL13dcaY=fDJ8AiOXDP5MhQTqDYDOt3a374CFA1HQ@mail.gmail.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <938d71a3-323a-1af3-3815-cd5e1b9813c9@huawei.com>
-Date: Fri, 2 Feb 2018 18:01:27 +0200
+Date: Fri, 2 Feb 2018 12:39:20 -0600 (CST)
+From: Christopher Lameter <cl@linux.com>
+Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
+In-Reply-To: <20180126053542.GA30189@bombadil.infradead.org>
+Message-ID: <alpine.DEB.2.20.1802021236510.31548@nuc-kabylake>
+References: <20180124175631.22925-1-igor.stoppa@huawei.com> <20180124175631.22925-5-igor.stoppa@huawei.com> <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com> <20180126053542.GA30189@bombadil.infradead.org>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKKeJL13dcaY=fDJ8AiOXDP5MhQTqDYDOt3a374CFA1HQ@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Christopher Lameter <cl@linux.com>, jglisse@redhat.com, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph Hellwig <hch@infradead.org>, Matthew Wilcox <willy@infradead.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=US-ASCII
+To: Matthew Wilcox <willy@infradead.org>
+Cc: Jann Horn <jannh@google.com>, Igor Stoppa <igor.stoppa@huawei.com>, jglisse@redhat.com, Kees Cook <keescook@chromium.org>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph Hellwig <hch@infradead.org>, linux-security-module@vger.kernel.org, linux-mm@kvack.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Thu, 25 Jan 2018, Matthew Wilcox wrote:
 
+> It's worth having a discussion about whether we want the pmalloc API
+> or whether we want a slab-based API.  We can have a separate discussion
+> about an API to remove pages from the physmap.
 
-On 01/02/18 23:11, Kees Cook wrote:
+We could even do this in a more thorough way. Can we use a ring 1 / 2
+distinction to create a hardened OS core that policies the rest of
+the ever expanding kernel with all its modules and this and that feature?
 
-> IIUC, he means PageHead(), which is also hard to grep for, since it is
-> a constructed name, via Page##uname in include/linux/page-flags.h:
-> 
-> __PAGEFLAG(Head, head, PF_ANY) CLEARPAGEFLAG(Head, head, PF_ANY)
-
-Thank you, I'll try to provide a meaningful reply soon, but I'll be AFK
-during most of next 2 weeks, so it might be delayed :-(
-
---
-igor
+I think that will long term be a better approach and allow more than the
+current hardening approaches can get you. It seems that we are willing to
+tolerate significant performance regressions now. So lets use the
+protection mechanisms that the hardware offers.
