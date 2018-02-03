@@ -1,63 +1,73 @@
-Subject: Re: [PATCH 3/6] struct page: add field for vm_struct
-References: <20180130151446.24698-1-igor.stoppa@huawei.com>
- <20180130151446.24698-4-igor.stoppa@huawei.com>
- <alpine.DEB.2.20.1801311758340.21272@nuc-kabylake>
- <48fde114-d063-cfbf-e1b6-262411fcd963@huawei.com>
- <alpine.DEB.2.20.1802021240370.31548@nuc-kabylake>
 From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <a12afe9b-79cf-d5c1-3795-89fbf61c6c9d@huawei.com>
-Date: Sat, 3 Feb 2018 18:13:58 +0200
+Subject: [RFC PATCH v13 0/6] mm: security: ro protection for dynamic data
+Date: Sat, 3 Feb 2018 21:42:52 +0200
+Message-ID: <20180203194258.28454-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.20.1802021240370.31548@nuc-kabylake>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-To: Christopher Lameter <cl@linux.com>
-Cc: jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, hch@infradead.org, willy@infradead.org, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain
+To: jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, hch@infradead.org, willy@infradead.org
+Cc: cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+This patch-set introduces the possibility of protecting memory that has
+been allocated dynamically.
 
+The memory is managed in pools: when a memory pool is turned into R/O,
+all the memory that is part of it, will become R/O.
 
-On 02/02/18 20:43, Christopher Lameter wrote:
-> On Thu, 1 Feb 2018, Igor Stoppa wrote:
-> 
->>> Would it not be better to use compound page allocations here?
+A R/O pool can be destroyed, to recover its memory, but it cannot be
+turned back into R/W mode.
 
-[...]
+This is intentional. This feature is meant for data that doesn't need
+further modifications after initialization.
 
-> Ok its compound_head(). See also the use in the SLAB and SLUB allocator.
-> 
->> During hardened user copy permission check, I need to confirm if the
->> memory range that would be exposed to userspace is a legitimate
->> sub-range of a pmalloc allocation.
-> 
-> If you save the size in the head page struct then you could do that pretty
-> fast.
+However the data might need to be released, for example as part of module
+unloading.
+To do this, the memory must first be freed, then the pool can be destroyed.
 
-Ok, now I get what you mean.
-But it doesn't seem to fit the intended use case, for other reasons
-(maybe the same, from 2 different POV):
+An example is provided, in the form of self-testing.
 
-- compound pages are aggregates of regular pages, in numbers that are
-powers of 2, while the amount of pages to allocate is not known upfront.
-One *could* give a hint to pmalloc about how many pages to allocate
-every time there is a need to grow the pool.
-Iow it would be the size of a chunk. But I'm afraid the granularity
-would still be pretty low, so maybe it would be 2-4 times less.
+Changes since v12
+[https://lkml.org/lkml/2018/1/30/397]
 
-- the property of the compound page will affect the property of all the
-pages in the compound, so when one is write protected, it can generate a
-lot of wasted memory, if there is too much slack (because of the order)
-With vmalloc, I can allocate any number of pages, minimizing the waste.
+- fixed Kconfig dependency for pmalloc-test
+- fixed warning for size_t treated as %ul on i386
+- moved to SPDX license reference
+- rewrote pmalloc docs
 
+Igor Stoppa (6):
+  genalloc: track beginning of allocations
+  genalloc: selftest
+  struct page: add field for vm_struct
+  Protectable Memory
+  Pmalloc: self-test
+  Documentation for Pmalloc
 
-Finally, there was a discussion about optimization:
-http://www.openwall.com/lists/kernel-hardening/2017/08/07/2
+ Documentation/core-api/pmalloc.rst | 114 ++++++++
+ include/linux/genalloc-selftest.h  |  30 +++
+ include/linux/genalloc.h           |   7 +-
+ include/linux/mm_types.h           |   1 +
+ include/linux/pmalloc.h            | 211 +++++++++++++++
+ include/linux/vmalloc.h            |   1 +
+ init/main.c                        |   2 +
+ lib/Kconfig                        |  15 ++
+ lib/Makefile                       |   1 +
+ lib/genalloc-selftest.c            | 402 +++++++++++++++++++++++++++++
+ lib/genalloc.c                     | 444 ++++++++++++++++++++++----------
+ mm/Kconfig                         |   9 +
+ mm/Makefile                        |   2 +
+ mm/pmalloc-selftest.c              |  61 +++++
+ mm/pmalloc-selftest.h              |  26 ++
+ mm/pmalloc.c                       | 514 +++++++++++++++++++++++++++++++++++++
+ mm/usercopy.c                      |  25 +-
+ mm/vmalloc.c                       |  18 +-
+ 18 files changed, 1742 insertions(+), 141 deletions(-)
+ create mode 100644 Documentation/core-api/pmalloc.rst
+ create mode 100644 include/linux/genalloc-selftest.h
+ create mode 100644 include/linux/pmalloc.h
+ create mode 100644 lib/genalloc-selftest.c
+ create mode 100644 mm/pmalloc-selftest.c
+ create mode 100644 mm/pmalloc-selftest.h
+ create mode 100644 mm/pmalloc.c
 
-The patch I sent does indeed take advantage of the new information, not
-just for pmalloc use.
-
-I have not measured if/where/what there is gain, but it does look like
-the extra info can be exploited also elsewhere.
-
---
-igor
+-- 
+2.9.3
