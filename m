@@ -1,13 +1,13 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.15 35/60] x86: Introduce barrier_nospec
-Date: Mon,  5 Feb 2018 10:23:08 -0800
-Message-Id: <20180205182215.404154263@linuxfoundation.org>
+Subject: [PATCH 4.15 43/60] x86/spectre: Report get_user mitigation for spectre_v1
+Date: Mon,  5 Feb 2018 10:23:16 -0800
+Message-Id: <20180205182215.744093198@linuxfoundation.org>
 In-Reply-To: <20180205182213.902626065@linuxfoundation.org>
 References: <20180205182213.902626065@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andi Kleen <ak@linux.intel.com>, Ingo Molnar <mingo@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, alan@linux.intel.com
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Jiri Slaby <jslaby@suse.cz>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, torvalds@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 4.15-stable review patch.  If anyone has any objections, please let me know.
@@ -16,62 +16,37 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Dan Williams dan.j.williams@intel.com
 
-commit b3d7ad85b80bbc404635dca80f5b129f6242bc7a
+commit edfbae53dab8348fca778531be9f4855d2ca0360
 
-Rename the open coded form of this instruction sequence from
-rdtsc_ordered() into a generic barrier primitive, barrier_nospec().
+Reflect the presence of get_user(), __get_user(), and 'syscall' protections
+in sysfs. The expectation is that new and better tooling will allow the
+kernel to grow more usages of array_index_nospec(), for now, only claim
+mitigation for __user pointer de-references.
 
-One of the mitigations for Spectre variant1 vulnerabilities is to fence
-speculative execution after successfully validating a bounds check. I.e.
-force the result of a bounds check to resolve in the instruction pipeline
-to ensure speculative execution honors that result before potentially
-operating on out-of-bounds data.
-
-No functional changes.
-
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-Suggested-by: Andi Kleen <ak@linux.intel.com>
-Suggested-by: Ingo Molnar <mingo@redhat.com>
+Reported-by: Jiri Slaby <jslaby@suse.cz>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Cc: linux-arch@vger.kernel.org
-Cc: Tom Lendacky <thomas.lendacky@amd.com>
-Cc: Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com
 Cc: gregkh@linuxfoundation.org
-Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: torvalds@linux-foundation.org
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727415361.33451.9049453007262764675.stgit@dwillia2-desk3.amr.corp.intel.com
+Link: https://lkml.kernel.org/r/151727420158.33451.11658324346540434635.stgit@dwillia2-desk3.amr.corp.intel.com
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 
 ---
- arch/x86/include/asm/barrier.h |    4 ++++
- arch/x86/include/asm/msr.h     |    3 +--
- 2 files changed, 5 insertions(+), 2 deletions(-)
+ arch/x86/kernel/cpu/bugs.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
---- a/arch/x86/include/asm/barrier.h
-+++ b/arch/x86/include/asm/barrier.h
-@@ -48,6 +48,10 @@ static inline unsigned long array_index_
- /* Override the default implementation from linux/nospec.h. */
- #define array_index_mask_nospec array_index_mask_nospec
- 
-+/* Prevent speculative execution past this barrier. */
-+#define barrier_nospec() alternative_2("", "mfence", X86_FEATURE_MFENCE_RDTSC, \
-+					   "lfence", X86_FEATURE_LFENCE_RDTSC)
-+
- #ifdef CONFIG_X86_PPRO_FENCE
- #define dma_rmb()	rmb()
- #else
---- a/arch/x86/include/asm/msr.h
-+++ b/arch/x86/include/asm/msr.h
-@@ -214,8 +214,7 @@ static __always_inline unsigned long lon
- 	 * that some other imaginary CPU is updating continuously with a
- 	 * time stamp.
- 	 */
--	alternative_2("", "mfence", X86_FEATURE_MFENCE_RDTSC,
--			  "lfence", X86_FEATURE_LFENCE_RDTSC);
-+	barrier_nospec();
- 	return rdtsc();
+--- a/arch/x86/kernel/cpu/bugs.c
++++ b/arch/x86/kernel/cpu/bugs.c
+@@ -297,7 +297,7 @@ ssize_t cpu_show_spectre_v1(struct devic
+ {
+ 	if (!boot_cpu_has_bug(X86_BUG_SPECTRE_V1))
+ 		return sprintf(buf, "Not affected\n");
+-	return sprintf(buf, "Vulnerable\n");
++	return sprintf(buf, "Mitigation: __user pointer sanitization\n");
  }
  
+ ssize_t cpu_show_spectre_v2(struct device *dev,
