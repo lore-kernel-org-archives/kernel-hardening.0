@@ -1,127 +1,183 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.14 37/64] array_index_nospec: Sanitize speculative array de-references
-Date: Mon,  5 Feb 2018 10:22:56 -0800
-Message-Id: <20180205182140.097335263@linuxfoundation.org>
+Subject: [PATCH 4.14 35/64] x86/asm: Move status from thread_struct to thread_info
+Date: Mon,  5 Feb 2018 10:22:54 -0800
+Message-Id: <20180205182140.021211346@linuxfoundation.org>
 In-Reply-To: <20180205182138.571333346@linuxfoundation.org>
 References: <20180205182138.571333346@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Cyril Novikov <cnovikov@lynx.com>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, torvalds@linux-foundation.org, alan@linux.intel.com
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, Borislav Petkov <bp@alien8.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 4.14-stable review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
-From: Dan Williams dan.j.williams@intel.com
+From: Andy Lutomirski luto@kernel.org
 
-commit f3804203306e098dae9ca51540fcd5eb700d7f40
+commit 37a8f7c38339b22b69876d6f5a0ab851565284e3
 
-array_index_nospec() is proposed as a generic mechanism to mitigate
-against Spectre-variant-1 attacks, i.e. an attack that bypasses boundary
-checks via speculative execution. The array_index_nospec()
-implementation is expected to be safe for current generation CPUs across
-multiple architectures (ARM, x86).
+The TS_COMPAT bit is very hot and is accessed from code paths that mostly
+also touch thread_info::flags.  Move it into struct thread_info to improve
+cache locality.
 
-Based on an original implementation by Linus Torvalds, tweaked to remove
-speculative flows by Alexei Starovoitov, and tweaked again by Linus to
-introduce an x86 assembly implementation for the mask generation.
+The only reason it was in thread_struct is that there was a brief period
+during which arch-specific fields were not allowed in struct thread_info.
 
-Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
-Co-developed-by: Alexei Starovoitov <ast@kernel.org>
-Suggested-by: Cyril Novikov <cnovikov@lynx.com>
-Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+Linus suggested further changing:
+
+  ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
+
+to:
+
+  if (unlikely(ti->status & (TS_COMPAT|TS_I386_REGS_POKED)))
+          ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
+
+on the theory that frequently dirtying the cacheline even in pure 64-bit
+code that never needs to modify status hurts performance.  That could be a
+reasonable followup patch, but I suspect it matters less on top of this
+patch.
+
+Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+Signed-off-by: Andy Lutomirski <luto@kernel.org>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Cc: linux-arch@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com
-Cc: Peter Zijlstra <peterz@infradead.org>
-Cc: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Will Deacon <will.deacon@arm.com>
-Cc: Russell King <linux@armlinux.org.uk>
-Cc: gregkh@linuxfoundation.org
-Cc: torvalds@linux-foundation.org
-Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727414229.33451.18411580953862676575.stgit@dwillia2-desk3.amr.corp.intel.com
+Reviewed-by: Ingo Molnar <mingo@kernel.org>
+Acked-by: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Borislav Petkov <bp@alien8.de>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Link: https://lkml.kernel.org/r/03148bcc1b217100e6e8ecf6a5468c45cf4304b6.1517164461.git.luto@kernel.org
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 
 ---
- include/linux/nospec.h |   72 +++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 72 insertions(+)
+ arch/x86/entry/common.c            |    4 ++--
+ arch/x86/include/asm/processor.h   |    2 --
+ arch/x86/include/asm/syscall.h     |    6 +++---
+ arch/x86/include/asm/thread_info.h |    3 ++-
+ arch/x86/kernel/process_64.c       |    4 ++--
+ arch/x86/kernel/ptrace.c           |    2 +-
+ arch/x86/kernel/signal.c           |    2 +-
+ 7 files changed, 11 insertions(+), 12 deletions(-)
 
---- /dev/null
-+++ b/include/linux/nospec.h
-@@ -0,0 +1,72 @@
-+// SPDX-License-Identifier: GPL-2.0
-+// Copyright(c) 2018 Linus Torvalds. All rights reserved.
-+// Copyright(c) 2018 Alexei Starovoitov. All rights reserved.
-+// Copyright(c) 2018 Intel Corporation. All rights reserved.
-+
-+#ifndef _LINUX_NOSPEC_H
-+#define _LINUX_NOSPEC_H
-+
-+/**
-+ * array_index_mask_nospec() - generate a ~0 mask when index < size, 0 otherwise
-+ * @index: array element index
-+ * @size: number of elements in array
-+ *
-+ * When @index is out of bounds (@index >= @size), the sign bit will be
-+ * set.  Extend the sign bit to all bits and invert, giving a result of
-+ * zero for an out of bounds index, or ~0 if within bounds [0, @size).
-+ */
-+#ifndef array_index_mask_nospec
-+static inline unsigned long array_index_mask_nospec(unsigned long index,
-+						    unsigned long size)
-+{
-+	/*
-+	 * Warn developers about inappropriate array_index_nospec() usage.
-+	 *
-+	 * Even if the CPU speculates past the WARN_ONCE branch, the
-+	 * sign bit of @index is taken into account when generating the
-+	 * mask.
-+	 *
-+	 * This warning is compiled out when the compiler can infer that
-+	 * @index and @size are less than LONG_MAX.
-+	 */
-+	if (WARN_ONCE(index > LONG_MAX || size > LONG_MAX,
-+			"array_index_nospec() limited to range of [0, LONG_MAX]\n"))
-+		return 0;
-+
-+	/*
-+	 * Always calculate and emit the mask even if the compiler
-+	 * thinks the mask is not needed. The compiler does not take
-+	 * into account the value of @index under speculation.
-+	 */
-+	OPTIMIZER_HIDE_VAR(index);
-+	return ~(long)(index | (size - 1UL - index)) >> (BITS_PER_LONG - 1);
-+}
-+#endif
-+
-+/*
-+ * array_index_nospec - sanitize an array index after a bounds check
-+ *
-+ * For a code sequence like:
-+ *
-+ *     if (index < size) {
-+ *         index = array_index_nospec(index, size);
-+ *         val = array[index];
-+ *     }
-+ *
-+ * ...if the CPU speculates past the bounds check then
-+ * array_index_nospec() will clamp the index within the range of [0,
-+ * size).
-+ */
-+#define array_index_nospec(index, size)					\
-+({									\
-+	typeof(index) _i = (index);					\
-+	typeof(size) _s = (size);					\
-+	unsigned long _mask = array_index_mask_nospec(_i, _s);		\
-+									\
-+	BUILD_BUG_ON(sizeof(_i) > sizeof(long));			\
-+	BUILD_BUG_ON(sizeof(_s) > sizeof(long));			\
-+									\
-+	_i &= _mask;							\
-+	_i;								\
-+})
-+#endif /* _LINUX_NOSPEC_H */
+--- a/arch/x86/entry/common.c
++++ b/arch/x86/entry/common.c
+@@ -208,7 +208,7 @@ __visible inline void prepare_exit_to_us
+ 	 * special case only applies after poking regs and before the
+ 	 * very next return to user mode.
+ 	 */
+-	current->thread.status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
++	ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
+ #endif
+ 
+ 	user_enter_irqoff();
+@@ -306,7 +306,7 @@ static __always_inline void do_syscall_3
+ 	unsigned int nr = (unsigned int)regs->orig_ax;
+ 
+ #ifdef CONFIG_IA32_EMULATION
+-	current->thread.status |= TS_COMPAT;
++	ti->status |= TS_COMPAT;
+ #endif
+ 
+ 	if (READ_ONCE(ti->flags) & _TIF_WORK_SYSCALL_ENTRY) {
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -459,8 +459,6 @@ struct thread_struct {
+ 	unsigned short		gsindex;
+ #endif
+ 
+-	u32			status;		/* thread synchronous flags */
+-
+ #ifdef CONFIG_X86_64
+ 	unsigned long		fsbase;
+ 	unsigned long		gsbase;
+--- a/arch/x86/include/asm/syscall.h
++++ b/arch/x86/include/asm/syscall.h
+@@ -60,7 +60,7 @@ static inline long syscall_get_error(str
+ 	 * TS_COMPAT is set for 32-bit syscall entries and then
+ 	 * remains set until we return to user mode.
+ 	 */
+-	if (task->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
++	if (task->thread_info.status & (TS_COMPAT|TS_I386_REGS_POKED))
+ 		/*
+ 		 * Sign-extend the value so (int)-EFOO becomes (long)-EFOO
+ 		 * and will match correctly in comparisons.
+@@ -116,7 +116,7 @@ static inline void syscall_get_arguments
+ 					 unsigned long *args)
+ {
+ # ifdef CONFIG_IA32_EMULATION
+-	if (task->thread.status & TS_COMPAT)
++	if (task->thread_info.status & TS_COMPAT)
+ 		switch (i) {
+ 		case 0:
+ 			if (!n--) break;
+@@ -177,7 +177,7 @@ static inline void syscall_set_arguments
+ 					 const unsigned long *args)
+ {
+ # ifdef CONFIG_IA32_EMULATION
+-	if (task->thread.status & TS_COMPAT)
++	if (task->thread_info.status & TS_COMPAT)
+ 		switch (i) {
+ 		case 0:
+ 			if (!n--) break;
+--- a/arch/x86/include/asm/thread_info.h
++++ b/arch/x86/include/asm/thread_info.h
+@@ -55,6 +55,7 @@ struct task_struct;
+ 
+ struct thread_info {
+ 	unsigned long		flags;		/* low level flags */
++	u32			status;		/* thread synchronous flags */
+ };
+ 
+ #define INIT_THREAD_INFO(tsk)			\
+@@ -221,7 +222,7 @@ static inline int arch_within_stack_fram
+ #define in_ia32_syscall() true
+ #else
+ #define in_ia32_syscall() (IS_ENABLED(CONFIG_IA32_EMULATION) && \
+-			   current->thread.status & TS_COMPAT)
++			   current_thread_info()->status & TS_COMPAT)
+ #endif
+ 
+ /*
+--- a/arch/x86/kernel/process_64.c
++++ b/arch/x86/kernel/process_64.c
+@@ -557,7 +557,7 @@ static void __set_personality_x32(void)
+ 	 * Pretend to come from a x32 execve.
+ 	 */
+ 	task_pt_regs(current)->orig_ax = __NR_x32_execve | __X32_SYSCALL_BIT;
+-	current->thread.status &= ~TS_COMPAT;
++	current_thread_info()->status &= ~TS_COMPAT;
+ #endif
+ }
+ 
+@@ -571,7 +571,7 @@ static void __set_personality_ia32(void)
+ 	current->personality |= force_personality32;
+ 	/* Prepare the first "return" to user space */
+ 	task_pt_regs(current)->orig_ax = __NR_ia32_execve;
+-	current->thread.status |= TS_COMPAT;
++	current_thread_info()->status |= TS_COMPAT;
+ #endif
+ }
+ 
+--- a/arch/x86/kernel/ptrace.c
++++ b/arch/x86/kernel/ptrace.c
+@@ -935,7 +935,7 @@ static int putreg32(struct task_struct *
+ 		 */
+ 		regs->orig_ax = value;
+ 		if (syscall_get_nr(child, regs) >= 0)
+-			child->thread.status |= TS_I386_REGS_POKED;
++			child->thread_info.status |= TS_I386_REGS_POKED;
+ 		break;
+ 
+ 	case offsetof(struct user32, regs.eflags):
+--- a/arch/x86/kernel/signal.c
++++ b/arch/x86/kernel/signal.c
+@@ -787,7 +787,7 @@ static inline unsigned long get_nr_resta
+ 	 * than the tracee.
+ 	 */
+ #ifdef CONFIG_IA32_EMULATION
+-	if (current->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
++	if (current_thread_info()->status & (TS_COMPAT|TS_I386_REGS_POKED))
+ 		return __NR_ia32_restart_syscall;
+ #endif
+ #ifdef CONFIG_X86_X32_ABI
