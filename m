@@ -1,183 +1,65 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.14 35/64] x86/asm: Move status from thread_struct to thread_info
-Date: Mon,  5 Feb 2018 10:22:54 -0800
-Message-Id: <20180205182140.021211346@linuxfoundation.org>
+Subject: [PATCH 4.14 45/64] vfs, fdtable: Prevent bounds-check bypass via speculative execution
+Date: Mon,  5 Feb 2018 10:23:04 -0800
+Message-Id: <20180205182140.422732097@linuxfoundation.org>
 In-Reply-To: <20180205182138.571333346@linuxfoundation.org>
 References: <20180205182138.571333346@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, Borislav Petkov <bp@alien8.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, torvalds@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 4.14-stable review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
-From: Andy Lutomirski luto@kernel.org
+From: Dan Williams dan.j.williams@intel.com
 
-commit 37a8f7c38339b22b69876d6f5a0ab851565284e3
+commit 56c30ba7b348b90484969054d561f711ba196507
 
-The TS_COMPAT bit is very hot and is accessed from code paths that mostly
-also touch thread_info::flags.  Move it into struct thread_info to improve
-cache locality.
+'fd' is a user controlled value that is used as a data dependency to
+read from the 'fdt->fd' array.  In order to avoid potential leaks of
+kernel memory values, block speculative execution of the instruction
+stream that could issue reads based on an invalid 'file *' returned from
+__fcheck_files.
 
-The only reason it was in thread_struct is that there was a brief period
-during which arch-specific fields were not allowed in struct thread_info.
-
-Linus suggested further changing:
-
-  ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-
-to:
-
-  if (unlikely(ti->status & (TS_COMPAT|TS_I386_REGS_POKED)))
-          ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-
-on the theory that frequently dirtying the cacheline even in pure 64-bit
-code that never needs to modify status hurts performance.  That could be a
-reasonable followup patch, but I suspect it matters less on top of this
-patch.
-
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-Signed-off-by: Andy Lutomirski <luto@kernel.org>
+Co-developed-by: Elena Reshetova <elena.reshetova@intel.com>
+Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Reviewed-by: Ingo Molnar <mingo@kernel.org>
-Acked-by: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Borislav Petkov <bp@alien8.de>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
-Link: https://lkml.kernel.org/r/03148bcc1b217100e6e8ecf6a5468c45cf4304b6.1517164461.git.luto@kernel.org
+Cc: linux-arch@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com
+Cc: gregkh@linuxfoundation.org
+Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: torvalds@linux-foundation.org
+Cc: alan@linux.intel.com
+Link: https://lkml.kernel.org/r/151727418500.33451.17392199002892248656.stgit@dwillia2-desk3.amr.corp.intel.com
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 
 ---
- arch/x86/entry/common.c            |    4 ++--
- arch/x86/include/asm/processor.h   |    2 --
- arch/x86/include/asm/syscall.h     |    6 +++---
- arch/x86/include/asm/thread_info.h |    3 ++-
- arch/x86/kernel/process_64.c       |    4 ++--
- arch/x86/kernel/ptrace.c           |    2 +-
- arch/x86/kernel/signal.c           |    2 +-
- 7 files changed, 11 insertions(+), 12 deletions(-)
+ include/linux/fdtable.h |    5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
 
---- a/arch/x86/entry/common.c
-+++ b/arch/x86/entry/common.c
-@@ -208,7 +208,7 @@ __visible inline void prepare_exit_to_us
- 	 * special case only applies after poking regs and before the
- 	 * very next return to user mode.
- 	 */
--	current->thread.status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-+	ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
- #endif
- 
- 	user_enter_irqoff();
-@@ -306,7 +306,7 @@ static __always_inline void do_syscall_3
- 	unsigned int nr = (unsigned int)regs->orig_ax;
- 
- #ifdef CONFIG_IA32_EMULATION
--	current->thread.status |= TS_COMPAT;
-+	ti->status |= TS_COMPAT;
- #endif
- 
- 	if (READ_ONCE(ti->flags) & _TIF_WORK_SYSCALL_ENTRY) {
---- a/arch/x86/include/asm/processor.h
-+++ b/arch/x86/include/asm/processor.h
-@@ -459,8 +459,6 @@ struct thread_struct {
- 	unsigned short		gsindex;
- #endif
- 
--	u32			status;		/* thread synchronous flags */
--
- #ifdef CONFIG_X86_64
- 	unsigned long		fsbase;
- 	unsigned long		gsbase;
---- a/arch/x86/include/asm/syscall.h
-+++ b/arch/x86/include/asm/syscall.h
-@@ -60,7 +60,7 @@ static inline long syscall_get_error(str
- 	 * TS_COMPAT is set for 32-bit syscall entries and then
- 	 * remains set until we return to user mode.
- 	 */
--	if (task->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
-+	if (task->thread_info.status & (TS_COMPAT|TS_I386_REGS_POKED))
- 		/*
- 		 * Sign-extend the value so (int)-EFOO becomes (long)-EFOO
- 		 * and will match correctly in comparisons.
-@@ -116,7 +116,7 @@ static inline void syscall_get_arguments
- 					 unsigned long *args)
+--- a/include/linux/fdtable.h
++++ b/include/linux/fdtable.h
+@@ -10,6 +10,7 @@
+ #include <linux/compiler.h>
+ #include <linux/spinlock.h>
+ #include <linux/rcupdate.h>
++#include <linux/nospec.h>
+ #include <linux/types.h>
+ #include <linux/init.h>
+ #include <linux/fs.h>
+@@ -82,8 +83,10 @@ static inline struct file *__fcheck_file
  {
- # ifdef CONFIG_IA32_EMULATION
--	if (task->thread.status & TS_COMPAT)
-+	if (task->thread_info.status & TS_COMPAT)
- 		switch (i) {
- 		case 0:
- 			if (!n--) break;
-@@ -177,7 +177,7 @@ static inline void syscall_set_arguments
- 					 const unsigned long *args)
- {
- # ifdef CONFIG_IA32_EMULATION
--	if (task->thread.status & TS_COMPAT)
-+	if (task->thread_info.status & TS_COMPAT)
- 		switch (i) {
- 		case 0:
- 			if (!n--) break;
---- a/arch/x86/include/asm/thread_info.h
-+++ b/arch/x86/include/asm/thread_info.h
-@@ -55,6 +55,7 @@ struct task_struct;
+ 	struct fdtable *fdt = rcu_dereference_raw(files->fdt);
  
- struct thread_info {
- 	unsigned long		flags;		/* low level flags */
-+	u32			status;		/* thread synchronous flags */
- };
- 
- #define INIT_THREAD_INFO(tsk)			\
-@@ -221,7 +222,7 @@ static inline int arch_within_stack_fram
- #define in_ia32_syscall() true
- #else
- #define in_ia32_syscall() (IS_ENABLED(CONFIG_IA32_EMULATION) && \
--			   current->thread.status & TS_COMPAT)
-+			   current_thread_info()->status & TS_COMPAT)
- #endif
- 
- /*
---- a/arch/x86/kernel/process_64.c
-+++ b/arch/x86/kernel/process_64.c
-@@ -557,7 +557,7 @@ static void __set_personality_x32(void)
- 	 * Pretend to come from a x32 execve.
- 	 */
- 	task_pt_regs(current)->orig_ax = __NR_x32_execve | __X32_SYSCALL_BIT;
--	current->thread.status &= ~TS_COMPAT;
-+	current_thread_info()->status &= ~TS_COMPAT;
- #endif
+-	if (fd < fdt->max_fds)
++	if (fd < fdt->max_fds) {
++		fd = array_index_nospec(fd, fdt->max_fds);
+ 		return rcu_dereference_raw(fdt->fd[fd]);
++	}
+ 	return NULL;
  }
  
-@@ -571,7 +571,7 @@ static void __set_personality_ia32(void)
- 	current->personality |= force_personality32;
- 	/* Prepare the first "return" to user space */
- 	task_pt_regs(current)->orig_ax = __NR_ia32_execve;
--	current->thread.status |= TS_COMPAT;
-+	current_thread_info()->status |= TS_COMPAT;
- #endif
- }
- 
---- a/arch/x86/kernel/ptrace.c
-+++ b/arch/x86/kernel/ptrace.c
-@@ -935,7 +935,7 @@ static int putreg32(struct task_struct *
- 		 */
- 		regs->orig_ax = value;
- 		if (syscall_get_nr(child, regs) >= 0)
--			child->thread.status |= TS_I386_REGS_POKED;
-+			child->thread_info.status |= TS_I386_REGS_POKED;
- 		break;
- 
- 	case offsetof(struct user32, regs.eflags):
---- a/arch/x86/kernel/signal.c
-+++ b/arch/x86/kernel/signal.c
-@@ -787,7 +787,7 @@ static inline unsigned long get_nr_resta
- 	 * than the tracee.
- 	 */
- #ifdef CONFIG_IA32_EMULATION
--	if (current->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
-+	if (current_thread_info()->status & (TS_COMPAT|TS_I386_REGS_POKED))
- 		return __NR_ia32_restart_syscall;
- #endif
- #ifdef CONFIG_X86_X32_ABI
