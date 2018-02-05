@@ -1,183 +1,135 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.15 31/60] x86/asm: Move status from thread_struct to thread_info
-Date: Mon,  5 Feb 2018 10:23:04 -0800
-Message-Id: <20180205182215.226459184@linuxfoundation.org>
+Subject: [PATCH 4.15 32/60] Documentation: Document array_index_nospec
+Date: Mon,  5 Feb 2018 10:23:05 -0800
+Message-Id: <20180205182215.274202516@linuxfoundation.org>
 In-Reply-To: <20180205182213.902626065@linuxfoundation.org>
 References: <20180205182213.902626065@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, Borislav Petkov <bp@alien8.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Mark Rutland <mark.rutland@arm.com>, Will Deacon <will.deacon@arm.com>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, linux-arch@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, Peter Zijlstra <peterz@infradead.org>, kernel-hardening@lists.openwall.com, torvalds@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 4.15-stable review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
-From: Andy Lutomirski luto@kernel.org
+From: Mark Rutland mark.rutland@arm.com
 
-commit 37a8f7c38339b22b69876d6f5a0ab851565284e3
+commit f84a56f73dddaeac1dba8045b007f742f61cd2da
 
-The TS_COMPAT bit is very hot and is accessed from code paths that mostly
-also touch thread_info::flags.  Move it into struct thread_info to improve
-cache locality.
+Document the rationale and usage of the new array_index_nospec() helper.
 
-The only reason it was in thread_struct is that there was a brief period
-during which arch-specific fields were not allowed in struct thread_info.
-
-Linus suggested further changing:
-
-  ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-
-to:
-
-  if (unlikely(ti->status & (TS_COMPAT|TS_I386_REGS_POKED)))
-          ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-
-on the theory that frequently dirtying the cacheline even in pure 64-bit
-code that never needs to modify status hurts performance.  That could be a
-reasonable followup patch, but I suspect it matters less on top of this
-patch.
-
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-Signed-off-by: Andy Lutomirski <luto@kernel.org>
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Reviewed-by: Ingo Molnar <mingo@kernel.org>
-Acked-by: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Borislav Petkov <bp@alien8.de>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
-Link: https://lkml.kernel.org/r/03148bcc1b217100e6e8ecf6a5468c45cf4304b6.1517164461.git.luto@kernel.org
+Reviewed-by: Kees Cook <keescook@chromium.org>
+Cc: linux-arch@vger.kernel.org
+Cc: Jonathan Corbet <corbet@lwn.net>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: gregkh@linuxfoundation.org
+Cc: kernel-hardening@lists.openwall.com
+Cc: torvalds@linux-foundation.org
+Cc: alan@linux.intel.com
+Link: https://lkml.kernel.org/r/151727413645.33451.15878817161436755393.stgit@dwillia2-desk3.amr.corp.intel.com
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 
 ---
- arch/x86/entry/common.c            |    4 ++--
- arch/x86/include/asm/processor.h   |    2 --
- arch/x86/include/asm/syscall.h     |    6 +++---
- arch/x86/include/asm/thread_info.h |    3 ++-
- arch/x86/kernel/process_64.c       |    4 ++--
- arch/x86/kernel/ptrace.c           |    2 +-
- arch/x86/kernel/signal.c           |    2 +-
- 7 files changed, 11 insertions(+), 12 deletions(-)
+ Documentation/speculation.txt |   90 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 90 insertions(+)
 
---- a/arch/x86/entry/common.c
-+++ b/arch/x86/entry/common.c
-@@ -206,7 +206,7 @@ __visible inline void prepare_exit_to_us
- 	 * special case only applies after poking regs and before the
- 	 * very next return to user mode.
- 	 */
--	current->thread.status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-+	ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
- #endif
- 
- 	user_enter_irqoff();
-@@ -304,7 +304,7 @@ static __always_inline void do_syscall_3
- 	unsigned int nr = (unsigned int)regs->orig_ax;
- 
- #ifdef CONFIG_IA32_EMULATION
--	current->thread.status |= TS_COMPAT;
-+	ti->status |= TS_COMPAT;
- #endif
- 
- 	if (READ_ONCE(ti->flags) & _TIF_WORK_SYSCALL_ENTRY) {
---- a/arch/x86/include/asm/processor.h
-+++ b/arch/x86/include/asm/processor.h
-@@ -460,8 +460,6 @@ struct thread_struct {
- 	unsigned short		gsindex;
- #endif
- 
--	u32			status;		/* thread synchronous flags */
--
- #ifdef CONFIG_X86_64
- 	unsigned long		fsbase;
- 	unsigned long		gsbase;
---- a/arch/x86/include/asm/syscall.h
-+++ b/arch/x86/include/asm/syscall.h
-@@ -60,7 +60,7 @@ static inline long syscall_get_error(str
- 	 * TS_COMPAT is set for 32-bit syscall entries and then
- 	 * remains set until we return to user mode.
- 	 */
--	if (task->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
-+	if (task->thread_info.status & (TS_COMPAT|TS_I386_REGS_POKED))
- 		/*
- 		 * Sign-extend the value so (int)-EFOO becomes (long)-EFOO
- 		 * and will match correctly in comparisons.
-@@ -116,7 +116,7 @@ static inline void syscall_get_arguments
- 					 unsigned long *args)
- {
- # ifdef CONFIG_IA32_EMULATION
--	if (task->thread.status & TS_COMPAT)
-+	if (task->thread_info.status & TS_COMPAT)
- 		switch (i) {
- 		case 0:
- 			if (!n--) break;
-@@ -177,7 +177,7 @@ static inline void syscall_set_arguments
- 					 const unsigned long *args)
- {
- # ifdef CONFIG_IA32_EMULATION
--	if (task->thread.status & TS_COMPAT)
-+	if (task->thread_info.status & TS_COMPAT)
- 		switch (i) {
- 		case 0:
- 			if (!n--) break;
---- a/arch/x86/include/asm/thread_info.h
-+++ b/arch/x86/include/asm/thread_info.h
-@@ -55,6 +55,7 @@ struct task_struct;
- 
- struct thread_info {
- 	unsigned long		flags;		/* low level flags */
-+	u32			status;		/* thread synchronous flags */
- };
- 
- #define INIT_THREAD_INFO(tsk)			\
-@@ -221,7 +222,7 @@ static inline int arch_within_stack_fram
- #define in_ia32_syscall() true
- #else
- #define in_ia32_syscall() (IS_ENABLED(CONFIG_IA32_EMULATION) && \
--			   current->thread.status & TS_COMPAT)
-+			   current_thread_info()->status & TS_COMPAT)
- #endif
- 
- /*
---- a/arch/x86/kernel/process_64.c
-+++ b/arch/x86/kernel/process_64.c
-@@ -557,7 +557,7 @@ static void __set_personality_x32(void)
- 	 * Pretend to come from a x32 execve.
- 	 */
- 	task_pt_regs(current)->orig_ax = __NR_x32_execve | __X32_SYSCALL_BIT;
--	current->thread.status &= ~TS_COMPAT;
-+	current_thread_info()->status &= ~TS_COMPAT;
- #endif
- }
- 
-@@ -571,7 +571,7 @@ static void __set_personality_ia32(void)
- 	current->personality |= force_personality32;
- 	/* Prepare the first "return" to user space */
- 	task_pt_regs(current)->orig_ax = __NR_ia32_execve;
--	current->thread.status |= TS_COMPAT;
-+	current_thread_info()->status |= TS_COMPAT;
- #endif
- }
- 
---- a/arch/x86/kernel/ptrace.c
-+++ b/arch/x86/kernel/ptrace.c
-@@ -935,7 +935,7 @@ static int putreg32(struct task_struct *
- 		 */
- 		regs->orig_ax = value;
- 		if (syscall_get_nr(child, regs) >= 0)
--			child->thread.status |= TS_I386_REGS_POKED;
-+			child->thread_info.status |= TS_I386_REGS_POKED;
- 		break;
- 
- 	case offsetof(struct user32, regs.eflags):
---- a/arch/x86/kernel/signal.c
-+++ b/arch/x86/kernel/signal.c
-@@ -787,7 +787,7 @@ static inline unsigned long get_nr_resta
- 	 * than the tracee.
- 	 */
- #ifdef CONFIG_IA32_EMULATION
--	if (current->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
-+	if (current_thread_info()->status & (TS_COMPAT|TS_I386_REGS_POKED))
- 		return __NR_ia32_restart_syscall;
- #endif
- #ifdef CONFIG_X86_X32_ABI
+--- /dev/null
++++ b/Documentation/speculation.txt
+@@ -0,0 +1,90 @@
++This document explains potential effects of speculation, and how undesirable
++effects can be mitigated portably using common APIs.
++
++===========
++Speculation
++===========
++
++To improve performance and minimize average latencies, many contemporary CPUs
++employ speculative execution techniques such as branch prediction, performing
++work which may be discarded at a later stage.
++
++Typically speculative execution cannot be observed from architectural state,
++such as the contents of registers. However, in some cases it is possible to
++observe its impact on microarchitectural state, such as the presence or
++absence of data in caches. Such state may form side-channels which can be
++observed to extract secret information.
++
++For example, in the presence of branch prediction, it is possible for bounds
++checks to be ignored by code which is speculatively executed. Consider the
++following code:
++
++	int load_array(int *array, unsigned int index)
++	{
++		if (index >= MAX_ARRAY_ELEMS)
++			return 0;
++		else
++			return array[index];
++	}
++
++Which, on arm64, may be compiled to an assembly sequence such as:
++
++	CMP	<index>, #MAX_ARRAY_ELEMS
++	B.LT	less
++	MOV	<returnval>, #0
++	RET
++  less:
++	LDR	<returnval>, [<array>, <index>]
++	RET
++
++It is possible that a CPU mis-predicts the conditional branch, and
++speculatively loads array[index], even if index >= MAX_ARRAY_ELEMS. This
++value will subsequently be discarded, but the speculated load may affect
++microarchitectural state which can be subsequently measured.
++
++More complex sequences involving multiple dependent memory accesses may
++result in sensitive information being leaked. Consider the following
++code, building on the prior example:
++
++	int load_dependent_arrays(int *arr1, int *arr2, int index)
++	{
++		int val1, val2,
++
++		val1 = load_array(arr1, index);
++		val2 = load_array(arr2, val1);
++
++		return val2;
++	}
++
++Under speculation, the first call to load_array() may return the value
++of an out-of-bounds address, while the second call will influence
++microarchitectural state dependent on this value. This may provide an
++arbitrary read primitive.
++
++====================================
++Mitigating speculation side-channels
++====================================
++
++The kernel provides a generic API to ensure that bounds checks are
++respected even under speculation. Architectures which are affected by
++speculation-based side-channels are expected to implement these
++primitives.
++
++The array_index_nospec() helper in <linux/nospec.h> can be used to
++prevent information from being leaked via side-channels.
++
++A call to array_index_nospec(index, size) returns a sanitized index
++value that is bounded to [0, size) even under cpu speculation
++conditions.
++
++This can be used to protect the earlier load_array() example:
++
++	int load_array(int *array, unsigned int index)
++	{
++		if (index >= MAX_ARRAY_ELEMS)
++			return 0;
++		else {
++			index = array_index_nospec(index, MAX_ARRAY_ELEMS);
++			return array[index];
++		}
++	}
