@@ -1,54 +1,36 @@
-Date: Tue, 6 Feb 2018 22:51:32 +0000
-From: Luis Henriques <lhenriques@suse.com>
-Subject: Re: [PATCH v4 07/10] x86: narrow out of bounds syscalls to sys_read
- under speculation
-Message-ID: <20180206225132.yewppdrnut35gzrh@hermes.olymp>
+MIME-Version: 1.0
+Sender: linus971@gmail.com
+In-Reply-To: <CAPcyv4hELJQMEBQ_gi+_bh4D=7h47ypzK++XTdQjhDGnOs2uRg@mail.gmail.com>
 References: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
  <151632014097.21271.16980532033566583357.stgit@dwillia2-desk3.amr.corp.intel.com>
- <20180206192925.qkmghwsbaysr4iv2@hermes.olymp>
- <CAPcyv4ihN6fy5-vBtfA0PuwXvCAj8-rMhtQmevh5sdYxbH3Yfw@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAPcyv4ihN6fy5-vBtfA0PuwXvCAj8-rMhtQmevh5sdYxbH3Yfw@mail.gmail.com>
+ <20180206192925.qkmghwsbaysr4iv2@hermes.olymp> <CAPcyv4ihN6fy5-vBtfA0PuwXvCAj8-rMhtQmevh5sdYxbH3Yfw@mail.gmail.com>
+ <CA+55aFxYHX3=HN4P5M0ziSJ08WfjccyhE2T7epS-EC6ZJ6LyjQ@mail.gmail.com>
+ <CAPcyv4i5oORdk-Fzypxw_+gCLUa8f=w1e_n0=47P7uHR-jT6GQ@mail.gmail.com>
+ <CA+55aFzZVL=WVuhJAQDazj59jwnmhUrRRwNgzXS+c-q5yva0iw@mail.gmail.com>
+ <CALCETrXV3rHb7Z8iaoieAJ5hRY0+UT7eTknxe4-FiOoke9XoGg@mail.gmail.com>
+ <CA+55aFy2-OMMCatHTXL7wfP7H=4CEKv4Y_pRvfeEOCwxriDP4Q@mail.gmail.com> <CAPcyv4hELJQMEBQ_gi+_bh4D=7h47ypzK++XTdQjhDGnOs2uRg@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Tue, 6 Feb 2018 14:52:59 -0800
+Message-ID: <CA+55aFxU_vo+JFBZcvE5EOs2D_QHNXBf4G=-KT=3LeP2zjECHw@mail.gmail.com>
+Subject: Re: [PATCH v4 07/10] x86: narrow out of bounds syscalls to sys_read
+ under speculation
+Content-Type: text/plain; charset="UTF-8"
 To: Dan Williams <dan.j.williams@intel.com>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, X86 ML <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Luis Henriques <lhenriques@suse.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, X86 ML <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 06, 2018 at 11:48:45AM -0800, Dan Williams wrote:
-> On Tue, Feb 6, 2018 at 11:29 AM, Luis Henriques <lhenriques@suse.com> wrote:
-> > On Thu, Jan 18, 2018 at 04:02:21PM -0800, Dan Williams wrote:
-> >> The syscall table base is a user controlled function pointer in kernel
-> >> space. Like, 'get_user, use 'MASK_NOSPEC' to prevent any out of bounds
-> >> speculation. While retpoline prevents speculating into the user
-> >> controlled target it does not stop the pointer de-reference, the concern
-> >> is leaking memory relative to the syscall table base.
-> >
-> > This patch seems to cause a regression.  An easy way to reproduce what
-> > I'm seeing is to run the samples/statx/test-statx.  Here's what I see
-> > when I have this patchset applied:
-> >
-> > # ./test-statx /tmp
-> > statx(/tmp) = -1
-> > /tmp: Bad file descriptor
-> >
-> > Reverting this single patch seems to fix it.
-> 
-> Just to clarify, when you say "this patch" you mean:
-> 
->      2fbd7af5af86 x86/syscall: Sanitize syscall table de-references
-> under speculation
-> 
-> ...not this early MASK_NOSPEC version of the patch, right?
+On Tue, Feb 6, 2018 at 1:37 PM, Dan Williams <dan.j.williams@intel.com> wrote:
+>
+> At that point we're basically just back to the array_ptr() version
+> that returned a sanitized pointer to an array element.
 
-*sigh*
+.. that one does an extra unnecessary 'andq' instead of the duplicated
+cmp.  But at least it avoids comparing that 32-bit integer twice, so
+it's probably slightly smaller.
 
-Looks like I spent some good amount of time hunting a non-issue just
-because I have enough old branches hanging around to confusing me :-(
+(And your code generation is without the "r" -> "ir" fix for the size argument)
 
-Sorry for the noise.
+Probably doesn't matter. But a "asm goto" would give you at least
+potentially optimal code.
 
-Cheers,
---
-Luís
+            Linus
