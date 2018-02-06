@@ -1,149 +1,105 @@
-Date: Tue, 6 Feb 2018 13:39:15 +0100
-From: Christoffer Dall <christoffer.dall@linaro.org>
-Subject: Re: [PATCHv2 09/12] arm64/kvm: preserve host HCR_EL2 value
-Message-ID: <20180206123915.GA21802@cbox>
-References: <20171127163806.31435-1-mark.rutland@arm.com>
- <20171127163806.31435-10-mark.rutland@arm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171127163806.31435-10-mark.rutland@arm.com>
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: linux-arm-kernel@lists.infradead.org, arnd@arndb.de, catalin.marinas@arm.com, cdall@linaro.org, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, yao.qi@arm.com, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org
+In-Reply-To: <20180206192925.qkmghwsbaysr4iv2@hermes.olymp>
+References: <151632009605.21271.11304291057104672116.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151632014097.21271.16980532033566583357.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <20180206192925.qkmghwsbaysr4iv2@hermes.olymp>
+From: Dan Williams <dan.j.williams@intel.com>
+Date: Tue, 6 Feb 2018 11:48:45 -0800
+Message-ID: <CAPcyv4ihN6fy5-vBtfA0PuwXvCAj8-rMhtQmevh5sdYxbH3Yfw@mail.gmail.com>
+Subject: Re: [PATCH v4 07/10] x86: narrow out of bounds syscalls to sys_read
+ under speculation
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Luis Henriques <lhenriques@suse.com>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, X86 ML <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, Alan Cox <alan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 27, 2017 at 04:38:03PM +0000, Mark Rutland wrote:
-> When restoring HCR_EL2 for the host, KVM uses HCR_HOST_VHE_FLAGS, which
-> is a constant value. This works today, as the host HCR_EL2 value is
-> always the same, but this will get in the way of supporting extensions
-> that require HCR_EL2 bits to be set conditionally for the host.
-> 
-> To allow such features to work without KVM having to explicitly handle
-> every possible host feature combination, this patch has KVM save/restore
-> the host HCR when switching to/from a guest HCR.
-> 
-> For __{activate,deactivate}_traps(), the HCR save/restore is made common
-> across the !VHE and VHE paths. As the host and guest HCR values must
-> have E2H set when VHE is in use, register redirection should always be
-> in effect at EL2, and this change should not adversely affect the VHE
-> code.
-> 
-> For the hyp TLB maintenance code, __tlb_switch_to_host_vhe() is updated
-> to toggle the TGE bit with a RMW sequence, as we already do in
-> __tlb_switch_to_guest_vhe().
-> 
-> The now unused HCR_HOST_VHE_FLAGS definition is removed.
-> 
-> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-> Reviewed-by: Christoffer Dall <cdall@linaro.org>
-> Cc: Marc Zyngier <marc.zyngier@arm.com>
-> Cc: kvmarm@lists.cs.columbia.edu
-> ---
->  arch/arm64/include/asm/kvm_arm.h  | 1 -
->  arch/arm64/include/asm/kvm_host.h | 5 ++++-
->  arch/arm64/kvm/hyp/switch.c       | 5 +++--
->  arch/arm64/kvm/hyp/tlb.c          | 6 +++++-
->  4 files changed, 12 insertions(+), 5 deletions(-)
-> 
-> diff --git a/arch/arm64/include/asm/kvm_arm.h b/arch/arm64/include/asm/kvm_arm.h
-> index 62854d5d1d3b..aa02b05430e8 100644
-> --- a/arch/arm64/include/asm/kvm_arm.h
-> +++ b/arch/arm64/include/asm/kvm_arm.h
-> @@ -84,7 +84,6 @@
->  			 HCR_AMO | HCR_SWIO | HCR_TIDCP | HCR_RW)
->  #define HCR_VIRT_EXCP_MASK (HCR_VSE | HCR_VI | HCR_VF)
->  #define HCR_INT_OVERRIDE   (HCR_FMO | HCR_IMO)
-> -#define HCR_HOST_VHE_FLAGS (HCR_RW | HCR_TGE | HCR_E2H)
->  
->  /* TCR_EL2 Registers bits */
->  #define TCR_EL2_RES1		((1 << 31) | (1 << 23))
-> diff --git a/arch/arm64/include/asm/kvm_host.h b/arch/arm64/include/asm/kvm_host.h
-> index 674912d7a571..39184aa3e2f2 100644
-> --- a/arch/arm64/include/asm/kvm_host.h
-> +++ b/arch/arm64/include/asm/kvm_host.h
-> @@ -199,10 +199,13 @@ typedef struct kvm_cpu_context kvm_cpu_context_t;
->  struct kvm_vcpu_arch {
->  	struct kvm_cpu_context ctxt;
->  
-> -	/* HYP configuration */
-> +	/* Guest HYP configuration */
->  	u64 hcr_el2;
->  	u32 mdcr_el2;
->  
-> +	/* Host HYP configuration */
-> +	u64 host_hcr_el2;
-> +
->  	/* Exception Information */
->  	struct kvm_vcpu_fault_info fault;
->  
-> diff --git a/arch/arm64/kvm/hyp/switch.c b/arch/arm64/kvm/hyp/switch.c
-> index 525c01f48867..2205f0be3ced 100644
-> --- a/arch/arm64/kvm/hyp/switch.c
-> +++ b/arch/arm64/kvm/hyp/switch.c
-> @@ -71,6 +71,8 @@ static void __hyp_text __activate_traps(struct kvm_vcpu *vcpu)
->  {
->  	u64 val;
->  
-> +	vcpu->arch.host_hcr_el2 = read_sysreg(hcr_el2);
-> +
+On Tue, Feb 6, 2018 at 11:29 AM, Luis Henriques <lhenriques@suse.com> wrote=
+:
+> On Thu, Jan 18, 2018 at 04:02:21PM -0800, Dan Williams wrote:
+>> The syscall table base is a user controlled function pointer in kernel
+>> space. Like, 'get_user, use 'MASK_NOSPEC' to prevent any out of bounds
+>> speculation. While retpoline prevents speculating into the user
+>> controlled target it does not stop the pointer de-reference, the concern
+>> is leaking memory relative to the syscall table base.
+>
+> This patch seems to cause a regression.  An easy way to reproduce what
+> I'm seeing is to run the samples/statx/test-statx.  Here's what I see
+> when I have this patchset applied:
+>
+> # ./test-statx /tmp
+> statx(/tmp) =3D -1
+> /tmp: Bad file descriptor
+>
+> Reverting this single patch seems to fix it.
 
-Looking back at this, it seems excessive to switch this at every
-round-trip.  I think it should be possible to have this as a single
-global (or per-CPU) variable that gets restored directly when returning
-from the VM.
+Just to clarify, when you say "this patch" you mean:
 
-Thanks,
--Christoffer
+     2fbd7af5af86 x86/syscall: Sanitize syscall table de-references
+under speculation
 
->  	/*
->  	 * We are about to set CPTR_EL2.TFP to trap all floating point
->  	 * register accesses to EL2, however, the ARM ARM clearly states that
-> @@ -116,7 +118,6 @@ static void __hyp_text __deactivate_traps_vhe(void)
->  		    MDCR_EL2_TPMS;
->  
->  	write_sysreg(mdcr_el2, mdcr_el2);
-> -	write_sysreg(HCR_HOST_VHE_FLAGS, hcr_el2);
->  	write_sysreg(CPACR_EL1_DEFAULT, cpacr_el1);
->  	write_sysreg(vectors, vbar_el1);
->  }
-> @@ -129,7 +130,6 @@ static void __hyp_text __deactivate_traps_nvhe(void)
->  	mdcr_el2 |= MDCR_EL2_E2PB_MASK << MDCR_EL2_E2PB_SHIFT;
->  
->  	write_sysreg(mdcr_el2, mdcr_el2);
-> -	write_sysreg(HCR_RW, hcr_el2);
->  	write_sysreg(CPTR_EL2_DEFAULT, cptr_el2);
->  }
->  
-> @@ -151,6 +151,7 @@ static void __hyp_text __deactivate_traps(struct kvm_vcpu *vcpu)
->  	__deactivate_traps_arch()();
->  	write_sysreg(0, hstr_el2);
->  	write_sysreg(0, pmuserenr_el0);
-> +	write_sysreg(vcpu->arch.host_hcr_el2, hcr_el2);
->  }
->  
->  static void __hyp_text __activate_vm(struct kvm_vcpu *vcpu)
-> diff --git a/arch/arm64/kvm/hyp/tlb.c b/arch/arm64/kvm/hyp/tlb.c
-> index 73464a96c365..c2b0680efa2c 100644
-> --- a/arch/arm64/kvm/hyp/tlb.c
-> +++ b/arch/arm64/kvm/hyp/tlb.c
-> @@ -49,12 +49,16 @@ static hyp_alternate_select(__tlb_switch_to_guest,
->  
->  static void __hyp_text __tlb_switch_to_host_vhe(struct kvm *kvm)
->  {
-> +	u64 val;
-> +
->  	/*
->  	 * We're done with the TLB operation, let's restore the host's
->  	 * view of HCR_EL2.
->  	 */
->  	write_sysreg(0, vttbr_el2);
-> -	write_sysreg(HCR_HOST_VHE_FLAGS, hcr_el2);
-> +	val = read_sysreg(hcr_el2);
-> +	val |= HCR_TGE;
-> +	write_sysreg(val, hcr_el2);
->  }
->  
->  static void __hyp_text __tlb_switch_to_host_nvhe(struct kvm *kvm)
-> -- 
-> 2.11.0
-> 
+...not this early MASK_NOSPEC version of the patch, right?
+
+>
+> Cheers,
+> --
+> Lu=C3=ADs
+>
+>>
+>> Reported-by: Linus Torvalds <torvalds@linux-foundation.org>
+>> Cc: Thomas Gleixner <tglx@linutronix.de>
+>> Cc: Ingo Molnar <mingo@redhat.com>
+>> Cc: "H. Peter Anvin" <hpa@zytor.com>
+>> Cc: x86@kernel.org
+>> Cc: Andy Lutomirski <luto@kernel.org>
+>> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+>> ---
+>>  arch/x86/entry/entry_64.S   |    2 ++
+>>  arch/x86/include/asm/smap.h |    9 ++++++++-
+>>  2 files changed, 10 insertions(+), 1 deletion(-)
+>>
+>> diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
+>> index 4f8e1d35a97c..2320017077d4 100644
+>> --- a/arch/x86/entry/entry_64.S
+>> +++ b/arch/x86/entry/entry_64.S
+>> @@ -35,6 +35,7 @@
+>>  #include <asm/asm.h>
+>>  #include <asm/smap.h>
+>>  #include <asm/pgtable_types.h>
+>> +#include <asm/smap.h>
+>>  #include <asm/export.h>
+>>  #include <asm/frame.h>
+>>  #include <asm/nospec-branch.h>
+>> @@ -264,6 +265,7 @@ entry_SYSCALL_64_fastpath:
+>>       cmpl    $__NR_syscall_max, %eax
+>>  #endif
+>>       ja      1f                              /* return -ENOSYS (already=
+ in pt_regs->ax) */
+>> +     MASK_NOSPEC %r11 %rax                   /* sanitize syscall_nr wrt=
+ speculation */
+>>       movq    %r10, %rcx
+>>
+>>       /*
+>> diff --git a/arch/x86/include/asm/smap.h b/arch/x86/include/asm/smap.h
+>> index 2b4ad4c6a226..3b5b2cf58dc6 100644
+>> --- a/arch/x86/include/asm/smap.h
+>> +++ b/arch/x86/include/asm/smap.h
+>> @@ -35,7 +35,14 @@
+>>   * this directs the cpu to speculate with a NULL ptr rather than
+>>   * something targeting kernel memory.
+>>   *
+>> - * assumes CF is set from a previous 'cmp TASK_addr_limit, %ptr'
+>> + * In the syscall entry path it is possible to speculate past the
+>> + * validation of the system call number. Use MASK_NOSPEC to sanitize th=
+e
+>> + * syscall array index to zero (sys_read) rather than an arbitrary
+>> + * target.
+>> + *
+>> + * assumes CF is set from a previous 'cmp' i.e.:
+>> + *     cmp TASK_addr_limit, %ptr
+>> + *     cmp __NR_syscall_max, %idx
+>>   */
+>>  .macro MASK_NOSPEC mask val
+>>       sbb \mask, \mask
+>>
+>>
