@@ -1,20 +1,39 @@
-MIME-Version: 1.0
-In-Reply-To: <20180208194235.GA3424@bombadil.infradead.org>
+Date: Thu, 8 Feb 2018 12:21:00 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [RFC] Warn the user when they could overflow mapcount
+Message-ID: <20180208202100.GB3424@bombadil.infradead.org>
 References: <20180208021112.GB14918@bombadil.infradead.org>
  <CAG48ez2-MTJ2YrS5fPZi19RY6P_6NWuK1U5CcQpJ25=xrGSy_A@mail.gmail.com>
  <CA+DvKQLHDR0s=6r4uiHL8kw2_PnfJcwYfPxgQOmuLbc=5k39+g@mail.gmail.com>
- <20180208185648.GB9524@bombadil.infradead.org> <CA+DvKQLHcFc3+kW_SnD6hs53yyD5Zi+uAeSgDMm1tRzxqy-Opg@mail.gmail.com>
+ <20180208185648.GB9524@bombadil.infradead.org>
+ <CA+DvKQLHcFc3+kW_SnD6hs53yyD5Zi+uAeSgDMm1tRzxqy-Opg@mail.gmail.com>
  <20180208194235.GA3424@bombadil.infradead.org>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Thu, 8 Feb 2018 14:48:52 -0500
-Message-ID: <CA+DvKQKba0iU+tydbmGkAJsxCxazORDnuoe32sy-2nggyagUxQ@mail.gmail.com>
-Subject: Re: [RFC] Warn the user when they could overflow mapcount
-Content-Type: text/plain; charset="UTF-8"
-To: Matthew Wilcox <willy@infradead.org>
+ <CA+DvKQKba0iU+tydbmGkAJsxCxazORDnuoe32sy-2nggyagUxQ@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CA+DvKQKba0iU+tydbmGkAJsxCxazORDnuoe32sy-2nggyagUxQ@mail.gmail.com>
+To: Daniel Micay <danielmicay@gmail.com>
 Cc: Jann Horn <jannh@google.com>, linux-mm@kvack.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I guess it could saturate and then switch to tracking the count via an
-object pointer -> count mapping with a global lock? Whatever the
-solution is should probably be a generic one since it's a recurring
-issue.
+On Thu, Feb 08, 2018 at 02:48:52PM -0500, Daniel Micay wrote:
+> I guess it could saturate and then switch to tracking the count via an
+> object pointer -> count mapping with a global lock? Whatever the
+> solution is should probably be a generic one since it's a recurring
+> issue.
+
+I was thinking of saturating _mapcount at 2 billion (allowing _refcount
+the extra space to go into the 2-3 billion range).  Once saturated,
+disallow all attempts at mapping it until _mapcount has gone below 2
+billion again.  We can walk the page->mapping->i_mmap tree and find
+tasks with more than, say, 10 mappings each, and kill them.
+
+Now that I think about it, though, perhaps the simplest solution is not
+to worry about checking whether _mapcount has saturated, and instead when
+adding a new mmap, check whether this task already has it mapped 10 times.
+If so, refuse the mapping.
+
+Now we can argue that since pid_max is smaller than 400 million that
+_mapcount will never overflow, and so we don't need to check it.
+Convincing argument?
