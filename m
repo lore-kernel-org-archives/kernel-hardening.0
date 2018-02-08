@@ -1,93 +1,100 @@
-Subject: Patch "x86/entry/64: Push extra regs right away" has been added to the 4.9-stable tree
-From: <gregkh@linuxfoundation.org>
-Date: Thu, 08 Feb 2018 03:38:19 +0100
-Message-ID: <15180574993042@kroah.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=ANSI_X3.4-1968
-Content-Transfer-Encoding: 8bit
-To: luto@kernel.org, bp@alien8.de, dwmw@amazon.co.uk, gregkh@linuxfoundation.org, kernel-hardening@lists.openwall.com, mingo@kernel.org, tglx@linutronix.de, torvalds@linux-foundation.org
-Cc: stable@vger.kernel.org, stable-commits@vger.kernel.org
+In-Reply-To: <20180208021112.GB14918@bombadil.infradead.org>
+References: <20180208021112.GB14918@bombadil.infradead.org>
+From: Jann Horn <jannh@google.com>
+Date: Thu, 8 Feb 2018 03:56:26 +0100
+Message-ID: <CAG48ez2-MTJ2YrS5fPZi19RY6P_6NWuK1U5CcQpJ25=xrGSy_A@mail.gmail.com>
+Subject: Re: [RFC] Warn the user when they could overflow mapcount
+Content-Type: text/plain; charset="UTF-8"
+To: Matthew Wilcox <willy@infradead.org>
+Cc: linux-mm@kvack.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Thu, Feb 8, 2018 at 3:11 AM, Matthew Wilcox <willy@infradead.org> wrote:
+> Kirill and I were talking about trying to overflow page->_mapcount
+> the other day and realised that the default settings of pid_max and
+> max_map_count prevent it [1].  But there isn't even documentation to
+> warn a sysadmin that they've just opened themselves up to the possibility
+> that they've opened their system up to a sufficiently-determined attacker.
+>
+> I'm not sufficiently wise in the ways of the MM to understand exactly
+> what goes wrong if we do wrap mapcount.  Kirill says:
+>
+>   rmap depends on mapcount to decide when the page is not longer mapped.
+>   If it sees page_mapcount() == 0 due to 32-bit wrap we are screwed;
+>   data corruption, etc.
 
-This is a note to let you know that I've just added the patch titled
+How much memory would you need to trigger this? You need one
+vm_area_struct per increment, and those are 200 bytes? So at least
+800GiB of memory for the vm_area_structs, and maybe more for other
+data structures?
 
-    x86/entry/64: Push extra regs right away
+I wouldn't be too surprised if there are more 32-bit overflows that
+start being realistic once you put something on the order of terabytes
+of memory into one machine, given that refcount_t is 32 bits wide -
+for example, the i_count. See
+https://bugs.chromium.org/p/project-zero/issues/detail?id=809 for an
+example where, given a sufficiently high RLIMIT_MEMLOCK, it was
+possible to overflow a 32-bit refcounter on a system with just ~32GiB
+of free memory (minimum required to store 2^32 64-bit pointers).
 
-to the 4.9-stable tree which can be found at:
-    http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
+On systems with RAM on the order of terabytes, it's probably a good
+idea to turn on refcount hardening to make issues like that
+non-exploitable for now.
 
-The filename of the patch is:
-     x86-entry-64-push-extra-regs-right-away.patch
-and it can be found in the queue-4.9 subdirectory.
+> That seems pretty bad.  So here's a patch which adds documentation to the
+> two sysctls that a sysadmin could use to shoot themselves in the foot,
+> and adds a warning if they change either of them to a dangerous value.
 
-If you, or anyone else, feels it should not be added to the stable tree,
-please let <stable@vger.kernel.org> know about it.
+I have negative feelings about this patch, mostly because AFAICS:
 
+ - It documents an issue instead of fixing it.
+ - It likely only addresses a small part of the actual problem.
 
->From foo@baz Thu Feb  8 03:30:27 CET 2018
-From: Andy Lutomirski <luto@kernel.org>
-Date: Sun, 28 Jan 2018 10:38:49 -0800
-Subject: x86/entry/64: Push extra regs right away
+> It's possible to get into a dangerous situation without triggering this
+> warning (already have the file mapped a lot of times, then lower pid_max,
+> then raise max_map_count, then map the file a lot more times), but it's
+> unlikely to happen.
+>
+> Comments?
+>
+> [1] map_count counts the number of times that a page is mapped to
+> userspace; max_map_count restricts the number of times a process can
+> map a page and pid_max restricts the number of processes that can exist.
+> So map_count can never be larger than pid_max * max_map_count.
+[...]
+> +int sysctl_pid_max(struct ctl_table *table, int write,
+> +                  void __user *buffer, size_t *lenp, loff_t *ppos)
+> +{
+> +       struct ctl_table t;
+> +       int ret;
+> +
+> +       t = *table;
+> +       t.data = &pid_max;
+> +       t.extra1 = &pid_max_min;
+> +       t.extra2 = &pid_max_max;
+> +
+> +       ret = proc_douintvec_minmax(&t, write, buffer, lenp, ppos);
+> +       if (ret || !write)
+> +               return ret;
+> +
+> +       if ((INT_MAX / max_map_count) > pid_max)
+> +               pr_warn("pid_max is dangerously large\n");
 
-From: Andy Lutomirski <luto@kernel.org>
+This in reordered is "if (pid_max * max_map_count < INT_MAX)
+pr_warn(...);", no? That doesn't make sense to me. Same thing again
+further down.
 
-(cherry picked from commit d1f7732009e0549eedf8ea1db948dc37be77fd46)
+[...]
+> diff --git a/mm/madvise.c b/mm/madvise.c
+> index 4d3c922ea1a1..5b66a4a48192 100644
+> --- a/mm/madvise.c
+> +++ b/mm/madvise.c
+> @@ -147,7 +147,7 @@ static long madvise_behavior(struct vm_area_struct *vma,
+>         *prev = vma;
+>
+>         if (start != vma->vm_start) {
+> -               if (unlikely(mm->map_count >= sysctl_max_map_count)) {
+> +               if (unlikely(mm->map_count >= max_map_count)) {
 
-With the fast path removed there is no point in splitting the push of the
-normal and the extra register set. Just push the extra regs right away.
-
-[ tglx: Split out from 'x86/entry/64: Remove the SYSCALL64 fast path' ]
-
-Signed-off-by: Andy Lutomirski <luto@kernel.org>
-Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Acked-by: Ingo Molnar <mingo@kernel.org>
-Cc: Borislav Petkov <bp@alien8.de>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
-Link: https://lkml.kernel.org/r/462dff8d4d64dfbfc851fbf3130641809d980ecd.1517164461.git.luto@kernel.org
-Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
-Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
----
- arch/x86/entry/entry_64.S |    8 ++++++--
- 1 file changed, 6 insertions(+), 2 deletions(-)
-
---- a/arch/x86/entry/entry_64.S
-+++ b/arch/x86/entry/entry_64.S
-@@ -177,10 +177,14 @@ GLOBAL(entry_SYSCALL_64_after_swapgs)
- 	pushq	%r9				/* pt_regs->r9 */
- 	pushq	%r10				/* pt_regs->r10 */
- 	pushq	%r11				/* pt_regs->r11 */
--	sub	$(6*8), %rsp			/* pt_regs->bp, bx, r12-15 not saved */
-+	pushq	%rbx				/* pt_regs->rbx */
-+	pushq	%rbp				/* pt_regs->rbp */
-+	pushq	%r12				/* pt_regs->r12 */
-+	pushq	%r13				/* pt_regs->r13 */
-+	pushq	%r14				/* pt_regs->r14 */
-+	pushq	%r15				/* pt_regs->r15 */
- 
- 	/* IRQs are off. */
--	SAVE_EXTRA_REGS
- 	movq	%rsp, %rdi
- 	call	do_syscall_64		/* returns with IRQs disabled */
- 
-
-
-Patches currently in stable-queue which might be from luto@kernel.org are
-
-queue-4.9/x86-entry-64-push-extra-regs-right-away.patch
-queue-4.9/kvm-vmx-allow-direct-access-to-msr_ia32_spec_ctrl.patch
-queue-4.9/kvm-x86-add-ibpb-support.patch
-queue-4.9/kvm-svm-allow-direct-access-to-msr_ia32_spec_ctrl.patch
-queue-4.9/x86-paravirt-remove-noreplace-paravirt-cmdline-option.patch
-queue-4.9/x86-asm-move-status-from-thread_struct-to-thread_info.patch
-queue-4.9/kvm-x86-make-indirect-calls-in-emulator-speculation-safe.patch
-queue-4.9/x86-entry-64-remove-the-syscall64-fast-path.patch
-queue-4.9/x86-asm-fix-inline-asm-call-constraints-for-gcc-4.4.patch
-queue-4.9/kvm-vmx-make-indirect-call-speculation-safe.patch
-queue-4.9/x86-spectre-fix-spelling-mistake-vunerable-vulnerable.patch
-queue-4.9/x86-get_user-use-pointer-masking-to-limit-speculation.patch
-queue-4.9/x86-syscall-sanitize-syscall-table-de-references-under-speculation.patch
-queue-4.9/x86-pti-make-unpoison-of-pgd-for-trusted-boot-work-for-real.patch
-queue-4.9/x86-pti-mark-constant-arrays-as-__initconst.patch
-queue-4.9/kvm-vmx-emulate-msr_ia32_arch_capabilities.patch
+Why the renaming?
