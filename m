@@ -1,53 +1,54 @@
-MIME-Version: 1.0
-In-Reply-To: <CAG48ez2-MTJ2YrS5fPZi19RY6P_6NWuK1U5CcQpJ25=xrGSy_A@mail.gmail.com>
-References: <20180208021112.GB14918@bombadil.infradead.org> <CAG48ez2-MTJ2YrS5fPZi19RY6P_6NWuK1U5CcQpJ25=xrGSy_A@mail.gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Thu, 8 Feb 2018 13:05:33 -0500
-Message-ID: <CA+DvKQLHDR0s=6r4uiHL8kw2_PnfJcwYfPxgQOmuLbc=5k39+g@mail.gmail.com>
+Sender: Valdis Kletnieks <valdis@vt.edu>
+From: valdis.kletnieks@vt.edu
 Subject: Re: [RFC] Warn the user when they could overflow mapcount
-Content-Type: text/plain; charset="UTF-8"
+In-Reply-To: <CAG48ez2-MTJ2YrS5fPZi19RY6P_6NWuK1U5CcQpJ25=xrGSy_A@mail.gmail.com>
+References: <20180208021112.GB14918@bombadil.infradead.org>
+ <CAG48ez2-MTJ2YrS5fPZi19RY6P_6NWuK1U5CcQpJ25=xrGSy_A@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: multipart/signed; boundary="==_Exmh_1518112722_2958P";
+	 micalg=pgp-sha1; protocol="application/pgp-signature"
+Content-Transfer-Encoding: 7bit
+Date: Thu, 08 Feb 2018 12:58:42 -0500
+Message-ID: <24367.1518112722@turing-police.cc.vt.edu>
 To: Jann Horn <jannh@google.com>
 Cc: Matthew Wilcox <willy@infradead.org>, linux-mm@kvack.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
->> That seems pretty bad.  So here's a patch which adds documentation to the
->> two sysctls that a sysadmin could use to shoot themselves in the foot,
->> and adds a warning if they change either of them to a dangerous value.
+--==_Exmh_1518112722_2958P
+Content-Type: text/plain; charset=us-ascii
+
+On Thu, 08 Feb 2018 03:56:26 +0100, Jann Horn said:
+
+> I wouldn't be too surprised if there are more 32-bit overflows that
+> start being realistic once you put something on the order of terabytes
+> of memory into one machine, given that refcount_t is 32 bits wide -
+> for example, the i_count. See
+> https://bugs.chromium.org/p/project-zero/issues/detail?id=809 for an
+> example where, given a sufficiently high RLIMIT_MEMLOCK, it was
+> possible to overflow a 32-bit refcounter on a system with just ~32GiB
+> of free memory (minimum required to store 2^32 64-bit pointers).
 >
-> I have negative feelings about this patch, mostly because AFAICS:
->
->  - It documents an issue instead of fixing it.
->  - It likely only addresses a small part of the actual problem.
+> On systems with RAM on the order of terabytes, it's probably a good
+> idea to turn on refcount hardening to make issues like that
+> non-exploitable for now.
 
-The standard map_max_count / pid_max are very low and there are many
-situations where either or both need to be raised.
+I have at least 10 systems across the hall that have 3T of RAM on them
+across our various HPC clusters.  So this is indeed no longer a hypothetical
+issue.
 
-VM fragmentation in long-lived processes is a major issue. There are
-allocators like jemalloc designed to minimize VM fragmentation by
-never unmapping memory but they're relying on not having anything else
-using mmap regularly so they can have all their ranges merged
-together, unless they decide to do something like making a 1TB
-PROT_NONE mapping up front to slowly consume. If you Google this
-sysctl name, you'll find lots of people running into the limit. If
-you're using a debugging / hardened allocator designed to use a lot of
-guard pages, the standard map_max_count is close to unusable...
+--==_Exmh_1518112722_2958P
+Content-Type: application/pgp-signature
 
-I think the same thing applies to pid_max. There are too many
-reasonable reasons to increase it. Process-per-request is quite
-reasonable if you care about robustness / security and want to sandbox
-each request handler. Look at Chrome / Chromium: it's currently
-process-per-site-instance, but they're moving to having more processes
-with site isolation to isolate iframes into their own processes to
-work towards enforcing the boundaries between sites at a process
-level. It's way worse for fine-grained server-side sandboxing. Using a
-lot of processes like this does counter VM fragmentation especially if
-long-lived processes doing a lot of work are mostly avoided... but if
-your allocators like using guard pages you're still going to hit the
-limit.
+-----BEGIN PGP SIGNATURE-----
+Comment: Exmh version 2.8.0 04/21/2017
 
-I do think the default value in the documentation should be fixed but
-if there's a clear problem with raising these it really needs to be
-fixed. Google either of the sysctl names and look at all the people
-running into issues and needing to raise them. It's only going to
-become more common to raise these with people trying to use lots of
-fine-grained sandboxing. Process-per-request is back in style.
+iQEVAwUBWnyP0o0DS38y7CIcAQJvMwgAqINtG3XsiyureZeY7FTqdkwoqxA0BUmM
+tUkyfbqu/6bfJmdPUOhV4a62wWIULi9xc/yTUcH3Ve/Y71KQVBWfz+QBeeMIihdr
+Qh8b6SWWL5gViGCj0uw0d8pbwgzmX/PplJSgupP8j4tf3CyQ7FcrIBpB3p8PfocO
+FINFQ/W8JiCVsTGlgmlcwAlTxTzmNP2EF7JoKp4Ugy/cBpxpN8B35/kawTBWirL4
+f2OagdWoDdeyu+XyVEaBhybUuGhGVBnbYGELaaJ5A2uGfPhooVZEMzBDZbFgpesu
+9jKlkll5COPF3fozpf6idD5uHYaWGUaYRw5rdH+7+eZ59JdRuYZoiw==
+=eDZP
+-----END PGP SIGNATURE-----
+
+--==_Exmh_1518112722_2958P--
