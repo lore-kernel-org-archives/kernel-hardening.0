@@ -1,7 +1,7 @@
-Subject: Patch "x86/asm: Move 'status' from thread_struct to thread_info" has been added to the 4.9-stable tree
+Subject: Patch "x86/entry/64: Remove the SYSCALL64 fast path" has been added to the 4.9-stable tree
 From: <gregkh@linuxfoundation.org>
-Date: Thu, 08 Feb 2018 03:38:16 +0100
-Message-ID: <151805749680247@kroah.com>
+Date: Thu, 08 Feb 2018 03:38:19 +0100
+Message-ID: <1518057499111245@kroah.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=ANSI_X3.4-1968
 Content-Transfer-Encoding: 8bit
@@ -12,191 +12,221 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 This is a note to let you know that I've just added the patch titled
 
-    x86/asm: Move 'status' from thread_struct to thread_info
+    x86/entry/64: Remove the SYSCALL64 fast path
 
 to the 4.9-stable tree which can be found at:
     http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
 
 The filename of the patch is:
-     x86-asm-move-status-from-thread_struct-to-thread_info.patch
+     x86-entry-64-remove-the-syscall64-fast-path.patch
 and it can be found in the queue-4.9 subdirectory.
 
 If you, or anyone else, feels it should not be added to the stable tree,
 please let <stable@vger.kernel.org> know about it.
 
 
->From foo@baz Thu Feb  8 03:32:24 CET 2018
+>From foo@baz Thu Feb  8 03:30:27 CET 2018
 From: Andy Lutomirski <luto@kernel.org>
-Date: Sun, 28 Jan 2018 10:38:50 -0800
-Subject: x86/asm: Move 'status' from thread_struct to thread_info
+Date: Sun, 28 Jan 2018 10:38:49 -0800
+Subject: x86/entry/64: Remove the SYSCALL64 fast path
 
 From: Andy Lutomirski <luto@kernel.org>
 
+(cherry picked from commit 21d375b6b34ff511a507de27bf316b3dde6938d9)
 
-(cherry picked from commit 37a8f7c38339b22b69876d6f5a0ab851565284e3)
+The SYCALLL64 fast path was a nice, if small, optimization back in the good
+old days when syscalls were actually reasonably fast.  Now there is PTI to
+slow everything down, and indirect branches are verboten, making everything
+messier.  The retpoline code in the fast path is particularly nasty.
 
-The TS_COMPAT bit is very hot and is accessed from code paths that mostly
-also touch thread_info::flags.  Move it into struct thread_info to improve
-cache locality.
+Just get rid of the fast path. The slow path is barely slower.
 
-The only reason it was in thread_struct is that there was a brief period
-during which arch-specific fields were not allowed in struct thread_info.
+[ tglx: Split out the 'push all extra regs' part ]
 
-Linus suggested further changing:
-
-  ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-
-to:
-
-  if (unlikely(ti->status & (TS_COMPAT|TS_I386_REGS_POKED)))
-          ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-
-on the theory that frequently dirtying the cacheline even in pure 64-bit
-code that never needs to modify status hurts performance.  That could be a
-reasonable followup patch, but I suspect it matters less on top of this
-patch.
-
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Reviewed-by: Ingo Molnar <mingo@kernel.org>
-Acked-by: Linus Torvalds <torvalds@linux-foundation.org>
+Acked-by: Ingo Molnar <mingo@kernel.org>
 Cc: Borislav Petkov <bp@alien8.de>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
 Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
-Link: https://lkml.kernel.org/r/03148bcc1b217100e6e8ecf6a5468c45cf4304b6.1517164461.git.luto@kernel.org
+Link: https://lkml.kernel.org/r/462dff8d4d64dfbfc851fbf3130641809d980ecd.1517164461.git.luto@kernel.org
 Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 ---
- arch/x86/entry/common.c            |    4 ++--
- arch/x86/include/asm/processor.h   |    2 --
- arch/x86/include/asm/syscall.h     |    6 +++---
- arch/x86/include/asm/thread_info.h |    3 ++-
- arch/x86/kernel/process_64.c       |    4 ++--
- arch/x86/kernel/ptrace.c           |    2 +-
- arch/x86/kernel/signal.c           |    2 +-
- 7 files changed, 11 insertions(+), 12 deletions(-)
+ arch/x86/entry/entry_64.S   |  123 --------------------------------------------
+ arch/x86/entry/syscall_64.c |    7 --
+ 2 files changed, 3 insertions(+), 127 deletions(-)
 
---- a/arch/x86/entry/common.c
-+++ b/arch/x86/entry/common.c
-@@ -201,7 +201,7 @@ __visible inline void prepare_exit_to_us
- 	 * special case only applies after poking regs and before the
- 	 * very next return to user mode.
- 	 */
--	current->thread.status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-+	ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
- #endif
+--- a/arch/x86/entry/entry_64.S
++++ b/arch/x86/entry/entry_64.S
+@@ -179,94 +179,11 @@ GLOBAL(entry_SYSCALL_64_after_swapgs)
+ 	pushq	%r11				/* pt_regs->r11 */
+ 	sub	$(6*8), %rsp			/* pt_regs->bp, bx, r12-15 not saved */
  
- 	user_enter_irqoff();
-@@ -299,7 +299,7 @@ static __always_inline void do_syscall_3
- 	unsigned int nr = (unsigned int)regs->orig_ax;
- 
- #ifdef CONFIG_IA32_EMULATION
--	current->thread.status |= TS_COMPAT;
-+	ti->status |= TS_COMPAT;
- #endif
- 
- 	if (READ_ONCE(ti->flags) & _TIF_WORK_SYSCALL_ENTRY) {
---- a/arch/x86/include/asm/processor.h
-+++ b/arch/x86/include/asm/processor.h
-@@ -391,8 +391,6 @@ struct thread_struct {
- 	unsigned short		gsindex;
- #endif
- 
--	u32			status;		/* thread synchronous flags */
+-	/*
+-	 * If we need to do entry work or if we guess we'll need to do
+-	 * exit work, go straight to the slow path.
+-	 */
+-	movq	PER_CPU_VAR(current_task), %r11
+-	testl	$_TIF_WORK_SYSCALL_ENTRY|_TIF_ALLWORK_MASK, TASK_TI_flags(%r11)
+-	jnz	entry_SYSCALL64_slow_path
 -
- #ifdef CONFIG_X86_64
- 	unsigned long		fsbase;
- 	unsigned long		gsbase;
---- a/arch/x86/include/asm/syscall.h
-+++ b/arch/x86/include/asm/syscall.h
-@@ -60,7 +60,7 @@ static inline long syscall_get_error(str
- 	 * TS_COMPAT is set for 32-bit syscall entries and then
- 	 * remains set until we return to user mode.
- 	 */
--	if (task->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
-+	if (task->thread_info.status & (TS_COMPAT|TS_I386_REGS_POKED))
- 		/*
- 		 * Sign-extend the value so (int)-EFOO becomes (long)-EFOO
- 		 * and will match correctly in comparisons.
-@@ -116,7 +116,7 @@ static inline void syscall_get_arguments
- 					 unsigned long *args)
- {
- # ifdef CONFIG_IA32_EMULATION
--	if (task->thread.status & TS_COMPAT)
-+	if (task->thread_info.status & TS_COMPAT)
- 		switch (i) {
- 		case 0:
- 			if (!n--) break;
-@@ -177,7 +177,7 @@ static inline void syscall_set_arguments
- 					 const unsigned long *args)
- {
- # ifdef CONFIG_IA32_EMULATION
--	if (task->thread.status & TS_COMPAT)
-+	if (task->thread_info.status & TS_COMPAT)
- 		switch (i) {
- 		case 0:
- 			if (!n--) break;
---- a/arch/x86/include/asm/thread_info.h
-+++ b/arch/x86/include/asm/thread_info.h
-@@ -54,6 +54,7 @@ struct task_struct;
+-entry_SYSCALL_64_fastpath:
+-	/*
+-	 * Easy case: enable interrupts and issue the syscall.  If the syscall
+-	 * needs pt_regs, we'll call a stub that disables interrupts again
+-	 * and jumps to the slow path.
+-	 */
+-	TRACE_IRQS_ON
+-	ENABLE_INTERRUPTS(CLBR_NONE)
+-#if __SYSCALL_MASK == ~0
+-	cmpq	$__NR_syscall_max, %rax
+-#else
+-	andl	$__SYSCALL_MASK, %eax
+-	cmpl	$__NR_syscall_max, %eax
+-#endif
+-	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
+-	movq	%r10, %rcx
+-
+-	/*
+-	 * This call instruction is handled specially in stub_ptregs_64.
+-	 * It might end up jumping to the slow path.  If it jumps, RAX
+-	 * and all argument registers are clobbered.
+-	 */
+-#ifdef CONFIG_RETPOLINE
+-	movq	sys_call_table(, %rax, 8), %rax
+-	call	__x86_indirect_thunk_rax
+-#else
+-	call	*sys_call_table(, %rax, 8)
+-#endif
+-.Lentry_SYSCALL_64_after_fastpath_call:
+-
+-	movq	%rax, RAX(%rsp)
+-1:
+-
+-	/*
+-	 * If we get here, then we know that pt_regs is clean for SYSRET64.
+-	 * If we see that no exit work is required (which we are required
+-	 * to check with IRQs off), then we can go straight to SYSRET64.
+-	 */
+-	DISABLE_INTERRUPTS(CLBR_NONE)
+-	TRACE_IRQS_OFF
+-	movq	PER_CPU_VAR(current_task), %r11
+-	testl	$_TIF_ALLWORK_MASK, TASK_TI_flags(%r11)
+-	jnz	1f
+-
+-	LOCKDEP_SYS_EXIT
+-	TRACE_IRQS_ON		/* user mode is traced as IRQs on */
+-	movq	RIP(%rsp), %rcx
+-	movq	EFLAGS(%rsp), %r11
+-	RESTORE_C_REGS_EXCEPT_RCX_R11
+-	/*
+-	 * This opens a window where we have a user CR3, but are
+-	 * running in the kernel.  This makes using the CS
+-	 * register useless for telling whether or not we need to
+-	 * switch CR3 in NMIs.  Normal interrupts are OK because
+-	 * they are off here.
+-	 */
+-	SWITCH_USER_CR3
+-	movq	RSP(%rsp), %rsp
+-	USERGS_SYSRET64
+-
+-1:
+-	/*
+-	 * The fast path looked good when we started, but something changed
+-	 * along the way and we need to switch to the slow path.  Calling
+-	 * raise(3) will trigger this, for example.  IRQs are off.
+-	 */
+-	TRACE_IRQS_ON
+-	ENABLE_INTERRUPTS(CLBR_NONE)
+-	SAVE_EXTRA_REGS
+-	movq	%rsp, %rdi
+-	call	syscall_return_slowpath	/* returns with IRQs disabled */
+-	jmp	return_from_SYSCALL_64
+-
+-entry_SYSCALL64_slow_path:
+ 	/* IRQs are off. */
+ 	SAVE_EXTRA_REGS
+ 	movq	%rsp, %rdi
+ 	call	do_syscall_64		/* returns with IRQs disabled */
  
- struct thread_info {
- 	unsigned long		flags;		/* low level flags */
-+	u32			status;		/* thread synchronous flags */
- };
+-return_from_SYSCALL_64:
+ 	RESTORE_EXTRA_REGS
+ 	TRACE_IRQS_IRETQ		/* we're about to change IF */
  
- #define INIT_THREAD_INFO(tsk)			\
-@@ -213,7 +214,7 @@ static inline int arch_within_stack_fram
- #define in_ia32_syscall() true
- #else
- #define in_ia32_syscall() (IS_ENABLED(CONFIG_IA32_EMULATION) && \
--			   current->thread.status & TS_COMPAT)
-+			   current_thread_info()->status & TS_COMPAT)
- #endif
+@@ -339,6 +256,7 @@ return_from_SYSCALL_64:
+ syscall_return_via_sysret:
+ 	/* rcx and r11 are already restored (see code above) */
+ 	RESTORE_C_REGS_EXCEPT_RCX_R11
++
+ 	/*
+ 	 * This opens a window where we have a user CR3, but are
+ 	 * running in the kernel.  This makes using the CS
+@@ -363,45 +281,6 @@ opportunistic_sysret_failed:
+ 	jmp	restore_c_regs_and_iret
+ END(entry_SYSCALL_64)
  
+-ENTRY(stub_ptregs_64)
+-	/*
+-	 * Syscalls marked as needing ptregs land here.
+-	 * If we are on the fast path, we need to save the extra regs,
+-	 * which we achieve by trying again on the slow path.  If we are on
+-	 * the slow path, the extra regs are already saved.
+-	 *
+-	 * RAX stores a pointer to the C function implementing the syscall.
+-	 * IRQs are on.
+-	 */
+-	cmpq	$.Lentry_SYSCALL_64_after_fastpath_call, (%rsp)
+-	jne	1f
+-
+-	/*
+-	 * Called from fast path -- disable IRQs again, pop return address
+-	 * and jump to slow path
+-	 */
+-	DISABLE_INTERRUPTS(CLBR_NONE)
+-	TRACE_IRQS_OFF
+-	popq	%rax
+-	jmp	entry_SYSCALL64_slow_path
+-
+-1:
+-	JMP_NOSPEC %rax				/* Called from C */
+-END(stub_ptregs_64)
+-
+-.macro ptregs_stub func
+-ENTRY(ptregs_\func)
+-	leaq	\func(%rip), %rax
+-	jmp	stub_ptregs_64
+-END(ptregs_\func)
+-.endm
+-
+-/* Instantiate ptregs_stub for each ptregs-using syscall */
+-#define __SYSCALL_64_QUAL_(sym)
+-#define __SYSCALL_64_QUAL_ptregs(sym) ptregs_stub sym
+-#define __SYSCALL_64(nr, sym, qual) __SYSCALL_64_QUAL_##qual(sym)
+-#include <asm/syscalls_64.h>
+-
  /*
---- a/arch/x86/kernel/process_64.c
-+++ b/arch/x86/kernel/process_64.c
-@@ -538,7 +538,7 @@ void set_personality_ia32(bool x32)
- 		current->personality &= ~READ_IMPLIES_EXEC;
- 		/* in_compat_syscall() uses the presence of the x32
- 		   syscall bit flag to determine compat status */
--		current->thread.status &= ~TS_COMPAT;
-+		current_thread_info()->status &= ~TS_COMPAT;
- 	} else {
- 		set_thread_flag(TIF_IA32);
- 		clear_thread_flag(TIF_X32);
-@@ -546,7 +546,7 @@ void set_personality_ia32(bool x32)
- 			current->mm->context.ia32_compat = TIF_IA32;
- 		current->personality |= force_personality32;
- 		/* Prepare the first "return" to user space */
--		current->thread.status |= TS_COMPAT;
-+		current_thread_info()->status |= TS_COMPAT;
- 	}
- }
- EXPORT_SYMBOL_GPL(set_personality_ia32);
---- a/arch/x86/kernel/ptrace.c
-+++ b/arch/x86/kernel/ptrace.c
-@@ -934,7 +934,7 @@ static int putreg32(struct task_struct *
- 		 */
- 		regs->orig_ax = value;
- 		if (syscall_get_nr(child, regs) >= 0)
--			child->thread.status |= TS_I386_REGS_POKED;
-+			child->thread_info.status |= TS_I386_REGS_POKED;
- 		break;
+  * %rdi: prev task
+  * %rsi: next task
+--- a/arch/x86/entry/syscall_64.c
++++ b/arch/x86/entry/syscall_64.c
+@@ -6,14 +6,11 @@
+ #include <asm/asm-offsets.h>
+ #include <asm/syscall.h>
  
- 	case offsetof(struct user32, regs.eflags):
---- a/arch/x86/kernel/signal.c
-+++ b/arch/x86/kernel/signal.c
-@@ -785,7 +785,7 @@ static inline unsigned long get_nr_resta
- 	 * than the tracee.
- 	 */
- #ifdef CONFIG_IA32_EMULATION
--	if (current->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
-+	if (current_thread_info()->status & (TS_COMPAT|TS_I386_REGS_POKED))
- 		return __NR_ia32_restart_syscall;
- #endif
- #ifdef CONFIG_X86_X32_ABI
+-#define __SYSCALL_64_QUAL_(sym) sym
+-#define __SYSCALL_64_QUAL_ptregs(sym) ptregs_##sym
+-
+-#define __SYSCALL_64(nr, sym, qual) extern asmlinkage long __SYSCALL_64_QUAL_##qual(sym)(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
++#define __SYSCALL_64(nr, sym, qual) extern asmlinkage long sym(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
+ #include <asm/syscalls_64.h>
+ #undef __SYSCALL_64
+ 
+-#define __SYSCALL_64(nr, sym, qual) [nr] = __SYSCALL_64_QUAL_##qual(sym),
++#define __SYSCALL_64(nr, sym, qual) [nr] = sym,
+ 
+ extern long sys_ni_syscall(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
+ 
 
 
 Patches currently in stable-queue which might be from luto@kernel.org are
