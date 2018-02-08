@@ -1,100 +1,71 @@
-MIME-Version: 1.0
-In-Reply-To: <20180208021112.GB14918@bombadil.infradead.org>
-References: <20180208021112.GB14918@bombadil.infradead.org>
-From: Jann Horn <jannh@google.com>
-Date: Thu, 8 Feb 2018 03:56:26 +0100
-Message-ID: <CAG48ez2-MTJ2YrS5fPZi19RY6P_6NWuK1U5CcQpJ25=xrGSy_A@mail.gmail.com>
+Date: Thu, 8 Feb 2018 14:18:04 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
 Subject: Re: [RFC] Warn the user when they could overflow mapcount
-Content-Type: text/plain; charset="UTF-8"
+Message-ID: <20180208031804.GD3304@eros>
+References: <20180208021112.GB14918@bombadil.infradead.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180208021112.GB14918@bombadil.infradead.org>
 To: Matthew Wilcox <willy@infradead.org>
-Cc: linux-mm@kvack.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
+Cc: linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 8, 2018 at 3:11 AM, Matthew Wilcox <willy@infradead.org> wrote:
+On Wed, Feb 07, 2018 at 06:11:12PM -0800, Matthew Wilcox wrote:
+> 
 > Kirill and I were talking about trying to overflow page->_mapcount
 > the other day and realised that the default settings of pid_max and
 > max_map_count prevent it [1].  But there isn't even documentation to
 > warn a sysadmin that they've just opened themselves up to the possibility
 > that they've opened their system up to a sufficiently-determined attacker.
->
+> 
 > I'm not sufficiently wise in the ways of the MM to understand exactly
 > what goes wrong if we do wrap mapcount.  Kirill says:
->
+> 
 >   rmap depends on mapcount to decide when the page is not longer mapped.
 >   If it sees page_mapcount() == 0 due to 32-bit wrap we are screwed;
 >   data corruption, etc.
-
-How much memory would you need to trigger this? You need one
-vm_area_struct per increment, and those are 200 bytes? So at least
-800GiB of memory for the vm_area_structs, and maybe more for other
-data structures?
-
-I wouldn't be too surprised if there are more 32-bit overflows that
-start being realistic once you put something on the order of terabytes
-of memory into one machine, given that refcount_t is 32 bits wide -
-for example, the i_count. See
-https://bugs.chromium.org/p/project-zero/issues/detail?id=809 for an
-example where, given a sufficiently high RLIMIT_MEMLOCK, it was
-possible to overflow a 32-bit refcounter on a system with just ~32GiB
-of free memory (minimum required to store 2^32 64-bit pointers).
-
-On systems with RAM on the order of terabytes, it's probably a good
-idea to turn on refcount hardening to make issues like that
-non-exploitable for now.
-
+> 
 > That seems pretty bad.  So here's a patch which adds documentation to the
 > two sysctls that a sysadmin could use to shoot themselves in the foot,
 > and adds a warning if they change either of them to a dangerous value.
-
-I have negative feelings about this patch, mostly because AFAICS:
-
- - It documents an issue instead of fixing it.
- - It likely only addresses a small part of the actual problem.
-
 > It's possible to get into a dangerous situation without triggering this
 > warning (already have the file mapped a lot of times, then lower pid_max,
 > then raise max_map_count, then map the file a lot more times), but it's
 > unlikely to happen.
->
+> 
 > Comments?
->
+> 
 > [1] map_count counts the number of times that a page is mapped to
 > userspace; max_map_count restricts the number of times a process can
 > map a page and pid_max restricts the number of processes that can exist.
 > So map_count can never be larger than pid_max * max_map_count.
-[...]
-> +int sysctl_pid_max(struct ctl_table *table, int write,
-> +                  void __user *buffer, size_t *lenp, loff_t *ppos)
-> +{
-> +       struct ctl_table t;
-> +       int ret;
-> +
-> +       t = *table;
-> +       t.data = &pid_max;
-> +       t.extra1 = &pid_max_min;
-> +       t.extra2 = &pid_max_max;
-> +
-> +       ret = proc_douintvec_minmax(&t, write, buffer, lenp, ppos);
-> +       if (ret || !write)
-> +               return ret;
-> +
-> +       if ((INT_MAX / max_map_count) > pid_max)
-> +               pr_warn("pid_max is dangerously large\n");
+> 
+> diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
+> index 412314eebda6..ec90cd633e99 100644
+> --- a/Documentation/sysctl/kernel.txt
+> +++ b/Documentation/sysctl/kernel.txt
+> @@ -718,6 +718,8 @@ pid_max:
+>  PID allocation wrap value.  When the kernel's next PID value
+>  reaches this value, it wraps back to a minimum PID value.
+>  PIDs of value pid_max or larger are not allocated.
+> +Increasing this value without decreasing vm.max_map_count may
+> +allow a hostile user to corrupt kernel memory
+>  
+>  ==============================================================
+>  
+> diff --git a/Documentation/sysctl/vm.txt b/Documentation/sysctl/vm.txt
+> index ff234d229cbb..0ab306ea8f80 100644
+> --- a/Documentation/sysctl/vm.txt
+> +++ b/Documentation/sysctl/vm.txt
+> @@ -379,7 +379,8 @@ While most applications need less than a thousand maps, certain
+>  programs, particularly malloc debuggers, may consume lots of them,
+>  e.g., up to one or two maps per allocation.
+>  
+> -The default value is 65536.
+> +The default value is 65530.  Increasing this value without decreasing
+> +pid_max may allow a hostile user to corrupt kernel memory.
 
-This in reordered is "if (pid_max * max_map_count < INT_MAX)
-pr_warn(...);", no? That doesn't make sense to me. Same thing again
-further down.
+Just checking - did you mean the final '0' on this value?
 
-[...]
-> diff --git a/mm/madvise.c b/mm/madvise.c
-> index 4d3c922ea1a1..5b66a4a48192 100644
-> --- a/mm/madvise.c
-> +++ b/mm/madvise.c
-> @@ -147,7 +147,7 @@ static long madvise_behavior(struct vm_area_struct *vma,
->         *prev = vma;
->
->         if (start != vma->vm_start) {
-> -               if (unlikely(mm->map_count >= sysctl_max_map_count)) {
-> +               if (unlikely(mm->map_count >= max_map_count)) {
-
-Why the renaming?
+	Tobin
