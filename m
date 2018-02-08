@@ -1,396 +1,219 @@
-Date: Wed, 7 Feb 2018 18:11:12 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Subject: [RFC] Warn the user when they could overflow mapcount
-Message-ID: <20180208021112.GB14918@bombadil.infradead.org>
+Subject: Patch "x86/asm: Move 'status' from thread_struct to thread_info" has been added to the 4.9-stable tree
+From: <gregkh@linuxfoundation.org>
+Date: Thu, 08 Feb 2018 03:38:16 +0100
+Message-ID: <151805749680247@kroah.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-To: linux-mm@kvack.org
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
+Content-Type: text/plain; charset=ANSI_X3.4-1968
+Content-Transfer-Encoding: 8bit
+To: luto@kernel.org, bp@alien8.de, dwmw@amazon.co.uk, gregkh@linuxfoundation.org, kernel-hardening@lists.openwall.com, mingo@kernel.org, tglx@linutronix.de, torvalds@linux-foundation.org
+Cc: stable@vger.kernel.org, stable-commits@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-Kirill and I were talking about trying to overflow page->_mapcount
-the other day and realised that the default settings of pid_max and
-max_map_count prevent it [1].  But there isn't even documentation to
-warn a sysadmin that they've just opened themselves up to the possibility
-that they've opened their system up to a sufficiently-determined attacker.
+This is a note to let you know that I've just added the patch titled
 
-I'm not sufficiently wise in the ways of the MM to understand exactly
-what goes wrong if we do wrap mapcount.  Kirill says:
+    x86/asm: Move 'status' from thread_struct to thread_info
 
-  rmap depends on mapcount to decide when the page is not longer mapped.
-  If it sees page_mapcount() == 0 due to 32-bit wrap we are screwed;
-  data corruption, etc.
+to the 4.9-stable tree which can be found at:
+    http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
 
-That seems pretty bad.  So here's a patch which adds documentation to the
-two sysctls that a sysadmin could use to shoot themselves in the foot,
-and adds a warning if they change either of them to a dangerous value.
-It's possible to get into a dangerous situation without triggering this
-warning (already have the file mapped a lot of times, then lower pid_max,
-then raise max_map_count, then map the file a lot more times), but it's
-unlikely to happen.
+The filename of the patch is:
+     x86-asm-move-status-from-thread_struct-to-thread_info.patch
+and it can be found in the queue-4.9 subdirectory.
 
-Comments?
+If you, or anyone else, feels it should not be added to the stable tree,
+please let <stable@vger.kernel.org> know about it.
 
-[1] map_count counts the number of times that a page is mapped to
-userspace; max_map_count restricts the number of times a process can
-map a page and pid_max restricts the number of processes that can exist.
-So map_count can never be larger than pid_max * max_map_count.
 
-diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
-index 412314eebda6..ec90cd633e99 100644
---- a/Documentation/sysctl/kernel.txt
-+++ b/Documentation/sysctl/kernel.txt
-@@ -718,6 +718,8 @@ pid_max:
- PID allocation wrap value.  When the kernel's next PID value
- reaches this value, it wraps back to a minimum PID value.
- PIDs of value pid_max or larger are not allocated.
-+Increasing this value without decreasing vm.max_map_count may
-+allow a hostile user to corrupt kernel memory
- 
- ==============================================================
- 
-diff --git a/Documentation/sysctl/vm.txt b/Documentation/sysctl/vm.txt
-index ff234d229cbb..0ab306ea8f80 100644
---- a/Documentation/sysctl/vm.txt
-+++ b/Documentation/sysctl/vm.txt
-@@ -379,7 +379,8 @@ While most applications need less than a thousand maps, certain
- programs, particularly malloc debuggers, may consume lots of them,
- e.g., up to one or two maps per allocation.
- 
--The default value is 65536.
-+The default value is 65530.  Increasing this value without decreasing
-+pid_max may allow a hostile user to corrupt kernel memory.
- 
- =============================================================
- 
-diff --git a/include/linux/mm.h b/include/linux/mm.h
-index 173d2484f6e3..ebc301b21589 100644
---- a/include/linux/mm.h
-+++ b/include/linux/mm.h
-@@ -123,8 +123,6 @@ extern int mmap_rnd_compat_bits __read_mostly;
- #define MAPCOUNT_ELF_CORE_MARGIN	(5)
- #define DEFAULT_MAX_MAP_COUNT	(USHRT_MAX - MAPCOUNT_ELF_CORE_MARGIN)
- 
--extern int sysctl_max_map_count;
--
- extern unsigned long sysctl_user_reserve_kbytes;
- extern unsigned long sysctl_admin_reserve_kbytes;
- 
-diff --git a/include/linux/pid.h b/include/linux/pid.h
-index 7633d55d9a24..7bb10c1b3be3 100644
---- a/include/linux/pid.h
-+++ b/include/linux/pid.h
-@@ -4,6 +4,8 @@
- 
- #include <linux/rculist.h>
- 
-+extern int pid_max;
-+
- enum pid_type
- {
- 	PIDTYPE_PID,
-diff --git a/include/linux/sysctl.h b/include/linux/sysctl.h
-index 992bc9948232..c939f403ad08 100644
---- a/include/linux/sysctl.h
-+++ b/include/linux/sysctl.h
-@@ -235,5 +235,9 @@ static inline void setup_sysctl_set(struct ctl_table_set *p,
- 
- int sysctl_max_threads(struct ctl_table *table, int write,
- 		       void __user *buffer, size_t *lenp, loff_t *ppos);
-+int sysctl_pid_max(struct ctl_table *table, int write,
-+		   void __user *buffer, size_t *lenp, loff_t *ppos);
-+int sysctl_max_map_count(struct ctl_table *table, int write,
-+			 void __user *buffer, size_t *lenp, loff_t *ppos);
- 
- #endif /* _LINUX_SYSCTL_H */
-diff --git a/kernel/pid.c b/kernel/pid.c
-index 5d30c87e3c42..9e230ae214c9 100644
---- a/kernel/pid.c
-+++ b/kernel/pid.c
-@@ -61,6 +61,27 @@ int pid_max = PID_MAX_DEFAULT;
- 
- int pid_max_min = RESERVED_PIDS + 1;
- int pid_max_max = PID_MAX_LIMIT;
-+extern int max_map_count;
-+
-+int sysctl_pid_max(struct ctl_table *table, int write,
-+		   void __user *buffer, size_t *lenp, loff_t *ppos)
-+{
-+	struct ctl_table t;
-+	int ret;
-+
-+	t = *table;
-+	t.data = &pid_max;
-+	t.extra1 = &pid_max_min;
-+	t.extra2 = &pid_max_max;
-+
-+	ret = proc_douintvec_minmax(&t, write, buffer, lenp, ppos);
-+	if (ret || !write)
-+		return ret;
-+
-+	if ((INT_MAX / max_map_count) > pid_max)
-+		pr_warn("pid_max is dangerously large\n");
-+	return 0;
-+}
- 
- /*
-  * PID-map pages start out as NULL, they get allocated upon
-diff --git a/kernel/pid_namespace.c b/kernel/pid_namespace.c
-index 0b53eef7d34b..e24becc39020 100644
---- a/kernel/pid_namespace.c
-+++ b/kernel/pid_namespace.c
-@@ -308,7 +308,6 @@ static int pid_ns_ctl_handler(struct ctl_table *table, int write,
- 	return ret;
- }
- 
--extern int pid_max;
- static int zero = 0;
- static struct ctl_table pid_ns_ctl_table[] = {
- 	{
-diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-index 2fb4e27c636a..a137acc0971f 100644
---- a/kernel/sysctl.c
-+++ b/kernel/sysctl.c
-@@ -105,8 +105,6 @@ extern int core_uses_pid;
- extern char core_pattern[];
- extern unsigned int core_pipe_limit;
- #endif
--extern int pid_max;
--extern int pid_max_min, pid_max_max;
- extern int percpu_pagelist_fraction;
- extern int latencytop_enabled;
- extern unsigned int sysctl_nr_open_min, sysctl_nr_open_max;
-@@ -784,12 +782,10 @@ static struct ctl_table kern_table[] = {
- #endif
- 	{
- 		.procname	= "pid_max",
--		.data		= &pid_max,
--		.maxlen		= sizeof (int),
-+		.data		= NULL,
-+		.maxlen		= sizeof(int),
- 		.mode		= 0644,
--		.proc_handler	= proc_dointvec_minmax,
--		.extra1		= &pid_max_min,
--		.extra2		= &pid_max_max,
-+		.proc_handler	= sysctl_pid_max,
- 	},
- 	{
- 		.procname	= "panic_on_oops",
-@@ -1454,11 +1450,10 @@ static struct ctl_table vm_table[] = {
- #ifdef CONFIG_MMU
- 	{
- 		.procname	= "max_map_count",
--		.data		= &sysctl_max_map_count,
--		.maxlen		= sizeof(sysctl_max_map_count),
-+		.data		= NULL,
-+		.maxlen		= sizeof(int),
- 		.mode		= 0644,
--		.proc_handler	= proc_dointvec_minmax,
--		.extra1		= &zero,
-+		.proc_handler	= sysctl_max_map_count,
- 	},
- #else
- 	{
-diff --git a/kernel/trace/trace.h b/kernel/trace/trace.h
-index 2a6d0325a761..3e9d08a1416a 100644
---- a/kernel/trace/trace.h
-+++ b/kernel/trace/trace.h
-@@ -663,8 +663,6 @@ extern unsigned long tracing_thresh;
- 
- /* PID filtering */
- 
--extern int pid_max;
--
- bool trace_find_filtered_pid(struct trace_pid_list *filtered_pids,
- 			     pid_t search_pid);
- bool trace_ignore_this_task(struct trace_pid_list *filtered_pids,
-diff --git a/mm/internal.h b/mm/internal.h
-index e6bd35182dae..23b014958eb9 100644
---- a/mm/internal.h
-+++ b/mm/internal.h
-@@ -79,6 +79,7 @@ static inline void set_page_refcounted(struct page *page)
- }
- 
- extern unsigned long highest_memmap_pfn;
-+extern int max_map_count;
- 
- /*
-  * Maximum number of reclaim retries without progress before the OOM
-diff --git a/mm/madvise.c b/mm/madvise.c
-index 4d3c922ea1a1..5b66a4a48192 100644
---- a/mm/madvise.c
-+++ b/mm/madvise.c
-@@ -147,7 +147,7 @@ static long madvise_behavior(struct vm_area_struct *vma,
- 	*prev = vma;
- 
- 	if (start != vma->vm_start) {
--		if (unlikely(mm->map_count >= sysctl_max_map_count)) {
-+		if (unlikely(mm->map_count >= max_map_count)) {
- 			error = -ENOMEM;
- 			goto out;
- 		}
-@@ -164,7 +164,7 @@ static long madvise_behavior(struct vm_area_struct *vma,
- 	}
- 
- 	if (end != vma->vm_end) {
--		if (unlikely(mm->map_count >= sysctl_max_map_count)) {
-+		if (unlikely(mm->map_count >= max_map_count)) {
- 			error = -ENOMEM;
- 			goto out;
- 		}
-diff --git a/mm/mmap.c b/mm/mmap.c
-index 9efdc021ad22..9016dae43fee 100644
---- a/mm/mmap.c
-+++ b/mm/mmap.c
-@@ -1355,7 +1355,7 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
- 		return -EOVERFLOW;
- 
- 	/* Too many mappings? */
--	if (mm->map_count > sysctl_max_map_count)
-+	if (mm->map_count > max_map_count)
- 		return -ENOMEM;
- 
- 	/* Obtain the address to map to. we verify (or select) it and ensure
-@@ -2546,7 +2546,7 @@ detach_vmas_to_be_unmapped(struct mm_struct *mm, struct vm_area_struct *vma,
- }
- 
- /*
-- * __split_vma() bypasses sysctl_max_map_count checking.  We use this where it
-+ * __split_vma() bypasses max_map_count checking.  We use this where it
-  * has already been checked or doesn't make sense to fail.
-  */
- int __split_vma(struct mm_struct *mm, struct vm_area_struct *vma,
-@@ -2621,7 +2621,7 @@ int __split_vma(struct mm_struct *mm, struct vm_area_struct *vma,
- int split_vma(struct mm_struct *mm, struct vm_area_struct *vma,
- 	      unsigned long addr, int new_below)
- {
--	if (mm->map_count >= sysctl_max_map_count)
-+	if (mm->map_count >= max_map_count)
- 		return -ENOMEM;
- 
- 	return __split_vma(mm, vma, addr, new_below);
-@@ -2672,7 +2672,7 @@ int do_munmap(struct mm_struct *mm, unsigned long start, size_t len,
- 		 * not exceed its limit; but let map_count go just above
- 		 * its limit temporarily, to help free resources as expected.
- 		 */
--		if (end < vma->vm_end && mm->map_count >= sysctl_max_map_count)
-+		if (end < vma->vm_end && mm->map_count >= max_map_count)
- 			return -ENOMEM;
- 
- 		error = __split_vma(mm, vma, start, 0);
-@@ -2917,7 +2917,7 @@ static int do_brk_flags(unsigned long addr, unsigned long request, unsigned long
- 	if (!may_expand_vm(mm, flags, len >> PAGE_SHIFT))
- 		return -ENOMEM;
- 
--	if (mm->map_count > sysctl_max_map_count)
-+	if (mm->map_count > max_map_count)
- 		return -ENOMEM;
- 
- 	if (security_vm_enough_memory_mm(mm, len >> PAGE_SHIFT))
-@@ -3532,6 +3532,30 @@ void mm_drop_all_locks(struct mm_struct *mm)
- 	mutex_unlock(&mm_all_locks_mutex);
- }
- 
-+int max_map_count __read_mostly = DEFAULT_MAX_MAP_COUNT;
-+
-+int sysctl_max_map_count(struct ctl_table *table, int write,
-+			 void __user *buffer, size_t *lenp, loff_t *ppos)
-+{
-+	struct ctl_table t;
-+	int ret;
-+	int min = 0;
-+	int max = ~0;
-+
-+	t = *table;
-+	t.data = &max_map_count;
-+	t.extra1 = &min;
-+	t.extra2 = &max;
-+
-+	ret = proc_douintvec_minmax(&t, write, buffer, lenp, ppos);
-+	if (ret || !write)
-+		return ret;
-+
-+	if ((INT_MAX / max_map_count) > pid_max)
-+		pr_warn("max_map_count is dangerously large\n");
-+	return 0;
-+}
-+
- /*
-  * initialise the percpu counter for VM
-  */
-diff --git a/mm/mremap.c b/mm/mremap.c
-index 049470aa1e3e..fdb1d71ab2cc 100644
---- a/mm/mremap.c
-+++ b/mm/mremap.c
-@@ -281,7 +281,7 @@ static unsigned long move_vma(struct vm_area_struct *vma,
- 	 * We'd prefer to avoid failure later on in do_munmap:
- 	 * which may split one vma into three before unmapping.
+>From foo@baz Thu Feb  8 03:32:24 CET 2018
+From: Andy Lutomirski <luto@kernel.org>
+Date: Sun, 28 Jan 2018 10:38:50 -0800
+Subject: x86/asm: Move 'status' from thread_struct to thread_info
+
+From: Andy Lutomirski <luto@kernel.org>
+
+
+(cherry picked from commit 37a8f7c38339b22b69876d6f5a0ab851565284e3)
+
+The TS_COMPAT bit is very hot and is accessed from code paths that mostly
+also touch thread_info::flags.  Move it into struct thread_info to improve
+cache locality.
+
+The only reason it was in thread_struct is that there was a brief period
+during which arch-specific fields were not allowed in struct thread_info.
+
+Linus suggested further changing:
+
+  ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
+
+to:
+
+  if (unlikely(ti->status & (TS_COMPAT|TS_I386_REGS_POKED)))
+          ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
+
+on the theory that frequently dirtying the cacheline even in pure 64-bit
+code that never needs to modify status hurts performance.  That could be a
+reasonable followup patch, but I suspect it matters less on top of this
+patch.
+
+Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+Signed-off-by: Andy Lutomirski <luto@kernel.org>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Reviewed-by: Ingo Molnar <mingo@kernel.org>
+Acked-by: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Borislav Petkov <bp@alien8.de>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Link: https://lkml.kernel.org/r/03148bcc1b217100e6e8ecf6a5468c45cf4304b6.1517164461.git.luto@kernel.org
+Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ arch/x86/entry/common.c            |    4 ++--
+ arch/x86/include/asm/processor.h   |    2 --
+ arch/x86/include/asm/syscall.h     |    6 +++---
+ arch/x86/include/asm/thread_info.h |    3 ++-
+ arch/x86/kernel/process_64.c       |    4 ++--
+ arch/x86/kernel/ptrace.c           |    2 +-
+ arch/x86/kernel/signal.c           |    2 +-
+ 7 files changed, 11 insertions(+), 12 deletions(-)
+
+--- a/arch/x86/entry/common.c
++++ b/arch/x86/entry/common.c
+@@ -201,7 +201,7 @@ __visible inline void prepare_exit_to_us
+ 	 * special case only applies after poking regs and before the
+ 	 * very next return to user mode.
  	 */
--	if (mm->map_count >= sysctl_max_map_count - 3)
-+	if (mm->map_count >= max_map_count - 3)
- 		return -ENOMEM;
+-	current->thread.status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
++	ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
+ #endif
  
- 	/*
-diff --git a/mm/nommu.c b/mm/nommu.c
-index 4b9864b17cb0..4cd9d4b9f473 100644
---- a/mm/nommu.c
-+++ b/mm/nommu.c
-@@ -1487,7 +1487,7 @@ int split_vma(struct mm_struct *mm, struct vm_area_struct *vma,
- 	if (vma->vm_file)
- 		return -ENOMEM;
+ 	user_enter_irqoff();
+@@ -299,7 +299,7 @@ static __always_inline void do_syscall_3
+ 	unsigned int nr = (unsigned int)regs->orig_ax;
  
--	if (mm->map_count >= sysctl_max_map_count)
-+	if (mm->map_count >= max_map_count)
- 		return -ENOMEM;
+ #ifdef CONFIG_IA32_EMULATION
+-	current->thread.status |= TS_COMPAT;
++	ti->status |= TS_COMPAT;
+ #endif
  
- 	region = kmem_cache_alloc(vm_region_jar, GFP_KERNEL);
-diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index c7dd9c86e353..9a2edf3925be 100644
---- a/mm/page_alloc.c
-+++ b/mm/page_alloc.c
-@@ -740,16 +740,14 @@ static inline void rmv_page_order(struct page *page)
+ 	if (READ_ONCE(ti->flags) & _TIF_WORK_SYSCALL_ENTRY) {
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -391,8 +391,6 @@ struct thread_struct {
+ 	unsigned short		gsindex;
+ #endif
+ 
+-	u32			status;		/* thread synchronous flags */
+-
+ #ifdef CONFIG_X86_64
+ 	unsigned long		fsbase;
+ 	unsigned long		gsbase;
+--- a/arch/x86/include/asm/syscall.h
++++ b/arch/x86/include/asm/syscall.h
+@@ -60,7 +60,7 @@ static inline long syscall_get_error(str
+ 	 * TS_COMPAT is set for 32-bit syscall entries and then
+ 	 * remains set until we return to user mode.
+ 	 */
+-	if (task->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
++	if (task->thread_info.status & (TS_COMPAT|TS_I386_REGS_POKED))
+ 		/*
+ 		 * Sign-extend the value so (int)-EFOO becomes (long)-EFOO
+ 		 * and will match correctly in comparisons.
+@@ -116,7 +116,7 @@ static inline void syscall_get_arguments
+ 					 unsigned long *args)
+ {
+ # ifdef CONFIG_IA32_EMULATION
+-	if (task->thread.status & TS_COMPAT)
++	if (task->thread_info.status & TS_COMPAT)
+ 		switch (i) {
+ 		case 0:
+ 			if (!n--) break;
+@@ -177,7 +177,7 @@ static inline void syscall_set_arguments
+ 					 const unsigned long *args)
+ {
+ # ifdef CONFIG_IA32_EMULATION
+-	if (task->thread.status & TS_COMPAT)
++	if (task->thread_info.status & TS_COMPAT)
+ 		switch (i) {
+ 		case 0:
+ 			if (!n--) break;
+--- a/arch/x86/include/asm/thread_info.h
++++ b/arch/x86/include/asm/thread_info.h
+@@ -54,6 +54,7 @@ struct task_struct;
+ 
+ struct thread_info {
+ 	unsigned long		flags;		/* low level flags */
++	u32			status;		/* thread synchronous flags */
+ };
+ 
+ #define INIT_THREAD_INFO(tsk)			\
+@@ -213,7 +214,7 @@ static inline int arch_within_stack_fram
+ #define in_ia32_syscall() true
+ #else
+ #define in_ia32_syscall() (IS_ENABLED(CONFIG_IA32_EMULATION) && \
+-			   current->thread.status & TS_COMPAT)
++			   current_thread_info()->status & TS_COMPAT)
+ #endif
  
  /*
-  * This function checks whether a page is free && is the buddy
-- * we can do coalesce a page and its buddy if
-+ * we can coalesce a page and its buddy if
-  * (a) the buddy is not in a hole (check before calling!) &&
-  * (b) the buddy is in the buddy system &&
-  * (c) a page and its buddy have the same order &&
-  * (d) a page and its buddy are in the same zone.
-  *
-- * For recording whether a page is in the buddy system, we set ->_mapcount
-- * PAGE_BUDDY_MAPCOUNT_VALUE.
-- * Setting, clearing, and testing _mapcount PAGE_BUDDY_MAPCOUNT_VALUE is
-- * serialized by zone->lock.
-+ * For recording whether a page is in the buddy system, we set PG_buddy.
-+ * Setting, clearing, and testing PG_buddy is serialized by zone->lock.
-  *
-  * For recording page's order, we use page_private(page).
-  */
-@@ -794,9 +792,8 @@ static inline int page_is_buddy(struct page *page, struct page *buddy,
-  * as necessary, plus some accounting needed to play nicely with other
-  * parts of the VM system.
-  * At each level, we keep a list of pages, which are heads of continuous
-- * free pages of length of (1 << order) and marked with _mapcount
-- * PAGE_BUDDY_MAPCOUNT_VALUE. Page's order is recorded in page_private(page)
-- * field.
-+ * free pages of length of (1 << order) and marked with PageBuddy().
-+ * Page's order is recorded in page_private(page) field.
-  * So when we are allocating or freeing one, we can derive the state of the
-  * other.  That is, if we allocate a small block, and both were
-  * free, the remainder of the region must be split into blocks.
-diff --git a/mm/util.c b/mm/util.c
-index c1250501364f..2ac777548694 100644
---- a/mm/util.c
-+++ b/mm/util.c
-@@ -538,7 +538,6 @@ EXPORT_SYMBOL_GPL(__page_mapcount);
- int sysctl_overcommit_memory __read_mostly = OVERCOMMIT_GUESS;
- int sysctl_overcommit_ratio __read_mostly = 50;
- unsigned long sysctl_overcommit_kbytes __read_mostly;
--int sysctl_max_map_count __read_mostly = DEFAULT_MAX_MAP_COUNT;
- unsigned long sysctl_user_reserve_kbytes __read_mostly = 1UL << 17; /* 128MB */
- unsigned long sysctl_admin_reserve_kbytes __read_mostly = 1UL << 13; /* 8MB */
+--- a/arch/x86/kernel/process_64.c
++++ b/arch/x86/kernel/process_64.c
+@@ -538,7 +538,7 @@ void set_personality_ia32(bool x32)
+ 		current->personality &= ~READ_IMPLIES_EXEC;
+ 		/* in_compat_syscall() uses the presence of the x32
+ 		   syscall bit flag to determine compat status */
+-		current->thread.status &= ~TS_COMPAT;
++		current_thread_info()->status &= ~TS_COMPAT;
+ 	} else {
+ 		set_thread_flag(TIF_IA32);
+ 		clear_thread_flag(TIF_X32);
+@@ -546,7 +546,7 @@ void set_personality_ia32(bool x32)
+ 			current->mm->context.ia32_compat = TIF_IA32;
+ 		current->personality |= force_personality32;
+ 		/* Prepare the first "return" to user space */
+-		current->thread.status |= TS_COMPAT;
++		current_thread_info()->status |= TS_COMPAT;
+ 	}
+ }
+ EXPORT_SYMBOL_GPL(set_personality_ia32);
+--- a/arch/x86/kernel/ptrace.c
++++ b/arch/x86/kernel/ptrace.c
+@@ -934,7 +934,7 @@ static int putreg32(struct task_struct *
+ 		 */
+ 		regs->orig_ax = value;
+ 		if (syscall_get_nr(child, regs) >= 0)
+-			child->thread.status |= TS_I386_REGS_POKED;
++			child->thread_info.status |= TS_I386_REGS_POKED;
+ 		break;
  
+ 	case offsetof(struct user32, regs.eflags):
+--- a/arch/x86/kernel/signal.c
++++ b/arch/x86/kernel/signal.c
+@@ -785,7 +785,7 @@ static inline unsigned long get_nr_resta
+ 	 * than the tracee.
+ 	 */
+ #ifdef CONFIG_IA32_EMULATION
+-	if (current->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
++	if (current_thread_info()->status & (TS_COMPAT|TS_I386_REGS_POKED))
+ 		return __NR_ia32_restart_syscall;
+ #endif
+ #ifdef CONFIG_X86_X32_ABI
+
+
+Patches currently in stable-queue which might be from luto@kernel.org are
+
+queue-4.9/x86-entry-64-push-extra-regs-right-away.patch
+queue-4.9/kvm-vmx-allow-direct-access-to-msr_ia32_spec_ctrl.patch
+queue-4.9/kvm-x86-add-ibpb-support.patch
+queue-4.9/kvm-svm-allow-direct-access-to-msr_ia32_spec_ctrl.patch
+queue-4.9/x86-paravirt-remove-noreplace-paravirt-cmdline-option.patch
+queue-4.9/x86-asm-move-status-from-thread_struct-to-thread_info.patch
+queue-4.9/kvm-x86-make-indirect-calls-in-emulator-speculation-safe.patch
+queue-4.9/x86-entry-64-remove-the-syscall64-fast-path.patch
+queue-4.9/x86-asm-fix-inline-asm-call-constraints-for-gcc-4.4.patch
+queue-4.9/kvm-vmx-make-indirect-call-speculation-safe.patch
+queue-4.9/x86-spectre-fix-spelling-mistake-vunerable-vulnerable.patch
+queue-4.9/x86-get_user-use-pointer-masking-to-limit-speculation.patch
+queue-4.9/x86-syscall-sanitize-syscall-table-de-references-under-speculation.patch
+queue-4.9/x86-pti-make-unpoison-of-pgd-for-trusted-boot-work-for-real.patch
+queue-4.9/x86-pti-mark-constant-arrays-as-__initconst.patch
+queue-4.9/kvm-vmx-emulate-msr_ia32_arch_capabilities.patch
