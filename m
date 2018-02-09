@@ -1,36 +1,98 @@
-Date: Fri, 9 Feb 2018 07:26:09 +0300
-From: "Kirill A. Shutemov" <kirill@shutemov.name>
-Subject: Re: [RFC] Limit mappings to ten per page per process
-Message-ID: <20180209042609.wi6zho24wmmdkg6i@node.shutemov.name>
-References: <20180208021112.GB14918@bombadil.infradead.org>
- <CAG48ez2-MTJ2YrS5fPZi19RY6P_6NWuK1U5CcQpJ25=xrGSy_A@mail.gmail.com>
- <CA+DvKQLHDR0s=6r4uiHL8kw2_PnfJcwYfPxgQOmuLbc=5k39+g@mail.gmail.com>
- <20180208185648.GB9524@bombadil.infradead.org>
- <CA+DvKQLHcFc3+kW_SnD6hs53yyD5Zi+uAeSgDMm1tRzxqy-Opg@mail.gmail.com>
- <20180208194235.GA3424@bombadil.infradead.org>
- <CA+DvKQKba0iU+tydbmGkAJsxCxazORDnuoe32sy-2nggyagUxQ@mail.gmail.com>
- <20180208202100.GB3424@bombadil.infradead.org>
- <20180208213743.GC3424@bombadil.infradead.org>
+Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
+References: <20180124175631.22925-1-igor.stoppa@huawei.com>
+ <20180124175631.22925-5-igor.stoppa@huawei.com>
+ <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
+ <20180126053542.GA30189@bombadil.infradead.org>
+ <alpine.DEB.2.20.1802021236510.31548@nuc-kabylake>
+ <f2ddaed0-313e-8664-8a26-9d10b66ed0c5@huawei.com>
+ <alpine.DEB.2.20.1802050935300.10705@nuc-kabylake>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <4e113814-7d24-b48c-993f-46d5aee1755d@huawei.com>
+Date: Fri, 9 Feb 2018 13:17:49 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180208213743.GC3424@bombadil.infradead.org>
-To: Matthew Wilcox <willy@infradead.org>
-Cc: Daniel Micay <danielmicay@gmail.com>, Jann Horn <jannh@google.com>, linux-mm@kvack.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
+In-Reply-To: <alpine.DEB.2.20.1802050935300.10705@nuc-kabylake>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+To: Christopher Lameter <cl@linux.com>
+Cc: Matthew Wilcox <willy@infradead.org>, Boris Lukashev <blukashev@sempervictus.com>, Jann Horn <jannh@google.com>, jglisse@redhat.com, Kees Cook <keescook@chromium.org>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph Hellwig <hch@infradead.org>, linux-security-module@vger.kernel.org, linux-mm@kvack.org, kernel list <linux-kernel@vger.kernel.org>, Kernel
+ Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 08, 2018 at 01:37:43PM -0800, Matthew Wilcox wrote:
-> On Thu, Feb 08, 2018 at 12:21:00PM -0800, Matthew Wilcox wrote:
-> > Now that I think about it, though, perhaps the simplest solution is not
-> > to worry about checking whether _mapcount has saturated, and instead when
-> > adding a new mmap, check whether this task already has it mapped 10 times.
-> > If so, refuse the mapping.
+
+
+On 05/02/18 17:40, Christopher Lameter wrote:
+> On Sat, 3 Feb 2018, Igor Stoppa wrote:
 > 
-> That turns out to be quite easy.  Comments on this approach?
+>>> We could even do this in a more thorough way. Can we use a ring 1 / 2
+>>> distinction to create a hardened OS core that policies the rest of
+>>> the ever expanding kernel with all its modules and this and that feature?
+>>
+>> What would be the differentiating criteria? Furthermore, what are the
+>> chances
+>> of invalidating the entire concept, because there is already an
+>> hypervisor using
+>> the higher level features?
+>> That is what you are proposing, if I understand correctly.
+> 
+> Were there not 4 rings as well as methods by the processor vendors to
+> virtualize them as well?
 
-This *may* break some remap_file_pages() users.
+I think you are talking x86, mostly.
+On ARM there are ELx and they are often (typically?) already used.
+For x86 I cannot comment.
 
-And it may be rather costly for popular binaries. Consider libc.so.
+>>> I think that will long term be a better approach and allow more than the
+>>> current hardening approaches can get you. It seems that we are willing to
+>>> tolerate significant performance regressions now. So lets use the
+>>> protection mechanisms that the hardware offers.
+>>
+>> I would rather *not* propose significant performance regression :-P
+> 
+> But we already have implemented significant kernel hardening which causes
+> performance regressions. Using hardware capabilities allows the processor
+> vendor to further optimize these mechanisms whereas the software
+> preventative measures are eating up more and more performance as the pile
+> them on. Plus these are methods that can be worked around. Restrictions
+> implemented in a higher ring can be enforced and are much better than
+> just "hardening" (which is making life difficult for the hackers and
+> throwing away performannce for the average user).
 
--- 
- Kirill A. Shutemov
+What you are proposing requires major restructuring of the memory
+management - at the very least - provided that it doesn't cause the
+conflicts I mentioned above.
+
+Even after you do that, the system will still be working with memory
+pages, there will be still a need to segregate data within certain
+pages, or pay the penalty of handling exceptions, when data with
+different permissions coexist within the same page.
+
+The way the pmalloc API is designed is meant to facilitate the
+segregation and to actually improve performance, by grouping types of
+data with same scope and permission.
+
+WRT the implementation, there is a minimal exposure to the memory
+provider, both for allocation and release.
+
+Same goes for the protection mechanism.
+It's a single call to the function which makes pages read only.
+It would be trivial to swap it out with a call to whatever framework you
+want to come up with, for implementing ring/EL based protection.
+
+>From this perspective, you can easily provide patches that implement
+what you are proposing, against pmalloc, if you really think that it's
+the way to go.
+
+I'll be happy to use them, if they provide improved performance and same
+or better protection.
+
+The way I designed pmalloc was really to be able to switch to some
+alternate memory provider and/or protection mechanism, should a better
+one arise.
+
+But it can be done in a separate step, I think, since you are not
+proposing to just change pmalloc, you are proposing to re-design how the
+overall kernel memory hardening works (including executable pages, const
+data, __ro_after_init, etc.)
+
+--
+igor
