@@ -1,183 +1,29 @@
-From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.9 55/92] x86/asm: Move status from thread_struct to thread_info
-Date: Fri,  9 Feb 2018 14:39:24 +0100
-Message-Id: <20180209133935.216280884@linuxfoundation.org>
-In-Reply-To: <20180209133931.211869118@linuxfoundation.org>
-References: <20180209133931.211869118@linuxfoundation.org>
+Subject: Re: [PATCH 3/6] struct page: add field for vm_struct
+References: <20180130151446.24698-1-igor.stoppa@huawei.com>
+ <20180130151446.24698-4-igor.stoppa@huawei.com>
+ <20180206123735.GA6151@bombadil.infradead.org>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <822b2358-4c62-b832-01f4-84756b1f02b0@huawei.com>
+Date: Fri, 9 Feb 2018 15:45:38 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, Borislav Petkov <bp@alien8.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, David Woodhouse <dwmw@amazon.co.uk>
+In-Reply-To: <20180206123735.GA6151@bombadil.infradead.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+To: Matthew Wilcox <willy@infradead.org>
+Cc: jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, hch@infradead.org, cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-4.9-stable review patch.  If anyone has any objections, please let me know.
+On 06/02/18 14:37, Matthew Wilcox wrote:
 
-------------------
+[...]
 
-From: Andy Lutomirski <luto@kernel.org>
+> LOCAL variable names should be short, and to the point.
 
+[...]
 
-(cherry picked from commit 37a8f7c38339b22b69876d6f5a0ab851565284e3)
+> (Documentation/process/coding-style.rst)
 
-The TS_COMPAT bit is very hot and is accessed from code paths that mostly
-also touch thread_info::flags.  Move it into struct thread_info to improve
-cache locality.
+ok, will do, thanks for the pointer!
 
-The only reason it was in thread_struct is that there was a brief period
-during which arch-specific fields were not allowed in struct thread_info.
-
-Linus suggested further changing:
-
-  ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-
-to:
-
-  if (unlikely(ti->status & (TS_COMPAT|TS_I386_REGS_POKED)))
-          ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-
-on the theory that frequently dirtying the cacheline even in pure 64-bit
-code that never needs to modify status hurts performance.  That could be a
-reasonable followup patch, but I suspect it matters less on top of this
-patch.
-
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-Signed-off-by: Andy Lutomirski <luto@kernel.org>
-Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Reviewed-by: Ingo Molnar <mingo@kernel.org>
-Acked-by: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Borislav Petkov <bp@alien8.de>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
-Link: https://lkml.kernel.org/r/03148bcc1b217100e6e8ecf6a5468c45cf4304b6.1517164461.git.luto@kernel.org
-Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
-Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
----
- arch/x86/entry/common.c            |    4 ++--
- arch/x86/include/asm/processor.h   |    2 --
- arch/x86/include/asm/syscall.h     |    6 +++---
- arch/x86/include/asm/thread_info.h |    3 ++-
- arch/x86/kernel/process_64.c       |    4 ++--
- arch/x86/kernel/ptrace.c           |    2 +-
- arch/x86/kernel/signal.c           |    2 +-
- 7 files changed, 11 insertions(+), 12 deletions(-)
-
---- a/arch/x86/entry/common.c
-+++ b/arch/x86/entry/common.c
-@@ -201,7 +201,7 @@ __visible inline void prepare_exit_to_us
- 	 * special case only applies after poking regs and before the
- 	 * very next return to user mode.
- 	 */
--	current->thread.status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
-+	ti->status &= ~(TS_COMPAT|TS_I386_REGS_POKED);
- #endif
- 
- 	user_enter_irqoff();
-@@ -299,7 +299,7 @@ static __always_inline void do_syscall_3
- 	unsigned int nr = (unsigned int)regs->orig_ax;
- 
- #ifdef CONFIG_IA32_EMULATION
--	current->thread.status |= TS_COMPAT;
-+	ti->status |= TS_COMPAT;
- #endif
- 
- 	if (READ_ONCE(ti->flags) & _TIF_WORK_SYSCALL_ENTRY) {
---- a/arch/x86/include/asm/processor.h
-+++ b/arch/x86/include/asm/processor.h
-@@ -391,8 +391,6 @@ struct thread_struct {
- 	unsigned short		gsindex;
- #endif
- 
--	u32			status;		/* thread synchronous flags */
--
- #ifdef CONFIG_X86_64
- 	unsigned long		fsbase;
- 	unsigned long		gsbase;
---- a/arch/x86/include/asm/syscall.h
-+++ b/arch/x86/include/asm/syscall.h
-@@ -60,7 +60,7 @@ static inline long syscall_get_error(str
- 	 * TS_COMPAT is set for 32-bit syscall entries and then
- 	 * remains set until we return to user mode.
- 	 */
--	if (task->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
-+	if (task->thread_info.status & (TS_COMPAT|TS_I386_REGS_POKED))
- 		/*
- 		 * Sign-extend the value so (int)-EFOO becomes (long)-EFOO
- 		 * and will match correctly in comparisons.
-@@ -116,7 +116,7 @@ static inline void syscall_get_arguments
- 					 unsigned long *args)
- {
- # ifdef CONFIG_IA32_EMULATION
--	if (task->thread.status & TS_COMPAT)
-+	if (task->thread_info.status & TS_COMPAT)
- 		switch (i) {
- 		case 0:
- 			if (!n--) break;
-@@ -177,7 +177,7 @@ static inline void syscall_set_arguments
- 					 const unsigned long *args)
- {
- # ifdef CONFIG_IA32_EMULATION
--	if (task->thread.status & TS_COMPAT)
-+	if (task->thread_info.status & TS_COMPAT)
- 		switch (i) {
- 		case 0:
- 			if (!n--) break;
---- a/arch/x86/include/asm/thread_info.h
-+++ b/arch/x86/include/asm/thread_info.h
-@@ -54,6 +54,7 @@ struct task_struct;
- 
- struct thread_info {
- 	unsigned long		flags;		/* low level flags */
-+	u32			status;		/* thread synchronous flags */
- };
- 
- #define INIT_THREAD_INFO(tsk)			\
-@@ -213,7 +214,7 @@ static inline int arch_within_stack_fram
- #define in_ia32_syscall() true
- #else
- #define in_ia32_syscall() (IS_ENABLED(CONFIG_IA32_EMULATION) && \
--			   current->thread.status & TS_COMPAT)
-+			   current_thread_info()->status & TS_COMPAT)
- #endif
- 
- /*
---- a/arch/x86/kernel/process_64.c
-+++ b/arch/x86/kernel/process_64.c
-@@ -538,7 +538,7 @@ void set_personality_ia32(bool x32)
- 		current->personality &= ~READ_IMPLIES_EXEC;
- 		/* in_compat_syscall() uses the presence of the x32
- 		   syscall bit flag to determine compat status */
--		current->thread.status &= ~TS_COMPAT;
-+		current_thread_info()->status &= ~TS_COMPAT;
- 	} else {
- 		set_thread_flag(TIF_IA32);
- 		clear_thread_flag(TIF_X32);
-@@ -546,7 +546,7 @@ void set_personality_ia32(bool x32)
- 			current->mm->context.ia32_compat = TIF_IA32;
- 		current->personality |= force_personality32;
- 		/* Prepare the first "return" to user space */
--		current->thread.status |= TS_COMPAT;
-+		current_thread_info()->status |= TS_COMPAT;
- 	}
- }
- EXPORT_SYMBOL_GPL(set_personality_ia32);
---- a/arch/x86/kernel/ptrace.c
-+++ b/arch/x86/kernel/ptrace.c
-@@ -934,7 +934,7 @@ static int putreg32(struct task_struct *
- 		 */
- 		regs->orig_ax = value;
- 		if (syscall_get_nr(child, regs) >= 0)
--			child->thread.status |= TS_I386_REGS_POKED;
-+			child->thread_info.status |= TS_I386_REGS_POKED;
- 		break;
- 
- 	case offsetof(struct user32, regs.eflags):
---- a/arch/x86/kernel/signal.c
-+++ b/arch/x86/kernel/signal.c
-@@ -785,7 +785,7 @@ static inline unsigned long get_nr_resta
- 	 * than the tracee.
- 	 */
- #ifdef CONFIG_IA32_EMULATION
--	if (current->thread.status & (TS_COMPAT|TS_I386_REGS_POKED))
-+	if (current_thread_info()->status & (TS_COMPAT|TS_I386_REGS_POKED))
- 		return __NR_ia32_restart_syscall;
- #endif
- #ifdef CONFIG_X86_X32_ABI
+--
+igor
