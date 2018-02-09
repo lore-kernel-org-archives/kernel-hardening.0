@@ -1,83 +1,213 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.9 66/92] nl80211: Sanitize array index in parse_txq_params
-Date: Fri,  9 Feb 2018 14:39:35 +0100
-Message-Id: <20180209133936.035590734@linuxfoundation.org>
+Subject: [PATCH 4.9 53/92] x86/entry/64: Remove the SYSCALL64 fast path
+Date: Fri,  9 Feb 2018 14:39:22 +0100
+Message-Id: <20180209133935.046221181@linuxfoundation.org>
 In-Reply-To: <20180209133931.211869118@linuxfoundation.org>
 References: <20180209133931.211869118@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Christian Lamparter <chunkeey@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, Johannes Berg <johannes@sipsolutions.net>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-wireless@vger.kernel.org, torvalds@linux-foundation.org, "David S. Miller" <davem@davemloft.net>, alan@linux.intel.com, David Woodhouse <dwmw@amazon.co.uk>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, Borislav Petkov <bp@alien8.de>, Linus Torvalds <torvalds@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, David Woodhouse <dwmw@amazon.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 4.9-stable review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
-From: Dan Williams <dan.j.williams@intel.com>
+From: Andy Lutomirski <luto@kernel.org>
 
+(cherry picked from commit 21d375b6b34ff511a507de27bf316b3dde6938d9)
 
-(cherry picked from commit 259d8c1e984318497c84eef547bbb6b1d9f4eb05)
+The SYCALLL64 fast path was a nice, if small, optimization back in the good
+old days when syscalls were actually reasonably fast.  Now there is PTI to
+slow everything down, and indirect branches are verboten, making everything
+messier.  The retpoline code in the fast path is particularly nasty.
 
-Wireless drivers rely on parse_txq_params to validate that txq_params->ac
-is less than NL80211_NUM_ACS by the time the low-level driver's ->conf_tx()
-handler is called. Use a new helper, array_index_nospec(), to sanitize
-txq_params->ac with respect to speculation. I.e. ensure that any
-speculation into ->conf_tx() handlers is done with a value of
-txq_params->ac that is within the bounds of [0, NL80211_NUM_ACS).
+Just get rid of the fast path. The slow path is barely slower.
 
-Reported-by: Christian Lamparter <chunkeey@gmail.com>
-Reported-by: Elena Reshetova <elena.reshetova@intel.com>
-Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+[ tglx: Split out the 'push all extra regs' part ]
+
+Signed-off-by: Andy Lutomirski <luto@kernel.org>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Acked-by: Johannes Berg <johannes@sipsolutions.net>
-Cc: linux-arch@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com
-Cc: gregkh@linuxfoundation.org
-Cc: linux-wireless@vger.kernel.org
-Cc: torvalds@linux-foundation.org
-Cc: "David S. Miller" <davem@davemloft.net>
-Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727419584.33451.7700736761686184303.stgit@dwillia2-desk3.amr.corp.intel.com
+Acked-by: Ingo Molnar <mingo@kernel.org>
+Cc: Borislav Petkov <bp@alien8.de>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Link: https://lkml.kernel.org/r/462dff8d4d64dfbfc851fbf3130641809d980ecd.1517164461.git.luto@kernel.org
 Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 ---
- net/wireless/nl80211.c |    9 ++++++---
- 1 file changed, 6 insertions(+), 3 deletions(-)
+ arch/x86/entry/entry_64.S   |  123 --------------------------------------------
+ arch/x86/entry/syscall_64.c |    7 --
+ 2 files changed, 3 insertions(+), 127 deletions(-)
 
---- a/net/wireless/nl80211.c
-+++ b/net/wireless/nl80211.c
-@@ -16,6 +16,7 @@
- #include <linux/nl80211.h>
- #include <linux/rtnetlink.h>
- #include <linux/netlink.h>
-+#include <linux/nospec.h>
- #include <linux/etherdevice.h>
- #include <net/net_namespace.h>
- #include <net/genetlink.h>
-@@ -2014,20 +2015,22 @@ static const struct nla_policy txq_param
- static int parse_txq_params(struct nlattr *tb[],
- 			    struct ieee80211_txq_params *txq_params)
- {
-+	u8 ac;
-+
- 	if (!tb[NL80211_TXQ_ATTR_AC] || !tb[NL80211_TXQ_ATTR_TXOP] ||
- 	    !tb[NL80211_TXQ_ATTR_CWMIN] || !tb[NL80211_TXQ_ATTR_CWMAX] ||
- 	    !tb[NL80211_TXQ_ATTR_AIFS])
- 		return -EINVAL;
+--- a/arch/x86/entry/entry_64.S
++++ b/arch/x86/entry/entry_64.S
+@@ -179,94 +179,11 @@ GLOBAL(entry_SYSCALL_64_after_swapgs)
+ 	pushq	%r11				/* pt_regs->r11 */
+ 	sub	$(6*8), %rsp			/* pt_regs->bp, bx, r12-15 not saved */
  
--	txq_params->ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
-+	ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
- 	txq_params->txop = nla_get_u16(tb[NL80211_TXQ_ATTR_TXOP]);
- 	txq_params->cwmin = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMIN]);
- 	txq_params->cwmax = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMAX]);
- 	txq_params->aifs = nla_get_u8(tb[NL80211_TXQ_ATTR_AIFS]);
- 
--	if (txq_params->ac >= NL80211_NUM_ACS)
-+	if (ac >= NL80211_NUM_ACS)
- 		return -EINVAL;
+-	/*
+-	 * If we need to do entry work or if we guess we'll need to do
+-	 * exit work, go straight to the slow path.
+-	 */
+-	movq	PER_CPU_VAR(current_task), %r11
+-	testl	$_TIF_WORK_SYSCALL_ENTRY|_TIF_ALLWORK_MASK, TASK_TI_flags(%r11)
+-	jnz	entry_SYSCALL64_slow_path
 -
-+	txq_params->ac = array_index_nospec(ac, NL80211_NUM_ACS);
- 	return 0;
- }
+-entry_SYSCALL_64_fastpath:
+-	/*
+-	 * Easy case: enable interrupts and issue the syscall.  If the syscall
+-	 * needs pt_regs, we'll call a stub that disables interrupts again
+-	 * and jumps to the slow path.
+-	 */
+-	TRACE_IRQS_ON
+-	ENABLE_INTERRUPTS(CLBR_NONE)
+-#if __SYSCALL_MASK == ~0
+-	cmpq	$__NR_syscall_max, %rax
+-#else
+-	andl	$__SYSCALL_MASK, %eax
+-	cmpl	$__NR_syscall_max, %eax
+-#endif
+-	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
+-	movq	%r10, %rcx
+-
+-	/*
+-	 * This call instruction is handled specially in stub_ptregs_64.
+-	 * It might end up jumping to the slow path.  If it jumps, RAX
+-	 * and all argument registers are clobbered.
+-	 */
+-#ifdef CONFIG_RETPOLINE
+-	movq	sys_call_table(, %rax, 8), %rax
+-	call	__x86_indirect_thunk_rax
+-#else
+-	call	*sys_call_table(, %rax, 8)
+-#endif
+-.Lentry_SYSCALL_64_after_fastpath_call:
+-
+-	movq	%rax, RAX(%rsp)
+-1:
+-
+-	/*
+-	 * If we get here, then we know that pt_regs is clean for SYSRET64.
+-	 * If we see that no exit work is required (which we are required
+-	 * to check with IRQs off), then we can go straight to SYSRET64.
+-	 */
+-	DISABLE_INTERRUPTS(CLBR_NONE)
+-	TRACE_IRQS_OFF
+-	movq	PER_CPU_VAR(current_task), %r11
+-	testl	$_TIF_ALLWORK_MASK, TASK_TI_flags(%r11)
+-	jnz	1f
+-
+-	LOCKDEP_SYS_EXIT
+-	TRACE_IRQS_ON		/* user mode is traced as IRQs on */
+-	movq	RIP(%rsp), %rcx
+-	movq	EFLAGS(%rsp), %r11
+-	RESTORE_C_REGS_EXCEPT_RCX_R11
+-	/*
+-	 * This opens a window where we have a user CR3, but are
+-	 * running in the kernel.  This makes using the CS
+-	 * register useless for telling whether or not we need to
+-	 * switch CR3 in NMIs.  Normal interrupts are OK because
+-	 * they are off here.
+-	 */
+-	SWITCH_USER_CR3
+-	movq	RSP(%rsp), %rsp
+-	USERGS_SYSRET64
+-
+-1:
+-	/*
+-	 * The fast path looked good when we started, but something changed
+-	 * along the way and we need to switch to the slow path.  Calling
+-	 * raise(3) will trigger this, for example.  IRQs are off.
+-	 */
+-	TRACE_IRQS_ON
+-	ENABLE_INTERRUPTS(CLBR_NONE)
+-	SAVE_EXTRA_REGS
+-	movq	%rsp, %rdi
+-	call	syscall_return_slowpath	/* returns with IRQs disabled */
+-	jmp	return_from_SYSCALL_64
+-
+-entry_SYSCALL64_slow_path:
+ 	/* IRQs are off. */
+ 	SAVE_EXTRA_REGS
+ 	movq	%rsp, %rdi
+ 	call	do_syscall_64		/* returns with IRQs disabled */
+ 
+-return_from_SYSCALL_64:
+ 	RESTORE_EXTRA_REGS
+ 	TRACE_IRQS_IRETQ		/* we're about to change IF */
+ 
+@@ -339,6 +256,7 @@ return_from_SYSCALL_64:
+ syscall_return_via_sysret:
+ 	/* rcx and r11 are already restored (see code above) */
+ 	RESTORE_C_REGS_EXCEPT_RCX_R11
++
+ 	/*
+ 	 * This opens a window where we have a user CR3, but are
+ 	 * running in the kernel.  This makes using the CS
+@@ -363,45 +281,6 @@ opportunistic_sysret_failed:
+ 	jmp	restore_c_regs_and_iret
+ END(entry_SYSCALL_64)
+ 
+-ENTRY(stub_ptregs_64)
+-	/*
+-	 * Syscalls marked as needing ptregs land here.
+-	 * If we are on the fast path, we need to save the extra regs,
+-	 * which we achieve by trying again on the slow path.  If we are on
+-	 * the slow path, the extra regs are already saved.
+-	 *
+-	 * RAX stores a pointer to the C function implementing the syscall.
+-	 * IRQs are on.
+-	 */
+-	cmpq	$.Lentry_SYSCALL_64_after_fastpath_call, (%rsp)
+-	jne	1f
+-
+-	/*
+-	 * Called from fast path -- disable IRQs again, pop return address
+-	 * and jump to slow path
+-	 */
+-	DISABLE_INTERRUPTS(CLBR_NONE)
+-	TRACE_IRQS_OFF
+-	popq	%rax
+-	jmp	entry_SYSCALL64_slow_path
+-
+-1:
+-	JMP_NOSPEC %rax				/* Called from C */
+-END(stub_ptregs_64)
+-
+-.macro ptregs_stub func
+-ENTRY(ptregs_\func)
+-	leaq	\func(%rip), %rax
+-	jmp	stub_ptregs_64
+-END(ptregs_\func)
+-.endm
+-
+-/* Instantiate ptregs_stub for each ptregs-using syscall */
+-#define __SYSCALL_64_QUAL_(sym)
+-#define __SYSCALL_64_QUAL_ptregs(sym) ptregs_stub sym
+-#define __SYSCALL_64(nr, sym, qual) __SYSCALL_64_QUAL_##qual(sym)
+-#include <asm/syscalls_64.h>
+-
+ /*
+  * %rdi: prev task
+  * %rsi: next task
+--- a/arch/x86/entry/syscall_64.c
++++ b/arch/x86/entry/syscall_64.c
+@@ -6,14 +6,11 @@
+ #include <asm/asm-offsets.h>
+ #include <asm/syscall.h>
+ 
+-#define __SYSCALL_64_QUAL_(sym) sym
+-#define __SYSCALL_64_QUAL_ptregs(sym) ptregs_##sym
+-
+-#define __SYSCALL_64(nr, sym, qual) extern asmlinkage long __SYSCALL_64_QUAL_##qual(sym)(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
++#define __SYSCALL_64(nr, sym, qual) extern asmlinkage long sym(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
+ #include <asm/syscalls_64.h>
+ #undef __SYSCALL_64
+ 
+-#define __SYSCALL_64(nr, sym, qual) [nr] = __SYSCALL_64_QUAL_##qual(sym),
++#define __SYSCALL_64(nr, sym, qual) [nr] = sym,
+ 
+ extern long sys_ni_syscall(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
  
