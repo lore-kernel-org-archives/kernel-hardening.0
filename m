@@ -1,38 +1,27 @@
-Subject: Re: [PATCH 1/6] genalloc: track beginning of allocations
-References: <20180204164732.28241-1-igor.stoppa@huawei.com>
- <20180204164732.28241-2-igor.stoppa@huawei.com>
- <60e66c5a-c1de-246f-4be8-b02cb0275da6@infradead.org>
- <947ea9c3-b045-17d3-51e5-df80b4fb27e6@huawei.com>
-From: Randy Dunlap <rdunlap@infradead.org>
-Message-ID: <8b02744c-d527-f000-78c0-90142052b4ae@infradead.org>
-Date: Fri, 9 Feb 2018 09:15:00 -0800
+Date: Fri, 9 Feb 2018 19:37:14 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH 5/6] Documentation for Pmalloc
+Message-ID: <20180210033714.GA12711@bombadil.infradead.org>
+References: <20180130151446.24698-1-igor.stoppa@huawei.com>
+ <20180130151446.24698-6-igor.stoppa@huawei.com>
+ <20180130100852.2213b94d@lwn.net>
+ <56eb3e0d-d74d-737a-9f85-fead2c40c17c@huawei.com>
 MIME-Version: 1.0
-In-Reply-To: <947ea9c3-b045-17d3-51e5-df80b4fb27e6@huawei.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Igor Stoppa <igor.stoppa@huawei.com>, jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, hch@infradead.org, willy@infradead.org
-Cc: cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <56eb3e0d-d74d-737a-9f85-fead2c40c17c@huawei.com>
+To: Igor Stoppa <igor.stoppa@huawei.com>
+Cc: Jonathan Corbet <corbet@lwn.net>, jglisse@redhat.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, hch@infradead.org, cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/09/2018 08:18 AM, Igor Stoppa wrote:
-> 
-> 
-> On 05/02/18 00:34, Randy Dunlap wrote:
->> On 02/04/2018 08:47 AM, Igor Stoppa wrote:
-> 
-> [...]
-> 
->> It would be good for a lot of this to be in a source file or the
->> pmalloc.rst documentation file instead of living only in the git repository.
-> 
-> This is actually about genalloc. The genalloc documentation is high
-> level and mostly about the API, while this talks about the guts of the
-> library. The part modified by the patch. This text doesn't seem to
-> belong to the generic genalloc documentation.
-> I will move it to the .c file, but isn't it too much text in a source file?
+On Fri, Feb 02, 2018 at 05:56:29PM +0200, Igor Stoppa wrote:
+> But what is the license for the documentation? It's not code, so GPL
+> seems wrong. Creative commons?
 
-No, that will be fine.
+I've done this as the first line of my new documentation files:
 
-thanks,
--- 
-~Randy
+.. SPDX-License-Identifier: CC-BY-SA-4.0
+
+I think this is the CC license that's closest in spirit to the GPL without
+the unintended consequences of the GPL when used on documentation.  The
+GFDL seems to be out of favour these days.
