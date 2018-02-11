@@ -1,54 +1,63 @@
+Subject: Re: [PATCH 2/6] genalloc: selftest
+References: <20180211031920.3424-1-igor.stoppa@huawei.com>
+ <20180211031920.3424-3-igor.stoppa@huawei.com>
+ <CAOFm3uGNVu87qYzPufu+gGbTwuhp3cjfhKuNDkcmwn3+ysKTdg@mail.gmail.com>
+From: Randy Dunlap <rdunlap@infradead.org>
+Message-ID: <f95a064d-75e9-6ff3-2c11-4158a0ad1ca9@infradead.org>
+Date: Sun, 11 Feb 2018 12:27:14 -0800
 MIME-Version: 1.0
-In-Reply-To: <CAAGnT3Zfz1g0YWeETUL2_WcuTmCGN1a32m47_GSwUBxoGi46SQ@mail.gmail.com>
-References: <CAAGnT3YNZM7rtcviqzOgDN2++pQhQPUyCDh5__+-nNY2F74N3A@mail.gmail.com>
- <CAAGnT3bxZ2+xg6wK35uGAqXpQE0mDoNCwLQ6OjfAn9Mf+wxVSw@mail.gmail.com>
- <CAAGnT3araKx_SequwEiB6TNrAWh_b4um=5quRdkX8RZXU3a+_g@mail.gmail.com>
- <CAAGnT3boYz-jJv7Ey3kYjE7fE93PHnCAFwdmmtXzYX+93q7NuQ@mail.gmail.com>
- <CAAGnT3apMqTMBZVFqQLq2Wv0=SxtD5a-kXt+W966BQaL2avWhw@mail.gmail.com>
- <CAAGnT3b+Eh8rg+QNCck--GGyt7s5dOuJNCVjYveygcRfGt8c-w@mail.gmail.com>
- <CAAGnT3YDOSFerkUOKngsZPdfUCZdRR+WRzYn8Ob1-n+jo31eUA@mail.gmail.com>
- <CAAGnT3aMOym5NgreVYR7VUiJxLfe_Fn6Ba-ZKXJzWVkJ+FRKhw@mail.gmail.com>
- <CAAGnT3auzoYq73kG5R+MFkQtD7FJ8SqT74mT=EF3HvV8MsBeHA@mail.gmail.com>
- <CAAGnT3bRJi9XxuGiGwZM1uPBRigua_s96k2GN=Bzh3JRSw0vSg@mail.gmail.com>
- <CAAGnT3bAxpDTFF6aFdzTpAb35i9em54gffDQmzvB3ES=ktmJSQ@mail.gmail.com> <CAAGnT3Zfz1g0YWeETUL2_WcuTmCGN1a32m47_GSwUBxoGi46SQ@mail.gmail.com>
-From: Ahmed Soliman <ahmedsoliman0x666@gmail.com>
-Date: Sun, 11 Feb 2018 15:31:50 +0200
-Message-ID: <CAAGnT3ZxjCCeiG1YeS9xLrnF-n7RmK8Z-QOOWAhGwSRrHP9FUg@mail.gmail.com>
-Subject: Updating wikis request
-Content-Type: multipart/alternative; boundary="001a11439b96af90170564efc875"
-To: kernel-hardening@lists.openwall.com
+In-Reply-To: <CAOFm3uGNVu87qYzPufu+gGbTwuhp3cjfhKuNDkcmwn3+ysKTdg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Philippe Ombredanne <pombredanne@nexb.com>, Igor Stoppa <igor.stoppa@huawei.com>
+Cc: Matthew Wilcox <willy@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, mhocko@kernel.org, labbott@redhat.com, jglisse@redhat.com, Christoph Hellwig <hch@infradead.org>, cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a11439b96af90170564efc875
-Content-Type: text/plain; charset="UTF-8"
+On 02/11/18 12:22, Philippe Ombredanne wrote:
+> On Sun, Feb 11, 2018 at 4:19 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
+>> Introduce a set of macros for writing concise test cases for genalloc.
+>>
+>> The test cases are meant to provide regression testing, when working on
+>> new functionality for genalloc.
+>>
+>> Primarily they are meant to confirm that the various allocation strategy
+>> will continue to work as expected.
+>>
+>> The execution of the self testing is controlled through a Kconfig option.
+>>
+>> Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
+> 
+> <snip>
+> 
+>> --- /dev/null
+>> +++ b/include/linux/genalloc-selftest.h
+>> @@ -0,0 +1,26 @@
+>> +/* SPDX-License-Identifier: GPL-2.0
+> 
+> nit... For a comment in .h this line should be instead its own comment
+> as the first line:
+>> +/* SPDX-License-Identifier: GPL-2.0 */
 
-In previous email, I did state that i was interested in woking on ASLR on
-ARM as it was open todo here:
-http://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Work
+Why are we treating header files (.h) differently than .c files?
+Either one can use the C++ "//" comment syntax.
 
-I was reading through mailing lists and it looks like some one did already
-implement KASLR for arm
-https://lwn.net/Articles/732891/
+> <snip>
+> 
+>> --- /dev/null
+>> +++ b/lib/genalloc-selftest.c
+>> @@ -0,0 +1,400 @@
+>> +/* SPDX-License-Identifier: GPL-2.0
+> 
+> And for a comment in .c this line should use C++ style as the first line:
+> 
+>> +// SPDX-License-Identifier: GPL-2.0
+> 
+> Please check the docs for this (I know this can feel surprising but
+> this has been debated at great length on list)
+> 
+> Thank you!
+> 
 
-Please if anyone got an idea for what to contribute in, i would deeply
-appreciate it, I am already reading the archives, but really the most
-unproductive way and i will appreciate it if anyone provide guidance.
 
---001a11439b96af90170564efc875
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-
-<div dir=3D"auto">In previous email, I did state that i was interested in w=
-oking on ASLR on ARM as it was open todo here:<div dir=3D"auto"><a href=3D"=
-http://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Work" targ=
-et=3D"_blank">http://kernsec.org/wiki/index.<wbr>php/Kernel_Self_Protection=
-_Pro<wbr>ject/Work</a><br></div><div dir=3D"auto"><br></div><div dir=3D"aut=
-o">I was reading through mailing lists and it looks like some one did alrea=
-dy implement KASLR for arm</div><div dir=3D"auto"><a href=3D"https://lwn.ne=
-t/Articles/732891/" target=3D"_blank">https://lwn.net/Articles/<wbr>732891/=
-</a></div><div dir=3D"auto"><br></div><div dir=3D"auto">Please if anyone go=
-t an idea for what to contribute in, i would deeply appreciate it, I am alr=
-eady reading the archives, but really the most unproductive way and i will =
-appreciate it if anyone provide guidance.</div></div>
-
---001a11439b96af90170564efc875--
+-- 
+~Randy
