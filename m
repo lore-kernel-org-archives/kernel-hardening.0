@@ -1,155 +1,88 @@
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Subject: [PATCH 6/6] Documentation for Pmalloc
-Date: Mon, 12 Feb 2018 18:53:01 +0200
-Message-ID: <20180212165301.17933-7-igor.stoppa@huawei.com>
-In-Reply-To: <20180212165301.17933-1-igor.stoppa@huawei.com>
-References: <20180212165301.17933-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: willy@infradead.org, rdunlap@infradead.org, corbet@lwn.net, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, jglisse@redhat.com, hch@infradead.org
-Cc: cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
+Sender: keescook@google.com
+In-Reply-To: <CAAGnT3YJGf=eixt2+O_XsHiJZFP+CSO9A0a4qc-NKHRf=4y0sw@mail.gmail.com>
+References: <CAAGnT3YJGf=eixt2+O_XsHiJZFP+CSO9A0a4qc-NKHRf=4y0sw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 12 Feb 2018 15:01:39 -0800
+Message-ID: <CAGXu5jJBmKiDnhV26kEZyCf+TGWnpMOvSjiYaUr1U6z0FLPJHg@mail.gmail.com>
+Subject: Re: Hello world! Student interested in getting involved.
+Content-Type: text/plain; charset="UTF-8"
+To: Ahmed Soliman <ahmedsoliman0x666@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Detailed documentation about the protectable memory allocator.
+On Sat, Feb 10, 2018 at 11:18 AM, Ahmed Soliman
+<ahmedsoliman0x666@gmail.com> wrote:
+> I am student, currently studying computer and communication engineering, My
+> relevant academic background is undergraduate level courses in operating
+> systems, system software, compiler theory, architecture, microprocessors.
+> Well most of which are outdated stuff anyway but I have some ideas. My real
 
-Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
----
- Documentation/core-api/index.rst   |   1 +
- Documentation/core-api/pmalloc.rst | 114 +++++++++++++++++++++++++++++++++++++
- 2 files changed, 115 insertions(+)
- create mode 100644 Documentation/core-api/pmalloc.rst
+Welcome to the list!
 
-diff --git a/Documentation/core-api/index.rst b/Documentation/core-api/index.rst
-index c670a8031786..8f5de42d6571 100644
---- a/Documentation/core-api/index.rst
-+++ b/Documentation/core-api/index.rst
-@@ -25,6 +25,7 @@ Core utilities
-    genalloc
-    errseq
-    printk-formats
-+   pmalloc
- 
- Interfaces for kernel debugging
- ===============================
-diff --git a/Documentation/core-api/pmalloc.rst b/Documentation/core-api/pmalloc.rst
-new file mode 100644
-index 000000000000..d9725870444e
---- /dev/null
-+++ b/Documentation/core-api/pmalloc.rst
-@@ -0,0 +1,114 @@
-+.. SPDX-License-Identifier: GPL-2.0
-+
-+Protectable memory allocator
-+============================
-+
-+Purpose
-+-------
-+
-+The pmalloc library is meant to provide R/O status to data that, for some
-+reason, could neither be declared as constant, nor could it take advantage
-+of the qualifier __ro_after_init, but is write-once and read-only in spirit.
-+It protects data from both accidental and malicious overwrites.
-+
-+Example: A policy that is loaded from userspace.
-+
-+
-+Concept
-+-------
-+
-+pmalloc builds on top of genalloc, using the same concept of memory pools.
-+
-+The value added by pmalloc is that now the memory contained in a pool can
-+become R/O, for the rest of the life of the pool.
-+
-+Different kernel drivers and threads can use different pools, for finer
-+control of what becomes R/O and when. And for improved lockless concurrency.
-+
-+
-+Caveats
-+-------
-+
-+- Memory freed while a pool is not yet protected will be reused.
-+
-+- Once a pool is protected, it's not possible to allocate any more memory
-+  from it.
-+
-+- Memory "freed" from a protected pool indicates that such memory is not
-+  in use anymore by the requester; however, it will not become available
-+  for further use, until the pool is destroyed.
-+
-+- Before destroying a pool, all the memory allocated from it must be
-+  released.
-+
-+- pmalloc does not provide locking support with respect to allocating vs
-+  protecting an individual pool, for performance reasons.
-+  It is recommended not to share the same pool between unrelated functions.
-+  Should sharing be a necessity, the user of the shared pool is expected
-+  to implement locking for that pool.
-+
-+- pmalloc uses genalloc to optimize the use of the space it allocates
-+  through vmalloc. Some more TLB entries will be used, however less than
-+  in the case of using vmalloc directly. The exact number depends on the
-+  size of each allocation request and possible slack.
-+
-+- Considering that not much data is supposed to be dynamically allocated
-+  and then marked as read-only, it shouldn't be an issue that the address
-+  range for pmalloc is limited, on 32-bit systems.
-+
-+- Regarding SMP systems, the allocations are expected to happen mostly
-+  during an initial transient, after which there should be no more need to
-+  perform cross-processor synchronizations of page tables.
-+
-+- To facilitate the conversion of existing code to pmalloc pools, several
-+  helper functions are provided, mirroring their kmalloc counterparts.
-+
-+
-+Use
-+---
-+
-+The typical sequence, when using pmalloc, is:
-+
-+1. create a pool
-+
-+.. kernel-doc:: include/linux/pmalloc.h
-+   :functions: pmalloc_create_pool
-+
-+2. [optional] pre-allocate some memory in the pool
-+
-+.. kernel-doc:: include/linux/pmalloc.h
-+   :functions: pmalloc_prealloc
-+
-+3. issue one or more allocation requests to the pool with locking as needed
-+
-+.. kernel-doc:: include/linux/pmalloc.h
-+   :functions: pmalloc
-+
-+.. kernel-doc:: include/linux/pmalloc.h
-+   :functions: pzalloc
-+
-+4. initialize the memory obtained with desired values
-+
-+5. [optional] iterate over points 3 & 4 as needed
-+
-+6. write-protect the pool
-+
-+.. kernel-doc:: include/linux/pmalloc.h
-+   :functions: pmalloc_protect_pool
-+
-+7. use in read-only mode the handles obtained through the allocations
-+
-+8. [optional] release all the memory allocated
-+
-+.. kernel-doc:: include/linux/pmalloc.h
-+   :functions: pfree
-+
-+9. [optional, but depends on point 8] destroy the pool
-+
-+.. kernel-doc:: include/linux/pmalloc.h
-+   :functions: pmalloc_destroy_pool
-+
-+API
-+---
-+
-+.. kernel-doc:: include/linux/pmalloc.h
+> background comes from Playing CTFs in my free time (which is basically 24/7)
+> doing mainly Reverse engineering and Binary exploitation, I have done 2~3
+> hello world kernel exploit dev for learning. so I have the basic knowledge,
+
+Excellent; CTFs can be extremely educational. There aren't enough
+kernel CTFs, IMO. :)
+
+> And I use hand tweaked Gentoo! I have 1 documentation kernel patch \o/.
+
+Hey, that's a good place to start! What was fixed?
+
+> I am exploiting the fact that we shall be doing Software Engineering course
+> This semester, so to enforce myself to get started developing for the
+> kernel, I was guided here though long searching journey with #kernelnewbies
+> and approaching many couple of maintainers in general.
+>
+> I always experienced people asking me even on kernelnewbies why I want to
+> write stuff for kernel, well it is just for pure fun and I like doing almost
+> low level security. And low level security requires being aware with kernel.
+> Please just don't try to send me off. And I hope no one gets the wrong idea
+> that I am only doing this for school.
+
+You've got the primary element: desire to work on it. :) There aren't
+a lot of people interested in low level code, and even fewer
+interested in security, so we'd love to help however we can.
+
+> Anyway I am interested in this implementing KASLR for ARM, I just wanted to
+> make sure that no one is working on that because this is major school
+> requirement, we are assumed to deliver a self contained "something" that
+> isn't ours and not someone's else.
+
+Ard (now on CC) implemented a first-pass at this already, but it
+likely needs some more tweaking and running down of any loose ends.
+
+See here:
+http://www.openwall.com/lists/kernel-hardening/2017/08/14/2
+
+> The reason I chose this one is that I think that is the only one that I
+> understand (in a very abstract level) among all of them. so it should be the
+> easiest way to kick start in my opinion.
+> Assuming that I am right, I wanted to state that the only ARM32 hardware I
+> own is raspberry pi zero, and Qemu of course, should that be enough please
+> do let me know, and I would appreciate any reading materials provided I am
+> already reading through wiki but there could be hidden gems that I missed.
+
+I'll let Ard take over; but between Qemu and real hardware you should
+be set. One of the tricky parts of arm32 is how many earlier CPU types
+there were, which can make some aspects more difficult to test. In the
+worst case, you can just mark it as available on certain hardware.
+
+> Also what directories that I should start exploring, this is extremely
+> important for me. I was past google summer of code student. And the best
+> assistance my mentors ever provided me is the folder or code files that
+> Should play with.
+
+This tends to be very interest-specific. For example, if you're
+looking at memory layouts, arch/*/mm/ tends to be the place to look.
+If you interested in ELF execution, that'd be kernel/fork.c and
+fs/binfmt_elf.c. Usercopy hardening is include/linux/uaccess.h,
+mm/usercopy.c, and arch/*/include/asm/uaccess.h, etc.
+
+-Kees
+
 -- 
-2.14.1
+Kees Cook
+Pixel Security
