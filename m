@@ -1,50 +1,49 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CAAGnT3ZxjCCeiG1YeS9xLrnF-n7RmK8Z-QOOWAhGwSRrHP9FUg@mail.gmail.com>
-References: <CAAGnT3YNZM7rtcviqzOgDN2++pQhQPUyCDh5__+-nNY2F74N3A@mail.gmail.com>
- <CAAGnT3bxZ2+xg6wK35uGAqXpQE0mDoNCwLQ6OjfAn9Mf+wxVSw@mail.gmail.com>
- <CAAGnT3araKx_SequwEiB6TNrAWh_b4um=5quRdkX8RZXU3a+_g@mail.gmail.com>
- <CAAGnT3boYz-jJv7Ey3kYjE7fE93PHnCAFwdmmtXzYX+93q7NuQ@mail.gmail.com>
- <CAAGnT3apMqTMBZVFqQLq2Wv0=SxtD5a-kXt+W966BQaL2avWhw@mail.gmail.com>
- <CAAGnT3b+Eh8rg+QNCck--GGyt7s5dOuJNCVjYveygcRfGt8c-w@mail.gmail.com>
- <CAAGnT3YDOSFerkUOKngsZPdfUCZdRR+WRzYn8Ob1-n+jo31eUA@mail.gmail.com>
- <CAAGnT3aMOym5NgreVYR7VUiJxLfe_Fn6Ba-ZKXJzWVkJ+FRKhw@mail.gmail.com>
- <CAAGnT3auzoYq73kG5R+MFkQtD7FJ8SqT74mT=EF3HvV8MsBeHA@mail.gmail.com>
- <CAAGnT3bRJi9XxuGiGwZM1uPBRigua_s96k2GN=Bzh3JRSw0vSg@mail.gmail.com>
- <CAAGnT3bAxpDTFF6aFdzTpAb35i9em54gffDQmzvB3ES=ktmJSQ@mail.gmail.com>
- <CAAGnT3Zfz1g0YWeETUL2_WcuTmCGN1a32m47_GSwUBxoGi46SQ@mail.gmail.com> <CAAGnT3ZxjCCeiG1YeS9xLrnF-n7RmK8Z-QOOWAhGwSRrHP9FUg@mail.gmail.com>
+In-Reply-To: <17e5b515-84c8-dca2-1695-cdf819834ea2@huawei.com>
+References: <20180124175631.22925-1-igor.stoppa@huawei.com>
+ <20180124175631.22925-5-igor.stoppa@huawei.com> <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
+ <20180126053542.GA30189@bombadil.infradead.org> <alpine.DEB.2.20.1802021236510.31548@nuc-kabylake>
+ <f2ddaed0-313e-8664-8a26-9d10b66ed0c5@huawei.com> <b75b5903-0177-8ad9-5c2b-fc63438fb5f2@huawei.com>
+ <CAFUG7CfrCpcbwgf5ixMC5EZZgiVVVp1NXhDHK1UoJJcC08R2qQ@mail.gmail.com>
+ <8818bfd4-dd9f-f279-0432-69b59531bd41@huawei.com> <CAFUG7CeUhFcvA82uZ2ZH1j_6PM=aBo4XmYDN85pf8G0gPU44dg@mail.gmail.com>
+ <17e5b515-84c8-dca2-1695-cdf819834ea2@huawei.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 12 Feb 2018 15:03:20 -0800
-Message-ID: <CAGXu5jJc-La=99OAaPPtB-cTtYoTnTC=3bEb7aRrcnBrUCs89g@mail.gmail.com>
-Subject: Re: Updating wikis request
+Date: Mon, 12 Feb 2018 15:27:19 -0800
+Message-ID: <CAGXu5j+LS1pgOOroi7Yxp2nh=DwtTnU3p-NZa6bQu_wkvvVkwg@mail.gmail.com>
+Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
 Content-Type: text/plain; charset="UTF-8"
-To: Ahmed Soliman <ahmedsoliman0x666@gmail.com>
-Cc: kernel-hardening@lists.openwall.com
+To: Igor Stoppa <igor.stoppa@huawei.com>
+Cc: Boris Lukashev <blukashev@sempervictus.com>, Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Jann Horn <jannh@google.com>, Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Christoph Hellwig <hch@infradead.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Feb 11, 2018 at 5:31 AM, Ahmed Soliman
-<ahmedsoliman0x666@gmail.com> wrote:
-> In previous email, I did state that i was interested in woking on ASLR on
-> ARM as it was open todo here:
-> http://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project/Work
-
-Yeah, this is still on the TODO since it's not yet landed in the
-upstream kernel. As mentioned, Ard has a working version of it, so
-that's the best place to start.
-
-> I was reading through mailing lists and it looks like some one did already
-> implement KASLR for arm
-> https://lwn.net/Articles/732891/
+On Sun, Feb 4, 2018 at 7:05 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
+> On 04/02/18 00:29, Boris Lukashev wrote:
+>> On Sat, Feb 3, 2018 at 3:32 PM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
 >
-> Please if anyone got an idea for what to contribute in, i would deeply
-> appreciate it, I am already reading the archives, but really the most
-> unproductive way and i will appreciate it if anyone provide guidance.
+> [...]
+>
+>>> What you are suggesting, if I have understood it correctly, is that,
+>>> when the pool is protected, the addresses already given out, will become
+>>> traps that get resolved through a lookup table that is built based on
+>>> the content of each allocation.
+>>>
+>>> That seems to generate a lot of overhead, not to mention the fact that
+>>> it might not play very well with the MMU.
+>>
+>> That is effectively what i'm suggesting - as a form of protection for
+>> consumers against direct reads of data which may have been corrupted
+>> by some irrelevant means. In the context of pmalloc, it would probably
+>> be a separate type of ro+verified pool
+> ok, that seems more like an extension though.
+>
+> ATM I am having problems gaining traction to get even the basic merged :-)
+>
+> I would consider this as a possibility for future work, unless it is
+> said that it's necessary for pmalloc to be accepted ...
 
-In my other reply I mentioned that this is still a good place to
-contribute since it's not "done". Getting it landed in upstream can
-take some persistence. :)
-
-I hope this helps!
+I would agree: let's get basic functionality in first. Both
+verification and the physmap part can be done separately, IMO.
 
 -Kees
 
