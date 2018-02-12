@@ -1,32 +1,57 @@
-Subject: Re: [PATCH 4/6] Protectable Memory
-References: <20180211031920.3424-1-igor.stoppa@huawei.com>
- <20180211031920.3424-5-igor.stoppa@huawei.com>
- <20180211123743.GC13931@rapoport-lnx>
- <e7ea02b4-3d43-9543-3d14-61c27e155042@huawei.com>
- <20180212114310.GD20737@rapoport-lnx> <20180212125347.GE20737@rapoport-lnx>
- <68edadf0-2b23-eaeb-17de-884032f0b906@huawei.com>
- <20180212153156.GF20737@rapoport-lnx>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <f5c08b12-a274-f2db-5cf2-8b774489c425@huawei.com>
-Date: Mon, 12 Feb 2018 17:41:52 +0200
+Date: Mon, 12 Feb 2018 16:00:39 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Subject: Re: [PATCHv2 05/12] arm64: Don't trap host pointer auth use to EL2
+Message-ID: <20180212160039.br2emy3zt6ftmwfu@lakrids.cambridge.arm.com>
+References: <20171127163806.31435-1-mark.rutland@arm.com>
+ <20171127163806.31435-6-mark.rutland@arm.com>
+ <20180206123906.GZ21802@cbox>
 MIME-Version: 1.0
-In-Reply-To: <20180212153156.GF20737@rapoport-lnx>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-To: Mike Rapoport <rppt@linux.vnet.ibm.com>
-Cc: willy@infradead.org, rdunlap@infradead.org, corbet@lwn.net, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, jglisse@redhat.com, hch@infradead.org, cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180206123906.GZ21802@cbox>
+To: Christoffer Dall <christoffer.dall@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, arnd@arndb.de, catalin.marinas@arm.com, cdall@linaro.org, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, yao.qi@arm.com, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 12/02/18 17:31, Mike Rapoport wrote:
+On Tue, Feb 06, 2018 at 01:39:06PM +0100, Christoffer Dall wrote:
+> Hi Mark,
+> 
+> On Mon, Nov 27, 2017 at 04:37:59PM +0000, Mark Rutland wrote:
+> > To allow EL0 (and/or EL1) to use pointer authentication functionality,
+> > we must ensure that pointer authentication instructions and accesses to
+> > pointer authentication keys are not trapped to EL2 (where we will not be
+> > able to handle them).
+> 
+> ...on non-VHE systems, presumably?
 
-[...]
+For EL0 usage, we don't want to trap even in the absence of VHE, so I'll
+drop the bit in brackets entirely.
 
-> Seems that kernel-doc does not consider () as a valid match for the
-> identifier :)
->  
-> Can you please check with the below patch?
+> > This patch ensures that HCR_EL2 is configured appropriately when the
+> > kernel is booted at EL2. For non-VHE kernels we set HCR_EL2.{API,APK},
+> > ensuring that EL1 can access keys and permit EL0 use of instructions.
+> > For VHE kernels, EL2 access is controlled by EL3, and we need not set
+> > anything.
+> 
+> 
+> for VHE kernels host EL0 (TGE && E2H) is unaffected by these settings,
+> and it doesn't matter how we configure HCR_EL2.{API,APK}.
+> 
+> (Because you do actually set these bits when the features are present if
+> I read the code correctly).
 
-yes, it works now, than you!
+Ah, true. I've taken your proposed wording.
 
---
-igor
+> > This does not enable support for KVM guests, since KVM manages HCR_EL2
+> > itself.
+> 
+>         (...when running VMs.)
+> 
+> 
+> Besides the nits:
+> 
+> Acked-by: Christoffer Dall <christoffer.dall@linaro.org>
+
+Cheers!
+
+Mark.
