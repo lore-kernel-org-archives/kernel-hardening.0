@@ -1,57 +1,40 @@
-Date: Mon, 12 Feb 2018 16:00:39 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Subject: Re: [PATCHv2 05/12] arm64: Don't trap host pointer auth use to EL2
-Message-ID: <20180212160039.br2emy3zt6ftmwfu@lakrids.cambridge.arm.com>
-References: <20171127163806.31435-1-mark.rutland@arm.com>
- <20171127163806.31435-6-mark.rutland@arm.com>
- <20180206123906.GZ21802@cbox>
+Subject: Re: [PATCH 3/6] struct page: add field for vm_struct
+References: <20180211031920.3424-1-igor.stoppa@huawei.com>
+ <20180211031920.3424-4-igor.stoppa@huawei.com>
+ <20180211211646.GC4680@bombadil.infradead.org>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <cef01110-dc23-4442-f277-88d1d3662e00@huawei.com>
+Date: Mon, 12 Feb 2018 18:24:20 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180206123906.GZ21802@cbox>
-To: Christoffer Dall <christoffer.dall@linaro.org>
-Cc: linux-arm-kernel@lists.infradead.org, arnd@arndb.de, catalin.marinas@arm.com, cdall@linaro.org, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, yao.qi@arm.com, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org
+In-Reply-To: <20180211211646.GC4680@bombadil.infradead.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+To: Matthew Wilcox <willy@infradead.org>
+Cc: rdunlap@infradead.org, corbet@lwn.net, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, jglisse@redhat.com, hch@infradead.org, cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 06, 2018 at 01:39:06PM +0100, Christoffer Dall wrote:
-> Hi Mark,
-> 
-> On Mon, Nov 27, 2017 at 04:37:59PM +0000, Mark Rutland wrote:
-> > To allow EL0 (and/or EL1) to use pointer authentication functionality,
-> > we must ensure that pointer authentication instructions and accesses to
-> > pointer authentication keys are not trapped to EL2 (where we will not be
-> > able to handle them).
-> 
-> ...on non-VHE systems, presumably?
 
-For EL0 usage, we don't want to trap even in the absence of VHE, so I'll
-drop the bit in brackets entirely.
 
-> > This patch ensures that HCR_EL2 is configured appropriately when the
-> > kernel is booted at EL2. For non-VHE kernels we set HCR_EL2.{API,APK},
-> > ensuring that EL1 can access keys and permit EL0 use of instructions.
-> > For VHE kernels, EL2 access is controlled by EL3, and we need not set
-> > anything.
+On 11/02/18 23:16, Matthew Wilcox wrote:
+> On Sun, Feb 11, 2018 at 05:19:17AM +0200, Igor Stoppa wrote:
+>> The struct page has a "mapping" field, which can be re-used, to store a
+>> pointer to the parent area. This will avoid more expensive searches.
+>>
+>> As example, the function find_vm_area is reimplemented, to take advantage
+>> of the newly introduced field.
 > 
-> 
-> for VHE kernels host EL0 (TGE && E2H) is unaffected by these settings,
-> and it doesn't matter how we configure HCR_EL2.{API,APK}.
-> 
-> (Because you do actually set these bits when the features are present if
-> I read the code correctly).
+> Umm.  Is it more efficient?  You're replacing an rb-tree search with a
+> page-table walk.  You eliminate a spinlock, which is great, but is the
+> page-table walk more efficient?  I suppose it'll depend on the depth of
+> the rb-tree, and (at least on x86), the page tables should already be
+> in cache.
 
-Ah, true. I've taken your proposed wording.
+I thought the tradeoff favorable. How to verify it?
 
-> > This does not enable support for KVM guests, since KVM manages HCR_EL2
-> > itself.
-> 
->         (...when running VMs.)
-> 
-> 
-> Besides the nits:
-> 
-> Acked-by: Christoffer Dall <christoffer.dall@linaro.org>
+> Unrelated to this patch, I'm working on a patch to give us page_type,
+> and I think I'll allocate a bit to mark pages which are vmalloced.
 
-Cheers!
+pmalloced too?
 
-Mark.
+--
+igor
