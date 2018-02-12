@@ -1,69 +1,43 @@
-Subject: Re: [PATCH 1/6] genalloc: track beginning of allocations
+Subject: Re: [PATCH 4/6] Protectable Memory
 References: <20180211031920.3424-1-igor.stoppa@huawei.com>
- <20180211031920.3424-2-igor.stoppa@huawei.com>
- <20180211122444.GB13931@rapoport-lnx>
+ <20180211031920.3424-5-igor.stoppa@huawei.com>
+ <20180211123743.GC13931@rapoport-lnx>
 From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <f0a244f2-f63a-376b-28f2-debbe914da34@huawei.com>
-Date: Mon, 12 Feb 2018 13:17:01 +0200
+Message-ID: <e7ea02b4-3d43-9543-3d14-61c27e155042@huawei.com>
+Date: Mon, 12 Feb 2018 13:26:28 +0200
 MIME-Version: 1.0
-In-Reply-To: <20180211122444.GB13931@rapoport-lnx>
+In-Reply-To: <20180211123743.GC13931@rapoport-lnx>
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 To: Mike Rapoport <rppt@linux.vnet.ibm.com>
 Cc: willy@infradead.org, rdunlap@infradead.org, corbet@lwn.net, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, jglisse@redhat.com, hch@infradead.org, cl@linux.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 11/02/18 14:37, Mike Rapoport wrote:
+> On Sun, Feb 11, 2018 at 05:19:18AM +0200, Igor Stoppa wrote:
 
+>> + * Return: 0 if the object does not belong to pmalloc, 1 if it belongs to
+>> + * pmalloc, -1 if it partially overlaps pmalloc meory, but incorectly.
+> 
+> typo:                                            ^ memory
 
-On 11/02/18 14:24, Mike Rapoport wrote:
-> On Sun, Feb 11, 2018 at 05:19:15AM +0200, Igor Stoppa wrote:
+thanks :-(
+
 [...]
 
 >> +/**
->> + * mem_to_units - convert references to memory into orders of allocation
+>> + * When the sysfs is ready to receive registrations, connect all the
+>> + * pools previously created. Also enable further pools to be connected
+>> + * right away.
+>> + */
 > 
-> Documentation/doc-guide/kernel-doc.rst recommends to to include brackets
-> for function comments. I haven't noticed any difference in the resulting
-> html, so I'm not sure if the brackets are actually required.
+> This does not seem as kernel-doc comment. Please either remove the second *
+> from the opening comment mark or reformat the comment.
 
-This is what I see in the example from mailine docs:
+For this too, I thought I had caught them all, but I was wrong ...
 
-/**
- * foobar() - Brief description of foobar.
- * @argument1: Description of parameter argument1 of foobar.
- * @argument2: Description of parameter argument2 of foobar.
- *
- * Longer description of foobar.
- *
- * Return: Description of return value of foobar.
- */
-int foobar(int argument1, char *argument2)
-
-
-What are you referring to?
-
-[...]
-
->> + * @size: amount in bytes
->> + * @order: power of 2 represented by each entry in the bitmap
->> + *
->> + * Returns the number of units representing the size.
-> 
-> Please s/Return/Return:/
-
-:-( I thought I had fixed them all. thanks for spotting this.
-
-[...]
-
->> + * Return: If two users alter the same bit, to one it will return
->> + * remaining entries, to the other it will return 0.
-> 
-> And what if there are three or four concurrent users? ;-)
-> 
-> I believe that a more elaborate description about what happens with
-> concurrent attempts to alter the bitmap would be really helpful.
-
-ok
+I didn't find any mention of automated checking for comments.
+Is there such tool?
 
 --
 thanks, igor
