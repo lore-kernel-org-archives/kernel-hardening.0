@@ -12,99 +12,31 @@ References: <20180124175631.22925-1-igor.stoppa@huawei.com>
  <17e5b515-84c8-dca2-1695-cdf819834ea2@huawei.com>
  <CAGXu5j+LS1pgOOroi7Yxp2nh=DwtTnU3p-NZa6bQu_wkvvVkwg@mail.gmail.com>
  <414027d3-dd73-cf11-dc2a-e8c124591646@redhat.com>
- <CAGXu5j++igQD4tMh0J8nZ9jNji5mU16C7OygFJ5Td+Bq-KSMgw@mail.gmail.com>
- <CAG48ez1utN_vwHUwk=BU6zM4Wa_53TPu8rm9JuTtY-vGP0Shqw@mail.gmail.com>
+ <5a83024c.64369d0a.a1e94.cdd6SMTPIN_ADDED_BROKEN@mx.google.com>
 From: Laura Abbott <labbott@redhat.com>
-Message-ID: <f4226a44-92fd-8ead-b458-7551ba82f96d@redhat.com>
-Date: Tue, 13 Feb 2018 08:09:35 -0800
+Message-ID: <13a50f85-bbd8-5d78-915a-a29c4a9f0c32@redhat.com>
+Date: Tue, 13 Feb 2018 10:10:13 -0800
 MIME-Version: 1.0
-In-Reply-To: <CAG48ez1utN_vwHUwk=BU6zM4Wa_53TPu8rm9JuTtY-vGP0Shqw@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
+In-Reply-To: <5a83024c.64369d0a.a1e94.cdd6SMTPIN_ADDED_BROKEN@mx.google.com>
+Content-Type: text/plain; charset=gbk; format=flowed
 Content-Transfer-Encoding: 7bit
-To: Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>
-Cc: Igor Stoppa <igor.stoppa@huawei.com>, Boris Lukashev <blukashev@sempervictus.com>, Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>, Christoph Hellwig <hch@infradead.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Igor Stoppa <igor.stoppa@huawei.com>, Kees Cook <keescook@chromium.org>
+Cc: Boris Lukashev <blukashev@sempervictus.com>, Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Jann Horn <jannh@google.com>, Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>, Christoph Hellwig <hch@infradead.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/12/2018 07:39 PM, Jann Horn wrote:
-> On Tue, Feb 13, 2018 at 2:25 AM, Kees Cook <keescook@chromium.org> wrote:
->> On Mon, Feb 12, 2018 at 4:40 PM, Laura Abbott <labbott@redhat.com> wrote:
->>> On 02/12/2018 03:27 PM, Kees Cook wrote:
->>>>
->>>> On Sun, Feb 4, 2018 at 7:05 AM, Igor Stoppa <igor.stoppa@huawei.com>
->>>> wrote:
->>>>>
->>>>> On 04/02/18 00:29, Boris Lukashev wrote:
->>>>>>
->>>>>> On Sat, Feb 3, 2018 at 3:32 PM, Igor Stoppa <igor.stoppa@huawei.com>
->>>>>> wrote:
->>>>>
->>>>>
->>>>> [...]
->>>>>
->>>>>>> What you are suggesting, if I have understood it correctly, is that,
->>>>>>> when the pool is protected, the addresses already given out, will
->>>>>>> become
->>>>>>> traps that get resolved through a lookup table that is built based on
->>>>>>> the content of each allocation.
->>>>>>>
->>>>>>> That seems to generate a lot of overhead, not to mention the fact that
->>>>>>> it might not play very well with the MMU.
->>>>>>
->>>>>>
->>>>>> That is effectively what i'm suggesting - as a form of protection for
->>>>>> consumers against direct reads of data which may have been corrupted
->>>>>> by some irrelevant means. In the context of pmalloc, it would probably
->>>>>> be a separate type of ro+verified pool
->>>>>
->>>>> ok, that seems more like an extension though.
->>>>>
->>>>> ATM I am having problems gaining traction to get even the basic merged
->>>>> :-)
->>>>>
->>>>> I would consider this as a possibility for future work, unless it is
->>>>> said that it's necessary for pmalloc to be accepted ...
->>>>
->>>>
->>>> I would agree: let's get basic functionality in first. Both
->>>> verification and the physmap part can be done separately, IMO.
->>>
->>>
->>> Skipping over physmap leaves a pretty big area of exposure that could
->>> be difficult to solve later. I appreciate this might block basic
->>> functionality but I don't think we should just gloss over it without
->>> at least some idea of what we would do.
->>
->> What's our exposure on physmap for other regions? e.g. things that are
->> executable, or made read-only later (like __ro_after_init)?
-> 
-> I just checked on a system with a 4.9 kernel, and there seems to be no
-> physical memory that is mapped as writable in the init PGD and
-> executable elsewhere.
-> 
-> Ah, I think I missed something. At least on X86, set_memory_ro,
-> set_memory_rw, set_memory_nx and set_memory_x all use
-> change_page_attr_clear/change_page_attr_set, which use
-> change_page_attr_set_clr, which calls __change_page_attr_set_clr()
-> with a second parameter "checkalias" that is set to 1 unless the bit
-> being changed is the NX bit, and that parameter causes the invocation
-> of cpa_process_alias(), which will, for mapped ranges, also change the
-> attributes of physmap ranges. set_memory_ro() and so on are also used
-> by the module loading code.
-> 
-> But in the ARM64 code, I don't see anything similar. Does anyone with
-> a better understanding of ARM64 want to check whether I missed
-> something? Or maybe, with a recent kernel, check whether executable
-> module pages show up with a second writable mapping in the
-> "kernel_page_tables" file in debugfs?
-> 
+On 02/13/2018 07:20 AM, Igor Stoppa wrote:
+> Why alterations of page properties are not considered a risk and the physmap is?
+> And how would it be easier (i suppose) to attack the latter?
 
-No, arm64 doesn't fixup the aliases, mostly because arm64 uses larger
-page sizes which can't be broken down at runtime. CONFIG_PAGE_POISONING
-does use 4K pages which could be adjusted at runtime. So yes, you are
-right we would have physmap exposure on arm64 as well.
+Alterations are certainly a risk but with the physmap the
+mapping is already there. Find the address and you have
+access vs. needing to actually modify the properties
+then do the access. I could also be complete off base
+on my threat model here so please correct me if I'm
+wrong.
 
-To the original question, it does sound like we are actually okay
-with the physmap.
+I think your other summaries are good points though
+and should go in the cover letter.
 
 Thanks,
 Laura
