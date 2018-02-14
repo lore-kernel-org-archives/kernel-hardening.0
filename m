@@ -1,7 +1,7 @@
 From: Matthew Wilcox <willy@infradead.org>
-Subject: [PATCH v2 4/8] Convert dax device to kvzalloc_struct
-Date: Wed, 14 Feb 2018 12:11:50 -0800
-Message-Id: <20180214201154.10186-5-willy@infradead.org>
+Subject: [PATCH v2 3/8] Convert virtio_console to kvzalloc_struct
+Date: Wed, 14 Feb 2018 12:11:49 -0800
+Message-Id: <20180214201154.10186-4-willy@infradead.org>
 In-Reply-To: <20180214201154.10186-1-willy@infradead.org>
 References: <20180214201154.10186-1-willy@infradead.org>
 To: Andrew Morton <akpm@linux-foundation.org>
@@ -12,21 +12,22 @@ From: Matthew Wilcox <mawilcox@microsoft.com>
 
 Signed-off-by: Matthew Wilcox <mawilcox@microsoft.com>
 ---
- drivers/dax/device.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ drivers/char/virtio_console.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/drivers/dax/device.c b/drivers/dax/device.c
-index 2137dbc29877..5821cde340f6 100644
---- a/drivers/dax/device.c
-+++ b/drivers/dax/device.c
-@@ -586,7 +586,7 @@ struct dev_dax *devm_create_dev_dax(struct dax_region *dax_region,
- 	if (!count)
- 		return ERR_PTR(-EINVAL);
- 
--	dev_dax = kzalloc(sizeof(*dev_dax) + sizeof(*res) * count, GFP_KERNEL);
-+	dev_dax = kvzalloc_struct(dev_dax, res, count, GFP_KERNEL);
- 	if (!dev_dax)
- 		return ERR_PTR(-ENOMEM);
+diff --git a/drivers/char/virtio_console.c b/drivers/char/virtio_console.c
+index 468f06134012..e0816cc2c6bd 100644
+--- a/drivers/char/virtio_console.c
++++ b/drivers/char/virtio_console.c
+@@ -433,8 +433,7 @@ static struct port_buffer *alloc_buf(struct virtqueue *vq, size_t buf_size,
+ 	 * Allocate buffer and the sg list. The sg list array is allocated
+ 	 * directly after the port_buffer struct.
+ 	 */
+-	buf = kmalloc(sizeof(*buf) + sizeof(struct scatterlist) * pages,
+-		      GFP_KERNEL);
++	buf = kvzalloc_struct(buf, sg, pages, GFP_KERNEL);
+ 	if (!buf)
+ 		goto fail;
  
 -- 
 2.15.1
