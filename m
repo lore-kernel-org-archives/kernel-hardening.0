@@ -1,55 +1,129 @@
-Subject: arm64 physmap (was Re: [kernel-hardening] [PATCH 4/6] Protectable
- Memory)
-References: <20180124175631.22925-1-igor.stoppa@huawei.com>
- <20180124175631.22925-5-igor.stoppa@huawei.com>
- <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
- <20180126053542.GA30189@bombadil.infradead.org>
- <alpine.DEB.2.20.1802021236510.31548@nuc-kabylake>
- <f2ddaed0-313e-8664-8a26-9d10b66ed0c5@huawei.com>
- <b75b5903-0177-8ad9-5c2b-fc63438fb5f2@huawei.com>
- <CAFUG7CfrCpcbwgf5ixMC5EZZgiVVVp1NXhDHK1UoJJcC08R2qQ@mail.gmail.com>
- <8818bfd4-dd9f-f279-0432-69b59531bd41@huawei.com>
- <CAFUG7CeUhFcvA82uZ2ZH1j_6PM=aBo4XmYDN85pf8G0gPU44dg@mail.gmail.com>
- <17e5b515-84c8-dca2-1695-cdf819834ea2@huawei.com>
- <CAGXu5j+LS1pgOOroi7Yxp2nh=DwtTnU3p-NZa6bQu_wkvvVkwg@mail.gmail.com>
- <414027d3-dd73-cf11-dc2a-e8c124591646@redhat.com>
- <CAGXu5j++igQD4tMh0J8nZ9jNji5mU16C7OygFJ5Td+Bq-KSMgw@mail.gmail.com>
- <CAG48ez1utN_vwHUwk=BU6zM4Wa_53TPu8rm9JuTtY-vGP0Shqw@mail.gmail.com>
- <f4226a44-92fd-8ead-b458-7551ba82f96d@redhat.com>
- <CAGXu5j+zOCLerneUt2b-tvyLLg7fEbr9B0YYow-4DH6oV-nnCw@mail.gmail.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <2f23544a-bd24-1e71-967b-e8d1cf5a20a3@redhat.com>
-Date: Wed, 14 Feb 2018 11:06:06 -0800
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+zOCLerneUt2b-tvyLLg7fEbr9B0YYow-4DH6oV-nnCw@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Jann Horn <jannh@google.com>, Igor Stoppa <igor.stoppa@huawei.com>, Boris Lukashev <blukashev@sempervictus.com>, Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>, Christoph Hellwig <hch@infradead.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>
+Sender: keescook@google.com
+In-Reply-To: <20180214182618.14627-3-willy@infradead.org>
+References: <20180214182618.14627-1-willy@infradead.org> <20180214182618.14627-3-willy@infradead.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 14 Feb 2018 11:22:38 -0800
+Message-ID: <CAGXu5jL9hqQGe672CmvFwqNbtTr=qu7WRwHuS4Vy7o5sX_UTgg@mail.gmail.com>
+Subject: Re: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
+Content-Type: text/plain; charset="UTF-8"
+To: Matthew Wilcox <willy@infradead.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Julia Lawall <julia.lawall@lip6.fr>, cocci@systeme.lip6.fr
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/13/2018 01:43 PM, Kees Cook wrote:
-> On Tue, Feb 13, 2018 at 8:09 AM, Laura Abbott <labbott@redhat.com> wrote:
->> No, arm64 doesn't fixup the aliases, mostly because arm64 uses larger
->> page sizes which can't be broken down at runtime. CONFIG_PAGE_POISONING
->> does use 4K pages which could be adjusted at runtime. So yes, you are
->> right we would have physmap exposure on arm64 as well.
-> 
-> Errr, so that means even modules and kernel code are writable via the
-> arm64 physmap? That seems extraordinarily bad. :(
-> 
-> -Kees
-> 
+On Wed, Feb 14, 2018 at 10:26 AM, Matthew Wilcox <willy@infradead.org> wrote:
+> From: Matthew Wilcox <mawilcox@microsoft.com>
+>
+> We have kvmalloc_array in order to safely allocate an array with a
+> number of elements specified by userspace (avoiding arithmetic overflow
+> leading to a buffer overrun).  But it's fairly common to have a header
+> in front of that array (eg specifying the length of the array), so we
+> need a helper function for that situation.
+>
+> kvmalloc_ab_c() is the workhorse that does the calculation, but in spite
+> of our best efforts to name the arguments, it's really hard to remember
+> which order to put the arguments in.  kvzalloc_struct() eliminates that
+> effort; you tell it about the struct you're allocating, and it puts the
+> arguments in the right order for you (and checks that the arguments
+> you've given are at least plausible).
+>
+> For comparison between the three schemes:
+>
+>         sev = kvzalloc(sizeof(*sev) + sizeof(struct v4l2_kevent) * elems,
+>                         GFP_KERNEL);
+>         sev = kvzalloc_ab_c(elems, sizeof(struct v4l2_kevent), sizeof(*sev),
+>                         GFP_KERNEL);
+>         sev = kvzalloc_struct(sev, events, elems, GFP_KERNEL);
+>
+> Signed-off-by: Matthew Wilcox <mawilcox@microsoft.com>
+> ---
+>  include/linux/mm.h | 51 +++++++++++++++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 51 insertions(+)
+>
+> diff --git a/include/linux/mm.h b/include/linux/mm.h
+> index 81bd7f0be286..ddf929c5aaee 100644
+> --- a/include/linux/mm.h
+> +++ b/include/linux/mm.h
+> @@ -557,6 +557,57 @@ static inline void *kvmalloc_array(size_t n, size_t size, gfp_t flags)
+>         return kvmalloc(n * size, flags);
+>  }
+>
+> +/**
+> + * kvmalloc_ab_c() - Allocate memory.
 
-(adding linux-arm-kernel and changing the subject)
+Longer description, maybe? "Allocate a *b + c bytes of memory"?
 
-Kernel code should be fine, if it isn't that is a bug that should be
-fixed. Modules yes are not fully protected. The conclusion from past
-experience has been that we cannot safely break down larger page sizes
-at runtime like x86 does. We could theoretically
-add support for fixing up the alias if PAGE_POISONING is enabled but
-I don't know who would actually use that in production. Performance
-is very poor at that point.
+> + * @n: Number of elements.
+> + * @size: Size of each element (should be constant).
+> + * @c: Size of header (should be constant).
 
-Thanks,
-Laura
+If these should be constant, should we mark them as "const"? Or WARN
+if __builtin_constant_p() isn't true?
+
+> + * @gfp: Memory allocation flags.
+> + *
+> + * Use this function to allocate @n * @size + @c bytes of memory.  This
+> + * function is safe to use when @n is controlled from userspace; it will
+> + * return %NULL if the required amount of memory cannot be allocated.
+> + * Use kvfree() to free the allocated memory.
+> + *
+> + * The kvzalloc_hdr_arr() function is easier to use as it has typechecking
+
+renaming typo? Should this be "kvzalloc_struct()"?
+
+> + * and you do not need to remember which of the arguments should be constants.
+> + *
+> + * Context: Process context.  May sleep; the @gfp flags should be based on
+> + *         %GFP_KERNEL.
+> + * Return: A pointer to the allocated memory or %NULL.
+> + */
+> +static inline __must_check
+> +void *kvmalloc_ab_c(size_t n, size_t size, size_t c, gfp_t gfp)
+> +{
+> +       if (size != 0 && n > (SIZE_MAX - c) / size)
+> +               return NULL;
+> +
+> +       return kvmalloc(n * size + c, gfp);
+> +}
+> +#define kvzalloc_ab_c(a, b, c, gfp)    kvmalloc_ab_c(a, b, c, gfp | __GFP_ZERO)
+
+Nit: "(gfp) | __GFP_ZERO" just in case of insane usage.
+
+> +
+> +/**
+> + * kvzalloc_struct() - Allocate and zero-fill a structure containing a
+> + *                    variable length array.
+> + * @p: Pointer to the structure.
+> + * @member: Name of the array member.
+> + * @n: Number of elements in the array.
+> + * @gfp: Memory allocation flags.
+> + *
+> + * Allocate (and zero-fill) enough memory for a structure with an array
+> + * of @n elements.  This function is safe to use when @n is specified by
+> + * userspace as the arithmetic will not overflow.
+> + * Use kvfree() to free the allocated memory.
+> + *
+> + * Context: Process context.  May sleep; the @gfp flags should be based on
+> + *         %GFP_KERNEL.
+> + * Return: Zero-filled memory or a NULL pointer.
+> + */
+> +#define kvzalloc_struct(p, member, n, gfp)                             \
+> +       (typeof(p))kvzalloc_ab_c(n,                                     \
+> +               sizeof(*(p)->member) + __must_be_array((p)->member),    \
+> +               offsetof(typeof(*(p)), member), gfp)
+> +
+>  extern void kvfree(const void *addr);
+>
+>  static inline atomic_t *compound_mapcount_ptr(struct page *page)
+
+It might be nice to include another patch that replaces some of the
+existing/common uses of a*b+c with the new function...
+
+Otherwise, yes, please. We could build a coccinelle rule for
+additional replacements...
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
