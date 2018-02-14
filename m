@@ -1,53 +1,44 @@
-Date: Wed, 14 Feb 2018 13:29:37 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [PATCH v2 2/8] mm: Add kvmalloc_ab_c and kvzalloc_struct
-Message-ID: <20180214212937.GG20627@bombadil.infradead.org>
-References: <20180214201154.10186-1-willy@infradead.org>
- <20180214201154.10186-3-willy@infradead.org>
- <1518641152.3678.28.camel@perches.com>
- <20180214211203.GF20627@bombadil.infradead.org>
- <1518643449.3678.33.camel@perches.com>
+Date: Wed, 14 Feb 2018 15:13:28 -0700
+From: Tycho Andersen <tycho@tycho.ws>
+Subject: Re: arm64 physmap (was Re: [kernel-hardening] [PATCH 4/6]
+ Protectable Memory)
+Message-ID: <20180214221328.glbrdib3wumve53z@cisco>
+References: <CAFUG7CeUhFcvA82uZ2ZH1j_6PM=aBo4XmYDN85pf8G0gPU44dg@mail.gmail.com>
+ <17e5b515-84c8-dca2-1695-cdf819834ea2@huawei.com>
+ <CAGXu5j+LS1pgOOroi7Yxp2nh=DwtTnU3p-NZa6bQu_wkvvVkwg@mail.gmail.com>
+ <414027d3-dd73-cf11-dc2a-e8c124591646@redhat.com>
+ <CAGXu5j++igQD4tMh0J8nZ9jNji5mU16C7OygFJ5Td+Bq-KSMgw@mail.gmail.com>
+ <CAG48ez1utN_vwHUwk=BU6zM4Wa_53TPu8rm9JuTtY-vGP0Shqw@mail.gmail.com>
+ <f4226a44-92fd-8ead-b458-7551ba82f96d@redhat.com>
+ <CAGXu5j+zOCLerneUt2b-tvyLLg7fEbr9B0YYow-4DH6oV-nnCw@mail.gmail.com>
+ <2f23544a-bd24-1e71-967b-e8d1cf5a20a3@redhat.com>
+ <CAGXu5j+zkFx+1Dn908iqaTV-yP7Wk_rMXZRvXN32h+i_oAcy6w@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1518643449.3678.33.camel@perches.com>
-To: Joe Perches <joe@perches.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, linux-mm@kvack.org, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CAGXu5j+zkFx+1Dn908iqaTV-yP7Wk_rMXZRvXN32h+i_oAcy6w@mail.gmail.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@redhat.com>, Jann Horn <jannh@google.com>, Igor Stoppa <igor.stoppa@huawei.com>, Boris Lukashev <blukashev@sempervictus.com>, Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>, Christoph Hellwig <hch@infradead.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 14, 2018 at 01:24:09PM -0800, Joe Perches wrote:
-> On Wed, 2018-02-14 at 13:12 -0800, Matthew Wilcox wrote:
-> > On Wed, Feb 14, 2018 at 12:45:52PM -0800, Joe Perches wrote:
-> > > Perhaps kv[zm]alloc_buf_and_array is better naming.
-> > 
-> > I think that's actively misleading.  The programmer isn't allocating a
-> > buf, they're allocating a struct.  kvzalloc_hdr_arr was the earlier name,
-> > and that made some sense; they're allocating an array with a header.
-> > But nobody thinks about it like that; they're allocating a structure
-> > with a variably sized array at the end of it.
-> > 
-> > If C macros had decent introspection, I'd like it to be:
-> > 
-> > 	sev = kvzalloc_struct(elems, GFP_KERNEL);
-> > 
-> > and have the macro examine the structure pointed to by 'sev', check
-> > the last element was an array, calculate the size of the array element,
-> > and call kvzalloc_ab_c.  But we don't live in that world, so I have to
-> > get the programmer to tell me the structure and the name of the last
-> > element in it.
+On Wed, Feb 14, 2018 at 11:48:38AM -0800, Kees Cook wrote:
+> On Wed, Feb 14, 2018 at 11:06 AM, Laura Abbott <labbott@redhat.com> wrote:
+> > fixed. Modules yes are not fully protected. The conclusion from past
+> > experience has been that we cannot safely break down larger page sizes
+> > at runtime like x86 does. We could theoretically
+> > add support for fixing up the alias if PAGE_POISONING is enabled but
+> > I don't know who would actually use that in production. Performance
+> > is very poor at that point.
 > 
-> Look at your patch 4
+> XPFO forces 4K pages on the physmap[1] for similar reasons. I have no
+> doubt about performance changes, but I'd be curious to see real
+> numbers. Did anyone do benchmarks on just the huge/4K change? (Without
+> also the XPFO overhead?)
 > 
-> -       dev_dax = kzalloc(sizeof(*dev_dax) + sizeof(*res) * count, GFP_KERNEL);
-> +       dev_dax = kvzalloc_struct(dev_dax, res, count, GFP_KERNEL);
-> 
-> Here what is being allocated is exactly a struct
-> and an array.
+> If this, XPFO, and PAGE_POISONING all need it, I think we have to
+> start a closer investigation. :)
 
-No, it's a struct *containing* an array.  Look at patches 5 & 8 where I
-have to convert the structs to contain the array which was silently
-being allocated immediately after them.
+I haven't but it shouldn't be too hard. What benchmarks are you
+thinking?
 
-> And this doesn't compile either.
-
-Does for me.  What error are you seeing?
+Tycho
