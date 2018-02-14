@@ -1,22 +1,33 @@
-Date: Wed, 14 Feb 2018 13:55:59 -0600 (CST)
-From: Christopher Lameter <cl@linux.com>
-Subject: Re: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
-In-Reply-To: <20180214182618.14627-3-willy@infradead.org>
-Message-ID: <alpine.DEB.2.20.1802141354530.28235@nuc-kabylake>
-References: <20180214182618.14627-1-willy@infradead.org> <20180214182618.14627-3-willy@infradead.org>
+Date: Wed, 14 Feb 2018 11:56:31 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH 0/2] Add kvzalloc_struct to complement kvzalloc_array
+Message-ID: <20180214195631.GC20627@bombadil.infradead.org>
+References: <20180214182618.14627-1-willy@infradead.org>
+ <1518634058.3678.15.camel@perches.com>
+ <CAGXu5jJdAJt3HK7FgaCyPRbXeFV-hJOrPodNnOkx=kCvSieK3w@mail.gmail.com>
+ <1518636765.3678.19.camel@perches.com>
+ <20180214193613.GB20627@bombadil.infradead.org>
+ <1518637426.3678.21.camel@perches.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Matthew Wilcox <willy@infradead.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, linux-mm@kvack.org, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1518637426.3678.21.camel@perches.com>
+To: Joe Perches <joe@perches.com>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 14 Feb 2018, Matthew Wilcox wrote:
+On Wed, Feb 14, 2018 at 11:43:46AM -0800, Joe Perches wrote:
+> On Wed, 2018-02-14 at 11:36 -0800, Matthew Wilcox wrote:
+> > If somebody wants them, then we can add them.
+> 
+> Yeah, but I don't think any of it is necessary.
+> 
+> How many of these struct+bufsize * count entries
+> actually exist?
 
-> +#define kvzalloc_struct(p, member, n, gfp)				\
-> +	(typeof(p))kvzalloc_ab_c(n,					\
-> +		sizeof(*(p)->member) + __must_be_array((p)->member),	\
-> +		offsetof(typeof(*(p)), member), gfp)
-> +
+Wrong question.  How many of them currently exist that don't check for
+integer overflow?  How many of them will be added in the future that
+will fail to check for integer overflow?
 
-Uppercase like the similar KMEM_CACHE related macros in
-include/linux/slab.h?>
+I chose five at random to fix as demonstration that the API is good.
+There are more; I imagine that Julia will be able to tell us how many.
