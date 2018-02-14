@@ -1,53 +1,102 @@
-Date: Wed, 14 Feb 2018 17:05:17 +0300
-From: "Kirill A. Shutemov" <kirill@shutemov.name>
-Subject: Re: [RFC] Limit mappings to ten per page per process
-Message-ID: <20180214140517.ipgxvskdy7bwl7up@node.shutemov.name>
-References: <CAG48ez2-MTJ2YrS5fPZi19RY6P_6NWuK1U5CcQpJ25=xrGSy_A@mail.gmail.com>
- <CA+DvKQLHDR0s=6r4uiHL8kw2_PnfJcwYfPxgQOmuLbc=5k39+g@mail.gmail.com>
- <20180208185648.GB9524@bombadil.infradead.org>
- <CA+DvKQLHcFc3+kW_SnD6hs53yyD5Zi+uAeSgDMm1tRzxqy-Opg@mail.gmail.com>
- <20180208194235.GA3424@bombadil.infradead.org>
- <CA+DvKQKba0iU+tydbmGkAJsxCxazORDnuoe32sy-2nggyagUxQ@mail.gmail.com>
- <20180208202100.GB3424@bombadil.infradead.org>
- <20180208213743.GC3424@bombadil.infradead.org>
- <20180209042609.wi6zho24wmmdkg6i@node.shutemov.name>
- <20180214135141.GA16215@bombadil.infradead.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180214135141.GA16215@bombadil.infradead.org>
-To: Matthew Wilcox <willy@infradead.org>
-Cc: Daniel Micay <danielmicay@gmail.com>, Jann Horn <jannh@google.com>, linux-mm@kvack.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
+From: Matthew Wilcox <willy@infradead.org>
+Subject: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
+Date: Wed, 14 Feb 2018 10:26:18 -0800
+Message-Id: <20180214182618.14627-3-willy@infradead.org>
+In-Reply-To: <20180214182618.14627-1-willy@infradead.org>
+References: <20180214182618.14627-1-willy@infradead.org>
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Matthew Wilcox <mawilcox@microsoft.com>, linux-mm@kvack.org, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 14, 2018 at 05:51:41AM -0800, Matthew Wilcox wrote:
-> On Fri, Feb 09, 2018 at 07:26:09AM +0300, Kirill A. Shutemov wrote:
-> > On Thu, Feb 08, 2018 at 01:37:43PM -0800, Matthew Wilcox wrote:
-> > > On Thu, Feb 08, 2018 at 12:21:00PM -0800, Matthew Wilcox wrote:
-> > > > Now that I think about it, though, perhaps the simplest solution is not
-> > > > to worry about checking whether _mapcount has saturated, and instead when
-> > > > adding a new mmap, check whether this task already has it mapped 10 times.
-> > > > If so, refuse the mapping.
-> > > 
-> > > That turns out to be quite easy.  Comments on this approach?
-> > 
-> > This *may* break some remap_file_pages() users.
-> 
-> We have some?!  ;-)
+From: Matthew Wilcox <mawilcox@microsoft.com>
 
-I can't prove otherwise :)
+We have kvmalloc_array in order to safely allocate an array with a
+number of elements specified by userspace (avoiding arithmetic overflow
+leading to a buffer overrun).  But it's fairly common to have a header
+in front of that array (eg specifying the length of the array), so we
+need a helper function for that situation.
 
-> I don't understand the use case where they want to map the same page of
-> a file multiple times into the same process.  I mean, yes, of course,
-> they might ask for it, but I don't understand why they would.  Do you
-> have any insight here?
+kvmalloc_ab_c() is the workhorse that does the calculation, but in spite
+of our best efforts to name the arguments, it's really hard to remember
+which order to put the arguments in.  kvzalloc_struct() eliminates that
+effort; you tell it about the struct you're allocating, and it puts the
+arguments in the right order for you (and checks that the arguments
+you've given are at least plausible).
 
-Some form of data deduplication? Like having repeating chunks stored once
-on presistent storage and page cache, but put into memory in
-"uncompressed" form.
+For comparison between the three schemes:
 
-It's not limited to remap_file_pages(). Plain mmap() can be used for this
-too.
+	sev = kvzalloc(sizeof(*sev) + sizeof(struct v4l2_kevent) * elems,
+			GFP_KERNEL);
+	sev = kvzalloc_ab_c(elems, sizeof(struct v4l2_kevent), sizeof(*sev),
+			GFP_KERNEL);
+	sev = kvzalloc_struct(sev, events, elems, GFP_KERNEL);
 
+Signed-off-by: Matthew Wilcox <mawilcox@microsoft.com>
+---
+ include/linux/mm.h | 51 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 51 insertions(+)
+
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index 81bd7f0be286..ddf929c5aaee 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -557,6 +557,57 @@ static inline void *kvmalloc_array(size_t n, size_t size, gfp_t flags)
+ 	return kvmalloc(n * size, flags);
+ }
+ 
++/**
++ * kvmalloc_ab_c() - Allocate memory.
++ * @n: Number of elements.
++ * @size: Size of each element (should be constant).
++ * @c: Size of header (should be constant).
++ * @gfp: Memory allocation flags.
++ *
++ * Use this function to allocate @n * @size + @c bytes of memory.  This
++ * function is safe to use when @n is controlled from userspace; it will
++ * return %NULL if the required amount of memory cannot be allocated.
++ * Use kvfree() to free the allocated memory.
++ *
++ * The kvzalloc_hdr_arr() function is easier to use as it has typechecking
++ * and you do not need to remember which of the arguments should be constants.
++ *
++ * Context: Process context.  May sleep; the @gfp flags should be based on
++ *	    %GFP_KERNEL.
++ * Return: A pointer to the allocated memory or %NULL.
++ */
++static inline __must_check
++void *kvmalloc_ab_c(size_t n, size_t size, size_t c, gfp_t gfp)
++{
++	if (size != 0 && n > (SIZE_MAX - c) / size)
++		return NULL;
++
++	return kvmalloc(n * size + c, gfp);
++}
++#define kvzalloc_ab_c(a, b, c, gfp)	kvmalloc_ab_c(a, b, c, gfp | __GFP_ZERO)
++
++/**
++ * kvzalloc_struct() - Allocate and zero-fill a structure containing a
++ *		       variable length array.
++ * @p: Pointer to the structure.
++ * @member: Name of the array member.
++ * @n: Number of elements in the array.
++ * @gfp: Memory allocation flags.
++ *
++ * Allocate (and zero-fill) enough memory for a structure with an array
++ * of @n elements.  This function is safe to use when @n is specified by
++ * userspace as the arithmetic will not overflow.
++ * Use kvfree() to free the allocated memory.
++ *
++ * Context: Process context.  May sleep; the @gfp flags should be based on
++ *	    %GFP_KERNEL.
++ * Return: Zero-filled memory or a NULL pointer.
++ */
++#define kvzalloc_struct(p, member, n, gfp)				\
++	(typeof(p))kvzalloc_ab_c(n,					\
++		sizeof(*(p)->member) + __must_be_array((p)->member),	\
++		offsetof(typeof(*(p)), member), gfp)
++
+ extern void kvfree(const void *addr);
+ 
+ static inline atomic_t *compound_mapcount_ptr(struct page *page)
 -- 
- Kirill A. Shutemov
+2.15.1
