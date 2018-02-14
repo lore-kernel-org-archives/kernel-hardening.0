@@ -1,125 +1,105 @@
 From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH 3/3] exec: Pin stack limit during exec
-Date: Wed, 14 Feb 2018 12:06:36 -0800
-Message-Id: <1518638796-20819-4-git-send-email-keescook@chromium.org>
+Subject: [PATCH 2/3] exec: Introduce finalize_exec() before start_thread()
+Date: Wed, 14 Feb 2018 12:06:35 -0800
+Message-Id: <1518638796-20819-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1518638796-20819-1-git-send-email-keescook@chromium.org>
 References: <1518638796-20819-1-git-send-email-keescook@chromium.org>
 To: Andrew Morton <akpm@linux-foundation.org>
 Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Michal Hocko <mhocko@kernel.org>, Ben Hutchings <ben@decadent.org.uk>, Willy Tarreau <w@1wt.eu>, Hugh Dickins <hughd@google.com>, Oleg Nesterov <oleg@redhat.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Rik van Riel <riel@redhat.com>, Laura Abbott <labbott@redhat.com>, Greg KH <greg@kroah.com>, Andy Lutomirski <luto@kernel.org>, linux-mm@kvack.org, linux-arch@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Since the stack rlimit is used in multiple places during exec and
-it can be changed via other threads (via setrlimit()) or processes
-(via prlimit()), the assumption that the value doesn't change cannot
-be made. This leads to races with mm layout selection and argument size
-calculations. This changes the exec path to use the rlimit stored in bprm
-instead of in current. Before starting the thread, the bprm stack rlimit
-is stored back to current.
+Provide a final call back into fs/exec.c before start_thread() takes
+over, to handle any last-minute changes, like the coming restoration of
+the stack limit.
 
-Reported-by: Ben Hutchings <ben.hutchings@codethink.co.uk>
-Reported-by: Andy Lutomirski <luto@kernel.org>
-Reported-by: Brad Spengler <spender@grsecurity.net>
-Fixes: 64701dee4178e ("exec: Use sane stack rlimit under secureexec")
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- fs/exec.c               | 27 +++++++++++++++------------
- include/linux/binfmts.h |  2 ++
- 2 files changed, 17 insertions(+), 12 deletions(-)
+As an alternative, fs/exec.c could provide a wrapper for start_thread()...
+---
+ fs/binfmt_aout.c        | 1 +
+ fs/binfmt_elf.c         | 1 +
+ fs/binfmt_elf_fdpic.c   | 1 +
+ fs/binfmt_flat.c        | 1 +
+ fs/exec.c               | 6 ++++++
+ include/linux/binfmts.h | 1 +
+ 6 files changed, 11 insertions(+)
 
+diff --git a/fs/binfmt_aout.c b/fs/binfmt_aout.c
+index ce1824f47ba6..c3deb2e35f20 100644
+--- a/fs/binfmt_aout.c
++++ b/fs/binfmt_aout.c
+@@ -330,6 +330,7 @@ static int load_aout_binary(struct linux_binprm * bprm)
+ #ifdef __alpha__
+ 	regs->gp = ex.a_gpvalue;
+ #endif
++	finalize_exec(bprm);
+ 	start_thread(regs, ex.a_entry, current->mm->start_stack);
+ 	return 0;
+ }
+diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
+index bdb201230bae..3edca6cb9a33 100644
+--- a/fs/binfmt_elf.c
++++ b/fs/binfmt_elf.c
+@@ -1155,6 +1155,7 @@ static int load_elf_binary(struct linux_binprm *bprm)
+ 	ELF_PLAT_INIT(regs, reloc_func_desc);
+ #endif
+ 
++	finalize_exec(bprm);
+ 	start_thread(regs, elf_entry, bprm->p);
+ 	retval = 0;
+ out:
+diff --git a/fs/binfmt_elf_fdpic.c b/fs/binfmt_elf_fdpic.c
+index 429326b6e2e7..d90993adeffa 100644
+--- a/fs/binfmt_elf_fdpic.c
++++ b/fs/binfmt_elf_fdpic.c
+@@ -463,6 +463,7 @@ static int load_elf_fdpic_binary(struct linux_binprm *bprm)
+ 			    dynaddr);
+ #endif
+ 
++	finalize_exec(bprm);
+ 	/* everything is now ready... get the userspace context ready to roll */
+ 	entryaddr = interp_params.entry_addr ?: exec_params.entry_addr;
+ 	start_thread(regs, entryaddr, current->mm->start_stack);
+diff --git a/fs/binfmt_flat.c b/fs/binfmt_flat.c
+index 5d6b94475f27..82a48e830018 100644
+--- a/fs/binfmt_flat.c
++++ b/fs/binfmt_flat.c
+@@ -994,6 +994,7 @@ static int load_flat_binary(struct linux_binprm *bprm)
+ 	FLAT_PLAT_INIT(regs);
+ #endif
+ 
++	finalize_exec(bprm);
+ 	pr_debug("start_thread(regs=0x%p, entry=0x%lx, start_stack=0x%lx)\n",
+ 		 regs, start_addr, current->mm->start_stack);
+ 	start_thread(regs, start_addr, current->mm->start_stack);
 diff --git a/fs/exec.c b/fs/exec.c
-index e4ae20ff6278..806936ad9387 100644
+index 7074913ad2e7..e4ae20ff6278 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
-@@ -257,7 +257,7 @@ static struct page *get_arg_page(struct linux_binprm *bprm, unsigned long pos,
- 		 *    to work from.
- 		 */
- 		limit = _STK_LIM / 4 * 3;
--		limit = min(limit, rlimit(RLIMIT_STACK) / 4);
-+		limit = min(limit, bprm->rlim_stack.rlim_cur / 4);
- 		if (size > limit)
- 			goto fail;
- 	}
-@@ -411,6 +411,11 @@ static int bprm_mm_init(struct linux_binprm *bprm)
- 	if (!mm)
- 		goto err;
- 
-+	/* Save current stack limit for all calculations made during exec. */
-+	task_lock(current->group_leader);
-+	bprm->rlim_stack = current->signal->rlim[RLIMIT_STACK];
-+	task_unlock(current->group_leader);
-+
- 	err = __bprm_mm_init(bprm);
- 	if (err)
- 		goto err;
-@@ -697,7 +702,7 @@ int setup_arg_pages(struct linux_binprm *bprm,
- 
- #ifdef CONFIG_STACK_GROWSUP
- 	/* Limit stack size */
--	stack_base = rlimit_max(RLIMIT_STACK);
-+	stack_base = bprm->rlim_stack.rlim_max;
- 	if (stack_base > STACK_SIZE_MAX)
- 		stack_base = STACK_SIZE_MAX;
- 
-@@ -770,7 +775,7 @@ int setup_arg_pages(struct linux_binprm *bprm,
- 	 * Align this down to a page boundary as expand_stack
- 	 * will align it up.
- 	 */
--	rlim_stack = rlimit(RLIMIT_STACK) & PAGE_MASK;
-+	rlim_stack = bprm->rlim_stack.rlim_cur & PAGE_MASK;
- #ifdef CONFIG_STACK_GROWSUP
- 	if (stack_size + stack_expand > rlim_stack)
- 		stack_base = vma->vm_start + rlim_stack;
-@@ -1323,8 +1328,6 @@ EXPORT_SYMBOL(would_dump);
- 
- void setup_new_exec(struct linux_binprm * bprm)
- {
--	struct rlimit rlim_stack;
--
- 	/*
- 	 * Once here, prepare_binrpm() will not be called any more, so
- 	 * the final state of setuid/setgid/fscaps can be merged into the
-@@ -1343,15 +1346,11 @@ void setup_new_exec(struct linux_binprm * bprm)
- 		 * RLIMIT_STACK, but after the point of no return to avoid
- 		 * needing to clean up the change on failure.
- 		 */
--		if (current->signal->rlim[RLIMIT_STACK].rlim_cur > _STK_LIM)
--			current->signal->rlim[RLIMIT_STACK].rlim_cur = _STK_LIM;
-+		if (bprm->rlim_stack.rlim_cur > _STK_LIM)
-+			bprm->rlim_stack.rlim_cur = _STK_LIM;
- 	}
- 
--	task_lock(current->group_leader);
--	rlim_stack = current->signal->rlim[RLIMIT_STACK];
--	task_unlock(current->group_leader);
--
--	arch_pick_mmap_layout(current->mm, &rlim_stack);
-+	arch_pick_mmap_layout(current->mm, &bprm->rlim_stack);
- 
- 	current->sas_ss_sp = current->sas_ss_size = 0;
- 
-@@ -1387,6 +1386,10 @@ EXPORT_SYMBOL(setup_new_exec);
- /* Runs immediately before start_thread() takes over. */
- void finalize_exec(struct linux_binprm *bprm)
- {
-+	/* Store any stack rlimit changes before starting thread. */
-+	task_lock(current->group_leader);
-+	current->signal->rlim[RLIMIT_STACK] = bprm->rlim_stack;
-+	task_unlock(current->group_leader);
+@@ -1384,6 +1384,12 @@ void setup_new_exec(struct linux_binprm * bprm)
  }
- EXPORT_SYMBOL(finalize_exec);
+ EXPORT_SYMBOL(setup_new_exec);
  
++/* Runs immediately before start_thread() takes over. */
++void finalize_exec(struct linux_binprm *bprm)
++{
++}
++EXPORT_SYMBOL(finalize_exec);
++
+ /*
+  * Prepare credentials and lock ->cred_guard_mutex.
+  * install_exec_creds() commits the new creds and drops the lock.
 diff --git a/include/linux/binfmts.h b/include/linux/binfmts.h
-index 40e52afbb2b0..4955e0863b83 100644
+index b0abe21d6cc9..40e52afbb2b0 100644
 --- a/include/linux/binfmts.h
 +++ b/include/linux/binfmts.h
-@@ -61,6 +61,8 @@ struct linux_binprm {
- 	unsigned interp_flags;
- 	unsigned interp_data;
- 	unsigned long loader, exec;
-+
-+	struct rlimit rlim_stack; /* Saved RLIMIT_STACK used during exec. */
- } __randomize_layout;
+@@ -118,6 +118,7 @@ extern int __must_check remove_arg_zero(struct linux_binprm *);
+ extern int search_binary_handler(struct linux_binprm *);
+ extern int flush_old_exec(struct linux_binprm * bprm);
+ extern void setup_new_exec(struct linux_binprm * bprm);
++extern void finalize_exec(struct linux_binprm *bprm);
+ extern void would_dump(struct linux_binprm *, struct file *);
  
- #define BINPRM_FLAGS_ENFORCE_NONDUMP_BIT 0
+ extern int suid_dumpable;
 -- 
 2.7.4
