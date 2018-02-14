@@ -1,39 +1,55 @@
-Message-ID: <1518641152.3678.28.camel@perches.com>
+Date: Wed, 14 Feb 2018 13:12:03 -0800
+From: Matthew Wilcox <willy@infradead.org>
 Subject: Re: [PATCH v2 2/8] mm: Add kvmalloc_ab_c and kvzalloc_struct
-From: Joe Perches <joe@perches.com>
-Date: Wed, 14 Feb 2018 12:45:52 -0800
-In-Reply-To: <20180214201154.10186-3-willy@infradead.org>
+Message-ID: <20180214211203.GF20627@bombadil.infradead.org>
 References: <20180214201154.10186-1-willy@infradead.org>
-	 <20180214201154.10186-3-willy@infradead.org>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-To: Matthew Wilcox <willy@infradead.org>, Andrew Morton <akpm@linux-foundation.org>
-Cc: Matthew Wilcox <mawilcox@microsoft.com>, linux-mm@kvack.org, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+ <20180214201154.10186-3-willy@infradead.org>
+ <1518641152.3678.28.camel@perches.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1518641152.3678.28.camel@perches.com>
+To: Joe Perches <joe@perches.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, linux-mm@kvack.org, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2018-02-14 at 12:11 -0800, Matthew Wilcox wrote:
-> From: Matthew Wilcox <mawilcox@microsoft.com>
+On Wed, Feb 14, 2018 at 12:45:52PM -0800, Joe Perches wrote:
+> On Wed, 2018-02-14 at 12:11 -0800, Matthew Wilcox wrote:
+> > We have kvmalloc_array in order to safely allocate an array with a
+> > number of elements specified by userspace (avoiding arithmetic overflow
+> > leading to a buffer overrun).  But it's fairly common to have a header
+> > in front of that array (eg specifying the length of the array), so we
+> > need a helper function for that situation.
+> > 
+> > kvmalloc_ab_c() is the workhorse that does the calculation, but in spite
+> > of our best efforts to name the arguments, it's really hard to remember
+> > which order to put the arguments in.  kvzalloc_struct() eliminates that
+> > effort; you tell it about the struct you're allocating, and it puts the
+> > arguments in the right order for you (and checks that the arguments
+> > you've given are at least plausible).
+> > 
+> > For comparison between the three schemes:
+> > 
+> > 	sev = kvzalloc(sizeof(*sev) + sizeof(struct v4l2_kevent) * elems,
+> > 			GFP_KERNEL);
+> > 	sev = kvzalloc_ab_c(elems, sizeof(struct v4l2_kevent), sizeof(*sev),
+> > 			GFP_KERNEL);
+> > 	sev = kvzalloc_struct(sev, events, elems, GFP_KERNEL);
 > 
-> We have kvmalloc_array in order to safely allocate an array with a
-> number of elements specified by userspace (avoiding arithmetic overflow
-> leading to a buffer overrun).  But it's fairly common to have a header
-> in front of that array (eg specifying the length of the array), so we
-> need a helper function for that situation.
-> 
-> kvmalloc_ab_c() is the workhorse that does the calculation, but in spite
-> of our best efforts to name the arguments, it's really hard to remember
-> which order to put the arguments in.  kvzalloc_struct() eliminates that
-> effort; you tell it about the struct you're allocating, and it puts the
-> arguments in the right order for you (and checks that the arguments
-> you've given are at least plausible).
-> 
-> For comparison between the three schemes:
-> 
-> 	sev = kvzalloc(sizeof(*sev) + sizeof(struct v4l2_kevent) * elems,
-> 			GFP_KERNEL);
-> 	sev = kvzalloc_ab_c(elems, sizeof(struct v4l2_kevent), sizeof(*sev),
-> 			GFP_KERNEL);
-> 	sev = kvzalloc_struct(sev, events, elems, GFP_KERNEL);
+> Perhaps kv[zm]alloc_buf_and_array is better naming.
 
-Perhaps kv[zm]alloc_buf_and_array is better naming.
+I think that's actively misleading.  The programmer isn't allocating a
+buf, they're allocating a struct.  kvzalloc_hdr_arr was the earlier name,
+and that made some sense; they're allocating an array with a header.
+But nobody thinks about it like that; they're allocating a structure
+with a variably sized array at the end of it.
+
+If C macros had decent introspection, I'd like it to be:
+
+	sev = kvzalloc_struct(elems, GFP_KERNEL);
+
+and have the macro examine the structure pointed to by 'sev', check
+the last element was an array, calculate the size of the array element,
+and call kvzalloc_ab_c.  But we don't live in that world, so I have to
+get the programmer to tell me the structure and the name of the last
+element in it.
