@@ -1,54 +1,126 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20180214221328.glbrdib3wumve53z@cisco>
-References: <CAFUG7CeUhFcvA82uZ2ZH1j_6PM=aBo4XmYDN85pf8G0gPU44dg@mail.gmail.com>
- <17e5b515-84c8-dca2-1695-cdf819834ea2@huawei.com> <CAGXu5j+LS1pgOOroi7Yxp2nh=DwtTnU3p-NZa6bQu_wkvvVkwg@mail.gmail.com>
- <414027d3-dd73-cf11-dc2a-e8c124591646@redhat.com> <CAGXu5j++igQD4tMh0J8nZ9jNji5mU16C7OygFJ5Td+Bq-KSMgw@mail.gmail.com>
- <CAG48ez1utN_vwHUwk=BU6zM4Wa_53TPu8rm9JuTtY-vGP0Shqw@mail.gmail.com>
- <f4226a44-92fd-8ead-b458-7551ba82f96d@redhat.com> <CAGXu5j+zOCLerneUt2b-tvyLLg7fEbr9B0YYow-4DH6oV-nnCw@mail.gmail.com>
- <2f23544a-bd24-1e71-967b-e8d1cf5a20a3@redhat.com> <CAGXu5j+zkFx+1Dn908iqaTV-yP7Wk_rMXZRvXN32h+i_oAcy6w@mail.gmail.com>
- <20180214221328.glbrdib3wumve53z@cisco>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 14 Feb 2018 14:27:47 -0800
-Message-ID: <CAGXu5jK1taW5JccCTdi6EzfD7RNnFrRyoJQMtLLi5CwT-8eJkQ@mail.gmail.com>
-Subject: Re: arm64 physmap (was Re: [kernel-hardening] [PATCH 4/6] Protectable Memory)
-Content-Type: text/plain; charset="UTF-8"
-To: Tycho Andersen <tycho@tycho.ws>
-Cc: Laura Abbott <labbott@redhat.com>, Jann Horn <jannh@google.com>, Igor Stoppa <igor.stoppa@huawei.com>, Boris Lukashev <blukashev@sempervictus.com>, Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>, Christoph Hellwig <hch@infradead.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>
+Date: Wed, 14 Feb 2018 15:58:33 -0800
+From: Andrew Morton <akpm@linux-foundation.org>
+Subject: Re: [PATCH v2 2/8] mm: Add kvmalloc_ab_c and kvzalloc_struct
+Message-Id: <20180214155833.9f1563b87391f7ff79ca7ed0@linux-foundation.org>
+In-Reply-To: <20180214211203.GF20627@bombadil.infradead.org>
+References: <20180214201154.10186-1-willy@infradead.org>
+	<20180214201154.10186-3-willy@infradead.org>
+	<1518641152.3678.28.camel@perches.com>
+	<20180214211203.GF20627@bombadil.infradead.org>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: Matthew Wilcox <willy@infradead.org>
+Cc: Joe Perches <joe@perches.com>, Matthew Wilcox <mawilcox@microsoft.com>, linux-mm@kvack.org, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 14, 2018 at 2:13 PM, Tycho Andersen <tycho@tycho.ws> wrote:
-> On Wed, Feb 14, 2018 at 11:48:38AM -0800, Kees Cook wrote:
->> On Wed, Feb 14, 2018 at 11:06 AM, Laura Abbott <labbott@redhat.com> wrote:
->> > fixed. Modules yes are not fully protected. The conclusion from past
->> > experience has been that we cannot safely break down larger page sizes
->> > at runtime like x86 does. We could theoretically
->> > add support for fixing up the alias if PAGE_POISONING is enabled but
->> > I don't know who would actually use that in production. Performance
->> > is very poor at that point.
->>
->> XPFO forces 4K pages on the physmap[1] for similar reasons. I have no
->> doubt about performance changes, but I'd be curious to see real
->> numbers. Did anyone do benchmarks on just the huge/4K change? (Without
->> also the XPFO overhead?)
->>
->> If this, XPFO, and PAGE_POISONING all need it, I think we have to
->> start a closer investigation. :)
->
-> I haven't but it shouldn't be too hard. What benchmarks are you
-> thinking?
+On Wed, 14 Feb 2018 13:12:03 -0800 Matthew Wilcox <willy@infradead.org> wrote:
 
-Unless I'm looking at some specific micro benchmark, I tend to default
-to looking at kernel build benchmarks but that gets pretty noisy.
-Laura regularly uses hackbench, IIRC. I'm not finding the pastebin I
-had for that, though.
+> On Wed, Feb 14, 2018 at 12:45:52PM -0800, Joe Perches wrote:
+> > On Wed, 2018-02-14 at 12:11 -0800, Matthew Wilcox wrote:
+> > > We have kvmalloc_array in order to safely allocate an array with a
+> > > number of elements specified by userspace (avoiding arithmetic overflow
+> > > leading to a buffer overrun).  But it's fairly common to have a header
+> > > in front of that array (eg specifying the length of the array), so we
+> > > need a helper function for that situation.
+> > > 
+> > > kvmalloc_ab_c() is the workhorse that does the calculation, but in spite
+> > > of our best efforts to name the arguments, it's really hard to remember
+> > > which order to put the arguments in.  kvzalloc_struct() eliminates that
+> > > effort; you tell it about the struct you're allocating, and it puts the
+> > > arguments in the right order for you (and checks that the arguments
+> > > you've given are at least plausible).
+> > > 
+> > > For comparison between the three schemes:
+> > > 
+> > > 	sev = kvzalloc(sizeof(*sev) + sizeof(struct v4l2_kevent) * elems,
+> > > 			GFP_KERNEL);
+> > > 	sev = kvzalloc_ab_c(elems, sizeof(struct v4l2_kevent), sizeof(*sev),
+> > > 			GFP_KERNEL);
+> > > 	sev = kvzalloc_struct(sev, events, elems, GFP_KERNEL);
+> > 
+> > Perhaps kv[zm]alloc_buf_and_array is better naming.
+> 
+> I think that's actively misleading.  The programmer isn't allocating a
+> buf, they're allocating a struct.  kvzalloc_hdr_arr was the earlier name,
+> and that made some sense; they're allocating an array with a header.
+> But nobody thinks about it like that; they're allocating a structure
+> with a variably sized array at the end of it.
+> 
+> If C macros had decent introspection, I'd like it to be:
+> 
+> 	sev = kvzalloc_struct(elems, GFP_KERNEL);
+> 
+> and have the macro examine the structure pointed to by 'sev', check
+> the last element was an array, calculate the size of the array element,
+> and call kvzalloc_ab_c.  But we don't live in that world, so I have to
+> get the programmer to tell me the structure and the name of the last
+> element in it.
 
-I wonder if we need a benchmark subdirectory in tools/testing/, so we
-could collect some of these common tools? All benchmarks are terrible,
-but at least we'd have the same terrible benchmarks. :)
+hm, bikeshedding fun.
 
--Kees
 
--- 
-Kees Cook
-Pixel Security
+struct foo {
+	whatevs;
+	struct bar[0];
+}
+
+
+	struct foo *a_foo;
+
+	a_foo = kvzalloc_struct_buf(foo, bar, nr_bars);
+
+and macro magic will insert the `struct' keyword.  This will help to
+force a miscompile if inappropriate types are used for foo and bar.
+
+Problem is, foo may be a union(?) and bar may be a scalar type.  So
+
+	a_foo = kvzalloc_struct_buf(struct foo, struct bar, nr_bars);
+
+or, of course.
+
+	a_foo = kvzalloc_struct_buf(typeof(*a_foo), typeof(a_foo->bar[0]),
+				    nr_bars);
+
+or whatever.
+
+The basic idea is to use the wrapper macros to force compile errors if
+these things are misused.
+
+
+Also,
+
+> +/**
+> + * kvmalloc_ab_c() - Allocate (a * b + c) bytes of memory.
+> + * @n: Number of elements.
+> + * @size: Size of each element (should be constant).
+> + * @c: Size of header (should be constant).
+> + * @gfp: Memory allocation flags.
+> + *
+> + * Use this function to allocate @n * @size + @c bytes of memory.  This
+> + * function is safe to use when @n is controlled from userspace; it will
+> + * return %NULL if the required amount of memory cannot be allocated.
+> + * Use kvfree() to free the allocated memory.
+> + *
+> + * The kvzalloc_struct() function is easier to use as it has typechecking
+> + * and you do not need to remember which of the arguments should be constants.
+> + *
+> + * Context: Process context.  May sleep; the @gfp flags should be based on
+> + *	    %GFP_KERNEL.
+> + * Return: A pointer to the allocated memory or %NULL.
+> + */
+> +static inline __must_check
+> +void *kvmalloc_ab_c(size_t n, size_t size, size_t c, gfp_t gfp)
+> +{
+> +	if (size != 0 && n > (SIZE_MAX - c) / size)
+> +		return NULL;
+> +
+> +	return kvmalloc(n * size + c, gfp);
+> +}
+
+Can we please avoid the single-char identifiers?
+
+void *kvmalloc_ab_c(size_t n_elems, size_t elem_size, size_t header_size,
+		    gfp_t gfp);
+
+makes the code so much more readable.
