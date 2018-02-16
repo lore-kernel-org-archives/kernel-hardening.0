@@ -1,56 +1,131 @@
-Date: Thu, 15 Feb 2018 09:36:39 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [PATCH v2 2/8] mm: Add kvmalloc_ab_c and kvzalloc_struct
-Message-ID: <20180215173639.GA10146@bombadil.infradead.org>
-References: <20180214201154.10186-1-willy@infradead.org>
- <20180214201154.10186-3-willy@infradead.org>
- <1518641152.3678.28.camel@perches.com>
- <20180214211203.GF20627@bombadil.infradead.org>
- <20180214155833.9f1563b87391f7ff79ca7ed0@linux-foundation.org>
- <20180215034050.GA5775@bombadil.infradead.org>
+Subject: Re: [PATCH v6 02/13] array_index_nospec: sanitize speculative array
+ de-references
+References: <151727412964.33451.17213780323040673404.stgit@dwillia2-desk3.amr.corp.intel.com>
+ <151727414229.33451.18411580953862676575.stgit@dwillia2-desk3.amr.corp.intel.com>
+From: Christian Borntraeger <borntraeger@de.ibm.com>
+Date: Fri, 16 Feb 2018 09:55:05 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180215034050.GA5775@bombadil.infradead.org>
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Joe Perches <joe@perches.com>, Matthew Wilcox <mawilcox@microsoft.com>, linux-mm@kvack.org, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <151727414229.33451.18411580953862676575.stgit@dwillia2-desk3.amr.corp.intel.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Message-Id: <366bb116-e375-458c-2b63-1b26b4c8bdac@de.ibm.com>
+To: Dan Williams <dan.j.williams@intel.com>, tglx@linutronix.de, mingo@kernel.org
+Cc: linux-arch@vger.kernel.org, Cyril Novikov <cnovikov@lynx.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, x86@kernel.org, Will Deacon <will.deacon@arm.com>, Russell King <linux@armlinux.org.uk>, linux-kernel@vger.kernel.org, Ingo Molnar <mingo@redhat.com>, gregkh@linuxfoundation.org, "H. Peter Anvin" <hpa@zytor.com>, torvalds@linux-foundation.org, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 14, 2018 at 07:40:50PM -0800, Matthew Wilcox wrote:
-> > 	a_foo = kvzalloc_struct_buf(struct foo, struct bar, nr_bars);
-> > 
-> > or, of course.
-> > 
-> > 	a_foo = kvzalloc_struct_buf(typeof(*a_foo), typeof(a_foo->bar[0]),
-> > 				    nr_bars);
-> > 
-> > or whatever.
 
-This version works, although it's more typing in the callers:
 
--               attr_group = kvzalloc_struct(attr_group, attrs, i + 1,
-+               attr_group = kvzalloc_struct(typeof(*attr_group), attrs, i + 1,
-                                                                GFP_KERNEL);
-...
--       dev_dax = kvzalloc_struct(dev_dax, res, count, GFP_KERNEL);
-+       dev_dax = kvzalloc_struct(struct dev_dax, res, count, GFP_KERNEL);
-...
--#define kvzalloc_struct(p, member, n, gfp)                             \
--       (typeof(p))kvzalloc_ab_c(n,                                     \
--               sizeof(*(p)->member) + __must_be_array((p)->member),    \
--               offsetof(typeof(*(p)), member), gfp)
-+#define kvzalloc_struct(s, member, n, gfp) ({                          \
-+       s *__p;                                                         \
-+       (s *)kvzalloc_ab_c(n,                                           \
-+               sizeof(*(__p)->member) + __must_be_array((__p)->member),\
-+               offsetof(s, member), gfp);                              \
-+})
+On 01/30/2018 02:02 AM, Dan Williams wrote:
+> array_index_nospec() is proposed as a generic mechanism to mitigate
+> against Spectre-variant-1 attacks, i.e. an attack that bypasses boundary
+> checks via speculative execution. The array_index_nospec()
+> implementation is expected to be safe for current generation CPUs across
+> multiple architectures (ARM, x86).
+> 
+> Based on an original implementation by Linus Torvalds, tweaked to remove
+> speculative flows by Alexei Starovoitov, and tweaked again by Linus to
+> introduce an x86 assembly implementation for the mask generation.
+> 
+> Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
+> Co-developed-by: Alexei Starovoitov <ast@kernel.org>
+> Suggested-by: Cyril Novikov <cnovikov@lynx.com>
+> Cc: Russell King <linux@armlinux.org.uk>
+> Cc: Peter Zijlstra <peterz@infradead.org>
+> Cc: Catalin Marinas <catalin.marinas@arm.com>
+> Cc: Will Deacon <will.deacon@arm.com>
+> Cc: Thomas Gleixner <tglx@linutronix.de>
+> Cc: Ingo Molnar <mingo@redhat.com>
+> Cc: "H. Peter Anvin" <hpa@zytor.com>
+> Cc: x86@kernel.org
+> Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+> ---
+>  include/linux/nospec.h |   72 ++++++++++++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 72 insertions(+)
+>  create mode 100644 include/linux/nospec.h
+> 
+> diff --git a/include/linux/nospec.h b/include/linux/nospec.h
+> new file mode 100644
+> index 000000000000..cf7be4bbcf17
+> --- /dev/null
+> +++ b/include/linux/nospec.h
+> @@ -0,0 +1,72 @@
+> +// SPDX-License-Identifier: GPL-2.0
+> +// Copyright(c) 2018 Linus Torvalds. All rights reserved.
+> +// Copyright(c) 2018 Alexei Starovoitov. All rights reserved.
+> +// Copyright(c) 2018 Intel Corporation. All rights reserved.
+> +
+> +#ifndef _LINUX_NOSPEC_H
+> +#define _LINUX_NOSPEC_H
 
-Gives all the same checking as the current version, and doesn't involve
-passing an uninitialised pointer to the macro.
 
-It also looks pretty similar:
+Hmmm, shouldn't we include asm/barrier.h here? Otherwise users might or might not
+use the optimized variant depending on which headers are included by the users
+of array_index_nospec.
 
-	p = kvzalloc(sizeof(*p), GFP_KERNEL);
-	p = kvzalloc_struct(typeof(*p), array, count, GFP_KERNEL);
-	p = kvzalloc_array(sizeof(*p), count);
+
+> +
+> +/**
+> + * array_index_mask_nospec() - generate a ~0 mask when index < size, 0 otherwise
+> + * @index: array element index
+> + * @size: number of elements in array
+> + *
+> + * When @index is out of bounds (@index >= @size), the sign bit will be
+> + * set.  Extend the sign bit to all bits and invert, giving a result of
+> + * zero for an out of bounds index, or ~0 if within bounds [0, @size).
+> + */
+> +#ifndef array_index_mask_nospec
+> +static inline unsigned long array_index_mask_nospec(unsigned long index,
+> +		unsigned long size)
+> +{
+> +	/*
+> +	 * Warn developers about inappropriate array_index_nospec() usage.
+> +	 *
+> +	 * Even if the CPU speculates past the WARN_ONCE branch, the
+> +	 * sign bit of @index is taken into account when generating the
+> +	 * mask.
+> +	 *
+> +	 * This warning is compiled out when the compiler can infer that
+> +	 * @index and @size are less than LONG_MAX.
+> +	 */
+> +	if (WARN_ONCE(index > LONG_MAX || size > LONG_MAX,
+> +			"array_index_nospec() limited to range of [0, LONG_MAX]\n"))
+> +		return 0;
+> +
+> +	/*
+> +	 * Always calculate and emit the mask even if the compiler
+> +	 * thinks the mask is not needed. The compiler does not take
+> +	 * into account the value of @index under speculation.
+> +	 */
+> +	OPTIMIZER_HIDE_VAR(index);
+> +	return ~(long)(index | (size - 1UL - index)) >> (BITS_PER_LONG - 1);
+> +}
+> +#endif
+> +
+> +/*
+> + * array_index_nospec - sanitize an array index after a bounds check
+> + *
+> + * For a code sequence like:
+> + *
+> + *     if (index < size) {
+> + *         index = array_index_nospec(index, size);
+> + *         val = array[index];
+> + *     }
+> + *
+> + * ...if the CPU speculates past the bounds check then
+> + * array_index_nospec() will clamp the index within the range of [0,
+> + * size).
+> + */
+> +#define array_index_nospec(index, size)					\
+> +({									\
+> +	typeof(index) _i = (index);					\
+> +	typeof(size) _s = (size);					\
+> +	unsigned long _mask = array_index_mask_nospec(_i, _s);		\
+> +									\
+> +	BUILD_BUG_ON(sizeof(_i) > sizeof(long));			\
+> +	BUILD_BUG_ON(sizeof(_s) > sizeof(long));			\
+> +									\
+> +	_i &= _mask;							\
+> +	_i;								\
+> +})
+> +#endif /* _LINUX_NOSPEC_H */
+> 
