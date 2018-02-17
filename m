@@ -1,163 +1,104 @@
-From: Masahiro Yamada <yamada.masahiro@socionext.com>
-Subject: [PATCH 22/23] gcc-plugins: test GCC plugin support in Kconfig
-Date: Sat, 17 Feb 2018 03:38:50 +0900
-Message-Id: <1518806331-7101-23-git-send-email-yamada.masahiro@socionext.com>
-In-Reply-To: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com>
-References: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com>
-To: linux-kbuild@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Ulf Magnusson <ulfalizer@gmail.com>, Sam Ravnborg <sam@ravnborg.org>, Michal Marek <michal.lkml@markovi.net>, Masahiro Yamada <yamada.masahiro@socionext.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Emese Revfy <re.emese@gmail.com>
+MIME-Version: 1.0
+In-Reply-To: <CAKv+Gu_SxHCekoCoOFTOLFbN0besY+BRj+AzUYk88xK=zsZKBg@mail.gmail.com>
+References: <CAAGnT3YJGf=eixt2+O_XsHiJZFP+CSO9A0a4qc-NKHRf=4y0sw@mail.gmail.com>
+ <CAGXu5jJBmKiDnhV26kEZyCf+TGWnpMOvSjiYaUr1U6z0FLPJHg@mail.gmail.com> <CAKv+Gu_SxHCekoCoOFTOLFbN0besY+BRj+AzUYk88xK=zsZKBg@mail.gmail.com>
+From: Ahmed Soliman <ahmedsoliman0x666@gmail.com>
+Date: Sat, 17 Feb 2018 17:22:29 +0200
+Message-ID: <CAAGnT3ZwmJ7GtNZwSqW7sa2G59-3RvRzyTnqCYiB3ABiqxzpOQ@mail.gmail.com>
+Subject: Re: Hello world! Student interested in getting involved.
+Content-Type: text/plain; charset="UTF-8"
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, riel@redhat.com, kvm@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Run scripts/gcc-plugin.sh from Kconfig.  Users can enable GCC_PLUGINS
-only when it is supported.
+well in this case I tried searching and researching more and I found
+the idea for Rootkit blocking using KVM virtualization, it is
+described here:
+https://kernelnewbies.org/KernelProjects/VirtRootkitBlocker
 
-I dropped 'depends on GCC_VERSION >= 40800'.  I guess gcc-plugin.sh
-will not pass with GCC 4.7 or older.
+I CCed to riel
+It took me a while to re-learn how to setup kernel developing
+environment, via buildroot for generating qemu
+images for paravirtualized OS debugging, and learning about mm and KVM (WIP).
+I am not sure if this is the right place but I think anti rootkits can
+be good hardening technique, I made sure
+that no one is working on this (no patches anywhere), and my
+team-mates are happy with the idea so I hope we are
+ready to start. Just in case anyone tries to drift me off the idea, I
+do like it enough so I already talked to my professor
+and my team-mates about it. I just wanted to know which tree should I
+be working on, should it be the kernel hardening
+tree or the tree used for kvm or memory management.
+Kind regards.
 
-Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>
----
-
- arch/Kconfig                 |  6 +++-
- scripts/Makefile.gcc-plugins | 82 ++++++++++++++++----------------------------
- scripts/gcc-plugin.sh        |  1 -
- 3 files changed, 34 insertions(+), 55 deletions(-)
-
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 9bd4e1f..d567bd1 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -407,10 +407,14 @@ config HAVE_GCC_PLUGINS
- 	  An arch should select this symbol if it supports building with
- 	  GCC plugins.
- 
-+config CC_HAS_GCC_PLUGINS
-+	bool
-+	default $(shell $srctree/scripts/gcc-plugin.sh $HOSTCXX $CC)
-+
- menuconfig GCC_PLUGINS
- 	bool "GCC plugins"
- 	depends on HAVE_GCC_PLUGINS
--	depends on GCC_VERSION >= 40800
-+	depends on CC_HAS_GCC_PLUGINS
- 	depends on !COMPILE_TEST
- 	help
- 	  GCC plugins are loadable modules that provide extra features to the
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index 25da4c0..19d0d5b 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -1,71 +1,47 @@
- # SPDX-License-Identifier: GPL-2.0
--ifdef CONFIG_GCC_PLUGINS
--  PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh $(HOSTCXX) $(CC))
--
--  SANCOV_PLUGIN := -fplugin=$(objtree)/scripts/gcc-plugins/sancov_plugin.so
-+SANCOV_PLUGIN := -fplugin=$(objtree)/scripts/gcc-plugins/sancov_plugin.so
- 
--  gcc-plugin-$(CONFIG_GCC_PLUGIN_CYC_COMPLEXITY)	+= cyc_complexity_plugin.so
-+gcc-plugin-$(CONFIG_GCC_PLUGIN_CYC_COMPLEXITY)	+= cyc_complexity_plugin.so
- 
--  gcc-plugin-$(CONFIG_GCC_PLUGIN_LATENT_ENTROPY)	+= latent_entropy_plugin.so
--  gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_LATENT_ENTROPY)	+= -DLATENT_ENTROPY_PLUGIN
--  ifdef CONFIG_GCC_PLUGIN_LATENT_ENTROPY
--    DISABLE_LATENT_ENTROPY_PLUGIN			+= -fplugin-arg-latent_entropy_plugin-disable
--  endif
-+gcc-plugin-$(CONFIG_GCC_PLUGIN_LATENT_ENTROPY)	+= latent_entropy_plugin.so
-+gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_LATENT_ENTROPY)	+= -DLATENT_ENTROPY_PLUGIN
-+ifdef CONFIG_GCC_PLUGIN_LATENT_ENTROPY
-+  DISABLE_LATENT_ENTROPY_PLUGIN			+= -fplugin-arg-latent_entropy_plugin-disable
-+endif
- 
--  ifdef CONFIG_GCC_PLUGIN_SANCOV
--    ifeq ($(CFLAGS_KCOV),)
--      # It is needed because of the gcc-plugin.sh and gcc version checks.
--      gcc-plugin-$(CONFIG_GCC_PLUGIN_SANCOV)           += sancov_plugin.so
-+ifdef CONFIG_GCC_PLUGIN_SANCOV
-+  ifeq ($(CFLAGS_KCOV),)
-+    # It is needed because of the gcc-plugin.sh and gcc version checks.
-+    gcc-plugin-$(CONFIG_GCC_PLUGIN_SANCOV)           += sancov_plugin.so
- 
--      ifneq ($(PLUGINCC),)
--        CFLAGS_KCOV := $(SANCOV_PLUGIN)
--      else
--        $(warning warning: cannot use CONFIG_KCOV: -fsanitize-coverage=trace-pc is not supported by compiler)
--      endif
--    endif
-+    CFLAGS_KCOV := $(SANCOV_PLUGIN)
-   endif
-+endif
- 
--  gcc-plugin-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)	+= structleak_plugin.so
--  gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE)	+= -fplugin-arg-structleak_plugin-verbose
--  gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL)	+= -fplugin-arg-structleak_plugin-byref-all
--  gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)	+= -DSTRUCTLEAK_PLUGIN
--
--  gcc-plugin-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)	+= randomize_layout_plugin.so
--  gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)	+= -DRANDSTRUCT_PLUGIN
--  gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE)	+= -fplugin-arg-randomize_layout_plugin-performance-mode
-+gcc-plugin-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)	+= structleak_plugin.so
-+gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE)	+= -fplugin-arg-structleak_plugin-verbose
-+gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL)	+= -fplugin-arg-structleak_plugin-byref-all
-+gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)	+= -DSTRUCTLEAK_PLUGIN
- 
--  GCC_PLUGINS_CFLAGS := $(strip $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y)) $(gcc-plugin-cflags-y))
-+gcc-plugin-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)	+= randomize_layout_plugin.so
-+gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)	+= -DRANDSTRUCT_PLUGIN
-+gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE)	+= -fplugin-arg-randomize_layout_plugin-performance-mode
- 
--  export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGIN GCC_PLUGIN_SUBDIR
--  export SANCOV_PLUGIN DISABLE_LATENT_ENTROPY_PLUGIN
-+GCC_PLUGINS_CFLAGS := $(strip $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y)) $(gcc-plugin-cflags-y))
- 
--  ifneq ($(PLUGINCC),)
--    # SANCOV_PLUGIN can be only in CFLAGS_KCOV because avoid duplication.
--    GCC_PLUGINS_CFLAGS := $(filter-out $(SANCOV_PLUGIN), $(GCC_PLUGINS_CFLAGS))
--  endif
-+export GCC_PLUGINS_CFLAGS GCC_PLUGIN GCC_PLUGIN_SUBDIR
-+export SANCOV_PLUGIN DISABLE_LATENT_ENTROPY_PLUGIN
- 
--  KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
--  GCC_PLUGIN := $(gcc-plugin-y)
--  GCC_PLUGIN_SUBDIR := $(gcc-plugin-subdir-y)
--endif
-+# SANCOV_PLUGIN can be only in CFLAGS_KCOV because avoid duplication.
-+GCC_PLUGINS_CFLAGS := $(filter-out $(SANCOV_PLUGIN), $(GCC_PLUGINS_CFLAGS))
- 
--# If plugins aren't supported, abort the build before hard-to-read compiler
--# errors start getting spewed by the main build.
--PHONY += gcc-plugins-check
--gcc-plugins-check: FORCE
--ifdef CONFIG_GCC_PLUGINS
--  ifeq ($(PLUGINCC),)
--    ifneq ($(GCC_PLUGINS_CFLAGS),)
--      $(Q)$(srctree)/scripts/gcc-plugin.sh --show-error $(HOSTCXX) $(CC) || true
--      @echo "Cannot use CONFIG_GCC_PLUGINS: your gcc installation does not support plugins, perhaps the necessary headers are missing?" >&2 && exit 1
--    endif
--  endif
--endif
--	@:
-+KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
-+GCC_PLUGIN := $(gcc-plugin-y)
-+GCC_PLUGIN_SUBDIR := $(gcc-plugin-subdir-y)
- 
- # Actually do the build, if requested.
- PHONY += gcc-plugins
--gcc-plugins: scripts_basic gcc-plugins-check
-+gcc-plugins: scripts_basic
- ifdef CONFIG_GCC_PLUGINS
- 	$(Q)$(MAKE) $(build)=scripts/gcc-plugins
- endif
-diff --git a/scripts/gcc-plugin.sh b/scripts/gcc-plugin.sh
-index 0edbdae..b18c69c 100755
---- a/scripts/gcc-plugin.sh
-+++ b/scripts/gcc-plugin.sh
-@@ -24,7 +24,6 @@ EOF
- 
- if [ $? -eq 0 ]
- then
--	echo "$1"
- 	exit 0
- fi
- 
--- 
-2.7.4
+On 13 February 2018 at 13:38, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
+> On 12 February 2018 at 23:01, Kees Cook <keescook@chromium.org> wrote:
+>> On Sat, Feb 10, 2018 at 11:18 AM, Ahmed Soliman
+>> <ahmedsoliman0x666@gmail.com> wrote:
+>>> I am student, currently studying computer and communication engineering, My
+>>> relevant academic background is undergraduate level courses in operating
+>>> systems, system software, compiler theory, architecture, microprocessors.
+>>> Well most of which are outdated stuff anyway but I have some ideas. My real
+>>
+>> Welcome to the list!
+>>
+>>> background comes from Playing CTFs in my free time (which is basically 24/7)
+>>> doing mainly Reverse engineering and Binary exploitation, I have done 2~3
+>>> hello world kernel exploit dev for learning. so I have the basic knowledge,
+>>
+>> Excellent; CTFs can be extremely educational. There aren't enough
+>> kernel CTFs, IMO. :)
+>>
+>>> And I use hand tweaked Gentoo! I have 1 documentation kernel patch \o/.
+>>
+>> Hey, that's a good place to start! What was fixed?
+>>
+>>> I am exploiting the fact that we shall be doing Software Engineering course
+>>> This semester, so to enforce myself to get started developing for the
+>>> kernel, I was guided here though long searching journey with #kernelnewbies
+>>> and approaching many couple of maintainers in general.
+>>>
+>>> I always experienced people asking me even on kernelnewbies why I want to
+>>> write stuff for kernel, well it is just for pure fun and I like doing almost
+>>> low level security. And low level security requires being aware with kernel.
+>>> Please just don't try to send me off. And I hope no one gets the wrong idea
+>>> that I am only doing this for school.
+>>
+>> You've got the primary element: desire to work on it. :) There aren't
+>> a lot of people interested in low level code, and even fewer
+>> interested in security, so we'd love to help however we can.
+>>
+>>> Anyway I am interested in this implementing KASLR for ARM, I just wanted to
+>>> make sure that no one is working on that because this is major school
+>>> requirement, we are assumed to deliver a self contained "something" that
+>>> isn't ours and not someone's else.
+>>
+>> Ard (now on CC) implemented a first-pass at this already, but it
+>> likely needs some more tweaking and running down of any loose ends.
+>>
+>> See here:
+>> http://www.openwall.com/lists/kernel-hardening/2017/08/14/2
+>>
+>>> The reason I chose this one is that I think that is the only one that I
+>>> understand (in a very abstract level) among all of them. so it should be the
+>>> easiest way to kick start in my opinion.
+>>> Assuming that I am right, I wanted to state that the only ARM32 hardware I
+>>> own is raspberry pi zero, and Qemu of course, should that be enough please
+>>> do let me know, and I would appreciate any reading materials provided I am
+>>> already reading through wiki but there could be hidden gems that I missed.
+>>
+>> I'll let Ard take over; but between Qemu and real hardware you should
+>> be set. One of the tricky parts of arm32 is how many earlier CPU types
+>> there were, which can make some aspects more difficult to test. In the
+>> worst case, you can just mark it as available on certain hardware.
+>>
+>
+> The latest version of my kaslr branch is feature complete, but I get
+> some hard to diagnose boot errors in automated boot testing on
+> kernelci.org
+>
+> However, over the past few months I did not get a single query from
+> anyone about how the work was progressing, and KASLR is a rather
+> intrusive change, so I am reluctant to spend time and/or endorse
+> others doing so for a feature that will require a substantial
+> maintenance effort without any real benefit to anyone.
