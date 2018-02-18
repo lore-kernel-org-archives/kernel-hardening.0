@@ -1,104 +1,99 @@
+Date: Sun, 18 Feb 2018 23:13:52 +0100
+From: Sam Ravnborg <sam@ravnborg.org>
+Subject: Re: [PATCH 00/23] kconfig: move compiler capability tests to Kconfig
+Message-ID: <20180218221352.GA6651@ravnborg.org>
+References: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com>
 MIME-Version: 1.0
-In-Reply-To: <CAKv+Gu_SxHCekoCoOFTOLFbN0besY+BRj+AzUYk88xK=zsZKBg@mail.gmail.com>
-References: <CAAGnT3YJGf=eixt2+O_XsHiJZFP+CSO9A0a4qc-NKHRf=4y0sw@mail.gmail.com>
- <CAGXu5jJBmKiDnhV26kEZyCf+TGWnpMOvSjiYaUr1U6z0FLPJHg@mail.gmail.com> <CAKv+Gu_SxHCekoCoOFTOLFbN0besY+BRj+AzUYk88xK=zsZKBg@mail.gmail.com>
-From: Ahmed Soliman <ahmedsoliman0x666@gmail.com>
-Date: Sat, 17 Feb 2018 17:22:29 +0200
-Message-ID: <CAAGnT3ZwmJ7GtNZwSqW7sa2G59-3RvRzyTnqCYiB3ABiqxzpOQ@mail.gmail.com>
-Subject: Re: Hello world! Student interested in getting involved.
-Content-Type: text/plain; charset="UTF-8"
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, riel@redhat.com, kvm@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com>
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: linux-kbuild@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Ulf Magnusson <ulfalizer@gmail.com>, Michal Marek <michal.lkml@markovi.net>, Peter Oberparleiter <oberpar@linux.vnet.ibm.com>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, sparclinux@vger.kernel.org, linux-sh@vger.kernel.org, x86@kernel.org, Thomas Gleixner <tglx@linutronix.de>, Rich Felker <dalias@libc.org>, Jeff Dike <jdike@addtoit.com>, "H. Peter Anvin" <hpa@zytor.com>, user-mode-linux-devel@lists.sourceforge.net, Yoshinori Sato <ysato@users.sourceforge.jp>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, linuxppc-dev@lists.ozlabs.org, Paul Mackerras <paulus@samba.org>, user-mode-linux-user@lists.sourceforge.net, Ingo Molnar <mingo@redhat.com>, "David S. Miller" <davem@davemloft.net>, Michael Ellerman <mpe@ellerman.id.au>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Richard Weinberger <richard@nod.at>, Emese Revfy <re.emese@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-well in this case I tried searching and researching more and I found
-the idea for Rootkit blocking using KVM virtualization, it is
-described here:
-https://kernelnewbies.org/KernelProjects/VirtRootkitBlocker
+Hi Masahiro.
 
-I CCed to riel
-It took me a while to re-learn how to setup kernel developing
-environment, via buildroot for generating qemu
-images for paravirtualized OS debugging, and learning about mm and KVM (WIP).
-I am not sure if this is the right place but I think anti rootkits can
-be good hardening technique, I made sure
-that no one is working on this (no patches anywhere), and my
-team-mates are happy with the idea so I hope we are
-ready to start. Just in case anyone tries to drift me off the idea, I
-do like it enough so I already talked to my professor
-and my team-mates about it. I just wanted to know which tree should I
-be working on, should it be the kernel hardening
-tree or the tree used for kvm or memory management.
-Kind regards.
+On Sat, Feb 17, 2018 at 03:38:28AM +0900, Masahiro Yamada wrote:
+> I brushed up the implementation in this version.
+> 
+> In the previous RFC, CC_HAS_ was described by using 'option shell=',
+> like this:
+> 
+> config CC_HAS_STACKPROTECTOR
+>         bool
+>         option shell="$CC -Werror -fstack-protector -c -x c /dev/null"
+> 
+> After I thought a bit more, the following syntax is more grammatical,
+> and flexible.
+> 
+> config CC_HAS_STACKPROTECTOR
+>         bool
+>         default $(shell $CC -Werror -fstack-protector -c -x c /dev/null)
 
-On 13 February 2018 at 13:38, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
-> On 12 February 2018 at 23:01, Kees Cook <keescook@chromium.org> wrote:
->> On Sat, Feb 10, 2018 at 11:18 AM, Ahmed Soliman
->> <ahmedsoliman0x666@gmail.com> wrote:
->>> I am student, currently studying computer and communication engineering, My
->>> relevant academic background is undergraduate level courses in operating
->>> systems, system software, compiler theory, architecture, microprocessors.
->>> Well most of which are outdated stuff anyway but I have some ideas. My real
->>
->> Welcome to the list!
->>
->>> background comes from Playing CTFs in my free time (which is basically 24/7)
->>> doing mainly Reverse engineering and Binary exploitation, I have done 2~3
->>> hello world kernel exploit dev for learning. so I have the basic knowledge,
->>
->> Excellent; CTFs can be extremely educational. There aren't enough
->> kernel CTFs, IMO. :)
->>
->>> And I use hand tweaked Gentoo! I have 1 documentation kernel patch \o/.
->>
->> Hey, that's a good place to start! What was fixed?
->>
->>> I am exploiting the fact that we shall be doing Software Engineering course
->>> This semester, so to enforce myself to get started developing for the
->>> kernel, I was guided here though long searching journey with #kernelnewbies
->>> and approaching many couple of maintainers in general.
->>>
->>> I always experienced people asking me even on kernelnewbies why I want to
->>> write stuff for kernel, well it is just for pure fun and I like doing almost
->>> low level security. And low level security requires being aware with kernel.
->>> Please just don't try to send me off. And I hope no one gets the wrong idea
->>> that I am only doing this for school.
->>
->> You've got the primary element: desire to work on it. :) There aren't
->> a lot of people interested in low level code, and even fewer
->> interested in security, so we'd love to help however we can.
->>
->>> Anyway I am interested in this implementing KASLR for ARM, I just wanted to
->>> make sure that no one is working on that because this is major school
->>> requirement, we are assumed to deliver a self contained "something" that
->>> isn't ours and not someone's else.
->>
->> Ard (now on CC) implemented a first-pass at this already, but it
->> likely needs some more tweaking and running down of any loose ends.
->>
->> See here:
->> http://www.openwall.com/lists/kernel-hardening/2017/08/14/2
->>
->>> The reason I chose this one is that I think that is the only one that I
->>> understand (in a very abstract level) among all of them. so it should be the
->>> easiest way to kick start in my opinion.
->>> Assuming that I am right, I wanted to state that the only ARM32 hardware I
->>> own is raspberry pi zero, and Qemu of course, should that be enough please
->>> do let me know, and I would appreciate any reading materials provided I am
->>> already reading through wiki but there could be hidden gems that I missed.
->>
->> I'll let Ard take over; but between Qemu and real hardware you should
->> be set. One of the tricky parts of arm32 is how many earlier CPU types
->> there were, which can make some aspects more difficult to test. In the
->> worst case, you can just mark it as available on certain hardware.
->>
->
-> The latest version of my kaslr branch is feature complete, but I get
-> some hard to diagnose boot errors in automated boot testing on
-> kernelci.org
->
-> However, over the past few months I did not get a single query from
-> anyone about how the work was progressing, and KASLR is a rather
-> intrusive change, so I am reluctant to spend time and/or endorse
-> others doing so for a feature that will require a substantial
-> maintenance effort without any real benefit to anyone.
+Looks good - but maybe we should go one step further.
+
+So we in the syntax explicit handles:
+- shell commands
+- other commands, defined as strings
+- environment variables
+- config variables
+
+Each case is explicit - so the reader is not confused what is used when.
+
+$(shell foo)	- output of the shell command foo. Uses $SHELL as the shell.
+		  May include optional paramters.
+		  foo may be a config variable referenced using ${} or a config variable prefixed with $
+		Example:
+
+		config BUILD_DIR
+			string
+			default $(shell cd ${objtree}; pwd)
+
+$(call bar)	- output of the bar command that may take optional parameters.
+		  bar may be a text string, a config variable or an environment variable
+		   The definition of bar may reference the parameters using $(1), $(2)
+		   In this context a config variable needs to be prefixed with $
+
+		Example:
+
+		config reverse
+			string
+			default $(2) $(1)
+
+		config NEW_ORDER
+			string
+			$(call $reverse, A, B)	# Will assign REVERSE the value "B A"
+
+
+		Example2:
+
+		config CC_OPTION
+			string
+			default $(shell ${srctree}/scripts/cc-option ${CC} $(1) $(2))
+
+		config CC_OPTIMIZE
+			string
+			$(call $CC_OPTION, -Oz, -Os)
+
+
+${FOO}		- environment variable
+
+The above is inspired by how make implement similar functionality.
+
+I'm not happy that we in one context can reference CONFIG variables
+directly, but inside the $(call ...) and $(shell ...) needs the $ prefix.
+But I could not come up with something un-ambigious where this could be avoided.
+
+The above proposal include the functionality of the macro stuff proposed in this patch-set.
+But with a simpler syntax and we keep all the other kconfig logic (depends on etc) - so
+users will not be limited in their creativity.
+
+> Current limitations:
+> 
+> Dependency on outside scripts.
+> Inter-option dependency:
+> Functions are evaluated statically:
+
+Same limitations exists with the syntax suggested above.
+
+	Sam
