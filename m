@@ -1,114 +1,153 @@
+From: Matt Redfearn <matt.redfearn@mips.com>
+Subject: [PATCH] signals: Move put_compat_sigset to compat.h to silence hardened usercopy
+Date: Mon, 19 Feb 2018 16:55:06 +0000
+Message-ID: <1519059306-30135-1-git-send-email-matt.redfearn@mips.com>
+In-Reply-To: <1515636190-24061-1-git-send-email-keescook@chromium.org>
+References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-In-Reply-To: <20180218221352.GA6651@ravnborg.org>
-References: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com> <20180218221352.GA6651@ravnborg.org>
-From: Ulf Magnusson <ulfalizer@gmail.com>
-Date: Mon, 19 Feb 2018 16:18:16 +0100
-Message-ID: <CAFkk2KT1krKuDkWt0eHcasfC61fTVQNf-1kqw7icLP9OYGYkXQ@mail.gmail.com>
-Subject: Re: [PATCH 00/23] kconfig: move compiler capability tests to Kconfig
-Content-Type: text/plain; charset="UTF-8"
-To: Sam Ravnborg <sam@ravnborg.org>
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Michal Marek <michal.lkml@markovi.net>, Peter Oberparleiter <oberpar@linux.vnet.ibm.com>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, sparclinux@vger.kernel.org, linux-sh@vger.kernel.org, x86@kernel.org, Thomas Gleixner <tglx@linutronix.de>, Rich Felker <dalias@libc.org>, Jeff Dike <jdike@addtoit.com>, "H. Peter Anvin" <hpa@zytor.com>, user-mode-linux-devel@lists.sourceforge.net, Yoshinori Sato <ysato@users.sourceforge.jp>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, linuxppc-dev@lists.ozlabs.org, Paul Mackerras <paulus@samba.org>, user-mode-linux-user@lists.sourceforge.net, Ingo Molnar <mingo@redhat.com>, "David S. Miller" <davem@davemloft.net>, Michael Ellerman <mpe@ellerman.id.au>, linux-doc@vger.kernel.org, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Richard Weinberger <richard@nod.at>, Emese Revfy <re.emese@gmail.com>
+Content-Type: text/plain
+To: Kees Cook <keescook@chromium.org>, "Dmitry V . Levin" <ldv@altlinux.org>, Al Viro <viro@zeniv.linux.org.uk>
+Cc: kernel-hardening@lists.openwall.com, linux-mips@linux-mips.org, Matt
+ Redfearn <matt.redfearn@mips.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello,
+Since commit afcc90f8621e ("usercopy: WARN() on slab cache usercopy
+region violations"), MIPS systems booting with a compat root filesystem
+emit a warning when copying compat siginfo to userspace:
 
-On Sun, Feb 18, 2018 at 11:13 PM, Sam Ravnborg <sam@ravnborg.org> wrote:
-> Hi Masahiro.
->
-> On Sat, Feb 17, 2018 at 03:38:28AM +0900, Masahiro Yamada wrote:
->> I brushed up the implementation in this version.
->>
->> In the previous RFC, CC_HAS_ was described by using 'option shell=',
->> like this:
->>
->> config CC_HAS_STACKPROTECTOR
->>         bool
->>         option shell="$CC -Werror -fstack-protector -c -x c /dev/null"
->>
->> After I thought a bit more, the following syntax is more grammatical,
->> and flexible.
->>
->> config CC_HAS_STACKPROTECTOR
->>         bool
->>         default $(shell $CC -Werror -fstack-protector -c -x c /dev/null)
->
-> Looks good - but maybe we should go one step further.
->
-> So we in the syntax explicit handles:
-> - shell commands
-> - other commands, defined as strings
-> - environment variables
-> - config variables
->
-> Each case is explicit - so the reader is not confused what is used when.
->
-> $(shell foo)    - output of the shell command foo. Uses $SHELL as the shell.
->                   May include optional paramters.
->                   foo may be a config variable referenced using ${} or a config variable prefixed with $
->                 Example:
->
->                 config BUILD_DIR
->                         string
->                         default $(shell cd ${objtree}; pwd)
->
-> $(call bar)     - output of the bar command that may take optional parameters.
->                   bar may be a text string, a config variable or an environment variable
->                    The definition of bar may reference the parameters using $(1), $(2)
->                    In this context a config variable needs to be prefixed with $
->
->                 Example:
->
->                 config reverse
->                         string
->                         default $(2) $(1)
->
->                 config NEW_ORDER
->                         string
->                         $(call $reverse, A, B)  # Will assign REVERSE the value "B A"
->
->
->                 Example2:
->
->                 config CC_OPTION
->                         string
->                         default $(shell ${srctree}/scripts/cc-option ${CC} $(1) $(2))
->
->                 config CC_OPTIMIZE
->                         string
->                         $(call $CC_OPTION, -Oz, -Os)
->
->
-> ${FOO}          - environment variable
->
-> The above is inspired by how make implement similar functionality.
->
-> I'm not happy that we in one context can reference CONFIG variables
-> directly, but inside the $(call ...) and $(shell ...) needs the $ prefix.
-> But I could not come up with something un-ambigious where this could be avoided.
+WARNING: CPU: 0 PID: 953 at mm/usercopy.c:81 usercopy_warn+0x98/0xe8
+Bad or missing usercopy whitelist? Kernel memory exposure attempt
+detected from SLAB object 'task_struct' (offset 1432, size 16)!
+Modules linked in:
+CPU: 0 PID: 953 Comm: S01logging Not tainted 4.16.0-rc2 #10
+Stack : ffffffff808c0000 0000000000000000 0000000000000001 65ac85163f3bdc4a
+	65ac85163f3bdc4a 0000000000000000 90000000ff667ab8 ffffffff808c0000
+	00000000000003f8 ffffffff808d0000 00000000000000d1 0000000000000000
+	000000000000003c 0000000000000000 ffffffff808c8ca8 ffffffff808d0000
+	ffffffff808d0000 ffffffff80810000 fffffc0000000000 ffffffff80785c30
+	0000000000000009 0000000000000051 90000000ff667eb0 90000000ff667db0
+	000000007fe0d938 0000000000000018 ffffffff80449958 0000000020052798
+	ffffffff808c0000 90000000ff664000 90000000ff667ab0 00000000100c0000
+	ffffffff80698810 0000000000000000 0000000000000000 0000000000000000
+	0000000000000000 0000000000000000 ffffffff8010d02c 65ac85163f3bdc4a
+	...
+Call Trace:
+[<ffffffff8010d02c>] show_stack+0x9c/0x130
+[<ffffffff80698810>] dump_stack+0x90/0xd0
+[<ffffffff80137b78>] __warn+0x100/0x118
+[<ffffffff80137bdc>] warn_slowpath_fmt+0x4c/0x70
+[<ffffffff8021e4a8>] usercopy_warn+0x98/0xe8
+[<ffffffff8021e68c>] __check_object_size+0xfc/0x250
+[<ffffffff801bbfb8>] put_compat_sigset+0x30/0x88
+[<ffffffff8011af24>] setup_rt_frame_n32+0xc4/0x160
+[<ffffffff8010b8b4>] do_signal+0x19c/0x230
+[<ffffffff8010c408>] do_notify_resume+0x60/0x78
+[<ffffffff80106f50>] work_notifysig+0x10/0x18
+---[ end trace 88fffbf69147f48a ]---
 
-I think we should be careful about allowing references to config
-symbols. It mixes up the parsing and evaluation phases, since $() is
-expanded during parsing (which I consider a feature and think is
-needed to retain sanity).
+Commit 5905429ad856 ("fork: Provide usercopy whitelisting for
+task_struct") noted that:
 
-Patch 06/23 removes the last existing instance of symbol references in
-strings by getting rid of 'option env'. That's an improvement to me.
-We shouldn't add it back.
+"While the blocked and saved_sigmask fields of task_struct are copied to
+userspace (via sigmask_to_save() and setup_rt_frame()), it is always
+copied with a static length (i.e. sizeof(sigset_t))."
 
->
-> The above proposal include the functionality of the macro stuff proposed in this patch-set.
-> But with a simpler syntax and we keep all the other kconfig logic (depends on etc) - so
-> users will not be limited in their creativity.
->
->> Current limitations:
->>
->> Dependency on outside scripts.
->> Inter-option dependency:
->> Functions are evaluated statically:
->
-> Same limitations exists with the syntax suggested above.
->
->         Sam
+However, this is not true in the case of compat signals, whose sigset
+is copied by put_compat_sigset and receives size as an argument.
 
-Cheers,
-Ulf
+At most call sites, put_compat_sigset is copying a sigset from the
+current task_struct. This triggers a warning when
+CONFIG_HARDENED_USERCOPY is active. However, by marking this function as
+static inline, the warning can be avoided because in all of these cases
+the size is constant at compile time, which is allowed. The only site
+where this is not the case is handling the rt_sigpending syscall, but
+there the copy is being made from a stack local variable so does not
+trigger the warning.
+
+Move put_compat_sigset to compat.h, and mark it static inline. This
+fixes the WARN on MIPS.
+
+Fixes: afcc90f8621e ("usercopy: WARN() on slab cache usercopy region violations")
+Signed-off-by: Matt Redfearn <matt.redfearn@mips.com>
+---
+
+ include/linux/compat.h | 26 ++++++++++++++++++++++++--
+ kernel/compat.c        | 19 -------------------
+ 2 files changed, 24 insertions(+), 21 deletions(-)
+
+diff --git a/include/linux/compat.h b/include/linux/compat.h
+index 8a9643857c4a..c4139c7a0de0 100644
+--- a/include/linux/compat.h
++++ b/include/linux/compat.h
+@@ -17,6 +17,7 @@
+ #include <linux/if.h>
+ #include <linux/fs.h>
+ #include <linux/aio_abi.h>	/* for aio_context_t */
++#include <linux/uaccess.h>
+ #include <linux/unistd.h>
+ 
+ #include <asm/compat.h>
+@@ -550,8 +551,29 @@ asmlinkage long compat_sys_settimeofday(struct compat_timeval __user *tv,
+ asmlinkage long compat_sys_adjtimex(struct compat_timex __user *utp);
+ 
+ extern int get_compat_sigset(sigset_t *set, const compat_sigset_t __user *compat);
+-extern int put_compat_sigset(compat_sigset_t __user *compat,
+-			     const sigset_t *set, unsigned int size);
++
++/*
++ * Defined inline such that size can be compile time constant, which avoids
++ * CONFIG_HARDENED_USERCOPY complaining about copies from task_struct
++ */
++static inline int
++put_compat_sigset(compat_sigset_t __user *compat, const sigset_t *set,
++		  unsigned int size)
++{
++	/* size <= sizeof(compat_sigset_t) <= sizeof(sigset_t) */
++#ifdef __BIG_ENDIAN
++	compat_sigset_t v;
++	switch (_NSIG_WORDS) {
++	case 4: v.sig[7] = (set->sig[3] >> 32); v.sig[6] = set->sig[3];
++	case 3: v.sig[5] = (set->sig[2] >> 32); v.sig[4] = set->sig[2];
++	case 2: v.sig[3] = (set->sig[1] >> 32); v.sig[2] = set->sig[1];
++	case 1: v.sig[1] = (set->sig[0] >> 32); v.sig[0] = set->sig[0];
++	}
++	return copy_to_user(compat, &v, size) ? -EFAULT : 0;
++#else
++	return copy_to_user(compat, set, size) ? -EFAULT : 0;
++#endif
++}
+ 
+ asmlinkage long compat_sys_migrate_pages(compat_pid_t pid,
+ 		compat_ulong_t maxnode, const compat_ulong_t __user *old_nodes,
+diff --git a/kernel/compat.c b/kernel/compat.c
+index 3247fe761f60..3f5fa8902e7d 100644
+--- a/kernel/compat.c
++++ b/kernel/compat.c
+@@ -488,25 +488,6 @@ get_compat_sigset(sigset_t *set, const compat_sigset_t __user *compat)
+ }
+ EXPORT_SYMBOL_GPL(get_compat_sigset);
+ 
+-int
+-put_compat_sigset(compat_sigset_t __user *compat, const sigset_t *set,
+-		  unsigned int size)
+-{
+-	/* size <= sizeof(compat_sigset_t) <= sizeof(sigset_t) */
+-#ifdef __BIG_ENDIAN
+-	compat_sigset_t v;
+-	switch (_NSIG_WORDS) {
+-	case 4: v.sig[7] = (set->sig[3] >> 32); v.sig[6] = set->sig[3];
+-	case 3: v.sig[5] = (set->sig[2] >> 32); v.sig[4] = set->sig[2];
+-	case 2: v.sig[3] = (set->sig[1] >> 32); v.sig[2] = set->sig[1];
+-	case 1: v.sig[1] = (set->sig[0] >> 32); v.sig[0] = set->sig[0];
+-	}
+-	return copy_to_user(compat, &v, size) ? -EFAULT : 0;
+-#else
+-	return copy_to_user(compat, set, size) ? -EFAULT : 0;
+-#endif
+-}
+-
+ #ifdef CONFIG_NUMA
+ COMPAT_SYSCALL_DEFINE6(move_pages, pid_t, pid, compat_ulong_t, nr_pages,
+ 		       compat_uptr_t __user *, pages32,
+-- 
+2.7.4
