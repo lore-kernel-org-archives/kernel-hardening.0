@@ -1,55 +1,78 @@
 From: "Tobin C. Harding" <me@tobin.cc>
-Subject: [PATCH 3/4] leaking_addresses: cache architecture name
-Date: Mon, 19 Feb 2018 13:50:48 +1100
-Message-Id: <1519008649-15782-4-git-send-email-me@tobin.cc>
+Subject: [PATCH 4/4] leaking_addresses: add scan_once array
+Date: Mon, 19 Feb 2018 13:50:49 +1100
+Message-Id: <1519008649-15782-5-git-send-email-me@tobin.cc>
 In-Reply-To: <1519008649-15782-1-git-send-email-me@tobin.cc>
 References: <1519008649-15782-1-git-send-email-me@tobin.cc>
 To: Kernel Hardening <kernel-hardening@lists.openwall.com>
 Cc: "Tobin C. Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently we are repeatedly calling `uname -m`.  This is causing the
-script to take a long time to run (more than 10 seconds to parse
-/proc/kallsyms).  We can use Perl state variables to cache the result of
-the first call to `uname -m`.  With this change in place the script
-scans the whole kernel in under a minute.
+There are files under /proc that have the same format for each PID, e.g
+'smaps'.  We need only scan these files a single time to verify that
+they are not leaking addresses.  This reduces the work the script must
+do.
 
-Cache machine architecture in state variable.
+Add once_only array.
 
 Signed-off-by: Tobin C. Harding <me@tobin.cc>
 ---
- scripts/leaking_addresses.pl | 8 +++++---
- 1 file changed, 5 insertions(+), 3 deletions(-)
+ scripts/leaking_addresses.pl | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
 
 diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-index e7bf15a45a69..f52e91ef7d5c 100755
+index f52e91ef7d5c..ab4e70d9efde 100755
 --- a/scripts/leaking_addresses.pl
 +++ b/scripts/leaking_addresses.pl
-@@ -175,7 +175,7 @@ sub is_32bit
+@@ -69,6 +69,12 @@ my @skip_any = (
+ 	'fd',
+ 	'usbmon');
  
- sub is_ix86_32
++# These files are the same format under each PID that they appear.
++# We need only pass them once.
++my @once_only = (
++	'smaps',
++	'mb_groups');
++
+ sub help
  {
--       my $arch = `uname -m`;
-+       state $arch = `uname -m`;
- 
-        chomp $arch;
-        if ($arch =~ m/i[3456]86/) {
-@@ -198,12 +198,14 @@ sub is_arch
- 
- sub is_x86_64
- {
--	return is_arch('x86_64');
-+	state $is = is_arch('x86_64');
-+	return $is;
+ 	my ($exitcode) = @_;
+@@ -401,6 +407,25 @@ sub parse_dmesg
+ 	close $cmd;
  }
  
- sub is_ppc64
++sub already_scanned
++{
++	my ($filename) = @_;
++	state %seen;
++
++	foreach (@once_only) {
++		if (/^$filename$/) {
++			if ($seen{$_} == 1) {
++				return 1;
++			}
++			$seen{$_} = 1;
++
++			return 0;
++		}
++	}
++
++	return 0;
++}
++
+ # True if we should skip this path.
+ sub skip
  {
--	return is_arch('ppc64');
-+	state $is = is_arch('ppc64');
-+	return $is;
+@@ -415,6 +440,10 @@ sub skip
+ 		return 1 if (/^$filename$/);
+ 	}
+ 
++	if (already_scanned($filename)) {
++		return 1;
++	}
++
+ 	return 0;
  }
  
- # Gets config option value from kernel config file.
 -- 
 2.7.4
