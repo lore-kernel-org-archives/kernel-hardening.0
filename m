@@ -1,55 +1,66 @@
-Subject: Re: [PATCH 1/6] genalloc: track beginning of allocations
-References: <20180212165301.17933-1-igor.stoppa@huawei.com>
- <20180212165301.17933-2-igor.stoppa@huawei.com>
- <CAGXu5jJWLdsBr-6mXiFQprT-=h2qhhXAWRLQ+EaKKiubKOQOfw@mail.gmail.com>
+Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
+References: <20180124175631.22925-1-igor.stoppa@huawei.com>
+ <20180124175631.22925-5-igor.stoppa@huawei.com>
+ <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
+ <20180126053542.GA30189@bombadil.infradead.org>
+ <alpine.DEB.2.20.1802021236510.31548@nuc-kabylake>
+ <f2ddaed0-313e-8664-8a26-9d10b66ed0c5@huawei.com>
+ <b75b5903-0177-8ad9-5c2b-fc63438fb5f2@huawei.com>
+ <CAFUG7CfrCpcbwgf5ixMC5EZZgiVVVp1NXhDHK1UoJJcC08R2qQ@mail.gmail.com>
+ <8818bfd4-dd9f-f279-0432-69b59531bd41@huawei.com>
+ <CAFUG7CeUhFcvA82uZ2ZH1j_6PM=aBo4XmYDN85pf8G0gPU44dg@mail.gmail.com>
+ <17e5b515-84c8-dca2-1695-cdf819834ea2@huawei.com>
+ <CAGXu5j+LS1pgOOroi7Yxp2nh=DwtTnU3p-NZa6bQu_wkvvVkwg@mail.gmail.com>
+ <414027d3-dd73-cf11-dc2a-e8c124591646@redhat.com>
+ <5a83024c.64369d0a.a1e94.cdd6SMTPIN_ADDED_BROKEN@mx.google.com>
+ <13a50f85-bbd8-5d78-915a-a29c4a9f0c32@redhat.com>
 From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <daaee36a-e6c7-8fbf-b758-ecee5106da9a@huawei.com>
-Date: Tue, 20 Feb 2018 19:07:12 +0200
+Message-ID: <7972cf4d-dfb2-6682-b1cb-e514a41196a6@huawei.com>
+Date: Tue, 20 Feb 2018 19:16:38 +0200
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jJWLdsBr-6mXiFQprT-=h2qhhXAWRLQ+EaKKiubKOQOfw@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
+In-Reply-To: <13a50f85-bbd8-5d78-915a-a29c4a9f0c32@redhat.com>
+Content-Type: text/plain; charset="gbk"
 Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Matthew Wilcox <willy@infradead.org>, Randy Dunlap <rdunlap@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Jerome Glisse <jglisse@redhat.com>, Christoph Hellwig <hch@infradead.org>, Christoph
- Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>
+Cc: Boris Lukashev <blukashev@sempervictus.com>, Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Jann Horn <jannh@google.com>, Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>, Christoph Hellwig <hch@infradead.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel
+ Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 13/02/18 01:52, Kees Cook wrote:
-> On Mon, Feb 12, 2018 at 8:52 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
->> @@ -738,14 +1031,16 @@ EXPORT_SYMBOL(devm_gen_pool_create);
->>
->>  #ifdef CONFIG_OF
->>  /**
->> - * of_gen_pool_get - find a pool by phandle property
->> + * of_gen_pool_get() - find a pool by phandle property
->>   * @np: device node
->>   * @propname: property name containing phandle(s)
->>   * @index: index into the phandle array
->>   *
->> - * Returns the pool that contains the chunk starting at the physical
->> - * address of the device tree node pointed at by the phandle property,
->> - * or NULL if not found.
->> + * Return:
->> + * * pool address      - it contains the chunk starting at the physical
->> + *                       address of the device tree node pointed at by
->> + *                       the phandle property
->> + * * NULL              - otherwise
->>   */
->>  struct gen_pool *of_gen_pool_get(struct device_node *np,
->>         const char *propname, int index)
+
+
+On 13/02/18 20:10, Laura Abbott wrote:
+> On 02/13/2018 07:20 AM, Igor Stoppa wrote:
+>> Why alterations of page properties are not considered a risk and the physmap is?
+>> And how would it be easier (i suppose) to attack the latter?
 > 
-> I wonder if this might be more readable by splitting the kernel-doc
-> changes from the bitmap changes? I.e. fix all the kernel-doc in one
-> patch, and in the following, make the bitmap changes. Maybe it's such
-> a small part that it doesn't matter, though?
+> Alterations are certainly a risk but with the physmap the
+> mapping is already there. Find the address and you have
+> access vs. needing to actually modify the properties
+> then do the access. I could also be complete off base
+> on my threat model here so please correct me if I'm
+> wrong.
 
-I had the same thought, but then I would have made most of the kerneldoc
-changes to something that would be altered by the following patch,
-because it would have made little sense to fix only those parts that
-would have survived.
+It's difficult for me to comment on this without knowing *how* the
+attack would be performed, in your model.
 
-If it is really a problem to keep them together, I could put these
-changes in a following patch. Would that be ok?
+Ex: my expectation is that the attacked has R/W access to kernel data
+and has knowledge of the location of static variables.
+
+This is not just a guess, but a real-life scenario, found in attacks
+that, among other things, are capable of disabling SELinux, to proceed
+toward gaining full root capability.
+
+At that point, I think that variables which are allocated dynamically,
+in vmalloc address space, are harder to locate, because of the virtual
+mapping and the randomness of the address chosen (this I have not
+confirmed yet, but I suppose there is some randomness in picking the
+address to assign to a certain allocation request to vmalloc, otherwise,
+it could be added).
+
+> I think your other summaries are good points though
+> and should go in the cover letter.
+
+Ok, I'm just afraid it risks becoming a lengthy dissertation :-)
 
 --
 igor
