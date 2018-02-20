@@ -1,120 +1,67 @@
-Date: Wed, 21 Feb 2018 08:36:04 +1100
-From: Dave Chinner <dchinner@redhat.com>
-Subject: Re: [RFC PATCH v16 0/6] mm: security: ro protection for dynamic data
-Message-ID: <20180220213604.GD3728@rh>
-References: <20180212165301.17933-1-igor.stoppa@huawei.com>
- <CAGXu5j+ZNFX17Vxd37rPnkahFepFn77Fi9zEy+OL8nNd_2bjqQ@mail.gmail.com>
- <20180220012111.GC3728@rh>
- <24e65dec-f452-a444-4382-d1f88fbb334c@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <24e65dec-f452-a444-4382-d1f88fbb334c@huawei.com>
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Randy Dunlap <rdunlap@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Jerome Glisse <jglisse@redhat.com>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Sender: keescook@google.com
+In-Reply-To: <791341f5-4347-ba38-0710-93551a45ec38@linux.com>
+References: <1518804657-24905-1-git-send-email-alex.popov@linux.com> <791341f5-4347-ba38-0710-93551a45ec38@linux.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 20 Feb 2018 15:17:21 -0800
+Message-ID: <CAGXu5jJ+dWjtjJ88ziOoyTJnSxbjdvEJd5LGY9nxWxHpVR6pug@mail.gmail.com>
+Subject: Re: [PATCH RFC v8 0/6] Introduce the STACKLEAK feature and a test for it
+Content-Type: text/plain; charset="UTF-8"
+To: Alexander Popov <alex.popov@linux.com>, Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@kernel.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, X86 ML <x86@kernel.org>, Mohamed Ghannam <simo.ghannam@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 20, 2018 at 08:03:49PM +0200, Igor Stoppa wrote:
-> 
-> 
-> On 20/02/18 03:21, Dave Chinner wrote:
-> > On Mon, Feb 12, 2018 at 03:32:36PM -0800, Kees Cook wrote:
-> >> On Mon, Feb 12, 2018 at 8:52 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
-> >>> This patch-set introduces the possibility of protecting memory that has
-> >>> been allocated dynamically.
-> >>>
-> >>> The memory is managed in pools: when a memory pool is turned into R/O,
-> >>> all the memory that is part of it, will become R/O.
-> >>>
-> >>> A R/O pool can be destroyed, to recover its memory, but it cannot be
-> >>> turned back into R/W mode.
-> >>>
-> >>> This is intentional. This feature is meant for data that doesn't need
-> >>> further modifications after initialization.
-> >>
-> >> This series came up in discussions with Dave Chinner (and Matthew
-> >> Wilcox, already part of the discussion, and others) at LCA. I wonder
-> >> if XFS would make a good initial user of this, as it could allocate
-> >> all the function pointers and other const information about a
-> >> superblock in pmalloc(), keeping it separate from the R/W portions?
-> >> Could other filesystems do similar things?
-> > 
-> > I wasn't cc'd on this patchset, (please use david@fromorbit.com for
-> > future postings) 
-> 
-> Apologies, somehow I didn't realize that I should have put you too in
-> CC. It will be fixed at the next iteration.
+On Tue, Feb 20, 2018 at 2:29 AM, Alexander Popov <alex.popov@linux.com> wrote:
+> On 16.02.2018 21:10, Alexander Popov wrote:
+>> This is the 8th version of the patch series introducing STACKLEAK to the
+>> mainline kernel. I've made some minor improvements while waiting for the
+>> next review by x86 maintainers.
 
-No worries, If you weren't at LCA, you wouldn't have known :P
+If we can borrow some of luto or tglx's time, I think that'd be best:
+they've been looking at the entry code a lot lately. :) Regardless, I
+think the addition to the entry code is clean (especially now that the
+fast path is gone *sob*). :P
 
-> > so I can't really say anything about it right
-> > now. My interest for XFS was that we have a fair amount of static
-> > data in XFS that we set up at mount time and it never gets modified
-> > after that.
-> 
-> This is the typical use case I had in mind, although it requires a
-> conversion.
-> Ex:
-> 
-> before:
-> 
-> static int a;
-> 
-> 
-> void set_a(void)
-> {
-> 	a = 4;
-> }
-> 
-> 
-> 
-> after:
-> 
-> static int *a __ro_after_init;
-> struct gen_pool *pool;
-> 
-> void init_a(void)
-> {
-> 	pool = pmalloc_create_pool("pool", 0);
-> 	a = (int *)pmalloc(pool, sizeof(int), GFP_KERNEL);
-> }
-> 
-> void set_a(void)
-> {
-> 	*a = 4;
-> 	pmalloc_protect_pool(pool);
-> }
+>> STACKLEAK is a security feature developed by Grsecurity/PaX (kudos to them),
+>> which:
+>>  - reduces the information that can be revealed through kernel stack leak bugs;
+>>  - blocks some uninitialized stack variable attacks (e.g. CVE-2010-2963);
+>>  - introduces some runtime checks for kernel stack overflow detection.
 
-Yeah, that's kinda what I figured. I'm guessing that I treat a pool
-just like a normal heap allocation, but then when all the objects I
-need to allocate are fully initialised, then I write protect the
-pool? i.e. the API isn't using an object-based protection scope?
+I've added this series to my kernel.org trees, which means 0-day will
+start grinding on it too now:
+https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git
+kspp/gcc-plugin/stackleak
 
-FWIW, I'm not wanting to use it to replace static variables. All the
-structures are dynamically allocated right now, and get assigned to
-other dynamically allocated pointers. I'd likely split the current
-structures into a "ro after init" structure and rw structure, so
-how does the "__ro_after_init" attribute work in that case? Is it
-something like this?
+The LKDTM tests look great and check out for me. I think the code is
+clear, so I'd like to get it into -next, but I want to be sure I'm not
+stepping on x86 toes first.
 
-struct xfs_mount {
-	struct xfs_mount_ro{
-		.......
-	} *ro __ro_after_init;
-	......
+Laura, how does arm64 look for this? Would it be possible to add it to
+this series (at least on kernel.org for build/run testing)?
 
-Also, what compile time checks are in place to catch writes to
-ro structure members? Is sparse going to be able to check this sort
-of thing, like is does with endian-specific variables?
+> Hello! I've just tested STACKLEAK against the recent CVE-2017-17712 exploit:
+> http://openwall.com/lists/oss-security/2018/02/20/1
+>
+> This vulnerability is a race condition in raw_sendmsg() in net/ipv4/raw.c. It
+> leads to uninitialized stack pointer usage which can be used for a local
+> privilege escalation.
+>
+> CVE-2017-17712 was discovered and fixed by Mohamed Ghannam (kudos to him!). He
+> also provided a stable PoC exploit for it.
+>
+> With STACKLEAK, the uninitialized stack pointer is set to STACKLEAK_POISON
+> (-0xBEEF) and points to the unused hole in the virtual memory map. That blocks
+> the stack spraying needed for CVE-2017-17712 exploit (similar to CVE-2010-2963).
 
-> I'd be interested to have your review of the pmalloc API, if you think
-> something is missing, once I send out the next revision.
+Nice check! I wonder if the the byref structleak also solves it?
+Regardless, I think stackleak has better performance and greater
+coverage.
 
-I'll look at it in more depth when it comes past again. :P
+Thanks!
 
-Cheers,
+-Kees
 
-Dave.
 -- 
-Dave Chinner
-dchinner@redhat.com
+Kees Cook
+Pixel Security
