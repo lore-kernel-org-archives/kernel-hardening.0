@@ -1,49 +1,36 @@
-Date: Tue, 20 Feb 2018 12:21:11 +1100
-From: Dave Chinner <dchinner@redhat.com>
-Subject: Re: [RFC PATCH v16 0/6] mm: security: ro protection for dynamic data
-Message-ID: <20180220012111.GC3728@rh>
-References: <20180212165301.17933-1-igor.stoppa@huawei.com>
- <CAGXu5j+ZNFX17Vxd37rPnkahFepFn77Fi9zEy+OL8nNd_2bjqQ@mail.gmail.com>
+Date: Tue, 20 Feb 2018 14:46:23 +0100
+From: Michal Hocko <mhocko@kernel.org>
+Subject: Re: [RESEND][PATCH 0/3] exec: Pin stack limit during exec
+Message-ID: <20180220134623.GA21134@dhcp22.suse.cz>
+References: <1518638796-20819-1-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5j+ZNFX17Vxd37rPnkahFepFn77Fi9zEy+OL8nNd_2bjqQ@mail.gmail.com>
+In-Reply-To: <1518638796-20819-1-git-send-email-keescook@chromium.org>
 To: Kees Cook <keescook@chromium.org>
-Cc: Igor Stoppa <igor.stoppa@huawei.com>, Matthew Wilcox <willy@infradead.org>, Randy Dunlap <rdunlap@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Jerome Glisse <jglisse@redhat.com>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ben Hutchings <ben@decadent.org.uk>, Willy Tarreau <w@1wt.eu>, Hugh Dickins <hughd@google.com>, Oleg Nesterov <oleg@redhat.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Rik van Riel <riel@redhat.com>, Laura Abbott <labbott@redhat.com>, Greg KH <greg@kroah.com>, Andy Lutomirski <luto@kernel.org>, linux-mm@kvack.org, linux-arch@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 12, 2018 at 03:32:36PM -0800, Kees Cook wrote:
-> On Mon, Feb 12, 2018 at 8:52 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
-> > This patch-set introduces the possibility of protecting memory that has
-> > been allocated dynamically.
-> >
-> > The memory is managed in pools: when a memory pool is turned into R/O,
-> > all the memory that is part of it, will become R/O.
-> >
-> > A R/O pool can be destroyed, to recover its memory, but it cannot be
-> > turned back into R/W mode.
-> >
-> > This is intentional. This feature is meant for data that doesn't need
-> > further modifications after initialization.
+On Wed 14-02-18 12:06:33, Kees Cook wrote:
+> Attempts to solve problems with the stack limit changing during exec
+> continue to be frustrated[1][2]. In addition to the specific issues around
+> the Stack Clash family of flaws, Andy Lutomirski pointed out[3] other
+> places during exec where the stack limit is used and is assumed to be
+> unchanging. Given the many places it gets used and the fact that it can be
+> manipulated/raced via setrlimit() and prlimit(), I think the only way to
+> handle this is to move away from the "current" view of the stack limit and
+> instead attach it to the bprm, and plumb this down into the functions that
+> need to know the stack limits. This series implements the approach.
 > 
-> This series came up in discussions with Dave Chinner (and Matthew
-> Wilcox, already part of the discussion, and others) at LCA. I wonder
-> if XFS would make a good initial user of this, as it could allocate
-> all the function pointers and other const information about a
-> superblock in pmalloc(), keeping it separate from the R/W portions?
-> Could other filesystems do similar things?
+> Neither I nor 0-day have found issues with this series, so I'd like to
+> get it into -mm for further testing.
 
-I wasn't cc'd on this patchset, (please use david@fromorbit.com for
-future postings) so I can't really say anything about it right
-now. My interest for XFS was that we have a fair amount of static
-data in XFS that we set up at mount time and it never gets modified
-after that. I'm not so worried about VFS level objects (that's a
-much more complex issue) but there is a lot of low hanging fruit in
-the XFS structures we could convert to write-once structures.
+Sorry, for the late response. All three patches make sense to me.
+finalize_exec could see a much better documentation and explain what is
+the semantic.
 
-Cheers,
-
-Dave.
+Anyway, feel free to add
+Acked-by: Michal Hocko <mhocko@suse.com>
 -- 
-Dave Chinner
-dchinner@redhat.com
+Michal Hocko
+SUSE Labs
