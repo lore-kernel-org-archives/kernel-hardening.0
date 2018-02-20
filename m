@@ -1,66 +1,93 @@
-Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
-References: <20180124175631.22925-1-igor.stoppa@huawei.com>
- <20180124175631.22925-5-igor.stoppa@huawei.com>
- <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
- <20180126053542.GA30189@bombadil.infradead.org>
- <alpine.DEB.2.20.1802021236510.31548@nuc-kabylake>
- <f2ddaed0-313e-8664-8a26-9d10b66ed0c5@huawei.com>
- <b75b5903-0177-8ad9-5c2b-fc63438fb5f2@huawei.com>
- <CAFUG7CfrCpcbwgf5ixMC5EZZgiVVVp1NXhDHK1UoJJcC08R2qQ@mail.gmail.com>
- <8818bfd4-dd9f-f279-0432-69b59531bd41@huawei.com>
- <CAFUG7CeUhFcvA82uZ2ZH1j_6PM=aBo4XmYDN85pf8G0gPU44dg@mail.gmail.com>
- <17e5b515-84c8-dca2-1695-cdf819834ea2@huawei.com>
- <CAGXu5j+LS1pgOOroi7Yxp2nh=DwtTnU3p-NZa6bQu_wkvvVkwg@mail.gmail.com>
- <414027d3-dd73-cf11-dc2a-e8c124591646@redhat.com>
- <5a83024c.64369d0a.a1e94.cdd6SMTPIN_ADDED_BROKEN@mx.google.com>
- <13a50f85-bbd8-5d78-915a-a29c4a9f0c32@redhat.com>
+Subject: Re: [RFC PATCH v16 0/6] mm: security: ro protection for dynamic data
+References: <20180212165301.17933-1-igor.stoppa@huawei.com>
+ <CAGXu5j+ZNFX17Vxd37rPnkahFepFn77Fi9zEy+OL8nNd_2bjqQ@mail.gmail.com>
+ <20180220012111.GC3728@rh>
 From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <7972cf4d-dfb2-6682-b1cb-e514a41196a6@huawei.com>
-Date: Tue, 20 Feb 2018 19:16:38 +0200
+Message-ID: <24e65dec-f452-a444-4382-d1f88fbb334c@huawei.com>
+Date: Tue, 20 Feb 2018 20:03:49 +0200
 MIME-Version: 1.0
-In-Reply-To: <13a50f85-bbd8-5d78-915a-a29c4a9f0c32@redhat.com>
-Content-Type: text/plain; charset="gbk"
+In-Reply-To: <20180220012111.GC3728@rh>
+Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-To: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>
-Cc: Boris Lukashev <blukashev@sempervictus.com>, Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Jann Horn <jannh@google.com>, Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>, Christoph Hellwig <hch@infradead.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel
- Hardening <kernel-hardening@lists.openwall.com>
+To: Dave Chinner <dchinner@redhat.com>, Kees Cook <keescook@chromium.org>
+Cc: Matthew Wilcox <willy@infradead.org>, Randy Dunlap <rdunlap@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Jerome Glisse <jglisse@redhat.com>, Christoph Hellwig <hch@infradead.org>, Christoph
+ Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
 
-On 13/02/18 20:10, Laura Abbott wrote:
-> On 02/13/2018 07:20 AM, Igor Stoppa wrote:
->> Why alterations of page properties are not considered a risk and the physmap is?
->> And how would it be easier (i suppose) to attack the latter?
+On 20/02/18 03:21, Dave Chinner wrote:
+> On Mon, Feb 12, 2018 at 03:32:36PM -0800, Kees Cook wrote:
+>> On Mon, Feb 12, 2018 at 8:52 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
+>>> This patch-set introduces the possibility of protecting memory that has
+>>> been allocated dynamically.
+>>>
+>>> The memory is managed in pools: when a memory pool is turned into R/O,
+>>> all the memory that is part of it, will become R/O.
+>>>
+>>> A R/O pool can be destroyed, to recover its memory, but it cannot be
+>>> turned back into R/W mode.
+>>>
+>>> This is intentional. This feature is meant for data that doesn't need
+>>> further modifications after initialization.
+>>
+>> This series came up in discussions with Dave Chinner (and Matthew
+>> Wilcox, already part of the discussion, and others) at LCA. I wonder
+>> if XFS would make a good initial user of this, as it could allocate
+>> all the function pointers and other const information about a
+>> superblock in pmalloc(), keeping it separate from the R/W portions?
+>> Could other filesystems do similar things?
 > 
-> Alterations are certainly a risk but with the physmap the
-> mapping is already there. Find the address and you have
-> access vs. needing to actually modify the properties
-> then do the access. I could also be complete off base
-> on my threat model here so please correct me if I'm
-> wrong.
+> I wasn't cc'd on this patchset, (please use david@fromorbit.com for
+> future postings) 
 
-It's difficult for me to comment on this without knowing *how* the
-attack would be performed, in your model.
+Apologies, somehow I didn't realize that I should have put you too in
+CC. It will be fixed at the next iteration.
 
-Ex: my expectation is that the attacked has R/W access to kernel data
-and has knowledge of the location of static variables.
+> so I can't really say anything about it right
+> now. My interest for XFS was that we have a fair amount of static
+> data in XFS that we set up at mount time and it never gets modified
+> after that.
 
-This is not just a guess, but a real-life scenario, found in attacks
-that, among other things, are capable of disabling SELinux, to proceed
-toward gaining full root capability.
+This is the typical use case I had in mind, although it requires a
+conversion.
+Ex:
 
-At that point, I think that variables which are allocated dynamically,
-in vmalloc address space, are harder to locate, because of the virtual
-mapping and the randomness of the address chosen (this I have not
-confirmed yet, but I suppose there is some randomness in picking the
-address to assign to a certain allocation request to vmalloc, otherwise,
-it could be added).
+before:
 
-> I think your other summaries are good points though
-> and should go in the cover letter.
+static int a;
 
-Ok, I'm just afraid it risks becoming a lengthy dissertation :-)
+
+void set_a(void)
+{
+	a = 4;
+}
+
+
+
+after:
+
+static int *a __ro_after_init;
+struct gen_pool *pool;
+
+void init_a(void)
+{
+	pool = pmalloc_create_pool("pool", 0);
+	a = (int *)pmalloc(pool, sizeof(int), GFP_KERNEL);
+}
+
+void set_a(void)
+{
+	*a = 4;
+	pmalloc_protect_pool(pool);
+}
+
+> I'm not so worried about VFS level objects (that's a
+> much more complex issue) but there is a lot of low hanging fruit in
+> the XFS structures we could convert to write-once structures.
+
+I'd be interested to have your review of the pmalloc API, if you think
+something is missing, once I send out the next revision.
 
 --
 igor
