@@ -1,99 +1,107 @@
-Subject: Re: [PATCH 2/6] genalloc: selftest
-References: <20180212165301.17933-1-igor.stoppa@huawei.com>
- <20180212165301.17933-3-igor.stoppa@huawei.com>
- <CAGXu5jJNERp-yni1jdqJRYJ82xrP7=_O1vkxG1sJ-b8CxudP9g@mail.gmail.com>
- <f33112e4-608f-ae8c-bf88-80ef83b61398@huawei.com>
- <CAGXu5jLeC285BGDW29aHgFZRV6CnqBmmkZULW2pzYmqd0pe9UQ@mail.gmail.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <fb001cd0-7f37-394f-f926-f5b98365b4b8@huawei.com>
-Date: Thu, 22 Feb 2018 11:14:25 +0200
+Subject: RANDSTRUCT structs need linux/compiler_types.h (Was: [nfsd4]
+ potentially hardware breaking regression in 4.14-rc and 4.13.11)
+References: <CAGXu5jLc_A1w4FM8FvQHGSPjLfOu80L_vbt_FkcE6+Bh_XMjxw@mail.gmail.com>
+From: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
+Message-ID: <6be06ce5-87e6-0d9d-55b9-6c70c3578ecf@maciej.szmigiero.name>
+Date: Wed, 21 Feb 2018 23:19:01 +0100
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jLeC285BGDW29aHgFZRV6CnqBmmkZULW2pzYmqd0pe9UQ@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Matthew Wilcox <willy@infradead.org>, Randy Dunlap <rdunlap@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Jerome Glisse <jglisse@redhat.com>, Christoph Hellwig <hch@infradead.org>, Christoph
- Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAGXu5jLc_A1w4FM8FvQHGSPjLfOu80L_vbt_FkcE6+Bh_XMjxw@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+To: Kees Cook <keescook@chromium.org>, Patrick McLean <chutzpah@gentoo.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Emese Revfy <re.emese@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-On 22/02/18 00:28, Kees Cook wrote:
-> On Tue, Feb 20, 2018 at 8:59 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
->>
->>
->> On 13/02/18 01:50, Kees Cook wrote:
->>> On Mon, Feb 12, 2018 at 8:52 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
-
-[...]
-
->>>> +       genalloc_selftest();
+On 18.11.2017 06:14, Kees Cook wrote:
+> On Fri, Nov 17, 2017 at 5:54 PM, Patrick McLean <chutzpah@gentoo.org> wrote:
+>> On 2017-11-17 04:55 PM, Linus Torvalds wrote:
+>>> On Fri, Nov 17, 2017 at 4:27 PM, Patrick McLean <chutzpah@gentoo.org> wrote:
+>>>>
+>>>> I am still getting the crash at d9e12200852d, I figured I would
+>>>> double-check the "good" and "bad" kernels before starting a full bisect.
 >>>
->>> I wonder if it's possible to make this module-loadable instead? That
->>> way it could be built and tested separately.
+>>> .. but without GCC_PLUGIN_RANDSTRUCT it's solid?
 >>
->> In my case modules are not an option.
->> Of course it could be still built in, but what is the real gain?
+>> Yes, without GCC_PLUGIN_RANDSTRUCT it's solid.
 > 
-> The gain for it being a module is that it can be loaded and tested
-> separately from the final kernel image and module collection. For
-> example, Chrome OS builds lots of debugging test modules but doesn't
-> include them on the final image. They're only used for testing, and
-> can be separate from the kernel and "production" modules.
-
-ok
-
+> That's strange. With d9e12200852d the shuffle_seed variables won't
+> ever actually get used. (i.e. I wouldn't expect the seed to change any
+> behavior.)
 > 
->> [...]
->>
->>>> +       BUG_ON(compare_bitmaps(pool, action->pattern));
+> Can you confirm with something like this:
+> 
+> 
+>         for (i = 0; i < 4; i++) {
+>                 seed[i] = shuffle_seed[i];
+> 
+> 
+> You should see no reports of "Shuffling struct ..."
+> 
+> And if it reports nothing, and you're on d9e12200852d, can you confirm
+> that switching to a "good" seed fixes it? (If it _does_, then I
+> suspect a build artifact being left behind or something odd like
+> that.)
+> 
+>>> Kees removed even the baseline "randomize pure function pointer
+>>> structures", so at that commit, nothing should be randomized.
 >>>
->>> There's been a lot recently on BUG vs WARN. It does seem crazy to not
->>> BUG for an allocator selftest, but if we can avoid it, we should.
->>
->> If this fails, I would expect that memory corruption is almost guaranteed.
->> Do we really want to allow the boot to continue, possibly mounting a
->> filesystem, only to corrupt it? It seems very dangerous.
-> 
-> I would include the rationale in either a comment or the commit log.
-> BUG() tends to need to be very well justified these days.
-
-ok
-
-> 
->>> Also, I wonder if it might make sense to split this series up a little
->>> more, as in:
+>>> But maybe the plugin code itself ends up confusing gcc somehow?
 >>>
->>> 1/n: add genalloc selftest
->>> 2/n: update bitmaps
->>> 3/n: add/change bitmap tests to selftest
+>>> Even when it doesn't actually do that "relayout_struct()" on the
+>>> structure, it always does those TYPE_ATTRIBUTES() games.
+> 
+> FWIW, myself doing a build at d9e12200852d with and without
+> GCC_PLUGIN_RANDSTRUCT _appears_ to produce identical objdump output
+> where I did spot-checks.
+> 
 
-[...]
+I have also hit a GPF in nfsd4_encode_fattr() with RANDSTRUCT plugin
+enabled.
+This function is located in a fs/nfsd/nfs4xdr.c file.
 
-> I'll leave it up to the -mm folks, but that was just my thought.
+The fault happened at "xdr_encode_hyper(p, exp->ex_path.mnt->mnt_sb->s_maxbytes)"
+line, namely when accessing s_maxbytes.
 
-The reasons why I have doubts about your proposal are:
+exp->ex_path is of type struct path that has been annotated with
+__randomize_layout.
+It seems to me that this annotation isn't really taken into consideration
+when compiling nfs4xdr.c.
+This most likely results in dereferencing a value of exp->ex_path.dentry
+instead of exp->ex_path.mnt. Then some member of struct dentry is
+dereferenced as struct super_block to access its s_maxbytes member which
+results in an oops if it happens to be an invalid pointer (which it was
+in my case).
 
-1) leaving 2/n and 3/n separate mean that the selftest could be broken,
-if one does bisections with selftest enabled
+How to reproduce the problem statically (tested on current Linus's tree
+and on 4.15.4, with gcc 7.3.0):
+1) Enable RANDSTRUCT plugin,
 
-2) since I would need to change the selftest, to make it work with the
-updated bitmap, it would not really prove that the change is correct.
+2) Use a RANDSTRUCT seed that results in shuffling of struct path,
+Example: "55e5fea7ff662b333a190209ab31f35b6f0f2470f7d0e3c64430936169571106".
 
-If there was a selftest that can work without changes, after the bitmap
-update, I would definitely agree to introduce it first.
+3) make fs/nfsd/nfs4xdr.s and save the result,
 
-OTOH, as I wrote, the bitmap patch itself is already introducing
-verification of the calculated value (from the bitmap) against the
-provided value (from the call parameters).
+4) Insert "#include <linux/compiler_types.h>" at the top of
+fs/nfsd/nfs4xdr.c as the very first include directive.
 
-This, unfortunately, cannot be split, because it still relies on the
-"find end of the allocation" capability introduced by the very same patch.
+5) make fs/nfsd/nfs4xdr.s and compare the result with the one from step 3.
 
-Anyway, putting aside concerns about the verification of the correctness
-of the patch, I still see point #1 as a problem: breaking bisectability.
+One can see that offsets used to access various members of struct path are
+different, and also that the original file from step 3 contains an object
+named "__randomize_layout".
 
-Or did I not understand correctly how this works?
+This is caused by a fact that the current version of nfs4xdr.c includes
+linux/fs_struct.h as the very first included header which then includes
+linux/path.h as the very first included header, which then defines
+struct path, but without including any files on its own.
 
---
-igor
+This results in __randomize_layout tag at the end of struct path
+definition being treated as a variable name (since linux/compiler-gcc.h
+that defines it as a type attribute has not been included yet).
+
+It looks like to me that every header file that defines a randomized
+struct also has to include linux/compiler_types.h or some other file
+that ultimately results in that file inclusion in order to make
+the RANDSTRUCT plugin work correctly.
+
+Maciej
