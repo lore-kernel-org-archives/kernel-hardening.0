@@ -1,103 +1,233 @@
+Subject: Re: [PATCH 2/2] arm64: Clear the stack
+References: <20180221011303.20392-1-labbott@redhat.com>
+ <20180221011303.20392-3-labbott@redhat.com>
+ <20180221153850.ywpzsigfnz3etoun@salmiak>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <3b76d238-e10a-9abf-c9cb-6d3738eb7896@redhat.com>
+Date: Wed, 21 Feb 2018 15:53:35 -0800
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CA+55aFz-AD8rWb66rjN-YhAtPXukMiGSFfW3nBMCp8k1RYUvOQ@mail.gmail.com>
-References: <CAGXu5jLc_A1w4FM8FvQHGSPjLfOu80L_vbt_FkcE6+Bh_XMjxw@mail.gmail.com>
- <6be06ce5-87e6-0d9d-55b9-6c70c3578ecf@maciej.szmigiero.name> <CA+55aFz-AD8rWb66rjN-YhAtPXukMiGSFfW3nBMCp8k1RYUvOQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 21 Feb 2018 15:34:34 -0800
-Message-ID: <CAGXu5jK3ZEs5SauEMHA3BnAyM1zbOkoG5cbM3B44_67TH1EZ=A@mail.gmail.com>
-Subject: Re: RANDSTRUCT structs need linux/compiler_types.h (Was: [nfsd4]
- potentially hardware breaking regression in 4.14-rc and 4.13.11)
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>, Patrick McLean <chutzpah@gentoo.org>, Emese Revfy <re.emese@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20180221153850.ywpzsigfnz3etoun@salmiak>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: Alexander Popov <alex.popov@linux.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 21, 2018 at 2:47 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> And other attribute specifiers we encourage people to put in other
-> parts of the type, like __user etc, so they don't have that same
-> parsing issue.
+On 02/21/2018 07:38 AM, Mark Rutland wrote:
+> Hi Laura,
+> 
+> On Tue, Feb 20, 2018 at 05:13:03PM -0800, Laura Abbott wrote:
+>> Implementation of stackleak based heavily on the x86 version
+> 
+> Neat!
+> 
+>> diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+>> index ec2ee720e33e..b909b436293a 100644
+>> --- a/arch/arm64/kernel/entry.S
+>> +++ b/arch/arm64/kernel/entry.S
+>> @@ -401,6 +401,11 @@ tsk	.req	x28		// current thread_info
+>>   
+>>   	.text
+>>   
+>> +	.macro	erase_kstack
+>> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+>> +	bl	__erase_kstack
+>> +#endif
+>> +	.endm
+>>   /*
+>>    * Exception vectors.
+>>    */
+>> @@ -901,6 +906,7 @@ work_pending:
+>>    */
+>>   ret_to_user:
+>>   	disable_daif
+>> +	erase_kstack
+> 
+> I *think* this should happen in finish_ret_to_user a few lines down, since we
+> can call C code if we branch to work_pending, dirtying the stack.
+> 
 
-Looking at other attributes we use on structs, we may have similar
-risks for these:
+I think you're right but this didn't immediately work when I tried it.
+I'll have to dig into this some more.
 
-__packed
-____cacheline_aligned
-____cacheline_aligned_in_smp
-____cacheline_internodealigned_in_smp
+>>   	ldr	x1, [tsk, #TSK_TI_FLAGS]
+>>   	and	x2, x1, #_TIF_WORK_MASK
+>>   	cbnz	x2, work_pending
+>> @@ -1337,3 +1343,105 @@ alternative_else_nop_endif
+>>   ENDPROC(__sdei_asm_handler)
+>>   NOKPROBE(__sdei_asm_handler)
+>>   #endif /* CONFIG_ARM_SDE_INTERFACE */
+>> +
+>> +/*
+>> + * This is what the stack looks like
+>> + *
+>> + * +---+ <- task_stack_page(p) + THREAD_SIZE
+>> + * |   |
+>> + * +---+ <- task_stack_page(p) + THREAD_START_SP
+>> + * |   |
+>> + * |   |
+>> + * +---+ <- task_pt_regs(p)
+> 
+> THREAD_START_SP got killed off in commit 34be98f4944f9907 as part of the
+> VMAP_STACK rework, so this can be:
+> 
+>        +---+ <- task_stack_page(p) + THREAD_SIZE
+>        |   |
+>        |   |
+>        +---+ <- task_pt_regs(p)
+>         ...
+> 
 
-But they just haven't been used in places that we could trip over it
-as badly, AFAICT.
+Good point.
 
-> I guess one _extreme_ fix for this would be to put
->
->     extern struct nostruct __randomize_layout;
->
-> in our include/linux/kconfig.h, which I think we end up always
-> including first thanks to having it on the command line.
+>> + * |   |
+>> + * |   |
+>> + * |   | <- current_sp
+>> + * ~~~~~
+>> + *
+>> + * ~~~~~
+>> + * |   | <- lowest_stack
+>> + * |   |
+>> + * |   |
+>> + * +---+ <- task_stack_page(p)
+>> + *
+>> + * This function is desgned to poison the memory between the lowest_stack
+>> + * and the current stack pointer. After clearing the stack, the lowest
+>> + * stack is reset.
+>> + */
+>> +
+>> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+>> +ENTRY(__erase_kstack)
+>> +	mov	x10, x0	// save x0 for the fast path
+> 
+> AFAICT, we only call this from ret_to_user, where x0 doesn't need to be
+> preserved.
+> 
+> Is that for ret_fast_syscall? In some cases, ret_fast_syscall can bypass
+> ret_to_user and calls kernel_exit directly, so we might need a call there.
+> 
 
-We could do that for all the above, but I wonder if the real problem
-is our convention of using "regular" names for these kinds of
-attributes instead of parameterized names. If we always used something
-like:
+This was a hold over when I was experimenting with calling  erase_kstack
+more places, one of which came through ret_fast_syscall. I realized
+later that the erase was unnecessary but accidentally kept the saving
+in. I'll see about removing it assuming we don't decide later to put
+a call on the fast path.
 
-#define __struct(x)   __attribute__(x)
+>> +
+>> +	get_thread_info	x0
+>> +	ldr	x1, [x0, #TSK_TI_LOWEST_STACK]
+>> +
+>> +	/* get the number of bytes to check for lowest stack */
+>> +	mov	x3, x1
+>> +	and	x3, x3, #THREAD_SIZE - 1
+>> +	lsr	x3, x3, #3
+>> +
+>> +	/* generate addresses from the bottom of the stack */
+>> +	mov	x4, sp
+>> +	movn	x2, #THREAD_SIZE - 1
+>> +	and	x1, x4, x2
+> 
+> Can we replace the MOVN;AND with a single instruction to clear the low bits?
+> e.g.
+> 
+> 	mov	x4, sp
+> 	bic	x1, x4, #THREAD_SIZE - 1
+> 
+> ... IIUC BIC is an alias for the bitfield instructions, though I can't recall
+> exactly which one(s).
+> 
 
-We'd avoid it, but we'd uglify our struct attributes:
+Good suggestion.
 
-struct thing { ... } __struct(randomize_layout);
+>> +
+>> +	mov	x2, #STACKLEAK_POISON
+>> +
+>> +	mov	x5, #0
+>> +1:
+>> +	/*
+>> +	 * As borrowed from the x86 logic, start from the lowest_stack
+>> +	 * and go to the bottom to find the poison value.
+>> +	 * The check of 16 is to hopefully avoid false positives.
+>> +	 */
+>> +	cbz	x3, 4f
+>> +	ldr	x4, [x1, x3, lsl #3]
+>> +	cmp	x4, x2
+>> +	csinc	x5, xzr, x5, ne
+>> +	tbnz	x5, #STACKLEAK_POISON_CHECK_DEPTH/4, 4f	// found 16 poisons?
+>> +	sub	x3, x3, #1
+>> +	b	1b
+>> +
+>> +4:
+>> +	/* total number of bytes to poison */
+>> +	add     x5, x1, x3, lsl #3
+>> +	mov	x4, sp
+>> +	sub     x8, x4, x5
+>> +
+>> +	cmp     x8, #THREAD_SIZE // sanity check the range
+>> +	b.lo    5f
+>> +	ASM_BUG()
+>> +
+>> +5:
+>> +	/*
+>> +	 * We may have hit a path where the stack did not get used,
+>> +	 * no need to do anything here
+>> +	 */
+>> +	cbz	x8, 7f
+>> +
+>> +	sub	x8, x8, #1 // don't poison the current stack pointer
+>> +
+>> +	lsr     x8, x8, #3
+>> +	add     x3, x3, x8
+>> +
+>> +	/*
+>> +	 * The logic of this loop ensures the last stack word isn't
+>> +	 * ovewritten.
+>> +	 */
+> 
+> Is that to ensure that we don't clobber the word at the current sp value?
+> 
 
-though trying this now creates other problems. Hmmm.
+Correct.
 
-(Regardless, let me send the nfs fix separately...)
+>> +6:
+>> +	cbz     x8, 7f
+>> +	str     x2, [x1, x3, lsl #3]
+>> +	sub     x3, x3, #1
+>> +	sub     x8, x8, #1
+>> +	b	6b
+>> +
+>> +	/* Reset the lowest stack to the top of the stack */
+>> +7:
+>> +	mov	x1, sp
+>> +	str	x1, [x0, #TSK_TI_LOWEST_STACK]
+>> +
+>> +	mov	x0, x10
+>> +	ret
+>> +ENDPROC(__erase_kstack)
+>> +#endif
+> 
+> [...]
+> 
+>> diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
+>> index 7b3ba40f0745..35ebbc1b17ff 100644
+>> --- a/drivers/firmware/efi/libstub/Makefile
+>> +++ b/drivers/firmware/efi/libstub/Makefile
+>> @@ -20,7 +20,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)	+= -I$(srctree)/scripts/dtc/libfdt
+>>   KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
+>>   				   -D__NO_FORTIFY \
+>>   				   $(call cc-option,-ffreestanding) \
+>> -				   $(call cc-option,-fno-stack-protector)
+>> +				   $(call cc-option,-fno-stack-protector) \
+>> +				   $(DISABLE_STACKLEAK_PLUGIN)
+> 
+> I believe the KVM hyp code will also need to opt-out of this.
+> 
 
--Kees
+I'll double check that.
 
->
-> Because if you do that, you actually get an error:
->
->     CC [M]  fs/nfsd/nfs4xdr.o
->   In file included from ./include/linux/fs_struct.h:5:0,
->                    from fs/nfsd/nfs4xdr.c:36:
->   ./include/linux/path.h:11:3: error: conflicting types for =E2=80=98__ra=
-ndomize_layout=E2=80=99
->    } __randomize_layout;
->      ^~~~~~~~~~~~~~~~~~
->   In file included from <command-line>:0:0:
->   ././include/linux/kconfig.h:8:28: note: previous declaration of
-> =E2=80=98__randomize_layout=E2=80=99 was here
->        extern struct nostruct __randomize_layout;
->                               ^~~~~~~~~~~~~~~~~~
->   make[1]: *** [scripts/Makefile.build:317: fs/nfsd/nfs4xdr.o] Error 1
->
-> and we would have figured this out immediately.
->
-> Broken example patch appended, in case somebody wants to play with
-> something like this or comes up with a better model entirely..
->
->                Linus
->
-> ---
->
-> diff --git a/include/linux/kconfig.h b/include/linux/kconfig.h
-> index fec5076eda91..537dacb83380 100644
-> --- a/include/linux/kconfig.h
-> +++ b/include/linux/kconfig.h
-> @@ -4,6 +4,10 @@
->
->  #include <generated/autoconf.h>
->
-> +#ifndef __ASSEMBLY__
-> + extern struct nostruct __randomize_layout;
-> +#endif
-> +
->  #define __ARG_PLACEHOLDER_1 0,
->  #define __take_second_arg(__ignored, val, ...) val
+> Thanks,
+> Mark.
+> 
 
-
-
---=20
-Kees Cook
-Pixel Security
+Thanks,
+Laura
