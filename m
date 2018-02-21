@@ -1,46 +1,77 @@
-Date: Wed, 21 Feb 2018 12:59:14 -0800
-From: Andrew Morton <akpm@linux-foundation.org>
-Subject: Re: [PATCH v2] fork: Unconditionally clear stack on fork
-Message-Id: <20180221125914.dc95830eada5fb958c13e36b@linux-foundation.org>
-In-Reply-To: <20180221102933.GD2231@dhcp22.suse.cz>
-References: <20180221021659.GA37073@beast>
-	<20180221102933.GD2231@dhcp22.suse.cz>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: Michal Hocko <mhocko@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Laura Abbott <labbott@redhat.com>, Rasmus Villemoes <rasmus.villemoes@prevas.dk>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Thu, 22 Feb 2018 08:36:29 +1100
+From: Dave Chinner <dchinner@redhat.com>
+Subject: Re: [RFC PATCH v16 0/6] mm: security: ro protection for dynamic data
+Message-ID: <20180221213629.GF3728@rh>
+References: <20180212165301.17933-1-igor.stoppa@huawei.com>
+ <CAGXu5j+ZNFX17Vxd37rPnkahFepFn77Fi9zEy+OL8nNd_2bjqQ@mail.gmail.com>
+ <20180220012111.GC3728@rh>
+ <24e65dec-f452-a444-4382-d1f88fbb334c@huawei.com>
+ <20180220213604.GD3728@rh>
+ <20180220235600.GA3706@bombadil.infradead.org>
+ <20180221013636.GE3728@rh>
+ <46a9610a-182b-4765-9d83-cab6297377f3@huawei.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <46a9610a-182b-4765-9d83-cab6297377f3@huawei.com>
+To: Igor Stoppa <igor.stoppa@huawei.com>
+Cc: Matthew Wilcox <willy@infradead.org>, Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Jerome Glisse <jglisse@redhat.com>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 21 Feb 2018 11:29:33 +0100 Michal Hocko <mhocko@kernel.org> wrote:
-
-> On Tue 20-02-18 18:16:59, Kees Cook wrote:
-> > One of the classes of kernel stack content leaks[1] is exposing the
-> > contents of prior heap or stack contents when a new process stack is
-> > allocated. Normally, those stacks are not zeroed, and the old contents
-> > remain in place. In the face of stack content exposure flaws, those
-> > contents can leak to userspace.
-> > 
-> > Fixing this will make the kernel no longer vulnerable to these flaws,
-> > as the stack will be wiped each time a stack is assigned to a new
-> > process. There's not a meaningful change in runtime performance; it
-> > almost looks like it provides a benefit.
-> > 
-> > Performing back-to-back kernel builds before:
-> > 	Run times: 157.86 157.09 158.90 160.94 160.80
-> > 	Mean: 159.12
-> > 	Std Dev: 1.54
-> > 
-> > and after:
-> > 	Run times: 159.31 157.34 156.71 158.15 160.81
-> > 	Mean: 158.46
-> > 	Std Dev: 1.46
+On Wed, Feb 21, 2018 at 11:56:22AM +0200, Igor Stoppa wrote:
+> On 21/02/18 03:36, Dave Chinner wrote:
+> > On Tue, Feb 20, 2018 at 03:56:00PM -0800, Matthew Wilcox wrote:
+> >> On Wed, Feb 21, 2018 at 08:36:04AM +1100, Dave Chinner wrote:
+> >>> FWIW, I'm not wanting to use it to replace static variables. All the
+> >>> structures are dynamically allocated right now, and get assigned to
+> >>> other dynamically allocated pointers. I'd likely split the current
+> >>> structures into a "ro after init" 
 > 
-> /bin/true or similar would be more representative for the worst case
-> but it is good to see that this doesn't have any visible effect on
-> a more real usecase.
+> I would prefer to use a different terminology, because, if I have
+> understood the use case, this is not exactly the same as __ro_after_init
 
-Yes, that's a pretty large memset.  And while it will populate the CPU
-cache with the stack contents, doing so will evict other things.
+I want a dynamically allocated "write once" structure.
 
-So some quite careful quantitative testing is needed here, methinks.
+A "write once" structure is, conceptually, is exactly the same as
+"ro after init". Implementation wise, it may be different to
+"__ro_after_init", especially when compared to static/global
+variables.
+
+It seems lots of people get confused when discussing concepts vs
+implementation... :)
+
+> >>> 	......
+> >>
+> >> No, you'd do:
+> >>
+> >> struct xfs_mount_ro {
+> >> 	[...]
+> >> };
+> 
+> is this something that is readonly from the beginning and then shared
+> among mount points or is it specific to each mount point?
+
+It's dynamically allocated for each mount point, made read-only
+before the mount completes and lives for the length of the mount
+point.
+
+> >> struct xfs_mount {
+> >> 	const struct xfs_mount_ro *ro;
+> >> 	[...]
+> >> };
+> > 
+> > .... so that's pretty much the same thing :P
+> 
+> The "const" modifier is a nice way to catch errors through the compiler,
+> iff the ro data will not be initialized through this handle, when it's
+> still writable.
+
+That's kinda implied by the const, isn't it? If we don't do it that
+way, then the compiler will throw errors....
+
+Cheers,
+
+Dave.
+-- 
+Dave Chinner
+dchinner@redhat.com
