@@ -1,77 +1,52 @@
-Date: Thu, 22 Feb 2018 08:36:29 +1100
-From: Dave Chinner <dchinner@redhat.com>
-Subject: Re: [RFC PATCH v16 0/6] mm: security: ro protection for dynamic data
-Message-ID: <20180221213629.GF3728@rh>
-References: <20180212165301.17933-1-igor.stoppa@huawei.com>
- <CAGXu5j+ZNFX17Vxd37rPnkahFepFn77Fi9zEy+OL8nNd_2bjqQ@mail.gmail.com>
- <20180220012111.GC3728@rh>
- <24e65dec-f452-a444-4382-d1f88fbb334c@huawei.com>
- <20180220213604.GD3728@rh>
- <20180220235600.GA3706@bombadil.infradead.org>
- <20180221013636.GE3728@rh>
- <46a9610a-182b-4765-9d83-cab6297377f3@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <46a9610a-182b-4765-9d83-cab6297377f3@huawei.com>
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Matthew Wilcox <willy@infradead.org>, Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@kernel.org>, Laura Abbott <labbott@redhat.com>, Jerome Glisse <jglisse@redhat.com>, Christoph Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Sender: keescook@google.com
+In-Reply-To: <CAAGnT3ZwmJ7GtNZwSqW7sa2G59-3RvRzyTnqCYiB3ABiqxzpOQ@mail.gmail.com>
+References: <CAAGnT3YJGf=eixt2+O_XsHiJZFP+CSO9A0a4qc-NKHRf=4y0sw@mail.gmail.com>
+ <CAGXu5jJBmKiDnhV26kEZyCf+TGWnpMOvSjiYaUr1U6z0FLPJHg@mail.gmail.com>
+ <CAKv+Gu_SxHCekoCoOFTOLFbN0besY+BRj+AzUYk88xK=zsZKBg@mail.gmail.com> <CAAGnT3ZwmJ7GtNZwSqW7sa2G59-3RvRzyTnqCYiB3ABiqxzpOQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 21 Feb 2018 13:44:27 -0800
+Message-ID: <CAGXu5j+rXRSWKRnEV4qC4PfAZQ+AUmx9DLWLseZv4-U=wR3JzQ@mail.gmail.com>
+Subject: Re: Hello world! Student interested in getting involved.
+Content-Type: text/plain; charset="UTF-8"
+To: Ahmed Soliman <ahmedsoliman0x666@gmail.com>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Rik van Riel <riel@redhat.com>, KVM <kvm@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 21, 2018 at 11:56:22AM +0200, Igor Stoppa wrote:
-> On 21/02/18 03:36, Dave Chinner wrote:
-> > On Tue, Feb 20, 2018 at 03:56:00PM -0800, Matthew Wilcox wrote:
-> >> On Wed, Feb 21, 2018 at 08:36:04AM +1100, Dave Chinner wrote:
-> >>> FWIW, I'm not wanting to use it to replace static variables. All the
-> >>> structures are dynamically allocated right now, and get assigned to
-> >>> other dynamically allocated pointers. I'd likely split the current
-> >>> structures into a "ro after init" 
-> 
-> I would prefer to use a different terminology, because, if I have
-> understood the use case, this is not exactly the same as __ro_after_init
+On Sat, Feb 17, 2018 at 7:22 AM, Ahmed Soliman
+<ahmedsoliman0x666@gmail.com> wrote:
+> well in this case I tried searching and researching more and I found
+> the idea for Rootkit blocking using KVM virtualization, it is
+> described here:
+> https://kernelnewbies.org/KernelProjects/VirtRootkitBlocker
 
-I want a dynamically allocated "write once" structure.
+I think it's good to experiment with kernel hardening via hypervisors.
+There isn't any particular direction defined for this approach, with
+lots of different things getting tried (e.g. Samsung KNOX). One
+problem with the hypervisor-control of memory protections is things
+like kprobes, modules, etc, that need to do dynamic rewriting of
+kernel text.
 
-A "write once" structure is, conceptually, is exactly the same as
-"ro after init". Implementation wise, it may be different to
-"__ro_after_init", especially when compared to static/global
-variables.
+> I CCed to riel
+> It took me a while to re-learn how to setup kernel developing
+> environment, via buildroot for generating qemu
+> images for paravirtualized OS debugging, and learning about mm and KVM (WIP).
+> I am not sure if this is the right place but I think anti rootkits can
+> be good hardening technique, I made sure
+> that no one is working on this (no patches anywhere), and my
+> team-mates are happy with the idea so I hope we are
+> ready to start. Just in case anyone tries to drift me off the idea, I
+> do like it enough so I already talked to my professor
+> and my team-mates about it. I just wanted to know which tree should I
+> be working on, should it be the kernel hardening
+> tree or the tree used for kvm or memory management.
 
-It seems lots of people get confused when discussing concepts vs
-implementation... :)
+I would develop against Linus's latest release tag (e.g. currently
+v4.15), unless you have some overwhelming reason to base on a
+subsystem tree.
 
-> >>> 	......
-> >>
-> >> No, you'd do:
-> >>
-> >> struct xfs_mount_ro {
-> >> 	[...]
-> >> };
-> 
-> is this something that is readonly from the beginning and then shared
-> among mount points or is it specific to each mount point?
+-Kees
 
-It's dynamically allocated for each mount point, made read-only
-before the mount completes and lives for the length of the mount
-point.
-
-> >> struct xfs_mount {
-> >> 	const struct xfs_mount_ro *ro;
-> >> 	[...]
-> >> };
-> > 
-> > .... so that's pretty much the same thing :P
-> 
-> The "const" modifier is a nice way to catch errors through the compiler,
-> iff the ro data will not be initialized through this handle, when it's
-> still writable.
-
-That's kinda implied by the const, isn't it? If we don't do it that
-way, then the compiler will throw errors....
-
-Cheers,
-
-Dave.
 -- 
-Dave Chinner
-dchinner@redhat.com
+Kees Cook
+Pixel Security
