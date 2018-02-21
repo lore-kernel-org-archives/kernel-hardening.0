@@ -1,74 +1,101 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <7972cf4d-dfb2-6682-b1cb-e514a41196a6@huawei.com>
-References: <20180124175631.22925-1-igor.stoppa@huawei.com>
- <20180124175631.22925-5-igor.stoppa@huawei.com> <CAG48ez0JRU8Nmn7jLBVoy6SMMrcj46R0_R30Lcyouc4R9igi-g@mail.gmail.com>
- <20180126053542.GA30189@bombadil.infradead.org> <alpine.DEB.2.20.1802021236510.31548@nuc-kabylake>
- <f2ddaed0-313e-8664-8a26-9d10b66ed0c5@huawei.com> <b75b5903-0177-8ad9-5c2b-fc63438fb5f2@huawei.com>
- <CAFUG7CfrCpcbwgf5ixMC5EZZgiVVVp1NXhDHK1UoJJcC08R2qQ@mail.gmail.com>
- <8818bfd4-dd9f-f279-0432-69b59531bd41@huawei.com> <CAFUG7CeUhFcvA82uZ2ZH1j_6PM=aBo4XmYDN85pf8G0gPU44dg@mail.gmail.com>
- <17e5b515-84c8-dca2-1695-cdf819834ea2@huawei.com> <CAGXu5j+LS1pgOOroi7Yxp2nh=DwtTnU3p-NZa6bQu_wkvvVkwg@mail.gmail.com>
- <414027d3-dd73-cf11-dc2a-e8c124591646@redhat.com> <5a83024c.64369d0a.a1e94.cdd6SMTPIN_ADDED_BROKEN@mx.google.com>
- <13a50f85-bbd8-5d78-915a-a29c4a9f0c32@redhat.com> <7972cf4d-dfb2-6682-b1cb-e514a41196a6@huawei.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 21 Feb 2018 14:37:11 -0800
-Message-ID: <CAGXu5j+9yKyUG-4YqK5Vo4kvV7P3vNAr_B4XkXuoishGEyY_Ag@mail.gmail.com>
-Subject: Re: [kernel-hardening] [PATCH 4/6] Protectable Memory
+Sender: linus971@gmail.com
+In-Reply-To: <6be06ce5-87e6-0d9d-55b9-6c70c3578ecf@maciej.szmigiero.name>
+References: <CAGXu5jLc_A1w4FM8FvQHGSPjLfOu80L_vbt_FkcE6+Bh_XMjxw@mail.gmail.com>
+ <6be06ce5-87e6-0d9d-55b9-6c70c3578ecf@maciej.szmigiero.name>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Wed, 21 Feb 2018 14:47:44 -0800
+Message-ID: <CA+55aFz-AD8rWb66rjN-YhAtPXukMiGSFfW3nBMCp8k1RYUvOQ@mail.gmail.com>
+Subject: Re: RANDSTRUCT structs need linux/compiler_types.h (Was: [nfsd4]
+ potentially hardware breaking regression in 4.14-rc and 4.13.11)
 Content-Type: text/plain; charset="UTF-8"
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Laura Abbott <labbott@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Christopher Lameter <cl@linux.com>, Matthew Wilcox <willy@infradead.org>, Jann Horn <jannh@google.com>, Jerome Glisse <jglisse@redhat.com>, Michal Hocko <mhocko@kernel.org>, Christoph Hellwig <hch@infradead.org>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Transfer-Encoding: quoted-printable
+To: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>
+Cc: Kees Cook <keescook@chromium.org>, Patrick McLean <chutzpah@gentoo.org>, Emese Revfy <re.emese@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 20, 2018 at 9:16 AM, Igor Stoppa <igor.stoppa@huawei.com> wrote:
+On Wed, Feb 21, 2018 at 2:19 PM, Maciej S. Szmigiero
+<mail@maciej.szmigiero.name> wrote:
 >
->
-> On 13/02/18 20:10, Laura Abbott wrote:
->> On 02/13/2018 07:20 AM, Igor Stoppa wrote:
->>> Why alterations of page properties are not considered a risk and the physmap is?
->>> And how would it be easier (i suppose) to attack the latter?
->>
->> Alterations are certainly a risk but with the physmap the
->> mapping is already there. Find the address and you have
->> access vs. needing to actually modify the properties
->> then do the access. I could also be complete off base
->> on my threat model here so please correct me if I'm
->> wrong.
->
-> It's difficult for me to comment on this without knowing *how* the
-> attack would be performed, in your model.
->
-> Ex: my expectation is that the attacked has R/W access to kernel data
-> and has knowledge of the location of static variables.
->
-> This is not just a guess, but a real-life scenario, found in attacks
-> that, among other things, are capable of disabling SELinux, to proceed
-> toward gaining full root capability.
->
-> At that point, I think that variables which are allocated dynamically,
-> in vmalloc address space, are harder to locate, because of the virtual
-> mapping and the randomness of the address chosen (this I have not
-> confirmed yet, but I suppose there is some randomness in picking the
-> address to assign to a certain allocation request to vmalloc, otherwise,
-> it could be added).
+> One can see that offsets used to access various members of struct path ar=
+e
+> different, and also that the original file from step 3 contains an object
+> named "__randomize_layout".
 
-Machine-to-machine runtime variation certainly affects the mapping
-location, but for early boot allocations, these become surprisingly
-deterministic, especially across similar hardware/memory layouts (both
-the virtmap and physmap locations). However, using
-CONFIG_RANDOMIZE_MEMORY makes it MUCH more difficult. (Note that
-RANDOMIZE_BASE on arm64 effectively includes RANDOMIZE_MEMORY, as it
-uses the entropy for multiple base offsets, including the physmap,
-IIRC.)
+Whee.
 
->> I think your other summaries are good points though
->> and should go in the cover letter.
->
-> Ok, I'm just afraid it risks becoming a lengthy dissertation :-)
+Thanks for root-causing this issue, and this syntax of ours is clearly
+*much* too fragile.
 
-It's rare to have anyone say "your commit log is too long". :)
+We actually have similar issues with some of our other attributes,
+where out nice "helpful" attribute shorthand can end up being just
+silently interpreted as a variable name if they aren't defined in
+time.
 
--Kees
+For most of our other attributes, it just doesn't matter all that much
+if some user doesn't happen to see the attribute. For
+__randomize_layout, it's obviously very fatal, and silently just
+generates crazy code.
 
--- 
-Kees Cook
-Pixel Security
+I'm not entirely sure what the right solution is, because it's
+obviously much too easy to miss some #include by mistake. It's easy to
+say "you should always include the proper header", but if a failure to
+do so doesn't end up with any warnings or errors, but just silent bad
+code generation, it's much too fragile.
+
+I wonder if we could change the syntax of that "__randomize_layout"
+thing. Some of our related helper macros (ie
+randomized_struct_fields_start/end) don't have the same problem,
+because if you don't have the define for them, the compiler will
+complain about bad syntax.
+
+And other attribute specifiers we encourage people to put in other
+parts of the type, like __user etc, so they don't have that same
+parsing issue.
+
+I guess one _extreme_ fix for this would be to put
+
+    extern struct nostruct __randomize_layout;
+
+in our include/linux/kconfig.h, which I think we end up always
+including first thanks to having it on the command line.
+
+Because if you do that, you actually get an error:
+
+    CC [M]  fs/nfsd/nfs4xdr.o
+  In file included from ./include/linux/fs_struct.h:5:0,
+                   from fs/nfsd/nfs4xdr.c:36:
+  ./include/linux/path.h:11:3: error: conflicting types for =E2=80=98__rand=
+omize_layout=E2=80=99
+   } __randomize_layout;
+     ^~~~~~~~~~~~~~~~~~
+  In file included from <command-line>:0:0:
+  ././include/linux/kconfig.h:8:28: note: previous declaration of
+=E2=80=98__randomize_layout=E2=80=99 was here
+       extern struct nostruct __randomize_layout;
+                              ^~~~~~~~~~~~~~~~~~
+  make[1]: *** [scripts/Makefile.build:317: fs/nfsd/nfs4xdr.o] Error 1
+
+and we would have figured this out immediately.
+
+Broken example patch appended, in case somebody wants to play with
+something like this or comes up with a better model entirely..
+
+               Linus
+
+---
+
+diff --git a/include/linux/kconfig.h b/include/linux/kconfig.h
+index fec5076eda91..537dacb83380 100644
+--- a/include/linux/kconfig.h
++++ b/include/linux/kconfig.h
+@@ -4,6 +4,10 @@
+
+ #include <generated/autoconf.h>
+
++#ifndef __ASSEMBLY__
++ extern struct nostruct __randomize_layout;
++#endif
++
+ #define __ARG_PLACEHOLDER_1 0,
+ #define __take_second_arg(__ignored, val, ...) val
