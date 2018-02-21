@@ -1,84 +1,61 @@
-Date: Tue, 20 Feb 2018 18:16:59 -0800
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v2] fork: Unconditionally clear stack on fork
-Message-ID: <20180221021659.GA37073@beast>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Andy Lutomirski <luto@kernel.org>, Laura Abbott <labbott@redhat.com>, Michal Hocko <mhocko@suse.com>, Rasmus Villemoes <rasmus.villemoes@prevas.dk>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CAFkk2KT1krKuDkWt0eHcasfC61fTVQNf-1kqw7icLP9OYGYkXQ@mail.gmail.com>
+References: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com>
+ <20180218221352.GA6651@ravnborg.org> <CAFkk2KT1krKuDkWt0eHcasfC61fTVQNf-1kqw7icLP9OYGYkXQ@mail.gmail.com>
+From: Masahiro Yamada <yamada.masahiro@socionext.com>
+Date: Wed, 21 Feb 2018 16:38:25 +0900
+Message-ID: <CAK7LNAQH0WD3A3T97gce0xmZpMy0zWxTO2StfNWaDbiqjQg8gg@mail.gmail.com>
+Subject: Re: [PATCH 00/23] kconfig: move compiler capability tests to Kconfig
+Content-Type: text/plain; charset="UTF-8"
+To: Ulf Magnusson <ulfalizer@gmail.com>
+Cc: Sam Ravnborg <sam@ravnborg.org>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Michal Marek <michal.lkml@markovi.net>, Peter Oberparleiter <oberpar@linux.vnet.ibm.com>, kernel-hardening@lists.openwall.com, Jonathan Corbet <corbet@lwn.net>, sparclinux@vger.kernel.org, Linux-sh list <linux-sh@vger.kernel.org>, X86 ML <x86@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Rich Felker <dalias@libc.org>, Jeff Dike <jdike@addtoit.com>, "H. Peter Anvin" <hpa@zytor.com>, user-mode-linux-devel@lists.sourceforge.net, Yoshinori Sato <ysato@users.sourceforge.jp>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, linuxppc-dev@lists.ozlabs.org, Paul Mackerras <paulus@samba.org>, user-mode-linux-user@lists.sourceforge.net, Ingo Molnar <mingo@redhat.com>, "David S. Miller" <davem@davemloft.net>, Michael Ellerman <mpe@ellerman.id.au>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Richard Weinberger <richard@nod.at>, Emese Revfy <re.emese@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-One of the classes of kernel stack content leaks[1] is exposing the
-contents of prior heap or stack contents when a new process stack is
-allocated. Normally, those stacks are not zeroed, and the old contents
-remain in place. In the face of stack content exposure flaws, those
-contents can leak to userspace.
+2018-02-20 0:18 GMT+09:00 Ulf Magnusson <ulfalizer@gmail.com>:
 
-Fixing this will make the kernel no longer vulnerable to these flaws,
-as the stack will be wiped each time a stack is assigned to a new
-process. There's not a meaningful change in runtime performance; it
-almost looks like it provides a benefit.
+>>
+>> I'm not happy that we in one context can reference CONFIG variables
+>> directly, but inside the $(call ...) and $(shell ...) needs the $ prefix.
+>> But I could not come up with something un-ambigious where this could be avoided.
+>
+> I think we should be careful about allowing references to config
+> symbols. It mixes up the parsing and evaluation phases, since $() is
+> expanded during parsing (which I consider a feature and think is
+> needed to retain sanity).
+>
+> Patch 06/23 removes the last existing instance of symbol references in
+> strings by getting rid of 'option env'. That's an improvement to me.
+> We shouldn't add it back.
 
-Performing back-to-back kernel builds before:
-	Run times: 157.86 157.09 158.90 160.94 160.80
-	Mean: 159.12
-	Std Dev: 1.54
 
-and after:
-	Run times: 159.31 157.34 156.71 158.15 160.81
-	Mean: 158.46
-	Std Dev: 1.46
+This is really important design decision,
+so I'd like to hear a little more from experts.
 
-Instead of making this a build or runtime config, Andy Lutomirski
-recommended this just be enabled by default.
 
-[1] A noisy search for many kinds of stack content leaks can be seen here:
-https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=linux+kernel+stack+leak
+For example, x86 allows users to choose sub-arch, either 'i386' or 'x86_64'.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- include/linux/thread_info.h | 6 +-----
- kernel/fork.c               | 3 +--
- 2 files changed, 2 insertions(+), 7 deletions(-)
+https://github.com/torvalds/linux/blob/v4.16-rc2/arch/x86/Kconfig#L4
 
-diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
-index 34f053a150a9..cf2862bd134a 100644
---- a/include/linux/thread_info.h
-+++ b/include/linux/thread_info.h
-@@ -43,11 +43,7 @@ enum {
- #define THREAD_ALIGN	THREAD_SIZE
- #endif
- 
--#if IS_ENABLED(CONFIG_DEBUG_STACK_USAGE) || IS_ENABLED(CONFIG_DEBUG_KMEMLEAK)
--# define THREADINFO_GFP		(GFP_KERNEL_ACCOUNT | __GFP_ZERO)
--#else
--# define THREADINFO_GFP		(GFP_KERNEL_ACCOUNT)
--#endif
-+#define THREADINFO_GFP		(GFP_KERNEL_ACCOUNT | __GFP_ZERO)
- 
- /*
-  * flag set/clear/test wrappers
-diff --git a/kernel/fork.c b/kernel/fork.c
-index be8aa5b98666..4f2ee527c7d2 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -216,10 +216,9 @@ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
- 		if (!s)
- 			continue;
- 
--#ifdef CONFIG_DEBUG_KMEMLEAK
- 		/* Clear stale pointers from reused stack. */
- 		memset(s->addr, 0, THREAD_SIZE);
--#endif
-+
- 		tsk->stack_vm_area = s;
- 		return s->addr;
- 	}
--- 
-2.7.4
+
+
+If the user toggles CONFIG_64BIT,
+the bi-arch compiler will work in a slightly different mode
+(at least, back-end parts)
+
+So, my question is, is there a case,
+
+$(cc-option, -m32 -foo) is y, but
+$(cc-option, -m64 -foo) is n  ?
+(or vice versa)
+
+
+If the answer is yes, $(cc-option -foo) would have to be re-calculated
+every time CONFIG_64BIT is toggled.
+
+This is what I'd like to avoid, though.
+
 
 
 -- 
-Kees Cook
-Pixel Security
+Best Regards
+Masahiro Yamada
