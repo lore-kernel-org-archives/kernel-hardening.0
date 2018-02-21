@@ -1,78 +1,140 @@
+Subject: Re: [RFC PATCH v16 0/6] mm: security: ro protection for dynamic data
+References: <20180212165301.17933-1-igor.stoppa@huawei.com>
+ <CAGXu5j+ZNFX17Vxd37rPnkahFepFn77Fi9zEy+OL8nNd_2bjqQ@mail.gmail.com>
+ <20180220012111.GC3728@rh> <24e65dec-f452-a444-4382-d1f88fbb334c@huawei.com>
+ <20180220213604.GD3728@rh> <20180220235600.GA3706@bombadil.infradead.org>
+ <20180221013636.GE3728@rh>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <46a9610a-182b-4765-9d83-cab6297377f3@huawei.com>
+Date: Wed, 21 Feb 2018 11:56:22 +0200
 MIME-Version: 1.0
-Sender: arndbergmann@gmail.com
-In-Reply-To: <CAK7LNAQH0WD3A3T97gce0xmZpMy0zWxTO2StfNWaDbiqjQg8gg@mail.gmail.com>
-References: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com>
- <20180218221352.GA6651@ravnborg.org> <CAFkk2KT1krKuDkWt0eHcasfC61fTVQNf-1kqw7icLP9OYGYkXQ@mail.gmail.com>
- <CAK7LNAQH0WD3A3T97gce0xmZpMy0zWxTO2StfNWaDbiqjQg8gg@mail.gmail.com>
-From: Arnd Bergmann <arnd@arndb.de>
-Date: Wed, 21 Feb 2018 10:56:24 +0100
-Message-ID: <CAK8P3a2BOQt5Y0B4271WqaJvvWqfxHxD3S6r1i1xONvb+CJ5Dg@mail.gmail.com>
-Subject: Re: [PATCH 00/23] kconfig: move compiler capability tests to Kconfig
-Content-Type: text/plain; charset="UTF-8"
-To: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: Ulf Magnusson <ulfalizer@gmail.com>, Rich Felker <dalias@libc.org>, Linux-sh list <linux-sh@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Paul Mackerras <paulus@samba.org>, "H. Peter Anvin" <hpa@zytor.com>, sparclinux <sparclinux@vger.kernel.org>, Sam Ravnborg <sam@ravnborg.org>, uml-devel <user-mode-linux-devel@lists.sourceforge.net>, Yoshinori Sato <ysato@users.sourceforge.jp>, Jonathan Corbet <corbet@lwn.net>, X86 ML <x86@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@redhat.com>, Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Peter Oberparleiter <oberpar@linux.vnet.ibm.com>, Jeff Dike <jdike@addtoit.com>, user-mode-linux-user@lists.sourceforge.net, Thomas Gleixner <tglx@linutronix.de>, Michal Marek <michal.lkml@markovi.net>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Randy Dunlap <rdunlap@infradead.org>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Richard Weinberger <richard@nod.at>, linuxppc-dev <linuxppc-dev@lists.ozlabs.org>, "David S. Miller" <davem@davemloft.net>
+In-Reply-To: <20180221013636.GE3728@rh>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+To: Dave Chinner <dchinner@redhat.com>, Matthew Wilcox <willy@infradead.org>
+Cc: Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Jonathan Corbet <corbet@lwn.net>, Michal Hocko <mhocko@kernel.org>, Laura
+ Abbott <labbott@redhat.com>, Jerome Glisse <jglisse@redhat.com>, Christoph
+ Hellwig <hch@infradead.org>, Christoph Lameter <cl@linux.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 21, 2018 at 8:38 AM, Masahiro Yamada
-<yamada.masahiro@socionext.com> wrote:
-> 2018-02-20 0:18 GMT+09:00 Ulf Magnusson <ulfalizer@gmail.com>:
->
+On 21/02/18 03:36, Dave Chinner wrote:
+> On Tue, Feb 20, 2018 at 03:56:00PM -0800, Matthew Wilcox wrote:
+>> On Wed, Feb 21, 2018 at 08:36:04AM +1100, Dave Chinner wrote:
+>>> FWIW, I'm not wanting to use it to replace static variables. All the
+>>> structures are dynamically allocated right now, and get assigned to
+>>> other dynamically allocated pointers. I'd likely split the current
+>>> structures into a "ro after init" 
+
+I would prefer to use a different terminology, because, if I have
+understood the use case, this is not exactly the same as __ro_after_init
+
+So, this is my understanding:
+
+* "const" needs to be known at link time - there might be some
+adjustments later on, ex: patching of "const" pointers, after relocation
+has taken place - I am assuming we are not planning to patch const data
+The compiler can perform whatever optimization it feels like and it is
+allowed to do, on this.
+
+* __ro_after_init is almost the same as a const, from a r/w perspective,
+but it will become effectively read_only after the completion of the
+init phase. The compiler cannot use it in any way to detect errors,
+AFAIK. The system will just generate a runtime error is someone tries to
+alter some __ro_after_init data, when it's read-only.
+The only trick available is to use, after the protection, a different
+type of handle, const.
+
+* pmalloc pools can be protected (hence the "p") at any time, but they
+start as r/w. Also, they cannot be declared statically.
+
+* data which is either const or __ro_after_init is placed into specific
+sections (on arm64 it's actually the same) and its pages are then marked
+as read-only.
+
+>>> structure and rw structure, so
+>>> how does the "__ro_after_init" attribute work in that case? Is it
+>>> something like this?
 >>>
->>> I'm not happy that we in one context can reference CONFIG variables
->>> directly, but inside the $(call ...) and $(shell ...) needs the $ prefix.
->>> But I could not come up with something un-ambigious where this could be avoided.
+>>> struct xfs_mount {
+>>> 	struct xfs_mount_ro{
+>>> 		.......
+>>> 	} *ro __ro_after_init;
+>        ^^^^^^^^
+> 
+> pointer, not embedded structure....
+
+I doubt this would work, because I think it's not possible to put a
+field of a structure into a separate section, afaik.
+
+__ro_after_init would refer to the ro field, not to the memory it refers to.
+
+>>> 	......
 >>
->> I think we should be careful about allowing references to config
->> symbols. It mixes up the parsing and evaluation phases, since $() is
->> expanded during parsing (which I consider a feature and think is
->> needed to retain sanity).
+>> No, you'd do:
 >>
->> Patch 06/23 removes the last existing instance of symbol references in
->> strings by getting rid of 'option env'. That's an improvement to me.
->> We shouldn't add it back.
->
->
-> This is really important design decision,
-> so I'd like to hear a little more from experts.
->
->
-> For example, x86 allows users to choose sub-arch, either 'i386' or 'x86_64'.
->
-> https://github.com/torvalds/linux/blob/v4.16-rc2/arch/x86/Kconfig#L4
->
->
->
-> If the user toggles CONFIG_64BIT,
-> the bi-arch compiler will work in a slightly different mode
-> (at least, back-end parts)
->
-> So, my question is, is there a case,
->
-> $(cc-option, -m32 -foo) is y, but
-> $(cc-option, -m64 -foo) is n  ?
-> (or vice versa)
->
->
-> If the answer is yes, $(cc-option -foo) would have to be re-calculated
-> every time CONFIG_64BIT is toggled.
->
-> This is what I'd like to avoid, though.
+>> struct xfs_mount_ro {
+>> 	[...]
+>> };
 
-The -m32/-m64 trick (and -mbig-endian/-mlittle-endian on other architectures
-as well as a couple of other flags) only works if the compiler is configured to
-support it. In other cases (e.g. big-endian xtensa), the kernel always
-detects what the compiler does and silently configures itself to match
-using Makefile logic.
+is this something that is readonly from the beginning and then shared
+among mount points or is it specific to each mount point?
 
-On x86, compilers are usually built as bi-arch, but you can build one that
-only allows one of them.
+>> struct xfs_mount {
+>> 	const struct xfs_mount_ro *ro;
+>> 	[...]
+>> };
+> 
+> .... so that's pretty much the same thing :P
 
-I can see two reasonable ways out:
+The "const" modifier is a nice way to catch errors through the compiler,
+iff the ro data will not be initialized through this handle, when it's
+still writable.
 
-- we don't use  $(cc-option -foo) in a case like this, and instead require the
-  user to have a matching toolchain.
-- we could make the 32/64 selection on x86 a 'choice' statement where
-  each option depends on both the ARCH= variable and the
-  $(cc-option, -m32)/ $(cc-option, -m64) output.
+>>> Also, what compile time checks are in place to catch writes to
+>>> ro structure members? Is sparse going to be able to check this sort
+>>> of thing, like is does with endian-specific variables?
+>>
+>> Just labelling the pointer const should be enough for the compiler to
+>> catch unintended writes.
+> 
+> Ok.
 
-       Arnd
+yes, anyway the first one trying to alter it at run time, is in for some
+surprise.
+
+>>>> I'd be interested to have your review of the pmalloc API, if you think
+>>>> something is missing, once I send out the next revision.
+>>>
+>>> I'll look at it in more depth when it comes past again. :P
+>>
+>> I think the key question is whether you want a slab-style interface
+>> or whether you want a kmalloc-style interface.  I'd been assuming
+>> the former, but Igor has implemented the latter already.
+> 
+> Slabs are rally only useful when you have lots of a specific type of
+> object. I'm concerned mostly about one-off per-mount point
+> structures, of which there are relatively few. A heap-like pool per
+> mount is fine for this.
+
+That was my same sentiment.
+
+Actually it would be even possible to simulate caches with pools: each
+pool supports a granularity parameter, during creation. One could have
+multiple pools, each with different granularity, but it would probably
+lead to a proliferation of pools.
+
+Instead, I preferred to have pmalloc as a drop-in replacement for the
+variants of k/v/kv malloc.
+
+The only real issue was the - previous - inability of tracking the size
+of an allocation, given its address, but that is taken care of by the
+patch for the genalloc bitmap.
+
+If I could have a pointer to a good candidate for the pmalloc treatment,
+I could come up with a patch, to show how it could be done.
+
+Then it might be easier to discuss if the API needs to be modified
+and/or extended somehow.
+
+--
+igor
