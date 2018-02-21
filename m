@@ -1,133 +1,221 @@
+Date: Wed, 21 Feb 2018 14:24:43 +0100
+From: Borislav Petkov <bp@alien8.de>
+Subject: Re: [PATCH RFC v8 1/6] x86/entry: Add STACKLEAK erasing the kernel
+ stack at the end of syscalls
+Message-ID: <20180221132443.GA9989@pd.tnic>
+References: <1518804657-24905-1-git-send-email-alex.popov@linux.com>
+ <1518804657-24905-2-git-send-email-alex.popov@linux.com>
 MIME-Version: 1.0
-In-Reply-To: <CAK8P3a1DrhxWXaEs6E85W5HEhvFr23E-GDsu=0X-sG0pX+PLag@mail.gmail.com>
-References: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com>
- <20180218221352.GA6651@ravnborg.org> <CAFkk2KT1krKuDkWt0eHcasfC61fTVQNf-1kqw7icLP9OYGYkXQ@mail.gmail.com>
- <CAK7LNAQH0WD3A3T97gce0xmZpMy0zWxTO2StfNWaDbiqjQg8gg@mail.gmail.com>
- <CAK8P3a2BOQt5Y0B4271WqaJvvWqfxHxD3S6r1i1xONvb+CJ5Dg@mail.gmail.com>
- <CAK7LNARtZcW1v53ridFJK1MULmj8tQT4s+DoRhKj9PrbMri5rQ@mail.gmail.com> <CAK8P3a1DrhxWXaEs6E85W5HEhvFr23E-GDsu=0X-sG0pX+PLag@mail.gmail.com>
-From: Masahiro Yamada <yamada.masahiro@socionext.com>
-Date: Wed, 21 Feb 2018 21:57:03 +0900
-Message-ID: <CAK7LNAR3OMh9Q9ZfaBq=FpSJ-+DT5-RH_20ohV-iu34pX9hFKw@mail.gmail.com>
-Subject: Re: [PATCH 00/23] kconfig: move compiler capability tests to Kconfig
-Content-Type: text/plain; charset="UTF-8"
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Rich Felker <dalias@libc.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>, Paul Mackerras <paulus@samba.org>, "H. Peter Anvin" <hpa@zytor.com>, sparclinux <sparclinux@vger.kernel.org>, Sam Ravnborg <sam@ravnborg.org>, Yoshinori Sato <ysato@users.sourceforge.jp>, Jonathan Corbet <corbet@lwn.net>, Richard Weinberger <richard@nod.at>, Linux-sh list <linux-sh@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, uml-devel <user-mode-linux-devel@lists.sourceforge.net>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Peter Oberparleiter <oberpar@linux.vnet.ibm.com>, Jeff Dike <jdike@addtoit.com>, linuxppc-dev <linuxppc-dev@lists.ozlabs.org>, user-mode-linux-user@lists.sourceforge.net, Thomas Gleixner <tglx@linutronix.de>, Michal Marek <michal.lkml@markovi.net>, Ulf Magnusson <ulfalizer@gmail.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Randy Dunlap <rdunlap@infradead.org>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <1518804657-24905-2-git-send-email-alex.popov@linux.com>
+To: Alexander Popov <alex.popov@linux.com>
+Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-02-21 19:52 GMT+09:00 Arnd Bergmann <arnd@arndb.de>:
-> On Wed, Feb 21, 2018 at 11:20 AM, Masahiro Yamada
-> <yamada.masahiro@socionext.com> wrote:
->> 2018-02-21 18:56 GMT+09:00 Arnd Bergmann <arnd@arndb.de>:
->>> On Wed, Feb 21, 2018 at 8:38 AM, Masahiro Yamada
->>> <yamada.masahiro@socionext.com> wrote:
->>>> 2018-02-20 0:18 GMT+09:00 Ulf Magnusson <ulfalizer@gmail.com>:
->>
->> Let me clarify my concern.
->>
->> When we test the compiler flag, is there a case
->> where a particular flag depends on -m{32,64} ?
->>
->> For example, is there a compiler that supports -fstack-protector
->> for 64bit mode, but unsupports it for 32bit mode?
->>
->>   $(cc-option -m32)                     ->  y
->>   $(cc-option -m64)                     ->  y
->>   $(cc-option -fstack-protector)        ->  y
->>   $(cc-option -m32 -fstack-protector)   ->  n
->>   $(cc-option -m64 -fstack-protector)   ->  y
->>
->> I guess this is unlikely to happen,
->> but I am not whether it is zero possibility.
->>
->> If this could happen,
->> $(cc-option ) must be evaluated together with
->> correct bi-arch option (either -m32 or -m64).
->>
->>
->> Currently, -m32/-m64 is specified in Makefile,
->> but we are moving compiler tests to Kconfig
->> and, CONFIG_64BIT can be dynamically toggled in Kconfig.
->
-> I don't think it can happen for this particular combination (stack protector
-> and word size), but I'm sure we'll eventually run into options that
-> need to be tested in combination. For the current CFLAGS_KERNEL
-> setting, we definitely have the case of needing the variables to be
-> evaluated in a specific order.
->
+On Fri, Feb 16, 2018 at 09:10:52PM +0300, Alexander Popov wrote:
+> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+> index 63bf349..62748bd 100644
+> --- a/arch/x86/Kconfig
+> +++ b/arch/x86/Kconfig
+> @@ -119,6 +119,7 @@ config X86
+>  	select HAVE_ARCH_COMPAT_MMAP_BASES	if MMU && COMPAT
+>  	select HAVE_ARCH_SECCOMP_FILTER
+>  	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
+> +	select HAVE_ARCH_STACKLEAK
+>  	select HAVE_ARCH_TRACEHOOK
+>  	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+>  	select HAVE_ARCH_TRANSPARENT_HUGEPAGE_PUD if X86_64
+> diff --git a/arch/x86/entry/entry_32.S b/arch/x86/entry/entry_32.S
+> index 16c2c02..4a7365a 100644
+> --- a/arch/x86/entry/entry_32.S
+> +++ b/arch/x86/entry/entry_32.S
+> @@ -77,6 +77,90 @@
+>  #endif
+>  .endm
+>  
+> +.macro erase_kstack
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +	call erase_kstack
 
+Hmm, why do we need a macro *and* a function of the same name? Why not do
 
+	call erase_kstack
 
+everywhere we need to?
 
-I was thinking of how we can handle complex cases
-in the current approach.
+And then do
 
+ENTRY(erase_kstack)
+#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+	...
 
+to tone down the ifdeffery.
 
-(Case 1)
+> +#endif
+> +.endm
+> +
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +ENTRY(erase_kstack)
+> +	pushl	%edi
+> +	pushl	%ecx
+> +	pushl	%eax
+> +	pushl	%ebp
+> +
+> +	movl	PER_CPU_VAR(current_task), %ebp
+> +	mov	TASK_lowest_stack(%ebp), %edi
 
-Compiler flag -foo and -bar interacts, so
-we also need to check the combination of the two.
+So instead of TASK_lowest_stack and adding all the ifdeffery around, why
+not do this computation:
 
+	(unsigned long)task_stack_page(p) + 2 * sizeof(unsigned long);
 
-config CC_HAS_FOO
-        def_bool $(cc-option -foo)
+in asm?
 
-config CC_HAS_BAR
-        def_bool $(cc-option -bar)
+You only need task->stack as an offset variable. And other code might
+need it too, anyway so you could just as well use it instead of adding
+another var to thread_struct.
 
-config CC_HAS_FOO_WITH_BAR
-        def_bool $(cc-option -foo -bar)
+/me reads further.
 
+Ah. So this lowest_stack thing changes at the end:
 
+	"Set the lowest_stack value to the top_of_stack - 256"
 
-(Case 2)
-Compiler flag -foo is sensitive to word-size.
-So, we need to test this option together with -m32/-m64.
-User can toggle CONFIG_64BIT, like i386/x86_64.
+Why?
 
+So that magic needs more explanation for slow people like me.
 
-config CC_NEEDS_M64
-          def_bool $(cc-option -m64) && 64BIT
+> +	mov	$STACKLEAK_POISON, %eax
+> +	std
+> +
+> +	/*
+> +	 * Let's search for the poison value in the stack.
+> +	 * Start from the lowest_stack and go to the bottom (see std above).
 
-config CC_NEEDS_M32
-          def_bool $(cc-option -m32) && !64BIT
+Let's write insns capitalized: "see STD above".
 
-config CC_HAS_FOO
-         bool
-         default $(cc-option -m64 -foo) if CC_NEEDS_M64
-         default $(cc-option -m32 -foo) if CC_NEEDS_M32
-         default $(cc-option -foo)
+...
 
+> +	/*
+> +	 * Check that some further qwords contain poison. If so, the part
+> +	 * of the stack below the address in %rdi is likely to be poisoned.
+> +	 * Otherwise we need to search deeper.
+> +	 */
+> +	mov	$STACKLEAK_POISON_CHECK_DEPTH / 8, %ecx
+> +	repe	scasq
+> +	jecxz	2f	/* Poison the upper part of the stack */
+> +	jne	1b	/* Search deeper */
+> +
+> +2:
 
+You could name that label
 
-(Case 3)
-Compiler flag -foo is sensitive to endian-ness.
+.Lpoison
 
+and make the code more readable:
 
-config CC_NEEDS_BIG_ENDIAN
-          def_bool $(cc-option -mbig-endian) && CPU_BIG_ENDIAN
+	jb	.Lpoison
 
-config CC_NEEDS_LITTLE_ENDIAN
-          def_bool $(cc-option -mlittle-endian) && CPU_LITTLE_ENDIAN
+and so on.
 
-config CC_HAS_FOO
-         bool
-         default $(cc-option -mbig-endian -foo) if CC_NEEDS_BIG_ENDIAN
-         default $(cc-option -mlittle-endian -foo) if CC_NEEDS_LITTLE_ENDIAN
-         default $(cc-option -foo)
+> +	/*
+> +	 * Two qwords at the bottom of the thread stack are reserved and
+> +	 * should not be poisoned (see CONFIG_SCHED_STACK_END_CHECK).
+> +	 */
+> +	or	$2 * 8, %rdi
+> +
+> +	/*
+> +	 * Check whether we are on the thread stack to prepare the counter
+> +	 * for stack poisoning.
+> +	 */
+> +	mov	PER_CPU_VAR(cpu_current_top_of_stack), %rcx
+> +	sub	%rsp, %rcx
+> +	cmp	$THREAD_SIZE_asm, %rcx
+> +	jb	3f
+> +
+> +	/*
+> +	 * We are not on the thread stack, so we can write poison between
+> +	 * the address in %rdi and the stack top.
+> +	 */
+> +	mov	PER_CPU_VAR(cpu_current_top_of_stack), %rcx
+> +	sub	%rdi, %rcx
+> +	jmp	4f
+> +
+> +3:
+> +	/*
+> +	 * We are on the thread stack, so we can write poison between the
+> +	 * address in %rdi and the address in %rsp (not included, used memory).
+> +	 */
+> +	mov	%rsp, %rcx
+> +	sub	%rdi, %rcx
+> +
+> +4:
+> +	/* Check that the counter value is sane */
+> +	cmp	$THREAD_SIZE_asm, %rcx
+> +	jb	5f
+> +	ud2
+> +
+> +5:
+> +	/*
+> +	 * So let's write the poison value to the kernel stack. Start from the
+> +	 * address in %rdi and move up (see cld).
+> +	 */
+> +	cld
+> +	shr	$3, %ecx
+> +	rep	stosq
 
+Hohumm, that's >2K loops per syscall here and stack is
 
+0xffffc90000008010:     0xffffffffffff4111      0xffffffffffff4111
+0xffffc90000008020:     0xffffffffffff4111      0xffffffffffff4111
+0xffffc90000008030:     0xffffffffffff4111      0xffffffffffff4111
+0xffffc90000008040:     0xffffffffffff4111      0xffffffffffff4111
+0xffffc90000008050:     0xffffffffffff4111      0xffffffffffff4111
+0xffffc90000008060:     0xffffffffffff4111      0xffffffffffff4111
+...
 
+> diff --git a/arch/x86/kernel/process_64.c b/arch/x86/kernel/process_64.c
+> index 9eb448c..6dc55f6 100644
+> --- a/arch/x86/kernel/process_64.c
+> +++ b/arch/x86/kernel/process_64.c
+> @@ -281,6 +281,11 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
+>  	p->thread.sp = (unsigned long) fork_frame;
+>  	p->thread.io_bitmap_ptr = NULL;
+>  
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +	p->thread.lowest_stack = (unsigned long)task_stack_page(p) +
+> +						2 * sizeof(unsigned long);
+> +#endif
+> +
+>  	savesegment(gs, p->thread.gsindex);
+>  	p->thread.gsbase = p->thread.gsindex ? 0 : me->thread.gsbase;
+>  	savesegment(fs, p->thread.fsindex);
+> diff --git a/include/linux/compiler.h b/include/linux/compiler.h
+> index e835fc0..fe04f60 100644
+> --- a/include/linux/compiler.h
+> +++ b/include/linux/compiler.h
+> @@ -337,4 +337,10 @@ unsigned long read_word_at_a_time(const void *addr)
+>  	compiletime_assert(__native_word(t),				\
+>  		"Need native word sized stores/loads for atomicity.")
+>  
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +/* Poison value points to the unused hole in the virtual memory map */
 
-Hmm, I think I can implement those somehow.
-But, I hope we do not have many instances like this...
+There are a bunch of those there now. Please document it in
+Documentation/x86/x86_64/mm.txt
 
-
-If you know more naive cases, please share your knowledge.
-
-Thanks!
-
+> +# define STACKLEAK_POISON -0xBEEF
+> +# define STACKLEAK_POISON_CHECK_DEPTH 128
+> +#endif
+> +
+>  #endif /* __LINUX_COMPILER_H */
+> -- 
+> 2.7.4
+> 
 
 -- 
-Best Regards
-Masahiro Yamada
+Regards/Gruss,
+    Boris.
+
+Good mailing practices for 400: avoid top-posting and trim the reply.
