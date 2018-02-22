@@ -1,28 +1,44 @@
-Subject: Re: [PATCH 21/23] gcc-plugins: move GCC version check for PowerPC to
- Kconfig
-References: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com>
- <1518806331-7101-22-git-send-email-yamada.masahiro@socionext.com>
-From: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
-Date: Thu, 22 Feb 2018 16:04:21 +1100
+Date: Thu, 22 Feb 2018 09:47:58 +0000
+From: Mel Gorman <mgorman@techsingularity.net>
+Subject: Re: [PATCH] fork: Allow stack to be wiped on fork
+Message-ID: <20180222094758.4qzvhoiu4hnmqkzq@techsingularity.net>
+References: <20180117055015.GA15256@beast>
+ <20180220163142.15366a82a7bece715b997597@linux-foundation.org>
+ <CALCETrVNBAWPAyrKKaiasehxDXKku3GSjc0+mQrvc4RC4+jUGw@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <1518806331-7101-22-git-send-email-yamada.masahiro@socionext.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Message-Id: <6805fb77-23b9-7880-13f1-5d082d5c1599@au1.ibm.com>
-To: Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Michal Marek <michal.lkml@markovi.net>, Ulf Magnusson <ulfalizer@gmail.com>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Randy Dunlap <rdunlap@infradead.org>, linux-kernel@vger.kernel.org, Emese Revfy <re.emese@gmail.com>, Paul Mackerras <paulus@samba.org>, linuxppc-dev@lists.ozlabs.org, Sam Ravnborg <sam@ravnborg.org>
+Content-Type: text/plain; charset=iso-8859-15
+Content-Disposition: inline
+In-Reply-To: <CALCETrVNBAWPAyrKKaiasehxDXKku3GSjc0+mQrvc4RC4+jUGw@mail.gmail.com>
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@kernel.org>, Laura Abbott <labbott@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, Sahara <keun-o.park@darkmatter.ae>, "Levin, Alexander (Sasha Levin)" <alexander.levin@verizon.com>, Michal Hocko <mhocko@suse.com>, Andrea Arcangeli <aarcange@redhat.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 17/02/18 05:38, Masahiro Yamada wrote:
-> For PowerPC, GCC 5.2 is the requirement for GCC plugins.  Move the
-> version check to Kconfig, and remove the ugly checker.
+On Wed, Feb 21, 2018 at 01:56:33AM +0000, Andrew Lutomirski wrote:
+> > It would be much nicer to be able to control this at runtime rather
+> > than compile-time.  Why not a /proc tunable?  We could always use more
+> > of those ;)
 > 
-> Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>
+> /proc/sys/kernel/hardening_features_that_cost_essentially_nothing?
+> 
+> Seriously, though, why don't we just enable it unconditionally?  It
+> wouldn't surprise me if it really is a speedup on more workloads than
+> it slows down -- it'll fill the kernel stack into the CPU cache with
+> exclusive ownership very quickly (streamily and without actually
+> reading from memory, I imagine, at least on new enough CPUs) rather
+> than grabbing each cache line one by one as they get used.
 
-The old checker was as non-ugly as I could make it. :)
+Note that this is not unconditionally true, it depends on the calling
+context that clears the page. If this is during fork, then the parent may
+be doing the clear (I didn't check) which means it's quite likely when the
+child wakes for the first time that it will not necessary wake on the same
+CPU. Up until recently on NUMA machines, the child was almost guaranteed
+to be running on a remote node (mitigated in tip for sched now).
 
-Acked-by: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
+I'm not claiming I've measured the overhead of this, just pointing out that
+"cache hotness" may actually result in double the cache line bounces --
+first clear, then write on first wake. If only zeroing pages was a bit
+faster :/
 
 -- 
-Andrew Donnellan              OzLabs, ADL Canberra
-andrew.donnellan@au1.ibm.com  IBM Australia Limited
+Mel Gorman
+SUSE Labs
