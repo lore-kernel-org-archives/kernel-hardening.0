@@ -1,43 +1,63 @@
-Date: Thu, 22 Feb 2018 09:47:58 +0000
+Date: Thu, 22 Feb 2018 09:53:03 +0000
 From: Mel Gorman <mgorman@techsingularity.net>
-Subject: Re: [PATCH] fork: Allow stack to be wiped on fork
-Message-ID: <20180222094758.4qzvhoiu4hnmqkzq@techsingularity.net>
-References: <20180117055015.GA15256@beast>
- <20180220163142.15366a82a7bece715b997597@linux-foundation.org>
- <CALCETrVNBAWPAyrKKaiasehxDXKku3GSjc0+mQrvc4RC4+jUGw@mail.gmail.com>
+Subject: Re: [PATCH v2] fork: Unconditionally clear stack on fork
+Message-ID: <20180222095303.jeepikc5qlbjsal7@techsingularity.net>
+References: <20180221021659.GA37073@beast>
+ <20180221102933.GD2231@dhcp22.suse.cz>
+ <20180221125914.dc95830eada5fb958c13e36b@linux-foundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=iso-8859-15
 Content-Disposition: inline
-In-Reply-To: <CALCETrVNBAWPAyrKKaiasehxDXKku3GSjc0+mQrvc4RC4+jUGw@mail.gmail.com>
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@kernel.org>, Laura Abbott <labbott@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, Sahara <keun-o.park@darkmatter.ae>, "Levin, Alexander (Sasha Levin)" <alexander.levin@verizon.com>, Michal Hocko <mhocko@suse.com>, Andrea Arcangeli <aarcange@redhat.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20180221125914.dc95830eada5fb958c13e36b@linux-foundation.org>
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Michal Hocko <mhocko@kernel.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Laura Abbott <labbott@redhat.com>, Rasmus Villemoes <rasmus.villemoes@prevas.dk>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 21, 2018 at 01:56:33AM +0000, Andrew Lutomirski wrote:
-> > It would be much nicer to be able to control this at runtime rather
-> > than compile-time.  Why not a /proc tunable?  We could always use more
-> > of those ;)
+On Wed, Feb 21, 2018 at 12:59:14PM -0800, Andrew Morton wrote:
+> On Wed, 21 Feb 2018 11:29:33 +0100 Michal Hocko <mhocko@kernel.org> wrote:
 > 
-> /proc/sys/kernel/hardening_features_that_cost_essentially_nothing?
+> > On Tue 20-02-18 18:16:59, Kees Cook wrote:
+> > > One of the classes of kernel stack content leaks[1] is exposing the
+> > > contents of prior heap or stack contents when a new process stack is
+> > > allocated. Normally, those stacks are not zeroed, and the old contents
+> > > remain in place. In the face of stack content exposure flaws, those
+> > > contents can leak to userspace.
+> > > 
+> > > Fixing this will make the kernel no longer vulnerable to these flaws,
+> > > as the stack will be wiped each time a stack is assigned to a new
+> > > process. There's not a meaningful change in runtime performance; it
+> > > almost looks like it provides a benefit.
+> > > 
+> > > Performing back-to-back kernel builds before:
+> > > 	Run times: 157.86 157.09 158.90 160.94 160.80
+> > > 	Mean: 159.12
+> > > 	Std Dev: 1.54
+> > > 
+> > > and after:
+> > > 	Run times: 159.31 157.34 156.71 158.15 160.81
+> > > 	Mean: 158.46
+> > > 	Std Dev: 1.46
+> > 
+> > /bin/true or similar would be more representative for the worst case
+> > but it is good to see that this doesn't have any visible effect on
+> > a more real usecase.
 > 
-> Seriously, though, why don't we just enable it unconditionally?  It
-> wouldn't surprise me if it really is a speedup on more workloads than
-> it slows down -- it'll fill the kernel stack into the CPU cache with
-> exclusive ownership very quickly (streamily and without actually
-> reading from memory, I imagine, at least on new enough CPUs) rather
-> than grabbing each cache line one by one as they get used.
+> Yes, that's a pretty large memset.  And while it will populate the CPU
+> cache with the stack contents, doing so will evict other things.
+> 
 
-Note that this is not unconditionally true, it depends on the calling
-context that clears the page. If this is during fork, then the parent may
-be doing the clear (I didn't check) which means it's quite likely when the
-child wakes for the first time that it will not necessary wake on the same
-CPU. Up until recently on NUMA machines, the child was almost guaranteed
-to be running on a remote node (mitigated in tip for sched now).
+The lines will also bounce on the child. I expect the zeroing will be a
+relatively small percentage of the overall cost. The cost is all elsewhere
+such as the the full search that fork does for queueing a task on a CPU
+for the first time. Using perf will mask the issue unless the performance
+governor is used in this case. Otherwise you hit the weird corner case
+whereby perf itself increases CPU utilisation and the cpufreq governor
+(even if it's HWP or another hardware-based scheme) will increase the
+p-state and it'll appear to run faster.
 
-I'm not claiming I've measured the overhead of this, just pointing out that
-"cache hotness" may actually result in double the cache line bounces --
-first clear, then write on first wake. If only zeroing pages was a bit
-faster :/
+> So some quite careful quantitative testing is needed here, methinks.
+
+With an emphasis on careful.
 
 -- 
 Mel Gorman
