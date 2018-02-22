@@ -1,159 +1,60 @@
-Date: Thu, 22 Feb 2018 20:14:23 +0100
-From: Borislav Petkov <bp@alien8.de>
-Subject: Re: [PATCH RFC v8 1/6] x86/entry: Add STACKLEAK erasing the kernel
- stack at the end of syscalls
-Message-ID: <20180222191423.GA27395@pd.tnic>
-References: <1518804657-24905-1-git-send-email-alex.popov@linux.com>
- <1518804657-24905-2-git-send-email-alex.popov@linux.com>
- <20180221132443.GA9989@pd.tnic>
- <1e30ffd0-b35c-fcc2-ec8f-4495aefa7f6f@linux.com>
+Subject: Re: [PATCH 1/2] stackleak: Update for arm64
+References: <20180221011303.20392-1-labbott@redhat.com>
+ <20180221011303.20392-2-labbott@redhat.com> <20180222165834.GC18421@arm.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <97090ca6-efad-7c03-6084-a97674ae61c7@linux.com>
+Date: Thu, 22 Feb 2018 22:22:14 +0300
 MIME-Version: 1.0
+In-Reply-To: <20180222165834.GC18421@arm.com>
 Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <1e30ffd0-b35c-fcc2-ec8f-4495aefa7f6f@linux.com>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, x86@kernel.org
+Content-Transfer-Encoding: 7bit
+To: Will Deacon <will.deacon@arm.com>, Laura Abbott <labbott@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, richard.sandiford@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 22, 2018 at 12:49:44AM +0300, Alexander Popov wrote:
-> Actually gcc creates a strange erase_kstack():
+Hello Will, Richard and GCC folks!
+
+On 22.02.2018 19:58, Will Deacon wrote:
+> On Tue, Feb 20, 2018 at 05:13:02PM -0800, Laura Abbott wrote:
+>>
+>> arm64 has another layer of indirection in the RTL.
+>> Account for this in the plugin.
+>>
+>> Signed-off-by: Laura Abbott <labbott@redhat.com>
+>> ---
+>>  scripts/gcc-plugins/stackleak_plugin.c | 5 +++++
+>>  1 file changed, 5 insertions(+)
+>>
+>> diff --git a/scripts/gcc-plugins/stackleak_plugin.c b/scripts/gcc-plugins/stackleak_plugin.c
+>> index 6fc991c98d8b..7dfaa027423f 100644
+>> --- a/scripts/gcc-plugins/stackleak_plugin.c
+>> +++ b/scripts/gcc-plugins/stackleak_plugin.c
+>> @@ -244,6 +244,11 @@ static unsigned int stackleak_final_execute(void)
+>>  		 * that insn.
+>>  		 */
+>>  		body = PATTERN(insn);
+>> +		/* arm64 is different */
+>> +		if (GET_CODE(body) == PARALLEL) {
+>> +			body = XEXP(body, 0);
+>> +			body = XEXP(body, 0);
+>> +		}
 > 
-> ffffffff81a00010 <erase_kstack>:
-> ffffffff81a00010:	5f                   	pop    %rdi
-> ffffffff81a00011:	eb 31                	jmp    ffffffff81a00044 <entry_SYSCALL_64_after_hwframe>
-> ffffffff81a00013:	0f 1f 00             	nopl   (%rax)
-> ffffffff81a00016:	66 2e 0f 1f 84 00 00 	nopw   %cs:0x0(%rax,%rax,1)
-> ffffffff81a0001d:	00 00 00
-
-Something's very strange here. That code looks like:
-
-ENTRY(entry_SYSCALL_64_stage2)
-        UNWIND_HINT_EMPTY
-        popq    %rdi
-        jmp     entry_SYSCALL_64_after_hwframe
-END(entry_SYSCALL_64_stage2)
-
-ENTRY(entry_SYSCALL_64)
-...
-
-so frankly I wonder what gcc is even doing here?!? And why isn't
-that erase_kstack symbol completely empty. It gives it that address
-ffffffff81a00010 and size and this looks really wrong.
-
-/me experiments a bit more, notices the ENDPROC()...
-
-Ok, I think I know what it is:
-
-END(erase_kstack) gives
-
-.globl erase_kstack ; .p2align 4, 0x90 ; erase_kstack:
-# 167 "arch/x86/entry/entry_64.S"
-.size erase_kstack, .-erase_kstack
-# 182 "arch/x86/entry/entry_64.S"
-
-and that generates a STT_NOTYPE symbol:
-
- 67318: ffffffff81a00000     0 NOTYPE  GLOBAL DEFAULT    1 erase_kstack
-
-In that case, the symbol gets ignored by objdump as it dumps this at
-that address:
-
-ffffffff81a00000 <entry_SYSCALL_64_stage2>:
-ffffffff81a00000:       5f                      pop    %rdi
-ffffffff81a00001:       eb 31                   jmp    ffffffff81a00034 <entry_SYSCALL_64_after_hwframe>
-ffffffff81a00003:       0f 1f 00                nopl   (%rax)
-ffffffff81a00006:       66 2e 0f 1f 84 00 00    nopw   %cs:0x0(%rax,%rax,1)
-ffffffff81a0000d:       00 00 00
-
-which is basically the strange erase_kstack() variant you pasted above.
-
-while ENDPROC(erase_kstack) gives
-
-.globl erase_kstack ; .p2align 4, 0x90 ; erase_kstack:
-# 167 "arch/x86/entry/entry_64.S"
-.type erase_kstack, @function ; .size erase_kstack, .-erase_kstack
-# 182 "arch/x86/entry/entry_64.S"
-
-and that generates a STT_FUNC:
-
- 67318: ffffffff81a00000     0 FUNC    GLOBAL DEFAULT    1 erase_kstack
-
-Now, there's this comment over ENDPROC:
-
-/* If symbol 'name' is treated as a subroutine (gets called, and returns)
- * then please use ENDPROC to mark 'name' as STT_FUNC for the benefit of
- * static analysis tools such as stack depth analyzer.
- */
-#ifndef ENDPROC
-
-and I don't think we want to analyze the stack depth of erase_kstack
-itself.
-
-However, even if we did END(erase_kstack), the calls are still in the
-code:
-
-ffffffff81a00111:       e8 ea fe ff ff          callq  ffffffff81a00000 <entry_SYSCALL_64_stage2>
-
-so macro it is. But please call the macro something else, not the same
-name as the function.
-
-> The commit message says: "Full STACKLEAK feature also contains the gcc plugin
-> which comes in a separate commit".
+> Like most kernel developers, I don't know the first thing about GCC internals
+> so I asked our GCC team and Richard (CC'd) reckons this should be:
 > 
-> And the next commit in this series introduces that plugin. Let me quote its
-> commit message as well:
-
-...
-
-> Tracking the lowest border of the kernel stack with the lowest_stack
-> variable makes STACKLEAK so efficient (please see the performance
-> statistics in the cover letter).
-
-Aha, there it is. I guess I better continue looking through the
-patchset. :)
-
-> The mm.txt already has this line:
->  ffffffffffe00000 - ffffffffffffffff (=2 MB) unused hole
+> 	if (GET_CODE(body) == PARALLEL)
+> 		body = XVECEXP(body, 0, 0);
 > 
-> Excuse me, I didn't get what to document.
+> instead of the hunk above. Can you give that a go instead, please?
 
-You say
+Thanks a lot!
 
-/* Poison value points to the unused hole in the virtual memory map */
+Would you be so kind to take a look at the whole STACKLEAK plugin?
+http://www.openwall.com/lists/kernel-hardening/2018/02/16/4
+https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/commit/?h=kspp/gcc-plugin/stackleak&id=57a0a6763b12e82dd462593d0f42be610e93cdc9
 
-but we do change that memory map from time to time and there are
-multiple unused holes.
+It's not very big. I documented it in detail. I would be really grateful for the
+review!
 
-So do something like this so that there are no clashes when someone
-decides to use that unused hole:
-
----
-diff --git a/Documentation/x86/x86_64/mm.txt b/Documentation/x86/x86_64/mm.txt
-index ea91cb61a602..5d8f4168247d 100644
---- a/Documentation/x86/x86_64/mm.txt
-+++ b/Documentation/x86/x86_64/mm.txt
-@@ -24,6 +24,7 @@ ffffffffa0000000 - [fixmap start]   (~1526 MB) module mapping space (variable)
- [fixmap start]   - ffffffffff5fffff kernel-internal fixmap range
- ffffffffff600000 - ffffffffff600fff (=4 kB) legacy vsyscall ABI
- ffffffffffe00000 - ffffffffffffffff (=2 MB) unused hole
-+Stackleak poison value in this last hole: 0xffffffffffff4111
- 
- Virtual memory map with 5 level page tables:
- 
-@@ -50,6 +51,7 @@ ffffffffa0000000 - fffffffffeffffff (1520 MB) module mapping space
- [fixmap start]   - ffffffffff5fffff kernel-internal fixmap range
- ffffffffff600000 - ffffffffff600fff (=4 kB) legacy vsyscall ABI
- ffffffffffe00000 - ffffffffffffffff (=2 MB) unused hole
-+Stackleak poison value in this last hole: 0xffffffffffff4111
- 
- Architecture defines a 64-bit virtual address. Implementations can support
- less. Currently supported are 48- and 57-bit virtual addresses. Bits 63
----
-
-Thx.
-
--- 
-Regards/Gruss,
-    Boris.
-
-Good mailing practices for 400: avoid top-posting and trim the reply.
+Best regards,
+Alexander
