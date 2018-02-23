@@ -1,65 +1,137 @@
-Subject: Re: [PATCH 1/2] gcc-plugins: Update cgraph_create_edge for gcc-8
-References: <20180222231442.29507-1-labbott@redhat.com>
- <20180222231442.29507-2-labbott@redhat.com>
- <CAGXu5j+eXU98vmERF+_7gfcNbkztav+JP3SJRexa=MLtyhb70Q@mail.gmail.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <d09acf69-e9b5-43df-4a2b-9644b7c16ac7@redhat.com>
-Date: Fri, 23 Feb 2018 09:30:28 -0800
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Subject: [PATCH 4.4 173/193] Documentation: Document array_index_nospec
+Date: Fri, 23 Feb 2018 19:26:46 +0100
+Message-Id: <20180223170353.126016056@linuxfoundation.org>
+In-Reply-To: <20180223170325.997716448@linuxfoundation.org>
+References: <20180223170325.997716448@linuxfoundation.org>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+eXU98vmERF+_7gfcNbkztav+JP3SJRexa=MLtyhb70Q@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Alexander Popov <alex.popov@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=UTF-8
+To: linux-kernel@vger.kernel.org
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Mark Rutland <mark.rutland@arm.com>, Will Deacon <will.deacon@arm.com>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, linux-arch@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, Peter Zijlstra <peterz@infradead.org>, kernel-hardening@lists.openwall.com, torvalds@linux-foundation.org, alan@linux.intel.com, David Woodhouse <dwmw@amazon.co.uk>, Jack Wang <jinpu.wang@profitbricks.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/22/2018 03:40 PM, Kees Cook wrote:
-> On Thu, Feb 22, 2018 at 3:14 PM, Laura Abbott <labbott@redhat.com> wrote:
->>
->> gcc-8 changed the API for cgraph_create_edge. Update accordingly.
->>
->> Signed-off-by: Laura Abbott <labbott@redhat.com>
->> ---
->>   scripts/gcc-plugins/gcc-common.h | 6 ++++++
->>   1 file changed, 6 insertions(+)
->>
->> diff --git a/scripts/gcc-plugins/gcc-common.h b/scripts/gcc-plugins/gcc-common.h
->> index f46750053377..42c55c29157f 100644
->> --- a/scripts/gcc-plugins/gcc-common.h
->> +++ b/scripts/gcc-plugins/gcc-common.h
->> @@ -723,8 +723,14 @@ static inline const char *get_decl_section_name(const_tree decl)
->>   #define varpool_get_node(decl) varpool_node::get(decl)
->>   #define dump_varpool_node(file, node) (node)->dump(file)
->>
->> +#if BUILDING_GCC_VERSION >= 8000
->> +#define cgraph_create_edge(caller, callee, call_stmt, count, nest) \
->> +       (caller)->create_edge((callee), (call_stmt), (count))
->> +#else
->>   #define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
->>          (caller)->create_edge((callee), (call_stmt), (count), (freq))
->> +
->> +#endif
-> 
-> Since gcc 8 "throws away" the freq argument, could this just be
-> updated to do the same? i.e., leave "freq" as an argument, and just
-> don't use it? That way the plugin caller doesn't need to be updated.
-> 
-> +#if BUILDING_GCC_VERSION >= 8000
-> +#define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
-> +       (caller)->create_edge((callee), (call_stmt), (count))
-> +#else
->   #define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
->          (caller)->create_edge((callee), (call_stmt), (count), (freq))
-> +#endif
-> 
-> 
-> -Kees
-> 
+4.4-stable review patch.  If anyone has any objections, please let me know.
 
-Yeah, I think I started out that way then ended up with this for
-debugging reasons. The only concern I might have is ending up
-with the freq argument flagged as unused by gcc but I'm indifferent
-overall.
+------------------
 
-Thanks,
-Laura
+From: Mark Rutland <mark.rutland@arm.com>
+
+(cherry picked from commit f84a56f73dddaeac1dba8045b007f742f61cd2da)
+
+Document the rationale and usage of the new array_index_nospec() helper.
+
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+Cc: linux-arch@vger.kernel.org
+Cc: Jonathan Corbet <corbet@lwn.net>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: gregkh@linuxfoundation.org
+Cc: kernel-hardening@lists.openwall.com
+Cc: torvalds@linux-foundation.org
+Cc: alan@linux.intel.com
+Link: https://lkml.kernel.org/r/151727413645.33451.15878817161436755393.stgit@dwillia2-desk3.amr.corp.intel.com
+Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
+[jwang: cherry pick to 4.4]
+Signed-off-by: Jack Wang <jinpu.wang@profitbricks.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ Documentation/speculation.txt |   90 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 90 insertions(+)
+ create mode 100644 Documentation/speculation.txt
+
+--- /dev/null
++++ b/Documentation/speculation.txt
+@@ -0,0 +1,90 @@
++This document explains potential effects of speculation, and how undesirable
++effects can be mitigated portably using common APIs.
++
++===========
++Speculation
++===========
++
++To improve performance and minimize average latencies, many contemporary CPUs
++employ speculative execution techniques such as branch prediction, performing
++work which may be discarded at a later stage.
++
++Typically speculative execution cannot be observed from architectural state,
++such as the contents of registers. However, in some cases it is possible to
++observe its impact on microarchitectural state, such as the presence or
++absence of data in caches. Such state may form side-channels which can be
++observed to extract secret information.
++
++For example, in the presence of branch prediction, it is possible for bounds
++checks to be ignored by code which is speculatively executed. Consider the
++following code:
++
++	int load_array(int *array, unsigned int index)
++	{
++		if (index >= MAX_ARRAY_ELEMS)
++			return 0;
++		else
++			return array[index];
++	}
++
++Which, on arm64, may be compiled to an assembly sequence such as:
++
++	CMP	<index>, #MAX_ARRAY_ELEMS
++	B.LT	less
++	MOV	<returnval>, #0
++	RET
++  less:
++	LDR	<returnval>, [<array>, <index>]
++	RET
++
++It is possible that a CPU mis-predicts the conditional branch, and
++speculatively loads array[index], even if index >= MAX_ARRAY_ELEMS. This
++value will subsequently be discarded, but the speculated load may affect
++microarchitectural state which can be subsequently measured.
++
++More complex sequences involving multiple dependent memory accesses may
++result in sensitive information being leaked. Consider the following
++code, building on the prior example:
++
++	int load_dependent_arrays(int *arr1, int *arr2, int index)
++	{
++		int val1, val2,
++
++		val1 = load_array(arr1, index);
++		val2 = load_array(arr2, val1);
++
++		return val2;
++	}
++
++Under speculation, the first call to load_array() may return the value
++of an out-of-bounds address, while the second call will influence
++microarchitectural state dependent on this value. This may provide an
++arbitrary read primitive.
++
++====================================
++Mitigating speculation side-channels
++====================================
++
++The kernel provides a generic API to ensure that bounds checks are
++respected even under speculation. Architectures which are affected by
++speculation-based side-channels are expected to implement these
++primitives.
++
++The array_index_nospec() helper in <linux/nospec.h> can be used to
++prevent information from being leaked via side-channels.
++
++A call to array_index_nospec(index, size) returns a sanitized index
++value that is bounded to [0, size) even under cpu speculation
++conditions.
++
++This can be used to protect the earlier load_array() example:
++
++	int load_array(int *array, unsigned int index)
++	{
++		if (index >= MAX_ARRAY_ELEMS)
++			return 0;
++		else {
++			index = array_index_nospec(index, MAX_ARRAY_ELEMS);
++			return array[index];
++		}
++	}
