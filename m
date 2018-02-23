@@ -1,51 +1,56 @@
-From: Jack Wang <jinpu.wang@profitbricks.com>
-Subject: [stable 4.4 18/29] x86/spectre: Report get_user mitigation for spectre_v1
-Date: Fri, 23 Feb 2018 11:42:07 +0100
-Message-Id: <1519382538-15143-19-git-send-email-jinpu.wangl@profitbricks.com>
-In-Reply-To: <1519382538-15143-1-git-send-email-jinpu.wangl@profitbricks.com>
-References: <1519382538-15143-1-git-send-email-jinpu.wangl@profitbricks.com>
-To: gregkh@linuxfoundation.org, stable@vger.kernel.org
-Cc: Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, torvalds@linux-foundation.org, alan@linux.intel.com, David Woodhouse <dwmw@amazon.co.uk>, Jack Wang <jinpu.wang@profitbricks.com>
+MIME-Version: 1.0
+In-Reply-To: <20180222194541.35076c5b2166879a8d5d234a@gmail.com>
+References: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com>
+ <1518806331-7101-21-git-send-email-yamada.masahiro@socionext.com> <20180222194541.35076c5b2166879a8d5d234a@gmail.com>
+From: Masahiro Yamada <yamada.masahiro@socionext.com>
+Date: Fri, 23 Feb 2018 21:37:53 +0900
+Message-ID: <CAK7LNAT0EYibS3cSDtSxyXGmRp0PoctB4aWuFhPTZxnCuAd+2A@mail.gmail.com>
+Subject: Re: [PATCH 20/23] gcc-plugins: always build plugins with C++
+Content-Type: text/plain; charset="UTF-8"
+To: Emese Revfy <re.emese@gmail.com>
+Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Ulf Magnusson <ulfalizer@gmail.com>, Sam Ravnborg <sam@ravnborg.org>, Michal Marek <michal.lkml@markovi.net>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Dan Williams <dan.j.williams@intel.com>
+2018-02-23 3:45 GMT+09:00 Emese Revfy <re.emese@gmail.com>:
+> On Sat, 17 Feb 2018 03:38:48 +0900
+> Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
+>
+>> If the target compiler is GCC 4.8 or newer, plugins are compiled with
+>> HOSTCXX.  Otherwise, gcc-plugin.sh will select HOSTCC or HOSTCXX.
+>>
+>> To simpily things, let's decide GCC 4.8 is the requirement for GCC
+>> pulgins.  With this, plugins are always built with HOSTCXX.  This is a
+>> feature of advanced users, so this requirement whould not be not a big
+>> issue.
+>
+> I disagree with such a decision. I think the gcc plugins should compile
+> with older version because the kernel can be compiled with them too.
+> The distros use these older versions as well and I can very well imagine
+> that new plugins will extend these with backported features such as
+> my sancov plugin.
+>
 
-(cherry picked from commit edfbae53dab8348fca778531be9f4855d2ca0360)
+Let me clarify this.
 
-Reflect the presence of get_user(), __get_user(), and 'syscall' protections
-in sysfs. The expectation is that new and better tooling will allow the
-kernel to grow more usages of array_index_nospec(), for now, only claim
-mitigation for __user pointer de-references.
+I removed the version check in the following patch:
+https://patchwork.kernel.org/patch/10225379/
 
-Reported-by: Jiri Slaby <jslaby@suse.cz>
-Signed-off-by: Dan Williams <dan.j.williams@intel.com>
-Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Cc: linux-arch@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com
-Cc: gregkh@linuxfoundation.org
-Cc: torvalds@linux-foundation.org
-Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727420158.33451.11658324346540434635.stgit@dwillia2-desk3.amr.corp.intel.com
-Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
-Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-[jwang: cherry pick to 4.4]
-Signed-off-by: Jack Wang <jinpu.wang@profitbricks.com>
----
- arch/x86/kernel/cpu/bugs.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+So, you can enable CONFIG_GCC_PLAUGINS
+as long as scripts/gcc-plugin.sh passes
+(i.e. C++ can compile plugins).
 
-diff --git a/arch/x86/kernel/cpu/bugs.c b/arch/x86/kernel/cpu/bugs.c
-index d3b8337..812813e 100644
---- a/arch/x86/kernel/cpu/bugs.c
-+++ b/arch/x86/kernel/cpu/bugs.c
-@@ -291,7 +291,7 @@ ssize_t cpu_show_spectre_v1(struct device *dev,
- {
- 	if (!boot_cpu_has_bug(X86_BUG_SPECTRE_V1))
- 		return sprintf(buf, "Not affected\n");
--	return sprintf(buf, "Vulnerable\n");
-+	return sprintf(buf, "Mitigation: __user pointer sanitization\n");
- }
- 
- ssize_t cpu_show_spectre_v2(struct device *dev,
+Even if it is unlikely happen,
+GCC 4.5 -> 4.8 is not a big jump.
+
+People were recently talking about the minimum compiler version
+https://patchwork.kernel.org/patch/10207385/
+
+The thread is super long, but my understanding was
+4.5 or 4.6 would be reasonable.
+
+So, we will be there sooner or later.
+
+
 -- 
-2.7.4
+Best Regards
+Masahiro Yamada
