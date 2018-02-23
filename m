@@ -1,56 +1,82 @@
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Subject: [RFC PATCH v17 0/7] mm: security: ro protection for dynamic data
+Date: Fri, 23 Feb 2018 16:48:00 +0200
+Message-ID: <20180223144807.1180-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-In-Reply-To: <20180222194541.35076c5b2166879a8d5d234a@gmail.com>
-References: <1518806331-7101-1-git-send-email-yamada.masahiro@socionext.com>
- <1518806331-7101-21-git-send-email-yamada.masahiro@socionext.com> <20180222194541.35076c5b2166879a8d5d234a@gmail.com>
-From: Masahiro Yamada <yamada.masahiro@socionext.com>
-Date: Fri, 23 Feb 2018 21:37:53 +0900
-Message-ID: <CAK7LNAT0EYibS3cSDtSxyXGmRp0PoctB4aWuFhPTZxnCuAd+2A@mail.gmail.com>
-Subject: Re: [PATCH 20/23] gcc-plugins: always build plugins with C++
-Content-Type: text/plain; charset="UTF-8"
-To: Emese Revfy <re.emese@gmail.com>
-Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Ulf Magnusson <ulfalizer@gmail.com>, Sam Ravnborg <sam@ravnborg.org>, Michal Marek <michal.lkml@markovi.net>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+Content-Type: text/plain
+To: david@fromorbit.com, willy@infradead.org, keescook@chromium.org, mhocko@kernel.org
+Cc: labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-02-23 3:45 GMT+09:00 Emese Revfy <re.emese@gmail.com>:
-> On Sat, 17 Feb 2018 03:38:48 +0900
-> Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
->
->> If the target compiler is GCC 4.8 or newer, plugins are compiled with
->> HOSTCXX.  Otherwise, gcc-plugin.sh will select HOSTCC or HOSTCXX.
->>
->> To simpily things, let's decide GCC 4.8 is the requirement for GCC
->> pulgins.  With this, plugins are always built with HOSTCXX.  This is a
->> feature of advanced users, so this requirement whould not be not a big
->> issue.
->
-> I disagree with such a decision. I think the gcc plugins should compile
-> with older version because the kernel can be compiled with them too.
-> The distros use these older versions as well and I can very well imagine
-> that new plugins will extend these with backported features such as
-> my sancov plugin.
->
+This patch-set introduces the possibility of protecting memory that has
+been allocated dynamically.
 
-Let me clarify this.
+The memory is managed in pools: when a memory pool is turned into R/O,
+all the memory that is part of it, will become R/O.
 
-I removed the version check in the following patch:
-https://patchwork.kernel.org/patch/10225379/
+A R/O pool can be destroyed, to recover its memory, but it cannot be
+turned back into R/W mode.
 
-So, you can enable CONFIG_GCC_PLAUGINS
-as long as scripts/gcc-plugin.sh passes
-(i.e. C++ can compile plugins).
+This is intentional. This feature is meant for data that doesn't need
+further modifications after initialization.
 
-Even if it is unlikely happen,
-GCC 4.5 -> 4.8 is not a big jump.
+However the data might need to be released, for example as part of module
+unloading.
+To do this, the memory must first be freed, then the pool can be destroyed.
 
-People were recently talking about the minimum compiler version
-https://patchwork.kernel.org/patch/10207385/
+An example is provided, in the form of self-testing.
 
-The thread is super long, but my understanding was
-4.5 or 4.6 would be reasonable.
+Changes since v16:
+[http://www.openwall.com/lists/kernel-hardening/2018/02/12/13]
 
-So, we will be there sooner or later.
+* introduced lkdtm test for write protection of a variable
+* added comments with rationale for use of BUG_ON() when running selftest
+* converted self-tests to kernel naming patter "test_xxx.c"
+* moved triggering of pmalloc self-testing to early phase of main.c
+* improved summaries of genalloc and vmalloc patches
+* removed example of optimization of find_vm_area because of possible bug
+  in vmalloc_to_page:
+[https://www.mail-archive.com/linux-kernel@vger.kernel.org/msg1617030.html]
 
+Igor Stoppa (7):
+  genalloc: track beginning of allocations
+  genalloc: selftest
+  struct page: add field for vm_struct
+  Protectable Memory
+  Pmalloc selftest
+  lkdtm: crash on overwriting protected pmalloc var
+  Documentation for Pmalloc
+
+ Documentation/core-api/index.rst   |   1 +
+ Documentation/core-api/pmalloc.rst | 114 +++++++
+ drivers/misc/lkdtm.h               |   1 +
+ drivers/misc/lkdtm_core.c          |   3 +
+ drivers/misc/lkdtm_perms.c         |  28 ++
+ include/linux/genalloc.h           |   7 +-
+ include/linux/mm_types.h           |   1 +
+ include/linux/pmalloc.h            | 242 ++++++++++++++
+ include/linux/test_genalloc.h      |  26 ++
+ include/linux/test_pmalloc.h       |  24 ++
+ include/linux/vmalloc.h            |   1 +
+ init/main.c                        |   4 +
+ lib/Kconfig                        |  15 +
+ lib/Makefile                       |   1 +
+ lib/genalloc.c                     | 658 +++++++++++++++++++++++++++----------
+ lib/test_genalloc.c                | 410 +++++++++++++++++++++++
+ mm/Kconfig                         |  15 +
+ mm/Makefile                        |   2 +
+ mm/pmalloc.c                       | 499 ++++++++++++++++++++++++++++
+ mm/test_pmalloc.c                  |  79 +++++
+ mm/usercopy.c                      |  33 ++
+ mm/vmalloc.c                       |   5 +
+ 22 files changed, 1999 insertions(+), 170 deletions(-)
+ create mode 100644 Documentation/core-api/pmalloc.rst
+ create mode 100644 include/linux/pmalloc.h
+ create mode 100644 include/linux/test_genalloc.h
+ create mode 100644 include/linux/test_pmalloc.h
+ create mode 100644 lib/test_genalloc.c
+ create mode 100644 mm/pmalloc.c
+ create mode 100644 mm/test_pmalloc.c
 
 -- 
-Best Regards
-Masahiro Yamada
+2.14.1
