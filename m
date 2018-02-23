@@ -1,13 +1,13 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.4 176/193] x86: Introduce barrier_nospec
-Date: Fri, 23 Feb 2018 19:26:49 +0100
-Message-Id: <20180223170353.649405309@linuxfoundation.org>
+Subject: [PATCH 4.4 177/193] x86/get_user: Use pointer masking to limit speculation
+Date: Fri, 23 Feb 2018 19:26:50 +0100
+Message-Id: <20180223170353.836877903@linuxfoundation.org>
 In-Reply-To: <20180223170325.997716448@linuxfoundation.org>
 References: <20180223170325.997716448@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andi Kleen <ak@linux.intel.com>, Ingo Molnar <mingo@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, alan@linux.intel.com, David Woodhouse <dwmw@amazon.co.uk>, Jack Wang <jinpu.wang@profitbricks.com>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, torvalds@linux-foundation.org, alan@linux.intel.com, David Woodhouse <dwmw@amazon.co.uk>, Jack Wang <jinpu.wang@profitbricks.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 4.4-stable review patch.  If anyone has any objections, please let me know.
@@ -16,63 +16,95 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Dan Williams <dan.j.williams@intel.com>
 
-(cherry picked from commit b3d7ad85b80bbc404635dca80f5b129f6242bc7a)
+(cherry picked from commit c7f631cb07e7da06ac1d231ca178452339e32a94)
 
-Rename the open coded form of this instruction sequence from
-rdtsc_ordered() into a generic barrier primitive, barrier_nospec().
+Quoting Linus:
 
-One of the mitigations for Spectre variant1 vulnerabilities is to fence
-speculative execution after successfully validating a bounds check. I.e.
-force the result of a bounds check to resolve in the instruction pipeline
-to ensure speculative execution honors that result before potentially
-operating on out-of-bounds data.
+    I do think that it would be a good idea to very expressly document
+    the fact that it's not that the user access itself is unsafe. I do
+    agree that things like "get_user()" want to be protected, but not
+    because of any direct bugs or problems with get_user() and friends,
+    but simply because get_user() is an excellent source of a pointer
+    that is obviously controlled from a potentially attacking user
+    space. So it's a prime candidate for then finding _subsequent_
+    accesses that can then be used to perturb the cache.
 
-No functional changes.
+Unlike the __get_user() case get_user() includes the address limit check
+near the pointer de-reference. With that locality the speculation can be
+mitigated with pointer narrowing rather than a barrier, i.e.
+array_index_nospec(). Where the narrowing is performed by:
 
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-Suggested-by: Andi Kleen <ak@linux.intel.com>
-Suggested-by: Ingo Molnar <mingo@redhat.com>
+	cmp %limit, %ptr
+	sbb %mask, %mask
+	and %mask, %ptr
+
+With respect to speculation the value of %ptr is either less than %limit
+or NULL.
+
+Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Cc: linux-arch@vger.kernel.org
-Cc: Tom Lendacky <thomas.lendacky@amd.com>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com
 Cc: gregkh@linuxfoundation.org
 Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: Andy Lutomirski <luto@kernel.org>
+Cc: torvalds@linux-foundation.org
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727415361.33451.9049453007262764675.stgit@dwillia2-desk3.amr.corp.intel.com
+Link: https://lkml.kernel.org/r/151727417469.33451.11804043010080838495.stgit@dwillia2-desk3.amr.corp.intel.com
 Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
-[jwang: cherry pick to 4.4]
+[jwang: port to 4.4]
 Signed-off-by: Jack Wang <jinpu.wang@profitbricks.com>
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 ---
- arch/x86/include/asm/barrier.h |    4 ++++
- arch/x86/include/asm/msr.h     |    3 +--
- 2 files changed, 5 insertions(+), 2 deletions(-)
+ arch/x86/lib/getuser.S |   10 ++++++++++
+ 1 file changed, 10 insertions(+)
 
---- a/arch/x86/include/asm/barrier.h
-+++ b/arch/x86/include/asm/barrier.h
-@@ -48,6 +48,10 @@ static inline unsigned long array_index_
- /* Override the default implementation from linux/nospec.h. */
- #define array_index_mask_nospec array_index_mask_nospec
- 
-+/* Prevent speculative execution past this barrier. */
-+#define barrier_nospec() alternative_2("", "mfence", X86_FEATURE_MFENCE_RDTSC, \
-+					   "lfence", X86_FEATURE_LFENCE_RDTSC)
-+
- #ifdef CONFIG_X86_PPRO_FENCE
- #define dma_rmb()	rmb()
- #else
---- a/arch/x86/include/asm/msr.h
-+++ b/arch/x86/include/asm/msr.h
-@@ -147,8 +147,7 @@ static __always_inline unsigned long lon
- 	 * that some other imaginary CPU is updating continuously with a
- 	 * time stamp.
- 	 */
--	alternative_2("", "mfence", X86_FEATURE_MFENCE_RDTSC,
--			  "lfence", X86_FEATURE_LFENCE_RDTSC);
-+	barrier_nospec();
- 	return rdtsc();
- }
- 
+--- a/arch/x86/lib/getuser.S
++++ b/arch/x86/lib/getuser.S
+@@ -38,6 +38,8 @@ ENTRY(__get_user_1)
+ 	GET_THREAD_INFO(%_ASM_DX)
+ 	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
++	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
++	and %_ASM_DX, %_ASM_AX
+ 	ASM_STAC
+ 1:	movzbl (%_ASM_AX),%edx
+ 	xor %eax,%eax
+@@ -51,6 +53,8 @@ ENTRY(__get_user_2)
+ 	GET_THREAD_INFO(%_ASM_DX)
+ 	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
++	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
++	and %_ASM_DX, %_ASM_AX
+ 	ASM_STAC
+ 2:	movzwl -1(%_ASM_AX),%edx
+ 	xor %eax,%eax
+@@ -64,6 +68,8 @@ ENTRY(__get_user_4)
+ 	GET_THREAD_INFO(%_ASM_DX)
+ 	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
++	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
++	and %_ASM_DX, %_ASM_AX
+ 	ASM_STAC
+ 3:	movl -3(%_ASM_AX),%edx
+ 	xor %eax,%eax
+@@ -78,6 +84,8 @@ ENTRY(__get_user_8)
+ 	GET_THREAD_INFO(%_ASM_DX)
+ 	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
++	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
++	and %_ASM_DX, %_ASM_AX
+ 	ASM_STAC
+ 4:	movq -7(%_ASM_AX),%rdx
+ 	xor %eax,%eax
+@@ -89,6 +97,8 @@ ENTRY(__get_user_8)
+ 	GET_THREAD_INFO(%_ASM_DX)
+ 	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user_8
++	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
++	and %_ASM_DX, %_ASM_AX
+ 	ASM_STAC
+ 4:	movl -7(%_ASM_AX),%edx
+ 5:	movl -3(%_ASM_AX),%ecx
