@@ -1,13 +1,13 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.4 178/193] x86/syscall: Sanitize syscall table de-references under speculation
-Date: Fri, 23 Feb 2018 19:26:51 +0100
-Message-Id: <20180223170354.028619665@linuxfoundation.org>
+Subject: [PATCH 4.4 179/193] vfs, fdtable: Prevent bounds-check bypass via speculative execution
+Date: Fri, 23 Feb 2018 19:26:52 +0100
+Message-Id: <20180223170354.207391528@linuxfoundation.org>
 In-Reply-To: <20180223170325.997716448@linuxfoundation.org>
 References: <20180223170325.997716448@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, alan@linux.intel.com, David Woodhouse <dwmw@amazon.co.uk>, Jack Wang <jinpu.wang@profitbricks.com>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, torvalds@linux-foundation.org, alan@linux.intel.com, David Woodhouse <dwmw@amazon.co.uk>, Jack Wang <jinpu.wang@profitbricks.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 4.4-stable review patch.  If anyone has any objections, please let me know.
@@ -16,48 +16,51 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Dan Williams <dan.j.williams@intel.com>
 
-(cherry picked from commit 2fbd7af5af8665d18bcefae3e9700be07e22b681)
+(cherry picked from commit 56c30ba7b348b90484969054d561f711ba196507)
 
-The syscall table base is a user controlled function pointer in kernel
-space. Use array_index_nospec() to prevent any out of bounds speculation.
+'fd' is a user controlled value that is used as a data dependency to
+read from the 'fdt->fd' array.  In order to avoid potential leaks of
+kernel memory values, block speculative execution of the instruction
+stream that could issue reads based on an invalid 'file *' returned from
+__fcheck_files.
 
-While retpoline prevents speculating into a userspace directed target it
-does not stop the pointer de-reference, the concern is leaking memory
-relative to the syscall table base, by observing instruction cache
-behavior.
-
-Reported-by: Linus Torvalds <torvalds@linux-foundation.org>
+Co-developed-by: Elena Reshetova <elena.reshetova@intel.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Cc: linux-arch@vger.kernel.org
 Cc: kernel-hardening@lists.openwall.com
 Cc: gregkh@linuxfoundation.org
-Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: torvalds@linux-foundation.org
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727417984.33451.1216731042505722161.stgit@dwillia2-desk3.amr.corp.intel.com
+Link: https://lkml.kernel.org/r/151727418500.33451.17392199002892248656.stgit@dwillia2-desk3.amr.corp.intel.com
 Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
-[jwang: port to 4.4, no syscall_64]
+[jwang: cherry pick to 4.4]
 Signed-off-by: Jack Wang <jinpu.wang@profitbricks.com>
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 ---
- arch/x86/entry/common.c |    2 ++
- 1 file changed, 2 insertions(+)
+ include/linux/fdtable.h |    5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
 
---- a/arch/x86/entry/common.c
-+++ b/arch/x86/entry/common.c
-@@ -20,6 +20,7 @@
- #include <linux/export.h>
- #include <linux/context_tracking.h>
- #include <linux/user-return-notifier.h>
+--- a/include/linux/fdtable.h
++++ b/include/linux/fdtable.h
+@@ -9,6 +9,7 @@
+ #include <linux/compiler.h>
+ #include <linux/spinlock.h>
+ #include <linux/rcupdate.h>
 +#include <linux/nospec.h>
- #include <linux/uprobes.h>
+ #include <linux/types.h>
+ #include <linux/init.h>
+ #include <linux/fs.h>
+@@ -81,8 +82,10 @@ static inline struct file *__fcheck_file
+ {
+ 	struct fdtable *fdt = rcu_dereference_raw(files->fdt);
  
- #include <asm/desc.h>
-@@ -381,6 +382,7 @@ __always_inline void do_syscall_32_irqs_
- 	}
+-	if (fd < fdt->max_fds)
++	if (fd < fdt->max_fds) {
++		fd = array_index_nospec(fd, fdt->max_fds);
+ 		return rcu_dereference_raw(fdt->fd[fd]);
++	}
+ 	return NULL;
+ }
  
- 	if (likely(nr < IA32_NR_syscalls)) {
-+		nr = array_index_nospec(nr, IA32_NR_syscalls);
- 		/*
- 		 * It's possible that a 32-bit syscall implementation
- 		 * takes a 64-bit parameter but nonetheless assumes that
