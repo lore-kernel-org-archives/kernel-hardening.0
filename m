@@ -1,92 +1,56 @@
-From: Alexander Popov <alex.popov@linux.com>
-Subject: Re: [PATCH 1/2] gcc-plugins: Update cgraph_create_edge for gcc-8
+Subject: Re: [PATCH 2/2] gcc-plugins: stackleak: Update for gcc-8
 References: <20180222231442.29507-1-labbott@redhat.com>
- <20180222231442.29507-2-labbott@redhat.com>
- <CAGXu5j+eXU98vmERF+_7gfcNbkztav+JP3SJRexa=MLtyhb70Q@mail.gmail.com>
- <d09acf69-e9b5-43df-4a2b-9644b7c16ac7@redhat.com>
-Message-ID: <595d7e78-4bd6-b36a-4abd-42e4dfedf7b0@linux.com>
-Date: Sat, 24 Feb 2018 15:36:00 +0300
+ <20180222231442.29507-3-labbott@redhat.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <b579d073-7d7a-366c-77fa-08ad170e1913@linux.com>
+Date: Sat, 24 Feb 2018 17:04:06 +0300
 MIME-Version: 1.0
-In-Reply-To: <d09acf69-e9b5-43df-4a2b-9644b7c16ac7@redhat.com>
+In-Reply-To: <20180222231442.29507-3-labbott@redhat.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+Cc: Will Deacon <will.deacon@arm.com>, richard.sandiford@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 23.02.2018 20:30, Laura Abbott wrote:
-> On 02/22/2018 03:40 PM, Kees Cook wrote:
->> On Thu, Feb 22, 2018 at 3:14 PM, Laura Abbott <labbott@redhat.com> wrote:
->>>
->>> gcc-8 changed the API for cgraph_create_edge. Update accordingly.
->>>
->>> Signed-off-by: Laura Abbott <labbott@redhat.com>
->>> ---
->>>   scripts/gcc-plugins/gcc-common.h | 6 ++++++
->>>   1 file changed, 6 insertions(+)
->>>
->>> diff --git a/scripts/gcc-plugins/gcc-common.h b/scripts/gcc-plugins/gcc-common.h
->>> index f46750053377..42c55c29157f 100644
->>> --- a/scripts/gcc-plugins/gcc-common.h
->>> +++ b/scripts/gcc-plugins/gcc-common.h
->>> @@ -723,8 +723,14 @@ static inline const char *get_decl_section_name(const_tree decl)
->>>   #define varpool_get_node(decl) varpool_node::get(decl)
->>>   #define dump_varpool_node(file, node) (node)->dump(file)
->>>
->>> +#if BUILDING_GCC_VERSION >= 8000
->>> +#define cgraph_create_edge(caller, callee, call_stmt, count, nest) \
->>> +       (caller)->create_edge((callee), (call_stmt), (count))
->>> +#else
->>>   #define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
->>>          (caller)->create_edge((callee), (call_stmt), (count), (freq))
->>> +
->>> +#endif
->>
->> Since gcc 8 "throws away" the freq argument, could this just be
->> updated to do the same? i.e., leave "freq" as an argument, and just
->> don't use it? That way the plugin caller doesn't need to be updated.
->>
->> +#if BUILDING_GCC_VERSION >= 8000
->> +#define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
->> +       (caller)->create_edge((callee), (call_stmt), (count))
->> +#else
->>   #define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
->>          (caller)->create_edge((callee), (call_stmt), (count), (freq))
->> +#endif
->>
-> 
-> Yeah, I think I started out that way then ended up with this for
-> debugging reasons. The only concern I might have is ending up
-> with the freq argument flagged as unused by gcc but I'm indifferent
-> overall.
+Hello Laura,
 
-Hello Laura and Kees,
+Thanks for the cooperation!
 
-Laura, thanks a lot for your work! I double-checked gcc changelog and
-agree with you. I will add this fix for gcc-8 as a separate commit
-to the next version of STACKLEAK.
+On 23.02.2018 02:14, Laura Abbott wrote:
+> +#if BUILDING_GCC_VERSION >= 8000
+> +bool check_frame_size()
+> +{
+> +	return maybe_ge(get_frame_size(), track_frame_size);
 
-And I'll do some macro cleanup as well. All the cgraph_create_edge* macros
-in gcc-common.h look strange.
+After looking through this guide
+https://gcc.gnu.org/onlinedocs//gccint/Guidelines-for-using-poly_005fint.html#Guidelines-for-using-poly_005fint
+it seems to me that we should better use something like that:
 
-At line 395 we have these redefinitions for dropping "nest":
+poly_int64 frame_size = get_frame_size();
 
- #if BUILDING_GCC_VERSION >= 4007 && BUILDING_GCC_VERSION <= 4009
- #define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
- 	cgraph_create_edge((caller), (callee), (call_stmt), (count), (freq))
- #define cgraph_create_edge_including_clones(caller, callee, old_call_stmt, call_stmt, count, freq, nest, reason) \
- 	cgraph_create_edge_including_clones((caller), (callee), (old_call_stmt), (call_stmt), (count), (freq), (reason))
- #endif
+if (frame_size.to_constant() >= track_frame_size)
+	return 0;
 
-But later at line 726 "nest" is not used as well:
+May I ask for your opinion?
 
- #define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
- 	(caller)->create_edge((callee), (call_stmt), (count), (freq))
- #define cgraph_create_edge_including_clones(caller, callee, old_call_stmt, call_stmt, count, freq, nest, reason) \
- 	(caller)->create_edge_including_clones((callee), (old_call_stmt), (call_stmt), (count), (freq), (reason))
+> +}
+> +#else
+> +bool check_frame_size()
+> +{
+> +	return get_frame_size() >= track_frame_size;
+> +}
+> +#endif
+>  /*
+>   * Work with the RTL representation of the code.
+>   * Remove the unneeded track_stack() calls from the functions which don't
+> @@ -215,7 +237,7 @@ static unsigned int stackleak_final_execute(void)
+>  	if (cfun->calls_alloca)
+>  		return 0;
+>  
+> -	if (get_frame_size() >= track_frame_size)
+> +	if (check_frame_size())
+>  		return 0;
+>  
 
-So I'm going to drop "nest" from cgraph_create_edge* macros and the plugin code.
-
-Thanks again!
 Best regards,
 Alexander
