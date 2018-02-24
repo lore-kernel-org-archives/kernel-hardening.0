@@ -1,128 +1,92 @@
-Subject: Re: [PATCH 7/7] Documentation for Pmalloc
-References: <20180223144807.1180-1-igor.stoppa@huawei.com>
- <20180223144807.1180-8-igor.stoppa@huawei.com>
-From: J Freyensee <why2jjj.linux@gmail.com>
-Message-ID: <98b2fecf-c1b3-aa5e-ba70-2770940bb965@gmail.com>
-Date: Fri, 23 Feb 2018 16:26:49 -0800
+From: Alexander Popov <alex.popov@linux.com>
+Subject: Re: [PATCH 1/2] gcc-plugins: Update cgraph_create_edge for gcc-8
+References: <20180222231442.29507-1-labbott@redhat.com>
+ <20180222231442.29507-2-labbott@redhat.com>
+ <CAGXu5j+eXU98vmERF+_7gfcNbkztav+JP3SJRexa=MLtyhb70Q@mail.gmail.com>
+ <d09acf69-e9b5-43df-4a2b-9644b7c16ac7@redhat.com>
+Message-ID: <595d7e78-4bd6-b36a-4abd-42e4dfedf7b0@linux.com>
+Date: Sat, 24 Feb 2018 15:36:00 +0300
 MIME-Version: 1.0
-In-Reply-To: <20180223144807.1180-8-igor.stoppa@huawei.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 8bit
-To: Igor Stoppa <igor.stoppa@huawei.com>, david@fromorbit.com, willy@infradead.org, keescook@chromium.org, mhocko@kernel.org
-Cc: labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <d09acf69-e9b5-43df-4a2b-9644b7c16ac7@redhat.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 23.02.2018 20:30, Laura Abbott wrote:
+> On 02/22/2018 03:40 PM, Kees Cook wrote:
+>> On Thu, Feb 22, 2018 at 3:14 PM, Laura Abbott <labbott@redhat.com> wrote:
+>>>
+>>> gcc-8 changed the API for cgraph_create_edge. Update accordingly.
+>>>
+>>> Signed-off-by: Laura Abbott <labbott@redhat.com>
+>>> ---
+>>>   scripts/gcc-plugins/gcc-common.h | 6 ++++++
+>>>   1 file changed, 6 insertions(+)
+>>>
+>>> diff --git a/scripts/gcc-plugins/gcc-common.h b/scripts/gcc-plugins/gcc-common.h
+>>> index f46750053377..42c55c29157f 100644
+>>> --- a/scripts/gcc-plugins/gcc-common.h
+>>> +++ b/scripts/gcc-plugins/gcc-common.h
+>>> @@ -723,8 +723,14 @@ static inline const char *get_decl_section_name(const_tree decl)
+>>>   #define varpool_get_node(decl) varpool_node::get(decl)
+>>>   #define dump_varpool_node(file, node) (node)->dump(file)
+>>>
+>>> +#if BUILDING_GCC_VERSION >= 8000
+>>> +#define cgraph_create_edge(caller, callee, call_stmt, count, nest) \
+>>> +       (caller)->create_edge((callee), (call_stmt), (count))
+>>> +#else
+>>>   #define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
+>>>          (caller)->create_edge((callee), (call_stmt), (count), (freq))
+>>> +
+>>> +#endif
+>>
+>> Since gcc 8 "throws away" the freq argument, could this just be
+>> updated to do the same? i.e., leave "freq" as an argument, and just
+>> don't use it? That way the plugin caller doesn't need to be updated.
+>>
+>> +#if BUILDING_GCC_VERSION >= 8000
+>> +#define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
+>> +       (caller)->create_edge((callee), (call_stmt), (count))
+>> +#else
+>>   #define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
+>>          (caller)->create_edge((callee), (call_stmt), (count), (freq))
+>> +#endif
+>>
+> 
+> Yeah, I think I started out that way then ended up with this for
+> debugging reasons. The only concern I might have is ending up
+> with the freq argument flagged as unused by gcc but I'm indifferent
+> overall.
 
+Hello Laura and Kees,
 
-On 2/23/18 6:48 AM, Igor Stoppa wrote:
-> Detailed documentation about the protectable memory allocator.
->
-> Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
-> ---
->   Documentation/core-api/index.rst   |   1 +
->   Documentation/core-api/pmalloc.rst | 114 +++++++++++++++++++++++++++++++++++++
->   2 files changed, 115 insertions(+)
->   create mode 100644 Documentation/core-api/pmalloc.rst
->
-> diff --git a/Documentation/core-api/index.rst b/Documentation/core-api/index.rst
-> index c670a8031786..8f5de42d6571 100644
-> --- a/Documentation/core-api/index.rst
-> +++ b/Documentation/core-api/index.rst
-> @@ -25,6 +25,7 @@ Core utilities
->      genalloc
->      errseq
->      printk-formats
-> +   pmalloc
->   
->   Interfaces for kernel debugging
->   ===============================
-> diff --git a/Documentation/core-api/pmalloc.rst b/Documentation/core-api/pmalloc.rst
-> new file mode 100644
-> index 000000000000..d9725870444e
-> --- /dev/null
-> +++ b/Documentation/core-api/pmalloc.rst
-> @@ -0,0 +1,114 @@
-> +.. SPDX-License-Identifier: GPL-2.0
-> +
-> +Protectable memory allocator
-> +============================
-> +
-> +Purpose
-> +-------
-> +
-> +The pmalloc library is meant to provide R/O status to data that, for some
-> +reason, could neither be declared as constant, nor could it take advantage
-> +of the qualifier __ro_after_init, but is write-once and read-only in spirit.
-> +It protects data from both accidental and malicious overwrites.
-> +
-> +Example: A policy that is loaded from userspace.
-> +
-> +
-> +Concept
-> +-------
-> +
-> +pmalloc builds on top of genalloc, using the same concept of memory pools.
-> +
-> +The value added by pmalloc is that now the memory contained in a pool can
-> +become R/O, for the rest of the life of the pool.
-> +
-> +Different kernel drivers and threads can use different pools, for finer
-> +control of what becomes R/O and when. And for improved lockless concurrency.
-> +
-> +
-> +Caveats
-> +-------
-> +
-> +- Memory freed while a pool is not yet protected will be reused.
-> +
-> +- Once a pool is protected, it's not possible to allocate any more memory
-> +  from it.
-> +
-> +- Memory "freed" from a protected pool indicates that such memory is not
-> +  in use anymore by the requester; however, it will not become available
-> +  for further use, until the pool is destroyed.
-> +
-> +- Before destroying a pool, all the memory allocated from it must be
-> +  released.
+Laura, thanks a lot for your work! I double-checked gcc changelog and
+agree with you. I will add this fix for gcc-8 as a separate commit
+to the next version of STACKLEAK.
 
-Is that true?  pmalloc_destroy_pool() has:
+And I'll do some macro cleanup as well. All the cgraph_create_edge* macros
+in gcc-common.h look strange.
 
-.
-.
-+    pmalloc_pool_set_protection(pool, false);
-+    gen_pool_for_each_chunk(pool, pmalloc_chunk_free, NULL);
-+    gen_pool_destroy(pool);
-+    kfree(data);
+At line 395 we have these redefinitions for dropping "nest":
 
-which to me looks like is the opposite, the data (ie, "memory") is being 
-released first, then the pool is destroyed.
+ #if BUILDING_GCC_VERSION >= 4007 && BUILDING_GCC_VERSION <= 4009
+ #define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
+ 	cgraph_create_edge((caller), (callee), (call_stmt), (count), (freq))
+ #define cgraph_create_edge_including_clones(caller, callee, old_call_stmt, call_stmt, count, freq, nest, reason) \
+ 	cgraph_create_edge_including_clones((caller), (callee), (old_call_stmt), (call_stmt), (count), (freq), (reason))
+ #endif
 
+But later at line 726 "nest" is not used as well:
 
+ #define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
+ 	(caller)->create_edge((callee), (call_stmt), (count), (freq))
+ #define cgraph_create_edge_including_clones(caller, callee, old_call_stmt, call_stmt, count, freq, nest, reason) \
+ 	(caller)->create_edge_including_clones((callee), (old_call_stmt), (call_stmt), (count), (freq), (reason))
 
-> +
-> +- pmalloc does not provide locking support with respect to allocating vs
-> +  protecting an individual pool, for performance reasons.
+So I'm going to drop "nest" from cgraph_create_edge* macros and the plugin code.
 
-What is the recommendation to using locks then, as the computing 
-real-world mainly operates in multi-threaded/process world?  Maybe show 
-an example of an issue that occur if locks aren't used and give a coding 
-example.
-
-> +  It is recommended not to share the same pool between unrelated functions.
-> +  Should sharing be a necessity, the user of the shared pool is expected
-> +  to implement locking for that pool.
-> +
-> +- pmalloc uses genalloc to optimize the use of the space it allocates
-> +  through vmalloc. Some more TLB entries will be used, however less than
-> +  in the case of using vmalloc directly. The exact number depends on the
-> +  size of each allocation request and possible slack.
-> +
-> +- Considering that not much data is supposed to be dynamically allocated
-> +  and then marked as read-only, it shouldn't be an issue that the address
-> +  range for pmalloc is limited, on 32-bit systems.
-
-Why is 32-bit systems mentioned and not 64-bit?  Is there a problem with 
-64-bit here?
-
-Thanks,
-Jay
+Thanks again!
+Best regards,
+Alexander
