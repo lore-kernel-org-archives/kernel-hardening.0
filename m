@@ -1,39 +1,34 @@
+Date: Sun, 25 Feb 2018 18:59:07 +1100
 From: "Tobin C. Harding" <me@tobin.cc>
-Subject: [PATCH] MAINTAINERS: Add list, tree, and maintainer
-Date: Sun, 25 Feb 2018 18:35:53 +1100
-Message-Id: <1519544153-10360-1-git-send-email-me@tobin.cc>
-To: Kernel Hardening <kernel-hardening@lists.openwall.com>
-Cc: "Tobin C. Harding" <me@tobin.cc>, LKML <linux-kernel@vger.kernel.org>, tycho@tycho.ws
+Subject: Pull Request for linux-next
+Message-ID: <20180225075907.GB9456@eros>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: sfr@canb.auug.org.au
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, tycho@tycho.ws, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-MAINTAINERS is out of date for leaking_addresses.pl. There is now a tree on
-kernel.org for development of this script.  We have a second maintainer now,
-thanks Tycho.  Development of this scripts was started on kernel-hardening
-mailing list so let's keep it there.
+Hi Stephen,
 
-Update maintainer details; Add mailing list, kernel.org hosted tree, and second
-maintainer.
+Would it be possible to get the development tree for
+scripts/leaking_addresses.pl included in Linux-next please.
 
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
----
- MAINTAINERS | 3 +++
- 1 file changed, 3 insertions(+)
+The tree is hosted on kernel.org
 
-diff --git a/MAINTAINERS b/MAINTAINERS
-index 3bdc260e36b7..e91b5ff1f5d5 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -7905,8 +7905,11 @@ F:	drivers/scsi/53c700*
- 
- LEAKING_ADDRESSES
- M:	Tobin C. Harding <me@tobin.cc>
-+M:	Tycho Andersen <tycho@tycho.ws>
- S:	Maintained
- F:	scripts/leaking_addresses.pl
-+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tobin/leaks.git
-+L:	kernel-hardening@lists.openwall.com
- 
- LED SUBSYSTEM
- M:	Richard Purdie <rpurdie@rpsys.net>
--- 
-2.7.4
+https://git.kernel.org/pub/scm/linux/kernel/git/tobin/leaks.git/
+
+I have created a branch called linux-next.  This branch is not tagged or
+signed.  I'm super new to kernel maintainer branch management, ATM the
+tree mirrors GregKH's staging tree setup i.e 3 branches
+
+	master
+	leaks-testing
+	leaks-next
+
+Development done on leaks-testing.  Once patches have been rinsed
+through LKML move them to leaks-next.  Any holes in that?
+
+
+thanks,
+Tobin.
