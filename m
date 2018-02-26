@@ -1,48 +1,41 @@
-From: "Tobin C. Harding" <me@tobin.cc>
-Subject: [PATCH v2] MAINTAINERS: Update LEAKING_ADDRESSES
-Date: Mon, 26 Feb 2018 09:27:59 +1100
-Message-Id: <1519597679-6101-1-git-send-email-me@tobin.cc>
-To: Kernel Hardening <kernel-hardening@lists.openwall.com>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>, Joe Perches <joe@perches.com>, LKML <linux-kernel@vger.kernel.org>
+Date: Sun, 25 Feb 2018 18:09:53 -0700
+From: Tycho Andersen <tycho@tycho.ws>
+Subject: Re: [PATCH 4/4] leaking_addresses: add scan_once array
+Message-ID: <20180226010953.37z3sz3rwcnj426k@cisco>
+References: <1519008649-15782-1-git-send-email-me@tobin.cc>
+ <1519008649-15782-5-git-send-email-me@tobin.cc>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1519008649-15782-5-git-send-email-me@tobin.cc>
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-MAINTAINERS is out of date for leaking_addresses.pl. There is now a tree on
-kernel.org for development of this script.  We have a second maintainer now,
-thanks Tycho.  Development of this scripts was started on kernel-hardening
-mailing list so let's keep it there.
+Hi Tobin,
 
-Update maintainer details; Add mailing list, kernel.org hosted tree, and second
-maintainer.
+On Mon, Feb 19, 2018 at 01:50:49PM +1100, Tobin C. Harding wrote:
+> +sub already_scanned
+> +{
+> +	my ($filename) = @_;
+> +	state %seen;
+> +
+> +	foreach (@once_only) {
+> +		if (/^$filename$/) {
+> +			if ($seen{$_} == 1) {
 
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
----
+This should be something like,
 
-v1 subject line: [PATCH] MAINTAINERS: Add list, tree, and maintainer
+if (($seen{$_} //= 0) == 1) {
 
-v2
- - Improve subject line to include section
- - Re-order items to conform to standards (suggested by Joe Perches)
+otherwise I get a bunch of uninitialized warnings,
 
- MAINTAINERS | 4 ++++
- 1 file changed, 4 insertions(+)
+Use of uninitialized value in pattern match (m//) at /usr/share/perl/5.26/Math/BigInt.pm line 1199.
+    Math::BigInt::bcmp(Math::BigInt=HASH(0x55dc2f7e4580), undef) called at /usr/share/perl/5.26/Math/BigInt.pm line 1257
+    Math::BigInt::beq(Math::BigInt=HASH(0x55dc2f7e4580), undef) called at /usr/share/perl/5.26/Math/BigInt.pm line 105
+    Math::BigInt::__ANON__(Math::BigInt=HASH(0x55dc2f7e4580), undef, 1) called at ./leaking_addresses.pl line 422
+    main::already_scanned("smaps") called at ./leaking_addresses.pl line 448
+    main::skip("/proc/1/smaps") called at ./leaking_addresses.pl line 509
+    main::walk("/proc", "/sys") called at ./leaking_addresses.pl line 159
 
-diff --git a/MAINTAINERS b/MAINTAINERS
-index 3bdc260e36b7..80fbb7ab2460 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -7905,9 +7905,13 @@ F:	drivers/scsi/53c700*
- 
- LEAKING_ADDRESSES
- M:	Tobin C. Harding <me@tobin.cc>
-+M:	Tycho Andersen <tycho@tycho.ws>
-+L:	kernel-hardening@lists.openwall.com
- S:	Maintained
-+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tobin/leaks.git
- F:	scripts/leaking_addresses.pl
- 
-+
- LED SUBSYSTEM
- M:	Richard Purdie <rpurdie@rpsys.net>
- M:	Jacek Anaszewski <jacek.anaszewski@gmail.com>
--- 
-2.7.4
+Tycho
