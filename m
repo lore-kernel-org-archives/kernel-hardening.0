@@ -1,50 +1,56 @@
 From: "Tobin C. Harding" <me@tobin.cc>
-Subject: [PATCH 0/3] leaking_addresses: limit scan to PID==1
-Date: Tue, 27 Feb 2018 15:45:08 +1100
-Message-Id: <1519706711-18580-1-git-send-email-me@tobin.cc>
+Subject: [PATCH 1/3] leaking_addresses: skip all /proc/PID except /proc/1
+Date: Tue, 27 Feb 2018 15:45:09 +1100
+Message-Id: <1519706711-18580-2-git-send-email-me@tobin.cc>
+In-Reply-To: <1519706711-18580-1-git-send-email-me@tobin.cc>
+References: <1519706711-18580-1-git-send-email-me@tobin.cc>
 To: Kernel Hardening <kernel-hardening@lists.openwall.com>
 Cc: "Tobin C. Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This set implements improvements discussed offline with Tycho as well as
-from suggestions on LKML.
+When the system is idle it is likely that most files under /proc/PID
+will be identical for various processes.  Scanning _all_ the PIDs under
+/proc is unnecessary and implies that we are thoroughly scanning /proc.
+This is _not_ the case because there may be ways userspace can trigger
+creation of /proc files that leak addresses but were not present during
+a scan.  For these two reasons we should exclude all PID directories
+under /proc except '1/'
 
-We no longer bother to scan /proc/PID for every PID on the system.
-Instead we only scan /proc/1 (still scan other non-pid related
-files/directoies).  The reasoning is given in the commit log of patch 1,
-duplicated here for reference:
+Exclude all /proc/PID except /proc/1.
 
-	When the system is idle it is likely that most files under
-	/proc/PID will be identical for various processes.  Scanning
-	_all_ the PIDs under /proc is unnecessary and implies that we
-	are thoroughly scanning /proc. This is _not_ the case because
-	there may be ways userspace can trigger creation of /proc files
-	that leak addresses but were not present during a scan.  For
-	these two reasons we should exclude all PID directories under
-	/proc except '1/' 
-    
-Next, we skip parsing /proc/1/syscall as suggested because the pointers
-listed are user pointers, and negative syscall args will show up like
-kernel pointers.
+Signed-off-by: Tobin C. Harding <me@tobin.cc>
+---
+ scripts/leaking_addresses.pl | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
 
-Finally we remove version number from the script.
-
-This set represents the tip of the branch 'leaks-testing' available at
-
-	git://git.kernel.org/pub/scm/linux/kernel/git/tobin/leaks.git
-
-
-thanks,
-Tobin.
-
-
-Tobin C. Harding (3):
-  leaking_addresses: skip all /proc/PID except /proc/1
-  leaking_addresses: skip '/proc/1/syscall'
-  leaking_addresses: remove version number
-
- scripts/leaking_addresses.pl | 14 ++++++++++++--
- 1 file changed, 12 insertions(+), 2 deletions(-)
-
+diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
+index 6e5bc57caeaa..fb40e2828f43 100755
+--- a/scripts/leaking_addresses.pl
++++ b/scripts/leaking_addresses.pl
+@@ -10,6 +10,14 @@
+ # Use --debug to output path before parsing, this is useful to find files that
+ # cause the script to choke.
+ 
++#
++# When the system is idle it is likely that most files under /proc/PID will be
++# identical for various processes.  Scanning _all_ the PIDs under /proc is
++# unnecessary and implies that we are thoroughly scanning /proc.  This is _not_
++# the case because there may be ways userspace can trigger creation of /proc
++# files that leak addresses but were not present during a scan.  For these two
++# reasons we exclude all PID directories under /proc except '1/'
++
+ use warnings;
+ use strict;
+ use POSIX;
+@@ -472,6 +480,9 @@ sub walk
+ 			my $path = "$pwd/$file";
+ 			next if (-l $path);
+ 
++			# skip /proc/PID except /proc/1
++			next if ($path =~ /\/proc\/(?:[2-9][0-9]*|1[0-9]+)/);
++
+ 			next if (skip($path));
+ 
+ 			if (-d $path) {
 -- 
 2.7.4
