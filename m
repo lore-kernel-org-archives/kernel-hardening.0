@@ -1,204 +1,55 @@
+Subject: Re: [PATCH 0/1] Zero initialise kernel stack variables
+References: <20180227111532.1144-1-ppandit@redhat.com>
+ <CAGXu5j+-qUrt-8kQ6WRUM=DH8K3Zgmm2ejRgiKJMLDrSXRtmdg@mail.gmail.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <f5f8d06d-461f-f4ad-bc32-5a18f5359353@redhat.com>
+Date: Tue, 27 Feb 2018 15:26:10 -0800
 MIME-Version: 1.0
-In-Reply-To: <CALCETrUTiUeV71jgYWup0CZwG8eQ3=W7X5FgJqmgPxnYbFsccw@mail.gmail.com>
-References: <20180227004121.3633-1-mic@digikod.net> <20180227004121.3633-9-mic@digikod.net>
- <CALCETrUpDbusLPyZijR6MpZd5-0x0d9KuQHBaavqP1_GZ2tjfg@mail.gmail.com>
- <D6B96EE0-8932-4845-BFA5-4C65E5189AFB@amacapital.net> <0e7d0512-12a3-568d-aa55-3def4b91c6d0@digikod.net>
- <CALCETrUTiUeV71jgYWup0CZwG8eQ3=W7X5FgJqmgPxnYbFsccw@mail.gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Tue, 27 Feb 2018 23:23:36 +0000
-Message-ID: <CALCETrV_BVc44YYq6g8PCpeUYuqQaooVoQSQ7Y=VpuaBshQgQg@mail.gmail.com>
-Subject: Re: [PATCH bpf-next v8 08/11] landlock: Add ptrace restrictions
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Andy Lutomirski <luto@kernel.org>
-Cc: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
+In-Reply-To: <CAGXu5j+-qUrt-8kQ6WRUM=DH8K3Zgmm2ejRgiKJMLDrSXRtmdg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>, P J P <ppandit@redhat.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Florian Weimer <fweimer@redhat.com>, P J P <pjp@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 27, 2018 at 11:02 PM, Andy Lutomirski <luto@kernel.org> wrote:
-> On Tue, Feb 27, 2018 at 10:14 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.n=
-et> wrote:
+On 02/27/2018 11:28 AM, Kees Cook wrote:
+> On Tue, Feb 27, 2018 at 3:15 AM, P J P <ppandit@redhat.com> wrote:
+>> Hello,
+> 
+> Hi!
+> 
 >>
->> On 27/02/2018 06:01, Andy Lutomirski wrote:
->>>
->>>
->>>> On Feb 26, 2018, at 8:17 PM, Andy Lutomirski <luto@amacapital.net> wro=
-te:
->>>>
->>>>> On Tue, Feb 27, 2018 at 12:41 AM, Micka=C3=ABl Sala=C3=BCn <mic@digik=
-od.net> wrote:
->>>>> A landlocked process has less privileges than a non-landlocked proces=
-s
->>>>> and must then be subject to additional restrictions when manipulating
->>>>> processes. To be allowed to use ptrace(2) and related syscalls on a
->>>>> target process, a landlocked process must have a subset of the target
->>>>> process' rules.
->>>>>
->>>>> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
->>>>> Cc: Alexei Starovoitov <ast@kernel.org>
->>>>> Cc: Andy Lutomirski <luto@amacapital.net>
->>>>> Cc: Daniel Borkmann <daniel@iogearbox.net>
->>>>> Cc: David S. Miller <davem@davemloft.net>
->>>>> Cc: James Morris <james.l.morris@oracle.com>
->>>>> Cc: Kees Cook <keescook@chromium.org>
->>>>> Cc: Serge E. Hallyn <serge@hallyn.com>
->>>>> ---
->>>>>
->>>>> Changes since v6:
->>>>> * factor out ptrace check
->>>>> * constify pointers
->>>>> * cleanup headers
->>>>> * use the new security_add_hooks()
->>>>> ---
->>>>> security/landlock/Makefile       |   2 +-
->>>>> security/landlock/hooks_ptrace.c | 124 ++++++++++++++++++++++++++++++=
-+++++++++
->>>>> security/landlock/hooks_ptrace.h |  11 ++++
->>>>> security/landlock/init.c         |   2 +
->>>>> 4 files changed, 138 insertions(+), 1 deletion(-)
->>>>> create mode 100644 security/landlock/hooks_ptrace.c
->>>>> create mode 100644 security/landlock/hooks_ptrace.h
->>>>>
->>>>> diff --git a/security/landlock/Makefile b/security/landlock/Makefile
->>>>> index d0f532a93b4e..605504d852d3 100644
->>>>> --- a/security/landlock/Makefile
->>>>> +++ b/security/landlock/Makefile
->>>>> @@ -3,4 +3,4 @@ obj-$(CONFIG_SECURITY_LANDLOCK) :=3D landlock.o
->>>>> landlock-y :=3D init.o chain.o task.o \
->>>>>        tag.o tag_fs.o \
->>>>>        enforce.o enforce_seccomp.o \
->>>>> -       hooks.o hooks_cred.o hooks_fs.o
->>>>> +       hooks.o hooks_cred.o hooks_fs.o hooks_ptrace.o
->>>>> diff --git a/security/landlock/hooks_ptrace.c b/security/landlock/hoo=
-ks_ptrace.c
->>>>> new file mode 100644
->>>>> index 000000000000..f1b977b9c808
->>>>> --- /dev/null
->>>>> +++ b/security/landlock/hooks_ptrace.c
->>>>> @@ -0,0 +1,124 @@
->>>>> +/*
->>>>> + * Landlock LSM - ptrace hooks
->>>>> + *
->>>>> + * Copyright =C2=A9 2017 Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
->>>>> + *
->>>>> + * This program is free software; you can redistribute it and/or mod=
-ify
->>>>> + * it under the terms of the GNU General Public License version 2, a=
-s
->>>>> + * published by the Free Software Foundation.
->>>>> + */
->>>>> +
->>>>> +#include <asm/current.h>
->>>>> +#include <linux/errno.h>
->>>>> +#include <linux/kernel.h> /* ARRAY_SIZE */
->>>>> +#include <linux/lsm_hooks.h>
->>>>> +#include <linux/sched.h> /* struct task_struct */
->>>>> +#include <linux/seccomp.h>
->>>>> +
->>>>> +#include "common.h" /* struct landlock_prog_set */
->>>>> +#include "hooks.h" /* landlocked() */
->>>>> +#include "hooks_ptrace.h"
->>>>> +
->>>>> +static bool progs_are_subset(const struct landlock_prog_set *parent,
->>>>> +               const struct landlock_prog_set *child)
->>>>> +{
->>>>> +       size_t i;
->>>>> +
->>>>> +       if (!parent || !child)
->>>>> +               return false;
->>>>> +       if (parent =3D=3D child)
->>>>> +               return true;
->>>>> +
->>>>> +       for (i =3D 0; i < ARRAY_SIZE(child->programs); i++) {
->>>>
->>>> ARRAY_SIZE(child->programs) seems misleading.  Is there no define
->>>> NUM_LANDLOCK_PROG_TYPES or similar?
->>>>
->>>>> +               struct landlock_prog_list *walker;
->>>>> +               bool found_parent =3D false;
->>>>> +
->>>>> +               if (!parent->programs[i])
->>>>> +                       continue;
->>>>> +               for (walker =3D child->programs[i]; walker;
->>>>> +                               walker =3D walker->prev) {
->>>>> +                       if (walker =3D=3D parent->programs[i]) {
->>>>> +                               found_parent =3D true;
->>>>> +                               break;
->>>>> +                       }
->>>>> +               }
->>>>> +               if (!found_parent)
->>>>> +                       return false;
->>>>> +       }
->>>>> +       return true;
->>>>> +}
->>>>
->>>> If you used seccomp, you'd get this type of check for free, and it
->>>> would be a lot easier to comprehend.  AFAICT the only extra leniency
->>>> you're granting is that you're agnostic to the order in which the
->>>> rules associated with different program types were applied, which
->>>> could easily be added to seccomp.
->>>
->>> On second thought, this is all way too complicated.  I think the correc=
-t logic is either "if you are filtered by Landlock, you cannot ptrace anyth=
-ing" or to delete this patch entirely.
+>> Please see:
+>>    -> https://gcc.gnu.org/ml/gcc-patches/2014-06/msg00615.html
 >>
->> This does not fit a lot of use cases like running a container
->> constrained with some Landlock programs. We should not deny users the
->> ability to debug their stuff.
+>> This experimental patch by Florian Weimer(CC'd) adds an option
+>> '-finit-local-vars' to gcc(1) compiler. When a program(or kernel)
+>> is built using this option, its automatic(local) variables are
+>> initialised with zero(0). This could significantly reduce the kernel
+>> information leakage issues.
 >>
->> This patch add the minimal protection which are needed to have
->> meaningful Landlock security policy. Without it, they may be easily
->> bypassable, hence useless.
+>> A dnf(8) repository of the latest gcc-7.3.1 package built with the above
+>> patch and kernel-4.15.5 package built using '-finit-local-vars' option
+>> on Fedora-27 is available below
 >>
->
-> I think you're wrong here.  Any sane container trying to use Landlock
-> like this would also create a PID namespace.  Problem solved.  I still
-> think you should drop this patch.
->
+>>    -> https://pjp.fedorapeople.org/init-vars/
 >>
->>> If something like Tycho's notifiers goes in, then it's not obvious that=
-, just because you have the same set of filters, you have the same privileg=
-e.  Similarly, if a feature that lets a filter query its cgroup goes in (an=
-d you proposed this once!) then the logic you implemented here is wrong.
->>
->> I don't get your point. Please take a look at the tests (patch 10).
->
-> I don't know what you want me to look at.
->
-> What I'm saying is: suppose I write a filter like this:
->
-> bool allow_some_action(void)
-> {
->   int value_from_container_manager =3D call_out_to_user_notifier();
->   return value_from_container_manager =3D=3D 42;
-> }
->
-> or
->
-> bool allow_some_action(void)
-> {
->   return my_cgroup_is("/foo/bar");
-> }
->
-> In both of these cases, your code will do the wrong thing.
->
->>
->>>
->>> Or you could just say that it's the responsibility of a Landlock user t=
-o properly filter ptrace() just like it's the responsibility of seccomp use=
-rs to filter ptrace if needed.
->>
->> A user should be able to enforce a security policy on ptrace as well,
->> but this patch enforce a minimal set of security boundaries. It will be
->> easy to add a new Landlock program type to get this kind of access contr=
-ol.
->
-> It sounds like you want Landlock to be a complete container system all
-> by itself.  I disagree with that design goal.
+>> This same kernel is running on my F27 test machine as I write this.
+>> There is no slowness or notice-able performance impact as such.
+> 
+> Unfortunately "noticeable" isn't going to be a viable metric. You'll
+> need to do some real-world benchmarks (i.e. kernel builds, hackbench,
+> etc), and compare the results. Even just initializing
+> passed-by-reference variables (GCC_PLUGIN_STRUCTLEAK_BYREF_ALL) had
+> measurable performance impact.
+> 
 
-Having actually read your series more correctly now (oops!), I still
-think that this patch should be dropped.  I can see an argument for
-having a flag that one can set when adding a seccomp filter that says
-"prevent ptrace of any child that doesn't have this exact stack
-installed", but I think that could be added later and should not be
-part of an initial submission.  For now, Landlock users can block
-ptrace() entirely or use PID namespaces.
+
+For comparison (-300 is official Fedora, -301 is from the repo):
+
+    text	   data	    bss	    dec	    hex	filename
+16948437	6771094	1777872	25497403	1850f3b	/lib/debug/lib/modules/4.15.5-300.fc27.x86_64/vmlinux
+16970359	6776078	1777872	25524309	1857855	/lib/debug/lib/modules/4.15.5-301.fc27.x86_64/vmlinux
+
+Thanks,
+Laura
