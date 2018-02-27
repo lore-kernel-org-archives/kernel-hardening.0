@@ -1,61 +1,245 @@
-From: P J P <ppandit@redhat.com>
-Subject: [PATCH 1/1] Add an option to build kernel with -finit-local-vars
-Date: Tue, 27 Feb 2018 16:45:32 +0530
-Message-Id: <20180227111532.1144-2-ppandit@redhat.com>
-In-Reply-To: <20180227111532.1144-1-ppandit@redhat.com>
-References: <20180227111532.1144-1-ppandit@redhat.com>
-To: kernel-hardening@lists.openwall.com
-Cc: Florian Weimer <fweimer@redhat.com>, P J P <pjp@fedoraproject.org>
+From: Ilya Smith <blackzert@gmail.com>
+Subject: [RFC PATCH] Randomization of address chosen by mmap.
+Date: Tue, 27 Feb 2018 16:13:38 +0300
+Message-Id: <20180227131338.3699-1-blackzert@gmail.com>
+To: akpm@linux-foundation.org, dan.j.williams@intel.com, mhocko@suse.com, kirill.shutemov@linux.intel.com, jack@suse.cz, jglisse@redhat.com, hughd@google.com, willy@infradead.org, deller@gmx.de, aarcange@redhat.com, oleg@redhat.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Ilya Smith <blackzert@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: P J P <pjp@fedoraproject.org>
+This is more proof of concept. Current implementation doesn't randomize
+address returned by mmap. All the entropy ends with choosing mmap_base_addr
+at the process creation. After that mmap build very predictable layout
+of address space. It allows to bypass ASLR in many cases.
+This patch make randomization of address on any mmap call.
+It works good on 64 bit system, but usage under 32 bit systems is not
+recommended. This approach uses current implementation to simplify search
+of address.
 
-Add a configuration option to build kernel with -finit-local-vars
-compiler option.[*] It'll zero initialize the automatic kernel
-function variables, thus helping to reduce kernel information
-leakage issues.
+Here I would like to discuss this approach.
 
-[*] https://gcc.gnu.org/ml/gcc-patches/2014-06/msg00615.html
-
-Signed-off-by: P J P <pjp@fedoraproject.org>
+Signed-off-by: Ilya Smith <blackzert@gmail.com>
 ---
- Makefile          | 4 ++++
- lib/Kconfig.debug | 8 ++++++++
- 2 files changed, 12 insertions(+)
+ include/linux/mm.h |   4 ++
+ mm/mmap.c          | 171 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 175 insertions(+)
 
-diff --git a/Makefile b/Makefile
-index 659a7780aeb3..7b25a77470ca 100644
---- a/Makefile
-+++ b/Makefile
-@@ -781,6 +781,10 @@ KBUILD_CFLAGS 	+= $(call cc-option, -femit-struct-debug-baseonly) \
- 		   $(call cc-option,-fno-var-tracking)
- endif
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index ad06d42adb1a..f81b6c8a0bc5 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -25,6 +25,7 @@
+ #include <linux/err.h>
+ #include <linux/page_ref.h>
+ #include <linux/memremap.h>
++#include <linux/sched.h>
  
-+ifdef CONFIG_FINIT_LOCAL_VARS
-+KBUILD_CFLAGS  += $(call cc-option, -finit-local-vars)
-+endif
-+
- ifdef CONFIG_FUNCTION_TRACER
- ifndef CC_FLAGS_FTRACE
- CC_FLAGS_FTRACE := -pg
-diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-index 64155e310a9f..8da18d145c5b 100644
---- a/lib/Kconfig.debug
-+++ b/lib/Kconfig.debug
-@@ -206,6 +206,14 @@ config ENABLE_WARN_DEPRECATED
- 	  Disable this to suppress the "warning: 'foo' is deprecated
- 	  (declared at kernel/power/somefile.c:1234)" messages.
+ struct mempolicy;
+ struct anon_vma;
+@@ -2253,6 +2254,7 @@ struct vm_unmapped_area_info {
+ 	unsigned long align_offset;
+ };
  
-+config FINIT_LOCAL_VARS
-+       bool "Enable -finit-local-vars"
-+       default n
-+       help
-+         Enable the -finit-local-vars compiler option during the kernel build.
-+         It'll zero initialise the automatic kernel function variables, thus
-+         helping to reduce kernel information leakage issues.
++extern unsigned long unmapped_area_random(struct vm_unmapped_area_info *info);
+ extern unsigned long unmapped_area(struct vm_unmapped_area_info *info);
+ extern unsigned long unmapped_area_topdown(struct vm_unmapped_area_info *info);
+ 
+@@ -2268,6 +2270,8 @@ extern unsigned long unmapped_area_topdown(struct vm_unmapped_area_info *info);
+ static inline unsigned long
+ vm_unmapped_area(struct vm_unmapped_area_info *info)
+ {
++	if (current->flags & PF_RANDOMIZE)
++		return unmapped_area_random(info);
+ 	if (info->flags & VM_UNMAPPED_AREA_TOPDOWN)
+ 		return unmapped_area_topdown(info);
+ 	else
+diff --git a/mm/mmap.c b/mm/mmap.c
+index 9efdc021ad22..58110e065417 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -45,6 +45,7 @@
+ #include <linux/moduleparam.h>
+ #include <linux/pkeys.h>
+ #include <linux/oom.h>
++#include <linux/random.h>
+ 
+ #include <linux/uaccess.h>
+ #include <asm/cacheflush.h>
+@@ -1780,6 +1781,176 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
+ 	return error;
+ }
+ 
++unsigned long unmapped_area_random(struct vm_unmapped_area_info *info)
++{
++	// first lets find right border with unmapped_area_topdown
++	struct mm_struct *mm = current->mm;
++	struct vm_area_struct *vma;
++	struct vm_area_struct *right_vma = 0;
++	unsigned long entropy;
++	unsigned int entropy_count;
++	unsigned long length, low_limit, high_limit, gap_start, gap_end;
++	unsigned long addr, low, high;
 +
- config ENABLE_MUST_CHECK
- 	bool "Enable __must_check logic"
- 	default y
++	/* Adjust search length to account for worst case alignment overhead */
++	length = info->length + info->align_mask;
++	if (length < info->length)
++		return -ENOMEM;
++
++	/*
++	 * Adjust search limits by the desired length.
++	 * See implementation comment at top of unmapped_area().
++	 */
++	gap_end = info->high_limit;
++	if (gap_end < length)
++		return -ENOMEM;
++	high_limit = gap_end - length;
++
++	info->low_limit = 0x10000;
++	if (info->low_limit > high_limit)
++		return -ENOMEM;
++	low_limit = info->low_limit + length;
++
++	/* Check highest gap, which does not precede any rbtree node */
++	gap_start = mm->highest_vm_end;
++	if (gap_start <= high_limit)
++		goto found;
++
++	/* Check if rbtree root looks promising */
++	if (RB_EMPTY_ROOT(&mm->mm_rb))
++		return -ENOMEM;
++	vma = rb_entry(mm->mm_rb.rb_node, struct vm_area_struct, vm_rb);
++	if (vma->rb_subtree_gap < length)
++		return -ENOMEM;
++
++	while (true) {
++		/* Visit right subtree if it looks promising */
++		gap_start = vma->vm_prev ? vm_end_gap(vma->vm_prev) : 0;
++		if (gap_start <= high_limit && vma->vm_rb.rb_right) {
++			struct vm_area_struct *right =
++				rb_entry(vma->vm_rb.rb_right,
++					 struct vm_area_struct, vm_rb);
++			if (right->rb_subtree_gap >= length) {
++				vma = right;
++				continue;
++			}
++		}
++
++check_current_down:
++		/* Check if current node has a suitable gap */
++		gap_end = vm_start_gap(vma);
++		if (gap_end < low_limit)
++			return -ENOMEM;
++		if (gap_start <= high_limit &&
++		    gap_end > gap_start && gap_end - gap_start >= length)
++			goto found;
++
++		/* Visit left subtree if it looks promising */
++		if (vma->vm_rb.rb_left) {
++			struct vm_area_struct *left =
++				rb_entry(vma->vm_rb.rb_left,
++					 struct vm_area_struct, vm_rb);
++			if (left->rb_subtree_gap >= length) {
++				vma = left;
++				continue;
++			}
++		}
++
++		/* Go back up the rbtree to find next candidate node */
++		while (true) {
++			struct rb_node *prev = &vma->vm_rb;
++
++			if (!rb_parent(prev))
++				return -ENOMEM;
++			vma = rb_entry(rb_parent(prev),
++				       struct vm_area_struct, vm_rb);
++			if (prev == vma->vm_rb.rb_right) {
++				gap_start = vma->vm_prev ?
++					vm_end_gap(vma->vm_prev) : 0;
++				goto check_current_down;
++			}
++		}
++	}
++
++found:
++	right_vma = vma;
++	low = gap_start;
++	high = gap_end - length;
++
++	entropy = get_random_long();
++	entropy_count = 0;
++
++	// from left node to right we check if node is fine and
++	// randomly select it.
++	vma = mm->mmap;
++	while (vma != right_vma) {
++		/* Visit left subtree if it looks promising */
++		gap_end = vm_start_gap(vma);
++		if (gap_end >= low_limit && vma->vm_rb.rb_left) {
++			struct vm_area_struct *left =
++				rb_entry(vma->vm_rb.rb_left,
++					 struct vm_area_struct, vm_rb);
++			if (left->rb_subtree_gap >= length) {
++				vma = left;
++				continue;
++			}
++		}
++
++		gap_start = vma->vm_prev ? vm_end_gap(vma->vm_prev) : low_limit;
++check_current_up:
++		/* Check if current node has a suitable gap */
++		if (gap_start > high_limit)
++			break;
++		if (gap_end >= low_limit &&
++		    gap_end > gap_start && gap_end - gap_start >= length) {
++			if (entropy & 1) {
++				low = gap_start;
++				high = gap_end - length;
++			}
++			entropy >>= 1;
++			if (++entropy_count == 64) {
++				entropy = get_random_long();
++				entropy_count = 0;
++			}
++		}
++
++		/* Visit right subtree if it looks promising */
++		if (vma->vm_rb.rb_right) {
++			struct vm_area_struct *right =
++				rb_entry(vma->vm_rb.rb_right,
++					 struct vm_area_struct, vm_rb);
++			if (right->rb_subtree_gap >= length) {
++				vma = right;
++				continue;
++			}
++		}
++
++		/* Go back up the rbtree to find next candidate node */
++		while (true) {
++			struct rb_node *prev = &vma->vm_rb;
++
++			if (!rb_parent(prev))
++				BUG(); // this should not happen
++			vma = rb_entry(rb_parent(prev),
++				       struct vm_area_struct, vm_rb);
++			if (prev == vma->vm_rb.rb_left) {
++				gap_start = vm_end_gap(vma->vm_prev);
++				gap_end = vm_start_gap(vma);
++				if (vma == right_vma)
++					break;
++				goto check_current_up;
++			}
++		}
++	}
++
++	if (high == low)
++		return low;
++
++	addr = get_random_long() % ((high - low) >> PAGE_SHIFT);
++	addr = low + (addr << PAGE_SHIFT);
++	return addr;
++}
++
+ unsigned long unmapped_area(struct vm_unmapped_area_info *info)
+ {
+ 	/*
 -- 
-2.14.3
+2.14.1
