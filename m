@@ -1,274 +1,319 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CAGXu5jKYSRqsHo8rqvyR1ZLQ2MT+UnG=F4_RTEp7Sq9q9qsPtw@mail.gmail.com>
-References: <1519729200-16056-1-git-send-email-s.mesoraca16@gmail.com> <CAGXu5jKYSRqsHo8rqvyR1ZLQ2MT+UnG=F4_RTEp7Sq9q9qsPtw@mail.gmail.com>
+In-Reply-To: <20180227131338.3699-1-blackzert@gmail.com>
+References: <20180227131338.3699-1-blackzert@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 27 Feb 2018 12:22:18 -0800
-Message-ID: <CAGXu5j+RELwBqkLrpQ0zHdHM3u2FxgcKokumtSS8KpkCeUgT2g@mail.gmail.com>
-Subject: Re: [PATCH v4] Protected FIFOs and regular files
+Date: Tue, 27 Feb 2018 12:52:29 -0800
+Message-ID: <CAGXu5jKF7ysJqj57ZktrcVL4G2NWOFHCud8dtXFHLs=tvVLXnQ@mail.gmail.com>
+Subject: Re: [RFC PATCH] Randomization of address chosen by mmap.
 Content-Type: text/plain; charset="UTF-8"
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>, Alexander Viro <viro@zeniv.linux.org.uk>, David Laight <David.Laight@aculab.com>, Ian Campbell <ijc@hellion.org.uk>, Jann Horn <jannh@google.com>, Matthew Wilcox <willy@infradead.org>, Pavel Vasilyev <dixlor@gmail.com>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>, "Tobin C. Harding" <me@tobin.cc>
+Content-Transfer-Encoding: quoted-printable
+To: Ilya Smith <blackzert@gmail.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Michal Hocko <mhocko@suse.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Jan Kara <jack@suse.cz>, Jerome Glisse <jglisse@redhat.com>, Hugh Dickins <hughd@google.com>, Matthew Wilcox <willy@infradead.org>, Helge Deller <deller@gmx.de>, Andrea Arcangeli <aarcange@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 27, 2018 at 11:47 AM, Kees Cook <keescook@chromium.org> wrote:
-> On Tue, Feb 27, 2018 at 3:00 AM, Salvatore Mesoraca
-> <s.mesoraca16@gmail.com> wrote:
->> Disallows open of FIFOs or regular files not owned by the user in world
->> writable sticky directories, unless the owner is the same as that of
->> the directory or the file is opened without the O_CREAT flag.
->> The purpose is to make data spoofing attacks harder.
->> This protection can be turned on and off separately for FIFOs and regular
->> files via sysctl, just like the symlinks/hardlinks protection.
->> This patch is based on Openwall's "HARDEN_FIFO" feature by Solar
->> Designer.
->>
->> This is a brief list of old vulnerabilities that could have been prevented
->> by this feature, some of them even allow for privilege escalation:
->> CVE-2000-1134
->> CVE-2007-3852
->> CVE-2008-0525
->> CVE-2009-0416
->> CVE-2011-4834
->> CVE-2015-1838
->> CVE-2015-7442
->> CVE-2016-7489
->>
->> This list is not meant to be complete. It's difficult to track down
->> all vulnerabilities of this kind because they were often reported
->> without any mention of this particular attack vector.
->> In fact, before hardlinks/symlinks restrictions, fifos/regular
->> files weren't the favorite vehicle to exploit them.
->>
->> Suggested-by: Solar Designer <solar@openwall.com>
->> Suggested-by: Kees Cook <keescook@chromium.org>
->> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
->> ---
->>
->> Notes:
->>     Changes in v3:
->>         - Fixed format string for uid_t that is unsigned
->>           (suggested by Jann Horn).
->>     Changes in v4:
->>         - Some English fixes (suggested by Tobin C. Harding).
->>         - The original patchset has been split to help this part
->>           land upstream (suggested by Solar Designer).
->>
->>  Documentation/sysctl/fs.txt | 36 ++++++++++++++++++++++++++
->>  fs/namei.c                  | 61 ++++++++++++++++++++++++++++++++++++++++++---
->>  include/linux/fs.h          |  2 ++
->>  kernel/sysctl.c             | 18 +++++++++++++
->>  4 files changed, 114 insertions(+), 3 deletions(-)
->>
->> diff --git a/Documentation/sysctl/fs.txt b/Documentation/sysctl/fs.txt
->> index 6c00c1e..819caf8 100644
->> --- a/Documentation/sysctl/fs.txt
->> +++ b/Documentation/sysctl/fs.txt
->> @@ -34,7 +34,9 @@ Currently, these files are in /proc/sys/fs:
->>  - overflowgid
->>  - pipe-user-pages-hard
->>  - pipe-user-pages-soft
->> +- protected_fifos
->>  - protected_hardlinks
->> +- protected_regular
->>  - protected_symlinks
->>  - suid_dumpable
->>  - super-max
->> @@ -182,6 +184,24 @@ applied.
->>
->>  ==============================================================
->>
->> +protected_fifos:
->> +
->> +The intent of this protection is to avoid unintentional writes to
->> +an attacker-controlled FIFO, where a program expected to create a regular
->> +file.
->> +
->> +When set to "0", writing to FIFOs is unrestricted.
->> +
->> +When set to "1" don't allow O_CREAT open on FIFOs that we don't own
->> +in world writable sticky directories, unless they are owned by the
->> +owner of the directory.
->> +
->> +When set to "2" it also applies to group writable sticky directories.
->> +
->> +This protection is based on the restrictions in Openwall.
->> +
->> +==============================================================
->> +
->>  protected_hardlinks:
->>
->>  A long-standing class of security issues is the hardlink-based
->> @@ -202,6 +222,22 @@ This protection is based on the restrictions in Openwall and grsecurity.
->>
->>  ==============================================================
->>
->> +protected_regular:
->> +
->> +This protection is similar to protected_fifos, but it
->> +avoids writes to an attacker-controlled regular file, where a program
->> +expected to create one.
->> +
->> +When set to "0", writing to regular files is unrestricted.
->> +
->> +When set to "1" don't allow O_CREAT open on regular files that we
->> +don't own in world writable sticky directories, unless they are
->> +owned by the owner of the directory.
->> +
->> +When set to "2" it also applies to group writable sticky directories.
->> +
->> +==============================================================
->> +
->>  protected_symlinks:
->>
->>  A long-standing class of security issues is the symlink-based
->> diff --git a/fs/namei.c b/fs/namei.c
->> index 921ae32..eaab668 100644
->> --- a/fs/namei.c
->> +++ b/fs/namei.c
->> @@ -883,6 +883,8 @@ static inline void put_link(struct nameidata *nd)
->>
->>  int sysctl_protected_symlinks __read_mostly = 0;
->>  int sysctl_protected_hardlinks __read_mostly = 0;
->> +int sysctl_protected_fifos __read_mostly;
->> +int sysctl_protected_regular __read_mostly;
->>
->>  /**
->>   * may_follow_link - Check symlink following for unsafe situations
->> @@ -996,6 +998,54 @@ static int may_linkat(struct path *link)
->>         return -EPERM;
->>  }
->>
->> +/**
->> + * may_create_in_sticky - Check whether an O_CREAT open in a sticky directory
->> + *                       should be allowed, or not, on files that already
->> + *                       exist.
->> + * @dir: the sticky parent directory
->> + * @name: the file name
->> + * @inode: the inode of the file to open
->> + *
->> + * Block an O_CREAT open of a FIFO (or a regular file) when:
->> + *   - sysctl_protected_fifos (or sysctl_protected_regular) is enabled
->> + *   - the file already exists
->> + *   - we are in a sticky directory
->> + *   - we don't own the file
->> + *   - the owner of the directory doesn't own the file
->> + *   - the directory is world writable
->> + * If the sysctl_protected_fifos (or sysctl_protected_regular) is set to 2
->> + * the directory doesn't have to be world writable: being group writable will
->> + * be enough.
->> + *
->> + * Returns 0 if the open is allowed, -ve on error.
->> + */
->> +static int may_create_in_sticky(struct dentry * const dir,
->> +                               const unsigned char * const name,
->> +                               struct inode * const inode)
->> +{
->> +       if ((!sysctl_protected_fifos && S_ISFIFO(inode->i_mode)) ||
->> +           (!sysctl_protected_regular && S_ISREG(inode->i_mode)) ||
->> +           likely(!(dir->d_inode->i_mode & S_ISVTX)) ||
->> +           uid_eq(inode->i_uid, dir->d_inode->i_uid) ||
->> +           uid_eq(current_fsuid(), inode->i_uid))
->> +               return 0;
->> +
->> +       if (likely(dir->d_inode->i_mode & 0002) ||
->> +           (dir->d_inode->i_mode & 0020 &&
->> +            ((sysctl_protected_fifos >= 2 && S_ISFIFO(inode->i_mode)) ||
->> +             (sysctl_protected_regular >= 2 && S_ISREG(inode->i_mode))))) {
->> +               pr_notice_ratelimited("denied writing in '%s' of %u.%u in a sticky directory by UID %u, EUID %u, process %s:%d.\n",
->> +                                     name,
->> +                                     from_kuid(&init_user_ns, inode->i_uid),
->> +                                     from_kgid(&init_user_ns, inode->i_gid),
->> +                                     from_kuid(&init_user_ns, current_uid()),
->> +                                     from_kuid(&init_user_ns, current_euid()),
->> +                                     current->comm, current->pid);
+On Tue, Feb 27, 2018 at 5:13 AM, Ilya Smith <blackzert@gmail.com> wrote:
+> This is more proof of concept. Current implementation doesn't randomize
+> address returned by mmap. All the entropy ends with choosing mmap_base_ad=
+dr
+> at the process creation. After that mmap build very predictable layout
+> of address space. It allows to bypass ASLR in many cases.
+
+I'd like more details on the threat model here; if it's just a matter
+of .so loading order, I wonder if load order randomization would get a
+comparable level of uncertainty without the memory fragmentation,
+like:
+https://android-review.googlesource.com/c/platform/bionic/+/178130/2
+If glibc, for example, could do this too, it would go a long way to
+improving things. Obviously, it's not as extreme as loading stuff all
+over the place, but it seems like the effect for an attack would be
+similar. The search _area_ remains small, but the ordering wouldn't be
+deterministic any more.
+
+> This patch make randomization of address on any mmap call.
+> It works good on 64 bit system, but usage under 32 bit systems is not
+> recommended. This approach uses current implementation to simplify search
+> of address.
+
+It would be worth spelling out the "not recommended" bit some more
+too: this fragments the mmap space, which has some serious issues on
+smaller address spaces if you get into a situation where you cannot
+allocate a hole large enough between the other allocations.
+
 >
-> Instead of this pr_notice_ratelimited(), I think
-> audit_log_link_denied() should be refactored and used instead. Drop
-> this line from this patch, and I think this is great as-is. The
-> logging can be separate (as it may get heavily bike-shed, as I
-> experienced with hard/symlink restrictions).
+> Here I would like to discuss this approach.
 >
-> Otherwise, I think this looks great.
+> Signed-off-by: Ilya Smith <blackzert@gmail.com>
+> ---
+>  include/linux/mm.h |   4 ++
+>  mm/mmap.c          | 171 +++++++++++++++++++++++++++++++++++++++++++++++=
+++++++
+>  2 files changed, 175 insertions(+)
 >
-> Acked-by: Kees Cook <keescook@chromium.org>
+> diff --git a/include/linux/mm.h b/include/linux/mm.h
+> index ad06d42adb1a..f81b6c8a0bc5 100644
+> --- a/include/linux/mm.h
+> +++ b/include/linux/mm.h
+> @@ -25,6 +25,7 @@
+>  #include <linux/err.h>
+>  #include <linux/page_ref.h>
+>  #include <linux/memremap.h>
+> +#include <linux/sched.h>
+>
+>  struct mempolicy;
+>  struct anon_vma;
+> @@ -2253,6 +2254,7 @@ struct vm_unmapped_area_info {
+>         unsigned long align_offset;
+>  };
+>
+> +extern unsigned long unmapped_area_random(struct vm_unmapped_area_info *=
+info);
+>  extern unsigned long unmapped_area(struct vm_unmapped_area_info *info);
+>  extern unsigned long unmapped_area_topdown(struct vm_unmapped_area_info =
+*info);
+>
+> @@ -2268,6 +2270,8 @@ extern unsigned long unmapped_area_topdown(struct v=
+m_unmapped_area_info *info);
+>  static inline unsigned long
+>  vm_unmapped_area(struct vm_unmapped_area_info *info)
+>  {
+> +       if (current->flags & PF_RANDOMIZE)
+> +               return unmapped_area_random(info);
 
-I've also tested this now; so:
+I think this will need a larger knob -- doing this by default is
+likely to break stuff, I'd imagine? Bikeshedding: I'm not sure if this
+should be setting "3" for /proc/sys/kernel/randomize_va_space, or a
+separate one like /proc/sys/mm/randomize_mmap_allocation.
 
-Tested-by: Kees Cook <keescook@chromium.org>
+>         if (info->flags & VM_UNMAPPED_AREA_TOPDOWN)
+>                 return unmapped_area_topdown(info);
+>         else
+> diff --git a/mm/mmap.c b/mm/mmap.c
+> index 9efdc021ad22..58110e065417 100644
+> --- a/mm/mmap.c
+> +++ b/mm/mmap.c
+> @@ -45,6 +45,7 @@
+>  #include <linux/moduleparam.h>
+>  #include <linux/pkeys.h>
+>  #include <linux/oom.h>
+> +#include <linux/random.h>
+>
+>  #include <linux/uaccess.h>
+>  #include <asm/cacheflush.h>
+> @@ -1780,6 +1781,176 @@ unsigned long mmap_region(struct file *file, unsi=
+gned long addr,
+>         return error;
+>  }
+>
+> +unsigned long unmapped_area_random(struct vm_unmapped_area_info *info)
+> +{
+> +       // first lets find right border with unmapped_area_topdown
 
-# grep . /proc/sys/fs/protected_*
-/proc/sys/fs/protected_fifos:0
-/proc/sys/fs/protected_hardlinks:1
-/proc/sys/fs/protected_regular:0
-/proc/sys/fs/protected_symlinks:1
-# cd /tmp
-# mkfifo fifo
-# touch regular
-# chown nobody fifo regular
-# chmod a+w fifo regular
-# chmod a+w regular
-# cat fifo > output &
-# su - keescook
-$ cd /tmp
-$ python
-...
->>> import os
->>> fd = os.open("fifo", os.O_RDWR | os.O_CREAT)
->>> os.write(fd, "OHAI\n")
-5
->>> fd = os.open("regular", os.O_RDWR | os.O_CREAT)
->>> os.write(fd, "OHAI\n")
-5
->>> exit()
-$ exit
-# echo 1 > /proc/sys/fs/protected_fifos
-# echo 1 > /proc/sys/fs/protected_regular
-# su - keescook
-$ cd /tmp
-$ python
-...
->>> import os
->>> fd = os.open("fifo", os.O_RDWR | os.O_CREAT)
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-OSError: [Errno 13] Permission denied: 'fifo'
->>> fd = os.open("regular", os.O_RDWR | os.O_CREAT)
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-OSError: [Errno 13] Permission denied: 'regular'
+Nit: kernel comments are /* */. (It's a good idea to run patches
+through scripts/checkpatch.pl first.)
 
-> I'll create a branch for this on git.kernel.org and see if anything
-> surprising pops out. :)
+> +       struct mm_struct *mm =3D current->mm;
+> +       struct vm_area_struct *vma;
+> +       struct vm_area_struct *right_vma =3D 0;
+> +       unsigned long entropy;
+> +       unsigned int entropy_count;
+> +       unsigned long length, low_limit, high_limit, gap_start, gap_end;
+> +       unsigned long addr, low, high;
+> +
+> +       /* Adjust search length to account for worst case alignment overh=
+ead */
+> +       length =3D info->length + info->align_mask;
+> +       if (length < info->length)
+> +               return -ENOMEM;
+> +
+> +       /*
+> +        * Adjust search limits by the desired length.
+> +        * See implementation comment at top of unmapped_area().
+> +        */
+> +       gap_end =3D info->high_limit;
+> +       if (gap_end < length)
+> +               return -ENOMEM;
+> +       high_limit =3D gap_end - length;
+> +
+> +       info->low_limit =3D 0x10000;
+> +       if (info->low_limit > high_limit)
+> +               return -ENOMEM;
+> +       low_limit =3D info->low_limit + length;
+> +
+> +       /* Check highest gap, which does not precede any rbtree node */
+> +       gap_start =3D mm->highest_vm_end;
+> +       if (gap_start <=3D high_limit)
+> +               goto found;
+> +
+> +       /* Check if rbtree root looks promising */
+> +       if (RB_EMPTY_ROOT(&mm->mm_rb))
+> +               return -ENOMEM;
+> +       vma =3D rb_entry(mm->mm_rb.rb_node, struct vm_area_struct, vm_rb)=
+;
+> +       if (vma->rb_subtree_gap < length)
+> +               return -ENOMEM;
+> +
+> +       while (true) {
+> +               /* Visit right subtree if it looks promising */
+> +               gap_start =3D vma->vm_prev ? vm_end_gap(vma->vm_prev) : 0=
+;
+> +               if (gap_start <=3D high_limit && vma->vm_rb.rb_right) {
+> +                       struct vm_area_struct *right =3D
+> +                               rb_entry(vma->vm_rb.rb_right,
+> +                                        struct vm_area_struct, vm_rb);
+> +                       if (right->rb_subtree_gap >=3D length) {
+> +                               vma =3D right;
+> +                               continue;
+> +                       }
+> +               }
+> +
+> +check_current_down:
+> +               /* Check if current node has a suitable gap */
+> +               gap_end =3D vm_start_gap(vma);
+> +               if (gap_end < low_limit)
+> +                       return -ENOMEM;
+> +               if (gap_start <=3D high_limit &&
+> +                   gap_end > gap_start && gap_end - gap_start >=3D lengt=
+h)
+> +                       goto found;
+> +
+> +               /* Visit left subtree if it looks promising */
+> +               if (vma->vm_rb.rb_left) {
+> +                       struct vm_area_struct *left =3D
+> +                               rb_entry(vma->vm_rb.rb_left,
+> +                                        struct vm_area_struct, vm_rb);
+> +                       if (left->rb_subtree_gap >=3D length) {
+> +                               vma =3D left;
+> +                               continue;
+> +                       }
+> +               }
+> +
+> +               /* Go back up the rbtree to find next candidate node */
+> +               while (true) {
+> +                       struct rb_node *prev =3D &vma->vm_rb;
+> +
+> +                       if (!rb_parent(prev))
+> +                               return -ENOMEM;
+> +                       vma =3D rb_entry(rb_parent(prev),
+> +                                      struct vm_area_struct, vm_rb);
+> +                       if (prev =3D=3D vma->vm_rb.rb_right) {
+> +                               gap_start =3D vma->vm_prev ?
+> +                                       vm_end_gap(vma->vm_prev) : 0;
+> +                               goto check_current_down;
+> +                       }
+> +               }
+> +       }
 
-Here it is with my suggested refactoring of the audit message:
+Everything from here up is identical to the existing
+unmapped_area_topdown(), yes? This likely needs to be refactored
+instead of copy/pasted, and adjust to handle both unmapped_area() and
+unmapped_area_topdown().
 
-https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/userspace/protected-creat
+> +
+> +found:
+> +       right_vma =3D vma;
+> +       low =3D gap_start;
+> +       high =3D gap_end - length;
+> +
+> +       entropy =3D get_random_long();
+> +       entropy_count =3D 0;
+> +
+> +       // from left node to right we check if node is fine and
+> +       // randomly select it.
+> +       vma =3D mm->mmap;
+> +       while (vma !=3D right_vma) {
+> +               /* Visit left subtree if it looks promising */
+> +               gap_end =3D vm_start_gap(vma);
+> +               if (gap_end >=3D low_limit && vma->vm_rb.rb_left) {
+> +                       struct vm_area_struct *left =3D
+> +                               rb_entry(vma->vm_rb.rb_left,
+> +                                        struct vm_area_struct, vm_rb);
+> +                       if (left->rb_subtree_gap >=3D length) {
+> +                               vma =3D left;
+> +                               continue;
+> +                       }
+> +               }
+> +
+> +               gap_start =3D vma->vm_prev ? vm_end_gap(vma->vm_prev) : l=
+ow_limit;
+> +check_current_up:
+> +               /* Check if current node has a suitable gap */
+> +               if (gap_start > high_limit)
+> +                       break;
+> +               if (gap_end >=3D low_limit &&
+> +                   gap_end > gap_start && gap_end - gap_start >=3D lengt=
+h) {
+> +                       if (entropy & 1) {
+> +                               low =3D gap_start;
+> +                               high =3D gap_end - length;
+> +                       }
+> +                       entropy >>=3D 1;
+> +                       if (++entropy_count =3D=3D 64) {
+> +                               entropy =3D get_random_long();
+> +                               entropy_count =3D 0;
+> +                       }
+> +               }
+> +
+> +               /* Visit right subtree if it looks promising */
+> +               if (vma->vm_rb.rb_right) {
+> +                       struct vm_area_struct *right =3D
+> +                               rb_entry(vma->vm_rb.rb_right,
+> +                                        struct vm_area_struct, vm_rb);
+> +                       if (right->rb_subtree_gap >=3D length) {
+> +                               vma =3D right;
+> +                               continue;
+> +                       }
+> +               }
+> +
+> +               /* Go back up the rbtree to find next candidate node */
+> +               while (true) {
+> +                       struct rb_node *prev =3D &vma->vm_rb;
+> +
+> +                       if (!rb_parent(prev))
+> +                               BUG(); // this should not happen
+> +                       vma =3D rb_entry(rb_parent(prev),
+> +                                      struct vm_area_struct, vm_rb);
+> +                       if (prev =3D=3D vma->vm_rb.rb_left) {
+> +                               gap_start =3D vm_end_gap(vma->vm_prev);
+> +                               gap_end =3D vm_start_gap(vma);
+> +                               if (vma =3D=3D right_vma)
 
-Which produces:
+mm/mmap.c: In function =E2=80=98unmapped_area_random=E2=80=99:
+mm/mmap.c:1939:8: warning: =E2=80=98vma=E2=80=99 may be used uninitialized =
+in this
+function [-Wmaybe-uninitialized]
+     if (vma =3D=3D right_vma)
+        ^
 
-[  146.854080] audit: type=1703 audit(1519762816.978:95): op=fifo
-ppid=3091 pid=3092 auid=0 uid=1000 gid=1000 euid=1000 suid=1000
-fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=pts8 ses=1 comm="python"
-exe="/usr/bin/python2.7" res=0
-[  146.858691] audit: type=1302 audit(1519762816.978:95): item=0
-name="/tmp/fifo" inode=531 dev=fd:01 mode=010666 ouid=65534 ogid=0
-rdev=00:00 nametype=NORMAL cap_fp=0000000000000000
-cap_fi=0000000000000000 cap_fe=0 cap_fver=0
-...
-[  152.993518] audit: type=1703 audit(1519762823.117:96): op=regular
-ppid=3091 pid=3092 auid=0 uid=1000 gid=1000 euid=1000 suid=1000
-fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=pts8 ses=1 comm="python"
-exe="/usr/bin/python2.7" res=0
-[  152.997963] audit: type=1302 audit(1519762823.117:96): item=0
-name="/tmp/regular" inode=700 dev=fd:01 mode=0100666 ouid=65534 ogid=0
-rdev=00:00 nametype=NORMAL cap_fp=0000000000000000
-cap_fi=0000000000000000 cap_fe=0 cap_fver=0
+> +                                       break;
+> +                               goto check_current_up;
+> +                       }
+> +               }
+> +       }
 
-and other things (uid, etc)
+What are the two phases here? Could this second one get collapsed into
+the first?
+
+> +
+> +       if (high =3D=3D low)
+> +               return low;
+> +
+> +       addr =3D get_random_long() % ((high - low) >> PAGE_SHIFT);
+> +       addr =3D low + (addr << PAGE_SHIFT);
+> +       return addr;
+> +}
+> +
+>  unsigned long unmapped_area(struct vm_unmapped_area_info *info)
+>  {
+>         /*
+
+How large are the gaps intended to be? Looking at the gaps on
+something like Xorg they differ a lot.
+
+Otherwise, looks interesting!
 
 -Kees
 
--- 
+--=20
 Kees Cook
 Pixel Security
