@@ -1,245 +1,273 @@
-From: Ilya Smith <blackzert@gmail.com>
-Subject: [RFC PATCH] Randomization of address chosen by mmap.
-Date: Tue, 27 Feb 2018 16:13:38 +0300
-Message-Id: <20180227131338.3699-1-blackzert@gmail.com>
-To: akpm@linux-foundation.org, dan.j.williams@intel.com, mhocko@suse.com, kirill.shutemov@linux.intel.com, jack@suse.cz, jglisse@redhat.com, hughd@google.com, willy@infradead.org, deller@gmx.de, aarcange@redhat.com, oleg@redhat.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: Ilya Smith <blackzert@gmail.com>
+MIME-Version: 1.0
+In-Reply-To: <20180227053255.a7ua24kjd6tvei2a@ast-mbp>
+References: <20180227004121.3633-1-mic@digikod.net> <20180227004121.3633-6-mic@digikod.net>
+ <20180227020856.teq4hobw3zwussu2@ast-mbp> <CALCETrVKRYnGJ9XNW-x7eHdMt+eGP90j7cAed-KTzp1KT_kMeQ@mail.gmail.com>
+ <20180227045458.wjrbbsxf3po656du@ast-mbp> <CALCETrXZ=xJEd53RhA67_VDoAKBWgUeyBi9XN7ibrE7V6nzk5Q@mail.gmail.com>
+ <20180227053255.a7ua24kjd6tvei2a@ast-mbp>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Tue, 27 Feb 2018 16:39:50 +0000
+Message-ID: <CALCETrUqc0wbig4ntQe9KNS-fOgYOpD+MPodXYruCRyJ7bhagA@mail.gmail.com>
+Subject: Re: [PATCH bpf-next v8 05/11] seccomp,landlock: Enforce Landlock
+ programs per process hierarchy
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Alexei Starovoitov <alexei.starovoitov@gmail.com>
+Cc: Andy Lutomirski <luto@kernel.org>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is more proof of concept. Current implementation doesn't randomize
-address returned by mmap. All the entropy ends with choosing mmap_base_addr
-at the process creation. After that mmap build very predictable layout
-of address space. It allows to bypass ASLR in many cases.
-This patch make randomization of address on any mmap call.
-It works good on 64 bit system, but usage under 32 bit systems is not
-recommended. This approach uses current implementation to simplify search
-of address.
+On Tue, Feb 27, 2018 at 5:32 AM, Alexei Starovoitov
+<alexei.starovoitov@gmail.com> wrote:
+> On Tue, Feb 27, 2018 at 05:20:55AM +0000, Andy Lutomirski wrote:
+>> On Tue, Feb 27, 2018 at 4:54 AM, Alexei Starovoitov
+>> <alexei.starovoitov@gmail.com> wrote:
+>> > On Tue, Feb 27, 2018 at 04:40:34AM +0000, Andy Lutomirski wrote:
+>> >> On Tue, Feb 27, 2018 at 2:08 AM, Alexei Starovoitov
+>> >> <alexei.starovoitov@gmail.com> wrote:
+>> >> > On Tue, Feb 27, 2018 at 01:41:15AM +0100, Micka=C3=ABl Sala=C3=BCn =
+wrote:
+>> >> >> The seccomp(2) syscall can be used by a task to apply a Landlock p=
+rogram
+>> >> >> to itself. As a seccomp filter, a Landlock program is enforced for=
+ the
+>> >> >> current task and all its future children. A program is immutable a=
+nd a
+>> >> >> task can only add new restricting programs to itself, forming a li=
+st of
+>> >> >> programss.
+>> >> >>
+>> >> >> A Landlock program is tied to a Landlock hook. If the action on a =
+kernel
+>> >> >> object is allowed by the other Linux security mechanisms (e.g. DAC=
+,
+>> >> >> capabilities, other LSM), then a Landlock hook related to this kin=
+d of
+>> >> >> object is triggered. The list of programs for this hook is then
+>> >> >> evaluated. Each program return a 32-bit value which can deny the a=
+ction
+>> >> >> on a kernel object with a non-zero value. If every programs of the=
+ list
+>> >> >> return zero, then the action on the object is allowed.
+>> >> >>
+>> >> >> Multiple Landlock programs can be chained to share a 64-bits value=
+ for a
+>> >> >> call chain (e.g. evaluating multiple elements of a file path).  Th=
+is
+>> >> >> chaining is restricted when a process construct this chain by load=
+ing a
+>> >> >> program, but additional checks are performed when it requests to a=
+pply
+>> >> >> this chain of programs to itself.  The restrictions ensure that it=
+ is
+>> >> >> not possible to call multiple programs in a way that would imply t=
+o
+>> >> >> handle multiple shared values (i.e. cookies) for one chain.  For n=
+ow,
+>> >> >> only a fs_pick program can be chained to the same type of program,
+>> >> >> because it may make sense if they have different triggers (cf. nex=
+t
+>> >> >> commits).  This restrictions still allows to reuse Landlock progra=
+ms in
+>> >> >> a safe way (e.g. use the same loaded fs_walk program with multiple
+>> >> >> chains of fs_pick programs).
+>> >> >>
+>> >> >> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
+>> >> >
+>> >> > ...
+>> >> >
+>> >> >> +struct landlock_prog_set *landlock_prepend_prog(
+>> >> >> +             struct landlock_prog_set *current_prog_set,
+>> >> >> +             struct bpf_prog *prog)
+>> >> >> +{
+>> >> >> +     struct landlock_prog_set *new_prog_set =3D current_prog_set;
+>> >> >> +     unsigned long pages;
+>> >> >> +     int err;
+>> >> >> +     size_t i;
+>> >> >> +     struct landlock_prog_set tmp_prog_set =3D {};
+>> >> >> +
+>> >> >> +     if (prog->type !=3D BPF_PROG_TYPE_LANDLOCK_HOOK)
+>> >> >> +             return ERR_PTR(-EINVAL);
+>> >> >> +
+>> >> >> +     /* validate memory size allocation */
+>> >> >> +     pages =3D prog->pages;
+>> >> >> +     if (current_prog_set) {
+>> >> >> +             size_t i;
+>> >> >> +
+>> >> >> +             for (i =3D 0; i < ARRAY_SIZE(current_prog_set->progr=
+ams); i++) {
+>> >> >> +                     struct landlock_prog_list *walker_p;
+>> >> >> +
+>> >> >> +                     for (walker_p =3D current_prog_set->programs=
+[i];
+>> >> >> +                                     walker_p; walker_p =3D walke=
+r_p->prev)
+>> >> >> +                             pages +=3D walker_p->prog->pages;
+>> >> >> +             }
+>> >> >> +             /* count a struct landlock_prog_set if we need to al=
+locate one */
+>> >> >> +             if (refcount_read(&current_prog_set->usage) !=3D 1)
+>> >> >> +                     pages +=3D round_up(sizeof(*current_prog_set=
+), PAGE_SIZE)
+>> >> >> +                             / PAGE_SIZE;
+>> >> >> +     }
+>> >> >> +     if (pages > LANDLOCK_PROGRAMS_MAX_PAGES)
+>> >> >> +             return ERR_PTR(-E2BIG);
+>> >> >> +
+>> >> >> +     /* ensure early that we can allocate enough memory for the n=
+ew
+>> >> >> +      * prog_lists */
+>> >> >> +     err =3D store_landlock_prog(&tmp_prog_set, current_prog_set,=
+ prog);
+>> >> >> +     if (err)
+>> >> >> +             return ERR_PTR(err);
+>> >> >> +
+>> >> >> +     /*
+>> >> >> +      * Each task_struct points to an array of prog list pointers=
+.  These
+>> >> >> +      * tables are duplicated when additions are made (which mean=
+s each
+>> >> >> +      * table needs to be refcounted for the processes using it).=
+ When a new
+>> >> >> +      * table is created, all the refcounters on the prog_list ar=
+e bumped (to
+>> >> >> +      * track each table that references the prog). When a new pr=
+og is
+>> >> >> +      * added, it's just prepended to the list for the new table =
+to point
+>> >> >> +      * at.
+>> >> >> +      *
+>> >> >> +      * Manage all the possible errors before this step to not us=
+elessly
+>> >> >> +      * duplicate current_prog_set and avoid a rollback.
+>> >> >> +      */
+>> >> >> +     if (!new_prog_set) {
+>> >> >> +             /*
+>> >> >> +              * If there is no Landlock program set used by the c=
+urrent task,
+>> >> >> +              * then create a new one.
+>> >> >> +              */
+>> >> >> +             new_prog_set =3D new_landlock_prog_set();
+>> >> >> +             if (IS_ERR(new_prog_set))
+>> >> >> +                     goto put_tmp_lists;
+>> >> >> +     } else if (refcount_read(&current_prog_set->usage) > 1) {
+>> >> >> +             /*
+>> >> >> +              * If the current task is not the sole user of its L=
+andlock
+>> >> >> +              * program set, then duplicate them.
+>> >> >> +              */
+>> >> >> +             new_prog_set =3D new_landlock_prog_set();
+>> >> >> +             if (IS_ERR(new_prog_set))
+>> >> >> +                     goto put_tmp_lists;
+>> >> >> +             for (i =3D 0; i < ARRAY_SIZE(new_prog_set->programs)=
+; i++) {
+>> >> >> +                     new_prog_set->programs[i] =3D
+>> >> >> +                             READ_ONCE(current_prog_set->programs=
+[i]);
+>> >> >> +                     if (new_prog_set->programs[i])
+>> >> >> +                             refcount_inc(&new_prog_set->programs=
+[i]->usage);
+>> >> >> +             }
+>> >> >> +
+>> >> >> +             /*
+>> >> >> +              * Landlock program set from the current task will n=
+ot be freed
+>> >> >> +              * here because the usage is strictly greater than 1=
+. It is
+>> >> >> +              * only prevented to be freed by another task thanks=
+ to the
+>> >> >> +              * caller of landlock_prepend_prog() which should be=
+ locked if
+>> >> >> +              * needed.
+>> >> >> +              */
+>> >> >> +             landlock_put_prog_set(current_prog_set);
+>> >> >> +     }
+>> >> >> +
+>> >> >> +     /* prepend tmp_prog_set to new_prog_set */
+>> >> >> +     for (i =3D 0; i < ARRAY_SIZE(tmp_prog_set.programs); i++) {
+>> >> >> +             /* get the last new list */
+>> >> >> +             struct landlock_prog_list *last_list =3D
+>> >> >> +                     tmp_prog_set.programs[i];
+>> >> >> +
+>> >> >> +             if (last_list) {
+>> >> >> +                     while (last_list->prev)
+>> >> >> +                             last_list =3D last_list->prev;
+>> >> >> +                     /* no need to increment usage (pointer repla=
+cement) */
+>> >> >> +                     last_list->prev =3D new_prog_set->programs[i=
+];
+>> >> >> +                     new_prog_set->programs[i] =3D tmp_prog_set.p=
+rograms[i];
+>> >> >> +             }
+>> >> >> +     }
+>> >> >> +     new_prog_set->chain_last =3D tmp_prog_set.chain_last;
+>> >> >> +     return new_prog_set;
+>> >> >> +
+>> >> >> +put_tmp_lists:
+>> >> >> +     for (i =3D 0; i < ARRAY_SIZE(tmp_prog_set.programs); i++)
+>> >> >> +             put_landlock_prog_list(tmp_prog_set.programs[i]);
+>> >> >> +     return new_prog_set;
+>> >> >> +}
+>> >> >
+>> >> > Nack on the chaining concept.
+>> >> > Please do not reinvent the wheel.
+>> >> > There is an existing mechanism for attaching/detaching/quering mult=
+iple
+>> >> > programs attached to cgroup and tracing hooks that are also
+>> >> > efficiently executed via BPF_PROG_RUN_ARRAY.
+>> >> > Please use that instead.
+>> >> >
+>> >>
+>> >> I don't see how that would help.  Suppose you add a filter, then
+>> >> fork(), and then the child adds another filter.  Do you want to
+>> >> duplicate the entire array?  You certainly can't *modify* the array
+>> >> because you'll affect processes that shouldn't be affected.
+>> >>
+>> >> In contrast, doing this through seccomp like the earlier patches
+>> >> seemed just fine to me, and seccomp already had the right logic.
+>> >
+>> > it doesn't look to me that existing seccomp side of managing fork
+>> > situation can be reused. Here there is an attempt to add 'chaining'
+>> > concept which sort of an extension of existing seccomp style,
+>> > but somehow heavily done on bpf side and contradicts cgroup/tracing.
+>> >
+>>
+>> I don't see why the seccomp way can't be used.  I agree with you that
+>> the seccomp *style* shouldn't be used in bpf code like this, but I
+>> think that Landlock programs can and should just live in the existing
+>> seccomp chain.  If the existing seccomp code needs some modification
+>> to make this work, then so be it.
+>
+> +1
+> if that was the case...
+> but that's not my reading of the patch set.
 
-Here I would like to discuss this approach.
+An earlier version of the patch set used the seccomp filter chain.
+Micka=C3=ABl, what exactly was wrong with that approach other than that the
+seccomp() syscall was awkward for you to use?  You could add a
+seccomp_add_landlock_rule() syscall if you needed to.
 
-Signed-off-by: Ilya Smith <blackzert@gmail.com>
----
- include/linux/mm.h |   4 ++
- mm/mmap.c          | 171 +++++++++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 175 insertions(+)
+As a side comment, why is this an LSM at all, let alone a non-stacking
+LSM?  It would make a lot more sense to me to make Landlock depend on
+having LSMs configured in but to call the landlock hooks directly from
+the security_xyz() hooks.
 
-diff --git a/include/linux/mm.h b/include/linux/mm.h
-index ad06d42adb1a..f81b6c8a0bc5 100644
---- a/include/linux/mm.h
-+++ b/include/linux/mm.h
-@@ -25,6 +25,7 @@
- #include <linux/err.h>
- #include <linux/page_ref.h>
- #include <linux/memremap.h>
-+#include <linux/sched.h>
- 
- struct mempolicy;
- struct anon_vma;
-@@ -2253,6 +2254,7 @@ struct vm_unmapped_area_info {
- 	unsigned long align_offset;
- };
- 
-+extern unsigned long unmapped_area_random(struct vm_unmapped_area_info *info);
- extern unsigned long unmapped_area(struct vm_unmapped_area_info *info);
- extern unsigned long unmapped_area_topdown(struct vm_unmapped_area_info *info);
- 
-@@ -2268,6 +2270,8 @@ extern unsigned long unmapped_area_topdown(struct vm_unmapped_area_info *info);
- static inline unsigned long
- vm_unmapped_area(struct vm_unmapped_area_info *info)
- {
-+	if (current->flags & PF_RANDOMIZE)
-+		return unmapped_area_random(info);
- 	if (info->flags & VM_UNMAPPED_AREA_TOPDOWN)
- 		return unmapped_area_topdown(info);
- 	else
-diff --git a/mm/mmap.c b/mm/mmap.c
-index 9efdc021ad22..58110e065417 100644
---- a/mm/mmap.c
-+++ b/mm/mmap.c
-@@ -45,6 +45,7 @@
- #include <linux/moduleparam.h>
- #include <linux/pkeys.h>
- #include <linux/oom.h>
-+#include <linux/random.h>
- 
- #include <linux/uaccess.h>
- #include <asm/cacheflush.h>
-@@ -1780,6 +1781,176 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
- 	return error;
- }
- 
-+unsigned long unmapped_area_random(struct vm_unmapped_area_info *info)
-+{
-+	// first lets find right border with unmapped_area_topdown
-+	struct mm_struct *mm = current->mm;
-+	struct vm_area_struct *vma;
-+	struct vm_area_struct *right_vma = 0;
-+	unsigned long entropy;
-+	unsigned int entropy_count;
-+	unsigned long length, low_limit, high_limit, gap_start, gap_end;
-+	unsigned long addr, low, high;
-+
-+	/* Adjust search length to account for worst case alignment overhead */
-+	length = info->length + info->align_mask;
-+	if (length < info->length)
-+		return -ENOMEM;
-+
-+	/*
-+	 * Adjust search limits by the desired length.
-+	 * See implementation comment at top of unmapped_area().
-+	 */
-+	gap_end = info->high_limit;
-+	if (gap_end < length)
-+		return -ENOMEM;
-+	high_limit = gap_end - length;
-+
-+	info->low_limit = 0x10000;
-+	if (info->low_limit > high_limit)
-+		return -ENOMEM;
-+	low_limit = info->low_limit + length;
-+
-+	/* Check highest gap, which does not precede any rbtree node */
-+	gap_start = mm->highest_vm_end;
-+	if (gap_start <= high_limit)
-+		goto found;
-+
-+	/* Check if rbtree root looks promising */
-+	if (RB_EMPTY_ROOT(&mm->mm_rb))
-+		return -ENOMEM;
-+	vma = rb_entry(mm->mm_rb.rb_node, struct vm_area_struct, vm_rb);
-+	if (vma->rb_subtree_gap < length)
-+		return -ENOMEM;
-+
-+	while (true) {
-+		/* Visit right subtree if it looks promising */
-+		gap_start = vma->vm_prev ? vm_end_gap(vma->vm_prev) : 0;
-+		if (gap_start <= high_limit && vma->vm_rb.rb_right) {
-+			struct vm_area_struct *right =
-+				rb_entry(vma->vm_rb.rb_right,
-+					 struct vm_area_struct, vm_rb);
-+			if (right->rb_subtree_gap >= length) {
-+				vma = right;
-+				continue;
-+			}
-+		}
-+
-+check_current_down:
-+		/* Check if current node has a suitable gap */
-+		gap_end = vm_start_gap(vma);
-+		if (gap_end < low_limit)
-+			return -ENOMEM;
-+		if (gap_start <= high_limit &&
-+		    gap_end > gap_start && gap_end - gap_start >= length)
-+			goto found;
-+
-+		/* Visit left subtree if it looks promising */
-+		if (vma->vm_rb.rb_left) {
-+			struct vm_area_struct *left =
-+				rb_entry(vma->vm_rb.rb_left,
-+					 struct vm_area_struct, vm_rb);
-+			if (left->rb_subtree_gap >= length) {
-+				vma = left;
-+				continue;
-+			}
-+		}
-+
-+		/* Go back up the rbtree to find next candidate node */
-+		while (true) {
-+			struct rb_node *prev = &vma->vm_rb;
-+
-+			if (!rb_parent(prev))
-+				return -ENOMEM;
-+			vma = rb_entry(rb_parent(prev),
-+				       struct vm_area_struct, vm_rb);
-+			if (prev == vma->vm_rb.rb_right) {
-+				gap_start = vma->vm_prev ?
-+					vm_end_gap(vma->vm_prev) : 0;
-+				goto check_current_down;
-+			}
-+		}
-+	}
-+
-+found:
-+	right_vma = vma;
-+	low = gap_start;
-+	high = gap_end - length;
-+
-+	entropy = get_random_long();
-+	entropy_count = 0;
-+
-+	// from left node to right we check if node is fine and
-+	// randomly select it.
-+	vma = mm->mmap;
-+	while (vma != right_vma) {
-+		/* Visit left subtree if it looks promising */
-+		gap_end = vm_start_gap(vma);
-+		if (gap_end >= low_limit && vma->vm_rb.rb_left) {
-+			struct vm_area_struct *left =
-+				rb_entry(vma->vm_rb.rb_left,
-+					 struct vm_area_struct, vm_rb);
-+			if (left->rb_subtree_gap >= length) {
-+				vma = left;
-+				continue;
-+			}
-+		}
-+
-+		gap_start = vma->vm_prev ? vm_end_gap(vma->vm_prev) : low_limit;
-+check_current_up:
-+		/* Check if current node has a suitable gap */
-+		if (gap_start > high_limit)
-+			break;
-+		if (gap_end >= low_limit &&
-+		    gap_end > gap_start && gap_end - gap_start >= length) {
-+			if (entropy & 1) {
-+				low = gap_start;
-+				high = gap_end - length;
-+			}
-+			entropy >>= 1;
-+			if (++entropy_count == 64) {
-+				entropy = get_random_long();
-+				entropy_count = 0;
-+			}
-+		}
-+
-+		/* Visit right subtree if it looks promising */
-+		if (vma->vm_rb.rb_right) {
-+			struct vm_area_struct *right =
-+				rb_entry(vma->vm_rb.rb_right,
-+					 struct vm_area_struct, vm_rb);
-+			if (right->rb_subtree_gap >= length) {
-+				vma = right;
-+				continue;
-+			}
-+		}
-+
-+		/* Go back up the rbtree to find next candidate node */
-+		while (true) {
-+			struct rb_node *prev = &vma->vm_rb;
-+
-+			if (!rb_parent(prev))
-+				BUG(); // this should not happen
-+			vma = rb_entry(rb_parent(prev),
-+				       struct vm_area_struct, vm_rb);
-+			if (prev == vma->vm_rb.rb_left) {
-+				gap_start = vm_end_gap(vma->vm_prev);
-+				gap_end = vm_start_gap(vma);
-+				if (vma == right_vma)
-+					break;
-+				goto check_current_up;
-+			}
-+		}
-+	}
-+
-+	if (high == low)
-+		return low;
-+
-+	addr = get_random_long() % ((high - low) >> PAGE_SHIFT);
-+	addr = low + (addr << PAGE_SHIFT);
-+	return addr;
-+}
-+
- unsigned long unmapped_area(struct vm_unmapped_area_info *info)
- {
- 	/*
--- 
-2.14.1
+>
+>> In other words, the kernel already has two kinds of chaining:
+>> seccomp's and bpf's.  bpf's doesn't work right for this type of usage
+>> across fork(), whereas seccomp's already handles that case correctly.
+>> (In contrast, seccomp's is totally wrong for cgroup-attached filters.)
+>>  So IMO Landlock should use the seccomp core code and call into bpf
+>> for the actual filtering.
+>
+> +1
+> in cgroup we had to invent this new BPF_PROG_RUN_ARRAY mechanism,
+> since cgroup hierarchy can be complicated with bpf progs attached
+> at different levels with different override/multiprog properties,
+> so walking link list and checking all flags at run-time would have
+> been too slow. That's why we added compute_effective_progs().
+
+If we start adding override flags to Landlock, I think we're doing it
+wrong.   With cgroup bpf programs, the whole mess is set up by the
+administrator.  With seccomp, and with Landlock if done correctly, it
+*won't* be set up by the administrator, so the chance that everyone
+gets all the flags right is about zero.  All attached filters should
+run unconditionally.
