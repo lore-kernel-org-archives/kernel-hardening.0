@@ -1,65 +1,105 @@
+From: Richard Sandiford <richard.sandiford@arm.com>
+Subject: Re: [PATCH 1/2] stackleak: Update for arm64
+In-Reply-To: <97090ca6-efad-7c03-6084-a97674ae61c7@linux.com> (Alexander
+	Popov's message of "Thu, 22 Feb 2018 22:22:14 +0300")
+References: <20180221011303.20392-1-labbott@redhat.com>
+	<20180221011303.20392-2-labbott@redhat.com>
+	<20180222165834.GC18421@arm.com>
+	<97090ca6-efad-7c03-6084-a97674ae61c7@linux.com>
+Date: Tue, 27 Feb 2018 10:21:49 +0000
+Message-ID: <874lm2d96q.fsf@e105548-lin.cambridge.arm.com>
 MIME-Version: 1.0
-In-Reply-To: <1519706711-18580-2-git-send-email-me@tobin.cc>
-References: <1519706711-18580-1-git-send-email-me@tobin.cc> <1519706711-18580-2-git-send-email-me@tobin.cc>
-From: Alexander Kapshuk <alexander.kapshuk@gmail.com>
-Date: Tue, 27 Feb 2018 09:15:03 +0200
-Message-ID: <CAJ1xhMWfAZnQXoYVLLf6ABQ1+JsfLyJZmr95-33LH1DFJ5NjXA@mail.gmail.com>
-Subject: Re: [PATCH 1/3] leaking_addresses: skip all /proc/PID except /proc/1
-Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Tycho Andersen <tycho@tycho.ws>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Will Deacon <will.deacon@arm.com>, Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 27, 2018 at 6:45 AM, Tobin C. Harding <me@tobin.cc> wrote:
-> When the system is idle it is likely that most files under /proc/PID
-> will be identical for various processes.  Scanning _all_ the PIDs under
-> /proc is unnecessary and implies that we are thoroughly scanning /proc.
-> This is _not_ the case because there may be ways userspace can trigger
-> creation of /proc files that leak addresses but were not present during
-> a scan.  For these two reasons we should exclude all PID directories
-> under /proc except '1/'
->
-> Exclude all /proc/PID except /proc/1.
->
-> Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> ---
->  scripts/leaking_addresses.pl | 11 +++++++++++
->  1 file changed, 11 insertions(+)
->
-> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-> index 6e5bc57caeaa..fb40e2828f43 100755
-> --- a/scripts/leaking_addresses.pl
-> +++ b/scripts/leaking_addresses.pl
-> @@ -10,6 +10,14 @@
->  # Use --debug to output path before parsing, this is useful to find files that
->  # cause the script to choke.
->
-> +#
-> +# When the system is idle it is likely that most files under /proc/PID will be
-> +# identical for various processes.  Scanning _all_ the PIDs under /proc is
-> +# unnecessary and implies that we are thoroughly scanning /proc.  This is _not_
-> +# the case because there may be ways userspace can trigger creation of /proc
-> +# files that leak addresses but were not present during a scan.  For these two
-> +# reasons we exclude all PID directories under /proc except '1/'
-> +
->  use warnings;
->  use strict;
->  use POSIX;
-> @@ -472,6 +480,9 @@ sub walk
->                         my $path = "$pwd/$file";
->                         next if (-l $path);
->
-> +                       # skip /proc/PID except /proc/1
-> +                       next if ($path =~ /\/proc\/(?:[2-9][0-9]*|1[0-9]+)/);
-> +
->                         next if (skip($path));
->
->                         if (-d $path) {
-> --
-> 2.7.4
->
+Hi Alexander,
 
-Would something like this do the trick?
-perl -e 'foreach my $dir (`ls -d /proc/[0-9]*`){next if($dir !~
-"/proc/1\$"); print $dir}'
-/proc/1
+Sorry for the slow reply, been caught up in an office move.
+
+Alexander Popov <alex.popov@linux.com> writes:
+> Hello Will, Richard and GCC folks!
+>
+> On 22.02.2018 19:58, Will Deacon wrote:
+>> On Tue, Feb 20, 2018 at 05:13:02PM -0800, Laura Abbott wrote:
+>>>
+>>> arm64 has another layer of indirection in the RTL.
+>>> Account for this in the plugin.
+>>>
+>>> Signed-off-by: Laura Abbott <labbott@redhat.com>
+>>> ---
+>>>  scripts/gcc-plugins/stackleak_plugin.c | 5 +++++
+>>>  1 file changed, 5 insertions(+)
+>>>
+>>> diff --git a/scripts/gcc-plugins/stackleak_plugin.c b/scripts/gcc-plugins/stackleak_plugin.c
+>>> index 6fc991c98d8b..7dfaa027423f 100644
+>>> --- a/scripts/gcc-plugins/stackleak_plugin.c
+>>> +++ b/scripts/gcc-plugins/stackleak_plugin.c
+>>> @@ -244,6 +244,11 @@ static unsigned int stackleak_final_execute(void)
+>>>  		 * that insn.
+>>>  		 */
+>>>  		body = PATTERN(insn);
+>>> +		/* arm64 is different */
+>>> +		if (GET_CODE(body) == PARALLEL) {
+>>> +			body = XEXP(body, 0);
+>>> +			body = XEXP(body, 0);
+>>> +		}
+>> 
+>> Like most kernel developers, I don't know the first thing about GCC internals
+>> so I asked our GCC team and Richard (CC'd) reckons this should be:
+>> 
+>> 	if (GET_CODE(body) == PARALLEL)
+>> 		body = XVECEXP(body, 0, 0);
+>> 
+>> instead of the hunk above. Can you give that a go instead, please?
+>
+> Thanks a lot!
+>
+> Would you be so kind to take a look at the whole STACKLEAK plugin?
+> http://www.openwall.com/lists/kernel-hardening/2018/02/16/4
+> https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/commit/?h=kspp/gcc-plugin/stackleak&id=57a0a6763b12e82dd462593d0f42be610e93cdc9
+>
+> It's not very big. I documented it in detail. I would be really grateful for the
+> review!
+
+Looks good to me FWIW.  Just a couple of minor things:
+
+> +	/*
+> +	 * 1. Loop through the GIMPLE statements in each of cfun basic blocks.
+> +	 * cfun is a global variable which represents the function that is
+> +	 * currently processed.
+> +	 */
+> +	FOR_EACH_BB_FN(bb, cfun) {
+> +		for (gsi = gsi_start_bb(bb); !gsi_end_p(gsi); gsi_next(&gsi)) {
+> +			gimple stmt;
+> +
+> +			stmt = gsi_stmt(gsi);
+> +
+> +			/* Leaf function is a function which makes no calls */
+> +			if (is_gimple_call(stmt))
+> +				is_leaf = false;
+
+It's probably not going to matter in practice, but it might be worth
+emphasising in the comments that this leafness is only approximate.
+It will sometimes be a false positive, because we could still
+end up creating calls to libgcc functions from non-call statements
+(or for target-specific reasons).  It can also be a false negative,
+since call statements can be to built-in or internal functions that
+end up being open-coded.
+
+> +	/*
+> +	 * The stackleak_final pass should be executed before the "final" pass,
+> +	 * which turns the RTL (Register Transfer Language) into assembly.
+> +	 */
+> +	PASS_INFO(stackleak_final, "final", 1, PASS_POS_INSERT_BEFORE);
+
+This might be too late, since it happens e.g. after addresses have
+been calculated for branch ranges, and after machine-specific passes
+(e.g. bundling on ia64).
+
+The stack size is final after reload, so inserting the pass after that
+might be better.
+
+Thanks,
+Richard
