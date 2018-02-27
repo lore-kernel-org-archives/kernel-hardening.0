@@ -1,46 +1,61 @@
 From: P J P <ppandit@redhat.com>
-Subject: [PATCH 0/1] Zero initialise kernel stack variables
-Date: Tue, 27 Feb 2018 16:45:31 +0530
-Message-Id: <20180227111532.1144-1-ppandit@redhat.com>
+Subject: [PATCH 1/1] Add an option to build kernel with -finit-local-vars
+Date: Tue, 27 Feb 2018 16:45:32 +0530
+Message-Id: <20180227111532.1144-2-ppandit@redhat.com>
+In-Reply-To: <20180227111532.1144-1-ppandit@redhat.com>
+References: <20180227111532.1144-1-ppandit@redhat.com>
 To: kernel-hardening@lists.openwall.com
 Cc: Florian Weimer <fweimer@redhat.com>, P J P <pjp@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: P J P <pjp@fedoraproject.org>
 
-Hello,
+Add a configuration option to build kernel with -finit-local-vars
+compiler option.[*] It'll zero initialize the automatic kernel
+function variables, thus helping to reduce kernel information
+leakage issues.
 
-Please see:
-  -> https://gcc.gnu.org/ml/gcc-patches/2014-06/msg00615.html
+[*] https://gcc.gnu.org/ml/gcc-patches/2014-06/msg00615.html
 
-This experimental patch by Florian Weimer(CC'd) adds an option
-'-finit-local-vars' to gcc(1) compiler. When a program(or kernel)
-is built using this option, its automatic(local) variables are
-initialised with zero(0). This could significantly reduce the kernel
-information leakage issues.
-
-A dnf(8) repository of the latest gcc-7.3.1 package built with the above
-patch and kernel-4.15.5 package built using '-finit-local-vars' option
-on Fedora-27 is available below
-
-  -> https://pjp.fedorapeople.org/init-vars/
-
-This same kernel is running on my F27 test machine as I write this.
-There is no slowness or notice-able performance impact as such.
-
-The patch here adds a kbuild menu option to enable/disable '-finit-local-vars'
-compiler flag while building the Linux kernel.
-
-I'd appreciate your review and/or inputs to test this option further.
-
-Thank you.
---
-Prasad J Pandit / Red Hat Product Security Team (1):
-  Add an option to build kernel with -finit-local-vars
-
+Signed-off-by: P J P <pjp@fedoraproject.org>
+---
  Makefile          | 4 ++++
  lib/Kconfig.debug | 8 ++++++++
  2 files changed, 12 insertions(+)
 
+diff --git a/Makefile b/Makefile
+index 659a7780aeb3..7b25a77470ca 100644
+--- a/Makefile
++++ b/Makefile
+@@ -781,6 +781,10 @@ KBUILD_CFLAGS 	+= $(call cc-option, -femit-struct-debug-baseonly) \
+ 		   $(call cc-option,-fno-var-tracking)
+ endif
+ 
++ifdef CONFIG_FINIT_LOCAL_VARS
++KBUILD_CFLAGS  += $(call cc-option, -finit-local-vars)
++endif
++
+ ifdef CONFIG_FUNCTION_TRACER
+ ifndef CC_FLAGS_FTRACE
+ CC_FLAGS_FTRACE := -pg
+diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
+index 64155e310a9f..8da18d145c5b 100644
+--- a/lib/Kconfig.debug
++++ b/lib/Kconfig.debug
+@@ -206,6 +206,14 @@ config ENABLE_WARN_DEPRECATED
+ 	  Disable this to suppress the "warning: 'foo' is deprecated
+ 	  (declared at kernel/power/somefile.c:1234)" messages.
+ 
++config FINIT_LOCAL_VARS
++       bool "Enable -finit-local-vars"
++       default n
++       help
++         Enable the -finit-local-vars compiler option during the kernel build.
++         It'll zero initialise the automatic kernel function variables, thus
++         helping to reduce kernel information leakage issues.
++
+ config ENABLE_MUST_CHECK
+ 	bool "Enable __must_check logic"
+ 	default y
 -- 
 2.14.3
