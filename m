@@ -1,7 +1,7 @@
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Subject: [PATCH bpf-next v8 03/11] bpf: Add eBPF program subtype and is_valid_subtype() verifier
-Date: Tue, 27 Feb 2018 01:41:13 +0100
-Message-Id: <20180227004121.3633-4-mic@digikod.net>
+Subject: [PATCH bpf-next v8 07/11] landlock: Handle filesystem access control
+Date: Tue, 27 Feb 2018 01:41:17 +0100
+Message-Id: <20180227004121.3633-8-mic@digikod.net>
 In-Reply-To: <20180227004121.3633-1-mic@digikod.net>
 References: <20180227004121.3633-1-mic@digikod.net>
 MIME-Version: 1.0
@@ -11,963 +11,1690 @@ To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The goal of the program subtype is to be able to have different static
-fine-grained verifications for a unique program type.
+This add three Landlock: FS_WALK, FS_PICK and FS_GET.
 
-The struct bpf_verifier_ops gets a new optional function:
-is_valid_subtype(). This new verifier is called at the beginning of the
-eBPF program verification to check if the (optional) program subtype is
-valid.
+The FS_WALK hook is used to walk through a file path. A program tied to
+this hook will be evaluated for each directory traversal except the last
+one if it is the leaf of the path.
 
-The struct bpf_prog_ops gets a new optional function: put_extra(). This
-may be used to put extra data.
+The FS_PICK hook is used to validate a set of actions requested on a
+file. This actions are defined with triggers (e.g. read, write, open,
+append...).
 
-For now, only Landlock eBPF programs are using a program subtype (see
-next commits) but this could be used by other program types in the
-future.
+The FS_GET hook is used to tag open files, which is necessary to be able
+to evaluate relative paths.  A program tied to this hook can tag a file
+with an inode map.
+
+A Landlock program can be chained to another if it is permitted by the
+BPF verifier. A FS_WALK can be chained to a FS_PICK which can be chained
+to a FS_GET.
+
+The Landlock LSM hook registration is done after other LSM to only run
+actions from user-space, via eBPF programs, if the access was granted by
+major (privileged) LSMs.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Alexei Starovoitov <ast@kernel.org>
+Cc: Andy Lutomirski <luto@amacapital.net>
 Cc: Daniel Borkmann <daniel@iogearbox.net>
 Cc: David S. Miller <davem@davemloft.net>
-Link: https://lkml.kernel.org/r/20160827205559.GA43880@ast-mbp.thefacebook.com
+Cc: James Morris <james.l.morris@oracle.com>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Serge E. Hallyn <serge@hallyn.com>
 ---
 
 Changes since v7:
-* rename LANDLOCK_SUBTYPE_* to LANDLOCK_*
-* move subtype in bpf_prog_aux and use only one bit for has_subtype
-  (suggested by Alexei Starovoitov)
-* wrap the prog_subtype with a prog_extra to be able to reference kernel
-  pointers:
-  * add an optional put_extra() function to struct bpf_prog_ops to be
-    able to free the pointed data
-  * replace all the prog_subtype with prog_extra in the struct
-    bpf_verifier_ops functions
-* remove the ABI field (requested by Alexei Starovoitov)
-* rename subtype fields
+* major rewrite with clean Landlock hooks able to deal with file paths
 
 Changes since v6:
-* rename Landlock version to ABI to better reflect its purpose
-* fix unsigned integer checks
-* fix pointer cast
+* add 3 more sub-events: IOCTL, LOCK, FCNTL
+  https://lkml.kernel.org/r/2fbc99a6-f190-f335-bd14-04bdeed35571@digikod.net
+* use the new security_add_hooks()
+* explain the -Werror=unused-function
 * constify pointers
-* rebase
+* cleanup headers
 
 Changes since v5:
-* use a prog_subtype pointer and make it future-proof
-* add subtype test
-* constify bpf_load_program()'s subtype argument
-* cleanup subtype initialization
-* rebase
+* split hooks.[ch] into hooks.[ch] and hooks_fs.[ch]
+* add more documentation
+* cosmetic fixes
+* rebase (SCALAR_VALUE)
 
 Changes since v4:
-* replace the "status" field with "version" (more generic)
-* replace the "access" field with "ability" (less confusing)
+* add LSM hook abstraction called Landlock event
+  * use the compiler type checking to verify hooks use by an event
+  * handle all filesystem related LSM hooks (e.g. file_permission,
+    mmap_file, sb_mount...)
+* register BPF programs for Landlock just after LSM hooks registration
+* move hooks registration after other LSMs
+* add failsafes to check if a hook is not used by the kernel
+* allow partial raw value access form the context (needed for programs
+  generated by LLVM)
 
 Changes since v3:
-* remove the "origin" field
-* add an "option" field
-* cleanup comments
+* split commit
+* add hooks dealing with struct inode and struct path pointers:
+  inode_permission and inode_getattr
+* add abstraction over eBPF helper arguments thanks to wrapping structs
 ---
- include/linux/bpf.h                         | 17 ++++++-
- include/uapi/linux/bpf.h                    | 11 +++++
- kernel/bpf/cgroup.c                         |  6 ++-
- kernel/bpf/core.c                           |  5 +-
- kernel/bpf/syscall.c                        | 35 ++++++++++++-
- kernel/bpf/verifier.c                       | 19 ++++++--
- kernel/trace/bpf_trace.c                    | 15 ++++--
- net/core/filter.c                           | 76 ++++++++++++++++++-----------
- samples/bpf/bpf_load.c                      |  3 +-
- samples/bpf/cookie_uid_helper_example.c     |  2 +-
- samples/bpf/fds_example.c                   |  2 +-
- samples/bpf/sock_example.c                  |  3 +-
- samples/bpf/test_cgrp2_attach.c             |  2 +-
- samples/bpf/test_cgrp2_attach2.c            |  4 +-
- samples/bpf/test_cgrp2_sock.c               |  2 +-
- tools/include/uapi/linux/bpf.h              | 11 +++++
- tools/lib/bpf/bpf.c                         | 15 ++++--
- tools/lib/bpf/bpf.h                         |  8 +--
- tools/lib/bpf/libbpf.c                      |  5 +-
- tools/perf/tests/bpf.c                      |  2 +-
- tools/testing/selftests/bpf/test_align.c    |  2 +-
- tools/testing/selftests/bpf/test_tag.c      |  2 +-
- tools/testing/selftests/bpf/test_verifier.c | 18 ++++++-
- 23 files changed, 200 insertions(+), 65 deletions(-)
+ include/linux/lsm_hooks.h           |    5 +
+ security/landlock/Makefile          |    5 +-
+ security/landlock/common.h          |    9 +
+ security/landlock/enforce_seccomp.c |   10 +
+ security/landlock/hooks.c           |  121 +++++
+ security/landlock/hooks.h           |   35 ++
+ security/landlock/hooks_cred.c      |   52 ++
+ security/landlock/hooks_cred.h      |    1 +
+ security/landlock/hooks_fs.c        | 1021 +++++++++++++++++++++++++++++++++++
+ security/landlock/hooks_fs.h        |   60 ++
+ security/landlock/init.c            |   56 ++
+ security/landlock/task.c            |   34 ++
+ security/landlock/task.h            |   29 +
+ security/security.c                 |   12 +-
+ 14 files changed, 1447 insertions(+), 3 deletions(-)
+ create mode 100644 security/landlock/hooks.c
+ create mode 100644 security/landlock/hooks.h
+ create mode 100644 security/landlock/hooks_cred.c
+ create mode 100644 security/landlock/hooks_cred.h
+ create mode 100644 security/landlock/hooks_fs.c
+ create mode 100644 security/landlock/hooks_fs.h
+ create mode 100644 security/landlock/task.c
+ create mode 100644 security/landlock/task.h
 
-diff --git a/include/linux/bpf.h b/include/linux/bpf.h
-index 66df387106de..377b2f3519f3 100644
---- a/include/linux/bpf.h
-+++ b/include/linux/bpf.h
-@@ -200,26 +200,38 @@ bpf_ctx_record_field_size(struct bpf_insn_access_aux *aux, u32 size)
- 	aux->ctx_field_size = size;
+diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
+index d71cf183f0be..c40163385b68 100644
+--- a/include/linux/lsm_hooks.h
++++ b/include/linux/lsm_hooks.h
+@@ -2032,5 +2032,10 @@ void __init loadpin_add_hooks(void);
+ #else
+ static inline void loadpin_add_hooks(void) { };
+ #endif
++#ifdef CONFIG_SECURITY_LANDLOCK
++extern void __init landlock_add_hooks(void);
++#else
++static inline void __init landlock_add_hooks(void) { }
++#endif /* CONFIG_SECURITY_LANDLOCK */
+ 
+ #endif /* ! __LINUX_LSM_HOOKS_H */
+diff --git a/security/landlock/Makefile b/security/landlock/Makefile
+index 0e1dd4612ecc..d0f532a93b4e 100644
+--- a/security/landlock/Makefile
++++ b/security/landlock/Makefile
+@@ -1,5 +1,6 @@
+ obj-$(CONFIG_SECURITY_LANDLOCK) := landlock.o
+ 
+-landlock-y := init.o chain.o \
++landlock-y := init.o chain.o task.o \
+ 	tag.o tag_fs.o \
+-	enforce.o enforce_seccomp.o
++	enforce.o enforce_seccomp.o \
++	hooks.o hooks_cred.o hooks_fs.o
+diff --git a/security/landlock/common.h b/security/landlock/common.h
+index 245e4ccafcf2..6d36b70068d5 100644
+--- a/security/landlock/common.h
++++ b/security/landlock/common.h
+@@ -82,4 +82,13 @@ static inline enum landlock_hook_type get_type(struct bpf_prog *prog)
+ 	return prog->aux->extra->subtype.landlock_hook.type;
  }
  
-+/* specific data per program type */
-+struct bpf_prog_extra {
-+	union bpf_prog_subtype subtype;
++__maybe_unused
++static bool current_has_prog_type(enum landlock_hook_type hook_type)
++{
++	struct landlock_prog_set *prog_set;
++
++	prog_set = current->seccomp.landlock_prog_set;
++	return (prog_set && prog_set->programs[get_index(hook_type)]);
++}
++
+ #endif /* _SECURITY_LANDLOCK_COMMON_H */
+diff --git a/security/landlock/enforce_seccomp.c b/security/landlock/enforce_seccomp.c
+index 8da72e868422..7d06ad26e0f8 100644
+--- a/security/landlock/enforce_seccomp.c
++++ b/security/landlock/enforce_seccomp.c
+@@ -22,6 +22,7 @@
+ #include <linux/uaccess.h> /* get_user() */
+ 
+ #include "enforce.h"
++#include "task.h"
+ 
+ /* headers in include/linux/landlock.h */
+ 
+@@ -64,6 +65,13 @@ int landlock_seccomp_prepend_prog(unsigned int flags,
+ 	if (err)
+ 		return err;
+ 
++	/* allocate current->security here to not have to handle this in
++	 * hook_nameidata_free_security() */
++	if (!current->security) {
++		current->security = landlock_new_task_security(GFP_KERNEL);
++		if (!current->security)
++			return -ENOMEM;
++	}
+ 	prog = bpf_prog_get(bpf_fd);
+ 	if (IS_ERR(prog)) {
+ 		err = PTR_ERR(prog);
+@@ -86,6 +94,8 @@ int landlock_seccomp_prepend_prog(unsigned int flags,
+ 	return 0;
+ 
+ free_task:
++	landlock_free_task_security(current->security);
++	current->security = NULL;
+ 	return err;
+ }
+ 
+diff --git a/security/landlock/hooks.c b/security/landlock/hooks.c
+new file mode 100644
+index 000000000000..e9535937a7b9
+--- /dev/null
++++ b/security/landlock/hooks.c
+@@ -0,0 +1,121 @@
++/*
++ * Landlock LSM - hook helpers
++ *
++ * Copyright © 2016-2018 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018 ANSSI
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ */
++
++#include <asm/current.h>
++#include <linux/bpf.h> /* enum bpf_prog_aux */
++#include <linux/errno.h>
++#include <linux/filter.h> /* BPF_PROG_RUN() */
++#include <linux/rculist.h> /* list_add_tail_rcu */
++#include <uapi/linux/landlock.h> /* struct landlock_context */
++
++#include "common.h" /* struct landlock_rule, get_index() */
++#include "hooks.h" /* landlock_hook_ctx */
++
++#include "hooks_fs.h"
++
++/* return a Landlock program context (e.g. hook_ctx->fs_walk.prog_ctx) */
++static void *update_ctx(enum landlock_hook_type hook_type,
++		struct landlock_hook_ctx *hook_ctx,
++		const struct landlock_chain *chain)
++{
++	switch (hook_type) {
++	case LANDLOCK_HOOK_FS_WALK:
++		return landlock_update_ctx_fs_walk(hook_ctx->fs_walk, chain);
++	case LANDLOCK_HOOK_FS_PICK:
++		return landlock_update_ctx_fs_pick(hook_ctx->fs_pick, chain);
++	case LANDLOCK_HOOK_FS_GET:
++		return landlock_update_ctx_fs_get(hook_ctx->fs_get, chain);
++	}
++	WARN_ON(1);
++	return NULL;
++}
++
++/* save the program context (e.g. hook_ctx->fs_get.prog_ctx.inode_tag) */
++static int save_ctx(enum landlock_hook_type hook_type,
++		struct landlock_hook_ctx *hook_ctx,
++		struct landlock_chain *chain)
++{
++	switch (hook_type) {
++	case LANDLOCK_HOOK_FS_WALK:
++		return landlock_save_ctx_fs_walk(hook_ctx->fs_walk, chain);
++	case LANDLOCK_HOOK_FS_PICK:
++		return landlock_save_ctx_fs_pick(hook_ctx->fs_pick, chain);
++	case LANDLOCK_HOOK_FS_GET:
++		/* no need to save the cookie */
++		return 0;
++	}
++	WARN_ON(1);
++	return 1;
++}
++
++/**
++ * landlock_access_deny - run Landlock programs tied to a hook
++ *
++ * @hook_idx: hook index in the programs array
++ * @ctx: non-NULL valid eBPF context
++ * @prog_set: Landlock program set pointer
++ * @triggers: a bitmask to check if a program should be run
++ *
++ * Return true if at least one program return deny.
++ */
++static bool landlock_access_deny(enum landlock_hook_type hook_type,
++		struct landlock_hook_ctx *hook_ctx,
++		struct landlock_prog_set *prog_set, u64 triggers)
++{
++	struct landlock_prog_list *prog_list, *prev_list = NULL;
++	u32 hook_idx = get_index(hook_type);
++
++	if (!prog_set)
++		return false;
++
++	for (prog_list = prog_set->programs[hook_idx];
++			prog_list; prog_list = prog_list->prev) {
++		u32 ret;
++		void *prog_ctx;
++
++		/* check if @prog expect at least one of this triggers */
++		if (triggers && !(triggers & prog_list->prog->aux->extra->
++					subtype.landlock_hook.triggers))
++			continue;
++		prog_ctx = update_ctx(hook_type, hook_ctx, prog_list->chain);
++		if (!prog_ctx || WARN_ON(IS_ERR(prog_ctx)))
++			return true;
++		rcu_read_lock();
++		ret = BPF_PROG_RUN(prog_list->prog, prog_ctx);
++		rcu_read_unlock();
++		if (save_ctx(hook_type, hook_ctx, prog_list->chain))
++			return true;
++		/* deny access if a program returns a value different than 0 */
++		if (ret)
++			return true;
++		if (prev_list && prog_list->prev && prog_list->prev->prog->
++				aux->extra->subtype.landlock_hook.type ==
++				prev_list->prog->aux->extra->
++				subtype.landlock_hook.type)
++			WARN_ON(prog_list->prev != prev_list);
++		prev_list = prog_list;
++	}
++	return false;
++}
++
++int landlock_decide(enum landlock_hook_type hook_type,
++		struct landlock_hook_ctx *hook_ctx, u64 triggers)
++{
++	bool deny = false;
++
++#ifdef CONFIG_SECCOMP_FILTER
++	deny = landlock_access_deny(hook_type, hook_ctx,
++			current->seccomp.landlock_prog_set, triggers);
++#endif /* CONFIG_SECCOMP_FILTER */
++
++	/* should we use -EPERM or -EACCES? */
++	return deny ? -EACCES : 0;
++}
+diff --git a/security/landlock/hooks.h b/security/landlock/hooks.h
+new file mode 100644
+index 000000000000..30ffd8ffa738
+--- /dev/null
++++ b/security/landlock/hooks.h
+@@ -0,0 +1,35 @@
++/*
++ * Landlock LSM - hooks helpers
++ *
++ * Copyright © 2016-2018 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018 ANSSI
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ */
++
++#include <asm/current.h>
++#include <linux/sched.h> /* struct task_struct */
++#include <linux/seccomp.h>
++
++#include "hooks_fs.h"
++
++struct landlock_hook_ctx {
 +	union {
-+		struct bpf_prog *previous;
-+	} landlock_hook;
++		struct landlock_hook_ctx_fs_walk *fs_walk;
++		struct landlock_hook_ctx_fs_pick *fs_pick;
++		struct landlock_hook_ctx_fs_get *fs_get;
++	};
 +};
 +
- struct bpf_prog_ops {
- 	int (*test_run)(struct bpf_prog *prog, const union bpf_attr *kattr,
- 			union bpf_attr __user *uattr);
-+	void (*put_extra)(struct bpf_prog_extra *prog_extra);
++static inline bool landlocked(const struct task_struct *task)
++{
++#ifdef CONFIG_SECCOMP_FILTER
++	return !!(task->seccomp.landlock_prog_set);
++#else
++	return false;
++#endif /* CONFIG_SECCOMP_FILTER */
++}
++
++int landlock_decide(enum landlock_hook_type, struct landlock_hook_ctx *, u64);
+diff --git a/security/landlock/hooks_cred.c b/security/landlock/hooks_cred.c
+new file mode 100644
+index 000000000000..1e30b3a3fe0e
+--- /dev/null
++++ b/security/landlock/hooks_cred.c
+@@ -0,0 +1,52 @@
++/*
++ * Landlock LSM - private headers
++ *
++ * Copyright © 2017-2018 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018 ANSSI
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ */
++
++#include <linux/cred.h>
++#include <linux/lsm_hooks.h>
++#include <linux/slab.h> /* alloc(), kfree() */
++
++#include "common.h" /* LANDLOCK_NAME */
++#include "task.h"
++
++static void hook_cred_free(struct cred *cred)
++{
++	struct landlock_task_security *tsec = cred->security;
++
++	if (!tsec)
++		return;
++	cred->security = NULL;
++	landlock_free_task_security(tsec);
++}
++
++/* TODO: make Landlock exclusive until the LSM stacking infrastructure */
++static int hook_cred_prepare(struct cred *new, const struct cred *old,
++		gfp_t gfp)
++{
++	struct landlock_task_security *tsec;
++
++	/* TODO: only allocate if the current task is landlocked */
++	tsec = landlock_new_task_security(gfp);
++	if (!tsec)
++		return -ENOMEM;
++	new->security = tsec;
++	return 0;
++}
++
++static struct security_hook_list landlock_hooks[] = {
++	LSM_HOOK_INIT(cred_prepare, hook_cred_prepare),
++	LSM_HOOK_INIT(cred_free, hook_cred_free),
++};
++
++__init void landlock_add_hooks_cred(void)
++{
++	security_add_hooks(landlock_hooks, ARRAY_SIZE(landlock_hooks),
++			LANDLOCK_NAME);
++}
+diff --git a/security/landlock/hooks_cred.h b/security/landlock/hooks_cred.h
+new file mode 100644
+index 000000000000..18ec646a7eb0
+--- /dev/null
++++ b/security/landlock/hooks_cred.h
+@@ -0,0 +1 @@
++__init void landlock_add_hooks_cred(void);
+diff --git a/security/landlock/hooks_fs.c b/security/landlock/hooks_fs.c
+new file mode 100644
+index 000000000000..8f91800feef4
+--- /dev/null
++++ b/security/landlock/hooks_fs.c
+@@ -0,0 +1,1021 @@
++/*
++ * Landlock LSM - filesystem hooks
++ *
++ * Copyright © 2016-2018 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018 ANSSI
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ */
++
++#include <linux/bpf.h> /* enum bpf_access_type */
++#include <linux/kernel.h> /* ARRAY_SIZE */
++#include <linux/lsm_hooks.h>
++#include <linux/rcupdate.h> /* synchronize_rcu() */
++#include <linux/stat.h> /* S_ISDIR */
++#include <linux/stddef.h> /* offsetof */
++#include <linux/types.h> /* uintptr_t */
++#include <linux/workqueue.h> /* INIT_WORK() */
++
++/* permissions translation */
++#include <linux/fs.h> /* MAY_* */
++#include <linux/mman.h> /* PROT_* */
++#include <linux/namei.h>
++
++/* hook arguments */
++#include <linux/cred.h>
++#include <linux/dcache.h> /* struct dentry */
++#include <linux/fs.h> /* struct inode, struct iattr */
++#include <linux/mm_types.h> /* struct vm_area_struct */
++#include <linux/mount.h> /* struct vfsmount */
++#include <linux/path.h> /* struct path */
++#include <linux/sched.h> /* struct task_struct */
++#include <linux/time.h> /* struct timespec */
++
++#include "chain.h"
++#include "common.h"
++#include "hooks_fs.h"
++#include "hooks.h"
++#include "tag.h"
++#include "task.h"
++
++/* fs_pick */
++
++#include <asm/page.h> /* PAGE_SIZE */
++#include <asm/syscall.h>
++#include <linux/dcache.h> /* d_path, dentry_path_raw */
++#include <linux/err.h> /* *_ERR */
++#include <linux/gfp.h> /* __get_free_page, GFP_KERNEL */
++#include <linux/path.h> /* struct path */
++#include <linux/sched/task_stack.h> /* task_pt_regs dependency */
++
++bool landlock_is_valid_access_fs_pick(int off, enum bpf_access_type type,
++		enum bpf_reg_type *reg_type, int *max_size)
++{
++	switch (off) {
++	case offsetof(struct landlock_ctx_fs_pick, cookie):
++		if (type != BPF_READ && type != BPF_WRITE)
++			return false;
++		*reg_type = SCALAR_VALUE;
++		*max_size = sizeof(u64);
++		return true;
++	case offsetof(struct landlock_ctx_fs_pick, chain):
++		if (type != BPF_READ)
++			return false;
++		*reg_type = PTR_TO_LL_CHAIN;
++		*max_size = sizeof(u64);
++		return true;
++	case offsetof(struct landlock_ctx_fs_pick, inode):
++		if (type != BPF_READ)
++			return false;
++		*reg_type = PTR_TO_INODE;
++		*max_size = sizeof(u64);
++		return true;
++	case offsetof(struct landlock_ctx_fs_pick, inode_lookup):
++		if (type != BPF_READ)
++			return false;
++		*reg_type = SCALAR_VALUE;
++		/* TODO: check the bit mask */
++		*max_size = sizeof(u8);
++		return true;
++	default:
++		return false;
++	}
++}
++
++bool landlock_is_valid_access_fs_walk(int off, enum bpf_access_type type,
++		enum bpf_reg_type *reg_type, int *max_size)
++{
++	switch (off) {
++	case offsetof(struct landlock_ctx_fs_walk, cookie):
++		if (type != BPF_READ && type != BPF_WRITE)
++			return false;
++		*reg_type = SCALAR_VALUE;
++		*max_size = sizeof(u64);
++		return true;
++	case offsetof(struct landlock_ctx_fs_walk, chain):
++		if (type != BPF_READ)
++			return false;
++		*reg_type = PTR_TO_LL_CHAIN;
++		*max_size = sizeof(u64);
++		return true;
++	case offsetof(struct landlock_ctx_fs_walk, inode):
++		if (type != BPF_READ)
++			return false;
++		*reg_type = PTR_TO_INODE;
++		*max_size = sizeof(u64);
++		return true;
++	case offsetof(struct landlock_ctx_fs_walk, inode_lookup):
++		if (type != BPF_READ)
++			return false;
++		*reg_type = SCALAR_VALUE;
++		/* TODO: check the bit mask */
++		*max_size = sizeof(u8);
++		return true;
++	default:
++		return false;
++	}
++}
++
++bool landlock_is_valid_access_fs_get(int off, enum bpf_access_type type,
++		enum bpf_reg_type *reg_type, int *max_size)
++{
++	switch (off) {
++	case offsetof(struct landlock_ctx_fs_get, cookie):
++		/* fs_get is the last possible hook, hence not useful to allow
++		 * cookie modification */
++		if (type != BPF_READ)
++			return false;
++		*reg_type = SCALAR_VALUE;
++		*max_size = sizeof(u64);
++		return true;
++	case offsetof(struct landlock_ctx_fs_get, chain):
++		if (type != BPF_READ)
++			return false;
++		*reg_type = PTR_TO_LL_CHAIN;
++		*max_size = sizeof(u64);
++		return true;
++	case offsetof(struct landlock_ctx_fs_get, tag_object):
++		if (type != BPF_READ)
++			return false;
++		*reg_type = PTR_TO_LL_TAG_OBJ;
++		*max_size = sizeof(u64);
++		return true;
++	default:
++		return false;
++	}
++}
++
++/* fs_walk */
++
++struct landlock_walk_state {
++	u64 cookie;
++};
++
++struct landlock_walk_list {
++	/* array of states */
++	struct work_struct work;
++	struct landlock_walk_state *state;
++	struct inode *last_inode;
++	struct task_struct *task;
++	struct landlock_walk_list *next;
++	enum namei_type lookup_type;
++};
++
++/* allocate an array of states nested in a new struct landlock_walk_list */
++/* never return NULL */
++/* TODO: use a dedicated kmem_cache_alloc() instead of k*alloc() */
++static struct landlock_walk_list *new_walk_list(struct task_struct *task)
++{
++	struct landlock_walk_list *walk_list;
++	struct landlock_walk_state *walk_state;
++	struct landlock_prog_set *prog_set =
++		task->seccomp.landlock_prog_set;
++
++	/* allocate an array of cookies: one for each fs_walk program */
++	if (WARN_ON(!prog_set))
++		return ERR_PTR(-EFAULT);
++	/* fill with zero */
++	walk_state = kcalloc(prog_set->chain_last->index + 1,
++			sizeof(*walk_state), GFP_ATOMIC);
++	if (!walk_state)
++		return ERR_PTR(-ENOMEM);
++	walk_list = kzalloc(sizeof(*walk_list), GFP_ATOMIC);
++	if (!walk_list) {
++		kfree(walk_state);
++		return ERR_PTR(-ENOMEM);
++	}
++	walk_list->state = walk_state;
++	walk_list->task = task;
++	return walk_list;
++}
++
++static void free_walk_list(struct landlock_walk_list *walker)
++{
++	while (walker) {
++		struct landlock_walk_list *freeme = walker;
++
++		walker = walker->next;
++		/* iput() might sleep */
++		iput(freeme->last_inode);
++		kfree(freeme->state);
++		kfree(freeme);
++	}
++}
++
++/* called from workqueue */
++static void free_walk_list_deferred(struct work_struct *work)
++{
++	struct landlock_walk_list *walk_list;
++
++	synchronize_rcu();
++	walk_list = container_of(work, struct landlock_walk_list, work);
++	free_walk_list(walk_list);
++}
++
++void landlock_free_walk_list(struct landlock_walk_list *freeme)
++{
++	if (!freeme)
++		return;
++	INIT_WORK(&freeme->work, free_walk_list_deferred);
++	schedule_work(&freeme->work);
++}
++
++/* return NULL if there is no fs_walk programs */
++static struct landlock_walk_list *get_current_walk_list(
++		const struct inode *inode)
++{
++	struct landlock_walk_list **walk_list;
++	struct nameidata_lookup *lookup;
++
++	lookup = current_nameidata_lookup(inode);
++	if (IS_ERR(lookup))
++		/* -ENOENT */
++		return ERR_CAST(lookup);
++	if (WARN_ON(!lookup))
++		return ERR_PTR(-EFAULT);
++	walk_list = (struct landlock_walk_list **)&lookup->security;
++	if (!*walk_list) {
++		struct landlock_walk_list *new_list;
++
++		/* allocate a landlock_walk_list to be able to move it without
++		 * new allocation in hook_nameidata_put_lookup() */
++		new_list = new_walk_list(current);
++		if (IS_ERR_OR_NULL(new_list))
++			/* no fs_walk prog */
++			return ERR_CAST(new_list);
++		*walk_list = new_list;
++	}
++	(*walk_list)->lookup_type = lookup->type;
++	return *walk_list;
++}
++
++static inline u8 translate_lookup(enum namei_type type)
++{
++	/* TODO: Use bitmask instead, and add an autonomous LOOKUP_ROOT
++	 * (doesn't show when encountering a LAST_DOTDOT)? */
++	BUILD_BUG_ON(LAST_ROOT != LANDLOCK_CTX_FS_WALK_INODE_LOOKUP_ROOT);
++	BUILD_BUG_ON(LAST_DOT != LANDLOCK_CTX_FS_WALK_INODE_LOOKUP_DOT);
++	BUILD_BUG_ON(LAST_DOTDOT != LANDLOCK_CTX_FS_WALK_INODE_LOOKUP_DOTDOT);
++	return type & 3;
++}
++
++/* for now, handle syscalls dealing with up to 2 concurrent path walks */
++#define LANDLOCK_MAX_CONCURRENT_WALK 2
++
++/* retrieve the walk state strictly associated to an inode (i.e. when the
++ * actual walk is done) */
++/* never return NULL */
++static struct landlock_walk_list *get_saved_walk_list(struct inode *inode)
++{
++	struct landlock_task_security *tsec;
++	struct landlock_walk_list **walker, *walk_match = NULL;
++	unsigned int walk_nb = 0;
++
++	tsec = current_security();
++	if (WARN_ON(!tsec) || WARN_ON(!inode))
++		return ERR_PTR(-EFAULT);
++	/* find the walk that match the inode */
++	walker = &tsec->walk_list;
++	while (*walker) {
++		walk_nb++;
++		if (walk_nb > LANDLOCK_MAX_CONCURRENT_WALK) {
++			free_walk_list(*walker);
++			*walker = NULL;
++			break;
++		}
++		if (!walk_match && (*walker)->last_inode == inode)
++			walk_match = *walker;
++		walker = &(*walker)->next;
++	}
++	if (!walk_match) {
++		/* create empty walk states */
++		walk_match = new_walk_list(current);
++		if (WARN_ON(!walk_match))
++			return ERR_PTR(-EFAULT);
++		ihold(inode);
++		walk_match->last_inode = inode;
++		walk_match->next = tsec->walk_list;
++		tsec->walk_list = walk_match;
++	}
++	return walk_match;
++}
++
++/* Move the walk state/list in current->security.  It will be freed by
++ * hook_cred_free(). */
++static void hook_nameidata_put_lookup(struct nameidata_lookup *lookup,
++		struct inode *inode)
++{
++	struct landlock_task_security *tsec;
++	struct landlock_walk_list *walk_list = lookup->security;
++
++	if (!landlocked(current))
++		return;
++	if (!walk_list)
++		return;
++	if (!inode)
++		goto free_list;
++	if (WARN_ON(walk_list->task != current))
++		goto free_list;
++	tsec = current_security();
++	if (WARN_ON(!tsec))
++		goto free_list;
++	inode = igrab(inode);
++	if (!inode)
++		goto free_list;
++	walk_list->lookup_type = lookup->type;
++	walk_list->last_inode = inode;
++	walk_list->next = tsec->walk_list;
++	tsec->walk_list = walk_list;
++	return;
++
++free_list:
++	landlock_free_walk_list(walk_list);
++}
++
++struct landlock_hook_ctx_fs_walk {
++	struct landlock_walk_state *state;
++	struct landlock_ctx_fs_walk prog_ctx;
++};
++
++/* set cookie and chain */
++struct landlock_ctx_fs_walk *landlock_update_ctx_fs_walk(
++		struct landlock_hook_ctx_fs_walk *hook_ctx,
++		const struct landlock_chain *chain)
++{
++	if (WARN_ON(!hook_ctx))
++		return NULL;
++	if (WARN_ON(!hook_ctx->state))
++		return NULL;
++	/* cookie initially contains zero */
++	hook_ctx->prog_ctx.cookie = hook_ctx->state[chain->index].cookie;
++	hook_ctx->prog_ctx.chain = (uintptr_t)chain;
++	return &hook_ctx->prog_ctx;
++}
++
++/* save cookie */
++int landlock_save_ctx_fs_walk(struct landlock_hook_ctx_fs_walk *hook_ctx,
++		struct landlock_chain *chain)
++{
++	if (WARN_ON(!hook_ctx))
++		return 1;
++	if (WARN_ON(!hook_ctx->state))
++		return 1;
++	hook_ctx->state[chain->index].cookie = hook_ctx->prog_ctx.cookie;
++	return 0;
++}
++
++static int decide_fs_walk(int may_mask, struct inode *inode)
++{
++	struct landlock_walk_list *walk_list;
++	struct landlock_hook_ctx_fs_walk fs_walk = {};
++	struct landlock_hook_ctx hook_ctx = {
++		.fs_walk = &fs_walk,
++	};
++	const enum landlock_hook_type hook_type = LANDLOCK_HOOK_FS_WALK;
++
++	if (!current_has_prog_type(hook_type))
++		/* no fs_walk */
++		return 0;
++	if (WARN_ON(!inode))
++		return -EFAULT;
++	walk_list = get_current_walk_list(inode);
++	if (IS_ERR_OR_NULL(walk_list))
++		/* error or no fs_walk */
++		return PTR_ERR(walk_list);
++
++	fs_walk.state = walk_list->state;
++	/* init common data: inode, is_dot, is_dotdot, is_root */
++	fs_walk.prog_ctx.inode = (uintptr_t)inode;
++	fs_walk.prog_ctx.inode_lookup =
++		translate_lookup(walk_list->lookup_type);
++	return landlock_decide(hook_type, &hook_ctx, 0);
++}
++
++/* fs_pick */
++
++struct landlock_hook_ctx_fs_pick {
++	__u64 triggers;
++	struct landlock_walk_state *state;
++	struct landlock_ctx_fs_pick prog_ctx;
++};
++
++/* set cookie and chain */
++struct landlock_ctx_fs_pick *landlock_update_ctx_fs_pick(
++		struct landlock_hook_ctx_fs_pick *hook_ctx,
++		const struct landlock_chain *chain)
++{
++	if (WARN_ON(!hook_ctx))
++		return NULL;
++	if (WARN_ON(!hook_ctx->state))
++		return NULL;
++	/* cookie initially contains zero */
++	hook_ctx->prog_ctx.cookie = hook_ctx->state[chain->index].cookie;
++	hook_ctx->prog_ctx.chain = (uintptr_t)chain;
++	return &hook_ctx->prog_ctx;
++}
++
++/* save cookie */
++int landlock_save_ctx_fs_pick(struct landlock_hook_ctx_fs_pick *hook_ctx,
++		struct landlock_chain *chain)
++{
++	if (WARN_ON(!hook_ctx))
++		return 1;
++	if (WARN_ON(!hook_ctx->state))
++		return 1;
++	hook_ctx->state[chain->index].cookie = hook_ctx->prog_ctx.cookie;
++	return 0;
++}
++
++static int decide_fs_pick(__u64 triggers, struct inode *inode)
++{
++	struct landlock_walk_list *walk_list;
++	struct landlock_hook_ctx_fs_pick fs_pick = {};
++	struct landlock_hook_ctx hook_ctx = {
++		.fs_pick = &fs_pick,
++	};
++	const enum landlock_hook_type hook_type = LANDLOCK_HOOK_FS_PICK;
++
++	if (WARN_ON(!triggers))
++		return 0;
++	if (!current_has_prog_type(hook_type))
++		/* no fs_pick */
++		return 0;
++	if (WARN_ON(!inode))
++		return -EFAULT;
++	/* first, try to get the current walk (e.g. open(2)) */
++	walk_list = get_current_walk_list(inode);
++	if (!walk_list || PTR_ERR(walk_list) == -ENOENT) {
++		/* otherwise, the path walk may have end (e.g. access(2)) */
++		walk_list = get_saved_walk_list(inode);
++		if (IS_ERR(walk_list))
++			return PTR_ERR(walk_list);
++		if (WARN_ON(!walk_list))
++			return -EFAULT;
++	}
++	if (IS_ERR(walk_list))
++		return PTR_ERR(walk_list);
++
++	fs_pick.state = walk_list->state;
++	fs_pick.triggers = triggers,
++	/* init common data: inode */
++	fs_pick.prog_ctx.inode = (uintptr_t)inode;
++	fs_pick.prog_ctx.inode_lookup =
++		translate_lookup(walk_list->lookup_type);
++	return landlock_decide(hook_type, &hook_ctx, fs_pick.triggers);
++}
++
++/* fs_get */
++
++struct landlock_hook_ctx_fs_get {
++	struct landlock_walk_state *state;
++	struct landlock_ctx_fs_get prog_ctx;
++};
++
++/* set cookie and chain */
++struct landlock_ctx_fs_get *landlock_update_ctx_fs_get(
++		struct landlock_hook_ctx_fs_get *hook_ctx,
++		const struct landlock_chain *chain)
++{
++	if (WARN_ON(!hook_ctx))
++		return NULL;
++	if (WARN_ON(!hook_ctx->state))
++		return NULL;
++	hook_ctx->prog_ctx.cookie = hook_ctx->state[chain->index].cookie;
++	hook_ctx->prog_ctx.chain = (uintptr_t)chain;
++	return &hook_ctx->prog_ctx;
++}
++
++static int decide_fs_get(struct inode *inode,
++		struct landlock_tag_ref **tag_ref)
++{
++	struct landlock_walk_list *walk_list;
++	struct landlock_hook_ctx_fs_get fs_get = {};
++	struct landlock_hook_ctx hook_ctx = {
++		.fs_get = &fs_get,
++	};
++	struct landlock_tag_object tag_obj = {
++		.lock = &inode->i_lock,
++		.root = (struct landlock_tag_root **)&inode->i_security,
++		.ref = tag_ref,
++	};
++	const enum landlock_hook_type hook_type = LANDLOCK_HOOK_FS_GET;
++
++	if (!current_has_prog_type(hook_type))
++		/* no fs_get */
++		return 0;
++	if (WARN_ON(!inode))
++		return -EFAULT;
++	walk_list = get_saved_walk_list(inode);
++	if (IS_ERR(walk_list))
++		return PTR_ERR(walk_list);
++	if (WARN_ON(!walk_list))
++		return -EFAULT;
++	fs_get.state = walk_list->state;
++	/* init common data: tag_obj */
++	fs_get.prog_ctx.tag_object = (uintptr_t)&tag_obj;
++	return landlock_decide(hook_type, &hook_ctx, 0);
++}
++
++/* helpers */
++
++static u64 fs_may_to_triggers(int may_mask, umode_t mode)
++{
++	u64 ret = 0;
++
++	if (may_mask & MAY_EXEC)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_EXECUTE;
++	if (may_mask & MAY_READ) {
++		if (S_ISDIR(mode))
++			ret |= LANDLOCK_TRIGGER_FS_PICK_READDIR;
++		else
++			ret |= LANDLOCK_TRIGGER_FS_PICK_READ;
++	}
++	if (may_mask & MAY_WRITE)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_WRITE;
++	if (may_mask & MAY_APPEND)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_APPEND;
++	/* do not (re-)run fs_pick in hook_file_open() */
++	if (may_mask & MAY_OPEN)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_OPEN;
++	if (may_mask & MAY_CHROOT)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_CHROOT;
++	else if (may_mask & MAY_CHDIR)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_CHDIR;
++	/* XXX: ignore MAY_ACCESS */
++	WARN_ON(!ret);
++	return ret;
++}
++
++static inline u64 mem_prot_to_triggers(unsigned long prot, bool private)
++{
++	u64 ret = LANDLOCK_TRIGGER_FS_PICK_MAP;
++
++	/* private mapping do not write to files */
++	if (!private && (prot & PROT_WRITE))
++		ret |= LANDLOCK_TRIGGER_FS_PICK_WRITE;
++	if (prot & PROT_READ)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_READ;
++	if (prot & PROT_EXEC)
++		ret |= LANDLOCK_TRIGGER_FS_PICK_EXECUTE;
++	WARN_ON(!ret);
++	return ret;
++}
++
++/* binder hooks */
++
++static int hook_binder_transfer_file(struct task_struct *from,
++		struct task_struct *to, struct file *file)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_TRANSFER,
++			file_inode(file));
++}
++
++/* sb hooks */
++
++static int hook_sb_statfs(struct dentry *dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR,
++			dentry->d_inode);
++}
++
++/* TODO: handle mount source and remount */
++static int hook_sb_mount(const char *dev_name, const struct path *path,
++		const char *type, unsigned long flags, void *data)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!path))
++		return 0;
++	if (WARN_ON(!path->dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_MOUNTON,
++			path->dentry->d_inode);
++}
++
++/*
++ * The @old_path is similar to a destination mount point.
++ */
++static int hook_sb_pivotroot(const struct path *old_path,
++		const struct path *new_path)
++{
++	int err;
++	struct landlock_task_security *tsec;
++
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!old_path))
++		return 0;
++	if (WARN_ON(!old_path->dentry))
++		return 0;
++	err = decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_MOUNTON,
++			old_path->dentry->d_inode);
++	if (err)
++		return err;
++	err = decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_CHROOT,
++			new_path->dentry->d_inode);
++	if (err)
++		return err;
++
++	/* handle root directory tag */
++	tsec = current_security();
++	if (!tsec->root) {
++		struct landlock_tag_fs *new_tag_fs;
++
++		new_tag_fs = landlock_new_tag_fs(new_path->dentry->d_inode);
++		if (IS_ERR(new_tag_fs))
++			return PTR_ERR(new_tag_fs);
++		tsec->root = new_tag_fs;
++	} else {
++		landlock_reset_tag_fs(tsec->root, new_path->dentry->d_inode);
++	}
++	return decide_fs_get(tsec->root->inode, &tsec->root->ref);
++}
++
++/* inode hooks */
++
++/* a directory inode contains only one dentry */
++static int hook_inode_create(struct inode *dir, struct dentry *dentry,
++		umode_t mode)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_CREATE, dir);
++}
++
++static int hook_inode_link(struct dentry *old_dentry, struct inode *dir,
++		struct dentry *new_dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!old_dentry)) {
++		int ret = decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_LINK,
++				old_dentry->d_inode);
++		if (ret)
++			return ret;
++	}
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_LINKTO, dir);
++}
++
++static int hook_inode_unlink(struct inode *dir, struct dentry *dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_UNLINK,
++			dentry->d_inode);
++}
++
++static int hook_inode_symlink(struct inode *dir, struct dentry *dentry,
++		const char *old_name)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_CREATE, dir);
++}
++
++static int hook_inode_mkdir(struct inode *dir, struct dentry *dentry,
++		umode_t mode)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_CREATE, dir);
++}
++
++static int hook_inode_rmdir(struct inode *dir, struct dentry *dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_RMDIR, dentry->d_inode);
++}
++
++static int hook_inode_mknod(struct inode *dir, struct dentry *dentry,
++		umode_t mode, dev_t dev)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_CREATE, dir);
++}
++
++static int hook_inode_rename(struct inode *old_dir, struct dentry *old_dentry,
++		struct inode *new_dir, struct dentry *new_dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	/* TODO: add artificial walk session from old_dir to old_dentry */
++	if (!WARN_ON(!old_dentry)) {
++		int ret = decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_RENAME,
++				old_dentry->d_inode);
++		if (ret)
++			return ret;
++	}
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_RENAMETO, new_dir);
++}
++
++static int hook_inode_readlink(struct dentry *dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_READ, dentry->d_inode);
++}
++
++/* ignore the inode_follow_link hook (could set is_symlink in the fs_walk
++ * context) */
++
++static int hook_inode_permission(struct inode *inode, int mask)
++{
++	int err;
++	u64 triggers;
++	struct landlock_tag_fs **tag_fs;
++	struct landlock_task_security *tsec;
++
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!inode))
++		return 0;
++
++	triggers = fs_may_to_triggers(mask, inode->i_mode);
++	/* decide_fs_walk() is exclusive with decide_fs_pick(): in a path walk,
++	 * ignore execute-only access on directory for any fs_pick program. */
++	if (triggers == LANDLOCK_TRIGGER_FS_PICK_EXECUTE &&
++			S_ISDIR(inode->i_mode))
++		return decide_fs_walk(mask, inode);
++
++	err = decide_fs_pick(triggers, inode);
++	if (err)
++		return err;
++
++	/* handle current working directory and root directory tags */
++	tsec = current_security();
++	if (triggers & LANDLOCK_TRIGGER_FS_PICK_CHDIR)
++		tag_fs = &tsec->cwd;
++	else if (triggers & LANDLOCK_TRIGGER_FS_PICK_CHROOT)
++		tag_fs = &tsec->root;
++	else
++		return 0;
++	if (!*tag_fs) {
++		struct landlock_tag_fs *new_tag_fs;
++
++		new_tag_fs = landlock_new_tag_fs(inode);
++		if (IS_ERR(new_tag_fs))
++			return PTR_ERR(new_tag_fs);
++		*tag_fs = new_tag_fs;
++	} else {
++		landlock_reset_tag_fs(*tag_fs, inode);
++	}
++	return decide_fs_get((*tag_fs)->inode, &(*tag_fs)->ref);
++}
++
++static int hook_inode_setattr(struct dentry *dentry, struct iattr *attr)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_SETATTR,
++			dentry->d_inode);
++}
++
++static int hook_inode_getattr(const struct path *path)
++{
++	/* TODO: link parent inode and path */
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!path))
++		return 0;
++	if (WARN_ON(!path->dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR,
++			path->dentry->d_inode);
++}
++
++static int hook_inode_setxattr(struct dentry *dentry, const char *name,
++		const void *value, size_t size, int flags)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_SETATTR,
++			dentry->d_inode);
++}
++
++static int hook_inode_getxattr(struct dentry *dentry, const char *name)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR,
++			dentry->d_inode);
++}
++
++static int hook_inode_listxattr(struct dentry *dentry)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR,
++			dentry->d_inode);
++}
++
++static int hook_inode_removexattr(struct dentry *dentry, const char *name)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!dentry))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_SETATTR,
++			dentry->d_inode);
++}
++
++static int hook_inode_getsecurity(struct inode *inode, const char *name,
++		void **buffer, bool alloc)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR, inode);
++}
++
++static int hook_inode_setsecurity(struct inode *inode, const char *name,
++		const void *value, size_t size, int flag)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_SETATTR, inode);
++}
++
++static int hook_inode_listsecurity(struct inode *inode, char *buffer,
++		size_t buffer_size)
++{
++	if (!landlocked(current))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_GETATTR, inode);
++}
++
++/* file hooks */
++
++static int hook_file_ioctl(struct file *file, unsigned int cmd,
++		unsigned long arg)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_IOCTL,
++			file_inode(file));
++}
++
++static int hook_file_lock(struct file *file, unsigned int cmd)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_LOCK, file_inode(file));
++}
++
++static int hook_file_fcntl(struct file *file, unsigned int cmd,
++		unsigned long arg)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	return decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_FCNTL,
++			file_inode(file));
++}
++
++static int hook_mmap_file(struct file *file, unsigned long reqprot,
++		unsigned long prot, unsigned long flags)
++{
++	if (!landlocked(current))
++		return 0;
++	/* file can be null for anonymous mmap */
++	if (!file)
++		return 0;
++	return decide_fs_pick(mem_prot_to_triggers(prot, flags & MAP_PRIVATE),
++			file_inode(file));
++}
++
++static int hook_file_mprotect(struct vm_area_struct *vma,
++		unsigned long reqprot, unsigned long prot)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!vma))
++		return 0;
++	if (!vma->vm_file)
++		return 0;
++	return decide_fs_pick(mem_prot_to_triggers(prot,
++				!(vma->vm_flags & VM_SHARED)),
++			file_inode(vma->vm_file));
++}
++
++static int hook_file_receive(struct file *file)
++{
++	int err;
++
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	err = decide_fs_pick(LANDLOCK_TRIGGER_FS_PICK_RECEIVE,
++			file_inode(file));
++	if (err)
++		return err;
++
++	return decide_fs_get(file_inode(file),
++			(struct landlock_tag_ref **)&file->f_security);
++}
++
++static int hook_file_open(struct file *file, const struct cred *cred)
++{
++	if (!landlocked(current))
++		return 0;
++	if (WARN_ON(!file))
++		return 0;
++	/* do not re-run fs_pick/LANDLOCK_TRIGGER_FS_PICK_OPEN here for now */
++	return decide_fs_get(file_inode(file),
++			(struct landlock_tag_ref **)&file->f_security);
++}
++
++static void hook_inode_free_security(struct inode *inode)
++{
++	if (!landlocked(current))
++		return;
++	WARN_ON(inode->i_security);
++}
++
++static void hook_file_free_security(struct file *file)
++{
++	if (!landlocked(current))
++		return;
++	/* free inode tags */
++	if (!file_inode(file))
++		return;
++	landlock_free_tag_ref(file->f_security, (struct landlock_tag_root **)
++			&file_inode(file)->i_security,
++			&file_inode(file)->i_lock);
++}
++
++static struct security_hook_list landlock_hooks[] = {
++	LSM_HOOK_INIT(binder_transfer_file, hook_binder_transfer_file),
++
++	LSM_HOOK_INIT(sb_statfs, hook_sb_statfs),
++	LSM_HOOK_INIT(sb_mount, hook_sb_mount),
++	LSM_HOOK_INIT(sb_pivotroot, hook_sb_pivotroot),
++
++	LSM_HOOK_INIT(inode_create, hook_inode_create),
++	LSM_HOOK_INIT(inode_link, hook_inode_link),
++	LSM_HOOK_INIT(inode_unlink, hook_inode_unlink),
++	LSM_HOOK_INIT(inode_symlink, hook_inode_symlink),
++	LSM_HOOK_INIT(inode_mkdir, hook_inode_mkdir),
++	LSM_HOOK_INIT(inode_rmdir, hook_inode_rmdir),
++	LSM_HOOK_INIT(inode_mknod, hook_inode_mknod),
++	LSM_HOOK_INIT(inode_rename, hook_inode_rename),
++	LSM_HOOK_INIT(inode_readlink, hook_inode_readlink),
++	LSM_HOOK_INIT(inode_permission, hook_inode_permission),
++	LSM_HOOK_INIT(inode_setattr, hook_inode_setattr),
++	LSM_HOOK_INIT(inode_getattr, hook_inode_getattr),
++	LSM_HOOK_INIT(inode_setxattr, hook_inode_setxattr),
++	LSM_HOOK_INIT(inode_getxattr, hook_inode_getxattr),
++	LSM_HOOK_INIT(inode_listxattr, hook_inode_listxattr),
++	LSM_HOOK_INIT(inode_removexattr, hook_inode_removexattr),
++	LSM_HOOK_INIT(inode_getsecurity, hook_inode_getsecurity),
++	LSM_HOOK_INIT(inode_setsecurity, hook_inode_setsecurity),
++	LSM_HOOK_INIT(inode_listsecurity, hook_inode_listsecurity),
++	LSM_HOOK_INIT(nameidata_put_lookup, hook_nameidata_put_lookup),
++
++	/* do not handle file_permission for now */
++	LSM_HOOK_INIT(inode_free_security, hook_inode_free_security),
++	LSM_HOOK_INIT(file_free_security, hook_file_free_security),
++	LSM_HOOK_INIT(file_ioctl, hook_file_ioctl),
++	LSM_HOOK_INIT(file_lock, hook_file_lock),
++	LSM_HOOK_INIT(file_fcntl, hook_file_fcntl),
++	LSM_HOOK_INIT(mmap_file, hook_mmap_file),
++	LSM_HOOK_INIT(file_mprotect, hook_file_mprotect),
++	LSM_HOOK_INIT(file_receive, hook_file_receive),
++	LSM_HOOK_INIT(file_open, hook_file_open),
++};
++
++__init void landlock_add_hooks_fs(void)
++{
++	security_add_hooks(landlock_hooks, ARRAY_SIZE(landlock_hooks),
++			LANDLOCK_NAME);
++}
+diff --git a/security/landlock/hooks_fs.h b/security/landlock/hooks_fs.h
+new file mode 100644
+index 000000000000..71cd2e7c47d4
+--- /dev/null
++++ b/security/landlock/hooks_fs.h
+@@ -0,0 +1,60 @@
++/*
++ * Landlock LSM - filesystem hooks
++ *
++ * Copyright © 2017-2018 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018 ANSSI
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ */
++
++#include <linux/bpf.h> /* enum bpf_access_type */
++
++#include "common.h" /* struct landlock_chain */
++
++/* needed for struct landlock_task_security */
++struct landlock_walk_list;
++
++void landlock_free_walk_list(struct landlock_walk_list *freeme);
++
++__init void landlock_add_hooks_fs(void);
++
++/* fs_pick */
++
++struct landlock_hook_ctx_fs_pick;
++
++bool landlock_is_valid_access_fs_pick(int off, enum bpf_access_type type,
++		enum bpf_reg_type *reg_type, int *max_size);
++
++struct landlock_ctx_fs_pick *landlock_update_ctx_fs_pick(
++		struct landlock_hook_ctx_fs_pick *hook_ctx,
++		const struct landlock_chain *chain);
++
++int landlock_save_ctx_fs_pick(struct landlock_hook_ctx_fs_pick *hook_ctx,
++		struct landlock_chain *chain);
++
++/* fs_walk */
++
++struct landlock_hook_ctx_fs_walk;
++
++bool landlock_is_valid_access_fs_walk(int off, enum bpf_access_type type,
++		enum bpf_reg_type *reg_type, int *max_size);
++
++struct landlock_ctx_fs_walk *landlock_update_ctx_fs_walk(
++		struct landlock_hook_ctx_fs_walk *hook_ctx,
++		const struct landlock_chain *chain);
++
++int landlock_save_ctx_fs_walk(struct landlock_hook_ctx_fs_walk *hook_ctx,
++		struct landlock_chain *chain);
++
++/* fs_get */
++
++struct landlock_hook_ctx_fs_get;
++
++bool landlock_is_valid_access_fs_get(int off, enum bpf_access_type type,
++		enum bpf_reg_type *reg_type, int *max_size);
++
++struct landlock_ctx_fs_get *landlock_update_ctx_fs_get(
++		struct landlock_hook_ctx_fs_get *hook_ctx,
++		const struct landlock_chain *chain);
+diff --git a/security/landlock/init.c b/security/landlock/init.c
+index ef2ee0742c53..3486272d17b2 100644
+--- a/security/landlock/init.c
++++ b/security/landlock/init.c
+@@ -12,8 +12,11 @@
+ #include <linux/bpf.h> /* enum bpf_access_type */
+ #include <linux/capability.h> /* capable */
+ #include <linux/filter.h> /* struct bpf_prog */
++#include <linux/lsm_hooks.h>
+ 
+ #include "common.h" /* LANDLOCK_* */
++#include "hooks_fs.h"
++#include "hooks_cred.h"
+ 
+ static bool bpf_landlock_is_valid_access(int off, int size,
+ 		enum bpf_access_type type, struct bpf_insn_access_aux *info,
+@@ -32,6 +35,28 @@ static bool bpf_landlock_is_valid_access(int off, int size,
+ 	if (size <= 0 || size > sizeof(__u64))
+ 		return false;
+ 
++	/* set register type and max size */
++	switch (prog_subtype->landlock_hook.type) {
++	case LANDLOCK_HOOK_FS_PICK:
++		if (!landlock_is_valid_access_fs_pick(off, type, &reg_type,
++					&max_size))
++			return false;
++		break;
++	case LANDLOCK_HOOK_FS_WALK:
++		if (!landlock_is_valid_access_fs_walk(off, type, &reg_type,
++					&max_size))
++			return false;
++		break;
++	case LANDLOCK_HOOK_FS_GET:
++		if (!landlock_is_valid_access_fs_get(off, type, &reg_type,
++					&max_size))
++			return false;
++		break;
++	default:
++		WARN_ON(1);
++		return false;
++	}
++
+ 	/* check memory range access */
+ 	switch (reg_type) {
+ 	case NOT_INIT:
+@@ -158,6 +183,30 @@ static const struct bpf_func_proto *bpf_landlock_func_proto(
+ 	default:
+ 		break;
+ 	}
++
++	switch (hook_type) {
++	case LANDLOCK_HOOK_FS_WALK:
++	case LANDLOCK_HOOK_FS_PICK:
++		switch (func_id) {
++		case BPF_FUNC_inode_map_lookup:
++			return &bpf_inode_map_lookup_proto;
++		case BPF_FUNC_inode_get_tag:
++			return &bpf_inode_get_tag_proto;
++		default:
++			break;
++		}
++		break;
++	case LANDLOCK_HOOK_FS_GET:
++		switch (func_id) {
++		case BPF_FUNC_inode_get_tag:
++			return &bpf_inode_get_tag_proto;
++		case BPF_FUNC_landlock_set_tag:
++			return &bpf_landlock_set_tag_proto;
++		default:
++			break;
++		}
++		break;
++	}
+ 	return NULL;
+ }
+ 
+@@ -178,3 +227,10 @@ const struct bpf_verifier_ops landlock_verifier_ops = {
+ const struct bpf_prog_ops landlock_prog_ops = {
+ 	.put_extra = bpf_landlock_put_extra,
  };
++
++void __init landlock_add_hooks(void)
++{
++	pr_info(LANDLOCK_NAME ": Ready to sandbox with seccomp\n");
++	landlock_add_hooks_cred();
++	landlock_add_hooks_fs();
++}
+diff --git a/security/landlock/task.c b/security/landlock/task.c
+new file mode 100644
+index 000000000000..8932570d3314
+--- /dev/null
++++ b/security/landlock/task.c
+@@ -0,0 +1,34 @@
++/*
++ * Landlock LSM - task helpers
++ *
++ * Copyright © 2018 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018 ANSSI
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ */
++
++#include <linux/slab.h>
++#include <linux/types.h> /* gfp_t */
++
++#include "hooks_fs.h" /* landlock_free_walk_list() */
++#include "tag_fs.h"
++#include "task.h"
++
++/* TODO: inherit tsec->root and tsec->cwd on fork/execve */
++
++void landlock_free_task_security(struct landlock_task_security *tsec)
++{
++	if (!tsec)
++		return;
++	landlock_free_walk_list(tsec->walk_list);
++	landlock_free_tag_fs(tsec->root);
++	landlock_free_tag_fs(tsec->cwd);
++	kfree(tsec);
++}
++
++struct landlock_task_security *landlock_new_task_security(gfp_t gfp)
++{
++	return kzalloc(sizeof(struct landlock_task_security), gfp);
++}
+diff --git a/security/landlock/task.h b/security/landlock/task.h
+new file mode 100644
+index 000000000000..31e640a6a4cb
+--- /dev/null
++++ b/security/landlock/task.h
+@@ -0,0 +1,29 @@
++/*
++ * Landlock LSM - task headers
++ *
++ * Copyright © 2018 Mickaël Salaün <mic@digikod.net>
++ * Copyright © 2018 ANSSI
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ */
++
++#ifndef _SECURITY_LANDLOCK_TASK_H
++#define _SECURITY_LANDLOCK_TASK_H
++
++#include <linux/types.h> /* gfp_t */
++
++#include "hooks_fs.h"
++#include "tag_fs.h"
++
++/* exclusively used by the current task (i.e. no concurrent access) */
++struct landlock_task_security {
++	struct landlock_walk_list *walk_list;
++	struct landlock_tag_fs *root, *cwd;
++};
++
++struct landlock_task_security *landlock_new_task_security(gfp_t gfp);
++void landlock_free_task_security(struct landlock_task_security *tsec);
++
++#endif /* _SECURITY_LANDLOCK_TASK_H */
+diff --git a/security/security.c b/security/security.c
+index 17053c7a1a77..5000b64a5363 100644
+--- a/security/security.c
++++ b/security/security.c
+@@ -76,10 +76,20 @@ int __init security_init(void)
+ 	loadpin_add_hooks();
  
- struct bpf_verifier_ops {
- 	/* return eBPF function prototype for verification */
--	const struct bpf_func_proto *(*get_func_proto)(enum bpf_func_id func_id);
-+	const struct bpf_func_proto *(*get_func_proto)(enum bpf_func_id func_id,
-+				      const struct bpf_prog_extra *prog_extra);
- 
- 	/* return true if 'size' wide access at offset 'off' within bpf_context
- 	 * with 'type' (read or write) is allowed
+ 	/*
+-	 * Load all the remaining security modules.
++	 * Load all remaining privileged security modules.
  	 */
- 	bool (*is_valid_access)(int off, int size, enum bpf_access_type type,
--				struct bpf_insn_access_aux *info);
-+				struct bpf_insn_access_aux *info,
-+				const struct bpf_prog_extra *prog_extra);
- 	int (*gen_prologue)(struct bpf_insn *insn, bool direct_write,
- 			    const struct bpf_prog *prog);
- 	u32 (*convert_ctx_access)(enum bpf_access_type type,
- 				  const struct bpf_insn *src,
- 				  struct bpf_insn *dst,
- 				  struct bpf_prog *prog, u32 *target_size);
-+	bool (*is_valid_subtype)(struct bpf_prog_extra *prog_extra);
- };
+ 	do_security_initcalls();
  
- struct bpf_prog_offload_ops {
-@@ -264,6 +276,7 @@ struct bpf_prog_aux {
- 		struct work_struct work;
- 		struct rcu_head	rcu;
- 	};
-+	struct bpf_prog_extra *extra;
- };
- 
- struct bpf_array {
-diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
-index db6bdc375126..87885c92ca78 100644
---- a/include/uapi/linux/bpf.h
-+++ b/include/uapi/linux/bpf.h
-@@ -231,6 +231,15 @@ enum bpf_attach_type {
- #define BPF_F_RDONLY		(1U << 3)
- #define BPF_F_WRONLY		(1U << 4)
- 
-+union bpf_prog_subtype {
-+	struct {
-+		__u32		type; /* enum landlock_hook_type */
-+		__aligned_u64	triggers; /* LANDLOCK_TRIGGER_* */
-+		__aligned_u64	options; /* LANDLOCK_OPTION_* */
-+		__u32		previous; /* chained program FD */
-+	} landlock_hook;
-+} __attribute__((aligned(8)));
++	/*
++	 * Load potentially-unprivileged security modules at the end.
++	 *
++	 * For an unprivileged access-control, we don't want to give the
++	 * ability to any process to do some checks (e.g. through an eBPF
++	 * program) on kernel objects (e.g. files) if a privileged security
++	 * policy forbid their access.
++	 */
++	landlock_add_hooks();
 +
- union bpf_attr {
- 	struct { /* anonymous struct used by BPF_MAP_CREATE command */
- 		__u32	map_type;	/* one of enum bpf_map_type */
-@@ -270,6 +279,8 @@ union bpf_attr {
- 		__u32		prog_flags;
- 		char		prog_name[BPF_OBJ_NAME_LEN];
- 		__u32		prog_ifindex;	/* ifindex of netdev to prep for */
-+		__aligned_u64	prog_subtype;	/* bpf_prog_subtype address */
-+		__u32		prog_subtype_size;
- 	};
- 
- 	struct { /* anonymous struct used by BPF_OBJ_* commands */
-diff --git a/kernel/bpf/cgroup.c b/kernel/bpf/cgroup.c
-index c1c0b60d3f2f..77d6d25d2f50 100644
---- a/kernel/bpf/cgroup.c
-+++ b/kernel/bpf/cgroup.c
-@@ -545,7 +545,8 @@ int __cgroup_bpf_check_dev_permission(short dev_type, u32 major, u32 minor,
- EXPORT_SYMBOL(__cgroup_bpf_check_dev_permission);
- 
- static const struct bpf_func_proto *
--cgroup_dev_func_proto(enum bpf_func_id func_id)
-+cgroup_dev_func_proto(enum bpf_func_id func_id,
-+		      const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_map_lookup_elem:
-@@ -566,7 +567,8 @@ cgroup_dev_func_proto(enum bpf_func_id func_id)
- 
- static bool cgroup_dev_is_valid_access(int off, int size,
- 				       enum bpf_access_type type,
--				       struct bpf_insn_access_aux *info)
-+				       struct bpf_insn_access_aux *info,
-+				       const struct bpf_prog_extra *prog_extra)
- {
- 	const int size_default = sizeof(__u32);
- 
-diff --git a/kernel/bpf/core.c b/kernel/bpf/core.c
-index 29ca9208dcfa..e4567f7434af 100644
---- a/kernel/bpf/core.c
-+++ b/kernel/bpf/core.c
-@@ -142,7 +142,10 @@ struct bpf_prog *bpf_prog_realloc(struct bpf_prog *fp_old, unsigned int size,
- 
- void __bpf_prog_free(struct bpf_prog *fp)
- {
--	kfree(fp->aux);
-+	if (fp->aux) {
-+		kfree(fp->aux->extra);
-+		kfree(fp->aux);
-+	}
- 	vfree(fp);
+ 	return 0;
  }
  
-diff --git a/kernel/bpf/syscall.c b/kernel/bpf/syscall.c
-index e24aa3241387..90d7de6d7393 100644
---- a/kernel/bpf/syscall.c
-+++ b/kernel/bpf/syscall.c
-@@ -992,6 +992,8 @@ static void __bpf_prog_put(struct bpf_prog *prog, bool do_idr_lock)
- 	if (atomic_dec_and_test(&prog->aux->refcnt)) {
- 		int i;
- 
-+		if (prog->aux->ops->put_extra && prog->aux->extra)
-+			prog->aux->ops->put_extra(prog->aux->extra);
- 		trace_bpf_prog_put_rcu(prog);
- 		/* bpf_prog_free_id() must be called first */
- 		bpf_prog_free_id(prog, do_idr_lock);
-@@ -1168,7 +1170,7 @@ struct bpf_prog *bpf_prog_get_type_dev(u32 ufd, enum bpf_prog_type type,
- EXPORT_SYMBOL_GPL(bpf_prog_get_type_dev);
- 
- /* last field in 'union bpf_attr' used by this command */
--#define	BPF_PROG_LOAD_LAST_FIELD prog_ifindex
-+#define	BPF_PROG_LOAD_LAST_FIELD prog_subtype_size
- 
- static int bpf_prog_load(union bpf_attr *attr)
- {
-@@ -1249,6 +1251,35 @@ static int bpf_prog_load(union bpf_attr *attr)
- 	if (err)
- 		goto free_prog;
- 
-+	/* copy eBPF program subtype from user space */
-+	if (attr->prog_subtype) {
-+		u32 size;
-+
-+		err = check_uarg_tail_zero(u64_to_user_ptr(attr->prog_subtype),
-+					   sizeof(prog->aux->extra->subtype),
-+					   attr->prog_subtype_size);
-+		if (err)
-+			goto free_prog;
-+		size = min_t(u32, attr->prog_subtype_size,
-+			     sizeof(prog->aux->extra->subtype));
-+
-+		prog->aux->extra = kzalloc(sizeof(*prog->aux->extra),
-+					   GFP_KERNEL | GFP_USER);
-+		if (!prog->aux->extra) {
-+			err = -ENOMEM;
-+			goto free_prog;
-+		}
-+		if (copy_from_user(&prog->aux->extra->subtype,
-+				   u64_to_user_ptr(attr->prog_subtype), size)
-+				   != 0) {
-+			err = -EFAULT;
-+			goto free_prog;
-+		}
-+	} else if (attr->prog_subtype_size != 0) {
-+		err = -EINVAL;
-+		goto free_prog;
-+	}
-+
- 	/* run eBPF verifier */
- 	err = bpf_check(&prog, attr);
- 	if (err < 0)
-@@ -1281,6 +1312,8 @@ static int bpf_prog_load(union bpf_attr *attr)
- 	return err;
- 
- free_used_maps:
-+	if (prog->aux->ops->put_extra && prog->aux->extra)
-+		prog->aux->ops->put_extra(prog->aux->extra);
- 	free_used_maps(prog->aux);
- free_prog:
- 	bpf_prog_uncharge_memlock(prog);
-diff --git a/kernel/bpf/verifier.c b/kernel/bpf/verifier.c
-index 3c74b163eaeb..ed0905338bb6 100644
---- a/kernel/bpf/verifier.c
-+++ b/kernel/bpf/verifier.c
-@@ -1310,7 +1310,8 @@ static int check_ctx_access(struct bpf_verifier_env *env, int insn_idx, int off,
- 	};
- 
- 	if (env->ops->is_valid_access &&
--	    env->ops->is_valid_access(off, size, t, &info)) {
-+	    env->ops->is_valid_access(off, size, t, &info,
-+				      env->prog->aux->extra)) {
- 		/* A non zero info.ctx_field_size indicates that this field is a
- 		 * candidate for later verifier transformation to load the whole
- 		 * field and then apply a mask when accessed with a narrower
-@@ -2325,7 +2326,8 @@ static int check_helper_call(struct bpf_verifier_env *env, int func_id, int insn
- 	}
- 
- 	if (env->ops->get_func_proto)
--		fn = env->ops->get_func_proto(func_id);
-+		fn = env->ops->get_func_proto(func_id, env->prog->aux->extra);
-+
- 	if (!fn) {
- 		verbose(env, "unknown func %s#%d\n", func_id_name(func_id),
- 			func_id);
-@@ -5546,7 +5548,7 @@ static int fixup_bpf_calls(struct bpf_verifier_env *env)
- 			insn      = new_prog->insnsi + i + delta;
- 		}
- patch_call_imm:
--		fn = env->ops->get_func_proto(insn->imm);
-+		fn = env->ops->get_func_proto(insn->imm, prog->aux->extra);
- 		/* all functions that have prototype and verifier allowed
- 		 * programs to call them, must be real in-kernel functions
- 		 */
-@@ -5633,6 +5635,17 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
- 	if (!IS_ENABLED(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS))
- 		env->strict_alignment = true;
- 
-+	if (env->ops->is_valid_subtype) {
-+		if (!env->ops->is_valid_subtype(env->prog->aux->extra)) {
-+			ret = -EINVAL;
-+			goto err_unlock;
-+		}
-+	} else if (env->prog->aux->extra) {
-+		/* do not accept a subtype if the program does not handle it */
-+		ret = -EINVAL;
-+		goto err_unlock;
-+	}
-+
- 	if (bpf_prog_is_dev_bound(env->prog->aux)) {
- 		ret = bpf_prog_offload_verifier_prep(env);
- 		if (ret)
-diff --git a/kernel/trace/bpf_trace.c b/kernel/trace/bpf_trace.c
-index fc2838ac8b78..bb5ada28c0f6 100644
---- a/kernel/trace/bpf_trace.c
-+++ b/kernel/trace/bpf_trace.c
-@@ -568,7 +568,8 @@ static const struct bpf_func_proto *tracing_func_proto(enum bpf_func_id func_id)
- 	}
- }
- 
--static const struct bpf_func_proto *kprobe_prog_func_proto(enum bpf_func_id func_id)
-+static const struct bpf_func_proto *kprobe_prog_func_proto(enum bpf_func_id func_id,
-+		const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_perf_event_output:
-@@ -588,7 +589,8 @@ static const struct bpf_func_proto *kprobe_prog_func_proto(enum bpf_func_id func
- 
- /* bpf+kprobe programs can access fields of 'struct pt_regs' */
- static bool kprobe_prog_is_valid_access(int off, int size, enum bpf_access_type type,
--					struct bpf_insn_access_aux *info)
-+					struct bpf_insn_access_aux *info,
-+					const struct bpf_prog_extra *prog_extra)
- {
- 	if (off < 0 || off >= sizeof(struct pt_regs))
- 		return false;
-@@ -687,7 +689,8 @@ static const struct bpf_func_proto bpf_perf_prog_read_value_proto_tp = {
-          .arg3_type      = ARG_CONST_SIZE,
- };
- 
--static const struct bpf_func_proto *tp_prog_func_proto(enum bpf_func_id func_id)
-+static const struct bpf_func_proto *tp_prog_func_proto(enum bpf_func_id func_id,
-+		const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_perf_event_output:
-@@ -702,7 +705,8 @@ static const struct bpf_func_proto *tp_prog_func_proto(enum bpf_func_id func_id)
- }
- 
- static bool tp_prog_is_valid_access(int off, int size, enum bpf_access_type type,
--				    struct bpf_insn_access_aux *info)
-+				    struct bpf_insn_access_aux *info,
-+				    const struct bpf_prog_extra *prog_extra)
- {
- 	if (off < sizeof(void *) || off >= PERF_MAX_TRACE_SIZE)
- 		return false;
-@@ -724,7 +728,8 @@ const struct bpf_prog_ops tracepoint_prog_ops = {
- };
- 
- static bool pe_prog_is_valid_access(int off, int size, enum bpf_access_type type,
--				    struct bpf_insn_access_aux *info)
-+				    struct bpf_insn_access_aux *info,
-+				    const struct bpf_prog_extra *prog_extra)
- {
- 	const int size_sp = FIELD_SIZEOF(struct bpf_perf_event_data,
- 					 sample_period);
-diff --git a/net/core/filter.c b/net/core/filter.c
-index 08ab4c65a998..8c01140db592 100644
---- a/net/core/filter.c
-+++ b/net/core/filter.c
-@@ -3403,7 +3403,8 @@ static const struct bpf_func_proto bpf_sock_ops_cb_flags_set_proto = {
- };
- 
- static const struct bpf_func_proto *
--bpf_base_func_proto(enum bpf_func_id func_id)
-+bpf_base_func_proto(enum bpf_func_id func_id,
-+		    const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_map_lookup_elem:
-@@ -3431,7 +3432,8 @@ bpf_base_func_proto(enum bpf_func_id func_id)
- }
- 
- static const struct bpf_func_proto *
--sock_filter_func_proto(enum bpf_func_id func_id)
-+sock_filter_func_proto(enum bpf_func_id func_id,
-+		       const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	/* inet and inet6 sockets are created in a process
-@@ -3440,12 +3442,13 @@ sock_filter_func_proto(enum bpf_func_id func_id)
- 	case BPF_FUNC_get_current_uid_gid:
- 		return &bpf_get_current_uid_gid_proto;
- 	default:
--		return bpf_base_func_proto(func_id);
-+		return bpf_base_func_proto(func_id, prog_extra);
- 	}
- }
- 
- static const struct bpf_func_proto *
--sk_filter_func_proto(enum bpf_func_id func_id)
-+sk_filter_func_proto(enum bpf_func_id func_id,
-+		     const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_skb_load_bytes:
-@@ -3455,12 +3458,13 @@ sk_filter_func_proto(enum bpf_func_id func_id)
- 	case BPF_FUNC_get_socket_uid:
- 		return &bpf_get_socket_uid_proto;
- 	default:
--		return bpf_base_func_proto(func_id);
-+		return bpf_base_func_proto(func_id, prog_extra);
- 	}
- }
- 
- static const struct bpf_func_proto *
--tc_cls_act_func_proto(enum bpf_func_id func_id)
-+tc_cls_act_func_proto(enum bpf_func_id func_id,
-+		      const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_skb_store_bytes:
-@@ -3522,12 +3526,13 @@ tc_cls_act_func_proto(enum bpf_func_id func_id)
- 	case BPF_FUNC_get_socket_uid:
- 		return &bpf_get_socket_uid_proto;
- 	default:
--		return bpf_base_func_proto(func_id);
-+		return bpf_base_func_proto(func_id, prog_extra);
- 	}
- }
- 
- static const struct bpf_func_proto *
--xdp_func_proto(enum bpf_func_id func_id)
-+xdp_func_proto(enum bpf_func_id func_id,
-+	       const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_perf_event_output:
-@@ -3545,12 +3550,13 @@ xdp_func_proto(enum bpf_func_id func_id)
- 	case BPF_FUNC_redirect_map:
- 		return &bpf_xdp_redirect_map_proto;
- 	default:
--		return bpf_base_func_proto(func_id);
-+		return bpf_base_func_proto(func_id, prog_extra);
- 	}
- }
- 
- static const struct bpf_func_proto *
--lwt_inout_func_proto(enum bpf_func_id func_id)
-+lwt_inout_func_proto(enum bpf_func_id func_id,
-+		     const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_skb_load_bytes:
-@@ -3572,12 +3578,13 @@ lwt_inout_func_proto(enum bpf_func_id func_id)
- 	case BPF_FUNC_skb_under_cgroup:
- 		return &bpf_skb_under_cgroup_proto;
- 	default:
--		return bpf_base_func_proto(func_id);
-+		return bpf_base_func_proto(func_id, prog_extra);
- 	}
- }
- 
- static const struct bpf_func_proto *
--	sock_ops_func_proto(enum bpf_func_id func_id)
-+	sock_ops_func_proto(enum bpf_func_id func_id,
-+			    const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_setsockopt:
-@@ -3589,11 +3596,13 @@ static const struct bpf_func_proto *
- 	case BPF_FUNC_sock_map_update:
- 		return &bpf_sock_map_update_proto;
- 	default:
--		return bpf_base_func_proto(func_id);
-+		return bpf_base_func_proto(func_id, prog_extra);
- 	}
- }
- 
--static const struct bpf_func_proto *sk_skb_func_proto(enum bpf_func_id func_id)
-+static const struct bpf_func_proto *
-+sk_skb_func_proto(enum bpf_func_id func_id,
-+		  const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_skb_store_bytes:
-@@ -3613,12 +3622,13 @@ static const struct bpf_func_proto *sk_skb_func_proto(enum bpf_func_id func_id)
- 	case BPF_FUNC_sk_redirect_map:
- 		return &bpf_sk_redirect_map_proto;
- 	default:
--		return bpf_base_func_proto(func_id);
-+		return bpf_base_func_proto(func_id, prog_extra);
- 	}
- }
- 
- static const struct bpf_func_proto *
--lwt_xmit_func_proto(enum bpf_func_id func_id)
-+lwt_xmit_func_proto(enum bpf_func_id func_id,
-+		    const struct bpf_prog_extra *prog_extra)
- {
- 	switch (func_id) {
- 	case BPF_FUNC_skb_get_tunnel_key:
-@@ -3648,12 +3658,13 @@ lwt_xmit_func_proto(enum bpf_func_id func_id)
- 	case BPF_FUNC_set_hash_invalid:
- 		return &bpf_set_hash_invalid_proto;
- 	default:
--		return lwt_inout_func_proto(func_id);
-+		return lwt_inout_func_proto(func_id, prog_extra);
- 	}
- }
- 
- static bool bpf_skb_is_valid_access(int off, int size, enum bpf_access_type type,
--				    struct bpf_insn_access_aux *info)
-+				    struct bpf_insn_access_aux *info,
-+				    const struct bpf_prog_extra *prog_extra)
- {
- 	const int size_default = sizeof(__u32);
- 
-@@ -3696,7 +3707,8 @@ static bool bpf_skb_is_valid_access(int off, int size, enum bpf_access_type type
- 
- static bool sk_filter_is_valid_access(int off, int size,
- 				      enum bpf_access_type type,
--				      struct bpf_insn_access_aux *info)
-+				      struct bpf_insn_access_aux *info,
-+				      const struct bpf_prog_extra *prog_extra)
- {
- 	switch (off) {
- 	case bpf_ctx_range(struct __sk_buff, tc_classid):
-@@ -3716,12 +3728,13 @@ static bool sk_filter_is_valid_access(int off, int size,
- 		}
- 	}
- 
--	return bpf_skb_is_valid_access(off, size, type, info);
-+	return bpf_skb_is_valid_access(off, size, type, info, prog_extra);
- }
- 
- static bool lwt_is_valid_access(int off, int size,
- 				enum bpf_access_type type,
--				struct bpf_insn_access_aux *info)
-+				struct bpf_insn_access_aux *info,
-+				const struct bpf_prog_extra *prog_extra)
- {
- 	switch (off) {
- 	case bpf_ctx_range(struct __sk_buff, tc_classid):
-@@ -3750,12 +3763,13 @@ static bool lwt_is_valid_access(int off, int size,
- 		break;
- 	}
- 
--	return bpf_skb_is_valid_access(off, size, type, info);
-+	return bpf_skb_is_valid_access(off, size, type, info, prog_extra);
- }
- 
- static bool sock_filter_is_valid_access(int off, int size,
- 					enum bpf_access_type type,
--					struct bpf_insn_access_aux *info)
-+					struct bpf_insn_access_aux *info,
-+					const struct bpf_prog_extra *prog_extra)
- {
- 	if (type == BPF_WRITE) {
- 		switch (off) {
-@@ -3826,7 +3840,8 @@ static int tc_cls_act_prologue(struct bpf_insn *insn_buf, bool direct_write,
- 
- static bool tc_cls_act_is_valid_access(int off, int size,
- 				       enum bpf_access_type type,
--				       struct bpf_insn_access_aux *info)
-+				       struct bpf_insn_access_aux *info,
-+				       const struct bpf_prog_extra *prog_extra)
- {
- 	if (type == BPF_WRITE) {
- 		switch (off) {
-@@ -3855,7 +3870,7 @@ static bool tc_cls_act_is_valid_access(int off, int size,
- 		return false;
- 	}
- 
--	return bpf_skb_is_valid_access(off, size, type, info);
-+	return bpf_skb_is_valid_access(off, size, type, info, prog_extra);
- }
- 
- static bool __is_valid_xdp_access(int off, int size)
-@@ -3872,7 +3887,8 @@ static bool __is_valid_xdp_access(int off, int size)
- 
- static bool xdp_is_valid_access(int off, int size,
- 				enum bpf_access_type type,
--				struct bpf_insn_access_aux *info)
-+				struct bpf_insn_access_aux *info,
-+				const struct bpf_prog_extra *prog_extra)
- {
- 	if (type == BPF_WRITE)
- 		return false;
-@@ -3904,7 +3920,8 @@ EXPORT_SYMBOL_GPL(bpf_warn_invalid_xdp_action);
- 
- static bool sock_ops_is_valid_access(int off, int size,
- 				     enum bpf_access_type type,
--				     struct bpf_insn_access_aux *info)
-+				     struct bpf_insn_access_aux *info,
-+				     const struct bpf_prog_extra *prog_extra)
- {
- 	const int size_default = sizeof(__u32);
- 
-@@ -3950,7 +3967,8 @@ static int sk_skb_prologue(struct bpf_insn *insn_buf, bool direct_write,
- 
- static bool sk_skb_is_valid_access(int off, int size,
- 				   enum bpf_access_type type,
--				   struct bpf_insn_access_aux *info)
-+				   struct bpf_insn_access_aux *info,
-+				   const struct bpf_prog_extra *prog_extra)
- {
- 	switch (off) {
- 	case bpf_ctx_range(struct __sk_buff, tc_classid):
-@@ -3979,7 +3997,7 @@ static bool sk_skb_is_valid_access(int off, int size,
- 		break;
- 	}
- 
--	return bpf_skb_is_valid_access(off, size, type, info);
-+	return bpf_skb_is_valid_access(off, size, type, info, prog_extra);
- }
- 
- static u32 bpf_convert_ctx_access(enum bpf_access_type type,
-diff --git a/samples/bpf/bpf_load.c b/samples/bpf/bpf_load.c
-index 69806d74fa53..5bb37db6054b 100644
---- a/samples/bpf/bpf_load.c
-+++ b/samples/bpf/bpf_load.c
-@@ -72,6 +72,7 @@ static int load_and_attach(const char *event, struct bpf_insn *prog, int size)
- 	char buf[256];
- 	int fd, efd, err, id;
- 	struct perf_event_attr attr = {};
-+	union bpf_prog_subtype *st = NULL;
- 
- 	attr.type = PERF_TYPE_TRACEPOINT;
- 	attr.sample_type = PERF_SAMPLE_RAW;
-@@ -102,7 +103,7 @@ static int load_and_attach(const char *event, struct bpf_insn *prog, int size)
- 	}
- 
- 	fd = bpf_load_program(prog_type, prog, insns_cnt, license, kern_version,
--			      bpf_log_buf, BPF_LOG_BUF_SIZE);
-+			      bpf_log_buf, BPF_LOG_BUF_SIZE, st);
- 	if (fd < 0) {
- 		printf("bpf_load_program() err=%d\n%s", errno, bpf_log_buf);
- 		return -1;
-diff --git a/samples/bpf/cookie_uid_helper_example.c b/samples/bpf/cookie_uid_helper_example.c
-index 9d751e209f31..df457c07d35d 100644
---- a/samples/bpf/cookie_uid_helper_example.c
-+++ b/samples/bpf/cookie_uid_helper_example.c
-@@ -159,7 +159,7 @@ static void prog_load(void)
- 	};
- 	prog_fd = bpf_load_program(BPF_PROG_TYPE_SOCKET_FILTER, prog,
- 					ARRAY_SIZE(prog), "GPL", 0,
--					log_buf, sizeof(log_buf));
-+					log_buf, sizeof(log_buf), NULL);
- 	if (prog_fd < 0)
- 		error(1, errno, "failed to load prog\n%s\n", log_buf);
- }
-diff --git a/samples/bpf/fds_example.c b/samples/bpf/fds_example.c
-index e29bd52ff9e8..0f4f5f6a9f9f 100644
---- a/samples/bpf/fds_example.c
-+++ b/samples/bpf/fds_example.c
-@@ -62,7 +62,7 @@ static int bpf_prog_create(const char *object)
- 	} else {
- 		return bpf_load_program(BPF_PROG_TYPE_SOCKET_FILTER,
- 					insns, insns_cnt, "GPL", 0,
--					bpf_log_buf, BPF_LOG_BUF_SIZE);
-+					bpf_log_buf, BPF_LOG_BUF_SIZE, NULL);
- 	}
- }
- 
-diff --git a/samples/bpf/sock_example.c b/samples/bpf/sock_example.c
-index 6fc6e193ef1b..3778f66deb76 100644
---- a/samples/bpf/sock_example.c
-+++ b/samples/bpf/sock_example.c
-@@ -60,7 +60,8 @@ static int test_sock(void)
- 	size_t insns_cnt = sizeof(prog) / sizeof(struct bpf_insn);
- 
- 	prog_fd = bpf_load_program(BPF_PROG_TYPE_SOCKET_FILTER, prog, insns_cnt,
--				   "GPL", 0, bpf_log_buf, BPF_LOG_BUF_SIZE);
-+				   "GPL", 0, bpf_log_buf, BPF_LOG_BUF_SIZE,
-+				   NULL);
- 	if (prog_fd < 0) {
- 		printf("failed to load prog '%s'\n", strerror(errno));
- 		goto cleanup;
-diff --git a/samples/bpf/test_cgrp2_attach.c b/samples/bpf/test_cgrp2_attach.c
-index 4bfcaf93fcf3..f8a91d2b7896 100644
---- a/samples/bpf/test_cgrp2_attach.c
-+++ b/samples/bpf/test_cgrp2_attach.c
-@@ -72,7 +72,7 @@ static int prog_load(int map_fd, int verdict)
- 
- 	return bpf_load_program(BPF_PROG_TYPE_CGROUP_SKB,
- 				prog, insns_cnt, "GPL", 0,
--				bpf_log_buf, BPF_LOG_BUF_SIZE);
-+				bpf_log_buf, BPF_LOG_BUF_SIZE, NULL);
- }
- 
- static int usage(const char *argv0)
-diff --git a/samples/bpf/test_cgrp2_attach2.c b/samples/bpf/test_cgrp2_attach2.c
-index 1af412ec6007..16023240ce5d 100644
---- a/samples/bpf/test_cgrp2_attach2.c
-+++ b/samples/bpf/test_cgrp2_attach2.c
-@@ -45,7 +45,7 @@ static int prog_load(int verdict)
- 
- 	ret = bpf_load_program(BPF_PROG_TYPE_CGROUP_SKB,
- 			       prog, insns_cnt, "GPL", 0,
--			       bpf_log_buf, BPF_LOG_BUF_SIZE);
-+			       bpf_log_buf, BPF_LOG_BUF_SIZE, NULL);
- 
- 	if (ret < 0) {
- 		log_err("Loading program");
-@@ -229,7 +229,7 @@ static int prog_load_cnt(int verdict, int val)
- 
- 	ret = bpf_load_program(BPF_PROG_TYPE_CGROUP_SKB,
- 			       prog, insns_cnt, "GPL", 0,
--			       bpf_log_buf, BPF_LOG_BUF_SIZE);
-+			       bpf_log_buf, BPF_LOG_BUF_SIZE, NULL);
- 
- 	if (ret < 0) {
- 		log_err("Loading program");
-diff --git a/samples/bpf/test_cgrp2_sock.c b/samples/bpf/test_cgrp2_sock.c
-index e79594dd629b..b4b8d96f61e7 100644
---- a/samples/bpf/test_cgrp2_sock.c
-+++ b/samples/bpf/test_cgrp2_sock.c
-@@ -115,7 +115,7 @@ static int prog_load(__u32 idx, __u32 mark, __u32 prio)
- 	insns_cnt /= sizeof(struct bpf_insn);
- 
- 	ret = bpf_load_program(BPF_PROG_TYPE_CGROUP_SOCK, prog, insns_cnt,
--				"GPL", 0, bpf_log_buf, BPF_LOG_BUF_SIZE);
-+				"GPL", 0, bpf_log_buf, BPF_LOG_BUF_SIZE, NULL);
- 
- 	free(prog);
- 
-diff --git a/tools/include/uapi/linux/bpf.h b/tools/include/uapi/linux/bpf.h
-index db6bdc375126..87885c92ca78 100644
---- a/tools/include/uapi/linux/bpf.h
-+++ b/tools/include/uapi/linux/bpf.h
-@@ -231,6 +231,15 @@ enum bpf_attach_type {
- #define BPF_F_RDONLY		(1U << 3)
- #define BPF_F_WRONLY		(1U << 4)
- 
-+union bpf_prog_subtype {
-+	struct {
-+		__u32		type; /* enum landlock_hook_type */
-+		__aligned_u64	triggers; /* LANDLOCK_TRIGGER_* */
-+		__aligned_u64	options; /* LANDLOCK_OPTION_* */
-+		__u32		previous; /* chained program FD */
-+	} landlock_hook;
-+} __attribute__((aligned(8)));
-+
- union bpf_attr {
- 	struct { /* anonymous struct used by BPF_MAP_CREATE command */
- 		__u32	map_type;	/* one of enum bpf_map_type */
-@@ -270,6 +279,8 @@ union bpf_attr {
- 		__u32		prog_flags;
- 		char		prog_name[BPF_OBJ_NAME_LEN];
- 		__u32		prog_ifindex;	/* ifindex of netdev to prep for */
-+		__aligned_u64	prog_subtype;	/* bpf_prog_subtype address */
-+		__u32		prog_subtype_size;
- 	};
- 
- 	struct { /* anonymous struct used by BPF_OBJ_* commands */
-diff --git a/tools/lib/bpf/bpf.c b/tools/lib/bpf/bpf.c
-index 592a58a2b681..630060c71c5e 100644
---- a/tools/lib/bpf/bpf.c
-+++ b/tools/lib/bpf/bpf.c
-@@ -150,7 +150,8 @@ int bpf_load_program_name(enum bpf_prog_type type, const char *name,
- 			  const struct bpf_insn *insns,
- 			  size_t insns_cnt, const char *license,
- 			  __u32 kern_version, char *log_buf,
--			  size_t log_buf_sz)
-+			  size_t log_buf_sz,
-+			  const union bpf_prog_subtype *subtype)
- {
- 	int fd;
- 	union bpf_attr attr;
-@@ -166,6 +167,8 @@ int bpf_load_program_name(enum bpf_prog_type type, const char *name,
- 	attr.log_level = 0;
- 	attr.kern_version = kern_version;
- 	memcpy(attr.prog_name, name, min(name_len, BPF_OBJ_NAME_LEN - 1));
-+	attr.prog_subtype = ptr_to_u64(subtype);
-+	attr.prog_subtype_size = subtype ? sizeof(*subtype) : 0;
- 
- 	fd = sys_bpf(BPF_PROG_LOAD, &attr, sizeof(attr));
- 	if (fd >= 0 || !log_buf || !log_buf_sz)
-@@ -182,16 +185,18 @@ int bpf_load_program_name(enum bpf_prog_type type, const char *name,
- int bpf_load_program(enum bpf_prog_type type, const struct bpf_insn *insns,
- 		     size_t insns_cnt, const char *license,
- 		     __u32 kern_version, char *log_buf,
--		     size_t log_buf_sz)
-+		     size_t log_buf_sz, const union bpf_prog_subtype *subtype)
- {
- 	return bpf_load_program_name(type, NULL, insns, insns_cnt, license,
--				     kern_version, log_buf, log_buf_sz);
-+				     kern_version, log_buf, log_buf_sz,
-+				     subtype);
- }
- 
- int bpf_verify_program(enum bpf_prog_type type, const struct bpf_insn *insns,
- 		       size_t insns_cnt, int strict_alignment,
- 		       const char *license, __u32 kern_version,
--		       char *log_buf, size_t log_buf_sz, int log_level)
-+		       char *log_buf, size_t log_buf_sz, int log_level,
-+		       const union bpf_prog_subtype *subtype)
- {
- 	union bpf_attr attr;
- 
-@@ -205,6 +210,8 @@ int bpf_verify_program(enum bpf_prog_type type, const struct bpf_insn *insns,
- 	attr.log_level = log_level;
- 	log_buf[0] = 0;
- 	attr.kern_version = kern_version;
-+	attr.prog_subtype = ptr_to_u64(subtype);
-+	attr.prog_subtype_size = subtype ? sizeof(*subtype) : 0;
- 	attr.prog_flags = strict_alignment ? BPF_F_STRICT_ALIGNMENT : 0;
- 
- 	return sys_bpf(BPF_PROG_LOAD, &attr, sizeof(attr));
-diff --git a/tools/lib/bpf/bpf.h b/tools/lib/bpf/bpf.h
-index 8d18fb73d7fb..25f58da59df3 100644
---- a/tools/lib/bpf/bpf.h
-+++ b/tools/lib/bpf/bpf.h
-@@ -47,15 +47,17 @@ int bpf_load_program_name(enum bpf_prog_type type, const char *name,
- 			  const struct bpf_insn *insns,
- 			  size_t insns_cnt, const char *license,
- 			  __u32 kern_version, char *log_buf,
--			  size_t log_buf_sz);
-+			  size_t log_buf_sz,
-+			  const union bpf_prog_subtype *subtype);
- int bpf_load_program(enum bpf_prog_type type, const struct bpf_insn *insns,
- 		     size_t insns_cnt, const char *license,
- 		     __u32 kern_version, char *log_buf,
--		     size_t log_buf_sz);
-+		     size_t log_buf_sz, const union bpf_prog_subtype *subtype);
- int bpf_verify_program(enum bpf_prog_type type, const struct bpf_insn *insns,
- 		       size_t insns_cnt, int strict_alignment,
- 		       const char *license, __u32 kern_version,
--		       char *log_buf, size_t log_buf_sz, int log_level);
-+		       char *log_buf, size_t log_buf_sz, int log_level,
-+		       const union bpf_prog_subtype *subtype);
- 
- int bpf_map_update_elem(int fd, const void *key, const void *value,
- 			__u64 flags);
-diff --git a/tools/lib/bpf/libbpf.c b/tools/lib/bpf/libbpf.c
-index 97073d649c1a..615860db6224 100644
---- a/tools/lib/bpf/libbpf.c
-+++ b/tools/lib/bpf/libbpf.c
-@@ -1175,7 +1175,8 @@ load_program(enum bpf_prog_type type, const char *name, struct bpf_insn *insns,
- 		pr_warning("Alloc log buffer for bpf loader error, continue without log\n");
- 
- 	ret = bpf_load_program_name(type, name, insns, insns_cnt, license,
--				    kern_version, log_buf, BPF_LOG_BUF_SIZE);
-+				    kern_version, log_buf, BPF_LOG_BUF_SIZE,
-+				    NULL);
- 
- 	if (ret >= 0) {
- 		*pfd = ret;
-@@ -1202,7 +1203,7 @@ load_program(enum bpf_prog_type type, const char *name, struct bpf_insn *insns,
- 
- 			fd = bpf_load_program_name(BPF_PROG_TYPE_KPROBE, name,
- 						   insns, insns_cnt, license,
--						   kern_version, NULL, 0);
-+						   kern_version, NULL, 0, NULL);
- 			if (fd >= 0) {
- 				close(fd);
- 				ret = -LIBBPF_ERRNO__PROGTYPE;
-diff --git a/tools/perf/tests/bpf.c b/tools/perf/tests/bpf.c
-index e8399beca62b..2635de920a71 100644
---- a/tools/perf/tests/bpf.c
-+++ b/tools/perf/tests/bpf.c
-@@ -306,7 +306,7 @@ static int check_env(void)
- 
- 	err = bpf_load_program(BPF_PROG_TYPE_KPROBE, insns,
- 			       sizeof(insns) / sizeof(insns[0]),
--			       license, kver_int, NULL, 0);
-+			       license, kver_int, NULL, 0, NULL);
- 	if (err < 0) {
- 		pr_err("Missing basic BPF support, skip this test: %s\n",
- 		       strerror(errno));
-diff --git a/tools/testing/selftests/bpf/test_align.c b/tools/testing/selftests/bpf/test_align.c
-index ff8bd7e3e50c..ed638ce9932e 100644
---- a/tools/testing/selftests/bpf/test_align.c
-+++ b/tools/testing/selftests/bpf/test_align.c
-@@ -625,7 +625,7 @@ static int do_test_single(struct bpf_align_test *test)
- 	prog_len = probe_filter_length(prog);
- 	fd_prog = bpf_verify_program(prog_type ? : BPF_PROG_TYPE_SOCKET_FILTER,
- 				     prog, prog_len, 1, "GPL", 0,
--				     bpf_vlog, sizeof(bpf_vlog), 2);
-+				     bpf_vlog, sizeof(bpf_vlog), 2, NULL);
- 	if (fd_prog < 0 && test->result != REJECT) {
- 		printf("Failed to load program.\n");
- 		printf("%s", bpf_vlog);
-diff --git a/tools/testing/selftests/bpf/test_tag.c b/tools/testing/selftests/bpf/test_tag.c
-index 8b201895c569..0b58e746af0c 100644
---- a/tools/testing/selftests/bpf/test_tag.c
-+++ b/tools/testing/selftests/bpf/test_tag.c
-@@ -58,7 +58,7 @@ static int bpf_try_load_prog(int insns, int fd_map,
- 
- 	bpf_filler(insns, fd_map);
- 	fd_prog = bpf_load_program(BPF_PROG_TYPE_SCHED_CLS, prog, insns, "", 0,
--				   NULL, 0);
-+				   NULL, 0, NULL);
- 	assert(fd_prog > 0);
- 	if (fd_map > 0)
- 		bpf_filler(insns, 0);
-diff --git a/tools/testing/selftests/bpf/test_verifier.c b/tools/testing/selftests/bpf/test_verifier.c
-index c987d3a2426f..3c24a5a7bafc 100644
---- a/tools/testing/selftests/bpf/test_verifier.c
-+++ b/tools/testing/selftests/bpf/test_verifier.c
-@@ -77,6 +77,8 @@ struct bpf_test {
- 	} result, result_unpriv;
- 	enum bpf_prog_type prog_type;
- 	uint8_t flags;
-+	bool has_prog_subtype;
-+	union bpf_prog_subtype prog_subtype;
- };
- 
- /* Note we want this to be 64 bit aligned so that the end of our array is
-@@ -11228,7 +11230,16 @@ static struct bpf_test tests[] = {
- 		.result = ACCEPT,
- 		.retval = 2,
- 	},
--
-+	{
-+		"superfluous subtype",
-+		.insns = {
-+			BPF_MOV32_IMM(BPF_REG_0, 0),
-+			BPF_EXIT_INSN(),
-+		},
-+		.errstr = "",
-+		.result = REJECT,
-+		.has_prog_subtype = true,
-+	},
- };
- 
- static int probe_filter_length(const struct bpf_insn *fp)
-@@ -11346,6 +11357,8 @@ static void do_test_single(struct bpf_test *test, bool unpriv,
- 	const char *expected_err;
- 	uint32_t retval;
- 	int i, err;
-+	union bpf_prog_subtype *prog_subtype =
-+		test->has_prog_subtype ? &test->prog_subtype : NULL;
- 
- 	for (i = 0; i < MAX_NR_MAPS; i++)
- 		map_fds[i] = -1;
-@@ -11354,7 +11367,8 @@ static void do_test_single(struct bpf_test *test, bool unpriv,
- 
- 	fd_prog = bpf_verify_program(prog_type ? : BPF_PROG_TYPE_SOCKET_FILTER,
- 				     prog, prog_len, test->flags & F_LOAD_WITH_STRICT_ALIGNMENT,
--				     "GPL", 0, bpf_vlog, sizeof(bpf_vlog), 1);
-+				     "GPL", 0, bpf_vlog, sizeof(bpf_vlog), 1,
-+				     prog_subtype);
- 
- 	expected_ret = unpriv && test->result_unpriv != UNDEF ?
- 		       test->result_unpriv : test->result;
 -- 
 2.16.2
