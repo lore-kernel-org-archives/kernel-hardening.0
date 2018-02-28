@@ -1,59 +1,39 @@
-Subject: Re: [PATCH 2/2] gcc-plugins: stackleak: Update for gcc-8
-References: <20180222231442.29507-1-labbott@redhat.com>
- <20180222231442.29507-3-labbott@redhat.com>
- <b579d073-7d7a-366c-77fa-08ad170e1913@linux.com>
- <d51c2fb1-3674-8df3-b0a5-65e5e3c0ad59@redhat.com>
- <87woyybu73.fsf@e105548-lin.cambridge.arm.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <e6357c8a-43a3-ecca-83e3-670e18303bcb@linux.com>
-Date: Wed, 28 Feb 2018 13:27:32 +0300
+Subject: Re: [PATCH 0/1] Zero initialise kernel stack variables
+References: <20180227111532.1144-1-ppandit@redhat.com>
+ <CAGXu5j+-qUrt-8kQ6WRUM=DH8K3Zgmm2ejRgiKJMLDrSXRtmdg@mail.gmail.com>
+ <f5f8d06d-461f-f4ad-bc32-5a18f5359353@redhat.com>
+ <CAGXu5j+rEo9u4CoNBz+Y-HDCqX5=mv__0Wvru6tJRgri2r2BUQ@mail.gmail.com>
+From: Florian Weimer <fweimer@redhat.com>
+Message-ID: <d93ce6b7-9057-4934-94ae-c3ae3555b434@redhat.com>
+Date: Wed, 28 Feb 2018 09:25:50 +0100
 MIME-Version: 1.0
-In-Reply-To: <87woyybu73.fsf@e105548-lin.cambridge.arm.com>
-Content-Type: text/plain; charset=utf-8
+In-Reply-To: <CAGXu5j+rEo9u4CoNBz+Y-HDCqX5=mv__0Wvru6tJRgri2r2BUQ@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-To: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, richard.sandiford@arm.com
+To: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>
+Cc: P J P <ppandit@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, P J P <pjp@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 27.02.2018 13:30, Richard Sandiford wrote:
-> Laura Abbott <labbott@redhat.com> writes:
->> On 02/24/2018 06:04 AM, Alexander Popov wrote:
->>> Hello Laura,
->>>
->>> Thanks for the cooperation!
->>>
->>> On 23.02.2018 02:14, Laura Abbott wrote:
->>>> +#if BUILDING_GCC_VERSION >= 8000
->>>> +bool check_frame_size()
->>>> +{
->>>> +	return maybe_ge(get_frame_size(), track_frame_size);
->>>
->>> After looking through this guide
->>> https://gcc.gnu.org/onlinedocs//gccint/Guidelines-for-using-poly_005fint.html#Guidelines-for-using-poly_005fint
->>> it seems to me that we should better use something like that:
->>>
->>> poly_int64 frame_size = get_frame_size();
->>>
->>> if (frame_size.to_constant() >= track_frame_size)
->>> 	return 0;
->>>
->>> May I ask for your opinion?
->>>
->>
->> I was a bit wary of using to_constant() because I wasn't 100% sure
->> I could make the assertion that it could actually be a constant so using
-> 
-> Yeah, the assert would fire for SVE functions that spill SVE registers
-> to the stack.
-> 
->> maybe_ge seemed like the conservative approach. This also getting into
->> compiler internals so it's possible I'm misunderstanding how poly_ints
->> are supposed to work.
-> 
-> The maybe_ge patch looks good to me FWIW.
+On 02/28/2018 12:38 AM, Kees Cook wrote:
+> That's a surprisingly small text change! I'd love to see benchmarks
+> too.
 
-Thanks, Laura and Richard!
+When we benchmarked this a while back, we saw a measurable performance 
+hit for processing small packet processing (both UDP and TCP).  I 
+assumed this was due to the initialization of the socket address 
+structure.  Unfortunately, this was a place where past leaks happened.
 
-I see the rationale, I will use maybe_ge() in the next version of the patch.
+My feeling at the time was that the return path for the socket address 
+would have to be overhauled, such that returning a partially initialized 
+result would be prevent by the API, without having to clear the entire 
+return buffer.
 
-Best regards,
-Alexander
+Apart from that, we didn't see any changes in performance.
+
+> Are you able to verify this is initializing the
+> passed-by-reference variables too?
+
+Shouldn't the initialization happen in the caller?
+
+Thanks,
+Florian
