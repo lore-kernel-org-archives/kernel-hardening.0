@@ -1,39 +1,34 @@
-Subject: Re: [PATCH 0/1] Zero initialise kernel stack variables
-References: <20180227111532.1144-1-ppandit@redhat.com>
- <CAGXu5j+-qUrt-8kQ6WRUM=DH8K3Zgmm2ejRgiKJMLDrSXRtmdg@mail.gmail.com>
- <f5f8d06d-461f-f4ad-bc32-5a18f5359353@redhat.com>
- <CAGXu5j+rEo9u4CoNBz+Y-HDCqX5=mv__0Wvru6tJRgri2r2BUQ@mail.gmail.com>
-From: Florian Weimer <fweimer@redhat.com>
-Message-ID: <d93ce6b7-9057-4934-94ae-c3ae3555b434@redhat.com>
-Date: Wed, 28 Feb 2018 09:25:50 +0100
+Date: Wed, 28 Feb 2018 23:29:09 +0900
+From: Jinbum Park <jinb.park7@gmail.com>
+Subject: [kernel-hardening] [PATCH 0/2] arm: Add ARCH_HAS_FORTIFY_SOURCE
+Message-ID: <20180228142909.GA3113@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+rEo9u4CoNBz+Y-HDCqX5=mv__0Wvru6tJRgri2r2BUQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>
-Cc: P J P <ppandit@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, P J P <pjp@fedoraproject.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: pombredanne@nexb.co, gregkh@linuxfoundation.org, tglx@linutronix.de, kstewart@linuxfoundation.org, luto@amacapital.net, dsafonov@virtuozzo.com, keescook@chromium.org, will.deacon@arm.com, mark.rutland@arm.com, danielmicay@gmail.com, arnd@arndb.de, catalin.marinas@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/28/2018 12:38 AM, Kees Cook wrote:
-> That's a surprisingly small text change! I'd love to see benchmarks
-> too.
+Hi,
 
-When we benchmarked this a while back, we saw a measurable performance 
-hit for processing small packet processing (both UDP and TCP).  I 
-assumed this was due to the initialization of the socket address 
-structure.  Unfortunately, this was a place where past leaks happened.
+This patch series are to select ARCH_HAS_FORTIFY_SOUCE on arm.
+A lot of architectures already select ARCH_HAS_FORTIFY_SOURCE
+to support CONFIG_FORTIFY_SOURCE that detects overflows at compile-time.
+(6974f0c4555e ("include/linux/string.h:
+add the option of fortified string.h functions)
+ARM can be built and run with CONFIG_FORTIFY_SOURCE.
 
-My feeling at the time was that the return path for the socket address 
-would have to be overhauled, such that returning a partially initialized 
-result would be prevent by the API, without having to clear the entire 
-return buffer.
+Additionally, modify vdso.c to remove compile-error that happens
+when built arm kernel with CONFIG_FORTIFY_SOURCE.
 
-Apart from that, we didn't see any changes in performance.
+Jinbum Park (2):
+  arm: mm: Define vdso_start, vdso_end as array
+  arm: Kconfig: Add ARCH_HAS_FORTIFY_SOURCE
 
-> Are you able to verify this is initializing the
-> passed-by-reference variables too?
+ arch/arm/Kconfig            |  1 +
+ arch/arm/include/asm/vdso.h |  2 --
+ arch/arm/kernel/vdso.c      | 12 +++++++-----
+ 3 files changed, 8 insertions(+), 7 deletions(-)
 
-Shouldn't the initialization happen in the caller?
-
-Thanks,
-Florian
+-- 
+1.9.1
