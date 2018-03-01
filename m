@@ -1,183 +1,79 @@
-From: Richard Sandiford <richard.sandiford@arm.com>
-Subject: Re: [PATCH 1/2] stackleak: Update for arm64
-References: <20180221011303.20392-1-labbott@redhat.com>
-	<20180221011303.20392-2-labbott@redhat.com>
-	<20180222165834.GC18421@arm.com>
-	<97090ca6-efad-7c03-6084-a97674ae61c7@linux.com>
-	<874lm2d96q.fsf@e105548-lin.cambridge.arm.com>
-	<5d10c6ad-b4b6-eb27-79f0-ca235b73e7eb@linux.com>
-Date: Thu, 01 Mar 2018 10:33:05 +0000
-In-Reply-To: <5d10c6ad-b4b6-eb27-79f0-ca235b73e7eb@linux.com> (Alexander
-	Popov's message of "Wed, 28 Feb 2018 18:09:54 +0300")
-Message-ID: <87woywxezi.fsf@e105548-lin.cambridge.arm.com>
-MIME-Version: 1.0
-Content-Type: text/plain
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Will Deacon <will.deacon@arm.com>, Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain;
+	charset=utf-8
+Mime-Version: 1.0 (Mac OS X Mail 11.2 \(3445.5.20\))
+Subject: Re: [RFC PATCH] Randomization of address chosen by mmap.
+From: Ilya Smith <blackzert@gmail.com>
+In-Reply-To: <CAGXu5jLY4eX5BMU8-2HFr2myjSL717KE-m_SAQp1yeu=cg+w7g@mail.gmail.com>
+Date: Thu, 1 Mar 2018 16:52:12 +0300
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <5E526DB1-08ED-4BD9-AD33-A2EBCC95091E@gmail.com>
+References: <20180227131338.3699-1-blackzert@gmail.com>
+ <CAGXu5jKF7ysJqj57ZktrcVL4G2NWOFHCud8dtXFHLs=tvVLXnQ@mail.gmail.com>
+ <55C92196-5398-4C19-B7A7-6C122CD78F32@gmail.com>
+ <CAGXu5jLY4eX5BMU8-2HFr2myjSL717KE-m_SAQp1yeu=cg+w7g@mail.gmail.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Michal Hocko <mhocko@suse.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Jan Kara <jack@suse.cz>, Jerome Glisse <jglisse@redhat.com>, Hugh Dickins <hughd@google.com>, Matthew Wilcox <willy@infradead.org>, Helge Deller <deller@gmx.de>, Andrea Arcangeli <aarcange@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Alexander Popov <alex.popov@linux.com> writes:
-> On 27.02.2018 13:21, Richard Sandiford wrote:
->> Hi Alexander,
->> 
->> Sorry for the slow reply, been caught up in an office move.
->
-> Thank you very much for the review, Richard!
->
->> Alexander Popov <alex.popov@linux.com> writes:
->>> Would you be so kind to take a look at the whole STACKLEAK plugin?
->>> http://www.openwall.com/lists/kernel-hardening/2018/02/16/4
->>> https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/commit/?h=kspp/gcc-plugin/stackleak&id=57a0a6763b12e82dd462593d0f42be610e93cdc9
->>>
->>> It's not very big. I documented it in detail. I would be really
->>> grateful for the
->>> review!
->> 
->> Looks good to me FWIW.  Just a couple of minor things:
->> 
->>> +	/*
->>> +	 * 1. Loop through the GIMPLE statements in each of cfun basic blocks.
->>> +	 * cfun is a global variable which represents the function that is
->>> +	 * currently processed.
->>> +	 */
->>> +	FOR_EACH_BB_FN(bb, cfun) {
->>> +		for (gsi = gsi_start_bb(bb); !gsi_end_p(gsi); gsi_next(&gsi)) {
->>> +			gimple stmt;
->>> +
->>> +			stmt = gsi_stmt(gsi);
->>> +
->>> +			/* Leaf function is a function which makes no calls */
->>> +			if (is_gimple_call(stmt))
->>> +				is_leaf = false;
->> 
->> It's probably not going to matter in practice, but it might be worth
->> emphasising in the comments that this leafness is only approximate.
->
-> That's important, thank you! May I ask why you think it's not going to matter in
-> practice?
 
-I just thought the kind of calls it misses are going to have very
-shallow frames, but from what you said later I guess that isn't the
-point.  It also might be a bit too hand-wavy for something like this :-)
+> On 28 Feb 2018, at 22:54, Kees Cook <keescook@chromium.org> wrote:
+>=20
+> I was trying to understand the target entropy level, and I'm worried
+> it's a bit biased. For example, if the first allocation lands at 1/4th
+> of the memory space, the next allocation (IIUC) has a 50% chance of
+> falling on either side of it. If it goes on the small side, it then
+> has much less entropy than if it had gone on the other side. I think
+> this may be less entropy than choosing a random address and just
+> seeing if it fits or not. Dealing with collisions could be done either
+> by pushing the address until it doesn't collide or picking another
+> random address, etc. This is probably more expensive, though, since it
+> would need to walk the vma tree repeatedly. Anyway, I was ultimately
+> curious about your measured entropy and what alternatives you
+> considered.
 
->> It will sometimes be a false positive, because we could still
->> end up creating calls to libgcc functions from non-call statements
->> (or for target-specific reasons).  It can also be a false negative,
->> since call statements can be to built-in or internal functions that
->> end up being open-coded.
->
-> Oh, that raises the question: how does this leafness inaccuracy affect in my
-> particular case?
->
-> is_leaf is currently used for finding the special cases to skip the
-> track_stack() call insertion:
->
-> /*
->  * Special cases to skip the instrumentation.
->  *
->  * Taking the address of static inline functions materializes them,
->  * but we mustn't instrument some of them as the resulting stack
->  * alignment required by the function call ABI will break other
->  * assumptions regarding the expected (but not otherwise enforced)
->  * register clobbering ABI.
->  *
->  * Case in point: native_save_fl on amd64 when optimized for size
->  * clobbers rdx if it were instrumented here.
->  *
->  * TODO: any more special cases?
->  */
-> if (is_leaf &&
->     !TREE_PUBLIC(current_function_decl) &&
->     DECL_DECLARED_INLINE_P(current_function_decl)) {
-> 	return 0;
-> }
->
->
-> And now it seems to me that the stackleak plugin should not instrument all
-> static inline functions, regardless of is_leaf. Do you agree?
+Let me please start with the options we have here.=20
+Let's pretend we need to choose random address from free memory pool. =
+Let=E2=80=99s=20
+pretend we have an array of gaps sorted by size of gap descending. First =
+we=20
+find the highest index satisfies requested length. For each suitable gap =
+(with=20
+less index) we count how many pages in this gap satisfies request. And =
+compute=20
+total count of pages satisfies request. Now we get random by module of =
+total=20
+number. Subtracting from this value count of suitable gap pages for gaps =
+until=20
+this value greater we will find needed gap and offset inside it. Add gap =
+start=20
+to offset we will randomly choose suitable address.
+In this scheme we have to keep array of gaps. Each time address space is=20=
 
-OK.  I'd missed that this was just a heuristic to detect certain kinds
-of linux function, so it's probably fine as it is.
+changed we have to keep the gaps array consistent and apply this =
+changes. It is=20
+a very big overhead on any change.
 
-Not sure whether it's safe to punt for general static inline functions.
-E.g. couldn't you have a static inline function that just provides a
-more convenient interface to another function?  But I guess it's a
-linux-specific heuristic, so I can't really say.
+Pure random looks really expensive. Lets try to improve something.
 
-TBH the paravirt save_fl stuff seems like dancing on the edge,
-but that's another story. :-)
+We can=E2=80=99t just choose random address and try do it again and =
+again until we find=20
+something - this approach has non-deterministic behaviour. Nobody knows =
+when it=20
+stops. Same if we try to walk tree in random direction.
 
->>> +	/*
->>> +	 * The stackleak_final pass should be executed before the "final" pass,
->>> +	 * which turns the RTL (Register Transfer Language) into assembly.
->>> +	 */
->>> +	PASS_INFO(stackleak_final, "final", 1, PASS_POS_INSERT_BEFORE);
->> 
->> This might be too late, since it happens e.g. after addresses have
->> been calculated for branch ranges, and after machine-specific passes
->> (e.g. bundling on ia64).
->> 
->> The stack size is final after reload, so inserting the pass after that
->> might be better.
->
-> Thanks for that notice. May I ask for the additional clarification?
->
-> I specified -fdump-passes and see a lot of passes between reload and final:
->   ...
->   rtl-sched1                                       :  OFF
->   rtl-ira                                          :  ON
->   rtl-reload                                       :  ON
->   rtl-vzeroupper                                   :  OFF
->   *all-postreload                                  :  OFF
->      rtl-postreload                                :  OFF
->      rtl-gcse2                                     :  OFF
->      rtl-split2                                    :  ON
->      rtl-ree                                       :  ON
->      rtl-cmpelim                                   :  OFF
->      rtl-btl1                                      :  OFF
->      rtl-pro_and_epilogue                          :  ON
->      rtl-dse2                                      :  ON
->      rtl-csa                                       :  ON
->      rtl-jump2                                     :  ON
->      rtl-compgotos                                 :  ON
->      rtl-sched_fusion                              :  OFF
->      rtl-peephole2                                 :  ON
->      rtl-ce3                                       :  ON
->      rtl-rnreg                                     :  OFF
->      rtl-cprop_hardreg                             :  ON
->      rtl-rtl_dce                                   :  ON
->      rtl-bbro                                      :  ON
->      rtl-btl2                                      :  OFF
->      *leaf_regs                                    :  ON
->      rtl-split4                                    :  ON
->      rtl-sched2                                    :  ON
->      *stack_regs                                   :  ON
->         rtl-split3                                 :  OFF
->         rtl-stack                                  :  ON
->   *all-late_compilation                            :  OFF
->      rtl-alignments                                :  ON
->      rtl-vartrack                                  :  ON
->      *free_cfg                                     :  ON
->      rtl-mach                                      :  ON
->      rtl-barriers                                  :  ON
->      rtl-dbr                                       :  OFF
->      rtl-split5                                    :  OFF
->      rtl-eh_ranges                                 :  OFF
->      rtl-shorten                                   :  ON
->      rtl-nothrow                                   :  ON
->      rtl-dwarf2                                    :  ON
->      rtl-stackleak_final                           :  ON
->      rtl-final                                     :  ON
->   rtl-dfinish                                      :  ON
-> clean_state                                        :  ON
->
-> Where exactly would you recommend me to insert the stackleak_final pass, which
-> removes the unneeded track_stack() calls?
-
-Directly after rtl-reload seems best.  That's the first point at which
-the frame size is final, and reload is one of the few rtl passes that
-always runs.  Doing it there could also help with things like shrink
-wrapping (part of rtl-pro_and_epilogue).
+We can walk tree and try to build array of suitable gaps and choose =
+something=20
+from there. In my current approach (proof of concept) length of array is =
+1 and=20
+thats why last gaps would be chosen with more probability. I=E2=80=99m =
+agree. It is=20
+possible to increase array spending some memory. For example struct mm =
+may have=20
+to array of 1024 gaps. We do the same, walk tree and randomly fill this =
+array (=20
+everything locked under write_mem semaphore). When we filled it or =
+walked whole=20
+tree - choose gap randomly. What do you think about it?
 
 Thanks,
-Richard
+Ilya
