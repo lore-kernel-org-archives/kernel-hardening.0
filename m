@@ -1,215 +1,65 @@
-Date: Fri, 2 Mar 2018 13:26:37 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Subject: [RFC] Handle mapcount overflows
-Message-ID: <20180302212637.GB671@bombadil.infradead.org>
-References: <20180208021112.GB14918@bombadil.infradead.org>
+Date: Fri, 2 Mar 2018 21:40:06 +0000
+From: James Hogan <jhogan@kernel.org>
+Subject: Re: [PATCH] signals: Move put_compat_sigset to compat.h to silence
+ hardened usercopy
+Message-ID: <20180302214005.GC4197@saruman>
+References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
+ <1519059306-30135-1-git-send-email-matt.redfearn@mips.com>
+ <CAGXu5jKtrJ6Nmses_pM-qkXAkOPXAxwT+V3B+omqu0tx4xEh8w@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: multipart/signed; micalg=pgp-sha256;
+	protocol="application/pgp-signature"; boundary="DIOMP1UsTsWJauNi"
 Content-Disposition: inline
-In-Reply-To: <20180208021112.GB14918@bombadil.infradead.org>
-To: linux-mm@kvack.org
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
+In-Reply-To: <CAGXu5jKtrJ6Nmses_pM-qkXAkOPXAxwT+V3B+omqu0tx4xEh8w@mail.gmail.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Matt Redfearn <matt.redfearn@mips.com>, "Dmitry V . Levin" <ldv@altlinux.org>, Al Viro <viro@zeniv.linux.org.uk>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux MIPS Mailing List <linux-mips@linux-mips.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-Here's my third effort to handle page->_mapcount overflows.
+--DIOMP1UsTsWJauNi
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-The idea is to minimise overhead, so we keep a list of users with more
-than 5000 mappings.  In order to overflow _mapcount, you have to have
-2 billion mappings, so you'd need 400,000 tasks to evade the tracking,
-and your sysadmin has probably accused you of forkbombing the system
-long before then.  Not to mention the 6GB of RAM you consumed just in
-stacks and the 24GB of RAM you consumed in page tables ... but I digress.
+On Mon, Feb 19, 2018 at 03:55:27PM -0800, Kees Cook wrote:
+> On Mon, Feb 19, 2018 at 8:55 AM, Matt Redfearn <matt.redfearn@mips.com> w=
+rote:
+> > Move put_compat_sigset to compat.h, and mark it static inline. This
+> > fixes the WARN on MIPS.
+> >
+> > Fixes: afcc90f8621e ("usercopy: WARN() on slab cache usercopy region vi=
+olations")
+> > Signed-off-by: Matt Redfearn <matt.redfearn@mips.com>
+>=20
+> Thanks for the catch and fix!
+>=20
+> Acked-by: Kees Cook <keescook@chromium.org>
 
-Let's assume that the sysadmin has increased the number of processes to
-100,000.  You'd need to create 20,000 mappings per process to overflow
-_mapcount, and they'd end up on the 'heavy_users' list.  Not everybody
-on the heavy_users list is going to be guilty, but if we hit an overflow,
-we look at everybody on the heavy_users list and if they've got the page
-mapped more than 1000 times, they get a SIGSEGV.
+Thanks Kees. I've applied this on the assumption nobody objects to it
+going via the MIPS tree.
 
-I'm not entirely sure how to forcibly tear down a task's mappings, so
-I've just left a comment in there to do that.  Looking for feedback on
-this approach.
+Cheers
+James
 
-diff --git a/mm/internal.h b/mm/internal.h
-index 7059a8389194..977852b8329e 100644
---- a/mm/internal.h
-+++ b/mm/internal.h
-@@ -97,6 +97,11 @@ extern void putback_lru_page(struct page *page);
-  */
- extern pmd_t *mm_find_pmd(struct mm_struct *mm, unsigned long address);
- 
-+#ifdef CONFIG_64BIT
-+extern void mm_mapcount_overflow(struct page *page);
-+#else
-+static inline void mm_mapcount_overflow(struct page *page) { }
-+#endif
- /*
-  * in mm/page_alloc.c
-  */
-diff --git a/mm/mmap.c b/mm/mmap.c
-index 9efdc021ad22..575766ec02f8 100644
---- a/mm/mmap.c
-+++ b/mm/mmap.c
-@@ -1315,6 +1315,115 @@ static inline int mlock_future_check(struct mm_struct *mm,
- 	return 0;
- }
- 
-+#ifdef CONFIG_64BIT
-+/*
-+ * Machines with more than 2TB of memory can create enough VMAs to overflow
-+ * page->_mapcount if they all point to the same page.  32-bit machines do
-+ * not need to be concerned.
-+ */
-+/*
-+ * Experimentally determined.  gnome-shell currently uses fewer than
-+ * 3000 mappings, so should have zero effect on desktop users.
-+ */
-+#define mm_track_threshold	5000
-+static DEFINE_SPINLOCK(heavy_users_lock);
-+static DEFINE_IDR(heavy_users);
-+
-+static void mmap_track_user(struct mm_struct *mm, int max)
-+{
-+	struct mm_struct *entry;
-+	unsigned int id;
-+
-+	idr_preload(GFP_KERNEL);
-+	spin_lock(&heavy_users_lock);
-+	idr_for_each_entry(&heavy_users, entry, id) {
-+		if (entry == mm)
-+			break;
-+		if (entry->map_count < mm_track_threshold)
-+			idr_remove(&heavy_users, id);
-+	}
-+	if (!entry)
-+		idr_alloc(&heavy_users, mm, 0, 0, GFP_ATOMIC);
-+	spin_unlock(&heavy_users_lock);
-+}
-+
-+static void mmap_untrack_user(struct mm_struct *mm)
-+{
-+	struct mm_struct *entry;
-+	unsigned int id;
-+
-+	spin_lock(&heavy_users_lock);
-+	idr_for_each_entry(&heavy_users, entry, id) {
-+		if (entry == mm) {
-+			idr_remove(&heavy_users, id);
-+			break;
-+		}
-+	}
-+	spin_unlock(&heavy_users_lock);
-+}
-+
-+static void kill_mm(struct task_struct *tsk)
-+{
-+	/* Tear down the mappings first */
-+	do_send_sig_info(SIGKILL, SEND_SIG_FORCED, tsk, true);
-+}
-+
-+static void kill_abuser(struct mm_struct *mm)
-+{
-+	struct task_struct *tsk;
-+
-+	for_each_process(tsk)
-+		if (tsk->mm == mm)
-+			break;
-+
-+	if (down_write_trylock(&mm->mmap_sem)) {
-+		kill_mm(tsk);
-+		up_write(&mm->mmap_sem);
-+	} else {
-+		do_send_sig_info(SIGKILL, SEND_SIG_FORCED, tsk, true);
-+	}
-+}
-+
-+void mm_mapcount_overflow(struct page *page)
-+{
-+	struct mm_struct *entry = current->mm;
-+	unsigned int id;
-+	struct vm_area_struct *vma;
-+	struct address_space *mapping = page_mapping(page);
-+	unsigned long pgoff = page_to_pgoff(page);
-+	unsigned int count = 0;
-+
-+	vma_interval_tree_foreach(vma, &mapping->i_mmap, pgoff, pgoff + 1) {
-+		if (vma->vm_mm == entry)
-+			count++;
-+		if (count > 1000)
-+			kill_mm(current);
-+	}
-+
-+	rcu_read_lock();
-+	idr_for_each_entry(&heavy_users, entry, id) {
-+		count = 0;
-+
-+		vma_interval_tree_foreach(vma, &mapping->i_mmap,
-+				pgoff, pgoff + 1) {
-+			if (vma->vm_mm == entry)
-+				count++;
-+			if (count > 1000) {
-+				kill_abuser(entry);
-+				goto out;
-+			}
-+		}
-+	}
-+	if (!entry)
-+		panic("No abusers found but mapcount exceeded\n");
-+out:
-+	rcu_read_unlock();
-+}
-+#else
-+static void mmap_track_user(struct mm_struct *mm, int max) { }
-+static void mmap_untrack_user(struct mm_struct *mm) { }
-+#endif
-+
- /*
-  * The caller must hold down_write(&current->mm->mmap_sem).
-  */
-@@ -1357,6 +1466,8 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
- 	/* Too many mappings? */
- 	if (mm->map_count > sysctl_max_map_count)
- 		return -ENOMEM;
-+	if (mm->map_count > mm_track_threshold)
-+		mmap_track_user(mm, mm_track_threshold);
- 
- 	/* Obtain the address to map to. we verify (or select) it and ensure
- 	 * that it represents a valid section of the address space.
-@@ -2997,6 +3108,8 @@ void exit_mmap(struct mm_struct *mm)
- 	/* mm's last user has gone, and its about to be pulled down */
- 	mmu_notifier_release(mm);
- 
-+	mmap_untrack_user(mm);
-+
- 	if (mm->locked_vm) {
- 		vma = mm->mmap;
- 		while (vma) {
-diff --git a/mm/rmap.c b/mm/rmap.c
-index 47db27f8049e..d88acf5c98e9 100644
---- a/mm/rmap.c
-+++ b/mm/rmap.c
-@@ -1190,6 +1190,7 @@ void page_add_file_rmap(struct page *page, bool compound)
- 		VM_BUG_ON_PAGE(!PageSwapBacked(page), page);
- 		__inc_node_page_state(page, NR_SHMEM_PMDMAPPED);
- 	} else {
-+		int v;
- 		if (PageTransCompound(page) && page_mapping(page)) {
- 			VM_WARN_ON_ONCE(!PageLocked(page));
- 
-@@ -1197,8 +1198,13 @@ void page_add_file_rmap(struct page *page, bool compound)
- 			if (PageMlocked(page))
- 				clear_page_mlock(compound_head(page));
- 		}
--		if (!atomic_inc_and_test(&page->_mapcount))
-+		v = atomic_inc_return(&page->_mapcount);
-+		if (likely(v > 0))
- 			goto out;
-+		if (unlikely(v < 0)) {
-+			mm_mapcount_overflow(page);
-+			goto out;
-+		}
- 	}
- 	__mod_lruvec_page_state(page, NR_FILE_MAPPED, nr);
- out:
+--DIOMP1UsTsWJauNi
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEEd80NauSabkiESfLYbAtpk944dnoFAlqZxLUACgkQbAtpk944
+dnpRvw//YigCAwd1TNaLZzn3MXVqAOXsY6IAtAe7QASbMi+ovlu53XBYP74R+Kxp
+8wgjmdA9SO8KjqUMWoi/M1fLnhVy/CFVE0rh4mU/4S/c3rN1gOcAAqI9C8AKApF/
+yZqF40/3/1z9VzoRA3BXOcBI11iBkRbUWf3T70q0/OPlCS8eIM4dsGyRxbWPYVqs
+2yYjagOQfccH68ZUPoHcWjgla5LgsreC5YPoVPtgjJO9ECxG0zFq4hcCRCUWInnu
+iklEJ+E5Y/6YrwmiwiqLK3QqByKRNveXVJHnfgM07Y0C5dYPpKW1dTUxzb46A5GN
+YK5IcIvaV/fzD5Q8o/ri5lu/ZmCIla5sy7CJ8hICDWWONuSBNFdqqhqCssNCAkT8
+OxAHhaI4gLH4oBWRUok2ycyf/5i2BRP/zgPKVJyuTVQ/c8lurYZd51CzcPZaY558
+p7FSo1YyZRp2+W6pMyqCp5Gq/BB5zu2pLKh3aB7xK8PpQxI0MDp90vG2edBZ4Qhb
+LlIvcbUABn37OqvsaVvmh4XFtk3a5pFZIeBZvj6+n7+CmNHs5GVypOpqDfb92TA7
+jHE4yjrvx6cDB5mZUezdinB3HRJKDr2ojvAkf7DPYrN2bina9jt6HnTcjc+DzhYj
+WLT3w3H4tQGrg+AQegMo/KCUWzY3u3pqT7OR96JKp5jT/AuGfAk=
+=4IQq
+-----END PGP SIGNATURE-----
+
+--DIOMP1UsTsWJauNi--
