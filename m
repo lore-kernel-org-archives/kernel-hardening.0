@@ -1,324 +1,149 @@
-Date: Fri, 2 Mar 2018 10:12:01 +0100
-From: Ulf Magnusson <ulfalizer@gmail.com>
-Subject: Re: [PATCH 00/23] kconfig: move compiler capability tests to Kconfig
-Message-ID: <20180302091201.veyw5iv2uwvlvs2h@huvuddator>
-References: <20180218221352.GA6651@ravnborg.org>
- <CAFkk2KT1krKuDkWt0eHcasfC61fTVQNf-1kqw7icLP9OYGYkXQ@mail.gmail.com>
- <CAK7LNAQH0WD3A3T97gce0xmZpMy0zWxTO2StfNWaDbiqjQg8gg@mail.gmail.com>
- <CAK8P3a2BOQt5Y0B4271WqaJvvWqfxHxD3S6r1i1xONvb+CJ5Dg@mail.gmail.com>
- <CAK7LNARtZcW1v53ridFJK1MULmj8tQT4s+DoRhKj9PrbMri5rQ@mail.gmail.com>
- <CAK8P3a1DrhxWXaEs6E85W5HEhvFr23E-GDsu=0X-sG0pX+PLag@mail.gmail.com>
- <CAK7LNAR3OMh9Q9ZfaBq=FpSJ-+DT5-RH_20ohV-iu34pX9hFKw@mail.gmail.com>
- <20180221213946.w4v6ywy7fbiy6oyc@huvuddator>
- <CAK7LNARd-9KNRTHT3jrNganqLisheAWbDQMGi_ujp+1GpYzSOg@mail.gmail.com>
- <20180302090326.h55wontzv3traxnn@huvuddator>
+Subject: Re: [PATCH 1/2] stackleak: Update for arm64
+References: <20180221011303.20392-1-labbott@redhat.com>
+ <20180221011303.20392-2-labbott@redhat.com> <20180222165834.GC18421@arm.com>
+ <97090ca6-efad-7c03-6084-a97674ae61c7@linux.com>
+ <874lm2d96q.fsf@e105548-lin.cambridge.arm.com>
+ <5d10c6ad-b4b6-eb27-79f0-ca235b73e7eb@linux.com>
+ <87woywxezi.fsf@e105548-lin.cambridge.arm.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <b0575fc6-79f4-9aad-ee31-e761a9cac5d8@linux.com>
+Date: Fri, 2 Mar 2018 14:14:36 +0300
 MIME-Version: 1.0
+In-Reply-To: <87woywxezi.fsf@e105548-lin.cambridge.arm.com>
 Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <20180302090326.h55wontzv3traxnn@huvuddator>
-To: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: Arnd Bergmann <arnd@arndb.de>, Rich Felker <dalias@libc.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>, Paul Mackerras <paulus@samba.org>, "H. Peter Anvin" <hpa@zytor.com>, sparclinux <sparclinux@vger.kernel.org>, Sam Ravnborg <sam@ravnborg.org>, Yoshinori Sato <ysato@users.sourceforge.jp>, Jonathan Corbet <corbet@lwn.net>, Richard Weinberger <richard@nod.at>, Linux-sh list <linux-sh@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, uml-devel <user-mode-linux-devel@lists.sourceforge.net>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, Peter Oberparleiter <oberpar@linux.vnet.ibm.com>, Jeff Dike <jdike@addtoit.com>, linuxppc-dev <linuxppc-dev@lists.ozlabs.org>, user-mode-linux-user@lists.sourceforge.net, Thomas Gleixner <tglx@linutronix.de>, Michal Marek <michal.lkml@markovi.net>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Randy Dunlap <rdunlap@infradead.org>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>
+Content-Transfer-Encoding: 7bit
+To: Will Deacon <will.deacon@arm.com>, Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, richard.sandiford@arm.com
+Cc: PaX Team <pageexec@freemail.hu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 02, 2018 at 10:03:26AM +0100, Ulf Magnusson wrote:
-> On Fri, Mar 02, 2018 at 02:50:39PM +0900, Masahiro Yamada wrote:
-> > 2018-02-22 6:39 GMT+09:00 Ulf Magnusson <ulfalizer@gmail.com>:
-> > > On Wed, Feb 21, 2018 at 09:57:03PM +0900, Masahiro Yamada wrote:
-> > >> 2018-02-21 19:52 GMT+09:00 Arnd Bergmann <arnd@arndb.de>:
-> > >> > On Wed, Feb 21, 2018 at 11:20 AM, Masahiro Yamada
-> > >> > <yamada.masahiro@socionext.com> wrote:
-> > >> >> 2018-02-21 18:56 GMT+09:00 Arnd Bergmann <arnd@arndb.de>:
-> > >> >>> On Wed, Feb 21, 2018 at 8:38 AM, Masahiro Yamada
-> > >> >>> <yamada.masahiro@socionext.com> wrote:
-> > >> >>>> 2018-02-20 0:18 GMT+09:00 Ulf Magnusson <ulfalizer@gmail.com>:
-> > >> >>
-> > >> >> Let me clarify my concern.
-> > >> >>
-> > >> >> When we test the compiler flag, is there a case
-> > >> >> where a particular flag depends on -m{32,64} ?
-> > >> >>
-> > >> >> For example, is there a compiler that supports -fstack-protector
-> > >> >> for 64bit mode, but unsupports it for 32bit mode?
-> > >> >>
-> > >> >>   $(cc-option -m32)                     ->  y
-> > >> >>   $(cc-option -m64)                     ->  y
-> > >> >>   $(cc-option -fstack-protector)        ->  y
-> > >> >>   $(cc-option -m32 -fstack-protector)   ->  n
-> > >> >>   $(cc-option -m64 -fstack-protector)   ->  y
-> > >> >>
-> > >> >> I guess this is unlikely to happen,
-> > >> >> but I am not whether it is zero possibility.
-> > >> >>
-> > >> >> If this could happen,
-> > >> >> $(cc-option ) must be evaluated together with
-> > >> >> correct bi-arch option (either -m32 or -m64).
-> > >> >>
-> > >> >>
-> > >> >> Currently, -m32/-m64 is specified in Makefile,
-> > >> >> but we are moving compiler tests to Kconfig
-> > >> >> and, CONFIG_64BIT can be dynamically toggled in Kconfig.
-> > >> >
-> > >> > I don't think it can happen for this particular combination (stack protector
-> > >> > and word size), but I'm sure we'll eventually run into options that
-> > >> > need to be tested in combination. For the current CFLAGS_KERNEL
-> > >> > setting, we definitely have the case of needing the variables to be
-> > >> > evaluated in a specific order.
-> > >> >
-> > >>
-> > >>
-> > >>
-> > >>
-> > >> I was thinking of how we can handle complex cases
-> > >> in the current approach.
-> > >>
-> > >>
-> > >>
-> > >> (Case 1)
-> > >>
-> > >> Compiler flag -foo and -bar interacts, so
-> > >> we also need to check the combination of the two.
-> > >>
-> > >>
-> > >> config CC_HAS_FOO
-> > >>         def_bool $(cc-option -foo)
-> > >>
-> > >> config CC_HAS_BAR
-> > >>         def_bool $(cc-option -bar)
-> > >>
-> > >> config CC_HAS_FOO_WITH_BAR
-> > >>         def_bool $(cc-option -foo -bar)
-> > >>
-> > >>
-> > >>
-> > >> (Case 2)
-> > >> Compiler flag -foo is sensitive to word-size.
-> > >> So, we need to test this option together with -m32/-m64.
-> > >> User can toggle CONFIG_64BIT, like i386/x86_64.
-> > >>
-> > >>
-> > >> config CC_NEEDS_M64
-> > >>           def_bool $(cc-option -m64) && 64BIT
-> > >>
-> > >> config CC_NEEDS_M32
-> > >>           def_bool $(cc-option -m32) && !64BIT
-> > >>
-> > >> config CC_HAS_FOO
-> > >>          bool
-> > >>          default $(cc-option -m64 -foo) if CC_NEEDS_M64
-> > >>          default $(cc-option -m32 -foo) if CC_NEEDS_M32
-> > >>          default $(cc-option -foo)
-> > >>
-> > >>
-> > >>
-> > >> (Case 3)
-> > >> Compiler flag -foo is sensitive to endian-ness.
-> > >>
-> > >>
-> > >> config CC_NEEDS_BIG_ENDIAN
-> > >>           def_bool $(cc-option -mbig-endian) && CPU_BIG_ENDIAN
-> > >>
-> > >> config CC_NEEDS_LITTLE_ENDIAN
-> > >>           def_bool $(cc-option -mlittle-endian) && CPU_LITTLE_ENDIAN
-> > >>
-> > >> config CC_HAS_FOO
-> > >>          bool
-> > >>          default $(cc-option -mbig-endian -foo) if CC_NEEDS_BIG_ENDIAN
-> > >>          default $(cc-option -mlittle-endian -foo) if CC_NEEDS_LITTLE_ENDIAN
-> > >>          default $(cc-option -foo)
-> > >>
-> > >>
-> > >>
-> > >>
-> > >> Hmm, I think I can implement those somehow.
-> > >> But, I hope we do not have many instances like this...
-> > >>
-> > >>
-> > >> If you know more naive cases, please share your knowledge.
-> > >>
-> > >> Thanks!
-> > >>
-> > >>
-> > >> --
-> > >> Best Regards
-> > >> Masahiro Yamada
-> > >
-> > > Would get pretty bad if a test needs to consider multiple symbols.
-> > > Exponential explosion there...
-> > >
-> > >
-> > > I thought some more about the implementation of dynamic (post-parsing)
-> > > functions to see how bad it would get with the current implementation.
-> > >
-> > > Some background on how things work now:
-> > >
-> > >   1. All expression operands in Kconfig are symbols.
-> > >
-> > >   2. Returning '$ENV' or '$(fn foo)' as a T_WORD during parsing gets
-> > >      you symbols with those strings as names and S_UNKNOWN type (because
-> > >      they act like references to undefined symbols).
-> > >
-> > >   3. For "foo-$(fn foo)", you also get a symbol with that string as its
-> > >      name and S_UNKNOWN type (stored among the SYMBOL_CONST symbols)
-> > >
-> > >   4. Symbols with S_UNKNOWN type get their name as their string value,
-> > >      and the tristate value n.
-> > >
-> > > So, if you do string expansion on the names of symbols with S_UNKNOWN
-> > > type in sym_calc_value(), you're almost there with the current
-> > > implementation, except for the tristate case.
-> > >
-> > > Maybe you could set the tristate value of S_UNKNOWN symbols depending on
-> > > the string value you end up with. Things are getting pretty confusing at
-> > > that point.
-> > >
-> > > Could have something like S_DYNAMIC as well. More Kconfig complexity...
-> > >
-> > > Then there's other complications:
-> > >
-> > >   1. SYMBOL_CONST is no longer constant.
-> > >
-> > >   2. Dependency loop detection needs to consider symbol references
-> > >      within strings.
-> > >
-> > >   3. Dependency loop detection relies on static knowledge of what
-> > >      symbols a symbol depends on. That might get messy for certain
-> > >      expansions, though it might be things you wouldn't do in practice.
-> > >
-> > >   4. Symbols still need to be properly invalidated. It looks like at
-> > >      least menuconfig just does a dumb invalidate-everything whenever
-> > >      the value of a symbol is changed though, so it might not require
-> > >      extra work. (Bit messier in Kconfiglib, which does minimal
-> > >      invalidation to keep scripts fast, but just need to extract a few
-> > >      extra deps there.)
-> > >
-> > >
-> > > It looks like dynamic functions could get quite messy, but might be
-> > > doable if absolutely required. There's probably more devils in the
-> > > details though.
-> > >
-> > > I don't think the static function model precludes switching models later
-> > > btw, when people have more experience.
-> > 
-> > 
-> > 
-> > I really want to start with the static function model
-> > and see if we need the dynamic function implementation.
-> 
-> Yeah, let's start with static functions, IMO.
-> 
-> Either we'll learn that they're powerful enough in practice, and save
-> ourselves some work, or we'll gain experience for later. Converting from
-> static to dynamic functions should be painless, if needed.
-> 
-> My plan would be something like:
-> 
->   1. Implement static functions
-> 
->   2. Convert as many simple cases over to them as possible
-> 
->   3. See how bad the bad cases get. If they get really bad, then decide
->      what to do next (extend Kconfig, handle them in the Makefiles,
->      etc.)
-> 
-> > 
-> > Here is an idea for the migration path in case
-> > we need to do that in the future.
-> > 
-> > 
-> > 
-> > Currently, every time user input is given,
-> > sym_clear_all_valid() is called.
-> > 
-> > It is not efficient to blindly re-evaluate expensive $(shell ...)
-> 
-> I think menuconfig only reevalutes the symbols in the menu that's
-> currently shown in the interface (along with their dependencies).
-> 
-> Maybe that'd be bad enough though.
-> 
-> > 
-> > 
-> > So, have a list of symbols the function depends on
-> > in its arguments.
-> > 
-> > For example,
-> > 
-> > config CC_HAS_SANE_STACKPROTECTOR
-> >         def_bool $(shell $srctree/scripts/gcc-has-stack-protector.sh
-> > $CC $(1), CFLAGS_BASE)
-> > 
-> > 
-> > Here the first argument
-> >   $srctree/scripts/gcc-x86-has-stack-protector.sh $CC $(1)
-> > 
-> > is the shell command.
-> > $(1), $(2), ... will be replaced with the values of symbols (or expressions)
-> > that follow when running the shell command.
-> > 
-> > 
-> > The second argument
-> > CFLAGS_BASE
-> > is the dependency symbol (or expression).
-> > 
-> > 
-> > CFLAGS_BASE can be dynamically changed like
-> > 
-> > config CFLAGS_BASE
-> >         string
-> >         default "-m64" if 64BIT
-> >         default "-m32"
-> > 
-> > 
-> > When and only when CFLAGS_BASE is updated, the function should be re-calculated.
-> > (This will require efforts to minimize the amount of re-evaluation.)
-> > 
-> > 
-> > 
-> > 
-> > cc-option will be implemented like follows:
-> > 
-> > macro cc-option $(shell $CC -Werror $$(1) $(1) -c -x c /dev/null -o
-> > /dev/null, CFLAGS_BASE)
-> > 
-> > 
-> > 
-> > Please notice the difference between $$(1) and $(1).
-> > 
-> > $(1) is immediately expanded by cc-option macro.
-> > 
-> > $$(1) is escaped since we want to expand it by $(shell ...), not by
-> > $(cc-option ...)
-> > 
-> > 
-> > 
-> > For example,
-> > 
-> >   $(cc-option -fstack-protector)
-> > 
-> > will be expanded to
-> > 
-> >   $(shell gcc -Werror $(1) -fstack-protector -c -x c /dev/null -o
-> > /dev/null, CFLAGS_BASE)
-> > 
-> > Since macros are just textual shorthand, so this expansion happens
-> > during the parse phase.
-> > 
-> > 
-> > 
-> > Then, the evaluation phase does the following every time CFLAGS_BASE is updated.
-> > 
-> > gcc -Werror [value of CFLAGS_BASE] -fstack-protector -c -x c /dev/null
-> > -o /dev/null
-> > 
-> > 
-> > This is a new form of expression, so it will be managed in AST tree
-> > with a flag E_SHELL (or E_FUNC) etc.
-> > 
-> > 
-> > Not implemented at all.  Just a rough sketch.
-> 
-> A simpler syntax like
-> 
-> 	$(shell $CC -Werror {CFLAGS_BASE} -c -x c /dev/null -o /dev/null)
+Thanks for your reply, Richard!
 
-	*$(shell $CC -Werror {CFLAGS_BASE} -fstack-protector -c -x c /dev/null -o /dev/null)
+On 01.03.2018 13:33, Richard Sandiford wrote:
+> Alexander Popov <alex.popov@linux.com> writes:
+>> On 27.02.2018 13:21, Richard Sandiford wrote:
+>>> Alexander Popov <alex.popov@linux.com> writes:
+>>>> Would you be so kind to take a look at the whole STACKLEAK plugin?
+>>>> http://www.openwall.com/lists/kernel-hardening/2018/02/16/4
+>>>> https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/commit/?h=kspp/gcc-plugin/stackleak&id=57a0a6763b12e82dd462593d0f42be610e93cdc9
+>>>>
+>>>> It's not very big. I documented it in detail. I would be really
+>>>> grateful for the
+>>>> review!
+>>>
+>>> Looks good to me FWIW.  Just a couple of minor things:
+>>>
+>>>> +	/*
+>>>> +	 * 1. Loop through the GIMPLE statements in each of cfun basic blocks.
+>>>> +	 * cfun is a global variable which represents the function that is
+>>>> +	 * currently processed.
+>>>> +	 */
+>>>> +	FOR_EACH_BB_FN(bb, cfun) {
+>>>> +		for (gsi = gsi_start_bb(bb); !gsi_end_p(gsi); gsi_next(&gsi)) {
+>>>> +			gimple stmt;
+>>>> +
+>>>> +			stmt = gsi_stmt(gsi);
+>>>> +
+>>>> +			/* Leaf function is a function which makes no calls */
+>>>> +			if (is_gimple_call(stmt))
+>>>> +				is_leaf = false;
+>>>
+>>> It's probably not going to matter in practice, but it might be worth
+>>> emphasising in the comments that this leafness is only approximate.
+>>
+>> That's important, thank you! May I ask why you think it's not going to matter in
+>> practice?
+> 
+> I just thought the kind of calls it misses are going to have very
+> shallow frames, but from what you said later I guess that isn't the
+> point.  It also might be a bit too hand-wavy for something like this :-)
+> 
+>>> It will sometimes be a false positive, because we could still
+>>> end up creating calls to libgcc functions from non-call statements
+>>> (or for target-specific reasons).  It can also be a false negative,
+>>> since call statements can be to built-in or internal functions that
+>>> end up being open-coded.
+>>
+>> Oh, that raises the question: how does this leafness inaccuracy affect in my
+>> particular case?
+>>
+>> is_leaf is currently used for finding the special cases to skip the
+>> track_stack() call insertion:
+>>
+>> /*
+>>  * Special cases to skip the instrumentation.
+>>  *
+>>  * Taking the address of static inline functions materializes them,
+>>  * but we mustn't instrument some of them as the resulting stack
+>>  * alignment required by the function call ABI will break other
+>>  * assumptions regarding the expected (but not otherwise enforced)
+>>  * register clobbering ABI.
+>>  *
+>>  * Case in point: native_save_fl on amd64 when optimized for size
+>>  * clobbers rdx if it were instrumented here.
+>>  *
+>>  * TODO: any more special cases?
+>>  */
+>> if (is_leaf &&
+>>     !TREE_PUBLIC(current_function_decl) &&
+>>     DECL_DECLARED_INLINE_P(current_function_decl)) {
+>> 	return 0;
+>> }
+>>
+>>
+>> And now it seems to me that the stackleak plugin should not instrument all
+>> static inline functions, regardless of is_leaf. Do you agree?
+> 
+> OK.  I'd missed that this was just a heuristic to detect certain kinds
+> of linux function, so it's probably fine as it is.
+> 
+> Not sure whether it's safe to punt for general static inline functions.
+> E.g. couldn't you have a static inline function that just provides a
+> more convenient interface to another function?  But I guess it's a
+> linux-specific heuristic, so I can't really say.
+
+Huh, I got the insight! I think that the current approach (originally by PaX
+Team) should work fine despite the false positives which you described:
+
+If some static inline function already does explicit calls (so is_leaf is
+false), adding the track_stack() call will not introduce anything special that
+can break the aforementioned register clobbering ABI in that function.
+
+Does it sound reasonable?
+
+However, I don't know what to with false negatives.
+
+> TBH the paravirt save_fl stuff seems like dancing on the edge,
+> but that's another story. :-)
+
+That's interesting. Could you elaborate on that?
+
+>>>> +	/*
+>>>> +	 * The stackleak_final pass should be executed before the "final" pass,
+>>>> +	 * which turns the RTL (Register Transfer Language) into assembly.
+>>>> +	 */
+>>>> +	PASS_INFO(stackleak_final, "final", 1, PASS_POS_INSERT_BEFORE);
+>>>
+>>> This might be too late, since it happens e.g. after addresses have
+>>> been calculated for branch ranges, and after machine-specific passes
+>>> (e.g. bundling on ia64).
+>>>
+>>> The stack size is final after reload, so inserting the pass after that
+>>> might be better.
+>>
+>> Thanks for that notice. May I ask for the additional clarification?
+>>
+>> I specified -fdump-passes and see a lot of passes between reload and final:
+...
+>>
+>> Where exactly would you recommend me to insert the stackleak_final pass, which
+>> removes the unneeded track_stack() calls?
+> 
+> Directly after rtl-reload seems best.  That's the first point at which
+> the frame size is final, and reload is one of the few rtl passes that
+> always runs.  Doing it there could also help with things like shrink
+> wrapping (part of rtl-pro_and_epilogue).
+Thanks a lot for your detailed answer. I'll follow your advice in the next
+version of the patch series.
+
+Best regards,
+Alexander
