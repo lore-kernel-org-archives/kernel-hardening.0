@@ -1,68 +1,64 @@
-Date: Thu, 1 Mar 2018 15:46:23 -0700
+Date: Thu, 1 Mar 2018 17:13:49 -0700
 From: Tycho Andersen <tycho@tycho.ws>
-Subject: Re: [PATCH 1/3] leaking_addresses: skip all /proc/PID except /proc/1
-Message-ID: <20180301224623.ehujx7gj26nu54ql@cisco>
-References: <1519706711-18580-1-git-send-email-me@tobin.cc>
- <1519706711-18580-2-git-send-email-me@tobin.cc>
- <20180301210623.GA15198@eros>
+Subject: Re: [PATCH 2/2] leaking_addresses: check if file name contains
+ address
+Message-ID: <20180302001349.buaus74hx3xjoaqs@cisco>
+References: <1519941800-27710-1-git-send-email-me@tobin.cc>
+ <1519941800-27710-3-git-send-email-me@tobin.cc>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180301210623.GA15198@eros>
+In-Reply-To: <1519941800-27710-3-git-send-email-me@tobin.cc>
 To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Alexander Kapshuk <alexander.kapshuk@gmail.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 02, 2018 at 08:06:23AM +1100, Tobin C. Harding wrote:
-> On Tue, Feb 27, 2018 at 03:45:09PM +1100, Tobin C. Harding wrote:
-> > When the system is idle it is likely that most files under /proc/PID
-> > will be identical for various processes.  Scanning _all_ the PIDs under
-> > /proc is unnecessary and implies that we are thoroughly scanning /proc.
-> > This is _not_ the case because there may be ways userspace can trigger
-> > creation of /proc files that leak addresses but were not present during
-> > a scan.  For these two reasons we should exclude all PID directories
-> > under /proc except '1/'
-> > 
-> > Exclude all /proc/PID except /proc/1.
-> > 
-> > Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> > ---
-> >  scripts/leaking_addresses.pl | 11 +++++++++++
-> >  1 file changed, 11 insertions(+)
-> > 
-> > diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-> > index 6e5bc57caeaa..fb40e2828f43 100755
-> > --- a/scripts/leaking_addresses.pl
-> > +++ b/scripts/leaking_addresses.pl
-> > @@ -10,6 +10,14 @@
-> >  # Use --debug to output path before parsing, this is useful to find files that
-> >  # cause the script to choke.
-> >  
-> > +#
-> > +# When the system is idle it is likely that most files under /proc/PID will be
-> > +# identical for various processes.  Scanning _all_ the PIDs under /proc is
-> > +# unnecessary and implies that we are thoroughly scanning /proc.  This is _not_
-> > +# the case because there may be ways userspace can trigger creation of /proc
-> > +# files that leak addresses but were not present during a scan.  For these two
-> > +# reasons we exclude all PID directories under /proc except '1/'
-> > +
-> >  use warnings;
-> >  use strict;
-> >  use POSIX;
-> > @@ -472,6 +480,9 @@ sub walk
-> >  			my $path = "$pwd/$file";
-> >  			next if (-l $path);
-> >  
-> > +			# skip /proc/PID except /proc/1
-> > +			next if ($path =~ /\/proc\/(?:[2-9][0-9]*|1[0-9]+)/);
+On Fri, Mar 02, 2018 at 09:03:20AM +1100, Tobin C. Harding wrote:
+> Sometimes files may be created by using output from printk.  As the scan
+> traverses the directory tree we should parse each path name and check if
+> it is leaking an address.
 > 
-> Perhaps the intent of this is clearer?
+> Add check for leaking address on each path name.
 > 
-> 			next if (($path =~ /^\/proc\/[0-9]+$/) &&
-> 			     	 ($path !~ /^\/proc\/1$/));
+> Suggested-by: Tycho Andersen <tycho@tycho.ws>
 
-+1, works for me.
+Acked-by: Tycho Andersen <tycho@tycho.ws>
 
-Cheers,
-
-Tycho
+> Signed-off-by: Tobin C. Harding <me@tobin.cc>
+> ---
+>  scripts/leaking_addresses.pl | 12 ++++++++++++
+>  1 file changed, 12 insertions(+)
+> 
+> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
+> index 65a65aa64d26..a550c9bc34f5 100755
+> --- a/scripts/leaking_addresses.pl
+> +++ b/scripts/leaking_addresses.pl
+> @@ -463,6 +463,16 @@ sub parse_file
+>  	close $fh;
+>  }
+>  
+> +# Checks if the actual path name is leaking a kernel address.
+> +sub check_path_for_leaks
+> +{
+> +	my ($path) = @_;
+> +
+> +	if (may_leak_address($path)) {
+> +		printf("Path name may contain address: $path\n");
+> +	}
+> +}
+> +
+>  # Recursively walk directory tree.
+>  sub walk
+>  {
+> @@ -484,6 +494,8 @@ sub walk
+>  
+>  			next if (skip($path));
+>  
+> +			check_path_for_leaks($path);
+> +
+>  			if (-d $path) {
+>  				push @dirs, $path;
+>  				next;
+> -- 
+> 2.7.4
+> 
