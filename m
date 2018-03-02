@@ -1,82 +1,215 @@
-Subject: Re: [PATCH 0/1] Zero initialise kernel stack variables
-References: <20180227111532.1144-1-ppandit@redhat.com>
- <CAGXu5j+-qUrt-8kQ6WRUM=DH8K3Zgmm2ejRgiKJMLDrSXRtmdg@mail.gmail.com>
- <CAFJ0LnFEtcWjTf5v1oBK_FC6VTdORpOLyKzzENL3B1bCHz1ySw@mail.gmail.com>
-From: Casey Schaufler <casey@schaufler-ca.com>
-Message-ID: <a5ac51e9-b0ab-ed1b-c820-ab9379d62427@schaufler-ca.com>
-Date: Fri, 2 Mar 2018 13:01:50 -0800
+Date: Fri, 2 Mar 2018 13:26:37 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Subject: [RFC] Handle mapcount overflows
+Message-ID: <20180302212637.GB671@bombadil.infradead.org>
+References: <20180208021112.GB14918@bombadil.infradead.org>
 MIME-Version: 1.0
-In-Reply-To: <CAFJ0LnFEtcWjTf5v1oBK_FC6VTdORpOLyKzzENL3B1bCHz1ySw@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Nick Kralevich <nnk@google.com>, Kees Cook <keescook@chromium.org>
-Cc: P J P <ppandit@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Florian Weimer <fweimer@redhat.com>, P J P <pjp@fedoraproject.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180208021112.GB14918@bombadil.infradead.org>
+To: linux-mm@kvack.org
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 3/2/2018 11:52 AM, Nick Kralevich wrote:
-> On Tue, Feb 27, 2018 at 11:28 AM, Kees Cook <keescook@chromium.org> wrote:
->>> This same kernel is running on my F27 test machine as I write this.
->>> There is no slowness or notice-able performance impact as such.
->> Unfortunately "noticeable" isn't going to be a viable metric. You'll
->> need to do some real-world benchmarks (i.e. kernel builds, hackbench,
->> etc), and compare the results. Even just initializing
->> passed-by-reference variables (GCC_PLUGIN_STRUCTLEAK_BYREF_ALL) had
->> measurable performance impact.
->>
->> It would be nice to have four options/features available from the
->> compiler, from least to most performance impact:
-> One of the recurring themes I've noticed from the kernel-hardening
-> mailing list is that someone will propose a valuable compile time
-> feature (such as this one), people will ask for performance
-> measurements, some specific use case will be found which has adverse
-> performance impact, and the entire change will be rejected. It's
-> silly.
 
-A security developers we *must* consider performance to be
-critical at all times. There is no easier way to get something
-rejected out of hand than for it to have serious performance
-impact. On the other hand, if I had a nickel for every time I
-saw something really stoopid done to improve performance I'd
-have a big pile of nickels. One of the performance issues your
-changed caused was in the common case of network packet delivery.
-The people who work on that code are fanatical about performance.
-Just as the security people might flame an obvious buffer overflow,
-the networking people will stomp on an unnecessary performance hit.
+Here's my third effort to handle page->_mapcount overflows.
 
+The idea is to minimise overhead, so we keep a list of users with more
+than 5000 mappings.  In order to overflow _mapcount, you have to have
+2 billion mappings, so you'd need 400,000 tasks to evade the tracking,
+and your sysadmin has probably accused you of forkbombing the system
+long before then.  Not to mention the 6GB of RAM you consumed just in
+stacks and the 24GB of RAM you consumed in page tables ... but I digress.
 
-> The beautiful thing about compile time features is that they can be
-> enabled / disabled per compilation unit. If there's a performance
-> problem in a certain chunk of code, figure out a way to opt that code
-> out of the protections. 95% of the performance of the kernel is likely
-> only dependent on 5% of the code, and even if we opt out that code, we
-> still protect the remaining 95% of the code. If you assume that bugs
-> are evenly distributed throughout the code base, a 95% reduction is
-> HUGE.
+Let's assume that the sysadmin has increased the number of processes to
+100,000.  You'd need to create 20,000 mappings per process to overflow
+_mapcount, and they'd end up on the 'heavy_users' list.  Not everybody
+on the heavy_users list is going to be guilty, but if we hit an overflow,
+we look at everybody on the heavy_users list and if they've got the page
+mapped more than 1000 times, they get a SIGSEGV.
 
-For good or ill there is a strong tradition that a 95% security
-solution is broken. You don't need all the code to be penetrated,
-just a teeny bit. And what about the code that couldn't be
-penetrated anyway, but now has to be slower to protect that little
-bit?
+I'm not entirely sure how to forcibly tear down a task's mappings, so
+I've just left a comment in there to do that.  Looking for feedback on
+this approach.
 
-> Strategically, we shouldn't let the perfect be the enemy of the good.
-> Let's move away from fixating on benchmarks, and just enable easy
-> opt-out for the folks who demonstrate performance bottlenecks.
-
-The problem is not that people will choose performance over security,
-or the other way around. It's that they don't consider both to be
-important in the first place.
-
->
-> I suspect that many kernel-hardening features would have an easier
-> time being accepted if it wasn't presented as an all or nothing
-> feature.
-
-You're up against the notion that you can ignore one aspect of
-the system to enhance another. 
-
->
-> My $0.02.
->
-> -- Nick
->
+diff --git a/mm/internal.h b/mm/internal.h
+index 7059a8389194..977852b8329e 100644
+--- a/mm/internal.h
++++ b/mm/internal.h
+@@ -97,6 +97,11 @@ extern void putback_lru_page(struct page *page);
+  */
+ extern pmd_t *mm_find_pmd(struct mm_struct *mm, unsigned long address);
+ 
++#ifdef CONFIG_64BIT
++extern void mm_mapcount_overflow(struct page *page);
++#else
++static inline void mm_mapcount_overflow(struct page *page) { }
++#endif
+ /*
+  * in mm/page_alloc.c
+  */
+diff --git a/mm/mmap.c b/mm/mmap.c
+index 9efdc021ad22..575766ec02f8 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -1315,6 +1315,115 @@ static inline int mlock_future_check(struct mm_struct *mm,
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_64BIT
++/*
++ * Machines with more than 2TB of memory can create enough VMAs to overflow
++ * page->_mapcount if they all point to the same page.  32-bit machines do
++ * not need to be concerned.
++ */
++/*
++ * Experimentally determined.  gnome-shell currently uses fewer than
++ * 3000 mappings, so should have zero effect on desktop users.
++ */
++#define mm_track_threshold	5000
++static DEFINE_SPINLOCK(heavy_users_lock);
++static DEFINE_IDR(heavy_users);
++
++static void mmap_track_user(struct mm_struct *mm, int max)
++{
++	struct mm_struct *entry;
++	unsigned int id;
++
++	idr_preload(GFP_KERNEL);
++	spin_lock(&heavy_users_lock);
++	idr_for_each_entry(&heavy_users, entry, id) {
++		if (entry == mm)
++			break;
++		if (entry->map_count < mm_track_threshold)
++			idr_remove(&heavy_users, id);
++	}
++	if (!entry)
++		idr_alloc(&heavy_users, mm, 0, 0, GFP_ATOMIC);
++	spin_unlock(&heavy_users_lock);
++}
++
++static void mmap_untrack_user(struct mm_struct *mm)
++{
++	struct mm_struct *entry;
++	unsigned int id;
++
++	spin_lock(&heavy_users_lock);
++	idr_for_each_entry(&heavy_users, entry, id) {
++		if (entry == mm) {
++			idr_remove(&heavy_users, id);
++			break;
++		}
++	}
++	spin_unlock(&heavy_users_lock);
++}
++
++static void kill_mm(struct task_struct *tsk)
++{
++	/* Tear down the mappings first */
++	do_send_sig_info(SIGKILL, SEND_SIG_FORCED, tsk, true);
++}
++
++static void kill_abuser(struct mm_struct *mm)
++{
++	struct task_struct *tsk;
++
++	for_each_process(tsk)
++		if (tsk->mm == mm)
++			break;
++
++	if (down_write_trylock(&mm->mmap_sem)) {
++		kill_mm(tsk);
++		up_write(&mm->mmap_sem);
++	} else {
++		do_send_sig_info(SIGKILL, SEND_SIG_FORCED, tsk, true);
++	}
++}
++
++void mm_mapcount_overflow(struct page *page)
++{
++	struct mm_struct *entry = current->mm;
++	unsigned int id;
++	struct vm_area_struct *vma;
++	struct address_space *mapping = page_mapping(page);
++	unsigned long pgoff = page_to_pgoff(page);
++	unsigned int count = 0;
++
++	vma_interval_tree_foreach(vma, &mapping->i_mmap, pgoff, pgoff + 1) {
++		if (vma->vm_mm == entry)
++			count++;
++		if (count > 1000)
++			kill_mm(current);
++	}
++
++	rcu_read_lock();
++	idr_for_each_entry(&heavy_users, entry, id) {
++		count = 0;
++
++		vma_interval_tree_foreach(vma, &mapping->i_mmap,
++				pgoff, pgoff + 1) {
++			if (vma->vm_mm == entry)
++				count++;
++			if (count > 1000) {
++				kill_abuser(entry);
++				goto out;
++			}
++		}
++	}
++	if (!entry)
++		panic("No abusers found but mapcount exceeded\n");
++out:
++	rcu_read_unlock();
++}
++#else
++static void mmap_track_user(struct mm_struct *mm, int max) { }
++static void mmap_untrack_user(struct mm_struct *mm) { }
++#endif
++
+ /*
+  * The caller must hold down_write(&current->mm->mmap_sem).
+  */
+@@ -1357,6 +1466,8 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
+ 	/* Too many mappings? */
+ 	if (mm->map_count > sysctl_max_map_count)
+ 		return -ENOMEM;
++	if (mm->map_count > mm_track_threshold)
++		mmap_track_user(mm, mm_track_threshold);
+ 
+ 	/* Obtain the address to map to. we verify (or select) it and ensure
+ 	 * that it represents a valid section of the address space.
+@@ -2997,6 +3108,8 @@ void exit_mmap(struct mm_struct *mm)
+ 	/* mm's last user has gone, and its about to be pulled down */
+ 	mmu_notifier_release(mm);
+ 
++	mmap_untrack_user(mm);
++
+ 	if (mm->locked_vm) {
+ 		vma = mm->mmap;
+ 		while (vma) {
+diff --git a/mm/rmap.c b/mm/rmap.c
+index 47db27f8049e..d88acf5c98e9 100644
+--- a/mm/rmap.c
++++ b/mm/rmap.c
+@@ -1190,6 +1190,7 @@ void page_add_file_rmap(struct page *page, bool compound)
+ 		VM_BUG_ON_PAGE(!PageSwapBacked(page), page);
+ 		__inc_node_page_state(page, NR_SHMEM_PMDMAPPED);
+ 	} else {
++		int v;
+ 		if (PageTransCompound(page) && page_mapping(page)) {
+ 			VM_WARN_ON_ONCE(!PageLocked(page));
+ 
+@@ -1197,8 +1198,13 @@ void page_add_file_rmap(struct page *page, bool compound)
+ 			if (PageMlocked(page))
+ 				clear_page_mlock(compound_head(page));
+ 		}
+-		if (!atomic_inc_and_test(&page->_mapcount))
++		v = atomic_inc_return(&page->_mapcount);
++		if (likely(v > 0))
+ 			goto out;
++		if (unlikely(v < 0)) {
++			mm_mapcount_overflow(page);
++			goto out;
++		}
+ 	}
+ 	__mod_lruvec_page_state(page, NR_FILE_MAPPED, nr);
+ out:
