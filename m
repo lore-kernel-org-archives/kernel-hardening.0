@@ -1,65 +1,129 @@
-Date: Fri, 2 Mar 2018 21:40:06 +0000
-From: James Hogan <jhogan@kernel.org>
-Subject: Re: [PATCH] signals: Move put_compat_sigset to compat.h to silence
- hardened usercopy
-Message-ID: <20180302214005.GC4197@saruman>
-References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
- <1519059306-30135-1-git-send-email-matt.redfearn@mips.com>
- <CAGXu5jKtrJ6Nmses_pM-qkXAkOPXAxwT+V3B+omqu0tx4xEh8w@mail.gmail.com>
+Date: Fri, 2 Mar 2018 14:03:40 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [RFC] Handle mapcount overflows
+Message-ID: <20180302220340.GC671@bombadil.infradead.org>
+References: <20180208021112.GB14918@bombadil.infradead.org>
+ <20180302212637.GB671@bombadil.infradead.org>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha256;
-	protocol="application/pgp-signature"; boundary="DIOMP1UsTsWJauNi"
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jKtrJ6Nmses_pM-qkXAkOPXAxwT+V3B+omqu0tx4xEh8w@mail.gmail.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: Matt Redfearn <matt.redfearn@mips.com>, "Dmitry V . Levin" <ldv@altlinux.org>, Al Viro <viro@zeniv.linux.org.uk>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux MIPS Mailing List <linux-mips@linux-mips.org>
+In-Reply-To: <20180302212637.GB671@bombadil.infradead.org>
+To: linux-mm@kvack.org
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Fri, Mar 02, 2018 at 01:26:37PM -0800, Matthew Wilcox wrote:
+> Here's my third effort to handle page->_mapcount overflows.
 
---DIOMP1UsTsWJauNi
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+If you like this approach, but wonder if it works, here's a little forkbomb
+of a program and a patch to add instrumentation.
 
-On Mon, Feb 19, 2018 at 03:55:27PM -0800, Kees Cook wrote:
-> On Mon, Feb 19, 2018 at 8:55 AM, Matt Redfearn <matt.redfearn@mips.com> w=
-rote:
-> > Move put_compat_sigset to compat.h, and mark it static inline. This
-> > fixes the WARN on MIPS.
-> >
-> > Fixes: afcc90f8621e ("usercopy: WARN() on slab cache usercopy region vi=
-olations")
-> > Signed-off-by: Matt Redfearn <matt.redfearn@mips.com>
->=20
-> Thanks for the catch and fix!
->=20
-> Acked-by: Kees Cook <keescook@chromium.org>
+In my dmesg, I never see the max mapcount getting above 65539.  I see a mix
+of unlucky, it him! and it me! messages.
 
-Thanks Kees. I've applied this on the assumption nobody objects to it
-going via the MIPS tree.
+#define _GNU_SOURCE
 
-Cheers
-James
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
 
---DIOMP1UsTsWJauNi
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
+int dummy;
 
------BEGIN PGP SIGNATURE-----
+int main(int argc, char **argv)
+{
+	int fd = open(argv[1], O_RDWR);
+	int i;
 
-iQIzBAEBCAAdFiEEd80NauSabkiESfLYbAtpk944dnoFAlqZxLUACgkQbAtpk944
-dnpRvw//YigCAwd1TNaLZzn3MXVqAOXsY6IAtAe7QASbMi+ovlu53XBYP74R+Kxp
-8wgjmdA9SO8KjqUMWoi/M1fLnhVy/CFVE0rh4mU/4S/c3rN1gOcAAqI9C8AKApF/
-yZqF40/3/1z9VzoRA3BXOcBI11iBkRbUWf3T70q0/OPlCS8eIM4dsGyRxbWPYVqs
-2yYjagOQfccH68ZUPoHcWjgla5LgsreC5YPoVPtgjJO9ECxG0zFq4hcCRCUWInnu
-iklEJ+E5Y/6YrwmiwiqLK3QqByKRNveXVJHnfgM07Y0C5dYPpKW1dTUxzb46A5GN
-YK5IcIvaV/fzD5Q8o/ri5lu/ZmCIla5sy7CJ8hICDWWONuSBNFdqqhqCssNCAkT8
-OxAHhaI4gLH4oBWRUok2ycyf/5i2BRP/zgPKVJyuTVQ/c8lurYZd51CzcPZaY558
-p7FSo1YyZRp2+W6pMyqCp5Gq/BB5zu2pLKh3aB7xK8PpQxI0MDp90vG2edBZ4Qhb
-LlIvcbUABn37OqvsaVvmh4XFtk3a5pFZIeBZvj6+n7+CmNHs5GVypOpqDfb92TA7
-jHE4yjrvx6cDB5mZUezdinB3HRJKDr2ojvAkf7DPYrN2bina9jt6HnTcjc+DzhYj
-WLT3w3H4tQGrg+AQegMo/KCUWzY3u3pqT7OR96JKp5jT/AuGfAk=
-=4IQq
------END PGP SIGNATURE-----
+	if (fd < 0) {
+		perror(argv[1]);
+		return 1;
+	}
 
---DIOMP1UsTsWJauNi--
+	// Spawn 511 children
+	for (i = 0; i < 9; i++)
+		fork();
+
+	for (i = 0; i < 5000; i++)
+		dummy = *(int *)mmap(NULL, 4096, PROT_READ, MAP_SHARED, fd, 0);
+}
+
+
+diff --git a/mm/mmap.c b/mm/mmap.c
+index 575766ec02f8..2b6187156db0 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -1325,7 +1325,7 @@ static inline int mlock_future_check(struct mm_struct *mm,
+  * Experimentally determined.  gnome-shell currently uses fewer than
+  * 3000 mappings, so should have zero effect on desktop users.
+  */
+-#define mm_track_threshold	5000
++#define mm_track_threshold	50
+ static DEFINE_SPINLOCK(heavy_users_lock);
+ static DEFINE_IDR(heavy_users);
+ 
+@@ -1377,9 +1377,11 @@ static void kill_abuser(struct mm_struct *mm)
+ 			break;
+ 
+ 	if (down_write_trylock(&mm->mmap_sem)) {
++		printk_ratelimited("it him!\n");
+ 		kill_mm(tsk);
+ 		up_write(&mm->mmap_sem);
+ 	} else {
++		printk_ratelimited("unlucky!\n");
+ 		do_send_sig_info(SIGKILL, SEND_SIG_FORCED, tsk, true);
+ 	}
+ }
+@@ -1396,8 +1398,10 @@ void mm_mapcount_overflow(struct page *page)
+ 	vma_interval_tree_foreach(vma, &mapping->i_mmap, pgoff, pgoff + 1) {
+ 		if (vma->vm_mm == entry)
+ 			count++;
+-		if (count > 1000)
++		if (count > 1000) {
++			printk_ratelimited("it me!\n");
+ 			kill_mm(current);
++		}
+ 	}
+ 
+ 	rcu_read_lock();
+@@ -1408,7 +1412,7 @@ void mm_mapcount_overflow(struct page *page)
+ 				pgoff, pgoff + 1) {
+ 			if (vma->vm_mm == entry)
+ 				count++;
+-			if (count > 1000) {
++			if (count > 10) {
+ 				kill_abuser(entry);
+ 				goto out;
+ 			}
+diff --git a/mm/rmap.c b/mm/rmap.c
+index d88acf5c98e9..3f0509f6f011 100644
+--- a/mm/rmap.c
++++ b/mm/rmap.c
+@@ -1190,6 +1190,7 @@ void page_add_file_rmap(struct page *page, bool compound)
+ 		VM_BUG_ON_PAGE(!PageSwapBacked(page), page);
+ 		__inc_node_page_state(page, NR_SHMEM_PMDMAPPED);
+ 	} else {
++		static int max = 0;
+ 		int v;
+ 		if (PageTransCompound(page) && page_mapping(page)) {
+ 			VM_WARN_ON_ONCE(!PageLocked(page));
+@@ -1199,12 +1200,14 @@ void page_add_file_rmap(struct page *page, bool compound)
+ 				clear_page_mlock(compound_head(page));
+ 		}
+ 		v = atomic_inc_return(&page->_mapcount);
+-		if (likely(v > 0))
+-			goto out;
+-		if (unlikely(v < 0)) {
++		if (unlikely(v > 65535)) {
++			if (max < v) max = v;
++			printk_ratelimited("overflow %d max %d\n", v, max);
+ 			mm_mapcount_overflow(page);
+ 			goto out;
+ 		}
++		if (likely(v > 0))
++			goto out;
+ 	}
+ 	__mod_lruvec_page_state(page, NR_FILE_MAPPED, nr);
+ out:
