@@ -1,52 +1,62 @@
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+-qUrt-8kQ6WRUM=DH8K3Zgmm2ejRgiKJMLDrSXRtmdg@mail.gmail.com>
-References: <20180227111532.1144-1-ppandit@redhat.com> <CAGXu5j+-qUrt-8kQ6WRUM=DH8K3Zgmm2ejRgiKJMLDrSXRtmdg@mail.gmail.com>
-From: Nick Kralevich <nnk@google.com>
-Date: Fri, 2 Mar 2018 11:52:41 -0800
-Message-ID: <CAFJ0LnFEtcWjTf5v1oBK_FC6VTdORpOLyKzzENL3B1bCHz1ySw@mail.gmail.com>
-Subject: Re: [PATCH 0/1] Zero initialise kernel stack variables
-Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>
-Cc: P J P <ppandit@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Florian Weimer <fweimer@redhat.com>, P J P <pjp@fedoraproject.org>
+Content-Type: text/plain;
+	charset=utf-8
+Mime-Version: 1.0 (Mac OS X Mail 11.2 \(3445.5.20\))
+Subject: Re: [RFC PATCH] Randomization of address chosen by mmap.
+From: Ilya Smith <blackzert@gmail.com>
+In-Reply-To: <20180228183349.GA16336@bombadil.infradead.org>
+Date: Fri, 2 Mar 2018 23:30:28 +0300
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <C9D0E3BA-3AB9-4F0E-BDA5-32378E440986@gmail.com>
+References: <20180227131338.3699-1-blackzert@gmail.com>
+ <CAGXu5jKF7ysJqj57ZktrcVL4G2NWOFHCud8dtXFHLs=tvVLXnQ@mail.gmail.com>
+ <55C92196-5398-4C19-B7A7-6C122CD78F32@gmail.com>
+ <20180228183349.GA16336@bombadil.infradead.org>
+To: Matthew Wilcox <willy@infradead.org>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Michal Hocko <mhocko@suse.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Jan Kara <jack@suse.cz>, Jerome Glisse <jglisse@redhat.com>, Hugh Dickins <hughd@google.com>, Helge Deller <deller@gmx.de>, Andrea Arcangeli <aarcange@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 27, 2018 at 11:28 AM, Kees Cook <keescook@chromium.org> wrote:
->> This same kernel is running on my F27 test machine as I write this.
->> There is no slowness or notice-able performance impact as such.
->
-> Unfortunately "noticeable" isn't going to be a viable metric. You'll
-> need to do some real-world benchmarks (i.e. kernel builds, hackbench,
-> etc), and compare the results. Even just initializing
-> passed-by-reference variables (GCC_PLUGIN_STRUCTLEAK_BYREF_ALL) had
-> measurable performance impact.
->
-> It would be nice to have four options/features available from the
-> compiler, from least to most performance impact:
+> On 28 Feb 2018, at 21:33, Matthew Wilcox <willy@infradead.org> wrote:
+>=20
+> On Wed, Feb 28, 2018 at 08:13:00PM +0300, Ilya Smith wrote:
+>>> It would be worth spelling out the "not recommended" bit some more
+>>> too: this fragments the mmap space, which has some serious issues on
+>>> smaller address spaces if you get into a situation where you cannot
+>>> allocate a hole large enough between the other allocations.
+>>>=20
+>>=20
+>> I=E2=80=99m agree, that's the point.
+>=20
+> Would it be worth randomising the address returned just ever so =
+slightly?
+> ie instead of allocating exactly the next address, put in a guard hole
+> of (configurable, by default maybe) 1-15 pages?  Is that enough extra
+> entropy to foil an interesting number of attacks, or do we need the =
+full
+> randomise-the-address-space approach in order to be useful?
+>=20
 
-One of the recurring themes I've noticed from the kernel-hardening
-mailing list is that someone will propose a valuable compile time
-feature (such as this one), people will ask for performance
-measurements, some specific use case will be found which has adverse
-performance impact, and the entire change will be rejected. It's
-silly.
+This is a really good question. Lets think we choose address with =
+random-length=20
+guard hole. This length is limited by some configuration as you =
+described. For=20
+instance let it be 1MB. Now according to current implementation, we =
+still may=20
+fill this gap with small allocations with size less than 1MB. Attacker =
+will=20
+going to build attack base on this predictable behaviour - he jus need =
+to spray=20
+with 1 MB chunks (or less, with some expectation). This attack harder =
+but not=20
+impossible.
 
-The beautiful thing about compile time features is that they can be
-enabled / disabled per compilation unit. If there's a performance
-problem in a certain chunk of code, figure out a way to opt that code
-out of the protections. 95% of the performance of the kernel is likely
-only dependent on 5% of the code, and even if we opt out that code, we
-still protect the remaining 95% of the code. If you assume that bugs
-are evenly distributed throughout the code base, a 95% reduction is
-HUGE.
+Now lets say we will increase this 1MB to 128MB. Attack is the same, =
+successful=20
+rate less and more regions needed. Now we increase this value to 48 bit =
+entropy=20
+and will get my patch (in some form ;))
 
-Strategically, we shouldn't let the perfect be the enemy of the good.
-Let's move away from fixating on benchmarks, and just enable easy
-opt-out for the folks who demonstrate performance bottlenecks.
+I hope full randomise-the-address-space approach will work for a long =
+time.
 
-I suspect that many kernel-hardening features would have an easier
-time being accepted if it wasn't presented as an all or nothing
-feature.
-
-My $0.02.
-
--- Nick
+Thanks,
+Ilya
