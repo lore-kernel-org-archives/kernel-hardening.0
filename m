@@ -1,129 +1,171 @@
-Date: Fri, 2 Mar 2018 14:03:40 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [RFC] Handle mapcount overflows
-Message-ID: <20180302220340.GC671@bombadil.infradead.org>
-References: <20180208021112.GB14918@bombadil.infradead.org>
- <20180302212637.GB671@bombadil.infradead.org>
+Date: Sat, 3 Mar 2018 10:35:22 +0800
+From: kbuild test robot <lkp@intel.com>
+Subject: Re: [PATCH 3/7] struct page: add field for vm_struct
+Message-ID: <201803031002.5HqxXcrB%fengguang.wu@intel.com>
+References: <20180228200620.30026-4-igor.stoppa@huawei.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180302212637.GB671@bombadil.infradead.org>
-To: linux-mm@kvack.org
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
+In-Reply-To: <20180228200620.30026-4-igor.stoppa@huawei.com>
+To: Igor Stoppa <igor.stoppa@huawei.com>
+Cc: kbuild-all@01.org, david@fromorbit.com, willy@infradead.org, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 02, 2018 at 01:26:37PM -0800, Matthew Wilcox wrote:
-> Here's my third effort to handle page->_mapcount overflows.
+Hi Igor,
 
-If you like this approach, but wonder if it works, here's a little forkbomb
-of a program and a patch to add instrumentation.
+Thank you for the patch! Perhaps something to improve:
 
-In my dmesg, I never see the max mapcount getting above 65539.  I see a mix
-of unlucky, it him! and it me! messages.
+[auto build test WARNING on next-20180223]
+[cannot apply to linus/master mmotm/master char-misc/char-misc-testing v4.16-rc3 v4.16-rc2 v4.16-rc1 v4.16-rc3]
+[if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
 
-#define _GNU_SOURCE
-
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <stdio.h>
-
-int dummy;
-
-int main(int argc, char **argv)
-{
-	int fd = open(argv[1], O_RDWR);
-	int i;
-
-	if (fd < 0) {
-		perror(argv[1]);
-		return 1;
-	}
-
-	// Spawn 511 children
-	for (i = 0; i < 9; i++)
-		fork();
-
-	for (i = 0; i < 5000; i++)
-		dummy = *(int *)mmap(NULL, 4096, PROT_READ, MAP_SHARED, fd, 0);
-}
+url:    https://github.com/0day-ci/linux/commits/Igor-Stoppa/mm-security-ro-protection-for-dynamic-data/20180302-232215
+reproduce:
+        # apt-get install sparse
+        make ARCH=x86_64 allmodconfig
+        make C=1 CF=-D__CHECK_ENDIAN__
 
 
-diff --git a/mm/mmap.c b/mm/mmap.c
-index 575766ec02f8..2b6187156db0 100644
---- a/mm/mmap.c
-+++ b/mm/mmap.c
-@@ -1325,7 +1325,7 @@ static inline int mlock_future_check(struct mm_struct *mm,
-  * Experimentally determined.  gnome-shell currently uses fewer than
-  * 3000 mappings, so should have zero effect on desktop users.
-  */
--#define mm_track_threshold	5000
-+#define mm_track_threshold	50
- static DEFINE_SPINLOCK(heavy_users_lock);
- static DEFINE_IDR(heavy_users);
- 
-@@ -1377,9 +1377,11 @@ static void kill_abuser(struct mm_struct *mm)
- 			break;
- 
- 	if (down_write_trylock(&mm->mmap_sem)) {
-+		printk_ratelimited("it him!\n");
- 		kill_mm(tsk);
- 		up_write(&mm->mmap_sem);
- 	} else {
-+		printk_ratelimited("unlucky!\n");
- 		do_send_sig_info(SIGKILL, SEND_SIG_FORCED, tsk, true);
- 	}
- }
-@@ -1396,8 +1398,10 @@ void mm_mapcount_overflow(struct page *page)
- 	vma_interval_tree_foreach(vma, &mapping->i_mmap, pgoff, pgoff + 1) {
- 		if (vma->vm_mm == entry)
- 			count++;
--		if (count > 1000)
-+		if (count > 1000) {
-+			printk_ratelimited("it me!\n");
- 			kill_mm(current);
-+		}
- 	}
- 
- 	rcu_read_lock();
-@@ -1408,7 +1412,7 @@ void mm_mapcount_overflow(struct page *page)
- 				pgoff, pgoff + 1) {
- 			if (vma->vm_mm == entry)
- 				count++;
--			if (count > 1000) {
-+			if (count > 10) {
- 				kill_abuser(entry);
- 				goto out;
- 			}
-diff --git a/mm/rmap.c b/mm/rmap.c
-index d88acf5c98e9..3f0509f6f011 100644
---- a/mm/rmap.c
-+++ b/mm/rmap.c
-@@ -1190,6 +1190,7 @@ void page_add_file_rmap(struct page *page, bool compound)
- 		VM_BUG_ON_PAGE(!PageSwapBacked(page), page);
- 		__inc_node_page_state(page, NR_SHMEM_PMDMAPPED);
- 	} else {
-+		static int max = 0;
- 		int v;
- 		if (PageTransCompound(page) && page_mapping(page)) {
- 			VM_WARN_ON_ONCE(!PageLocked(page));
-@@ -1199,12 +1200,14 @@ void page_add_file_rmap(struct page *page, bool compound)
- 				clear_page_mlock(compound_head(page));
- 		}
- 		v = atomic_inc_return(&page->_mapcount);
--		if (likely(v > 0))
--			goto out;
--		if (unlikely(v < 0)) {
-+		if (unlikely(v > 65535)) {
-+			if (max < v) max = v;
-+			printk_ratelimited("overflow %d max %d\n", v, max);
- 			mm_mapcount_overflow(page);
- 			goto out;
- 		}
-+		if (likely(v > 0))
-+			goto out;
- 	}
- 	__mod_lruvec_page_state(page, NR_FILE_MAPPED, nr);
- out:
+sparse warnings: (new ones prefixed by >>)
+
+   lib/genalloc.c:624:29: sparse: undefined identifier 'exit_test'
+>> lib/genalloc.c:624:29: sparse: call with no type!
+   In file included from arch/x86/include/asm/bug.h:83:0,
+                    from include/linux/bug.h:5,
+                    from include/linux/mmdebug.h:5,
+                    from include/linux/gfp.h:5,
+                    from include/linux/slab.h:15,
+                    from lib/genalloc.c:99:
+   lib/genalloc.c: In function 'gen_pool_free':
+   lib/genalloc.c:616:10: warning: format '%s' expects argument of type 'char *', but argument 2 has type 'struct gen_pool *' [-Wformat=]
+             "Trying to free unallocated memory"
+             ^
+   include/asm-generic/bug.h:98:50: note: in definition of macro '__WARN_printf'
+    #define __WARN_printf(arg...) do { __warn_printk(arg); __WARN(); } while (0)
+                                                     ^~~
+   lib/genalloc.c:615:5: note: in expansion of macro 'WARN'
+        WARN(true,
+        ^~~~
+   lib/genalloc.c:617:23: note: format string is defined here
+             " from pool %s", pool);
+                         ~^
+   In file included from include/asm-generic/bug.h:5:0,
+                    from arch/x86/include/asm/bug.h:83,
+                    from include/linux/bug.h:5,
+                    from include/linux/mmdebug.h:5,
+                    from include/linux/gfp.h:5,
+                    from include/linux/slab.h:15,
+                    from lib/genalloc.c:99:
+   lib/genalloc.c:624:17: error: implicit declaration of function 'exit_test'; did you mean 'exit_sem'? [-Werror=implicit-function-declaration]
+       if (unlikely(exit_test(boundary < 0))) {
+                    ^
+   include/linux/compiler.h:77:42: note: in definition of macro 'unlikely'
+    # define unlikely(x) __builtin_expect(!!(x), 0)
+                                             ^
+   In file included from arch/x86/include/asm/bug.h:83:0,
+                    from include/linux/bug.h:5,
+                    from include/linux/mmdebug.h:5,
+                    from include/linux/gfp.h:5,
+                    from include/linux/slab.h:15,
+                    from lib/genalloc.c:99:
+   lib/genalloc.c:626:16: warning: format '%s' expects argument of type 'char *', but argument 2 has type 'struct gen_pool *' [-Wformat=]
+        WARN(true, "Corrupted pool %s", pool);
+                   ^
+   include/asm-generic/bug.h:98:50: note: in definition of macro '__WARN_printf'
+    #define __WARN_printf(arg...) do { __warn_printk(arg); __WARN(); } while (0)
+                                                     ^~~
+   lib/genalloc.c:626:5: note: in expansion of macro 'WARN'
+        WARN(true, "Corrupted pool %s", pool);
+        ^~~~
+   lib/genalloc.c:634:10: warning: format '%s' expects argument of type 'char *', but argument 2 has type 'struct gen_pool *' [-Wformat=]
+             "Size provided differs from size "
+             ^
+   include/asm-generic/bug.h:98:50: note: in definition of macro '__WARN_printf'
+    #define __WARN_printf(arg...) do { __warn_printk(arg); __WARN(); } while (0)
+                                                     ^~~
+   lib/genalloc.c:633:5: note: in expansion of macro 'WARN'
+        WARN(true,
+        ^~~~
+   lib/genalloc.c:635:31: note: format string is defined here
+             "measured from pool %s", pool);
+                                 ~^
+   In file included from arch/x86/include/asm/bug.h:83:0,
+                    from include/linux/bug.h:5,
+                    from include/linux/mmdebug.h:5,
+                    from include/linux/gfp.h:5,
+                    from include/linux/slab.h:15,
+                    from lib/genalloc.c:99:
+   lib/genalloc.c:643:10: warning: format '%s' expects argument of type 'char *', but argument 2 has type 'struct gen_pool *' [-Wformat=]
+             "Unexpected bitmap collision while"
+             ^
+   include/asm-generic/bug.h:98:50: note: in definition of macro '__WARN_printf'
+    #define __WARN_printf(arg...) do { __warn_printk(arg); __WARN(); } while (0)
+                                                     ^~~
+   lib/genalloc.c:642:5: note: in expansion of macro 'WARN'
+        WARN(true,
+        ^~~~
+   lib/genalloc.c:644:36: note: format string is defined here
+             " freeing memory in pool %s", pool);
+                                      ~^
+   cc1: some warnings being treated as errors
+
+vim +624 lib/genalloc.c
+
+929f9727 Dean Nelson    2006-06-23  609  
+7f184275 Huang Ying     2011-07-13  610  	rcu_read_lock();
+7f184275 Huang Ying     2011-07-13  611  	list_for_each_entry_rcu(chunk, &pool->chunks, next_chunk) {
+674470d9 Joonyoung Shim 2013-09-11  612  		if (addr >= chunk->start_addr && addr <= chunk->end_addr) {
+3406f868 Igor Stoppa    2018-02-28  613  			if (unlikely(addr + size - 1 > chunk->end_addr)) {
+7f184275 Huang Ying     2011-07-13  614  				rcu_read_unlock();
+3406f868 Igor Stoppa    2018-02-28  615  				WARN(true,
+3406f868 Igor Stoppa    2018-02-28  616  				     "Trying to free unallocated memory"
+3406f868 Igor Stoppa    2018-02-28  617  				     " from pool %s", pool);
+7f184275 Huang Ying     2011-07-13  618  				return;
+f14f75b8 Jes Sorensen   2005-06-21  619  			}
+3406f868 Igor Stoppa    2018-02-28  620  			start_entry = (addr - chunk->start_addr) >> order;
+3406f868 Igor Stoppa    2018-02-28  621  			remaining_entries = (chunk->end_addr - addr) >> order;
+3406f868 Igor Stoppa    2018-02-28  622  			boundary = get_boundary(chunk->entries, start_entry,
+3406f868 Igor Stoppa    2018-02-28  623  						remaining_entries);
+3406f868 Igor Stoppa    2018-02-28 @624  			if (unlikely(exit_test(boundary < 0))) {
+3406f868 Igor Stoppa    2018-02-28  625  				rcu_read_unlock();
+3406f868 Igor Stoppa    2018-02-28  626  				WARN(true, "Corrupted pool %s", pool);
+3406f868 Igor Stoppa    2018-02-28  627  				return;
+f14f75b8 Jes Sorensen   2005-06-21  628  			}
+3406f868 Igor Stoppa    2018-02-28  629  			nentries = boundary - start_entry;
+3406f868 Igor Stoppa    2018-02-28  630  			if (unlikely(size && (nentries !=
+3406f868 Igor Stoppa    2018-02-28  631  					      mem_to_units(size, order)))) {
+7f184275 Huang Ying     2011-07-13  632  				rcu_read_unlock();
+3406f868 Igor Stoppa    2018-02-28  633  				WARN(true,
+3406f868 Igor Stoppa    2018-02-28  634  				     "Size provided differs from size "
+3406f868 Igor Stoppa    2018-02-28  635  				     "measured from pool %s", pool);
+3406f868 Igor Stoppa    2018-02-28  636  				return;
+3406f868 Igor Stoppa    2018-02-28  637  			}
+3406f868 Igor Stoppa    2018-02-28  638  			remain = alter_bitmap_ll(CLEAR_BITS, chunk->entries,
+3406f868 Igor Stoppa    2018-02-28  639  						 start_entry, nentries);
+3406f868 Igor Stoppa    2018-02-28  640  			if (unlikely(remain)) {
+3406f868 Igor Stoppa    2018-02-28  641  				rcu_read_unlock();
+3406f868 Igor Stoppa    2018-02-28  642  				WARN(true,
+3406f868 Igor Stoppa    2018-02-28  643  				     "Unexpected bitmap collision while"
+3406f868 Igor Stoppa    2018-02-28  644  				     " freeing memory in pool %s", pool);
+3406f868 Igor Stoppa    2018-02-28  645  				return;
+3406f868 Igor Stoppa    2018-02-28  646  			}
+3406f868 Igor Stoppa    2018-02-28  647  			atomic_long_add(nentries << order, &chunk->avail);
+3406f868 Igor Stoppa    2018-02-28  648  			rcu_read_unlock();
+3406f868 Igor Stoppa    2018-02-28  649  			return;
+3406f868 Igor Stoppa    2018-02-28  650  		}
+3406f868 Igor Stoppa    2018-02-28  651  	}
+3406f868 Igor Stoppa    2018-02-28  652  	rcu_read_unlock();
+3406f868 Igor Stoppa    2018-02-28  653  	WARN(true, "address not found in pool %s", pool->name);
+f14f75b8 Jes Sorensen   2005-06-21  654  }
+f14f75b8 Jes Sorensen   2005-06-21  655  EXPORT_SYMBOL(gen_pool_free);
+7f184275 Huang Ying     2011-07-13  656  
+
+:::::: The code at line 624 was first introduced by commit
+:::::: 3406f8684f722bb52edc94f65976585acb6382ce genalloc: track beginning of allocations
+
+:::::: TO: Igor Stoppa <igor.stoppa@huawei.com>
+:::::: CC: 0day robot <fengguang.wu@intel.com>
+
+---
+0-DAY kernel test infrastructure                Open Source Technology Center
+https://lists.01.org/pipermail/kbuild-all                   Intel Corporation
