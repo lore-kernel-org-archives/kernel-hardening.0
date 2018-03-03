@@ -1,60 +1,198 @@
-From: Alexander Popov <alex.popov@linux.com>
-Subject: [PATCH RFC v9 7/7] doc: self-protection: Add information about STACKLEAK feature
-Date: Sat,  3 Mar 2018 23:00:32 +0300
-Message-Id: <1520107232-14111-8-git-send-email-alex.popov@linux.com>
-In-Reply-To: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
-References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, x86@kernel.org, linux-kernel@vger.kernel.org, alex.popov@linux.com
+MIME-Version: 1.0
+In-Reply-To: <2CF957C6-53F2-4B00-920F-245BEF3CA1F6@gmail.com>
+References: <20180227131338.3699-1-blackzert@gmail.com> <CAGXu5jKF7ysJqj57ZktrcVL4G2NWOFHCud8dtXFHLs=tvVLXnQ@mail.gmail.com>
+ <55C92196-5398-4C19-B7A7-6C122CD78F32@gmail.com> <20180228183349.GA16336@bombadil.infradead.org>
+ <CA+DvKQKoo1U7T_iOOLhfEf9c+K1pzD068au+kGtx0RokFFNKHw@mail.gmail.com> <2CF957C6-53F2-4B00-920F-245BEF3CA1F6@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Sat, 3 Mar 2018 16:00:45 -0500
+Message-ID: <CA+DvKQ+mrnm4WX+3cBPuoSLFHmx2Zwz8=FsEx51fH-7yQMAd9w@mail.gmail.com>
+Subject: Re: [RFC PATCH] Randomization of address chosen by mmap.
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Ilya Smith <blackzert@gmail.com>
+Cc: Matthew Wilcox <willy@infradead.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Michal Hocko <mhocko@suse.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Jan Kara <jack@suse.cz>, Jerome Glisse <jglisse@redhat.com>, Hugh Dickins <hughd@google.com>, Helge Deller <deller@gmx.de>, Andrea Arcangeli <aarcange@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add information about STACKLEAK feature to "Stack depth overflow" and
-"Memory poisoning" sections of self-protection.rst.
+On 3 March 2018 at 08:58, Ilya Smith <blackzert@gmail.com> wrote:
+> Hello Daniel, thanks for sharing you experience!
+>
+>> On 1 Mar 2018, at 00:02, Daniel Micay <danielmicay@gmail.com> wrote:
+>>
+>> I don't think it makes sense for the kernel to attempt mitigations to
+>> hide libraries. The best way to do that is in userspace, by having the
+>> linker reserve a large PROT_NONE region for mapping libraries (both at
+>> initialization and for dlopen) including a random gap to act as a
+>> separate ASLR base.
+> Why this is the best and what is the limit of this large region?
+> Let=E2=80=99s think out of the box.
+> What you say here means you made a separate memory region for libraries w=
+ithout
+> changing kernel. But the basic idea - you have a separate region for libr=
+aries
+> only. Probably you also want to have separate regions for any thread stac=
+k, for
+> mmaped files, shared memory, etc. This allows to protect memory regions o=
+f
+> different types from each other. It is impossible to implement this witho=
+ut
+> keeping the whole memory map. This map should be secure from any leak att=
+ack to
+> prevent ASLR bypass. The only one way to do it is to implement it in the =
+kernel
+> and provide different syscalls like uselib or allocstack, etc. This one i=
+s
+> really hard in current kernel implementation.
 
-Signed-off-by: Alexander Popov <alex.popov@linux.com>
----
- Documentation/security/self-protection.rst | 23 ++++++++++++++---------
- 1 file changed, 14 insertions(+), 9 deletions(-)
+There's the option of reserving PROT_NONE regions and managing memory
+within them using a similar best-fit allocation scheme to get separate
+random bases. The kernel could offer something like that but it's
+already possible to do it for libc mmap usage within libc as we did
+for libraries.
 
-diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
-index 0f53826..b685f18 100644
---- a/Documentation/security/self-protection.rst
-+++ b/Documentation/security/self-protection.rst
-@@ -165,10 +165,15 @@ Stack depth overflow
- A less well understood attack is using a bug that triggers the
- kernel to consume stack memory with deep function calls or large stack
- allocations. With this attack it is possible to write beyond the end of
--the kernel's preallocated stack space and into sensitive structures. Two
--important changes need to be made for better protections: moving the
--sensitive thread_info structure elsewhere, and adding a faulting memory
--hole at the bottom of the stack to catch these overflows.
-+the kernel's preallocated stack space and into sensitive structures.
-+The combination of the following measures gives better protection:
-+
-+* moving the sensitive thread_info structure off the stack
-+  (``CONFIG_THREAD_INFO_IN_TASK``);
-+* adding a faulting memory hole at the bottom of the stack to catch
-+  these overflows (``CONFIG_VMAP_STACK``);
-+* runtime checking that alloca() calls don't overstep the stack boundary
-+  (``CONFIG_GCC_PLUGIN_STACKLEAK``).
- 
- Heap memory integrity
- ---------------------
-@@ -302,11 +307,11 @@ sure structure holes are cleared.
- Memory poisoning
- ----------------
- 
--When releasing memory, it is best to poison the contents (clear stack on
--syscall return, wipe heap memory on a free), to avoid reuse attacks that
--rely on the old contents of memory. This frustrates many uninitialized
--variable attacks, stack content exposures, heap content exposures, and
--use-after-free attacks.
-+When releasing memory, it is best to poison the contents, to avoid reuse
-+attacks that rely on the old contents of memory. E.g., clear stack on a
-+syscall return (``CONFIG_GCC_PLUGIN_STACKLEAK``), wipe heap memory on a
-+free. This frustrates many uninitialized variable attacks, stack content
-+exposures, heap content exposures, and use-after-free attacks.
- 
- Destination tracking
- --------------------
--- 
-2.7.4
+The kernel's help is needed to cover non-libc users of mmap, i.e. not
+the linker, malloc, etc. It's not possible for libc to assume that
+everything goes through the libc mmap/mremap/munmap wrappers and it
+would be a mess so I'm not saying the kernel doesn't have a part to
+play. I'm only saying it makes sense to look at the whole picture and
+if something can be done better in libc or the linker, to do it there
+instead. There isn't an API for dividing stuff up into regions, so it
+has to be done in userspace right now and I think it works a lot
+better when it's an option.
+
+>
+> My approach was to hide memory regions from attacker and from each other.
+>
+>> If an attacker has library addresses, it's hard to
+>> see much point in hiding the other libraries from them.
+>
+> In some cases attacker has only one leak for whole attack. And we should =
+do the best
+> to make even this leak useless.
+>
+>> It does make
+>> sense to keep them from knowing the location of any executable code if
+>> they leak non-library addresses. An isolated library region + gap is a
+>> feature we implemented in CopperheadOS and it works well, although we
+>> haven't ported it to Android 7.x or 8.x.
+> This one interesting to know and I would like to try to attack it, but it=
+'s out of the
+> scope of current conversation.
+
+I don't think it's out-of-scope. There are different approaches to
+this kind of finer-grained randomization and they can be done
+together.
+
+>> I don't think the kernel can
+>> bring much / anything to the table for it. It's inherently the
+>> responsibility of libc to randomize the lower bits for secondary
+>> stacks too.
+>
+> I think any bit of secondary stack should be randomized to provide attack=
+er as
+> less information as we can.
+
+The issue is that the kernel is only providing a mapping so it can add
+a random gap or randomize it in other ways but it's ultimately up to
+libc and other userspace code to do randomization without those
+mappings.
+
+A malloc implementation is similarly going to request fairly large
+mappings from the kernel to manage a bunch of stuff within them
+itself. The kernel can't protect against stuff like heap spray attacks
+very well all by itself. It definitely has a part to play in that but
+is a small piece of it (unless the malloc impl actually manages
+virtual memory regions itself, which is already done by
+performance-oriented allocators for very different reasons).
+
+>> Fine-grained randomized mmap isn't going to be used if it causes
+>> unpredictable levels of fragmentation or has a high / unpredictable
+>> performance cost.
+>
+> Lets pretend any chosen address is pure random and always satisfies reque=
+st. At
+> some time we failed to mmap new chunk with size N. What does this means? =
+This
+> means that all chunks with size of N are occupied and we even can=E2=80=
+=99t find place
+> between them. Now lets count already allocated memory. Let=E2=80=99s pret=
+end on all of
+> these occupied chunks lies one page minimum. So count of these pages is
+> TASK_SIZE / N. Total bytes already allocated is PASGE_SIZE * TASK_SIZE / =
+N. Now
+> we can calculate. TASK_SIZE is 2^48 bytes. PAGE_SIZE 4096. If N is 1MB,
+> allocated memory minimum 1125899906842624, that is very big number. Ok. i=
+s N is
+> 256 MB, we already consumed 4TB of memory. And this one is still ok. if N=
+ is
+> 1GB we allocated 1GB and it looks like a problem. If we allocated 1GB of =
+memory
+> we can=E2=80=99t mmap chunk size of 1GB. Sounds scary, but this is absolu=
+tely bad case
+> when we consume 1 page on 1GB chunk. In reality  this number would be muc=
+h
+> bigger and random according this patch.
+>
+> Here lets stop and think - if we know that application going to consume m=
+emory.
+> The question here would be can we protect it? Attacker will know he has a=
+ good
+> probability to guess address with read permissions. In this case ASLR may=
+ not
+> work at all. For such applications we can turn off address randomization =
+or
+> decrease entropy level since it any way will not help much.
+>
+> Would be good to know whats the performance costs you can see here. Can
+> you please tell?
+
+Fragmenting the virtual address space means having more TLB cache
+misses, etc. Spreading out the mappings more also increases memory
+usage and overhead for anything tied to the number of VMAs, which is
+hopefully all O(log n) where it matters but O(log n) doesn't mean
+increasing `n` is free.
+
+>> I don't think it makes sense to approach it
+>> aggressively in a way that people can't use. The OpenBSD randomized
+>> mmap is a fairly conservative implementation to avoid causing
+>> excessive fragmentation. I think they do a bit more than adding random
+>> gaps by switching between different 'pivots' but that isn't very high
+>> benefit. The main benefit is having random bits of unmapped space all
+>> over the heap when combined with their hardened allocator which
+>> heavily uses small mmap mappings and has a fair bit of malloc-level
+>> randomization (it's a bitmap / hash table based slab allocator using
+>> 4k regions with a page span cache and we use a port of it to Android
+>> with added hardening features but we're missing the fine-grained mmap
+>> rand it's meant to have underneath what it does itself).
+>>
+>
+> So you think OpenBSD implementation even better? It seems like you like i=
+t
+> after all.
+
+I think they found a good compromise between low fragmentation vs.
+some security benefits.
+
+The main thing I'd like to see is just the option to get a guarantee
+of enforced gaps around mappings, without necessarily even having
+randomization of the gap size. It's possible to add guard pages in
+userspace but it adds overhead by doubling the number of system calls
+to map memory (mmap PROT_NONE region, mprotect the inner portion to
+PROT_READ|PROT_WRITE) and *everything* using mmap would need to
+cooperate which is unrealistic.
+
+>> The default vm.max_map_count =3D 65530 is also a major problem for doing
+>> fine-grained mmap randomization of any kind and there's the 32-bit
+>> reference count overflow issue on high memory machines with
+>> max_map_count * pid_max which isn't resolved yet.
+>
+> I=E2=80=99ve read a thread about it. This one is what should be fixed any=
+way.
+>
+> Thanks,
+> Ilya
+>
+
+Yeah, the correctness issue should definitely be fixed. The default
+value would *really* need to be raised if greatly increasing the
+number of VMAs by not using a performance / low-fragmentation focused
+best-fit algorithm without randomization or enforced gaps.
