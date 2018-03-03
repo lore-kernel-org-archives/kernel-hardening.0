@@ -1,75 +1,147 @@
-MIME-Version: 1.0
-In-Reply-To: <20180301210623.GA15198@eros>
-References: <1519706711-18580-1-git-send-email-me@tobin.cc>
- <1519706711-18580-2-git-send-email-me@tobin.cc> <20180301210623.GA15198@eros>
-From: Alexander Kapshuk <alexander.kapshuk@gmail.com>
-Date: Sat, 3 Mar 2018 11:44:26 +0200
-Message-ID: <CAJ1xhMWzxX=uuf4S6=augqSgSoh7ATUd=OMotgq3RgMHd13o_A@mail.gmail.com>
-Subject: Re: [PATCH 1/3] leaking_addresses: skip all /proc/PID except /proc/1
-Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Tycho Andersen <tycho@tycho.ws>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain;
+	charset=utf-8
+Mime-Version: 1.0 (Mac OS X Mail 11.2 \(3445.5.20\))
+Subject: Re: [RFC PATCH] Randomization of address chosen by mmap.
+From: Ilya Smith <blackzert@gmail.com>
+In-Reply-To: <CA+DvKQKoo1U7T_iOOLhfEf9c+K1pzD068au+kGtx0RokFFNKHw@mail.gmail.com>
+Date: Sat, 3 Mar 2018 16:58:40 +0300
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <2CF957C6-53F2-4B00-920F-245BEF3CA1F6@gmail.com>
+References: <20180227131338.3699-1-blackzert@gmail.com>
+ <CAGXu5jKF7ysJqj57ZktrcVL4G2NWOFHCud8dtXFHLs=tvVLXnQ@mail.gmail.com>
+ <55C92196-5398-4C19-B7A7-6C122CD78F32@gmail.com>
+ <20180228183349.GA16336@bombadil.infradead.org>
+ <CA+DvKQKoo1U7T_iOOLhfEf9c+K1pzD068au+kGtx0RokFFNKHw@mail.gmail.com>
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: Matthew Wilcox <willy@infradead.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Michal Hocko <mhocko@suse.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Jan Kara <jack@suse.cz>, Jerome Glisse <jglisse@redhat.com>, Hugh Dickins <hughd@google.com>, Helge Deller <deller@gmx.de>, Andrea Arcangeli <aarcange@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 1, 2018 at 11:06 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> On Tue, Feb 27, 2018 at 03:45:09PM +1100, Tobin C. Harding wrote:
->> When the system is idle it is likely that most files under /proc/PID
->> will be identical for various processes.  Scanning _all_ the PIDs under
->> /proc is unnecessary and implies that we are thoroughly scanning /proc.
->> This is _not_ the case because there may be ways userspace can trigger
->> creation of /proc files that leak addresses but were not present during
->> a scan.  For these two reasons we should exclude all PID directories
->> under /proc except '1/'
->>
->> Exclude all /proc/PID except /proc/1.
->>
->> Signed-off-by: Tobin C. Harding <me@tobin.cc>
->> ---
->>  scripts/leaking_addresses.pl | 11 +++++++++++
->>  1 file changed, 11 insertions(+)
->>
->> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
->> index 6e5bc57caeaa..fb40e2828f43 100755
->> --- a/scripts/leaking_addresses.pl
->> +++ b/scripts/leaking_addresses.pl
->> @@ -10,6 +10,14 @@
->>  # Use --debug to output path before parsing, this is useful to find files that
->>  # cause the script to choke.
->>
->> +#
->> +# When the system is idle it is likely that most files under /proc/PID will be
->> +# identical for various processes.  Scanning _all_ the PIDs under /proc is
->> +# unnecessary and implies that we are thoroughly scanning /proc.  This is _not_
->> +# the case because there may be ways userspace can trigger creation of /proc
->> +# files that leak addresses but were not present during a scan.  For these two
->> +# reasons we exclude all PID directories under /proc except '1/'
->> +
->>  use warnings;
->>  use strict;
->>  use POSIX;
->> @@ -472,6 +480,9 @@ sub walk
->>                       my $path = "$pwd/$file";
->>                       next if (-l $path);
->>
->> +                     # skip /proc/PID except /proc/1
->> +                     next if ($path =~ /\/proc\/(?:[2-9][0-9]*|1[0-9]+)/);
->
-> Perhaps the intent of this is clearer?
->
->                         next if (($path =~ /^\/proc\/[0-9]+$/) &&
->                                  ($path !~ /^\/proc\/1$/));
->
->
-> thanks,
-> Tobin.
+Hello Daniel, thanks for sharing you experience!
 
-Hi Tobin,
+> On 1 Mar 2018, at 00:02, Daniel Micay <danielmicay@gmail.com> wrote:
+>=20
+> I don't think it makes sense for the kernel to attempt mitigations to
+> hide libraries. The best way to do that is in userspace, by having the
+> linker reserve a large PROT_NONE region for mapping libraries (both at
+> initialization and for dlopen) including a random gap to act as a
+> separate ASLR base.
+Why this is the best and what is the limit of this large region?
+Let=E2=80=99s think out of the box.
+What you say here means you made a separate memory region for libraries =
+without=20
+changing kernel. But the basic idea - you have a separate region for =
+libraries=20
+only. Probably you also want to have separate regions for any thread =
+stack, for=20
+mmaped files, shared memory, etc. This allows to protect memory regions =
+of=20
+different types from each other. It is impossible to implement this =
+without=20
+keeping the whole memory map. This map should be secure from any leak =
+attack to=20
+prevent ASLR bypass. The only one way to do it is to implement it in the =
+kernel=20
+and provide different syscalls like uselib or allocstack, etc. This one =
+is=20
+really hard in current kernel implementation.
 
-The intent is crystal clear now. Thanks.
+My approach was to hide memory regions from attacker and from each =
+other.
 
-Here's something that generates the same output as the code above:
-next if ($path !~ "^/proc/(1|[^0-9]+)\$");
+> If an attacker has library addresses, it's hard to
+> see much point in hiding the other libraries from them.
 
-I'm not insisting this be given any preference whatsoever.
+In some cases attacker has only one leak for whole attack. And we should =
+do the best
+to make even this leak useless.
 
-Thanks.
+> It does make
+> sense to keep them from knowing the location of any executable code if
+> they leak non-library addresses. An isolated library region + gap is a
+> feature we implemented in CopperheadOS and it works well, although we
+> haven't ported it to Android 7.x or 8.x.
+This one interesting to know and I would like to try to attack it, but =
+it's out of the
+scope of current conversation.
+
+> I don't think the kernel can
+> bring much / anything to the table for it. It's inherently the
+> responsibility of libc to randomize the lower bits for secondary
+> stacks too.
+
+I think any bit of secondary stack should be randomized to provide =
+attacker as
+less information as we can.
+
+> Fine-grained randomized mmap isn't going to be used if it causes
+> unpredictable levels of fragmentation or has a high / unpredictable
+> performance cost.
+
+Lets pretend any chosen address is pure random and always satisfies =
+request. At=20
+some time we failed to mmap new chunk with size N. What does this means? =
+This=20
+means that all chunks with size of N are occupied and we even can=E2=80=99=
+t find place=20
+between them. Now lets count already allocated memory. Let=E2=80=99s =
+pretend on all of=20
+these occupied chunks lies one page minimum. So count of these pages is=20=
+
+TASK_SIZE / N. Total bytes already allocated is PASGE_SIZE * TASK_SIZE / =
+N. Now=20
+we can calculate. TASK_SIZE is 2^48 bytes. PAGE_SIZE 4096. If N is 1MB,=20=
+
+allocated memory minimum 1125899906842624, that is very big number. Ok. =
+is N is=20
+256 MB, we already consumed 4TB of memory. And this one is still ok. if =
+N is=20
+1GB we allocated 1GB and it looks like a problem. If we allocated 1GB of =
+memory=20
+we can=E2=80=99t mmap chunk size of 1GB. Sounds scary, but this is =
+absolutely bad case=20
+when we consume 1 page on 1GB chunk. In reality  this number would be =
+much=20
+bigger and random according this patch.
+
+Here lets stop and think - if we know that application going to consume =
+memory.=20
+The question here would be can we protect it? Attacker will know he has =
+a good=20
+probability to guess address with read permissions. In this case ASLR =
+may not=20
+work at all. For such applications we can turn off address randomization =
+or=20
+decrease entropy level since it any way will not help much.
+
+Would be good to know whats the performance costs you can see here. Can
+you please tell?
+
+> I don't think it makes sense to approach it
+> aggressively in a way that people can't use. The OpenBSD randomized
+> mmap is a fairly conservative implementation to avoid causing
+> excessive fragmentation. I think they do a bit more than adding random
+> gaps by switching between different 'pivots' but that isn't very high
+> benefit. The main benefit is having random bits of unmapped space all
+> over the heap when combined with their hardened allocator which
+> heavily uses small mmap mappings and has a fair bit of malloc-level
+> randomization (it's a bitmap / hash table based slab allocator using
+> 4k regions with a page span cache and we use a port of it to Android
+> with added hardening features but we're missing the fine-grained mmap
+> rand it's meant to have underneath what it does itself).
+>=20
+
+So you think OpenBSD implementation even better? It seems like you like =
+it
+after all.
+
+> The default vm.max_map_count =3D 65530 is also a major problem for =
+doing
+> fine-grained mmap randomization of any kind and there's the 32-bit
+> reference count overflow issue on high memory machines with
+> max_map_count * pid_max which isn't resolved yet.
+
+I=E2=80=99ve read a thread about it. This one is what should be fixed =
+anyway.
+
+Thanks,
+Ilya
