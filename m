@@ -1,35 +1,128 @@
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CAGXu5jLRpJ7ktij4TpaSG-RZLOou=RWyY_=jTMNE87+E4Xp2Ag@mail.gmail.com>
-References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
- <1520107232-14111-5-git-send-email-alex.popov@linux.com> <b52a2cca-cb5c-d47f-131e-7db297f78958@linux.intel.com>
- <CAGXu5jLRpJ7ktij4TpaSG-RZLOou=RWyY_=jTMNE87+E4Xp2Ag@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Mon, 5 Mar 2018 12:15:11 -0800
-Message-ID: <CA+55aFxEAYyrUkApo-dtZvxcYbvWBZJpUytjbm7e2wruTvbYjQ@mail.gmail.com>
-Subject: Re: [PATCH RFC v9 4/7] x86/entry: Erase kernel stack in syscall_trace_enter()
-Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>
-Cc: Dave Hansen <dave.hansen@linux.intel.com>, Alexander Popov <alex.popov@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain;
+	charset=utf-8
+Mime-Version: 1.0 (Mac OS X Mail 11.2 \(3445.5.20\))
+Subject: Re: [RFC PATCH] Randomization of address chosen by mmap.
+From: Ilya Smith <blackzert@gmail.com>
+In-Reply-To: <20180305194728.GB10418@bombadil.infradead.org>
+Date: Mon, 5 Mar 2018 23:20:31 +0300
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <4CB48994-60BF-4329-B6CE-0613EE1F7417@gmail.com>
+References: <55C92196-5398-4C19-B7A7-6C122CD78F32@gmail.com>
+ <20180228183349.GA16336@bombadil.infradead.org>
+ <CA+DvKQKoo1U7T_iOOLhfEf9c+K1pzD068au+kGtx0RokFFNKHw@mail.gmail.com>
+ <2CF957C6-53F2-4B00-920F-245BEF3CA1F6@gmail.com>
+ <CA+DvKQ+mrnm4WX+3cBPuoSLFHmx2Zwz8=FsEx51fH-7yQMAd9w@mail.gmail.com>
+ <20180304034704.GB20725@bombadil.infradead.org>
+ <20180304205614.GC23816@bombadil.infradead.org>
+ <7FA6631B-951F-42F4-A7BF-8E5BB734D709@gmail.com>
+ <20180305162343.GA8230@bombadil.infradead.org>
+ <EC4E37F1-C2B8-4112-8EAD-FF072602DD08@gmail.com>
+ <20180305194728.GB10418@bombadil.infradead.org>
+To: Matthew Wilcox <willy@infradead.org>
+Cc: Daniel Micay <danielmicay@gmail.com>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Michal Hocko <mhocko@suse.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Jan Kara <jack@suse.cz>, Jerome Glisse <jglisse@redhat.com>, Hugh Dickins <hughd@google.com>, Helge Deller <deller@gmx.de>, Andrea Arcangeli <aarcange@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is the first I see of any of this, it was apparently not actually
-posted to lkml or anything like that.
+> On 5 Mar 2018, at 22:47, Matthew Wilcox <willy@infradead.org> wrote:
+>>>> - the entropy you provide is like 16 bit, that is really not so =
+hard to brute
+>>>=20
+>>> It's 16 bits per mapping.  I think that'll make enough attacks =
+harder
+>>> to be worthwhile.
+>>=20
+>> Well yes, its ok, sorry. I just would like to have 32 bit entropy =
+maximum some day :)
+>=20
+> We could put 32 bits of padding into the prot argument on 64-bit =
+systems
+> (and obviously you need a 64-bit address space to use that many bits). =
+ The
+> thing is that you can't then put anything else into those pages =
+(without
+> using MAP_FIXED).
+>=20
 
-Honestly, what I see just makes me go "this is security-masturbation".
+This one sounds good to me. In my approach it is possible to map there, =
+but ok.
 
-It doesn't actually seem to help *find* bugs at all. As such, it's
-another "paper over and forget" thing that just adds fairly high
-overhead when it's enabled.
+>>>> - if you unmap/remap one page inside region, field vma_guard will =
+show head=20
+>>>> or tail pages for vma, not both; kernel don=E2=80=99t know how to =
+handle it
+>>>=20
+>>> There are no head pages.  The guard pages are only placed after the =
+real end.
+>>=20
+>> Ok, we have MG where G =3D vm_guard, right? so when you do vm_split,=20=
 
-I'm NAK'ing it sight-unseen (see above) just because I'm tired of
-these kinds of pointless things that don't actually strive to improve
-on the kernel, just add more and more overhead for nebulous "things
-may happen", and that just make the code uglier.
+>> you may come to situation - m1g1m2G, how to handle it? I mean when M =
+is=20
+>> split with only one page inside this region. How to handle it?
+>=20
+> I thought I covered that in my earlier email.  Using one letter per =
+page,
+> and a five-page mapping with two guard pages: MMMMMGG.  Now unmap the
+> fourth page, and the VMA gets split into two.  You get: MMMGMGG.
+>=20
+I was just interesting, it=E2=80=99s not the issue to me. Now its clear, =
+thanks.
 
-Why wasn't it even posted to lkml?
+>>> I can't agree with that.  The user has plenty of opportunities to =
+get
+>>> randomness; from /dev/random is the easiest, but you could also do =
+timing
+>>> attacks on your own cachelines, for example.
+>>=20
+>> I think the usual case to use randomization for any mmap or not use =
+it at all=20
+>> for whole process. So here I think would be nice to have some =
+variable=20
+>> changeable with sysctl (root only) and ioctl (for greedy processes).
+>=20
+> I think this functionality can just as well live inside libc as in
+> the kernel.
+>=20
 
-And why isn't the focus of security people on tools to _analyse_ and
-find problems?
+Good news for them :)
 
-                  Linus
+>> Well, let me summary:
+>> My approach chose random gap inside gap range with following strings:
+>>=20
+>> +	addr =3D get_random_long() % ((high - low) >> PAGE_SHIFT);
+>> +	addr =3D low + (addr << PAGE_SHIFT);
+>>=20
+>> Could be improved limiting maximum possible entropy in this shift.
+>> To prevent situation when attacker may massage allocations and=20
+>> predict chosen address, I randomly choose memory region. I=E2=80=99m =
+still
+>> like my idea, but not going to push it anymore, since you have yours =
+now.
+>>=20
+>> Your idea just provide random non-mappable and non-accessable offset
+>> from best-fit region. This consumes memory (1GB gap if random value=20=
+
+>> is 0xffff). But it works and should work faster and should resolve =
+the issue.
+>=20
+> umm ... 64k * 4k is a 256MB gap, not 1GB.  And it consumes address =
+space,
+> not memory.
+>=20
+
+hmm, yes=E2=80=A6 I found 8 bits somewhere.. 256MB should be enough for =
+everyone.
+
+>> My point was that current implementation need to be changed and you
+>> have your own approach for that. :)
+>> Lets keep mine in the mind till better times (or worse?) ;)
+>> Will you finish your approach and upstream it?
+>=20
+> I'm just putting it out there for discussion.  If people think this is
+> the right approach, then I'm happy to finish it off.  If the consensus
+> is that we should randomly pick addresses instead, I'm happy if your
+> approach gets merged.
+
+So now, its time to call for people? Sorry, I=E2=80=99m new here.
+
+Thanks,
+Ilya
