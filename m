@@ -1,60 +1,137 @@
-Date: Sun, 4 Mar 2018 12:56:14 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [RFC PATCH] Randomization of address chosen by mmap.
-Message-ID: <20180304205614.GC23816@bombadil.infradead.org>
-References: <20180227131338.3699-1-blackzert@gmail.com>
- <CAGXu5jKF7ysJqj57ZktrcVL4G2NWOFHCud8dtXFHLs=tvVLXnQ@mail.gmail.com>
- <55C92196-5398-4C19-B7A7-6C122CD78F32@gmail.com>
- <20180228183349.GA16336@bombadil.infradead.org>
- <CA+DvKQKoo1U7T_iOOLhfEf9c+K1pzD068au+kGtx0RokFFNKHw@mail.gmail.com>
- <2CF957C6-53F2-4B00-920F-245BEF3CA1F6@gmail.com>
- <CA+DvKQ+mrnm4WX+3cBPuoSLFHmx2Zwz8=FsEx51fH-7yQMAd9w@mail.gmail.com>
- <20180304034704.GB20725@bombadil.infradead.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180304034704.GB20725@bombadil.infradead.org>
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Ilya Smith <blackzert@gmail.com>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Michal Hocko <mhocko@suse.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Jan Kara <jack@suse.cz>, Jerome Glisse <jglisse@redhat.com>, Hugh Dickins <hughd@google.com>, Helge Deller <deller@gmx.de>, Andrea Arcangeli <aarcange@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CA+55aFz-AD8rWb66rjN-YhAtPXukMiGSFfW3nBMCp8k1RYUvOQ@mail.gmail.com>
+References: <CAGXu5jLc_A1w4FM8FvQHGSPjLfOu80L_vbt_FkcE6+Bh_XMjxw@mail.gmail.com>
+ <6be06ce5-87e6-0d9d-55b9-6c70c3578ecf@maciej.szmigiero.name> <CA+55aFz-AD8rWb66rjN-YhAtPXukMiGSFfW3nBMCp8k1RYUvOQ@mail.gmail.com>
+From: Masahiro Yamada <yamada.masahiro@socionext.com>
+Date: Mon, 5 Mar 2018 18:27:44 +0900
+Message-ID: <CAK7LNASKHOb5GNPu9XHWxyq-iucxTRkw99_7wL4zgm5HNc6_SA@mail.gmail.com>
+Subject: Re: RANDSTRUCT structs need linux/compiler_types.h (Was: [nfsd4]
+ potentially hardware breaking regression in 4.14-rc and 4.13.11)
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>, Kees Cook <keescook@chromium.org>, Patrick McLean <chutzpah@gentoo.org>, Emese Revfy <re.emese@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Mar 03, 2018 at 07:47:04PM -0800, Matthew Wilcox wrote:
-> On Sat, Mar 03, 2018 at 04:00:45PM -0500, Daniel Micay wrote:
-> > The main thing I'd like to see is just the option to get a guarantee
-> > of enforced gaps around mappings, without necessarily even having
-> > randomization of the gap size. It's possible to add guard pages in
-> > userspace but it adds overhead by doubling the number of system calls
-> > to map memory (mmap PROT_NONE region, mprotect the inner portion to
-> > PROT_READ|PROT_WRITE) and *everything* using mmap would need to
-> > cooperate which is unrealistic.
-> 
-> So something like this?
-> 
-> To use it, OR in PROT_GUARD(n) to the PROT flags of mmap, and it should
-> pad the map by n pages.  I haven't tested it, so I'm sure it's buggy,
-> but it seems like a fairly cheap way to give us padding after every
-> mapping.
-> 
-> Running it on an old kernel will result in no padding, so to see if it
-> worked or not, try mapping something immediately after it.
+Hi Linus,
 
-Thinking about this more ...
+2018-02-22 7:47 GMT+09:00 Linus Torvalds <torvalds@linux-foundation.org>:
+> On Wed, Feb 21, 2018 at 2:19 PM, Maciej S. Szmigiero
+> <mail@maciej.szmigiero.name> wrote:
+>>
+>> One can see that offsets used to access various members of struct path a=
+re
+>> different, and also that the original file from step 3 contains an objec=
+t
+>> named "__randomize_layout".
+>
+> Whee.
+>
+> Thanks for root-causing this issue, and this syntax of ours is clearly
+> *much* too fragile.
+>
+> We actually have similar issues with some of our other attributes,
+> where out nice "helpful" attribute shorthand can end up being just
+> silently interpreted as a variable name if they aren't defined in
+> time.
+>
+> For most of our other attributes, it just doesn't matter all that much
+> if some user doesn't happen to see the attribute. For
+> __randomize_layout, it's obviously very fatal, and silently just
+> generates crazy code.
+>
+> I'm not entirely sure what the right solution is, because it's
+> obviously much too easy to miss some #include by mistake. It's easy to
+> say "you should always include the proper header", but if a failure to
+> do so doesn't end up with any warnings or errors, but just silent bad
+> code generation, it's much too fragile.
+>
+> I wonder if we could change the syntax of that "__randomize_layout"
+> thing. Some of our related helper macros (ie
+> randomized_struct_fields_start/end) don't have the same problem,
+> because if you don't have the define for them, the compiler will
+> complain about bad syntax.
+>
+> And other attribute specifiers we encourage people to put in other
+> parts of the type, like __user etc, so they don't have that same
+> parsing issue.
+>
+> I guess one _extreme_ fix for this would be to put
+>
+>     extern struct nostruct __randomize_layout;
+>
+> in our include/linux/kconfig.h, which I think we end up always
+> including first thanks to having it on the command line.
+>
+> Because if you do that, you actually get an error:
+>
+>     CC [M]  fs/nfsd/nfs4xdr.o
+>   In file included from ./include/linux/fs_struct.h:5:0,
+>                    from fs/nfsd/nfs4xdr.c:36:
+>   ./include/linux/path.h:11:3: error: conflicting types for =E2=80=98__ra=
+ndomize_layout=E2=80=99
+>    } __randomize_layout;
+>      ^~~~~~~~~~~~~~~~~~
+>   In file included from <command-line>:0:0:
+>   ././include/linux/kconfig.h:8:28: note: previous declaration of
+> =E2=80=98__randomize_layout=E2=80=99 was here
+>        extern struct nostruct __randomize_layout;
+>                               ^~~~~~~~~~~~~~~~~~
+>   make[1]: *** [scripts/Makefile.build:317: fs/nfsd/nfs4xdr.o] Error 1
+>
+> and we would have figured this out immediately.
+>
+> Broken example patch appended, in case somebody wants to play with
+> something like this or comes up with a better model entirely..
+>
+>                Linus
+>
 
- - When you call munmap, if you pass in the same (addr, length) that were
-   used for mmap, then it should unmap the guard pages as well (that
-   wasn't part of the patch, so it would have to be added)
- - If 'addr' is higher than the mapped address, and length at least
-   reaches the end of the mapping, then I would expect the guard pages to
-   "move down" and be after the end of the newly-shortened mapping.
- - If 'addr' is higher than the mapped address, and the length doesn't
-   reach the end of the old mapping, we split the old mapping into two.
-   I would expect the guard pages to apply to both mappings, insofar as
-   they'll fit.  For an example, suppose we have a five-page mapping with
-   two guard pages (MMMMMGG), and then we unmap the fourth page.  Now we
-   have a three-page mapping with one guard page followed immediately
-   by a one-page mapping with two guard pages (MMMGMGG).
 
-I would say that mremap cannot change the number of guard pages.
-Although I'm a little tempted to add an mremap flag to permit the mapping
-to expand into the guard pages.  That would give us a nice way to reserve
-address space for a mapping we think is going to expand.
+Sorry for chiming in late.
+
+I noticed this thread today,
+honestly, the commit made me upset.
+
+
+Can I suggest another way to make it less fragile?
+__attribute((...)) can be placed after 'struct'.
+
+
+So, we can write:
+
+
+struct __randomize_layout path {
+        struct vfsmount *mnt;
+        struct dentry *dentry;
+};
+
+
+  instead of
+
+
+struct path {
+        struct vfsmount *mnt;
+        struct dentry *dentry;
+} __randomize_layout;
+
+
+
+If we force the former notation,
+the undefined __randomize_layout results in a build error
+instead of silent broken code generation.
+
+
+It is true somebody can still place
+__randomize_layout after the closing brace,
+but can we check this by coccicheck or checkpatch.pl?
+(we can describe it in coding style documentation, of course)
+
+
+IMHO, we should not (ab)use include/linux/kconfig.h
+to bring in misc things.
+
+
+--=20
+Best Regards
+Masahiro Yamada
