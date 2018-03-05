@@ -1,72 +1,36 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
+Sender: linus971@gmail.com
 In-Reply-To: <CAK7LNASKHOb5GNPu9XHWxyq-iucxTRkw99_7wL4zgm5HNc6_SA@mail.gmail.com>
 References: <CAGXu5jLc_A1w4FM8FvQHGSPjLfOu80L_vbt_FkcE6+Bh_XMjxw@mail.gmail.com>
  <6be06ce5-87e6-0d9d-55b9-6c70c3578ecf@maciej.szmigiero.name>
  <CA+55aFz-AD8rWb66rjN-YhAtPXukMiGSFfW3nBMCp8k1RYUvOQ@mail.gmail.com> <CAK7LNASKHOb5GNPu9XHWxyq-iucxTRkw99_7wL4zgm5HNc6_SA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 5 Mar 2018 11:15:35 -0800
-Message-ID: <CAGXu5jJo+c4d+=57rFiHaFrOHxDHVSZzMhWSMqNQe+tcw0-4zQ@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Mon, 5 Mar 2018 11:18:50 -0800
+Message-ID: <CA+55aFyf9NkW26BNyEnvUT60u2oXezRiXMexdHy8yx1AD9aUYw@mail.gmail.com>
 Subject: Re: RANDSTRUCT structs need linux/compiler_types.h (Was: [nfsd4]
  potentially hardware breaking regression in 4.14-rc and 4.13.11)
 Content-Type: text/plain; charset="UTF-8"
 To: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>, Patrick McLean <chutzpah@gentoo.org>, Emese Revfy <re.emese@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>, Kees Cook <keescook@chromium.org>, Patrick McLean <chutzpah@gentoo.org>, Emese Revfy <re.emese@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Mon, Mar 5, 2018 at 1:27 AM, Masahiro Yamada
 <yamada.masahiro@socionext.com> wrote:
-> Sorry for chiming in late.
->
-> I noticed this thread today,
-> honestly, the commit made me upset.
->
 >
 > Can I suggest another way to make it less fragile?
 > __attribute((...)) can be placed after 'struct'.
->
->
-> So, we can write:
->
->
-> struct __randomize_layout path {
->         struct vfsmount *mnt;
->         struct dentry *dentry;
-> };
->
->
->   instead of
->
->
-> struct path {
->         struct vfsmount *mnt;
->         struct dentry *dentry;
-> } __randomize_layout;
 
-Ugh. I had tried this after the struct _name_, not after "struct"
-itself. This does fix it, though it remains fragile, as you mention.
+That avoids the actual bug, but it wouldn't have helped _find_ the
+problem in the first place.
 
-> If we force the former notation,
-> the undefined __randomize_layout results in a build error
-> instead of silent broken code generation.
->
->
-> It is true somebody can still place
-> __randomize_layout after the closing brace,
-> but can we check this by coccicheck or checkpatch.pl?
-> (we can describe it in coding style documentation, of course)
->
->
-> IMHO, we should not (ab)use include/linux/kconfig.h
-> to bring in misc things.
+If somebody ever does the same thing, they'd hit the same issue. And
+it's not just __randomize_struct, it's any of our other type markers.
 
-I'm happy to send a patch that reverts the other changes and relocates
-all the markings...
+We can say "don't do that", but if there is no automated checking,
+it's still ripe to cause problems just because somebody didn't notice.
 
-Linus, how would you like this to go?
+So I'd rather have something that causes a build failure when
+something goes wrong, rather than silently accepting syntax that
+wasn't intended.
 
--Kees
-
--- 
-Kees Cook
-Pixel Security
+                   Linus
