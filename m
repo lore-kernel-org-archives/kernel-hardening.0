@@ -1,167 +1,71 @@
+Subject: Re: [PATCH RFC v9 4/7] x86/entry: Erase kernel stack in
+ syscall_trace_enter()
+References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
+ <1520107232-14111-5-git-send-email-alex.popov@linux.com>
+ <b52a2cca-cb5c-d47f-131e-7db297f78958@linux.intel.com>
+ <CAGXu5jLRpJ7ktij4TpaSG-RZLOou=RWyY_=jTMNE87+E4Xp2Ag@mail.gmail.com>
+ <CA+55aFxEAYyrUkApo-dtZvxcYbvWBZJpUytjbm7e2wruTvbYjQ@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <abc02704-304e-2604-6297-75e6d2757c1e@linux.com>
+Date: Tue, 6 Mar 2018 00:02:49 +0300
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <a5ac51e9-b0ab-ed1b-c820-ab9379d62427@schaufler-ca.com>
-References: <20180227111532.1144-1-ppandit@redhat.com> <CAGXu5j+-qUrt-8kQ6WRUM=DH8K3Zgmm2ejRgiKJMLDrSXRtmdg@mail.gmail.com>
- <CAFJ0LnFEtcWjTf5v1oBK_FC6VTdORpOLyKzzENL3B1bCHz1ySw@mail.gmail.com> <a5ac51e9-b0ab-ed1b-c820-ab9379d62427@schaufler-ca.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 5 Mar 2018 12:42:38 -0800
-Message-ID: <CAGXu5jL-rr9YcRzPJFRd7wSk82-9WB-NToe4T5dTBcAGw9UEug@mail.gmail.com>
-Subject: Re: [PATCH 0/1] Zero initialise kernel stack variables
-Content-Type: text/plain; charset="UTF-8"
-To: Casey Schaufler <casey@schaufler-ca.com>
-Cc: Nick Kralevich <nnk@google.com>, P J P <ppandit@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Florian Weimer <fweimer@redhat.com>, P J P <pjp@fedoraproject.org>
+In-Reply-To: <CA+55aFxEAYyrUkApo-dtZvxcYbvWBZJpUytjbm7e2wruTvbYjQ@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>
+Cc: Dave Hansen <dave.hansen@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 2, 2018 at 1:01 PM, Casey Schaufler <casey@schaufler-ca.com> wrote:
-> On 3/2/2018 11:52 AM, Nick Kralevich wrote:
->> On Tue, Feb 27, 2018 at 11:28 AM, Kees Cook <keescook@chromium.org> wrote:
->>>> This same kernel is running on my F27 test machine as I write this.
->>>> There is no slowness or notice-able performance impact as such.
->>> Unfortunately "noticeable" isn't going to be a viable metric. You'll
->>> need to do some real-world benchmarks (i.e. kernel builds, hackbench,
->>> etc), and compare the results. Even just initializing
->>> passed-by-reference variables (GCC_PLUGIN_STRUCTLEAK_BYREF_ALL) had
->>> measurable performance impact.
->>>
->>> It would be nice to have four options/features available from the
->>> compiler, from least to most performance impact:
->>
->> One of the recurring themes I've noticed from the kernel-hardening
->> mailing list is that someone will propose a valuable compile time
->> feature (such as this one), people will ask for performance
->> measurements, some specific use case will be found which has adverse
->> performance impact, and the entire change will be rejected. It's
->> silly.
+Hello Linus,
 
-The way I think about adding security hardening to upstream is that we
-have to consider a number of conflicting interests. I would say the
-primary principle is "secure by default", which comes with lots of
-caveats, namely in the form of performance impact, maintainability
-impact, and false positive rate. If something has zero performance and
-maintenance impact and zero false positive rate, then this is a
-slam-dunk and there's no problem. This is rarely the case, of course.
-Frequently the maintainability and false positive rate can be seen or
-inferred from the content of the patches, so the explicit question,
-when not answered in a commit log or documentation, becomes "what is
-the performance impact?"
+Thanks for your reply (despite some strong words).
 
-When something can't be always-on, then we have to look at asking "can
-this be a _runtime_ toggle?" rather than a compile-time option, since
-many of the end-users of the kernel are getting it through distros,
-and distros are allergic to making many different kernel packages with
-different compile-time options. They just want _one_ kernel binary.
+On 05.03.2018 23:15, Linus Torvalds wrote:
+> This is the first I see of any of this, it was apparently not actually
+> posted to lkml or anything like that.
 
-Now, speaking to "the entire change will be rejected", this usually
-happens in two cases. Either the added complexity is seen as not worth
-the hardening (in which case, better evidence is needed to support the
-hardening, or refactoring to reduce maintenance burdens), or we bump
-up against what I'll call "security absolutism" ways of thinking from
-some maintainers. Dealing with the latter is much more difficult,
-since they don't see pragmatic security improvements as having value
-compared to "perfect protection". Obviously perfect is preferred, but
-it can't always be done. (e.g. see "an unpowered computer is safest",
-etc.)
+I described that below.
 
-I want hardening features to _actually_ get used by the widest
-possible audience of end users. That means trying to balance all the
-things above, and get the best possible approach for upstream and
-downstream.
+> Honestly, what I see just makes me go "this is security-masturbation".
 
-In this specific case, we can't have a runtime toggle, which means we
-need to get the performance impact as low as possible if we want to
-see distros using it. We may not get down to a level were a distro
-wants to enable it, then that's fine, other people who do their own
-kernel builds will still have it available as a compile-time option,
-but then at least we've tried, and we'll have evidence to show for
-what kinds of improvements would be needed in the future to gain wider
-roll-out.
+Let me quote the cover letter of this patch series.
 
-> A security developers we *must* consider performance to be
-> critical at all times. There is no easier way to get something
-> rejected out of hand than for it to have serious performance
-> impact. On the other hand, if I had a nickel for every time I
-> saw something really stoopid done to improve performance I'd
-> have a big pile of nickels. One of the performance issues your
-> changed caused was in the common case of network packet delivery.
-> The people who work on that code are fanatical about performance.
-> Just as the security people might flame an obvious buffer overflow,
-> the networking people will stomp on an unnecessary performance hit.
+STACKLEAK (initially developed by PaX Team):
+ - reduces the information that can be revealed through kernel stack leak bugs;
+ - blocks some uninitialized stack variable attacks (e.g. CVE-2017-17712,
+CVE-2010-2963);
+ - introduces some runtime checks for kernel stack overflow detection. It blocks
+the Stack Clash attack against the kernel.
 
-The networking folks are especially unhappy about doing (what they see
-as) redundant memory initialization, even when it kills classes of
-bugs. I personally find this rather frustrating, but I understand that
-performance is critical to them. In these cases, having a generalized
-approach (such as a compiler flag or plugin) provides a way for the
-general public to benefit from killing bug classes and for the
-perf-critical users to disable the protection. I don't like having to
-face these trade-offs, but as we're seeing, the corner-cutting by CPUs
-and kernels continue to haunt us, and we need to find efficient ways
-to initialize memory, avoid side-channels, etc.
+So it seems to be a useful feature.
 
->> The beautiful thing about compile time features is that they can be
->> enabled / disabled per compilation unit. If there's a performance
->> problem in a certain chunk of code, figure out a way to opt that code
->> out of the protections. 95% of the performance of the kernel is likely
->> only dependent on 5% of the code, and even if we opt out that code, we
->> still protect the remaining 95% of the code. If you assume that bugs
->> are evenly distributed throughout the code base, a 95% reduction is
->> HUGE.
->
-> For good or ill there is a strong tradition that a 95% security
-> solution is broken. You don't need all the code to be penetrated,
-> just a teeny bit. And what about the code that couldn't be
-> penetrated anyway, but now has to be slower to protect that little
-> bit?
+> It doesn't actually seem to help *find* bugs at all. As such, it's
+> another "paper over and forget" thing that just adds fairly high
+> overhead when it's enabled.
 
-Yeah, and it's specifically the networking code that has had many of
-the flaws in leaking memory contents due to drivers not fully
-initializing some structure here or there. So we'd leave ourselves
-open to a known source of regular bugs.
+The cover letter also contains the information about the performance impact.
+It's 0.6% on the compiling the kernel (with Ubuntu config) and approx 4% on a
+very intensive hackbench test.
 
-I think the best use of per-compilation-unit protections is for things
-that have high false-positive rates, and it can be used as a way to
-start building up coverage over time across the entire kernel with the
-goal of 100% coverage (e.g. runtime integer overflow detection like
-Clang's -fsanitize=integer).
+> I'm NAK'ing it sight-unseen (see above) just because I'm tired of
+> these kinds of pointless things that don't actually strive to improve
+> on the kernel, just add more and more overhead for nebulous "things
+> may happen", and that just make the code uglier.
+> 
+> Why wasn't it even posted to lkml?
 
->> Strategically, we shouldn't let the perfect be the enemy of the good.
->> Let's move away from fixating on benchmarks, and just enable easy
->> opt-out for the folks who demonstrate performance bottlenecks.
+That's my mistake. I started to learn that feature 9 month ago, just before
+Qualys published the Stack Clash attack (which is blocked by STACKLEAK). I sent
+first WIP versions to a short list of people (and had a lot of feedback to work
+with). But later unfortunately I didn't adjust the list of recipients.
 
-I agree that opt-out is desired, but upstream conservatism tends to
-dictate opt-in initially. Having performance numbers (like I talk
-about above) is just part of the larger piece for trying to figure out
-a strategy for upstreaming. Once it's in, then distros enable it by
-default, then the kernel does too. This can span years, though.
+That was not done intentionally.
 
-> The problem is not that people will choose performance over security,
-> or the other way around. It's that they don't consider both to be
-> important in the first place.
->
->>
->> I suspect that many kernel-hardening features would have an easier
->> time being accepted if it wasn't presented as an all or nothing
->> feature.
+> And why isn't the focus of security people on tools to _analyse_ and
+> find problems?
 
-The largest constraint, IMO, is the maintainability one. Having
-complex code with lots of #ifdefs for the compile-time toggles creates
-code that bit-rots, gets less testing, etc. Perf is part of the
-picture, but one that gets discussed more explicitly since it can
-impact the other areas of concern.
+You know, I like KASAN and kernel fuzzing as well:
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=82f2341c94d270421f383641b7cd670e474db56b
 
-> You're up against the notion that you can ignore one aspect of
-> the system to enhance another.
->
->>
->> My $0.02.
-
-Thanks for bringing it up! I wish things were easier, but this is what
-we have. :) I'd also like to think that if we can hammer out all the
-concerns for a patch series on this list, then we can avoid flame-wars
-and auto-ignore when presenting things for merging.
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+Best regards,
+Alexander
