@@ -1,81 +1,72 @@
-Subject: Re: [PATCH 1/7] genalloc: track beginning of allocations
-References: <20180228200620.30026-1-igor.stoppa@huawei.com>
- <20180228200620.30026-2-igor.stoppa@huawei.com>
-From: J Freyensee <why2jjj.linux@gmail.com>
-Message-ID: <6a31164a-af3f-91ea-d385-7c6d1888b28c@gmail.com>
-Date: Mon, 5 Mar 2018 11:00:08 -0800
 MIME-Version: 1.0
-In-Reply-To: <20180228200620.30026-2-igor.stoppa@huawei.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 8bit
-To: Igor Stoppa <igor.stoppa@huawei.com>, david@fromorbit.com, willy@infradead.org, keescook@chromium.org, mhocko@kernel.org
-Cc: labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <CAK7LNASKHOb5GNPu9XHWxyq-iucxTRkw99_7wL4zgm5HNc6_SA@mail.gmail.com>
+References: <CAGXu5jLc_A1w4FM8FvQHGSPjLfOu80L_vbt_FkcE6+Bh_XMjxw@mail.gmail.com>
+ <6be06ce5-87e6-0d9d-55b9-6c70c3578ecf@maciej.szmigiero.name>
+ <CA+55aFz-AD8rWb66rjN-YhAtPXukMiGSFfW3nBMCp8k1RYUvOQ@mail.gmail.com> <CAK7LNASKHOb5GNPu9XHWxyq-iucxTRkw99_7wL4zgm5HNc6_SA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 5 Mar 2018 11:15:35 -0800
+Message-ID: <CAGXu5jJo+c4d+=57rFiHaFrOHxDHVSZzMhWSMqNQe+tcw0-4zQ@mail.gmail.com>
+Subject: Re: RANDSTRUCT structs need linux/compiler_types.h (Was: [nfsd4]
+ potentially hardware breaking regression in 4.14-rc and 4.13.11)
+Content-Type: text/plain; charset="UTF-8"
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>, Patrick McLean <chutzpah@gentoo.org>, Emese Revfy <re.emese@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-.
-.
-
-
-On 2/28/18 12:06 PM, Igor Stoppa wrote:
-> +
-> +/**
-> + * gen_pool_dma_alloc() - allocate special memory from the pool for DMA usage
-> + * @pool: pool to allocate from
-> + * @size: number of bytes to allocate from the pool
-> + * @dma: dma-view physical address return value.  Use NULL if unneeded.
-> + *
-> + * Allocate the requested number of bytes from the specified pool.
-> + * Uses the pool allocation function (with first-fit algorithm by default).
-> + * Can not be used in NMI handler on architectures without
-> + * NMI-safe cmpxchg implementation.
-> + *
-> + * Return:
-> + * * address of the memory allocated	- success
-> + * * NULL				- error
-> + */
-> +void *gen_pool_dma_alloc(struct gen_pool *pool, size_t size, dma_addr_t *dma);
-> +
-
-OK, so gen_pool_dma_alloc() is defined here, which believe is the API 
-line being drawn for this series.
-
-so,
-.
-.
-.
+On Mon, Mar 5, 2018 at 1:27 AM, Masahiro Yamada
+<yamada.masahiro@socionext.com> wrote:
+> Sorry for chiming in late.
 >
->   
->   /**
-> - * gen_pool_dma_alloc - allocate special memory from the pool for DMA usage
-> + * gen_pool_dma_alloc() - allocate special memory from the pool for DMA usage
->    * @pool: pool to allocate from
->    * @size: number of bytes to allocate from the pool
->    * @dma: dma-view physical address return value.  Use NULL if unneeded.
-> @@ -342,14 +566,15 @@ EXPORT_SYMBOL(gen_pool_alloc_algo);
->    * Uses the pool allocation function (with first-fit algorithm by default).
->    * Can not be used in NMI handler on architectures without
->    * NMI-safe cmpxchg implementation.
-> + *
-> + * Return:
-> + * * address of the memory allocated	- success
-> + * * NULL				- error
->    */
->   void *gen_pool_dma_alloc(struct gen_pool *pool, size_t size, dma_addr_t *dma)
->   {
->   	unsigned long vaddr;
->   
-> -	if (!pool)
-> -		return NULL;
-> -
-why is this being removed?  I don't believe this code was getting 
-removed from your v17 series patches.
->   	vaddr = gen_pool_alloc(pool, size);
->   	if (!vaddr)
->   		return NULL;
-> @@ -362,10 +587,10 @@ void *gen_pool_dma_alloc(struct gen_pool *pool, size_t size, dma_addr_t *dma)
->   EXPORT_SYMBOL(gen_pool_dma_alloc);
->   
+> I noticed this thread today,
+> honestly, the commit made me upset.
 >
-Otherwise, looks good,
+>
+> Can I suggest another way to make it less fragile?
+> __attribute((...)) can be placed after 'struct'.
+>
+>
+> So, we can write:
+>
+>
+> struct __randomize_layout path {
+>         struct vfsmount *mnt;
+>         struct dentry *dentry;
+> };
+>
+>
+>   instead of
+>
+>
+> struct path {
+>         struct vfsmount *mnt;
+>         struct dentry *dentry;
+> } __randomize_layout;
 
-Reviewed-by: Jay Freyensee <why2jjj.linux@gmail.com>
+Ugh. I had tried this after the struct _name_, not after "struct"
+itself. This does fix it, though it remains fragile, as you mention.
+
+> If we force the former notation,
+> the undefined __randomize_layout results in a build error
+> instead of silent broken code generation.
+>
+>
+> It is true somebody can still place
+> __randomize_layout after the closing brace,
+> but can we check this by coccicheck or checkpatch.pl?
+> (we can describe it in coding style documentation, of course)
+>
+>
+> IMHO, we should not (ab)use include/linux/kconfig.h
+> to bring in misc things.
+
+I'm happy to send a patch that reverts the other changes and relocates
+all the markings...
+
+Linus, how would you like this to go?
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
