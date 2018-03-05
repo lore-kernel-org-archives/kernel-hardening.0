@@ -1,24 +1,35 @@
-Subject: Re: [PATCH RFC v9 0/7] Introduce the STACKLEAK feature and a test for
- it
+Subject: Re: [PATCH RFC v9 2/7] x86/entry: Add STACKLEAK erasing the kernel
+ stack at the end of syscalls
 References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
- <CAGXu5jKvTUkU5qLf+j9aB8G2xqKm7n3QLPBXaGnk_ewhG6=i_g@mail.gmail.com>
-From: Dave Hansen <dave.hansen@linux.intel.com>
-Message-ID: <39c52c1d-dba5-07f6-0838-2e8b368b40ed@linux.intel.com>
-Date: Mon, 5 Mar 2018 11:42:07 -0800
+ <1520107232-14111-3-git-send-email-alex.popov@linux.com>
+ <d968e58a-3abd-8e3c-cee3-00c19c1b6430@linux.intel.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <94f268b2-31a4-620a-86ed-325d5bb33c57@redhat.com>
+Date: Mon, 5 Mar 2018 11:43:19 -0800
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKvTUkU5qLf+j9aB8G2xqKm7n3QLPBXaGnk_ewhG6=i_g@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
+In-Reply-To: <d968e58a-3abd-8e3c-cee3-00c19c1b6430@linux.intel.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+To: Dave Hansen <dave.hansen@linux.intel.com>, Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/05/2018 11:34 AM, Kees Cook wrote:
-> Boris, Andy, and Dave (Hansen), you've all looked at this; would you
-> be willing to give an Ack on the x86 parts? (Though I do now see a new
-> comment from Dave was just sent.) And if not, what changes would you
-> like to see?
+On 03/05/2018 08:41 AM, Dave Hansen wrote:
+> On 03/03/2018 12:00 PM, Alexander Popov wrote:
+>>   Documentation/x86/x86_64/mm.txt  |   2 +
+>>   arch/Kconfig                     |  27 ++++++++++
+>>   arch/x86/Kconfig                 |   1 +
+>>   arch/x86/entry/entry_32.S        |  88 +++++++++++++++++++++++++++++++
+>>   arch/x86/entry/entry_64.S        | 108 +++++++++++++++++++++++++++++++++++++++
+>>   arch/x86/entry/entry_64_compat.S |  11 ++++
+> 
+> This is a *lot* of assembly.  I wonder if you tried at all to get more
+> of this into C or whether you just inherited the assembly from the
+> original code?
+> 
 
-I think it could definitely use another cleanup and de-#ifdef'ing pass.
-It seems to have inherited the style from the original code and it's a
-bit more than we're used to in mainline.
+This came up previously http://www.openwall.com/lists/kernel-hardening/2017/10/23/5
+there were concerns about trusting C to do the right thing as well as
+speed.
+
+Thanks,
+Laura
