@@ -1,7 +1,7 @@
-Date: Mon, 5 Mar 2018 20:17:45 +0900
+Date: Mon, 5 Mar 2018 20:18:24 +0900
 From: Jinbum Park <jinb.park7@gmail.com>
-Subject: [PATCH v2 1/2] arm: mm: Define vdso_start, vdso_end as array
-Message-ID: <20180305111745.GA4193@pjb1027-Latitude-E5410>
+Subject: [PATCH v2 2/2] arm: Kconfig: Add ARCH_HAS_FORTIFY_SOURCE
+Message-ID: <20180305111824.GA4216@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
@@ -9,88 +9,50 @@ To: linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-h
 Cc: gregkh@linuxfoundation.org, tglx@linutronix.de, kstewart@linuxfoundation.org, luto@amacapital.net, dsafonov@virtuozzo.com, keescook@chromium.org, will.deacon@arm.com, mark.rutland@arm.com, danielmicay@gmail.com, arnd@arndb.de, catalin.marinas@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Define vdso_start, vdso_end as array to avoid compile-time analysis error
-for the case of built with CONFIG_FORTIFY_SOURCE.
+CONFIG_FORTIFY_SOURCE detects various overflows at compile-time.
+(6974f0c4555e ("include/linux/string.h:
+add the option of fortified string.h functions)
 
-and, since vdso_start, vdso_end are used in vdso.c only,
-move extern-declaration from vdso.h to vdso.c.
+ARCH_HAS_FORTIFY_SOURCE means that the architecture can be built and
+run with CONFIG_FORTIFY_SOURCE.
 
-If kernel is built with CONFIG_FORTIFY_SOURCE,
-compile-time error happens at this code.
-- if (memcmp(&vdso_start, "\177ELF", 4))
-
-The size of "&vdso_start" is recognized as 1 byte, but n is 4,
-So that compile-time error is reported.
+Since ARM can be built and run with that flag like other architectures,
+select ARCH_HAS_FORTIFY_SOURCE as default.
 
 Acked-by: Kees Cook <keescook@chromium.org>
 Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
 ---
-v2: No changes
+v2: Add fortify_panic() in arch/arm/boot/compressed/misc.c,
+    Because there will be a build error if without that function.
 ---
- arch/arm/include/asm/vdso.h |  2 --
- arch/arm/kernel/vdso.c      | 12 +++++++-----
- 2 files changed, 7 insertions(+), 7 deletions(-)
+ arch/arm/Kconfig                | 1 +
+ arch/arm/boot/compressed/misc.c | 5 +++++
+ 2 files changed, 6 insertions(+)
 
-diff --git a/arch/arm/include/asm/vdso.h b/arch/arm/include/asm/vdso.h
-index 9c99e81..5b85889 100644
---- a/arch/arm/include/asm/vdso.h
-+++ b/arch/arm/include/asm/vdso.h
-@@ -12,8 +12,6 @@
- 
- void arm_install_vdso(struct mm_struct *mm, unsigned long addr);
- 
--extern char vdso_start, vdso_end;
--
- extern unsigned int vdso_total_pages;
- 
- #else /* CONFIG_VDSO */
-diff --git a/arch/arm/kernel/vdso.c b/arch/arm/kernel/vdso.c
-index a4d6dc0..f4dd7f9 100644
---- a/arch/arm/kernel/vdso.c
-+++ b/arch/arm/kernel/vdso.c
-@@ -39,6 +39,8 @@
- 
- static struct page **vdso_text_pagelist;
- 
-+extern char vdso_start[], vdso_end[];
-+
- /* Total number of pages needed for the data and text portions of the VDSO. */
- unsigned int vdso_total_pages __ro_after_init;
- 
-@@ -197,13 +199,13 @@ static int __init vdso_init(void)
- 	unsigned int text_pages;
- 	int i;
- 
--	if (memcmp(&vdso_start, "\177ELF", 4)) {
-+	if (memcmp(vdso_start, "\177ELF", 4)) {
- 		pr_err("VDSO is not a valid ELF object!\n");
- 		return -ENOEXEC;
- 	}
- 
--	text_pages = (&vdso_end - &vdso_start) >> PAGE_SHIFT;
--	pr_debug("vdso: %i text pages at base %p\n", text_pages, &vdso_start);
-+	text_pages = (vdso_end - vdso_start) >> PAGE_SHIFT;
-+	pr_debug("vdso: %i text pages at base %p\n", text_pages, vdso_start);
- 
- 	/* Allocate the VDSO text pagelist */
- 	vdso_text_pagelist = kcalloc(text_pages, sizeof(struct page *),
-@@ -218,7 +220,7 @@ static int __init vdso_init(void)
- 	for (i = 0; i < text_pages; i++) {
- 		struct page *page;
- 
--		page = virt_to_page(&vdso_start + i * PAGE_SIZE);
-+		page = virt_to_page(vdso_start + i * PAGE_SIZE);
- 		vdso_text_pagelist[i] = page;
- 	}
- 
-@@ -229,7 +231,7 @@ static int __init vdso_init(void)
- 
- 	cntvct_ok = cntvct_functional();
- 
--	patch_vdso(&vdso_start);
-+	patch_vdso(vdso_start);
- 
- 	return 0;
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 7e3d535..3765336 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -7,6 +7,7 @@ config ARM
+ 	select ARCH_HAS_DEBUG_VIRTUAL if MMU
+ 	select ARCH_HAS_DEVMEM_IS_ALLOWED
+ 	select ARCH_HAS_ELF_RANDOMIZE
++	select ARCH_HAS_FORTIFY_SOURCE
+ 	select ARCH_HAS_SET_MEMORY
+ 	select ARCH_HAS_PHYS_TO_DMA
+ 	select ARCH_HAS_STRICT_KERNEL_RWX if MMU && !XIP_KERNEL
+diff --git a/arch/arm/boot/compressed/misc.c b/arch/arm/boot/compressed/misc.c
+index 16a8a80..4a247ac 100644
+--- a/arch/arm/boot/compressed/misc.c
++++ b/arch/arm/boot/compressed/misc.c
+@@ -167,3 +167,8 @@ void __stack_chk_fail(void)
+ 	else
+ 		putstr(" done, booting the kernel.\n");
  }
++
++void fortify_panic(const char *name)
++{
++	error("detected buffer overflow");
++}
 -- 
 1.9.1
