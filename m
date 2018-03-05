@@ -1,12 +1,7 @@
-Content-Type: text/plain;
-	charset=utf-8
-Mime-Version: 1.0 (Mac OS X Mail 11.2 \(3445.5.20\))
+Date: Mon, 5 Mar 2018 08:23:43 -0800
+From: Matthew Wilcox <willy@infradead.org>
 Subject: Re: [RFC PATCH] Randomization of address chosen by mmap.
-From: Ilya Smith <blackzert@gmail.com>
-In-Reply-To: <CA+DvKQKHqVzk9u2GwSC+F2vF938DY4Heb+JexwOSZhfcFkuqcw@mail.gmail.com>
-Date: Mon, 5 Mar 2018 19:05:08 +0300
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <896E6047-A49F-4E2E-A831-34CC2AD48550@gmail.com>
+Message-ID: <20180305162343.GA8230@bombadil.infradead.org>
 References: <20180227131338.3699-1-blackzert@gmail.com>
  <CAGXu5jKF7ysJqj57ZktrcVL4G2NWOFHCud8dtXFHLs=tvVLXnQ@mail.gmail.com>
  <55C92196-5398-4C19-B7A7-6C122CD78F32@gmail.com>
@@ -17,105 +12,65 @@ References: <20180227131338.3699-1-blackzert@gmail.com>
  <20180304034704.GB20725@bombadil.infradead.org>
  <20180304205614.GC23816@bombadil.infradead.org>
  <7FA6631B-951F-42F4-A7BF-8E5BB734D709@gmail.com>
- <CA+DvKQKHqVzk9u2GwSC+F2vF938DY4Heb+JexwOSZhfcFkuqcw@mail.gmail.com>
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Matthew Wilcox <willy@infradead.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Michal Hocko <mhocko@suse.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Jan Kara <jack@suse.cz>, Jerome Glisse <jglisse@redhat.com>, Hugh Dickins <hughd@google.com>, Helge Deller <deller@gmx.de>, Andrea Arcangeli <aarcange@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <7FA6631B-951F-42F4-A7BF-8E5BB734D709@gmail.com>
+To: Ilya Smith <blackzert@gmail.com>
+Cc: Daniel Micay <danielmicay@gmail.com>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Michal Hocko <mhocko@suse.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Jan Kara <jack@suse.cz>, Jerome Glisse <jglisse@redhat.com>, Hugh Dickins <hughd@google.com>, Helge Deller <deller@gmx.de>, Andrea Arcangeli <aarcange@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> On 5 Mar 2018, at 17:23, Daniel Micay <danielmicay@gmail.com> wrote:
-> I didn't suggest this as the way of implementing fine-grained
-> randomization but rather a small starting point for hardening address
-> space layout further. I don't think it should be tied to a mmap flag
-> but rather something like a personality flag or a global sysctl. It
-> doesn't need to be random at all to be valuable, and it's just a first
-> step. It doesn't mean there can't be switches between random pivots
-> like OpenBSD mmap, etc. I'm not so sure that randomly switching around
-> is going to result in isolating things very well though.
->=20
+On Mon, Mar 05, 2018 at 04:09:31PM +0300, Ilya Smith wrote:
+> > On 4 Mar 2018, at 23:56, Matthew Wilcox <willy@infradead.org> wrote:
+> > Thinking about this more ...
+> > 
+> > - When you call munmap, if you pass in the same (addr, length) that were
+> >   used for mmap, then it should unmap the guard pages as well (that
+> >   wasn't part of the patch, so it would have to be added)
+> > - If 'addr' is higher than the mapped address, and length at least
+> >   reaches the end of the mapping, then I would expect the guard pages to
+> >   "move down" and be after the end of the newly-shortened mapping.
+> > - If 'addr' is higher than the mapped address, and the length doesn't
+> >   reach the end of the old mapping, we split the old mapping into two.
+> >   I would expect the guard pages to apply to both mappings, insofar as
+> >   they'll fit.  For an example, suppose we have a five-page mapping with
+> >   two guard pages (MMMMMGG), and then we unmap the fourth page.  Now we
+> >   have a three-page mapping with one guard page followed immediately
+> >   by a one-page mapping with two guard pages (MMMGMGG).
+> 
+> I’m analysing that approach and see much more problems:
+> - each time you call mmap like this, you still  increase count of vmas as my 
+> patch did
 
-Here I like the idea of Kees Cook:
-> I think this will need a larger knob -- doing this by default is
-> likely to break stuff, I'd imagine? Bikeshedding: I'm not sure if this
-> should be setting "3" for /proc/sys/kernel/randomize_va_space, or a
-> separate one like /proc/sys/mm/randomize_mmap_allocation.
-I mean it should be a way to turn randomization off since some =
-applications are=20
-really need huge memory.
-If you have suggestion here, would be really helpful to discuss.
-I think one switch might be done globally for system administrate like=20=
+Umm ... yes, each time you call mmap, you get a VMA.  I'm not sure why
+that's a problem with my patch.  I was trying to solve the problem Daniel
+pointed out, that mapping a guard region after each mmap cost twice as
+many VMAs, and it solves that problem.
 
-/proc/sys/mm/randomize_mmap_allocation and another one would be good to =
-have=20
-some ioctl to switch it of in case if application knows what to do.
+> - now feature vma_merge shouldn’t work at all, until MAP_FIXED is set or
+> PROT_GUARD(0)
 
-I would like to implement it in v2 of the patch.
+That's true.
 
->> I can=E2=80=99t understand what direction this conversation is going =
-to. I was talking
->> about weak implementation in Linux kernel but got many comments about =
-ASLR
->> should be implemented in user mode what is really weird to me.
->=20
-> That's not what I said. I was saying that splitting things into
-> regions based on the type of allocation works really well and allows
-> for high entropy bases, but that the kernel can't really do that right
-> now. It could split up code that starts as PROT_EXEC into a region but
-> that's generally not how libraries are mapped in so it won't know
-> until mprotect which is obviously too late. Unless it had some kind of
-> type key passed from userspace, it can't really do that.
+> - the entropy you provide is like 16 bit, that is really not so hard to brute
 
-Yes, thats really true. I wrote about earlier. This is the issue - =
-kernel can=E2=80=99t=20
-provide such interface thats why I try to get maximum from current mmap =
-design.=20
-May be later we could split mmap on different actions by different types =
-of=20
-memory it handles. But it will be a very long road I think.=20
+It's 16 bits per mapping.  I think that'll make enough attacks harder
+to be worthwhile.
 
->> I think it is possible  to add GUARD pages into my implementations, =
-but initially
->> problem was about entropy of address choosing. I would like to =
-resolve it step by
->> step.
->=20
-> Starting with fairly aggressive fragmentation of the address space is
-> going to be a really hard sell. The costs of a very spread out address
-> space in terms of TLB misses, etc. are unclear. Starting with enforced
-> gaps (1 page) and randomization for those wouldn't rule out having
-> finer-grained randomization, like randomly switching between different
-> regions. This needs to be cheap enough that people want to enable it,
-> and the goals need to be clearly spelled out. The goal needs to be
-> clearer than "more randomization =3D=3D good" and then accepting a =
-high
-> performance cost for that.
->=20
+> - in your patch you don’t use vm_guard at address searching, I see many roots 
+> of bugs here
 
-I want to clarify. As I know TLB caches doesn=E2=80=99t care about =
-distance between=20
-pages, since it works with pages. So in theory TLB miss is not an issue =
-here. I=20
-agree, I need to show the performance costs here. I will. Just give some =
-time=20
-please.
+Don't need to.  vm_end includes the guard pages.
 
-The enforced gaps, in my case:
-+	addr =3D get_random_long() % ((high - low) >> PAGE_SHIFT);
-+	addr =3D low + (addr << PAGE_SHIFT);
-but what you saying, entropy here should be decreased.
+> - if you unmap/remap one page inside region, field vma_guard will show head 
+> or tail pages for vma, not both; kernel don’t know how to handle it
 
-How about something like this:
-+	addr =3D get_random_long() % min(((high - low) >> PAGE_SHIFT),=20=
+There are no head pages.  The guard pages are only placed after the real end.
 
-MAX_SECURE_GAP );
-+	addr =3D high - (addr << PAGE_SHIFT);
-where MAX_SECURE_GAP is configurable. Probably with sysctl.
+> - user mode now choose entropy with PROT_GUARD macro, where did he gets it? 
+> User mode shouldn’t be responsible for entropy at all
 
-How do you like it?
-
-> I'm not dictating how things should be done, I don't have any say
-> about that. I'm just trying to discuss it.
-
-Sorry, thanks for your involvement. I=E2=80=99m really appreciate it.=20
-
-Thanks,
-Ilya
+I can't agree with that.  The user has plenty of opportunities to get
+randomness; from /dev/random is the easiest, but you could also do timing
+attacks on your own cachelines, for example.
