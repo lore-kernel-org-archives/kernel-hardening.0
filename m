@@ -1,7 +1,7 @@
-Date: Mon, 5 Mar 2018 20:17:08 +0900
+Date: Mon, 5 Mar 2018 20:17:45 +0900
 From: Jinbum Park <jinb.park7@gmail.com>
-Subject: [PATCH v2 0/2] arm: Add ARCH_HAS_FORTIFY_SOURCE
-Message-ID: <20180305111708.GA4156@pjb1027-Latitude-E5410>
+Subject: [PATCH v2 1/2] arm: mm: Define vdso_start, vdso_end as array
+Message-ID: <20180305111745.GA4193@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
@@ -9,31 +9,88 @@ To: linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-h
 Cc: gregkh@linuxfoundation.org, tglx@linutronix.de, kstewart@linuxfoundation.org, luto@amacapital.net, dsafonov@virtuozzo.com, keescook@chromium.org, will.deacon@arm.com, mark.rutland@arm.com, danielmicay@gmail.com, arnd@arndb.de, catalin.marinas@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+Define vdso_start, vdso_end as array to avoid compile-time analysis error
+for the case of built with CONFIG_FORTIFY_SOURCE.
 
-This patch series are to select ARCH_HAS_FORTIFY_SOUCE on arm.
-A lot of architectures already select ARCH_HAS_FORTIFY_SOURCE
-to support CONFIG_FORTIFY_SOURCE that detects overflows at compile-time.
-(6974f0c4555e ("include/linux/string.h:
-add the option of fortified string.h functions)
-ARM can be built and run with CONFIG_FORTIFY_SOURCE.
+and, since vdso_start, vdso_end are used in vdso.c only,
+move extern-declaration from vdso.h to vdso.c.
 
-Additionally, modify vdso.c to remove compile-error that happens
-when built arm kernel with CONFIG_FORTIFY_SOURCE.
+If kernel is built with CONFIG_FORTIFY_SOURCE,
+compile-time error happens at this code.
+- if (memcmp(&vdso_start, "\177ELF", 4))
 
-v2 : 
-Fix build error reported by kbuild test robot.
-- Add fortify_panic() in arch/arm/boot/compressed/misc.c,
-  because arch/arm/boot/compressed/* can't find that function.
+The size of "&vdso_start" is recognized as 1 byte, but n is 4,
+So that compile-time error is reported.
 
-Jinbum Park (2):
-  arm: mm: Define vdso_start, vdso_end as array
-  arm: Kconfig: Add ARCH_HAS_FORTIFY_SOURCE
-
- arch/arm/Kconfig            |  1 +
+Acked-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
+---
+v2: No changes
+---
  arch/arm/include/asm/vdso.h |  2 --
  arch/arm/kernel/vdso.c      | 12 +++++++-----
- 3 files changed, 8 insertions(+), 7 deletions(-)
+ 2 files changed, 7 insertions(+), 7 deletions(-)
 
+diff --git a/arch/arm/include/asm/vdso.h b/arch/arm/include/asm/vdso.h
+index 9c99e81..5b85889 100644
+--- a/arch/arm/include/asm/vdso.h
++++ b/arch/arm/include/asm/vdso.h
+@@ -12,8 +12,6 @@
+ 
+ void arm_install_vdso(struct mm_struct *mm, unsigned long addr);
+ 
+-extern char vdso_start, vdso_end;
+-
+ extern unsigned int vdso_total_pages;
+ 
+ #else /* CONFIG_VDSO */
+diff --git a/arch/arm/kernel/vdso.c b/arch/arm/kernel/vdso.c
+index a4d6dc0..f4dd7f9 100644
+--- a/arch/arm/kernel/vdso.c
++++ b/arch/arm/kernel/vdso.c
+@@ -39,6 +39,8 @@
+ 
+ static struct page **vdso_text_pagelist;
+ 
++extern char vdso_start[], vdso_end[];
++
+ /* Total number of pages needed for the data and text portions of the VDSO. */
+ unsigned int vdso_total_pages __ro_after_init;
+ 
+@@ -197,13 +199,13 @@ static int __init vdso_init(void)
+ 	unsigned int text_pages;
+ 	int i;
+ 
+-	if (memcmp(&vdso_start, "\177ELF", 4)) {
++	if (memcmp(vdso_start, "\177ELF", 4)) {
+ 		pr_err("VDSO is not a valid ELF object!\n");
+ 		return -ENOEXEC;
+ 	}
+ 
+-	text_pages = (&vdso_end - &vdso_start) >> PAGE_SHIFT;
+-	pr_debug("vdso: %i text pages at base %p\n", text_pages, &vdso_start);
++	text_pages = (vdso_end - vdso_start) >> PAGE_SHIFT;
++	pr_debug("vdso: %i text pages at base %p\n", text_pages, vdso_start);
+ 
+ 	/* Allocate the VDSO text pagelist */
+ 	vdso_text_pagelist = kcalloc(text_pages, sizeof(struct page *),
+@@ -218,7 +220,7 @@ static int __init vdso_init(void)
+ 	for (i = 0; i < text_pages; i++) {
+ 		struct page *page;
+ 
+-		page = virt_to_page(&vdso_start + i * PAGE_SIZE);
++		page = virt_to_page(vdso_start + i * PAGE_SIZE);
+ 		vdso_text_pagelist[i] = page;
+ 	}
+ 
+@@ -229,7 +231,7 @@ static int __init vdso_init(void)
+ 
+ 	cntvct_ok = cntvct_functional();
+ 
+-	patch_vdso(&vdso_start);
++	patch_vdso(vdso_start);
+ 
+ 	return 0;
+ }
 -- 
 1.9.1
