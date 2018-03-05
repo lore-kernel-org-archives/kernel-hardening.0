@@ -1,35 +1,105 @@
-Subject: Re: [PATCH RFC v9 2/7] x86/entry: Add STACKLEAK erasing the kernel
- stack at the end of syscalls
-References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
- <1520107232-14111-3-git-send-email-alex.popov@linux.com>
- <d968e58a-3abd-8e3c-cee3-00c19c1b6430@linux.intel.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <94f268b2-31a4-620a-86ed-325d5bb33c57@redhat.com>
-Date: Mon, 5 Mar 2018 11:43:19 -0800
+Date: Mon, 5 Mar 2018 11:47:28 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [RFC PATCH] Randomization of address chosen by mmap.
+Message-ID: <20180305194728.GB10418@bombadil.infradead.org>
+References: <55C92196-5398-4C19-B7A7-6C122CD78F32@gmail.com>
+ <20180228183349.GA16336@bombadil.infradead.org>
+ <CA+DvKQKoo1U7T_iOOLhfEf9c+K1pzD068au+kGtx0RokFFNKHw@mail.gmail.com>
+ <2CF957C6-53F2-4B00-920F-245BEF3CA1F6@gmail.com>
+ <CA+DvKQ+mrnm4WX+3cBPuoSLFHmx2Zwz8=FsEx51fH-7yQMAd9w@mail.gmail.com>
+ <20180304034704.GB20725@bombadil.infradead.org>
+ <20180304205614.GC23816@bombadil.infradead.org>
+ <7FA6631B-951F-42F4-A7BF-8E5BB734D709@gmail.com>
+ <20180305162343.GA8230@bombadil.infradead.org>
+ <EC4E37F1-C2B8-4112-8EAD-FF072602DD08@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <d968e58a-3abd-8e3c-cee3-00c19c1b6430@linux.intel.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Dave Hansen <dave.hansen@linux.intel.com>, Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, x86@kernel.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <EC4E37F1-C2B8-4112-8EAD-FF072602DD08@gmail.com>
+To: Ilya Smith <blackzert@gmail.com>
+Cc: Daniel Micay <danielmicay@gmail.com>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Michal Hocko <mhocko@suse.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Jan Kara <jack@suse.cz>, Jerome Glisse <jglisse@redhat.com>, Hugh Dickins <hughd@google.com>, Helge Deller <deller@gmx.de>, Andrea Arcangeli <aarcange@redhat.com>, Oleg Nesterov <oleg@redhat.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/05/2018 08:41 AM, Dave Hansen wrote:
-> On 03/03/2018 12:00 PM, Alexander Popov wrote:
->>   Documentation/x86/x86_64/mm.txt  |   2 +
->>   arch/Kconfig                     |  27 ++++++++++
->>   arch/x86/Kconfig                 |   1 +
->>   arch/x86/entry/entry_32.S        |  88 +++++++++++++++++++++++++++++++
->>   arch/x86/entry/entry_64.S        | 108 +++++++++++++++++++++++++++++++++++++++
->>   arch/x86/entry/entry_64_compat.S |  11 ++++
-> 
-> This is a *lot* of assembly.  I wonder if you tried at all to get more
-> of this into C or whether you just inherited the assembly from the
-> original code?
-> 
+On Mon, Mar 05, 2018 at 10:27:32PM +0300, Ilya Smith wrote:
+> > On 5 Mar 2018, at 19:23, Matthew Wilcox <willy@infradead.org> wrote:
+> > On Mon, Mar 05, 2018 at 04:09:31PM +0300, Ilya Smith wrote:
+> >> I’m analysing that approach and see much more problems:
+> >> - each time you call mmap like this, you still  increase count of vmas as my 
+> >> patch did
+> > 
+> > Umm ... yes, each time you call mmap, you get a VMA.  I'm not sure why
+> > that's a problem with my patch.  I was trying to solve the problem Daniel
+> > pointed out, that mapping a guard region after each mmap cost twice as
+> > many VMAs, and it solves that problem.
+> > 
+> The issue was in VMAs count as Daniel mentioned. 
+> The more count, the harder walk tree. I think this is fine
 
-This came up previously http://www.openwall.com/lists/kernel-hardening/2017/10/23/5
-there were concerns about trusting C to do the right thing as well as
-speed.
+The performance problem Daniel was mentioning with your patch was not
+with the number of VMAs but with the scattering of addresses across the
+page table tree.
 
-Thanks,
-Laura
+> >> - the entropy you provide is like 16 bit, that is really not so hard to brute
+> > 
+> > It's 16 bits per mapping.  I think that'll make enough attacks harder
+> > to be worthwhile.
+> 
+> Well yes, its ok, sorry. I just would like to have 32 bit entropy maximum some day :)
+
+We could put 32 bits of padding into the prot argument on 64-bit systems
+(and obviously you need a 64-bit address space to use that many bits).  The
+thing is that you can't then put anything else into those pages (without
+using MAP_FIXED).
+
+> >> - if you unmap/remap one page inside region, field vma_guard will show head 
+> >> or tail pages for vma, not both; kernel don’t know how to handle it
+> > 
+> > There are no head pages.  The guard pages are only placed after the real end.
+> 
+> Ok, we have MG where G = vm_guard, right? so when you do vm_split, 
+> you may come to situation - m1g1m2G, how to handle it? I mean when M is 
+> split with only one page inside this region. How to handle it?
+
+I thought I covered that in my earlier email.  Using one letter per page,
+and a five-page mapping with two guard pages: MMMMMGG.  Now unmap the
+fourth page, and the VMA gets split into two.  You get: MMMGMGG.
+
+> > I can't agree with that.  The user has plenty of opportunities to get
+> > randomness; from /dev/random is the easiest, but you could also do timing
+> > attacks on your own cachelines, for example.
+> 
+> I think the usual case to use randomization for any mmap or not use it at all 
+> for whole process. So here I think would be nice to have some variable 
+> changeable with sysctl (root only) and ioctl (for greedy processes).
+
+I think this functionality can just as well live inside libc as in
+the kernel.
+
+> Well, let me summary:
+> My approach chose random gap inside gap range with following strings:
+> 
+> +	addr = get_random_long() % ((high - low) >> PAGE_SHIFT);
+> +	addr = low + (addr << PAGE_SHIFT);
+> 
+> Could be improved limiting maximum possible entropy in this shift.
+> To prevent situation when attacker may massage allocations and 
+> predict chosen address, I randomly choose memory region. I’m still
+> like my idea, but not going to push it anymore, since you have yours now.
+> 
+> Your idea just provide random non-mappable and non-accessable offset
+> from best-fit region. This consumes memory (1GB gap if random value 
+> is 0xffff). But it works and should work faster and should resolve the issue.
+
+umm ... 64k * 4k is a 256MB gap, not 1GB.  And it consumes address space,
+not memory.
+
+> My point was that current implementation need to be changed and you
+> have your own approach for that. :)
+> Lets keep mine in the mind till better times (or worse?) ;)
+> Will you finish your approach and upstream it?
+
+I'm just putting it out there for discussion.  If people think this is
+the right approach, then I'm happy to finish it off.  If the consensus
+is that we should randomly pick addresses instead, I'm happy if your
+approach gets merged.
