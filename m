@@ -1,137 +1,39 @@
+Date: Mon, 5 Mar 2018 20:17:08 +0900
+From: Jinbum Park <jinb.park7@gmail.com>
+Subject: [PATCH v2 0/2] arm: Add ARCH_HAS_FORTIFY_SOURCE
+Message-ID: <20180305111708.GA4156@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
-In-Reply-To: <CA+55aFz-AD8rWb66rjN-YhAtPXukMiGSFfW3nBMCp8k1RYUvOQ@mail.gmail.com>
-References: <CAGXu5jLc_A1w4FM8FvQHGSPjLfOu80L_vbt_FkcE6+Bh_XMjxw@mail.gmail.com>
- <6be06ce5-87e6-0d9d-55b9-6c70c3578ecf@maciej.szmigiero.name> <CA+55aFz-AD8rWb66rjN-YhAtPXukMiGSFfW3nBMCp8k1RYUvOQ@mail.gmail.com>
-From: Masahiro Yamada <yamada.masahiro@socionext.com>
-Date: Mon, 5 Mar 2018 18:27:44 +0900
-Message-ID: <CAK7LNASKHOb5GNPu9XHWxyq-iucxTRkw99_7wL4zgm5HNc6_SA@mail.gmail.com>
-Subject: Re: RANDSTRUCT structs need linux/compiler_types.h (Was: [nfsd4]
- potentially hardware breaking regression in 4.14-rc and 4.13.11)
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: "Maciej S. Szmigiero" <mail@maciej.szmigiero.name>, Kees Cook <keescook@chromium.org>, Patrick McLean <chutzpah@gentoo.org>, Emese Revfy <re.emese@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Bruce Fields <bfields@redhat.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux NFS Mailing List <linux-nfs@vger.kernel.org>, Thorsten Leemhuis <regressions@leemhuis.info>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: gregkh@linuxfoundation.org, tglx@linutronix.de, kstewart@linuxfoundation.org, luto@amacapital.net, dsafonov@virtuozzo.com, keescook@chromium.org, will.deacon@arm.com, mark.rutland@arm.com, danielmicay@gmail.com, arnd@arndb.de, catalin.marinas@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Linus,
+Hi,
 
-2018-02-22 7:47 GMT+09:00 Linus Torvalds <torvalds@linux-foundation.org>:
-> On Wed, Feb 21, 2018 at 2:19 PM, Maciej S. Szmigiero
-> <mail@maciej.szmigiero.name> wrote:
->>
->> One can see that offsets used to access various members of struct path a=
-re
->> different, and also that the original file from step 3 contains an objec=
-t
->> named "__randomize_layout".
->
-> Whee.
->
-> Thanks for root-causing this issue, and this syntax of ours is clearly
-> *much* too fragile.
->
-> We actually have similar issues with some of our other attributes,
-> where out nice "helpful" attribute shorthand can end up being just
-> silently interpreted as a variable name if they aren't defined in
-> time.
->
-> For most of our other attributes, it just doesn't matter all that much
-> if some user doesn't happen to see the attribute. For
-> __randomize_layout, it's obviously very fatal, and silently just
-> generates crazy code.
->
-> I'm not entirely sure what the right solution is, because it's
-> obviously much too easy to miss some #include by mistake. It's easy to
-> say "you should always include the proper header", but if a failure to
-> do so doesn't end up with any warnings or errors, but just silent bad
-> code generation, it's much too fragile.
->
-> I wonder if we could change the syntax of that "__randomize_layout"
-> thing. Some of our related helper macros (ie
-> randomized_struct_fields_start/end) don't have the same problem,
-> because if you don't have the define for them, the compiler will
-> complain about bad syntax.
->
-> And other attribute specifiers we encourage people to put in other
-> parts of the type, like __user etc, so they don't have that same
-> parsing issue.
->
-> I guess one _extreme_ fix for this would be to put
->
->     extern struct nostruct __randomize_layout;
->
-> in our include/linux/kconfig.h, which I think we end up always
-> including first thanks to having it on the command line.
->
-> Because if you do that, you actually get an error:
->
->     CC [M]  fs/nfsd/nfs4xdr.o
->   In file included from ./include/linux/fs_struct.h:5:0,
->                    from fs/nfsd/nfs4xdr.c:36:
->   ./include/linux/path.h:11:3: error: conflicting types for =E2=80=98__ra=
-ndomize_layout=E2=80=99
->    } __randomize_layout;
->      ^~~~~~~~~~~~~~~~~~
->   In file included from <command-line>:0:0:
->   ././include/linux/kconfig.h:8:28: note: previous declaration of
-> =E2=80=98__randomize_layout=E2=80=99 was here
->        extern struct nostruct __randomize_layout;
->                               ^~~~~~~~~~~~~~~~~~
->   make[1]: *** [scripts/Makefile.build:317: fs/nfsd/nfs4xdr.o] Error 1
->
-> and we would have figured this out immediately.
->
-> Broken example patch appended, in case somebody wants to play with
-> something like this or comes up with a better model entirely..
->
->                Linus
->
+This patch series are to select ARCH_HAS_FORTIFY_SOUCE on arm.
+A lot of architectures already select ARCH_HAS_FORTIFY_SOURCE
+to support CONFIG_FORTIFY_SOURCE that detects overflows at compile-time.
+(6974f0c4555e ("include/linux/string.h:
+add the option of fortified string.h functions)
+ARM can be built and run with CONFIG_FORTIFY_SOURCE.
 
+Additionally, modify vdso.c to remove compile-error that happens
+when built arm kernel with CONFIG_FORTIFY_SOURCE.
 
-Sorry for chiming in late.
+v2 : 
+Fix build error reported by kbuild test robot.
+- Add fortify_panic() in arch/arm/boot/compressed/misc.c,
+  because arch/arm/boot/compressed/* can't find that function.
 
-I noticed this thread today,
-honestly, the commit made me upset.
+Jinbum Park (2):
+  arm: mm: Define vdso_start, vdso_end as array
+  arm: Kconfig: Add ARCH_HAS_FORTIFY_SOURCE
 
+ arch/arm/Kconfig            |  1 +
+ arch/arm/include/asm/vdso.h |  2 --
+ arch/arm/kernel/vdso.c      | 12 +++++++-----
+ 3 files changed, 8 insertions(+), 7 deletions(-)
 
-Can I suggest another way to make it less fragile?
-__attribute((...)) can be placed after 'struct'.
-
-
-So, we can write:
-
-
-struct __randomize_layout path {
-        struct vfsmount *mnt;
-        struct dentry *dentry;
-};
-
-
-  instead of
-
-
-struct path {
-        struct vfsmount *mnt;
-        struct dentry *dentry;
-} __randomize_layout;
-
-
-
-If we force the former notation,
-the undefined __randomize_layout results in a build error
-instead of silent broken code generation.
-
-
-It is true somebody can still place
-__randomize_layout after the closing brace,
-but can we check this by coccicheck or checkpatch.pl?
-(we can describe it in coding style documentation, of course)
-
-
-IMHO, we should not (ab)use include/linux/kconfig.h
-to bring in misc things.
-
-
---=20
-Best Regards
-Masahiro Yamada
+-- 
+1.9.1
