@@ -1,62 +1,175 @@
+Subject: Re: [PATCH bpf-next v8 00/11] Landlock LSM: Toward unprivileged
+ sandboxing
+References: <20180227004121.3633-1-mic@digikod.net>
+ <CALCETrV3OZb70o83uOG437PubwBwaUJ6SKQucq_7g1BuBOmxzg@mail.gmail.com>
+ <2e06621c-08e9-dc12-9b6e-9c09d5d8f458@digikod.net>
+ <CALCETrWnJ7WkkfiymyahQd7YqO0KXP4mG1pRMq7fp8LG8Bwtcw@mail.gmail.com>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <a70b41ee-78cb-52cc-152c-ac5e43b7e45c@digikod.net>
+Date: Tue, 6 Mar 2018 23:25:31 +0100
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CAK8P3a12YVBK6rtXwubW-0W3XwEbF+BU21MN1Fx8OrA4-2S7vw@mail.gmail.com>
-References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
- <1520107232-14111-5-git-send-email-alex.popov@linux.com> <b52a2cca-cb5c-d47f-131e-7db297f78958@linux.intel.com>
- <CAGXu5jLRpJ7ktij4TpaSG-RZLOou=RWyY_=jTMNE87+E4Xp2Ag@mail.gmail.com>
- <CA+55aFxEAYyrUkApo-dtZvxcYbvWBZJpUytjbm7e2wruTvbYjQ@mail.gmail.com>
- <CAGXu5j+-AjMKxOYDOpbmJ4X357JRGWViAOmqyqd6bu_w47mffw@mail.gmail.com>
- <20180306080855.phtgl2bzqm5hnthu@gmail.com> <CA+DvKQ+uQD0qyMvwqaRd_sMLBHE5q9pcfOQ+VknBW2==q0NJJA@mail.gmail.com>
- <CA+55aFwgmTaaA8QqMGm+VzRNbpKxDXbq2MtKyayyq8f+=PqWqA@mail.gmail.com>
- <CAKv+Gu_VaO39h8trgsNhU4JEVkdgoFWGoovBdmAL_YsHe7Nq1Q@mail.gmail.com>
- <CA+55aFxkzxhGaK=sp2CqM1YFEE=fL33wC1TR4KKqsRqPGto6yA@mail.gmail.com>
- <CAK8P3a0bWWZbFW5AFag=vRKC=PbCbwaLNPNiyk1ziJk=fTe0nQ@mail.gmail.com>
- <CA+55aFxTdT11pxKL7oscN=2bu8wkiZbZgDfQd_Emqk1Z1Qqb7A@mail.gmail.com>
- <CAK8P3a3BA2BueHOuOiszEzkBtA80QDdo3wgX+62=KXCdi9wScQ@mail.gmail.com>
- <CA+55aFxeJ-6JB-DeZavyzeAYrcdjM=5tMM5dMxvNgT5WJLfQMQ@mail.gmail.com> <CAK8P3a12YVBK6rtXwubW-0W3XwEbF+BU21MN1Fx8OrA4-2S7vw@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Tue, 6 Mar 2018 14:24:53 -0800
-Message-ID: <CA+55aFy-imLQ9WeA880qR_DqKTpCiH2-3ou6_NScBGOKGE=-fQ@mail.gmail.com>
-Subject: Re: [PATCH RFC v9 4/7] x86/entry: Erase kernel stack in syscall_trace_enter()
-Content-Type: text/plain; charset="UTF-8"
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Daniel Micay <danielmicay@gmail.com>, Ingo Molnar <mingo@kernel.org>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@linux.intel.com>, Alexander Popov <alex.popov@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <CALCETrWnJ7WkkfiymyahQd7YqO0KXP4mG1pRMq7fp8LG8Bwtcw@mail.gmail.com>
+Content-Type: multipart/signed; micalg=pgp-sha512;
+ protocol="application/pgp-signature";
+ boundary="PvZReyUi33n28IxqiwHX1q5FTHMFGG1i5"
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 6, 2018 at 2:09 PM, Arnd Bergmann <arnd@arndb.de> wrote:
-> On Tue, Mar 6, 2018 at 10:29 PM, Linus Torvalds
-> <torvalds@linux-foundation.org> wrote:
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--PvZReyUi33n28IxqiwHX1q5FTHMFGG1i5
+Content-Type: multipart/mixed; boundary="sEcIHHJqCS6B4cMrH9dqyVOUmWwcXc4Pq";
+ protected-headers="v1"
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>,
+ Arnaldo Carvalho de Melo <acme@kernel.org>,
+ Casey Schaufler <casey@schaufler-ca.com>,
+ Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
+ <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>,
+ "Eric W . Biederman" <ebiederm@xmission.com>,
+ James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
+ Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>,
+ Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>,
+ Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>,
+ Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>,
+ Thomas Graf <tgraf@suug.ch>, Tycho Andersen <tycho@tycho.ws>,
+ Will Drewry <wad@chromium.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ Linux API <linux-api@vger.kernel.org>,
+ LSM List <linux-security-module@vger.kernel.org>,
+ Network Development <netdev@vger.kernel.org>
+Message-ID: <a70b41ee-78cb-52cc-152c-ac5e43b7e45c@digikod.net>
+Subject: Re: [PATCH bpf-next v8 00/11] Landlock LSM: Toward unprivileged
+ sandboxing
+References: <20180227004121.3633-1-mic@digikod.net>
+ <CALCETrV3OZb70o83uOG437PubwBwaUJ6SKQucq_7g1BuBOmxzg@mail.gmail.com>
+ <2e06621c-08e9-dc12-9b6e-9c09d5d8f458@digikod.net>
+ <CALCETrWnJ7WkkfiymyahQd7YqO0KXP4mG1pRMq7fp8LG8Bwtcw@mail.gmail.com>
+In-Reply-To: <CALCETrWnJ7WkkfiymyahQd7YqO0KXP4mG1pRMq7fp8LG8Bwtcw@mail.gmail.com>
+
+--sEcIHHJqCS6B4cMrH9dqyVOUmWwcXc4Pq
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: quoted-printable
+
+
+
+On 28/02/2018 00:09, Andy Lutomirski wrote:
+> On Tue, Feb 27, 2018 at 10:03 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod=
+=2Enet> wrote:
 >>
->> Yes, it can obviously generate some extra code for the "pass pointer
->> to uninitialized scalar around to be initialized", where it can now
->> make that stack slot be initialized to zero - so it can generate extra
->> code. But disabling an optimization?
+>> On 27/02/2018 05:36, Andy Lutomirski wrote:
+>>> On Tue, Feb 27, 2018 at 12:41 AM, Micka=C3=ABl Sala=C3=BCn <mic@digik=
+od.net> wrote:
+>>>> Hi,
+>>>>
+>=20
+>>>>
+>>>> ## Why use the seccomp(2) syscall?
+>>>>
+>>>> Landlock use the same semantic as seccomp to apply access rule
+>>>> restrictions. It add a new layer of security for the current process=
+
+>>>> which is inherited by its children. It makes sense to use an unique
+>>>> access-restricting syscall (that should be allowed by seccomp filter=
+s)
+>>>> which can only drop privileges. Moreover, a Landlock rule could come=
+
+>>>> from outside a process (e.g.  passed through a UNIX socket). It is t=
+hen
+>>>> useful to differentiate the creation/load of Landlock eBPF programs =
+via
+>>>> bpf(2), from rule enforcement via seccomp(2).
+>>>
+>>> This seems like a weak argument to me.  Sure, this is a bit different=
+
+>>> from seccomp(), and maybe shoving it into the seccomp() multiplexer i=
+s
+>>> awkward, but surely the bpf() multiplexer is even less applicable.
 >>
->> What did you have in mind?
->
-> The type of optimization that causes my earlier example
+>> I think using the seccomp syscall is fine, and everyone agreed on it.
+>>
+>=20
+> Ah, sorry, I completely misread what you wrote.  My apologies.  You
+> can disregard most of my email.
+>=20
+>>
+>>>
+>>> Also, looking forward, I think you're going to want a bunch of the
+>>> stuff that's under consideration as new seccomp features.  Tycho is
+>>> working on a "user notifier" feature for seccomp where, in addition t=
+o
+>>> accepting, rejecting, or kicking to ptrace, you can send a message to=
 
-That's not a  valid "optimization". It doesn't make correct code run
-faster. It just makes incorrect code result in incorrect results.
+>>> the creator of the filter and wait for a reply.  I think that Landloc=
+k
+>>> will want exactly the same feature.
+>>
+>> I don't think why this may be useful at all her. Landlock does not
+>> filter at the syscall level but handles kernel object and actions as
+>> does an LSM. That is the whole purpose of Landlock.
+>=20
+> Suppose I'm writing a container manager.  I want to run "mount" in the
+> container, but I don't want to allow moun() in general and I want to
+> emulate certain mount() actions.  I can write a filter that catches
+> mount using seccomp and calls out to the container manager for help.
+> This isn't theoretical -- Tycho wants *exactly* this use case to be
+> supported.
 
-See my previous email about _why_ it does it, but the point remains:
-the "optimization" is not actually an optimization. It's just "garbage
-in, garbage out". Speed doesn't matter for garbage.
+Well, I think this use case should be handled with something like
+LD_PRELOAD and a helper library. FYI, I did something like this:
+https://github.com/stemjail/stemshim
 
-In fact, see my explanation for _why_ that optimization happens to
-understand why adding an iniitializer doesn't make it go slower, but
-simply makes ie well-defined and thus makes the optimization go away.
+Otherwise, we should think about enabling a process to (dynamically)
+extend/patch the vDSO (similar to LD_PRELOAD but at the syscall level
+and works with static binaries) for a subset of processes (the same way
+seccomp filters are inherited). It may be more powerful and flexible
+than extending the kernel/seccomp to patch (buggy?) userland.
 
-Really, only stupid compiler people think it's an "optimization" to
-take advantage of undefined behavior. Sure, garbage code generation
-can run faster, but that's not "optimization".
+>=20
+> But using seccomp for this is indeed annoying.  It would be nice to
+> use Landlock's ability to filter based on the filesystem type, for
+> example.  So Tycho could write a Landlock rule like:
+>=20
+> bool filter_mount(...)
+> {
+>   if (path needs emulation)
+>     call_user_notifier();
+> }
+>=20
+> And it should work.
+>=20
+> This means that, if both seccomp user notifiers and Landlock make it
+> upstream, then there should probably be a way to have a user notifier
+> bound to a seccomp filter and a set of landlock filters.
+>=20
 
-We want to very much avoid those kinds of people, and those kinds of
-optimizations. It's very much why we disable strict aliasing etc -
-because the whole optimization is purely based on taking advantage of
-undefined behavior.
+Using seccomp filters and Landlock programs may be powerful. However,
+for this use case, I think a *post-syscall* vDSO-like (which could get
+some data returned by a Landlock program) may be much more flexible
+(with less kernel code). What is needed here is a way to know the kernel
+semantic (Landlock) and a way to patch userland without patching its
+code (vDSO-like).
 
-It's shit. Don't call it anything else. Getting rid of that
-optimization is a *good* thing, not a bad thing.
 
-                 Linus
+--sEcIHHJqCS6B4cMrH9dqyVOUmWwcXc4Pq--
+
+--PvZReyUi33n28IxqiwHX1q5FTHMFGG1i5
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAlqfFVsACgkQIt7+33O9
+apXBpgf+IexCxH4mYe+h7ZXCYbbX2SNVuELlcdHdOc0/nWAtQp1iE60Q5cerYFzd
+2GyIc2aNTXQo8bxcvUIubzGPmvIiDkuAB5FvaDsjgkC/02YisW6N9QegxMx7duD6
+QtHTiW8LqIektN1IkNstUXn6M796ToUjMMrJo+Mh/hyUV488wepbsPNvRQwTD9g8
+sbvC1CVnQQtjqPNkgqaI1uA4n3hRB75a+9JH8tRu/Z7CP9EiTpqVuJhx02R7jO8P
+k2aMZXLNbdO3p14nk67gL/TMhLIIPLEcVWICjmDexGMY+o3ehARIYV+KqEXVbzO4
+rgQ9zEHUngRX4523Yf46CtEZUgn+3A==
+=i3OW
+-----END PGP SIGNATURE-----
+
+--PvZReyUi33n28IxqiwHX1q5FTHMFGG1i5--
