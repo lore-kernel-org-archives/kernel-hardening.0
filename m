@@ -1,106 +1,32 @@
-Subject: Re: [PATCH 1/7] genalloc: track beginning of allocations
-References: <20180228200620.30026-1-igor.stoppa@huawei.com>
- <20180228200620.30026-2-igor.stoppa@huawei.com>
- <6a31164a-af3f-91ea-d385-7c6d1888b28c@gmail.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <05bde73d-6c0a-8309-4150-7225862c28e0@huawei.com>
-Date: Tue, 6 Mar 2018 19:39:41 +0200
 MIME-Version: 1.0
-In-Reply-To: <6a31164a-af3f-91ea-d385-7c6d1888b28c@gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 8bit
-To: J Freyensee <why2jjj.linux@gmail.com>, david@fromorbit.com, willy@infradead.org, keescook@chromium.org, mhocko@kernel.org
-Cc: labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CA+55aFyknMsiT3efAeOyf32O2NJjD9vt0XxtAegFVmmn+pvxgA@mail.gmail.com>
+References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
+ <1520107232-14111-5-git-send-email-alex.popov@linux.com> <b52a2cca-cb5c-d47f-131e-7db297f78958@linux.intel.com>
+ <CAGXu5jLRpJ7ktij4TpaSG-RZLOou=RWyY_=jTMNE87+E4Xp2Ag@mail.gmail.com>
+ <CA+55aFxEAYyrUkApo-dtZvxcYbvWBZJpUytjbm7e2wruTvbYjQ@mail.gmail.com>
+ <CAGXu5j+-AjMKxOYDOpbmJ4X357JRGWViAOmqyqd6bu_w47mffw@mail.gmail.com>
+ <CA+55aFxpzgQiJg8XyQTH-hDHd7A0jRAtOJ8b6krrvNDQX96Vrw@mail.gmail.com>
+ <CAGXu5jJaTR25zZp5sGqc6m3nv3AunYhEZhxtB_JuP2WFbv_pfg@mail.gmail.com> <CA+55aFyknMsiT3efAeOyf32O2NJjD9vt0XxtAegFVmmn+pvxgA@mail.gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Tue, 6 Mar 2018 17:58:26 +0000
+Message-ID: <CALCETrWpt3ckn0jpDS_J7Da053-gi27ddbK8zEBicpeFWuhP_w@mail.gmail.com>
+Subject: Re: [PATCH RFC v9 4/7] x86/entry: Erase kernel stack in syscall_trace_enter()
+Content-Type: text/plain; charset="UTF-8"
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@linux.intel.com>, Alexander Popov <alex.popov@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Mar 6, 2018 at 4:30 AM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Mon, Mar 5, 2018 at 4:56 PM, Kees Cook <keescook@chromium.org> wrote:
+>> On Mon, Mar 5, 2018 at 1:40 PM, Linus Torvalds
+>> <torvalds@linux-foundation.org> wrote:
+>
+> I was actually hoping that the clang people would get rid of those,
+> but they only seemed to care about VLA's in structures, not about them
+> in general ;(
+>
+> I detest VLA's, we really shouldn't use them. I'm sorry we have any.
 
-
-On 05/03/2018 21:00, J Freyensee wrote:
-> .
-> .
-> 
-> 
-> On 2/28/18 12:06 PM, Igor Stoppa wrote:
->> +
->> +/**
->> + * gen_pool_dma_alloc() - allocate special memory from the pool for DMA usage
->> + * @pool: pool to allocate from
->> + * @size: number of bytes to allocate from the pool
->> + * @dma: dma-view physical address return value.  Use NULL if unneeded.
->> + *
->> + * Allocate the requested number of bytes from the specified pool.
->> + * Uses the pool allocation function (with first-fit algorithm by default).
->> + * Can not be used in NMI handler on architectures without
->> + * NMI-safe cmpxchg implementation.
->> + *
->> + * Return:
->> + * * address of the memory allocated	- success
->> + * * NULL				- error
->> + */
->> +void *gen_pool_dma_alloc(struct gen_pool *pool, size_t size, dma_addr_t *dma);
->> +
-> 
-> OK, so gen_pool_dma_alloc() is defined here, which believe is the API 
-> line being drawn for this series.
-> 
-> so,
-> .
-> .
-> .
->>
->>   
->>   /**
->> - * gen_pool_dma_alloc - allocate special memory from the pool for DMA usage
->> + * gen_pool_dma_alloc() - allocate special memory from the pool for DMA usage
->>    * @pool: pool to allocate from
->>    * @size: number of bytes to allocate from the pool
->>    * @dma: dma-view physical address return value.  Use NULL if unneeded.
->> @@ -342,14 +566,15 @@ EXPORT_SYMBOL(gen_pool_alloc_algo);
->>    * Uses the pool allocation function (with first-fit algorithm by default).
->>    * Can not be used in NMI handler on architectures without
->>    * NMI-safe cmpxchg implementation.
->> + *
->> + * Return:
->> + * * address of the memory allocated	- success
->> + * * NULL				- error
->>    */
->>   void *gen_pool_dma_alloc(struct gen_pool *pool, size_t size, dma_addr_t *dma)
->>   {
->>   	unsigned long vaddr;
->>   
->> -	if (!pool)
->> -		return NULL;
->> -
-> why is this being removed?  I don't believe this code was getting 
-> removed from your v17 series patches.
-
-Because, as Matthew Wilcox pointed out [1] (well, that's how I
-understood it) de-referencing a NULL pointer will cause the kernel to
-complain loudly.
-
-Where is the NULL pointer coming from?
-
-a) from a bug in the user of the API - in that case it will be noticed,
-reported and fixed, that is how also other in-kernel APIs work
-
-b) from an attacker - it will still trigger an error from the kernel,
-but it cannot really do much else, besides crashing repeatedly and
-causing a DOS. However, there are so many other places that could be
-under similar attack, that it doesn't seem to make a difference having a
-check here only.
-
-If the value was coming from userspace, that would be a completely
-different case and some sort of sanitation would be mandatory.
-
-> Otherwise, looks good,
-> 
-> Reviewed-by: Jay Freyensee <why2jjj.linux@gmail.com>
-
-thanks
-
-
-[1] http://www.openwall.com/lists/kernel-hardening/2018/02/26/16
-
-
---
-igor
+Then we need to fix our abysmal synchronous crypto API, which, AFAICT,
+is the primary user of on-stack VLAs in the kernel.
