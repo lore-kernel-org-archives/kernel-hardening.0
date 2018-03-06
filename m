@@ -1,85 +1,63 @@
-From: Jiri Slaby <jslaby@suse.cz>
-Subject: [PATCH v2 stable-4.4] x86/syscall: Sanitize syscall table de-references under speculation fix
-Date: Wed,  7 Mar 2018 08:56:23 +0100
-Message-Id: <20180307075623.12336-1-jslaby@suse.cz>
-In-Reply-To: <0020b336-3cc4-a4b6-ef22-6def428a5e79@suse.cz>
-References: <0020b336-3cc4-a4b6-ef22-6def428a5e79@suse.cz>
-To: gregkh@linuxfoundation.org
-Cc: stable@vger.kernel.org, Jiri Slaby <jslaby@suse.cz>, Linus Torvalds <torvalds@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, alan@linux.intel.com, Jinpu Wang <jinpu.wang@profitbricks.com>
+Date: Tue, 6 Mar 2018 17:52:11 -0500
+From: Steven Rostedt <rostedt@goodmis.org>
+Subject: Re: [PATCH RFC v9 4/7] x86/entry: Erase kernel stack in
+ syscall_trace_enter()
+Message-ID: <20180306175211.5584cc28@vmware.local.home>
+In-Reply-To: <CA+55aFyuQZ-cYxPeGF2VJu2GjzznQTua6sVBi4+CFdUi+=+Ajw@mail.gmail.com>
+References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
+	<CA+55aFxEAYyrUkApo-dtZvxcYbvWBZJpUytjbm7e2wruTvbYjQ@mail.gmail.com>
+	<CAGXu5j+-AjMKxOYDOpbmJ4X357JRGWViAOmqyqd6bu_w47mffw@mail.gmail.com>
+	<20180306080855.phtgl2bzqm5hnthu@gmail.com>
+	<CA+DvKQ+uQD0qyMvwqaRd_sMLBHE5q9pcfOQ+VknBW2==q0NJJA@mail.gmail.com>
+	<CA+55aFwgmTaaA8QqMGm+VzRNbpKxDXbq2MtKyayyq8f+=PqWqA@mail.gmail.com>
+	<CAKv+Gu_VaO39h8trgsNhU4JEVkdgoFWGoovBdmAL_YsHe7Nq1Q@mail.gmail.com>
+	<CA+55aFxkzxhGaK=sp2CqM1YFEE=fL33wC1TR4KKqsRqPGto6yA@mail.gmail.com>
+	<CAK8P3a0bWWZbFW5AFag=vRKC=PbCbwaLNPNiyk1ziJk=fTe0nQ@mail.gmail.com>
+	<CA+55aFxTdT11pxKL7oscN=2bu8wkiZbZgDfQd_Emqk1Z1Qqb7A@mail.gmail.com>
+	<20180306163616.7e3b6e0e@vmware.local.home>
+	<CA+55aFze-do7sAvg1=z=Yb4p8J2EJ5Eyr6MLdMbgQKwMrO5hxQ@mail.gmail.com>
+	<CA+55aFyv4wDxLQDbzB14HgW8ddu-w2VFteh5JQ57Jkw46mCVAw@mail.gmail.com>
+	<20180306172927.7a975cee@vmware.local.home>
+	<CA+55aFyuQZ-cYxPeGF2VJu2GjzznQTua6sVBi4+CFdUi+=+Ajw@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Daniel Micay <danielmicay@gmail.com>, Ingo Molnar <mingo@kernel.org>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@linux.intel.com>, Alexander Popov <alex.popov@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In 4.4.118, we have commit c8961332d6da (x86/syscall: Sanitize syscall
-table de-references under speculation), which is a backport of upstream
-commit 2fbd7af5af86. But it fixed only the C part of the upstream patch
--- the IA32 sysentry. So it ommitted completely the assembly part -- the
-64bit sysentry.
+On Tue, 6 Mar 2018 14:41:55 -0800
+Linus Torvalds <torvalds@linux-foundation.org> wrote:
 
-Fix that in this patch by explicit array_index_mask_nospec written in
-assembly. The same was used in lib/getuser.S.
+> I'm literally telling you that lack of variable initialization is
+> almost purely a bad thing. C would be a safer language, with less
+> undefined behavior, if it just made the initialization of automatic
+> variables be something you cannot avoid.
 
-However, to have "sbb" working properly, we have to switch from "cmp"
-against (NR_syscalls-1) to (NR_syscalls), otherwise the last syscall
-number would be "and"ed by 0. It is because the original "ja" relies on
-"CF" or "ZF", but we rely only on "CF" in "sbb". That means: switch to
-"jae" conditional jump too.
+I get your point. Basically you are saying that the language should
+have forced all local variables to be initialized to zero in the spec,
+and the compiler is free to optimize that initialization out if the
+variable is always initialized first.
 
-Final note: use rcx for mask as this is exactly what is overwritten by
-the 4th syscall argument (r10) right after.
+Just like it would optimize the below.
 
-Reported-by: Jan Beulich <JBeulich@suse.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Dan Williams <dan.j.williams@intel.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: linux-arch@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com
-Cc: gregkh@linuxfoundation.org
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: alan@linux.intel.com
-Cc: Jinpu Wang <jinpu.wang@profitbricks.com>
-Signed-off-by: Jiri Slaby <jslaby@suse.cz>
----
- arch/x86/entry/entry_64.S | 16 ++++++++++------
- 1 file changed, 10 insertions(+), 6 deletions(-)
+int g(int c)
+{
+	int i = 0;
 
-diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index a03b22c615d9..59a4e1604a36 100644
---- a/arch/x86/entry/entry_64.S
-+++ b/arch/x86/entry/entry_64.S
-@@ -178,12 +178,14 @@ GLOBAL(entry_SYSCALL_64_after_swapgs)
- 	jnz	tracesys
- entry_SYSCALL_64_fastpath:
- #if __SYSCALL_MASK == ~0
--	cmpq	$__NR_syscall_max, %rax
-+	cmpq	$NR_syscalls, %rax
- #else
- 	andl	$__SYSCALL_MASK, %eax
--	cmpl	$__NR_syscall_max, %eax
-+	cmpl	$NR_syscalls, %eax
- #endif
--	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
-+	jae	1f				/* return -ENOSYS (already in pt_regs->ax) */
-+	sbb	%rcx, %rcx			/* array_index_mask_nospec() */
-+	and	%rcx, %rax
- 	movq	%r10, %rcx
- #ifdef CONFIG_RETPOLINE
- 	movq	sys_call_table(, %rax, 8), %rax
-@@ -276,12 +278,14 @@ tracesys_phase2:
- 	RESTORE_C_REGS_EXCEPT_RAX
- 	RESTORE_EXTRA_REGS
- #if __SYSCALL_MASK == ~0
--	cmpq	$__NR_syscall_max, %rax
-+	cmpq	$NR_syscalls, %rax
- #else
- 	andl	$__SYSCALL_MASK, %eax
--	cmpl	$__NR_syscall_max, %eax
-+	cmpl	$NR_syscalls, %eax
- #endif
--	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
-+	jae	1f				/* return -ENOSYS (already in pt_regs->ax) */
-+	sbb	%rcx, %rcx			/* array_index_mask_nospec() */
-+	and	%rcx, %rax
- 	movq	%r10, %rcx			/* fixup for C */
- #ifdef CONFIG_RETPOLINE
- 	movq	sys_call_table(, %rax, 8), %rax
--- 
-2.16.2
+	if (c < 10)
+		i = 1;
+	else
+		i = 2;
+	return i;
+};
+
+There's no reason to initialize i to zero because it will never return
+zero. But what you are saying is to make that implicit by just
+declaring 'i'.
+
+Other languages do this, and you are right, I don't expect warnings to
+appear in  those. I guess I've grown so accustomed to this "undefined
+behavior" it's part of what I just expect.
+
+-- Steve
