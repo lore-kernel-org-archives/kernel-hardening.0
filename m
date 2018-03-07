@@ -1,88 +1,47 @@
-Date: Thu, 8 Mar 2018 09:28:01 +1100
-From: "Tobin C. Harding" <tobin@apporbit.com>
-Subject: Re: [RFC 2/2] lustre: use VLA_SAFE
-Message-ID: <20180307222801.GH11750@eros>
-References: <1520400451-11475-1-git-send-email-me@tobin.cc>
- <1520400451-11475-3-git-send-email-me@tobin.cc>
- <CAGXu5jKgQsg8e4N2oqZc6g6EdvcEA45hoK8Gu63=bwNuJwZrig@mail.gmail.com>
- <20180307101014.GG11750@eros>
- <87efkveezw.fsf@rasmusvillemoes.dk>
+Date: Wed, 7 Mar 2018 15:07:14 -0800
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH] vsprintf: Remove accidental VLA usage
+Message-ID: <20180307230714.GA20797@beast>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <87efkveezw.fsf@rasmusvillemoes.dk>
-To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Cc: Kees Cook <keescook@chromium.org>, "Tobin C. Harding" <me@tobin.cc>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Jonathan Corbet <corbet@lwn.net>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, "Steven Rostedt (VMware)" <rostedt@goodmis.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, "Gustavo A. R. Silva" <gustavo@embeddedor.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 07, 2018 at 10:45:55PM +0100, Rasmus Villemoes wrote:
-> On Wed, Mar 07 2018, "Tobin C. Harding" <tobin@apporbit.com> wrote:
-> 
-> > On Tue, Mar 06, 2018 at 09:46:02PM -0800, Kees Cook wrote:
-> >> On Tue, Mar 6, 2018 at 9:27 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> >> > Currently lustre uses a VLA to store a string on the stack.  We can use
-> >> > the newly define VLA_SAFE macro to make this declaration safer.
-> >> >
-> >> > Use VLA_SAFE to declare VLA.
-> >> 
-> >> VLA_SAFE implements a max, which is nice, but I think we're just
-> >> digging ourselves into a bigger hole with this, since now all the
-> >> maxes must be validated (which isn't done here, what happens if
-> >> VLA_DEFAULT_MAX is smaller than the strlen() math? We'll overflow the
-> >> stack buffer in the later sprintf).
-> >
-> > ok, lets drop this.
-> >
-> > Memory on the stack is always going to be faster than memory from the
-> > slub allocator, right?  Do you think using kasprintf() is going to be
-> > acceptable? Isn't it only going to be acceptable on non-time critical
-> > paths?
-> 
-> Probably anything that does string formatting to begin with (using any
-> *printf function) is not performance critical.
+The "sym" calculation is actually a fixed size, but since the max()
+macro uses some extensive tricks for safety, it ends up looking like a
+variable size. This replaces max() with a simple max macro which is
+sufficient for the calculation of the array size.
 
-Oh cool, good metric. thanks.
+Seen with -Wvla. Fixed as part of the directive to remove all VLAs from
+the kernel: https://lkml.org/lkml/2018/3/7/621
 
-> That e.g. applies to the
-> lustre case. It's true that kasprintf() ends up doing the vsnprintf()
-> twice, but I haven't yet seen an example where that is really a
-> problem. Should it actually come up, I've thought about a few things one
-> might do to partly mitigate that:
-> 
-> (1) Use that the vast majority of kasprintf() results are short'ish
-> strings, so instead of letting the first vsnprintf() write nothing at
-> all, allocate a smallish (32/64) stack buffer and do the first
-> vsnprintf() to that - on "success", just kmemdup() the result instead of
-> doing the formatting again.
-> 
-> (2) Add a
-> 
->   char *kasprintf_buf(buf, len, gfp, fmt, ...)
-> 
-> public API that will use the user-provided (buf, len) as initial target,
-> and return buf on success, otherwise fall back to kmalloc'ing an
-> appropriate buffer and redoing the formatting. It's not totally unheard
-> of to decide whether to kfree() based on comparison with a caller-owned
-> pointer. Typically buf would be stack-allocated, and it's up to the
-> caller to decide what a reasonable size would be - and especially useful
-> in cases such as the lustre one where the string does not outlive the
-> sprintf() caller.
-> 
-> (1) is easily implemented in terms of this.
-> 
-> (3) As (2), but with the rule being that buf must be kmalloc'ed, and
-> kasprintf() will kfree() it and allocate a new buffer if
-> necessary. Probably too hard to use (and exact semantics on failure
-> would need to be decided; like realloc(), or is the passed-in too-small
-> buffer already kfree'd?)
-> 
-> Rasmus
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ lib/vsprintf.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
 
-So, I can go ahead and patch any place that uses *printf() with a VLA to
-use kasprintf() and iff performance is mentioned look at speeding up
-kasprintf().
+diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+index d7a708f82559..f420ab1477cb 100644
+--- a/lib/vsprintf.c
++++ b/lib/vsprintf.c
+@@ -744,8 +744,9 @@ char *resource_string(char *buf, char *end, struct resource *res,
+ #define FLAG_BUF_SIZE		(2 * sizeof(res->flags))
+ #define DECODED_BUF_SIZE	sizeof("[mem - 64bit pref window disabled]")
+ #define RAW_BUF_SIZE		sizeof("[mem - flags 0x]")
+-	char sym[max(2*RSRC_BUF_SIZE + DECODED_BUF_SIZE,
+-		     2*RSRC_BUF_SIZE + FLAG_BUF_SIZE + RAW_BUF_SIZE)];
++#define SIMPLE_MAX(x, y)	((x) > (y) ? (x) : (y))
++	char sym[SIMPLE_MAX(2*RSRC_BUF_SIZE + DECODED_BUF_SIZE,
++			    2*RSRC_BUF_SIZE + FLAG_BUF_SIZE + RAW_BUF_SIZE)];
+ 
+ 	char *p = sym, *pend = sym + sizeof(sym);
+ 	int decode = (fmt[0] == 'R') ? 1 : 0;
+-- 
+2.7.4
 
-I like it.
 
-thanks,
-Tobin.
+-- 
+Kees Cook
+Pixel Security
