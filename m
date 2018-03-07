@@ -1,73 +1,90 @@
-From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Subject: Re: [RFC 2/2] lustre: use VLA_SAFE
-References: <1520400451-11475-1-git-send-email-me@tobin.cc>
-	<1520400451-11475-3-git-send-email-me@tobin.cc>
-	<CAGXu5jKgQsg8e4N2oqZc6g6EdvcEA45hoK8Gu63=bwNuJwZrig@mail.gmail.com>
-	<20180307101014.GG11750@eros>
-Date: Wed, 07 Mar 2018 22:45:55 +0100
-In-Reply-To: <20180307101014.GG11750@eros> (Tobin C. Harding's message of
-	"Wed, 7 Mar 2018 21:10:14 +1100")
-Message-ID: <87efkveezw.fsf@rasmusvillemoes.dk>
+Date: Wed, 7 Mar 2018 13:56:15 -0800
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH] crypto/ecc: Remove stack VLA usage
+Message-ID: <20180307215615.GA18928@beast>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: "Tobin C. Harding" <tobin@apporbit.com>
-Cc: Kees Cook <keescook@chromium.org>, "Tobin C. Harding" <me@tobin.cc>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: linux-kernel@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, linux-crypto@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 07 2018, "Tobin C. Harding" <tobin@apporbit.com> wrote:
+On the quest to remove all VLAs from the kernel[1], this switches to
+a pair of kmalloc regions instead of using the stack. This also moves
+the get_random_bytes() after all allocations (and drops the needless
+"nbytes" variable).
 
-> On Tue, Mar 06, 2018 at 09:46:02PM -0800, Kees Cook wrote:
->> On Tue, Mar 6, 2018 at 9:27 PM, Tobin C. Harding <me@tobin.cc> wrote:
->> > Currently lustre uses a VLA to store a string on the stack.  We can use
->> > the newly define VLA_SAFE macro to make this declaration safer.
->> >
->> > Use VLA_SAFE to declare VLA.
->> 
->> VLA_SAFE implements a max, which is nice, but I think we're just
->> digging ourselves into a bigger hole with this, since now all the
->> maxes must be validated (which isn't done here, what happens if
->> VLA_DEFAULT_MAX is smaller than the strlen() math? We'll overflow the
->> stack buffer in the later sprintf).
->
-> ok, lets drop this.
->
-> Memory on the stack is always going to be faster than memory from the
-> slub allocator, right?  Do you think using kasprintf() is going to be
-> acceptable? Isn't it only going to be acceptable on non-time critical
-> paths?
+[1] https://lkml.org/lkml/2018/3/7/621
 
-Probably anything that does string formatting to begin with (using any
-*printf function) is not performance critical. That e.g. applies to the
-lustre case. It's true that kasprintf() ends up doing the vsnprintf()
-twice, but I haven't yet seen an example where that is really a
-problem. Should it actually come up, I've thought about a few things one
-might do to partly mitigate that:
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ crypto/ecc.c | 23 +++++++++++++++++------
+ 1 file changed, 17 insertions(+), 6 deletions(-)
 
-(1) Use that the vast majority of kasprintf() results are short'ish
-strings, so instead of letting the first vsnprintf() write nothing at
-all, allocate a smallish (32/64) stack buffer and do the first
-vsnprintf() to that - on "success", just kmemdup() the result instead of
-doing the formatting again.
+diff --git a/crypto/ecc.c b/crypto/ecc.c
+index 18f32f2a5e1c..5bfa63603da0 100644
+--- a/crypto/ecc.c
++++ b/crypto/ecc.c
+@@ -1025,9 +1025,7 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
+ {
+ 	int ret = 0;
+ 	struct ecc_point *product, *pk;
+-	u64 priv[ndigits];
+-	u64 rand_z[ndigits];
+-	unsigned int nbytes;
++	u64 *priv, *rand_z;
+ 	const struct ecc_curve *curve = ecc_get_curve(curve_id);
+ 
+ 	if (!private_key || !public_key || !curve) {
+@@ -1035,14 +1033,22 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
+ 		goto out;
+ 	}
+ 
+-	nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
++	priv = kmalloc_array(ndigits, sizeof(*priv), GFP_KERNEL);
++	if (!priv) {
++		ret = -ENOMEM;
++		goto out;
++	}
+ 
+-	get_random_bytes(rand_z, nbytes);
++	rand_z = kmalloc_array(ndigits, sizeof(*rand_z), GFP_KERNEL);
++	if (!rand_z) {
++		ret = -ENOMEM;
++		goto kfree_out;
++	}
+ 
+ 	pk = ecc_alloc_point(ndigits);
+ 	if (!pk) {
+ 		ret = -ENOMEM;
+-		goto out;
++		goto kfree_out;
+ 	}
+ 
+ 	product = ecc_alloc_point(ndigits);
+@@ -1051,6 +1057,8 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
+ 		goto err_alloc_product;
+ 	}
+ 
++	get_random_bytes(rand_z, ndigits << ECC_DIGITS_TO_BYTES_SHIFT);
++
+ 	ecc_swap_digits(public_key, pk->x, ndigits);
+ 	ecc_swap_digits(&public_key[ndigits], pk->y, ndigits);
+ 	ecc_swap_digits(private_key, priv, ndigits);
+@@ -1065,6 +1073,9 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
+ 	ecc_free_point(product);
+ err_alloc_product:
+ 	ecc_free_point(pk);
++kfree_out:
++	kfree(priv);
++	kfree(rand_z);
+ out:
+ 	return ret;
+ }
+-- 
+2.7.4
 
-(2) Add a
 
-  char *kasprintf_buf(buf, len, gfp, fmt, ...)
-
-public API that will use the user-provided (buf, len) as initial target,
-and return buf on success, otherwise fall back to kmalloc'ing an
-appropriate buffer and redoing the formatting. It's not totally unheard
-of to decide whether to kfree() based on comparison with a caller-owned
-pointer. Typically buf would be stack-allocated, and it's up to the
-caller to decide what a reasonable size would be - and especially useful
-in cases such as the lustre one where the string does not outlive the
-sprintf() caller.
-
-(1) is easily implemented in terms of this.
-
-(3) As (2), but with the rule being that buf must be kmalloc'ed, and
-kasprintf() will kfree() it and allocate a new buffer if
-necessary. Probably too hard to use (and exact semantics on failure
-would need to be decided; like realloc(), or is the passed-in too-small
-buffer already kfree'd?)
-
-Rasmus
+-- 
+Kees Cook
+Pixel Security
