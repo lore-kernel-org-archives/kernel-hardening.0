@@ -1,43 +1,92 @@
-From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Subject: Re: [PATCH] staging: lustre: Remove VLA usage
-References: <20180307054608.GA9300@beast>
-	<d5de0034-6f74-5b73-2df8-dbe5b366c2fc@prevas.dk>
-	<CAGXu5j+OTu84ohuR3f4_xKRw9vikVi-K2TnH3+n_ekX1m1Vv8A@mail.gmail.com>
-Date: Wed, 07 Mar 2018 21:48:33 +0100
-In-Reply-To: <CAGXu5j+OTu84ohuR3f4_xKRw9vikVi-K2TnH3+n_ekX1m1Vv8A@mail.gmail.com>
-	(Kees Cook's message of "Wed, 7 Mar 2018 09:20:31 -0800")
-Message-ID: <87ina7ehni.fsf@rasmusvillemoes.dk>
+Date: Wed, 7 Mar 2018 12:54:44 -0800
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH v2] staging: lustre: Remove VLA usage
+Message-ID: <20180307205444.GA11349@beast>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: Kees Cook <keescook@chromium.org>
-Cc: Rasmus Villemoes <rasmus.villemoes@prevas.dk>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, LKML <linux-kernel@vger.kernel.org>, "Tobin C. Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Dmitry Eremin <dmitry.eremin@intel.com>, Gargi Sharma <gs051095@gmail.com>, Lustre Development List <lustre-devel@lists.lustre.org>, devel@driverdev.osuosl.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: linux-kernel@vger.kernel.org, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Tobin C. Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Dmitry Eremin <dmitry.eremin@intel.com>, Gargi Sharma <gs051095@gmail.com>, Lustre Development List <lustre-devel@lists.lustre.org>, devel@driverdev.osuosl.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 07 2018, Kees Cook <keescook@chromium.org> wrote:
+The kernel would like to have all stack VLA usage removed[1]. This switches
+to a simple kasprintf() instead, and in the process fixes an off-by-one
+between the allocation and the sprintf (allocation did not include NULL
+byte in calculation).
 
-> On Wed, Mar 7, 2018 at 5:10 AM, Rasmus Villemoes
-> <rasmus.villemoes@prevas.dk> wrote:
->> On 2018-03-07 06:46, Kees Cook wrote:
->>> The kernel would like to remove all VLA usage. This switches to a
->>> simple kasprintf() instead.
->>>
->>
->> It's probably worth pointing out that this actually fixes an
->> unconditional buffer overflow: fullname only has room for the two
->> strings and the '\n', but vsnprintf() is told that the buffer has
->> infinite size (well, INT_MAX), so there should be plenty of room to
->> append the '\0' after the '\n'.
->>
->
-> Oh yes, hah. I didn't even see the \n in the string. :P
->
-> So, both a VLA fix and a buffer over-run fix. Can I add your "Reviewed-by"? :)
+[1] https://lkml.org/lkml/2018/3/7/621
 
-Sure,
-
+Signed-off-by: Kees Cook <keescook@chromium.org>
 Reviewed-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+---
+ drivers/staging/lustre/lustre/llite/xattr.c | 19 +++++++++++++------
+ 1 file changed, 13 insertions(+), 6 deletions(-)
 
-A nit, if you're resending anyway: can you move the "char *fullname"
-declarations down a bit, to between pv,valid, and lli,rc, respectively?
-That keeps the initialized and uninitialized variables nicely together
-and ends up looking better.
+diff --git a/drivers/staging/lustre/lustre/llite/xattr.c b/drivers/staging/lustre/lustre/llite/xattr.c
+index 532384c91447..ff6fe81a4ddb 100644
+--- a/drivers/staging/lustre/lustre/llite/xattr.c
++++ b/drivers/staging/lustre/lustre/llite/xattr.c
+@@ -87,10 +87,10 @@ ll_xattr_set_common(const struct xattr_handler *handler,
+ 		    const char *name, const void *value, size_t size,
+ 		    int flags)
+ {
+-	char fullname[strlen(handler->prefix) + strlen(name) + 1];
+ 	struct ll_sb_info *sbi = ll_i2sbi(inode);
+ 	struct ptlrpc_request *req = NULL;
+ 	const char *pv = value;
++	char *fullname;
+ 	__u64 valid;
+ 	int rc;
+ 
+@@ -141,10 +141,13 @@ ll_xattr_set_common(const struct xattr_handler *handler,
+ 			return -EPERM;
+ 	}
+ 
+-	sprintf(fullname, "%s%s\n", handler->prefix, name);
++	fullname = kasprintf(GFP_KERNEL, "%s%s\n", handler->prefix, name);
++	if (!fullname)
++		return -ENOMEM;
+ 	rc = md_setxattr(sbi->ll_md_exp, ll_inode2fid(inode),
+ 			 valid, fullname, pv, size, 0, flags,
+ 			 ll_i2suppgid(inode), &req);
++	kfree(fullname);
+ 	if (rc) {
+ 		if (rc == -EOPNOTSUPP && handler->flags == XATTR_USER_T) {
+ 			LCONSOLE_INFO("Disabling user_xattr feature because it is not supported on the server\n");
+@@ -364,11 +367,11 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
+ 			       struct dentry *dentry, struct inode *inode,
+ 			       const char *name, void *buffer, size_t size)
+ {
+-	char fullname[strlen(handler->prefix) + strlen(name) + 1];
+ 	struct ll_sb_info *sbi = ll_i2sbi(inode);
+ #ifdef CONFIG_FS_POSIX_ACL
+ 	struct ll_inode_info *lli = ll_i2info(inode);
+ #endif
++	char *fullname;
+ 	int rc;
+ 
+ 	CDEBUG(D_VFSTRACE, "VFS Op:inode=" DFID "(%p)\n",
+@@ -411,9 +414,13 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
+ 	if (handler->flags == XATTR_ACL_DEFAULT_T && !S_ISDIR(inode->i_mode))
+ 		return -ENODATA;
+ #endif
+-	sprintf(fullname, "%s%s\n", handler->prefix, name);
+-	return ll_xattr_list(inode, fullname, handler->flags, buffer, size,
+-			     OBD_MD_FLXATTR);
++	fullname = kasprintf(GFP_KERNEL, "%s%s\n", handler->prefix, name);
++	if (!fullname)
++		return -ENOMEM;
++	rc = ll_xattr_list(inode, fullname, handler->flags, buffer, size,
++			   OBD_MD_FLXATTR);
++	kfree(fullname);
++	return rc;
+ }
+ 
+ static ssize_t ll_getxattr_lov(struct inode *inode, void *buf, size_t buf_size)
+-- 
+2.7.4
+
+
+-- 
+Kees Cook
+Pixel Security
