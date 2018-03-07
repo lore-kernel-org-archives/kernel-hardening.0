@@ -1,62 +1,84 @@
-Subject: Re: [PATCH 6/7] lkdtm: crash on overwriting protected pmalloc var
-References: <20180228200620.30026-1-igor.stoppa@huawei.com>
- <20180228200620.30026-7-igor.stoppa@huawei.com>
- <1723ee8d-c89e-0704-c2c3-254eda39dc8b@gmail.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <6378e63e-174f-642e-d319-1d121b74d3d7@huawei.com>
-Date: Wed, 7 Mar 2018 15:18:16 +0200
+Subject: Re: [PATCH] staging: lustre: Remove VLA usage
+References: <20180307054608.GA9300@beast>
+From: Rasmus Villemoes <rasmus.villemoes@prevas.dk>
+Message-ID: <d5de0034-6f74-5b73-2df8-dbe5b366c2fc@prevas.dk>
+Date: Wed, 7 Mar 2018 14:10:41 +0100
 MIME-Version: 1.0
-In-Reply-To: <1723ee8d-c89e-0704-c2c3-254eda39dc8b@gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 8bit
-To: J Freyensee <why2jjj.linux@gmail.com>, david@fromorbit.com, willy@infradead.org, keescook@chromium.org, mhocko@kernel.org
-Cc: labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20180307054608.GA9300@beast>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: linux-kernel@vger.kernel.org, "Tobin C. Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Dmitry Eremin <dmitry.eremin@intel.com>, Gargi Sharma <gs051095@gmail.com>, lustre-devel@lists.lustre.org, devel@driverdev.osuosl.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-On 06/03/18 19:20, J Freyensee wrote:
-
-> On 2/28/18 12:06 PM, Igor Stoppa wrote:
-
-[...]
-
->>   void __init lkdtm_perms_init(void);
->>   void lkdtm_WRITE_RO(void);
->>   void lkdtm_WRITE_RO_AFTER_INIT(void);
->> +void lkdtm_WRITE_RO_PMALLOC(void);
+On 2018-03-07 06:46, Kees Cook wrote:
+> The kernel would like to remove all VLA usage. This switches to a
+> simple kasprintf() instead.
 > 
-> Does this need some sort of #ifdef too?
-
-Not strictly. It's just a function declaration.
-As long as it is not used, the linker will not complain.
-The #ifdef placed around the use and definition is sufficient, from a
-correctness perspective.
-
-But it's a different question if there is any standard in linux about
-hiding also the declaration.
-
-I am not very fond of #ifdefs, so when I can I try to avoid them.
-
->> +	pr_info("attempting bad pmalloc write at %p\n", i);
->> +	*i = 0;
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  drivers/staging/lustre/lustre/llite/xattr.c | 19 +++++++++++++------
+>  1 file changed, 13 insertions(+), 6 deletions(-)
 > 
-> OK, now I'm on the right version of this patch series, same comment 
-> applies.  I don't get the local *i assignment at the end of the 
-> function, but seems harmless.
+> diff --git a/drivers/staging/lustre/lustre/llite/xattr.c b/drivers/staging/lustre/lustre/llite/xattr.c
+> index 532384c91447..aab4eab64289 100644
+> --- a/drivers/staging/lustre/lustre/llite/xattr.c
+> +++ b/drivers/staging/lustre/lustre/llite/xattr.c
+> @@ -87,7 +87,7 @@ ll_xattr_set_common(const struct xattr_handler *handler,
+>  		    const char *name, const void *value, size_t size,
+>  		    int flags)
+>  {
+> -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
+> +	char *fullname;
+>  	struct ll_sb_info *sbi = ll_i2sbi(inode);
+>  	struct ptlrpc_request *req = NULL;
+>  	const char *pv = value;
+> @@ -141,10 +141,13 @@ ll_xattr_set_common(const struct xattr_handler *handler,
+>  			return -EPERM;
+>  	}
+>  
+> -	sprintf(fullname, "%s%s\n", handler->prefix, name);
 
+It's probably worth pointing out that this actually fixes an
+unconditional buffer overflow: fullname only has room for the two
+strings and the '\n', but vsnprintf() is told that the buffer has
+infinite size (well, INT_MAX), so there should be plenty of room to
+append the '\0' after the '\n'.
 
-Because that's the whole point of the function: prove that pmalloc
-protection works (see the message in the pr_info one line above).
+> +	fullname = kasprintf(GFP_KERNEL, "%s%s\n", handler->prefix, name);
+> +	if (!fullname)
+> +		return -ENOMEM;
+>  	rc = md_setxattr(sbi->ll_md_exp, ll_inode2fid(inode),
+>  			 valid, fullname, pv, size, 0, flags,
+>  			 ll_i2suppgid(inode), &req);
+> +	kfree(fullname);
+>  	if (rc) {
+>  		if (rc == -EOPNOTSUPP && handler->flags == XATTR_USER_T) {
+>  			LCONSOLE_INFO("Disabling user_xattr feature because it is not supported on the server\n");
+> @@ -364,7 +367,7 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
+>  			       struct dentry *dentry, struct inode *inode,
+>  			       const char *name, void *buffer, size_t size)
+>  {
+> -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
+> +	char *fullname;
+>  	struct ll_sb_info *sbi = ll_i2sbi(inode);
+>  #ifdef CONFIG_FS_POSIX_ACL
+>  	struct ll_inode_info *lli = ll_i2info(inode);
+> @@ -411,9 +414,13 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
+>  	if (handler->flags == XATTR_ACL_DEFAULT_T && !S_ISDIR(inode->i_mode))
+>  		return -ENODATA;
+>  #endif
+> -	sprintf(fullname, "%s%s\n", handler->prefix, name);
 
-The function is supposed to do:
+Same here.
 
-* create a pool
-* allocate memory from it
-* protect it
-* try to alter it (and crash)
+I'm a little surprised this hasn't been caugt by static analysis, I
+thought gcc/coverity/smatch/whatnot had gotten pretty good at computing
+the size of the output generated by a given format string with "known"
+arguments and comparing to the size of the output buffer. Though of
+course it does require the tool to be able to do symbolic manipulations,
+in this case realizing that
 
-*i = 0; performs the last step
+outsize == strlen(x)+strlen(y)+1+1 > bufsize == strlen(x)+strlen(y)+1
 
---
-igor
+Rasmus
