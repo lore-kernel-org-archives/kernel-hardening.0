@@ -1,66 +1,111 @@
-Subject: Re: [PATCH 4/7] Protectable Memory
+Subject: Re: [PATCH 1/7] genalloc: track beginning of allocations
 References: <20180228200620.30026-1-igor.stoppa@huawei.com>
- <20180228200620.30026-5-igor.stoppa@huawei.com>
- <1b0aff92-bc6c-c815-f129-95720ec80778@gmail.com>
+ <20180228200620.30026-2-igor.stoppa@huawei.com>
+ <20180306131856.GD19349@rapoport-lnx>
 From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <a21118be-a066-6ad7-4188-f50585a6f06d@huawei.com>
-Date: Wed, 7 Mar 2018 16:07:42 +0200
+Message-ID: <54e95716-9d61-51a3-9ae8-196e60625b76@huawei.com>
+Date: Wed, 7 Mar 2018 16:48:25 +0200
 MIME-Version: 1.0
-In-Reply-To: <1b0aff92-bc6c-c815-f129-95720ec80778@gmail.com>
+In-Reply-To: <20180306131856.GD19349@rapoport-lnx>
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-To: J Freyensee <why2jjj.linux@gmail.com>, david@fromorbit.com, willy@infradead.org, keescook@chromium.org, mhocko@kernel.org
-Cc: labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+To: Mike Rapoport <rppt@linux.vnet.ibm.com>
+Cc: david@fromorbit.com, willy@infradead.org, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 06/03/18 05:59, J Freyensee wrote:
+
+
+On 06/03/18 15:19, Mike Rapoport wrote:
+> On Wed, Feb 28, 2018 at 10:06:14PM +0200, Igor Stoppa wrote:
 
 [...]
 
->> +config PROTECTABLE_MEMORY
->> +    bool
->> +    depends on MMU
+> If I'm not mistaken, several kernel-doc descriptions are duplicated now.
+> Can you please keep a single copy? ;-)
+
+What's the preferred approach?
+Document the functions that are API in the .h file and leave in the .c
+those which are not API?
+
+[...]
+
+>> + * The alignment at which to perform the research for sequence of empty
 > 
+>                                            ^ search?
+
+yes
+
+>> + * get_boundary() - verifies address, then measure length.
 > 
-> Curious, would you also want to depend on "SECURITY" as well, as this is 
-> being advertised as a compliment to __read_only_after_init, per the file 
-> header comments, as I'm assuming ro_after_init would be disabled if the 
-> SECURITY Kconfig selection is *NOT* selected?
+> There's some lack of consistency between the name and implementation and
+> the description.
+> It seems that it would be simpler to actually make it get_length() and
+> return the length of the allocation or nentries if the latter is smaller.
+> Then in gen_pool_free() there will be no need to recalculate nentries
+> again.
 
-__ro_after_init is configured like this:
+There is an error in the documentation. I'll explain below.
 
-#if defined(CONFIG_STRICT_KERNEL_RWX) || defined(CONFIG_STRICT_MODULE_RWX)
-bool rodata_enabled __ro_after_init = true;
+> 
+>>   * @map: pointer to a bitmap
+>> - * @start: a bit position in @map
+>> - * @nr: number of bits to set
+>> + * @start_entry: the index of the first entry in the bitmap
+>> + * @nentries: number of entries to alter
+> 
+> Maybe: "maximal number of entries to check"?
 
-But even if __ro_after_init and pmalloc are conceptually similar, in
-practice they have - potentially - different constraints.
+No, it's actually the total number of entries in the chunk.
 
-1) the __ro_after_init segment belongs to linear kernel memory
-2) the pmalloc pools belong to vmalloc memory
+[...]
 
-There is one extra layer of indirection in pmalloc.
-I am not an expert of MMUs but I suppose there might be types where it
-is possible to mark pages as RO but it's not possible to have virtual
-memory.
+>> +	return nentries - start_entry;
+> 
+> Shouldn't it be "nentries + start_entry"?
 
-If (and this is a big "if") such MMUs exist and are supported by linux,
-then __ro_after_init would be possible, while pmalloc would not be.
+And in the light of the correct comment, also what I am doing should be
+now more clear:
 
-So it seemed more correct to focus specifically on hte enablers required
-by pmalloc to perform correctly.
+* start_entry is the index of the initial entry
+* nentries is the number of entries in the chunk
 
-Open Question:
+If I iterate over the rest of the chunk:
 
-Is it ok that the API disappears in case the enablers are missing?
-Or should it fall back to something else?
+(i = start_entry + 1; i < nentries; i++)
 
-Dealing with lack of ReadOnly support would be pretty simple, it would
-be enough to make the write-Protection conditional.
+without finding either another HEAD or an empty slot, then it means I
+was measuring the length of the last allocation in the chunk, which was
+taking up all the space, to the end.
 
-But what to do if virtual mapping is not supported?
+Simple example:
 
-kmalloc might not have the ability to support large requests made toward
-pmalloc and this would possibly cause runtime failures.
+- chunk with 7 entries -> nentries is 7
+- start_entry is 2, meaning that the last allocation starts from the 3rd
+element, iow it occupies indexes from 2 to 6, for a total of 5 entries
+- so the length is (nentries - start_entry) = (7 - 2) = 5
+
+
+But yeah, the kerneldoc was wrong.
+
+[...]
+
+>> - * gen_pool_alloc_algo - allocate special memory from the pool
+>> + * gen_pool_alloc_algo() - allocate special memory from the pool
+> 
+> + using specified algorithm
+
+ok
+
+> 
+>>   * @pool: pool to allocate from
+>>   * @size: number of bytes to allocate from the pool
+>>   * @algo: algorithm passed from caller
+>> @@ -285,14 +502,18 @@ EXPORT_SYMBOL(gen_pool_alloc);
+>>   * Uses the pool allocation function (with first-fit algorithm by default).
+> 
+> "uses the provided @algo function to find room for the allocation"
+
+ok
 
 --
 igor
