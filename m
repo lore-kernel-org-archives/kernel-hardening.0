@@ -1,84 +1,66 @@
-Subject: Re: [PATCH] staging: lustre: Remove VLA usage
-References: <20180307054608.GA9300@beast>
-From: Rasmus Villemoes <rasmus.villemoes@prevas.dk>
-Message-ID: <d5de0034-6f74-5b73-2df8-dbe5b366c2fc@prevas.dk>
-Date: Wed, 7 Mar 2018 14:10:41 +0100
+Subject: Re: [PATCH 4/7] Protectable Memory
+References: <20180228200620.30026-1-igor.stoppa@huawei.com>
+ <20180228200620.30026-5-igor.stoppa@huawei.com>
+ <1b0aff92-bc6c-c815-f129-95720ec80778@gmail.com>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <a21118be-a066-6ad7-4188-f50585a6f06d@huawei.com>
+Date: Wed, 7 Mar 2018 16:07:42 +0200
 MIME-Version: 1.0
-In-Reply-To: <20180307054608.GA9300@beast>
-Content-Type: text/plain; charset=utf-8
+In-Reply-To: <1b0aff92-bc6c-c815-f129-95720ec80778@gmail.com>
+Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Cc: linux-kernel@vger.kernel.org, "Tobin C. Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Dmitry Eremin <dmitry.eremin@intel.com>, Gargi Sharma <gs051095@gmail.com>, lustre-devel@lists.lustre.org, devel@driverdev.osuosl.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: J Freyensee <why2jjj.linux@gmail.com>, david@fromorbit.com, willy@infradead.org, keescook@chromium.org, mhocko@kernel.org
+Cc: labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2018-03-07 06:46, Kees Cook wrote:
-> The kernel would like to remove all VLA usage. This switches to a
-> simple kasprintf() instead.
+On 06/03/18 05:59, J Freyensee wrote:
+
+[...]
+
+>> +config PROTECTABLE_MEMORY
+>> +    bool
+>> +    depends on MMU
 > 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
->  drivers/staging/lustre/lustre/llite/xattr.c | 19 +++++++++++++------
->  1 file changed, 13 insertions(+), 6 deletions(-)
 > 
-> diff --git a/drivers/staging/lustre/lustre/llite/xattr.c b/drivers/staging/lustre/lustre/llite/xattr.c
-> index 532384c91447..aab4eab64289 100644
-> --- a/drivers/staging/lustre/lustre/llite/xattr.c
-> +++ b/drivers/staging/lustre/lustre/llite/xattr.c
-> @@ -87,7 +87,7 @@ ll_xattr_set_common(const struct xattr_handler *handler,
->  		    const char *name, const void *value, size_t size,
->  		    int flags)
->  {
-> -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
-> +	char *fullname;
->  	struct ll_sb_info *sbi = ll_i2sbi(inode);
->  	struct ptlrpc_request *req = NULL;
->  	const char *pv = value;
-> @@ -141,10 +141,13 @@ ll_xattr_set_common(const struct xattr_handler *handler,
->  			return -EPERM;
->  	}
->  
-> -	sprintf(fullname, "%s%s\n", handler->prefix, name);
+> Curious, would you also want to depend on "SECURITY" as well, as this is 
+> being advertised as a compliment to __read_only_after_init, per the file 
+> header comments, as I'm assuming ro_after_init would be disabled if the 
+> SECURITY Kconfig selection is *NOT* selected?
 
-It's probably worth pointing out that this actually fixes an
-unconditional buffer overflow: fullname only has room for the two
-strings and the '\n', but vsnprintf() is told that the buffer has
-infinite size (well, INT_MAX), so there should be plenty of room to
-append the '\0' after the '\n'.
+__ro_after_init is configured like this:
 
-> +	fullname = kasprintf(GFP_KERNEL, "%s%s\n", handler->prefix, name);
-> +	if (!fullname)
-> +		return -ENOMEM;
->  	rc = md_setxattr(sbi->ll_md_exp, ll_inode2fid(inode),
->  			 valid, fullname, pv, size, 0, flags,
->  			 ll_i2suppgid(inode), &req);
-> +	kfree(fullname);
->  	if (rc) {
->  		if (rc == -EOPNOTSUPP && handler->flags == XATTR_USER_T) {
->  			LCONSOLE_INFO("Disabling user_xattr feature because it is not supported on the server\n");
-> @@ -364,7 +367,7 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
->  			       struct dentry *dentry, struct inode *inode,
->  			       const char *name, void *buffer, size_t size)
->  {
-> -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
-> +	char *fullname;
->  	struct ll_sb_info *sbi = ll_i2sbi(inode);
->  #ifdef CONFIG_FS_POSIX_ACL
->  	struct ll_inode_info *lli = ll_i2info(inode);
-> @@ -411,9 +414,13 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
->  	if (handler->flags == XATTR_ACL_DEFAULT_T && !S_ISDIR(inode->i_mode))
->  		return -ENODATA;
->  #endif
-> -	sprintf(fullname, "%s%s\n", handler->prefix, name);
+#if defined(CONFIG_STRICT_KERNEL_RWX) || defined(CONFIG_STRICT_MODULE_RWX)
+bool rodata_enabled __ro_after_init = true;
 
-Same here.
+But even if __ro_after_init and pmalloc are conceptually similar, in
+practice they have - potentially - different constraints.
 
-I'm a little surprised this hasn't been caugt by static analysis, I
-thought gcc/coverity/smatch/whatnot had gotten pretty good at computing
-the size of the output generated by a given format string with "known"
-arguments and comparing to the size of the output buffer. Though of
-course it does require the tool to be able to do symbolic manipulations,
-in this case realizing that
+1) the __ro_after_init segment belongs to linear kernel memory
+2) the pmalloc pools belong to vmalloc memory
 
-outsize == strlen(x)+strlen(y)+1+1 > bufsize == strlen(x)+strlen(y)+1
+There is one extra layer of indirection in pmalloc.
+I am not an expert of MMUs but I suppose there might be types where it
+is possible to mark pages as RO but it's not possible to have virtual
+memory.
 
-Rasmus
+If (and this is a big "if") such MMUs exist and are supported by linux,
+then __ro_after_init would be possible, while pmalloc would not be.
+
+So it seemed more correct to focus specifically on hte enablers required
+by pmalloc to perform correctly.
+
+Open Question:
+
+Is it ok that the API disappears in case the enablers are missing?
+Or should it fall back to something else?
+
+Dealing with lack of ReadOnly support would be pretty simple, it would
+be enough to make the write-Protection conditional.
+
+But what to do if virtual mapping is not supported?
+
+kmalloc might not have the ability to support large requests made toward
+pmalloc and this would possibly cause runtime failures.
+
+--
+igor
