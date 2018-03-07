@@ -1,118 +1,62 @@
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <20180306175211.5584cc28@vmware.local.home>
-References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
- <CA+55aFxEAYyrUkApo-dtZvxcYbvWBZJpUytjbm7e2wruTvbYjQ@mail.gmail.com>
- <CAGXu5j+-AjMKxOYDOpbmJ4X357JRGWViAOmqyqd6bu_w47mffw@mail.gmail.com>
- <20180306080855.phtgl2bzqm5hnthu@gmail.com> <CA+DvKQ+uQD0qyMvwqaRd_sMLBHE5q9pcfOQ+VknBW2==q0NJJA@mail.gmail.com>
- <CA+55aFwgmTaaA8QqMGm+VzRNbpKxDXbq2MtKyayyq8f+=PqWqA@mail.gmail.com>
- <CAKv+Gu_VaO39h8trgsNhU4JEVkdgoFWGoovBdmAL_YsHe7Nq1Q@mail.gmail.com>
- <CA+55aFxkzxhGaK=sp2CqM1YFEE=fL33wC1TR4KKqsRqPGto6yA@mail.gmail.com>
- <CAK8P3a0bWWZbFW5AFag=vRKC=PbCbwaLNPNiyk1ziJk=fTe0nQ@mail.gmail.com>
- <CA+55aFxTdT11pxKL7oscN=2bu8wkiZbZgDfQd_Emqk1Z1Qqb7A@mail.gmail.com>
- <20180306163616.7e3b6e0e@vmware.local.home> <CA+55aFze-do7sAvg1=z=Yb4p8J2EJ5Eyr6MLdMbgQKwMrO5hxQ@mail.gmail.com>
- <CA+55aFyv4wDxLQDbzB14HgW8ddu-w2VFteh5JQ57Jkw46mCVAw@mail.gmail.com>
- <20180306172927.7a975cee@vmware.local.home> <CA+55aFyuQZ-cYxPeGF2VJu2GjzznQTua6sVBi4+CFdUi+=+Ajw@mail.gmail.com>
- <20180306175211.5584cc28@vmware.local.home>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Tue, 6 Mar 2018 15:09:30 -0800
-Message-ID: <CA+55aFzcNfSKc2uU5=okU_g0utnYKoeOueJb5enoP78mqMBZPQ@mail.gmail.com>
-Subject: Re: [PATCH RFC v9 4/7] x86/entry: Erase kernel stack in syscall_trace_enter()
+In-Reply-To: <7082be04-d6af-b853-4bb7-f331836662e2@digikod.net>
+References: <20180227004121.3633-1-mic@digikod.net> <CALCETrV3OZb70o83uOG437PubwBwaUJ6SKQucq_7g1BuBOmxzg@mail.gmail.com>
+ <2e06621c-08e9-dc12-9b6e-9c09d5d8f458@digikod.net> <CALCETrWnJ7WkkfiymyahQd7YqO0KXP4mG1pRMq7fp8LG8Bwtcw@mail.gmail.com>
+ <a70b41ee-78cb-52cc-152c-ac5e43b7e45c@digikod.net> <CALCETrUQYp0ta4tLgUWJ79pZVwp3WRY7cp-XaPcn1WyTc=wZyg@mail.gmail.com>
+ <20180306224636.wf5z3kujtc7r5qyh@cisco> <7082be04-d6af-b853-4bb7-f331836662e2@digikod.net>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Wed, 7 Mar 2018 01:21:11 +0000
+Message-ID: <CALCETrXT8JUXVwDNKGVRG7=aenthDRePD+T+YiDY6cceaazDeA@mail.gmail.com>
+Subject: Re: [PATCH bpf-next v8 00/11] Landlock LSM: Toward unprivileged sandboxing
 Content-Type: text/plain; charset="UTF-8"
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Daniel Micay <danielmicay@gmail.com>, Ingo Molnar <mingo@kernel.org>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@linux.intel.com>, Alexander Popov <alex.popov@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+Content-Transfer-Encoding: quoted-printable
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: Tycho Andersen <tycho@tycho.ws>, LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 6, 2018 at 2:52 PM, Steven Rostedt <rostedt@goodmis.org> wrote:
+On Tue, Mar 6, 2018 at 11:06 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>=
+ wrote:
 >
-> I get your point. Basically you are saying that the language should
-> have forced all local variables to be initialized to zero in the spec,
-> and the compiler is free to optimize that initialization out if the
-> variable is always initialized first.
-
-Exactly.
-
-> Just like it would optimize the below.
+> On 06/03/2018 23:46, Tycho Andersen wrote:
+>> On Tue, Mar 06, 2018 at 10:33:17PM +0000, Andy Lutomirski wrote:
+>>>>> Suppose I'm writing a container manager.  I want to run "mount" in th=
+e
+>>>>> container, but I don't want to allow moun() in general and I want to
+>>>>> emulate certain mount() actions.  I can write a filter that catches
+>>>>> mount using seccomp and calls out to the container manager for help.
+>>>>> This isn't theoretical -- Tycho wants *exactly* this use case to be
+>>>>> supported.
+>>>>
+>>>> Well, I think this use case should be handled with something like
+>>>> LD_PRELOAD and a helper library. FYI, I did something like this:
+>>>> https://github.com/stemjail/stemshim
+>>>
+>>> I doubt that will work for containers.  Containers that use user
+>>> namespaces and, for example, setuid programs aren't going to honor
+>>> LD_PRELOAD.
+>>
+>> Or anything that calls syscalls directly, like go programs.
 >
-> int g(int c)
-> {
->         int i = 0;
+> That's why the vDSO-like approach. Enforcing an access control is not
+> the issue here, patching a buggy userland (without patching its code) is
+> the issue isn't it?
 >
->         if (c < 10)
->                 i = 1;
->         else
->                 i = 2;
->         return i;
-> };
+> As far as I remember, the main problem is to handle file descriptors
+> while "emulating" the kernel behavior. This can be done with a "shim"
+> code mapped in every processes. Chrome used something like this (in a
+> previous sandbox mechanism) as a kind of emulation (with the current
+> seccomp-bpf ). I think it should be doable to replace the (userland)
+> emulation code with an IPC wrapper receiving file descriptors through
+> UNIX socket.
 >
-> There's no reason to initialize i to zero because it will never return
-> zero. But what you are saying is to make that implicit by just
-> declaring 'i'.
 
-Yes.
+Can you explain exactly what you mean by "vDSO-like"?
 
-And at the same time, it is certainly true that a compiler cannot
-*always* remove the unnecessary initialization.
+When a 64-bit program does a syscall, it just executes the SYSCALL
+instruction.  The vDSO isn't involved at all.  32-bit programs usually
+go through the vDSO, but not always.
 
-But with any half-way modern compiler, all the _normal_ cases would be
-no-brainers, and the case where the compiler couldn't do so really is
-code that almost certainly wants that initialization anyway, because a
-_human_ generally wouldn't see that it's initialized either.
-
-The obvious counter-example is literally
-
-> int g(int c)
-> {
->         int i = 0;
->
->         initialize_variable(&i);
->
->         if (c < 10)
-
-where a *human* can tell that "hey, that initialization to zero is
-pointless, because 'i' is clearly being initialized by that
-'initialize_variable()' function call".
-
-But the compiler often cannot see that "obvious" initialization, and
-would have to spend the extra instruction to actually do that zero
-initialization.
-
-So I'm not saying that it would always be entirely free to just have
-the safe default.
-
-But in the context of the kernel, I think that we can probably agree
-that "oops, we've had exactly the kind of bug where a function
-_didn't_ end up initializing the variable every time even though to a
-human obviously thought it did" actually has happened.
-
-Now, as mentioned, aggregate types are different.
-
-They are _less_ different for the kernel than they are for user
-programs (because we have to be careful about aggregate types on the
-stack anyway just for stack size reasons), but they do have more
-issues with the implicit initializers.
-
-For aggregate types, initializers are obviously more expensive to
-begin with, and the "initialize by passing a reference to an external
-function" is much more common too. So there's a double hit.
-
-At the same time, aggregate types are obviously where we tend to have
-most problems, and I really think we should strive to avoid even
-medium-sized aggregate types in the kernel anyway.
-
-Which is why I'm much more willing to take a hit on those kinds of
-things (that I think should be rare), than add things like "let's just
-clear the stack after every system call" kinds of things.
-
-But I do agree that for aggregate types, we almost certainly do want
-to have some way to flag "this is explicitly not initialized".
-
-Instead, right now, we're in the reverse situation, where we have to
-add explicit initializers.
-
-I think we'd be in a better situation if the *default* semantics was
-the safe and well-defined behavior, and we'd have to do extra things
-to get the undefined uninitialized behavior for when we know better,
-and we really really care.
-
-              Linus
+It could be possible to force-load a DSO into an entire container and
+rig up seccomp to intercept all SYSCALLs not originating from the DSO
+such that they merely redirect control to the DSO, but that seems
+quite messy.
