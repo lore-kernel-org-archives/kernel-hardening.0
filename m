@@ -1,40 +1,37 @@
-Date: Wed, 7 Mar 2018 21:10:14 +1100
-From: "Tobin C. Harding" <tobin@apporbit.com>
-Subject: Re: [RFC 2/2] lustre: use VLA_SAFE
-Message-ID: <20180307101014.GG11750@eros>
-References: <1520400451-11475-1-git-send-email-me@tobin.cc>
- <1520400451-11475-3-git-send-email-me@tobin.cc>
- <CAGXu5jKgQsg8e4N2oqZc6g6EdvcEA45hoK8Gu63=bwNuJwZrig@mail.gmail.com>
+Subject: Re: [PATCH 1/7] genalloc: track beginning of allocations
+From: Igor Stoppa <igor.stoppa@huawei.com>
+References: <20180228200620.30026-1-igor.stoppa@huawei.com>
+ <20180228200620.30026-2-igor.stoppa@huawei.com>
+ <20180306141047.GB13722@bombadil.infradead.org>
+ <6d27845d-a8f3-607b-1b6b-8464de65162c@huawei.com>
+Message-ID: <a667773c-59fa-33d1-9621-16e702c1859f@huawei.com>
+Date: Wed, 7 Mar 2018 12:51:46 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jKgQsg8e4N2oqZc6g6EdvcEA45hoK8Gu63=bwNuJwZrig@mail.gmail.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+In-Reply-To: <6d27845d-a8f3-607b-1b6b-8464de65162c@huawei.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+To: Matthew Wilcox <willy@infradead.org>
+Cc: david@fromorbit.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 06, 2018 at 09:46:02PM -0800, Kees Cook wrote:
-> On Tue, Mar 6, 2018 at 9:27 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> > Currently lustre uses a VLA to store a string on the stack.  We can use
-> > the newly define VLA_SAFE macro to make this declaration safer.
-> >
-> > Use VLA_SAFE to declare VLA.
+
+
+On 06/03/18 18:05, Igor Stoppa wrote:
+> On 06/03/2018 16:10, Matthew Wilcox wrote:
+
+[...]
+
+>> This seems unnecessarily complicated.
 > 
-> VLA_SAFE implements a max, which is nice, but I think we're just
-> digging ourselves into a bigger hole with this, since now all the
-> maxes must be validated (which isn't done here, what happens if
-> VLA_DEFAULT_MAX is smaller than the strlen() math? We'll overflow the
-> stack buffer in the later sprintf).
+> TBH it seemed to me a natural extension of the existing encoding :-)
 
-ok, lets drop this.
+BTW, to provide some background, this is where it begun:
 
-Memory on the stack is always going to be faster than memory from the
-slub allocator, right?  Do you think using kasprintf() is going to be
-acceptable? Isn't it only going to be acceptable on non-time critical
-paths?  I'm still trying to get my head around how we get rid of VLA
-when the stack is faster?  Is this a speed vs safety trade off that must
-be tackled on a case by case basis?
+http://www.openwall.com/lists/kernel-hardening/2017/08/18/4
 
+Probably that comment about "keeping existing behavior and managing two
+bitmaps locklessly" is what made me think of growing the 1-bit-per-unit
+into a 1-word-per-unit.
 
-thanks,
-Tobin.
+--
+igor
