@@ -1,62 +1,164 @@
-MIME-Version: 1.0
-In-Reply-To: <7082be04-d6af-b853-4bb7-f331836662e2@digikod.net>
-References: <20180227004121.3633-1-mic@digikod.net> <CALCETrV3OZb70o83uOG437PubwBwaUJ6SKQucq_7g1BuBOmxzg@mail.gmail.com>
- <2e06621c-08e9-dc12-9b6e-9c09d5d8f458@digikod.net> <CALCETrWnJ7WkkfiymyahQd7YqO0KXP4mG1pRMq7fp8LG8Bwtcw@mail.gmail.com>
- <a70b41ee-78cb-52cc-152c-ac5e43b7e45c@digikod.net> <CALCETrUQYp0ta4tLgUWJ79pZVwp3WRY7cp-XaPcn1WyTc=wZyg@mail.gmail.com>
- <20180306224636.wf5z3kujtc7r5qyh@cisco> <7082be04-d6af-b853-4bb7-f331836662e2@digikod.net>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Wed, 7 Mar 2018 01:21:11 +0000
-Message-ID: <CALCETrXT8JUXVwDNKGVRG7=aenthDRePD+T+YiDY6cceaazDeA@mail.gmail.com>
-Subject: Re: [PATCH bpf-next v8 00/11] Landlock LSM: Toward unprivileged sandboxing
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
-Cc: Tycho Andersen <tycho@tycho.ws>, LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
+From: "Tobin C. Harding" <me@tobin.cc>
+Subject: [RFC 0/2] add macro VLA_SAFE
+Date: Wed,  7 Mar 2018 16:27:29 +1100
+Message-Id: <1520400451-11475-1-git-send-email-me@tobin.cc>
+To: Kernel Hardening <kernel-hardening@lists.openwall.com>, Tycho Andersen <tycho@tycho.ws>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Kees Cook <keescook@chromium.org>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 6, 2018 at 11:06 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>=
- wrote:
->
-> On 06/03/2018 23:46, Tycho Andersen wrote:
->> On Tue, Mar 06, 2018 at 10:33:17PM +0000, Andy Lutomirski wrote:
->>>>> Suppose I'm writing a container manager.  I want to run "mount" in th=
-e
->>>>> container, but I don't want to allow moun() in general and I want to
->>>>> emulate certain mount() actions.  I can write a filter that catches
->>>>> mount using seccomp and calls out to the container manager for help.
->>>>> This isn't theoretical -- Tycho wants *exactly* this use case to be
->>>>> supported.
->>>>
->>>> Well, I think this use case should be handled with something like
->>>> LD_PRELOAD and a helper library. FYI, I did something like this:
->>>> https://github.com/stemjail/stemshim
->>>
->>> I doubt that will work for containers.  Containers that use user
->>> namespaces and, for example, setuid programs aren't going to honor
->>> LD_PRELOAD.
->>
->> Or anything that calls syscalls directly, like go programs.
->
-> That's why the vDSO-like approach. Enforcing an access control is not
-> the issue here, patching a buggy userland (without patching its code) is
-> the issue isn't it?
->
-> As far as I remember, the main problem is to handle file descriptors
-> while "emulating" the kernel behavior. This can be done with a "shim"
-> code mapped in every processes. Chrome used something like this (in a
-> previous sandbox mechanism) as a kind of emulation (with the current
-> seccomp-bpf ). I think it should be doable to replace the (userland)
-> emulation code with an IPC wrapper receiving file descriptors through
-> UNIX socket.
->
+We would like to get rid of VLAs all together from the kernel but in the
+mean time we can make their usage safer.
 
-Can you explain exactly what you mean by "vDSO-like"?
+Patch 1 defines a macro for declaring a VLA.
+Patch 2 shows example usage.
 
-When a 64-bit program does a syscall, it just executes the SYSCALL
-instruction.  The vDSO isn't involved at all.  32-bit programs usually
-go through the vDSO, but not always.
+There are a number of issues with this set
 
-It could be possible to force-load a DSO into an entire container and
-rig up seccomp to intercept all SYSCALLs not originating from the DSO
-such that they merely redirect control to the DSO, but that seems
-quite messy.
+1. It is opt-in security - that's bad.
+2. The compiler still warns for VLA use.
+
+
+thanks,
+Tobin.
+
+
+Tested with a test module - I'm not really sure if this sort of test
+module should go into the kernel (in general I mean).  Posting here for
+comment.
+
+/*
+ * Tests for VLA macro.
+ */
+
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/printk.h>
+
+/* newly added header file */
+/* #include <linux/vla.h> */
+#include "vla.h"
+
+#define MAX_VLA_SIZE 32
+
+static unsigned total_tests __initdata;
+static unsigned failed_tests __initdata;
+
+/* verify there are no compiler warnings */
+static void __init verify_declaration(void)
+{
+	int size = 10;
+	VLA_SAFE(int, myvla, size, VLA_DEFAULT_MAX);
+	int dummy;
+
+	VLA_WARN_OVERSIZE(myvla, size);
+
+	/* quiet compiler */
+	dummy = 1;
+	myvla[0] = 'a';
+
+}
+
+static int __init test_vla_less_than_max(void)
+{
+	int want = MAX_VLA_SIZE / 2;
+	VLA_SAFE(char, myvla, want, MAX_VLA_SIZE);
+	int got = sizeof(myvla);
+
+	total_tests++;
+
+	if (want != got) {
+		pr_warn("VLA_SAFE() declaration error: want=%d got=%d max=%d\n",
+			want, got, MAX_VLA_SIZE);
+		return 1;
+	}
+
+	/* quiet compiler warning */
+	myvla[0] = 'a';
+
+	return 0;
+}
+
+static int __init test_vla_greater_than_max(void)
+{
+	int want = MAX_VLA_SIZE * 2;
+	VLA_SAFE(char, myvla, want, MAX_VLA_SIZE);
+	int got = sizeof(myvla);
+
+	total_tests++;
+
+	if (got != MAX_VLA_SIZE) {
+		pr_warn("VLA_SAFE() declaration error: want=%d got=%d max=%d\n",
+			want, got, MAX_VLA_SIZE);
+		return 1;
+	}
+
+	/* quiet compiler warning */
+	myvla[0] = 'a';
+
+	return 0;
+}
+
+static void __init test_vla_int_type_usage(void)
+{
+	int size = 100;
+	VLA_SAFE(int, myvla, size, MAX_VLA_SIZE);
+	int i;
+
+	total_tests++;
+
+	for (i = 0; i < size; i++)
+		myvla[i] = 0;
+}
+
+static int __init test_vla_init(void)
+{
+
+
+	int err;
+
+	verify_declaration();
+
+	err = test_vla_less_than_max();
+	if (err)
+		failed_tests++;
+
+	err = test_vla_greater_than_max();
+	if (err)
+		failed_tests++;
+
+	test_vla_int_type_usage();
+
+	if (failed_tests == 0)
+		pr_info("all %u tests passed\n", total_tests);
+	else
+		pr_warn("failed %u out of %u tests\n",
+			failed_tests, total_tests);
+
+	return failed_tests ? -EINVAL : 0;
+}
+module_init(test_vla_init);
+
+static void hello_exit(void)
+{
+	pr_alert("Removing module: vla\n");
+}
+module_exit(hello_exit);
+
+MODULE_AUTHOR("Tobin C. Harding <me@tobin.cc>");
+MODULE_LICENSE("GPL");
+
+
+Tobin C. Harding (2):
+  vla: define new safe vla macros
+  lustre: use VLA_SAFE
+
+ drivers/staging/lustre/lustre/llite/xattr.c |  4 +++-
+ include/linux/vla.h                         | 15 +++++++++++++++
+ 2 files changed, 18 insertions(+), 1 deletion(-)
+ create mode 100644 include/linux/vla.h
+
+-- 
+2.7.4
