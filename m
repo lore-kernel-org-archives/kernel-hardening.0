@@ -1,87 +1,52 @@
-From: Jiri Slaby <jslaby@suse.cz>
-Subject: [PATCH stable-4.4] x86/syscall: Sanitize syscall table de-references under speculation fix
-Date: Wed,  7 Mar 2018 08:53:57 +0100
-Message-Id: <20180307075357.12147-1-jslaby@suse.cz>
-In-Reply-To: <CAMGffEm3bRrshMftdpC4cTNppQuFUPyOniE3zZL7PJRinbVVfw@mail.gmail.com>
-References: <CAMGffEm3bRrshMftdpC4cTNppQuFUPyOniE3zZL7PJRinbVVfw@mail.gmail.com>
-To: gregkh@linuxfoundation.org
-Cc: stable@vger.kernel.org, Dan Williams <dan.j.williams@intel.com>, Linus Torvalds <torvalds@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, alan@linux.intel.com, Jinpu Wang <jinpu.wang@profitbricks.com>, Jiri Slaby <jslaby@suse.cz>
+Date: Wed, 7 Mar 2018 21:02:05 +1100
+From: "Tobin C. Harding" <tobin@apporbit.com>
+Subject: Re: [PATCH] staging: lustre: Remove VLA usage
+Message-ID: <20180307100205.GF11750@eros>
+References: <20180307054608.GA9300@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180307054608.GA9300@beast>
+To: Kees Cook <keescook@chromium.org>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, linux-kernel@vger.kernel.org, "Tobin C. Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Dmitry Eremin <dmitry.eremin@intel.com>, Gargi Sharma <gs051095@gmail.com>, lustre-devel@lists.lustre.org, devel@driverdev.osuosl.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Dan Williams <dan.j.williams@intel.com>
+On Tue, Mar 06, 2018 at 09:46:08PM -0800, Kees Cook wrote:
+> The kernel would like to remove all VLA usage. This switches to a
+> simple kasprintf() instead.
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  drivers/staging/lustre/lustre/llite/xattr.c | 19 +++++++++++++------
+>  1 file changed, 13 insertions(+), 6 deletions(-)
+> 
+> diff --git a/drivers/staging/lustre/lustre/llite/xattr.c b/drivers/staging/lustre/lustre/llite/xattr.c
+> index 532384c91447..aab4eab64289 100644
+> --- a/drivers/staging/lustre/lustre/llite/xattr.c
+> +++ b/drivers/staging/lustre/lustre/llite/xattr.c
+> @@ -87,7 +87,7 @@ ll_xattr_set_common(const struct xattr_handler *handler,
+>  		    const char *name, const void *value, size_t size,
+>  		    int flags)
+>  {
+> -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
+> +	char *fullname;
+>  	struct ll_sb_info *sbi = ll_i2sbi(inode);
+>  	struct ptlrpc_request *req = NULL;
+>  	const char *pv = value;
+> @@ -141,10 +141,13 @@ ll_xattr_set_common(const struct xattr_handler *handler,
+>  			return -EPERM;
+>  	}
+>  
+> -	sprintf(fullname, "%s%s\n", handler->prefix, name);
+> +	fullname = kasprintf(GFP_KERNEL, "%s%s\n", handler->prefix, name);
+> +	if (!fullname)
+> +		return -ENOMEM;
+>  	rc = md_setxattr(sbi->ll_md_exp, ll_inode2fid(inode),
+>  			 valid, fullname, pv, size, 0, flags,
+>  			 ll_i2suppgid(inode), &req);
+> +	kfree(fullname);
 
-In 4.4.118, we have commit c8961332d6da (x86/syscall: Sanitize syscall
-table de-references under speculation), which is a backport of upstream
-commit 2fbd7af5af86. But it fixed only the C part of the upstream patch
--- the IA32 sysentry. So it ommitted completely the assembly part -- the
-64bit sysentry.
+This is cool.  We've had kasprintf() since 2007, who knew?!
 
-Fix that in this patch by explicit array_index_mask_nospec written in
-assembly. The same was used in lib/getuser.S.
-
-However, to have "sbb" working properly, we have to switch from "cmp"
-against (NR_syscalls-1) to (NR_syscalls), otherwise the last syscall
-number would be "and"ed by 0. It is because the original "ja" relies on
-"CF" or "ZF", but we rely only on "CF" in "sbb". That means: switch to
-"jae" conditional jump too.
-
-Final note: use rcx for mask as this is exactly what is overwritten by
-the 4th syscall argument (r10) right after.
-
-Reported-by: Jan Beulich <JBeulich@suse.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Dan Williams <dan.j.williams@intel.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: linux-arch@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com
-Cc: gregkh@linuxfoundation.org
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: alan@linux.intel.com
-Cc: Jinpu Wang <jinpu.wang@profitbricks.com>
-Signed-off-by: Jiri Slaby <jslaby@suse.cz>
----
- arch/x86/entry/entry_64.S | 16 ++++++++++------
- 1 file changed, 10 insertions(+), 6 deletions(-)
-
-diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index a03b22c615d9..59a4e1604a36 100644
---- a/arch/x86/entry/entry_64.S
-+++ b/arch/x86/entry/entry_64.S
-@@ -178,12 +178,14 @@ GLOBAL(entry_SYSCALL_64_after_swapgs)
- 	jnz	tracesys
- entry_SYSCALL_64_fastpath:
- #if __SYSCALL_MASK == ~0
--	cmpq	$__NR_syscall_max, %rax
-+	cmpq	$NR_syscalls, %rax
- #else
- 	andl	$__SYSCALL_MASK, %eax
--	cmpl	$__NR_syscall_max, %eax
-+	cmpl	$NR_syscalls, %eax
- #endif
--	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
-+	jae	1f				/* return -ENOSYS (already in pt_regs->ax) */
-+	sbb	%rcx, %rcx			/* array_index_mask_nospec() */
-+	and	%rcx, %rax
- 	movq	%r10, %rcx
- #ifdef CONFIG_RETPOLINE
- 	movq	sys_call_table(, %rax, 8), %rax
-@@ -276,12 +278,14 @@ tracesys_phase2:
- 	RESTORE_C_REGS_EXCEPT_RAX
- 	RESTORE_EXTRA_REGS
- #if __SYSCALL_MASK == ~0
--	cmpq	$__NR_syscall_max, %rax
-+	cmpq	$NR_syscalls, %rax
- #else
- 	andl	$__SYSCALL_MASK, %eax
--	cmpl	$__NR_syscall_max, %eax
-+	cmpl	$NR_syscalls, %eax
- #endif
--	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
-+	jae	1f				/* return -ENOSYS (already in pt_regs->ax) */
-+	sbb	%rcx, %rcx			/* array_index_mask_nospec() */
-+	and	%rcx, %rax
- 	movq	%r10, %rcx			/* fixup for C */
- #ifdef CONFIG_RETPOLINE
- 	movq	sys_call_table(, %rax, 8), %rax
--- 
-2.16.2
+thanks,
+Tobin.
