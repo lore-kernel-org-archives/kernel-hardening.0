@@ -1,46 +1,96 @@
-Subject: Re: [PATCH 1/7] genalloc: track beginning of allocations
-From: Igor Stoppa <igor.stoppa@huawei.com>
-References: <20180228200620.30026-1-igor.stoppa@huawei.com>
- <20180228200620.30026-2-igor.stoppa@huawei.com>
- <20180306131856.GD19349@rapoport-lnx>
- <54e95716-9d61-51a3-9ae8-196e60625b76@huawei.com>
-Message-ID: <98df3380-a142-871e-5a18-b356088e33ea@huawei.com>
-Date: Wed, 7 Mar 2018 17:46:53 +0200
 MIME-Version: 1.0
-In-Reply-To: <54e95716-9d61-51a3-9ae8-196e60625b76@huawei.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-To: Mike Rapoport <rppt@linux.vnet.ibm.com>
-Cc: david@fromorbit.com, willy@infradead.org, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <d5de0034-6f74-5b73-2df8-dbe5b366c2fc@prevas.dk>
+References: <20180307054608.GA9300@beast> <d5de0034-6f74-5b73-2df8-dbe5b366c2fc@prevas.dk>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 7 Mar 2018 09:20:31 -0800
+Message-ID: <CAGXu5j+OTu84ohuR3f4_xKRw9vikVi-K2TnH3+n_ekX1m1Vv8A@mail.gmail.com>
+Subject: Re: [PATCH] staging: lustre: Remove VLA usage
+Content-Type: text/plain; charset="UTF-8"
+To: Rasmus Villemoes <rasmus.villemoes@prevas.dk>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, LKML <linux-kernel@vger.kernel.org>, "Tobin C. Harding" <me@tobin.cc>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Dmitry Eremin <dmitry.eremin@intel.com>, Gargi Sharma <gs051095@gmail.com>, Lustre Development List <lustre-devel@lists.lustre.org>, devel@driverdev.osuosl.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-On 07/03/18 16:48, Igor Stoppa wrote:
-> 
-> 
-> On 06/03/18 15:19, Mike Rapoport wrote:
->> On Wed, Feb 28, 2018 at 10:06:14PM +0200, Igor Stoppa wrote:
-
-[...]
-
->>> + * get_boundary() - verifies address, then measure length.
+On Wed, Mar 7, 2018 at 5:10 AM, Rasmus Villemoes
+<rasmus.villemoes@prevas.dk> wrote:
+> On 2018-03-07 06:46, Kees Cook wrote:
+>> The kernel would like to remove all VLA usage. This switches to a
+>> simple kasprintf() instead.
 >>
->> There's some lack of consistency between the name and implementation and
->> the description.
->> It seems that it would be simpler to actually make it get_length() and
->> return the length of the allocation or nentries if the latter is smaller.
->> Then in gen_pool_free() there will be no need to recalculate nentries
->> again.
-> 
-> There is an error in the documentation. I'll explain below.
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> ---
+>>  drivers/staging/lustre/lustre/llite/xattr.c | 19 +++++++++++++------
+>>  1 file changed, 13 insertions(+), 6 deletions(-)
+>>
+>> diff --git a/drivers/staging/lustre/lustre/llite/xattr.c b/drivers/staging/lustre/lustre/llite/xattr.c
+>> index 532384c91447..aab4eab64289 100644
+>> --- a/drivers/staging/lustre/lustre/llite/xattr.c
+>> +++ b/drivers/staging/lustre/lustre/llite/xattr.c
+>> @@ -87,7 +87,7 @@ ll_xattr_set_common(const struct xattr_handler *handler,
+>>                   const char *name, const void *value, size_t size,
+>>                   int flags)
+>>  {
+>> -     char fullname[strlen(handler->prefix) + strlen(name) + 1];
+>> +     char *fullname;
+>>       struct ll_sb_info *sbi = ll_i2sbi(inode);
+>>       struct ptlrpc_request *req = NULL;
+>>       const char *pv = value;
+>> @@ -141,10 +141,13 @@ ll_xattr_set_common(const struct xattr_handler *handler,
+>>                       return -EPERM;
+>>       }
+>>
+>> -     sprintf(fullname, "%s%s\n", handler->prefix, name);
+>
+> It's probably worth pointing out that this actually fixes an
+> unconditional buffer overflow: fullname only has room for the two
+> strings and the '\n', but vsnprintf() is told that the buffer has
+> infinite size (well, INT_MAX), so there should be plenty of room to
+> append the '\0' after the '\n'.
+>
+>> +     fullname = kasprintf(GFP_KERNEL, "%s%s\n", handler->prefix, name);
+>> +     if (!fullname)
+>> +             return -ENOMEM;
+>>       rc = md_setxattr(sbi->ll_md_exp, ll_inode2fid(inode),
+>>                        valid, fullname, pv, size, 0, flags,
+>>                        ll_i2suppgid(inode), &req);
+>> +     kfree(fullname);
+>>       if (rc) {
+>>               if (rc == -EOPNOTSUPP && handler->flags == XATTR_USER_T) {
+>>                       LCONSOLE_INFO("Disabling user_xattr feature because it is not supported on the server\n");
+>> @@ -364,7 +367,7 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
+>>                              struct dentry *dentry, struct inode *inode,
+>>                              const char *name, void *buffer, size_t size)
+>>  {
+>> -     char fullname[strlen(handler->prefix) + strlen(name) + 1];
+>> +     char *fullname;
+>>       struct ll_sb_info *sbi = ll_i2sbi(inode);
+>>  #ifdef CONFIG_FS_POSIX_ACL
+>>       struct ll_inode_info *lli = ll_i2info(inode);
+>> @@ -411,9 +414,13 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
+>>       if (handler->flags == XATTR_ACL_DEFAULT_T && !S_ISDIR(inode->i_mode))
+>>               return -ENODATA;
+>>  #endif
+>> -     sprintf(fullname, "%s%s\n", handler->prefix, name);
+>
+> Same here.
+>
+> I'm a little surprised this hasn't been caugt by static analysis, I
+> thought gcc/coverity/smatch/whatnot had gotten pretty good at computing
+> the size of the output generated by a given format string with "known"
+> arguments and comparing to the size of the output buffer. Though of
+> course it does require the tool to be able to do symbolic manipulations,
+> in this case realizing that
+>
+> outsize == strlen(x)+strlen(y)+1+1 > bufsize == strlen(x)+strlen(y)+1
+>
+> Rasmus
 
-Argh, I do not know why I came out with that.
+Oh yes, hah. I didn't even see the \n in the string. :P
 
-Yes, your comment is correct. I've modified the function accordingly and
-it is simpler.
+So, both a VLA fix and a buffer over-run fix. Can I add your "Reviewed-by"? :)
 
-I will post it in the next revision.
+-Kees
 
---
-igor
+-- 
+Kees Cook
+Pixel Security
