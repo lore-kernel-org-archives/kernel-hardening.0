@@ -1,117 +1,119 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20180308172031.GA14541@embeddedgus>
-References: <20180308172031.GA14541@embeddedgus>
+In-Reply-To: <20180308150236.5tysfbm3xdouii5n@treble>
+References: <1520479847-39174-1-git-send-email-keescook@chromium.org> <20180308150236.5tysfbm3xdouii5n@treble>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 8 Mar 2018 09:58:57 -0800
-Message-ID: <CAGXu5jLjKcYOPxQOV6GO1oaLj1M_K=cFu-kHLLEzP=ZOXaAtfA@mail.gmail.com>
-Subject: Re: [PATCH] rtc: s5m: Remove VLA usage
+Date: Thu, 8 Mar 2018 10:02:01 -0800
+Message-ID: <CAGXu5jL=93keuGEjNaLYHM-hc1EeaaW2SmnnW5ja=SH1jPJwGw@mail.gmail.com>
+Subject: Re: [PATCH 0/3] Remove accidental VLA usage
 Content-Type: text/plain; charset="UTF-8"
-To: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Cc: Sangbeom Kim <sbkim73@samsung.com>, Krzysztof Kozlowski <krzk@kernel.org>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, Alessandro Zummo <a.zummo@towertech.it>, Alexandre Belloni <alexandre.belloni@bootlin.com>, LKML <linux-kernel@vger.kernel.org>, linux-samsung-soc@vger.kernel.org, linux-rtc@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+To: Josh Poimboeuf <jpoimboe@redhat.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Steven Rostedt <rostedt@goodmis.org>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, "Tobin C. Harding" <me@tobin.cc>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 8, 2018 at 9:20 AM, Gustavo A. R. Silva
-<gustavo@embeddedor.com> wrote:
-> In preparation to enabling -Wvla, remove VLAs and replace them
-> with fixed-length arrays instead.
+On Thu, Mar 8, 2018 at 7:02 AM, Josh Poimboeuf <jpoimboe@redhat.com> wrote:
+> On Wed, Mar 07, 2018 at 07:30:44PM -0800, Kees Cook wrote:
+>> This series adds SIMPLE_MAX() to be used in places where a stack array
+>> is actually fixed, but the compiler still warns about VLA usage due to
+>> confusion caused by the safety checks in the max() macro.
+>>
+>> I'm sending these via -mm since that's where I've introduced SIMPLE_MAX(),
+>> and they should all have no operational differences.
 >
-> From a security viewpoint, the use of Variable Length Arrays can be
-> a vector for stack overflow attacks. Also, in general, as the code
-> evolves it is easy to lose track of how big a VLA can get. Thus, we
-> can end up having segfaults that are hard to debug.
->
-> Also, fixed as part of the directive to remove all VLAs from
-> the kernel: https://lkml.org/lkml/2018/3/7/621
->
-> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
-> ---
->  drivers/rtc/rtc-s5m.c | 15 +++++++++------
->  1 file changed, 9 insertions(+), 6 deletions(-)
->
-> diff --git a/drivers/rtc/rtc-s5m.c b/drivers/rtc/rtc-s5m.c
-> index 6deae10..2b5f4f7 100644
-> --- a/drivers/rtc/rtc-s5m.c
-> +++ b/drivers/rtc/rtc-s5m.c
-> @@ -38,6 +38,9 @@
->   */
->  #define UDR_READ_RETRY_CNT     5
->
-> +/* Maximum number of registers for setting time/alarm0/alarm1 */
-> +#define MAX_NUM_TIME_REGS      8
+> What if we instead simplify the max() macro's type checking so that GCC
+> can more easily fold the array size constants?  The below patch seems to
+> work:
 
-I would adjust the various const struct s5m_rtc_reg_config's
-.regs_count to be represented by this new define, so the stack and the
-structures stay in sync. Something like:
-
-static const struct s5m_rtc_reg_config s2mps13_rtc_regs = {
-        .regs_count             = MAX_NUM_TIME_REGS - 1,
-
-?
+Oooooh magic! Very nice. I couldn't figure out how to do this when I
+stared at it. Yes, let me respin. (I assume I can add your S-o-b?)
 
 -Kees
 
+>
+> diff --git a/include/linux/kernel.h b/include/linux/kernel.h
+> index 3fd291503576..ec863726da29 100644
+> --- a/include/linux/kernel.h
+> +++ b/include/linux/kernel.h
+> @@ -782,42 +782,32 @@ ftrace_vprintk(const char *fmt, va_list ap)
+>  static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
+>  #endif /* CONFIG_TRACING */
+>
+> -/*
+> - * min()/max()/clamp() macros that also do
+> - * strict type-checking.. See the
+> - * "unnecessary" pointer comparison.
+> - */
+> -#define __min(t1, t2, min1, min2, x, y) ({             \
+> -       t1 min1 = (x);                                  \
+> -       t2 min2 = (y);                                  \
+> -       (void) (&min1 == &min2);                        \
+> -       min1 < min2 ? min1 : min2; })
+> +extern long __error_incompatible_types_in_min_macro;
+> +extern long __error_incompatible_types_in_max_macro;
 > +
->  /*
->   * Registers used by the driver which are different between chipsets.
->   *
-> @@ -367,7 +370,7 @@ static void s5m8763_tm_to_data(struct rtc_time *tm, u8 *data)
->  static int s5m_rtc_read_time(struct device *dev, struct rtc_time *tm)
->  {
->         struct s5m_rtc_info *info = dev_get_drvdata(dev);
-> -       u8 data[info->regs->regs_count];
-> +       u8 data[MAX_NUM_TIME_REGS];
->         int ret;
+> +#define __min(t1, t2, x, y)                                            \
+> +       __builtin_choose_expr(__builtin_types_compatible_p(t1, t2),     \
+> +                             (t1)(x) < (t2)(y) ? (t1)(x) : (t2)(y),    \
+> +                             (t1)__error_incompatible_types_in_min_macro)
 >
->         if (info->regs->read_time_udr_mask) {
-> @@ -413,7 +416,7 @@ static int s5m_rtc_read_time(struct device *dev, struct rtc_time *tm)
->  static int s5m_rtc_set_time(struct device *dev, struct rtc_time *tm)
->  {
->         struct s5m_rtc_info *info = dev_get_drvdata(dev);
-> -       u8 data[info->regs->regs_count];
-> +       u8 data[MAX_NUM_TIME_REGS];
->         int ret = 0;
+>  /**
+>   * min - return minimum of two values of the same or compatible types
+>   * @x: first value
+>   * @y: second value
+>   */
+> -#define min(x, y)                                      \
+> -       __min(typeof(x), typeof(y),                     \
+> -             __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),   \
+> -             x, y)
+> +#define min(x, y) __min(typeof(x), typeof(y), x, y)                    \
 >
->         switch (info->device_type) {
-> @@ -450,7 +453,7 @@ static int s5m_rtc_set_time(struct device *dev, struct rtc_time *tm)
->  static int s5m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
->  {
->         struct s5m_rtc_info *info = dev_get_drvdata(dev);
-> -       u8 data[info->regs->regs_count];
-> +       u8 data[MAX_NUM_TIME_REGS];
->         unsigned int val;
->         int ret, i;
+> -#define __max(t1, t2, max1, max2, x, y) ({             \
+> -       t1 max1 = (x);                                  \
+> -       t2 max2 = (y);                                  \
+> -       (void) (&max1 == &max2);                        \
+> -       max1 > max2 ? max1 : max2; })
+> +#define __max(t1, t2, x, y)                                            \
+> +       __builtin_choose_expr(__builtin_types_compatible_p(t1, t2),     \
+> +                             (t1)(x) > (t2)(y) ? (t1)(x) : (t2)(y),    \
+> +                             (t1)__error_incompatible_types_in_max_macro)
 >
-> @@ -500,7 +503,7 @@ static int s5m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
+>  /**
+>   * max - return maximum of two values of the same or compatible types
+>   * @x: first value
+>   * @y: second value
+>   */
+> -#define max(x, y)                                      \
+> -       __max(typeof(x), typeof(y),                     \
+> -             __UNIQUE_ID(max1_), __UNIQUE_ID(max2_),   \
+> -             x, y)
+> +#define max(x, y) __max(typeof(x), typeof(y), x, y)
 >
->  static int s5m_rtc_stop_alarm(struct s5m_rtc_info *info)
->  {
-> -       u8 data[info->regs->regs_count];
-> +       u8 data[MAX_NUM_TIME_REGS];
->         int ret, i;
->         struct rtc_time tm;
+>  /**
+>   * min3 - return minimum of three values
+> @@ -869,10 +859,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
+>   * @x: first value
+>   * @y: second value
+>   */
+> -#define min_t(type, x, y)                              \
+> -       __min(type, type,                               \
+> -             __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),   \
+> -             x, y)
+> +#define min_t(type, x, y) __min(type, type, x, y)
 >
-> @@ -545,7 +548,7 @@ static int s5m_rtc_stop_alarm(struct s5m_rtc_info *info)
->  static int s5m_rtc_start_alarm(struct s5m_rtc_info *info)
->  {
->         int ret;
-> -       u8 data[info->regs->regs_count];
-> +       u8 data[MAX_NUM_TIME_REGS];
->         u8 alarm0_conf;
->         struct rtc_time tm;
+>  /**
+>   * max_t - return maximum of two values, using the specified type
+> @@ -880,10 +867,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
+>   * @x: first value
+>   * @y: second value
+>   */
+> -#define max_t(type, x, y)                              \
+> -       __max(type, type,                               \
+> -             __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),   \
+> -             x, y)
+> +#define max_t(type, x, y) __max(type, type, x, y)                              \
 >
-> @@ -598,7 +601,7 @@ static int s5m_rtc_start_alarm(struct s5m_rtc_info *info)
->  static int s5m_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
->  {
->         struct s5m_rtc_info *info = dev_get_drvdata(dev);
-> -       u8 data[info->regs->regs_count];
-> +       u8 data[MAX_NUM_TIME_REGS];
->         int ret;
->
->         switch (info->device_type) {
-> --
-> 2.7.4
->
+>  /**
+>   * clamp_t - return a value clamped to a given range using a given type
 
 
 
