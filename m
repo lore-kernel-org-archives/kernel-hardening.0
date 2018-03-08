@@ -1,53 +1,73 @@
-Date: Thu, 8 Mar 2018 15:05:12 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
-Message-ID: <20180308230512.GD29073@bombadil.infradead.org>
-References: <20180214182618.14627-1-willy@infradead.org>
- <20180214182618.14627-3-willy@infradead.org>
- <CAGXu5jL9hqQGe672CmvFwqNbtTr=qu7WRwHuS4Vy7o5sX_UTgg@mail.gmail.com>
- <alpine.DEB.2.20.1803072212160.2814@hadrien>
- <20180308025812.GA9082@bombadil.infradead.org>
- <alpine.DEB.2.20.1803080722300.3754@hadrien>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.20.1803080722300.3754@hadrien>
-To: Julia Lawall <julia.lawall@lip6.fr>
-Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, cocci@systeme.lip6.fr, Himanshu Jha <himanshujha199640@gmail.com>
+From: Tycho Andersen <tycho@tycho.ws>
+Subject: [PATCH v3] ima: drop vla in ima_audit_measurement()
+Date: Thu,  8 Mar 2018 16:08:36 -0700
+Message-Id: <20180308230836.24329-1-tycho@tycho.ws>
+To: Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>
+Cc: linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 08, 2018 at 07:24:47AM +0100, Julia Lawall wrote:
-> On Wed, 7 Mar 2018, Matthew Wilcox wrote:
-> > On Wed, Mar 07, 2018 at 10:18:21PM +0100, Julia Lawall wrote:
-> > > > Otherwise, yes, please. We could build a coccinelle rule for
-> > > > additional replacements...
-> > >
-> > > A potential semantic patch and the changes it generates are attached
-> > > below.  Himanshu Jha helped with its development.  Working on this
-> > > uncovered one bug, where the allocated array is too large, because the
-> > > size provided for it was a structure size, but actually only pointers to
-> > > that structure were to be stored in it.
-> >
-> > This is cool!  Thanks for doing the coccinelle patch!  Diffstat:
-> >
-> >  50 files changed, 81 insertions(+), 124 deletions(-)
-> >
-> > I find that pretty compelling.  I'll repost the kvmalloc_struct patch
-> > imminently.
-> 
-> Thanks.  So it's OK to replace kmalloc and kzalloc, even though they
-> didn't previously consider vmalloc and even though kmalloc doesn't zero?
+In keeping with the directive to get rid of VLAs [1], let's drop the VLA
+from ima_audit_measurement(). We need to adjust the return type of
+ima_audit_measurement, because now this function can fail if an allocation
+fails.
 
-We'll also need to replace the corresponding places where those structs
-are freed with kvfree().  Can coccinelle handle that too?
+[1]: https://lkml.org/lkml/2018/3/7/621
 
-> There are a few other cases that use GFP_NOFS and GFP_NOWAIT, but I didn't
-> transform those because the comment says that the flags should be
-> GFP_KERNEL based.  Should those be transformed too?
+v2: just use audit_log_format instead of doing a second allocation
+v3: ignore failures in ima_audit_measurement()
 
-The problem with non-GFP_KERNEL allocations is that vmalloc may have to
-allocate page tables, which is always done with an implicit GFP_KERNEL
-allocation.  There's an intent to get rid of GFP_NOFS, but that's not
-been realised yet (and I'm not sure of our strategy to eliminate it ...
-I'll send a separate email about that).  I'm not sure why anything's
-trying to allocate with GFP_NOWAIT; can you send a list of those places?
+Signed-off-by: Tycho Andersen <tycho@tycho.ws>
+---
+ security/integrity/ima/ima_api.c | 16 ++++++++++------
+ 1 file changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/security/integrity/ima/ima_api.c b/security/integrity/ima/ima_api.c
+index 08fe405338e1..2aab9170ef68 100644
+--- a/security/integrity/ima/ima_api.c
++++ b/security/integrity/ima/ima_api.c
+@@ -308,14 +308,17 @@ void ima_audit_measurement(struct integrity_iint_cache *iint,
+ 			   const unsigned char *filename)
+ {
+ 	struct audit_buffer *ab;
+-	char hash[(iint->ima_hash->length * 2) + 1];
++	char *hash;
+ 	const char *algo_name = hash_algo_name[iint->ima_hash->algo];
+-	char algo_hash[sizeof(hash) + strlen(algo_name) + 2];
+ 	int i;
+ 
+ 	if (iint->flags & IMA_AUDITED)
+ 		return;
+ 
++	hash = kzalloc((iint->ima_hash->length * 2) + 1, GFP_KERNEL);
++	if (!hash)
++		return;
++
+ 	for (i = 0; i < iint->ima_hash->length; i++)
+ 		hex_byte_pack(hash + (i * 2), iint->ima_hash->digest[i]);
+ 	hash[i * 2] = '\0';
+@@ -323,18 +326,19 @@ void ima_audit_measurement(struct integrity_iint_cache *iint,
+ 	ab = audit_log_start(current->audit_context, GFP_KERNEL,
+ 			     AUDIT_INTEGRITY_RULE);
+ 	if (!ab)
+-		return;
++		goto out;
+ 
+ 	audit_log_format(ab, "file=");
+ 	audit_log_untrustedstring(ab, filename);
+-	audit_log_format(ab, " hash=");
+-	snprintf(algo_hash, sizeof(algo_hash), "%s:%s", algo_name, hash);
+-	audit_log_untrustedstring(ab, algo_hash);
++	audit_log_format(ab, " hash=\"%s:%s\"", algo_name, hash);
+ 
+ 	audit_log_task_info(ab, current);
+ 	audit_log_end(ab);
+ 
+ 	iint->flags |= IMA_AUDITED;
++out:
++	kfree(hash);
++	return;
+ }
+ 
+ /*
+-- 
+2.14.1
