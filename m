@@ -1,109 +1,121 @@
-Date: Thu, 8 Mar 2018 09:02:36 -0600
-From: Josh Poimboeuf <jpoimboe@redhat.com>
-Subject: Re: [PATCH 0/3] Remove accidental VLA usage
-Message-ID: <20180308150236.5tysfbm3xdouii5n@treble>
-References: <1520479847-39174-1-git-send-email-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <1520479847-39174-1-git-send-email-keescook@chromium.org>
-To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, corbet@lwn.net, gustavo@embeddedor.com, rostedt@goodmis.org, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, "Tobin C. Harding" <me@tobin.cc>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, linux-btrfs@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Tycho Andersen <tycho@tycho.ws>
+Subject: [PATCH] ima: drop vla in ima_audit_measurement()
+Date: Thu,  8 Mar 2018 10:00:51 -0700
+Message-Id: <20180308170051.30840-1-tycho@tycho.ws>
+To: Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>
+Cc: linux-ima-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 07, 2018 at 07:30:44PM -0800, Kees Cook wrote:
-> This series adds SIMPLE_MAX() to be used in places where a stack array
-> is actually fixed, but the compiler still warns about VLA usage due to
-> confusion caused by the safety checks in the max() macro.
-> 
-> I'm sending these via -mm since that's where I've introduced SIMPLE_MAX(),
-> and they should all have no operational differences.
+In keeping with the directive to get rid of VLAs [1], let's drop the VLA
+from ima_audit_measurement(). We need to adjust the return type of
+ima_audit_measurement, because now this function can fail if an allocation
+fails.
 
-What if we instead simplify the max() macro's type checking so that GCC
-can more easily fold the array size constants?  The below patch seems to
-work:
+[1]: https://lkml.org/lkml/2018/3/7/621
 
-diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index 3fd291503576..ec863726da29 100644
---- a/include/linux/kernel.h
-+++ b/include/linux/kernel.h
-@@ -782,42 +782,32 @@ ftrace_vprintk(const char *fmt, va_list ap)
- static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
- #endif /* CONFIG_TRACING */
+Signed-off-by: Tycho Andersen <tycho@tycho.ws>
+---
+ security/integrity/ima/ima.h      |  4 ++--
+ security/integrity/ima/ima_api.c  | 31 +++++++++++++++++++++++--------
+ security/integrity/ima/ima_main.c |  7 +++++--
+ 3 files changed, 30 insertions(+), 12 deletions(-)
+
+diff --git a/security/integrity/ima/ima.h b/security/integrity/ima/ima.h
+index d52b487ad259..8e2470f72f7f 100644
+--- a/security/integrity/ima/ima.h
++++ b/security/integrity/ima/ima.h
+@@ -201,8 +201,8 @@ void ima_store_measurement(struct integrity_iint_cache *iint, struct file *file,
+ 			   const unsigned char *filename,
+ 			   struct evm_ima_xattr_data *xattr_value,
+ 			   int xattr_len, int pcr);
+-void ima_audit_measurement(struct integrity_iint_cache *iint,
+-			   const unsigned char *filename);
++int ima_audit_measurement(struct integrity_iint_cache *iint,
++			  const unsigned char *filename);
+ int ima_alloc_init_template(struct ima_event_data *event_data,
+ 			    struct ima_template_entry **entry);
+ int ima_store_template(struct ima_template_entry *entry, int violation,
+diff --git a/security/integrity/ima/ima_api.c b/security/integrity/ima/ima_api.c
+index 08fe405338e1..008d3887ae00 100644
+--- a/security/integrity/ima/ima_api.c
++++ b/security/integrity/ima/ima_api.c
+@@ -304,17 +304,28 @@ void ima_store_measurement(struct integrity_iint_cache *iint,
+ 		ima_free_template_entry(entry);
+ }
  
--/*
-- * min()/max()/clamp() macros that also do
-- * strict type-checking.. See the
-- * "unnecessary" pointer comparison.
-- */
--#define __min(t1, t2, min1, min2, x, y) ({		\
--	t1 min1 = (x);					\
--	t2 min2 = (y);					\
--	(void) (&min1 == &min2);			\
--	min1 < min2 ? min1 : min2; })
-+extern long __error_incompatible_types_in_min_macro;
-+extern long __error_incompatible_types_in_max_macro;
+-void ima_audit_measurement(struct integrity_iint_cache *iint,
+-			   const unsigned char *filename)
++int ima_audit_measurement(struct integrity_iint_cache *iint,
++			  const unsigned char *filename)
+ {
+ 	struct audit_buffer *ab;
+-	char hash[(iint->ima_hash->length * 2) + 1];
++	char *hash, *algo_hash;
+ 	const char *algo_name = hash_algo_name[iint->ima_hash->algo];
+-	char algo_hash[sizeof(hash) + strlen(algo_name) + 2];
+-	int i;
++	int i, hash_len, algo_hash_len;
+ 
+ 	if (iint->flags & IMA_AUDITED)
+-		return;
++		return 0;
 +
-+#define __min(t1, t2, x, y)						\
-+	__builtin_choose_expr(__builtin_types_compatible_p(t1, t2),	\
-+			      (t1)(x) < (t2)(y) ? (t1)(x) : (t2)(y),	\
-+			      (t1)__error_incompatible_types_in_min_macro)
++	hash_len = (iint->ima_hash->length * 2) + 1;
++	hash = kzalloc(hash_len, GFP_KERNEL);
++	if (!hash)
++		return -ENOMEM;
++
++	algo_hash_len = hash_len + strlen(algo_name) + 2;
++	algo_hash = kzalloc(algo_hash_len, GFP_KERNEL);
++	if (!algo_hash) {
++		kfree(hash);
++		return -ENOMEM;
++	}
  
- /**
-  * min - return minimum of two values of the same or compatible types
-  * @x: first value
-  * @y: second value
-  */
--#define min(x, y)					\
--	__min(typeof(x), typeof(y),			\
--	      __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),	\
--	      x, y)
-+#define min(x, y) __min(typeof(x), typeof(y), x, y)			\
+ 	for (i = 0; i < iint->ima_hash->length; i++)
+ 		hex_byte_pack(hash + (i * 2), iint->ima_hash->digest[i]);
+@@ -323,18 +334,22 @@ void ima_audit_measurement(struct integrity_iint_cache *iint,
+ 	ab = audit_log_start(current->audit_context, GFP_KERNEL,
+ 			     AUDIT_INTEGRITY_RULE);
+ 	if (!ab)
+-		return;
++		goto out;
  
--#define __max(t1, t2, max1, max2, x, y) ({		\
--	t1 max1 = (x);					\
--	t2 max2 = (y);					\
--	(void) (&max1 == &max2);			\
--	max1 > max2 ? max1 : max2; })
-+#define __max(t1, t2, x, y)						\
-+	__builtin_choose_expr(__builtin_types_compatible_p(t1, t2),	\
-+			      (t1)(x) > (t2)(y) ? (t1)(x) : (t2)(y),	\
-+			      (t1)__error_incompatible_types_in_max_macro)
+ 	audit_log_format(ab, "file=");
+ 	audit_log_untrustedstring(ab, filename);
+ 	audit_log_format(ab, " hash=");
+-	snprintf(algo_hash, sizeof(algo_hash), "%s:%s", algo_name, hash);
++	snprintf(algo_hash, algo_hash_len, "%s:%s", algo_name, hash);
+ 	audit_log_untrustedstring(ab, algo_hash);
  
- /**
-  * max - return maximum of two values of the same or compatible types
-  * @x: first value
-  * @y: second value
-  */
--#define max(x, y)					\
--	__max(typeof(x), typeof(y),			\
--	      __UNIQUE_ID(max1_), __UNIQUE_ID(max2_),	\
--	      x, y)
-+#define max(x, y) __max(typeof(x), typeof(y), x, y)
+ 	audit_log_task_info(ab, current);
+ 	audit_log_end(ab);
  
- /**
-  * min3 - return minimum of three values
-@@ -869,10 +859,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
-  * @x: first value
-  * @y: second value
-  */
--#define min_t(type, x, y)				\
--	__min(type, type,				\
--	      __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),	\
--	      x, y)
-+#define min_t(type, x, y) __min(type, type, x, y)
+ 	iint->flags |= IMA_AUDITED;
++out:
++	kfree(hash);
++	kfree(algo_hash);
++	return 0;
+ }
  
- /**
-  * max_t - return maximum of two values, using the specified type
-@@ -880,10 +867,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
-  * @x: first value
-  * @y: second value
-  */
--#define max_t(type, x, y)				\
--	__max(type, type,				\
--	      __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),	\
--	      x, y)
-+#define max_t(type, x, y) __max(type, type, x, y)				\
+ /*
+diff --git a/security/integrity/ima/ima_main.c b/security/integrity/ima/ima_main.c
+index 2cfb0c714967..356faae6f09c 100644
+--- a/security/integrity/ima/ima_main.c
++++ b/security/integrity/ima/ima_main.c
+@@ -288,8 +288,11 @@ static int process_measurement(struct file *file, char *buf, loff_t size,
+ 					      xattr_value, xattr_len, opened);
+ 		inode_unlock(inode);
+ 	}
+-	if (action & IMA_AUDIT)
+-		ima_audit_measurement(iint, pathname);
++	if (action & IMA_AUDIT) {
++		rc = ima_audit_measurement(iint, pathname);
++		if (rc < 0)
++			goto out_locked;
++	}
  
- /**
-  * clamp_t - return a value clamped to a given range using a given type
+ 	if ((file->f_flags & O_DIRECT) && (iint->flags & IMA_PERMIT_DIRECTIO))
+ 		rc = 0;
+-- 
+2.14.1
