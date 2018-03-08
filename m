@@ -1,56 +1,71 @@
+Date: Thu, 8 Mar 2018 14:45:47 -0700
+From: Tycho Andersen <tycho@tycho.ws>
+Subject: Re: [PATCH v2] ima: drop vla in ima_audit_measurement()
+Message-ID: <20180308214547.kdeoeozugxffzumn@smitten>
+References: <20180308202347.31331-1-tycho@tycho.ws>
+ <1520541374.3605.101.camel@linux.vnet.ibm.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20180308213841.13807-1-steve@sk2.org>
-References: <20180308213841.13807-1-steve@sk2.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 8 Mar 2018 13:43:07 -0800
-Message-ID: <CAGXu5j+_DvU4jNESxO2zBvP_VrTxOwVzh_NXqdw+S5amQukNjg@mail.gmail.com>
-Subject: Re: [PATCH] bfa: remove VLA
-Content-Type: text/plain; charset="UTF-8"
-To: Stephen Kitt <steve@sk2.org>
-Cc: hare <hare@suse.com>, linux-scsi@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <1520541374.3605.101.camel@linux.vnet.ibm.com>
+To: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Cc: Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 8, 2018 at 1:38 PM, Stephen Kitt <steve@sk2.org> wrote:
-> In preparation to enabling -Wvla, remove VLAs and replace them with
-> fixed-length arrays instead.
->
-> bfad_bsg.c uses a variable-length array declaration to measure the
-> size of a putative array; this can be replaced by the product of the
-> size of an element and the number of elements, avoiding the VLA
-> altogether.
->
-> This was prompted by https://lkml.org/lkml/2018/3/7/621
->
-> Signed-off-by: Stephen Kitt <steve@sk2.org>
+Hi Mimi,
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
+On Thu, Mar 08, 2018 at 03:36:14PM -0500, Mimi Zohar wrote:
+> On Thu, 2018-03-08 at 13:23 -0700, Tycho Andersen wrote:
+> 
+> >  /*
+> > diff --git a/security/integrity/ima/ima_main.c b/security/integrity/ima/ima_main.c
+> > index 2cfb0c714967..356faae6f09c 100644
+> > --- a/security/integrity/ima/ima_main.c
+> > +++ b/security/integrity/ima/ima_main.c
+> > @@ -288,8 +288,11 @@ static int process_measurement(struct file *file, char *buf, loff_t size,
+> >  					      xattr_value, xattr_len, opened);
+> >  		inode_unlock(inode);
+> >  	}
+> > -	if (action & IMA_AUDIT)
+> > -		ima_audit_measurement(iint, pathname);
+> > +	if (action & IMA_AUDIT) {
+> > +		rc = ima_audit_measurement(iint, pathname);
+> > +		if (rc < 0)
+> > +			goto out_locked;
+> > +	}
+> > 
+> >  	if ((file->f_flags & O_DIRECT) && (iint->flags & IMA_PERMIT_DIRECTIO))
+> >  		rc = 0;
+> 
+> Only when IMA-appraisal is enforcing file data integrity should
+> process_measurement() ever fail.  Other errors can be logged/audited.
 
--Kees
+Ok, so previously in ima_audit_measurement() when allocation failed,
+there was nothing logged. If we just keep this behavior like below,
+does that look good?
 
-> ---
->  drivers/scsi/bfa/bfad_bsg.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
->
-> diff --git a/drivers/scsi/bfa/bfad_bsg.c b/drivers/scsi/bfa/bfad_bsg.c
-> index 3976e787ba64..7c884f881180 100644
-> --- a/drivers/scsi/bfa/bfad_bsg.c
-> +++ b/drivers/scsi/bfa/bfad_bsg.c
-> @@ -891,7 +891,7 @@ bfad_iocmd_fabric_get_lports(struct bfad_s *bfad, void *cmd,
->
->         if (bfad_chk_iocmd_sz(payload_len,
->                 sizeof(struct bfa_bsg_fabric_get_lports_s),
-> -               sizeof(wwn_t[iocmd->nports])) != BFA_STATUS_OK) {
-> +               sizeof(wwn_t) * iocmd->nports) != BFA_STATUS_OK) {
->                 iocmd->status = BFA_STATUS_VERSION_FAIL;
->                 goto out;
->         }
-> --
-> 2.11.0
->
+Thanks!
 
+Tycho
 
-
--- 
-Kees Cook
-Pixel Security
+diff --git a/security/integrity/ima/ima_main.c b/security/integrity/ima/ima_main.c
+index 356faae6f09c..4e699bc7adc5 100644
+--- a/security/integrity/ima/ima_main.c
++++ b/security/integrity/ima/ima_main.c
+@@ -289,9 +289,13 @@ static int process_measurement(struct file *file, char *buf, loff_t size,
+ 		inode_unlock(inode);
+ 	}
+ 	if (action & IMA_AUDIT) {
+-		rc = ima_audit_measurement(iint, pathname);
+-		if (rc < 0)
++		int ret;
++
++		ret = ima_audit_measurement(iint, pathname);
++		if (ret < 0 && ima_appraise & IMA_APPRAISE_ENFORCE) {
++			rc = ret;
+ 			goto out_locked;
++		}
+ 	}
+ 
+ 	if ((file->f_flags & O_DIRECT) && (iint->flags & IMA_PERMIT_DIRECTIO))
