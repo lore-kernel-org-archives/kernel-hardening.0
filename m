@@ -1,98 +1,89 @@
-Subject: Re: [PATCH] crypto/ecc: Remove stack VLA usage
-References: <20180307215615.GA18928@beast>
-From: Tudor Ambarus <tudor.ambarus@microchip.com>
-Message-ID: <4fbe11f1-c92e-a4d5-616d-01e983f5405f@microchip.com>
-Date: Thu, 8 Mar 2018 11:43:45 +0200
+Date: Thu, 8 Mar 2018 13:43:09 +0300
+From: Dan Carpenter <dan.carpenter@oracle.com>
+Subject: Re: [PATCH] staging: lustre: Remove VLA usage
+Message-ID: <20180308104309.l3j2deqrgq5d472g@mwanda>
+References: <20180307054608.GA9300@beast>
+ <d5de0034-6f74-5b73-2df8-dbe5b366c2fc@prevas.dk>
 MIME-Version: 1.0
-In-Reply-To: <20180307215615.GA18928@beast>
-Content-Type: text/plain; charset="utf-8"; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>, Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-kernel@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, linux-crypto@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <d5de0034-6f74-5b73-2df8-dbe5b366c2fc@prevas.dk>
+To: Rasmus Villemoes <rasmus.villemoes@prevas.dk>
+Cc: Kees Cook <keescook@chromium.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, devel@driverdev.osuosl.org, Dmitry Eremin <dmitry.eremin@intel.com>, Tycho Andersen <tycho@tycho.ws>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-kernel@vger.kernel.org, Gargi Sharma <gs051095@gmail.com>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, lustre-devel@lists.lustre.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi, Kees,
-
-On 03/07/2018 11:56 PM, Kees Cook wrote:
-> On the quest to remove all VLAs from the kernel[1], this switches to
-> a pair of kmalloc regions instead of using the stack. This also moves
-> the get_random_bytes() after all allocations (and drops the needless
-> "nbytes" variable).
+On Wed, Mar 07, 2018 at 02:10:41PM +0100, Rasmus Villemoes wrote:
+> On 2018-03-07 06:46, Kees Cook wrote:
+> > The kernel would like to remove all VLA usage. This switches to a
+> > simple kasprintf() instead.
+> > 
+> > Signed-off-by: Kees Cook <keescook@chromium.org>
+> > ---
+> >  drivers/staging/lustre/lustre/llite/xattr.c | 19 +++++++++++++------
+> >  1 file changed, 13 insertions(+), 6 deletions(-)
+> > 
+> > diff --git a/drivers/staging/lustre/lustre/llite/xattr.c b/drivers/staging/lustre/lustre/llite/xattr.c
+> > index 532384c91447..aab4eab64289 100644
+> > --- a/drivers/staging/lustre/lustre/llite/xattr.c
+> > +++ b/drivers/staging/lustre/lustre/llite/xattr.c
+> > @@ -87,7 +87,7 @@ ll_xattr_set_common(const struct xattr_handler *handler,
+> >  		    const char *name, const void *value, size_t size,
+> >  		    int flags)
+> >  {
+> > -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
+> > +	char *fullname;
+> >  	struct ll_sb_info *sbi = ll_i2sbi(inode);
+> >  	struct ptlrpc_request *req = NULL;
+> >  	const char *pv = value;
+> > @@ -141,10 +141,13 @@ ll_xattr_set_common(const struct xattr_handler *handler,
+> >  			return -EPERM;
+> >  	}
+> >  
+> > -	sprintf(fullname, "%s%s\n", handler->prefix, name);
 > 
-> [1] https://lkml.org/lkml/2018/3/7/621
+> It's probably worth pointing out that this actually fixes an
+> unconditional buffer overflow: fullname only has room for the two
+> strings and the '\n', but vsnprintf() is told that the buffer has
+> infinite size (well, INT_MAX), so there should be plenty of room to
+> append the '\0' after the '\n'.
 > 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
->   crypto/ecc.c | 23 +++++++++++++++++------
->   1 file changed, 17 insertions(+), 6 deletions(-)
+> > +	fullname = kasprintf(GFP_KERNEL, "%s%s\n", handler->prefix, name);
+> > +	if (!fullname)
+> > +		return -ENOMEM;
+> >  	rc = md_setxattr(sbi->ll_md_exp, ll_inode2fid(inode),
+> >  			 valid, fullname, pv, size, 0, flags,
+> >  			 ll_i2suppgid(inode), &req);
+> > +	kfree(fullname);
+> >  	if (rc) {
+> >  		if (rc == -EOPNOTSUPP && handler->flags == XATTR_USER_T) {
+> >  			LCONSOLE_INFO("Disabling user_xattr feature because it is not supported on the server\n");
+> > @@ -364,7 +367,7 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
+> >  			       struct dentry *dentry, struct inode *inode,
+> >  			       const char *name, void *buffer, size_t size)
+> >  {
+> > -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
+> > +	char *fullname;
+> >  	struct ll_sb_info *sbi = ll_i2sbi(inode);
+> >  #ifdef CONFIG_FS_POSIX_ACL
+> >  	struct ll_inode_info *lli = ll_i2info(inode);
+> > @@ -411,9 +414,13 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
+> >  	if (handler->flags == XATTR_ACL_DEFAULT_T && !S_ISDIR(inode->i_mode))
+> >  		return -ENODATA;
+> >  #endif
+> > -	sprintf(fullname, "%s%s\n", handler->prefix, name);
 > 
-> diff --git a/crypto/ecc.c b/crypto/ecc.c
-> index 18f32f2a5e1c..5bfa63603da0 100644
-> --- a/crypto/ecc.c
-> +++ b/crypto/ecc.c
-> @@ -1025,9 +1025,7 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
->   {
->   	int ret = 0;
->   	struct ecc_point *product, *pk;
-> -	u64 priv[ndigits];
-> -	u64 rand_z[ndigits];
-> -	unsigned int nbytes;
-> +	u64 *priv, *rand_z;
->   	const struct ecc_curve *curve = ecc_get_curve(curve_id);
->   
->   	if (!private_key || !public_key || !curve) {
-> @@ -1035,14 +1033,22 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
->   		goto out;
->   	}
->   
-> -	nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
-> +	priv = kmalloc_array(ndigits, sizeof(*priv), GFP_KERNEL);
-> +	if (!priv) {
-> +		ret = -ENOMEM;
-> +		goto out;
-> +	}
->   
-> -	get_random_bytes(rand_z, nbytes);
-> +	rand_z = kmalloc_array(ndigits, sizeof(*rand_z), GFP_KERNEL);
-> +	if (!rand_z) {
-> +		ret = -ENOMEM;
-> +		goto kfree_out;
-> +	}
->   
->   	pk = ecc_alloc_point(ndigits);
->   	if (!pk) {
->   		ret = -ENOMEM;
-> -		goto out;
-> +		goto kfree_out;
->   	}
->   
->   	product = ecc_alloc_point(ndigits);
-> @@ -1051,6 +1057,8 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
->   		goto err_alloc_product;
->   	}
->   
-> +	get_random_bytes(rand_z, ndigits << ECC_DIGITS_TO_BYTES_SHIFT);
-> +
->   	ecc_swap_digits(public_key, pk->x, ndigits);
->   	ecc_swap_digits(&public_key[ndigits], pk->y, ndigits);
->   	ecc_swap_digits(private_key, priv, ndigits);
-> @@ -1065,6 +1073,9 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
->   	ecc_free_point(product);
->   err_alloc_product:
->   	ecc_free_point(pk);
-> +kfree_out:
-> +	kfree(priv);
-
-I think we should use kzfree here.
-
-> +	kfree(rand_z);
-
-Probably here too. Looks like there are few intermediate buffers in ecc
-that should be zeroized as well.
-
-Best,
-ta
->   out:
->   	return ret;
->   }
+> Same here.
 > 
+> I'm a little surprised this hasn't been caugt by static analysis, I
+> thought gcc/coverity/smatch/whatnot had gotten pretty good at computing
+> the size of the output generated by a given format string with "known"
+> arguments and comparing to the size of the output buffer. Though of
+> course it does require the tool to be able to do symbolic manipulations,
+> in this case realizing that
+> 
+> outsize == strlen(x)+strlen(y)+1+1 > bufsize == strlen(x)+strlen(y)+1
+
+That kind of symbolic manipulation is crazy hard to do.
+
+regards,
+dan carpenter
