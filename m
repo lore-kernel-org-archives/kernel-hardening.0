@@ -1,138 +1,109 @@
-From: Stephen Kitt <steve@sk2.org>
-Subject: [PATCH] aic7xxx/aic79xx: remove VLAs
-Date: Thu,  8 Mar 2018 14:22:25 +0100
-Message-Id: <20180308132225.13229-1-steve@sk2.org>
-To: hare@suse.com
-Cc: linux-scsi@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Stephen Kitt <steve@sk2.org>
+Date: Thu, 8 Mar 2018 09:02:36 -0600
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+Subject: Re: [PATCH 0/3] Remove accidental VLA usage
+Message-ID: <20180308150236.5tysfbm3xdouii5n@treble>
+References: <1520479847-39174-1-git-send-email-keescook@chromium.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <1520479847-39174-1-git-send-email-keescook@chromium.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, corbet@lwn.net, gustavo@embeddedor.com, rostedt@goodmis.org, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, "Tobin C. Harding" <me@tobin.cc>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, linux-btrfs@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In preparation to enabling -Wvla, remove VLAs and replace them with
-fixed-length arrays instead.
+On Wed, Mar 07, 2018 at 07:30:44PM -0800, Kees Cook wrote:
+> This series adds SIMPLE_MAX() to be used in places where a stack array
+> is actually fixed, but the compiler still warns about VLA usage due to
+> confusion caused by the safety checks in the max() macro.
+> 
+> I'm sending these via -mm since that's where I've introduced SIMPLE_MAX(),
+> and they should all have no operational differences.
 
-The arrays fixed here, using the number of constant sections, aren't
-really VLAs, but they appear so to the compiler. Since we know at
-build-time how many critical sections there are, we might as well use
-a pre-processor-level constant instead.
+What if we instead simplify the max() macro's type checking so that GCC
+can more easily fold the array size constants?  The below patch seems to
+work:
 
-This was prompted by https://lkml.org/lkml/2018/3/7/621
-
-Signed-off-by: Stephen Kitt <steve@sk2.org>
----
- drivers/scsi/aic7xxx/aic79xx_core.c        | 8 ++++----
- drivers/scsi/aic7xxx/aic79xx_seq.h_shipped | 3 +--
- drivers/scsi/aic7xxx/aic7xxx_core.c        | 8 ++++----
- drivers/scsi/aic7xxx/aic7xxx_seq.h_shipped | 3 +--
- drivers/scsi/aic7xxx/aicasm/aicasm.c       | 6 ++++--
- 5 files changed, 14 insertions(+), 14 deletions(-)
-
-diff --git a/drivers/scsi/aic7xxx/aic79xx_core.c b/drivers/scsi/aic7xxx/aic79xx_core.c
-index b560f396ee99..034f4eebb160 100644
---- a/drivers/scsi/aic7xxx/aic79xx_core.c
-+++ b/drivers/scsi/aic7xxx/aic79xx_core.c
-@@ -9338,9 +9338,9 @@ ahd_dumpseq(struct ahd_softc* ahd)
- static void
- ahd_loadseq(struct ahd_softc *ahd)
- {
--	struct	cs cs_table[num_critical_sections];
--	u_int	begin_set[num_critical_sections];
--	u_int	end_set[num_critical_sections];
-+	struct	cs cs_table[NUM_CRITICAL_SECTIONS];
-+	u_int	begin_set[NUM_CRITICAL_SECTIONS];
-+	u_int	end_set[NUM_CRITICAL_SECTIONS];
- 	const struct patch *cur_patch;
- 	u_int	cs_count;
- 	u_int	cur_cs;
-@@ -9456,7 +9456,7 @@ ahd_loadseq(struct ahd_softc *ahd)
- 		 * Move through the CS table until we find a CS
- 		 * that might apply to this instruction.
- 		 */
--		for (; cur_cs < num_critical_sections; cur_cs++) {
-+		for (; cur_cs < NUM_CRITICAL_SECTIONS; cur_cs++) {
- 			if (critical_sections[cur_cs].end <= i) {
- 				if (begin_set[cs_count] == TRUE
- 				 && end_set[cs_count] == FALSE) {
-diff --git a/drivers/scsi/aic7xxx/aic79xx_seq.h_shipped b/drivers/scsi/aic7xxx/aic79xx_seq.h_shipped
-index 4b51e232392f..20fb9ca9e271 100644
---- a/drivers/scsi/aic7xxx/aic79xx_seq.h_shipped
-+++ b/drivers/scsi/aic7xxx/aic79xx_seq.h_shipped
-@@ -1186,5 +1186,4 @@ static const struct cs {
- 	{ 759, 763 }
- };
+diff --git a/include/linux/kernel.h b/include/linux/kernel.h
+index 3fd291503576..ec863726da29 100644
+--- a/include/linux/kernel.h
++++ b/include/linux/kernel.h
+@@ -782,42 +782,32 @@ ftrace_vprintk(const char *fmt, va_list ap)
+ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
+ #endif /* CONFIG_TRACING */
  
--static const int num_critical_sections = sizeof(critical_sections)
--				       / sizeof(*critical_sections);
-+#define NUM_CRITICAL_SECTIONS 14
-diff --git a/drivers/scsi/aic7xxx/aic7xxx_core.c b/drivers/scsi/aic7xxx/aic7xxx_core.c
-index 6612ff3b2e83..e97eceacf522 100644
---- a/drivers/scsi/aic7xxx/aic7xxx_core.c
-+++ b/drivers/scsi/aic7xxx/aic7xxx_core.c
-@@ -6848,9 +6848,9 @@ ahc_dumpseq(struct ahc_softc* ahc)
- static int
- ahc_loadseq(struct ahc_softc *ahc)
- {
--	struct	cs cs_table[num_critical_sections];
--	u_int	begin_set[num_critical_sections];
--	u_int	end_set[num_critical_sections];
-+	struct	cs cs_table[NUM_CRITICAL_SECTIONS];
-+	u_int	begin_set[NUM_CRITICAL_SECTIONS];
-+	u_int	end_set[NUM_CRITICAL_SECTIONS];
- 	const struct patch *cur_patch;
- 	u_int	cs_count;
- 	u_int	cur_cs;
-@@ -6915,7 +6915,7 @@ ahc_loadseq(struct ahc_softc *ahc)
- 		 * Move through the CS table until we find a CS
- 		 * that might apply to this instruction.
- 		 */
--		for (; cur_cs < num_critical_sections; cur_cs++) {
-+		for (; cur_cs < NUM_CRITICAL_SECTIONS; cur_cs++) {
- 			if (critical_sections[cur_cs].end <= i) {
- 				if (begin_set[cs_count] == TRUE
- 				 && end_set[cs_count] == FALSE) {
-diff --git a/drivers/scsi/aic7xxx/aic7xxx_seq.h_shipped b/drivers/scsi/aic7xxx/aic7xxx_seq.h_shipped
-index 07e93fbae706..d814f1d6b820 100644
---- a/drivers/scsi/aic7xxx/aic7xxx_seq.h_shipped
-+++ b/drivers/scsi/aic7xxx/aic7xxx_seq.h_shipped
-@@ -1304,5 +1304,4 @@ static const struct cs {
- 	{ 875, 877 }
- };
+-/*
+- * min()/max()/clamp() macros that also do
+- * strict type-checking.. See the
+- * "unnecessary" pointer comparison.
+- */
+-#define __min(t1, t2, min1, min2, x, y) ({		\
+-	t1 min1 = (x);					\
+-	t2 min2 = (y);					\
+-	(void) (&min1 == &min2);			\
+-	min1 < min2 ? min1 : min2; })
++extern long __error_incompatible_types_in_min_macro;
++extern long __error_incompatible_types_in_max_macro;
++
++#define __min(t1, t2, x, y)						\
++	__builtin_choose_expr(__builtin_types_compatible_p(t1, t2),	\
++			      (t1)(x) < (t2)(y) ? (t1)(x) : (t2)(y),	\
++			      (t1)__error_incompatible_types_in_min_macro)
  
--static const int num_critical_sections = sizeof(critical_sections)
--				       / sizeof(*critical_sections);
-+#define NUM_CRITICAL_SECTIONS 7
-diff --git a/drivers/scsi/aic7xxx/aicasm/aicasm.c b/drivers/scsi/aic7xxx/aicasm/aicasm.c
-index 21ac265280bf..bdffe84221ce 100644
---- a/drivers/scsi/aic7xxx/aicasm/aicasm.c
-+++ b/drivers/scsi/aic7xxx/aicasm/aicasm.c
-@@ -353,6 +353,7 @@ output_code()
- 	critical_section_t *cs;
- 	symbol_node_t *cur_node;
- 	int instrcount;
-+	int num_critical_sections;
+ /**
+  * min - return minimum of two values of the same or compatible types
+  * @x: first value
+  * @y: second value
+  */
+-#define min(x, y)					\
+-	__min(typeof(x), typeof(y),			\
+-	      __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),	\
+-	      x, y)
++#define min(x, y) __min(typeof(x), typeof(y), x, y)			\
  
- 	instrcount = 0;
- 	fprintf(ofile,
-@@ -440,19 +441,20 @@ output_code()
- "	uint16_t	end;\n"
- "} critical_sections[] = {\n");
+-#define __max(t1, t2, max1, max2, x, y) ({		\
+-	t1 max1 = (x);					\
+-	t2 max2 = (y);					\
+-	(void) (&max1 == &max2);			\
+-	max1 > max2 ? max1 : max2; })
++#define __max(t1, t2, x, y)						\
++	__builtin_choose_expr(__builtin_types_compatible_p(t1, t2),	\
++			      (t1)(x) > (t2)(y) ? (t1)(x) : (t2)(y),	\
++			      (t1)__error_incompatible_types_in_max_macro)
  
-+	num_critical_sections = 0;
- 	for (cs = TAILQ_FIRST(&cs_tailq);
- 	     cs != NULL;
- 	     cs = TAILQ_NEXT(cs, links)) {
- 		fprintf(ofile, "%s\t{ %d, %d }",
- 			cs == TAILQ_FIRST(&cs_tailq) ? "" : ",\n",
- 			cs->begin_addr, cs->end_addr);
-+		num_critical_sections++;
- 	}
+ /**
+  * max - return maximum of two values of the same or compatible types
+  * @x: first value
+  * @y: second value
+  */
+-#define max(x, y)					\
+-	__max(typeof(x), typeof(y),			\
+-	      __UNIQUE_ID(max1_), __UNIQUE_ID(max2_),	\
+-	      x, y)
++#define max(x, y) __max(typeof(x), typeof(y), x, y)
  
- 	fprintf(ofile, "\n};\n\n");
+ /**
+  * min3 - return minimum of three values
+@@ -869,10 +859,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
+  * @x: first value
+  * @y: second value
+  */
+-#define min_t(type, x, y)				\
+-	__min(type, type,				\
+-	      __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),	\
+-	      x, y)
++#define min_t(type, x, y) __min(type, type, x, y)
  
- 	fprintf(ofile,
--"static const int num_critical_sections = sizeof(critical_sections)\n"
--"				       / sizeof(*critical_sections);\n");
-+		"#define NUM_CRITICAL_SECTIONS %d\n", num_critical_sections);
+ /**
+  * max_t - return maximum of two values, using the specified type
+@@ -880,10 +867,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
+  * @x: first value
+  * @y: second value
+  */
+-#define max_t(type, x, y)				\
+-	__max(type, type,				\
+-	      __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),	\
+-	      x, y)
++#define max_t(type, x, y) __max(type, type, x, y)				\
  
- 	fprintf(stderr, "%s: %d instructions used\n", appname, instrcount);
- }
--- 
-2.11.0
+ /**
+  * clamp_t - return a value clamped to a given range using a given type
