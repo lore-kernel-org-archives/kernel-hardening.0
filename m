@@ -1,47 +1,26 @@
-Date: Thu, 8 Mar 2018 12:21:23 +0100 (CET)
-From: Thomas Gleixner <tglx@linutronix.de>
-Subject: Re: [PATCH v2 1/3] vsprintf: Remove accidental VLA usage
-In-Reply-To: <49e6b509-d1e7-5916-ecb8-6bde026fde1e@rasmusvillemoes.dk>
-Message-ID: <alpine.DEB.2.21.1803081211230.8662@nanos.tec.linutronix.de>
-References: <1520479847-39174-1-git-send-email-keescook@chromium.org> <1520479847-39174-2-git-send-email-keescook@chromium.org> <49e6b509-d1e7-5916-ecb8-6bde026fde1e@rasmusvillemoes.dk>
+Date: Thu, 8 Mar 2018 12:33:33 +0100
+From: David Sterba <dsterba@suse.cz>
+Subject: Re: [PATCH 3/3] btrfs: tree-checker: Avoid accidental stack VLA
+Message-ID: <20180308113333.GM23693@suse.cz>
+References: <1520479847-39174-1-git-send-email-keescook@chromium.org>
+ <1520479847-39174-4-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, corbet@lwn.net, gustavo@embeddedor.com, rostedt@goodmis.org, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, "Tobin C. Harding" <me@tobin.cc>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, linux-btrfs@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1520479847-39174-4-git-send-email-keescook@chromium.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, gustavo@embeddedor.com, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, rostedt@goodmis.org, Peter Zijlstra <peterz@infradead.org>, Randy Dunlap <rdunlap@infradead.org>, Ingo Molnar <mingo@kernel.org>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Thomas Gleixner <tglx@linutronix.de>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, kernel-hardening@lists.openwall.com, corbet@lwn.net, Ian Abbott <abbotti@mev.co.uk>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Josh Poimboeuf <jpoimboe@redhat.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Petr Mladek <pmladek@suse.com>, Borislav Petkov <bp@suse.de>, "Tobin C. Harding" <me@tobin.cc>, linux-btrfs@vger.kernel.org, linux-kernel@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 8 Mar 2018, Rasmus Villemoes wrote:
-> On 2018-03-08 04:30, Kees Cook wrote:
-> >  /**
-> > + * SIMPLE_MAX - return maximum of two values without any type checking
-> > + * @x: first value
-> > + * @y: second value
-> > + *
-> > + * This should only be used in stack array sizes, since the type-checking
-> > + * from max() confuses the compiler into thinking a VLA is being used.
-> > + */
-> > +#define SIMPLE_MAX(x, y)	((size_t)(x) > (size_t)(y) ? (size_t)(x) \
-> > +							   : (size_t)(y))
+On Wed, Mar 07, 2018 at 07:30:47PM -0800, Kees Cook wrote:
+> In the quest to remove all stack VLAs from the kernel[1], this refactors
+> the stack array size calculation to avoid using max(), which makes the
+> compiler think the size isn't fixed.
 > 
-> This will be abused at some point, leading to the usual double
-> evaluation etc. etc. problems. The name is also too long (and in general
-> we should avoid adjectives like "simple", "safe", people reading the
-> code won't know what is simple or safe about it). I think this should work
+> [1] https://lkml.org/lkml/2018/3/7/621
 > 
-> #define MAX(x, y) (__builtin_choose_expr((x) > (y), x, y))
-> 
-> That forces (x)>(y) to be a compile-time constant, so x and y must also
-> be; hence there can be no side effects. The MIN version of this could
-> replace the custom __const_min in fs/file.c, and probably other places
-> as well.
-> 
-> I tested that this at least works in the vsprintf case, -Wvla no longer
-> complains. fs/file.c also compiles with the MIN version of this.
-> 
-> I suppose MIN and MAX will collide with other uses in the tree. Hmm.
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
-Make it CONST_MAX() or something like that which makes it entirely clear.
+Acked-by: David Sterba <dsterba@suse.com>
 
-Thanks,
-
-	tglx
+for whatever name you decide for the max macro.
