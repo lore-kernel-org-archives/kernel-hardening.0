@@ -1,31 +1,32 @@
+Date: Wed, 7 Mar 2018 18:58:12 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
+Message-ID: <20180308025812.GA9082@bombadil.infradead.org>
+References: <20180214182618.14627-1-willy@infradead.org>
+ <20180214182618.14627-3-willy@infradead.org>
+ <CAGXu5jL9hqQGe672CmvFwqNbtTr=qu7WRwHuS4Vy7o5sX_UTgg@mail.gmail.com>
+ <alpine.DEB.2.20.1803072212160.2814@hadrien>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20180307160322.e9f8a3fb462751d1efa3b09a@linux-foundation.org>
-References: <20180307230714.GA20797@beast> <20180307234238.yxbbaka35ck2xymw@smitten>
- <CAGXu5j+d91dqTEPm13CXDvNzzaj01M-CYLYCqyMN5VjrD5Q4ww@mail.gmail.com> <20180307160322.e9f8a3fb462751d1efa3b09a@linux-foundation.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 7 Mar 2018 16:36:17 -0800
-Message-ID: <CAGXu5jKvAiyF=Dxd0nGx6bH84Vjqksjf4jZRXOTVXqSrnG6S5A@mail.gmail.com>
-Subject: Re: [PATCH] vsprintf: Remove accidental VLA usage
-Content-Type: text/plain; charset="UTF-8"
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Tycho Andersen <tycho@tycho.ws>, "Tobin C. Harding" <me@tobin.cc>, Jonathan Corbet <corbet@lwn.net>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, "Steven Rostedt (VMware)" <rostedt@goodmis.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <alpine.DEB.2.20.1803072212160.2814@hadrien>
+To: Julia Lawall <julia.lawall@lip6.fr>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, cocci@systeme.lip6.fr, Himanshu Jha <himanshujha199640@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 7, 2018 at 4:03 PM, Andrew Morton <akpm@linux-foundation.org> wrote:
-> On Wed, 7 Mar 2018 15:59:27 -0800 Kees Cook <keescook@chromium.org> wrote:
->
->> I didn't want to encourage a global macro that _lacked_ the safety
->> built into the max*() family, though... thoughts for a reasonable
->> approach?
->
-> I think SIMPLE_MAX() is OK.    Along with one of /* these */ things ;)
+On Wed, Mar 07, 2018 at 10:18:21PM +0100, Julia Lawall wrote:
+> > Otherwise, yes, please. We could build a coccinelle rule for
+> > additional replacements...
+> 
+> A potential semantic patch and the changes it generates are attached
+> below.  Himanshu Jha helped with its development.  Working on this
+> uncovered one bug, where the allocated array is too large, because the
+> size provided for it was a structure size, but actually only pointers to
+> that structure were to be stored in it.
 
-Sounds good. I will resend with net/ipv[46]/proc.c and one other fixed
-as well...
+This is cool!  Thanks for doing the coccinelle patch!  Diffstat:
 
--Kees
+ 50 files changed, 81 insertions(+), 124 deletions(-)
 
--- 
-Kees Cook
-Pixel Security
+I find that pretty compelling.  I'll repost the kvmalloc_struct patch
+imminently.
