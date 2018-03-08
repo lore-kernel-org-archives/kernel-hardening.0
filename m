@@ -1,84 +1,94 @@
-Subject: Re: [PATCH v2] ima: drop vla in ima_audit_measurement()
-From: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Date: Thu, 08 Mar 2018 17:28:06 -0500
-In-Reply-To: <20180308221537.46ogqx64cev767ur@smitten>
-References: <20180308202347.31331-1-tycho@tycho.ws>
-	 <1520541374.3605.101.camel@linux.vnet.ibm.com>
-	 <20180308214547.kdeoeozugxffzumn@smitten>
-	 <1520546740.3605.124.camel@linux.vnet.ibm.com>
-	 <20180308221537.46ogqx64cev767ur@smitten>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20180308141833.3fb57913bceae38f18db2bf1@linux-foundation.org>
+References: <20180308214045.GA6787@beast> <20180308141833.3fb57913bceae38f18db2bf1@linux-foundation.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 8 Mar 2018 14:49:59 -0800
+Message-ID: <CAGXu5j+6rPgn1biniy6Xju5w7=n9ogiOZvHs_kvT55LT9u9y2Q@mail.gmail.com>
+Subject: Re: [PATCH] kernel.h: Skip single-eval logic on literals in min()/max()
 Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <1520548086.3605.135.camel@linux.vnet.ibm.com>
-To: Tycho Andersen <tycho@tycho.ws>
-Cc: Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Transfer-Encoding: quoted-printable
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2018-03-08 at 15:15 -0700, Tycho Andersen wrote:
-> Hi Mimi,
-> 
-> On Thu, Mar 08, 2018 at 05:05:40PM -0500, Mimi Zohar wrote:
-> > On Thu, 2018-03-08 at 14:45 -0700, Tycho Andersen wrote:
-> > > Hi Mimi,
-> > > 
-> > > On Thu, Mar 08, 2018 at 03:36:14PM -0500, Mimi Zohar wrote:
-> > > > On Thu, 2018-03-08 at 13:23 -0700, Tycho Andersen wrote:
-> > > > 
-> > > > >  /*
-> > > > > diff --git a/security/integrity/ima/ima_main.c b/security/integrity/ima/ima_main.c
-> > > > > index 2cfb0c714967..356faae6f09c 100644
-> > > > > --- a/security/integrity/ima/ima_main.c
-> > > > > +++ b/security/integrity/ima/ima_main.c
-> > > > > @@ -288,8 +288,11 @@ static int process_measurement(struct file *file, char *buf, loff_t size,
-> > > > >  					      xattr_value, xattr_len, opened);
-> > > > >  		inode_unlock(inode);
-> > > > >  	}
-> > > > > -	if (action & IMA_AUDIT)
-> > > > > -		ima_audit_measurement(iint, pathname);
-> > > > > +	if (action & IMA_AUDIT) {
-> > > > > +		rc = ima_audit_measurement(iint, pathname);
-> > > > > +		if (rc < 0)
-> > > > > +			goto out_locked;
-> > > > > +	}
-> > > > > 
-> > > > >  	if ((file->f_flags & O_DIRECT) && (iint->flags & IMA_PERMIT_DIRECTIO))
-> > > > >  		rc = 0;
-> > > > 
-> > > > Only when IMA-appraisal is enforcing file data integrity should
-> > > > process_measurement() ever fail.  Other errors can be logged/audited.
-> > > 
-> > > Ok, so previously in ima_audit_measurement() when allocation failed,
-> > > there was nothing logged. If we just keep this behavior like below,
-> > > does that look good?
-> > 
-> > Before the IMA locking change that were just upstreamed, there were
-> > problems with measuring/appraising files that were opened with the
-> > O_DIRECT flag.  Unless the IMA policy specified permit_directio, the
-> > measurement/appraisal failed.  With the new locking, opening files
-> > with the O_DIRECTIO flag shouldn't be a problem.  It just needs to be
-> > fully tested before removing this code.
-> > 
-> > On failure, the code below tests the ima_audit_measurement() result
-> > and skips the IMA_PERMIT_DIRECTIO test.  Unless I'm missing something,
-> > I don't see the point.
-> 
-> It skips the IMA_PERMIT_DIRECTIO test because it's already going to
-> fail: we're in enforce mode and we got an allocation failure and so we
-> can't audit this access (note: there is another allocation failure in
-> ima_audit_measurement() which is still ignored after this patch, so
-> maybe ignoring failures is ok; seems like it's not, though
+On Thu, Mar 8, 2018 at 2:18 PM, Andrew Morton <akpm@linux-foundation.org> w=
+rote:
+> On Thu, 8 Mar 2018 13:40:45 -0800 Kees Cook <keescook@chromium.org> wrote=
+:
+>
+>> When max() is used in stack array size calculations from literal values
+>> (e.g. "char foo[max(sizeof(struct1), sizeof(struct2))]", the compiler
+>> thinks this is a dynamic calculation due to the single-eval logic, which
+>> is not needed in the literal case. This change removes several accidenta=
+l
+>> stack VLAs from an x86 allmodconfig build:
+>>
+>> $ diff -u before.txt after.txt | grep ^-
+>> -drivers/input/touchscreen/cyttsp4_core.c:871:2: warning: ISO C90 forbid=
+s variable length array =E2=80=98ids=E2=80=99 [-Wvla]
+>> -fs/btrfs/tree-checker.c:344:4: warning: ISO C90 forbids variable length=
+ array =E2=80=98namebuf=E2=80=99 [-Wvla]
+>> -lib/vsprintf.c:747:2: warning: ISO C90 forbids variable length array =
+=E2=80=98sym=E2=80=99 [-Wvla]
+>> -net/ipv4/proc.c:403:2: warning: ISO C90 forbids variable length array =
+=E2=80=98buff=E2=80=99 [-Wvla]
+>> -net/ipv6/proc.c:198:2: warning: ISO C90 forbids variable length array =
+=E2=80=98buff=E2=80=99 [-Wvla]
+>> -net/ipv6/proc.c:218:2: warning: ISO C90 forbids variable length array =
+=E2=80=98buff64=E2=80=99 [-Wvla]
+>>
+>> Based on an earlier patch from Josh Poimboeuf.
+>>
+>> ...
+>>
+>> --- a/include/linux/kernel.h
+>> +++ b/include/linux/kernel.h
+>> @@ -787,37 +787,57 @@ static inline void ftrace_dump(enum ftrace_dump_mo=
+de oops_dump_mode) { }
+>>   * strict type-checking.. See the
+>>   * "unnecessary" pointer comparison.
+>>   */
+>> -#define __min(t1, t2, min1, min2, x, y) ({           \
+>> +#define __single_eval_min(t1, t2, min1, min2, x, y) ({       \
+>>       t1 min1 =3D (x);                                  \
+>>       t2 min2 =3D (y);                                  \
+>>       (void) (&min1 =3D=3D &min2);                        \
+>>       min1 < min2 ? min1 : min2; })
+>>
+>> +/*
+>> + * In the case of builtin constant values, there is no need to do the
+>> + * double-evaluation protection, so the raw comparison can be made.
+>> + * This allows min()/max() to be used in stack array allocations and
+>> + * avoid the compiler thinking it is a dynamic value leading to an
+>> + * accidental VLA.
+>> + */
+>> +#define __min(t1, t2, x, y)                                          \
+>> +     __builtin_choose_expr(__builtin_constant_p(x) &&                \
+>> +                           __builtin_constant_p(y) &&                \
+>> +                           __builtin_types_compatible_p(t1, t2),     \
+>> +                           (t1)(x) < (t2)(y) ? (t1)(x) : (t2)(y),    \
+>> +                           __single_eval_min(t1, t2,                 \
+>> +                                             __UNIQUE_ID(max1_),     \
+>> +                                             __UNIQUE_ID(max2_),     \
+>> +                                             x, y))
+>> +
+>
+> Holy crap.
+>
+> I suppose gcc will one day be fixed and we won't need this.
+>
+> Is there a good reason to convert min()?  Surely nobody will be using
+> min to dimension an array - always max?  Just for symmetry, I guess.
 
-By the time we get here, we've already verified the file's integrity,
-if it is in policy.  At this point, we're attempting to add the file
-hash to the audit log.  If for some reason the audit fails, there's
-not much we can do.
+I just went with symmetry. It seems like an ugly risk to implement min
+and mix differently. :) In theory it may produce smaller code for rare
+min() uses, but I haven't actually verified that.
 
-> I'm not sure I really understand the rest of your message though. Can
-> you suggest what the patch should do here? Should we just ignore all
-> failures as before?
+I will send a v2 with the two nits mentioned...
 
-I would leave it as it is.
+-Kees
 
-Mimi
- 
+--=20
+Kees Cook
+Pixel Security
