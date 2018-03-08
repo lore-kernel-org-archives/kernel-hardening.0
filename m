@@ -1,86 +1,54 @@
+Subject: Re: [PATCH 0/3] Remove accidental VLA usage
+References: <1520479847-39174-1-git-send-email-keescook@chromium.org>
+ <20180308150236.5tysfbm3xdouii5n@treble>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Message-ID: <78428dec-270e-5d74-0160-83feb5c0ff02@rasmusvillemoes.dk>
+Date: Thu, 8 Mar 2018 20:57:16 +0100
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20180308132225.13229-1-steve@sk2.org>
-References: <20180308132225.13229-1-steve@sk2.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 8 Mar 2018 11:52:25 -0800
-Message-ID: <CAGXu5jK=JhBFHBGpbWF46DC3-QMruiB0qqz1z+njcK2h7jVU9w@mail.gmail.com>
-Subject: Re: [PATCH] aic7xxx/aic79xx: remove VLAs
-Content-Type: text/plain; charset="UTF-8"
-To: Stephen Kitt <steve@sk2.org>
-Cc: hare <hare@suse.com>, linux-scsi@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <20180308150236.5tysfbm3xdouii5n@treble>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Josh Poimboeuf <jpoimboe@redhat.com>, Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, corbet@lwn.net, gustavo@embeddedor.com, rostedt@goodmis.org, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, "Tobin C. Harding" <me@tobin.cc>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, linux-btrfs@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 8, 2018 at 5:22 AM, Stephen Kitt <steve@sk2.org> wrote:
-> In preparation to enabling -Wvla, remove VLAs and replace them with
-> fixed-length arrays instead.
->
-> The arrays fixed here, using the number of constant sections, aren't
-> really VLAs, but they appear so to the compiler. Since we know at
-> build-time how many critical sections there are, we might as well use
-> a pre-processor-level constant instead.
->
-> This was prompted by https://lkml.org/lkml/2018/3/7/621
->
-> Signed-off-by: Stephen Kitt <steve@sk2.org>
-> ---
->  drivers/scsi/aic7xxx/aic79xx_core.c        | 8 ++++----
->  drivers/scsi/aic7xxx/aic79xx_seq.h_shipped | 3 +--
->  drivers/scsi/aic7xxx/aic7xxx_core.c        | 8 ++++----
->  drivers/scsi/aic7xxx/aic7xxx_seq.h_shipped | 3 +--
->  drivers/scsi/aic7xxx/aicasm/aicasm.c       | 6 ++++--
->  5 files changed, 14 insertions(+), 14 deletions(-)
->
-> diff --git a/drivers/scsi/aic7xxx/aic79xx_core.c b/drivers/scsi/aic7xxx/aic79xx_core.c
-> index b560f396ee99..034f4eebb160 100644
-> --- a/drivers/scsi/aic7xxx/aic79xx_core.c
-> +++ b/drivers/scsi/aic7xxx/aic79xx_core.c
-> @@ -9338,9 +9338,9 @@ ahd_dumpseq(struct ahd_softc* ahd)
->  static void
->  ahd_loadseq(struct ahd_softc *ahd)
->  {
-> -       struct  cs cs_table[num_critical_sections];
-> -       u_int   begin_set[num_critical_sections];
-> -       u_int   end_set[num_critical_sections];
-> +       struct  cs cs_table[NUM_CRITICAL_SECTIONS];
-> +       u_int   begin_set[NUM_CRITICAL_SECTIONS];
-> +       u_int   end_set[NUM_CRITICAL_SECTIONS];
->         const struct patch *cur_patch;
->         u_int   cs_count;
->         u_int   cur_cs;
-> @@ -9456,7 +9456,7 @@ ahd_loadseq(struct ahd_softc *ahd)
->                  * Move through the CS table until we find a CS
->                  * that might apply to this instruction.
->                  */
-> -               for (; cur_cs < num_critical_sections; cur_cs++) {
-> +               for (; cur_cs < NUM_CRITICAL_SECTIONS; cur_cs++) {
->                         if (critical_sections[cur_cs].end <= i) {
->                                 if (begin_set[cs_count] == TRUE
->                                  && end_set[cs_count] == FALSE) {
-> diff --git a/drivers/scsi/aic7xxx/aic79xx_seq.h_shipped b/drivers/scsi/aic7xxx/aic79xx_seq.h_shipped
-> index 4b51e232392f..20fb9ca9e271 100644
-> --- a/drivers/scsi/aic7xxx/aic79xx_seq.h_shipped
-> +++ b/drivers/scsi/aic7xxx/aic79xx_seq.h_shipped
-> @@ -1186,5 +1186,4 @@ static const struct cs {
->         { 759, 763 }
->  };
->
-> -static const int num_critical_sections = sizeof(critical_sections)
-> -                                      / sizeof(*critical_sections);
-> +#define NUM_CRITICAL_SECTIONS 14
+On 2018-03-08 16:02, Josh Poimboeuf wrote:
+> On Wed, Mar 07, 2018 at 07:30:44PM -0800, Kees Cook wrote:
+>> This series adds SIMPLE_MAX() to be used in places where a stack array
+>> is actually fixed, but the compiler still warns about VLA usage due to
+>> confusion caused by the safety checks in the max() macro.
+>>
+>> I'm sending these via -mm since that's where I've introduced SIMPLE_MAX(),
+>> and they should all have no operational differences.
+> 
+> What if we instead simplify the max() macro's type checking so that GCC
+> can more easily fold the array size constants?  The below patch seems to
+> work:
+> 
 
-The compiler doesn't treat "const" as a literal, hence the need to
-change this. However, you can still use the sizeof (actually, this is
-exactly ARRAY_SIZE()). Perhaps:
+> +extern long __error_incompatible_types_in_min_macro;
+> +extern long __error_incompatible_types_in_max_macro;
+> +
+> +#define __min(t1, t2, x, y)						\
+> +	__builtin_choose_expr(__builtin_types_compatible_p(t1, t2),	\
+> +			      (t1)(x) < (t2)(y) ? (t1)(x) : (t2)(y),	\
+> +			      (t1)__error_incompatible_types_in_min_macro)
+>  
+>  /**
+>   * min - return minimum of two values of the same or compatible types
+>   * @x: first value
+>   * @y: second value
+>   */
+> -#define min(x, y)					\
+> -	__min(typeof(x), typeof(y),			\
+> -	      __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),	\
+> -	      x, y)
+> +#define min(x, y) __min(typeof(x), typeof(y), x, y)			\
+>  
 
-#define NUM_CRITICAL_SECTIONS ARRAY_SIZE(critical_sections)
+But this introduces the the-chosen-one-of-x-and-y-gets-evaluated-twice
+problem. Maybe we don't care? But until we get a
+__builtin_assert_this_has_no_side_effects() I think that's a little
+dangerous.
 
-?
-
-Otherwise, looks great!
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+Rasmus
