@@ -1,89 +1,47 @@
-Date: Thu, 8 Mar 2018 13:43:09 +0300
-From: Dan Carpenter <dan.carpenter@oracle.com>
-Subject: Re: [PATCH] staging: lustre: Remove VLA usage
-Message-ID: <20180308104309.l3j2deqrgq5d472g@mwanda>
-References: <20180307054608.GA9300@beast>
- <d5de0034-6f74-5b73-2df8-dbe5b366c2fc@prevas.dk>
+Date: Thu, 8 Mar 2018 12:21:23 +0100 (CET)
+From: Thomas Gleixner <tglx@linutronix.de>
+Subject: Re: [PATCH v2 1/3] vsprintf: Remove accidental VLA usage
+In-Reply-To: <49e6b509-d1e7-5916-ecb8-6bde026fde1e@rasmusvillemoes.dk>
+Message-ID: <alpine.DEB.2.21.1803081211230.8662@nanos.tec.linutronix.de>
+References: <1520479847-39174-1-git-send-email-keescook@chromium.org> <1520479847-39174-2-git-send-email-keescook@chromium.org> <49e6b509-d1e7-5916-ecb8-6bde026fde1e@rasmusvillemoes.dk>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <d5de0034-6f74-5b73-2df8-dbe5b366c2fc@prevas.dk>
-To: Rasmus Villemoes <rasmus.villemoes@prevas.dk>
-Cc: Kees Cook <keescook@chromium.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, devel@driverdev.osuosl.org, Dmitry Eremin <dmitry.eremin@intel.com>, Tycho Andersen <tycho@tycho.ws>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-kernel@vger.kernel.org, Gargi Sharma <gs051095@gmail.com>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, lustre-devel@lists.lustre.org
+Content-Type: text/plain; charset=US-ASCII
+To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, corbet@lwn.net, gustavo@embeddedor.com, rostedt@goodmis.org, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, "Tobin C. Harding" <me@tobin.cc>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, linux-btrfs@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 07, 2018 at 02:10:41PM +0100, Rasmus Villemoes wrote:
-> On 2018-03-07 06:46, Kees Cook wrote:
-> > The kernel would like to remove all VLA usage. This switches to a
-> > simple kasprintf() instead.
-> > 
-> > Signed-off-by: Kees Cook <keescook@chromium.org>
-> > ---
-> >  drivers/staging/lustre/lustre/llite/xattr.c | 19 +++++++++++++------
-> >  1 file changed, 13 insertions(+), 6 deletions(-)
-> > 
-> > diff --git a/drivers/staging/lustre/lustre/llite/xattr.c b/drivers/staging/lustre/lustre/llite/xattr.c
-> > index 532384c91447..aab4eab64289 100644
-> > --- a/drivers/staging/lustre/lustre/llite/xattr.c
-> > +++ b/drivers/staging/lustre/lustre/llite/xattr.c
-> > @@ -87,7 +87,7 @@ ll_xattr_set_common(const struct xattr_handler *handler,
-> >  		    const char *name, const void *value, size_t size,
-> >  		    int flags)
-> >  {
-> > -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
-> > +	char *fullname;
-> >  	struct ll_sb_info *sbi = ll_i2sbi(inode);
-> >  	struct ptlrpc_request *req = NULL;
-> >  	const char *pv = value;
-> > @@ -141,10 +141,13 @@ ll_xattr_set_common(const struct xattr_handler *handler,
-> >  			return -EPERM;
-> >  	}
-> >  
-> > -	sprintf(fullname, "%s%s\n", handler->prefix, name);
+On Thu, 8 Mar 2018, Rasmus Villemoes wrote:
+> On 2018-03-08 04:30, Kees Cook wrote:
+> >  /**
+> > + * SIMPLE_MAX - return maximum of two values without any type checking
+> > + * @x: first value
+> > + * @y: second value
+> > + *
+> > + * This should only be used in stack array sizes, since the type-checking
+> > + * from max() confuses the compiler into thinking a VLA is being used.
+> > + */
+> > +#define SIMPLE_MAX(x, y)	((size_t)(x) > (size_t)(y) ? (size_t)(x) \
+> > +							   : (size_t)(y))
 > 
-> It's probably worth pointing out that this actually fixes an
-> unconditional buffer overflow: fullname only has room for the two
-> strings and the '\n', but vsnprintf() is told that the buffer has
-> infinite size (well, INT_MAX), so there should be plenty of room to
-> append the '\0' after the '\n'.
+> This will be abused at some point, leading to the usual double
+> evaluation etc. etc. problems. The name is also too long (and in general
+> we should avoid adjectives like "simple", "safe", people reading the
+> code won't know what is simple or safe about it). I think this should work
 > 
-> > +	fullname = kasprintf(GFP_KERNEL, "%s%s\n", handler->prefix, name);
-> > +	if (!fullname)
-> > +		return -ENOMEM;
-> >  	rc = md_setxattr(sbi->ll_md_exp, ll_inode2fid(inode),
-> >  			 valid, fullname, pv, size, 0, flags,
-> >  			 ll_i2suppgid(inode), &req);
-> > +	kfree(fullname);
-> >  	if (rc) {
-> >  		if (rc == -EOPNOTSUPP && handler->flags == XATTR_USER_T) {
-> >  			LCONSOLE_INFO("Disabling user_xattr feature because it is not supported on the server\n");
-> > @@ -364,7 +367,7 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
-> >  			       struct dentry *dentry, struct inode *inode,
-> >  			       const char *name, void *buffer, size_t size)
-> >  {
-> > -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
-> > +	char *fullname;
-> >  	struct ll_sb_info *sbi = ll_i2sbi(inode);
-> >  #ifdef CONFIG_FS_POSIX_ACL
-> >  	struct ll_inode_info *lli = ll_i2info(inode);
-> > @@ -411,9 +414,13 @@ static int ll_xattr_get_common(const struct xattr_handler *handler,
-> >  	if (handler->flags == XATTR_ACL_DEFAULT_T && !S_ISDIR(inode->i_mode))
-> >  		return -ENODATA;
-> >  #endif
-> > -	sprintf(fullname, "%s%s\n", handler->prefix, name);
+> #define MAX(x, y) (__builtin_choose_expr((x) > (y), x, y))
 > 
-> Same here.
+> That forces (x)>(y) to be a compile-time constant, so x and y must also
+> be; hence there can be no side effects. The MIN version of this could
+> replace the custom __const_min in fs/file.c, and probably other places
+> as well.
 > 
-> I'm a little surprised this hasn't been caugt by static analysis, I
-> thought gcc/coverity/smatch/whatnot had gotten pretty good at computing
-> the size of the output generated by a given format string with "known"
-> arguments and comparing to the size of the output buffer. Though of
-> course it does require the tool to be able to do symbolic manipulations,
-> in this case realizing that
+> I tested that this at least works in the vsprintf case, -Wvla no longer
+> complains. fs/file.c also compiles with the MIN version of this.
 > 
-> outsize == strlen(x)+strlen(y)+1+1 > bufsize == strlen(x)+strlen(y)+1
+> I suppose MIN and MAX will collide with other uses in the tree. Hmm.
 
-That kind of symbolic manipulation is crazy hard to do.
+Make it CONST_MAX() or something like that which makes it entirely clear.
 
-regards,
-dan carpenter
+Thanks,
+
+	tglx
