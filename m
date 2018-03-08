@@ -1,63 +1,50 @@
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v2 1/3] vsprintf: Remove accidental VLA usage
-Date: Wed,  7 Mar 2018 19:30:45 -0800
-Message-Id: <1520479847-39174-2-git-send-email-keescook@chromium.org>
-In-Reply-To: <1520479847-39174-1-git-send-email-keescook@chromium.org>
-References: <1520479847-39174-1-git-send-email-keescook@chromium.org>
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, corbet@lwn.net, gustavo@embeddedor.com, rostedt@goodmis.org, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, "Tobin C. Harding" <me@tobin.cc>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, linux-btrfs@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+In-Reply-To: <CA+55aFzCG-zNmZwX4A2FQpadafLfEzK6CC=qPXydAacU1RqZWA@mail.gmail.com>
+References: <CAGXu5jJaVPPjqtpOLapk8ABT93zaUoaKR-i7Ga6LVSK2OiX_tQ@mail.gmail.com>
+ <CA+55aFzCG-zNmZwX4A2FQpadafLfEzK6CC=qPXydAacU1RqZWA@mail.gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Thu, 8 Mar 2018 00:05:27 -0500
+Message-ID: <CA+DvKQ+bZauBVA9G-E74ibRuDyfiZfduwycVwBH3jKDyjDe4Zg@mail.gmail.com>
+Subject: Re: VLA removal (was Re: [RFC 2/2] lustre: use VLA_SAFE)
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Kees Cook <keescook@chromium.org>, Joern Engel <joern@logfs.org>, "Tobin C. Harding" <tobin@apporbit.com>, "Tobin C. Harding" <me@tobin.cc>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, LKML <linux-kernel@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@kernel.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In the quest to remove all stack VLAs from the kernel[1], this introduces
-a new "simple max" macro, and changes the "sym" array size calculation to
-use it. The value is actually a fixed size, but since the max() macro uses
-some extensive tricks for safety, it ends up looking like a variable size
-to the compiler.
+On 7 March 2018 at 13:09, Linus Torvalds <torvalds@linux-foundation.org> wr=
+ote:
+> On Wed, Mar 7, 2018 at 9:37 AM, Kees Cook <keescook@chromium.org> wrote:
+>>
+>> Building with -Wvla, I see 209 unique locations reported in 60 directori=
+es:
+>> http://paste.ubuntu.com/p/srQxwPQS9s/
+>
+> Ok, that's not so bad. Maybe Greg could even add it to one of those
+> things he encourages new people to do?
+>
+> Because at least *some* of them are pretty trivial. For example,
+> looking at the core code, I was surprised to see something in
+> lib/btree.c
 
-[1] https://lkml.org/lkml/2018/3/7/621
+Some are probably just the issue of technically having a VLA that's
+not really a VLA:
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- include/linux/kernel.h | 11 +++++++++++
- lib/vsprintf.c         |  4 ++--
- 2 files changed, 13 insertions(+), 2 deletions(-)
+    static const int size =3D 5;
 
-diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index 3fd291503576..1da554e9997f 100644
---- a/include/linux/kernel.h
-+++ b/include/linux/kernel.h
-@@ -820,6 +820,17 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
- 	      x, y)
- 
- /**
-+ * SIMPLE_MAX - return maximum of two values without any type checking
-+ * @x: first value
-+ * @y: second value
-+ *
-+ * This should only be used in stack array sizes, since the type-checking
-+ * from max() confuses the compiler into thinking a VLA is being used.
-+ */
-+#define SIMPLE_MAX(x, y)	((size_t)(x) > (size_t)(y) ? (size_t)(x) \
-+							   : (size_t)(y))
-+
-+/**
-  * min3 - return minimum of three values
-  * @x: first value
-  * @y: second value
-diff --git a/lib/vsprintf.c b/lib/vsprintf.c
-index d7a708f82559..50cce36e1cdc 100644
---- a/lib/vsprintf.c
-+++ b/lib/vsprintf.c
-@@ -744,8 +744,8 @@ char *resource_string(char *buf, char *end, struct resource *res,
- #define FLAG_BUF_SIZE		(2 * sizeof(res->flags))
- #define DECODED_BUF_SIZE	sizeof("[mem - 64bit pref window disabled]")
- #define RAW_BUF_SIZE		sizeof("[mem - flags 0x]")
--	char sym[max(2*RSRC_BUF_SIZE + DECODED_BUF_SIZE,
--		     2*RSRC_BUF_SIZE + FLAG_BUF_SIZE + RAW_BUF_SIZE)];
-+	char sym[SIMPLE_MAX(2*RSRC_BUF_SIZE + DECODED_BUF_SIZE,
-+			    2*RSRC_BUF_SIZE + FLAG_BUF_SIZE + RAW_BUF_SIZE)];
- 
- 	char *p = sym, *pend = sym + sizeof(sym);
- 	int decode = (fmt[0] == 'R') ? 1 : 0;
--- 
-2.7.4
+    void foo(void) {
+      int x[size];
+    }
+
+% gcc -c -Wvla foo.c
+foo.c: In function =E2=80=98foo=E2=80=99:
+foo.c:4:3: warning: ISO C90 forbids variable length array =E2=80=98x=E2=80=
+=99 [-Wvla]
+   int x[size];
+   ^~~
+
+I don't really understand why the C standard didn't make `static
+const` declarations usable as constant expressions like C++. They made
+the pointer conversions more painful too.
+
+It would be nice to get rid of those cases to use -Werror=3Dvla though.
