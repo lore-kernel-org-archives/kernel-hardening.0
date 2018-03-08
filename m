@@ -1,97 +1,78 @@
-Date: Thu, 8 Mar 2018 11:20:31 -0600
+Date: Thu, 8 Mar 2018 11:39:49 -0600
 From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Subject: [PATCH] rtc: s5m: Remove VLA usage
-Message-ID: <20180308172031.GA14541@embeddedgus>
+Subject: [PATCH] video: fbdev: via: remove VLA usage
+Message-ID: <20180308173949.GA19305@embeddedgus>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-To: Sangbeom Kim <sbkim73@samsung.com>, Krzysztof Kozlowski <krzk@kernel.org>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, Alessandro Zummo <a.zummo@towertech.it>, Alexandre Belloni <alexandre.belloni@bootlin.com>
-Cc: linux-kernel@vger.kernel.org, linux-samsung-soc@vger.kernel.org, linux-rtc@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+To: Emil Velikov <emil.l.velikov@gmail.com>, Florian Tobias Schandinat <FlorianSchandinat@gmx.de>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>
+Cc: linux-fbdev@vger.kernel.org, dri-devel@lists.freedesktop.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In preparation to enabling -Wvla, remove VLAs and replace them
-with fixed-length arrays instead.
-
->From a security viewpoint, the use of Variable Length Arrays can be
-a vector for stack overflow attacks. Also, in general, as the code
-evolves it is easy to lose track of how big a VLA can get. Thus, we
-can end up having segfaults that are hard to debug.
+In preparation to enabling -Wvla, remove VLA usage.
 
 Also, fixed as part of the directive to remove all VLAs from
 the kernel: https://lkml.org/lkml/2018/3/7/621
 
 Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
 ---
- drivers/rtc/rtc-s5m.c | 15 +++++++++------
- 1 file changed, 9 insertions(+), 6 deletions(-)
+ drivers/video/fbdev/via/via_aux_sii164.c | 2 +-
+ drivers/video/fbdev/via/via_aux_vt1631.c | 2 +-
+ drivers/video/fbdev/via/via_aux_vt1632.c | 2 +-
+ drivers/video/fbdev/via/via_aux_vt1636.c | 2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/rtc/rtc-s5m.c b/drivers/rtc/rtc-s5m.c
-index 6deae10..2b5f4f7 100644
---- a/drivers/rtc/rtc-s5m.c
-+++ b/drivers/rtc/rtc-s5m.c
-@@ -38,6 +38,9 @@
-  */
- #define UDR_READ_RETRY_CNT	5
+diff --git a/drivers/video/fbdev/via/via_aux_sii164.c b/drivers/video/fbdev/via/via_aux_sii164.c
+index ca1b35f..c27f62c 100644
+--- a/drivers/video/fbdev/via/via_aux_sii164.c
++++ b/drivers/video/fbdev/via/via_aux_sii164.c
+@@ -36,7 +36,7 @@ static void probe(struct via_aux_bus *bus, u8 addr)
+ 		.name	=	name};
+ 	/* check vendor id and device id */
+ 	const u8 id[] = {0x01, 0x00, 0x06, 0x00}, len = ARRAY_SIZE(id);
+-	u8 tmp[len];
++	u8 tmp[ARRAY_SIZE(id)];
  
-+/* Maximum number of registers for setting time/alarm0/alarm1 */
-+#define MAX_NUM_TIME_REGS	8
-+
- /*
-  * Registers used by the driver which are different between chipsets.
-  *
-@@ -367,7 +370,7 @@ static void s5m8763_tm_to_data(struct rtc_time *tm, u8 *data)
- static int s5m_rtc_read_time(struct device *dev, struct rtc_time *tm)
- {
- 	struct s5m_rtc_info *info = dev_get_drvdata(dev);
--	u8 data[info->regs->regs_count];
-+	u8 data[MAX_NUM_TIME_REGS];
- 	int ret;
+ 	if (!via_aux_read(&drv, 0x00, tmp, len) || memcmp(id, tmp, len))
+ 		return;
+diff --git a/drivers/video/fbdev/via/via_aux_vt1631.c b/drivers/video/fbdev/via/via_aux_vt1631.c
+index 06e742f..32978a0 100644
+--- a/drivers/video/fbdev/via/via_aux_vt1631.c
++++ b/drivers/video/fbdev/via/via_aux_vt1631.c
+@@ -36,7 +36,7 @@ void via_aux_vt1631_probe(struct via_aux_bus *bus)
+ 		.name	=	name};
+ 	/* check vendor id and device id */
+ 	const u8 id[] = {0x06, 0x11, 0x91, 0x31}, len = ARRAY_SIZE(id);
+-	u8 tmp[len];
++	u8 tmp[ARRAY_SIZE(id)];
  
- 	if (info->regs->read_time_udr_mask) {
-@@ -413,7 +416,7 @@ static int s5m_rtc_read_time(struct device *dev, struct rtc_time *tm)
- static int s5m_rtc_set_time(struct device *dev, struct rtc_time *tm)
- {
- 	struct s5m_rtc_info *info = dev_get_drvdata(dev);
--	u8 data[info->regs->regs_count];
-+	u8 data[MAX_NUM_TIME_REGS];
- 	int ret = 0;
+ 	if (!via_aux_read(&drv, 0x00, tmp, len) || memcmp(id, tmp, len))
+ 		return;
+diff --git a/drivers/video/fbdev/via/via_aux_vt1632.c b/drivers/video/fbdev/via/via_aux_vt1632.c
+index d24f4cd..cec8cc4 100644
+--- a/drivers/video/fbdev/via/via_aux_vt1632.c
++++ b/drivers/video/fbdev/via/via_aux_vt1632.c
+@@ -36,7 +36,7 @@ static void probe(struct via_aux_bus *bus, u8 addr)
+ 		.name	=	name};
+ 	/* check vendor id and device id */
+ 	const u8 id[] = {0x06, 0x11, 0x92, 0x31}, len = ARRAY_SIZE(id);
+-	u8 tmp[len];
++	u8 tmp[ARRAY_SIZE(id)];
  
- 	switch (info->device_type) {
-@@ -450,7 +453,7 @@ static int s5m_rtc_set_time(struct device *dev, struct rtc_time *tm)
- static int s5m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
- {
- 	struct s5m_rtc_info *info = dev_get_drvdata(dev);
--	u8 data[info->regs->regs_count];
-+	u8 data[MAX_NUM_TIME_REGS];
- 	unsigned int val;
- 	int ret, i;
+ 	if (!via_aux_read(&drv, 0x00, tmp, len) || memcmp(id, tmp, len))
+ 		return;
+diff --git a/drivers/video/fbdev/via/via_aux_vt1636.c b/drivers/video/fbdev/via/via_aux_vt1636.c
+index 9e015c1..2b10bc2 100644
+--- a/drivers/video/fbdev/via/via_aux_vt1636.c
++++ b/drivers/video/fbdev/via/via_aux_vt1636.c
+@@ -36,7 +36,7 @@ void via_aux_vt1636_probe(struct via_aux_bus *bus)
+ 		.name	=	name};
+ 	/* check vendor id and device id */
+ 	const u8 id[] = {0x06, 0x11, 0x45, 0x33}, len = ARRAY_SIZE(id);
+-	u8 tmp[len];
++	u8 tmp[ARRAY_SIZE(id)];
  
-@@ -500,7 +503,7 @@ static int s5m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
- 
- static int s5m_rtc_stop_alarm(struct s5m_rtc_info *info)
- {
--	u8 data[info->regs->regs_count];
-+	u8 data[MAX_NUM_TIME_REGS];
- 	int ret, i;
- 	struct rtc_time tm;
- 
-@@ -545,7 +548,7 @@ static int s5m_rtc_stop_alarm(struct s5m_rtc_info *info)
- static int s5m_rtc_start_alarm(struct s5m_rtc_info *info)
- {
- 	int ret;
--	u8 data[info->regs->regs_count];
-+	u8 data[MAX_NUM_TIME_REGS];
- 	u8 alarm0_conf;
- 	struct rtc_time tm;
- 
-@@ -598,7 +601,7 @@ static int s5m_rtc_start_alarm(struct s5m_rtc_info *info)
- static int s5m_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
- {
- 	struct s5m_rtc_info *info = dev_get_drvdata(dev);
--	u8 data[info->regs->regs_count];
-+	u8 data[MAX_NUM_TIME_REGS];
- 	int ret;
- 
- 	switch (info->device_type) {
+ 	if (!via_aux_read(&drv, 0x00, tmp, len) || memcmp(id, tmp, len))
+ 		return;
 -- 
 2.7.4
