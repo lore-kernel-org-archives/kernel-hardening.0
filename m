@@ -1,48 +1,39 @@
-Subject: Re: [PATCH] net: ipv6: xfrm6_state: remove VLA usage
-References: <1520598106-3271-1-git-send-email-andreaschristofo@gmail.com>
-From: Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>
-Message-ID: <168b5c29-b037-cf5d-1383-4dfffab44e55@cogentembedded.com>
-Date: Fri, 9 Mar 2018 21:35:21 +0300
 MIME-Version: 1.0
-In-Reply-To: <1520598106-3271-1-git-send-email-andreaschristofo@gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Andreas Christoforou <andreaschristofo@gmail.com>, keescook@chromium.org
-Cc: kernel-hardening@lists.openwall.com, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
+Sender: keescook@google.com
+In-Reply-To: <877eqli0f0.fsf@anholt.net>
+References: <1520576470-20628-1-git-send-email-me@tobin.cc> <877eqli0f0.fsf@anholt.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 9 Mar 2018 10:35:55 -0800
+Message-ID: <CAGXu5j+k6SkGP19EYxOAvwy+uzvkJ664_Lj_Rz5t8a6Fi60+JQ@mail.gmail.com>
+Subject: Re: [PATCH] staging: vchiq_arm: Clear VLA warning
+Content-Type: text/plain; charset="UTF-8"
+To: Eric Anholt <eric@anholt.net>
+Cc: "Tobin C. Harding" <me@tobin.cc>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Stefan Wahren <stefan.wahren@i2se.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, driverdev-devel@linuxdriverproject.org, Tycho Andersen <tycho@tycho.ws>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello!
+On Fri, Mar 9, 2018 at 10:11 AM, Eric Anholt <eric@anholt.net> wrote:
+> "Tobin C. Harding" <me@tobin.cc> writes:
+>
+>> The kernel would like to have all stack VLA usage removed[1].  The
+>> array here is fixed (declared with a const variable) but it appears
+>> like VLA to the compiler.  We can use a pre-processor define to quiet
+>> the compiler.
+>>
+>> [1]: https://lkml.org/lkml/2018/3/7/621
+>>
+>> Signed-off-by: Tobin C. Harding <me@tobin.cc>
+>> ---
+>>
+>> The name of this constant may need changing, there is already a
+>> pre-processor constant VCHIQ_MAX_SERVICES
+>
+> Maybe just use ARRAY_SIZE(local_max_services) and not have the #define?
 
-On 03/09/2018 03:21 PM, Andreas Christoforou wrote:
+I think you mean ARRAY_SIZE(service_data) ? In that case, yeah, it
+seems like a raw "64" for the array size can be used instead.
 
-> The kernel would like to have all stack VLA usage removed[1].
-> 
-> Signed-off-by: Andreas Christoforou <andreaschristofo@gmail.com>
-> ---
->  net/ipv6/xfrm6_state.c | 8 +++++++-
->  1 file changed, 7 insertions(+), 1 deletion(-)
-> 
-> diff --git a/net/ipv6/xfrm6_state.c b/net/ipv6/xfrm6_state.c
-> index b15075a..45c0d98 100644
-> --- a/net/ipv6/xfrm6_state.c
-> +++ b/net/ipv6/xfrm6_state.c
-> @@ -62,7 +62,12 @@ __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
->  {
->  	int i;
->  	int class[XFRM_MAX_DEPTH];
-> -	int count[maxclass];
-> +	int *count;
-> +
-> +	count = kcalloc(maxclass + 1, sizeof(*count), GFP_KERNEL);
-> +
+-Kees
 
-  Empty line not needed here.
-
-> +	if (!count)
-> +		return -ENOMEM;
->  
->  	memset(count, 0, sizeof(count));
->  
-[...]
-
-MBR, Sergei
+-- 
+Kees Cook
+Pixel Security
