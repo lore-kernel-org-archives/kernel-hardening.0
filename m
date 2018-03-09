@@ -1,79 +1,65 @@
-Date: Fri, 9 Mar 2018 06:46:13 -0800
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH][RFC] rslib: Remove VLAs by setting upper bound on nroots
-Message-ID: <20180309144613.GA48965@beast>
+From: Kalle Valo <kvalo@codeaurora.org>
+Subject: Re: [PATCH] drivers: net: wireless: ath: ath9: dfs: remove VLA usage
+References: <1520598613-3641-1-git-send-email-andreaschristofo@gmail.com>
+	<20180309125124.GA17968@himanshu-Vostro-3559>
+Date: Fri, 09 Mar 2018 16:48:41 +0200
+In-Reply-To: <20180309125124.GA17968@himanshu-Vostro-3559> (Himanshu Jha's
+	message of "Fri, 9 Mar 2018 18:21:24 +0530")
+Message-ID: <874llpe246.fsf@kamboji.qca.qualcomm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: linux-kernel@vger.kernel.org, Segher Boessenkool <segher@kernel.crashing.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain
+To: Himanshu Jha <morganfreeman6991@gmail.com>
+Cc: Andreas Christoforou <andreaschristofo@gmail.com>, keescook@chromium.org, kernel-hardening@lists.openwall.com, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, linux-wireless@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Avoid VLAs[1] by always allocating the upper bound of stack space
-needed. The existing users of rslib appear to max out at 32 roots,
-so use that as the upper bound.
+Himanshu Jha <morganfreeman6991@gmail.com> writes:
 
-Alternative: make init_rs() a true caller-instance and pre-allocate
-the workspaces. Will this need locking or are the callers already
-single-threaded in their use of librs?
+> On Fri, Mar 09, 2018 at 02:30:12PM +0200, Andreas Christoforou wrote:
+>> The kernel would like to have all stack VLA usage removed.
+>> 
+>> Signed-off-by: Andreas Christoforou <andreaschristofo@gmail.com>
+>> ---
+>>  drivers/net/wireless/ath/ath9k/dfs.c | 3 +--
+>>  1 file changed, 1 insertion(+), 2 deletions(-)
+>> 
+>> diff --git a/drivers/net/wireless/ath/ath9k/dfs.c
+>> b/drivers/net/wireless/ath/ath9k/dfs.c
+>> index 6fee9a4..cfb0f84 100644
+>> --- a/drivers/net/wireless/ath/ath9k/dfs.c
+>> +++ b/drivers/net/wireless/ath/ath9k/dfs.c
+>> @@ -41,7 +41,6 @@ static const int BIN_DELTA_MAX		= 10;
+>>  
+>>  /* we need at least 3 deltas / 4 samples for a reliable chirp detection */
+>>  #define NUM_DIFFS 3
+>> -static const int FFT_NUM_SAMPLES	= (NUM_DIFFS + 1);
+>
+> Are you sure it is correct ?
+> Look for other users of "FFT_NUM_SAMPLES".
+>
+>>  /* Threshold for difference of delta peaks */
+>>  static const int MAX_DIFF		= 2;
+>> @@ -101,7 +100,7 @@ static bool ath9k_check_chirping(struct ath_softc *sc, u8 *data,
+>>  				 int datalen, bool is_ctl, bool is_ext)
+>>  {
+>>  	int i;
+>> -	int max_bin[FFT_NUM_SAMPLES];
+>> +	int max_bin[NUM_DIFFS + 1];
+>>  	struct ath_hw *ah = sc->sc_ah;
+>>  	struct ath_common *common = ath9k_hw_common(ah);
+>>  	int prev_delta;
+>
+> Always compile test the driver before sending a patch.
+> Also, patch title seems incorrect *ath9k*
+>
+> himanshu@himanshu-Vostro-3559:~/linux-next$ git log --oneline
+> drivers/net/wireless/ath/ath9k/dfs.c
+> 626ab67 ath9k: dfs: use swap macro in ath9k_check_chirping
+> 50c8cd4 ath9k: remove cast to void pointer
+> 8fc2b61 ath9k: DFS - add pulse chirp detection for FCC
+> ....
 
-Using kmalloc in this path doesn't look great, especially since at
-least one caller (pstore) is sensitive to allocations during rslib
-usage (it expects to run it during an Oops, for example).
-
-[1] https://lkml.org/lkml/2018/3/7/621
-
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- lib/reed_solomon/decode_rs.c    | 7 ++++---
- lib/reed_solomon/reed_solomon.c | 5 ++++-
- 2 files changed, 8 insertions(+), 4 deletions(-)
-
-diff --git a/lib/reed_solomon/decode_rs.c b/lib/reed_solomon/decode_rs.c
-index 0ec3f257ffdf..3e3becb836a6 100644
---- a/lib/reed_solomon/decode_rs.c
-+++ b/lib/reed_solomon/decode_rs.c
-@@ -31,9 +31,10 @@
- 	 * of nroots is 8. So the necessary stack size will be about
- 	 * 220 bytes max.
- 	 */
--	uint16_t lambda[nroots + 1], syn[nroots];
--	uint16_t b[nroots + 1], t[nroots + 1], omega[nroots + 1];
--	uint16_t root[nroots], reg[nroots + 1], loc[nroots];
-+	uint16_t lambda[RS_MAX_ROOTS + 1], syn[RS_MAX_ROOTS];
-+	uint16_t b[RS_MAX_ROOTS + 1], t[RS_MAX_ROOTS + 1];
-+	uint16_t omega[RS_MAX_ROOTS + 1], root[RS_MAX_ROOTS];
-+	uint16_t reg[RS_MAX_ROOTS + 1], loc[RS_MAX_ROOTS];
- 	int count = 0;
- 	uint16_t msk = (uint16_t) rs->nn;
- 
-diff --git a/lib/reed_solomon/reed_solomon.c b/lib/reed_solomon/reed_solomon.c
-index 06d04cfa9339..1ad9094ddf66 100644
---- a/lib/reed_solomon/reed_solomon.c
-+++ b/lib/reed_solomon/reed_solomon.c
-@@ -51,6 +51,9 @@ static LIST_HEAD (rslist);
- /* Protection for the list */
- static DEFINE_MUTEX(rslistlock);
- 
-+/* Ultimately controls the upper bounds of the on-stack buffers. */
-+#define RS_MAX_ROOTS	32
-+
- /**
-  * rs_init - Initialize a Reed-Solomon codec
-  * @symsize:	symbol size, bits (1-8)
-@@ -210,7 +213,7 @@ static struct rs_control *init_rs_internal(int symsize, int gfpoly,
-     		return NULL;
- 	if (prim <= 0 || prim >= (1<<symsize))
-     		return NULL;
--	if (nroots < 0 || nroots >= (1<<symsize))
-+	if (nroots < 0 || nroots >= (1<<symsize) || nroots > RS_MAX_ROOTS)
- 		return NULL;
- 
- 	mutex_lock(&rslistlock);
--- 
-2.7.4
-
+Yeah, just "ath9k:" is enough as the prefix, no need to have full
+directory path in the title.
 
 -- 
-Kees Cook
-Pixel Security
+Kalle Valo
