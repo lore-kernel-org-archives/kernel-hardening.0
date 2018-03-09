@@ -1,124 +1,209 @@
-From: "Dilger, Andreas" <andreas.dilger@intel.com>
-Subject: Re: [lustre-devel] [PATCH v2] staging: lustre: Remove VLA usage
-Date: Fri, 9 Mar 2018 08:54:29 +0000
-Message-ID: <D86B331F-466E-4395-9620-A84349F2DD2E@intel.com>
-References: <20180307205444.GA11349@beast>
-In-Reply-To: <20180307205444.GA11349@beast>
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <256AED917176C643BB96F1916F39FFBC@intel.com>
-Content-Transfer-Encoding: quoted-printable
+Date: Fri, 9 Mar 2018 19:22:47 +0900
+From: Jinbum Park <jinb.park7@gmail.com>
+Subject: [PATCH] lib: Add testing module for UBSAN
+Message-ID: <20180309102247.GA2944@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
-To: Kees Cook <keescook@chromium.org>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "devel@driverdev.osuosl.org" <devel@driverdev.osuosl.org>, Tycho Andersen <tycho@tycho.ws>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Gargi Sharma <gs051095@gmail.com>, "Drokin,
- Oleg" <oleg.drokin@intel.com>, Lustre Development List <lustre-devel@lists.lustre.org>, "Tobin C. Harding" <me@tobin.cc>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: akpm@linux-foundation.org, aryabinin@virtuozzo.com, dvyukov@google.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mar 7, 2018, at 13:54, Kees Cook <keescook@chromium.org> wrote:
->=20
-> The kernel would like to have all stack VLA usage removed[1]. This switch=
-es
-> to a simple kasprintf() instead, and in the process fixes an off-by-one
-> between the allocation and the sprintf (allocation did not include NULL
-> byte in calculation).
->=20
-> [1] https://lkml.org/lkml/2018/3/7/621
->=20
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> Reviewed-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+This is a test module for UBSAN.
+It triggers all undefined behaviors that linux supports now,
+and detect them.
 
-This seems better than the VLA_SAFE() macro, at the cost of an extra kmallo=
-c.
-I don't think these code paths are super performance critical.
+All test-cases have passed by compiling with gcc-5.5.0.
 
-Reviewed-by: Andreas Dilger <andreas.dilger@intel.com>
+If use gcc-4.9.x,
+misaligned, out-of-bounds, object-size-mismatch will not be detected.
+Because gcc-4.9.x doesn't support them.
 
-> ---
-> drivers/staging/lustre/lustre/llite/xattr.c | 19 +++++++++++++------
-> 1 file changed, 13 insertions(+), 6 deletions(-)
->=20
-> diff --git a/drivers/staging/lustre/lustre/llite/xattr.c b/drivers/stagin=
-g/lustre/lustre/llite/xattr.c
-> index 532384c91447..ff6fe81a4ddb 100644
-> --- a/drivers/staging/lustre/lustre/llite/xattr.c
-> +++ b/drivers/staging/lustre/lustre/llite/xattr.c
-> @@ -87,10 +87,10 @@ ll_xattr_set_common(const struct xattr_handler *handl=
-er,
-> 		    const char *name, const void *value, size_t size,
-> 		    int flags)
-> {
-> -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
-> 	struct ll_sb_info *sbi =3D ll_i2sbi(inode);
-> 	struct ptlrpc_request *req =3D NULL;
-> 	const char *pv =3D value;
-> +	char *fullname;
-> 	__u64 valid;
-> 	int rc;
->=20
-> @@ -141,10 +141,13 @@ ll_xattr_set_common(const struct xattr_handler *han=
-dler,
-> 			return -EPERM;
-> 	}
->=20
-> -	sprintf(fullname, "%s%s\n", handler->prefix, name);
-> +	fullname =3D kasprintf(GFP_KERNEL, "%s%s\n", handler->prefix, name);
-> +	if (!fullname)
-> +		return -ENOMEM;
-> 	rc =3D md_setxattr(sbi->ll_md_exp, ll_inode2fid(inode),
-> 			 valid, fullname, pv, size, 0, flags,
-> 			 ll_i2suppgid(inode), &req);
-> +	kfree(fullname);
-> 	if (rc) {
-> 		if (rc =3D=3D -EOPNOTSUPP && handler->flags =3D=3D XATTR_USER_T) {
-> 			LCONSOLE_INFO("Disabling user_xattr feature because it is not supporte=
-d on the server\n");
-> @@ -364,11 +367,11 @@ static int ll_xattr_get_common(const struct xattr_h=
-andler *handler,
-> 			       struct dentry *dentry, struct inode *inode,
-> 			       const char *name, void *buffer, size_t size)
-> {
-> -	char fullname[strlen(handler->prefix) + strlen(name) + 1];
-> 	struct ll_sb_info *sbi =3D ll_i2sbi(inode);
-> #ifdef CONFIG_FS_POSIX_ACL
-> 	struct ll_inode_info *lli =3D ll_i2info(inode);
-> #endif
-> +	char *fullname;
-> 	int rc;
->=20
-> 	CDEBUG(D_VFSTRACE, "VFS Op:inode=3D" DFID "(%p)\n",
-> @@ -411,9 +414,13 @@ static int ll_xattr_get_common(const struct xattr_ha=
-ndler *handler,
-> 	if (handler->flags =3D=3D XATTR_ACL_DEFAULT_T && !S_ISDIR(inode->i_mode)=
-)
-> 		return -ENODATA;
-> #endif
-> -	sprintf(fullname, "%s%s\n", handler->prefix, name);
-> -	return ll_xattr_list(inode, fullname, handler->flags, buffer, size,
-> -			     OBD_MD_FLXATTR);
-> +	fullname =3D kasprintf(GFP_KERNEL, "%s%s\n", handler->prefix, name);
-> +	if (!fullname)
-> +		return -ENOMEM;
-> +	rc =3D ll_xattr_list(inode, fullname, handler->flags, buffer, size,
-> +			   OBD_MD_FLXATTR);
-> +	kfree(fullname);
-> +	return rc;
-> }
->=20
-> static ssize_t ll_getxattr_lov(struct inode *inode, void *buf, size_t buf=
-_size)
-> --=20
-> 2.7.4
->=20
->=20
-> --=20
-> Kees Cook
-> Pixel Security
-> _______________________________________________
-> lustre-devel mailing list
-> lustre-devel@lists.lustre.org
-> http://lists.lustre.org/listinfo.cgi/lustre-devel-lustre.org
+Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
+---
+ lib/Kconfig.ubsan |   7 +++
+ lib/Makefile      |   2 +
+ lib/test_ubsan.c  | 144 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 153 insertions(+)
+ create mode 100644 lib/test_ubsan.c
 
-Cheers, Andreas
---
-Andreas Dilger
-Lustre Principal Architect
-Intel Corporation
+diff --git a/lib/Kconfig.ubsan b/lib/Kconfig.ubsan
+index a669c19..19d42ea 100644
+--- a/lib/Kconfig.ubsan
++++ b/lib/Kconfig.ubsan
+@@ -46,3 +46,10 @@ config UBSAN_NULL
+ 	help
+ 	  This option enables detection of memory accesses via a
+ 	  null pointer.
++
++config TEST_UBSAN
++	tristate "Module for testing for undefined behavior detection"
++	depends on m && UBSAN
++	help
++	  This is a test module for UBSAN.
++	  It triggers various undefined behavior, and detect it.
+diff --git a/lib/Makefile b/lib/Makefile
+index c25957d1..f3503f8 100644
+--- a/lib/Makefile
++++ b/lib/Makefile
+@@ -54,6 +54,8 @@ obj-$(CONFIG_TEST_SYSCTL) += test_sysctl.o
+ obj-$(CONFIG_TEST_HASH) += test_hash.o test_siphash.o
+ obj-$(CONFIG_TEST_KASAN) += test_kasan.o
+ CFLAGS_test_kasan.o += -fno-builtin
++obj-$(CONFIG_TEST_UBSAN) += test_ubsan.o
++UBSAN_SANITIZE_test_ubsan.o := y
+ obj-$(CONFIG_TEST_KSTRTOX) += test-kstrtox.o
+ obj-$(CONFIG_TEST_LIST_SORT) += test_list_sort.o
+ obj-$(CONFIG_TEST_LKM) += test_module.o
+diff --git a/lib/test_ubsan.c b/lib/test_ubsan.c
+new file mode 100644
+index 0000000..58dedff
+--- /dev/null
++++ b/lib/test_ubsan.c
+@@ -0,0 +1,144 @@
++// SPDX-License-Identifier: GPL-2.0
++#include <linux/init.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++
++typedef void(*test_ubsan_fp)(void);
++
++static void test_ubsan_add_overflow(void)
++{
++	volatile int val = INT_MAX;
++
++	val += 2;
++}
++
++static void test_ubsan_sub_overflow(void)
++{
++	volatile int val = INT_MIN;
++	volatile int val2 = 2;
++
++	val -= val2;
++}
++
++static void test_ubsan_mul_overflow(void)
++{
++	volatile int val = INT_MAX / 2;
++
++	val *= 3;
++}
++
++static void test_ubsan_negate_overflow(void)
++{
++	volatile int val = INT_MIN;
++
++	val = -val;
++}
++
++static void test_ubsan_divrem_overflow(void)
++{
++	volatile int val = 16;
++	volatile int val2 = 0;
++
++	val /= val2;
++}
++
++static void test_ubsan_vla_bound_not_positive(void)
++{
++	volatile int size = -1;
++	char buf[size];
++
++	(void)buf;
++}
++
++static void test_ubsan_shift_out_of_bounds(void)
++{
++	volatile int val = -1;
++	int val2 = 10;
++
++	val2 <<= val;
++}
++
++static void test_ubsan_out_of_bounds(void)
++{
++	volatile int i = 4, j = 5;
++	volatile int arr[i];
++
++	arr[j] = i;
++}
++
++static void test_ubsan_load_invalid_value(void)
++{
++	volatile char *dst, *src;
++	bool val, val2, *ptr;
++	char c = 4;
++
++	dst = (char *)&val;
++	src = &c;
++	*dst = *src;
++
++	ptr = &val2;
++	val2 = val;
++}
++
++static void test_ubsan_null_ptr_deref(void)
++{
++	volatile int *ptr = NULL;
++	int val;
++
++	val = *ptr;
++}
++
++void test_ubsan_misaligned_access(void)
++{
++	volatile char arr[5] __aligned(4) = {1, 2, 3, 4, 5};
++	volatile int *ptr, val = 6;
++
++	ptr = (int *)(arr + 1);
++	*ptr = val;
++}
++
++static void test_ubsan_object_size_mismatch(void)
++{
++	/* "((aligned(8)))" helps this not into be misaligned for ptr-access. */
++	volatile int val __aligned(8) = 4;
++	volatile long long *ptr, val2;
++
++	ptr = (long long *)&val;
++	val2 = *ptr;
++}
++
++static const test_ubsan_fp test_ubsan_array[] = {
++	test_ubsan_add_overflow,
++	test_ubsan_sub_overflow,
++	test_ubsan_mul_overflow,
++	test_ubsan_negate_overflow,
++	test_ubsan_divrem_overflow,
++	test_ubsan_vla_bound_not_positive,
++	test_ubsan_shift_out_of_bounds,
++	test_ubsan_out_of_bounds,
++	test_ubsan_load_invalid_value,
++	//test_ubsan_null_ptr_deref, /* exclude it because there is a crash */
++	test_ubsan_misaligned_access,
++	test_ubsan_object_size_mismatch,
++};
++
++static int __init test_ubsan_init(void)
++{
++	unsigned int i;
++
++	for (i = 0; i < ARRAY_SIZE(test_ubsan_array); i++)
++		test_ubsan_array[i]();
++
++	(void)test_ubsan_null_ptr_deref; /* to avoid unsed-function warning */
++	return 0;
++}
++module_init(test_ubsan_init);
++
++static void __exit test_ubsan_exit(void)
++{
++	/* do nothing */
++}
++module_exit(test_ubsan_exit);
++
++MODULE_AUTHOR("Jinbum Park <jinb.park7@gmail.com>");
++MODULE_LICENSE("GPL v2");
+-- 
+1.9.1
