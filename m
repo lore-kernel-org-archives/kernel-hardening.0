@@ -1,69 +1,79 @@
-Subject: Re: [PATCH 4/4] video: Remove stack VLA usage
-References: <1520574625-4225-1-git-send-email-me@tobin.cc>
- <1520575267.11634.25.camel@perches.com>
- <20180309061152.r3yumh6agasyhtvo@cisco>
-From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Message-ID: <d99bbd46-8fed-b86f-c043-272ebc96e023@embeddedor.com>
-Date: Fri, 9 Mar 2018 00:16:21 -0600
-MIME-Version: 1.0
-In-Reply-To: <20180309061152.r3yumh6agasyhtvo@cisco>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Tycho Andersen <tycho@tycho.ws>, Joe Perches <joe@perches.com>
-Cc: "Tobin C. Harding" <me@tobin.cc>, Florian Tobias Schandinat <FlorianSchandinat@gmx.de>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, driverdev-devel@linuxdriverproject.org, Kees Cook <keescook@chromium.org>
+From: "Tobin C. Harding" <me@tobin.cc>
+Subject: [PATCH] staging: vchiq_arm: Clear VLA warning
+Date: Fri,  9 Mar 2018 17:21:10 +1100
+Message-Id: <1520576470-20628-1-git-send-email-me@tobin.cc>
+To: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Anholt <eric@anholt.net>, Stefan Wahren <stefan.wahren@i2se.com>
+Cc: "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, driverdev-devel@linuxdriverproject.org, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+The kernel would like to have all stack VLA usage removed[1].  The
+array here is fixed (declared with a const variable) but it appears
+like VLA to the compiler.  We can use a pre-processor define to quiet
+the compiler.
 
-I sent a patch for this six hours ago:
+[1]: https://lkml.org/lkml/2018/3/7/621
 
-https://patchwork.kernel.org/patch/10268591/
+Signed-off-by: Tobin C. Harding <me@tobin.cc>
+---
 
---
-Gustavo
+The name of this constant may need changing, there is already a
+pre-processor constant VCHIQ_MAX_SERVICES
 
-On 03/09/2018 12:11 AM, Tycho Andersen wrote:
-> On Thu, Mar 08, 2018 at 10:01:07PM -0800, Joe Perches wrote:
->> On Fri, 2018-03-09 at 16:50 +1100, Tobin C. Harding wrote:
->>> The kernel would like to have all stack VLA usage removed[1].  The
->>> arrays are fixed here (declared with a const variable) but they appear
->>> like VLAs to the compiler.  We can use a pre-processor define to fix the
->>> warning.
->> []
->>> diff --git a/drivers/video/fbdev/via/via_aux_sii164.c b/drivers/video/fbdev/via/via_aux_sii164.c
->> []
->>> @@ -27,6 +27,9 @@
->>>   
->>>   static const char *name = "SiI 164 PanelLink Transmitter";
->>>   
->>> +/* check vendor id and device id */
->>> +const u8 id[] = {0x01, 0x00, 0x06, 0x00};
->>
->> It seems id is now global in multiple places.
->> Perhaps these should be static.
-> 
-> Does it even need to be global? Why not just get rid of the indirection and use
-> ARRAY_SIZE where we mean it? This seems to work for me,
-> 
-> diff --git a/drivers/video/fbdev/via/via_aux_sii164.c b/drivers/video/fbdev/via/via_aux_sii164.c
-> index ca1b35f033b1..87db6c98d680 100644
-> --- a/drivers/video/fbdev/via/via_aux_sii164.c
-> +++ b/drivers/video/fbdev/via/via_aux_sii164.c
-> @@ -35,10 +35,10 @@ static void probe(struct via_aux_bus *bus, u8 addr)
->                  .addr   =       addr,
->                  .name   =       name};
->          /* check vendor id and device id */
-> -       const u8 id[] = {0x01, 0x00, 0x06, 0x00}, len = ARRAY_SIZE(id);
-> -       u8 tmp[len];
-> +       const u8 id[] = {0x01, 0x00, 0x06, 0x00};
-> +       u8 tmp[ARRAY_SIZE(id)];
->   
-> -       if (!via_aux_read(&drv, 0x00, tmp, len) || memcmp(id, tmp, len))
-> +       if (!via_aux_read(&drv, 0x00, tmp, sizeof(tmp)) || memcmp(id, tmp, sizeof(tmp)))
->                  return;
->   
->          printk(KERN_INFO "viafb: Found %s at address 0x%x\n", name, addr);
-> 
-> Cheers,
-> 
-> Tycho
-> 
+ .../staging/vc04_services/interface/vchiq_arm/vchiq_arm.c  | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/staging/vc04_services/interface/vchiq_arm/vchiq_arm.c b/drivers/staging/vc04_services/interface/vchiq_arm/vchiq_arm.c
+index f5cefda49b22..c972869a0333 100644
+--- a/drivers/staging/vc04_services/interface/vchiq_arm/vchiq_arm.c
++++ b/drivers/staging/vc04_services/interface/vchiq_arm/vchiq_arm.c
+@@ -3434,13 +3434,15 @@ vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
+ 	return ret;
+ }
+ 
++/* Only dump 64 services */
++#define VCHIQ_LOCAL_MAX_SERVICES 64
++
+ void
+ vchiq_dump_service_use_state(VCHIQ_STATE_T *state)
+ {
+ 	VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+ 	int i, j = 0;
+-	/* Only dump 64 services */
+-	static const int local_max_services = 64;
++
+ 	/* If there's more than 64 services, only dump ones with
+ 	 * non-zero counts */
+ 	int only_nonzero = 0;
+@@ -3455,7 +3457,7 @@ vchiq_dump_service_use_state(VCHIQ_STATE_T *state)
+ 		int fourcc;
+ 		int clientid;
+ 		int use_count;
+-	} service_data[local_max_services];
++	} service_data[VCHIQ_LOCAL_MAX_SERVICES];
+ 
+ 	if (!arm_state)
+ 		return;
+@@ -3466,10 +3468,10 @@ vchiq_dump_service_use_state(VCHIQ_STATE_T *state)
+ 	peer_count = arm_state->peer_use_count;
+ 	vc_use_count = arm_state->videocore_use_count;
+ 	active_services = state->unused_service;
+-	if (active_services > local_max_services)
++	if (active_services > VCHIQ_LOCAL_MAX_SERVICES)
+ 		only_nonzero = 1;
+ 
+-	for (i = 0; (i < active_services) && (j < local_max_services); i++) {
++	for (i = 0; (i < active_services) && (j < VCHIQ_LOCAL_MAX_SERVICES); i++) {
+ 		VCHIQ_SERVICE_T *service_ptr = state->services[i];
+ 
+ 		if (!service_ptr)
+@@ -3499,7 +3501,7 @@ vchiq_dump_service_use_state(VCHIQ_STATE_T *state)
+ 		vchiq_log_warning(vchiq_susp_log_level, "Too many active "
+ 			"services (%d).  Only dumping up to first %d services "
+ 			"with non-zero use-count", active_services,
+-			local_max_services);
++			VCHIQ_LOCAL_MAX_SERVICES);
+ 
+ 	for (i = 0; i < j; i++) {
+ 		vchiq_log_warning(vchiq_susp_log_level,
+-- 
+2.7.4
