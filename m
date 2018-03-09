@@ -1,53 +1,71 @@
 MIME-Version: 1.0
-In-Reply-To: <1520598106-3271-1-git-send-email-andreaschristofo@gmail.com>
-References: <1520598106-3271-1-git-send-email-andreaschristofo@gmail.com>
-From: Mathias Krause <minipli@googlemail.com>
-Date: Fri, 9 Mar 2018 13:49:07 +0100
-Message-ID: <CA+rthh9g3gcgTt8jbcRrVUK=Lagnz8HWJJLERwSbMi++3VqS1A@mail.gmail.com>
-Subject: Re: [PATCH] net: ipv6: xfrm6_state: remove VLA usage
+In-Reply-To: <23757731-bfa5-cb4c-ddc0-04103f9a72e0@embeddedor.com>
+References: <20180308172031.GA14541@embeddedgus> <CAGXu5jLjKcYOPxQOV6GO1oaLj1M_K=cFu-kHLLEzP=ZOXaAtfA@mail.gmail.com>
+ <23757731-bfa5-cb4c-ddc0-04103f9a72e0@embeddedor.com>
+From: Krzysztof Kozlowski <krzk@kernel.org>
+Date: Fri, 9 Mar 2018 14:04:44 +0100
+Message-ID: <CAJKOXPf+4tF4oq5ePsgcpUAQS_M2Vi6b1+J-8D9CVemO-6ve5g@mail.gmail.com>
+Subject: Re: [PATCH] rtc: s5m: Remove VLA usage
 Content-Type: text/plain; charset="UTF-8"
-To: Andreas Christoforou <andreaschristofo@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
+To: "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+Cc: Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Sangbeom Kim <sbkim73@samsung.com>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, Alessandro Zummo <a.zummo@towertech.it>, Alexandre Belloni <alexandre.belloni@bootlin.com>, LKML <linux-kernel@vger.kernel.org>, linux-samsung-soc@vger.kernel.org, linux-rtc@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 9 March 2018 at 13:21, Andreas Christoforou
-<andreaschristofo@gmail.com> wrote:
-> The kernel would like to have all stack VLA usage removed[1].
+On Thu, Mar 8, 2018 at 7:03 PM, Gustavo A. R. Silva
+<garsilva@embeddedor.com> wrote:
 >
-> Signed-off-by: Andreas Christoforou <andreaschristofo@gmail.com>
-> ---
->  net/ipv6/xfrm6_state.c | 8 +++++++-
->  1 file changed, 7 insertions(+), 1 deletion(-)
 >
-> diff --git a/net/ipv6/xfrm6_state.c b/net/ipv6/xfrm6_state.c
-> index b15075a..45c0d98 100644
-> --- a/net/ipv6/xfrm6_state.c
-> +++ b/net/ipv6/xfrm6_state.c
-> @@ -62,7 +62,12 @@ __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
->  {
->         int i;
->         int class[XFRM_MAX_DEPTH];
-> -       int count[maxclass];
-> +       int *count;
-> +
-> +       count = kcalloc(maxclass + 1, sizeof(*count), GFP_KERNEL);
-> +
-> +       if (!count)
-> +               return -ENOMEM;
+> On 03/08/2018 11:58 AM, Kees Cook wrote:
+>>
+>> On Thu, Mar 8, 2018 at 9:20 AM, Gustavo A. R. Silva
+>> <gustavo@embeddedor.com> wrote:
+>>>
+>>> In preparation to enabling -Wvla, remove VLAs and replace them
+>>> with fixed-length arrays instead.
+>>>
+>>>  From a security viewpoint, the use of Variable Length Arrays can be
+>>> a vector for stack overflow attacks. Also, in general, as the code
+>>> evolves it is easy to lose track of how big a VLA can get. Thus, we
+>>> can end up having segfaults that are hard to debug.
+>>>
+>>> Also, fixed as part of the directive to remove all VLAs from
+>>> the kernel: https://lkml.org/lkml/2018/3/7/621
+>>>
+>>> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+>>> ---
+>>>   drivers/rtc/rtc-s5m.c | 15 +++++++++------
+>>>   1 file changed, 9 insertions(+), 6 deletions(-)
+>>>
+>>> diff --git a/drivers/rtc/rtc-s5m.c b/drivers/rtc/rtc-s5m.c
+>>> index 6deae10..2b5f4f7 100644
+>>> --- a/drivers/rtc/rtc-s5m.c
+>>> +++ b/drivers/rtc/rtc-s5m.c
+>>> @@ -38,6 +38,9 @@
+>>>    */
+>>>   #define UDR_READ_RETRY_CNT     5
+>>>
+>>> +/* Maximum number of registers for setting time/alarm0/alarm1 */
+>>> +#define MAX_NUM_TIME_REGS      8
+>>
+>>
+>> I would adjust the various const struct s5m_rtc_reg_config's
+>> .regs_count to be represented by this new define, so the stack and the
+>> structures stay in sync. Something like:
+>>
+>> static const struct s5m_rtc_reg_config s2mps13_rtc_regs = {
+>>          .regs_count             = MAX_NUM_TIME_REGS - 1,
+>>
+>> ?
+>>
 >
->         memset(count, 0, sizeof(count));
->
-> @@ -80,6 +85,7 @@ __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
->                 src[i] = NULL;
->         }
->
-> +       kfree(count);
->         return 0;
->  }
+> Yep. I thought about that and decided to wait for some feedback first. But
+> yeah, I think is that'd be a good change.
 
-Instead of dynamically allocating and freeing memory here, shouldn't
-we just get rid of the maxclass parameter and use XFRM_MAX_DEPTH as
-size for the count[] array, too?
+Define and these assignments should be somehow connected with enum
+defining the offsets for data[] (from
+include/linux/mfd/samsung/rtc.h). Otherwise we define the same in two
+places. The enum could be itself (in separate patch) moved to the
+driver because it is meaningless for others.
 
-Cheers,
-Mathias
+Best regards,
+Krzysztof
