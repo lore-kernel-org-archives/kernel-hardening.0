@@ -1,32 +1,62 @@
+From: Adam Thomson <Adam.Thomson.Opensource@diasemi.com>
+Subject: RE: [PATCH] power: supply: da9150-fg: remove VLA usage
+Date: Fri, 9 Mar 2018 11:36:04 +0000
+Message-ID: <2E89032DDAA8B9408CB92943514A0337014C1D771E@SW-EX-MBX01.diasemi.com>
+References: <20180309045813.GA11964@embeddedgus>
+In-Reply-To: <20180309045813.GA11964@embeddedgus>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-In-Reply-To: <20180309105940.22hd2uy2mv7wahzb@imgtec.com>
-References: <20180308173949.GA19305@embeddedgus> <20180309105940.22hd2uy2mv7wahzb@imgtec.com>
-From: Emil Velikov <emil.l.velikov@gmail.com>
-Date: Fri, 9 Mar 2018 11:02:24 +0000
-Message-ID: <CACvgo5278SmXfV0jfrMu=Ba6gf7rRXzNduNX+D270fGUFQcZdQ@mail.gmail.com>
-Subject: Re: [PATCH] video: fbdev: via: remove VLA usage
-Content-Type: text/plain; charset="UTF-8"
-To: Eric Engestrom <eric.engestrom@imgtec.com>
-Cc: "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Florian Tobias Schandinat <FlorianSchandinat@gmx.de>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, linux-fbdev <linux-fbdev@vger.kernel.org>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, "Linux-Kernel@Vger. Kernel. Org" <linux-kernel@vger.kernel.org>, ML dri-devel <dri-devel@lists.freedesktop.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+To: "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Support Opensource <Support.Opensource@diasemi.com>, Sebastian Reichel <sre@kernel.org>
+Cc: "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 9 March 2018 at 10:59, Eric Engestrom <eric.engestrom@imgtec.com> wrote:
-> On Thursday, 2018-03-08 11:39:49 -0600, Gustavo A. R. Silva wrote:
->> In preparation to enabling -Wvla, remove VLA usage.
->>
->> Also, fixed as part of the directive to remove all VLAs from
->> the kernel: https://lkml.org/lkml/2018/3/7/621
->>
->> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
->
-> Sorry for my reply on v1, I missed that Emil already replied to another
-> post of the same patch (side note on that, making use of `-vX` and
-> `--in-reply-to` helps track the evolution of patches)
->
-> This looks good to me:
-> Reviewed-by: Eric Engestrom <eric.engestrom@imgtec.com>
->
-Same here
-Reviewed-by: Emil Velikov <emil.velikov@collabora.com>
+On 09 March 2018 04:58, Gustavo A. R. Silva wrote:
 
--Emil
+> In preparation to enabling -Wvla, remove VLA usage and replace it
+> with fixed-length arrays.
+>=20
+> It seems that the length of array 'buf' will not exceed
+> DA9150_QIF_SHORT_SIZE bytes (2 bytes). But a fixed length
+> of DA9150_QIF_BYTE_SIZE bytes (8 bytes) was chosen in case
+> this change in the future.
+>=20
+> Fixed as part of the directive to remove all VLAs from
+> the kernel: https://lkml.org/lkml/2018/3/7/621
+>=20
+> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+> ---
+>  drivers/power/supply/da9150-fg.c | 4 ++--
+>  1 file changed, 2 insertions(+), 2 deletions(-)
+>=20
+> diff --git a/drivers/power/supply/da9150-fg.c b/drivers/power/supply/da91=
+50-fg.c
+> index 8b8ce97..96893be 100644
+> --- a/drivers/power/supply/da9150-fg.c
+> +++ b/drivers/power/supply/da9150-fg.c
+> @@ -92,7 +92,7 @@ struct da9150_fg {
+>  static u32 da9150_fg_read_attr(struct da9150_fg *fg, u8 code, u8 size)
+>=20
+>  {
+> -	u8 buf[size];
+> +	u8 buf[DA9150_QIF_BYTE_SIZE];
+
+You can use DA9150_QIF_LONG_SIZE as that's the biggest size of an attribute
+which can be accessed. This will also save a little space.
+
+>  	u8 read_addr;
+>  	u32 res =3D 0;
+>  	int i;
+> @@ -111,7 +111,7 @@ static void da9150_fg_write_attr(struct da9150_fg *fg=
+, u8
+> code, u8 size,
+>  				 u32 val)
+>=20
+>  {
+> -	u8 buf[size];
+> +	u8 buf[DA9150_QIF_BYTE_SIZE];
+>  	u8 write_addr;
+>  	int i;
+>=20
+> --
+> 2.7.4
