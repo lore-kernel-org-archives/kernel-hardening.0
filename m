@@ -1,40 +1,55 @@
+Subject: Re: [PATCH] power: supply: da9150-fg: remove VLA usage
+References: <20180309045813.GA11964@embeddedgus>
+ <2E89032DDAA8B9408CB92943514A0337014C1D771E@SW-EX-MBX01.diasemi.com>
+From: "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+Message-ID: <b657eeff-ba9d-c40c-24f3-b971c893b6c3@embeddedor.com>
+Date: Fri, 9 Mar 2018 11:55:40 -0600
 MIME-Version: 1.0
-In-Reply-To: <1520602169.26370.1.camel@perches.com>
-References: <1520601833-4952-1-git-send-email-andreaschristofo@gmail.com> <1520602169.26370.1.camel@perches.com>
-From: Rosen Penev <rosenp@gmail.com>
-Date: Fri, 9 Mar 2018 07:42:02 -0800
-Message-ID: <CAKxU2N8wULJyidq9BiU_87o7csS=HcKjAa7DCX7vuGRiLJdbcw@mail.gmail.com>
-Subject: Re: [PATCH] drivers: net: wireless: ath: ath9k: dfs: remove VLA usage
-Content-Type: text/plain; charset="UTF-8"
-To: Joe Perches <joe@perches.com>
-Cc: Andreas Christoforou <andreaschristofo@gmail.com>, keescook@chromium.org, kernel-hardening@lists.openwall.com, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, Kalle Valo <kvalo@codeaurora.org>, linux-wireless@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
+In-Reply-To: <2E89032DDAA8B9408CB92943514A0337014C1D771E@SW-EX-MBX01.diasemi.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Adam Thomson <Adam.Thomson.Opensource@diasemi.com>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Support Opensource <Support.Opensource@diasemi.com>, Sebastian Reichel <sre@kernel.org>
+Cc: "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 9, 2018 at 5:29 AM, Joe Perches <joe@perches.com> wrote:
-> On Fri, 2018-03-09 at 15:23 +0200, Andreas Christoforou wrote:
->> The kernel would like to have all stack VLA usage removed.
->> This is the correct patch.
-> []
->> diff --git a/drivers/net/wireless/ath/ath9k/dfs.c b/drivers/net/wireless/ath/ath9k/dfs.c
-> []
->> @@ -101,7 +101,7 @@ static bool ath9k_check_chirping(struct ath_softc *sc, u8 *data,
->>                                int datalen, bool is_ctl, bool is_ext)
->>  {
->>       int i;
->> -     int max_bin[FFT_NUM_SAMPLES];
->> +     int max_bin[NUM_DIFFS + 1];
->>       struct ath_hw *ah = sc->sc_ah;
->>       struct ath_common *common = ath9k_hw_common(ah);
->>       int prev_delta;
->
-> why not just change FFT_NUM_SAMPLES to a #define
-> or get rid if FFT_NUM_SAMPLES altogether?
->
-I did the former yesterday. Never submitted.
-> $ git grep -w FFT_NUM_SAMPLES
-> drivers/net/wireless/ath/ath9k/dfs.c:static const int FFT_NUM_SAMPLES   = (NUM_DIFFS + 1);
-> drivers/net/wireless/ath/ath9k/dfs.c:   int max_bin[FFT_NUM_SAMPLES];
-> drivers/net/wireless/ath/ath9k/dfs.c:           if (num_fft_packets < (FFT_NUM_SAMPLES)) {
-> drivers/net/wireless/ath/ath9k/dfs.c:           for (i = 0; i < FFT_NUM_SAMPLES; i++)
-> drivers/net/wireless/ath/ath9k/dfs.c:           if (num_fft_packets < (FFT_NUM_SAMPLES)) {
-> drivers/net/wireless/ath/ath9k/dfs.c:           for (i = 0; i < FFT_NUM_SAMPLES; i++)
+
+
+On 03/09/2018 05:36 AM, Adam Thomson wrote:
+> On 09 March 2018 04:58, Gustavo A. R. Silva wrote:
+> 
+>> In preparation to enabling -Wvla, remove VLA usage and replace it
+>> with fixed-length arrays.
+>>
+>> It seems that the length of array 'buf' will not exceed
+>> DA9150_QIF_SHORT_SIZE bytes (2 bytes). But a fixed length
+>> of DA9150_QIF_BYTE_SIZE bytes (8 bytes) was chosen in case
+>> this change in the future.
+>>
+>> Fixed as part of the directive to remove all VLAs from
+>> the kernel: https://lkml.org/lkml/2018/3/7/621
+>>
+>> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+>> ---
+>>   drivers/power/supply/da9150-fg.c | 4 ++--
+>>   1 file changed, 2 insertions(+), 2 deletions(-)
+>>
+>> diff --git a/drivers/power/supply/da9150-fg.c b/drivers/power/supply/da9150-fg.c
+>> index 8b8ce97..96893be 100644
+>> --- a/drivers/power/supply/da9150-fg.c
+>> +++ b/drivers/power/supply/da9150-fg.c
+>> @@ -92,7 +92,7 @@ struct da9150_fg {
+>>   static u32 da9150_fg_read_attr(struct da9150_fg *fg, u8 code, u8 size)
+>>
+>>   {
+>> -	u8 buf[size];
+>> +	u8 buf[DA9150_QIF_BYTE_SIZE];
+> 
+> You can use DA9150_QIF_LONG_SIZE as that's the biggest size of an attribute
+> which can be accessed. This will also save a little space.
+> 
+
+I got it. I'll send v2 shortly.
+
+Thanks for the feedback, Adam.
+--
+Gustavo
