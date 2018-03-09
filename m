@@ -1,64 +1,40 @@
-Date: Fri, 9 Mar 2018 16:49:28 +0100 (CET)
-From: Thomas Gleixner <tglx@linutronix.de>
-Subject: Re: [PATCH][RFC] rslib: Remove VLAs by setting upper bound on
- nroots
-In-Reply-To: <20180309144613.GA48965@beast>
-Message-ID: <alpine.DEB.2.21.1803091610120.1364@nanos.tec.linutronix.de>
-References: <20180309144613.GA48965@beast>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Kees Cook <keescook@chromium.org>
-Cc: linux-kernel@vger.kernel.org, Segher Boessenkool <segher@kernel.crashing.org>, kernel-hardening@lists.openwall.com
+In-Reply-To: <1520602169.26370.1.camel@perches.com>
+References: <1520601833-4952-1-git-send-email-andreaschristofo@gmail.com> <1520602169.26370.1.camel@perches.com>
+From: Rosen Penev <rosenp@gmail.com>
+Date: Fri, 9 Mar 2018 07:42:02 -0800
+Message-ID: <CAKxU2N8wULJyidq9BiU_87o7csS=HcKjAa7DCX7vuGRiLJdbcw@mail.gmail.com>
+Subject: Re: [PATCH] drivers: net: wireless: ath: ath9k: dfs: remove VLA usage
+Content-Type: text/plain; charset="UTF-8"
+To: Joe Perches <joe@perches.com>
+Cc: Andreas Christoforou <andreaschristofo@gmail.com>, keescook@chromium.org, kernel-hardening@lists.openwall.com, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, Kalle Valo <kvalo@codeaurora.org>, linux-wireless@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 9 Mar 2018, Kees Cook wrote:
-
-> Avoid VLAs[1] by always allocating the upper bound of stack space
-> needed. The existing users of rslib appear to max out at 32 roots,
-> so use that as the upper bound.
-
-I think 32 is plenty. Do we have actually a user with 32?
-
-> Alternative: make init_rs() a true caller-instance and pre-allocate
-> the workspaces. Will this need locking or are the callers already
-> single-threaded in their use of librs?
-
-init_rs() is an init function which needs to be invoked _before_ the
-decoder/encoder can be used.
-
-The way it works today that it can share the rs_control between users to
-avoid duplicating the polynom arrays and the setup of them.
-
-So we might change how rs_control works and allocate rs_control for each
-invocation of init_rs(). That means we need two data structures:
-
-Rename rs_control to rs_poly and just use that internaly for sharing the
-polynom arrays.
-
-rs_control then becomes:
-
-struct rs_control {
-	struct rs_poly	*poly;
-	uint16_t	lamda[MAX_ROOTS + 1];
-	....
-	uint16_t	loc[MAX_ROOTS];
-};
-
-But as you said that requires serialization or separation at the usage
-sites.
-
-drivers/mtd/nand/* would either need a mutex or allocate one rs_control per
-instance. Simple enough to do.
-
-drivers/md/dm-verity-fec.c looks like it's allocating a dm control struct
-for each worker thread, so that should just require allocating one
-rs_control per worker then.
-
-pstore only has an issue in case of OOPS. A simple solution would be to
-allocate two rs_control structs, one for regular usage and one for the OOPS
-case. Not sure if that covers all possible problems, so that needs more
-thoughts.
-
-Thanks,
-
-	tglx
+On Fri, Mar 9, 2018 at 5:29 AM, Joe Perches <joe@perches.com> wrote:
+> On Fri, 2018-03-09 at 15:23 +0200, Andreas Christoforou wrote:
+>> The kernel would like to have all stack VLA usage removed.
+>> This is the correct patch.
+> []
+>> diff --git a/drivers/net/wireless/ath/ath9k/dfs.c b/drivers/net/wireless/ath/ath9k/dfs.c
+> []
+>> @@ -101,7 +101,7 @@ static bool ath9k_check_chirping(struct ath_softc *sc, u8 *data,
+>>                                int datalen, bool is_ctl, bool is_ext)
+>>  {
+>>       int i;
+>> -     int max_bin[FFT_NUM_SAMPLES];
+>> +     int max_bin[NUM_DIFFS + 1];
+>>       struct ath_hw *ah = sc->sc_ah;
+>>       struct ath_common *common = ath9k_hw_common(ah);
+>>       int prev_delta;
+>
+> why not just change FFT_NUM_SAMPLES to a #define
+> or get rid if FFT_NUM_SAMPLES altogether?
+>
+I did the former yesterday. Never submitted.
+> $ git grep -w FFT_NUM_SAMPLES
+> drivers/net/wireless/ath/ath9k/dfs.c:static const int FFT_NUM_SAMPLES   = (NUM_DIFFS + 1);
+> drivers/net/wireless/ath/ath9k/dfs.c:   int max_bin[FFT_NUM_SAMPLES];
+> drivers/net/wireless/ath/ath9k/dfs.c:           if (num_fft_packets < (FFT_NUM_SAMPLES)) {
+> drivers/net/wireless/ath/ath9k/dfs.c:           for (i = 0; i < FFT_NUM_SAMPLES; i++)
+> drivers/net/wireless/ath/ath9k/dfs.c:           if (num_fft_packets < (FFT_NUM_SAMPLES)) {
+> drivers/net/wireless/ath/ath9k/dfs.c:           for (i = 0; i < FFT_NUM_SAMPLES; i++)
