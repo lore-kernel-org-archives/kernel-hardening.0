@@ -1,27 +1,64 @@
-From: Kalle Valo <kvalo@codeaurora.org>
-Subject: Re: [PATCH] drivers: net: wireless: ath: ath9k: dfs: remove VLA usage
-References: <1520601833-4952-1-git-send-email-andreaschristofo@gmail.com>
-Date: Fri, 09 Mar 2018 16:50:05 +0200
-In-Reply-To: <1520601833-4952-1-git-send-email-andreaschristofo@gmail.com>
-	(Andreas Christoforou's message of "Fri, 9 Mar 2018 15:23:53 +0200")
-Message-ID: <87zi3hcnhe.fsf@kamboji.qca.qualcomm.com>
+Date: Fri, 9 Mar 2018 16:49:28 +0100 (CET)
+From: Thomas Gleixner <tglx@linutronix.de>
+Subject: Re: [PATCH][RFC] rslib: Remove VLAs by setting upper bound on
+ nroots
+In-Reply-To: <20180309144613.GA48965@beast>
+Message-ID: <alpine.DEB.2.21.1803091610120.1364@nanos.tec.linutronix.de>
+References: <20180309144613.GA48965@beast>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: Andreas Christoforou <andreaschristofo@gmail.com>
-Cc: keescook@chromium.org, kernel-hardening@lists.openwall.com, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, linux-wireless@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset=US-ASCII
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, Segher Boessenkool <segher@kernel.crashing.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Andreas Christoforou <andreaschristofo@gmail.com> writes:
+On Fri, 9 Mar 2018, Kees Cook wrote:
 
-> The kernel would like to have all stack VLA usage removed.
->
-> This is the correct patch.
->
-> Signed-off-by: Andreas Christoforou <andreaschristofo@gmail.com>
+> Avoid VLAs[1] by always allocating the upper bound of stack space
+> needed. The existing users of rslib appear to max out at 32 roots,
+> so use that as the upper bound.
 
-Please use versioning in the patches:
+I think 32 is plenty. Do we have actually a user with 32?
 
-https://wireless.wiki.kernel.org/en/developers/documentation/submittingpatches#patch_version_missing
+> Alternative: make init_rs() a true caller-instance and pre-allocate
+> the workspaces. Will this need locking or are the callers already
+> single-threaded in their use of librs?
 
--- 
-Kalle Valo
+init_rs() is an init function which needs to be invoked _before_ the
+decoder/encoder can be used.
+
+The way it works today that it can share the rs_control between users to
+avoid duplicating the polynom arrays and the setup of them.
+
+So we might change how rs_control works and allocate rs_control for each
+invocation of init_rs(). That means we need two data structures:
+
+Rename rs_control to rs_poly and just use that internaly for sharing the
+polynom arrays.
+
+rs_control then becomes:
+
+struct rs_control {
+	struct rs_poly	*poly;
+	uint16_t	lamda[MAX_ROOTS + 1];
+	....
+	uint16_t	loc[MAX_ROOTS];
+};
+
+But as you said that requires serialization or separation at the usage
+sites.
+
+drivers/mtd/nand/* would either need a mutex or allocate one rs_control per
+instance. Simple enough to do.
+
+drivers/md/dm-verity-fec.c looks like it's allocating a dm control struct
+for each worker thread, so that should just require allocating one
+rs_control per worker then.
+
+pstore only has an issue in case of OOPS. A simple solution would be to
+allocate two rs_control structs, one for regular usage and one for the OOPS
+case. Not sure if that covers all possible problems, so that needs more
+thoughts.
+
+Thanks,
+
+	tglx
