@@ -1,58 +1,53 @@
-Date: Fri, 9 Mar 2018 18:21:24 +0530
-From: Himanshu Jha <morganfreeman6991@gmail.com>
-Subject: Re: [PATCH] drivers: net: wireless: ath: ath9: dfs: remove VLA usage
-Message-ID: <20180309125124.GA17968@himanshu-Vostro-3559>
-References: <1520598613-3641-1-git-send-email-andreaschristofo@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1520598613-3641-1-git-send-email-andreaschristofo@gmail.com>
+In-Reply-To: <1520598106-3271-1-git-send-email-andreaschristofo@gmail.com>
+References: <1520598106-3271-1-git-send-email-andreaschristofo@gmail.com>
+From: Mathias Krause <minipli@googlemail.com>
+Date: Fri, 9 Mar 2018 13:49:07 +0100
+Message-ID: <CA+rthh9g3gcgTt8jbcRrVUK=Lagnz8HWJJLERwSbMi++3VqS1A@mail.gmail.com>
+Subject: Re: [PATCH] net: ipv6: xfrm6_state: remove VLA usage
+Content-Type: text/plain; charset="UTF-8"
 To: Andreas Christoforou <andreaschristofo@gmail.com>
-Cc: keescook@chromium.org, kernel-hardening@lists.openwall.com, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, Kalle Valo <kvalo@codeaurora.org>, linux-wireless@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 09, 2018 at 02:30:12PM +0200, Andreas Christoforou wrote:
-> The kernel would like to have all stack VLA usage removed.
-> 
+On 9 March 2018 at 13:21, Andreas Christoforou
+<andreaschristofo@gmail.com> wrote:
+> The kernel would like to have all stack VLA usage removed[1].
+>
 > Signed-off-by: Andreas Christoforou <andreaschristofo@gmail.com>
 > ---
->  drivers/net/wireless/ath/ath9k/dfs.c | 3 +--
->  1 file changed, 1 insertion(+), 2 deletions(-)
-> 
-> diff --git a/drivers/net/wireless/ath/ath9k/dfs.c b/drivers/net/wireless/ath/ath9k/dfs.c
-> index 6fee9a4..cfb0f84 100644
-> --- a/drivers/net/wireless/ath/ath9k/dfs.c
-> +++ b/drivers/net/wireless/ath/ath9k/dfs.c
-> @@ -41,7 +41,6 @@ static const int BIN_DELTA_MAX		= 10;
->  
->  /* we need at least 3 deltas / 4 samples for a reliable chirp detection */
->  #define NUM_DIFFS 3
-> -static const int FFT_NUM_SAMPLES	= (NUM_DIFFS + 1);
-
-Are you sure it is correct ?
-Look for other users of "FFT_NUM_SAMPLES".
-
->  /* Threshold for difference of delta peaks */
->  static const int MAX_DIFF		= 2;
-> @@ -101,7 +100,7 @@ static bool ath9k_check_chirping(struct ath_softc *sc, u8 *data,
->  				 int datalen, bool is_ctl, bool is_ext)
+>  net/ipv6/xfrm6_state.c | 8 +++++++-
+>  1 file changed, 7 insertions(+), 1 deletion(-)
+>
+> diff --git a/net/ipv6/xfrm6_state.c b/net/ipv6/xfrm6_state.c
+> index b15075a..45c0d98 100644
+> --- a/net/ipv6/xfrm6_state.c
+> +++ b/net/ipv6/xfrm6_state.c
+> @@ -62,7 +62,12 @@ __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
 >  {
->  	int i;
-> -	int max_bin[FFT_NUM_SAMPLES];
-> +	int max_bin[NUM_DIFFS + 1];
->  	struct ath_hw *ah = sc->sc_ah;
->  	struct ath_common *common = ath9k_hw_common(ah);
->  	int prev_delta;
+>         int i;
+>         int class[XFRM_MAX_DEPTH];
+> -       int count[maxclass];
+> +       int *count;
+> +
+> +       count = kcalloc(maxclass + 1, sizeof(*count), GFP_KERNEL);
+> +
+> +       if (!count)
+> +               return -ENOMEM;
+>
+>         memset(count, 0, sizeof(count));
+>
+> @@ -80,6 +85,7 @@ __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
+>                 src[i] = NULL;
+>         }
+>
+> +       kfree(count);
+>         return 0;
+>  }
 
-Always compile test the driver before sending a patch.
-Also, patch title seems incorrect *ath9k*
+Instead of dynamically allocating and freeing memory here, shouldn't
+we just get rid of the maxclass parameter and use XFRM_MAX_DEPTH as
+size for the count[] array, too?
 
-himanshu@himanshu-Vostro-3559:~/linux-next$ git log --oneline drivers/net/wireless/ath/ath9k/dfs.c
-626ab67 ath9k: dfs: use swap macro in ath9k_check_chirping
-50c8cd4 ath9k: remove cast to void pointer
-8fc2b61 ath9k: DFS - add pulse chirp detection for FCC
-....
-
--- 
-Thanks
-Himanshu Jha
+Cheers,
+Mathias
