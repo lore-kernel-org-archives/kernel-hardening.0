@@ -1,32 +1,40 @@
-From: Andreas Christoforou <andreaschristofo@gmail.com>
-Subject: [PATCH] drivers: net: wireless: ath: ath9k: dfs: remove VLA usage
-Date: Fri,  9 Mar 2018 15:23:53 +0200
-Message-Id: <1520601833-4952-1-git-send-email-andreaschristofo@gmail.com>
-To: keescook@chromium.org
-Cc: kernel-hardening@lists.openwall.com, Andreas Christoforou <andreaschristofo@gmail.com>, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, Kalle Valo <kvalo@codeaurora.org>, linux-wireless@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
+Message-ID: <1520602169.26370.1.camel@perches.com>
+Subject: Re: [PATCH] drivers: net: wireless: ath: ath9k: dfs: remove VLA
+ usage
+From: Joe Perches <joe@perches.com>
+Date: Fri, 09 Mar 2018 05:29:29 -0800
+In-Reply-To: <1520601833-4952-1-git-send-email-andreaschristofo@gmail.com>
+References: <1520601833-4952-1-git-send-email-andreaschristofo@gmail.com>
+Content-Type: text/plain; charset="ISO-8859-1"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+To: Andreas Christoforou <andreaschristofo@gmail.com>, keescook@chromium.org
+Cc: kernel-hardening@lists.openwall.com, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, Kalle Valo <kvalo@codeaurora.org>, linux-wireless@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The kernel would like to have all stack VLA usage removed.
+On Fri, 2018-03-09 at 15:23 +0200, Andreas Christoforou wrote:
+> The kernel would like to have all stack VLA usage removed.
+> This is the correct patch.
+[]
+> diff --git a/drivers/net/wireless/ath/ath9k/dfs.c b/drivers/net/wireless/ath/ath9k/dfs.c
+[]
+> @@ -101,7 +101,7 @@ static bool ath9k_check_chirping(struct ath_softc *sc, u8 *data,
+>  				 int datalen, bool is_ctl, bool is_ext)
+>  {
+>  	int i;
+> -	int max_bin[FFT_NUM_SAMPLES];
+> +	int max_bin[NUM_DIFFS + 1];
+>  	struct ath_hw *ah = sc->sc_ah;
+>  	struct ath_common *common = ath9k_hw_common(ah);
+>  	int prev_delta;
 
-This is the correct patch.
+why not just change FFT_NUM_SAMPLES to a #define
+or get rid if FFT_NUM_SAMPLES altogether?
 
-Signed-off-by: Andreas Christoforou <andreaschristofo@gmail.com>
----
- drivers/net/wireless/ath/ath9k/dfs.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/drivers/net/wireless/ath/ath9k/dfs.c b/drivers/net/wireless/ath/ath9k/dfs.c
-index 6fee9a4..eeb77f2 100644
---- a/drivers/net/wireless/ath/ath9k/dfs.c
-+++ b/drivers/net/wireless/ath/ath9k/dfs.c
-@@ -101,7 +101,7 @@ static bool ath9k_check_chirping(struct ath_softc *sc, u8 *data,
- 				 int datalen, bool is_ctl, bool is_ext)
- {
- 	int i;
--	int max_bin[FFT_NUM_SAMPLES];
-+	int max_bin[NUM_DIFFS + 1];
- 	struct ath_hw *ah = sc->sc_ah;
- 	struct ath_common *common = ath9k_hw_common(ah);
- 	int prev_delta;
--- 
-2.7.4
+$ git grep -w FFT_NUM_SAMPLES
+drivers/net/wireless/ath/ath9k/dfs.c:static const int FFT_NUM_SAMPLES   = (NUM_DIFFS + 1);
+drivers/net/wireless/ath/ath9k/dfs.c:   int max_bin[FFT_NUM_SAMPLES];
+drivers/net/wireless/ath/ath9k/dfs.c:           if (num_fft_packets < (FFT_NUM_SAMPLES)) {
+drivers/net/wireless/ath/ath9k/dfs.c:           for (i = 0; i < FFT_NUM_SAMPLES; i++)
+drivers/net/wireless/ath/ath9k/dfs.c:           if (num_fft_packets < (FFT_NUM_SAMPLES)) {
+drivers/net/wireless/ath/ath9k/dfs.c:           for (i = 0; i < FFT_NUM_SAMPLES; i++)
