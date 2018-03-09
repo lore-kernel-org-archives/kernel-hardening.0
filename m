@@ -1,57 +1,48 @@
-Date: Fri, 9 Mar 2018 12:27:08 -0600
-From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Subject: [PATCH v2] power: supply: da9150-fg: remove VLA usage
-Message-ID: <20180309182708.GA18542@embeddedgus>
+Subject: Re: [PATCH] net: ipv6: xfrm6_state: remove VLA usage
+References: <1520598106-3271-1-git-send-email-andreaschristofo@gmail.com>
+From: Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>
+Message-ID: <168b5c29-b037-cf5d-1383-4dfffab44e55@cogentembedded.com>
+Date: Fri, 9 Mar 2018 21:35:21 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-To: Adam Thomson <Adam.Thomson.Opensource@diasemi.com>, Support Opensource <support.opensource@diasemi.com>, Sebastian Reichel <sre@kernel.org>
-Cc: linux-pm@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+In-Reply-To: <1520598106-3271-1-git-send-email-andreaschristofo@gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Andreas Christoforou <andreaschristofo@gmail.com>, keescook@chromium.org
+Cc: kernel-hardening@lists.openwall.com, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In preparation to enabling -Wvla, remove VLA usage and replace it
-with fixed-length arrays.
+Hello!
 
-DA9150_QIF_LONG_SIZE (4 bytes) is the biggest size of an attribute which can
-be accessed [1].
+On 03/09/2018 03:21 PM, Andreas Christoforou wrote:
 
-Fixed as part of the directive to remove all VLAs from
-the kernel: https://lkml.org/lkml/2018/3/7/621
+> The kernel would like to have all stack VLA usage removed[1].
+> 
+> Signed-off-by: Andreas Christoforou <andreaschristofo@gmail.com>
+> ---
+>  net/ipv6/xfrm6_state.c | 8 +++++++-
+>  1 file changed, 7 insertions(+), 1 deletion(-)
+> 
+> diff --git a/net/ipv6/xfrm6_state.c b/net/ipv6/xfrm6_state.c
+> index b15075a..45c0d98 100644
+> --- a/net/ipv6/xfrm6_state.c
+> +++ b/net/ipv6/xfrm6_state.c
+> @@ -62,7 +62,12 @@ __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
+>  {
+>  	int i;
+>  	int class[XFRM_MAX_DEPTH];
+> -	int count[maxclass];
+> +	int *count;
+> +
+> +	count = kcalloc(maxclass + 1, sizeof(*count), GFP_KERNEL);
+> +
 
-[1] https://marc.info/?l=kernel-hardening&m=152059600524753&w=2
+  Empty line not needed here.
 
-Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
----
-Changes in v2:
- - Use DA9150_QIF_LONG_SIZE instead of DA9150_QIF_BYTE_SIZE as the
-   maximum size for array 'buf'. Thanks to Adam Thomson for the
-   feedback on this.
- - Update changelog based on Adam's comments.
+> +	if (!count)
+> +		return -ENOMEM;
+>  
+>  	memset(count, 0, sizeof(count));
+>  
+[...]
 
- drivers/power/supply/da9150-fg.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/drivers/power/supply/da9150-fg.c b/drivers/power/supply/da9150-fg.c
-index 8b8ce97..7ea2188 100644
---- a/drivers/power/supply/da9150-fg.c
-+++ b/drivers/power/supply/da9150-fg.c
-@@ -92,7 +92,7 @@ struct da9150_fg {
- static u32 da9150_fg_read_attr(struct da9150_fg *fg, u8 code, u8 size)
- 
- {
--	u8 buf[size];
-+	u8 buf[DA9150_QIF_LONG_SIZE];
- 	u8 read_addr;
- 	u32 res = 0;
- 	int i;
-@@ -111,7 +111,7 @@ static void da9150_fg_write_attr(struct da9150_fg *fg, u8 code, u8 size,
- 				 u32 val)
- 
- {
--	u8 buf[size];
-+	u8 buf[DA9150_QIF_LONG_SIZE];
- 	u8 write_addr;
- 	int i;
- 
--- 
-2.7.4
+MBR, Sergei
