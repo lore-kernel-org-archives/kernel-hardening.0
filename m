@@ -1,105 +1,80 @@
-Subject: Re: [PATCH] scsi: resolve COMMAND_SIZE at compile time
-From: James Bottomley <jejb@linux.vnet.ibm.com>
-Date: Sat, 10 Mar 2018 12:49:17 -0800
-In-Reply-To: <20180310142930.0692200b@heffalump.sk2.org>
-References: <20180309232933.14e39858@heffalump.sk2.org>
-	 <20180309223355.21222-1-steve@sk2.org> <1520635631.2907.16.camel@wdc.com>
-	 <20180310142930.0692200b@heffalump.sk2.org>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-OM5HNyDTbZlw5Ws0bDJ4"
-Mime-Version: 1.0
-Message-Id: <1520714957.4495.5.camel@linux.vnet.ibm.com>
-To: Stephen Kitt <steve@sk2.org>, Bart Van Assche <Bart.VanAssche@wdc.com>
-Cc: "hare@suse.com" <hare@suse.com>, "martin.petersen@oracle.com" <martin.petersen@oracle.com>, "axboe@kernel.dk" <axboe@kernel.dk>, "linux-scsi@vger.kernel.org" <linux-scsi@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-block@vger.kernel.org" <linux-block@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Date: Sat, 10 Mar 2018 14:34:50 -0800
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH] rslib: Remove VLAs by setting upper bound on nroots
+Message-ID: <20180310223450.GA37999@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: Thomas Gleixner <tglx@linutronix.de>
+Cc: linux-kernel@vger.kernel.org, Segher Boessenkool <segher@kernel.crashing.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Avoid stack VLAs[1] by always allocating the upper bound of stack space
+needed. The existing users of rslib appear to max out at 24 roots[2],
+so use that as the upper bound until we have a reason to change it.
 
---=-OM5HNyDTbZlw5Ws0bDJ4
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Alternative considered: make init_rs() a true caller-instance and
+pre-allocate the workspaces. This would possibly need locking and
+a refactoring of the returned structure.
 
-On Sat, 2018-03-10 at 14:29 +0100, Stephen Kitt wrote:
-> Hi Bart,
->=20
-> On Fri, 9 Mar 2018 22:47:12 +0000, Bart Van Assche <Bart.VanAssche@wd
-> c.com>
-> wrote:
-> >=20
-> > On Fri, 2018-03-09 at 23:33 +0100, Stephen Kitt wrote:
-> > >=20
-> > > +/*
-> > > + * SCSI command sizes are as follows, in bytes, for fixed size
-> > > commands,
-> > > per
-> > > + * group: 6, 10, 10, 12, 16, 12, 10, 10. The top three bits of
-> > > an opcode
-> > > + * determine its group.
-> > > + * The size table is encoded into a 32-bit value by subtracting
-> > > each
-> > > value
-> > > + * from 16, resulting in a value of 1715488362
-> > > + * (6 << 28 + 6 << 24 + 4 << 20 + 0 << 16 + 4 << 12 + 6 << 8 + 6
-> > > << 4 +
-> > > 10).
-> > > + * Command group 3 is reserved and should never be used.
-> > > + */
-> > > +#define COMMAND_SIZE(opcode) \
-> > > +	(16 - (15 & (1715488362 >> (4 * (((opcode) >> 5) &
-> > > 7)))))=C2=A0=C2=A0
-> >=20
-> > To me this seems hard to read and hard to verify. Could this have
-> > been
-> > written as a combination of ternary expressions, e.g. using a gcc
-> > statement
-> > expression to ensure that opcode is evaluated once?
->=20
-> That=E2=80=99s what I=E2=80=99d tried initially, e.g.
->=20
-> #define COMMAND_SIZE(opcode) ({ \
-> int index =3D ((opcode) >> 5) & 7; \
-> index =3D=3D 0 ? 6 : (index =3D=3D 4 ? 16 : index =3D=3D 3 || index =3D=
-=3D 5 ? 12 :
-> 10); \
-> })
->=20
-> But gcc still reckons that results in a VLA, defeating the initial
-> purpose of
-> the exercise.
->=20
-> Does it help if I make the magic value construction clearer?
->=20
-> #define SCSI_COMMAND_SIZE_TBL (	\
-> 	=C2=A0=C2=A0=C2=A0(16 -=C2=A0=C2=A06)		\
-> 	+ ((16 - 10) <<=C2=A0=C2=A04)	\
-> 	+ ((16 - 10) <<=C2=A0=C2=A08)	\
-> 	+ ((16 - 12) << 12)	\
-> 	+ ((16 - 16) << 16)	\
-> 	+ ((16 - 12) << 20)	\
-> 	+ ((16 - 10) << 24)	\
-> 	+ ((16 - 10) << 28))
->=20
-> #define COMMAND_SIZE(opcode)					=09
-> \
-> =C2=A0 (16 - (15 & (SCSI_COMMAND_SIZE_TBL >> (4 * (((opcode) >> 5) &
-> 7)))))
+Using kmalloc in this path doesn't look great, especially since at
+least one caller (pstore) is sensitive to allocations during rslib
+usage (it expects to run it during an Oops, for example).
 
-Couldn't we do the less clever thing of making the array a static const
-and moving it to a header? =C2=A0That way the compiler should be able to
-work it out at compile time.
+[1] https://lkml.org/lkml/2018/3/7/621
+[2] https://lkml.org/lkml/2018/3/9/838
 
-James
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ lib/reed_solomon/decode_rs.c    | 7 ++++---
+ lib/reed_solomon/reed_solomon.c | 5 ++++-
+ 2 files changed, 8 insertions(+), 4 deletions(-)
 
---=-OM5HNyDTbZlw5Ws0bDJ4
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
+diff --git a/lib/reed_solomon/decode_rs.c b/lib/reed_solomon/decode_rs.c
+index 0ec3f257ffdf..3e3becb836a6 100644
+--- a/lib/reed_solomon/decode_rs.c
++++ b/lib/reed_solomon/decode_rs.c
+@@ -31,9 +31,10 @@
+ 	 * of nroots is 8. So the necessary stack size will be about
+ 	 * 220 bytes max.
+ 	 */
+-	uint16_t lambda[nroots + 1], syn[nroots];
+-	uint16_t b[nroots + 1], t[nroots + 1], omega[nroots + 1];
+-	uint16_t root[nroots], reg[nroots + 1], loc[nroots];
++	uint16_t lambda[RS_MAX_ROOTS + 1], syn[RS_MAX_ROOTS];
++	uint16_t b[RS_MAX_ROOTS + 1], t[RS_MAX_ROOTS + 1];
++	uint16_t omega[RS_MAX_ROOTS + 1], root[RS_MAX_ROOTS];
++	uint16_t reg[RS_MAX_ROOTS + 1], loc[RS_MAX_ROOTS];
+ 	int count = 0;
+ 	uint16_t msk = (uint16_t) rs->nn;
+ 
+diff --git a/lib/reed_solomon/reed_solomon.c b/lib/reed_solomon/reed_solomon.c
+index 06d04cfa9339..3e218e70ac2e 100644
+--- a/lib/reed_solomon/reed_solomon.c
++++ b/lib/reed_solomon/reed_solomon.c
+@@ -51,6 +51,9 @@ static LIST_HEAD (rslist);
+ /* Protection for the list */
+ static DEFINE_MUTEX(rslistlock);
+ 
++/* Ultimately controls the upper bounds of the on-stack buffers. */
++#define RS_MAX_ROOTS	24
++
+ /**
+  * rs_init - Initialize a Reed-Solomon codec
+  * @symsize:	symbol size, bits (1-8)
+@@ -210,7 +213,7 @@ static struct rs_control *init_rs_internal(int symsize, int gfpoly,
+     		return NULL;
+ 	if (prim <= 0 || prim >= (1<<symsize))
+     		return NULL;
+-	if (nroots < 0 || nroots >= (1<<symsize))
++	if (nroots < 0 || nroots >= (1<<symsize) || nroots > RS_MAX_ROOTS)
+ 		return NULL;
+ 
+ 	mutex_lock(&rslistlock);
+-- 
+2.7.4
 
------BEGIN PGP SIGNATURE-----
 
-iHUEABMIAB0WIQTnYEDbdso9F2cI+arnQslM7pishQUCWqREzQAKCRDnQslM7pis
-hQCdAP9X+JY9S6TJJVa9NN/j9DR6ai4u+PI2CzZEfB4w3WKAagD/TC1cwqmOjCnr
-2FGwySKUezmBHURe948ekZU+nbgRvQM=
-=yP4n
------END PGP SIGNATURE-----
-
---=-OM5HNyDTbZlw5Ws0bDJ4--
+-- 
+Kees Cook
+Pixel Security
