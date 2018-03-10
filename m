@@ -1,72 +1,36 @@
-From: Joao Moreira <jmoreira@suse.de>
-Subject: [PATCH] vgacon: fix function prototypes
-Date: Sat, 10 Mar 2018 03:40:59 -0300
-Message-Id: <20180310064059.12720-1-jmoreira@suse.de>
+Date: Fri, 9 Mar 2018 22:10:19 -0500
+From: Steven Rostedt <rostedt@goodmis.org>
+Subject: Re: [PATCH 3/3] tracing: Rewrite filter logic to be simpler and
+ faster
+Message-ID: <20180309221019.31c896a3@vmware.local.home>
+In-Reply-To: <20180310023907.798690563@goodmis.org>
+References: <20180309200536.GA5670@beast>
+	<20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
+	<CA+55aFw9hWz1-YFVoHEiXDjqb9q7dz=rQVXr7YLkMuVLvbwaOg@mail.gmail.com>
+	<20180309163241.a421e216999bd0b1f43a64c2@linux-foundation.org>
+	<CA+55aFwbO2vUsjWzAwB6SZ65RM4r3P0+2JvyMHn=ry0CgWCBgA@mail.gmail.com>
+	<CAGXu5j+D=zs8AMb969dhH05GmKPuBxKPcAs89KfKzVf47faL1g@mail.gmail.com>
+	<CAGXu5j+4_2vZF9uPy_agcGymbHbVqohSqApKZZxwcTz4OC_Skg@mail.gmail.com>
+	<20180310023907.798690563@goodmis.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-To: kernel-hardening@lists.openwall.com
-Cc: linux-kernel@vger.kernel.org, danielmicay@gmail.com, keescook@chromium.org
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: linux-kernel@vger.kernel.org
+Cc: Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S.
+ Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-It is possible to indirectly invoke functions with prototypes that do not
-match those of the respectively used function pointers by using void types.
-Despite widely used as a feature for relaxing function invocation, this
-should be avoided when possible as it may prevent the use of heuristics
-such as prototype matching-based Control-Flow Integrity, which can be used
-to prevent ROP-based attacks.
+On Fri, 09 Mar 2018 21:34:45 -0500
+Steven Rostedt <rostedt@goodmis.org> wrote:
 
-Given the above, the current efforts to improve the Linux security, and the
-upcoming kernel support to compilers with CFI features, fix prototypes in
-vgacon console driver.
+>  2 files changed, 1050 insertions(+), 1273 deletions(-)
 
-Another similar fix can be seen in [1].
+BTW, it's a bit bigger impact than 223 deletions. As I added a lot of
+comments to explain the logic better. Removing comments and white space
+from the modifications we have:
 
-[1] https://android-review.googlesource.com/c/kernel/common/+/602010
+ 649 insertions(+), 1035 deletions(-)
 
-Signed-off-by:	João Moreira <jmoreira@suse.de>
----
- drivers/video/console/vgacon.c | 18 +++++++++++++-----
- 1 file changed, 13 insertions(+), 5 deletions(-)
+That's 386 lines of code removed.
 
-diff --git a/drivers/video/console/vgacon.c b/drivers/video/console/vgacon.c
-index a17ba1465815..f00b630f6839 100644
---- a/drivers/video/console/vgacon.c
-+++ b/drivers/video/console/vgacon.c
-@@ -1407,21 +1407,29 @@ static bool vgacon_scroll(struct vc_data *c, unsigned int t, unsigned int b,
-  *  The console `switch' structure for the VGA based console
-  */
- 
--static int vgacon_dummy(struct vc_data *c)
-+static int vgacon_clear(struct vc_data *c)
- {
- 	return 0;
- }
- 
--#define DUMMY (void *) vgacon_dummy
-+static void vgacon_putc(struct vc_data *c, int a, int b, int d)
-+{
-+	return;
-+}
-+
-+static void vgacon_putcs(struct vc_data *c, ushort *s, int a, int b, int d)
-+{
-+	return;
-+}
- 
- const struct consw vga_con = {
- 	.owner = THIS_MODULE,
- 	.con_startup = vgacon_startup,
- 	.con_init = vgacon_init,
- 	.con_deinit = vgacon_deinit,
--	.con_clear = DUMMY,
--	.con_putc = DUMMY,
--	.con_putcs = DUMMY,
-+	.con_clear = vgacon_clear,
-+	.con_putc = vgacon_putc,
-+	.con_putcs = vgacon_putcs,
- 	.con_cursor = vgacon_cursor,
- 	.con_scroll = vgacon_scroll,
- 	.con_switch = vgacon_switch,
--- 
-2.13.6
+-- Steve
