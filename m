@@ -1,74 +1,89 @@
-Subject: Re: [PATCH v3] kernel.h: Skip single-eval logic on literals in
- min()/max()
-References: <20180309200536.GA5670@beast>
- <20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
-From: Randy Dunlap <rdunlap@infradead.org>
-Message-ID: <e8874944-f0b7-7a1f-26f3-446d7d7fcc38@infradead.org>
-Date: Fri, 9 Mar 2018 19:11:54 -0800
+Subject: Re: [PATCH] rtc: s5m: Remove VLA usage
+References: <20180308172031.GA14541@embeddedgus>
+ <CAGXu5jLjKcYOPxQOV6GO1oaLj1M_K=cFu-kHLLEzP=ZOXaAtfA@mail.gmail.com>
+ <23757731-bfa5-cb4c-ddc0-04103f9a72e0@embeddedor.com>
+ <CAJKOXPf+4tF4oq5ePsgcpUAQS_M2Vi6b1+J-8D9CVemO-6ve5g@mail.gmail.com>
+From: "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+Message-ID: <4f25592d-e805-b81e-b518-4b60867ef32a@embeddedor.com>
+Date: Fri, 9 Mar 2018 22:34:55 -0600
 MIME-Version: 1.0
-In-Reply-To: <20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-To: Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>
-Cc: linux-kernel@vger.kernel.org, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>
+In-Reply-To: <CAJKOXPf+4tF4oq5ePsgcpUAQS_M2Vi6b1+J-8D9CVemO-6ve5g@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Krzysztof Kozlowski <krzk@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Sangbeom Kim <sbkim73@samsung.com>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, Alessandro Zummo <a.zummo@towertech.it>, Alexandre Belloni <alexandre.belloni@bootlin.com>, LKML <linux-kernel@vger.kernel.org>, linux-samsung-soc@vger.kernel.org, linux-rtc@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/09/2018 04:07 PM, Andrew Morton wrote:
-> On Fri, 9 Mar 2018 12:05:36 -0800 Kees Cook <keescook@chromium.org> wrote:
-> 
->> When max() is used in stack array size calculations from literal values
->> (e.g. "char foo[max(sizeof(struct1), sizeof(struct2))]", the compiler
->> thinks this is a dynamic calculation due to the single-eval logic, which
->> is not needed in the literal case. This change removes several accidental
->> stack VLAs from an x86 allmodconfig build:
+
+Hi Krzysztof,
+
+On 03/09/2018 07:04 AM, Krzysztof Kozlowski wrote:
+> On Thu, Mar 8, 2018 at 7:03 PM, Gustavo A. R. Silva
+> <garsilva@embeddedor.com> wrote:
 >>
->> $ diff -u before.txt after.txt | grep ^-
->> -drivers/input/touchscreen/cyttsp4_core.c:871:2: warning: ISO C90 forbids variable length array ‘ids’ [-Wvla]
->> -fs/btrfs/tree-checker.c:344:4: warning: ISO C90 forbids variable length array ‘namebuf’ [-Wvla]
->> -lib/vsprintf.c:747:2: warning: ISO C90 forbids variable length array ‘sym’ [-Wvla]
->> -net/ipv4/proc.c:403:2: warning: ISO C90 forbids variable length array ‘buff’ [-Wvla]
->> -net/ipv6/proc.c:198:2: warning: ISO C90 forbids variable length array ‘buff’ [-Wvla]
->> -net/ipv6/proc.c:218:2: warning: ISO C90 forbids variable length array ‘buff64’ [-Wvla]
 >>
->> Based on an earlier patch from Josh Poimboeuf.
+>> On 03/08/2018 11:58 AM, Kees Cook wrote:
+>>>
+>>> On Thu, Mar 8, 2018 at 9:20 AM, Gustavo A. R. Silva
+>>> <gustavo@embeddedor.com> wrote:
+>>>>
+>>>> In preparation to enabling -Wvla, remove VLAs and replace them
+>>>> with fixed-length arrays instead.
+>>>>
+>>>>   From a security viewpoint, the use of Variable Length Arrays can be
+>>>> a vector for stack overflow attacks. Also, in general, as the code
+>>>> evolves it is easy to lose track of how big a VLA can get. Thus, we
+>>>> can end up having segfaults that are hard to debug.
+>>>>
+>>>> Also, fixed as part of the directive to remove all VLAs from
+>>>> the kernel: https://lkml.org/lkml/2018/3/7/621
+>>>>
+>>>> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+>>>> ---
+>>>>    drivers/rtc/rtc-s5m.c | 15 +++++++++------
+>>>>    1 file changed, 9 insertions(+), 6 deletions(-)
+>>>>
+>>>> diff --git a/drivers/rtc/rtc-s5m.c b/drivers/rtc/rtc-s5m.c
+>>>> index 6deae10..2b5f4f7 100644
+>>>> --- a/drivers/rtc/rtc-s5m.c
+>>>> +++ b/drivers/rtc/rtc-s5m.c
+>>>> @@ -38,6 +38,9 @@
+>>>>     */
+>>>>    #define UDR_READ_RETRY_CNT     5
+>>>>
+>>>> +/* Maximum number of registers for setting time/alarm0/alarm1 */
+>>>> +#define MAX_NUM_TIME_REGS      8
+>>>
+>>>
+>>> I would adjust the various const struct s5m_rtc_reg_config's
+>>> .regs_count to be represented by this new define, so the stack and the
+>>> structures stay in sync. Something like:
+>>>
+>>> static const struct s5m_rtc_reg_config s2mps13_rtc_regs = {
+>>>           .regs_count             = MAX_NUM_TIME_REGS - 1,
+>>>
+>>> ?
+>>>
+>>
+>> Yep. I thought about that and decided to wait for some feedback first. But
+>> yeah, I think is that'd be a good change.
 > 
-> v1, v2 and v3 of this patch all fail with gcc-4.4.4:
+> Define and these assignments should be somehow connected with enum
+> defining the offsets for data[] (from
+> include/linux/mfd/samsung/rtc.h). Otherwise we define the same in two
+> places. The enum could be itself (in separate patch) moved to the
+> driver because it is meaningless for others.
+>
+
+I got it.
+
+I'll move the enum to rtc-s5m.c and add RTC_MAX_NUM_TIME_REGS at the end 
+of it. I'll send a patch series for this.
+
+Thanks for the feedback.
+--
+Gustavo
+
+> Best regards,
+> Krzysztof
 > 
-> ./include/linux/jiffies.h: In function 'jiffies_delta_to_clock_t':
-> ./include/linux/jiffies.h:444: error: first argument to '__builtin_choose_expr' not a constant
-
-
-I'm seeing that problem with
-> gcc --version
-gcc (SUSE Linux) 4.8.5
-
-in mmotm.
-
-> That's with
-> 
-> #define __max(t1, t2, x, y)						\
-> 	__builtin_choose_expr(__builtin_constant_p(x) &&		\
-> 			      __builtin_constant_p(y) &&		\
-> 			      __builtin_types_compatible_p(t1, t2),	\
-> 			      (t1)(x) > (t2)(y) ? (t1)(x) : (t2)(y),	\
-> 			      __single_eval_max(t1, t2,			\
-> 						__UNIQUE_ID(max1_),	\
-> 						__UNIQUE_ID(max2_),	\
-> 						x, y))
-> /**
->  * max - return maximum of two values of the same or compatible types
->  * @x: first value
->  * @y: second value
->  */
-> #define max(x, y)	__max(typeof(x), typeof(y), x, y)
-> 
-> 
-> A brief poke failed to reveal a workaround - gcc-4.4.4 doesn't appear
-> to know that __builtin_constant_p(x) is a constant.  Or something.
-> 
-> Sigh.  Wasn't there some talk about modernizing our toolchain
-> requirements?
-
-
--- 
-~Randy
