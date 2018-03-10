@@ -1,80 +1,49 @@
-Date: Sat, 10 Mar 2018 14:34:50 -0800
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH] rslib: Remove VLAs by setting upper bound on nroots
-Message-ID: <20180310223450.GA37999@beast>
+Subject: Re: [PATCH] drivers: net: wireless: ath: ath9: dfs: remove VLA usage
+References: <1520598613-3641-1-git-send-email-andreaschristofo@gmail.com>
+From: Arend van Spriel <arend.vanspriel@broadcom.com>
+Message-ID: <5AA464DE.90100@broadcom.com>
+Date: Sun, 11 Mar 2018 00:06:06 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: linux-kernel@vger.kernel.org, Segher Boessenkool <segher@kernel.crashing.org>, kernel-hardening@lists.openwall.com
+In-Reply-To: <1520598613-3641-1-git-send-email-andreaschristofo@gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Andreas Christoforou <andreaschristofo@gmail.com>, keescook@chromium.org
+Cc: kernel-hardening@lists.openwall.com, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, Kalle Valo <kvalo@codeaurora.org>, linux-wireless@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Avoid stack VLAs[1] by always allocating the upper bound of stack space
-needed. The existing users of rslib appear to max out at 24 roots[2],
-so use that as the upper bound until we have a reason to change it.
+On 3/9/2018 1:30 PM, Andreas Christoforou wrote:
+> The kernel would like to have all stack VLA usage removed.
 
-Alternative considered: make init_rs() a true caller-instance and
-pre-allocate the workspaces. This would possibly need locking and
-a refactoring of the returned structure.
+I think there was a remark made earlier to give more explanation here. 
+It should explain why we want "VLA on stack" removed.
 
-Using kmalloc in this path doesn't look great, especially since at
-least one caller (pstore) is sensitive to allocations during rslib
-usage (it expects to run it during an Oops, for example).
+> Signed-off-by: Andreas Christoforou <andreaschristofo@gmail.com>
+> ---
+>   drivers/net/wireless/ath/ath9k/dfs.c | 3 +--
+>   1 file changed, 1 insertion(+), 2 deletions(-)
+>
+> diff --git a/drivers/net/wireless/ath/ath9k/dfs.c b/drivers/net/wireless/ath/ath9k/dfs.c
+> index 6fee9a4..cfb0f84 100644
+> --- a/drivers/net/wireless/ath/ath9k/dfs.c
+> +++ b/drivers/net/wireless/ath/ath9k/dfs.c
+> @@ -41,7 +41,6 @@ static const int BIN_DELTA_MAX		= 10;
+>
+>   /* we need at least 3 deltas / 4 samples for a reliable chirp detection */
+>   #define NUM_DIFFS 3
+> -static const int FFT_NUM_SAMPLES	= (NUM_DIFFS + 1);
+>
+>   /* Threshold for difference of delta peaks */
+>   static const int MAX_DIFF		= 2;
+> @@ -101,7 +100,7 @@ static bool ath9k_check_chirping(struct ath_softc *sc, u8 *data,
+>   				 int datalen, bool is_ctl, bool is_ext)
+>   {
+>   	int i;
+> -	int max_bin[FFT_NUM_SAMPLES];
+> +	int max_bin[NUM_DIFFS + 1];
 
-[1] https://lkml.org/lkml/2018/3/7/621
-[2] https://lkml.org/lkml/2018/3/9/838
+Just wondering. Is this actually a VLA. FFT_NUM_SAMPLES was static const 
+so not really going to show a lot of variation. This array will always 
+have the same size on the stack.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- lib/reed_solomon/decode_rs.c    | 7 ++++---
- lib/reed_solomon/reed_solomon.c | 5 ++++-
- 2 files changed, 8 insertions(+), 4 deletions(-)
-
-diff --git a/lib/reed_solomon/decode_rs.c b/lib/reed_solomon/decode_rs.c
-index 0ec3f257ffdf..3e3becb836a6 100644
---- a/lib/reed_solomon/decode_rs.c
-+++ b/lib/reed_solomon/decode_rs.c
-@@ -31,9 +31,10 @@
- 	 * of nroots is 8. So the necessary stack size will be about
- 	 * 220 bytes max.
- 	 */
--	uint16_t lambda[nroots + 1], syn[nroots];
--	uint16_t b[nroots + 1], t[nroots + 1], omega[nroots + 1];
--	uint16_t root[nroots], reg[nroots + 1], loc[nroots];
-+	uint16_t lambda[RS_MAX_ROOTS + 1], syn[RS_MAX_ROOTS];
-+	uint16_t b[RS_MAX_ROOTS + 1], t[RS_MAX_ROOTS + 1];
-+	uint16_t omega[RS_MAX_ROOTS + 1], root[RS_MAX_ROOTS];
-+	uint16_t reg[RS_MAX_ROOTS + 1], loc[RS_MAX_ROOTS];
- 	int count = 0;
- 	uint16_t msk = (uint16_t) rs->nn;
- 
-diff --git a/lib/reed_solomon/reed_solomon.c b/lib/reed_solomon/reed_solomon.c
-index 06d04cfa9339..3e218e70ac2e 100644
---- a/lib/reed_solomon/reed_solomon.c
-+++ b/lib/reed_solomon/reed_solomon.c
-@@ -51,6 +51,9 @@ static LIST_HEAD (rslist);
- /* Protection for the list */
- static DEFINE_MUTEX(rslistlock);
- 
-+/* Ultimately controls the upper bounds of the on-stack buffers. */
-+#define RS_MAX_ROOTS	24
-+
- /**
-  * rs_init - Initialize a Reed-Solomon codec
-  * @symsize:	symbol size, bits (1-8)
-@@ -210,7 +213,7 @@ static struct rs_control *init_rs_internal(int symsize, int gfpoly,
-     		return NULL;
- 	if (prim <= 0 || prim >= (1<<symsize))
-     		return NULL;
--	if (nroots < 0 || nroots >= (1<<symsize))
-+	if (nroots < 0 || nroots >= (1<<symsize) || nroots > RS_MAX_ROOTS)
- 		return NULL;
- 
- 	mutex_lock(&rslistlock);
--- 
-2.7.4
-
-
--- 
-Kees Cook
-Pixel Security
+Regards,
+Arend
