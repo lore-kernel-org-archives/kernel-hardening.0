@@ -1,83 +1,99 @@
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Sun, 11 Mar 2018 12:05:43 +0100
-From: Ingo Molnar <mingo@kernel.org>
-Subject: Re: [PATCH v3] kernel.h: Skip single-eval logic on literals in
- min()/max()
-Message-ID: <20180311110543.pgcnrafloj5qbdjm@gmail.com>
-References: <20180309200536.GA5670@beast>
- <20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
- <e8874944-f0b7-7a1f-26f3-446d7d7fcc38@infradead.org>
- <CANiq72k_vsTPMXvcfTNo+sjRoVMkihvRz-fzeXdcXvNEEeY-Pw@mail.gmail.com>
- <CAGXu5jLtKAUsoYemHZTrJqKEH9=BqwO_QXk=x3BPfCKqZ6DRYA@mail.gmail.com>
- <CA+55aFyLicYSe+R4yQ2Eu+P9m6qsRfso-HiK78Sw+-dPuZvAYg@mail.gmail.com>
- <CANiq72nwg3mMhWeE_bLKdQ5WP+0E+SxxvcuUF=Rn9a1MM+EapQ@mail.gmail.com>
- <CA+55aFw+guiiJ3OavrP-RpFV9NRAF4t=oj3-GDfSyuZ9zBRfdg@mail.gmail.com>
+Subject: Re: [PATCH] scsi: resolve COMMAND_SIZE at compile time
+References: <20180309232933.14e39858@heffalump.sk2.org>
+ <20180309223355.21222-1-steve@sk2.org> <1520635631.2907.16.camel@wdc.com>
+ <20180310142930.0692200b@heffalump.sk2.org>
+ <1520714957.4495.5.camel@linux.vnet.ibm.com>
+From: Douglas Gilbert <dgilbert@interlog.com>
+Message-ID: <ef5dc446-b60f-662a-678b-786088526458@interlog.com>
+Date: Sat, 10 Mar 2018 16:16:45 -0500
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
+In-Reply-To: <1520714957.4495.5.camel@linux.vnet.ibm.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 8bit
-In-Reply-To: <CA+55aFw+guiiJ3OavrP-RpFV9NRAF4t=oj3-GDfSyuZ9zBRfdg@mail.gmail.com>
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: James Bottomley <jejb@linux.vnet.ibm.com>, Stephen Kitt <steve@sk2.org>, Bart Van Assche <Bart.VanAssche@wdc.com>
+Cc: "hare@suse.com" <hare@suse.com>, "martin.petersen@oracle.com" <martin.petersen@oracle.com>, "axboe@kernel.dk" <axboe@kernel.dk>, "linux-scsi@vger.kernel.org" <linux-scsi@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-block@vger.kernel.org" <linux-block@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-* Linus Torvalds <torvalds@linux-foundation.org> wrote:
-
-> So an error message like
+On 2018-03-10 03:49 PM, James Bottomley wrote:
+> On Sat, 2018-03-10 at 14:29 +0100, Stephen Kitt wrote:
+>> Hi Bart,
+>>
+>> On Fri, 9 Mar 2018 22:47:12 +0000, Bart Van Assche <Bart.VanAssche@wd
+>> c.com>
+>> wrote:
+>>>
+>>> On Fri, 2018-03-09 at 23:33 +0100, Stephen Kitt wrote:
+>>>>
+>>>> +/*
+>>>> + * SCSI command sizes are as follows, in bytes, for fixed size
+>>>> commands,
+>>>> per
+>>>> + * group: 6, 10, 10, 12, 16, 12, 10, 10. The top three bits of
+>>>> an opcode
+>>>> + * determine its group.
+>>>> + * The size table is encoded into a 32-bit value by subtracting
+>>>> each
+>>>> value
+>>>> + * from 16, resulting in a value of 1715488362
+>>>> + * (6 << 28 + 6 << 24 + 4 << 20 + 0 << 16 + 4 << 12 + 6 << 8 + 6
+>>>> << 4 +
+>>>> 10).
+>>>> + * Command group 3 is reserved and should never be used.
+>>>> + */
+>>>> +#define COMMAND_SIZE(opcode) \
+>>>> +	(16 - (15 & (1715488362 >> (4 * (((opcode) >> 5) &
+>>>> 7)))))
+>>>
+>>> To me this seems hard to read and hard to verify. Could this have
+>>> been
+>>> written as a combination of ternary expressions, e.g. using a gcc
+>>> statement
+>>> expression to ensure that opcode is evaluated once?
+>>
+>> That’s what I’d tried initially, e.g.
+>>
+>> #define COMMAND_SIZE(opcode) ({ \
+>> int index = ((opcode) >> 5) & 7; \
+>> index == 0 ? 6 : (index == 4 ? 16 : index == 3 || index == 5 ? 12 :
+>> 10); \
+>> })
+>>
+>> But gcc still reckons that results in a VLA, defeating the initial
+>> purpose of
+>> the exercise.
+>>
+>> Does it help if I make the magic value construction clearer?
+>>
+>> #define SCSI_COMMAND_SIZE_TBL (	\
+>> 	   (16 -  6)		\
+>> 	+ ((16 - 10) <<  4)	\
+>> 	+ ((16 - 10) <<  8)	\
+>> 	+ ((16 - 12) << 12)	\
+>> 	+ ((16 - 16) << 16)	\
+>> 	+ ((16 - 12) << 20)	\
+>> 	+ ((16 - 10) << 24)	\
+>> 	+ ((16 - 10) << 28))
+>>
+>> #define COMMAND_SIZE(opcode)						
+>> \
+>>    (16 - (15 & (SCSI_COMMAND_SIZE_TBL >> (4 * (((opcode) >> 5) &
+>> 7)))))
 > 
->    warning: ISO C90 requires array sizes to be constant-expressions
-> 
-> would be technically correct and useful from a portability angle. It
-> tells you when you're doing something non-portable, and should be
-> automatically enabled with "-ansi -pedantic", for example.
-> 
-> So what's misleading is actually the name of the warning and the
-> message, not that it happens. The warning isn't about "variable
-> length", it's literally about the rules for what a
-> "constant-expression" is.
-> 
-> And in C, the expression (2,3) has a constant _value_ (namely 3), but
-> it isn't a constant-expression as specified by the language.
-> 
-> Now, the thing is that once you actually do variable length arrays,
-> those old front-end rules make no sense any more (outside of the "give
-> portability warnings" thing).
-> 
-> Because once you do variable length arrays, you obviously _parse_
-> everything just fine, and you're doing to evaluate much more complex
-> expressions than some limited constant-expression rule.
+> Couldn't we do the less clever thing of making the array a static const
+> and moving it to a header?  That way the compiler should be able to
+> work it out at compile time.
 
-BTW., while I fully agree with everything you said, it's not entirely correct to 
-claim that if a C compiler can generate VLA code it is necessarily able to parse 
-and evaluate constant array sizes "just fine".
+And maybe add a comment that as of now (SPC-5 rev 19), COMMAND_SIZE is not
+valid for opcodes 0x7e and 0x7f plus everything above and including 0xc0.
+The latter ones are vendor specific and are loosely constrained, probably
+all even numbered lengths in the closed range: [6,260].
 
-Constant expressions are typically parsed very early on, at the preprocessing 
-stage. They can be used with some preprocessor directives as well, such as '#if' 
-(with some further limitations on their syntax).
 
-If VLA support is implemented in a later stage, and results in heavy-handed code 
-generation that will technically work for constant value expressions as well but 
-results in suboptimal code, then a warning should probably be emitted - and it 
-wouldn't be pedantic.
+If the SCSI command sets want to keep up with NVMe, they may want to think
+about how they can gainfully use cdb_s that are > 64 bytes long. WRITE
+SCATTERED got into SBC-4 but READ GATHERED didn't, due to lack of interest.
+The READ GATHERED proposed was a bidi command, but it could have been a
+a simpler data-in command with a looong cdb (holding LBA, number_of_blocks
+pairs).
 
-The existing warning is still very misleading:
-
-  warning: ISO C90 forbids variable length array ‘array’ [-Wvla]
-
-... and if my above theory is correct then I think a better warning would be 
-something like:
-
-  warning: Array declaration is not a C90 constant expression, resulting in VLA code generation
-
-... and note that in this specific case it's not misleading to talk about VLAs in 
-the warning text, because the array size, even if it's constant value, results in 
-VLA code generation.
-
-I don't know whether GCC has such a limitation, but a quick experiment with GCC 
-7.2 suggests that a (2,3) array size expression results in a lot more code being 
-generated than with a constant expression.
-
-Thanks,
-
-	Ingo
+Doug Gilbert
