@@ -1,98 +1,72 @@
-Date: Sat, 10 Mar 2018 00:27:35 -0600
-From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Subject: [PATCH 2/2] rtc: s5m: Remove VLA usage
-Message-ID: <543a0a74122172acae549329b35964f402da8b77.1520660422.git.gustavo@embeddedor.com>
-References: <cover.1520660422.git.gustavo@embeddedor.com>
+From: Joao Moreira <jmoreira@suse.de>
+Subject: [PATCH] vgacon: fix function prototypes
+Date: Sat, 10 Mar 2018 03:40:59 -0300
+Message-Id: <20180310064059.12720-1-jmoreira@suse.de>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <cover.1520660422.git.gustavo@embeddedor.com>
-To: Sangbeom Kim <sbkim73@samsung.com>, Krzysztof Kozlowski <krzk@kernel.org>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, Alessandro Zummo <a.zummo@towertech.it>, Alexandre Belloni <alexandre.belloni@bootlin.com>
-Cc: linux-samsung-soc@vger.kernel.org, linux-rtc@vger.kernel.org, linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+To: kernel-hardening@lists.openwall.com
+Cc: linux-kernel@vger.kernel.org, danielmicay@gmail.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In preparation to enabling -Wvla, remove VLAs and replace them
-with fixed-length arrays instead.
+It is possible to indirectly invoke functions with prototypes that do not
+match those of the respectively used function pointers by using void types.
+Despite widely used as a feature for relaxing function invocation, this
+should be avoided when possible as it may prevent the use of heuristics
+such as prototype matching-based Control-Flow Integrity, which can be used
+to prevent ROP-based attacks.
 
->From a security viewpoint, the use of Variable Length Arrays can be
-a vector for stack overflow attacks. Also, in general, as the code
-evolves it is easy to lose track of how big a VLA can get. Thus, we
-can end up having segfaults that are hard to debug.
+Given the above, the current efforts to improve the Linux security, and the
+upcoming kernel support to compilers with CFI features, fix prototypes in
+vgacon console driver.
 
-Also, fixed as part of the directive to remove all VLAs from
-the kernel: https://lkml.org/lkml/2018/3/7/621
+Another similar fix can be seen in [1].
 
-Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+[1] https://android-review.googlesource.com/c/kernel/common/+/602010
+
+Signed-off-by:	João Moreira <jmoreira@suse.de>
 ---
- drivers/rtc/rtc-s5m.c | 14 ++++++++------
- 1 file changed, 8 insertions(+), 6 deletions(-)
+ drivers/video/console/vgacon.c | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/rtc/rtc-s5m.c b/drivers/rtc/rtc-s5m.c
-index 4c363de..8428455 100644
---- a/drivers/rtc/rtc-s5m.c
-+++ b/drivers/rtc/rtc-s5m.c
-@@ -47,6 +47,8 @@ enum {
- 	RTC_MONTH,
- 	RTC_YEAR1,
- 	RTC_YEAR2,
-+	/* Make sure this is always the last enum name. */
-+	RTC_MAX_NUM_TIME_REGS
- };
+diff --git a/drivers/video/console/vgacon.c b/drivers/video/console/vgacon.c
+index a17ba1465815..f00b630f6839 100644
+--- a/drivers/video/console/vgacon.c
++++ b/drivers/video/console/vgacon.c
+@@ -1407,21 +1407,29 @@ static bool vgacon_scroll(struct vc_data *c, unsigned int t, unsigned int b,
+  *  The console `switch' structure for the VGA based console
+  */
  
- /*
-@@ -378,7 +380,7 @@ static void s5m8763_tm_to_data(struct rtc_time *tm, u8 *data)
- static int s5m_rtc_read_time(struct device *dev, struct rtc_time *tm)
+-static int vgacon_dummy(struct vc_data *c)
++static int vgacon_clear(struct vc_data *c)
  {
- 	struct s5m_rtc_info *info = dev_get_drvdata(dev);
--	u8 data[info->regs->regs_count];
-+	u8 data[RTC_MAX_NUM_TIME_REGS];
- 	int ret;
+ 	return 0;
+ }
  
- 	if (info->regs->read_time_udr_mask) {
-@@ -424,7 +426,7 @@ static int s5m_rtc_read_time(struct device *dev, struct rtc_time *tm)
- static int s5m_rtc_set_time(struct device *dev, struct rtc_time *tm)
- {
- 	struct s5m_rtc_info *info = dev_get_drvdata(dev);
--	u8 data[info->regs->regs_count];
-+	u8 data[RTC_MAX_NUM_TIME_REGS];
- 	int ret = 0;
+-#define DUMMY (void *) vgacon_dummy
++static void vgacon_putc(struct vc_data *c, int a, int b, int d)
++{
++	return;
++}
++
++static void vgacon_putcs(struct vc_data *c, ushort *s, int a, int b, int d)
++{
++	return;
++}
  
- 	switch (info->device_type) {
-@@ -461,7 +463,7 @@ static int s5m_rtc_set_time(struct device *dev, struct rtc_time *tm)
- static int s5m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
- {
- 	struct s5m_rtc_info *info = dev_get_drvdata(dev);
--	u8 data[info->regs->regs_count];
-+	u8 data[RTC_MAX_NUM_TIME_REGS];
- 	unsigned int val;
- 	int ret, i;
- 
-@@ -511,7 +513,7 @@ static int s5m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
- 
- static int s5m_rtc_stop_alarm(struct s5m_rtc_info *info)
- {
--	u8 data[info->regs->regs_count];
-+	u8 data[RTC_MAX_NUM_TIME_REGS];
- 	int ret, i;
- 	struct rtc_time tm;
- 
-@@ -556,7 +558,7 @@ static int s5m_rtc_stop_alarm(struct s5m_rtc_info *info)
- static int s5m_rtc_start_alarm(struct s5m_rtc_info *info)
- {
- 	int ret;
--	u8 data[info->regs->regs_count];
-+	u8 data[RTC_MAX_NUM_TIME_REGS];
- 	u8 alarm0_conf;
- 	struct rtc_time tm;
- 
-@@ -609,7 +611,7 @@ static int s5m_rtc_start_alarm(struct s5m_rtc_info *info)
- static int s5m_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
- {
- 	struct s5m_rtc_info *info = dev_get_drvdata(dev);
--	u8 data[info->regs->regs_count];
-+	u8 data[RTC_MAX_NUM_TIME_REGS];
- 	int ret;
- 
- 	switch (info->device_type) {
+ const struct consw vga_con = {
+ 	.owner = THIS_MODULE,
+ 	.con_startup = vgacon_startup,
+ 	.con_init = vgacon_init,
+ 	.con_deinit = vgacon_deinit,
+-	.con_clear = DUMMY,
+-	.con_putc = DUMMY,
+-	.con_putcs = DUMMY,
++	.con_clear = vgacon_clear,
++	.con_putc = vgacon_putc,
++	.con_putcs = vgacon_putcs,
+ 	.con_cursor = vgacon_cursor,
+ 	.con_scroll = vgacon_scroll,
+ 	.con_switch = vgacon_switch,
 -- 
-2.7.4
+2.13.6
