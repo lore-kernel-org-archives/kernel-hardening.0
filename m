@@ -1,98 +1,105 @@
-MIME-Version: 1.0
-In-Reply-To: <CA+55aFw+guiiJ3OavrP-RpFV9NRAF4t=oj3-GDfSyuZ9zBRfdg@mail.gmail.com>
-References: <20180309200536.GA5670@beast> <20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
- <e8874944-f0b7-7a1f-26f3-446d7d7fcc38@infradead.org> <CANiq72k_vsTPMXvcfTNo+sjRoVMkihvRz-fzeXdcXvNEEeY-Pw@mail.gmail.com>
- <CAGXu5jLtKAUsoYemHZTrJqKEH9=BqwO_QXk=x3BPfCKqZ6DRYA@mail.gmail.com>
- <CA+55aFyLicYSe+R4yQ2Eu+P9m6qsRfso-HiK78Sw+-dPuZvAYg@mail.gmail.com>
- <CANiq72nwg3mMhWeE_bLKdQ5WP+0E+SxxvcuUF=Rn9a1MM+EapQ@mail.gmail.com> <CA+55aFw+guiiJ3OavrP-RpFV9NRAF4t=oj3-GDfSyuZ9zBRfdg@mail.gmail.com>
-From: Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>
-Date: Sat, 10 Mar 2018 20:08:55 +0100
-Message-ID: <CANiq72mTC6oo5WnomzOOh31FO_a9hiUebPmensLOcDAfi0sQ-A@mail.gmail.com>
-Subject: Re: [PATCH v3] kernel.h: Skip single-eval logic on literals in min()/max()
-Content-Type: text/plain; charset="UTF-8"
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Subject: Re: [PATCH] scsi: resolve COMMAND_SIZE at compile time
+From: James Bottomley <jejb@linux.vnet.ibm.com>
+Date: Sat, 10 Mar 2018 12:49:17 -0800
+In-Reply-To: <20180310142930.0692200b@heffalump.sk2.org>
+References: <20180309232933.14e39858@heffalump.sk2.org>
+	 <20180309223355.21222-1-steve@sk2.org> <1520635631.2907.16.camel@wdc.com>
+	 <20180310142930.0692200b@heffalump.sk2.org>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-OM5HNyDTbZlw5Ws0bDJ4"
+Mime-Version: 1.0
+Message-Id: <1520714957.4495.5.camel@linux.vnet.ibm.com>
+To: Stephen Kitt <steve@sk2.org>, Bart Van Assche <Bart.VanAssche@wdc.com>
+Cc: "hare@suse.com" <hare@suse.com>, "martin.petersen@oracle.com" <martin.petersen@oracle.com>, "axboe@kernel.dk" <axboe@kernel.dk>, "linux-scsi@vger.kernel.org" <linux-scsi@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-block@vger.kernel.org" <linux-block@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Mar 10, 2018 at 6:51 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
->
-> So in *historical* context - when a compiler didn't do variable length
-> arrays at all - the original semantics of C "constant expressions"
-> actually make a ton of sense.
->
-> You can basically think of a constant expression as something that can
-> be (historically) handled by the front-end without any real
-> complexity, and no optimization phases - just evaluating a simple
-> parse tree with purely compile-time constants.
->
-> So there's a good and perfectly valid reason for why C limits certain
-> expressions to just a very particular subset. It's not just array
-> sizes, it's  case statements etc too. And those are very much part of
-> the C standard.
->
-> So an error message like
->
->    warning: ISO C90 requires array sizes to be constant-expressions
->
-> would be technically correct and useful from a portability angle. It
-> tells you when you're doing something non-portable, and should be
-> automatically enabled with "-ansi -pedantic", for example.
->
-> So what's misleading is actually the name of the warning and the
-> message, not that it happens. The warning isn't about "variable
-> length", it's literally about the rules for what a
-> "constant-expression" is.
->
-> And in C, the expression (2,3) has a constant _value_ (namely 3), but
-> it isn't a constant-expression as specified by the language.
->
-> Now, the thing is that once you actually do variable length arrays,
-> those old front-end rules make no sense any more (outside of the "give
-> portability warnings" thing).
->
-> Because once you do variable length arrays, you obviously _parse_
-> everything just fine, and you're doing to evaluate much more complex
-> expressions than some limited constant-expression rule.
->
-> And at that point it would make a whole lot more sense to add a *new*
-> warning that basically says "I have to generate code for a
-> variable-sized array", if you actually talk about VLA's.
->
-> But that's clearly not what gcc actually did.
->
-> So the problem really is that -Wvla doesn't actually warn about VLA's,
-> but about something technically completely different.
->
 
-I *think* I followed your reasoning. For gcc, -Wvla is the "I have to
-generate code for a variable-sized array" one; but in this case, the
-array size is the actual issue that you would have liked to be warned
-about; since people writing:
+--=-OM5HNyDTbZlw5Ws0bDJ4
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-    int a[(2,3)];
+On Sat, 2018-03-10 at 14:29 +0100, Stephen Kitt wrote:
+> Hi Bart,
+>=20
+> On Fri, 9 Mar 2018 22:47:12 +0000, Bart Van Assche <Bart.VanAssche@wd
+> c.com>
+> wrote:
+> >=20
+> > On Fri, 2018-03-09 at 23:33 +0100, Stephen Kitt wrote:
+> > >=20
+> > > +/*
+> > > + * SCSI command sizes are as follows, in bytes, for fixed size
+> > > commands,
+> > > per
+> > > + * group: 6, 10, 10, 12, 16, 12, 10, 10. The top three bits of
+> > > an opcode
+> > > + * determine its group.
+> > > + * The size table is encoded into a 32-bit value by subtracting
+> > > each
+> > > value
+> > > + * from 16, resulting in a value of 1715488362
+> > > + * (6 << 28 + 6 << 24 + 4 << 20 + 0 << 16 + 4 << 12 + 6 << 8 + 6
+> > > << 4 +
+> > > 10).
+> > > + * Command group 3 is reserved and should never be used.
+> > > + */
+> > > +#define COMMAND_SIZE(opcode) \
+> > > +	(16 - (15 & (1715488362 >> (4 * (((opcode) >> 5) &
+> > > 7)))))=C2=A0=C2=A0
+> >=20
+> > To me this seems hard to read and hard to verify. Could this have
+> > been
+> > written as a combination of ternary expressions, e.g. using a gcc
+> > statement
+> > expression to ensure that opcode is evaluated once?
+>=20
+> That=E2=80=99s what I=E2=80=99d tried initially, e.g.
+>=20
+> #define COMMAND_SIZE(opcode) ({ \
+> int index =3D ((opcode) >> 5) & 7; \
+> index =3D=3D 0 ? 6 : (index =3D=3D 4 ? 16 : index =3D=3D 3 || index =3D=
+=3D 5 ? 12 :
+> 10); \
+> })
+>=20
+> But gcc still reckons that results in a VLA, defeating the initial
+> purpose of
+> the exercise.
+>=20
+> Does it help if I make the magic value construction clearer?
+>=20
+> #define SCSI_COMMAND_SIZE_TBL (	\
+> 	=C2=A0=C2=A0=C2=A0(16 -=C2=A0=C2=A06)		\
+> 	+ ((16 - 10) <<=C2=A0=C2=A04)	\
+> 	+ ((16 - 10) <<=C2=A0=C2=A08)	\
+> 	+ ((16 - 12) << 12)	\
+> 	+ ((16 - 16) << 16)	\
+> 	+ ((16 - 12) << 20)	\
+> 	+ ((16 - 10) << 24)	\
+> 	+ ((16 - 10) << 28))
+>=20
+> #define COMMAND_SIZE(opcode)					=09
+> \
+> =C2=A0 (16 - (15 & (SCSI_COMMAND_SIZE_TBL >> (4 * (((opcode) >> 5) &
+> 7)))))
 
-did not really mean to declare a VLA. Therefore, you say warning them
-about the "warning: ISO C90 requires array sizes to be
-constant-expressions" (let's call it -Wpedantic-array-sizes) would be
-more helpful here instead of saying stuff about VLAs.
+Couldn't we do the less clever thing of making the array a static const
+and moving it to a header? =C2=A0That way the compiler should be able to
+work it out at compile time.
 
-In my case, I was just expecting gcc to give us both warnings and
-that's it, instead of trying to be smart and give only the
--Wpedantic-array-sizes one (which is the one I was wondering in my
-previous email about why it was missing). I think it would be clear
-enough if both warnings are shown are the same time. And it makes
-sense, since if you write that line in ISO C90 it means there really
-are 2 things going wrong in the end (fishy syntax while in ISO C90
-mode and, due to that, VLA code generated as well), no?
+James
 
-Thanks for taking the time to write about the historical context, by the way!
+--=-OM5HNyDTbZlw5Ws0bDJ4
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
-Miguel
+-----BEGIN PGP SIGNATURE-----
 
-> And that's why those stupid syntactic issues with min/max matter. It's
-> not whether the end result is a compile-time constant or not, it's
-> about completely different issues, like whether there is a
-> comma-expression in it.
->
->               Linus
+iHUEABMIAB0WIQTnYEDbdso9F2cI+arnQslM7pishQUCWqREzQAKCRDnQslM7pis
+hQCdAP9X+JY9S6TJJVa9NN/j9DR6ai4u+PI2CzZEfB4w3WKAagD/TC1cwqmOjCnr
+2FGwySKUezmBHURe948ekZU+nbgRvQM=
+=yP4n
+-----END PGP SIGNATURE-----
+
+--=-OM5HNyDTbZlw5Ws0bDJ4--
