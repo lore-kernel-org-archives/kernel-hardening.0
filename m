@@ -1,96 +1,81 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20180310064059.12720-1-jmoreira@suse.de>
-References: <20180310064059.12720-1-jmoreira@suse.de>
+In-Reply-To: <CANiq72k_vsTPMXvcfTNo+sjRoVMkihvRz-fzeXdcXvNEEeY-Pw@mail.gmail.com>
+References: <20180309200536.GA5670@beast> <20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
+ <e8874944-f0b7-7a1f-26f3-446d7d7fcc38@infradead.org> <CANiq72k_vsTPMXvcfTNo+sjRoVMkihvRz-fzeXdcXvNEEeY-Pw@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Sat, 10 Mar 2018 07:27:21 -0800
-Message-ID: <CAGXu5jJBQPPv1jr85wFFKAuLtacMWk+_P-=Yi0UR=E9yJ7nkow@mail.gmail.com>
-Subject: Re: [PATCH] vgacon: fix function prototypes
+Date: Sat, 10 Mar 2018 07:33:53 -0800
+Message-ID: <CAGXu5jLtKAUsoYemHZTrJqKEH9=BqwO_QXk=x3BPfCKqZ6DRYA@mail.gmail.com>
+Subject: Re: [PATCH v3] kernel.h: Skip single-eval logic on literals in min()/max()
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
-To: Joao Moreira <jmoreira@suse.de>, Greg KH <gregkh@linuxfoundation.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Daniel Micay <danielmicay@gmail.com>
+To: Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>
+Cc: Randy Dunlap <rdunlap@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 9, 2018 at 10:40 PM, Joao Moreira <jmoreira@suse.de> wrote:
-> It is possible to indirectly invoke functions with prototypes that do not
-> match those of the respectively used function pointers by using void type=
-s.
-> Despite widely used as a feature for relaxing function invocation, this
-> should be avoided when possible as it may prevent the use of heuristics
-> such as prototype matching-based Control-Flow Integrity, which can be use=
-d
-> to prevent ROP-based attacks.
+On Fri, Mar 9, 2018 at 10:10 PM, Miguel Ojeda
+<miguel.ojeda.sandonis@gmail.com> wrote:
+> On Sat, Mar 10, 2018 at 4:11 AM, Randy Dunlap <rdunlap@infradead.org> wro=
+te:
+>> On 03/09/2018 04:07 PM, Andrew Morton wrote:
+>>> On Fri, 9 Mar 2018 12:05:36 -0800 Kees Cook <keescook@chromium.org> wro=
+te:
+>>>
+>>>> When max() is used in stack array size calculations from literal value=
+s
+>>>> (e.g. "char foo[max(sizeof(struct1), sizeof(struct2))]", the compiler
+>>>> thinks this is a dynamic calculation due to the single-eval logic, whi=
+ch
+>>>> is not needed in the literal case. This change removes several acciden=
+tal
+>>>> stack VLAs from an x86 allmodconfig build:
+>>>>
+>>>> $ diff -u before.txt after.txt | grep ^-
+>>>> -drivers/input/touchscreen/cyttsp4_core.c:871:2: warning: ISO C90 forb=
+ids variable length array =E2=80=98ids=E2=80=99 [-Wvla]
+>>>> -fs/btrfs/tree-checker.c:344:4: warning: ISO C90 forbids variable leng=
+th array =E2=80=98namebuf=E2=80=99 [-Wvla]
+>>>> -lib/vsprintf.c:747:2: warning: ISO C90 forbids variable length array =
+=E2=80=98sym=E2=80=99 [-Wvla]
+>>>> -net/ipv4/proc.c:403:2: warning: ISO C90 forbids variable length array=
+ =E2=80=98buff=E2=80=99 [-Wvla]
+>>>> -net/ipv6/proc.c:198:2: warning: ISO C90 forbids variable length array=
+ =E2=80=98buff=E2=80=99 [-Wvla]
+>>>> -net/ipv6/proc.c:218:2: warning: ISO C90 forbids variable length array=
+ =E2=80=98buff64=E2=80=99 [-Wvla]
+>>>>
+>>>> Based on an earlier patch from Josh Poimboeuf.
+>>>
+>>> v1, v2 and v3 of this patch all fail with gcc-4.4.4:
+>>>
+>>> ./include/linux/jiffies.h: In function 'jiffies_delta_to_clock_t':
+>>> ./include/linux/jiffies.h:444: error: first argument to '__builtin_choo=
+se_expr' not a constant
+>>
+>>
+>> I'm seeing that problem with
+>>> gcc --version
+>> gcc (SUSE Linux) 4.8.5
 >
-> Given the above, the current efforts to improve the Linux security, and t=
-he
-> upcoming kernel support to compilers with CFI features, fix prototypes in
-> vgacon console driver.
->
-> Another similar fix can be seen in [1].
->
-> [1] https://android-review.googlesource.com/c/kernel/common/+/602010
->
-> Signed-off-by:  Jo=C3=A3o Moreira <jmoreira@suse.de>
+> Same here, 4.8.5 fails. gcc 5.4.1 seems to work. I compiled a minimal
+> 5.1.0 and it seems to work as well.
 
-Whoops, I missed this one. :) Thanks! Greg, do you need this resent
-directly to you?
+And sparse freaks out too:
 
-Acked-by: Kees Cook <keescook@chromium.org>
+   drivers/net/ethernet/via/via-velocity.c:97:26: sparse: incorrect
+type in initializer (different address spaces) @@    expected void
+*addr @@    got struct mac_regs [noderef] <avoid *addr @@
+   drivers/net/ethernet/via/via-velocity.c:97:26:    expected void *addr
+   drivers/net/ethernet/via/via-velocity.c:97:26:    got struct
+mac_regs [noderef] <asn:2>*mac_regs
+   drivers/net/ethernet/via/via-velocity.c:100:49: sparse: incorrect
+type in argument 2 (different base types) @@    expected restricted
+pci_power_t [usertype] state @@    got _t [usertype] state @@
+
+Alright, I'm giving up on fixing max(). I'll go back to STACK_MAX() or
+some other name for the simple macro. Bleh.
 
 -Kees
-
-> ---
->  drivers/video/console/vgacon.c | 18 +++++++++++++-----
->  1 file changed, 13 insertions(+), 5 deletions(-)
->
-> diff --git a/drivers/video/console/vgacon.c b/drivers/video/console/vgaco=
-n.c
-> index a17ba1465815..f00b630f6839 100644
-> --- a/drivers/video/console/vgacon.c
-> +++ b/drivers/video/console/vgacon.c
-> @@ -1407,21 +1407,29 @@ static bool vgacon_scroll(struct vc_data *c, unsi=
-gned int t, unsigned int b,
->   *  The console `switch' structure for the VGA based console
->   */
->
-> -static int vgacon_dummy(struct vc_data *c)
-> +static int vgacon_clear(struct vc_data *c)
->  {
->         return 0;
->  }
->
-> -#define DUMMY (void *) vgacon_dummy
-> +static void vgacon_putc(struct vc_data *c, int a, int b, int d)
-> +{
-> +       return;
-> +}
-> +
-> +static void vgacon_putcs(struct vc_data *c, ushort *s, int a, int b, int=
- d)
-> +{
-> +       return;
-> +}
->
->  const struct consw vga_con =3D {
->         .owner =3D THIS_MODULE,
->         .con_startup =3D vgacon_startup,
->         .con_init =3D vgacon_init,
->         .con_deinit =3D vgacon_deinit,
-> -       .con_clear =3D DUMMY,
-> -       .con_putc =3D DUMMY,
-> -       .con_putcs =3D DUMMY,
-> +       .con_clear =3D vgacon_clear,
-> +       .con_putc =3D vgacon_putc,
-> +       .con_putcs =3D vgacon_putcs,
->         .con_cursor =3D vgacon_cursor,
->         .con_scroll =3D vgacon_scroll,
->         .con_switch =3D vgacon_switch,
-> --
-> 2.13.6
->
-
-
 
 --=20
 Kees Cook
