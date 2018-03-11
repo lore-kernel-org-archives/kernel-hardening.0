@@ -1,34 +1,33 @@
-Date: Mon, 12 Mar 2018 08:00:24 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Subject: Re: [PATCH] rsi: Remove stack VLA usage
-Message-ID: <20180311210024.GF16734@eros>
-References: <1520577493-24603-1-git-send-email-me@tobin.cc>
- <87r2ota625.fsf@codeaurora.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <87r2ota625.fsf@codeaurora.org>
-To: Kalle Valo <kvalo@codeaurora.org>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Subject: [PATCH] scsi: eata: drop VLA in reorder()
+Date: Sun, 11 Mar 2018 22:06:58 +0100
+Message-Id: <1520802418-17284-1-git-send-email-s.mesoraca16@gmail.com>
+To: linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, linux-scsi@vger.kernel.org, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Dario Ballabio <ballabio_dario@emc.com>, Kees Cook <keescook@chromium.org>, Salvatore Mesoraca <s.mesoraca16@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 09, 2018 at 12:37:06PM +0200, Kalle Valo wrote:
-> "Tobin C. Harding" <me@tobin.cc> writes:
-> 
-> > The kernel would like to have all stack VLA usage removed[1].  rsi uses
-> > a VLA based on 'blksize'.  Elsewhere in the SDIO code maximum block size
-> > is defined using a magic number.  We can use a pre-processor defined
-> > constant and declare the array to maximum size.  We add a check before
-> > accessing the array in case of programmer error.
-> >
-> > [1]: https://lkml.org/lkml/2018/3/7/621
-> >
-> > Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> 
-> Please CC linux-wireless list, otherwise patchwork won't see the patch
-> and I can't apply it.
+n_ready will always be less than or equal to MAX_MAILBOXES.
+So we avoid a VLA[1] and use fixed-length arrays instead.
 
-No worries Kelle can do, will repost as [RESEND]
+[1] https://lkml.org/lkml/2018/3/7/621
 
-thanks,
-Tobin.
+Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+---
+ drivers/scsi/eata.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/eata.c b/drivers/scsi/eata.c
+index 6501c33..202cd17 100644
+--- a/drivers/scsi/eata.c
++++ b/drivers/scsi/eata.c
+@@ -2096,7 +2096,7 @@ static int reorder(struct hostdata *ha, unsigned long cursec,
+ 	unsigned int k, n;
+ 	unsigned int rev = 0, s = 1, r = 1;
+ 	unsigned int input_only = 1, overlap = 0;
+-	unsigned long sl[n_ready], pl[n_ready], ll[n_ready];
++	unsigned long sl[MAX_MAILBOXES], pl[MAX_MAILBOXES], ll[MAX_MAILBOXES];
+ 	unsigned long maxsec = 0, minsec = ULONG_MAX, seek = 0, iseek = 0;
+ 	unsigned long ioseek = 0;
+ 
+-- 
+1.9.1
