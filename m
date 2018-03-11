@@ -1,48 +1,82 @@
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Subject: [PATCH] net: llc: drop VLA in llc_sap_mcast()
-Date: Sun, 11 Mar 2018 22:12:04 +0100
-Message-Id: <1520802724-17509-1-git-send-email-s.mesoraca16@gmail.com>
-To: linux-kernel@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, David Rientjes <rientjes@google.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Kees Cook <keescook@chromium.org>, Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Subject: Re: [PATCH v3] ima: drop vla in ima_audit_measurement()
+From: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Date: Sun, 11 Mar 2018 18:01:05 -0400
+In-Reply-To: <20180308230836.24329-1-tycho@tycho.ws>
+References: <20180308230836.24329-1-tycho@tycho.ws>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Message-Id: <1520805665.3547.7.camel@linux.vnet.ibm.com>
+To: Tycho Andersen <tycho@tycho.ws>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>
+Cc: linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Avoid a VLA[1] by using a real constant expression instead of a variable.
-The compiler should be able to optimize the original code and avoid using
-an actual VLA. Anyway this change is useful because it will avoid a false
-positive with -Wvla, it might also help the compiler generating better
-code.
+On Thu, 2018-03-08 at 16:08 -0700, Tycho Andersen wrote:
+> In keeping with the directive to get rid of VLAs [1], let's drop the VLA
+> from ima_audit_measurement(). We need to adjust the return type of
+> ima_audit_measurement, because now this function can fail if an allocation
+> fails.
+> 
+> [1]: https://lkml.org/lkml/2018/3/7/621
+> 
+> v2: just use audit_log_format instead of doing a second allocation
+> v3: ignore failures in ima_audit_measurement()
+> 
+> Signed-off-by: Tycho Andersen <tycho@tycho.ws>
 
-[1] https://lkml.org/lkml/2018/3/7/621
+Thanks, this patch has been applied.
 
-Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
----
- net/llc/llc_sap.c | 7 ++++---
- 1 file changed, 4 insertions(+), 3 deletions(-)
+Mimi
 
-diff --git a/net/llc/llc_sap.c b/net/llc/llc_sap.c
-index d90928f..a7f7b8f 100644
---- a/net/llc/llc_sap.c
-+++ b/net/llc/llc_sap.c
-@@ -394,8 +394,9 @@ static void llc_sap_mcast(struct llc_sap *sap,
- 			  const struct llc_addr *laddr,
- 			  struct sk_buff *skb)
- {
--	int i = 0, count = 256 / sizeof(struct sock *);
--	struct sock *sk, *stack[count];
-+	int i = 0;
-+	struct sock *sk;
-+	struct sock *stack[256 / sizeof(struct sock *)];
- 	struct llc_sock *llc;
- 	struct hlist_head *dev_hb = llc_sk_dev_hash(sap, skb->dev->ifindex);
- 
-@@ -408,7 +409,7 @@ static void llc_sap_mcast(struct llc_sap *sap,
- 			continue;
- 
- 		sock_hold(sk);
--		if (i < count)
-+		if (i < ARRAY_SIZE(stack))
- 			stack[i++] = sk;
- 		else {
- 			llc_do_mcast(sap, skb, stack, i);
--- 
-1.9.1
+> ---
+>  security/integrity/ima/ima_api.c | 16 ++++++++++------
+>  1 file changed, 10 insertions(+), 6 deletions(-)
+> 
+> diff --git a/security/integrity/ima/ima_api.c b/security/integrity/ima/ima_api.c
+> index 08fe405338e1..2aab9170ef68 100644
+> --- a/security/integrity/ima/ima_api.c
+> +++ b/security/integrity/ima/ima_api.c
+> @@ -308,14 +308,17 @@ void ima_audit_measurement(struct integrity_iint_cache *iint,
+>  			   const unsigned char *filename)
+>  {
+>  	struct audit_buffer *ab;
+> -	char hash[(iint->ima_hash->length * 2) + 1];
+> +	char *hash;
+>  	const char *algo_name = hash_algo_name[iint->ima_hash->algo];
+> -	char algo_hash[sizeof(hash) + strlen(algo_name) + 2];
+>  	int i;
+> 
+>  	if (iint->flags & IMA_AUDITED)
+>  		return;
+> 
+> +	hash = kzalloc((iint->ima_hash->length * 2) + 1, GFP_KERNEL);
+> +	if (!hash)
+> +		return;
+> +
+>  	for (i = 0; i < iint->ima_hash->length; i++)
+>  		hex_byte_pack(hash + (i * 2), iint->ima_hash->digest[i]);
+>  	hash[i * 2] = '\0';
+> @@ -323,18 +326,19 @@ void ima_audit_measurement(struct integrity_iint_cache *iint,
+>  	ab = audit_log_start(current->audit_context, GFP_KERNEL,
+>  			     AUDIT_INTEGRITY_RULE);
+>  	if (!ab)
+> -		return;
+> +		goto out;
+> 
+>  	audit_log_format(ab, "file=");
+>  	audit_log_untrustedstring(ab, filename);
+> -	audit_log_format(ab, " hash=");
+> -	snprintf(algo_hash, sizeof(algo_hash), "%s:%s", algo_name, hash);
+> -	audit_log_untrustedstring(ab, algo_hash);
+> +	audit_log_format(ab, " hash=\"%s:%s\"", algo_name, hash);
+> 
+>  	audit_log_task_info(ab, current);
+>  	audit_log_end(ab);
+> 
+>  	iint->flags |= IMA_AUDITED;
+> +out:
+> +	kfree(hash);
+> +	return;
+>  }
+> 
+>  /*
