@@ -1,49 +1,48 @@
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Subject: [PATCH 2/2] net: rds: drop VLA in rds_walk_conn_path_info()
-Date: Sun, 11 Mar 2018 22:07:50 +0100
-Message-Id: <1520802470-17374-2-git-send-email-s.mesoraca16@gmail.com>
-In-Reply-To: <1520802470-17374-1-git-send-email-s.mesoraca16@gmail.com>
-References: <1520802470-17374-1-git-send-email-s.mesoraca16@gmail.com>
+Subject: [PATCH] net: llc: drop VLA in llc_sap_mcast()
+Date: Sun, 11 Mar 2018 22:12:04 +0100
+Message-Id: <1520802724-17509-1-git-send-email-s.mesoraca16@gmail.com>
 To: linux-kernel@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, linux-rdma@vger.kernel.org, netdev@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Kees Cook <keescook@chromium.org>, Salvatore Mesoraca <s.mesoraca16@gmail.com>, Santosh Shilimkar <santosh.shilimkar@oracle.com>
+Cc: kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, David Rientjes <rientjes@google.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Kees Cook <keescook@chromium.org>, Salvatore Mesoraca <s.mesoraca16@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Avoid VLA[1] by using an already allocated buffer passed
-by the caller.
+Avoid a VLA[1] by using a real constant expression instead of a variable.
+The compiler should be able to optimize the original code and avoid using
+an actual VLA. Anyway this change is useful because it will avoid a false
+positive with -Wvla, it might also help the compiler generating better
+code.
 
 [1] https://lkml.org/lkml/2018/3/7/621
 
 Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 ---
- net/rds/connection.c | 5 ++++-
- 1 file changed, 4 insertions(+), 1 deletion(-)
+ net/llc/llc_sap.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
 
-diff --git a/net/rds/connection.c b/net/rds/connection.c
-index f80792c..abef75d 100644
---- a/net/rds/connection.c
-+++ b/net/rds/connection.c
-@@ -578,9 +578,9 @@ static void rds_walk_conn_path_info(struct socket *sock, unsigned int len,
- 				    struct rds_info_iterator *iter,
- 				    struct rds_info_lengths *lens,
- 				    int (*visitor)(struct rds_conn_path *, void *),
-+				    u64 *buffer,
- 				    size_t item_len)
+diff --git a/net/llc/llc_sap.c b/net/llc/llc_sap.c
+index d90928f..a7f7b8f 100644
+--- a/net/llc/llc_sap.c
++++ b/net/llc/llc_sap.c
+@@ -394,8 +394,9 @@ static void llc_sap_mcast(struct llc_sap *sap,
+ 			  const struct llc_addr *laddr,
+ 			  struct sk_buff *skb)
  {
--	u64  buffer[(item_len + 7) / 8];
- 	struct hlist_head *head;
- 	struct rds_connection *conn;
- 	size_t i;
-@@ -649,8 +649,11 @@ static void rds_conn_info(struct socket *sock, unsigned int len,
- 			  struct rds_info_iterator *iter,
- 			  struct rds_info_lengths *lens)
- {
-+	u64 buffer[(sizeof(struct rds_info_connection) + 7) / 8];
-+
- 	rds_walk_conn_path_info(sock, len, iter, lens,
- 				rds_conn_info_visitor,
-+				buffer,
- 				sizeof(struct rds_info_connection));
- }
+-	int i = 0, count = 256 / sizeof(struct sock *);
+-	struct sock *sk, *stack[count];
++	int i = 0;
++	struct sock *sk;
++	struct sock *stack[256 / sizeof(struct sock *)];
+ 	struct llc_sock *llc;
+ 	struct hlist_head *dev_hb = llc_sk_dev_hash(sap, skb->dev->ifindex);
  
+@@ -408,7 +409,7 @@ static void llc_sap_mcast(struct llc_sap *sap,
+ 			continue;
+ 
+ 		sock_hold(sk);
+-		if (i < count)
++		if (i < ARRAY_SIZE(stack))
+ 			stack[i++] = sk;
+ 		else {
+ 			llc_do_mcast(sap, skb, stack, i);
 -- 
 1.9.1
