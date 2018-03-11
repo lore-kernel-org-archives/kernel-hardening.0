@@ -1,82 +1,38 @@
-Subject: Re: [PATCH v3] ima: drop vla in ima_audit_measurement()
-From: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Date: Sun, 11 Mar 2018 18:01:05 -0400
-In-Reply-To: <20180308230836.24329-1-tycho@tycho.ws>
-References: <20180308230836.24329-1-tycho@tycho.ws>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Message-Id: <1520805665.3547.7.camel@linux.vnet.ibm.com>
-To: Tycho Andersen <tycho@tycho.ws>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>
-Cc: linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Mon, 12 Mar 2018 09:46:16 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Subject: Re: [PATCH v3] kernel.h: Skip single-eval logic on literals in
+ min()/max()
+Message-ID: <20180311224616.GJ16734@eros>
+References: <20180309200536.GA5670@beast>
+ <CA+55aFy82Drgu2xm1GWaDz2Jyj5QBx3dW4AatXzmCx-b1YET5Q@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CA+55aFy82Drgu2xm1GWaDz2Jyj5QBx3dW4AatXzmCx-b1YET5Q@mail.gmail.com>
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2018-03-08 at 16:08 -0700, Tycho Andersen wrote:
-> In keeping with the directive to get rid of VLAs [1], let's drop the VLA
-> from ima_audit_measurement(). We need to adjust the return type of
-> ima_audit_measurement, because now this function can fail if an allocation
-> fails.
+On Fri, Mar 09, 2018 at 01:10:30PM -0800, Linus Torvalds wrote:
+> On Fri, Mar 9, 2018 at 12:05 PM, Kees Cook <keescook@chromium.org> wrote:
+> > When max() is used in stack array size calculations from literal values
+> > (e.g. "char foo[max(sizeof(struct1), sizeof(struct2))]", the compiler
+> > thinks this is a dynamic calculation due to the single-eval logic, which
+> > is not needed in the literal case. This change removes several accidental
+> > stack VLAs from an x86 allmodconfig build:
 > 
-> [1]: https://lkml.org/lkml/2018/3/7/621
+> Ok, looks good.
 > 
-> v2: just use audit_log_format instead of doing a second allocation
-> v3: ignore failures in ima_audit_measurement()
+> I just have a couple of questions about applying it.
 > 
-> Signed-off-by: Tycho Andersen <tycho@tycho.ws>
+> In particular, if this will help people working on getting rid of
+> VLA's in the short term, I can apply it directly. But if people who
+> are looking at it (anybody else than Kees?) don't much care, then this
+> might be a 4.17 thing or at least "random -mm queue"?
 
-Thanks, this patch has been applied.
+It's easy enough to work on the other VLA removals without basing on
+this, no rush.
 
-Mimi
 
-> ---
->  security/integrity/ima/ima_api.c | 16 ++++++++++------
->  1 file changed, 10 insertions(+), 6 deletions(-)
-> 
-> diff --git a/security/integrity/ima/ima_api.c b/security/integrity/ima/ima_api.c
-> index 08fe405338e1..2aab9170ef68 100644
-> --- a/security/integrity/ima/ima_api.c
-> +++ b/security/integrity/ima/ima_api.c
-> @@ -308,14 +308,17 @@ void ima_audit_measurement(struct integrity_iint_cache *iint,
->  			   const unsigned char *filename)
->  {
->  	struct audit_buffer *ab;
-> -	char hash[(iint->ima_hash->length * 2) + 1];
-> +	char *hash;
->  	const char *algo_name = hash_algo_name[iint->ima_hash->algo];
-> -	char algo_hash[sizeof(hash) + strlen(algo_name) + 2];
->  	int i;
-> 
->  	if (iint->flags & IMA_AUDITED)
->  		return;
-> 
-> +	hash = kzalloc((iint->ima_hash->length * 2) + 1, GFP_KERNEL);
-> +	if (!hash)
-> +		return;
-> +
->  	for (i = 0; i < iint->ima_hash->length; i++)
->  		hex_byte_pack(hash + (i * 2), iint->ima_hash->digest[i]);
->  	hash[i * 2] = '\0';
-> @@ -323,18 +326,19 @@ void ima_audit_measurement(struct integrity_iint_cache *iint,
->  	ab = audit_log_start(current->audit_context, GFP_KERNEL,
->  			     AUDIT_INTEGRITY_RULE);
->  	if (!ab)
-> -		return;
-> +		goto out;
-> 
->  	audit_log_format(ab, "file=");
->  	audit_log_untrustedstring(ab, filename);
-> -	audit_log_format(ab, " hash=");
-> -	snprintf(algo_hash, sizeof(algo_hash), "%s:%s", algo_name, hash);
-> -	audit_log_untrustedstring(ab, algo_hash);
-> +	audit_log_format(ab, " hash=\"%s:%s\"", algo_name, hash);
-> 
->  	audit_log_task_info(ab, current);
->  	audit_log_end(ab);
-> 
->  	iint->flags |= IMA_AUDITED;
-> +out:
-> +	kfree(hash);
-> +	return;
->  }
-> 
->  /*
+thanks,
+Tobin.
