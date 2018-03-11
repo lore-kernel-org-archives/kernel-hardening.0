@@ -1,56 +1,158 @@
+Subject: Re: [PATCH bpf-next v8 01/11] fs,security: Add a security blob to
+ nameidata
+References: <20180227004121.3633-1-mic@digikod.net>
+ <20180227004121.3633-2-mic@digikod.net>
+ <20180227005721.GK30522@ZenIV.linux.org.uk>
+ <20180227012329.GL30522@ZenIV.linux.org.uk>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <53e1f50d-6719-aa6c-a0a7-485cf1fd0d2d@digikod.net>
+Date: Sun, 11 Mar 2018 21:14:08 +0100
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <20180311110543.pgcnrafloj5qbdjm@gmail.com>
-References: <20180309200536.GA5670@beast> <20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
- <e8874944-f0b7-7a1f-26f3-446d7d7fcc38@infradead.org> <CANiq72k_vsTPMXvcfTNo+sjRoVMkihvRz-fzeXdcXvNEEeY-Pw@mail.gmail.com>
- <CAGXu5jLtKAUsoYemHZTrJqKEH9=BqwO_QXk=x3BPfCKqZ6DRYA@mail.gmail.com>
- <CA+55aFyLicYSe+R4yQ2Eu+P9m6qsRfso-HiK78Sw+-dPuZvAYg@mail.gmail.com>
- <CANiq72nwg3mMhWeE_bLKdQ5WP+0E+SxxvcuUF=Rn9a1MM+EapQ@mail.gmail.com>
- <CA+55aFw+guiiJ3OavrP-RpFV9NRAF4t=oj3-GDfSyuZ9zBRfdg@mail.gmail.com> <20180311110543.pgcnrafloj5qbdjm@gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Sun, 11 Mar 2018 11:23:29 -0700
-Message-ID: <CA+55aFykPUaZUjxf9qkWN-QhTH_fK=R4bXHBb-iKT1EaEh87uQ@mail.gmail.com>
-Subject: Re: [PATCH v3] kernel.h: Skip single-eval logic on literals in min()/max()
-Content-Type: text/plain; charset="UTF-8"
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Kees Cook <keescook@chromium.org>, Randy Dunlap <rdunlap@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20180227012329.GL30522@ZenIV.linux.org.uk>
+Content-Type: multipart/signed; micalg=pgp-sha512;
+ protocol="application/pgp-signature";
+ boundary="cdt5OfIhwr4oaLzUGCrbv9AUTGvyZ36E3"
+To: Al Viro <viro@ZenIV.linux.org.uk>
+Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, James Morris <jmorris@namei.org>, John Johansen <john.johansen@canonical.com>, Stephen Smalley <sds@tycho.nsa.gov>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, linux-fsdevel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Mar 11, 2018 at 4:05 AM, Ingo Molnar <mingo@kernel.org> wrote:
->
-> BTW., while I fully agree with everything you said, it's not entirely correct to
-> claim that if a C compiler can generate VLA code it is necessarily able to parse
-> and evaluate constant array sizes "just fine".
->
-> Constant expressions are typically parsed very early on, at the preprocessing
-> stage. They can be used with some preprocessor directives as well, such as '#if'
-> (with some further limitations on their syntax).
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--cdt5OfIhwr4oaLzUGCrbv9AUTGvyZ36E3
+Content-Type: multipart/mixed; boundary="fU5D1iIsVDFbnRIZV7fin7fKso3RelxuQ";
+ protected-headers="v1"
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+To: Al Viro <viro@ZenIV.linux.org.uk>
+Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>,
+ Andy Lutomirski <luto@amacapital.net>,
+ Arnaldo Carvalho de Melo <acme@kernel.org>,
+ Casey Schaufler <casey@schaufler-ca.com>,
+ Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
+ <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>,
+ "Eric W . Biederman" <ebiederm@xmission.com>,
+ James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
+ Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>,
+ Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>,
+ Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>,
+ Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>,
+ Thomas Graf <tgraf@suug.ch>, Tycho Andersen <tycho@tycho.ws>,
+ Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com,
+ linux-api@vger.kernel.org, linux-security-module@vger.kernel.org,
+ netdev@vger.kernel.org, James Morris <jmorris@namei.org>,
+ John Johansen <john.johansen@canonical.com>,
+ Stephen Smalley <sds@tycho.nsa.gov>,
+ Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
+ linux-fsdevel@vger.kernel.org
+Message-ID: <53e1f50d-6719-aa6c-a0a7-485cf1fd0d2d@digikod.net>
+Subject: Re: [PATCH bpf-next v8 01/11] fs,security: Add a security blob to
+ nameidata
+References: <20180227004121.3633-1-mic@digikod.net>
+ <20180227004121.3633-2-mic@digikod.net>
+ <20180227005721.GK30522@ZenIV.linux.org.uk>
+ <20180227012329.GL30522@ZenIV.linux.org.uk>
+In-Reply-To: <20180227012329.GL30522@ZenIV.linux.org.uk>
 
-Yes. But constant simplification and CSE etc is just a very
-fundamental part of a compiler, and anybody who actually implements
-VLA's would have to do it anyway.
+--fU5D1iIsVDFbnRIZV7fin7fKso3RelxuQ
+Content-Type: text/plain; charset=iso-8859-15
+Content-Language: en-US
+Content-Transfer-Encoding: quoted-printable
 
-So no, a message like
 
-  warning: Array declaration is not a C90 constant expression,
-resulting in VLA code generation
+On 02/27/2018 02:23 AM, Al Viro wrote:
+> On Tue, Feb 27, 2018 at 12:57:21AM +0000, Al Viro wrote:
+>> On Tue, Feb 27, 2018 at 01:41:11AM +0100, Micka=EBl Sala=FCn wrote:
+>>> The function current_nameidata_security(struct inode *) can be used t=
+o
+>>> retrieve a blob's pointer address tied to the inode being walk throug=
+h.
+>>> This enable to follow a path lookup and know where an inode access co=
+me
+>>> from. This is needed for the Landlock LSM to be able to restrict acce=
+ss
+>>> to file path.
+>>>
+>>> The LSM hook nameidata_free_security(struct inode *) is called before=
 
-would be moronic. Only some completely mindless broken shit would do
-"oh, it's not a parse-time constant, so it will be variable". The two
-just do not follow AT ALL.
+>>> freeing the associated nameidata.
+>>
+>> NAK.  Not without well-defined semantics and "some Linux S&M uses that=
+ for
+>> something, don't ask what" does not count.
+>=20
+> Incidentally, pathwalk mechanics is subject to change at zero notice, s=
+o
+> if you want something, you'd better
+> 	* have explicitly defined semantics
+> 	* explain what it is - on fsdevel
+> 	* not have it hidden behind the layers of opaque LSM dreck, pardon
+> the redundance.
+>=20
+> Again, pathwalk internals have changed in the past and may bloody well
+> change again in the future.  There's a damn good reason why struct name=
+idata
+> is _not_ visible outside of fs/namei.c, and quietly relying upon any
+> implementation details is no-go.
+>=20
 
-So the message might be about _possibly_ resulting in VLA code
-generation, but honestly, at that point you should just add the
-warning when you actually generate the code to do the stack
-allocation.
+I thought this whole patch series would go to linux-fsdevel but only
+this patch did. I'll CCed fsdevel for the next round. Meanwhile, the
+cover letter is here: https://lkml.org/lkml/2018/2/26/1214
+The code using current_nameidata_lookup(inode) is in the patch 07/11:
+https://lkml.org/lkml/2018/2/26/1206
 
-Because at that point, you know whether it's variable or not.
+To sum up, I don't know any way to identify if a directory (execute)
+access was directly requested by a process or inferred by the kernel
+because of a path walk. This was not needed until now because the other
+access control systems (either the DAC or access controls enforced by
+inode-based LSM, i.e. SELinux and Smack) do not care about the file
+hierarchy. Path-based access controls (i.e. AppArmor and Tomoyo)
+directly use the notion of path to define a security policy (in the
+kernel, not only in the user space configuration). Landlock can't rely
+on xattrs (because of composed and unprivileged access control). Because
+we can't know for sure from which path an inode come from (if any),
+path-based LSM hooks do not help for some file system checks (e.g.
+inode_permission). With Landlock, I try to find a way to identify a set
+of inodes, from the user space point of view, which is most of the time
+related to file hierarchies.
 
-And trust me, it won't be variable for things like (2,3), or even for
-our "max()" thing with other odd builtins. Not unless the compiler
-doesn't really support VLA at all (maybe some bolted-on crazy thing
-that just turns a VLA at the front-end time into just an alloca), or
-the user has explicitly asked to disable some fundamental optimization
-phase.
+I needed a way to "follow" a path walk, with the minimum amount of code,
+and if possible without touching the fs/namei.c . I saw that the
+pathwalk mechanism has evolved over time. With this patch, I tried to
+make a kernel object (nameidata) usable in some way by LSM, but only
+through an inode (current_nameidata_lookup(inode)). The "only" guarantee
+of this function should be to identify if an inode is tied to a path
+walk. This enable to follow a path walk and know why an inode access is
+requested.
 
-               Linus
+I get your concern about the "instability" of the path walk mechanism.
+However, I though that a path resolution should not change from the user
+space point of view, like other Linux ABI. Anyway, all the current
+inode-based access controls, including DAC, rely on this path walks
+mechanism. This patch does not expose anything to user space, but only
+through the API of Landlock, which is currently relying on path walk
+resolutions, already visible to user space. Did I miss something? Do you
+have another suggestion to tie an inode to a path walk?
+
+Thanks,
+ Micka=EBl
+
+
+--fU5D1iIsVDFbnRIZV7fin7fKso3RelxuQ--
+
+--cdt5OfIhwr4oaLzUGCrbv9AUTGvyZ36E3
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAlqljhgACgkQIt7+33O9
+apUEVwgAoNkjdPJXibIfn0WlEL+JT2QbHNoII6AAZyRUKgBTBgmHs0OGeBR0aa5U
+bA8cIvDL558Y2crA9gzum00XepwC4JNIhMq3dmSOYZtcNfkN2OIhJGUqSSFWPsRe
+q76GTF4esFx9ic9mE8K+V4MmvvVSUQzD/eZWeVtb5V/2t5opQ7zPlzPjPtOYG1Kh
+vF2mfOetMES0iFdNT7aM9FCME/PqFGatL2Fh/Zbx/i+AIrA1QoYrzUsAl9BbdBIT
+vKprrbgAn0l0cHSLAUWA85G8EpYoT5+fejiwL+bxAhUzgTZWZCTq9rlnDFBfea8J
+vFr06ZvGzyeD2wmRlKQRLrRIerFUmA==
+=/ydU
+-----END PGP SIGNATURE-----
+
+--cdt5OfIhwr4oaLzUGCrbv9AUTGvyZ36E3--
