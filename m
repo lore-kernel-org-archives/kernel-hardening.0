@@ -4,11 +4,11 @@ Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
 From: Ben Hutchings <ben@decadent.org.uk>
 Date: Mon, 12 Mar 2018 03:06:12 +0000
-Message-ID: <lsq.1520823972.992404138@decadent.org.uk>
-Subject: [PATCH 3.16 53/76] x86: Implement array_index_mask_nospec
+Message-ID: <lsq.1520823972.926146860@decadent.org.uk>
+Subject: [PATCH 3.16 54/76] x86: Introduce barrier_nospec
 In-Reply-To: <lsq.1520823971.5976735@decadent.org.uk>
 To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, alan@linux.intel.com, gregkh@linuxfoundation.org, linux-arch@vger.kernel.org
+Cc: akpm@linux-foundation.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Linus Torvalds <torvalds@linux-foundation.org>, Andi Kleen <ak@linux.intel.com>, Ingo Molnar <mingo@redhat.com>, Dan Williams <dan.j.williams@intel.com>, alan@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, Tom Lendacky <thomas.lendacky@amd.com>, linux-arch@vger.kernel.org, gregkh@linuxfoundation.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 3.16.56-rc1 review patch.  If anyone has any objections, please let me know.
@@ -17,61 +17,55 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Dan Williams <dan.j.williams@intel.com>
 
-commit babdde2698d482b6c0de1eab4f697cf5856c5859 upstream.
+commit b3d7ad85b80bbc404635dca80f5b129f6242bc7a upstream.
 
-array_index_nospec() uses a mask to sanitize user controllable array
-indexes, i.e. generate a 0 mask if 'index' >= 'size', and a ~0 mask
-otherwise. While the default array_index_mask_nospec() handles the
-carry-bit from the (index - size) result in software.
+Rename the open coded form of this instruction sequence from
+rdtsc_ordered() into a generic barrier primitive, barrier_nospec().
 
-The x86 array_index_mask_nospec() does the same, but the carry-bit is
-handled in the processor CF flag without conditional instructions in the
-control flow.
+One of the mitigations for Spectre variant1 vulnerabilities is to fence
+speculative execution after successfully validating a bounds check. I.e.
+force the result of a bounds check to resolve in the instruction pipeline
+to ensure speculative execution honors that result before potentially
+operating on out-of-bounds data.
+
+No functional changes.
 
 Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+Suggested-by: Andi Kleen <ak@linux.intel.com>
+Suggested-by: Ingo Molnar <mingo@redhat.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Cc: linux-arch@vger.kernel.org
+Cc: Tom Lendacky <thomas.lendacky@amd.com>
+Cc: Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com
 Cc: gregkh@linuxfoundation.org
+Cc: Al Viro <viro@zeniv.linux.org.uk>
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727414808.33451.1873237130672785331.stgit@dwillia2-desk3.amr.corp.intel.com
-[bwh: Backported to 3.16: adjust context]
+Link: https://lkml.kernel.org/r/151727415361.33451.9049453007262764675.stgit@dwillia2-desk3.amr.corp.intel.com
+[bwh: Backported to 3.16: update rdtsc_barrier() instead of rdtsc_ordered()]
 Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 ---
- arch/x86/include/asm/barrier.h | 24 ++++++++++++++++++++++++
- 1 file changed, 24 insertions(+)
-
 --- a/arch/x86/include/asm/barrier.h
 +++ b/arch/x86/include/asm/barrier.h
-@@ -25,6 +25,30 @@
- #endif
+@@ -48,6 +48,10 @@ static inline unsigned long array_index_
+ /* Override the default implementation from linux/nospec.h. */
+ #define array_index_mask_nospec array_index_mask_nospec
  
++/* Prevent speculative execution past this barrier. */
++#define barrier_nospec() alternative_2("", "mfence", X86_FEATURE_MFENCE_RDTSC, \
++					   "lfence", X86_FEATURE_LFENCE_RDTSC)
++
  /**
-+ * array_index_mask_nospec() - generate a mask that is ~0UL when the
-+ * 	bounds check succeeds and 0 otherwise
-+ * @index: array element index
-+ * @size: number of elements in array
-+ *
-+ * Returns:
-+ *     0 - (index < size)
-+ */
-+static inline unsigned long array_index_mask_nospec(unsigned long index,
-+		unsigned long size)
-+{
-+	unsigned long mask;
-+
-+	asm ("cmp %1,%2; sbb %0,%0;"
-+			:"=r" (mask)
-+			:"r"(size),"r" (index)
-+			:"cc");
-+	return mask;
-+}
-+
-+/* Override the default implementation from linux/nospec.h. */
-+#define array_index_mask_nospec array_index_mask_nospec
-+
-+/**
   * read_barrier_depends - Flush all pending reads that subsequents reads
   * depend on.
-  *
+@@ -174,8 +178,7 @@ do {									\
+  */
+ static __always_inline void rdtsc_barrier(void)
+ {
+-	alternative(ASM_NOP3, "mfence", X86_FEATURE_MFENCE_RDTSC);
+-	alternative(ASM_NOP3, "lfence", X86_FEATURE_LFENCE_RDTSC);
++	barrier_nospec();
+ }
+ 
+ #endif /* _ASM_X86_BARRIER_H */
