@@ -1,119 +1,100 @@
 MIME-Version: 1.0
-In-Reply-To: <1520858937-3582-1-git-send-email-s.mesoraca16@gmail.com>
-References: <1520858937-3582-1-git-send-email-s.mesoraca16@gmail.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Mon, 12 Mar 2018 17:50:27 +0100
-Message-ID: <CAJHCu1JDLJkF1Bhg0c-GeNYBKx23o3Jry7gwehrAb_yZfssJVw@mail.gmail.com>
-Subject: Re: [PATCH v2] scsi: eata: drop VLA in reorder()
+Sender: linus971@gmail.com
+In-Reply-To: <CAGXu5j+4mEyhE6shkxWqY4AVQGcq2U7nzf4j_n2+CdW2t6CzqQ@mail.gmail.com>
+References: <CAGXu5j+4mEyhE6shkxWqY4AVQGcq2U7nzf4j_n2+CdW2t6CzqQ@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Mon, 12 Mar 2018 10:09:12 -0700
+Message-ID: <CA+55aFykZL+cSBJjBBts7ebEFfyGPdMzTmLSxKnT_29=j942dA@mail.gmail.com>
+Subject: Re: Fully initialized stack usage (was Re: [PATCH RFC v9 4/7]
+ x86/entry: Erase kernel stack in syscall_trace_enter())
 Content-Type: text/plain; charset="UTF-8"
-To: linux-kernel@vger.kernel.org
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-scsi@vger.kernel.org, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, "Tobin C. Harding" <tobin@apporbit.com>, Dario Ballabio <ballabio_dario@emc.com>, Kees Cook <keescook@chromium.org>, Salvatore Mesoraca <s.mesoraca16@gmail.com>, valdis.kletnieks@vt.edu
+To: Kees Cook <keescook@chromium.org>
+Cc: Ingo Molnar <mingo@kernel.org>, P J P <pjp@fedoraproject.org>, Florian Weimer <fweimer@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Steven Rostedt <rostedt@goodmis.org>, Arnd Bergmann <arnd@arndb.de>, Daniel Micay <danielmicay@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Alexander Popov <alex.popov@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-03-12 13:48 GMT+01:00 Salvatore Mesoraca <s.mesoraca16@gmail.com>:
-> Avoid 3 VLAs[1] by using a single dinamically allocated array
-> and some helper variables: we don't need 3 arrays.
+On Mon, Mar 12, 2018 at 9:42 AM, Kees Cook <keescook@chromium.org> wrote:
 >
-> [1] https://lkml.org/lkml/2018/3/7/621
->
-> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-> ---
->  drivers/scsi/eata.c | 40 ++++++++++++++++++++++++++--------------
->  1 file changed, 26 insertions(+), 14 deletions(-)
->
-> diff --git a/drivers/scsi/eata.c b/drivers/scsi/eata.c
-> index 6501c33..8ba44b7 100644
-> --- a/drivers/scsi/eata.c
-> +++ b/drivers/scsi/eata.c
-> @@ -2091,12 +2091,14 @@ static void sort(unsigned long sk[], unsigned int da[], unsigned int n,
->  static int reorder(struct hostdata *ha, unsigned long cursec,
->                    unsigned int ihdlr, unsigned int il[], unsigned int n_ready)
->  {
-> +       int overlap;
->         struct scsi_cmnd *SCpnt;
->         struct mscp *cpp;
->         unsigned int k, n;
->         unsigned int rev = 0, s = 1, r = 1;
-> -       unsigned int input_only = 1, overlap = 0;
-> -       unsigned long sl[n_ready], pl[n_ready], ll[n_ready];
-> +       unsigned int input_only = 1;
-> +       unsigned long *sl;
-> +       unsigned long sl_zero, sl_cur, sl_prev, ll_cur, ll_prev;
->         unsigned long maxsec = 0, minsec = ULONG_MAX, seek = 0, iseek = 0;
->         unsigned long ioseek = 0;
->
-> @@ -2115,6 +2117,12 @@ static int reorder(struct hostdata *ha, unsigned long cursec,
->         if (n_ready <= 1)
->                 return 0;
->
-> +       overlap = -ENOMEM;
-> +       sl = kcalloc(n_ready, sizeof(*sl), GFP_ATOMIC);
+> On Tue, Feb 27, 2018 at 3:15 AM, P J P <ppandit@redhat.com> wrote:
+>> Please see:
+>>   -> https://gcc.gnu.org/ml/gcc-patches/2014-06/msg00615.html
+>>
+>> This experimental patch by Florian Weimer(CC'd) adds an option
+>> '-finit-local-vars' to gcc(1) compiler. When a program(or kernel)
+>> is built using this option, its automatic(local) variables are
+>> initialised with zero(0). This could significantly reduce the kernel
+>> information leakage issues.
 
-I should have used kmalloc_array :/
-Sending v3
+Oh, I love that patch.
 
-> +       if (!sl)
-> +               goto out;
-> +       overlap = 0;
-> +
->         for (n = 0; n < n_ready; n++) {
->                 k = il[n];
->                 cpp = &ha->cp[k];
-> @@ -2164,31 +2172,33 @@ static int reorder(struct hostdata *ha, unsigned long cursec,
->         if (!((rev && r) || (!rev && s)))
->                 sort(sl, il, n_ready, rev);
+THAT is the kind of thing we should do. It's small, it's trivial, and
+it's done early in the parsing stage, so later stages will almost
+certainly end up optimizing things away.
+
+The only complaint I have is that the Fortran front-end already has
+(some of) that functionality, and calls it something else, and allows
+you to specify more exactly what you want to clear.
+
+Florian, are you aware of the Fortran flags?
+
+  -finit-local-zero
+  -finit-derived
+  -finit-integer=n
+  -finit-real=<zero|inf|-inf|nan|snan>
+  -finit-logical=<true|false>
+  -finit-character=n
+
+they aren't perfect for C, but some of them do make sense at least
+conceptually: things like being able to specify whether arrays and
+structures should be initialized (-finit-derived is kind of relevant)
+might make sense.
+
+In the kernel we'd likely always do it unconditionally (apart from
+optional per-function or per-declaration considerations) but I could
+easily see some other projects saying "do it for scalars but not for
+aggregate types". Because they might want the convenience, but not the
+expense.
+
+> Getting this implemented directly in the compiler would be preferred
+> over a plugin. (Prototyping may be easier in the plugin, though.)
+
+Absolutely.  I think it's better in gcc simply because I suspect a
+number of other projects might use this flag too. A plugin is rather
+cumbersome.
+
+That said, the patch is literally right at the PLUGIN_FINISH_DECL, so
+doing it as a plugin for older compiler versions, or for just testing,
+might still be useful.
+
+> Considerations:
 >
-> +       sl_zero = sl[0];
-> +
->         if (!input_only)
->                 for (n = 0; n < n_ready; n++) {
->                         k = il[n];
->                         cpp = &ha->cp[k];
->                         SCpnt = cpp->SCpnt;
-> -                       ll[n] = blk_rq_sectors(SCpnt->request);
-> -                       pl[n] = SCpnt->serial_number;
-> +                       ll_cur = blk_rq_sectors(SCpnt->request);
-> +                       sl_cur = sl[n];
-> +                       sl[n] = SCpnt->serial_number;
->
-> -                       if (!n)
-> -                               continue;
-> -
-> -                       if ((sl[n] == sl[n - 1])
-> -                           || (!rev && ((sl[n - 1] + ll[n - 1]) > sl[n]))
-> -                           || (rev && ((sl[n] + ll[n]) > sl[n - 1])))
-> +                       if (n && ((sl_cur == sl_prev)
-> +                                 || (!rev && ((sl_prev + ll_prev) > sl_cur))
-> +                                 || (rev && ((sl_cur + ll_cur) > sl_prev))))
->                                 overlap = 1;
-> +                       ll_prev = ll_cur;
-> +                       sl_prev = sl_cur;
->                 }
->
->         if (overlap)
-> -               sort(pl, il, n_ready, 0);
-> +               sort(sl, il, n_ready, 0);
->
->         if (link_statistics) {
-> -               if (cursec > sl[0])
-> -                       iseek = cursec - sl[0];
-> +               if (cursec > sl_zero)
-> +                       iseek = cursec - sl_zero;
->                 else
-> -                       iseek = sl[0] - cursec;
-> +                       iseek = sl_zero - cursec;
->                 batchcount++;
->                 readycount += n_ready;
->                 seeknosort += seek / 1024;
-> @@ -2225,6 +2235,8 @@ static int reorder(struct hostdata *ha, unsigned long cursec,
->                              YESNO(overlap), cpp->din);
->                 }
->  #endif
-> +       kfree(sl);
-> +out:
->         return overlap;
->  }
->
-> --
-> 1.9.1
->
+> - the kernel needs a way to "opt out" of this for places where later
+> functions will do the initialization. Something like
+> __attribute__((no_automatic_variable_init)) ?
+
+Yes, that's going to make it more palatable to some uses.
+
+However, somebody who knows gcc needs to verify that it does the right
+things when inlining happens.
+
+And honestly, it would be better to make it per-variable, not per
+function. That would fit the structure of that patch too, I think. It
+iterates over variables anyway to generate the initialization.
+
+> - initialization _must include structure padding_. Without this, we're
+> only solving part of the exposure. Does -finit-local-vars do this?
+
+Good point. It uses build_constructor() with an empty constructor, so
+it *should* be 100% equivalent to
+
+    struct xyz var = { };
+
+if I understand correctly, but I'm not sure what that will do with padding.
+
+> - Can we retain the uninitialized variable usage warning? (with an
+> updated text; maybe "variable used without explicit initialization,
+> using zero-initialization"?)
+
+I think that fundamentally goes away, because all later phases see
+fully initialized state.
+
+               Linus
