@@ -1,68 +1,53 @@
 From: "Tobin C. Harding" <me@tobin.cc>
-Subject: [PATCH] of: unittest: Remove VLA stack usage
-Date: Mon, 12 Mar 2018 15:27:23 +1100
-Message-Id: <1520828843-22289-1-git-send-email-me@tobin.cc>
-To: Rob Herring <robh+dt@kernel.org>, Frank Rowand <frowand.list@gmail.com>
-Cc: "Tobin C. Harding" <me@tobin.cc>, devicetree@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
+Subject: [PATCH] rbd: Remove VLA stack usage
+Date: Mon, 12 Mar 2018 15:49:40 +1100
+Message-Id: <1520830180-25452-1-git-send-email-me@tobin.cc>
+To: Ilya Dryomov <idryomov@gmail.com>, Sage Weil <sage@redhat.com>, Alex Elder <elder@kernel.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, ceph-devel@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The kernel would like to have all stack VLA usage removed[1].  This is a
-test function so the execution speed is not critical.  We can allocate
-memory for this buffer instead of using a VLA.  If kmalloc() fails just
-return.
+The kernel would like to have all stack VLA usage removed[1].  Here the
+array is declared using a variable that is declared using a constant
+statement but the compiler still emits a warning.  We can clear the
+warning bu using the constant statement directly.  In place of later
+usage of the size variable we can use the ARRAY_SIZE() macro.
 
-Allocate buffer with kmalloc().
+Use constant statement to declare array.
 
 [1]: https://lkml.org/lkml/2018/3/7/621
 
 Signed-off-by: Tobin C. Harding <me@tobin.cc>
 ---
+ drivers/block/rbd.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
 
-Kees is this annoying you, CC'ing you an all my VLA patches?
-
- drivers/of/unittest.c | 15 +++++++++++----
- 1 file changed, 11 insertions(+), 4 deletions(-)
-
-diff --git a/drivers/of/unittest.c b/drivers/of/unittest.c
-index 1991fe4319f5..38cbc343b7da 100644
---- a/drivers/of/unittest.c
-+++ b/drivers/of/unittest.c
-@@ -254,12 +254,18 @@ static void __init of_unittest_check_tree_linkage(void)
- static void __init of_unittest_printf_one(struct device_node *np, const char *fmt,
- 					  const char *expected)
+diff --git a/drivers/block/rbd.c b/drivers/block/rbd.c
+index 0016170cde0a..927ecd9a2511 100644
+--- a/drivers/block/rbd.c
++++ b/drivers/block/rbd.c
+@@ -3100,20 +3100,19 @@ static int __rbd_notify_op_lock(struct rbd_device *rbd_dev,
  {
--	unsigned char buf[strlen(expected)+10];
-+	unsigned char *buf;
-+	int buf_size;
- 	int size, i;
+ 	struct ceph_osd_client *osdc = &rbd_dev->rbd_client->client->osdc;
+ 	struct rbd_client_id cid = rbd_get_cid(rbd_dev);
+-	int buf_size = 4 + 8 + 8 + CEPH_ENCODING_START_BLK_LEN;
+-	char buf[buf_size];
++	char buf[4 + 8 + 8 + CEPH_ENCODING_START_BLK_LEN];
+ 	void *p = buf;
  
-+	buf_size = strlen(expected) + 10;
-+	buf = kmalloc(buf_size, GFP_KERNEL);
-+	if (!buf)
-+		return;
-+
- 	/* Baseline; check conversion with a large size limit */
--	memset(buf, 0xff, sizeof(buf));
--	size = snprintf(buf, sizeof(buf) - 2, fmt, np);
-+	memset(buf, 0xff, buf_size);
-+	size = snprintf(buf, buf_size - 2, fmt, np);
+ 	dout("%s rbd_dev %p notify_op %d\n", __func__, rbd_dev, notify_op);
  
- 	/* use strcmp() instead of strncmp() here to be absolutely sure strings match */
- 	unittest((strcmp(buf, expected) == 0) && (buf[size+1] == 0xff),
-@@ -270,12 +276,13 @@ static void __init of_unittest_printf_one(struct device_node *np, const char *fm
- 	size++;
- 	for (i = 0; i < 2; i++, size--) {
- 		/* Clear the buffer, and make sure it works correctly still */
--		memset(buf, 0xff, sizeof(buf));
-+		memset(buf, 0xff, buf_size);
- 		snprintf(buf, size+1, fmt, np);
- 		unittest(strncmp(buf, expected, size) == 0 && (buf[size+1] == 0xff),
- 			"snprintf failed; size=%i fmt='%s' expected='%s' rslt='%s'\n",
- 			size, fmt, expected, buf);
- 	}
-+	kfree(buf);
+ 	/* encode *LockPayload NotifyMessage (op + ClientId) */
+-	ceph_start_encoding(&p, 2, 1, buf_size - CEPH_ENCODING_START_BLK_LEN);
++	ceph_start_encoding(&p, 2, 1, ARRAY_SIZE(buf) - CEPH_ENCODING_START_BLK_LEN);
+ 	ceph_encode_32(&p, notify_op);
+ 	ceph_encode_64(&p, cid.gid);
+ 	ceph_encode_64(&p, cid.handle);
+ 
+ 	return ceph_osdc_notify(osdc, &rbd_dev->header_oid,
+-				&rbd_dev->header_oloc, buf, buf_size,
++				&rbd_dev->header_oloc, buf, ARRAY_SIZE(buf),
+ 				RBD_NOTIFY_TIMEOUT, preply_pages, preply_len);
  }
  
- static void __init of_unittest_printf(void)
 -- 
 2.7.4
