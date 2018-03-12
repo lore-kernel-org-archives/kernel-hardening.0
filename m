@@ -1,41 +1,67 @@
-Date: Mon, 12 Mar 2018 12:13:15 -0700
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [PATCH 4/7] Protectable Memory
-Message-ID: <20180312191314.GA29191@bombadil.infradead.org>
-References: <20180228200620.30026-1-igor.stoppa@huawei.com>
- <20180228200620.30026-5-igor.stoppa@huawei.com>
+Date: Mon, 12 Mar 2018 20:26:44 +0100
+From: Stephen Kitt <steve@sk2.org>
+Subject: Re: [PATCH] device_handler: remove VLAs
+Message-ID: <20180312202644.5594421e@heffalump.sk2.org>
+In-Reply-To: <1520869285.3469.13.camel@wdc.com>
+References: <20180309232933.14e39858@heffalump.sk2.org>
+	<20180309223211.20473-1-steve@sk2.org>
+	<1520635688.2907.17.camel@wdc.com>
+	<20180310141422.3a8c451f@heffalump.sk2.org>
+	<1520869285.3469.13.camel@wdc.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180228200620.30026-5-igor.stoppa@huawei.com>
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: david@fromorbit.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: multipart/signed; micalg=pgp-sha512;
+ boundary="Sig_/Q4hJWW478X8YOM=u9FIG7am"; protocol="application/pgp-signature"
+To: Bart Van Assche <Bart.VanAssche@wdc.com>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-block@vger.kernel.org" <linux-block@vger.kernel.org>, "martin.petersen@oracle.com" <martin.petersen@oracle.com>, "axboe@kernel.dk" <axboe@kernel.dk>, "linux-scsi@vger.kernel.org" <linux-scsi@vger.kernel.org>, "hare@suse.com" <hare@suse.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "jejb@linux.vnet.ibm.com" <jejb@linux.vnet.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 28, 2018 at 10:06:17PM +0200, Igor Stoppa wrote:
-> struct gen_pool *pmalloc_create_pool(const char *name,
-> 					 int min_alloc_order);
-> int is_pmalloc_object(const void *ptr, const unsigned long n);
-> bool pmalloc_prealloc(struct gen_pool *pool, size_t size);
-> void *pmalloc(struct gen_pool *pool, size_t size, gfp_t gfp);
-> static inline void *pzalloc(struct gen_pool *pool, size_t size, gfp_t gfp)
-> static inline void *pmalloc_array(struct gen_pool *pool, size_t n,
-> 				  size_t size, gfp_t flags)
-> static inline void *pcalloc(struct gen_pool *pool, size_t n,
-> 			    size_t size, gfp_t flags)
-> static inline char *pstrdup(struct gen_pool *pool, const char *s, gfp_t gfp)
-> int pmalloc_protect_pool(struct gen_pool *pool);
-> static inline void pfree(struct gen_pool *pool, const void *addr)
-> int pmalloc_destroy_pool(struct gen_pool *pool);
+--Sig_/Q4hJWW478X8YOM=u9FIG7am
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
 
-Do you have users for all these functions?  I'm particularly sceptical of
-pfree().  To my mind, a user wants to:
+On Mon, 12 Mar 2018 15:41:26 +0000, Bart Van Assche <Bart.VanAssche@wdc.com>
+wrote:
+> On Sat, 2018-03-10 at 14:14 +0100, Stephen Kitt wrote:
+> > The two patches I sent were supposed to be alternative solutions; see
+> > https://marc.info/?l=3Dlinux-scsi&m=3D152063671005295&w=3D2 for the
+> > introduction (I seem to have messed up the headers, so the mails didn=
+=E2=80=99t
+> > end up threaded properly). =20
+>=20
+> The two patches arrived in my inbox several minutes before the cover
+> letter. In the e-mail header of the cover letter I found the following:
+>=20
+> X-Greylist: delayed 1810 seconds by postgrey-1.27 at vger.kernel.org; Fri,
+> 09 Mar 2018 18:05:08 EST
+>=20
+> Does this mean that the delay happened due to vger server's anti-spam
+> algorithm?
 
-pmalloc_create();
-pmalloc(); * N
-pmalloc_protect();
-...
-pmalloc_destroy();
+That=E2=80=99s right, the greylisting part of its anti-spam measures.
 
-I don't mind the pstrdup, pcalloc, pmalloc_array, pzalloc variations, but
-I don't know why you need is_pmalloc_object().
+Regards,
+
+Stephen
+
+--Sig_/Q4hJWW478X8YOM=u9FIG7am
+Content-Type: application/pgp-signature
+Content-Description: OpenPGP digital signature
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEnPVX/hPLkMoq7x0ggNMC9Yhtg5wFAlqm1HQACgkQgNMC9Yht
+g5w4Pg//XsoJ53FkY+BpdO4+B9OJz3sNmy8OJi+HGqMzhLpHeTp/5JKyCQI0J+6M
+kHXrYkl76mRyYSnh4Dx/YEaq99igksN9B6mu21Y/y0ZNIveO1ItEnzux3D9K2/K0
+M1ErDbD0rbpt14dkhbY4rn7dvmsLY26mmXEqdd9Kc2hiI4BqxTyI1IOYARswrpyk
+jYHglsKtBsgUvloVAsLa7DIjuW7Fk/usA7aoZp2xJenKYVEmRbJDDvb3QOjS13eO
+SKfWS8a6+viID7GbvADcGEGy0QdWe1I69qSAhkI5zlHZGaPM/dCCJmvJxRZ8JVks
+F+Tl2obuWptRJe3muSLNg6y3XkNH18lvPRUC/AHR5wah9ZX3Hlx0gyudcztIw9FF
+Ui1BgDmUyZC9hLgoXNKGGve/U3IEXs7wVV/EpxOfqvVnpmi/d566zv8ltRjRRa4F
+f0IxclNOBEwlP0H1rEODKopdMSxTRMpvxLHDQr8ejOr6v7OkOW69UK5xIFpX8N7T
+59YK14HbjUav7cjB9JnYTcS+4f3/rsubLYKS8y+DELIGskPEGKNkaiXlQINQ/3E8
+09VegkFiaiQM1tCOvq3JXSGKnW/kUrGaAMBsAHdHJaZLjGD01i3tymcjf8eHQaTK
+cWrpE98iLC1fqoIIY2Z6HnF65PURaUepKhlrQuERwbpSPGYx/C8=
+=huhw
+-----END PGP SIGNATURE-----
+
+--Sig_/Q4hJWW478X8YOM=u9FIG7am--
