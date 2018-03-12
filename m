@@ -1,27 +1,43 @@
-Date: Mon, 12 Mar 2018 11:14:32 -0400 (EDT)
-Message-Id: <20180312.111432.849792523664957837.davem@davemloft.net>
-Subject: Re: [PATCH] net: llc: drop VLA in llc_sap_mcast()
-From: David Miller <davem@davemloft.net>
-In-Reply-To: <1520802724-17509-1-git-send-email-s.mesoraca16@gmail.com>
-References: <1520802724-17509-1-git-send-email-s.mesoraca16@gmail.com>
-Mime-Version: 1.0
-Content-Type: Text/Plain; charset=us-ascii
-Content-Transfer-Encoding: 7bit
-To: s.mesoraca16@gmail.com
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, paulmck@linux.vnet.ibm.com, rientjes@google.com, elena.reshetova@intel.com, ishkamiel@gmail.com, keescook@chromium.org
+From: Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>
+Subject: Re: [PATCH] video: fbdev: via: remove VLA usage
+Date: Mon, 12 Mar 2018 17:04:25 +0100
+Message-id: <7211546.mLmn3tHjVa@amdc3058>
+In-reply-to: 
+	<CACvgo5278SmXfV0jfrMu=Ba6gf7rRXzNduNX+D270fGUFQcZdQ@mail.gmail.com>
+MIME-version: 1.0
+Content-transfer-encoding: 7Bit
+Content-type: text/plain; charset="us-ascii"
+References: <20180308173949.GA19305@embeddedgus>
+	<CGME20180309110234epcas1p2c64b608487008f178d25609e962ecc74@epcas1p2.samsung.com>
+	<CACvgo5278SmXfV0jfrMu=Ba6gf7rRXzNduNX+D270fGUFQcZdQ@mail.gmail.com>
+To: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Cc: Emil Velikov <emil.l.velikov@gmail.com>, Eric Engestrom <eric.engestrom@imgtec.com>, Florian Tobias Schandinat <FlorianSchandinat@gmx.de>, linux-fbdev <linux-fbdev@vger.kernel.org>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, "Linux-Kernel@Vger. Kernel. Org" <linux-kernel@vger.kernel.org>, ML dri-devel <dri-devel@lists.freedesktop.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Sun, 11 Mar 2018 22:12:04 +0100
+On Friday, March 09, 2018 11:02:24 AM Emil Velikov wrote:
+> On 9 March 2018 at 10:59, Eric Engestrom <eric.engestrom@imgtec.com> wrote:
+> > On Thursday, 2018-03-08 11:39:49 -0600, Gustavo A. R. Silva wrote:
+> >> In preparation to enabling -Wvla, remove VLA usage.
+> >>
+> >> Also, fixed as part of the directive to remove all VLAs from
+> >> the kernel: https://lkml.org/lkml/2018/3/7/621
+> >>
+> >> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+> >
+> > Sorry for my reply on v1, I missed that Emil already replied to another
+> > post of the same patch (side note on that, making use of `-vX` and
+> > `--in-reply-to` helps track the evolution of patches)
+> >
+> > This looks good to me:
+> > Reviewed-by: Eric Engestrom <eric.engestrom@imgtec.com>
+> >
+> Same here
+> Reviewed-by: Emil Velikov <emil.velikov@collabora.com>
 
-> Avoid a VLA[1] by using a real constant expression instead of a variable.
-> The compiler should be able to optimize the original code and avoid using
-> an actual VLA. Anyway this change is useful because it will avoid a false
-> positive with -Wvla, it might also help the compiler generating better
-> code.
-> 
-> [1] https://lkml.org/lkml/2018/3/7/621
-> 
-> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Patch queued for 4.17, thanks.
 
-Applied.
+Best regards,
+--
+Bartlomiej Zolnierkiewicz
+Samsung R&D Institute Poland
+Samsung Electronics
