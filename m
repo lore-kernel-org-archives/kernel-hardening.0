@@ -1,58 +1,35 @@
 MIME-Version: 1.0
-In-Reply-To: <20180312052639.GE8631@eros>
-References: <20180312052639.GE8631@eros>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Mon, 12 Mar 2018 11:28:19 +0100
-Message-ID: <CAJHCu1JTa_TFBv220Yju9xz0Rq-9xihp40yJ9-U5Ok-Pg4-aTQ@mail.gmail.com>
-Subject: Re: VLA commit log
+In-Reply-To: <543a0a74122172acae549329b35964f402da8b77.1520660422.git.gustavo@embeddedor.com>
+References: <cover.1520660422.git.gustavo@embeddedor.com> <543a0a74122172acae549329b35964f402da8b77.1520660422.git.gustavo@embeddedor.com>
+From: Krzysztof Kozlowski <krzk@kernel.org>
+Date: Mon, 12 Mar 2018 12:14:04 +0100
+Message-ID: <CAJKOXPc3ELO9sX0Xp391D2_3uDHK91snzHDn6FmDrJ6dt3E_Zg@mail.gmail.com>
+Subject: Re: [PATCH 2/2] rtc: s5m: Remove VLA usage
 Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <tobin@apporbit.com>
-Cc: Kees Cook <keescook@chromium.org>, Tycho Andersen <tycho@tycho.ws>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Cc: Sangbeom Kim <sbkim73@samsung.com>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, Alessandro Zummo <a.zummo@towertech.it>, Alexandre Belloni <alexandre.belloni@bootlin.com>, linux-samsung-soc@vger.kernel.org, linux-rtc@vger.kernel.org, linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-03-12 6:26 GMT+01:00 Tobin C. Harding <tobin@apporbit.com>:
-> Hi,
+On Sat, Mar 10, 2018 at 7:27 AM, Gustavo A. R. Silva
+<gustavo@embeddedor.com> wrote:
+> In preparation to enabling -Wvla, remove VLAs and replace them
+> with fixed-length arrays instead.
 >
-> I got some push back on the commit log we have all started to use
-> (copying Kees' initial commit log).  If we are going to do hundreds of
-> these patches should we write a perfectly correct commit log that can be
-> included as the start of the 'why' of each VLA removal patch?  Here is
-> my attempt, I am quite bad at writing commit logs so would love someone
-> to fix it up.
+> From a security viewpoint, the use of Variable Length Arrays can be
+> a vector for stack overflow attacks. Also, in general, as the code
+> evolves it is easy to lose track of how big a VLA can get. Thus, we
+> can end up having segfaults that are hard to debug.
 >
->     Kernel stack size is limited.  Variable Length Arrays (VLA) open the
->     kernel up to stack abuse in a couple of ways;
+> Also, fixed as part of the directive to remove all VLAs from
+> the kernel: https://lkml.org/lkml/2018/3/7/621
 >
->     1. If the variable can be controlled by an attacker.
->     2. Not having the size of the stack right there in plain site makes it
->     harder to maintain the code base because changes in one place can effect
->     the stack in another place (i.e in another function).
->
->     It would be nice to be able to build the kernel with -Wvla.  There has
->     been some consensus on this already [1].
->
->     ...
->
->     [1]: https://lkml.org/lkml/2018/3/7/621
->
-> The '...' would of course be different for each patch.  In case you
-> missed it here is the catalyst for this email
->
->         On Mon, Mar 12, 2018 at 03:49:40PM +1100, Tobin C. Harding wrote:
->         > The kernel would like to have all stack VLA usage removed[1].
->
->         Can you please stop writing this?  The Linux kernel isn't
->         sentient; it doesn't "like" anything.  You need to explain why
->         *you* (and other people) believe these changes should be made.
->
->
-> Perhaps we should add a summary of all the gcc discussion i.e why const
-> variables still cause gcc to emit a VLA warning.
+> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+> ---
+>  drivers/rtc/rtc-s5m.c | 14 ++++++++------
+>  1 file changed, 8 insertions(+), 6 deletions(-)
 
-Maybe it will be useful to update the doc (e.g.
-Documentation/process/coding-style.rst or a new
-Documentation/process/vla-considered-harmful.rst) with an extensive
-explanation of why VLAs shouldn't be used.
-And then we can just refer to that.
 
-Salvatore
+Reviewed-by: Krzysztof Kozlowski <krzk@kernel.org>
+
+Best regards,
+Krzysztof
