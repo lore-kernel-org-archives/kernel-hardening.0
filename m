@@ -1,31 +1,109 @@
-MIME-Version: 1.0
-In-Reply-To: <20180312050623.GD8631@eros>
-References: <1520830180-25452-1-git-send-email-me@tobin.cc>
- <20180312050204.GC25480@zzz.localdomain> <20180312050623.GD8631@eros>
-From: Ilya Dryomov <idryomov@gmail.com>
-Date: Mon, 12 Mar 2018 10:57:08 +0100
-Message-ID: <CAOi1vP-TrD9xp4ottwSUEx=h_-uLOYs5BuEMAgSJrK2gmdZoDg@mail.gmail.com>
-Subject: Re: [PATCH] rbd: Remove VLA stack usage
-Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Eric Biggers <ebiggers3@gmail.com>, Sage Weil <sage@redhat.com>, Alex Elder <elder@kernel.org>, Ceph Development <ceph-devel@vger.kernel.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Subject: [PATCH v2] scsi: eata: drop VLA in reorder()
+Date: Mon, 12 Mar 2018 13:48:57 +0100
+Message-Id: <1520858937-3582-1-git-send-email-s.mesoraca16@gmail.com>
+To: linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, linux-scsi@vger.kernel.org, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, "Tobin C. Harding" <tobin@apporbit.com>, Dario Ballabio <ballabio_dario@emc.com>, Kees Cook <keescook@chromium.org>, Salvatore Mesoraca <s.mesoraca16@gmail.com>, valdis.kletnieks@vt.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 12, 2018 at 6:06 AM, Tobin C. Harding <me@tobin.cc> wrote:
-> On Sun, Mar 11, 2018 at 10:02:04PM -0700, Eric Biggers wrote:
->> On Mon, Mar 12, 2018 at 03:49:40PM +1100, Tobin C. Harding wrote:
->> > The kernel would like to have all stack VLA usage removed[1].
->>
->> Can you please stop writing this?  The Linux kernel isn't sentient; it doesn't
->> "like" anything.  You need to explain why *you* (and other people) believe these
->> changes should be made.
->
-> No worries, will re-spin with better description.
+Avoid 3 VLAs[1] by using a single dinamically allocated array
+and some helper variables: we don't need 3 arrays.
 
-I'd prefer a single patch covering both functions.
+[1] https://lkml.org/lkml/2018/3/7/621
 
-Also, as these are char arrays, use sizeof instead of ARRAY_SIZE.
+Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+---
+ drivers/scsi/eata.c | 40 ++++++++++++++++++++++++++--------------
+ 1 file changed, 26 insertions(+), 14 deletions(-)
 
-Thanks,
-
-                Ilya
+diff --git a/drivers/scsi/eata.c b/drivers/scsi/eata.c
+index 6501c33..8ba44b7 100644
+--- a/drivers/scsi/eata.c
++++ b/drivers/scsi/eata.c
+@@ -2091,12 +2091,14 @@ static void sort(unsigned long sk[], unsigned int da[], unsigned int n,
+ static int reorder(struct hostdata *ha, unsigned long cursec,
+ 		   unsigned int ihdlr, unsigned int il[], unsigned int n_ready)
+ {
++	int overlap;
+ 	struct scsi_cmnd *SCpnt;
+ 	struct mscp *cpp;
+ 	unsigned int k, n;
+ 	unsigned int rev = 0, s = 1, r = 1;
+-	unsigned int input_only = 1, overlap = 0;
+-	unsigned long sl[n_ready], pl[n_ready], ll[n_ready];
++	unsigned int input_only = 1;
++	unsigned long *sl;
++	unsigned long sl_zero, sl_cur, sl_prev, ll_cur, ll_prev;
+ 	unsigned long maxsec = 0, minsec = ULONG_MAX, seek = 0, iseek = 0;
+ 	unsigned long ioseek = 0;
+ 
+@@ -2115,6 +2117,12 @@ static int reorder(struct hostdata *ha, unsigned long cursec,
+ 	if (n_ready <= 1)
+ 		return 0;
+ 
++	overlap = -ENOMEM;
++	sl = kcalloc(n_ready, sizeof(*sl), GFP_ATOMIC);
++	if (!sl)
++		goto out;
++	overlap = 0;
++
+ 	for (n = 0; n < n_ready; n++) {
+ 		k = il[n];
+ 		cpp = &ha->cp[k];
+@@ -2164,31 +2172,33 @@ static int reorder(struct hostdata *ha, unsigned long cursec,
+ 	if (!((rev && r) || (!rev && s)))
+ 		sort(sl, il, n_ready, rev);
+ 
++	sl_zero = sl[0];
++
+ 	if (!input_only)
+ 		for (n = 0; n < n_ready; n++) {
+ 			k = il[n];
+ 			cpp = &ha->cp[k];
+ 			SCpnt = cpp->SCpnt;
+-			ll[n] = blk_rq_sectors(SCpnt->request);
+-			pl[n] = SCpnt->serial_number;
++			ll_cur = blk_rq_sectors(SCpnt->request);
++			sl_cur = sl[n];
++			sl[n] = SCpnt->serial_number;
+ 
+-			if (!n)
+-				continue;
+-
+-			if ((sl[n] == sl[n - 1])
+-			    || (!rev && ((sl[n - 1] + ll[n - 1]) > sl[n]))
+-			    || (rev && ((sl[n] + ll[n]) > sl[n - 1])))
++			if (n && ((sl_cur == sl_prev)
++				  || (!rev && ((sl_prev + ll_prev) > sl_cur))
++				  || (rev && ((sl_cur + ll_cur) > sl_prev))))
+ 				overlap = 1;
++			ll_prev = ll_cur;
++			sl_prev = sl_cur;
+ 		}
+ 
+ 	if (overlap)
+-		sort(pl, il, n_ready, 0);
++		sort(sl, il, n_ready, 0);
+ 
+ 	if (link_statistics) {
+-		if (cursec > sl[0])
+-			iseek = cursec - sl[0];
++		if (cursec > sl_zero)
++			iseek = cursec - sl_zero;
+ 		else
+-			iseek = sl[0] - cursec;
++			iseek = sl_zero - cursec;
+ 		batchcount++;
+ 		readycount += n_ready;
+ 		seeknosort += seek / 1024;
+@@ -2225,6 +2235,8 @@ static int reorder(struct hostdata *ha, unsigned long cursec,
+ 			     YESNO(overlap), cpp->din);
+ 		}
+ #endif
++	kfree(sl);
++out:
+ 	return overlap;
+ }
+ 
+-- 
+1.9.1
