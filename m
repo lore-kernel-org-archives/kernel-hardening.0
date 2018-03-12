@@ -1,89 +1,89 @@
-Subject: Re: [PATCH 4/7] Protectable Memory
-References: <20180228200620.30026-1-igor.stoppa@huawei.com>
- <20180228200620.30026-5-igor.stoppa@huawei.com>
- <20180312191314.GA29191@bombadil.infradead.org>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <b481f817-dad4-6bed-15bb-1bda4396b6b6@huawei.com>
-Date: Mon, 12 Mar 2018 23:25:54 +0200
-MIME-Version: 1.0
-In-Reply-To: <20180312191314.GA29191@bombadil.infradead.org>
-Content-Type: text/plain; charset="utf-8"
+Date: Mon, 12 Mar 2018 15:55:24 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Subject: Re: [PATCH v3] kernel.h: Skip single-eval logic on literals in
+ min()/max()
+Message-Id: <20180312155524.b421f07d7f08f24c57bd1887@linux-foundation.org>
+In-Reply-To: <CAGXu5j+D=zs8AMb969dhH05GmKPuBxKPcAs89KfKzVf47faL1g@mail.gmail.com>
+References: <20180309200536.GA5670@beast>
+	<20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
+	<CA+55aFw9hWz1-YFVoHEiXDjqb9q7dz=rQVXr7YLkMuVLvbwaOg@mail.gmail.com>
+	<20180309163241.a421e216999bd0b1f43a64c2@linux-foundation.org>
+	<CA+55aFwbO2vUsjWzAwB6SZ65RM4r3P0+2JvyMHn=ry0CgWCBgA@mail.gmail.com>
+	<CAGXu5j+D=zs8AMb969dhH05GmKPuBxKPcAs89KfKzVf47faL1g@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-To: Matthew Wilcox <willy@infradead.org>
-Cc: david@fromorbit.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+To: Kees Cook <keescook@chromium.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Fri, 9 Mar 2018 17:30:15 -0800 Kees Cook <keescook@chromium.org> wrote:
 
-
-On 12/03/18 21:13, Matthew Wilcox wrote:
-> On Wed, Feb 28, 2018 at 10:06:17PM +0200, Igor Stoppa wrote:
->> struct gen_pool *pmalloc_create_pool(const char *name,
->> 					 int min_alloc_order);
->> int is_pmalloc_object(const void *ptr, const unsigned long n);
->> bool pmalloc_prealloc(struct gen_pool *pool, size_t size);
->> void *pmalloc(struct gen_pool *pool, size_t size, gfp_t gfp);
->> static inline void *pzalloc(struct gen_pool *pool, size_t size, gfp_t gfp)
->> static inline void *pmalloc_array(struct gen_pool *pool, size_t n,
->> 				  size_t size, gfp_t flags)
->> static inline void *pcalloc(struct gen_pool *pool, size_t n,
->> 			    size_t size, gfp_t flags)
->> static inline char *pstrdup(struct gen_pool *pool, const char *s, gfp_t gfp)
->> int pmalloc_protect_pool(struct gen_pool *pool);
->> static inline void pfree(struct gen_pool *pool, const void *addr)
->> int pmalloc_destroy_pool(struct gen_pool *pool);
+> > It's one reason why I wondered if simplifying the expression to have
+> > just that single __builtin_constant_p() might not end up working..
 > 
-> Do you have users for all these functions?  I'm particularly sceptical of
-> pfree().
-
-The typical case is when rolling back allocations, on an error path.
-For example, with SELinux, the userspace provides the policy, which gets
-processed and converted into a policyDB, where every policy maps to
-several structures allocated dynamically.
-
-The allocation is not transactional. In case a policy turns out to be
-bad/broken, while being interpreted, those structures that were
-initially allocated for that policy, must be freed.
-
-Since pmalloc is meant to be a drop in replacement for k/vmalloc, it
-needs to provide also pfree.
-
->  To my mind, a user wants to:
+> Yeah, it seems like it doesn't bail out as "false" for complex
+> expressions given to __builtin_constant_p().
 > 
-> pmalloc_create();
-> pmalloc(); * N
-> pmalloc_protect();
-> ...
-> pmalloc_destroy();
+> If no magic solution, then which of these?
+> 
+> - go back to my original "multi-eval max only for constants" macro (meh)
+> - add gcc version checks around this and similarly for -Wvla in the future (eww)
+> - raise gcc version (yikes)
 
-This is the simplest case, but also the error path must be supported.
+Replacing the __builtin_choose_expr() with ?: works of course.  What
+will be the runtime effects?
 
-> I don't mind the pstrdup, pcalloc, pmalloc_array, pzalloc variations, but
+I tried replacing
 
-All those functions turned out to be necessary when converting SELinux
-to pmalloc.
-Yes, I haven't published this code yet, but I was hoping to first be
-done with pmalloc and then move on to SELinux, which I suspect will be
-harder to chew :-/
+	__builtin_choose_expr(__builtin_constant_p(x) &&
+                              __builtin_constant_p(y),
 
-> I don't know why you need is_pmalloc_object().
+with
 
-Because of hardened usercopy [1]:
+	__builtin_choose_expr(__builtin_constant_p(x + y),
 
+but no success.
 
-On 23/05/17 00:38, Kees Cook wrote:
+I'm not sure what else to try to trick gcc into working.
 
-[...]
-
-> I'd like hardened usercopy to grow knowledge of these
-> allocations so we can bounds-check objects. Right now, mm/usercopy.c
-> just looks at PageSlab(page) to decide if it should do slab checks. I
-> think adding a check for this type of object would be very important
-> there.
-
-
-
-[1] http://www.openwall.com/lists/kernel-hardening/2017/05/23/17
-
-
---
-igor
+--- a/include/linux/kernel.h~kernelh-skip-single-eval-logic-on-literals-in-min-max-v3-fix
++++ a/include/linux/kernel.h
+@@ -804,13 +804,10 @@ static inline void ftrace_dump(enum ftra
+  * accidental VLA.
+  */
+ #define __min(t1, t2, x, y)						\
+-	__builtin_choose_expr(__builtin_constant_p(x) &&		\
+-			      __builtin_constant_p(y),			\
+-			      (t1)(x) < (t2)(y) ? (t1)(x) : (t2)(y),	\
+-			      __single_eval_min(t1, t2,			\
+-						__UNIQUE_ID(min1_),	\
+-						__UNIQUE_ID(min2_),	\
+-						x, y))
++	((__builtin_constant_p(x) && __builtin_constant_p(y)) ?		\
++		((t1)(x) < (t2)(y) ? (t1)(x) : (t2)(y)) :		\
++		(__single_eval_min(t1, t2, __UNIQUE_ID(min1_),		\
++				  __UNIQUE_ID(min2_), x, y)))
+ 
+ /**
+  * min - return minimum of two values of the same or compatible types
+@@ -826,13 +823,11 @@ static inline void ftrace_dump(enum ftra
+ 	max1 > max2 ? max1 : max2; })
+ 
+ #define __max(t1, t2, x, y)						\
+-	__builtin_choose_expr(__builtin_constant_p(x) &&		\
+-			      __builtin_constant_p(y),			\
+-			      (t1)(x) > (t2)(y) ? (t1)(x) : (t2)(y),	\
+-			      __single_eval_max(t1, t2,			\
+-						__UNIQUE_ID(max1_),	\
+-						__UNIQUE_ID(max2_),	\
+-						x, y))
++	((__builtin_constant_p(x) && __builtin_constant_p(y)) ?		\
++		((t1)(x) > (t2)(y) ? (t1)(x) : (t2)(y)) :		\
++		(__single_eval_max(t1, t2, __UNIQUE_ID(max1_),		\
++				  __UNIQUE_ID(max2_), x, y)))
++
+ /**
+  * max - return maximum of two values of the same or compatible types
+  * @x: first value
+_
