@@ -1,60 +1,32 @@
-Date: Mon, 12 Mar 2018 16:44:50 +1100
-From: "Tobin C. Harding" <tobin@apporbit.com>
-Subject: Re: VLA commit log
-Message-ID: <20180312054450.GF8631@eros>
-References: <20180312052639.GE8631@eros>
- <861efe7a-e51f-e004-5979-aef0ed9ff1fe@embeddedor.com>
+Date: Mon, 12 Mar 2018 16:46:13 +1100
+From: "Tobin C. Harding" <me@tobin.cc>
+Subject: Re: [PATCH v2] staging: vchiq_arm: Clear VLA warning
+Message-ID: <20180312054613.GG8631@eros>
+References: <1520818673-14084-1-git-send-email-me@tobin.cc>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <861efe7a-e51f-e004-5979-aef0ed9ff1fe@embeddedor.com>
-To: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Cc: Kees Cook <keescook@chromium.org>, Tycho Andersen <tycho@tycho.ws>, kernel-hardening@lists.openwall.com
+In-Reply-To: <1520818673-14084-1-git-send-email-me@tobin.cc>
+To: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Anholt <eric@anholt.net>, Stefan Wahren <stefan.wahren@i2se.com>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, driverdev-devel@linuxdriverproject.org, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 12, 2018 at 12:38:04AM -0500, Gustavo A. R. Silva wrote:
+On Mon, Mar 12, 2018 at 12:37:53PM +1100, Tobin C. Harding wrote:
+> The kernel would like to have all stack VLA usage removed[1].  The array
+> here is fixed (declared with a const variable) but it appears like a VLA
+> to the compiler.  Also, currently we are putting 768 bytes on the
+> stack.  This function is only called on the error path so performance is
+> not critical, let's just allocate the memory instead of using the
+> stack.  This saves stack space and removes the VLA build warning.
 > 
+> kmalloc a buffer for dumping state instead of using the stack.
 > 
-> On 03/12/2018 12:26 AM, Tobin C. Harding wrote:
-> >Hi,
-> >
-> >I got some push back on the commit log we have all started to use
-> >(copying Kees' initial commit log).  If we are going to do hundreds of
-> >these patches should we write a perfectly correct commit log that can be
-> >included as the start of the 'why' of each VLA removal patch?  Here is
-> >my attempt, I am quite bad at writing commit logs so would love someone
-> >to fix it up.
-> >
+> [1]: https://lkml.org/lkml/2018/3/7/621
 > 
-> The same thing happened to me once and then I wrote this:
+> Signed-off-by: Tobin C. Harding <me@tobin.cc>
+> ---
 
-I had a feeling this had happened to you but I couldn't find the patch
-that made me think that when writing this.
-
-> In preparation to enabling -Wvla, remove VLA and replace it
-> with a fixed-length array instead.
-
----
-
-> From a security viewpoint, the use of Variable Length Arrays can be
-> a vector for stack overflow attacks. Also, in general, as the code
-> evolves it is easy to lose track of how big a VLA can get. Thus, we
-> can end up having segfaults that are hard to debug.
->
-> Also, fixed as part of the directive to remove all VLAs from
-> the kernel: https://lkml.org/lkml/2018/3/7/621
-
----
-
-Cool, I like this (between ---).  Kees can you ack this since I'm going
-to cut and paste it about 300 times :)
-
-> The maintainer lived happily ever after. :)
-
-lol
-
-> --
-> Gustavo
+Drop this please, leaks memory.
 
 thanks,
 Tobin.
