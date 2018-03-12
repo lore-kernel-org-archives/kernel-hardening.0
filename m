@@ -1,62 +1,28 @@
-Sender: Valdis Kletnieks <valdis@vt.edu>
-From: valdis.kletnieks@vt.edu
-Subject: Re: [PATCH] scsi: eata: drop VLA in reorder()
-In-Reply-To: <20180312030834.GC8631@eros>
-References: <1520802418-17284-1-git-send-email-s.mesoraca16@gmail.com>
- <20180312030834.GC8631@eros>
-Mime-Version: 1.0
-Content-Type: multipart/signed; boundary="==_Exmh_1520836598_3502P";
-	 micalg=pgp-sha1; protocol="application/pgp-signature"
+Subject: Re: [PATCH 3.16 56/76] x86/syscall: Sanitize syscall table
+ de-references under speculation
+References: <lsq.1520823972.93871245@decadent.org.uk>
+From: Jiri Slaby <jslaby@suse.cz>
+Message-ID: <2a1d3a0f-6227-39c6-0ed9-a07c22424d67@suse.cz>
+Date: Mon, 12 Mar 2018 08:32:12 +0100
+MIME-Version: 1.0
+In-Reply-To: <lsq.1520823972.93871245@decadent.org.uk>
+Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-Date: Mon, 12 Mar 2018 02:36:38 -0400
-Message-ID: <134937.1520836598@turing-police.cc.vt.edu>
-To: "Tobin C. Harding" <tobin@apporbit.com>
-Cc: Salvatore Mesoraca <s.mesoraca16@gmail.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-scsi@vger.kernel.org, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Dario Ballabio <ballabio_dario@emc.com>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, kernelnewbies@kernelnewbies.org
+To: Ben Hutchings <ben@decadent.org.uk>, linux-kernel@vger.kernel.org, stable@vger.kernel.org
+Cc: akpm@linux-foundation.org, Jinpu Wang <jinpu.wang@profitbricks.com>, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Jan Beulich <JBeulich@suse.com>, alan@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, Dan Williams <dan.j.williams@intel.com>, gregkh@linuxfoundation.org, linux-arch@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
---==_Exmh_1520836598_3502P
-Content-Type: text/plain; charset=us-ascii
+On 03/12/2018, 04:06 AM, Ben Hutchings wrote:
+> In 3.16 the x86_32 syscall table lookup is also written in assembly.
+> So I've taken Jiri's version and added similar masking in entry_32.S,
+> using edx as the temporary.  edx is clobbered by SAVE_REGS and seems
+> to be free at this point.
 
-On Mon, 12 Mar 2018 14:08:34 +1100, "Tobin C. Harding" said:
+I don't know the state in 3.16, but in 3.12, I had to fix the 32bit
+entry on 64bit in arch/x86/ia32/ia32entry.S (ia32_sysenter_target &
+others) too.
 
-> removal patch that 768 was a lot of stack space.  That comment did,
-> however say 'deep in some transfer call chain'.  I don't know what a
-> 'transfer call chain' (the transfer bit) is but is there some heuristic
-> we can use to know how deep is deep?  Or more to the point, is there some
-> heuristic we can use to know what is an acceptable amount of stack space
-> to use?
-
-The canonical "why we put kernel stacks on a diet" configuration:
-
-Imagine a bunch of ISCSI targets - with IPSec wrapping the connection.
-Arranged into a software RAID5. With LVM. With encryption on the LV.  With XFS
-on the encrypted LV.  And then the in-kernel sharing it out over NFS. With
-more IPSec wrapping the  NFS TCP connection.
-
-Oh, and I/O interrupts, just for fun.  And most of all of that has to fit their *entire*
-stack chain into 2 4K pages.  Suddenly, that 768 bytes is taking close to 10% of
-*all* of the stack that all of that call chain has to share.
-
-And I see that patch is against scsi/eata.c - which means it can plausibly end up
-sharing that stack scenario above starting at 'software raid5'.
-
-(For bonus points, the alert reader is invited to figure out which stack each of the
-above actually ends up on.  No, it isn't split across enough stacks that taking
-768 bytes out of any of them is acceptable.. :)
-
---==_Exmh_1520836598_3502P
-Content-Type: application/pgp-signature
-
------BEGIN PGP SIGNATURE-----
-Comment: Exmh version 2.8.0 04/21/2017
-
-iQEVAwUBWqYf9o0DS38y7CIcAQLwGwgAsbjEunB2hZFHsWdo75SIaBMf5iCRpt18
-8TZdZJwgBLqT/6mndzwmwc4DynfPCoxsE+fNsfTcTumGNiqWiBVPKM9YQhCvkdu4
-Iygpn6H23C6pgSzExzwNuGGstGyVh9fLsiLBiU07aFQA0ReINi9XZGZscrrDbO2T
-cr4XIuJ0onTJX7367zOGBDNrFVfpO9ZJby7Zjy/1FL6XPg7IV6lUz4ciYAK2tcbv
-0gb6AQdDSyz3BJcEorYoLc1wmdEBAiJ/UjGYL8c6V4O7jazhNl0pMn2HWuhupqKE
-HhlMt5TyCpt6fHYgSQqiNPidq5fvmqWut4bKY3EZwRf8YKUMHgNeAQ==
-=jNqk
------END PGP SIGNATURE-----
-
---==_Exmh_1520836598_3502P--
+thanks,
+-- 
+js
+suse labs
