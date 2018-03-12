@@ -1,23 +1,37 @@
-Subject: Re: [PATCH 2/2] net: rds: drop VLA in rds_walk_conn_path_info()
-References: <1520802470-17374-1-git-send-email-s.mesoraca16@gmail.com>
- <1520802470-17374-2-git-send-email-s.mesoraca16@gmail.com>
-From: "santosh.shilimkar@oracle.com" <santosh.shilimkar@oracle.com>
-Message-ID: <07a52b72-5ecf-2027-0e87-e16dc0a70d09@oracle.com>
-Date: Mon, 12 Mar 2018 00:06:29 -0700
+Date: Mon, 12 Mar 2018 08:54:08 +0000
+From: Lee Jones <lee.jones@linaro.org>
+Subject: Re: [PATCH 1/2] rtc: s5m: Move enum from rtc.h to rtc-s5m.c
+Message-ID: <20180312085408.juqhh5pvgno5zag6@dell>
+References: <cover.1520660422.git.gustavo@embeddedor.com>
+ <44ee5bd5053d579dc6c46b21e2ef8f6acf70e4ce.1520660422.git.gustavo@embeddedor.com>
 MIME-Version: 1.0
-In-Reply-To: <1520802470-17374-2-git-send-email-s.mesoraca16@gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>, linux-kernel@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, linux-rdma@vger.kernel.org, netdev@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <44ee5bd5053d579dc6c46b21e2ef8f6acf70e4ce.1520660422.git.gustavo@embeddedor.com>
+To: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Cc: Sangbeom Kim <sbkim73@samsung.com>, Krzysztof Kozlowski <krzk@kernel.org>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, Alessandro Zummo <a.zummo@towertech.it>, Alexandre Belloni <alexandre.belloni@bootlin.com>, linux-samsung-soc@vger.kernel.org, linux-rtc@vger.kernel.org, linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 3/11/18 2:07 PM, Salvatore Mesoraca wrote:
-> Avoid VLA[1] by using an already allocated buffer passed
-> by the caller.
+On Sat, 10 Mar 2018, Gustavo A. R. Silva wrote:
+
+> Move this enum to rtc-s5m.c once it is meaningless to others drivers [1].
 > 
-> [1] https://lkml.org/lkml/2018/3/7/621
+> [1] https://marc.info/?l=linux-rtc&m=152060068925948&w=2
 > 
-> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
 > ---
-Acked-by: Santosh Shilimkar <santosh.shilimkar@oracle.com>
+>  drivers/rtc/rtc-s5m.c           | 11 +++++++++++
+>  include/linux/mfd/samsung/rtc.h | 11 -----------
+
+I don't think this will conflict with anything (unless some major
+works are carried out within the next few weeks - in which case I'll
+need a pull-request, but for now ...)
+
+Acked-by: Lee Jones <lee.jones@linaro.org>
+
+-- 
+Lee Jones [李琼斯]
+Linaro Services Technical Lead
+Linaro.org │ Open source software for ARM SoCs
+Follow Linaro: Facebook | Twitter | Blog
