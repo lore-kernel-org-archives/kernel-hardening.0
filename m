@@ -1,48 +1,63 @@
-Date: Mon, 12 Mar 2018 06:58:04 +0100 (CET)
-From: Stefan Wahren <stefan.wahren@i2se.com>
-Message-ID: <1166411830.411906.1520834284931@email.1und1.de>
-In-Reply-To: <20180312054613.GG8631@eros>
-References: <1520818673-14084-1-git-send-email-me@tobin.cc>
- <20180312054613.GG8631@eros>
-Subject: Re: [PATCH v2] staging: vchiq_arm: Clear VLA warning
+Subject: Re: EXT: [PATCH 3/4] gpio: Remove VLA from xra1403 driver
+References: <20180310001021.6437-1-labbott@redhat.com>
+ <20180310001021.6437-4-labbott@redhat.com>
+From: Nandor Han <nandor.han@ge.com>
+Message-ID: <2ba65a3e-3bc9-d709-caf9-f0c512d718a3@ge.com>
+Date: Mon, 12 Mar 2018 08:06:00 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-To: Eric Anholt <eric@anholt.net>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Tobin C. Harding" <me@tobin.cc>
-Cc: Tycho Andersen <tycho@tycho.ws>, driverdev-devel@linuxdriverproject.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+In-Reply-To: <20180310001021.6437-4-labbott@redhat.com>
+Content-Type: text/plain; charset="utf-8"; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Laura Abbott <labbott@redhat.com>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Semi Malinen <semi.malinen@ge.com>
+Cc: linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Tobin,
+On 10/03/18 02:10, Laura Abbott wrote:
+> 
+> The new challenge is to remove VLAs from the kernel
+> (see https://lkml.org/lkml/2018/3/7/621)
+> 
+> This patch replaces a VLA with an appropriate call to kmalloc_array.
+> 
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
 
-> "Tobin C. Harding" <me@tobin.cc> hat am 12. M=C3=A4rz 2018 um 06:46 gesch=
-rieben:
->=20
->=20
-> On Mon, Mar 12, 2018 at 12:37:53PM +1100, Tobin C. Harding wrote:
-> > The kernel would like to have all stack VLA usage removed[1].  The arra=
-y
-> > here is fixed (declared with a const variable) but it appears like a VL=
-A
-> > to the compiler.  Also, currently we are putting 768 bytes on the
-> > stack.  This function is only called on the error path so performance i=
-s
-> > not critical, let's just allocate the memory instead of using the
-> > stack.  This saves stack space and removes the VLA build warning.
-> >=20
-> > kmalloc a buffer for dumping state instead of using the stack.
-> >=20
-> > [1]: https://lkml.org/lkml/2018/3/7/621
-> >=20
-> > Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> > ---
->=20
-> Drop this please, leaks memory.
+This looks good to me.
+Reviewed-by: Nandor Han <nandor.han@ge.com>
 
-except from the leak, did you test this patch on a RPi?
+Nandor
 
-Thanks
-Stefan
-
->=20
-> thanks,
-> Tobin.
+>   drivers/gpio/gpio-xra1403.c | 8 +++++++-
+>   1 file changed, 7 insertions(+), 1 deletion(-)
+> 
+> diff --git a/drivers/gpio/gpio-xra1403.c b/drivers/gpio/gpio-xra1403.c
+> index 0230e4b7a2fb..8d4c8e99b251 100644
+> --- a/drivers/gpio/gpio-xra1403.c
+> +++ b/drivers/gpio/gpio-xra1403.c
+> @@ -126,11 +126,16 @@ static void xra1403_dbg_show(struct seq_file *s, struct gpio_chip *chip)
+>   {
+>   	int reg;
+>   	struct xra1403 *xra = gpiochip_get_data(chip);
+> -	int value[xra1403_regmap_cfg.max_register];
+> +	int *value;
+>   	int i;
+>   	unsigned int gcr;
+>   	unsigned int gsr;
+>   
+> +	value = kmalloc_array(xra1403_regmap_cfg.max_register, sizeof(*value),
+> +				GFP_KERNEL);
+> +	if (!value)
+> +		return;
+> +
+>   	seq_puts(s, "xra reg:");
+>   	for (reg = 0; reg <= xra1403_regmap_cfg.max_register; reg++)
+>   		seq_printf(s, " %2.2x", reg);
+> @@ -154,6 +159,7 @@ static void xra1403_dbg_show(struct seq_file *s, struct gpio_chip *chip)
+>   			   (gcr & BIT(i)) ? "in" : "out",
+>   			   (gsr & BIT(i)) ? "hi" : "lo");
+>   	}
+> +	kfree(value);
+>   }
+>   #else
+>   #define xra1403_dbg_show NULL
+> 
