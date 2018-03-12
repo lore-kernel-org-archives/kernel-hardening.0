@@ -1,57 +1,68 @@
-Date: Mon, 12 Mar 2018 14:08:34 +1100
-From: "Tobin C. Harding" <tobin@apporbit.com>
-Subject: Re: [PATCH] scsi: eata: drop VLA in reorder()
-Message-ID: <20180312030834.GC8631@eros>
-References: <1520802418-17284-1-git-send-email-s.mesoraca16@gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1520802418-17284-1-git-send-email-s.mesoraca16@gmail.com>
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-scsi@vger.kernel.org, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Dario Ballabio <ballabio_dario@emc.com>, Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, kernelnewbies@kernelnewbies.org
+From: "Tobin C. Harding" <me@tobin.cc>
+Subject: [PATCH] of: unittest: Remove VLA stack usage
+Date: Mon, 12 Mar 2018 15:27:23 +1100
+Message-Id: <1520828843-22289-1-git-send-email-me@tobin.cc>
+To: Rob Herring <robh+dt@kernel.org>, Frank Rowand <frowand.list@gmail.com>
+Cc: "Tobin C. Harding" <me@tobin.cc>, devicetree@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Adding kernel newbies to CC because I pose a few noob questions :)
-Adding Linus to CC because I quoted him.
+The kernel would like to have all stack VLA usage removed[1].  This is a
+test function so the execution speed is not critical.  We can allocate
+memory for this buffer instead of using a VLA.  If kmalloc() fails just
+return.
 
-On Sun, Mar 11, 2018 at 10:06:58PM +0100, Salvatore Mesoraca wrote:
-> n_ready will always be less than or equal to MAX_MAILBOXES.
-> So we avoid a VLA[1] and use fixed-length arrays instead.
-> 
-> [1] https://lkml.org/lkml/2018/3/7/621
-> 
-> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-> ---
->  drivers/scsi/eata.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
-> 
-> diff --git a/drivers/scsi/eata.c b/drivers/scsi/eata.c
-> index 6501c33..202cd17 100644
-> --- a/drivers/scsi/eata.c
-> +++ b/drivers/scsi/eata.c
-> @@ -2096,7 +2096,7 @@ static int reorder(struct hostdata *ha, unsigned long cursec,
->  	unsigned int k, n;
->  	unsigned int rev = 0, s = 1, r = 1;
->  	unsigned int input_only = 1, overlap = 0;
-> -	unsigned long sl[n_ready], pl[n_ready], ll[n_ready];
-> +	unsigned long sl[MAX_MAILBOXES], pl[MAX_MAILBOXES], ll[MAX_MAILBOXES];
+Allocate buffer with kmalloc().
 
-I think we are going to see a recurring theme here.  MAX_MAILBOXES==64
-so this patch adds 1536 bytes to the stack on a 64 bit machine or 768
-bytes on a 32 bit machine.  Linus already commented on another VLA
-removal patch that 768 was a lot of stack space.  That comment did,
-however say 'deep in some transfer call chain'.  I don't know what a
-'transfer call chain' (the transfer bit) is but is there some heuristic
-we can use to know how deep is deep?  Or more to the point, is there some
-heuristic we can use to know what is an acceptable amount of stack space
-to use?
+[1]: https://lkml.org/lkml/2018/3/7/621
 
-As far as this patch is concerned wouldn't a kmalloc (with GFP_ATOMIC)
-be ok?  We are in an interrupt handler, can we assume that since IO has
-just occurred that the IO will be so slow comparatively that a memory
-allocation will be quick.  (assuming IO since eata.c only requests a
-single irq line.)
+Signed-off-by: Tobin C. Harding <me@tobin.cc>
+---
 
+Kees is this annoying you, CC'ing you an all my VLA patches?
 
-thanks,
-Tobin.
+ drivers/of/unittest.c | 15 +++++++++++----
+ 1 file changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/of/unittest.c b/drivers/of/unittest.c
+index 1991fe4319f5..38cbc343b7da 100644
+--- a/drivers/of/unittest.c
++++ b/drivers/of/unittest.c
+@@ -254,12 +254,18 @@ static void __init of_unittest_check_tree_linkage(void)
+ static void __init of_unittest_printf_one(struct device_node *np, const char *fmt,
+ 					  const char *expected)
+ {
+-	unsigned char buf[strlen(expected)+10];
++	unsigned char *buf;
++	int buf_size;
+ 	int size, i;
+ 
++	buf_size = strlen(expected) + 10;
++	buf = kmalloc(buf_size, GFP_KERNEL);
++	if (!buf)
++		return;
++
+ 	/* Baseline; check conversion with a large size limit */
+-	memset(buf, 0xff, sizeof(buf));
+-	size = snprintf(buf, sizeof(buf) - 2, fmt, np);
++	memset(buf, 0xff, buf_size);
++	size = snprintf(buf, buf_size - 2, fmt, np);
+ 
+ 	/* use strcmp() instead of strncmp() here to be absolutely sure strings match */
+ 	unittest((strcmp(buf, expected) == 0) && (buf[size+1] == 0xff),
+@@ -270,12 +276,13 @@ static void __init of_unittest_printf_one(struct device_node *np, const char *fm
+ 	size++;
+ 	for (i = 0; i < 2; i++, size--) {
+ 		/* Clear the buffer, and make sure it works correctly still */
+-		memset(buf, 0xff, sizeof(buf));
++		memset(buf, 0xff, buf_size);
+ 		snprintf(buf, size+1, fmt, np);
+ 		unittest(strncmp(buf, expected, size) == 0 && (buf[size+1] == 0xff),
+ 			"snprintf failed; size=%i fmt='%s' expected='%s' rslt='%s'\n",
+ 			size, fmt, expected, buf);
+ 	}
++	kfree(buf);
+ }
+ 
+ static void __init of_unittest_printf(void)
+-- 
+2.7.4
