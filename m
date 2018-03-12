@@ -1,100 +1,115 @@
-Date: Mon, 12 Mar 2018 14:41:05 +0100
-From: Sebastian Reichel <sre@kernel.org>
-Subject: Re: [PATCH v2] power: supply: da9150-fg: remove VLA usage
-Message-ID: <20180312134105.vyuqjluqyght4trd@earth.universe>
-References: <20180309182708.GA18542@embeddedgus>
-MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha512;
-	protocol="application/pgp-signature"; boundary="k6uosldzav3rb6ov"
-Content-Disposition: inline
-In-Reply-To: <20180309182708.GA18542@embeddedgus>
-To: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Cc: Adam Thomson <Adam.Thomson.Opensource@diasemi.com>, Support Opensource <support.opensource@diasemi.com>, linux-pm@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+From: Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>
+Subject: Re: [PATCH] vgacon: fix function prototypes
+Date: Mon, 12 Mar 2018 15:06:12 +0100
+Message-id: <4831767.IeJWIvYDSU@amdc3058>
+In-reply-to: 
+	<CAGXu5jJBQPPv1jr85wFFKAuLtacMWk+_P-=Yi0UR=E9yJ7nkow@mail.gmail.com>
+MIME-version: 1.0
+Content-transfer-encoding: quoted-printable
+Content-type: text/plain; charset="iso-8859-1"
+References: <20180310064059.12720-1-jmoreira@suse.de>
+	<CAGXu5jJBQPPv1jr85wFFKAuLtacMWk+_P-=Yi0UR=E9yJ7nkow@mail.gmail.com>
+	<CGME20180312140620epcas1p10db98576017a2e4ef9a6ada74eb5daf0@epcas1p1.samsung.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Joao Moreira <jmoreira@suse.de>, Greg KH <gregkh@linuxfoundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Daniel Micay <danielmicay@gmail.com>, linux-fbdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---k6uosldzav3rb6ov
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
-
 Hi,
 
-On Fri, Mar 09, 2018 at 12:27:08PM -0600, Gustavo A. R. Silva wrote:
-> In preparation to enabling -Wvla, remove VLA usage and replace it
-> with fixed-length arrays.
+On Saturday, March 10, 2018 07:27:21 AM Kees Cook wrote:
+> On Fri, Mar 9, 2018 at 10:40 PM, Joao Moreira <jmoreira@suse.de> wrot=
+e:
+> > It is possible to indirectly invoke functions with prototypes that =
+do not
+> > match those of the respectively used function pointers by using voi=
+d types.
+> > Despite widely used as a feature for relaxing function invocation, =
+this
+> > should be avoided when possible as it may prevent the use of heuris=
+tics
+> > such as prototype matching-based Control-Flow Integrity, which can =
+be used
+> > to prevent ROP-based attacks.
+> >
+> > Given the above, the current efforts to improve the Linux security,=
+ and the
+> > upcoming kernel support to compilers with CFI features, fix prototy=
+pes in
+> > vgacon console driver.
+> >
+> > Another similar fix can be seen in [1].
+> >
+> > [1] https://android-review.googlesource.com/c/kernel/common/+/60201=
+0
+> >
+> > Signed-off-by:  Jo=E3o Moreira <jmoreira@suse.de>
 >=20
-> DA9150_QIF_LONG_SIZE (4 bytes) is the biggest size of an attribute which =
-can
-> be accessed [1].
+> Whoops, I missed this one. :) Thanks! Greg, do you need this resent
+> directly to you?
+
+I would prefer for drivers/video/console/ changes to go through
+fbdev tree (like suggested by scripts/get_maintainers.pl)..
+
+However since Greg has already merged your CFI patches:
+
+Acked-by: Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>
+
+> Acked-by: Kees Cook <keescook@chromium.org>
 >=20
-> Fixed as part of the directive to remove all VLAs from
-> the kernel: https://lkml.org/lkml/2018/3/7/621
+> -Kees
 >=20
-> [1] https://marc.info/?l=3Dkernel-hardening&m=3D152059600524753&w=3D2
->=20
-> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
-> ---
+> > ---
+> >  drivers/video/console/vgacon.c | 18 +++++++++++++-----
+> >  1 file changed, 13 insertions(+), 5 deletions(-)
+> >
+> > diff --git a/drivers/video/console/vgacon.c b/drivers/video/console=
+/vgacon.c
+> > index a17ba1465815..f00b630f6839 100644
+> > --- a/drivers/video/console/vgacon.c
+> > +++ b/drivers/video/console/vgacon.c
+> > @@ -1407,21 +1407,29 @@ static bool vgacon_scroll(struct vc_data *c=
+, unsigned int t, unsigned int b,
+> >   *  The console `switch' structure for the VGA based console
+> >   */
+> >
+> > -static int vgacon_dummy(struct vc_data *c)
+> > +static int vgacon_clear(struct vc_data *c)
+> >  {
+> >         return 0;
+> >  }
+> >
+> > -#define DUMMY (void *) vgacon_dummy
+> > +static void vgacon_putc(struct vc_data *c, int a, int b, int d)
+> > +{
+> > +       return;
+> > +}
+> > +
+> > +static void vgacon_putcs(struct vc_data *c, ushort *s, int a, int =
+b, int d)
+> > +{
+> > +       return;
+> > +}
+> >
+> >  const struct consw vga_con =3D {
+> >         .owner =3D THIS_MODULE,
+> >         .con_startup =3D vgacon_startup,
+> >         .con_init =3D vgacon_init,
+> >         .con_deinit =3D vgacon_deinit,
+> > -       .con_clear =3D DUMMY,
+> > -       .con_putc =3D DUMMY,
+> > -       .con_putcs =3D DUMMY,
+> > +       .con_clear =3D vgacon_clear,
+> > +       .con_putc =3D vgacon_putc,
+> > +       .con_putcs =3D vgacon_putcs,
+> >         .con_cursor =3D vgacon_cursor,
+> >         .con_scroll =3D vgacon_scroll,
+> >         .con_switch =3D vgacon_switch,
+> > --
+> > 2.13.6
 
-Thanks, queued to power-supply's for-next branch.
-
--- Sebastian
-
-> Changes in v2:
->  - Use DA9150_QIF_LONG_SIZE instead of DA9150_QIF_BYTE_SIZE as the
->    maximum size for array 'buf'. Thanks to Adam Thomson for the
->    feedback on this.
->  - Update changelog based on Adam's comments.
->=20
->  drivers/power/supply/da9150-fg.c | 4 ++--
->  1 file changed, 2 insertions(+), 2 deletions(-)
->=20
-> diff --git a/drivers/power/supply/da9150-fg.c b/drivers/power/supply/da91=
-50-fg.c
-> index 8b8ce97..7ea2188 100644
-> --- a/drivers/power/supply/da9150-fg.c
-> +++ b/drivers/power/supply/da9150-fg.c
-> @@ -92,7 +92,7 @@ struct da9150_fg {
->  static u32 da9150_fg_read_attr(struct da9150_fg *fg, u8 code, u8 size)
-> =20
->  {
-> -	u8 buf[size];
-> +	u8 buf[DA9150_QIF_LONG_SIZE];
->  	u8 read_addr;
->  	u32 res =3D 0;
->  	int i;
-> @@ -111,7 +111,7 @@ static void da9150_fg_write_attr(struct da9150_fg *fg=
-, u8 code, u8 size,
->  				 u32 val)
-> =20
->  {
-> -	u8 buf[size];
-> +	u8 buf[DA9150_QIF_LONG_SIZE];
->  	u8 write_addr;
->  	int i;
-> =20
-> --=20
-> 2.7.4
->=20
-
---k6uosldzav3rb6ov
-Content-Type: application/pgp-signature; name="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-
-iQIzBAEBCgAdFiEE72YNB0Y/i3JqeVQT2O7X88g7+poFAlqmg2QACgkQ2O7X88g7
-+prUaBAAiHY3IHzDJtEVUEwmwUZGx1ESHMbGkCYgodZlMTdzDwNpeUjT2o8Pdf5g
-Nj5WjVm09XBh/h6kXMcZllsi/OOAhPEsA6AFqsTOWgeLIu6QikUywFA4giC3U5R9
-x4hLUyFlScVcNBr6bE1N+QFqCgZ7ZdURsLNFQ3ASdwdxkozjvdWe0worIkFN+CIi
-1N5KttrgwLN0FJmcZDreHu9YcPRcbU8wubXjSgTpbdotS3uOnrTieyIFkN7kj4EY
-DGqlKcuem3Lpl96mYC/W7H1sQP9xe2D5LH9xWxvtiqAEegATXNJ7h2Jcw7+wqV0S
-8IFEmGIDOZ7SKFQqjJfoX6BkKuey7vjELwnhS0sD4cdQ2rAx3Sz7WLxCeTrYdqVp
-VmiNED4MV9MRB/KVqLUINv7zsxQYwC8Z8F9vyAJmnZpD4CVhRX6Ie7GXSuq8OU2Q
-K+F92tggVcE+z+gfztvcXEU5JPxboE2TlVMShUXNUSWUFU1jqfvfQTElPHaPdrQ+
-pWOxEaX9cJs/qsJZavP0r+oZdDA1r2ET+lk5MthzJCVy47bc3r/wr4Pn5yMPXQ25
-jpNg9Fqh8VFNOyLRPNjhG9YPkzAV27+lDruAKejL31O9pzd3K2PIILEB4YNpnMl/
-QwtX3NDWH/tFKsDu6tS6g1N7C5tLiEKiRzDR5uIdo13xnRr5lWQ=
-=Khci
------END PGP SIGNATURE-----
-
---k6uosldzav3rb6ov--
+Best regards,
+--
+Bartlomiej Zolnierkiewicz
+Samsung R&D Institute Poland
+Samsung Electronics
