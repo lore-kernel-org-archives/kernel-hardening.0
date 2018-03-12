@@ -4,119 +4,132 @@ Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
 From: Ben Hutchings <ben@decadent.org.uk>
 Date: Mon, 12 Mar 2018 03:03:34 +0000
-Message-ID: <lsq.1520823814.932106069@decadent.org.uk>
-Subject: [PATCH 3.2 087/104] x86/syscall: Sanitize syscall table
- de-references under speculation
+Message-ID: <lsq.1520823814.145348710@decadent.org.uk>
+Subject: [PATCH 3.2 082/104] Documentation: Document array_index_nospec
 In-Reply-To: <lsq.1520823814.606620518@decadent.org.uk>
 To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: akpm@linux-foundation.org, Dan Williams <dan.j.williams@intel.com>, Linus Torvalds <torvalds@linux-foundation.org>, Jiri Slaby <jslaby@suse.cz>, kernel-hardening@lists.openwall.com, alan@linux.intel.com, Jan Beulich <JBeulich@suse.com>, linux-arch@vger.kernel.org, Andy Lutomirski <luto@kernel.org>, Jinpu Wang <jinpu.wang@profitbricks.com>, gregkh@linuxfoundation.org, Thomas Gleixner <tglx@linutronix.de>
+Cc: akpm@linux-foundation.org, linux-arch@vger.kernel.org, Will Deacon <will.deacon@arm.com>, Thomas Gleixner <tglx@linutronix.de>, gregkh@linuxfoundation.org, kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Peter Zijlstra <peterz@infradead.org>, torvalds@linux-foundation.org, Jonathan Corbet <corbet@lwn.net>, Dan Williams <dan.j.williams@intel.com>, alan@linux.intel.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 3.2.101-rc1 review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
-From: Ben Hutchings <ben@decadent.org.uk>
+From: Mark Rutland <mark.rutland@arm.com>
 
-commit 2fbd7af5af8665d18bcefae3e9700be07e22b681 upstream.
+commit f84a56f73dddaeac1dba8045b007f742f61cd2da upstream.
 
-The upstream version of this, touching C code, was written by Dan Williams,
-with the following description:
+Document the rationale and usage of the new array_index_nospec() helper.
 
-> The syscall table base is a user controlled function pointer in kernel
-> space. Use array_index_nospec() to prevent any out of bounds speculation.
->
-> While retpoline prevents speculating into a userspace directed target it
-> does not stop the pointer de-reference, the concern is leaking memory
-> relative to the syscall table base, by observing instruction cache
-> behavior.
-
-The x86_64 assembly version for 4.4 was written by Jiri Slaby, with
-the following description:
-
-> In 4.4.118, we have commit c8961332d6da (x86/syscall: Sanitize syscall
-> table de-references under speculation), which is a backport of upstream
-> commit 2fbd7af5af86. But it fixed only the C part of the upstream patch
-> -- the IA32 sysentry. So it ommitted completely the assembly part -- the
-> 64bit sysentry.
->
-> Fix that in this patch by explicit array_index_mask_nospec written in
-> assembly. The same was used in lib/getuser.S.
->
-> However, to have "sbb" working properly, we have to switch from "cmp"
-> against (NR_syscalls-1) to (NR_syscalls), otherwise the last syscall
-> number would be "and"ed by 0. It is because the original "ja" relies on
-> "CF" or "ZF", but we rely only on "CF" in "sbb". That means: switch to
-> "jae" conditional jump too.
->
-> Final note: use rcx for mask as this is exactly what is overwritten by
-> the 4th syscall argument (r10) right after.
-
-In 3.2 the x86_32 syscall table lookup is also written in assembly.
-So I've taken Jiri's version and added similar masking in entry_32.S,
-using edx as the temporary.  edx is clobbered by SAVE_REGS and seems
-to be free at this point.
-
-In 3.2 the x86_64 entry code also lacks syscall masking for x32.
-
-Cc: Dan Williams <dan.j.williams@intel.com>
-Cc: Jiri Slaby <jslaby@suse.cz>
-Cc: Jan Beulich <JBeulich@suse.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Reviewed-by: Kees Cook <keescook@chromium.org>
 Cc: linux-arch@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com
+Cc: Jonathan Corbet <corbet@lwn.net>
+Cc: Peter Zijlstra <peterz@infradead.org>
 Cc: gregkh@linuxfoundation.org
-Cc: Andy Lutomirski <luto@kernel.org>
+Cc: kernel-hardening@lists.openwall.com
+Cc: torvalds@linux-foundation.org
 Cc: alan@linux.intel.com
-Cc: Jinpu Wang <jinpu.wang@profitbricks.com>
+Link: https://lkml.kernel.org/r/151727413645.33451.15878817161436755393.stgit@dwillia2-desk3.amr.corp.intel.com
 Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 ---
---- a/arch/x86/kernel/entry_32.S
-+++ b/arch/x86/kernel/entry_32.S
-@@ -429,6 +429,8 @@ sysenter_past_esp:
- sysenter_do_call:
- 	cmpl $(nr_syscalls), %eax
- 	jae sysenter_badsys
-+	sbb %edx, %edx				/* array_index_mask_nospec() */
-+	and %edx, %eax
- 	call *sys_call_table(,%eax,4)
- sysenter_after_call:
- 	movl %eax,PT_EAX(%esp)
-@@ -512,6 +514,8 @@ ENTRY(system_call)
- 	cmpl $(nr_syscalls), %eax
- 	jae syscall_badsys
- syscall_call:
-+	sbb %edx, %edx				/* array_index_mask_nospec() */
-+	and %edx, %eax
- 	call *sys_call_table(,%eax,4)
- syscall_after_call:
- 	movl %eax,PT_EAX(%esp)		# store the return value
---- a/arch/x86/kernel/entry_64.S
-+++ b/arch/x86/kernel/entry_64.S
-@@ -517,8 +517,10 @@ ENTRY(system_call_after_swapgs)
- 	testl $_TIF_WORK_SYSCALL_ENTRY,TI_flags(%rcx)
- 	jnz tracesys
- system_call_fastpath:
--	cmpq $__NR_syscall_max,%rax
--	ja badsys
-+	cmpq	$NR_syscalls, %rax
-+	jae	badsys
-+	sbb	%rcx, %rcx			/* array_index_mask_nospec() */
-+	and	%rcx, %rax
- 	movq %r10,%rcx
- #ifdef CONFIG_RETPOLINE
- 	movq	sys_call_table(, %rax, 8), %rax
-@@ -646,8 +648,10 @@ tracesys:
- 	 */
- 	LOAD_ARGS ARGOFFSET, 1
- 	RESTORE_REST
--	cmpq $__NR_syscall_max,%rax
--	ja   int_ret_from_sys_call	/* RAX(%rsp) set to -ENOSYS above */
-+	cmpq	$NR_syscalls, %rax
-+	jae	int_ret_from_sys_call		/* RAX(%rsp) set to -ENOSYS above */
-+	sbb	%rcx, %rcx			/* array_index_mask_nospec() */
-+	and	%rcx, %rax
- 	movq %r10,%rcx	/* fixup for C */
- #ifdef CONFIG_RETPOLINE
- 	movq	sys_call_table(, %rax, 8), %rax
+ Documentation/speculation.txt | 90 +++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 90 insertions(+)
+ create mode 100644 Documentation/speculation.txt
+
+--- /dev/null
++++ b/Documentation/speculation.txt
+@@ -0,0 +1,90 @@
++This document explains potential effects of speculation, and how undesirable
++effects can be mitigated portably using common APIs.
++
++===========
++Speculation
++===========
++
++To improve performance and minimize average latencies, many contemporary CPUs
++employ speculative execution techniques such as branch prediction, performing
++work which may be discarded at a later stage.
++
++Typically speculative execution cannot be observed from architectural state,
++such as the contents of registers. However, in some cases it is possible to
++observe its impact on microarchitectural state, such as the presence or
++absence of data in caches. Such state may form side-channels which can be
++observed to extract secret information.
++
++For example, in the presence of branch prediction, it is possible for bounds
++checks to be ignored by code which is speculatively executed. Consider the
++following code:
++
++	int load_array(int *array, unsigned int index)
++	{
++		if (index >= MAX_ARRAY_ELEMS)
++			return 0;
++		else
++			return array[index];
++	}
++
++Which, on arm64, may be compiled to an assembly sequence such as:
++
++	CMP	<index>, #MAX_ARRAY_ELEMS
++	B.LT	less
++	MOV	<returnval>, #0
++	RET
++  less:
++	LDR	<returnval>, [<array>, <index>]
++	RET
++
++It is possible that a CPU mis-predicts the conditional branch, and
++speculatively loads array[index], even if index >= MAX_ARRAY_ELEMS. This
++value will subsequently be discarded, but the speculated load may affect
++microarchitectural state which can be subsequently measured.
++
++More complex sequences involving multiple dependent memory accesses may
++result in sensitive information being leaked. Consider the following
++code, building on the prior example:
++
++	int load_dependent_arrays(int *arr1, int *arr2, int index)
++	{
++		int val1, val2,
++
++		val1 = load_array(arr1, index);
++		val2 = load_array(arr2, val1);
++
++		return val2;
++	}
++
++Under speculation, the first call to load_array() may return the value
++of an out-of-bounds address, while the second call will influence
++microarchitectural state dependent on this value. This may provide an
++arbitrary read primitive.
++
++====================================
++Mitigating speculation side-channels
++====================================
++
++The kernel provides a generic API to ensure that bounds checks are
++respected even under speculation. Architectures which are affected by
++speculation-based side-channels are expected to implement these
++primitives.
++
++The array_index_nospec() helper in <linux/nospec.h> can be used to
++prevent information from being leaked via side-channels.
++
++A call to array_index_nospec(index, size) returns a sanitized index
++value that is bounded to [0, size) even under cpu speculation
++conditions.
++
++This can be used to protect the earlier load_array() example:
++
++	int load_array(int *array, unsigned int index)
++	{
++		if (index >= MAX_ARRAY_ELEMS)
++			return 0;
++		else {
++			index = array_index_nospec(index, MAX_ARRAY_ELEMS);
++			return array[index];
++		}
++	}
