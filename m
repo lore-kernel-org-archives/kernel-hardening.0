@@ -1,134 +1,48 @@
-Content-Type: text/plain; charset="UTF-8"
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
+Date: Mon, 12 Mar 2018 06:58:04 +0100 (CET)
+From: Stefan Wahren <stefan.wahren@i2se.com>
+Message-ID: <1166411830.411906.1520834284931@email.1und1.de>
+In-Reply-To: <20180312054613.GG8631@eros>
+References: <1520818673-14084-1-git-send-email-me@tobin.cc>
+ <20180312054613.GG8631@eros>
+Subject: Re: [PATCH v2] staging: vchiq_arm: Clear VLA warning
 MIME-Version: 1.0
-From: Ben Hutchings <ben@decadent.org.uk>
-Date: Mon, 12 Mar 2018 03:06:12 +0000
-Message-ID: <lsq.1520823972.943057352@decadent.org.uk>
-Subject: [PATCH 3.16 74/76] x86/usercopy: Replace open coded stac/clac
- with __uaccess_{begin, end}
-In-Reply-To: <lsq.1520823971.5976735@decadent.org.uk>
-To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: akpm@linux-foundation.org, linux-arch@vger.kernel.org, gregkh@linuxfoundation.org, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, alan@linux.intel.com, Dan Williams <dan.j.williams@intel.com>, Tom Lendacky <thomas.lendacky@amd.com>, torvalds@linux-foundation.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+To: Eric Anholt <eric@anholt.net>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Tobin C. Harding" <me@tobin.cc>
+Cc: Tycho Andersen <tycho@tycho.ws>, driverdev-devel@linuxdriverproject.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-3.16.56-rc1 review patch.  If anyone has any objections, please let me know.
+Hi Tobin,
 
-------------------
+> "Tobin C. Harding" <me@tobin.cc> hat am 12. M=C3=A4rz 2018 um 06:46 gesch=
+rieben:
+>=20
+>=20
+> On Mon, Mar 12, 2018 at 12:37:53PM +1100, Tobin C. Harding wrote:
+> > The kernel would like to have all stack VLA usage removed[1].  The arra=
+y
+> > here is fixed (declared with a const variable) but it appears like a VL=
+A
+> > to the compiler.  Also, currently we are putting 768 bytes on the
+> > stack.  This function is only called on the error path so performance i=
+s
+> > not critical, let's just allocate the memory instead of using the
+> > stack.  This saves stack space and removes the VLA build warning.
+> >=20
+> > kmalloc a buffer for dumping state instead of using the stack.
+> >=20
+> > [1]: https://lkml.org/lkml/2018/3/7/621
+> >=20
+> > Signed-off-by: Tobin C. Harding <me@tobin.cc>
+> > ---
+>=20
+> Drop this please, leaks memory.
 
-From: Dan Williams <dan.j.williams@intel.com>
+except from the leak, did you test this patch on a RPi?
 
-commit b5c4ae4f35325d520b230bab6eb3310613b72ac1 upstream.
+Thanks
+Stefan
 
-In preparation for converting some __uaccess_begin() instances to
-__uacess_begin_nospec(), make sure all 'from user' uaccess paths are
-using the _begin(), _end() helpers rather than open-coded stac() and
-clac().
-
-No functional changes.
-
-Suggested-by: Ingo Molnar <mingo@redhat.com>
-Signed-off-by: Dan Williams <dan.j.williams@intel.com>
-Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Cc: linux-arch@vger.kernel.org
-Cc: Tom Lendacky <thomas.lendacky@amd.com>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com
-Cc: gregkh@linuxfoundation.org
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: torvalds@linux-foundation.org
-Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727416438.33451.17309465232057176966.stgit@dwillia2-desk3.amr.corp.intel.com
-[bwh: Backported to 3.16:
- - Convert several more functions to use __uaccess_begin_nospec(), that
-   are just wrappers in mainline
- - Adjust context]
-Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
----
- arch/x86/lib/usercopy_32.c | 8 ++++----
- 1 file changed, 4 insertions(+), 4 deletions(-)
-
---- a/arch/x86/lib/usercopy_32.c
-+++ b/arch/x86/lib/usercopy_32.c
-@@ -570,12 +570,12 @@ do {									\
- unsigned long __copy_to_user_ll(void __user *to, const void *from,
- 				unsigned long n)
- {
--	stac();
-+	__uaccess_begin();
- 	if (movsl_is_ok(to, from, n))
- 		__copy_user(to, from, n);
- 	else
- 		n = __copy_user_intel(to, from, n);
--	clac();
-+	__uaccess_end();
- 	return n;
- }
- EXPORT_SYMBOL(__copy_to_user_ll);
-@@ -583,12 +583,12 @@ EXPORT_SYMBOL(__copy_to_user_ll);
- unsigned long __copy_from_user_ll(void *to, const void __user *from,
- 					unsigned long n)
- {
--	stac();
-+	__uaccess_begin();
- 	if (movsl_is_ok(to, from, n))
- 		__copy_user_zeroing(to, from, n);
- 	else
- 		n = __copy_user_zeroing_intel(to, from, n);
--	clac();
-+	__uaccess_end();
- 	return n;
- }
- EXPORT_SYMBOL(__copy_from_user_ll);
-@@ -596,13 +596,13 @@ EXPORT_SYMBOL(__copy_from_user_ll);
- unsigned long __copy_from_user_ll_nozero(void *to, const void __user *from,
- 					 unsigned long n)
- {
--	stac();
-+	__uaccess_begin();
- 	if (movsl_is_ok(to, from, n))
- 		__copy_user(to, from, n);
- 	else
- 		n = __copy_user_intel((void __user *)to,
- 				      (const void *)from, n);
--	clac();
-+	__uaccess_end();
- 	return n;
- }
- EXPORT_SYMBOL(__copy_from_user_ll_nozero);
-@@ -610,7 +610,7 @@ EXPORT_SYMBOL(__copy_from_user_ll_nozero
- unsigned long __copy_from_user_ll_nocache(void *to, const void __user *from,
- 					unsigned long n)
- {
--	stac();
-+	__uaccess_begin();
- #ifdef CONFIG_X86_INTEL_USERCOPY
- 	if (n > 64 && cpu_has_xmm2)
- 		n = __copy_user_zeroing_intel_nocache(to, from, n);
-@@ -619,7 +619,7 @@ unsigned long __copy_from_user_ll_nocach
- #else
- 	__copy_user_zeroing(to, from, n);
- #endif
--	clac();
-+	__uaccess_end();
- 	return n;
- }
- EXPORT_SYMBOL(__copy_from_user_ll_nocache);
-@@ -627,7 +627,7 @@ EXPORT_SYMBOL(__copy_from_user_ll_nocach
- unsigned long __copy_from_user_ll_nocache_nozero(void *to, const void __user *from,
- 					unsigned long n)
- {
--	stac();
-+	__uaccess_begin();
- #ifdef CONFIG_X86_INTEL_USERCOPY
- 	if (n > 64 && cpu_has_xmm2)
- 		n = __copy_user_intel_nocache(to, from, n);
-@@ -636,7 +636,7 @@ unsigned long __copy_from_user_ll_nocach
- #else
- 	__copy_user(to, from, n);
- #endif
--	clac();
-+	__uaccess_end();
- 	return n;
- }
- EXPORT_SYMBOL(__copy_from_user_ll_nocache_nozero);
+>=20
+> thanks,
+> Tobin.
