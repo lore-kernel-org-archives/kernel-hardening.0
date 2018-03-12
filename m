@@ -1,109 +1,81 @@
-Sender: Larry Finger <larry.finger@gmail.com>
-Subject: Re: [RESEND PATCH] rsi: Remove stack VLA usage
-References: <1520819022-15238-1-git-send-email-me@tobin.cc>
-From: Larry Finger <Larry.Finger@lwfinger.net>
-Message-ID: <ff9309bf-4c3d-b0f9-cdd0-429dacd3177b@lwfinger.net>
-Date: Sun, 11 Mar 2018 21:06:10 -0500
+Content-Type: text/plain; charset="UTF-8"
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-In-Reply-To: <1520819022-15238-1-git-send-email-me@tobin.cc>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: "Tobin C. Harding" <me@tobin.cc>, Kalle Valo <kvalo@codeaurora.org>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, linux-wireless@vger.kernel.org, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
+From: Ben Hutchings <ben@decadent.org.uk>
+Date: Mon, 12 Mar 2018 03:03:34 +0000
+Message-ID: <lsq.1520823814.499853632@decadent.org.uk>
+Subject: [PATCH 3.2 101/104] x86: Introduce __uaccess_begin_nospec() and
+ uaccess_try_nospec
+In-Reply-To: <lsq.1520823814.606620518@decadent.org.uk>
+To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
+Cc: akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Andi Kleen <ak@linux.intel.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, alan@linux.intel.com, linux-arch@vger.kernel.org, Al Viro <viro@zeniv.linux.org.uk>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Tom Lendacky <thomas.lendacky@amd.com>, gregkh@linuxfoundation.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/11/2018 08:43 PM, Tobin C. Harding wrote:
-> The kernel would like to have all stack VLA usage removed[1].  rsi uses
-> a VLA based on 'blksize'.  Elsewhere in the SDIO code maximum block size
-> is defined using a magic number.  We can use a pre-processor defined
-> constant and declare the array to maximum size.  We add a check before
-> accessing the array in case of programmer error.
-> 
-> [1]: https://lkml.org/lkml/2018/3/7/621
-> 
-> Signed-off-by: Tobin C. Harding <me@tobin.cc>
-> ---
-> 
-> RESEND: add wireless mailing list to CC's (requested by Kalle)
-> 
->   drivers/net/wireless/rsi/rsi_91x_hal.c  | 13 +++++++------
->   drivers/net/wireless/rsi/rsi_91x_sdio.c |  9 +++++++--
->   2 files changed, 14 insertions(+), 8 deletions(-)
-> 
-> diff --git a/drivers/net/wireless/rsi/rsi_91x_hal.c b/drivers/net/wireless/rsi/rsi_91x_hal.c
-> index 1176de646942..839ebdd602df 100644
-> --- a/drivers/net/wireless/rsi/rsi_91x_hal.c
-> +++ b/drivers/net/wireless/rsi/rsi_91x_hal.c
-> @@ -641,7 +641,7 @@ static int ping_pong_write(struct rsi_hw *adapter, u8 cmd, u8 *addr, u32 size)
->   	u32 cmd_addr;
->   	u16 cmd_resp, cmd_req;
->   	u8 *str;
-> -	int status;
-> +	int status, ret;
->   
->   	if (cmd == PING_WRITE) {
->   		cmd_addr = PING_BUFFER_ADDRESS;
-> @@ -655,12 +655,13 @@ static int ping_pong_write(struct rsi_hw *adapter, u8 cmd, u8 *addr, u32 size)
->   		str = "PONG_VALID";
->   	}
->   
-> -	status = hif_ops->load_data_master_write(adapter, cmd_addr, size,
-> +	ret = hif_ops->load_data_master_write(adapter, cmd_addr, size,
->   					    block_size, addr);
-> -	if (status) {
-> -		rsi_dbg(ERR_ZONE, "%s: Unable to write blk at addr %0x\n",
-> -			__func__, *addr);
-> -		return status;
-> +	if (ret) {
-> +		if (ret != -EINVAL)
-> +			rsi_dbg(ERR_ZONE, "%s: Unable to write blk at addr %0x\n",
-> +				__func__, *addr);
-> +		return ret;
->   	}
->   
->   	status = bl_cmd(adapter, cmd_req, cmd_resp, str);
-> diff --git a/drivers/net/wireless/rsi/rsi_91x_sdio.c b/drivers/net/wireless/rsi/rsi_91x_sdio.c
-> index b0cf41195051..b766578b591a 100644
-> --- a/drivers/net/wireless/rsi/rsi_91x_sdio.c
-> +++ b/drivers/net/wireless/rsi/rsi_91x_sdio.c
-> @@ -20,6 +20,8 @@
->   #include "rsi_common.h"
->   #include "rsi_hal.h"
->   
-> +#define RSI_MAX_BLOCK_SIZE 256
-> +
->   /**
->    * rsi_sdio_set_cmd52_arg() - This function prepares cmd 52 read/write arg.
->    * @rw: Read/write
-> @@ -362,7 +364,7 @@ static int rsi_setblocklength(struct rsi_hw *adapter, u32 length)
->   	rsi_dbg(INIT_ZONE, "%s: Setting the block length\n", __func__);
->   
->   	status = sdio_set_block_size(dev->pfunction, length);
-> -	dev->pfunction->max_blksize = 256;
-> +	dev->pfunction->max_blksize = RSI_MAX_BLOCK_SIZE;
->   	adapter->block_size = dev->pfunction->max_blksize;
->   
->   	rsi_dbg(INFO_ZONE,
-> @@ -567,9 +569,12 @@ static int rsi_sdio_load_data_master_write(struct rsi_hw *adapter,
->   {
->   	u32 num_blocks, offset, i;
->   	u16 msb_address, lsb_address;
-> -	u8 temp_buf[block_size];
-> +	u8 temp_buf[RSI_MAX_BLOCK_SIZE];
->   	int status;
->   
-> +	if (block_size > RSI_MAX_BLOCK_SIZE)
-> +		return -EINVAL;
-> +
->   	num_blocks = instructions_sz / block_size;
->   	msb_address = base_address >> 16;
+3.2.101-rc1 review patch.  If anyone has any objections, please let me know.
 
-I am not giving this patch a negative review, but my solution to the same 
-problem has been to change the on-stack array into a u8 pointer, use kmalloc() 
-to assign the space, and then free that space at the end. That way large stack 
-allocations are avoided, with a minimum of changes.
+------------------
 
-Larry
+From: Dan Williams <dan.j.williams@intel.com>
 
->   
-> 
+commit b3bbfb3fb5d25776b8e3f361d2eedaabb0b496cd upstream.
+
+For __get_user() paths, do not allow the kernel to speculate on the value
+of a user controlled pointer. In addition to the 'stac' instruction for
+Supervisor Mode Access Protection (SMAP), a barrier_nospec() causes the
+access_ok() result to resolve in the pipeline before the CPU might take any
+speculative action on the pointer value. Given the cost of 'stac' the
+speculation barrier is placed after 'stac' to hopefully overlap the cost of
+disabling SMAP with the cost of flushing the instruction pipeline.
+
+Since __get_user is a major kernel interface that deals with user
+controlled pointers, the __uaccess_begin_nospec() mechanism will prevent
+speculative execution past an access_ok() permission check. While
+speculative execution past access_ok() is not enough to lead to a kernel
+memory leak, it is a necessary precondition.
+
+To be clear, __uaccess_begin_nospec() is addressing a class of potential
+problems near __get_user() usages.
+
+Note, that while the barrier_nospec() in __uaccess_begin_nospec() is used
+to protect __get_user(), pointer masking similar to array_index_nospec()
+will be used for get_user() since it incorporates a bounds check near the
+usage.
+
+uaccess_try_nospec provides the same mechanism for get_user_try.
+
+No functional changes.
+
+Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+Suggested-by: Andi Kleen <ak@linux.intel.com>
+Suggested-by: Ingo Molnar <mingo@redhat.com>
+Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Cc: linux-arch@vger.kernel.org
+Cc: Tom Lendacky <thomas.lendacky@amd.com>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com
+Cc: gregkh@linuxfoundation.org
+Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: alan@linux.intel.com
+Link: https://lkml.kernel.org/r/151727415922.33451.5796614273104346583.stgit@dwillia2-desk3.amr.corp.intel.com
+[bwh: Backported to 3.2:
+ - There's no SMAP support, so only add uaccess_try_nospec()
+ - Use current_thread_info() and save the previous error state, matching
+   uaccess_try()]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+--- a/arch/x86/include/asm/uaccess.h
++++ b/arch/x86/include/asm/uaccess.h
+@@ -462,6 +462,11 @@ struct __large_struct { unsigned long bu
+ 	current_thread_info()->uaccess_err = 0;				\
+ 	barrier();
+ 
++#define uaccess_try_nospec do {						\
++	int prev_err = current_thread_info()->uaccess_err;		\
++	current_thread_info()->uaccess_err = 0;				\
++	barrier_nospec();
++
+ #define uaccess_catch(err)						\
+ 	(err) |= current_thread_info()->uaccess_err;			\
+ 	current_thread_info()->uaccess_err = prev_err;			\
