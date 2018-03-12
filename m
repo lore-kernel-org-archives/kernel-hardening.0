@@ -1,42 +1,24 @@
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <20180312030834.GC8631@eros>
-References: <1520802418-17284-1-git-send-email-s.mesoraca16@gmail.com> <20180312030834.GC8631@eros>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Mon, 12 Mar 2018 11:45:53 -0700
-Message-ID: <CA+55aFww=otC4Wv40enadF+9NAyWG4Hotzjvv2EKb+_wGFui-w@mail.gmail.com>
-Subject: Re: [PATCH] scsi: eata: drop VLA in reorder()
-Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <tobin@apporbit.com>, Arthur Marsh <arthur.marsh@internode.on.net>
-Cc: Salvatore Mesoraca <s.mesoraca16@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux SCSI List <linux-scsi@vger.kernel.org>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, Dario Ballabio <ballabio_dario@emc.com>, Kees Cook <keescook@chromium.org>, kernelnewbies@kernelnewbies.org
+Date: Mon, 12 Mar 2018 15:07:57 -0400 (EDT)
+Message-Id: <20180312.150757.1880237990834088910.davem@davemloft.net>
+Subject: Re: [PATCH 1/2] net: rds: drop VLA in rds_for_each_conn_info()
+From: David Miller <davem@davemloft.net>
+In-Reply-To: <1520802470-17374-1-git-send-email-s.mesoraca16@gmail.com>
+References: <1520802470-17374-1-git-send-email-s.mesoraca16@gmail.com>
+Mime-Version: 1.0
+Content-Type: Text/Plain; charset=us-ascii
+Content-Transfer-Encoding: 7bit
+To: s.mesoraca16@gmail.com
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-rdma@vger.kernel.org, netdev@vger.kernel.org, keescook@chromium.org, santosh.shilimkar@oracle.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Mar 11, 2018 at 8:08 PM, Tobin C. Harding <tobin@apporbit.com> wrote:
->
-> I think we are going to see a recurring theme here.  MAX_MAILBOXES==64
-> so this patch adds 1536 bytes to the stack on a 64 bit machine or 768
-> bytes on a 32 bit machine.
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Sun, 11 Mar 2018 22:07:49 +0100
 
-Yeah, that's a bit excessive. It probably works, but one or two of
-those allocations will make the kernel stack really tight, so in
-general I really would suggest using kmalloc() instead, or figuring
-out some way to simply shrink the data structures.
+> Avoid VLA[1] by using an already allocated buffer passed
+> by the caller.
+> 
+> [1] https://lkml.org/lkml/2018/3/7/621
+> 
+> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 
-That said, I wonder if the solution to this particular driver is
-"delete it". Because the hardware is truly ancient and nobody sane
-would use it any more.
-
-The last patch that seemed to come from an actual _user_ finding a
-problem was in 2008 (commit 20c09df7eb9c: "[SCSI] eata: fix the data
-buffer accessors conversion regression"). And even then it apparently
-took a year for people to have noticed the breakage.
-
-But because the person who reported that problem is still around, I'll
-just add him to the cc, just in case.
-
-Arthur Marsh, you have the dubious honor and distinction of being the
-only person to have apparently used that driver in the last ten years.
-Do you still have hardware using that? Because maybe it's really time
-to retire that driver.
-
-                   Linus
+Applied.
