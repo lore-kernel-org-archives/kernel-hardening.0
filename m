@@ -4,12 +4,11 @@ Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
 From: Ben Hutchings <ben@decadent.org.uk>
 Date: Mon, 12 Mar 2018 03:06:12 +0000
-Message-ID: <lsq.1520823972.837680702@decadent.org.uk>
-Subject: [PATCH 3.16 73/76] x86: Introduce __uaccess_begin_nospec() and
- uaccess_try_nospec
+Message-ID: <lsq.1520823972.857925406@decadent.org.uk>
+Subject: [PATCH 3.16 58/76] nl80211: Sanitize array index in parse_txq_params
 In-Reply-To: <lsq.1520823971.5976735@decadent.org.uk>
 To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: akpm@linux-foundation.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Linus Torvalds <torvalds@linux-foundation.org>, Andi Kleen <ak@linux.intel.com>, Tom Lendacky <thomas.lendacky@amd.com>, Ingo Molnar <mingo@redhat.com>, Dan Williams <dan.j.williams@intel.com>, alan@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, gregkh@linuxfoundation.org, linux-arch@vger.kernel.org
+Cc: akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, torvalds@linux-foundation.org, Elena Reshetova <elena.reshetova@intel.com>, Thomas Gleixner <tglx@linutronix.de>, alan@linux.intel.com, Dan Williams <dan.j.williams@intel.com>, "David S. Miller" <davem@davemloft.net>, linux-arch@vger.kernel.org, Christian Lamparter <chunkeey@gmail.com>, linux-wireless@vger.kernel.org, gregkh@linuxfoundation.org, Johannes Berg <johannes@sipsolutions.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 3.16.56-rc1 review patch.  If anyone has any objections, please let me know.
@@ -18,75 +17,66 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Dan Williams <dan.j.williams@intel.com>
 
-commit b3bbfb3fb5d25776b8e3f361d2eedaabb0b496cd upstream.
+commit 259d8c1e984318497c84eef547bbb6b1d9f4eb05 upstream.
 
-For __get_user() paths, do not allow the kernel to speculate on the value
-of a user controlled pointer. In addition to the 'stac' instruction for
-Supervisor Mode Access Protection (SMAP), a barrier_nospec() causes the
-access_ok() result to resolve in the pipeline before the CPU might take any
-speculative action on the pointer value. Given the cost of 'stac' the
-speculation barrier is placed after 'stac' to hopefully overlap the cost of
-disabling SMAP with the cost of flushing the instruction pipeline.
+Wireless drivers rely on parse_txq_params to validate that txq_params->ac
+is less than NL80211_NUM_ACS by the time the low-level driver's ->conf_tx()
+handler is called. Use a new helper, array_index_nospec(), to sanitize
+txq_params->ac with respect to speculation. I.e. ensure that any
+speculation into ->conf_tx() handlers is done with a value of
+txq_params->ac that is within the bounds of [0, NL80211_NUM_ACS).
 
-Since __get_user is a major kernel interface that deals with user
-controlled pointers, the __uaccess_begin_nospec() mechanism will prevent
-speculative execution past an access_ok() permission check. While
-speculative execution past access_ok() is not enough to lead to a kernel
-memory leak, it is a necessary precondition.
-
-To be clear, __uaccess_begin_nospec() is addressing a class of potential
-problems near __get_user() usages.
-
-Note, that while the barrier_nospec() in __uaccess_begin_nospec() is used
-to protect __get_user(), pointer masking similar to array_index_nospec()
-will be used for get_user() since it incorporates a bounds check near the
-usage.
-
-uaccess_try_nospec provides the same mechanism for get_user_try.
-
-No functional changes.
-
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-Suggested-by: Andi Kleen <ak@linux.intel.com>
-Suggested-by: Ingo Molnar <mingo@redhat.com>
+Reported-by: Christian Lamparter <chunkeey@gmail.com>
+Reported-by: Elena Reshetova <elena.reshetova@intel.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Acked-by: Johannes Berg <johannes@sipsolutions.net>
 Cc: linux-arch@vger.kernel.org
-Cc: Tom Lendacky <thomas.lendacky@amd.com>
-Cc: Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com
 Cc: gregkh@linuxfoundation.org
-Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: linux-wireless@vger.kernel.org
+Cc: torvalds@linux-foundation.org
+Cc: "David S. Miller" <davem@davemloft.net>
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727415922.33451.5796614273104346583.stgit@dwillia2-desk3.amr.corp.intel.com
-[bwh: Backported to 3.16: use current_thread_info()]
+Link: https://lkml.kernel.org/r/151727419584.33451.7700736761686184303.stgit@dwillia2-desk3.amr.corp.intel.com
 Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 ---
- arch/x86/include/asm/uaccess.h | 9 +++++++++
- 1 file changed, 9 insertions(+)
+ net/wireless/nl80211.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
 
---- a/arch/x86/include/asm/uaccess.h
-+++ b/arch/x86/include/asm/uaccess.h
-@@ -145,6 +145,11 @@ extern int __get_user_bad(void);
- 
- #define __uaccess_begin() stac()
- #define __uaccess_end()   clac()
-+#define __uaccess_begin_nospec()	\
-+({					\
-+	stac();				\
-+	barrier_nospec();		\
-+})
- 
- /*
-  * This is a type: either unsigned long, if the argument fits into
-@@ -470,6 +475,10 @@ struct __large_struct { unsigned long bu
- 	__uaccess_begin();						\
- 	barrier();
- 
-+#define uaccess_try_nospec do {						\
-+	current_thread_info()->uaccess_err = 0;				\
-+	__uaccess_begin_nospec();					\
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -14,6 +14,7 @@
+ #include <linux/nl80211.h>
+ #include <linux/rtnetlink.h>
+ #include <linux/netlink.h>
++#include <linux/nospec.h>
+ #include <linux/etherdevice.h>
+ #include <net/net_namespace.h>
+ #include <net/genetlink.h>
+@@ -1829,20 +1830,22 @@ static const struct nla_policy txq_param
+ static int parse_txq_params(struct nlattr *tb[],
+ 			    struct ieee80211_txq_params *txq_params)
+ {
++	u8 ac;
 +
- #define uaccess_catch(err)						\
- 	__uaccess_end();						\
- 	(err) |= (current_thread_info()->uaccess_err ? -EFAULT : 0);	\
+ 	if (!tb[NL80211_TXQ_ATTR_AC] || !tb[NL80211_TXQ_ATTR_TXOP] ||
+ 	    !tb[NL80211_TXQ_ATTR_CWMIN] || !tb[NL80211_TXQ_ATTR_CWMAX] ||
+ 	    !tb[NL80211_TXQ_ATTR_AIFS])
+ 		return -EINVAL;
+ 
+-	txq_params->ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
++	ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
+ 	txq_params->txop = nla_get_u16(tb[NL80211_TXQ_ATTR_TXOP]);
+ 	txq_params->cwmin = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMIN]);
+ 	txq_params->cwmax = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMAX]);
+ 	txq_params->aifs = nla_get_u8(tb[NL80211_TXQ_ATTR_AIFS]);
+ 
+-	if (txq_params->ac >= NL80211_NUM_ACS)
++	if (ac >= NL80211_NUM_ACS)
+ 		return -EINVAL;
+-
++	txq_params->ac = array_index_nospec(ac, NL80211_NUM_ACS);
+ 	return 0;
+ }
+ 
