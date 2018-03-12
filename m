@@ -1,9 +1,10 @@
-Date: Mon, 12 Mar 2018 15:07:57 -0400 (EDT)
-Message-Id: <20180312.150757.1880237990834088910.davem@davemloft.net>
-Subject: Re: [PATCH 1/2] net: rds: drop VLA in rds_for_each_conn_info()
+Date: Mon, 12 Mar 2018 15:08:15 -0400 (EDT)
+Message-Id: <20180312.150815.1091524401090660262.davem@davemloft.net>
+Subject: Re: [PATCH 2/2] net: rds: drop VLA in rds_walk_conn_path_info()
 From: David Miller <davem@davemloft.net>
-In-Reply-To: <1520802470-17374-1-git-send-email-s.mesoraca16@gmail.com>
+In-Reply-To: <1520802470-17374-2-git-send-email-s.mesoraca16@gmail.com>
 References: <1520802470-17374-1-git-send-email-s.mesoraca16@gmail.com>
+	<1520802470-17374-2-git-send-email-s.mesoraca16@gmail.com>
 Mime-Version: 1.0
 Content-Type: Text/Plain; charset=us-ascii
 Content-Transfer-Encoding: 7bit
@@ -12,7 +13,7 @@ Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-rdm
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Sun, 11 Mar 2018 22:07:49 +0100
+Date: Sun, 11 Mar 2018 22:07:50 +0100
 
 > Avoid VLA[1] by using an already allocated buffer passed
 > by the caller.
@@ -21,4 +22,4 @@ Date: Sun, 11 Mar 2018 22:07:49 +0100
 > 
 > Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 
-Applied.
+Also applied, thanks.
