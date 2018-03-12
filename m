@@ -1,37 +1,31 @@
-Date: Mon, 12 Mar 2018 08:54:08 +0000
-From: Lee Jones <lee.jones@linaro.org>
-Subject: Re: [PATCH 1/2] rtc: s5m: Move enum from rtc.h to rtc-s5m.c
-Message-ID: <20180312085408.juqhh5pvgno5zag6@dell>
-References: <cover.1520660422.git.gustavo@embeddedor.com>
- <44ee5bd5053d579dc6c46b21e2ef8f6acf70e4ce.1520660422.git.gustavo@embeddedor.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <44ee5bd5053d579dc6c46b21e2ef8f6acf70e4ce.1520660422.git.gustavo@embeddedor.com>
-To: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Cc: Sangbeom Kim <sbkim73@samsung.com>, Krzysztof Kozlowski <krzk@kernel.org>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, Alessandro Zummo <a.zummo@towertech.it>, Alexandre Belloni <alexandre.belloni@bootlin.com>, linux-samsung-soc@vger.kernel.org, linux-rtc@vger.kernel.org, linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+In-Reply-To: <20180312050623.GD8631@eros>
+References: <1520830180-25452-1-git-send-email-me@tobin.cc>
+ <20180312050204.GC25480@zzz.localdomain> <20180312050623.GD8631@eros>
+From: Ilya Dryomov <idryomov@gmail.com>
+Date: Mon, 12 Mar 2018 10:57:08 +0100
+Message-ID: <CAOi1vP-TrD9xp4ottwSUEx=h_-uLOYs5BuEMAgSJrK2gmdZoDg@mail.gmail.com>
+Subject: Re: [PATCH] rbd: Remove VLA stack usage
+Content-Type: text/plain; charset="UTF-8"
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: Eric Biggers <ebiggers3@gmail.com>, Sage Weil <sage@redhat.com>, Alex Elder <elder@kernel.org>, Ceph Development <ceph-devel@vger.kernel.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, 10 Mar 2018, Gustavo A. R. Silva wrote:
+On Mon, Mar 12, 2018 at 6:06 AM, Tobin C. Harding <me@tobin.cc> wrote:
+> On Sun, Mar 11, 2018 at 10:02:04PM -0700, Eric Biggers wrote:
+>> On Mon, Mar 12, 2018 at 03:49:40PM +1100, Tobin C. Harding wrote:
+>> > The kernel would like to have all stack VLA usage removed[1].
+>>
+>> Can you please stop writing this?  The Linux kernel isn't sentient; it doesn't
+>> "like" anything.  You need to explain why *you* (and other people) believe these
+>> changes should be made.
+>
+> No worries, will re-spin with better description.
 
-> Move this enum to rtc-s5m.c once it is meaningless to others drivers [1].
-> 
-> [1] https://marc.info/?l=linux-rtc&m=152060068925948&w=2
-> 
-> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
-> ---
->  drivers/rtc/rtc-s5m.c           | 11 +++++++++++
->  include/linux/mfd/samsung/rtc.h | 11 -----------
+I'd prefer a single patch covering both functions.
 
-I don't think this will conflict with anything (unless some major
-works are carried out within the next few weeks - in which case I'll
-need a pull-request, but for now ...)
+Also, as these are char arrays, use sizeof instead of ARRAY_SIZE.
 
-Acked-by: Lee Jones <lee.jones@linaro.org>
+Thanks,
 
--- 
-Lee Jones [李琼斯]
-Linaro Services Technical Lead
-Linaro.org │ Open source software for ARM SoCs
-Follow Linaro: Facebook | Twitter | Blog
+                Ilya
