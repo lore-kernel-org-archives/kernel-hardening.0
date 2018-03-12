@@ -4,12 +4,12 @@ Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
 From: Ben Hutchings <ben@decadent.org.uk>
 Date: Mon, 12 Mar 2018 03:06:12 +0000
-Message-ID: <lsq.1520823972.995550615@decadent.org.uk>
-Subject: [PATCH 3.16 59/76] x86/spectre: Report get_user mitigation for
- spectre_v1
+Message-ID: <lsq.1520823972.943057352@decadent.org.uk>
+Subject: [PATCH 3.16 74/76] x86/usercopy: Replace open coded stac/clac
+ with __uaccess_{begin, end}
 In-Reply-To: <lsq.1520823971.5976735@decadent.org.uk>
 To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: akpm@linux-foundation.org, linux-arch@vger.kernel.org, gregkh@linuxfoundation.org, Dan Williams <dan.j.williams@intel.com>, alan@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, torvalds@linux-foundation.org, Jiri Slaby <jslaby@suse.cz>, kernel-hardening@lists.openwall.com
+Cc: akpm@linux-foundation.org, linux-arch@vger.kernel.org, gregkh@linuxfoundation.org, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, alan@linux.intel.com, Dan Williams <dan.j.williams@intel.com>, Tom Lendacky <thomas.lendacky@amd.com>, torvalds@linux-foundation.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 3.16.56-rc1 review patch.  If anyone has any objections, please let me know.
@@ -18,35 +18,117 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Dan Williams <dan.j.williams@intel.com>
 
-commit edfbae53dab8348fca778531be9f4855d2ca0360 upstream.
+commit b5c4ae4f35325d520b230bab6eb3310613b72ac1 upstream.
 
-Reflect the presence of get_user(), __get_user(), and 'syscall' protections
-in sysfs. The expectation is that new and better tooling will allow the
-kernel to grow more usages of array_index_nospec(), for now, only claim
-mitigation for __user pointer de-references.
+In preparation for converting some __uaccess_begin() instances to
+__uacess_begin_nospec(), make sure all 'from user' uaccess paths are
+using the _begin(), _end() helpers rather than open-coded stac() and
+clac().
 
-Reported-by: Jiri Slaby <jslaby@suse.cz>
+No functional changes.
+
+Suggested-by: Ingo Molnar <mingo@redhat.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Cc: linux-arch@vger.kernel.org
+Cc: Tom Lendacky <thomas.lendacky@amd.com>
+Cc: Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com
 Cc: gregkh@linuxfoundation.org
+Cc: Al Viro <viro@zeniv.linux.org.uk>
 Cc: torvalds@linux-foundation.org
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727420158.33451.11658324346540434635.stgit@dwillia2-desk3.amr.corp.intel.com
+Link: https://lkml.kernel.org/r/151727416438.33451.17309465232057176966.stgit@dwillia2-desk3.amr.corp.intel.com
+[bwh: Backported to 3.16:
+ - Convert several more functions to use __uaccess_begin_nospec(), that
+   are just wrappers in mainline
+ - Adjust context]
 Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 ---
- arch/x86/kernel/cpu/bugs.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ arch/x86/lib/usercopy_32.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
 
---- a/arch/x86/kernel/cpu/bugs.c
-+++ b/arch/x86/kernel/cpu/bugs.c
-@@ -353,7 +353,7 @@ ssize_t cpu_show_spectre_v1(struct devic
+--- a/arch/x86/lib/usercopy_32.c
++++ b/arch/x86/lib/usercopy_32.c
+@@ -570,12 +570,12 @@ do {									\
+ unsigned long __copy_to_user_ll(void __user *to, const void *from,
+ 				unsigned long n)
  {
- 	if (!boot_cpu_has_bug(X86_BUG_SPECTRE_V1))
- 		return sprintf(buf, "Not affected\n");
--	return sprintf(buf, "Vulnerable\n");
-+	return sprintf(buf, "Mitigation: __user pointer sanitization\n");
+-	stac();
++	__uaccess_begin();
+ 	if (movsl_is_ok(to, from, n))
+ 		__copy_user(to, from, n);
+ 	else
+ 		n = __copy_user_intel(to, from, n);
+-	clac();
++	__uaccess_end();
+ 	return n;
  }
- 
- ssize_t cpu_show_spectre_v2(struct device *dev,
+ EXPORT_SYMBOL(__copy_to_user_ll);
+@@ -583,12 +583,12 @@ EXPORT_SYMBOL(__copy_to_user_ll);
+ unsigned long __copy_from_user_ll(void *to, const void __user *from,
+ 					unsigned long n)
+ {
+-	stac();
++	__uaccess_begin();
+ 	if (movsl_is_ok(to, from, n))
+ 		__copy_user_zeroing(to, from, n);
+ 	else
+ 		n = __copy_user_zeroing_intel(to, from, n);
+-	clac();
++	__uaccess_end();
+ 	return n;
+ }
+ EXPORT_SYMBOL(__copy_from_user_ll);
+@@ -596,13 +596,13 @@ EXPORT_SYMBOL(__copy_from_user_ll);
+ unsigned long __copy_from_user_ll_nozero(void *to, const void __user *from,
+ 					 unsigned long n)
+ {
+-	stac();
++	__uaccess_begin();
+ 	if (movsl_is_ok(to, from, n))
+ 		__copy_user(to, from, n);
+ 	else
+ 		n = __copy_user_intel((void __user *)to,
+ 				      (const void *)from, n);
+-	clac();
++	__uaccess_end();
+ 	return n;
+ }
+ EXPORT_SYMBOL(__copy_from_user_ll_nozero);
+@@ -610,7 +610,7 @@ EXPORT_SYMBOL(__copy_from_user_ll_nozero
+ unsigned long __copy_from_user_ll_nocache(void *to, const void __user *from,
+ 					unsigned long n)
+ {
+-	stac();
++	__uaccess_begin();
+ #ifdef CONFIG_X86_INTEL_USERCOPY
+ 	if (n > 64 && cpu_has_xmm2)
+ 		n = __copy_user_zeroing_intel_nocache(to, from, n);
+@@ -619,7 +619,7 @@ unsigned long __copy_from_user_ll_nocach
+ #else
+ 	__copy_user_zeroing(to, from, n);
+ #endif
+-	clac();
++	__uaccess_end();
+ 	return n;
+ }
+ EXPORT_SYMBOL(__copy_from_user_ll_nocache);
+@@ -627,7 +627,7 @@ EXPORT_SYMBOL(__copy_from_user_ll_nocach
+ unsigned long __copy_from_user_ll_nocache_nozero(void *to, const void __user *from,
+ 					unsigned long n)
+ {
+-	stac();
++	__uaccess_begin();
+ #ifdef CONFIG_X86_INTEL_USERCOPY
+ 	if (n > 64 && cpu_has_xmm2)
+ 		n = __copy_user_intel_nocache(to, from, n);
+@@ -636,7 +636,7 @@ unsigned long __copy_from_user_ll_nocach
+ #else
+ 	__copy_user(to, from, n);
+ #endif
+-	clac();
++	__uaccess_end();
+ 	return n;
+ }
+ EXPORT_SYMBOL(__copy_from_user_ll_nocache_nozero);
