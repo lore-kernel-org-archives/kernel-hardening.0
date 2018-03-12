@@ -1,57 +1,95 @@
 From: "Tobin C. Harding" <me@tobin.cc>
-Subject: [PATCH v2] staging: vchiq_arm: Clear VLA warning
-Date: Mon, 12 Mar 2018 12:37:53 +1100
-Message-Id: <1520818673-14084-1-git-send-email-me@tobin.cc>
-To: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Anholt <eric@anholt.net>, Stefan Wahren <stefan.wahren@i2se.com>
-Cc: "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, driverdev-devel@linuxdriverproject.org, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
+Subject: [RESEND PATCH] rsi: Remove stack VLA usage
+Date: Mon, 12 Mar 2018 12:43:42 +1100
+Message-Id: <1520819022-15238-1-git-send-email-me@tobin.cc>
+To: Kalle Valo <kvalo@codeaurora.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, linux-wireless@vger.kernel.org, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The kernel would like to have all stack VLA usage removed[1].  The array
-here is fixed (declared with a const variable) but it appears like a VLA
-to the compiler.  Also, currently we are putting 768 bytes on the
-stack.  This function is only called on the error path so performance is
-not critical, let's just allocate the memory instead of using the
-stack.  This saves stack space and removes the VLA build warning.
-
-kmalloc a buffer for dumping state instead of using the stack.
+The kernel would like to have all stack VLA usage removed[1].  rsi uses
+a VLA based on 'blksize'.  Elsewhere in the SDIO code maximum block size
+is defined using a magic number.  We can use a pre-processor defined
+constant and declare the array to maximum size.  We add a check before
+accessing the array in case of programmer error.
 
 [1]: https://lkml.org/lkml/2018/3/7/621
 
 Signed-off-by: Tobin C. Harding <me@tobin.cc>
 ---
 
-v1 of this patch already merged into staging-testing branch of Greg's
-staging tree.  This patch depends on v1 being removed, can re-do this
-one on top of tip of staging-testing if required.
+RESEND: add wireless mailing list to CC's (requested by Kalle)
 
-v2:
- - Use kmalloc() instead of the stack
+ drivers/net/wireless/rsi/rsi_91x_hal.c  | 13 +++++++------
+ drivers/net/wireless/rsi/rsi_91x_sdio.c |  9 +++++++--
+ 2 files changed, 14 insertions(+), 8 deletions(-)
 
-Patch is untested.  
-
- drivers/staging/vc04_services/interface/vchiq_arm/vchiq_arm.c | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
-
-diff --git a/drivers/staging/vc04_services/interface/vchiq_arm/vchiq_arm.c b/drivers/staging/vc04_services/interface/vchiq_arm/vchiq_arm.c
-index f5cefda49b22..408ea73f8da7 100644
---- a/drivers/staging/vc04_services/interface/vchiq_arm/vchiq_arm.c
-+++ b/drivers/staging/vc04_services/interface/vchiq_arm/vchiq_arm.c
-@@ -3455,11 +3455,15 @@ vchiq_dump_service_use_state(VCHIQ_STATE_T *state)
- 		int fourcc;
- 		int clientid;
- 		int use_count;
--	} service_data[local_max_services];
-+	} *service_data;
+diff --git a/drivers/net/wireless/rsi/rsi_91x_hal.c b/drivers/net/wireless/rsi/rsi_91x_hal.c
+index 1176de646942..839ebdd602df 100644
+--- a/drivers/net/wireless/rsi/rsi_91x_hal.c
++++ b/drivers/net/wireless/rsi/rsi_91x_hal.c
+@@ -641,7 +641,7 @@ static int ping_pong_write(struct rsi_hw *adapter, u8 cmd, u8 *addr, u32 size)
+ 	u32 cmd_addr;
+ 	u16 cmd_resp, cmd_req;
+ 	u8 *str;
+-	int status;
++	int status, ret;
  
- 	if (!arm_state)
- 		return;
+ 	if (cmd == PING_WRITE) {
+ 		cmd_addr = PING_BUFFER_ADDRESS;
+@@ -655,12 +655,13 @@ static int ping_pong_write(struct rsi_hw *adapter, u8 cmd, u8 *addr, u32 size)
+ 		str = "PONG_VALID";
+ 	}
  
-+	service_data = kmalloc_array(local_max_services, sizeof(*service_data), GFP_KERNEL);
-+	if (!service_data)
-+		return;
+-	status = hif_ops->load_data_master_write(adapter, cmd_addr, size,
++	ret = hif_ops->load_data_master_write(adapter, cmd_addr, size,
+ 					    block_size, addr);
+-	if (status) {
+-		rsi_dbg(ERR_ZONE, "%s: Unable to write blk at addr %0x\n",
+-			__func__, *addr);
+-		return status;
++	if (ret) {
++		if (ret != -EINVAL)
++			rsi_dbg(ERR_ZONE, "%s: Unable to write blk at addr %0x\n",
++				__func__, *addr);
++		return ret;
+ 	}
+ 
+ 	status = bl_cmd(adapter, cmd_req, cmd_resp, str);
+diff --git a/drivers/net/wireless/rsi/rsi_91x_sdio.c b/drivers/net/wireless/rsi/rsi_91x_sdio.c
+index b0cf41195051..b766578b591a 100644
+--- a/drivers/net/wireless/rsi/rsi_91x_sdio.c
++++ b/drivers/net/wireless/rsi/rsi_91x_sdio.c
+@@ -20,6 +20,8 @@
+ #include "rsi_common.h"
+ #include "rsi_hal.h"
+ 
++#define RSI_MAX_BLOCK_SIZE 256
 +
- 	read_lock_bh(&arm_state->susp_res_lock);
- 	vc_suspend_state = arm_state->vc_suspend_state;
- 	vc_resume_state  = arm_state->vc_resume_state;
+ /**
+  * rsi_sdio_set_cmd52_arg() - This function prepares cmd 52 read/write arg.
+  * @rw: Read/write
+@@ -362,7 +364,7 @@ static int rsi_setblocklength(struct rsi_hw *adapter, u32 length)
+ 	rsi_dbg(INIT_ZONE, "%s: Setting the block length\n", __func__);
+ 
+ 	status = sdio_set_block_size(dev->pfunction, length);
+-	dev->pfunction->max_blksize = 256;
++	dev->pfunction->max_blksize = RSI_MAX_BLOCK_SIZE;
+ 	adapter->block_size = dev->pfunction->max_blksize;
+ 
+ 	rsi_dbg(INFO_ZONE,
+@@ -567,9 +569,12 @@ static int rsi_sdio_load_data_master_write(struct rsi_hw *adapter,
+ {
+ 	u32 num_blocks, offset, i;
+ 	u16 msb_address, lsb_address;
+-	u8 temp_buf[block_size];
++	u8 temp_buf[RSI_MAX_BLOCK_SIZE];
+ 	int status;
+ 
++	if (block_size > RSI_MAX_BLOCK_SIZE)
++		return -EINVAL;
++
+ 	num_blocks = instructions_sz / block_size;
+ 	msb_address = base_address >> 16;
+ 
 -- 
 2.7.4
