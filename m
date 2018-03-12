@@ -3,133 +3,90 @@ Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
 From: Ben Hutchings <ben@decadent.org.uk>
-Date: Mon, 12 Mar 2018 03:03:34 +0000
-Message-ID: <lsq.1520823814.145348710@decadent.org.uk>
-Subject: [PATCH 3.2 082/104] Documentation: Document array_index_nospec
-In-Reply-To: <lsq.1520823814.606620518@decadent.org.uk>
+Date: Mon, 12 Mar 2018 03:06:12 +0000
+Message-ID: <lsq.1520823972.837680702@decadent.org.uk>
+Subject: [PATCH 3.16 73/76] x86: Introduce __uaccess_begin_nospec() and
+ uaccess_try_nospec
+In-Reply-To: <lsq.1520823971.5976735@decadent.org.uk>
 To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: akpm@linux-foundation.org, linux-arch@vger.kernel.org, Will Deacon <will.deacon@arm.com>, Thomas Gleixner <tglx@linutronix.de>, gregkh@linuxfoundation.org, kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Peter Zijlstra <peterz@infradead.org>, torvalds@linux-foundation.org, Jonathan Corbet <corbet@lwn.net>, Dan Williams <dan.j.williams@intel.com>, alan@linux.intel.com, Kees Cook <keescook@chromium.org>
+Cc: akpm@linux-foundation.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Linus Torvalds <torvalds@linux-foundation.org>, Andi Kleen <ak@linux.intel.com>, Tom Lendacky <thomas.lendacky@amd.com>, Ingo Molnar <mingo@redhat.com>, Dan Williams <dan.j.williams@intel.com>, alan@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, gregkh@linuxfoundation.org, linux-arch@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-3.2.101-rc1 review patch.  If anyone has any objections, please let me know.
+3.16.56-rc1 review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
-From: Mark Rutland <mark.rutland@arm.com>
+From: Dan Williams <dan.j.williams@intel.com>
 
-commit f84a56f73dddaeac1dba8045b007f742f61cd2da upstream.
+commit b3bbfb3fb5d25776b8e3f361d2eedaabb0b496cd upstream.
 
-Document the rationale and usage of the new array_index_nospec() helper.
+For __get_user() paths, do not allow the kernel to speculate on the value
+of a user controlled pointer. In addition to the 'stac' instruction for
+Supervisor Mode Access Protection (SMAP), a barrier_nospec() causes the
+access_ok() result to resolve in the pipeline before the CPU might take any
+speculative action on the pointer value. Given the cost of 'stac' the
+speculation barrier is placed after 'stac' to hopefully overlap the cost of
+disabling SMAP with the cost of flushing the instruction pipeline.
 
-Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-Signed-off-by: Will Deacon <will.deacon@arm.com>
+Since __get_user is a major kernel interface that deals with user
+controlled pointers, the __uaccess_begin_nospec() mechanism will prevent
+speculative execution past an access_ok() permission check. While
+speculative execution past access_ok() is not enough to lead to a kernel
+memory leak, it is a necessary precondition.
+
+To be clear, __uaccess_begin_nospec() is addressing a class of potential
+problems near __get_user() usages.
+
+Note, that while the barrier_nospec() in __uaccess_begin_nospec() is used
+to protect __get_user(), pointer masking similar to array_index_nospec()
+will be used for get_user() since it incorporates a bounds check near the
+usage.
+
+uaccess_try_nospec provides the same mechanism for get_user_try.
+
+No functional changes.
+
+Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+Suggested-by: Andi Kleen <ak@linux.intel.com>
+Suggested-by: Ingo Molnar <mingo@redhat.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Reviewed-by: Kees Cook <keescook@chromium.org>
 Cc: linux-arch@vger.kernel.org
-Cc: Jonathan Corbet <corbet@lwn.net>
-Cc: Peter Zijlstra <peterz@infradead.org>
-Cc: gregkh@linuxfoundation.org
+Cc: Tom Lendacky <thomas.lendacky@amd.com>
+Cc: Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com
-Cc: torvalds@linux-foundation.org
+Cc: gregkh@linuxfoundation.org
+Cc: Al Viro <viro@zeniv.linux.org.uk>
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727413645.33451.15878817161436755393.stgit@dwillia2-desk3.amr.corp.intel.com
+Link: https://lkml.kernel.org/r/151727415922.33451.5796614273104346583.stgit@dwillia2-desk3.amr.corp.intel.com
+[bwh: Backported to 3.16: use current_thread_info()]
 Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 ---
- Documentation/speculation.txt | 90 +++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 90 insertions(+)
- create mode 100644 Documentation/speculation.txt
+ arch/x86/include/asm/uaccess.h | 9 +++++++++
+ 1 file changed, 9 insertions(+)
 
---- /dev/null
-+++ b/Documentation/speculation.txt
-@@ -0,0 +1,90 @@
-+This document explains potential effects of speculation, and how undesirable
-+effects can be mitigated portably using common APIs.
+--- a/arch/x86/include/asm/uaccess.h
++++ b/arch/x86/include/asm/uaccess.h
+@@ -145,6 +145,11 @@ extern int __get_user_bad(void);
+ 
+ #define __uaccess_begin() stac()
+ #define __uaccess_end()   clac()
++#define __uaccess_begin_nospec()	\
++({					\
++	stac();				\
++	barrier_nospec();		\
++})
+ 
+ /*
+  * This is a type: either unsigned long, if the argument fits into
+@@ -470,6 +475,10 @@ struct __large_struct { unsigned long bu
+ 	__uaccess_begin();						\
+ 	barrier();
+ 
++#define uaccess_try_nospec do {						\
++	current_thread_info()->uaccess_err = 0;				\
++	__uaccess_begin_nospec();					\
 +
-+===========
-+Speculation
-+===========
-+
-+To improve performance and minimize average latencies, many contemporary CPUs
-+employ speculative execution techniques such as branch prediction, performing
-+work which may be discarded at a later stage.
-+
-+Typically speculative execution cannot be observed from architectural state,
-+such as the contents of registers. However, in some cases it is possible to
-+observe its impact on microarchitectural state, such as the presence or
-+absence of data in caches. Such state may form side-channels which can be
-+observed to extract secret information.
-+
-+For example, in the presence of branch prediction, it is possible for bounds
-+checks to be ignored by code which is speculatively executed. Consider the
-+following code:
-+
-+	int load_array(int *array, unsigned int index)
-+	{
-+		if (index >= MAX_ARRAY_ELEMS)
-+			return 0;
-+		else
-+			return array[index];
-+	}
-+
-+Which, on arm64, may be compiled to an assembly sequence such as:
-+
-+	CMP	<index>, #MAX_ARRAY_ELEMS
-+	B.LT	less
-+	MOV	<returnval>, #0
-+	RET
-+  less:
-+	LDR	<returnval>, [<array>, <index>]
-+	RET
-+
-+It is possible that a CPU mis-predicts the conditional branch, and
-+speculatively loads array[index], even if index >= MAX_ARRAY_ELEMS. This
-+value will subsequently be discarded, but the speculated load may affect
-+microarchitectural state which can be subsequently measured.
-+
-+More complex sequences involving multiple dependent memory accesses may
-+result in sensitive information being leaked. Consider the following
-+code, building on the prior example:
-+
-+	int load_dependent_arrays(int *arr1, int *arr2, int index)
-+	{
-+		int val1, val2,
-+
-+		val1 = load_array(arr1, index);
-+		val2 = load_array(arr2, val1);
-+
-+		return val2;
-+	}
-+
-+Under speculation, the first call to load_array() may return the value
-+of an out-of-bounds address, while the second call will influence
-+microarchitectural state dependent on this value. This may provide an
-+arbitrary read primitive.
-+
-+====================================
-+Mitigating speculation side-channels
-+====================================
-+
-+The kernel provides a generic API to ensure that bounds checks are
-+respected even under speculation. Architectures which are affected by
-+speculation-based side-channels are expected to implement these
-+primitives.
-+
-+The array_index_nospec() helper in <linux/nospec.h> can be used to
-+prevent information from being leaked via side-channels.
-+
-+A call to array_index_nospec(index, size) returns a sanitized index
-+value that is bounded to [0, size) even under cpu speculation
-+conditions.
-+
-+This can be used to protect the earlier load_array() example:
-+
-+	int load_array(int *array, unsigned int index)
-+	{
-+		if (index >= MAX_ARRAY_ELEMS)
-+			return 0;
-+		else {
-+			index = array_index_nospec(index, MAX_ARRAY_ELEMS);
-+			return array[index];
-+		}
-+	}
+ #define uaccess_catch(err)						\
+ 	__uaccess_end();						\
+ 	(err) |= (current_thread_info()->uaccess_err ? -EFAULT : 0);	\
