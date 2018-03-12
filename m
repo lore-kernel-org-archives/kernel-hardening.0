@@ -4,12 +4,12 @@ Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
 From: Ben Hutchings <ben@decadent.org.uk>
 Date: Mon, 12 Mar 2018 03:03:34 +0000
-Message-ID: <lsq.1520823814.163616880@decadent.org.uk>
-Subject: [PATCH 3.2 086/104] x86/get_user: Use pointer masking to limit
- speculation
+Message-ID: <lsq.1520823814.957643617@decadent.org.uk>
+Subject: [PATCH 3.2 102/104] x86/uaccess: Use __uaccess_begin_nospec() and
+ uaccess_try_nospec
 In-Reply-To: <lsq.1520823814.606620518@decadent.org.uk>
 To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: akpm@linux-foundation.org, gregkh@linuxfoundation.org, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, Andy Lutomirski <luto@kernel.org>, linux-arch@vger.kernel.org, alan@linux.intel.com, Kees Cook <keescook@chromium.org>, Dan Williams <dan.j.williams@intel.com>, kernel-hardening@lists.openwall.com, torvalds@linux-foundation.org
+Cc: akpm@linux-foundation.org, linux-arch@vger.kernel.org, Al Viro <viro@zeniv.linux.org.uk>, gregkh@linuxfoundation.org, Thomas Gleixner <tglx@linutronix.de>, Andi Kleen <ak@linux.intel.com>, Dan Williams <dan.j.williams@intel.com>, kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, alan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 3.2.101-rc1 review patch.  If anyone has any objections, please let me know.
@@ -18,7 +18,7 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Dan Williams <dan.j.williams@intel.com>
 
-commit c7f631cb07e7da06ac1d231ca178452339e32a94 upstream.
+commit 304ec1b050310548db33063e567123fae8fd0301 upstream.
 
 Quoting Linus:
 
@@ -31,19 +31,13 @@ Quoting Linus:
     space. So it's a prime candidate for then finding _subsequent_
     accesses that can then be used to perturb the cache.
 
-Unlike the __get_user() case get_user() includes the address limit check
-near the pointer de-reference. With that locality the speculation can be
-mitigated with pointer narrowing rather than a barrier, i.e.
-array_index_nospec(). Where the narrowing is performed by:
+__uaccess_begin_nospec() covers __get_user() and copy_from_iter() where the
+limit check is far away from the user pointer de-reference. In those cases
+a barrier_nospec() prevents speculation with a potential pointer to
+privileged memory. uaccess_try_nospec covers get_user_try.
 
-	cmp %limit, %ptr
-	sbb %mask, %mask
-	and %mask, %ptr
-
-With respect to speculation the value of %ptr is either less than %limit
-or NULL.
-
-Co-developed-by: Linus Torvalds <torvalds@linux-foundation.org>
+Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+Suggested-by: Andi Kleen <ak@linux.intel.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Cc: linux-arch@vger.kernel.org
@@ -51,53 +45,218 @@ Cc: Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com
 Cc: gregkh@linuxfoundation.org
 Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: torvalds@linux-foundation.org
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727417469.33451.11804043010080838495.stgit@dwillia2-desk3.amr.corp.intel.com
+Link: https://lkml.kernel.org/r/151727416953.33451.10508284228526170604.stgit@dwillia2-desk3.amr.corp.intel.com
 [bwh: Backported to 3.2:
- - Drop changes to 32-bit implementation of __get_user_8
+ - There's no SMAP support, so use barrier_nospec() directly instead of
+   __uaccess_begin_nospec()
+ - Convert several more functions to use barrier_nospec(), that are just
+   wrappers in mainline
+ - There's no 'case 8' in __copy_to_user_inatomic()
  - Adjust context]
 Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 ---
- arch/x86/lib/getuser.S | 10 ++++++++++
- 1 file changed, 10 insertions(+)
-
---- a/arch/x86/lib/getuser.S
-+++ b/arch/x86/lib/getuser.S
-@@ -40,6 +40,8 @@ ENTRY(__get_user_1)
- 	GET_THREAD_INFO(%_ASM_DX)
- 	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
-+	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
-+	and %_ASM_DX, %_ASM_AX
- 1:	movzb (%_ASM_AX),%edx
- 	xor %eax,%eax
- 	ret
-@@ -53,6 +55,8 @@ ENTRY(__get_user_2)
- 	GET_THREAD_INFO(%_ASM_DX)
- 	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
-+	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
-+	and %_ASM_DX, %_ASM_AX
- 2:	movzwl -1(%_ASM_AX),%edx
- 	xor %eax,%eax
- 	ret
-@@ -66,6 +70,8 @@ ENTRY(__get_user_4)
- 	GET_THREAD_INFO(%_ASM_DX)
- 	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
-+	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
-+	and %_ASM_DX, %_ASM_AX
- 3:	mov -3(%_ASM_AX),%edx
- 	xor %eax,%eax
- 	ret
-@@ -80,6 +86,8 @@ ENTRY(__get_user_8)
- 	GET_THREAD_INFO(%_ASM_DX)
- 	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae	bad_get_user
-+	sbb %_ASM_DX, %_ASM_DX		/* array_index_mask_nospec() */
-+	and %_ASM_DX, %_ASM_AX
- 4:	movq -7(%_ASM_AX),%_ASM_DX
- 	xor %eax,%eax
- 	ret
+--- a/arch/x86/include/asm/uaccess.h
++++ b/arch/x86/include/asm/uaccess.h
+@@ -423,6 +423,7 @@ do {									\
+ ({									\
+ 	int __gu_err;							\
+ 	unsigned long __gu_val;						\
++	barrier_nospec();					\
+ 	__get_user_size(__gu_val, (ptr), (size), __gu_err, -EFAULT);	\
+ 	(x) = (__force __typeof__(*(ptr)))__gu_val;			\
+ 	__gu_err;							\
+@@ -529,7 +530,7 @@ struct __large_struct { unsigned long bu
+  *	get_user_ex(...);
+  * } get_user_catch(err)
+  */
+-#define get_user_try		uaccess_try
++#define get_user_try		uaccess_try_nospec
+ #define get_user_catch(err)	uaccess_catch(err)
+ 
+ #define get_user_ex(x, ptr)	do {					\
+--- a/arch/x86/include/asm/uaccess_32.h
++++ b/arch/x86/include/asm/uaccess_32.h
+@@ -48,14 +48,17 @@ __copy_to_user_inatomic(void __user *to,
+ 
+ 		switch (n) {
+ 		case 1:
++			barrier_nospec();
+ 			__put_user_size(*(u8 *)from, (u8 __user *)to,
+ 					1, ret, 1);
+ 			return ret;
+ 		case 2:
++			barrier_nospec();
+ 			__put_user_size(*(u16 *)from, (u16 __user *)to,
+ 					2, ret, 2);
+ 			return ret;
+ 		case 4:
++			barrier_nospec();
+ 			__put_user_size(*(u32 *)from, (u32 __user *)to,
+ 					4, ret, 4);
+ 			return ret;
+@@ -98,12 +101,15 @@ __copy_from_user_inatomic(void *to, cons
+ 
+ 		switch (n) {
+ 		case 1:
++			barrier_nospec();
+ 			__get_user_size(*(u8 *)to, from, 1, ret, 1);
+ 			return ret;
+ 		case 2:
++			barrier_nospec();
+ 			__get_user_size(*(u16 *)to, from, 2, ret, 2);
+ 			return ret;
+ 		case 4:
++			barrier_nospec();
+ 			__get_user_size(*(u32 *)to, from, 4, ret, 4);
+ 			return ret;
+ 		}
+@@ -142,12 +148,15 @@ __copy_from_user(void *to, const void __
+ 
+ 		switch (n) {
+ 		case 1:
++			barrier_nospec();
+ 			__get_user_size(*(u8 *)to, from, 1, ret, 1);
+ 			return ret;
+ 		case 2:
++			barrier_nospec();
+ 			__get_user_size(*(u16 *)to, from, 2, ret, 2);
+ 			return ret;
+ 		case 4:
++			barrier_nospec();
+ 			__get_user_size(*(u32 *)to, from, 4, ret, 4);
+ 			return ret;
+ 		}
+@@ -164,12 +173,15 @@ static __always_inline unsigned long __c
+ 
+ 		switch (n) {
+ 		case 1:
++			barrier_nospec();
+ 			__get_user_size(*(u8 *)to, from, 1, ret, 1);
+ 			return ret;
+ 		case 2:
++			barrier_nospec();
+ 			__get_user_size(*(u16 *)to, from, 2, ret, 2);
+ 			return ret;
+ 		case 4:
++			barrier_nospec();
+ 			__get_user_size(*(u32 *)to, from, 4, ret, 4);
+ 			return ret;
+ 		}
+--- a/arch/x86/include/asm/uaccess_64.h
++++ b/arch/x86/include/asm/uaccess_64.h
+@@ -75,19 +75,28 @@ int __copy_from_user_nocheck(void *dst,
+ 	if (!__builtin_constant_p(size))
+ 		return copy_user_generic(dst, (__force void *)src, size);
+ 	switch (size) {
+-	case 1:__get_user_asm(*(u8 *)dst, (u8 __user *)src,
++	case 1:
++		barrier_nospec();
++		__get_user_asm(*(u8 *)dst, (u8 __user *)src,
+ 			      ret, "b", "b", "=q", 1);
+ 		return ret;
+-	case 2:__get_user_asm(*(u16 *)dst, (u16 __user *)src,
++	case 2:
++		barrier_nospec();
++		__get_user_asm(*(u16 *)dst, (u16 __user *)src,
+ 			      ret, "w", "w", "=r", 2);
+ 		return ret;
+-	case 4:__get_user_asm(*(u32 *)dst, (u32 __user *)src,
++	case 4:
++		barrier_nospec();
++		__get_user_asm(*(u32 *)dst, (u32 __user *)src,
+ 			      ret, "l", "k", "=r", 4);
+ 		return ret;
+-	case 8:__get_user_asm(*(u64 *)dst, (u64 __user *)src,
++	case 8:
++		barrier_nospec();
++		__get_user_asm(*(u64 *)dst, (u64 __user *)src,
+ 			      ret, "q", "", "=r", 8);
+ 		return ret;
+ 	case 10:
++		barrier_nospec();
+ 		__get_user_asm(*(u64 *)dst, (u64 __user *)src,
+ 			       ret, "q", "", "=r", 10);
+ 		if (unlikely(ret))
+@@ -97,6 +106,7 @@ int __copy_from_user_nocheck(void *dst,
+ 			       ret, "w", "w", "=r", 2);
+ 		return ret;
+ 	case 16:
++		barrier_nospec();
+ 		__get_user_asm(*(u64 *)dst, (u64 __user *)src,
+ 			       ret, "q", "", "=r", 16);
+ 		if (unlikely(ret))
+@@ -179,6 +189,7 @@ int __copy_in_user(void __user *dst, con
+ 	switch (size) {
+ 	case 1: {
+ 		u8 tmp;
++		barrier_nospec();
+ 		__get_user_asm(tmp, (u8 __user *)src,
+ 			       ret, "b", "b", "=q", 1);
+ 		if (likely(!ret))
+@@ -188,6 +199,7 @@ int __copy_in_user(void __user *dst, con
+ 	}
+ 	case 2: {
+ 		u16 tmp;
++		barrier_nospec();
+ 		__get_user_asm(tmp, (u16 __user *)src,
+ 			       ret, "w", "w", "=r", 2);
+ 		if (likely(!ret))
+@@ -198,6 +210,7 @@ int __copy_in_user(void __user *dst, con
+ 
+ 	case 4: {
+ 		u32 tmp;
++		barrier_nospec();
+ 		__get_user_asm(tmp, (u32 __user *)src,
+ 			       ret, "l", "k", "=r", 4);
+ 		if (likely(!ret))
+@@ -207,6 +220,7 @@ int __copy_in_user(void __user *dst, con
+ 	}
+ 	case 8: {
+ 		u64 tmp;
++		barrier_nospec();
+ 		__get_user_asm(tmp, (u64 __user *)src,
+ 			       ret, "q", "", "=r", 8);
+ 		if (likely(!ret))
+--- a/arch/x86/lib/usercopy_32.c
++++ b/arch/x86/lib/usercopy_32.c
+@@ -774,6 +774,7 @@ survive:
+ 		return n;
+ 	}
+ #endif
++	barrier_nospec();
+ 	if (movsl_is_ok(to, from, n))
+ 		__copy_user(to, from, n);
+ 	else
+@@ -785,6 +786,7 @@ EXPORT_SYMBOL(__copy_to_user_ll);
+ unsigned long __copy_from_user_ll(void *to, const void __user *from,
+ 					unsigned long n)
+ {
++	barrier_nospec();
+ 	if (movsl_is_ok(to, from, n))
+ 		__copy_user_zeroing(to, from, n);
+ 	else
+@@ -796,6 +798,7 @@ EXPORT_SYMBOL(__copy_from_user_ll);
+ unsigned long __copy_from_user_ll_nozero(void *to, const void __user *from,
+ 					 unsigned long n)
+ {
++	barrier_nospec();
+ 	if (movsl_is_ok(to, from, n))
+ 		__copy_user(to, from, n);
+ 	else
+@@ -808,6 +811,7 @@ EXPORT_SYMBOL(__copy_from_user_ll_nozero
+ unsigned long __copy_from_user_ll_nocache(void *to, const void __user *from,
+ 					unsigned long n)
+ {
++	barrier_nospec();
+ #ifdef CONFIG_X86_INTEL_USERCOPY
+ 	if (n > 64 && cpu_has_xmm2)
+ 		n = __copy_user_zeroing_intel_nocache(to, from, n);
+@@ -823,6 +827,7 @@ EXPORT_SYMBOL(__copy_from_user_ll_nocach
+ unsigned long __copy_from_user_ll_nocache_nozero(void *to, const void __user *from,
+ 					unsigned long n)
+ {
++	barrier_nospec();
+ #ifdef CONFIG_X86_INTEL_USERCOPY
+ 	if (n > 64 && cpu_has_xmm2)
+ 		n = __copy_user_intel_nocache(to, from, n);
