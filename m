@@ -4,12 +4,11 @@ Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
 From: Ben Hutchings <ben@decadent.org.uk>
 Date: Mon, 12 Mar 2018 03:03:34 +0000
-Message-ID: <lsq.1520823814.499853632@decadent.org.uk>
-Subject: [PATCH 3.2 101/104] x86: Introduce __uaccess_begin_nospec() and
- uaccess_try_nospec
+Message-ID: <lsq.1520823814.879983504@decadent.org.uk>
+Subject: [PATCH 3.2 084/104] x86: Implement array_index_mask_nospec
 In-Reply-To: <lsq.1520823814.606620518@decadent.org.uk>
 To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Andi Kleen <ak@linux.intel.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, alan@linux.intel.com, linux-arch@vger.kernel.org, Al Viro <viro@zeniv.linux.org.uk>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Tom Lendacky <thomas.lendacky@amd.com>, gregkh@linuxfoundation.org
+Cc: akpm@linux-foundation.org, alan@linux.intel.com, kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, gregkh@linuxfoundation.org, linux-arch@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 3.2.101-rc1 review patch.  If anyone has any objections, please let me know.
@@ -18,64 +17,61 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Dan Williams <dan.j.williams@intel.com>
 
-commit b3bbfb3fb5d25776b8e3f361d2eedaabb0b496cd upstream.
+commit babdde2698d482b6c0de1eab4f697cf5856c5859 upstream.
 
-For __get_user() paths, do not allow the kernel to speculate on the value
-of a user controlled pointer. In addition to the 'stac' instruction for
-Supervisor Mode Access Protection (SMAP), a barrier_nospec() causes the
-access_ok() result to resolve in the pipeline before the CPU might take any
-speculative action on the pointer value. Given the cost of 'stac' the
-speculation barrier is placed after 'stac' to hopefully overlap the cost of
-disabling SMAP with the cost of flushing the instruction pipeline.
+array_index_nospec() uses a mask to sanitize user controllable array
+indexes, i.e. generate a 0 mask if 'index' >= 'size', and a ~0 mask
+otherwise. While the default array_index_mask_nospec() handles the
+carry-bit from the (index - size) result in software.
 
-Since __get_user is a major kernel interface that deals with user
-controlled pointers, the __uaccess_begin_nospec() mechanism will prevent
-speculative execution past an access_ok() permission check. While
-speculative execution past access_ok() is not enough to lead to a kernel
-memory leak, it is a necessary precondition.
-
-To be clear, __uaccess_begin_nospec() is addressing a class of potential
-problems near __get_user() usages.
-
-Note, that while the barrier_nospec() in __uaccess_begin_nospec() is used
-to protect __get_user(), pointer masking similar to array_index_nospec()
-will be used for get_user() since it incorporates a bounds check near the
-usage.
-
-uaccess_try_nospec provides the same mechanism for get_user_try.
-
-No functional changes.
+The x86 array_index_mask_nospec() does the same, but the carry-bit is
+handled in the processor CF flag without conditional instructions in the
+control flow.
 
 Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-Suggested-by: Andi Kleen <ak@linux.intel.com>
-Suggested-by: Ingo Molnar <mingo@redhat.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Cc: linux-arch@vger.kernel.org
-Cc: Tom Lendacky <thomas.lendacky@amd.com>
-Cc: Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com
 Cc: gregkh@linuxfoundation.org
-Cc: Al Viro <viro@zeniv.linux.org.uk>
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727415922.33451.5796614273104346583.stgit@dwillia2-desk3.amr.corp.intel.com
-[bwh: Backported to 3.2:
- - There's no SMAP support, so only add uaccess_try_nospec()
- - Use current_thread_info() and save the previous error state, matching
-   uaccess_try()]
+Link: https://lkml.kernel.org/r/151727414808.33451.1873237130672785331.stgit@dwillia2-desk3.amr.corp.intel.com
+[bwh: Backported to 3.2: adjust filename, context]
 Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 ---
---- a/arch/x86/include/asm/uaccess.h
-+++ b/arch/x86/include/asm/uaccess.h
-@@ -462,6 +462,11 @@ struct __large_struct { unsigned long bu
- 	current_thread_info()->uaccess_err = 0;				\
- 	barrier();
+ arch/x86/include/asm/system.h | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+--- a/arch/x86/include/asm/system.h
++++ b/arch/x86/include/asm/system.h
+@@ -455,6 +455,30 @@ void stop_this_cpu(void *dummy);
+ #endif
  
-+#define uaccess_try_nospec do {						\
-+	int prev_err = current_thread_info()->uaccess_err;		\
-+	current_thread_info()->uaccess_err = 0;				\
-+	barrier_nospec();
+ /**
++ * array_index_mask_nospec() - generate a mask that is ~0UL when the
++ * 	bounds check succeeds and 0 otherwise
++ * @index: array element index
++ * @size: number of elements in array
++ *
++ * Returns:
++ *     0 - (index < size)
++ */
++static inline unsigned long array_index_mask_nospec(unsigned long index,
++		unsigned long size)
++{
++	unsigned long mask;
 +
- #define uaccess_catch(err)						\
- 	(err) |= current_thread_info()->uaccess_err;			\
- 	current_thread_info()->uaccess_err = prev_err;			\
++	asm ("cmp %1,%2; sbb %0,%0;"
++			:"=r" (mask)
++			:"r"(size),"r" (index)
++			:"cc");
++	return mask;
++}
++
++/* Override the default implementation from linux/nospec.h. */
++#define array_index_mask_nospec array_index_mask_nospec
++
++/**
+  * read_barrier_depends - Flush all pending reads that subsequents reads
+  * depend on.
+  *
