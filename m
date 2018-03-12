@@ -1,43 +1,28 @@
-From: Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>
-Subject: Re: [PATCH] video: fbdev: via: remove VLA usage
-Date: Mon, 12 Mar 2018 17:04:25 +0100
-Message-id: <7211546.mLmn3tHjVa@amdc3058>
-In-reply-to: 
-	<CACvgo5278SmXfV0jfrMu=Ba6gf7rRXzNduNX+D270fGUFQcZdQ@mail.gmail.com>
-MIME-version: 1.0
-Content-transfer-encoding: 7Bit
-Content-type: text/plain; charset="us-ascii"
-References: <20180308173949.GA19305@embeddedgus>
-	<CGME20180309110234epcas1p2c64b608487008f178d25609e962ecc74@epcas1p2.samsung.com>
-	<CACvgo5278SmXfV0jfrMu=Ba6gf7rRXzNduNX+D270fGUFQcZdQ@mail.gmail.com>
-To: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Cc: Emil Velikov <emil.l.velikov@gmail.com>, Eric Engestrom <eric.engestrom@imgtec.com>, Florian Tobias Schandinat <FlorianSchandinat@gmx.de>, linux-fbdev <linux-fbdev@vger.kernel.org>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, "Linux-Kernel@Vger. Kernel. Org" <linux-kernel@vger.kernel.org>, ML dri-devel <dri-devel@lists.freedesktop.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+From: Bart Van Assche <Bart.VanAssche@wdc.com>
+Subject: Re: [PATCH] device_handler: remove VLAs
+Date: Mon, 12 Mar 2018 15:41:26 +0000
+Message-ID: <1520869285.3469.13.camel@wdc.com>
+References: <20180309232933.14e39858@heffalump.sk2.org>
+	 <20180309223211.20473-1-steve@sk2.org> <1520635688.2907.17.camel@wdc.com>
+	 <20180310141422.3a8c451f@heffalump.sk2.org>
+In-Reply-To: <20180310141422.3a8c451f@heffalump.sk2.org>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <B0DD18BB1A20EC49A68831DE9DF44737@namprd04.prod.outlook.com>
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+To: "steve@sk2.org" <steve@sk2.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-block@vger.kernel.org" <linux-block@vger.kernel.org>, "martin.petersen@oracle.com" <martin.petersen@oracle.com>, "axboe@kernel.dk" <axboe@kernel.dk>, "linux-scsi@vger.kernel.org" <linux-scsi@vger.kernel.org>, "hare@suse.com" <hare@suse.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "jejb@linux.vnet.ibm.com" <jejb@linux.vnet.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Friday, March 09, 2018 11:02:24 AM Emil Velikov wrote:
-> On 9 March 2018 at 10:59, Eric Engestrom <eric.engestrom@imgtec.com> wrote:
-> > On Thursday, 2018-03-08 11:39:49 -0600, Gustavo A. R. Silva wrote:
-> >> In preparation to enabling -Wvla, remove VLA usage.
-> >>
-> >> Also, fixed as part of the directive to remove all VLAs from
-> >> the kernel: https://lkml.org/lkml/2018/3/7/621
-> >>
-> >> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
-> >
-> > Sorry for my reply on v1, I missed that Emil already replied to another
-> > post of the same patch (side note on that, making use of `-vX` and
-> > `--in-reply-to` helps track the evolution of patches)
-> >
-> > This looks good to me:
-> > Reviewed-by: Eric Engestrom <eric.engestrom@imgtec.com>
-> >
-> Same here
-> Reviewed-by: Emil Velikov <emil.velikov@collabora.com>
-
-Patch queued for 4.17, thanks.
-
-Best regards,
---
-Bartlomiej Zolnierkiewicz
-Samsung R&D Institute Poland
-Samsung Electronics
+T24gU2F0LCAyMDE4LTAzLTEwIGF0IDE0OjE0ICswMTAwLCBTdGVwaGVuIEtpdHQgd3JvdGU6DQo+
+IFRoZSB0d28gcGF0Y2hlcyBJIHNlbnQgd2VyZSBzdXBwb3NlZCB0byBiZSBhbHRlcm5hdGl2ZSBz
+b2x1dGlvbnM7IHNlZQ0KPiBodHRwczovL21hcmMuaW5mby8/bD1saW51eC1zY3NpJm09MTUyMDYz
+NjcxMDA1Mjk1Jnc9MiBmb3IgdGhlIGludHJvZHVjdGlvbiAoSQ0KPiBzZWVtIHRvIGhhdmUgbWVz
+c2VkIHVwIHRoZSBoZWFkZXJzLCBzbyB0aGUgbWFpbHMgZGlkbuKAmXQgZW5kIHVwIHRocmVhZGVk
+DQo+IHByb3Blcmx5KS4NCg0KVGhlIHR3byBwYXRjaGVzIGFycml2ZWQgaW4gbXkgaW5ib3ggc2V2
+ZXJhbCBtaW51dGVzIGJlZm9yZSB0aGUgY292ZXIgbGV0dGVyLiBJbg0KdGhlIGUtbWFpbCBoZWFk
+ZXIgb2YgdGhlIGNvdmVyIGxldHRlciBJIGZvdW5kIHRoZSBmb2xsb3dpbmc6DQoNClgtR3JleWxp
+c3Q6IGRlbGF5ZWQgMTgxMCBzZWNvbmRzIGJ5IHBvc3RncmV5LTEuMjcgYXQgdmdlci5rZXJuZWwu
+b3JnOyBGcmksIDA5IE1hciAyMDE4IDE4OjA1OjA4IEVTVA0KDQpEb2VzIHRoaXMgbWVhbiB0aGF0
+IHRoZSBkZWxheSBoYXBwZW5lZCBkdWUgdG8gdmdlciBzZXJ2ZXIncyBhbnRpLXNwYW0gYWxnb3Jp
+dGhtPw0KDQpCYXJ0Lg0KDQoNCg0K
