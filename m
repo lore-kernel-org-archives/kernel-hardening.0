@@ -1,26 +1,52 @@
-Date: Mon, 12 Mar 2018 16:06:23 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Subject: Re: [PATCH] rbd: Remove VLA stack usage
-Message-ID: <20180312050623.GD8631@eros>
-References: <1520830180-25452-1-git-send-email-me@tobin.cc>
- <20180312050204.GC25480@zzz.localdomain>
+Date: Mon, 12 Mar 2018 16:26:39 +1100
+From: "Tobin C. Harding" <tobin@apporbit.com>
+Subject: VLA commit log
+Message-ID: <20180312052639.GE8631@eros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180312050204.GC25480@zzz.localdomain>
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: Ilya Dryomov <idryomov@gmail.com>, Sage Weil <sage@redhat.com>, Alex Elder <elder@kernel.org>, ceph-devel@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
+To: Kees Cook <keescook@chromium.org>, Tycho Andersen <tycho@tycho.ws>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Mar 11, 2018 at 10:02:04PM -0700, Eric Biggers wrote:
-> On Mon, Mar 12, 2018 at 03:49:40PM +1100, Tobin C. Harding wrote:
-> > The kernel would like to have all stack VLA usage removed[1].
-> 
-> Can you please stop writing this?  The Linux kernel isn't sentient; it doesn't
-> "like" anything.  You need to explain why *you* (and other people) believe these
-> changes should be made.
+Hi,
 
-No worries, will re-spin with better description.
+I got some push back on the commit log we have all started to use
+(copying Kees' initial commit log).  If we are going to do hundreds of
+these patches should we write a perfectly correct commit log that can be
+included as the start of the 'why' of each VLA removal patch?  Here is
+my attempt, I am quite bad at writing commit logs so would love someone
+to fix it up.
+
+    Kernel stack size is limited.  Variable Length Arrays (VLA) open the
+    kernel up to stack abuse in a couple of ways;
+    
+    1. If the variable can be controlled by an attacker.
+    2. Not having the size of the stack right there in plain site makes it
+    harder to maintain the code base because changes in one place can effect
+    the stack in another place (i.e in another function).
+    
+    It would be nice to be able to build the kernel with -Wvla.  There has
+    been some consensus on this already [1].
+
+    ...
+
+    [1]: https://lkml.org/lkml/2018/3/7/621
+
+The '...' would of course be different for each patch.  In case you
+missed it here is the catalyst for this email
+
+	On Mon, Mar 12, 2018 at 03:49:40PM +1100, Tobin C. Harding wrote:
+	> The kernel would like to have all stack VLA usage removed[1].
+
+	Can you please stop writing this?  The Linux kernel isn't
+	sentient; it doesn't "like" anything.  You need to explain why
+	*you* (and other people) believe these changes should be made.
+
+
+Perhaps we should add a summary of all the gcc discussion i.e why const
+variables still cause gcc to emit a VLA warning.
+
 
 thanks,
 Tobin.
