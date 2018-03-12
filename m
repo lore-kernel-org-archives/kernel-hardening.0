@@ -4,11 +4,11 @@ Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
 From: Ben Hutchings <ben@decadent.org.uk>
 Date: Mon, 12 Mar 2018 03:06:12 +0000
-Message-ID: <lsq.1520823972.857925406@decadent.org.uk>
-Subject: [PATCH 3.16 58/76] nl80211: Sanitize array index in parse_txq_params
+Message-ID: <lsq.1520823972.992404138@decadent.org.uk>
+Subject: [PATCH 3.16 53/76] x86: Implement array_index_mask_nospec
 In-Reply-To: <lsq.1520823971.5976735@decadent.org.uk>
 To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, torvalds@linux-foundation.org, Elena Reshetova <elena.reshetova@intel.com>, Thomas Gleixner <tglx@linutronix.de>, alan@linux.intel.com, Dan Williams <dan.j.williams@intel.com>, "David S. Miller" <davem@davemloft.net>, linux-arch@vger.kernel.org, Christian Lamparter <chunkeey@gmail.com>, linux-wireless@vger.kernel.org, gregkh@linuxfoundation.org, Johannes Berg <johannes@sipsolutions.net>
+Cc: akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, alan@linux.intel.com, gregkh@linuxfoundation.org, linux-arch@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 3.16.56-rc1 review patch.  If anyone has any objections, please let me know.
@@ -17,66 +17,61 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Dan Williams <dan.j.williams@intel.com>
 
-commit 259d8c1e984318497c84eef547bbb6b1d9f4eb05 upstream.
+commit babdde2698d482b6c0de1eab4f697cf5856c5859 upstream.
 
-Wireless drivers rely on parse_txq_params to validate that txq_params->ac
-is less than NL80211_NUM_ACS by the time the low-level driver's ->conf_tx()
-handler is called. Use a new helper, array_index_nospec(), to sanitize
-txq_params->ac with respect to speculation. I.e. ensure that any
-speculation into ->conf_tx() handlers is done with a value of
-txq_params->ac that is within the bounds of [0, NL80211_NUM_ACS).
+array_index_nospec() uses a mask to sanitize user controllable array
+indexes, i.e. generate a 0 mask if 'index' >= 'size', and a ~0 mask
+otherwise. While the default array_index_mask_nospec() handles the
+carry-bit from the (index - size) result in software.
 
-Reported-by: Christian Lamparter <chunkeey@gmail.com>
-Reported-by: Elena Reshetova <elena.reshetova@intel.com>
+The x86 array_index_mask_nospec() does the same, but the carry-bit is
+handled in the processor CF flag without conditional instructions in the
+control flow.
+
+Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Acked-by: Johannes Berg <johannes@sipsolutions.net>
 Cc: linux-arch@vger.kernel.org
 Cc: kernel-hardening@lists.openwall.com
 Cc: gregkh@linuxfoundation.org
-Cc: linux-wireless@vger.kernel.org
-Cc: torvalds@linux-foundation.org
-Cc: "David S. Miller" <davem@davemloft.net>
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727419584.33451.7700736761686184303.stgit@dwillia2-desk3.amr.corp.intel.com
+Link: https://lkml.kernel.org/r/151727414808.33451.1873237130672785331.stgit@dwillia2-desk3.amr.corp.intel.com
+[bwh: Backported to 3.16: adjust context]
 Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 ---
- net/wireless/nl80211.c | 9 ++++++---
- 1 file changed, 6 insertions(+), 3 deletions(-)
+ arch/x86/include/asm/barrier.h | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
 
---- a/net/wireless/nl80211.c
-+++ b/net/wireless/nl80211.c
-@@ -14,6 +14,7 @@
- #include <linux/nl80211.h>
- #include <linux/rtnetlink.h>
- #include <linux/netlink.h>
-+#include <linux/nospec.h>
- #include <linux/etherdevice.h>
- #include <net/net_namespace.h>
- #include <net/genetlink.h>
-@@ -1829,20 +1830,22 @@ static const struct nla_policy txq_param
- static int parse_txq_params(struct nlattr *tb[],
- 			    struct ieee80211_txq_params *txq_params)
- {
-+	u8 ac;
+--- a/arch/x86/include/asm/barrier.h
++++ b/arch/x86/include/asm/barrier.h
+@@ -25,6 +25,30 @@
+ #endif
+ 
+ /**
++ * array_index_mask_nospec() - generate a mask that is ~0UL when the
++ * 	bounds check succeeds and 0 otherwise
++ * @index: array element index
++ * @size: number of elements in array
++ *
++ * Returns:
++ *     0 - (index < size)
++ */
++static inline unsigned long array_index_mask_nospec(unsigned long index,
++		unsigned long size)
++{
++	unsigned long mask;
 +
- 	if (!tb[NL80211_TXQ_ATTR_AC] || !tb[NL80211_TXQ_ATTR_TXOP] ||
- 	    !tb[NL80211_TXQ_ATTR_CWMIN] || !tb[NL80211_TXQ_ATTR_CWMAX] ||
- 	    !tb[NL80211_TXQ_ATTR_AIFS])
- 		return -EINVAL;
- 
--	txq_params->ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
-+	ac = nla_get_u8(tb[NL80211_TXQ_ATTR_AC]);
- 	txq_params->txop = nla_get_u16(tb[NL80211_TXQ_ATTR_TXOP]);
- 	txq_params->cwmin = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMIN]);
- 	txq_params->cwmax = nla_get_u16(tb[NL80211_TXQ_ATTR_CWMAX]);
- 	txq_params->aifs = nla_get_u8(tb[NL80211_TXQ_ATTR_AIFS]);
- 
--	if (txq_params->ac >= NL80211_NUM_ACS)
-+	if (ac >= NL80211_NUM_ACS)
- 		return -EINVAL;
--
-+	txq_params->ac = array_index_nospec(ac, NL80211_NUM_ACS);
- 	return 0;
- }
- 
++	asm ("cmp %1,%2; sbb %0,%0;"
++			:"=r" (mask)
++			:"r"(size),"r" (index)
++			:"cc");
++	return mask;
++}
++
++/* Override the default implementation from linux/nospec.h. */
++#define array_index_mask_nospec array_index_mask_nospec
++
++/**
+  * read_barrier_depends - Flush all pending reads that subsequents reads
+  * depend on.
+  *
