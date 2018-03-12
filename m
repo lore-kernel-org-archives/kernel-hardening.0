@@ -1,70 +1,87 @@
-Date: Mon, 12 Mar 2018 18:14:42 -0500
-From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Subject: [PATCH] netfilter: cttimeout: remove VLA usage
-Message-ID: <20180312231442.GA22071@embeddedgus>
+Subject: Re: [PATCH 1/4] gpio: Remove VLA from gpiolib
+References: <20180310001021.6437-1-labbott@redhat.com>
+ <20180310001021.6437-2-labbott@redhat.com>
+ <a758ce3f-fed7-2ecf-94c5-ba133ea75bde@rasmusvillemoes.dk>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <301ecaf7-62a4-14af-3a5b-7bd76a49c4f6@redhat.com>
+Date: Mon, 12 Mar 2018 16:40:50 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-To: Pablo Neira Ayuso <pablo@netfilter.org>, Jozsef Kadlecsik <kadlec@blackhole.kfki.hu>, Florian Westphal <fw@strlen.de>, "David S. Miller" <davem@davemloft.net>
-Cc: netfilter-devel@vger.kernel.org, coreteam@netfilter.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+In-Reply-To: <a758ce3f-fed7-2ecf-94c5-ba133ea75bde@rasmusvillemoes.dk>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Rasmus Villemoes <linux@rasmusvillemoes.dk>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>
+Cc: linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Lukas Wunner <lukas@wunner.de>, Mathias Duckeck <m.duckeck@kunbus.de>, Nandor Han <nandor.han@ge.com>, Semi Malinen <semi.malinen@ge.com>, Patrice Chotard <patrice.chotard@st.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In preparation to enabling -Wvla, remove VLA and replace it
-with dynamic memory allocation.
+On 03/12/2018 08:00 AM, Rasmus Villemoes wrote:
+> On 2018-03-10 01:10, Laura Abbott wrote:
+>>   		/* collect all inputs belonging to the same chip */
+>>   		first = i;
+>> -		memset(mask, 0, sizeof(mask));
+>> +		memset(mask, 0, sizeof(*mask));
+> 
+> see below
+> 
+>> @@ -2887,14 +2909,30 @@ void gpiod_set_array_value_complex(bool raw, bool can_sleep,
+>>   
+>>   	while (i < array_size) {
+>>   		struct gpio_chip *chip = desc_array[i]->gdev->chip;
+>> -		unsigned long mask[BITS_TO_LONGS(chip->ngpio)];
+>> -		unsigned long bits[BITS_TO_LONGS(chip->ngpio)];
+>> +		unsigned long *mask;
+>> +		unsigned long *bits;
+>>   		int count = 0;
+>>   
+>> +		mask = kmalloc_array(BITS_TO_LONGS(chip->ngpio),
+>> +				sizeof(*mask),
+>> +				can_sleep ? GFP_KERNEL : GFP_ATOMIC);
+>> +
+>> +		if (!mask)
+>> +			return;
+>> +
+>> +		bits = kmalloc_array(BITS_TO_LONGS(chip->ngpio),
+>> +				sizeof(*bits),
+>> +				can_sleep ? GFP_KERNEL : GFP_ATOMIC);
+>> +
+>> +		if (!bits) {
+>> +			kfree(mask);
+>> +			return;
+>> +		}
+>> +
+>>   		if (!can_sleep)
+>>   			WARN_ON(chip->can_sleep);
+>>   
+>> -		memset(mask, 0, sizeof(mask));
+>> +		memset(mask, 0, sizeof(*mask));
+> 
+> Hm, it seems you're now only clearing the first word of mask, not the
+> entire allocation. Why not just use kcalloc() instead of kmalloc_array
+> to have it automatically cleared?
+> 
 
->From a security viewpoint, the use of Variable Length Arrays can be
-a vector for stack overflow attacks. Also, in general, as the code
-evolves it is easy to lose track of how big a VLA can get. Thus, we
-can end up having segfaults that are hard to debug.
+Bleh, I didn't think through that carefully. I'll just switch
+to kcalloc, especially since it calls kmalloc_array.
 
-Also, fixed as part of the directive to remove all VLAs from
-the kernel: https://lkml.org/lkml/2018/3/7/621
+> Other random thoughts: maybe two allocations for each loop iteration is
+> a bit much. Maybe do a first pass over the array and collect the maximal
+> chip->ngpio, do the memory allocation and freeing outside the loop (then
+> you'd of course need to preserve the memset() with appropriate length
+> computed). And maybe even just do one allocation, making bits point at
+> the second half.
+> 
 
-Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
----
- net/netfilter/nfnetlink_cttimeout.c | 26 +++++++++++++++++---------
- 1 file changed, 17 insertions(+), 9 deletions(-)
+I was trying to make minimal changes and match the existing code. Is this
+likely to be an actual hot path to optimize?
 
-diff --git a/net/netfilter/nfnetlink_cttimeout.c b/net/netfilter/nfnetlink_cttimeout.c
-index 6819300..dcd7bd3 100644
---- a/net/netfilter/nfnetlink_cttimeout.c
-+++ b/net/netfilter/nfnetlink_cttimeout.c
-@@ -51,19 +51,27 @@ ctnl_timeout_parse_policy(void *timeouts,
- 			  const struct nf_conntrack_l4proto *l4proto,
- 			  struct net *net, const struct nlattr *attr)
- {
-+	struct nlattr **tb;
- 	int ret = 0;
- 
--	if (likely(l4proto->ctnl_timeout.nlattr_to_obj)) {
--		struct nlattr *tb[l4proto->ctnl_timeout.nlattr_max+1];
-+	if (!l4proto->ctnl_timeout.nlattr_to_obj)
-+		return 0;
- 
--		ret = nla_parse_nested(tb, l4proto->ctnl_timeout.nlattr_max,
--				       attr, l4proto->ctnl_timeout.nla_policy,
--				       NULL);
--		if (ret < 0)
--			return ret;
-+	tb = kcalloc(l4proto->ctnl_timeout.nlattr_max + 1, sizeof(*tb),
-+		     GFP_KERNEL);
- 
--		ret = l4proto->ctnl_timeout.nlattr_to_obj(tb, net, timeouts);
--	}
-+	if (!tb)
-+		return -ENOMEM;
-+
-+	ret = nla_parse_nested(tb, l4proto->ctnl_timeout.nlattr_max, attr,
-+			       l4proto->ctnl_timeout.nla_policy, NULL);
-+	if (ret < 0)
-+		goto err;
-+
-+	ret = l4proto->ctnl_timeout.nlattr_to_obj(tb, net, timeouts);
-+
-+err:
-+	kfree(tb);
- 	return ret;
- }
- 
--- 
-2.7.4
+> Does the set function need to be updated to return an int to be able to
+> inform the caller that memory allocation failed?
+> 
+
+That would involve changing the public API. I don't have a problem
+doing so if that's what you want.
+
+> Rasmus
+> 
+
+Thanks,
+Laura
