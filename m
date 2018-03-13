@@ -1,97 +1,34 @@
-Date: Tue, 13 Mar 2018 12:39:03 -0500
-From: "Serge E. Hallyn" <serge@hallyn.com>
-Subject: Re: [PATCH 2/2] dh key: get rid of stack array allocation
-Message-ID: <20180313173903.GA19174@mail.hallyn.com>
-References: <20180313042907.29598-1-tycho@tycho.ws>
- <20180313042907.29598-2-tycho@tycho.ws>
+Date: Tue, 13 Mar 2018 11:32:20 -0700
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
+Message-ID: <20180313183220.GA21538@bombadil.infradead.org>
+References: <20180214182618.14627-1-willy@infradead.org>
+ <20180214182618.14627-3-willy@infradead.org>
+ <CAGXu5jL9hqQGe672CmvFwqNbtTr=qu7WRwHuS4Vy7o5sX_UTgg@mail.gmail.com>
+ <alpine.DEB.2.20.1803072212160.2814@hadrien>
+ <20180308025812.GA9082@bombadil.infradead.org>
+ <alpine.DEB.2.20.1803080722300.3754@hadrien>
+ <20180308230512.GD29073@bombadil.infradead.org>
+ <alpine.DEB.2.20.1803131818550.3117@hadrien>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180313042907.29598-2-tycho@tycho.ws>
-To: Tycho Andersen <tycho@tycho.ws>
-Cc: David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>
+In-Reply-To: <alpine.DEB.2.20.1803131818550.3117@hadrien>
+To: Julia Lawall <julia.lawall@lip6.fr>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, cocci@systeme.lip6.fr, Himanshu Jha <himanshujha199640@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Tycho Andersen (tycho@tycho.ws):
-> Similarly to the previous patch, we would like to get rid of stack
-> allocated arrays: https://lkml.org/lkml/2018/3/7/621
+On Tue, Mar 13, 2018 at 06:19:51PM +0100, Julia Lawall wrote:
+> On Thu, 8 Mar 2018, Matthew Wilcox wrote:
+> > On Thu, Mar 08, 2018 at 07:24:47AM +0100, Julia Lawall wrote:
+> > > Thanks.  So it's OK to replace kmalloc and kzalloc, even though they
+> > > didn't previously consider vmalloc and even though kmalloc doesn't zero?
+> >
+> > We'll also need to replace the corresponding places where those structs
+> > are freed with kvfree().  Can coccinelle handle that too?
 > 
-> In this case, we can also use a malloc style approach to free the temporary
-> buffer, being careful to also use kzfree to free them (indeed, at least one
-> of these has a memzero_explicit, but it seems like maybe they both
-> should?).
-> 
-> Signed-off-by: Tycho Andersen <tycho@tycho.ws>
-> CC: David Howells <dhowells@redhat.com>
-> CC: James Morris <jmorris@namei.org>
-> CC: "Serge E. Hallyn" <serge@hallyn.com>
+> Is the use of vmalloc a necessary part of the design?  Or could there be a
+> non vmalloc versions for call sites that are already ok with that?
 
-Acked-by: Serge Hallyn <serge@hallyn.com>
-
-for both, thanks.
-
-> ---
->  security/keys/dh.c | 27 +++++++++++++++++++++------
->  1 file changed, 21 insertions(+), 6 deletions(-)
-> 
-> diff --git a/security/keys/dh.c b/security/keys/dh.c
-> index d1ea9f325f94..f02261b24759 100644
-> --- a/security/keys/dh.c
-> +++ b/security/keys/dh.c
-> @@ -162,19 +162,27 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
->  			goto err;
->  
->  		if (zlen && h) {
-> -			u8 tmpbuffer[h];
-> +			u8 *tmpbuffer;
->  			size_t chunk = min_t(size_t, zlen, h);
-> -			memset(tmpbuffer, 0, chunk);
-> +
-> +			err = -ENOMEM;
-> +			tmpbuffer = kzalloc(chunk, GFP_KERNEL);
-> +			if (!tmpbuffer)
-> +				goto err;
->  
->  			do {
->  				err = crypto_shash_update(desc, tmpbuffer,
->  							  chunk);
-> -				if (err)
-> +				if (err) {
-> +					kzfree(tmpbuffer);
->  					goto err;
-> +				}
->  
->  				zlen -= chunk;
->  				chunk = min_t(size_t, zlen, h);
->  			} while (zlen);
-> +
-> +			kzfree(tmpbuffer);
->  		}
->  
->  		if (src && slen) {
-> @@ -184,13 +192,20 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
->  		}
->  
->  		if (dlen < h) {
-> -			u8 tmpbuffer[h];
-> +			u8 *tmpbuffer;
-> +
-> +			err = -ENOMEM;
-> +			tmpbuffer = kzalloc(h, GFP_KERNEL);
-> +			if (!tmpbuffer)
-> +				goto err;
->  
->  			err = crypto_shash_final(desc, tmpbuffer);
-> -			if (err)
-> +			if (err) {
-> +				kzfree(tmpbuffer);
->  				goto err;
-> +			}
->  			memcpy(dst, tmpbuffer, dlen);
-> -			memzero_explicit(tmpbuffer, h);
-> +			kzfree(tmpbuffer);
->  			return 0;
->  		} else {
->  			err = crypto_shash_final(desc, dst);
-> -- 
-> 2.15.1
+We can also add kmalloc_struct() along with kmalloc_ab_c that won't fall
+back to vmalloc but just return NULL.
