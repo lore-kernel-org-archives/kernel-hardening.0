@@ -1,37 +1,45 @@
-Subject: Re: [PATCH] net: dsa: drop some VLAs in switch.c
-References: <1520970647-19587-1-git-send-email-s.mesoraca16@gmail.com>
- <87fu5321du.fsf@weeman.i-did-not-set--mail-host-address--so-tickle-me>
-From: Florian Fainelli <f.fainelli@gmail.com>
-Message-ID: <b948ef55-8b16-fee4-b22f-4c6d09fea0cf@gmail.com>
-Date: Tue, 13 Mar 2018 13:06:33 -0700
+Date: Wed, 14 Mar 2018 07:17:57 +1100
+From: tcharding <me@tobin.cc>
+Subject: Re: [RESEND] rsi: Remove stack VLA usage
+Message-ID: <20180313201757.GK8631@eros>
+References: <1520819022-15238-1-git-send-email-me@tobin.cc>
+ <20180312094606.8192B6081A@smtp.codeaurora.org>
 MIME-Version: 1.0
-In-Reply-To: <87fu5321du.fsf@weeman.i-did-not-set--mail-host-address--so-tickle-me>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Vivien Didelot <vivien.didelot@savoirfairelinux.com>, Salvatore Mesoraca <s.mesoraca16@gmail.com>, linux-kernel@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Andrew Lunn <andrew@lunn.ch>, Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180312094606.8192B6081A@smtp.codeaurora.org>
+To: Kalle Valo <kvalo@codeaurora.org>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, linux-wireless@vger.kernel.org, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/13/2018 12:58 PM, Vivien Didelot wrote:
-> Hi Salvatore,
+On Mon, Mar 12, 2018 at 09:46:06AM +0000, Kalle Valo wrote:
+> tcharding <me@tobin.cc> wrote:
 > 
-> Salvatore Mesoraca <s.mesoraca16@gmail.com> writes:
+> > The kernel would like to have all stack VLA usage removed[1].  rsi uses
+> > a VLA based on 'blksize'.  Elsewhere in the SDIO code maximum block size
+> > is defined using a magic number.  We can use a pre-processor defined
+> > constant and declare the array to maximum size.  We add a check before
+> > accessing the array in case of programmer error.
+> > 
+> > [1]: https://lkml.org/lkml/2018/3/7/621
+> > 
+> > Signed-off-by: Tobin C. Harding <me@tobin.cc>
 > 
->> dsa_switch's num_ports is currently fixed to DSA_MAX_PORTS. So we avoid
->> 2 VLAs[1] by using DSA_MAX_PORTS instead of ds->num_ports.
->>
->> [1] https://lkml.org/lkml/2018/3/7/621
->>
->> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+> Tobin, your name in patchwork.kernel.org is just "tcharding" then it should be
+> "Tobin C. Harding". Patchwork is braindead in a way as it takes the name from
+> it's database instead of the From header of the patch in question.
 > 
-> NAK.
-> 
-> We are in the process to remove hardcoded limits such as DSA_MAX_PORTS
-> and DSA_MAX_SWITCHES, so we have to stick with ds->num_ports.
+> I can fix that manually but it would be helpful if you could register to
+> patchwork and fix your name during registration. You have only one chance to
+> fix your name (another braindead feature!) so be careful :)
 
-Then this means that we need to allocate a bitmap from the heap, which
-sounds a bit superfluous and could theoretically fail... not sure which
-way is better, but bumping the size to DSA_MAX_PORTS definitively does
-help people working on enabling -Wvla.
--- 
-Florian
+Hi Kalle,
+
+I logged into my patchwork account but I don't see any way to set the
+name.  Within 'profile' there is only 'change password' and 'link
+email'.  I thought I could unregister then re-register but I can't see
+how to do that either.  Is there a maintainer of patchwork.kernel.org
+who I can email to manually remove me from the system?
+
+thanks,
+Tobin.
