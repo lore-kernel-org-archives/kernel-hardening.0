@@ -1,25 +1,62 @@
-From: David Laight <David.Laight@ACULAB.COM>
-Subject: RE: [PATCH v3] kernel.h: Skip single-eval logic on literals in
- min()/max()
-Date: Tue, 13 Mar 2018 13:31:24 +0000
-Message-ID: <569ab24c68bb46ae99600b9b309ebcbd@AcuMS.aculab.com>
-References: <20180309200536.GA5670@beast>
- <CA+55aFy82Drgu2xm1GWaDz2Jyj5QBx3dW4AatXzmCx-b1YET5Q@mail.gmail.com>
-In-Reply-To: <CA+55aFy82Drgu2xm1GWaDz2Jyj5QBx3dW4AatXzmCx-b1YET5Q@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Subject: Re: [PATCH 4/4] gpio: Remove VLA from stmpe driver
+References: <20180310001021.6437-1-labbott@redhat.com>
+ <20180310001021.6437-5-labbott@redhat.com>
+From: Phil Reid <preid@electromag.com.au>
+Message-ID: <9175611d-049d-ec28-0716-e45fccfd579f@electromag.com.au>
+Date: Tue, 13 Mar 2018 17:13:06 +0800
 MIME-Version: 1.0
-To: 'Linus Torvalds' <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus
- Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo
- Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas
- Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy
- Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20180310001021.6437-5-labbott@redhat.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Laura Abbott <labbott@redhat.com>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Patrice Chotard <patrice.chotard@st.com>
+Cc: linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-VGhlIGFtb3VudCBvZiByZXBsaWNhdGVkIGRlZmluZWQgY291bGQgYWxzbyBiZSByZWR1Y2VkIGJ5
-IHBhc3NpbmcgPiBvciA8DQp0byBhIG1pbl9tYXgoKSBtYWNyby4NClNvIHlvdSBzdGFydCBvZmYg
-d2l0aCBzb21ldGhpbmcgbGlrZToNCiNkZWZpbmUgbWluKHgsIHkpIF9fbWluX21heCh4LCA8LCB5
-KQ0KI2RlZmluZSBtYXgoeCwgeSkgX19taW5fbWF4KHgsID4sIHkpDQp0aGVuIGhhdmU6DQojZGVm
-aW5lIF9fbWluX21heCh4LCBjb25kLCB5KSAoKHgpIGNvbmQgKHkpID8gKHgpIDogKHkpKQ0KaW4g
-YWxsIGl0cyBhc3NvY2lhdGVkIGZsYXZvdXJzLg0KDQoJRGF2aWQNCg0KDQo=
+On 10/03/2018 08:10, Laura Abbott wrote:
+> The new challenge is to remove VLAs from the kernel
+> (see https://lkml.org/lkml/2018/3/7/621)
+> 
+> This patch replaces a VLA with an appropriate call to kmalloc_array.
+> 
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+>   drivers/gpio/gpio-stmpe.c | 7 ++++++-
+>   1 file changed, 6 insertions(+), 1 deletion(-)
+> 
+> diff --git a/drivers/gpio/gpio-stmpe.c b/drivers/gpio/gpio-stmpe.c
+> index f8d7d1cd8488..b7854850bcdb 100644
+> --- a/drivers/gpio/gpio-stmpe.c
+> +++ b/drivers/gpio/gpio-stmpe.c
+> @@ -369,10 +369,14 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>   	struct stmpe *stmpe = stmpe_gpio->stmpe;
+>   	u8 statmsbreg;
+>   	int num_banks = DIV_ROUND_UP(stmpe->num_gpios, 8);
+> -	u8 status[num_banks];
+> +	u8 *status;
+>   	int ret;
+>   	int i;
+>   
+> +	status = kmalloc_array(num_banks, sizeof(*status), GFP_ATOMIC);
+> +	if (!status)
+> +		return IRQ_NONE;
+> +
+>   	/*
+>   	 * the stmpe_block_read() call below, imposes to set statmsbreg
+>   	 * with the register located at the lowest address. As STMPE1600
+> @@ -424,6 +428,7 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>   		}
+>   	}
+>   
+> +	kfree(status);
+>   	return IRQ_HANDLED;
+>   }
+>   
+> 
+
+Doing this in an irq handler seems wrong.
+Perhaps better if a buffer is pre-allocated in stmpe_gpio
+
+
+-- 
+Regards
+Phil Reid
