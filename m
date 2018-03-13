@@ -1,47 +1,109 @@
-Subject: Re: [PATCH] video: fbdev: via: remove VLA usage
-References: <20180308173949.GA19305@embeddedgus>
- <20180309105940.22hd2uy2mv7wahzb@imgtec.com>
- <CACvgo5278SmXfV0jfrMu=Ba6gf7rRXzNduNX+D270fGUFQcZdQ@mail.gmail.com>
-From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
-Message-ID: <8e3b270d-b615-e58c-fd6e-f677e7e892e8@embeddedor.com>
-Date: Mon, 12 Mar 2018 22:29:27 -0500
 MIME-Version: 1.0
-In-Reply-To: <CACvgo5278SmXfV0jfrMu=Ba6gf7rRXzNduNX+D270fGUFQcZdQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Emil Velikov <emil.l.velikov@gmail.com>, Eric Engestrom <eric.engestrom@imgtec.com>
-Cc: Florian Tobias Schandinat <FlorianSchandinat@gmx.de>, Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>, linux-fbdev <linux-fbdev@vger.kernel.org>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, "Linux-Kernel@Vger. Kernel. Org" <linux-kernel@vger.kernel.org>, ML dri-devel <dri-devel@lists.freedesktop.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+Sender: keescook@google.com
+In-Reply-To: <20180312054450.GF8631@eros>
+References: <20180312052639.GE8631@eros> <861efe7a-e51f-e004-5979-aef0ed9ff1fe@embeddedor.com>
+ <20180312054450.GF8631@eros>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 12 Mar 2018 21:05:36 -0700
+Message-ID: <CAGXu5j+U2kyuSoDyg214HcDfkwCTytWR77EbnoDj0n2=rG70LA@mail.gmail.com>
+Subject: Re: VLA commit log
+Content-Type: text/plain; charset="UTF-8"
+To: "Tobin C. Harding" <tobin@apporbit.com>
+Cc: "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Tycho Andersen <tycho@tycho.ws>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-On 03/09/2018 05:02 AM, Emil Velikov wrote:
-> On 9 March 2018 at 10:59, Eric Engestrom <eric.engestrom@imgtec.com> wrote:
->> On Thursday, 2018-03-08 11:39:49 -0600, Gustavo A. R. Silva wrote:
->>> In preparation to enabling -Wvla, remove VLA usage.
->>>
->>> Also, fixed as part of the directive to remove all VLAs from
->>> the kernel: https://lkml.org/lkml/2018/3/7/621
->>>
->>> Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+On Sun, Mar 11, 2018 at 10:44 PM, Tobin C. Harding <tobin@apporbit.com> wrote:
+> On Mon, Mar 12, 2018 at 12:38:04AM -0500, Gustavo A. R. Silva wrote:
 >>
->> Sorry for my reply on v1, I missed that Emil already replied to another
->> post of the same patch (side note on that, making use of `-vX` and
->> `--in-reply-to` helps track the evolution of patches)
 >>
-
-Yep. I know. It is just that some people prefer vX in a new thread. 
-Anyway, I will take this into account for the next time.
-
->> This looks good to me:
->> Reviewed-by: Eric Engestrom <eric.engestrom@imgtec.com>
+>> On 03/12/2018 12:26 AM, Tobin C. Harding wrote:
+>> >Hi,
+>> >
+>> >I got some push back on the commit log we have all started to use
+>> >(copying Kees' initial commit log).  If we are going to do hundreds of
+>> >these patches should we write a perfectly correct commit log that can be
+>> >included as the start of the 'why' of each VLA removal patch?  Here is
+>> >my attempt, I am quite bad at writing commit logs so would love someone
+>> >to fix it up.
+>> >
 >>
-> Same here
-> Reviewed-by: Emil Velikov <emil.velikov@collabora.com>
-> 
-> -Emil
-> 
+>> The same thing happened to me once and then I wrote this:
+>
+> I had a feeling this had happened to you but I couldn't find the patch
+> that made me think that when writing this.
+>
+>> In preparation to enabling -Wvla, remove VLA and replace it
+>> with a fixed-length array instead.
+>
+> ---
+>
+>> From a security viewpoint, the use of Variable Length Arrays can be
 
-Thanks for reviewing it, guys.
+I avoid starting lines with "From" due to age-old mbox-format email
+hilarity. Also, if we're going to be pedantic, we should say "stack
+VLA".
+
+>> a vector for stack overflow attacks. Also, in general, as the code
+
+Many people confused "stack buffer overflow" with "stack exhaustion".
+In this case, we should use the latter terminology.
+
+>> evolves it is easy to lose track of how big a VLA can get. Thus, we
+>> can end up having segfaults that are hard to debug.
+>>
+>> Also, fixed as part of the directive to remove all VLAs from
+>> the kernel: https://lkml.org/lkml/2018/3/7/621
+>
+> ---
+>
+> Cool, I like this (between ---).  Kees can you ack this since I'm going
+> to cut and paste it about 300 times :)
+
+We've got two cases we're dealing with:
+
+1) Actual VLA in use, etc.
+
+2) -Wvla warns about a non-constant-expression, but it's a
+constant-value ("const int foo = 5"). In this case, it appears no VLA
+is generated, but we get the warning. So we're fixing VLA warnings
+that aren't real. But we still want the coverage of -Wvla, so we need
+to refactor these cases too.
+
+
+So, for 1, sure:
+
+---
+The use of stack Variable Length Arrays needs to be avoided, as they
+can be a vector for stack exhaustion, which can be both a runtime bug
+(kernel Oops) or a security flaw (overwriting memory beyond the
+stack). Also, in general, as code evolves it is easy to lose track of
+how big a VLA can get. Thus, we can end up having runtime failures
+that are hard to debug. As part of the directive[1] to remove all VLAs
+from the kernel, and build with -Wvla, this patch [does whatever, with
+analysis of alternatives, runtime impact, or memory usage].
+
+[1] https://lkml.org/lkml/2018/3/7/621
+---
+
+For 2, how about something like this:
+
+---
+As part of the directive[1] to remove all VLAs from the kernel, it
+would be nice to build with -Wvla. This warning is, however, overly
+pessimistic in that it warns about not using constant expressions when
+declaring stack array size: it still warns about constant values, even
+though those do not appear to generate actual VLAs. This patch adjusts
+the stack array declarations to use a constant expression to remove
+this false positive by [whatever, with analysys of alternatives, etc].
+
+[1] https://lkml.org/lkml/2018/3/7/621
+---
+
+
+What do you think?
+
+-Kees
+
 -- 
-Gustavo A. R. Silva
+Kees Cook
+Pixel Security
