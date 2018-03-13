@@ -1,30 +1,39 @@
-Date: Tue, 13 Mar 2018 15:00:40 -0700
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [PATCH 4/8] struct page: add field for vm_struct
-Message-ID: <20180313220040.GA15791@bombadil.infradead.org>
-References: <20180313214554.28521-1-igor.stoppa@huawei.com>
- <20180313214554.28521-5-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180313214554.28521-5-igor.stoppa@huawei.com>
-To: Igor Stoppa <igor.stoppa@huawei.com>
-Cc: david@fromorbit.com, rppt@linux.vnet.ibm.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <87fu5321du.fsf@weeman.i-did-not-set--mail-host-address--so-tickle-me>
+References: <1520970647-19587-1-git-send-email-s.mesoraca16@gmail.com> <87fu5321du.fsf@weeman.i-did-not-set--mail-host-address--so-tickle-me>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Tue, 13 Mar 2018 23:01:05 +0100
+Message-ID: <CAJHCu1JCCkkoL92tL+Zpx6te1A=-B1dNbAFu4sFEHiHa4vB6BQ@mail.gmail.com>
+Subject: Re: [PATCH] net: dsa: drop some VLAs in switch.c
+Content-Type: text/plain; charset="UTF-8"
+To: Vivien Didelot <vivien.didelot@savoirfairelinux.com>
+Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, netdev@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Andrew Lunn <andrew@lunn.ch>, Florian Fainelli <f.fainelli@gmail.com>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 13, 2018 at 11:45:50PM +0200, Igor Stoppa wrote:
-> When a page is used for virtual memory, it is often necessary to obtain
-> a handler to the corresponding vm_struct, which refers to the virtually
-> continuous area generated when invoking vmalloc.
-> 
-> The struct page has a "mapping" field, which can be re-used, to store a
-> pointer to the parent area.
-> 
-> This will avoid more expensive searches, later on.
-> 
-> Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
+2018-03-13 20:58 GMT+01:00 Vivien Didelot <vivien.didelot@savoirfairelinux.com>:
+> Hi Salvatore,
 
-Reviewed-by: Matthew Wilcox <mawilcox@microsoft.com>
+Hi Vivien,
 
-Regardless of the fate of the rest of this patchset, this makes sense
-and we should have this.
+> Salvatore Mesoraca <s.mesoraca16@gmail.com> writes:
+>
+>> dsa_switch's num_ports is currently fixed to DSA_MAX_PORTS. So we avoid
+>> 2 VLAs[1] by using DSA_MAX_PORTS instead of ds->num_ports.
+>>
+>> [1] https://lkml.org/lkml/2018/3/7/621
+>>
+>> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+>
+> NAK.
+>
+> We are in the process to remove hardcoded limits such as DSA_MAX_PORTS
+> and DSA_MAX_SWITCHES, so we have to stick with ds->num_ports.
+
+I can rewrite the patch using kmalloc.
+Although, if ds->num_ports will always be less than or equal to 12, it
+should be better to
+just use DSA_MAX_PORTS.
+
+Thank you,
+
+Salvatore
