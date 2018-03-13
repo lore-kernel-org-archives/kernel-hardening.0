@@ -1,54 +1,47 @@
-Message-ID: <1520957627.2049.37.camel@perches.com>
-Subject: Re: [PATCH] netfilter: cttimeout: remove VLA usage
-From: Joe Perches <joe@perches.com>
-Date: Tue, 13 Mar 2018 09:13:47 -0700
-In-Reply-To: <20180313145947.tpekwvyioaft5auc@salvia>
-References: <20180312231442.GA22071@embeddedgus>
-	 <1520899118.2049.24.camel@perches.com>
-	 <20180313145947.tpekwvyioaft5auc@salvia>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
-To: Pablo Neira Ayuso <pablo@netfilter.org>
-Cc: "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Jozsef Kadlecsik <kadlec@blackhole.kfki.hu>, Florian Westphal <fw@strlen.de>, "David S.
- Miller" <davem@davemloft.net>, netfilter-devel@vger.kernel.org, coreteam@netfilter.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+Subject: Re: [RESEND] rsi: Remove stack VLA usage
+From: Kalle Valo <kvalo@codeaurora.org>
+In-Reply-To: <1520819022-15238-1-git-send-email-me@tobin.cc>
+References: <1520819022-15238-1-git-send-email-me@tobin.cc>
+Message-Id: <20180313165207.BB0FE600C1@smtp.codeaurora.org>
+Date: Tue, 13 Mar 2018 16:52:07 +0000 (UTC)
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, linux-wireless@vger.kernel.org, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 2018-03-13 at 15:59 +0100, Pablo Neira Ayuso wrote:
-> On Mon, Mar 12, 2018 at 04:58:38PM -0700, Joe Perches wrote:
-> > On Mon, 2018-03-12 at 18:14 -0500, Gustavo A. R. Silva wrote:
-> > > In preparation to enabling -Wvla, remove VLA and replace it
-> > > with dynamic memory allocation.
-> > > 
-> > > From a security viewpoint, the use of Variable Length Arrays can be
-> > > a vector for stack overflow attacks. Also, in general, as the code
-> > > evolves it is easy to lose track of how big a VLA can get. Thus, we
-> > > can end up having segfaults that are hard to debug.
-> > > 
-> > > Also, fixed as part of the directive to remove all VLAs from
-> > 
-> > []
-> > > diff --git a/net/netfilter/nfnetlink_cttimeout.c b/net/netfilter/nfnetlink_cttimeout.c
-> > 
-> > []
-> > > @@ -51,19 +51,27 @@ ctnl_timeout_parse_policy(void *timeouts,
-> > >  			  const struct nf_conntrack_l4proto *l4proto,
-> > >  			  struct net *net, const struct nlattr *attr)
-> > >  {
-> > > +	struct nlattr **tb;
-> > >  	int ret = 0;
-> > >  
-> > > -	if (likely(l4proto->ctnl_timeout.nlattr_to_obj)) {
-> > > -		struct nlattr *tb[l4proto->ctnl_timeout.nlattr_max+1];
-> > > +	if (!l4proto->ctnl_timeout.nlattr_to_obj)
-> > > +		return 0;
-> > 
-> > Why not
-> > 	if unlikely(!...)
-> 
-> This is control plane code - not packet path - I think we should just
-> let the compiler decide on this one, not really need to provide an
-> explicit hint here.
+"Tobin C. Harding" <me@tobin.cc> wrote:
 
-I don't have an issue with that, but it should probably be
-mentioned in the changelog as it's unrelated to VLA removal.
+> The kernel would like to have all stack VLA usage removed[1].  rsi uses
+> a VLA based on 'blksize'.  Elsewhere in the SDIO code maximum block size
+> is defined using a magic number.  We can use a pre-processor defined
+> constant and declare the array to maximum size.  We add a check before
+> accessing the array in case of programmer error.
+> 
+> [1]: https://lkml.org/lkml/2018/3/7/621
+> 
+> Signed-off-by: Tobin C. Harding <me@tobin.cc>
+
+There were conflicts. Can you rebase on top of wireless-drivers-next and
+resend, please?
+
+Recorded preimage for 'drivers/net/wireless/rsi/rsi_91x_sdio.c'
+error: Failed to merge in the changes.
+Applying: rsi: Remove stack VLA usage
+Using index info to reconstruct a base tree...
+M	drivers/net/wireless/rsi/rsi_91x_hal.c
+M	drivers/net/wireless/rsi/rsi_91x_sdio.c
+Falling back to patching base and 3-way merge...
+Auto-merging drivers/net/wireless/rsi/rsi_91x_sdio.c
+CONFLICT (content): Merge conflict in drivers/net/wireless/rsi/rsi_91x_sdio.c
+Auto-merging drivers/net/wireless/rsi/rsi_91x_hal.c
+Patch failed at 0001 rsi: Remove stack VLA usage
+The copy of the patch that failed is found in: .git/rebase-apply/patch
+
+Patch set to Changes Requested.
+
+-- 
+https://patchwork.kernel.org/patch/10274983/
+
+https://wireless.wiki.kernel.org/en/developers/documentation/submittingpatches
