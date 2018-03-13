@@ -1,57 +1,112 @@
-Date: Tue, 13 Mar 2018 14:02:48 -0700
-From: Andrew Morton <akpm@linux-foundation.org>
-Subject: Re: [PATCH v3] kernel.h: Skip single-eval logic on literals in
- min()/max()
-Message-Id: <20180313140248.7fdb0d0cee044cd7c7fc7b93@linux-foundation.org>
-In-Reply-To: <CAGXu5j+M0qbBS0og8buXHdubA=oi=jMcK=ehLGDeevFd2H7JmA@mail.gmail.com>
-References: <20180309200536.GA5670@beast>
-	<20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
-	<CA+55aFw9hWz1-YFVoHEiXDjqb9q7dz=rQVXr7YLkMuVLvbwaOg@mail.gmail.com>
-	<20180309163241.a421e216999bd0b1f43a64c2@linux-foundation.org>
-	<CA+55aFwbO2vUsjWzAwB6SZ65RM4r3P0+2JvyMHn=ry0CgWCBgA@mail.gmail.com>
-	<CAGXu5j+D=zs8AMb969dhH05GmKPuBxKPcAs89KfKzVf47faL1g@mail.gmail.com>
-	<20180312155524.b421f07d7f08f24c57bd1887@linux-foundation.org>
-	<CA+55aFwK7W0SsaP5eR+2TxOj-j_Mu_E11fRw2Gk8ptV71ebvww@mail.gmail.com>
-	<CAGXu5j+M0qbBS0og8buXHdubA=oi=jMcK=ehLGDeevFd2H7JmA@mail.gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Subject: [RFC PATCH v19 0/8] mm: security: ro protection for dynamic data
+Date: Tue, 13 Mar 2018 23:45:46 +0200
+Message-ID: <20180313214554.28521-1-igor.stoppa@huawei.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+To: david@fromorbit.com, willy@infradead.org, rppt@linux.vnet.ibm.com, keescook@chromium.org, mhocko@kernel.org
+Cc: labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 12 Mar 2018 21:28:57 -0700 Kees Cook <keescook@chromium.org> wrote:
+This patch-set introduces the possibility of protecting memory that has
+been allocated dynamically.
 
-> On Mon, Mar 12, 2018 at 4:57 PM, Linus Torvalds
-> <torvalds@linux-foundation.org> wrote:
-> > On Mon, Mar 12, 2018 at 3:55 PM, Andrew Morton
-> > <akpm@linux-foundation.org> wrote:
-> >>
-> >> Replacing the __builtin_choose_expr() with ?: works of course.
-> >
-> > Hmm. That sounds like the right thing to do. We were so myopically
-> > staring at the __builtin_choose_expr() problem that we overlooked the
-> > obvious solution.
-> >
-> > Using __builtin_constant_p() together with a ?: is in fact our common
-> > pattern, so that should be fine. The only real reason to use
-> > __builtin_choose_expr() is if you want to get the *type* to vary
-> > depending on which side you choose, but that's not an issue for
-> > min/max.
-> 
-> This doesn't solve it for -Wvla, unfortunately. That was the point of
-> Josh's original suggestion of __builtin_choose_expr().
-> 
-> Try building with KCFLAGS=-Wval and checking net/ipv6/proc.c:
-> 
-> net/ipv6/proc.c: In function ‘snmp6_seq_show_item’:
-> net/ipv6/proc.c:198:2: warning: ISO C90 forbids array ‘buff’ whose
-> size can’t be evaluated [-Wvla]
->   unsigned long buff[SNMP_MIB_MAX];
->   ^~~~~~~~
+The memory is managed in pools: when a memory pool is turned into R/O,
+all the memory that is part of it, will become R/O.
 
-PITA.  Didn't we once have a different way of detecting VLAs?  Some
-post-compilation asm parser, iirc.
+A R/O pool can be destroyed, to recover its memory, but it cannot be
+turned back into R/W mode.
 
-I suppose the world wouldn't end if we had a gcc version ifdef in
-kernel.h.  We'll get to remove it in, oh, ten years.
+This is intentional. This feature is meant for data that doesn't need
+further modifications after initialization.
+
+However the data might need to be released, for example as part of module
+unloading.
+To do this, the memory must first be freed, then the pool can be destroyed.
+
+An example is provided, in the form of self-testing.
+
+Changes since v18:
+
+[http://www.openwall.com/lists/kernel-hardening/2018/02/28/21]
+
+* Code refactoring in pmalloc & genalloc:
+  - simplify the logic for handling pools before and after sysf init
+  - reduced section holding mutex on pmalloc list, when adding a pool
+  - reduced the steps in finding length of an existing allocation
+  - split various functions into smaller ones
+* clarified in the comments the need for pfree()
+* Various fixes to the documentation:
+  - remove kerneldoc duplicates
+  - added cross-reference lables
+  - miscellaneous typos
+* improved error notifications: use WARNs with specific messages
+* added missing tests for possible error conditions
+
+
+Discussion topics that are unclear if they are closed and would need
+comment from those who initiated them, if my answers are accepted or not:
+
+* @Kees Cook proposed to have first self testing for genalloc, to
+  validate the following patch, adding tracing of allocations
+  My answer was that such tests would also need patching, therefore they 
+  could not certify that the functionality is corect both before and
+  after the genalloc bitmap modification.
+
+* @Kees Cook proposed to turn the self testing into modules.
+  My answer was that the functionality is intentionally tested very early
+  in the boot phase, to prevent unexplainable errors, should the feature
+  really fail.
+
+* @Matthew Wilcox proposed to use a different mechanism for th genalloc
+  bitmap: 2 bitmaps, one for occupation and one for start.
+  And possibly use an rbtree for the starts.
+  My answer was that this solution is less optimized, because it scatters
+  the data of one allocation across multiple words/pages, plus is not
+  a transaction anymore. And the particular distribution of sizes of
+  allocation is likely to eat up much more memory than the bitmap.
+
+Igor Stoppa (8):
+  genalloc: track beginning of allocations
+  Add label to genalloc.rst for cross reference
+  genalloc: selftest
+  struct page: add field for vm_struct
+  Protectable Memory
+  Pmalloc selftest
+  lkdtm: crash on overwriting protected pmalloc var
+  Documentation for Pmalloc
+
+ Documentation/core-api/genalloc.rst |   2 +
+ Documentation/core-api/index.rst    |   1 +
+ Documentation/core-api/pmalloc.rst  | 111 ++++++
+ drivers/misc/lkdtm.h                |   1 +
+ drivers/misc/lkdtm_core.c           |   3 +
+ drivers/misc/lkdtm_perms.c          |  28 ++
+ include/linux/genalloc.h            | 116 +++---
+ include/linux/mm_types.h            |   1 +
+ include/linux/pmalloc.h             | 163 ++++++++
+ include/linux/test_genalloc.h       |  26 ++
+ include/linux/test_pmalloc.h        |  24 ++
+ include/linux/vmalloc.h             |   1 +
+ init/main.c                         |   4 +
+ lib/Kconfig                         |  15 +
+ lib/Makefile                        |   1 +
+ lib/genalloc.c                      | 765 ++++++++++++++++++++++++++----------
+ lib/test_genalloc.c                 | 410 +++++++++++++++++++
+ mm/Kconfig                          |  17 +
+ mm/Makefile                         |   2 +
+ mm/pmalloc.c                        | 643 ++++++++++++++++++++++++++++++
+ mm/test_pmalloc.c                   | 238 +++++++++++
+ mm/usercopy.c                       |  33 ++
+ mm/vmalloc.c                        |   2 +
+ 23 files changed, 2352 insertions(+), 255 deletions(-)
+ create mode 100644 Documentation/core-api/pmalloc.rst
+ create mode 100644 include/linux/pmalloc.h
+ create mode 100644 include/linux/test_genalloc.h
+ create mode 100644 include/linux/test_pmalloc.h
+ create mode 100644 lib/test_genalloc.c
+ create mode 100644 mm/pmalloc.c
+ create mode 100644 mm/test_pmalloc.c
+
+-- 
+2.14.1
