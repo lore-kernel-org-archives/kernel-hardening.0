@@ -1,39 +1,26 @@
 MIME-Version: 1.0
-In-Reply-To: <87fu5321du.fsf@weeman.i-did-not-set--mail-host-address--so-tickle-me>
-References: <1520970647-19587-1-git-send-email-s.mesoraca16@gmail.com> <87fu5321du.fsf@weeman.i-did-not-set--mail-host-address--so-tickle-me>
+In-Reply-To: <20180313090540.GA4810@infradead.org>
+References: <1520802418-17284-1-git-send-email-s.mesoraca16@gmail.com>
+ <20180312030834.GC8631@eros> <CA+55aFww=otC4Wv40enadF+9NAyWG4Hotzjvv2EKb+_wGFui-w@mail.gmail.com>
+ <yq1y3iwem87.fsf@oracle.com> <20180313090540.GA4810@infradead.org>
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Tue, 13 Mar 2018 23:01:05 +0100
-Message-ID: <CAJHCu1JCCkkoL92tL+Zpx6te1A=-B1dNbAFu4sFEHiHa4vB6BQ@mail.gmail.com>
-Subject: Re: [PATCH] net: dsa: drop some VLAs in switch.c
+Date: Tue, 13 Mar 2018 23:04:21 +0100
+Message-ID: <CAJHCu1+XPPmCcrP+89zc9Lg7k_t78LzfJbY7aC8Mt+ANeuVWdA@mail.gmail.com>
+Subject: Re: [PATCH] scsi: eata: drop VLA in reorder()
 Content-Type: text/plain; charset="UTF-8"
-To: Vivien Didelot <vivien.didelot@savoirfairelinux.com>
-Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, netdev@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Andrew Lunn <andrew@lunn.ch>, Florian Fainelli <f.fainelli@gmail.com>, Kees Cook <keescook@chromium.org>
+To: Christoph Hellwig <hch@infradead.org>
+Cc: "Martin K. Petersen" <martin.petersen@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>, "Tobin C. Harding" <tobin@apporbit.com>, Arthur Marsh <arthur.marsh@internode.on.net>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux SCSI List <linux-scsi@vger.kernel.org>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, Dario Ballabio <ballabio_dario@emc.com>, Kees Cook <keescook@chromium.org>, kernelnewbies@kernelnewbies.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-03-13 20:58 GMT+01:00 Vivien Didelot <vivien.didelot@savoirfairelinux.com>:
-> Hi Salvatore,
-
-Hi Vivien,
-
-> Salvatore Mesoraca <s.mesoraca16@gmail.com> writes:
+2018-03-13 10:05 GMT+01:00 Christoph Hellwig <hch@infradead.org>:
+> On Mon, Mar 12, 2018 at 10:35:36PM -0400, Martin K. Petersen wrote:
+>> No objections to Salvatore's patch but I have a slight affinity for
+>> retiring unused code over patching it. So unless there are objections...
 >
->> dsa_switch's num_ports is currently fixed to DSA_MAX_PORTS. So we avoid
->> 2 VLAs[1] by using DSA_MAX_PORTS instead of ds->num_ports.
->>
->> [1] https://lkml.org/lkml/2018/3/7/621
->>
->> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
->
-> NAK.
->
-> We are in the process to remove hardcoded limits such as DSA_MAX_PORTS
-> and DSA_MAX_SWITCHES, so we have to stick with ds->num_ports.
+> Lets kill it.  And the not DMA capable eata_pio driver with it for
+> good riddance.
 
-I can rewrite the patch using kmalloc.
-Although, if ds->num_ports will always be less than or equal to 12, it
-should be better to
-just use DSA_MAX_PORTS.
-
-Thank you,
+Good, I'll send a patch to remove eata & friends.
+Thank you for your time,
 
 Salvatore
