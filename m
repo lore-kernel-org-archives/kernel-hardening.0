@@ -1,30 +1,25 @@
 From: David Laight <David.Laight@ACULAB.COM>
-Subject: RE: [PATCH] drivers: net: wireless: ath: ath9: dfs: remove VLA usage
-Date: Tue, 13 Mar 2018 12:32:17 +0000
-Message-ID: <423b529d48c54eba9f7ed51922814d46@AcuMS.aculab.com>
-References: <1520598613-3641-1-git-send-email-andreaschristofo@gmail.com>
- <5AA464DE.90100@broadcom.com>
- <CA+DvKQ+hbMoWJdOuQB5n+eVF4ePf=kVuRiMbdtTUZ8ars4Pz4A@mail.gmail.com>
-In-Reply-To: <CA+DvKQ+hbMoWJdOuQB5n+eVF4ePf=kVuRiMbdtTUZ8ars4Pz4A@mail.gmail.com>
+Subject: RE: [PATCH v3] kernel.h: Skip single-eval logic on literals in
+ min()/max()
+Date: Tue, 13 Mar 2018 13:31:24 +0000
+Message-ID: <569ab24c68bb46ae99600b9b309ebcbd@AcuMS.aculab.com>
+References: <20180309200536.GA5670@beast>
+ <CA+55aFy82Drgu2xm1GWaDz2Jyj5QBx3dW4AatXzmCx-b1YET5Q@mail.gmail.com>
+In-Reply-To: <CA+55aFy82Drgu2xm1GWaDz2Jyj5QBx3dW4AatXzmCx-b1YET5Q@mail.gmail.com>
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-To: 'Daniel Micay' <danielmicay@gmail.com>, Arend van Spriel <arend.vanspriel@broadcom.com>
-Cc: Andreas Christoforou <andreaschristofo@gmail.com>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, Kalle Valo <kvalo@codeaurora.org>, "linux-wireless@vger.kernel.org" <linux-wireless@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>
+To: 'Linus Torvalds' <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus
+ Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo
+ Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas
+ Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy
+ Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-RnJvbTogRGFuaWVsIE1pY2F5DQo+IFNlbnQ6IDEwIE1hcmNoIDIwMTggMjM6NDUNCj4gDQo+ID4g
-SnVzdCB3b25kZXJpbmcuIElzIHRoaXMgYWN0dWFsbHkgYSBWTEEuIEZGVF9OVU1fU0FNUExFUyB3
-YXMgc3RhdGljIGNvbnN0IHNvDQo+ID4gbm90IHJlYWxseSBnb2luZyB0byBzaG93IGEgbG90IG9m
-IHZhcmlhdGlvbi4gVGhpcyBhcnJheSB3aWxsIGFsd2F5cyBoYXZlIHRoZQ0KPiA+IHNhbWUgc2l6
-ZSBvbiB0aGUgc3RhY2suDQo+IA0KPiBUaGUgaXNzdWUgaXMgdGhhdCB1bmxpa2UgaW4gQysrLCBh
-IGBzdGF0aWMgY29uc3RgIGNhbid0IGJlIHVzZWQgaW4gYQ0KPiBjb25zdGFudCBleHByZXNzaW9u
-IGluIEMuIEl0J3MgdW5jbGVhciB3aHkgQyBpcyBkZWZpbmVkIHRoYXQgd2F5IGJ1dA0KPiBpdCdz
-IGhvdyBpdCBpcyBhbmQgdGhlcmUgaXNuJ3QgY3VycmVudGx5IGEgR0NDIGV4dGVuc2lvbiBtYWtp
-bmcgbW9yZQ0KPiB0aGluZ3MgaW50byBjb25zdGFudCBleHByZXNzaW9ucyBsaWtlIEMrKy4NCg0K
-J3N0YXRpYycgYW5kICdjb25zdCcgYXJlIGJvdGgganVzdCBxdWFsaWZpZXJzIHRvIGEgJ3Zhcmlh
-YmxlJw0KWW91IGNhbiBzdGlsbCB0YWtlIGl0J3MgYWRkcmVzcy4NClRoZSBsYW5ndWFnZSBhbGxv
-d3MgeW91IHRvIGNhc3QgYXdheSB0aGUgJ2NvbnN0JyBhbmQgd3JpdGUgdG8NCnRoZSB2YXJpYWJs
-ZSAtIHRoZSBlZmZlY3QgaXMgcHJvYmFibHkgJ2ltcGxlbWVudGF0aW9uIGRlZmluZWQnLg0KDQpJ
-dCBpcyBwcm9iYWJseSByZXF1aXJlZCB0byBiZSB2YWxpZCBmb3IgJ3N0YXRpYyBjb25zdCcgaXRl
-bXMNCnRvIGJlIHBhdGNoYWJsZS4NCg0KCURhdmlkDQoNCg==
+VGhlIGFtb3VudCBvZiByZXBsaWNhdGVkIGRlZmluZWQgY291bGQgYWxzbyBiZSByZWR1Y2VkIGJ5
+IHBhc3NpbmcgPiBvciA8DQp0byBhIG1pbl9tYXgoKSBtYWNyby4NClNvIHlvdSBzdGFydCBvZmYg
+d2l0aCBzb21ldGhpbmcgbGlrZToNCiNkZWZpbmUgbWluKHgsIHkpIF9fbWluX21heCh4LCA8LCB5
+KQ0KI2RlZmluZSBtYXgoeCwgeSkgX19taW5fbWF4KHgsID4sIHkpDQp0aGVuIGhhdmU6DQojZGVm
+aW5lIF9fbWluX21heCh4LCBjb25kLCB5KSAoKHgpIGNvbmQgKHkpID8gKHgpIDogKHkpKQ0KaW4g
+YWxsIGl0cyBhc3NvY2lhdGVkIGZsYXZvdXJzLg0KDQoJRGF2aWQNCg0KDQo=
