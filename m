@@ -1,54 +1,63 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CA+55aFwK7W0SsaP5eR+2TxOj-j_Mu_E11fRw2Gk8ptV71ebvww@mail.gmail.com>
-References: <20180309200536.GA5670@beast> <20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
- <CA+55aFw9hWz1-YFVoHEiXDjqb9q7dz=rQVXr7YLkMuVLvbwaOg@mail.gmail.com>
- <20180309163241.a421e216999bd0b1f43a64c2@linux-foundation.org>
- <CA+55aFwbO2vUsjWzAwB6SZ65RM4r3P0+2JvyMHn=ry0CgWCBgA@mail.gmail.com>
- <CAGXu5j+D=zs8AMb969dhH05GmKPuBxKPcAs89KfKzVf47faL1g@mail.gmail.com>
- <20180312155524.b421f07d7f08f24c57bd1887@linux-foundation.org> <CA+55aFwK7W0SsaP5eR+2TxOj-j_Mu_E11fRw2Gk8ptV71ebvww@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 12 Mar 2018 21:28:57 -0700
-Message-ID: <CAGXu5j+M0qbBS0og8buXHdubA=oi=jMcK=ehLGDeevFd2H7JmA@mail.gmail.com>
-Subject: Re: [PATCH v3] kernel.h: Skip single-eval logic on literals in min()/max()
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+From: Tycho Andersen <tycho@tycho.ws>
+Subject: [PATCH 1/2] big key: get rid of stack array allocation
+Date: Mon, 12 Mar 2018 22:29:06 -0600
+Message-Id: <20180313042907.29598-1-tycho@tycho.ws>
+To: David Howells <dhowells@redhat.com>
+Cc: keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 12, 2018 at 4:57 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Mon, Mar 12, 2018 at 3:55 PM, Andrew Morton
-> <akpm@linux-foundation.org> wrote:
->>
->> Replacing the __builtin_choose_expr() with ?: works of course.
->
-> Hmm. That sounds like the right thing to do. We were so myopically
-> staring at the __builtin_choose_expr() problem that we overlooked the
-> obvious solution.
->
-> Using __builtin_constant_p() together with a ?: is in fact our common
-> pattern, so that should be fine. The only real reason to use
-> __builtin_choose_expr() is if you want to get the *type* to vary
-> depending on which side you choose, but that's not an issue for
-> min/max.
+We're interested in getting rid of all of the stack allocated arrays in the
+kernel [1]. This patch removes one in keys by switching to malloc/free.
+Note that we use kzalloc, to avoid leaking the nonce. I'm not sure this is
+really necessary, but extra paranoia seems prudent.
 
-This doesn't solve it for -Wvla, unfortunately. That was the point of
-Josh's original suggestion of __builtin_choose_expr().
+Manually tested using the program from the add_key man page to trigger
+big_key.
 
-Try building with KCFLAGS=3D-Wval and checking net/ipv6/proc.c:
+[1]: https://lkml.org/lkml/2018/3/7/621
 
-net/ipv6/proc.c: In function =E2=80=98snmp6_seq_show_item=E2=80=99:
-net/ipv6/proc.c:198:2: warning: ISO C90 forbids array =E2=80=98buff=E2=80=
-=99 whose
-size can=E2=80=99t be evaluated [-Wvla]
-  unsigned long buff[SNMP_MIB_MAX];
-  ^~~~~~~~
+Signed-off-by: Tycho Andersen <tycho@tycho.ws>
+CC: David Howells <dhowells@redhat.com>
+CC: James Morris <jmorris@namei.org>
+CC: "Serge E. Hallyn" <serge@hallyn.com>
+CC: Jason A. Donenfeld <Jason@zx2c4.com>
+---
+ security/keys/big_key.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
 
-
--Kees
-
---=20
-Kees Cook
-Pixel Security
+diff --git a/security/keys/big_key.c b/security/keys/big_key.c
+index fa728f662a6f..70f9f785c59d 100644
+--- a/security/keys/big_key.c
++++ b/security/keys/big_key.c
+@@ -108,13 +108,18 @@ static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t dat
+ 	 * an .update function, so there's no chance we'll wind up reusing the
+ 	 * key to encrypt updated data. Simply put: one key, one encryption.
+ 	 */
+-	u8 zero_nonce[crypto_aead_ivsize(big_key_aead)];
++	u8 *zero_nonce;
++
++	zero_nonce = kzalloc(crypto_aead_ivsize(big_key_aead), GFP_KERNEL);
++	if (!zero_nonce)
++		return -ENOMEM;
+ 
+ 	aead_req = aead_request_alloc(big_key_aead, GFP_KERNEL);
+-	if (!aead_req)
++	if (!aead_req) {
++		kfree(zero_nonce);
+ 		return -ENOMEM;
++	}
+ 
+-	memset(zero_nonce, 0, sizeof(zero_nonce));
+ 	aead_request_set_crypt(aead_req, buf->sg, buf->sg, datalen, zero_nonce);
+ 	aead_request_set_callback(aead_req, CRYPTO_TFM_REQ_MAY_SLEEP, NULL, NULL);
+ 	aead_request_set_ad(aead_req, 0);
+@@ -131,6 +136,7 @@ static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t dat
+ error:
+ 	mutex_unlock(&big_key_aead_lock);
+ 	aead_request_free(aead_req);
++	kzfree(zero_nonce);
+ 	return ret;
+ }
+ 
+-- 
+2.15.1
