@@ -1,109 +1,54 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20180312054450.GF8631@eros>
-References: <20180312052639.GE8631@eros> <861efe7a-e51f-e004-5979-aef0ed9ff1fe@embeddedor.com>
- <20180312054450.GF8631@eros>
+In-Reply-To: <CA+55aFwK7W0SsaP5eR+2TxOj-j_Mu_E11fRw2Gk8ptV71ebvww@mail.gmail.com>
+References: <20180309200536.GA5670@beast> <20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
+ <CA+55aFw9hWz1-YFVoHEiXDjqb9q7dz=rQVXr7YLkMuVLvbwaOg@mail.gmail.com>
+ <20180309163241.a421e216999bd0b1f43a64c2@linux-foundation.org>
+ <CA+55aFwbO2vUsjWzAwB6SZ65RM4r3P0+2JvyMHn=ry0CgWCBgA@mail.gmail.com>
+ <CAGXu5j+D=zs8AMb969dhH05GmKPuBxKPcAs89KfKzVf47faL1g@mail.gmail.com>
+ <20180312155524.b421f07d7f08f24c57bd1887@linux-foundation.org> <CA+55aFwK7W0SsaP5eR+2TxOj-j_Mu_E11fRw2Gk8ptV71ebvww@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 12 Mar 2018 21:05:36 -0700
-Message-ID: <CAGXu5j+U2kyuSoDyg214HcDfkwCTytWR77EbnoDj0n2=rG70LA@mail.gmail.com>
-Subject: Re: VLA commit log
+Date: Mon, 12 Mar 2018 21:28:57 -0700
+Message-ID: <CAGXu5j+M0qbBS0og8buXHdubA=oi=jMcK=ehLGDeevFd2H7JmA@mail.gmail.com>
+Subject: Re: [PATCH v3] kernel.h: Skip single-eval logic on literals in min()/max()
 Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <tobin@apporbit.com>
-Cc: "Gustavo A. R. Silva" <gustavo@embeddedor.com>, Tycho Andersen <tycho@tycho.ws>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Transfer-Encoding: quoted-printable
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Mar 11, 2018 at 10:44 PM, Tobin C. Harding <tobin@apporbit.com> wrote:
-> On Mon, Mar 12, 2018 at 12:38:04AM -0500, Gustavo A. R. Silva wrote:
+On Mon, Mar 12, 2018 at 4:57 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Mon, Mar 12, 2018 at 3:55 PM, Andrew Morton
+> <akpm@linux-foundation.org> wrote:
 >>
->>
->> On 03/12/2018 12:26 AM, Tobin C. Harding wrote:
->> >Hi,
->> >
->> >I got some push back on the commit log we have all started to use
->> >(copying Kees' initial commit log).  If we are going to do hundreds of
->> >these patches should we write a perfectly correct commit log that can be
->> >included as the start of the 'why' of each VLA removal patch?  Here is
->> >my attempt, I am quite bad at writing commit logs so would love someone
->> >to fix it up.
->> >
->>
->> The same thing happened to me once and then I wrote this:
+>> Replacing the __builtin_choose_expr() with ?: works of course.
 >
-> I had a feeling this had happened to you but I couldn't find the patch
-> that made me think that when writing this.
+> Hmm. That sounds like the right thing to do. We were so myopically
+> staring at the __builtin_choose_expr() problem that we overlooked the
+> obvious solution.
 >
->> In preparation to enabling -Wvla, remove VLA and replace it
->> with a fixed-length array instead.
->
-> ---
->
->> From a security viewpoint, the use of Variable Length Arrays can be
+> Using __builtin_constant_p() together with a ?: is in fact our common
+> pattern, so that should be fine. The only real reason to use
+> __builtin_choose_expr() is if you want to get the *type* to vary
+> depending on which side you choose, but that's not an issue for
+> min/max.
 
-I avoid starting lines with "From" due to age-old mbox-format email
-hilarity. Also, if we're going to be pedantic, we should say "stack
-VLA".
+This doesn't solve it for -Wvla, unfortunately. That was the point of
+Josh's original suggestion of __builtin_choose_expr().
 
->> a vector for stack overflow attacks. Also, in general, as the code
+Try building with KCFLAGS=3D-Wval and checking net/ipv6/proc.c:
 
-Many people confused "stack buffer overflow" with "stack exhaustion".
-In this case, we should use the latter terminology.
+net/ipv6/proc.c: In function =E2=80=98snmp6_seq_show_item=E2=80=99:
+net/ipv6/proc.c:198:2: warning: ISO C90 forbids array =E2=80=98buff=E2=80=
+=99 whose
+size can=E2=80=99t be evaluated [-Wvla]
+  unsigned long buff[SNMP_MIB_MAX];
+  ^~~~~~~~
 
->> evolves it is easy to lose track of how big a VLA can get. Thus, we
->> can end up having segfaults that are hard to debug.
->>
->> Also, fixed as part of the directive to remove all VLAs from
->> the kernel: https://lkml.org/lkml/2018/3/7/621
->
-> ---
->
-> Cool, I like this (between ---).  Kees can you ack this since I'm going
-> to cut and paste it about 300 times :)
-
-We've got two cases we're dealing with:
-
-1) Actual VLA in use, etc.
-
-2) -Wvla warns about a non-constant-expression, but it's a
-constant-value ("const int foo = 5"). In this case, it appears no VLA
-is generated, but we get the warning. So we're fixing VLA warnings
-that aren't real. But we still want the coverage of -Wvla, so we need
-to refactor these cases too.
-
-
-So, for 1, sure:
-
----
-The use of stack Variable Length Arrays needs to be avoided, as they
-can be a vector for stack exhaustion, which can be both a runtime bug
-(kernel Oops) or a security flaw (overwriting memory beyond the
-stack). Also, in general, as code evolves it is easy to lose track of
-how big a VLA can get. Thus, we can end up having runtime failures
-that are hard to debug. As part of the directive[1] to remove all VLAs
-from the kernel, and build with -Wvla, this patch [does whatever, with
-analysis of alternatives, runtime impact, or memory usage].
-
-[1] https://lkml.org/lkml/2018/3/7/621
----
-
-For 2, how about something like this:
-
----
-As part of the directive[1] to remove all VLAs from the kernel, it
-would be nice to build with -Wvla. This warning is, however, overly
-pessimistic in that it warns about not using constant expressions when
-declaring stack array size: it still warns about constant values, even
-though those do not appear to generate actual VLAs. This patch adjusts
-the stack array declarations to use a constant expression to remove
-this false positive by [whatever, with analysys of alternatives, etc].
-
-[1] https://lkml.org/lkml/2018/3/7/621
----
-
-
-What do you think?
 
 -Kees
 
--- 
+--=20
 Kees Cook
 Pixel Security
