@@ -1,95 +1,113 @@
+Date: Wed, 14 Mar 2018 10:33:43 -0700
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [RFC PATCH v19 0/8] mm: security: ro protection for dynamic data
+Message-ID: <20180314173343.GJ29631@bombadil.infradead.org>
+References: <20180313214554.28521-1-igor.stoppa@huawei.com>
+ <a9bfc57f-1591-21b6-1676-b60341a2fadd@huawei.com>
+ <20180314115653.GD29631@bombadil.infradead.org>
+ <8623382b-cdbe-8862-8c2f-fa5bc6a1213a@huawei.com>
+ <20180314130418.GG29631@bombadil.infradead.org>
+ <9623b0d1-4ace-b3e7-b861-edba03b8a8cd@huawei.com>
 MIME-Version: 1.0
-References: <20180313205945.245105-1-thgarnie@google.com> <20180313205945.245105-7-thgarnie@google.com>
- <20180314102951.GQ4043@hirez.programming.kicks-ass.net> <alpine.DEB.2.20.1803141051210.14471@nuc-kabylake>
-In-Reply-To: <alpine.DEB.2.20.1803141051210.14471@nuc-kabylake>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed, 14 Mar 2018 17:09:37 +0000
-Message-ID: <CAJcbSZHz9c-W4ZEVFVn3Fepj9Tau6YzDdcvxAQdK5Aw-8S6Jzg@mail.gmail.com>
-Subject: Re: [PATCH v2 06/27] x86/entry/64: Adapt assembly for PIE support
-Content-Type: text/plain; charset="UTF-8"
-To: Christoph Lameter <cl@linux.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Greg KH <gregkh@linuxfoundation.org>, Kate Stewart <kstewart@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Philippe Ombredanne <pombredanne@nexb.com>, Arnaldo Carvalho de Melo <acme@redhat.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Matthias Kaehlcke <mka@chromium.org>, Kees Cook <keescook@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Andy Lutomirski <luto@kernel.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Borislav Petkov <bp@alien8.de>, Borislav Petkov <bp@suse.de>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Alok Kataria <akataria@vmware.com>, Steven Rostedt <rostedt@goodmis.org>, Tejun Heo <tj@kernel.org>, Dennis Zhou <dennisszhou@gmail.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, David Woodhouse <dwmw@amazon.co.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Randy Dunlap <rdunlap@infradead.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Christopher Li <sparse@chrisli.org>, Jason Baron <jbaron@akamai.com>, Ashish Kalra <ashish@bluestacks.com>, Kyle McMartin <kyle@redhat.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Lukas Wunner <lukas@wunner.de>, Petr Mladek <pmladek@suse.com>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Ingo Molnar <mingo@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Cao jin <caoj.fnst@cn.fujitsu.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Dave Hansen <dave.hansen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Jia Zhang <qianyue.zj@alibaba-inc.com>, Jiri Slaby <jslaby@suse.cz>, Kyle Huey <me@kylehuey.com>, Jonathan Corbet <corbet@lwn.net>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, =?UTF-8?B?SmFuIEggLiBTY2jDtm5oZXJy?= <jschoenh@amazon.de>, the arch/x86 maintainers <x86@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, virtualization@lists.linux-foundation.org, xen-devel <xen-devel@lists.xenproject.org>, linux-arch <linux-arch@vger.kernel.org>, Sparse Mailing-list <linux-sparse@vger.kernel.org>, kvm list <kvm@vger.kernel.org>, Linux Doc Mailing List <linux-doc@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <9623b0d1-4ace-b3e7-b861-edba03b8a8cd@huawei.com>
+To: Igor Stoppa <igor.stoppa@huawei.com>
+Cc: keescook@chromium.org, david@fromorbit.com, rppt@linux.vnet.ibm.com, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 14, 2018 at 8:55 AM Christopher Lameter <cl@linux.com> wrote:
+On Wed, Mar 14, 2018 at 06:11:22PM +0200, Igor Stoppa wrote:
+> On 14/03/18 15:04, Matthew Wilcox wrote:
+> > but the principle it uses
+> > seems like a better match to me than the rather complex genalloc.
+> 
+> It uses meta data in a different way than genalloc.
+> There is probably a tipping point where one implementation becomes more
+> space-efficient than the other.
 
+Certainly there are always tradeoffs in writing a memory allocator.
 
+> Probably page_frag does well with relatively large allocations, while
+> genalloc seems to be better for small (few allocation units) allocations.
 
-> On Wed, 14 Mar 2018, Peter Zijlstra wrote:
+I don't understand why you would think that.  If you allocate 4096 1-byte
+elements, page_frag will just use up a page.  Doing the same thing with
+genalloc requires allocating two bits per byte (1kB of bitmap), plus
+other overheads.
 
-> > On Tue, Mar 13, 2018 at 01:59:24PM -0700, Thomas Garnier wrote:
-> > > @@ -1576,7 +1578,9 @@ first_nmi:
-> > >     addq    $8, (%rsp)      /* Fix up RSP */
-> > >     pushfq                  /* RFLAGS */
-> > >     pushq   $__KERNEL_CS    /* CS */
-> > > -   pushq   $1f             /* RIP */
-> > > +   pushq   %rax            /* Support Position Independent Code */
-> > > +   leaq    1f(%rip), %rax  /* RIP */
-> > > +   xchgq   %rax, (%rsp)    /* Restore RAX, put 1f */
-> > >     iretq                   /* continues at repeat_nmi below */
-> > >     UNWIND_HINT_IRET_REGS
-> > >  1:
-> >
-> > Urgh, xchg with a memop has an implicit LOCK prefix.
+> Also, in case of high variance in the size of the allocations, genalloc
+> requires the allocation unit to be small enough to fit the smallest
+> request (otherwise one must accept some slack), while page_frag doesn't
+> care if the allocation is small or large.
 
-> this_cpu_xchg uses no lock cmpxchg as a replacement to reduce latency.
+Right; internal versus external fragmentation.  The bane of memory
+allocators ;-)
 
-Great, I will update my implementation.
+> page_frag otoh, seems to not support the reuse of space that was freed,
+> since there is only
 
-Thanks Peter and Christoph.
+To a certain extent it does.  If you free everything on a page, and that
+page is still in the page_frag_cache, it will get reused.
 
+> But could you please explain to what you are referring to, when you say
+> that page_frag has "significantly lower overhead" ?
 
->  From linux/arch/x86/include/asm/percpu.h
+Less CPU time taken per allocation, less metadata stored per object.
 
-> /*
->   * xchg is implemented using cmpxchg without a lock prefix. xchg is
->   * expensive due to the implied lock prefix.  The processor cannot
-prefetch
->   * cachelines if xchg is used.
->   */
-> #define percpu_xchg_op(var, nval)                                       \
-> ({                                                                      \
->          typeof(var) pxo_ret__;                                          \
->          typeof(var) pxo_new__ = (nval);                                 \
->          switch (sizeof(var)) {                                          \
->          case 1:                                                         \
->                  asm("\n\tmov "__percpu_arg(1)",%%al"                    \
->                      "\n1:\tcmpxchgb %2, "__percpu_arg(1)                \
->                      "\n\tjnz 1b"                                        \
->                              : "=&a" (pxo_ret__), "+m" (var)             \
->                              : "q" (pxo_new__)                           \
->                              : "memory");                                \
->                  break;                                                  \
->          case 2:                                                         \
->                  asm("\n\tmov "__percpu_arg(1)",%%ax"                    \
->                      "\n1:\tcmpxchgw %2, "__percpu_arg(1)                \
->                      "\n\tjnz 1b"                                        \
->                              : "=&a" (pxo_ret__), "+m" (var)             \
->                              : "r" (pxo_new__)                           \
->                              : "memory");                                \
->                  break;                                                  \
->          case 4:                                                         \
->                  asm("\n\tmov "__percpu_arg(1)",%%eax"                   \
->                      "\n1:\tcmpxchgl %2, "__percpu_arg(1)                \
->                      "\n\tjnz 1b"                                        \
->                              : "=&a" (pxo_ret__), "+m" (var)             \
->                              : "r" (pxo_new__)                           \
->                              : "memory");                                \
->                  break;                                                  \
->          case 8:                                                         \
->                  asm("\n\tmov "__percpu_arg(1)",%%rax"                   \
->                      "\n1:\tcmpxchgq %2, "__percpu_arg(1)                \
->                      "\n\tjnz 1b"                                        \
->                              : "=&a" (pxo_ret__), "+m" (var)             \
->                              : "r" (pxo_new__)                           \
->                              : "memory");                                \
->                  break;                                                  \
->          default: __bad_percpu_size();                                   \
->          }                                                               \
->          pxo_ret__;                                                      \
+> Ex: if the pfree is called only on error paths, is it ok to not claim
+> back the memory released, if it's less than one page?
 
+Yes, I think that's a great example.
 
+> To be clear: I do not want to hold to genalloc just because I have
+> already implemented it. I can at least sketch a version with page_frag,
+> but I would like to understand why its trade-offs are better :-)
+> 
+> > Just allocate some pages and track the offset within those pages that 
+> 
+> > is the current allocation point.
+> 
+> 
+> > It's less than 100 lines of code!
+> 
+> Strictly speaking it is true, but it all relies on other functions,
+> which must be rewritten, because they use linear address, while this
+> must work with virtual (vmalloc) addresses.
 
+No, that's basically the whole thing.  I think an implementation of
+pmalloc which used a page_frag-style allocator would be larger than
+100 lines, but I don't think it would have to be significantly larger
+than that.
 
--- 
-Thomas
+> Also, I see that the code relies a lot on order of allocation.
+> I think we had similar discussion wrt compound pages.
+> 
+> It seems to me wasteful, if I have a request of, say, 5 pages, and I end
+> up allocating 8.
+
+Yes, but the other three pages are available for use by the pmalloc pool.
+Now, at pmalloc_protect() time, you might well want to release the unused
+pages by calling make_alloc_exact() and hand those three pages back to the
+page allocator.
+
+> I do not recall anyone giving a justification like:
+> "yeah, it uses extra pages, but it's preferable, for reasons X, Y and Z,
+> so it's a good trade-off"
+
+Sometimes it is, sometimes it isn't.
+
+> Could it be that it's normal RAM is considered less precious than the
+> special memory genalloc is written for, so normal RAM is not really
+> proactively reused, while special memory is treated as a more valuable
+> resource that should not be wasted?
+
+We're certainly at the point where normal RAM is pretty cheap.  A 16GB
+DIMM is $200, so that's $12.50 per gigabyte.  We have more of a problem
+with fragmentation than we do with squeezing every last byte out of
+the system.
+
+Of course, Linux still runs on tiny systems, and we don't want to
+unnecessarily bloat the kernel.  And cachelines are also a precious
+resource; the fewer we touch, the faster the system runs.  The bitmap
+in genalloc can easily occupy several cachelines; the page_frag allocator
+touches a single cacheline for most allocations.
