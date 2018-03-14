@@ -1,51 +1,79 @@
+Subject: Re: [PATCH 4/4] gpio: Remove VLA from stmpe driver
+References: <20180310001021.6437-1-labbott@redhat.com>
+ <20180310001021.6437-5-labbott@redhat.com>
+ <9175611d-049d-ec28-0716-e45fccfd579f@electromag.com.au>
+ <4e64bbae-e91b-f0c5-ff79-3dde8fbe2119@redhat.com>
+ <d37dbce5-43ca-b70a-41da-5ccfc673d3ac@redhat.com>
+From: Phil Reid <preid@electromag.com.au>
+Message-ID: <9ffedffb-5dd1-a67a-7266-eb480b07a384@electromag.com.au>
+Date: Wed, 14 Mar 2018 10:55:29 +0800
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20180314021151.GA11666@eros>
-References: <1520819022-15238-1-git-send-email-me@tobin.cc>
- <20180312094606.8192B6081A@smtp.codeaurora.org> <20180313201757.GK8631@eros>
- <CAHp75VeM1zNyNtHvsn0=rg_xibcitVHREY73cAk=KCSK3Ti3vw@mail.gmail.com> <20180314021151.GA11666@eros>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 13 Mar 2018 19:53:34 -0700
-Message-ID: <CAGXu5jJsDsegY+EZFq1Hip+sRNLR5SS+-Euf1rm22okAq7REJw@mail.gmail.com>
-Subject: Re: [RESEND] rsi: Remove stack VLA usage
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: "Tobin C. Harding" <me@tobin.cc>
-Cc: Andy Shevchenko <andy.shevchenko@gmail.com>, Kalle Valo <kvalo@codeaurora.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, netdev <netdev@vger.kernel.org>, "open list:TI WILINK WIRELES..." <linux-wireless@vger.kernel.org>, Tycho Andersen <tycho@tycho.ws>
+In-Reply-To: <d37dbce5-43ca-b70a-41da-5ccfc673d3ac@redhat.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+To: Laura Abbott <labbott@redhat.com>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Patrice Chotard <patrice.chotard@st.com>
+Cc: linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 13, 2018 at 7:11 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> On Tue, Mar 13, 2018 at 11:00:47PM +0200, Andy Shevchenko wrote:
->> On Tue, Mar 13, 2018 at 10:17 PM, tcharding <me@tobin.cc> wrote:
->> > On Mon, Mar 12, 2018 at 09:46:06AM +0000, Kalle Valo wrote:
->> >> tcharding <me@tobin.cc> wrote:
+On 14/03/2018 09:16, Laura Abbott wrote:
+> On 03/13/2018 05:18 PM, Laura Abbott wrote:
+>> On 03/13/2018 02:13 AM, Phil Reid wrote:
+>>> On 10/03/2018 08:10, Laura Abbott wrote:
+>>>> The new challenge is to remove VLAs from the kernel
+>>>> (see https://lkml.org/lkml/2018/3/7/621)
+>>>>
+>>>> This patch replaces a VLA with an appropriate call to kmalloc_array.
+>>>>
+>>>> Signed-off-by: Laura Abbott <labbott@redhat.com>
+>>>> ---
+>>>>   drivers/gpio/gpio-stmpe.c | 7 ++++++-
+>>>>   1 file changed, 6 insertions(+), 1 deletion(-)
+>>>>
+>>>> diff --git a/drivers/gpio/gpio-stmpe.c b/drivers/gpio/gpio-stmpe.c
+>>>> index f8d7d1cd8488..b7854850bcdb 100644
+>>>> --- a/drivers/gpio/gpio-stmpe.c
+>>>> +++ b/drivers/gpio/gpio-stmpe.c
+>>>> @@ -369,10 +369,14 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>>>>       struct stmpe *stmpe = stmpe_gpio->stmpe;
+>>>>       u8 statmsbreg;
+>>>>       int num_banks = DIV_ROUND_UP(stmpe->num_gpios, 8);
+>>>> -    u8 status[num_banks];
+>>>> +    u8 *status;
+>>>>       int ret;
+>>>>       int i;
+>>>> +    status = kmalloc_array(num_banks, sizeof(*status), GFP_ATOMIC);
+>>>> +    if (!status)
+>>>> +        return IRQ_NONE;
+>>>> +
+>>>>       /*
+>>>>        * the stmpe_block_read() call below, imposes to set statmsbreg
+>>>>        * with the register located at the lowest address. As STMPE1600
+>>>> @@ -424,6 +428,7 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>>>>           }
+>>>>       }
+>>>> +    kfree(status);
+>>>>       return IRQ_HANDLED;
+>>>>   }
+>>>>
+>>>
+>>> Doing this in an irq handler seems wrong.
+>>> Perhaps better if a buffer is pre-allocated in stmpe_gpio
 >>
->> I'm pretty much sure it depends on the original email headers, like
->> above ^^^ =E2=80=94 no name.
->> Perhaps git config on your side should be done.
->
-> Thanks for the suggestion Andy but the 'tcharding' as the name was
-> munged by either Kalle or patchwork.  I'm guessing patchwork.
+>> Sure, I can pre-allocate the buffer in the probe.
+> 
+> Actually I wonder if there would be concurrency problems if we
+> tried to pre-allocate a global buffer. But the IRQ handler
+> calls stmpe_block_read which takes a mutex to sleep so I think
+> doing the (small) kmalloc should be fine and I can change it to
+> a GFP_KERNEL.
+> 
+I'm no expert on this driver, but I wouldn't think there'd be any concurrency
+problem if the buffer is only used by the irq handler.
+It should never get called concurrently for the same device.
 
-Something you're sending from is using "tcharding" (see the email Andy
-quotes). I see the headers as:
-
-Date: Wed, 14 Mar 2018 07:17:57 +1100
-From: tcharding <me@tobin.cc>
-...
-Message-ID: <20180313201757.GK8631@eros>
-X-Mailer: Mutt 1.5.24 (2015-08-30)
-User-Agent: Mutt/1.5.24 (2015-08-30)
-
-Your most recently email shows "Tobin C. Harding" though, and also
-sent with Mutt...
-
-Do you have multiple Mutt configurations? Is something lacking a
-"From" header insertion and your MTA is filling it in for you from
-your username?
-
--Kees
-
---=20
-Kees Cook
-Pixel Security
+As to the impact, I'll admit I've really got no idea how much potential overhead a
+kmalloc has compared to a mutex for the linux kernel.
+Just a general rule of thumb, that memory allocations are usually expensive.
+-- 
+Regards
+Phil Reid
