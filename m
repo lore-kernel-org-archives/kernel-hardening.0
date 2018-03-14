@@ -1,34 +1,38 @@
 From: David Laight <David.Laight@ACULAB.COM>
-Subject: RE: [PATCH] net: dsa: drop some VLAs in switch.c
-Date: Wed, 14 Mar 2018 11:24:30 +0000
-Message-ID: <9843d23677af411aa75a5fb24df3c97b@AcuMS.aculab.com>
-References: <1520970647-19587-1-git-send-email-s.mesoraca16@gmail.com>
- <87fu5321du.fsf@weeman.i-did-not-set--mail-host-address--so-tickle-me>
- <CAJHCu1JCCkkoL92tL+Zpx6te1A=-B1dNbAFu4sFEHiHa4vB6BQ@mail.gmail.com>
-In-Reply-To: <CAJHCu1JCCkkoL92tL+Zpx6te1A=-B1dNbAFu4sFEHiHa4vB6BQ@mail.gmail.com>
+Subject: RE: [PATCH v3] kernel.h: Skip single-eval logic on literals in
+ min()/max()
+Date: Wed, 14 Mar 2018 11:35:26 +0000
+Message-ID: <4922d8fb3c334e76a622258bb3c610e6@AcuMS.aculab.com>
+References: <20180309200536.GA5670@beast>
+ <20180309160719.154a3158e2d8ee56e43a918f@linux-foundation.org>
+ <CA+55aFw9hWz1-YFVoHEiXDjqb9q7dz=rQVXr7YLkMuVLvbwaOg@mail.gmail.com>
+ <20180309163241.a421e216999bd0b1f43a64c2@linux-foundation.org>
+ <CA+55aFwbO2vUsjWzAwB6SZ65RM4r3P0+2JvyMHn=ry0CgWCBgA@mail.gmail.com>
+ <CAGXu5j+D=zs8AMb969dhH05GmKPuBxKPcAs89KfKzVf47faL1g@mail.gmail.com>
+ <20180312155524.b421f07d7f08f24c57bd1887@linux-foundation.org>
+ <CA+55aFwK7W0SsaP5eR+2TxOj-j_Mu_E11fRw2Gk8ptV71ebvww@mail.gmail.com>
+ <CAGXu5j+M0qbBS0og8buXHdubA=oi=jMcK=ehLGDeevFd2H7JmA@mail.gmail.com>
+ <20180313140248.7fdb0d0cee044cd7c7fc7b93@linux-foundation.org>
+ <CAGXu5j+JUfvYCej17Gx__3Vhu4JmimddrSgV89c2tkfwshH_Mw@mail.gmail.com>
+In-Reply-To: <CAGXu5j+JUfvYCej17Gx__3Vhu4JmimddrSgV89c2tkfwshH_Mw@mail.gmail.com>
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-To: 'Salvatore Mesoraca' <s.mesoraca16@gmail.com>, Vivien Didelot <vivien.didelot@savoirfairelinux.com>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kernel
- Hardening <kernel-hardening@lists.openwall.com>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "David S. Miller" <davem@davemloft.net>, Andrew
- Lunn <andrew@lunn.ch>, Florian Fainelli <f.fainelli@gmail.com>, Kees Cook <keescook@chromium.org>
+To: 'Kees Cook' <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus
+ Villemoes <linux@rasmusvillemoes.dk>, "Gustavo A. R. Silva" <gustavo@embeddedor.com>, "Tobin C. Harding" <me@tobin.cc>, Steven Rostedt <rostedt@goodmis.org>, Jonathan Corbet <corbet@lwn.net>, Chris Mason <clm@fb.com>, Josef Bacik <jbacik@fb.com>, David Sterba <dsterba@suse.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Ingo
+ Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Thomas
+ Gleixner <tglx@linutronix.de>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Randy Dunlap <rdunlap@infradead.org>, Ian Abbott <abbotti@mev.co.uk>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, Andy
+ Shevchenko <andriy.shevchenko@linux.intel.com>, Pantelis Antoniou <pantelis.antoniou@konsulko.com>, Linux Btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-RnJvbTogU2FsdmF0b3JlIE1lc29yYWNhDQo+IFNlbnQ6IDEzIE1hcmNoIDIwMTggMjI6MDENCj4g
-MjAxOC0wMy0xMyAyMDo1OCBHTVQrMDE6MDAgVml2aWVuIERpZGVsb3QgPHZpdmllbi5kaWRlbG90
-QHNhdm9pcmZhaXJlbGludXguY29tPjoNCj4gPiBIaSBTYWx2YXRvcmUsDQo+IA0KPiBIaSBWaXZp
-ZW4sDQo+IA0KPiA+IFNhbHZhdG9yZSBNZXNvcmFjYSA8cy5tZXNvcmFjYTE2QGdtYWlsLmNvbT4g
-d3JpdGVzOg0KPiA+DQo+ID4+IGRzYV9zd2l0Y2gncyBudW1fcG9ydHMgaXMgY3VycmVudGx5IGZp
-eGVkIHRvIERTQV9NQVhfUE9SVFMuIFNvIHdlIGF2b2lkDQo+ID4+IDIgVkxBc1sxXSBieSB1c2lu
-ZyBEU0FfTUFYX1BPUlRTIGluc3RlYWQgb2YgZHMtPm51bV9wb3J0cy4NCj4gPj4NCj4gPj4gWzFd
-IGh0dHBzOi8vbGttbC5vcmcvbGttbC8yMDE4LzMvNy82MjENCj4gPj4NCj4gPj4gU2lnbmVkLW9m
-Zi1ieTogU2FsdmF0b3JlIE1lc29yYWNhIDxzLm1lc29yYWNhMTZAZ21haWwuY29tPg0KPiA+DQo+
-ID4gTkFLLg0KPiA+DQo+ID4gV2UgYXJlIGluIHRoZSBwcm9jZXNzIHRvIHJlbW92ZSBoYXJkY29k
-ZWQgbGltaXRzIHN1Y2ggYXMgRFNBX01BWF9QT1JUUw0KPiA+IGFuZCBEU0FfTUFYX1NXSVRDSEVT
-LCBzbyB3ZSBoYXZlIHRvIHN0aWNrIHdpdGggZHMtPm51bV9wb3J0cy4NCj4gDQo+IEkgY2FuIHJl
-d3JpdGUgdGhlIHBhdGNoIHVzaW5nIGttYWxsb2MuDQo+IEFsdGhvdWdoLCBpZiBkcy0+bnVtX3Bv
-cnRzIHdpbGwgYWx3YXlzIGJlIGxlc3MgdGhhbiBvciBlcXVhbCB0byAxMiwgaXQNCj4gc2hvdWxk
-IGJlIGJldHRlciB0bw0KPiBqdXN0IHVzZSBEU0FfTUFYX1BPUlRTLg0KDQpJc24ndCB1c2luZyBE
-RUNMQVJFX0JJVE1BUCgpIGNvbXBsZXRlbHkgT1RUIHdoZW4gdGhlIG1heGltdW0gc2l6ZSBpcyBs
-ZXNzDQp0aGFuIHRoZSBudW1iZXIgb2YgYml0cyBpbiBhIHdvcmQ/DQoNCglEYXZpZA0KDQo=
+RnJvbTogS2VlcyBDb29rDQo+IFNlbnQ6IDEzIE1hcmNoIDIwMTggMjI6MTUNCi4uLg0KPiBJJ2xs
+IHNlbmQgYSAiY29uc3RfbWF4KCkiIHdoaWNoIHdpbGwgcmVmdXNlIHRvIHdvcmsgb24NCj4gbm9u
+LWNvbnN0YW50LXZhbHVlcyAoc28gaXQgZG9lc24ndCBnZXQgYWNjaWRlbnRhbGx5IHVzZWQgb24g
+dmFyaWFibGVzDQo+IHRoYXQgY291bGQgYmUgZXhwb3NlZCB0byBkb3VibGUtZXZhbHVhdGlvbiks
+IGFuZCB3aWxsIHdvcmsgZm9yIHN0YWNrDQo+IGFycmF5IGRlY2xhcmF0aW9ucyAodG8gYXZvaWQg
+dGhlIG92ZXJseS1zZW5zaXRpdmUgLVd2bGEgY2hlY2tzKS4NCg0KSVNUUiB0aGUgZGVmaW5pdGlv
+bnMgd2VyZSBvZiB0aGUgZm9ybToNCgljaGFyIGZvb1ttYXgoc2l6ZW9mIChzdHJ1Y3QgYmFoKSwg
+c2l6ZW9mIChzdHJ1Y3QgYmF6KSldOw0KVGhpcyBkb2Vzbid0IGdlbmVyYXRlIGEgJ2Zvbycgd2l0
+aCB0aGUgcmVxdWlyZWQgYWxpZ25tZW50Lg0KSXQgd291bGQgYmUgbXVjaCBiZXR0ZXIgdG8gdXNl
+IGEgdW5pb24uDQoNCglEYXZpZA0KDQo=
