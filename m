@@ -1,18 +1,24 @@
 MIME-Version: 1.0
-In-Reply-To: <CA+DvKQK9jRe5YOk_K4DzBYkh2VUys56XbaYZRGs0fn2WJNT+nQ@mail.gmail.com>
+In-Reply-To: <CAGXu5jKDA=L5E6Cu_oRe-M=ouuhrccCZHyM+z6_UMAUqe9xnRQ@mail.gmail.com>
 References: <1520598613-3641-1-git-send-email-andreaschristofo@gmail.com>
- <5AA464DE.90100@broadcom.com> <CA+DvKQ+hbMoWJdOuQB5n+eVF4ePf=kVuRiMbdtTUZ8ars4Pz4A@mail.gmail.com>
- <423b529d48c54eba9f7ed51922814d46@AcuMS.aculab.com> <CA+DvKQK9jRe5YOk_K4DzBYkh2VUys56XbaYZRGs0fn2WJNT+nQ@mail.gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Tue, 13 Mar 2018 21:22:08 -0400
-Message-ID: <CA+DvKQJYMYCVgxZPxqCnkZn2u-sunSUF6ZTTDJ0sauhX-1qEzw@mail.gmail.com>
+ <5AA464DE.90100@broadcom.com> <CAGXu5jKDA=L5E6Cu_oRe-M=ouuhrccCZHyM+z6_UMAUqe9xnRQ@mail.gmail.com>
+From: Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>
+Date: Wed, 14 Mar 2018 02:38:45 +0100
+Message-ID: <CANiq72=W0=DwZq_SGAHTnbvofPPKUgSOXhJtHDj0CReu5d17hw@mail.gmail.com>
 Subject: Re: [PATCH] drivers: net: wireless: ath: ath9: dfs: remove VLA usage
 Content-Type: text/plain; charset="UTF-8"
-To: David Laight <David.Laight@aculab.com>
-Cc: Arend van Spriel <arend.vanspriel@broadcom.com>, Andreas Christoforou <andreaschristofo@gmail.com>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, Kalle Valo <kvalo@codeaurora.org>, "linux-wireless@vger.kernel.org" <linux-wireless@vger.kernel.org>, Netdev <netdev@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Arend van Spriel <arend.vanspriel@broadcom.com>, Andreas Christoforou <andreaschristofo@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, Kalle Valo <kvalo@codeaurora.org>, linux-wireless <linux-wireless@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> I don't think the difference between C and C++ const pointer
-> conversions
+On Sun, Mar 11, 2018 at 12:12 AM, Kees Cook <keescook@chromium.org> wrote:
+>
+> The problem is that it's not a "constant expression", so the compiler
+> frontend still yells about it under -Wvla. I would characterize this
+> mainly as a fix for "accidental VLA" or "misdetected VLA" or something
+> like that. AIUI, there really isn't a functional change here.
 
-I mean I don't think the difference between them was intended.
+C++11's constexpr variables would be nice to have.
+
+Cheers,
+Miguel
