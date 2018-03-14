@@ -1,88 +1,28 @@
-Date: Tue, 13 Mar 2018 14:10:12 -0700
-From: =?iso-8859-1?Q?J=F6rn?= Engel <joern@purestorage.com>
-Subject: [PATCH] btree: avoid variable-length allocations
-Message-ID: <20180313211012.GB29976@cork>
+Date: Wed, 14 Mar 2018 11:29:51 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Subject: Re: [PATCH v2 06/27] x86/entry/64: Adapt assembly for PIE support
+Message-ID: <20180314102951.GQ4043@hirez.programming.kicks-ass.net>
+References: <20180313205945.245105-1-thgarnie@google.com>
+ <20180313205945.245105-7-thgarnie@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CA+55aFzCG-zNmZwX4A2FQpadafLfEzK6CC=qPXydAacU1RqZWA@mail.gmail.com>
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Kees Cook <keescook@chromium.org>, "Tobin C. Harding" <tobin@apporbit.com>, "Tobin C. Harding" <me@tobin.cc>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Tycho Andersen <tycho@tycho.ws>, Oleg Drokin <oleg.drokin@intel.com>, Andreas Dilger <andreas.dilger@intel.com>, James Simmons <jsimmons@infradead.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, LKML <linux-kernel@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@kernel.org>, "Gustavo A. R. Silva" <garsilva@embeddedor.com>
+In-Reply-To: <20180313205945.245105-7-thgarnie@google.com>
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Kate Stewart <kstewart@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Philippe Ombredanne <pombredanne@nexb.com>, Arnaldo Carvalho de Melo <acme@redhat.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Matthias Kaehlcke <mka@chromium.org>, Kees Cook <keescook@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Andy Lutomirski <luto@kernel.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Borislav Petkov <bp@alien8.de>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Alok Kataria <akataria@vmware.com>, Steven Rostedt <rostedt@goodmis.org>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Dennis Zhou <dennisszhou@gmail.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, David Woodhouse <dwmw@amazon.co.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Randy Dunlap <rdunlap@infradead.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Christopher Li <sparse@chrisli.org>, Jason Baron <jbaron@akamai.com>, Ashish Kalra <ashish@bluestacks.com>, Kyle McMartin <kyle@redhat.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Lukas Wunner <lukas@wunner.de>, Petr Mladek <pmladek@suse.com>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Ingo Molnar <mingo@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Cao jin <caoj.fnst@cn.fujitsu.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Dave Hansen <dave.hansen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Jia Zhang <qianyue.zj@alibaba-inc.com>, Jiri Slaby <jslaby@suse.cz>, Kyle Huey <me@kylehuey.com>, Jonathan Corbet <corbet@lwn.net>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Jan H =?iso-8859-1?Q?=2E_Sch=F6nherr?= <jschoenh@amazon.de>, x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux-pm@vger.kernel.org, virtualization@lists.linux-foundation.org, xen-devel@lists.xenproject.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I agree that the code is garbage.  In my defense, creating generic
-iterator-type functions for multiple data types appears to be one of the
-hardest problems in CS with many bad examples of what not to do.
+On Tue, Mar 13, 2018 at 01:59:24PM -0700, Thomas Garnier wrote:
+> @@ -1576,7 +1578,9 @@ first_nmi:
+>  	addq	$8, (%rsp)	/* Fix up RSP */
+>  	pushfq			/* RFLAGS */
+>  	pushq	$__KERNEL_CS	/* CS */
+> -	pushq	$1f		/* RIP */
+> +	pushq	%rax		/* Support Position Independent Code */
+> +	leaq	1f(%rip), %rax	/* RIP */
+> +	xchgq	%rax, (%rsp)	/* Restore RAX, put 1f */
+>  	iretq			/* continues at repeat_nmi below */
+>  	UNWIND_HINT_IRET_REGS
+>  1:
 
-Patch below should fix it.  We have tcm_qla2xxx systems, so I will stick
-it into our test system as well.
-
-Jörn
-
---
-It is a cliché that most clichés are true, but then, like most clichés,
-that cliché is untrue.
--- Stephen Fry
-
->From 0077d19b11ec27c3287787d2413b26fc4cf0b3ca Mon Sep 17 00:00:00 2001
-From: Joern Engel <joern@purestorage.com>
-Date: Tue, 13 Mar 2018 11:36:49 -0700
-Subject: [PATCH] btree: avoid variable-length allocations
-
-geo->keylen cannot be larger than 4.  So we might as well make
-fixed-size allocations.
-
-Given the one remaining user, geo->keylen cannot even be larger than 1.
-Logfs used to have 64bit and 128bit keys, tcm_qla2xxx only has 32bit
-keys.  But let's not break the code if we don't have to.
-
-Signed-off-by: Joern Engel <joern@purestorage.com>
----
- lib/btree.c | 10 ++++++----
- 1 file changed, 6 insertions(+), 4 deletions(-)
-
-diff --git a/lib/btree.c b/lib/btree.c
-index f93a945274af..590facba2c50 100644
---- a/lib/btree.c
-+++ b/lib/btree.c
-@@ -3,7 +3,7 @@
-  *
-  * As should be obvious for Linux kernel code, license is GPLv2
-  *
-- * Copyright (c) 2007-2008 Joern Engel <joern@logfs.org>
-+ * Copyright (c) 2007-2008 Joern Engel <joern@purestorage.com>
-  * Bits and pieces stolen from Peter Zijlstra's code, which is
-  * Copyright 2007, Red Hat Inc. Peter Zijlstra
-  * GPLv2
-@@ -76,6 +76,8 @@ struct btree_geo btree_geo128 = {
- };
- EXPORT_SYMBOL_GPL(btree_geo128);
- 
-+#define MAX_KEYLEN	(2 * LONG_PER_U64)
-+
- static struct kmem_cache *btree_cachep;
- 
- void *btree_alloc(gfp_t gfp_mask, void *pool_data)
-@@ -313,7 +315,7 @@ void *btree_get_prev(struct btree_head *head, struct btree_geo *geo,
- {
- 	int i, height;
- 	unsigned long *node, *oldnode;
--	unsigned long *retry_key = NULL, key[geo->keylen];
-+	unsigned long *retry_key = NULL, key[MAX_KEYLEN];
- 
- 	if (keyzero(geo, __key))
- 		return NULL;
-@@ -639,8 +641,8 @@ EXPORT_SYMBOL_GPL(btree_remove);
- int btree_merge(struct btree_head *target, struct btree_head *victim,
- 		struct btree_geo *geo, gfp_t gfp)
- {
--	unsigned long key[geo->keylen];
--	unsigned long dup[geo->keylen];
-+	unsigned long key[MAX_KEYLEN];
-+	unsigned long dup[MAX_KEYLEN];
- 	void *val;
- 	int err;
- 
--- 
-2.15.1
+Urgh, xchg with a memop has an implicit LOCK prefix.
