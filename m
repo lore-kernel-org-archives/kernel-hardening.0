@@ -1,40 +1,38 @@
-From: David Laight <David.Laight@ACULAB.COM>
-Subject: RE: [PATCH] crypto: ctr: avoid VLA use
-Date: Thu, 15 Mar 2018 11:55:21 +0000
-Message-ID: <913c28c268ca49f19f2407afc110deef@AcuMS.aculab.com>
-References: <1521033450-14447-1-git-send-email-s.mesoraca16@gmail.com>
- <20180314183157.GA183724@gmail.com>
-In-Reply-To: <20180314183157.GA183724@gmail.com>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+Subject: Re: [RFC PATCH v19 0/8] mm: security: ro protection for dynamic data
+References: <20180313214554.28521-1-igor.stoppa@huawei.com>
+ <a9bfc57f-1591-21b6-1676-b60341a2fadd@huawei.com>
+ <20180314115653.GD29631@bombadil.infradead.org>
+ <8623382b-cdbe-8862-8c2f-fa5bc6a1213a@huawei.com>
+ <20180314130418.GG29631@bombadil.infradead.org>
+ <9623b0d1-4ace-b3e7-b861-edba03b8a8cd@huawei.com>
+ <20180314173343.GJ29631@bombadil.infradead.org>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <fc984bf4-c46a-976c-ec74-ad89dc3d150e@huawei.com>
+Date: Thu, 15 Mar 2018 15:43:49 +0200
 MIME-Version: 1.0
-To: 'Eric Biggers' <ebiggers3@gmail.com>, Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, "David S.
- Miller" <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Kees Cook <keescook@chromium.org>
+In-Reply-To: <20180314173343.GJ29631@bombadil.infradead.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+To: Matthew Wilcox <willy@infradead.org>
+Cc: keescook@chromium.org, david@fromorbit.com, rppt@linux.vnet.ibm.com, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Eric Biggers
-> Sent: 14 March 2018 18:32
-...
-> Also, I recall there being a long discussion a while back about how
-> __aligned(16) doesn't work on local variables because the kernel's stack =
-pointer
-> isn't guaranteed to maintain the alignment assumed by the compiler (see c=
-ommit
-> b8fbe71f7535)...
 
-ISTR that gcc arbitrarily decided that the x86 stack (for 32 bit) would be
-kept aligned to more than 4 bytes (16??) - probably so that xmm registers
-could be written to stack locations.
-This was a massive ABI change that they didn't tell anyone about!
-While gcc compiled code maintained the alignment a lot of asm code didn't.
-I don't know about Linux, but NetBSD didn't even align user stacks.
 
-There is a gcc option to not assume that the stack is 'appropriately aligne=
-d',
-but ISTR that it generates rather more code that one might have wished.
+On 14/03/2018 19:33, Matthew Wilcox wrote:
+> On Wed, Mar 14, 2018 at 06:11:22PM +0200, Igor Stoppa wrote:
 
-If the compiler does align the stack, it does so by generating a double
-stack frame - not pretty at all.
+[...]
 
-	David
+>> Probably page_frag does well with relatively large allocations, while
+>> genalloc seems to be better for small (few allocation units) allocations.
+> 
+> I don't understand why you would think that.  If you allocate 4096 1-byte
+> elements, page_frag will just use up a page.  Doing the same thing with
+> genalloc requires allocating two bits per byte (1kB of bitmap), plus
+> other overheads.
+
+I had misunderstood the amount of page_frag structures needed.
+
+--
+igor
