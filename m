@@ -1,55 +1,44 @@
-From: Laura Abbott <labbott@redhat.com>
-Subject: [PATCHv2 4/4] gpio: Remove VLA from stmpe driver
-Date: Thu, 15 Mar 2018 11:00:30 -0700
-Message-Id: <20180315180030.20001-5-labbott@redhat.com>
-In-Reply-To: <20180315180030.20001-1-labbott@redhat.com>
-References: <20180315180030.20001-1-labbott@redhat.com>
-To: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Patrice Chotard <patrice.chotard@st.com>
-Cc: Laura Abbott <labbott@redhat.com>, linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Subject: Re: [PATCH 4/8] struct page: add field for vm_struct
+References: <20180313214554.28521-1-igor.stoppa@huawei.com>
+ <20180313214554.28521-5-igor.stoppa@huawei.com>
+ <20180313220040.GA15791@bombadil.infradead.org>
+ <7b18521c-539b-2ba1-823e-e83be071c13f@gmail.com>
+ <6924c919-dbfb-a9f6-748a-0bbfe8d876b1@huawei.com>
+From: J Freyensee <why2jjj.linux@gmail.com>
+Message-ID: <007b20f7-54f8-0397-88ce-4a106bfdb8e9@gmail.com>
+Date: Thu, 15 Mar 2018 11:51:16 -0700
+MIME-Version: 1.0
+In-Reply-To: <6924c919-dbfb-a9f6-748a-0bbfe8d876b1@huawei.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Igor Stoppa <igor.stoppa@huawei.com>, Matthew Wilcox <willy@infradead.org>
+Cc: david@fromorbit.com, rppt@linux.vnet.ibm.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The new challenge is to remove VLAs from the kernel
-(see https://lkml.org/lkml/2018/3/7/621)
 
-This patch replaces a VLA with an appropriate call to kmalloc_array.
 
-Signed-off-by: Laura Abbott <labbott@redhat.com>
----
-v2: Switch to GFP_KERNEL. There was some discussion about if we should
-be doing the allocation at all but given a) the allocation is pretty
-small and b) we can possibly take a mutex in a called function I think
-this is fine.
----
- drivers/gpio/gpio-stmpe.c | 7 ++++++-
- 1 file changed, 6 insertions(+), 1 deletion(-)
+On 3/15/18 2:38 AM, Igor Stoppa wrote:
+> On 14/03/18 19:43, J Freyensee wrote:
+>> On 3/13/18 3:00 PM, Matthew Wilcox wrote:
+> [...]
+>
+>>>> Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
+>>> Reviewed-by: Matthew Wilcox <mawilcox@microsoft.com>
+>> Igor, do you mind sticking these tags on the files that have spent some
+>> time reviewing a revision of your patchset (like the Reviewed-by: tags I
+>> provided last revision?)
+> Apologies, that was not intentional, I forgot it.
+> I will do it, although most of the files will now change so much that I
+> am not sure what will survive, beside this patch, in the form that you
+> reviewed.
+>
+> I suppose the Review-by tag drops, if the patch changes.
 
-diff --git a/drivers/gpio/gpio-stmpe.c b/drivers/gpio/gpio-stmpe.c
-index f8d7d1cd8488..c2bb20ace6f5 100644
---- a/drivers/gpio/gpio-stmpe.c
-+++ b/drivers/gpio/gpio-stmpe.c
-@@ -369,10 +369,14 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
- 	struct stmpe *stmpe = stmpe_gpio->stmpe;
- 	u8 statmsbreg;
- 	int num_banks = DIV_ROUND_UP(stmpe->num_gpios, 8);
--	u8 status[num_banks];
-+	u8 *status;
- 	int ret;
- 	int i;
- 
-+	status = kmalloc_array(num_banks, sizeof(*status), GFP_KERNEL);
-+	if (!status)
-+		return IRQ_NONE;
-+
- 	/*
- 	 * the stmpe_block_read() call below, imposes to set statmsbreg
- 	 * with the register located at the lowest address. As STMPE1600
-@@ -424,6 +428,7 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
- 		}
- 	}
- 
-+	kfree(status);
- 	return IRQ_HANDLED;
- }
- 
--- 
-2.14.3
+That's true, if so much of the patch changes it basically looks like 
+something different, the Reviewed-by: would drop.
+
+Jay
+
+>
+> --
+> igor
