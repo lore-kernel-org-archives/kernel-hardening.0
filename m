@@ -1,57 +1,88 @@
-Date: Thu, 15 Mar 2018 09:48:36 +0100
-From: Pavel Machek <pavel@ucw.cz>
-Subject: Re: [PATCH v2 00/27] x86: PIE support and option to extend KASLR
- randomization
-Message-ID: <20180315084836.GA15953@amd>
-References: <20180313205945.245105-1-thgarnie@google.com>
+From: Kalle Valo <kvalo@codeaurora.org>
+Subject: Re: [RESEND] rsi: Remove stack VLA usage
+References: <1520819022-15238-1-git-send-email-me@tobin.cc>
+	<20180312094606.8192B6081A@smtp.codeaurora.org>
+	<20180313201757.GK8631@eros>
+	<CAHp75VeM1zNyNtHvsn0=rg_xibcitVHREY73cAk=KCSK3Ti3vw@mail.gmail.com>
+	<20180314021151.GA11666@eros>
+	<CAGXu5jJsDsegY+EZFq1Hip+sRNLR5SS+-Euf1rm22okAq7REJw@mail.gmail.com>
+	<20180314034303.GB11666@eros> <87fu536mkm.fsf@codeaurora.org>
+	<20180314201944.GC11666@eros>
+Date: Thu, 15 Mar 2018 11:07:28 +0200
+In-Reply-To: <20180314201944.GC11666@eros> (Tobin C. Harding's message of
+	"Thu, 15 Mar 2018 07:19:44 +1100")
+Message-ID: <87woyd7lm7.fsf@kamboji.qca.qualcomm.com>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="0OAP2g/MAC+5xKAE"
-Content-Disposition: inline
-In-Reply-To: <20180313205945.245105-1-thgarnie@google.com>
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Kate Stewart <kstewart@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Philippe Ombredanne <pombredanne@nexb.com>, Arnaldo Carvalho de Melo <acme@redhat.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Matthias Kaehlcke <mka@chromium.org>, Kees Cook <keescook@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Andy Lutomirski <luto@kernel.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Borislav Petkov <bp@alien8.de>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Juergen Gross <jgross@suse.com>, Alok Kataria <akataria@vmware.com>, Steven Rostedt <rostedt@goodmis.org>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Dennis Zhou <dennisszhou@gmail.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, David Woodhouse <dwmw@amazon.co.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Randy Dunlap <rdunlap@infradead.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Christopher Li <sparse@chrisli.org>, Jason Baron <jbaron@akamai.com>, Ashish Kalra <ashish@bluestacks.com>, Kyle McMartin <kyle@redhat.com>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Lukas Wunner <lukas@wunner.de>, Petr Mladek <pmladek@suse.com>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Ingo Molnar <mingo@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Cao jin <caoj.fnst@cn.fujitsu.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, Dave Hansen <dave.hansen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Jia Zhang <qianyue.zj@alibaba-inc.com>, Jiri Slaby <jslaby@suse.cz>, Kyle Huey <me@kylehuey.com>, Jonathan Corbet <corbet@lwn.net>, Matthew Wilcox <mawilcox@microsoft.com>, Michal Hocko <mhocko@suse.com>, Rob Landley <rob@landley.net>, Baoquan He <bhe@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Jan H =?iso-8859-1?Q?=2E_Sch=F6nherr?= <jschoenh@amazon.de>, x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux-pm@vger.kernel.org, virtualization@lists.linux-foundation.org, xen-devel@lists.xenproject.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: Kees Cook <keescook@chromium.org>, Andy Shevchenko <andy.shevchenko@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, netdev <netdev@vger.kernel.org>, "open list:TI WILINK WIRELES..." <linux-wireless@vger.kernel.org>, Tycho Andersen <tycho@tycho.ws>, Konstantin Ryabitsev <konstantin@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+"Tobin C. Harding" <me@tobin.cc> writes:
 
---0OAP2g/MAC+5xKAE
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+> On Wed, Mar 14, 2018 at 11:19:53AM +0200, Kalle Valo wrote:
+>> "Tobin C. Harding" <me@tobin.cc> writes:
+>>=20
+>> > Added Konstantin in case he is in charge of administering patchwork.ke=
+rnel.org?
+>> >
+>> > On Tue, Mar 13, 2018 at 07:53:34PM -0700, Kees Cook wrote:
+>> >> On Tue, Mar 13, 2018 at 7:11 PM, Tobin C. Harding <me@tobin.cc> wrote:
+>> >> > On Tue, Mar 13, 2018 at 11:00:47PM +0200, Andy Shevchenko wrote:
+>> >> >> On Tue, Mar 13, 2018 at 10:17 PM, tcharding <me@tobin.cc> wrote:
+>> >> >> > On Mon, Mar 12, 2018 at 09:46:06AM +0000, Kalle Valo wrote:
+>> >> >> >> tcharding <me@tobin.cc> wrote:
+>> >> >>
+>> >> >> I'm pretty much sure it depends on the original email headers, like
+>> >> >> above ^^^ =E2=80=94 no name.
+>> >> >> Perhaps git config on your side should be done.
+>> >> >
+>> >> > Thanks for the suggestion Andy but the 'tcharding' as the name was
+>> >> > munged by either Kalle or patchwork.  I'm guessing patchwork.
+>> >>=20
+>> >> Something you're sending from is using "tcharding" (see the email Andy
+>> >> quotes). I see the headers as:
+>> >>=20
+>> >> Date: Wed, 14 Mar 2018 07:17:57 +1100
+>> >> From: tcharding <me@tobin.cc>
+>> >> ...
+>> >> Message-ID: <20180313201757.GK8631@eros>
+>> >> X-Mailer: Mutt 1.5.24 (2015-08-30)
+>> >> User-Agent: Mutt/1.5.24 (2015-08-30)
+>> >>=20
+>> >> Your most recently email shows "Tobin C. Harding" though, and also
+>> >> sent with Mutt...
+>> >>
+>> >> Do you have multiple Mutt configurations? Is something lacking a
+>> >> "From" header insertion and your MTA is filling it in for you from
+>> >> your username?
+>> >
+>> > Thanks for taking the time to respond Kees (and Tycho).  I have mutt
+>> > configured to reply from whichever email address I receive from so if
+>> > patchwork sent an email to 'tcharding <me@tobin.cc>' (which is the
+>> > details it has) and I hit reply it would have come from 'tcharding',
+>> > hence Andy's reply.  I wouldn't bet my life on it but I'm kinda
+>> > confident that I cannot initiate an email from 'tcharding' with my
+>> > current set up.
+>> >
+>> > Super bad form to blame someone (or something else) but I think this is
+>> > a problem with how my patchwork account is configured.  Either way, th=
+at
+>> > is still my fault I should have added my real name to patchwork when I
+>> > signed up (not just username 'tcharding').
+>> >
+>> > Is patchwork.kernel.org administered by Konstantin Ryabitsev? Added
+>> > Konstantin to CC's.
+>>=20
+>> Like I said earlier, just send a request to helpdesk@kernel.org and
+>> admins should fix your name.
+>
+> thanks Kalle, I'm on it.
 
-Hi!
+Thanks. Looks to be fixed, now patchwork gives me:
 
-> These patches make the changes necessary to build the kernel as Position
-> Independent Executable (PIE) on x86_64. A PIE kernel can be relocated bel=
-ow
-> the top 2G of the virtual address space. It allows to optionally extend t=
-he
-> KASLR randomization range from 1G to 3G.
+From: Tobin C. Harding <me@tobin.cc>
 
-Would you explain why PIE code is good idea?
-
-You are adding less than 2 bits of randomness. Cost is new config
-option, some size and performance impact, and more than 1000 lines of
-code...
-
-Is there some grand plan of adding 30 more bits of randomness with
-future patch or something?
-									Pavel
 --=20
-(english) http://www.livejournal.com/~pavelmachek
-(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
-g.html
-
---0OAP2g/MAC+5xKAE
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iEYEARECAAYFAlqqM2QACgkQMOfwapXb+vIPUQCgiwtu3igz+Mea6JgZEWaFBEa4
-DdUAn1zcqcTDjpsItrwfFnQZ9XU/fRNQ
-=OpfY
------END PGP SIGNATURE-----
-
---0OAP2g/MAC+5xKAE--
+Kalle Valo
