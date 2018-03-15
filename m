@@ -1,32 +1,28 @@
-Date: Thu, 15 Mar 2018 22:27:11 +0100 (CET)
-From: Thomas Gleixner <tglx@linutronix.de>
-Subject: Re: [PATCH] rslib: Remove VLAs by setting upper bound on nroots
-In-Reply-To: <20180310223450.GA37999@beast>
-Message-ID: <alpine.DEB.2.21.1803152226590.1520@nanos.tec.linutronix.de>
-References: <20180310223450.GA37999@beast>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+Sender: linus971@gmail.com
+In-Reply-To: <1521143266-31350-2-git-send-email-keescook@chromium.org>
+References: <1521143266-31350-1-git-send-email-keescook@chromium.org> <1521143266-31350-2-git-send-email-keescook@chromium.org>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Thu, 15 Mar 2018 14:42:13 -0700
+Message-ID: <CA+55aFzu+VU_FVZdbLCZttUspZdJCvBhkuo4V69H=XnqmLrpLA@mail.gmail.com>
+Subject: Re: [PATCH v4 1/2] kernel.h: Introduce const_max() for VLA removal
+Content-Type: text/plain; charset="UTF-8"
 To: Kees Cook <keescook@chromium.org>
-Cc: linux-kernel@vger.kernel.org, Segher Boessenkool <segher@kernel.crashing.org>, kernel-hardening@lists.openwall.com
+Cc: Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Randy Dunlap <rdunlap@infradead.org>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Ingo Molnar <mingo@kernel.org>, David Laight <David.Laight@aculab.com>, Ian Abbott <abbotti@mev.co.uk>, linux-input@vger.kernel.org, linux-btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, 10 Mar 2018, Kees Cook wrote:
+On Thu, Mar 15, 2018 at 12:47 PM, Kees Cook <keescook@chromium.org> wrote:
+>
+> To gain the ability to compare differing types, the arguments are
+> explicitly cast to size_t.
 
-> Avoid stack VLAs[1] by always allocating the upper bound of stack space
-> needed. The existing users of rslib appear to max out at 24 roots[2],
-> so use that as the upper bound until we have a reason to change it.
-> 
-> Alternative considered: make init_rs() a true caller-instance and
-> pre-allocate the workspaces. This would possibly need locking and
-> a refactoring of the returned structure.
-> 
-> Using kmalloc in this path doesn't look great, especially since at
-> least one caller (pstore) is sensitive to allocations during rslib
-> usage (it expects to run it during an Oops, for example).
-> 
-> [1] https://lkml.org/lkml/2018/3/7/621
-> [2] https://lkml.org/lkml/2018/3/9/838
-> 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
+Ugh, I really hate this.
 
-Reviewed-by: Thomas Gleixner <tglx@linutronix.de>
+It silently does insane things if you do
+
+   const_max(-1,6)
+
+and there is nothing in the name that implies that you can't use
+negative constants.
+
+                   Linus
