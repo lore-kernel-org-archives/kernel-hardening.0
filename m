@@ -1,32 +1,78 @@
-MIME-Version: 1.0
-In-Reply-To: <20180315095428.GA31069@gondor.apana.org.au>
-References: <1521033450-14447-1-git-send-email-s.mesoraca16@gmail.com> <20180315095428.GA31069@gondor.apana.org.au>
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Thu, 15 Mar 2018 11:42:25 +0100
-Message-ID: <CAJHCu1+hKPTijqMO-bz5iB7fdmdxbh+xcpzW96tLYvOUBqhemg@mail.gmail.com>
-Subject: Re: [PATCH] crypto: ctr: avoid VLA use
-Content-Type: text/plain; charset="UTF-8"
-To: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-crypto@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Kees Cook <keescook@chromium.org>
+Subject: [PATCH v2] crypto: ctr - avoid VLA use
+Date: Thu, 15 Mar 2018 12:18:58 +0100
+Message-Id: <1521112738-13250-1-git-send-email-s.mesoraca16@gmail.com>
+To: linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Kees Cook <keescook@chromium.org>, Salvatore Mesoraca <s.mesoraca16@gmail.com>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-03-15 10:54 GMT+01:00 Herbert Xu <herbert@gondor.apana.org.au>:
-> On Wed, Mar 14, 2018 at 02:17:30PM +0100, Salvatore Mesoraca wrote:
->> All ciphers implemented in Linux have a block size less than or
->> equal to 16 bytes and the most demanding hw require 16 bits
->> alignment for the block buffer.
->> We avoid 2 VLAs[1] by always allocating 16 bytes with 16 bits
->> alignment, unless the architecture support efficient unaligned
->> accesses.
->> We also check, at runtime, that our assumptions still stand,
->> possibly dynamically allocating a new buffer, just in case
->> something changes in the future.
->
-> Please move the check to ctr instance creation time.  That is,
-> if the underlying blocksize is greater than 16 bytes than simply
-> fail the creation.
+All ciphers implemented in Linux have a block size less than or
+equal to 16 bytes and the most demanding hw require 16 bytes
+alignment for the block buffer.
+We avoid 2 VLAs[1] by always allocating 16 bytes with 16 bytes
+alignment, unless the architecture supports efficient unaligned
+accesses.
+We also check the selected cipher at instance creation time, if
+it doesn't comply with these limits, we fail the creation.
 
-Good, I'll send a v2.
-Thank you for your help,
+[1] https://lkml.org/lkml/2018/3/7/621
 
-Salvatore
+Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+---
+ crypto/ctr.c | 20 ++++++++++++++++++--
+ 1 file changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/crypto/ctr.c b/crypto/ctr.c
+index 854d924..2c9f80f 100644
+--- a/crypto/ctr.c
++++ b/crypto/ctr.c
+@@ -21,6 +21,14 @@
+ #include <linux/scatterlist.h>
+ #include <linux/slab.h>
+ 
++#define MAX_BLOCKSIZE 16
++
++#ifdef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
++#define MAX_ALIGNMASK 15
++#else
++#define MAX_ALIGNMASK 0
++#endif
++
+ struct crypto_ctr_ctx {
+ 	struct crypto_cipher *child;
+ };
+@@ -58,7 +66,7 @@ static void crypto_ctr_crypt_final(struct blkcipher_walk *walk,
+ 	unsigned int bsize = crypto_cipher_blocksize(tfm);
+ 	unsigned long alignmask = crypto_cipher_alignmask(tfm);
+ 	u8 *ctrblk = walk->iv;
+-	u8 tmp[bsize + alignmask];
++	u8 tmp[MAX_BLOCKSIZE + MAX_ALIGNMASK];
+ 	u8 *keystream = PTR_ALIGN(tmp + 0, alignmask + 1);
+ 	u8 *src = walk->src.virt.addr;
+ 	u8 *dst = walk->dst.virt.addr;
+@@ -106,7 +114,7 @@ static int crypto_ctr_crypt_inplace(struct blkcipher_walk *walk,
+ 	unsigned int nbytes = walk->nbytes;
+ 	u8 *ctrblk = walk->iv;
+ 	u8 *src = walk->src.virt.addr;
+-	u8 tmp[bsize + alignmask];
++	u8 tmp[MAX_BLOCKSIZE + MAX_ALIGNMASK];
+ 	u8 *keystream = PTR_ALIGN(tmp + 0, alignmask + 1);
+ 
+ 	do {
+@@ -206,6 +214,14 @@ static struct crypto_instance *crypto_ctr_alloc(struct rtattr **tb)
+ 	if (alg->cra_blocksize < 4)
+ 		goto out_put_alg;
+ 
++	/* Block size must be <= MAX_BLOCKSIZE. */
++	if (alg->cra_blocksize > MAX_BLOCKSIZE)
++		goto out_put_alg;
++
++	/* Alignmask must be <= MAX_ALIGNMASK. */
++	if (alg->cra_alignmask > MAX_ALIGNMASK)
++		goto out_put_alg;
++
+ 	/* If this is false we'd fail the alignment of crypto_inc. */
+ 	if (alg->cra_blocksize % 4)
+ 		goto out_put_alg;
+-- 
+1.9.1
