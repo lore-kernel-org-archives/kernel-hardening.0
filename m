@@ -1,76 +1,107 @@
-Date: Wed, 14 Mar 2018 18:51:39 -0700
+Date: Wed, 14 Mar 2018 19:21:12 -0700
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: [PATCH 1/2] big key: get rid of stack array allocation
-Message-ID: <20180315015139.GA641@zzz.localdomain>
+Subject: Re: [PATCH 2/2] dh key: get rid of stack array allocation
+Message-ID: <20180315022112.GB641@zzz.localdomain>
 References: <20180313042907.29598-1-tycho@tycho.ws>
+ <20180313042907.29598-2-tycho@tycho.ws>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180313042907.29598-1-tycho@tycho.ws>
+In-Reply-To: <20180313042907.29598-2-tycho@tycho.ws>
 To: Tycho Andersen <tycho@tycho.ws>
-Cc: David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>
+Cc: David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 12, 2018 at 10:29:06PM -0600, Tycho Andersen wrote:
-> We're interested in getting rid of all of the stack allocated arrays in the
-> kernel [1]. This patch removes one in keys by switching to malloc/free.
-> Note that we use kzalloc, to avoid leaking the nonce. I'm not sure this is
-> really necessary, but extra paranoia seems prudent.
+On Mon, Mar 12, 2018 at 10:29:07PM -0600, Tycho Andersen wrote:
+> Similarly to the previous patch, we would like to get rid of stack
+> allocated arrays: https://lkml.org/lkml/2018/3/7/621
 > 
-> Manually tested using the program from the add_key man page to trigger
-> big_key.
-> 
-> [1]: https://lkml.org/lkml/2018/3/7/621
+> In this case, we can also use a malloc style approach to free the temporary
+> buffer, being careful to also use kzfree to free them (indeed, at least one
+> of these has a memzero_explicit, but it seems like maybe they both
+> should?).
 > 
 > Signed-off-by: Tycho Andersen <tycho@tycho.ws>
 > CC: David Howells <dhowells@redhat.com>
 > CC: James Morris <jmorris@namei.org>
 > CC: "Serge E. Hallyn" <serge@hallyn.com>
-> CC: Jason A. Donenfeld <Jason@zx2c4.com>
 > ---
->  security/keys/big_key.c | 12 +++++++++---
->  1 file changed, 9 insertions(+), 3 deletions(-)
+>  security/keys/dh.c | 27 +++++++++++++++++++++------
+>  1 file changed, 21 insertions(+), 6 deletions(-)
 > 
-> diff --git a/security/keys/big_key.c b/security/keys/big_key.c
-> index fa728f662a6f..70f9f785c59d 100644
-> --- a/security/keys/big_key.c
-> +++ b/security/keys/big_key.c
-> @@ -108,13 +108,18 @@ static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t dat
->  	 * an .update function, so there's no chance we'll wind up reusing the
->  	 * key to encrypt updated data. Simply put: one key, one encryption.
->  	 */
-> -	u8 zero_nonce[crypto_aead_ivsize(big_key_aead)];
-> +	u8 *zero_nonce;
+> diff --git a/security/keys/dh.c b/security/keys/dh.c
+> index d1ea9f325f94..f02261b24759 100644
+> --- a/security/keys/dh.c
+> +++ b/security/keys/dh.c
+> @@ -162,19 +162,27 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
+>  			goto err;
+>  
+>  		if (zlen && h) {
+> -			u8 tmpbuffer[h];
+> +			u8 *tmpbuffer;
+>  			size_t chunk = min_t(size_t, zlen, h);
+> -			memset(tmpbuffer, 0, chunk);
 > +
-> +	zero_nonce = kzalloc(crypto_aead_ivsize(big_key_aead), GFP_KERNEL);
-> +	if (!zero_nonce)
-> +		return -ENOMEM;
+> +			err = -ENOMEM;
+> +			tmpbuffer = kzalloc(chunk, GFP_KERNEL);
+> +			if (!tmpbuffer)
+> +				goto err;
 >  
->  	aead_req = aead_request_alloc(big_key_aead, GFP_KERNEL);
-> -	if (!aead_req)
-> +	if (!aead_req) {
-> +		kfree(zero_nonce);
->  		return -ENOMEM;
-> +	}
+>  			do {
+>  				err = crypto_shash_update(desc, tmpbuffer,
+>  							  chunk);
+> -				if (err)
+> +				if (err) {
+> +					kzfree(tmpbuffer);
+>  					goto err;
+> +				}
 >  
-> -	memset(zero_nonce, 0, sizeof(zero_nonce));
->  	aead_request_set_crypt(aead_req, buf->sg, buf->sg, datalen, zero_nonce);
->  	aead_request_set_callback(aead_req, CRYPTO_TFM_REQ_MAY_SLEEP, NULL, NULL);
->  	aead_request_set_ad(aead_req, 0);
-> @@ -131,6 +136,7 @@ static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t dat
->  error:
->  	mutex_unlock(&big_key_aead_lock);
->  	aead_request_free(aead_req);
-> +	kzfree(zero_nonce);
->  	return ret;
+>  				zlen -= chunk;
+>  				chunk = min_t(size_t, zlen, h);
+>  			} while (zlen);
+> +
+> +			kzfree(tmpbuffer);
+>  		}
 
-A dynamic allocation here doesn't make sense -- the algorithm is hard-coded to
-AES-GCM, so the IV size is fixed.  You should just include <crypto/gcm.h> and
-use GCM_AES_IV_LEN.  As a sanity check you can add
-'BUG_ON(crypto_aead_ivsize(big_key_aead) != GCM_AES_IV_LEN' to big_key_init().
+This is just hashing zeroes.  Why not use the zeroes at the end of the 'src'
+buffer which was allocated as 'outbuf' in __keyctl_dh_compute()?  It's already
+the right size.  It might even simplify the code a bit since
+crypto_shash_update() would no longer need to be in a loop.
 
-kzfree() also doesn't make sense since the nonce is not secret information.
+>  
+>  		if (src && slen) {
+> @@ -184,13 +192,20 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
+>  		}
+>  
+>  		if (dlen < h) {
+> -			u8 tmpbuffer[h];
+> +			u8 *tmpbuffer;
+> +
+> +			err = -ENOMEM;
+> +			tmpbuffer = kzalloc(h, GFP_KERNEL);
+> +			if (!tmpbuffer)
+> +				goto err;
+>  
+>  			err = crypto_shash_final(desc, tmpbuffer);
+> -			if (err)
+> +			if (err) {
+> +				kzfree(tmpbuffer);
+>  				goto err;
+> +			}
+>  			memcpy(dst, tmpbuffer, dlen);
+> -			memzero_explicit(tmpbuffer, h);
+> +			kzfree(tmpbuffer);
+>  			return 0;
+>  		} else {
+>  			err = crypto_shash_final(desc, dst);
+> -- 
 
-Thanks,
+Why not instead round the allocated size of 'outbuf' in keyctl_dh_compute_kdf()
+up to the next 'crypto_shash_digestsize()'-boundary?  Then this temporary buffer
+wouldn't be needed at all.
+
+It would be nice if people thought about how to properly solve the problems when
+doing these VLA conversions, rather than mindlessly replacing them with
+kmalloc...
 
 Eric
