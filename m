@@ -1,107 +1,138 @@
-Date: Wed, 14 Mar 2018 19:21:12 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: [PATCH 2/2] dh key: get rid of stack array allocation
-Message-ID: <20180315022112.GB641@zzz.localdomain>
-References: <20180313042907.29598-1-tycho@tycho.ws>
- <20180313042907.29598-2-tycho@tycho.ws>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180313042907.29598-2-tycho@tycho.ws>
-To: Tycho Andersen <tycho@tycho.ws>
-Cc: David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>
+From: "Tobin C. Harding" <me@tobin.cc>
+Subject: [PATCH v2] rsi: Remove stack VLA usage
+Date: Thu, 15 Mar 2018 13:31:25 +1100
+Message-Id: <1521081085-16404-1-git-send-email-me@tobin.cc>
+To: Kalle Valo <kvalo@codeaurora.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, linux-wireless@vger.kernel.org, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>, Larry Finger <Larry.Finger@lwfinger.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 12, 2018 at 10:29:07PM -0600, Tycho Andersen wrote:
-> Similarly to the previous patch, we would like to get rid of stack
-> allocated arrays: https://lkml.org/lkml/2018/3/7/621
-> 
-> In this case, we can also use a malloc style approach to free the temporary
-> buffer, being careful to also use kzfree to free them (indeed, at least one
-> of these has a memzero_explicit, but it seems like maybe they both
-> should?).
-> 
-> Signed-off-by: Tycho Andersen <tycho@tycho.ws>
-> CC: David Howells <dhowells@redhat.com>
-> CC: James Morris <jmorris@namei.org>
-> CC: "Serge E. Hallyn" <serge@hallyn.com>
-> ---
->  security/keys/dh.c | 27 +++++++++++++++++++++------
->  1 file changed, 21 insertions(+), 6 deletions(-)
-> 
-> diff --git a/security/keys/dh.c b/security/keys/dh.c
-> index d1ea9f325f94..f02261b24759 100644
-> --- a/security/keys/dh.c
-> +++ b/security/keys/dh.c
-> @@ -162,19 +162,27 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
->  			goto err;
->  
->  		if (zlen && h) {
-> -			u8 tmpbuffer[h];
-> +			u8 *tmpbuffer;
->  			size_t chunk = min_t(size_t, zlen, h);
-> -			memset(tmpbuffer, 0, chunk);
-> +
-> +			err = -ENOMEM;
-> +			tmpbuffer = kzalloc(chunk, GFP_KERNEL);
-> +			if (!tmpbuffer)
-> +				goto err;
->  
->  			do {
->  				err = crypto_shash_update(desc, tmpbuffer,
->  							  chunk);
-> -				if (err)
-> +				if (err) {
-> +					kzfree(tmpbuffer);
->  					goto err;
-> +				}
->  
->  				zlen -= chunk;
->  				chunk = min_t(size_t, zlen, h);
->  			} while (zlen);
-> +
-> +			kzfree(tmpbuffer);
->  		}
+The use of stack Variable Length Arrays needs to be avoided, as they
+can be a vector for stack exhaustion, which can be both a runtime bug
+(kernel Oops) or a security flaw (overwriting memory beyond the
+stack). Also, in general, as code evolves it is easy to lose track of
+how big a VLA can get. Thus, we can end up having runtime failures
+that are hard to debug. As part of the directive[1] to remove all VLAs
+from the kernel, and build with -Wvla.
 
-This is just hashing zeroes.  Why not use the zeroes at the end of the 'src'
-buffer which was allocated as 'outbuf' in __keyctl_dh_compute()?  It's already
-the right size.  It might even simplify the code a bit since
-crypto_shash_update() would no longer need to be in a loop.
+Currently rsi code uses a VLA based on a function argument to
+`rsi_sdio_load_data_master_write()`.  The function call chain is
 
->  
->  		if (src && slen) {
-> @@ -184,13 +192,20 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
->  		}
->  
->  		if (dlen < h) {
-> -			u8 tmpbuffer[h];
-> +			u8 *tmpbuffer;
-> +
-> +			err = -ENOMEM;
-> +			tmpbuffer = kzalloc(h, GFP_KERNEL);
-> +			if (!tmpbuffer)
-> +				goto err;
->  
->  			err = crypto_shash_final(desc, tmpbuffer);
-> -			if (err)
-> +			if (err) {
-> +				kzfree(tmpbuffer);
->  				goto err;
-> +			}
->  			memcpy(dst, tmpbuffer, dlen);
-> -			memzero_explicit(tmpbuffer, h);
-> +			kzfree(tmpbuffer);
->  			return 0;
->  		} else {
->  			err = crypto_shash_final(desc, dst);
-> -- 
+Both these functions
 
-Why not instead round the allocated size of 'outbuf' in keyctl_dh_compute_kdf()
-up to the next 'crypto_shash_digestsize()'-boundary?  Then this temporary buffer
-wouldn't be needed at all.
+	rsi_sdio_reinit_device()
+	rsi_probe()
 
-It would be nice if people thought about how to properly solve the problems when
-doing these VLA conversions, rather than mindlessly replacing them with
-kmalloc...
+start the call chain:
 
-Eric
+	rsi_hal_device_init()
+	rsi_load_fw()
+	auto_fw_upgrade()
+	ping_pong_write()
+	rsi_sdio_load_data_master_write()
+
+[Without familiarity with the code] it appears that none of the 4 locks
+
+	mutex
+	rx_mutex
+	tx_mutex
+	tx_bus_mutex
+
+are held when `rsi_sdio_load_data_master_write()` is called.  It is therefore
+safe to use kmalloc with GFP_KERNEL.
+
+We can avoid using the VLA by using `kmalloc()` and free'ing the memory on all
+exit paths.
+
+Change buffer from 'u8 array' to 'u8 *'.  Call `kmalloc()` to allocate memory for
+the buffer.  Using goto statement to call `kfree()` on all return paths.
+
+It can be expected that this patch will result in a small increase in overhead
+due to the use of `kmalloc()` however this code is only called on initialization
+(and re-initialization) so this overhead should not degrade performance.
+
+[1] https://lkml.org/lkml/2018/3/7/621
+
+Signed-off-by: Tobin C. Harding <me@tobin.cc>
+---
+
+This applies onto tip of wireless-drivers next, commit
+
+	(28bf8312a983 mwifiex: get_channel from firmware 
+
+v2:
+ - Use kmalloc instead of #define (suggested by Larry)
+ - (Apply on top of wireless-drivers-next tree)
+ - (Fix up user name on patchwork.kernel.org)
+
+ drivers/net/wireless/rsi/rsi_91x_sdio.c | 20 ++++++++++++++------
+ 1 file changed, 14 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/wireless/rsi/rsi_91x_sdio.c b/drivers/net/wireless/rsi/rsi_91x_sdio.c
+index 98c7d1dae18e..13705fca59dd 100644
+--- a/drivers/net/wireless/rsi/rsi_91x_sdio.c
++++ b/drivers/net/wireless/rsi/rsi_91x_sdio.c
+@@ -576,7 +576,7 @@ static int rsi_sdio_load_data_master_write(struct rsi_hw *adapter,
+ {
+ 	u32 num_blocks, offset, i;
+ 	u16 msb_address, lsb_address;
+-	u8 temp_buf[block_size];
++	u8 *temp_buf;
+ 	int status;
+ 
+ 	num_blocks = instructions_sz / block_size;
+@@ -585,11 +585,15 @@ static int rsi_sdio_load_data_master_write(struct rsi_hw *adapter,
+ 	rsi_dbg(INFO_ZONE, "ins_size: %d, num_blocks: %d\n",
+ 		instructions_sz, num_blocks);
+ 
++	temp_buf = kmalloc(block_size, GFP_KERNEL);
++	if (!temp_buf)
++		return -ENOMEM;
++
+ 	/* Loading DM ms word in the sdio slave */
+ 	status = rsi_sdio_master_access_msword(adapter, msb_address);
+ 	if (status < 0) {
+ 		rsi_dbg(ERR_ZONE, "%s: Unable to set ms word reg\n", __func__);
+-		return status;
++		goto out_free;
+ 	}
+ 
+ 	for (offset = 0, i = 0; i < num_blocks; i++, offset += block_size) {
+@@ -601,7 +605,7 @@ static int rsi_sdio_load_data_master_write(struct rsi_hw *adapter,
+ 					 temp_buf, block_size);
+ 		if (status < 0) {
+ 			rsi_dbg(ERR_ZONE, "%s: failed to write\n", __func__);
+-			return status;
++			goto out_free;
+ 		}
+ 		rsi_dbg(INFO_ZONE, "%s: loading block: %d\n", __func__, i);
+ 		base_address += block_size;
+@@ -616,7 +620,7 @@ static int rsi_sdio_load_data_master_write(struct rsi_hw *adapter,
+ 				rsi_dbg(ERR_ZONE,
+ 					"%s: Unable to set ms word reg\n",
+ 					__func__);
+-				return status;
++				goto out_free;
+ 			}
+ 		}
+ 	}
+@@ -632,12 +636,16 @@ static int rsi_sdio_load_data_master_write(struct rsi_hw *adapter,
+ 					 temp_buf,
+ 					 instructions_sz % block_size);
+ 		if (status < 0)
+-			return status;
++			goto out_free;
+ 		rsi_dbg(INFO_ZONE,
+ 			"Written Last Block in Address 0x%x Successfully\n",
+ 			offset | RSI_SD_REQUEST_MASTER);
+ 	}
+-	return 0;
++
++	status = 0;
++out_free:
++	kfree(temp_buf);
++	return status;
+ }
+ 
+ #define FLASH_SIZE_ADDR                 0x04000016
+-- 
+2.7.4
