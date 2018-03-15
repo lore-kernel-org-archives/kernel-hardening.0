@@ -1,49 +1,56 @@
 From: Laura Abbott <labbott@redhat.com>
-Subject: [PATCHv2 2/4] gpio: Remove VLA from MAX3191X driver
-Date: Thu, 15 Mar 2018 11:00:28 -0700
-Message-Id: <20180315180030.20001-3-labbott@redhat.com>
+Subject: [PATCHv2 3/4] gpio: Remove VLA from xra1403 driver
+Date: Thu, 15 Mar 2018 11:00:29 -0700
+Message-Id: <20180315180030.20001-4-labbott@redhat.com>
 In-Reply-To: <20180315180030.20001-1-labbott@redhat.com>
 References: <20180315180030.20001-1-labbott@redhat.com>
-To: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>
-Cc: Laura Abbott <labbott@redhat.com>, linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Mathias Duckeck <m.duckeck@kunbus.de>
+To: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Nandor Han <nandor.han@ge.com>
+Cc: Laura Abbott <labbott@redhat.com>, linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
 The new challenge is to remove VLAs from the kernel
 (see https://lkml.org/lkml/2018/3/7/621)
 
-This patch replaces several a VLA with an appropriate call to
-kmalloc_array.
+This patch replaces a VLA with an appropriate call to kmalloc_array.
 
+Reviewed-by: Nandor Han <nandor.han@ge.com>
 Signed-off-by: Laura Abbott <labbott@redhat.com>
 ---
-v2: No changes
+v3: Add reviwed-by
 ---
- drivers/gpio/gpio-max3191x.c | 7 ++++++-
- 1 file changed, 6 insertions(+), 1 deletion(-)
+ drivers/gpio/gpio-xra1403.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/gpio/gpio-max3191x.c b/drivers/gpio/gpio-max3191x.c
-index f74b1072e84b..b5b9cb1fda50 100644
---- a/drivers/gpio/gpio-max3191x.c
-+++ b/drivers/gpio/gpio-max3191x.c
-@@ -315,12 +315,17 @@ static void gpiod_set_array_single_value_cansleep(unsigned int ndescs,
- 						  struct gpio_desc **desc,
- 						  int value)
+diff --git a/drivers/gpio/gpio-xra1403.c b/drivers/gpio/gpio-xra1403.c
+index 0230e4b7a2fb..8d4c8e99b251 100644
+--- a/drivers/gpio/gpio-xra1403.c
++++ b/drivers/gpio/gpio-xra1403.c
+@@ -126,11 +126,16 @@ static void xra1403_dbg_show(struct seq_file *s, struct gpio_chip *chip)
  {
--	int i, values[ndescs];
-+	int i, *values;
-+
-+	values = kmalloc_array(ndescs, sizeof(*values), GFP_KERNEL);
-+	if (!values)
+ 	int reg;
+ 	struct xra1403 *xra = gpiochip_get_data(chip);
+-	int value[xra1403_regmap_cfg.max_register];
++	int *value;
+ 	int i;
+ 	unsigned int gcr;
+ 	unsigned int gsr;
+ 
++	value = kmalloc_array(xra1403_regmap_cfg.max_register, sizeof(*value),
++				GFP_KERNEL);
++	if (!value)
 +		return;
- 
- 	for (i = 0; i < ndescs; i++)
- 		values[i] = value;
- 
- 	gpiod_set_array_value_cansleep(ndescs, desc, values);
-+	kfree(values);
++
+ 	seq_puts(s, "xra reg:");
+ 	for (reg = 0; reg <= xra1403_regmap_cfg.max_register; reg++)
+ 		seq_printf(s, " %2.2x", reg);
+@@ -154,6 +159,7 @@ static void xra1403_dbg_show(struct seq_file *s, struct gpio_chip *chip)
+ 			   (gcr & BIT(i)) ? "in" : "out",
+ 			   (gsr & BIT(i)) ? "hi" : "lo");
+ 	}
++	kfree(value);
  }
- 
- static struct gpio_descs *devm_gpiod_get_array_optional_count(
+ #else
+ #define xra1403_dbg_show NULL
 -- 
 2.14.3
