@@ -1,46 +1,82 @@
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CAGXu5jKtv=a8qTy1-AfbzNRB=Azb8V7Pt1M4QMVYNKg6+Ci7=Q@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <CA+55aFwDJ906oQ-98L2DNrjfKtb6cd5ykwMxpG942qxCFmAoEQ@mail.gmail.com>
 References: <1521143266-31350-1-git-send-email-keescook@chromium.org>
  <1521143266-31350-2-git-send-email-keescook@chromium.org> <CA+55aFzu+VU_FVZdbLCZttUspZdJCvBhkuo4V69H=XnqmLrpLA@mail.gmail.com>
- <CAGXu5jKtv=a8qTy1-AfbzNRB=Azb8V7Pt1M4QMVYNKg6+Ci7=Q@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Thu, 15 Mar 2018 15:23:16 -0700
-Message-ID: <CA+55aFwDJ906oQ-98L2DNrjfKtb6cd5ykwMxpG942qxCFmAoEQ@mail.gmail.com>
+ <CAGXu5jKtv=a8qTy1-AfbzNRB=Azb8V7Pt1M4QMVYNKg6+Ci7=Q@mail.gmail.com> <CA+55aFwDJ906oQ-98L2DNrjfKtb6cd5ykwMxpG942qxCFmAoEQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 15 Mar 2018 15:46:21 -0700
+Message-ID: <CAGXu5jLHam5kz18k9uvhsz2WYodkF2v1tsEOV4Sx0O7jir4B3A@mail.gmail.com>
 Subject: Re: [PATCH v4 1/2] kernel.h: Introduce const_max() for VLA removal
 Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>
+To: Linus Torvalds <torvalds@linux-foundation.org>
 Cc: Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Randy Dunlap <rdunlap@infradead.org>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Ingo Molnar <mingo@kernel.org>, David Laight <David.Laight@aculab.com>, Ian Abbott <abbotti@mev.co.uk>, linux-input <linux-input@vger.kernel.org>, linux-btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 15, 2018 at 3:16 PM, Kees Cook <keescook@chromium.org> wrote:
+On Thu, Mar 15, 2018 at 3:23 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Thu, Mar 15, 2018 at 3:16 PM, Kees Cook <keescook@chromium.org> wrote:
+>>
+>> size_t __error_not_const_arg(void) \
+>> __compiletime_error("const_max() used with non-compile-time constant arg");
+>> #define const_max(x, y)                                         \
+>>         __builtin_choose_expr(__builtin_constant_p(x) &&        \
+>>                               __builtin_constant_p(y),          \
+>>                               (typeof(x))(x) > (typeof(y))(y) ? \
+>>                                         (x) : (y),              \
+>>                               __error_not_const_arg())
+>>
+>> Is typeof() forcing enums to int? Regardless, I'll put this through
+>> larger testing. How does that look?
 >
-> size_t __error_not_const_arg(void) \
-> __compiletime_error("const_max() used with non-compile-time constant arg");
-> #define const_max(x, y)                                         \
->         __builtin_choose_expr(__builtin_constant_p(x) &&        \
->                               __builtin_constant_p(y),          \
->                               (typeof(x))(x) > (typeof(y))(y) ? \
->                                         (x) : (y),              \
->                               __error_not_const_arg())
+> Ok, that alleviates my worry about one class of insane behavior, but
+> it does raise a few other questions:
 >
-> Is typeof() forcing enums to int? Regardless, I'll put this through
-> larger testing. How does that look?
+>  - what drugs is gcc on where (typeof(x)(x)) makes a difference? Funky.
 
-Ok, that alleviates my worry about one class of insane behavior, but
-it does raise a few other questions:
+Yeah, that's why I didn't even try that originally. But in looking
+back at max() again, it seemed to be the only thing missing that would
+handle the enum evaluation, which turned out to be true.
 
- - what drugs is gcc on where (typeof(x)(x)) makes a difference? Funky.
+>  - this does have the usual "what happen if you do
+>
+>      const_max(-1,sizeof(x))
+>
+> where the comparison will now be done in 'size_t', and -1 ends up
+> being a very very big unsigned integer.
+>
+> Is there no way to get that type checking inserted? Maybe now is a
+> good point for that __builtin_types_compatible(), and add it to the
+> constness checking (and change the name of that error case function)?
 
- - this does have the usual "what happen if you do
+So, AIUI, I can either get strict type checking, in which case, this
+is rejected (which I assume there is still a desire to have):
 
-     const_max(-1,sizeof(x))
+int foo[const_max(6, sizeof(whatever))];
 
-where the comparison will now be done in 'size_t', and -1 ends up
-being a very very big unsigned integer.
+due to __builtin_types_compatible_p() rejecting it, or I can construct
+a "positive arguments only" test, in which the above is accepted, but
+this is rejected:
 
-Is there no way to get that type checking inserted? Maybe now is a
-good point for that __builtin_types_compatible(), and add it to the
-constness checking (and change the name of that error case function)?
+int foo[const_max(-1, sizeof(whatever))];
 
-          Linus
+By using this eye-bleed:
+
+size_t __error_not_const_arg(void) \
+__compiletime_error("const_max() used with non-compile-time constant arg");
+size_t __error_not_positive_arg(void) \
+__compiletime_error("const_max() used with negative arg");
+#define const_max(x, y)                                                 \
+        __builtin_choose_expr(__builtin_constant_p(x) &&                \
+                              __builtin_constant_p(y),                  \
+                __builtin_choose_expr((x) >= 0 && (y) >= 0,             \
+                                      (typeof(x))(x) > (typeof(y))(y) ? \
+                                        (x) : (y),                      \
+                                      __error_not_positive_arg()),      \
+                __error_not_const_arg())
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
