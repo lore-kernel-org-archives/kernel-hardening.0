@@ -1,77 +1,76 @@
-Date: Thu, 15 Mar 2018 07:19:44 +1100
-From: "Tobin C. Harding" <me@tobin.cc>
-Subject: Re: [RESEND] rsi: Remove stack VLA usage
-Message-ID: <20180314201944.GC11666@eros>
-References: <1520819022-15238-1-git-send-email-me@tobin.cc>
- <20180312094606.8192B6081A@smtp.codeaurora.org>
- <20180313201757.GK8631@eros>
- <CAHp75VeM1zNyNtHvsn0=rg_xibcitVHREY73cAk=KCSK3Ti3vw@mail.gmail.com>
- <20180314021151.GA11666@eros>
- <CAGXu5jJsDsegY+EZFq1Hip+sRNLR5SS+-Euf1rm22okAq7REJw@mail.gmail.com>
- <20180314034303.GB11666@eros>
- <87fu536mkm.fsf@codeaurora.org>
+Date: Wed, 14 Mar 2018 18:51:39 -0700
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: Re: [PATCH 1/2] big key: get rid of stack array allocation
+Message-ID: <20180315015139.GA641@zzz.localdomain>
+References: <20180313042907.29598-1-tycho@tycho.ws>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <87fu536mkm.fsf@codeaurora.org>
-To: Kalle Valo <kvalo@codeaurora.org>
-Cc: Kees Cook <keescook@chromium.org>, Andy Shevchenko <andy.shevchenko@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, netdev <netdev@vger.kernel.org>, "open list:TI WILINK WIRELES..." <linux-wireless@vger.kernel.org>, Tycho Andersen <tycho@tycho.ws>, Konstantin Ryabitsev <konstantin@linuxfoundation.org>
+In-Reply-To: <20180313042907.29598-1-tycho@tycho.ws>
+To: Tycho Andersen <tycho@tycho.ws>
+Cc: David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 14, 2018 at 11:19:53AM +0200, Kalle Valo wrote:
-> "Tobin C. Harding" <me@tobin.cc> writes:
+On Mon, Mar 12, 2018 at 10:29:06PM -0600, Tycho Andersen wrote:
+> We're interested in getting rid of all of the stack allocated arrays in the
+> kernel [1]. This patch removes one in keys by switching to malloc/free.
+> Note that we use kzalloc, to avoid leaking the nonce. I'm not sure this is
+> really necessary, but extra paranoia seems prudent.
 > 
-> > Added Konstantin in case he is in charge of administering patchwork.kernel.org?
-> >
-> > On Tue, Mar 13, 2018 at 07:53:34PM -0700, Kees Cook wrote:
-> >> On Tue, Mar 13, 2018 at 7:11 PM, Tobin C. Harding <me@tobin.cc> wrote:
-> >> > On Tue, Mar 13, 2018 at 11:00:47PM +0200, Andy Shevchenko wrote:
-> >> >> On Tue, Mar 13, 2018 at 10:17 PM, tcharding <me@tobin.cc> wrote:
-> >> >> > On Mon, Mar 12, 2018 at 09:46:06AM +0000, Kalle Valo wrote:
-> >> >> >> tcharding <me@tobin.cc> wrote:
-> >> >>
-> >> >> I'm pretty much sure it depends on the original email headers, like
-> >> >> above ^^^ — no name.
-> >> >> Perhaps git config on your side should be done.
-> >> >
-> >> > Thanks for the suggestion Andy but the 'tcharding' as the name was
-> >> > munged by either Kalle or patchwork.  I'm guessing patchwork.
-> >> 
-> >> Something you're sending from is using "tcharding" (see the email Andy
-> >> quotes). I see the headers as:
-> >> 
-> >> Date: Wed, 14 Mar 2018 07:17:57 +1100
-> >> From: tcharding <me@tobin.cc>
-> >> ...
-> >> Message-ID: <20180313201757.GK8631@eros>
-> >> X-Mailer: Mutt 1.5.24 (2015-08-30)
-> >> User-Agent: Mutt/1.5.24 (2015-08-30)
-> >> 
-> >> Your most recently email shows "Tobin C. Harding" though, and also
-> >> sent with Mutt...
-> >>
-> >> Do you have multiple Mutt configurations? Is something lacking a
-> >> "From" header insertion and your MTA is filling it in for you from
-> >> your username?
-> >
-> > Thanks for taking the time to respond Kees (and Tycho).  I have mutt
-> > configured to reply from whichever email address I receive from so if
-> > patchwork sent an email to 'tcharding <me@tobin.cc>' (which is the
-> > details it has) and I hit reply it would have come from 'tcharding',
-> > hence Andy's reply.  I wouldn't bet my life on it but I'm kinda
-> > confident that I cannot initiate an email from 'tcharding' with my
-> > current set up.
-> >
-> > Super bad form to blame someone (or something else) but I think this is
-> > a problem with how my patchwork account is configured.  Either way, that
-> > is still my fault I should have added my real name to patchwork when I
-> > signed up (not just username 'tcharding').
-> >
-> > Is patchwork.kernel.org administered by Konstantin Ryabitsev? Added
-> > Konstantin to CC's.
+> Manually tested using the program from the add_key man page to trigger
+> big_key.
 > 
-> Like I said earlier, just send a request to helpdesk@kernel.org and
-> admins should fix your name.
+> [1]: https://lkml.org/lkml/2018/3/7/621
+> 
+> Signed-off-by: Tycho Andersen <tycho@tycho.ws>
+> CC: David Howells <dhowells@redhat.com>
+> CC: James Morris <jmorris@namei.org>
+> CC: "Serge E. Hallyn" <serge@hallyn.com>
+> CC: Jason A. Donenfeld <Jason@zx2c4.com>
+> ---
+>  security/keys/big_key.c | 12 +++++++++---
+>  1 file changed, 9 insertions(+), 3 deletions(-)
+> 
+> diff --git a/security/keys/big_key.c b/security/keys/big_key.c
+> index fa728f662a6f..70f9f785c59d 100644
+> --- a/security/keys/big_key.c
+> +++ b/security/keys/big_key.c
+> @@ -108,13 +108,18 @@ static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t dat
+>  	 * an .update function, so there's no chance we'll wind up reusing the
+>  	 * key to encrypt updated data. Simply put: one key, one encryption.
+>  	 */
+> -	u8 zero_nonce[crypto_aead_ivsize(big_key_aead)];
+> +	u8 *zero_nonce;
+> +
+> +	zero_nonce = kzalloc(crypto_aead_ivsize(big_key_aead), GFP_KERNEL);
+> +	if (!zero_nonce)
+> +		return -ENOMEM;
+>  
+>  	aead_req = aead_request_alloc(big_key_aead, GFP_KERNEL);
+> -	if (!aead_req)
+> +	if (!aead_req) {
+> +		kfree(zero_nonce);
+>  		return -ENOMEM;
+> +	}
+>  
+> -	memset(zero_nonce, 0, sizeof(zero_nonce));
+>  	aead_request_set_crypt(aead_req, buf->sg, buf->sg, datalen, zero_nonce);
+>  	aead_request_set_callback(aead_req, CRYPTO_TFM_REQ_MAY_SLEEP, NULL, NULL);
+>  	aead_request_set_ad(aead_req, 0);
+> @@ -131,6 +136,7 @@ static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t dat
+>  error:
+>  	mutex_unlock(&big_key_aead_lock);
+>  	aead_request_free(aead_req);
+> +	kzfree(zero_nonce);
+>  	return ret;
 
-thanks Kalle, I'm on it.
+A dynamic allocation here doesn't make sense -- the algorithm is hard-coded to
+AES-GCM, so the IV size is fixed.  You should just include <crypto/gcm.h> and
+use GCM_AES_IV_LEN.  As a sanity check you can add
+'BUG_ON(crypto_aead_ivsize(big_key_aead) != GCM_AES_IV_LEN' to big_key_init().
+
+kzfree() also doesn't make sense since the nonce is not secret information.
+
+Thanks,
+
+Eric
