@@ -1,7 +1,7 @@
-Date: Fri, 16 Mar 2018 15:38:22 -0700
+Date: Fri, 16 Mar 2018 15:59:50 -0700
 From: Andrew Morton <akpm@linux-foundation.org>
 Subject: Re: [PATCH v2] rslib: Remove VLAs by setting upper bound on nroots
-Message-Id: <20180316153822.e169251b57165a52494aace7@linux-foundation.org>
+Message-Id: <20180316155950.35fda7c63ec59277ba504201@linux-foundation.org>
 In-Reply-To: <20180315225919.GA43806@beast>
 References: <20180315225919.GA43806@beast>
 Mime-Version: 1.0
@@ -24,15 +24,8 @@ On Thu, 15 Mar 2018 15:59:19 -0700 Kees Cook <keescook@chromium.org> wrote:
 > Using kmalloc in this path doesn't look great, especially since at
 > least one caller (pstore) is sensitive to allocations during rslib
 > usage (it expects to run it during an Oops, for example).
-> 
-> [1] https://lkml.org/lkml/2018/3/7/621
-> [2] https://lkml.org/lkml/2018/3/9/838
 
-Yeah, email [2] is rather important.  This patch is a bit of a pig to
-review!
+Oh.
 
-The restriction to 24 roots might be a significant one, dunno.  Perhaps
-we should just kmalloc these things?
-
-Otherwise, RS_MAX_ROOTS becomes part of the rs interface and should be
-documented and published in rslib.h?
+Could we allocate the storage during init_rs(), attach it to `struct
+rs_control'?  
