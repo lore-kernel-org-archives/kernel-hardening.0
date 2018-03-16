@@ -1,39 +1,38 @@
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <a37f7b0da04f4ede9fac2c88f7079a8a@AcuMS.aculab.com>
-References: <1521174359-46392-1-git-send-email-keescook@chromium.org>
- <ab2933a2-ca7b-eb3b-744d-bc037b1be688@redhat.com> <CA+55aFx92dXg-qnrjGS2Rsna6TE5HSPBgGpSA3cv4n_n3RqBzA@mail.gmail.com>
- <a37f7b0da04f4ede9fac2c88f7079a8a@AcuMS.aculab.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Fri, 16 Mar 2018 13:25:26 -0700
-Message-ID: <CA+55aFwzgO9w8Dj1NoCViz6JTwVLWhWabLq_cvzJ1-woEBfJMg@mail.gmail.com>
-Subject: Re: [PATCH v5 0/2] Remove false-positive VLAs when using max()
-Content-Type: text/plain; charset="UTF-8"
-To: David Laight <David.Laight@aculab.com>
-Cc: Florian Weimer <fweimer@redhat.com>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Randy Dunlap <rdunlap@infradead.org>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Ingo Molnar <mingo@kernel.org>, Ian Abbott <abbotti@mev.co.uk>, linux-input <linux-input@vger.kernel.org>, linux-btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Date: Fri, 16 Mar 2018 15:38:22 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Subject: Re: [PATCH v2] rslib: Remove VLAs by setting upper bound on nroots
+Message-Id: <20180316153822.e169251b57165a52494aace7@linux-foundation.org>
+In-Reply-To: <20180315225919.GA43806@beast>
+References: <20180315225919.GA43806@beast>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, Segher Boessenkool <segher@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 16, 2018 at 10:44 AM, David Laight <David.Laight@aculab.com> wrote:
->
-> I looked at the generated code for one of the constant sized VLA that
-> the compiler barfed at.
-> It seemed to subtract constants from %sp separately for the VLA.
-> So it looks like the compiler treats them as VLA even though it
-> knows the size.
-> That is probably missing optimisation.
+On Thu, 15 Mar 2018 15:59:19 -0700 Kees Cook <keescook@chromium.org> wrote:
 
-Looking at the code is definitely an option.
+> Avoid stack VLAs[1] by always allocating the upper bound of stack space
+> needed. The existing users of rslib appear to max out at 24 roots[2],
+> so use that as the upper bound until we have a reason to change it.
+> 
+> Alternative considered: make init_rs() a true caller-instance and
+> pre-allocate the workspaces. This would possibly need locking and
+> a refactoring of the returned structure.
+> 
+> Using kmalloc in this path doesn't look great, especially since at
+> least one caller (pstore) is sensitive to allocations during rslib
+> usage (it expects to run it during an Oops, for example).
+> 
+> [1] https://lkml.org/lkml/2018/3/7/621
+> [2] https://lkml.org/lkml/2018/3/9/838
 
-In fact, instead of depending on -Wvla, we could just make 'objtool'
-warn about real variable-sized stack frames.
+Yeah, email [2] is rather important.  This patch is a bit of a pig to
+review!
 
-That said, if that "sizeof()" trick of Al's actually works with older
-gcc versions too (it *should*, but it's not like
-__builtin_choose_expr() and __builtin_constant_p() have well-defined
-rules in the standard), that may just be the solution.
+The restriction to 24 roots might be a significant one, dunno.  Perhaps
+we should just kmalloc these things?
 
-And if gcc ends up generating bad code for those "constant sized vlas"
-anyway, then -Wvla would effectively warn about that code generation
-problem.
-
-              Linus
+Otherwise, RS_MAX_ROOTS becomes part of the rs interface and should be
+documented and published in rslib.h?
