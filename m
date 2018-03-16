@@ -1,19 +1,15 @@
 From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v5 0/2] Remove false-positive VLAs when using max()
-Date: Thu, 15 Mar 2018 21:25:57 -0700
-Message-Id: <1521174359-46392-1-git-send-email-keescook@chromium.org>
+Subject: [PATCH v5 1/2] kernel.h: Introduce const_max_t() for VLA removal
+Date: Thu, 15 Mar 2018 21:25:58 -0700
+Message-Id: <1521174359-46392-2-git-send-email-keescook@chromium.org>
+In-Reply-To: <1521174359-46392-1-git-send-email-keescook@chromium.org>
+References: <1521174359-46392-1-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 To: Andrew Morton <akpm@linux-foundation.org>
 Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Randy Dunlap <rdunlap@infradead.org>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Ingo Molnar <mingo@kernel.org>, David Laight <David.Laight@aculab.com>, Ian Abbott <abbotti@mev.co.uk>, linux-input@vger.kernel.org, linux-btrfs@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
-
-Patch 1 adds const_max_t(), patch 2 uses it in all the places max()
-was used for stack arrays. Commit log from patch 1:
-
----snip---
-kernel.h: Introduce const_max_t() for VLA removal
 
 In the effort to remove all VLAs from the kernel[1], it is desirable to
 build with -Wvla. However, this warning is overly pessimistic, in that
@@ -46,13 +42,41 @@ needed when comparing different enum types and to allow things like:
 
 [1] https://lkml.org/lkml/2018/3/7/621
 [2] https://lkml.org/lkml/2018/3/10/170
----eol---
 
-Hopefully this reads well as a summary from all the things that got tried.
-I've tested this on allmodconfig builds with gcc 4.4.4 and 6.3.0, with and
-without -Wvla.
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ include/linux/kernel.h | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
 
--Kees
-
-v5: explicit type argument
-v4: forced size_t type
+diff --git a/include/linux/kernel.h b/include/linux/kernel.h
+index 3fd291503576..e14531781568 100644
+--- a/include/linux/kernel.h
++++ b/include/linux/kernel.h
+@@ -820,6 +820,25 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
+ 	      x, y)
+ 
+ /**
++ * const_max_t - return maximum of two compile-time constant expressions
++ * @type: type used for evaluation
++ * @x: first compile-time constant expression
++ * @y: second compile-time constant expression
++ *
++ * This has no multi-evaluation defenses, and must only ever be used with
++ * compile-time constant expressions (for example when calculating a stack
++ * array size).
++ */
++size_t __error_non_const_arg(void) \
++__compiletime_error("const_max_t() used with non-constant expression");
++#define const_max_t(type, x, y)					\
++	__builtin_choose_expr(__builtin_constant_p(x) &&	\
++			      __builtin_constant_p(y),		\
++			      (type)(x) > (type)(y) ?		\
++				(type)(x) : (type)(y),		\
++			      __error_non_const_arg())
++
++/**
+  * min3 - return minimum of three values
+  * @x: first value
+  * @y: second value
+-- 
+2.7.4
