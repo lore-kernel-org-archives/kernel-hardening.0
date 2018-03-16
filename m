@@ -1,82 +1,148 @@
 From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v5 1/2] kernel.h: Introduce const_max_t() for VLA removal
-Date: Thu, 15 Mar 2018 21:25:58 -0700
-Message-Id: <1521174359-46392-2-git-send-email-keescook@chromium.org>
+Subject: [PATCH v5 2/2] Remove false-positive VLAs when using max()
+Date: Thu, 15 Mar 2018 21:25:59 -0700
+Message-Id: <1521174359-46392-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1521174359-46392-1-git-send-email-keescook@chromium.org>
 References: <1521174359-46392-1-git-send-email-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
 To: Andrew Morton <akpm@linux-foundation.org>
 Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Randy Dunlap <rdunlap@infradead.org>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Ingo Molnar <mingo@kernel.org>, David Laight <David.Laight@aculab.com>, Ian Abbott <abbotti@mev.co.uk>, linux-input@vger.kernel.org, linux-btrfs@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In the effort to remove all VLAs from the kernel[1], it is desirable to
-build with -Wvla. However, this warning is overly pessimistic, in that
-it is only happy with stack array sizes that are declared as constant
-expressions, and not constant values. One case of this is the evaluation
-of the max() macro which, due to its construction, ends up converting
-constant expression arguments into a constant value result. Attempts
-to adjust the behavior of max() ran afoul of version-dependent compiler
-behavior[2].
-
-To work around this and still gain -Wvla coverage, this patch introduces
-a new macro, const_max_t(), for use in these cases of stack array size
-declaration, where the constant expressions are retained. Since this means
-losing the double-evaluation protections of the max() macro, this macro is
-designed to explicitly fail if used on non-constant arguments.
-
-Older compilers will fail with the unhelpful message:
-
-    error: first argument to ‘__builtin_choose_expr’ not a constant
-
-Newer compilers will fail with a hopefully more helpful message:
-
-    error: call to ‘__error_non_const_arg’ declared with attribute error: const_max_t() used with non-constant expression
-
-To gain the ability to compare differing types, the desired type must
-be explicitly declared, as with the existing max_t() macro. This is
-needed when comparing different enum types and to allow things like:
-
-    int foo[const_max_t(size_t, 6, sizeof(something))];
+As part of removing VLAs from the kernel[1], we want to build with -Wvla,
+but it is overly pessimistic and only accepts constant expressions for
+stack array sizes, instead of also constant values. The max() macro
+triggers the warning, so this refactors these uses of max() to use the
+new const_max() instead.
 
 [1] https://lkml.org/lkml/2018/3/7/621
-[2] https://lkml.org/lkml/2018/3/10/170
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- include/linux/kernel.h | 19 +++++++++++++++++++
- 1 file changed, 19 insertions(+)
+ drivers/input/touchscreen/cyttsp4_core.c |  2 +-
+ fs/btrfs/tree-checker.c                  |  3 ++-
+ lib/vsprintf.c                           |  5 +++--
+ net/ipv4/proc.c                          |  8 ++++----
+ net/ipv6/proc.c                          | 11 +++++------
+ 5 files changed, 15 insertions(+), 14 deletions(-)
 
-diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index 3fd291503576..e14531781568 100644
---- a/include/linux/kernel.h
-+++ b/include/linux/kernel.h
-@@ -820,6 +820,25 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
- 	      x, y)
+diff --git a/drivers/input/touchscreen/cyttsp4_core.c b/drivers/input/touchscreen/cyttsp4_core.c
+index 727c3232517c..7fb9bd48e41c 100644
+--- a/drivers/input/touchscreen/cyttsp4_core.c
++++ b/drivers/input/touchscreen/cyttsp4_core.c
+@@ -868,7 +868,7 @@ static void cyttsp4_get_mt_touches(struct cyttsp4_mt_data *md, int num_cur_tch)
+ 	struct cyttsp4_touch tch;
+ 	int sig;
+ 	int i, j, t = 0;
+-	int ids[max(CY_TMA1036_MAX_TCH, CY_TMA4XX_MAX_TCH)];
++	int ids[const_max_t(size_t, CY_TMA1036_MAX_TCH, CY_TMA4XX_MAX_TCH)];
  
- /**
-+ * const_max_t - return maximum of two compile-time constant expressions
-+ * @type: type used for evaluation
-+ * @x: first compile-time constant expression
-+ * @y: second compile-time constant expression
-+ *
-+ * This has no multi-evaluation defenses, and must only ever be used with
-+ * compile-time constant expressions (for example when calculating a stack
-+ * array size).
-+ */
-+size_t __error_non_const_arg(void) \
-+__compiletime_error("const_max_t() used with non-constant expression");
-+#define const_max_t(type, x, y)					\
-+	__builtin_choose_expr(__builtin_constant_p(x) &&	\
-+			      __builtin_constant_p(y),		\
-+			      (type)(x) > (type)(y) ?		\
-+				(type)(x) : (type)(y),		\
-+			      __error_non_const_arg())
-+
-+/**
-  * min3 - return minimum of three values
-  * @x: first value
-  * @y: second value
+ 	memset(ids, 0, si->si_ofs.tch_abs[CY_TCH_T].max * sizeof(int));
+ 	for (i = 0; i < num_cur_tch; i++) {
+diff --git a/fs/btrfs/tree-checker.c b/fs/btrfs/tree-checker.c
+index c3c8d48f6618..d83244e3821f 100644
+--- a/fs/btrfs/tree-checker.c
++++ b/fs/btrfs/tree-checker.c
+@@ -341,7 +341,8 @@ static int check_dir_item(struct btrfs_root *root,
+ 		 */
+ 		if (key->type == BTRFS_DIR_ITEM_KEY ||
+ 		    key->type == BTRFS_XATTR_ITEM_KEY) {
+-			char namebuf[max(BTRFS_NAME_LEN, XATTR_NAME_MAX)];
++			char namebuf[const_max_t(size_t, BTRFS_NAME_LEN,
++						 XATTR_NAME_MAX)];
+ 
+ 			read_extent_buffer(leaf, namebuf,
+ 					(unsigned long)(di + 1), name_len);
+diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+index d7a708f82559..12ff57a36171 100644
+--- a/lib/vsprintf.c
++++ b/lib/vsprintf.c
+@@ -744,8 +744,9 @@ char *resource_string(char *buf, char *end, struct resource *res,
+ #define FLAG_BUF_SIZE		(2 * sizeof(res->flags))
+ #define DECODED_BUF_SIZE	sizeof("[mem - 64bit pref window disabled]")
+ #define RAW_BUF_SIZE		sizeof("[mem - flags 0x]")
+-	char sym[max(2*RSRC_BUF_SIZE + DECODED_BUF_SIZE,
+-		     2*RSRC_BUF_SIZE + FLAG_BUF_SIZE + RAW_BUF_SIZE)];
++	char sym[const_max_t(size_t,
++			     2*RSRC_BUF_SIZE + DECODED_BUF_SIZE,
++			     2*RSRC_BUF_SIZE + FLAG_BUF_SIZE + RAW_BUF_SIZE)];
+ 
+ 	char *p = sym, *pend = sym + sizeof(sym);
+ 	int decode = (fmt[0] == 'R') ? 1 : 0;
+diff --git a/net/ipv4/proc.c b/net/ipv4/proc.c
+index dc5edc8f7564..7f5c3b40dac9 100644
+--- a/net/ipv4/proc.c
++++ b/net/ipv4/proc.c
+@@ -46,7 +46,7 @@
+ #include <net/sock.h>
+ #include <net/raw.h>
+ 
+-#define TCPUDP_MIB_MAX max_t(u32, UDP_MIB_MAX, TCP_MIB_MAX)
++#define TCPUDP_MIB_MAX const_max_t(size_t, UDP_MIB_MAX, TCP_MIB_MAX)
+ 
+ /*
+  *	Report socket allocation statistics [mea@utu.fi]
+@@ -404,7 +404,7 @@ static int snmp_seq_show_tcp_udp(struct seq_file *seq, void *v)
+ 	struct net *net = seq->private;
+ 	int i;
+ 
+-	memset(buff, 0, TCPUDP_MIB_MAX * sizeof(unsigned long));
++	memset(buff, 0, sizeof(buff));
+ 
+ 	seq_puts(seq, "\nTcp:");
+ 	for (i = 0; snmp4_tcp_list[i].name; i++)
+@@ -421,7 +421,7 @@ static int snmp_seq_show_tcp_udp(struct seq_file *seq, void *v)
+ 			seq_printf(seq, " %lu", buff[i]);
+ 	}
+ 
+-	memset(buff, 0, TCPUDP_MIB_MAX * sizeof(unsigned long));
++	memset(buff, 0, sizeof(buff));
+ 
+ 	snmp_get_cpu_field_batch(buff, snmp4_udp_list,
+ 				 net->mib.udp_statistics);
+@@ -432,7 +432,7 @@ static int snmp_seq_show_tcp_udp(struct seq_file *seq, void *v)
+ 	for (i = 0; snmp4_udp_list[i].name; i++)
+ 		seq_printf(seq, " %lu", buff[i]);
+ 
+-	memset(buff, 0, TCPUDP_MIB_MAX * sizeof(unsigned long));
++	memset(buff, 0, sizeof(buff));
+ 
+ 	/* the UDP and UDP-Lite MIBs are the same */
+ 	seq_puts(seq, "\nUdpLite:");
+diff --git a/net/ipv6/proc.c b/net/ipv6/proc.c
+index b67814242f78..b68c233de296 100644
+--- a/net/ipv6/proc.c
++++ b/net/ipv6/proc.c
+@@ -30,10 +30,9 @@
+ #include <net/transp_v6.h>
+ #include <net/ipv6.h>
+ 
+-#define MAX4(a, b, c, d) \
+-	max_t(u32, max_t(u32, a, b), max_t(u32, c, d))
+-#define SNMP_MIB_MAX MAX4(UDP_MIB_MAX, TCP_MIB_MAX, \
+-			IPSTATS_MIB_MAX, ICMP_MIB_MAX)
++#define SNMP_MIB_MAX const_max_t(u32,					\
++			const_max_t(u32, UDP_MIB_MAX, TCP_MIB_MAX),	\
++			const_max_t(u32, IPSTATS_MIB_MAX, ICMP_MIB_MAX))
+ 
+ static int sockstat6_seq_show(struct seq_file *seq, void *v)
+ {
+@@ -199,7 +198,7 @@ static void snmp6_seq_show_item(struct seq_file *seq, void __percpu *pcpumib,
+ 	int i;
+ 
+ 	if (pcpumib) {
+-		memset(buff, 0, sizeof(unsigned long) * SNMP_MIB_MAX);
++		memset(buff, 0, sizeof(buff));
+ 
+ 		snmp_get_cpu_field_batch(buff, itemlist, pcpumib);
+ 		for (i = 0; itemlist[i].name; i++)
+@@ -218,7 +217,7 @@ static void snmp6_seq_show_item64(struct seq_file *seq, void __percpu *mib,
+ 	u64 buff64[SNMP_MIB_MAX];
+ 	int i;
+ 
+-	memset(buff64, 0, sizeof(u64) * SNMP_MIB_MAX);
++	memset(buff64, 0, sizeof(buff64));
+ 
+ 	snmp_get_cpu_field64_batch(buff64, itemlist, mib, syncpoff);
+ 	for (i = 0; itemlist[i].name; i++)
 -- 
 2.7.4
