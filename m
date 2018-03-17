@@ -1,42 +1,79 @@
+Date: Sat, 17 Mar 2018 09:25:09 +0100
+From: Lukas Wunner <lukas@wunner.de>
+Subject: Re: [PATCH 1/4] gpio: Remove VLA from gpiolib
+Message-ID: <20180317082509.GA2579@wunner.de>
+References: <20180310001021.6437-1-labbott@redhat.com>
+ <20180310001021.6437-2-labbott@redhat.com>
+ <a758ce3f-fed7-2ecf-94c5-ba133ea75bde@rasmusvillemoes.dk>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CA+55aFzsrVF7W+YQye=EeF4Wk3yDOTbb_vSiM8s1zkKbE4JV4Q@mail.gmail.com>
-References: <1521174359-46392-1-git-send-email-keescook@chromium.org>
- <ab2933a2-ca7b-eb3b-744d-bc037b1be688@redhat.com> <CA+55aFx92dXg-qnrjGS2Rsna6TE5HSPBgGpSA3cv4n_n3RqBzA@mail.gmail.com>
- <20180316175502.GE30522@ZenIV.linux.org.uk> <CA+55aFzsrVF7W+YQye=EeF4Wk3yDOTbb_vSiM8s1zkKbE4JV4Q@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Sat, 17 Mar 2018 00:27:02 -0700
-Message-ID: <CAGXu5jJmAAgaq3VCsUN2yjpHLSc7P-kNrM_4c4cqP=ysFcETXA@mail.gmail.com>
-Subject: Re: [PATCH v5 0/2] Remove false-positive VLAs when using max()
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, Florian Weimer <fweimer@redhat.com>, Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Randy Dunlap <rdunlap@infradead.org>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Ingo Molnar <mingo@kernel.org>, David Laight <David.Laight@aculab.com>, Ian Abbott <abbotti@mev.co.uk>, linux-input <linux-input@vger.kernel.org>, linux-btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <a758ce3f-fed7-2ecf-94c5-ba133ea75bde@rasmusvillemoes.dk>
+To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: Laura Abbott <labbott@redhat.com>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Mathias Duckeck <m.duckeck@kunbus.de>, Nandor Han <nandor.han@ge.com>, Semi Malinen <semi.malinen@ge.com>, Patrice Chotard <patrice.chotard@st.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 16, 2018 at 12:27 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> Kees - is there some online "gcc-4.4 checker" somewhere? This does
-> seem to work with my gcc. I actually tested some of those files you
-> pointed at now.
+On Mon, Mar 12, 2018 at 04:00:36PM +0100, Rasmus Villemoes wrote:
+> On 2018-03-10 01:10, Laura Abbott wrote:
+> > @@ -2887,14 +2909,30 @@ void gpiod_set_array_value_complex(bool raw, bool can_sleep,
+> >  
+> >  	while (i < array_size) {
+> >  		struct gpio_chip *chip = desc_array[i]->gdev->chip;
+> > -		unsigned long mask[BITS_TO_LONGS(chip->ngpio)];
+> > -		unsigned long bits[BITS_TO_LONGS(chip->ngpio)];
+> > +		unsigned long *mask;
+> > +		unsigned long *bits;
+> >  		int count = 0;
+> >  
+> > +		mask = kmalloc_array(BITS_TO_LONGS(chip->ngpio),
+> > +				sizeof(*mask),
+> > +				can_sleep ? GFP_KERNEL : GFP_ATOMIC);
+> > +
+> > +		if (!mask)
+> > +			return;
+> > +
+> > +		bits = kmalloc_array(BITS_TO_LONGS(chip->ngpio),
+> > +				sizeof(*bits),
+> > +				can_sleep ? GFP_KERNEL : GFP_ATOMIC);
+> > +
+> > +		if (!bits) {
+> > +			kfree(mask);
+> > +			return;
+> > +		}
+> > +
+> >  		if (!can_sleep)
+> >  			WARN_ON(chip->can_sleep);
+> >  
+> > -		memset(mask, 0, sizeof(mask));
+> > +		memset(mask, 0, sizeof(*mask));
+> 
+> Other random thoughts: maybe two allocations for each loop iteration is
+> a bit much. Maybe do a first pass over the array and collect the maximal
+> chip->ngpio, do the memory allocation and freeing outside the loop (then
+> you'd of course need to preserve the memset() with appropriate length
+> computed). And maybe even just do one allocation, making bits point at
+> the second half.
 
-Unfortunately my 4.4 test fails quickly:
+I think those are great ideas because the function is kind of a hotpath
+and usage of VLAs was motivated by the desire to make it fast.
 
-./include/linux/jiffies.h: In function =E2=80=98jiffies_delta_to_clock_t=E2=
-=80=99:
-./include/linux/jiffies.h:444: error: first argument to
-=E2=80=98__builtin_choose_expr=E2=80=99 not a constant
+I'd go one step further and store the maximum ngpio of all registered
+chips in a global variable (and update it in gpiochip_add_data_with_key()),
+then allocate 2 * max_ngpio once before entering the loop (as you've
+suggested).  That would avoid the first pass to determine the maximum
+chip->ngpio.  In most systems max_ngpio will be < 64, so one or two
+unsigned longs depending on the arch's bitness.
 
-static inline clock_t jiffies_delta_to_clock_t(long delta)
-{
-        return jiffies_to_clock_t(max(0L, delta));
-}
+FWIW, to achieve a stack overflow the platform or a driver need to specify
+a huge number of GPIOs for a chip.  So the exploitability is limited,
+but of course it's still better to get rid of the VLAs.
 
-I think this is the same problem of using __builtin_constant_p() in
-4.4 that we hit earlier? :(
+Running v2 of this patch through checkpatch --strict results in a few
+"Alignment should match open parenthesis" and one "Please don't use
+multiple blank lines" complaint, granted those are nits but it may
+be worth fixing them up front lest the usual suspects come along and
+submit bikeshedding patches.
 
--Kees
+Thanks,
 
---=20
-Kees Cook
-Pixel Security
+Lukas
