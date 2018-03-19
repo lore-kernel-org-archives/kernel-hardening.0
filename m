@@ -1,45 +1,74 @@
+Subject: Re: [RFC PATCH v19 0/8] mm: security: ro protection for dynamic data
+References: <20180313214554.28521-1-igor.stoppa@huawei.com>
+ <a9bfc57f-1591-21b6-1676-b60341a2fadd@huawei.com>
+ <20180314115653.GD29631@bombadil.infradead.org>
+ <8623382b-cdbe-8862-8c2f-fa5bc6a1213a@huawei.com>
+ <20180314130418.GG29631@bombadil.infradead.org>
+ <9623b0d1-4ace-b3e7-b861-edba03b8a8cd@huawei.com>
+ <20180314173343.GJ29631@bombadil.infradead.org>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <242fd8a2-2b80-3aa3-4b11-27f49c021a1d@huawei.com>
+Date: Mon, 19 Mar 2018 20:04:35 +0200
 MIME-Version: 1.0
-In-Reply-To: <20180319070043.GA25474@wunner.de>
-References: <20180310001021.6437-1-labbott@redhat.com> <20180310001021.6437-2-labbott@redhat.com>
- <a758ce3f-fed7-2ecf-94c5-ba133ea75bde@rasmusvillemoes.dk> <20180317082509.GA2579@wunner.de>
- <20180318142327.GA23761@wunner.de> <0f17eb05-c183-bec9-0076-5ddd00d70f15@rasmusvillemoes.dk>
- <20180319070043.GA25474@wunner.de>
-From: Andy Shevchenko <andy.shevchenko@gmail.com>
-Date: Mon, 19 Mar 2018 17:09:54 +0200
-Message-ID: <CAHp75VeJ5WQeEFaoExCCrFBuuKUX+17vC5JOdMW8V4KNvniT-Q@mail.gmail.com>
-Subject: Re: [PATCH 1/4] gpio: Remove VLA from gpiolib
-Content-Type: text/plain; charset="UTF-8"
-To: Lukas Wunner <lukas@wunner.de>
-Cc: Rasmus Villemoes <linux@rasmusvillemoes.dk>, Laura Abbott <labbott@redhat.com>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Mathias Duckeck <m.duckeck@kunbus.de>, Nandor Han <nandor.han@ge.com>, Semi Malinen <semi.malinen@ge.com>, Patrice Chotard <patrice.chotard@st.com>
+In-Reply-To: <20180314173343.GJ29631@bombadil.infradead.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+To: Matthew Wilcox <willy@infradead.org>
+Cc: keescook@chromium.org, david@fromorbit.com, rppt@linux.vnet.ibm.com, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 19, 2018 at 9:00 AM, Lukas Wunner <lukas@wunner.de> wrote:
-> On Sun, Mar 18, 2018 at 09:34:12PM +0100, Rasmus Villemoes wrote:
->> On 2018-03-18 15:23, Lukas Wunner wrote:
+On 14/03/18 19:33, Matthew Wilcox wrote:
+> I think an implementation of
+> pmalloc which used a page_frag-style allocator would be larger than
+> 100 lines, but I don't think it would have to be significantly larger
+> than that.
 
->> > Actually, scratch that.  If ngpio is usually smallish, we can just
->> > allocate reasonably sized space for mask and bits on the stack,
->> > and fall back to the kcalloc slowpath only if chip->ngpio exceeds
->> > that limit.
+I have some doubt about what is the best way to implement it using
+vmalloced memory.
 
->> Well, I'd suggest not adding that fallback code now, but simply add a
->> check in gpiochip_add_data_with_key to ensure ngpio is sane (and refuse
->> to register the chip otherwise), at least if we know that every
->> currently supported/known chip is covered by the 256 (?).
->
-> The number 256 was arbitrarily chosen.  I really wouldn't be surprised
-> if gpiochips with more pins exist, but they're probably rare, so using
-> the slowpath seems fine, but dropping support for them completely would
-> be a regression.
+1. Since I can allocate an arbitrary number of pages, I think allocating
+a rounded up amount of memory, so that it's multiple of PAGE_SIZE should
+be enough.
 
-All modern Intel SoCs have GPIO count in between of ~230-380.
-Though, few of them are split to communities by (much) less than 256
-pin in each when there is a 1:1 mapping between community and
-gpiochip.
+But maybe I could do better than that:
+a) support pre-allocation of x pages
 
-OTOH, the function you are fixing is most likely is not used together
-with the drivers for x86.
+b) define, as pool parameter, the minimum number of pages to allocate
+every time there is a refill
 
--- 
-With Best Regards,
-Andy Shevchenko
+c) both a and b
+
+
+----
+
+
+2. the flavor of page_frag from page_alloc relies on page->_refcount,
+however neither vmap_area, nor vm_struct seem to have anything like
+that. (My reasoning is that I should do the accounting not on page
+level, but based on the virtual area that I get when I allocate new
+memory) What would be the best way to do refcounting for the area?
+
+a) use the the page->_refcount from the first page that belongs to the area
+
+b) add the _refcount to either vm_struct or vmap_area (I am not really
+sure of why these two structures exist as separate entities, rather than
+a single one - cache optimization?)
+
+
+----
+
+3. I will have to add a list of chunks (in genalloc lingo, or areas, if
+we refer to the new implementation), because I will still need to
+iterate over all the memory that belongs to a pool, for either write
+protecting it or for destroying the pool. I have two options:
+
+a) handle the chunks within the pmalloc pool
+
+b) create an intermediate type of pool (vfrag_pool?) and then include it
+in the pmalloc pool structure.
+
+I'd lean toward option a, but I thought I might as well ask for advice
+before I implement the less desirable option (whatever it might be).
+
+--
+thanks, igor
