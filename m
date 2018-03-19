@@ -1,63 +1,69 @@
-Message-ID: <1521421160.2495.188.camel@decadent.org.uk>
-Subject: Re: [PATCH 3.16 56/76] x86/syscall: Sanitize syscall table
- de-references under speculation
-From: Ben Hutchings <ben@decadent.org.uk>
-Date: Mon, 19 Mar 2018 00:59:20 +0000
-In-Reply-To: <2a1d3a0f-6227-39c6-0ed9-a07c22424d67@suse.cz>
-References: <lsq.1520823972.93871245@decadent.org.uk>
-	 <2a1d3a0f-6227-39c6-0ed9-a07c22424d67@suse.cz>
-Content-Type: multipart/signed; micalg="pgp-sha512";
-	protocol="application/pgp-signature"; boundary="=-mI2R8bO8LtGKrB4ZLhsb"
-Mime-Version: 1.0
-To: Jiri Slaby <jslaby@suse.cz>, linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: akpm@linux-foundation.org, Jinpu Wang <jinpu.wang@profitbricks.com>, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Jan Beulich <JBeulich@suse.com>, alan@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, Dan Williams <dan.j.williams@intel.com>, gregkh@linuxfoundation.org, linux-arch@vger.kernel.org
+Subject: Re: [PATCHv2 4/4] gpio: Remove VLA from stmpe driver
+References: <20180315180030.20001-1-labbott@redhat.com>
+ <20180315180030.20001-5-labbott@redhat.com>
+From: Phil Reid <preid@electromag.com.au>
+Message-ID: <21a2e869-62fb-75ef-ae7b-a27e136696f7@electromag.com.au>
+Date: Mon, 19 Mar 2018 09:29:59 +0800
+MIME-Version: 1.0
+In-Reply-To: <20180315180030.20001-5-labbott@redhat.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Laura Abbott <labbott@redhat.com>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Patrice Chotard <patrice.chotard@st.com>
+Cc: linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 16/03/2018 02:00, Laura Abbott wrote:
+> The new challenge is to remove VLAs from the kernel
+> (see https://lkml.org/lkml/2018/3/7/621)
+> 
+> This patch replaces a VLA with an appropriate call to kmalloc_array.
+> 
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+> v2: Switch to GFP_KERNEL. There was some discussion about if we should
+> be doing the allocation at all but given a) the allocation is pretty
+> small and b) we can possibly take a mutex in a called function I think
+> this is fine.
 
---=-mI2R8bO8LtGKrB4ZLhsb
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-
-On Mon, 2018-03-12 at 08:32 +0100, Jiri Slaby wrote:
-> On 03/12/2018, 04:06 AM, Ben Hutchings wrote:
-> > In 3.16 the x86_32 syscall table lookup is also written in assembly.
-> > So I've taken Jiri's version and added similar masking in entry_32.S,
-> > using edx as the temporary.  edx is clobbered by SAVE_REGS and seems
-> > to be free at this point.
->=20
-> I don't know the state in 3.16, but in 3.12, I had to fix the 32bit
-> entry on 64bit in arch/x86/ia32/ia32entry.S (ia32_sysenter_target &
-> others) too.
-
-Thank you, yes I need to fix them in 3.16 too.  I also failed to use
-retpolines there.
-
-Ben.
-
---=20
-Ben Hutchings
-The first rule of tautology club is the first rule of tautology club.
+I still think it's a bad idea. It's simple to preallocate the buffer.
+But it's up to the maintainer.
 
 
---=-mI2R8bO8LtGKrB4ZLhsb
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
+> ---
+>   drivers/gpio/gpio-stmpe.c | 7 ++++++-
+>   1 file changed, 6 insertions(+), 1 deletion(-)
+> 
+> diff --git a/drivers/gpio/gpio-stmpe.c b/drivers/gpio/gpio-stmpe.c
+> index f8d7d1cd8488..c2bb20ace6f5 100644
+> --- a/drivers/gpio/gpio-stmpe.c
+> +++ b/drivers/gpio/gpio-stmpe.c
+> @@ -369,10 +369,14 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>   	struct stmpe *stmpe = stmpe_gpio->stmpe;
+>   	u8 statmsbreg;
+>   	int num_banks = DIV_ROUND_UP(stmpe->num_gpios, 8);
+> -	u8 status[num_banks];
+> +	u8 *status;
+>   	int ret;
+>   	int i;
+>   
+> +	status = kmalloc_array(num_banks, sizeof(*status), GFP_KERNEL);
+> +	if (!status)
+> +		return IRQ_NONE;
+> +
+>   	/*
+>   	 * the stmpe_block_read() call below, imposes to set statmsbreg
+>   	 * with the register located at the lowest address. As STMPE1600
+> @@ -424,6 +428,7 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>   		}
+>   	}
+>   
+> +	kfree(status);
+>   	return IRQ_HANDLED;
+>   }
+>   
+> 
 
------BEGIN PGP SIGNATURE-----
 
-iQIzBAABCgAdFiEErCspvTSmr92z9o8157/I7JWGEQkFAlqvC2gACgkQ57/I7JWG
-EQmXpRAAwMMnb5IZ7NDeYxMrSAYDFY4c7Bf/qHchP6Sj4WB8pR58u6Ptt0pQR5nJ
-d3gt2EKjANaXJQfp6JKX9SOFyY1HEL0hz1tf/E99Qib4hHPJ4PnD8srug4MQW3q2
-1Rcl2LE+pqHRP6N3ge4/QEV+xRcs2+k+RMHVOrMco+9s1RfPfQJKTE7Bh1VkYX1R
-iTkcc+r+eA53pkorBOovZ48Ih74SWuV3CdJ2jypZBcVbep4dPrw/dzrsLTKa9DL1
-d64KEiZLCWOcZs1exeDAzvFFk0QKiB61znapD3MHlkor6lFp2DgNIU7rizYdW2G5
-Ig/XNpKZnhFaPLB56xAZ/dZU5RgFwo0wpOvDH97OOdf6cYu9dM0f5m5eK7W/Ozaz
-JrJEEbWPcL5WEgEtTIY7B890sgacwlJdxBqeVmeurBU7nE2DcGCgqTisF7DbJIMv
-BPBrQct92RpS9xM3HQxMbOsqP91w1GHL+TrDr65ehSZzG7pE9E03rzE2k/LBn8yn
-9cE55uVVU84u13+jR9A63us7c3j+pJkMiUoLZVHZasFoZjlrysuxyiR/NAo4gNJA
-Ue6X7VW/nAdIQkgzA3Nrgnx5HOHkjJK3DdweQkzR4+5zuWXq98TTOetVuC/Pcrhk
-DrLIPKiUdkuIC4z6n9tk1RpKWITpeIVq+hScPnnZ6NuG0fQJOOw=
-=nHXF
------END PGP SIGNATURE-----
-
---=-mI2R8bO8LtGKrB4ZLhsb--
+-- 
+Regards
+Phil Reid
