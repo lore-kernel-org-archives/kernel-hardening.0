@@ -1,74 +1,32 @@
-Subject: Re: [RFC PATCH v19 0/8] mm: security: ro protection for dynamic data
-References: <20180313214554.28521-1-igor.stoppa@huawei.com>
- <a9bfc57f-1591-21b6-1676-b60341a2fadd@huawei.com>
- <20180314115653.GD29631@bombadil.infradead.org>
- <8623382b-cdbe-8862-8c2f-fa5bc6a1213a@huawei.com>
- <20180314130418.GG29631@bombadil.infradead.org>
- <9623b0d1-4ace-b3e7-b861-edba03b8a8cd@huawei.com>
- <20180314173343.GJ29631@bombadil.infradead.org>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <242fd8a2-2b80-3aa3-4b11-27f49c021a1d@huawei.com>
-Date: Mon, 19 Mar 2018 20:04:35 +0200
 MIME-Version: 1.0
-In-Reply-To: <20180314173343.GJ29631@bombadil.infradead.org>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-To: Matthew Wilcox <willy@infradead.org>
-Cc: keescook@chromium.org, david@fromorbit.com, rppt@linux.vnet.ibm.com, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: linus971@gmail.com
+In-Reply-To: <0e94e9582bec4373b5e21c612be179ac@AcuMS.aculab.com>
+References: <1521174359-46392-1-git-send-email-keescook@chromium.org>
+ <ab2933a2-ca7b-eb3b-744d-bc037b1be688@redhat.com> <CA+55aFx92dXg-qnrjGS2Rsna6TE5HSPBgGpSA3cv4n_n3RqBzA@mail.gmail.com>
+ <20180316175502.GE30522@ZenIV.linux.org.uk> <CA+55aFzsrVF7W+YQye=EeF4Wk3yDOTbb_vSiM8s1zkKbE4JV4Q@mail.gmail.com>
+ <CAGXu5jJmAAgaq3VCsUN2yjpHLSc7P-kNrM_4c4cqP=ysFcETXA@mail.gmail.com>
+ <CA+55aFwv0VC67cx2W9yrf7qSFKf6ncVRrsVyLGqdmfSBn4yTYw@mail.gmail.com>
+ <42b4342b-aefc-a16a-0d43-9f9c0d63ba7a@rasmusvillemoes.dk> <CA+55aFwFoTapX2niPiaET5kg7K85qxhav1_PoDDxY0o_VRA5Ag@mail.gmail.com>
+ <38b6da49-1138-017e-7307-f39ff067d6d2@rasmusvillemoes.dk> <CA+55aFw0WC+S3TTE6x_vkLbRV6YLeR4-1S9LsBXhE+E2KZqBuA@mail.gmail.com>
+ <0e94e9582bec4373b5e21c612be179ac@AcuMS.aculab.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Mon, 19 Mar 2018 16:29:28 -0700
+Message-ID: <CA+55aFwZnkR5uA5Oe19Xzox=+Bcab-j6-+a=XGqS8yokDU3Dog@mail.gmail.com>
+Subject: Re: [PATCH v5 0/2] Remove false-positive VLAs when using max()
+Content-Type: text/plain; charset="UTF-8"
+To: David Laight <David.Laight@aculab.com>
+Cc: Rasmus Villemoes <linux@rasmusvillemoes.dk>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Florian Weimer <fweimer@redhat.com>, Andrew Morton <akpm@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Ingo Molnar <mingo@kernel.org>, Ian Abbott <abbotti@mev.co.uk>, linux-input <linux-input@vger.kernel.org>, linux-btrfs <linux-btrfs@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 14/03/18 19:33, Matthew Wilcox wrote:
-> I think an implementation of
-> pmalloc which used a page_frag-style allocator would be larger than
-> 100 lines, but I don't think it would have to be significantly larger
-> than that.
+On Mon, Mar 19, 2018 at 2:43 AM, David Laight <David.Laight@aculab.com> wrote:
+>
+> Is it necessary to have the full checks for old versions of gcc?
+>
+> Even -Wvla could be predicated on very recent gcc - since we aren't
+> worried about whether gcc decides to generate a vla, but whether
+> the source requests one.
 
-I have some doubt about what is the best way to implement it using
-vmalloced memory.
+You are correct. We could just ignore the issue with old gcc versions,
+and disable -Wvla rather than worry about it.
 
-1. Since I can allocate an arbitrary number of pages, I think allocating
-a rounded up amount of memory, so that it's multiple of PAGE_SIZE should
-be enough.
-
-But maybe I could do better than that:
-a) support pre-allocation of x pages
-
-b) define, as pool parameter, the minimum number of pages to allocate
-every time there is a refill
-
-c) both a and b
-
-
-----
-
-
-2. the flavor of page_frag from page_alloc relies on page->_refcount,
-however neither vmap_area, nor vm_struct seem to have anything like
-that. (My reasoning is that I should do the accounting not on page
-level, but based on the virtual area that I get when I allocate new
-memory) What would be the best way to do refcounting for the area?
-
-a) use the the page->_refcount from the first page that belongs to the area
-
-b) add the _refcount to either vm_struct or vmap_area (I am not really
-sure of why these two structures exist as separate entities, rather than
-a single one - cache optimization?)
-
-
-----
-
-3. I will have to add a list of chunks (in genalloc lingo, or areas, if
-we refer to the new implementation), because I will still need to
-iterate over all the memory that belongs to a pool, for either write
-protecting it or for destroying the pool. I have two options:
-
-a) handle the chunks within the pmalloc pool
-
-b) create an intermediate type of pool (vfrag_pool?) and then include it
-in the pmalloc pool structure.
-
-I'd lean toward option a, but I thought I might as well ask for advice
-before I implement the less desirable option (whatever it might be).
-
---
-thanks, igor
+                  Linus
