@@ -1,30 +1,37 @@
-Subject: Re: [PATCH RFC v9 2/7] x86/entry: Add STACKLEAK erasing the kernel
- stack at the end of syscalls
-References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
- <1520107232-14111-3-git-send-email-alex.popov@linux.com>
- <d968e58a-3abd-8e3c-cee3-00c19c1b6430@linux.intel.com>
- <94f268b2-31a4-620a-86ed-325d5bb33c57@redhat.com>
- <20180305202535.GX25201@hirez.programming.kicks-ass.net>
- <e043e0d6-3265-4bc2-ae11-ab430832a8e2@linux.com>
-From: Dave Hansen <dave.hansen@linux.intel.com>
-Message-ID: <295a6830-fce9-ee00-f45d-7dafd74d11a1@linux.intel.com>
-Date: Wed, 21 Mar 2018 08:33:29 -0700
 MIME-Version: 1.0
-In-Reply-To: <e043e0d6-3265-4bc2-ae11-ab430832a8e2@linux.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: alex.popov@linux.com, Peter Zijlstra <peterz@infradead.org>, Laura Abbott <labbott@redhat.com>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>
-Cc: PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, x86@kernel.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Sender: daniel.vetter@ffwll.ch
+In-Reply-To: <20180322080300.GA28877@kroah.com>
+References: <20180321154553.GA18454@kroah.com> <20180322065959.GF14155@phenom.ffwll.local>
+ <20180322080300.GA28877@kroah.com>
+From: Daniel Vetter <daniel@ffwll.ch>
+Date: Thu, 22 Mar 2018 10:54:47 +0100
+Message-ID: <CAKMK7uHJ3NTfu25wPSO7QStRd9pOR3j2tyVp5sa+T5UqUdxu7Q@mail.gmail.com>
+Subject: Re: [PATCH] drm: udl: Properly check framebuffer mmap offsets
+Content-Type: text/plain; charset="UTF-8"
+To: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+Cc: David Airlie <airlied@linux.ie>, dri-devel <dri-devel@lists.freedesktop.org>, Sean Paul <seanpaul@chromium.org>, Cihangir Akturk <cakturk@gmail.com>, Ingo Molnar <mingo@kernel.org>, Krzysztof Kozlowski <krzk@kernel.org>, Tom Lendacky <thomas.lendacky@amd.com>, Eyal Itkin <eyalit@checkpoint.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/21/2018 04:04 AM, Alexander Popov wrote:
-> The main obstacle:
-> erase_kstack() must save and restore any modified registers, because it is
-> called from the trampoline stack (introduced by Andy Lutomirski), when all
-> registers except RDI are live.
+On Thu, Mar 22, 2018 at 9:03 AM, Greg Kroah-Hartman
+<gregkh@linuxfoundation.org> wrote:
+> On Thu, Mar 22, 2018 at 07:59:59AM +0100, Daniel Vetter wrote:
+>> Does anyone working on overflow-proof integers? That would make a lot of
+>> this code so much simpler if we could just ask the compiler to carry the
+>> oferflow bit around for a given expression and then check that and bail
+>> with -EINVAL.
+>
+> That would be nice, but no, I don't think that's part of any C standard
+> work that I have heard of :(
 
-Wow, cool, thanks for doing this!
+Well we have refcount_t already, stitching something together that
+would work and not suck too badly with performance should be possible.
+But yeah direct compiler support would be better (and would allow
+optimizing the carry flag checks I guess). I kinda hoped Kees&team
+would be working on this eventually.
 
-PTI might also cause you some problems here because it probably won't
-map your function.  Did you have to put it in one of the sections that
-gets mapped by the user page tables?
+Adding Kees+kernel-hardening, maybe he'll grow fond of this :-)
+-Daniel
+-- 
+Daniel Vetter
+Software Engineer, Intel Corporation
++41 (0) 79 365 57 48 - http://blog.ffwll.ch
