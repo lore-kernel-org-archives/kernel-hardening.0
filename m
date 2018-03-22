@@ -1,53 +1,74 @@
-Subject: Re: [PATCH RFC v9 2/7] x86/entry: Add STACKLEAK erasing the kernel
- stack at the end of syscalls
-References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
- <1520107232-14111-3-git-send-email-alex.popov@linux.com>
- <d968e58a-3abd-8e3c-cee3-00c19c1b6430@linux.intel.com>
- <94f268b2-31a4-620a-86ed-325d5bb33c57@redhat.com>
- <20180305202535.GX25201@hirez.programming.kicks-ass.net>
- <e043e0d6-3265-4bc2-ae11-ab430832a8e2@linux.com>
- <295a6830-fce9-ee00-f45d-7dafd74d11a1@linux.intel.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <ac1a2090-e120-d202-35b4-b158d4787ab5@linux.com>
-Date: Thu, 22 Mar 2018 23:56:53 +0300
+Subject: Re: [PATCHv2 4/4] gpio: Remove VLA from stmpe driver
+References: <20180315180030.20001-1-labbott@redhat.com>
+ <20180315180030.20001-5-labbott@redhat.com>
+ <21a2e869-62fb-75ef-ae7b-a27e136696f7@electromag.com.au>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <90e40062-cedb-be32-ab17-56136c78dbad@redhat.com>
+Date: Thu, 22 Mar 2018 14:43:39 -0700
 MIME-Version: 1.0
-In-Reply-To: <295a6830-fce9-ee00-f45d-7dafd74d11a1@linux.intel.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, Laura Abbott <labbott@redhat.com>, Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>
-Cc: PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, x86@kernel.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <21a2e869-62fb-75ef-ae7b-a27e136696f7@electromag.com.au>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+To: Phil Reid <preid@electromag.com.au>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Patrice Chotard <patrice.chotard@st.com>
+Cc: linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 21.03.2018 18:33, Dave Hansen wrote:
-> On 03/21/2018 04:04 AM, Alexander Popov wrote:
->> The main obstacle:
->> erase_kstack() must save and restore any modified registers, because it is
->> called from the trampoline stack (introduced by Andy Lutomirski), when all
->> registers except RDI are live.
+On 03/18/2018 06:29 PM, Phil Reid wrote:
+> On 16/03/2018 02:00, Laura Abbott wrote:
+>> The new challenge is to remove VLAs from the kernel
+>> (see https://lkml.org/lkml/2018/3/7/621)
+>>
+>> This patch replaces a VLA with an appropriate call to kmalloc_array.
+>>
+>> Signed-off-by: Laura Abbott <labbott@redhat.com>
+>> ---
+>> v2: Switch to GFP_KERNEL. There was some discussion about if we should
+>> be doing the allocation at all but given a) the allocation is pretty
+>> small and b) we can possibly take a mutex in a called function I think
+>> this is fine.
 > 
-> Wow, cool, thanks for doing this!
+> I still think it's a bad idea. It's simple to preallocate the buffer.
+> But it's up to the maintainer.
 > 
-> PTI might also cause you some problems here because it probably won't
-> map your function.  Did you have to put it in one of the sections that
-> gets mapped by the user page tables?
 
-No, I didn't have to do that: erase_kstack() works fine, it is called just
-before SWITCH_TO_USER_CR3_STACK.
+I'd feel a lot more confident about doing the global buffer with
+guidance from the maintainer. But looking at the platform data, the
+maximum number of GPIOs is 24, or 3 banks. Maybe we should just always
+stack allocate the maximum since it's fairly small.
 
-There is also a way not to offend KASAN. erase_kstack() C code can be put in a
-separate source file and compiled with "KASAN_SANITIZE_erase.o := n".
+Thanks,
+Laura
 
-So, as I wrote, the only critical drawback of the C implementation is that it
-needs no_caller_saved_registers attribute, which is provided by gcc since version 7.
-
-Can you recommend any solution?
-
-
-By the way, during my work on STACKLEAK, I've found one case when we get to the
-userspace directly from the thread stack. Please see sysret32_from_system_call
-in entry_64_compat.S. I checked that.
-
-IMO it seems odd, can the adversary use that to bypass PTI?
-
-Best regards,
-Alexander
+> 
+>> ---
+>>   drivers/gpio/gpio-stmpe.c | 7 ++++++-
+>>   1 file changed, 6 insertions(+), 1 deletion(-)
+>>
+>> diff --git a/drivers/gpio/gpio-stmpe.c b/drivers/gpio/gpio-stmpe.c
+>> index f8d7d1cd8488..c2bb20ace6f5 100644
+>> --- a/drivers/gpio/gpio-stmpe.c
+>> +++ b/drivers/gpio/gpio-stmpe.c
+>> @@ -369,10 +369,14 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>>       struct stmpe *stmpe = stmpe_gpio->stmpe;
+>>       u8 statmsbreg;
+>>       int num_banks = DIV_ROUND_UP(stmpe->num_gpios, 8);
+>> -    u8 status[num_banks];
+>> +    u8 *status;
+>>       int ret;
+>>       int i;
+>> +    status = kmalloc_array(num_banks, sizeof(*status), GFP_KERNEL);
+>> +    if (!status)
+>> +        return IRQ_NONE;
+>> +
+>>       /*
+>>        * the stmpe_block_read() call below, imposes to set statmsbreg
+>>        * with the register located at the lowest address. As STMPE1600
+>> @@ -424,6 +428,7 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>>           }
+>>       }
+>> +    kfree(status);
+>>       return IRQ_HANDLED;
+>>   }
+>>
+> 
+> 
