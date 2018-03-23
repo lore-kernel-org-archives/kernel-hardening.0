@@ -1,56 +1,83 @@
+Subject: Re: [PATCHv2 4/4] gpio: Remove VLA from stmpe driver
+References: <20180315180030.20001-1-labbott@redhat.com>
+ <20180315180030.20001-5-labbott@redhat.com>
+ <21a2e869-62fb-75ef-ae7b-a27e136696f7@electromag.com.au>
+ <90e40062-cedb-be32-ab17-56136c78dbad@redhat.com>
+From: Phil Reid <preid@electromag.com.au>
+Message-ID: <e7ec40ec-99cd-8078-3238-db024589d08b@electromag.com.au>
+Date: Fri, 23 Mar 2018 09:28:07 +0800
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAKMK7uHJ3NTfu25wPSO7QStRd9pOR3j2tyVp5sa+T5UqUdxu7Q@mail.gmail.com>
-References: <20180321154553.GA18454@kroah.com> <20180322065959.GF14155@phenom.ffwll.local>
- <20180322080300.GA28877@kroah.com> <CAKMK7uHJ3NTfu25wPSO7QStRd9pOR3j2tyVp5sa+T5UqUdxu7Q@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 22 Mar 2018 17:14:40 -0700
-Message-ID: <CAGXu5j+75ev=w5cmag7Y6mwnvza5Or1pn-s8gWyQTJSH_jHKjg@mail.gmail.com>
-Subject: Re: [PATCH] drm: udl: Properly check framebuffer mmap offsets
-Content-Type: text/plain; charset="UTF-8"
-To: Daniel Vetter <daniel@ffwll.ch>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, David Airlie <airlied@linux.ie>, dri-devel <dri-devel@lists.freedesktop.org>, Sean Paul <seanpaul@chromium.org>, Cihangir Akturk <cakturk@gmail.com>, Ingo Molnar <mingo@kernel.org>, Krzysztof Kozlowski <krzk@kernel.org>, Tom Lendacky <thomas.lendacky@amd.com>, Eyal Itkin <eyalit@checkpoint.com>, Daniel Micay <danielmicay@gmail.com>
+In-Reply-To: <90e40062-cedb-be32-ab17-56136c78dbad@redhat.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+To: Laura Abbott <labbott@redhat.com>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Patrice Chotard <patrice.chotard@st.com>
+Cc: linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 22, 2018 at 2:54 AM, Daniel Vetter <daniel@ffwll.ch> wrote:
-> On Thu, Mar 22, 2018 at 9:03 AM, Greg Kroah-Hartman
-> <gregkh@linuxfoundation.org> wrote:
->> On Thu, Mar 22, 2018 at 07:59:59AM +0100, Daniel Vetter wrote:
->>> Does anyone working on overflow-proof integers? That would make a lot of
->>> this code so much simpler if we could just ask the compiler to carry the
->>> oferflow bit around for a given expression and then check that and bail
->>> with -EINVAL.
+On 23/03/2018 05:43, Laura Abbott wrote:
+> On 03/18/2018 06:29 PM, Phil Reid wrote:
+>> On 16/03/2018 02:00, Laura Abbott wrote:
+>>> The new challenge is to remove VLAs from the kernel
+>>> (see https://lkml.org/lkml/2018/3/7/621)
+>>>
+>>> This patch replaces a VLA with an appropriate call to kmalloc_array.
+>>>
+>>> Signed-off-by: Laura Abbott <labbott@redhat.com>
+>>> ---
+>>> v2: Switch to GFP_KERNEL. There was some discussion about if we should
+>>> be doing the allocation at all but given a) the allocation is pretty
+>>> small and b) we can possibly take a mutex in a called function I think
+>>> this is fine.
 >>
->> That would be nice, but no, I don't think that's part of any C standard
->> work that I have heard of :(
->
-> Well we have refcount_t already, stitching something together that
-> would work and not suck too badly with performance should be possible.
-> But yeah direct compiler support would be better (and would allow
-> optimizing the carry flag checks I guess). I kinda hoped Kees&team
-> would be working on this eventually.
+>> I still think it's a bad idea. It's simple to preallocate the buffer.
+>> But it's up to the maintainer.
+>>
+> 
+> I'd feel a lot more confident about doing the global buffer with
+> guidance from the maintainer. But looking at the platform data, the
+> maximum number of GPIOs is 24, or 3 banks. Maybe we should just always
+> stack allocate the maximum since it's fairly small.
 
-refcount_t could be used if it happens to match the needed semantics.
+That's the other way to go.
 
-> Adding Kees+kernel-hardening, maybe he'll grow fond of this :-)
 
-Yeah, general integer overflow is on the list of things to get fixed
-in the kernel. It's a bit of a long road, though.
+>>> ---
+>>>   drivers/gpio/gpio-stmpe.c | 7 ++++++-
+>>>   1 file changed, 6 insertions(+), 1 deletion(-)
+>>>
+>>> diff --git a/drivers/gpio/gpio-stmpe.c b/drivers/gpio/gpio-stmpe.c
+>>> index f8d7d1cd8488..c2bb20ace6f5 100644
+>>> --- a/drivers/gpio/gpio-stmpe.c
+>>> +++ b/drivers/gpio/gpio-stmpe.c
+>>> @@ -369,10 +369,14 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>>>       struct stmpe *stmpe = stmpe_gpio->stmpe;
+>>>       u8 statmsbreg;
+>>>       int num_banks = DIV_ROUND_UP(stmpe->num_gpios, 8);
+>>> -    u8 status[num_banks];
+>>> +    u8 *status;
+>>>       int ret;
+>>>       int i;
+>>> +    status = kmalloc_array(num_banks, sizeof(*status), GFP_KERNEL);
+>>> +    if (!status)
+>>> +        return IRQ_NONE;
+>>> +
+>>>       /*
+>>>        * the stmpe_block_read() call below, imposes to set statmsbreg
+>>>        * with the register located at the lowest address. As STMPE1600
+>>> @@ -424,6 +428,7 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>>>           }
+>>>       }
+>>> +    kfree(status);
+>>>       return IRQ_HANDLED;
+>>>   }
+>>>
+>>
+>>
+> 
+> 
+> 
 
-Clang has -fsanitize=integer (and sub-options) which could be added
-for specific object or trees:
-https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#ubsan-checks
-
-GCC seems to only support manual marking of overflow detections:
-https://gcc.gnu.org/onlinedocs/gcc/Integer-Overflow-Builtins.html
-
-grsecurity/PaX has a gcc plugin for overflow detection, though it
-hasn't been upstreamed and comes with various caveats:
-http://forums.grsecurity.net/viewtopic.php?f=7&t=3043
-https://github.com/ephox-gcc-plugins/size_overflow
-
--Kees
 
 -- 
-Kees Cook
-Pixel Security
+Regards
+Phil Reid
