@@ -1,34 +1,44 @@
+Subject: Re: [PATCH 6/8] Pmalloc selftest
+References: <20180313214554.28521-1-igor.stoppa@huawei.com>
+ <20180313214554.28521-7-igor.stoppa@huawei.com>
+ <20180314122512.GF29631@bombadil.infradead.org>
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Message-ID: <ce6e34a4-592d-624c-2353-20e50e321298@huawei.com>
+Date: Sun, 25 Mar 2018 04:32:57 +0300
 MIME-Version: 1.0
-In-Reply-To: <20180323153652.GA1760@gondor.apana.org.au>
-References: <1521112738-13250-1-git-send-email-s.mesoraca16@gmail.com> <20180323153652.GA1760@gondor.apana.org.au>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Sat, 24 Mar 2018 14:21:53 +0100
-Message-ID: <CAJHCu1K-gFnt2mR6LkP=BH-eB-cHUoPyWWGCgPNe7B1B4no8Sg@mail.gmail.com>
-Subject: Re: [PATCH v2] crypto: ctr - avoid VLA use
-Content-Type: text/plain; charset="UTF-8"
-To: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-crypto@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Kees Cook <keescook@chromium.org>, Eric Biggers <ebiggers3@gmail.com>
+In-Reply-To: <20180314122512.GF29631@bombadil.infradead.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+To: Matthew Wilcox <willy@infradead.org>
+Cc: david@fromorbit.com, rppt@linux.vnet.ibm.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-03-23 16:36 GMT+01:00 Herbert Xu <herbert@gondor.apana.org.au>:
-> On Thu, Mar 15, 2018 at 12:18:58PM +0100, Salvatore Mesoraca wrote:
->>
->> +#define MAX_BLOCKSIZE 16
->> +
->> +#ifdef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
->> +#define MAX_ALIGNMASK 15
->> +#else
->> +#define MAX_ALIGNMASK 0
->> +#endif
->> +
->
-> Hmm, this won't work.  Just because you have efficient unaligned
-> access in general doesn't mean that every implementation can live
-> with unaligned access.  In particular, on x86 there are quite a
-> few implementations that require alignment or they will fault.
->
-> So please just make it 15 unconditionally.
 
-Oh, thank you for pointing it out. I'll fix this in v3.
 
-Salvatore
+On 14/03/18 14:25, Matthew Wilcox wrote:
+> On Tue, Mar 13, 2018 at 11:45:52PM +0200, Igor Stoppa wrote:
+>> Add basic self-test functionality for pmalloc.
+> 
+> Here're some additional tests for your test-suite:
+> 
+> 	for (i = 1; i; i *= 2)
+> 		pzalloc(pool, i - 1, GFP_KERNEL);
+> 
+
+Ok, I have almost finished the rewrite.
+I still have to address this comment.
+
+When I run the test, eventually the system runs out of memory, it keeps
+getting allocation errors from vmalloc, until i finally overflows and
+becomes 0.
+
+Am I supposed to do something about it?
+If pmalloc receives a request that the vmalloc backend cannot satisfy, I
+would prefer that vmalloc itself produces the warning and pmalloc
+returns NULL.
+
+This doesn't look like a test case that one can leave always enabled in
+a build, but maybe I'm missing the point.
+
+--
+igor
