@@ -1,98 +1,33 @@
-Date: Mon, 26 Mar 2018 17:22:01 +0100
-From: Dave Martin <Dave.Martin@arm.com>
-Subject: Re: [PATCH 33/38] arm64: Implement thread_struct whitelist for
- hardened usercopy
-Message-ID: <20180326162158.GH16308@e103592.cambridge.arm.com>
-References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
- <1515636190-24061-34-git-send-email-keescook@chromium.org>
- <20180115122458.GI12608@e103592.cambridge.arm.com>
- <CAGXu5jLHb3BQ9U7g6suoVZwVeETiXiCRbxsprpLNiFxcjcWk1A@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jLHb3BQ9U7g6suoVZwVeETiXiCRbxsprpLNiFxcjcWk1A@mail.gmail.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: Mark Rutland <Mark.Rutland@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <Catalin.Marinas@arm.com>, Will Deacon <Will.Deacon@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+Sender: keescook@google.com
+In-Reply-To: <ac1a2090-e120-d202-35b4-b158d4787ab5@linux.com>
+References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
+ <1520107232-14111-3-git-send-email-alex.popov@linux.com> <d968e58a-3abd-8e3c-cee3-00c19c1b6430@linux.intel.com>
+ <94f268b2-31a4-620a-86ed-325d5bb33c57@redhat.com> <20180305202535.GX25201@hirez.programming.kicks-ass.net>
+ <e043e0d6-3265-4bc2-ae11-ab430832a8e2@linux.com> <295a6830-fce9-ee00-f45d-7dafd74d11a1@linux.intel.com>
+ <ac1a2090-e120-d202-35b4-b158d4787ab5@linux.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 26 Mar 2018 10:32:04 -0700
+Message-ID: <CAGXu5jKLErrvewvSiusr7qPup-08YgvLKC1ZT7FKTR_RyDSTuQ@mail.gmail.com>
+Subject: Re: [PATCH RFC v9 2/7] x86/entry: Add STACKLEAK erasing the kernel
+ stack at the end of syscalls
+Content-Type: text/plain; charset="UTF-8"
+To: alex.popov@linux.com, Dave Hansen <dave.hansen@linux.intel.com>
+Cc: Peter Zijlstra <peterz@infradead.org>, Laura Abbott <labbott@redhat.com>, Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, x86@kernel.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-[Dropped most of the original Cc list, since most people are unlikely to
-care about this thread archaeology.]
+On Thu, Mar 22, 2018 at 1:56 PM, Alexander Popov <alex.popov@linux.com> wrote:
+> By the way, during my work on STACKLEAK, I've found one case when we get to the
+> userspace directly from the thread stack. Please see sysret32_from_system_call
+> in entry_64_compat.S. I checked that.
+>
+> IMO it seems odd, can the adversary use that to bypass PTI?
 
-On Mon, Jan 15, 2018 at 12:06:17PM -0800, Kees Cook wrote:
-> On Mon, Jan 15, 2018 at 4:24 AM, Dave P Martin <Dave.Martin@arm.com> wrote:
-> > On Thu, Jan 11, 2018 at 02:03:05AM +0000, Kees Cook wrote:
-> >> This whitelists the FPU register state portion of the thread_struct for
-> >> copying to userspace, instead of the default entire structure.
-> >>
-> >> Cc: Catalin Marinas <catalin.marinas@arm.com>
-> >> Cc: Will Deacon <will.deacon@arm.com>
-> >> Cc: Christian Borntraeger <borntraeger@de.ibm.com>
-> >> Cc: Ingo Molnar <mingo@kernel.org>
-> >> Cc: James Morse <james.morse@arm.com>
-> >> Cc: "Peter Zijlstra (Intel)" <peterz@infradead.org>
-> >> Cc: Dave Martin <Dave.Martin@arm.com>
-> >> Cc: zijun_hu <zijun_hu@htc.com>
-> >> Cc: linux-arm-kernel@lists.infradead.org
-> >> Signed-off-by: Kees Cook <keescook@chromium.org>
-> >> ---
-> >>  arch/arm64/Kconfig                 | 1 +
-> >>  arch/arm64/include/asm/processor.h | 8 ++++++++
-> >>  2 files changed, 9 insertions(+)
-> >>
-> >> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-> >> index a93339f5178f..c84477e6a884 100644
-> >> --- a/arch/arm64/Kconfig
-> >> +++ b/arch/arm64/Kconfig
-> >> @@ -90,6 +90,7 @@ config ARM64
-> >>       select HAVE_ARCH_MMAP_RND_BITS
-> >>       select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
-> >>       select HAVE_ARCH_SECCOMP_FILTER
-> >> +     select HAVE_ARCH_THREAD_STRUCT_WHITELIST
-> >>       select HAVE_ARCH_TRACEHOOK
-> >>       select HAVE_ARCH_TRANSPARENT_HUGEPAGE
-> >>       select HAVE_ARCH_VMAP_STACK
-> >> diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
-> >> index 023cacb946c3..e58a5864ec89 100644
-> >> --- a/arch/arm64/include/asm/processor.h
-> >> +++ b/arch/arm64/include/asm/processor.h
-> >> @@ -113,6 +113,14 @@ struct thread_struct {
-> >>       struct debug_info       debug;          /* debugging */
-> >>  };
-> >>
-> >> +/* Whitelist the fpsimd_state for copying to userspace. */
-> >> +static inline void arch_thread_struct_whitelist(unsigned long *offset,
-> >> +                                             unsigned long *size)
-> >> +{
-> >> +     *offset = offsetof(struct thread_struct, fpsimd_state);
-> >> +     *size = sizeof(struct fpsimd_state);
-> >
-> > This should be fpsimd_state.user_fpsimd (fpsimd_state.cpu is important
-> > for correctly context switching and not supposed to be user-accessible.
-> > A user copy that encompasses that is definitely a bug).
-> 
-> So, I actually spent some more time looking at this due to the
-> comments from rmk on arm32, and I don't think any whitelist is needed
-> here at all. (i.e. it can be *offset = *size = 0) This is because all
-> the usercopying I could find uses static sizes or bounce buffers, both
-> of which bypass the dynamic-size hardened usercopy checks.
-> 
-> I've been running some arm64 builds now with this change, and I
-> haven't tripped over any problems yet...
+If it was missing the page table swap, shouldn't this mean that the
+missing NX bit would immediately crash userspace?
 
-Hmmm, it looks like we may be hitting this with user_regset_copyout()
-when reading the fp regs via ptrace.  This is maybe not surprising,
-since the size comes from userspace for PTRACE_{GET,SET}REGSET.
-Also, while we copy into a bounce buffer for SETREGSET here, we do copy
-straight out of task_struct for GETREGSET here.
+-Kees
 
-This suggests we should have:
-
-	*offset = offsetof(struct thread_struct, fpsimd_state);
-	*size = sizeof(struct user_fpsimd_state);
-
-Thoughts?
-
-I'm making some assumptions about how the usercopy hardening works.
-
-Cheers
----Dave
+-- 
+Kees Cook
+Pixel Security
