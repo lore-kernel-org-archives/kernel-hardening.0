@@ -1,79 +1,29 @@
-From: "Tobin C. Harding" <me@tobin.cc>
-Subject: [PATCH] mmc: pwrseq: Use kmalloc_array instead of stack VLA
-Date: Mon, 26 Mar 2018 17:33:14 +1100
-Message-Id: <1522045994-21913-1-git-send-email-me@tobin.cc>
-To: Ulf Hansson <ulf.hansson@linaro.org>
-Cc: "Tobin C. Harding" <me@tobin.cc>, linux-mmc@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>
+MIME-Version: 1.0
+In-Reply-To: <20180310001021.6437-3-labbott@redhat.com>
+References: <20180310001021.6437-1-labbott@redhat.com> <20180310001021.6437-3-labbott@redhat.com>
+From: Linus Walleij <linus.walleij@linaro.org>
+Date: Mon, 26 Mar 2018 11:07:57 +0200
+Message-ID: <CACRpkdaOJeEJTH8xtDzwbOjoONp=M7QvEfF_bO5pTQJ8KpnMdA@mail.gmail.com>
+Subject: Re: [PATCH 2/4] gpio: Remove VLA from MAX3191X driver
+Content-Type: text/plain; charset="UTF-8"
+To: Laura Abbott <labbott@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Mathias Duckeck <m.duckeck@kunbus.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The use of stack Variable Length Arrays needs to be avoided, as they
-can be a vector for stack exhaustion, which can be both a runtime bug
-(kernel Oops) or a security flaw (overwriting memory beyond the
-stack). Also, in general, as code evolves it is easy to lose track of
-how big a VLA can get. Thus, we can end up having runtime failures
-that are hard to debug. As part of the directive[1] to remove all VLAs
-from the kernel, and build with -Wvla.
+On Sat, Mar 10, 2018 at 1:10 AM, Laura Abbott <labbott@redhat.com> wrote:
 
-Currently driver is using a VLA declared using the number of descriptors.  This
-array is used to store integer values and is later used as an argument to
-`gpiod_set_array_value_cansleep()` This can be avoided by using
-`kmalloc_array()` to allocate memory for the array of integer values.  Memory is
-free'd before return from function.
+>
+> The new challenge is to remove VLAs from the kernel
+> (see https://lkml.org/lkml/2018/3/7/621)
+>
+> This patch replaces several a VLA with an appropriate call to
+> kmalloc_array.
+>
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
 
->From the code it appears that it is safe to sleep so we can use GFP_KERNEL
-(based _cansleep() suffix of function `gpiod_set_array_value_cansleep()`.
+Patch applied.
 
-It can be expected that this patch will result in a small increase in overhead
-due to the use of `kmalloc_array()`
+It's very simple and straight-forward after all.
 
-[1] https://lkml.org/lkml/2018/3/7/621
-
-Signed-off-by: Tobin C. Harding <me@tobin.cc>
----
-
-Patch is untested.  I was not able to fully grok the call chain involved
-with this change so was unable to quantify the total degradation
-of performance.
-
-Line calling to gpiod_set_array_value_cansleep() is 83 characters long,
-patch attempts to leave the code as clean as possible.  Open to
-suggestions for improvement.  I tried various forms of while loop and
-pointer arithmetic for the setting of `values` but in the end settled
-for array indexing, again open to suggestions.
-
-thanks,
-Tobin.
-
- drivers/mmc/core/pwrseq_simple.c | 14 +++++++++-----
- 1 file changed, 9 insertions(+), 5 deletions(-)
-
-diff --git a/drivers/mmc/core/pwrseq_simple.c b/drivers/mmc/core/pwrseq_simple.c
-index 13ef162cf066..a8b9fee4d62a 100644
---- a/drivers/mmc/core/pwrseq_simple.c
-+++ b/drivers/mmc/core/pwrseq_simple.c
-@@ -40,14 +40,18 @@ static void mmc_pwrseq_simple_set_gpios_value(struct mmc_pwrseq_simple *pwrseq,
- 	struct gpio_descs *reset_gpios = pwrseq->reset_gpios;
- 
- 	if (!IS_ERR(reset_gpios)) {
--		int i;
--		int values[reset_gpios->ndescs];
-+		int i, *values;
-+		int nvalues = reset_gpios->ndescs;
- 
--		for (i = 0; i < reset_gpios->ndescs; i++)
-+		values = kmalloc_array(nvalues, sizeof(int), GFP_KERNEL);
-+		if (!values)
-+			return;
-+
-+		for (i = 0; i < nvalues; i++)
- 			values[i] = value;
- 
--		gpiod_set_array_value_cansleep(
--			reset_gpios->ndescs, reset_gpios->desc, values);
-+		gpiod_set_array_value_cansleep(nvalues, reset_gpios->desc, values);
-+		kfree(values);
- 	}
- }
- 
--- 
-2.7.4
+Yours,
+Linus Walleij
