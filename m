@@ -1,58 +1,48 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1520970663-19633-1-git-send-email-s.mesoraca16@gmail.com>
-References: <1520970663-19633-1-git-send-email-s.mesoraca16@gmail.com>
+In-Reply-To: <CAGXu5jLAqki8oE7AF9BEwLxKzpTOOPsT1imjdSAG_U44uGXJdQ@mail.gmail.com>
+References: <20180315225919.GA43806@beast> <20180316155950.35fda7c63ec59277ba504201@linux-foundation.org>
+ <CAGXu5jLAqki8oE7AF9BEwLxKzpTOOPsT1imjdSAG_U44uGXJdQ@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 26 Mar 2018 16:16:23 -0700
-Message-ID: <CAGXu5jJ=46_1DiWg=0aKzOo1+kxL9vemLFi11brn-+iY6cgZMw@mail.gmail.com>
-Subject: Re: [PATCH] ftrace: drop a VLA in module_exists()
+Date: Mon, 26 Mar 2018 16:17:57 -0700
+Message-ID: <CAGXu5j+utmcN_ot-3NJ-8C0onnu8O-DOdbAxVoatzE9UcJ-O4A@mail.gmail.com>
+Subject: Re: [PATCH v2] rslib: Remove VLAs by setting upper bound on nroots
 Content-Type: text/plain; charset="UTF-8"
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Steven Rostedt <rostedt@goodmis.org>
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, Segher Boessenkool <segher@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 13, 2018 at 12:51 PM, Salvatore Mesoraca
-<s.mesoraca16@gmail.com> wrote:
-> Avoid a VLA[1] by using a real constant expression instead of a variable.
-> The compiler should be able to optimize the original code and avoid using
-> an actual VLA. Anyway this change is useful because it will avoid a false
-> positive with -Wvla, it might also help the compiler generating better
-> code.
+On Fri, Mar 16, 2018 at 11:25 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Fri, Mar 16, 2018 at 3:59 PM, Andrew Morton
+> <akpm@linux-foundation.org> wrote:
+>> On Thu, 15 Mar 2018 15:59:19 -0700 Kees Cook <keescook@chromium.org> wrote:
+>>
+>>> Avoid stack VLAs[1] by always allocating the upper bound of stack space
+>>> needed. The existing users of rslib appear to max out at 24 roots[2],
+>>> so use that as the upper bound until we have a reason to change it.
+>>>
+>>> Alternative considered: make init_rs() a true caller-instance and
+>>> pre-allocate the workspaces. This would possibly need locking and
+>>> a refactoring of the returned structure.
+>>>
+>>> Using kmalloc in this path doesn't look great, especially since at
+>>> least one caller (pstore) is sensitive to allocations during rslib
+>>> usage (it expects to run it during an Oops, for example).
+>>
+>> Oh.
+>>
+>> Could we allocate the storage during init_rs(), attach it to `struct
+>> rs_control'?
 >
-> [1] https://lkml.org/lkml/2018/3/7/621
+> No, because they're modified during decode, and struct rs_control is
+> shared between users. :(
 >
-> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-> ---
->  kernel/trace/ftrace.c | 7 +++----
->  1 file changed, 3 insertions(+), 4 deletions(-)
+> Doing those changes is possible, but it requires a rather extensive
+> analysis of callers, etc.
 >
-> diff --git a/kernel/trace/ftrace.c b/kernel/trace/ftrace.c
-> index eac9ce2..adebb92 100644
-> --- a/kernel/trace/ftrace.c
-> +++ b/kernel/trace/ftrace.c
-> @@ -3902,14 +3902,13 @@ static bool module_exists(const char *module)
->  {
->         /* All modules have the symbol __this_module */
->         const char this_mod[] = "__this_module";
-> -       const int modname_size = MAX_PARAM_PREFIX_LEN + sizeof(this_mod) + 1;
-> -       char modname[modname_size + 1];
-> +       char modname[MAX_PARAM_PREFIX_LEN + sizeof(this_mod) + 1];
+> Hence, the 24 ultimately.
 
-Actually, I think this needs to be "+ 2" (":" and NULL).
-
->         unsigned long val;
->         int n;
->
-> -       n = snprintf(modname, modname_size + 1, "%s:%s", module, this_mod);
-> +       n = snprintf(modname, sizeof(modname), "%s:%s", module, this_mod);
->
-> -       if (n > modname_size)
-> +       if (n > sizeof(modname) - 1)
->                 return false;
->
->         val = module_kallsyms_lookup_name(modname);
-
-Otherwise, looks good!
+Can this land in -mm, or does this need further discussion?
 
 -Kees
 
