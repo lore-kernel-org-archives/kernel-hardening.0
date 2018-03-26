@@ -1,85 +1,80 @@
-Sender: Daniel Vetter <daniel.vetter@ffwll.ch>
-Date: Mon, 26 Mar 2018 10:26:46 +0200
-From: Daniel Vetter <daniel@ffwll.ch>
-Subject: Re: [PATCH] drm: udl: Properly check framebuffer mmap offsets
-Message-ID: <20180326082646.GQ14155@phenom.ffwll.local>
-References: <20180321154553.GA18454@kroah.com>
- <20180322065959.GF14155@phenom.ffwll.local>
- <20180322080300.GA28877@kroah.com>
- <CAKMK7uHJ3NTfu25wPSO7QStRd9pOR3j2tyVp5sa+T5UqUdxu7Q@mail.gmail.com>
- <CAGXu5j+75ev=w5cmag7Y6mwnvza5Or1pn-s8gWyQTJSH_jHKjg@mail.gmail.com>
+Date: Mon, 26 Mar 2018 13:52:47 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+Subject: Re: [PATCH 1/4] task_struct: Allow randomized layout
+Message-ID: <20180326115246.GA4147@hirez.programming.kicks-ass.net>
+References: <1497905801-69164-1-git-send-email-keescook@chromium.org>
+ <1497905801-69164-2-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5j+75ev=w5cmag7Y6mwnvza5Or1pn-s8gWyQTJSH_jHKjg@mail.gmail.com>
+In-Reply-To: <1497905801-69164-2-git-send-email-keescook@chromium.org>
 To: Kees Cook <keescook@chromium.org>
-Cc: Daniel Vetter <daniel@ffwll.ch>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, David Airlie <airlied@linux.ie>, dri-devel <dri-devel@lists.freedesktop.org>, Sean Paul <seanpaul@chromium.org>, Cihangir Akturk <cakturk@gmail.com>, Ingo Molnar <mingo@kernel.org>, Krzysztof Kozlowski <krzk@kernel.org>, Tom Lendacky <thomas.lendacky@amd.com>, Eyal Itkin <eyalit@checkpoint.com>, Daniel Micay <danielmicay@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 22, 2018 at 05:14:40PM -0700, Kees Cook wrote:
-> On Thu, Mar 22, 2018 at 2:54 AM, Daniel Vetter <daniel@ffwll.ch> wrote:
-> > On Thu, Mar 22, 2018 at 9:03 AM, Greg Kroah-Hartman
-> > <gregkh@linuxfoundation.org> wrote:
-> >> On Thu, Mar 22, 2018 at 07:59:59AM +0100, Daniel Vetter wrote:
-> >>> Does anyone working on overflow-proof integers? That would make a lot of
-> >>> this code so much simpler if we could just ask the compiler to carry the
-> >>> oferflow bit around for a given expression and then check that and bail
-> >>> with -EINVAL.
-> >>
-> >> That would be nice, but no, I don't think that's part of any C standard
-> >> work that I have heard of :(
-> >
-> > Well we have refcount_t already, stitching something together that
-> > would work and not suck too badly with performance should be possible.
-> > But yeah direct compiler support would be better (and would allow
-> > optimizing the carry flag checks I guess). I kinda hoped Kees&team
-> > would be working on this eventually.
+On Mon, Jun 19, 2017 at 01:56:38PM -0700, Kees Cook wrote:
+> This marks most of the layout of task_struct as randomizable, but leaves
+> thread_info and scheduler state untouched at the start, and thread_struct
+> untouched at the end.
 > 
-> refcount_t could be used if it happens to match the needed semantics.
+> Other parts of the kernel use unnamed structures, but the 0-day builder
+> using gcc-4.4 blows up on static initializers. Officially, it's documented
+> as only working on gcc 4.6 and later, which further confuses me:
+> 	https://gcc.gnu.org/wiki/C11Status
+> The structure layout randomization already requires gcc 4.7, but instead
+> of depending on the plugin being enabled, just check the gcc versions
+> for wider build testing. At Linus's suggestion, the marking is hidden
+> in a macro to reduce how ugly it looks. Additionally, indenting is left
+> unchanged since it would make things harder to read.
 > 
-> > Adding Kees+kernel-hardening, maybe he'll grow fond of this :-)
+> Randomization of task_struct is modified from Brad Spengler/PaX Team's
+> code in the last public patch of grsecurity/PaX based on my understanding
+> of the code. Changes or omissions from the original code are mine and
+> don't reflect the original grsecurity/PaX code.
 > 
-> Yeah, general integer overflow is on the list of things to get fixed
-> in the kernel. It's a bit of a long road, though.
-> 
-> Clang has -fsanitize=integer (and sub-options) which could be added
-> for specific object or trees:
-> https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#ubsan-checks
+> Cc: Linus Torvalds <torvalds@linux-foundation.org>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
-I expect that a bunch of folks will scream about checking all interger
-math for overflows
+Thanks for the Cc :/
 
-> GCC seems to only support manual marking of overflow detections:
-> https://gcc.gnu.org/onlinedocs/gcc/Integer-Overflow-Builtins.html
+> +#define randomized_struct_fields_start	struct {
+> +#define randomized_struct_fields_end	} __randomize_layout;
 
-And this sounds _very_ verbose. What I have in mind is something like
+> diff --git a/include/linux/sched.h b/include/linux/sched.h
+> index f833254fce00..e2ad3531e7fe 100644
+> --- a/include/linux/sched.h
+> +++ b/include/linux/sched.h
+> @@ -490,6 +490,13 @@ struct task_struct {
+>  #endif
+>  	/* -1 unrunnable, 0 runnable, >0 stopped: */
+>  	volatile long			state;
+> +
+> +	/*
+> +	 * This begins the randomizable portion of task_struct. Only
+> +	 * scheduling-critical items should be added above here.
+> +	 */
+> +	randomized_struct_fields_start
+> +
+>  	void				*stack;
+>  	atomic_t			usage;
+>  	/* Per task flags (PF_*), defined further below: */
 
-	result = overflow_checked(expr, &overflow)
-	if (overflow)
-		return -EINVAL;
 
-and expr could be any expression at all (except calling functions ofc, or
-whatever the correct verbiage from the C standard for this is). I don't
-want to annotate each compuation individually at least, that's too much
-typing :-) Even neater would be an entire block:
+That now looks like:
 
-	while {
-		/* compute stuff except function calls, but allow inlining */
-	} has_overflow {
-		return -EINVAL;
-	}
+struct task_struct {
+        struct thread_info         thread_info;          /*     0    16 */
+        volatile long int          state;                /*    16     8 */
 
-Anyway, yay for this being somewhere on the future plans!
+        /* XXX 40 bytes hole, try to pack */
 
-> grsecurity/PaX has a gcc plugin for overflow detection, though it
-> hasn't been upstreamed and comes with various caveats:
-> http://forums.grsecurity.net/viewtopic.php?f=7&t=3043
-> https://github.com/ephox-gcc-plugins/size_overflow
+        /* --- cacheline 1 boundary (64 bytes) --- */
+        struct {
+                void *             stack;                /*    64     8 */
+                atomic_t           usage;                /*    72     4 */
+                unsigned int       flags;                /*    76     4 */
+                unsigned int       ptrace;               /*    80     4 */
+                struct llist_node  wake_entry;           /*    88     8 */
 
-Yeah this looks fairly fragile to me, also can't use the overflow bits
-instructions sets have I think.
--Daniel
--- 
-Daniel Vetter
-Software Engineer, Intel Corporation
-http://blog.ffwll.ch
+
+Can we please undo this crap?
