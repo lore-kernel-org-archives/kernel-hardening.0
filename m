@@ -1,83 +1,31 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20180326120321.GD4129@hirez.programming.kicks-ass.net>
-References: <1497905801-69164-1-git-send-email-keescook@chromium.org>
- <1497905801-69164-2-git-send-email-keescook@chromium.org> <20180326115246.GA4147@hirez.programming.kicks-ass.net>
- <20180326120321.GD4129@hirez.programming.kicks-ass.net>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 26 Mar 2018 10:43:22 -0700
-Message-ID: <CAGXu5jLGdhYm5=7ZhzZ2gO_iFatmOp5Mb51_UygUciHwkAxHSg@mail.gmail.com>
-Subject: Re: [PATCH 1/4] task_struct: Allow randomized layout
+In-Reply-To: <CAGXu5jKLErrvewvSiusr7qPup-08YgvLKC1ZT7FKTR_RyDSTuQ@mail.gmail.com>
+References: <1520107232-14111-1-git-send-email-alex.popov@linux.com>
+ <1520107232-14111-3-git-send-email-alex.popov@linux.com> <d968e58a-3abd-8e3c-cee3-00c19c1b6430@linux.intel.com>
+ <94f268b2-31a4-620a-86ed-325d5bb33c57@redhat.com> <20180305202535.GX25201@hirez.programming.kicks-ass.net>
+ <e043e0d6-3265-4bc2-ae11-ab430832a8e2@linux.com> <295a6830-fce9-ee00-f45d-7dafd74d11a1@linux.intel.com>
+ <ac1a2090-e120-d202-35b4-b158d4787ab5@linux.com> <CAGXu5jKLErrvewvSiusr7qPup-08YgvLKC1ZT7FKTR_RyDSTuQ@mail.gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Mon, 26 Mar 2018 17:43:42 +0000
+Message-ID: <CALCETrXWzMQHBKzkm3oLt7SfQQcYp0hz=ckQfay0t4mAV5NxyA@mail.gmail.com>
+Subject: Re: [PATCH RFC v9 2/7] x86/entry: Add STACKLEAK erasing the kernel
+ stack at the end of syscalls
 Content-Type: text/plain; charset="UTF-8"
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@kernel.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Alexander Popov <alex.popov@linux.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, Laura Abbott <labbott@redhat.com>, Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 26, 2018 at 5:03 AM, Peter Zijlstra <peterz@infradead.org> wrote:
-> On Mon, Mar 26, 2018 at 01:52:46PM +0200, Peter Zijlstra wrote:
->
->> That now looks like:
+On Mon, Mar 26, 2018 at 5:32 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Thu, Mar 22, 2018 at 1:56 PM, Alexander Popov <alex.popov@linux.com> wrote:
+>> By the way, during my work on STACKLEAK, I've found one case when we get to the
+>> userspace directly from the thread stack. Please see sysret32_from_system_call
+>> in entry_64_compat.S. I checked that.
 >>
->> struct task_struct {
->>         struct thread_info         thread_info;          /*     0    16 */
->>         volatile long int          state;                /*    16     8 */
->>
->>         /* XXX 40 bytes hole, try to pack */
->>
->>         /* --- cacheline 1 boundary (64 bytes) --- */
->>         struct {
->>                 void *             stack;                /*    64     8 */
->>                 atomic_t           usage;                /*    72     4 */
->>                 unsigned int       flags;                /*    76     4 */
->>                 unsigned int       ptrace;               /*    80     4 */
->>                 struct llist_node  wake_entry;           /*    88     8 */
->>
->>
->> Can we please undo this crap?
+>> IMO it seems odd, can the adversary use that to bypass PTI?
 >
-> The below gets rid of that nonsense.
->
-> diff --git a/include/linux/compiler-gcc.h b/include/linux/compiler-gcc.h
-> index e2c7f4369eff..767cf74d61f7 100644
-> --- a/include/linux/compiler-gcc.h
-> +++ b/include/linux/compiler-gcc.h
-> @@ -242,6 +242,15 @@
->  #if defined(RANDSTRUCT_PLUGIN) && !defined(__CHECKER__)
->  #define __randomize_layout __attribute__((randomize_layout))
->  #define __no_randomize_layout __attribute__((no_randomize_layout))
-> +/*
-> + * RANDSTRUCT_PLUGIN wants to use an anonymous struct, but it is only
-> + * possible since GCC 4.6. To provide as much build testing coverage
-> + * as possible, this is used for all GCC 4.6+ builds, and not just on
-> + * RANDSTRUCT_PLUGIN builds.
-> + */
-> +#define randomized_struct_fields_start struct {
-> +#define randomized_struct_fields_end   } __randomize_layout;
-> +
->  #endif
->
->  #endif /* GCC_VERSION >= 40500 */
-> @@ -256,15 +265,6 @@
->   */
->  #define __visible      __attribute__((externally_visible))
->
-> -/*
-> - * RANDSTRUCT_PLUGIN wants to use an anonymous struct, but it is only
-> - * possible since GCC 4.6. To provide as much build testing coverage
-> - * as possible, this is used for all GCC 4.6+ builds, and not just on
-> - * RANDSTRUCT_PLUGIN builds.
-> - */
-> -#define randomized_struct_fields_start struct {
-> -#define randomized_struct_fields_end   } __randomize_layout;
-> -
->  #endif /* GCC_VERSION >= 40600 */
->
->
+> If it was missing the page table swap, shouldn't this mean that the
+> missing NX bit would immediately crash userspace?
 
-This is fine by me, though obviously the comment would need to be updated. :)
+sysret32_from_system_call does;
 
--Kees
-
--- 
-Kees Cook
-Pixel Security
+    SWITCH_TO_USER_CR3_NOSTACK scratch_reg=%r8 scratch_reg2=%r9
