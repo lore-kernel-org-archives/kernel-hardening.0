@@ -1,130 +1,80 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20180326162158.GH16308@e103592.cambridge.arm.com>
-References: <1515636190-24061-1-git-send-email-keescook@chromium.org>
- <1515636190-24061-34-git-send-email-keescook@chromium.org>
- <20180115122458.GI12608@e103592.cambridge.arm.com> <CAGXu5jLHb3BQ9U7g6suoVZwVeETiXiCRbxsprpLNiFxcjcWk1A@mail.gmail.com>
- <20180326162158.GH16308@e103592.cambridge.arm.com>
+In-Reply-To: <20180326120321.GD4129@hirez.programming.kicks-ass.net>
+References: <1497905801-69164-1-git-send-email-keescook@chromium.org>
+ <1497905801-69164-2-git-send-email-keescook@chromium.org> <20180326115246.GA4147@hirez.programming.kicks-ass.net>
+ <20180326120321.GD4129@hirez.programming.kicks-ass.net>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 26 Mar 2018 10:41:09 -0700
-Message-ID: <CAGXu5jL1S+CFEruBOaN_yJa7cY+a9gr8cBQgFcYowW=gT5VfSA@mail.gmail.com>
-Subject: Re: [PATCH 33/38] arm64: Implement thread_struct whitelist for
- hardened usercopy
+Date: Mon, 26 Mar 2018 10:43:22 -0700
+Message-ID: <CAGXu5jLGdhYm5=7ZhzZ2gO_iFatmOp5Mb51_UygUciHwkAxHSg@mail.gmail.com>
+Subject: Re: [PATCH 1/4] task_struct: Allow randomized layout
 Content-Type: text/plain; charset="UTF-8"
-To: Dave Martin <Dave.Martin@arm.com>
-Cc: Mark Rutland <Mark.Rutland@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <Catalin.Marinas@arm.com>, Will Deacon <Will.Deacon@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 26, 2018 at 9:22 AM, Dave Martin <Dave.Martin@arm.com> wrote:
-> [Dropped most of the original Cc list, since most people are unlikely to
-> care about this thread archaeology.]
+On Mon, Mar 26, 2018 at 5:03 AM, Peter Zijlstra <peterz@infradead.org> wrote:
+> On Mon, Mar 26, 2018 at 01:52:46PM +0200, Peter Zijlstra wrote:
 >
-> On Mon, Jan 15, 2018 at 12:06:17PM -0800, Kees Cook wrote:
->> On Mon, Jan 15, 2018 at 4:24 AM, Dave P Martin <Dave.Martin@arm.com> wrote:
->> > On Thu, Jan 11, 2018 at 02:03:05AM +0000, Kees Cook wrote:
->> >> This whitelists the FPU register state portion of the thread_struct for
->> >> copying to userspace, instead of the default entire structure.
->> >>
->> >> Cc: Catalin Marinas <catalin.marinas@arm.com>
->> >> Cc: Will Deacon <will.deacon@arm.com>
->> >> Cc: Christian Borntraeger <borntraeger@de.ibm.com>
->> >> Cc: Ingo Molnar <mingo@kernel.org>
->> >> Cc: James Morse <james.morse@arm.com>
->> >> Cc: "Peter Zijlstra (Intel)" <peterz@infradead.org>
->> >> Cc: Dave Martin <Dave.Martin@arm.com>
->> >> Cc: zijun_hu <zijun_hu@htc.com>
->> >> Cc: linux-arm-kernel@lists.infradead.org
->> >> Signed-off-by: Kees Cook <keescook@chromium.org>
->> >> ---
->> >>  arch/arm64/Kconfig                 | 1 +
->> >>  arch/arm64/include/asm/processor.h | 8 ++++++++
->> >>  2 files changed, 9 insertions(+)
->> >>
->> >> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
->> >> index a93339f5178f..c84477e6a884 100644
->> >> --- a/arch/arm64/Kconfig
->> >> +++ b/arch/arm64/Kconfig
->> >> @@ -90,6 +90,7 @@ config ARM64
->> >>       select HAVE_ARCH_MMAP_RND_BITS
->> >>       select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
->> >>       select HAVE_ARCH_SECCOMP_FILTER
->> >> +     select HAVE_ARCH_THREAD_STRUCT_WHITELIST
->> >>       select HAVE_ARCH_TRACEHOOK
->> >>       select HAVE_ARCH_TRANSPARENT_HUGEPAGE
->> >>       select HAVE_ARCH_VMAP_STACK
->> >> diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
->> >> index 023cacb946c3..e58a5864ec89 100644
->> >> --- a/arch/arm64/include/asm/processor.h
->> >> +++ b/arch/arm64/include/asm/processor.h
->> >> @@ -113,6 +113,14 @@ struct thread_struct {
->> >>       struct debug_info       debug;          /* debugging */
->> >>  };
->> >>
->> >> +/* Whitelist the fpsimd_state for copying to userspace. */
->> >> +static inline void arch_thread_struct_whitelist(unsigned long *offset,
->> >> +                                             unsigned long *size)
->> >> +{
->> >> +     *offset = offsetof(struct thread_struct, fpsimd_state);
->> >> +     *size = sizeof(struct fpsimd_state);
->> >
->> > This should be fpsimd_state.user_fpsimd (fpsimd_state.cpu is important
->> > for correctly context switching and not supposed to be user-accessible.
->> > A user copy that encompasses that is definitely a bug).
+>> That now looks like:
 >>
->> So, I actually spent some more time looking at this due to the
->> comments from rmk on arm32, and I don't think any whitelist is needed
->> here at all. (i.e. it can be *offset = *size = 0) This is because all
->> the usercopying I could find uses static sizes or bounce buffers, both
->> of which bypass the dynamic-size hardened usercopy checks.
+>> struct task_struct {
+>>         struct thread_info         thread_info;          /*     0    16 */
+>>         volatile long int          state;                /*    16     8 */
 >>
->> I've been running some arm64 builds now with this change, and I
->> haven't tripped over any problems yet...
+>>         /* XXX 40 bytes hole, try to pack */
+>>
+>>         /* --- cacheline 1 boundary (64 bytes) --- */
+>>         struct {
+>>                 void *             stack;                /*    64     8 */
+>>                 atomic_t           usage;                /*    72     4 */
+>>                 unsigned int       flags;                /*    76     4 */
+>>                 unsigned int       ptrace;               /*    80     4 */
+>>                 struct llist_node  wake_entry;           /*    88     8 */
+>>
+>>
+>> Can we please undo this crap?
 >
-> Hmmm, it looks like we may be hitting this with user_regset_copyout()
-> when reading the fp regs via ptrace.  This is maybe not surprising,
-
-Did you get one of the WARNs for it?
-
-> since the size comes from userspace for PTRACE_{GET,SET}REGSET.
-> Also, while we copy into a bounce buffer for SETREGSET here, we do copy
-> straight out of task_struct for GETREGSET here.
-
-Hm, yeah,
-
-> This suggests we should have:
+> The below gets rid of that nonsense.
 >
->         *offset = offsetof(struct thread_struct, fpsimd_state);
->         *size = sizeof(struct user_fpsimd_state);
+> diff --git a/include/linux/compiler-gcc.h b/include/linux/compiler-gcc.h
+> index e2c7f4369eff..767cf74d61f7 100644
+> --- a/include/linux/compiler-gcc.h
+> +++ b/include/linux/compiler-gcc.h
+> @@ -242,6 +242,15 @@
+>  #if defined(RANDSTRUCT_PLUGIN) && !defined(__CHECKER__)
+>  #define __randomize_layout __attribute__((randomize_layout))
+>  #define __no_randomize_layout __attribute__((no_randomize_layout))
+> +/*
+> + * RANDSTRUCT_PLUGIN wants to use an anonymous struct, but it is only
+> + * possible since GCC 4.6. To provide as much build testing coverage
+> + * as possible, this is used for all GCC 4.6+ builds, and not just on
+> + * RANDSTRUCT_PLUGIN builds.
+> + */
+> +#define randomized_struct_fields_start struct {
+> +#define randomized_struct_fields_end   } __randomize_layout;
+> +
+>  #endif
+>
+>  #endif /* GCC_VERSION >= 40500 */
+> @@ -256,15 +265,6 @@
+>   */
+>  #define __visible      __attribute__((externally_visible))
+>
+> -/*
+> - * RANDSTRUCT_PLUGIN wants to use an anonymous struct, but it is only
+> - * possible since GCC 4.6. To provide as much build testing coverage
+> - * as possible, this is used for all GCC 4.6+ builds, and not just on
+> - * RANDSTRUCT_PLUGIN builds.
+> - */
+> -#define randomized_struct_fields_start struct {
+> -#define randomized_struct_fields_end   } __randomize_layout;
+> -
+>  #endif /* GCC_VERSION >= 40600 */
+>
+>
 
-This is what I had originally for arm64, but when I tried exercising
-this code more recently, it didn't need the whitelist. It really looks
-like I forgot what I had tested the first time, though. :P
-
-> Thoughts?
-
-Seems like it would be tripped by:
-
-static int __fpr_get(struct task_struct *target,
-                     const struct user_regset *regset,
-                     unsigned int pos, unsigned int count,
-                     void *kbuf, void __user *ubuf, unsigned int start_pos)
-{
-        struct user_fpsimd_state *uregs;
-
-        sve_sync_to_fpsimd(target);
-
-        uregs = &target->thread.fpsimd_state.user_fpsimd;
-
-        return user_regset_copyout(&pos, &count, &kbuf, &ubuf, uregs,
-                                   start_pos, start_pos + sizeof(*uregs));
-}
-
-And similarly __fpr_set(), compat_vfp_get(), compat_vfp_set(),
-sve_get(), and sve_set(), ?
-
-> I'm making some assumptions about how the usercopy hardening works.
-
-I think you're right -- I just tricked myself after looking at arm32.
+This is fine by me, though obviously the comment would need to be updated. :)
 
 -Kees
 
