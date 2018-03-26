@@ -1,44 +1,79 @@
-Subject: Re: [PATCH 6/8] Pmalloc selftest
-References: <20180313214554.28521-1-igor.stoppa@huawei.com>
- <20180313214554.28521-7-igor.stoppa@huawei.com>
- <20180314122512.GF29631@bombadil.infradead.org>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <ce6e34a4-592d-624c-2353-20e50e321298@huawei.com>
-Date: Sun, 25 Mar 2018 04:32:57 +0300
-MIME-Version: 1.0
-In-Reply-To: <20180314122512.GF29631@bombadil.infradead.org>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-To: Matthew Wilcox <willy@infradead.org>
-Cc: david@fromorbit.com, rppt@linux.vnet.ibm.com, keescook@chromium.org, mhocko@kernel.org, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: "Tobin C. Harding" <me@tobin.cc>
+Subject: [PATCH] mmc: pwrseq: Use kmalloc_array instead of stack VLA
+Date: Mon, 26 Mar 2018 17:33:14 +1100
+Message-Id: <1522045994-21913-1-git-send-email-me@tobin.cc>
+To: Ulf Hansson <ulf.hansson@linaro.org>
+Cc: "Tobin C. Harding" <me@tobin.cc>, linux-mmc@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+The use of stack Variable Length Arrays needs to be avoided, as they
+can be a vector for stack exhaustion, which can be both a runtime bug
+(kernel Oops) or a security flaw (overwriting memory beyond the
+stack). Also, in general, as code evolves it is easy to lose track of
+how big a VLA can get. Thus, we can end up having runtime failures
+that are hard to debug. As part of the directive[1] to remove all VLAs
+from the kernel, and build with -Wvla.
 
+Currently driver is using a VLA declared using the number of descriptors.  This
+array is used to store integer values and is later used as an argument to
+`gpiod_set_array_value_cansleep()` This can be avoided by using
+`kmalloc_array()` to allocate memory for the array of integer values.  Memory is
+free'd before return from function.
 
-On 14/03/18 14:25, Matthew Wilcox wrote:
-> On Tue, Mar 13, 2018 at 11:45:52PM +0200, Igor Stoppa wrote:
->> Add basic self-test functionality for pmalloc.
-> 
-> Here're some additional tests for your test-suite:
-> 
-> 	for (i = 1; i; i *= 2)
-> 		pzalloc(pool, i - 1, GFP_KERNEL);
-> 
+>From the code it appears that it is safe to sleep so we can use GFP_KERNEL
+(based _cansleep() suffix of function `gpiod_set_array_value_cansleep()`.
 
-Ok, I have almost finished the rewrite.
-I still have to address this comment.
+It can be expected that this patch will result in a small increase in overhead
+due to the use of `kmalloc_array()`
 
-When I run the test, eventually the system runs out of memory, it keeps
-getting allocation errors from vmalloc, until i finally overflows and
-becomes 0.
+[1] https://lkml.org/lkml/2018/3/7/621
 
-Am I supposed to do something about it?
-If pmalloc receives a request that the vmalloc backend cannot satisfy, I
-would prefer that vmalloc itself produces the warning and pmalloc
-returns NULL.
+Signed-off-by: Tobin C. Harding <me@tobin.cc>
+---
 
-This doesn't look like a test case that one can leave always enabled in
-a build, but maybe I'm missing the point.
+Patch is untested.  I was not able to fully grok the call chain involved
+with this change so was unable to quantify the total degradation
+of performance.
 
---
-igor
+Line calling to gpiod_set_array_value_cansleep() is 83 characters long,
+patch attempts to leave the code as clean as possible.  Open to
+suggestions for improvement.  I tried various forms of while loop and
+pointer arithmetic for the setting of `values` but in the end settled
+for array indexing, again open to suggestions.
+
+thanks,
+Tobin.
+
+ drivers/mmc/core/pwrseq_simple.c | 14 +++++++++-----
+ 1 file changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/mmc/core/pwrseq_simple.c b/drivers/mmc/core/pwrseq_simple.c
+index 13ef162cf066..a8b9fee4d62a 100644
+--- a/drivers/mmc/core/pwrseq_simple.c
++++ b/drivers/mmc/core/pwrseq_simple.c
+@@ -40,14 +40,18 @@ static void mmc_pwrseq_simple_set_gpios_value(struct mmc_pwrseq_simple *pwrseq,
+ 	struct gpio_descs *reset_gpios = pwrseq->reset_gpios;
+ 
+ 	if (!IS_ERR(reset_gpios)) {
+-		int i;
+-		int values[reset_gpios->ndescs];
++		int i, *values;
++		int nvalues = reset_gpios->ndescs;
+ 
+-		for (i = 0; i < reset_gpios->ndescs; i++)
++		values = kmalloc_array(nvalues, sizeof(int), GFP_KERNEL);
++		if (!values)
++			return;
++
++		for (i = 0; i < nvalues; i++)
+ 			values[i] = value;
+ 
+-		gpiod_set_array_value_cansleep(
+-			reset_gpios->ndescs, reset_gpios->desc, values);
++		gpiod_set_array_value_cansleep(nvalues, reset_gpios->desc, values);
++		kfree(values);
+ 	}
+ }
+ 
+-- 
+2.7.4
