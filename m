@@ -1,74 +1,28 @@
-Date: Mon, 26 Mar 2018 14:03:21 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Subject: Re: [PATCH 1/4] task_struct: Allow randomized layout
-Message-ID: <20180326120321.GD4129@hirez.programming.kicks-ass.net>
-References: <1497905801-69164-1-git-send-email-keescook@chromium.org>
- <1497905801-69164-2-git-send-email-keescook@chromium.org>
- <20180326115246.GA4147@hirez.programming.kicks-ass.net>
+Date: Mon, 26 Mar 2018 15:35:18 +0100
+From: Will Deacon <will.deacon@arm.com>
+Subject: Re: [PATCH 0/4] usercopy: reimplement arch_within_stack_frames
+Message-ID: <20180326143518.GA9341@arm.com>
+References: <1519899591-29761-1-git-send-email-kpark3469@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180326115246.GA4147@hirez.programming.kicks-ass.net>
-To: Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org, Ingo Molnar <mingo@kernel.org>
+In-Reply-To: <1519899591-29761-1-git-send-email-kpark3469@gmail.com>
+To: kpark3469@gmail.com
+Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, james.morse@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, keun-o.park@darkmatter.ae
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 26, 2018 at 01:52:46PM +0200, Peter Zijlstra wrote:
+Hi Sahara,
 
-> That now looks like:
+On Thu, Mar 01, 2018 at 02:19:47PM +0400, kpark3469@gmail.com wrote:
+> From: Sahara <keun-o.park@darkmatter.ae>
 > 
-> struct task_struct {
->         struct thread_info         thread_info;          /*     0    16 */
->         volatile long int          state;                /*    16     8 */
-> 
->         /* XXX 40 bytes hole, try to pack */
-> 
->         /* --- cacheline 1 boundary (64 bytes) --- */
->         struct {
->                 void *             stack;                /*    64     8 */
->                 atomic_t           usage;                /*    72     4 */
->                 unsigned int       flags;                /*    76     4 */
->                 unsigned int       ptrace;               /*    80     4 */
->                 struct llist_node  wake_entry;           /*    88     8 */
-> 
-> 
-> Can we please undo this crap?
+> This series of patches introduce the arm64 arch_within_stack_frames
+> implementation using stacktrace functions. Also the base code is
+> moved from thread_info.h to stacktrace.h. x86 code is reimplemented
+> to use frame pointer unwinder functions.
 
-The below gets rid of that nonsense.
+What's the status on this series? I'm ok taking the arm64 patch from James
+to bring us up to speed with x86, but it doesn't make sense without the
+first patch in the series because the arch callback is out-of-line.
 
-diff --git a/include/linux/compiler-gcc.h b/include/linux/compiler-gcc.h
-index e2c7f4369eff..767cf74d61f7 100644
---- a/include/linux/compiler-gcc.h
-+++ b/include/linux/compiler-gcc.h
-@@ -242,6 +242,15 @@
- #if defined(RANDSTRUCT_PLUGIN) && !defined(__CHECKER__)
- #define __randomize_layout __attribute__((randomize_layout))
- #define __no_randomize_layout __attribute__((no_randomize_layout))
-+/*
-+ * RANDSTRUCT_PLUGIN wants to use an anonymous struct, but it is only
-+ * possible since GCC 4.6. To provide as much build testing coverage
-+ * as possible, this is used for all GCC 4.6+ builds, and not just on
-+ * RANDSTRUCT_PLUGIN builds.
-+ */
-+#define randomized_struct_fields_start	struct {
-+#define randomized_struct_fields_end	} __randomize_layout;
-+
- #endif
- 
- #endif /* GCC_VERSION >= 40500 */
-@@ -256,15 +265,6 @@
-  */
- #define __visible	__attribute__((externally_visible))
- 
--/*
-- * RANDSTRUCT_PLUGIN wants to use an anonymous struct, but it is only
-- * possible since GCC 4.6. To provide as much build testing coverage
-- * as possible, this is used for all GCC 4.6+ builds, and not just on
-- * RANDSTRUCT_PLUGIN builds.
-- */
--#define randomized_struct_fields_start	struct {
--#define randomized_struct_fields_end	} __randomize_layout;
--
- #endif /* GCC_VERSION >= 40600 */
- 
- 
+Will
