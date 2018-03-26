@@ -1,33 +1,58 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20180316155632.GI7095@gondor.apana.org.au>
-References: <20180308215702.GA9902@beast> <20180316155632.GI7095@gondor.apana.org.au>
+In-Reply-To: <1520970663-19633-1-git-send-email-s.mesoraca16@gmail.com>
+References: <1520970663-19633-1-git-send-email-s.mesoraca16@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 26 Mar 2018 15:38:59 -0700
-Message-ID: <CAGXu5jKJ-05xb8x7A4dZmFQm10z5g9x1LhFbC1nzLT7kdVVbGg@mail.gmail.com>
-Subject: Re: [PATCH v2] crypto/ecc: Remove stack VLA usage
+Date: Mon, 26 Mar 2018 16:16:23 -0700
+Message-ID: <CAGXu5jJ=46_1DiWg=0aKzOo1+kxL9vemLFi11brn-+iY6cgZMw@mail.gmail.com>
+Subject: Re: [PATCH] ftrace: drop a VLA in module_exists()
 Content-Type: text/plain; charset="UTF-8"
-To: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: Tudor Ambarus <tudor.ambarus@microchip.com>, "David S. Miller" <davem@davemloft.net>, linux-crypto <linux-crypto@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Steven Rostedt <rostedt@goodmis.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 16, 2018 at 8:56 AM, Herbert Xu <herbert@gondor.apana.org.au> wrote:
-> On Thu, Mar 08, 2018 at 01:57:02PM -0800, Kees Cook wrote:
->> On the quest to remove all VLAs from the kernel[1], this switches to
->> a pair of kmalloc regions instead of using the stack. This also moves
->> the get_random_bytes() after all allocations (and drops the needless
->> "nbytes" variable).
->>
->> [1] https://lkml.org/lkml/2018/3/7/621
->>
->> Signed-off-by: Kees Cook <keescook@chromium.org>
+On Tue, Mar 13, 2018 at 12:51 PM, Salvatore Mesoraca
+<s.mesoraca16@gmail.com> wrote:
+> Avoid a VLA[1] by using a real constant expression instead of a variable.
+> The compiler should be able to optimize the original code and avoid using
+> an actual VLA. Anyway this change is useful because it will avoid a false
+> positive with -Wvla, it might also help the compiler generating better
+> code.
 >
-> Patch applied.  Thanks.
+> [1] https://lkml.org/lkml/2018/3/7/621
+>
+> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+> ---
+>  kernel/trace/ftrace.c | 7 +++----
+>  1 file changed, 3 insertions(+), 4 deletions(-)
+>
+> diff --git a/kernel/trace/ftrace.c b/kernel/trace/ftrace.c
+> index eac9ce2..adebb92 100644
+> --- a/kernel/trace/ftrace.c
+> +++ b/kernel/trace/ftrace.c
+> @@ -3902,14 +3902,13 @@ static bool module_exists(const char *module)
+>  {
+>         /* All modules have the symbol __this_module */
+>         const char this_mod[] = "__this_module";
+> -       const int modname_size = MAX_PARAM_PREFIX_LEN + sizeof(this_mod) + 1;
+> -       char modname[modname_size + 1];
+> +       char modname[MAX_PARAM_PREFIX_LEN + sizeof(this_mod) + 1];
 
-Hi, sorry for the noise on this one: I messed up looking at the ecc
-code (I confused myself into thinking there was only a single instance
-of the problem). The applied patch is both incomplete and inefficient.
-I have a much simpler solution, and I'll send that with a revert...
+Actually, I think this needs to be "+ 2" (":" and NULL).
+
+>         unsigned long val;
+>         int n;
+>
+> -       n = snprintf(modname, modname_size + 1, "%s:%s", module, this_mod);
+> +       n = snprintf(modname, sizeof(modname), "%s:%s", module, this_mod);
+>
+> -       if (n > modname_size)
+> +       if (n > sizeof(modname) - 1)
+>                 return false;
+>
+>         val = module_kallsyms_lookup_name(modname);
+
+Otherwise, looks good!
 
 -Kees
 
