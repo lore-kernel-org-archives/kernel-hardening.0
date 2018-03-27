@@ -1,51 +1,72 @@
+From: Igor Stoppa <igor.stoppa@huawei.com>
+Subject: [RFC PATCH v21 0/6] mm: security: ro protection for dynamic data
+Date: Tue, 27 Mar 2018 18:37:36 +0300
+Message-ID: <20180327153742.17328-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-In-Reply-To: <90e40062-cedb-be32-ab17-56136c78dbad@redhat.com>
-References: <20180315180030.20001-1-labbott@redhat.com> <20180315180030.20001-5-labbott@redhat.com>
- <21a2e869-62fb-75ef-ae7b-a27e136696f7@electromag.com.au> <90e40062-cedb-be32-ab17-56136c78dbad@redhat.com>
-From: Linus Walleij <linus.walleij@linaro.org>
-Date: Tue, 27 Mar 2018 15:41:23 +0200
-Message-ID: <CACRpkdafSd0R1czzw8w7bB8Stbvrx6LoP7tR7BQQnB1RSKQysQ@mail.gmail.com>
-Subject: Re: [PATCHv2 4/4] gpio: Remove VLA from stmpe driver
-Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: Phil Reid <preid@electromag.com.au>, Kees Cook <keescook@chromium.org>, Patrice Chotard <patrice.chotard@st.com>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain
+To: willy@infradead.org, keescook@chromium.org, mhocko@kernel.org
+Cc: david@fromorbit.com, rppt@linux.vnet.ibm.com, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, igor.stoppa@gmail.com, Igor Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Laura,
+This patch-set introduces the possibility of protecting memory that has
+been allocated dynamically.
 
-sorry for slow response :/
+The memory is managed in pools: when a memory pool is protected, all the
+memory that is currently part of it, will become R/O.
 
-On Thu, Mar 22, 2018 at 10:43 PM, Laura Abbott <labbott@redhat.com> wrote:
-> On 03/18/2018 06:29 PM, Phil Reid wrote:
->>
->> On 16/03/2018 02:00, Laura Abbott wrote:
->>>
->>> The new challenge is to remove VLAs from the kernel
->>> (see https://lkml.org/lkml/2018/3/7/621)
->>>
->>> This patch replaces a VLA with an appropriate call to kmalloc_array.
->>>
->>> Signed-off-by: Laura Abbott <labbott@redhat.com>
->>> ---
->>> v2: Switch to GFP_KERNEL. There was some discussion about if we should
->>> be doing the allocation at all but given a) the allocation is pretty
->>> small and b) we can possibly take a mutex in a called function I think
->>> this is fine.
->>
->>
->> I still think it's a bad idea. It's simple to preallocate the buffer.
->> But it's up to the maintainer.
->>
->
-> I'd feel a lot more confident about doing the global buffer with
-> guidance from the maintainer. But looking at the platform data, the
-> maximum number of GPIOs is 24, or 3 banks. Maybe we should just always
-> stack allocate the maximum since it's fairly small.
+A R/O pool can be expanded (adding more protectable memory).
+It can also be destroyed, to recover its memory, but it cannot be
+turned back into R/W mode.
 
-Either way works fine, global (in the state container struct stmpe_gpio)
-or stack allocation for 24 bits.
+This is intentional. This feature is meant for data that doesn't need
+further modifications after initialization.
 
-I guess I am maintainer for this, I can test it at least.
+However the data might need to be released, for example as part of module
+unloading. The pool, therefore, can be destroyed.
 
-Yours,
-Linus Walleij
+An example is provided, in the form of self-testing.
+
+Changes since v20:
+
+[http://www.openwall.com/lists/kernel-hardening/2018/03/27/2]
+
+* removed the align_order parameter from allocation functions
+* improved documentation with more explanation
+* fixed lkdt test
+* reworked the destroy function, removing a possible race with
+  use-after-free code.
+
+
+Igor Stoppa (6):
+  struct page: add field for vm_struct
+  vmalloc: rename llist field in vmap_area
+  Protectable Memory
+  Pmalloc selftest
+  lkdtm: crash on overwriting protected pmalloc var
+  Documentation for Pmalloc
+
+ Documentation/core-api/index.rst   |   1 +
+ Documentation/core-api/pmalloc.rst | 107 +++++++++++++++
+ drivers/misc/lkdtm.h               |   1 +
+ drivers/misc/lkdtm_core.c          |   3 +
+ drivers/misc/lkdtm_perms.c         |  25 ++++
+ include/linux/mm_types.h           |   1 +
+ include/linux/pmalloc.h            | 166 +++++++++++++++++++++++
+ include/linux/test_pmalloc.h       |  24 ++++
+ include/linux/vmalloc.h            |   5 +-
+ init/main.c                        |   2 +
+ mm/Kconfig                         |  16 +++
+ mm/Makefile                        |   2 +
+ mm/pmalloc.c                       | 264 +++++++++++++++++++++++++++++++++++++
+ mm/test_pmalloc.c                  | 136 +++++++++++++++++++
+ mm/usercopy.c                      |  33 +++++
+ mm/vmalloc.c                       |  10 +-
+ 16 files changed, 791 insertions(+), 5 deletions(-)
+ create mode 100644 Documentation/core-api/pmalloc.rst
+ create mode 100644 include/linux/pmalloc.h
+ create mode 100644 include/linux/test_pmalloc.h
+ create mode 100644 mm/pmalloc.c
+ create mode 100644 mm/test_pmalloc.c
+
+-- 
+2.14.1
