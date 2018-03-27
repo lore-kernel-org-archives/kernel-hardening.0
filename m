@@ -1,52 +1,323 @@
-Date: Wed, 28 Mar 2018 02:39:15 +0800
-From: kbuild test robot <lkp@intel.com>
-Subject: Re: [PATCH v6] kernel.h: Retain constant expression output for
- max()/min()
-Message-ID: <201803280107.bZw8jIAt%fengguang.wu@intel.com>
-References: <20180326221554.GA45166@beast>
+Date: Tue, 27 Mar 2018 13:39:04 -0700
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH] exofs: Avoid VLA in structures
+Message-ID: <20180327203904.GA1151@beast>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180326221554.GA45166@beast>
-To: Kees Cook <keescook@chromium.org>
-Cc: kbuild-all@01.org, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Martin Uecker <Martin.Uecker@med.uni-goettingen.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Randy Dunlap <rdunlap@infradead.org>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, Ingo Molnar <mingo@kernel.org>, David Laight <David.Laight@aculab.com>, Ian Abbott <abbotti@mev.co.uk>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+To: Andrew Morton <akpm@linux-foundation.org>, Boaz Harrosh <ooo@electrozaur.com>
+Cc: linux-kernel@vger.kernel.org, Nick Desaulniers <ndesaulniers@google.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
+On the quest to remove all VLAs from the kernel[1] this adjusts several
+cases where allocation is made after an array of structures that points
+back into the allocation. The allocations are changed to perform explicit
+calculations instead of using a Variable Length Array in a structure.
+Additionally, this lets Clang compile this code now, since Clang does not
+support VLAIS[2].
 
-I love your patch! Perhaps something to improve:
+[1] https://lkml.org/lkml/2018/3/7/621
+[2] https://lkml.org/lkml/2013/9/23/500
 
-[auto build test WARNING on linus/master]
-[also build test WARNING on v4.16-rc7 next-20180327]
-[if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
-
-url:    https://github.com/0day-ci/linux/commits/Kees-Cook/kernel-h-Retain-constant-expression-output-for-max-min/20180327-110916
-reproduce:
-        # apt-get install sparse
-        make ARCH=x86_64 allmodconfig
-        make C=1 CF=-D__CHECK_ENDIAN__
-
-
-vim +124 drivers/infiniband/hw/vmw_pvrdma/pvrdma_doorbell.c
-
-29c8d9eb Adit Ranadive 2016-10-02  114  
-29c8d9eb Adit Ranadive 2016-10-02  115  void pvrdma_uar_free(struct pvrdma_dev *dev, struct pvrdma_uar_map *uar)
-29c8d9eb Adit Ranadive 2016-10-02  116  {
-29c8d9eb Adit Ranadive 2016-10-02  117  	struct pvrdma_id_table *tbl = &dev->uar_table.tbl;
-29c8d9eb Adit Ranadive 2016-10-02  118  	unsigned long flags;
-29c8d9eb Adit Ranadive 2016-10-02  119  	u32 obj;
-29c8d9eb Adit Ranadive 2016-10-02  120  
-29c8d9eb Adit Ranadive 2016-10-02  121  	obj = uar->index & (tbl->max - 1);
-29c8d9eb Adit Ranadive 2016-10-02  122  	spin_lock_irqsave(&tbl->lock, flags);
-29c8d9eb Adit Ranadive 2016-10-02  123  	clear_bit(obj, tbl->table);
-29c8d9eb Adit Ranadive 2016-10-02 @124  	tbl->last = min(tbl->last, obj);
-
-:::::: The code at line 124 was first introduced by commit
-:::::: 29c8d9eba550c6d73d17cc1618a9f5f2a7345aa1 IB: Add vmw_pvrdma driver
-
-:::::: TO: Adit Ranadive <aditr@vmware.com>
-:::::: CC: Doug Ledford <dledford@redhat.com>
-
+Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
-0-DAY kernel test infrastructure                Open Source Technology Center
-https://lists.01.org/pipermail/kbuild-all                   Intel Corporation
+I not sure the best way to test this. Kconfig implies I need special hardware?
+---
+ fs/exofs/ore.c      | 84 +++++++++++++++++++++++++++++++----------------------
+ fs/exofs/ore_raid.c | 73 ++++++++++++++++++++++++++++++++++------------
+ fs/exofs/super.c    | 23 +++++++--------
+ 3 files changed, 114 insertions(+), 66 deletions(-)
+
+diff --git a/fs/exofs/ore.c b/fs/exofs/ore.c
+index 3c6a9c156b7a..cfa862ea19d2 100644
+--- a/fs/exofs/ore.c
++++ b/fs/exofs/ore.c
+@@ -146,68 +146,82 @@ int  _ore_get_io_state(struct ore_layout *layout,
+ 			struct ore_io_state **pios)
+ {
+ 	struct ore_io_state *ios;
+-	struct page **pages;
+-	struct osd_sg_entry *sgilist;
++	size_t size_ios, size_extra, size_total;
++	void *ios_extra;
++
++	/*
++	 * The desired layout looks like this, with the extra_allocation
++	 * items pointed at from fields within ios or per_dev:
++
+ 	struct __alloc_all_io_state {
+ 		struct ore_io_state ios;
+ 		struct ore_per_dev_state per_dev[numdevs];
+ 		union {
+ 			struct osd_sg_entry sglist[sgs_per_dev * numdevs];
+ 			struct page *pages[num_par_pages];
+-		};
+-	} *_aios;
+-
+-	if (likely(sizeof(*_aios) <= PAGE_SIZE)) {
+-		_aios = kzalloc(sizeof(*_aios), GFP_KERNEL);
+-		if (unlikely(!_aios)) {
+-			ORE_DBGMSG("Failed kzalloc bytes=%zd\n",
+-				   sizeof(*_aios));
++		} extra_allocation;
++	} whole_allocation;
++
++	*/
++
++	/* This should never happen, so abort early if it ever does. */
++	if (sgs_per_dev && num_par_pages) {
++		ORE_DBGMSG("Tried to use both pages and sglist\n");
++		*pios = NULL;
++		return -EINVAL;
++	}
++
++	if (numdevs > (INT_MAX - sizeof(*ios)) /
++		       sizeof(struct ore_per_dev_state))
++		return -ENOMEM;
++	size_ios = sizeof(*ios) + sizeof(struct ore_per_dev_state) * numdevs;
++
++	if (sgs_per_dev * numdevs > INT_MAX / sizeof(struct osd_sg_entry))
++		return -ENOMEM;
++	if (num_par_pages > INT_MAX / sizeof(struct page *))
++		return -ENOMEM;
++	size_extra = max(sizeof(struct osd_sg_entry) * (sgs_per_dev * numdevs),
++			 sizeof(struct page *) * num_par_pages);
++
++	size_total = size_ios + size_extra;
++
++	if (likely(size_total <= PAGE_SIZE)) {
++		ios = kzalloc(size_total, GFP_KERNEL);
++		if (unlikely(!ios)) {
++			ORE_DBGMSG("Failed kzalloc bytes=%zd\n", size_total);
+ 			*pios = NULL;
+ 			return -ENOMEM;
+ 		}
+-		pages = num_par_pages ? _aios->pages : NULL;
+-		sgilist = sgs_per_dev ? _aios->sglist : NULL;
+-		ios = &_aios->ios;
++		ios_extra = (char *)ios + size_ios;
+ 	} else {
+-		struct __alloc_small_io_state {
+-			struct ore_io_state ios;
+-			struct ore_per_dev_state per_dev[numdevs];
+-		} *_aio_small;
+-		union __extra_part {
+-			struct osd_sg_entry sglist[sgs_per_dev * numdevs];
+-			struct page *pages[num_par_pages];
+-		} *extra_part;
+-
+-		_aio_small = kzalloc(sizeof(*_aio_small), GFP_KERNEL);
+-		if (unlikely(!_aio_small)) {
++		ios = kzalloc(size_ios, GFP_KERNEL);
++		if (unlikely(!ios)) {
+ 			ORE_DBGMSG("Failed alloc first part bytes=%zd\n",
+-				   sizeof(*_aio_small));
++				   size_ios);
+ 			*pios = NULL;
+ 			return -ENOMEM;
+ 		}
+-		extra_part = kzalloc(sizeof(*extra_part), GFP_KERNEL);
+-		if (unlikely(!extra_part)) {
++		ios_extra = kzalloc(size_extra, GFP_KERNEL);
++		if (unlikely(!ios_extra)) {
+ 			ORE_DBGMSG("Failed alloc second part bytes=%zd\n",
+-				   sizeof(*extra_part));
+-			kfree(_aio_small);
++				   size_extra);
++			kfree(ios);
+ 			*pios = NULL;
+ 			return -ENOMEM;
+ 		}
+ 
+-		pages = num_par_pages ? extra_part->pages : NULL;
+-		sgilist = sgs_per_dev ? extra_part->sglist : NULL;
+ 		/* In this case the per_dev[0].sgilist holds the pointer to
+ 		 * be freed
+ 		 */
+-		ios = &_aio_small->ios;
+ 		ios->extra_part_alloc = true;
+ 	}
+ 
+-	if (pages) {
+-		ios->parity_pages = pages;
++	if (num_par_pages) {
++		ios->parity_pages = ios_extra;
+ 		ios->max_par_pages = num_par_pages;
+ 	}
+-	if (sgilist) {
++	if (sgs_per_dev) {
++		struct osd_sg_entry *sgilist = ios_extra;
+ 		unsigned d;
+ 
+ 		for (d = 0; d < numdevs; ++d) {
+diff --git a/fs/exofs/ore_raid.c b/fs/exofs/ore_raid.c
+index 27cbdb697649..659129d5e9f7 100644
+--- a/fs/exofs/ore_raid.c
++++ b/fs/exofs/ore_raid.c
+@@ -71,6 +71,11 @@ static int _sp2d_alloc(unsigned pages_in_unit, unsigned group_width,
+ {
+ 	struct __stripe_pages_2d *sp2d;
+ 	unsigned data_devs = group_width - parity;
++
++	/*
++	 * Desired allocation layout is, though when larger than PAGE_SIZE,
++	 * each struct __alloc_1p_arrays is separately allocated:
++
+ 	struct _alloc_all_bytes {
+ 		struct __alloc_stripe_pages_2d {
+ 			struct __stripe_pages_2d sp2d;
+@@ -82,55 +87,85 @@ static int _sp2d_alloc(unsigned pages_in_unit, unsigned group_width,
+ 			char page_is_read[data_devs];
+ 		} __a1pa[pages_in_unit];
+ 	} *_aab;
++
+ 	struct __alloc_1p_arrays *__a1pa;
+ 	struct __alloc_1p_arrays *__a1pa_end;
+-	const unsigned sizeof__a1pa = sizeof(_aab->__a1pa[0]);
++
++	*/
++
++	char *__a1pa;
++	char *__a1pa_end;
++
++	const size_t sizeof_stripe_pages_2d =
++		sizeof(struct __stripe_pages_2d) +
++		sizeof(struct __1_page_stripe) * pages_in_unit;
++	const size_t sizeof__a1pa =
++		ALIGN(sizeof(struct page *) * (2 * group_width) + data_devs,
++		      sizeof(void *));
++	const size_t sizeof__a1pa_arrays = sizeof__a1pa * pages_in_unit;
++	const size_t alloc_total = sizeof_stripe_pages_2d +
++				   sizeof__a1pa_arrays;
++
+ 	unsigned num_a1pa, alloc_size, i;
+ 
+ 	/* FIXME: check these numbers in ore_verify_layout */
+-	BUG_ON(sizeof(_aab->__asp2d) > PAGE_SIZE);
++	BUG_ON(sizeof_stripe_pages_2d > PAGE_SIZE);
+ 	BUG_ON(sizeof__a1pa > PAGE_SIZE);
+ 
+-	if (sizeof(*_aab) > PAGE_SIZE) {
+-		num_a1pa = (PAGE_SIZE - sizeof(_aab->__asp2d)) / sizeof__a1pa;
+-		alloc_size = sizeof(_aab->__asp2d) + sizeof__a1pa * num_a1pa;
++	/*
++	 * If alloc_total would be larger than PAGE_SIZE, only allocate
++	 * as many a1pa items as would fill the rest of the page, instead
++	 * of the full pages_in_unit count.
++	 */
++	if (alloc_total > PAGE_SIZE) {
++		num_a1pa = (PAGE_SIZE - sizeof_stripe_pages_2d) / sizeof__a1pa;
++		alloc_size = sizeof_stripe_pages_2d + sizeof__a1pa * num_a1pa;
+ 	} else {
+ 		num_a1pa = pages_in_unit;
+-		alloc_size = sizeof(*_aab);
++		alloc_size = alloc_total;
+ 	}
+ 
+-	_aab = kzalloc(alloc_size, GFP_KERNEL);
+-	if (unlikely(!_aab)) {
++	*psp2d = sp2d = kzalloc(alloc_size, GFP_KERNEL);
++	if (unlikely(!sp2d)) {
+ 		ORE_DBGMSG("!! Failed to alloc sp2d size=%d\n", alloc_size);
+ 		return -ENOMEM;
+ 	}
++	/* From here Just call _sp2d_free */
+ 
+-	sp2d = &_aab->__asp2d.sp2d;
+-	*psp2d = sp2d; /* From here Just call _sp2d_free */
+-
+-	__a1pa = _aab->__a1pa;
+-	__a1pa_end = __a1pa + num_a1pa;
++	/* Find start of a1pa area. */
++	__a1pa = (char *)sp2d + sizeof_stripe_pages_2d;
++	/* Find end of the _allocated_ a1pa area. */
++	__a1pa_end = __a1pa + alloc_size;
+ 
++	/* Allocate additionally needed a1pa items in PAGE_SIZE chunks. */
+ 	for (i = 0; i < pages_in_unit; ++i) {
+ 		if (unlikely(__a1pa >= __a1pa_end)) {
+ 			num_a1pa = min_t(unsigned, PAGE_SIZE / sizeof__a1pa,
+ 							pages_in_unit - i);
++			alloc_size = sizeof__a1pa * num_a1pa;
+ 
+-			__a1pa = kcalloc(num_a1pa, sizeof__a1pa, GFP_KERNEL);
++			__a1pa = kzalloc(alloc_size, GFP_KERNEL);
+ 			if (unlikely(!__a1pa)) {
+ 				ORE_DBGMSG("!! Failed to _alloc_1p_arrays=%d\n",
+ 					   num_a1pa);
+ 				return -ENOMEM;
+ 			}
+-			__a1pa_end = __a1pa + num_a1pa;
++			__a1pa_end = __a1pa + alloc_size;
+ 			/* First *pages is marked for kfree of the buffer */
+ 			sp2d->_1p_stripes[i].alloc = true;
+ 		}
+ 
+-		sp2d->_1p_stripes[i].pages = __a1pa->pages;
+-		sp2d->_1p_stripes[i].scribble = __a1pa->scribble ;
+-		sp2d->_1p_stripes[i].page_is_read = __a1pa->page_is_read;
+-		++__a1pa;
++		/*
++		 * Attach all _lp_stripes pointers to the allocation for
++		 * it which was either part of the original PAGE_SIZE
++		 * allocation or the subsequent allocation in this loop.
++		 */
++		sp2d->_1p_stripes[i].pages = (void *)__a1pa;
++		sp2d->_1p_stripes[i].scribble =
++			sp2d->_1p_stripes[i].pages + group_width;
++		sp2d->_1p_stripes[i].page_is_read =
++			(char *)(sp2d->_1p_stripes[i].scribble + group_width);
++		__a1pa += sizeof__a1pa;
+ 	}
+ 
+ 	sp2d->parity = parity;
+diff --git a/fs/exofs/super.c b/fs/exofs/super.c
+index 179cd5c2f52a..f3c29e9326f1 100644
+--- a/fs/exofs/super.c
++++ b/fs/exofs/super.c
+@@ -549,27 +549,26 @@ static int exofs_devs_2_odi(struct exofs_dt_device_info *dt_dev,
+ static int __alloc_dev_table(struct exofs_sb_info *sbi, unsigned numdevs,
+ 		      struct exofs_dev **peds)
+ {
+-	struct __alloc_ore_devs_and_exofs_devs {
+-		/* Twice bigger table: See exofs_init_comps() and comment at
+-		 * exofs_read_lookup_dev_table()
+-		 */
+-		struct ore_dev *oreds[numdevs * 2 - 1];
+-		struct exofs_dev eds[numdevs];
+-	} *aoded;
++	/* Twice bigger table: See exofs_init_comps() and comment at
++	 * exofs_read_lookup_dev_table()
++	 */
++	size_t numores = numdevs * 2 - 1;
+ 	struct exofs_dev *eds;
+ 	unsigned i;
+ 
+-	aoded = kzalloc(sizeof(*aoded), GFP_KERNEL);
+-	if (unlikely(!aoded)) {
++	sbi->oc.ods = kzalloc(numores * sizeof(struct ore_dev *) +
++			      numdevs * sizeof(struct exofs_dev), GFP_KERNEL);
++	if (unlikely(!sbi->oc.ods)) {
+ 		EXOFS_ERR("ERROR: failed allocating Device array[%d]\n",
+ 			  numdevs);
+ 		return -ENOMEM;
+ 	}
+ 
+-	sbi->oc.ods = aoded->oreds;
+-	*peds = eds = aoded->eds;
++	/* Start of allocated struct exofs_dev entries */
++	*peds = eds = (void *)sbi->oc.ods[numores];
++	/* Initialize pointers into struct exofs_dev */
+ 	for (i = 0; i < numdevs; ++i)
+-		aoded->oreds[i] = &eds[i].ored;
++		sbi->oc.ods[i] = &eds[i].ored;
+ 	return 0;
+ }
+ 
+-- 
+2.7.4
+
+
+-- 
+Kees Cook
+Pixel Security
