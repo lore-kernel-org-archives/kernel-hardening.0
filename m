@@ -1,34 +1,33 @@
-Date: Tue, 27 Mar 2018 15:10:53 -0700
+Date: Tue, 27 Mar 2018 16:03:42 -0700
 From: Andrew Morton <akpm@linux-foundation.org>
-Subject: Re: [PATCH] exofs: Avoid VLA in structures
-Message-Id: <20180327151053.c7c8df4135a5dc0bacea0a83@linux-foundation.org>
-In-Reply-To: <20180327203904.GA1151@beast>
-References: <20180327203904.GA1151@beast>
+Subject: Re: [PATCH] task_struct: Only use anon struct under randstruct
+ plugin
+Message-Id: <20180327160342.e2bc9a15afda5823c8daf4fb@linux-foundation.org>
+In-Reply-To: <20180327213609.GA2964@beast>
+References: <20180327213609.GA2964@beast>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
 To: Kees Cook <keescook@chromium.org>
-Cc: Boaz Harrosh <ooo@electrozaur.com>, linux-kernel@vger.kernel.org, Nick Desaulniers <ndesaulniers@google.com>, kernel-hardening@lists.openwall.com
+Cc: Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 27 Mar 2018 13:39:04 -0700 Kees Cook <keescook@chromium.org> wrote:
+On Tue, 27 Mar 2018 14:36:09 -0700 Kees Cook <keescook@chromium.org> wrote:
 
-> On the quest to remove all VLAs from the kernel[1] this adjusts several
-> cases where allocation is made after an array of structures that points
-> back into the allocation. The allocations are changed to perform explicit
-> calculations instead of using a Variable Length Array in a structure.
-> Additionally, this lets Clang compile this code now, since Clang does not
-> support VLAIS[2].
-> 
-> [1] https://lkml.org/lkml/2018/3/7/621
-> [2] https://lkml.org/lkml/2013/9/23/500
-> 
-> ...
->
-> I not sure the best way to test this. Kconfig implies I need special hardware?
+> The original intent for always adding the anonymous struct in task_struct
+> was to make sure we had compiler coverage. However, this caused
+> pathological padding of 40 bytes at the start of task_struct.
 
-Yeah, I was wondering about that.  It's a tricky-looking patch.
+Why?  What caused this padding?  It happens in all configs?
 
-Boaz, are you able to give it a spin?
+> Instead,
+> move the anonymous struct to being only used when struct layout
+> randomization is enabled.
 
-Thanks.
+So the mysterious 40 byte bloat is still present in this case?
+
+> Reported-by: Peter Zijlstra <peterz@infradead.org>
+> Fixes: 29e48ce87f1e ("task_struct: Allow randomized")
+> Cc: stable@vger.kernel.org
+
+Why cc:stable?
