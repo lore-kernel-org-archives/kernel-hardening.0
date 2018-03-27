@@ -1,142 +1,53 @@
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Subject: [PATCH 6/6] Documentation for Pmalloc
-Date: Tue, 27 Mar 2018 04:55:24 +0300
-Message-ID: <20180327015524.14318-7-igor.stoppa@huawei.com>
-In-Reply-To: <20180327015524.14318-1-igor.stoppa@huawei.com>
+Date: Mon, 26 Mar 2018 19:31:10 -0700
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH 3/6] Protectable Memory
+Message-ID: <20180327023110.GD10054@bombadil.infradead.org>
 References: <20180327015524.14318-1-igor.stoppa@huawei.com>
+ <20180327015524.14318-4-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: willy@infradead.org, keescook@chromium.org, mhocko@kernel.org
-Cc: david@fromorbit.com, rppt@linux.vnet.ibm.com, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, igor.stoppa@gmail.com, Igor Stoppa <igor.stoppa@huawei.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180327015524.14318-4-igor.stoppa@huawei.com>
+To: Igor Stoppa <igor.stoppa@huawei.com>
+Cc: keescook@chromium.org, mhocko@kernel.org, david@fromorbit.com, rppt@linux.vnet.ibm.com, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, igor.stoppa@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Detailed documentation about the protectable memory allocator.
+On Tue, Mar 27, 2018 at 04:55:21AM +0300, Igor Stoppa wrote:
+> +static inline void *pmalloc_array_align(struct pmalloc_pool *pool,
+> +					size_t n, size_t size,
+> +					short int align_order)
+> +{
 
-Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
----
- Documentation/core-api/index.rst   |   1 +
- Documentation/core-api/pmalloc.rst | 101 +++++++++++++++++++++++++++++++++++++
- 2 files changed, 102 insertions(+)
- create mode 100644 Documentation/core-api/pmalloc.rst
+You're missing:
 
-diff --git a/Documentation/core-api/index.rst b/Documentation/core-api/index.rst
-index c670a8031786..8f5de42d6571 100644
---- a/Documentation/core-api/index.rst
-+++ b/Documentation/core-api/index.rst
-@@ -25,6 +25,7 @@ Core utilities
-    genalloc
-    errseq
-    printk-formats
-+   pmalloc
- 
- Interfaces for kernel debugging
- ===============================
-diff --git a/Documentation/core-api/pmalloc.rst b/Documentation/core-api/pmalloc.rst
-new file mode 100644
-index 000000000000..3d2c19e5deaf
---- /dev/null
-+++ b/Documentation/core-api/pmalloc.rst
-@@ -0,0 +1,101 @@
-+.. SPDX-License-Identifier: GPL-2.0
-+
-+.. _pmalloc:
-+
-+Protectable memory allocator
-+============================
-+
-+Purpose
-+-------
-+
-+The pmalloc library is meant to provide read-only status to data that,
-+for some reason, could neither be declared as constant, nor could it take
-+advantage of the qualifier __ro_after_init, but is write-once and
-+read-only in spirit.
-+It protects data from both accidental and malicious overwrites.
-+
-+Example: A policy that is loaded from userspace.
-+
-+
-+Concept
-+-------
-+
-+The MMU available in the system can be used to write protect memory pages.
-+Unfortunately this feature cannot be used as-it-is, to protect sensitive
-+data, because it is typically interleaved with data that must stay
-+writeable.
-+
-+pmalloc introduces the concept of protectable memory pools.
-+Each pool contains a list of areas of virtually contiguous pages of
-+memory. An area is the minimum amount of memory that pmalloc allows to
-+protect, because the data it contains can be larger than a single page.
-+
-+When an allocation is performed, if there is not enough memory already
-+available in the pool, a new area of suitable size is allocated.
-+The size chosen is the largest between the roundup (to PAGE_SIZE) of
-+the request from pmalloc and friends and the refill parameter specified
-+when creating the pool.
-+
-+When a pool is created, it is possible to specify two parameters:
-+- refill size: the minimum size of the memory area to allocate when needed
-+- align_order: the default alignment to use when returning to pmalloc
-+
-+Caveats
-+-------
-+
-+- To facilitate the conversion of existing code to pmalloc pools, several
-+  helper functions are provided, mirroring their k/vmalloc counterparts.
-+  In particular, pfree(), which is mostly meant for error paths, when one
-+  or more previous allocations must be rolled back.
-+
-+- Whatever memory was still available in the previous area (where
-+  applicable) is relinquished.
-+
-+- Freeing of memory is not supported. Pages will be returned to the
-+  system upon destruction of the memory pool.
-+
-+- Considering that not much data is supposed to be dynamically allocated
-+  and then marked as read-only, it shouldn't be an issue that the address
-+  range for pmalloc is limited, on 32-bit systems.
-+
-+- Regarding SMP systems, the allocations are expected to happen mostly
-+  during an initial transient, after which there should be no more need to
-+  perform cross-processor synchronizations of page tables.
-+
-+
-+Use
-+---
-+
-+The typical sequence, when using pmalloc, is:
-+
-+#. create a pool
-+
-+   :c:func:`pmalloc_create_pool`
-+
-+#. [optional] pre-allocate some memory in the pool
-+
-+   :c:func:`pmalloc_prealloc`
-+
-+#. issue one or more allocation requests to the pool with locking as needed
-+
-+   :c:func:`pmalloc`
-+
-+   :c:func:`pzalloc`
-+
-+#. initialize the memory obtained with desired values
-+
-+#. write-protect the memory so far allocated
-+
-+   :c::func:`pmalloc_protect_pool`
-+
-+#. iterate over the last 3 points as needed
-+
-+#. [optional] destroy the pool
-+
-+   :c:func:`pmalloc_destroy_pool`
-+
-+API
-+---
-+
-+.. kernel-doc:: include/linux/pmalloc.h
-+.. kernel-doc:: mm/pmalloc.c
--- 
-2.14.1
+        if (size != 0 && n > SIZE_MAX / size)
+                return NULL;
+
+> +	return pmalloc_align(pool, n * size, align_order);
+> +}
+
+> +static inline void *pcalloc_align(struct pmalloc_pool *pool, size_t n,
+> +				  size_t size, short int align_order)
+> +{
+> +	return pzalloc_align(pool, n * size, align_order);
+> +}
+
+Ditto.
+
+> +static inline void *pcalloc(struct pmalloc_pool *pool, size_t n,
+> +			    size_t size)
+> +{
+> +	return pzalloc_align(pool, n * size, PMALLOC_ALIGN_DEFAULT);
+> +}
+
+If you make this one:
+
+	return pcalloc_align(pool, n, size, PMALLOC_ALIGN_DEFAULT)
+
+then you don't need the check in this function.
+
+Also, do we really need 'align' as a parameter to the allocator functions
+rather than to the pool?
+
+I'd just reuse ARCH_KMALLOC_MINALIGN from slab.h as the alignment, and
+then add the special alignment options when we have a real user for them.
