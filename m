@@ -1,146 +1,156 @@
 From: Masahiro Yamada <yamada.masahiro@socionext.com>
-Subject: [PATCH v2 17/21] gcc-plugins: always build plugins with C++
-Date: Tue, 27 Mar 2018 14:29:31 +0900
-Message-Id: <1522128575-5326-18-git-send-email-yamada.masahiro@socionext.com>
-In-Reply-To: <1522128575-5326-1-git-send-email-yamada.masahiro@socionext.com>
-References: <1522128575-5326-1-git-send-email-yamada.masahiro@socionext.com>
+Subject: [PATCH v2 00/21] kconfig: move compiler capability tests to Kconfig
+Date: Tue, 27 Mar 2018 14:29:14 +0900
+Message-Id: <1522128575-5326-1-git-send-email-yamada.masahiro@socionext.com>
 To: linux-kbuild@vger.kernel.org
-Cc: Sam Ravnborg <sam@ravnborg.org>, Linus Torvalds <torvalds@linux-foundation.org>, Arnd Bergmann <arnd@arndb.de>, Ulf Magnusson <ulfalizer@gmail.com>, Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Randy Dunlap <rdunlap@infradead.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Nicolas Pitre <nico@linaro.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>
+Cc: Sam Ravnborg <sam@ravnborg.org>, Linus Torvalds <torvalds@linux-foundation.org>, Arnd Bergmann <arnd@arndb.de>, Ulf Magnusson <ulfalizer@gmail.com>, Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Randy Dunlap <rdunlap@infradead.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Nicolas Pitre <nico@linaro.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Peter Oberparleiter <oberpar@linux.vnet.ibm.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Ingo Molnar <mingo@redhat.com>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Emese Revfy <re.emese@gmail.com>, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-If the target compiler is GCC 4.8 or newer, plugins are compiled with
-HOSTCXX.  Otherwise, gcc-plugin.sh will select HOSTCC or HOSTCXX.
 
-To simplify things, drop the HOSTCC support for plugins.  If you use
-GCC plugins, the requirement for the target compiler is GCC 4.8 (or
-older compiler with necessary features backported).  This is a feature
-for advanced users, so this requirement would not be a big deal.
-Currently, building plugins requires GCC 4.5, so this is not a big jump.
+Here is v2 to start to move compiler capability tests to Kconfig.
 
-Remove the code that was needed to build plugins with HOSTCC as a
-preparation for Kconfig migration.
+V1:
+https://lkml.org/lkml/2018/2/16/610
 
-Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>
----
+I brushed up the implementation even more.
 
-Changes in v2: None
+Major changes for v2:
+[1] Environments and functions are expanded in the lexer (zconf.l)
+    The parser (zconf.y) receives expanded tokens.  This simplifies
+    the implementation.
 
- scripts/Makefile.gcc-plugins | 11 +++--------
- scripts/gcc-plugin.sh        | 38 +++-----------------------------------
- scripts/gcc-plugins/Makefile | 15 ++++-----------
- 3 files changed, 10 insertions(+), 54 deletions(-)
+[2] Implement only one built-in function 'shell'.  This returns
+    stdout from the command.  We need something to return 'y' or 'n'.
+    This is now implemented as a macro 'success'.
 
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index b2a95af..b0f9108 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -1,7 +1,6 @@
- # SPDX-License-Identifier: GPL-2.0
- ifdef CONFIG_GCC_PLUGINS
--  __PLUGINCC := $(call cc-ifversion, -ge, 0408, $(HOSTCXX), $(HOSTCC))
--  PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh "$(__PLUGINCC)" "$(HOSTCXX)" "$(CC)")
-+  PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh $(HOSTCXX) $(CC))
- 
-   SANCOV_PLUGIN := -fplugin=$(objtree)/scripts/gcc-plugins/sancov_plugin.so
- 
-@@ -65,12 +64,8 @@ ifdef CONFIG_GCC_PLUGINS
- 	  @echo "Cannot use CONFIG_GCC_PLUGINS: plugin support on gcc <= 5.1 is buggy on powerpc, please upgrade to gcc 5.2 or newer" >&2 && exit 1
-         endif
-       endif
--      ifeq ($(call cc-ifversion, -ge, 0405, y), y)
--	$(Q)$(srctree)/scripts/gcc-plugin.sh --show-error "$(__PLUGINCC)" "$(HOSTCXX)" "$(CC)" || true
--	@echo "Cannot use CONFIG_GCC_PLUGINS: your gcc installation does not support plugins, perhaps the necessary headers are missing?" >&2 && exit 1
--      else
--	@echo "Cannot use CONFIG_GCC_PLUGINS: your gcc version does not support plugins, you should upgrade it to at least gcc 4.5" >&2 && exit 1
--      endif
-+      $(Q)$(srctree)/scripts/gcc-plugin.sh --show-error $(HOSTCXX) $(CC) || true
-+      @echo "Cannot use CONFIG_GCC_PLUGINS: your gcc installation does not support plugins, perhaps the necessary headers are missing?" >&2 && exit 1
-     endif
-   endif
- endif
-diff --git a/scripts/gcc-plugin.sh b/scripts/gcc-plugin.sh
-index d3caefe..0edbdae 100755
---- a/scripts/gcc-plugin.sh
-+++ b/scripts/gcc-plugin.sh
-@@ -8,42 +8,10 @@ if [ "$1" = "--show-error" ] ; then
- 	shift || true
- fi
- 
--gccplugins_dir=$($3 -print-file-name=plugin)
--plugincc=$($1 -E -x c++ - -o /dev/null -I"${srctree}"/gcc-plugins -I"${gccplugins_dir}"/include 2>&1 <<EOF
--#include "gcc-common.h"
--#if BUILDING_GCC_VERSION >= 4008 || defined(ENABLE_BUILD_WITH_CXX)
--#warning $2 CXX
--#else
--#warning $1 CC
--#endif
--EOF
--)
--
--if [ $? -ne 0 ]
--then
--	if [ -n "$SHOW_ERROR" ] ; then
--		echo "${plugincc}" >&2
--	fi
--	exit 1
--fi
--
--case "$plugincc" in
--	*"$1 CC"*)
--		echo "$1"
--		exit 0
--		;;
--
--	*"$2 CXX"*)
--		# the c++ compiler needs another test, see below
--		;;
--
--	*)
--		exit 1
--		;;
--esac
-+gccplugins_dir=$($2 -print-file-name=plugin)
- 
- # we need a c++ compiler that supports the designated initializer GNU extension
--plugincc=$($2 -c -x c++ -std=gnu++98 - -fsyntax-only -I"${srctree}"/gcc-plugins -I"${gccplugins_dir}"/include 2>&1 <<EOF
-+plugincc=$($1 -c -x c++ -std=gnu++98 - -fsyntax-only -I"${srctree}"/gcc-plugins -I"${gccplugins_dir}"/include 2>&1 <<EOF
- #include "gcc-common.h"
- class test {
- public:
-@@ -56,7 +24,7 @@ EOF
- 
- if [ $? -eq 0 ]
- then
--	echo "$2"
-+	echo "$1"
- 	exit 0
- fi
- 
-diff --git a/scripts/gcc-plugins/Makefile b/scripts/gcc-plugins/Makefile
-index e2ff425..47d5f69 100644
---- a/scripts/gcc-plugins/Makefile
-+++ b/scripts/gcc-plugins/Makefile
-@@ -1,17 +1,10 @@
- # SPDX-License-Identifier: GPL-2.0
- GCC_PLUGINS_DIR := $(shell $(CC) -print-file-name=plugin)
- 
--ifeq ($(PLUGINCC),$(HOSTCC))
--  HOSTLIBS := hostlibs
--  HOST_EXTRACFLAGS += -I$(GCC_PLUGINS_DIR)/include -I$(src) -std=gnu99 -ggdb
--  export HOST_EXTRACFLAGS
--else
--  HOSTLIBS := hostcxxlibs
--  HOST_EXTRACXXFLAGS += -I$(GCC_PLUGINS_DIR)/include -I$(src) -std=gnu++98 -fno-rtti
--  HOST_EXTRACXXFLAGS += -fno-exceptions -fasynchronous-unwind-tables -ggdb
--  HOST_EXTRACXXFLAGS += -Wno-narrowing -Wno-unused-variable
--  export HOST_EXTRACXXFLAGS
--endif
-+HOSTLIBS := hostcxxlibs
-+HOST_EXTRACXXFLAGS += -I$(GCC_PLUGINS_DIR)/include -I$(src) -std=gnu++98 -fno-rtti
-+HOST_EXTRACXXFLAGS += -fno-exceptions -fasynchronous-unwind-tables -ggdb
-+HOST_EXTRACXXFLAGS += -Wno-narrowing -Wno-unused-variable
- 
- ifneq ($(CFLAGS_KCOV), $(SANCOV_PLUGIN))
-   GCC_PLUGIN := $(filter-out $(SANCOV_PLUGIN), $(GCC_PLUGIN))
+[3] Macros (user-defined function) are defined by 'macro' keyword
+    instead of string type symbol.
+
+    ex1) macro success $(shell ($(1) && echo y) || echo n)
+    ex2) macro cc-option $(success $CC -Werror $(1) -c -x c /dev/null -o /dev/null)
+
+My plan for v3
+--------------
+
+The MW is approaching, but I'd like to make it more lovely if
+I have some time.
+
+While I was writing these patches, I noticed a kind of similarity
+between Makefile and Kconfig.
+
+Makefile can define variables and functions to do text processing
+during the parse phase.  After parsing, it builds up dependency
+graph, and moves on to the execution phase.  Then, it generates
+objects as needed by checking time-stamps.
+
+[Makefile]
+
+  OBJ := foo.o
+  SRC := foo.c
+  CC := gcc
+
+  $(OBJ): $(SRC)
+            $(CC) -c -o $(OBJ) $(SRC)
+
+[Makefile after text processing]
+
+  foo.o: foo.c
+          gcc -c -o foo.o foo.c
+
+Now, we are adding tools for text processing to Kconfig.  Functions
+are statically expanded by the lexer.  After all source files are
+parsed, Kconfig moves on to the evaluation phase.  Then, users can
+tweak symbol values from menus.
+
+So, we should be able to describe Kconfig like follows:
+
+[Kconfig]
+
+   MY_SYMBOL := CC_STACKPROTECTOR
+   MY_PROMPT := "Stackprotector"
+   success = $(shell ($(1) && echo y) || echo n)
+   cc-option = $(success $CC -Werror $(1) -c -x c /dev/null -o /dev/null)
+
+   config $(MY_SYMBOL)
+           bool $(MY_PROMPT)
+           depends on $(cc-option -fstack-protector)
+
+[Kconfig after text processing]
+
+   config CC_STACKPROTECTOR
+           bool "Stackptector"
+           depends on y
+
+So, I think it is better to use '=' assignment for defining functions.
+I will remove the 'macro' keyword.
+Also, support variables.  A variable is a function with no argument.
+So, it will be easy to implement it as a sub-set of function feature.
+It is better to support two flavors of assignments, '=' and ':=' as well.
+
+Masahiro Yamada (21):
+  kbuild: remove kbuild cache
+  kbuild: remove CONFIG_CROSS_COMPILE support
+  kconfig: move and rename sym_expand_string_value()
+  kconfig: reference environments directly and remove 'option env='
+    syntax
+  kconfig: remove string expansion in file_lookup()
+  kconfig: remove string expansion for mainmenu after yyparse()
+  kconfig: add function support and implement 'shell' function
+  kconfig: replace $UNAME_RELEASE with function call
+  kconfig: add 'macro' keyword to support user-defined function
+  kconfig: add 'success' and 'cc-option' macros
+  stack-protector: test compiler capability in Kconfig and drop AUTO
+    mode
+  kconfig: show compiler version text in the top comment
+  kconfig: add CC_IS_GCC and GCC_VERSION
+  kconfig: add CC_IS_CLANG and CLANG_VERSION
+  gcov: remove CONFIG_GCOV_FORMAT_AUTODETECT
+  kcov: imply GCC_PLUGINS and GCC_PLUGIN_SANCOV instead of select'ing
+    them
+  gcc-plugins: always build plugins with C++
+  gcc-plugins: move GCC version check for PowerPC to Kconfig
+  gcc-plugins: test GCC plugin support in Kconfig
+  gcc-plugins: enable GCC_PLUGINS for COMPILE_TEST
+  arm64: move GCC version check for ARCH_SUPPORTS_INT128 to Kconfig
+
+ Documentation/kbuild/kconfig-language.txt |   8 --
+ Kconfig                                   |   4 +-
+ Makefile                                  | 103 ++------------
+ arch/Kconfig                              |  37 ++---
+ arch/arm64/Kconfig                        |   1 +
+ arch/arm64/Makefile                       |   2 -
+ arch/powerpc/Kconfig                      |   2 +-
+ arch/sh/Kconfig                           |   4 +-
+ arch/sparc/Kconfig                        |   4 +-
+ arch/tile/Kconfig                         |   2 +-
+ arch/um/Kconfig.common                    |   4 -
+ arch/x86/Kconfig                          |  12 +-
+ arch/x86/um/Kconfig                       |   4 +-
+ init/Kconfig                              |  44 +++---
+ kernel/gcov/Kconfig                       |  17 +--
+ kernel/gcov/Makefile                      |   2 -
+ lib/Kconfig.debug                         |   7 +-
+ scripts/Kbuild.include                    | 101 ++------------
+ scripts/Makefile.gcc-plugins              |  95 ++++---------
+ scripts/clang-version.sh                  |  24 ++--
+ scripts/gcc-plugin.sh                     |  37 +----
+ scripts/gcc-plugins/Makefile              |  15 +-
+ scripts/gcc-x86_32-has-stack-protector.sh |   7 +-
+ scripts/gcc-x86_64-has-stack-protector.sh |   5 -
+ scripts/kconfig/confdata.c                |  31 +---
+ scripts/kconfig/env.c                     |  95 +++++++++++++
+ scripts/kconfig/function.c                | 225 ++++++++++++++++++++++++++++++
+ scripts/kconfig/kconf_id.c                |   1 -
+ scripts/kconfig/lkc.h                     |   9 +-
+ scripts/kconfig/lkc_proto.h               |   7 +-
+ scripts/kconfig/menu.c                    |   3 -
+ scripts/kconfig/symbol.c                  | 109 ---------------
+ scripts/kconfig/util.c                    |  96 ++++++++++---
+ scripts/kconfig/zconf.l                   |  51 ++++++-
+ scripts/kconfig/zconf.y                   |  35 ++---
+ 35 files changed, 608 insertions(+), 595 deletions(-)
+ create mode 100644 scripts/kconfig/env.c
+ create mode 100644 scripts/kconfig/function.c
+
 -- 
 2.7.4
