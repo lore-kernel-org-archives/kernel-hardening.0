@@ -1,148 +1,179 @@
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Subject: [PATCH 6/6] Documentation for Pmalloc
-Date: Tue, 27 Mar 2018 18:37:42 +0300
-Message-ID: <20180327153742.17328-7-igor.stoppa@huawei.com>
-In-Reply-To: <20180327153742.17328-1-igor.stoppa@huawei.com>
-References: <20180327153742.17328-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: willy@infradead.org, keescook@chromium.org, mhocko@kernel.org
-Cc: david@fromorbit.com, rppt@linux.vnet.ibm.com, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, igor.stoppa@gmail.com, Igor Stoppa <igor.stoppa@huawei.com>
+In-Reply-To: <1522128575-5326-1-git-send-email-yamada.masahiro@socionext.com>
+References: <1522128575-5326-1-git-send-email-yamada.masahiro@socionext.com>
+From: Masahiro Yamada <yamada.masahiro@socionext.com>
+Date: Wed, 28 Mar 2018 01:39:13 +0900
+Message-ID: <CAK7LNAR89KNWVbUBZiOP1Yv7V-0rGO3L3xKvza9hnHjn0DFJcw@mail.gmail.com>
+Subject: Re: [PATCH v2 00/21] kconfig: move compiler capability tests to Kconfig
+Content-Type: text/plain; charset="UTF-8"
+To: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>
+Cc: Sam Ravnborg <sam@ravnborg.org>, Linus Torvalds <torvalds@linux-foundation.org>, Arnd Bergmann <arnd@arndb.de>, Ulf Magnusson <ulfalizer@gmail.com>, Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Randy Dunlap <rdunlap@infradead.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Nicolas Pitre <nico@linaro.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Peter Oberparleiter <oberpar@linux.vnet.ibm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Emese Revfy <re.emese@gmail.com>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Detailed documentation about the protectable memory allocator.
+2018-03-27 14:29 GMT+09:00 Masahiro Yamada <yamada.masahiro@socionext.com>:
+>
+> Here is v2 to start to move compiler capability tests to Kconfig.
+>
+> V1:
+> https://lkml.org/lkml/2018/2/16/610
+>
+> I brushed up the implementation even more.
+>
+> Major changes for v2:
+> [1] Environments and functions are expanded in the lexer (zconf.l)
+>     The parser (zconf.y) receives expanded tokens.  This simplifies
+>     the implementation.
+>
+> [2] Implement only one built-in function 'shell'.  This returns
+>     stdout from the command.  We need something to return 'y' or 'n'.
+>     This is now implemented as a macro 'success'.
+>
+> [3] Macros (user-defined function) are defined by 'macro' keyword
+>     instead of string type symbol.
+>
+>     ex1) macro success $(shell ($(1) && echo y) || echo n)
+>     ex2) macro cc-option $(success $CC -Werror $(1) -c -x c /dev/null -o /dev/null)
+>
+> My plan for v3
+> --------------
+>
+> The MW is approaching, but I'd like to make it more lovely if
+> I have some time.
+>
+> While I was writing these patches, I noticed a kind of similarity
+> between Makefile and Kconfig.
+>
+> Makefile can define variables and functions to do text processing
+> during the parse phase.  After parsing, it builds up dependency
+> graph, and moves on to the execution phase.  Then, it generates
+> objects as needed by checking time-stamps.
+>
+> [Makefile]
+>
+>   OBJ := foo.o
+>   SRC := foo.c
+>   CC := gcc
+>
+>   $(OBJ): $(SRC)
+>             $(CC) -c -o $(OBJ) $(SRC)
+>
+> [Makefile after text processing]
+>
+>   foo.o: foo.c
+>           gcc -c -o foo.o foo.c
+>
+> Now, we are adding tools for text processing to Kconfig.  Functions
+> are statically expanded by the lexer.  After all source files are
+> parsed, Kconfig moves on to the evaluation phase.  Then, users can
+> tweak symbol values from menus.
+>
+> So, we should be able to describe Kconfig like follows:
+>
+> [Kconfig]
+>
+>    MY_SYMBOL := CC_STACKPROTECTOR
+>    MY_PROMPT := "Stackprotector"
+>    success = $(shell ($(1) && echo y) || echo n)
+>    cc-option = $(success $CC -Werror $(1) -c -x c /dev/null -o /dev/null)
+>
+>    config $(MY_SYMBOL)
+>            bool $(MY_PROMPT)
+>            depends on $(cc-option -fstack-protector)
+>
+> [Kconfig after text processing]
+>
+>    config CC_STACKPROTECTOR
+>            bool "Stackptector"
+>            depends on y
+>
+> So, I think it is better to use '=' assignment for defining functions.
+> I will remove the 'macro' keyword.
+> Also, support variables.  A variable is a function with no argument.
+> So, it will be easy to implement it as a sub-set of function feature.
+> It is better to support two flavors of assignments, '=' and ':=' as well.
+>
+> Masahiro Yamada (21):
+>   kbuild: remove kbuild cache
+>   kbuild: remove CONFIG_CROSS_COMPILE support
+>   kconfig: move and rename sym_expand_string_value()
+>   kconfig: reference environments directly and remove 'option env='
+>     syntax
+>   kconfig: remove string expansion in file_lookup()
+>   kconfig: remove string expansion for mainmenu after yyparse()
+>   kconfig: add function support and implement 'shell' function
+>   kconfig: replace $UNAME_RELEASE with function call
+>   kconfig: add 'macro' keyword to support user-defined function
+>   kconfig: add 'success' and 'cc-option' macros
+>   stack-protector: test compiler capability in Kconfig and drop AUTO
+>     mode
+>   kconfig: show compiler version text in the top comment
+>   kconfig: add CC_IS_GCC and GCC_VERSION
+>   kconfig: add CC_IS_CLANG and CLANG_VERSION
+>   gcov: remove CONFIG_GCOV_FORMAT_AUTODETECT
+>   kcov: imply GCC_PLUGINS and GCC_PLUGIN_SANCOV instead of select'ing
+>     them
+>   gcc-plugins: always build plugins with C++
+>   gcc-plugins: move GCC version check for PowerPC to Kconfig
+>   gcc-plugins: test GCC plugin support in Kconfig
+>   gcc-plugins: enable GCC_PLUGINS for COMPILE_TEST
+>   arm64: move GCC version check for ARCH_SUPPORTS_INT128 to Kconfig
+>
+>  Documentation/kbuild/kconfig-language.txt |   8 --
+>  Kconfig                                   |   4 +-
+>  Makefile                                  | 103 ++------------
+>  arch/Kconfig                              |  37 ++---
+>  arch/arm64/Kconfig                        |   1 +
+>  arch/arm64/Makefile                       |   2 -
+>  arch/powerpc/Kconfig                      |   2 +-
+>  arch/sh/Kconfig                           |   4 +-
+>  arch/sparc/Kconfig                        |   4 +-
+>  arch/tile/Kconfig                         |   2 +-
+>  arch/um/Kconfig.common                    |   4 -
+>  arch/x86/Kconfig                          |  12 +-
+>  arch/x86/um/Kconfig                       |   4 +-
+>  init/Kconfig                              |  44 +++---
+>  kernel/gcov/Kconfig                       |  17 +--
+>  kernel/gcov/Makefile                      |   2 -
+>  lib/Kconfig.debug                         |   7 +-
+>  scripts/Kbuild.include                    | 101 ++------------
+>  scripts/Makefile.gcc-plugins              |  95 ++++---------
+>  scripts/clang-version.sh                  |  24 ++--
+>  scripts/gcc-plugin.sh                     |  37 +----
+>  scripts/gcc-plugins/Makefile              |  15 +-
+>  scripts/gcc-x86_32-has-stack-protector.sh |   7 +-
+>  scripts/gcc-x86_64-has-stack-protector.sh |   5 -
+>  scripts/kconfig/confdata.c                |  31 +---
+>  scripts/kconfig/env.c                     |  95 +++++++++++++
+>  scripts/kconfig/function.c                | 225 ++++++++++++++++++++++++++++++
+>  scripts/kconfig/kconf_id.c                |   1 -
+>  scripts/kconfig/lkc.h                     |   9 +-
+>  scripts/kconfig/lkc_proto.h               |   7 +-
+>  scripts/kconfig/menu.c                    |   3 -
+>  scripts/kconfig/symbol.c                  | 109 ---------------
+>  scripts/kconfig/util.c                    |  96 ++++++++++---
+>  scripts/kconfig/zconf.l                   |  51 ++++++-
+>  scripts/kconfig/zconf.y                   |  35 ++---
+>  35 files changed, 608 insertions(+), 595 deletions(-)
+>  create mode 100644 scripts/kconfig/env.c
+>  create mode 100644 scripts/kconfig/function.c
+>
+> --
+> 2.7.4
+>
+> --
+> To unsubscribe from this list: send the line "unsubscribe linux-kbuild" in
+> the body of a message to majordomo@vger.kernel.org
+> More majordomo info at  http://vger.kernel.org/majordomo-info.html
 
-Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
----
- Documentation/core-api/index.rst   |   1 +
- Documentation/core-api/pmalloc.rst | 107 +++++++++++++++++++++++++++++++++++++
- 2 files changed, 108 insertions(+)
- create mode 100644 Documentation/core-api/pmalloc.rst
 
-diff --git a/Documentation/core-api/index.rst b/Documentation/core-api/index.rst
-index c670a8031786..8f5de42d6571 100644
---- a/Documentation/core-api/index.rst
-+++ b/Documentation/core-api/index.rst
-@@ -25,6 +25,7 @@ Core utilities
-    genalloc
-    errseq
-    printk-formats
-+   pmalloc
- 
- Interfaces for kernel debugging
- ===============================
-diff --git a/Documentation/core-api/pmalloc.rst b/Documentation/core-api/pmalloc.rst
-new file mode 100644
-index 000000000000..c14907485137
---- /dev/null
-+++ b/Documentation/core-api/pmalloc.rst
-@@ -0,0 +1,107 @@
-+.. SPDX-License-Identifier: GPL-2.0
-+
-+.. _pmalloc:
-+
-+Protectable memory allocator
-+============================
-+
-+Purpose
-+-------
-+
-+The pmalloc library is meant to provide read-only status to data that,
-+for some reason, could neither be declared as constant, nor could it take
-+advantage of the qualifier __ro_after_init, but is write-once and
-+read-only in spirit. At least as long as it doesn't get teared down.
-+It protects data from both accidental and malicious overwrites.
-+
-+Example: A policy that is loaded from userspace.
-+
-+
-+Concept
-+-------
-+
-+The MMU available in the system can be used to write protect memory pages.
-+Unfortunately this feature cannot be used as-it-is, to protect sensitive
-+data, because this potentially read-only data is typically interleaved
-+with other data, which must stay writeable.
-+
-+pmalloc introduces the concept of protectable memory pools.
-+A pool contains a list of areas of virtually contiguous pages of
-+memory. An area is the minimum amount of memory that pmalloc allows to
-+protect, because the user might have allocated a memory range that
-+crosses the boundary between pages.
-+
-+When an allocation is performed, if there is not enough memory already
-+available in the pool, a new area of suitable size is grabbed.
-+The size chosen is the largest between the roundup (to PAGE_SIZE) of
-+the request from pmalloc and friends and the refill parameter specified
-+when creating the pool.
-+
-+When a pool is created, it is possible to specify two parameters:
-+- refill size: the minimum size of the memory area to allocate when needed
-+- align_order: the default alignment to use when reserving memory
-+
-+To facilitate the conversion of existing code to pmalloc pools, several
-+helper functions are provided, mirroring their k/vmalloc counterparts.
-+However one is missing. There is no pfree() because the memory protected
-+by a pool will be released exclusively when the pool is destroyed.
-+
-+
-+
-+Caveats
-+-------
-+
-+- When a pool is protected, whatever memory would be still available in
-+  the current vmap_area (from which allocations are performed) is
-+  relinquished.
-+
-+- As already explained, freeing of memory is not supported. Pages will be
-+  returned to the system upon destruction of the memory pool that they
-+  belong to.
-+
-+- The address range available for vmalloc (and thus for pmalloc too) is
-+  limited, on 32-bit systems. However it shouldn't be an issue, since not
-+  much data is expected tobe dynamically allocated and turned into
-+  read-only.
-+
-+- Regarding SMP systems, the allocations are expected to happen mostly
-+  during an initial transient, after which there should be no more need
-+  to perform cross-processor synchronizations of page tables.
-+  Loading of kernel modules is an exception to this, but it's not expected
-+  to happen with such high frequency to become a problem.
-+
-+
-+Use
-+---
-+
-+The typical sequence, when using pmalloc, is:
-+
-+#. create a pool
-+
-+   :c:func:`pmalloc_create_pool`
-+
-+#. issue one or more allocation requests to the pool
-+
-+   :c:func:`pmalloc`
-+
-+   or
-+
-+   :c:func:`pzalloc`
-+
-+#. initialize the memory obtained, with the desired values
-+
-+#. write-protect the memory so far allocated
-+
-+   :c::func:`pmalloc_protect_pool`
-+
-+#. iterate over the last 3 points as needed
-+
-+#. [optional] destroy the pool
-+
-+   :c:func:`pmalloc_destroy_pool`
-+
-+API
-+---
-+
-+.. kernel-doc:: include/linux/pmalloc.h
-+.. kernel-doc:: mm/pmalloc.c
+
+For convenience, the whole of this series is available at
+the following branch.
+
+git://git.kernel.org/pub/scm/linux/kernel/git/masahiroy/linux-kbuild.git
+ kconfig-shell-v2
+
+
 -- 
-2.14.1
+Best Regards
+Masahiro Yamada
