@@ -1,66 +1,52 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20180327164532.796cdd043fece53cd9b56f8f@linux-foundation.org>
-References: <20180315225919.GA43806@beast> <20180316155950.35fda7c63ec59277ba504201@linux-foundation.org>
- <CAGXu5jLAqki8oE7AF9BEwLxKzpTOOPsT1imjdSAG_U44uGXJdQ@mail.gmail.com>
- <CAGXu5j+utmcN_ot-3NJ-8C0onnu8O-DOdbAxVoatzE9UcJ-O4A@mail.gmail.com> <20180327164532.796cdd043fece53cd9b56f8f@linux-foundation.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 27 Mar 2018 16:55:12 -0700
-Message-ID: <CAGXu5j+7cG+BQQLfxSm8xLPzF1de7_+fU-s0R5ZXjfD0jx4c8w@mail.gmail.com>
-Subject: Re: [PATCH v2] rslib: Remove VLAs by setting upper bound on nroots
+Sender: linus971@gmail.com
+In-Reply-To: <20180327160342.e2bc9a15afda5823c8daf4fb@linux-foundation.org>
+References: <20180327213609.GA2964@beast> <20180327160342.e2bc9a15afda5823c8daf4fb@linux-foundation.org>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Tue, 27 Mar 2018 14:22:31 -1000
+Message-ID: <CA+55aFzi0aUGuxDOwj1HkrP6r2Df2jk5F0HDTOQCG6_eeytbYw@mail.gmail.com>
+Subject: Re: [PATCH] task_struct: Only use anon struct under randstruct plugin
 Content-Type: text/plain; charset="UTF-8"
 To: Andrew Morton <akpm@linux-foundation.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, Segher Boessenkool <segher@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 27, 2018 at 4:45 PM, Andrew Morton
+On Tue, Mar 27, 2018 at 1:03 PM, Andrew Morton
 <akpm@linux-foundation.org> wrote:
-> On Mon, 26 Mar 2018 16:17:57 -0700 Kees Cook <keescook@chromium.org> wrote:
 >
->> On Fri, Mar 16, 2018 at 11:25 PM, Kees Cook <keescook@chromium.org> wrote:
->> > On Fri, Mar 16, 2018 at 3:59 PM, Andrew Morton
->> > <akpm@linux-foundation.org> wrote:
->> >> On Thu, 15 Mar 2018 15:59:19 -0700 Kees Cook <keescook@chromium.org> wrote:
->> >>
->> >>> Avoid stack VLAs[1] by always allocating the upper bound of stack space
->> >>> needed. The existing users of rslib appear to max out at 24 roots[2],
->> >>> so use that as the upper bound until we have a reason to change it.
->> >>>
->> >>> Alternative considered: make init_rs() a true caller-instance and
->> >>> pre-allocate the workspaces. This would possibly need locking and
->> >>> a refactoring of the returned structure.
->> >>>
->> >>> Using kmalloc in this path doesn't look great, especially since at
->> >>> least one caller (pstore) is sensitive to allocations during rslib
->> >>> usage (it expects to run it during an Oops, for example).
->> >>
->> >> Oh.
->> >>
->> >> Could we allocate the storage during init_rs(), attach it to `struct
->> >> rs_control'?
->> >
->> > No, because they're modified during decode, and struct rs_control is
->> > shared between users. :(
->> >
->> > Doing those changes is possible, but it requires a rather extensive
->> > analysis of callers, etc.
->> >
->> > Hence, the 24 ultimately.
->>
->> Can this land in -mm, or does this need further discussion?
+> Why?  What caused this padding?  It happens in all configs?
+
+I assume what happens is that the anonymous struct ends up containing
+fields that are cacheline-aligned, and then the whole anonymous struct
+is cacheline-aligned.
+
+Which is all kinds of stupid, since the anonymous struct itself does
+not exist outside of the outer struct. So it would be entirely
+sufficient to just make the outer struct cacheline aligned (like it
+used to be), but not align the inner anonymous one - just the fields
+in it.
+
+But there may be "reasons" why the inner anonymous  one needs to be
+aligned. Maybe it's some standards requirement, or maybe it's just an
+internal gcc implementation detail.
+
+Regardless, it's a bit sad. It also means that when randomization is
+on, that unnecessary padding will be there.
+
+I wonder if there is some acceptable trick to avoid it. Maybe the
+anonymous struct can be marked as not needing alignment, even if the
+fields inside of it would still need to be aligned wrt the outer
+struct.
+
+>> Instead,
+>> move the anonymous struct to being only used when struct layout
+>> randomization is enabled.
 >
-> Grumble.  That share-the-rs_control-if-there's-already-a-matching-one
-> thing looks like premature optimization to me :(
->
-> I guess if we put this storage into the rs_control (rather than on the
-> stack) then we'd have to worry about concurrent uses of it.  It looks
-> like all the other fields are immutable once it's set up so there might
-> be such users.  In fact, I suspect there are...
+> So the mysterious 40 byte bloat is still present in this case?
 
-Exactly. :( This is the same conclusion tglx and I came to.
+Almost certainly. And the struct randomization will possibly add much
+*more* padding elsewhere, since at least some of  our structures are
+laid out to try to avoid padding, and then the randomization might be
+breaking that.
 
--Kees
-
--- 
-Kees Cook
-Pixel Security
+               Linus
