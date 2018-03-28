@@ -1,62 +1,34 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jJ=46_1DiWg=0aKzOo1+kxL9vemLFi11brn-+iY6cgZMw@mail.gmail.com>
-References: <1520970663-19633-1-git-send-email-s.mesoraca16@gmail.com> <CAGXu5jJ=46_1DiWg=0aKzOo1+kxL9vemLFi11brn-+iY6cgZMw@mail.gmail.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Wed, 28 Mar 2018 12:38:32 +0200
-Message-ID: <CAJHCu1JFfKEiRFs6rz3W=B3z1GM09E9K7Oja2i9iK3GHqLpDuw@mail.gmail.com>
-Subject: Re: [PATCH] ftrace: drop a VLA in module_exists()
+Sender: keescook@google.com
+In-Reply-To: <1522128575-5326-18-git-send-email-yamada.masahiro@socionext.com>
+References: <1522128575-5326-1-git-send-email-yamada.masahiro@socionext.com> <1522128575-5326-18-git-send-email-yamada.masahiro@socionext.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 28 Mar 2018 04:29:26 -0700
+Message-ID: <CAGXu5j+mJeG+POhgPkoanX8SVnY0LvTDoBUsyTNGpKh0KYiHMQ@mail.gmail.com>
+Subject: Re: [PATCH v2 17/21] gcc-plugins: always build plugins with C++
 Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Steven Rostedt <rostedt@goodmis.org>
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, Sam Ravnborg <sam@ravnborg.org>, Linus Torvalds <torvalds@linux-foundation.org>, Arnd Bergmann <arnd@arndb.de>, Ulf Magnusson <ulfalizer@gmail.com>, Thomas Gleixner <tglx@linutronix.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Randy Dunlap <rdunlap@infradead.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Nicolas Pitre <nico@linaro.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Emese Revfy <re.emese@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-03-27 1:16 GMT+02:00 Kees Cook <keescook@chromium.org>:
-> On Tue, Mar 13, 2018 at 12:51 PM, Salvatore Mesoraca
-> <s.mesoraca16@gmail.com> wrote:
->> Avoid a VLA[1] by using a real constant expression instead of a variable.
->> The compiler should be able to optimize the original code and avoid using
->> an actual VLA. Anyway this change is useful because it will avoid a false
->> positive with -Wvla, it might also help the compiler generating better
->> code.
->>
->> [1] https://lkml.org/lkml/2018/3/7/621
->>
->> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
->> ---
->>  kernel/trace/ftrace.c | 7 +++----
->>  1 file changed, 3 insertions(+), 4 deletions(-)
->>
->> diff --git a/kernel/trace/ftrace.c b/kernel/trace/ftrace.c
->> index eac9ce2..adebb92 100644
->> --- a/kernel/trace/ftrace.c
->> +++ b/kernel/trace/ftrace.c
->> @@ -3902,14 +3902,13 @@ static bool module_exists(const char *module)
->>  {
->>         /* All modules have the symbol __this_module */
->>         const char this_mod[] = "__this_module";
->> -       const int modname_size = MAX_PARAM_PREFIX_LEN + sizeof(this_mod) + 1;
->> -       char modname[modname_size + 1];
->> +       char modname[MAX_PARAM_PREFIX_LEN + sizeof(this_mod) + 1];
+On Mon, Mar 26, 2018 at 10:29 PM, Masahiro Yamada
+<yamada.masahiro@socionext.com> wrote:
+> If the target compiler is GCC 4.8 or newer, plugins are compiled with
+> HOSTCXX.  Otherwise, gcc-plugin.sh will select HOSTCC or HOSTCXX.
 >
-> Actually, I think this needs to be "+ 2" (":" and NULL).
+> To simplify things, drop the HOSTCC support for plugins.  If you use
+> GCC plugins, the requirement for the target compiler is GCC 4.8 (or
+> older compiler with necessary features backported).  This is a feature
+> for advanced users, so this requirement would not be a big deal.
+> Currently, building plugins requires GCC 4.5, so this is not a big jump.
 
-Ah, right! I'll fix it ASAP :)
+Emese already NAKed this, and I'd agree. 4.5 to 4.8 is quite a jump
+(see all the threads on minimum gcc versions). Until we're at 4.8 as a
+minimum, let's leave this as-is. "To simply things" doesn't seem like
+a good enough reason to me.
 
->
->>         unsigned long val;
->>         int n;
->>
->> -       n = snprintf(modname, modname_size + 1, "%s:%s", module, this_mod);
->> +       n = snprintf(modname, sizeof(modname), "%s:%s", module, this_mod);
->>
->> -       if (n > modname_size)
->> +       if (n > sizeof(modname) - 1)
->>                 return false;
->>
->>         val = module_kallsyms_lookup_name(modname);
->
-> Otherwise, looks good!
+-Kees
 
-Thank you!
-
-Salvatore
+-- 
+Kees Cook
+Pixel Security
