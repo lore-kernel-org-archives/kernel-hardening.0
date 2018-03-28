@@ -1,60 +1,43 @@
-From: Alexander Popov <alex.popov@linux.com>
-Subject: [PATCH RFC v10 6/6] doc: self-protection: Add information about STACKLEAK feature
-Date: Wed, 28 Mar 2018 22:57:12 +0300
-Message-Id: <1522267032-6603-7-git-send-email-alex.popov@linux.com>
+MIME-Version: 1.0
+Sender: keescook@google.com
 In-Reply-To: <1522267032-6603-1-git-send-email-alex.popov@linux.com>
 References: <1522267032-6603-1-git-send-email-alex.popov@linux.com>
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, x86@kernel.org, linux-kernel@vger.kernel.org, alex.popov@linux.com
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 28 Mar 2018 13:13:48 -0700
+Message-ID: <CAGXu5jKRs6Zi7+hDEsH3hW2zsAAQ0aiJoXaOpmxNjHC64ZABTw@mail.gmail.com>
+Subject: Re: [PATCH RFC v10 0/6] Introduce the STACKLEAK feature and a test
+ for it
+Content-Type: text/plain; charset="UTF-8"
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add information about STACKLEAK feature to "Stack depth overflow" and
-"Memory poisoning" sections of self-protection.rst.
+On Wed, Mar 28, 2018 at 12:57 PM, Alexander Popov <alex.popov@linux.com> wrote:
+> This is the 10th version of the patch series introducing STACKLEAK to the
+> mainline kernel. The previous version raised a fervent discussion[0].
+> The assembly code introduced by v9 irritated the reviewers.
 
-Signed-off-by: Alexander Popov <alex.popov@linux.com>
----
- Documentation/security/self-protection.rst | 23 ++++++++++++++---------
- 1 file changed, 14 insertions(+), 9 deletions(-)
+Thanks for persisting!
 
-diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
-index 0f53826..b685f18 100644
---- a/Documentation/security/self-protection.rst
-+++ b/Documentation/security/self-protection.rst
-@@ -165,10 +165,15 @@ Stack depth overflow
- A less well understood attack is using a bug that triggers the
- kernel to consume stack memory with deep function calls or large stack
- allocations. With this attack it is possible to write beyond the end of
--the kernel's preallocated stack space and into sensitive structures. Two
--important changes need to be made for better protections: moving the
--sensitive thread_info structure elsewhere, and adding a faulting memory
--hole at the bottom of the stack to catch these overflows.
-+the kernel's preallocated stack space and into sensitive structures.
-+The combination of the following measures gives better protection:
-+
-+* moving the sensitive thread_info structure off the stack
-+  (``CONFIG_THREAD_INFO_IN_TASK``);
-+* adding a faulting memory hole at the bottom of the stack to catch
-+  these overflows (``CONFIG_VMAP_STACK``);
-+* runtime checking that alloca() calls don't overstep the stack boundary
-+  (``CONFIG_GCC_PLUGIN_STACKLEAK``).
- 
- Heap memory integrity
- ---------------------
-@@ -302,11 +307,11 @@ sure structure holes are cleared.
- Memory poisoning
- ----------------
- 
--When releasing memory, it is best to poison the contents (clear stack on
--syscall return, wipe heap memory on a free), to avoid reuse attacks that
--rely on the old contents of memory. This frustrates many uninitialized
--variable attacks, stack content exposures, heap content exposures, and
--use-after-free attacks.
-+When releasing memory, it is best to poison the contents, to avoid reuse
-+attacks that rely on the old contents of memory. E.g., clear stack on a
-+syscall return (``CONFIG_GCC_PLUGIN_STACKLEAK``), wipe heap memory on a
-+free. This frustrates many uninitialized variable attacks, stack content
-+exposures, heap content exposures, and use-after-free attacks.
- 
- Destination tracking
- --------------------
+> I've found the way to bypass the obstacles[1] of the C implementation.
+> So I dare come once again. Let me ask you to look at this code without
+> preconception.
+
+The assembly changes are now very minimal; thanks for reworking this.
+I hope this addresses both Dave Hansen and Linus's (similar)
+objections.
+
+>  1. reduces the information that can be revealed through kernel stack leak bugs.
+>     The idea of erasing the thread stack at the end of syscalls is similar to
+>     CONFIG_PAGE_POISONING and memzero_explicit() in kernel crypto, which all
+>     comply with FDP_RIP.2 (Full Residual Information Protection) of the
+>     Common Criteria standard.
+
+Agreed: I continue to believe this is meaningful even if just for
+reducing the lifetime of sensitive data on the stack.
+
+-Kees
+
 -- 
-2.7.4
+Kees Cook
+Pixel Security
