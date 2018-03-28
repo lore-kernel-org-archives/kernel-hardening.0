@@ -1,59 +1,60 @@
-Subject: Re: [PATCH 3/4] gpio: Remove VLA from xra1403 driver
-References: <20180310001021.6437-1-labbott@redhat.com>
- <20180310001021.6437-4-labbott@redhat.com>
- <CAMuHMdUfGp_rn_fMWdOfWxPvyE1Y9oemm2piXszFTvBi9sQ5Eg@mail.gmail.com>
 From: Laura Abbott <labbott@redhat.com>
-Message-ID: <90ca44b5-52d0-be74-f36c-55d6f4a9bf25@redhat.com>
-Date: Wed, 28 Mar 2018 10:27:09 -0700
-MIME-Version: 1.0
-In-Reply-To: <CAMuHMdUfGp_rn_fMWdOfWxPvyE1Y9oemm2piXszFTvBi9sQ5Eg@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Geert Uytterhoeven <geert@linux-m68k.org>
-Cc: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Subject: [PATCH v3] gpio: Remove VLA from stmpe driver
+Date: Wed, 28 Mar 2018 10:59:57 -0700
+Message-Id: <20180328175957.23904-1-labbott@redhat.com>
+To: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Patrice Chotard <patrice.chotard@st.com>
+Cc: Laura Abbott <labbott@redhat.com>, linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+The new challenge is to remove VLAs from the kernel
+(see https://lkml.org/lkml/2018/3/7/621)
 
+The number of GPIOs on the supported chips is fairly small
+so stack allocate to a known upper bound and spit out a warning
+if any new chips have more gpios.
 
-On 03/28/2018 12:27 AM, Geert Uytterhoeven wrote:
-> Hi Laura,
-> 
-> On Sat, Mar 10, 2018 at 1:10 AM, Laura Abbott <labbott@redhat.com> wrote:
->> The new challenge is to remove VLAs from the kernel
->> (see https://lkml.org/lkml/2018/3/7/621)
->>
->> This patch replaces a VLA with an appropriate call to kmalloc_array.
->>
->> Signed-off-by: Laura Abbott <labbott@redhat.com>
-> 
-> Thanks for your patch!
-> 
->> --- a/drivers/gpio/gpio-xra1403.c
->> +++ b/drivers/gpio/gpio-xra1403.c
->> @@ -126,11 +126,16 @@ static void xra1403_dbg_show(struct seq_file *s, struct gpio_chip *chip)
->>   {
->>          int reg;
->>          struct xra1403 *xra = gpiochip_get_data(chip);
->> -       int value[xra1403_regmap_cfg.max_register];
-> 
-> Apparently xra1403_regmap_cfg.max_register is always 0x15?
-> 
-> What about adding
-> 
->          #define XRA_LAST 15
-> 
-> at the top, and replacing both "XRA_IFR | 0x01" and
-> xra1403_regmap_cfg.max_register by XRA_LAST instead?
-> That would avoid doing yet another memory allocation over and over.
-> 
-> Gr{oetje,eeting}s,
-> 
->                          Geert
-> 
+Signed-off-by: Laura Abbott <labbott@redhat.com>
+---
+v3: Split this off from the rest of the series since some of the
+patches had been picked up. Switched to just hardcoding an upper
+bound for the stack array since it's only a few extra bytes
+of stack space.
+---
+ drivers/gpio/gpio-stmpe.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
 
-I'm okay with making the change but I think Linus already picked
-up the patch into his gpio trees. Linus, do you want a patch on
-top of your -devel branch or should I just send a new patch?
-
-Thanks,
-Laura
+diff --git a/drivers/gpio/gpio-stmpe.c b/drivers/gpio/gpio-stmpe.c
+index f8d7d1cd8488..8d6a5a7e612d 100644
+--- a/drivers/gpio/gpio-stmpe.c
++++ b/drivers/gpio/gpio-stmpe.c
+@@ -363,13 +363,15 @@ static struct irq_chip stmpe_gpio_irq_chip = {
+ 	.irq_set_type		= stmpe_gpio_irq_set_type,
+ };
+ 
++#define MAX_GPIOS 24
++
+ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+ {
+ 	struct stmpe_gpio *stmpe_gpio = dev;
+ 	struct stmpe *stmpe = stmpe_gpio->stmpe;
+ 	u8 statmsbreg;
+ 	int num_banks = DIV_ROUND_UP(stmpe->num_gpios, 8);
+-	u8 status[num_banks];
++	u8 status[DIV_ROUND_UP(MAX_GPIOS, 8)];
+ 	int ret;
+ 	int i;
+ 
+@@ -434,6 +436,11 @@ static int stmpe_gpio_probe(struct platform_device *pdev)
+ 	struct stmpe_gpio *stmpe_gpio;
+ 	int ret, irq;
+ 
++	if (stmpe->num_gpios > MAX_GPIOS) {
++		dev_err(&pdev->dev, "Need to increase maximum GPIO number\n");
++		return -EINVAL;
++	}
++
+ 	stmpe_gpio = kzalloc(sizeof(*stmpe_gpio), GFP_KERNEL);
+ 	if (!stmpe_gpio)
+ 		return -ENOMEM;
+-- 
+2.14.3
