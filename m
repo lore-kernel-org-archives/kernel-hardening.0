@@ -1,27 +1,38 @@
-Date: Wed, 28 Mar 2018 12:10:52 +0200 (CEST)
-From: Thomas Gleixner <tglx@linutronix.de>
-Subject: Re: [PATCH v2] rslib: Remove VLAs by setting upper bound on nroots
-In-Reply-To: <alpine.DEB.2.21.1803281020390.3247@nanos.tec.linutronix.de>
-Message-ID: <alpine.DEB.2.21.1803281210040.3247@nanos.tec.linutronix.de>
-References: <20180315225919.GA43806@beast> <20180316155950.35fda7c63ec59277ba504201@linux-foundation.org> <CAGXu5jLAqki8oE7AF9BEwLxKzpTOOPsT1imjdSAG_U44uGXJdQ@mail.gmail.com> <CAGXu5j+utmcN_ot-3NJ-8C0onnu8O-DOdbAxVoatzE9UcJ-O4A@mail.gmail.com>
- <20180327164532.796cdd043fece53cd9b56f8f@linux-foundation.org> <CAGXu5j+7cG+BQQLfxSm8xLPzF1de7_+fU-s0R5ZXjfD0jx4c8w@mail.gmail.com> <alpine.DEB.2.21.1803281020390.3247@nanos.tec.linutronix.de>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20180326143518.GA9341@arm.com>
+References: <1519899591-29761-1-git-send-email-kpark3469@gmail.com> <20180326143518.GA9341@arm.com>
+From: Keun-O Park <kpark3469@gmail.com>
+Date: Wed, 28 Mar 2018 12:16:02 +0200
+Message-ID: <CA+KhAHbv4CbuWcKt7Sbn8g_BcMCSFaJTmHtJedDESHqHc1mmGQ@mail.gmail.com>
+Subject: Re: [PATCH 0/4] usercopy: reimplement arch_within_stack_frames
+Content-Type: text/plain; charset="UTF-8"
+To: Will Deacon <will.deacon@arm.com>
+Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, James Morse <james.morse@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, keun-o.park@darkmatter.ae
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 28 Mar 2018, Thomas Gleixner wrote:
-> On Tue, 27 Mar 2018, Kees Cook wrote:
-> 
-> > > I guess if we put this storage into the rs_control (rather than on the
-> > > stack) then we'd have to worry about concurrent uses of it.  It looks
-> > > like all the other fields are immutable once it's set up so there might
-> > > be such users.  In fact, I suspect there are...
-> > 
-> > Exactly. :( This is the same conclusion tglx and I came to.
-> 
-> I think we can lift that and just let all users set up a new rs_control
-> from scratch. Takes some time to init the tables, but ....
+Hi Will,
 
-Bah, no. dm-verity really wants to share them.....
+On Mon, Mar 26, 2018 at 4:35 PM, Will Deacon <will.deacon@arm.com> wrote:
+> Hi Sahara,
+>
+> On Thu, Mar 01, 2018 at 02:19:47PM +0400, kpark3469@gmail.com wrote:
+>> From: Sahara <keun-o.park@darkmatter.ae>
+>>
+>> This series of patches introduce the arm64 arch_within_stack_frames
+>> implementation using stacktrace functions. Also the base code is
+>> moved from thread_info.h to stacktrace.h. x86 code is reimplemented
+>> to use frame pointer unwinder functions.
+>
+> What's the status on this series? I'm ok taking the arm64 patch from James
+> to bring us up to speed with x86, but it doesn't make sense without the
+> first patch in the series because the arch callback is out-of-line.
+>
+> Will
+
+I haven't received any response from Kees or other engineers about
+this series of patches yet.
+Hi Kees, any comment on these patches to put these on the next stage?
+Thanks.
+
+BR
+Sahara
