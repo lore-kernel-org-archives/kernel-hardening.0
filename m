@@ -1,53 +1,69 @@
+Date: Wed, 28 Mar 2018 10:22:34 +0200 (CEST)
+From: Thomas Gleixner <tglx@linutronix.de>
+Subject: Re: [PATCH v2] rslib: Remove VLAs by setting upper bound on nroots
+In-Reply-To: <CAGXu5j+7cG+BQQLfxSm8xLPzF1de7_+fU-s0R5ZXjfD0jx4c8w@mail.gmail.com>
+Message-ID: <alpine.DEB.2.21.1803281020390.3247@nanos.tec.linutronix.de>
+References: <20180315225919.GA43806@beast> <20180316155950.35fda7c63ec59277ba504201@linux-foundation.org> <CAGXu5jLAqki8oE7AF9BEwLxKzpTOOPsT1imjdSAG_U44uGXJdQ@mail.gmail.com> <CAGXu5j+utmcN_ot-3NJ-8C0onnu8O-DOdbAxVoatzE9UcJ-O4A@mail.gmail.com>
+ <20180327164532.796cdd043fece53cd9b56f8f@linux-foundation.org> <CAGXu5j+7cG+BQQLfxSm8xLPzF1de7_+fU-s0R5ZXjfD0jx4c8w@mail.gmail.com>
 MIME-Version: 1.0
-Sender: geert.uytterhoeven@gmail.com
-In-Reply-To: <20180310001021.6437-4-labbott@redhat.com>
-References: <20180310001021.6437-1-labbott@redhat.com> <20180310001021.6437-4-labbott@redhat.com>
-From: Geert Uytterhoeven <geert@linux-m68k.org>
-Date: Wed, 28 Mar 2018 09:27:22 +0200
-Message-ID: <CAMuHMdUfGp_rn_fMWdOfWxPvyE1Y9oemm2piXszFTvBi9sQ5Eg@mail.gmail.com>
-Subject: Re: [PATCH 3/4] gpio: Remove VLA from xra1403 driver
-Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Nandor Han <nandor.han@ge.com>, Semi Malinen <semi.malinen@ge.com>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=US-ASCII
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Laura,
+On Tue, 27 Mar 2018, Kees Cook wrote:
+> On Tue, Mar 27, 2018 at 4:45 PM, Andrew Morton
+> <akpm@linux-foundation.org> wrote:
+> > On Mon, 26 Mar 2018 16:17:57 -0700 Kees Cook <keescook@chromium.org> wrote:
+> >
+> >> On Fri, Mar 16, 2018 at 11:25 PM, Kees Cook <keescook@chromium.org> wrote:
+> >> > On Fri, Mar 16, 2018 at 3:59 PM, Andrew Morton
+> >> > <akpm@linux-foundation.org> wrote:
+> >> >> On Thu, 15 Mar 2018 15:59:19 -0700 Kees Cook <keescook@chromium.org> wrote:
+> >> >>
+> >> >>> Avoid stack VLAs[1] by always allocating the upper bound of stack space
+> >> >>> needed. The existing users of rslib appear to max out at 24 roots[2],
+> >> >>> so use that as the upper bound until we have a reason to change it.
+> >> >>>
+> >> >>> Alternative considered: make init_rs() a true caller-instance and
+> >> >>> pre-allocate the workspaces. This would possibly need locking and
+> >> >>> a refactoring of the returned structure.
+> >> >>>
+> >> >>> Using kmalloc in this path doesn't look great, especially since at
+> >> >>> least one caller (pstore) is sensitive to allocations during rslib
+> >> >>> usage (it expects to run it during an Oops, for example).
+> >> >>
+> >> >> Oh.
+> >> >>
+> >> >> Could we allocate the storage during init_rs(), attach it to `struct
+> >> >> rs_control'?
+> >> >
+> >> > No, because they're modified during decode, and struct rs_control is
+> >> > shared between users. :(
+> >> >
+> >> > Doing those changes is possible, but it requires a rather extensive
+> >> > analysis of callers, etc.
+> >> >
+> >> > Hence, the 24 ultimately.
+> >>
+> >> Can this land in -mm, or does this need further discussion?
+> >
+> > Grumble.  That share-the-rs_control-if-there's-already-a-matching-one
+> > thing looks like premature optimization to me :(
 
-On Sat, Mar 10, 2018 at 1:10 AM, Laura Abbott <labbott@redhat.com> wrote:
-> The new challenge is to remove VLAs from the kernel
-> (see https://lkml.org/lkml/2018/3/7/621)
->
-> This patch replaces a VLA with an appropriate call to kmalloc_array.
->
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
+That was done back then in the days when the first NAND chips required Reed
+solomon error correction and we were still running on rather small devices.
 
-Thanks for your patch!
+> > I guess if we put this storage into the rs_control (rather than on the
+> > stack) then we'd have to worry about concurrent uses of it.  It looks
+> > like all the other fields are immutable once it's set up so there might
+> > be such users.  In fact, I suspect there are...
+> 
+> Exactly. :( This is the same conclusion tglx and I came to.
 
-> --- a/drivers/gpio/gpio-xra1403.c
-> +++ b/drivers/gpio/gpio-xra1403.c
-> @@ -126,11 +126,16 @@ static void xra1403_dbg_show(struct seq_file *s, struct gpio_chip *chip)
->  {
->         int reg;
->         struct xra1403 *xra = gpiochip_get_data(chip);
-> -       int value[xra1403_regmap_cfg.max_register];
+I think we can lift that and just let all users set up a new rs_control
+from scratch. Takes some time to init the tables, but ....
 
-Apparently xra1403_regmap_cfg.max_register is always 0x15?
+Thanks,
 
-What about adding
-
-        #define XRA_LAST 15
-
-at the top, and replacing both "XRA_IFR | 0x01" and
-xra1403_regmap_cfg.max_register by XRA_LAST instead?
-That would avoid doing yet another memory allocation over and over.
-
-Gr{oetje,eeting}s,
-
-                        Geert
-
--- 
-Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k.org
-
-In personal conversations with technical people, I call myself a hacker. But
-when I'm talking to journalists I just say "programmer" or something like that.
-                                -- Linus Torvalds
+	tglx
