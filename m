@@ -1,47 +1,27 @@
-Date: Wed, 28 Mar 2018 11:51:40 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Subject: Re: [PATCH] task_struct: Only use anon struct under randstruct plugin
-Message-ID: <20180328095140.GP4043@hirez.programming.kicks-ass.net>
-References: <20180327213609.GA2964@beast>
- <20180327160342.e2bc9a15afda5823c8daf4fb@linux-foundation.org>
- <CA+55aFzi0aUGuxDOwj1HkrP6r2Df2jk5F0HDTOQCG6_eeytbYw@mail.gmail.com>
+Date: Wed, 28 Mar 2018 12:10:52 +0200 (CEST)
+From: Thomas Gleixner <tglx@linutronix.de>
+Subject: Re: [PATCH v2] rslib: Remove VLAs by setting upper bound on nroots
+In-Reply-To: <alpine.DEB.2.21.1803281020390.3247@nanos.tec.linutronix.de>
+Message-ID: <alpine.DEB.2.21.1803281210040.3247@nanos.tec.linutronix.de>
+References: <20180315225919.GA43806@beast> <20180316155950.35fda7c63ec59277ba504201@linux-foundation.org> <CAGXu5jLAqki8oE7AF9BEwLxKzpTOOPsT1imjdSAG_U44uGXJdQ@mail.gmail.com> <CAGXu5j+utmcN_ot-3NJ-8C0onnu8O-DOdbAxVoatzE9UcJ-O4A@mail.gmail.com>
+ <20180327164532.796cdd043fece53cd9b56f8f@linux-foundation.org> <CAGXu5j+7cG+BQQLfxSm8xLPzF1de7_+fU-s0R5ZXjfD0jx4c8w@mail.gmail.com> <alpine.DEB.2.21.1803281020390.3247@nanos.tec.linutronix.de>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+55aFzi0aUGuxDOwj1HkrP6r2Df2jk5F0HDTOQCG6_eeytbYw@mail.gmail.com>
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=US-ASCII
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 27, 2018 at 02:22:31PM -1000, Linus Torvalds wrote:
-> On Tue, Mar 27, 2018 at 1:03 PM, Andrew Morton
-> <akpm@linux-foundation.org> wrote:
-> >
-> > Why?  What caused this padding?  It happens in all configs?
+On Wed, 28 Mar 2018, Thomas Gleixner wrote:
+> On Tue, 27 Mar 2018, Kees Cook wrote:
 > 
-> I assume what happens is that the anonymous struct ends up containing
-> fields that are cacheline-aligned, and then the whole anonymous struct
-> is cacheline-aligned.
-
-Yes, structures inherit the alignment requirements of their constituent
-members.
-
-> Which is all kinds of stupid, since the anonymous struct itself does
-> not exist outside of the outer struct. So it would be entirely
-> sufficient to just make the outer struct cacheline aligned (like it
-> used to be), but not align the inner anonymous one - just the fields
-> in it.
+> > > I guess if we put this storage into the rs_control (rather than on the
+> > > stack) then we'd have to worry about concurrent uses of it.  It looks
+> > > like all the other fields are immutable once it's set up so there might
+> > > be such users.  In fact, I suspect there are...
+> > 
+> > Exactly. :( This is the same conclusion tglx and I came to.
 > 
-> But there may be "reasons" why the inner anonymous  one needs to be
-> aligned. Maybe it's some standards requirement, or maybe it's just an
-> internal gcc implementation detail.
+> I think we can lift that and just let all users set up a new rs_control
+> from scratch. Takes some time to init the tables, but ....
 
-Last time I read the standard there wasn't a distinction between
-anonymous and regular structures for this. So in that regards a strict
-reading of the standard would mandate this behaviour.
-
-> Regardless, it's a bit sad. It also means that when randomization is
-> on, that unnecessary padding will be there.
-
-The other complaint is that the anonymous structure makes the pahole
-output (which is what I showed) unnecessarily ugly.
+Bah, no. dm-verity really wants to share them.....
