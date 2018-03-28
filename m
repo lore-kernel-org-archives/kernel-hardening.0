@@ -1,12 +1,11 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1522128575-5326-19-git-send-email-yamada.masahiro@socionext.com>
-References: <1522128575-5326-1-git-send-email-yamada.masahiro@socionext.com> <1522128575-5326-19-git-send-email-yamada.masahiro@socionext.com>
+In-Reply-To: <1522128575-5326-20-git-send-email-yamada.masahiro@socionext.com>
+References: <1522128575-5326-1-git-send-email-yamada.masahiro@socionext.com> <1522128575-5326-20-git-send-email-yamada.masahiro@socionext.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 28 Mar 2018 04:30:59 -0700
-Message-ID: <CAGXu5jJrd2w5ys6tfwH6zd6dpep65XuV3wCZs=hUi=p5nbjDHw@mail.gmail.com>
-Subject: Re: [PATCH v2 18/21] gcc-plugins: move GCC version check for PowerPC
- to Kconfig
+Date: Wed, 28 Mar 2018 04:44:32 -0700
+Message-ID: <CAGXu5jJB3AKMC8U--H61eUkFJeMogLMq00dBUUrfg4n2b4FbOQ@mail.gmail.com>
+Subject: Re: [PATCH v2 19/21] gcc-plugins: test GCC plugin support in Kconfig
 Content-Type: text/plain; charset="UTF-8"
 To: Masahiro Yamada <yamada.masahiro@socionext.com>
 Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, Sam Ravnborg <sam@ravnborg.org>, Linus Torvalds <torvalds@linux-foundation.org>, Arnd Bergmann <arnd@arndb.de>, Ulf Magnusson <ulfalizer@gmail.com>, Thomas Gleixner <tglx@linutronix.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Randy Dunlap <rdunlap@infradead.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Nicolas Pitre <nico@linaro.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Emese Revfy <re.emese@gmail.com>
@@ -14,59 +13,61 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 On Mon, Mar 26, 2018 at 10:29 PM, Masahiro Yamada
 <yamada.masahiro@socionext.com> wrote:
-> For PowerPC, GCC 5.2 is the requirement for GCC plugins.  Move the
-> version check to Kconfig so that the GCC plugin menus will be hidden
-> if an older compiler is in use.
+> Run scripts/gcc-plugin.sh from Kconfig.  Users can enable GCC_PLUGINS
+> only when it is supported.
 >
 > Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>
-> Acked-by: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
 > ---
 >
 > Changes in v2: None
 >
->  arch/powerpc/Kconfig         | 2 +-
->  scripts/Makefile.gcc-plugins | 8 --------
->  2 files changed, 1 insertion(+), 9 deletions(-)
+>  arch/Kconfig                 |  4 +++
+>  scripts/Makefile.gcc-plugins | 82 ++++++++++++++++----------------------------
+>  scripts/gcc-plugin.sh        |  1 -
+>  3 files changed, 33 insertions(+), 54 deletions(-)
 >
-> diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
-> index 73ce5dd..b8474c2 100644
-> --- a/arch/powerpc/Kconfig
-> +++ b/arch/powerpc/Kconfig
-> @@ -195,7 +195,7 @@ config PPC
->         select HAVE_FTRACE_MCOUNT_RECORD
->         select HAVE_FUNCTION_GRAPH_TRACER
->         select HAVE_FUNCTION_TRACER
-> -       select HAVE_GCC_PLUGINS
-> +       select HAVE_GCC_PLUGINS                 if GCC_VERSION >= 50200
->         select HAVE_GENERIC_GUP
->         select HAVE_HW_BREAKPOINT               if PERF_EVENTS && (PPC_BOOK3S || PPC_8xx)
->         select HAVE_IDE
+> diff --git a/arch/Kconfig b/arch/Kconfig
+> index b42378d..88cc925 100644
+> --- a/arch/Kconfig
+> +++ b/arch/Kconfig
+> @@ -407,9 +407,13 @@ config HAVE_GCC_PLUGINS
+>           An arch should select this symbol if it supports building with
+>           GCC plugins.
+>
+> +config CC_HAS_GCC_PLUGINS
+> +       bool
+> +
+
+This doesn't seem used anywhere?
+
+>  menuconfig GCC_PLUGINS
+>         bool "GCC plugins"
+>         depends on HAVE_GCC_PLUGINS
+> +       depends on $(success $srctree/scripts/gcc-plugin.sh $HOSTCXX $CC)
+>         depends on !COMPILE_TEST
+>         help
+>           GCC plugins are loadable modules that provide extra features to the
 > diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-> index b0f9108..25da4c0 100644
+> index 25da4c0..19d0d5b 100644
 > --- a/scripts/Makefile.gcc-plugins
 > +++ b/scripts/Makefile.gcc-plugins
-> @@ -56,14 +56,6 @@ gcc-plugins-check: FORCE
->  ifdef CONFIG_GCC_PLUGINS
->    ifeq ($(PLUGINCC),)
->      ifneq ($(GCC_PLUGINS_CFLAGS),)
-> -      # Various gccs between 4.5 and 5.1 have bugs on powerpc due to missing
-> -      # header files. gcc <= 4.6 doesn't work at all, gccs from 4.8 to 5.1 have
-> -      # issues with 64-bit targets.
-> -      ifeq ($(ARCH),powerpc)
-> -        ifeq ($(call cc-ifversion, -le, 0501, y), y)
-> -         @echo "Cannot use CONFIG_GCC_PLUGINS: plugin support on gcc <= 5.1 is buggy on powerpc, please upgrade to gcc 5.2 or newer" >&2 && exit 1
+> [...]
+> -# If plugins aren't supported, abort the build before hard-to-read compiler
+> -# errors start getting spewed by the main build.
+> -PHONY += gcc-plugins-check
+> -gcc-plugins-check: FORCE
+> -ifdef CONFIG_GCC_PLUGINS
+> -  ifeq ($(PLUGINCC),)
+> -    ifneq ($(GCC_PLUGINS_CFLAGS),)
+> -      $(Q)$(srctree)/scripts/gcc-plugin.sh --show-error $(HOSTCXX) $(CC) || true
+> -      @echo "Cannot use CONFIG_GCC_PLUGINS: your gcc installation does not support plugins, perhaps the necessary headers are missing?" >&2 && exit 1
 
-I think we should retain the "buggy" note as a comment in Kconfig
-since that knowledge isn't obvious just from the GCC_VERSION test.
+As mentioned in the other email, we lose the error reporting. Now the
+lack of plugins is just a silent =n in menuconfig. Keeping
+--show-error in the Kconfig call and retaining stderr would be nice.
 
-> -        endif
-> -      endif
->        $(Q)$(srctree)/scripts/gcc-plugin.sh --show-error $(HOSTCXX) $(CC) || true
->        @echo "Cannot use CONFIG_GCC_PLUGINS: your gcc installation does not support plugins, perhaps the necessary headers are missing?" >&2 && exit 1
->      endif
-> --
-> 2.7.4
->
+I need to do some further testing with SANCOV, but otherwise this all
+looks correct, and my testing shows it behaving correctly.
 
 -Kees
 
