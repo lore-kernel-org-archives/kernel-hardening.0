@@ -1,26 +1,71 @@
-Subject: Re: [PATCH RFC v10 2/6] x86/entry: Add STACKLEAK erasing the kernel
- stack at the end of syscalls
-References: <1522267032-6603-1-git-send-email-alex.popov@linux.com>
- <1522267032-6603-3-git-send-email-alex.popov@linux.com>
-From: Dave Hansen <dave.hansen@linux.intel.com>
-Message-ID: <77fab6ea-0bbf-d68b-a38e-3e22d1ae6093@linux.intel.com>
-Date: Wed, 28 Mar 2018 15:55:24 -0700
+Subject: Re: [PATCH v3] gpio: Remove VLA from stmpe driver
+References: <20180328175957.23904-1-labbott@redhat.com>
+From: Phil Reid <preid@electromag.com.au>
+Message-ID: <e676f8fc-e619-ac7e-a5e0-8682197c7b9b@electromag.com.au>
+Date: Thu, 29 Mar 2018 08:07:05 +0800
 MIME-Version: 1.0
-In-Reply-To: <1522267032-6603-3-git-send-email-alex.popov@linux.com>
-Content-Type: text/plain; charset=utf-8
+In-Reply-To: <20180328175957.23904-1-labbott@redhat.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-To: Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+To: Laura Abbott <labbott@redhat.com>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Patrice Chotard <patrice.chotard@st.com>
+Cc: linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/28/2018 12:57 PM, Alexander Popov wrote:
-> +.macro ERASE_KSTACK
-> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-> +	PUSH_AND_CLEAR_REGS
-> +	call erase_kstack
-> +	POP_REGS
-> +#endif
-> +.endm
+On 29/03/2018 01:59, Laura Abbott wrote:
+> The new challenge is to remove VLAs from the kernel
+> (see https://lkml.org/lkml/2018/3/7/621)
+> 
+> The number of GPIOs on the supported chips is fairly small
+> so stack allocate to a known upper bound and spit out a warning
+> if any new chips have more gpios.
+> 
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+> v3: Split this off from the rest of the series since some of the
+> patches had been picked up. Switched to just hardcoding an upper
+> bound for the stack array since it's only a few extra bytes
+> of stack space.
+> ---
+>   drivers/gpio/gpio-stmpe.c | 9 ++++++++-
+>   1 file changed, 8 insertions(+), 1 deletion(-)
+> 
+> diff --git a/drivers/gpio/gpio-stmpe.c b/drivers/gpio/gpio-stmpe.c
+> index f8d7d1cd8488..8d6a5a7e612d 100644
+> --- a/drivers/gpio/gpio-stmpe.c
+> +++ b/drivers/gpio/gpio-stmpe.c
+> @@ -363,13 +363,15 @@ static struct irq_chip stmpe_gpio_irq_chip = {
+>   	.irq_set_type		= stmpe_gpio_irq_set_type,
+>   };
+>   
+> +#define MAX_GPIOS 24
+> +
+>   static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
+>   {
+>   	struct stmpe_gpio *stmpe_gpio = dev;
+>   	struct stmpe *stmpe = stmpe_gpio->stmpe;
+>   	u8 statmsbreg;
+>   	int num_banks = DIV_ROUND_UP(stmpe->num_gpios, 8);
+> -	u8 status[num_banks];
+> +	u8 status[DIV_ROUND_UP(MAX_GPIOS, 8)];
+>   	int ret;
+>   	int i;
+>   
+> @@ -434,6 +436,11 @@ static int stmpe_gpio_probe(struct platform_device *pdev)
+>   	struct stmpe_gpio *stmpe_gpio;
+>   	int ret, irq;
+>   
+> +	if (stmpe->num_gpios > MAX_GPIOS) {
+> +		dev_err(&pdev->dev, "Need to increase maximum GPIO number\n");
+> +		return -EINVAL;
+> +	}
+> +
+>   	stmpe_gpio = kzalloc(sizeof(*stmpe_gpio), GFP_KERNEL);
+>   	if (!stmpe_gpio)
+>   		return -ENOMEM;
+> 
+FWIW
+Reviewed-by: Phil Reid <preid@electromag.com.au>
 
-Thanks again for the hard work to trim down the complexity of the
-assembly.  I noticed the 64-bit version saves/restores registers while
-the 32-bit version doesn't.  What's the reasoning there?
+-- 
+Regards
+Phil Reid
