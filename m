@@ -1,45 +1,73 @@
 From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Subject: [v2] ftrace: drop a VLA in module_exists()
-Date: Fri, 30 Mar 2018 10:53:08 +0200
-Message-Id: <1522399988-8815-1-git-send-email-s.mesoraca16@gmail.com>
+Subject: [v3] crypto: ctr - avoid VLA use
+Date: Fri, 30 Mar 2018 10:53:26 +0200
+Message-Id: <1522400006-8859-1-git-send-email-s.mesoraca16@gmail.com>
 To: linux-kernel@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, Ingo Molnar <mingo@redhat.com>, Kees Cook <keescook@chromium.org>, Salvatore Mesoraca <s.mesoraca16@gmail.com>, Steven Rostedt <rostedt@goodmis.org>
+Cc: kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Kees Cook <keescook@chromium.org>, Salvatore Mesoraca <s.mesoraca16@gmail.com>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Avoid a VLA[1] by using a real constant expression instead of a variable.
-The compiler should be able to optimize the original code and avoid using
-an actual VLA. Anyway this change is useful because it will avoid a false
-positive with -Wvla, it might also help the compiler generating better
-code.
+All ciphers implemented in Linux have a block size less than or
+equal to 16 bytes and the most demanding hw require 16 bytes
+alignment for the block buffer.
+We avoid 2 VLAs[1] by always allocating 16 bytes with 16 bytes
+alignment, unless the architecture supports efficient unaligned
+accesses.
+We also check the selected cipher at instance creation time, if
+it doesn't comply with these limits, we fail the creation.
 
 [1] https://lkml.org/lkml/2018/3/7/621
 
 Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 ---
- kernel/trace/ftrace.c | 7 +++----
- 1 file changed, 3 insertions(+), 4 deletions(-)
+ crypto/ctr.c | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
 
-diff --git a/kernel/trace/ftrace.c b/kernel/trace/ftrace.c
-index eac9ce2..16bbf06 100644
---- a/kernel/trace/ftrace.c
-+++ b/kernel/trace/ftrace.c
-@@ -3902,14 +3902,13 @@ static bool module_exists(const char *module)
- {
- 	/* All modules have the symbol __this_module */
- 	const char this_mod[] = "__this_module";
--	const int modname_size = MAX_PARAM_PREFIX_LEN + sizeof(this_mod) + 1;
--	char modname[modname_size + 1];
-+	char modname[MAX_PARAM_PREFIX_LEN + sizeof(this_mod) + 2];
- 	unsigned long val;
- 	int n;
+diff --git a/crypto/ctr.c b/crypto/ctr.c
+index 854d924..49c469d 100644
+--- a/crypto/ctr.c
++++ b/crypto/ctr.c
+@@ -21,6 +21,9 @@
+ #include <linux/scatterlist.h>
+ #include <linux/slab.h>
  
--	n = snprintf(modname, modname_size + 1, "%s:%s", module, this_mod);
-+	n = snprintf(modname, sizeof(modname), "%s:%s", module, this_mod);
++#define MAX_BLOCKSIZE 16
++#define MAX_ALIGNMASK 15
++
+ struct crypto_ctr_ctx {
+ 	struct crypto_cipher *child;
+ };
+@@ -58,7 +61,7 @@ static void crypto_ctr_crypt_final(struct blkcipher_walk *walk,
+ 	unsigned int bsize = crypto_cipher_blocksize(tfm);
+ 	unsigned long alignmask = crypto_cipher_alignmask(tfm);
+ 	u8 *ctrblk = walk->iv;
+-	u8 tmp[bsize + alignmask];
++	u8 tmp[MAX_BLOCKSIZE + MAX_ALIGNMASK];
+ 	u8 *keystream = PTR_ALIGN(tmp + 0, alignmask + 1);
+ 	u8 *src = walk->src.virt.addr;
+ 	u8 *dst = walk->dst.virt.addr;
+@@ -106,7 +109,7 @@ static int crypto_ctr_crypt_inplace(struct blkcipher_walk *walk,
+ 	unsigned int nbytes = walk->nbytes;
+ 	u8 *ctrblk = walk->iv;
+ 	u8 *src = walk->src.virt.addr;
+-	u8 tmp[bsize + alignmask];
++	u8 tmp[MAX_BLOCKSIZE + MAX_ALIGNMASK];
+ 	u8 *keystream = PTR_ALIGN(tmp + 0, alignmask + 1);
  
--	if (n > modname_size)
-+	if (n > sizeof(modname) - 1)
- 		return false;
+ 	do {
+@@ -206,6 +209,14 @@ static struct crypto_instance *crypto_ctr_alloc(struct rtattr **tb)
+ 	if (alg->cra_blocksize < 4)
+ 		goto out_put_alg;
  
- 	val = module_kallsyms_lookup_name(modname);
++	/* Block size must be <= MAX_BLOCKSIZE. */
++	if (alg->cra_blocksize > MAX_BLOCKSIZE)
++		goto out_put_alg;
++
++	/* Alignmask must be <= MAX_ALIGNMASK. */
++	if (alg->cra_alignmask > MAX_ALIGNMASK)
++		goto out_put_alg;
++
+ 	/* If this is false we'd fail the alignment of crypto_inc. */
+ 	if (alg->cra_blocksize % 4)
+ 		goto out_put_alg;
 -- 
 1.9.1
