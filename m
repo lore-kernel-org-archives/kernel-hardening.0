@@ -1,63 +1,64 @@
+Date: Fri, 30 Mar 2018 10:34:11 -0400
+From: Steven Rostedt <rostedt@goodmis.org>
+Subject: Re: [v2] ftrace: drop a VLA in module_exists()
+Message-ID: <20180330103411.5ed25f43@gandalf.local.home>
+In-Reply-To: <1522399988-8815-1-git-send-email-s.mesoraca16@gmail.com>
+References: <1522399988-8815-1-git-send-email-s.mesoraca16@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20180328181809.24505-1-labbott@redhat.com>
-References: <20180328181809.24505-1-labbott@redhat.com>
-From: Andy Shevchenko <andy.shevchenko@gmail.com>
-Date: Fri, 30 Mar 2018 17:33:55 +0300
-Message-ID: <CAHp75VdZOiJgzt3nhdeqwTXC=jsbndLWOV3eF_XmgFU-eHjYSg@mail.gmail.com>
-Subject: Re: [PATCHv3] gpio: Remove VLA from gpiolib
-Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Ingo Molnar <mingo@redhat.com>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 28, 2018 at 9:18 PM, Laura Abbott <labbott@redhat.com> wrote:
-> The new challenge is to remove VLAs from the kernel
-> (see https://lkml.org/lkml/2018/3/7/621) to eventually
-> turn on -Wvla.
->
-> Using a kmalloc array is the easy way to fix this but kmalloc is still
-> more expensive than stack allocation. Introduce a fast path with a
-> fixed size stack array to cover most chip with gpios below some fixed
-> amount. The slow path dynamically allocates an array to cover those
-> chips with a large number of gpios.
+On Fri, 30 Mar 2018 10:53:08 +0200
+Salvatore Mesoraca <s.mesoraca16@gmail.com> wrote:
 
-> +               ret = gpiod_set_array_value_complex(false,
->                                               true,
->                                               lh->numdescs,
->                                               lh->descs,
->                                               vals);
-> +               if (ret)
-> +                       return ret;
-> +
->                 return 0;
+Couple of things. First, "PATCH" was dropped from the subject. If my
+inbox was busy today, I probably would have missed this email.
 
-Can't we
+> Avoid a VLA[1] by using a real constant expression instead of a variable.
+> The compiler should be able to optimize the original code and avoid using
+> an actual VLA. Anyway this change is useful because it will avoid a false
+> positive with -Wvla, it might also help the compiler generating better
+> code.
+> 
+> [1] https://lkml.org/lkml/2018/3/7/621
 
-return gpiod_set_array_value_complex(); ?
+Second, do not use lkml.org, use http://lkml.kernel.org/r/<messageid>
 
+Search for "Link:" tags in git log to see examples.
 
-> +                       slowpath = kcalloc(2 * BITS_TO_LONGS(chip->ngpio),
-> +                                          sizeof(*slowpath),
-> +                                          can_sleep ? GFP_KERNEL : GFP_ATOMIC);
+Other than that, the patch looks fine to me and I can pull it for the
+next merge window.
 
+-- Steve
 
-> +                       if (slowpath)
-> +                               kfree(slowpath);
-
-> +               if (slowpath)
-> +                       kfree(slowpath);
-
-Since slowpath is a pointer, conditionals above are redundant.
-
-> +                       slowpath = kcalloc(2 * BITS_TO_LONGS(chip->ngpio),
-> +                                          sizeof(*slowpath),
-> +                                          can_sleep ? GFP_KERNEL : GFP_ATOMIC);
-
-> +               if (slowpath)
-> +                       kfree(slowpath);
-
-Ditto.
-
--- 
-With Best Regards,
-Andy Shevchenko
+> 
+> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+> ---
+>  kernel/trace/ftrace.c | 7 +++----
+>  1 file changed, 3 insertions(+), 4 deletions(-)
+> 
+> diff --git a/kernel/trace/ftrace.c b/kernel/trace/ftrace.c
+> index eac9ce2..16bbf06 100644
+> --- a/kernel/trace/ftrace.c
+> +++ b/kernel/trace/ftrace.c
+> @@ -3902,14 +3902,13 @@ static bool module_exists(const char *module)
+>  {
+>  	/* All modules have the symbol __this_module */
+>  	const char this_mod[] = "__this_module";
+> -	const int modname_size = MAX_PARAM_PREFIX_LEN + sizeof(this_mod) + 1;
+> -	char modname[modname_size + 1];
+> +	char modname[MAX_PARAM_PREFIX_LEN + sizeof(this_mod) + 2];
+>  	unsigned long val;
+>  	int n;
+>  
+> -	n = snprintf(modname, modname_size + 1, "%s:%s", module, this_mod);
+> +	n = snprintf(modname, sizeof(modname), "%s:%s", module, this_mod);
+>  
+> -	if (n > modname_size)
+> +	if (n > sizeof(modname) - 1)
+>  		return false;
+>  
+>  	val = module_kallsyms_lookup_name(modname);
