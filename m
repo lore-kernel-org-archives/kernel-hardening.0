@@ -1,41 +1,60 @@
 MIME-Version: 1.0
-In-Reply-To: <20180330103411.5ed25f43@gandalf.local.home>
-References: <1522399988-8815-1-git-send-email-s.mesoraca16@gmail.com> <20180330103411.5ed25f43@gandalf.local.home>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Sat, 31 Mar 2018 11:55:16 +0200
-Message-ID: <CAJHCu1+9NJ0onfjETfwn+XSL_d1Zxo0P=5RpWUkxnXO597BA5g@mail.gmail.com>
-Subject: Re: [v2] ftrace: drop a VLA in module_exists()
+Sender: keescook@google.com
+In-Reply-To: <20180331053434.akno723avvcri654@gmail.com>
+References: <20180326221554.GA45166@beast> <20180327054748.jx6mzywguuqfkqpv@gmail.com>
+ <CAGXu5jK74cVQPigf2Q23E2pjonfzq+MMxhbqTNvzbWFxP4aGig@mail.gmail.com> <20180331053434.akno723avvcri654@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Sat, 31 Mar 2018 06:37:37 -0700
+Message-ID: <CAGXu5jKrE+oejudtV1SKFgTMd0cEaPv_y=iw16LnGUUX0R8M8Q@mail.gmail.com>
+Subject: Re: [PATCH v6] kernel.h: Retain constant expression output for max()/min()
 Content-Type: text/plain; charset="UTF-8"
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Kees Cook <keescook@chromium.org>
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Martin Uecker <Martin.Uecker@med.uni-goettingen.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Randy Dunlap <rdunlap@infradead.org>, Miguel Ojeda <miguel.ojeda.sandonis@gmail.com>, David Laight <David.Laight@aculab.com>, Ian Abbott <abbotti@mev.co.uk>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-03-30 16:34 GMT+02:00 Steven Rostedt <rostedt@goodmis.org>:
-> On Fri, 30 Mar 2018 10:53:08 +0200
-> Salvatore Mesoraca <s.mesoraca16@gmail.com> wrote:
+On Fri, Mar 30, 2018 at 10:34 PM, Ingo Molnar <mingo@kernel.org> wrote:
 >
-> Couple of things. First, "PATCH" was dropped from the subject. If my
-> inbox was busy today, I probably would have missed this email.
-
-Aargh, I'm sorry for this, I didn't notice it.
-
->> Avoid a VLA[1] by using a real constant expression instead of a variable.
->> The compiler should be able to optimize the original code and avoid using
->> an actual VLA. Anyway this change is useful because it will avoid a false
->> positive with -Wvla, it might also help the compiler generating better
->> code.
+> * Kees Cook <keescook@chromium.org> wrote:
+>
+>> On Mon, Mar 26, 2018 at 10:47 PM, Ingo Molnar <mingo@kernel.org> wrote:
+>> >
+>> > * Kees Cook <keescook@chromium.org> wrote:
+>> >
+>> >> In the effort to remove all VLAs from the kernel[1], it is desirable to
+>> >> build with -Wvla. However, this warning is overly pessimistic, in that
+>> >> it is only happy with stack array sizes that are declared as constant
+>> >> expressions, and not constant values. One case of this is the evaluation
+>> >> of the max() macro which, due to its construction, ends up converting
+>> >> constant expression arguments into a constant value result.
+>> >>
+>> >> All attempts to rewrite this macro with __builtin_constant_p() failed with
+>> >> older compilers (e.g. gcc 4.4)[2]. However, Martin Uecker constructed[3] a
+>> >> mind-shattering solution that works everywhere. Cthulhu fhtagn!
+>> >>
+>> >> This patch updates the min()/max() macros to evaluate to a constant
+>> >> expression when called on constant expression arguments. This removes
+>> >> several false-positive stack VLA warnings from an x86 allmodconfig
+>> >> build when -Wvla is added:
+>> >
+>> > Cool!
+>> >
+>> > Acked-by: Ingo Molnar <mingo@kernel.org>
+>> >
+>> > How many warnings are left in an allmodconfig build?
 >>
->> [1] https://lkml.org/lkml/2018/3/7/621
+>> For -Wvla? Out of the original 112 files with VLAs, 42 haven't had a
+>> patch applied yet. Doing a linux-next allmodconfig build with the
+>> max() patch and my latest ecc patch, we've gone from 316 warning
+>> instances to 205. More than half of those are in
+>> include/crypto/skcipher.h and include/crypto/hash.h.
 >
-> Second, do not use lkml.org, use http://lkml.kernel.org/r/<messageid>
->
-> Search for "Link:" tags in git log to see examples.
+> Great - once the number of warnings is zero, is the plan to enable the warning
+> unconditionally?
 
-Thank you for the suggestion.
+That's the plan, yes. Like inbox-zero but for VLAs. ;)
 
-> Other than that, the patch looks fine to me and I can pull it for the
-> next merge window.
+-Kees
 
-Thank you very much,
-
-Salvatore
+-- 
+Kees Cook
+Pixel Security
