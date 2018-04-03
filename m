@@ -1,86 +1,88 @@
-Date: Mon, 2 Apr 2018 11:04:58 +0200 (CEST)
-From: Julia Lawall <julia.lawall@lip6.fr>
-Subject: Re: [PATCH] gpio: fix ifnullfree.cocci warnings
-In-Reply-To: <20180402083150.GA8013@wunner.de>
-Message-ID: <alpine.DEB.2.20.1804021102370.3198@hadrien>
-References: <alpine.DEB.2.20.1803300829580.2870@hadrien> <20180402083150.GA8013@wunner.de>
+Subject: Re: [v3] crypto: ctr - avoid VLA use
+References: <1522400006-8859-1-git-send-email-s.mesoraca16@gmail.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <4e536889-439a-49e6-dd95-2d4286913202@redhat.com>
+Date: Tue, 3 Apr 2018 14:37:00 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Lukas Wunner <lukas@wunner.de>
-Cc: Laura Abbott <labbott@redhat.com>, Linus Walleij <linus.walleij@linaro.org>, kbuild-all@01.org, Kees Cook <keescook@chromium.org>, linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Andy Shevchenko <andy.shevchenko@gmail.com>
+In-Reply-To: <1522400006-8859-1-git-send-email-s.mesoraca16@gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>, linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Kees Cook <keescook@chromium.org>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 03/30/2018 01:53 AM, Salvatore Mesoraca wrote:
+> All ciphers implemented in Linux have a block size less than or
+> equal to 16 bytes and the most demanding hw require 16 bytes
+> alignment for the block buffer.
+> We avoid 2 VLAs[1] by always allocating 16 bytes with 16 bytes
+> alignment, unless the architecture supports efficient unaligned
+> accesses.
+> We also check the selected cipher at instance creation time, if
+> it doesn't comply with these limits, we fail the creation.
+> 
+> [1] https://lkml.org/lkml/2018/3/7/621
+> 
+> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+> ---
+>   crypto/ctr.c | 15 +++++++++++++--
+>   1 file changed, 13 insertions(+), 2 deletions(-)
+> 
+> diff --git a/crypto/ctr.c b/crypto/ctr.c
+> index 854d924..49c469d 100644
+> --- a/crypto/ctr.c
+> +++ b/crypto/ctr.c
+> @@ -21,6 +21,9 @@
+>   #include <linux/scatterlist.h>
+>   #include <linux/slab.h>
+>   
+> +#define MAX_BLOCKSIZE 16
+> +#define MAX_ALIGNMASK 15
+> +
+
+Can we pull this out into a header file, I think this would cover
+
+crypto/cipher.c: In function ‘cipher_crypt_unaligned’:
+crypto/cipher.c:70:2: warning: ISO C90 forbids variable length array ‘buffer’ [-Wvla]
+   u8 buffer[size + alignmask];
+   ^~
 
 
-On Mon, 2 Apr 2018, Lukas Wunner wrote:
 
-> On Fri, Mar 30, 2018 at 08:32:56AM +0200, Julia Lawall wrote:
-> > --- a/drivers/gpio/gpiolib.c
-> > +++ b/drivers/gpio/gpiolib.c
-> > @@ -2774,8 +2773,7 @@ int gpiod_get_array_value_complex(bool r
-> >  			trace_gpio_value(desc_to_gpio(desc), 1, value);
-> >  		}
-> >
-> > -		if (slowpath)
-> > -			kfree(slowpath);
-> > +		kfree(slowpath);
-> >  	}
-> >  	return 0;
-> >  }
-> > @@ -3020,8 +3018,7 @@ int gpiod_set_array_value_complex(bool r
-> >  		if (count != 0)
-> >  			gpio_chip_set_multiple(chip, mask, bits);
-> >
-> > -		if (slowpath)
-> > -			kfree(slowpath);
-> > +		kfree(slowpath);
-> >  	}
-> >  	return 0;
-> >  }
->
-> The problem I see here is that kfree may not be in L1 cache,
-> and in that case checking for non-NULL locally in this function
-> should actually be cheaper.
->
-> Note that kfree() need only be called in the slowpath, which
-> is the *unlikely* case.  Letting the branch predictor assume
-> that kfree() is not called is the right thing to do here.
->
-> The function is a hot path, on the Revolution Pi open source PLCs
-> we're calling it every 250 usec to poll digital inputs and update
-> digital outputs.
->
-> Would "if (unlikely(slowpath))" be sufficient to make coccinelle
-> happy?  That's what I'd suggest then.
-
-I think that indeed it would not complain any more in this case.  But at
-least from kbuild, you shouldn't get another report on this, even if you
-don't change it.  Of course, someone else running the script could find
-the issue again.  If it would seem appropriate to you, adding a comment
-would also at least capture the knowledge that the change is not wanted.
-
-julia
-
->
-> Otherwise "if (unlikely(chip->ngpio > FASTPATH_NGPIO))" could be used,
-> though that might be minimally slower due to the pointer chasing.
->
->
-> > @@ -2758,8 +2758,7 @@ int gpiod_get_array_value_complex(bool r
-> >
-> >  		ret = gpio_chip_get_multiple(chip, mask, bits);
-> >  		if (ret) {
-> > -			if (slowpath)
-> > -				kfree(slowpath);
-> > +			kfree(slowpath);
-> >  			return ret;
-> >  		}
-> >
->
-> This particular change on the other hand is fine because the kfree()
-> is occurring in an error path, which we'll normally not enter anyway.
->
-> Thanks,
->
-> Lukas
->
+>   struct crypto_ctr_ctx {
+>   	struct crypto_cipher *child;
+>   };
+> @@ -58,7 +61,7 @@ static void crypto_ctr_crypt_final(struct blkcipher_walk *walk,
+>   	unsigned int bsize = crypto_cipher_blocksize(tfm);
+>   	unsigned long alignmask = crypto_cipher_alignmask(tfm);
+>   	u8 *ctrblk = walk->iv;
+> -	u8 tmp[bsize + alignmask];
+> +	u8 tmp[MAX_BLOCKSIZE + MAX_ALIGNMASK];
+>   	u8 *keystream = PTR_ALIGN(tmp + 0, alignmask + 1);
+>   	u8 *src = walk->src.virt.addr;
+>   	u8 *dst = walk->dst.virt.addr;
+> @@ -106,7 +109,7 @@ static int crypto_ctr_crypt_inplace(struct blkcipher_walk *walk,
+>   	unsigned int nbytes = walk->nbytes;
+>   	u8 *ctrblk = walk->iv;
+>   	u8 *src = walk->src.virt.addr;
+> -	u8 tmp[bsize + alignmask];
+> +	u8 tmp[MAX_BLOCKSIZE + MAX_ALIGNMASK];
+>   	u8 *keystream = PTR_ALIGN(tmp + 0, alignmask + 1);
+>   
+>   	do {
+> @@ -206,6 +209,14 @@ static struct crypto_instance *crypto_ctr_alloc(struct rtattr **tb)
+>   	if (alg->cra_blocksize < 4)
+>   		goto out_put_alg;
+>   
+> +	/* Block size must be <= MAX_BLOCKSIZE. */
+> +	if (alg->cra_blocksize > MAX_BLOCKSIZE)
+> +		goto out_put_alg;
+> +
+> +	/* Alignmask must be <= MAX_ALIGNMASK. */
+> +	if (alg->cra_alignmask > MAX_ALIGNMASK)
+> +		goto out_put_alg;
+> +
+>   	/* If this is false we'd fail the alignment of crypto_inc. */
+>   	if (alg->cra_blocksize % 4)
+>   		goto out_put_alg;
+> 
