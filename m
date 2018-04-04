@@ -1,44 +1,64 @@
 MIME-Version: 1.0
-In-Reply-To: <4e536889-439a-49e6-dd95-2d4286913202@redhat.com>
-References: <1522400006-8859-1-git-send-email-s.mesoraca16@gmail.com> <4e536889-439a-49e6-dd95-2d4286913202@redhat.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Wed, 4 Apr 2018 11:49:54 +0200
-Message-ID: <CAJHCu1KEuu61_7sWaGtxWgC-3SQeu2cyeFhK0+3s5t3FNNWg9A@mail.gmail.com>
-Subject: Re: [v3] crypto: ctr - avoid VLA use
+In-Reply-To: <90ca44b5-52d0-be74-f36c-55d6f4a9bf25@redhat.com>
+References: <20180310001021.6437-1-labbott@redhat.com> <20180310001021.6437-4-labbott@redhat.com>
+ <CAMuHMdUfGp_rn_fMWdOfWxPvyE1Y9oemm2piXszFTvBi9sQ5Eg@mail.gmail.com> <90ca44b5-52d0-be74-f36c-55d6f4a9bf25@redhat.com>
+From: Linus Walleij <linus.walleij@linaro.org>
+Date: Wed, 4 Apr 2018 14:53:42 +0200
+Message-ID: <CACRpkdbVAr62X9FrkS5cVpfpr+vgvnwmRfy0zKM=Vo=E+LjA9Q@mail.gmail.com>
+Subject: Re: [PATCH 3/4] gpio: Remove VLA from xra1403 driver
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
 To: Laura Abbott <labbott@redhat.com>
-Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-crypto@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Kees Cook <keescook@chromium.org>, Eric Biggers <ebiggers3@gmail.com>
+Cc: Geert Uytterhoeven <geert@linux-m68k.org>, Kees Cook <keescook@chromium.org>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-04-03 23:37 GMT+02:00 Laura Abbott <labbott@redhat.com>:
-> On 03/30/2018 01:53 AM, Salvatore Mesoraca wrote:
->> ---
->>   crypto/ctr.c | 15 +++++++++++++--
->>   1 file changed, 13 insertions(+), 2 deletions(-)
+On Wed, Mar 28, 2018 at 7:27 PM, Laura Abbott <labbott@redhat.com> wrote:
+> On 03/28/2018 12:27 AM, Geert Uytterhoeven wrote:
 >>
->> diff --git a/crypto/ctr.c b/crypto/ctr.c
->> index 854d924..49c469d 100644
->> --- a/crypto/ctr.c
->> +++ b/crypto/ctr.c
->> @@ -21,6 +21,9 @@
->>   #include <linux/scatterlist.h>
->>   #include <linux/slab.h>
->>   +#define MAX_BLOCKSIZE 16
->> +#define MAX_ALIGNMASK 15
->> +
+>> Hi Laura,
+>>
+>> On Sat, Mar 10, 2018 at 1:10 AM, Laura Abbott <labbott@redhat.com> wrote:
+>>>
+>>> The new challenge is to remove VLAs from the kernel
+>>> (see https://lkml.org/lkml/2018/3/7/621)
+>>>
+>>> This patch replaces a VLA with an appropriate call to kmalloc_array.
+>>>
+>>> Signed-off-by: Laura Abbott <labbott@redhat.com>
+>>
+>>
+>> Thanks for your patch!
+>>
+>>> --- a/drivers/gpio/gpio-xra1403.c
+>>> +++ b/drivers/gpio/gpio-xra1403.c
+>>> @@ -126,11 +126,16 @@ static void xra1403_dbg_show(struct seq_file *s,
+>>> struct gpio_chip *chip)
+>>>   {
+>>>          int reg;
+>>>          struct xra1403 *xra = gpiochip_get_data(chip);
+>>> -       int value[xra1403_regmap_cfg.max_register];
+>>
+>>
+>> Apparently xra1403_regmap_cfg.max_register is always 0x15?
+>>
+>> What about adding
+>>
+>>          #define XRA_LAST 15
+>>
+>> at the top, and replacing both "XRA_IFR | 0x01" and
+>> xra1403_regmap_cfg.max_register by XRA_LAST instead?
+>> That would avoid doing yet another memory allocation over and over.
+>>
+>> Gr{oetje,eeting}s,
+>>
+>>                          Geert
+>>
 >
->
-> Can we pull this out into a header file, I think this would cover
->
-> crypto/cipher.c: In function =E2=80=98cipher_crypt_unaligned=E2=80=99:
-> crypto/cipher.c:70:2: warning: ISO C90 forbids variable length array
-> =E2=80=98buffer=E2=80=99 [-Wvla]
->   u8 buffer[size + alignmask];
->   ^~
+> I'm okay with making the change but I think Linus already picked
+> up the patch into his gpio trees. Linus, do you want a patch on
+> top of your -devel branch or should I just send a new patch?
 
-Yeah, I'll send a patchset that includes the fix for crypto/cipher.c too.
+Yeah a patch on top is fine, I sent my pull request to Torvalds
+today so we can take this as a fix for the -rc cycle simply.
 
-Thank you for the suggestion :)
-
-Salvatore
+Yours,
+Linus Walleij
