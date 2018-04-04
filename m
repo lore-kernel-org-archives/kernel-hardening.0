@@ -1,64 +1,91 @@
 MIME-Version: 1.0
-In-Reply-To: <90ca44b5-52d0-be74-f36c-55d6f4a9bf25@redhat.com>
-References: <20180310001021.6437-1-labbott@redhat.com> <20180310001021.6437-4-labbott@redhat.com>
- <CAMuHMdUfGp_rn_fMWdOfWxPvyE1Y9oemm2piXszFTvBi9sQ5Eg@mail.gmail.com> <90ca44b5-52d0-be74-f36c-55d6f4a9bf25@redhat.com>
-From: Linus Walleij <linus.walleij@linaro.org>
-Date: Wed, 4 Apr 2018 14:53:42 +0200
-Message-ID: <CACRpkdbVAr62X9FrkS5cVpfpr+vgvnwmRfy0zKM=Vo=E+LjA9Q@mail.gmail.com>
-Subject: Re: [PATCH 3/4] gpio: Remove VLA from xra1403 driver
+In-Reply-To: <1522045994-21913-1-git-send-email-me@tobin.cc>
+References: <1522045994-21913-1-git-send-email-me@tobin.cc>
+From: Ulf Hansson <ulf.hansson@linaro.org>
+Date: Wed, 4 Apr 2018 14:45:31 +0200
+Message-ID: <CAPDyKFobX6U4_st0nE7-yHt1SPFu4diLhzTaswY6Xt3BrruvAA@mail.gmail.com>
+Subject: Re: [PATCH] mmc: pwrseq: Use kmalloc_array instead of stack VLA
 Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: Geert Uytterhoeven <geert@linux-m68k.org>, Kees Cook <keescook@chromium.org>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+To: "Tobin C. Harding" <me@tobin.cc>
+Cc: "linux-mmc@vger.kernel.org" <linux-mmc@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 28, 2018 at 7:27 PM, Laura Abbott <labbott@redhat.com> wrote:
-> On 03/28/2018 12:27 AM, Geert Uytterhoeven wrote:
->>
->> Hi Laura,
->>
->> On Sat, Mar 10, 2018 at 1:10 AM, Laura Abbott <labbott@redhat.com> wrote:
->>>
->>> The new challenge is to remove VLAs from the kernel
->>> (see https://lkml.org/lkml/2018/3/7/621)
->>>
->>> This patch replaces a VLA with an appropriate call to kmalloc_array.
->>>
->>> Signed-off-by: Laura Abbott <labbott@redhat.com>
->>
->>
->> Thanks for your patch!
->>
->>> --- a/drivers/gpio/gpio-xra1403.c
->>> +++ b/drivers/gpio/gpio-xra1403.c
->>> @@ -126,11 +126,16 @@ static void xra1403_dbg_show(struct seq_file *s,
->>> struct gpio_chip *chip)
->>>   {
->>>          int reg;
->>>          struct xra1403 *xra = gpiochip_get_data(chip);
->>> -       int value[xra1403_regmap_cfg.max_register];
->>
->>
->> Apparently xra1403_regmap_cfg.max_register is always 0x15?
->>
->> What about adding
->>
->>          #define XRA_LAST 15
->>
->> at the top, and replacing both "XRA_IFR | 0x01" and
->> xra1403_regmap_cfg.max_register by XRA_LAST instead?
->> That would avoid doing yet another memory allocation over and over.
->>
->> Gr{oetje,eeting}s,
->>
->>                          Geert
->>
+On 26 March 2018 at 08:33, Tobin C. Harding <me@tobin.cc> wrote:
+> The use of stack Variable Length Arrays needs to be avoided, as they
+> can be a vector for stack exhaustion, which can be both a runtime bug
+> (kernel Oops) or a security flaw (overwriting memory beyond the
+> stack). Also, in general, as code evolves it is easy to lose track of
+> how big a VLA can get. Thus, we can end up having runtime failures
+> that are hard to debug. As part of the directive[1] to remove all VLAs
+> from the kernel, and build with -Wvla.
 >
-> I'm okay with making the change but I think Linus already picked
-> up the patch into his gpio trees. Linus, do you want a patch on
-> top of your -devel branch or should I just send a new patch?
+> Currently driver is using a VLA declared using the number of descriptors.  This
+> array is used to store integer values and is later used as an argument to
+> `gpiod_set_array_value_cansleep()` This can be avoided by using
+> `kmalloc_array()` to allocate memory for the array of integer values.  Memory is
+> free'd before return from function.
+>
+> From the code it appears that it is safe to sleep so we can use GFP_KERNEL
+> (based _cansleep() suffix of function `gpiod_set_array_value_cansleep()`.
+>
+> It can be expected that this patch will result in a small increase in overhead
+> due to the use of `kmalloc_array()`
+>
+> [1] https://lkml.org/lkml/2018/3/7/621
+>
+> Signed-off-by: Tobin C. Harding <me@tobin.cc>
 
-Yeah a patch on top is fine, I sent my pull request to Torvalds
-today so we can take this as a fix for the -rc cycle simply.
+Thanks, queued for 3.18!
 
-Yours,
-Linus Walleij
+Kind regards
+Uffe
+
+> ---
+>
+> Patch is untested.  I was not able to fully grok the call chain involved
+> with this change so was unable to quantify the total degradation
+> of performance.
+>
+> Line calling to gpiod_set_array_value_cansleep() is 83 characters long,
+> patch attempts to leave the code as clean as possible.  Open to
+> suggestions for improvement.  I tried various forms of while loop and
+> pointer arithmetic for the setting of `values` but in the end settled
+> for array indexing, again open to suggestions.
+>
+> thanks,
+> Tobin.
+>
+>  drivers/mmc/core/pwrseq_simple.c | 14 +++++++++-----
+>  1 file changed, 9 insertions(+), 5 deletions(-)
+>
+> diff --git a/drivers/mmc/core/pwrseq_simple.c b/drivers/mmc/core/pwrseq_simple.c
+> index 13ef162cf066..a8b9fee4d62a 100644
+> --- a/drivers/mmc/core/pwrseq_simple.c
+> +++ b/drivers/mmc/core/pwrseq_simple.c
+> @@ -40,14 +40,18 @@ static void mmc_pwrseq_simple_set_gpios_value(struct mmc_pwrseq_simple *pwrseq,
+>         struct gpio_descs *reset_gpios = pwrseq->reset_gpios;
+>
+>         if (!IS_ERR(reset_gpios)) {
+> -               int i;
+> -               int values[reset_gpios->ndescs];
+> +               int i, *values;
+> +               int nvalues = reset_gpios->ndescs;
+>
+> -               for (i = 0; i < reset_gpios->ndescs; i++)
+> +               values = kmalloc_array(nvalues, sizeof(int), GFP_KERNEL);
+> +               if (!values)
+> +                       return;
+> +
+> +               for (i = 0; i < nvalues; i++)
+>                         values[i] = value;
+>
+> -               gpiod_set_array_value_cansleep(
+> -                       reset_gpios->ndescs, reset_gpios->desc, values);
+> +               gpiod_set_array_value_cansleep(nvalues, reset_gpios->desc, values);
+> +               kfree(values);
+>         }
+>  }
+>
+> --
+> 2.7.4
+>
