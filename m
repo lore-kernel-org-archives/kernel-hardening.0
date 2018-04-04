@@ -1,18 +1,21 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1519899591-29761-5-git-send-email-kpark3469@gmail.com>
+In-Reply-To: <CAGXu5jJbPGifqTkKkqP3OJTCY=YO9+d_fRdvY-Fj_41HH4HFCw@mail.gmail.com>
 References: <1519899591-29761-1-git-send-email-kpark3469@gmail.com>
  <1519899591-29761-2-git-send-email-kpark3469@gmail.com> <1519899591-29761-3-git-send-email-kpark3469@gmail.com>
  <1519899591-29761-4-git-send-email-kpark3469@gmail.com> <1519899591-29761-5-git-send-email-kpark3469@gmail.com>
+ <CAGXu5jJbPGifqTkKkqP3OJTCY=YO9+d_fRdvY-Fj_41HH4HFCw@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 4 Apr 2018 16:10:56 -0700
-Message-ID: <CAGXu5jJbPGifqTkKkqP3OJTCY=YO9+d_fRdvY-Fj_41HH4HFCw@mail.gmail.com>
+Date: Wed, 4 Apr 2018 16:11:50 -0700
+Message-ID: <CAGXu5jLBc6Ebqzzcfv7Duy5y6_6apfOgZohmyHdSTUAR5xWmsA@mail.gmail.com>
 Subject: Re: [PATCH 4/4] x86: usercopy: reimplement arch_within_stack_frames
  with unwinder
 Content-Type: text/plain; charset="UTF-8"
 To: Keun-O Park <kpark3469@gmail.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, James Morse <james.morse@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, keun-o.park@darkmatter.ae
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, James Morse <james.morse@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, keun-o.park@darkmatter.ae, Sodagudi Prasad <psodagud@codeaurora.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Ingo Molnar <mingo@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
+
+[resending with the CCs I forgot...]
 
 On Thu, Mar 1, 2018 at 2:19 AM,  <kpark3469@gmail.com> wrote:
 > From: Sahara <keun-o.park@darkmatter.ae>
@@ -205,6 +208,11 @@ Also seems like we should keep the comment for describing what's happening...
 >
 
 -Kees
+
+--
+Kees Cook
+Pixel Security
+
 
 -- 
 Kees Cook
