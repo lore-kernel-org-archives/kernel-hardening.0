@@ -1,219 +1,73 @@
+Subject: Re: [PATCHv3] gpio: Remove VLA from gpiolib
+References: <20180328181809.24505-1-labbott@redhat.com>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Message-ID: <e359dc22-ee4c-4ca8-c953-df7d6a4b4062@rasmusvillemoes.dk>
+Date: Thu, 5 Apr 2018 09:41:03 +0200
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAGXu5jJbPGifqTkKkqP3OJTCY=YO9+d_fRdvY-Fj_41HH4HFCw@mail.gmail.com>
-References: <1519899591-29761-1-git-send-email-kpark3469@gmail.com>
- <1519899591-29761-2-git-send-email-kpark3469@gmail.com> <1519899591-29761-3-git-send-email-kpark3469@gmail.com>
- <1519899591-29761-4-git-send-email-kpark3469@gmail.com> <1519899591-29761-5-git-send-email-kpark3469@gmail.com>
- <CAGXu5jJbPGifqTkKkqP3OJTCY=YO9+d_fRdvY-Fj_41HH4HFCw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 4 Apr 2018 16:11:50 -0700
-Message-ID: <CAGXu5jLBc6Ebqzzcfv7Duy5y6_6apfOgZohmyHdSTUAR5xWmsA@mail.gmail.com>
-Subject: Re: [PATCH 4/4] x86: usercopy: reimplement arch_within_stack_frames
- with unwinder
-Content-Type: text/plain; charset="UTF-8"
-To: Keun-O Park <kpark3469@gmail.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, James Morse <james.morse@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, keun-o.park@darkmatter.ae, Sodagudi Prasad <psodagud@codeaurora.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Ingo Molnar <mingo@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <20180328181809.24505-1-labbott@redhat.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Laura Abbott <labbott@redhat.com>, Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>
+Cc: linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-[resending with the CCs I forgot...]
-
-On Thu, Mar 1, 2018 at 2:19 AM,  <kpark3469@gmail.com> wrote:
-> From: Sahara <keun-o.park@darkmatter.ae>
->
-> The old arch_within_stack_frames which used the frame pointer is
-> now reimplemented to use frame pointer unwinder apis. So the main
-> functionality is same as before.
->
-> Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
-
-This will result in slightly more expensive stack checking for
-hardened usercopy, but I think that'd be okay if this could also be
-made to be unwinder-agnostic. Then it would work for ORC too, and
-wouldn't have to depend on just FRAME_POINTER. Without that, I'm not
-sure what the benefit is in changing this?
-
-Further notes below...
-
+On 2018-03-28 20:18, Laura Abbott wrote:
+> The new challenge is to remove VLAs from the kernel
+> (see https://lkml.org/lkml/2018/3/7/621) to eventually
+> turn on -Wvla.
+> 
+> Using a kmalloc array is the easy way to fix this but kmalloc is still
+> more expensive than stack allocation. Introduce a fast path with a
+> fixed size stack array to cover most chip with gpios below some fixed
+> amount. The slow path dynamically allocates an array to cover those
+> chips with a large number of gpios.
+> 
+> Signed-off-by: Lukas Wunner <lukas@wunner.de>
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
 > ---
->  arch/x86/include/asm/unwind.h  |  5 +++
->  arch/x86/kernel/stacktrace.c   | 77 +++++++++++++++++++++++++++++-------------
->  arch/x86/kernel/unwind_frame.c |  4 +--
->  3 files changed, 60 insertions(+), 26 deletions(-)
->
-> diff --git a/arch/x86/include/asm/unwind.h b/arch/x86/include/asm/unwind.h
-> index 1f86e1b..6f04906f 100644
-> --- a/arch/x86/include/asm/unwind.h
-> +++ b/arch/x86/include/asm/unwind.h
-> @@ -87,6 +87,11 @@ void unwind_init(void);
->  void unwind_module_init(struct module *mod, void *orc_ip, size_t orc_ip_size,
->                         void *orc, size_t orc_size);
->  #else
-> +#ifdef CONFIG_UNWINDER_FRAME_POINTER
-> +#define FRAME_HEADER_SIZE (sizeof(long) * 2)
-> +size_t regs_size(struct pt_regs *regs);
-> +#endif
+> v3: Split out from the series since patches have been picked up
+> independently. Fold in patch from Lukas Wunner to introduce slow/fast
+> paths. I took his suggestions to go with 384 as the maximum number of
+> gpios. Also fixed one 0-day bot issue where I forgot to change the
+> return type.
+>  
+>  	while (i < array_size) {
+>  		struct gpio_chip *chip = desc_array[i]->gdev->chip;
+> -		unsigned long mask[BITS_TO_LONGS(chip->ngpio)];
+> -		unsigned long bits[BITS_TO_LONGS(chip->ngpio)];
+> +		unsigned long fastpath[2 * BITS_TO_LONGS(FASTPATH_NGPIO)];
+> +		unsigned long *slowpath = NULL, *mask, *bits;
+>  		int first, j, ret;
+>  
+> +		if (likely(chip->ngpio <= FASTPATH_NGPIO)) {
+> +			memset(fastpath, 0, sizeof(fastpath));
+> +			mask = fastpath;
+> +			bits = fastpath + BITS_TO_LONGS(FASTPATH_NGPIO);
+> +		} else {
+> +			slowpath = kcalloc(2 * BITS_TO_LONGS(chip->ngpio),
+> +					   sizeof(*slowpath),
+> +					   can_sleep ? GFP_KERNEL : GFP_ATOMIC);
+> +			if (!slowpath)
+> +				return -ENOMEM;
+> +			mask = slowpath;
+> +			bits = slowpath + BITS_TO_LONGS(chip->ngpio);
+> +		}
 > +
->  static inline void unwind_init(void) {}
->  static inline
->  void unwind_module_init(struct module *mod, void *orc_ip, size_t orc_ip_size,
-> diff --git a/arch/x86/kernel/stacktrace.c b/arch/x86/kernel/stacktrace.c
-> index f433a33..c26eb55 100644
-> --- a/arch/x86/kernel/stacktrace.c
-> +++ b/arch/x86/kernel/stacktrace.c
-> @@ -12,6 +12,37 @@
->  #include <asm/unwind.h>
->
->
-> +static inline void *get_cur_frame(struct unwind_state *state)
-> +{
-> +       void *frame = NULL;
-> +
-> +#if defined(CONFIG_UNWINDER_ORC)
-> +#elif defined(CONFIG_UNWINDER_FRAME_POINTER)
-> +       if (state->regs)
-> +               frame = (void *)state->regs;
-> +       else
-> +               frame = (void *)state->bp;
-> +#else
-> +#endif
-> +       return frame;
-> +}
 
-What's going on here with the #if statement? Shouldn't this just be:
+To avoid the static analysis complaints about the "if (slowpath)
+kfree(slowpath)" pattern, I'd suggest getting rid of the slowpath
+variable and simply assign the kcalloc directly to mask. Then the
+condition becomes "if (mask != fastpath) kfree(mask)". A comment won't
+silence subsequenct coccicheck runs, and unfortunately probably won't
+prevent certain individuals from sending auto-generated patches.
 
-+static inline void *get_cur_frame(struct unwind_state *state)
-+{
-+       void *frame = NULL;
-+
-+#ifdef CONFIG_UNWINDER_FRAME_POINTER
-+       if (state->regs)
-+               frame = (void *)state->regs;
-+       else
-+               frame = (void *)state->bp;
-+#endif
-+       return frame;
-+}
+Maybe also pull out the "bits = mask + BITS_TO_LONGS(chip->ngpio)" to
+the common path.
 
-?
+Another thing: Maybe a pr_warn or at least a pr_info would be in order
+when a gpio chip with > FASTPATH_NGPIO lines is registered? And if that
+triggers for a lot of different SoCs, one could consider changing it to
+a CONFIG_ thing, or just bumping it to 512 if that would seem to cover
+all the reports.
 
-> +
-> +static inline void *get_frame_end(struct unwind_state *state)
-> +{
-> +       void *frame_end = NULL;
-> +
-> +#if defined(CONFIG_UNWINDER_ORC)
-> +#elif defined(CONFIG_UNWINDER_FRAME_POINTER)
-> +       if (state->regs) {
-> +               frame_end = (void *)state->regs + regs_size(state->regs);
-> +       } else {
-> +               frame_end = (void *)state->bp + FRAME_HEADER_SIZE;
-> +       }
-> +#else
-> +#endif
-> +       return frame_end;
-> +}
-
-Same thing above?
-
-> +
->  /*
->   * Walks up the stack frames to make sure that the specified object is
->   * entirely contained by a single stack frame.
-> @@ -25,31 +56,31 @@ int arch_within_stack_frames(const void * const stack,
->                              const void * const stackend,
->                              const void *obj, unsigned long len)
->  {
-> -#if defined(CONFIG_FRAME_POINTER)
-> -       const void *frame = NULL;
-> -       const void *oldframe;
-> -
-> -       oldframe = __builtin_frame_address(2);
-> -       if (oldframe)
-> -               frame = __builtin_frame_address(3);
-> +#if defined(CONFIG_UNWINDER_FRAME_POINTER)
-> +       struct unwind_state state;
-> +       void *prev_frame_end = NULL;
->         /*
-> -        * low ----------------------------------------------> high
-> -        * [saved bp][saved ip][args][local vars][saved bp][saved ip]
-> -        *                     ^----------------^
-> -        *               allow copies only within here
-
-I think it's worth keeping this diagram: it explains what region is
-being checked...
-
-> +        * Skip 3 non-inlined frames: arch_within_stack_frames(),
-> +        * check_stack_object() and __check_object_size().
-> +        *
->          */
-> -       while (stack <= frame && frame < stackend) {
-> -               /*
-> -                * If obj + len extends past the last frame, this
-> -                * check won't pass and the next frame will be 0,
-> -                * causing us to bail out and correctly report
-> -                * the copy as invalid.
-> -                */
-
-Also seems like we should keep the comment for describing what's happening...
-
-> -               if (obj + len <= frame)
-> -                       return obj >= oldframe + 2 * sizeof(void *) ?
-> -                               GOOD_FRAME : BAD_STACK;
-> -               oldframe = frame;
-> -               frame = *(const void * const *)frame;
-> +       unsigned int discard_frames = 3;
-> +
-> +       for (unwind_start(&state, current, NULL, NULL); !unwind_done(&state);
-> +            unwind_next_frame(&state)) {
-> +               if (discard_frames) {
-> +                       discard_frames--;
-> +               } else {
-> +                       void *frame = get_cur_frame(&state);
-> +
-> +                       if (!frame || !prev_frame_end)
-> +                               return NOT_STACK;
-> +                       if (obj + len <= frame)
-> +                               return obj >= prev_frame_end ?
-> +                                               GOOD_FRAME : BAD_STACK;
-> +               }
-> +               /* save current frame end before move to next frame */
-> +               prev_frame_end = get_frame_end(&state);
->         }
->         return BAD_STACK;
->  #else
-> diff --git a/arch/x86/kernel/unwind_frame.c b/arch/x86/kernel/unwind_frame.c
-> index 3dc26f9..c8bfa5c 100644
-> --- a/arch/x86/kernel/unwind_frame.c
-> +++ b/arch/x86/kernel/unwind_frame.c
-> @@ -8,8 +8,6 @@
->  #include <asm/stacktrace.h>
->  #include <asm/unwind.h>
->
-> -#define FRAME_HEADER_SIZE (sizeof(long) * 2)
-> -
->  unsigned long unwind_get_return_address(struct unwind_state *state)
->  {
->         if (unwind_done(state))
-> @@ -69,7 +67,7 @@ static void unwind_dump(struct unwind_state *state)
->         }
->  }
->
-> -static size_t regs_size(struct pt_regs *regs)
-> +size_t regs_size(struct pt_regs *regs)
->  {
->         /* x86_32 regs from kernel mode are two words shorter: */
->         if (IS_ENABLED(CONFIG_X86_32) && !user_mode(regs))
-> --
-> 2.7.4
->
-
--Kees
-
---
-Kees Cook
-Pixel Security
-
-
--- 
-Kees Cook
-Pixel Security
+Rasmus
