@@ -1,60 +1,97 @@
-From: Alexander Popov <alex.popov@linux.com>
-Subject: [PATCH v11 6/6] doc: self-protection: Add information about STACKLEAK feature
-Date: Fri,  6 Apr 2018 17:22:26 +0300
-Message-Id: <1523024546-6150-7-git-send-email-alex.popov@linux.com>
-In-Reply-To: <1523024546-6150-1-git-send-email-alex.popov@linux.com>
-References: <1523024546-6150-1-git-send-email-alex.popov@linux.com>
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, x86@kernel.org, linux-kernel@vger.kernel.org, alex.popov@linux.com
+Date: Sat, 7 Apr 2018 09:55:56 +1000
+From: "Tobin C. Harding" <me@tobin.cc>
+Subject: [GIT PULL] leaking_addresses: changes for 14.17-rc1
+Message-ID: <20180406235556.GA8365@eros>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add information about STACKLEAK feature to "Stack depth overflow" and
-"Memory poisoning" sections of self-protection.rst.
+Hi Linus,
 
-Signed-off-by: Alexander Popov <alex.popov@linux.com>
----
- Documentation/security/self-protection.rst | 23 ++++++++++++++---------
- 1 file changed, 14 insertions(+), 9 deletions(-)
+This is your favourite noob maintainer requesting that you pretty please
+with sugar on top pull the leaking_addresses patch set.
 
-diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
-index 0f53826..b685f18 100644
---- a/Documentation/security/self-protection.rst
-+++ b/Documentation/security/self-protection.rst
-@@ -165,10 +165,15 @@ Stack depth overflow
- A less well understood attack is using a bug that triggers the
- kernel to consume stack memory with deep function calls or large stack
- allocations. With this attack it is possible to write beyond the end of
--the kernel's preallocated stack space and into sensitive structures. Two
--important changes need to be made for better protections: moving the
--sensitive thread_info structure elsewhere, and adding a faulting memory
--hole at the bottom of the stack to catch these overflows.
-+the kernel's preallocated stack space and into sensitive structures.
-+The combination of the following measures gives better protection:
-+
-+* moving the sensitive thread_info structure off the stack
-+  (``CONFIG_THREAD_INFO_IN_TASK``);
-+* adding a faulting memory hole at the bottom of the stack to catch
-+  these overflows (``CONFIG_VMAP_STACK``);
-+* runtime checking that alloca() calls don't overstep the stack boundary
-+  (``CONFIG_GCC_PLUGIN_STACKLEAK``).
- 
- Heap memory integrity
- ---------------------
-@@ -302,11 +307,11 @@ sure structure holes are cleared.
- Memory poisoning
- ----------------
- 
--When releasing memory, it is best to poison the contents (clear stack on
--syscall return, wipe heap memory on a free), to avoid reuse attacks that
--rely on the old contents of memory. This frustrates many uninitialized
--variable attacks, stack content exposures, heap content exposures, and
--use-after-free attacks.
-+When releasing memory, it is best to poison the contents, to avoid reuse
-+attacks that rely on the old contents of memory. E.g., clear stack on a
-+syscall return (``CONFIG_GCC_PLUGIN_STACKLEAK``), wipe heap memory on a
-+free. This frustrates many uninitialized variable attacks, stack content
-+exposures, heap content exposures, and use-after-free attacks.
- 
- Destination tracking
- --------------------
--- 
-2.7.4
+I have hopefully lifted my game after the abysmal effort last merge
+window.  The script now actually runs in an acceptable time, the tree is
+on kernel.org and I have convinced another (more experienced) kernel
+hacker to cast an eye over things.
+
+All patches have been in linux-next since about half way through last
+dev cycle and testing was done on x86_64, ARM (32 bit), and PowerPC.
+
+thanks,
+Tobin.
+
+
+The following changes since commit 0adb32858b0bddf4ada5f364a84ed60b196dbcda:
+
+  Linux 4.16 (2018-04-01 14:20:27 -0700)
+
+are available in the git repository at:
+
+  ssh://git@gitolite.kernel.org/pub/scm/linux/kernel/git/tobin/leaks.git tags/leaks-4.17-rc1
+
+for you to fetch changes up to e875d33d7f06d1107c057d12bb5aaba84738e418:
+
+  MAINTAINERS: Update LEAKING_ADDRESSES (2018-04-07 09:35:37 +1000)
+
+----------------------------------------------------------------
+Leaking-addresses patches for 4.17-rc1
+
+Here is the patch set for the 4.17-rc1 merge window.  This set
+represents improvements to the scripts/leaking_addresses.pl script.  The
+major improvement is that with this set applied the script actually runs
+in a reasonable amount of time (less than a minute on a standard stock
+Ubuntu user desktop).  Also, we have a second maintainer now and a tree
+hosted on kernel.org
+
+We do a few code clean ups.  We fix the command help output.  Handling
+of the vsyscall address range is fixed to check the whole range instead
+of just the start/end addresses.  We add support for 5 page table levels
+(suggested on LKML).  We use a system command to get the machine
+architecture instead of using Perl.  Calling this command for every
+regex comparison is what previously choked the script, caching the
+result of this call gave the major speed improvement.  We add support
+for scanning 32-bit kernels using the user/kernel memory split.  Path
+skipping code refactored and simplified (meaning easier script
+configuration).  We remove version numbering.  We add a variable name to
+improve readability of a regex and finally we check filenames for
+leaking addresses.
+
+Currently script scans /proc/PID for all PID.  With this set applied we
+only scan for PID==1. It was observed that on an idle system files under
+/proc/PID are predominantly the same for all processes.  Also it was
+noted that the script does not scan _all_ the kernel since it only scans
+active processes.  Scanning only for PID==1 makes explicit the inherent
+flaw in the script that the scan is only partial and also speeds things up.
+
+Signed-off-by: Tobin C. Harding <me@tobin.cc>
+
+----------------------------------------------------------------
+Tobin C. Harding (19):
+      leaking_addresses: fix typo function not called
+      leaking_addresses: remove mention of kptr_restrict
+      leaking_addresses: remove command examples
+      leaking_addresses: indent dependant options
+      leaking_addresses: add range check for vsyscall memory
+      leaking_addresses: add support for kernel config file
+      leaking_addresses: add support for 5 page table levels
+      leaking_addresses: use system command to get arch
+      leaking_addresses: add is_arch() wrapper subroutine
+      leaking_addresses: add 32-bit support
+      leaking_addresses: do not parse binary files
+      leaking_addresses: simplify path skipping
+      leaking_addresses: cache architecture name
+      leaking_addresses: skip all /proc/PID except /proc/1
+      leaking_addresses: skip '/proc/1/syscall'
+      leaking_addresses: remove version number
+      leaking_addresses: explicitly name variable used in regex
+      leaking_addresses: check if file name contains address
+      MAINTAINERS: Update LEAKING_ADDRESSES
+
+ MAINTAINERS                  |   3 +
+ scripts/leaking_addresses.pl | 372 ++++++++++++++++++++++++++++++-------------
+ 2 files changed, 262 insertions(+), 113 deletions(-)
