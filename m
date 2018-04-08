@@ -1,87 +1,47 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+DW-qpFwCxN0dgsNLn35940SX+n0nJTceNfRzRrswU+A@mail.gmail.com>
-References: <1519899591-29761-1-git-send-email-kpark3469@gmail.com>
- <1519899591-29761-2-git-send-email-kpark3469@gmail.com> <1519899591-29761-3-git-send-email-kpark3469@gmail.com>
- <1519899591-29761-4-git-send-email-kpark3469@gmail.com> <CAGXu5j+DW-qpFwCxN0dgsNLn35940SX+n0nJTceNfRzRrswU+A@mail.gmail.com>
-From: Keun-O Park <kpark3469@gmail.com>
-Date: Sun, 8 Apr 2018 10:45:21 +0400
-Message-ID: <CA+KhAHZB6_V-9dKeXzJEmUuYt3Qn7YqoH+rqEncD-tvx9HS6qA@mail.gmail.com>
-Subject: Re: [PATCH 3/4] arm64: usercopy: consider dynamic array stack variable
+In-Reply-To: <CAGXu5j+cETZ7udEG9pgmxfdwZLmNzO0Br4KAL7_ZdyOP2_CANQ@mail.gmail.com>
+References: <1523126303-23205-1-git-send-email-s.mesoraca16@gmail.com> <CAGXu5j+cETZ7udEG9pgmxfdwZLmNzO0Br4KAL7_ZdyOP2_CANQ@mail.gmail.com>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Sun, 8 Apr 2018 10:55:09 +0200
+Message-ID: <CAJHCu1LLVoov_dHb-GuzyZpO3EVAwpeoJN_1PQHipBpAh8S1Gw@mail.gmail.com>
+Subject: Re: [PATCH 0/6] Remove several VLAs in the crypto subsystem
 Content-Type: text/plain; charset="UTF-8"
 To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, James Morse <james.morse@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, keun-o.park@darkmatter.ae
+Cc: LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-crypto <linux-crypto@vger.kernel.org>, "David S. Miller" <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers3@gmail.com>, Laura Abbott <labbott@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Apr 5, 2018 at 2:57 AM, Kees Cook <keescook@chromium.org> wrote:
-> On Thu, Mar 1, 2018 at 2:19 AM,  <kpark3469@gmail.com> wrote:
->> From: Sahara <keun-o.park@darkmatter.ae>
+2018-04-07 21:56 GMT+02:00 Kees Cook <keescook@chromium.org>:
+> On Sat, Apr 7, 2018 at 11:38 AM, Salvatore Mesoraca
+> <s.mesoraca16@gmail.com> wrote:
+>> As suggested by Laura Abbott[2], I'm resending my patch with
+>> MAX_BLOCKSIZE and MAX_ALIGNMASK defined in an header, so they
+>> can be used in other places.
+>> I take this opportuinuty to deal with some other VLAs not
+>> handled in the old patch.
 >>
->> When an array is dynamically declared, the array may be placed
->> at next frame. If this variable is used for usercopy, then it
->> will cause an Oops because the current check code does not allow
->> this exceptional case.
+>> [1] http://lkml.kernel.org/r/CA+55aFzCG-zNmZwX4A2FQpadafLfEzK6CC=qPXydAacU1RqZWA@mail.gmail.com
+>> [2] http://lkml.kernel.org/r/4e536889-439a-49e6-dd95-2d4286913202@redhat.com
 >>
->>  low -----------------------------------------------------> high
->>  [__check_object_size fp][lr][args][local vars][caller_fp][lr]
->>                              ^----------------^
->>                      dynamically allocated stack variable of
->>                      caller frame copies are allowed within here
+>> Salvatore Mesoraca (6):
+>>   crypto: api - laying macros for statically allocated buffers
+>>   crypto: ctr - avoid VLA use
+>>   crypto: api - avoid VLA use
+>>   crypto: pcbc - avoid VLA use
+>>   crypto: cts - avoid VLA use
+>>   crypto: cfb - avoid VLA use
 >>
->>  < example code snippet >
->>  array_size = get_random_int() & 0x0f;
->>  if (to_user) {
->>          unsigned char array[array_size];
->>          if (copy_to_user((void __user *)user_addr, array,
->>                           unconst + sizeof(array))) {
+>>  crypto/cfb.c      | 14 ++++++++++----
+>>  crypto/cipher.c   |  7 ++++++-
+>>  crypto/ctr.c      | 13 +++++++++++--
+>>  crypto/cts.c      |  8 ++++++--
+>>  crypto/internal.h |  8 ++++++++
+>>  crypto/pcbc.c     |  9 +++++++--
+>>  6 files changed, 48 insertions(+), 11 deletions(-)
 >
-> And once we have -Wvla in the build[1] by default we can revert this
-> and ignore the VLA case, yes?
-
-Yes, you are right. Once we enable -Wvla, then we don't need this.
-Thanks.
-
-BR,
-Sahara
-
-
+> These all look good to me! Thanks for the refactoring. :)
 >
 > Reviewed-by: Kees Cook <keescook@chromium.org>
->
-> -Kees
->
-> [1] https://lkml.org/lkml/2018/3/7/621
->
->>
->> Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
->> ---
->>  arch/arm64/kernel/stacktrace.c | 7 ++++++-
->>  1 file changed, 6 insertions(+), 1 deletion(-)
->>
->> diff --git a/arch/arm64/kernel/stacktrace.c b/arch/arm64/kernel/stacktrace.c
->> index 6d37fad..75a8f20 100644
->> --- a/arch/arm64/kernel/stacktrace.c
->> +++ b/arch/arm64/kernel/stacktrace.c
->> @@ -162,8 +162,13 @@ int arch_within_stack_frames(const void *stack,
->>          * Skip 4 non-inlined frames: <fake frame>,
->>          * arch_within_stack_frames(), check_stack_object() and
->>          * __check_object_size().
->> +        *
->> +        * From Akashi's report, an object may be placed between next caller's
->> +        * frame, when the object is created as dynamic array.
->> +        * Setting the discard_frames to 3 is proper to catch this exceptional
->> +        * case.
->>          */
->> -       arg.discard_frames = 4;
->> +       arg.discard_frames = 3;
->>
->>         walk_stackframe(current, &frame, check_frame, &arg);
->>
->> --
->> 2.7.4
->>
->
->
->
-> --
-> Kees Cook
-> Pixel Security
+
+Thank you!
+
+Salvatore
