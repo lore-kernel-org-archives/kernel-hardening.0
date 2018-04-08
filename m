@@ -1,34 +1,87 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKidijcESX2vguQ=m4Fx1S7eKOKXrLTEb3Of1FN9jQbbg@mail.gmail.com>
+In-Reply-To: <CAGXu5j+DW-qpFwCxN0dgsNLn35940SX+n0nJTceNfRzRrswU+A@mail.gmail.com>
 References: <1519899591-29761-1-git-send-email-kpark3469@gmail.com>
  <1519899591-29761-2-git-send-email-kpark3469@gmail.com> <1519899591-29761-3-git-send-email-kpark3469@gmail.com>
- <CAGXu5jKidijcESX2vguQ=m4Fx1S7eKOKXrLTEb3Of1FN9jQbbg@mail.gmail.com>
+ <1519899591-29761-4-git-send-email-kpark3469@gmail.com> <CAGXu5j+DW-qpFwCxN0dgsNLn35940SX+n0nJTceNfRzRrswU+A@mail.gmail.com>
 From: Keun-O Park <kpark3469@gmail.com>
-Date: Sun, 8 Apr 2018 10:39:24 +0400
-Message-ID: <CA+KhAHZB2tDpd-EY8har78PWyf=SCN4cNSjLHLpRqZoJgB2TiQ@mail.gmail.com>
-Subject: Re: [PATCH 2/4] arm64: usercopy: implement arch_within_stack_frames
+Date: Sun, 8 Apr 2018 10:45:21 +0400
+Message-ID: <CA+KhAHZB6_V-9dKeXzJEmUuYt3Qn7YqoH+rqEncD-tvx9HS6qA@mail.gmail.com>
+Subject: Re: [PATCH 3/4] arm64: usercopy: consider dynamic array stack variable
 Content-Type: text/plain; charset="UTF-8"
 To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, James Morse <james.morse@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, keun-o.park@darkmatter.ae, Sodagudi Prasad <psodagud@codeaurora.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Ingo Molnar <mingo@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, James Morse <james.morse@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, keun-o.park@darkmatter.ae
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
-
-On Thu, Apr 5, 2018 at 2:55 AM, Kees Cook <keescook@chromium.org> wrote:
+On Thu, Apr 5, 2018 at 2:57 AM, Kees Cook <keescook@chromium.org> wrote:
 > On Thu, Mar 1, 2018 at 2:19 AM,  <kpark3469@gmail.com> wrote:
->> From: James Morse <james.morse@arm.com>
+>> From: Sahara <keun-o.park@darkmatter.ae>
 >>
->> This implements arch_within_stack_frames() for arm64 that should
->> validate if a given object is contained by a kernel stack frame.
+>> When an array is dynamically declared, the array may be placed
+>> at next frame. If this variable is used for usercopy, then it
+>> will cause an Oops because the current check code does not allow
+>> this exceptional case.
 >>
->> Signed-off-by: James Morse <james.morse@arm.com>
->> Reviewed-by: Sahara <keun-o.park@darkmatter.ae>
+>>  low -----------------------------------------------------> high
+>>  [__check_object_size fp][lr][args][local vars][caller_fp][lr]
+>>                              ^----------------^
+>>                      dynamically allocated stack variable of
+>>                      caller frame copies are allowed within here
+>>
+>>  < example code snippet >
+>>  array_size = get_random_int() & 0x0f;
+>>  if (to_user) {
+>>          unsigned char array[array_size];
+>>          if (copy_to_user((void __user *)user_addr, array,
+>>                           unconst + sizeof(array))) {
 >
-> Looks good to me. Does this end up passing the LKDTM
-> USERCOPY_STACK_FRAME_TO and USERCOPY_STACK_FRAME_FROM tests?
+> And once we have -Wvla in the build[1] by default we can revert this
+> and ignore the VLA case, yes?
 
-Yes, this passes those two LKDTM tests.
+Yes, you are right. Once we enable -Wvla, then we don't need this.
 Thanks.
 
-BR
+BR,
 Sahara
+
+
+>
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+>
+> -Kees
+>
+> [1] https://lkml.org/lkml/2018/3/7/621
+>
+>>
+>> Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
+>> ---
+>>  arch/arm64/kernel/stacktrace.c | 7 ++++++-
+>>  1 file changed, 6 insertions(+), 1 deletion(-)
+>>
+>> diff --git a/arch/arm64/kernel/stacktrace.c b/arch/arm64/kernel/stacktrace.c
+>> index 6d37fad..75a8f20 100644
+>> --- a/arch/arm64/kernel/stacktrace.c
+>> +++ b/arch/arm64/kernel/stacktrace.c
+>> @@ -162,8 +162,13 @@ int arch_within_stack_frames(const void *stack,
+>>          * Skip 4 non-inlined frames: <fake frame>,
+>>          * arch_within_stack_frames(), check_stack_object() and
+>>          * __check_object_size().
+>> +        *
+>> +        * From Akashi's report, an object may be placed between next caller's
+>> +        * frame, when the object is created as dynamic array.
+>> +        * Setting the discard_frames to 3 is proper to catch this exceptional
+>> +        * case.
+>>          */
+>> -       arg.discard_frames = 4;
+>> +       arg.discard_frames = 3;
+>>
+>>         walk_stackframe(current, &frame, check_frame, &arg);
+>>
+>> --
+>> 2.7.4
+>>
+>
+>
+>
+> --
+> Kees Cook
+> Pixel Security
