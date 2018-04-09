@@ -1,183 +1,45 @@
+From: Sasha Levin <Alexander.Levin@microsoft.com>
+Subject: [PATCH AUTOSEL for 4.15 010/189] kvm: x86: fix KVM_XEN_HVM_CONFIG
+ ioctl
+Date: Mon, 9 Apr 2018 00:16:51 +0000
+Message-ID: <20180409001637.162453-10-alexander.levin@microsoft.com>
+References: <20180409001637.162453-1-alexander.levin@microsoft.com>
+In-Reply-To: <20180409001637.162453-1-alexander.levin@microsoft.com>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <A27094D6286A0C43AC5FB6945EDBD0B4@namprd21.prod.outlook.com>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-In-Reply-To: <CA+KhAHZB6_V-9dKeXzJEmUuYt3Qn7YqoH+rqEncD-tvx9HS6qA@mail.gmail.com>
-References: <1519899591-29761-1-git-send-email-kpark3469@gmail.com>
- <1519899591-29761-2-git-send-email-kpark3469@gmail.com> <1519899591-29761-3-git-send-email-kpark3469@gmail.com>
- <1519899591-29761-4-git-send-email-kpark3469@gmail.com> <CAGXu5j+DW-qpFwCxN0dgsNLn35940SX+n0nJTceNfRzRrswU+A@mail.gmail.com>
- <CA+KhAHZB6_V-9dKeXzJEmUuYt3Qn7YqoH+rqEncD-tvx9HS6qA@mail.gmail.com>
-From: Keun-O Park <kpark3469@gmail.com>
-Date: Mon, 9 Apr 2018 09:54:24 +0400
-Message-ID: <CA+KhAHZBfeVFrAaGaxY=+DWtLkHSgy7xH4yitnUJ6UmdVuyW4A@mail.gmail.com>
-Subject: Re: [PATCH 3/4] arm64: usercopy: consider dynamic array stack variable
-Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, James Morse <james.morse@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, keun-o.park@darkmatter.ae
+To: "stable@vger.kernel.org" <stable@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Cc: Paolo Bonzini <pbonzini@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, =?utf-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Sasha Levin <Alexander.Levin@microsoft.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I removed this patch from v2 patchset.
-I noticed that this patch can not pass the current lkdtm
-stack_frame_to/from tests.
-Because the bad_stack is placed before the do_usercopy_stack frame,
-this patch makes bad_stack pass the check.
-It's not what we want to happen.
-For now and later, I think this might be the best solution.
-
-These are the each frame's information in walk_stackframe, when
-discard_frame is set to 3 in order to filter the variable length
-array.
-
-root@genericarmv8:/sys/kernel/debug/provoke-crash# echo
-USERCOPY_STACK_FRAME_TO > DIRECT
-[ 3726.088794] lkdtm: Performing direct entry USERCOPY_STACK_FRAME_TO
-[ 3726.088867] lkdtm: >>> buf=0xffff00000bf7bc18
-[ 3726.088936] lkdtm: >>> do_usercopy_stack_callee:
-fp=ffff00000bf7bbf0 xfp=ffff00000bf7bc40
-[ 3726.089037] lkdtm: >>> do_usercopy_stack:
-good_stack=0xffff00000bf7bc98, bad_stack=0xffff00000bf7bc18
-[ 3726.089129] lkdtm: >>> do_usercopy_stack: fp=ffff00000bf7bc40
-xfp=ffff00000bf7bcc0
-[ 3726.089203] lkdtm: attempting good copy_to_user of local stack
-[ 3726.089267] =====================================
-[ 3726.089358] > PC        = arch_within_stack_frames+0x0/0x88
-[ 3726.089423] > discard_f = 3
-[ 3726.089477] > frm_start = 0xffff00000bf7bb90
-[ 3726.089539] > frame_end = 0xffff00000bf7bb90
-[ 3726.089601] > obj start = 0xffff00000bf7bc98
-[ 3726.089662] > obj end   = 0xffff00000bf7bcb8
-[ 3726.089720] =====================================
-[ 3726.089803] > PC        = check_stack_object+0x44/0x68
-[ 3726.089867] > discard_f = 2
-[ 3726.089921] > frm_start = 0xffff00000bf7bba0
-[ 3726.089982] > frame_end = 0xffff00000bf7bbf0
-[ 3726.090044] > obj start = 0xffff00000bf7bc98
-[ 3726.090105] > obj end   = 0xffff00000bf7bcb8
-[ 3726.090163] =====================================
-[ 3726.090247] > PC        = __check_object_size+0x50/0x1e0
-[ 3726.090311] > discard_f = 1
-[ 3726.090365] > frm_start = 0xffff00000bf7bc00
-[ 3726.090427] > frame_end = 0xffff00000bf7bc00
-[ 3726.090489] > obj start = 0xffff00000bf7bc98
-[ 3726.090550] > obj end   = 0xffff00000bf7bcb8
-[ 3726.090608] =====================================
-[ 3726.090688] > PC        = do_usercopy_stack+0x188/0x3c0
-[ 3726.090752] > discard_f = 0
-[ 3726.090806] > frm_start = 0xffff00000bf7bc10
-[ 3726.090867] > frame_end = 0xffff00000bf7bc40
-[ 3726.091025] > obj start = 0xffff00000bf7bc98
-[ 3726.091134] > obj end   = 0xffff00000bf7bcb8
-[ 3726.091240] =====================================
-[ 3726.091365] > PC        = lkdtm_USERCOPY_STACK_FRAME_TO+0x24/0x38
-[ 3726.091495] > discard_f = 0
-[ 3726.091596] > frm_start = 0xffff00000bf7bc50
-[ 3726.091702] > frame_end = 0xffff00000bf7bcc0
-[ 3726.091806] > obj start = 0xffff00000bf7bc98
-[ 3726.091909] > obj end   = 0xffff00000bf7bcb8
-[ 3726.092037] lkdtm: attempting bad copy_to_user of distant stack
-[ 3726.092163] =====================================
-[ 3726.092298] > PC        = arch_within_stack_frames+0x0/0x88
-[ 3726.092424] > discard_f = 3
-[ 3726.092528] > frm_start = 0xffff00000bf7bb90
-[ 3726.092634] > frame_end = 0xffff00000bf7bb90
-[ 3726.092696] > obj start = 0xffff00000bf7bc18
-[ 3726.092757] > obj end   = 0xffff00000bf7bc38
-[ 3726.092815] =====================================
-[ 3726.092897] > PC        = check_stack_object+0x44/0x68
-[ 3726.092960] > discard_f = 2
-[ 3726.093014] > frm_start = 0xffff00000bf7bba0
-[ 3726.093075] > frame_end = 0xffff00000bf7bbf0
-[ 3726.093136] > obj start = 0xffff00000bf7bc18
-[ 3726.093198] > obj end   = 0xffff00000bf7bc38
-[ 3726.093255] =====================================
-[ 3726.093338] > PC        = __check_object_size+0x50/0x1e0
-[ 3726.093402] > discard_f = 1
-[ 3726.093456] > frm_start = 0xffff00000bf7bc00
-[ 3726.093517] > frame_end = 0xffff00000bf7bc00
-[ 3726.093578] > obj start = 0xffff00000bf7bc18
-[ 3726.093640] > obj end   = 0xffff00000bf7bc38
-[ 3726.093697] =====================================
-[ 3726.093777] > PC        = do_usercopy_stack+0x318/0x3c0
-[ 3726.093840] > discard_f = 0
-[ 3726.093894] > frm_start = 0xffff00000bf7bc10
-[ 3726.093955] > frame_end = 0xffff00000bf7bc40
-[ 3726.094016] > obj start = 0xffff00000bf7bc18
-[ 3726.094077] > obj end   = 0xffff00000bf7bc38
-
-
-Thanks.
-
-BR
-Sahara
-
-On Sun, Apr 8, 2018 at 10:45 AM, Keun-O Park <kpark3469@gmail.com> wrote:
-> On Thu, Apr 5, 2018 at 2:57 AM, Kees Cook <keescook@chromium.org> wrote:
->> On Thu, Mar 1, 2018 at 2:19 AM,  <kpark3469@gmail.com> wrote:
->>> From: Sahara <keun-o.park@darkmatter.ae>
->>>
->>> When an array is dynamically declared, the array may be placed
->>> at next frame. If this variable is used for usercopy, then it
->>> will cause an Oops because the current check code does not allow
->>> this exceptional case.
->>>
->>>  low -----------------------------------------------------> high
->>>  [__check_object_size fp][lr][args][local vars][caller_fp][lr]
->>>                              ^----------------^
->>>                      dynamically allocated stack variable of
->>>                      caller frame copies are allowed within here
->>>
->>>  < example code snippet >
->>>  array_size = get_random_int() & 0x0f;
->>>  if (to_user) {
->>>          unsigned char array[array_size];
->>>          if (copy_to_user((void __user *)user_addr, array,
->>>                           unconst + sizeof(array))) {
->>
->> And once we have -Wvla in the build[1] by default we can revert this
->> and ignore the VLA case, yes?
->
-> Yes, you are right. Once we enable -Wvla, then we don't need this.
-> Thanks.
->
-> BR,
-> Sahara
->
->
->>
->> Reviewed-by: Kees Cook <keescook@chromium.org>
->>
->> -Kees
->>
->> [1] https://lkml.org/lkml/2018/3/7/621
->>
->>>
->>> Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
->>> ---
->>>  arch/arm64/kernel/stacktrace.c | 7 ++++++-
->>>  1 file changed, 6 insertions(+), 1 deletion(-)
->>>
->>> diff --git a/arch/arm64/kernel/stacktrace.c b/arch/arm64/kernel/stacktrace.c
->>> index 6d37fad..75a8f20 100644
->>> --- a/arch/arm64/kernel/stacktrace.c
->>> +++ b/arch/arm64/kernel/stacktrace.c
->>> @@ -162,8 +162,13 @@ int arch_within_stack_frames(const void *stack,
->>>          * Skip 4 non-inlined frames: <fake frame>,
->>>          * arch_within_stack_frames(), check_stack_object() and
->>>          * __check_object_size().
->>> +        *
->>> +        * From Akashi's report, an object may be placed between next caller's
->>> +        * frame, when the object is created as dynamic array.
->>> +        * Setting the discard_frames to 3 is proper to catch this exceptional
->>> +        * case.
->>>          */
->>> -       arg.discard_frames = 4;
->>> +       arg.discard_frames = 3;
->>>
->>>         walk_stackframe(current, &frame, check_frame, &arg);
->>>
->>> --
->>> 2.7.4
->>>
->>
->>
->>
->> --
->> Kees Cook
->> Pixel Security
+RnJvbTogUGFvbG8gQm9uemluaSA8cGJvbnppbmlAcmVkaGF0LmNvbT4NCg0KWyBVcHN0cmVhbSBj
+b21taXQgNTE3NzYwNDNhZmE0MTU0MzVjN2U0NjM2MjA0ZmJlNGY3ZWRjNDUwMSBdDQoNClRoaXMg
+aW9jdGwgaXMgb2Jzb2xldGUgKGl0IHdhcyB1c2VkIGJ5IFhlbm5lciBhcyBmYXIgYXMgSSBrbm93
+KSBidXQNCnN0aWxsIGxldCdzIG5vdCBicmVhayBpdCBncmF0dWl0b3VzbHkuLi4gIEl0cyBoYW5k
+bGVyIGlzIGNvcHlpbmcNCmRpcmVjdGx5IGludG8gc3RydWN0IGt2bS4gIEdvIHRocm91Z2ggYSBi
+b3VuY2UgYnVmZmVyIGluc3RlYWQsIHdpdGgNCnRoZSBhZGRlZCBiZW5lZml0IHRoYXQgd2UgY2Fu
+IGFjdHVhbGx5IGRvIHNvbWV0aGluZyB1c2VmdWwgd2l0aCB0aGUNCmZsYWdzIGFyZ3VtZW50LS0t
+dGhlIHByZXZpb3VzIGNvZGUgd2FzIGV4aXRpbmcgd2l0aCAtRUlOVkFMIGJ1dCBzdGlsbA0KZG9p
+bmcgdGhlIGNvcHkuDQoNClRoaXMgdGVjaG5pY2FsbHkgaXMgYSB1c2Vyc3BhY2UgQUJJIGJyZWFr
+YWdlLCBidXQgc2luY2Ugbm8gb25lIHNob3VsZCBiZQ0KdXNpbmcgdGhlIGlvY3RsLCBpdCdzIGEg
+Z29vZCBvY2Nhc2lvbiB0byBzZWUgaWYgc29tZW9uZSBhY3R1YWxseQ0KY29tcGxhaW5zLg0KDQpD
+Yzoga2VybmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2FsbC5jb20NCkNjOiBLZWVzIENvb2sgPGtl
+ZXNjb29rQGNocm9taXVtLm9yZz4NCkNjOiBSYWRpbSBLcsSNbcOhxZkgPHJrcmNtYXJAcmVkaGF0
+LmNvbT4NClNpZ25lZC1vZmYtYnk6IFBhb2xvIEJvbnppbmkgPHBib256aW5pQHJlZGhhdC5jb20+
+DQpTaWduZWQtb2ZmLWJ5OiBLZWVzIENvb2sgPGtlZXNjb29rQGNocm9taXVtLm9yZz4NClNpZ25l
+ZC1vZmYtYnk6IFNhc2hhIExldmluIDxhbGV4YW5kZXIubGV2aW5AbWljcm9zb2Z0LmNvbT4NCi0t
+LQ0KIGFyY2gveDg2L2t2bS94ODYuYyB8IDcgKysrKy0tLQ0KIDEgZmlsZSBjaGFuZ2VkLCA0IGlu
+c2VydGlvbnMoKyksIDMgZGVsZXRpb25zKC0pDQoNCmRpZmYgLS1naXQgYS9hcmNoL3g4Ni9rdm0v
+eDg2LmMgYi9hcmNoL3g4Ni9rdm0veDg2LmMNCmluZGV4IGExMGRhNTA1MjA3Mi4uNDFhOGFjNDRk
+NWNjIDEwMDY0NA0KLS0tIGEvYXJjaC94ODYva3ZtL3g4Ni5jDQorKysgYi9hcmNoL3g4Ni9rdm0v
+eDg2LmMNCkBAIC00MjQ0LDEzICs0MjQ0LDE0IEBAIHNldF9pZGVudGl0eV91bmxvY2s6DQogCQlt
+dXRleF91bmxvY2soJmt2bS0+bG9jayk7DQogCQlicmVhazsNCiAJY2FzZSBLVk1fWEVOX0hWTV9D
+T05GSUc6IHsNCisJCXN0cnVjdCBrdm1feGVuX2h2bV9jb25maWcgeGhjOw0KIAkJciA9IC1FRkFV
+TFQ7DQotCQlpZiAoY29weV9mcm9tX3VzZXIoJmt2bS0+YXJjaC54ZW5faHZtX2NvbmZpZywgYXJn
+cCwNCi0JCQkJICAgc2l6ZW9mKHN0cnVjdCBrdm1feGVuX2h2bV9jb25maWcpKSkNCisJCWlmIChj
+b3B5X2Zyb21fdXNlcigmeGhjLCBhcmdwLCBzaXplb2YoeGhjKSkpDQogCQkJZ290byBvdXQ7DQog
+CQlyID0gLUVJTlZBTDsNCi0JCWlmIChrdm0tPmFyY2gueGVuX2h2bV9jb25maWcuZmxhZ3MpDQor
+CQlpZiAoeGhjLmZsYWdzKQ0KIAkJCWdvdG8gb3V0Ow0KKwkJbWVtY3B5KCZrdm0tPmFyY2gueGVu
+X2h2bV9jb25maWcsICZ4aGMsIHNpemVvZih4aGMpKTsNCiAJCXIgPSAwOw0KIAkJYnJlYWs7DQog
+CX0NCi0tIA0KMi4xNS4xDQo=
