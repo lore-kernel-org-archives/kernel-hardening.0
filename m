@@ -1,74 +1,35 @@
 From: Laura Abbott <labbott@redhat.com>
-Subject: [PATCH] gpio: xra1403: Switch to a fixed upper bound for registers
-Date: Mon,  9 Apr 2018 14:07:17 -0700
-Message-Id: <20180409210717.3852-1-labbott@redhat.com>
-To: Nandor Han <nandor.han@ge.com>, Geert Uytterhoeven <geert@linux-m68k.org>, Kees Cook <keescook@chromium.org>, Linus Walleij <linus.walleij@linaro.org>
-Cc: Laura Abbott <labbott@redhat.com>, linux-gpio@vger.kernel.org, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Subject: [PATCH] misc: tifm: Remove VLA
+Date: Mon,  9 Apr 2018 14:07:32 -0700
+Message-Id: <20180409210732.3919-1-labbott@redhat.com>
+To: Alex Dubov <oakad@yahoo.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: Laura Abbott <labbott@redhat.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Geert Uytterhoeven pointed out that the number of register was a
-fixed upper bound so there's no need to use a dynamically allocated
-array in place of a VLA. Use the defined upper bound.
+There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+turn on -Wvla. The single VLA can either take a value of 2 or 4 so switch
+to the upper bound.
 
-Suggested-by: Geert Uytterhoeven <geert@linux-m68k.org>
+[1] https://lkml.org/lkml/2018/3/7/621
+
 Signed-off-by: Laura Abbott <labbott@redhat.com>
 ---
- drivers/gpio/gpio-xra1403.c | 15 +++++----------
- 1 file changed, 5 insertions(+), 10 deletions(-)
+ drivers/misc/tifm_7xx1.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/gpio/gpio-xra1403.c b/drivers/gpio/gpio-xra1403.c
-index 8d4c8e99b251..8711a7907568 100644
---- a/drivers/gpio/gpio-xra1403.c
-+++ b/drivers/gpio/gpio-xra1403.c
-@@ -39,6 +39,7 @@
- #define XRA_REIR  0x10 /* Input Rising Edge Interrupt Enable */
- #define XRA_FEIR  0x12 /* Input Falling Edge Interrupt Enable */
- #define XRA_IFR   0x14 /* Input Filter Enable/Disable */
-+#define XRA_LAST  0x15 /* Bounds */
+diff --git a/drivers/misc/tifm_7xx1.c b/drivers/misc/tifm_7xx1.c
+index e5f108713dd8..690eaaea5ce4 100644
+--- a/drivers/misc/tifm_7xx1.c
++++ b/drivers/misc/tifm_7xx1.c
+@@ -239,7 +239,8 @@ static int tifm_7xx1_resume(struct pci_dev *dev)
+ 	unsigned long timeout;
+ 	unsigned int good_sockets = 0, bad_sockets = 0;
+ 	unsigned long flags;
+-	unsigned char new_ids[fm->num_sockets];
++	/* Maximum number of entries is 4 */
++	unsigned char new_ids[4];
+ 	DECLARE_COMPLETION_ONSTACK(finish_resume);
  
- struct xra1403 {
- 	struct gpio_chip  chip;
-@@ -50,7 +51,7 @@ static const struct regmap_config xra1403_regmap_cfg = {
- 		.pad_bits = 1,
- 		.val_bits = 8,
- 
--		.max_register = XRA_IFR | 0x01,
-+		.max_register = XRA_LAST,
- };
- 
- static unsigned int to_reg(unsigned int reg, unsigned int offset)
-@@ -126,21 +127,16 @@ static void xra1403_dbg_show(struct seq_file *s, struct gpio_chip *chip)
- {
- 	int reg;
- 	struct xra1403 *xra = gpiochip_get_data(chip);
--	int *value;
-+	int value[XRA_LAST];
- 	int i;
- 	unsigned int gcr;
- 	unsigned int gsr;
- 
--	value = kmalloc_array(xra1403_regmap_cfg.max_register, sizeof(*value),
--				GFP_KERNEL);
--	if (!value)
--		return;
--
- 	seq_puts(s, "xra reg:");
--	for (reg = 0; reg <= xra1403_regmap_cfg.max_register; reg++)
-+	for (reg = 0; reg <= XRA_LAST; reg++)
- 		seq_printf(s, " %2.2x", reg);
- 	seq_puts(s, "\n  value:");
--	for (reg = 0; reg < xra1403_regmap_cfg.max_register; reg++) {
-+	for (reg = 0; reg < XRA_LAST; reg++) {
- 		regmap_read(xra->regmap, reg, &value[reg]);
- 		seq_printf(s, " %2.2x", value[reg]);
- 	}
-@@ -159,7 +155,6 @@ static void xra1403_dbg_show(struct seq_file *s, struct gpio_chip *chip)
- 			   (gcr & BIT(i)) ? "in" : "out",
- 			   (gsr & BIT(i)) ? "hi" : "lo");
- 	}
--	kfree(value);
- }
- #else
- #define xra1403_dbg_show NULL
+ 	pci_set_power_state(dev, PCI_D0);
 -- 
 2.14.3
