@@ -1,37 +1,23 @@
+Subject: Re: [PATCH] dmaengine: dmatest: Remove use of VLAs
+References: <20180409210603.3575-1-labbott@redhat.com>
+From: Sinan Kaya <okaya@codeaurora.org>
+Message-ID: <4491bde2-cf38-5103-0634-1986ecd32a7c@codeaurora.org>
+Date: Mon, 9 Apr 2018 18:48:14 -0400
 MIME-Version: 1.0
-Sender: geert.uytterhoeven@gmail.com
-In-Reply-To: <20180409210717.3852-1-labbott@redhat.com>
-References: <20180409210717.3852-1-labbott@redhat.com>
-From: Geert Uytterhoeven <geert@linux-m68k.org>
-Date: Tue, 10 Apr 2018 10:08:56 +0200
-Message-ID: <CAMuHMdVnXc+SrUEteb-v4Kb9FtXJcaWmdK63-oTK0f2KxBThsQ@mail.gmail.com>
-Subject: Re: [PATCH] gpio: xra1403: Switch to a fixed upper bound for registers
-Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: Nandor Han <nandor.han@ge.com>, Kees Cook <keescook@chromium.org>, Linus Walleij <linus.walleij@linaro.org>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+In-Reply-To: <20180409210603.3575-1-labbott@redhat.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Laura Abbott <labbott@redhat.com>, Vinod Koul <vinod.koul@intel.com>, Dan Williams <dan.j.williams@intel.com>
+Cc: dmaengine@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Laura,
+On 4/9/2018 5:06 PM, Laura Abbott wrote:
+> +			/* dst_cnt can't be more than u8 */
+> +			dma_addr_t dma_pq[255];
 
-On Mon, Apr 9, 2018 at 11:07 PM, Laura Abbott <labbott@redhat.com> wrote:
-> Geert Uytterhoeven pointed out that the number of register was a
-> fixed upper bound so there's no need to use a dynamically allocated
-> array in place of a VLA. Use the defined upper bound.
->
-> Suggested-by: Geert Uytterhoeven <geert@linux-m68k.org>
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
-
-Thanks for your patch!
-
-Reviewed-by: Geert Uytterhoeven <geert+renesas@glider.be>
-
-Gr{oetje,eeting}s,
-
-                        Geert
+This is 2k stack space on 64 bit architectures. Isn't that a lot?
 
 -- 
-Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k.org
-
-In personal conversations with technical people, I call myself a hacker. But
-when I'm talking to journalists I just say "programmer" or something like that.
-                                -- Linus Torvalds
+Sinan Kaya
+Qualcomm Datacenter Technologies, Inc. as an affiliate of Qualcomm Technologies, Inc.
+Qualcomm Technologies, Inc. is a member of the Code Aurora Forum, a Linux Foundation Collaborative Project.
