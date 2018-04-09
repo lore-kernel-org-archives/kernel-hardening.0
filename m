@@ -1,665 +1,245 @@
-Subject: Re: [PATCH bpf-next v8 05/11] seccomp,landlock: Enforce Landlock
- programs per process hierarchy
-References: <20180227004121.3633-1-mic@digikod.net>
- <20180227004121.3633-6-mic@digikod.net>
- <20180227020856.teq4hobw3zwussu2@ast-mbp>
- <CALCETrVKRYnGJ9XNW-x7eHdMt+eGP90j7cAed-KTzp1KT_kMeQ@mail.gmail.com>
- <20180227045458.wjrbbsxf3po656du@ast-mbp>
- <CALCETrXZ=xJEd53RhA67_VDoAKBWgUeyBi9XN7ibrE7V6nzk5Q@mail.gmail.com>
- <20180227053255.a7ua24kjd6tvei2a@ast-mbp>
- <CALCETrUqc0wbig4ntQe9KNS-fOgYOpD+MPodXYruCRyJ7bhagA@mail.gmail.com>
- <ab8dda73-4a6e-4e10-cda0-3e91c5019a63@digikod.net>
- <498f8193-c909-78b2-e4ca-c1dd05605255@digikod.net>
- <CALCETrViaXEx1iQ6q8bEEWSLchj=FH6LjcRY6+hjMx8A+rtgDQ@mail.gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <c6621359-e8f8-dc14-d449-f8e5d7149a97@digikod.net>
-Date: Mon, 9 Apr 2018 00:01:59 +0200
 MIME-Version: 1.0
-In-Reply-To: <CALCETrViaXEx1iQ6q8bEEWSLchj=FH6LjcRY6+hjMx8A+rtgDQ@mail.gmail.com>
-Content-Type: multipart/signed; micalg=pgp-sha512;
- protocol="application/pgp-signature";
- boundary="fsDpHUePup1Pjb0yAkxFgn5ORwNxLpEVq"
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Alexei Starovoitov <alexei.starovoitov@gmail.com>, Daniel Borkmann <daniel@iogearbox.net>, LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@ZenIV.linux.org.uk>, Linux-Fsdevel <linux-fsdevel@vger.kernel.org>
+In-Reply-To: <CAGXu5jLBc6Ebqzzcfv7Duy5y6_6apfOgZohmyHdSTUAR5xWmsA@mail.gmail.com>
+References: <1519899591-29761-1-git-send-email-kpark3469@gmail.com>
+ <1519899591-29761-2-git-send-email-kpark3469@gmail.com> <1519899591-29761-3-git-send-email-kpark3469@gmail.com>
+ <1519899591-29761-4-git-send-email-kpark3469@gmail.com> <1519899591-29761-5-git-send-email-kpark3469@gmail.com>
+ <CAGXu5jJbPGifqTkKkqP3OJTCY=YO9+d_fRdvY-Fj_41HH4HFCw@mail.gmail.com> <CAGXu5jLBc6Ebqzzcfv7Duy5y6_6apfOgZohmyHdSTUAR5xWmsA@mail.gmail.com>
+From: Keun-O Park <kpark3469@gmail.com>
+Date: Mon, 9 Apr 2018 09:40:30 +0400
+Message-ID: <CA+KhAHZTEhjidgfyiixKjfsGs93PS8c1WMNBn8Vi8FaSzfcRHg@mail.gmail.com>
+Subject: Re: [PATCH 4/4] x86: usercopy: reimplement arch_within_stack_frames
+ with unwinder
+Content-Type: text/plain; charset="UTF-8"
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, James Morse <james.morse@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, keun-o.park@darkmatter.ae, Sodagudi Prasad <psodagud@codeaurora.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Ingo Molnar <mingo@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---fsDpHUePup1Pjb0yAkxFgn5ORwNxLpEVq
-Content-Type: multipart/mixed; boundary="hHaom91hQZiq9frJExV3TxjZTzpQ1zqIf";
- protected-headers="v1"
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Alexei Starovoitov <alexei.starovoitov@gmail.com>,
- Daniel Borkmann <daniel@iogearbox.net>, LKML <linux-kernel@vger.kernel.org>,
- Alexei Starovoitov <ast@kernel.org>,
- Arnaldo Carvalho de Melo <acme@kernel.org>,
- Casey Schaufler <casey@schaufler-ca.com>,
- David Drysdale <drysdale@google.com>, "David S . Miller"
- <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>,
- Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>,
- Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>,
- Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
- "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
- Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>,
- Tycho Andersen <tycho@tycho.ws>, Will Drewry <wad@chromium.org>,
- Kernel Hardening <kernel-hardening@lists.openwall.com>,
- Linux API <linux-api@vger.kernel.org>,
- LSM List <linux-security-module@vger.kernel.org>,
- Network Development <netdev@vger.kernel.org>,
- Andrew Morton <akpm@linux-foundation.org>, Al Viro
- <viro@ZenIV.linux.org.uk>, Linux-Fsdevel <linux-fsdevel@vger.kernel.org>
-Message-ID: <c6621359-e8f8-dc14-d449-f8e5d7149a97@digikod.net>
-Subject: Re: [PATCH bpf-next v8 05/11] seccomp,landlock: Enforce Landlock
- programs per process hierarchy
-References: <20180227004121.3633-1-mic@digikod.net>
- <20180227004121.3633-6-mic@digikod.net>
- <20180227020856.teq4hobw3zwussu2@ast-mbp>
- <CALCETrVKRYnGJ9XNW-x7eHdMt+eGP90j7cAed-KTzp1KT_kMeQ@mail.gmail.com>
- <20180227045458.wjrbbsxf3po656du@ast-mbp>
- <CALCETrXZ=xJEd53RhA67_VDoAKBWgUeyBi9XN7ibrE7V6nzk5Q@mail.gmail.com>
- <20180227053255.a7ua24kjd6tvei2a@ast-mbp>
- <CALCETrUqc0wbig4ntQe9KNS-fOgYOpD+MPodXYruCRyJ7bhagA@mail.gmail.com>
- <ab8dda73-4a6e-4e10-cda0-3e91c5019a63@digikod.net>
- <498f8193-c909-78b2-e4ca-c1dd05605255@digikod.net>
- <CALCETrViaXEx1iQ6q8bEEWSLchj=FH6LjcRY6+hjMx8A+rtgDQ@mail.gmail.com>
-In-Reply-To: <CALCETrViaXEx1iQ6q8bEEWSLchj=FH6LjcRY6+hjMx8A+rtgDQ@mail.gmail.com>
+Hi Kees,
 
---hHaom91hQZiq9frJExV3TxjZTzpQ1zqIf
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: quoted-printable
-
-
-On 04/08/2018 11:06 PM, Andy Lutomirski wrote:
-> On Sun, Apr 8, 2018 at 6:13 AM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.n=
-et> wrote:
+On Thu, Apr 5, 2018 at 3:11 AM, Kees Cook <keescook@chromium.org> wrote:
+> [resending with the CCs I forgot...]
+>
+> On Thu, Mar 1, 2018 at 2:19 AM,  <kpark3469@gmail.com> wrote:
+>> From: Sahara <keun-o.park@darkmatter.ae>
 >>
->> On 02/27/2018 10:48 PM, Micka=C3=ABl Sala=C3=BCn wrote:
->>>
->>> On 27/02/2018 17:39, Andy Lutomirski wrote:
->>>> On Tue, Feb 27, 2018 at 5:32 AM, Alexei Starovoitov
->>>> <alexei.starovoitov@gmail.com> wrote:
->>>>> On Tue, Feb 27, 2018 at 05:20:55AM +0000, Andy Lutomirski wrote:
->>>>>> On Tue, Feb 27, 2018 at 4:54 AM, Alexei Starovoitov
->>>>>> <alexei.starovoitov@gmail.com> wrote:
->>>>>>> On Tue, Feb 27, 2018 at 04:40:34AM +0000, Andy Lutomirski wrote:
->>>>>>>> On Tue, Feb 27, 2018 at 2:08 AM, Alexei Starovoitov
->>>>>>>> <alexei.starovoitov@gmail.com> wrote:
->>>>>>>>> On Tue, Feb 27, 2018 at 01:41:15AM +0100, Micka=C3=ABl Sala=C3=BC=
-n wrote:
->>>>>>>>>> The seccomp(2) syscall can be used by a task to apply a Landlo=
-ck program
->>>>>>>>>> to itself. As a seccomp filter, a Landlock program is enforced=
- for the
->>>>>>>>>> current task and all its future children. A program is immutab=
-le and a
->>>>>>>>>> task can only add new restricting programs to itself, forming =
-a list of
->>>>>>>>>> programss.
->>>>>>>>>>
->>>>>>>>>> A Landlock program is tied to a Landlock hook. If the action o=
-n a kernel
->>>>>>>>>> object is allowed by the other Linux security mechanisms (e.g.=
- DAC,
->>>>>>>>>> capabilities, other LSM), then a Landlock hook related to this=
- kind of
->>>>>>>>>> object is triggered. The list of programs for this hook is the=
-n
->>>>>>>>>> evaluated. Each program return a 32-bit value which can deny t=
-he action
->>>>>>>>>> on a kernel object with a non-zero value. If every programs of=
- the list
->>>>>>>>>> return zero, then the action on the object is allowed.
->>>>>>>>>>
->>>>>>>>>> Multiple Landlock programs can be chained to share a 64-bits v=
-alue for a
->>>>>>>>>> call chain (e.g. evaluating multiple elements of a file path).=
-  This
->>>>>>>>>> chaining is restricted when a process construct this chain by =
-loading a
->>>>>>>>>> program, but additional checks are performed when it requests =
-to apply
->>>>>>>>>> this chain of programs to itself.  The restrictions ensure tha=
-t it is
->>>>>>>>>> not possible to call multiple programs in a way that would imp=
-ly to
->>>>>>>>>> handle multiple shared values (i.e. cookies) for one chain.  F=
-or now,
->>>>>>>>>> only a fs_pick program can be chained to the same type of prog=
-ram,
->>>>>>>>>> because it may make sense if they have different triggers (cf.=
- next
->>>>>>>>>> commits).  This restrictions still allows to reuse Landlock pr=
-ograms in
->>>>>>>>>> a safe way (e.g. use the same loaded fs_walk program with mult=
-iple
->>>>>>>>>> chains of fs_pick programs).
->>>>>>>>>>
->>>>>>>>>> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
->>>>>>>>>
->>>>>>>>> ...
->>>>>>>>>
->>>>>>>>>> +struct landlock_prog_set *landlock_prepend_prog(
->>>>>>>>>> +             struct landlock_prog_set *current_prog_set,
->>>>>>>>>> +             struct bpf_prog *prog)
->>>>>>>>>> +{
->>>>>>>>>> +     struct landlock_prog_set *new_prog_set =3D current_prog_=
-set;
->>>>>>>>>> +     unsigned long pages;
->>>>>>>>>> +     int err;
->>>>>>>>>> +     size_t i;
->>>>>>>>>> +     struct landlock_prog_set tmp_prog_set =3D {};
->>>>>>>>>> +
->>>>>>>>>> +     if (prog->type !=3D BPF_PROG_TYPE_LANDLOCK_HOOK)
->>>>>>>>>> +             return ERR_PTR(-EINVAL);
->>>>>>>>>> +
->>>>>>>>>> +     /* validate memory size allocation */
->>>>>>>>>> +     pages =3D prog->pages;
->>>>>>>>>> +     if (current_prog_set) {
->>>>>>>>>> +             size_t i;
->>>>>>>>>> +
->>>>>>>>>> +             for (i =3D 0; i < ARRAY_SIZE(current_prog_set->p=
-rograms); i++) {
->>>>>>>>>> +                     struct landlock_prog_list *walker_p;
->>>>>>>>>> +
->>>>>>>>>> +                     for (walker_p =3D current_prog_set->prog=
-rams[i];
->>>>>>>>>> +                                     walker_p; walker_p =3D w=
-alker_p->prev)
->>>>>>>>>> +                             pages +=3D walker_p->prog->pages=
-;
->>>>>>>>>> +             }
->>>>>>>>>> +             /* count a struct landlock_prog_set if we need t=
-o allocate one */
->>>>>>>>>> +             if (refcount_read(&current_prog_set->usage) !=3D=
- 1)
->>>>>>>>>> +                     pages +=3D round_up(sizeof(*current_prog=
-_set), PAGE_SIZE)
->>>>>>>>>> +                             / PAGE_SIZE;
->>>>>>>>>> +     }
->>>>>>>>>> +     if (pages > LANDLOCK_PROGRAMS_MAX_PAGES)
->>>>>>>>>> +             return ERR_PTR(-E2BIG);
->>>>>>>>>> +
->>>>>>>>>> +     /* ensure early that we can allocate enough memory for t=
-he new
->>>>>>>>>> +      * prog_lists */
->>>>>>>>>> +     err =3D store_landlock_prog(&tmp_prog_set, current_prog_=
-set, prog);
->>>>>>>>>> +     if (err)
->>>>>>>>>> +             return ERR_PTR(err);
->>>>>>>>>> +
->>>>>>>>>> +     /*
->>>>>>>>>> +      * Each task_struct points to an array of prog list poin=
-ters.  These
->>>>>>>>>> +      * tables are duplicated when additions are made (which =
-means each
->>>>>>>>>> +      * table needs to be refcounted for the processes using =
-it). When a new
->>>>>>>>>> +      * table is created, all the refcounters on the prog_lis=
-t are bumped (to
->>>>>>>>>> +      * track each table that references the prog). When a ne=
-w prog is
->>>>>>>>>> +      * added, it's just prepended to the list for the new ta=
-ble to point
->>>>>>>>>> +      * at.
->>>>>>>>>> +      *
->>>>>>>>>> +      * Manage all the possible errors before this step to no=
-t uselessly
->>>>>>>>>> +      * duplicate current_prog_set and avoid a rollback.
->>>>>>>>>> +      */
->>>>>>>>>> +     if (!new_prog_set) {
->>>>>>>>>> +             /*
->>>>>>>>>> +              * If there is no Landlock program set used by t=
-he current task,
->>>>>>>>>> +              * then create a new one.
->>>>>>>>>> +              */
->>>>>>>>>> +             new_prog_set =3D new_landlock_prog_set();
->>>>>>>>>> +             if (IS_ERR(new_prog_set))
->>>>>>>>>> +                     goto put_tmp_lists;
->>>>>>>>>> +     } else if (refcount_read(&current_prog_set->usage) > 1) =
-{
->>>>>>>>>> +             /*
->>>>>>>>>> +              * If the current task is not the sole user of i=
-ts Landlock
->>>>>>>>>> +              * program set, then duplicate them.
->>>>>>>>>> +              */
->>>>>>>>>> +             new_prog_set =3D new_landlock_prog_set();
->>>>>>>>>> +             if (IS_ERR(new_prog_set))
->>>>>>>>>> +                     goto put_tmp_lists;
->>>>>>>>>> +             for (i =3D 0; i < ARRAY_SIZE(new_prog_set->progr=
-ams); i++) {
->>>>>>>>>> +                     new_prog_set->programs[i] =3D
->>>>>>>>>> +                             READ_ONCE(current_prog_set->prog=
-rams[i]);
->>>>>>>>>> +                     if (new_prog_set->programs[i])
->>>>>>>>>> +                             refcount_inc(&new_prog_set->prog=
-rams[i]->usage);
->>>>>>>>>> +             }
->>>>>>>>>> +
->>>>>>>>>> +             /*
->>>>>>>>>> +              * Landlock program set from the current task wi=
-ll not be freed
->>>>>>>>>> +              * here because the usage is strictly greater th=
-an 1. It is
->>>>>>>>>> +              * only prevented to be freed by another task th=
-anks to the
->>>>>>>>>> +              * caller of landlock_prepend_prog() which shoul=
-d be locked if
->>>>>>>>>> +              * needed.
->>>>>>>>>> +              */
->>>>>>>>>> +             landlock_put_prog_set(current_prog_set);
->>>>>>>>>> +     }
->>>>>>>>>> +
->>>>>>>>>> +     /* prepend tmp_prog_set to new_prog_set */
->>>>>>>>>> +     for (i =3D 0; i < ARRAY_SIZE(tmp_prog_set.programs); i++=
-) {
->>>>>>>>>> +             /* get the last new list */
->>>>>>>>>> +             struct landlock_prog_list *last_list =3D
->>>>>>>>>> +                     tmp_prog_set.programs[i];
->>>>>>>>>> +
->>>>>>>>>> +             if (last_list) {
->>>>>>>>>> +                     while (last_list->prev)
->>>>>>>>>> +                             last_list =3D last_list->prev;
->>>>>>>>>> +                     /* no need to increment usage (pointer r=
-eplacement) */
->>>>>>>>>> +                     last_list->prev =3D new_prog_set->progra=
-ms[i];
->>>>>>>>>> +                     new_prog_set->programs[i] =3D tmp_prog_s=
-et.programs[i];
->>>>>>>>>> +             }
->>>>>>>>>> +     }
->>>>>>>>>> +     new_prog_set->chain_last =3D tmp_prog_set.chain_last;
->>>>>>>>>> +     return new_prog_set;
->>>>>>>>>> +
->>>>>>>>>> +put_tmp_lists:
->>>>>>>>>> +     for (i =3D 0; i < ARRAY_SIZE(tmp_prog_set.programs); i++=
-)
->>>>>>>>>> +             put_landlock_prog_list(tmp_prog_set.programs[i])=
-;
->>>>>>>>>> +     return new_prog_set;
->>>>>>>>>> +}
->>>>>>>>>
->>>>>>>>> Nack on the chaining concept.
->>>>>>>>> Please do not reinvent the wheel.
->>>>>>>>> There is an existing mechanism for attaching/detaching/quering =
-multiple
->>>>>>>>> programs attached to cgroup and tracing hooks that are also
->>>>>>>>> efficiently executed via BPF_PROG_RUN_ARRAY.
->>>>>>>>> Please use that instead.
->>>>>>>>>
->>>>>>>>
->>>>>>>> I don't see how that would help.  Suppose you add a filter, then=
-
->>>>>>>> fork(), and then the child adds another filter.  Do you want to
->>>>>>>> duplicate the entire array?  You certainly can't *modify* the ar=
-ray
->>>>>>>> because you'll affect processes that shouldn't be affected.
->>>>>>>>
->>>>>>>> In contrast, doing this through seccomp like the earlier patches=
-
->>>>>>>> seemed just fine to me, and seccomp already had the right logic.=
-
->>>>>>>
->>>>>>> it doesn't look to me that existing seccomp side of managing fork=
-
->>>>>>> situation can be reused. Here there is an attempt to add 'chainin=
-g'
->>>>>>> concept which sort of an extension of existing seccomp style,
->>>>>>> but somehow heavily done on bpf side and contradicts cgroup/traci=
-ng.
->>>>>>>
->>>>>>
->>>>>> I don't see why the seccomp way can't be used.  I agree with you t=
-hat
->>>>>> the seccomp *style* shouldn't be used in bpf code like this, but I=
-
->>>>>> think that Landlock programs can and should just live in the exist=
-ing
->>>>>> seccomp chain.  If the existing seccomp code needs some modificati=
-on
->>>>>> to make this work, then so be it.
->>>>>
->>>>> +1
->>>>> if that was the case...
->>>>> but that's not my reading of the patch set.
->>>>
->>>> An earlier version of the patch set used the seccomp filter chain.
->>>> Micka=C3=ABl, what exactly was wrong with that approach other than t=
-hat the
->>>> seccomp() syscall was awkward for you to use?  You could add a
->>>> seccomp_add_landlock_rule() syscall if you needed to.
->>>
->>> Nothing was wrong about about that, this part did not changed (see my=
-
->>> next comment).
->>>
->>>>
->>>> As a side comment, why is this an LSM at all, let alone a non-stacki=
-ng
->>>> LSM?  It would make a lot more sense to me to make Landlock depend o=
-n
->>>> having LSMs configured in but to call the landlock hooks directly fr=
-om
->>>> the security_xyz() hooks.
->>>
->>> See Casey's answer and his patch series: https://lwn.net/Articles/741=
-963/
->>>
->>>>
->>>>>
->>>>>> In other words, the kernel already has two kinds of chaining:
->>>>>> seccomp's and bpf's.  bpf's doesn't work right for this type of us=
-age
->>>>>> across fork(), whereas seccomp's already handles that case correct=
-ly.
->>>>>> (In contrast, seccomp's is totally wrong for cgroup-attached filte=
-rs.)
->>>>>>  So IMO Landlock should use the seccomp core code and call into bp=
-f
->>>>>> for the actual filtering.
->>>>>
->>>>> +1
->>>>> in cgroup we had to invent this new BPF_PROG_RUN_ARRAY mechanism,
->>>>> since cgroup hierarchy can be complicated with bpf progs attached
->>>>> at different levels with different override/multiprog properties,
->>>>> so walking link list and checking all flags at run-time would have
->>>>> been too slow. That's why we added compute_effective_progs().
->>>>
->>>> If we start adding override flags to Landlock, I think we're doing i=
-t
->>>> wrong.   With cgroup bpf programs, the whole mess is set up by the
->>>> administrator.  With seccomp, and with Landlock if done correctly, i=
-t
->>>> *won't* be set up by the administrator, so the chance that everyone
->>>> gets all the flags right is about zero.  All attached filters should=
-
->>>> run unconditionally.
->>>
->>>
->>> There is a misunderstanding about this chaining mechanism. This shoul=
-d
->>> not be confused with the list of seccomp filters nor the cgroup
->>> hierarchies. Landlock programs can be stacked the same way seccomp's
->>> filters can (cf. struct landlock_prog_set, the "chain_last" field is =
-an
->>> optimization which is not used for this struct handling). This stacka=
-ble
->>> property did not changed from the previous patch series. The chaining=
-
->>> mechanism is for another use case, which does not make sense for secc=
-omp
->>> filters nor other eBPF program types, at least for now, from what I c=
-an
->>> tell.
->>>
->>> You may want to get a look at my talk at FOSDEM
->>> (https://landlock.io/talks/2018-02-04_landlock-fosdem.pdf), especiall=
-y
->>> slides 11 and 12.
->>>
->>> Let me explain my reasoning about this program chaining thing.
->>>
->>> To check if an action on a file is allowed, we first need to identify=
-
->>> this file and match it to the security policy. In a previous
->>> (non-public) patch series, I tried to use one type of eBPF program to=
-
->>> check every kind of access to a file. To be able to identify a file, =
-I
->>> relied on an eBPF map, similar to the current inode map. This map sto=
-re
->>> a set of references to file descriptors. I then created a function
->>> bpf_is_file_beneath() to check if the requested file was beneath a fi=
-le
->>> in the map. This way, no chaining, only one eBPF program type to chec=
-k
->>> an access to a file... but some issues then emerged. First, this desi=
-gn
->>> create a side-channel which help an attacker using such a program to
->>> infer some information not normally available, for example to get a h=
-int
->>> on where a file descriptor (received from a UNIX socket) come from.
->>> Another issue is that this type of program would be called for each
->>> component of a path. Indeed, when the kernel check if an access to a
->>> file is allowed, it walk through all of the directories in its path
->>> (checking if the current process is allowed to execute them). That fi=
-rst
->>> attempt led me to rethink the way we could filter an access to a file=
-
->>> *path*.
->>>
->>> To minimize the number of called to an eBPF program dedicated to
->>> validate an access to a file path, I decided to create three subtype =
-of
->>> eBPF programs. The FS_WALK type is called when walking through every
->>> directory of a file path (except the last one if it is the target). W=
-e
->>> can then restrict this type of program to the minimum set of function=
-s
->>> it is allowed to call and the minimum set of data available from its
->>> context. The first implicit chaining is for this type of program. To =
-be
->>> able to evaluate a path while being called for all its components, th=
-is
->>> program need to store a state (to remember what was the parent direct=
-ory
->>> of this path). There is no "previous" field in the subtype for this
->>> program because it is chained with itself, for each directories. This=
-
->>> enable to create a FS_WALK program to evaluate a file hierarchy, than=
-k
->>> to the inode map which can be used to check if a directory of this
->>> hierarchy is part of an allowed (or denied) list of directories. This=
-
->>> design enables to express a file hierarchy in a programmatic way,
->>> without requiring an eBPF helper to do the job (unlike my first exper=
-iment).
->>>
->>> The explicit chaining is used to tied a path evaluation (with a FS_WA=
-LK
->>> program) to an access to the actual file being requested (the last
->>> component of a file path), with a FS_PICK program. It is only at this=
-
->>> time that the kernel check for the requested action (e.g. read, write=
-,
->>> chdir, append...). To be able to filter such access request we can ha=
-ve
->>> one call to the same program for every action and let this program ch=
-eck
->>> for which action it was called. However, this design does not allow t=
-he
->>> kernel to know if the current action is indeed handled by this progra=
-m.
->>> Hence, it is not possible to implement a cache mechanism to only call=
-
->>> this program if it knows how to handle this action.
->>>
->>> The approach I took for this FS_PICK type of program is to add to its=
-
->>> subtype which action it can handle (with the "triggers" bitfield, see=
-n
->>> as ORed actions). This way, the kernel knows if a call to a FS_PICK
->>> program is necessary. If the user wants to enforce a different securi=
-ty
->>> policy according to the action requested on a file, then it needs
->>> multiple FS_PICK programs. However, to reduce the number of such
->>> programs, this patch series allow a FS_PICK program to be chained wit=
-h
->>> another, the same way a FS_WALK is chained with itself. This way, if =
-the
->>> user want to check if the action is a for example an "open" and a "re=
-ad"
->>> and not a "map" and a "read", then it can chain multiple FS_PICK
->>> programs with different triggers actions. The OR check performed by t=
-he
->>> kernel is not a limitation then, only a way to know if a call to an e=
-BPF
->>> program is needed.
->>>
->>> The last type of program is FS_GET. This one is called when a process=
-
->>> get a struct file or change its working directory. This is the only
->>> program type able (and allowed) to tag a file. This restriction is
->>> important to not being subject to resource exhaustion attacks (i.e.
->>> tagging every inode accessible to an attacker, which would allocate t=
-oo
->>> much kernel memory).
->>>
->>> This design gives room for improvements to create a cache of eBPF
->>> context (input data, including maps if any), with the result of an eB=
-PF
->>> program. This would help limit the number of call to an eBPF program =
-the
->>> same way SELinux or other kernel components do to limit costly checks=
-=2E
->>>
->>> The eBPF maps of progs are useful to call the same type of eBPF
->>> program. It does not fit with this use case because we may want multi=
-ple
->>> eBPF program according to the action requested on a kernel object (e.=
-g.
->>> FS_GET). The other reason is because the eBPF program does not know w=
-hat
->>> will be the next (type of) access check performed by the kernel.
->>>
->>> To say it another way, this chaining mechanism is a way to split a
->>> kernel object evaluation with multiple specialized programs, each of
->>> them being able to deal with data tied to their type. Using a monolit=
-hic
->>> eBPF program to check everything does not scale and does not fit with=
-
->>> unprivileged use either.
->>>
->>> As a side note, the cookie value is only an ephemeral value to keep a=
-
->>> state between multiple programs call. It can be used to create a stat=
-e
->>> machine for an object evaluation.
->>>
->>> I don't see a way to do an efficient and programmatic path evaluation=
-,
->>> with different access checks, with the current eBPF features. Please =
-let
->>> me know if you know how to do it another way.
->>>
+>> The old arch_within_stack_frames which used the frame pointer is
+>> now reimplemented to use frame pointer unwinder apis. So the main
+>> functionality is same as before.
 >>
->> Andy, Alexei, Daniel, what do you think about this Landlock program
->> chaining and cookie?
+>> Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
+>
+> This will result in slightly more expensive stack checking for
+> hardened usercopy, but I think that'd be okay if this could also be
+> made to be unwinder-agnostic. Then it would work for ORC too, and
+> wouldn't have to depend on just FRAME_POINTER. Without that, I'm not
+> sure what the benefit is in changing this?
+
+Exactly. It's the only reason not to depend on the FRAME_POINTER only.
+And, it will be better if it would work for ORC.
+
+>
+> Further notes below...
+>
+>> ---
+>>  arch/x86/include/asm/unwind.h  |  5 +++
+>>  arch/x86/kernel/stacktrace.c   | 77 +++++++++++++++++++++++++++++-------------
+>>  arch/x86/kernel/unwind_frame.c |  4 +--
+>>  3 files changed, 60 insertions(+), 26 deletions(-)
 >>
->=20
-> Can you give a small pseudocode real world example that acutally needs
-> chaining?  The mechanism is quite complicated and I'd like to
-> understand how it'll be used.
->=20
+>> diff --git a/arch/x86/include/asm/unwind.h b/arch/x86/include/asm/unwind.h
+>> index 1f86e1b..6f04906f 100644
+>> --- a/arch/x86/include/asm/unwind.h
+>> +++ b/arch/x86/include/asm/unwind.h
+>> @@ -87,6 +87,11 @@ void unwind_init(void);
+>>  void unwind_module_init(struct module *mod, void *orc_ip, size_t orc_ip_size,
+>>                         void *orc, size_t orc_size);
+>>  #else
+>> +#ifdef CONFIG_UNWINDER_FRAME_POINTER
+>> +#define FRAME_HEADER_SIZE (sizeof(long) * 2)
+>> +size_t regs_size(struct pt_regs *regs);
+>> +#endif
+>> +
+>>  static inline void unwind_init(void) {}
+>>  static inline
+>>  void unwind_module_init(struct module *mod, void *orc_ip, size_t orc_ip_size,
+>> diff --git a/arch/x86/kernel/stacktrace.c b/arch/x86/kernel/stacktrace.c
+>> index f433a33..c26eb55 100644
+>> --- a/arch/x86/kernel/stacktrace.c
+>> +++ b/arch/x86/kernel/stacktrace.c
+>> @@ -12,6 +12,37 @@
+>>  #include <asm/unwind.h>
+>>
+>>
+>> +static inline void *get_cur_frame(struct unwind_state *state)
+>> +{
+>> +       void *frame = NULL;
+>> +
+>> +#if defined(CONFIG_UNWINDER_ORC)
+>> +#elif defined(CONFIG_UNWINDER_FRAME_POINTER)
+>> +       if (state->regs)
+>> +               frame = (void *)state->regs;
+>> +       else
+>> +               frame = (void *)state->bp;
+>> +#else
+>> +#endif
+>> +       return frame;
+>> +}
+>
+> What's going on here with the #if statement? Shouldn't this just be:
+>
+> +static inline void *get_cur_frame(struct unwind_state *state)
+> +{
+> +       void *frame = NULL;
+> +
+> +#ifdef CONFIG_UNWINDER_FRAME_POINTER
+> +       if (state->regs)
+> +               frame = (void *)state->regs;
+> +       else
+> +               frame = (void *)state->bp;
+> +#endif
+> +       return frame;
+> +}
+>
+> ?
 
-Here is the interesting part from the example (patch 09/11):
-
-+SEC("maps")
-+struct bpf_map_def inode_map =3D {
-+	.type =3D BPF_MAP_TYPE_INODE,
-+	.key_size =3D sizeof(u32),
-+	.value_size =3D sizeof(u64),
-+	.max_entries =3D 20,
-+};
-+
-+SEC("subtype/landlock1")
-+static union bpf_prog_subtype _subtype1 =3D {
-+	.landlock_hook =3D {
-+		.type =3D LANDLOCK_HOOK_FS_WALK,
-+	}
-+};
-+
-+static __always_inline __u64 update_cookie(__u64 cookie, __u8 lookup,
-+		void *inode, void *chain, bool freeze)
-+{
-+	__u64 map_allow =3D 0;
-+
-+	if (cookie =3D=3D 0) {
-+		cookie =3D bpf_inode_get_tag(inode, chain);
-+		if (cookie)
-+			return cookie;
-+		/* only look for the first match in the map, ignore nested
-+		 * paths in this example */
-+		map_allow =3D bpf_inode_map_lookup(&inode_map, inode);
-+		if (map_allow)
-+			cookie =3D 1 | map_allow;
-+	} else {
-+		if (cookie & COOKIE_VALUE_FREEZED)
-+			return cookie;
-+		map_allow =3D cookie & _MAP_MARK_MASK;
-+		cookie &=3D ~_MAP_MARK_MASK;
-+		switch (lookup) {
-+		case LANDLOCK_CTX_FS_WALK_INODE_LOOKUP_DOTDOT:
-+			cookie--;
-+			break;
-+		case LANDLOCK_CTX_FS_WALK_INODE_LOOKUP_DOT:
-+			break;
-+		default:
-+			/* ignore _MAP_MARK_MASK overflow in this example */
-+			cookie++;
-+			break;
-+		}
-+		if (cookie >=3D 1)
-+			cookie |=3D map_allow;
-+	}
-+	/* do not modify the cookie for each fs_pick */
-+	if (freeze && cookie)
-+		cookie |=3D COOKIE_VALUE_FREEZED;
-+	return cookie;
-+}
-+
-+SEC("landlock1")
-+int fs_walk(struct landlock_ctx_fs_walk *ctx)
-+{
-+	ctx->cookie =3D update_cookie(ctx->cookie, ctx->inode_lookup,
-+			(void *)ctx->inode, (void *)ctx->chain, false);
-+	return LANDLOCK_RET_ALLOW;
-+}
-
-The program "landlock1" is called for every directory execution (except
-the last one if it is the leaf of a path). This enables to identify a
-file hierarchy with only a (one dimension) list of file descriptors
-(i.e. inode_map).
-
-Underneath, the Landlock LSM part looks if there is an associated path
-walk (nameidata) with each inode access request. If there is one, then
-the cookie associated with the path walk (if any) is made available
-through the eBPF program context. This enables to develop a state
-machine with an eBPF program to "evaluate" a file path (without string
-parsing).
-
-The goal with this chaining mechanism is to be able to express a complex
-kernel object like a file, with multiple run of one or more eBPF
-programs, as a multilayer evaluation. This semantic may only make sense
-for the user/developer and his security policy. We must keep in mind
-that this object identification should be available to unprivileged
-processes. This means that we must be very careful to what kind of
-information are available to an eBPF program because this can then leak
-to a process (e.g. through a map). With this mechanism, only information
-already available to user space is available to the eBPF program.
-
-In this example, the complexity of the path evaluation is in the eBPF
-program. We can then keep the kernel code more simple and generic. This
-enables more flexibility for a security policy definition.
+Removed the unused #ifdef.
 
 
---hHaom91hQZiq9frJExV3TxjZTzpQ1zqIf--
 
---fsDpHUePup1Pjb0yAkxFgn5ORwNxLpEVq
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
+>
+>> +
+>> +static inline void *get_frame_end(struct unwind_state *state)
+>> +{
+>> +       void *frame_end = NULL;
+>> +
+>> +#if defined(CONFIG_UNWINDER_ORC)
+>> +#elif defined(CONFIG_UNWINDER_FRAME_POINTER)
+>> +       if (state->regs) {
+>> +               frame_end = (void *)state->regs + regs_size(state->regs);
+>> +       } else {
+>> +               frame_end = (void *)state->bp + FRAME_HEADER_SIZE;
+>> +       }
+>> +#else
+>> +#endif
+>> +       return frame_end;
+>> +}
+>
+> Same thing above?
 
------BEGIN PGP SIGNATURE-----
+Removed the unused #ifdef.
 
-iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAlrKkVwACgkQIt7+33O9
-apUzZQf9H63aJWoUkZXNK/mRrYNCksy5NJOE476+wpAkrVjq7LhfF74pQ5BQG70B
-fhPUU9v86sVorcWp26nO5qPmIG5FCUTgIF6WPs1BcGzrOdj0iRzY+Dxs0OYieqoN
-6b1Fj2kUm/oMOCuGqWYbNEmthAd8DrM+2tvPInknC1rhhNByuCacTBPRfIJk7G8S
-LKvwmVFGRBK7Q4h86y7uhh72KDv/eDyGNQn7evzgS91DUlMklWpM+QdH+0eo25Dw
-+HC5zNwS0DVWUCwLWM/vQ2MJNVcSPYF9c48VgnVDSm+e3fPRg+BTxD0pRsmX/W2G
-HV1dySa7jNHLNQ48ha+2G2+8Dw5SNg==
-=F+M6
------END PGP SIGNATURE-----
+>
+>> +
+>>  /*
+>>   * Walks up the stack frames to make sure that the specified object is
+>>   * entirely contained by a single stack frame.
+>> @@ -25,31 +56,31 @@ int arch_within_stack_frames(const void * const stack,
+>>                              const void * const stackend,
+>>                              const void *obj, unsigned long len)
+>>  {
+>> -#if defined(CONFIG_FRAME_POINTER)
+>> -       const void *frame = NULL;
+>> -       const void *oldframe;
+>> -
+>> -       oldframe = __builtin_frame_address(2);
+>> -       if (oldframe)
+>> -               frame = __builtin_frame_address(3);
+>> +#if defined(CONFIG_UNWINDER_FRAME_POINTER)
+>> +       struct unwind_state state;
+>> +       void *prev_frame_end = NULL;
+>>         /*
+>> -        * low ----------------------------------------------> high
+>> -        * [saved bp][saved ip][args][local vars][saved bp][saved ip]
+>> -        *                     ^----------------^
+>> -        *               allow copies only within here
+>
+> I think it's worth keeping this diagram: it explains what region is
+> being checked...
 
---fsDpHUePup1Pjb0yAkxFgn5ORwNxLpEVq--
+Kept the comment in v2 patch.
+
+
+>
+>> +        * Skip 3 non-inlined frames: arch_within_stack_frames(),
+>> +        * check_stack_object() and __check_object_size().
+>> +        *
+>>          */
+>> -       while (stack <= frame && frame < stackend) {
+>> -               /*
+>> -                * If obj + len extends past the last frame, this
+>> -                * check won't pass and the next frame will be 0,
+>> -                * causing us to bail out and correctly report
+>> -                * the copy as invalid.
+>> -                */
+>
+> Also seems like we should keep the comment for describing what's happening...
+
+Kept this comment.
+
+Thanks.
+
+BR,
+Sahara
+
+>
+>> -               if (obj + len <= frame)
+>> -                       return obj >= oldframe + 2 * sizeof(void *) ?
+>> -                               GOOD_FRAME : BAD_STACK;
+>> -               oldframe = frame;
+>> -               frame = *(const void * const *)frame;
+>> +       unsigned int discard_frames = 3;
+>> +
+>> +       for (unwind_start(&state, current, NULL, NULL); !unwind_done(&state);
+>> +            unwind_next_frame(&state)) {
+>> +               if (discard_frames) {
+>> +                       discard_frames--;
+>> +               } else {
+>> +                       void *frame = get_cur_frame(&state);
+>> +
+>> +                       if (!frame || !prev_frame_end)
+>> +                               return NOT_STACK;
+>> +                       if (obj + len <= frame)
+>> +                               return obj >= prev_frame_end ?
+>> +                                               GOOD_FRAME : BAD_STACK;
+>> +               }
+>> +               /* save current frame end before move to next frame */
+>> +               prev_frame_end = get_frame_end(&state);
+>>         }
+>>         return BAD_STACK;
+>>  #else
+>> diff --git a/arch/x86/kernel/unwind_frame.c b/arch/x86/kernel/unwind_frame.c
+>> index 3dc26f9..c8bfa5c 100644
+>> --- a/arch/x86/kernel/unwind_frame.c
+>> +++ b/arch/x86/kernel/unwind_frame.c
+>> @@ -8,8 +8,6 @@
+>>  #include <asm/stacktrace.h>
+>>  #include <asm/unwind.h>
+>>
+>> -#define FRAME_HEADER_SIZE (sizeof(long) * 2)
+>> -
+>>  unsigned long unwind_get_return_address(struct unwind_state *state)
+>>  {
+>>         if (unwind_done(state))
+>> @@ -69,7 +67,7 @@ static void unwind_dump(struct unwind_state *state)
+>>         }
+>>  }
+>>
+>> -static size_t regs_size(struct pt_regs *regs)
+>> +size_t regs_size(struct pt_regs *regs)
+>>  {
+>>         /* x86_32 regs from kernel mode are two words shorter: */
+>>         if (IS_ENABLED(CONFIG_X86_32) && !user_mode(regs))
+>> --
+>> 2.7.4
+>>
+>
+> -Kees
+>
+> --
+> Kees Cook
+> Pixel Security
+>
+>
+> --
+> Kees Cook
+> Pixel Security
