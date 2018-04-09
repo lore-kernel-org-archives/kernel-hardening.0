@@ -1,64 +1,55 @@
+Sender: Christoffer Dall <christofferdall@christofferdall.dk>
+Date: Mon, 9 Apr 2018 21:03:24 +0200
+From: Christoffer Dall <cdall@kernel.org>
+Subject: Re: [PATCHv2 09/12] arm64/kvm: preserve host HCR_EL2 value
+Message-ID: <20180409190324.GG10904@cbox>
+References: <20171127163806.31435-1-mark.rutland@arm.com>
+ <20171127163806.31435-10-mark.rutland@arm.com>
+ <20180206123915.GA21802@cbox>
+ <20180409145709.dneotb6xaznw44c4@lakrids.cambridge.arm.com>
 MIME-Version: 1.0
-In-Reply-To: <ca31b95a8b8e4dab90c5ea2eb6e6477f@AcuMS.aculab.com>
-References: <1523282087-22128-1-git-send-email-s.mesoraca16@gmail.com> <ca31b95a8b8e4dab90c5ea2eb6e6477f@AcuMS.aculab.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Mon, 9 Apr 2018 18:38:18 +0200
-Message-ID: <CAJHCu1+YynzroRkfZC9ki0b=RwiDOoOJB0S97uUVWSxLgac74A@mail.gmail.com>
-Subject: Re: [PATCH v2 0/2] crypto: removing various VLAs
-Content-Type: text/plain; charset="UTF-8"
-To: David Laight <David.Laight@aculab.com>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, "David S. Miller" <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Kees Cook <keescook@chromium.org>, Eric Biggers <ebiggers3@gmail.com>, Laura Abbott <labbott@redhat.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180409145709.dneotb6xaznw44c4@lakrids.cambridge.arm.com>
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, arnd@arndb.de, catalin.marinas@arm.com, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, yao.qi@arm.com, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-04-09 16:35 GMT+02:00 David Laight <David.Laight@aculab.com>:
-> From: Salvatore Mesoraca
->> Sent: 09 April 2018 14:55
->>
->> v2:
->>       As suggested by Herbert Xu, the blocksize and alignmask checks
->>       have been moved to crypto_check_alg.
->>       So, now, all the other separate checks are not necessary.
->>       Also, the defines have been moved to include/crypto/algapi.h.
->>
->> v1:
->>       As suggested by Laura Abbott[1], I'm resending my patch with
->>       MAX_BLOCKSIZE and MAX_ALIGNMASK defined in an header, so they
->>       can be used in other places.
->>       I took this opportunity to deal with some other VLAs not
->>       handled in the old patch.
->
-> If the constants are visible they need better names.
-> Maybe CRYPTO_MAX_xxx.
+On Mon, Apr 09, 2018 at 03:57:09PM +0100, Mark Rutland wrote:
+> On Tue, Feb 06, 2018 at 01:39:15PM +0100, Christoffer Dall wrote:
+> > On Mon, Nov 27, 2017 at 04:38:03PM +0000, Mark Rutland wrote:
+> > > diff --git a/arch/arm64/kvm/hyp/switch.c b/arch/arm64/kvm/hyp/switch.c
+> > > index 525c01f48867..2205f0be3ced 100644
+> > > --- a/arch/arm64/kvm/hyp/switch.c
+> > > +++ b/arch/arm64/kvm/hyp/switch.c
+> > > @@ -71,6 +71,8 @@ static void __hyp_text __activate_traps(struct kvm_vcpu *vcpu)
+> > >  {
+> > >  	u64 val;
+> > >  
+> > > +	vcpu->arch.host_hcr_el2 = read_sysreg(hcr_el2);
+> > > +
+> > 
+> > Looking back at this, it seems excessive to switch this at every
+> > round-trip.  I think it should be possible to have this as a single
+> > global (or per-CPU) variable that gets restored directly when returning
+> > from the VM.
+> 
+> I suspect this needs to be per-cpu, to account for heterogeneous
+> systems.
+> 
+> I guess if we move hcr_el2 into kvm_cpu_context, that gives us a
+> per-vcpu copy for guests, and a per-cpu copy for the host (in the global
+> kvm_host_cpu_state).
+> 
+> I'll have a look at how gnarly that turns out. I'm not sure how we can
+> initialise that sanely for the !VHE case to match whatever el2_setup
+> did.
 
-You are right, in fact I renamed them, but forget to write about this
-in the change log.
-The new names look like MAX_CIPHER_*.
+There's no harm in jumping down to EL2 to read a register during the
+initialization phase.  All it requires is an annotation of the callee
+function, and a kvm_call_hyp(), and it's actually quite fast unless you
+start saving/restoring a bunch of additional system registers.  See how
+we call __kvm_set_tpidr_el2() for example.
 
-> You can also do much better than allocating MAX_BLOCKSIZE + MAX_ALIGNMASK
-> bytes by requesting 'long' aligned on-stack memory.
-> The easiest way is to define a union like:
->
-> union crypto_tmp {
->         u8 buf[CRYPTO_MAX_TMP_BUF];
->         long buf_align;
-> };
->
-> Then in each function:
->
->         union tmp crypto_tmp;
->         u8 *keystream = PTR_ALIGN(tmp.buf, alignmask + 1);
->
-> I think CRYPTO_MAX_TMP_BUF needs to be MAX_BLOCKSIZE + MAX_ALIGNMASK - sizeof (long).
-
-Yeah, that would be nice, it might save us 4-8 bytes on the stack.
-But I was thinking, wouldn't it be even better to do something like:
-
-u8 buf[CRYPTO_MAX_TMP_BUF] __aligned(__alignof__(long));
-u8 *keystream = PTR_ALIGN(buf, alignmask + 1);
-
-In this case __aligned should work, if I'm not missing some other
-subtle GCC caveat.
-
-Thank you,
-
-Salvatore
+Thanks,
+-Christoffer
