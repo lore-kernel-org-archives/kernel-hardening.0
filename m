@@ -1,12 +1,12 @@
 From: Sasha Levin <Alexander.Levin@microsoft.com>
-Subject: [PATCH AUTOSEL for 4.9 215/293] kvm: x86: fix KVM_XEN_HVM_CONFIG
+Subject: [PATCH AUTOSEL for 4.4 109/162] kvm: x86: fix KVM_XEN_HVM_CONFIG
  ioctl
-Date: Mon, 9 Apr 2018 00:25:42 +0000
-Message-ID: <20180409002239.163177-215-alexander.levin@microsoft.com>
-References: <20180409002239.163177-1-alexander.levin@microsoft.com>
-In-Reply-To: <20180409002239.163177-1-alexander.levin@microsoft.com>
+Date: Mon, 9 Apr 2018 00:29:07 +0000
+Message-ID: <20180409002738.163941-109-alexander.levin@microsoft.com>
+References: <20180409002738.163941-1-alexander.levin@microsoft.com>
+In-Reply-To: <20180409002738.163941-1-alexander.levin@microsoft.com>
 Content-Type: text/plain; charset="utf-8"
-Content-ID: <D3EAB4D8B66A8E40A570FD7EFF65CA5E@namprd21.prod.outlook.com>
+Content-ID: <69065A9D733C92428F7E0428E1A89B6A@namprd21.prod.outlook.com>
 Content-Transfer-Encoding: base64
 MIME-Version: 1.0
 To: "stable@vger.kernel.org" <stable@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
@@ -31,9 +31,9 @@ DQpTaWduZWQtb2ZmLWJ5OiBLZWVzIENvb2sgPGtlZXNjb29rQGNocm9taXVtLm9yZz4NClNpZ25l
 ZC1vZmYtYnk6IFNhc2hhIExldmluIDxhbGV4YW5kZXIubGV2aW5AbWljcm9zb2Z0LmNvbT4NCi0t
 LQ0KIGFyY2gveDg2L2t2bS94ODYuYyB8IDcgKysrKy0tLQ0KIDEgZmlsZSBjaGFuZ2VkLCA0IGlu
 c2VydGlvbnMoKyksIDMgZGVsZXRpb25zKC0pDQoNCmRpZmYgLS1naXQgYS9hcmNoL3g4Ni9rdm0v
-eDg2LmMgYi9hcmNoL3g4Ni9rdm0veDg2LmMNCmluZGV4IDNhYWFmMzA1NDIwZC4uODAzYmI0NTJh
-YWM2IDEwMDY0NA0KLS0tIGEvYXJjaC94ODYva3ZtL3g4Ni5jDQorKysgYi9hcmNoL3g4Ni9rdm0v
-eDg2LmMNCkBAIC00MTMwLDEzICs0MTMwLDE0IEBAIGxvbmcga3ZtX2FyY2hfdm1faW9jdGwoc3Ry
+eDg2LmMgYi9hcmNoL3g4Ni9rdm0veDg2LmMNCmluZGV4IGYzN2YwYzcyYjIyYS4uOWNlYTA5NTk3
+ZDY2IDEwMDY0NA0KLS0tIGEvYXJjaC94ODYva3ZtL3g4Ni5jDQorKysgYi9hcmNoL3g4Ni9rdm0v
+eDg2LmMNCkBAIC0zOTczLDEzICszOTczLDE0IEBAIGxvbmcga3ZtX2FyY2hfdm1faW9jdGwoc3Ry
 dWN0IGZpbGUgKmZpbHAsDQogCQltdXRleF91bmxvY2soJmt2bS0+bG9jayk7DQogCQlicmVhazsN
 CiAJY2FzZSBLVk1fWEVOX0hWTV9DT05GSUc6IHsNCisJCXN0cnVjdCBrdm1feGVuX2h2bV9jb25m
 aWcgeGhjOw0KIAkJciA9IC1FRkFVTFQ7DQotCQlpZiAoY29weV9mcm9tX3VzZXIoJmt2bS0+YXJj
