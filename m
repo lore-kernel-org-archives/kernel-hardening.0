@@ -1,45 +1,54 @@
-From: Sasha Levin <Alexander.Levin@microsoft.com>
-Subject: [PATCH AUTOSEL for 3.18 066/101] kvm: x86: fix KVM_XEN_HVM_CONFIG
- ioctl
-Date: Mon, 9 Apr 2018 00:41:28 +0000
-Message-ID: <20180409004042.164920-16-alexander.levin@microsoft.com>
-References: <20180409004042.164920-1-alexander.levin@microsoft.com>
-In-Reply-To: <20180409004042.164920-1-alexander.levin@microsoft.com>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <B8E6478831FCA84A9A911B19530CF65B@namprd21.prod.outlook.com>
-Content-Transfer-Encoding: base64
-MIME-Version: 1.0
-To: "stable@vger.kernel.org" <stable@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
-Cc: Paolo Bonzini <pbonzini@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, =?utf-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Sasha Levin <Alexander.Levin@microsoft.com>
+From: kpark3469@gmail.com
+Subject: [PATCH v2 0/3] usercopy: reimplement arch_within_stack_frames
+Date: Mon,  9 Apr 2018 10:06:06 +0400
+Message-Id: <1523253969-31699-1-git-send-email-kpark3469@gmail.com>
+To: kernel-hardening@lists.openwall.com
+Cc: catalin.marinas@arm.com, keescook@chromium.org, will.deacon@arm.com, mark.rutland@arm.com, james.morse@arm.com, panand@redhat.com, keun-o.park@darkmatter.ae, psodagud@codeaurora.org, jpoimboe@redhat.com, mingo@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-RnJvbTogUGFvbG8gQm9uemluaSA8cGJvbnppbmlAcmVkaGF0LmNvbT4NCg0KWyBVcHN0cmVhbSBj
-b21taXQgNTE3NzYwNDNhZmE0MTU0MzVjN2U0NjM2MjA0ZmJlNGY3ZWRjNDUwMSBdDQoNClRoaXMg
-aW9jdGwgaXMgb2Jzb2xldGUgKGl0IHdhcyB1c2VkIGJ5IFhlbm5lciBhcyBmYXIgYXMgSSBrbm93
-KSBidXQNCnN0aWxsIGxldCdzIG5vdCBicmVhayBpdCBncmF0dWl0b3VzbHkuLi4gIEl0cyBoYW5k
-bGVyIGlzIGNvcHlpbmcNCmRpcmVjdGx5IGludG8gc3RydWN0IGt2bS4gIEdvIHRocm91Z2ggYSBi
-b3VuY2UgYnVmZmVyIGluc3RlYWQsIHdpdGgNCnRoZSBhZGRlZCBiZW5lZml0IHRoYXQgd2UgY2Fu
-IGFjdHVhbGx5IGRvIHNvbWV0aGluZyB1c2VmdWwgd2l0aCB0aGUNCmZsYWdzIGFyZ3VtZW50LS0t
-dGhlIHByZXZpb3VzIGNvZGUgd2FzIGV4aXRpbmcgd2l0aCAtRUlOVkFMIGJ1dCBzdGlsbA0KZG9p
-bmcgdGhlIGNvcHkuDQoNClRoaXMgdGVjaG5pY2FsbHkgaXMgYSB1c2Vyc3BhY2UgQUJJIGJyZWFr
-YWdlLCBidXQgc2luY2Ugbm8gb25lIHNob3VsZCBiZQ0KdXNpbmcgdGhlIGlvY3RsLCBpdCdzIGEg
-Z29vZCBvY2Nhc2lvbiB0byBzZWUgaWYgc29tZW9uZSBhY3R1YWxseQ0KY29tcGxhaW5zLg0KDQpD
-Yzoga2VybmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2FsbC5jb20NCkNjOiBLZWVzIENvb2sgPGtl
-ZXNjb29rQGNocm9taXVtLm9yZz4NCkNjOiBSYWRpbSBLcsSNbcOhxZkgPHJrcmNtYXJAcmVkaGF0
-LmNvbT4NClNpZ25lZC1vZmYtYnk6IFBhb2xvIEJvbnppbmkgPHBib256aW5pQHJlZGhhdC5jb20+
-DQpTaWduZWQtb2ZmLWJ5OiBLZWVzIENvb2sgPGtlZXNjb29rQGNocm9taXVtLm9yZz4NClNpZ25l
-ZC1vZmYtYnk6IFNhc2hhIExldmluIDxhbGV4YW5kZXIubGV2aW5AbWljcm9zb2Z0LmNvbT4NCi0t
-LQ0KIGFyY2gveDg2L2t2bS94ODYuYyB8IDcgKysrKy0tLQ0KIDEgZmlsZSBjaGFuZ2VkLCA0IGlu
-c2VydGlvbnMoKyksIDMgZGVsZXRpb25zKC0pDQoNCmRpZmYgLS1naXQgYS9hcmNoL3g4Ni9rdm0v
-eDg2LmMgYi9hcmNoL3g4Ni9rdm0veDg2LmMNCmluZGV4IGYwNmZkMjAxODY1MS4uNGRlMjM5Nzlk
-MGZmIDEwMDY0NA0KLS0tIGEvYXJjaC94ODYva3ZtL3g4Ni5jDQorKysgYi9hcmNoL3g4Ni9rdm0v
-eDg2LmMNCkBAIC00MDI1LDEzICs0MDI1LDE0IEBAIGxvbmcga3ZtX2FyY2hfdm1faW9jdGwoc3Ry
-dWN0IGZpbGUgKmZpbHAsDQogCQlicmVhazsNCiAJfQ0KIAljYXNlIEtWTV9YRU5fSFZNX0NPTkZJ
-Rzogew0KKwkJc3RydWN0IGt2bV94ZW5faHZtX2NvbmZpZyB4aGM7DQogCQlyID0gLUVGQVVMVDsN
-Ci0JCWlmIChjb3B5X2Zyb21fdXNlcigma3ZtLT5hcmNoLnhlbl9odm1fY29uZmlnLCBhcmdwLA0K
-LQkJCQkgICBzaXplb2Yoc3RydWN0IGt2bV94ZW5faHZtX2NvbmZpZykpKQ0KKwkJaWYgKGNvcHlf
-ZnJvbV91c2VyKCZ4aGMsIGFyZ3AsIHNpemVvZih4aGMpKSkNCiAJCQlnb3RvIG91dDsNCiAJCXIg
-PSAtRUlOVkFMOw0KLQkJaWYgKGt2bS0+YXJjaC54ZW5faHZtX2NvbmZpZy5mbGFncykNCisJCWlm
-ICh4aGMuZmxhZ3MpDQogCQkJZ290byBvdXQ7DQorCQltZW1jcHkoJmt2bS0+YXJjaC54ZW5faHZt
-X2NvbmZpZywgJnhoYywgc2l6ZW9mKHhoYykpOw0KIAkJciA9IDA7DQogCQlicmVhazsNCiAJfQ0K
-LS0gDQoyLjE1LjENCg==
+From: Sahara <keun-o.park@darkmatter.ae>
+
+This series of patches introduce the arm64 arch_within_stack_frames
+implementation using stacktrace functions. Also the base code is
+moved from thread_info.h to stacktrace.h. x86 code is reimplemented
+to use frame pointer unwinder functions.
+
+Note: The code is still missing in case of using x86 ORC unwinder and
+guess unwinder.
+
+v2 changes:
+ - Remove 'arm64: usercopy: consider dynamic array stack variable'
+ - minor fix in x86 arch_within_stack_frames code.
+
+James Morse (1):
+  arm64: usercopy: implement arch_within_stack_frames
+
+Sahara (2):
+  stacktrace: move arch_within_stack_frames from thread_info.h
+  x86: usercopy: reimplement arch_within_stack_frames with unwinder
+
+ arch/arm/kernel/stacktrace.c       |  1 -
+ arch/arm64/Kconfig                 |  1 +
+ arch/arm64/kernel/stacktrace.c     | 77 ++++++++++++++++++++++++++++++++-
+ arch/mips/kernel/stacktrace.c      |  1 -
+ arch/mips/oprofile/backtrace.c     |  1 -
+ arch/sh/kernel/stacktrace.c        |  1 -
+ arch/sparc/kernel/stacktrace.c     |  1 -
+ arch/um/kernel/stacktrace.c        |  1 -
+ arch/unicore32/kernel/process.c    |  1 -
+ arch/unicore32/kernel/stacktrace.c |  2 -
+ arch/x86/include/asm/thread_info.h | 51 +---------------------
+ arch/x86/include/asm/unwind.h      |  5 +++
+ arch/x86/kernel/Makefile           |  2 +-
+ arch/x86/kernel/stacktrace.c       | 88 +++++++++++++++++++++++++++++++++++++-
+ arch/x86/kernel/unwind_frame.c     |  4 +-
+ arch/xtensa/kernel/stacktrace.c    |  1 -
+ include/linux/page_ext.h           |  1 -
+ include/linux/stacktrace.h         | 25 +++++++++++
+ include/linux/thread_info.h        | 21 ---------
+ kernel/sysctl.c                    |  1 -
+ mm/usercopy.c                      |  2 +-
+ 21 files changed, 198 insertions(+), 90 deletions(-)
+
+-- 
+2.7.4
