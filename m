@@ -1,73 +1,73 @@
-Subject: Re: [PATCH] misc: tifm: Remove VLA
-References: <20180409210732.3919-1-labbott@redhat.com>
- <CAK8P3a3Yo0riMroM3x4EVz8FkMakdPkkJ-mCTYW0qOji+MCCiQ@mail.gmail.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <799e8f9a-0aa1-6f5d-8421-7c768d70f562@redhat.com>
-Date: Tue, 10 Apr 2018 11:49:02 -0700
 MIME-Version: 1.0
-In-Reply-To: <CAK8P3a3Yo0riMroM3x4EVz8FkMakdPkkJ-mCTYW0qOji+MCCiQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Alex Dubov <oakad@yahoo.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Sender: keescook@google.com
+In-Reply-To: <CAJHCu1LAvw5N8cXr-L8goEXUN5+jAdC4aUv3jNW0FxO9W_VH1w@mail.gmail.com>
+References: <1519729200-16056-1-git-send-email-s.mesoraca16@gmail.com>
+ <CAGXu5jKYSRqsHo8rqvyR1ZLQ2MT+UnG=F4_RTEp7Sq9q9qsPtw@mail.gmail.com>
+ <CAGXu5j+RELwBqkLrpQ0zHdHM3u2FxgcKokumtSS8KpkCeUgT2g@mail.gmail.com> <CAJHCu1LAvw5N8cXr-L8goEXUN5+jAdC4aUv3jNW0FxO9W_VH1w@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 10 Apr 2018 14:23:17 -0700
+Message-ID: <CAGXu5jKXMx1hzQX6g=Y51mdTgHoYp4vuVUvri3=s7Fn9NgmZmA@mail.gmail.com>
+Subject: Re: [PATCH v4] Protected FIFOs and regular files
+Content-Type: text/plain; charset="UTF-8"
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Alan Cox <gnomes@lxorguk.ukuu.org.uk>, Alexander Viro <viro@zeniv.linux.org.uk>, David Laight <David.Laight@aculab.com>, Ian Campbell <ijc@hellion.org.uk>, Jann Horn <jannh@google.com>, Matthew Wilcox <willy@infradead.org>, Pavel Vasilyev <dixlor@gmail.com>, Solar Designer <solar@openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>, "Tobin C. Harding" <me@tobin.cc>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 04/10/2018 12:57 AM, Arnd Bergmann wrote:
-> On Mon, Apr 9, 2018 at 11:07 PM, Laura Abbott <labbott@redhat.com> wrote:
->> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
->> turn on -Wvla. The single VLA can either take a value of 2 or 4 so switch
->> to the upper bound.
+On Wed, Feb 28, 2018 at 1:22 AM, Salvatore Mesoraca
+<s.mesoraca16@gmail.com> wrote:
+> 2018-02-27 21:22 GMT+01:00 Kees Cook <keescook@chromium.org>:
+>> On Tue, Feb 27, 2018 at 11:47 AM, Kees Cook <keescook@chromium.org> wrote:
+>>> On Tue, Feb 27, 2018 at 3:00 AM, Salvatore Mesoraca
+>>> <s.mesoraca16@gmail.com> wrote:
+>>>> Disallows open of FIFOs or regular files not owned by the user in world
+>>>> writable sticky directories, unless the owner is the same as that of
+>>>> the directory or the file is opened without the O_CREAT flag.
+>>>> The purpose is to make data spoofing attacks harder.
+>>>> This protection can be turned on and off separately for FIFOs and regular
+>>>> files via sysctl, just like the symlinks/hardlinks protection.
+>>>> This patch is based on Openwall's "HARDEN_FIFO" feature by Solar
+>>>> Designer.
+>>>>
+>>>> This is a brief list of old vulnerabilities that could have been prevented
+>>>> by this feature, some of them even allow for privilege escalation:
+>>>> CVE-2000-1134
+>>>> CVE-2007-3852
+>>>> CVE-2008-0525
+>>>> CVE-2009-0416
+>>>> CVE-2011-4834
+>>>> CVE-2015-1838
+>>>> CVE-2015-7442
+>>>> CVE-2016-7489
+>>>>
+>>>> This list is not meant to be complete. It's difficult to track down
+>>>> all vulnerabilities of this kind because they were often reported
+>>>> without any mention of this particular attack vector.
+>>>> In fact, before hardlinks/symlinks restrictions, fifos/regular
+>>>> files weren't the favorite vehicle to exploit them.
+>>>>
+>>>> Suggested-by: Solar Designer <solar@openwall.com>
+>>>> Suggested-by: Kees Cook <keescook@chromium.org>
+>>>> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+>>>> [...]
+>>>
+>>> I think this looks great.
+>>>
+>>> Acked-by: Kees Cook <keescook@chromium.org>
 >>
->> [1] https://lkml.org/lkml/2018/3/7/621
->>
->> Signed-off-by: Laura Abbott <labbott@redhat.com>
->> ---
->>   drivers/misc/tifm_7xx1.c | 3 ++-
->>   1 file changed, 2 insertions(+), 1 deletion(-)
->>
->> diff --git a/drivers/misc/tifm_7xx1.c b/drivers/misc/tifm_7xx1.c
->> index e5f108713dd8..690eaaea5ce4 100644
->> --- a/drivers/misc/tifm_7xx1.c
->> +++ b/drivers/misc/tifm_7xx1.c
->> @@ -239,7 +239,8 @@ static int tifm_7xx1_resume(struct pci_dev *dev)
->>          unsigned long timeout;
->>          unsigned int good_sockets = 0, bad_sockets = 0;
->>          unsigned long flags;
->> -       unsigned char new_ids[fm->num_sockets];
->> +       /* Maximum number of entries is 4 */
->> +       unsigned char new_ids[4];
->>          DECLARE_COMPLETION_ONSTACK(finish_resume);
->>
-> 
-> I like the idea of removing all the VLAs, but this one appears to make
-> the code less robust rather than more: In case of an unexpected
-> fm->num_sockets value, we now not only overflow the kernel stack
-> area but also the local variable into the neighboring stack slots.
-> 
-> Maybe add an extra overflow check?
-> 
+>> Tested-by: Kees Cook <keescook@chromium.org>
+>
+> Awesome! Thank you very much for your help!
 
-Sure.
+Salvatore, do you want to send this again as a v5 with my two
+follow-up patches, as I have them here:
+https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/userspace/protected-creat
 
->         Arnd
-> 
-> diff --git a/drivers/misc/tifm_7xx1.c b/drivers/misc/tifm_7xx1.c
-> index e5f108713dd8..c702cd92d396 100644
-> --- a/drivers/misc/tifm_7xx1.c
-> +++ b/drivers/misc/tifm_7xx1.c
-> @@ -239,9 +239,12 @@ static int tifm_7xx1_resume(struct pci_dev *dev)
->          unsigned long timeout;
->          unsigned int good_sockets = 0, bad_sockets = 0;
->          unsigned long flags;
-> -       unsigned char new_ids[fm->num_sockets];
-> +      /* Maximum number of entries is 4 */
-> +       unsigned char new_ids[4];
->          DECLARE_COMPLETION_ONSTACK(finish_resume);
-> 
-> +       if (WARN_ON(fm->num_sockets > ARRAY_SIZE(new_ids)))
-> +               return -ENXIO;
-> +
->          pci_set_power_state(dev, PCI_D0);
->          pci_restore_state(dev);
->          rc = pci_enable_device(dev);
-> 
+or would you like me to send those? I would expect this series to land
+via the -mm tree, since that tends to be the catch-all. (In which
+case, the series should be To: akpm with everyone else in Cc.)
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
