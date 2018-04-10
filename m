@@ -1,60 +1,44 @@
-Subject: Re: [PATCH] drm/amdkfd: Remove vla
-References: <20180409210620.3647-1-labbott@redhat.com>
-From: =?UTF-8?Q?Christian_K=c3=b6nig?= <christian.koenig@amd.com>
-Message-ID: <71ff5078-713c-ff8b-8c8d-6d24a7d84c02@amd.com>
-Date: Tue, 10 Apr 2018 08:38:59 +0200
+Date: Tue, 10 Apr 2018 10:35:38 -0500
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+Subject: Re: [PATCH v3 3/3] x86: usercopy: reimplement
+ arch_within_stack_frames with unwinder
+Message-ID: <20180410153500.shqpjemlsfp63yu5@treble>
+References: <1523275156-29087-1-git-send-email-kpark3469@gmail.com>
+ <1523275156-29087-2-git-send-email-kpark3469@gmail.com>
+ <1523275156-29087-3-git-send-email-kpark3469@gmail.com>
+ <1523275156-29087-4-git-send-email-kpark3469@gmail.com>
+ <a59b818d84b74c13a4f25f757eba1f93@AcuMS.aculab.com>
 MIME-Version: 1.0
-In-Reply-To: <20180409210620.3647-1-labbott@redhat.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Laura Abbott <labbott@redhat.com>, Oded Gabbay <oded.gabbay@gmail.com>, Alex Deucher <alexander.deucher@amd.com>, "David (ChunMing) Zhou" <David1.Zhou@amd.com>
-Cc: David Airlie <airlied@linux.ie>, dri-devel@lists.freedesktop.org, amd-gfx@lists.freedesktop.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <a59b818d84b74c13a4f25f757eba1f93@AcuMS.aculab.com>
+To: David Laight <David.Laight@ACULAB.COM>
+Cc: "'kpark3469@gmail.com'" <kpark3469@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "catalin.marinas@arm.com" <catalin.marinas@arm.com>, "keescook@chromium.org" <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "mark.rutland@arm.com" <mark.rutland@arm.com>, "james.morse@arm.com" <james.morse@arm.com>, "keun-o.park@darkmatter.ae" <keun-o.park@darkmatter.ae>, "psodagud@codeaurora.org" <psodagud@codeaurora.org>, "mingo@kernel.org" <mingo@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Am 09.04.2018 um 23:06 schrieb Laura Abbott:
-> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
-> turn on -Wvla. The single VLA usage in the amdkfd driver is actually
-> constant across all current platforms.
+On Mon, Apr 09, 2018 at 01:14:58PM +0000, David Laight wrote:
+> From: kpark3469@gmail.com
+> > Sent: 09 April 2018 12:59
+> >
+> > The old arch_within_stack_frames which used the frame pointer is
+> > now reimplemented to use frame pointer unwinder apis. So the main
+> > functionality is same as before.
+> 
+> How much slower does this make the code?
+> Following stack frames using %bp is reasonably quick.
+> I can't imagine some of the other unwinder APIs being any where
+> near that fast.
+> While fine for fault tracebacks, using them during usercopy
+> is likely to have measurable performance impact.
 
-Actually that isn't correct.
+Agreed, using the unwind interface is going to be quite a bit slower
+than the current manual approach.  So this patch has only drawbacks and
+no benefits.
 
-Could be that we haven't upstreamed KFD support for them, but Vega10 
-have a different interrupt ring entry size and so would cause the error 
-message here.
+The only benefit would be if you used the unwind API in a generic
+manner, such that it also worked for the ORC unwinder.  But even then I
+think we'd need to see performance numbers, with both FP and ORC, to see
+how bad the impact is on usercopy.
 
-> Switch to a constant size array
-> instead.
-
-I would say to just make make the array bigger.
-
-Regards,
-Christian.
-
->
-> [1] https://lkml.org/lkml/2018/3/7/621
->
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
-> ---
->   drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c | 8 +++++---
->   1 file changed, 5 insertions(+), 3 deletions(-)
->
-> diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
-> index 035c351f47c5..c9863858f343 100644
-> --- a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
-> +++ b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
-> @@ -139,10 +139,12 @@ static void interrupt_wq(struct work_struct *work)
->   {
->   	struct kfd_dev *dev = container_of(work, struct kfd_dev,
->   						interrupt_work);
-> +	uint32_t ih_ring_entry[4];
->   
-> -	uint32_t ih_ring_entry[DIV_ROUND_UP(
-> -				dev->device_info->ih_ring_entry_size,
-> -				sizeof(uint32_t))];
-> +	if (dev->device_info->ih_ring_entry_size > (4 * sizeof(uint32_t))) {
-> +		dev_err(kfd_chardev(), "Ring entry too small\n");
-> +		return;
-> +	}
->   
->   	while (dequeue_ih_ring_entry(dev, ih_ring_entry))
->   		dev->device_info->event_interrupt_class->interrupt_wq(dev,
+-- 
+Josh
