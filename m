@@ -1,93 +1,73 @@
-Subject: Re: [PATCH] drm/amdkfd: Remove vla
-References: <20180409210620.3647-1-labbott@redhat.com>
- <71ff5078-713c-ff8b-8c8d-6d24a7d84c02@amd.com>
-From: Felix Kuehling <felix.kuehling@amd.com>
-Message-ID: <ad009206-2202-ad01-c7ee-6ce296df56ba@amd.com>
-Date: Tue, 10 Apr 2018 14:42:24 -0400
+Subject: Re: [PATCH] misc: tifm: Remove VLA
+References: <20180409210732.3919-1-labbott@redhat.com>
+ <CAK8P3a3Yo0riMroM3x4EVz8FkMakdPkkJ-mCTYW0qOji+MCCiQ@mail.gmail.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <799e8f9a-0aa1-6f5d-8421-7c768d70f562@redhat.com>
+Date: Tue, 10 Apr 2018 11:49:02 -0700
 MIME-Version: 1.0
-In-Reply-To: <71ff5078-713c-ff8b-8c8d-6d24a7d84c02@amd.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-To: =?UTF-8?Q?Christian_K=c3=b6nig?= <christian.koenig@amd.com>, Laura Abbott <labbott@redhat.com>, Oded Gabbay <oded.gabbay@gmail.com>, Alex Deucher <alexander.deucher@amd.com>, "David (ChunMing) Zhou" <David1.Zhou@amd.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, David Airlie <airlied@linux.ie>, linux-kernel@vger.kernel.org, amd-gfx@lists.freedesktop.org, dri-devel@lists.freedesktop.org
+In-Reply-To: <CAK8P3a3Yo0riMroM3x4EVz8FkMakdPkkJ-mCTYW0qOji+MCCiQ@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Arnd Bergmann <arnd@arndb.de>
+Cc: Alex Dubov <oakad@yahoo.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Thanks Christian for catching that. I'm working on a patch series to
-upstream Vega10 support, about 95% done. It will add this ASIC info for
-Vega10:
-
-static const struct kfd_device_info vega10_device_info = {
-	.asic_family = CHIP_VEGA10,
-	.max_pasid_bits = 16,
-	.max_no_of_hqd  = 24,
-	.doorbell_size  = 8,
-	.ih_ring_entry_size = 8 * sizeof(uint32_t), /* !!! IH ring entry size is bigger on Vega10 !!! */
-	.event_interrupt_class = &event_interrupt_class_v9,
-	.num_of_watch_points = 4,
-	.mqd_size_aligned = MQD_SIZE_ALIGNED,
-	.supports_cwsr = true,
-	.needs_iommu_device = false,
-	.needs_pci_atomics = false,
-};
-
-If you change it to uint32_t ih_ring_entry[8] and update the check, it
-should be reasonably future proof.
-
-Regards,
-  Felix
-
-
-On 2018-04-10 02:38 AM, Christian König wrote:
-> Am 09.04.2018 um 23:06 schrieb Laura Abbott:
->> There's an ongoing effort to remove VLAs[1] from the kernel to
->> eventually
->> turn on -Wvla. The single VLA usage in the amdkfd driver is actually
->> constant across all current platforms.
->
-> Actually that isn't correct.
->
-> Could be that we haven't upstreamed KFD support for them, but Vega10
-> have a different interrupt ring entry size and so would cause the
-> error message here.
->
->> Switch to a constant size array
->> instead.
->
-> I would say to just make make the array bigger.
->
-> Regards,
-> Christian.
->
+On 04/10/2018 12:57 AM, Arnd Bergmann wrote:
+> On Mon, Apr 9, 2018 at 11:07 PM, Laura Abbott <labbott@redhat.com> wrote:
+>> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+>> turn on -Wvla. The single VLA can either take a value of 2 or 4 so switch
+>> to the upper bound.
 >>
 >> [1] https://lkml.org/lkml/2018/3/7/621
 >>
 >> Signed-off-by: Laura Abbott <labbott@redhat.com>
 >> ---
->>   drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c | 8 +++++---
->>   1 file changed, 5 insertions(+), 3 deletions(-)
+>>   drivers/misc/tifm_7xx1.c | 3 ++-
+>>   1 file changed, 2 insertions(+), 1 deletion(-)
 >>
->> diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
->> b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
->> index 035c351f47c5..c9863858f343 100644
->> --- a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
->> +++ b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
->> @@ -139,10 +139,12 @@ static void interrupt_wq(struct work_struct *work)
->>   {
->>       struct kfd_dev *dev = container_of(work, struct kfd_dev,
->>                           interrupt_work);
->> +    uint32_t ih_ring_entry[4];
->>   -    uint32_t ih_ring_entry[DIV_ROUND_UP(
->> -                dev->device_info->ih_ring_entry_size,
->> -                sizeof(uint32_t))];
->> +    if (dev->device_info->ih_ring_entry_size > (4 *
->> sizeof(uint32_t))) {
->> +        dev_err(kfd_chardev(), "Ring entry too small\n");
->> +        return;
->> +    }
->>         while (dequeue_ih_ring_entry(dev, ih_ring_entry))
->>           dev->device_info->event_interrupt_class->interrupt_wq(dev,
->
-> _______________________________________________
-> amd-gfx mailing list
-> amd-gfx@lists.freedesktop.org
-> https://lists.freedesktop.org/mailman/listinfo/amd-gfx
+>> diff --git a/drivers/misc/tifm_7xx1.c b/drivers/misc/tifm_7xx1.c
+>> index e5f108713dd8..690eaaea5ce4 100644
+>> --- a/drivers/misc/tifm_7xx1.c
+>> +++ b/drivers/misc/tifm_7xx1.c
+>> @@ -239,7 +239,8 @@ static int tifm_7xx1_resume(struct pci_dev *dev)
+>>          unsigned long timeout;
+>>          unsigned int good_sockets = 0, bad_sockets = 0;
+>>          unsigned long flags;
+>> -       unsigned char new_ids[fm->num_sockets];
+>> +       /* Maximum number of entries is 4 */
+>> +       unsigned char new_ids[4];
+>>          DECLARE_COMPLETION_ONSTACK(finish_resume);
+>>
+> 
+> I like the idea of removing all the VLAs, but this one appears to make
+> the code less robust rather than more: In case of an unexpected
+> fm->num_sockets value, we now not only overflow the kernel stack
+> area but also the local variable into the neighboring stack slots.
+> 
+> Maybe add an extra overflow check?
+> 
+
+Sure.
+
+>         Arnd
+> 
+> diff --git a/drivers/misc/tifm_7xx1.c b/drivers/misc/tifm_7xx1.c
+> index e5f108713dd8..c702cd92d396 100644
+> --- a/drivers/misc/tifm_7xx1.c
+> +++ b/drivers/misc/tifm_7xx1.c
+> @@ -239,9 +239,12 @@ static int tifm_7xx1_resume(struct pci_dev *dev)
+>          unsigned long timeout;
+>          unsigned int good_sockets = 0, bad_sockets = 0;
+>          unsigned long flags;
+> -       unsigned char new_ids[fm->num_sockets];
+> +      /* Maximum number of entries is 4 */
+> +       unsigned char new_ids[4];
+>          DECLARE_COMPLETION_ONSTACK(finish_resume);
+> 
+> +       if (WARN_ON(fm->num_sockets > ARRAY_SIZE(new_ids)))
+> +               return -ENXIO;
+> +
+>          pci_set_power_state(dev, PCI_D0);
+>          pci_restore_state(dev);
+>          rc = pci_enable_device(dev);
+> 
