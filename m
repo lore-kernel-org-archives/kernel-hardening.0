@@ -1,44 +1,40 @@
-Date: Tue, 10 Apr 2018 10:35:38 -0500
-From: Josh Poimboeuf <jpoimboe@redhat.com>
-Subject: Re: [PATCH v3 3/3] x86: usercopy: reimplement
- arch_within_stack_frames with unwinder
-Message-ID: <20180410153500.shqpjemlsfp63yu5@treble>
-References: <1523275156-29087-1-git-send-email-kpark3469@gmail.com>
- <1523275156-29087-2-git-send-email-kpark3469@gmail.com>
- <1523275156-29087-3-git-send-email-kpark3469@gmail.com>
- <1523275156-29087-4-git-send-email-kpark3469@gmail.com>
- <a59b818d84b74c13a4f25f757eba1f93@AcuMS.aculab.com>
+Date: Tue, 10 Apr 2018 21:08:55 +0530
+From: Vinod Koul <vinod.koul@intel.com>
+Subject: Re: [PATCH] dmaengine: dmatest: Remove use of VLAs
+Message-ID: <20180410153854.GT6014@localhost>
+References: <20180409210603.3575-1-labbott@redhat.com>
+ <4491bde2-cf38-5103-0634-1986ecd32a7c@codeaurora.org>
+ <9bdd8bb4-b6d9-e170-b585-b2dc3b8f0d67@redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <a59b818d84b74c13a4f25f757eba1f93@AcuMS.aculab.com>
-To: David Laight <David.Laight@ACULAB.COM>
-Cc: "'kpark3469@gmail.com'" <kpark3469@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "catalin.marinas@arm.com" <catalin.marinas@arm.com>, "keescook@chromium.org" <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "mark.rutland@arm.com" <mark.rutland@arm.com>, "james.morse@arm.com" <james.morse@arm.com>, "keun-o.park@darkmatter.ae" <keun-o.park@darkmatter.ae>, "psodagud@codeaurora.org" <psodagud@codeaurora.org>, "mingo@kernel.org" <mingo@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+In-Reply-To: <9bdd8bb4-b6d9-e170-b585-b2dc3b8f0d67@redhat.com>
+To: Laura Abbott <labbott@redhat.com>
+Cc: Sinan Kaya <okaya@codeaurora.org>, Dan Williams <dan.j.williams@intel.com>, dmaengine@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 09, 2018 at 01:14:58PM +0000, David Laight wrote:
-> From: kpark3469@gmail.com
-> > Sent: 09 April 2018 12:59
+On Mon, Apr 09, 2018 at 04:14:20PM -0700, Laura Abbott wrote:
+> On 04/09/2018 03:48 PM, Sinan Kaya wrote:
+> >On 4/9/2018 5:06 PM, Laura Abbott wrote:
+> >>+			/* dst_cnt can't be more than u8 */
+> >>+			dma_addr_t dma_pq[255];
 > >
-> > The old arch_within_stack_frames which used the frame pointer is
-> > now reimplemented to use frame pointer unwinder apis. So the main
-> > functionality is same as before.
+> >This is 2k stack space on 64 bit architectures. Isn't that a lot?
+> >
 > 
-> How much slower does this make the code?
-> Following stack frames using %bp is reasonably quick.
-> I can't imagine some of the other unwinder APIs being any where
-> near that fast.
-> While fine for fault tracebacks, using them during usercopy
-> is likely to have measurable performance impact.
+> Depends on your definition of 'a lot'. My assumption was that
+> since this was a test module there would be some willingness
+> to be a bit more generous. The problem is the array size is
+> based off of the parameters passed in, although oddly enough
+> it's based off of the minimum of two variables. If you have
+> a suggestion for a tighter bound we can use that. Another
+> option is to just switch to allocating the array with kmalloc.
+> That might be reasonable here since there's other setup
+> that happens before the test starts.
 
-Agreed, using the unwind interface is going to be quite a bit slower
-than the current manual approach.  So this patch has only drawbacks and
-no benefits.
+Being a test module I don't think I would have too many qualms with current
+approach :) said that kmalloc approach seems reasonable too..
 
-The only benefit would be if you used the unwind API in a generic
-manner, such that it also worked for the ORC unwinder.  But even then I
-think we'd need to see performance numbers, with both FP and ORC, to see
-how bad the impact is on usercopy.
-
+Thanks
 -- 
-Josh
+~Vinod
