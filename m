@@ -1,42 +1,93 @@
 From: Laura Abbott <labbott@redhat.com>
-Subject: [PATCHv2] misc: tifm: Remove VLA
-Date: Tue, 10 Apr 2018 18:04:12 -0700
-Message-Id: <20180411010412.18006-1-labbott@redhat.com>
-To: Alex Dubov <oakad@yahoo.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Cc: Laura Abbott <labbott@redhat.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Subject: [PATCHv2] mISDN: Remove VLAs
+Date: Tue, 10 Apr 2018 18:04:29 -0700
+Message-Id: <20180411010429.18074-1-labbott@redhat.com>
+To: Karsten Keil <isdn@linux-pingi.de>, "David S. Miller" <davem@davemloft.net>
+Cc: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-There's an ongoing effort to remove VLAs[1] from the kernel to eventually
-turn on -Wvla. The single VLA can either take a value of 2 or 4 so switch
-to the upper bound.
 
-[1] https://lkml.org/lkml/2018/3/7/621
+There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+turn on -Wvla. Remove the VLAs from the mISDN code by switching to using
+kstrdup in one place and using an upper bound in another.
 
 Signed-off-by: Laura Abbott <labbott@redhat.com>
 ---
-v2: Add extra bounds check per request of Arnd
+v2: Switch to a tighter upper bound so we are allocating a more
+reasonable amount on the stack (300). This is based on previous checks
+against this value.
 ---
- drivers/misc/tifm_7xx1.c | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
+ drivers/isdn/mISDN/dsp_hwec.c   |  8 +++++---
+ drivers/isdn/mISDN/l1oip_core.c | 14 +++++++++++---
+ 2 files changed, 16 insertions(+), 6 deletions(-)
 
-diff --git a/drivers/misc/tifm_7xx1.c b/drivers/misc/tifm_7xx1.c
-index e5f108713dd8..9ac95b48ef92 100644
---- a/drivers/misc/tifm_7xx1.c
-+++ b/drivers/misc/tifm_7xx1.c
-@@ -239,9 +239,13 @@ static int tifm_7xx1_resume(struct pci_dev *dev)
- 	unsigned long timeout;
- 	unsigned int good_sockets = 0, bad_sockets = 0;
- 	unsigned long flags;
--	unsigned char new_ids[fm->num_sockets];
-+	/* Maximum number of entries is 4 */
-+	unsigned char new_ids[4];
- 	DECLARE_COMPLETION_ONSTACK(finish_resume);
+diff --git a/drivers/isdn/mISDN/dsp_hwec.c b/drivers/isdn/mISDN/dsp_hwec.c
+index a6e87076acc2..5336bbdbfdc5 100644
+--- a/drivers/isdn/mISDN/dsp_hwec.c
++++ b/drivers/isdn/mISDN/dsp_hwec.c
+@@ -68,12 +68,12 @@ void dsp_hwec_enable(struct dsp *dsp, const char *arg)
+ 		goto _do;
  
-+	if (WARN_ON(fm->num_sockets > ARRAY_SIZE(new_ids)))
-+		return -ENXIO;
+ 	{
+-		char _dup[len + 1];
+ 		char *dup, *tok, *name, *val;
+ 		int tmp;
+ 
+-		strcpy(_dup, arg);
+-		dup = _dup;
++		dup = kstrdup(arg, GFP_ATOMIC);
++		if (!dup)
++			return;
+ 
+ 		while ((tok = strsep(&dup, ","))) {
+ 			if (!strlen(tok))
+@@ -89,6 +89,8 @@ void dsp_hwec_enable(struct dsp *dsp, const char *arg)
+ 					deftaps = tmp;
+ 			}
+ 		}
 +
- 	pci_set_power_state(dev, PCI_D0);
- 	pci_restore_state(dev);
- 	rc = pci_enable_device(dev);
++		kfree(dup);
+ 	}
+ 
+ _do:
+diff --git a/drivers/isdn/mISDN/l1oip_core.c b/drivers/isdn/mISDN/l1oip_core.c
+index 21d50e4cc5e1..b05022f94f18 100644
+--- a/drivers/isdn/mISDN/l1oip_core.c
++++ b/drivers/isdn/mISDN/l1oip_core.c
+@@ -279,7 +279,7 @@ l1oip_socket_send(struct l1oip *hc, u8 localcodec, u8 channel, u32 chanmask,
+ 		  u16 timebase, u8 *buf, int len)
+ {
+ 	u8 *p;
+-	u8 frame[len + 32];
++	u8 frame[MAX_DFRAME_LEN_L1 + 32];
+ 	struct socket *socket = NULL;
+ 
+ 	if (debug & DEBUG_L1OIP_MSG)
+@@ -902,7 +902,11 @@ handle_dmsg(struct mISDNchannel *ch, struct sk_buff *skb)
+ 		p = skb->data;
+ 		l = skb->len;
+ 		while (l) {
+-			ll = (l < L1OIP_MAX_PERFRAME) ? l : L1OIP_MAX_PERFRAME;
++			/*
++			 * This is technically bounded by L1OIP_MAX_PERFRAME but
++			 * MAX_DFRAME_LEN_L1 < L1OIP_MAX_PERFRAME
++			 */
++			ll = (l < MAX_DFRAME_LEN_L1) ? l : MAX_DFRAME_LEN_L1;
+ 			l1oip_socket_send(hc, 0, dch->slot, 0,
+ 					  hc->chan[dch->slot].tx_counter++, p, ll);
+ 			p += ll;
+@@ -1140,7 +1144,11 @@ handle_bmsg(struct mISDNchannel *ch, struct sk_buff *skb)
+ 		p = skb->data;
+ 		l = skb->len;
+ 		while (l) {
+-			ll = (l < L1OIP_MAX_PERFRAME) ? l : L1OIP_MAX_PERFRAME;
++			/*
++			 * This is technically bounded by L1OIP_MAX_PERFRAME but
++			 * MAX_DFRAME_LEN_L1 < L1OIP_MAX_PERFRAME
++			 */
++			ll = (l < MAX_DFRAME_LEN_L1) ? l : MAX_DFRAME_LEN_L1;
+ 			l1oip_socket_send(hc, hc->codec, bch->slot, 0,
+ 					  hc->chan[bch->slot].tx_counter, p, ll);
+ 			hc->chan[bch->slot].tx_counter += ll;
 -- 
 2.14.3
