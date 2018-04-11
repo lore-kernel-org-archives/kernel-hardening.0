@@ -1,78 +1,42 @@
 From: Laura Abbott <labbott@redhat.com>
-Subject: [PATCHv2] dmaengine: dmatest: Remove use of VLAs
-Date: Tue, 10 Apr 2018 18:02:16 -0700
-Message-Id: <20180411010216.17702-1-labbott@redhat.com>
-To: Vinod Koul <vinod.koul@intel.com>, Dan Williams <dan.j.williams@intel.com>
-Cc: Laura Abbott <labbott@redhat.com>, dmaengine@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Sinan Kaya <okaya@codeaurora.org>
+Subject: [PATCHv2] drm/amdkfd: Remove vla
+Date: Tue, 10 Apr 2018 18:02:43 -0700
+Message-Id: <20180411010243.17771-1-labbott@redhat.com>
+To: Oded Gabbay <oded.gabbay@gmail.com>, Alex Deucher <alexander.deucher@amd.com>, =?UTF-8?q?Christian=20K=C3=B6nig?= <christian.koenig@amd.com>, "David (ChunMing) Zhou" <David1.Zhou@amd.com>, Felix Kuehling <felix.kuehling@amd.com>
+Cc: Laura Abbott <labbott@redhat.com>, David Airlie <airlied@linux.ie>, dri-devel@lists.freedesktop.org, amd-gfx@lists.freedesktop.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-There's an ongoing effort to remove VLAs from the kernel
-(https://lkml.org/lkml/2018/3/7/621) to eventually turn on -Wvla.
-The test already pre-allocates some buffers with kmalloc so turn
-the two VLAs in to pre-allocated kmalloc buffers.
+There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+turn on -Wvla. Switch to a constant value that covers all hardware.
+
+[1] https://lkml.org/lkml/2018/3/7/621
 
 Signed-off-by: Laura Abbott <labbott@redhat.com>
 ---
-v2: Switch to using kmalloc buffers instead of putting a large array on
-the stack.
+v2: Switch to a larger size to account for other hardware
 ---
- drivers/dma/dmatest.c | 16 +++++++++++++---
- 1 file changed, 13 insertions(+), 3 deletions(-)
+ drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
 
-diff --git a/drivers/dma/dmatest.c b/drivers/dma/dmatest.c
-index 80cc2be6483c..9730956dfbe3 100644
---- a/drivers/dma/dmatest.c
-+++ b/drivers/dma/dmatest.c
-@@ -463,6 +463,8 @@ static int dmatest_func(void *data)
- 	unsigned long long	total_len = 0;
- 	u8			align = 0;
- 	bool			is_memset = false;
-+	dma_addr_t		*srcs;
-+	dma_addr_t		*dma_pq;
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
+index 035c351f47c5..c3a5a80e31ae 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
+@@ -139,10 +139,12 @@ static void interrupt_wq(struct work_struct *work)
+ {
+ 	struct kfd_dev *dev = container_of(work, struct kfd_dev,
+ 						interrupt_work);
++	uint32_t ih_ring_entry[8];
  
- 	set_freezable();
+-	uint32_t ih_ring_entry[DIV_ROUND_UP(
+-				dev->device_info->ih_ring_entry_size,
+-				sizeof(uint32_t))];
++	if (dev->device_info->ih_ring_entry_size > (8 * sizeof(uint32_t))) {
++		dev_err(kfd_chardev(), "Ring entry too small\n");
++		return;
++	}
  
-@@ -546,6 +548,14 @@ static int dmatest_func(void *data)
- 
- 	set_user_nice(current, 10);
- 
-+	srcs = kcalloc(src_cnt, sizeof(dma_addr_t), GFP_KERNEL);
-+	if (!srcs)
-+		goto err_dstbuf;
-+
-+	dma_pq = kcalloc(dst_cnt, sizeof(dma_addr_t), GFP_KERNEL);
-+	if (!dma_pq)
-+		goto err_srcs_array;
-+
- 	/*
- 	 * src and dst buffers are freed by ourselves below
- 	 */
-@@ -556,7 +566,6 @@ static int dmatest_func(void *data)
- 	       && !(params->iterations && total_tests >= params->iterations)) {
- 		struct dma_async_tx_descriptor *tx = NULL;
- 		struct dmaengine_unmap_data *um;
--		dma_addr_t srcs[src_cnt];
- 		dma_addr_t *dsts;
- 		unsigned int src_off, dst_off, len;
- 
-@@ -669,8 +678,6 @@ static int dmatest_func(void *data)
- 						      srcs, src_cnt,
- 						      len, flags);
- 		else if (thread->type == DMA_PQ) {
--			dma_addr_t dma_pq[dst_cnt];
--
- 			for (i = 0; i < dst_cnt; i++)
- 				dma_pq[i] = dsts[i] + dst_off;
- 			tx = dev->device_prep_dma_pq(chan, dma_pq, srcs,
-@@ -772,6 +779,9 @@ static int dmatest_func(void *data)
- 	runtime = ktime_to_us(ktime);
- 
- 	ret = 0;
-+	kfree(dma_pq);
-+err_srcs_array:
-+	kfree(srcs);
- err_dstbuf:
- 	for (i = 0; thread->udsts[i]; i++)
- 		kfree(thread->udsts[i]);
+ 	while (dequeue_ih_ring_entry(dev, ih_ring_entry))
+ 		dev->device_info->event_interrupt_class->interrupt_wq(dev,
 -- 
 2.14.3
