@@ -1,46 +1,78 @@
-Date: Tue, 10 Apr 2018 23:06:34 +0100
-From: Russell King - ARM Linux <linux@armlinux.org.uk>
-Subject: Re: [PATCH] drm/i2c: tda998x: Remove VLA usage
-Message-ID: <20180410220634.GZ16141@n2100.armlinux.org.uk>
-References: <20180409210703.3787-1-labbott@redhat.com>
- <20180409222141.GR16141@n2100.armlinux.org.uk>
- <855433a0-72f5-df29-3a17-5c2016e988e1@redhat.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <855433a0-72f5-df29-3a17-5c2016e988e1@redhat.com>
-Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
-To: Laura Abbott <labbott@redhat.com>
-Cc: David Airlie <airlied@linux.ie>, dri-devel@lists.freedesktop.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+From: Laura Abbott <labbott@redhat.com>
+Subject: [PATCHv2] dmaengine: dmatest: Remove use of VLAs
+Date: Tue, 10 Apr 2018 18:02:16 -0700
+Message-Id: <20180411010216.17702-1-labbott@redhat.com>
+To: Vinod Koul <vinod.koul@intel.com>, Dan Williams <dan.j.williams@intel.com>
+Cc: Laura Abbott <labbott@redhat.com>, dmaengine@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Sinan Kaya <okaya@codeaurora.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 10, 2018 at 02:52:35PM -0700, Laura Abbott wrote:
-> On 04/09/2018 03:21 PM, Russell King - ARM Linux wrote:
-> >On Mon, Apr 09, 2018 at 02:07:03PM -0700, Laura Abbott wrote:
-> >>There's an ongoing effort to remove VLAs[1] from the kernel to eventually
-> >>turn on -Wvla. The vla in reg_write_range is based on the length of data
-> >>passed. The one use of a non-constant size for this range is bounded by
-> >>the size buffer passed to hdmi_infoframe_pack which is a fixed size.
-> >>Switch to this upper bound.
-> >
-> >Does this _really_ make it safer?  What if the code is modified to write
-> >more than 32 bytes in the future?
-> >
-> >Sorry, I don't think this is safer at all.
-> >
-> 
-> Yeah I wasn't 100% sure about this one. Elsewhere, we've added bounds
-> checks against the new static size buffer so we could do that here
-> to ensure we don't overrun the stack if we do need to write more
-> than 32 bytes in the future. Another option is to switch to
-> a kmalloc buffer. Are either of those options acceptable to you or
-> do you have a better idea of how to get rid of the VLA?
+There's an ongoing effort to remove VLAs from the kernel
+(https://lkml.org/lkml/2018/3/7/621) to eventually turn on -Wvla.
+The test already pre-allocates some buffers with kmalloc so turn
+the two VLAs in to pre-allocated kmalloc buffers.
 
-Limiting the size would be better (with an error message/WARN_ON) -
-at least that results in a diagnostic message to alert the developer
-rather than silently stomping over the stack.
+Signed-off-by: Laura Abbott <labbott@redhat.com>
+---
+v2: Switch to using kmalloc buffers instead of putting a large array on
+the stack.
+---
+ drivers/dma/dmatest.c | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
 
+diff --git a/drivers/dma/dmatest.c b/drivers/dma/dmatest.c
+index 80cc2be6483c..9730956dfbe3 100644
+--- a/drivers/dma/dmatest.c
++++ b/drivers/dma/dmatest.c
+@@ -463,6 +463,8 @@ static int dmatest_func(void *data)
+ 	unsigned long long	total_len = 0;
+ 	u8			align = 0;
+ 	bool			is_memset = false;
++	dma_addr_t		*srcs;
++	dma_addr_t		*dma_pq;
+ 
+ 	set_freezable();
+ 
+@@ -546,6 +548,14 @@ static int dmatest_func(void *data)
+ 
+ 	set_user_nice(current, 10);
+ 
++	srcs = kcalloc(src_cnt, sizeof(dma_addr_t), GFP_KERNEL);
++	if (!srcs)
++		goto err_dstbuf;
++
++	dma_pq = kcalloc(dst_cnt, sizeof(dma_addr_t), GFP_KERNEL);
++	if (!dma_pq)
++		goto err_srcs_array;
++
+ 	/*
+ 	 * src and dst buffers are freed by ourselves below
+ 	 */
+@@ -556,7 +566,6 @@ static int dmatest_func(void *data)
+ 	       && !(params->iterations && total_tests >= params->iterations)) {
+ 		struct dma_async_tx_descriptor *tx = NULL;
+ 		struct dmaengine_unmap_data *um;
+-		dma_addr_t srcs[src_cnt];
+ 		dma_addr_t *dsts;
+ 		unsigned int src_off, dst_off, len;
+ 
+@@ -669,8 +678,6 @@ static int dmatest_func(void *data)
+ 						      srcs, src_cnt,
+ 						      len, flags);
+ 		else if (thread->type == DMA_PQ) {
+-			dma_addr_t dma_pq[dst_cnt];
+-
+ 			for (i = 0; i < dst_cnt; i++)
+ 				dma_pq[i] = dsts[i] + dst_off;
+ 			tx = dev->device_prep_dma_pq(chan, dma_pq, srcs,
+@@ -772,6 +779,9 @@ static int dmatest_func(void *data)
+ 	runtime = ktime_to_us(ktime);
+ 
+ 	ret = 0;
++	kfree(dma_pq);
++err_srcs_array:
++	kfree(srcs);
+ err_dstbuf:
+ 	for (i = 0; thread->udsts[i]; i++)
+ 		kfree(thread->udsts[i]);
 -- 
-RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
-FTTC broadband for 0.8mile line in suburbia: sync at 8.8Mbps down 630kbps up
-According to speedtest.net: 8.21Mbps down 510kbps up
+2.14.3
