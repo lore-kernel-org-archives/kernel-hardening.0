@@ -1,25 +1,55 @@
+Subject: Re: [PATCHv2] drm/amdkfd: Remove vla
+References: <20180411010243.17771-1-labbott@redhat.com>
+From: =?UTF-8?Q?Christian_K=c3=b6nig?= <ckoenig.leichtzumerken@gmail.com>
+Message-ID: <5444bdd3-e97f-043e-9032-1a072bcca85d@gmail.com>
+Date: Wed, 11 Apr 2018 11:30:38 +0200
 MIME-Version: 1.0
-Sender: arndbergmann@gmail.com
-In-Reply-To: <20180411010412.18006-1-labbott@redhat.com>
-References: <20180411010412.18006-1-labbott@redhat.com>
-From: Arnd Bergmann <arnd@arndb.de>
-Date: Wed, 11 Apr 2018 10:45:32 +0200
-Message-ID: <CAK8P3a36rXwCj9Z_m_th62BvvMc7X3rYqbQPr3ti_8=Pn=e5Xw@mail.gmail.com>
-Subject: Re: [PATCHv2] misc: tifm: Remove VLA
-Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: Alex Dubov <oakad@yahoo.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20180411010243.17771-1-labbott@redhat.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+To: Laura Abbott <labbott@redhat.com>, Oded Gabbay <oded.gabbay@gmail.com>, Alex Deucher <alexander.deucher@amd.com>, =?UTF-8?Q?Christian_K=c3=b6nig?= <christian.koenig@amd.com>, "David (ChunMing) Zhou" <David1.Zhou@amd.com>, Felix Kuehling <felix.kuehling@amd.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, David Airlie <airlied@linux.ie>, linux-kernel@vger.kernel.org, amd-gfx@lists.freedesktop.org, dri-devel@lists.freedesktop.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 11, 2018 at 3:04 AM, Laura Abbott <labbott@redhat.com> wrote:
+Am 11.04.2018 um 03:02 schrieb Laura Abbott:
 > There's an ongoing effort to remove VLAs[1] from the kernel to eventually
-> turn on -Wvla. The single VLA can either take a value of 2 or 4 so switch
-> to the upper bound.
+> turn on -Wvla. Switch to a constant value that covers all hardware.
 >
 > [1] https://lkml.org/lkml/2018/3/7/621
 >
 > Signed-off-by: Laura Abbott <labbott@redhat.com>
 
-Thanks for the new version,
+It would be nicer to have a define for that somewhere.
 
-Acked-by: Arnd Bergmann <arnd@arndb.de>
+Anyway the patch is Acked-by: Christian König <christian.koenig@amd.com> 
+for now.
+
+Regards,
+Christian.
+
+> ---
+> v2: Switch to a larger size to account for other hardware
+> ---
+>   drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c | 8 +++++---
+>   1 file changed, 5 insertions(+), 3 deletions(-)
+>
+> diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
+> index 035c351f47c5..c3a5a80e31ae 100644
+> --- a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
+> +++ b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
+> @@ -139,10 +139,12 @@ static void interrupt_wq(struct work_struct *work)
+>   {
+>   	struct kfd_dev *dev = container_of(work, struct kfd_dev,
+>   						interrupt_work);
+> +	uint32_t ih_ring_entry[8];
+>   
+> -	uint32_t ih_ring_entry[DIV_ROUND_UP(
+> -				dev->device_info->ih_ring_entry_size,
+> -				sizeof(uint32_t))];
+> +	if (dev->device_info->ih_ring_entry_size > (8 * sizeof(uint32_t))) {
+> +		dev_err(kfd_chardev(), "Ring entry too small\n");
+> +		return;
+> +	}
+>   
+>   	while (dequeue_ih_ring_entry(dev, ih_ring_entry))
+>   		dev->device_info->event_interrupt_class->interrupt_wq(dev,
