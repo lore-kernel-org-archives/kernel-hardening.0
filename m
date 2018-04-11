@@ -1,39 +1,51 @@
+From: David Laight <David.Laight@ACULAB.COM>
+Subject: RE: [PATCH v2 0/2] crypto: removing various VLAs
+Date: Wed, 11 Apr 2018 16:20:42 +0000
+Message-ID: <43fc1586cc5247df860e592f37b170a3@AcuMS.aculab.com>
+References: <1523282087-22128-1-git-send-email-s.mesoraca16@gmail.com>
+ <ca31b95a8b8e4dab90c5ea2eb6e6477f@AcuMS.aculab.com>
+ <CAJHCu1+YynzroRkfZC9ki0b=RwiDOoOJB0S97uUVWSxLgac74A@mail.gmail.com>
+In-Reply-To: <CAJHCu1+YynzroRkfZC9ki0b=RwiDOoOJB0S97uUVWSxLgac74A@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAK7LNASerehkH2391jHcXoqysiw-PWuxHsAgqHp+7vp04q+tYA@mail.gmail.com>
-References: <1522128575-5326-1-git-send-email-yamada.masahiro@socionext.com>
- <1522128575-5326-20-git-send-email-yamada.masahiro@socionext.com>
- <CAGXu5jJB3AKMC8U--H61eUkFJeMogLMq00dBUUrfg4n2b4FbOQ@mail.gmail.com> <CAK7LNASerehkH2391jHcXoqysiw-PWuxHsAgqHp+7vp04q+tYA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 11 Apr 2018 09:09:02 -0700
-Message-ID: <CAGXu5j+8OZ6cfQ9km1Y0Lgb3_vVCvgpqdacAPHDikvH_S=gnVQ@mail.gmail.com>
-Subject: Re: [PATCH v2 19/21] gcc-plugins: test GCC plugin support in Kconfig
-Content-Type: text/plain; charset="UTF-8"
-To: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, Sam Ravnborg <sam@ravnborg.org>, Linus Torvalds <torvalds@linux-foundation.org>, Arnd Bergmann <arnd@arndb.de>, Ulf Magnusson <ulfalizer@gmail.com>, Thomas Gleixner <tglx@linutronix.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Randy Dunlap <rdunlap@infradead.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Nicolas Pitre <nico@linaro.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Emese Revfy <re.emese@gmail.com>
+To: 'Salvatore Mesoraca' <s.mesoraca16@gmail.com>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, "David S.
+ Miller" <davem@davemloft.net>, Herbert Xu <herbert@gondor.apana.org.au>, Kees Cook <keescook@chromium.org>, Eric Biggers <ebiggers3@gmail.com>, Laura Abbott <labbott@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 11, 2018 at 8:55 AM, Masahiro Yamada
-<yamada.masahiro@socionext.com> wrote:
-> No.
-> There is no problem to use a compiler without plugin support.
->
-> If a user does not want to use plugin in the first place,
-> why does he/she need to be bothered by such information in stderr?
-
-So, I don't think it's needed for the first version of this, but it'd
-be nice to have a way for end users to discover _why_ some option they
-want is unavailable. Having them dig through the Kconfigs, edit
-scripts to see stderr again, running those by hand, etc, is really
-unfriendly. If, instead, stderr was visible from the menuconfig "help"
-for a Kconfig, it could serve as automatic documentation for why
-something wasn't enabled. I don't mean for stderr to get sprayed out
-during a regular "make"; I agree: that would be ugly and pointless.
-I'd just like some way for the reason behind an option being disabled
-to be discoverable in some way.
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+RnJvbTogU2FsdmF0b3JlIE1lc29yYWNhDQo+IFNlbnQ6IDA5IEFwcmlsIDIwMTggMTc6MzgNCi4u
+Lg0KPiA+IFlvdSBjYW4gYWxzbyBkbyBtdWNoIGJldHRlciB0aGFuIGFsbG9jYXRpbmcgTUFYX0JM
+T0NLU0laRSArIE1BWF9BTElHTk1BU0sNCj4gPiBieXRlcyBieSByZXF1ZXN0aW5nICdsb25nJyBh
+bGlnbmVkIG9uLXN0YWNrIG1lbW9yeS4NCj4gPiBUaGUgZWFzaWVzdCB3YXkgaXMgdG8gZGVmaW5l
+IGEgdW5pb24gbGlrZToNCj4gPg0KPiA+IHVuaW9uIGNyeXB0b190bXAgew0KPiA+ICAgICAgICAg
+dTggYnVmW0NSWVBUT19NQVhfVE1QX0JVRl07DQo+ID4gICAgICAgICBsb25nIGJ1Zl9hbGlnbjsN
+Cj4gPiB9Ow0KPiA+DQo+ID4gVGhlbiBpbiBlYWNoIGZ1bmN0aW9uOg0KPiA+DQo+ID4gICAgICAg
+ICB1bmlvbiB0bXAgY3J5cHRvX3RtcDsNCj4gPiAgICAgICAgIHU4ICprZXlzdHJlYW0gPSBQVFJf
+QUxJR04odG1wLmJ1ZiwgYWxpZ25tYXNrICsgMSk7DQo+ID4NCj4gPiBJIHRoaW5rIENSWVBUT19N
+QVhfVE1QX0JVRiBuZWVkcyB0byBiZSBNQVhfQkxPQ0tTSVpFICsgTUFYX0FMSUdOTUFTSyAtIHNp
+emVvZiAobG9uZykuDQo+IA0KPiBZZWFoLCB0aGF0IHdvdWxkIGJlIG5pY2UsIGl0IG1pZ2h0IHNh
+dmUgdXMgNC04IGJ5dGVzIG9uIHRoZSBzdGFjay4NCj4gQnV0IEkgd2FzIHRoaW5raW5nLCB3b3Vs
+ZG4ndCBpdCBiZSBldmVuIGJldHRlciB0byBkbyBzb21ldGhpbmcgbGlrZToNCj4gDQo+IHU4IGJ1
+ZltDUllQVE9fTUFYX1RNUF9CVUZdIF9fYWxpZ25lZChfX2FsaWdub2ZfXyhsb25nKSk7DQo+IHU4
+ICprZXlzdHJlYW0gPSBQVFJfQUxJR04oYnVmLCBhbGlnbm1hc2sgKyAxKTsNCj4gDQo+IEluIHRo
+aXMgY2FzZSBfX2FsaWduZWQgc2hvdWxkIHdvcmssIGlmIEknbSBub3QgbWlzc2luZyBzb21lIG90
+aGVyDQo+IHN1YnRsZSBHQ0MgY2F2ZWF0Lg0KDQpUaGlua2luZyBmdXJ0aGVyLCB0aGVyZSBpcyBu
+byBwb2ludCBhbGlnbmluZyB0aGUgYnVmZmVyIHRvIGxlc3MgdGhhbg0KdGhlIG1heGltdW0gYWxp
+Z25tZW50IGFsbG93ZWQgLSBpdCBqdXN0IGFkZHMgY29kZS4NCg0KU28geW91IGVuZCB1cCB3aXRo
+Og0KI2RlZmluZSBNQVhfU1RBQ0tfQUxJR04gX19hbGlnbm9mX18obG9uZykgIC8qIExhcmdlc3Qg
+dHlwZSB0aGUgY29tcGlsZXIgY2FuIGFsaWduIG9uIHN0YWNrICovDQojZGVmaW5lIENSWVBUT19N
+QVhfVE1QX0JVRiAoTUFYX0JMT0NLU0laRSArIE1BWF9BTElHTk1BU0sgKyAxIC0gTUFYX1NUQUNL
+X0FMSUdOKQ0KdTggYnVmW0NSWVBUT19NQVhfVE1QX0JVRl0gX19hbGlnbmVkKE1BWF9TVEFDS19B
+TElHTik7DQp1OCAqa2V5c3RyZWFtID0gUFRSX0FMSUdOKGJ1ZiwgTUFYX0FMSUdOTUFTSyArIDEp
+Ow0KDQpUaGUgbGFzdCB0d28gbGluZXMgY291bGQgYmUgcHV0IGludG8gYSAjZGVmaW5lIG9mIHRo
+ZWlyIG93biBzbyB0aGF0IHRoZSAnY2FsbCBzaXRlcycNCmRvbid0IG5lZWQgdG8ga25vdyB0aGUg
+Z29yeSBkZXRhaWxzIG9mIGhvdyB0aGUgYnVmZmVyIGlzIGRlZmluZWQuDQoNCkluIHByaW5jaXBs
+ZSB5b3UgY291bGQganVzdCBoYXZlOg0KdTgga2V5c3RyZWFtW01BWF9CTE9DS1NJWkVdIF9fYWxp
+Z25lZChNQVhfQUxJR05NQVNLICsgMSk7DQoNCkJ1dCB0aGF0IHdpbGwgZ28gd3JvbmcgaWYgdGhl
+IHN0YWNrIGFsaWdubWVudCBoYXMgZ29uZSB3cm9uZyBzb21ld2hlcmUNCmFuZCBnZW5lcmF0ZXMg
+YSBkb3VibGUgc3RhY2sgZnJhbWUgaWYgdGhlIHJlcXVlc3RlZCBhbGlnbm1lbnQgaXMgbGFyZ2Vy
+DQp0aGFuIHRoZSBleHBlY3RlZCBzdGFjayBhbGlnbm1lbnQuDQoNCklJUkMgdGhlcmUgaXMgYSBn
+Y2MgY29tbWFuZCBsaW5lIG9wdGlvbiB0byBlbmZvcmNlIHN0YWNrIGFsaWdubWVudCBvbg0Kc29t
+ZS9hbGwgZnVuY3Rpb24gZW50cnkgcHJvbG9ndWVzLiBUaGUgZ29yeSBkZXRhaWxzIGFyZSBoZWxk
+IGluIHNvbWUNCm9sZCBicmFpbiBjZWxscyBzb21ld2hlcmUuDQoNCglEYXZpZA0KDQo=
