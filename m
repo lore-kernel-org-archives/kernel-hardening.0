@@ -1,45 +1,54 @@
-Date: Wed, 11 Apr 2018 17:03:00 +0200
-From: Lukas Wunner <lukas@wunner.de>
-Subject: Re: [PATCHv4] gpio: Remove VLA from gpiolib
-Message-ID: <20180411150300.GA32719@wunner.de>
-References: <20180411010352.17929-1-labbott@redhat.com>
+Subject: Re: [PATCHv2] drm/amdkfd: Remove vla
+References: <20180411010243.17771-1-labbott@redhat.com>
+From: Felix Kuehling <felix.kuehling@amd.com>
+Message-ID: <e71e9512-d4cf-9aa2-fef2-075833fc8e40@amd.com>
+Date: Wed, 11 Apr 2018 11:31:07 -0400
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180411010352.17929-1-labbott@redhat.com>
-To: Laura Abbott <labbott@redhat.com>
-Cc: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20180411010243.17771-1-labbott@redhat.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+To: Laura Abbott <labbott@redhat.com>, Oded Gabbay <oded.gabbay@gmail.com>, Alex Deucher <alexander.deucher@amd.com>, =?UTF-8?Q?Christian_K=c3=b6nig?= <christian.koenig@amd.com>, "David (ChunMing) Zhou" <David1.Zhou@amd.com>
+Cc: David Airlie <airlied@linux.ie>, dri-devel@lists.freedesktop.org, amd-gfx@lists.freedesktop.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 10, 2018 at 06:03:52PM -0700, Laura Abbott wrote:
-> --- a/drivers/gpio/gpiolib.c
-> +++ b/drivers/gpio/gpiolib.c
-> @@ -61,6 +61,11 @@ static struct bus_type gpio_bus_type = {
->  	.name = "gpio",
->  };
+On 2018-04-10 09:02 PM, Laura Abbott wrote:
+> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+> turn on -Wvla. Switch to a constant value that covers all hardware.
+>
+> [1] https://lkml.org/lkml/2018/3/7/621
+>
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+> v2: Switch to a larger size to account for other hardware
+> ---
+>  drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c | 8 +++++---
+>  1 file changed, 5 insertions(+), 3 deletions(-)
+>
+> diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
+> index 035c351f47c5..c3a5a80e31ae 100644
+> --- a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
+> +++ b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
+> @@ -139,10 +139,12 @@ static void interrupt_wq(struct work_struct *work)
+>  {
+>  	struct kfd_dev *dev = container_of(work, struct kfd_dev,
+>  						interrupt_work);
+> +	uint32_t ih_ring_entry[8];
 >  
-> +/*
-> + * Number of GPIOs to use for the fast path in set array
-> + */
-> +#define FASTPATH_NGPIO 256
+> -	uint32_t ih_ring_entry[DIV_ROUND_UP(
+> -				dev->device_info->ih_ring_entry_size,
+> -				sizeof(uint32_t))];
+> +	if (dev->device_info->ih_ring_entry_size > (8 * sizeof(uint32_t))) {
+> +		dev_err(kfd_chardev(), "Ring entry too small\n");
 
-Hm, this has regressed from 384 back to 256 since v3.
+When the ring entry size really is too small, this will potentially
+flood the kernel log. Maybe a WARN_ONCE would be more helpful. With that
+fixed, this patch is Reviewed-by: Felix Kuehling <Felix.Kuehling@amd.com>
 
+Regards,
+  Felix
 
-> @@ -2653,6 +2661,7 @@ static int gpio_chip_get_multiple(struct gpio_chip *chip,
->  	return -EIO;
->  }
+> +		return;
+> +	}
 >  
-> +
->  int gpiod_get_array_value_complex(bool raw, bool can_sleep,
-
-Spurious newline.  (In v3 this was the place where FASTPATH_NGPIO was
-defined, this is a leftover from when you moved it further up.)
-
-I've given this another quick test with gpio-hammer and it worked fine,
-so this is still
-Reviewed-and-tested-by: Lukas Wunner <lukas@wunner.de>
-
-Thanks a lot!
-
-Lukas
+>  	while (dequeue_ih_ring_entry(dev, ih_ring_entry))
+>  		dev->device_info->event_interrupt_class->interrupt_wq(dev,
