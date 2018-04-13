@@ -1,63 +1,281 @@
 From: Laura Abbott <labbott@redhat.com>
-Subject: [PATCHv3] drm/amdkfd: Remove vla
-Date: Fri, 13 Apr 2018 14:24:12 -0700
-Message-Id: <20180413212412.18205-1-labbott@redhat.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-To: Oded Gabbay <oded.gabbay@gmail.com>, Alex Deucher <alexander.deucher@amd.com>, =?UTF-8?q?Christian=20K=C3=B6nig?= <christian.koenig@amd.com>, "David (ChunMing) Zhou" <David1.Zhou@amd.com>, Felix Kuehling <felix.kuehling@amd.com>
-Cc: Laura Abbott <labbott@redhat.com>, David Airlie <airlied@linux.ie>, dri-devel@lists.freedesktop.org, amd-gfx@lists.freedesktop.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+Subject: [PATCHv5] gpio: Remove VLA from gpiolib
+Date: Fri, 13 Apr 2018 14:24:27 -0700
+Message-Id: <20180413212427.18261-1-labbott@redhat.com>
+To: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: Laura Abbott <labbott@redhat.com>, linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-There's an ongoing effort to remove VLAs[1] from the kernel to eventually
-turn on -Wvla. Switch to a constant value that covers all hardware.
+The new challenge is to remove VLAs from the kernel
+(see https://lkml.org/lkml/2018/3/7/621) to eventually
+turn on -Wvla.
 
-[1] https://lkml.org/lkml/2018/3/7/621
+Using a kmalloc array is the easy way to fix this but kmalloc is still
+more expensive than stack allocation. Introduce a fast path with a
+fixed size stack array to cover most chip with gpios below some fixed
+amount. The slow path dynamically allocates an array to cover those
+chips with a large number of gpios.
 
-Reviewed-by: Felix Kuehling <Felix.Kuehling@amd.com>
-Acked-by: Christian König <christian.koenig@amd.com>
+Reviewed-and-tested-by: Lukas Wunner <lukas@wunner.de>
+Signed-off-by: Lukas Wunner <lukas@wunner.de>
 Signed-off-by: Laura Abbott <labbott@redhat.com>
 ---
-v3: Introduced a #define for the max value, switched to pr_err_once to
-avoid log flood, switched to sizeof(array) per private suggestion.
+v5: Dropped some outdated comments and extra whitespace. Switched to
+ARCH_NR_GPIOS per suggestion of Linus Walleij.
 ---
- drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c | 8 +++++---
- drivers/gpu/drm/amd/amdkfd/kfd_priv.h      | 2 ++
- 2 files changed, 7 insertions(+), 3 deletions(-)
+ drivers/gpio/gpiolib.c        | 76 +++++++++++++++++++++++++++++++++----------
+ drivers/gpio/gpiolib.h        |  2 +-
+ include/linux/gpio/consumer.h | 10 +++---
+ 3 files changed, 66 insertions(+), 22 deletions(-)
 
-diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
-index 035c351f47c5..db6d9336b80d 100644
---- a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
-+++ b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
-@@ -139,10 +139,12 @@ static void interrupt_wq(struct work_struct *work)
- {
- 	struct kfd_dev *dev = container_of(work, struct kfd_dev,
- 						interrupt_work);
-+	uint32_t ih_ring_entry[KFD_MAX_RING_ENTRY_SIZE];
+diff --git a/drivers/gpio/gpiolib.c b/drivers/gpio/gpiolib.c
+index d66de67ef307..79ec7a29b684 100644
+--- a/drivers/gpio/gpiolib.c
++++ b/drivers/gpio/gpiolib.c
+@@ -61,6 +61,11 @@ static struct bus_type gpio_bus_type = {
+ 	.name = "gpio",
+ };
  
--	uint32_t ih_ring_entry[DIV_ROUND_UP(
--				dev->device_info->ih_ring_entry_size,
--				sizeof(uint32_t))];
-+	if (dev->device_info->ih_ring_entry_size > sizeof(ih_ring_entry)) {
-+		dev_err_once(kfd_chardev(), "Ring entry too small\n");
-+		return;
-+	}
- 
- 	while (dequeue_ih_ring_entry(dev, ih_ring_entry))
- 		dev->device_info->event_interrupt_class->interrupt_wq(dev,
-diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
-index 96a9cc0f02c9..a90db05dfe61 100644
---- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
-+++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
-@@ -39,6 +39,8 @@
- 
- #include "amd_shared.h"
- 
-+#define KFD_MAX_RING_ENTRY_SIZE	8
++/*
++ * Number of GPIOs to use for the fast path in set array
++ */
++#define FASTPATH_NGPIO ARCH_NR_GPIOS
 +
- #define KFD_SYSFS_FILE_MODE 0444
+ /* gpio_lock prevents conflicts during gpio_desc[] table updates.
+  * While any GPIO is requested, its gpio_chip is not removable;
+  * each GPIO's "requested" flag serves as a lock and refcount.
+@@ -399,12 +404,11 @@ static long linehandle_ioctl(struct file *filep, unsigned int cmd,
+ 			vals[i] = !!ghd.values[i];
  
- #define KFD_MMAP_DOORBELL_MASK 0x8000000000000ull
+ 		/* Reuse the array setting function */
+-		gpiod_set_array_value_complex(false,
++		return gpiod_set_array_value_complex(false,
+ 					      true,
+ 					      lh->numdescs,
+ 					      lh->descs,
+ 					      vals);
+-		return 0;
+ 	}
+ 	return -EINVAL;
+ }
+@@ -1192,6 +1196,10 @@ int gpiochip_add_data_with_key(struct gpio_chip *chip, void *data,
+ 		goto err_free_descs;
+ 	}
+ 
++	if (chip->ngpio > FASTPATH_NGPIO)
++		chip_warn(chip, "line cnt %d is greater than fast path cnt %d\n",
++		chip->ngpio, FASTPATH_NGPIO);
++
+ 	gdev->label = kstrdup_const(chip->label ?: "unknown", GFP_KERNEL);
+ 	if (!gdev->label) {
+ 		status = -ENOMEM;
+@@ -2662,16 +2670,28 @@ int gpiod_get_array_value_complex(bool raw, bool can_sleep,
+ 
+ 	while (i < array_size) {
+ 		struct gpio_chip *chip = desc_array[i]->gdev->chip;
+-		unsigned long mask[BITS_TO_LONGS(chip->ngpio)];
+-		unsigned long bits[BITS_TO_LONGS(chip->ngpio)];
++		unsigned long fastpath[2 * BITS_TO_LONGS(FASTPATH_NGPIO)];
++		unsigned long *mask, *bits;
+ 		int first, j, ret;
+ 
++		if (likely(chip->ngpio <= FASTPATH_NGPIO)) {
++			memset(fastpath, 0, sizeof(fastpath));
++			mask = fastpath;
++			bits = fastpath + BITS_TO_LONGS(FASTPATH_NGPIO);
++		} else {
++			mask = kcalloc(2 * BITS_TO_LONGS(chip->ngpio),
++					   sizeof(*mask),
++					   can_sleep ? GFP_KERNEL : GFP_ATOMIC);
++			if (!mask)
++				return -ENOMEM;
++			bits = mask + BITS_TO_LONGS(chip->ngpio);
++		}
++
+ 		if (!can_sleep)
+ 			WARN_ON(chip->can_sleep);
+ 
+ 		/* collect all inputs belonging to the same chip */
+ 		first = i;
+-		memset(mask, 0, sizeof(mask));
+ 		do {
+ 			const struct gpio_desc *desc = desc_array[i];
+ 			int hwgpio = gpio_chip_hwgpio(desc);
+@@ -2682,8 +2702,11 @@ int gpiod_get_array_value_complex(bool raw, bool can_sleep,
+ 			 (desc_array[i]->gdev->chip == chip));
+ 
+ 		ret = gpio_chip_get_multiple(chip, mask, bits);
+-		if (ret)
++		if (ret) {
++			if (mask != fastpath)
++				kfree(mask);
+ 			return ret;
++		}
+ 
+ 		for (j = first; j < i; j++) {
+ 			const struct gpio_desc *desc = desc_array[j];
+@@ -2695,6 +2718,9 @@ int gpiod_get_array_value_complex(bool raw, bool can_sleep,
+ 			value_array[j] = value;
+ 			trace_gpio_value(desc_to_gpio(desc), 1, value);
+ 		}
++
++		if (mask != fastpath)
++			kfree(mask);
+ 	}
+ 	return 0;
+ }
+@@ -2878,7 +2904,7 @@ static void gpio_chip_set_multiple(struct gpio_chip *chip,
+ 	}
+ }
+ 
+-void gpiod_set_array_value_complex(bool raw, bool can_sleep,
++int gpiod_set_array_value_complex(bool raw, bool can_sleep,
+ 				   unsigned int array_size,
+ 				   struct gpio_desc **desc_array,
+ 				   int *value_array)
+@@ -2887,14 +2913,26 @@ void gpiod_set_array_value_complex(bool raw, bool can_sleep,
+ 
+ 	while (i < array_size) {
+ 		struct gpio_chip *chip = desc_array[i]->gdev->chip;
+-		unsigned long mask[BITS_TO_LONGS(chip->ngpio)];
+-		unsigned long bits[BITS_TO_LONGS(chip->ngpio)];
++		unsigned long fastpath[2 * BITS_TO_LONGS(FASTPATH_NGPIO)];
++		unsigned long *mask, *bits;
+ 		int count = 0;
+ 
++		if (likely(chip->ngpio <= FASTPATH_NGPIO)) {
++			memset(fastpath, 0, sizeof(fastpath));
++			mask = fastpath;
++			bits = fastpath + BITS_TO_LONGS(FASTPATH_NGPIO);
++		} else {
++			mask = kcalloc(2 * BITS_TO_LONGS(chip->ngpio),
++					   sizeof(*mask),
++					   can_sleep ? GFP_KERNEL : GFP_ATOMIC);
++			if (!mask)
++				return -ENOMEM;
++			bits = mask + BITS_TO_LONGS(chip->ngpio);
++		}
++
+ 		if (!can_sleep)
+ 			WARN_ON(chip->can_sleep);
+ 
+-		memset(mask, 0, sizeof(mask));
+ 		do {
+ 			struct gpio_desc *desc = desc_array[i];
+ 			int hwgpio = gpio_chip_hwgpio(desc);
+@@ -2925,7 +2963,11 @@ void gpiod_set_array_value_complex(bool raw, bool can_sleep,
+ 		/* push collected bits to outputs */
+ 		if (count != 0)
+ 			gpio_chip_set_multiple(chip, mask, bits);
++
++		if (mask != fastpath)
++			kfree(mask);
+ 	}
++	return 0;
+ }
+ 
+ /**
+@@ -3000,13 +3042,13 @@ EXPORT_SYMBOL_GPL(gpiod_set_value);
+  * This function should be called from contexts where we cannot sleep, and will
+  * complain if the GPIO chip functions potentially sleep.
+  */
+-void gpiod_set_raw_array_value(unsigned int array_size,
++int gpiod_set_raw_array_value(unsigned int array_size,
+ 			 struct gpio_desc **desc_array, int *value_array)
+ {
+ 	if (!desc_array)
+-		return;
+-	gpiod_set_array_value_complex(true, false, array_size, desc_array,
+-				      value_array);
++		return -EINVAL;
++	return gpiod_set_array_value_complex(true, false, array_size,
++					desc_array, value_array);
+ }
+ EXPORT_SYMBOL_GPL(gpiod_set_raw_array_value);
+ 
+@@ -3326,14 +3368,14 @@ EXPORT_SYMBOL_GPL(gpiod_set_value_cansleep);
+  *
+  * This function is to be called from contexts that can sleep.
+  */
+-void gpiod_set_raw_array_value_cansleep(unsigned int array_size,
++int gpiod_set_raw_array_value_cansleep(unsigned int array_size,
+ 					struct gpio_desc **desc_array,
+ 					int *value_array)
+ {
+ 	might_sleep_if(extra_checks);
+ 	if (!desc_array)
+-		return;
+-	gpiod_set_array_value_complex(true, true, array_size, desc_array,
++		return -EINVAL;
++	return gpiod_set_array_value_complex(true, true, array_size, desc_array,
+ 				      value_array);
+ }
+ EXPORT_SYMBOL_GPL(gpiod_set_raw_array_value_cansleep);
+diff --git a/drivers/gpio/gpiolib.h b/drivers/gpio/gpiolib.h
+index b17ec6795c81..b64813e3876e 100644
+--- a/drivers/gpio/gpiolib.h
++++ b/drivers/gpio/gpiolib.h
+@@ -188,7 +188,7 @@ int gpiod_get_array_value_complex(bool raw, bool can_sleep,
+ 				  unsigned int array_size,
+ 				  struct gpio_desc **desc_array,
+ 				  int *value_array);
+-void gpiod_set_array_value_complex(bool raw, bool can_sleep,
++int gpiod_set_array_value_complex(bool raw, bool can_sleep,
+ 				   unsigned int array_size,
+ 				   struct gpio_desc **desc_array,
+ 				   int *value_array);
+diff --git a/include/linux/gpio/consumer.h b/include/linux/gpio/consumer.h
+index dbd065963296..243112c7fa7d 100644
+--- a/include/linux/gpio/consumer.h
++++ b/include/linux/gpio/consumer.h
+@@ -116,7 +116,7 @@ int gpiod_get_raw_array_value(unsigned int array_size,
+ 			      struct gpio_desc **desc_array,
+ 			      int *value_array);
+ void gpiod_set_raw_value(struct gpio_desc *desc, int value);
+-void gpiod_set_raw_array_value(unsigned int array_size,
++int gpiod_set_raw_array_value(unsigned int array_size,
+ 			       struct gpio_desc **desc_array,
+ 			       int *value_array);
+ 
+@@ -134,7 +134,7 @@ int gpiod_get_raw_array_value_cansleep(unsigned int array_size,
+ 				       struct gpio_desc **desc_array,
+ 				       int *value_array);
+ void gpiod_set_raw_value_cansleep(struct gpio_desc *desc, int value);
+-void gpiod_set_raw_array_value_cansleep(unsigned int array_size,
++int gpiod_set_raw_array_value_cansleep(unsigned int array_size,
+ 					struct gpio_desc **desc_array,
+ 					int *value_array);
+ 
+@@ -369,12 +369,13 @@ static inline void gpiod_set_raw_value(struct gpio_desc *desc, int value)
+ 	/* GPIO can never have been requested */
+ 	WARN_ON(1);
+ }
+-static inline void gpiod_set_raw_array_value(unsigned int array_size,
++static inline int gpiod_set_raw_array_value(unsigned int array_size,
+ 					     struct gpio_desc **desc_array,
+ 					     int *value_array)
+ {
+ 	/* GPIO can never have been requested */
+ 	WARN_ON(1);
++	return 0;
+ }
+ 
+ static inline int gpiod_get_value_cansleep(const struct gpio_desc *desc)
+@@ -423,12 +424,13 @@ static inline void gpiod_set_raw_value_cansleep(struct gpio_desc *desc,
+ 	/* GPIO can never have been requested */
+ 	WARN_ON(1);
+ }
+-static inline void gpiod_set_raw_array_value_cansleep(unsigned int array_size,
++static inline int gpiod_set_raw_array_value_cansleep(unsigned int array_size,
+ 						struct gpio_desc **desc_array,
+ 						int *value_array)
+ {
+ 	/* GPIO can never have been requested */
+ 	WARN_ON(1);
++	return 0;
+ }
+ 
+ static inline int gpiod_set_debounce(struct gpio_desc *desc, unsigned debounce)
 -- 
 2.14.3
