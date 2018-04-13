@@ -1,114 +1,27 @@
-Subject: Re: [PATCHv4] gpio: Remove VLA from gpiolib
-References: <20180411010352.17929-1-labbott@redhat.com>
- <CACRpkdb04=5eHW3xR-qmY6UzOUcAC35mV4eDgHaFn9nQEL_eEw@mail.gmail.com>
-From: Phil Reid <preid@electromag.com.au>
-Message-ID: <c618af81-2dbb-1aff-212a-e87e56caa7eb@electromag.com.au>
-Date: Fri, 13 Apr 2018 08:39:06 +0800
-MIME-Version: 1.0
-In-Reply-To: <CACRpkdb04=5eHW3xR-qmY6UzOUcAC35mV4eDgHaFn9nQEL_eEw@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
+Date: Thu, 12 Apr 2018 21:48:04 -0400 (EDT)
+Message-Id: <20180412.214804.685830742109478351.davem@davemloft.net>
+Subject: Re: [PATCHv2] mISDN: Remove VLAs
+From: David Miller <davem@davemloft.net>
+In-Reply-To: <20180411010429.18074-1-labbott@redhat.com>
+References: <20180411010429.18074-1-labbott@redhat.com>
+Mime-Version: 1.0
+Content-Type: Text/Plain; charset=us-ascii
 Content-Transfer-Encoding: 7bit
-To: Linus Walleij <linus.walleij@linaro.org>, Laura Abbott <labbott@redhat.com>
-Cc: Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+To: labbott@redhat.com
+Cc: isdn@linux-pingi.de, keescook@chromium.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 12/04/2018 16:38, Linus Walleij wrote:
-> On Wed, Apr 11, 2018 at 3:03 AM, Laura Abbott <labbott@redhat.com> wrote:
-> 
->> The new challenge is to remove VLAs from the kernel
->> (see https://lkml.org/lkml/2018/3/7/621) to eventually
->> turn on -Wvla.
->>
->> Using a kmalloc array is the easy way to fix this but kmalloc is still
->> more expensive than stack allocation. Introduce a fast path with a
->> fixed size stack array to cover most chip with gpios below some fixed
->> amount. The slow path dynamically allocates an array to cover those
->> chips with a large number of gpios.
->>
->> Reviewed-and-tested-by: Lukas Wunner <lukas@wunner.de>
->> Signed-off-by: Lukas Wunner <lukas@wunner.de>
->> Signed-off-by: Laura Abbott <labbott@redhat.com>
->> ---
->> v4: Changed some local variables to avoid coccinelle warnings. Added a
->> warning if the number of GPIOs exceeds the current fast path define.
->>
->> Lukas, I kept your Tested-by because the changes were pretty minimal.
->> Let me know if you want to run the tests again.
-> 
-> This patch is starting to look really good.
-> 
->> +/*
->> + * Number of GPIOs to use for the fast path in set array
->> + */
->> +#define FASTPATH_NGPIO 256
-> 
-> There is still some comment about this.
-> 
-> And now that I am also tryint to think I wonder about it, we
-> have a global ARCH_NR_GPIOS that is typically 512.
-> Some archs set it up.
-> 
-> This define is something of an abomination, in the ARM
-> case it comes from arch/arm/include/asm/gpio.h
-> where #define ARCH_NR_GPIOS CONFIG_ARCH_NR_GPIO
-> where the latter is a Kconfig option that is mostly 512 for
-> most ARM systems.
-> 
-> Well, ARM looks like this:
-> 
-> config ARCH_NR_GPIO
->          int
->          default 2048 if ARCH_SOCFPGA
->          default 1024 if ARCH_BRCMSTB || ARCH_SHMOBILE || ARCH_TEGRA || \
->                  ARCH_ZYNQ
->          default 512 if ARCH_EXYNOS || ARCH_KEYSTONE || SOC_OMAP5 || \
->                  SOC_DRA7XX || ARCH_S3C24XX || ARCH_S3C64XX || ARCH_S5PV210
->          default 416 if ARCH_SUNXI
->          default 392 if ARCH_U8500
->          default 352 if ARCH_VT8500
->          default 288 if ARCH_ROCKCHIP
->          default 264 if MACH_H4700
->          default 0
->          help
->            Maximum number of GPIOs in the system.
-> 
->            If unsure, leave the default value.
-> 
-> So if FASTPATH_NGPIO should be anything else than
-> ARCH_NR_GPIO this has to be established somewhere
-> as a floor or half or something, but I would just set it as
-> the same as ARCH_NR_GPIOS...
-> 
-> The main reason this define exist is for this function
-> from <linux/gpio/consumer.h>:
-> 
-> /* Convert between the old gpio_ and new gpiod_ interfaces */
-> struct gpio_desc *gpio_to_desc(unsigned gpio);
-> 
-> Nowadays that fact is a bit obscured since the variable is
-> only used when assigning the base (in the global GPIO
-> number space, which is what we want to get rid of but
-> sigh) in gpiochip_find_base() where it attempts to place
-> a newly allocated gpiochip in the higher region of this
-> numberspace since the embedded SoC GPIO base tends
-> to be 0, on old platforms.
-> 
-> So I don't know about this.
-> 
-> Can't we just use ARCH_NR_GPIOS?
-> 
-> Very few systems have more than 512 assigned global
-> GPIO numbers and those are FPGA experimental machines.
-> 
-> In the long run obviously I want to get rid of these defines
-> altogether and only allocate GPIO descriptos dynamically
-> so as you see I am reluctant to add new numberspace weirdness
-> around here.
-Isn't that for total GPIO's in the system?
-And the arrays just need to cater for max per chip?
- From what I can understand of the code which is admittedly limited.
+From: Laura Abbott <labbott@redhat.com>
+Date: Tue, 10 Apr 2018 18:04:29 -0700
 
+> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+> turn on -Wvla. Remove the VLAs from the mISDN code by switching to using
+> kstrdup in one place and using an upper bound in another.
+> 
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+> v2: Switch to a tighter upper bound so we are allocating a more
+> reasonable amount on the stack (300). This is based on previous checks
+> against this value.
 
--- 
-Regards
-Phil Reid
+Applied.
