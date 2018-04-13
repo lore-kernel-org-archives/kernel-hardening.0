@@ -1,91 +1,132 @@
-From: Igor Stoppa <igor.stoppa@gmail.com>
-Subject: [PATCH 6/6] lkdtm: crash on overwriting protected pmalloc var
-Date: Fri, 13 Apr 2018 17:41:31 +0400
-Message-Id: <20180413134131.4651-7-igor.stoppa@huawei.com>
-In-Reply-To: <20180413134131.4651-1-igor.stoppa@huawei.com>
-References: <20180413134131.4651-1-igor.stoppa@huawei.com>
-To: willy@infradead.org, keescook@chromium.org, mhocko@kernel.org, corbet@lwn.net
-Cc: david@fromorbit.com, rppt@linux.vnet.ibm.com, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
+Subject: Re: [PATCHv4] gpio: Remove VLA from gpiolib
+References: <20180411010352.17929-1-labbott@redhat.com>
+ <CACRpkdb04=5eHW3xR-qmY6UzOUcAC35mV4eDgHaFn9nQEL_eEw@mail.gmail.com>
+ <c618af81-2dbb-1aff-212a-e87e56caa7eb@electromag.com.au>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <0aea6c90-ba94-708c-5cad-836c50dadfe6@redhat.com>
+Date: Fri, 13 Apr 2018 14:10:22 -0700
+MIME-Version: 1.0
+In-Reply-To: <c618af81-2dbb-1aff-212a-e87e56caa7eb@electromag.com.au>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+To: Phil Reid <preid@electromag.com.au>, Linus Walleij <linus.walleij@linaro.org>
+Cc: Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Verify that pmalloc read-only protection is in place: trying to
-overwrite a protected variable will crash the kernel.
+On 04/12/2018 05:39 PM, Phil Reid wrote:
+> On 12/04/2018 16:38, Linus Walleij wrote:
+>> On Wed, Apr 11, 2018 at 3:03 AM, Laura Abbott <labbott@redhat.com> wrote:
+>>
+>>> The new challenge is to remove VLAs from the kernel
+>>> (see https://lkml.org/lkml/2018/3/7/621) to eventually
+>>> turn on -Wvla.
+>>>
+>>> Using a kmalloc array is the easy way to fix this but kmalloc is still
+>>> more expensive than stack allocation. Introduce a fast path with a
+>>> fixed size stack array to cover most chip with gpios below some fixed
+>>> amount. The slow path dynamically allocates an array to cover those
+>>> chips with a large number of gpios.
+>>>
+>>> Reviewed-and-tested-by: Lukas Wunner <lukas@wunner.de>
+>>> Signed-off-by: Lukas Wunner <lukas@wunner.de>
+>>> Signed-off-by: Laura Abbott <labbott@redhat.com>
+>>> ---
+>>> v4: Changed some local variables to avoid coccinelle warnings. Added a
+>>> warning if the number of GPIOs exceeds the current fast path define.
+>>>
+>>> Lukas, I kept your Tested-by because the changes were pretty minimal.
+>>> Let me know if you want to run the tests again.
+>>
+>> This patch is starting to look really good.
+>>
+>>> +/*
+>>> + * Number of GPIOs to use for the fast path in set array
+>>> + */
+>>> +#define FASTPATH_NGPIO 256
+>>
+>> There is still some comment about this.
+>>
+>> And now that I am also tryint to think I wonder about it, we
+>> have a global ARCH_NR_GPIOS that is typically 512.
+>> Some archs set it up.
+>>
+>> This define is something of an abomination, in the ARM
+>> case it comes from arch/arm/include/asm/gpio.h
+>> where #define ARCH_NR_GPIOS CONFIG_ARCH_NR_GPIO
+>> where the latter is a Kconfig option that is mostly 512 for
+>> most ARM systems.
+>>
+>> Well, ARM looks like this:
+>>
+>> config ARCH_NR_GPIO
+>>          int
+>>          default 2048 if ARCH_SOCFPGA
+>>          default 1024 if ARCH_BRCMSTB || ARCH_SHMOBILE || ARCH_TEGRA || \
+>>                  ARCH_ZYNQ
+>>          default 512 if ARCH_EXYNOS || ARCH_KEYSTONE || SOC_OMAP5 || \
+>>                  SOC_DRA7XX || ARCH_S3C24XX || ARCH_S3C64XX || ARCH_S5PV210
+>>          default 416 if ARCH_SUNXI
+>>          default 392 if ARCH_U8500
+>>          default 352 if ARCH_VT8500
+>>          default 288 if ARCH_ROCKCHIP
+>>          default 264 if MACH_H4700
+>>          default 0
+>>          help
+>>            Maximum number of GPIOs in the system.
+>>
+>>            If unsure, leave the default value.
+>>
+>> So if FASTPATH_NGPIO should be anything else than
+>> ARCH_NR_GPIO this has to be established somewhere
+>> as a floor or half or something, but I would just set it as
+>> the same as ARCH_NR_GPIOS...
+>>
+>> The main reason this define exist is for this function
+>> from <linux/gpio/consumer.h>:
+>>
+>> /* Convert between the old gpio_ and new gpiod_ interfaces */
+>> struct gpio_desc *gpio_to_desc(unsigned gpio);
+>>
+>> Nowadays that fact is a bit obscured since the variable is
+>> only used when assigning the base (in the global GPIO
+>> number space, which is what we want to get rid of but
+>> sigh) in gpiochip_find_base() where it attempts to place
+>> a newly allocated gpiochip in the higher region of this
+>> numberspace since the embedded SoC GPIO base tends
+>> to be 0, on old platforms.
+>>
+>> So I don't know about this.
+>>
+>> Can't we just use ARCH_NR_GPIOS?
+>>
+>> Very few systems have more than 512 assigned global
+>> GPIO numbers and those are FPGA experimental machines.
+>>
+>> In the long run obviously I want to get rid of these defines
+>> altogether and only allocate GPIO descriptos dynamically
+>> so as you see I am reluctant to add new numberspace weirdness
+>> around here.
+> Isn't that for total GPIO's in the system?
+> And the arrays just need to cater for max per chip?
+>  From what I can understand of the code which is admittedly limited.
+> 
+> 
 
-Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
----
- drivers/misc/lkdtm/core.c  |  3 +++
- drivers/misc/lkdtm/lkdtm.h |  1 +
- drivers/misc/lkdtm/perms.c | 25 +++++++++++++++++++++++++
- 3 files changed, 29 insertions(+)
+Yeah the switch back to 256 was a mistake on my end (I think I
+grabbed an incorrect version for my base). ARCH_NR_GPIOs
+is the total number in the system which may be multiple
+chips so yes we would be possibly allocating more space
+than necessary.
 
-diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
-index 2154d1bfd18b..c9fd42bda6ee 100644
---- a/drivers/misc/lkdtm/core.c
-+++ b/drivers/misc/lkdtm/core.c
-@@ -155,6 +155,9 @@ static const struct crashtype crashtypes[] = {
- 	CRASHTYPE(ACCESS_USERSPACE),
- 	CRASHTYPE(WRITE_RO),
- 	CRASHTYPE(WRITE_RO_AFTER_INIT),
-+#ifdef CONFIG_PROTECTABLE_MEMORY
-+	CRASHTYPE(WRITE_RO_PMALLOC),
-+#endif
- 	CRASHTYPE(WRITE_KERN),
- 	CRASHTYPE(REFCOUNT_INC_OVERFLOW),
- 	CRASHTYPE(REFCOUNT_ADD_OVERFLOW),
-diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
-index 9e513dcfd809..dcda3ae76ceb 100644
---- a/drivers/misc/lkdtm/lkdtm.h
-+++ b/drivers/misc/lkdtm/lkdtm.h
-@@ -38,6 +38,7 @@ void lkdtm_READ_BUDDY_AFTER_FREE(void);
- void __init lkdtm_perms_init(void);
- void lkdtm_WRITE_RO(void);
- void lkdtm_WRITE_RO_AFTER_INIT(void);
-+void lkdtm_WRITE_RO_PMALLOC(void);
- void lkdtm_WRITE_KERN(void);
- void lkdtm_EXEC_DATA(void);
- void lkdtm_EXEC_STACK(void);
-diff --git a/drivers/misc/lkdtm/perms.c b/drivers/misc/lkdtm/perms.c
-index 53b85c9d16b8..4660ff0bfa44 100644
---- a/drivers/misc/lkdtm/perms.c
-+++ b/drivers/misc/lkdtm/perms.c
-@@ -9,6 +9,7 @@
- #include <linux/vmalloc.h>
- #include <linux/mman.h>
- #include <linux/uaccess.h>
-+#include <linux/pmalloc.h>
- #include <asm/cacheflush.h>
- 
- /* Whether or not to fill the target memory area with do_nothing(). */
-@@ -104,6 +105,30 @@ void lkdtm_WRITE_RO_AFTER_INIT(void)
- 	*ptr ^= 0xabcd1234;
- }
- 
-+#ifdef CONFIG_PROTECTABLE_MEMORY
-+void lkdtm_WRITE_RO_PMALLOC(void)
-+{
-+	struct pmalloc_pool *pool;
-+	int *i;
-+
-+	pool = pmalloc_create_pool();
-+	if (WARN(!pool, "Failed preparing pool for pmalloc test."))
-+		return;
-+
-+	i = (int *)pmalloc(pool, sizeof(int));
-+	if (WARN(!i, "Failed allocating memory for pmalloc test.")) {
-+		pmalloc_destroy_pool(pool);
-+		return;
-+	}
-+
-+	*i = INT_MAX;
-+	pmalloc_protect_pool(pool);
-+
-+	pr_info("attempting bad pmalloc write at %p\n", i);
-+	*i = 0;
-+}
-+#endif
-+
- void lkdtm_WRITE_KERN(void)
- {
- 	size_t size;
--- 
-2.14.1
+unsigned long fastpath[2 * BITS_TO_LONGS(FASTPATH_NGPIO)]
+
+unsigned long fastpath[2 * BITS_TO_LONGS(512)]
+unsigned long fastpath[2 * DIV_ROUND_UP(512, 8 * sizeof(long))]
+
+so we end up with 128 bytes on the stack total assuming I
+can do math correctly. I think this a fairly reasonable
+amount though, even if we are over-estimating if there are
+multiple chips.
+
+Thanks,
+Laura
