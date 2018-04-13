@@ -1,27 +1,87 @@
-Date: Thu, 12 Apr 2018 21:48:04 -0400 (EDT)
-Message-Id: <20180412.214804.685830742109478351.davem@davemloft.net>
-Subject: Re: [PATCHv2] mISDN: Remove VLAs
-From: David Miller <davem@davemloft.net>
-In-Reply-To: <20180411010429.18074-1-labbott@redhat.com>
-References: <20180411010429.18074-1-labbott@redhat.com>
-Mime-Version: 1.0
-Content-Type: Text/Plain; charset=us-ascii
-Content-Transfer-Encoding: 7bit
-To: labbott@redhat.com
-Cc: isdn@linux-pingi.de, keescook@chromium.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Igor Stoppa <igor.stoppa@gmail.com>
+Subject: [RFC PATCH v22 0/6] mm: security: ro protection for dynamic data
+Date: Fri, 13 Apr 2018 17:41:25 +0400
+Message-Id: <20180413134131.4651-1-igor.stoppa@huawei.com>
+To: willy@infradead.org, keescook@chromium.org, mhocko@kernel.org, corbet@lwn.net
+Cc: david@fromorbit.com, rppt@linux.vnet.ibm.com, labbott@redhat.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Laura Abbott <labbott@redhat.com>
-Date: Tue, 10 Apr 2018 18:04:29 -0700
+This patch-set introduces the possibility of protecting memory that has
+been allocated dynamically.
 
-> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
-> turn on -Wvla. Remove the VLAs from the mISDN code by switching to using
-> kstrdup in one place and using an upper bound in another.
-> 
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
-> ---
-> v2: Switch to a tighter upper bound so we are allocating a more
-> reasonable amount on the stack (300). This is based on previous checks
-> against this value.
+The memory is managed in pools: when a memory pool is protected, all the
+memory that is currently part of it, will become R/O.
 
-Applied.
+A R/O pool can be expanded (adding more protectable memory).
+It can also be destroyed, to recover its memory, but it cannot be
+turned back into R/W mode.
+
+This is intentional. This feature is meant for data that doesn't need
+further modifications after initialization.
+
+However the data might need to be released, for example as part of module
+unloading. The pool, therefore, can be destroyed.
+
+An example is provided, in the form of self-testing.
+
+Since it was advised to give an example of protecting real kernel data
+[1],
+a well known vulnerability has been used to demo an effective use of
+pmalloc.
+
+[1] http://www.openwall.com/lists/kernel-hardening/2018/03/29/7
+
+However it turned out to be almost an how-to for attacking the kernel, so
+it was sent first to security@kernel.org, for obtaining clearance about
+the
+publication.
+
+Changes since v21:
+
+[http://www.openwall.com/lists/kernel-hardening/2018/03/27/23]
+
+* fixed type mismatch error in use of max(), detected by gcc 7.3
+* converted internal types into size_t
+* fixed leak of vmalloc memory in the self-test code
+
+Igor Stoppa (6):
+  struct page: add field for vm_struct
+  vmalloc: rename llist field in vmap_area
+  Protectable Memory
+  Documentation for Pmalloc
+  Pmalloc selftest
+  lkdtm: crash on overwriting protected pmalloc var
+
+Igor Stoppa (6):
+  struct page: add field for vm_struct
+  vmalloc: rename llist field in vmap_area
+  Protectable Memory
+  Documentation for Pmalloc
+  Pmalloc selftest
+  lkdtm: crash on overwriting protected pmalloc var
+
+ Documentation/core-api/index.rst   |   1 +
+ Documentation/core-api/pmalloc.rst | 107 +++++++++++++++
+ drivers/misc/lkdtm/core.c          |   3 +
+ drivers/misc/lkdtm/lkdtm.h         |   1 +
+ drivers/misc/lkdtm/perms.c         |  25 ++++
+ include/linux/mm_types.h           |   1 +
+ include/linux/pmalloc.h            | 166 +++++++++++++++++++++++
+ include/linux/test_pmalloc.h       |  24 ++++
+ include/linux/vmalloc.h            |   5 +-
+ init/main.c                        |   2 +
+ mm/Kconfig                         |  16 +++
+ mm/Makefile                        |   2 +
+ mm/pmalloc.c                       | 265 +++++++++++++++++++++++++++++++++++++
+ mm/test_pmalloc.c                  | 137 +++++++++++++++++++
+ mm/usercopy.c                      |  33 +++++
+ mm/vmalloc.c                       |  10 +-
+ 16 files changed, 793 insertions(+), 5 deletions(-)
+ create mode 100644 Documentation/core-api/pmalloc.rst
+ create mode 100644 include/linux/pmalloc.h
+ create mode 100644 include/linux/test_pmalloc.h
+ create mode 100644 mm/pmalloc.c
+ create mode 100644 mm/test_pmalloc.c
+
+-- 
+2.14.1
