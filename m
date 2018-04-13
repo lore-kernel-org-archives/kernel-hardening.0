@@ -1,132 +1,63 @@
-Subject: Re: [PATCHv4] gpio: Remove VLA from gpiolib
-References: <20180411010352.17929-1-labbott@redhat.com>
- <CACRpkdb04=5eHW3xR-qmY6UzOUcAC35mV4eDgHaFn9nQEL_eEw@mail.gmail.com>
- <c618af81-2dbb-1aff-212a-e87e56caa7eb@electromag.com.au>
 From: Laura Abbott <labbott@redhat.com>
-Message-ID: <0aea6c90-ba94-708c-5cad-836c50dadfe6@redhat.com>
-Date: Fri, 13 Apr 2018 14:10:22 -0700
+Subject: [PATCHv3] drm/amdkfd: Remove vla
+Date: Fri, 13 Apr 2018 14:24:12 -0700
+Message-Id: <20180413212412.18205-1-labbott@redhat.com>
 MIME-Version: 1.0
-In-Reply-To: <c618af81-2dbb-1aff-212a-e87e56caa7eb@electromag.com.au>
-Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-To: Phil Reid <preid@electromag.com.au>, Linus Walleij <linus.walleij@linaro.org>
-Cc: Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+To: Oded Gabbay <oded.gabbay@gmail.com>, Alex Deucher <alexander.deucher@amd.com>, =?UTF-8?q?Christian=20K=C3=B6nig?= <christian.koenig@amd.com>, "David (ChunMing) Zhou" <David1.Zhou@amd.com>, Felix Kuehling <felix.kuehling@amd.com>
+Cc: Laura Abbott <labbott@redhat.com>, David Airlie <airlied@linux.ie>, dri-devel@lists.freedesktop.org, amd-gfx@lists.freedesktop.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 04/12/2018 05:39 PM, Phil Reid wrote:
-> On 12/04/2018 16:38, Linus Walleij wrote:
->> On Wed, Apr 11, 2018 at 3:03 AM, Laura Abbott <labbott@redhat.com> wrote:
->>
->>> The new challenge is to remove VLAs from the kernel
->>> (see https://lkml.org/lkml/2018/3/7/621) to eventually
->>> turn on -Wvla.
->>>
->>> Using a kmalloc array is the easy way to fix this but kmalloc is still
->>> more expensive than stack allocation. Introduce a fast path with a
->>> fixed size stack array to cover most chip with gpios below some fixed
->>> amount. The slow path dynamically allocates an array to cover those
->>> chips with a large number of gpios.
->>>
->>> Reviewed-and-tested-by: Lukas Wunner <lukas@wunner.de>
->>> Signed-off-by: Lukas Wunner <lukas@wunner.de>
->>> Signed-off-by: Laura Abbott <labbott@redhat.com>
->>> ---
->>> v4: Changed some local variables to avoid coccinelle warnings. Added a
->>> warning if the number of GPIOs exceeds the current fast path define.
->>>
->>> Lukas, I kept your Tested-by because the changes were pretty minimal.
->>> Let me know if you want to run the tests again.
->>
->> This patch is starting to look really good.
->>
->>> +/*
->>> + * Number of GPIOs to use for the fast path in set array
->>> + */
->>> +#define FASTPATH_NGPIO 256
->>
->> There is still some comment about this.
->>
->> And now that I am also tryint to think I wonder about it, we
->> have a global ARCH_NR_GPIOS that is typically 512.
->> Some archs set it up.
->>
->> This define is something of an abomination, in the ARM
->> case it comes from arch/arm/include/asm/gpio.h
->> where #define ARCH_NR_GPIOS CONFIG_ARCH_NR_GPIO
->> where the latter is a Kconfig option that is mostly 512 for
->> most ARM systems.
->>
->> Well, ARM looks like this:
->>
->> config ARCH_NR_GPIO
->>          int
->>          default 2048 if ARCH_SOCFPGA
->>          default 1024 if ARCH_BRCMSTB || ARCH_SHMOBILE || ARCH_TEGRA || \
->>                  ARCH_ZYNQ
->>          default 512 if ARCH_EXYNOS || ARCH_KEYSTONE || SOC_OMAP5 || \
->>                  SOC_DRA7XX || ARCH_S3C24XX || ARCH_S3C64XX || ARCH_S5PV210
->>          default 416 if ARCH_SUNXI
->>          default 392 if ARCH_U8500
->>          default 352 if ARCH_VT8500
->>          default 288 if ARCH_ROCKCHIP
->>          default 264 if MACH_H4700
->>          default 0
->>          help
->>            Maximum number of GPIOs in the system.
->>
->>            If unsure, leave the default value.
->>
->> So if FASTPATH_NGPIO should be anything else than
->> ARCH_NR_GPIO this has to be established somewhere
->> as a floor or half or something, but I would just set it as
->> the same as ARCH_NR_GPIOS...
->>
->> The main reason this define exist is for this function
->> from <linux/gpio/consumer.h>:
->>
->> /* Convert between the old gpio_ and new gpiod_ interfaces */
->> struct gpio_desc *gpio_to_desc(unsigned gpio);
->>
->> Nowadays that fact is a bit obscured since the variable is
->> only used when assigning the base (in the global GPIO
->> number space, which is what we want to get rid of but
->> sigh) in gpiochip_find_base() where it attempts to place
->> a newly allocated gpiochip in the higher region of this
->> numberspace since the embedded SoC GPIO base tends
->> to be 0, on old platforms.
->>
->> So I don't know about this.
->>
->> Can't we just use ARCH_NR_GPIOS?
->>
->> Very few systems have more than 512 assigned global
->> GPIO numbers and those are FPGA experimental machines.
->>
->> In the long run obviously I want to get rid of these defines
->> altogether and only allocate GPIO descriptos dynamically
->> so as you see I am reluctant to add new numberspace weirdness
->> around here.
-> Isn't that for total GPIO's in the system?
-> And the arrays just need to cater for max per chip?
->  From what I can understand of the code which is admittedly limited.
-> 
-> 
 
-Yeah the switch back to 256 was a mistake on my end (I think I
-grabbed an incorrect version for my base). ARCH_NR_GPIOs
-is the total number in the system which may be multiple
-chips so yes we would be possibly allocating more space
-than necessary.
+There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+turn on -Wvla. Switch to a constant value that covers all hardware.
 
-unsigned long fastpath[2 * BITS_TO_LONGS(FASTPATH_NGPIO)]
+[1] https://lkml.org/lkml/2018/3/7/621
 
-unsigned long fastpath[2 * BITS_TO_LONGS(512)]
-unsigned long fastpath[2 * DIV_ROUND_UP(512, 8 * sizeof(long))]
+Reviewed-by: Felix Kuehling <Felix.Kuehling@amd.com>
+Acked-by: Christian König <christian.koenig@amd.com>
+Signed-off-by: Laura Abbott <labbott@redhat.com>
+---
+v3: Introduced a #define for the max value, switched to pr_err_once to
+avoid log flood, switched to sizeof(array) per private suggestion.
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c | 8 +++++---
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h      | 2 ++
+ 2 files changed, 7 insertions(+), 3 deletions(-)
 
-so we end up with 128 bytes on the stack total assuming I
-can do math correctly. I think this a fairly reasonable
-amount though, even if we are over-estimating if there are
-multiple chips.
-
-Thanks,
-Laura
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
+index 035c351f47c5..db6d9336b80d 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
+@@ -139,10 +139,12 @@ static void interrupt_wq(struct work_struct *work)
+ {
+ 	struct kfd_dev *dev = container_of(work, struct kfd_dev,
+ 						interrupt_work);
++	uint32_t ih_ring_entry[KFD_MAX_RING_ENTRY_SIZE];
+ 
+-	uint32_t ih_ring_entry[DIV_ROUND_UP(
+-				dev->device_info->ih_ring_entry_size,
+-				sizeof(uint32_t))];
++	if (dev->device_info->ih_ring_entry_size > sizeof(ih_ring_entry)) {
++		dev_err_once(kfd_chardev(), "Ring entry too small\n");
++		return;
++	}
+ 
+ 	while (dequeue_ih_ring_entry(dev, ih_ring_entry))
+ 		dev->device_info->event_interrupt_class->interrupt_wq(dev,
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index 96a9cc0f02c9..a90db05dfe61 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -39,6 +39,8 @@
+ 
+ #include "amd_shared.h"
+ 
++#define KFD_MAX_RING_ENTRY_SIZE	8
++
+ #define KFD_SYSFS_FILE_MODE 0444
+ 
+ #define KFD_MMAP_DOORBELL_MASK 0x8000000000000ull
+-- 
+2.14.3
