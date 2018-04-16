@@ -1,27 +1,60 @@
 Subject: Re: [PATCH] x86/xen: Remove use of VLAs
 References: <20180413221146.28476-1-labbott@redhat.com>
-From: Juergen Gross <jgross@suse.com>
-Message-ID: <49e13c53-718f-879c-fc0d-b0f5dd7ea23d@suse.com>
-Date: Mon, 16 Apr 2018 10:11:54 +0200
+From: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Message-ID: <7cf66c00-74c2-62bb-81f5-4332313a5a6e@oracle.com>
+Date: Mon, 16 Apr 2018 09:27:24 -0400
 MIME-Version: 1.0
 In-Reply-To: <20180413221146.28476-1-labbott@redhat.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Laura Abbott <labbott@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>
+To: Laura Abbott <labbott@redhat.com>, Juergen Gross <jgross@suse.com>
 Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, xen-devel@lists.xenproject.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 14/04/18 00:11, Laura Abbott wrote:
+On 04/13/2018 06:11 PM, Laura Abbott wrote:
 > There's an ongoing effort to remove VLAs[1] from the kernel to eventually
 > turn on -Wvla. The few VLAs in use have an upper bound based on a size
 > of 64K. This doesn't produce an excessively large stack so just switch
 > the upper bound.
-> 
+>
 > [1] https://lkml.org/lkml/2018/3/7/621
-> 
+>
 > Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+>  arch/x86/xen/enlighten_pv.c | 6 ++----
+>  1 file changed, 2 insertions(+), 4 deletions(-)
+>
+> diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
+> index c36d23aa6c35..d96a5a535cbb 100644
+> --- a/arch/x86/xen/enlighten_pv.c
+> +++ b/arch/x86/xen/enlighten_pv.c
+> @@ -421,8 +421,7 @@ static void xen_load_gdt(const struct desc_ptr *dtr)
+>  {
+>  	unsigned long va = dtr->address;
+>  	unsigned int size = dtr->size + 1;
+> -	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
 
-Reviewed-by: Juergen Gross <jgross@suse.com>
 
 
-Juergen
+Isn't dtr->size always either GDT_SIZE or 0?
+
+-boris
+
+
+
+
+> -	unsigned long frames[pages];
+> +	unsigned long frames[DIV_ROUND_UP(SZ_64K, PAGE_SIZE)];
+>  	int f;
+>  
+>  	/*
+> @@ -470,8 +469,7 @@ static void __init xen_load_gdt_boot(const struct desc_ptr *dtr)
+>  {
+>  	unsigned long va = dtr->address;
+>  	unsigned int size = dtr->size + 1;
+> -	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
+> -	unsigned long frames[pages];
+> +	unsigned long frames[DIV_ROUND_UP(SZ_64K, PAGE_SIZE)];
+>  	int f;
+>  
+>  	/*
