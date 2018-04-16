@@ -1,60 +1,45 @@
-Subject: Re: [PATCH] x86/xen: Remove use of VLAs
-References: <20180413221146.28476-1-labbott@redhat.com>
-From: Boris Ostrovsky <boris.ostrovsky@oracle.com>
-Message-ID: <7cf66c00-74c2-62bb-81f5-4332313a5a6e@oracle.com>
-Date: Mon, 16 Apr 2018 09:27:24 -0400
+Subject: Re: [PATCH 1/4] x86/crypto: camellia: Fix function prototypes
+References: <20180415041542.5364-1-jmoreira@suse.de>
+ <20180415041542.5364-2-jmoreira@suse.de>
+ <20180416061044.z6eb4psw2sbszemb@gmail.com>
+From: =?UTF-8?Q?Jo=c3=a3o_Moreira?= <jmoreira@suse.de>
+Message-ID: <15bd0d05-e046-1b35-9f14-91e507e6b162@suse.de>
+Date: Mon, 16 Apr 2018 11:35:58 -0300
 MIME-Version: 1.0
-In-Reply-To: <20180413221146.28476-1-labbott@redhat.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Laura Abbott <labbott@redhat.com>, Juergen Gross <jgross@suse.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, xen-devel@lists.xenproject.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20180416061044.z6eb4psw2sbszemb@gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+To: Ingo Molnar <mingo@kernel.org>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, x86@kernel.org, herbert@gondor.apana.org.au, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, gregkh@linuxfoundation.org, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 04/13/2018 06:11 PM, Laura Abbott wrote:
-> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
-> turn on -Wvla. The few VLAs in use have an upper bound based on a size
-> of 64K. This doesn't produce an excessively large stack so just switch
-> the upper bound.
->
-> [1] https://lkml.org/lkml/2018/3/7/621
->
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
-> ---
->  arch/x86/xen/enlighten_pv.c | 6 ++----
->  1 file changed, 2 insertions(+), 4 deletions(-)
->
-> diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
-> index c36d23aa6c35..d96a5a535cbb 100644
-> --- a/arch/x86/xen/enlighten_pv.c
-> +++ b/arch/x86/xen/enlighten_pv.c
-> @@ -421,8 +421,7 @@ static void xen_load_gdt(const struct desc_ptr *dtr)
->  {
->  	unsigned long va = dtr->address;
->  	unsigned int size = dtr->size + 1;
-> -	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
+> 
+>> +static inline void camellia_enc_blk(void *ctx, u8 *dst, const u8 *src)
+>>   {
+>> -	__camellia_enc_blk(ctx, dst, src, false);
+>> +	__camellia_enc_blk((struct camellia_ctx *) ctx, dst, src, false);
+>>   }
+> 
+> I don't see how this is an improvement: instead of having a proper type there's
+> now an opaque type and an ugly (and dangerous) type cast.
+> 
+> What does "compatible with CFI requirements" mean?
 
+For "compatible with CFI requirements", I meant: given a set of 
+functions that are invoked through a given set of pointers, all 
+functions and pointers in these sets have the same prototype. I added a 
+note about this CFI heuristic in the cover letter, but I guess I should 
+have been clearer there and added something more substantial to the 
+commit message.
 
+Regarding the changes, this was the most straight-forward way I found to 
+make the sources compliant with the above, not requiring deeper semantic 
+changes to the underneath invoking code. On the other hand, I agree that 
+there is a collateral damage and that an ideal fix would be the other 
+way around -- removing the opaque type from the pointer instead of 
+adding it to the functions.
 
-Isn't dtr->size always either GDT_SIZE or 0?
+I'll try to think of another way and send if I come to something.
 
--boris
-
-
-
-
-> -	unsigned long frames[pages];
-> +	unsigned long frames[DIV_ROUND_UP(SZ_64K, PAGE_SIZE)];
->  	int f;
->  
->  	/*
-> @@ -470,8 +469,7 @@ static void __init xen_load_gdt_boot(const struct desc_ptr *dtr)
->  {
->  	unsigned long va = dtr->address;
->  	unsigned int size = dtr->size + 1;
-> -	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
-> -	unsigned long frames[pages];
-> +	unsigned long frames[DIV_ROUND_UP(SZ_64K, PAGE_SIZE)];
->  	int f;
->  
->  	/*
+Tks,
+João.
