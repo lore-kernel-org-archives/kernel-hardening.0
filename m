@@ -1,48 +1,75 @@
+Date: Tue, 17 Apr 2018 00:13:48 +0200
+From: Stefano Brivio <sbrivio@redhat.com>
+Subject: Re: [PATCH v2] net: ipv6: xfrm6_state: remove VLA usage
+Message-ID: <20180417001348.5a2df7c7@epycfail>
+In-Reply-To: <1520667645-21975-1-git-send-email-andreaschristofo@gmail.com>
+References: <1520667645-21975-1-git-send-email-andreaschristofo@gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1523024546-6150-3-git-send-email-alex.popov@linux.com>
-References: <1523024546-6150-1-git-send-email-alex.popov@linux.com> <1523024546-6150-3-git-send-email-alex.popov@linux.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 16 Apr 2018 11:29:13 -0700
-Message-ID: <CAGXu5jKm218fpxyV3vOM+2SO-ERG3tWPUV0x8+-S0MJAReFz+A@mail.gmail.com>
-Subject: Re: [PATCH v11 2/6] x86/entry: Add STACKLEAK erasing the kernel stack
- at the end of syscalls
-Content-Type: text/plain; charset="UTF-8"
-To: Alexander Popov <alex.popov@linux.com>, Dave Hansen <dave.hansen@linux.intel.com>, Ingo Molnar <mingo@kernel.org>, Laura Abbott <labbott@redhat.com>, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: Andreas Christoforou <andreaschristofo@gmail.com>
+Cc: keescook@chromium.org, kernel-hardening@lists.openwall.com, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Apr 6, 2018 at 7:22 AM, Alexander Popov <alex.popov@linux.com> wrote:
-> This commit introduces the architecture-specific code filling the used
-> part of the kernel stack with a poison value before returning to the
-> userspace. Full STACKLEAK feature also contains the gcc plugin which
-> comes in a separate commit.
+Andreas,
 
-Thanks for sending this again! And thanks for the updated reasoning
-for why this remains a valuable addition:
+On Sat, 10 Mar 2018 09:40:44 +0200
+Andreas Christoforou <andreaschristofo@gmail.com> wrote:
 
-https://lkml.kernel.org/r/1523024546-6150-1-git-send-email-alex.popov@linux.com
+> The kernel would like to have all stack VLA usage removed[1].
+> Instead of dynamic allocation, just use XFRM_MAX_DEPTH
+> as already done for the "class" array, but as per feedback,
+> I will not drop maxclass because that changes the behavior.
+> In one case, it'll do this loop up to 5, the other
+> caller up to 6.
+> 
+> [1] https://lkml.org/lkml/2018/3/7/621
+> 
+> Signed-off-by: Andreas Christoforou <andreaschristofo@gmail.com>
+> ---
+> v2:
+> - use XFRM_MAX_DEPTH for "count" array (Steffen and Mathias).
+> ---
+>  net/ipv6/xfrm6_state.c | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/net/ipv6/xfrm6_state.c b/net/ipv6/xfrm6_state.c
+> index b15075a..270a53a 100644
+> --- a/net/ipv6/xfrm6_state.c
+> +++ b/net/ipv6/xfrm6_state.c
+> @@ -62,7 +62,7 @@ __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
+>  {
+>  	int i;
+>  	int class[XFRM_MAX_DEPTH];
+> -	int count[maxclass];
+> +	int count[XFRM_MAX_DEPTH];
+>  
+>  	memset(count, 0, sizeof(count));
+>  
 
-I, too, remain convinced this is a good protection to have, even as we
-slowly remove VLAs and try to improve the compiler's initialization of
-stack variables.
+I hope this didn't get too confusing. In the end, the change I proposed
+for this patch was simply to drop the memset and initialize 'count'
+like:
 
-Dave, Ingo, Linus: how does this look? With the assembly rewritten
-into C, the entry changes are very small:
+	int count[XFRM_MAX_DEPTH] = { };
 
->  arch/x86/entry/entry_32.S        |  7 ++++++
->  arch/x86/entry/entry_64.S        |  3 +++
->  arch/x86/entry/entry_64_compat.S |  5 ++++
->  arch/x86/entry/erase.c           | 54 ++++++++++++++++++++++++++++++++++++++++
+and perhaps, while at it, move this before 'int i', for coding style
+reasons.
 
-I'd really like to get people's Ack/Review. :)
+When you re-post, please also take care of Steffen's comment. He
+proposed to change the subject to:
 
-Laura, can this C version work for arm64 as well?
+	xfrm: remove VLA usage in __xfrm6_sort()
 
-Thanks,
+Note that you should give an indication of which tree this patch should
+be applied to, by including this in the subject. The current subject
+doesn't specify it, it should have been:
 
--Kees
+	[PATCH v2 ipsec-next] ...
+
+Please see Documentation/networking/netdev-FAQ.txt for the difference
+between net and net-next, as the same distinction applies for ipsec and
+ipsec-next trees. Thanks.
 
 -- 
-Kees Cook
-Pixel Security
+Stefano
