@@ -1,23 +1,239 @@
-Date: Mon, 16 Apr 2018 21:06:34 +0530
-From: Vinod Koul <vinod.koul@intel.com>
-Subject: Re: [PATCHv2] dmaengine: dmatest: Remove use of VLAs
-Message-ID: <20180416153634.GR6014@localhost>
-References: <20180411010216.17702-1-labbott@redhat.com>
+Date: Mon, 16 Apr 2018 10:59:18 -0700
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH v5] namei: Allow restricted O_CREAT of FIFOs and regular files
+Message-ID: <20180416175918.GA13494@beast>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180411010216.17702-1-labbott@redhat.com>
-To: Laura Abbott <labbott@redhat.com>
-Cc: Dan Williams <dan.j.williams@intel.com>, dmaengine@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Sinan Kaya <okaya@codeaurora.org>
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Solar Designer <solar@openwall.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 10, 2018 at 06:02:16PM -0700, Laura Abbott wrote:
-> There's an ongoing effort to remove VLAs from the kernel
-> (https://lkml.org/lkml/2018/3/7/621) to eventually turn on -Wvla.
-> The test already pre-allocates some buffers with kmalloc so turn
-> the two VLAs in to pre-allocated kmalloc buffers.
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 
-Applied, thanks
+Disallows open of FIFOs or regular files not owned by the user in world
+writable sticky directories, unless the owner is the same as that of the
+directory or the file is opened without the O_CREAT flag. The purpose
+is to make data spoofing attacks harder. This protection can be turned
+on and off separately for FIFOs and regular files via sysctl, just like
+the symlinks/hardlinks protection. This patch is based on Openwall's
+"HARDEN_FIFO" feature by Solar Designer.
+
+This is a brief list of old vulnerabilities that could have been prevented
+by this feature, some of them even allow for privilege escalation:
+CVE-2000-1134
+CVE-2007-3852
+CVE-2008-0525
+CVE-2009-0416
+CVE-2011-4834
+CVE-2015-1838
+CVE-2015-7442
+CVE-2016-7489
+
+This list is not meant to be complete. It's difficult to track down
+all vulnerabilities of this kind because they were often reported
+without any mention of this particular attack vector. In fact, before
+hardlinks/symlinks restrictions, fifos/regular files weren't the favorite
+vehicle to exploit them.
+
+Suggested-by: Solar Designer <solar@openwall.com>
+Suggested-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+[kees: drop pr_warn_ratelimited() in favor of audit changes in the future]
+[kees: adjust commit subjet]
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ Documentation/sysctl/fs.txt | 36 +++++++++++++++++++++++++++++++
+ fs/namei.c                  | 52 ++++++++++++++++++++++++++++++++++++++++++---
+ include/linux/fs.h          |  2 ++
+ kernel/sysctl.c             | 18 ++++++++++++++++
+ 4 files changed, 105 insertions(+), 3 deletions(-)
+
+diff --git a/Documentation/sysctl/fs.txt b/Documentation/sysctl/fs.txt
+index 6c00c1e2743f..819caf8ca05f 100644
+--- a/Documentation/sysctl/fs.txt
++++ b/Documentation/sysctl/fs.txt
+@@ -34,7 +34,9 @@ Currently, these files are in /proc/sys/fs:
+ - overflowgid
+ - pipe-user-pages-hard
+ - pipe-user-pages-soft
++- protected_fifos
+ - protected_hardlinks
++- protected_regular
+ - protected_symlinks
+ - suid_dumpable
+ - super-max
+@@ -182,6 +184,24 @@ applied.
+ 
+ ==============================================================
+ 
++protected_fifos:
++
++The intent of this protection is to avoid unintentional writes to
++an attacker-controlled FIFO, where a program expected to create a regular
++file.
++
++When set to "0", writing to FIFOs is unrestricted.
++
++When set to "1" don't allow O_CREAT open on FIFOs that we don't own
++in world writable sticky directories, unless they are owned by the
++owner of the directory.
++
++When set to "2" it also applies to group writable sticky directories.
++
++This protection is based on the restrictions in Openwall.
++
++==============================================================
++
+ protected_hardlinks:
+ 
+ A long-standing class of security issues is the hardlink-based
+@@ -202,6 +222,22 @@ This protection is based on the restrictions in Openwall and grsecurity.
+ 
+ ==============================================================
+ 
++protected_regular:
++
++This protection is similar to protected_fifos, but it
++avoids writes to an attacker-controlled regular file, where a program
++expected to create one.
++
++When set to "0", writing to regular files is unrestricted.
++
++When set to "1" don't allow O_CREAT open on regular files that we
++don't own in world writable sticky directories, unless they are
++owned by the owner of the directory.
++
++When set to "2" it also applies to group writable sticky directories.
++
++==============================================================
++
+ protected_symlinks:
+ 
+ A long-standing class of security issues is the symlink-based
+diff --git a/fs/namei.c b/fs/namei.c
+index 186bd2464fd5..3157c984414b 100644
+--- a/fs/namei.c
++++ b/fs/namei.c
+@@ -887,6 +887,8 @@ static inline void put_link(struct nameidata *nd)
+ 
+ int sysctl_protected_symlinks __read_mostly = 0;
+ int sysctl_protected_hardlinks __read_mostly = 0;
++int sysctl_protected_fifos __read_mostly;
++int sysctl_protected_regular __read_mostly;
+ 
+ /**
+  * may_follow_link - Check symlink following for unsafe situations
+@@ -1001,6 +1003,45 @@ static int may_linkat(struct path *link)
+ 	return -EPERM;
+ }
+ 
++/**
++ * may_create_in_sticky - Check whether an O_CREAT open in a sticky directory
++ *			  should be allowed, or not, on files that already
++ *			  exist.
++ * @dir: the sticky parent directory
++ * @inode: the inode of the file to open
++ *
++ * Block an O_CREAT open of a FIFO (or a regular file) when:
++ *   - sysctl_protected_fifos (or sysctl_protected_regular) is enabled
++ *   - the file already exists
++ *   - we are in a sticky directory
++ *   - we don't own the file
++ *   - the owner of the directory doesn't own the file
++ *   - the directory is world writable
++ * If the sysctl_protected_fifos (or sysctl_protected_regular) is set to 2
++ * the directory doesn't have to be world writable: being group writable will
++ * be enough.
++ *
++ * Returns 0 if the open is allowed, -ve on error.
++ */
++static int may_create_in_sticky(struct dentry * const dir,
++				struct inode * const inode)
++{
++	if ((!sysctl_protected_fifos && S_ISFIFO(inode->i_mode)) ||
++	    (!sysctl_protected_regular && S_ISREG(inode->i_mode)) ||
++	    likely(!(dir->d_inode->i_mode & S_ISVTX)) ||
++	    uid_eq(inode->i_uid, dir->d_inode->i_uid) ||
++	    uid_eq(current_fsuid(), inode->i_uid))
++		return 0;
++
++	if (likely(dir->d_inode->i_mode & 0002) ||
++	    (dir->d_inode->i_mode & 0020 &&
++	     ((sysctl_protected_fifos >= 2 && S_ISFIFO(inode->i_mode)) ||
++	      (sysctl_protected_regular >= 2 && S_ISREG(inode->i_mode))))) {
++		return -EACCES;
++	}
++	return 0;
++}
++
+ static __always_inline
+ const char *get_link(struct nameidata *nd)
+ {
+@@ -3342,9 +3383,14 @@ static int do_last(struct nameidata *nd,
+ 	if (error)
+ 		return error;
+ 	audit_inode(nd->name, nd->path.dentry, 0);
+-	error = -EISDIR;
+-	if ((open_flag & O_CREAT) && d_is_dir(nd->path.dentry))
+-		goto out;
++	if (open_flag & O_CREAT) {
++		error = -EISDIR;
++		if (d_is_dir(nd->path.dentry))
++			goto out;
++		error = may_create_in_sticky(dir, inode);
++		if (unlikely(error))
++			goto out;
++	}
+ 	error = -ENOTDIR;
+ 	if ((nd->flags & LOOKUP_DIRECTORY) && !d_can_lookup(nd->path.dentry))
+ 		goto out;
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 760d8da1b6c7..dbd4ae431910 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -73,6 +73,8 @@ extern struct inodes_stat_t inodes_stat;
+ extern int leases_enable, lease_break_time;
+ extern int sysctl_protected_symlinks;
+ extern int sysctl_protected_hardlinks;
++extern int sysctl_protected_fifos;
++extern int sysctl_protected_regular;
+ 
+ typedef __kernel_rwf_t rwf_t;
+ 
+diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+index 6a78cf70761d..f45ed9e696eb 100644
+--- a/kernel/sysctl.c
++++ b/kernel/sysctl.c
+@@ -1805,6 +1805,24 @@ static struct ctl_table fs_table[] = {
+ 		.extra2		= &one,
+ 	},
+ 	{
++		.procname	= "protected_fifos",
++		.data		= &sysctl_protected_fifos,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec_minmax,
++		.extra1		= &zero,
++		.extra2		= &two,
++	},
++	{
++		.procname	= "protected_regular",
++		.data		= &sysctl_protected_regular,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec_minmax,
++		.extra1		= &zero,
++		.extra2		= &two,
++	},
++	{
+ 		.procname	= "suid_dumpable",
+ 		.data		= &suid_dumpable,
+ 		.maxlen		= sizeof(int),
+-- 
+2.7.4
+
 
 -- 
-~Vinod
+Kees Cook
+Pixel Security
