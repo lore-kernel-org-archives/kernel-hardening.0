@@ -1,38 +1,56 @@
 Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Mon, 16 Apr 2018 08:10:44 +0200
+Date: Mon, 16 Apr 2018 11:40:07 +0200
 From: Ingo Molnar <mingo@kernel.org>
-Subject: Re: [PATCH 1/4] x86/crypto: camellia: Fix function prototypes
-Message-ID: <20180416061044.z6eb4psw2sbszemb@gmail.com>
-References: <20180415041542.5364-1-jmoreira@suse.de>
- <20180415041542.5364-2-jmoreira@suse.de>
+Subject: Re: [PATCH] x86/xen: Remove use of VLAs
+Message-ID: <20180416094007.diuobump2qxraybx@gmail.com>
+References: <20180413221146.28476-1-labbott@redhat.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180415041542.5364-2-jmoreira@suse.de>
-To: Joao Moreira <jmoreira@suse.de>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, x86@kernel.org, herbert@gondor.apana.org.au, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, gregkh@linuxfoundation.org, keescook@chromium.org
+In-Reply-To: <20180413221146.28476-1-labbott@redhat.com>
+To: Laura Abbott <labbott@redhat.com>
+Cc: Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, xen-devel@lists.xenproject.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-* Joao Moreira <jmoreira@suse.de> wrote:
+* Laura Abbott <labbott@redhat.com> wrote:
 
-> Convert the use of 'struct camellia_ctx *' to 'void *' in prototypes of
-> functions which are referenced through 'struct common_glue_func_entry',
-> making their prototypes match those of this struct and, consequently,
-> turning them compatible with CFI requirements.
+> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+> turn on -Wvla. The few VLAs in use have an upper bound based on a size
+> of 64K. This doesn't produce an excessively large stack so just switch
+> the upper bound.
 > 
-> Whenever needed, cast 'void *' to 'struct camellia_ctx *'.
-
-> +static inline void camellia_enc_blk(void *ctx, u8 *dst, const u8 *src)
+> [1] https://lkml.org/lkml/2018/3/7/621
+> 
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+>  arch/x86/xen/enlighten_pv.c | 6 ++----
+>  1 file changed, 2 insertions(+), 4 deletions(-)
+> 
+> diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
+> index c36d23aa6c35..d96a5a535cbb 100644
+> --- a/arch/x86/xen/enlighten_pv.c
+> +++ b/arch/x86/xen/enlighten_pv.c
+> @@ -421,8 +421,7 @@ static void xen_load_gdt(const struct desc_ptr *dtr)
 >  {
-> -	__camellia_enc_blk(ctx, dst, src, false);
-> +	__camellia_enc_blk((struct camellia_ctx *) ctx, dst, src, false);
->  }
+>  	unsigned long va = dtr->address;
+>  	unsigned int size = dtr->size + 1;
+> -	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
+> -	unsigned long frames[pages];
+> +	unsigned long frames[DIV_ROUND_UP(SZ_64K, PAGE_SIZE)];
+>  	int f;
+>  
+>  	/*
+> @@ -470,8 +469,7 @@ static void __init xen_load_gdt_boot(const struct desc_ptr *dtr)
+>  {
+>  	unsigned long va = dtr->address;
+>  	unsigned int size = dtr->size + 1;
+> -	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
+> -	unsigned long frames[pages];
+> +	unsigned long frames[DIV_ROUND_UP(SZ_64K, PAGE_SIZE)];
+>  	int f;
 
-I don't see how this is an improvement: instead of having a proper type there's 
-now an opaque type and an ugly (and dangerous) type cast.
-
-What does "compatible with CFI requirements" mean?
+Reviewed-by: Ingo Molnar <mingo@kernel.org>
 
 Thanks,
 
