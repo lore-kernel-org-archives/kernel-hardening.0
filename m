@@ -1,150 +1,53 @@
-From: Mark Rutland <mark.rutland@arm.com>
-Subject: [PATCHv3 11/11] arm64: docs: document pointer authentication
-Date: Tue, 17 Apr 2018 19:37:35 +0100
-Message-Id: <20180417183735.56985-12-mark.rutland@arm.com>
-In-Reply-To: <20180417183735.56985-1-mark.rutland@arm.com>
-References: <20180417183735.56985-1-mark.rutland@arm.com>
-To: linux-arm-kernel@lists.infradead.org
-Cc: arnd@arndb.de, catalin.marinas@arm.com, cdall@kernel.org, drjones@redhat.com, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, mark.rutland@arm.com, ramana.radhakrishnan@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org, kernel-hardening@lists.openwall.com
+Date: Tue, 17 Apr 2018 21:31:45 +0200
+From: Solar Designer <solar@openwall.com>
+Subject: mmap flags
+Message-ID: <20180417193145.GA10528@openwall.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Now that we've added code to support pointer authentication, add some
-documentation so that people can figure out if/how to use it.
+Hi,
 
-Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-Cc: Andrew Jones <drjones@redhat.com>
-Cc: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Ramana Radhakrishnan <ramana.radhakrishnan@arm.com>
-Cc: Will Deacon <will.deacon@arm.com>
----
- Documentation/arm64/booting.txt                |  8 +++
- Documentation/arm64/elf_hwcaps.txt             |  6 ++
- Documentation/arm64/pointer-authentication.txt | 84 ++++++++++++++++++++++++++
- 3 files changed, 98 insertions(+)
- create mode 100644 Documentation/arm64/pointer-authentication.txt
+I'd like to have two new security-related mmap() flags on Linux:
 
-diff --git a/Documentation/arm64/booting.txt b/Documentation/arm64/booting.txt
-index 8d0df62c3fe0..8df9f4658d6f 100644
---- a/Documentation/arm64/booting.txt
-+++ b/Documentation/arm64/booting.txt
-@@ -205,6 +205,14 @@ Before jumping into the kernel, the following conditions must be met:
-     ICC_SRE_EL2.SRE (bit 0) must be initialised to 0b0.
-   - The DT or ACPI tables must describe a GICv2 interrupt controller.
- 
-+  For CPUs with pointer authentication functionality:
-+  - If EL3 is present:
-+    SCR_EL3.APK (bit 16) must be initialised to 0b1
-+    SCR_EL3.API (bit 17) must be initialised to 0b1
-+  - If the kernel is entered at EL1:
-+    HCR_EL2.APK (bit 40) must be initialised to 0b1
-+    HCR_EL2.API (bit 41) must be initialised to 0b1
-+
- The requirements described above for CPU mode, caches, MMUs, architected
- timers, coherency and system registers apply to all CPUs.  All CPUs must
- enter the kernel in the same exception level.
-diff --git a/Documentation/arm64/elf_hwcaps.txt b/Documentation/arm64/elf_hwcaps.txt
-index d6aff2c5e9e2..ebc8b15b45fc 100644
---- a/Documentation/arm64/elf_hwcaps.txt
-+++ b/Documentation/arm64/elf_hwcaps.txt
-@@ -178,3 +178,9 @@ HWCAP_ILRCPC
- HWCAP_FLAGM
- 
-     Functionality implied by ID_AA64ISAR0_EL1.TS == 0b0001.
-+
-+HWCAP_APIA
-+
-+    EL0 AddPac and Auth functionality using APIAKey_EL1 is enabled, as
-+    described by Documentation/arm64/pointer-authentication.txt.
-+
-diff --git a/Documentation/arm64/pointer-authentication.txt b/Documentation/arm64/pointer-authentication.txt
-new file mode 100644
-index 000000000000..8a9cb5713770
---- /dev/null
-+++ b/Documentation/arm64/pointer-authentication.txt
-@@ -0,0 +1,84 @@
-+Pointer authentication in AArch64 Linux
-+=======================================
-+
-+Author: Mark Rutland <mark.rutland@arm.com>
-+Date: 2017-07-19
-+
-+This document briefly describes the provision of pointer authentication
-+functionality in AArch64 Linux.
-+
-+
-+Architecture overview
-+---------------------
-+
-+The ARMv8.3 Pointer Authentication extension adds primitives that can be
-+used to mitigate certain classes of attack where an attacker can corrupt
-+the contents of some memory (e.g. the stack).
-+
-+The extension uses a Pointer Authentication Code (PAC) to determine
-+whether pointers have been modified unexpectedly. A PAC is derived from
-+a pointer, another value (such as the stack pointer), and a secret key
-+held in system registers.
-+
-+The extension adds instructions to insert a valid PAC into a pointer,
-+and to verify/remove the PAC from a pointer. The PAC occupies a number
-+of high-order bits of the pointer, which varies dependent on the
-+configured virtual address size and whether pointer tagging is in use.
-+
-+A subset of these instructions have been allocated from the HINT
-+encoding space. In the absence of the extension (or when disabled),
-+these instructions behave as NOPs. Applications and libraries using
-+these instructions operate correctly regardless of the presence of the
-+extension.
-+
-+
-+Basic support
-+-------------
-+
-+When CONFIG_ARM64_PTR_AUTH is selected, and relevant HW support is
-+present, the kernel will assign a random APIAKey value to each process
-+at exec*() time. This key is shared by all threads within the process,
-+and the key is preserved across fork(). Presence of functionality using
-+APIAKey is advertised via HWCAP_APIA.
-+
-+Recent versions of GCC can compile code with APIAKey-based return
-+address protection when passed the -msign-return-address option. This
-+uses instructions in the HINT space, and such code can run on systems
-+without the pointer authentication extension.
-+
-+The remaining instruction and data keys (APIBKey, APDAKey, APDBKey) are
-+reserved for future use, and instructions using these keys must not be
-+used by software until a purpose and scope for their use has been
-+decided. To enable future software using these keys to function on
-+contemporary kernels, where possible, instructions using these keys are
-+made to behave as NOPs.
-+
-+The generic key (APGAKey) is currently unsupported. Instructions using
-+the generic key must not be used by software.
-+
-+
-+Debugging
-+---------
-+
-+When CONFIG_ARM64_PTR_AUTH is selected, and relevant HW support is
-+present, the kernel will expose the position of TTBR0 PAC bits in the
-+NT_ARM_PAC_MASK regset (struct user_pac_mask), which userspace can
-+acqure via PTRACE_GETREGSET.
-+
-+Separate masks are exposed for data pointers and instruction pointers,
-+as the set of PAC bits can vary between the two. Debuggers should not
-+expect that HWCAP_APIA implies the presence (or non-presence) of this
-+regset -- in future the kernel may support the use of APIBKey, APDAKey,
-+and/or APBAKey, even in the absence of APIAKey.
-+
-+Note that the masks apply to TTBR0 addresses, and are not valid to apply
-+to TTBR1 addresses (e.g. kernel pointers).
-+
-+
-+Virtualization
-+--------------
-+
-+Pointer authentication is not currently supported in KVM guests. KVM
-+will mask the feature bits from ID_AA64ISAR1_EL1, and attempted use of
-+the feature will result in an UNDEFINED exception being injected into
-+the guest.
--- 
-2.11.0
+1. MAP_NOCORE - same as FreeBSD already has, "Region is not included in
+a core file." per their man page.  We can now do similar by writing a
+bitmask into /proc/<pid>/coredump_filter, but it's cumbersome (not
+something a library would be OK doing because of its one security
+sensitive and/or very large mapping needing this), low granularity (not
+per mapping), and non-portable (MAP_NOCORE would be portable at least
+between Linux and FreeBSD).
+
+2. MAP_ZEROIZE (or whatever we call it) - zeroize the pages on unmap
+(but not necessarily before the munmap() syscall returns), including on
+[abnormal] process exit, which is good for security (if the data is
+sensitive) and also for performance (the program doesn't have to do the
+zeroization on its own and either wait for it to complete or spawn a
+thread, but instead can trivially defer this work to be done by the
+kernel a bit later; also, a subsequent mmap() with MAP_POPULATE, or
+corresponding memory accesses if without MAP_POPULATE, can complete
+quicker due to the lazily-zeroized pages).
+
+I'd use both for yescrypt.  In fact, I learned of FreeBSD's MAP_NOCORE
+from scrypt, so indeed yescrypt already uses it where available, too.
+
+I'd also like SHM_* equivalents of these.  And a SHM_POPULATE too, but
+that's purely for performance (not security), so is off-topic here.
+I'd use those for yescrypt ROMs.
+
+Perhaps the zeroization can build upon a common framework also
+supporting a sysctl where it's forced on all (or only ever writable?)
+mappings of all processes, without them requesting it explicitly.  It's
+just set the flag on all mappings (few systems will) vs. only on some
+(few libraries and programs will, but hopefully those where it's needed
+the most).  This would reduce total complexity of the implementation.
+
+Not hardening of the kernel (in fact, there's a risk we'd introduce bugs
+at first), but helping harden the userland.
+
+I'm just posting this in case anyone capable has time and willingness
+to work on this.
+
+Alexander
