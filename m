@@ -1,75 +1,52 @@
-Date: Tue, 17 Apr 2018 00:13:48 +0200
-From: Stefano Brivio <sbrivio@redhat.com>
-Subject: Re: [PATCH v2] net: ipv6: xfrm6_state: remove VLA usage
-Message-ID: <20180417001348.5a2df7c7@epycfail>
-In-Reply-To: <1520667645-21975-1-git-send-email-andreaschristofo@gmail.com>
-References: <1520667645-21975-1-git-send-email-andreaschristofo@gmail.com>
+Subject: Re: [PATCH] x86/xen: Remove use of VLAs
+References: <20180413221146.28476-1-labbott@redhat.com>
+ <7cf66c00-74c2-62bb-81f5-4332313a5a6e@oracle.com>
+From: Juergen Gross <jgross@suse.com>
+Message-ID: <e63f261b-9ef3-5750-20df-555291a8a0d8@suse.com>
+Date: Tue, 17 Apr 2018 09:16:41 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+In-Reply-To: <7cf66c00-74c2-62bb-81f5-4332313a5a6e@oracle.com>
+Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Andreas Christoforou <andreaschristofo@gmail.com>
-Cc: keescook@chromium.org, kernel-hardening@lists.openwall.com, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
+To: Boris Ostrovsky <boris.ostrovsky@oracle.com>, Laura Abbott <labbott@redhat.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, xen-devel@lists.xenproject.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Andreas,
-
-On Sat, 10 Mar 2018 09:40:44 +0200
-Andreas Christoforou <andreaschristofo@gmail.com> wrote:
-
-> The kernel would like to have all stack VLA usage removed[1].
-> Instead of dynamic allocation, just use XFRM_MAX_DEPTH
-> as already done for the "class" array, but as per feedback,
-> I will not drop maxclass because that changes the behavior.
-> In one case, it'll do this loop up to 5, the other
-> caller up to 6.
+On 16/04/18 15:27, Boris Ostrovsky wrote:
+> On 04/13/2018 06:11 PM, Laura Abbott wrote:
+>> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+>> turn on -Wvla. The few VLAs in use have an upper bound based on a size
+>> of 64K. This doesn't produce an excessively large stack so just switch
+>> the upper bound.
+>>
+>> [1] https://lkml.org/lkml/2018/3/7/621
+>>
+>> Signed-off-by: Laura Abbott <labbott@redhat.com>
+>> ---
+>>  arch/x86/xen/enlighten_pv.c | 6 ++----
+>>  1 file changed, 2 insertions(+), 4 deletions(-)
+>>
+>> diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
+>> index c36d23aa6c35..d96a5a535cbb 100644
+>> --- a/arch/x86/xen/enlighten_pv.c
+>> +++ b/arch/x86/xen/enlighten_pv.c
+>> @@ -421,8 +421,7 @@ static void xen_load_gdt(const struct desc_ptr *dtr)
+>>  {
+>>  	unsigned long va = dtr->address;
+>>  	unsigned int size = dtr->size + 1;
+>> -	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
 > 
-> [1] https://lkml.org/lkml/2018/3/7/621
 > 
-> Signed-off-by: Andreas Christoforou <andreaschristofo@gmail.com>
-> ---
-> v2:
-> - use XFRM_MAX_DEPTH for "count" array (Steffen and Mathias).
-> ---
->  net/ipv6/xfrm6_state.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
 > 
-> diff --git a/net/ipv6/xfrm6_state.c b/net/ipv6/xfrm6_state.c
-> index b15075a..270a53a 100644
-> --- a/net/ipv6/xfrm6_state.c
-> +++ b/net/ipv6/xfrm6_state.c
-> @@ -62,7 +62,7 @@ __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
->  {
->  	int i;
->  	int class[XFRM_MAX_DEPTH];
-> -	int count[maxclass];
-> +	int count[XFRM_MAX_DEPTH];
->  
->  	memset(count, 0, sizeof(count));
->  
+> Isn't dtr->size always either GDT_SIZE or 0?
 
-I hope this didn't get too confusing. In the end, the change I proposed
-for this patch was simply to drop the memset and initialize 'count'
-like:
+GDT_SIZE - 1 :-)
 
-	int count[XFRM_MAX_DEPTH] = { };
+>> -	unsigned long frames[pages];
+>> +	unsigned long frames[DIV_ROUND_UP(SZ_64K, PAGE_SIZE)];
 
-and perhaps, while at it, move this before 'int i', for coding style
-reasons.
+So we could just go with one frame and modify the BUG_ON() further below
+accordingly.
 
-When you re-post, please also take care of Steffen's comment. He
-proposed to change the subject to:
 
-	xfrm: remove VLA usage in __xfrm6_sort()
-
-Note that you should give an indication of which tree this patch should
-be applied to, by including this in the subject. The current subject
-doesn't specify it, it should have been:
-
-	[PATCH v2 ipsec-next] ...
-
-Please see Documentation/networking/netdev-FAQ.txt for the difference
-between net and net-next, as the same distinction applies for ipsec and
-ipsec-next trees. Thanks.
-
--- 
-Stefano
+Juergen
