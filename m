@@ -1,52 +1,146 @@
-Subject: Re: [PATCH] x86/xen: Remove use of VLAs
-References: <20180413221146.28476-1-labbott@redhat.com>
- <7cf66c00-74c2-62bb-81f5-4332313a5a6e@oracle.com>
-From: Juergen Gross <jgross@suse.com>
-Message-ID: <e63f261b-9ef3-5750-20df-555291a8a0d8@suse.com>
-Date: Tue, 17 Apr 2018 09:16:41 +0200
-MIME-Version: 1.0
-In-Reply-To: <7cf66c00-74c2-62bb-81f5-4332313a5a6e@oracle.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Boris Ostrovsky <boris.ostrovsky@oracle.com>, Laura Abbott <labbott@redhat.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, xen-devel@lists.xenproject.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Mark Rutland <mark.rutland@arm.com>
+Subject: [PATCHv3 00/11] ARMv8.3 pointer authentication userspace support
+Date: Tue, 17 Apr 2018 19:37:24 +0100
+Message-Id: <20180417183735.56985-1-mark.rutland@arm.com>
+To: linux-arm-kernel@lists.infradead.org
+Cc: arnd@arndb.de, catalin.marinas@arm.com, cdall@kernel.org, drjones@redhat.com, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, mark.rutland@arm.com, ramana.radhakrishnan@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 16/04/18 15:27, Boris Ostrovsky wrote:
-> On 04/13/2018 06:11 PM, Laura Abbott wrote:
->> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
->> turn on -Wvla. The few VLAs in use have an upper bound based on a size
->> of 64K. This doesn't produce an excessively large stack so just switch
->> the upper bound.
->>
->> [1] https://lkml.org/lkml/2018/3/7/621
->>
->> Signed-off-by: Laura Abbott <labbott@redhat.com>
->> ---
->>  arch/x86/xen/enlighten_pv.c | 6 ++----
->>  1 file changed, 2 insertions(+), 4 deletions(-)
->>
->> diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
->> index c36d23aa6c35..d96a5a535cbb 100644
->> --- a/arch/x86/xen/enlighten_pv.c
->> +++ b/arch/x86/xen/enlighten_pv.c
->> @@ -421,8 +421,7 @@ static void xen_load_gdt(const struct desc_ptr *dtr)
->>  {
->>  	unsigned long va = dtr->address;
->>  	unsigned int size = dtr->size + 1;
->> -	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
-> 
-> 
-> 
-> Isn't dtr->size always either GDT_SIZE or 0?
+This series adds support for the ARMv8.3 pointer authentication extension,
+enabling userspace return address protection with recent versions of GCC.
 
-GDT_SIZE - 1 :-)
+Since RFC [1]:
+* Make the KVM context switch (semi-lazy)
+* Rebase to v4.13-rc1
+* Improve pointer authentication documentation
+* Add hwcap documentation
+* Various minor cleanups
 
->> -	unsigned long frames[pages];
->> +	unsigned long frames[DIV_ROUND_UP(SZ_64K, PAGE_SIZE)];
+Since v1 [2]:
+* Rebase to v4.15-rc1
+* Settle on per-process keys
+* Strip PACs when unwinding userspace
+* Don't expose an XPAC hwcap (this is implied by ID registers)
+* Leave APIB, ABPDA, APDB, and APGA keys unsupported for now
+* Support IMP DEF algorithms
+* Rely on KVM ID register emulation
+* Various cleanups
 
-So we could just go with one frame and modify the BUG_ON() further below
-accordingly.
+Since v2 [3]:
+* Unify HCR_EL2 initialization
+* s/POINTER_AUTHENTICATION/PTR_AUTH/
+* Drop KVM support (for now)
+* Drop detection of generic authentication
+
+While there are use-cases for keys other than APIAKey, the only software that
+I'm aware of with pointer authentication support is GCC, which only makes use
+of APIAKey. I'm happy to add support for other keys as users appear.
+
+I've pushed the series to the arm64/pointer-auth branch [4] of my linux tree.
+I've also pushed out a necessary bootwrapper patch to the pointer-auth branch
+[5] of my bootwrapper repo.
 
 
-Juergen
+Extension Overview 
+==================
+
+The ARMv8.3 pointer authentication extension adds functionality to detect
+modification of pointer values, mitigating certain classes of attack such as
+stack smashing, and making return oriented programming attacks harder
+
+The extension introduces the concept of a pointer authentication code (PAC),
+which is stored in some upper bits of pointers. Each PAC is derived from the
+original pointer, another 64-bit value (e.g. the stack pointer), and a secret
+128-bit key.
+
+New instructions are added which can be used to:
+
+* Insert a PAC into a pointer
+* Strip a PAC from a pointer
+* Authenticate strip a PAC from a pointer
+
+If authentication succeeds, the code is removed, yielding the original pointer.
+If authentication fails, bits are set in the pointer such that it is guaranteed
+to cause a fault if used.
+
+These instructions can make use of four keys:
+
+* APIAKey (A.K.A. Instruction A key)
+* APIBKey (A.K.A. Instruction B key)
+* APDAKey (A.K.A. Data A key)
+* APDBKey (A.K.A. Data B Key)
+
+A subset of these instruction encodings have been allocated from the HINT
+space, and will operate as NOPs on any ARMv8-A parts which do not feature the
+extension (or if purposefully disabled by the kernel). Software using only this
+subset of the instructions should function correctly on all ARMv8-A parts.
+
+Additionally, instructions are added to authenticate small blocks of memory in
+similar fashion, using APGAKey (A.K.A. Generic key).
+
+
+This Series
+===========
+
+This series enables the use of instructions using APIAKey, which is initialised
+and maintained per-process (shared by all threads). This series does not add
+support for APIBKey, APDAKey, APDBKey, nor APGAKey.
+
+I've given this some basic testing with a homebrew test suite. More ideally,
+we'd add some tests to the kernel source tree.
+
+For the time being, pointer authentication functionality is hidden from
+guests via ID register trapping.
+
+Thanks,
+Mark.
+
+[1] http://lists.infradead.org/pipermail/linux-arm-kernel/2017-April/498941.html
+[2] https://lkml.kernel.org/r/1500480092-28480-1-git-send-email-mark.rutland@arm.com
+[3] https://lkml.kernel.org/r/20171127163806.31435-1-mark.rutland@arm.com
+[4] git://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git arm64/pointer-auth
+[5] git://git.kernel.org/pub/scm/linux/kernel/git/mark/boot-wrapper-aarch64.git pointer-auth
+
+
+Mark Rutland (11):
+  arm64: add pointer authentication register bits
+  arm64/kvm: consistently handle host HCR_EL2 flags
+  arm64/kvm: hide ptrauth from guests
+  arm64: Don't trap host pointer auth use to EL2
+  arm64/cpufeature: detect pointer authentication
+  asm-generic: mm_hooks: allow hooks to be overridden individually
+  arm64: add basic pointer authentication support
+  arm64: expose user PAC bit positions via ptrace
+  arm64: perf: strip PAC when unwinding userspace
+  arm64: enable pointer authentication
+  arm64: docs: document pointer authentication
+
+ Documentation/arm64/booting.txt                |   8 ++
+ Documentation/arm64/elf_hwcaps.txt             |   6 ++
+ Documentation/arm64/pointer-authentication.txt |  84 ++++++++++++++++++++
+ arch/arm64/Kconfig                             |  23 ++++++
+ arch/arm64/include/asm/cpucaps.h               |   5 +-
+ arch/arm64/include/asm/esr.h                   |   3 +-
+ arch/arm64/include/asm/kvm_arm.h               |   3 +
+ arch/arm64/include/asm/mmu.h                   |   5 ++
+ arch/arm64/include/asm/mmu_context.h           |  25 +++++-
+ arch/arm64/include/asm/pointer_auth.h          | 104 +++++++++++++++++++++++++
+ arch/arm64/include/asm/sysreg.h                |  30 +++++++
+ arch/arm64/include/uapi/asm/hwcap.h            |   1 +
+ arch/arm64/include/uapi/asm/ptrace.h           |   7 ++
+ arch/arm64/kernel/cpufeature.c                 |  56 +++++++++++++
+ arch/arm64/kernel/cpuinfo.c                    |   1 +
+ arch/arm64/kernel/head.S                       |   5 +-
+ arch/arm64/kernel/perf_callchain.c             |   5 +-
+ arch/arm64/kernel/ptrace.c                     |  38 +++++++++
+ arch/arm64/kvm/handle_exit.c                   |  18 +++++
+ arch/arm64/kvm/hyp/switch.c                    |   2 +-
+ arch/arm64/kvm/sys_regs.c                      |   9 +++
+ include/asm-generic/mm_hooks.h                 |  11 +++
+ include/uapi/linux/elf.h                       |   1 +
+ 23 files changed, 441 insertions(+), 9 deletions(-)
+ create mode 100644 Documentation/arm64/pointer-authentication.txt
+ create mode 100644 arch/arm64/include/asm/pointer_auth.h
+
+-- 
+2.11.0
