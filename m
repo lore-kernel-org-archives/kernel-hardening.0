@@ -1,87 +1,58 @@
 From: Mark Rutland <mark.rutland@arm.com>
-Subject: [PATCHv3 03/11] arm64/kvm: hide ptrauth from guests
-Date: Tue, 17 Apr 2018 19:37:27 +0100
-Message-Id: <20180417183735.56985-4-mark.rutland@arm.com>
+Subject: [PATCHv3 04/11] arm64: Don't trap host pointer auth use to EL2
+Date: Tue, 17 Apr 2018 19:37:28 +0100
+Message-Id: <20180417183735.56985-5-mark.rutland@arm.com>
 In-Reply-To: <20180417183735.56985-1-mark.rutland@arm.com>
 References: <20180417183735.56985-1-mark.rutland@arm.com>
 To: linux-arm-kernel@lists.infradead.org
 Cc: arnd@arndb.de, catalin.marinas@arm.com, cdall@kernel.org, drjones@redhat.com, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, mark.rutland@arm.com, ramana.radhakrishnan@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In subsequent patches we're going to expose ptrauth to the host kernel
-and userspace, but things are a bit trickier for guest kernels. For the
-time being, let's hide ptrauth from KVM guests.
+To allow EL0 (and/or EL1) to use pointer authentication functionality,
+we must ensure that pointer authentication instructions and accesses to
+pointer authentication keys are not trapped to EL2.
 
-Regardless of how well-behaved the guest kernel is, guest userspace
-could attempt to use ptrauth instructions, triggering a trap to EL2,
-resulting in noise from kvm_handle_unknown_ec(). So let's write up a
-handler for the PAC trap, which silently injects an UNDEF into the
-guest, as if the feature were really missing.
+This patch ensures that HCR_EL2 is configured appropriately when the
+kernel is booted at EL2. For non-VHE kernels we set HCR_EL2.{API,APK},
+ensuring that EL1 can access keys and permit EL0 use of instructions.
+For VHE kernels host EL0 (TGE && E2H) is unaffected by these settings,
+and it doesn't matter how we configure HCR_EL2.{API,APK}, so we don't
+bother setting them.
+
+This does not enable support for KVM guests, since KVM manages HCR_EL2
+itself when running VMs.
 
 Signed-off-by: Mark Rutland <mark.rutland@arm.com>
 Cc: Christoffer Dall <cdall@kernel.org>
+Cc: Catalin Marinas <catalin.marinas@arm.com>
 Cc: Marc Zyngier <marc.zyngier@arm.com>
+Cc: Will Deacon <will.deacon@arm.com>
 Cc: kvmarm@lists.cs.columbia.edu
 ---
- arch/arm64/kvm/handle_exit.c | 18 ++++++++++++++++++
- arch/arm64/kvm/sys_regs.c    |  9 +++++++++
- 2 files changed, 27 insertions(+)
+ arch/arm64/include/asm/kvm_arm.h | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
 
-diff --git a/arch/arm64/kvm/handle_exit.c b/arch/arm64/kvm/handle_exit.c
-index e5e741bfffe1..5114ad691eae 100644
---- a/arch/arm64/kvm/handle_exit.c
-+++ b/arch/arm64/kvm/handle_exit.c
-@@ -173,6 +173,23 @@ static int handle_sve(struct kvm_vcpu *vcpu, struct kvm_run *run)
- 	return 1;
- }
+diff --git a/arch/arm64/include/asm/kvm_arm.h b/arch/arm64/include/asm/kvm_arm.h
+index 89b3dda7e3cb..4d57e1e58323 100644
+--- a/arch/arm64/include/asm/kvm_arm.h
++++ b/arch/arm64/include/asm/kvm_arm.h
+@@ -23,6 +23,8 @@
+ #include <asm/types.h>
  
-+/*
-+ * Guest usage of a ptrauth instruction (which the guest EL1 did not turn into
-+ * a NOP), or guest EL1 access to a ptrauth register.
-+ */
-+static int kvm_handle_ptrauth(struct kvm_vcpu *vcpu, struct kvm_run *run)
-+{
-+	/*
-+	 * We don't currently suport ptrauth in a guest, and we mask the ID
-+	 * registers to prevent well-behaved guests from trying to make use of
-+	 * it.
-+	 *
-+	 * Inject an UNDEF, as if the feature really isn't present.
-+	 */
-+	kvm_inject_undefined(vcpu);
-+	return 1;
-+}
-+
- static exit_handle_fn arm_exit_handlers[] = {
- 	[0 ... ESR_ELx_EC_MAX]	= kvm_handle_unknown_ec,
- 	[ESR_ELx_EC_WFx]	= kvm_handle_wfx,
-@@ -195,6 +212,7 @@ static exit_handle_fn arm_exit_handlers[] = {
- 	[ESR_ELx_EC_BKPT32]	= kvm_handle_guest_debug,
- 	[ESR_ELx_EC_BRK64]	= kvm_handle_guest_debug,
- 	[ESR_ELx_EC_FP_ASIMD]	= handle_no_fpsimd,
-+	[ESR_ELx_EC_PAC]	= kvm_handle_ptrauth,
- };
+ /* Hyp Configuration Register (HCR) bits */
++#define HCR_API		(UL(1) << 41)
++#define HCR_APK		(UL(1) << 40)
+ #define HCR_TEA		(UL(1) << 37)
+ #define HCR_TERR	(UL(1) << 36)
+ #define HCR_TLOR	(UL(1) << 35)
+@@ -86,7 +88,7 @@
+ 			 HCR_AMO | HCR_SWIO | HCR_TIDCP | HCR_RW | HCR_TLOR | \
+ 			 HCR_FMO | HCR_IMO)
+ #define HCR_VIRT_EXCP_MASK (HCR_VSE | HCR_VI | HCR_VF)
+-#define HCR_HOST_NVHE_FLAGS (HCR_RW)
++#define HCR_HOST_NVHE_FLAGS (HCR_RW | HCR_API | HCR_APK)
+ #define HCR_HOST_VHE_FLAGS (HCR_RW | HCR_TGE | HCR_E2H)
  
- static exit_handle_fn kvm_get_exit_handler(struct kvm_vcpu *vcpu)
-diff --git a/arch/arm64/kvm/sys_regs.c b/arch/arm64/kvm/sys_regs.c
-index 806b0b126a64..eee399c35e84 100644
---- a/arch/arm64/kvm/sys_regs.c
-+++ b/arch/arm64/kvm/sys_regs.c
-@@ -1000,6 +1000,15 @@ static u64 read_id_reg(struct sys_reg_desc const *r, bool raz)
- 				    task_pid_nr(current));
- 
- 		val &= ~(0xfUL << ID_AA64PFR0_SVE_SHIFT);
-+	} else if (id == SYS_ID_AA64ISAR1_EL1) {
-+		const u64 ptrauth_mask = (0xfUL << ID_AA64ISAR1_APA_SHIFT) |
-+					 (0xfUL << ID_AA64ISAR1_API_SHIFT) |
-+					 (0xfUL << ID_AA64ISAR1_GPA_SHIFT) |
-+					 (0xfUL << ID_AA64ISAR1_GPI_SHIFT);
-+		if (val & ptrauth_mask)
-+			pr_err_once("kvm [%i]: ptrauth unsupported for guests, suppressing\n",
-+					task_pid_nr(current));
-+		val &= ~ptrauth_mask;
- 	} else if (id == SYS_ID_AA64MMFR1_EL1) {
- 		if (val & (0xfUL << ID_AA64MMFR1_LOR_SHIFT))
- 			pr_err_once("kvm [%i]: LORegions unsupported for guests, suppressing\n",
+ /* TCR_EL2 Registers bits */
 -- 
 2.11.0
