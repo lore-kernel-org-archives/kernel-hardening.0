@@ -1,146 +1,115 @@
 From: Mark Rutland <mark.rutland@arm.com>
-Subject: [PATCHv3 00/11] ARMv8.3 pointer authentication userspace support
-Date: Tue, 17 Apr 2018 19:37:24 +0100
-Message-Id: <20180417183735.56985-1-mark.rutland@arm.com>
+Subject: [PATCHv3 01/11] arm64: add pointer authentication register bits
+Date: Tue, 17 Apr 2018 19:37:25 +0100
+Message-Id: <20180417183735.56985-2-mark.rutland@arm.com>
+In-Reply-To: <20180417183735.56985-1-mark.rutland@arm.com>
+References: <20180417183735.56985-1-mark.rutland@arm.com>
 To: linux-arm-kernel@lists.infradead.org
 Cc: arnd@arndb.de, catalin.marinas@arm.com, cdall@kernel.org, drjones@redhat.com, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, mark.rutland@arm.com, ramana.radhakrishnan@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, awallis@codeaurora.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This series adds support for the ARMv8.3 pointer authentication extension,
-enabling userspace return address protection with recent versions of GCC.
+The ARMv8.3 pointer authentication extension adds:
 
-Since RFC [1]:
-* Make the KVM context switch (semi-lazy)
-* Rebase to v4.13-rc1
-* Improve pointer authentication documentation
-* Add hwcap documentation
-* Various minor cleanups
+* New fields in ID_AA64ISAR1 to report the presence of pointer
+  authentication functionality.
 
-Since v1 [2]:
-* Rebase to v4.15-rc1
-* Settle on per-process keys
-* Strip PACs when unwinding userspace
-* Don't expose an XPAC hwcap (this is implied by ID registers)
-* Leave APIB, ABPDA, APDB, and APGA keys unsupported for now
-* Support IMP DEF algorithms
-* Rely on KVM ID register emulation
-* Various cleanups
+* New control bits in SCTLR_ELx to enable this functionality.
 
-Since v2 [3]:
-* Unify HCR_EL2 initialization
-* s/POINTER_AUTHENTICATION/PTR_AUTH/
-* Drop KVM support (for now)
-* Drop detection of generic authentication
+* New system registers to hold the keys necessary for this
+  functionality.
 
-While there are use-cases for keys other than APIAKey, the only software that
-I'm aware of with pointer authentication support is GCC, which only makes use
-of APIAKey. I'm happy to add support for other keys as users appear.
+* A new ESR_ELx.EC code used when the new instructions are affected by
+  configurable traps
 
-I've pushed the series to the arm64/pointer-auth branch [4] of my linux tree.
-I've also pushed out a necessary bootwrapper patch to the pointer-auth branch
-[5] of my bootwrapper repo.
+This patch adds the relevant definitions to <asm/sysreg.h> and
+<asm/esr.h> for these, to be used by subsequent patches.
 
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Cc: Catalin Marinas <catalin.marinas@arm.com>
+Cc: Marc Zyngier <marc.zyngier@arm.com>
+Cc: Suzuki K Poulose <suzuki.poulose@arm.com>
+Cc: Will Deacon <will.deacon@arm.com>
+---
+ arch/arm64/include/asm/esr.h    |  3 ++-
+ arch/arm64/include/asm/sysreg.h | 30 ++++++++++++++++++++++++++++++
+ 2 files changed, 32 insertions(+), 1 deletion(-)
 
-Extension Overview 
-==================
-
-The ARMv8.3 pointer authentication extension adds functionality to detect
-modification of pointer values, mitigating certain classes of attack such as
-stack smashing, and making return oriented programming attacks harder
-
-The extension introduces the concept of a pointer authentication code (PAC),
-which is stored in some upper bits of pointers. Each PAC is derived from the
-original pointer, another 64-bit value (e.g. the stack pointer), and a secret
-128-bit key.
-
-New instructions are added which can be used to:
-
-* Insert a PAC into a pointer
-* Strip a PAC from a pointer
-* Authenticate strip a PAC from a pointer
-
-If authentication succeeds, the code is removed, yielding the original pointer.
-If authentication fails, bits are set in the pointer such that it is guaranteed
-to cause a fault if used.
-
-These instructions can make use of four keys:
-
-* APIAKey (A.K.A. Instruction A key)
-* APIBKey (A.K.A. Instruction B key)
-* APDAKey (A.K.A. Data A key)
-* APDBKey (A.K.A. Data B Key)
-
-A subset of these instruction encodings have been allocated from the HINT
-space, and will operate as NOPs on any ARMv8-A parts which do not feature the
-extension (or if purposefully disabled by the kernel). Software using only this
-subset of the instructions should function correctly on all ARMv8-A parts.
-
-Additionally, instructions are added to authenticate small blocks of memory in
-similar fashion, using APGAKey (A.K.A. Generic key).
-
-
-This Series
-===========
-
-This series enables the use of instructions using APIAKey, which is initialised
-and maintained per-process (shared by all threads). This series does not add
-support for APIBKey, APDAKey, APDBKey, nor APGAKey.
-
-I've given this some basic testing with a homebrew test suite. More ideally,
-we'd add some tests to the kernel source tree.
-
-For the time being, pointer authentication functionality is hidden from
-guests via ID register trapping.
-
-Thanks,
-Mark.
-
-[1] http://lists.infradead.org/pipermail/linux-arm-kernel/2017-April/498941.html
-[2] https://lkml.kernel.org/r/1500480092-28480-1-git-send-email-mark.rutland@arm.com
-[3] https://lkml.kernel.org/r/20171127163806.31435-1-mark.rutland@arm.com
-[4] git://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git arm64/pointer-auth
-[5] git://git.kernel.org/pub/scm/linux/kernel/git/mark/boot-wrapper-aarch64.git pointer-auth
-
-
-Mark Rutland (11):
-  arm64: add pointer authentication register bits
-  arm64/kvm: consistently handle host HCR_EL2 flags
-  arm64/kvm: hide ptrauth from guests
-  arm64: Don't trap host pointer auth use to EL2
-  arm64/cpufeature: detect pointer authentication
-  asm-generic: mm_hooks: allow hooks to be overridden individually
-  arm64: add basic pointer authentication support
-  arm64: expose user PAC bit positions via ptrace
-  arm64: perf: strip PAC when unwinding userspace
-  arm64: enable pointer authentication
-  arm64: docs: document pointer authentication
-
- Documentation/arm64/booting.txt                |   8 ++
- Documentation/arm64/elf_hwcaps.txt             |   6 ++
- Documentation/arm64/pointer-authentication.txt |  84 ++++++++++++++++++++
- arch/arm64/Kconfig                             |  23 ++++++
- arch/arm64/include/asm/cpucaps.h               |   5 +-
- arch/arm64/include/asm/esr.h                   |   3 +-
- arch/arm64/include/asm/kvm_arm.h               |   3 +
- arch/arm64/include/asm/mmu.h                   |   5 ++
- arch/arm64/include/asm/mmu_context.h           |  25 +++++-
- arch/arm64/include/asm/pointer_auth.h          | 104 +++++++++++++++++++++++++
- arch/arm64/include/asm/sysreg.h                |  30 +++++++
- arch/arm64/include/uapi/asm/hwcap.h            |   1 +
- arch/arm64/include/uapi/asm/ptrace.h           |   7 ++
- arch/arm64/kernel/cpufeature.c                 |  56 +++++++++++++
- arch/arm64/kernel/cpuinfo.c                    |   1 +
- arch/arm64/kernel/head.S                       |   5 +-
- arch/arm64/kernel/perf_callchain.c             |   5 +-
- arch/arm64/kernel/ptrace.c                     |  38 +++++++++
- arch/arm64/kvm/handle_exit.c                   |  18 +++++
- arch/arm64/kvm/hyp/switch.c                    |   2 +-
- arch/arm64/kvm/sys_regs.c                      |   9 +++
- include/asm-generic/mm_hooks.h                 |  11 +++
- include/uapi/linux/elf.h                       |   1 +
- 23 files changed, 441 insertions(+), 9 deletions(-)
- create mode 100644 Documentation/arm64/pointer-authentication.txt
- create mode 100644 arch/arm64/include/asm/pointer_auth.h
-
+diff --git a/arch/arm64/include/asm/esr.h b/arch/arm64/include/asm/esr.h
+index ce70c3ffb993..022785162281 100644
+--- a/arch/arm64/include/asm/esr.h
++++ b/arch/arm64/include/asm/esr.h
+@@ -30,7 +30,8 @@
+ #define ESR_ELx_EC_CP14_LS	(0x06)
+ #define ESR_ELx_EC_FP_ASIMD	(0x07)
+ #define ESR_ELx_EC_CP10_ID	(0x08)
+-/* Unallocated EC: 0x09 - 0x0B */
++#define ESR_ELx_EC_PAC		(0x09)
++/* Unallocated EC: 0x0A - 0x0B */
+ #define ESR_ELx_EC_CP14_64	(0x0C)
+ /* Unallocated EC: 0x0d */
+ #define ESR_ELx_EC_ILL		(0x0E)
+diff --git a/arch/arm64/include/asm/sysreg.h b/arch/arm64/include/asm/sysreg.h
+index 6171178075dc..426f0eb90101 100644
+--- a/arch/arm64/include/asm/sysreg.h
++++ b/arch/arm64/include/asm/sysreg.h
+@@ -171,6 +171,19 @@
+ #define SYS_TTBR1_EL1			sys_reg(3, 0, 2, 0, 1)
+ #define SYS_TCR_EL1			sys_reg(3, 0, 2, 0, 2)
+ 
++#define SYS_APIAKEYLO_EL1		sys_reg(3, 0, 2, 1, 0)
++#define SYS_APIAKEYHI_EL1		sys_reg(3, 0, 2, 1, 1)
++#define SYS_APIBKEYLO_EL1		sys_reg(3, 0, 2, 1, 2)
++#define SYS_APIBKEYHI_EL1		sys_reg(3, 0, 2, 1, 3)
++
++#define SYS_APDAKEYLO_EL1		sys_reg(3, 0, 2, 2, 0)
++#define SYS_APDAKEYHI_EL1		sys_reg(3, 0, 2, 2, 1)
++#define SYS_APDBKEYLO_EL1		sys_reg(3, 0, 2, 2, 2)
++#define SYS_APDBKEYHI_EL1		sys_reg(3, 0, 2, 2, 3)
++
++#define SYS_APGAKEYLO_EL1		sys_reg(3, 0, 2, 3, 0)
++#define SYS_APGAKEYHI_EL1		sys_reg(3, 0, 2, 3, 1)
++
+ #define SYS_ICC_PMR_EL1			sys_reg(3, 0, 4, 6, 0)
+ 
+ #define SYS_AFSR0_EL1			sys_reg(3, 0, 5, 1, 0)
+@@ -417,9 +430,13 @@
+ #define SYS_ICH_LR15_EL2		__SYS__LR8_EL2(7)
+ 
+ /* Common SCTLR_ELx flags. */
++#define SCTLR_ELx_ENIA	(1 << 31)
++#define SCTLR_ELx_ENIB	(1 << 30)
++#define SCTLR_ELx_ENDA	(1 << 27)
+ #define SCTLR_ELx_EE    (1 << 25)
+ #define SCTLR_ELx_IESB	(1 << 21)
+ #define SCTLR_ELx_WXN	(1 << 19)
++#define SCTLR_ELx_ENDB	(1 << 13)
+ #define SCTLR_ELx_I	(1 << 12)
+ #define SCTLR_ELx_SA	(1 << 3)
+ #define SCTLR_ELx_C	(1 << 2)
+@@ -510,11 +527,24 @@
+ #define ID_AA64ISAR0_AES_SHIFT		4
+ 
+ /* id_aa64isar1 */
++#define ID_AA64ISAR1_GPI_SHIFT		28
++#define ID_AA64ISAR1_GPA_SHIFT		24
+ #define ID_AA64ISAR1_LRCPC_SHIFT	20
+ #define ID_AA64ISAR1_FCMA_SHIFT		16
+ #define ID_AA64ISAR1_JSCVT_SHIFT	12
++#define ID_AA64ISAR1_API_SHIFT		8
++#define ID_AA64ISAR1_APA_SHIFT		4
+ #define ID_AA64ISAR1_DPB_SHIFT		0
+ 
++#define ID_AA64ISAR1_APA_NI		0x0
++#define ID_AA64ISAR1_APA_ARCHITECTED	0x1
++#define ID_AA64ISAR1_API_NI		0x0
++#define ID_AA64ISAR1_API_IMP_DEF	0x1
++#define ID_AA64ISAR1_GPA_NI		0x0
++#define ID_AA64ISAR1_GPA_ARCHITECTED	0x1
++#define ID_AA64ISAR1_GPI_NI		0x0
++#define ID_AA64ISAR1_GPI_IMP_DEF	0x1
++
+ /* id_aa64pfr0 */
+ #define ID_AA64PFR0_CSV3_SHIFT		60
+ #define ID_AA64PFR0_CSV2_SHIFT		56
 -- 
 2.11.0
