@@ -1,60 +1,141 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20180404214007.31a5fbc6@bbrezillon>
-References: <20180328205138.301218351@linutronix.de> <20180328205554.666762229@linutronix.de>
- <20180404214007.31a5fbc6@bbrezillon>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 18 Apr 2018 10:03:44 -0700
-Message-ID: <CAGXu5j+rckvb94YhdqUhRhuG=RtjN+S9QArAhwVWPj8mbPom+w@mail.gmail.com>
-Subject: Re: [patch 5/8] rslib: Split rs control struct
-Content-Type: text/plain; charset="UTF-8"
-To: Boris Brezillon <boris.brezillon@bootlin.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, LKML <linux-kernel@vger.kernel.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
+From: Laura Abbott <labbott@redhat.com>
+Subject: [PATCHv2] x86/xen: Remove use of VLAs
+Date: Wed, 18 Apr 2018 10:08:32 -0700
+Message-Id: <20180418170832.8798-1-labbott@redhat.com>
+To: Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>
+Cc: Laura Abbott <labbott@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, xen-devel@lists.xenproject.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 4, 2018 at 12:40 PM, Boris Brezillon
-<boris.brezillon@bootlin.com> wrote:
-> Hi Thomas,
->
-> On Wed, 28 Mar 2018 22:51:43 +0200
-> Thomas Gleixner <tglx@linutronix.de> wrote:
->
->> The decoder library uses variable length arrays on stack. To get rid of
->> them it's it would be simple to allocate fixed length arrays on stack, but
->
->        ^ s/it's//
->
->> those might become rather large. The other solution is to allocate the
->> buffers in the rs control structure, but this cannot be done as long as the
->> structure can be shared by several users. Sharing is desired because the RS
->> polynom tables are large and initialization is time consuming.
->>
->> To solve this split the codec information out of the control structure and
->> have a pointer to a shared codec in it. Instantiate the control structure
->> for each user, create a new codec if no shareable is avaiable yet.  Adjust
->> all affected usage sites to the new scheme.
->>
->> This allows to add per instance decoder buffers to the control structure
->> later on.
->>
->> Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
->> ---
->>  drivers/mtd/nand/cafe_nand.c    |    7 +
->>  drivers/mtd/nand/diskonchip.c   |    7 +
->
-> Don't know how you want to get these patches merged, but the NAND
-> related changes will conflict with my nand/for-4.17 changes (NAND
-> code base has been moved to drivers/mtd/nand/raw).
->
-> The rest looks good,
->
-> Acked-by: Boris Brezillon <boris.brezillon@bootlin.com>
 
-Hi, just checking in on this series. Thomas, what's your plan for
-merging this? I don't see it in -next yet.
+There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+turn on -Wvla. It turns out, the few VLAs in use in Xen produce only a
+single entry array that is always bounded by GDT_SIZE. Clean up the code to
+get rid of the VLA and the loop.
 
--Kees
+[1] https://lkml.org/lkml/2018/3/7/621
 
+Signed-off-by: Laura Abbott <labbott@redhat.com>
+---
+v2: Updated the code to reflect that we know size is always bounded by
+GDT_SIZE. This gets rid of the array and the loop. I can throw a few
+more comments in there if someone thinks they need to be updated.
+---
+ arch/x86/xen/enlighten_pv.c | 84 ++++++++++++++++-----------------------------
+ 1 file changed, 29 insertions(+), 55 deletions(-)
+
+diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
+index c36d23aa6c35..1254f2fa3a89 100644
+--- a/arch/x86/xen/enlighten_pv.c
++++ b/arch/x86/xen/enlighten_pv.c
+@@ -421,45 +421,32 @@ static void xen_load_gdt(const struct desc_ptr *dtr)
+ {
+ 	unsigned long va = dtr->address;
+ 	unsigned int size = dtr->size + 1;
+-	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
+-	unsigned long frames[pages];
+-	int f;
+-
+-	/*
+-	 * A GDT can be up to 64k in size, which corresponds to 8192
+-	 * 8-byte entries, or 16 4k pages..
+-	 */
++	unsigned long pfn, mfn;
++	int level;
++	pte_t *ptep;
++	void *virt;
+ 
+-	BUG_ON(size > 65536);
++	BUG_ON(size > GDT_SIZE);
+ 	BUG_ON(va & ~PAGE_MASK);
+ 
+-	for (f = 0; va < dtr->address + size; va += PAGE_SIZE, f++) {
+-		int level;
+-		pte_t *ptep;
+-		unsigned long pfn, mfn;
+-		void *virt;
+-
+-		/*
+-		 * The GDT is per-cpu and is in the percpu data area.
+-		 * That can be virtually mapped, so we need to do a
+-		 * page-walk to get the underlying MFN for the
+-		 * hypercall.  The page can also be in the kernel's
+-		 * linear range, so we need to RO that mapping too.
+-		 */
+-		ptep = lookup_address(va, &level);
+-		BUG_ON(ptep == NULL);
+-
+-		pfn = pte_pfn(*ptep);
+-		mfn = pfn_to_mfn(pfn);
+-		virt = __va(PFN_PHYS(pfn));
++	/*
++	 * The GDT is per-cpu and is in the percpu data area.
++	 * That can be virtually mapped, so we need to do a
++	 * page-walk to get the underlying MFN for the
++	 * hypercall.  The page can also be in the kernel's
++	 * linear range, so we need to RO that mapping too.
++	 */
++	ptep = lookup_address(va, &level);
++	BUG_ON(ptep == NULL);
+ 
+-		frames[f] = mfn;
++	pfn = pte_pfn(*ptep);
++	mfn = pfn_to_mfn(pfn);
++	virt = __va(PFN_PHYS(pfn));
+ 
+-		make_lowmem_page_readonly((void *)va);
+-		make_lowmem_page_readonly(virt);
+-	}
++	make_lowmem_page_readonly((void *)va);
++	make_lowmem_page_readonly(virt);
+ 
+-	if (HYPERVISOR_set_gdt(frames, size / sizeof(struct desc_struct)))
++	if (HYPERVISOR_set_gdt(&mfn, size / sizeof(struct desc_struct)))
+ 		BUG();
+ }
+ 
+@@ -470,34 +457,21 @@ static void __init xen_load_gdt_boot(const struct desc_ptr *dtr)
+ {
+ 	unsigned long va = dtr->address;
+ 	unsigned int size = dtr->size + 1;
+-	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
+-	unsigned long frames[pages];
+-	int f;
+-
+-	/*
+-	 * A GDT can be up to 64k in size, which corresponds to 8192
+-	 * 8-byte entries, or 16 4k pages..
+-	 */
++	unsigned long pfn, mfn;
++	pte_t pte;
+ 
+-	BUG_ON(size > 65536);
++	BUG_ON(size > GDT_SIZE);
+ 	BUG_ON(va & ~PAGE_MASK);
+ 
+-	for (f = 0; va < dtr->address + size; va += PAGE_SIZE, f++) {
+-		pte_t pte;
+-		unsigned long pfn, mfn;
++	pfn = virt_to_pfn(va);
++	mfn = pfn_to_mfn(pfn);
+ 
+-		pfn = virt_to_pfn(va);
+-		mfn = pfn_to_mfn(pfn);
++	pte = pfn_pte(pfn, PAGE_KERNEL_RO);
+ 
+-		pte = pfn_pte(pfn, PAGE_KERNEL_RO);
+-
+-		if (HYPERVISOR_update_va_mapping((unsigned long)va, pte, 0))
+-			BUG();
+-
+-		frames[f] = mfn;
+-	}
++	if (HYPERVISOR_update_va_mapping((unsigned long)va, pte, 0))
++		BUG();
+ 
+-	if (HYPERVISOR_set_gdt(frames, size / sizeof(struct desc_struct)))
++	if (HYPERVISOR_set_gdt(&mfn, size / sizeof(struct desc_struct)))
+ 		BUG();
+ }
+ 
 -- 
-Kees Cook
-Pixel Security
+2.14.3
