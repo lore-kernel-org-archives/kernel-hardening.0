@@ -1,71 +1,57 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CAGXu5j+dc=y+1M=unyvEvCo+QrX3MCW5Hm=2Z+q0a6iC3pgN6g@mail.gmail.com>
-References: <20180221021659.GA37073@beast> <20180221102933.GD2231@dhcp22.suse.cz>
- <20180221125914.dc95830eada5fb958c13e36b@linux-foundation.org> <CAGXu5j+dc=y+1M=unyvEvCo+QrX3MCW5Hm=2Z+q0a6iC3pgN6g@mail.gmail.com>
+In-Reply-To: <20180404214007.31a5fbc6@bbrezillon>
+References: <20180328205138.301218351@linutronix.de> <20180328205554.666762229@linutronix.de>
+ <20180404214007.31a5fbc6@bbrezillon>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 18 Apr 2018 09:38:07 -0700
-Message-ID: <CAGXu5j+PmPUg9-gx3769X+kjXJo+markuPA3FwredM7jU8CdXg@mail.gmail.com>
-Subject: Re: [PATCH v2] fork: Unconditionally clear stack on fork
+Date: Wed, 18 Apr 2018 10:03:44 -0700
+Message-ID: <CAGXu5j+rckvb94YhdqUhRhuG=RtjN+S9QArAhwVWPj8mbPom+w@mail.gmail.com>
+Subject: Re: [patch 5/8] rslib: Split rs control struct
 Content-Type: text/plain; charset="UTF-8"
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Michal Hocko <mhocko@kernel.org>, Andy Lutomirski <luto@kernel.org>, Laura Abbott <labbott@redhat.com>, Rasmus Villemoes <rasmus.villemoes@prevas.dk>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Boris Brezillon <boris.brezillon@bootlin.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, LKML <linux-kernel@vger.kernel.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 21, 2018 at 6:15 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Wed, Feb 21, 2018 at 12:59 PM, Andrew Morton
-> <akpm@linux-foundation.org> wrote:
->> On Wed, 21 Feb 2018 11:29:33 +0100 Michal Hocko <mhocko@kernel.org> wrote:
+On Wed, Apr 4, 2018 at 12:40 PM, Boris Brezillon
+<boris.brezillon@bootlin.com> wrote:
+> Hi Thomas,
+>
+> On Wed, 28 Mar 2018 22:51:43 +0200
+> Thomas Gleixner <tglx@linutronix.de> wrote:
+>
+>> The decoder library uses variable length arrays on stack. To get rid of
+>> them it's it would be simple to allocate fixed length arrays on stack, but
+>
+>        ^ s/it's//
+>
+>> those might become rather large. The other solution is to allocate the
+>> buffers in the rs control structure, but this cannot be done as long as the
+>> structure can be shared by several users. Sharing is desired because the RS
+>> polynom tables are large and initialization is time consuming.
 >>
->>> On Tue 20-02-18 18:16:59, Kees Cook wrote:
->>> > One of the classes of kernel stack content leaks[1] is exposing the
->>> > contents of prior heap or stack contents when a new process stack is
->>> > allocated. Normally, those stacks are not zeroed, and the old contents
->>> > remain in place. In the face of stack content exposure flaws, those
->>> > contents can leak to userspace.
->>> >
->>> > Fixing this will make the kernel no longer vulnerable to these flaws,
->>> > as the stack will be wiped each time a stack is assigned to a new
->>> > process. There's not a meaningful change in runtime performance; it
->>> > almost looks like it provides a benefit.
->>> >
->>> > Performing back-to-back kernel builds before:
->>> >     Run times: 157.86 157.09 158.90 160.94 160.80
->>> >     Mean: 159.12
->>> >     Std Dev: 1.54
->>> >
->>> > and after:
->>> >     Run times: 159.31 157.34 156.71 158.15 160.81
->>> >     Mean: 158.46
->>> >     Std Dev: 1.46
->>>
->>> /bin/true or similar would be more representative for the worst case
->>> but it is good to see that this doesn't have any visible effect on
->>> a more real usecase.
+>> To solve this split the codec information out of the control structure and
+>> have a pointer to a shared codec in it. Instantiate the control structure
+>> for each user, create a new codec if no shareable is avaiable yet.  Adjust
+>> all affected usage sites to the new scheme.
 >>
->> Yes, that's a pretty large memset.  And while it will populate the CPU
->> cache with the stack contents, doing so will evict other things.
+>> This allows to add per instance decoder buffers to the control structure
+>> later on.
 >>
->> So some quite careful quantitative testing is needed here, methinks.
+>> Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+>> ---
+>>  drivers/mtd/nand/cafe_nand.c    |    7 +
+>>  drivers/mtd/nand/diskonchip.c   |    7 +
 >
-> Well, I did some more with perf and cycle counts on running 100,000
-> execs of /bin/true.
+> Don't know how you want to get these patches merged, but the NAND
+> related changes will conflict with my nand/for-4.17 changes (NAND
+> code base has been moved to drivers/mtd/nand/raw).
 >
-> before:
-> Cycles: 218858861551 218853036130 214727610969 227656844122 224980542841
-> Mean:  221015379122.60
-> Std Dev: 4662486552.47
+> The rest looks good,
 >
-> after:
-> Cycles: 213868945060 213119275204 211820169456 224426673259 225489986348
-> Mean:  217745009865.40
-> Std Dev: 5935559279.99
->
-> It continues to look like it's faster, though the deviation is rather
-> wide, but I'm not sure what I could do that would be less noisy. I'm
-> open to ideas!
+> Acked-by: Boris Brezillon <boris.brezillon@bootlin.com>
 
-Friendly ping. Andrew, can you add this to -mm?
+Hi, just checking in on this series. Thomas, what's your plan for
+merging this? I don't see it in -next yet.
 
 -Kees
 
