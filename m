@@ -1,328 +1,73 @@
-Date: Wed, 18 Apr 2018 09:35:46 -0700
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v2] exofs: Avoid VLA in structures
-Message-ID: <20180418163546.GA45794@beast>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-To: Andrew Morton <akpm@linux-foundation.org>, Boaz Harrosh <ooo@electrozaur.com>
-Cc: linux-kernel@vger.kernel.org, Nick Desaulniers <ndesaulniers@google.com>, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <CAGXu5j+dc=y+1M=unyvEvCo+QrX3MCW5Hm=2Z+q0a6iC3pgN6g@mail.gmail.com>
+References: <20180221021659.GA37073@beast> <20180221102933.GD2231@dhcp22.suse.cz>
+ <20180221125914.dc95830eada5fb958c13e36b@linux-foundation.org> <CAGXu5j+dc=y+1M=unyvEvCo+QrX3MCW5Hm=2Z+q0a6iC3pgN6g@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 18 Apr 2018 09:38:07 -0700
+Message-ID: <CAGXu5j+PmPUg9-gx3769X+kjXJo+markuPA3FwredM7jU8CdXg@mail.gmail.com>
+Subject: Re: [PATCH v2] fork: Unconditionally clear stack on fork
+Content-Type: text/plain; charset="UTF-8"
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Michal Hocko <mhocko@kernel.org>, Andy Lutomirski <luto@kernel.org>, Laura Abbott <labbott@redhat.com>, Rasmus Villemoes <rasmus.villemoes@prevas.dk>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On the quest to remove all VLAs from the kernel[1] this adjusts several
-cases where allocation is made after an array of structures that points
-back into the allocation. The allocations are changed to perform explicit
-calculations instead of using a Variable Length Array in a structure.
-Additionally, this lets Clang compile this code now, since Clang does not
-support VLAIS[2].
+On Wed, Feb 21, 2018 at 6:15 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Feb 21, 2018 at 12:59 PM, Andrew Morton
+> <akpm@linux-foundation.org> wrote:
+>> On Wed, 21 Feb 2018 11:29:33 +0100 Michal Hocko <mhocko@kernel.org> wrote:
+>>
+>>> On Tue 20-02-18 18:16:59, Kees Cook wrote:
+>>> > One of the classes of kernel stack content leaks[1] is exposing the
+>>> > contents of prior heap or stack contents when a new process stack is
+>>> > allocated. Normally, those stacks are not zeroed, and the old contents
+>>> > remain in place. In the face of stack content exposure flaws, those
+>>> > contents can leak to userspace.
+>>> >
+>>> > Fixing this will make the kernel no longer vulnerable to these flaws,
+>>> > as the stack will be wiped each time a stack is assigned to a new
+>>> > process. There's not a meaningful change in runtime performance; it
+>>> > almost looks like it provides a benefit.
+>>> >
+>>> > Performing back-to-back kernel builds before:
+>>> >     Run times: 157.86 157.09 158.90 160.94 160.80
+>>> >     Mean: 159.12
+>>> >     Std Dev: 1.54
+>>> >
+>>> > and after:
+>>> >     Run times: 159.31 157.34 156.71 158.15 160.81
+>>> >     Mean: 158.46
+>>> >     Std Dev: 1.46
+>>>
+>>> /bin/true or similar would be more representative for the worst case
+>>> but it is good to see that this doesn't have any visible effect on
+>>> a more real usecase.
+>>
+>> Yes, that's a pretty large memset.  And while it will populate the CPU
+>> cache with the stack contents, doing so will evict other things.
+>>
+>> So some quite careful quantitative testing is needed here, methinks.
+>
+> Well, I did some more with perf and cycle counts on running 100,000
+> execs of /bin/true.
+>
+> before:
+> Cycles: 218858861551 218853036130 214727610969 227656844122 224980542841
+> Mean:  221015379122.60
+> Std Dev: 4662486552.47
+>
+> after:
+> Cycles: 213868945060 213119275204 211820169456 224426673259 225489986348
+> Mean:  217745009865.40
+> Std Dev: 5935559279.99
+>
+> It continues to look like it's faster, though the deviation is rather
+> wide, but I'm not sure what I could do that would be less noisy. I'm
+> open to ideas!
 
-[1] https://lkml.kernel.org/r/CA+55aFzCG-zNmZwX4A2FQpadafLfEzK6CC=qPXydAacU1RqZWA@mail.gmail.com
-[2] https://lkml.kernel.org/r/CA+55aFy6h1c3_rP_bXFedsTXzwW+9Q9MfJaW7GUmMBrAp-fJ9A@mail.gmail.com
+Friendly ping. Andrew, can you add this to -mm?
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
-Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
----
-v2:
-- use DRY for easier to read stripe updates (ndesaulniers)
-- add const to unchanging variable (ndesaulniers)
-- update references with message-id URLs
-- add Reviewed-by
----
- fs/exofs/ore.c      | 84 +++++++++++++++++++++++++++++++----------------------
- fs/exofs/ore_raid.c | 75 ++++++++++++++++++++++++++++++++++-------------
- fs/exofs/super.c    | 23 +++++++--------
- 3 files changed, 115 insertions(+), 67 deletions(-)
-
-diff --git a/fs/exofs/ore.c b/fs/exofs/ore.c
-index 3c6a9c156b7a..cfa862ea19d2 100644
---- a/fs/exofs/ore.c
-+++ b/fs/exofs/ore.c
-@@ -146,68 +146,82 @@ int  _ore_get_io_state(struct ore_layout *layout,
- 			struct ore_io_state **pios)
- {
- 	struct ore_io_state *ios;
--	struct page **pages;
--	struct osd_sg_entry *sgilist;
-+	size_t size_ios, size_extra, size_total;
-+	void *ios_extra;
-+
-+	/*
-+	 * The desired layout looks like this, with the extra_allocation
-+	 * items pointed at from fields within ios or per_dev:
-+
- 	struct __alloc_all_io_state {
- 		struct ore_io_state ios;
- 		struct ore_per_dev_state per_dev[numdevs];
- 		union {
- 			struct osd_sg_entry sglist[sgs_per_dev * numdevs];
- 			struct page *pages[num_par_pages];
--		};
--	} *_aios;
--
--	if (likely(sizeof(*_aios) <= PAGE_SIZE)) {
--		_aios = kzalloc(sizeof(*_aios), GFP_KERNEL);
--		if (unlikely(!_aios)) {
--			ORE_DBGMSG("Failed kzalloc bytes=%zd\n",
--				   sizeof(*_aios));
-+		} extra_allocation;
-+	} whole_allocation;
-+
-+	*/
-+
-+	/* This should never happen, so abort early if it ever does. */
-+	if (sgs_per_dev && num_par_pages) {
-+		ORE_DBGMSG("Tried to use both pages and sglist\n");
-+		*pios = NULL;
-+		return -EINVAL;
-+	}
-+
-+	if (numdevs > (INT_MAX - sizeof(*ios)) /
-+		       sizeof(struct ore_per_dev_state))
-+		return -ENOMEM;
-+	size_ios = sizeof(*ios) + sizeof(struct ore_per_dev_state) * numdevs;
-+
-+	if (sgs_per_dev * numdevs > INT_MAX / sizeof(struct osd_sg_entry))
-+		return -ENOMEM;
-+	if (num_par_pages > INT_MAX / sizeof(struct page *))
-+		return -ENOMEM;
-+	size_extra = max(sizeof(struct osd_sg_entry) * (sgs_per_dev * numdevs),
-+			 sizeof(struct page *) * num_par_pages);
-+
-+	size_total = size_ios + size_extra;
-+
-+	if (likely(size_total <= PAGE_SIZE)) {
-+		ios = kzalloc(size_total, GFP_KERNEL);
-+		if (unlikely(!ios)) {
-+			ORE_DBGMSG("Failed kzalloc bytes=%zd\n", size_total);
- 			*pios = NULL;
- 			return -ENOMEM;
- 		}
--		pages = num_par_pages ? _aios->pages : NULL;
--		sgilist = sgs_per_dev ? _aios->sglist : NULL;
--		ios = &_aios->ios;
-+		ios_extra = (char *)ios + size_ios;
- 	} else {
--		struct __alloc_small_io_state {
--			struct ore_io_state ios;
--			struct ore_per_dev_state per_dev[numdevs];
--		} *_aio_small;
--		union __extra_part {
--			struct osd_sg_entry sglist[sgs_per_dev * numdevs];
--			struct page *pages[num_par_pages];
--		} *extra_part;
--
--		_aio_small = kzalloc(sizeof(*_aio_small), GFP_KERNEL);
--		if (unlikely(!_aio_small)) {
-+		ios = kzalloc(size_ios, GFP_KERNEL);
-+		if (unlikely(!ios)) {
- 			ORE_DBGMSG("Failed alloc first part bytes=%zd\n",
--				   sizeof(*_aio_small));
-+				   size_ios);
- 			*pios = NULL;
- 			return -ENOMEM;
- 		}
--		extra_part = kzalloc(sizeof(*extra_part), GFP_KERNEL);
--		if (unlikely(!extra_part)) {
-+		ios_extra = kzalloc(size_extra, GFP_KERNEL);
-+		if (unlikely(!ios_extra)) {
- 			ORE_DBGMSG("Failed alloc second part bytes=%zd\n",
--				   sizeof(*extra_part));
--			kfree(_aio_small);
-+				   size_extra);
-+			kfree(ios);
- 			*pios = NULL;
- 			return -ENOMEM;
- 		}
- 
--		pages = num_par_pages ? extra_part->pages : NULL;
--		sgilist = sgs_per_dev ? extra_part->sglist : NULL;
- 		/* In this case the per_dev[0].sgilist holds the pointer to
- 		 * be freed
- 		 */
--		ios = &_aio_small->ios;
- 		ios->extra_part_alloc = true;
- 	}
- 
--	if (pages) {
--		ios->parity_pages = pages;
-+	if (num_par_pages) {
-+		ios->parity_pages = ios_extra;
- 		ios->max_par_pages = num_par_pages;
- 	}
--	if (sgilist) {
-+	if (sgs_per_dev) {
-+		struct osd_sg_entry *sgilist = ios_extra;
- 		unsigned d;
- 
- 		for (d = 0; d < numdevs; ++d) {
-diff --git a/fs/exofs/ore_raid.c b/fs/exofs/ore_raid.c
-index 27cbdb697649..199590f36203 100644
---- a/fs/exofs/ore_raid.c
-+++ b/fs/exofs/ore_raid.c
-@@ -71,6 +71,11 @@ static int _sp2d_alloc(unsigned pages_in_unit, unsigned group_width,
- {
- 	struct __stripe_pages_2d *sp2d;
- 	unsigned data_devs = group_width - parity;
-+
-+	/*
-+	 * Desired allocation layout is, though when larger than PAGE_SIZE,
-+	 * each struct __alloc_1p_arrays is separately allocated:
-+
- 	struct _alloc_all_bytes {
- 		struct __alloc_stripe_pages_2d {
- 			struct __stripe_pages_2d sp2d;
-@@ -82,55 +87,85 @@ static int _sp2d_alloc(unsigned pages_in_unit, unsigned group_width,
- 			char page_is_read[data_devs];
- 		} __a1pa[pages_in_unit];
- 	} *_aab;
-+
- 	struct __alloc_1p_arrays *__a1pa;
- 	struct __alloc_1p_arrays *__a1pa_end;
--	const unsigned sizeof__a1pa = sizeof(_aab->__a1pa[0]);
-+
-+	*/
-+
-+	char *__a1pa;
-+	char *__a1pa_end;
-+
-+	const size_t sizeof_stripe_pages_2d =
-+		sizeof(struct __stripe_pages_2d) +
-+		sizeof(struct __1_page_stripe) * pages_in_unit;
-+	const size_t sizeof__a1pa =
-+		ALIGN(sizeof(struct page *) * (2 * group_width) + data_devs,
-+		      sizeof(void *));
-+	const size_t sizeof__a1pa_arrays = sizeof__a1pa * pages_in_unit;
-+	const size_t alloc_total = sizeof_stripe_pages_2d +
-+				   sizeof__a1pa_arrays;
-+
- 	unsigned num_a1pa, alloc_size, i;
- 
- 	/* FIXME: check these numbers in ore_verify_layout */
--	BUG_ON(sizeof(_aab->__asp2d) > PAGE_SIZE);
-+	BUG_ON(sizeof_stripe_pages_2d > PAGE_SIZE);
- 	BUG_ON(sizeof__a1pa > PAGE_SIZE);
- 
--	if (sizeof(*_aab) > PAGE_SIZE) {
--		num_a1pa = (PAGE_SIZE - sizeof(_aab->__asp2d)) / sizeof__a1pa;
--		alloc_size = sizeof(_aab->__asp2d) + sizeof__a1pa * num_a1pa;
-+	/*
-+	 * If alloc_total would be larger than PAGE_SIZE, only allocate
-+	 * as many a1pa items as would fill the rest of the page, instead
-+	 * of the full pages_in_unit count.
-+	 */
-+	if (alloc_total > PAGE_SIZE) {
-+		num_a1pa = (PAGE_SIZE - sizeof_stripe_pages_2d) / sizeof__a1pa;
-+		alloc_size = sizeof_stripe_pages_2d + sizeof__a1pa * num_a1pa;
- 	} else {
- 		num_a1pa = pages_in_unit;
--		alloc_size = sizeof(*_aab);
-+		alloc_size = alloc_total;
- 	}
- 
--	_aab = kzalloc(alloc_size, GFP_KERNEL);
--	if (unlikely(!_aab)) {
-+	*psp2d = sp2d = kzalloc(alloc_size, GFP_KERNEL);
-+	if (unlikely(!sp2d)) {
- 		ORE_DBGMSG("!! Failed to alloc sp2d size=%d\n", alloc_size);
- 		return -ENOMEM;
- 	}
-+	/* From here Just call _sp2d_free */
- 
--	sp2d = &_aab->__asp2d.sp2d;
--	*psp2d = sp2d; /* From here Just call _sp2d_free */
--
--	__a1pa = _aab->__a1pa;
--	__a1pa_end = __a1pa + num_a1pa;
-+	/* Find start of a1pa area. */
-+	__a1pa = (char *)sp2d + sizeof_stripe_pages_2d;
-+	/* Find end of the _allocated_ a1pa area. */
-+	__a1pa_end = __a1pa + alloc_size;
- 
-+	/* Allocate additionally needed a1pa items in PAGE_SIZE chunks. */
- 	for (i = 0; i < pages_in_unit; ++i) {
-+		struct __1_page_stripe *stripe = &sp2d->_1p_stripes[i];
-+
- 		if (unlikely(__a1pa >= __a1pa_end)) {
- 			num_a1pa = min_t(unsigned, PAGE_SIZE / sizeof__a1pa,
- 							pages_in_unit - i);
-+			alloc_size = sizeof__a1pa * num_a1pa;
- 
--			__a1pa = kcalloc(num_a1pa, sizeof__a1pa, GFP_KERNEL);
-+			__a1pa = kzalloc(alloc_size, GFP_KERNEL);
- 			if (unlikely(!__a1pa)) {
- 				ORE_DBGMSG("!! Failed to _alloc_1p_arrays=%d\n",
- 					   num_a1pa);
- 				return -ENOMEM;
- 			}
--			__a1pa_end = __a1pa + num_a1pa;
-+			__a1pa_end = __a1pa + alloc_size;
- 			/* First *pages is marked for kfree of the buffer */
--			sp2d->_1p_stripes[i].alloc = true;
-+			stripe->alloc = true;
- 		}
- 
--		sp2d->_1p_stripes[i].pages = __a1pa->pages;
--		sp2d->_1p_stripes[i].scribble = __a1pa->scribble ;
--		sp2d->_1p_stripes[i].page_is_read = __a1pa->page_is_read;
--		++__a1pa;
-+		/*
-+		 * Attach all _lp_stripes pointers to the allocation for
-+		 * it which was either part of the original PAGE_SIZE
-+		 * allocation or the subsequent allocation in this loop.
-+		 */
-+		stripe->pages = (void *)__a1pa;
-+		stripe->scribble = stripe->pages + group_width;
-+		stripe->page_is_read = (char *)stripe->scribble + group_width;
-+		__a1pa += sizeof__a1pa;
- 	}
- 
- 	sp2d->parity = parity;
-diff --git a/fs/exofs/super.c b/fs/exofs/super.c
-index 179cd5c2f52a..fabd15e482be 100644
---- a/fs/exofs/super.c
-+++ b/fs/exofs/super.c
-@@ -549,27 +549,26 @@ static int exofs_devs_2_odi(struct exofs_dt_device_info *dt_dev,
- static int __alloc_dev_table(struct exofs_sb_info *sbi, unsigned numdevs,
- 		      struct exofs_dev **peds)
- {
--	struct __alloc_ore_devs_and_exofs_devs {
--		/* Twice bigger table: See exofs_init_comps() and comment at
--		 * exofs_read_lookup_dev_table()
--		 */
--		struct ore_dev *oreds[numdevs * 2 - 1];
--		struct exofs_dev eds[numdevs];
--	} *aoded;
-+	/* Twice bigger table: See exofs_init_comps() and comment at
-+	 * exofs_read_lookup_dev_table()
-+	 */
-+	const size_t numores = numdevs * 2 - 1;
- 	struct exofs_dev *eds;
- 	unsigned i;
- 
--	aoded = kzalloc(sizeof(*aoded), GFP_KERNEL);
--	if (unlikely(!aoded)) {
-+	sbi->oc.ods = kzalloc(numores * sizeof(struct ore_dev *) +
-+			      numdevs * sizeof(struct exofs_dev), GFP_KERNEL);
-+	if (unlikely(!sbi->oc.ods)) {
- 		EXOFS_ERR("ERROR: failed allocating Device array[%d]\n",
- 			  numdevs);
- 		return -ENOMEM;
- 	}
- 
--	sbi->oc.ods = aoded->oreds;
--	*peds = eds = aoded->eds;
-+	/* Start of allocated struct exofs_dev entries */
-+	*peds = eds = (void *)sbi->oc.ods[numores];
-+	/* Initialize pointers into struct exofs_dev */
- 	for (i = 0; i < numdevs; ++i)
--		aoded->oreds[i] = &eds[i].ored;
-+		sbi->oc.ods[i] = &eds[i].ored;
- 	return 0;
- }
- 
--- 
-2.7.4
-
+-Kees
 
 -- 
 Kees Cook
