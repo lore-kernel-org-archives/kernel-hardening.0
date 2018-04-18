@@ -1,141 +1,56 @@
+Subject: Re: [PATCH v11 2/6] x86/entry: Add STACKLEAK erasing the kernel stack
+ at the end of syscalls
+References: <1523024546-6150-1-git-send-email-alex.popov@linux.com>
+ <1523024546-6150-3-git-send-email-alex.popov@linux.com>
+ <CAGXu5jKm218fpxyV3vOM+2SO-ERG3tWPUV0x8+-S0MJAReFz+A@mail.gmail.com>
 From: Laura Abbott <labbott@redhat.com>
-Subject: [PATCHv2] x86/xen: Remove use of VLAs
-Date: Wed, 18 Apr 2018 10:08:32 -0700
-Message-Id: <20180418170832.8798-1-labbott@redhat.com>
-To: Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>
-Cc: Laura Abbott <labbott@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, xen-devel@lists.xenproject.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Message-ID: <b63d4f30-4473-3487-20d6-6d590c12d51c@redhat.com>
+Date: Wed, 18 Apr 2018 11:33:05 -0700
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5jKm218fpxyV3vOM+2SO-ERG3tWPUV0x8+-S0MJAReFz+A@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, Dave Hansen <dave.hansen@linux.intel.com>, Ingo Molnar <mingo@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 04/16/2018 11:29 AM, Kees Cook wrote:
+> On Fri, Apr 6, 2018 at 7:22 AM, Alexander Popov <alex.popov@linux.com> wrote:
+>> This commit introduces the architecture-specific code filling the used
+>> part of the kernel stack with a poison value before returning to the
+>> userspace. Full STACKLEAK feature also contains the gcc plugin which
+>> comes in a separate commit.
+> 
+> Thanks for sending this again! And thanks for the updated reasoning
+> for why this remains a valuable addition:
+> 
+> https://lkml.kernel.org/r/1523024546-6150-1-git-send-email-alex.popov@linux.com
+> 
+> I, too, remain convinced this is a good protection to have, even as we
+> slowly remove VLAs and try to improve the compiler's initialization of
+> stack variables.
+> 
+> Dave, Ingo, Linus: how does this look? With the assembly rewritten
+> into C, the entry changes are very small:
+> 
+>>   arch/x86/entry/entry_32.S        |  7 ++++++
+>>   arch/x86/entry/entry_64.S        |  3 +++
+>>   arch/x86/entry/entry_64_compat.S |  5 ++++
+>>   arch/x86/entry/erase.c           | 54 ++++++++++++++++++++++++++++++++++++++++
+> 
+> I'd really like to get people's Ack/Review. :)
+> 
+> Laura, can this C version work for arm64 as well?
+> 
+> Thanks,
+> 
+> -Kees
+> 
 
-There's an ongoing effort to remove VLAs[1] from the kernel to eventually
-turn on -Wvla. It turns out, the few VLAs in use in Xen produce only a
-single entry array that is always bounded by GDT_SIZE. Clean up the code to
-get rid of the VLA and the loop.
+I did a quick port and it seems to work on a minimal system
+(passes LKDTM tests). I'll clean it up and do a few more
+tests to send out and see about give this series another
+review.
 
-[1] https://lkml.org/lkml/2018/3/7/621
-
-Signed-off-by: Laura Abbott <labbott@redhat.com>
----
-v2: Updated the code to reflect that we know size is always bounded by
-GDT_SIZE. This gets rid of the array and the loop. I can throw a few
-more comments in there if someone thinks they need to be updated.
----
- arch/x86/xen/enlighten_pv.c | 84 ++++++++++++++++-----------------------------
- 1 file changed, 29 insertions(+), 55 deletions(-)
-
-diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
-index c36d23aa6c35..1254f2fa3a89 100644
---- a/arch/x86/xen/enlighten_pv.c
-+++ b/arch/x86/xen/enlighten_pv.c
-@@ -421,45 +421,32 @@ static void xen_load_gdt(const struct desc_ptr *dtr)
- {
- 	unsigned long va = dtr->address;
- 	unsigned int size = dtr->size + 1;
--	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
--	unsigned long frames[pages];
--	int f;
--
--	/*
--	 * A GDT can be up to 64k in size, which corresponds to 8192
--	 * 8-byte entries, or 16 4k pages..
--	 */
-+	unsigned long pfn, mfn;
-+	int level;
-+	pte_t *ptep;
-+	void *virt;
- 
--	BUG_ON(size > 65536);
-+	BUG_ON(size > GDT_SIZE);
- 	BUG_ON(va & ~PAGE_MASK);
- 
--	for (f = 0; va < dtr->address + size; va += PAGE_SIZE, f++) {
--		int level;
--		pte_t *ptep;
--		unsigned long pfn, mfn;
--		void *virt;
--
--		/*
--		 * The GDT is per-cpu and is in the percpu data area.
--		 * That can be virtually mapped, so we need to do a
--		 * page-walk to get the underlying MFN for the
--		 * hypercall.  The page can also be in the kernel's
--		 * linear range, so we need to RO that mapping too.
--		 */
--		ptep = lookup_address(va, &level);
--		BUG_ON(ptep == NULL);
--
--		pfn = pte_pfn(*ptep);
--		mfn = pfn_to_mfn(pfn);
--		virt = __va(PFN_PHYS(pfn));
-+	/*
-+	 * The GDT is per-cpu and is in the percpu data area.
-+	 * That can be virtually mapped, so we need to do a
-+	 * page-walk to get the underlying MFN for the
-+	 * hypercall.  The page can also be in the kernel's
-+	 * linear range, so we need to RO that mapping too.
-+	 */
-+	ptep = lookup_address(va, &level);
-+	BUG_ON(ptep == NULL);
- 
--		frames[f] = mfn;
-+	pfn = pte_pfn(*ptep);
-+	mfn = pfn_to_mfn(pfn);
-+	virt = __va(PFN_PHYS(pfn));
- 
--		make_lowmem_page_readonly((void *)va);
--		make_lowmem_page_readonly(virt);
--	}
-+	make_lowmem_page_readonly((void *)va);
-+	make_lowmem_page_readonly(virt);
- 
--	if (HYPERVISOR_set_gdt(frames, size / sizeof(struct desc_struct)))
-+	if (HYPERVISOR_set_gdt(&mfn, size / sizeof(struct desc_struct)))
- 		BUG();
- }
- 
-@@ -470,34 +457,21 @@ static void __init xen_load_gdt_boot(const struct desc_ptr *dtr)
- {
- 	unsigned long va = dtr->address;
- 	unsigned int size = dtr->size + 1;
--	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
--	unsigned long frames[pages];
--	int f;
--
--	/*
--	 * A GDT can be up to 64k in size, which corresponds to 8192
--	 * 8-byte entries, or 16 4k pages..
--	 */
-+	unsigned long pfn, mfn;
-+	pte_t pte;
- 
--	BUG_ON(size > 65536);
-+	BUG_ON(size > GDT_SIZE);
- 	BUG_ON(va & ~PAGE_MASK);
- 
--	for (f = 0; va < dtr->address + size; va += PAGE_SIZE, f++) {
--		pte_t pte;
--		unsigned long pfn, mfn;
-+	pfn = virt_to_pfn(va);
-+	mfn = pfn_to_mfn(pfn);
- 
--		pfn = virt_to_pfn(va);
--		mfn = pfn_to_mfn(pfn);
-+	pte = pfn_pte(pfn, PAGE_KERNEL_RO);
- 
--		pte = pfn_pte(pfn, PAGE_KERNEL_RO);
--
--		if (HYPERVISOR_update_va_mapping((unsigned long)va, pte, 0))
--			BUG();
--
--		frames[f] = mfn;
--	}
-+	if (HYPERVISOR_update_va_mapping((unsigned long)va, pte, 0))
-+		BUG();
- 
--	if (HYPERVISOR_set_gdt(frames, size / sizeof(struct desc_struct)))
-+	if (HYPERVISOR_set_gdt(&mfn, size / sizeof(struct desc_struct)))
- 		BUG();
- }
- 
--- 
-2.14.3
+Thanks,
+Laura
