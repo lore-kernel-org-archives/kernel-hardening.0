@@ -1,46 +1,62 @@
-Date: Wed, 18 Apr 2018 12:50:08 -0700
-From: Andrew Morton <akpm@linux-foundation.org>
-Subject: Re: [PATCH v2] fork: Unconditionally clear stack on fork
-Message-Id: <20180418125008.203632feeaf0cac4e51c5b79@linux-foundation.org>
-In-Reply-To: <CAGXu5j+PmPUg9-gx3769X+kjXJo+markuPA3FwredM7jU8CdXg@mail.gmail.com>
-References: <20180221021659.GA37073@beast>
-	<20180221102933.GD2231@dhcp22.suse.cz>
-	<20180221125914.dc95830eada5fb958c13e36b@linux-foundation.org>
-	<CAGXu5j+dc=y+1M=unyvEvCo+QrX3MCW5Hm=2Z+q0a6iC3pgN6g@mail.gmail.com>
-	<CAGXu5j+PmPUg9-gx3769X+kjXJo+markuPA3FwredM7jU8CdXg@mail.gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+Subject: Re: [PATCHv2] x86/xen: Remove use of VLAs
+References: <20180418170832.8798-1-labbott@redhat.com>
+From: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Message-ID: <b4a28e8b-d4ec-bbd2-cfaf-9a416ef08ef6@oracle.com>
+Date: Wed, 18 Apr 2018 18:17:04 -0400
+MIME-Version: 1.0
+In-Reply-To: <20180418170832.8798-1-labbott@redhat.com>
+Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Michal Hocko <mhocko@kernel.org>, Andy Lutomirski <luto@kernel.org>, Laura Abbott <labbott@redhat.com>, Rasmus Villemoes <rasmus.villemoes@prevas.dk>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Laura Abbott <labbott@redhat.com>, Juergen Gross <jgross@suse.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, xen-devel@lists.xenproject.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 18 Apr 2018 09:38:07 -0700 Kees Cook <keescook@chromium.org> wrote:
+On 04/18/2018 01:08 PM, Laura Abbott wrote:
+> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+> turn on -Wvla. It turns out, the few VLAs in use in Xen produce only a
+> single entry array that is always bounded by GDT_SIZE. Clean up the code to
+> get rid of the VLA and the loop.
+>
+> [1] https://lkml.org/lkml/2018/3/7/621
+>
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+> v2: Updated the code to reflect that we know size is always bounded by
+> GDT_SIZE. This gets rid of the array and the loop. I can throw a few
+> more comments in there if someone thinks they need to be updated.
+> ---
+>  arch/x86/xen/enlighten_pv.c | 84 ++++++++++++++++-----------------------------
+>  1 file changed, 29 insertions(+), 55 deletions(-)
+>
+> diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
+> index c36d23aa6c35..1254f2fa3a89 100644
+> --- a/arch/x86/xen/enlighten_pv.c
+> +++ b/arch/x86/xen/enlighten_pv.c
+> @@ -421,45 +421,32 @@ static void xen_load_gdt(const struct desc_ptr *dtr)
+>  {
+>  	unsigned long va = dtr->address;
+>  	unsigned int size = dtr->size + 1;
+> -	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
+> -	unsigned long frames[pages];
+> -	int f;
+> -
+> -	/*
+> -	 * A GDT can be up to 64k in size, which corresponds to 8192
+> -	 * 8-byte entries, or 16 4k pages..
+> -	 */
+> +	unsigned long pfn, mfn;
+> +	int level;
+> +	pte_t *ptep;
+> +	void *virt;
+>  
+> -	BUG_ON(size > 65536);
+> +	BUG_ON(size > GDT_SIZE);
 
-> >> So some quite careful quantitative testing is needed here, methinks.
-> >
-> > Well, I did some more with perf and cycle counts on running 100,000
-> > execs of /bin/true.
-> >
-> > before:
-> > Cycles: 218858861551 218853036130 214727610969 227656844122 224980542841
-> > Mean:  221015379122.60
-> > Std Dev: 4662486552.47
-> >
-> > after:
-> > Cycles: 213868945060 213119275204 211820169456 224426673259 225489986348
-> > Mean:  217745009865.40
-> > Std Dev: 5935559279.99
-> >
-> > It continues to look like it's faster, though the deviation is rather
-> > wide, but I'm not sure what I could do that would be less noisy. I'm
-> > open to ideas!
-> 
-> Friendly ping. Andrew, can you add this to -mm?
 
-I did so on Feb 21 but didn't merge it up because I'd told myself that
-careful perf testing is needed.  I guess we've sufficiently ticked that
-box.  Kind of.  Maybe.
+I'd probably BUG_ON(size>PAGE_SIZE) because that's what we are really
+trying to avoid. Maybe with a comment that we expect GDT_SIZE at most,
+and it is less than PAGE_SIZE.
 
-Oh well, it's easy enough to revert.  I'll add it to the next
-batch-for-Linus.
+I can fix it while committing if you don't object.
+
+Reviewed-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
