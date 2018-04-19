@@ -1,153 +1,134 @@
+From: NeilBrown <neilb@suse.com>
+Date: Fri, 20 Apr 2018 08:16:10 +1000
+Subject: Re: [patch V2 7/8] dm verity fec: Check result of init_rs()
+In-Reply-To: <alpine.DEB.2.21.1804191551520.19539@nanos.tec.linutronix.de>
+References: <20180419100441.548834519@linutronix.de> <20180419100935.340306831@linutronix.de> <20180419134647.GA9817@redhat.com> <alpine.DEB.2.21.1804191551520.19539@nanos.tec.linutronix.de>
+Message-ID: <87o9ieq1ud.fsf@notabene.neil.brown.name>
 MIME-Version: 1.0
-In-Reply-To: <20180419100935.011090923@linutronix.de>
-References: <20180419100441.548834519@linutronix.de> <20180419100935.011090923@linutronix.de>
-From: Kate Stewart <kstewart@linuxfoundation.org>
-Date: Thu, 19 Apr 2018 10:32:10 -0500
-Message-ID: <CAG_66ZQJGhwKaVMyR8Vijd1Ew6YRrc6mO-Ci8zsqz5S2uuPJ6g@mail.gmail.com>
-Subject: Re: [patch V2 3/8] rslib: Add SPDX identifiers
-Content-Type: multipart/alternative; boundary="0000000000006e6abe056a35462b"
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: LKML <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Content-Type: multipart/signed; boundary="=-=-=";
+	micalg=pgp-sha256; protocol="application/pgp-signature"
+To: Thomas Gleixner <tglx@linutronix.de>, Mike Snitzer <snitzer@redhat.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---0000000000006e6abe056a35462b
-Content-Type: text/plain; charset="UTF-8"
-
-On Thu, Apr 19, 2018 at 5:04 AM, Thomas Gleixner <tglx@linutronix.de> wrote:
-
-> From: Thomas Gleixner <tglx@linutronix.de>
->
-> The Reed-Solomon library is based on code from Phil Karn who granted
-> permission to import it into the kernel under the GPL V2.
->
-> See commit 15b5423757a7 ("Shared Reed-Solomon ECC library") in the history
-> git tree at: git://git.kernel.org/pub/scm/linux/kernel/git/tglx/history.
-> git
->
->   ...
->   The encoder/decoder code is lifted from the GPL'd userspace RS-library
->   written by Phil Karn. I modified/wrapped it to provide the different
->   functions which we need in the MTD/NAND code.
->   ...
->   Signed-Off-By: Thomas Gleixner <tglx@linutronix.de>
->   Signed-Off-By: David Woodhouse <dwmw2@infradead.org>
->   "No objections at all. Just keep the authorship notices." -- Phil Karn
->
-> Add the proper SPDX identifiers according to
-> Documentation/process/license-rules.rst.
->
->
-> Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-> Cc: Boris Brezillon <boris.brezillon@free-electrons.com>
-> Cc: Tony Luck <tony.luck@intel.com>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Segher Boessenkool <segher@kernel.crashing.org>
-> Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
-> Cc: Richard Weinberger <richard@nod.at>
-> Cc: Mike Snitzer <snitzer@redhat.com>
-> Cc: Anton Vorontsov <anton@enomsg.org>
-> Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-> Cc: Colin Cross <ccross@android.com>
-> Cc: Andrew Morton <akpm@linuxfoundation.org>
-> Cc: David Woodhouse <dwmw2@infradead.org>
-> Cc: Alasdair Kergon <agk@redhat.com>
->
->  Reviewed-by: Kate Stewart <kstewart@linuxfoundation.org>
-
---0000000000006e6abe056a35462b
-Content-Type: text/html; charset="UTF-8"
+--=-=-=
+Content-Type: text/plain
 Content-Transfer-Encoding: quoted-printable
 
-<div dir=3D"ltr"><br><div class=3D"gmail_extra"><br><div class=3D"gmail_quo=
-te">On Thu, Apr 19, 2018 at 5:04 AM, Thomas Gleixner <span dir=3D"ltr">&lt;=
-<a href=3D"mailto:tglx@linutronix.de" target=3D"_blank">tglx@linutronix.de<=
-/a>&gt;</span> wrote:<br><blockquote class=3D"gmail_quote" style=3D"margin:=
-0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex">From: Thomas Gleixn=
-er &lt;<a href=3D"mailto:tglx@linutronix.de">tglx@linutronix.de</a>&gt;<br>
-<br>
-The Reed-Solomon library is based on code from Phil Karn who granted<br>
-permission to import it into the kernel under the GPL V2.<br>
-<br>
-See commit 15b5423757a7 (&quot;Shared Reed-Solomon ECC library&quot;) in th=
-e history<br>
-git tree at: git://<a href=3D"http://git.kernel.org/pub/scm/linux/kernel/gi=
-t/tglx/history.git" rel=3D"noreferrer" target=3D"_blank">git.kernel.org/pub=
-/scm/<wbr>linux/kernel/git/tglx/history.<wbr>git</a><br>
-<br>
-=C2=A0 ...<br>
-=C2=A0 The encoder/decoder code is lifted from the GPL&#39;d userspace RS-l=
-ibrary<br>
-=C2=A0 written by Phil Karn. I modified/wrapped it to provide the different=
-<br>
-=C2=A0 functions which we need in the MTD/NAND code.<br>
-=C2=A0 ...=C2=A0 =C2=A0 <br>
-=C2=A0 Signed-Off-By: Thomas Gleixner &lt;<a href=3D"mailto:tglx@linutronix=
-.de">tglx@linutronix.de</a>&gt;<br>
-=C2=A0 Signed-Off-By: David Woodhouse &lt;<a href=3D"mailto:dwmw2@infradead=
-.org">dwmw2@infradead.org</a>&gt;<br>
-=C2=A0 &quot;No objections at all. Just keep the authorship notices.&quot; =
--- Phil Karn<br>
-<br>
-Add the proper SPDX identifiers according to<br>
-Documentation/process/license-<wbr>rules.rst.<br>
-<br>
-<br>
-Signed-off-by: Thomas Gleixner &lt;<a href=3D"mailto:tglx@linutronix.de">tg=
-lx@linutronix.de</a>&gt;<br>
-Cc: Boris Brezillon &lt;<a href=3D"mailto:boris.brezillon@free-electrons.co=
-m">boris.brezillon@free-<wbr>electrons.com</a>&gt;<br>
-Cc: Tony Luck &lt;<a href=3D"mailto:tony.luck@intel.com">tony.luck@intel.co=
-m</a>&gt;<br>
-Cc: Kees Cook &lt;<a href=3D"mailto:keescook@chromium.org">keescook@chromiu=
-m.org</a>&gt;<br>
-Cc: Segher Boessenkool &lt;<a href=3D"mailto:segher@kernel.crashing.org">se=
-gher@kernel.crashing.org</a>&gt;<br>
-Cc: Kernel Hardening &lt;<a href=3D"mailto:kernel-hardening@lists.openwall.=
-com">kernel-hardening@lists.<wbr>openwall.com</a>&gt;<br>
-Cc: Richard Weinberger &lt;<a href=3D"mailto:richard@nod.at">richard@nod.at=
-</a>&gt;<br>
-Cc: Mike Snitzer &lt;<a href=3D"mailto:snitzer@redhat.com">snitzer@redhat.c=
-om</a>&gt;<br>
-Cc: Anton Vorontsov &lt;<a href=3D"mailto:anton@enomsg.org">anton@enomsg.or=
-g</a>&gt;<br>
-Cc: Greg Kroah-Hartman &lt;<a href=3D"mailto:gregkh@linuxfoundation.org">gr=
-egkh@linuxfoundation.org</a>&gt;<br>
-Cc: Colin Cross &lt;<a href=3D"mailto:ccross@android.com">ccross@android.co=
-m</a>&gt;<br>
-Cc: Andrew Morton &lt;<a href=3D"mailto:akpm@linuxfoundation.org">akpm@linu=
-xfoundation.org</a>&gt;<br>
-Cc: David Woodhouse &lt;<a href=3D"mailto:dwmw2@infradead.org">dwmw2@infrad=
-ead.org</a>&gt;<br>
-Cc: Alasdair Kergon &lt;<a href=3D"mailto:agk@redhat.com">agk@redhat.com</a=
->&gt;<br>
-<br></blockquote><div><span style=3D"color:rgb(34,34,34);font-family:arial,=
-sans-serif;font-size:small;font-style:normal;font-variant-ligatures:normal;=
-font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:s=
-tart;text-indent:0px;text-transform:none;white-space:normal;word-spacing:0p=
-x;background-color:rgb(255,255,255);text-decoration-style:initial;text-deco=
-ration-color:initial;float:none;display:inline">=C2=A0</span><span style=3D=
-"color:rgb(34,34,34);font-family:arial,sans-serif;font-style:normal;font-va=
-riant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spac=
-ing:normal;text-align:start;text-indent:0px;text-transform:none;white-space=
-:normal;word-spacing:0px;text-decoration-style:initial;text-decoration-colo=
-r:initial;font-size:12.8px;background-color:rgb(255,255,255);float:none;dis=
-play:inline">Reviewed-by:=C2=A0<span style=3D"color:rgb(80,0,80);font-famil=
-y:arial,sans-serif;font-size:12.8px;font-style:normal;font-variant-ligature=
-s:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;tex=
-t-align:start;text-indent:0px;text-transform:none;white-space:normal;word-s=
-pacing:0px;background-color:rgb(255,255,255);text-decoration-style:initial;=
-text-decoration-color:initial;float:none;display:inline">Kate Stewart &lt;<=
-/span><a href=3D"mailto:kstewart@linuxfoundation.org" style=3D"color:rgb(17=
-,85,204);font-family:arial,sans-serif;font-size:12.8px;font-style:normal;fo=
-nt-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter=
--spacing:normal;text-align:start;text-indent:0px;text-transform:none;white-=
-space:normal;word-spacing:0px;background-color:rgb(255,255,255)">kstewart@l=
-inuxfoundation.org</a><span style=3D"color:rgb(80,0,80);font-family:arial,s=
-ans-serif;font-size:12.8px;font-style:normal;font-variant-ligatures:normal;=
-font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:s=
-tart;text-indent:0px;text-transform:none;white-space:normal;word-spacing:0p=
-x;background-color:rgb(255,255,255);text-decoration-style:initial;text-deco=
-ration-color:initial;float:none;display:inline">&gt;</span></span></div><di=
-v>=C2=A0</div></div></div></div>
+On Thu, Apr 19 2018, Thomas Gleixner wrote:
 
---0000000000006e6abe056a35462b--
+> On Thu, 19 Apr 2018, Mike Snitzer wrote:
+>
+>> On Thu, Apr 19 2018 at  6:04am -0400,
+>> Thomas Gleixner <tglx@linutronix.de> wrote:
+>>=20
+>> > From: Thomas Gleixner <tglx@linutronix.de>
+>> >=20
+>> > The allocation of the reed solomon control structure can fail, but
+>> > fec_alloc_bufs() ignores that and subsequent operations in dm verity u=
+se
+>> > the potential NULL pointer unconditionally.
+>> >=20
+>> > Add a proper check and abort if init_rs() fails.
+>>=20
+>> This changelog makes little sense: init_rs() isn't in play relative to
+>> this patch.
+>
+> 	fio->rs =3D mempool_alloc(v->fec->rs_pool, GFP_NOIO);
+>
+>         f->rs_pool =3D mempool_create(num_online_cpus(), fec_rs_alloc,
+>                                     fec_rs_free, (void *) v);
+>
+> static void *fec_rs_alloc(gfp_t gfp_mask, void *pool_data)
+> {
+> 	struct dm_verity *v =3D (struct dm_verity *)pool_data;
+>
+>         return init_rs(8, 0x11d, 0, 1, v->fec->roots);
+> }
+>
+> So init_rs() is part of the chain, right?
+>
+> Yes. I missed the NOIO part. But....
+>
+>> And it runs counter to this commit's changelog:
+>>=20
+>> commit 34c96507e8f6be497c15497be05f489fb34c5880
+>> Author: NeilBrown <neilb@suse.com>
+>> Date:   Mon Apr 10 12:13:00 2017 +1000
+>>=20
+>>     dm verity fec: fix GFP flags used with mempool_alloc()
+>>=20
+>>     mempool_alloc() cannot fail for GFP_NOIO allocation, so there is no
+>>     point testing for failure.
+>>=20
+>>     One place the code tested for failure was passing "0" as the GFP
+>>     flags.  This is most unusual and is probably meant to be GFP_NOIO,
+>>     so that is changed.
+>>=20
+>>     Also, allocation from ->extra_pool and ->prealloc_pool are repeated
+>>     before releasing the previous allocation.  This can deadlock if the =
+code
+>>     is servicing a write under high memory pressure.  To avoid deadlocks,
+>>     change these to use GFP_NOWAIT and leave the error handling in place.
+>>=20
+>>     Signed-off-by: NeilBrown <neilb@suse.com>
+>>     Signed-off-by: Mike Snitzer <snitzer@redhat.com>
+>>=20
+>> Seems there is no real need for this patch.  Neil, what do you think?
+
+I think the code is correct as-is.
+
+>
+> The analysis above forgot to look at the mempool->alloc() callback. So ye=
+s,
+> while the NOIO is good at the mempool level, but init_rs() uses GPF_KERNEL
+> so there might be a different can of wurms lurking.
+
+The ->alloc call back is not relevant to the question of when
+mempool_alloc() can return NULL.
+If the ->alloc() callback returns a non-NULL value, it will be returned
+by mempool_alloc().
+If it returns NULL, that will not be returned.
+
+mempool_alloc() *only* returns NULL in one place:
+
+	if (!(gfp_mask & __GFP_DIRECT_RECLAIM)) {
+		spin_unlock_irqrestore(&pool->lock, flags);
+		return NULL;
+	}
+
+so a NULL return is purely dependent on the GFP flags passed.
+GFP_NOIO contains __GFP_DIRECT_RECLAIM, so NULL cannot be returned.
+
+It seems quite broken that init_rs() uses GFP_KERNEL. It should take a
+gfp_t arg for the allocation.
+If the mempool_alloc() above really needs GFP_NOIO, then it could
+theoretically deadlock as it performs a GFP_KERNEL allocation inside
+rs_init().  So in that sense, the code is not correct as-is.
+It could possibly be fixed by calling memalloc_noio_save() /
+memalloc_noio_restore() around the call to init_rs() in fec_rs_alloc().
+
+
+Thanks,
+NeilBrown
+
+--=-=-=
+Content-Type: application/pgp-signature; name="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEEG8Yp69OQ2HB7X0l6Oeye3VZigbkFAlrZFSoACgkQOeye3VZi
+gbmLsRAAxMcISn8430PLb2pWi84yysdQvxdbkQ2zEW8SCTzs+YO37RRAQBqW4NrW
+/80BpwUTDQLqogu3QTifQoxeEKEKl9oWr1FVVm2T0pITzhBtaE7xiurUgo3zSdtK
+T/ApYrTUILAKcP2WHIn0d4ksgfasi5am1mOpdhnSFVpjaoikVTUIViiWwVxxX+tL
+bOkxqobl9pbc0SkUHXH5h1GE3ncaiPnBMDjBR8u2+BZRj8Tka1eqpU29eqb8Rt3m
+P6/qSZPiDjwS5eI8ANH3itoGIfk74RZvH7+snzqN7N2PhXA5vCBRo2wcVB6KUhGb
+Qe67qGPVQKNLMjTunt99ud4t0gHmEiw9zRsBlPlQp/OJfmkK2X9fw8Ll4VCri8m6
+N363pkrcir58SUcxcthqL9DriHY43uBENSSgW0UOqfvbnjWU9sr2FVblXh0rUC3h
+hayF7PJnPBT1DIZWIM6quy92Hp3IVcd24HZDucyIg5+8d9UT41OwsoGLbAT+H/pz
+KENO/wqpE/JexVfFPeipnQbhT/TKiqCFOZEpEcgYErbs4H/hUspeVJxR67iqtpj3
+YCE6hZhWvsca7JETXpBtlteG1Ifzy1rlMEYz4WvxTHutMJR1pelz5I9qHCzXwXFf
+tMcxI0CkB9DNHNzU2OFRqUOiZ5+ZXSnJfgCxWqHJimbkYV/wTzQ=
+=+r10
+-----END PGP SIGNATURE-----
+--=-=-=--
