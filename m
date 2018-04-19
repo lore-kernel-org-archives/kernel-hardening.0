@@ -1,44 +1,97 @@
-Date: Thu, 19 Apr 2018 12:35:29 +0200 (CEST)
-From: Thomas Gleixner <tglx@linutronix.de>
-Subject: Re: [PATCH 1/4] x86/crypto: camellia: Fix function prototypes
-In-Reply-To: <CAGXu5jLerFuW=-uxpegBinAjJN0shPJkYAVaz9K7VWzVRmnOEQ@mail.gmail.com>
-Message-ID: <alpine.DEB.2.21.1804191233500.1563@nanos.tec.linutronix.de>
-References: <20180415041542.5364-1-jmoreira@suse.de> <20180415041542.5364-2-jmoreira@suse.de> <20180416061044.z6eb4psw2sbszemb@gmail.com> <CAGXu5jLerFuW=-uxpegBinAjJN0shPJkYAVaz9K7VWzVRmnOEQ@mail.gmail.com>
+Date: Thu, 19 Apr 2018 09:46:47 -0400
+From: Mike Snitzer <snitzer@redhat.com>
+Subject: Re: [patch V2 7/8] dm verity fec: Check result of init_rs()
+Message-ID: <20180419134647.GA9817@redhat.com>
+References: <20180419100441.548834519@linutronix.de>
+ <20180419100935.340306831@linutronix.de>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Kees Cook <keescook@chromium.org>
-Cc: Ingo Molnar <mingo@kernel.org>, Joao Moreira <jmoreira@suse.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Greg KH <gregkh@linuxfoundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180419100935.340306831@linutronix.de>
+To: Thomas Gleixner <tglx@linutronix.de>, NeilBrown <neilb@suse.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 18 Apr 2018, Kees Cook wrote:
-> So, instead of the original series, how about something like this:
-> 
-> Switch function pointers to not use the function cast, and define a
-> new GLUE_FUNC macro that kinda looks like the tricks used for
-> syscalls:
-> 
-> static const struct common_glue_ctx camellia_enc = {
-> ...
->         .funcs = { {
-> ...
->                 .num_blocks = 1,
->                 .fn_u = { .ecb = camellia_enc_blk }
->         } }
-> };
-> 
-> #define GLUE_FUNC(func, context) \
-> static inline void func(void *ctx, u8 *dst, const u8 *src) \
-> { __##func((context)ctx, dst, src); } \
-> __##func(context ctx, u8 *dst, const u8 *src)
-> 
-> GLUE_FUNC(camellia_enc_blk, struct camellia_ctx *)
-> {
-> ...original function...
-> }
+On Thu, Apr 19 2018 at  6:04am -0400,
+Thomas Gleixner <tglx@linutronix.de> wrote:
 
-I was about to suggest this before I read to the end of the mail. Yes, that
-is much more palatable.
+> From: Thomas Gleixner <tglx@linutronix.de>
+> 
+> The allocation of the reed solomon control structure can fail, but
+> fec_alloc_bufs() ignores that and subsequent operations in dm verity use
+> the potential NULL pointer unconditionally.
+> 
+> Add a proper check and abort if init_rs() fails.
+
+This changelog makes little sense: init_rs() isn't in play relative to
+this patch.
+
+And it runs counter to this commit's changelog:
+
+commit 34c96507e8f6be497c15497be05f489fb34c5880
+Author: NeilBrown <neilb@suse.com>
+Date:   Mon Apr 10 12:13:00 2017 +1000
+
+    dm verity fec: fix GFP flags used with mempool_alloc()
+
+    mempool_alloc() cannot fail for GFP_NOIO allocation, so there is no
+    point testing for failure.
+
+    One place the code tested for failure was passing "0" as the GFP
+    flags.  This is most unusual and is probably meant to be GFP_NOIO,
+    so that is changed.
+
+    Also, allocation from ->extra_pool and ->prealloc_pool are repeated
+    before releasing the previous allocation.  This can deadlock if the code
+    is servicing a write under high memory pressure.  To avoid deadlocks,
+    change these to use GFP_NOWAIT and leave the error handling in place.
+
+    Signed-off-by: NeilBrown <neilb@suse.com>
+    Signed-off-by: Mike Snitzer <snitzer@redhat.com>
+
+Seems there is no real need for this patch.  Neil, what do you think?
 
 Thanks,
+Mike
 
-	tglx
+
+> Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+> Cc: Boris Brezillon <boris.brezillon@free-electrons.com>
+> Cc: Tony Luck <tony.luck@intel.com>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Segher Boessenkool <segher@kernel.crashing.org>
+> Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+> Cc: Richard Weinberger <richard@nod.at>
+> Cc: Mike Snitzer <snitzer@redhat.com>
+> Cc: Anton Vorontsov <anton@enomsg.org>
+> Cc: Colin Cross <ccross@android.com>
+> Cc: Andrew Morton <akpm@linuxfoundation.org>
+> Cc: David Woodhouse <dwmw2@infradead.org>
+> Cc: Alasdair Kergon <agk@redhat.com>
+> 
+> ---
+>  drivers/md/dm-verity-fec.c |    7 ++++++-
+>  1 file changed, 6 insertions(+), 1 deletion(-)
+> 
+> --- a/drivers/md/dm-verity-fec.c
+> +++ b/drivers/md/dm-verity-fec.c
+> @@ -308,8 +308,13 @@ static int fec_alloc_bufs(struct dm_veri
+>  {
+>  	unsigned n;
+>  
+> -	if (!fio->rs)
+> +	if (!fio->rs) {
+>  		fio->rs = mempool_alloc(v->fec->rs_pool, GFP_NOIO);
+> +		if (!fio->rs) {
+> +			DMERR("failed to allocate RS control structure");
+> +			return -ENOMEM;
+> +		}
+> +	}
+>  
+>  	fec_for_each_prealloc_buffer(n) {
+>  		if (fio->bufs[n])
+> 
+> 
+> 
+> 
+> 
