@@ -1,31 +1,46 @@
-Date: Thu, 19 Apr 2018 10:16:51 +0200 (CEST)
+Message-Id: <20180419100441.548834519@linutronix.de>
+Date: Thu, 19 Apr 2018 12:04:41 +0200
 From: Thomas Gleixner <tglx@linutronix.de>
-Subject: Re: [patch 5/8] rslib: Split rs control struct
-In-Reply-To: <CAGXu5j+rckvb94YhdqUhRhuG=RtjN+S9QArAhwVWPj8mbPom+w@mail.gmail.com>
-Message-ID: <alpine.DEB.2.21.1804191014510.1788@nanos.tec.linutronix.de>
-References: <20180328205138.301218351@linutronix.de> <20180328205554.666762229@linutronix.de> <20180404214007.31a5fbc6@bbrezillon> <CAGXu5j+rckvb94YhdqUhRhuG=RtjN+S9QArAhwVWPj8mbPom+w@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Kees Cook <keescook@chromium.org>
-Cc: Boris Brezillon <boris.brezillon@bootlin.com>, LKML <linux-kernel@vger.kernel.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
+Subject: [patch V2 0/8] rslib: Cleanup and VLA removal
+To: LKML <linux-kernel@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 18 Apr 2018, Kees Cook wrote:
-> On Wed, Apr 4, 2018 at 12:40 PM, Boris Brezillon
-> <boris.brezillon@bootlin.com> wrote:
-> > Don't know how you want to get these patches merged, but the NAND
-> > related changes will conflict with my nand/for-4.17 changes (NAND
-> > code base has been moved to drivers/mtd/nand/raw).
-> >
-> > The rest looks good,
-> >
-> > Acked-by: Boris Brezillon <boris.brezillon@bootlin.com>
-> 
-> Hi, just checking in on this series. Thomas, what's your plan for
-> merging this? I don't see it in -next yet.
+Kees tried to get rid of the Variable Length Arrays in the Reed-Solomon
+library by replacing them with fixed length arrays on stack. Though they
+are rather large and Andrew did not fall in love with that solution.
 
-Got distracted. Need to address the review comments and repost.
+This series addresses that in a different way by splitting the rs control
+structure up, so that each invocation of rs_init() returns a new instance
+in which the decoder buffers are allocated. The polynom tables which build
+the base for the RS codecs are still shareable between the instances to
+avoid large allocations and initializations of the same data over and over.
+
+The usage sites have been audited and fixed up where necessary to
+accomodate the decoder change which forbids parallel decoder invocation for
+a particular rs control instance to prevent buffer corruption.
+
+While at it the patch set tidies up the code and converts the related files
+over to use SPDX license identifiers.
+
+Changes since V1:
+
+   Simplify error path in the diskonchip code and use the proper
+   function to free the decoder.
+
+As this spawns multiple subsystems it should either go through Andrews tree
+or Kees can route it with his other hardening stuff.
 
 Thanks,
 
-	tglx
+        tglx
+
+8<---------------
+ drivers/md/dm-verity-fec.c        |    7 +
+ drivers/mtd/nand/raw/cafe_nand.c  |    7 -
+ drivers/mtd/nand/raw/diskonchip.c |   67 +++++-------
+ include/linux/rslib.h             |   46 ++++----
+ lib/reed_solomon/decode_rs.c      |   34 +++---
+ lib/reed_solomon/encode_rs.c      |   15 --
+ lib/reed_solomon/reed_solomon.c   |  203 ++++++++++++++++++++++----------------
+ 7 files changed, 205 insertions(+), 174 deletions(-)
