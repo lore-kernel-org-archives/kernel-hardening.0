@@ -1,31 +1,37 @@
-Message-Id: <20180419100935.257180656@linutronix.de>
-Date: Thu, 19 Apr 2018 12:04:47 +0200
+Message-Id: <20180419100935.424056863@linutronix.de>
+Date: Thu, 19 Apr 2018 12:04:49 +0200
 From: Thomas Gleixner <tglx@linutronix.de>
-Subject: [patch V2 6/8] mtd/diskonchip: Allocate rs control per instance
+Subject: [patch V2 8/8] rslib: Allocate decoder buffers to avoid VLAs
 References: <20180419100441.548834519@linutronix.de>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Disposition: inline;
- filename=mtd-diskonchip--Allocate_rs_control_per_instance.patch
+ filename=rslib--Allocate_decoder_buffers_to_avoid_VLAs.patch
 To: LKML <linux-kernel@vger.kernel.org>
 Cc: Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Thomas Gleixner <tglx@linutronix.de>
 
-The reed solomon library is moving the on stack decoder buffers into the rs
-control structure. That would break the DoC driver because multiple
-instances share the same control structure and can operate in parallel. At
-least in theory....
+To get rid of the variable length arrays on stack in the RS decoder it's
+necessary to allocate the decoder buffers per control structure instance.
 
-Instantiate a rs control instance per DoC device to avoid that. The per
-instance buffer is fine as the operation on a single DoC instance is
-serialized by the MTD/NAND core.
+All usage sites have been checked for potential parallel decoder usage and
+fixed where necessary. Kees confirmed that the pstore decoding is strictly
+single threaded so there should be no surprises.
+
+Allocate them in the rs control structure sized depending on the number of
+roots for the chosen codec and adapt the decoder code to make use of them.
+
+Document the fact that decode operations based on a particular rs control
+instance cannot run in parallel and the caller has to ensure that as it's
+not possible to provide a proper locking construct which fits all use
+cases.
 
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Acked-by: Kees Cook <keescook@chromium.org>
 Cc: Boris Brezillon <boris.brezillon@free-electrons.com>
 Cc: Tony Luck <tony.luck@intel.com>
-Cc: Kees Cook <keescook@chromium.org>
 Cc: Segher Boessenkool <segher@kernel.crashing.org>
 Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 Cc: Richard Weinberger <richard@nod.at>
@@ -37,154 +43,118 @@ Cc: David Woodhouse <dwmw2@infradead.org>
 Cc: Alasdair Kergon <agk@redhat.com>
 
 ---
- drivers/mtd/nand/raw/diskonchip.c |   60 +++++++++++++++++---------------------
- 1 file changed, 27 insertions(+), 33 deletions(-)
+ include/linux/rslib.h           |    1 +
+ lib/reed_solomon/decode_rs.c    |   20 +++++++++++++-------
+ lib/reed_solomon/reed_solomon.c |   31 ++++++++++++++++++++++++++++++-
+ 3 files changed, 44 insertions(+), 8 deletions(-)
 
---- a/drivers/mtd/nand/raw/diskonchip.c
-+++ b/drivers/mtd/nand/raw/diskonchip.c
-@@ -66,6 +66,7 @@ struct doc_priv {
- 	int curchip;
- 	int mh0_page;
- 	int mh1_page;
-+	struct rs_control *rs_decoder;
- 	struct mtd_info *nextdoc;
+--- a/include/linux/rslib.h
++++ b/include/linux/rslib.h
+@@ -51,6 +51,7 @@ struct rs_codec {
+  */
+ struct rs_control {
+ 	struct rs_codec	*codec;
++	uint16_t	buffers[0];
+ };
  
- 	/* Handle the last stage of initialization (BBT scan, partitioning) */
-@@ -123,9 +124,6 @@ MODULE_PARM_DESC(doc_config_location, "P
- /* Number of symbols */
- #define NN 1023
- 
--/* the Reed Solomon control structure */
--static struct rs_control *rs_decoder;
--
- /*
-  * The HW decoder in the DoC ASIC's provides us a error syndrome,
-  * which we must convert to a standard syndrome usable by the generic
-@@ -931,7 +929,7 @@ static int doc200x_correct_data(struct m
- 				calc_ecc[i] = ReadDOC_(docptr, DoC_ECCSyndrome0 + i);
- 		}
- 
--		ret = doc_ecc_decode(rs_decoder, dat, calc_ecc);
-+		ret = doc_ecc_decode(doc->rs_decoder, dat, calc_ecc);
- 		if (ret > 0)
- 			pr_err("doc200x_correct_data corrected %d errors\n",
- 			       ret);
-@@ -1422,10 +1420,10 @@ static inline int __init doc2001plus_ini
- 
- static int __init doc_probe(unsigned long physadr)
- {
-+	struct nand_chip *nand = NULL;
-+	struct doc_priv *doc = NULL;
- 	unsigned char ChipID;
- 	struct mtd_info *mtd;
--	struct nand_chip *nand;
--	struct doc_priv *doc;
- 	void __iomem *virtadr;
- 	unsigned char save_control;
- 	unsigned char tmp, tmpb, tmpc;
-@@ -1562,8 +1560,25 @@ static int __init doc_probe(unsigned lon
- 		goto fail;
- 	}
- 
-+
-+	/*
-+	 * Allocate a RS codec instance
-+	 *
-+	 * Symbolsize is 10 (bits)
-+	 * Primitve polynomial is x^10+x^3+1
-+	 * First consecutive root is 510
-+	 * Primitve element to generate roots = 1
-+	 * Generator polinomial degree = 4
-+	 */
-+	doc = (struct doc_priv *) (nand + 1);
-+	doc->rs_decoder = init_rs(10, 0x409, FCR, 1, NROOTS);
-+	if (!doc->rs_decoder) {
-+		pr_err("DiskOnChip: Could not create a RS codec\n");
-+		ret = -ENOMEM;
-+		goto fail;
-+	}
-+
- 	mtd			= nand_to_mtd(nand);
--	doc			= (struct doc_priv *) (nand + 1);
- 	nand->bbt_td		= (struct nand_bbt_descr *) (doc + 1);
- 	nand->bbt_md		= nand->bbt_td + 1;
- 
-@@ -1613,7 +1628,6 @@ static int __init doc_probe(unsigned lon
- 		   haven't yet added it.  This is handled without incident by
- 		   mtd_device_unregister, as far as I can tell. */
- 		nand_release(mtd);
--		kfree(nand);
- 		goto fail;
- 	}
- 
-@@ -1626,6 +1640,9 @@ static int __init doc_probe(unsigned lon
- 	   actually a DiskOnChip.  */
- 	WriteDOC(save_control, virtadr, DOCControl);
-  fail:
-+	if (doc)
-+		free_rs(doc->rs_decoder);
-+	kfree(nand);
- 	iounmap(virtadr);
- 
- error_ioremap:
-@@ -1648,6 +1665,7 @@ static void release_nanddoc(void)
- 		nand_release(mtd);
- 		iounmap(doc->virtadr);
- 		release_mem_region(doc->physadr, DOC_IOREMAP_LEN);
-+		free_rs(doc->rs_decoder);
- 		kfree(nand);
- 	}
- }
-@@ -1656,27 +1674,12 @@ static int __init init_nanddoc(void)
- {
- 	int i, ret = 0;
- 
--	/* We could create the decoder on demand, if memory is a concern.
--	 * This way we have it handy, if an error happens
--	 *
--	 * Symbolsize is 10 (bits)
--	 * Primitve polynomial is x^10+x^3+1
--	 * first consecutive root is 510
--	 * primitve element to generate roots = 1
--	 * generator polinomial degree = 4
+ /* General purpose RS codec, 8-bit data width, symbol width 1-15 bit  */
+--- a/lib/reed_solomon/decode_rs.c
++++ b/lib/reed_solomon/decode_rs.c
+@@ -21,16 +21,22 @@
+ 	uint16_t *alpha_to = rs->alpha_to;
+ 	uint16_t *index_of = rs->index_of;
+ 	uint16_t u, q, tmp, num1, num2, den, discr_r, syn_error;
+-	/* Err+Eras Locator poly and syndrome poly The maximum value
+-	 * of nroots is 8. So the necessary stack size will be about
+-	 * 220 bytes max.
 -	 */
--	rs_decoder = init_rs(10, 0x409, FCR, 1, NROOTS);
--	if (!rs_decoder) {
--		pr_err("DiskOnChip: Could not create a RS decoder\n");
--		return -ENOMEM;
--	}
--
- 	if (doc_config_location) {
- 		pr_info("Using configured DiskOnChip probe address 0x%lx\n",
- 			doc_config_location);
- 		ret = doc_probe(doc_config_location);
- 		if (ret < 0)
--			goto outerr;
-+			return ret;
- 	} else {
- 		for (i = 0; (doc_locations[i] != 0xffffffff); i++) {
- 			doc_probe(doc_locations[i]);
-@@ -1687,11 +1690,7 @@ static int __init init_nanddoc(void)
- 	if (!doclist) {
- 		pr_info("No valid DiskOnChip devices found\n");
- 		ret = -ENODEV;
--		goto outerr;
- 	}
--	return 0;
-- outerr:
--	free_rs(rs_decoder);
- 	return ret;
- }
+-	uint16_t lambda[nroots + 1], syn[nroots];
+-	uint16_t b[nroots + 1], t[nroots + 1], omega[nroots + 1];
+-	uint16_t root[nroots], reg[nroots + 1], loc[nroots];
+ 	int count = 0;
+ 	uint16_t msk = (uint16_t) rs->nn;
  
-@@ -1699,11 +1698,6 @@ static void __exit cleanup_nanddoc(void)
++	/*
++	 * The decoder buffers are in the rs control struct. They are
++	 * arrays sized [nroots + 1]
++	 */
++	uint16_t *lambda = rsc->buffers + RS_DECODE_LAMBDA * (nroots + 1);
++	uint16_t *syn = rsc->buffers + RS_DECODE_SYN * (nroots + 1);
++	uint16_t *b = rsc->buffers + RS_DECODE_B * (nroots + 1);
++	uint16_t *t = rsc->buffers + RS_DECODE_T * (nroots + 1);
++	uint16_t *omega = rsc->buffers + RS_DECODE_OMEGA * (nroots + 1);
++	uint16_t *root = rsc->buffers + RS_DECODE_ROOT * (nroots + 1);
++	uint16_t *reg = rsc->buffers + RS_DECODE_REG * (nroots + 1);
++	uint16_t *loc = rsc->buffers + RS_DECODE_LOC * (nroots + 1);
++
+ 	/* Check length parameter for validity */
+ 	pad = nn - nroots - len;
+ 	BUG_ON(pad < 0 || pad >= nn);
+--- a/lib/reed_solomon/reed_solomon.c
++++ b/lib/reed_solomon/reed_solomon.c
+@@ -37,6 +37,18 @@
+ #include <linux/slab.h>
+ #include <linux/mutex.h>
+ 
++enum {
++	RS_DECODE_LAMBDA,
++	RS_DECODE_SYN,
++	RS_DECODE_B,
++	RS_DECODE_T,
++	RS_DECODE_OMEGA,
++	RS_DECODE_ROOT,
++	RS_DECODE_REG,
++	RS_DECODE_LOC,
++	RS_DECODE_NUM_BUFFERS
++};
++
+ /* This list holds all currently allocated rs codec structures */
+ static LIST_HEAD(codec_list);
+ /* Protection for the list */
+@@ -205,6 +217,7 @@ static struct rs_control *init_rs_intern
  {
- 	/* Cleanup the nand/DoC resources */
- 	release_nanddoc();
--
--	/* Free the reed solomon resources */
--	if (rs_decoder) {
--		free_rs(rs_decoder);
--	}
- }
+ 	struct list_head *tmp;
+ 	struct rs_control *rs;
++	unsigned int bsize;
  
- module_init(init_nanddoc);
+ 	/* Sanity checks */
+ 	if (symsize < 1)
+@@ -216,7 +229,13 @@ static struct rs_control *init_rs_intern
+ 	if (nroots < 0 || nroots >= (1<<symsize))
+ 		return NULL;
+ 
+-	rs = kzalloc(sizeof(*rs), GFP_KERNEL);
++	/*
++	 * The decoder needs buffers in each control struct instance to
++	 * avoid variable size or large fixed size allocations on
++	 * stack. Size the buffers to arrays of [nroots + 1].
++	 */
++	bsize = sizeof(uint16_t) * RS_DECODE_NUM_BUFFERS * (nroots + 1);
++	rs = kzalloc(sizeof(*rs) + bsize, GFP_KERNEL);
+ 	if (!rs)
+ 		return NULL;
+ 
+@@ -327,6 +346,11 @@ EXPORT_SYMBOL_GPL(encode_rs8);
+  *  The syndrome and parity uses a uint16_t data type to enable
+  *  symbol size > 8. The calling code must take care of decoding of the
+  *  syndrome result and the received parity before calling this code.
++ *
++ *  Note: The rs_control struct @rsc contains buffers which are used for
++ *  decoding, so the caller has to ensure that decoder invocations are
++ *  serialized.
++ *
+  *  Returns the number of corrected bits or -EBADMSG for uncorrectable errors.
+  */
+ int decode_rs8(struct rs_control *rsc, uint8_t *data, uint16_t *par, int len,
+@@ -371,6 +395,11 @@ EXPORT_SYMBOL_GPL(encode_rs16);
+  *  @corr:	buffer to store correction bitmask on eras_pos
+  *
+  *  Each field in the data array contains up to symbol size bits of valid data.
++ *
++ *  Note: The rc_control struct @rsc contains buffers which are used for
++ *  decoding, so the caller has to ensure that decoder invocations are
++ *  serialized.
++ *
+  *  Returns the number of corrected bits or -EBADMSG for uncorrectable errors.
+  */
+ int decode_rs16(struct rs_control *rsc, uint16_t *data, uint16_t *par, int len,
