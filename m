@@ -1,24 +1,25 @@
-Message-Id: <20180419100935.093663398@linutronix.de>
-Date: Thu, 19 Apr 2018 12:04:45 +0200
+Message-Id: <20180419100935.340306831@linutronix.de>
+Date: Thu, 19 Apr 2018 12:04:48 +0200
 From: Thomas Gleixner <tglx@linutronix.de>
-Subject: [patch V2 4/8] rslib: Remove GPL boilerplate
+Subject: [patch V2 7/8] dm verity fec: Check result of init_rs()
 References: <20180419100441.548834519@linutronix.de>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
-Content-Disposition: inline; filename=rslib--Remove_GPL_boilerplate.patch
+Content-Disposition: inline;
+ filename=dm_verity_fec--Check_result_of_init_rs--.patch
 To: LKML <linux-kernel@vger.kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>, Kate Stewart <kstewart@linuxfoundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Thomas Gleixner <tglx@linutronix.de>
 
-Now that SPDX identifiers are in place, remove the GPL boiler plate
-text. Leave the notices which document that Phil Karn granted permission in
-place (encode/decode source code). The modified files are code written for
-the kernel by me.
+The allocation of the reed solomon control structure can fail, but
+fec_alloc_bufs() ignores that and subsequent operations in dm verity use
+the potential NULL pointer unconditionally.
+
+Add a proper check and abort if init_rs() fails.
 
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Cc: Kate Stewart <kstewart@linuxfoundation.org>
 Cc: Boris Brezillon <boris.brezillon@free-electrons.com>
 Cc: Tony Luck <tony.luck@intel.com>
 Cc: Kees Cook <keescook@chromium.org>
@@ -27,42 +28,29 @@ Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 Cc: Richard Weinberger <richard@nod.at>
 Cc: Mike Snitzer <snitzer@redhat.com>
 Cc: Anton Vorontsov <anton@enomsg.org>
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 Cc: Colin Cross <ccross@android.com>
 Cc: Andrew Morton <akpm@linuxfoundation.org>
 Cc: David Woodhouse <dwmw2@infradead.org>
 Cc: Alasdair Kergon <agk@redhat.com>
 
 ---
- include/linux/rslib.h           |    5 -----
- lib/reed_solomon/reed_solomon.c |    4 ----
- 2 files changed, 9 deletions(-)
+ drivers/md/dm-verity-fec.c |    7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
 
---- a/include/linux/rslib.h
-+++ b/include/linux/rslib.h
-@@ -6,12 +6,7 @@
-  *
-  * RS code lifted from reed solomon library written by Phil Karn
-  * Copyright 2002 Phil Karn, KA9Q
-- *
-- * This program is free software; you can redistribute it and/or modify
-- * it under the terms of the GNU General Public License version 2 as
-- * published by the Free Software Foundation.
-  */
--
- #ifndef _RSLIB_H_
- #define _RSLIB_H_
+--- a/drivers/md/dm-verity-fec.c
++++ b/drivers/md/dm-verity-fec.c
+@@ -308,8 +308,13 @@ static int fec_alloc_bufs(struct dm_veri
+ {
+ 	unsigned n;
  
---- a/lib/reed_solomon/reed_solomon.c
-+++ b/lib/reed_solomon/reed_solomon.c
-@@ -7,10 +7,6 @@
-  * Reed Solomon code lifted from reed solomon library written by Phil Karn
-  * Copyright 2002 Phil Karn, KA9Q
-  *
-- * This program is free software; you can redistribute it and/or modify
-- * it under the terms of the GNU General Public License version 2 as
-- * published by the Free Software Foundation.
-- *
-  * Description:
-  *
-  * The generic Reed Solomon library provides runtime configurable
+-	if (!fio->rs)
++	if (!fio->rs) {
+ 		fio->rs = mempool_alloc(v->fec->rs_pool, GFP_NOIO);
++		if (!fio->rs) {
++			DMERR("failed to allocate RS control structure");
++			return -ENOMEM;
++		}
++	}
+ 
+ 	fec_for_each_prealloc_buffer(n) {
+ 		if (fio->bufs[n])
