@@ -1,46 +1,142 @@
-Message-Id: <20180419100441.548834519@linutronix.de>
-Date: Thu, 19 Apr 2018 12:04:41 +0200
+Message-Id: <20180419100934.829783226@linutronix.de>
+Date: Thu, 19 Apr 2018 12:04:42 +0200
 From: Thomas Gleixner <tglx@linutronix.de>
-Subject: [patch V2 0/8] rslib: Cleanup and VLA removal
+Subject: [patch V2 1/8] rslib: Cleanup whitespace damage
+References: <20180419100441.548834519@linutronix.de>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Disposition: inline; filename=rslib--Cleanup_whitespace_damage.patch
 To: LKML <linux-kernel@vger.kernel.org>
 Cc: Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees tried to get rid of the Variable Length Arrays in the Reed-Solomon
-library by replacing them with fixed length arrays on stack. Though they
-are rather large and Andrew did not fall in love with that solution.
+From: Thomas Gleixner <tglx@linutronix.de>
 
-This series addresses that in a different way by splitting the rs control
-structure up, so that each invocation of rs_init() returns a new instance
-in which the decoder buffers are allocated. The polynom tables which build
-the base for the RS codecs are still shareable between the instances to
-avoid large allocations and initializations of the same data over and over.
+Instead of mixing the whitespace cleanup into functional changes, mop it up
+first.
 
-The usage sites have been audited and fixed up where necessary to
-accomodate the decoder change which forbids parallel decoder invocation for
-a particular rs control instance to prevent buffer corruption.
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Cc: Boris Brezillon <boris.brezillon@free-electrons.com>
+Cc: Tony Luck <tony.luck@intel.com>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Segher Boessenkool <segher@kernel.crashing.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
+Cc: Richard Weinberger <richard@nod.at>
+Cc: Mike Snitzer <snitzer@redhat.com>
+Cc: Anton Vorontsov <anton@enomsg.org>
+Cc: Colin Cross <ccross@android.com>
+Cc: Andrew Morton <akpm@linuxfoundation.org>
+Cc: David Woodhouse <dwmw2@infradead.org>
+Cc: Alasdair Kergon <agk@redhat.com>
 
-While at it the patch set tidies up the code and converts the related files
-over to use SPDX license identifiers.
+---
+ include/linux/rslib.h           |   14 +++++++-------
+ lib/reed_solomon/reed_solomon.c |   20 ++++++++++----------
+ 2 files changed, 17 insertions(+), 17 deletions(-)
 
-Changes since V1:
-
-   Simplify error path in the diskonchip code and use the proper
-   function to free the decoder.
-
-As this spawns multiple subsystems it should either go through Andrews tree
-or Kees can route it with his other hardening stuff.
-
-Thanks,
-
-        tglx
-
-8<---------------
- drivers/md/dm-verity-fec.c        |    7 +
- drivers/mtd/nand/raw/cafe_nand.c  |    7 -
- drivers/mtd/nand/raw/diskonchip.c |   67 +++++-------
- include/linux/rslib.h             |   46 ++++----
- lib/reed_solomon/decode_rs.c      |   34 +++---
- lib/reed_solomon/encode_rs.c      |   15 --
- lib/reed_solomon/reed_solomon.c   |  203 ++++++++++++++++++++++----------------
- 7 files changed, 205 insertions(+), 174 deletions(-)
+--- a/include/linux/rslib.h
++++ b/include/linux/rslib.h
+@@ -39,15 +39,15 @@
+  * @list:	List entry for the rs control list
+ */
+ struct rs_control {
+-	int 		mm;
+-	int 		nn;
++	int		mm;
++	int		nn;
+ 	uint16_t	*alpha_to;
+ 	uint16_t	*index_of;
+ 	uint16_t	*genpoly;
+-	int 		nroots;
+-	int 		fcr;
+-	int 		prim;
+-	int 		iprim;
++	int		nroots;
++	int		fcr;
++	int		prim;
++	int		iprim;
+ 	int		gfpoly;
+ 	int		(*gffunc)(int);
+ 	int		users;
+@@ -80,7 +80,7 @@ int decode_rs16(struct rs_control *rs, u
+ struct rs_control *init_rs(int symsize, int gfpoly, int fcr, int prim,
+ 			   int nroots);
+ struct rs_control *init_rs_non_canonical(int symsize, int (*func)(int),
+-                                         int fcr, int prim, int nroots);
++					 int fcr, int prim, int nroots);
+ 
+ /* Release a rs control structure */
+ void free_rs(struct rs_control *rs);
+--- a/lib/reed_solomon/reed_solomon.c
++++ b/lib/reed_solomon/reed_solomon.c
+@@ -64,7 +64,7 @@ static DEFINE_MUTEX(rslistlock);
+  * en/decoding. Fill the arrays according to the given parameters.
+  */
+ static struct rs_control *rs_init(int symsize, int gfpoly, int (*gffunc)(int),
+-                                  int fcr, int prim, int nroots)
++				  int fcr, int prim, int nroots)
+ {
+ 	struct rs_control *rs;
+ 	int i, j, sr, root, iprim;
+@@ -191,14 +191,14 @@ void free_rs(struct rs_control *rs)
+  *  @gffunc:	pointer to function to generate the next field element,
+  *		or the multiplicative identity element if given 0.  Used
+  *		instead of gfpoly if gfpoly is 0
+- *  @fcr:  	the first consecutive root of the rs code generator polynomial
++ *  @fcr:	the first consecutive root of the rs code generator polynomial
+  *		in index form
+  *  @prim:	primitive element to generate polynomial roots
+  *  @nroots:	RS code generator polynomial degree (number of roots)
+  */
+ static struct rs_control *init_rs_internal(int symsize, int gfpoly,
+-                                           int (*gffunc)(int), int fcr,
+-                                           int prim, int nroots)
++					   int (*gffunc)(int), int fcr,
++					   int prim, int nroots)
+ {
+ 	struct list_head	*tmp;
+ 	struct rs_control	*rs;
+@@ -207,9 +207,9 @@ static struct rs_control *init_rs_intern
+ 	if (symsize < 1)
+ 		return NULL;
+ 	if (fcr < 0 || fcr >= (1<<symsize))
+-    		return NULL;
++		return NULL;
+ 	if (prim <= 0 || prim >= (1<<symsize))
+-    		return NULL;
++		return NULL;
+ 	if (nroots < 0 || nroots >= (1<<symsize))
+ 		return NULL;
+ 
+@@ -252,13 +252,13 @@ static struct rs_control *init_rs_intern
+  *  @gfpoly:	the extended Galois field generator polynomial coefficients,
+  *		with the 0th coefficient in the low order bit. The polynomial
+  *		must be primitive;
+- *  @fcr:  	the first consecutive root of the rs code generator polynomial
++ *  @fcr:	the first consecutive root of the rs code generator polynomial
+  *		in index form
+  *  @prim:	primitive element to generate polynomial roots
+  *  @nroots:	RS code generator polynomial degree (number of roots)
+  */
+ struct rs_control *init_rs(int symsize, int gfpoly, int fcr, int prim,
+-                           int nroots)
++			   int nroots)
+ {
+ 	return init_rs_internal(symsize, gfpoly, NULL, fcr, prim, nroots);
+ }
+@@ -271,13 +271,13 @@ struct rs_control *init_rs(int symsize,
+  *  @gffunc:	pointer to function to generate the next field element,
+  *		or the multiplicative identity element if given 0.  Used
+  *		instead of gfpoly if gfpoly is 0
+- *  @fcr:  	the first consecutive root of the rs code generator polynomial
++ *  @fcr:	the first consecutive root of the rs code generator polynomial
+  *		in index form
+  *  @prim:	primitive element to generate polynomial roots
+  *  @nroots:	RS code generator polynomial degree (number of roots)
+  */
+ struct rs_control *init_rs_non_canonical(int symsize, int (*gffunc)(int),
+-                                         int fcr, int prim, int nroots)
++					 int fcr, int prim, int nroots)
+ {
+ 	return init_rs_internal(symsize, 0, gffunc, fcr, prim, nroots);
+ }
