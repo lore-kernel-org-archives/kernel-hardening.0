@@ -1,48 +1,52 @@
-Date: Sat, 21 Apr 2018 00:51:43 +0800
-From: Herbert Xu <herbert@gondor.apana.org.au>
-Subject: Re: [PATCH v2 0/2] crypto: removing various VLAs
-Message-ID: <20180420165143.mwcxwkf6j7ddckdt@gondor.apana.org.au>
-References: <1523282087-22128-1-git-send-email-s.mesoraca16@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1523282087-22128-1-git-send-email-s.mesoraca16@gmail.com>
-To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Kees Cook <keescook@chromium.org>, Eric Biggers <ebiggers3@gmail.com>, Laura Abbott <labbott@redhat.com>
+Sender: keescook@google.com
+In-Reply-To: <20180419100441.548834519@linutronix.de>
+References: <20180419100441.548834519@linutronix.de>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 20 Apr 2018 16:02:23 -0700
+Message-ID: <CAGXu5jLs43nUASmLPrKf-eycoYZR3K_vuWi8Q+RaruFfodB0oQ@mail.gmail.com>
+Subject: Re: [patch V2 0/8] rslib: Cleanup and VLA removal
+Content-Type: text/plain; charset="UTF-8"
+To: Thomas Gleixner <tglx@linutronix.de>
+Cc: LKML <linux-kernel@vger.kernel.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 09, 2018 at 03:54:45PM +0200, Salvatore Mesoraca wrote:
-> v2:
-> 	As suggested by Herbert Xu, the blocksize and alignmask checks
-> 	have been moved to crypto_check_alg.
-> 	So, now, all the other separate checks are not necessary.
-> 	Also, the defines have been moved to include/crypto/algapi.h.
-> 
-> v1:
-> 	As suggested by Laura Abbott[1], I'm resending my patch with
-> 	MAX_BLOCKSIZE and MAX_ALIGNMASK defined in an header, so they
-> 	can be used in other places.
-> 	I took this opportunity to deal with some other VLAs not
-> 	handled in the old patch.
-> 
-> [1] http://lkml.kernel.org/r/4e536889-439a-49e6-dd95-2d4286913202@redhat.com
-> 
-> Salvatore Mesoraca (2):
->   crypto: api - laying defines and checks for statically allocated
->     buffers
->   crypto: remove several VLAs
-> 
->  crypto/algapi.c         | 10 ++++++++++
->  crypto/cfb.c            |  7 +++----
->  crypto/cipher.c         |  3 ++-
->  crypto/ctr.c            |  4 ++--
->  crypto/cts.c            |  5 +++--
->  crypto/pcbc.c           |  5 +++--
->  include/crypto/algapi.h |  8 ++++++++
->  7 files changed, 31 insertions(+), 11 deletions(-)
+On Thu, Apr 19, 2018 at 3:04 AM, Thomas Gleixner <tglx@linutronix.de> wrote:
+> Kees tried to get rid of the Variable Length Arrays in the Reed-Solomon
+> library by replacing them with fixed length arrays on stack. Though they
+> are rather large and Andrew did not fall in love with that solution.
+>
+> This series addresses that in a different way by splitting the rs control
+> structure up, so that each invocation of rs_init() returns a new instance
+> in which the decoder buffers are allocated. The polynom tables which build
+> the base for the RS codecs are still shareable between the instances to
+> avoid large allocations and initializations of the same data over and over.
+>
+> The usage sites have been audited and fixed up where necessary to
+> accomodate the decoder change which forbids parallel decoder invocation for
+> a particular rs control instance to prevent buffer corruption.
+>
+> While at it the patch set tidies up the code and converts the related files
+> over to use SPDX license identifiers.
+>
+> Changes since V1:
+>
+>    Simplify error path in the diskonchip code and use the proper
+>    function to free the decoder.
+>
+> As this spawns multiple subsystems it should either go through Andrews tree
+> or Kees can route it with his other hardening stuff.
 
-All applied.  Thanks.
+I can start collecting ignored VLA patches. I haven't done that yet as
+most maintainers have been taking them. There are only a handful
+unapplied. Should I start the tree with rslib? :)
+
+Either way:
+
+Reviewed-by: Kees Cook <keescook@chromium.org>
+
+-Kees
+
 -- 
-Email: Herbert Xu <herbert@gondor.apana.org.au>
-Home Page: http://gondor.apana.org.au/~herbert/
-PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
+Kees Cook
+Pixel Security
