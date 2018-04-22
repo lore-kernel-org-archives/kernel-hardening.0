@@ -1,138 +1,171 @@
-Message-Id: <20180422162512.650512856@linutronix.de>
-Date: Sun, 22 Apr 2018 18:23:49 +0200
+Message-Id: <20180422162512.363154748@linutronix.de>
+Date: Sun, 22 Apr 2018 18:23:46 +0200
 From: Thomas Gleixner <tglx@linutronix.de>
-Subject: [patch V3 04/10] rslib: Cleanup top level comments
+Subject: [patch V3 01/10] rslib: Add GFP aware init function
 References: <20180422162345.004292133@linutronix.de>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
-Content-Disposition: inline; filename=rslib--Cleanup_top_level_comments.patch
+Content-Disposition: inline; filename=rslib--Add-GFP-aware-init-function.patch
 To: LKML <linux-kernel@vger.kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>
+Cc: Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>, Neil Brown <neilb@suse.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Thomas Gleixner <tglx@linutronix.de>
+The rslib usage in dm/verity_fec is broken because init_rs() can nest in
+GFP_NOIO mempool allocations as init_rs() is invoked from the mempool alloc
+callback.
 
-File references and stale CVS ids are really not useful.
+Provide a variant which takes gfp_t flags as argument.
 
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Cc: Boris Brezillon <boris.brezillon@free-electrons.com>
-Cc: Tony Luck <tony.luck@intel.com>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Segher Boessenkool <segher@kernel.crashing.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
-Cc: Richard Weinberger <richard@nod.at>
 Cc: Mike Snitzer <snitzer@redhat.com>
-Cc: Anton Vorontsov <anton@enomsg.org>
-Cc: Colin Cross <ccross@android.com>
-Cc: Andrew Morton <akpm@linuxfoundation.org>
-Cc: David Woodhouse <dwmw2@infradead.org>
 Cc: Alasdair Kergon <agk@redhat.com>
-
+Cc: Neil Brown <neilb@suse.com>
 ---
- include/linux/rslib.h           |    7 +------
- lib/reed_solomon/decode_rs.c    |   12 ++----------
- lib/reed_solomon/encode_rs.c    |   13 ++-----------
- lib/reed_solomon/reed_solomon.c |    9 +--------
- 4 files changed, 6 insertions(+), 35 deletions(-)
+ include/linux/rslib.h           |   26 +++++++++++++++++++++++---
+ lib/reed_solomon/reed_solomon.c |   36 ++++++++++++++++++++----------------
+ 2 files changed, 43 insertions(+), 19 deletions(-)
 
 --- a/include/linux/rslib.h
 +++ b/include/linux/rslib.h
-@@ -1,16 +1,11 @@
- /*
-- * include/linux/rslib.h
-- *
-- * Overview:
-- *   Generic Reed Solomon encoder / decoder library
-+ * Generic Reed Solomon encoder / decoder library
-  *
-  * Copyright (C) 2004 Thomas Gleixner (tglx@linutronix.de)
-  *
-  * RS code lifted from reed solomon library written by Phil Karn
-  * Copyright 2002 Phil Karn, KA9Q
-  *
-- * $Id: rslib.h,v 1.4 2005/11/07 11:14:52 gleixner Exp $
-- *
-  * This program is free software; you can redistribute it and/or modify
-  * it under the terms of the GNU General Public License version 2 as
-  * published by the Free Software Foundation.
---- a/lib/reed_solomon/decode_rs.c
-+++ b/lib/reed_solomon/decode_rs.c
-@@ -1,20 +1,12 @@
- /*
-- * lib/reed_solomon/decode_rs.c
-- *
-- * Overview:
-- *   Generic Reed Solomon encoder / decoder library
-+ * Generic Reed Solomon encoder / decoder library
-  *
-  * Copyright 2002, Phil Karn, KA9Q
-  * May be used under the terms of the GNU General Public License (GPL)
-  *
-  * Adaption to the kernel by Thomas Gleixner (tglx@linutronix.de)
-  *
-- * $Id: decode_rs.c,v 1.7 2005/11/07 11:14:59 gleixner Exp $
-- *
-- */
--
--/* Generic data width independent code which is included by the
-- * wrappers.
-+ * Generic data width independent code which is included by the wrappers.
-  */
- {
- 	int deg_lambda, el, deg_omega;
---- a/lib/reed_solomon/encode_rs.c
-+++ b/lib/reed_solomon/encode_rs.c
-@@ -1,21 +1,12 @@
- /*
-- * lib/reed_solomon/encode_rs.c
-- *
-- * Overview:
-- *   Generic Reed Solomon encoder / decoder library
-+ * Generic Reed Solomon encoder / decoder library
-  *
-  * Copyright 2002, Phil Karn, KA9Q
-  * May be used under the terms of the GNU General Public License (GPL)
-  *
-  * Adaption to the kernel by Thomas Gleixner (tglx@linutronix.de)
-  *
-- * $Id: encode_rs.c,v 1.5 2005/11/07 11:14:59 gleixner Exp $
-- *
-- */
--
--/* Generic data width independent code which is included by the
-- * wrappers.
-- * int encode_rsX (struct rs_control *rs, uintX_t *data, int len, uintY_t *par)
-+ * Generic data width independent code which is included by the wrappers.
-  */
- {
- 	int i, j, pad;
+@@ -77,10 +77,30 @@ int decode_rs16(struct rs_control *rs, u
+ #endif
+ 
+ /* Create or get a matching rs control structure */
+-struct rs_control *init_rs(int symsize, int gfpoly, int fcr, int prim,
+-			   int nroots);
++struct rs_control *init_rs_gfp(int symsize, int gfpoly, int fcr, int prim,
++			       int nroots, gfp_t gfp);
++
++/**
++ * init_rs - Create a RS control struct and initialize it
++ *  @symsize:	the symbol size (number of bits)
++ *  @gfpoly:	the extended Galois field generator polynomial coefficients,
++ *		with the 0th coefficient in the low order bit. The polynomial
++ *		must be primitive;
++ *  @fcr:	the first consecutive root of the rs code generator polynomial
++ *		in index form
++ *  @prim:	primitive element to generate polynomial roots
++ *  @nroots:	RS code generator polynomial degree (number of roots)
++ *
++ * Allocations use GFP_KERNEL.
++ */
++static inline struct rs_control *init_rs(int symsize, int gfpoly, int fcr,
++					 int prim, int nroots)
++{
++	return init_rs_gfp(symsize, gfpoly, fcr, prim, nroots, GFP_KERNEL);
++}
++
+ struct rs_control *init_rs_non_canonical(int symsize, int (*func)(int),
+-                                         int fcr, int prim, int nroots);
++					 int fcr, int prim, int nroots);
+ 
+ /* Release a rs control structure */
+ void free_rs(struct rs_control *rs);
 --- a/lib/reed_solomon/reed_solomon.c
 +++ b/lib/reed_solomon/reed_solomon.c
-@@ -1,16 +1,11 @@
- /*
-- * lib/reed_solomon/reed_solomon.c
-- *
-- * Overview:
-- *   Generic Reed Solomon encoder / decoder library
-+ * Generic Reed Solomon encoder / decoder library
+@@ -59,19 +59,20 @@ static DEFINE_MUTEX(rslistlock);
+  * @fcr:	first root of RS code generator polynomial, index form
+  * @prim:	primitive element to generate polynomial roots
+  * @nroots:	RS code generator polynomial degree (number of roots)
++ * @gfp:	GFP_ flags for allocations
   *
-  * Copyright (C) 2004 Thomas Gleixner (tglx@linutronix.de)
-  *
-  * Reed Solomon code lifted from reed solomon library written by Phil Karn
-  * Copyright 2002 Phil Karn, KA9Q
-  *
-- * $Id: rslib.c,v 1.7 2005/11/07 11:14:59 gleixner Exp $
-- *
-  * This program is free software; you can redistribute it and/or modify
-  * it under the terms of the GNU General Public License version 2 as
-  * published by the Free Software Foundation.
-@@ -35,9 +30,7 @@
-  * second stage, which does the decoding / error correction itself.
-  * Many hw encoders provide a syndrome calculation over the received
-  * data + syndrome and can call the second stage directly.
-- *
+  * Allocate a control structure and the polynom arrays for faster
+  * en/decoding. Fill the arrays according to the given parameters.
   */
--
- #include <linux/errno.h>
- #include <linux/kernel.h>
- #include <linux/init.h>
+ static struct rs_control *rs_init(int symsize, int gfpoly, int (*gffunc)(int),
+-                                  int fcr, int prim, int nroots)
++				  int fcr, int prim, int nroots, gfp_t gfp)
+ {
+ 	struct rs_control *rs;
+ 	int i, j, sr, root, iprim;
+ 
+ 	/* Allocate the control structure */
+-	rs = kmalloc(sizeof (struct rs_control), GFP_KERNEL);
+-	if (rs == NULL)
++	rs = kmalloc(sizeof(*rs), gfp);
++	if (!rs)
+ 		return NULL;
+ 
+ 	INIT_LIST_HEAD(&rs->list);
+@@ -85,15 +86,15 @@ static struct rs_control *rs_init(int sy
+ 	rs->gffunc = gffunc;
+ 
+ 	/* Allocate the arrays */
+-	rs->alpha_to = kmalloc(sizeof(uint16_t) * (rs->nn + 1), GFP_KERNEL);
++	rs->alpha_to = kmalloc(sizeof(uint16_t) * (rs->nn + 1), gfp);
+ 	if (rs->alpha_to == NULL)
+ 		goto errrs;
+ 
+-	rs->index_of = kmalloc(sizeof(uint16_t) * (rs->nn + 1), GFP_KERNEL);
++	rs->index_of = kmalloc(sizeof(uint16_t) * (rs->nn + 1), gfp);
+ 	if (rs->index_of == NULL)
+ 		goto erralp;
+ 
+-	rs->genpoly = kmalloc(sizeof(uint16_t) * (rs->nroots + 1), GFP_KERNEL);
++	rs->genpoly = kmalloc(sizeof(uint16_t) * (rs->nroots + 1), gfp);
+ 	if(rs->genpoly == NULL)
+ 		goto erridx;
+ 
+@@ -195,13 +196,14 @@ void free_rs(struct rs_control *rs)
+  *		in index form
+  *  @prim:	primitive element to generate polynomial roots
+  *  @nroots:	RS code generator polynomial degree (number of roots)
++ *  @gfp:	GFP_ flags for allocations
+  */
+ static struct rs_control *init_rs_internal(int symsize, int gfpoly,
+-                                           int (*gffunc)(int), int fcr,
+-                                           int prim, int nroots)
++					   int (*gffunc)(int), int fcr,
++					   int prim, int nroots, gfp_t gfp)
+ {
+-	struct list_head	*tmp;
+-	struct rs_control	*rs;
++	struct list_head *tmp;
++	struct rs_control *rs;
+ 
+ 	/* Sanity checks */
+ 	if (symsize < 1)
+@@ -236,7 +238,7 @@ static struct rs_control *init_rs_intern
+ 	}
+ 
+ 	/* Create a new one */
+-	rs = rs_init(symsize, gfpoly, gffunc, fcr, prim, nroots);
++	rs = rs_init(symsize, gfpoly, gffunc, fcr, prim, nroots, gfp);
+ 	if (rs) {
+ 		rs->users = 1;
+ 		list_add(&rs->list, &rslist);
+@@ -247,7 +249,7 @@ static struct rs_control *init_rs_intern
+ }
+ 
+ /**
+- * init_rs - Find a matching or allocate a new rs control structure
++ * init_rs_gfp - Find a matching or allocate a new rs control structure
+  *  @symsize:	the symbol size (number of bits)
+  *  @gfpoly:	the extended Galois field generator polynomial coefficients,
+  *		with the 0th coefficient in the low order bit. The polynomial
+@@ -256,11 +258,12 @@ static struct rs_control *init_rs_intern
+  *		in index form
+  *  @prim:	primitive element to generate polynomial roots
+  *  @nroots:	RS code generator polynomial degree (number of roots)
++ *  @gfp:	GFP_ flags for allocations
+  */
+-struct rs_control *init_rs(int symsize, int gfpoly, int fcr, int prim,
+-                           int nroots)
++struct rs_control *init_rs_gfp(int symsize, int gfpoly, int fcr, int prim,
++			       int nroots, gfp_t gfp)
+ {
+-	return init_rs_internal(symsize, gfpoly, NULL, fcr, prim, nroots);
++	return init_rs_internal(symsize, gfpoly, NULL, fcr, prim, nroots, gfp);
+ }
+ 
+ /**
+@@ -279,7 +282,8 @@ struct rs_control *init_rs(int symsize,
+ struct rs_control *init_rs_non_canonical(int symsize, int (*gffunc)(int),
+                                          int fcr, int prim, int nroots)
+ {
+-	return init_rs_internal(symsize, 0, gffunc, fcr, prim, nroots);
++	return init_rs_internal(symsize, 0, gffunc, fcr, prim, nroots,
++				GFP_KERNEL);
+ }
+ 
+ #ifdef CONFIG_REED_SOLOMON_ENC8
