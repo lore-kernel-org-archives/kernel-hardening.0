@@ -1,45 +1,88 @@
-Message-Id: <20180422162512.458372618@linutronix.de>
-Date: Sun, 22 Apr 2018 18:23:47 +0200
-From: Thomas Gleixner <tglx@linutronix.de>
-Subject: [patch V3 02/10] dm/verity_fec: Use GFP aware reed solomon init
-References: <20180422162345.004292133@linutronix.de>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Disposition: inline;
- filename=dm-verity_fec--Use-GFP-aware-reed-solomon-init.patch
-To: LKML <linux-kernel@vger.kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Segher Boessenkool <segher@kernel.crashing.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linuxfoundation.org>, Boris Brezillon <boris.brezillon@free-electrons.com>, Richard Weinberger <richard@nod.at>, David Woodhouse <dwmw2@infradead.org>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, Anton Vorontsov <anton@enomsg.org>, Colin Cross <ccross@android.com>, Tony Luck <tony.luck@intel.com>, Neil Brown <neilb@suse.com>
+From: Igor Stoppa <igor.stoppa@gmail.com>
+Subject: [RFC PATCH v23 0/6] mm: security: write protection for dynamic data
+Date: Mon, 23 Apr 2018 16:54:49 +0400
+Message-Id: <20180423125458.5338-1-igor.stoppa@huawei.com>
+To: willy@infradead.org, keescook@chromium.org, paul@paul-moore.com, sds@tycho.nsa.gov, mhocko@kernel.org, corbet@lwn.net
+Cc: labbott@redhat.com, linux-cc=david@fromorbit.com, --cc=rppt@linux.vnet.ibm.com, --security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, igor.stoppa@gmail.com, Igor Stoppa <igor.stoppa@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Allocations from the rs_pool can invoke init_rs() from the mempool
-allocation callback. This is problematic in fec_alloc_bufs() which invokes
-mempool_alloc() with GFP_NOIO to prevent a swap deadlock because init_rs()
-uses GFP_KERNEL allocations.
+This patch-set introduces the possibility of protecting memory that has
+been allocated dynamically.
 
-Switch it to init_rs_gfp() and invoke it with the gfp_t flags which are
-handed in from the allocator.
+The memory is managed in pools: when a memory pool is protected, all the
+memory that is currently part of it, will become R/O.
 
-Note: This is not a problem today because the rs control struct is shared
-between the instances and its created when the mempool is initialized. But
-the upcoming changes which switch to a rs_control struct per instance to
-embed decoder buffers will trigger the swap vs. GFP_KERNEL issue.
+A R/O pool can be expanded (adding more protectable memory).
+It can also be destroyed, to recover its memory, but it cannot be
+turned back into normal R/W mode.
 
-Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
-Cc: Mike Snitzer <snitzer@redhat.com>
-Cc: Alasdair Kergon <agk@redhat.com>
-Cc: Neil Brown <neilb@suse.com>
----
- drivers/md/dm-verity-fec.c |    2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+This is intentional. This feature is meant for data that either doesn't
+need further modifications after initialization, or it will change very
+seldom.
 
---- a/drivers/md/dm-verity-fec.c
-+++ b/drivers/md/dm-verity-fec.c
-@@ -570,7 +570,7 @@ static void *fec_rs_alloc(gfp_t gfp_mask
- {
- 	struct dm_verity *v = (struct dm_verity *)pool_data;
- 
--	return init_rs(8, 0x11d, 0, 1, v->fec->roots);
-+	return init_rs_gfp(8, 0x11d, 0, 1, v->fec->roots, gfp_mask);
- }
- 
- static void fec_rs_free(void *element, void *pool_data)
+The data might need to be released, for example as part of module unloading.
+The pool, therefore, can be destroyed.
+
+For those cases where the data is never completely stable, however it can
+stay unmodified for very long periods, there is a possibility of
+allocating it from a "rare write" pool, which allows modification to its
+data, through an helper function.
+
+I did not want to overcomplicate the first version of rare write, but it
+might be needed to add disabling/enabling of preemption, however I would
+appreciate comments in general about the implementation through transient
+remapping.
+
+An example is provided, showing how to protect one of hte internal states
+of SELinux.
+
+Changes since v22:
+[http://www.openwall.com/lists/kernel-hardening/2018/04/13/3]
+
+- refactored some helper functions in a separate local header
+- expanded the documentation
+- introduction of rare write support
+- example with SELinux "initialized" field
+
+
+Igor Stoppa (9):
+  struct page: add field for vm_struct
+  vmalloc: rename llist field in vmap_area
+  Protectable Memory
+  Documentation for Pmalloc
+  Pmalloc selftest
+  lkdtm: crash on overwriting protected pmalloc var
+  Pmalloc Rare Write: modify selected pools
+  Preliminary self test for pmalloc rare write
+  Protect SELinux initialized state with pmalloc
+
+ Documentation/core-api/index.rst    |   1 +
+ Documentation/core-api/pmalloc.rst  | 189 ++++++++++++++++++++++++++
+ drivers/misc/lkdtm/core.c           |   3 +
+ drivers/misc/lkdtm/lkdtm.h          |   1 +
+ drivers/misc/lkdtm/perms.c          |  25 ++++
+ include/linux/mm_types.h            |   1 +
+ include/linux/pmalloc.h             | 170 ++++++++++++++++++++++++
+ include/linux/test_pmalloc.h        |  24 ++++
+ include/linux/vmalloc.h             |   6 +-
+ init/main.c                         |   2 +
+ mm/Kconfig                          |  16 +++
+ mm/Makefile                         |   2 +
+ mm/pmalloc.c                        | 258 ++++++++++++++++++++++++++++++++++++
+ mm/pmalloc_helpers.h                | 210 +++++++++++++++++++++++++++++
+ mm/test_pmalloc.c                   | 213 +++++++++++++++++++++++++++++
+ mm/usercopy.c                       |   9 ++
+ mm/vmalloc.c                        |  10 +-
+ security/selinux/hooks.c            |  12 +-
+ security/selinux/include/security.h |   2 +-
+ security/selinux/ss/services.c      |  51 ++++---
+ 20 files changed, 1174 insertions(+), 31 deletions(-)
+ create mode 100644 Documentation/core-api/pmalloc.rst
+ create mode 100644 include/linux/pmalloc.h
+ create mode 100644 include/linux/test_pmalloc.h
+ create mode 100644 mm/pmalloc.c
+ create mode 100644 mm/pmalloc_helpers.h
+ create mode 100644 mm/test_pmalloc.c
+
+-- 
+2.14.1
