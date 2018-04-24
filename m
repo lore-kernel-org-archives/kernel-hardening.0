@@ -1,49 +1,43 @@
-Date: Tue, 24 Apr 2018 16:46:51 -0700
+Date: Tue, 24 Apr 2018 16:57:52 -0700
 From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v3 ipsec-next] xfrm: remove VLA usage in __xfrm6_sort()
-Message-ID: <20180424234651.GA30225@beast>
+Subject: [PATCH v3] ath9k: dfs: Remove VLA usage
+Message-ID: <20180424235752.GA37317@beast>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-To: Stefano Brivio <sbrivio@redhat.com>
-Cc: Andreas Christoforou <andreaschristofo@gmail.com>, kernel-hardening@lists.openwall.com, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
+To: Kalle Valo <kvalo@codeaurora.org>
+Cc: Andreas Christoforou <andreaschristofo@gmail.com>, Rosen Penev <rosenp@gmail.com>, Eric Dumazet <eric.dumazet@gmail.com>, Joe Perches <joe@perches.com>, linux-wireless@vger.kernel.org, netdev@vger.kernel.org, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In the quest to remove all stack VLA usage removed from the kernel[1],
-just use XFRM_MAX_DEPTH as already done for the "class" array. In one
-case, it'll do this loop up to 5, the other caller up to 6.
+In the quest to remove all stack VLA usage from the kernel[1], this
+redefines FFT_NUM_SAMPLES as a #define instead of const int, which still
+triggers gcc's VLA checking pass.
 
 [1] https://lkml.org/lkml/2018/3/7/621
 
 Co-developed-by: Andreas Christoforou <andreaschristofo@gmail.com>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
-v3:
-- adjust Subject and commit log (Steffen)
-- use "= { }" instead of memset() (Stefano)
-- reorder variables (Stefano)
-v2:
-- use XFRM_MAX_DEPTH for "count" array (Steffen and Mathias).
+v3: replace FFT_NUM_SAMPLES as a #define (Joe)
 ---
- net/ipv6/xfrm6_state.c | 4 ++--
+ drivers/net/wireless/ath/ath9k/dfs.c | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/net/ipv6/xfrm6_state.c b/net/ipv6/xfrm6_state.c
-index 16f434791763..eeb44b64ae7f 100644
---- a/net/ipv6/xfrm6_state.c
-+++ b/net/ipv6/xfrm6_state.c
-@@ -60,9 +60,9 @@ xfrm6_init_temprop(struct xfrm_state *x, const struct xfrm_tmpl *tmpl,
- static int
- __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
- {
--	int i;
-+	int count[XFRM_MAX_DEPTH] = { };
- 	int class[XFRM_MAX_DEPTH];
--	int count[maxclass];
-+	int i;
+diff --git a/drivers/net/wireless/ath/ath9k/dfs.c b/drivers/net/wireless/ath/ath9k/dfs.c
+index 6fee9a464cce..e6e56a925121 100644
+--- a/drivers/net/wireless/ath/ath9k/dfs.c
++++ b/drivers/net/wireless/ath/ath9k/dfs.c
+@@ -40,8 +40,8 @@ static const int BIN_DELTA_MIN		= 1;
+ static const int BIN_DELTA_MAX		= 10;
  
- 	memset(count, 0, sizeof(count));
+ /* we need at least 3 deltas / 4 samples for a reliable chirp detection */
+-#define NUM_DIFFS 3
+-static const int FFT_NUM_SAMPLES	= (NUM_DIFFS + 1);
++#define NUM_DIFFS	3
++#define FFT_NUM_SAMPLES	(NUM_DIFFS + 1)
  
+ /* Threshold for difference of delta peaks */
+ static const int MAX_DIFF		= 2;
 -- 
 2.7.4
 
