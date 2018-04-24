@@ -1,88 +1,93 @@
-Subject: Patch "kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl" has been added to the 4.14-stable tree
-From: <gregkh@linuxfoundation.org>
-Date: Tue, 24 Apr 2018 17:01:05 +0200
-Message-ID: <15245820659976@kroah.com>
+Subject: Re: [PATCH 7/9] Pmalloc Rare Write: modify selected pools
+References: <20180423125458.5338-1-igor.stoppa@huawei.com>
+ <20180423125458.5338-8-igor.stoppa@huawei.com>
+ <20180424115050.GD26636@bombadil.infradead.org>
+ <eb23fbd9-1b9e-8633-b0eb-241b8ad24d95@gmail.com>
+ <20180424144404.GF26636@bombadil.infradead.org>
+ <b1efb813-3629-518c-4eeb-7d15eb5e7319@gmail.com>
+From: Igor Stoppa <igor.stoppa@gmail.com>
+Message-ID: <a8ea4455-3be8-153e-0ac4-52ef27a942b4@gmail.com>
+Date: Tue, 24 Apr 2018 19:29:05 +0400
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-To: alexander.levin@microsoft.com, gregkh@linuxfoundation.org, keescook@chromium.org, kernel-hardening@lists.openwall.com, pbonzini@redhat.com, rkrcmar@redhat.com
-Cc: stable-commits@vger.kernel.org
+In-Reply-To: <b1efb813-3629-518c-4eeb-7d15eb5e7319@gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: lazytyped <lazytyped@gmail.com>, Matthew Wilcox <willy@infradead.org>
+Cc: keescook@chromium.org, paul@paul-moore.com, sds@tycho.nsa.gov, mhocko@kernel.org, corbet@lwn.net, labbott@redhat.com, linux-cc=david@fromorbit.com, --cc=rppt@linux.vnet.ibm.com, --security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>, Carlos Chinea Perez <carlos.chinea.perez@huawei.com>, Remi Denis Courmont <remi.denis.courmont@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-This is a note to let you know that I've just added the patch titled
 
-    kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
+On 24/04/18 19:03, lazytyped wrote:
+> 
+> 
+> On 4/24/18 4:44 PM, Matthew Wilcox wrote:
+>> On Tue, Apr 24, 2018 at 02:32:36PM +0200, lazytyped wrote:
+>>> On 4/24/18 1:50 PM, Matthew Wilcox wrote:
+>>>> struct modifiable_data {
+>>>> 	struct immutable_data *d;
+>>>> 	...
+>>>> };
+>>>>
+>>>> Then allocate a new pool, change d and destroy the old pool.
+>>> With the above, you have just shifted the target of the arbitrary write
+>>> from the immutable data itself to the pointer to the immutable data, so
+>>> got no security benefit.
+>> There's always a pointer to the immutable data.  How do you currently
+>> get to the selinux context?  file->f_security.  You can't make 'file'
+>> immutable, so file->f_security is the target of the arbitrary write.
+>> All you can do is make life harder, and reduce the size of the target.
+> 
+> So why adding an extra pointer/indirection helps here? It adds attacking
+> surface.
+>>
+>>> The goal of the patch is to reduce the window when stuff is writeable,
+>>> so that an arbitrary write is likely to hit the time when data is read-only.
+>> Yes, reducing the size of the target in time as well as bytes.  This patch
+>> gives attackers a great roadmap (maybe even gadget) to unprotecting
+>> a pool.
+> 
+> I don't think this is relevant to the threat model this patch addresses.
+> If the attacker can already execute code, it doesn't matter whether this
+> specific piece of code exists or not. In general, if an attacker got to
+> the point of using gadgets, you've lost.
 
-to the 4.14-stable tree which can be found at:
-    http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
+Realistically, if the attacker can execute arbitrary code, through 
+gadgets, there is nothing preventing a direct attack to the physical 
+page, by remapping it, exactly like the patch does.
+Or even changing the page table.
 
-The filename of the patch is:
-     kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
-and it can be found in the queue-4.14 subdirectory.
+Wrt re-utilizing this specific rare_write() function, it would be 
+possible to mark it as __always_inline, so that it will be executed only 
+with the data and pool it is intended for.
 
-If you, or anyone else, feels it should not be added to the stable tree,
-please let <stable@vger.kernel.org> know about it.
+Then, if one has access to a compiler plugin that does CFI, it becomes 
+harder to reuse the inlined function.
 
+Inlining should not be too bad, as size overhead.
 
->From foo@baz Tue Apr 24 15:29:20 CEST 2018
-From: Paolo Bonzini <pbonzini@redhat.com>
-Date: Thu, 26 Oct 2017 15:45:47 +0200
-Subject: kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
+OTOH, having the pointer always laying around at a specific address, 
+allows for easier scanning - and attack - of the data
 
-From: Paolo Bonzini <pbonzini@redhat.com>
+The remapping to a temporary address should make it harder to figure out 
+where to write to.
 
+Again, the whole assumption behind pmalloc is that the attacker can do 
+read and writes, maybe limited execution, in the form of function calls.
 
-[ Upstream commit 51776043afa415435c7e4636204fbe4f7edc4501 ]
+But if the attacker can execute arbitrary code, all bets are off and the 
+system is forfeited.
 
-This ioctl is obsolete (it was used by Xenner as far as I know) but
-still let's not break it gratuitously...  Its handler is copying
-directly into struct kvm.  Go through a bounce buffer instead, with
-the added benefit that we can actually do something useful with the
-flags argument---the previous code was exiting with -EINVAL but still
-doing the copy.
+Really critical data should go into a TEE or similar isolated environment.
 
-This technically is a userspace ABI breakage, but since no one should be
-using the ioctl, it's a good occasion to see if someone actually
-complains.
+> On the contrary, it opens the road to design trusted paths that can
+> write to or access data that would generally be read-only or not
+> accessible (with, of course, all the complexity, limitations and
+> penalties of doing this purely in software on a page sized basis).
 
-Cc: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Radim Krčmář <rkrcmar@redhat.com>
-Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
-Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
-Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
----
- arch/x86/kvm/x86.c |    7 ++++---
- 1 file changed, 4 insertions(+), 3 deletions(-)
+I had considered the COW approach, where I would allocate a new page and 
+swap it atomically, but it is not supported on ARM.
 
---- a/arch/x86/kvm/x86.c
-+++ b/arch/x86/kvm/x86.c
-@@ -4225,13 +4225,14 @@ long kvm_arch_vm_ioctl(struct file *filp
- 		mutex_unlock(&kvm->lock);
- 		break;
- 	case KVM_XEN_HVM_CONFIG: {
-+		struct kvm_xen_hvm_config xhc;
- 		r = -EFAULT;
--		if (copy_from_user(&kvm->arch.xen_hvm_config, argp,
--				   sizeof(struct kvm_xen_hvm_config)))
-+		if (copy_from_user(&xhc, argp, sizeof(xhc)))
- 			goto out;
- 		r = -EINVAL;
--		if (kvm->arch.xen_hvm_config.flags)
-+		if (xhc.flags)
- 			goto out;
-+		memcpy(&kvm->arch.xen_hvm_config, &xhc, sizeof(xhc));
- 		r = 0;
- 		break;
- 	}
+--
 
-
-Patches currently in stable-queue which might be from pbonzini@redhat.com are
-
-queue-4.14/kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
-queue-4.14/kvm-map-pfn-type-memory-regions-as-writable-if-possible.patch
-queue-4.14/x86-kvm-vmx-do-not-use-vm-exit-instruction-length-for-fast-mmio-when-running-nested.patch
-queue-4.14/revert-kvm-x86-fix-smram-accessing-even-if-vm-is-shutdown.patch
-queue-4.14/x86-hyperv-check-for-required-priviliges-in-hyperv_init.patch
+igor
