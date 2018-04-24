@@ -1,56 +1,23 @@
-Date: Mon, 23 Apr 2018 21:13:24 -0600
-From: Tycho Andersen <tycho@tycho.ws>
-Subject: Re: [PATCH 3/3] dh key: get rid of stack allocated array for zeroes
-Message-ID: <20180424031324.GA3125@cisco>
-References: <20180424010321.14739-1-tycho@tycho.ws>
- <20180424010321.14739-3-tycho@tycho.ws>
+Subject: Re: [PATCH v11 2/6] x86/entry: Add STACKLEAK erasing the kernel stack
+ at the end of syscalls
+References: <1523024546-6150-1-git-send-email-alex.popov@linux.com>
+ <1523024546-6150-3-git-send-email-alex.popov@linux.com>
+From: Dave Hansen <dave.hansen@linux.intel.com>
+Message-ID: <4e668302-8754-3f4e-3372-d0d7ba30cfa3@linux.intel.com>
+Date: Mon, 23 Apr 2018 21:23:50 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180424010321.14739-3-tycho@tycho.ws>
-To: David Howells <dhowells@redhat.com>
-Cc: keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Eric Biggers <ebiggers3@gmail.com>
+In-Reply-To: <1523024546-6150-3-git-send-email-alex.popov@linux.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 23, 2018 at 07:03:21PM -0600, Tycho Andersen wrote:
-> We're interested in getting rid of all of the stack allocated arrays in
-> the kernel: https://lkml.org/lkml/2018/3/7/621
-> 
-> This case is interesting, since we really just need an array of bytes that
-> are zero. The loop already ensures that if the array isn't exactly the
-> right size that enough zero bytes will be copied in. So, instead of
-> choosing this value to be the size of the hash, let's just choose it to be
-> 256, since that is a common size, is not to big, and will not result in too
-> many extra iterations of the loop.
-> 
-> v2: split out from other patch, just hardcode array size instead of
->     dynamically allocating something the right size
-> 
-> Signed-off-by: Tycho Andersen <tycho@tycho.ws>
-> CC: David Howells <dhowells@redhat.com>
-> CC: James Morris <jmorris@namei.org>
-> CC: "Serge E. Hallyn" <serge@hallyn.com>
-> CC: Eric Biggers <ebiggers3@gmail.com>
-> ---
->  security/keys/dh.c | 6 +++---
->  1 file changed, 3 insertions(+), 3 deletions(-)
-> 
-> diff --git a/security/keys/dh.c b/security/keys/dh.c
-> index 9fecaea6c298..74f8a853872e 100644
-> --- a/security/keys/dh.c
-> +++ b/security/keys/dh.c
-> @@ -162,8 +162,8 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
->  			goto err;
->  
->  		if (zlen && h) {
-> -			u8 tmpbuffer[h];
-> -			size_t chunk = min_t(size_t, zlen, h);
-> +			u8 tmpbuffer[256];
+Hi Alexander,
 
-Whoops, this should be 32, not 256. That shouldn't make any runtime
-difference, but it'll closer match the allocation patterns from
-before.
+You can add:
 
-I'll let this sit for a bit and send v3.
+Reviewed-by: Dave Hansen <dave.hansen@linux.intel.com>
 
-Tycho
+for this patch if you like.  I haven't taken a super close look at the
+rest, but this is certainly minimally invasive from my point of view for
+the entry code.  Thanks, again for reworking it.
