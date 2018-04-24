@@ -1,54 +1,89 @@
-Subject: Re: [PATCH 9/9] Protect SELinux initialized state with pmalloc
-References: <20180423125458.5338-1-igor.stoppa@huawei.com>
- <20180423125458.5338-10-igor.stoppa@huawei.com>
- <13ee6991-db48-d484-66a6-90de45fad2df@tycho.nsa.gov>
-From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <34d804c6-8aea-52ee-41b8-139aaf188d80@gmail.com>
-Date: Tue, 24 Apr 2018 18:35:18 +0400
+Date: Tue, 24 Apr 2018 08:35:39 -0600
+From: Tycho Andersen <tycho@tycho.ws>
+Subject: Re: [PATCH 1/3] big key: get rid of stack array allocation
+Message-ID: <20180424143539.GB3125@cisco>
+References: <20180424010321.14739-1-tycho@tycho.ws>
+ <20180424045015.GA4281@sol.localdomain>
 MIME-Version: 1.0
-In-Reply-To: <13ee6991-db48-d484-66a6-90de45fad2df@tycho.nsa.gov>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Stephen Smalley <sds@tycho.nsa.gov>, willy@infradead.org, keescook@chromium.org, paul@paul-moore.com, mhocko@kernel.org, corbet@lwn.net
-Cc: labbott@redhat.com, david@fromorbit.com, rppt@linux.vnet.ibm.com, linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180424045015.GA4281@sol.localdomain>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Hi Eric,
 
-
-On 24/04/18 16:49, Stephen Smalley wrote:
-> On 04/23/2018 08:54 AM, Igor Stoppa wrote:
-
-[...]
-
->> The patch is probably in need of rework, to make it fit better with the
->> new SELinux internal data structures, however it shows how to deny an
->> easy target to the attacker.
+On Mon, Apr 23, 2018 at 09:50:15PM -0700, Eric Biggers wrote:
+> Hi Tycho,
 > 
-> I know this is just an example, but not sure why you wouldn't just protect the
-> entire selinux_state.
+> On Mon, Apr 23, 2018 at 07:03:19PM -0600, Tycho Andersen wrote:
+> > We're interested in getting rid of all of the stack allocated arrays in the
+> > kernel [1]. This patch simply hardcodes the iv length to match that of the
+> > hardcoded cipher.
+> > 
+> > [1]: https://lkml.org/lkml/2018/3/7/621
+> > 
+> > v2: hardcode the length of the nonce to be the GCM AES IV length, and do a
+> >     sanity check in init(), Eric Biggers
+> > 
+> > Signed-off-by: Tycho Andersen <tycho@tycho.ws>
+> > CC: David Howells <dhowells@redhat.com>
+> > CC: James Morris <jmorris@namei.org>
+> > CC: "Serge E. Hallyn" <serge@hallyn.com>
+> > CC: Jason A. Donenfeld <Jason@zx2c4.com>
+> > CC: Eric Biggers <ebiggers3@gmail.com>
+> > ---
+> >  security/keys/big_key.c | 9 ++++++++-
+> >  1 file changed, 8 insertions(+), 1 deletion(-)
+> > 
+> > diff --git a/security/keys/big_key.c b/security/keys/big_key.c
+> > index 933623784ccd..75c46786a166 100644
+> > --- a/security/keys/big_key.c
+> > +++ b/security/keys/big_key.c
+> > @@ -22,6 +22,7 @@
+> >  #include <keys/user-type.h>
+> >  #include <keys/big_key-type.h>
+> >  #include <crypto/aead.h>
+> > +#include <crypto/gcm.h>
+> >  
+> >  struct big_key_buf {
+> >  	unsigned int		nr_pages;
+> > @@ -109,7 +110,7 @@ static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t dat
+> >  	 * an .update function, so there's no chance we'll wind up reusing the
+> >  	 * key to encrypt updated data. Simply put: one key, one encryption.
+> >  	 */
+> > -	u8 zero_nonce[crypto_aead_ivsize(big_key_aead)];
+> > +	u8 zero_nonce[GCM_AES_IV_SIZE];
+> >  
+> >  	aead_req = aead_request_alloc(big_key_aead, GFP_KERNEL);
+> >  	if (!aead_req)
+> > @@ -425,6 +426,12 @@ static int __init big_key_init(void)
+> >  		pr_err("Can't alloc crypto: %d\n", ret);
+> >  		return ret;
+> >  	}
+> > +
+> > +	if (unlikely(crypto_aead_ivsize(big_key_aead) != GCM_AES_IV_SIZE)) {
+> > +		WARN(1, "big key algorithm changed?");
+> > +		return -EINVAL;
+> > +	}
+> > +
+> 
+> 'big_key_aead' needs to be freed on error.
+> 
+> 	err = -EINVAL;
+> 	goto free_aead;
 
-Because I have much more to discuss about SELinux, which would involve 
-the whole state, the policyDB and the AVC
+oof, yes, thanks.
 
-I will start a separate thread about that. This was merely as simple as 
-possible example of the use of the API.
+> Also how about defining the IV size next to the algorithm name?
+> Then all the algorithm details would be on adjacent lines:
+> 
+> static const char big_key_alg_name[] = "gcm(aes)";
+> #define BIG_KEY_IV_SIZE         GCM_AES_IV_SIZE
 
-I just wanted to have a feeling about how it would be received :-)
+Sounds good, I'll fix both of these for v3.
 
-> Note btw that the selinux_state encapsulation is preparatory work
-> for selinux namespaces [1], at which point the structure is in fact dynamically allocated
-> and there can be multiple instances of it.  That however is work-in-progress, highly experimental,
-> and might not ever make it upstream (if we can't resolve the various challenges it poses in a satisfactory
-> way).
+Cheers,
 
-Yes, I am aware of this and I would like to discuss also in the light of 
-the future directions.
-
-I just didn't want to waste too much time on something that you might 
-want to change radically in a month :-)
-
-I already was caught once by surprise when ss_initalized disappeared 
-just when I had a patch ready for it :-)
-
---
-igor
+Tycho
