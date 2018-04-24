@@ -1,89 +1,40 @@
-Date: Tue, 24 Apr 2018 08:35:39 -0600
-From: Tycho Andersen <tycho@tycho.ws>
-Subject: Re: [PATCH 1/3] big key: get rid of stack array allocation
-Message-ID: <20180424143539.GB3125@cisco>
-References: <20180424010321.14739-1-tycho@tycho.ws>
- <20180424045015.GA4281@sol.localdomain>
+Date: Tue, 24 Apr 2018 07:44:04 -0700
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH 7/9] Pmalloc Rare Write: modify selected pools
+Message-ID: <20180424144404.GF26636@bombadil.infradead.org>
+References: <20180423125458.5338-1-igor.stoppa@huawei.com>
+ <20180423125458.5338-8-igor.stoppa@huawei.com>
+ <20180424115050.GD26636@bombadil.infradead.org>
+ <eb23fbd9-1b9e-8633-b0eb-241b8ad24d95@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180424045015.GA4281@sol.localdomain>
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>
+In-Reply-To: <eb23fbd9-1b9e-8633-b0eb-241b8ad24d95@gmail.com>
+To: lazytyped <lazytyped@gmail.com>
+Cc: Igor Stoppa <igor.stoppa@gmail.com>, keescook@chromium.org, paul@paul-moore.com, sds@tycho.nsa.gov, mhocko@kernel.org, corbet@lwn.net, labbott@redhat.com, linux-cc=david@fromorbit.com, --cc=rppt@linux.vnet.ibm.com, --security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>, Carlos Chinea Perez <carlos.chinea.perez@huawei.com>, Remi Denis Courmont <remi.denis.courmont@huawei.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Eric,
-
-On Mon, Apr 23, 2018 at 09:50:15PM -0700, Eric Biggers wrote:
-> Hi Tycho,
+On Tue, Apr 24, 2018 at 02:32:36PM +0200, lazytyped wrote:
+> On 4/24/18 1:50 PM, Matthew Wilcox wrote:
+> > struct modifiable_data {
+> > 	struct immutable_data *d;
+> > 	...
+> > };
+> >
+> > Then allocate a new pool, change d and destroy the old pool.
 > 
-> On Mon, Apr 23, 2018 at 07:03:19PM -0600, Tycho Andersen wrote:
-> > We're interested in getting rid of all of the stack allocated arrays in the
-> > kernel [1]. This patch simply hardcodes the iv length to match that of the
-> > hardcoded cipher.
-> > 
-> > [1]: https://lkml.org/lkml/2018/3/7/621
-> > 
-> > v2: hardcode the length of the nonce to be the GCM AES IV length, and do a
-> >     sanity check in init(), Eric Biggers
-> > 
-> > Signed-off-by: Tycho Andersen <tycho@tycho.ws>
-> > CC: David Howells <dhowells@redhat.com>
-> > CC: James Morris <jmorris@namei.org>
-> > CC: "Serge E. Hallyn" <serge@hallyn.com>
-> > CC: Jason A. Donenfeld <Jason@zx2c4.com>
-> > CC: Eric Biggers <ebiggers3@gmail.com>
-> > ---
-> >  security/keys/big_key.c | 9 ++++++++-
-> >  1 file changed, 8 insertions(+), 1 deletion(-)
-> > 
-> > diff --git a/security/keys/big_key.c b/security/keys/big_key.c
-> > index 933623784ccd..75c46786a166 100644
-> > --- a/security/keys/big_key.c
-> > +++ b/security/keys/big_key.c
-> > @@ -22,6 +22,7 @@
-> >  #include <keys/user-type.h>
-> >  #include <keys/big_key-type.h>
-> >  #include <crypto/aead.h>
-> > +#include <crypto/gcm.h>
-> >  
-> >  struct big_key_buf {
-> >  	unsigned int		nr_pages;
-> > @@ -109,7 +110,7 @@ static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t dat
-> >  	 * an .update function, so there's no chance we'll wind up reusing the
-> >  	 * key to encrypt updated data. Simply put: one key, one encryption.
-> >  	 */
-> > -	u8 zero_nonce[crypto_aead_ivsize(big_key_aead)];
-> > +	u8 zero_nonce[GCM_AES_IV_SIZE];
-> >  
-> >  	aead_req = aead_request_alloc(big_key_aead, GFP_KERNEL);
-> >  	if (!aead_req)
-> > @@ -425,6 +426,12 @@ static int __init big_key_init(void)
-> >  		pr_err("Can't alloc crypto: %d\n", ret);
-> >  		return ret;
-> >  	}
-> > +
-> > +	if (unlikely(crypto_aead_ivsize(big_key_aead) != GCM_AES_IV_SIZE)) {
-> > +		WARN(1, "big key algorithm changed?");
-> > +		return -EINVAL;
-> > +	}
-> > +
-> 
-> 'big_key_aead' needs to be freed on error.
-> 
-> 	err = -EINVAL;
-> 	goto free_aead;
+> With the above, you have just shifted the target of the arbitrary write
+> from the immutable data itself to the pointer to the immutable data, so
+> got no security benefit.
 
-oof, yes, thanks.
+There's always a pointer to the immutable data.  How do you currently
+get to the selinux context?  file->f_security.  You can't make 'file'
+immutable, so file->f_security is the target of the arbitrary write.
+All you can do is make life harder, and reduce the size of the target.
 
-> Also how about defining the IV size next to the algorithm name?
-> Then all the algorithm details would be on adjacent lines:
-> 
-> static const char big_key_alg_name[] = "gcm(aes)";
-> #define BIG_KEY_IV_SIZE         GCM_AES_IV_SIZE
+> The goal of the patch is to reduce the window when stuff is writeable,
+> so that an arbitrary write is likely to hit the time when data is read-only.
 
-Sounds good, I'll fix both of these for v3.
-
-Cheers,
-
-Tycho
+Yes, reducing the size of the target in time as well as bytes.  This patch
+gives attackers a great roadmap (maybe even gadget) to unprotecting
+a pool.
