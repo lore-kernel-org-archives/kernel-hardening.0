@@ -1,59 +1,53 @@
-From: Tycho Andersen <tycho@tycho.ws>
-Subject: [PATCH v3 3/3] dh key: get rid of stack allocated array for zeroes
-Date: Tue, 24 Apr 2018 14:26:39 -0600
-Message-Id: <20180424202639.19830-3-tycho@tycho.ws>
-In-Reply-To: <20180424202639.19830-1-tycho@tycho.ws>
-References: <20180424202639.19830-1-tycho@tycho.ws>
-To: David Howells <dhowells@redhat.com>
-Cc: keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@tycho.ws>, James Morris <jmorris@namei.org>, "Serge E. Hallyn" <serge@hallyn.com>, Eric Biggers <ebiggers3@gmail.com>
+Date: Tue, 24 Apr 2018 16:46:51 -0700
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH v3 ipsec-next] xfrm: remove VLA usage in __xfrm6_sort()
+Message-ID: <20180424234651.GA30225@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: Stefano Brivio <sbrivio@redhat.com>
+Cc: Andreas Christoforou <andreaschristofo@gmail.com>, kernel-hardening@lists.openwall.com, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-We're interested in getting rid of all of the stack allocated arrays in
-the kernel: https://lkml.org/lkml/2018/3/7/621
+In the quest to remove all stack VLA usage removed from the kernel[1],
+just use XFRM_MAX_DEPTH as already done for the "class" array. In one
+case, it'll do this loop up to 5, the other caller up to 6.
 
-This case is interesting, since we really just need an array of bytes that
-are zero. The loop already ensures that if the array isn't exactly the
-right size that enough zero bytes will be copied in. So, instead of
-choosing this value to be the size of the hash, let's just choose it to be
-32, since that is a common size, is not too big, and will not result in too
-many extra iterations of the loop.
+[1] https://lkml.org/lkml/2018/3/7/621
 
-v2: split out from other patch, just hardcode array size instead of
-    dynamically allocating something the right size
-v3: fix typo of 256 -> 32
-
-Signed-off-by: Tycho Andersen <tycho@tycho.ws>
-CC: David Howells <dhowells@redhat.com>
-CC: James Morris <jmorris@namei.org>
-CC: "Serge E. Hallyn" <serge@hallyn.com>
-CC: Eric Biggers <ebiggers3@gmail.com>
+Co-developed-by: Andreas Christoforou <andreaschristofo@gmail.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- security/keys/dh.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+v3:
+- adjust Subject and commit log (Steffen)
+- use "= { }" instead of memset() (Stefano)
+- reorder variables (Stefano)
+v2:
+- use XFRM_MAX_DEPTH for "count" array (Steffen and Mathias).
+---
+ net/ipv6/xfrm6_state.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/security/keys/dh.c b/security/keys/dh.c
-index 9fecaea6c298..f7403821db7f 100644
---- a/security/keys/dh.c
-+++ b/security/keys/dh.c
-@@ -162,8 +162,8 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
- 			goto err;
+diff --git a/net/ipv6/xfrm6_state.c b/net/ipv6/xfrm6_state.c
+index 16f434791763..eeb44b64ae7f 100644
+--- a/net/ipv6/xfrm6_state.c
++++ b/net/ipv6/xfrm6_state.c
+@@ -60,9 +60,9 @@ xfrm6_init_temprop(struct xfrm_state *x, const struct xfrm_tmpl *tmpl,
+ static int
+ __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
+ {
+-	int i;
++	int count[XFRM_MAX_DEPTH] = { };
+ 	int class[XFRM_MAX_DEPTH];
+-	int count[maxclass];
++	int i;
  
- 		if (zlen && h) {
--			u8 tmpbuffer[h];
--			size_t chunk = min_t(size_t, zlen, h);
-+			u8 tmpbuffer[32];
-+			size_t chunk = min_t(size_t, zlen, sizeof(tmpbuffer));
- 			memset(tmpbuffer, 0, chunk);
- 
- 			do {
-@@ -173,7 +173,7 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
- 					goto err;
- 
- 				zlen -= chunk;
--				chunk = min_t(size_t, zlen, h);
-+				chunk = min_t(size_t, zlen, sizeof(tmpbuffer));
- 			} while (zlen);
- 		}
+ 	memset(count, 0, sizeof(count));
  
 -- 
-2.17.0
+2.7.4
+
+
+-- 
+Kees Cook
+Pixel Security
