@@ -1,98 +1,72 @@
-Date: Wed, 25 Apr 2018 12:23:32 +0100
+Date: Wed, 25 Apr 2018 13:27:50 +0100
 From: Catalin Marinas <catalin.marinas@arm.com>
-Subject: Re: [PATCHv3 07/11] arm64: add basic pointer authentication support
-Message-ID: <20180425112331.hke7afxnslyrwf3h@armageddon.cambridge.arm.com>
+Subject: Re: [PATCHv3 11/11] arm64: docs: document pointer authentication
+Message-ID: <20180425122749.4eqhd2uiofoc7jyv@armageddon.cambridge.arm.com>
 References: <20180417183735.56985-1-mark.rutland@arm.com>
- <20180417183735.56985-8-mark.rutland@arm.com>
+ <20180417183735.56985-12-mark.rutland@arm.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180417183735.56985-8-mark.rutland@arm.com>
+In-Reply-To: <20180417183735.56985-12-mark.rutland@arm.com>
 To: Mark Rutland <mark.rutland@arm.com>
 Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, drjones@redhat.com, cdall@kernel.org, arnd@arndb.de, suzuki.poulose@arm.com, marc.zyngier@arm.com, awallis@codeaurora.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, ramana.radhakrishnan@arm.com, kvmarm@lists.cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Mark,
-
-On Tue, Apr 17, 2018 at 07:37:31PM +0100, Mark Rutland wrote:
-> diff --git a/arch/arm64/include/asm/mmu_context.h b/arch/arm64/include/asm/mmu_context.h
-> index 39ec0b8a689e..caf0d3010112 100644
-> --- a/arch/arm64/include/asm/mmu_context.h
-> +++ b/arch/arm64/include/asm/mmu_context.h
-> @@ -29,7 +29,6 @@
->  #include <asm/cacheflush.h>
->  #include <asm/cpufeature.h>
->  #include <asm/proc-fns.h>
-> -#include <asm-generic/mm_hooks.h>
->  #include <asm/cputype.h>
->  #include <asm/pgtable.h>
->  #include <asm/sysreg.h>
-> @@ -168,7 +167,14 @@ static inline void cpu_replace_ttbr1(pgd_t *pgdp)
->  #define destroy_context(mm)		do { } while(0)
->  void check_and_switch_context(struct mm_struct *mm, unsigned int cpu);
->  
-> -#define init_new_context(tsk,mm)	({ atomic64_set(&(mm)->context.id, 0); 0; })
-> +static inline int init_new_context(struct task_struct *tsk,
-> +			struct mm_struct *mm)
-> +{
-> +	atomic64_set(&mm->context.id, 0);
-> +	mm_ctx_ptrauth_init(&mm->context);
+On Tue, Apr 17, 2018 at 07:37:35PM +0100, Mark Rutland wrote:
+> +Basic support
+> +-------------
 > +
-> +	return 0;
-> +}
->  
->  #ifdef CONFIG_ARM64_SW_TTBR0_PAN
->  static inline void update_saved_ttbr0(struct task_struct *tsk,
-> @@ -216,6 +222,8 @@ static inline void __switch_mm(struct mm_struct *next)
->  		return;
->  	}
->  
-> +	mm_ctx_ptrauth_switch(&next->context);
+> +When CONFIG_ARM64_PTR_AUTH is selected, and relevant HW support is
+> +present, the kernel will assign a random APIAKey value to each process
+> +at exec*() time. This key is shared by all threads within the process,
+> +and the key is preserved across fork(). Presence of functionality using
+> +APIAKey is advertised via HWCAP_APIA.
 > +
->  	check_and_switch_context(next, cpu);
->  }
->  
-> @@ -241,6 +249,19 @@ switch_mm(struct mm_struct *prev, struct mm_struct *next,
->  void verify_cpu_asid_bits(void);
->  void post_ttbr_update_workaround(void);
->  
-> +static inline void arch_dup_mmap(struct mm_struct *oldmm,
-> +				 struct mm_struct *mm)
-> +{
-> +	mm_ctx_ptrauth_dup(&oldmm->context, &mm->context);
-> +}
-> +#define arch_dup_mmap arch_dup_mmap
+> +Recent versions of GCC can compile code with APIAKey-based return
+> +address protection when passed the -msign-return-address option. This
+> +uses instructions in the HINT space, and such code can run on systems
+> +without the pointer authentication extension.
+> +
+> +The remaining instruction and data keys (APIBKey, APDAKey, APDBKey) are
+> +reserved for future use, and instructions using these keys must not be
+> +used by software until a purpose and scope for their use has been
+> +decided. To enable future software using these keys to function on
+> +contemporary kernels, where possible, instructions using these keys are
+> +made to behave as NOPs.
+> +
+> +The generic key (APGAKey) is currently unsupported. Instructions using
+> +the generic key must not be used by software.
+> +
+> +
+> +Debugging
+> +---------
+> +
+> +When CONFIG_ARM64_PTR_AUTH is selected, and relevant HW support is
+> +present, the kernel will expose the position of TTBR0 PAC bits in the
+> +NT_ARM_PAC_MASK regset (struct user_pac_mask), which userspace can
+> +acqure via PTRACE_GETREGSET.
+> +
+> +Separate masks are exposed for data pointers and instruction pointers,
+> +as the set of PAC bits can vary between the two. Debuggers should not
+> +expect that HWCAP_APIA implies the presence (or non-presence) of this
+> +regset -- in future the kernel may support the use of APIBKey, APDAKey,
+> +and/or APBAKey, even in the absence of APIAKey.
+> +
+> +Note that the masks apply to TTBR0 addresses, and are not valid to apply
+> +to TTBR1 addresses (e.g. kernel pointers).
 
-IIUC, we could skip the arch_dup_mmap() and init_new_context() here for
-the fork() case since the ptrauth_keys would be copied as part of the
-dup_mm(). There is another situation where init_new_context() is called
-bprm_mm_init() -> mm_alloc() -> mm_init() -> init_new_context().
-However, in this case the core code also calls arch_bprm_mm_init(). So I
-think we only need to update the latter to get a new random key.
+I'm fine with the rest of the series but I'd like the toolchain guys to
+ack the ABI we are exposing (just this document is fine).
 
-> diff --git a/arch/arm64/include/asm/pointer_auth.h b/arch/arm64/include/asm/pointer_auth.h
-> new file mode 100644
-> index 000000000000..a2e8fb91fdee
-> --- /dev/null
-> +++ b/arch/arm64/include/asm/pointer_auth.h
-> @@ -0,0 +1,89 @@
-> +/*
-> + * Copyright (C) 2016 ARM Ltd.
-> + *
-> + * This program is free software; you can redistribute it and/or modify
-> + * it under the terms of the GNU General Public License version 2 as
-> + * published by the Free Software Foundation.
-> + *
-> + * This program is distributed in the hope that it will be useful,
-> + * but WITHOUT ANY WARRANTY; without even the implied warranty of
-> + * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-> + * GNU General Public License for more details.
-> + *
-> + * You should have received a copy of the GNU General Public License
-> + * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-> + */
+> +Virtualization
+> +--------------
+> +
+> +Pointer authentication is not currently supported in KVM guests. KVM
+> +will mask the feature bits from ID_AA64ISAR1_EL1, and attempted use of
+> +the feature will result in an UNDEFINED exception being injected into
+> +the guest.
 
-Nitpick: 2018. You could also use the SPDX header, save some lines.
+I suspect at some point we'll see patches for KVM?
 
 -- 
 Catalin
