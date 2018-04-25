@@ -1,28 +1,55 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <87po2nagrk.fsf@kamboji.qca.qualcomm.com>
-References: <20180424235752.GA37317@beast> <87po2nagrk.fsf@kamboji.qca.qualcomm.com>
+Date: Wed, 25 Apr 2018 07:46:39 -0700
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 25 Apr 2018 07:42:25 -0700
-Message-ID: <CAGXu5jJrd94=RQJHqfdP9wTfhsp61+aCnOmr06bia3mmi79_Mg@mail.gmail.com>
-Subject: Re: [PATCH v3] ath9k: dfs: Remove VLA usage
-Content-Type: text/plain; charset="UTF-8"
-To: Kalle Valo <kvalo@codeaurora.org>
-Cc: Andreas Christoforou <andreaschristofo@gmail.com>, Rosen Penev <rosenp@gmail.com>, Eric Dumazet <eric.dumazet@gmail.com>, Joe Perches <joe@perches.com>, linux-wireless <linux-wireless@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, QCA ath9k Development <ath9k-devel@qca.qualcomm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Subject: [PATCH v4 ipsec-next] xfrm: remove VLA usage in __xfrm6_sort()
+Message-ID: <20180425144639.GA38350@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: Stefano Brivio <sbrivio@redhat.com>
+Cc: Andreas Christoforou <andreaschristofo@gmail.com>, kernel-hardening@lists.openwall.com, Steffen Klassert <steffen.klassert@secunet.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 25, 2018 at 12:26 AM, Kalle Valo <kvalo@codeaurora.org> wrote:
-> I have already applied an almost identical patch:
->
-> ath9k: dfs: remove accidental use of stack VLA
->
-> https://git.kernel.org/pub/scm/linux/kernel/git/kvalo/ath.git/commit/?h=ath-next&id=9c27489a34548913baaaf3b2776e05d4a9389e3e
+In the quest to remove all stack VLA usage removed from the kernel[1],
+just use XFRM_MAX_DEPTH as already done for the "class" array. In one
+case, it'll do this loop up to 5, the other caller up to 6.
 
-Ah! Cool, no worries. I didn't see that in linux-next yet. :)
+[1] https://lkml.org/lkml/2018/3/7/621
 
-Thanks!
+Co-developed-by: Andreas Christoforou <andreaschristofo@gmail.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+v4:
+- actually remove memset(). :)
+v3:
+- adjust Subject and commit log (Steffen)
+- use "= { }" instead of memset() (Stefano)
+v2:
+- use XFRM_MAX_DEPTH for "count" array (Steffen and Mathias).
+---
+ net/ipv6/xfrm6_state.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
 
--Kees
+diff --git a/net/ipv6/xfrm6_state.c b/net/ipv6/xfrm6_state.c
+index 16f434791763..5bdca3d5d6b7 100644
+--- a/net/ipv6/xfrm6_state.c
++++ b/net/ipv6/xfrm6_state.c
+@@ -60,11 +60,9 @@ xfrm6_init_temprop(struct xfrm_state *x, const struct xfrm_tmpl *tmpl,
+ static int
+ __xfrm6_sort(void **dst, void **src, int n, int (*cmp)(void *p), int maxclass)
+ {
+-	int i;
++	int count[XFRM_MAX_DEPTH] = { };
+ 	int class[XFRM_MAX_DEPTH];
+-	int count[maxclass];
+-
+-	memset(count, 0, sizeof(count));
++	int i;
+ 
+ 	for (i = 0; i < n; i++) {
+ 		int c;
+-- 
+2.7.4
+
 
 -- 
 Kees Cook
