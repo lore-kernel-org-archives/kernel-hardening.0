@@ -1,48 +1,92 @@
+Date: Fri, 27 Apr 2018 11:51:39 +0200
+From: Christoffer Dall <christoffer.dall@arm.com>
+Subject: Re: [PATCHv3 02/11] arm64/kvm: consistently handle host HCR_EL2 flags
+Message-ID: <20180427095139.GH13249@C02W217FHV2R.local>
+References: <20180417183735.56985-1-mark.rutland@arm.com>
+ <20180417183735.56985-3-mark.rutland@arm.com>
 MIME-Version: 1.0
-In-Reply-To: <20180420165143.mwcxwkf6j7ddckdt@gondor.apana.org.au>
-References: <1523282087-22128-1-git-send-email-s.mesoraca16@gmail.com> <20180420165143.mwcxwkf6j7ddckdt@gondor.apana.org.au>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Thu, 26 Apr 2018 19:27:07 +0200
-Message-ID: <CAJHCu1LDTDD5pBJYbsiio5yne-a+cVgDLaVNYSKxjq=L74JWqQ@mail.gmail.com>
-Subject: Re: [PATCH v2 0/2] crypto: removing various VLAs
-Content-Type: text/plain; charset="UTF-8"
-To: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-kernel@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-crypto@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Kees Cook <keescook@chromium.org>, Eric Biggers <ebiggers3@gmail.com>, Laura Abbott <labbott@redhat.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180417183735.56985-3-mark.rutland@arm.com>
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, linux-arch@vger.kernel.org, drjones@redhat.com, arnd@arndb.de, suzuki.poulose@arm.com, marc.zyngier@arm.com, catalin.marinas@arm.com, awallis@codeaurora.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, ramana.radhakrishnan@arm.com, kvmarm@lists.cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-04-20 18:51 GMT+02:00 Herbert Xu <herbert@gondor.apana.org.au>:
-> On Mon, Apr 09, 2018 at 03:54:45PM +0200, Salvatore Mesoraca wrote:
->> v2:
->>       As suggested by Herbert Xu, the blocksize and alignmask checks
->>       have been moved to crypto_check_alg.
->>       So, now, all the other separate checks are not necessary.
->>       Also, the defines have been moved to include/crypto/algapi.h.
->>
->> v1:
->>       As suggested by Laura Abbott[1], I'm resending my patch with
->>       MAX_BLOCKSIZE and MAX_ALIGNMASK defined in an header, so they
->>       can be used in other places.
->>       I took this opportunity to deal with some other VLAs not
->>       handled in the old patch.
->>
->> [1] http://lkml.kernel.org/r/4e536889-439a-49e6-dd95-2d4286913202@redhat.com
->>
->> Salvatore Mesoraca (2):
->>   crypto: api - laying defines and checks for statically allocated
->>     buffers
->>   crypto: remove several VLAs
->>
->>  crypto/algapi.c         | 10 ++++++++++
->>  crypto/cfb.c            |  7 +++----
->>  crypto/cipher.c         |  3 ++-
->>  crypto/ctr.c            |  4 ++--
->>  crypto/cts.c            |  5 +++--
->>  crypto/pcbc.c           |  5 +++--
->>  include/crypto/algapi.h |  8 ++++++++
->>  7 files changed, 31 insertions(+), 11 deletions(-)
->
-> All applied.  Thanks.
+On Tue, Apr 17, 2018 at 07:37:26PM +0100, Mark Rutland wrote:
+> In KVM we define the configuration of HCR_EL2 for a VHE HOST in
+> HCR_HOST_VHE_FLAGS, but we don't ahve a similar definition for the
 
-Thank you very much.
+nit: have
 
-Salvatore
+> non-VHE host flags, and open-code HCR_RW. Further, in head.S we
+> open-code the flags for VHE and non-VHE configurations.
+> 
+> In future, we're going to want to configure more flags for the host, so
+> lets add a HCR_HOST_NVHE_FLAGS defintion, adn consistently use both
+
+nit: and
+
+> HCR_HOST_VHE_FLAGS and HCR_HOST_NVHE_FLAGS in the kvm code and head.S.
+> 
+> We now use mov_q to generate the HCR_EL2 value, as we use when
+> configuring other registers in head.S.
+> 
+> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+> Cc: Catalin Marinas <catalin.marinas@arm.com>
+> Cc: Christoffer Dall <cdall@kernel.org>
+> Cc: Marc Zyngier <marc.zyngier@arm.com>
+> Cc: Will Deacon <will.deacon@arm.com>
+> Cc: kvmarm@lists.cs.columbia.edu
+> ---
+>  arch/arm64/include/asm/kvm_arm.h | 1 +
+>  arch/arm64/kernel/head.S         | 5 ++---
+>  arch/arm64/kvm/hyp/switch.c      | 2 +-
+>  3 files changed, 4 insertions(+), 4 deletions(-)
+> 
+> diff --git a/arch/arm64/include/asm/kvm_arm.h b/arch/arm64/include/asm/kvm_arm.h
+> index 6dd285e979c9..89b3dda7e3cb 100644
+> --- a/arch/arm64/include/asm/kvm_arm.h
+> +++ b/arch/arm64/include/asm/kvm_arm.h
+> @@ -86,6 +86,7 @@
+>  			 HCR_AMO | HCR_SWIO | HCR_TIDCP | HCR_RW | HCR_TLOR | \
+>  			 HCR_FMO | HCR_IMO)
+>  #define HCR_VIRT_EXCP_MASK (HCR_VSE | HCR_VI | HCR_VF)
+> +#define HCR_HOST_NVHE_FLAGS (HCR_RW)
+>  #define HCR_HOST_VHE_FLAGS (HCR_RW | HCR_TGE | HCR_E2H)
+>  
+>  /* TCR_EL2 Registers bits */
+> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+> index b0853069702f..651a06b1980f 100644
+> --- a/arch/arm64/kernel/head.S
+> +++ b/arch/arm64/kernel/head.S
+> @@ -494,10 +494,9 @@ ENTRY(el2_setup)
+>  #endif
+>  
+>  	/* Hyp configuration. */
+> -	mov	x0, #HCR_RW			// 64-bit EL1
+> +	mov_q	x0, HCR_HOST_NVHE_FLAGS
+>  	cbz	x2, set_hcr
+> -	orr	x0, x0, #HCR_TGE		// Enable Host Extensions
+> -	orr	x0, x0, #HCR_E2H
+> +	mov_q	x0, HCR_HOST_VHE_FLAGS
+>  set_hcr:
+>  	msr	hcr_el2, x0
+>  	isb
+> diff --git a/arch/arm64/kvm/hyp/switch.c b/arch/arm64/kvm/hyp/switch.c
+> index d9645236e474..cdae330e15e9 100644
+> --- a/arch/arm64/kvm/hyp/switch.c
+> +++ b/arch/arm64/kvm/hyp/switch.c
+> @@ -143,7 +143,7 @@ static void __hyp_text __deactivate_traps_nvhe(void)
+>  	mdcr_el2 |= MDCR_EL2_E2PB_MASK << MDCR_EL2_E2PB_SHIFT;
+>  
+>  	write_sysreg(mdcr_el2, mdcr_el2);
+> -	write_sysreg(HCR_RW, hcr_el2);
+> +	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
+>  	write_sysreg(CPTR_EL2_DEFAULT, cptr_el2);
+>  }
+>  
+> -- 
+> 2.11.0
+> 
+> 
+Reviewed-by: Christoffer Dall <christoffer.dall@arm.com>
