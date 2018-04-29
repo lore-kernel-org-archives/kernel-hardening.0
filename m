@@ -1,45 +1,80 @@
-Date: Sun, 29 Apr 2018 13:30:23 -0700
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
-Message-ID: <20180429203023.GA11891@bombadil.infradead.org>
-References: <20180214182618.14627-1-willy@infradead.org>
- <20180214182618.14627-3-willy@infradead.org>
- <CAGXu5jL9hqQGe672CmvFwqNbtTr=qu7WRwHuS4Vy7o5sX_UTgg@mail.gmail.com>
- <alpine.DEB.2.20.1803072212160.2814@hadrien>
- <20180308025812.GA9082@bombadil.infradead.org>
- <alpine.DEB.2.20.1803080722300.3754@hadrien>
- <20180308230512.GD29073@bombadil.infradead.org>
- <alpine.DEB.2.20.1803131818550.3117@hadrien>
- <20180313183220.GA21538@bombadil.infradead.org>
- <CAGXu5jKLaY2vzeFNaEhZOXbMgDXp4nF4=BnGCFfHFRwL6LXNHA@mail.gmail.com>
+Subject: Re: [PATCH 3/3] genalloc: selftest
+References: <20180429024542.19475-1-igor.stoppa@huawei.com>
+ <20180429024542.19475-4-igor.stoppa@huawei.com>
+ <01ec5680-b1de-5473-f32b-89729d9fcc70@infradead.org>
+From: Igor Stoppa <igor.stoppa@gmail.com>
+Message-ID: <649d5e8a-6a5a-01c0-d261-c303cf8137fb@gmail.com>
+Date: Mon, 30 Apr 2018 02:39:53 +0400
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jKLaY2vzeFNaEhZOXbMgDXp4nF4=BnGCFfHFRwL6LXNHA@mail.gmail.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: Julia Lawall <julia.lawall@lip6.fr>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, cocci@systeme.lip6.fr, Himanshu Jha <himanshujha199640@gmail.com>
+In-Reply-To: <01ec5680-b1de-5473-f32b-89729d9fcc70@infradead.org>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Randy Dunlap <rdunlap@infradead.org>, mhocko@kernel.org, akpm@linux-foundation.org, keescook@chromium.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org
+Cc: willy@infradead.org, labbott@redhat.com, linux-kernel@vger.kernel.org, igor.stoppa@huawei.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Apr 29, 2018 at 09:59:27AM -0700, Kees Cook wrote:
-> Did this ever happen?
+On 29/04/18 07:36, Randy Dunlap wrote:
+> On 04/28/2018 07:45 PM, Igor Stoppa wrote:
 
-Not yet.  I brought it up at LSFMM, and I'll repost the patches soon.
+[...]
 
-> I'd also like to see kmalloc_array_3d() or
-> something that takes three size arguments. We have a lot of this
-> pattern too:
+>> +	test_genalloc();
 > 
-> kmalloc(sizeof(foo) * A * B, gfp...)
-> 
-> And we could turn that into:
-> 
-> kmalloc_array_3d(sizeof(foo), A, B, gfp...)
+> Is there a stub for test_genalloc() when its config option is not enabled?
+> I don't see it.
 
-Are either of A or B constant?  Because if so, we could just use
-kmalloc_array.  If not, then kmalloc_array_3d becomes a little more
-expensive than kmalloc_array because we have to do a divide at runtime
-instead of compile-time.  that's still better than allocating too few
-bytes, of course.
+I failed to add to the patch include/linux/test_genalloc.h :-/
+That's where the stub is hiding.
 
-I'm wondering how far down the abc + ab + ac + bc + d rabbit-hole we're
-going to end up going.  As far as we have to, I guess.
+>> diff --git a/lib/Kconfig b/lib/Kconfig
+>> index 09565d779324..2bf89af50728 100644
+>> --- a/lib/Kconfig
+>> +++ b/lib/Kconfig
+>> @@ -303,6 +303,21 @@ config DECOMPRESS_LZ4
+>>   config GENERIC_ALLOCATOR
+>>   	bool
+>>   
+> 
+> These TEST_ kconfig symbols should be in lib/Kconfig.debug, not lib/Kconfig.
+
+ok, I will fix it
+
+>> +config TEST_GENERIC_ALLOCATOR
+>> +	bool "genalloc tester"
+>> +	default n
+>> +	select GENERIC_ALLOCATOR
+> 
+> This should depend on GENERIC_ALLOCATOR, not select it.
+> 
+> See TEST_PARMAN, TEST_BPF, TEST_FIRMWARE, TEST_SYSCTL, TEST_DEBUG_VIRTUAL
+> in lib/Kconfig.debug.
+
+I was actually wondering about this.
+The dependency I came up with allows to perform the test even if nothing 
+is selecting genalloc, but ok, if this is how it is done, I'll adjust to 
+it.
+
+>> +	help
+>> +	  Enable automated testing of the generic allocator.
+>> +	  The testing is primarily for the tracking of allocated space.
+>> +
+>> +config TEST_GENERIC_ALLOCATOR_VERBOSE
+>> +	bool "make the genalloc tester more verbose"
+>> +	default n
+>> +	select TEST_GENERIC_ALLOCATOR
+> 
+> 	depends on TEST_GENERIC_ALLOCATOR
+
+ok
+
+[...]
+
+>> + * guarranteed; allowing the boot to continue means risking to corrupt
+> 
+>        guaranteed;
+
+hmmm
+
+--
+
+thanks, igor
