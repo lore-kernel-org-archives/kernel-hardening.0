@@ -1,7 +1,7 @@
-Subject: Patch "kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl" has been added to the 4.9-stable tree
+Subject: Patch "kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl" has been added to the 4.4-stable tree
 From: <gregkh@linuxfoundation.org>
-Date: Wed, 02 May 2018 11:16:39 -0700
-Message-ID: <152528499913166@kroah.com>
+Date: Wed, 02 May 2018 12:04:01 -0700
+Message-ID: <15252878411690@kroah.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -14,18 +14,18 @@ This is a note to let you know that I've just added the patch titled
 
     kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
 
-to the 4.9-stable tree which can be found at:
+to the 4.4-stable tree which can be found at:
     http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
 
 The filename of the patch is:
      kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
-and it can be found in the queue-4.9 subdirectory.
+and it can be found in the queue-4.4 subdirectory.
 
 If you, or anyone else, feels it should not be added to the stable tree,
 please let <stable@vger.kernel.org> know about it.
 
 
->From foo@baz Wed May  2 10:53:11 PDT 2018
+>From foo@baz Wed May  2 11:39:22 PDT 2018
 From: Paolo Bonzini <pbonzini@redhat.com>
 Date: Thu, 26 Oct 2017 15:45:47 +0200
 Subject: kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
@@ -58,7 +58,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -4130,13 +4130,14 @@ long kvm_arch_vm_ioctl(struct file *filp
+@@ -3973,13 +3973,14 @@ long kvm_arch_vm_ioctl(struct file *filp
  		mutex_unlock(&kvm->lock);
  		break;
  	case KVM_XEN_HVM_CONFIG: {
@@ -80,6 +80,4 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 Patches currently in stable-queue which might be from pbonzini@redhat.com are
 
-queue-4.9/kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
-queue-4.9/kvm-map-pfn-type-memory-regions-as-writable-if-possible.patch
-queue-4.9/kvm-fix-warning-for-config_have_kvm_eventfd-builds.patch
+queue-4.4/kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
