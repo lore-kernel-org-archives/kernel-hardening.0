@@ -1,71 +1,85 @@
+Subject: Patch "kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl" has been added to the 4.9-stable tree
+From: <gregkh@linuxfoundation.org>
+Date: Wed, 02 May 2018 11:16:39 -0700
+Message-ID: <152528499913166@kroah.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <8d3e702b-470a-542e-4e0d-6a3c58419f0f@linux.ibm.com>
-References: <20180427123547.15727-1-tmricht@linux.ibm.com> <20180427134936.GA31171@kroah.com>
- <CAGXu5j+LK8-g9bg+RNn+-v1LpRC32sTCAUNZr1v0HXquiG9fQw@mail.gmail.com> <8d3e702b-470a-542e-4e0d-6a3c58419f0f@linux.ibm.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 2 May 2018 07:29:51 -0700
-Message-ID: <CAGXu5j+Fr+=bdWMwkLh2jP2EA4JejTyxqXbr+L99Y7jrDV1X3w@mail.gmail.com>
-Subject: Re: [PATCH v2] inode: debugfs_create_dir uses mode permission from parent
-Content-Type: text/plain; charset="UTF-8"
-To: Thomas-Mich Richter <tmricht@linux.ibm.com>
-Cc: Greg KH <gregkh@linuxfoundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, brueckner@linux.vnet.ibm.com, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+To: alexander.levin@microsoft.com, gregkh@linuxfoundation.org, keescook@chromium.org, kernel-hardening@lists.openwall.com, pbonzini@redhat.com, rkrcmar@redhat.com
+Cc: stable-commits@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 2, 2018 at 12:16 AM, Thomas-Mich Richter
-<tmricht@linux.ibm.com> wrote:
-> On 04/27/2018 04:58 PM, Kees Cook wrote:
->> On Fri, Apr 27, 2018 at 6:49 AM, Greg KH <gregkh@linuxfoundation.org> wrote:
->>> I'm going to add Kees and the kernel-hardning list here, as I'd like
->>> their opinions for the patch below.
->>>
->>> Kees, do you have any problems with this patch?  I know you worked on
->>> making debugfs more "secure" from non-root users, this should still keep
->>> the intial mount permissions all fine, right?  Anything I'm not
->>> considering here?
->>
->> This appears correct to me. I'd like to see some stronger rationale
->> for why this is needed, just so I have a "design" to compare the
->> implementation against. :)
->>
->> Normally, the top-level directory permissions should block all the
->> subdirectories too. The only time I think of this being needed is if
->> someone is explicitly bind-mounting a subdirectory to another location
->> (e.g. Chrome OS does this for the i915 subdirectory). In that case,
->> I'd expect them to tweak permissions too. Thomas, what's your
->> use-case?
->>
->> -Kees
->>
->
-> There is no 'real use case'. I wrote the patch because of discussions
-> regarding file permissions for files located deeply in the
-> directory tree, for example
->
->   -r--r--r-- 1 root root 0 Apr 27 14:23 /sys/kernel/debug/kprobes/blacklist
->
-> which gives the impression it is world readable.
-> This happened to me in recent discussions when I wrote patches to fix some
-> of the address randomized output of /sys files which broke the perf tool.
->
-> During discussion people often forgot that the root /sys/kernel/debug is rwx for
-> root only and blocks non root access to subdirectories and files. They simply
-> looked at the file permissions.
 
-Okay, sounds good. "Make permissions less surprising" is a perfectly
-good reason to make the change. :)
+This is a note to let you know that I've just added the patch titled
 
-> I have not thought about the bind-mount case nor did I test this scenario.
+    kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
 
-I think this case is fine too. Anyone doing this is likely doing some
-pretty special things with permissions already.
+to the 4.9-stable tree which can be found at:
+    http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
 
-So, FWIW:
+The filename of the patch is:
+     kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
+and it can be found in the queue-4.9 subdirectory.
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
+If you, or anyone else, feels it should not be added to the stable tree,
+please let <stable@vger.kernel.org> know about it.
 
--Kees
 
--- 
-Kees Cook
-Pixel Security
+>From foo@baz Wed May  2 10:53:11 PDT 2018
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Thu, 26 Oct 2017 15:45:47 +0200
+Subject: kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+[ Upstream commit 51776043afa415435c7e4636204fbe4f7edc4501 ]
+
+This ioctl is obsolete (it was used by Xenner as far as I know) but
+still let's not break it gratuitously...  Its handler is copying
+directly into struct kvm.  Go through a bounce buffer instead, with
+the added benefit that we can actually do something useful with the
+flags argument---the previous code was exiting with -EINVAL but still
+doing the copy.
+
+This technically is a userspace ABI breakage, but since no one should be
+using the ioctl, it's a good occasion to see if someone actually
+complains.
+
+Cc: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Radim Krčmář <rkrcmar@redhat.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ arch/x86/kvm/x86.c |    7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+--- a/arch/x86/kvm/x86.c
++++ b/arch/x86/kvm/x86.c
+@@ -4130,13 +4130,14 @@ long kvm_arch_vm_ioctl(struct file *filp
+ 		mutex_unlock(&kvm->lock);
+ 		break;
+ 	case KVM_XEN_HVM_CONFIG: {
++		struct kvm_xen_hvm_config xhc;
+ 		r = -EFAULT;
+-		if (copy_from_user(&kvm->arch.xen_hvm_config, argp,
+-				   sizeof(struct kvm_xen_hvm_config)))
++		if (copy_from_user(&xhc, argp, sizeof(xhc)))
+ 			goto out;
+ 		r = -EINVAL;
+-		if (kvm->arch.xen_hvm_config.flags)
++		if (xhc.flags)
+ 			goto out;
++		memcpy(&kvm->arch.xen_hvm_config, &xhc, sizeof(xhc));
+ 		r = 0;
+ 		break;
+ 	}
+
+
+Patches currently in stable-queue which might be from pbonzini@redhat.com are
+
+queue-4.9/kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
+queue-4.9/kvm-map-pfn-type-memory-regions-as-writable-if-possible.patch
+queue-4.9/kvm-fix-warning-for-config_have_kvm_eventfd-builds.patch
