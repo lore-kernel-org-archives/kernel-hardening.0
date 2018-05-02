@@ -1,86 +1,88 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20180413212412.18205-1-labbott@redhat.com>
-References: <20180413212412.18205-1-labbott@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 2 May 2018 14:49:34 -0700
-Message-ID: <CAGXu5jJW2h4PqMkRFEc1G1yqxXm+oZyDfE13pkVxJJjDw6XS3A@mail.gmail.com>
-Subject: Re: [PATCHv3] drm/amdkfd: Remove vla
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Oded Gabbay <oded.gabbay@gmail.com>
-Cc: Laura Abbott <labbott@redhat.com>, Alex Deucher <alexander.deucher@amd.com>, =?UTF-8?Q?Christian_K=C3=B6nig?= <christian.koenig@amd.com>, "David (ChunMing) Zhou" <David1.Zhou@amd.com>, Felix Kuehling <felix.kuehling@amd.com>, David Airlie <airlied@linux.ie>, Maling list - DRI developers <dri-devel@lists.freedesktop.org>, amd-gfx list <amd-gfx@lists.freedesktop.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Date: Wed, 2 May 2018 14:50:44 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Subject: Re: [PATCH 0/3 v2] linux-next: mm: Track genalloc allocations
+Message-Id: <20180502145044.373c268eeaaa9022b99f9191@linux-foundation.org>
+In-Reply-To: <20180502010522.28767-1-igor.stoppa@huawei.com>
+References: <20180502010522.28767-1-igor.stoppa@huawei.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: Igor Stoppa <igor.stoppa@gmail.com>
+Cc: mhocko@kernel.org, keescook@chromium.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, willy@infradead.org, labbott@redhat.com, linux-kernel@vger.kernel.org, igor.stoppa@huawei.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Apr 13, 2018 at 2:24 PM, Laura Abbott <labbott@redhat.com> wrote:
->
-> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
-> turn on -Wvla. Switch to a constant value that covers all hardware.
->
-> [1] https://lkml.org/lkml/2018/3/7/621
->
-> Reviewed-by: Felix Kuehling <Felix.Kuehling@amd.com>
-> Acked-by: Christian K=C3=B6nig <christian.koenig@amd.com>
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
+On Wed,  2 May 2018 05:05:19 +0400 Igor Stoppa <igor.stoppa@gmail.com> wrote:
 
-Friendly ping -- I don't see this in -next yet. Oded, does this look
-okay to apply?
+> This patchset was created as part of an older version of pmalloc, however
+> it has value per-se, as it hardens the memory management for the generic
+> allocator genalloc.
+> 
+> Genalloc does not currently track the size of the allocations it hands
+> out.
+> 
+> Either by mistake, or due to an attack, it is possible that more memory
+> than what was initially allocated is freed, leaving behind dangling
+> pointers, ready for an use-after-free attack.
+> 
+> With this patch, genalloc becomes capable of tracking the size of each
+> allocation it has handed out, when it's time to free it.
+> 
+> It can either verify that the size received is correct, when free is
+> invoked, or it can decide autonomously how much memory to free, if the
+> value received for the size parameter is 0.
+> 
+> These patches are proposed for beign merged into linux-next, to verify
+> that they do not introduce regressions, by comparing the value received
+> from the callers of the free function with the internal tracking.
+> 
+> For this reason, the patchset does not contain the removal of the size
+> parameter from users of the free() function.
+> 
+> Later on, the "size" parameter can be dropped, and each caller can be
+> adjusted accordingly.
+> 
+> However, I do not have access to most of the HW required for confirming
+> that all of its users are not negatively affected.
+> This is where I believe having the patches in linux-next would help to
+> coordinate with the maintaiers of the code that uses gen_alloc.
+> 
+> Since there were comments about the (lack-of) efficiency introduced by
+> this patchset, I have added some more explanations and calculations to the
+> description of the first patch, the one adding the bitmap.
+> My conclusion is that this patch should not cause any major perfomance
+> problem.
+> 
+> Regarding the possibility of completely changing genalloc into some other
+> type of allocator, I think it should not be a showstopper for this
+> patchset, which aims to plug a security hole in genalloc, without
+> introducing any major regression.
+> 
+> The security flaw is clear and present, while the benefit of introducing a
+> new allocator is not clear, at least for the current users of genalloc.
+> 
+> And anyway the users of genalloc should be fixed to not pass any size
+> parameter, which can be done after this patch is merged.
+> 
+> A newer, more efficient allocator will still benefit from not receiving a
+> spurious parameter (size), when freeing memory.
+> 
+> ...
+> 
+>  Documentation/core-api/genalloc.rst |   4 +
+>  include/linux/genalloc.h            | 112 +++---
+>  lib/Kconfig.debug                   |  23 ++
+>  lib/Makefile                        |   1 +
+>  lib/genalloc.c                      | 742 ++++++++++++++++++++++++++----------
+>  lib/test_genalloc.c                 | 419 ++++++++++++++++++++
 
-Thanks!
+That's a big patch, and I'm having trouble believing that it's
+justified?  We're trying to reduce the harm in bugs (none of which are
+known to exist) in a small number of drivers to avoid exploits, none of
+which are known to exist and which may not even be possible.
 
--Kees
+Or something like that.  Perhaps all this is taking defensiveness a bit
+too far?
 
-> ---
-> v3: Introduced a #define for the max value, switched to pr_err_once to
-> avoid log flood, switched to sizeof(array) per private suggestion.
-> ---
->  drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c | 8 +++++---
->  drivers/gpu/drm/amd/amdkfd/kfd_priv.h      | 2 ++
->  2 files changed, 7 insertions(+), 3 deletions(-)
->
-> diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c b/drivers/gpu/drm=
-/amd/amdkfd/kfd_interrupt.c
-> index 035c351f47c5..db6d9336b80d 100644
-> --- a/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
-> +++ b/drivers/gpu/drm/amd/amdkfd/kfd_interrupt.c
-> @@ -139,10 +139,12 @@ static void interrupt_wq(struct work_struct *work)
->  {
->         struct kfd_dev *dev =3D container_of(work, struct kfd_dev,
->                                                 interrupt_work);
-> +       uint32_t ih_ring_entry[KFD_MAX_RING_ENTRY_SIZE];
->
-> -       uint32_t ih_ring_entry[DIV_ROUND_UP(
-> -                               dev->device_info->ih_ring_entry_size,
-> -                               sizeof(uint32_t))];
-> +       if (dev->device_info->ih_ring_entry_size > sizeof(ih_ring_entry))=
- {
-> +               dev_err_once(kfd_chardev(), "Ring entry too small\n");
-> +               return;
-> +       }
->
->         while (dequeue_ih_ring_entry(dev, ih_ring_entry))
->                 dev->device_info->event_interrupt_class->interrupt_wq(dev=
-,
-> diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/=
-amdkfd/kfd_priv.h
-> index 96a9cc0f02c9..a90db05dfe61 100644
-> --- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
-> +++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
-> @@ -39,6 +39,8 @@
->
->  #include "amd_shared.h"
->
-> +#define KFD_MAX_RING_ENTRY_SIZE        8
-> +
->  #define KFD_SYSFS_FILE_MODE 0444
->
->  #define KFD_MMAP_DOORBELL_MASK 0x8000000000000ull
-> --
-> 2.14.3
->
-
-
-
---=20
-Kees Cook
-Pixel Security
+And a bitmap is a pretty crappy way of managing memory anyway, surely? 
+If this code is indeed performance-sensitive then perhaps a
+reimplementation with some standard textbook allocator(?) is warranted?
