@@ -1,40 +1,62 @@
-Date: Wed, 2 May 2018 10:42:21 +0200 (CEST)
-From: Thomas Gleixner <tglx@linutronix.de>
-Subject: Re: [PATCH v11 2/6] x86/entry: Add STACKLEAK erasing the kernel
- stack at the end of syscalls
-In-Reply-To: <CAGXu5jJ_0e63QSv0YZsQoT_=zN8U-83nwxrQ10h=QjszbHK-aQ@mail.gmail.com>
-Message-ID: <alpine.DEB.2.21.1805021041260.1668@nanos.tec.linutronix.de>
-References: <1523024546-6150-1-git-send-email-alex.popov@linux.com> <1523024546-6150-3-git-send-email-alex.popov@linux.com> <4e668302-8754-3f4e-3372-d0d7ba30cfa3@linux.intel.com> <CAGXu5jJ_0e63QSv0YZsQoT_=zN8U-83nwxrQ10h=QjszbHK-aQ@mail.gmail.com>
+Subject: Re: [PATCH v2] inode: debugfs_create_dir uses mode permission from
+ parent
+References: <20180427123547.15727-1-tmricht@linux.ibm.com>
+ <20180427134936.GA31171@kroah.com>
+ <CAGXu5j+LK8-g9bg+RNn+-v1LpRC32sTCAUNZr1v0HXquiG9fQw@mail.gmail.com>
+From: Thomas-Mich Richter <tmricht@linux.ibm.com>
+Date: Wed, 2 May 2018 09:16:29 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Kees Cook <keescook@chromium.org>
-Cc: Dave Hansen <dave.hansen@linux.intel.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alexander Popov <alex.popov@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <CAGXu5j+LK8-g9bg+RNn+-v1LpRC32sTCAUNZr1v0HXquiG9fQw@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <8d3e702b-470a-542e-4e0d-6a3c58419f0f@linux.ibm.com>
+To: Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, brueckner@linux.vnet.ibm.com, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 30 Apr 2018, Kees Cook wrote:
-
-> On Mon, Apr 23, 2018 at 9:23 PM, Dave Hansen
-> <dave.hansen@linux.intel.com> wrote:
-> > Hi Alexander,
-> >
-> > You can add:
-> >
-> > Reviewed-by: Dave Hansen <dave.hansen@linux.intel.com>
-> >
-> > for this patch if you like.  I haven't taken a super close look at the
-> > rest, but this is certainly minimally invasive from my point of view for
-> > the entry code.  Thanks, again for reworking it.
+On 04/27/2018 04:58 PM, Kees Cook wrote:
+> On Fri, Apr 27, 2018 at 6:49 AM, Greg KH <gregkh@linuxfoundation.org> wrote:
+>> I'm going to add Kees and the kernel-hardning list here, as I'd like
+>> their opinions for the patch below.
+>>
+>> Kees, do you have any problems with this patch?  I know you worked on
+>> making debugfs more "secure" from non-root users, this should still keep
+>> the intial mount permissions all fine, right?  Anything I'm not
+>> considering here?
 > 
-> Thanks Dave!
+> This appears correct to me. I'd like to see some stronger rationale
+> for why this is needed, just so I have a "design" to compare the
+> implementation against. :)
 > 
-> Given this improvement and your review, I'm going to start carrying
-> this for linux-next. Linus, if you're still opposed to this even after
-> the changes here in v11, please let us know. I'd rather hash things
-> out now instead of during a NAK in the 4.18 merge window. :)
+> Normally, the top-level directory permissions should block all the
+> subdirectories too. The only time I think of this being needed is if
+> someone is explicitly bind-mounting a subdirectory to another location
+> (e.g. Chrome OS does this for the i915 subdirectory). In that case,
+> I'd expect them to tweak permissions too. Thomas, what's your
+> use-case?
+> 
+> -Kees
+> 
 
-Kees, can we please route that x86/entry stuff through tip to avoid
-conflicts as there are other changes in that area on the horizon.
+There is no 'real use case'. I wrote the patch because of discussions
+regarding file permissions for files located deeply in the
+directory tree, for example
 
-Thanks,
+  -r--r--r-- 1 root root 0 Apr 27 14:23 /sys/kernel/debug/kprobes/blacklist
 
-	tglx
+which gives the impression it is world readable.
+This happened to me in recent discussions when I wrote patches to fix some
+of the address randomized output of /sys files which broke the perf tool.
+
+During discussion people often forgot that the root /sys/kernel/debug is rwx for
+root only and blocks non root access to subdirectories and files. They simply
+looked at the file permissions.
+
+I have not thougth about the bind-mount case nor did I test this scenario.
+
+-- 
+Thomas Richter, Dept 3303, IBM s390 Linux Development, Boeblingen, Germany
+--
+Vorsitzende des Aufsichtsrats: Martina Koederitz 
+Geschäftsführung: Dirk Wittkopp
+Sitz der Gesellschaft: Böblingen / Registergericht: Amtsgericht Stuttgart, HRB 243294
