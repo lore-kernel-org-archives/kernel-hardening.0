@@ -1,223 +1,83 @@
-From: Laura Abbott <labbott@redhat.com>
-Subject: [PATCH 2/2] arm64: Clear the stack
-Date: Wed,  2 May 2018 13:33:26 -0700
-Message-Id: <20180502203326.9491-3-labbott@redhat.com>
-In-Reply-To: <20180502203326.9491-1-labbott@redhat.com>
-References: <20180502203326.9491-1-labbott@redhat.com>
-To: Alexander Popov <alex.popov@linux.com>, Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+Subject: Patch "kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl" has been added to the 3.18-stable tree
+From: <gregkh@linuxfoundation.org>
+Date: Wed, 02 May 2018 13:43:36 -0700
+Message-ID: <1525293816112241@kroah.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+To: alexander.levin@microsoft.com, gregkh@linuxfoundation.org, keescook@chromium.org, kernel-hardening@lists.openwall.com, pbonzini@redhat.com, rkrcmar@redhat.com
+Cc: stable-commits@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-Implementation of stackleak based heavily on the x86 version
+This is a note to let you know that I've just added the patch titled
 
-Signed-off-by: Laura Abbott <labbott@redhat.com>
----
-Now written in C instead of a bunch of assembly.
----
- arch/arm64/Kconfig                    |  1 +
- arch/arm64/include/asm/processor.h    |  6 ++++
- arch/arm64/kernel/Makefile            |  3 ++
- arch/arm64/kernel/entry.S             |  6 ++++
- arch/arm64/kernel/erase.c             | 55 +++++++++++++++++++++++++++++++++++
- arch/arm64/kernel/process.c           | 16 ++++++++++
- drivers/firmware/efi/libstub/Makefile |  3 +-
- scripts/Makefile.gcc-plugins          |  5 +++-
- 8 files changed, 93 insertions(+), 2 deletions(-)
- create mode 100644 arch/arm64/kernel/erase.c
+    kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index eb2cf4938f6d..b0221db95dc9 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -92,6 +92,7 @@ config ARM64
- 	select HAVE_ARCH_MMAP_RND_BITS
- 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
- 	select HAVE_ARCH_SECCOMP_FILTER
-+	select HAVE_ARCH_STACKLEAK
- 	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
- 	select HAVE_ARCH_TRACEHOOK
- 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
-diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
-index 767598932549..d31ab80ff647 100644
---- a/arch/arm64/include/asm/processor.h
-+++ b/arch/arm64/include/asm/processor.h
-@@ -124,6 +124,12 @@ struct thread_struct {
- 	unsigned long		fault_address;	/* fault info */
- 	unsigned long		fault_code;	/* ESR_EL1 value */
- 	struct debug_info	debug;		/* debugging */
-+#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-+	unsigned long           lowest_stack;
-+#ifdef CONFIG_STACKLEAK_METRICS
-+	unsigned long		prev_lowest_stack;
-+#endif
-+#endif
- };
- 
- static inline void arch_thread_struct_whitelist(unsigned long *offset,
-diff --git a/arch/arm64/kernel/Makefile b/arch/arm64/kernel/Makefile
-index bf825f38d206..0ceea613c65b 100644
---- a/arch/arm64/kernel/Makefile
-+++ b/arch/arm64/kernel/Makefile
-@@ -55,6 +55,9 @@ arm64-reloc-test-y := reloc_test_core.o reloc_test_syms.o
- arm64-obj-$(CONFIG_CRASH_DUMP)		+= crash_dump.o
- arm64-obj-$(CONFIG_ARM_SDE_INTERFACE)	+= sdei.o
- 
-+arm64-obj-$(CONFIG_GCC_PLUGIN_STACKLEAK) += erase.o
-+KASAN_SANITIZE_erase.o	:= n
-+
- obj-y					+= $(arm64-obj-y) vdso/ probes/
- obj-m					+= $(arm64-obj-m)
- head-y					:= head.o
-diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-index ec2ee720e33e..3144f1ebdc18 100644
---- a/arch/arm64/kernel/entry.S
-+++ b/arch/arm64/kernel/entry.S
-@@ -401,6 +401,11 @@ tsk	.req	x28		// current thread_info
- 
- 	.text
- 
-+	.macro	ERASE_KSTACK
-+#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-+	bl	erase_kstack
-+#endif
-+	.endm
- /*
-  * Exception vectors.
-  */
-@@ -906,6 +911,7 @@ ret_to_user:
- 	cbnz	x2, work_pending
- finish_ret_to_user:
- 	enable_step_tsk x1, x2
-+	ERASE_KSTACK
- 	kernel_exit 0
- ENDPROC(ret_to_user)
- 
-diff --git a/arch/arm64/kernel/erase.c b/arch/arm64/kernel/erase.c
-new file mode 100644
-index 000000000000..b8b5648d893b
---- /dev/null
-+++ b/arch/arm64/kernel/erase.c
-@@ -0,0 +1,55 @@
-+#include <linux/bug.h>
-+#include <linux/sched.h>
-+#include <asm/current.h>
-+#include <asm/linkage.h>
-+#include <asm/processor.h>
-+
-+asmlinkage void erase_kstack(void)
-+{
-+	unsigned long p = current->thread.lowest_stack;
-+	unsigned long boundary = p & ~(THREAD_SIZE - 1);
-+	unsigned long poison = 0;
-+	const unsigned long check_depth = STACKLEAK_POISON_CHECK_DEPTH /
-+							sizeof(unsigned long);
-+
-+	/*
-+	 * Let's search for the poison value in the stack.
-+	 * Start from the lowest_stack and go to the bottom.
-+	 */
-+	while (p > boundary && poison <= check_depth) {
-+		if (*(unsigned long *)p == STACKLEAK_POISON)
-+			poison++;
-+		else
-+			poison = 0;
-+
-+		p -= sizeof(unsigned long);
-+	}
-+
-+	/*
-+	 * One long int at the bottom of the thread stack is reserved and
-+	 * should not be poisoned (see CONFIG_SCHED_STACK_END_CHECK).
-+	 */
-+	if (p == boundary)
-+		p += sizeof(unsigned long);
-+
-+#ifdef CONFIG_STACKLEAK_METRICS
-+	current->thread.prev_lowest_stack = p;
-+#endif
-+
-+	/*
-+	 * So let's write the poison value to the kernel stack.
-+	 * Start from the address in p and move up till the new boundary.
-+	 */
-+	boundary = current_stack_pointer;
-+
-+	BUG_ON(boundary - p >= THREAD_SIZE);
-+
-+	while (p < boundary) {
-+		*(unsigned long *)p = STACKLEAK_POISON;
-+		p += sizeof(unsigned long);
-+	}
-+
-+	/* Reset the lowest_stack value for the next syscall */
-+	current->thread.lowest_stack = current_stack_pointer;
-+}
-+
-diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
-index f08a2ed9db0d..156fa0a0da19 100644
---- a/arch/arm64/kernel/process.c
-+++ b/arch/arm64/kernel/process.c
-@@ -364,6 +364,9 @@ int copy_thread(unsigned long clone_flags, unsigned long stack_start,
- 	p->thread.cpu_context.pc = (unsigned long)ret_from_fork;
- 	p->thread.cpu_context.sp = (unsigned long)childregs;
- 
-+#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-+	p->thread.lowest_stack = (unsigned long)task_stack_page(p);
-+#endif
- 	ptrace_hw_copy_thread(p);
- 
- 	return 0;
-@@ -493,3 +496,16 @@ void arch_setup_new_exec(void)
- {
- 	current->mm->context.flags = is_compat_task() ? MMCF_AARCH32 : 0;
- }
-+
-+#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-+void __used check_alloca(unsigned long size)
-+{
-+	unsigned long sp, stack_left;
-+
-+	sp = current_stack_pointer;
-+
-+	stack_left = sp & (THREAD_SIZE - 1);
-+	BUG_ON(stack_left < 256 || size >= stack_left - 256);
-+}
-+EXPORT_SYMBOL(check_alloca);
-+#endif
-diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
-index a34e9290a699..25dd2a14560d 100644
---- a/drivers/firmware/efi/libstub/Makefile
-+++ b/drivers/firmware/efi/libstub/Makefile
-@@ -20,7 +20,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)	+= -I$(srctree)/scripts/dtc/libfdt
- KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
- 				   -D__NO_FORTIFY \
- 				   $(call cc-option,-ffreestanding) \
--				   $(call cc-option,-fno-stack-protector)
-+				   $(call cc-option,-fno-stack-protector) \
-+				   $(DISABLE_STACKLEAK_PLUGIN)
- 
- GCOV_PROFILE			:= n
- KASAN_SANITIZE			:= n
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index 8d6070fc538f..6cc0e35d3324 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -37,11 +37,14 @@ ifdef CONFIG_GCC_PLUGINS
- 
-   gcc-plugin-$(CONFIG_GCC_PLUGIN_STACKLEAK)	+= stackleak_plugin.so
-   gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STACKLEAK)	+= -DSTACKLEAK_PLUGIN -fplugin-arg-stackleak_plugin-track-min-size=$(CONFIG_STACKLEAK_TRACK_MIN_SIZE)
-+  ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-+    DISABLE_STACKLEAK_PLUGIN		+= -fplugin-arg-stackleak_plugin-disable
-+  endif
- 
-   GCC_PLUGINS_CFLAGS := $(strip $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y)) $(gcc-plugin-cflags-y))
- 
-   export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGIN GCC_PLUGIN_SUBDIR
--  export SANCOV_PLUGIN DISABLE_LATENT_ENTROPY_PLUGIN
-+  export SANCOV_PLUGIN DISABLE_LATENT_ENTROPY_PLUGIN DISABLE_STACKLEAK_PLUGIN
- 
-   ifneq ($(PLUGINCC),)
-     # SANCOV_PLUGIN can be only in CFLAGS_KCOV because avoid duplication.
--- 
-2.14.3
+to the 3.18-stable tree which can be found at:
+    http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
+
+The filename of the patch is:
+     kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
+and it can be found in the queue-3.18 subdirectory.
+
+If you, or anyone else, feels it should not be added to the stable tree,
+please let <stable@vger.kernel.org> know about it.
+
+
+>From foo@baz Wed May  2 13:21:43 PDT 2018
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Thu, 26 Oct 2017 15:45:47 +0200
+Subject: kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+[ Upstream commit 51776043afa415435c7e4636204fbe4f7edc4501 ]
+
+This ioctl is obsolete (it was used by Xenner as far as I know) but
+still let's not break it gratuitously...  Its handler is copying
+directly into struct kvm.  Go through a bounce buffer instead, with
+the added benefit that we can actually do something useful with the
+flags argument---the previous code was exiting with -EINVAL but still
+doing the copy.
+
+This technically is a userspace ABI breakage, but since no one should be
+using the ioctl, it's a good occasion to see if someone actually
+complains.
+
+Cc: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Radim Krčmář <rkrcmar@redhat.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ arch/x86/kvm/x86.c |    7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+--- a/arch/x86/kvm/x86.c
++++ b/arch/x86/kvm/x86.c
+@@ -4025,13 +4025,14 @@ long kvm_arch_vm_ioctl(struct file *filp
+ 		break;
+ 	}
+ 	case KVM_XEN_HVM_CONFIG: {
++		struct kvm_xen_hvm_config xhc;
+ 		r = -EFAULT;
+-		if (copy_from_user(&kvm->arch.xen_hvm_config, argp,
+-				   sizeof(struct kvm_xen_hvm_config)))
++		if (copy_from_user(&xhc, argp, sizeof(xhc)))
+ 			goto out;
+ 		r = -EINVAL;
+-		if (kvm->arch.xen_hvm_config.flags)
++		if (xhc.flags)
+ 			goto out;
++		memcpy(&kvm->arch.xen_hvm_config, &xhc, sizeof(xhc));
+ 		r = 0;
+ 		break;
+ 	}
+
+
+Patches currently in stable-queue which might be from pbonzini@redhat.com are
+
+queue-3.18/kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
