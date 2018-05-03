@@ -1,79 +1,68 @@
-Subject: Re: Correct way to access the physmap? - Was: Re: [PATCH 7/9] Pmalloc
- Rare Write: modify selected pools
-References: <20180423125458.5338-1-igor.stoppa@huawei.com>
- <20180423125458.5338-8-igor.stoppa@huawei.com>
- <20180424115050.GD26636@bombadil.infradead.org>
- <035f2bba-ebb1-06a0-fb88-3d40f7e484a7@gmail.com>
- <ef116557-1fb1-780e-2480-3eef9052b609@intel.com>
-From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <91ca0b5e-0719-7ebf-4e11-8b17f54251fe@gmail.com>
-Date: Fri, 4 May 2018 02:52:22 +0400
+Subject: Re: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
+References: <CAGXu5jL9hqQGe672CmvFwqNbtTr=qu7WRwHuS4Vy7o5sX_UTgg@mail.gmail.com>
+ <alpine.DEB.2.20.1803072212160.2814@hadrien>
+ <20180308025812.GA9082@bombadil.infradead.org>
+ <alpine.DEB.2.20.1803080722300.3754@hadrien>
+ <20180308230512.GD29073@bombadil.infradead.org>
+ <alpine.DEB.2.20.1803131818550.3117@hadrien>
+ <20180313183220.GA21538@bombadil.infradead.org>
+ <CAGXu5jKLaY2vzeFNaEhZOXbMgDXp4nF4=BnGCFfHFRwL6LXNHA@mail.gmail.com>
+ <20180429203023.GA11891@bombadil.infradead.org>
+ <CAGXu5j+N9tt4rxaUMxoZnE-ziqU_yu-jkt-cBZ=R8wmYq6XBTg@mail.gmail.com>
+ <20180430201607.GA7041@bombadil.infradead.org>
+ <4ad99a55-9c93-5ea1-5954-3cb6e5ba7df9@rasmusvillemoes.dk>
+ <CAGXu5j+tYhQOfVMkZdPzW5CX103LHpm8SYSN51VFLufn0Z0y6Q@mail.gmail.com>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Message-ID: <4e25ff5b-f8fc-7012-83c2-b56e6928e8bc@rasmusvillemoes.dk>
+Date: Fri, 4 May 2018 01:00:43 +0200
 MIME-Version: 1.0
-In-Reply-To: <ef116557-1fb1-780e-2480-3eef9052b609@intel.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
+In-Reply-To: <CAGXu5j+tYhQOfVMkZdPzW5CX103LHpm8SYSN51VFLufn0Z0y6Q@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Dave Hansen <dave.hansen@intel.com>, Matthew Wilcox <willy@infradead.org>
-Cc: linux-security-module@vger.kernel.org, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Igor Stoppa <igor.stoppa@huawei.com>
+To: Kees Cook <keescook@chromium.org>, Daniel Vetter <daniel.vetter@intel.com>
+Cc: Matthew Wilcox <willy@infradead.org>, Julia Lawall <julia.lawall@lip6.fr>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, cocci@systeme.lip6.fr, Himanshu Jha <himanshujha199640@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-On 04/05/18 01:55, Dave Hansen wrote:
-> On 05/03/2018 02:52 PM, Igor Stoppa wrote:
->> At the end of the summit, we agreed that I would go through the physmap.
+On 2018-05-01 19:00, Kees Cook wrote:
+> On Mon, Apr 30, 2018 at 2:29 PM, Rasmus Villemoes
+> <linux@rasmusvillemoes.dk> wrote:
+>>
+>> gcc 5.1+ (I think) have the __builtin_OP_overflow checks that should
+>> generate reasonable code. Too bad there's no completely generic
+>> check_all_ops_in_this_expression(a+b*c+d/e, or_jump_here). Though it's
+>> hard to define what they should be checked against - probably would
+>> require all subexpressions (including the variables themselves) to have
+>> the same type.
+>>
+>> plug: https://lkml.org/lkml/2015/7/19/358
 > 
-> Do you mean the kernel linear map? 
+> That's a very nice series. Why did it never get taken?
 
-Apparently I did mean it. It was confusing, because I couldn't find a 
-single place stating it explicitly, like you just did.
+Well, nobody seemed particularly interested, and then
+https://lkml.org/lkml/2015/10/28/215 happened... but he did later seem
+to admit that it could be useful for the multiplication checking, and
+that "the gcc interface for multiplication overflow is fine".
 
-> That's just another name for the
-> virtual address that you get back from page_to_virt():
-> 
-> 	int *j = page_to_virt(vmalloc_to_page(i));
-> 
+I still think even for unsigned types overflow checking can be subtle. E.g.
 
-One reason why I was not sure is that also the linear mapping gets 
-protected, when I protect hte corresponding page in the vmap_area:
+u32 somevar;
 
-if i do:
+if (somevar + sizeof(foo) < somevar)
+  return -EOVERFLOW;
+somevar += sizeof(this);
 
-int *i = vmalloc(sizeof(int));
-int *j = page_to_virt(vmalloc_to_page(i));
-*i = 1;
-set_memory_ro(i, 1);
-*j = 2;
+is broken, because the LHS is promoted to unsigned long/size_t, then so
+is the RHS for the comparison, and the comparison is thus always false
+(on 64bit). It gets worse if the two types are more "opaque", and in any
+case it's not always easy to verify at a glance that the types are the
+same, or at least that the expression of the widest type is on the RHS.
 
-I get an error, because also *j has become read only.
-I was expecting to have to do the protection of the linear mapping in a 
-second phase.
+> It seems to do the right things quite correctly.
 
-It turns out that - at least on x86_64 - it's already in place.
+Yes, I wouldn't suggest it without the test module verifying corner
+cases, and checking it has the same semantics whether used with old or
+new gcc.
 
-But it invalidates what we agreed, which was based on the assumption 
-that the linear mapping was writable all the time.
+Would you shepherd it through if I updated the patches and resent?
 
-I see two options:
-
-1) continue to go through the linear mapping, unprotecting it for the 
-time it takes to make the write.
-
-2) use the code I already wrote, which creates an additional, temporary 
-mapping in R/W mode at a random address.
-
-
-I'd prefer 2) because it is already designed to make life harder for 
-someone trying to attack the data in the page: even if one manages to 
-take over a core and busy loop on it, option 2) will use a random 
-temporary address, that is harder to figure out.
-
-Option 1) re-uses the linear mapping and therefore the attacker really 
-only needs to get lucky and, depending on the target, write over some 
-other data that was in the same page being unprotected, or overwrite the 
-same data being updated, after the update has taken place.
-
-
-Is there any objection if I continue with options 2?
-
---
-igor
+Rasmus
