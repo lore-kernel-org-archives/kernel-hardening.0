@@ -1,99 +1,82 @@
-From: ebiederm@xmission.com (Eric W. Biederman)
-References: <1523572911-16363-1-git-send-email-zohar@linux.vnet.ibm.com>
-	<87r2mso5up.fsf@xmission.com>
-	<1525383075.3539.67.camel@linux.vnet.ibm.com>
-	<87d0yco1vy.fsf@xmission.com>
-	<1525384675.3539.89.camel@linux.vnet.ibm.com>
-Date: Thu, 03 May 2018 18:03:47 -0500
-In-Reply-To: <1525384675.3539.89.camel@linux.vnet.ibm.com> (Mimi Zohar's
-	message of "Thu, 03 May 2018 17:57:55 -0400")
-Message-ID: <87fu38jq98.fsf@xmission.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [PATCH 0/3] kexec: limit kexec_load syscall
-To: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Cc: Kees Cook <keescook@chromium.org>, David Howells <dhowells@redhat.com>, Matthew Garrett <mjg59@google.com>, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, kexec@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <4e25ff5b-f8fc-7012-83c2-b56e6928e8bc@rasmusvillemoes.dk>
+References: <CAGXu5jL9hqQGe672CmvFwqNbtTr=qu7WRwHuS4Vy7o5sX_UTgg@mail.gmail.com>
+ <alpine.DEB.2.20.1803072212160.2814@hadrien> <20180308025812.GA9082@bombadil.infradead.org>
+ <alpine.DEB.2.20.1803080722300.3754@hadrien> <20180308230512.GD29073@bombadil.infradead.org>
+ <alpine.DEB.2.20.1803131818550.3117@hadrien> <20180313183220.GA21538@bombadil.infradead.org>
+ <CAGXu5jKLaY2vzeFNaEhZOXbMgDXp4nF4=BnGCFfHFRwL6LXNHA@mail.gmail.com>
+ <20180429203023.GA11891@bombadil.infradead.org> <CAGXu5j+N9tt4rxaUMxoZnE-ziqU_yu-jkt-cBZ=R8wmYq6XBTg@mail.gmail.com>
+ <20180430201607.GA7041@bombadil.infradead.org> <4ad99a55-9c93-5ea1-5954-3cb6e5ba7df9@rasmusvillemoes.dk>
+ <CAGXu5j+tYhQOfVMkZdPzW5CX103LHpm8SYSN51VFLufn0Z0y6Q@mail.gmail.com> <4e25ff5b-f8fc-7012-83c2-b56e6928e8bc@rasmusvillemoes.dk>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 3 May 2018 17:36:28 -0700
+Message-ID: <CAGXu5jJ9Uw9pDOYfBH8iXTVqiQXgNrEqzpk7a5mOCrH0G3CoyA@mail.gmail.com>
+Subject: Re: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
+Content-Type: text/plain; charset="UTF-8"
+To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: Daniel Vetter <daniel.vetter@intel.com>, Matthew Wilcox <willy@infradead.org>, Julia Lawall <julia.lawall@lip6.fr>, Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, cocci@systeme.lip6.fr, Himanshu Jha <himanshujha199640@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Mimi Zohar <zohar@linux.vnet.ibm.com> writes:
-
-> On Thu, 2018-05-03 at 16:38 -0500, Eric W. Biederman wrote:
->> Mimi Zohar <zohar@linux.vnet.ibm.com> writes:
->>=20
->> > [Cc'ing Kees and kernel-hardening]
->> >
->> > On Thu, 2018-05-03 at 15:13 -0500, Eric W. Biederman wrote:
->> >> Mimi Zohar <zohar@linux.vnet.ibm.com> writes:
->> >>=20
->> >> > In environments that require the kexec kernel image to be signed, p=
-revent
->> >> > using the kexec_load syscall.  In order for LSMs and IMA to differe=
-ntiate
->> >> > between kexec_load and kexec_file_load syscalls, this patch set add=
-s a
->> >> > call to security_kernel_read_file() in kexec_load_check().
->> >>=20
->> >> Having thought about it some more this justification for these changes
->> >> does not work.  The functionality of kexec_load is already root-only.
->> >> So in environments that require the kernel image to be signed just do=
-n't
->> >> use kexec_load.  Possibly even compile kexec_load out to save space
->> >> because you will never need it.  You don't need a new security hook to
->> >> do any of that.  Userspace is a very fine mechanism for being the
->> >> instrument of policy.
->> >
->> > True, for those building their own kernel, they can disable the old
->> > syscalls. =C2=A0The concern is not for those building their own kernel=
-s,
->> > but for those using stock kernels. =C2=A0
->> >
->> > By adding an LSM hook here in the kexec_load syscall, as opposed to an
->> > IMA specific hook, other LSMs can piggy back on top of it. =C2=A0Curre=
-ntly,
->> > both load_pin and SELinux are gating the kernel module syscalls based
->> > on security_kernel_read_file.
->> >
->> > If there was a similar option for the kernel image, I'm pretty sure
->> > other LSMs would use it.
->> >
->> > From an IMA perspective, there needs to be some method for only
->> > allowing signed code to be loaded, executed, etc. - kernel modules,
->> > kernel image/initramfs, firmware, policies.
->>=20
->> What is the IMA perspective.  Why can't IMA trust appropriately
->> authorized userspace?
+On Thu, May 3, 2018 at 4:00 PM, Rasmus Villemoes
+<linux@rasmusvillemoes.dk> wrote:
+> On 2018-05-01 19:00, Kees Cook wrote:
+>> On Mon, Apr 30, 2018 at 2:29 PM, Rasmus Villemoes
+>> <linux@rasmusvillemoes.dk> wrote:
+>>>
+>>> gcc 5.1+ (I think) have the __builtin_OP_overflow checks that should
+>>> generate reasonable code. Too bad there's no completely generic
+>>> check_all_ops_in_this_expression(a+b*c+d/e, or_jump_here). Though it's
+>>> hard to define what they should be checked against - probably would
+>>> require all subexpressions (including the variables themselves) to have
+>>> the same type.
+>>>
+>>> plug: https://lkml.org/lkml/2015/7/19/358
+>>
+>> That's a very nice series. Why did it never get taken?
 >
-> Suppose a system owner wants to define a system wide policy that
-> requires all code be signed - kernel modules, firmware, kexec image &
-> initramfs, executables, mmapped files, etc - without having to rebuild
-> the kernel. =C2=A0Without a call in kexec_load that isn't possible.
+> Well, nobody seemed particularly interested, and then
+> https://lkml.org/lkml/2015/10/28/215 happened... but he did later seem
+> to admit that it could be useful for the multiplication checking, and
+> that "the gcc interface for multiplication overflow is fine".
 
-Of course it is.  You just make it a requirement that before an
-executable will be signed it will be audited to see that it doesn't
-call sys_kexec_load.  Signing presumably means something.  So it should
-not be hard to enforce a policy like that on a specialty system call
-that most applications will never call.
+Oh, excellent. Thank you for that pointer! That conversation covered a
+lot of ground. I need to think a little more about how to apply the
+thoughts there with the kmalloc() needs and the GPU driver needs...
 
->> >> If you don't trust userspace that needs to be spelled out very clearl=
-y.
->> >> You need to talk about what your threat models are.
->> >>=20
->> >> If the only justification is so that that we can't boot windows if
->> >> someone hacks into userspace it has my nack because that is another k=
-ind
->> >> of complete non-sense.
->> >
->> > The usecase is the ability to gate the kexec_load usage in stock
->> > kernels.
->>=20
->> But kexec_load is already gated.  It requires CAP_SYS_BOOT.
+> I still think even for unsigned types overflow checking can be subtle. E.g.
 >
-> It isn't a matter of kexec_load already being gated, but of wanting a
-> single place for defining a system wide policy, as described above.
+> u32 somevar;
+>
+> if (somevar + sizeof(foo) < somevar)
+>   return -EOVERFLOW;
+> somevar += sizeof(this);
+>
+> is broken, because the LHS is promoted to unsigned long/size_t, then so
+> is the RHS for the comparison, and the comparison is thus always false
+> (on 64bit). It gets worse if the two types are more "opaque", and in any
+> case it's not always easy to verify at a glance that the types are the
+> same, or at least that the expression of the widest type is on the RHS.
 
-Signing is only a tool to enforce a policy.  Signing by itself is not a
-policy.  Enforcing any quality controls in the signed executables should
-trivially prevent kexec_load from being used.
+That's an excellent example, yes. (And likely worth including in the
+commit log somewhere.)
 
-Eric
+>
+>> It seems to do the right things quite correctly.
+>
+> Yes, I wouldn't suggest it without the test module verifying corner
+> cases, and checking it has the same semantics whether used with old or
+> new gcc.
+>
+> Would you shepherd it through if I updated the patches and resent?
+
+Yes, though we may need reworking if we actually want to do the
+try/catch style (since that was talked about with GPU stuff too...)
+
+Either way, yes, a refresh would be lovely! :)
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
