@@ -1,105 +1,162 @@
-Date: Fri, 4 May 2018 12:16:17 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Subject: Re: [PATCH 2/2] arm64: Clear the stack
-Message-ID: <20180504111616.znz5sphyqb6v57nx@lakrids.cambridge.arm.com>
-References: <20180502203326.9491-1-labbott@redhat.com>
- <20180502203326.9491-3-labbott@redhat.com>
- <20180503071917.xm2xvgagvzkworay@salmiak>
- <a8ce3e4d-f0f3-1321-92af-9aed0097d205@redhat.com>
+Date: Fri, 4 May 2018 06:14:41 -0700
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
+Message-ID: <20180504131441.GA24691@bombadil.infradead.org>
+References: <20180214182618.14627-1-willy@infradead.org>
+ <20180214182618.14627-3-willy@infradead.org>
+ <CA+55aFzLgES5qTAt2szDKcRtoUP5X--UPCoYX-38ea67cRFHxQ@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <a8ce3e4d-f0f3-1321-92af-9aed0097d205@redhat.com>
-To: Laura Abbott <labbott@redhat.com>
-Cc: Alexander Popov <alex.popov@linux.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+In-Reply-To: <CA+55aFzLgES5qTAt2szDKcRtoUP5X--UPCoYX-38ea67cRFHxQ@mail.gmail.com>
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, linux-mm <linux-mm@kvack.org>, Kees Cook <keescook@chromium.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 03, 2018 at 12:00:26PM -0700, Laura Abbott wrote:
-> On 05/03/2018 12:19 AM, Mark Rutland wrote:
-> > On Wed, May 02, 2018 at 01:33:26PM -0700, Laura Abbott wrote:
-
-> > > +asmlinkage void erase_kstack(void)
-> > > +{
-
-> > > +
-> > > +	/*
-> > > +	 * So let's write the poison value to the kernel stack.
-> > > +	 * Start from the address in p and move up till the new boundary.
-> > > +	 */
-> > > +	boundary = current_stack_pointer;
-> > 
-> > I worry a little that the compiler can move the SP during a function's
-> > lifetime, but maybe that's only the case when there are VLAs, or something like
-> > that?
+On Fri, May 04, 2018 at 07:42:52AM +0000, Linus Torvalds wrote:
+> On Wed, Feb 14, 2018 at 8:27 AM Matthew Wilcox <willy@infradead.org> wrote:
+> > +static inline __must_check
+> > +void *kvmalloc_ab_c(size_t n, size_t size, size_t c, gfp_t gfp)
+> > +{
+> > +       if (size != 0 && n > (SIZE_MAX - c) / size)
+> > +               return NULL;
+> > +
+> > +       return kvmalloc(n * size + c, gfp);
 > 
-> I think that's true and a risk we take writing this in C. Here's
-> the disassembly on gcc-7.3.1:
+> Ok, so some more bikeshedding:
+
+I'm putting up the bikeshed against your house ... the colour is your
+choice!
+
+>   - I really don't want to encourage people to use kvmalloc().
 > 
-> ffff00000809d4d8 <erase_kstack>:
-> ffff00000809d4d8:       a9bf7bfd        stp     x29, x30, [sp, #-16]!
-> ffff00000809d4dc:       d5384100        mrs     x0, sp_el0
-> ffff00000809d4e0:       910003fd        mov     x29, sp
-> ffff00000809d4e4:       f946e400        ldr     x0, [x0, #3528]
-> ffff00000809d4e8:       9272c404        and     x4, x0, #0xffffffffffffc000
-> ffff00000809d4ec:       eb04001f        cmp     x0, x4
-> ffff00000809d4f0:       540002c9        b.ls    ffff00000809d548 <erase_kstack+0x70>  // b.plast
-> ffff00000809d4f4:       d2800003        mov     x3, #0x0                        // #0
-> ffff00000809d4f8:       9297ddc5        mov     x5, #0xffffffffffff4111         // #-48879
-> ffff00000809d4fc:       14000008        b       ffff00000809d51c <erase_kstack+0x44>
-> ffff00000809d500:       d1002000        sub     x0, x0, #0x8
-> ffff00000809d504:       52800022        mov     w2, #0x1                        // #1
-> ffff00000809d508:       eb00009f        cmp     x4, x0
-> ffff00000809d50c:       d2800003        mov     x3, #0x0                        // #0
-> ffff00000809d510:       1a9f27e1        cset    w1, cc  // cc = lo, ul, last
-> ffff00000809d514:       6a01005f        tst     w2, w1
-> ffff00000809d518:       54000180        b.eq    ffff00000809d548 <erase_kstack+0x70>  // b.none
-> ffff00000809d51c:       f9400001        ldr     x1, [x0]
-> ffff00000809d520:       eb05003f        cmp     x1, x5
-> ffff00000809d524:       54fffee1        b.ne    ffff00000809d500 <erase_kstack+0x28>  // b.any
-> ffff00000809d528:       91000463        add     x3, x3, #0x1
-> ffff00000809d52c:       d1002000        sub     x0, x0, #0x8
-> ffff00000809d530:       f100407f        cmp     x3, #0x10
-> ffff00000809d534:       1a9f87e2        cset    w2, ls  // ls = plast
-> ffff00000809d538:       eb00009f        cmp     x4, x0
-> ffff00000809d53c:       1a9f27e1        cset    w1, cc  // cc = lo, ul, last
-> ffff00000809d540:       6a01005f        tst     w2, w1
-> ffff00000809d544:       54fffec1        b.ne    ffff00000809d51c <erase_kstack+0x44>  // b.any
-> ffff00000809d548:       eb00009f        cmp     x4, x0
-> ffff00000809d54c:       91002001        add     x1, x0, #0x8
-> ffff00000809d550:       9a800020        csel    x0, x1, x0, eq  // eq = none
-> ffff00000809d554:       910003e1        mov     x1, sp
-> ffff00000809d558:       d5384102        mrs     x2, sp_el0
-> ffff00000809d55c:       f906e840        str     x0, [x2, #3536]
-> ffff00000809d560:       cb000023        sub     x3, x1, x0
-> ffff00000809d564:       d287ffe2        mov     x2, #0x3fff                     // #16383
-> ffff00000809d568:       eb02007f        cmp     x3, x2
-> ffff00000809d56c:       540001a8        b.hi    ffff00000809d5a0 <erase_kstack+0xc8>  // b.pmore
-> ffff00000809d570:       9297ddc2        mov     x2, #0xffffffffffff4111         // #-48879
-> ffff00000809d574:       eb01001f        cmp     x0, x1
-> ffff00000809d578:       54000082        b.cs    ffff00000809d588 <erase_kstack+0xb0>  // b.hs, b.nlast
-> ffff00000809d57c:       f8008402        str     x2, [x0], #8
-> ffff00000809d580:       eb00003f        cmp     x1, x0
-> ffff00000809d584:       54ffffc8        b.hi    ffff00000809d57c <erase_kstack+0xa4>  // b.pmore
-> ffff00000809d588:       910003e1        mov     x1, sp
-> ffff00000809d58c:       d5384100        mrs     x0, sp_el0
-> ffff00000809d590:       f906e401        str     x1, [x0, #3528]
-> ffff00000809d594:       a8c17bfd        ldp     x29, x30, [sp], #16
-> ffff00000809d598:       d65f03c0        ret
-> ffff00000809d59c:       d503201f        nop
-> ffff00000809d5a0:       d4210000        brk     #0x800
-> ffff00000809d5a4:       00000000        .inst   0x00000000 ; undefined
+> In fact, the conversion I saw was buggy. You can *not* convert a GFP_ATOMIC
+> user of kmalloc() to use kvmalloc.
+
+Not sure which conversion you're referring to; not one of mine, I hope?
+
+>   - that divide is really really expensive on many architectures.
+
+'c' and 'size' are _supposed_ to be constant and get evaluated at
+compile-time.  ie you should get something like this on x86:
+
+   0:   48 b8 fe ff ff ff ff    movabs $0x1ffffffffffffffe,%rax
+   7:   ff ff 1f 
+   a:   48 39 c7                cmp    %rax,%rdi
+   d:   76 09                   jbe    18 <a+0x18>
+   f:   48 c1 e7 03             shl    $0x3,%rdi
+  13:   e9 00 00 00 00          jmpq   18 <a+0x18>
+                        14: R_X86_64_PLT32      malloc-0x4
+  18:   31 c0                   xor    %eax,%eax
+  1a:   c3                      retq   
+
+Now, if someone's an idiot, then you'll get the divide done at runtime,
+and that'll be expensive.
+
+> Normal kernel allocations are *limited*. It's simply not ok to allocate
+> megabytes (or gigabytes) of mmory in general. We have serious limits, and
+> we *should* have serious limits. If people worry about the multiply
+> overflowing because a user is controlling the size valus, then dammit, such
+> a user should not be able to do a huge gigabyte vmalloc() that exhausts
+> memory and then spends time clearing it all!
+
+I agree.
+
+> So the whole notion that "overflows are dangerous, let's get rid of them"
+> somehow fixes a bug is BULLSHIT. You literally introduced a *new* bug by
+> removing the normal kmalloc() size limit because you thought that pverflows
+> are the only problem.
+
+Rather, I replaced one bug with another.  The removed bug was one
+where we allocated 24 bytes and then indexed into the next slab object.
+The added bug was that someone can now persuade the driver to allocate
+gigabytes of memory.  It's a less severe bug, but I take your point.
+We do have _some_ limits in vmalloc -- we fail if you're trying to
+allocate more memory than is in the machine, and we fail if there's
+insufficient contiguous space in the virtual address space.  But, yes,
+this does allow people to allocate more memory than kmalloc would allow.
+
+> So stop doing things like this. We should not do a stupid divide, because
+> we damn well know that it is NOT VALID to allocate arrays that have
+> hundreds of fthousands of elements,  or where the size of one element is
+> very big.
 > 
-> It looks to be okay although admittedly that's subject to compiler
-> whims. It might be safer to save the stack pointer almost as soon as
-> we get into the function and use that?
+> So get rid of the stupid divide, and make the limits be much stricter. Like
+> saying "the array element size had better be smaller than one page"
+> (because honestly, bigger elements are not valid in the kernel), and "the
+> size of the array cannot be more than "pick-some-number-out-of-your-ass".
+> 
+> So just make the divide go the hell away, a and check the size for validity.
+> 
+> Something like
+> 
+>       if (size > PAGE_SIZE)
+>            return NULL;
+>       if (elem > 65535)
+>            return NULL;
+>       if (offset > PAGE_SIZE)
+>            return NULL;
+>       return kzalloc(size*elem+offset);
+> 
+> and now you (a) guarantee it can't overflow and (b) don't make people use
+> crazy vmalloc() allocations when they damn well shouldn't.
 
-I think that's still potentially a problem. If the compiler expands the
-stack frame after we've taken a snaphot of the stack pointer, we might
-end up erasing portions of the active stackframe.
+I find your faith in the size of structs in the kernel touching ;-)
 
-Maybe we should just document we rely on the compiler not doing that,
-and if we end up seeing it in practice we rewrite this in asm? I can't
-think of a simple way we can auto-detect if this happens. :/
+struct cmp_data {
+        /* size: 290904, cachelines: 4546, members: 11 */
+struct dec_data {
+        /* size: 274520, cachelines: 4290, members: 10 */
+struct cpu_entry_area {
+        /* size: 180224, cachelines: 2816, members: 7 */
+struct saved_cmdlines_buffer {
+        /* size: 131104, cachelines: 2049, members: 5 */
+struct debug_store_buffers {
+        /* size: 131072, cachelines: 2048, members: 2 */
+struct bunzip_data {
+        /* size: 42648, cachelines: 667, members: 23 */
+struct inflate_workspace {
+        /* size: 42312, cachelines: 662, members: 2 */
+struct xz_dec_lzma2 {
+        /* size: 28496, cachelines: 446, members: 5 */
+struct lzma_dec {
+        /* size: 28304, cachelines: 443, members: 21 */
+struct rcu_state {
+        /* size: 17344, cachelines: 271, members: 34 */
+struct pglist_data {
+        /* size: 18304, cachelines: 286, members: 34 */
+struct tss_struct {
+        /* size: 12288, cachelines: 192, members: 2 */
+struct bts_ctx {
+        /* size: 12288, cachelines: 192, members: 3 */
 
-Thanks,
-Mark.
+Those are just the ones above 10kB.  Sure, I can see some of them are
+boot time use only, or we allocate one per node, or whatever.  But people
+do create arrays of these things.  The biggest object we have in the
+slab_cache today is 23488 bytes (kvm_vcpu) -- at least on my laptop.  Maybe
+there's some insane driver out there that's creating larger things.
+
+> And yeah, if  somebody has a page size bigger than 64k, then the above can
+> still overflow. I'm sorry, that architecture s broken shit.
+> 
+> Are there  cases where vmalloc() is ok? Yes. But they should be rare, and
+> they should have a good reason for them. And honestly, even then the above
+> limits really really sound quite reasonable. There is no excuse for
+> million-entry arrays in the kernel. You are doing something seriously wrong
+> if you do those.
+
+Normally, yes.  But then you get people like Google who want to have
+a million file descriptors open in a single process.  So I'm leery of
+putting hard limits on, like the ones you suggest above, because I'm not
+going to be the one who Google come to when they want to exceed the limit.
+If you want to draw that line in the sand, then I'm happy to respin the
+patch in that direction.
+
+We really have two reasons for using vmalloc -- one is "fragmentation
+currently makes it impossible to allocate enough contiguous memory
+to satisfy your needs" and the other is "this request is for too much
+memory to satisfy through the buddy allocator".  kvmalloc is normally
+(not always; see file descriptor example above) for the first kind of
+problem, but I wonder if kvmalloc() shouldn't have the same limit as
+kmalloc (2048 pages), then add a kvmalloc_large() which will not impose
+that limit check.
