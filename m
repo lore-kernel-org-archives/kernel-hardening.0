@@ -1,79 +1,116 @@
+Subject: Re: [PATCH 2/2] arm64: Clear the stack
+References: <20180502203326.9491-1-labbott@redhat.com>
+ <20180502203326.9491-3-labbott@redhat.com>
+ <20180503071917.xm2xvgagvzkworay@salmiak>
+ <dd6ad26c-1d2c-88f3-8f01-e68d2b31d6ea@linux.com>
+ <5b654bb4-64cc-dc64-afd7-135971b54c98@redhat.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <b2f4f5c4-ab19-b7c9-a564-02d54d17fd49@linux.com>
+Date: Fri, 4 May 2018 11:30:31 +0300
 MIME-Version: 1.0
-References: <20180214182618.14627-1-willy@infradead.org> <20180214182618.14627-3-willy@infradead.org>
-In-Reply-To: <20180214182618.14627-3-willy@infradead.org>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Fri, 04 May 2018 07:42:52 +0000
-Message-ID: <CA+55aFzLgES5qTAt2szDKcRtoUP5X--UPCoYX-38ea67cRFHxQ@mail.gmail.com>
-Subject: Re: [PATCH 2/2] mm: Add kvmalloc_ab_c and kvzalloc_struct
-Content-Type: text/plain; charset="UTF-8"
-To: Matthew Wilcox <willy@infradead.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <mawilcox@microsoft.com>, linux-mm <linux-mm@kvack.org>, Kees Cook <keescook@chromium.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <5b654bb4-64cc-dc64-afd7-135971b54c98@redhat.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>
+Cc: Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 14, 2018 at 8:27 AM Matthew Wilcox <willy@infradead.org> wrote:
-> +static inline __must_check
-> +void *kvmalloc_ab_c(size_t n, size_t size, size_t c, gfp_t gfp)
-> +{
-> +       if (size != 0 && n > (SIZE_MAX - c) / size)
-> +               return NULL;
-> +
-> +       return kvmalloc(n * size + c, gfp);
+On 03.05.2018 22:09, Laura Abbott wrote:
+> On 05/03/2018 10:33 AM, Alexander Popov wrote:
+>> On 03.05.2018 10:19, Mark Rutland wrote:
+>>> On Wed, May 02, 2018 at 01:33:26PM -0700, Laura Abbott wrote:
+>>>> +	/* Reset the lowest_stack value for the next syscall */
+>>>> +	current->thread.lowest_stack = current_stack_pointer;
+>>
+>> Laura, that might be wrong and introduce huge performance impact.
+>>
+>> I think, lowest_stack should be reset similarly to the original version.
+>>
+> 
+> Sorry, I'm not understanding here. What's the performance impact and
+> what do you mean by original version?
 
-Ok, so some more bikeshedding:
+I meant the code for x86:
+	/* Reset the lowest_stack value for the next syscall */
+	current->thread.lowest_stack = current_top_of_stack() - 256;
 
-  - I really don't want to encourage people to use kvmalloc().
+...Now when I'm writing about the performance impact, I see that I was wrong
+about "huge". Excuse me.
 
-In fact, the conversion I saw was buggy. You can *not* convert a GFP_ATOMIC
-user of kmalloc() to use kvmalloc.
+Let me describe the implications of this code change.
 
-  - that divide is really really expensive on many architectures.
+So we are at the end of a syscall. We've just erased the used part of the kernel
+stack. The current stack pointer is near to the top of stack. On x86_64 I see
+that the stack pointer is stack top minus 56 bytes (just before switching onto
+the trampoline stack).
 
-Note that these issues kind of go hand in hand.
+I took the idea of resetting lowest_stack to stack top minus 256 from the
+original PaX Team's code. It should give the speedup when lowest_stack is not
+updated during a syscall (a lot of functions are not instrumented) and we start
+to search for the poison value from that reasonable point.
 
-Normal kernel allocations are *limited*. It's simply not ok to allocate
-megabytes (or gigabytes) of mmory in general. We have serious limits, and
-we *should* have serious limits. If people worry about the multiply
-overflowing because a user is controlling the size valus, then dammit, such
-a user should not be able to do a huge gigabyte vmalloc() that exhausts
-memory and then spends time clearing it all!
+If we speak about the common erase_kstack() code, this code change can break
+x86, because this function can be called from the trampoline stack (separate
+from the thread stack).
 
-So the whole notion that "overflows are dangerous, let's get rid of them"
-somehow fixes a bug is BULLSHIT. You literally introduced a *new* bug by
-removing the normal kmalloc() size limit because you thought that pverflows
-are the only problem.
+>>>> +}
+>>>
+>>> Once this function returns, its data is left on the stack. Is that not a problem?
+>>>
+>>> No strong feelings either way, but it might be worth mentioning in the commit
+>>> message.
+>>
+>> I managed to bypass that with "register" specifier. Although it doesn't give an
+>> absolute guarantee.
+>>
+> 
+> I guess I was assuming gcc would be smart enough not to spill stuff
+> on the stack. I also intentionally removed the register keyword
+> since it wasn't clear gcc does much with it on a modern system? I
+> could be completely off base here though so please correct me if
+> I'm wrong. It probably is worth documenting what we are assuming about
+> the compiler here.
 
-So stop doing things like this. We should not do a stupid divide, because
-we damn well know that it is NOT VALID to allocate arrays that have
-hundreds of fthousands of elements,  or where the size of one element is
-very big.
+I think having register storage class specifier here is a bit better than
+nothing. And yes, I'll add a comment. Right now don't see a better solution.
 
-So get rid of the stupid divide, and make the limits be much stricter. Like
-saying "the array element size had better be smaller than one page"
-(because honestly, bigger elements are not valid in the kernel), and "the
-size of the array cannot be more than "pick-some-number-out-of-your-ass".
+>>>> diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
+>>>> index a34e9290a699..25dd2a14560d 100644
+>>>> --- a/drivers/firmware/efi/libstub/Makefile
+>>>> +++ b/drivers/firmware/efi/libstub/Makefile
+>>>> @@ -20,7 +20,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)	+= -I$(srctree)/scripts/dtc/libfdt
+>>>>   KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
+>>>>   				   -D__NO_FORTIFY \
+>>>>   				   $(call cc-option,-ffreestanding) \
+>>>> -				   $(call cc-option,-fno-stack-protector)
+>>>> +				   $(call cc-option,-fno-stack-protector) \
+>>>> +				   $(DISABLE_STACKLEAK_PLUGIN)
+>>>>   
+>>>>   GCOV_PROFILE			:= n
+>>>>   KASAN_SANITIZE			:= n
+>>>
+>>> I believe we'll also need to do this for the KVM hyp code in arch/arm64/kvm/hyp/.
+>>
+>> Could you please give more details on that? Why STACKLEAK breaks it?
+>>
+> 
+> For reference, I originally added this for the efistub because
+> it would not compile.
 
-So just make the divide go the hell away, a and check the size for validity.
+I guess it was a linkage error, right?
 
-Something like
+> I did compile this against my Fedora tree which has KVM enabled.
 
-      if (size > PAGE_SIZE)
-           return NULL;
-      if (elem > 65535)
-           return NULL;
-      if (offset > PAGE_SIZE)
-           return NULL;
-      return kzalloc(size*elem+offset);
+Looked through this big article about ARM, KVM and HYP mode:
+https://lwn.net/Articles/557132/
 
-and now you (a) guarantee it can't overflow and (b) don't make people use
-crazy vmalloc() allocations when they damn well shouldn't.
+So we have some limited amount of kernel code which runs in HYP mode. Is it only
+in arch/arm64/kvm/hyp/ directory?
 
-And yeah, if  somebody has a page size bigger than 64k, then the above can
-still overflow. I'm sorry, that architecture s broken shit.
+Mark, could you give a clue what trouble will we have if we call track_stack()
+or check_alloca() from that code?
 
-Are there  cases where vmalloc() is ok? Yes. But they should be rare, and
-they should have a good reason for them. And honestly, even then the above
-limits really really sound quite reasonable. There is no excuse for
-million-entry arrays in the kernel. You are doing something seriously wrong
-if you do those.
+Thanks in advance!
 
-             Linus
+--
+Alexander
