@@ -1,181 +1,105 @@
-Date: Fri, 4 May 2018 12:09:08 +0100
+Date: Fri, 4 May 2018 12:16:17 +0100
 From: Mark Rutland <mark.rutland@arm.com>
 Subject: Re: [PATCH 2/2] arm64: Clear the stack
-Message-ID: <20180504110907.c2dw33kjmyybso6t@lakrids.cambridge.arm.com>
+Message-ID: <20180504111616.znz5sphyqb6v57nx@lakrids.cambridge.arm.com>
 References: <20180502203326.9491-1-labbott@redhat.com>
  <20180502203326.9491-3-labbott@redhat.com>
  <20180503071917.xm2xvgagvzkworay@salmiak>
- <dd6ad26c-1d2c-88f3-8f01-e68d2b31d6ea@linux.com>
+ <a8ce3e4d-f0f3-1321-92af-9aed0097d205@redhat.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <dd6ad26c-1d2c-88f3-8f01-e68d2b31d6ea@linux.com>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+In-Reply-To: <a8ce3e4d-f0f3-1321-92af-9aed0097d205@redhat.com>
+To: Laura Abbott <labbott@redhat.com>
+Cc: Alexander Popov <alex.popov@linux.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 03, 2018 at 08:33:38PM +0300, Alexander Popov wrote:
-> Hello Mark and Laura,
-> 
-> Let me join the discussion. Mark, thanks for your feedback!
-> 
-> On 03.05.2018 10:19, Mark Rutland wrote:
-> > Hi Laura,
-> > 
+On Thu, May 03, 2018 at 12:00:26PM -0700, Laura Abbott wrote:
+> On 05/03/2018 12:19 AM, Mark Rutland wrote:
 > > On Wed, May 02, 2018 at 01:33:26PM -0700, Laura Abbott wrote:
-> >>
-> >> Implementation of stackleak based heavily on the x86 version
-> >>
-> >> Signed-off-by: Laura Abbott <labbott@redhat.com>
-> >> ---
-> >> Now written in C instead of a bunch of assembly.
+
+> > > +asmlinkage void erase_kstack(void)
+> > > +{
+
+> > > +
+> > > +	/*
+> > > +	 * So let's write the poison value to the kernel stack.
+> > > +	 * Start from the address in p and move up till the new boundary.
+> > > +	 */
+> > > +	boundary = current_stack_pointer;
 > > 
-> > This looks neat!
-> > 
-> > I have a few minor comments below.
-> > 
-> >> diff --git a/arch/arm64/kernel/Makefile b/arch/arm64/kernel/Makefile
-> >> index bf825f38d206..0ceea613c65b 100644
-> >> --- a/arch/arm64/kernel/Makefile
-> >> +++ b/arch/arm64/kernel/Makefile
-> >> @@ -55,6 +55,9 @@ arm64-reloc-test-y := reloc_test_core.o reloc_test_syms.o
-> >>  arm64-obj-$(CONFIG_CRASH_DUMP)		+= crash_dump.o
-> >>  arm64-obj-$(CONFIG_ARM_SDE_INTERFACE)	+= sdei.o
-> >>  
-> >> +arm64-obj-$(CONFIG_GCC_PLUGIN_STACKLEAK) += erase.o
-> >> +KASAN_SANITIZE_erase.o	:= n
-> > 
-> > I suspect we want to avoid the full set of instrumentation suspects here, e.g.
-> > GKOV, KASAN, UBSAN, and KCOV.
+> > I worry a little that the compiler can move the SP during a function's
+> > lifetime, but maybe that's only the case when there are VLAs, or something like
+> > that?
 > 
-> I've disabled KASAN instrumentation for that file on x86 because erase_kstack()
-> intentionally writes to the stack and causes KASAN false positive reports.
+> I think that's true and a risk we take writing this in C. Here's
+> the disassembly on gcc-7.3.1:
 > 
-> But I didn't see any conflicts with other types of instrumentation that you
-> mentioned.
-
-The rationale is that any of these can result in implicit calls to C
-functions at arbitrary points during erase_kstack(). That could
-interfere with the search for poison, and/or leave data on the stack
-which is not erased.
-
-They won't result in hard failures, as KASAN would, but we should
-probably avoid them regardless.
-
-[...]
-
-> >> +asmlinkage void erase_kstack(void)
-> >> +{
-> >> +	unsigned long p = current->thread.lowest_stack;
-> >> +	unsigned long boundary = p & ~(THREAD_SIZE - 1);
-> >> +	unsigned long poison = 0;
-> >> +	const unsigned long check_depth = STACKLEAK_POISON_CHECK_DEPTH /
-> >> +							sizeof(unsigned long);
-> >> +
-> >> +	/*
-> >> +	 * Let's search for the poison value in the stack.
-> >> +	 * Start from the lowest_stack and go to the bottom.
-> >> +	 */
-> >> +	while (p > boundary && poison <= check_depth) {
-> >> +		if (*(unsigned long *)p == STACKLEAK_POISON)
-> >> +			poison++;
-> >> +		else
-> >> +			poison = 0;
-> >> +
-> >> +		p -= sizeof(unsigned long);
-> >> +	}
-> >> +
-> >> +	/*
-> >> +	 * One long int at the bottom of the thread stack is reserved and
-> >> +	 * should not be poisoned (see CONFIG_SCHED_STACK_END_CHECK).
-> >> +	 */
-> >> +	if (p == boundary)
-> >> +		p += sizeof(unsigned long);
-> > 
-> > I wonder if end_of_stack() should be taught about CONFIG_SCHED_STACK_END_CHECK,
-> > given that's supposed to return the last *usable* long on the stack, and we
-> > don't account for this elsewhere.
+> ffff00000809d4d8 <erase_kstack>:
+> ffff00000809d4d8:       a9bf7bfd        stp     x29, x30, [sp, #-16]!
+> ffff00000809d4dc:       d5384100        mrs     x0, sp_el0
+> ffff00000809d4e0:       910003fd        mov     x29, sp
+> ffff00000809d4e4:       f946e400        ldr     x0, [x0, #3528]
+> ffff00000809d4e8:       9272c404        and     x4, x0, #0xffffffffffffc000
+> ffff00000809d4ec:       eb04001f        cmp     x0, x4
+> ffff00000809d4f0:       540002c9        b.ls    ffff00000809d548 <erase_kstack+0x70>  // b.plast
+> ffff00000809d4f4:       d2800003        mov     x3, #0x0                        // #0
+> ffff00000809d4f8:       9297ddc5        mov     x5, #0xffffffffffff4111         // #-48879
+> ffff00000809d4fc:       14000008        b       ffff00000809d51c <erase_kstack+0x44>
+> ffff00000809d500:       d1002000        sub     x0, x0, #0x8
+> ffff00000809d504:       52800022        mov     w2, #0x1                        // #1
+> ffff00000809d508:       eb00009f        cmp     x4, x0
+> ffff00000809d50c:       d2800003        mov     x3, #0x0                        // #0
+> ffff00000809d510:       1a9f27e1        cset    w1, cc  // cc = lo, ul, last
+> ffff00000809d514:       6a01005f        tst     w2, w1
+> ffff00000809d518:       54000180        b.eq    ffff00000809d548 <erase_kstack+0x70>  // b.none
+> ffff00000809d51c:       f9400001        ldr     x1, [x0]
+> ffff00000809d520:       eb05003f        cmp     x1, x5
+> ffff00000809d524:       54fffee1        b.ne    ffff00000809d500 <erase_kstack+0x28>  // b.any
+> ffff00000809d528:       91000463        add     x3, x3, #0x1
+> ffff00000809d52c:       d1002000        sub     x0, x0, #0x8
+> ffff00000809d530:       f100407f        cmp     x3, #0x10
+> ffff00000809d534:       1a9f87e2        cset    w2, ls  // ls = plast
+> ffff00000809d538:       eb00009f        cmp     x4, x0
+> ffff00000809d53c:       1a9f27e1        cset    w1, cc  // cc = lo, ul, last
+> ffff00000809d540:       6a01005f        tst     w2, w1
+> ffff00000809d544:       54fffec1        b.ne    ffff00000809d51c <erase_kstack+0x44>  // b.any
+> ffff00000809d548:       eb00009f        cmp     x4, x0
+> ffff00000809d54c:       91002001        add     x1, x0, #0x8
+> ffff00000809d550:       9a800020        csel    x0, x1, x0, eq  // eq = none
+> ffff00000809d554:       910003e1        mov     x1, sp
+> ffff00000809d558:       d5384102        mrs     x2, sp_el0
+> ffff00000809d55c:       f906e840        str     x0, [x2, #3536]
+> ffff00000809d560:       cb000023        sub     x3, x1, x0
+> ffff00000809d564:       d287ffe2        mov     x2, #0x3fff                     // #16383
+> ffff00000809d568:       eb02007f        cmp     x3, x2
+> ffff00000809d56c:       540001a8        b.hi    ffff00000809d5a0 <erase_kstack+0xc8>  // b.pmore
+> ffff00000809d570:       9297ddc2        mov     x2, #0xffffffffffff4111         // #-48879
+> ffff00000809d574:       eb01001f        cmp     x0, x1
+> ffff00000809d578:       54000082        b.cs    ffff00000809d588 <erase_kstack+0xb0>  // b.hs, b.nlast
+> ffff00000809d57c:       f8008402        str     x2, [x0], #8
+> ffff00000809d580:       eb00003f        cmp     x1, x0
+> ffff00000809d584:       54ffffc8        b.hi    ffff00000809d57c <erase_kstack+0xa4>  // b.pmore
+> ffff00000809d588:       910003e1        mov     x1, sp
+> ffff00000809d58c:       d5384100        mrs     x0, sp_el0
+> ffff00000809d590:       f906e401        str     x1, [x0, #3528]
+> ffff00000809d594:       a8c17bfd        ldp     x29, x30, [sp], #16
+> ffff00000809d598:       d65f03c0        ret
+> ffff00000809d59c:       d503201f        nop
+> ffff00000809d5a0:       d4210000        brk     #0x800
+> ffff00000809d5a4:       00000000        .inst   0x00000000 ; undefined
 > 
-> I would be afraid to change the meaning of end_of_stack()... Currently it
-> considers that magic long as usable (include/linux/sched/task_stack.h):
-> 
-> #define task_stack_end_corrupted(task) \
-> 		(*(end_of_stack(task)) != STACK_END_MAGIC)
-> 
-> 
-> > If we did, then IIUC we could do:
-> > 
-> > 	unsigned long boundary = (unsigned long)end_of_stack(current);
-> > 
-> > ... at the start of the function, and not have to worry about this explicitly.
-> 
-> I should mention that erase_kstack() can be called from x86 trampoline stack.
-> That's why the boundary is calculated from the lowest_stack.
+> It looks to be okay although admittedly that's subject to compiler
+> whims. It might be safer to save the stack pointer almost as soon as
+> we get into the function and use that?
 
-Ok. Under what circumstances does that happen?
+I think that's still potentially a problem. If the compiler expands the
+stack frame after we've taken a snaphot of the stack pointer, we might
+end up erasing portions of the active stackframe.
 
-It seems a little scary that curent::thread::lowest_stack might not be
-on current's task stack. Is that reset when transitioning to/from the
-trampoile stack?
-
-[...]
-
-> >> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-> >> +void __used check_alloca(unsigned long size)
-> >> +{
-> >> +	unsigned long sp, stack_left;
-> >> +
-> >> +	sp = current_stack_pointer;
-> >> +
-> >> +	stack_left = sp & (THREAD_SIZE - 1);
-> >> +	BUG_ON(stack_left < 256 || size >= stack_left - 256);
-> >> +}
-> > 
-> > Is this arbitrary, or is there something special about 256?
-> > 
-> > Even if this is arbitrary, can we give it some mnemonic?
-> 
-> It's just a reasonable number. We can introduce a macro for it.
-
-I'm just not sure I see the point in the offset, given things like
-VMAP_STACK exist. BUG_ON() handling will likely require *more* than 256
-bytes of stack, so it seems superfluous, as we'd be relying on stack
-overflow detection at that point.
-
-I can see that we should take the CONFIG_SCHED_STACK_END_CHECK offset
-into account, though.
-
-> >> +EXPORT_SYMBOL(check_alloca);
-> >> +#endif
-> >> diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
-> >> index a34e9290a699..25dd2a14560d 100644
-> >> --- a/drivers/firmware/efi/libstub/Makefile
-> >> +++ b/drivers/firmware/efi/libstub/Makefile
-> >> @@ -20,7 +20,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)	+= -I$(srctree)/scripts/dtc/libfdt
-> >>  KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
-> >>  				   -D__NO_FORTIFY \
-> >>  				   $(call cc-option,-ffreestanding) \
-> >> -				   $(call cc-option,-fno-stack-protector)
-> >> +				   $(call cc-option,-fno-stack-protector) \
-> >> +				   $(DISABLE_STACKLEAK_PLUGIN)
-> >>  
-> >>  GCOV_PROFILE			:= n
-> >>  KASAN_SANITIZE			:= n
-> > 
-> > I believe we'll also need to do this for the KVM hyp code in arch/arm64/kvm/hyp/.
-> 
-> Could you please give more details on that? Why STACKLEAK breaks it?
-
-In the hyp/EL2 exception level, we only map the hyp text, and not the
-rest of the kernel. So erase_kstack and check_alloca won't be mapped,
-and attempt to branch to them will fault.
-
-Even if it were mapped, things like BUG_ON(), get_current(), etc do not
-work at hyp.
-
-Additionally, the hyp code is mapped as a different virtual address from
-the rest of the kernel, so if any of the STACKLEAK code happens to use
-an absolute address, this will not work correctly.
+Maybe we should just document we rely on the compiler not doing that,
+and if we end up seeing it in practice we rewrite this in asm? I can't
+think of a simple way we can auto-detect if this happens. :/
 
 Thanks,
 Mark.
