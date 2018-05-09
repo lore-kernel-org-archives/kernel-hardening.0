@@ -1,61 +1,41 @@
-Date: Wed, 9 May 2018 04:34:46 -0700
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [PATCH 04/13] mm: Use array_size() helpers for kmalloc()
-Message-ID: <20180509113446.GA18549@bombadil.infradead.org>
+Subject: Re: [RFC][PATCH 00/13] Provide saturating helpers for allocation
 References: <20180509004229.36341-1-keescook@chromium.org>
- <20180509004229.36341-5-keescook@chromium.org>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <4baffc55-510e-96d3-3487-5ea09f993a0c@redhat.com>
+Date: Wed, 9 May 2018 09:08:24 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180509004229.36341-5-keescook@chromium.org>
-To: Kees Cook <keescook@chromium.org>
-Cc: Matthew Wilcox <mawilcox@microsoft.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20180509004229.36341-1-keescook@chromium.org>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>, Matthew Wilcox <mawilcox@microsoft.com>
+Cc: Rasmus Villemoes <linux@rasmusvillemoes.dk>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 08, 2018 at 05:42:20PM -0700, Kees Cook wrote:
-> @@ -499,6 +500,8 @@ static __always_inline void *kmalloc_large(size_t size, gfp_t flags)
->   */
->  static __always_inline void *kmalloc(size_t size, gfp_t flags)
->  {
-> +	if (size == SIZE_MAX)
-> +		return NULL;
->  	if (__builtin_constant_p(size)) {
->  		if (size > KMALLOC_MAX_CACHE_SIZE)
->  			return kmalloc_large(size, flags);
+On 05/08/2018 05:42 PM, Kees Cook wrote:
+> This is a stab at providing three new helpers for allocation size
+> calculation:
+> 
+> struct_size(), array_size(), and array3_size().
+> 
+> These are implemented on top of Rasmus's overflow checking functions,
+> and the last 8 patches are all treewide conversions of open-coded
+> multiplications into the various combinations of the helper functions.
+> 
+> -Kees
+> 
+> 
+Obvious question (that might indicate this deserves documentation?)
 
-I don't like the add-checking-to-every-call-site part of this patch.
-Fine, the compiler will optimise it away if it can calculate it at compile
-time, but there are a lot of situations where it can't.  You aren't
-adding any safety by doing this; trying to allocate SIZE_MAX bytes is
-guaranteed to fail, and it doesn't need to fail quickly.
+What's the difference between
 
-> @@ -624,11 +629,13 @@ int memcg_update_all_caches(int num_memcgs);
->   */
->  static inline void *kmalloc_array(size_t n, size_t size, gfp_t flags)
->  {
-> -	if (size != 0 && n > SIZE_MAX / size)
-> +	size_t bytes = array_size(n, size);
-> +
-> +	if (bytes == SIZE_MAX)
->  		return NULL;
->  	if (__builtin_constant_p(n) && __builtin_constant_p(size))
-> -		return kmalloc(n * size, flags);
-> -	return __kmalloc(n * size, flags);
-> +		return kmalloc(bytes, flags);
-> +	return __kmalloc(bytes, flags);
->  }
->  
->  /**
-> @@ -639,7 +646,9 @@ static inline void *kmalloc_array(size_t n, size_t size, gfp_t flags)
->   */
->  static inline void *kcalloc(size_t n, size_t size, gfp_t flags)
->  {
-> -	return kmalloc_array(n, size, flags | __GFP_ZERO);
-> +	size_t bytes = array_size(n, size);
-> +
-> +	return kmalloc(bytes, flags | __GFP_ZERO);
->  }
+kmalloc_array(cnt, sizeof(struct blah), GFP_KERNEL);
 
-Hmm.  I wonder why we have the kmalloc/__kmalloc "optimisation"
-in kmalloc_array, but not kcalloc.  Bet we don't really need it in
-kmalloc_array.  I'll do some testing.
+and
+
+kmalloc(array_size(cnt, struct blah), GFP_KERNEL);
+
+
+and when would you use one over the other?
+
+Thanks,
+Laura
