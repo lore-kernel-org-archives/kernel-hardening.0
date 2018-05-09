@@ -1,71 +1,80 @@
+Subject: Re: [PATCH 03/13] overflow.h: Add allocation size calculation helpers
+References: <20180509004229.36341-1-keescook@chromium.org>
+ <20180509004229.36341-4-keescook@chromium.org>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Message-ID: <b481bbb2-758f-dcd3-3e1a-8b3137081614@rasmusvillemoes.dk>
+Date: Wed, 9 May 2018 20:27:22 +0200
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <fea0a346-6f36-ff8c-f036-13f22dfb9bfe@rasmusvillemoes.dk>
-References: <20180509004229.36341-1-keescook@chromium.org> <20180509004229.36341-5-keescook@chromium.org>
- <20180509113446.GA18549@bombadil.infradead.org> <fea0a346-6f36-ff8c-f036-13f22dfb9bfe@rasmusvillemoes.dk>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 9 May 2018 11:07:20 -0700
-Message-ID: <CAGXu5j+ds=4tKM=GwzgfpA0YheUSX30pTbQqXg0gKUniOeDzww@mail.gmail.com>
-Subject: Re: [PATCH 04/13] mm: Use array_size() helpers for kmalloc()
-Content-Type: text/plain; charset="UTF-8"
-To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Cc: Matthew Wilcox <willy@infradead.org>, Matthew Wilcox <mawilcox@microsoft.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20180509004229.36341-4-keescook@chromium.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>, Matthew Wilcox <mawilcox@microsoft.com>
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 9, 2018 at 11:00 AM, Rasmus Villemoes
-<linux@rasmusvillemoes.dk> wrote:
-> On 2018-05-09 13:34, Matthew Wilcox wrote:
->> On Tue, May 08, 2018 at 05:42:20PM -0700, Kees Cook wrote:
->>> @@ -499,6 +500,8 @@ static __always_inline void *kmalloc_large(size_t size, gfp_t flags)
->>>   */
->>>  static __always_inline void *kmalloc(size_t size, gfp_t flags)
->>>  {
->>> +    if (size == SIZE_MAX)
->>> +            return NULL;
->>>      if (__builtin_constant_p(size)) {
->>>              if (size > KMALLOC_MAX_CACHE_SIZE)
->>>                      return kmalloc_large(size, flags);
->>
->> I don't like the add-checking-to-every-call-site part of this patch.
->> Fine, the compiler will optimise it away if it can calculate it at compile
->> time, but there are a lot of situations where it can't.  You aren't
->> adding any safety by doing this; trying to allocate SIZE_MAX bytes is
->> guaranteed to fail, and it doesn't need to fail quickly.
->
-> Yeah, agree that we don't want to add a size check to all callers,
-> including those where the size doesn't even come from one of the new
-> *_size helpers; that just adds bloat. It's true that the overflow case
-> does not have to fail quickly, but I was worried that the saturating
-> helpers would end up making gcc emit a cmov instruction, thus stalling
-> the regular path. But it seems that it actually ends up doing a forward
-> jump, sets %rdi to SIZE_MAX, then jumps back to the call of __kmalloc,
-> so it should be ok.
+On 2018-05-09 02:42, Kees Cook wrote:
+> In preparation for replacing unchecked overflows for memory allocations,
+> this creates helpers for the 3 most common calculations:
+> 
+> array_size(a, b): 2-dimensional array
+> array3_size(a, b, c): 2-dimensional array
 
-Okay, consensus is to remove new SIZE_MAX checks, then?
+yeah... complete confusion...
 
-> With __builtin_constant_p(size) && size == SIZE_MAX, gcc could be smart
-> enough to elide those two instructions and have the jo go directly to
-> the caller's error handling, but at least gcc 5.4 doesn't seem to be
-> that smart. So let's just omit that part for now.
->
-> But in case of the kmalloc_array functions, with a direct call of
-> __builtin_mul_overflow(), gcc does combine the "return NULL" with the
-> callers error handling, thus avoiding the six byte "%rdi = -1; jmp
-> back;" thunk. That, along with the churn factor, might be an argument
-> for leaving the current callers of *_array alone. But if we are going to
-> keep those longer-term, we might as well convert kmalloc(a, b) into
-> kmalloc_array(a, b) instead of kmalloc(array_size(a, b)). In any case, I
-> do see the usefulness of the struct_size helper, and agree that we
-> definitely should not introduce a new *_struct variant that needs to be
-> implemented in all families.
+> +/**
+> + * array_size() - Calculate size of 2-dimensional array.
+> + *
+> + * @a: dimension one
+> + * @b: dimension two
+> + *
+> + * Calculates size of 2-dimensional array: @a * @b.
+> + *
+> + * Returns: number of bytes needed to represent the array or SIZE_MAX on
+> + * overflow.
+> + */
+> +static inline __must_check size_t array_size(size_t a, size_t b)
+> +{
+> +	size_t bytes;
+> +
+> +	if (check_mul_overflow(a, b, &bytes))
+> +		return SIZE_MAX;
+> +
+> +	return bytes;
+> +}
+> +
+> +/**
+> + * array3_size() - Calculate size of 3-dimensional array.
+> + *
 
-I'd like to drop *calloc() and *_array() to simplify APIs (and improve
-developer sanity). Are you suggesting we should not use the overflow
-helpers in kmalloc_array(), instead leaving the existing open-coded
-overflow check?
+...IDGI. array_size is/will most often be used to calculate the size of
+a one-dimensional array, count*elemsize, accessed as foo[i]. Won't a
+three-factor product usually be dim1*dim2*elemsize, i.e. 2-dimensional,
+accessed (because C is lame) as foo[i*dim2 + j]?
 
--Kees
+> +/**
+> + * struct_size() - Calculate size of structure with trailing array.
+> + * @p: Pointer to the structure.
+> + * @member: Name of the array member.
+> + * @n: Number of elements in the array.
+> + *
+> + * Calculates size of memory needed for structure @p followed by an
+> + * array of @n @member elements.
+> + *
+> + * Return: number of bytes needed or SIZE_MAX on overflow.
+> + */
+> +#define struct_size(p, member, n)					\
+> +	__ab_c_size(n,							\
+> +		    sizeof(*(p)->member) + __must_be_array((p)->member),\
+> +		    offsetof(typeof(*(p)), member))
+> +
+> +
 
--- 
-Kees Cook
-Pixel Security
+struct s { int a; char b; char c[]; } has sizeof > offsetof(c), so for
+small enough n, we end up allocating less than sizeof(struct s). And the
+caller might reasonably do memset(s, 0, sizeof(*s)) to initialize all
+members before c. In practice our allocators round up to a multiple of
+8, so I don't think it's a big problem, but some sanitizer might
+complain. But I do think you should make that addend sizeof() instead of
+offsetof().
+
+Rasmus
