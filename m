@@ -1,103 +1,67 @@
+Date: Thu, 10 May 2018 05:19:31 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
+Subject: Re: [PATCH v3 1/3] big key: get rid of stack array allocation
+In-Reply-To: <CAGXu5jLL7NeX+zUNqcYW_LDF87CPg-5Z4R5+FZ5uPDT-sTisng@mail.gmail.com>
+Message-ID: <alpine.LRH.2.21.1805100519200.12749@namei.org>
+References: <20180424202639.19830-1-tycho@tycho.ws> <CAGXu5jLL7NeX+zUNqcYW_LDF87CPg-5Z4R5+FZ5uPDT-sTisng@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <b481bbb2-758f-dcd3-3e1a-8b3137081614@rasmusvillemoes.dk>
-References: <20180509004229.36341-1-keescook@chromium.org> <20180509004229.36341-4-keescook@chromium.org>
- <b481bbb2-758f-dcd3-3e1a-8b3137081614@rasmusvillemoes.dk>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 9 May 2018 11:49:33 -0700
-Message-ID: <CAGXu5jJFdDOJAxN+zsRmCMRRQd=rLR6Qpo8pbeBtUmsM32Gh+Q@mail.gmail.com>
-Subject: Re: [PATCH 03/13] overflow.h: Add allocation size calculation helpers
-Content-Type: text/plain; charset="UTF-8"
-To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Cc: Matthew Wilcox <mawilcox@microsoft.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=US-ASCII
+To: Kees Cook <keescook@chromium.org>
+Cc: Tycho Andersen <tycho@tycho.ws>, David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, linux-security-module <linux-security-module@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "Serge E. Hallyn" <serge@hallyn.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 9, 2018 at 11:27 AM, Rasmus Villemoes
-<linux@rasmusvillemoes.dk> wrote:
-> On 2018-05-09 02:42, Kees Cook wrote:
->> In preparation for replacing unchecked overflows for memory allocations,
->> this creates helpers for the 3 most common calculations:
->>
->> array_size(a, b): 2-dimensional array
->> array3_size(a, b, c): 2-dimensional array
->
-> yeah... complete confusion...
->
->> +/**
->> + * array_size() - Calculate size of 2-dimensional array.
->> + *
->> + * @a: dimension one
->> + * @b: dimension two
->> + *
->> + * Calculates size of 2-dimensional array: @a * @b.
->> + *
->> + * Returns: number of bytes needed to represent the array or SIZE_MAX on
->> + * overflow.
->> + */
->> +static inline __must_check size_t array_size(size_t a, size_t b)
->> +{
->> +     size_t bytes;
->> +
->> +     if (check_mul_overflow(a, b, &bytes))
->> +             return SIZE_MAX;
->> +
->> +     return bytes;
->> +}
->> +
->> +/**
->> + * array3_size() - Calculate size of 3-dimensional array.
->> + *
->
-> ...IDGI. array_size is/will most often be used to calculate the size of
-> a one-dimensional array, count*elemsize, accessed as foo[i]. Won't a
-> three-factor product usually be dim1*dim2*elemsize, i.e. 2-dimensional,
-> accessed (because C is lame) as foo[i*dim2 + j]?
+On Tue, 8 May 2018, Kees Cook wrote:
 
-I was thinking of byte addressing, not object addressing. I can
-rewrite this to be less confusing.
+> On Tue, Apr 24, 2018 at 1:26 PM, Tycho Andersen <tycho@tycho.ws> wrote:
+> > We're interested in getting rid of all of the stack allocated arrays in the
+> > kernel [1]. This patch simply hardcodes the iv length to match that of the
+> > hardcoded cipher.
+> >
+> > [1]: https://lkml.org/lkml/2018/3/7/621
+> >
+> > v2: hardcode the length of the nonce to be the GCM AES IV length, and do a
+> >     sanity check in init(), Eric Biggers
+> > v3: * remember to free big_key_aead when sanity check fails
+> >     * define a constant for big key IV size so it can be changed along side
+> >       the algorithm in the code
+> >
+> > Signed-off-by: Tycho Andersen <tycho@tycho.ws>
+> > CC: David Howells <dhowells@redhat.com>
+> > CC: James Morris <jmorris@namei.org>
+> > CC: "Serge E. Hallyn" <serge@hallyn.com>
+> > CC: Jason A. Donenfeld <Jason@zx2c4.com>
+> > CC: Eric Biggers <ebiggers3@gmail.com>
+> 
+> Please consider this and patches 2 and 3:
+> 
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> 
+> James, are these something you can take into your tree?
 
->> +/**
->> + * struct_size() - Calculate size of structure with trailing array.
->> + * @p: Pointer to the structure.
->> + * @member: Name of the array member.
->> + * @n: Number of elements in the array.
->> + *
->> + * Calculates size of memory needed for structure @p followed by an
->> + * array of @n @member elements.
->> + *
->> + * Return: number of bytes needed or SIZE_MAX on overflow.
->> + */
->> +#define struct_size(p, member, n)                                    \
->> +     __ab_c_size(n,                                                  \
->> +                 sizeof(*(p)->member) + __must_be_array((p)->member),\
->> +                 offsetof(typeof(*(p)), member))
->> +
->> +
->
-> struct s { int a; char b; char c[]; } has sizeof > offsetof(c), so for
-> small enough n, we end up allocating less than sizeof(struct s). And the
-> caller might reasonably do memset(s, 0, sizeof(*s)) to initialize all
-> members before c. In practice our allocators round up to a multiple of
-> 8, so I don't think it's a big problem, but some sanitizer might
-> complain. But I do think you should make that addend sizeof() instead of
-> offsetof().
-
-Erg. Yeah, I think we'd best "round up". Besides the "< sizeof()" vs
-memset() case you mention, another pattern I've seen is doing stuff
-like:
-
-array = (array_type *)(thing + 1);
-
-So if padding somehow caused us to under-allocate, we'll get it wrong there too.
-
-I'll change this to be strictly sizeof(*(p)).
-
-(Though it might be nice to enforce that "member" is at the end of the
-structure, though, otherwise this could be misused for struct s { int
-a; char c[2]; char b[]; } ... )
-
--Kees
+> 
+> Thanks!
+> 
+> -Kees
+> 
+> > ---
+> >  security/keys/big_key.c | 11 ++++++++++-
+> >  1 file changed, 10 insertions(+), 1 deletion(-)
+> >
+> > diff --git a/security/keys/big_key.c b/security/keys/big_key.c
+> > index 933623784ccd..2806e70d7f8f 100644
+> > --- a/security/keys/big_key.c
+> > +++ b/security/keys/big_key.c
+> > @@ -22,6 +22,7 @@
+> >  #include <keys/user-type.h>
+> >  #include <keys/big_key-type.h>
+> >  #include <crypto/aead.h>
+> > +#include <crypto/gcm.h>
+> >
+> >  struct big_key_buf {
+> >         unsigned int            nr_pages;
+> > @@ -85,6 +86,7 @@ struct key_type key_type_big_key = {
+Sure!
 
 -- 
-Kees Cook
-Pixel Security
+James Morris
+<jmorris@namei.org>
