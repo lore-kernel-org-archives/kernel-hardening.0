@@ -1,37 +1,146 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <alpine.LRH.2.21.1805100520100.12749@namei.org>
-References: <20180424202639.19830-1-tycho@tycho.ws> <CAGXu5jLL7NeX+zUNqcYW_LDF87CPg-5Z4R5+FZ5uPDT-sTisng@mail.gmail.com>
- <alpine.LRH.2.21.1805100519200.12749@namei.org> <alpine.LRH.2.21.1805100520100.12749@namei.org>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 9 May 2018 12:50:15 -0700
-Message-ID: <CAGXu5jKr=E5bnJPX7nHov-UfWRr4EFd1Ni+WFgaikD0dyYiMZw@mail.gmail.com>
-Subject: Re: [PATCH v3 1/3] big key: get rid of stack array allocation
-Content-Type: text/plain; charset="UTF-8"
-To: James Morris <jmorris@namei.org>, David Howells <dhowells@redhat.com>
-Cc: Tycho Andersen <tycho@tycho.ws>, keyrings@vger.kernel.org, linux-security-module <linux-security-module@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "Serge E. Hallyn" <serge@hallyn.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH v2 3/6] overflow.h: Add allocation size calculation helpers
+Date: Wed,  9 May 2018 13:02:20 -0700
+Message-Id: <20180509200223.22451-4-keescook@chromium.org>
+In-Reply-To: <20180509200223.22451-1-keescook@chromium.org>
+References: <20180509200223.22451-1-keescook@chromium.org>
+To: Matthew Wilcox <mawilcox@microsoft.com>
+Cc: Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Matthew Wilcox <willy@infradead.org>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 9, 2018 at 12:21 PM, James Morris <jmorris@namei.org> wrote:
-> On Thu, 10 May 2018, James Morris wrote:
->
->> >
->> > Reviewed-by: Kees Cook <keescook@chromium.org>
->> >
->> > James, are these something you can take into your tree?
->>
->> Sure!
->
-> Although, normally, these would likely come in to mine via David's tree.
->
-> Please do that unless there's a special case here.
+In preparation for replacing unchecked overflows for memory allocations,
+this creates helpers for the 3 most common calculations:
 
-David has not replied to any of the threads or versions since
-originally posted on March 12. David, can you take these or at least
-Ack them for James?
+array_size(a, b): 2-dimensional array
+array3_size(a, b, c): 3-dimensional array
+struct_size(ptr, member, n): struct followed by n-many trailing members
 
--Kees
+Each of these return SIZE_MAX on overflow instead of wrapping around.
 
+(Additionally renames a variable named "array_size" to avoid future
+collision.)
+
+Co-developed-by: Matthew Wilcox <mawilcox@microsoft.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ drivers/md/dm-table.c    | 10 +++---
+ include/linux/overflow.h | 73 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 78 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/md/dm-table.c b/drivers/md/dm-table.c
+index 0589a4da12bb..caa51dd351b6 100644
+--- a/drivers/md/dm-table.c
++++ b/drivers/md/dm-table.c
+@@ -548,14 +548,14 @@ static int adjoin(struct dm_table *table, struct dm_target *ti)
+  * On the other hand, dm-switch needs to process bulk data using messages and
+  * excessive use of GFP_NOIO could cause trouble.
+  */
+-static char **realloc_argv(unsigned *array_size, char **old_argv)
++static char **realloc_argv(unsigned *size, char **old_argv)
+ {
+ 	char **argv;
+ 	unsigned new_size;
+ 	gfp_t gfp;
+ 
+-	if (*array_size) {
+-		new_size = *array_size * 2;
++	if (*size) {
++		new_size = *size * 2;
+ 		gfp = GFP_KERNEL;
+ 	} else {
+ 		new_size = 8;
+@@ -563,8 +563,8 @@ static char **realloc_argv(unsigned *array_size, char **old_argv)
+ 	}
+ 	argv = kmalloc(new_size * sizeof(*argv), gfp);
+ 	if (argv) {
+-		memcpy(argv, old_argv, *array_size * sizeof(*argv));
+-		*array_size = new_size;
++		memcpy(argv, old_argv, *size * sizeof(*argv));
++		*size = new_size;
+ 	}
+ 
+ 	kfree(old_argv);
+diff --git a/include/linux/overflow.h b/include/linux/overflow.h
+index c8890ec358a7..8712ff70995f 100644
+--- a/include/linux/overflow.h
++++ b/include/linux/overflow.h
+@@ -202,4 +202,77 @@
+ 
+ #endif /* COMPILER_HAS_GENERIC_BUILTIN_OVERFLOW */
+ 
++/**
++ * array_size() - Calculate size of 2-dimensional array.
++ *
++ * @a: dimension one
++ * @b: dimension two
++ *
++ * Calculates size of 2-dimensional array: @a * @b.
++ *
++ * Returns: number of bytes needed to represent the array or SIZE_MAX on
++ * overflow.
++ */
++static inline __must_check size_t array_size(size_t a, size_t b)
++{
++	size_t bytes;
++
++	if (check_mul_overflow(a, b, &bytes))
++		return SIZE_MAX;
++
++	return bytes;
++}
++
++/**
++ * array3_size() - Calculate size of 3-dimensional array.
++ *
++ * @a: dimension one
++ * @b: dimension two
++ * @c: dimension three
++ *
++ * Calculates size of 3-dimensional array: @a * @b * @c.
++ *
++ * Returns: number of bytes needed to represent the array or SIZE_MAX on
++ * overflow.
++ */
++static inline __must_check size_t array3_size(size_t a, size_t b, size_t c)
++{
++	size_t bytes;
++
++	if (check_mul_overflow(a, b, &bytes))
++		return SIZE_MAX;
++	if (check_mul_overflow(bytes, c, &bytes))
++		return SIZE_MAX;
++
++	return bytes;
++}
++
++static inline __must_check size_t __ab_c_size(size_t n, size_t size, size_t c)
++{
++	size_t bytes;
++
++	if (check_mul_overflow(n, size, &bytes))
++		return SIZE_MAX;
++	if (check_add_overflow(bytes, c, &bytes))
++		return SIZE_MAX;
++
++	return bytes;
++}
++
++/**
++ * struct_size() - Calculate size of structure with trailing array.
++ * @p: Pointer to the structure.
++ * @member: Name of the array member.
++ * @n: Number of elements in the array.
++ *
++ * Calculates size of memory needed for structure @p followed by an
++ * array of @n @member elements.
++ *
++ * Return: number of bytes needed or SIZE_MAX on overflow.
++ */
++#define struct_size(p, member, n)					\
++	__ab_c_size(n,							\
++		    sizeof(*(p)->member) + __must_be_array((p)->member),\
++		    sizeof(*(p)))
++
+ #endif /* __LINUX_OVERFLOW_H */
 -- 
-Kees Cook
-Pixel Security
+2.17.0
