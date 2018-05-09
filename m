@@ -1,66 +1,87 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <4baffc55-510e-96d3-3487-5ea09f993a0c@redhat.com>
-References: <20180509004229.36341-1-keescook@chromium.org> <4baffc55-510e-96d3-3487-5ea09f993a0c@redhat.com>
+In-Reply-To: <20180509113446.GA18549@bombadil.infradead.org>
+References: <20180509004229.36341-1-keescook@chromium.org> <20180509004229.36341-5-keescook@chromium.org>
+ <20180509113446.GA18549@bombadil.infradead.org>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 9 May 2018 10:01:41 -0700
-Message-ID: <CAGXu5jKXq7--CYgp8Q+k00RjjGJY+o71RMr51NPuWS1eM0KX1w@mail.gmail.com>
-Subject: Re: [RFC][PATCH 00/13] Provide saturating helpers for allocation
+Date: Wed, 9 May 2018 10:58:57 -0700
+Message-ID: <CAGXu5j+PT2O6RTnUJvV-m1PKT6RebY2s-0V=19V3tt+VGJrKvQ@mail.gmail.com>
+Subject: Re: [PATCH 04/13] mm: Use array_size() helpers for kmalloc()
 Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
+To: Matthew Wilcox <willy@infradead.org>
 Cc: Matthew Wilcox <mawilcox@microsoft.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 9, 2018 at 9:08 AM, Laura Abbott <labbott@redhat.com> wrote:
-> On 05/08/2018 05:42 PM, Kees Cook wrote:
->>
->> This is a stab at providing three new helpers for allocation size
->> calculation:
->>
->> struct_size(), array_size(), and array3_size().
->>
->> These are implemented on top of Rasmus's overflow checking functions,
->> and the last 8 patches are all treewide conversions of open-coded
->> multiplications into the various combinations of the helper functions.
->>
->> -Kees
->>
->>
-> Obvious question (that might indicate this deserves documentation?)
+On Wed, May 9, 2018 at 4:34 AM, Matthew Wilcox <willy@infradead.org> wrote:
+> On Tue, May 08, 2018 at 05:42:20PM -0700, Kees Cook wrote:
+>> @@ -499,6 +500,8 @@ static __always_inline void *kmalloc_large(size_t size, gfp_t flags)
+>>   */
+>>  static __always_inline void *kmalloc(size_t size, gfp_t flags)
+>>  {
+>> +     if (size == SIZE_MAX)
+>> +             return NULL;
+>>       if (__builtin_constant_p(size)) {
+>>               if (size > KMALLOC_MAX_CACHE_SIZE)
+>>                       return kmalloc_large(size, flags);
 >
-> What's the difference between
->
-> kmalloc_array(cnt, sizeof(struct blah), GFP_KERNEL);
->
-> and
->
-> kmalloc(array_size(cnt, struct blah), GFP_KERNEL);
->
->
-> and when would you use one over the other?
+> I don't like the add-checking-to-every-call-site part of this patch.
+> Fine, the compiler will optimise it away if it can calculate it at compile
+> time, but there are a lot of situations where it can't.  You aren't
+> adding any safety by doing this; trying to allocate SIZE_MAX bytes is
+> guaranteed to fail, and it doesn't need to fail quickly.
 
-If I'm understanding the intentions here, the next set of treewide
-changes would be to remove *calloc() and *_array() in favor of using
-the array_size() helper. (i.e. reducing proliferation of allocator
-helpers in favor of using the *_size() helpers.
+Fun bit of paranoia: I added early checks to devm_kmalloc() too in
+another patch after 0-day started yelling about other things, and this
+morning while removing the SIZE_MAX checks based on your feedback, I
+discovered:
 
-There are, however, some cases that don't map well to
-{struct,array,array3}_size(), specifically cases of additions in
-finding a count. For example, stuff like:
+void * devm_kmalloc(struct device *dev, size_t size, gfp_t gfp)
+{
+        struct devres *dr;
 
-kmalloc(sizeof(header) + sizeof(trailing_array) * (count + SOMETHING), gfp...)
+        /* use raw alloc_dr for kmalloc caller tracing */
+        dr = alloc_dr(devm_kmalloc_release, size, gfp, dev_to_node(dev));
+...
 
-This gets currently mapped to:
+static __always_inline struct devres * alloc_dr(dr_release_t release,
+                                               size_t size, gfp_t gfp, int nid)
+{
+       size_t tot_size = sizeof(struct devres) + size;
+        struct devres *dr;
 
-kmalloc(struct_size(header, trailing_array, (count + SOMETHING), gfp...)
+        dr = kmalloc_node_track_caller(tot_size, gfp, nid);
+...
 
-But we run the risk in some cases of having even the addition
-overflow. I think we need to have a "saturating add" too. Something
-like:
+which is exactly the pattern I was worried about: SIZE_MAX plus some
+small number would overflow. :(
 
-kmalloc(struct_size(header, trailing_array, sat_add(count, SOMETHING), gfp...)
+So, I've added an explicit overflow check in devm_kmalloc() now.
 
-It's a bit ugly, but it would cover nearly all the remaining cases...
+Thoughts: making {struct,array,array3}_size() return "SIZE_MAX -
+something" could help for generic cases (like above), but it might
+still be possible in a buggy situation for an attacker to choose
+factors that do NOT overflow, but reach something like "SIZE_MAX - 1"
+and then the later addition will wrap it around. I'm leaning towards
+doing it anyway, though, since not all factors in a given bug may have
+very high granularity, giving us better protection than SIZE_MAX.
+
+However, since now we're separating overflow checking from saturation
+(i.e. we could calculate a non-overflowing value that lands in the
+saturation zone), we can't sanely to the check_*_overflow() cases,
+since the "saturated" results from array_size() aren't SIZE_MAX any
+more...
+
+I can't decide which is a safer failure case...
+
+> Hmm.  I wonder why we have the kmalloc/__kmalloc "optimisation"
+> in kmalloc_array, but not kcalloc.  Bet we don't really need it in
+> kmalloc_array.  I'll do some testing.
+
+Not sure; my new patches drop it entirely since they're redefining
+*calloc() and *_array*() with the helpers now...
+
+I'll send a v2 shortly (without the treewide changes, since those are
+huge and only changed slightly with some 0-day noticed glitches).
 
 -Kees
 
