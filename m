@@ -1,29 +1,37 @@
-Date: Fri, 11 May 2018 20:28:32 +0100
-From: Al Viro <viro@ZenIV.linux.org.uk>
-Subject: Re: [PATCH v5 0/7] proc: modernize proc to support multiple private
- instances
-Message-ID: <20180511192831.GC30522@ZenIV.linux.org.uk>
-References: <20180511093221.GA902@comp-core-i7-2640m-0182e6>
- <CA+55aFwZK+BMsm19sK-Wmfta6PcdvW6z-ghuKsb4PAwk19nRVg@mail.gmail.com>
+Date: Sat, 12 May 2018 06:09:49 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
+Subject: Re: [PATCH v3 1/3] big key: get rid of stack array allocation
+In-Reply-To: <20180424202639.19830-1-tycho@tycho.ws>
+Message-ID: <alpine.LRH.2.21.1805120609250.6601@namei.org>
+References: <20180424202639.19830-1-tycho@tycho.ws>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+55aFwZK+BMsm19sK-Wmfta6PcdvW6z-ghuKsb4PAwk19nRVg@mail.gmail.com>
-Sender: Al Viro <viro@ftp.linux.org.uk>
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: gladkov.alexey@gmail.com, Kees Cook <keescook@chromium.org>, Andrew Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Akinobu Mita <akinobu.mita@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Jeff Layton <jlayton@poochiereds.net>, Ingo Molnar <mingo@kernel.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Daniel Micay <danielmicay@gmail.com>, Jonathan Corbet <corbet@lwn.net>, "J. Bruce Fields" <bfields@fieldses.org>, Stephen Rothwell <sfr@canb.auug.org.au>, Solar Designer <solar@openwall.com>, "Dmitry V. Levin" <ldv@altlinux.org>, Djalal Harouni <tixxdz@gmail.com>
+Content-Type: text/plain; charset=US-ASCII
+To: Tycho Andersen <tycho@tycho.ws>
+Cc: David Howells <dhowells@redhat.com>, keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, "Serge E. Hallyn" <serge@hallyn.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, May 11, 2018 at 09:39:23AM -0700, Linus Torvalds wrote:
-> On Fri, May 11, 2018 at 2:42 AM Alexey Gladkov <gladkov.alexey@gmail.com>
-> wrote:
-> 
-> > This is RFC v5 to modernize procfs and make it able to support multiple
-> > private instances per the same pid namespace.
-> 
-> So I have no big objections, but I would *really* like this to go through
-> Al's vfs tree.
-> 
-> Al? Have you looked at this series?
+On Tue, 24 Apr 2018, Tycho Andersen wrote:
 
-Looking through it...
+> We're interested in getting rid of all of the stack allocated arrays in the
+> kernel [1]. This patch simply hardcodes the iv length to match that of the
+> hardcoded cipher.
+> 
+> [1]: https://lkml.org/lkml/2018/3/7/621
+> 
+> v2: hardcode the length of the nonce to be the GCM AES IV length, and do a
+>     sanity check in init(), Eric Biggers
+> v3: * remember to free big_key_aead when sanity check fails
+>     * define a constant for big key IV size so it can be changed along side
+>       the algorithm in the code
+
+All applied to
+git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git next-general
+and next-testing
+
+
+Thanks!
+
+
+-- 
+James Morris
+<jmorris@namei.org>
