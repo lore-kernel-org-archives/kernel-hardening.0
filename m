@@ -1,68 +1,52 @@
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH v2 6/6] device: Use overflow helpers for devm_kmalloc()
-Date: Wed,  9 May 2018 13:02:23 -0700
-Message-Id: <20180509200223.22451-7-keescook@chromium.org>
+MIME-Version: 1.0
+Sender: keescook@google.com
 In-Reply-To: <20180509200223.22451-1-keescook@chromium.org>
 References: <20180509200223.22451-1-keescook@chromium.org>
-To: Matthew Wilcox <mawilcox@microsoft.com>
-Cc: Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Matthew Wilcox <willy@infradead.org>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 10 May 2018 17:02:34 -0700
+Message-ID: <CAGXu5j+0WKjetgxxdE4HUi9mDjnWm+taNLnYio1VgpAeCutpJg@mail.gmail.com>
+Subject: Re: [PATCH v2 0/6] Provide saturating helpers for allocation
+Content-Type: text/plain; charset="UTF-8"
+To: Linux-MM <linux-mm@kvack.org>
+Cc: Rasmus Villemoes <linux@rasmusvillemoes.dk>, Matthew Wilcox <mawilcox@microsoft.com>, Matthew Wilcox <willy@infradead.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Use the overflow helpers both in existing multiplication-using inlines as
-well as the addition-overflow case in the core allocation routine.
+On Wed, May 9, 2018 at 1:02 PM, Kees Cook <keescook@chromium.org> wrote:
+> This is a stab at providing three new helpers for allocation size
+> calculation:
+>
+> struct_size(), array_size(), and array3_size().
+>
+> These are implemented on top of Rasmus's overflow checking functions. The
+> existing allocators are adjusted to use the more efficient overflow
+> checks as well.
+>
+> I have left out the 8 tree-wide conversion patches of open-coded
+> multiplications into the new helpers, as those are largely
+> unchanged from v1. Everything can be seen here, though:
+> https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/overflow/array_size
+>
+> The question remains for what to do with the *calloc() and *_array*()
+> API. They could be entirely removed in favor of using the new helpers:
+>
+> kcalloc(n, size, gfp)        ->  kzalloc(array_size(n, size), gfp)
+> kmalloc_array(n, size, gfp)  ->  kmalloc(array_size(n, size), gfp)
+>
+> Changes from v1:
+> - use explicit overflow helpers instead of array_size() helpers.
+> - drop early-checks for SIZE_MAX.
+> - protect devm_kmalloc()-family from addition overflow.
+> - added missing overflow.h includes.
+> - fixed 0-day issues in a few treewide manual conversions
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- drivers/base/devres.c  | 7 ++++++-
- include/linux/device.h | 8 ++++++--
- 2 files changed, 12 insertions(+), 3 deletions(-)
+I've added an allocation overflow addition to lib/test_overflow now,
+so I'll send a v3 soon. Does anyone want to provide an Ack or Reviewed
+for these?
 
-diff --git a/drivers/base/devres.c b/drivers/base/devres.c
-index 95b67281cd2a..f98a097e73f2 100644
---- a/drivers/base/devres.c
-+++ b/drivers/base/devres.c
-@@ -84,9 +84,14 @@ static struct devres_group * node_to_group(struct devres_node *node)
- static __always_inline struct devres * alloc_dr(dr_release_t release,
- 						size_t size, gfp_t gfp, int nid)
- {
--	size_t tot_size = sizeof(struct devres) + size;
-+	size_t tot_size;
- 	struct devres *dr;
- 
-+	/* We must catch any near-SIZE_MAX cases that could overflow. */
-+	if (unlikely(check_add_overflow(sizeof(struct devres), size,
-+					&tot_size)))
-+		return NULL;
-+
- 	dr = kmalloc_node_track_caller(tot_size, gfp, nid);
- 	if (unlikely(!dr))
- 		return NULL;
-diff --git a/include/linux/device.h b/include/linux/device.h
-index 0059b99e1f25..e78a050d6e7e 100644
---- a/include/linux/device.h
-+++ b/include/linux/device.h
-@@ -25,6 +25,7 @@
- #include <linux/ratelimit.h>
- #include <linux/uidgid.h>
- #include <linux/gfp.h>
-+#include <linux/overflow.h>
- #include <asm/device.h>
- 
- struct device;
-@@ -666,9 +667,12 @@ static inline void *devm_kzalloc(struct device *dev, size_t size, gfp_t gfp)
- static inline void *devm_kmalloc_array(struct device *dev,
- 				       size_t n, size_t size, gfp_t flags)
- {
--	if (size != 0 && n > SIZE_MAX / size)
-+	size_t bytes;
-+
-+	if (unlikely(check_mul_overflow(n, size, &bytes)))
- 		return NULL;
--	return devm_kmalloc(dev, n * size, flags);
-+
-+	return devm_kmalloc(dev, bytes, flags);
- }
- static inline void *devm_kcalloc(struct device *dev,
- 				 size_t n, size_t size, gfp_t flags)
+Also, any thoughts on *calloc() and *_array*() removal?
+
+-Kees
+
 -- 
-2.17.0
+Kees Cook
+Pixel Security
