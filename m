@@ -1,96 +1,162 @@
-Date: Mon, 14 May 2018 11:06:40 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Subject: Re: [PATCH 2/2] arm64: Clear the stack
-Message-ID: <20180514100639.v3erlzbuv2e4awfh@lakrids.cambridge.arm.com>
-References: <20180502203326.9491-3-labbott@redhat.com>
- <20180503071917.xm2xvgagvzkworay@salmiak>
- <dd6ad26c-1d2c-88f3-8f01-e68d2b31d6ea@linux.com>
- <20180504110907.c2dw33kjmyybso6t@lakrids.cambridge.arm.com>
- <4badae50-be9b-2c6d-854b-57ab48664800@linux.com>
- <71199506-b46b-5f91-e489-e6450b6d1067@linux.com>
- <20180511161317.57k6prl54xjmsit3@lakrids.cambridge.arm.com>
- <f180b312-d1cf-3992-4e89-9632c1674cd6@linux.com>
- <20180514051555.bpbydgr56hyffjch@salmiak>
- <6c311899-7131-d21b-10f6-d2ba7380a392@linux.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <6c311899-7131-d21b-10f6-d2ba7380a392@linux.com>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+From: Michael Ellerman <mpe@ellerman.id.au>
+Subject: [PATCH 2/2] powerpc: Check address limit on user-mode return (TIF_FSCHECK)
+Date: Mon, 14 May 2018 23:03:16 +1000
+Message-Id: <20180514130316.23855-2-mpe@ellerman.id.au>
+In-Reply-To: <20180514130316.23855-1-mpe@ellerman.id.au>
+References: <20180514130316.23855-1-mpe@ellerman.id.au>
+To: linuxppc-dev@ozlabs.org
+Cc: kernel-hardening@lists.openwall.com, thgarnie@google.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 14, 2018 at 12:35:25PM +0300, Alexander Popov wrote:
-> On 14.05.2018 08:15, Mark Rutland wrote:
-> > On Sun, May 13, 2018 at 11:40:07AM +0300, Alexander Popov wrote:
-> >> So what would you think if I do the following in check_alloca():
-> >>
-> >> 	if (size >= stack_left) {
-> >> #if !defined(CONFIG_VMAP_STACK) && defined(CONFIG_SCHED_STACK_END_CHECK)
-> >> 		panic("alloca over the kernel stack boundary\n");
-> >> #else
-> >> 		BUG();
-> >> #endif
-> > 
-> > Given this is already out-of-line, how about we always use panic(), regardless
-> > of VMAP_STACK and SCHED_STACK_END_CHECK? i.e. just
-> > 
-> > 	if (unlikely(size >= stack_left))
-> > 		panic("alloca over the kernel stack boundary");
-> > 
-> > If we have VMAP_STACK selected, and overflow during the panic, it's the same as
-> > if we overflowed during the BUG(). It's likely that panic() will use less stack
-> > space than BUG(), and the compiler can put the call in a slow path that
-> > shouldn't affect most calls, so in all cases it's likely preferable.
-> 
-> I'm sure that maintainers and Linus will strongly dislike my patch if I always
-> use panic() here. panic() kills the whole kernel and we shouldn't use it when we
-> can safely continue to work.
-> 
-> Let me describe my logic. So let's have size >= stack_left on a thread stack.
-> 
-> 1. If CONFIG_VMAP_STACK is enabled, we can safely use BUG(). Even if BUG()
-> handling overflows the thread stack into the guard page, handle_stack_overflow()
-> is called and the neighbour memory is not corrupted. The kernel can proceed to live.
+set_fs() sets the addr_limit, which is used in access_ok() to
+determine if an address is a user or kernel address.
 
-On arm64 with CONFIG_VMAP_STACK, a stack overflow will result in a
-panic(). My understanding was that the same is true on x86.
+Some code paths use set_fs() to temporarily elevate the addr_limit so
+that kernel code can read/write kernel memory as if it were user
+memory. That is fine as long as the code can't ever return to
+userspace with the addr_limit still elevated.
 
-> 2. If CONFIG_VMAP_STACK is disabled, BUG() handling can corrupt the neighbour
-> kernel memory and cause the undefined behaviour of the whole kernel. I see it on
-> my lkdtm test. That is a cogent reason for panic().
+If that did happen, then userspace can read/write kernel memory as if
+it were user memory, eg. just with write(2). In case it's not clear,
+that is very bad. It has also happened in the past due to bugs.
 
-In this case, panic() can also corrupt the neighbour stack, and could
-also fail.
+Commit 5ea0727b163c ("x86/syscalls: Check address limit on user-mode
+return") added a mechanism to check the addr_limit value before
+returning to userspace. Any call to set_fs() sets a thread flag,
+TIF_FSCHECK, and if we see that on the return to userspace we go out
+of line to check that the addr_limit value is not elevated.
 
-When CONFIG_VMAP_STACK is not selected, a stack overflow simply cannot
-be handled reliably -- while panic() may be more likely to succeed, it
-is not gauranteed to.
+For further info see the above commit, as well as:
+  https://lwn.net/Articles/722267/
+  https://bugs.chromium.org/p/project-zero/issues/detail?id=990
 
-> 2.a. If CONFIG_SCHED_STACK_END_CHECK is enabled, the kernel already does panic()
-> when STACK_END_MAGIC is corrupted. So we will _not_ break the safety policy if
-> we do panic() in a similar situation in check_alloca().
+Verified to work on 64-bit Book3S using a POC that objdumps the system
+call handler, and a modified lkdtm_CORRUPT_USER_DS() that doesn't kill
+the caller.
 
-Sure, I'm certainly happy with panic() here.
+Before:
+  $ sudo ./test-tif-fscheck
+  ...
+  0000000000000000 <.data>:
+         0:       e1 f7 8a 79     rldicl. r10,r12,30,63
+         4:       80 03 82 40     bne     0x384
+         8:       00 40 8a 71     andi.   r10,r12,16384
+         c:       78 0b 2a 7c     mr      r10,r1
+        10:       10 fd 21 38     addi    r1,r1,-752
+        14:       08 00 c2 41     beq-    0x1c
+        18:       58 09 2d e8     ld      r1,2392(r13)
+        1c:       00 00 41 f9     std     r10,0(r1)
+        20:       70 01 61 f9     std     r11,368(r1)
+        24:       78 01 81 f9     std     r12,376(r1)
+        28:       70 00 01 f8     std     r0,112(r1)
+        2c:       78 00 41 f9     std     r10,120(r1)
+        30:       20 00 82 41     beq     0x50
+        34:       a6 42 4c 7d     mftb    r10
 
-> 2.b. If CONFIG_SCHED_STACK_END_CHECK is disabled, the user has some real reasons
-> not to do panic() when the kernel stack is corrupted. 
+After:
 
-I believe that CONFIG_SCHED_STACK_END_CHECK is seen as a debug feature,
-and hence people don't select it. I strongly doubt that people have
-reasons to disable it other than not wanting the overhead associated
-with debug features.
+  $ sudo ./test-tif-fscheck
+  Killed
 
-I think it is reasonable to panic() here even with CONFIG_VMAP_STACK
-selected.
+And in dmesg:
+  Invalid address limit on user-mode return
+  WARNING: CPU: 1 PID: 3689 at ../include/linux/syscalls.h:260 do_notify_resume+0x140/0x170
+  ...
+  NIP [c00000000001ee50] do_notify_resume+0x140/0x170
+  LR [c00000000001ee4c] do_notify_resume+0x13c/0x170
+  Call Trace:
+    do_notify_resume+0x13c/0x170 (unreliable)
+    ret_from_except_lite+0x70/0x74
 
-> So we should not do it in check_alloca() as well, just use BUG() and
-> hope for the best.
+Performance overhead is essentially zero in the usual case, because
+the bit is checked as part of the existing _TIF_USER_WORK_MASK check.
 
-Regardless of whether we BUG() or panic(), we're hoping for the best.
+Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+---
+ arch/powerpc/include/asm/thread_info.h | 8 +++++---
+ arch/powerpc/include/asm/uaccess.h     | 8 +++++++-
+ arch/powerpc/kernel/signal.c           | 4 ++++
+ 3 files changed, 16 insertions(+), 4 deletions(-)
 
-Consistently using panic() here will keep things simpler, so any failure
-reported will be easier to reason about, and easier to debug.
-
-Thanks,
-Mark.
+diff --git a/arch/powerpc/include/asm/thread_info.h b/arch/powerpc/include/asm/thread_info.h
+index 5964145db03d..f308dfeb2746 100644
+--- a/arch/powerpc/include/asm/thread_info.h
++++ b/arch/powerpc/include/asm/thread_info.h
+@@ -79,8 +79,7 @@ extern int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src
+ #define TIF_SYSCALL_TRACE	0	/* syscall trace active */
+ #define TIF_SIGPENDING		1	/* signal pending */
+ #define TIF_NEED_RESCHED	2	/* rescheduling necessary */
+-#define TIF_POLLING_NRFLAG	3	/* true if poll_idle() is polling
+-					   TIF_NEED_RESCHED */
++#define TIF_FSCHECK		3	/* Check FS is USER_DS on return */
+ #define TIF_32BIT		4	/* 32 bit binary */
+ #define TIF_RESTORE_TM		5	/* need to restore TM FP/VEC/VSX */
+ #define TIF_PATCH_PENDING	6	/* pending live patching update */
+@@ -99,6 +98,7 @@ extern int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src
+ #if defined(CONFIG_PPC64)
+ #define TIF_ELF2ABI		18	/* function descriptors must die! */
+ #endif
++#define TIF_POLLING_NRFLAG	19	/* true if poll_idle() is polling TIF_NEED_RESCHED */
+ 
+ /* as above, but as bit values */
+ #define _TIF_SYSCALL_TRACE	(1<<TIF_SYSCALL_TRACE)
+@@ -118,13 +118,15 @@ extern int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src
+ #define _TIF_SYSCALL_TRACEPOINT	(1<<TIF_SYSCALL_TRACEPOINT)
+ #define _TIF_EMULATE_STACK_STORE	(1<<TIF_EMULATE_STACK_STORE)
+ #define _TIF_NOHZ		(1<<TIF_NOHZ)
++#define _TIF_FSCHECK		(1<<TIF_FSCHECK)
+ #define _TIF_SYSCALL_DOTRACE	(_TIF_SYSCALL_TRACE | _TIF_SYSCALL_AUDIT | \
+ 				 _TIF_SECCOMP | _TIF_SYSCALL_TRACEPOINT | \
+ 				 _TIF_NOHZ)
+ 
+ #define _TIF_USER_WORK_MASK	(_TIF_SIGPENDING | _TIF_NEED_RESCHED | \
+ 				 _TIF_NOTIFY_RESUME | _TIF_UPROBE | \
+-				 _TIF_RESTORE_TM | _TIF_PATCH_PENDING)
++				 _TIF_RESTORE_TM | _TIF_PATCH_PENDING | \
++				 _TIF_FSCHECK)
+ #define _TIF_PERSYSCALL_MASK	(_TIF_RESTOREALL|_TIF_NOERROR)
+ 
+ /* Bits in local_flags */
+diff --git a/arch/powerpc/include/asm/uaccess.h b/arch/powerpc/include/asm/uaccess.h
+index a91cea15187b..abba80f8ff04 100644
+--- a/arch/powerpc/include/asm/uaccess.h
++++ b/arch/powerpc/include/asm/uaccess.h
+@@ -31,7 +31,13 @@
+ 
+ #define get_ds()	(KERNEL_DS)
+ #define get_fs()	(current->thread.addr_limit)
+-#define set_fs(val)	(current->thread.addr_limit = (val))
++
++static inline void set_fs(mm_segment_t fs)
++{
++	current->thread.addr_limit = fs;
++	/* On user-mode return check addr_limit (fs) is correct */
++	set_thread_flag(TIF_FSCHECK);
++}
+ 
+ #define segment_eq(a, b)	((a).seg == (b).seg)
+ 
+diff --git a/arch/powerpc/kernel/signal.c b/arch/powerpc/kernel/signal.c
+index 61db86ecd318..fb932f1202c7 100644
+--- a/arch/powerpc/kernel/signal.c
++++ b/arch/powerpc/kernel/signal.c
+@@ -15,6 +15,7 @@
+ #include <linux/key.h>
+ #include <linux/context_tracking.h>
+ #include <linux/livepatch.h>
++#include <linux/syscalls.h>
+ #include <asm/hw_breakpoint.h>
+ #include <linux/uaccess.h>
+ #include <asm/unistd.h>
+@@ -150,6 +151,9 @@ void do_notify_resume(struct pt_regs *regs, unsigned long thread_info_flags)
+ {
+ 	user_exit();
+ 
++	/* Check valid addr_limit, TIF check is done there */
++	addr_limit_user_check();
++
+ 	if (thread_info_flags & _TIF_UPROBE)
+ 		uprobe_notify_resume(regs);
+ 
+-- 
+2.14.1
