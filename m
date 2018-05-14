@@ -1,107 +1,133 @@
-Subject: Re: [PATCH v11 0/6] Introduce the STACKLEAK feature and a test for it
-References: <1523024546-6150-1-git-send-email-alex.popov@linux.com>
+Subject: Re: [PATCHv5] gpio: Remove VLA from gpiolib
+References: <20180413212427.18261-1-labbott@redhat.com>
+ <CAMuHMdWDysLemM3PNNjC-Aircpu=Y-z=e79zgG8LPzvGCSEetg@mail.gmail.com>
 From: Laura Abbott <labbott@redhat.com>
-Message-ID: <5726d16d-23f3-7d55-d488-e4e0ce262edf@redhat.com>
-Date: Mon, 14 May 2018 11:55:34 -0700
+Message-ID: <067d073f-556c-9df0-37f8-fd63fcdc7eb9@redhat.com>
+Date: Mon, 14 May 2018 15:49:21 -0700
 MIME-Version: 1.0
-In-Reply-To: <1523024546-6150-1-git-send-email-alex.popov@linux.com>
+In-Reply-To: <CAMuHMdWDysLemM3PNNjC-Aircpu=Y-z=e79zgG8LPzvGCSEetg@mail.gmail.com>
 Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-To: Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+To: Geert Uytterhoeven <geert@linux-m68k.org>
+Cc: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 04/06/2018 07:22 AM, Alexander Popov wrote:
-> This is the 11th version of the patch series introducing STACKLEAK to the
-> mainline kernel. The 9th version raised a fervent discussion[0].
-> The assembly code introduced by that version irritated the reviewers.
+On 04/20/2018 02:02 AM, Geert Uytterhoeven wrote:
+> Hi Laura,
 > 
-> I've found the way to bypass the obstacles[1] of the C implementation.
-> So I dare come again. Let me ask you to look at this code without
-> preconception.
+> Thanks for your patch!
 > 
-> Motivation
-> ==========
+> On Fri, Apr 13, 2018 at 11:24 PM, Laura Abbott <labbott@redhat.com> wrote:
+>> The new challenge is to remove VLAs from the kernel
+>> (see https://lkml.org/lkml/2018/3/7/621) to eventually
+>> turn on -Wvla.
+>>
+>> Using a kmalloc array is the easy way to fix this but kmalloc is still
+>> more expensive than stack allocation. Introduce a fast path with a
+>> fixed size stack array to cover most chip with gpios below some fixed
+>> amount. The slow path dynamically allocates an array to cover those
+>> chips with a large number of gpios.
 > 
-> STACKLEAK (initially developed by PaX Team):
+> Blindly replacing VLAs by allocated arrays is IMHO not such a good solution.
+> On the largest systems, NR_GPIOS is 2048, so that makes 2 arrays of 256
+> bytes. That's an uppper limit, and assumes they are all on the same gpiochip,
+> which they probably aren't.
 > 
->   1. reduces the information that can be revealed through kernel stack leak bugs.
->      The idea of erasing the thread stack at the end of syscalls is similar to
->      CONFIG_PAGE_POISONING and memzero_explicit() in kernel crypto, which all
->      comply with FDP_RIP.2 (Full Residual Information Protection) of the
->      Common Criteria standard.
+> Still, 2 x 256 bytes is a lot, so I agree it should be fixed.
 > 
->   2. blocks some uninitialized stack variable attacks (e.g. CVE-2017-17712,
->      CVE-2010-2963). That kind of bugs should be killed by improving C compilers
->      in future, which might take a long time.
+> So, wouldn't it make more sense to not allocate memory, but just process
+> the request in chunks (say, at most 128 gpios per chunk, i.e. 2 x
+> 16 bytes)? The code already caters for handling chunks due to not all gpios
+> belonging to the same gpiochip. That will probably also be faster than
+> allocating memory, which is the main idea behind this API.
 > 
->   3. blocks stack depth overflow caused by alloca (aka Stack Clash attack).
->      That is orthogonal to the mainline kernel VLA cleanup and protects
->      un-upstreamed code.
+>> Reviewed-and-tested-by: Lukas Wunner <lukas@wunner.de>
+>> Signed-off-by: Lukas Wunner <lukas@wunner.de>
+>> Signed-off-by: Laura Abbott <labbott@redhat.com>
 > 
-> Performance impact
-> ==================
+>> --- a/drivers/gpio/gpiolib.c
+>> +++ b/drivers/gpio/gpiolib.c
 > 
-> Hardware: Intel Core i7-4770, 16 GB RAM
+>> @@ -1192,6 +1196,10 @@ int gpiochip_add_data_with_key(struct gpio_chip *chip, void *data,
+>>                  goto err_free_descs;
+>>          }
+>>
+>> +       if (chip->ngpio > FASTPATH_NGPIO)
+>> +               chip_warn(chip, "line cnt %d is greater than fast path cnt %d\n",
+>> +               chip->ngpio, FASTPATH_NGPIO);
 > 
-> Test #1: building the Linux kernel on a single core
-> 	0.91% slowdown
+> FWIW, can this warning be triggered from userspace?
 > 
-> Test #2: hackbench -s 4096 -l 2000 -g 15 -f 25 -P
-> 	4.2% slowdown
+>> @@ -2662,16 +2670,28 @@ int gpiod_get_array_value_complex(bool raw, bool can_sleep,
+>>
+>>          while (i < array_size) {
+>>                  struct gpio_chip *chip = desc_array[i]->gdev->chip;
+>> -               unsigned long mask[BITS_TO_LONGS(chip->ngpio)];
+>> -               unsigned long bits[BITS_TO_LONGS(chip->ngpio)];
 > 
-> So the STACKLEAK description in Kconfig includes:
-> "The tradeoff is the performance impact: on a single CPU system kernel
-> compilation sees a 1% slowdown, other systems and workloads may vary and you are
-> advised to test this feature on your expected workload before deploying it".
+> Hence just use a fixed size here...
 > 
-> Links
-> =====
+>> +               unsigned long fastpath[2 * BITS_TO_LONGS(FASTPATH_NGPIO)];
+>> +               unsigned long *mask, *bits;
+>>                  int first, j, ret;
+>>
+>> +               if (likely(chip->ngpio <= FASTPATH_NGPIO)) {
+>> +                       memset(fastpath, 0, sizeof(fastpath));
+>> +                       mask = fastpath;
+>> +                       bits = fastpath + BITS_TO_LONGS(FASTPATH_NGPIO);
+>> +               } else {
+>> +                       mask = kcalloc(2 * BITS_TO_LONGS(chip->ngpio),
+>> +                                          sizeof(*mask),
+>> +                                          can_sleep ? GFP_KERNEL : GFP_ATOMIC);
+>> +                       if (!mask)
+>> +                               return -ENOMEM;
+>> +                       bits = mask + BITS_TO_LONGS(chip->ngpio);
+>> +               }
+>> +
+>>                  if (!can_sleep)
+>>                          WARN_ON(chip->can_sleep);
+>>
+>>                  /* collect all inputs belonging to the same chip */
+>>                  first = i;
+>> -               memset(mask, 0, sizeof(mask));
+>>                  do {
+>>                          const struct gpio_desc *desc = desc_array[i];
+>>                          int hwgpio = gpio_chip_hwgpio(desc);
 > 
-> [0] http://www.openwall.com/lists/kernel-hardening/2018/03/03/7
-> [1] http://www.openwall.com/lists/kernel-hardening/2018/03/21/4
+> Out-of-context, the code does:
 > 
+> |                       __set_bit(hwgpio, mask);
+> |                       i++;
+> |                 } while ((i < array_size) &&
 > 
-> Alexander Popov (6):
->    gcc-plugins: Clean up the cgraph_create_edge* macros
->    x86/entry: Add STACKLEAK erasing the kernel stack at the end of
->      syscalls
->    gcc-plugins: Add STACKLEAK plugin for tracking the kernel stack
->    lkdtm: Add a test for STACKLEAK
->    fs/proc: Show STACKLEAK metrics in the /proc file system
->    doc: self-protection: Add information about STACKLEAK feature
+> ... and change this limit to "(i < min(array_size, first +
+> ARRAY_SIZE(mask) * BITS_PER_BYTE))"
 > 
->   Documentation/security/self-protection.rst |  23 +-
->   Documentation/x86/x86_64/mm.txt            |   2 +
->   arch/Kconfig                               |  53 ++++
->   arch/x86/Kconfig                           |   1 +
->   arch/x86/entry/Makefile                    |   3 +
->   arch/x86/entry/calling.h                   |  14 +
->   arch/x86/entry/entry_32.S                  |   7 +
->   arch/x86/entry/entry_64.S                  |   3 +
->   arch/x86/entry/entry_64_compat.S           |   5 +
->   arch/x86/entry/erase.c                     |  58 ++++
->   arch/x86/include/asm/processor.h           |   7 +
->   arch/x86/kernel/dumpstack.c                |  19 ++
->   arch/x86/kernel/process_32.c               |   8 +
->   arch/x86/kernel/process_64.c               |   8 +
->   drivers/misc/Makefile                      |   3 +
->   drivers/misc/lkdtm.h                       |   4 +
->   drivers/misc/lkdtm_core.c                  |   2 +
->   drivers/misc/lkdtm_stackleak.c             | 141 +++++++++
->   fs/proc/base.c                             |  18 ++
->   include/linux/compiler.h                   |   4 +
->   mm/util.c                                  |  33 ++
->   scripts/Makefile.gcc-plugins               |   3 +
->   scripts/gcc-plugins/gcc-common.h           |  26 +-
->   scripts/gcc-plugins/stackleak_plugin.c     | 470 +++++++++++++++++++++++++++++
->   24 files changed, 896 insertions(+), 19 deletions(-)
->   create mode 100644 arch/x86/entry/erase.c
->   create mode 100644 drivers/misc/lkdtm_stackleak.c
->   create mode 100644 scripts/gcc-plugins/stackleak_plugin.c
+> |                         (desc_array[i]->gdev->chip == chip));
 > 
+> ... and you're done?
+> 
+I don't think this approach will work since gpio_chip_{get,set}_multiple
+expect to be working on arrays for the entire chip. There doesn't seem
+to be a nice way to work on a subset of GPIOs without defeating the point
+of the multiple API.
 
-As a point of reference, this series mitigates the leak
-fixed by https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0a0b98734479aa5b3c671d5190e86273372cab95
+is 2*256 = 512 bytes really too much stack space? I guess we could
+switch to a Kconfig to allow for better bounds.
 
 Thanks,
 Laura
+
+>> @@ -2878,7 +2904,7 @@ static void gpio_chip_set_multiple(struct gpio_chip *chip,
+>>          }
+>>   }
+>>
+>> -void gpiod_set_array_value_complex(bool raw, bool can_sleep,
+>> +int gpiod_set_array_value_complex(bool raw, bool can_sleep,
+> 
+> Same here.
+> 
+> Gr{oetje,eeting}s,
+> 
+>                          Geert
+> 
