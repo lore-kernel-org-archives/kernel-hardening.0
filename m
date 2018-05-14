@@ -1,51 +1,107 @@
-Date: Mon, 14 May 2018 15:07:15 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Subject: Re: [PATCH 2/2] arm64: Clear the stack
-Message-ID: <20180514140714.sfmvfpwco63eomor@lakrids.cambridge.arm.com>
-References: <dd6ad26c-1d2c-88f3-8f01-e68d2b31d6ea@linux.com>
- <20180504110907.c2dw33kjmyybso6t@lakrids.cambridge.arm.com>
- <4badae50-be9b-2c6d-854b-57ab48664800@linux.com>
- <71199506-b46b-5f91-e489-e6450b6d1067@linux.com>
- <20180511161317.57k6prl54xjmsit3@lakrids.cambridge.arm.com>
- <f180b312-d1cf-3992-4e89-9632c1674cd6@linux.com>
- <20180514051555.bpbydgr56hyffjch@salmiak>
- <6c311899-7131-d21b-10f6-d2ba7380a392@linux.com>
- <20180514100639.v3erlzbuv2e4awfh@lakrids.cambridge.arm.com>
- <c5bebf0b-9667-5725-2800-97c5a85635c4@linux.com>
+Subject: Re: [PATCH v11 0/6] Introduce the STACKLEAK feature and a test for it
+References: <1523024546-6150-1-git-send-email-alex.popov@linux.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <5726d16d-23f3-7d55-d488-e4e0ce262edf@redhat.com>
+Date: Mon, 14 May 2018 11:55:34 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <c5bebf0b-9667-5725-2800-97c5a85635c4@linux.com>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
+In-Reply-To: <1523024546-6150-1-git-send-email-alex.popov@linux.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 14, 2018 at 04:53:12PM +0300, Alexander Popov wrote:
-> On 14.05.2018 13:06, Mark Rutland wrote:
-> > I think it is reasonable to panic() here even with CONFIG_VMAP_STACK
-> > selected.
+On 04/06/2018 07:22 AM, Alexander Popov wrote:
+> This is the 11th version of the patch series introducing STACKLEAK to the
+> mainline kernel. The 9th version raised a fervent discussion[0].
+> The assembly code introduced by that version irritated the reviewers.
 > 
-> It's too tough for CONFIG_VMAP_STACK on x86 - the system can proceed to live.
-> Anyway, the check_alloca() code will not be shared between x86 and arm64, I've
-> described the reasons in this thread. So I can have BUG() for CONFIG_VMAP_STACK
-> on x86 and Laura can consistently use panic() on arm64.
-
-If we need arch-specific implementations anyway, then that's fine by me.
-
-> >> So we should not do it in check_alloca() as well, just use BUG() and
-> >> hope for the best.
-> > 
-> > Regardless of whether we BUG() or panic(), we're hoping for the best.
-> > 
-> > Consistently using panic() here will keep things simpler, so any failure
-> > reported will be easier to reason about, and easier to debug.
+> I've found the way to bypass the obstacles[1] of the C implementation.
+> So I dare come again. Let me ask you to look at this code without
+> preconception.
 > 
-> Let me keep BUG() for !CONFIG_SCHED_STACK_END_CHECK. I beware of using panic()
-> by default, let distro/user decide this. I remember very well how I was shouted
-> at, when this one was merged:
-> https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ce6fa91b93630396ca220c33dd38ffc62686d499
+> Motivation
+> ==========
+> 
+> STACKLEAK (initially developed by PaX Team):
+> 
+>   1. reduces the information that can be revealed through kernel stack leak bugs.
+>      The idea of erasing the thread stack at the end of syscalls is similar to
+>      CONFIG_PAGE_POISONING and memzero_explicit() in kernel crypto, which all
+>      comply with FDP_RIP.2 (Full Residual Information Protection) of the
+>      Common Criteria standard.
+> 
+>   2. blocks some uninitialized stack variable attacks (e.g. CVE-2017-17712,
+>      CVE-2010-2963). That kind of bugs should be killed by improving C compilers
+>      in future, which might take a long time.
+> 
+>   3. blocks stack depth overflow caused by alloca (aka Stack Clash attack).
+>      That is orthogonal to the mainline kernel VLA cleanup and protects
+>      un-upstreamed code.
+> 
+> Performance impact
+> ==================
+> 
+> Hardware: Intel Core i7-4770, 16 GB RAM
+> 
+> Test #1: building the Linux kernel on a single core
+> 	0.91% slowdown
+> 
+> Test #2: hackbench -s 4096 -l 2000 -g 15 -f 25 -P
+> 	4.2% slowdown
+> 
+> So the STACKLEAK description in Kconfig includes:
+> "The tradeoff is the performance impact: on a single CPU system kernel
+> compilation sees a 1% slowdown, other systems and workloads may vary and you are
+> advised to test this feature on your expected workload before deploying it".
+> 
+> Links
+> =====
+> 
+> [0] http://www.openwall.com/lists/kernel-hardening/2018/03/03/7
+> [1] http://www.openwall.com/lists/kernel-hardening/2018/03/21/4
+> 
+> 
+> Alexander Popov (6):
+>    gcc-plugins: Clean up the cgraph_create_edge* macros
+>    x86/entry: Add STACKLEAK erasing the kernel stack at the end of
+>      syscalls
+>    gcc-plugins: Add STACKLEAK plugin for tracking the kernel stack
+>    lkdtm: Add a test for STACKLEAK
+>    fs/proc: Show STACKLEAK metrics in the /proc file system
+>    doc: self-protection: Add information about STACKLEAK feature
+> 
+>   Documentation/security/self-protection.rst |  23 +-
+>   Documentation/x86/x86_64/mm.txt            |   2 +
+>   arch/Kconfig                               |  53 ++++
+>   arch/x86/Kconfig                           |   1 +
+>   arch/x86/entry/Makefile                    |   3 +
+>   arch/x86/entry/calling.h                   |  14 +
+>   arch/x86/entry/entry_32.S                  |   7 +
+>   arch/x86/entry/entry_64.S                  |   3 +
+>   arch/x86/entry/entry_64_compat.S           |   5 +
+>   arch/x86/entry/erase.c                     |  58 ++++
+>   arch/x86/include/asm/processor.h           |   7 +
+>   arch/x86/kernel/dumpstack.c                |  19 ++
+>   arch/x86/kernel/process_32.c               |   8 +
+>   arch/x86/kernel/process_64.c               |   8 +
+>   drivers/misc/Makefile                      |   3 +
+>   drivers/misc/lkdtm.h                       |   4 +
+>   drivers/misc/lkdtm_core.c                  |   2 +
+>   drivers/misc/lkdtm_stackleak.c             | 141 +++++++++
+>   fs/proc/base.c                             |  18 ++
+>   include/linux/compiler.h                   |   4 +
+>   mm/util.c                                  |  33 ++
+>   scripts/Makefile.gcc-plugins               |   3 +
+>   scripts/gcc-plugins/gcc-common.h           |  26 +-
+>   scripts/gcc-plugins/stackleak_plugin.c     | 470 +++++++++++++++++++++++++++++
+>   24 files changed, 896 insertions(+), 19 deletions(-)
+>   create mode 100644 arch/x86/entry/erase.c
+>   create mode 100644 drivers/misc/lkdtm_stackleak.c
+>   create mode 100644 scripts/gcc-plugins/stackleak_plugin.c
+> 
 
-Sure; my comments needn't hold up your patches.
+As a point of reference, this series mitigates the leak
+fixed by https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0a0b98734479aa5b3c671d5190e86273372cab95
 
 Thanks,
-Mark.
+Laura
