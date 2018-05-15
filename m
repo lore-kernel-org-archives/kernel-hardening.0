@@ -1,89 +1,187 @@
 MIME-Version: 1.0
-In-Reply-To: <20180515072153.GD28179@comp-core-i7-2640m-0182e6>
-References: <20180511093445.GA1008@comp-core-i7-2640m-0182e6>
- <CAG48ez3xYHsKMkPJhjq-yrrTxMHmrHDov-P7bTy8T2xf_7=OAQ@mail.gmail.com> <20180515072153.GD28179@comp-core-i7-2640m-0182e6>
-From: Jann Horn <jannh@google.com>
-Date: Tue, 15 May 2018 18:19:18 +0200
-Message-ID: <CAG48ez1T5v=iryQk0fPkUr2umRpfMrSPJ2pYcB5HDbc3-kYBUw@mail.gmail.com>
-Subject: Re: [PATCH v5 1/7] proc: add proc_fs_info struct to store proc information
+References: <20180514130316.23855-1-mpe@ellerman.id.au> <20180514130316.23855-2-mpe@ellerman.id.au>
+In-Reply-To: <20180514130316.23855-2-mpe@ellerman.id.au>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Tue, 15 May 2018 15:04:26 -0700
+Message-ID: <CAJcbSZE+um6VjY8C_o4aofvZnQU9db46yspTEbB5ibpm9qyOtg@mail.gmail.com>
+Subject: Re: [PATCH 2/2] powerpc: Check address limit on user-mode return (TIF_FSCHECK)
 Content-Type: text/plain; charset="UTF-8"
-To: Alexey Gladkov <gladkov.alexey@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, linux-fsdevel@vger.kernel.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Akinobu Mita <akinobu.mita@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Jeff Layton <jlayton@poochiereds.net>, Ingo Molnar <mingo@kernel.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Linus Torvalds <torvalds@linux-foundation.org>, aniel Micay <danielmicay@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Bruce Fields <bfields@fieldses.org>, Stephen Rothwell <sfr@canb.auug.org.au>, Solar Designer <solar@openwall.com>, "Dmitry V. Levin" <ldv@altlinux.org>, Djalal Harouni <tixxdz@gmail.com>
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: linuxppc-dev@ozlabs.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 15, 2018 at 9:21 AM, Alexey Gladkov
-<gladkov.alexey@gmail.com> wrote:
-> On Fri, May 11, 2018 at 03:49:13PM +0200, Jann Horn wrote:
->> On Fri, May 11, 2018 at 11:34 AM, Alexey Gladkov
->> <gladkov.alexey@gmail.com> wrote:
->> > From: Djalal Harouni <tixxdz@gmail.com>
->> >
->> > This is a preparation patch that adds proc_fs_info to be able to store
->> > different procfs options and informations. Right now some mount options
->> > are stored inside the pid namespace which makes it hard to change or
->> > modernize procfs without affecting pid namespaces. Plus we do want to
->> > treat proc as more of a real mount point and filesystem. procfs is part
->> > of Linux API where it offers some features using filesystem syscalls and
->> > in order to support some features where we are able to have multiple
->> > instances of procfs, each one with its mount options inside the same pid
->> > namespace, we have to separate these procfs instances.
->> >
->> > This is the same feature that was also added to other Linux interfaces
->> > like devpts in order to support containers, sandboxes, and to have
->> > multiple instances of devpts filesystem [1].
->> >
->> > [1] http://lxr.free-electrons.com/source/Documentation/filesystems/devpts.txt?v=3.14
->> >
->> > Cc: Kees Cook <keescook@chromium.org>
->> > Suggested-by: Andy Lutomirski <luto@kernel.org>
->> > Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
->> > Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
->> > ---
->> [...]
->> >  static struct dentry *proc_mount(struct file_system_type *fs_type,
->> >         int flags, const char *dev_name, void *data)
->> >  {
->> > +       int error;
->> > +       struct super_block *sb;
->> >         struct pid_namespace *ns;
->> > +       struct proc_fs_info *fs_info;
->> > +
->> > +       /*
->> > +        * Don't allow mounting unless the caller has CAP_SYS_ADMIN over
->> > +        * the namespace.
->> > +        */
->> > +       if (!(flags & MS_KERNMOUNT) && !ns_capable(current_user_ns(), CAP_SYS_ADMIN))
->> > +               return ERR_PTR(-EPERM);
->>
->> Is this correct?
->>
->> The old code invoked a check with the same comment through mount_ns();
->> however, this patch changes the semantics of the check.
->> The old code checked that the caller has privileges over the user
->> namespace that contains the PID namespace; in other words, it checked
->> that the caller has privileges over the PID namespace. The current
->> code just checks that the caller is privileged over its own user
->> namespace.
->>
->> As far as I can tell, this means that by doing something like this:
->>
->>     unshare(CLONE_NEWNS|CLONE_NEWUSER);
->>     mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL);
->>     mount("proc", "/proc", "proc", 0, "newinstance,pids=all");
->>
->> any process could create a new unrestricted procfs mount for its PID
->> namespace, even if it is only supposed to have access to a more
->> restricted procfs mount.
->
-> Hm... let me investigate this. It looks like mount with "newinstance"
-> option should fail if pid namespace is the same and the current and parent
-> user namespace do not match.
+On Mon, May 14, 2018 at 6:03 AM Michael Ellerman <mpe@ellerman.id.au> wrote:
 
-I don't understand that last sentence. What does "if pid namespace is
-the same" mean, and what does "current and parent user namespace do
-not match" mean?
+> set_fs() sets the addr_limit, which is used in access_ok() to
+> determine if an address is a user or kernel address.
 
-Just changing "ns_capable(current_user_ns(), CAP_SYS_ADMIN)" to
-"ns_capable(task_active_pid_ns(current)->user_ns, CAP_SYS_ADMIN)"
-should be enough to get the old semantics again: It checks whether the
-current task is capable over its PID namespace.
+> Some code paths use set_fs() to temporarily elevate the addr_limit so
+> that kernel code can read/write kernel memory as if it were user
+> memory. That is fine as long as the code can't ever return to
+> userspace with the addr_limit still elevated.
+
+> If that did happen, then userspace can read/write kernel memory as if
+> it were user memory, eg. just with write(2). In case it's not clear,
+> that is very bad. It has also happened in the past due to bugs.
+
+> Commit 5ea0727b163c ("x86/syscalls: Check address limit on user-mode
+> return") added a mechanism to check the addr_limit value before
+> returning to userspace. Any call to set_fs() sets a thread flag,
+> TIF_FSCHECK, and if we see that on the return to userspace we go out
+> of line to check that the addr_limit value is not elevated.
+
+> For further info see the above commit, as well as:
+>    https://lwn.net/Articles/722267/
+>    https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+
+> Verified to work on 64-bit Book3S using a POC that objdumps the system
+> call handler, and a modified lkdtm_CORRUPT_USER_DS() that doesn't kill
+> the caller.
+
+> Before:
+>    $ sudo ./test-tif-fscheck
+>    ...
+>    0000000000000000 <.data>:
+>           0:       e1 f7 8a 79     rldicl. r10,r12,30,63
+>           4:       80 03 82 40     bne     0x384
+>           8:       00 40 8a 71     andi.   r10,r12,16384
+>           c:       78 0b 2a 7c     mr      r10,r1
+>          10:       10 fd 21 38     addi    r1,r1,-752
+>          14:       08 00 c2 41     beq-    0x1c
+>          18:       58 09 2d e8     ld      r1,2392(r13)
+>          1c:       00 00 41 f9     std     r10,0(r1)
+>          20:       70 01 61 f9     std     r11,368(r1)
+>          24:       78 01 81 f9     std     r12,376(r1)
+>          28:       70 00 01 f8     std     r0,112(r1)
+>          2c:       78 00 41 f9     std     r10,120(r1)
+>          30:       20 00 82 41     beq     0x50
+>          34:       a6 42 4c 7d     mftb    r10
+
+> After:
+
+>    $ sudo ./test-tif-fscheck
+>    Killed
+
+> And in dmesg:
+>    Invalid address limit on user-mode return
+>    WARNING: CPU: 1 PID: 3689 at ../include/linux/syscalls.h:260
+do_notify_resume+0x140/0x170
+>    ...
+>    NIP [c00000000001ee50] do_notify_resume+0x140/0x170
+>    LR [c00000000001ee4c] do_notify_resume+0x13c/0x170
+>    Call Trace:
+>      do_notify_resume+0x13c/0x170 (unreliable)
+>      ret_from_except_lite+0x70/0x74
+
+> Performance overhead is essentially zero in the usual case, because
+> the bit is checked as part of the existing _TIF_USER_WORK_MASK check.
+
+> Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+
+The change looks good to me.
+
+> ---
+>   arch/powerpc/include/asm/thread_info.h | 8 +++++---
+>   arch/powerpc/include/asm/uaccess.h     | 8 +++++++-
+>   arch/powerpc/kernel/signal.c           | 4 ++++
+>   3 files changed, 16 insertions(+), 4 deletions(-)
+
+> diff --git a/arch/powerpc/include/asm/thread_info.h
+b/arch/powerpc/include/asm/thread_info.h
+> index 5964145db03d..f308dfeb2746 100644
+> --- a/arch/powerpc/include/asm/thread_info.h
+> +++ b/arch/powerpc/include/asm/thread_info.h
+> @@ -79,8 +79,7 @@ extern int arch_dup_task_struct(struct task_struct
+*dst, struct task_struct *src
+>   #define TIF_SYSCALL_TRACE      0       /* syscall trace active */
+>   #define TIF_SIGPENDING         1       /* signal pending */
+>   #define TIF_NEED_RESCHED       2       /* rescheduling necessary */
+> -#define TIF_POLLING_NRFLAG     3       /* true if poll_idle() is polling
+> -                                          TIF_NEED_RESCHED */
+> +#define TIF_FSCHECK            3       /* Check FS is USER_DS on return
+*/
+>   #define TIF_32BIT              4       /* 32 bit binary */
+>   #define TIF_RESTORE_TM         5       /* need to restore TM FP/VEC/VSX
+*/
+>   #define TIF_PATCH_PENDING      6       /* pending live patching update */
+> @@ -99,6 +98,7 @@ extern int arch_dup_task_struct(struct task_struct
+*dst, struct task_struct *src
+>   #if defined(CONFIG_PPC64)
+>   #define TIF_ELF2ABI            18      /* function descriptors must die!
+*/
+>   #endif
+> +#define TIF_POLLING_NRFLAG     19      /* true if poll_idle() is polling
+TIF_NEED_RESCHED */
+
+>   /* as above, but as bit values */
+>   #define _TIF_SYSCALL_TRACE     (1<<TIF_SYSCALL_TRACE)
+> @@ -118,13 +118,15 @@ extern int arch_dup_task_struct(struct task_struct
+*dst, struct task_struct *src
+>   #define _TIF_SYSCALL_TRACEPOINT        (1<<TIF_SYSCALL_TRACEPOINT)
+>   #define _TIF_EMULATE_STACK_STORE       (1<<TIF_EMULATE_STACK_STORE)
+>   #define _TIF_NOHZ              (1<<TIF_NOHZ)
+> +#define _TIF_FSCHECK           (1<<TIF_FSCHECK)
+>   #define _TIF_SYSCALL_DOTRACE   (_TIF_SYSCALL_TRACE | _TIF_SYSCALL_AUDIT
+| \
+>                                   _TIF_SECCOMP | _TIF_SYSCALL_TRACEPOINT |
+\
+>                                   _TIF_NOHZ)
+
+>   #define _TIF_USER_WORK_MASK    (_TIF_SIGPENDING | _TIF_NEED_RESCHED | \
+>                                   _TIF_NOTIFY_RESUME | _TIF_UPROBE | \
+> -                                _TIF_RESTORE_TM | _TIF_PATCH_PENDING)
+> +                                _TIF_RESTORE_TM | _TIF_PATCH_PENDING | \
+> +                                _TIF_FSCHECK)
+>   #define _TIF_PERSYSCALL_MASK   (_TIF_RESTOREALL|_TIF_NOERROR)
+
+>   /* Bits in local_flags */
+> diff --git a/arch/powerpc/include/asm/uaccess.h
+b/arch/powerpc/include/asm/uaccess.h
+> index a91cea15187b..abba80f8ff04 100644
+> --- a/arch/powerpc/include/asm/uaccess.h
+> +++ b/arch/powerpc/include/asm/uaccess.h
+> @@ -31,7 +31,13 @@
+
+>   #define get_ds()       (KERNEL_DS)
+>   #define get_fs()       (current->thread.addr_limit)
+> -#define set_fs(val)    (current->thread.addr_limit = (val))
+> +
+> +static inline void set_fs(mm_segment_t fs)
+> +{
+> +       current->thread.addr_limit = fs;
+> +       /* On user-mode return check addr_limit (fs) is correct */
+> +       set_thread_flag(TIF_FSCHECK);
+> +}
+
+>   #define segment_eq(a, b)       ((a).seg == (b).seg)
+
+> diff --git a/arch/powerpc/kernel/signal.c b/arch/powerpc/kernel/signal.c
+> index 61db86ecd318..fb932f1202c7 100644
+> --- a/arch/powerpc/kernel/signal.c
+> +++ b/arch/powerpc/kernel/signal.c
+> @@ -15,6 +15,7 @@
+>   #include <linux/key.h>
+>   #include <linux/context_tracking.h>
+>   #include <linux/livepatch.h>
+> +#include <linux/syscalls.h>
+>   #include <asm/hw_breakpoint.h>
+>   #include <linux/uaccess.h>
+>   #include <asm/unistd.h>
+> @@ -150,6 +151,9 @@ void do_notify_resume(struct pt_regs *regs, unsigned
+long thread_info_flags)
+>   {
+>          user_exit();
+
+> +       /* Check valid addr_limit, TIF check is done there */
+> +       addr_limit_user_check();
+> +
+>          if (thread_info_flags & _TIF_UPROBE)
+>                  uprobe_notify_resume(regs);
+
+> --
+> 2.14.1
+
+
+
+-- 
+Thomas
