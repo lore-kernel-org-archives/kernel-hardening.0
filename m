@@ -1,143 +1,89 @@
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Subject: [ANNOUNCE] Linux Security Summit Europe 2018 - CFP
-Date: Tue, 15 May 2018 08:30:15 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B8D492DB4@IRSMSX102.ger.corp.intel.com>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-To: "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
-Cc: James Morris <jmorris@namei.org>, "lwn@lwn.net" <lwn@lwn.net>, "fedora-selinux-list@redhat.com" <fedora-selinux-list@redhat.com>, "selinux@tycho.nsa.gov" <selinux@tycho.nsa.gov>, Linux Security Summit
- Program Committee <lss-pc@lists.linuxfoundation.org>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, Audit-ML <linux-audit@redhat.com>, "gentoo-hardened@gentoo.org" <gentoo-hardened@gentoo.org>, "keyrings@linux-nfs.org" <keyrings@linux-nfs.org>, "tpmdd-devel@lists.sourceforge.net" <tpmdd-devel@lists.sourceforge.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20180515072153.GD28179@comp-core-i7-2640m-0182e6>
+References: <20180511093445.GA1008@comp-core-i7-2640m-0182e6>
+ <CAG48ez3xYHsKMkPJhjq-yrrTxMHmrHDov-P7bTy8T2xf_7=OAQ@mail.gmail.com> <20180515072153.GD28179@comp-core-i7-2640m-0182e6>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 15 May 2018 18:19:18 +0200
+Message-ID: <CAG48ez1T5v=iryQk0fPkUr2umRpfMrSPJ2pYcB5HDbc3-kYBUw@mail.gmail.com>
+Subject: Re: [PATCH v5 1/7] proc: add proc_fs_info struct to store proc information
+Content-Type: text/plain; charset="UTF-8"
+To: Alexey Gladkov <gladkov.alexey@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, linux-fsdevel@vger.kernel.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Akinobu Mita <akinobu.mita@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Jeff Layton <jlayton@poochiereds.net>, Ingo Molnar <mingo@kernel.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Linus Torvalds <torvalds@linux-foundation.org>, aniel Micay <danielmicay@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Bruce Fields <bfields@fieldses.org>, Stephen Rothwell <sfr@canb.auug.org.au>, Solar Designer <solar@openwall.com>, "Dmitry V. Levin" <ldv@altlinux.org>, Djalal Harouni <tixxdz@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-=3D=3D=3D
-		   ANNOUNCEMENT AND CALL FOR PARTICIPATION
+On Tue, May 15, 2018 at 9:21 AM, Alexey Gladkov
+<gladkov.alexey@gmail.com> wrote:
+> On Fri, May 11, 2018 at 03:49:13PM +0200, Jann Horn wrote:
+>> On Fri, May 11, 2018 at 11:34 AM, Alexey Gladkov
+>> <gladkov.alexey@gmail.com> wrote:
+>> > From: Djalal Harouni <tixxdz@gmail.com>
+>> >
+>> > This is a preparation patch that adds proc_fs_info to be able to store
+>> > different procfs options and informations. Right now some mount options
+>> > are stored inside the pid namespace which makes it hard to change or
+>> > modernize procfs without affecting pid namespaces. Plus we do want to
+>> > treat proc as more of a real mount point and filesystem. procfs is part
+>> > of Linux API where it offers some features using filesystem syscalls and
+>> > in order to support some features where we are able to have multiple
+>> > instances of procfs, each one with its mount options inside the same pid
+>> > namespace, we have to separate these procfs instances.
+>> >
+>> > This is the same feature that was also added to other Linux interfaces
+>> > like devpts in order to support containers, sandboxes, and to have
+>> > multiple instances of devpts filesystem [1].
+>> >
+>> > [1] http://lxr.free-electrons.com/source/Documentation/filesystems/devpts.txt?v=3.14
+>> >
+>> > Cc: Kees Cook <keescook@chromium.org>
+>> > Suggested-by: Andy Lutomirski <luto@kernel.org>
+>> > Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
+>> > Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
+>> > ---
+>> [...]
+>> >  static struct dentry *proc_mount(struct file_system_type *fs_type,
+>> >         int flags, const char *dev_name, void *data)
+>> >  {
+>> > +       int error;
+>> > +       struct super_block *sb;
+>> >         struct pid_namespace *ns;
+>> > +       struct proc_fs_info *fs_info;
+>> > +
+>> > +       /*
+>> > +        * Don't allow mounting unless the caller has CAP_SYS_ADMIN over
+>> > +        * the namespace.
+>> > +        */
+>> > +       if (!(flags & MS_KERNMOUNT) && !ns_capable(current_user_ns(), CAP_SYS_ADMIN))
+>> > +               return ERR_PTR(-EPERM);
+>>
+>> Is this correct?
+>>
+>> The old code invoked a check with the same comment through mount_ns();
+>> however, this patch changes the semantics of the check.
+>> The old code checked that the caller has privileges over the user
+>> namespace that contains the PID namespace; in other words, it checked
+>> that the caller has privileges over the PID namespace. The current
+>> code just checks that the caller is privileged over its own user
+>> namespace.
+>>
+>> As far as I can tell, this means that by doing something like this:
+>>
+>>     unshare(CLONE_NEWNS|CLONE_NEWUSER);
+>>     mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL);
+>>     mount("proc", "/proc", "proc", 0, "newinstance,pids=all");
+>>
+>> any process could create a new unrestricted procfs mount for its PID
+>> namespace, even if it is only supposed to have access to a more
+>> restricted procfs mount.
+>
+> Hm... let me investigate this. It looks like mount with "newinstance"
+> option should fail if pid namespace is the same and the current and parent
+> user namespace do not match.
 
-		   LINUX SECURITY SUMMIT EUROPE 2018
-                            =20
-			         25-26 October
-			       EDINBURGH, UK
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-=3D=3D=3D
+I don't understand that last sentence. What does "if pid namespace is
+the same" mean, and what does "current and parent user namespace do
+not match" mean?
 
-
-DESCRIPTION
-
- The Linux Security Summit (LSS) is a technical forum for collaboration
- between Linux developers, researchers, and end users. Its primary aim is t=
-o
- foster community efforts in analyzing and solving Linux security challenge=
-s.
-
- This year, for the first time, the Linux Security Summit is going to
- be also held in Europe (LSS-EU) in order to facilitate broader participati=
-on in Linux
- Security development. Similar to LSS-North America, LSS-EU provides a uniq=
-ue
- opportunity for to have discussions and networking opportunities with key =
-people=20
- in  the Linux kernel security community , present your work and ideas and=
-=20
- affect the future direction of Linux security. =20
-
- In addition to the refereed presentations, panels and BoF sessions, this y=
-ear's
- LSS-EU program will have an introduction into various Linux kernel securit=
-y
- subsystems in order to get participants acquainted with their main concept=
-s
- and goals, as well as outline the areas of future development, where contr=
-ibution
- by the community is welcomed.=20
-
-
-  The program committee currently seeks proposals for:
-
-    * Refereed Presentations:
-      45 minutes in length.
-
-    * Panel Discussion Topics:
-      45 minutes in length.
-
-    * Short Topics:
-      30 minutes in total, including at least 10 minutes discussion.
-
-    * BoF Sessions.
-
-  Topic areas include, but are not limited to:
-
-    * Kernel self-protection
-    * Access control
-    * Cryptography and key management
-    * Integrity control
-    * Hardware Security
-    * Iot and embedded security
-    * Virtualization and containers
-    * System-specific system hardening
-    * Case studies
-    * Security tools
-    * Security UX
-    * Emerging technologies, threats & techniques=20
-
-  Proposals should be submitted via:
-    https://events.linuxfoundation.org/events/linux-security-summit-europe-=
-2018/program/cfp/
-
-
-DATES
-
-  * CFP Close: July 16, 2018
-  * CFP Notifications: July 23, 2018
-  * Schedule Announced: Aug 25, 2018
-  * Event: October 25-26, 2018
-
-
-WHO SHOULD ATTEND
-
-  We're seeking a diverse range of attendees, and welcome participation by
-  people involved in Linux security development, operations, and research.
-
-  The LSS is a unique global event which provides the opportunity to presen=
-t
-  and discuss your work or research with key Linux security community membe=
-rs
-  and maintainers. It?s also useful for those who wish to keep up with the
-  latest in Linux security development, and to provide input to the
-  development process.
-
-
-WEB SITE
-
-  https://events.linuxfoundation.org/events/linux-security-summit-europe-20=
-18/
-
-
-TWITTER
-
-  For event updates and announcements, follow:
-
-    https://twitter.com/LinuxSecSummit
- =20
-
-PROGRAM COMMITTEE
-
-  The program committee for LSS-EU 2018 is:
-
-    * Elena Reshetova, Intel
-    * James Morris, Microsoft
-    * Serge Hallyn, Cisco
-    * Paul Moore, Red Hat
-    * Stephen Smalley, NSA
-    * John Johansen, Canonical
-    * Kees Cook, Google
-    * Casey Schaufler, Intel
-    * Mimi Zohar, IBM
-    * David A. Wheeler, Institute for Defense Analyses
-
-  The program committee may be contacted as a group via email:
-    lss-pc () lists.linuxfoundation.org
+Just changing "ns_capable(current_user_ns(), CAP_SYS_ADMIN)" to
+"ns_capable(task_active_pid_ns(current)->user_ns, CAP_SYS_ADMIN)"
+should be enough to get the old semantics again: It checks whether the
+current task is capable over its PID namespace.
