@@ -1,149 +1,83 @@
+Date: Tue, 15 May 2018 09:21:54 +0200
+From: Alexey Gladkov <gladkov.alexey@gmail.com>
+Subject: Re: [PATCH v5 1/7] proc: add proc_fs_info struct to store proc
+ information
+Message-ID: <20180515072153.GD28179@comp-core-i7-2640m-0182e6>
+References: <20180511093445.GA1008@comp-core-i7-2640m-0182e6>
+ <CAG48ez3xYHsKMkPJhjq-yrrTxMHmrHDov-P7bTy8T2xf_7=OAQ@mail.gmail.com>
 MIME-Version: 1.0
-Sender: geert.uytterhoeven@gmail.com
-In-Reply-To: <067d073f-556c-9df0-37f8-fd63fcdc7eb9@redhat.com>
-References: <20180413212427.18261-1-labbott@redhat.com> <CAMuHMdWDysLemM3PNNjC-Aircpu=Y-z=e79zgG8LPzvGCSEetg@mail.gmail.com>
- <067d073f-556c-9df0-37f8-fd63fcdc7eb9@redhat.com>
-From: Geert Uytterhoeven <geert@linux-m68k.org>
-Date: Tue, 15 May 2018 09:10:39 +0200
-Message-ID: <CAMuHMdX2LrSRuk-H__HLHJkoNWc1u-seTsR63dzFsXLLOwypGg@mail.gmail.com>
-Subject: Re: [PATCHv5] gpio: Remove VLA from gpiolib
-Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, "open list:GPIO SUBSYSTEM" <linux-gpio@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAG48ez3xYHsKMkPJhjq-yrrTxMHmrHDov-P7bTy8T2xf_7=OAQ@mail.gmail.com>
+To: Jann Horn <jannh@google.com>
+Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, linux-fsdevel@vger.kernel.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Akinobu Mita <akinobu.mita@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Jeff Layton <jlayton@poochiereds.net>, Ingo Molnar <mingo@kernel.org>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Linus Torvalds <torvalds@linux-foundation.org>, aniel Micay <danielmicay@gmail.com>, Jonathan Corbet <corbet@lwn.net>, bfields@fieldses.org, Stephen Rothwell <sfr@canb.auug.org.au>, Solar Designer <solar@openwall.com>, "Dmitry V. Levin" <ldv@altlinux.org>, Djalal Harouni <tixxdz@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Laura,
+On Fri, May 11, 2018 at 03:49:13PM +0200, Jann Horn wrote:
+> On Fri, May 11, 2018 at 11:34 AM, Alexey Gladkov
+> <gladkov.alexey@gmail.com> wrote:
+> > From: Djalal Harouni <tixxdz@gmail.com>
+> >
+> > This is a preparation patch that adds proc_fs_info to be able to store
+> > different procfs options and informations. Right now some mount options
+> > are stored inside the pid namespace which makes it hard to change or
+> > modernize procfs without affecting pid namespaces. Plus we do want to
+> > treat proc as more of a real mount point and filesystem. procfs is part
+> > of Linux API where it offers some features using filesystem syscalls and
+> > in order to support some features where we are able to have multiple
+> > instances of procfs, each one with its mount options inside the same pid
+> > namespace, we have to separate these procfs instances.
+> >
+> > This is the same feature that was also added to other Linux interfaces
+> > like devpts in order to support containers, sandboxes, and to have
+> > multiple instances of devpts filesystem [1].
+> >
+> > [1] http://lxr.free-electrons.com/source/Documentation/filesystems/devpts.txt?v=3.14
+> >
+> > Cc: Kees Cook <keescook@chromium.org>
+> > Suggested-by: Andy Lutomirski <luto@kernel.org>
+> > Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
+> > Signed-off-by: Alexey Gladkov <gladkov.alexey@gmail.com>
+> > ---
+> [...]
+> >  static struct dentry *proc_mount(struct file_system_type *fs_type,
+> >         int flags, const char *dev_name, void *data)
+> >  {
+> > +       int error;
+> > +       struct super_block *sb;
+> >         struct pid_namespace *ns;
+> > +       struct proc_fs_info *fs_info;
+> > +
+> > +       /*
+> > +        * Don't allow mounting unless the caller has CAP_SYS_ADMIN over
+> > +        * the namespace.
+> > +        */
+> > +       if (!(flags & MS_KERNMOUNT) && !ns_capable(current_user_ns(), CAP_SYS_ADMIN))
+> > +               return ERR_PTR(-EPERM);
+> 
+> Is this correct?
+> 
+> The old code invoked a check with the same comment through mount_ns();
+> however, this patch changes the semantics of the check.
+> The old code checked that the caller has privileges over the user
+> namespace that contains the PID namespace; in other words, it checked
+> that the caller has privileges over the PID namespace. The current
+> code just checks that the caller is privileged over its own user
+> namespace.
+> 
+> As far as I can tell, this means that by doing something like this:
+> 
+>     unshare(CLONE_NEWNS|CLONE_NEWUSER);
+>     mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL);
+>     mount("proc", "/proc", "proc", 0, "newinstance,pids=all");
+> 
+> any process could create a new unrestricted procfs mount for its PID
+> namespace, even if it is only supposed to have access to a more
+> restricted procfs mount.
 
-On Tue, May 15, 2018 at 12:49 AM, Laura Abbott <labbott@redhat.com> wrote:
-> On 04/20/2018 02:02 AM, Geert Uytterhoeven wrote:
->> On Fri, Apr 13, 2018 at 11:24 PM, Laura Abbott <labbott@redhat.com> wrote:
->>> The new challenge is to remove VLAs from the kernel
->>> (see https://lkml.org/lkml/2018/3/7/621) to eventually
->>> turn on -Wvla.
->>>
->>> Using a kmalloc array is the easy way to fix this but kmalloc is still
->>> more expensive than stack allocation. Introduce a fast path with a
->>> fixed size stack array to cover most chip with gpios below some fixed
->>> amount. The slow path dynamically allocates an array to cover those
->>> chips with a large number of gpios.
->>
->>
->> Blindly replacing VLAs by allocated arrays is IMHO not such a good
->> solution.
->> On the largest systems, NR_GPIOS is 2048, so that makes 2 arrays of 256
->> bytes. That's an uppper limit, and assumes they are all on the same
->> gpiochip,
->> which they probably aren't.
->>
->> Still, 2 x 256 bytes is a lot, so I agree it should be fixed.
->>
->> So, wouldn't it make more sense to not allocate memory, but just process
->> the request in chunks (say, at most 128 gpios per chunk, i.e. 2 x
->> 16 bytes)? The code already caters for handling chunks due to not all
->> gpios
->> belonging to the same gpiochip. That will probably also be faster than
->> allocating memory, which is the main idea behind this API.
->>
->>> Reviewed-and-tested-by: Lukas Wunner <lukas@wunner.de>
->>> Signed-off-by: Lukas Wunner <lukas@wunner.de>
->>> Signed-off-by: Laura Abbott <labbott@redhat.com>
->>
->>
->>> --- a/drivers/gpio/gpiolib.c
->>> +++ b/drivers/gpio/gpiolib.c
->>
->>
->>> @@ -1192,6 +1196,10 @@ int gpiochip_add_data_with_key(struct gpio_chip
->>> *chip, void *data,
->>>                  goto err_free_descs;
->>>          }
->>>
->>> +       if (chip->ngpio > FASTPATH_NGPIO)
->>> +               chip_warn(chip, "line cnt %d is greater than fast path
->>> cnt %d\n",
->>> +               chip->ngpio, FASTPATH_NGPIO);
->>
->>
->> FWIW, can this warning be triggered from userspace?
->>
->>> @@ -2662,16 +2670,28 @@ int gpiod_get_array_value_complex(bool raw, bool
->>> can_sleep,
->>>
->>>          while (i < array_size) {
->>>                  struct gpio_chip *chip = desc_array[i]->gdev->chip;
->>> -               unsigned long mask[BITS_TO_LONGS(chip->ngpio)];
->>> -               unsigned long bits[BITS_TO_LONGS(chip->ngpio)];
->>
->>
->> Hence just use a fixed size here...
->>
->>> +               unsigned long fastpath[2 *
->>> BITS_TO_LONGS(FASTPATH_NGPIO)];
->>> +               unsigned long *mask, *bits;
->>>                  int first, j, ret;
->>>
->>> +               if (likely(chip->ngpio <= FASTPATH_NGPIO)) {
->>> +                       memset(fastpath, 0, sizeof(fastpath));
->>> +                       mask = fastpath;
->>> +                       bits = fastpath + BITS_TO_LONGS(FASTPATH_NGPIO);
->>> +               } else {
->>> +                       mask = kcalloc(2 * BITS_TO_LONGS(chip->ngpio),
->>> +                                          sizeof(*mask),
->>> +                                          can_sleep ? GFP_KERNEL :
->>> GFP_ATOMIC);
->>> +                       if (!mask)
->>> +                               return -ENOMEM;
->>> +                       bits = mask + BITS_TO_LONGS(chip->ngpio);
->>> +               }
->>> +
->>>                  if (!can_sleep)
->>>                          WARN_ON(chip->can_sleep);
->>>
->>>                  /* collect all inputs belonging to the same chip */
->>>                  first = i;
->>> -               memset(mask, 0, sizeof(mask));
->>>                  do {
->>>                          const struct gpio_desc *desc = desc_array[i];
->>>                          int hwgpio = gpio_chip_hwgpio(desc);
->>
->>
->> Out-of-context, the code does:
->>
->> |                       __set_bit(hwgpio, mask);
->> |                       i++;
->> |                 } while ((i < array_size) &&
->>
->> ... and change this limit to "(i < min(array_size, first +
->> ARRAY_SIZE(mask) * BITS_PER_BYTE))"
->>
->> |                         (desc_array[i]->gdev->chip == chip));
->>
->> ... and you're done?
->>
-> I don't think this approach will work since gpio_chip_{get,set}_multiple
-> expect to be working on arrays for the entire chip. There doesn't seem
-> to be a nice way to work on a subset of GPIOs without defeating the point
-> of the multiple API.
-
-You're right, sorry for missing that.
-
-> is 2*256 = 512 bytes really too much stack space? I guess we could
-> switch to a Kconfig to allow for better bounds.
-
-That's a good question.
-
-As long as a VLA is used, it's probably fine, as chip->ngpio is quite small.
-If you would change it to an array that can accommodate NR_GPIOS bits, you
-have to start caring about recursion (e.g. gpio-74x164 driven from spi-gpio,
-where I can extend the chain to increase the level of recursion arbitrarily).
-
-Gr{oetje,eeting}s,
-
-                        Geert
+Hm... let me investigate this. It looks like mount with "newinstance"
+option should fail if pid namespace is the same and the current and parent
+user namespace do not match.
 
 -- 
-Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k.org
-
-In personal conversations with technical people, I call myself a hacker. But
-when I'm talking to journalists I just say "programmer" or something like that.
-                                -- Linus Torvalds
+Rgrds, legion
