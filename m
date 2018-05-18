@@ -1,305 +1,75 @@
-From: Laura Abbott <labbott@redhat.com>
-Subject: [PATCHv8] gpio: Remove VLA from gpiolib
-Date: Fri, 18 May 2018 10:53:04 -0700
-Message-Id: <20180518175304.20414-1-labbott@redhat.com>
-To: Linus Walleij <linus.walleij@linaro.org>, Kees Cook <keescook@chromium.org>, Lukas Wunner <lukas@wunner.de>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Cc: Laura Abbott <labbott@redhat.com>, linux-gpio@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Phil Reid <preid@electromag.com.au>, Geert Uytterhoeven <geert@linux-m68k.org>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20180409210647.3718-1-labbott@redhat.com>
+References: <20180409210647.3718-1-labbott@redhat.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 18 May 2018 10:58:40 -0700
+Message-ID: <CAGXu5jLcRqjk17BqprGsWJXqGusoR6nRSf8986w7chQ9UONKMA@mail.gmail.com>
+Subject: Re: [PATCH] drm/gma500: Remove VLA
+Content-Type: text/plain; charset="UTF-8"
+To: Daniel Vetter <daniel.vetter@ffwll.ch>
+Cc: Laura Abbott <labbott@redhat.com>, Patrik Jakobsson <patrik.r.jakobsson@gmail.com>, David Airlie <airlied@linux.ie>, Maling list - DRI developers <dri-devel@lists.freedesktop.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The new challenge is to remove VLAs from the kernel
-(see https://lkml.org/lkml/2018/3/7/621) to eventually
-turn on -Wvla.
+On Mon, Apr 9, 2018 at 2:06 PM, Laura Abbott <labbott@redhat.com> wrote:
+>
+> There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+> turn on -Wvla. Switch to a reasonable upper bound for the VLAs in
+> the gma500 driver.
+>
+> [1] https://lkml.org/lkml/2018/3/7/621
+>
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
 
-Using a kmalloc array is the easy way to fix this but kmalloc is still
-more expensive than stack allocation. Introduce a fast path with a
-fixed size stack array to cover most chip with gpios below some fixed
-amount. The slow path dynamically allocates an array to cover those
-chips with a large number of gpios.
+Reviewed-by: Kees Cook <keescook@chromium.org>
 
-Reviewed-by: Geert Uytterhoeven <geert+renesas@glider.be>
-Reviewed-by: Phil Reid <preid@electromag.com.au>
-Reviewed-and-tested-by: Lukas Wunner <lukas@wunner.de>
-Signed-off-by: Lukas Wunner <lukas@wunner.de>
-Signed-off-by: Laura Abbott <labbott@redhat.com>
----
-v8: Adjust lower bound
----
- drivers/gpio/Kconfig          | 12 ++++++
- drivers/gpio/gpiolib.c        | 76 +++++++++++++++++++++++++++--------
- drivers/gpio/gpiolib.h        |  2 +-
- include/linux/gpio/consumer.h | 10 +++--
- 4 files changed, 78 insertions(+), 22 deletions(-)
+Daniel, can this go via you, or what's the best path for this patch?
 
-diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
-index b960f6f35abd..71c0ab46f216 100644
---- a/drivers/gpio/Kconfig
-+++ b/drivers/gpio/Kconfig
-@@ -22,6 +22,18 @@ menuconfig GPIOLIB
- 
- if GPIOLIB
- 
-+config GPIOLIB_FASTPATH_LIMIT
-+	int "Maximum number of GPIOs for fast path"
-+	range 32 512
-+	default 512
-+	help
-+	   This adjusts the point at which certain APIs will switch from
-+	   using a stack allocated buffer to a dynamically allocated buffer.
-+
-+	   You shouldn't need to change this unless you really need to
-+	   optimize either stack space or performance. Change this carefully
-+	   since setting an incorrect value could cause stack corruption.
-+
- config OF_GPIO
- 	def_bool y
- 	depends on OF
-diff --git a/drivers/gpio/gpiolib.c b/drivers/gpio/gpiolib.c
-index d8ccb500872f..d29916cd3b74 100644
---- a/drivers/gpio/gpiolib.c
-+++ b/drivers/gpio/gpiolib.c
-@@ -61,6 +61,11 @@ static struct bus_type gpio_bus_type = {
- 	.name = "gpio",
- };
- 
-+/*
-+ * Number of GPIOs to use for the fast path in set array
-+ */
-+#define FASTPATH_NGPIO CONFIG_GPIOLIB_FASTPATH_LIMIT
-+
- /* gpio_lock prevents conflicts during gpio_desc[] table updates.
-  * While any GPIO is requested, its gpio_chip is not removable;
-  * each GPIO's "requested" flag serves as a lock and refcount.
-@@ -450,12 +455,11 @@ static long linehandle_ioctl(struct file *filep, unsigned int cmd,
- 			vals[i] = !!ghd.values[i];
- 
- 		/* Reuse the array setting function */
--		gpiod_set_array_value_complex(false,
-+		return gpiod_set_array_value_complex(false,
- 					      true,
- 					      lh->numdescs,
- 					      lh->descs,
- 					      vals);
--		return 0;
- 	}
- 	return -EINVAL;
- }
-@@ -1244,6 +1248,10 @@ int gpiochip_add_data_with_key(struct gpio_chip *chip, void *data,
- 		goto err_free_descs;
- 	}
- 
-+	if (chip->ngpio > FASTPATH_NGPIO)
-+		chip_warn(chip, "line cnt %u is greater than fast path cnt %u\n",
-+		chip->ngpio, FASTPATH_NGPIO);
-+
- 	gdev->label = kstrdup_const(chip->label ?: "unknown", GFP_KERNEL);
- 	if (!gdev->label) {
- 		status = -ENOMEM;
-@@ -2719,16 +2727,28 @@ int gpiod_get_array_value_complex(bool raw, bool can_sleep,
- 
- 	while (i < array_size) {
- 		struct gpio_chip *chip = desc_array[i]->gdev->chip;
--		unsigned long mask[BITS_TO_LONGS(chip->ngpio)];
--		unsigned long bits[BITS_TO_LONGS(chip->ngpio)];
-+		unsigned long fastpath[2 * BITS_TO_LONGS(FASTPATH_NGPIO)];
-+		unsigned long *mask, *bits;
- 		int first, j, ret;
- 
-+		if (likely(chip->ngpio <= FASTPATH_NGPIO)) {
-+			mask = fastpath;
-+		} else {
-+			mask = kmalloc_array(2 * BITS_TO_LONGS(chip->ngpio),
-+					   sizeof(*mask),
-+					   can_sleep ? GFP_KERNEL : GFP_ATOMIC);
-+			if (!mask)
-+				return -ENOMEM;
-+		}
-+
-+		bits = mask + BITS_TO_LONGS(chip->ngpio);
-+		memset(mask, 0, BITS_TO_LONGS(chip->ngpio) * sizeof(*mask));
-+
- 		if (!can_sleep)
- 			WARN_ON(chip->can_sleep);
- 
- 		/* collect all inputs belonging to the same chip */
- 		first = i;
--		memset(mask, 0, sizeof(mask));
- 		do {
- 			const struct gpio_desc *desc = desc_array[i];
- 			int hwgpio = gpio_chip_hwgpio(desc);
-@@ -2739,8 +2759,11 @@ int gpiod_get_array_value_complex(bool raw, bool can_sleep,
- 			 (desc_array[i]->gdev->chip == chip));
- 
- 		ret = gpio_chip_get_multiple(chip, mask, bits);
--		if (ret)
-+		if (ret) {
-+			if (mask != fastpath)
-+				kfree(mask);
- 			return ret;
-+		}
- 
- 		for (j = first; j < i; j++) {
- 			const struct gpio_desc *desc = desc_array[j];
-@@ -2752,6 +2775,9 @@ int gpiod_get_array_value_complex(bool raw, bool can_sleep,
- 			value_array[j] = value;
- 			trace_gpio_value(desc_to_gpio(desc), 1, value);
- 		}
-+
-+		if (mask != fastpath)
-+			kfree(mask);
- 	}
- 	return 0;
- }
-@@ -2935,7 +2961,7 @@ static void gpio_chip_set_multiple(struct gpio_chip *chip,
- 	}
- }
- 
--void gpiod_set_array_value_complex(bool raw, bool can_sleep,
-+int gpiod_set_array_value_complex(bool raw, bool can_sleep,
- 				   unsigned int array_size,
- 				   struct gpio_desc **desc_array,
- 				   int *value_array)
-@@ -2944,14 +2970,26 @@ void gpiod_set_array_value_complex(bool raw, bool can_sleep,
- 
- 	while (i < array_size) {
- 		struct gpio_chip *chip = desc_array[i]->gdev->chip;
--		unsigned long mask[BITS_TO_LONGS(chip->ngpio)];
--		unsigned long bits[BITS_TO_LONGS(chip->ngpio)];
-+		unsigned long fastpath[2 * BITS_TO_LONGS(FASTPATH_NGPIO)];
-+		unsigned long *mask, *bits;
- 		int count = 0;
- 
-+		if (likely(chip->ngpio <= FASTPATH_NGPIO)) {
-+			mask = fastpath;
-+		} else {
-+			mask = kmalloc_array(2 * BITS_TO_LONGS(chip->ngpio),
-+					   sizeof(*mask),
-+					   can_sleep ? GFP_KERNEL : GFP_ATOMIC);
-+			if (!mask)
-+				return -ENOMEM;
-+		}
-+
-+		bits = mask + BITS_TO_LONGS(chip->ngpio);
-+		memset(mask, 0, BITS_TO_LONGS(chip->ngpio) * sizeof(*mask));
-+
- 		if (!can_sleep)
- 			WARN_ON(chip->can_sleep);
- 
--		memset(mask, 0, sizeof(mask));
- 		do {
- 			struct gpio_desc *desc = desc_array[i];
- 			int hwgpio = gpio_chip_hwgpio(desc);
-@@ -2982,7 +3020,11 @@ void gpiod_set_array_value_complex(bool raw, bool can_sleep,
- 		/* push collected bits to outputs */
- 		if (count != 0)
- 			gpio_chip_set_multiple(chip, mask, bits);
-+
-+		if (mask != fastpath)
-+			kfree(mask);
- 	}
-+	return 0;
- }
- 
- /**
-@@ -3057,13 +3099,13 @@ EXPORT_SYMBOL_GPL(gpiod_set_value);
-  * This function should be called from contexts where we cannot sleep, and will
-  * complain if the GPIO chip functions potentially sleep.
-  */
--void gpiod_set_raw_array_value(unsigned int array_size,
-+int gpiod_set_raw_array_value(unsigned int array_size,
- 			 struct gpio_desc **desc_array, int *value_array)
- {
- 	if (!desc_array)
--		return;
--	gpiod_set_array_value_complex(true, false, array_size, desc_array,
--				      value_array);
-+		return -EINVAL;
-+	return gpiod_set_array_value_complex(true, false, array_size,
-+					desc_array, value_array);
- }
- EXPORT_SYMBOL_GPL(gpiod_set_raw_array_value);
- 
-@@ -3383,14 +3425,14 @@ EXPORT_SYMBOL_GPL(gpiod_set_value_cansleep);
-  *
-  * This function is to be called from contexts that can sleep.
-  */
--void gpiod_set_raw_array_value_cansleep(unsigned int array_size,
-+int gpiod_set_raw_array_value_cansleep(unsigned int array_size,
- 					struct gpio_desc **desc_array,
- 					int *value_array)
- {
- 	might_sleep_if(extra_checks);
- 	if (!desc_array)
--		return;
--	gpiod_set_array_value_complex(true, true, array_size, desc_array,
-+		return -EINVAL;
-+	return gpiod_set_array_value_complex(true, true, array_size, desc_array,
- 				      value_array);
- }
- EXPORT_SYMBOL_GPL(gpiod_set_raw_array_value_cansleep);
-diff --git a/drivers/gpio/gpiolib.h b/drivers/gpio/gpiolib.h
-index ad456b6f9d8b..1a8e20363861 100644
---- a/drivers/gpio/gpiolib.h
-+++ b/drivers/gpio/gpiolib.h
-@@ -188,7 +188,7 @@ int gpiod_get_array_value_complex(bool raw, bool can_sleep,
- 				  unsigned int array_size,
- 				  struct gpio_desc **desc_array,
- 				  int *value_array);
--void gpiod_set_array_value_complex(bool raw, bool can_sleep,
-+int gpiod_set_array_value_complex(bool raw, bool can_sleep,
- 				   unsigned int array_size,
- 				   struct gpio_desc **desc_array,
- 				   int *value_array);
-diff --git a/include/linux/gpio/consumer.h b/include/linux/gpio/consumer.h
-index dbd065963296..243112c7fa7d 100644
---- a/include/linux/gpio/consumer.h
-+++ b/include/linux/gpio/consumer.h
-@@ -116,7 +116,7 @@ int gpiod_get_raw_array_value(unsigned int array_size,
- 			      struct gpio_desc **desc_array,
- 			      int *value_array);
- void gpiod_set_raw_value(struct gpio_desc *desc, int value);
--void gpiod_set_raw_array_value(unsigned int array_size,
-+int gpiod_set_raw_array_value(unsigned int array_size,
- 			       struct gpio_desc **desc_array,
- 			       int *value_array);
- 
-@@ -134,7 +134,7 @@ int gpiod_get_raw_array_value_cansleep(unsigned int array_size,
- 				       struct gpio_desc **desc_array,
- 				       int *value_array);
- void gpiod_set_raw_value_cansleep(struct gpio_desc *desc, int value);
--void gpiod_set_raw_array_value_cansleep(unsigned int array_size,
-+int gpiod_set_raw_array_value_cansleep(unsigned int array_size,
- 					struct gpio_desc **desc_array,
- 					int *value_array);
- 
-@@ -369,12 +369,13 @@ static inline void gpiod_set_raw_value(struct gpio_desc *desc, int value)
- 	/* GPIO can never have been requested */
- 	WARN_ON(1);
- }
--static inline void gpiod_set_raw_array_value(unsigned int array_size,
-+static inline int gpiod_set_raw_array_value(unsigned int array_size,
- 					     struct gpio_desc **desc_array,
- 					     int *value_array)
- {
- 	/* GPIO can never have been requested */
- 	WARN_ON(1);
-+	return 0;
- }
- 
- static inline int gpiod_get_value_cansleep(const struct gpio_desc *desc)
-@@ -423,12 +424,13 @@ static inline void gpiod_set_raw_value_cansleep(struct gpio_desc *desc,
- 	/* GPIO can never have been requested */
- 	WARN_ON(1);
- }
--static inline void gpiod_set_raw_array_value_cansleep(unsigned int array_size,
-+static inline int gpiod_set_raw_array_value_cansleep(unsigned int array_size,
- 						struct gpio_desc **desc_array,
- 						int *value_array)
- {
- 	/* GPIO can never have been requested */
- 	WARN_ON(1);
-+	return 0;
- }
- 
- static inline int gpiod_set_debounce(struct gpio_desc *desc, unsigned debounce)
+Thanks!
+
+-Kees
+
+> ---
+> This was a little hard to figure out but I think 32 should be a
+> comfortable upper bound based on all the structures I saw. Of course I
+> can't test it.
+> ---
+>  drivers/gpu/drm/gma500/psb_intel_sdvo.c | 11 +++++++++--
+>  1 file changed, 9 insertions(+), 2 deletions(-)
+>
+> diff --git a/drivers/gpu/drm/gma500/psb_intel_sdvo.c b/drivers/gpu/drm/gma500/psb_intel_sdvo.c
+> index 84507912be84..3d4fa9f6b94c 100644
+> --- a/drivers/gpu/drm/gma500/psb_intel_sdvo.c
+> +++ b/drivers/gpu/drm/gma500/psb_intel_sdvo.c
+> @@ -429,13 +429,20 @@ static const char *cmd_status_names[] = {
+>         "Scaling not supported"
+>  };
+>
+> +#define MAX_ARG_LEN 32
+> +
+>  static bool psb_intel_sdvo_write_cmd(struct psb_intel_sdvo *psb_intel_sdvo, u8 cmd,
+>                                  const void *args, int args_len)
+>  {
+> -       u8 buf[args_len*2 + 2], status;
+> -       struct i2c_msg msgs[args_len + 3];
+> +       u8 buf[MAX_ARG_LEN*2 + 2], status;
+> +       struct i2c_msg msgs[MAX_ARG_LEN + 3];
+>         int i, ret;
+>
+> +       if (args_len > MAX_ARG_LEN) {
+> +               DRM_ERROR("Need to increase arg length\n");
+> +               return false;
+> +       }
+> +
+>         psb_intel_sdvo_debug_write(psb_intel_sdvo, cmd, args, args_len);
+>
+>         for (i = 0; i < args_len; i++) {
+> --
+> 2.14.3
+>
+
+
+
 -- 
-2.17.0
+Kees Cook
+Pixel Security
