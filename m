@@ -1,31 +1,59 @@
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Fri, 18 May 2018 08:54:19 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Subject: Re: [PATCH v12 0/6] Introduce the STACKLEAK feature and a test for it
-Message-ID: <20180518065419.GB10080@gmail.com>
-References: <1526488097-20611-1-git-send-email-alex.popov@linux.com>
- <CAGXu5jLwnbcMqoV_LYPjEUHZ2Lgv+35xVxYO0FNSqGPD-P7Pzg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jLwnbcMqoV_LYPjEUHZ2Lgv+35xVxYO0FNSqGPD-P7Pzg@mail.gmail.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: Alexander Popov <alex.popov@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+Sender: keescook@google.com
+In-Reply-To: <1520970710-19732-1-git-send-email-s.mesoraca16@gmail.com>
+References: <1520970710-19732-1-git-send-email-s.mesoraca16@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 18 May 2018 08:00:59 -0700
+Message-ID: <CAGXu5jKJj5rrjX28kqOnavyRXYGu95ZzpV5tZbHvTSJVAz4YBw@mail.gmail.com>
+Subject: Re: [PATCH] ocfs2: drop a VLA in ocfs2_orphan_del()
+Content-Type: text/plain; charset="UTF-8"
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Salvatore Mesoraca <s.mesoraca16@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Joel Becker <jlbec@evilplan.org>, Mark Fasheh <mfasheh@versity.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Mar 13, 2018 at 12:51 PM, Salvatore Mesoraca
+<s.mesoraca16@gmail.com> wrote:
+> Avoid a VLA[1] by using a real constant expression instead of a variable.
+> The compiler should be able to optimize the original code and avoid using
+> an actual VLA. Anyway this change is useful because it will avoid a false
+> positive with -Wvla, it might also help the compiler generating better
+> code.
+>
+> [1] https://lkml.org/lkml/2018/3/7/621
+>
+> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
 
-* Kees Cook <keescook@chromium.org> wrote:
+Reviewed-by: Kees Cook <keescook@chromium.org>
 
-> On Wed, May 16, 2018 at 9:28 AM, Alexander Popov <alex.popov@linux.com> wrote:
-> > This is the 12th version of the patch series introducing STACKLEAK to the
-> > mainline kernel for x86. Some code is made common for easier porting to
-> > arm64 (will be done by Laura Abbott).
-> 
-> Thanks for the update! I've pushed this for 0-day testing here:
-> https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/gcc-plugin/stackleak-v12
+Andrew, can you take this? It seems the most recent patch to ocfs2
+went through your tree...
 
-Please don't commit this to any stable Git tree yet, it still needs more work.
+-Kees
 
-Thanks,
+> ---
+>  fs/ocfs2/namei.c | 3 +--
+>  1 file changed, 1 insertion(+), 2 deletions(-)
+>
+> diff --git a/fs/ocfs2/namei.c b/fs/ocfs2/namei.c
+> index c801edd..41ef356 100644
+> --- a/fs/ocfs2/namei.c
+> +++ b/fs/ocfs2/namei.c
+> @@ -2332,8 +2332,7 @@ int ocfs2_orphan_del(struct ocfs2_super *osb,
+>                      struct buffer_head *orphan_dir_bh,
+>                      bool dio)
+>  {
+> -       const int namelen = OCFS2_DIO_ORPHAN_PREFIX_LEN + OCFS2_ORPHAN_NAMELEN;
+> -       char name[namelen + 1];
+> +       char name[OCFS2_DIO_ORPHAN_PREFIX_LEN + OCFS2_ORPHAN_NAMELEN + 1];
+>         struct ocfs2_dinode *orphan_fe;
+>         int status = 0;
+>         struct ocfs2_dir_lookup_result lookup = { NULL, };
+> --
+> 1.9.1
+>
 
-	Ingo
+
+
+-- 
+Kees Cook
+Pixel Security
