@@ -1,61 +1,71 @@
-Subject: Re: [PATCHv2 06/12] arm64: add basic pointer authentication support
-References: <20171127163806.31435-1-mark.rutland@arm.com>
- <20171127163806.31435-7-mark.rutland@arm.com>
-From: Adam Wallis <awallis@codeaurora.org>
-Message-ID: <daefeb1f-9553-c26d-0b35-2c4da328aeff@codeaurora.org>
-Date: Tue, 22 May 2018 15:06:21 -0400
+Subject: Re: [PATCH v12 2/6] x86/entry: Add STACKLEAK erasing the kernel stack
+ at the end of syscalls
+References: <1526488097-20611-1-git-send-email-alex.popov@linux.com>
+ <1526488097-20611-3-git-send-email-alex.popov@linux.com>
+ <20180518065349.GA10080@gmail.com>
+ <23369d86-ad31-e7c5-e42f-28e0e51ec128@linux.com>
+ <CAGXu5jKcZope_h1Hr2iAwzOe16A=sT-UXJF2ugg2w8rV0_i7jA@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <b7afe9c1-1112-1605-e0a1-2cfd5c6d88ca@linux.com>
+Date: Wed, 23 May 2018 00:00:13 +0300
 MIME-Version: 1.0
-In-Reply-To: <20171127163806.31435-7-mark.rutland@arm.com>
+In-Reply-To: <CAGXu5jKcZope_h1Hr2iAwzOe16A=sT-UXJF2ugg2w8rV0_i7jA@mail.gmail.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Mark Rutland <mark.rutland@arm.com>, linux-arm-kernel@lists.infradead.org
-Cc: arnd@arndb.de, catalin.marinas@arm.com, cdall@linaro.org, kvmarm@lists.cs.columbia.edu, linux-arch@vger.kernel.org, marc.zyngier@arm.com, suzuki.poulose@arm.com, will.deacon@arm.com, yao.qi@arm.com, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+To: Kees Cook <keescook@chromium.org>
+Cc: Ingo Molnar <mingo@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/27/2017 11:38 AM, Mark Rutland wrote:
-> This patch adds basic support for pointer authentication, allowing
-> userspace to make use of APIAKey. The kernel maintains an APIAKey value
-> for each process (shared by all threads within), which is initialised to
-> a random value at exec() time.
+On 22.05.2018 20:20, Kees Cook wrote:
+> On Tue, May 22, 2018 at 3:58 AM, Alexander Popov <alex.popov@linux.com> wrote:
+>> Hello Ingo and Kees,
+>>
+>> On 18.05.2018 09:53, Ingo Molnar wrote:
+>>> * Alexander Popov <alex.popov@linux.com> wrote:
+>>>> --- a/arch/x86/kernel/process_32.c
+>>>> +++ b/arch/x86/kernel/process_32.c
+>>>> @@ -136,6 +136,11 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
+>>>>      p->thread.sp0 = (unsigned long) (childregs+1);
+>>>>      memset(p->thread.ptrace_bps, 0, sizeof(p->thread.ptrace_bps));
+>>>>
+>>>> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+>>>> +    p->thread.lowest_stack.val = (unsigned long)end_of_stack(p) +
+>>>> +                                            sizeof(unsigned long);
+>>>> +#endif
+>>>
+>>> This should use an inline helper:
+>>>
+>>>       stackleak_task_init(p);
+>>
+>> Right now I can't define such a helper because 'lowest_stack' is a part of
+>> 'thread_struct', but arch/x86/include/asm/processor.h and include/linux/sched.h
+>> are independent.
+>>
+>> I think the best solution is to move 'lowest_stack' variable to 'task_struct'.
 > 
-> To describe that address authentication instructions are available, the
-> ID_AA64ISAR0.{APA,API} fields are exposed to userspace. A new hwcap,
-> APIA, is added to describe that the kernel manages APIAKey.
+> It might be possible work around this by using a macro in stackleak.h
+> (pardon any whitespace damage):
 > 
-> Instructions using other keys (APIBKey, APDAKey, APDBKey) are disabled,
-> and will behave as NOPs. These may be made use of in future patches.
+> #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> # define stackleak_task_init(task)     do {                      \
+>                       task->thread.stack_leak.lowest_stack = \
+>                                    (unsigned long)end_of_stack(task) + \
+>                                    sizeof(unsigned long);                  \
+>                } while (0)
+> #else
+> # define stackleak_task_init(task)   do { } while (0)
+> #endif
 > 
-> No support is added for the generic key (APGAKey), though this cannot be
-> trapped or made to behave as a NOP. Its presence is not advertised with
-> a hwcap.
+>> Is there any reason to fold this variable into a 'stackleak_info' structure? I
+>> see everybody happily uses #ifdef in 'task_struct'.
 > 
-> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-> Cc: Catalin Marinas <catalin.marinas@arm.com>
-> Cc: Suzuki K Poulose <suzuki.poulose@arm.com>
-> Cc: Will Deacon <will.deacon@arm.com>
-> ---
->  arch/arm64/include/asm/mmu.h          |  5 ++
->  arch/arm64/include/asm/mmu_context.h  | 25 +++++++++-
->  arch/arm64/include/asm/pointer_auth.h | 89 +++++++++++++++++++++++++++++++++++
->  arch/arm64/include/uapi/asm/hwcap.h   |  1 +
->  arch/arm64/kernel/cpufeature.c        | 17 ++++++-
->  arch/arm64/kernel/cpuinfo.c           |  1 +
->  6 files changed, 134 insertions(+), 4 deletions(-)
->  create mode 100644 arch/arm64/include/asm/pointer_auth.h
+> I'd rather it stay in threadinfo, but I could be convinced otherwise.
 
-Mark, I was able to verify that a buffer overflow exploit results in a segfault
-with these PAC patches. When I compile the same binary without
-"-msign-return-address=none", I am able to successfully overflow the stack and
-execute malicious code.
+Currently 'lowest_stack' is a part of 'thread_struct', which is a "CPU-specific
+state of this task". But in fact 'lowest_stack' is not CPU-specific. If I move
+it to 'task_struct', Laura will avoid redefining it in 'thread_struct' in
+arch/arm64/include/asm/processor.h. And that will also allow me to create a
+stackleak_task_init() inline helper in stackleak.h.
 
-Thanks
-Adam
-
-Tested-by: Adam Wallis <awallis@codeaurora.org>
-
-
--- 
-Adam Wallis
-Qualcomm Datacenter Technologies as an affiliate of Qualcomm Technologies, Inc.
-Qualcomm Technologies, Inc. is a member of the Code Aurora Forum,
-a Linux Foundation Collaborative Project.
+Best regards,
+Alexander
