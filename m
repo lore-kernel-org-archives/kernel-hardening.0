@@ -1,31 +1,87 @@
+Sender: Daniel Vetter <daniel.vetter@ffwll.ch>
+Date: Wed, 23 May 2018 10:44:51 +0200
+From: Daniel Vetter <daniel@ffwll.ch>
+Subject: Re: [PATCH] drm/gma500: Remove VLA
+Message-ID: <20180523084451.GK3438@phenom.ffwll.local>
+References: <20180409210647.3718-1-labbott@redhat.com>
+ <CAGXu5jLcRqjk17BqprGsWJXqGusoR6nRSf8986w7chQ9UONKMA@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <b7afe9c1-1112-1605-e0a1-2cfd5c6d88ca@linux.com>
-References: <1526488097-20611-1-git-send-email-alex.popov@linux.com>
- <1526488097-20611-3-git-send-email-alex.popov@linux.com> <20180518065349.GA10080@gmail.com>
- <23369d86-ad31-e7c5-e42f-28e0e51ec128@linux.com> <CAGXu5jKcZope_h1Hr2iAwzOe16A=sT-UXJF2ugg2w8rV0_i7jA@mail.gmail.com>
- <b7afe9c1-1112-1605-e0a1-2cfd5c6d88ca@linux.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 22 May 2018 14:19:14 -0700
-Message-ID: <CAGXu5jJExz263gs6MpU4-NKR0qLvj=POAahrtbnYGiRbPQNtuQ@mail.gmail.com>
-Subject: Re: [PATCH v12 2/6] x86/entry: Add STACKLEAK erasing the kernel stack
- at the end of syscalls
-Content-Type: text/plain; charset="UTF-8"
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Ingo Molnar <mingo@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jLcRqjk17BqprGsWJXqGusoR6nRSf8986w7chQ9UONKMA@mail.gmail.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Daniel Vetter <daniel.vetter@ffwll.ch>, Laura Abbott <labbott@redhat.com>, Patrik Jakobsson <patrik.r.jakobsson@gmail.com>, David Airlie <airlied@linux.ie>, Maling list - DRI developers <dri-devel@lists.freedesktop.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 22, 2018 at 2:00 PM, Alexander Popov <alex.popov@linux.com> wrote:
-> Currently 'lowest_stack' is a part of 'thread_struct', which is a "CPU-specific
-> state of this task". But in fact 'lowest_stack' is not CPU-specific. If I move
-> it to 'task_struct', Laura will avoid redefining it in 'thread_struct' in
-> arch/arm64/include/asm/processor.h. And that will also allow me to create a
-> stackleak_task_init() inline helper in stackleak.h.
+On Fri, May 18, 2018 at 10:58:40AM -0700, Kees Cook wrote:
+> On Mon, Apr 9, 2018 at 2:06 PM, Laura Abbott <labbott@redhat.com> wrote:
+> >
+> > There's an ongoing effort to remove VLAs[1] from the kernel to eventually
+> > turn on -Wvla. Switch to a reasonable upper bound for the VLAs in
+> > the gma500 driver.
+> >
+> > [1] https://lkml.org/lkml/2018/3/7/621
+> >
+> > Signed-off-by: Laura Abbott <labbott@redhat.com>
+> 
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> 
+> Daniel, can this go via you, or what's the best path for this patch?
 
-Okay, give it a go! :)
+Applied to drm-misc-next for 4.19, thanks.
+-Daniel
 
--Kees
+> 
+> Thanks!
+> 
+> -Kees
+> 
+> > ---
+> > This was a little hard to figure out but I think 32 should be a
+> > comfortable upper bound based on all the structures I saw. Of course I
+> > can't test it.
+> > ---
+> >  drivers/gpu/drm/gma500/psb_intel_sdvo.c | 11 +++++++++--
+> >  1 file changed, 9 insertions(+), 2 deletions(-)
+> >
+> > diff --git a/drivers/gpu/drm/gma500/psb_intel_sdvo.c b/drivers/gpu/drm/gma500/psb_intel_sdvo.c
+> > index 84507912be84..3d4fa9f6b94c 100644
+> > --- a/drivers/gpu/drm/gma500/psb_intel_sdvo.c
+> > +++ b/drivers/gpu/drm/gma500/psb_intel_sdvo.c
+> > @@ -429,13 +429,20 @@ static const char *cmd_status_names[] = {
+> >         "Scaling not supported"
+> >  };
+> >
+> > +#define MAX_ARG_LEN 32
+> > +
+> >  static bool psb_intel_sdvo_write_cmd(struct psb_intel_sdvo *psb_intel_sdvo, u8 cmd,
+> >                                  const void *args, int args_len)
+> >  {
+> > -       u8 buf[args_len*2 + 2], status;
+> > -       struct i2c_msg msgs[args_len + 3];
+> > +       u8 buf[MAX_ARG_LEN*2 + 2], status;
+> > +       struct i2c_msg msgs[MAX_ARG_LEN + 3];
+> >         int i, ret;
+> >
+> > +       if (args_len > MAX_ARG_LEN) {
+> > +               DRM_ERROR("Need to increase arg length\n");
+> > +               return false;
+> > +       }
+> > +
+> >         psb_intel_sdvo_debug_write(psb_intel_sdvo, cmd, args, args_len);
+> >
+> >         for (i = 0; i < args_len; i++) {
+> > --
+> > 2.14.3
+> >
+> 
+> 
+> 
+> -- 
+> Kees Cook
+> Pixel Security
 
 -- 
-Kees Cook
-Pixel Security
+Daniel Vetter
+Software Engineer, Intel Corporation
+http://blog.ffwll.ch
