@@ -1,95 +1,41 @@
-Date: Thu, 24 May 2018 13:40:24 +0200
-From: Petr Mladek <pmladek@suse.com>
-Subject: Re: [PATCH v3 21/27] x86/ftrace: Adapt function tracing for PIE
- support
-Message-ID: <20180524114024.pa67zjipy5qcg4tm@pathway.suse.cz>
-References: <20180523195421.180248-1-thgarnie@google.com>
- <20180523195421.180248-22-thgarnie@google.com>
+Subject: Re: [PATCH v12 2/6] x86/entry: Add STACKLEAK erasing the kernel stack
+ at the end of syscalls
+References: <1526488097-20611-1-git-send-email-alex.popov@linux.com>
+ <1526488097-20611-3-git-send-email-alex.popov@linux.com>
+ <20180518065349.GA10080@gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <24c5699b-d222-486b-6f16-7539e931c436@linux.com>
+Date: Thu, 24 May 2018 16:05:27 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180523195421.180248-22-thgarnie@google.com>
-To: Thomas Garnier <thgarnie@google.com>, Steven Rostedt <rostedt@goodmis.org>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S . Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Philippe Ombredanne <pombredanne@nexb.com>, Kate Stewart <kstewart@linuxfoundation.org>, Arnaldo Carvalho de Melo <acme@redhat.com>, Yonghong Song <yhs@fb.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Kees Cook <keescook@chromium.org>, Tom Lendacky <thomas.lendacky@amd.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Andy Lutomirski <luto@kernel.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Borislav Petkov <bp@alien8.de>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Juergen Gross <jgross@suse.com>, Alok Kataria <akataria@vmware.com>, Jan Kiszka <jan.kiszka@siemens.com>, Tejun Heo <tj@kernel.org>, Christoph Lameter <cl@linux.com>, Dennis Zhou <dennisszhou@gmail.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Alexey Dobriyan <adobriyan@gmail.com>, Masami Hiramatsu <mhiramat@kernel.org>, Cao jin <caoj.fnst@cn.fujitsu.com>, Francis Deslauriers <francis.deslauriers@efficios.com>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Andrew Morton <akpm@linux-foundation.org>, Randy Dunlap <rdunlap@infradead.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Christopher Li <sparse@chrisli.org>, Jason Baron <jbaron@akamai.com>, Mika Westerberg <mika.westerberg@linux.intel.com>, Lukas Wunner <lukas@wunner.de>, Dou Liyang <douly.fnst@cn.fujitsu.com>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Ingo Molnar <mingo@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, "H . J . Lu" <hjl.tools@gmail.com>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, Joerg Roedel <joro@8bytes.org>, David Woodhouse <dwmw@amazon.co.uk>, Dave Hansen <dave.hansen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Jia Zhang <qianyue.zj@alibaba-inc.com>, Ricardo Neri <ricardo.neri-calderon@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Jan Beulich <JBeulich@suse.com>, Matthias Kaehlcke <mka@chromium.org>, Baoquan He <bhe@redhat.com>, Jan H =?iso-8859-1?Q?=2E_Sch=F6nherr?= <jschoenh@amazon.de>, Daniel Micay <danielmicay@gmail.com>, x86@kernel.org, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux-pm@vger.kernel.org, virtualization@lists.linux-foundation.org, xen-devel@lists.xenproject.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20180518065349.GA10080@gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+To: Ingo Molnar <mingo@kernel.org>, Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed 2018-05-23 12:54:15, Thomas Garnier wrote:
-> When using -fPIE/PIC with function tracing, the compiler generates a
-> call through the GOT (call *__fentry__@GOTPCREL). This instruction
-> takes 6 bytes instead of 5 on the usual relative call.
+On 18.05.2018 09:53, Ingo Molnar wrote:
+> * Alexander Popov <alex.popov@linux.com> wrote:
+>> +	if (on_thread_stack())
+>> +		boundary = current_stack_pointer;
+>> +	else
+>> +		boundary = current_top_of_stack();
+>> +
+>> +	BUG_ON(boundary - p >= THREAD_SIZE);
 > 
-> If PIE is enabled, replace the 6th byte of the GOT call by a 1-byte nop
-> so ftrace can handle the previous 5-bytes as before.
+> Please make this:
 > 
-> Position Independent Executable (PIE) support will allow to extended the
-> KASLR randomization range below the -2G memory limit.
+> 	if ( WARN_ON_ONCE())
+> 		return;
 > 
-> Signed-off-by: Thomas Garnier <thgarnie@google.com>
-> ---
->  arch/x86/include/asm/ftrace.h   |  6 +++--
->  arch/x86/include/asm/sections.h |  4 ++++
->  arch/x86/kernel/ftrace.c        | 42 +++++++++++++++++++++++++++++++--
->  3 files changed, 48 insertions(+), 4 deletions(-)
-> 
-> diff --git a/arch/x86/include/asm/ftrace.h b/arch/x86/include/asm/ftrace.h
-> index c18ed65287d5..8f2decce38d8 100644
-> --- a/arch/x86/include/asm/ftrace.h
-> +++ b/arch/x86/include/asm/ftrace.h
-> @@ -25,9 +25,11 @@ extern void __fentry__(void);
->  static inline unsigned long ftrace_call_adjust(unsigned long addr)
->  {
->  	/*
-> -	 * addr is the address of the mcount call instruction.
-> -	 * recordmcount does the necessary offset calculation.
-> +	 * addr is the address of the mcount call instruction. PIE has always a
-> +	 * byte added to the start of the function.
->  	 */
-> +	if (IS_ENABLED(CONFIG_X86_PIE))
-> +		addr -= 1;
+> ... or so, so that if this code is buggy we get actual useful user reports, not 
+> just "my machine froze, help!"...
 
-This seems to modify the address even for modules that are _not_ compiled with
-PIE, see below.
+I've just double-checked that BUG() in erase_kstack() works fine when it's
+called from the trampoline stack and thread stack.
 
->  	return addr;
->  }
->  
-> diff --git a/arch/x86/kernel/ftrace.c b/arch/x86/kernel/ftrace.c
-> index 01ebcb6f263e..73b3c30cb7a3 100644
-> --- a/arch/x86/kernel/ftrace.c
-> +++ b/arch/x86/kernel/ftrace.c
-> @@ -135,6 +135,44 @@ ftrace_modify_code_direct(unsigned long ip, unsigned const char *old_code,
->  	return 0;
->  }
->  
-> +/* Bytes before call GOT offset */
-> +const unsigned char got_call_preinsn[] = { 0xff, 0x15 };
-> +
-> +static int
-> +ftrace_modify_initial_code(unsigned long ip, unsigned const char *old_code,
-> +			   unsigned const char *new_code)
-> +{
-> +	unsigned char replaced[MCOUNT_INSN_SIZE + 1];
-> +
-> +	ftrace_expected = old_code;
-> +
-> +	/*
-> +	 * If PIE is not enabled or no GOT call was found, default to the
-> +	 * original approach to code modification.
-> +	 */
-> +	if (!IS_ENABLED(CONFIG_X86_PIE) ||
-> +	    probe_kernel_read(replaced, (void *)ip, sizeof(replaced)) ||
-> +	    memcmp(replaced, got_call_preinsn, sizeof(got_call_preinsn)))
-> +		return ftrace_modify_code_direct(ip, old_code, new_code);
+But this "WARN_ON_ONCE() + return" logic would introduce an undesirable effect:
+modifying 'lowest_stack' value would allow to silently skip stack erasing.
 
-And this looks like an attempt to handle modules compiled without
-PIE. Does it works with the right ip in that case?
-
-I wonder if a better solution would be to update
-scripts/recordmcount.c to store the incremented location into the module.
-
-IMPORTANT: I have only vague picture about how this all works. It is
-possible that I am completely wrong. The code might be correct,
-especially if you tested this situation.
-
-Best Regards,
-Petr
+Best regards,
+Alexander
