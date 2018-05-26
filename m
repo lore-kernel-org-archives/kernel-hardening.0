@@ -1,60 +1,126 @@
 From: Alexander Popov <alex.popov@linux.com>
-Subject: [PATCH v13 6/6] doc: self-protection: Add information about STACKLEAK feature
-Date: Sat, 26 May 2018 23:10:30 +0300
-Message-Id: <1527365430-8303-7-git-send-email-alex.popov@linux.com>
+Subject: [PATCH v13 5/6] fs/proc: Show STACKLEAK metrics in the /proc file system
+Date: Sat, 26 May 2018 23:10:29 +0300
+Message-Id: <1527365430-8303-6-git-send-email-alex.popov@linux.com>
 In-Reply-To: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
 References: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
 To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, x86@kernel.org, linux-kernel@vger.kernel.org, alex.popov@linux.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add information about STACKLEAK feature to "Stack depth overflow" and
-"Memory poisoning" sections of self-protection.rst.
+Introduce CONFIG_STACKLEAK_METRICS providing STACKLEAK information about
+tasks via the /proc file system. In particular, /proc/<pid>/stack_depth
+shows the maximum kernel stack consumption for the current and previous
+syscalls. Although this information is not precise, it can be useful for
+estimating the STACKLEAK performance impact for your workloads.
 
 Signed-off-by: Alexander Popov <alex.popov@linux.com>
 ---
- Documentation/security/self-protection.rst | 23 ++++++++++++++---------
- 1 file changed, 14 insertions(+), 9 deletions(-)
+ arch/Kconfig              | 12 ++++++++++++
+ fs/proc/base.c            | 18 ++++++++++++++++++
+ include/linux/sched.h     |  1 +
+ include/linux/stackleak.h |  3 +++
+ kernel/stackleak.c        |  4 ++++
+ 5 files changed, 38 insertions(+)
 
-diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
-index 0f53826..b685f18 100644
---- a/Documentation/security/self-protection.rst
-+++ b/Documentation/security/self-protection.rst
-@@ -165,10 +165,15 @@ Stack depth overflow
- A less well understood attack is using a bug that triggers the
- kernel to consume stack memory with deep function calls or large stack
- allocations. With this attack it is possible to write beyond the end of
--the kernel's preallocated stack space and into sensitive structures. Two
--important changes need to be made for better protections: moving the
--sensitive thread_info structure elsewhere, and adding a faulting memory
--hole at the bottom of the stack to catch these overflows.
-+the kernel's preallocated stack space and into sensitive structures.
-+The combination of the following measures gives better protection:
+diff --git a/arch/Kconfig b/arch/Kconfig
+index 46fe6c8..ee213f2 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -576,6 +576,18 @@ config STACKLEAK_TRACK_MIN_SIZE
+ 	  a stack frame size greater than or equal to this parameter.
+ 	  If unsure, leave the default value 100.
+ 
++config STACKLEAK_METRICS
++	bool "Show STACKLEAK metrics in the /proc file system"
++	depends on GCC_PLUGIN_STACKLEAK
++	depends on PROC_FS
++	help
++	  If this is set, STACKLEAK metrics for every task are available in
++	  the /proc file system. In particular, /proc/<pid>/stack_depth
++	  shows the maximum kernel stack consumption for the current and
++	  previous syscalls. Although this information is not precise, it
++	  can be useful for estimating the STACKLEAK performance impact for
++	  your workloads.
 +
-+* moving the sensitive thread_info structure off the stack
-+  (``CONFIG_THREAD_INFO_IN_TASK``);
-+* adding a faulting memory hole at the bottom of the stack to catch
-+  these overflows (``CONFIG_VMAP_STACK``);
-+* runtime checking that alloca() calls don't overstep the stack boundary
-+  (``CONFIG_GCC_PLUGIN_STACKLEAK``).
+ config HAVE_CC_STACKPROTECTOR
+ 	bool
+ 	help
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index 1a76d75..5a97edf 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -2924,6 +2924,21 @@ static int proc_pid_patch_state(struct seq_file *m, struct pid_namespace *ns,
+ }
+ #endif /* CONFIG_LIVEPATCH */
  
- Heap memory integrity
- ---------------------
-@@ -302,11 +307,11 @@ sure structure holes are cleared.
- Memory poisoning
- ----------------
++#ifdef CONFIG_STACKLEAK_METRICS
++static int proc_stack_depth(struct seq_file *m, struct pid_namespace *ns,
++				struct pid *pid, struct task_struct *task)
++{
++	unsigned long prev_depth = THREAD_SIZE -
++				(task->prev_lowest_stack & (THREAD_SIZE - 1));
++	unsigned long depth = THREAD_SIZE -
++				(task->lowest_stack & (THREAD_SIZE - 1));
++
++	seq_printf(m, "previous stack depth: %lu\nstack depth: %lu\n",
++							prev_depth, depth);
++	return 0;
++}
++#endif /* CONFIG_STACKLEAK_METRICS */
++
+ /*
+  * Thread groups
+  */
+@@ -3025,6 +3040,9 @@ static const struct pid_entry tgid_base_stuff[] = {
+ #ifdef CONFIG_LIVEPATCH
+ 	ONE("patch_state",  S_IRUSR, proc_pid_patch_state),
+ #endif
++#ifdef CONFIG_STACKLEAK_METRICS
++	ONE("stack_depth", S_IRUGO, proc_stack_depth),
++#endif
+ };
  
--When releasing memory, it is best to poison the contents (clear stack on
--syscall return, wipe heap memory on a free), to avoid reuse attacks that
--rely on the old contents of memory. This frustrates many uninitialized
--variable attacks, stack content exposures, heap content exposures, and
--use-after-free attacks.
-+When releasing memory, it is best to poison the contents, to avoid reuse
-+attacks that rely on the old contents of memory. E.g., clear stack on a
-+syscall return (``CONFIG_GCC_PLUGIN_STACKLEAK``), wipe heap memory on a
-+free. This frustrates many uninitialized variable attacks, stack content
-+exposures, heap content exposures, and use-after-free attacks.
+ static int proc_tgid_base_readdir(struct file *file, struct dir_context *ctx)
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index 050906f..3456d7c 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -1170,6 +1170,7 @@ struct task_struct {
  
- Destination tracking
- --------------------
+ #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+ 	unsigned long			lowest_stack;
++	unsigned long			prev_lowest_stack;
+ #endif
+ 
+ 	/*
+diff --git a/include/linux/stackleak.h b/include/linux/stackleak.h
+index 743c911..e2da99b 100644
+--- a/include/linux/stackleak.h
++++ b/include/linux/stackleak.h
+@@ -18,6 +18,9 @@ static inline void stackleak_task_init(struct task_struct *task)
+ #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+ 	task->lowest_stack = (unsigned long)end_of_stack(task) +
+ 						sizeof(unsigned long);
++# ifdef CONFIG_STACKLEAK_METRICS
++	task->prev_lowest_stack = task->lowest_stack;
++# endif
+ #endif
+ }
+ 
+diff --git a/kernel/stackleak.c b/kernel/stackleak.c
+index 7343f41..8cb29fb 100644
+--- a/kernel/stackleak.c
++++ b/kernel/stackleak.c
+@@ -40,6 +40,10 @@ asmlinkage void stackleak_erase_kstack(void)
+ 	if (kstack_ptr == boundary)
+ 		kstack_ptr += sizeof(unsigned long);
+ 
++#ifdef CONFIG_STACKLEAK_METRICS
++	current->prev_lowest_stack = kstack_ptr;
++#endif
++
+ 	/*
+ 	 * Now write the poison value to the kernel stack. Start from
+ 	 * 'kstack_ptr' and move up till the new 'boundary'. We assume that
 -- 
 2.7.4
