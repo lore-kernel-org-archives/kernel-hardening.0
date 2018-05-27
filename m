@@ -1,28 +1,24 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CA+55aFx6DBp+d33_fytOGPWw11xg_L0MdGp1M2e5Obc0N9kMRQ@mail.gmail.com>
-References: <1527346246-1334-1-git-send-email-s.mesoraca16@gmail.com>
- <CAGXu5j+PHzDwnJxJwMJ=WuhacDn_vJWe9xZx+Kbsh28vxOGRiA@mail.gmail.com> <CA+55aFx6DBp+d33_fytOGPWw11xg_L0MdGp1M2e5Obc0N9kMRQ@mail.gmail.com>
+In-Reply-To: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
+References: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Sun, 27 May 2018 07:41:34 -0700
-Message-ID: <CAGXu5jK_YfFLKt4vde__bzmhH9SCEz01ET9wyycYkhSSQj5+RA@mail.gmail.com>
-Subject: Re: [PATCH] proc: prevent a task from writing on its own /proc/*/mem
+Date: Sun, 27 May 2018 07:57:56 -0700
+Message-ID: <CAGXu5jJ9F-eZW5qVGebsv=wUh0kSm+edAecpztgvMC3fGeYXXA@mail.gmail.com>
+Subject: Re: [PATCH v13 0/6] Introduce the STACKLEAK feature and a test for it
 Content-Type: text/plain; charset="UTF-8"
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Salvatore Mesoraca <s.mesoraca16@gmail.com>, Jann Horn <jannh@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-mm <linux-mm@kvack.org>, Andrew Morton <akpm@linux-foundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, Akinobu Mita <akinobu.mita@gmail.com>, Dmitry Vyukov <dvyukov@google.com>, Arnd Bergmann <arnd@arndb.de>, Davidlohr Bueso <dave@stgolabs.net>
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, May 26, 2018 at 6:33 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> Thus commit f511c0b17b08 "Yes, people use FOLL_FORCE ;)"
->
-> Side note, that very sam ecommit f511c0b17b08 is also the explanation for
-> why the patch under discussion now seems broken.
->
-> People really do use "write to /proc/self/mem" as a way to keep the
-> mappings read-only, but have a way to change them when required.
+On Sat, May 26, 2018 at 1:10 PM, Alexander Popov <alex.popov@linux.com> wrote:
+> This is the 13th version of the patch series introducing STACKLEAK to the
+> mainline kernel for x86. This version comes with style changes according to
+> the feedback from Ingo Molnar. Previous version discussion:
+> http://www.openwall.com/lists/kernel-hardening/2018/05/16/1
 
-Ah! Yes, that is the commit I was trying to find. Thanks!
+Thanks for the update! I've pushed it to my tree for 0-day testing:
+https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/gcc-plugin/stackleak-v13
 
 -Kees
 
