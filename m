@@ -1,27 +1,86 @@
+Subject: Patch "kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl" has been added to the 4.9-stable tree
+From: <gregkh@linuxfoundation.org>
+Date: Sun, 27 May 2018 17:59:27 +0200
+Message-ID: <15274367679154@kroah.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
-References: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Sun, 27 May 2018 07:57:56 -0700
-Message-ID: <CAGXu5jJ9F-eZW5qVGebsv=wUh0kSm+edAecpztgvMC3fGeYXXA@mail.gmail.com>
-Subject: Re: [PATCH v13 0/6] Introduce the STACKLEAK feature and a test for it
-Content-Type: text/plain; charset="UTF-8"
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+To: alexander.levin@microsoft.com, gregkh@linuxfoundation.org, keescook@chromium.org, kernel-hardening@lists.openwall.com, pbonzini@redhat.com, rkrcmar@redhat.com
+Cc: stable-commits@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, May 26, 2018 at 1:10 PM, Alexander Popov <alex.popov@linux.com> wrote:
-> This is the 13th version of the patch series introducing STACKLEAK to the
-> mainline kernel for x86. This version comes with style changes according to
-> the feedback from Ingo Molnar. Previous version discussion:
-> http://www.openwall.com/lists/kernel-hardening/2018/05/16/1
 
-Thanks for the update! I've pushed it to my tree for 0-day testing:
-https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/gcc-plugin/stackleak-v13
+This is a note to let you know that I've just added the patch titled
 
--Kees
+    kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
 
--- 
-Kees Cook
-Pixel Security
+to the 4.9-stable tree which can be found at:
+    http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
+
+The filename of the patch is:
+     kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
+and it can be found in the queue-4.9 subdirectory.
+
+If you, or anyone else, feels it should not be added to the stable tree,
+please let <stable@vger.kernel.org> know about it.
+
+
+>From foo@baz Sun May 27 17:33:37 CEST 2018
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Thu, 26 Oct 2017 15:45:47 +0200
+Subject: kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+[ Upstream commit 51776043afa415435c7e4636204fbe4f7edc4501 ]
+
+This ioctl is obsolete (it was used by Xenner as far as I know) but
+still let's not break it gratuitously...  Its handler is copying
+directly into struct kvm.  Go through a bounce buffer instead, with
+the added benefit that we can actually do something useful with the
+flags argument---the previous code was exiting with -EINVAL but still
+doing the copy.
+
+This technically is a userspace ABI breakage, but since no one should be
+using the ioctl, it's a good occasion to see if someone actually
+complains.
+
+Cc: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Radim Krčmář <rkrcmar@redhat.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ arch/x86/kvm/x86.c |    7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+--- a/arch/x86/kvm/x86.c
++++ b/arch/x86/kvm/x86.c
+@@ -4131,13 +4131,14 @@ long kvm_arch_vm_ioctl(struct file *filp
+ 		mutex_unlock(&kvm->lock);
+ 		break;
+ 	case KVM_XEN_HVM_CONFIG: {
++		struct kvm_xen_hvm_config xhc;
+ 		r = -EFAULT;
+-		if (copy_from_user(&kvm->arch.xen_hvm_config, argp,
+-				   sizeof(struct kvm_xen_hvm_config)))
++		if (copy_from_user(&xhc, argp, sizeof(xhc)))
+ 			goto out;
+ 		r = -EINVAL;
+-		if (kvm->arch.xen_hvm_config.flags)
++		if (xhc.flags)
+ 			goto out;
++		memcpy(&kvm->arch.xen_hvm_config, &xhc, sizeof(xhc));
+ 		r = 0;
+ 		break;
+ 	}
+
+
+Patches currently in stable-queue which might be from pbonzini@redhat.com are
+
+queue-4.9/kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
+queue-4.9/kvm-map-pfn-type-memory-regions-as-writable-if-possible.patch
+queue-4.9/kvm-fix-warning-for-config_have_kvm_eventfd-builds.patch
+queue-4.9/kvm-vmx-expose-ssbd-properly-to-guests.patch
