@@ -1,7 +1,7 @@
-Subject: Patch "kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl" has been added to the 4.9-stable tree
+Subject: Patch "kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl" has been added to the 4.4-stable tree
 From: <gregkh@linuxfoundation.org>
-Date: Sun, 27 May 2018 17:59:27 +0200
-Message-ID: <15274367679154@kroah.com>
+Date: Sun, 27 May 2018 18:06:41 +0200
+Message-ID: <15274372011766@kroah.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -14,18 +14,18 @@ This is a note to let you know that I've just added the patch titled
 
     kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
 
-to the 4.9-stable tree which can be found at:
+to the 4.4-stable tree which can be found at:
     http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
 
 The filename of the patch is:
      kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
-and it can be found in the queue-4.9 subdirectory.
+and it can be found in the queue-4.4 subdirectory.
 
 If you, or anyone else, feels it should not be added to the stable tree,
 please let <stable@vger.kernel.org> know about it.
 
 
->From foo@baz Sun May 27 17:33:37 CEST 2018
+>From foo@baz Sun May 27 17:52:22 CEST 2018
 From: Paolo Bonzini <pbonzini@redhat.com>
 Date: Thu, 26 Oct 2017 15:45:47 +0200
 Subject: kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
@@ -58,7 +58,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -4131,13 +4131,14 @@ long kvm_arch_vm_ioctl(struct file *filp
+@@ -3973,13 +3973,14 @@ long kvm_arch_vm_ioctl(struct file *filp
  		mutex_unlock(&kvm->lock);
  		break;
  	case KVM_XEN_HVM_CONFIG: {
@@ -80,7 +80,4 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 Patches currently in stable-queue which might be from pbonzini@redhat.com are
 
-queue-4.9/kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
-queue-4.9/kvm-map-pfn-type-memory-regions-as-writable-if-possible.patch
-queue-4.9/kvm-fix-warning-for-config_have_kvm_eventfd-builds.patch
-queue-4.9/kvm-vmx-expose-ssbd-properly-to-guests.patch
+queue-4.4/kvm-x86-fix-kvm_xen_hvm_config-ioctl.patch
