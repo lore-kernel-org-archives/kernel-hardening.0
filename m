@@ -1,126 +1,164 @@
-From: Alexander Popov <alex.popov@linux.com>
-Subject: [PATCH v13 5/6] fs/proc: Show STACKLEAK metrics in the /proc file system
-Date: Sat, 26 May 2018 23:10:29 +0300
-Message-Id: <1527365430-8303-6-git-send-email-alex.popov@linux.com>
-In-Reply-To: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
-References: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, x86@kernel.org, linux-kernel@vger.kernel.org, alex.popov@linux.com
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <1527346246-1334-1-git-send-email-s.mesoraca16@gmail.com>
+References: <1527346246-1334-1-git-send-email-s.mesoraca16@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Sat, 26 May 2018 17:31:56 -0700
+Message-ID: <CAGXu5j+PHzDwnJxJwMJ=WuhacDn_vJWe9xZx+Kbsh28vxOGRiA@mail.gmail.com>
+Subject: Re: [PATCH] proc: prevent a task from writing on its own /proc/*/mem
+Content-Type: text/plain; charset="UTF-8"
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Jann Horn <jannh@google.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Andrew Morton <akpm@linux-foundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, Akinobu Mita <akinobu.mita@gmail.com>, Dmitry Vyukov <dvyukov@google.com>, Arnd Bergmann <arnd@arndb.de>, Davidlohr Bueso <dave@stgolabs.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Introduce CONFIG_STACKLEAK_METRICS providing STACKLEAK information about
-tasks via the /proc file system. In particular, /proc/<pid>/stack_depth
-shows the maximum kernel stack consumption for the current and previous
-syscalls. Although this information is not precise, it can be useful for
-estimating the STACKLEAK performance impact for your workloads.
+On Sat, May 26, 2018 at 7:50 AM, Salvatore Mesoraca
+<s.mesoraca16@gmail.com> wrote:
+> Prevent a task from opening, in "write" mode, any /proc/*/mem
+> file that operates on the task's mm.
+> /proc/*/mem is mainly a debugging means and, as such, it shouldn't
+> be used by the inspected process itself.
+> Current implementation always allow a task to access its own
+> /proc/*/mem file.
+> A process can use it to overwrite read-only memory, making
+> pointless the use of security_file_mprotect() or other ways to
+> enforce RO memory.
 
-Signed-off-by: Alexander Popov <alex.popov@linux.com>
----
- arch/Kconfig              | 12 ++++++++++++
- fs/proc/base.c            | 18 ++++++++++++++++++
- include/linux/sched.h     |  1 +
- include/linux/stackleak.h |  3 +++
- kernel/stackleak.c        |  4 ++++
- 5 files changed, 38 insertions(+)
+I went through some old threads from 2012 when e268337dfe26 was
+introduced, and later when things got looked at during DirtyCOW. There
+was discussion about removing FOLL_FORCE (in order to block writes on
+a read-only memory region). But that was much more general, touched
+ptrace, etc. I think this patch would be okay, since it's specific to
+the proc "self" mem interface, not remote processes (via ptrace). This
+patch would also have blocked the /proc/self/mem path to DirtyCOW
+(though not ptrace), so that would be nice if we have similar issues
+in the future. So, as long as this doesn't break anything, I'm for it
+in general. I've CCed Linus and Jann too, since they've stared at this
+a lot too. :P
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 46fe6c8..ee213f2 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -576,6 +576,18 @@ config STACKLEAK_TRACK_MIN_SIZE
- 	  a stack frame size greater than or equal to this parameter.
- 	  If unsure, leave the default value 100.
- 
-+config STACKLEAK_METRICS
-+	bool "Show STACKLEAK metrics in the /proc file system"
-+	depends on GCC_PLUGIN_STACKLEAK
-+	depends on PROC_FS
-+	help
-+	  If this is set, STACKLEAK metrics for every task are available in
-+	  the /proc file system. In particular, /proc/<pid>/stack_depth
-+	  shows the maximum kernel stack consumption for the current and
-+	  previous syscalls. Although this information is not precise, it
-+	  can be useful for estimating the STACKLEAK performance impact for
-+	  your workloads.
-+
- config HAVE_CC_STACKPROTECTOR
- 	bool
- 	help
-diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 1a76d75..5a97edf 100644
---- a/fs/proc/base.c
-+++ b/fs/proc/base.c
-@@ -2924,6 +2924,21 @@ static int proc_pid_patch_state(struct seq_file *m, struct pid_namespace *ns,
- }
- #endif /* CONFIG_LIVEPATCH */
- 
-+#ifdef CONFIG_STACKLEAK_METRICS
-+static int proc_stack_depth(struct seq_file *m, struct pid_namespace *ns,
-+				struct pid *pid, struct task_struct *task)
-+{
-+	unsigned long prev_depth = THREAD_SIZE -
-+				(task->prev_lowest_stack & (THREAD_SIZE - 1));
-+	unsigned long depth = THREAD_SIZE -
-+				(task->lowest_stack & (THREAD_SIZE - 1));
-+
-+	seq_printf(m, "previous stack depth: %lu\nstack depth: %lu\n",
-+							prev_depth, depth);
-+	return 0;
-+}
-+#endif /* CONFIG_STACKLEAK_METRICS */
-+
- /*
-  * Thread groups
-  */
-@@ -3025,6 +3040,9 @@ static const struct pid_entry tgid_base_stuff[] = {
- #ifdef CONFIG_LIVEPATCH
- 	ONE("patch_state",  S_IRUSR, proc_pid_patch_state),
- #endif
-+#ifdef CONFIG_STACKLEAK_METRICS
-+	ONE("stack_depth", S_IRUGO, proc_stack_depth),
-+#endif
- };
- 
- static int proc_tgid_base_readdir(struct file *file, struct dir_context *ctx)
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 050906f..3456d7c 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -1170,6 +1170,7 @@ struct task_struct {
- 
- #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
- 	unsigned long			lowest_stack;
-+	unsigned long			prev_lowest_stack;
- #endif
- 
- 	/*
-diff --git a/include/linux/stackleak.h b/include/linux/stackleak.h
-index 743c911..e2da99b 100644
---- a/include/linux/stackleak.h
-+++ b/include/linux/stackleak.h
-@@ -18,6 +18,9 @@ static inline void stackleak_task_init(struct task_struct *task)
- #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
- 	task->lowest_stack = (unsigned long)end_of_stack(task) +
- 						sizeof(unsigned long);
-+# ifdef CONFIG_STACKLEAK_METRICS
-+	task->prev_lowest_stack = task->lowest_stack;
-+# endif
- #endif
- }
- 
-diff --git a/kernel/stackleak.c b/kernel/stackleak.c
-index 7343f41..8cb29fb 100644
---- a/kernel/stackleak.c
-+++ b/kernel/stackleak.c
-@@ -40,6 +40,10 @@ asmlinkage void stackleak_erase_kstack(void)
- 	if (kstack_ptr == boundary)
- 		kstack_ptr += sizeof(unsigned long);
- 
-+#ifdef CONFIG_STACKLEAK_METRICS
-+	current->prev_lowest_stack = kstack_ptr;
-+#endif
-+
- 	/*
- 	 * Now write the poison value to the kernel stack. Start from
- 	 * 'kstack_ptr' and move up till the new 'boundary'. We assume that
+Note that you're re-checking the mm-check-for-self in mm_access().
+That's used in /proc and for process_vm_write(). Ptrace (and
+mm_access()) uses ptrace_may_access() for stuff (which has a similar
+check to bypass LSMs), so I'd be curious what would happen if this
+logic was plumbed into mm_access() instead of into proc_mem_open().
+(Does anything open /proc/$pid files for writing? Does anything using
+process_vm_write() on itself?)
+
+-Kees
+
+>
+> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+> ---
+>  fs/proc/base.c       | 25 ++++++++++++++++++-------
+>  fs/proc/internal.h   |  3 ++-
+>  fs/proc/task_mmu.c   |  4 ++--
+>  fs/proc/task_nommu.c |  2 +-
+>  4 files changed, 23 insertions(+), 11 deletions(-)
+>
+> diff --git a/fs/proc/base.c b/fs/proc/base.c
+> index 1a76d75..01ecfec 100644
+> --- a/fs/proc/base.c
+> +++ b/fs/proc/base.c
+> @@ -762,8 +762,9 @@ static int proc_single_open(struct inode *inode, struct file *filp)
+>         .release        = single_release,
+>  };
+>
+> -
+> -struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode)
+> +struct mm_struct *proc_mem_open(struct inode *inode,
+> +                               unsigned int mode,
+> +                               fmode_t f_mode)
+>  {
+>         struct task_struct *task = get_proc_task(inode);
+>         struct mm_struct *mm = ERR_PTR(-ESRCH);
+> @@ -773,10 +774,20 @@ struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode)
+>                 put_task_struct(task);
+>
+>                 if (!IS_ERR_OR_NULL(mm)) {
+> -                       /* ensure this mm_struct can't be freed */
+> -                       mmgrab(mm);
+> -                       /* but do not pin its memory */
+> -                       mmput(mm);
+> +                       /*
+> +                        * Prevent this interface from being used as a mean
+> +                        * to bypass memory restrictions, including those
+> +                        * imposed by LSMs.
+> +                        */
+> +                       if (mm == current->mm &&
+> +                           f_mode & FMODE_WRITE)
+> +                               mm = ERR_PTR(-EACCES);
+> +                       else {
+> +                               /* ensure this mm_struct can't be freed */
+> +                               mmgrab(mm);
+> +                               /* but do not pin its memory */
+> +                               mmput(mm);
+> +                       }
+>                 }
+>         }
+>
+> @@ -785,7 +796,7 @@ struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode)
+>
+>  static int __mem_open(struct inode *inode, struct file *file, unsigned int mode)
+>  {
+> -       struct mm_struct *mm = proc_mem_open(inode, mode);
+> +       struct mm_struct *mm = proc_mem_open(inode, mode, file->f_mode);
+>
+>         if (IS_ERR(mm))
+>                 return PTR_ERR(mm);
+> diff --git a/fs/proc/internal.h b/fs/proc/internal.h
+> index 0f1692e..8d38cc7 100644
+> --- a/fs/proc/internal.h
+> +++ b/fs/proc/internal.h
+> @@ -275,7 +275,8 @@ struct proc_maps_private {
+>  #endif
+>  } __randomize_layout;
+>
+> -struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode);
+> +struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode,
+> +                               fmode_t f_mode);
+>
+>  extern const struct file_operations proc_pid_maps_operations;
+>  extern const struct file_operations proc_tid_maps_operations;
+> diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
+> index c486ad4..efb6535 100644
+> --- a/fs/proc/task_mmu.c
+> +++ b/fs/proc/task_mmu.c
+> @@ -227,7 +227,7 @@ static int proc_maps_open(struct inode *inode, struct file *file,
+>                 return -ENOMEM;
+>
+>         priv->inode = inode;
+> -       priv->mm = proc_mem_open(inode, PTRACE_MODE_READ);
+> +       priv->mm = proc_mem_open(inode, PTRACE_MODE_READ, file->f_mode);
+>         if (IS_ERR(priv->mm)) {
+>                 int err = PTR_ERR(priv->mm);
+>
+> @@ -1534,7 +1534,7 @@ static int pagemap_open(struct inode *inode, struct file *file)
+>  {
+>         struct mm_struct *mm;
+>
+> -       mm = proc_mem_open(inode, PTRACE_MODE_READ);
+> +       mm = proc_mem_open(inode, PTRACE_MODE_READ, file->f_mode);
+>         if (IS_ERR(mm))
+>                 return PTR_ERR(mm);
+>         file->private_data = mm;
+> diff --git a/fs/proc/task_nommu.c b/fs/proc/task_nommu.c
+> index 5b62f57..dc38516 100644
+> --- a/fs/proc/task_nommu.c
+> +++ b/fs/proc/task_nommu.c
+> @@ -280,7 +280,7 @@ static int maps_open(struct inode *inode, struct file *file,
+>                 return -ENOMEM;
+>
+>         priv->inode = inode;
+> -       priv->mm = proc_mem_open(inode, PTRACE_MODE_READ);
+> +       priv->mm = proc_mem_open(inode, PTRACE_MODE_READ, file->f_mode);
+>         if (IS_ERR(priv->mm)) {
+>                 int err = PTR_ERR(priv->mm);
+>
+> --
+> 1.9.1
+>
+
+
+
 -- 
-2.7.4
+Kees Cook
+Pixel Security
