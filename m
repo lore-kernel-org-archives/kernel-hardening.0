@@ -1,16 +1,16 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.4 022/268] kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
-Date: Mon, 28 May 2018 11:59:56 +0200
-Message-Id: <20180528100204.614345592@linuxfoundation.org>
-In-Reply-To: <20180528100202.045206534@linuxfoundation.org>
-References: <20180528100202.045206534@linuxfoundation.org>
+Subject: [PATCH 4.9 029/329] kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
+Date: Mon, 28 May 2018 11:59:18 +0200
+Message-Id: <20180528100244.842346458@linuxfoundation.org>
+In-Reply-To: <20180528100241.796630982@linuxfoundation.org>
+References: <20180528100241.796630982@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 To: linux-kernel@vger.kernel.org
 Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Paolo Bonzini <pbonzini@redhat.com>, Sasha Levin <alexander.levin@microsoft.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-4.4-stable review patch.  If anyone has any objections, please let me know.
+4.9-stable review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
@@ -42,7 +42,7 @@ Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -3973,13 +3973,14 @@ long kvm_arch_vm_ioctl(struct file *filp
+@@ -4131,13 +4131,14 @@ long kvm_arch_vm_ioctl(struct file *filp
  		mutex_unlock(&kvm->lock);
  		break;
  	case KVM_XEN_HVM_CONFIG: {
