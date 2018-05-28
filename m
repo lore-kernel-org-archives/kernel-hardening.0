@@ -1,84 +1,62 @@
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Subject: [PATCH 3.18 012/185] kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
+Date: Mon, 28 May 2018 12:00:53 +0200
+Message-Id: <20180528100051.384969707@linuxfoundation.org>
+In-Reply-To: <20180528100050.700971285@linuxfoundation.org>
+References: <20180528100050.700971285@linuxfoundation.org>
 MIME-Version: 1.0
-In-Reply-To: <CAG48ez2N8tjyjGbdh+927uf2A_Xtsie=+DL+GZbvBniiO8jNHw@mail.gmail.com>
-References: <1527346246-1334-1-git-send-email-s.mesoraca16@gmail.com> <CAG48ez2N8tjyjGbdh+927uf2A_Xtsie=+DL+GZbvBniiO8jNHw@mail.gmail.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Mon, 28 May 2018 11:33:33 +0200
-Message-ID: <CAJHCu1+3jcJWSyPE8DsFfaR-NNtG5P=H31cKeDuagx_w1u0urA@mail.gmail.com>
-Subject: Re: [PATCH] proc: prevent a task from writing on its own /proc/*/mem
-Content-Type: text/plain; charset="UTF-8"
-To: Jann Horn <jannh@google.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Andrew Morton <akpm@linux-foundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, Akinobu Mita <akinobu.mita@gmail.com>, Dmitry Vyukov <dvyukov@google.com>, Arnd Bergmann <arnd@arndb.de>, Davidlohr Bueso <dave@stgolabs.net>, Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+To: linux-kernel@vger.kernel.org
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Paolo Bonzini <pbonzini@redhat.com>, Sasha Levin <alexander.levin@microsoft.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-05-28 11:06 GMT+02:00 Jann Horn <jannh@google.com>:
-> On Sat, May 26, 2018 at 4:50 PM, Salvatore Mesoraca
-> <s.mesoraca16@gmail.com> wrote:
->> Prevent a task from opening, in "write" mode, any /proc/*/mem
->> file that operates on the task's mm.
->> /proc/*/mem is mainly a debugging means and, as such, it shouldn't
->> be used by the inspected process itself.
->> Current implementation always allow a task to access its own
->> /proc/*/mem file.
->> A process can use it to overwrite read-only memory, making
->> pointless the use of security_file_mprotect() or other ways to
->> enforce RO memory.
->>
->> Signed-off-by: Salvatore Mesoraca <s.mesoraca16@gmail.com>
->> ---
->>  fs/proc/base.c       | 25 ++++++++++++++++++-------
->>  fs/proc/internal.h   |  3 ++-
->>  fs/proc/task_mmu.c   |  4 ++--
->>  fs/proc/task_nommu.c |  2 +-
->>  4 files changed, 23 insertions(+), 11 deletions(-)
->>
->> diff --git a/fs/proc/base.c b/fs/proc/base.c
->> index 1a76d75..01ecfec 100644
->> --- a/fs/proc/base.c
->> +++ b/fs/proc/base.c
->> @@ -762,8 +762,9 @@ static int proc_single_open(struct inode *inode, struct file *filp)
->>         .release        = single_release,
->>  };
->>
->> -
->> -struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode)
->> +struct mm_struct *proc_mem_open(struct inode *inode,
->> +                               unsigned int mode,
->> +                               fmode_t f_mode)
->>  {
->>         struct task_struct *task = get_proc_task(inode);
->>         struct mm_struct *mm = ERR_PTR(-ESRCH);
->> @@ -773,10 +774,20 @@ struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode)
->>                 put_task_struct(task);
->>
->>                 if (!IS_ERR_OR_NULL(mm)) {
->> -                       /* ensure this mm_struct can't be freed */
->> -                       mmgrab(mm);
->> -                       /* but do not pin its memory */
->> -                       mmput(mm);
->> +                       /*
->> +                        * Prevent this interface from being used as a mean
->> +                        * to bypass memory restrictions, including those
->> +                        * imposed by LSMs.
->> +                        */
->> +                       if (mm == current->mm &&
->> +                           f_mode & FMODE_WRITE)
->> +                               mm = ERR_PTR(-EACCES);
->> +                       else {
->> +                               /* ensure this mm_struct can't be freed */
->> +                               mmgrab(mm);
->> +                               /* but do not pin its memory */
->> +                               mmput(mm);
->> +                       }
->>                 }
->>         }
->
-> I don't have an opinion on the overall patch, but this part looks
-> buggy: In the error path, you set `mm` to an error pointer, but you
-> still own the reference that mm_access() took on the old `mm`. The
-> error path needs to call `mmput(mm)`.
+3.18-stable review patch.  If anyone has any objections, please let me know.
 
-You are absolutely right,
+------------------
 
-Thank you,
+From: Paolo Bonzini <pbonzini@redhat.com>
 
-Salvatore
+[ Upstream commit 51776043afa415435c7e4636204fbe4f7edc4501 ]
+
+This ioctl is obsolete (it was used by Xenner as far as I know) but
+still let's not break it gratuitously...  Its handler is copying
+directly into struct kvm.  Go through a bounce buffer instead, with
+the added benefit that we can actually do something useful with the
+flags argument---the previous code was exiting with -EINVAL but still
+doing the copy.
+
+This technically is a userspace ABI breakage, but since no one should be
+using the ioctl, it's a good occasion to see if someone actually
+complains.
+
+Cc: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Radim Krčmář <rkrcmar@redhat.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ arch/x86/kvm/x86.c |    7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+--- a/arch/x86/kvm/x86.c
++++ b/arch/x86/kvm/x86.c
+@@ -4025,13 +4025,14 @@ long kvm_arch_vm_ioctl(struct file *filp
+ 		break;
+ 	}
+ 	case KVM_XEN_HVM_CONFIG: {
++		struct kvm_xen_hvm_config xhc;
+ 		r = -EFAULT;
+-		if (copy_from_user(&kvm->arch.xen_hvm_config, argp,
+-				   sizeof(struct kvm_xen_hvm_config)))
++		if (copy_from_user(&xhc, argp, sizeof(xhc)))
+ 			goto out;
+ 		r = -EINVAL;
+-		if (kvm->arch.xen_hvm_config.flags)
++		if (xhc.flags)
+ 			goto out;
++		memcpy(&kvm->arch.xen_hvm_config, &xhc, sizeof(xhc));
+ 		r = 0;
+ 		break;
+ 	}
