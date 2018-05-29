@@ -1,82 +1,63 @@
 From: Thomas Garnier <thgarnie@google.com>
-Subject: [PATCH v4 10/27] x86/boot/64: Adapt assembly for PIE support
-Date: Tue, 29 May 2018 15:15:11 -0700
-Message-Id: <20180529221625.33541-11-thgarnie@google.com>
+Subject: [PATCH v4 13/27] x86/boot/64: Build head64.c as mcmodel large when PIE is enabled
+Date: Tue, 29 May 2018 15:15:14 -0700
+Message-Id: <20180529221625.33541-14-thgarnie@google.com>
 In-Reply-To: <20180529221625.33541-1-thgarnie@google.com>
 References: <20180529221625.33541-1-thgarnie@google.com>
 To: kernel-hardening@lists.openwall.com
-Cc: Thomas Garnier <thgarnie@google.com>, Skip Tom Lendacky <thomas.lendacky@amd.com>, Skip Dave Hansen <dave.hansen@linux.intel.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Juergen Gross <jgross@suse.com>, linux-kernel@vger.kernel.org
+Cc: Thomas Garnier <thgarnie@google.com>, Skip Andrey Ryabinin <aryabinin@virtuozzo.com>, Skip Alexander Potapenko <glider@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Josh Poimboeuf <jpoimboe@redhat.com>, "Steven Rostedt (VMware)" <rostedt@goodmis.org>, Jan Kiszka <jan.kiszka@siemens.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Tom Lendacky <thomas.lendacky@amd.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Change the assembly code to use only relative references of symbols for the
-kernel to be PIE compatible.
+The __startup_64 function assumes all symbols have relocated addresses
+instead of the current boot virtual address. PIE generated code favor
+relative addresses making all virtual and physical address math incorrect.
+If PIE is enabled, build head64.c as mcmodel large instead to ensure absolute
+references on all memory access. Add a global __force_order variable required
+when using a large model with read_cr* functions.
 
-Early at boot, the kernel is mapped at a temporary address while preparing
-the page table. To know the changes needed for the page table with KASLR,
-the boot code calculate the difference between the expected address of the
-kernel and the one chosen by KASLR. It does not work with PIE because all
-symbols in code are relatives. Instead of getting the future relocated
-virtual address, you will get the current temporary mapping.
-Instructions were changed to have absolute 64-bit references.
+To build head64.c as mcmodel=large, disable the retpoline gcc flags.
+This code is used at early boot and removed later, it doesn't need
+retpoline mitigation.
 
 Position Independent Executable (PIE) support will allow to extend the
 KASLR randomization range 0xffffffff80000000.
 
 Signed-off-by: Thomas Garnier <thgarnie@google.com>
 ---
- arch/x86/kernel/head_64.S | 16 ++++++++++------
- 1 file changed, 10 insertions(+), 6 deletions(-)
+ arch/x86/kernel/Makefile | 6 ++++++
+ arch/x86/kernel/head64.c | 3 +++
+ 2 files changed, 9 insertions(+)
 
-diff --git a/arch/x86/kernel/head_64.S b/arch/x86/kernel/head_64.S
-index 8344dd2f310a..7fca19e1f556 100644
---- a/arch/x86/kernel/head_64.S
-+++ b/arch/x86/kernel/head_64.S
-@@ -89,8 +89,10 @@ startup_64:
- 	popq	%rsi
+diff --git a/arch/x86/kernel/Makefile b/arch/x86/kernel/Makefile
+index 02d6f5cf4e70..0f6da4b216e0 100644
+--- a/arch/x86/kernel/Makefile
++++ b/arch/x86/kernel/Makefile
+@@ -22,6 +22,12 @@ CFLAGS_REMOVE_early_printk.o = -pg
+ CFLAGS_REMOVE_head64.o = -pg
+ endif
  
- 	/* Form the CR3 value being sure to include the CR3 modifier */
--	addq	$(early_top_pgt - __START_KERNEL_map), %rax
-+	movabs  $(early_top_pgt - __START_KERNEL_map), %rcx
-+	addq    %rcx, %rax
- 	jmp 1f
++ifdef CONFIG_X86_PIE
++# Remove PIE and retpoline flags that are incompatible with mcmodel=large
++CFLAGS_REMOVE_head64.o += -fPIE -mindirect-branch=thunk-extern -mindirect-branch-register
++CFLAGS_head64.o = -mcmodel=large
++endif
 +
- ENTRY(secondary_startup_64)
- 	UNWIND_HINT_EMPTY
- 	/*
-@@ -119,7 +121,8 @@ ENTRY(secondary_startup_64)
- 	popq	%rsi
+ KASAN_SANITIZE_head$(BITS).o				:= n
+ KASAN_SANITIZE_dumpstack.o				:= n
+ KASAN_SANITIZE_dumpstack_$(BITS).o			:= n
+diff --git a/arch/x86/kernel/head64.c b/arch/x86/kernel/head64.c
+index 2d29e47c056e..fa661fb97127 100644
+--- a/arch/x86/kernel/head64.c
++++ b/arch/x86/kernel/head64.c
+@@ -64,6 +64,9 @@ EXPORT_SYMBOL(vmemmap_base);
  
- 	/* Form the CR3 value being sure to include the CR3 modifier */
--	addq	$(init_top_pgt - __START_KERNEL_map), %rax
-+	movabs	$(init_top_pgt - __START_KERNEL_map), %rcx
-+	addq    %rcx, %rax
- 1:
+ #define __head	__section(.head.text)
  
- 	/* Enable PAE mode, PGE and LA57 */
-@@ -137,7 +140,7 @@ ENTRY(secondary_startup_64)
- 	movq	%rax, %cr3
- 
- 	/* Ensure I am executing from virtual addresses */
--	movq	$1f, %rax
-+	movabs  $1f, %rax
- 	ANNOTATE_RETPOLINE_SAFE
- 	jmp	*%rax
- 1:
-@@ -234,11 +237,12 @@ ENTRY(secondary_startup_64)
- 	 *	REX.W + FF /5 JMP m16:64 Jump far, absolute indirect,
- 	 *		address given in m16:64.
- 	 */
--	pushq	$.Lafter_lret	# put return address on stack for unwinder
-+	movabs  $.Lafter_lret, %rax
-+	pushq	%rax		# put return address on stack for unwinder
- 	xorq	%rbp, %rbp	# clear frame pointer
--	movq	initial_code(%rip), %rax
-+	leaq	initial_code(%rip), %rax
- 	pushq	$__KERNEL_CS	# set correct cs
--	pushq	%rax		# target address in negative space
-+	pushq	(%rax)		# target address in negative space
- 	lretq
- .Lafter_lret:
- END(secondary_startup_64)
++/* Required for read_cr3 when building as PIE */
++unsigned long __force_order;
++
+ static void __head *fixup_pointer(void *ptr, unsigned long physaddr)
+ {
+ 	return ptr - (void *)_text + (void *)physaddr;
 -- 
 2.17.0.921.gf22659ad46-goog
