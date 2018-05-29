@@ -1,162 +1,223 @@
 From: Thomas Garnier <thgarnie@google.com>
-Subject: [PATCH v4 25/27] x86/pie: Add option to build the kernel as PIE
-Date: Tue, 29 May 2018 15:15:26 -0700
-Message-Id: <20180529221625.33541-26-thgarnie@google.com>
+Subject: [PATCH v4 26/27] x86/relocs: Add option to generate 64-bit relocations
+Date: Tue, 29 May 2018 15:15:27 -0700
+Message-Id: <20180529221625.33541-27-thgarnie@google.com>
 In-Reply-To: <20180529221625.33541-1-thgarnie@google.com>
 References: <20180529221625.33541-1-thgarnie@google.com>
 To: kernel-hardening@lists.openwall.com
-Cc: Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+Cc: Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Kate Stewart <kstewart@linuxfoundation.org>, "H.J. Lu" <hjl.tools@gmail.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Philippe Ombredanne <pombredanne@nexb.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add the CONFIG_X86_PIE option which builds the kernel as a Position
-Independent Executable (PIE). The kernel is currently build with the
-mcmodel=kernel option which forces it to stay on the top 2G of the
-virtual address space. With PIE, the kernel will be able to move below
-the current limit.
+The x86 relocation tool generates a list of 32-bit signed integers. There
+was no need to use 64-bit integers because all addresses where above the 2G
+top of the memory.
 
-The --emit-relocs linker option was kept instead of using -pie to limit
-the impact on mapped sections. Any incompatible relocation will be
-catch by the arch/x86/tools/relocs binary at compile time.
-
-If segment based stack cookies are enabled, try to use the compiler
-option to select the segment register. If not available, automatically
-enabled global stack cookie in auto mode. Otherwise, recommend
-compiler update or global stack cookie option.
-
-Performance/Size impact:
-
-Size of vmlinux (Default configuration):
- File size:
- - PIE disabled: +0.18%
- - PIE enabled: -1.977% (less relocations)
- .text section:
- - PIE disabled: same
- - PIE enabled: same
-
-Size of vmlinux (Ubuntu configuration):
- File size:
- - PIE disabled: +0.21%
- - PIE enabled: +10%
- .text section:
- - PIE disabled: same
- - PIE enabled: +0.001%
-
-The size increase is mainly due to not having access to the 32-bit signed
-relocation that can be used with mcmodel=kernel. A small part is due to reduced
-optimization for PIE code. This bug [1] was opened with gcc to provide a better
-code generation for kernel PIE.
-
-Hackbench (50% and 1600% on thread/process for pipe/sockets):
- - PIE disabled: no significant change (avg -/+ 0.5% on latest test).
- - PIE enabled: between -1% to +1% in average (default and Ubuntu config).
-
-Kernbench (average of 10 Half and Optimal runs):
- Elapsed Time:
- - PIE disabled: no significant change (avg -0.5%)
- - PIE enabled: average -0.5% to +0.5%
- System Time:
- - PIE disabled: no significant change (avg -0.1%)
- - PIE enabled: average -0.4% to +0.4%.
-
-[1] https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82303
+This change add a large-reloc option to generate 64-bit unsigned integers.
+It can be used when the kernel plan to go below the top 2G and 32-bit
+integers are not enough.
 
 Signed-off-by: Thomas Garnier <thgarnie@google.com>
-
-merge pie
 ---
- arch/x86/Kconfig  |  8 ++++++++
- arch/x86/Makefile | 45 ++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 52 insertions(+), 1 deletion(-)
+ arch/x86/tools/relocs.c        | 60 +++++++++++++++++++++++++++-------
+ arch/x86/tools/relocs.h        |  4 +--
+ arch/x86/tools/relocs_common.c | 15 ++++++---
+ 3 files changed, 60 insertions(+), 19 deletions(-)
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 94a00d81ec18..47cf21e452d2 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -2214,6 +2214,14 @@ config X86_GLOBAL_STACKPROTECTOR
+diff --git a/arch/x86/tools/relocs.c b/arch/x86/tools/relocs.c
+index 29283ad3950f..a29cccceaac6 100644
+--- a/arch/x86/tools/relocs.c
++++ b/arch/x86/tools/relocs.c
+@@ -13,8 +13,14 @@
  
- 	   If unsure, say N
+ static Elf_Ehdr ehdr;
  
-+config X86_PIE
-+	bool
-+	depends on X86_64
-+	select DEFAULT_HIDDEN
-+	select WEAK_PROVIDE_HIDDEN
-+	select DYNAMIC_MODULE_BASE
-+	select MODULE_REL_CRCS if MODVERSIONS
++#if ELF_BITS == 64
++typedef uint64_t rel_off_t;
++#else
++typedef uint32_t rel_off_t;
++#endif
 +
- config HOTPLUG_CPU
- 	bool "Support for hot-pluggable CPUs"
- 	depends on SMP
-diff --git a/arch/x86/Makefile b/arch/x86/Makefile
-index 20bb6cbd8938..c92bcca4400c 100644
---- a/arch/x86/Makefile
-+++ b/arch/x86/Makefile
-@@ -60,6 +60,8 @@ endif
- KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow
- KBUILD_CFLAGS += $(call cc-option,-mno-avx,)
+ struct relocs {
+-	uint32_t	*offset;
++	rel_off_t	*offset;
+ 	unsigned long	count;
+ 	unsigned long	size;
+ };
+@@ -685,7 +691,7 @@ static void print_absolute_relocs(void)
+ 		printf("\n");
+ }
  
-+stackglobal := $(call cc-option-yn, -mstack-protector-guard=global)
-+
- ifeq ($(CONFIG_X86_32),y)
-         BITS := 32
-         UTS_MACHINE := i386
-@@ -135,7 +137,48 @@ else
+-static void add_reloc(struct relocs *r, uint32_t offset)
++static void add_reloc(struct relocs *r, rel_off_t offset)
+ {
+ 	if (r->count == r->size) {
+ 		unsigned long newsize = r->size + 50000;
+@@ -1061,26 +1067,48 @@ static void sort_relocs(struct relocs *r)
+ 	qsort(r->offset, r->count, sizeof(r->offset[0]), cmp_relocs);
+ }
  
-         KBUILD_CFLAGS += -mno-red-zone
- ifdef CONFIG_X86_PIE
-+        KBUILD_CFLAGS += -fPIE
-         KBUILD_LDFLAGS_MODULE += -T $(srctree)/arch/x86/kernel/module.lds
-+
-+        # Relax relocation in both CFLAGS and LDFLAGS to support older compilers
-+        KBUILD_CFLAGS += $(call cc-option,-Wa$(comma)-mrelax-relocations=no)
-+        LDFLAGS_vmlinux += $(call ld-option,--no-relax)
-+        KBUILD_LDFLAGS_MODULE += $(call ld-option,--no-relax)
-+
-+        # Stack validation is not yet support due to self-referenced switches
-+ifdef CONFIG_STACK_VALIDATION
-+        $(warning CONFIG_STACK_VALIDATION is not yet supported for x86_64 pie \
-+	        build.)
-+        SKIP_STACK_VALIDATION := 1
-+        export SKIP_STACK_VALIDATION
-+endif
-+
-+ifndef CONFIG_CC_STACKPROTECTOR_NONE
-+ifndef CONFIG_X86_GLOBAL_STACKPROTECTOR
-+        stackseg-flag := -mstack-protector-guard-reg=%gs
-+        ifeq ($(call cc-option-yn,$(stackseg-flag)),n)
-+                # Try to enable global stack cookie if possible
-+                ifeq ($(stackglobal), y)
-+                        $(warning Cannot use CONFIG_CC_STACKPROTECTOR_* while \
-+                                building a position independent kernel. \
-+                                Default to global stack protector \
-+                                (CONFIG_X86_GLOBAL_STACKPROTECTOR).)
-+                        CONFIG_X86_GLOBAL_STACKPROTECTOR := y
-+                        KBUILD_CFLAGS += -DCONFIG_X86_GLOBAL_STACKPROTECTOR
-+                        KBUILD_AFLAGS += -DCONFIG_X86_GLOBAL_STACKPROTECTOR
-+                else
-+                        $(error echo Cannot use \
-+                                CONFIG_CC_STACKPROTECTOR_(REGULAR|STRONG|AUTO) \
-+                                while building a position independent binary. \
-+                                Update your compiler or use \
-+                                CONFIG_X86_GLOBAL_STACKPROTECTOR)
-+                endif
-+        else
-+                KBUILD_CFLAGS += $(stackseg-flag)
-+        endif
-+endif
-+endif
-+
- else
-         KBUILD_CFLAGS += -mcmodel=kernel
- endif
-@@ -146,7 +189,7 @@ endif
- endif
+-static int write32(uint32_t v, FILE *f)
++static int write32(rel_off_t rel, FILE *f)
+ {
+-	unsigned char buf[4];
++	unsigned char buf[sizeof(uint32_t)];
++	uint32_t v = (uint32_t)rel;
  
- ifdef CONFIG_X86_GLOBAL_STACKPROTECTOR
--        ifeq ($(call cc-option, -mstack-protector-guard=global),)
-+        ifeq ($(stackglobal), n)
-                 $(error Cannot use CONFIG_X86_GLOBAL_STACKPROTECTOR: \
-                         -mstack-protector-guard=global not supported \
-                         by compiler)
+ 	put_unaligned_le32(v, buf);
+-	return fwrite(buf, 1, 4, f) == 4 ? 0 : -1;
++	return fwrite(buf, 1, sizeof(buf), f) == sizeof(buf) ? 0 : -1;
+ }
+ 
+-static int write32_as_text(uint32_t v, FILE *f)
++static int write32_as_text(rel_off_t rel, FILE *f)
+ {
++	uint32_t v = (uint32_t)rel;
+ 	return fprintf(f, "\t.long 0x%08"PRIx32"\n", v) > 0 ? 0 : -1;
+ }
+ 
+-static void emit_relocs(int as_text, int use_real_mode)
++static int write64(rel_off_t rel, FILE *f)
++{
++	unsigned char buf[sizeof(uint64_t)];
++	uint64_t v = (uint64_t)rel;
++
++	put_unaligned_le64(v, buf);
++	return fwrite(buf, 1, sizeof(buf), f) == sizeof(buf) ? 0 : -1;
++}
++
++static int write64_as_text(rel_off_t rel, FILE *f)
++{
++	uint64_t v = (uint64_t)rel;
++	return fprintf(f, "\t.quad 0x%016"PRIx64"\n", v) > 0 ? 0 : -1;
++}
++
++static void emit_relocs(int as_text, int use_real_mode, int use_large_reloc)
+ {
+ 	int i;
+-	int (*write_reloc)(uint32_t, FILE *) = write32;
++	int (*write_reloc)(rel_off_t, FILE *);
+ 	int (*do_reloc)(struct section *sec, Elf_Rel *rel, Elf_Sym *sym,
+ 			const char *symname);
+ 
++	if (use_large_reloc)
++		write_reloc = write64;
++	else
++		write_reloc = write32;
++
+ #if ELF_BITS == 64
+ 	if (!use_real_mode)
+ 		do_reloc = do_reloc64;
+@@ -1091,6 +1119,9 @@ static void emit_relocs(int as_text, int use_real_mode)
+ 		do_reloc = do_reloc32;
+ 	else
+ 		do_reloc = do_reloc_real;
++
++	/* Large relocations only for 64-bit */
++	use_large_reloc = 0;
+ #endif
+ 
+ 	/* Collect up the relocations */
+@@ -1114,8 +1145,13 @@ static void emit_relocs(int as_text, int use_real_mode)
+ 		 * gas will like.
+ 		 */
+ 		printf(".section \".data.reloc\",\"a\"\n");
+-		printf(".balign 4\n");
+-		write_reloc = write32_as_text;
++		if (use_large_reloc) {
++			printf(".balign 8\n");
++			write_reloc = write64_as_text;
++		} else {
++			printf(".balign 4\n");
++			write_reloc = write32_as_text;
++		}
+ 	}
+ 
+ 	if (use_real_mode) {
+@@ -1183,7 +1219,7 @@ static void print_reloc_info(void)
+ 
+ void process(FILE *fp, int use_real_mode, int as_text,
+ 	     int show_absolute_syms, int show_absolute_relocs,
+-	     int show_reloc_info)
++	     int show_reloc_info, int use_large_reloc)
+ {
+ 	regex_init(use_real_mode);
+ 	read_ehdr(fp);
+@@ -1206,5 +1242,5 @@ void process(FILE *fp, int use_real_mode, int as_text,
+ 		print_reloc_info();
+ 		return;
+ 	}
+-	emit_relocs(as_text, use_real_mode);
++	emit_relocs(as_text, use_real_mode, use_large_reloc);
+ }
+diff --git a/arch/x86/tools/relocs.h b/arch/x86/tools/relocs.h
+index 43c83c0fd22c..3d401da59df7 100644
+--- a/arch/x86/tools/relocs.h
++++ b/arch/x86/tools/relocs.h
+@@ -31,8 +31,8 @@ enum symtype {
+ 
+ void process_32(FILE *fp, int use_real_mode, int as_text,
+ 		int show_absolute_syms, int show_absolute_relocs,
+-		int show_reloc_info);
++		int show_reloc_info, int use_large_reloc);
+ void process_64(FILE *fp, int use_real_mode, int as_text,
+ 		int show_absolute_syms, int show_absolute_relocs,
+-		int show_reloc_info);
++		int show_reloc_info, int use_large_reloc);
+ #endif /* RELOCS_H */
+diff --git a/arch/x86/tools/relocs_common.c b/arch/x86/tools/relocs_common.c
+index 6634352a20bc..11f49adf1c06 100644
+--- a/arch/x86/tools/relocs_common.c
++++ b/arch/x86/tools/relocs_common.c
+@@ -12,14 +12,14 @@ void die(char *fmt, ...)
+ 
+ static void usage(void)
+ {
+-	die("relocs [--abs-syms|--abs-relocs|--reloc-info|--text|--realmode]" \
+-	    " vmlinux\n");
++	die("relocs [--abs-syms|--abs-relocs|--reloc-info|--text|--realmode|" \
++	    "--large-reloc]  vmlinux\n");
+ }
+ 
+ int main(int argc, char **argv)
+ {
+ 	int show_absolute_syms, show_absolute_relocs, show_reloc_info;
+-	int as_text, use_real_mode;
++	int as_text, use_real_mode, use_large_reloc;
+ 	const char *fname;
+ 	FILE *fp;
+ 	int i;
+@@ -30,6 +30,7 @@ int main(int argc, char **argv)
+ 	show_reloc_info = 0;
+ 	as_text = 0;
+ 	use_real_mode = 0;
++	use_large_reloc = 0;
+ 	fname = NULL;
+ 	for (i = 1; i < argc; i++) {
+ 		char *arg = argv[i];
+@@ -54,6 +55,10 @@ int main(int argc, char **argv)
+ 				use_real_mode = 1;
+ 				continue;
+ 			}
++			if (strcmp(arg, "--large-reloc") == 0) {
++				use_large_reloc = 1;
++				continue;
++			}
+ 		}
+ 		else if (!fname) {
+ 			fname = arg;
+@@ -75,11 +80,11 @@ int main(int argc, char **argv)
+ 	if (e_ident[EI_CLASS] == ELFCLASS64)
+ 		process_64(fp, use_real_mode, as_text,
+ 			   show_absolute_syms, show_absolute_relocs,
+-			   show_reloc_info);
++			   show_reloc_info, use_large_reloc);
+ 	else
+ 		process_32(fp, use_real_mode, as_text,
+ 			   show_absolute_syms, show_absolute_relocs,
+-			   show_reloc_info);
++			   show_reloc_info, use_large_reloc);
+ 	fclose(fp);
+ 	return 0;
+ }
 -- 
 2.17.0.921.gf22659ad46-goog
