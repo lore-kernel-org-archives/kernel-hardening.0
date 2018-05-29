@@ -1,240 +1,120 @@
 From: Thomas Garnier <thgarnie@google.com>
-Subject: [PATCH v4 21/27] x86/ftrace: Adapt function tracing for PIE support
-Date: Tue, 29 May 2018 15:15:22 -0700
-Message-Id: <20180529221625.33541-22-thgarnie@google.com>
+Subject: [PATCH v4 22/27] x86/modules: Add option to start module section after kernel
+Date: Tue, 29 May 2018 15:15:23 -0700
+Message-Id: <20180529221625.33541-23-thgarnie@google.com>
 In-Reply-To: <20180529221625.33541-1-thgarnie@google.com>
 References: <20180529221625.33541-1-thgarnie@google.com>
 To: kernel-hardening@lists.openwall.com
-Cc: Thomas Garnier <thgarnie@google.com>, Steven Rostedt <rostedt@goodmis.org>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Francis Deslauriers <francis.deslauriers@efficios.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Guenter Roeck <linux@roeck-us.net>, nixiaoming <nixiaoming@huawei.com>, James Hogan <jhogan@kernel.org>, linux-kernel@vger.kernel.org
+Cc: Thomas Garnier <thgarnie@google.com>, Skip Peter Zijlstra <peterz@infradead.org>, Skip Philippe Ombredanne <pombredanne@nexb.com>, Skip Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Skip Jiri Kosina <jkosina@suse.cz>, Skip Alexander Potapenko <glider@google.com>, Skip Joerg Roedel <jroedel@suse.de>, Skip Jan Beulich <JBeulich@suse.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Jonathan Corbet <corbet@lwn.net>, Andy Lutomirski <luto@kernel.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Tom Lendacky <thomas.lendacky@amd.com>, Juergen Gross <jgross@suse.com>, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-When using -fPIE/PIC with function tracing, the compiler generates a
-call through the GOT (call *__fentry__@GOTPCREL). This instruction
-takes 6 bytes instead of 5 on the usual relative call.
-
-If PIE is enabled, replace the 6th byte of the GOT call by a 1-byte nop
-so ftrace can handle the previous 5-bytes as before.
-
-Position Independent Executable (PIE) support will allow to extend the
-KASLR randomization range 0xffffffff80000000.
+Add an option so the module section is just after the mapped kernel. It
+will ensure position independent modules are always at the right
+distance from the kernel and do not require mcmodule=large. It also
+optimize the available size for modules by getting rid of the empty
+space on kernel randomization range.
 
 Signed-off-by: Thomas Garnier <thgarnie@google.com>
 ---
- arch/x86/include/asm/ftrace.h   |  4 --
- arch/x86/include/asm/sections.h |  4 ++
- arch/x86/kernel/ftrace.c        | 42 +++++++++++++++++-
- scripts/recordmcount.c          | 79 ++++++++++++++++++++++-----------
- 4 files changed, 97 insertions(+), 32 deletions(-)
+ Documentation/x86/x86_64/mm.txt         | 3 +++
+ arch/x86/Kconfig                        | 4 ++++
+ arch/x86/include/asm/pgtable_64_types.h | 6 ++++++
+ arch/x86/kernel/head64.c                | 5 ++++-
+ arch/x86/mm/dump_pagetables.c           | 3 ++-
+ 5 files changed, 19 insertions(+), 2 deletions(-)
 
-diff --git a/arch/x86/include/asm/ftrace.h b/arch/x86/include/asm/ftrace.h
-index c18ed65287d5..b1eb3f6735fc 100644
---- a/arch/x86/include/asm/ftrace.h
-+++ b/arch/x86/include/asm/ftrace.h
-@@ -24,10 +24,6 @@ extern void __fentry__(void);
+diff --git a/Documentation/x86/x86_64/mm.txt b/Documentation/x86/x86_64/mm.txt
+index 5432a96d31ff..334ab458c82d 100644
+--- a/Documentation/x86/x86_64/mm.txt
++++ b/Documentation/x86/x86_64/mm.txt
+@@ -77,3 +77,6 @@ Their order is preserved but their base will be offset early at boot time.
+ Be very careful vs. KASLR when changing anything here. The KASLR address
+ range must not overlap with anything except the KASAN shadow area, which is
+ correct as KASAN disables KASLR.
++
++If CONFIG_DYNAMIC_MODULE_BASE is enabled, the module section follows the end of
++the mapped kernel.
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 177e712201d1..94a00d81ec18 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -2198,6 +2198,10 @@ config RANDOMIZE_MEMORY_PHYSICAL_PADDING
  
- static inline unsigned long ftrace_call_adjust(unsigned long addr)
- {
--	/*
--	 * addr is the address of the mcount call instruction.
--	 * recordmcount does the necessary offset calculation.
--	 */
- 	return addr;
- }
+ 	   If unsure, leave at the default value.
  
-diff --git a/arch/x86/include/asm/sections.h b/arch/x86/include/asm/sections.h
-index 5c019d23d06b..da3d98bb2bcb 100644
---- a/arch/x86/include/asm/sections.h
-+++ b/arch/x86/include/asm/sections.h
-@@ -13,4 +13,8 @@ extern char __end_rodata_hpage_align[];
- extern char __entry_trampoline_start[], __entry_trampoline_end[];
- #endif
++# Module section starts just after the end of the kernel module
++config DYNAMIC_MODULE_BASE
++	bool
++
+ config X86_GLOBAL_STACKPROTECTOR
+ 	bool "Stack cookie using a global variable"
+ 	depends on CC_STACKPROTECTOR_AUTO
+diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/asm/pgtable_64_types.h
+index adb47552e6bb..3ab25b908879 100644
+--- a/arch/x86/include/asm/pgtable_64_types.h
++++ b/arch/x86/include/asm/pgtable_64_types.h
+@@ -7,6 +7,7 @@
+ #ifndef __ASSEMBLY__
+ #include <linux/types.h>
+ #include <asm/kaslr.h>
++#include <asm/sections.h>
  
-+#if defined(CONFIG_X86_PIE)
-+extern char __start_got[], __end_got[];
+ /*
+  * These are used to make use of C type-checking..
+@@ -126,7 +127,12 @@ extern unsigned int ptrs_per_p4d;
+ 
+ #define VMALLOC_END		(VMALLOC_START + (VMALLOC_SIZE_TB << 40) - 1)
+ 
++#ifdef CONFIG_DYNAMIC_MODULE_BASE
++#define MODULES_VADDR		ALIGN(((unsigned long)_end + PAGE_SIZE), PMD_SIZE)
++#else
+ #define MODULES_VADDR		(__START_KERNEL_map + KERNEL_IMAGE_SIZE)
 +#endif
 +
- #endif	/* _ASM_X86_SECTIONS_H */
-diff --git a/arch/x86/kernel/ftrace.c b/arch/x86/kernel/ftrace.c
-index 01ebcb6f263e..73b3c30cb7a3 100644
---- a/arch/x86/kernel/ftrace.c
-+++ b/arch/x86/kernel/ftrace.c
-@@ -102,7 +102,7 @@ static const unsigned char *ftrace_nop_replace(void)
- 
- static int
- ftrace_modify_code_direct(unsigned long ip, unsigned const char *old_code,
--		   unsigned const char *new_code)
-+			  unsigned const char *new_code)
- {
- 	unsigned char replaced[MCOUNT_INSN_SIZE];
- 
-@@ -135,6 +135,44 @@ ftrace_modify_code_direct(unsigned long ip, unsigned const char *old_code,
- 	return 0;
- }
- 
-+/* Bytes before call GOT offset */
-+const unsigned char got_call_preinsn[] = { 0xff, 0x15 };
-+
-+static int
-+ftrace_modify_initial_code(unsigned long ip, unsigned const char *old_code,
-+			   unsigned const char *new_code)
-+{
-+	unsigned char replaced[MCOUNT_INSN_SIZE + 1];
-+
-+	ftrace_expected = old_code;
-+
-+	/*
-+	 * If PIE is not enabled or no GOT call was found, default to the
-+	 * original approach to code modification.
-+	 */
-+	if (!IS_ENABLED(CONFIG_X86_PIE) ||
-+	    probe_kernel_read(replaced, (void *)ip, sizeof(replaced)) ||
-+	    memcmp(replaced, got_call_preinsn, sizeof(got_call_preinsn)))
-+		return ftrace_modify_code_direct(ip, old_code, new_code);
-+
-+	/*
-+	 * Build a nop slide with a 5-byte nop and 1-byte nop to keep the ftrace
-+	 * hooking algorithm working with the expected 5 bytes instruction.
-+	 */
-+	memcpy(replaced, new_code, MCOUNT_INSN_SIZE);
-+	replaced[MCOUNT_INSN_SIZE] = ideal_nops[1][0];
-+
-+	ip = text_ip_addr(ip);
-+
-+	if (probe_kernel_write((void *)ip, replaced, sizeof(replaced)))
-+		return -EPERM;
-+
-+	sync_core();
-+
-+	return 0;
-+
-+}
-+
- int ftrace_make_nop(struct module *mod,
- 		    struct dyn_ftrace *rec, unsigned long addr)
- {
-@@ -153,7 +191,7 @@ int ftrace_make_nop(struct module *mod,
- 	 * just modify the code directly.
+ /* The module sections ends with the start of the fixmap */
+ #define MODULES_END		_AC(0xffffffffff000000, UL)
+ #define MODULES_LEN		(MODULES_END - MODULES_VADDR)
+diff --git a/arch/x86/kernel/head64.c b/arch/x86/kernel/head64.c
+index fa661fb97127..3a1ce822e1c0 100644
+--- a/arch/x86/kernel/head64.c
++++ b/arch/x86/kernel/head64.c
+@@ -394,12 +394,15 @@ asmlinkage __visible void __init x86_64_start_kernel(char * real_mode_data)
+ 	 * Build-time sanity checks on the kernel image and module
+ 	 * area mappings. (these are purely build-time and produce no code)
  	 */
- 	if (addr == MCOUNT_ADDR)
--		return ftrace_modify_code_direct(rec->ip, old, new);
-+		return ftrace_modify_initial_code(rec->ip, old, new);
- 
- 	ftrace_expected = NULL;
- 
-diff --git a/scripts/recordmcount.c b/scripts/recordmcount.c
-index 895c40e8679f..aa71b912958d 100644
---- a/scripts/recordmcount.c
-+++ b/scripts/recordmcount.c
-@@ -171,33 +171,9 @@ umalloc(size_t size)
- 	return addr;
- }
- 
--static unsigned char ideal_nop5_x86_64[5] = { 0x0f, 0x1f, 0x44, 0x00, 0x00 };
--static unsigned char ideal_nop5_x86_32[5] = { 0x3e, 0x8d, 0x74, 0x26, 0x00 };
--static unsigned char *ideal_nop;
--
- static char rel_type_nop;
--
- static int (*make_nop)(void *map, size_t const offset);
--
--static int make_nop_x86(void *map, size_t const offset)
--{
--	uint32_t *ptr;
--	unsigned char *op;
--
--	/* Confirm we have 0xe8 0x0 0x0 0x0 0x0 */
--	ptr = map + offset;
--	if (*ptr != 0)
--		return -1;
--
--	op = map + offset - 1;
--	if (*op != 0xe8)
--		return -1;
--
--	/* convert to nop */
--	ulseek(fd_map, offset - 1, SEEK_SET);
--	uwrite(fd_map, ideal_nop, 5);
--	return 0;
--}
-+static unsigned char *ideal_nop;
- 
- static unsigned char ideal_nop4_arm_le[4] = { 0x00, 0x00, 0xa0, 0xe1 }; /* mov r0, r0 */
- static unsigned char ideal_nop4_arm_be[4] = { 0xe1, 0xa0, 0x00, 0x00 }; /* mov r0, r0 */
-@@ -447,6 +423,50 @@ static void MIPS64_r_info(Elf64_Rel *const rp, unsigned sym, unsigned type)
- 	}).r_info;
- }
- 
-+static unsigned char ideal_nop5_x86_64[5] = { 0x0f, 0x1f, 0x44, 0x00, 0x00 };
-+static unsigned char ideal_nop6_x86_64[6] = { 0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00 };
-+static unsigned char ideal_nop5_x86_32[5] = { 0x3e, 0x8d, 0x74, 0x26, 0x00 };
-+static size_t ideal_nop_x86_size;
-+
-+static unsigned char stub_default_x86[2] = { 0xe8, 0x00 };   /* call relative */
-+static unsigned char stub_got_x86[3] = { 0xff, 0x15, 0x00 }; /* call .got */
-+static unsigned char *stub_x86;
-+static size_t stub_x86_size;
-+
-+static int make_nop_x86(void *map, size_t const offset)
-+{
-+	uint32_t *ptr;
-+	size_t stub_offset = offset - stub_x86_size;
-+
-+	/* confirm we have the expected stub */
-+	ptr = map + stub_offset;
-+	if (memcmp(ptr, stub_x86, stub_x86_size)) {
-+		return -1;
-+	}
-+
-+	/* convert to nop */
-+	ulseek(fd_map, stub_offset, SEEK_SET);
-+	uwrite(fd_map, ideal_nop, ideal_nop_x86_size);
-+	return 0;
-+}
-+
-+/* Swap the stub and nop for a got call if the binary is built with PIE */
-+static int is_fake_mcount_x86_x64(Elf64_Rel const *rp)
-+{
-+	if (ELF64_R_TYPE(rp->r_info) == R_X86_64_GOTPCREL) {
-+		ideal_nop = ideal_nop6_x86_64;
-+		ideal_nop_x86_size = sizeof(ideal_nop6_x86_64);
-+		stub_x86 = stub_got_x86;
-+		stub_x86_size = sizeof(stub_got_x86);
-+		mcount_adjust_64 = 1 - stub_x86_size;
-+	}
-+
-+	/* Once the relocation was checked, rollback to default */
-+	is_fake_mcount64 = fn_is_fake_mcount64;
-+	return is_fake_mcount64(rp);
-+}
-+
-+
- static void
- do_file(char const *const fname)
- {
-@@ -509,6 +529,9 @@ do_file(char const *const fname)
- 		rel_type_nop = R_386_NONE;
- 		make_nop = make_nop_x86;
- 		ideal_nop = ideal_nop5_x86_32;
-+		ideal_nop_x86_size = sizeof(ideal_nop5_x86_32);
-+		stub_x86 = stub_default_x86;
-+		stub_x86_size = sizeof(stub_default_x86);
- 		mcount_adjust_32 = -1;
- 		break;
- 	case EM_ARM:	 reltype = R_ARM_ABS32;
-@@ -533,9 +556,13 @@ do_file(char const *const fname)
- 	case EM_X86_64:
- 		make_nop = make_nop_x86;
- 		ideal_nop = ideal_nop5_x86_64;
-+		ideal_nop_x86_size = sizeof(ideal_nop5_x86_64);
-+		stub_x86 = stub_default_x86;
-+		stub_x86_size = sizeof(stub_default_x86);
- 		reltype = R_X86_64_64;
- 		rel_type_nop = R_X86_64_NONE;
--		mcount_adjust_64 = -1;
-+		is_fake_mcount64 = is_fake_mcount_x86_x64;
-+		mcount_adjust_64 = 1 - stub_x86_size;
- 		break;
- 	}  /* end switch */
- 
++#ifndef CONFIG_DYNAMIC_MODULE_BASE
+ 	BUILD_BUG_ON(MODULES_VADDR < __START_KERNEL_map);
+ 	BUILD_BUG_ON(MODULES_VADDR - __START_KERNEL_map < KERNEL_IMAGE_SIZE);
+-	BUILD_BUG_ON(MODULES_LEN + KERNEL_IMAGE_SIZE > 2*PUD_SIZE);
++	BUILD_BUG_ON(!IS_ENABLED(CONFIG_RANDOMIZE_BASE_LARGE) &&
++		     MODULES_LEN + KERNEL_IMAGE_SIZE > 2*PUD_SIZE);
+ 	BUILD_BUG_ON((__START_KERNEL_map & ~PMD_MASK) != 0);
+ 	BUILD_BUG_ON((MODULES_VADDR & ~PMD_MASK) != 0);
+ 	BUILD_BUG_ON(!(MODULES_VADDR > __START_KERNEL));
++#endif
+ 	MAYBE_BUILD_BUG_ON(!(((MODULES_END - 1) & PGDIR_MASK) ==
+ 				(__START_KERNEL & PGDIR_MASK)));
+ 	BUILD_BUG_ON(__fix_to_virt(__end_of_fixed_addresses) <= MODULES_END);
+diff --git a/arch/x86/mm/dump_pagetables.c b/arch/x86/mm/dump_pagetables.c
+index cc7ff5957194..dca4098ce4fd 100644
+--- a/arch/x86/mm/dump_pagetables.c
++++ b/arch/x86/mm/dump_pagetables.c
+@@ -105,7 +105,7 @@ static struct addr_marker address_markers[] = {
+ 	[EFI_END_NR]		= { EFI_VA_END,		"EFI Runtime Services" },
+ #endif
+ 	[HIGH_KERNEL_NR]	= { __START_KERNEL_map,	"High Kernel Mapping" },
+-	[MODULES_VADDR_NR]	= { MODULES_VADDR,	"Modules" },
++	[MODULES_VADDR_NR]	= { 0/*MODULES_VADDR*/,	"Modules" },
+ 	[MODULES_END_NR]	= { MODULES_END,	"End Modules" },
+ 	[FIXADDR_START_NR]	= { FIXADDR_START,	"Fixmap Area" },
+ 	[END_OF_SPACE_NR]	= { -1,			NULL }
+@@ -600,6 +600,7 @@ static int __init pt_dump_init(void)
+ 	address_markers[KASAN_SHADOW_START_NR].start_address = KASAN_SHADOW_START;
+ 	address_markers[KASAN_SHADOW_END_NR].start_address = KASAN_SHADOW_END;
+ #endif
++	address_markers[MODULES_VADDR_NR].start_address = MODULES_VADDR;
+ #endif
+ #ifdef CONFIG_X86_32
+ 	address_markers[VMALLOC_START_NR].start_address = VMALLOC_START;
 -- 
 2.17.0.921.gf22659ad46-goog
