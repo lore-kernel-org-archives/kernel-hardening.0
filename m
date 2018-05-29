@@ -1,70 +1,67 @@
 From: YaoJun <yaojun8558363@gmail.com>
-Subject: [PATCH 2/4] migrate swapper_pg_dir
-Date: Tue, 29 May 2018 12:37:54 +0800
-Message-Id: <20180529043754.27843-1-yaojun8558363@gmail.com>
+Subject: [PATCH 3/4] migrate swapper_pg_dir
+Date: Tue, 29 May 2018 12:38:08 +0800
+Message-Id: <20180529043808.27896-1-yaojun8558363@gmail.com>
 To: kernel-hardening@lists.openwall.com
 Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, jmorris@namei.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Introduce a variable to record new virtual address of
- swapper_pg_dir.
+Because tramp_map_kernel/tramp_unmap_kernel macro update
+ttbr1 by add/sub offset, so we need to migrate both
+swapper_pg_dir and tramp_pg_dir. Before doing that, make
+tramp_pg_dir and swapper_pg_dir adjacent.
 
 ---
- arch/arm64/include/asm/mmu_context.h | 2 +-
- arch/arm64/include/asm/pgtable.h     | 1 +
- arch/arm64/mm/kasan_init.c           | 2 +-
- arch/arm64/mm/mmu.c                  | 1 +
- 4 files changed, 4 insertions(+), 2 deletions(-)
+ arch/arm64/kernel/entry.S       |  4 ++--
+ arch/arm64/kernel/vmlinux.lds.S | 10 +++++-----
+ 2 files changed, 7 insertions(+), 7 deletions(-)
 
-diff --git a/arch/arm64/include/asm/mmu_context.h b/arch/arm64/include/asm/mmu_context.h
-index 3eddb871f251..481c2d16adeb 100644
---- a/arch/arm64/include/asm/mmu_context.h
-+++ b/arch/arm64/include/asm/mmu_context.h
-@@ -57,7 +57,7 @@ static inline void cpu_set_reserved_ttbr0(void)
+diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+index ec2ee720e33e..b35425feaf56 100644
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -1004,7 +1004,7 @@ __ni_sys_trace:
  
- static inline void cpu_switch_mm(pgd_t *pgd, struct mm_struct *mm)
- {
--	BUG_ON(pgd == swapper_pg_dir);
-+	BUG_ON(pgd == new_swapper_pg_dir);
- 	cpu_set_reserved_ttbr0();
- 	cpu_do_switch_mm(virt_to_phys(pgd),mm);
- }
-diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
-index 14ba344b1af7..7abec25cedd2 100644
---- a/arch/arm64/include/asm/pgtable.h
-+++ b/arch/arm64/include/asm/pgtable.h
-@@ -723,6 +723,7 @@ extern pgd_t swapper_pg_end[];
- extern pgd_t idmap_pg_dir[PTRS_PER_PGD];
- extern pgd_t tramp_pg_dir[PTRS_PER_PGD];
- extern phys_addr_t __pa_swapper_pg_dir;
-+extern pgd_t *new_swapper_pg_dir;
+ 	.macro tramp_map_kernel, tmp
+ 	mrs	\tmp, ttbr1_el1
+-	add	\tmp, \tmp, #(PAGE_SIZE + RESERVED_TTBR0_SIZE)
++	add	\tmp, \tmp, #(PAGE_SIZE)
+ 	bic	\tmp, \tmp, #USER_ASID_FLAG
+ 	msr	ttbr1_el1, \tmp
+ #ifdef CONFIG_QCOM_FALKOR_ERRATUM_1003
+@@ -1023,7 +1023,7 @@ alternative_else_nop_endif
  
- /*
-  * Encode and decode a swap entry:
-diff --git a/arch/arm64/mm/kasan_init.c b/arch/arm64/mm/kasan_init.c
-index dd4f28c19165..08bcaae4725e 100644
---- a/arch/arm64/mm/kasan_init.c
-+++ b/arch/arm64/mm/kasan_init.c
-@@ -197,7 +197,7 @@ void __init kasan_init(void)
- 	 * tmp_pg_dir used to keep early shadow mapped until full shadow
- 	 * setup will be finished.
- 	 */
--	memcpy(tmp_pg_dir, swapper_pg_dir, sizeof(tmp_pg_dir));
-+	memcpy(tmp_pg_dir, new_swapper_pg_dir, sizeof(tmp_pg_dir));
- 	dsb(ishst);
- 	cpu_replace_ttbr1(__pa_symbol(tmp_pg_dir));
+ 	.macro tramp_unmap_kernel, tmp
+ 	mrs	\tmp, ttbr1_el1
+-	sub	\tmp, \tmp, #(PAGE_SIZE + RESERVED_TTBR0_SIZE)
++	sub	\tmp, \tmp, #(PAGE_SIZE)
+ 	orr	\tmp, \tmp, #USER_ASID_FLAG
+ 	msr	ttbr1_el1, \tmp
+ 	/*
+diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
+index 0221aca6493d..a094156e05a4 100644
+--- a/arch/arm64/kernel/vmlinux.lds.S
++++ b/arch/arm64/kernel/vmlinux.lds.S
+@@ -219,15 +219,15 @@ SECTIONS
+ 	idmap_pg_dir = .;
+ 	. += IDMAP_DIR_SIZE;
  
-diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-index 41eee333f91a..26ba3e70a91c 100644
---- a/arch/arm64/mm/mmu.c
-+++ b/arch/arm64/mm/mmu.c
-@@ -56,6 +56,7 @@ u64 kimage_voffset __ro_after_init;
- EXPORT_SYMBOL(kimage_voffset);
- 
- phys_addr_t __pa_swapper_pg_dir;
-+pgd_t *new_swapper_pg_dir = swapper_pg_dir;
- 
- /*
-  * Empty_zero_page is a special page that is used for zero-initialized data
+-#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
+-	tramp_pg_dir = .;
+-	. += PAGE_SIZE;
+-#endif
+-
+ #ifdef CONFIG_ARM64_SW_TTBR0_PAN
+ 	reserved_ttbr0 = .;
+ 	. += RESERVED_TTBR0_SIZE;
+ #endif
++
++#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
++	tramp_pg_dir = .;
++	. += PAGE_SIZE;
++#endif
+ 	swapper_pg_dir = .;
+ 	. += SWAPPER_DIR_SIZE;
+ 	swapper_pg_end = .;
 -- 
 2.17.0
