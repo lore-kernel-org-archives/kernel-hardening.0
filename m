@@ -1,62 +1,42 @@
-From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.9 029/329] kvm: x86: fix KVM_XEN_HVM_CONFIG ioctl
-Date: Mon, 28 May 2018 11:59:18 +0200
-Message-Id: <20180528100244.842346458@linuxfoundation.org>
-In-Reply-To: <20180528100241.796630982@linuxfoundation.org>
-References: <20180528100241.796630982@linuxfoundation.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Paolo Bonzini <pbonzini@redhat.com>, Sasha Levin <alexander.levin@microsoft.com>
+From: YaoJun <yaojun8558363@gmail.com>
+Subject: [PATCH 0/4] migrate swapper_pg_dir
+Date: Tue, 29 May 2018 12:37:28 +0800
+Message-Id: <20180529043728.27738-1-yaojun8558363@gmail.com>
+To: kernel-hardening@lists.openwall.com
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, jmorris@namei.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-4.9-stable review patch.  If anyone has any objections, please let me know.
+Because the offset between swapper_pg_dir and _text is fixed, when
+attackers break KASLR, they can calculate the address of swapper_pg_dir,
+and then they can apply KSMA(Kernel Space Mirror Attack). The principle
+of KSMA is to insert an entry to PGD, and this entry has type of block
+with AP = 01, so attackers can read/write kernel memory directly. Details
+can reference:
 
-------------------
+https://www.blackhat.com/docs/asia-18/asia-18-WANG-KSMA-Breaking-Android-kernel-isolation-and-Rooting-with-ARM-MMU-features.pdf
 
-From: Paolo Bonzini <pbonzini@redhat.com>
+These patches migrate swapper_pg_dir to new place, and there is no
+relationship between swapper_pg_dir and _text. Because this is done
+during kernel booting, the physical address of new swapper_pg_dir may
+be fixed. Do we need to further randomize it?
 
-[ Upstream commit 51776043afa415435c7e4636204fbe4f7edc4501 ]
+YaoJun (4):
+  Introduce a variable to record physical address of swapper_pg_dir.
+  Introduce a variable to record new virtual address of swapper_pg_dir.
+  Make tramp_pg_dir and swapper_pg_dir adjacent
+  Migrate swapper_pg_dir and tramp_pg_dir.
 
-This ioctl is obsolete (it was used by Xenner as far as I know) but
-still let's not break it gratuitously...  Its handler is copying
-directly into struct kvm.  Go through a bounce buffer instead, with
-the added benefit that we can actually do something useful with the
-flags argument---the previous code was exiting with -EINVAL but still
-doing the copy.
+ arch/arm64/include/asm/mmu_context.h |  6 +--
+ arch/arm64/include/asm/pgtable.h     |  2 +
+ arch/arm64/kernel/cpufeature.c       |  2 +-
+ arch/arm64/kernel/entry.S            |  4 +-
+ arch/arm64/kernel/head.S             | 10 ++--
+ arch/arm64/kernel/hibernate.c        |  2 +-
+ arch/arm64/kernel/sleep.S            |  2 +
+ arch/arm64/kernel/vmlinux.lds.S      | 10 ++--
+ arch/arm64/mm/kasan_init.c           |  6 +--
+ arch/arm64/mm/mmu.c                  | 72 +++++++++++++++++++---------
+ 10 files changed, 74 insertions(+), 42 deletions(-)
 
-This technically is a userspace ABI breakage, but since no one should be
-using the ioctl, it's a good occasion to see if someone actually
-complains.
-
-Cc: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Radim Krčmář <rkrcmar@redhat.com>
-Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
-Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
-Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
----
- arch/x86/kvm/x86.c |    7 ++++---
- 1 file changed, 4 insertions(+), 3 deletions(-)
-
---- a/arch/x86/kvm/x86.c
-+++ b/arch/x86/kvm/x86.c
-@@ -4131,13 +4131,14 @@ long kvm_arch_vm_ioctl(struct file *filp
- 		mutex_unlock(&kvm->lock);
- 		break;
- 	case KVM_XEN_HVM_CONFIG: {
-+		struct kvm_xen_hvm_config xhc;
- 		r = -EFAULT;
--		if (copy_from_user(&kvm->arch.xen_hvm_config, argp,
--				   sizeof(struct kvm_xen_hvm_config)))
-+		if (copy_from_user(&xhc, argp, sizeof(xhc)))
- 			goto out;
- 		r = -EINVAL;
--		if (kvm->arch.xen_hvm_config.flags)
-+		if (xhc.flags)
- 			goto out;
-+		memcpy(&kvm->arch.xen_hvm_config, &xhc, sizeof(xhc));
- 		r = 0;
- 		break;
- 	}
+-- 
+2.17.0
