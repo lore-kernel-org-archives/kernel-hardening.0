@@ -1,153 +1,28 @@
-Subject: Re: [PATCH 4/4] arm64/mm: migrate swapper_pg_dir and tramp_pg_dir
-References: <20180601080918.11918-1-yaojun8558363@gmail.com>
-From: Robin Murphy <robin.murphy@arm.com>
-Message-ID: <87d80d7e-5c9f-671a-c487-d51d05876077@arm.com>
-Date: Fri, 1 Jun 2018 10:47:04 +0100
 MIME-Version: 1.0
-In-Reply-To: <20180601080918.11918-1-yaojun8558363@gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Jun Yao <yaojun8558363@gmail.com>, linux-arm-kernel@lists.infradead.org
-Cc: catalin.marinas@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, greg@kroah.com, kernel-hardening@lists.openwall.com
+In-Reply-To: <20180601004233.37822-6-keescook@chromium.org>
+References: <20180601004233.37822-1-keescook@chromium.org> <20180601004233.37822-6-keescook@chromium.org>
+From: Andy Shevchenko <andy.shevchenko@gmail.com>
+Date: Fri, 1 Jun 2018 13:18:29 +0300
+Message-ID: <CAHp75Vdgz7edHYnqyC9d0ciSwDDyMEF7Jwr1bgnBe-UvUqoUtg@mail.gmail.com>
+Subject: Re: [PATCH v3 05/16] lib: overflow: Add memory allocation overflow tests
+Content-Type: text/plain; charset="UTF-8"
+To: Kees Cook <keescook@chromium.org>
+Cc: Matthew Wilcox <mawilcox@microsoft.com>, Linus Torvalds <torvalds@linux-foundation.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Matthew Wilcox <willy@infradead.org>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/06/18 09:09, Jun Yao wrote:
-> Migrate swapper_pg_dir and tramp_pg_dir. And their virtual addresses
-> do not correlate with kernel's address.
+On Fri, Jun 1, 2018 at 3:42 AM, Kees Cook <keescook@chromium.org> wrote:
+> Make sure that the memory allocators are behaving as expected in the face
+> of overflows.
 
-I think this might break software PAN, which IIRC depends on the 
-reserved TTBR0 PGD being physically adjacent to the live swapper PGD for 
-the trickery in __uaccess_ttbr0_{en,dis}able() to work.
+>  #include <linux/module.h>
+>  #include <linux/overflow.h>
+>  #include <linux/types.h>
+> +#include <linux/slab.h>
+> +#include <linux/device.h>
+> +#include <linux/mm.h>
 
-Robin.
+A nit, can we keep it in order?
 
-> Signed-off-by: Jun Yao <yaojun8558363@gmail.com>
-> ---
->   arch/arm64/mm/mmu.c | 70 +++++++++++++++++++++++++++------------------
->   1 file changed, 42 insertions(+), 28 deletions(-)
-> 
-> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-> index 26ba3e70a91c..5baae59479d8 100644
-> --- a/arch/arm64/mm/mmu.c
-> +++ b/arch/arm64/mm/mmu.c
-> @@ -57,6 +57,9 @@ EXPORT_SYMBOL(kimage_voffset);
->   
->   phys_addr_t __pa_swapper_pg_dir;
->   pgd_t *new_swapper_pg_dir = swapper_pg_dir;
-> +#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
-> +pgd_t *new_tramp_pg_dir;
-> +#endif
->   
->   /*
->    * Empty_zero_page is a special page that is used for zero-initialized data
-> @@ -80,19 +83,14 @@ pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
->   }
->   EXPORT_SYMBOL(phys_mem_access_prot);
->   
-> -static phys_addr_t __init early_pgtable_alloc(void)
-> +static void __init clear_page_phys(phys_addr_t phys)
->   {
-> -	phys_addr_t phys;
-> -	void *ptr;
-> -
-> -	phys = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
-> -
->   	/*
->   	 * The FIX_{PGD,PUD,PMD} slots may be in active use, but the FIX_PTE
->   	 * slot will be free, so we can (ab)use the FIX_PTE slot to initialise
->   	 * any level of table.
->   	 */
-> -	ptr = pte_set_fixmap(phys);
-> +	void *ptr = pte_set_fixmap(phys);
->   
->   	memset(ptr, 0, PAGE_SIZE);
->   
-> @@ -101,6 +99,14 @@ static phys_addr_t __init early_pgtable_alloc(void)
->   	 * table walker
->   	 */
->   	pte_clear_fixmap();
-> +}
-> +
-> +static phys_addr_t __init early_pgtable_alloc(void)
-> +{
-> +	phys_addr_t phys;
-> +
-> +	phys = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
-> +	clear_page_phys(phys);
->   
->   	return phys;
->   }
-> @@ -554,6 +560,10 @@ static int __init map_entry_trampoline(void)
->   	__create_pgd_mapping(tramp_pg_dir, pa_start, TRAMP_VALIAS, PAGE_SIZE,
->   			     prot, pgd_pgtable_alloc, 0);
->   
-> +	memcpy(new_tramp_pg_dir, tramp_pg_dir, PGD_SIZE);
-> +	memblock_free(__pa_symbol(tramp_pg_dir),
-> +		__pa_symbol(swapper_pg_dir) - __pa_symbol(tramp_pg_dir));
-> +
->   	/* Map both the text and data into the kernel page table */
->   	__set_fixmap(FIX_ENTRY_TRAMP_TEXT, pa_start, prot);
->   	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE)) {
-> @@ -631,36 +641,40 @@ static void __init map_kernel(pgd_t *pgdp)
->    */
->   void __init paging_init(void)
->   {
-> -	phys_addr_t pgd_phys = early_pgtable_alloc();
-> -	pgd_t *pgdp = pgd_set_fixmap(pgd_phys);
-> +	phys_addr_t pgd_phys;
-> +	pgd_t *pgdp;
-> +
-> +#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
-> +	phys_addr_t mem_size;
-> +	phys_addr_t p;
->   
-> -	__pa_swapper_pg_dir = __pa_symbol(swapper_pg_dir);
-> +	mem_size = __pa_symbol(swapper_pg_dir) + PAGE_SIZE
-> +				- __pa_symbol(tramp_pg_dir);
-> +	pgd_phys = memblock_alloc(mem_size, PAGE_SIZE);
-> +
-> +	for (p = pgd_phys; p < pgd_phys + mem_size; p += PAGE_SIZE)
-> +		clear_page_phys(p);
-> +
-> +	new_tramp_pg_dir = __va(pgd_phys);
-> +	__pa_swapper_pg_dir = pgd_phys + PAGE_SIZE;
-> +#else
-> +	pgd_phys = early_pgtable_alloc();
-> +	__pa_swapper_pg_dir = pgd_phys;
-> +#endif
-> +	new_swapper_pg_dir = __va(__pa_swapper_pg_dir);
-> +
-> +	pgdp = pgd_set_fixmap(__pa_swapper_pg_dir);
->   
->   	map_kernel(pgdp);
->   	map_mem(pgdp);
->   
-> -	/*
-> -	 * We want to reuse the original swapper_pg_dir so we don't have to
-> -	 * communicate the new address to non-coherent secondaries in
-> -	 * secondary_entry, and so cpu_switch_mm can generate the address with
-> -	 * adrp+add rather than a load from some global variable.
-> -	 *
-> -	 * To do this we need to go via a temporary pgd.
-> -	 */
-> -	cpu_replace_ttbr1(pgd_phys);
-> -	memcpy(swapper_pg_dir, pgdp, PGD_SIZE);
->   	cpu_replace_ttbr1(__pa_swapper_pg_dir);
-> +	init_mm.pgd = new_swapper_pg_dir;
->   
->   	pgd_clear_fixmap();
-> -	memblock_free(pgd_phys, PAGE_SIZE);
->   
-> -	/*
-> -	 * We only reuse the PGD from the swapper_pg_dir, not the pud + pmd
-> -	 * allocated with it.
-> -	 */
-> -	memblock_free(__pa_symbol(swapper_pg_dir) + PAGE_SIZE,
-> -		      __pa_symbol(swapper_pg_end) - __pa_symbol(swapper_pg_dir)
-> -		      - PAGE_SIZE);
-> +	memblock_free(__pa_symbol(swapper_pg_dir),
-> +		__pa_symbol(swapper_pg_end) - __pa_symbol(swapper_pg_dir));
->   }
->   
->   /*
-> 
+-- 
+With Best Regards,
+Andy Shevchenko
