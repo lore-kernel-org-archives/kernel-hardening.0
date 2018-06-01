@@ -1,74 +1,60 @@
-In-Reply-To: 
-From: Peter Rosin <peda@axentia.se>
-Subject: Re: [PATCH v3 00/16] Provide saturating helpers for allocation
-Message-ID: <0634bebc-e16d-ed40-ee26-5401e4bc7b50@axentia.se>
-Date: Fri, 1 Jun 2018 15:50:57 +0200
+Subject: Re: [PATCH v4 18/27] xen: Adapt assembly for PIE support
+References: <20180529221625.33541-1-thgarnie@google.com>
+ <20180529221625.33541-19-thgarnie@google.com>
+From: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Message-ID: <cfd5f012-4ce2-639b-9ff0-4ad627805fd4@oracle.com>
+Date: Fri, 1 Jun 2018 11:44:07 -0400
 MIME-Version: 1.0
+In-Reply-To: <20180529221625.33541-19-thgarnie@google.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Matthew Wilcox <mawilcox@microsoft.com>, Linus Torvalds <torvalds@linux-foundation.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+To: Thomas Garnier <thgarnie@google.com>, kernel-hardening@lists.openwall.com
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Juergen Gross <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Kate Stewart <kstewart@linuxfoundation.org>, "H.J. Lu" <hjl.tools@gmail.com>, linux-kernel@vger.kernel.org, xen-devel@lists.xenproject.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook wrote:
-> This is a stab at providing three new helpers for allocation size
-> calculation:
-> 
-> struct_size(), array_size(), and array3_size().
-> 
-> These are implemented on top of Rasmus's overflow checking functions. The
-> existing allocators are adjusted to use the more efficient overflow
-> checks as well.
-> 
-> While the tree-wide conversions continue to be largely unchanged,
-> I've updated their commit logs a bit with some more details on
-> rationale and options. Notably, while there are NO plans to replace
-> kmalloc_array() and kcalloc() with kmalloc(array_size(...),...) and
-> kzalloc(array_size(...),...), the treewide conversions only add the
-> new helpers, as making the ..._array() and ...calloc() conversions
-> balloons the Coccinelle script terribly (I haven't found a way to
-> make the replacement function name depend on the matched regular expression).
-> So, while nothing does:
->     kmalloc_array(a, b, ...) -> kmalloc(array_size(a, b), ...)
-> the treewide changes DO perform changes like this:
->     kmalloc(a * b, ...) -> kmalloc(array_size(a, b), ...)
-> 
-> It should also be noted that the treewide changes overlap with a few
-> recently reported "real" overflows, so these aren't theoretical fixes.
-> 
-> At the very least, I'd like to get the helpers and self-test landed in
-> the v4.18 merge window (coming right up!) since those are relatively
-> self-contained. If the treewide changes need adjustment we've got,
-> in theory, through the end of -rc2 to land those.
+On 05/29/2018 06:15 PM, Thomas Garnier wrote:
+> diff --git a/arch/x86/xen/xen-pvh.S b/arch/x86/xen/xen-pvh.S
+> index ca2d3b2bf2af..82ba89ba8bb3 100644
+> --- a/arch/x86/xen/xen-pvh.S
+> +++ b/arch/x86/xen/xen-pvh.S
+> @@ -114,8 +114,8 @@ ENTRY(pvh_start_xen)
+>  	call xen_prepare_pvh
+>  
+>  	/* startup_64 expects boot_params in %rsi. */
+> -	mov $_pa(pvh_bootparams), %rsi
+> -	mov $_pa(startup_64), %rax
+> +	movabs $_pa(pvh_bootparams), %rsi
+> +	movabs $_pa(startup_64), %rax
+>  	jmp *%rax
+>  
+>  #else /* CONFIG_X86_64 */
+> @@ -161,10 +161,15 @@ END(pvh_start_xen)
+>  
+>  	.section ".init.data","aw"
+>  	.balign 8
+> +	/*
+> +	 * Use a quad for _pa(gdt_start) because PIE does not understand a
+> +	 * long is enough. The resulting value will still be in the lower long
+> +	 * part.
+> +	 */
+>  gdt:
+>  	.word gdt_end - gdt_start
+> -	.long _pa(gdt_start)
+> -	.word 0
+> +	.quad _pa(gdt_start)
 
-In some places you make an effort to have the count as the first
-argument, e.g. in "treewide: Use array_size() for kmalloc()-family"
 
--	kbuf = kmalloc(sizeof(*kbuf) * maxevents, GFP_KERNEL);
-+	kbuf = kmalloc(array_size(maxevents, sizeof(*kbuf)), GFP_KERNEL);
+With this becoming .quad 32-bit compilation fails:
 
-which is reordered, and from the same patch
+/data/root/linux/arch/x86/xen/xen-pvh.S: Assembler messages:
+/data/root/linux/arch/x86/xen/xen-pvh.S:147: Error: cannot represent
+relocation type BFD_RELOC_64
 
--	mapping->bitmaps = kzalloc(extensions * sizeof(unsigned long *),
--				GFP_KERNEL);
-+	mapping->bitmaps = kzalloc(array_size(extensions, sizeof(unsigned long *)),
-+				   GFP_KERNEL);
 
-which is not reordered. That is all fine by me.
+-boris
 
-But then, in "treewide: Use array_size() for devm_*alloc()-like, leftovers"
-this reordering thing is not happening, e.g.
 
- 	values = devm_kzalloc(&pdev->dev,
--			      sizeof(*mux->data.values) * mux->data.n_values,
-+			      array_size(sizeof(*mux->data.values), mux->data.n_values),
- 			      GFP_KERNEL);
-
-Also, the above shows two of numerous examples of the tools breaking the
-80 column "rule", even though the surrounding code makes decent effort to
-uphold it.
-
-I can see why these things happen, but they are annoying.
-
-Cheers,
-Peter
+> +	.balign 8
+>  gdt_start:
+>  	.quad 0x0000000000000000            /* NULL descriptor */
+>  #ifdef CONFIG_X86_64
