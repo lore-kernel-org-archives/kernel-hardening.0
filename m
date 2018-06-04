@@ -1,24 +1,27 @@
-In-Reply-To: <20180514130316.23855-1-mpe@ellerman.id.au>
-From: Michael Ellerman <patch-notifications@ellerman.id.au>
-Subject: Re: [1/2] powerpc: Rename thread_struct.fs to addr_limit
-Message-Id: <40zxg609Blz9ryk@ozlabs.org>
-Date: Tue,  5 Jun 2018 00:10:57 +1000 (AEST)
-To: Michael Ellerman <mpe@ellerman.id.au>, linuxppc-dev@ozlabs.org
-Cc: thgarnie@google.com, keescook@chromium.org, kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+In-Reply-To: <CAJHCu1Ky09DWskcD4nVW5u1C5faWMv1A4kcxWzdiap7+G1SPkg@mail.gmail.com>
+References: <1527346246-1334-1-git-send-email-s.mesoraca16@gmail.com>
+ <CAGXu5j+PHzDwnJxJwMJ=WuhacDn_vJWe9xZx+Kbsh28vxOGRiA@mail.gmail.com>
+ <CA+55aFx6DBp+d33_fytOGPWw11xg_L0MdGp1M2e5Obc0N9kMRQ@mail.gmail.com> <CAJHCu1Ky09DWskcD4nVW5u1C5faWMv1A4kcxWzdiap7+G1SPkg@mail.gmail.com>
+From: Steve Kemp <steve.backup.kemp@gmail.com>
+Date: Mon, 4 Jun 2018 19:57:23 +0300
+Message-ID: <CABxV-EWN8ag2zk2CDxWyC3+DvuM3ADbf=qGm4uczK8YnOd5JBQ@mail.gmail.com>
+Subject: Re: [PATCH] proc: prevent a task from writing on its own /proc/*/mem
+Content-Type: text/plain; charset="UTF-8"
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 2018-05-14 at 13:03:15 UTC, Michael Ellerman wrote:
-> It's called 'fs' for historical reasons, it's named after the x86 'FS'
-> register. But we don't have to use that name for the member of
-> thread_struct, and in fact arch/x86 doesn't even call it 'fs' anymore.
-> 
-> So rename it to 'addr_limit', which better reflects what it's used
-> for, and is also the name used on other arches.
-> 
-> Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+> A configurable LSM is probably the right way to do this.
 
-Series applied to powerpc next.
+I wonder how many out of tree LSM there are?  Looking at the mainline
+kernel the only "small" LSM bundled is YAMA, and it seems that most of
+the patches proposing new ones eventually die out.
 
-https://git.kernel.org/powerpc/c/ba0635fcbe8c1ce83523c1ec797538
+I appreciate that there are probably a lot of "toy" or "local" modules
+out there for specific fields, companies, or products, but it does
+seem odd that there are so few discussed publicly.
 
-cheers
+(The last two I remember were S.A.R.A and something relating to
+xattr-attributes being used to whitelist execution.)
+
+Steve
