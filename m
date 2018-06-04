@@ -1,68 +1,45 @@
-Date: Sun, 3 Jun 2018 15:37:35 +0200
-From: Greg KH <gregkh@linuxfoundation.org>
-Subject: Re: Nethammer and kernel network drivers
-Message-ID: <20180603133735.GA10274@kroah.com>
-References: <078f9b83-44d9-e7b2-6608-41a88e23b63e@riseup.net>
- <20180602094327.GA16667@kroah.com>
- <db41b7e2-cf14-51e3-a2f7-12cffc467bdf@riseup.net>
- <617047d2-8bdd-fc57-d3b1-f1404138c474@riseup.net>
- <20180603063130.GA28847@kroah.com>
- <4b4c83d9-832d-dfd1-ee4a-3aba78edab50@riseup.net>
+Date: Mon, 4 Jun 2018 17:13:27 +0800
+From: Jun Yao <yaojun8558363@gmail.com>
+Subject: Re: [PATCH 0/4] arm64/mm: migrate swapper_pg_dir
+Message-ID: <20180604091327.GA4863@toy>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <4b4c83d9-832d-dfd1-ee4a-3aba78edab50@riseup.net>
-To: procmem <procmem@riseup.net>
-Cc: kernel-hardening@lists.openwall.com
+To: robin.murphy@arm.com, linux-arm-kernel@lists.infradead.org
+Cc: catalin.marinas@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, greg@kroah.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jun 03, 2018 at 01:23:28PM +0000, procmem wrote:
-> 
-> 
-> Greg KH:
-> > On Sat, Jun 02, 2018 at 05:41:09PM +0000, procmem wrote:
-> >> Hello. Daniel provided more details on the problematic areas of the
-> >> kernel and I quote what he said verbatim:
-> >>
-> >>
-> >>> We have only found very outdated network drivers using clflush (old
-> >>> windows ndis code). On ARM there are many drivers using uncached memory.
-> >>> However, we have so far failed to produce enough memory traffic on ARM
-> >>> to trigger a bit flip with Nethammer on any ARM device.
-> >>> It should be possible though if you can make the ARM device handle
-> >>>> =300MBit/s.
-> >>> And that's the most plausible scenario.
-> >>>
-> >>> Anyway, searching for clflush or use of uncached memory is a good idea
-> >>> to locate the critical spots.
-> >>>
-> >>> Intel CAT is (we believe) not used anywhere yet. And we must be careful
-> >>> when it gets to the point where we introduce usage of CAT for QoS
-> >>> mechanisms.
-> >>>
-> >>> However, my intuition tells me that most systems are not even vulnerable
-> >>> to Rowhammer in the first place. Although the only prevalence studies we
-> >>> have suggest otherwise (they find 60-80% are affected).
-> >
-> > So Linux is not vulnerable to this at all?  That's good to know, thanks
-> > for following up with this.
-> >
-> > greg k-h
-> >
-> 
-> I interpreted this to mean that there is a major problem with ARM
-> drivers but the only backstop is the current gen of hardware being
-> underpowered.
+On 1 Jun 2018 at 10:42:10, Robin Murphy <robin.murphy@arm.com> wrote:
+>> Currently, The offset between swapper_pg_dir and _text is
+>> fixed. When attackers know the address of _text(no KASLR or
+>> breaking KASLR), they can caculate the address of
+>> swapper_pg_dir. Then KSMA(Kernel Space Mirroring Attack) can
+>> be applied.
+>>
+>> The principle of KSMA is to insert a carefully constructed PGD
+>> entry into the translation table. The type of this entry is
+>
+>Out of interest, how does that part work? AFAICS, modifying a PGD entry
+>involves writing to kernel memory, which would mean the implication of KSMA is
+>"userspace can gain write permission to kernel memory by writing to kernel
+>memory" - that doesn't sound like an attack in itself, more just a convenience
+>for ease of exploiting whatever successful attack got you in there in the
+>first place.
+>
+>That's not to say that it isn't still worth mitigating, I'm just questioning
+>the given rationale here.
 
-Really?  There are ARM servers now that can do really fast networking,
-yet those drivers do not seem to have this problem from what I can see.
-Am I missing something here?
+Yes, you are right. KSMA is just a convenience for ease of exploiting. I think
+that the biggest role of KSMA is to covert an arbitrary write to multiple
+arbitrary writes. In the past, to accomplish this, a function
+pointer(e.g. ptmx_fops) is modified to point to gadget, which can r/w kernel
+memory. However, PAN makes this more difficult. And KSMA becomes a new way to
+do that.
 
-> Also it would be best to put a kernel comment about sec implications
-> of Intel CAT for those who want to enable/use it IMHO.
+For details on KSMA, you can refer to:
 
-Patches are always gladly accepted :)
+https://www.blackhat.com/docs/asia-18/asia-18-WANG-KSMA-Breaking-Android-kernel-isolation-and-Rooting-with-ARM-MMU-features.pdf
 
 thanks,
 
-greg k-h
+Jun
