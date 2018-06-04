@@ -1,151 +1,53 @@
-From: Jun Yao <yaojun8558363@gmail.com>
-Subject: [PATCH v2 3/3] arm64/mm: migrate swapper_pg_dir and tramp_pg_dir
-Date: Tue,  5 Jun 2018 17:33:50 +0800
-Message-Id: <20180605093350.24504-4-yaojun8558363@gmail.com>
-In-Reply-To: <20180605093350.24504-1-yaojun8558363@gmail.com>
-References: <20180605093350.24504-1-yaojun8558363@gmail.com>
-To: linux-arm-kernel@lists.infradead.org
-Cc: catalin.marinas@arm.com, will.deacon@arm.com, james.morse@arm.com, robin.murphy@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Mon, 4 Jun 2018 17:44:31 -0400
+From: Steven Rostedt <rostedt@goodmis.org>
+Subject: Re: [PATCH v4 21/27] x86/ftrace: Adapt function tracing for PIE
+ support
+Message-ID: <20180604174431.4aabfbf1@gandalf.local.home>
+In-Reply-To: <CAJcbSZG1dVBVeOjEDeTm4mwXS60wMi-5ej_FB+YyS7iwXoebOQ@mail.gmail.com>
+References: <20180529221625.33541-1-thgarnie@google.com>
+	<20180529221625.33541-22-thgarnie@google.com>
+	<20180604161612.6d48d8d2@gandalf.local.home>
+	<CAJcbSZG1dVBVeOjEDeTm4mwXS60wMi-5ej_FB+YyS7iwXoebOQ@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, Francis Deslauriers <francis.deslauriers@efficios.com>, Greg KH <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, Peter Zijlstra <peterz@infradead.org>, Guenter Roeck <linux@roeck-us.net>, nixiaoming <nixiaoming@huawei.com>, James Hogan <jhogan@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Migrate swapper_pg_dir and tramp_pg_dir. And their virtual addresses
-do not correlate with kernel's address.
+On Mon, 4 Jun 2018 14:06:03 -0700
+Thomas Garnier <thgarnie@google.com> wrote:
 
-Signed-off-by: Jun Yao <yaojun8558363@gmail.com>
----
- arch/arm64/mm/mmu.c | 75 ++++++++++++++++++++++++++++-----------------
- 1 file changed, 47 insertions(+), 28 deletions(-)
+> On Mon, Jun 4, 2018 at 1:16 PM Steven Rostedt <rostedt@goodmis.org> wrote:
+> >
+> > On Tue, 29 May 2018 15:15:22 -0700
+> > Thomas Garnier <thgarnie@google.com> wrote:
+> >  
+> > > When using -fPIE/PIC with function tracing, the compiler generates a
+> > > call through the GOT (call *__fentry__@GOTPCREL). This instruction
+> > > takes 6 bytes instead of 5 on the usual relative call.
+> > >
+> > > If PIE is enabled, replace the 6th byte of the GOT call by a 1-byte nop
+> > > so ftrace can handle the previous 5-bytes as before.
+> > >
+> > > Position Independent Executable (PIE) support will allow to extend the
+> > > KASLR randomization range 0xffffffff80000000.  
+> >
+> > I thought you were going to write a update to recordmcount.c to handle
+> > this at compile time?  
+> 
+> I can correctly calculate the start of the call instruction with
+> recordmcount (no need for addr-1) but I still need to handle the
+> different size of the instructions. I don't think I can completely
+> replace the GOT call with a relative call. Maybe I am missing
+> something on the way recordmcount is used? Should it replace all
+> mcount locations with a nop slide? Why is it done at runtime too then?
 
-diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-index fcb425b0fcab..3ffcff2d7dcd 100644
---- a/arch/arm64/mm/mmu.c
-+++ b/arch/arm64/mm/mmu.c
-@@ -58,6 +58,9 @@ EXPORT_SYMBOL(kimage_voffset);
- volatile phys_addr_t __section(".mmuoff.data.read")
- __pa_swapper_pg_dir;
- pgd_t *new_swapper_pg_dir = swapper_pg_dir;
-+#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
-+pgd_t *new_tramp_pg_dir;
-+#endif
- 
- /*
-  * Empty_zero_page is a special page that is used for zero-initialized data
-@@ -81,19 +84,14 @@ pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
- }
- EXPORT_SYMBOL(phys_mem_access_prot);
- 
--static phys_addr_t __init early_pgtable_alloc(void)
-+static void __init clear_page_phys(phys_addr_t phys)
- {
--	phys_addr_t phys;
--	void *ptr;
--
--	phys = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
--
- 	/*
- 	 * The FIX_{PGD,PUD,PMD} slots may be in active use, but the FIX_PTE
- 	 * slot will be free, so we can (ab)use the FIX_PTE slot to initialise
- 	 * any level of table.
- 	 */
--	ptr = pte_set_fixmap(phys);
-+	void *ptr = pte_set_fixmap(phys);
- 
- 	memset(ptr, 0, PAGE_SIZE);
- 
-@@ -102,6 +100,14 @@ static phys_addr_t __init early_pgtable_alloc(void)
- 	 * table walker
- 	 */
- 	pte_clear_fixmap();
-+}
-+
-+static phys_addr_t __init early_pgtable_alloc(void)
-+{
-+	phys_addr_t phys;
-+
-+	phys = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
-+	clear_page_phys(phys);
- 
- 	return phys;
- }
-@@ -555,6 +561,10 @@ static int __init map_entry_trampoline(void)
- 	__create_pgd_mapping(tramp_pg_dir, pa_start, TRAMP_VALIAS, PAGE_SIZE,
- 			     prot, pgd_pgtable_alloc, 0);
- 
-+	memcpy(new_tramp_pg_dir, tramp_pg_dir, PGD_SIZE);
-+	memblock_free(__pa_symbol(tramp_pg_dir),
-+		__pa_symbol(swapper_pg_dir) - __pa_symbol(tramp_pg_dir));
-+
- 	/* Map both the text and data into the kernel page table */
- 	__set_fixmap(FIX_ENTRY_TRAMP_TEXT, pa_start, prot);
- 	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE)) {
-@@ -632,38 +642,47 @@ static void __init map_kernel(pgd_t *pgdp)
-  */
- void __init paging_init(void)
- {
--	phys_addr_t pgd_phys = early_pgtable_alloc();
--	pgd_t *pgdp = pgd_set_fixmap(pgd_phys);
-+	phys_addr_t pgd_phys;
-+	pgd_t *pgdp;
-+	phys_addr_t mem_size;
-+
-+	mem_size = __pa_symbol(swapper_pg_dir) + PAGE_SIZE
-+			- (__pa_symbol(idmap_pg_dir) + IDMAP_DIR_SIZE);
-+
-+	if (mem_size == PAGE_SIZE) {
-+		pgd_phys = early_pgtable_alloc();
-+		__pa_swapper_pg_dir = pgd_phys;
-+	} else {
-+		phys_addr_t p;
-+
-+		pgd_phys = memblock_alloc(mem_size, PAGE_SIZE);
-+
-+		for (p = pgd_phys; p < pgd_phys + mem_size; p += PAGE_SIZE)
-+			clear_page_phys(p);
-+
-+		#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
-+		new_tramp_pg_dir = __va(pgd_phys);
-+		#endif
-+		__pa_swapper_pg_dir = pgd_phys + mem_size - PAGE_SIZE;
-+	}
- 
--	__pa_swapper_pg_dir = __pa_symbol(swapper_pg_dir);
- 	__flush_dcache_area((void *)&__pa_swapper_pg_dir,
- 			    sizeof(__pa_swapper_pg_dir));
- 
-+	new_swapper_pg_dir = __va(__pa_swapper_pg_dir);
-+
-+	pgdp = pgd_set_fixmap(__pa_swapper_pg_dir);
-+
- 	map_kernel(pgdp);
- 	map_mem(pgdp);
- 
--	/*
--	 * We want to reuse the original swapper_pg_dir so we don't have to
--	 * communicate the new address to non-coherent secondaries in
--	 * secondary_entry, and so cpu_switch_mm can generate the address with
--	 * adrp+add rather than a load from some global variable.
--	 *
--	 * To do this we need to go via a temporary pgd.
--	 */
--	cpu_replace_ttbr1(pgd_phys);
--	memcpy(swapper_pg_dir, pgdp, PGD_SIZE);
- 	cpu_replace_ttbr1(__pa_swapper_pg_dir);
-+	init_mm.pgd = new_swapper_pg_dir;
- 
- 	pgd_clear_fixmap();
--	memblock_free(pgd_phys, PAGE_SIZE);
- 
--	/*
--	 * We only reuse the PGD from the swapper_pg_dir, not the pud + pmd
--	 * allocated with it.
--	 */
--	memblock_free(__pa_symbol(swapper_pg_dir) + PAGE_SIZE,
--		      __pa_symbol(swapper_pg_end) - __pa_symbol(swapper_pg_dir)
--		      - PAGE_SIZE);
-+	memblock_free(__pa_symbol(swapper_pg_dir),
-+		__pa_symbol(swapper_pg_end) - __pa_symbol(swapper_pg_dir));
- }
- 
- /*
--- 
-2.17.0
+Because we need to figure out the "ideal nop" thus we need to change it
+regardless.
+
+We could have recordmcount.c replace everything with the default nop
+(I've thought of that before), and then we could update with the ideal
+nop at run time, if that helps with this.
+
+-- Steve
