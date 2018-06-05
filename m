@@ -1,82 +1,209 @@
+Subject: Re: [PATCH v2 1/3] arm64/mm: pass swapper_pg_dir as an argument to
+ __enable_mmu()
+References: <20180605093350.24504-1-yaojun8558363@gmail.com>
+ <20180605093350.24504-2-yaojun8558363@gmail.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <7cc30f38-55e5-ff7e-03a4-5cae2fa69587@redhat.com>
+Date: Tue, 5 Jun 2018 14:56:46 -0700
 MIME-Version: 1.0
-References: <20180529221625.33541-1-thgarnie@google.com> <20180529221625.33541-22-thgarnie@google.com>
- <20180604161612.6d48d8d2@gandalf.local.home> <CAJcbSZG1dVBVeOjEDeTm4mwXS60wMi-5ej_FB+YyS7iwXoebOQ@mail.gmail.com>
- <20180604174431.4aabfbf1@gandalf.local.home> <CAJcbSZGc7PjLTaoosZFPHpzfDGteE0fWrYS9g_GMBxMAegjfwQ@mail.gmail.com>
-In-Reply-To: <CAJcbSZGc7PjLTaoosZFPHpzfDGteE0fWrYS9g_GMBxMAegjfwQ@mail.gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Tue, 5 Jun 2018 14:19:40 -0700
-Message-ID: <CAJcbSZGDuJWuKKHkSi9N9iG12gzBQXawHtmmA4CtHPiP_uPRMA@mail.gmail.com>
-Subject: Re: [PATCH v4 21/27] x86/ftrace: Adapt function tracing for PIE support
-Content-Type: text/plain; charset="UTF-8"
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, Francis Deslauriers <francis.deslauriers@efficios.com>, Greg KH <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, Peter Zijlstra <peterz@infradead.org>, Guenter Roeck <linux@roeck-us.net>, nixiaoming <nixiaoming@huawei.com>, James Hogan <jhogan@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <20180605093350.24504-2-yaojun8558363@gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Jun Yao <yaojun8558363@gmail.com>, linux-arm-kernel@lists.infradead.org
+Cc: catalin.marinas@arm.com, will.deacon@arm.com, james.morse@arm.com, robin.murphy@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 5, 2018 at 9:56 AM Thomas Garnier <thgarnie@google.com> wrote:
->
-> On Mon, Jun 4, 2018 at 2:44 PM Steven Rostedt <rostedt@goodmis.org> wrote:
-> >
-> > On Mon, 4 Jun 2018 14:06:03 -0700
-> > Thomas Garnier <thgarnie@google.com> wrote:
-> >
-> > > On Mon, Jun 4, 2018 at 1:16 PM Steven Rostedt <rostedt@goodmis.org> wrote:
-> > > >
-> > > > On Tue, 29 May 2018 15:15:22 -0700
-> > > > Thomas Garnier <thgarnie@google.com> wrote:
-> > > >
-> > > > > When using -fPIE/PIC with function tracing, the compiler generates a
-> > > > > call through the GOT (call *__fentry__@GOTPCREL). This instruction
-> > > > > takes 6 bytes instead of 5 on the usual relative call.
-> > > > >
-> > > > > If PIE is enabled, replace the 6th byte of the GOT call by a 1-byte nop
-> > > > > so ftrace can handle the previous 5-bytes as before.
-> > > > >
-> > > > > Position Independent Executable (PIE) support will allow to extend the
-> > > > > KASLR randomization range 0xffffffff80000000.
-> > > >
-> > > > I thought you were going to write a update to recordmcount.c to handle
-> > > > this at compile time?
-> > >
-> > > I can correctly calculate the start of the call instruction with
-> > > recordmcount (no need for addr-1) but I still need to handle the
-> > > different size of the instructions. I don't think I can completely
-> > > replace the GOT call with a relative call. Maybe I am missing
-> > > something on the way recordmcount is used? Should it replace all
-> > > mcount locations with a nop slide? Why is it done at runtime too then?
-> >
-> > Because we need to figure out the "ideal nop" thus we need to change it
-> > regardless.
->
-> I see what you mean looking at the different ideal_nops based on configurations.
->
-> >
-> > We could have recordmcount.c replace everything with the default nop
-> > (I've thought of that before), and then we could update with the ideal
-> > nop at run time, if that helps with this.
->
-> I don't think that's necessary. In proposed implementation of PIE,
-> kernel modules would not use a GOT call. In the current implementation
-> the __fentry__ call is always GOT based (6-bytes). I will simplify the
-> runtime implementation in the next patch set to just swap the expected
-> size and ideal_nop when PIE is enabled.
+On 06/05/2018 02:33 AM, Jun Yao wrote:
+> Introduce __pa_swapper_pg_dir to save physical address of
+> swapper_pg_dir. And pass it as an argument to __enable_mmu().
+> 
+> Signed-off-by: Jun Yao <yaojun8558363@gmail.com>
+> ---
+>   arch/arm64/include/asm/mmu_context.h |  4 +---
+>   arch/arm64/include/asm/pgtable.h     |  1 +
+>   arch/arm64/kernel/cpufeature.c       |  2 +-
+>   arch/arm64/kernel/head.S             |  6 ++++--
+>   arch/arm64/kernel/hibernate.c        |  2 +-
+>   arch/arm64/kernel/sleep.S            |  1 +
+>   arch/arm64/mm/kasan_init.c           |  4 ++--
+>   arch/arm64/mm/mmu.c                  | 11 +++++++++--
+>   8 files changed, 20 insertions(+), 11 deletions(-)
+> 
+> diff --git a/arch/arm64/include/asm/mmu_context.h b/arch/arm64/include/asm/mmu_context.h
+> index 39ec0b8a689e..3eddb871f251 100644
+> --- a/arch/arm64/include/asm/mmu_context.h
+> +++ b/arch/arm64/include/asm/mmu_context.h
+> @@ -141,14 +141,12 @@ static inline void cpu_install_idmap(void)
+>    * Atomically replaces the active TTBR1_EL1 PGD with a new VA-compatible PGD,
+>    * avoiding the possibility of conflicting TLB entries being allocated.
+>    */
+> -static inline void cpu_replace_ttbr1(pgd_t *pgdp)
+> +static inline void cpu_replace_ttbr1(phys_addr_t pgd_phys)
+>   {
+>   	typedef void (ttbr_replace_func)(phys_addr_t);
+>   	extern ttbr_replace_func idmap_cpu_replace_ttbr1;
+>   	ttbr_replace_func *replace_phys;
+>   
+> -	phys_addr_t pgd_phys = virt_to_phys(pgdp);
+> -
+>   	replace_phys = (void *)__pa_symbol(idmap_cpu_replace_ttbr1);
+>   
+>   	cpu_install_idmap();
+> diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
+> index 7c4c8f318ba9..519ab5581b08 100644
+> --- a/arch/arm64/include/asm/pgtable.h
+> +++ b/arch/arm64/include/asm/pgtable.h
+> @@ -722,6 +722,7 @@ extern pgd_t swapper_pg_dir[PTRS_PER_PGD];
+>   extern pgd_t swapper_pg_end[];
+>   extern pgd_t idmap_pg_dir[PTRS_PER_PGD];
+>   extern pgd_t tramp_pg_dir[PTRS_PER_PGD];
+> +extern volatile phys_addr_t __pa_swapper_pg_dir;
+>   
+>   /*
+>    * Encode and decode a swap entry:
+> diff --git a/arch/arm64/kernel/cpufeature.c b/arch/arm64/kernel/cpufeature.c
+> index d2856b129097..e3d76a9dd67a 100644
+> --- a/arch/arm64/kernel/cpufeature.c
+> +++ b/arch/arm64/kernel/cpufeature.c
+> @@ -917,7 +917,7 @@ kpti_install_ng_mappings(const struct arm64_cpu_capabilities *__unused)
+>   	remap_fn = (void *)__pa_symbol(idmap_kpti_install_ng_mappings);
+>   
+>   	cpu_install_idmap();
+> -	remap_fn(cpu, num_online_cpus(), __pa_symbol(swapper_pg_dir));
+> +	remap_fn(cpu, num_online_cpus(), __pa_swapper_pg_dir);
+>   	cpu_uninstall_idmap();
+>   
+>   	if (!cpu)
+> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+> index b0853069702f..2e871b1cb75f 100644
+> --- a/arch/arm64/kernel/head.S
+> +++ b/arch/arm64/kernel/head.S
+> @@ -706,6 +706,7 @@ secondary_startup:
+>   	 * Common entry point for secondary CPUs.
+>   	 */
+>   	bl	__cpu_setup			// initialise processor
+> +	ldr_l   x26, __pa_swapper_pg_dir
+>   	bl	__enable_mmu
+>   	ldr	x8, =__secondary_switched
+>   	br	x8
+> @@ -748,6 +749,7 @@ ENDPROC(__secondary_switched)
+>    * Enable the MMU.
+>    *
+>    *  x0  = SCTLR_EL1 value for turning on the MMU.
+> + *  x26 = TTBR1 value for turning on the MMU.
+>    *
+>    * Returns to the caller via x30/lr. This requires the caller to be covered
+>    * by the .idmap.text section.
+> @@ -762,9 +764,8 @@ ENTRY(__enable_mmu)
+>   	b.ne	__no_granule_support
+>   	update_early_cpu_boot_status 0, x1, x2
+>   	adrp	x1, idmap_pg_dir
+> -	adrp	x2, swapper_pg_dir
+>   	phys_to_ttbr x3, x1
+> -	phys_to_ttbr x4, x2
+> +	phys_to_ttbr x4, x26
+>   	msr	ttbr0_el1, x3			// load TTBR0
+>   	msr	ttbr1_el1, x4			// load TTBR1
+>   	isb
+> @@ -823,6 +824,7 @@ __primary_switch:
+>   	mrs	x20, sctlr_el1			// preserve old SCTLR_EL1 value
+>   #endif
+>   
+> +	adrp    x26, swapper_pg_dir
+>   	bl	__enable_mmu
+>   #ifdef CONFIG_RELOCATABLE
+>   	bl	__relocate_kernel
+> diff --git a/arch/arm64/kernel/hibernate.c b/arch/arm64/kernel/hibernate.c
+> index 6b2686d54411..0a0a0ca19f9b 100644
+> --- a/arch/arm64/kernel/hibernate.c
+> +++ b/arch/arm64/kernel/hibernate.c
+> @@ -125,7 +125,7 @@ int arch_hibernation_header_save(void *addr, unsigned int max_size)
+>   		return -EOVERFLOW;
+>   
+>   	arch_hdr_invariants(&hdr->invariants);
+> -	hdr->ttbr1_el1		= __pa_symbol(swapper_pg_dir);
+> +	hdr->ttbr1_el1          = __pa_swapper_pg_dir;
+>   	hdr->reenter_kernel	= _cpu_resume;
+>   
+>   	/* We can't use __hyp_get_vectors() because kvm may still be loaded */
+> diff --git a/arch/arm64/kernel/sleep.S b/arch/arm64/kernel/sleep.S
+> index bebec8ef9372..03854c329449 100644
+> --- a/arch/arm64/kernel/sleep.S
+> +++ b/arch/arm64/kernel/sleep.S
+> @@ -101,6 +101,7 @@ ENTRY(cpu_resume)
+>   	bl	el2_setup		// if in EL2 drop to EL1 cleanly
+>   	bl	__cpu_setup
+>   	/* enable the MMU early - so we can access sleep_save_stash by va */
+> +	ldr_l   x26, __pa_swapper_pg_dir
+>   	bl	__enable_mmu
+>   	ldr	x8, =_cpu_resume
+>   	br	x8
+> diff --git a/arch/arm64/mm/kasan_init.c b/arch/arm64/mm/kasan_init.c
+> index 12145874c02b..dd4f28c19165 100644
+> --- a/arch/arm64/mm/kasan_init.c
+> +++ b/arch/arm64/mm/kasan_init.c
+> @@ -199,7 +199,7 @@ void __init kasan_init(void)
+>   	 */
+>   	memcpy(tmp_pg_dir, swapper_pg_dir, sizeof(tmp_pg_dir));
+>   	dsb(ishst);
+> -	cpu_replace_ttbr1(lm_alias(tmp_pg_dir));
+> +	cpu_replace_ttbr1(__pa_symbol(tmp_pg_dir));
+>   
+>   	clear_pgds(KASAN_SHADOW_START, KASAN_SHADOW_END);
+>   
+> @@ -236,7 +236,7 @@ void __init kasan_init(void)
+>   			pfn_pte(sym_to_pfn(kasan_zero_page), PAGE_KERNEL_RO));
+>   
+>   	memset(kasan_zero_page, 0, PAGE_SIZE);
+> -	cpu_replace_ttbr1(lm_alias(swapper_pg_dir));
+> +	cpu_replace_ttbr1(__pa_swapper_pg_dir);
+>   
+>   	/* At this point kasan is fully initialized. Enable error messages */
+>   	init_task.kasan_depth = 0;
+> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+> index 2dbb2c9f1ec1..c7df2f0d2e85 100644
+> --- a/arch/arm64/mm/mmu.c
+> +++ b/arch/arm64/mm/mmu.c
+> @@ -55,6 +55,9 @@ u64 idmap_ptrs_per_pgd = PTRS_PER_PGD;
+>   u64 kimage_voffset __ro_after_init;
+>   EXPORT_SYMBOL(kimage_voffset);
+>   
+> +volatile phys_addr_t __section(".mmuoff.data.read")
+> +__pa_swapper_pg_dir;
+> +
+>   /*
+>    * Empty_zero_page is a special page that is used for zero-initialized data
+>    * and COW.
+> @@ -631,6 +634,10 @@ void __init paging_init(void)
+>   	phys_addr_t pgd_phys = early_pgtable_alloc();
+>   	pgd_t *pgdp = pgd_set_fixmap(pgd_phys);
+>   
+> +	__pa_swapper_pg_dir = __pa_symbol(swapper_pg_dir);
+> +	__flush_dcache_area((void *)&__pa_swapper_pg_dir,
+> +			    sizeof(__pa_swapper_pg_dir));
+> +
 
-Actually moving the logic from 5-bytes to 6-bytes is much more
-complicated, that's why I went with this approach before. I don't
-think it can be improved much more beyond creating a nop slide in
-mrecordcount but that's a different approach. I will clean-up the code
-a bit for the next iteration but that's about it. Let me know what you
-think.
+Can you add a comment here explaining why the flush is needed and
+also why the variable gets placed in the particular section?
+A brief summary of https://www.spinics.net/lists/kernel/msg2819594.html
+would be fine.
 
->
-> >
-> > -- Steve
->
->
->
-> --
-> Thomas
+Thanks,
+Laura
 
-
-
--- 
-Thomas
+>   	map_kernel(pgdp);
+>   	map_mem(pgdp);
+>   
+> @@ -642,9 +649,9 @@ void __init paging_init(void)
+>   	 *
+>   	 * To do this we need to go via a temporary pgd.
+>   	 */
+> -	cpu_replace_ttbr1(__va(pgd_phys));
+> +	cpu_replace_ttbr1(pgd_phys);
+>   	memcpy(swapper_pg_dir, pgdp, PGD_SIZE);
+> -	cpu_replace_ttbr1(lm_alias(swapper_pg_dir));
+> +	cpu_replace_ttbr1(__pa_swapper_pg_dir);
+>   
+>   	pgd_clear_fixmap();
+>   	memblock_free(pgd_phys, PAGE_SIZE);
+> 
