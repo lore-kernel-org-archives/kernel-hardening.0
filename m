@@ -1,7 +1,7 @@
 From: Matthew Wilcox <willy@infradead.org>
-Subject: [PATCH 4/6] Convert vhost to struct_size
-Date: Thu,  7 Jun 2018 07:57:18 -0700
-Message-Id: <20180607145720.22590-5-willy@infradead.org>
+Subject: [PATCH 1/6] Convert virtio_console to struct_size
+Date: Thu,  7 Jun 2018 07:57:15 -0700
+Message-Id: <20180607145720.22590-2-willy@infradead.org>
 In-Reply-To: <20180607145720.22590-1-willy@infradead.org>
 References: <20180607145720.22590-1-willy@infradead.org>
 To: Kees Cook <keescook@chromium.org>
@@ -12,22 +12,22 @@ From: Matthew Wilcox <mawilcox@microsoft.com>
 
 Signed-off-by: Matthew Wilcox <mawilcox@microsoft.com>
 ---
- drivers/vhost/vhost.c | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
+ drivers/char/virtio_console.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 895eaa25807c..f9bce818da11 100644
---- a/drivers/vhost/vhost.c
-+++ b/drivers/vhost/vhost.c
-@@ -1286,7 +1286,8 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
- 		return -EOPNOTSUPP;
- 	if (mem.nregions > max_mem_regions)
- 		return -E2BIG;
--	newmem = kvzalloc(size + mem.nregions * sizeof(*m->regions), GFP_KERNEL);
-+	newmem = kvzalloc(struct_size(newmem, regions, mem.nregions),
-+			GFP_KERNEL);
- 	if (!newmem)
- 		return -ENOMEM;
+diff --git a/drivers/char/virtio_console.c b/drivers/char/virtio_console.c
+index 21085515814f..4bf7c06c2343 100644
+--- a/drivers/char/virtio_console.c
++++ b/drivers/char/virtio_console.c
+@@ -433,8 +433,7 @@ static struct port_buffer *alloc_buf(struct virtio_device *vdev, size_t buf_size
+ 	 * Allocate buffer and the sg list. The sg list array is allocated
+ 	 * directly after the port_buffer struct.
+ 	 */
+-	buf = kmalloc(sizeof(*buf) + sizeof(struct scatterlist) * pages,
+-		      GFP_KERNEL);
++	buf = kmalloc(struct_size(buf, sg, pages), GFP_KERNEL);
+ 	if (!buf)
+ 		goto fail;
  
 -- 
 2.17.0
