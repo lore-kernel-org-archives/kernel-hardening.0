@@ -1,7 +1,7 @@
 From: Matthew Wilcox <willy@infradead.org>
-Subject: [PATCH 3/6] Convert v4l2 event to struct_size
-Date: Thu,  7 Jun 2018 07:57:17 -0700
-Message-Id: <20180607145720.22590-4-willy@infradead.org>
+Subject: [PATCH 6/6] Convert intel uncore to struct_size
+Date: Thu,  7 Jun 2018 07:57:20 -0700
+Message-Id: <20180607145720.22590-7-willy@infradead.org>
 In-Reply-To: <20180607145720.22590-1-willy@infradead.org>
 References: <20180607145720.22590-1-willy@infradead.org>
 To: Kees Cook <keescook@chromium.org>
@@ -10,24 +10,57 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Matthew Wilcox <mawilcox@microsoft.com>
 
+Need to do a bit of rearranging to make this work.
+
 Signed-off-by: Matthew Wilcox <mawilcox@microsoft.com>
 ---
- drivers/media/v4l2-core/v4l2-event.c | 3 +--
- 1 file changed, 1 insertion(+), 2 deletions(-)
+ arch/x86/events/intel/uncore.c | 19 ++++++++++---------
+ 1 file changed, 10 insertions(+), 9 deletions(-)
 
-diff --git a/drivers/media/v4l2-core/v4l2-event.c b/drivers/media/v4l2-core/v4l2-event.c
-index 968c2eb08b5a..127fe6eb91d9 100644
---- a/drivers/media/v4l2-core/v4l2-event.c
-+++ b/drivers/media/v4l2-core/v4l2-event.c
-@@ -215,8 +215,7 @@ int v4l2_event_subscribe(struct v4l2_fh *fh,
- 	if (elems < 1)
- 		elems = 1;
+diff --git a/arch/x86/events/intel/uncore.c b/arch/x86/events/intel/uncore.c
+index 15b07379e72d..e15cfad4f89b 100644
+--- a/arch/x86/events/intel/uncore.c
++++ b/arch/x86/events/intel/uncore.c
+@@ -865,8 +865,6 @@ static void uncore_types_exit(struct intel_uncore_type **types)
+ static int __init uncore_type_init(struct intel_uncore_type *type, bool setid)
+ {
+ 	struct intel_uncore_pmu *pmus;
+-	struct attribute_group *attr_group;
+-	struct attribute **attrs;
+ 	size_t size;
+ 	int i, j;
  
--	sev = kvzalloc(sizeof(*sev) + sizeof(struct v4l2_kevent) * elems,
--		       GFP_KERNEL);
-+	sev = kvzalloc(struct_size(sev, events, elems), GFP_KERNEL);
- 	if (!sev)
- 		return -ENOMEM;
- 	for (i = 0; i < elems; i++)
+@@ -891,21 +889,24 @@ static int __init uncore_type_init(struct intel_uncore_type *type, bool setid)
+ 				0, type->num_counters, 0, 0);
+ 
+ 	if (type->event_descs) {
++		struct {
++			struct attribute_group group;
++			struct attribute *attrs[];
++		} *attr_group;
+ 		for (i = 0; type->event_descs[i].attr.attr.name; i++);
+ 
+-		attr_group = kzalloc(sizeof(struct attribute *) * (i + 1) +
+-					sizeof(*attr_group), GFP_KERNEL);
++		attr_group = kzalloc(struct_size(attr_group, attrs, i + 1),
++								GFP_KERNEL);
+ 		if (!attr_group)
+ 			goto err;
+ 
+-		attrs = (struct attribute **)(attr_group + 1);
+-		attr_group->name = "events";
+-		attr_group->attrs = attrs;
++		attr_group->group.name = "events";
++		attr_group->group.attrs = attr_group->attrs;
+ 
+ 		for (j = 0; j < i; j++)
+-			attrs[j] = &type->event_descs[j].attr.attr;
++			attr_group->attrs[j] = &type->event_descs[j].attr.attr;
+ 
+-		type->events_group = attr_group;
++		type->events_group = &attr_group->group;
+ 	}
+ 
+ 	type->pmu_group = &uncore_pmu_attr_group;
 -- 
 2.17.0
