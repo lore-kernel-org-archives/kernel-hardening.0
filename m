@@ -1,37 +1,67 @@
+Subject: Re: [PATCH v3 3/3] arm64/mm: migrate swapper_pg_dir and tramp_pg_dir
+References: <20180606043921.19851-1-yaojun8558363@gmail.com>
+ <20180606043921.19851-4-yaojun8558363@gmail.com>
+From: James Morse <james.morse@arm.com>
+Message-ID: <1ef0fd31-001d-0872-7089-70ec22bab59f@arm.com>
+Date: Wed, 13 Jun 2018 10:17:36 +0100
 MIME-Version: 1.0
-In-Reply-To: <CABxV-EWN8ag2zk2CDxWyC3+DvuM3ADbf=qGm4uczK8YnOd5JBQ@mail.gmail.com>
-References: <1527346246-1334-1-git-send-email-s.mesoraca16@gmail.com>
- <CAGXu5j+PHzDwnJxJwMJ=WuhacDn_vJWe9xZx+Kbsh28vxOGRiA@mail.gmail.com>
- <CA+55aFx6DBp+d33_fytOGPWw11xg_L0MdGp1M2e5Obc0N9kMRQ@mail.gmail.com>
- <CAJHCu1Ky09DWskcD4nVW5u1C5faWMv1A4kcxWzdiap7+G1SPkg@mail.gmail.com> <CABxV-EWN8ag2zk2CDxWyC3+DvuM3ADbf=qGm4uczK8YnOd5JBQ@mail.gmail.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Sun, 10 Jun 2018 09:40:53 +0200
-Message-ID: <CAJHCu1LMzXeySHDXyXNpDbVjD2Lpu-dNTXFm3YhEuTnrU0tA9A@mail.gmail.com>
-Subject: Re: [PATCH] proc: prevent a task from writing on its own /proc/*/mem
-Content-Type: text/plain; charset="UTF-8"
-To: Steve Kemp <steve.backup.kemp@gmail.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+In-Reply-To: <20180606043921.19851-4-yaojun8558363@gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Jun Yao <yaojun8558363@gmail.com>
+Cc: linux-arm-kernel@lists.infradead.org, catalin.marinas@arm.com, will.deacon@arm.com, robin.murphy@arm.com, labbott@redhat.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2018-06-04 18:57 GMT+02:00 Steve Kemp <steve.backup.kemp@gmail.com>:
->> A configurable LSM is probably the right way to do this.
->
-> I wonder how many out of tree LSM there are?  Looking at the mainline
-> kernel the only "small" LSM bundled is YAMA, and it seems that most of
-> the patches proposing new ones eventually die out.
->
-> I appreciate that there are probably a lot of "toy" or "local" modules
-> out there for specific fields, companies, or products, but it does
-> seem odd that there are so few discussed publicly.
->
-> (The last two I remember were S.A.R.A and something relating to
-> xattr-attributes being used to whitelist execution.)
+Hi Jun,
 
-FWIW S.A.R.A. is not dead [1].
-Unfortunately it needs infrastructure managed security blobs, so I didn't
-tried to get it upstream, yet.
-Of course, I can't give you any guarantees about when or if it will be
-upstreamed,
-but it's definitely still alive.
+On 06/06/18 05:39, Jun Yao wrote:
+> Migrate swapper_pg_dir and tramp_pg_dir. And their virtual addresses
+> do not correlate with kernel's address.
 
-[1] https://github.com/smeso/sara/releases/latest
+This is all to make 'KSMA' harder, where an single arbitrary write is used to
+add a block mapping to the page-tables, giving the attacker full access to
+physical memory.
+
+This series is pretty complicated, and would still be overcome by arbitrary-read
+of __pa_swapper_pg_dir. Any attacker already has to defeat KASLR, but I guess
+that can be done without having read-access.
+
+
+> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+> index 94056e064c6f..ba0b55158971 100644
+> --- a/arch/arm64/mm/mmu.c
+> +++ b/arch/arm64/mm/mmu.c
+> @@ -637,10 +647,29 @@ static void __init map_kernel(pgd_t *pgdp)
+>   */
+>  void __init paging_init(void)
+>  {
+> -	phys_addr_t pgd_phys = early_pgtable_alloc();
+> -	pgd_t *pgdp = pgd_set_fixmap(pgd_phys);
+> +	phys_addr_t pgd_phys;
+> +	pgd_t *pgdp;
+> +	phys_addr_t mem_size;
+>
+> -	__pa_swapper_pg_dir = __pa_symbol(swapper_pg_dir);
+> +	mem_size = __pa_symbol(swapper_pg_dir) + PAGE_SIZE
+> +			- (__pa_symbol(idmap_pg_dir) + IDMAP_DIR_SIZE);
+> +
+> +	if (mem_size == PAGE_SIZE) {
+> +		pgd_phys = early_pgtable_alloc();
+
+This is where we migrated swapper_pg_dir to, its the first memblock_alloc()
+call, and is guaranteed to be at the top of memory. Moving this allocation later
+will still cause a predictable page to be allocated as this setup code is the
+only thing running. I don't think we are in a better position after this series.
+
+
+Ideally we would put these pgd entries in the read-only section. We only modify
+swapper_pg_dir for vmalloc()/vmap() once its generated, which we could do
+through a fixmap entry.
+
+Like this, an attacker can find where swapper_pg_dir is, but can't write to it.
+(the tricky bit will be breaking swapper_pg_dir up, as we free parts of it)
+
+
+Thanks,
+
+James
