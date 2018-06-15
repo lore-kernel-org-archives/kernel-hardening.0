@@ -1,58 +1,83 @@
+Subject: Re: [PATCH] sg, bsg: mitigate read/write abuse, block uaccess in
+ release
+References: <20180615152335.208202-1-jannh@google.com>
+ <20180615164009.GD30522@ZenIV.linux.org.uk>
+From: Douglas Gilbert <dgilbert@interlog.com>
+Message-ID: <90063ef3-68fa-e983-9b47-838e6076b0f4@interlog.com>
+Date: Fri, 15 Jun 2018 16:47:47 -0400
 MIME-Version: 1.0
-References: <20180615152335.208202-1-jannh@google.com> <20180615164009.GD30522@ZenIV.linux.org.uk>
- <CAG48ez2Fku77S+FM2w5n8J_utOhO0EW_RFbMib=t5Nmwc9pwfQ@mail.gmail.com>
- <20180615165310.GF30522@ZenIV.linux.org.uk> <20180615171033.GG30522@ZenIV.linux.org.uk>
-In-Reply-To: <20180615171033.GG30522@ZenIV.linux.org.uk>
-From: Jann Horn <jannh@google.com>
-Date: Fri, 15 Jun 2018 19:13:35 +0200
-Message-ID: <CAG48ez0eeBNBjnpNXWHLF4VAXB8xaAi7SGJT3EmEhUUJaz4Pqg@mail.gmail.com>
-Subject: Re: [PATCH] sg, bsg: mitigate read/write abuse, block uaccess in release
-Content-Type: text/plain; charset="UTF-8"
-To: Al Viro <viro@zeniv.linux.org.uk>
-Cc: axboe@kernel.dk, fujita.tomonori@lab.ntt.co.jp, dgilbert@interlog.com, jejb@linux.vnet.ibm.com, martin.petersen@oracle.com, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, security@kernel.org
+In-Reply-To: <20180615164009.GD30522@ZenIV.linux.org.uk>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+To: Al Viro <viro@ZenIV.linux.org.uk>, Jann Horn <jannh@google.com>
+Cc: Jens Axboe <axboe@kernel.dk>, FUJITA Tomonori <fujita.tomonori@lab.ntt.co.jp>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, security@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 15, 2018 at 7:10 PM Al Viro <viro@zeniv.linux.org.uk> wrote:
->
-> On Fri, Jun 15, 2018 at 05:53:10PM +0100, Al Viro wrote:
-> > On Fri, Jun 15, 2018 at 06:44:51PM +0200, Jann Horn wrote:
-> > > On Fri, Jun 15, 2018 at 6:40 PM Al Viro <viro@zeniv.linux.org.uk> wrote:
-> > > >
-> > > > On Fri, Jun 15, 2018 at 05:23:35PM +0200, Jann Horn wrote:
-> > > >
-> > > > > I've mostly copypasted ib_safe_file_access() over as
-> > > > > scsi_safe_file_access() because I couldn't find a good common header -
-> > > > > please tell me if you know a better way.
-> > > > > The duplicate pr_err_once() calls are so that each of them fires once;
-> > > > > otherwise, this would probably have to be a macro.
-> > > > >
-> > > > > Fixes: 1da177e4c3f4 ("Linux-2.6.12-rc2")
-> > > > > Cc: <stable@vger.kernel.org>
-> > > > > Signed-off-by: Jann Horn <jannh@google.com>
-> > > > > ---
-> > > >
-> > > > WTF do you mean, in ->release()?  That makes no sense whatsoever -
-> > > > what kind of copy_{to,from}_user() would be possible in there?
-> > >
-> > > bsg_release -> bsg_put_device -> bsg_complete_all_commands ->
-> > > blk_complete_sgv4_hdr_rq -> bsg_scsi_complete_rq -> copy_to_user.
-> > > I don't think that was intentional.
-> > >
-> > > Basically, the sense buffer is copied to a userspace address supplied
-> > > in the previous ->write() when you ->read() the reply. But when you
-> > > ->release() the file without reading the reply, they have to clean it
-> > > up, and for that, they reuse the same code they use for ->read() - so
-> > > the sense buffer is written to userspace on ->release().
-> >
-> > Pardon me, that has only one fix - git rm.  This is too broken for words -
-> > if your reading is correct, the interface is unsalvagable.  I hope you
-> > *are* misreading it, but if not... how did that insanity get through
-> > review at merge time?
->
-> AFAICS, it went in as part of commit 3d6392cfbd7d "bsg: support for full
-> generic block layer SG v3", so your 2.6.12-rc2 is too old...
+On 2018-06-15 12:40 PM, Al Viro wrote:
+> On Fri, Jun 15, 2018 at 05:23:35PM +0200, Jann Horn wrote:
+> 
+>> I've mostly copypasted ib_safe_file_access() over as
+>> scsi_safe_file_access() because I couldn't find a good common header -
+>> please tell me if you know a better way.
+>> The duplicate pr_err_once() calls are so that each of them fires once;
+>> otherwise, this would probably have to be a macro.
+>>
+>> Fixes: 1da177e4c3f4 ("Linux-2.6.12-rc2")
+>> Cc: <stable@vger.kernel.org>
+>> Signed-off-by: Jann Horn <jannh@google.com>
+>> ---
+> 
+> WTF do you mean, in ->release()?  That makes no sense whatsoever -
+> what kind of copy_{to,from}_user() would be possible in there?
 
-I picked 2.6.12-rc2 for the Fixes tag because the bad copy_to_user()
-in sg_new_read() is at least that old.
-Do you think I should split this up into two patches or so - one for
-the creds/uaccess_kernel checks, one for the ->release() bug?
+The folks responsible are no longer active in kernel development ***
+but as far as I know the async write(command), read(response) were
+added to bsg over 10 years ago as proof-of-concept and never properly
+worked in this async mode. The biggest design problem with it that I'm
+aware of is that two tasks which issue write(commands) at about the
+same time to the same device can receive one another's read(response).
+The tracking of which response belongs to which task is in part the
+reason why the sg driver's data structures are more complex than the
+bsg driver's are. Hence the code work to fix that problem in the bsg
+driver is not trivial and probably a reason why no-one has attempted it.
+
+Once real world users (needing an async SCSI (or general storage)
+pass-through) find out about that bsg "feature", they don't use it.
+They use the sg driver or something else. So the fact that bsg has
+other glaring errors in it in async mode is no surprise to me.
+
+When I took over the maintenance of the sg driver in 1998, it only
+had an async (i.e. write(command), read(response)) interface.
+The SG_IO ioctl was added at the suggestion of Jørg Schilling (of
+cdrecord "fame"). The sg driver implementation was essentially to
+put a write(command) and read(response) back-to-back. The bsg driver
+came along later and started with the synchronous SG_IO ioctl
+interface only. The async write(command)/read(response) functionality
+was added later to bsg. Perhaps that part of the bsg driver should be
+deprecated/withdrawn if a maintainer/rewriter cannot be found.
+[BTW the bsg sync SG_IO ioctl implementation can probably get the
+wrong response, it's just that the window is a lot narrower.]
+
+That said, the bsg driver has lots of other users. For example it is
+the only generic pass-through in Linux for the SAS Management Protocol
+(SMP) used to control SAS based storage enclosures. I have a user space
+package based on it (in Linux) called smp_utils which works well IMO.
+However disk enclosures won't typically have contention between users
+trying to control them and I'm not aware of any disk enclosures that
+support Persistent Reservations. So the bsg driver's "async" problems
+are not a practical issue in this case. Also I believe some high end
+storage hardware uses bsg to communicate with their hardware from their
+user space tools.
+
+
+Just some observations from an interested observer ...
+
+Doug Gilbert
+
+
+*** Well Jens Axbø's Copyright notice is on the bsg driver, together with
+     and Peter M. Jones. Since I have been watching the bsg driver I'm
+     not aware of any substantial patches or reworks for them. As far as
+     I know FUJITA Tomonori did a ground up rewrite of it and he no longer
+     works in this area. Makes you wonder what exactly Copyright banners
+     mean on some code; 10, 15, 20 years on.
