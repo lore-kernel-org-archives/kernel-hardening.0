@@ -1,46 +1,42 @@
+Date: Mon, 18 Jun 2018 17:26:45 +0200
+From: Benjamin Block <bblock@linux.vnet.ibm.com>
 Subject: Re: [PATCH] sg, bsg: mitigate read/write abuse, block uaccess in
  release
 References: <20180615152335.208202-1-jannh@google.com>
  <20180615164009.GD30522@ZenIV.linux.org.uk>
  <90063ef3-68fa-e983-9b47-838e6076b0f4@interlog.com>
-From: Jens Axboe <axboe@kernel.dk>
-Message-ID: <813e817b-bb2f-4a47-6225-9e39f19be278@kernel.dk>
-Date: Mon, 18 Jun 2018 09:37:01 -0600
 MIME-Version: 1.0
-In-Reply-To: <90063ef3-68fa-e983-9b47-838e6076b0f4@interlog.com>
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-To: dgilbert@interlog.com, Al Viro <viro@ZenIV.linux.org.uk>, Jann Horn <jannh@google.com>
-Cc: FUJITA Tomonori <fujita.tomonori@lab.ntt.co.jp>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, security@kernel.org
+In-Reply-To: <90063ef3-68fa-e983-9b47-838e6076b0f4@interlog.com>
+Message-Id: <20180618152645.GA15656@bblock-ThinkPad-W530>
+To: Douglas Gilbert <dgilbert@interlog.com>
+Cc: Al Viro <viro@ZenIV.linux.org.uk>, Jann Horn <jannh@google.com>, Jens Axboe <axboe@kernel.dk>, FUJITA Tomonori <fujita.tomonori@lab.ntt.co.jp>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, security@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 6/15/18 2:47 PM, Douglas Gilbert wrote:
+On Fri, Jun 15, 2018 at 04:47:47PM -0400, Douglas Gilbert wrote:
 > On 2018-06-15 12:40 PM, Al Viro wrote:
->> On Fri, Jun 15, 2018 at 05:23:35PM +0200, Jann Horn wrote:
->>
->>> I've mostly copypasted ib_safe_file_access() over as
->>> scsi_safe_file_access() because I couldn't find a good common header -
->>> please tell me if you know a better way.
->>> The duplicate pr_err_once() calls are so that each of them fires once;
->>> otherwise, this would probably have to be a macro.
->>>
->>> Fixes: 1da177e4c3f4 ("Linux-2.6.12-rc2")
->>> Cc: <stable@vger.kernel.org>
->>> Signed-off-by: Jann Horn <jannh@google.com>
->>> ---
->>
->> WTF do you mean, in ->release()?  That makes no sense whatsoever -
->> what kind of copy_{to,from}_user() would be possible in there?
+> > On Fri, Jun 15, 2018 at 05:23:35PM +0200, Jann Horn wrote:
+> > 
+> >> I've mostly copypasted ib_safe_file_access() over as
+> >> scsi_safe_file_access() because I couldn't find a good common header -
+> >> please tell me if you know a better way.
+> >> The duplicate pr_err_once() calls are so that each of them fires once;
+> >> otherwise, this would probably have to be a macro.
+> >>
+> >> Fixes: 1da177e4c3f4 ("Linux-2.6.12-rc2")
+> >> Cc: <stable@vger.kernel.org>
+> >> Signed-off-by: Jann Horn <jannh@google.com>
+> >> ---
+> > 
+> > WTF do you mean, in ->release()?  That makes no sense whatsoever -
+> > what kind of copy_{to,from}_user() would be possible in there?
 > 
 > The folks responsible are no longer active in kernel development ***
 > but as far as I know the async write(command), read(response) were
 > added to bsg over 10 years ago as proof-of-concept and never properly
 > worked in this async mode. The biggest design problem with it that I'm
-
-It was born with that mode, but I don't think anyone ever really used it.
-So it might feasible to simply yank it. That said, just doing a prune
-mode at ->release() time doesn't seem like such a hard task.
-
 > aware of is that two tasks which issue write(commands) at about the
 > same time to the same device can receive one another's read(response).
 > The tracking of which response belongs to which task is in part the
@@ -55,7 +51,7 @@ mode at ->release() time doesn't seem like such a hard task.
 > 
 > When I took over the maintenance of the sg driver in 1998, it only
 > had an async (i.e. write(command), read(response)) interface.
-> The SG_IO ioctl was added at the suggestion of JÃ¸rg Schilling (of
+> The SG_IO ioctl was added at the suggestion of Jørg Schilling (of
 > cdrecord "fame"). The sg driver implementation was essentially to
 > put a write(command) and read(response) back-to-back. The bsg driver
 > came along later and started with the synchronous SG_IO ioctl
@@ -64,10 +60,6 @@ mode at ->release() time doesn't seem like such a hard task.
 > deprecated/withdrawn if a maintainer/rewriter cannot be found.
 > [BTW the bsg sync SG_IO ioctl implementation can probably get the
 > wrong response, it's just that the window is a lot narrower.]
-
-Feature wise, I don't think it ever changed. The read/write async
-mode was included from the get-go.
-
 > 
 > That said, the bsg driver has lots of other users. For example it is
 > the only generic pass-through in Linux for the SAS Management Protocol
@@ -80,25 +72,25 @@ mode was included from the get-go.
 > storage hardware uses bsg to communicate with their hardware from their
 > user space tools.
 > 
-> 
-> Just some observations from an interested observer ...
-> 
-> Doug Gilbert
-> 
-> 
-> *** Well Jens AxbÃ¸'s Copyright notice is on the bsg driver, together with
->      and Peter M. Jones. Since I have been watching the bsg driver I'm
->      not aware of any substantial patches or reworks for them. As far as
->      I know FUJITA Tomonori did a ground up rewrite of it and he no longer
->      works in this area. Makes you wonder what exactly Copyright banners
->      mean on some code; 10, 15, 20 years on.
 
-It was never re-written. I handed it over to Fujita about 11 years ago,
-but there was never any rewrite.
+We definitely use the BSG IOCTL part for FC-Command passthrough (and
+other SCSI transports need it for theirs too, SAS, iSCSI, ...). And I am
+not aware of any other way to do that right now. So this can not go away
+without someone giving us a different way to do that.
 
-BTW, don't ever write my name like that, the 'oe' is not a spelled out
-ascii variant, it's my name. For JÃ¶rg, it's o with umlaut, not the
-Danish/Norwegian variant (he's German).
+That said.. the read()/write() interface is just pointless atm, I don't
+see any sane way of using that in userspace.
 
--- 
-Jens Axboe
+FWIW, I actually thought about rewriting that part so it becomes
+somewhat sane (tracking which thread sends what command and so on), but
+haven't had time to really doing it. With the whole discussion now, I am
+not sure anyone really needs that anyway.
+
+
+- Benjamin
+
+--
+With Best Regards, Benjamin Block      /      Linux on IBM Z Kernel Development
+IBM Systems & Technology Group   /  IBM Deutschland Research & Development GmbH
+Vorsitz. AufsR.: Martina Koederitz       /      Geschäftsführung: Dirk Wittkopp
+Sitz der Gesellschaft: Böblingen / Registergericht: AmtsG Stuttgart, HRB 243294
