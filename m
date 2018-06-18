@@ -1,60 +1,104 @@
-Subject: Re: Design Decision for KVM based anti rootkit
-References: <CAAGnT3bjYPu9bordn_Dh8z+MW6p5DDLoSsZC9xg8QxQriVus9A@mail.gmail.com>
-From: David Hildenbrand <david@redhat.com>
-Message-ID: <7c7ddb96-e865-53a2-3aa9-b79403c646a9@redhat.com>
-Date: Mon, 18 Jun 2018 16:34:12 +0200
+Subject: Re: [PATCH] sg, bsg: mitigate read/write abuse, block uaccess in
+ release
+References: <20180615152335.208202-1-jannh@google.com>
+ <20180615164009.GD30522@ZenIV.linux.org.uk>
+ <90063ef3-68fa-e983-9b47-838e6076b0f4@interlog.com>
+From: Jens Axboe <axboe@kernel.dk>
+Message-ID: <813e817b-bb2f-4a47-6225-9e39f19be278@kernel.dk>
+Date: Mon, 18 Jun 2018 09:37:01 -0600
 MIME-Version: 1.0
-In-Reply-To: <CAAGnT3bjYPu9bordn_Dh8z+MW6p5DDLoSsZC9xg8QxQriVus9A@mail.gmail.com>
+In-Reply-To: <90063ef3-68fa-e983-9b47-838e6076b0f4@interlog.com>
 Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Ahmed Soliman <ahmedsoliman0x666@gmail.com>, kvm@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, riel@redhat.com, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Hossam Hassan <7ossam9063@gmail.com>, Ahmed Lotfy <A7med.lotfey@gmail.com>, virtualization@lists.linux-foundation.org, qemu-devel@nongnu.org
+Content-Transfer-Encoding: 8bit
+To: dgilbert@interlog.com, Al Viro <viro@ZenIV.linux.org.uk>, Jann Horn <jannh@google.com>
+Cc: FUJITA Tomonori <fujita.tomonori@lab.ntt.co.jp>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, security@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 16.06.2018 13:49, Ahmed Soliman wrote:
-> Following up on these threads:
-> - https://marc.info/?l=kvm&m=151929803301378&w=2
-> - http://www.openwall.com/lists/kernel-hardening/2018/02/22/18
+On 6/15/18 2:47 PM, Douglas Gilbert wrote:
+> On 2018-06-15 12:40 PM, Al Viro wrote:
+>> On Fri, Jun 15, 2018 at 05:23:35PM +0200, Jann Horn wrote:
+>>
+>>> I've mostly copypasted ib_safe_file_access() over as
+>>> scsi_safe_file_access() because I couldn't find a good common header -
+>>> please tell me if you know a better way.
+>>> The duplicate pr_err_once() calls are so that each of them fires once;
+>>> otherwise, this would probably have to be a macro.
+>>>
+>>> Fixes: 1da177e4c3f4 ("Linux-2.6.12-rc2")
+>>> Cc: <stable@vger.kernel.org>
+>>> Signed-off-by: Jann Horn <jannh@google.com>
+>>> ---
+>>
+>> WTF do you mean, in ->release()?  That makes no sense whatsoever -
+>> what kind of copy_{to,from}_user() would be possible in there?
 > 
-> I lost the original emails so I couldn't reply to them, and also sorry
-> for being late, it was the end of semester exams.
-> 
-> I was adviced on #qemu and #kernelnewbies IRCs to ask here as it will
-> help having better insights.
-> 
-> To wrap things up, the basic design will be a method for communication
-> between host and guest is guest can request certain pages to be read
-> only, and then host will force them to be read-only by guest until
-> next guest reboot, then it will impossible for guest OS to have them
-> as RW again. The choice of which pages to be set as read only is the
-> guest's. So this way mixed pages can still be mixed with R/W content
-> even if holds kernel code.
-> 
-> I was planning to use KVM as my hypervisor, until I found out that KVM
-> can't do that on its own so one will need a custom virtio driver to do
-> this kind of guest-host communication/coordination, I am still
-> sticking to KVM, and have no plans to do this for Xen at least for
-> now, this means that in order to get it to work there must be a QEMU
-> support our specific driver we are planning to write in order for
-> things to work properly.
-> 
-> The question is is this the right approach? or is there a simpler way
-> to achieve this goal?
-> 
+> The folks responsible are no longer active in kernel development ***
+> but as far as I know the async write(command), read(response) were
+> added to bsg over 10 years ago as proof-of-concept and never properly
+> worked in this async mode. The biggest design problem with it that I'm
 
-Especially if you want to support multiple architectures in the long
-term, virtio is the way to go.
+It was born with that mode, but I don't think anyone ever really used it.
+So it might feasible to simply yank it. That said, just doing a prune
+mode at ->release() time doesn't seem like such a hard task.
 
-Design an architecture independent and extensible (+configurable)
-interface and be happy :) This might of course require some thought.
+> aware of is that two tasks which issue write(commands) at about the
+> same time to the same device can receive one another's read(response).
+> The tracking of which response belongs to which task is in part the
+> reason why the sg driver's data structures are more complex than the
+> bsg driver's are. Hence the code work to fix that problem in the bsg
+> driver is not trivial and probably a reason why no-one has attempted it.
+> 
+> Once real world users (needing an async SCSI (or general storage)
+> pass-through) find out about that bsg "feature", they don't use it.
+> They use the sg driver or something else. So the fact that bsg has
+> other glaring errors in it in async mode is no surprise to me.
+> 
+> When I took over the maintenance of the sg driver in 1998, it only
+> had an async (i.e. write(command), read(response)) interface.
+> The SG_IO ioctl was added at the suggestion of Jørg Schilling (of
+> cdrecord "fame"). The sg driver implementation was essentially to
+> put a write(command) and read(response) back-to-back. The bsg driver
+> came along later and started with the synchronous SG_IO ioctl
+> interface only. The async write(command)/read(response) functionality
+> was added later to bsg. Perhaps that part of the bsg driver should be
+> deprecated/withdrawn if a maintainer/rewriter cannot be found.
+> [BTW the bsg sync SG_IO ioctl implementation can probably get the
+> wrong response, it's just that the window is a lot narrower.]
 
-(and don't worry, implementing a virtio driver is a lot simpler than you
-might think)
+Feature wise, I don't think it ever changed. The read/write async
+mode was included from the get-go.
 
-But be aware that the virtio "hypervisor" side will be handled in QEMU,
-so you'll need a proper QEMU->KVM interface to get things running.
+> 
+> That said, the bsg driver has lots of other users. For example it is
+> the only generic pass-through in Linux for the SAS Management Protocol
+> (SMP) used to control SAS based storage enclosures. I have a user space
+> package based on it (in Linux) called smp_utils which works well IMO.
+> However disk enclosures won't typically have contention between users
+> trying to control them and I'm not aware of any disk enclosures that
+> support Persistent Reservations. So the bsg driver's "async" problems
+> are not a practical issue in this case. Also I believe some high end
+> storage hardware uses bsg to communicate with their hardware from their
+> user space tools.
+> 
+> 
+> Just some observations from an interested observer ...
+> 
+> Doug Gilbert
+> 
+> 
+> *** Well Jens Axbø's Copyright notice is on the bsg driver, together with
+>      and Peter M. Jones. Since I have been watching the bsg driver I'm
+>      not aware of any substantial patches or reworks for them. As far as
+>      I know FUJITA Tomonori did a ground up rewrite of it and he no longer
+>      works in this area. Makes you wonder what exactly Copyright banners
+>      mean on some code; 10, 15, 20 years on.
+
+It was never re-written. I handed it over to Fujita about 11 years ago,
+but there was never any rewrite.
+
+BTW, don't ever write my name like that, the 'oe' is not a spelled out
+ascii variant, it's my name. For Jörg, it's o with umlaut, not the
+Danish/Norwegian variant (he's German).
 
 -- 
-
-Thanks,
-
-David / dhildenb
+Jens Axboe
