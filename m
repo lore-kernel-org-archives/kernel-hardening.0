@@ -1,83 +1,35 @@
+Subject: Re: Design Decision for KVM based anti rootkit
+References: <CAAGnT3bjYPu9bordn_Dh8z+MW6p5DDLoSsZC9xg8QxQriVus9A@mail.gmail.com>
+From: David Vrabel <david.vrabel@nutanix.com>
+Message-ID: <7337582f-0007-d006-0809-cf41fd93b31e@nutanix.com>
+Date: Tue, 19 Jun 2018 18:37:53 +0100
 MIME-Version: 1.0
-In-Reply-To: <20180619155512.GQ13984@arm.com>
-References: <20180530091457.GB2452@arm.com> <CAKv+Gu8Zc7eQbG-Ww51GXUCEmhe2J03vbq5vVdyaKra-s13KrA@mail.gmail.com>
- <20180619152035.GM13984@arm.com> <CAKv+Gu-Mad64U63jjuKGjhg=h2wdoEKm2vywzATBYr-t_UY_bQ@mail.gmail.com>
- <20180619152805.GN13984@arm.com> <CAKv+Gu81zgvcLd-N_MMENykxcm6ENvvfCuWOoMGsrfUf9Usy5g@mail.gmail.com>
- <20180619153754.GO13984@arm.com> <CAKv+Gu-x-e+M7_28m=zMeZ2=1p6DXWvu2L4K988jpfYjK+=JaA@mail.gmail.com>
- <20180619155001.GP13984@arm.com> <CAKv+Gu-fA61TbOWOfMbwffyJEzMDKrOSOOw0nbNbeO-xm8YbaA@mail.gmail.com>
- <20180619155512.GQ13984@arm.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Tue, 19 Jun 2018 18:00:57 +0200
-Message-ID: <CAKv+Gu-KA0Yog7mxfPkF7aNkJsTr=V6+R9+tbKLw0xMb4mSmWQ@mail.gmail.com>
-Subject: Re: [PATCH] arm64: mm: mark tramp_pg_dir read-only
-Content-Type: text/plain; charset="UTF-8"
-To: Will Deacon <will.deacon@arm.com>
-Cc: YaoJun <yaojun8558363@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+In-Reply-To: <CAAGnT3bjYPu9bordn_Dh8z+MW6p5DDLoSsZC9xg8QxQriVus9A@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Ahmed Soliman <ahmedsoliman0x666@gmail.com>, kvm@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, riel@redhat.com, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Hossam Hassan <7ossam9063@gmail.com>, Ahmed Lotfy <A7med.lotfey@gmail.com>, virtualization@lists.linux-foundation.org, qemu-devel@nongnu.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 19 June 2018 at 17:55, Will Deacon <will.deacon@arm.com> wrote:
-> On Tue, Jun 19, 2018 at 05:51:46PM +0200, Ard Biesheuvel wrote:
->> On 19 June 2018 at 17:50, Will Deacon <will.deacon@arm.com> wrote:
->> > On Tue, Jun 19, 2018 at 05:40:26PM +0200, Ard Biesheuvel wrote:
->> >> On 19 June 2018 at 17:37, Will Deacon <will.deacon@arm.com> wrote:
->> >> > On Tue, Jun 19, 2018 at 05:29:03PM +0200, Ard Biesheuvel wrote:
->> >> >> On 19 June 2018 at 17:28, Will Deacon <will.deacon@arm.com> wrote:
->> >> >> > On Tue, Jun 19, 2018 at 05:23:41PM +0200, Ard Biesheuvel wrote:
->> >> >> >> On 19 June 2018 at 17:20, Will Deacon <will.deacon@arm.com> wrote:
->> >> >> >> > On Wed, May 30, 2018 at 11:53:20AM +0200, Ard Biesheuvel wrote:
->> >> >> >> >> On 30 May 2018 at 11:14, Will Deacon <will.deacon@arm.com> wrote:
->> >> >> >> >> > On Wed, May 30, 2018 at 12:48:06PM +0800, YaoJun wrote:
->> >> >> >> >> >> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
->> >> >> >> >> >> index 2dbb2c9f1ec1..ac4b22c7e435 100644
->> >> >> >> >> >> --- a/arch/arm64/mm/mmu.c
->> >> >> >> >> >> +++ b/arch/arm64/mm/mmu.c
->> >> >> >> >> >> @@ -551,6 +551,10 @@ static int __init map_entry_trampoline(void)
->> >> >> >> >> >>       __create_pgd_mapping(tramp_pg_dir, pa_start, TRAMP_VALIAS, PAGE_SIZE,
->> >> >> >> >> >>                            prot, pgd_pgtable_alloc, 0);
->> >> >> >> >> >>
->> >> >> >> >> >> +     update_mapping_prot(__pa_symbol(tramp_pg_dir),
->> >> >> >> >> >> +                             (unsigned long)tramp_pg_dir,
->> >> >> >> >> >> +                             PGD_SIZE, PAGE_KERNEL_RO);
->> >> >> >> >> >
->> >> >> >> >> > Hmm, I like the idea but is there a risk that the page table has been mapped
->> >> >> >> >> > as part of a block entry, which we can't safely split at this point (i.e.
->> >> >> >> >> > we'll run into one of the BUG_ONs in the mapping code)?
->> >> >> >> >> >
->> >> >> >> >>
->> >> >> >> >> We'd need to create a separate segment for it initially so the mapping
->> >> >> >> >> is already at the right granularity.
->> >> >> >> >
->> >> >> >> > Why do you think that's the case? I can't see anything that guarantees this
->> >> >> >> > for the page table itself.
->> >> >> >> >
->> >> >> >>
->> >> >> >> We'd need to pass NO_BLOCK_MAPPINGS to map_kernel_segment(),
->> >> >> >> obviously, but that shouldn't hurt since that segment is relatively
->> >> >> >> tiny anyway.
->> >> >> >
->> >> >> > Ah right, with NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS, I agree that we're good.
->> >> >> > Ideally, we'd move {idmap,swapper,tramp}_pg_dir into .rodata...
->> >> >> >
->> >> >>
->> >> >> idmap and tramp yes, but swapper needs to be modifiable at runtime, no?
->> >> >
->> >> > Right, but couldn't we swizzle the permissions in e.g. set_pmd? We could
->> >> > even predicate that on a sanity check of the prot.
->> >> >
->> >>
->> >> Swizzle the permissions of the entire .rodata segment? That sounds
->> >> doable, but there is a whole class of data that belongs in this
->> >> category, and I think PaX/grsecurity had an API for that (but I don't
->> >> think anyone is upstreaming that yet). So let's not reinvent that
->> >> wheel for swapper_pg_dir only.
->> >
->> > I wasn't thinking of the whole .rodata segment -- just the page containing
->> > the entry being modified, but ok.
->>
->> That means we will need to map .rodata down to pages as well, or at
->> least avoid contiguous mappings.
->
-> Doesn't it already avoid those?
->
+On 16/06/18 12:49, Ahmed Soliman wrote:
+> 
+> To wrap things up, the basic design will be a method for communication
+> between host and guest is guest can request certain pages to be read
+> only, and then host will force them to be read-only by guest until
+> next guest reboot, then it will impossible for guest OS to have them
+> as RW again. The choice of which pages to be set as read only is the
+> guest's. So this way mixed pages can still be mixed with R/W content
+> even if holds kernel code.
 
-You are right, it does.
+It's not clear how this increases security. What threats is this
+protecting again?
+
+As an attacker, modifying the sensitive pages (kernel text?) will
+require either: a) altering the existing mappings for these (to make
+them read-write or user-writable for example); or b) creating aliased
+mappings with suitable permissions.
+
+If the attacker can modify page tables in this way then it can also
+bypass the suggested hypervisor's read-only protection by changing the
+mappings to point to a unprotected page.
+
+David
