@@ -1,61 +1,60 @@
-Subject: Re: Design Decision for KVM based anti rootkit
-References: <CAAGnT3bjYPu9bordn_Dh8z+MW6p5DDLoSsZC9xg8QxQriVus9A@mail.gmail.com>
- <7c7ddb96-e865-53a2-3aa9-b79403c646a9@redhat.com>
- <CAAGnT3avoMOJP9zEdG2WmmxUe7m4S+5mDWezjJerzO4fq11cjQ@mail.gmail.com>
-From: David Hildenbrand <david@redhat.com>
-Message-ID: <4f482fce-bf1e-e79d-3b7d-a20c87425236@redhat.com>
-Date: Mon, 18 Jun 2018 21:01:22 +0200
+Date: Tue, 19 Jun 2018 16:20:35 +0100
+From: Will Deacon <will.deacon@arm.com>
+Subject: Re: [PATCH] arm64: mm: mark tramp_pg_dir read-only
+Message-ID: <20180619152035.GM13984@arm.com>
+References: <20180530044806.18449-1-yaojun8558363@gmail.com>
+ <20180530091457.GB2452@arm.com>
+ <CAKv+Gu8Zc7eQbG-Ww51GXUCEmhe2J03vbq5vVdyaKra-s13KrA@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CAAGnT3avoMOJP9zEdG2WmmxUe7m4S+5mDWezjJerzO4fq11cjQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-To: Ahmed Soliman <ahmedsoliman0x666@gmail.com>
-Cc: kvm@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, riel@redhat.com, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Hossam Hassan <7ossam9063@gmail.com>, Ahmed Lotfy <A7med.lotfey@gmail.com>, virtualization@lists.linux-foundation.org, qemu-devel@nongnu.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAKv+Gu8Zc7eQbG-Ww51GXUCEmhe2J03vbq5vVdyaKra-s13KrA@mail.gmail.com>
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: YaoJun <yaojun8558363@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 18.06.2018 18:35, Ahmed Soliman wrote:
-> Shortly after I sent the first email, we found that there is another
-> way to achieve this kind of communication, via KVM Hypercalls, I think
-> they are underutilised in kvm, but they exist.
+Hi Ard,
+
+Sorry, I forgot to reply to this.
+
+On Wed, May 30, 2018 at 11:53:20AM +0200, Ard Biesheuvel wrote:
+> On 30 May 2018 at 11:14, Will Deacon <will.deacon@arm.com> wrote:
+> > On Wed, May 30, 2018 at 12:48:06PM +0800, YaoJun wrote:
+> >> To protect against KSMA(Kernel Space Mirroring Attack), make
+> >> tramp_pg_dir read-only. The principle of KSMA is to insert a
+> >> carefully constructed PGD entry into the translation table.
+> >> The type of this entry is block, which maps the kernel text
+> >> and its access permissions bits are 01. The user process can
+> >> then modify kernel text directly through this mapping. In this
+> >> way, an arbitrary write can be converted to multiple arbitrary
+> >> writes.
+> >>
+> >> Signed-off-by: YaoJun <yaojun8558363@gmail.com>
+> >> ---
+> >>  arch/arm64/mm/mmu.c | 4 ++++
+> >>  1 file changed, 4 insertions(+)
+> >>
+> >> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+> >> index 2dbb2c9f1ec1..ac4b22c7e435 100644
+> >> --- a/arch/arm64/mm/mmu.c
+> >> +++ b/arch/arm64/mm/mmu.c
+> >> @@ -551,6 +551,10 @@ static int __init map_entry_trampoline(void)
+> >>       __create_pgd_mapping(tramp_pg_dir, pa_start, TRAMP_VALIAS, PAGE_SIZE,
+> >>                            prot, pgd_pgtable_alloc, 0);
+> >>
+> >> +     update_mapping_prot(__pa_symbol(tramp_pg_dir),
+> >> +                             (unsigned long)tramp_pg_dir,
+> >> +                             PGD_SIZE, PAGE_KERNEL_RO);
+> >
+> > Hmm, I like the idea but is there a risk that the page table has been mapped
+> > as part of a block entry, which we can't safely split at this point (i.e.
+> > we'll run into one of the BUG_ONs in the mapping code)?
+> >
 > 
-> We also found that they are architecture dependent, but the advantage
-> is that one doesn't need to create QEMU<-> kvm interface
-> 
-> So from our point of view it is either have things easily compatible
-> with many architectures out of the box (virtio) VS compatiability with
-> almost every front end including QEMU and any other one without
-> modification (Hypercalls)?
+> We'd need to create a separate segment for it initially so the mapping
+> is already at the right granularity.
 
-My gut feeling (I might of course be wrong) is that hypercalls will not
-be accepted easily in KVM (I assume only if it is really highly
-specialized for e.g. x86 and/or required very early during boot and/or
-has very specific performance requirements - e.g. pvspinlocks or kvmclock).
+Why do you think that's the case? I can't see anything that guarantees this
+for the page table itself.
 
-> 
-> If it is the case, We might stick to hypercalls at the beginning,
-> because it can be easily tested with out modifying QEMU, but then
-> later we can move to virtio if there turned out to be clearer
-> advantage, especially performance wise.
-
-hypercalls might be good for prototyping, but I assume that the
-challenging part will rather be a clean KVM mmu interface. And once you
-have that, a kernel interface might not be too hard (I remember some
-work being done by malwarebytes).
-
-> 
-> Does that sounds like good idea?
-> I wanted to make sure because maybe maybe hypercalls aren't that much
-> used in kvm for a reason, so I wanted to verify that.
-
-I assume the same.
-
-Another thing to note is performance, having to go via QEMU might be
-performance wise not that good. (usually chunking is the answer to
-reduce the overhead). But if it is really a "protect once, forget until
-reboot" thing, that should not be relevant.
-
--- 
-
-Thanks,
-
-David / dhildenb
+Will
