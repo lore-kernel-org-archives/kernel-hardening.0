@@ -1,52 +1,65 @@
-Date: Wed, 20 Jun 2018 15:26:53 -0700
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [PATCH 1/3] vmalloc: Add __vmalloc_node_try_addr function
-Message-ID: <20180620222653.GC11479@bombadil.infradead.org>
-References: <1529532570-21765-1-git-send-email-rick.p.edgecombe@intel.com>
- <1529532570-21765-2-git-send-email-rick.p.edgecombe@intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1529532570-21765-2-git-send-email-rick.p.edgecombe@intel.com>
+Sender: keescook@google.com
+In-Reply-To: <1529532570-21765-1-git-send-email-rick.p.edgecombe@intel.com>
+References: <1529532570-21765-1-git-send-email-rick.p.edgecombe@intel.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 20 Jun 2018 15:33:44 -0700
+Message-ID: <CAGXu5jLt8Zv-p=9J590WFppc3O6LWrAVdi-xtU7r_8f4j0XeRg@mail.gmail.com>
+Subject: Re: [PATCH 0/3] KASLR feature to randomize each loadable module
+Content-Type: text/plain; charset="UTF-8"
 To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, kristen.c.accardi@intel.com, dave.hansen@intel.com, arjan.van.de.ven@intel.com
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kristen Accardi <kristen.c.accardi@intel.com>, Dave Hansen <dave.hansen@intel.com>, "Van De Ven, Arjan" <arjan.van.de.ven@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 20, 2018 at 03:09:28PM -0700, Rick Edgecombe wrote:
->  
->  /**
-> + *	__vmalloc_try_addr  -  try to alloc at a specific address
-> + *	@addr:		address to try
-> + *	@size:		size to try
-> + *	@gfp_mask:	flags for the page level allocator
-> + *	@prot:		protection mask for the allocated pages
-> + *	@vm_flags:	additional vm area flags (e.g. %VM_NO_GUARD)
-> + *	@node:		node to use for allocation or NUMA_NO_NODE
-> + *	@caller:	caller's return address
-> + *
-> + *	Try to allocate at the specific address. If it succeeds the address is
-> + *	returned. If it fails NULL is returned.  It may trigger TLB flushes.
+On Wed, Jun 20, 2018 at 3:09 PM, Rick Edgecombe
+<rick.p.edgecombe@intel.com> wrote:
+> This patch changes the module loading KASLR algorithm to randomize the position
+> of each module text section allocation with at least 18 bits of entropy in the
+> typical case. It used on x86_64 only for now.
 
- * Try to allocate memory at a specific address.  May trigger TLB flushes.
- *
- * Context: Process context.
- * Return: The allocated address if it succeeds.  NULL if it fails.
+Very cool! Thanks for sending the series. :)
 
-> @@ -1759,8 +1795,9 @@ void *__vmalloc_node_range(unsigned long size, unsigned long align,
->  	return addr;
->  
->  fail:
-> -	warn_alloc(gfp_mask, NULL,
-> -			  "vmalloc: allocation failure: %lu bytes", real_size);
-> +	if (!(gfp_mask & __GFP_NOWARN))
-> +		warn_alloc(gfp_mask, NULL,
-> +			"vmalloc: allocation failure: %lu bytes", real_size);
->  	return NULL;
+> Today the RANDOMIZE_BASE feature randomizes the base address where the module
+> allocations begin with 10 bits of entropy. From here, a highly deterministic
+> algorithm allocates space for the modules as they are loaded and un-loaded. If
+> an attacker can predict the order and identities for modules that will be
+> loaded, then a single text address leak can give the attacker access to the
 
-Not needed:
+nit: "text address" -> "module text address"
 
-void warn_alloc(gfp_t gfp_mask, nodemask_t *nodemask, const char *fmt, ...)
-{
-...
-        if ((gfp_mask & __GFP_NOWARN) || !__ratelimit(&nopage_rs))
-                return;
+> So the defensive strength of this algorithm in typical usage (<800 modules) for
+> x86_64 should be at least 18 bits, even if an address from the random area
+> leaks.
+
+And most systems have <200 modules, really. I have 113 on a desktop
+right now, 63 on a server. So this looks like a trivial win.
+
+> As for fragmentation, this algorithm reduces the average number of modules that
+> can be loaded without an allocation failure by about 6% (~17000 to ~16000)
+> (p<0.05). It can also reduce the largest module executable section that can be
+> loaded by half to ~500MB in the worst case.
+
+Given that we only have 8312 tristate Kconfig items, I think 16000
+will remain just fine. And even large modules (i915) are under 2MB...
+
+> The new __vmalloc_node_try_addr function uses the existing function
+> __vmalloc_node_range, in order to introduce this algorithm with the least
+> invasive change. The side effect is that each time there is a collision when
+> trying to allocate in the random area a TLB flush will be triggered. There is
+> a more complex, more efficient implementation that can be used instead if
+> there is interest in improving performance.
+
+The only time when module loading speed is noticeable, I would think,
+would be boot time. Have you done any boot time delta analysis? I
+wouldn't expect it to change hardly at all, but it's probably a good
+idea to actually test it. :)
+
+Also: can this be generalized for use on other KASLRed architectures?
+For example, I know the arm64 module randomization is pretty similar
+to x86.
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
