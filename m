@@ -1,183 +1,150 @@
-MIME-Version: 1.0
-In-Reply-To: <20180620085755.20045-2-yaojun8558363@gmail.com>
-References: <20180620085755.20045-1-yaojun8558363@gmail.com> <20180620085755.20045-2-yaojun8558363@gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed, 20 Jun 2018 12:09:49 +0200
-Message-ID: <CAKv+Gu8_=uTJFDXr0GpGMc=9WZ9tbz305CE6i=qbnqRB=suRVA@mail.gmail.com>
-Subject: Re: [PATCH 1/1] arm64/mm: move {idmap_pg_dir,tramp_pg_dir,swapper_pg_dir}
- to .rodata section
-Content-Type: text/plain; charset="UTF-8"
-To: Jun Yao <yaojun8558363@gmail.com>
-Cc: linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+From: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Subject: [PATCH 0/3] KASLR feature to randomize each loadable module
+Date: Wed, 20 Jun 2018 15:09:27 -0700
+Message-Id: <1529532570-21765-1-git-send-email-rick.p.edgecombe@intel.com>
+To: tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: kristen.c.accardi@intel.com, dave.hansen@intel.com, arjan.van.de.ven@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 20 June 2018 at 10:57, Jun Yao <yaojun8558363@gmail.com> wrote:
-> Move {idmap_pg_dir,tramp_pg_dir,swapper_pg_dir} to .rodata
-> section. And update the swapper_pg_dir by fixmap.
->
+Hi,
+This is to add a KASLR feature for stronger randomization for the location of
+the text sections of dynamically loaded kernel modules.
 
-I think we may be able to get away with not mapping idmap_pg_dir and
-tramp_pg_dir at all.
+Today the RANDOMIZE_BASE feature randomizes the base address where the module
+allocations begin with 10 bits of entropy. From here, a highly deterministic
+algorithm allocates space for the modules as they are loaded and un-loaded. If
+an attacker can predict the order and identities for modules that will be
+loaded, then a single text address leak can give the attacker access to the
+locations of all the modules.
 
-As for swapper_pg_dir, it would indeed be nice if we could keep those
-mappings read-only most of the time, but I'm not sure how useful this
-is if we apply it to the root level only.
+This patch changes the module loading KASLR algorithm to randomize the position
+of each module text section allocation with at least 18 bits of entropy in the
+typical case. It used on x86_64 only for now.
 
-> Signed-off-by: Jun Yao <yaojun8558363@gmail.com>
-> ---
->  arch/arm64/include/asm/pgalloc.h | 19 +++++++++++++++++++
->  arch/arm64/kernel/vmlinux.lds.S  | 32 ++++++++++++++++++--------------
->  arch/arm64/mm/mmu.c              | 23 +++++++++++++++++++----
->  3 files changed, 56 insertions(+), 18 deletions(-)
->
-> diff --git a/arch/arm64/include/asm/pgalloc.h b/arch/arm64/include/asm/pgalloc.h
-> index 2e05bcd944c8..cc96a7e6957d 100644
-> --- a/arch/arm64/include/asm/pgalloc.h
-> +++ b/arch/arm64/include/asm/pgalloc.h
-> @@ -29,6 +29,10 @@
->  #define PGALLOC_GFP    (GFP_KERNEL | __GFP_ZERO)
->  #define PGD_SIZE       (PTRS_PER_PGD * sizeof(pgd_t))
->
-> +#if CONFIG_STRICT_KERNEL_RWX
-> +extern spinlock_t pgdir_lock;
-> +#endif
-> +
->  #if CONFIG_PGTABLE_LEVELS > 2
->
->  static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
-> @@ -78,6 +82,21 @@ static inline void __pgd_populate(pgd_t *pgdp, phys_addr_t pudp, pgdval_t prot)
->
->  static inline void pgd_populate(struct mm_struct *mm, pgd_t *pgdp, pud_t *pudp)
->  {
-> +#if CONFIG_STRICT_KERNEL_RWX
-> +       if (mm == &init_mm) {
-> +               pgd_t *pgd;
-> +
-> +               spin_lock(&pgdir_lock);
-> +               pgd = pgd_set_fixmap(__pa_symbol(swapper_pg_dir));
-> +
-> +               pgd = (pgd_t *)((unsigned long)pgd + pgdp - swapper_pg_dir);
-> +               __pgd_populate(pgdp, __pa(pudp), PUD_TYPE_TABLE);
-> +
+Allocation Algorithm
+====================
+The algorithm evenly breaks the module space in two, a random area and a backup
+area. For module text allocations, it first tries to allocate up to 10 randomly
+located starting pages inside the random section. If this fails, it will
+allocate in the backup area. The backup area base will be offset in the same
+way as current algorithm does for the base area, which has 10 bits of entropy.
 
-This only works for 4-level paging, but we support 2 and 3 level paging as well.
+Randomness and Fragmentation
+============================
+The advantages of this algorithm over the existing one are higher entropy and
+that each module text section is randomized in relation to the other sections,
+so that if one location is leaked the location of other sections cannot be
+inferred.
 
-> +               pgd_clear_fixmap();
-> +               spin_unlock(&pgdir_lock);
-> +               return;
-> +       }
-> +#endif
->         __pgd_populate(pgdp, __pa(pudp), PUD_TYPE_TABLE);
->  }
->  #else
-> diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
-> index 605d1b60469c..86532c57206a 100644
-> --- a/arch/arm64/kernel/vmlinux.lds.S
-> +++ b/arch/arm64/kernel/vmlinux.lds.S
-> @@ -216,21 +216,25 @@ SECTIONS
->         BSS_SECTION(0, 0, 0)
->
->         . = ALIGN(PAGE_SIZE);
-> -       idmap_pg_dir = .;
-> -       . += IDMAP_DIR_SIZE;
->
-> -#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
-> -       tramp_pg_dir = .;
-> -       . += PAGE_SIZE;
-> -#endif
-> -
-> -#ifdef CONFIG_ARM64_SW_TTBR0_PAN
-> -       reserved_ttbr0 = .;
-> -       . += RESERVED_TTBR0_SIZE;
-> -#endif
-> -       swapper_pg_dir = .;
-> -       . += SWAPPER_DIR_SIZE;
-> -       swapper_pg_end = .;
-> +       .rodata : {
-> +               . = ALIGN(PAGE_SIZE);
-> +               idmap_pg_dir = .;
-> +               . += IDMAP_DIR_SIZE;
-> +
-> +               #ifdef CONFIG_UNMAP_KERNEL_AT_EL0
+However, unlike the existing algorithm, the amount of randomness provided has a
+dependency on the number of modules allocated and the sizes of the modules text
+sections.
 
-CPP directives should start in the first column
+The following estimates are based on simulations done with core section
+allocation sizes recorded from all in-tree x86_64 modules, and with a module
+space size of 1GB (the size when KASLR is enabled). The entropy provided for the
+Nth allocation will come from three sources of randomness, the address picked
+for the random area, the probability the section will be allocated in the backup
+area and randomness from the number of modules already allocated in the backup
+area. For computing a lower bound entropy in the following calculations, the
+randomness of the modules already in the backup area, or overlapping from the
+random area, is ignored since it is usually small for small numbers of modules
+and will only increase the entropy.
 
-> +               tramp_pg_dir = .;
-> +               . += PAGE_SIZE;
-> +               #endif
-> +
-> +               #ifdef CONFIG_ARM64_SW_TTBR0_PAN
-> +               reserved_ttbr0 = .;
-> +               . += RESERVED_TTBR0_SIZE;
-> +               #endif
-> +               swapper_pg_dir = .;
-> +               . += SWAPPER_DIR_SIZE;
-> +               swapper_pg_end = .;
-> +       }
->
->         __pecoff_data_size = ABSOLUTE(. - __initdata_begin);
->         _end = .;
-> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-> index 2dbb2c9f1ec1..c1aa85a6ada5 100644
-> --- a/arch/arm64/mm/mmu.c
-> +++ b/arch/arm64/mm/mmu.c
-> @@ -66,6 +66,10 @@ static pte_t bm_pte[PTRS_PER_PTE] __page_aligned_bss;
->  static pmd_t bm_pmd[PTRS_PER_PMD] __page_aligned_bss __maybe_unused;
->  static pud_t bm_pud[PTRS_PER_PUD] __page_aligned_bss __maybe_unused;
->
-> +#ifdef CONFIG_STRICT_KERNEL_RWX
-> +DEFINE_SPINLOCK(pgdir_lock);
-> +#endif
-> +
->  pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
->                               unsigned long size, pgprot_t vma_prot)
->  {
-> @@ -417,12 +421,22 @@ static void __init __map_memblock(pgd_t *pgdp, phys_addr_t start,
->
->  void __init mark_linear_text_alias_ro(void)
->  {
-> +       unsigned long size;
-> +
->         /*
->          * Remove the write permissions from the linear alias of .text/.rodata
-> +        *
-> +        * We free some pages in .rodata at paging_init(), which generates a
-> +        * hole. And the hole splits .rodata into two pieces.
->          */
-> +       size = (unsigned long)swapper_pg_dir + PAGE_SIZE - (unsigned long)_text;
->         update_mapping_prot(__pa_symbol(_text), (unsigned long)lm_alias(_text),
-> -                           (unsigned long)__init_begin - (unsigned long)_text,
-> -                           PAGE_KERNEL_RO);
-> +                           size, PAGE_KERNEL_RO);
-> +
-> +       size = (unsigned long)__init_begin - (unsigned long)swapper_pg_end;
-> +       update_mapping_prot(__pa_symbol(swapper_pg_end),
-> +                           (unsigned long)lm_alias(swapper_pg_end),
-> +                           size, PAGE_KERNEL_RO);
+For probability of the Nth module being in the backup area, p, a lower bound
+entropy estimate is calculated here as:
+Entropy = -((1-p)*log2((1-p)/(1073741824/4096)) + p*log2(p/1024))
 
-I don't think this is necessary. Even if some pages are freed, it
-doesn't harm to keep a read-only alias of them here since the new
-owner won't access them via this mapping anyway. So we can keep
-.rodata as a single region.
+Nth Modules	Probability Nth in Backup (p<0.01)	Entropy (bits)
+200		0.00015658918				18.0009525805
+300		0.00061754750				18.0025340517
+400		0.00092257674				18.0032512276
+500		0.00143354729				18.0041398771
+600		0.00199926260				18.0048133611
+700		0.00303342527				18.0054763676
+800		0.00375362443				18.0056209924
+900		0.00449013182				18.0055609282
+1000		0.00506372420				18.0053909502
+2000		0.01655518527				17.9891937614
 
->  }
->
->  static void __init map_mem(pgd_t *pgdp)
-> @@ -587,8 +601,9 @@ static void __init map_kernel(pgd_t *pgdp)
->          */
->         map_kernel_segment(pgdp, _text, _etext, text_prot, &vmlinux_text, 0,
->                            VM_NO_GUARD);
-> -       map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL,
-> -                          &vmlinux_rodata, NO_CONT_MAPPINGS, VM_NO_GUARD);
-> +       map_kernel_segment(pgdp, __start_rodata, __inittext_begin,
-> +                          PAGE_KERNEL, &vmlinux_rodata,
-> +                          NO_CONT_MAPPINGS | NO_BLOCK_MAPPINGS, VM_NO_GUARD);
+For the subclass of control flow attacks, a wrong guess can often crash the
+process or even the system if is wrong, so the probability of the first guess
+being right can be more important than the Nth guess. KASLR schemes usually have
+equal probability for each possible position, but in this scheme that is not the
+case. So a more conservative comparison to existing schemes is the amount of
+information that would have to be guessed correctly for the position that has
+the highest probability for having the Nth module allocated (as that would be
+the attackers best guess).
 
-Given the above, you should be able to drop this as well.
+This next table shows the bits that would have to be guessed for a most likely
+position for the Nth module, assuming no other address has leaked:
 
->         map_kernel_segment(pgdp, __inittext_begin, __inittext_end, text_prot,
->                            &vmlinux_inittext, 0, VM_NO_GUARD);
->         map_kernel_segment(pgdp, __initdata_begin, __initdata_end, PAGE_KERNEL,
-> --
-> 2.17.1
->
+Min Info = MIN(-log2(p/1024), -log2((1-p)/(1073741824/4096)))
+
+Nth Modules	Min Info		Random Area 		Backup Area
+200		18.00022592813		18.00022592813		22.64072780584
+300		18.00089120792		18.00089120792		20.66116227856
+400		18.00133161125		18.00133161125		20.08204345143
+500		18.00206965540		18.00206965540		19.44619478537
+600		18.00288721335		18.00288721335		18.96631630463
+700		18.00438295865		18.00438295865		18.36483651470
+800		18.00542552443		18.00542552443		18.05749997547
+900		17.79902648177		18.00649247790		17.79902648177
+1000		17.62558545623		18.00732396876		17.62558545623
+2000		15.91657303366		18.02408399587		15.91657303366
+
+So the defensive strength of this algorithm in typical usage (<800 modules) for
+x86_64 should be at least 18 bits, even if an address from the random area
+leaks.
+
+If an address from a section in the backup area leaks however, the remaining
+information that would have to be guessed is reduced. To get at a lower bound,
+the following assumes the address of the leak is the first module in the backup
+area and ignores the probability of guessing the identity.
+
+Nth Modules	P of At Least 2 in Backup (p<0.01)	Info (bits)
+200		0.00005298177				14.20414443057
+300		0.00005298177				14.20414443057
+400		0.00034665456				11.49421363374
+500		0.00310895422				8.32935491164
+600		0.01299838019				6.26552433915
+700		0.04042051772				4.62876838940
+800		0.09812051823				3.34930133623
+900		0.19325547277				2.37141882470
+1000		0.32712329132				1.61209361130
+
+So the in typical usage, the entropy will still be decent if an address in the
+backup leaks as well.
+
+As for fragmentation, this algorithm reduces the average number of modules that
+can be loaded without an allocation failure by about 6% (~17000 to ~16000)
+(p<0.05). It can also reduce the largest module executable section that can be
+loaded by half to ~500MB in the worst case.
+
+Implementation
+==============
+This patch adds a new function in vmalloc (__vmalloc_node_try_addr) that tries
+to allocate at a specific address. In the x86 module loader, this new vmalloc
+function is used to implement the algorithm described above.
+
+The new __vmalloc_node_try_addr function uses the existing function 
+__vmalloc_node_range, in order to introduce this algorithm with the least
+invasive change. The side effect is that each time there is a collision when
+trying to allocate in the random area a TLB flush will be triggered. There is 
+a more complex, more efficient implementation that can be used instead if 
+there is interest in improving performance.
+
+
+Rick Edgecombe (3):
+  vmalloc: Add __vmalloc_node_try_addr function
+  x86/modules: Increase randomization for modules
+  vmalloc: Add debugfs modfraginfo
+
+ arch/x86/include/asm/pgtable_64_types.h |   1 +
+ arch/x86/kernel/module.c                |  80 +++++++++++++++--
+ include/linux/vmalloc.h                 |   3 +
+ mm/vmalloc.c                            | 151 +++++++++++++++++++++++++++++++-
+ 4 files changed, 227 insertions(+), 8 deletions(-)
+
+-- 
+2.7.4
