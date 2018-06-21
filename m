@@ -1,50 +1,54 @@
-Date: Thu, 21 Jun 2018 20:24:36 +0800
-From: Jun Yao <yaojun8558363@gmail.com>
-Subject: Re: [PATCH 1/1] arm64/mm: move
- {idmap_pg_dir,tramp_pg_dir,swapper_pg_dir} to .rodata section
-Message-ID: <20180621122436.GA19014@toy>
-References: <20180620085755.20045-1-yaojun8558363@gmail.com>
- <20180620085755.20045-2-yaojun8558363@gmail.com>
- <CAKv+Gu8_=uTJFDXr0GpGMc=9WZ9tbz305CE6i=qbnqRB=suRVA@mail.gmail.com>
- <20180621025141.GB11276@toy>
- <CAKv+Gu_3Cfuq-qQuRHkYCB2uTPOK=KVeVh4OKmtu2MDYwfOtTA@mail.gmail.com>
- <70ebe6d7-0745-5606-ae89-8a7b2fb62008@arm.com>
- <CAKv+Gu-t5ErL89J=sxeVRYzDNrB1Ejdj+XOggAMWk-gY7ewsOg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAKv+Gu-t5ErL89J=sxeVRYzDNrB1Ejdj+XOggAMWk-gY7ewsOg@mail.gmail.com>
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: james.morse@arm.com, linux-arm-kernel@lists.infradead.org, catalin.marinas@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+References: <1529532570-21765-1-git-send-email-rick.p.edgecombe@intel.com> <1529532570-21765-4-git-send-email-rick.p.edgecombe@intel.com>
+In-Reply-To: <1529532570-21765-4-git-send-email-rick.p.edgecombe@intel.com>
+From: Jann Horn <jannh@google.com>
+Date: Thu, 21 Jun 2018 14:32:38 +0200
+Message-ID: <CAG48ez1QbKgoBCb-M=L+M5DJHj0URhNvS34h+Ax6RudckgCEEA@mail.gmail.com>
+Subject: Re: [PATCH 3/3] vmalloc: Add debugfs modfraginfo
+Content-Type: text/plain; charset="UTF-8"
+To: rick.p.edgecombe@intel.com
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, kernel list <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kristen.c.accardi@intel.com, Dave Hansen <dave.hansen@intel.com>, arjan.van.de.ven@intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 21, 2018 at 11:29:52AM +0200, Ard Biesheuvel wrote:
-> On 21 June 2018 at 10:59, James Morse <james.morse@arm.com> wrote:
-> > On 21/06/18 07:39, Ard Biesheuvel wrote:
-> >> On 21 June 2018 at 04:51, Jun Yao <yaojun8558363@gmail.com> wrote:
-> >>> On Wed, Jun 20, 2018 at 12:09:49PM +0200, Ard Biesheuvel wrote:
-> >>>> On 20 June 2018 at 10:57, Jun Yao <yaojun8558363@gmail.com> wrote:
-> >>>> As for swapper_pg_dir, it would indeed be nice if we could keep those
-> >>>> mappings read-only most of the time, but I'm not sure how useful this
-> >>>> is if we apply it to the root level only.
-> >>>
-> >>> The purpose of it is to make 'KSMA' harder, where an single arbitrary
-> >>> write is used to add a block mapping to the page-tables, giving the
-> >>> attacker full access to kernel memory. That's why we just apply it to
-> >>> the root level only. If the attacker can arbitrary write multiple times,
-> >>> I think it's hard to defend.
-> >>>
-> >>
-> >> So the assumption is that the root level is more easy to find?
-> >> Otherwise, I'm not sure I understand why being able to write a level 0
-> >> entry is so harmful, given that we don't have block mappings at that
-> >> level.
-> >
-> > I think this thing assumes 3-level page tables with 39bit VA.
-> >
-> 
-> The attack, you mean? Because this code is unlikely to build with that
-> configuration, given that __pgd_populate() BUILD_BUG()s in that case.
+On Thu, Jun 21, 2018 at 12:12 AM Rick Edgecombe
+<rick.p.edgecombe@intel.com> wrote:
+> Add debugfs file "modfraginfo" for providing info on module space
+> fragmentation.  This can be used for determining if loadable module
+> randomization is causing any problems for extreme module loading situations,
+> like huge numbers of modules or extremely large modules.
+>
+> Sample output when RANDOMIZE_BASE and X86_64 is configured:
+> Largest free space:             847253504
+> External Memory Fragementation: 20%
+> Allocations in backup area:     0
+>
+> Sample output otherwise:
+> Largest free space:             847253504
+> External Memory Fragementation: 20%
+[...]
+> +       seq_printf(m, "Largest free space:\t\t%lu\n", largest_free);
+> +       if (total_free)
+> +               seq_printf(m, "External Memory Fragementation:\t%lu%%\n",
 
-I think this configuration may be ok. I find that the kernel on Google
-pixel 2 XL is built with 3-level page tables with 39-bit VA.
+"Fragmentation"
+
+> +                       100-(100*largest_free/total_free));
+> +       else
+> +               seq_puts(m, "External Memory Fragementation:\t0%%\n");
+
+"Fragmentation"
+
+[...]
+> +static const struct file_operations debug_module_frag_operations = {
+> +       .open       = proc_module_frag_debug_open,
+> +       .read       = seq_read,
+> +       .llseek     = seq_lseek,
+> +       .release    = single_release,
+> +};
+>
+> +static void debug_modfrag_init(void)
+> +{
+> +       debugfs_create_file("modfraginfo", 0x0400, NULL, NULL,
+> +                       &debug_module_frag_operations);
+
+0x0400 is 02000, which is the setgid bit. I think you meant to type 0400?
