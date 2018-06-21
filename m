@@ -1,85 +1,71 @@
-From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
 Subject: Re: [PATCH 0/3] KASLR feature to randomize each loadable module
-Date: Thu, 21 Jun 2018 18:59:59 +0000
-Message-ID: <1529607615.29548.202.camel@intel.com>
 References: <1529532570-21765-1-git-send-email-rick.p.edgecombe@intel.com>
-	 <CAGXu5jLt8Zv-p=9J590WFppc3O6LWrAVdi-xtU7r_8f4j0XeRg@mail.gmail.com>
-	 <CAG48ez2uuQkSS9DLz6j5HbpuxaHMyAVYGMM+xoZEo51N=sHmdg@mail.gmail.com>
-In-Reply-To: <CAG48ez2uuQkSS9DLz6j5HbpuxaHMyAVYGMM+xoZEo51N=sHmdg@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <872ADC6A6EF5B044B71DB96FBDE5FF8E@intel.com>
-Content-Transfer-Encoding: base64
+ <CAGXu5jLt8Zv-p=9J590WFppc3O6LWrAVdi-xtU7r_8f4j0XeRg@mail.gmail.com>
+ <CAG48ez2uuQkSS9DLz6j5HbpuxaHMyAVYGMM+xoZEo51N=sHmdg@mail.gmail.com>
+ <1529607615.29548.202.camel@intel.com>
+From: Daniel Borkmann <daniel@iogearbox.net>
+Message-ID: <4efbcefe-78fb-b7db-affd-ad86f9e9b0ee@iogearbox.net>
+Date: Thu, 21 Jun 2018 23:23:11 +0200
 MIME-Version: 1.0
-To: "jannh@google.com" <jannh@google.com>, "keescook@chromium.org" <keescook@chromium.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "Van De
- Ven, Arjan" <arjan.van.de.ven@intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "x86@kernel.org" <x86@kernel.org>, "Accardi, Kristen C" <kristen.c.accardi@intel.com>, "hpa@zytor.com" <hpa@zytor.com>, "mingo@redhat.com" <mingo@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Hansen, Dave" <dave.hansen@intel.com>
+In-Reply-To: <1529607615.29548.202.camel@intel.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+To: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>, "jannh@google.com" <jannh@google.com>, "keescook@chromium.org" <keescook@chromium.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "Van De Ven, Arjan" <arjan.van.de.ven@intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "x86@kernel.org" <x86@kernel.org>, "Accardi, Kristen C" <kristen.c.accardi@intel.com>, "hpa@zytor.com" <hpa@zytor.com>, "mingo@redhat.com" <mingo@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Hansen, Dave" <dave.hansen@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gVGh1LCAyMDE4LTA2LTIxIGF0IDE1OjM3ICswMjAwLCBKYW5uIEhvcm4gd3JvdGU6DQo+IE9u
-IFRodSwgSnVuIDIxLCAyMDE4IGF0IDEyOjM0IEFNIEtlZXMgQ29vayA8a2Vlc2Nvb2tAY2hyb21p
-dW0ub3JnPg0KPiB3cm90ZToNCj4gPiBBbmQgbW9zdCBzeXN0ZW1zIGhhdmUgPDIwMCBtb2R1bGVz
-LCByZWFsbHkuIEkgaGF2ZSAxMTMgb24gYSBkZXNrdG9wDQo+ID4gcmlnaHQgbm93LCA2MyBvbiBh
-IHNlcnZlci4gU28gdGhpcyBsb29rcyBsaWtlIGEgdHJpdmlhbCB3aW4uDQo+IEJ1dCBub3RlIHRo
-YXQgdGhlIGVCUEYgSklUIGFsc28gdXNlcyBtb2R1bGVfYWxsb2MoKS4gRXZlcnkgdGltZSBhIEJQ
-Rg0KPiBwcm9ncmFtICh0aGlzIGluY2x1ZGVzIHNlY2NvbXAgZmlsdGVycyEpIGlzIEpJVC1jb21w
-aWxlZCBieSB0aGUNCj4ga2VybmVsLCBhbm90aGVyIG1vZHVsZV9hbGxvYygpIGFsbG9jYXRpb24g
-aXMgbWFkZS4gRm9yIGV4YW1wbGUsIG9uIG15DQo+IGRlc2t0b3AgbWFjaGluZSwgSSBoYXZlIGEg
-YnVuY2ggb2Ygc2VjY29tcC1zYW5kYm94ZWQgcHJvY2Vzc2VzIHRoYW5rcw0KPiB0byBDaHJvbWUu
-IElmIEkgZW5hYmxlIHRoZSBuZXQuY29yZS5icGZfaml0X2VuYWJsZSBzeXNjdGwgYW5kIG9wZW4g
-YQ0KPiBmZXcgQ2hyb21lIHRhYnMsIEJQRiBKSVQgYWxsb2NhdGlvbnMgc3RhcnQgc2hvd2luZyB1
-cCBiZXR3ZWVuDQo+IG1vZHVsZXM6DQo+IA0KPiAjIGdyZXAgLUMxIGJwZl9qaXRfYmluYXJ5X2Fs
-bG9jIC9wcm9jL3ZtYWxsb2NpbmZvIHwgY3V0IC1kJyAnIC1mIDItDQo+IMKgIDIwNDgwIGxvYWRf
-bW9kdWxlKzB4MTMyNi8weDJhYjAgcGFnZXM9NCB2bWFsbG9jIE4wPTQNCj4gwqAgMTIyODggYnBm
-X2ppdF9iaW5hcnlfYWxsb2MrMHgzMi8weDkwIHBhZ2VzPTIgdm1hbGxvYyBOMD0yDQo+IMKgIDIw
-NDgwIGxvYWRfbW9kdWxlKzB4MTMyNi8weDJhYjAgcGFnZXM9NCB2bWFsbG9jIE4wPTQNCj4gLS0N
-Cj4gwqAgMjA0ODAgbG9hZF9tb2R1bGUrMHgxMzI2LzB4MmFiMCBwYWdlcz00IHZtYWxsb2MgTjA9
-NA0KPiDCoCAxMjI4OCBicGZfaml0X2JpbmFyeV9hbGxvYysweDMyLzB4OTAgcGFnZXM9MiB2bWFs
-bG9jIE4wPTINCj4gwqAgMzY4NjQgbG9hZF9tb2R1bGUrMHgxMzI2LzB4MmFiMCBwYWdlcz04IHZt
-YWxsb2MgTjA9OA0KPiAtLQ0KPiDCoCAyMDQ4MCBsb2FkX21vZHVsZSsweDEzMjYvMHgyYWIwIHBh
-Z2VzPTQgdm1hbGxvYyBOMD00DQo+IMKgIDEyMjg4IGJwZl9qaXRfYmluYXJ5X2FsbG9jKzB4MzIv
-MHg5MCBwYWdlcz0yIHZtYWxsb2MgTjA9Mg0KPiDCoCA0MDk2MCBsb2FkX21vZHVsZSsweDEzMjYv
-MHgyYWIwIHBhZ2VzPTkgdm1hbGxvYyBOMD05DQo+IC0tDQo+IMKgIDIwNDgwIGxvYWRfbW9kdWxl
-KzB4MTMyNi8weDJhYjAgcGFnZXM9NCB2bWFsbG9jIE4wPTQNCj4gwqAgMTIyODggYnBmX2ppdF9i
-aW5hcnlfYWxsb2MrMHgzMi8weDkwIHBhZ2VzPTIgdm1hbGxvYyBOMD0yDQo+IMKgMjUzOTUyIGxv
-YWRfbW9kdWxlKzB4MTMyNi8weDJhYjAgcGFnZXM9NjEgdm1hbGxvYyBOMD02MQ0KPiANCj4gSWYg
-eW91IHVzZSBDaHJvbWUgd2l0aCBTaXRlIElzb2xhdGlvbiwgeW91IGhhdmUgYSBmZXcgZG96ZW4g
-b3Blbg0KPiB0YWJzLA0KPiBhbmQgdGhlIEJQRiBKSVQgaXMgZW5hYmxlZCwgcmVhY2hpbmcgYSBm
-ZXcgaHVuZHJlZCBhbGxvY2F0aW9ucyBtaWdodA0KPiBub3QgYmUgdGhhdCBoYXJkLg0KPiANCj4g
-QWxzbzogV2hhdCdzIHRoZSBpbXBhY3Qgb24gbWVtb3J5IHVzYWdlPyBJcyB0aGlzIGdvaW5nIHRv
-IGluY3JlYXNlDQo+IHRoZQ0KPiBudW1iZXIgb2YgcGFnZXRhYmxlcyB0aGF0IG5lZWQgdG8gYmUg
-YWxsb2NhdGVkIGJ5IHRoZSBrZXJuZWwgcGVyDQo+IG1vZHVsZV9hbGxvYygpIGJ5IDRLIG9yIDhL
-IG9yIHNvPw0KVGhhbmtzLCBpdCBzZWVtcyBpdCBtaWdodCByZXF1aXJlIHNvbWUgZXh0cmEgbWVt
-b3J5LsKgwqBJJ2xsIGxvb2sgaW50byBpdA0KdG8gZmluZCBvdXQgZXhhY3RseSBob3cgbXVjaC4N
-Cg0KSSBkaWRuJ3QgaW5jbHVkZSBlQkZQIG1vZHVsZXMgaW4gdGhlIHJhbmRvbWl6YXRpb24gZXN0
-aW1hdGVzLCBidXQgaXQNCmxvb2tzIGxpa2UgdGhleSBhcmUgdXN1YWxseSBzbWFsbGVyIHRoYW4g
-YSBwYWdlLiDCoFNvIHdpdGggdGhlIHNsaWdodA0KbGVhcCB0aGF0IHRoZSBsYXJnZXIgbm9ybWFs
-IG1vZHVsZXMgYmFzZWQgZXN0aW1hdGXCoGlzIHRoZSB3b3JzdCBjYXNlLA0KeW91IHNob3VsZCBz
-dGlsbCBnZXQgfjgwMCBtb2R1bGVzIGF0IDE4IGJpdHMuIEFmdGVyIHRoYXQgaXQgd2lsbCBzdGFy
-dA0KdG8gZ28gZG93biB0byAxMCBiaXRzIGFuZCBzbyBpbiBlaXRoZXIgY2FzZSBpdCBhdCBsZWFz
-dCB3b24ndCByZWdyZXNzDQp0aGUgcmFuZG9tbmVzcyBvZiB0aGUgZXhpc3RpbmcgYWxnb3JpdGht
-Lg0KDQo+ID4gDQo+ID4gPiANCj4gPiA+IEFzIGZvciBmcmFnbWVudGF0aW9uLCB0aGlzIGFsZ29y
-aXRobSByZWR1Y2VzIHRoZSBhdmVyYWdlIG51bWJlcg0KPiA+ID4gb2YgbW9kdWxlcyB0aGF0DQo+
-ID4gPiBjYW4gYmUgbG9hZGVkIHdpdGhvdXQgYW4gYWxsb2NhdGlvbiBmYWlsdXJlIGJ5IGFib3V0
-IDYlICh+MTcwMDANCj4gPiA+IHRvIH4xNjAwMCkNCj4gPiA+IChwPDAuMDUpLiBJdCBjYW4gYWxz
-byByZWR1Y2UgdGhlIGxhcmdlc3QgbW9kdWxlIGV4ZWN1dGFibGUNCj4gPiA+IHNlY3Rpb24gdGhh
-dCBjYW4gYmUNCj4gPiA+IGxvYWRlZCBieSBoYWxmIHRvIH41MDBNQiBpbiB0aGUgd29yc3QgY2Fz
-ZS4NCj4gPiBHaXZlbiB0aGF0IHdlIG9ubHkgaGF2ZSA4MzEyIHRyaXN0YXRlIEtjb25maWcgaXRl
-bXMsIEkgdGhpbmsgMTYwMDANCj4gPiB3aWxsIHJlbWFpbiBqdXN0IGZpbmUuIEFuZCBldmVuIGxh
-cmdlIG1vZHVsZXMgKGk5MTUpIGFyZSB1bmRlcg0KPiA+IDJNQi4uLg0KPiA+IA0KPiA+ID4gDQo+
-ID4gPiBUaGUgbmV3IF9fdm1hbGxvY19ub2RlX3RyeV9hZGRyIGZ1bmN0aW9uIHVzZXMgdGhlIGV4
-aXN0aW5nDQo+ID4gPiBmdW5jdGlvbg0KPiA+ID4gX192bWFsbG9jX25vZGVfcmFuZ2UsIGluIG9y
-ZGVyIHRvIGludHJvZHVjZSB0aGlzIGFsZ29yaXRobSB3aXRoDQo+ID4gPiB0aGUgbGVhc3QNCj4g
-PiA+IGludmFzaXZlIGNoYW5nZS4gVGhlIHNpZGUgZWZmZWN0IGlzIHRoYXQgZWFjaCB0aW1lIHRo
-ZXJlIGlzIGENCj4gPiA+IGNvbGxpc2lvbiB3aGVuDQo+ID4gPiB0cnlpbmcgdG8gYWxsb2NhdGUg
-aW4gdGhlIHJhbmRvbSBhcmVhIGEgVExCIGZsdXNoIHdpbGwgYmUNCj4gPiA+IHRyaWdnZXJlZC4g
-VGhlcmUgaXMNCj4gPiA+IGEgbW9yZSBjb21wbGV4LCBtb3JlIGVmZmljaWVudCBpbXBsZW1lbnRh
-dGlvbiB0aGF0IGNhbiBiZSB1c2VkDQo+ID4gPiBpbnN0ZWFkIGlmDQo+ID4gPiB0aGVyZSBpcyBp
-bnRlcmVzdCBpbiBpbXByb3ZpbmcgcGVyZm9ybWFuY2UuDQo+ID4gVGhlIG9ubHkgdGltZSB3aGVu
-IG1vZHVsZSBsb2FkaW5nIHNwZWVkIGlzIG5vdGljZWFibGUsIEkgd291bGQNCj4gPiB0aGluaywN
-Cj4gPiB3b3VsZCBiZSBib290IHRpbWUuIEhhdmUgeW91IGRvbmUgYW55IGJvb3QgdGltZSBkZWx0
-YSBhbmFseXNpcz8gSQ0KPiA+IHdvdWxkbid0IGV4cGVjdCBpdCB0byBjaGFuZ2UgaGFyZGx5IGF0
-IGFsbCwgYnV0IGl0J3MgcHJvYmFibHkgYQ0KPiA+IGdvb2QNCj4gPiBpZGVhIHRvIGFjdHVhbGx5
-IHRlc3QgaXQuIDopDQo+IElmIHlvdSBoYXZlIGEgZm9ya2luZyBzZXJ2ZXIgdGhhdCBhcHBsaWVz
-IHNlY2NvbXAgZmlsdGVycyBvbiBlYWNoDQo+IGZvcmssIG9yIHNvbWV0aGluZyBsaWtlIHRoYXQs
-IHlvdSBtaWdodCBjYXJlIGFib3V0IHRob3NlIFRMQiBmbHVzaGVzLg0KPiANCg0KSSBjYW4gdGVz
-dCB0aGlzIGFzIHdlbGwu
+On 06/21/2018 08:59 PM, Edgecombe, Rick P wrote:
+> On Thu, 2018-06-21 at 15:37 +0200, Jann Horn wrote:
+>> On Thu, Jun 21, 2018 at 12:34 AM Kees Cook <keescook@chromium.org>
+>> wrote:
+>>> And most systems have <200 modules, really. I have 113 on a desktop
+>>> right now, 63 on a server. So this looks like a trivial win.
+>> But note that the eBPF JIT also uses module_alloc(). Every time a BPF
+>> program (this includes seccomp filters!) is JIT-compiled by the
+>> kernel, another module_alloc() allocation is made. For example, on my
+>> desktop machine, I have a bunch of seccomp-sandboxed processes thanks
+>> to Chrome. If I enable the net.core.bpf_jit_enable sysctl and open a
+>> few Chrome tabs, BPF JIT allocations start showing up between
+>> modules:
+>>
+>> # grep -C1 bpf_jit_binary_alloc /proc/vmallocinfo | cut -d' ' -f 2-
+>>   20480 load_module+0x1326/0x2ab0 pages=4 vmalloc N0=4
+>>   12288 bpf_jit_binary_alloc+0x32/0x90 pages=2 vmalloc N0=2
+>>   20480 load_module+0x1326/0x2ab0 pages=4 vmalloc N0=4
+>> --
+>>   20480 load_module+0x1326/0x2ab0 pages=4 vmalloc N0=4
+>>   12288 bpf_jit_binary_alloc+0x32/0x90 pages=2 vmalloc N0=2
+>>   36864 load_module+0x1326/0x2ab0 pages=8 vmalloc N0=8
+>> --
+>>   20480 load_module+0x1326/0x2ab0 pages=4 vmalloc N0=4
+>>   12288 bpf_jit_binary_alloc+0x32/0x90 pages=2 vmalloc N0=2
+>>   40960 load_module+0x1326/0x2ab0 pages=9 vmalloc N0=9
+>> --
+>>   20480 load_module+0x1326/0x2ab0 pages=4 vmalloc N0=4
+>>   12288 bpf_jit_binary_alloc+0x32/0x90 pages=2 vmalloc N0=2
+>>  253952 load_module+0x1326/0x2ab0 pages=61 vmalloc N0=61
+>>
+>> If you use Chrome with Site Isolation, you have a few dozen open
+>> tabs,
+>> and the BPF JIT is enabled, reaching a few hundred allocations might
+>> not be that hard.
+>>
+>> Also: What's the impact on memory usage? Is this going to increase
+>> the
+>> number of pagetables that need to be allocated by the kernel per
+>> module_alloc() by 4K or 8K or so?
+> Thanks, it seems it might require some extra memory.  I'll look into it
+> to find out exactly how much.
+> 
+> I didn't include eBFP modules in the randomization estimates, but it
+> looks like they are usually smaller than a page.  So with the slight
+> leap that the larger normal modules based estimate is the worst case,
+> you should still get ~800 modules at 18 bits. After that it will start
+> to go down to 10 bits and so in either case it at least won't regress
+> the randomness of the existing algorithm.
+
+Assume typically complex (real) programs at around 2.5k BPF insns today.
+In our case it's max a handful per net device, thus approx per netns (veth)
+which can be few hundreds. Worst case is 4k that BPF allows and then JITs.
+There's a BPF kselftest suite you could also run to check on worst case
+upper bounds.
