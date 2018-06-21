@@ -1,46 +1,43 @@
+Subject: Re: [PATCH] sg, bsg: mitigate read/write abuse, block uaccess in
+ release
+References: <20180615152335.208202-1-jannh@google.com>
+ <20180615164009.GD30522@ZenIV.linux.org.uk>
+ <90063ef3-68fa-e983-9b47-838e6076b0f4@interlog.com>
+ <813e817b-bb2f-4a47-6225-9e39f19be278@kernel.dk>
+ <20180621123431.GA558@infradead.org>
+From: Jens Axboe <axboe@kernel.dk>
+Message-ID: <36a641db-fb1d-6c4c-7f1b-172f2b1cde32@kernel.dk>
+Date: Thu, 21 Jun 2018 08:07:23 -0600
 MIME-Version: 1.0
-References: <1529532570-21765-1-git-send-email-rick.p.edgecombe@intel.com>
- <CAGXu5jLt8Zv-p=9J590WFppc3O6LWrAVdi-xtU7r_8f4j0XeRg@mail.gmail.com> <CAG48ez2uuQkSS9DLz6j5HbpuxaHMyAVYGMM+xoZEo51N=sHmdg@mail.gmail.com>
-In-Reply-To: <CAG48ez2uuQkSS9DLz6j5HbpuxaHMyAVYGMM+xoZEo51N=sHmdg@mail.gmail.com>
-From: Jann Horn <jannh@google.com>
-Date: Thu, 21 Jun 2018 15:39:03 +0200
-Message-ID: <CAG48ez1eAKVy13tmAxrVkRqj2Fd+wduqBt4fzMBjY5FA1aFFmw@mail.gmail.com>
-Subject: Re: [PATCH 0/3] KASLR feature to randomize each loadable module
-Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>, rick.p.edgecombe@intel.com
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, kernel list <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kristen.c.accardi@intel.com, Dave Hansen <dave.hansen@intel.com>, arjan.van.de.ven@intel.com
+In-Reply-To: <20180621123431.GA558@infradead.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Christoph Hellwig <hch@infradead.org>
+Cc: dgilbert@interlog.com, Al Viro <viro@ZenIV.linux.org.uk>, Jann Horn <jannh@google.com>, FUJITA Tomonori <fujita.tomonori@lab.ntt.co.jp>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, security@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 21, 2018 at 3:37 PM Jann Horn <jannh@google.com> wrote:
->
-> On Thu, Jun 21, 2018 at 12:34 AM Kees Cook <keescook@chromium.org> wrote:
-> >
-> > On Wed, Jun 20, 2018 at 3:09 PM, Rick Edgecombe
-> > <rick.p.edgecombe@intel.com> wrote:
-> > > This patch changes the module loading KASLR algorithm to randomize the position
-> > > of each module text section allocation with at least 18 bits of entropy in the
-> > > typical case. It used on x86_64 only for now.
-> >
-> > Very cool! Thanks for sending the series. :)
-> >
-> > > Today the RANDOMIZE_BASE feature randomizes the base address where the module
-> > > allocations begin with 10 bits of entropy. From here, a highly deterministic
-> > > algorithm allocates space for the modules as they are loaded and un-loaded. If
-> > > an attacker can predict the order and identities for modules that will be
-> > > loaded, then a single text address leak can give the attacker access to the
-> >
-> > nit: "text address" -> "module text address"
-> >
-> > > So the defensive strength of this algorithm in typical usage (<800 modules) for
-> > > x86_64 should be at least 18 bits, even if an address from the random area
-> > > leaks.
-> >
-> > And most systems have <200 modules, really. I have 113 on a desktop
-> > right now, 63 on a server. So this looks like a trivial win.
-[...]
-> Also: What's the impact on memory usage? Is this going to increase the
-> number of pagetables that need to be allocated by the kernel per
-> module_alloc() by 4K or 8K or so?
+On 6/21/18 6:34 AM, Christoph Hellwig wrote:
+> On Mon, Jun 18, 2018 at 09:37:01AM -0600, Jens Axboe wrote:
+>> It was born with that mode, but I don't think anyone ever really used it.
+>> So it might feasible to simply yank it. That said, just doing a prune
+>> mode at ->release() time doesn't seem like such a hard task.
+> 
+> Let's try to kill it.  It is a significant amount of code, which does
+> fishy things and is probably entirely unused:
 
-Sorry, I meant increase the amount of memory used by pagetables by 4K
-or 8K, not the number of pagetables.
+I'd be fine with that, if we knew that nobody uses it. But that's
+really hard to figure out. I did see Jann's source code scan, which
+even if non-exhaustive, still shows at least one user of it.
+
+How about we just make the write interface sync? Then any copy can
+happen while the we block the task, and the read side is just
+copying the header info back, or dumping it if the task didn't
+read it before it went away.
+
+That will still be functional, just not queueable. But that's not
+a huge concern, it won't break any applications. And with pure
+sync issue, most of the code goes away anyway and becomes similar
+to the sync ioctl.
+
+-- 
+Jens Axboe
