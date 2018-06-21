@@ -1,43 +1,35 @@
+Date: Thu, 21 Jun 2018 06:03:27 -0700
+From: Christoph Hellwig <hch@infradead.org>
 Subject: Re: [PATCH] sg, bsg: mitigate read/write abuse, block uaccess in
  release
+Message-ID: <20180621130327.GB24925@infradead.org>
 References: <20180615152335.208202-1-jannh@google.com>
  <20180615164009.GD30522@ZenIV.linux.org.uk>
  <90063ef3-68fa-e983-9b47-838e6076b0f4@interlog.com>
  <813e817b-bb2f-4a47-6225-9e39f19be278@kernel.dk>
  <20180621123431.GA558@infradead.org>
-From: Jens Axboe <axboe@kernel.dk>
-Message-ID: <36a641db-fb1d-6c4c-7f1b-172f2b1cde32@kernel.dk>
-Date: Thu, 21 Jun 2018 08:07:23 -0600
+ <CAG48ez3BWeZkW5XG814K4o7p0KWXVm9Gpzh2rTthNei=4fhH-A@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20180621123431.GA558@infradead.org>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Christoph Hellwig <hch@infradead.org>
-Cc: dgilbert@interlog.com, Al Viro <viro@ZenIV.linux.org.uk>, Jann Horn <jannh@google.com>, FUJITA Tomonori <fujita.tomonori@lab.ntt.co.jp>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, security@kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAG48ez3BWeZkW5XG814K4o7p0KWXVm9Gpzh2rTthNei=4fhH-A@mail.gmail.com>
+To: Jann Horn <jannh@google.com>
+Cc: Christoph Hellwig <hch@infradead.org>, axboe@kernel.dk, dgilbert@interlog.com, Al Viro <viro@zeniv.linux.org.uk>, fujita.tomonori@lab.ntt.co.jp, jejb@linux.vnet.ibm.com, martin.petersen@oracle.com, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, security@kernel.org, Alexander Nezhinsky <alexandern@mellanox.com>, Nicholas Bellinger <nab@linux-iscsi.org>, stgt@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 6/21/18 6:34 AM, Christoph Hellwig wrote:
-> On Mon, Jun 18, 2018 at 09:37:01AM -0600, Jens Axboe wrote:
->> It was born with that mode, but I don't think anyone ever really used it.
->> So it might feasible to simply yank it. That said, just doing a prune
->> mode at ->release() time doesn't seem like such a hard task.
-> 
-> Let's try to kill it.  It is a significant amount of code, which does
-> fishy things and is probably entirely unused:
+On Thu, Jun 21, 2018 at 02:51:16PM +0200, Jann Horn wrote:
+> In the package https://packages.debian.org/stretch/tgt:
+>   https://sources.debian.org/src/tgt/1:1.0.73-1/usr/bs_sg.c/?hl=131#L131
+>   https://sources.debian.org/src/tgt/1:1.0.73-1/usr/bs_sg.c/?hl=236#L236
 
-I'd be fine with that, if we knew that nobody uses it. But that's
-really hard to figure out. I did see Jann's source code scan, which
-even if non-exhaustive, still shows at least one user of it.
+This is for real, although it is an optional case in an optional plug
+in, so I'm not sure if any one actually uses bsg read/write with it
+for real.
 
-How about we just make the write interface sync? Then any copy can
-happen while the we block the task, and the read side is just
-copying the header info back, or dumping it if the task didn't
-read it before it went away.
+The usual aspects added. (the question is if bsg read/write support
+is actually used in real life or can be removed)
 
-That will still be functional, just not queueable. But that's not
-a huge concern, it won't break any applications. And with pure
-sync issue, most of the code goes away anyway and becomes similar
-to the sync ioctl.
+> In the package https://packages.debian.org/stretch/sg3-utils:
+>   https://sources.debian.org/src/sg3-utils/1.42-2/examples/bsg_queue_tst.c/?hl=60#L60
 
--- 
-Jens Axboe
+This is just example code.
