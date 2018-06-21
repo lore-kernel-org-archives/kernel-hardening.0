@@ -1,23 +1,39 @@
-From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Subject: Re: [PATCH 1/3] vmalloc: Add __vmalloc_node_try_addr function
-Date: Thu, 21 Jun 2018 22:02:39 +0000
-Message-ID: <1529618574.29548.207.camel@intel.com>
-References: <1529532570-21765-1-git-send-email-rick.p.edgecombe@intel.com>
-	 <1529532570-21765-2-git-send-email-rick.p.edgecombe@intel.com>
-	 <20180620222653.GC11479@bombadil.infradead.org>
-In-Reply-To: <20180620222653.GC11479@bombadil.infradead.org>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <FBF7B1AD2130BB4D8BDEDBD442B31691@intel.com>
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-To: "willy@infradead.org" <willy@infradead.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "Van De
- Ven, Arjan" <arjan.van.de.ven@intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "x86@kernel.org" <x86@kernel.org>, "Accardi, Kristen C" <kristen.c.accardi@intel.com>, "hpa@zytor.com" <hpa@zytor.com>, "mingo@redhat.com" <mingo@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Hansen, Dave" <dave.hansen@intel.com>
+Sender: keescook@google.com
+In-Reply-To: <CAGXu5jJ9F-eZW5qVGebsv=wUh0kSm+edAecpztgvMC3fGeYXXA@mail.gmail.com>
+References: <1527365430-8303-1-git-send-email-alex.popov@linux.com> <CAGXu5jJ9F-eZW5qVGebsv=wUh0kSm+edAecpztgvMC3fGeYXXA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 21 Jun 2018 16:00:04 -0700
+Message-ID: <CAGXu5jLU4En5Cf6KGf0Adpky-TF7aa=d9MTDqDKwxQuxZSLNEg@mail.gmail.com>
+Subject: Re: [PATCH v13 0/6] Introduce the STACKLEAK feature and a test for it
+Content-Type: text/plain; charset="UTF-8"
+To: Alexander Popov <alex.popov@linux.com>, Laura Abbott <labbott@redhat.com>, Ingo Molnar <mingo@kernel.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gV2VkLCAyMDE4LTA2LTIwIGF0IDE1OjI2IC0wNzAwLCBNYXR0aGV3IFdpbGNveCB3cm90ZToN
-Cj4gTm90IG5lZWRlZDoNCj4gDQo+IHZvaWQgd2Fybl9hbGxvYyhnZnBfdCBnZnBfbWFzaywgbm9k
-ZW1hc2tfdCAqbm9kZW1hc2ssIGNvbnN0IGNoYXINCj4gKmZtdCwgLi4uKQ0KPiB7DQo+IC4uLg0K
-PiDCoMKgwqDCoMKgwqDCoMKgaWYgKChnZnBfbWFzayAmIF9fR0ZQX05PV0FSTikgfHwgIV9fcmF0
-ZWxpbWl0KCZub3BhZ2VfcnMpKQ0KPiDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoHJl
-dHVybjsNCj4gDQpZZXMsIHRoYW5rcyE=
+On Sun, May 27, 2018 at 7:57 AM, Kees Cook <keescook@chromium.org> wrote:
+> On Sat, May 26, 2018 at 1:10 PM, Alexander Popov <alex.popov@linux.com> wrote:
+>> This is the 13th version of the patch series introducing STACKLEAK to the
+>> mainline kernel for x86. This version comes with style changes according to
+>> the feedback from Ingo Molnar. Previous version discussion:
+>> http://www.openwall.com/lists/kernel-hardening/2018/05/16/1
+>
+> Thanks for the update! I've pushed it to my tree for 0-day testing:
+> https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/gcc-plugin/stackleak-v13
+
+0-day has been happy with this tree, and with Ingo's freedback
+addressed, I'd like to push this to -next after -rc2 is released (in
+theory this coming Sunday). It needed some rebasing to -rc1, but it
+was all trivial stuff in Kconfg and Makefile from the kbuild tree's
+changes.
+
+Ingo, how do things look to you now?
+
+Laura, have you had a chance to refresh your arm64 bits to this tree?
+I haven't had a chance to look at it myself.
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
