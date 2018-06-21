@@ -1,143 +1,85 @@
+From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
+Subject: Re: [PATCH 0/3] KASLR feature to randomize each loadable module
+Date: Thu, 21 Jun 2018 18:59:59 +0000
+Message-ID: <1529607615.29548.202.camel@intel.com>
+References: <1529532570-21765-1-git-send-email-rick.p.edgecombe@intel.com>
+	 <CAGXu5jLt8Zv-p=9J590WFppc3O6LWrAVdi-xtU7r_8f4j0XeRg@mail.gmail.com>
+	 <CAG48ez2uuQkSS9DLz6j5HbpuxaHMyAVYGMM+xoZEo51N=sHmdg@mail.gmail.com>
+In-Reply-To: <CAG48ez2uuQkSS9DLz6j5HbpuxaHMyAVYGMM+xoZEo51N=sHmdg@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <872ADC6A6EF5B044B71DB96FBDE5FF8E@intel.com>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-References: <20180621151809.10921-1-jannh@google.com> <eafae3a5-346b-5361-4551-7dc5a146e1da@interlog.com>
-In-Reply-To: <eafae3a5-346b-5361-4551-7dc5a146e1da@interlog.com>
-From: Jann Horn <jannh@google.com>
-Date: Thu, 21 Jun 2018 20:56:18 +0200
-Message-ID: <CAG48ez1EgmS9Gp2G__doddRQQU2iuSQ=7WXymrKUFDwWHjx91A@mail.gmail.com>
-Subject: Re: [PATCH v2] sg: mitigate read/write abuse
-Content-Type: text/plain; charset="UTF-8"
-To: dgilbert@interlog.com
-Cc: jejb@linux.vnet.ibm.com, martin.petersen@oracle.com, linux-scsi@vger.kernel.org, Christoph Hellwig <hch@infradead.org>, Al Viro <viro@zeniv.linux.org.uk>, kernel list <linux-kernel@vger.kernel.org>, axboe@kernel.dk, fujita.tomonori@lab.ntt.co.jp, Kernel Hardening <kernel-hardening@lists.openwall.com>, security@kernel.org, bblock@linux.vnet.ibm.com
+To: "jannh@google.com" <jannh@google.com>, "keescook@chromium.org" <keescook@chromium.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "Van De
+ Ven, Arjan" <arjan.van.de.ven@intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "x86@kernel.org" <x86@kernel.org>, "Accardi, Kristen C" <kristen.c.accardi@intel.com>, "hpa@zytor.com" <hpa@zytor.com>, "mingo@redhat.com" <mingo@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Hansen, Dave" <dave.hansen@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 21, 2018 at 6:53 PM Douglas Gilbert <dgilbert@interlog.com> wrote:
->
-> On 2018-06-21 05:18 PM, Jann Horn wrote:
-> > As Al Viro noted in commit 128394eff343 ("sg_write()/bsg_write() is not fit
-> > to be called under KERNEL_DS"), sg improperly accesses userspace memory
-> > outside the provided buffer, permitting kernel memory corruption via
-> > splice().
-> > But it doesn't just do it on ->write(), also on ->read().
-> >
-> > As a band-aid, make sure that the ->read() and ->write() handlers can not
-> > be called in weird contexts (kernel context or credentials different from
-> > file opener), like for ib_safe_file_access().
-> >
-> > If someone needs to use these interfaces from different security contexts,
-> > a new interface should be written that goes through the ->ioctl() handler.
-> >
-> > I've mostly copypasted ib_safe_file_access() over as sg_safe_file_access()
-> > because I couldn't find a good common header - please tell me if you know a
-> > better way.
-> > The duplicate pr_err_once() calls are so that each of them fires once;
-> > otherwise, this would probably have to be a macro.
-> >
-> > changed in v2:
-> >   - remove the bsg parts per Christoph Hellwig's request
-> >
-> > Fixes: 1da177e4c3f4 ("Linux-2.6.12-rc2")
-> > Cc: <stable@vger.kernel.org>
-> > Signed-off-by: Jann Horn <jannh@google.com>
-> > ---
-> >   drivers/scsi/sg.c | 29 ++++++++++++++++++++++++++++-
-> >   1 file changed, 28 insertions(+), 1 deletion(-)
-> >
-> > diff --git a/drivers/scsi/sg.c b/drivers/scsi/sg.c
-> > index 53ae52dbff84..51b685192646 100644
-> > --- a/drivers/scsi/sg.c
-> > +++ b/drivers/scsi/sg.c
-> > @@ -51,6 +51,7 @@ static int sg_version_num = 30536;  /* 2 digits for each component */
-> >   #include <linux/atomic.h>
-> >   #include <linux/ratelimit.h>
-> >   #include <linux/uio.h>
-> > +#include <linux/cred.h> /* for sg_safe_file_access() */
-> >
-> >   #include "scsi.h"
-> >   #include <scsi/scsi_dbg.h>
-> > @@ -209,6 +210,23 @@ static void sg_device_destroy(struct kref *kref);
-> >       sdev_prefix_printk(prefix, (sdp)->device,               \
-> >                          (sdp)->disk->disk_name, fmt, ##a)
-> >
-> > +/*
-> > + * The SCSI interfaces that use read() and write() as an asynchronous variant of
-> > + * ioctl(..., SG_IO, ...) are fundamentally unsafe, since there are lots of ways
-> > + * to trigger read() and write() calls from various contexts with elevated
-> > + * privileges. This can lead to kernel memory corruption (e.g. if these
-> > + * interfaces are called through splice()) and privilege escalation inside
-> > + * userspace (e.g. if a process with access to such a device passes a file
-> > + * descriptor to a SUID binary as stdin/stdout/stderr).
-> > + *
-> > + * This function provides protection for the legacy API by restricting the
-> > + * calling context.
-> > + */
-> > +static inline bool sg_safe_file_access(struct file *filp)
-> > +{
-> > +     return filp->f_cred == current_cred() && !uaccess_kernel();
-> > +}
-> > +
-> >   static int sg_allow_access(struct file *filp, unsigned char *cmd)
-> >   {
-> >       struct sg_fd *sfp = filp->private_data;
-> > @@ -393,6 +411,12 @@ sg_read(struct file *filp, char __user *buf, size_t count, loff_t * ppos)
-> >       struct sg_header *old_hdr = NULL;
-> >       int retval = 0;
-> >
-> > +     if (!sg_safe_file_access(filp)) {
-> > +             pr_err_once("%s: process %d (%s) changed security contexts after opening file descriptor, this is not allowed.\n",
-> > +                     __func__, task_tgid_vnr(current), current->comm);
-> > +             return -EINVAL;
->
-> The error message and returned code apply to the
-> (filp->f_cred == current_cred()) case, not so much to !uaccess_kernel().
-> While on the error path could you not break out the !uaccess_kernel()
-> with an appropriate error message and a return code of -EACCES ? Perhaps
-> a message is unneeded since EACCES is clear.
->
-> Not that wild about EINVAL either since it suggests (to me) a "front end"
-> error (e.g. associated with a badly formed request). How about EPERM for
-> the changing credentials case.
-
-I used EINVAL since infiniband uses that error case, but I see how it
-would be a relatively confusing error code in the context of an sg
-device - I agree that EACCES and EPERM might be a better fit here.
-I'll adjust the patch.
-However, shouldn't it be EPERM in the uaccess_kernel() case and EACCES
-in the filp->f_cred!=current_cred() case (instead of the other way
-around)?
-
-> And could I suggest a comment in the code along these lines:
->
-> /*
->   * This could cause a response to be stranded. Close the associated
->   * file descriptor to free up any resources being held.
->   */
-
-You mean, as advice to users of this interface, telling them to
-close() the FD if they get an error code from read()?
-
-> > +     }
-> > +
-> >       if ((!(sfp = (Sg_fd *) filp->private_data)) || (!(sdp = sfp->parentdp)))
-> >               return -ENXIO;
-> >       SCSI_LOG_TIMEOUT(3, sg_printk(KERN_INFO, sdp,
-> > @@ -581,8 +605,11 @@ sg_write(struct file *filp, const char __user *buf, size_t count, loff_t * ppos)
-> >       sg_io_hdr_t *hp;
-> >       unsigned char cmnd[SG_MAX_CDB_SIZE];
-> >
-> > -     if (unlikely(uaccess_kernel()))
-> > +     if (!sg_safe_file_access(filp)) {
-> > +             pr_err_once("%s: process %d (%s) changed security contexts after opening file descriptor, this is not allowed.\n",
-> > +                     __func__, task_tgid_vnr(current), current->comm);
-> >               return -EINVAL;
->
-> Same comments as above.
->
->
-> Doug Gilbert
->
-> > +     }
-> >
-> >       if ((!(sfp = (Sg_fd *) filp->private_data)) || (!(sdp = sfp->parentdp)))
-> >               return -ENXIO;
-> >
->
+T24gVGh1LCAyMDE4LTA2LTIxIGF0IDE1OjM3ICswMjAwLCBKYW5uIEhvcm4gd3JvdGU6DQo+IE9u
+IFRodSwgSnVuIDIxLCAyMDE4IGF0IDEyOjM0IEFNIEtlZXMgQ29vayA8a2Vlc2Nvb2tAY2hyb21p
+dW0ub3JnPg0KPiB3cm90ZToNCj4gPiBBbmQgbW9zdCBzeXN0ZW1zIGhhdmUgPDIwMCBtb2R1bGVz
+LCByZWFsbHkuIEkgaGF2ZSAxMTMgb24gYSBkZXNrdG9wDQo+ID4gcmlnaHQgbm93LCA2MyBvbiBh
+IHNlcnZlci4gU28gdGhpcyBsb29rcyBsaWtlIGEgdHJpdmlhbCB3aW4uDQo+IEJ1dCBub3RlIHRo
+YXQgdGhlIGVCUEYgSklUIGFsc28gdXNlcyBtb2R1bGVfYWxsb2MoKS4gRXZlcnkgdGltZSBhIEJQ
+Rg0KPiBwcm9ncmFtICh0aGlzIGluY2x1ZGVzIHNlY2NvbXAgZmlsdGVycyEpIGlzIEpJVC1jb21w
+aWxlZCBieSB0aGUNCj4ga2VybmVsLCBhbm90aGVyIG1vZHVsZV9hbGxvYygpIGFsbG9jYXRpb24g
+aXMgbWFkZS4gRm9yIGV4YW1wbGUsIG9uIG15DQo+IGRlc2t0b3AgbWFjaGluZSwgSSBoYXZlIGEg
+YnVuY2ggb2Ygc2VjY29tcC1zYW5kYm94ZWQgcHJvY2Vzc2VzIHRoYW5rcw0KPiB0byBDaHJvbWUu
+IElmIEkgZW5hYmxlIHRoZSBuZXQuY29yZS5icGZfaml0X2VuYWJsZSBzeXNjdGwgYW5kIG9wZW4g
+YQ0KPiBmZXcgQ2hyb21lIHRhYnMsIEJQRiBKSVQgYWxsb2NhdGlvbnMgc3RhcnQgc2hvd2luZyB1
+cCBiZXR3ZWVuDQo+IG1vZHVsZXM6DQo+IA0KPiAjIGdyZXAgLUMxIGJwZl9qaXRfYmluYXJ5X2Fs
+bG9jIC9wcm9jL3ZtYWxsb2NpbmZvIHwgY3V0IC1kJyAnIC1mIDItDQo+IMKgIDIwNDgwIGxvYWRf
+bW9kdWxlKzB4MTMyNi8weDJhYjAgcGFnZXM9NCB2bWFsbG9jIE4wPTQNCj4gwqAgMTIyODggYnBm
+X2ppdF9iaW5hcnlfYWxsb2MrMHgzMi8weDkwIHBhZ2VzPTIgdm1hbGxvYyBOMD0yDQo+IMKgIDIw
+NDgwIGxvYWRfbW9kdWxlKzB4MTMyNi8weDJhYjAgcGFnZXM9NCB2bWFsbG9jIE4wPTQNCj4gLS0N
+Cj4gwqAgMjA0ODAgbG9hZF9tb2R1bGUrMHgxMzI2LzB4MmFiMCBwYWdlcz00IHZtYWxsb2MgTjA9
+NA0KPiDCoCAxMjI4OCBicGZfaml0X2JpbmFyeV9hbGxvYysweDMyLzB4OTAgcGFnZXM9MiB2bWFs
+bG9jIE4wPTINCj4gwqAgMzY4NjQgbG9hZF9tb2R1bGUrMHgxMzI2LzB4MmFiMCBwYWdlcz04IHZt
+YWxsb2MgTjA9OA0KPiAtLQ0KPiDCoCAyMDQ4MCBsb2FkX21vZHVsZSsweDEzMjYvMHgyYWIwIHBh
+Z2VzPTQgdm1hbGxvYyBOMD00DQo+IMKgIDEyMjg4IGJwZl9qaXRfYmluYXJ5X2FsbG9jKzB4MzIv
+MHg5MCBwYWdlcz0yIHZtYWxsb2MgTjA9Mg0KPiDCoCA0MDk2MCBsb2FkX21vZHVsZSsweDEzMjYv
+MHgyYWIwIHBhZ2VzPTkgdm1hbGxvYyBOMD05DQo+IC0tDQo+IMKgIDIwNDgwIGxvYWRfbW9kdWxl
+KzB4MTMyNi8weDJhYjAgcGFnZXM9NCB2bWFsbG9jIE4wPTQNCj4gwqAgMTIyODggYnBmX2ppdF9i
+aW5hcnlfYWxsb2MrMHgzMi8weDkwIHBhZ2VzPTIgdm1hbGxvYyBOMD0yDQo+IMKgMjUzOTUyIGxv
+YWRfbW9kdWxlKzB4MTMyNi8weDJhYjAgcGFnZXM9NjEgdm1hbGxvYyBOMD02MQ0KPiANCj4gSWYg
+eW91IHVzZSBDaHJvbWUgd2l0aCBTaXRlIElzb2xhdGlvbiwgeW91IGhhdmUgYSBmZXcgZG96ZW4g
+b3Blbg0KPiB0YWJzLA0KPiBhbmQgdGhlIEJQRiBKSVQgaXMgZW5hYmxlZCwgcmVhY2hpbmcgYSBm
+ZXcgaHVuZHJlZCBhbGxvY2F0aW9ucyBtaWdodA0KPiBub3QgYmUgdGhhdCBoYXJkLg0KPiANCj4g
+QWxzbzogV2hhdCdzIHRoZSBpbXBhY3Qgb24gbWVtb3J5IHVzYWdlPyBJcyB0aGlzIGdvaW5nIHRv
+IGluY3JlYXNlDQo+IHRoZQ0KPiBudW1iZXIgb2YgcGFnZXRhYmxlcyB0aGF0IG5lZWQgdG8gYmUg
+YWxsb2NhdGVkIGJ5IHRoZSBrZXJuZWwgcGVyDQo+IG1vZHVsZV9hbGxvYygpIGJ5IDRLIG9yIDhL
+IG9yIHNvPw0KVGhhbmtzLCBpdCBzZWVtcyBpdCBtaWdodCByZXF1aXJlIHNvbWUgZXh0cmEgbWVt
+b3J5LsKgwqBJJ2xsIGxvb2sgaW50byBpdA0KdG8gZmluZCBvdXQgZXhhY3RseSBob3cgbXVjaC4N
+Cg0KSSBkaWRuJ3QgaW5jbHVkZSBlQkZQIG1vZHVsZXMgaW4gdGhlIHJhbmRvbWl6YXRpb24gZXN0
+aW1hdGVzLCBidXQgaXQNCmxvb2tzIGxpa2UgdGhleSBhcmUgdXN1YWxseSBzbWFsbGVyIHRoYW4g
+YSBwYWdlLiDCoFNvIHdpdGggdGhlIHNsaWdodA0KbGVhcCB0aGF0IHRoZSBsYXJnZXIgbm9ybWFs
+IG1vZHVsZXMgYmFzZWQgZXN0aW1hdGXCoGlzIHRoZSB3b3JzdCBjYXNlLA0KeW91IHNob3VsZCBz
+dGlsbCBnZXQgfjgwMCBtb2R1bGVzIGF0IDE4IGJpdHMuIEFmdGVyIHRoYXQgaXQgd2lsbCBzdGFy
+dA0KdG8gZ28gZG93biB0byAxMCBiaXRzIGFuZCBzbyBpbiBlaXRoZXIgY2FzZSBpdCBhdCBsZWFz
+dCB3b24ndCByZWdyZXNzDQp0aGUgcmFuZG9tbmVzcyBvZiB0aGUgZXhpc3RpbmcgYWxnb3JpdGht
+Lg0KDQo+ID4gDQo+ID4gPiANCj4gPiA+IEFzIGZvciBmcmFnbWVudGF0aW9uLCB0aGlzIGFsZ29y
+aXRobSByZWR1Y2VzIHRoZSBhdmVyYWdlIG51bWJlcg0KPiA+ID4gb2YgbW9kdWxlcyB0aGF0DQo+
+ID4gPiBjYW4gYmUgbG9hZGVkIHdpdGhvdXQgYW4gYWxsb2NhdGlvbiBmYWlsdXJlIGJ5IGFib3V0
+IDYlICh+MTcwMDANCj4gPiA+IHRvIH4xNjAwMCkNCj4gPiA+IChwPDAuMDUpLiBJdCBjYW4gYWxz
+byByZWR1Y2UgdGhlIGxhcmdlc3QgbW9kdWxlIGV4ZWN1dGFibGUNCj4gPiA+IHNlY3Rpb24gdGhh
+dCBjYW4gYmUNCj4gPiA+IGxvYWRlZCBieSBoYWxmIHRvIH41MDBNQiBpbiB0aGUgd29yc3QgY2Fz
+ZS4NCj4gPiBHaXZlbiB0aGF0IHdlIG9ubHkgaGF2ZSA4MzEyIHRyaXN0YXRlIEtjb25maWcgaXRl
+bXMsIEkgdGhpbmsgMTYwMDANCj4gPiB3aWxsIHJlbWFpbiBqdXN0IGZpbmUuIEFuZCBldmVuIGxh
+cmdlIG1vZHVsZXMgKGk5MTUpIGFyZSB1bmRlcg0KPiA+IDJNQi4uLg0KPiA+IA0KPiA+ID4gDQo+
+ID4gPiBUaGUgbmV3IF9fdm1hbGxvY19ub2RlX3RyeV9hZGRyIGZ1bmN0aW9uIHVzZXMgdGhlIGV4
+aXN0aW5nDQo+ID4gPiBmdW5jdGlvbg0KPiA+ID4gX192bWFsbG9jX25vZGVfcmFuZ2UsIGluIG9y
+ZGVyIHRvIGludHJvZHVjZSB0aGlzIGFsZ29yaXRobSB3aXRoDQo+ID4gPiB0aGUgbGVhc3QNCj4g
+PiA+IGludmFzaXZlIGNoYW5nZS4gVGhlIHNpZGUgZWZmZWN0IGlzIHRoYXQgZWFjaCB0aW1lIHRo
+ZXJlIGlzIGENCj4gPiA+IGNvbGxpc2lvbiB3aGVuDQo+ID4gPiB0cnlpbmcgdG8gYWxsb2NhdGUg
+aW4gdGhlIHJhbmRvbSBhcmVhIGEgVExCIGZsdXNoIHdpbGwgYmUNCj4gPiA+IHRyaWdnZXJlZC4g
+VGhlcmUgaXMNCj4gPiA+IGEgbW9yZSBjb21wbGV4LCBtb3JlIGVmZmljaWVudCBpbXBsZW1lbnRh
+dGlvbiB0aGF0IGNhbiBiZSB1c2VkDQo+ID4gPiBpbnN0ZWFkIGlmDQo+ID4gPiB0aGVyZSBpcyBp
+bnRlcmVzdCBpbiBpbXByb3ZpbmcgcGVyZm9ybWFuY2UuDQo+ID4gVGhlIG9ubHkgdGltZSB3aGVu
+IG1vZHVsZSBsb2FkaW5nIHNwZWVkIGlzIG5vdGljZWFibGUsIEkgd291bGQNCj4gPiB0aGluaywN
+Cj4gPiB3b3VsZCBiZSBib290IHRpbWUuIEhhdmUgeW91IGRvbmUgYW55IGJvb3QgdGltZSBkZWx0
+YSBhbmFseXNpcz8gSQ0KPiA+IHdvdWxkbid0IGV4cGVjdCBpdCB0byBjaGFuZ2UgaGFyZGx5IGF0
+IGFsbCwgYnV0IGl0J3MgcHJvYmFibHkgYQ0KPiA+IGdvb2QNCj4gPiBpZGVhIHRvIGFjdHVhbGx5
+IHRlc3QgaXQuIDopDQo+IElmIHlvdSBoYXZlIGEgZm9ya2luZyBzZXJ2ZXIgdGhhdCBhcHBsaWVz
+IHNlY2NvbXAgZmlsdGVycyBvbiBlYWNoDQo+IGZvcmssIG9yIHNvbWV0aGluZyBsaWtlIHRoYXQs
+IHlvdSBtaWdodCBjYXJlIGFib3V0IHRob3NlIFRMQiBmbHVzaGVzLg0KPiANCg0KSSBjYW4gdGVz
+dCB0aGlzIGFzIHdlbGwu
