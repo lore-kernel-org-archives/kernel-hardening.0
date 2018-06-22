@@ -1,83 +1,45 @@
-Date: Fri, 22 Jun 2018 16:15:11 +0800
-From: Jun Yao <yaojun8558363@gmail.com>
-Subject: Re: [PATCH 1/1] arm64/mm: move
- {idmap_pg_dir,tramp_pg_dir,swapper_pg_dir} to .rodata section
-Message-ID: <20180622081511.GA11076@toy>
-References: <20180620085755.20045-1-yaojun8558363@gmail.com>
- <20180620085755.20045-2-yaojun8558363@gmail.com>
- <CAKv+Gu8_=uTJFDXr0GpGMc=9WZ9tbz305CE6i=qbnqRB=suRVA@mail.gmail.com>
- <20180621025141.GB11276@toy>
- <CAKv+Gu_3Cfuq-qQuRHkYCB2uTPOK=KVeVh4OKmtu2MDYwfOtTA@mail.gmail.com>
- <70ebe6d7-0745-5606-ae89-8a7b2fb62008@arm.com>
- <CAKv+Gu-t5ErL89J=sxeVRYzDNrB1Ejdj+XOggAMWk-gY7ewsOg@mail.gmail.com>
- <67a238a8-e4db-6bf1-6da5-62ca9536191f@arm.com>
- <CAKv+Gu8=jxY0qfMk53L8p5+x8HoE1DRy7W_p42ji9omGBc6QSA@mail.gmail.com>
+Subject: Re: [PATCH v13 0/6] Introduce the STACKLEAK feature and a test for it
+References: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
+ <CAGXu5jJ9F-eZW5qVGebsv=wUh0kSm+edAecpztgvMC3fGeYXXA@mail.gmail.com>
+ <CAGXu5jLU4En5Cf6KGf0Adpky-TF7aa=d9MTDqDKwxQuxZSLNEg@mail.gmail.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <4880480e-b3cc-a6d0-bd5d-41f98d695842@redhat.com>
+Date: Fri, 22 Jun 2018 07:32:08 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAKv+Gu8=jxY0qfMk53L8p5+x8HoE1DRy7W_p42ji9omGBc6QSA@mail.gmail.com>
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: james.morse@arm.com, linux-arm-kernel@lists.infradead.org, catalin.marinas@arm.com, will.deacon@arm.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CAGXu5jLU4En5Cf6KGf0Adpky-TF7aa=d9MTDqDKwxQuxZSLNEg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>, Alexander Popov <alex.popov@linux.com>, Ingo Molnar <mingo@kernel.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Ard,
-
-On Thu, Jun 21, 2018 at 07:27:01PM +0200, Ard Biesheuvel wrote:
-> On 21 June 2018 at 19:04, James Morse <james.morse@arm.com> wrote:
-> > On 21/06/18 10:29, Ard Biesheuvel wrote:
-> >> On 21 June 2018 at 10:59, James Morse <james.morse@arm.com> wrote:
-> >>> On 21/06/18 07:39, Ard Biesheuvel wrote:
-> >>>> On 21 June 2018 at 04:51, Jun Yao <yaojun8558363@gmail.com> wrote:
-> >>>>> On Wed, Jun 20, 2018 at 12:09:49PM +0200, Ard Biesheuvel wrote:
-> >>>>>> As for swapper_pg_dir, it would indeed be nice if we could keep those
-> >>>>>> mappings read-only most of the time, but I'm not sure how useful this
-> >>>>>> is if we apply it to the root level only.
-> >>>>>
-> >>>>> The purpose of it is to make 'KSMA' harder, where an single arbitrary
-> >>>>> write is used to add a block mapping to the page-tables, giving the
-> >>>>> attacker full access to kernel memory. That's why we just apply it to
-> >>>>> the root level only. If the attacker can arbitrary write multiple times,
-> >>>>> I think it's hard to defend.
-> >>>>
-> >>>> So the assumption is that the root level is more easy to find?
-> >>>> Otherwise, I'm not sure I understand why being able to write a level 0
-> >>>> entry is so harmful, given that we don't have block mappings at that
-> >>>> level.
-> >>>
-> >>> I think this thing assumes 3-level page tables with 39bit VA.
-> >
-> >> The attack, you mean? Because this code is unlikely to build with that
-> >> configuration, given that __pgd_populate() BUILD_BUG()s in that case.
-> >
-> > Yes, the attack. (I struggle to think of it as an 'attack' because you already
-> > have arbitrary write...)
-> >
+On 06/21/2018 04:00 PM, Kees Cook wrote:
+> On Sun, May 27, 2018 at 7:57 AM, Kees Cook <keescook@chromium.org> wrote:
+>> On Sat, May 26, 2018 at 1:10 PM, Alexander Popov <alex.popov@linux.com> wrote:
+>>> This is the 13th version of the patch series introducing STACKLEAK to the
+>>> mainline kernel for x86. This version comes with style changes according to
+>>> the feedback from Ingo Molnar. Previous version discussion:
+>>> http://www.openwall.com/lists/kernel-hardening/2018/05/16/1
+>>
+>> Thanks for the update! I've pushed it to my tree for 0-day testing:
+>> https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/gcc-plugin/stackleak-v13
 > 
-> OK, so in that case, you can abuse your single arbitrary write to map
-> an entire 1 GB block of memory with arbitrary permissions, allowing
-> userland to take control of the contents, right? And if you know the
-> virtual and physical addresses of swapper_pg_dir, you can make sure
-> this block covers the entire kernel, allowing the attacker to
-> manipulate all core kernel code and statically allocated data
-> structures.
+> 0-day has been happy with this tree, and with Ingo's freedback
+> addressed, I'd like to push this to -next after -rc2 is released (in
+> theory this coming Sunday). It needed some rebasing to -rc1, but it
+> was all trivial stuff in Kconfg and Makefile from the kbuild tree's
+> changes.
 > 
-> What I don't understand about this patch is how it is sufficient to
-> only remap swapper_pg_dir r/w for updates on kernels that use 4 level
-> paging.
+> Ingo, how do things look to you now?
+> 
+> Laura, have you had a chance to refresh your arm64 bits to this tree?
+> I haven't had a chance to look at it myself.
+> 
+> -Kees
 > 
 
-Sorry, It's my mistake.
+Not yet, this fell off my radar for a bit. I'll see about getting
+a new version out.
 
-To my best knowledge, to defend 'KSMA', we need to handle these
-configurations:
-
-1. ARM64_4K_PAGES && ARM64_VA_BITS_39 (PGTABLE_LEVELS = 3, 1GB block)
-2. ARM64_16K_PAGES && ARM64_VA_BITS_36 (PGTABLE_LEVELS = 2, 32MB block)
-3. ARM64_64K_PAGES && ARM64_VA_BITS_42 (PGTABLE_LEVELS = 2, 512MB block)
-
-If these configurations are selected, we move {idmap_pg_dir,
-tramp_pg_dir, reserved_ttbr0, swapper_pg_dir} to .rodata section(avoid
-modifying tramp_(un)map_kernel), and remap swapper_pg_dir r/w for updates.
-If these configurations are not selected, we just keep them as they are.
-
-Do you think this is okay?
+Thanks,
+Laura
