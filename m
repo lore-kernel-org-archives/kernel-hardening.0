@@ -1,131 +1,84 @@
 MIME-Version: 1.0
-Date: Mon, 25 Jun 2018 15:39:06 -0700
+Date: Mon, 25 Jun 2018 15:39:07 -0700
 In-Reply-To: <20180625224014.134829-1-thgarnie@google.com>
-Message-Id: <20180625224014.134829-19-thgarnie@google.com>
+Message-Id: <20180625224014.134829-20-thgarnie@google.com>
 References: <20180625224014.134829-1-thgarnie@google.com>
-Subject: [PATCH v5 18/27] xen: Adapt assembly for PIE support
+Subject: [PATCH v5 19/27] kvm: Adapt assembly for PIE support
 From: Thomas Garnier <thgarnie@google.com>
 Content-Type: text/plain; charset="UTF-8"
 To: kernel-hardening@lists.openwall.com
-Cc: Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Philippe Ombredanne <pombredanne@nexb.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Kate Stewart <kstewart@linuxfoundation.org>, "H.J. Lu" <hjl.tools@gmail.com>, linux-kernel@vger.kernel.org, xen-devel@lists.xenproject.org
+Cc: Thomas Garnier <thgarnie@google.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Joerg Roedel <joro@8bytes.org>, kvm@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Change the assembly code to use the new _ASM_MOVABS macro which get a
-symbol reference while being PIE compatible. Adapt the relocation tool
-to ignore 32-bit Xen code.
+Change the assembly code to use only relative references of symbols for the
+kernel to be PIE compatible. The new __ASM_MOVABS macro is used to
+get the address of a symbol on both 32 and 64-bit with PIE support.
 
 Position Independent Executable (PIE) support will allow to extend the
 KASLR randomization range 0xffffffff80000000.
 
 Signed-off-by: Thomas Garnier <thgarnie@google.com>
-Reviewed-by: Juergen Gross <jgross@suse.com>
 ---
- arch/x86/tools/relocs.c | 16 +++++++++++++++-
- arch/x86/xen/xen-head.S | 11 ++++++-----
- arch/x86/xen/xen-pvh.S  | 14 ++++++++++----
- 3 files changed, 31 insertions(+), 10 deletions(-)
+ arch/x86/include/asm/kvm_host.h | 8 ++++++--
+ arch/x86/kernel/kvm.c           | 6 ++++--
+ arch/x86/kvm/svm.c              | 4 ++--
+ 3 files changed, 12 insertions(+), 6 deletions(-)
 
-diff --git a/arch/x86/tools/relocs.c b/arch/x86/tools/relocs.c
-index a35cc337f883..29283ad3950f 100644
---- a/arch/x86/tools/relocs.c
-+++ b/arch/x86/tools/relocs.c
-@@ -832,6 +832,16 @@ static int is_percpu_sym(ElfW(Sym) *sym, const char *symname)
- 		strncmp(symname, "init_per_cpu_", 13);
+diff --git a/arch/x86/include/asm/kvm_host.h b/arch/x86/include/asm/kvm_host.h
+index c13cd28d9d1b..27370f4917a4 100644
+--- a/arch/x86/include/asm/kvm_host.h
++++ b/arch/x86/include/asm/kvm_host.h
+@@ -1390,9 +1390,13 @@ asmlinkage void kvm_spurious_fault(void);
+ 	".pushsection .fixup, \"ax\" \n" \
+ 	"667: \n\t" \
+ 	cleanup_insn "\n\t"		      \
+-	"cmpb $0, kvm_rebooting \n\t"	      \
++	"cmpb $0, kvm_rebooting" __ASM_SEL(,(%%rip)) " \n\t" \
+ 	"jne 668b \n\t"      		      \
+-	__ASM_SIZE(push) " $666b \n\t"	      \
++	__ASM_SIZE(push) "$0 \n\t"		\
++	__ASM_SIZE(push) "%%" _ASM_AX " \n\t"		\
++	_ASM_MOVABS " $666b, %%" _ASM_AX "\n\t"	\
++	_ASM_MOV " %%" _ASM_AX ", " __ASM_SEL(4,8) "(%%" _ASM_SP ") \n\t" \
++	__ASM_SIZE(pop) "%%" _ASM_AX " \n\t"		\
+ 	"call kvm_spurious_fault \n\t"	      \
+ 	".popsection \n\t" \
+ 	_ASM_EXTABLE(666b, 667b)
+diff --git a/arch/x86/kernel/kvm.c b/arch/x86/kernel/kvm.c
+index a37bda38d205..761157c138c9 100644
+--- a/arch/x86/kernel/kvm.c
++++ b/arch/x86/kernel/kvm.c
+@@ -726,8 +726,10 @@ asm(
+ ".global __raw_callee_save___kvm_vcpu_is_preempted;"
+ ".type __raw_callee_save___kvm_vcpu_is_preempted, @function;"
+ "__raw_callee_save___kvm_vcpu_is_preempted:"
+-"movq	__per_cpu_offset(,%rdi,8), %rax;"
+-"cmpb	$0, " __stringify(KVM_STEAL_TIME_preempted) "+steal_time(%rax);"
++"leaq	__per_cpu_offset(%rip), %rax;"
++"movq	(%rax,%rdi,8), %rax;"
++"addq	" __stringify(KVM_STEAL_TIME_preempted) "+steal_time(%rip), %rax;"
++"cmpb	$0, (%rax);"
+ "setne	%al;"
+ "ret;"
+ ".popsection");
+diff --git a/arch/x86/kvm/svm.c b/arch/x86/kvm/svm.c
+index f059a73f0fd0..cb78647d6383 100644
+--- a/arch/x86/kvm/svm.c
++++ b/arch/x86/kvm/svm.c
+@@ -707,12 +707,12 @@ static u32 svm_msrpm_offset(u32 msr)
+ 
+ static inline void clgi(void)
+ {
+-	asm volatile (__ex(SVM_CLGI));
++	asm volatile (__ex(SVM_CLGI) : :);
  }
  
-+/*
-+ * Check if the 32-bit relocation is within the xenpvh 32-bit code.
-+ * If so, ignores it.
-+ */
-+static int is_in_xenpvh_assembly(ElfW(Addr) offset)
-+{
-+	ElfW(Sym) *sym = sym_lookup("pvh_start_xen");
-+	return sym && (offset >= sym->st_value) &&
-+		(offset < (sym->st_value + sym->st_size));
-+}
+ static inline void stgi(void)
+ {
+-	asm volatile (__ex(SVM_STGI));
++	asm volatile (__ex(SVM_STGI) : :);
+ }
  
- static int do_reloc64(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
- 		      const char *symname)
-@@ -895,8 +905,12 @@ static int do_reloc64(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
- 		 * the relocations are processed.
- 		 * Make sure that the offset will fit.
- 		 */
--		if (r_type != R_X86_64_64 && (int32_t)offset != (int64_t)offset)
-+		if (r_type != R_X86_64_64 &&
-+		    (int32_t)offset != (int64_t)offset) {
-+			if (is_in_xenpvh_assembly(offset))
-+				break;
- 			die("Relocation offset doesn't fit in 32 bits\n");
-+		}
- 
- 		if (r_type == R_X86_64_64)
- 			add_reloc(&relocs64, offset);
-diff --git a/arch/x86/xen/xen-head.S b/arch/x86/xen/xen-head.S
-index 5077ead5e59c..4418ff0a1d96 100644
---- a/arch/x86/xen/xen-head.S
-+++ b/arch/x86/xen/xen-head.S
-@@ -28,14 +28,15 @@ ENTRY(startup_xen)
- 
- 	/* Clear .bss */
- 	xor %eax,%eax
--	mov $__bss_start, %_ASM_DI
--	mov $__bss_stop, %_ASM_CX
-+	_ASM_MOVABS $__bss_start, %_ASM_DI
-+	_ASM_MOVABS $__bss_stop, %_ASM_CX
- 	sub %_ASM_DI, %_ASM_CX
- 	shr $__ASM_SEL(2, 3), %_ASM_CX
- 	rep __ASM_SIZE(stos)
- 
--	mov %_ASM_SI, xen_start_info
--	mov $init_thread_union+THREAD_SIZE, %_ASM_SP
-+	_ASM_MOVABS $xen_start_info, %_ASM_AX
-+	_ASM_MOV %_ASM_SI, (%_ASM_AX)
-+	_ASM_MOVABS $init_thread_union+THREAD_SIZE, %_ASM_SP
- 
- #ifdef CONFIG_X86_64
- 	/* Set up %gs.
-@@ -46,7 +47,7 @@ ENTRY(startup_xen)
- 	 * init data section till per cpu areas are set up.
- 	 */
- 	movl	$MSR_GS_BASE,%ecx
--	movq	$INIT_PER_CPU_VAR(irq_stack_union),%rax
-+	movabsq	$INIT_PER_CPU_VAR(irq_stack_union),%rax
- 	cdq
- 	wrmsr
- #endif
-diff --git a/arch/x86/xen/xen-pvh.S b/arch/x86/xen/xen-pvh.S
-index ca2d3b2bf2af..4b83f861b655 100644
---- a/arch/x86/xen/xen-pvh.S
-+++ b/arch/x86/xen/xen-pvh.S
-@@ -114,8 +114,8 @@ ENTRY(pvh_start_xen)
- 	call xen_prepare_pvh
- 
- 	/* startup_64 expects boot_params in %rsi. */
--	mov $_pa(pvh_bootparams), %rsi
--	mov $_pa(startup_64), %rax
-+	movabs $_pa(pvh_bootparams), %rsi
-+	movabs $_pa(startup_64), %rax
- 	jmp *%rax
- 
- #else /* CONFIG_X86_64 */
-@@ -161,10 +161,16 @@ END(pvh_start_xen)
- 
- 	.section ".init.data","aw"
- 	.balign 8
-+	/*
-+	 * Use an ASM_PTR (quad on x64) for _pa(gdt_start) because PIE requires
-+	 * a pointer size storage value before applying the relocation. On
-+	 * 32-bit _ASM_PTR will be a long which is aligned the space needed for
-+	 * relocation.
-+	 */
- gdt:
- 	.word gdt_end - gdt_start
--	.long _pa(gdt_start)
--	.word 0
-+	_ASM_PTR _pa(gdt_start)
-+	.balign 8
- gdt_start:
- 	.quad 0x0000000000000000            /* NULL descriptor */
- #ifdef CONFIG_X86_64
+ static inline void invlpga(unsigned long addr, u32 asid)
 -- 
 2.18.0.rc2.346.g013aa6912e-goog
