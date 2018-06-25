@@ -1,132 +1,54 @@
-Subject: Re: [PATCH v3] sg: mitigate read/write abuse
-References: <20180625142544.182673-1-jannh@google.com>
-From: Douglas Gilbert <dgilbert@interlog.com>
-Message-ID: <beea2f87-807d-eabd-bd92-3f3feacb78ba@interlog.com>
-Date: Tue, 26 Jun 2018 01:18:52 +0200
+Subject: Re: [PATCH v5 15/27] compiler: Option to default to hidden symbols
+References: <20180625224014.134829-1-thgarnie@google.com>
+ <20180625224014.134829-16-thgarnie@google.com>
+From: Randy Dunlap <rdunlap@infradead.org>
+Message-ID: <8486eb8b-e233-4e2f-e976-da7b4cefc673@infradead.org>
+Date: Mon, 25 Jun 2018 16:25:03 -0700
 MIME-Version: 1.0
-In-Reply-To: <20180625142544.182673-1-jannh@google.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
+In-Reply-To: <20180625224014.134829-16-thgarnie@google.com>
+Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Jann Horn <jannh@google.com>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-scsi@vger.kernel.org, Christoph Hellwig <hch@infradead.org>, Al Viro <viro@zeniv.linux.org.uk>
-Cc: Andy Lutomirski <luto@kernel.org>, linux-kernel@vger.kernel.org, Jens Axboe <axboe@kernel.dk>, FUJITA Tomonori <fujita.tomonori@lab.ntt.co.jp>, kernel-hardening@lists.openwall.com, security@kernel.org, Benjamin Block <bblock@linux.vnet.ibm.com>
+To: Thomas Garnier <thgarnie@google.com>, kernel-hardening@lists.openwall.com
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Borislav Petkov <bp@alien8.de>, "Luis R. Rodriguez" <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Christopher Li <sparse@chrisli.org>, Steven Rostedt <rostedt@goodmis.org>, Jason Baron <jbaron@akamai.com>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Kate Stewart <kstewart@linuxfoundation.org>, Mika Westerberg <mika.westerberg@linux.intel.com>, Philippe Ombredanne <pombredanne@nexb.com>, Lukas Wunner <lukas@wunner.de>, Kees Cook <keescook@chromium.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Sergey Senozhatsky <sergey.senozhatsky.work@gmail.com>, Petr Mladek <pmladek@suse.com>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2018-06-25 04:25 PM, Jann Horn wrote:
-> As Al Viro noted in commit 128394eff343 ("sg_write()/bsg_write() is not fit
-> to be called under KERNEL_DS"), sg improperly accesses userspace memory
-> outside the provided buffer, permitting kernel memory corruption via
-> splice().
-> But it doesn't just do it on ->write(), also on ->read().
+On 06/25/18 15:39, Thomas Garnier wrote:
+> Provide an option to default visibility to hidden except for key
+> symbols. This option is disabled by default and will be used by x86_64
+> PIE support to remove errors between compilation units.
 > 
-> As a band-aid, make sure that the ->read() and ->write() handlers can not
-> be called in weird contexts (kernel context or credentials different from
-> file opener), like for ib_safe_file_access().
+> The default visibility is also enabled for external symbols that are
+> compared as they maybe equals (start/end of sections). In this case,
+> older versions of GCC will remove the comparison if the symbols are
+> hidden. This issue exists at least on gcc 4.9 and before.
 > 
-> If someone needs to use these interfaces from different security contexts,
-> a new interface should be written that goes through the ->ioctl() handler.
-> 
-> I've mostly copypasted ib_safe_file_access() over as sg_safe_file_access()
-> because I couldn't find a good common header - please tell me if you know a
-> better way.
-> 
-> changed in v2:
->   - remove the bsg parts per Christoph Hellwig's request
-> 
-> changed in v3:
->   - move error messages into helper function
->   - use two different error messages and return values (Douglas Gilbert)
->   - add comment on stranded responses (Douglas Gilbert)
->   - use current_real_cred() instead of current_cred() (so that
->     override_creds() can't bypass this check)
-> 
-> Fixes: 1da177e4c3f4 ("Linux-2.6.12-rc2")
-> Cc: <stable@vger.kernel.org>
-> Signed-off-by: Jann Horn <jannh@google.com>
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
 > ---
->   drivers/scsi/sg.c | 42 ++++++++++++++++++++++++++++++++++++++++--
->   1 file changed, 40 insertions(+), 2 deletions(-)
-> 
-> diff --git a/drivers/scsi/sg.c b/drivers/scsi/sg.c
-> index 53ae52dbff84..4f4e88ca8213 100644
-> --- a/drivers/scsi/sg.c
-> +++ b/drivers/scsi/sg.c
-> @@ -51,6 +51,7 @@ static int sg_version_num = 30536;	/* 2 digits for each component */
->   #include <linux/atomic.h>
->   #include <linux/ratelimit.h>
->   #include <linux/uio.h>
-> +#include <linux/cred.h> /* for sg_safe_file_access() */
 
-s/_safe_/_check_/
-
->   
->   #include "scsi.h"
->   #include <scsi/scsi_dbg.h>
-> @@ -209,6 +210,33 @@ static void sg_device_destroy(struct kref *kref);
->   	sdev_prefix_printk(prefix, (sdp)->device,		\
->   			   (sdp)->disk->disk_name, fmt, ##a)
->   
-> +/*
-> + * The SCSI interfaces that use read() and write() as an asynchronous variant of
-> + * ioctl(..., SG_IO, ...) are fundamentally unsafe, since there are lots of ways
-> + * to trigger read() and write() calls from various contexts with elevated
-> + * privileges. This can lead to kernel memory corruption (e.g. if these
-> + * interfaces are called through splice()) and privilege escalation inside
-> + * userspace (e.g. if a process with access to such a device passes a file
-> + * descriptor to a SUID binary as stdin/stdout/stderr).
-> + *
-> + * This function provides protection for the legacy API by restricting the
-> + * calling context.
-> + */
-> +static int sg_check_file_access(struct file *filp, const char *caller)
-> +{
-> +	if (filp->f_cred != current_real_cred()) {
-> +		pr_err_once("%s: process %d (%s) changed security contexts after opening file descriptor, this is not allowed.\n",
-> +			caller, task_tgid_vnr(current), current->comm);
-> +		return -EPERM;
-> +	}
-> +	if (uaccess_kernel()) {
-> +		pr_err_once("%s: process %d (%s) called from kernel context, this is not allowed.\n",
-> +			caller, task_tgid_vnr(current), current->comm);
-> +		return -EACCES;
-> +	}
-> +	return 0;
-> +}
+> diff --git a/init/Kconfig b/init/Kconfig
+> index 24b60536e26b..d4f90cc38ede 100644
+> --- a/init/Kconfig
+> +++ b/init/Kconfig
+> @@ -1718,6 +1718,13 @@ config PROFILING
+>  config TRACEPOINTS
+>  	bool
+>  
+> +#
+> +# Default to hidden visibility for all symbols.
+> +# Useful for Position Independent Code to reduce global references.
+> +#
+> +config DEFAULT_HIDDEN
+> +	bool
 > +
->   static int sg_allow_access(struct file *filp, unsigned char *cmd)
->   {
->   	struct sg_fd *sfp = filp->private_data;
-> @@ -393,6 +421,14 @@ sg_read(struct file *filp, char __user *buf, size_t count, loff_t * ppos)
->   	struct sg_header *old_hdr = NULL;
->   	int retval = 0;
->   
-> +	/*
-> +	 * This could cause a response to be stranded. Close the associated
-> +	 * file descriptor to free up any resources being held.
-> +	 */
-> +	retval = sg_check_file_access(filp, __func__);
-> +	if (retval)
-> +		return retval;
-> +
->   	if ((!(sfp = (Sg_fd *) filp->private_data)) || (!(sdp = sfp->parentdp)))
->   		return -ENXIO;
->   	SCSI_LOG_TIMEOUT(3, sg_printk(KERN_INFO, sdp,
-> @@ -580,9 +616,11 @@ sg_write(struct file *filp, const char __user *buf, size_t count, loff_t * ppos)
->   	struct sg_header old_hdr;
->   	sg_io_hdr_t *hp;
->   	unsigned char cmnd[SG_MAX_CDB_SIZE];
-> +	int retval;
->   
-> -	if (unlikely(uaccess_kernel()))
-> -		return -EINVAL;
-> +	retval = sg_check_file_access(filp, __func__);
-> +	if (retval)
-> +		return retval;
->   
->   	if ((!(sfp = (Sg_fd *) filp->private_data)) || (!(sdp = sfp->parentdp)))
->   		return -ENXIO;
-> 
 
-If you need to make any other changes to this patch, then you could fix
-that typo above.
+I certainly would appreciate a better/more descriptive kconfig symbol name
+here.
 
-Acked-by: Douglas Gilbert <dgilbert@interlog.com>
+>  source "arch/Kconfig"
+>  
+>  endmenu		# General setup
+
+
+thanks,
+-- 
+~Randy
