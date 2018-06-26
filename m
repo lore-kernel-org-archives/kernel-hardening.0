@@ -1,225 +1,207 @@
+Subject: Re: [PATCH v2 2/2] arm64/mm: Move {tramp_pg_dir, swapper_pg_dir} to
+ .rodata section
+References: <20180625113921.21854-1-yaojun8558363@gmail.com>
+ <20180625113921.21854-3-yaojun8558363@gmail.com>
+From: James Morse <james.morse@arm.com>
+Message-ID: <f9dfd840-1d90-96f9-2915-7e1bc4bd43a4@arm.com>
+Date: Tue, 26 Jun 2018 12:21:35 +0100
 MIME-Version: 1.0
-Date: Mon, 25 Jun 2018 15:39:14 -0700
-In-Reply-To: <20180625224014.134829-1-thgarnie@google.com>
-Message-Id: <20180625224014.134829-27-thgarnie@google.com>
-References: <20180625224014.134829-1-thgarnie@google.com>
-Subject: [PATCH v5 26/27] x86/relocs: Add option to generate 64-bit relocations
-From: Thomas Garnier <thgarnie@google.com>
-Content-Type: text/plain; charset="UTF-8"
-To: kernel-hardening@lists.openwall.com
-Cc: Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, "H.J. Lu" <hjl.tools@gmail.com>, Philippe Ombredanne <pombredanne@nexb.com>, Kate Stewart <kstewart@linuxfoundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, linux-kernel@vger.kernel.org
+In-Reply-To: <20180625113921.21854-3-yaojun8558363@gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Jun Yao <yaojun8558363@gmail.com>
+Cc: linux-arm-kernel@lists.infradead.org, catalin.marinas@arm.com, will.deacon@arm.com, ard.biesheuvel@linaro.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The x86 relocation tool generates a list of 32-bit signed integers. There
-was no need to use 64-bit integers because all addresses where above the 2G
-top of the memory.
+Hi Jun,
 
-This change add a large-reloc option to generate 64-bit unsigned integers.
-It can be used when the kernel plan to go below the top 2G and 32-bit
-integers are not enough.
+On 25/06/18 12:39, Jun Yao wrote:
+> When CONFIG_ARM64_VA_BITS_36/CONFIG_ARM64_VA_BITS_39/
+> CONFIG_ARM64_VA_BITS_42 are selected, a block-mapping can be
+> written to swapper_pg_dir. To defend 'KSMA', we move swapper_pg_dir
+> to .rodata section when these configurations are selected. At the
+> same time, we update swapper_pg_dir by fixmap.
 
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
----
- arch/x86/tools/relocs.c        | 60 +++++++++++++++++++++++++++-------
- arch/x86/tools/relocs.h        |  4 +--
- arch/x86/tools/relocs_common.c | 15 ++++++---
- 3 files changed, 60 insertions(+), 19 deletions(-)
+I don't think we should consider individual MMU configurations. KSMA is the
+motivation for making swapper_pg_dir read-only.
+When making swapper_pg_dir read-only it should work in the same way for all
+configurations as its simpler.
 
-diff --git a/arch/x86/tools/relocs.c b/arch/x86/tools/relocs.c
-index 29283ad3950f..a29cccceaac6 100644
---- a/arch/x86/tools/relocs.c
-+++ b/arch/x86/tools/relocs.c
-@@ -13,8 +13,14 @@
- 
- static Elf_Ehdr ehdr;
- 
-+#if ELF_BITS == 64
-+typedef uint64_t rel_off_t;
-+#else
-+typedef uint32_t rel_off_t;
-+#endif
-+
- struct relocs {
--	uint32_t	*offset;
-+	rel_off_t	*offset;
- 	unsigned long	count;
- 	unsigned long	size;
- };
-@@ -685,7 +691,7 @@ static void print_absolute_relocs(void)
- 		printf("\n");
- }
- 
--static void add_reloc(struct relocs *r, uint32_t offset)
-+static void add_reloc(struct relocs *r, rel_off_t offset)
- {
- 	if (r->count == r->size) {
- 		unsigned long newsize = r->size + 50000;
-@@ -1061,26 +1067,48 @@ static void sort_relocs(struct relocs *r)
- 	qsort(r->offset, r->count, sizeof(r->offset[0]), cmp_relocs);
- }
- 
--static int write32(uint32_t v, FILE *f)
-+static int write32(rel_off_t rel, FILE *f)
- {
--	unsigned char buf[4];
-+	unsigned char buf[sizeof(uint32_t)];
-+	uint32_t v = (uint32_t)rel;
- 
- 	put_unaligned_le32(v, buf);
--	return fwrite(buf, 1, 4, f) == 4 ? 0 : -1;
-+	return fwrite(buf, 1, sizeof(buf), f) == sizeof(buf) ? 0 : -1;
- }
- 
--static int write32_as_text(uint32_t v, FILE *f)
-+static int write32_as_text(rel_off_t rel, FILE *f)
- {
-+	uint32_t v = (uint32_t)rel;
- 	return fprintf(f, "\t.long 0x%08"PRIx32"\n", v) > 0 ? 0 : -1;
- }
- 
--static void emit_relocs(int as_text, int use_real_mode)
-+static int write64(rel_off_t rel, FILE *f)
-+{
-+	unsigned char buf[sizeof(uint64_t)];
-+	uint64_t v = (uint64_t)rel;
-+
-+	put_unaligned_le64(v, buf);
-+	return fwrite(buf, 1, sizeof(buf), f) == sizeof(buf) ? 0 : -1;
-+}
-+
-+static int write64_as_text(rel_off_t rel, FILE *f)
-+{
-+	uint64_t v = (uint64_t)rel;
-+	return fprintf(f, "\t.quad 0x%016"PRIx64"\n", v) > 0 ? 0 : -1;
-+}
-+
-+static void emit_relocs(int as_text, int use_real_mode, int use_large_reloc)
- {
- 	int i;
--	int (*write_reloc)(uint32_t, FILE *) = write32;
-+	int (*write_reloc)(rel_off_t, FILE *);
- 	int (*do_reloc)(struct section *sec, Elf_Rel *rel, Elf_Sym *sym,
- 			const char *symname);
- 
-+	if (use_large_reloc)
-+		write_reloc = write64;
-+	else
-+		write_reloc = write32;
-+
- #if ELF_BITS == 64
- 	if (!use_real_mode)
- 		do_reloc = do_reloc64;
-@@ -1091,6 +1119,9 @@ static void emit_relocs(int as_text, int use_real_mode)
- 		do_reloc = do_reloc32;
- 	else
- 		do_reloc = do_reloc_real;
-+
-+	/* Large relocations only for 64-bit */
-+	use_large_reloc = 0;
- #endif
- 
- 	/* Collect up the relocations */
-@@ -1114,8 +1145,13 @@ static void emit_relocs(int as_text, int use_real_mode)
- 		 * gas will like.
- 		 */
- 		printf(".section \".data.reloc\",\"a\"\n");
--		printf(".balign 4\n");
--		write_reloc = write32_as_text;
-+		if (use_large_reloc) {
-+			printf(".balign 8\n");
-+			write_reloc = write64_as_text;
-+		} else {
-+			printf(".balign 4\n");
-+			write_reloc = write32_as_text;
-+		}
- 	}
- 
- 	if (use_real_mode) {
-@@ -1183,7 +1219,7 @@ static void print_reloc_info(void)
- 
- void process(FILE *fp, int use_real_mode, int as_text,
- 	     int show_absolute_syms, int show_absolute_relocs,
--	     int show_reloc_info)
-+	     int show_reloc_info, int use_large_reloc)
- {
- 	regex_init(use_real_mode);
- 	read_ehdr(fp);
-@@ -1206,5 +1242,5 @@ void process(FILE *fp, int use_real_mode, int as_text,
- 		print_reloc_info();
- 		return;
- 	}
--	emit_relocs(as_text, use_real_mode);
-+	emit_relocs(as_text, use_real_mode, use_large_reloc);
- }
-diff --git a/arch/x86/tools/relocs.h b/arch/x86/tools/relocs.h
-index 43c83c0fd22c..3d401da59df7 100644
---- a/arch/x86/tools/relocs.h
-+++ b/arch/x86/tools/relocs.h
-@@ -31,8 +31,8 @@ enum symtype {
- 
- void process_32(FILE *fp, int use_real_mode, int as_text,
- 		int show_absolute_syms, int show_absolute_relocs,
--		int show_reloc_info);
-+		int show_reloc_info, int use_large_reloc);
- void process_64(FILE *fp, int use_real_mode, int as_text,
- 		int show_absolute_syms, int show_absolute_relocs,
--		int show_reloc_info);
-+		int show_reloc_info, int use_large_reloc);
- #endif /* RELOCS_H */
-diff --git a/arch/x86/tools/relocs_common.c b/arch/x86/tools/relocs_common.c
-index 6634352a20bc..11f49adf1c06 100644
---- a/arch/x86/tools/relocs_common.c
-+++ b/arch/x86/tools/relocs_common.c
-@@ -12,14 +12,14 @@ void die(char *fmt, ...)
- 
- static void usage(void)
- {
--	die("relocs [--abs-syms|--abs-relocs|--reloc-info|--text|--realmode]" \
--	    " vmlinux\n");
-+	die("relocs [--abs-syms|--abs-relocs|--reloc-info|--text|--realmode|" \
-+	    "--large-reloc]  vmlinux\n");
- }
- 
- int main(int argc, char **argv)
- {
- 	int show_absolute_syms, show_absolute_relocs, show_reloc_info;
--	int as_text, use_real_mode;
-+	int as_text, use_real_mode, use_large_reloc;
- 	const char *fname;
- 	FILE *fp;
- 	int i;
-@@ -30,6 +30,7 @@ int main(int argc, char **argv)
- 	show_reloc_info = 0;
- 	as_text = 0;
- 	use_real_mode = 0;
-+	use_large_reloc = 0;
- 	fname = NULL;
- 	for (i = 1; i < argc; i++) {
- 		char *arg = argv[i];
-@@ -54,6 +55,10 @@ int main(int argc, char **argv)
- 				use_real_mode = 1;
- 				continue;
- 			}
-+			if (strcmp(arg, "--large-reloc") == 0) {
-+				use_large_reloc = 1;
-+				continue;
-+			}
- 		}
- 		else if (!fname) {
- 			fname = arg;
-@@ -75,11 +80,11 @@ int main(int argc, char **argv)
- 	if (e_ident[EI_CLASS] == ELFCLASS64)
- 		process_64(fp, use_real_mode, as_text,
- 			   show_absolute_syms, show_absolute_relocs,
--			   show_reloc_info);
-+			   show_reloc_info, use_large_reloc);
- 	else
- 		process_32(fp, use_real_mode, as_text,
- 			   show_absolute_syms, show_absolute_relocs,
--			   show_reloc_info);
-+			   show_reloc_info, use_large_reloc);
- 	fclose(fp);
- 	return 0;
- }
--- 
-2.18.0.rc2.346.g013aa6912e-goog
+
+> diff --git a/arch/arm64/include/asm/fixmap.h b/arch/arm64/include/asm/fixmap.h
+> index 62908eeedcdc..881784b43965 100644
+> --- a/arch/arm64/include/asm/fixmap.h
+> +++ b/arch/arm64/include/asm/fixmap.h
+> @@ -83,6 +83,7 @@ enum fixed_addresses {
+>  	FIX_PTE,
+>  	FIX_PMD,
+>  	FIX_PUD,
+> +	FIX_SWAPPER,
+
+Please leave this as FIX_PGD that you removed in the previous patch. Depending
+on the folding pmd/pud can be used as the top level. If we always use the fixmap
+entry that goes with the name, its clear how these operate.
+
+
+>  	__end_of_fixed_addresses
+>  };
+> diff --git a/arch/arm64/include/asm/pgalloc.h b/arch/arm64/include/asm/pgalloc.h
+> index 2e05bcd944c8..62512ad9c310 100644
+> --- a/arch/arm64/include/asm/pgalloc.h
+> +++ b/arch/arm64/include/asm/pgalloc.h
+
+How come you don't touch pgd_populate()? Surely with a 4-level configuration we
+may need to put a new pud-table in when we use a fresh chunk of vmalloc space...
+
+(ah, this is because you are conditionally doing all this on configurations
+where the MMU has top-level block mappings. I think this is unnecessarily
+complicated, we should just do it all the time)
+
+
+> @@ -49,6 +49,22 @@ static inline void __pud_populate(pud_t *pudp, phys_addr_t pmdp, pudval_t prot)
+>  
+>  static inline void pud_populate(struct mm_struct *mm, pud_t *pudp, pmd_t *pmdp)
+>  {
+> +#ifdef CONFIG_ARM64_VA_BITS_39
+
+Please make this depend on the number of levels not the VA size. We also have
+3-level page tables for 64K with 48bit VA space, and 16K with 47bit VA space.
+
+I'd prefer some "if (CONFIG_PGTABLE_LEVELS == 3)" style check, as that way the
+compiler will always parse the code that is currently hidden behind #ifdefs.
+
+We can avoid use of fixmap entries for subsequent levels by making the check
+something like:
+| if (CONFIG_PGTABLE_LEVELS == 3 && magic_helper(pud) == swapper_pg_dir)
+
+
+> +	if (mm == &init_mm) {
+> +		pud_t *pud;
+> +		unsigned long offset;
+> +		extern spinlock_t pgdir_lock;
+> +
+> +		spin_lock(&pgdir_lock);
+> +		pud = (pud_t *)swapper_set_fixmap();
+
+Can't we use pud_set_fixmap for pud levels?
+
+Do we need an extra spinlock?, won't init_mm.page_table_lock always be held?
+(we can put a lockdep_assert_held() in here to find cases that aren't).
+
+
+> +		offset = (unsigned long)pudp - (unsigned long)swapper_pg_dir;
+> +		pud = (pud_t *)((unsigned long)pud + offset);
+
+It feels like there should be a helper for this.
+
+I'm not comfortable assuming mm=init_mm means we are actually modifying
+swapper_pg_dir. Hibernate does this on the grounds that the tables it generates
+will be used as the kernel's mm when it starts restoring. This field wasn't used
+before, so it wasn't clear what the field was for. I'm sure we will find
+something else doing this...
+
+Could we test that the provided pudp is within swapper_pg_dir before invoking
+the fixmap path.
+
+
+> +		__pud_populate(pud, __pa(pmdp), PMD_TYPE_TABLE);
+> +		swapper_clear_fixmap();
+> +		spin_unlock(&pgdir_lock);
+> +		return;
+> +	}
+> +#endif
+>  	__pud_populate(pudp, __pa(pmdp), PMD_TYPE_TABLE);
+>  }
+>  #else
+
+
+> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+> index 9677deb7b6c7..9db187024b44 100644
+> --- a/arch/arm64/kernel/head.S
+> +++ b/arch/arm64/kernel/head.S
+
+(Changes here are cleanup, they should be in a separate patch)
+
+
+> @@ -300,7 +300,7 @@ __create_page_tables:
+>  	 * dirty cache lines being evicted.
+>  	 */
+>  	adrp	x0, idmap_pg_dir
+> -	adrp	x1, swapper_pg_end
+> +	adrp	x1, idmap_pg_end
+>  	sub	x1, x1, x0
+>  	bl	__inval_dcache_area
+
+As we no longer modify swapper_pg_dir with the MMU disabled I think this is safe.
+
+
+> @@ -313,7 +313,7 @@ __create_page_tables:
+>  	 * Clear the idmap and init page tables.
+>  	 */
+>  	adrp	x0, idmap_pg_dir
+> -	adrp	x1, swapper_pg_end
+> +	adrp	x1, idmap_pg_end
+>  	sub	x1, x1, x0
+>  	clear_pages x0, x1
+
+With the current placement of swapper_pg_dir after the BSS we rely on this to
+zero that memory. It may have junk left over from the boot loader as this is the
+area where the kernel's memory-footprint is bigger than the Image file.
+
+Your vmlinux.lds.S changes below conditionally move swapper_pg_dir around.
+Sometimes you need this, sometimes you don't.
+
+Please always keep these pgd in the read-only section. I think we should keep
+the page-zeroing as a sanity check, we only do it once during boot, and
+corruption here isn't something we would be able to debug easily.
+
+
+> diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
+> index b0e4255fcba4..db72c4680f1d 100644
+> --- a/arch/arm64/kernel/vmlinux.lds.S
+> +++ b/arch/arm64/kernel/vmlinux.lds.S
+> @@ -219,6 +219,28 @@ SECTIONS
+>  	. = ALIGN(PAGE_SIZE);
+>  	idmap_pg_dir = .;
+>  	. += IDMAP_DIR_SIZE;
+> +	idmap_pg_end = .;
+> +
+> +#if defined(CONFIG_ARM64_VA_BITS_39) || \
+> +	defined(CONFIG_ARM64_VA_BITS_36) || \
+> +	defined(CONFIG_ARM64_VA_BITS_42)
+
+I think we should always do this read-only-swapper, even if there aren't any
+top-level block-mappings. The code will be much more maintainable this way.
+
+
+> +	.rodata : {
+> +#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
+> +		. = ALIGN(PAGE_SIZE);
+> +		tramp_pg_dir = .;
+> +		. += PAGE_SIZE;
+> +#endif
+> +
+> +#ifdef CONFIG_ARM64_SW_TTBR0_PAN
+> +		reserved_ttbr0 = .;
+> +		. += RESERVED_TTBR0_SIZE;
+> +#endif
+> +		swapper_pg_dir = .;
+> +		. += PAGE_SIZE;
+> +		swapper_pg_end = .;
+> +	}
+> +
+> +#else
+>  
+>  #ifdef CONFIG_UNMAP_KERNEL_AT_EL0
+>  	tramp_pg_dir = .;
+> @@ -232,6 +254,7 @@ SECTIONS
+>  	swapper_pg_dir = .;
+>  	. += PAGE_SIZE;
+>  	swapper_pg_end = .;
+> +#endif
+
+
+
+Thanks,
+
+James
