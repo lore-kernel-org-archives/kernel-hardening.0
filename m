@@ -1,193 +1,210 @@
 MIME-Version: 1.0
-In-Reply-To: <06b7ea07-53e2-690a-b670-d1fc41d133c3@redhat.com>
-References: <20180626165455.22636-1-ard.biesheuvel@linaro.org> <06b7ea07-53e2-690a-b670-d1fc41d133c3@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed, 27 Jun 2018 00:11:13 +0200
-Message-ID: <CAKv+Gu9uiqerCd54upWHxPBKcX1ga1oTwpYctEqbhhQGZOq6XA@mail.gmail.com>
-Subject: Re: [RFC PATCH] arm64/mm: unmap the linear alias of module allocations
+Sender: keescook@google.com
+In-Reply-To: <1530017430-5394-1-git-send-email-crecklin@redhat.com>
+References: <1530017430-5394-1-git-send-email-crecklin@redhat.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 26 Jun 2018 17:03:52 -0700
+Message-ID: <CAGXu5j+ELUHuyjkUU358DkQieKhxQ5Z6h5HM7qYE_AQvVr4R3g@mail.gmail.com>
+Subject: Re: [v2 PATCH] add param that allows bootline control of hardened usercopy
 Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, James Morse <james.morse@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, YaoJun <yaojun8558363@gmail.com>
+To: Chris von Recklinghausen <crecklin@redhat.com>
+Cc: Laura Abbott <labbott@redhat.com>, Paolo Abeni <pabeni@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Laura,
+nit: I would expect the version to trail "PATCH" in the subject, like:
+[PATCH v2]
 
-Thanks for taking a look.
+On Tue, Jun 26, 2018 at 5:50 AM, Chris von Recklinghausen
+<crecklin@redhat.com> wrote:
+> Enabling HARDENED_USER_COPY causes measurable regressions in the
+> networking performances, up to 8% under UDP flood.
 
-On 26 June 2018 at 23:28, Laura Abbott <labbott@redhat.com> wrote:
-> On 06/26/2018 09:54 AM, Ard Biesheuvel wrote:
->>
->> When CONFIG_STRICT_KERNEL_RXW=y [which is the default on arm64], we
->> take great care to ensure that the mappings of modules in the vmalloc
->> space are locked down as much as possible, i.e., executable code is
->> mapped read-only, read-only data is mapped read-only and non-executable,
->> and read-write data is mapped non-executable as well.
->>
->> However, due to the way we map the linear region [aka the kernel direct
->> mapping], those module regions are aliased by read-write mappings, and
->> it is possible for an attacker to modify code or data that was assumed
->> to be immutable in this configuration.
->>
->> So let's ensure that the linear alias of module memory is unmapped upon
->> allocation and remapped when it is freed. The latter requires some
->> special handling involving a workqueue due to the fact that it may be
->> called in softirq context at which time calling find_vm_area() is unsafe.
->>
->> Note that this requires the entire linear region to be mapped down to
->> pages, which may result in a performance regression in some
->> configurations.
->>
->> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
->> ---
->> For this RFC, I simply reused set_memory_valid() to do the unmap/remap,
->> but I am aware that this likely breaks hibernation, and perhaps some
->> other things as well, so we should probably remap r/o instead.
->>
->
-> This fixes modules but doesn't fix the set_memory_*
-> uses like in bpf. Is it worth trying to fix it for those
-> cases as well?
->
+Please include the details on the benchmark (from the email in the
+thread), include the backtrace to help other people that might
+discover the same issues. (Also, the name is "HARDENED_USERCOPY".)
 
-AIUI bpf uses set_memory_* on the vmalloc region only, and is
-oblivious to the fact that there exists a linear alias in the first
-place. But due to the fact that it actually uses module_alloc() to
-allocate the regions, this patch affects the linear aliases of those
-regions as well.
+> A generic distro may want to enable HARDENED_USER_COPY in their default
+> kernel config, but at the same time, such distro may want to be able to
+> avoid the performance penalties in with the default configuration and
+> disable the stricter check on a per-boot basis.
+>
+> This change adds a boot parameter that to conditionally disable
+> HARDENED_USERCOPY at boot time.
+>
+> v1->v2:
+>         remove CONFIG_HUC_DEFAULT_OFF
+>         default is now enabled, boot param disables
+>         move check to __check_object_size so as to not break optimization of
+>                 __builtin_constant_p()
+>         include linux/atomic.h before linux/jump_label.h
+>
+> Signed-off-by: Chris von Recklinghausen <crecklin@redhat.com>
+> ---
+>  .../admin-guide/kernel-parameters.rst         |  1 +
+>  .../admin-guide/kernel-parameters.txt         |  3 +++
+>  include/linux/thread_info.h                   |  5 ++++
+>  mm/usercopy.c                                 | 27 +++++++++++++++++++
+>  4 files changed, 36 insertions(+)
+>
+> diff --git a/Documentation/admin-guide/kernel-parameters.rst b/Documentation/admin-guide/kernel-parameters.rst
+> index b8d0bc07ed0a..87a1200a1db6 100644
+> --- a/Documentation/admin-guide/kernel-parameters.rst
+> +++ b/Documentation/admin-guide/kernel-parameters.rst
+> @@ -100,6 +100,7 @@ parameter is applicable::
+>         FB      The frame buffer device is enabled.
+>         FTRACE  Function tracing enabled.
+>         GCOV    GCOV profiling is enabled.
+> +       HUC     Hardened usercopy is enabled
 
-Does that answer your question at all?
+I'd prefer the new HUC item here was just left off: it isn't a class
+of parameters yet (it's a single item). See below.
 
+>         HW      Appropriate hardware is enabled.
+>         IA-64   IA-64 architecture is enabled.
+>         IMA     Integrity measurement architecture is enabled.
+> diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
+> index efc7aa7a0670..d14be0038aed 100644
+> --- a/Documentation/admin-guide/kernel-parameters.txt
+> +++ b/Documentation/admin-guide/kernel-parameters.txt
+> @@ -816,6 +816,9 @@
+>         disable=        [IPV6]
+>                         See Documentation/networking/ipv6.txt.
 >
->>   arch/arm64/kernel/module.c | 57 ++++++++++++++++++++
->>   arch/arm64/mm/mmu.c        |  2 +-
->>   2 files changed, 58 insertions(+), 1 deletion(-)
->>
->> diff --git a/arch/arm64/kernel/module.c b/arch/arm64/kernel/module.c
->> index 155fd91e78f4..4a1d3c7486f5 100644
->> --- a/arch/arm64/kernel/module.c
->> +++ b/arch/arm64/kernel/module.c
->> @@ -26,10 +26,66 @@
->>   #include <linux/mm.h>
->>   #include <linux/moduleloader.h>
->>   #include <linux/vmalloc.h>
->> +#include <linux/workqueue.h>
->>   #include <asm/alternative.h>
->> +#include <asm/cacheflush.h>
->>   #include <asm/insn.h>
->>   #include <asm/sections.h>
->>   +#ifdef CONFIG_STRICT_KERNEL_RWX
->> +
->> +static struct workqueue_struct *module_free_wq;
->> +
->> +static int init_workqueue(void)
->> +{
->> +       module_free_wq = alloc_ordered_workqueue("module_free_wq", 0);
->> +       WARN_ON(!module_free_wq);
->> +
->> +       return 0;
->> +}
->> +pure_initcall(init_workqueue);
->> +
->> +static void remap_linear_module_alias(void *module_region, int enable)
->> +{
->> +       struct vm_struct *vm = find_vm_area(module_region);
->> +       struct page **p;
->> +       unsigned long size;
->> +
->> +       WARN_ON(!vm || !vm->pages);
->> +
->> +       for (p = vm->pages, size = vm->size; size > 0; size -= PAGE_SIZE)
->> +               set_memory_valid((u64)page_address(*p++), 1, enable);
->> +}
->> +
->> +static void module_free_wq_worker(struct work_struct *work)
->> +{
->> +       remap_linear_module_alias(work, true);
->> +       vfree(work);
->> +}
->> +
->> +void module_memfree(void *module_region)
->> +{
->> +       struct work_struct *work;
->> +
->> +       if (!module_region)
->> +               return;
->> +
->> +       /*
->> +        * At this point, module_region is a pointer to an allocation of
->> at
->> +        * least PAGE_SIZE bytes that is mapped read-write. So instead of
->> +        * allocating memory for a data structure containing a work_struct
->> +        * instance and a copy of the value of module_region, just reuse
->> the
->> +        * allocation directly.
->> +        */
->> +       work = module_region;
->> +       INIT_WORK(work, module_free_wq_worker);
->> +       queue_work(module_free_wq, work);
->> +}
->> +
->> +#else
->> +static void remap_linear_module_alias(void *module_region, int enable) {}
->> +#endif
->> +
->>   void *module_alloc(unsigned long size)
->>   {
->>         gfp_t gfp_mask = GFP_KERNEL;
->> @@ -65,6 +121,7 @@ void *module_alloc(unsigned long size)
->>                 return NULL;
->>         }
->>   +     remap_linear_module_alias(p, false);
->>         return p;
->>   }
->>   diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
->> index 493ff75670ff..e1057ebb672d 100644
->> --- a/arch/arm64/mm/mmu.c
->> +++ b/arch/arm64/mm/mmu.c
->> @@ -432,7 +432,7 @@ static void __init map_mem(pgd_t *pgdp)
->>         struct memblock_region *reg;
->>         int flags = 0;
->>   -     if (debug_pagealloc_enabled())
->> +       if (IS_ENABLED(CONFIG_STRICT_KERNEL_RWX) ||
->> debug_pagealloc_enabled())
->>                 flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
->>         /*
->>
->
-> I think this should be based on rodata_enabled instead of the kernel
-> configuration option.
->
+> +       disable_hardened_usercopy [HUC]
+> +                       Disable hardened usercopy checks
+> +
 
-Agreed.
+Instead of "disable_hardened_usercopy" let's make this a parseable
+item. I would model it after "rodata=" or other things like that.
+Perhaps the following text:
 
-> This looks reasonable from the pagetable debugfs but I'm seeing
-> some intermittent weird output:
+        hardened_usercopy=
+                        [KNL] Under CONFIG_HARDENED_USERCOPY, whether
+                        hardening is enabled for this boot. Hardened
+                        usercopy checking is used to protect the kernel
+                        from reading or writing beyond known memory
+                        allocation boundaries as a proactive defense
+                        against bounds-checking flaws in the kernel's
+                        copy_to_user()/copy_from_user() interface.
+                on      Perform hardened usercopy checks (default).
+                off     Disable hardened usercopy checks.
+
+
+>         disable_radix   [PPC]
+>                         Disable RADIX MMU mode on POWER9
 >
-> ---[ Linear Mapping ]---
-> 0xffff800000000000-0xffff800000001000           4K PTE       RW x
-> BLK DEVICE/nGnRnE
-> 0xffff800000200000-0xffff800000280000         512K PTE       RW NX SHD AF NG
-> UXN MEM/NORMAL
-> 0xffff800000280000-0xffff800000400000        1536K PTE       ro NX SHD AF NG
-> UXN MEM/NORMAL
-> 0xffff800000400000-0xffff800001400000          16M PMD       ro NX SHD AF NG
-> BLK UXN MEM/NORMAL
-> 0xffff800001400000-0xffff800001440000         256K PTE       ro NX SHD AF NG
-> UXN MEM/NORMAL
-> 0xffff800001440000-0xffff800010000000      241408K PTE       RW NX SHD AF NG
-> UXN MEM/NORMAL
+> diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
+> index 8d8821b3689a..ab24fe2d3f87 100644
+> --- a/include/linux/thread_info.h
+> +++ b/include/linux/thread_info.h
+> @@ -109,6 +109,11 @@ static inline int arch_within_stack_frames(const void * const stack,
+>  #endif
 >
+>  #ifdef CONFIG_HARDENED_USERCOPY
+> +#include <linux/atomic.h>
+> +#include <linux/jump_label.h>
+> +
+> +DECLARE_STATIC_KEY_FALSE(bypass_usercopy_checks);
+> +
+>  extern void __check_object_size(const void *ptr, unsigned long n,
+>                                         bool to_user);
 >
-> I can't tell if this is some artifact of how we do the
-> debugfs dumping or an actual bug. It doesn't seem to
-> happen on every boot either. I'll play around with this
-> to see if I find anything.
+> diff --git a/mm/usercopy.c b/mm/usercopy.c
+> index e9e9325f7638..6a1265e1a54e 100644
+> --- a/mm/usercopy.c
+> +++ b/mm/usercopy.c
+> @@ -20,6 +20,8 @@
+>  #include <linux/sched/task.h>
+>  #include <linux/sched/task_stack.h>
+>  #include <linux/thread_info.h>
+> +#include <linux/atomic.h>
+> +#include <linux/jump_label.h>
+>  #include <asm/sections.h>
+>
+>  /*
+> @@ -248,6 +250,9 @@ static inline void check_heap_object(const void *ptr, unsigned long n,
+>   */
+>  void __check_object_size(const void *ptr, unsigned long n, bool to_user)
+>  {
+> +       if (static_branch_likely(&bypass_usercopy_checks))
+> +               return;
+
+This should be unlikely (if CONFIG_HARDENED_USERCOPY is built, we want
+the fast-path to avoid the jmp instruction).
+
+> +
+>         /* Skip all tests if size is zero. */
+>         if (!n)
+>                 return;
+> @@ -279,3 +284,25 @@ void __check_object_size(const void *ptr, unsigned long n, bool to_user)
+>         check_kernel_text_object((const unsigned long)ptr, n, to_user);
+>  }
+>  EXPORT_SYMBOL(__check_object_size);
+> +
+> +DEFINE_STATIC_KEY_FALSE(bypass_usercopy_checks);
+
+This needs to be __ro_after_init otherwise it remains a target for
+attacks. Though it seems unlikely for it to be useful without the call
+to static_branch_enable(), see my thoughts below on non-jump-label
+architectures...
+
+> +EXPORT_SYMBOL(bypass_usercopy_checks);
+> +
+> +static bool disable_huc_atboot = false;
+
+Since this is static, you can just call it "disable_checks". The "huc"
+is redundant since that's the subject of the .c file already, and
+"atboot" will be obvious from the next suggestion: it is never used
+outside of __init, so it can be marked __initdata.
+
+> +
+> +static int __init parse_disable_usercopy(char *str)
+> +{
+> +       disable_huc_atboot = true;
+> +       return 1;
+> +}
+> +
+> +static int __init set_disable_usercopy(void)
+> +{
+> +       if (disable_huc_atboot == true)
+> +               static_branch_enable(&bypass_usercopy_checks);
+> +       return 1;
+> +}
+> +
+> +__setup("disable_hardened_usercopy", parse_disable_usercopy);
+> +
+> +late_initcall(set_disable_usercopy);
+> --
+> 2.17.0
 >
 
-This is indeed weird, but I think the ptdump code makes it look
-weirder than it actually is: the BLK attribute means bit 1 is cleared,
-and the nGnRnE device attribute means bits [4:2] are cleared, so this
-is essentially a reserved entry, although I wouldn't be able to
-explain how we ended up with one.
+One concern remains:
 
-Are the first 2 MB of DRAM made available to the kernel by the firmware?
+$ git grep HAVE_ARCH_JUMP_LABEL
+...
+arch/arm/Kconfig:       select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL &&
+!CPU_ENDIAN_BE32 && MMU
+arch/arm64/Kconfig:     select HAVE_ARCH_JUMP_LABEL
+arch/mips/Kconfig:      select HAVE_ARCH_JUMP_LABEL
+arch/powerpc/Kconfig:   select HAVE_ARCH_JUMP_LABEL
+arch/s390/Kconfig:      select HAVE_ARCH_JUMP_LABEL
+arch/sparc/Kconfig:     select HAVE_ARCH_JUMP_LABEL if SPARC64
+arch/x86/Kconfig:       select HAVE_ARCH_JUMP_LABEL
+
+This means for non-jump-label architectures (e.g. old arm, sparc32,
+riscv) this leaves a branch test against a writable target in memory
+(i.e. the fall-back implementation of static keys):
+
+#define static_branch_likely(x)         likely(static_key_enabled(&(x)->key))
+#define static_branch_unlikely(x)       unlikely(static_key_enabled(&(x)->key))
+
+But the earlier __ro_after_init change should, I think, solve my main
+concern there. These architectures, however, will still have a
+memory-load-branch (though marked "unlikely"), but I think I can live
+with that.
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
