@@ -1,72 +1,184 @@
-Subject: Re: [PATCH v2 2/2] arm64/mm: Move {tramp_pg_dir, swapper_pg_dir} to
- .rodata section
-References: <20180625113921.21854-1-yaojun8558363@gmail.com>
- <20180625113921.21854-3-yaojun8558363@gmail.com>
- <82f3bf16-cf3a-9b2d-a7d2-789a4abb0bf2@arm.com>
-From: James Morse <james.morse@arm.com>
-Message-ID: <ceb6135a-4e4d-d597-85aa-7639a044d097@arm.com>
-Date: Wed, 27 Jun 2018 12:23:02 +0100
-MIME-Version: 1.0
-In-Reply-To: <82f3bf16-cf3a-9b2d-a7d2-789a4abb0bf2@arm.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-To: Suzuki K Poulose <Suzuki.Poulose@arm.com>, Jun Yao <yaojun8558363@gmail.com>
-Cc: linux-arm-kernel@lists.infradead.org, catalin.marinas@arm.com, will.deacon@arm.com, ard.biesheuvel@linaro.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Chris von Recklinghausen <crecklin@redhat.com>
+Subject: [PATCH v3] add param that allows bootline control of hardened usercopy
+Date: Wed, 27 Jun 2018 08:07:35 -0400
+Message-Id: <1530101255-13988-1-git-send-email-crecklin@redhat.com>
+To: keescook@chromium.org, labbott@redhat.com, pabeni@redhat.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Suzuki, Jun,
+Enabling HARDENED_USER_COPY causes measurable regressions in
+ networking performance, up to 8% under UDP flood.
 
-On 27/06/18 12:07, Suzuki K Poulose wrote:
-> On 25/06/18 12:39, Jun Yao wrote:
->> When CONFIG_ARM64_VA_BITS_36/CONFIG_ARM64_VA_BITS_39/
->> CONFIG_ARM64_VA_BITS_42 are selected, a block-mapping can be
->> written to swapper_pg_dir. To defend 'KSMA', we move swapper_pg_dir
->> to .rodata section when these configurations are selected. At the
->> same time, we update swapper_pg_dir by fixmap.
+I'm running an a small packet UDP flood using pktgen vs. a host b2b
+connected. On the receiver side the UDP packets are processed by a
+simple user space process that just reads and drops them:
 
->> diff --git a/arch/arm64/include/asm/pgalloc.h b/arch/arm64/include/asm/pgalloc.h
->> index 2e05bcd944c8..62512ad9c310 100644
->> --- a/arch/arm64/include/asm/pgalloc.h
->> +++ b/arch/arm64/include/asm/pgalloc.h
->> @@ -49,6 +49,22 @@ static inline void __pud_populate(pud_t *pudp, phys_addr_t
->> pmdp, pudval_t prot)
->>     static inline void pud_populate(struct mm_struct *mm, pud_t *pudp, pmd_t
->> *pmdp)
->>   {
->> +#ifdef CONFIG_ARM64_VA_BITS_39
-> 
-> Could we please use
-> 
-> #ifdef __PAGETABLE_PUD_FOLDED ^^
+https://github.com/netoptimizer/network-testing/blob/master/src/udp_sink.c
 
->> @@ -142,6 +158,23 @@ pmd_populate_kernel(struct mm_struct *mm, pmd_t *pmdp,
->> pte_t *ptep)
->>       /*
->>        * The pmd must be loaded with the physical address of the PTE table
->>        */
->> +#if defined(CONFIG_ARM64_VA_BITS_42) || \
->> +    defined(CONFIG_ARM64_VA_BITS_36)
-> 
-> and
-> 
-> #ifdef __PGTABLE_PMD_FOLDED here ^^
-> 
-> 
->> +#if defined(CONFIG_ARM64_VA_BITS_39) || \
->> +    defined(CONFIG_ARM64_VA_BITS_36) || \
->> +    defined(CONFIG_ARM64_VA_BITS_42)
-> 
-> and
-> 
-> #ifdef __PGTABLE_PMD_FOLDED ^^ (as it implies
-> __PGTABLE_PUD_FOLDED )
-> 
-> instead ?
+Not very useful from a functional PoV, but it helps to pin-point
+bottlenecks in the networking stack.
 
-Aha, I didn't know these existed. As we are only interested in matching one
-level for now, this is even clearer.
+When running a kernel with CONFIG_HARDENED_USERCOPY=y, I see a 5-8%
+regression in the receive tput, compared to the same kernel without
+this option enabled.
 
+With CONFIG_HARDENED_USERCOPY=y, perf shows ~6% of CPU time spent
+cumulatively in __check_object_size (~4%) and __virt_addr_valid (~2%).
 
-Thanks,
+The call-chain is:
 
-James
+__GI___libc_recvfrom
+entry_SYSCALL_64_after_hwframe
+do_syscall_64
+__x64_sys_recvfrom
+__sys_recvfrom
+inet_recvmsg
+udp_recvmsg
+__check_object_size
+
+udp_recvmsg() actually calls copy_to_iter() (inlined) and the latters
+calls check_copy_size() (again, inlined).
+
+A generic distro may want to enable HARDENED_USER_COPY in their default
+kernel config, but at the same time, such distro may want to be able to
+avoid the performance penalties in with the default configuration and
+disable the stricter check on a per-boot basis.
+
+This change adds a boot parameter that conditionally disables
+HARDENED_USERCOPY at boot time.
+
+v2->v3:
+	add benchmark details to commit comments
+	Don't add new item to Documentation/admin-guide/kernel-parameters.rst
+	rename boot param to "hardened_usercopy="
+	update description in Documentation/admin-guide/kernel-parameters.txt
+	static_branch_likely -> static_branch_unlikely
+	add __ro_after_init versions of DEFINE_STATIC_KEY_FALSE,
+		DEFINE_STATIC_KEY_TRUE
+	disable_huc_atboot -> enable_checks (strtobool "on" == true)
+
+v1->v2:
+	remove CONFIG_HUC_DEFAULT_OFF
+	default is now enabled, boot param disables
+	move check to __check_object_size so as to not break optimization of
+		__builtin_constant_p()
+	include linux/atomic.h before linux/jump_label.h
+
+Signed-off-by: Chris von Recklinghausen <crecklin@redhat.com>
+---
+ .../admin-guide/kernel-parameters.txt         | 11 ++++++++
+ include/linux/jump_label.h                    |  6 +++++
+ include/linux/thread_info.h                   |  5 ++++
+ mm/usercopy.c                                 | 26 +++++++++++++++++++
+ 4 files changed, 48 insertions(+)
+
+diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
+index efc7aa7a0670..560d4dc66f02 100644
+--- a/Documentation/admin-guide/kernel-parameters.txt
++++ b/Documentation/admin-guide/kernel-parameters.txt
+@@ -816,6 +816,17 @@
+ 	disable=	[IPV6]
+ 			See Documentation/networking/ipv6.txt.
+ 
++	hardened_usercopy=
++                        [KNL] Under CONFIG_HARDENED_USERCOPY, whether
++                        hardening is enabled for this boot. Hardened
++                        usercopy checking is used to protect the kernel
++                        from reading or writing beyond known memory
++                        allocation boundaries as a proactive defense
++                        against bounds-checking flaws in the kernel's
++                        copy_to_user()/copy_from_user() interface.
++                on      Perform hardened usercopy checks (default).
++                off     Disable hardened usercopy checks.
++
+ 	disable_radix	[PPC]
+ 			Disable RADIX MMU mode on POWER9
+ 
+diff --git a/include/linux/jump_label.h b/include/linux/jump_label.h
+index b46b541c67c4..1a0b6f17a5d6 100644
+--- a/include/linux/jump_label.h
++++ b/include/linux/jump_label.h
+@@ -299,12 +299,18 @@ struct static_key_false {
+ #define DEFINE_STATIC_KEY_TRUE(name)	\
+ 	struct static_key_true name = STATIC_KEY_TRUE_INIT
+ 
++#define DEFINE_STATIC_KEY_TRUE_RO(name)	\
++	struct static_key_true name __ro_after_init = STATIC_KEY_TRUE_INIT
++
+ #define DECLARE_STATIC_KEY_TRUE(name)	\
+ 	extern struct static_key_true name
+ 
+ #define DEFINE_STATIC_KEY_FALSE(name)	\
+ 	struct static_key_false name = STATIC_KEY_FALSE_INIT
+ 
++#define DEFINE_STATIC_KEY_FALSE_RO(name)	\
++	struct static_key_false name __ro_after_init = STATIC_KEY_FALSE_INIT
++
+ #define DECLARE_STATIC_KEY_FALSE(name)	\
+ 	extern struct static_key_false name
+ 
+diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
+index 8d8821b3689a..ab24fe2d3f87 100644
+--- a/include/linux/thread_info.h
++++ b/include/linux/thread_info.h
+@@ -109,6 +109,11 @@ static inline int arch_within_stack_frames(const void * const stack,
+ #endif
+ 
+ #ifdef CONFIG_HARDENED_USERCOPY
++#include <linux/atomic.h>
++#include <linux/jump_label.h>
++
++DECLARE_STATIC_KEY_FALSE(bypass_usercopy_checks);
++
+ extern void __check_object_size(const void *ptr, unsigned long n,
+ 					bool to_user);
+ 
+diff --git a/mm/usercopy.c b/mm/usercopy.c
+index e9e9325f7638..39f8b1409618 100644
+--- a/mm/usercopy.c
++++ b/mm/usercopy.c
+@@ -20,6 +20,8 @@
+ #include <linux/sched/task.h>
+ #include <linux/sched/task_stack.h>
+ #include <linux/thread_info.h>
++#include <linux/atomic.h>
++#include <linux/jump_label.h>
+ #include <asm/sections.h>
+ 
+ /*
+@@ -248,6 +250,9 @@ static inline void check_heap_object(const void *ptr, unsigned long n,
+  */
+ void __check_object_size(const void *ptr, unsigned long n, bool to_user)
+ {
++	if (static_branch_unlikely(&bypass_usercopy_checks))
++		return;
++
+ 	/* Skip all tests if size is zero. */
+ 	if (!n)
+ 		return;
+@@ -279,3 +284,24 @@ void __check_object_size(const void *ptr, unsigned long n, bool to_user)
+ 	check_kernel_text_object((const unsigned long)ptr, n, to_user);
+ }
+ EXPORT_SYMBOL(__check_object_size);
++
++DEFINE_STATIC_KEY_FALSE_RO(bypass_usercopy_checks);
++EXPORT_SYMBOL(bypass_usercopy_checks);
++
++static bool enable_checks __initdata = true;
++
++static int __init parse_hardened_usercopy(char *str)
++{
++	return strtobool(str, &enable_checks);
++}
++
++__setup("hardened_usercopy=", parse_hardened_usercopy);
++
++static int __init set_hardened_usercopy(void)
++{
++	if (enable_checks == false)
++		static_branch_enable(&bypass_usercopy_checks);
++	return 1;
++}
++
++late_initcall(set_hardened_usercopy);
+-- 
+2.17.0
