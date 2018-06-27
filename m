@@ -1,207 +1,74 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1530017430-5394-1-git-send-email-crecklin@redhat.com>
-References: <1530017430-5394-1-git-send-email-crecklin@redhat.com>
+In-Reply-To: <3e319e96-e942-7c87-7b72-a5c3f520f234@redhat.com>
+References: <1529686717-16017-1-git-send-email-alex.popov@linux.com>
+ <1529686717-16017-3-git-send-email-alex.popov@linux.com> <3e319e96-e942-7c87-7b72-a5c3f520f234@redhat.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 26 Jun 2018 17:03:52 -0700
-Message-ID: <CAGXu5j+ELUHuyjkUU358DkQieKhxQ5Z6h5HM7qYE_AQvVr4R3g@mail.gmail.com>
-Subject: Re: [v2 PATCH] add param that allows bootline control of hardened usercopy
+Date: Tue, 26 Jun 2018 17:13:58 -0700
+Message-ID: <CAGXu5j+2d-2SpzitAaB65zT6FjhmOYiCKSRfRQHcUUvOQ1CDGg@mail.gmail.com>
+Subject: Re: [PATCH v13 (resend) 2/6] x86/entry: Add STACKLEAK erasing the
+ kernel stack at the end of syscalls
 Content-Type: text/plain; charset="UTF-8"
-To: Chris von Recklinghausen <crecklin@redhat.com>
-Cc: Laura Abbott <labbott@redhat.com>, Paolo Abeni <pabeni@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Laura Abbott <labbott@redhat.com>
+Cc: Alexander Popov <alex.popov@linux.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-nit: I would expect the version to trail "PATCH" in the subject, like:
-[PATCH v2]
-
-On Tue, Jun 26, 2018 at 5:50 AM, Chris von Recklinghausen
-<crecklin@redhat.com> wrote:
-> Enabling HARDENED_USER_COPY causes measurable regressions in the
-> networking performances, up to 8% under UDP flood.
-
-Please include the details on the benchmark (from the email in the
-thread), include the backtrace to help other people that might
-discover the same issues. (Also, the name is "HARDENED_USERCOPY".)
-
-> A generic distro may want to enable HARDENED_USER_COPY in their default
-> kernel config, but at the same time, such distro may want to be able to
-> avoid the performance penalties in with the default configuration and
-> disable the stricter check on a per-boot basis.
+On Fri, Jun 22, 2018 at 11:58 AM, Laura Abbott <labbott@redhat.com> wrote:
+> On 06/22/2018 09:58 AM, Alexander Popov wrote:
+>>
+>> +       /*
+>> +        * Now write the poison value to the kernel stack. Start from
+>> +        * 'kstack_ptr' and move up till the new 'boundary'. We assume
+>> that
+>> +        * the stack pointer doesn't change when we write poison.
+>> +        */
+>> +       if (on_thread_stack())
+>> +               boundary = current_stack_pointer;
+>> +       else
+>> +               boundary = current_top_of_stack();
+>> +
+>> +       BUG_ON(boundary - kstack_ptr >= THREAD_SIZE);
+>> +
+>> +       while (kstack_ptr < boundary) {
+>> +               *(unsigned long *)kstack_ptr = STACKLEAK_POISON;
+>> +               kstack_ptr += sizeof(unsigned long);
+>> +       }
+>> +
+>> +       /* Reset the 'lowest_stack' value for the next syscall */
+>> +       current->lowest_stack = current_top_of_stack() - THREAD_SIZE / 64;
 >
-> This change adds a boot parameter that to conditionally disable
-> HARDENED_USERCOPY at boot time.
 >
-> v1->v2:
->         remove CONFIG_HUC_DEFAULT_OFF
->         default is now enabled, boot param disables
->         move check to __check_object_size so as to not break optimization of
->                 __builtin_constant_p()
->         include linux/atomic.h before linux/jump_label.h
->
-> Signed-off-by: Chris von Recklinghausen <crecklin@redhat.com>
-> ---
->  .../admin-guide/kernel-parameters.rst         |  1 +
->  .../admin-guide/kernel-parameters.txt         |  3 +++
->  include/linux/thread_info.h                   |  5 ++++
->  mm/usercopy.c                                 | 27 +++++++++++++++++++
->  4 files changed, 36 insertions(+)
->
-> diff --git a/Documentation/admin-guide/kernel-parameters.rst b/Documentation/admin-guide/kernel-parameters.rst
-> index b8d0bc07ed0a..87a1200a1db6 100644
-> --- a/Documentation/admin-guide/kernel-parameters.rst
-> +++ b/Documentation/admin-guide/kernel-parameters.rst
-> @@ -100,6 +100,7 @@ parameter is applicable::
->         FB      The frame buffer device is enabled.
->         FTRACE  Function tracing enabled.
->         GCOV    GCOV profiling is enabled.
-> +       HUC     Hardened usercopy is enabled
+> on_thread_stack() and current_top_of_stack() are x86 only
+> functions currently defined in asm/processor.h. There are
+> similar functions in arch/arm64/include/asm/stacktrace.h
+> which I think I can use to build those functions. Should
+> I just throw the arm64 versions in processor.h or do
+> we want to consider abstracting these into something like
+> asm/stackleak.h? I'd like to know a direction before I
+> start ripping apart stacktrace.h.
 
-I'd prefer the new HUC item here was just left off: it isn't a class
-of parameters yet (it's a single item). See below.
+static inline unsigned long current_top_of_stack(void)
+{
+        /*
+         *  We can't read directly from tss.sp0: sp0 on x86_32 is special in
+         *  and around vm86 mode and sp0 on x86_64 is special because of the
+         *  entry trampoline.
+         */
+        return this_cpu_read_stable(cpu_current_top_of_stack);
+}
 
->         HW      Appropriate hardware is enabled.
->         IA-64   IA-64 architecture is enabled.
->         IMA     Integrity measurement architecture is enabled.
-> diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-> index efc7aa7a0670..d14be0038aed 100644
-> --- a/Documentation/admin-guide/kernel-parameters.txt
-> +++ b/Documentation/admin-guide/kernel-parameters.txt
-> @@ -816,6 +816,9 @@
->         disable=        [IPV6]
->                         See Documentation/networking/ipv6.txt.
->
-> +       disable_hardened_usercopy [HUC]
-> +                       Disable hardened usercopy checks
-> +
+static inline bool on_thread_stack(void)
+{
+        return (unsigned long)(current_top_of_stack() -
+                               current_stack_pointer) < THREAD_SIZE;
+}
 
-Instead of "disable_hardened_usercopy" let's make this a parseable
-item. I would model it after "rodata=" or other things like that.
-Perhaps the following text:
+The only arch-specific part is current_top_of_stack(), so it seems
+like just solving current_top_of_stack() and copying on_thread_stack()
+directly should work, yes? I would think sticking those directly into
+asm/processor.h on arm64 would be okay?
 
-        hardened_usercopy=
-                        [KNL] Under CONFIG_HARDENED_USERCOPY, whether
-                        hardening is enabled for this boot. Hardened
-                        usercopy checking is used to protect the kernel
-                        from reading or writing beyond known memory
-                        allocation boundaries as a proactive defense
-                        against bounds-checking flaws in the kernel's
-                        copy_to_user()/copy_from_user() interface.
-                on      Perform hardened usercopy checks (default).
-                off     Disable hardened usercopy checks.
-
-
->         disable_radix   [PPC]
->                         Disable RADIX MMU mode on POWER9
->
-> diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
-> index 8d8821b3689a..ab24fe2d3f87 100644
-> --- a/include/linux/thread_info.h
-> +++ b/include/linux/thread_info.h
-> @@ -109,6 +109,11 @@ static inline int arch_within_stack_frames(const void * const stack,
->  #endif
->
->  #ifdef CONFIG_HARDENED_USERCOPY
-> +#include <linux/atomic.h>
-> +#include <linux/jump_label.h>
-> +
-> +DECLARE_STATIC_KEY_FALSE(bypass_usercopy_checks);
-> +
->  extern void __check_object_size(const void *ptr, unsigned long n,
->                                         bool to_user);
->
-> diff --git a/mm/usercopy.c b/mm/usercopy.c
-> index e9e9325f7638..6a1265e1a54e 100644
-> --- a/mm/usercopy.c
-> +++ b/mm/usercopy.c
-> @@ -20,6 +20,8 @@
->  #include <linux/sched/task.h>
->  #include <linux/sched/task_stack.h>
->  #include <linux/thread_info.h>
-> +#include <linux/atomic.h>
-> +#include <linux/jump_label.h>
->  #include <asm/sections.h>
->
->  /*
-> @@ -248,6 +250,9 @@ static inline void check_heap_object(const void *ptr, unsigned long n,
->   */
->  void __check_object_size(const void *ptr, unsigned long n, bool to_user)
->  {
-> +       if (static_branch_likely(&bypass_usercopy_checks))
-> +               return;
-
-This should be unlikely (if CONFIG_HARDENED_USERCOPY is built, we want
-the fast-path to avoid the jmp instruction).
-
-> +
->         /* Skip all tests if size is zero. */
->         if (!n)
->                 return;
-> @@ -279,3 +284,25 @@ void __check_object_size(const void *ptr, unsigned long n, bool to_user)
->         check_kernel_text_object((const unsigned long)ptr, n, to_user);
->  }
->  EXPORT_SYMBOL(__check_object_size);
-> +
-> +DEFINE_STATIC_KEY_FALSE(bypass_usercopy_checks);
-
-This needs to be __ro_after_init otherwise it remains a target for
-attacks. Though it seems unlikely for it to be useful without the call
-to static_branch_enable(), see my thoughts below on non-jump-label
-architectures...
-
-> +EXPORT_SYMBOL(bypass_usercopy_checks);
-> +
-> +static bool disable_huc_atboot = false;
-
-Since this is static, you can just call it "disable_checks". The "huc"
-is redundant since that's the subject of the .c file already, and
-"atboot" will be obvious from the next suggestion: it is never used
-outside of __init, so it can be marked __initdata.
-
-> +
-> +static int __init parse_disable_usercopy(char *str)
-> +{
-> +       disable_huc_atboot = true;
-> +       return 1;
-> +}
-> +
-> +static int __init set_disable_usercopy(void)
-> +{
-> +       if (disable_huc_atboot == true)
-> +               static_branch_enable(&bypass_usercopy_checks);
-> +       return 1;
-> +}
-> +
-> +__setup("disable_hardened_usercopy", parse_disable_usercopy);
-> +
-> +late_initcall(set_disable_usercopy);
-> --
-> 2.17.0
->
-
-One concern remains:
-
-$ git grep HAVE_ARCH_JUMP_LABEL
-...
-arch/arm/Kconfig:       select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL &&
-!CPU_ENDIAN_BE32 && MMU
-arch/arm64/Kconfig:     select HAVE_ARCH_JUMP_LABEL
-arch/mips/Kconfig:      select HAVE_ARCH_JUMP_LABEL
-arch/powerpc/Kconfig:   select HAVE_ARCH_JUMP_LABEL
-arch/s390/Kconfig:      select HAVE_ARCH_JUMP_LABEL
-arch/sparc/Kconfig:     select HAVE_ARCH_JUMP_LABEL if SPARC64
-arch/x86/Kconfig:       select HAVE_ARCH_JUMP_LABEL
-
-This means for non-jump-label architectures (e.g. old arm, sparc32,
-riscv) this leaves a branch test against a writable target in memory
-(i.e. the fall-back implementation of static keys):
-
-#define static_branch_likely(x)         likely(static_key_enabled(&(x)->key))
-#define static_branch_unlikely(x)       unlikely(static_key_enabled(&(x)->key))
-
-But the earlier __ro_after_init change should, I think, solve my main
-concern there. These architectures, however, will still have a
-memory-load-branch (though marked "unlikely"), but I think I can live
-with that.
+FWIW, I don't think a separate asm/stackleak.h is needed.
 
 -Kees
 
