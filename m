@@ -1,39 +1,70 @@
+Subject: Re: [PATCH v13 0/6] Introduce the STACKLEAK feature and a test for it
+References: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
+ <CAGXu5jJ9F-eZW5qVGebsv=wUh0kSm+edAecpztgvMC3fGeYXXA@mail.gmail.com>
+ <CAGXu5jLU4En5Cf6KGf0Adpky-TF7aa=d9MTDqDKwxQuxZSLNEg@mail.gmail.com>
+ <20180622013339.GA10129@gmail.com>
+ <CAGXu5jJgmvqWzJ1kbq-zTsmwkcc9FPXgBdT9qf+Hc4tLcLh87w@mail.gmail.com>
+ <CAGXu5j+bUEPZp1LAc82RDmvCXc=YnsOVP3FdzCX_4WsZTXcCBA@mail.gmail.com>
+ <20180622031645.GA26826@gmail.com>
+ <feb24168-9528-dfd0-be05-daea3e0b19b9@linux.com>
+ <20180624071817.GA32154@gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <02a4e913-ff52-405f-c8ea-61efd6d6af73@linux.com>
+Date: Thu, 28 Jun 2018 18:48:37 +0300
 MIME-Version: 1.0
-In-Reply-To: <ab0541ca-a036-34ca-ed1b-937c470cc9da@redhat.com>
-References: <20180626165455.22636-1-ard.biesheuvel@linaro.org>
- <06b7ea07-53e2-690a-b670-d1fc41d133c3@redhat.com> <CAKv+Gu9uiqerCd54upWHxPBKcX1ga1oTwpYctEqbhhQGZOq6XA@mail.gmail.com>
- <76b00e4f-e6fd-f0e9-379c-e31e85d5258d@redhat.com> <ab0541ca-a036-34ca-ed1b-937c470cc9da@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu, 28 Jun 2018 01:29:42 +0200
-Message-ID: <CAKv+Gu8TnraRGj_b=pcb6xTKMLX7GLZeJGmJ4R3vU6ygnr2kTA@mail.gmail.com>
-Subject: Re: [RFC PATCH] arm64/mm: unmap the linear alias of module allocations
-Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, James Morse <james.morse@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, YaoJun <yaojun8558363@gmail.com>
+In-Reply-To: <20180624071817.GA32154@gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 28 June 2018 at 01:28, Laura Abbott <labbott@redhat.com> wrote:
-> On 06/26/2018 06:15 PM, Laura Abbott wrote:
->>
->> +static void remap_linear_module_alias(void *module_region, int enable)
->> +{
->> +       struct vm_struct *vm = find_vm_area(module_region);
->> +       struct page **p;
->> +       unsigned long size;
->> +
->> +       WARN_ON(!vm || !vm->pages);
->> +
->> +       for (p = vm->pages, size = vm->size; size > 0; size -= PAGE_SIZE)
->> +               set_memory_valid((u64)page_address(*p++), 1, enable);
->> +}
->
->
-> So I think the weirdness is caused by using vm->size here. The size of
-> the array is actually tracked by vm->nr_pages since vm->size may vary
-> depending on the guard page. I think this ended being an off by one
-> error with setting a non-existent page valid, hence the oddness in
-> the entry. If I switch to using vm->nr_pages, I don't see the entry
-> anymore.
->
+Hello Ingo,
 
-OK, thanks for tracking that down!
+On 24.06.2018 10:18, Ingo Molnar wrote:
+> 
+> * Alexander Popov <alex.popov@linux.com> wrote:
+> 
+>> On 22.06.2018 06:16, Ingo Molnar wrote:
+>>>
+>>> * Kees Cook <keescook@chromium.org> wrote:
+>>>
+>>>> On Thu, Jun 21, 2018 at 7:07 PM, Kees Cook <keescook@chromium.org> wrote:
+>>>>> It needs rebasing to -rc1 (which I've done already, but I'm still
+>>>>> doing build tests on it).
+>>>>
+>>>> It's passed basic allmodconfig builds:
+>>>>
+>>>> tree: https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git
+>>>> branch: for-next/stackleak
+>>>
+>>> Ok, that's 6 patches - please send the latest for review as emails to lkml the 
+>>> usual. Thanks!
+>>
+>> I'll resend the rebased v13 shortly.
+> 
+> Well, I assume there were v12->v13 changes, correct?
+> 
+> If yes, and if it's on a different base krnel, then why did you call it a 
+> 'resend'? That will only get fewer people to review it ... Please don't do that 
+> for future iterations.
+
+Let me recall the timeline:
+- I sent the v12 on May 16 [1];
+- you gave a detailed feedback on v12 on May 18 [2];
+- I fixed the series according to your feedback and sent v13 on May 26 [3];
+- ... merge window for 4.18 is closed;
+- I re-sent the rebased v13 on June 22 [4], because you asked to do so in this
+thread. That's why I called it 'resend'.
+
+May I ask for your feedback on v13?
+Do you have any objections? Would you give your "Reviewed-by" or "Acked-by"?
+Thanks in advance.
+
+Best regards,
+Alexander
+
+[1]: http://www.openwall.com/lists/kernel-hardening/2018/05/16/1
+[2]: http://www.openwall.com/lists/kernel-hardening/2018/05/18/2
+[3]: http://www.openwall.com/lists/kernel-hardening/2018/05/26/6
+[4]: http://www.openwall.com/lists/kernel-hardening/2018/06/22/8
