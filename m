@@ -1,70 +1,183 @@
-Subject: Re: [PATCH v13 0/6] Introduce the STACKLEAK feature and a test for it
-References: <1527365430-8303-1-git-send-email-alex.popov@linux.com>
- <CAGXu5jJ9F-eZW5qVGebsv=wUh0kSm+edAecpztgvMC3fGeYXXA@mail.gmail.com>
- <CAGXu5jLU4En5Cf6KGf0Adpky-TF7aa=d9MTDqDKwxQuxZSLNEg@mail.gmail.com>
- <20180622013339.GA10129@gmail.com>
- <CAGXu5jJgmvqWzJ1kbq-zTsmwkcc9FPXgBdT9qf+Hc4tLcLh87w@mail.gmail.com>
- <CAGXu5j+bUEPZp1LAc82RDmvCXc=YnsOVP3FdzCX_4WsZTXcCBA@mail.gmail.com>
- <20180622031645.GA26826@gmail.com>
- <feb24168-9528-dfd0-be05-daea3e0b19b9@linux.com>
- <20180624071817.GA32154@gmail.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <02a4e913-ff52-405f-c8ea-61efd6d6af73@linux.com>
-Date: Thu, 28 Jun 2018 18:48:37 +0300
-MIME-Version: 1.0
-In-Reply-To: <20180624071817.GA32154@gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+From: Laura Abbott <labbott@redhat.com>
+Subject: [PATCH] arm64: Clear the stack
+Date: Fri, 29 Jun 2018 12:05:53 -0700
+Message-Id: <20180629190553.7282-1-labbott@redhat.com>
+To: Alexander Popov <alex.popov@linux.com>, Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Ingo,
+Implementation of stackleak based heavily on the x86 version
 
-On 24.06.2018 10:18, Ingo Molnar wrote:
-> 
-> * Alexander Popov <alex.popov@linux.com> wrote:
-> 
->> On 22.06.2018 06:16, Ingo Molnar wrote:
->>>
->>> * Kees Cook <keescook@chromium.org> wrote:
->>>
->>>> On Thu, Jun 21, 2018 at 7:07 PM, Kees Cook <keescook@chromium.org> wrote:
->>>>> It needs rebasing to -rc1 (which I've done already, but I'm still
->>>>> doing build tests on it).
->>>>
->>>> It's passed basic allmodconfig builds:
->>>>
->>>> tree: https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git
->>>> branch: for-next/stackleak
->>>
->>> Ok, that's 6 patches - please send the latest for review as emails to lkml the 
->>> usual. Thanks!
->>
->> I'll resend the rebased v13 shortly.
-> 
-> Well, I assume there were v12->v13 changes, correct?
-> 
-> If yes, and if it's on a different base krnel, then why did you call it a 
-> 'resend'? That will only get fewer people to review it ... Please don't do that 
-> for future iterations.
+Signed-off-by: Laura Abbott <labbott@redhat.com>
+---
+Changes since last time:
+- Minor name change in entry.S
+- Converted to use the generic interfaces so there's minimal additions.
+- Added the fast syscall path.
+- Addition of on_thread_stack and current_top_of_stack
+- Disable stackleak on hyp per suggestion
+- Added a define for check_alloca. I'm still not sure about keeping it
+  since the x86 version got reworked?
 
-Let me recall the timeline:
-- I sent the v12 on May 16 [1];
-- you gave a detailed feedback on v12 on May 18 [2];
-- I fixed the series according to your feedback and sent v13 on May 26 [3];
-- ... merge window for 4.18 is closed;
-- I re-sent the rebased v13 on June 22 [4], because you asked to do so in this
-thread. That's why I called it 'resend'.
+I've mostly kept this as one patch with a minimal commit text. I can
+split it up and elaborate more before final merging.
+---
+ arch/arm64/Kconfig                    |  1 +
+ arch/arm64/include/asm/processor.h    |  9 +++++++++
+ arch/arm64/kernel/entry.S             |  7 +++++++
+ arch/arm64/kernel/process.c           | 16 ++++++++++++++++
+ arch/arm64/kvm/hyp/Makefile           |  3 ++-
+ drivers/firmware/efi/libstub/Makefile |  3 ++-
+ include/linux/stackleak.h             |  1 +
+ scripts/Makefile.gcc-plugins          |  5 ++++-
+ 8 files changed, 42 insertions(+), 3 deletions(-)
 
-May I ask for your feedback on v13?
-Do you have any objections? Would you give your "Reviewed-by" or "Acked-by"?
-Thanks in advance.
-
-Best regards,
-Alexander
-
-[1]: http://www.openwall.com/lists/kernel-hardening/2018/05/16/1
-[2]: http://www.openwall.com/lists/kernel-hardening/2018/05/18/2
-[3]: http://www.openwall.com/lists/kernel-hardening/2018/05/26/6
-[4]: http://www.openwall.com/lists/kernel-hardening/2018/06/22/8
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index eb2cf4938f6d..b0221db95dc9 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -92,6 +92,7 @@ config ARM64
+ 	select HAVE_ARCH_MMAP_RND_BITS
+ 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
+ 	select HAVE_ARCH_SECCOMP_FILTER
++	select HAVE_ARCH_STACKLEAK
+ 	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
+ 	select HAVE_ARCH_TRACEHOOK
+ 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
+index 767598932549..73914fd7e142 100644
+--- a/arch/arm64/include/asm/processor.h
++++ b/arch/arm64/include/asm/processor.h
+@@ -248,5 +248,14 @@ void cpu_clear_disr(const struct arm64_cpu_capabilities *__unused);
+ #define SVE_SET_VL(arg)	sve_set_current_vl(arg)
+ #define SVE_GET_VL()	sve_get_current_vl()
+ 
++/*
++ * For stackleak
++ *
++ * These need to be macros because otherwise we get stuck in a nightmare
++ * of header definitions for the use of task_stack_page.
++ */
++#define current_top_of_stack()	(task_stack_page(current) + THREAD_SIZE)
++#define on_thread_stack()	(on_task_stack(current, current_stack_pointer))
++
+ #endif /* __ASSEMBLY__ */
+ #endif /* __ASM_PROCESSOR_H */
+diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+index ec2ee720e33e..31c9da7d401e 100644
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -401,6 +401,11 @@ tsk	.req	x28		// current thread_info
+ 
+ 	.text
+ 
++	.macro	stackleak_erase
++#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
++	bl	stackleak_erase_kstack
++#endif
++	.endm
+ /*
+  * Exception vectors.
+  */
+@@ -880,6 +885,7 @@ ret_fast_syscall:
+ 	and	x2, x1, #_TIF_WORK_MASK
+ 	cbnz	x2, work_pending
+ 	enable_step_tsk x1, x2
++	stackleak_erase
+ 	kernel_exit 0
+ ret_fast_syscall_trace:
+ 	enable_daif
+@@ -906,6 +912,7 @@ ret_to_user:
+ 	cbnz	x2, work_pending
+ finish_ret_to_user:
+ 	enable_step_tsk x1, x2
++	stackleak_erase
+ 	kernel_exit 0
+ ENDPROC(ret_to_user)
+ 
+diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
+index f08a2ed9db0d..9f0f135f8b66 100644
+--- a/arch/arm64/kernel/process.c
++++ b/arch/arm64/kernel/process.c
+@@ -493,3 +493,19 @@ void arch_setup_new_exec(void)
+ {
+ 	current->mm->context.flags = is_compat_task() ? MMCF_AARCH32 : 0;
+ }
++
++#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
++#define MIN_STACK_LEFT	256
++
++void __used stackleak_check_alloca(unsigned long size)
++{
++	unsigned long sp, stack_left;
++
++	sp = current_stack_pointer;
++
++	stack_left = sp & (THREAD_SIZE - 1);
++	BUG_ON(stack_left < MIN_STACK_LEFT ||
++		size >= stack_left - MIN_STACK_LEFT);
++}
++EXPORT_SYMBOL(stackleak_check_alloca);
++#endif
+diff --git a/arch/arm64/kvm/hyp/Makefile b/arch/arm64/kvm/hyp/Makefile
+index 4313f7475333..2fabc2dc1966 100644
+--- a/arch/arm64/kvm/hyp/Makefile
++++ b/arch/arm64/kvm/hyp/Makefile
+@@ -3,7 +3,8 @@
+ # Makefile for Kernel-based Virtual Machine module, HYP part
+ #
+ 
+-ccflags-y += -fno-stack-protector -DDISABLE_BRANCH_PROFILING
++ccflags-y += -fno-stack-protector -DDISABLE_BRANCH_PROFILING \
++		$(DISABLE_STACKLEAK_PLUGIN)
+ 
+ KVM=../../../../virt/kvm
+ 
+diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
+index a34e9290a699..25dd2a14560d 100644
+--- a/drivers/firmware/efi/libstub/Makefile
++++ b/drivers/firmware/efi/libstub/Makefile
+@@ -20,7 +20,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)	+= -I$(srctree)/scripts/dtc/libfdt
+ KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
+ 				   -D__NO_FORTIFY \
+ 				   $(call cc-option,-ffreestanding) \
+-				   $(call cc-option,-fno-stack-protector)
++				   $(call cc-option,-fno-stack-protector) \
++				   $(DISABLE_STACKLEAK_PLUGIN)
+ 
+ GCOV_PROFILE			:= n
+ KASAN_SANITIZE			:= n
+diff --git a/include/linux/stackleak.h b/include/linux/stackleak.h
+index e2da99b3a191..00d62b302efb 100644
+--- a/include/linux/stackleak.h
++++ b/include/linux/stackleak.h
+@@ -5,6 +5,7 @@
+ #include <linux/sched.h>
+ #include <linux/sched/task_stack.h>
+ 
++#include <asm/stacktrace.h>
+ /*
+  * Check that the poison value points to the unused hole in the
+  * virtual memory map for your platform.
+diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
+index a535742a1c06..972ce4ca7f6a 100644
+--- a/scripts/Makefile.gcc-plugins
++++ b/scripts/Makefile.gcc-plugins
+@@ -37,11 +37,14 @@ ifdef CONFIG_GCC_PLUGINS
+ 
+   gcc-plugin-$(CONFIG_GCC_PLUGIN_STACKLEAK)	+= stackleak_plugin.so
+   gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STACKLEAK)	+= -DSTACKLEAK_PLUGIN -fplugin-arg-stackleak_plugin-track-min-size=$(CONFIG_STACKLEAK_TRACK_MIN_SIZE)
++  ifdef CONFIG_GCC_PLUGIN_STACKLEAK
++    DISABLE_STACKLEAK_PLUGIN		+= -fplugin-arg-stackleak_plugin-disable
++  endif
+ 
+   GCC_PLUGINS_CFLAGS := $(strip $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y)) $(gcc-plugin-cflags-y))
+ 
+   export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGIN GCC_PLUGIN_SUBDIR
+-  export SANCOV_PLUGIN DISABLE_LATENT_ENTROPY_PLUGIN
++  export SANCOV_PLUGIN DISABLE_LATENT_ENTROPY_PLUGIN DISABLE_STACKLEAK_PLUGIN
+ 
+   ifneq ($(PLUGINCC),)
+     # SANCOV_PLUGIN can be only in CFLAGS_KCOV because avoid duplication.
+-- 
+2.17.1
