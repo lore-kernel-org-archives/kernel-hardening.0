@@ -1,191 +1,123 @@
-From: Chris von Recklinghausen <crecklin@redhat.com>
-Subject: [PATCH v6] add param that allows bootline control of hardened usercopy
-Date: Tue,  3 Jul 2018 06:00:37 -0400
-Message-Id: <1530612037-32512-1-git-send-email-crecklin@redhat.com>
-To: keescook@chromium.org, labbott@redhat.com, pabeni@redhat.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Date: Tue, 3 Jul 2018 13:14:41 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Subject: Re: [PATCH] arm64: Clear the stack
+Message-ID: <20180703121440.v4olvwqb3ykgt5fm@lakrids.cambridge.arm.com>
+References: <20180629190553.7282-1-labbott@redhat.com>
+ <9733d929-3c6a-40e1-6110-8f79975323d3@linux.com>
+ <1b97aa7d-2b6c-a5df-0caa-1cd16e18a816@redhat.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1b97aa7d-2b6c-a5df-0caa-1cd16e18a816@redhat.com>
+To: Laura Abbott <labbott@redhat.com>, will.deacon@arm.com, catalin.marinas@arm.com
+Cc: alex.popov@linux.com, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, james.morse@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Enabling HARDENED_USERCOPY causes measurable regressions in
- networking performance, up to 8% under UDP flood.
+On Mon, Jul 02, 2018 at 11:48:05AM -0700, Laura Abbott wrote:
+> On 07/02/2018 06:02 AM, Alexander Popov wrote:
+> > On 29.06.2018 22:05, Laura Abbott wrote:
+> > > Implementation of stackleak based heavily on the x86 version
+> > > 
+> > > Signed-off-by: Laura Abbott <labbott@redhat.com>
+> > > ---
+> > > Changes since last time:
+> > > - Minor name change in entry.S
+> > > - Converted to use the generic interfaces so there's minimal additions.
+> > > - Added the fast syscall path.
+> > > - Addition of on_thread_stack and current_top_of_stack
+> > > - Disable stackleak on hyp per suggestion
+> > > - Added a define for check_alloca. I'm still not sure about keeping it
+> > >    since the x86 version got reworked?
+> > > 
+> > > I've mostly kept this as one patch with a minimal commit text. I can
+> > > split it up and elaborate more before final merging.
+> > > ---
 
-I'm running an a small packet UDP flood using pktgen vs. a host b2b
-connected. On the receiver side the UDP packets are processed by a
-simple user space process that just reads and drops them:
+[...]
 
-https://github.com/netoptimizer/network-testing/blob/master/src/udp_sink.c
+> > > diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+> > > index ec2ee720e33e..31c9da7d401e 100644
+> > > --- a/arch/arm64/kernel/entry.S
+> > > +++ b/arch/arm64/kernel/entry.S
+> > > @@ -401,6 +401,11 @@ tsk	.req	x28		// current thread_info
+> > >   	.text
+> > > +	.macro	stackleak_erase
+> > 
+> > Could you rename the macro to STACKLEAK_ERASE for similarity with x86?
+> > 
+> 
+> Mark Rutland had previously asked for this to be lowercase.
+> I really don't care one way or the other so I'll defer to
+> someone else to have the final word.
 
-Not very useful from a functional PoV, but it helps to pin-point
-bottlenecks in the networking stack.
+Will, Catalin, could you chime in either way?
 
-When running a kernel with CONFIG_HARDENED_USERCOPY=y, I see a 5-8%
-regression in the receive tput, compared to the same kernel without
-this option enabled.
+I'd previously asked for lower-case for consistency with our other
+assembly macros.
 
-With CONFIG_HARDENED_USERCOPY=y, perf shows ~6% of CPU time spent
-cumulatively in __check_object_size (~4%) and __virt_addr_valid (~2%).
+[...]
 
-The call-chain is:
+> > > diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
+> > > index f08a2ed9db0d..9f0f135f8b66 100644
+> > > --- a/arch/arm64/kernel/process.c
+> > > +++ b/arch/arm64/kernel/process.c
+> > > @@ -493,3 +493,19 @@ void arch_setup_new_exec(void)
+> > >   {
+> > >   	current->mm->context.flags = is_compat_task() ? MMCF_AARCH32 : 0;
+> > >   }
+> > > +
+> > > +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> > > +#define MIN_STACK_LEFT	256
+> > > +
+> > > +void __used stackleak_check_alloca(unsigned long size)
+> > > +{
+> > > +	unsigned long sp, stack_left;
+> > > +
+> > > +	sp = current_stack_pointer;
+> > > +
+> > > +	stack_left = sp & (THREAD_SIZE - 1);
+> > > +	BUG_ON(stack_left < MIN_STACK_LEFT ||
+> > > +		size >= stack_left - MIN_STACK_LEFT);
+> > > +}
+> > > +EXPORT_SYMBOL(stackleak_check_alloca);
+> > > +#endif
+> > 
+> > This code should be updated.
+> > You may remember the troubles I had with MIN_STACK_LEFT:
+> > http://openwall.com/lists/kernel-hardening/2018/05/11/12
+> > Please see that thread where Mark Rutland and I worked out the solution.
+> > 
+> 
+> Ah yeah, I missed the details in that thread. Thanks for
+> that pointer.
+> 
+> > By the way, different stacks on x86_64 have different sizes. Is it false for arm64?
+> 
+> Currently everything except the overflow stack looks to be
+> the same size but there's also another stack I missed.
 
-__GI___libc_recvfrom
-entry_SYSCALL_64_after_hwframe
-do_syscall_64
-__x64_sys_recvfrom
-__sys_recvfrom
-inet_recvmsg
-udp_recvmsg
-__check_object_size
+Assuming I've followed the code correctly, we currently have:
 
-udp_recvmsg() actually calls copy_to_iter() (inlined) and the latters
-calls check_copy_size() (again, inlined).
+stack		size		alignment (minimum)
+---------------------------------------------------
+task		THREAD_SIZE	THREAD_ALIGN
+irq		THREAD_SIZE	16
+overflow	SZ_4K		16
+sdei_normal	THREAD_SIZE	THREAD_ALIGN
+sdei_critical	THREAD_SIZE	THREAD_ALIGN
 
-A generic distro may want to enable HARDENED_USERCOPY in their default
-kernel config, but at the same time, such distro may want to be able to
-avoid the performance penalties in with the default configuration and
-disable the stricter check on a per-boot basis.
+... since IRQ_STACK_SIZE is defined as THREAD_SIZE, and SDEI_STACK_SIZE
+is defined as IRQ_STACK_SIZE.
 
-This change adds a boot parameter that conditionally disables
-HARDENED_USERCOPY at boot time.
+So we can't just mask the sp, unfortunately.
 
-This feature is not available on platforms that don't have CONFIG_JUMP_LABEL
-set.
+> It might be cleaner just to use on_accessible_stack and then another
+> function to get the top of stack. This also might just be
+> reimplementing what x86 already has? (Mark, Ard?)
 
-v5->v6:
-	m68k build issue was when changes were in include/linux/thread_info.h.
-		mm/usercopy.c builds just fine without CONFIG_JUMP_LABEL or
-		CONFIG_SMP_BROKEN.
-v4->v5:
-	key off of CONFIG_JUMP_LABEL, not CONFIG_SMP_BROKEN.
+It looks like we could build a get_stack_info() as they have.
 
-v3->v4:
-	fix a couple of nits in commit comments
-	declaration of bypass_usercopy_checks moved inside mm/usercopy.c and
-		made static
-	add blurb to commit comments about not enabling this functionality on
-		platforms with CONFIG_BROKEN_ON_SMP set.
-v2->v3:
-	add benchmark details to commit comments
-	Don't add new item to Documentation/admin-guide/kernel-parameters.rst
-	rename boot param to "hardened_usercopy="
-	update description in Documentation/admin-guide/kernel-parameters.txt
-	static_branch_likely -> static_branch_unlikely
-	add __ro_after_init versions of DEFINE_STATIC_KEY_FALSE,
-		DEFINE_STATIC_KEY_TRUE
-	disable_huc_atboot -> enable_checks (strtobool "on" == true)
+We could probably clean up our stack traced atop of that, too.
 
-v1->v2:
-	remove CONFIG_HUC_DEFAULT_OFF
-	default is now enabled, boot param disables
-	move check to __check_object_size so as to not break optimization of
-		__builtin_constant_p()
-	include linux/atomic.h before linux/jump_label.h
-
-Signed-off-by: Chris von Recklinghausen <crecklin@redhat.com>
----
- Documentation/admin-guide/kernel-parameters.txt | 11 ++++++++++
- include/linux/jump_label.h                      |  6 ++++++
- mm/usercopy.c                                   | 27 +++++++++++++++++++++++++
- 3 files changed, 44 insertions(+)
-
-diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-index efc7aa7..560d4dc 100644
---- a/Documentation/admin-guide/kernel-parameters.txt
-+++ b/Documentation/admin-guide/kernel-parameters.txt
-@@ -816,6 +816,17 @@
- 	disable=	[IPV6]
- 			See Documentation/networking/ipv6.txt.
- 
-+	hardened_usercopy=
-+                        [KNL] Under CONFIG_HARDENED_USERCOPY, whether
-+                        hardening is enabled for this boot. Hardened
-+                        usercopy checking is used to protect the kernel
-+                        from reading or writing beyond known memory
-+                        allocation boundaries as a proactive defense
-+                        against bounds-checking flaws in the kernel's
-+                        copy_to_user()/copy_from_user() interface.
-+                on      Perform hardened usercopy checks (default).
-+                off     Disable hardened usercopy checks.
-+
- 	disable_radix	[PPC]
- 			Disable RADIX MMU mode on POWER9
- 
-diff --git a/include/linux/jump_label.h b/include/linux/jump_label.h
-index b46b541..1a0b6f1 100644
---- a/include/linux/jump_label.h
-+++ b/include/linux/jump_label.h
-@@ -299,12 +299,18 @@ struct static_key_false {
- #define DEFINE_STATIC_KEY_TRUE(name)	\
- 	struct static_key_true name = STATIC_KEY_TRUE_INIT
- 
-+#define DEFINE_STATIC_KEY_TRUE_RO(name)	\
-+	struct static_key_true name __ro_after_init = STATIC_KEY_TRUE_INIT
-+
- #define DECLARE_STATIC_KEY_TRUE(name)	\
- 	extern struct static_key_true name
- 
- #define DEFINE_STATIC_KEY_FALSE(name)	\
- 	struct static_key_false name = STATIC_KEY_FALSE_INIT
- 
-+#define DEFINE_STATIC_KEY_FALSE_RO(name)	\
-+	struct static_key_false name __ro_after_init = STATIC_KEY_FALSE_INIT
-+
- #define DECLARE_STATIC_KEY_FALSE(name)	\
- 	extern struct static_key_false name
- 
-diff --git a/mm/usercopy.c b/mm/usercopy.c
-index e9e9325..7c8a1e9 100644
---- a/mm/usercopy.c
-+++ b/mm/usercopy.c
-@@ -20,6 +20,8 @@
- #include <linux/sched/task.h>
- #include <linux/sched/task_stack.h>
- #include <linux/thread_info.h>
-+#include <linux/atomic.h>
-+#include <linux/jump_label.h>
- #include <asm/sections.h>
- 
- /*
-@@ -240,6 +242,8 @@ static inline void check_heap_object(const void *ptr, unsigned long n,
- 	}
- }
- 
-+static DEFINE_STATIC_KEY_FALSE_RO(bypass_usercopy_checks);
-+
- /*
-  * Validates that the given object is:
-  * - not bogus address
-@@ -248,6 +252,9 @@ static inline void check_heap_object(const void *ptr, unsigned long n,
-  */
- void __check_object_size(const void *ptr, unsigned long n, bool to_user)
- {
-+	if (static_branch_unlikely(&bypass_usercopy_checks))
-+		return;
-+
- 	/* Skip all tests if size is zero. */
- 	if (!n)
- 		return;
-@@ -279,3 +286,23 @@ void __check_object_size(const void *ptr, unsigned long n, bool to_user)
- 	check_kernel_text_object((const unsigned long)ptr, n, to_user);
- }
- EXPORT_SYMBOL(__check_object_size);
-+
-+EXPORT_SYMBOL(bypass_usercopy_checks);
-+
-+static bool enable_checks __initdata = true;
-+
-+static int __init parse_hardened_usercopy(char *str)
-+{
-+	return strtobool(str, &enable_checks);
-+}
-+
-+__setup("hardened_usercopy=", parse_hardened_usercopy);
-+
-+static int __init set_hardened_usercopy(void)
-+{
-+	if (enable_checks == false)
-+		static_branch_enable(&bypass_usercopy_checks);
-+	return 1;
-+}
-+
-+late_initcall(set_hardened_usercopy);
--- 
-1.8.3.1
+Thanks,
+Mark.
