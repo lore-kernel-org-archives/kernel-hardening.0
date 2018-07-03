@@ -1,47 +1,46 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAK7LNAT13TrEbq5YR74YA1Snimn53MLjZFbHhbS2jLuvXn9a=g@mail.gmail.com>
-References: <1530578352-18613-1-git-send-email-yamada.masahiro@socionext.com>
- <CAGXu5jKcWjm-56VRj=0kKU0Fb1ZrGgJ8WgesD0cN2x9WHTGwDw@mail.gmail.com> <CAK7LNAT13TrEbq5YR74YA1Snimn53MLjZFbHhbS2jLuvXn9a=g@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 2 Jul 2018 19:25:26 -0700
-Message-ID: <CAGXu5j+sQ9Fz+zYW8AXyDjuKtOSh-e7b_02N5nkD_DV7Voj10g@mail.gmail.com>
-Subject: Re: [PATCH] gcc-plugins: remove unused GCC_PLUGIN_SUBDIR
+References: <1530101255-13988-1-git-send-email-crecklin@redhat.com>
+ <CAGXu5jLDULvf-VBhUfBXtSNaSWpq8irgg56LT3nHDft5gZg5Lw@mail.gmail.com>
+ <5506a72f-99ac-b47c-4ace-86c43b17b5c5@redhat.com> <CAGXu5jL8XDYE+B=a_TBM2K8F-c3f4Jz6zcm3ggacbPNN2wCtpg@mail.gmail.com>
+In-Reply-To: <CAGXu5jL8XDYE+B=a_TBM2K8F-c3f4Jz6zcm3ggacbPNN2wCtpg@mail.gmail.com>
+From: Geert Uytterhoeven <geert@linux-m68k.org>
+Date: Tue, 3 Jul 2018 10:04:40 +0200
+Message-ID: <CAMuHMdU89jEp4Oi6RK887P-LxCFNVPMnOpvvC6BEDHWDjNATAw@mail.gmail.com>
+Subject: Re: [PATCH v3] add param that allows bootline control of hardened usercopy
 Content-Type: text/plain; charset="UTF-8"
-To: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: Emese Revfy <re.emese@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Michal Marek <michal.lkml@markovi.net>, linux-kbuild <linux-kbuild@vger.kernel.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: crecklin@redhat.com, Laura Abbott <labbott@redhat.com>, pabeni@redhat.com, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux MM <linux-mm@kvack.org>, kernel-hardening@lists.openwall.com, Josh Poimboeuf <jpoimboe@redhat.com>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jul 2, 2018 at 7:23 PM, Masahiro Yamada
-<yamada.masahiro@socionext.com> wrote:
-> Hi Kees,
->
-> 2018-07-03 11:18 GMT+09:00 Kees Cook <keescook@chromium.org>:
->> On Mon, Jul 2, 2018 at 5:39 PM, Masahiro Yamada
->> <yamada.masahiro@socionext.com> wrote:
->>> GCC_PLUGIN_SUBDIR has never been used.  If you really need this in
->>> the future, please re-add it then.
->>>
->>> For now, the code is unused. Remove.
->>>
->>> 'export HOSTLIBS' is not necessary either.
->>>
->>> Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>
->>
->> Acked-by: Kees Cook <keescook@chromium.org>
->>
->> Is this going via your tree, or should I take it via the gcc-plugins tree?
->>
->> Thanks!
->>
->> -Kees
->
-> Could you pick it up to your tree?
+Hi Kees,
 
-Happily; thanks!
+On Mon, Jul 2, 2018 at 8:44 PM Kees Cook <keescook@chromium.org> wrote:
+> On Sat, Jun 30, 2018 at 1:43 PM, Christoph von Recklinghausen
+> <crecklin@redhat.com> wrote:
+> > The last issue I'm chasing is build failures on ARCH=m68k. The error is
+> > atomic_read and friends needed by the jump label code not being found.
+> > The config has CONFIG_BROKEN_ON_SMP=y, so the jump label calls I added
+> > will only be made #ifndef CONFIG_BROKEN_ON_SMP. Do you think that's
+> > worth a mention in the blurb that's added to
+> > Documentation/admin-guide/kernel-parameters.txt?
+>
+> Uhm, that's weird -- I think the configs on m68k need fixing then? I
+> don't want to have to sprinkle that ifdef in generic code.
 
--Kees
+config BROKEN_ON_SMP
+        bool
+        depends on BROKEN || !SMP
+        default y
+
+So BROKEN_ON_SMP=y if SMP=n, i.e. not an issue?
+
+Gr{oetje,eeting}s,
+
+                        Geert
 
 -- 
-Kees Cook
-Pixel Security
+Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k.org
+
+In personal conversations with technical people, I call myself a hacker. But
+when I'm talking to journalists I just say "programmer" or something like that.
+                                -- Linus Torvalds
