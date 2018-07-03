@@ -1,38 +1,51 @@
-Subject: Re: [PATCH] arm64: Clear the stack
-References: <20180629190553.7282-1-labbott@redhat.com>
- <9733d929-3c6a-40e1-6110-8f79975323d3@linux.com>
- <1b97aa7d-2b6c-a5df-0caa-1cd16e18a816@redhat.com>
- <20180703121440.v4olvwqb3ykgt5fm@lakrids.cambridge.arm.com>
- <20180703150349.fndcq7h5hl3mtain@armageddon.cambridge.arm.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <6ca7144a-2659-3877-b208-ce043d1393dc@linux.com>
-Date: Tue, 3 Jul 2018 23:38:08 +0300
+Date: Tue, 3 Jul 2018 23:02:33 +0200
+From: Hanno =?UTF-8?B?QsO2Y2s=?= <hanno@hboeck.de>
+Subject: Re: Patch for SymlinksIfOwnerMatches
+Message-ID: <20180703230233.5f383b63@computer.lan>
+In-Reply-To: <CAG48ez0efGF2TQ4Di9FnTJq091z7SpWBcB+oj1gG05AKiZ0U2g@mail.gmail.com>
+References: <20180703201931.79b546f8@computer.lan>
+	<CAG48ez0efGF2TQ4Di9FnTJq091z7SpWBcB+oj1gG05AKiZ0U2g@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20180703150349.fndcq7h5hl3mtain@armageddon.cambridge.arm.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>
-Cc: Laura Abbott <labbott@redhat.com>, will.deacon@arm.com, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-kernel@vger.kernel.org, james.morse@arm.com, linux-arm-kernel@lists.infradead.org
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+To: Jann Horn <jannh@google.com>
+Cc: Al Viro <viro@zeniv.linux.org.uk>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03.07.2018 18:03, Catalin Marinas wrote:
-> On Tue, Jul 03, 2018 at 01:14:41PM +0100, Mark Rutland wrote:
->> On Mon, Jul 02, 2018 at 11:48:05AM -0700, Laura Abbott wrote:
->>> On 07/02/2018 06:02 AM, Alexander Popov wrote:
->>>> Could you rename the macro to STACKLEAK_ERASE for similarity with x86?
->>>
->>> Mark Rutland had previously asked for this to be lowercase.
->>> I really don't care one way or the other so I'll defer to
->>> someone else to have the final word.
->>
->> Will, Catalin, could you chime in either way?
->>
->> I'd previously asked for lower-case for consistency with our other
->> assembly macros.
-> 
-> I'd keep it lowercase as the other arm64 macros in this file.
+On Tue, 3 Jul 2018 21:47:34 +0200
+Jann Horn <jannh@google.com> wrote:
 
-Ok, thanks, I'm fine with it.
+> Hmm. Actually, I wonder whether the kernel is a good place to handle
+> this at all.
+>=20
+> As you note, Apache already has the option SymLinksIfOwnerMatch, which
+> means that it already has to do a component-wise path walk in
+> userspace (because AT_BENEATH hasn't landed yet). Here's what "strace"
+> reports when Apache with that option is following a symlink:
 
-Best regards,
-Alexander
+Maybe for context: I haven't looked into the details of the technical
+implementation and I'm not claiming this is a good solution (nor do I
+claim to have good knowledge of these things at all). But when I looked
+into this a while ago it was the only solution that was available.
+
+Right now the apache option has 2 problems:
+* There are many web apps that will enable "FollowSymlinks". If you
+  start forbidding that you'll break them. There's currently no way to
+  configure apache in a way that both enforces symlink owner match and
+  doesn't break half of the PHP ecosystem. It would need an option like
+  "treat FollowSymlinks like FollowSymlinksIfOwnerMatch"
+* The option has a documented race condition. (Apache has this habit of
+  documenting security bugs and thinking this makes them go away...) I
+  have heard people saying that this is unfixable in userspace, but
+  well, if you say it's possible I'm not going to argue with it.
+
+Point is: I merely wanted to keep the grsecurity option working, so I
+ripped it out of grsec into a separate patch. If there's a better way
+I'm all for it.
+
+--=20
+Hanno B=C3=B6ck
+https://hboeck.de/
+
+mail/jabber: hanno@hboeck.de
+GPG: FE73757FA60E4E21B937579FA5880072BBB51E42
