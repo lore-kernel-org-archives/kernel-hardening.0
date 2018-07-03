@@ -1,188 +1,96 @@
-From: Chris von Recklinghausen <crecklin@redhat.com>
-Subject: [PATCH v7] add param that allows bootline control of hardened  usercopy
-Date: Tue,  3 Jul 2018 15:43:08 -0400
-Message-Id: <1530646988-25546-1-git-send-email-crecklin@redhat.com>
-To: keescook@chromium.org, labbott@redhat.com, pabeni@redhat.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+References: <20180703201931.79b546f8@computer.lan>
+In-Reply-To: <20180703201931.79b546f8@computer.lan>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 3 Jul 2018 21:47:34 +0200
+Message-ID: <CAG48ez0efGF2TQ4Di9FnTJq091z7SpWBcB+oj1gG05AKiZ0U2g@mail.gmail.com>
+Subject: Re: Patch for SymlinksIfOwnerMatches
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: hanno@hboeck.de, Al Viro <viro@zeniv.linux.org.uk>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Enabling HARDENED_USERCOPY causes measurable regressions in
- networking performance, up to 8% under UDP flood.
+On Tue, Jul 3, 2018 at 8:29 PM Hanno B=C3=B6ck <hanno@hboeck.de> wrote:
+>
+> Hi,
+>
+> There's a nasty problem in many webserver configurations on multiuser
+> systems, I've blogged about it a while ago [1]. With a symlink it's
+> often possible to read out configuration files of other users. This was
+> famously used in the freedom hosting II hack [2].
+>
+> grsecurity had a workaround for this: By not allowing file operations
+> to follow symlinks if the owner of the link and the target don't match
+> it can block this kind of attack.
+>
+> I saw a need to keep this feature alive in a post-grsecurity world, so
+> a while ago I extracted it from the grsecurity patch. I've now made
+> that public:
+> https://github.com/hannob/symlinkown
+>
+> I'm not sure about upstreaming, I think it's a worthy feature, but it
+> might need some work in polishing it. But for now I'll just share it
+> and I will hopefully be able to keep the patch working for future
+> kernels.
+>
+> [1]
+> https://blog.hboeck.de/archives/873-The-tricky-security-issue-with-Follow=
+SymLinks-and-Apache.html
+> [2]
+> https://securityaffairs.co/wordpress/55990/deep-web/freedom-hosting-ii-ha=
+ck.html
 
-I'm running an a small packet UDP flood using pktgen vs. a host b2b
-connected. On the receiver side the UDP packets are processed by a
-simple user space process that just reads and drops them:
++cc Al Viro because this is related to AT_BENEATH and other path walk stuff
 
-https://github.com/netoptimizer/network-testing/blob/master/src/udp_sink.c
+Hmm. Actually, I wonder whether the kernel is a good place to handle
+this at all.
 
-Not very useful from a functional PoV, but it helps to pin-point
-bottlenecks in the networking stack.
+As you note, Apache already has the option SymLinksIfOwnerMatch, which
+means that it already has to do a component-wise path walk in
+userspace (because AT_BENEATH hasn't landed yet). Here's what "strace"
+reports when Apache with that option is following a symlink:
 
-When running a kernel with CONFIG_HARDENED_USERCOPY=y, I see a 5-8%
-regression in the receive tput, compared to the same kernel without
-this option enabled.
+root@vm:~# strace -f -p5559 -p5560 -e
+trace=3D'!accept4,futex,epoll_wait,epoll_ctl,read,write,fcntl,getsockname'
+strace: Process 5559 attached with 27 threads
+strace: Process 5560 attached with 27 threads
+[pid  5613] mmap(NULL, 8192, PROT_READ|PROT_WRITE,
+MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D 0x7f584a463000
+[pid  5613] mmap(NULL, 8192, PROT_READ|PROT_WRITE,
+MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D 0x7f584a461000
+[pid  5613] mmap(NULL, 8192, PROT_READ|PROT_WRITE,
+MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D 0x7f584a45f000
+[pid  5613] stat("/var/www/html/foo/bar/link/subdir/hello",
+{st_mode=3DS_IFREG|0644, st_size=3D12, ...}) =3D 0
+[pid  5613] lstat("/var", {st_mode=3DS_IFDIR|0755, st_size=3D4096, ...}) =
+=3D 0
+[pid  5613] lstat("/var/www", {st_mode=3DS_IFDIR|0755, st_size=3D4096, ...}=
+) =3D 0
+[pid  5613] lstat("/var/www/html", {st_mode=3DS_IFDIR|0755,
+st_size=3D4096, ...}) =3D 0
+[pid  5613] lstat("/var/www/html/foo", {st_mode=3DS_IFDIR|0755,
+st_size=3D4096, ...}) =3D 0
+[pid  5613] lstat("/var/www/html/foo/bar", {st_mode=3DS_IFDIR|0755,
+st_size=3D4096, ...}) =3D 0
+[pid  5613] lstat("/var/www/html/foo/bar/link", {st_mode=3DS_IFLNK|0777,
+st_size=3D17, ...}) =3D 0
+[pid  5613] stat("/var/www/html/foo/bar/link", {st_mode=3DS_IFDIR|0755,
+st_size=3D4096, ...}) =3D 0
+[pid  5613] lstat("/var/www/html/foo/bar/link/subdir",
+{st_mode=3DS_IFDIR|0755, st_size=3D4096, ...}) =3D 0
+[pid  5613] lstat("/var/www/html/foo/bar/link/subdir/hello",
+{st_mode=3DS_IFREG|0644, st_size=3D12, ...}) =3D 0
+[pid  5613] mmap(NULL, 8192, PROT_READ|PROT_WRITE,
+MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D 0x7f584a45d000
+[pid  5613] openat(AT_FDCWD,
+"/var/www/html/foo/bar/link/subdir/hello", O_RDONLY|O_CLOEXEC) =3D 13
 
-With CONFIG_HARDENED_USERCOPY=y, perf shows ~6% of CPU time spent
-cumulatively in __check_object_size (~4%) and __virt_addr_valid (~2%).
-
-The call-chain is:
-
-__GI___libc_recvfrom
-entry_SYSCALL_64_after_hwframe
-do_syscall_64
-__x64_sys_recvfrom
-__sys_recvfrom
-inet_recvmsg
-udp_recvmsg
-__check_object_size
-
-udp_recvmsg() actually calls copy_to_iter() (inlined) and the latters
-calls check_copy_size() (again, inlined).
-
-A generic distro may want to enable HARDENED_USERCOPY in their default
-kernel config, but at the same time, such distro may want to be able to
-avoid the performance penalties in with the default configuration and
-disable the stricter check on a per-boot basis.
-
-This change adds a boot parameter that conditionally disables
-HARDENED_USERCOPY at boot time.
-
-v6->v7:
-	remove EXPORT_SYMBOL(bypass_usercopy_checks);
-	remove mention of CONFIG_JUMP_LABEL from commit comments
-v5->v6:
-	no need to key off of anything - build errors were when jump label
-		code was in include/linux/thread_info.h.
-v4->v5:
-	key off of CONFIG_JUMP_LABEL, not CONFIG_SMP_BROKEN.
-
-v3->v4:
-	fix a couple of nits in commit comments
-	declaration of bypass_usercopy_checks moved inside mm/usercopy.c and
-		made static
-	add blurb to commit comments about not enabling this functionality on
-		platforms with CONFIG_BROKEN_ON_SMP set.
-v2->v3:
-	add benchmark details to commit comments
-	Don't add new item to Documentation/admin-guide/kernel-parameters.rst
-	rename boot param to "hardened_usercopy="
-	update description in Documentation/admin-guide/kernel-parameters.txt
-	static_branch_likely -> static_branch_unlikely
-	add __ro_after_init versions of DEFINE_STATIC_KEY_FALSE,
-		DEFINE_STATIC_KEY_TRUE
-	disable_huc_atboot -> enable_checks (strtobool "on" == true)
-
-v1->v2:
-	remove CONFIG_HUC_DEFAULT_OFF
-	default is now enabled, boot param disables
-	move check to __check_object_size so as to not break optimization of
-		__builtin_constant_p()
-	include linux/atomic.h before linux/jump_label.h
-
-Signed-off-by: Chris von Recklinghausen <crecklin@redhat.com>
----
- .../admin-guide/kernel-parameters.txt         | 11 ++++++++
- include/linux/jump_label.h                    |  6 +++++
- mm/usercopy.c                                 | 25 +++++++++++++++++++
- 3 files changed, 42 insertions(+)
-
-diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-index efc7aa7a0670..560d4dc66f02 100644
---- a/Documentation/admin-guide/kernel-parameters.txt
-+++ b/Documentation/admin-guide/kernel-parameters.txt
-@@ -816,6 +816,17 @@
- 	disable=	[IPV6]
- 			See Documentation/networking/ipv6.txt.
- 
-+	hardened_usercopy=
-+                        [KNL] Under CONFIG_HARDENED_USERCOPY, whether
-+                        hardening is enabled for this boot. Hardened
-+                        usercopy checking is used to protect the kernel
-+                        from reading or writing beyond known memory
-+                        allocation boundaries as a proactive defense
-+                        against bounds-checking flaws in the kernel's
-+                        copy_to_user()/copy_from_user() interface.
-+                on      Perform hardened usercopy checks (default).
-+                off     Disable hardened usercopy checks.
-+
- 	disable_radix	[PPC]
- 			Disable RADIX MMU mode on POWER9
- 
-diff --git a/include/linux/jump_label.h b/include/linux/jump_label.h
-index b46b541c67c4..1a0b6f17a5d6 100644
---- a/include/linux/jump_label.h
-+++ b/include/linux/jump_label.h
-@@ -299,12 +299,18 @@ struct static_key_false {
- #define DEFINE_STATIC_KEY_TRUE(name)	\
- 	struct static_key_true name = STATIC_KEY_TRUE_INIT
- 
-+#define DEFINE_STATIC_KEY_TRUE_RO(name)	\
-+	struct static_key_true name __ro_after_init = STATIC_KEY_TRUE_INIT
-+
- #define DECLARE_STATIC_KEY_TRUE(name)	\
- 	extern struct static_key_true name
- 
- #define DEFINE_STATIC_KEY_FALSE(name)	\
- 	struct static_key_false name = STATIC_KEY_FALSE_INIT
- 
-+#define DEFINE_STATIC_KEY_FALSE_RO(name)	\
-+	struct static_key_false name __ro_after_init = STATIC_KEY_FALSE_INIT
-+
- #define DECLARE_STATIC_KEY_FALSE(name)	\
- 	extern struct static_key_false name
- 
-diff --git a/mm/usercopy.c b/mm/usercopy.c
-index e9e9325f7638..852eb4e53f06 100644
---- a/mm/usercopy.c
-+++ b/mm/usercopy.c
-@@ -20,6 +20,8 @@
- #include <linux/sched/task.h>
- #include <linux/sched/task_stack.h>
- #include <linux/thread_info.h>
-+#include <linux/atomic.h>
-+#include <linux/jump_label.h>
- #include <asm/sections.h>
- 
- /*
-@@ -240,6 +242,8 @@ static inline void check_heap_object(const void *ptr, unsigned long n,
- 	}
- }
- 
-+static DEFINE_STATIC_KEY_FALSE_RO(bypass_usercopy_checks);
-+
- /*
-  * Validates that the given object is:
-  * - not bogus address
-@@ -248,6 +252,9 @@ static inline void check_heap_object(const void *ptr, unsigned long n,
-  */
- void __check_object_size(const void *ptr, unsigned long n, bool to_user)
- {
-+	if (static_branch_unlikely(&bypass_usercopy_checks))
-+		return;
-+
- 	/* Skip all tests if size is zero. */
- 	if (!n)
- 		return;
-@@ -279,3 +286,21 @@ void __check_object_size(const void *ptr, unsigned long n, bool to_user)
- 	check_kernel_text_object((const unsigned long)ptr, n, to_user);
- }
- EXPORT_SYMBOL(__check_object_size);
-+
-+static bool enable_checks __initdata = true;
-+
-+static int __init parse_hardened_usercopy(char *str)
-+{
-+	return strtobool(str, &enable_checks);
-+}
-+
-+__setup("hardened_usercopy=", parse_hardened_usercopy);
-+
-+static int __init set_hardened_usercopy(void)
-+{
-+	if (enable_checks == false)
-+		static_branch_enable(&bypass_usercopy_checks);
-+	return 1;
-+}
-+
-+late_initcall(set_hardened_usercopy);
--- 
-2.17.0
+If, instead of using lstat() and open(), this code used fstatat() and
+openat(), you could deal with symlink races in userspace. In theory,
+for very long paths, this might also be faster; the current code has
+to follow O(n^2) path elements. At that point, the only small
+remaining problem would be that you could determine whether a given
+path exists by using a symlink that points into that path and
+traverses back out with a sequence of ".."; if you want to also deal
+with that, you'd have to also do symlink resolution in userspace.
