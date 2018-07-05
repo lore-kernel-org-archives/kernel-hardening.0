@@ -1,328 +1,270 @@
-From: Masahiro Yamada <yamada.masahiro@socionext.com>
-Subject: [PATCH] gcc-plugins: split out Kconfig entries to scripts/gcc-plugins/Kconfig
-Date: Thu,  5 Jul 2018 15:24:12 +0900
-Message-Id: <1530771852-21998-1-git-send-email-yamada.masahiro@socionext.com>
-To: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, Arnd Bergmann <arnd@arndb.de>, Alexei Starovoitov <ast@kernel.org>, Deepa Dinamani <deepa.kernel@gmail.com>, linux-kernel@vger.kernel.org, Nicholas Piggin <npiggin@gmail.com>, Josef Bacik <jbacik@fb.com>, Andrew Morton <akpm@linux-foundation.org>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Thu, 5 Jul 2018 10:12:37 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Subject: Re: [PATCH v13 (resend) 2/6] x86/entry: Add STACKLEAK erasing the
+ kernel stack at the end of syscalls
+Message-ID: <20180705081236.GB20903@gmail.com>
+References: <1529686717-16017-1-git-send-email-alex.popov@linux.com>
+ <1529686717-16017-3-git-send-email-alex.popov@linux.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1529686717-16017-3-git-send-email-alex.popov@linux.com>
+To: Alexander Popov <alex.popov@linux.com>
+Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, x86@kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Collect relevant code into the scripts/gcc-plugins directory.
 
-Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>
----
+* Alexander Popov <alex.popov@linux.com> wrote:
 
- arch/Kconfig                | 146 +-------------------------------------------
- scripts/gcc-plugins/Kconfig | 141 ++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 143 insertions(+), 144 deletions(-)
- create mode 100644 scripts/gcc-plugins/Kconfig
+> The STACKLEAK feature erases the kernel stack before returning from
+> syscalls. That reduces the information which kernel stack leak bugs can
+> reveal and blocks some uninitialized stack variable attacks. Moreover,
+> STACKLEAK blocks kernel stack depth overflow caused by alloca (aka
+> Stack Clash attack).
+> 
+> This commit introduces the code filling the used part of the kernel
+> stack with a poison value before returning to the userspace. Full
+> STACKLEAK feature also contains the gcc plugin which comes in a
+> separate commit.
+> 
+> The STACKLEAK feature is ported from grsecurity/PaX. More information at:
+>   https://grsecurity.net/
+>   https://pax.grsecurity.net/
+> 
+> This code is modified from Brad Spengler/PaX Team's code in the last
+> public patch of grsecurity/PaX based on our understanding of the code.
+> Changes or omissions from the original code are ours and don't reflect
+> the original grsecurity/PaX code.
+> 
+> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+> Acked-by: Thomas Gleixner <tglx@linutronix.de>
+> Reviewed-by: Dave Hansen <dave.hansen@linux.intel.com>
+> ---
+>  Documentation/x86/x86_64/mm.txt  |  2 ++
+>  arch/Kconfig                     | 27 +++++++++++++++++
+>  arch/x86/Kconfig                 |  1 +
+>  arch/x86/entry/calling.h         | 14 +++++++++
+>  arch/x86/entry/entry_32.S        |  7 +++++
+>  arch/x86/entry/entry_64.S        |  3 ++
+>  arch/x86/entry/entry_64_compat.S |  5 ++++
+>  include/linux/sched.h            |  4 +++
+>  include/linux/stackleak.h        | 24 +++++++++++++++
+>  kernel/Makefile                  |  4 +++
+>  kernel/fork.c                    |  3 ++
+>  kernel/stackleak.c               | 63 ++++++++++++++++++++++++++++++++++++++++
+>  12 files changed, 157 insertions(+)
+>  create mode 100644 include/linux/stackleak.h
+>  create mode 100644 kernel/stackleak.c
+> 
+> diff --git a/Documentation/x86/x86_64/mm.txt b/Documentation/x86/x86_64/mm.txt
+> index 5432a96..600bc2a 100644
+> --- a/Documentation/x86/x86_64/mm.txt
+> +++ b/Documentation/x86/x86_64/mm.txt
+> @@ -24,6 +24,7 @@ ffffffffa0000000 - fffffffffeffffff (1520 MB) module mapping space
+>  [fixmap start]   - ffffffffff5fffff kernel-internal fixmap range
+>  ffffffffff600000 - ffffffffff600fff (=4 kB) legacy vsyscall ABI
+>  ffffffffffe00000 - ffffffffffffffff (=2 MB) unused hole
+> +STACKLEAK_POISON value in this last hole: ffffffffffff4111
+>  
+>  Virtual memory map with 5 level page tables:
+>  
+> @@ -50,6 +51,7 @@ ffffffffa0000000 - fffffffffeffffff (1520 MB) module mapping space
+>  [fixmap start]   - ffffffffff5fffff kernel-internal fixmap range
+>  ffffffffff600000 - ffffffffff600fff (=4 kB) legacy vsyscall ABI
+>  ffffffffffe00000 - ffffffffffffffff (=2 MB) unused hole
+> +STACKLEAK_POISON value in this last hole: ffffffffffff4111
+>  
+>  Architecture defines a 64-bit virtual address. Implementations can support
+>  less. Currently supported are 48- and 57-bit virtual addresses. Bits 63
+> diff --git a/arch/Kconfig b/arch/Kconfig
+> index 1aa5906..57817f0 100644
+> --- a/arch/Kconfig
+> +++ b/arch/Kconfig
+> @@ -414,6 +414,13 @@ config PLUGIN_HOSTCC
+>  	  Host compiler used to build GCC plugins.  This can be $(HOSTCXX),
+>  	  $(HOSTCC), or a null string if GCC plugin is unsupported.
+>  
+> +config HAVE_ARCH_STACKLEAK
+> +	bool
+> +	help
+> +	  An architecture should select this if it has the code which
+> +	  fills the used part of the kernel stack with the STACKLEAK_POISON
+> +	  value before returning from system calls.
+> +
+>  config HAVE_GCC_PLUGINS
+>  	bool
+>  	help
+> @@ -549,6 +556,26 @@ config GCC_PLUGIN_RANDSTRUCT_PERFORMANCE
+>  	  in structures.  This reduces the performance hit of RANDSTRUCT
+>  	  at the cost of weakened randomization.
+>  
+> +config GCC_PLUGIN_STACKLEAK
+> +	bool "Erase the kernel stack before returning from syscalls"
+> +	depends on GCC_PLUGINS
+> +	depends on HAVE_ARCH_STACKLEAK
+> +	help
+> +	  This option makes the kernel erase the kernel stack before
+> +	  returning from system calls. That reduces the information which
+> +	  kernel stack leak bugs can reveal and blocks some uninitialized
+> +	  stack variable attacks. This option also blocks kernel stack depth
+> +	  overflow caused by alloca (aka Stack Clash attack).
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 1aa5906..b6d1787 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -405,150 +405,6 @@ config SECCOMP_FILTER
- 
- 	  See Documentation/userspace-api/seccomp_filter.rst for details.
- 
--preferred-plugin-hostcc := $(if-success,[ $(gcc-version) -ge 40800 ],$(HOSTCXX),$(HOSTCC))
--
--config PLUGIN_HOSTCC
--	string
--	default "$(shell,$(srctree)/scripts/gcc-plugin.sh "$(preferred-plugin-hostcc)" "$(HOSTCXX)" "$(CC)")"
--	help
--	  Host compiler used to build GCC plugins.  This can be $(HOSTCXX),
--	  $(HOSTCC), or a null string if GCC plugin is unsupported.
--
--config HAVE_GCC_PLUGINS
--	bool
--	help
--	  An arch should select this symbol if it supports building with
--	  GCC plugins.
--
--menuconfig GCC_PLUGINS
--	bool "GCC plugins"
--	depends on HAVE_GCC_PLUGINS
--	depends on PLUGIN_HOSTCC != ""
--	help
--	  GCC plugins are loadable modules that provide extra features to the
--	  compiler. They are useful for runtime instrumentation and static analysis.
--
--	  See Documentation/gcc-plugins.txt for details.
--
--config GCC_PLUGIN_CYC_COMPLEXITY
--	bool "Compute the cyclomatic complexity of a function" if EXPERT
--	depends on GCC_PLUGINS
--	depends on !COMPILE_TEST	# too noisy
--	help
--	  The complexity M of a function's control flow graph is defined as:
--	   M = E - N + 2P
--	  where
--
--	  E = the number of edges
--	  N = the number of nodes
--	  P = the number of connected components (exit nodes).
--
--	  Enabling this plugin reports the complexity to stderr during the
--	  build. It mainly serves as a simple example of how to create a
--	  gcc plugin for the kernel.
--
--config GCC_PLUGIN_SANCOV
--	bool
--	depends on GCC_PLUGINS
--	help
--	  This plugin inserts a __sanitizer_cov_trace_pc() call at the start of
--	  basic blocks. It supports all gcc versions with plugin support (from
--	  gcc-4.5 on). It is based on the commit "Add fuzzing coverage support"
--	  by Dmitry Vyukov <dvyukov@google.com>.
--
--config GCC_PLUGIN_LATENT_ENTROPY
--	bool "Generate some entropy during boot and runtime"
--	depends on GCC_PLUGINS
--	help
--	  By saying Y here the kernel will instrument some kernel code to
--	  extract some entropy from both original and artificially created
--	  program state.  This will help especially embedded systems where
--	  there is little 'natural' source of entropy normally.  The cost
--	  is some slowdown of the boot process (about 0.5%) and fork and
--	  irq processing.
--
--	  Note that entropy extracted this way is not cryptographically
--	  secure!
--
--	  This plugin was ported from grsecurity/PaX. More information at:
--	   * https://grsecurity.net/
--	   * https://pax.grsecurity.net/
--
--config GCC_PLUGIN_STRUCTLEAK
--	bool "Force initialization of variables containing userspace addresses"
--	depends on GCC_PLUGINS
--	# Currently STRUCTLEAK inserts initialization out of live scope of
--	# variables from KASAN point of view. This leads to KASAN false
--	# positive reports. Prohibit this combination for now.
--	depends on !KASAN_EXTRA
--	help
--	  This plugin zero-initializes any structures containing a
--	  __user attribute. This can prevent some classes of information
--	  exposures.
--
--	  This plugin was ported from grsecurity/PaX. More information at:
--	   * https://grsecurity.net/
--	   * https://pax.grsecurity.net/
--
--config GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
--	bool "Force initialize all struct type variables passed by reference"
--	depends on GCC_PLUGIN_STRUCTLEAK
--	depends on !COMPILE_TEST
--	help
--	  Zero initialize any struct type local variable that may be passed by
--	  reference without having been initialized.
--
--config GCC_PLUGIN_STRUCTLEAK_VERBOSE
--	bool "Report forcefully initialized variables"
--	depends on GCC_PLUGIN_STRUCTLEAK
--	depends on !COMPILE_TEST	# too noisy
--	help
--	  This option will cause a warning to be printed each time the
--	  structleak plugin finds a variable it thinks needs to be
--	  initialized. Since not all existing initializers are detected
--	  by the plugin, this can produce false positive warnings.
--
--config GCC_PLUGIN_RANDSTRUCT
--	bool "Randomize layout of sensitive kernel structures"
--	depends on GCC_PLUGINS
--	select MODVERSIONS if MODULES
--	help
--	  If you say Y here, the layouts of structures that are entirely
--	  function pointers (and have not been manually annotated with
--	  __no_randomize_layout), or structures that have been explicitly
--	  marked with __randomize_layout, will be randomized at compile-time.
--	  This can introduce the requirement of an additional information
--	  exposure vulnerability for exploits targeting these structure
--	  types.
--
--	  Enabling this feature will introduce some performance impact,
--	  slightly increase memory usage, and prevent the use of forensic
--	  tools like Volatility against the system (unless the kernel
--	  source tree isn't cleaned after kernel installation).
--
--	  The seed used for compilation is located at
--	  scripts/gcc-plgins/randomize_layout_seed.h.  It remains after
--	  a make clean to allow for external modules to be compiled with
--	  the existing seed and will be removed by a make mrproper or
--	  make distclean.
--
--	  Note that the implementation requires gcc 4.7 or newer.
--
--	  This plugin was ported from grsecurity/PaX. More information at:
--	   * https://grsecurity.net/
--	   * https://pax.grsecurity.net/
--
--config GCC_PLUGIN_RANDSTRUCT_PERFORMANCE
--	bool "Use cacheline-aware structure randomization"
--	depends on GCC_PLUGIN_RANDSTRUCT
--	depends on !COMPILE_TEST	# do not reduce test coverage
--	help
--	  If you say Y here, the RANDSTRUCT randomization will make a
--	  best effort at restricting randomization to cacheline-sized
--	  groups of elements.  It will further not randomize bitfields
--	  in structures.  This reduces the performance hit of RANDSTRUCT
--	  at the cost of weakened randomization.
--
- config HAVE_STACKPROTECTOR
- 	bool
- 	help
-@@ -972,3 +828,5 @@ config REFCOUNT_FULL
- 	  security flaw exploits.
- 
- source "kernel/gcov/Kconfig"
-+
-+source "scripts/gcc-plugins/Kconfig"
-diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
-new file mode 100644
-index 0000000..5a5a747
---- /dev/null
-+++ b/scripts/gcc-plugins/Kconfig
-@@ -0,0 +1,141 @@
-+preferred-plugin-hostcc := $(if-success,[ $(gcc-version) -ge 40800 ],$(HOSTCXX),$(HOSTCC))
-+
-+config PLUGIN_HOSTCC
-+	string
-+	default "$(shell,$(srctree)/scripts/gcc-plugin.sh "$(preferred-plugin-hostcc)" "$(HOSTCXX)" "$(CC)")"
-+	help
-+	  Host compiler used to build GCC plugins.  This can be $(HOSTCXX),
-+	  $(HOSTCC), or a null string if GCC plugin is unsupported.
-+
-+config HAVE_GCC_PLUGINS
-+	bool
-+	help
-+	  An arch should select this symbol if it supports building with
-+	  GCC plugins.
-+
-+menuconfig GCC_PLUGINS
-+	bool "GCC plugins"
-+	depends on HAVE_GCC_PLUGINS
-+	depends on PLUGIN_HOSTCC != ""
-+	help
-+	  GCC plugins are loadable modules that provide extra features to the
-+	  compiler. They are useful for runtime instrumentation and static analysis.
-+
-+	  See Documentation/gcc-plugins.txt for details.
-+
-+if GCC_PLUGINS
-+
-+config GCC_PLUGIN_CYC_COMPLEXITY
-+	bool "Compute the cyclomatic complexity of a function" if EXPERT
-+	depends on !COMPILE_TEST	# too noisy
-+	help
-+	  The complexity M of a function's control flow graph is defined as:
-+	   M = E - N + 2P
-+	  where
-+
-+	  E = the number of edges
-+	  N = the number of nodes
-+	  P = the number of connected components (exit nodes).
-+
-+	  Enabling this plugin reports the complexity to stderr during the
-+	  build. It mainly serves as a simple example of how to create a
-+	  gcc plugin for the kernel.
-+
-+config GCC_PLUGIN_SANCOV
-+	bool
-+	help
-+	  This plugin inserts a __sanitizer_cov_trace_pc() call at the start of
-+	  basic blocks. It supports all gcc versions with plugin support (from
-+	  gcc-4.5 on). It is based on the commit "Add fuzzing coverage support"
-+	  by Dmitry Vyukov <dvyukov@google.com>.
-+
-+config GCC_PLUGIN_LATENT_ENTROPY
-+	bool "Generate some entropy during boot and runtime"
-+	help
-+	  By saying Y here the kernel will instrument some kernel code to
-+	  extract some entropy from both original and artificially created
-+	  program state.  This will help especially embedded systems where
-+	  there is little 'natural' source of entropy normally.  The cost
-+	  is some slowdown of the boot process (about 0.5%) and fork and
-+	  irq processing.
-+
-+	  Note that entropy extracted this way is not cryptographically
-+	  secure!
-+
-+	  This plugin was ported from grsecurity/PaX. More information at:
-+	   * https://grsecurity.net/
-+	   * https://pax.grsecurity.net/
-+
-+config GCC_PLUGIN_STRUCTLEAK
-+	bool "Force initialization of variables containing userspace addresses"
-+	# Currently STRUCTLEAK inserts initialization out of live scope of
-+	# variables from KASAN point of view. This leads to KASAN false
-+	# positive reports. Prohibit this combination for now.
-+	depends on !KASAN_EXTRA
-+	help
-+	  This plugin zero-initializes any structures containing a
-+	  __user attribute. This can prevent some classes of information
-+	  exposures.
-+
-+	  This plugin was ported from grsecurity/PaX. More information at:
-+	   * https://grsecurity.net/
-+	   * https://pax.grsecurity.net/
-+
-+config GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
-+	bool "Force initialize all struct type variables passed by reference"
-+	depends on GCC_PLUGIN_STRUCTLEAK
-+	depends on !COMPILE_TEST
-+	help
-+	  Zero initialize any struct type local variable that may be passed by
-+	  reference without having been initialized.
-+
-+config GCC_PLUGIN_STRUCTLEAK_VERBOSE
-+	bool "Report forcefully initialized variables"
-+	depends on GCC_PLUGIN_STRUCTLEAK
-+	depends on !COMPILE_TEST	# too noisy
-+	help
-+	  This option will cause a warning to be printed each time the
-+	  structleak plugin finds a variable it thinks needs to be
-+	  initialized. Since not all existing initializers are detected
-+	  by the plugin, this can produce false positive warnings.
-+
-+config GCC_PLUGIN_RANDSTRUCT
-+	bool "Randomize layout of sensitive kernel structures"
-+	select MODVERSIONS if MODULES
-+	help
-+	  If you say Y here, the layouts of structures that are entirely
-+	  function pointers (and have not been manually annotated with
-+	  __no_randomize_layout), or structures that have been explicitly
-+	  marked with __randomize_layout, will be randomized at compile-time.
-+	  This can introduce the requirement of an additional information
-+	  exposure vulnerability for exploits targeting these structure
-+	  types.
-+
-+	  Enabling this feature will introduce some performance impact,
-+	  slightly increase memory usage, and prevent the use of forensic
-+	  tools like Volatility against the system (unless the kernel
-+	  source tree isn't cleaned after kernel installation).
-+
-+	  The seed used for compilation is located at
-+	  scripts/gcc-plgins/randomize_layout_seed.h.  It remains after
-+	  a make clean to allow for external modules to be compiled with
-+	  the existing seed and will be removed by a make mrproper or
-+	  make distclean.
-+
-+	  Note that the implementation requires gcc 4.7 or newer.
-+
-+	  This plugin was ported from grsecurity/PaX. More information at:
-+	   * https://grsecurity.net/
-+	   * https://pax.grsecurity.net/
-+
-+config GCC_PLUGIN_RANDSTRUCT_PERFORMANCE
-+	bool "Use cacheline-aware structure randomization"
-+	depends on !COMPILE_TEST	# do not reduce test coverage
-+	help
-+	  If you say Y here, the RANDSTRUCT randomization will make a
-+	  best effort at restricting randomization to cacheline-sized
-+	  groups of elements.  It will further not randomize bitfields
-+	  in structures.  This reduces the performance hit of RANDSTRUCT
-+	  at the cost of weakened randomization.
-+
-+endif
--- 
-2.7.4
+Nit, please pick one of these variants to refer to library functions:
+
+	  overflow caused by 'alloca' (aka Stack Clash attack).
+	  overflow caused by alloca() (aka Stack Clash attack).
+
+Like you correctly did later on in a C comment block:
+
+> + * STACKLEAK blocks stack depth overflow caused by alloca() (aka Stack Clash
+> + * attack).
+> + */
+
+
+> +	  The tradeoff is the performance impact: on a single CPU system kernel
+> +	  compilation sees a 1% slowdown, other systems and workloads may vary
+> +	  and you are advised to test this feature on your expected workload
+> +	  before deploying it.
+
+Is there a way to patch this out runtime? I.e. if a distro enabled it, is there an 
+easy way to disable much of the overhead without rebooting the kernel?
+
+> --- /dev/null
+> +++ b/include/linux/stackleak.h
+> @@ -0,0 +1,24 @@
+> +/* SPDX-License-Identifier: GPL-2.0 */
+> +#ifndef _LINUX_STACKLEAK_H
+> +#define _LINUX_STACKLEAK_H
+> +
+> +#include <linux/sched.h>
+> +#include <linux/sched/task_stack.h>
+> +
+> +/*
+> + * Check that the poison value points to the unused hole in the
+> + * virtual memory map for your platform.
+> + */
+> +#define STACKLEAK_POISON -0xBEEF
+> +
+> +#define STACKLEAK_POISON_CHECK_DEPTH 128
+> +
+> +static inline void stackleak_task_init(struct task_struct *task)
+> +{
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +	task->lowest_stack = (unsigned long)end_of_stack(task) +
+> +						sizeof(unsigned long);
+> +#endif
+
+Please don't break the line in such an ugly fashion - just keep the line long and 
+ignore checkpatch, because the cure is worse than the disease.
+
+> --- /dev/null
+> +++ b/kernel/stackleak.c
+> @@ -0,0 +1,63 @@
+> +// SPDX-License-Identifier: GPL-2.0
+> +/*
+> + * This code fills the used part of the kernel stack with a poison value
+> + * before returning to the userspace. It's a part of the STACKLEAK feature
+> + * ported from grsecurity/PaX.
+
+s/returning to the userspace
+ /returning to userspace
+
+s/It's a part of the STACKLEAK feature
+ /It's part of the STACKLEAK feature
+
+> + * Author: Alexander Popov <alex.popov@linux.com>
+> + *
+> + * STACKLEAK reduces the information which kernel stack leak bugs can
+> + * reveal and blocks some uninitialized stack variable attacks. Moreover,
+> + * STACKLEAK blocks stack depth overflow caused by alloca() (aka Stack Clash
+> + * attack).
+> + */
+> +
+> +#include <linux/stackleak.h>
+> +
+> +asmlinkage void stackleak_erase_kstack(void)
+
+s/stackleak_erase_kstack
+ /stackleak_erase
+
+?
+
+> +{
+> +	/* It would be nice not to have 'kstack_ptr' and 'boundary' on stack */
+> +	unsigned long kstack_ptr = current->lowest_stack;
+> +	unsigned long boundary = kstack_ptr & ~(THREAD_SIZE - 1);
+> +	unsigned int poison_count = 0;
+> +	const unsigned int check_depth =
+> +			STACKLEAK_POISON_CHECK_DEPTH / sizeof(unsigned long);
+
+ugly linebreak.
+
+> +
+> +	/* Search for the poison value in the kernel stack */
+> +	while (kstack_ptr > boundary && poison_count <= check_depth) {
+> +		if (*(unsigned long *)kstack_ptr == STACKLEAK_POISON)
+> +			poison_count++;
+> +		else
+> +			poison_count = 0;
+> +
+> +		kstack_ptr -= sizeof(unsigned long);
+> +	}
+> +
+> +	/*
+> +	 * One 'long int' at the bottom of the thread stack is reserved and
+> +	 * should not be poisoned (see CONFIG_SCHED_STACK_END_CHECK).
+
+Nit:
+
+  s/CONFIG_SCHED_STACK_END_CHECK
+   /CONFIG_SCHED_STACK_END_CHECK=y
+
+> +	 */
+> +	if (kstack_ptr == boundary)
+> +		kstack_ptr += sizeof(unsigned long);
+> +
+> +	/*
+> +	 * Now write the poison value to the kernel stack. Start from
+> +	 * 'kstack_ptr' and move up till the new 'boundary'. We assume that
+> +	 * the stack pointer doesn't change when we write poison.
+> +	 */
+> +	if (on_thread_stack())
+> +		boundary = current_stack_pointer;
+> +	else
+> +		boundary = current_top_of_stack();
+> +
+> +	BUG_ON(boundary - kstack_ptr >= THREAD_SIZE);
+
+Should never happen, right? If so then please make this:
+
+	if (WARN_ON(boundary - kstack_ptr >= THREAD_SIZE))
+		return;
+
+or so, to make it non-fatal and to allow users to report it, should it trigger 
+against all expectations.
+
+> +
+> +	while (kstack_ptr < boundary) {
+> +		*(unsigned long *)kstack_ptr = STACKLEAK_POISON;
+> +		kstack_ptr += sizeof(unsigned long);
+> +	}
+> +
+> +	/* Reset the 'lowest_stack' value for the next syscall */
+> +	current->lowest_stack = current_top_of_stack() - THREAD_SIZE / 64;
+> +}
+
+Nit, I'd write this as:
+
+	current->lowest_stack = current_top_of_stack() - THREAD_SIZE/64;
+
+to make it group better visually. (Again, ignore checkpatch if it complains, it's 
+wrong.)
+
+Overall I like the interface cleanups in v13, so if these nits are addressed and 
+it becomes possible for (root users) to disable the checking then I suppose this 
+is fine.
+
+Thanks,
+
+	Ingo
