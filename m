@@ -1,85 +1,176 @@
-Subject: Re: [PATCH v13 (resend) 2/6] x86/entry: Add STACKLEAK erasing the
- kernel stack at the end of syscalls
-References: <1529686717-16017-1-git-send-email-alex.popov@linux.com>
- <1529686717-16017-3-git-send-email-alex.popov@linux.com>
- <20180705081236.GB20903@gmail.com>
- <45db2e83-5b87-0083-924f-f1ce7c89fe73@linux.com>
- <20180705222006.GA5410@gmail.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <1c78f05f-dba1-d6e3-27cc-a482911a8b91@linux.com>
-Date: Fri, 6 Jul 2018 14:46:10 +0300
-MIME-Version: 1.0
-In-Reply-To: <20180705222006.GA5410@gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Ingo Molnar <mingo@kernel.org>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+From: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Subject: [PATCH RFC V2 0/3] KASLR feature to randomize each loadable module
+Date: Fri,  6 Jul 2018 17:35:41 -0700
+Message-Id: <1530923744-25687-1-git-send-email-rick.p.edgecombe@intel.com>
+To: tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Cc: kristen@linux.intel.com, dave.hansen@intel.com, arjan@linux.intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 06.07.2018 01:20, Ingo Molnar wrote:
-> 
-> * Alexander Popov <alex.popov@linux.com> wrote:
-> 
->> Hello Ingo,
->>
->> Thanks for your review! I'll fix the style issues you pointed at.
->>
->> Please also see my answers below.
->>
->> On 05.07.2018 11:12, Ingo Molnar wrote:
->>>> +	  The tradeoff is the performance impact: on a single CPU system kernel
->>>> +	  compilation sees a 1% slowdown, other systems and workloads may vary
->>>> +	  and you are advised to test this feature on your expected workload
->>>> +	  before deploying it.
->>>
->>> Is there a way to patch this out runtime? I.e. if a distro enabled it, is there an 
->>> easy way to disable much of the overhead without rebooting the kernel?
->>
->> Hm. We can't completely disable STACKLEAK in runtime, since STACKLEAK gcc plugin
->> performs compile-time instrumentation of the kernel code. So we can only chop
->> off a part of functionality, for example, by introducing some variable and
->> checking it before every stack erasing (additional performance impact), but the
->> kernel will stay uselessly instrumented. It doesn't look reasonable to me.
-> 
-> Or we could use what every other performance critical instrumentation feature uses 
-> to reduce overhead (ftrace, perf): kernel patching.
+Hi,
 
-I see. It would be a big separate research - how to combine those different
-kinds of instrumentation. I would propose to postpone it until we have a request
-for STACKLEAK runtime disabling.
+This is v2 of the "KASLR feature to randomize each loadable module" patchset.
+The purpose is to increase the randomization and makes the modules randomized
+in relation to each other instead of just the base, so that if one module leaks,
+the location of the others can't be inferred.
 
->>> If so then please make this:
->>>
->>> 	if (WARN_ON(boundary - kstack_ptr >= THREAD_SIZE))
->>> 		return;
->>>
->>> or so, to make it non-fatal and to allow users to report it, should it trigger 
->>> against all expectations.
->>
->> I've made an experiment. The results:
->>  1. BUG_ON() here doesn't freeze the kernel output - I see a full 'PANIC: double
->> fault' report;
-> 
-> Only in text mode - very few users are using text mode.
-> 
->>  2. WARN_ON() here gives absolutely same 'PANIC: double fault' here.
-> 
-> that should only happen if the kernel is otherwise already fatally corrupted, 
-> right?
+This code needs some refactoring and simplification, but I was hoping to get
+some feedback on the benchmarks and provide an update.
 
-No, I mean WARN_ON() in stackleak_erase_kstack() gives the double fault just
-like BUG_ON() (without any corruption). In my experiment I've made the following
-change:
+V2 brings the TLB flushes down to close to the existing algorithm and increases
+the modules that get high randomness based on the concerns raised by Jann Horn
+about the BPF JIT use case. It also tries to address Kees Cook's comments about
+possible minimal boot time regression by measuring the average allocation time
+to be below the existing allocator. It also addresses Mathew Wilcox's comment
+on the GFP_NOWARN not being needed. There is also some data on PTE memory use
+which is higher than the original algorithm, as suggested by Jann.
 
--       BUG_ON(boundary - kstack_ptr >= THREAD_SIZE);
-+//     BUG_ON(boundary - kstack_ptr >= THREAD_SIZE);
-+       WARN_ON(1);
+This is off of 4.18-RC3.
 
-It might be caused by the fact, that stackleak_erase_kstack() is called from the
-trampoline stack just before returning to the userspace.
+Changes since v1:
+ - New implementation of __vmalloc_node_try_addr based on the
+   __vmalloc_node_range implementation, that only flushes TLB when needed.
+ - Modified module loading algorithm to try to reduce the TLB flushes further.
+ - Increase "random area" tries in order to increase the number of modules that
+   can get high randomness.
+ - Increase "random area" size to 2/3 of module area in order to increase the
+   number of modules that can get high randomness.
+ - Fix for 0day failures on other architectures.
+ - Fix for wrong debugfs permissions. (thanks to Jann)
+ - Spelling fix .(thanks to Jann)
+ - Data on module_alloc performance and TLB flushes. (brought up by Kees and
+   Jann)
+ - Data on memory usage. (suggested by Jann)
+ 
+Todo:
+ - Refactor __vmalloc_node_try_addr to be smaller and share more code with the
+   normal vmalloc path, and misc cleanup
+ - More real world testing other than the synthetic micro benchmarks described
+   below. BPF kselftest brought up by Daniel Borkman.
 
-So I mean 'WARN_ON() + return' here wouldn't give any profit over a single
-BUG_ON() check.
+New Algorithm
+=============
+In addition to __vmalloc_node_try_addr only purging the lazy free areas when it
+needs to, it also now supports a mode where it will fail to allocate instead of
+doing any purge. In this case it reports when the allocation would have
+succeeded if it was allowed to purge. It returns this information via an
+ERR_PTR.
 
-Best regards,
-Alexander
+The logic for the selection of a location in the random ara is changed as well.
+The number of tries is increased from 10 to 10000, which actually still gives
+good performance. At a high level, the vmalloc algorithm quickly traverses an
+RB-Tree to find a start position and then more slowly traverses a link list to
+look for an open spot. Since this new algorithm randomly picks a spot, it
+mostly just needs to traverse the RB-Tree, and as a result the "tries" are fast
+enough that the number can be high and still be faster than traversing the
+linked list. In the data below you can see that the random algorithm is on
+average actually faster than the existing one.
+
+The increase in number of tries is also to support the BPF JIT use case, by
+increasing the number of modules that can get high randomness.
+
+Since the __vmalloc_node_try_addr now can optionally fail instead of purging,
+for the first half of the tries, the algorithm tries to find a spot where it
+doesn't need to do a purge. For the second half it allows purges. The 50:50
+split is to try to be a happy medium between reducing TLB flushes and reducing
+average allocation time.
+
+Randomness
+==========
+In the last patchset the size of the random area used in the calculations was
+incorrect. The entropy should have been closer to 17 bits, not 18, which is why
+its lower here even though the number of random area tries is cranked up. 17.3
+bits is likely maintained to much higher number of allocations than shown here
+in reality, since it seems that the BPF JIT allocations are usually smaller than
+modules. If you assume the majority of allocations are 1 page, 17 bits is
+maintained to 8000 modules.
+
+Modules		Min Info
+1000		17.3
+2000		17.3
+3000		17.3
+4000		17.3
+5000		17.08
+6000		16.30
+7000		15.67
+8000		14.92
+
+Allocation Time
+===============
+The average module_alloc time over N modules was actually always faster with the
+random algorithm:
+
+Modules	Existing(ns)	New(ns)
+1000	4,761		1,134
+2000	9,730		1,149
+3000	15,572		1,396
+4000	20,723		2,161
+5000	26,206		4,349
+6000	31,374		8,615
+7000	36,123		14,009
+8000	40,174		23,396
+
+Average Nth Allocation time was usually better than the existing algorithm,
+until the modules get very high.
+
+Module	Original(ns)	New(ns)
+1000	8,800		1,288
+2000	20,949		1,477
+3000	31,980		2,583
+4000	44,539		9,250
+5000	55,212		25,986
+6000	65,968		39,540
+7000	74,883		57,798
+8000	85,392		97,319
+
+TLB Flushes Per Allocation
+==========================
+The new algorithm flushes the TLB a little bit more than the existing algorithm.
+For the sake of comparison to the old simpler __vmalloc_node_try_addr
+implementation, this is about a 238x improvement in some cases.
+
+Modules	Existing	New
+1000	0.0014		0.001407
+2000	0.001746	0.0018155
+3000	0.0018186667	0.0021186667
+4000	0.00187525	0.00249675
+5000	0.001897	0.0025334
+6000	0.0019066667	0.0025228333
+7000	0.001925	0.0025315714
+8000	0.0019325	0.002553
+
+Memory Usage
+============
+A downside is that since the random area is fragmented, it uses extra PTE pages.
+It first approaches 1.3 MB of PTEs as the random area fills. After that it
+increases more slowly. I am not sure this can be improved without reducing
+randomness.
+
+Modules	Existing(pages)	New(pages)
+100	6		159
+200	11		240
+300	15		285
+400	20		307
+500	23		315
+1000	41		330
+2000	80		335
+3000	118		338
+
+Module Capacity
+===============
+The estimate of module capacity also now goes back up to ~17000, so the real
+value should be close to the existing algorithm.
+
+
+Rick Edgecombe (3):
+  vmalloc: Add __vmalloc_node_try_addr function
+  x86/modules: Increase randomization for modules
+  vmalloc: Add debugfs modfraginfo
+
+ arch/x86/include/asm/pgtable_64_types.h |   1 +
+ arch/x86/kernel/module.c                | 103 +++++++++++-
+ include/linux/vmalloc.h                 |   3 +
+ mm/vmalloc.c                            | 275 +++++++++++++++++++++++++++++++-
+ 4 files changed, 375 insertions(+), 7 deletions(-)
+
+-- 
+2.7.4
