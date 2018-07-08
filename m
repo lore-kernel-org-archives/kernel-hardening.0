@@ -1,157 +1,49 @@
-From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH 3/3] vmalloc: Add debugfs modfraginfo
-Date: Fri,  6 Jul 2018 17:35:44 -0700
-Message-Id: <1530923744-25687-4-git-send-email-rick.p.edgecombe@intel.com>
-In-Reply-To: <1530923744-25687-1-git-send-email-rick.p.edgecombe@intel.com>
-References: <1530923744-25687-1-git-send-email-rick.p.edgecombe@intel.com>
-To: tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
-Cc: kristen@linux.intel.com, dave.hansen@intel.com, arjan@linux.intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
+Date: Sun, 8 Jul 2018 07:58:40 -0700
+From: Christoph Hellwig <hch@infradead.org>
+Subject: Re: [PATCH] sg, bsg: mitigate read/write abuse, block uaccess in
+ release
+Message-ID: <20180708145840.GA22949@infradead.org>
+References: <20180615152335.208202-1-jannh@google.com>
+ <20180615164009.GD30522@ZenIV.linux.org.uk>
+ <90063ef3-68fa-e983-9b47-838e6076b0f4@interlog.com>
+ <813e817b-bb2f-4a47-6225-9e39f19be278@kernel.dk>
+ <20180621123431.GA558@infradead.org>
+ <36a641db-fb1d-6c4c-7f1b-172f2b1cde32@kernel.dk>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <36a641db-fb1d-6c4c-7f1b-172f2b1cde32@kernel.dk>
+To: Jens Axboe <axboe@kernel.dk>
+Cc: Christoph Hellwig <hch@infradead.org>, dgilbert@interlog.com, Al Viro <viro@ZenIV.linux.org.uk>, Jann Horn <jannh@google.com>, FUJITA Tomonori <fujita.tomonori@lab.ntt.co.jp>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, security@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add debugfs file "modfraginfo" for providing info on module space
-fragmentation.  This can be used for determining if loadable module
-randomization is causing any problems for extreme module loading situations,
-like huge numbers of modules or extremely large modules.
+On Thu, Jun 21, 2018 at 08:07:23AM -0600, Jens Axboe wrote:
+> I'd be fine with that, if we knew that nobody uses it. But that's
+> really hard to figure out. I did see Jann's source code scan, which
+> even if non-exhaustive, still shows at least one user of it.
 
-Sample output when RANDOMIZE_BASE and X86_64 is configured:
-Largest free space:		847253504
-External Memory Fragementation:	20%
-Allocations in backup area:	0
+One is an example, and the other looks very close to an example,
+as far as I can tell it was Nic doing a bsg read/write WIP for a
+tgt module without anyone every picking up on it.  I did add the tgt
+list to Cc and no one seemed to care about the bsg read/write support.
+Adding the tgt list back, but I doubt anyone ever actually used it.
 
-Sample output when just X86_64:
-Largest free space:		847253504
-External Memory Fragementation:	20%
+> How about we just make the write interface sync? Then any copy can
+> happen while the we block the task, and the read side is just
+> copying the header info back, or dumping it if the task didn't
+> read it before it went away.
 
-Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
----
- mm/vmalloc.c | 101 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 100 insertions(+), 1 deletion(-)
+How is that going to work?  As far as I can tell each I/O using
+bsg read/write needs a write and a read, so they need to pair
+and thus can't be a purely sync interface.
 
-diff --git a/mm/vmalloc.c b/mm/vmalloc.c
-index b6f2449..85441f2 100644
---- a/mm/vmalloc.c
-+++ b/mm/vmalloc.c
-@@ -18,6 +18,7 @@
- #include <linux/interrupt.h>
- #include <linux/proc_fs.h>
- #include <linux/seq_file.h>
-+#include <linux/debugfs.h>
- #include <linux/debugobjects.h>
- #include <linux/kallsyms.h>
- #include <linux/list.h>
-@@ -33,6 +34,7 @@
- #include <linux/bitops.h>
- 
- #include <linux/uaccess.h>
-+#include <asm/setup.h>
- #include <asm/tlbflush.h>
- #include <asm/shmparam.h>
- 
-@@ -2922,7 +2924,104 @@ static int __init proc_vmalloc_init(void)
- 		proc_create_seq("vmallocinfo", 0400, NULL, &vmalloc_op);
- 	return 0;
- }
--module_init(proc_vmalloc_init);
-+#else
-+static int proc_vmalloc_init(void)
-+{
-+	return 0;
-+}
-+#endif
- 
-+#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_X86_64)
-+#if defined(CONFIG_RANDOMIZE_BASE)
-+static void print_backup_area(struct seq_file *m, unsigned long backup_cnt)
-+{
-+	if (kaslr_enabled())
-+		seq_printf(m, "Allocations in backup area:\t%lu\n", backup_cnt);
-+}
-+#else
-+static void print_backup_area(struct seq_file *m, unsigned long backup_cnt)
-+{
-+}
- #endif
-+static int modulefraginfo_debug_show(struct seq_file *m, void *v)
-+{
-+	struct list_head *i;
-+	unsigned long last_end = MODULES_VADDR;
-+	unsigned long total_free = 0;
-+	unsigned long largest_free = 0;
-+	unsigned long backup_cnt = 0;
-+	unsigned long gap;
-+
-+	spin_lock(&vmap_area_lock);
-+
-+	list_for_each(i, &vmap_area_list) {
-+		struct vmap_area *obj = list_entry(i, struct vmap_area, list);
-+
-+		if (!(obj->flags & VM_LAZY_FREE)
-+			&& obj->va_start >= MODULES_VADDR
-+			&& obj->va_end <= MODULES_END) {
-+
-+			if (obj->va_start >= MODULES_VADDR + MODULES_RAND_LEN)
-+				backup_cnt++;
-+
-+			gap = (obj->va_start - last_end);
-+			if (gap > largest_free)
-+				largest_free = gap;
-+			total_free += gap;
-+
-+			last_end = obj->va_end;
-+		}
-+	}
-+
-+	gap = (MODULES_END - last_end);
-+	if (gap > largest_free)
-+		largest_free = gap;
-+	total_free += gap;
-+
-+	spin_unlock(&vmap_area_lock);
- 
-+	seq_printf(m, "Largest free space:\t\t%lu\n", largest_free);
-+	if (total_free)
-+		seq_printf(m, "External Memory Fragmentation:\t%lu%%\n",
-+			100-(100*largest_free/total_free));
-+	else
-+		seq_puts(m, "External Memory Fragmentation:\t0%%\n");
-+
-+	print_backup_area(m, backup_cnt);
-+
-+	return 0;
-+}
-+
-+static int proc_module_frag_debug_open(struct inode *inode, struct file *file)
-+{
-+	return single_open(file, modulefraginfo_debug_show, NULL);
-+}
-+
-+static const struct file_operations debug_module_frag_operations = {
-+	.open       = proc_module_frag_debug_open,
-+	.read       = seq_read,
-+	.llseek     = seq_lseek,
-+	.release    = single_release,
-+};
-+
-+static void debug_modfrag_init(void)
-+{
-+	debugfs_create_file("modfraginfo", 0400, NULL, NULL,
-+			&debug_module_frag_operations);
-+}
-+#else /* defined(CONFIG_DEBUG_FS) && defined(CONFIG_X86_64) */
-+static void debug_modfrag_init(void)
-+{
-+}
-+#endif
-+
-+#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_PROC_FS)
-+static int __init info_vmalloc_init(void)
-+{
-+	proc_vmalloc_init();
-+	debug_modfrag_init();
-+	return 0;
-+}
-+
-+module_init(info_vmalloc_init);
-+#endif
--- 
-2.7.4
+It also doesn't help with the issue that bsg_write may possible
+write to user memory, which is highly unusal and asking for security
+issues itself.
+
+Either way, we should probably at very least apply a respun version
+of the patch from Jann to 4.18-rc and -stable while we keep discussing
+this.
+
+Jann, can you respin the bsg patch with the same changes as the now
+included sg one?
