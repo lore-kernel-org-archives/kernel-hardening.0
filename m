@@ -1,35 +1,30 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20180629190553.7282-1-labbott@redhat.com>
-References: <20180629190553.7282-1-labbott@redhat.com>
+In-Reply-To: <1530771852-21998-1-git-send-email-yamada.masahiro@socionext.com>
+References: <1530771852-21998-1-git-send-email-yamada.masahiro@socionext.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 11 Jul 2018 17:05:32 -0700
-Message-ID: <CAGXu5jLwhdKy6rfSKOeN2hajP5aCnYeT3yMka5ZbJ_o02z=WTA@mail.gmail.com>
-Subject: Re: [PATCH] arm64: Clear the stack
+Date: Wed, 11 Jul 2018 17:16:34 -0700
+Message-ID: <CAGXu5jK3jgJ5qvT4jPKgvO_Jf+edeLRYKrJ+67r7zrVszB2_xw@mail.gmail.com>
+Subject: Re: [PATCH] gcc-plugins: split out Kconfig entries to scripts/gcc-plugins/Kconfig
 Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: Alexander Popov <alex.popov@linux.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: Emese Revfy <re.emese@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Alexei Starovoitov <ast@kernel.org>, Deepa Dinamani <deepa.kernel@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Josef Bacik <jbacik@fb.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 29, 2018 at 12:05 PM, Laura Abbott <labbott@redhat.com> wrote:
->  include/linux/stackleak.h             |  1 +
-> [...]
-> diff --git a/include/linux/stackleak.h b/include/linux/stackleak.h
-> index e2da99b3a191..00d62b302efb 100644
-> --- a/include/linux/stackleak.h
-> +++ b/include/linux/stackleak.h
-> @@ -5,6 +5,7 @@
->  #include <linux/sched.h>
->  #include <linux/sched/task_stack.h>
+On Wed, Jul 4, 2018 at 11:24 PM, Masahiro Yamada
+<yamada.masahiro@socionext.com> wrote:
+> Collect relevant code into the scripts/gcc-plugins directory.
 >
-> +#include <asm/stacktrace.h>
->  /*
->   * Check that the poison value points to the unused hole in the
->   * virtual memory map for your platform.
+> Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>
+> ---
+>
+>  arch/Kconfig                | 146 +-------------------------------------------
+>  scripts/gcc-plugins/Kconfig | 141 ++++++++++++++++++++++++++++++++++++++++++
+>  2 files changed, 143 insertions(+), 144 deletions(-)
+>  create mode 100644 scripts/gcc-plugins/Kconfig
 
-FYI, I squashed this change into my copy of the stackleak v14 series.
-(And I just sent this arm64 patch with the adjustments for it to be
-stand-alone.)
+I'd been pondering this for a while too. Thanks for sending the patch,
+I'll include it in my gcc-plugins tree.
 
 -Kees
 
