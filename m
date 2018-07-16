@@ -1,83 +1,66 @@
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Mon, 16 Jul 2018 12:13:38 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Subject: Re: [PATCH v14 0/6] Introduce the STACKLEAK feature and a test for it
-Message-ID: <20180716101337.GA30279@gmail.com>
-References: <1531341400-12077-1-git-send-email-alex.popov@linux.com>
- <CA+55aFyeZGaC7DSYT6oKuC+Pdpx1Jd95wC97XFdZdNPqD325RA@mail.gmail.com>
- <20180712135944.GB6199@gmail.com>
- <CAGXu5jJQ2EWKsEWcDf3WWv94kYDcubCSVHA_YhG0HKG+XbahFQ@mail.gmail.com>
- <20180712205016.GA20649@gmail.com>
- <50c690fc-c967-8376-8524-ac9c1be722bc@linux.com>
- <CAGXu5j+Vc3U6C3UO1CVYN+EmguJdoPCuatOJ2vpAx=r1jbmwjQ@mail.gmail.com>
- <20180715224446.GA29087@gmail.com>
- <ae9db092-13fa-101c-1d07-5767631f7611@linux.com>
+Subject: Re: [PATCH v7] add param that allows bootline control of hardened
+ usercopy
+References: <1530646988-25546-1-git-send-email-crecklin@redhat.com>
+ <b1bfe507-3dda-fccb-5355-26f6cce9fa6a@suse.cz>
+ <CAGXu5jJa=jEZmRQa6TYuOFORHs_nYvQAO3Q3Hv5vz4tsHd00nQ@mail.gmail.com>
+ <0bf9be39-82bb-ad3a-a3c3-e41bebedba7e@suse.cz>
+ <CAGXu5jLcx7iFNJGL9=LStCGCq6gx2D7onJAmHsKK3Vxe2pJvdg@mail.gmail.com>
+From: Vlastimil Babka <vbabka@suse.cz>
+Message-ID: <5e08d6ab-00dd-1d1c-3a2f-32761bc51d28@suse.cz>
+Date: Mon, 16 Jul 2018 13:30:20 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <ae9db092-13fa-101c-1d07-5767631f7611@linux.com>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Pax Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andrew Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, Peter Anvin <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V. Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nick Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, David Miller <davem@davemloft.net>, dingtianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, =?iso-8859-1?Q?J=FCrgen_Gro=DF?= <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+In-Reply-To: <CAGXu5jLcx7iFNJGL9=LStCGCq6gx2D7onJAmHsKK3Vxe2pJvdg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>
+Cc: Chris von Recklinghausen <crecklin@redhat.com>, Laura Abbott <labbott@redhat.com>, Paolo Abeni <pabeni@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-* Alexander Popov <alex.popov@linux.com> wrote:
-
-> On 16.07.2018 01:44, Ingo Molnar wrote:
-> > 
-> > * Kees Cook <keescook@chromium.org> wrote:
-> > 
-> >> On Thu, Jul 12, 2018 at 2:22 PM, Alexander Popov <alex.popov@linux.com> wrote:
-> >>> On 12.07.2018 23:50, Ingo Molnar wrote:
-> >>>> Let's make sure informed users have an easy runtime way out
-> >>>> from the worst of the overhead that doesn't involve "recompile your distro
-> >>>> kernel". Also, make it easier to measure and fingerpoint the overhead...
-> >>>
-> >>> Would you like the following solution?
-> >>>
-> >>> I'll create the CONFIG_STACKLEAK_RUNTIME_DISABLE config option, which would be
-> >>> similar to CONFIG_SECURITY_SELINUX_DISABLE. That option will provide a sysctl
-> >>> switch disabling stackleak_erase(), which provides the most of performance penalty.
-> >>
-> >> I don't think CONFIG/sysctl is the way to go. I'd recommend making it
-> >> a boot arg and using a static key, similar to what's happening to
-> >> hardened_usercopy:
-> > 
-> > Why no sysctl? It's a PITA to reboot systems just to turn a stupid knob off.
-> > 
-> > Also, it's _much_ easier to measure performance impact when there's a sysctl.
+On 07/15/2018 04:04 AM, Kees Cook wrote:
+> On Wed, Jul 4, 2018 at 10:47 AM, Vlastimil Babka <vbabka@suse.cz> wrote:
+>> On 07/04/2018 06:52 PM, Kees Cook wrote:
+>>> This produces less efficient code in the general case, and I'd like to
+>>> keep the general case (hardening enabled) as fast as possible.
+>>
+>> How specifically is the code less efficient? It should be always a
+>> static key check (no-op thanks to the code patching involved) and a
+>> function call in the "hardening enabled" case, just in different order.
+>> And in either case compiled out if it's a constant.
 > 
-> Yes, you are right.
+> My understanding from reading the jump label comments[1] is that on
+> order produces:
 > 
-> But I looked carefully and now see the troubles which sysctl would bring us.
-> Each 'task_struct' has 'lowest_stack', which must be initialized before enabling
-> STACKLEAK. So runtime enabling via sysctl is not plain and may bring race
-> conditions.
+> NOP
+> do normal thing
+> label1:
+> do rest of function
+> RET
+> label2:
+> do exceptional thing
+> jump label1
+> 
+> where "NOP" is changed to "JMP label2" when toggled, and the other is:
+> 
+> JMP label1
+> do exceptional thing
+> JMP label2
+> label1:
+> do normal thing
+> label2:
+> do rest of function
+> RET
+> 
+> where "JMP label1" is changed to NOP when toggled. (i.e. does the
+> default do NOP, thing, function, or does the default to JMP, thing,
+> JMP, function)
 
-Firstly, a sysctl could still allow it to be *disabled*, once - which is the most 
-important usecase of the sysctl anyway.
+My mistake, sorry. I didn't mean to change likely() to unlikely(). Also
+I didn't negate the condition. The correct code is:
 
-Secondly, in the first iteration this could be kept included unconditionally:
+        if (!__builtin_constant_p(n) &&
+                        !static_branch_unlikely(&bypass_usercopy_checks))
+                __check_object_size(ptr, n, to_user);
 
-	current->lowest_stack = current_top_of_stack() - THREAD_SIZE/64;
-
-... which would keep it initialized and wouldn't be racy, right?
-
-I.e. only the most expensive part of the function, the scanning, would be turned 
-off via the sysctl. I submit that this will avoid all measurable aspects of the 1% 
-kbuild performance overhead.
-
-A more involved approach can be done in the future if warranted, and the feature 
-could be disabled/enabled more thoroughly - but the runtime sysctl would be 
-acceptable for me for now, as a first iteration.
-
-> On the other hand, a boot param + static key that can only disable STACKLEAK 
-> during __init are much more robust. I'm preparing the patch and performance 
-> measurements.
-
-A boot parameter does *not* address the concern I outlined. Why force admins 
-reboot a box just to disable something that causes overhead?
-
-Thanks,
-
-	Ingo
+I've test-compiled it, did objdump -d and checked few call sites and they
+seem to be preceded just y NOP, so it's the first case you mentioned above,
+as expected - calling __check_object_size() is treated as the "normal thing".
