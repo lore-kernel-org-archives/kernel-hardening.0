@@ -1,6 +1,9 @@
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Tue, 17 Jul 2018 09:12:23 +0200
+From: Ingo Molnar <mingo@kernel.org>
 Subject: Re: [PATCH v14 0/6] Introduce the STACKLEAK feature and a test for it
-References: <1531341400-12077-1-git-send-email-alex.popov@linux.com>
- <CA+55aFyeZGaC7DSYT6oKuC+Pdpx1Jd95wC97XFdZdNPqD325RA@mail.gmail.com>
+Message-ID: <20180717071223.GA29533@gmail.com>
+References: <CA+55aFyeZGaC7DSYT6oKuC+Pdpx1Jd95wC97XFdZdNPqD325RA@mail.gmail.com>
  <20180712135944.GB6199@gmail.com>
  <CAGXu5jJQ2EWKsEWcDf3WWv94kYDcubCSVHA_YhG0HKG+XbahFQ@mail.gmail.com>
  <20180712205016.GA20649@gmail.com>
@@ -9,85 +12,48 @@ References: <1531341400-12077-1-git-send-email-alex.popov@linux.com>
  <20180715224446.GA29087@gmail.com>
  <ae9db092-13fa-101c-1d07-5767631f7611@linux.com>
  <20180716101337.GA30279@gmail.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <7e673919-4c6a-0120-a198-a0ed4ee47b36@linux.com>
-Date: Mon, 16 Jul 2018 20:48:06 +0300
+ <7e673919-4c6a-0120-a198-a0ed4ee47b36@linux.com>
 MIME-Version: 1.0
-In-Reply-To: <20180716101337.GA30279@gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Pax Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andrew Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, Peter Anvin <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V. Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nick Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, David Miller <davem@davemloft.net>, dingtianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, =?UTF-8?B?SsO8cmdlbiBHcm8=?= =?UTF-8?B?w58=?= <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <7e673919-4c6a-0120-a198-a0ed4ee47b36@linux.com>
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Pax Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Andrew Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, Peter Anvin <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V. Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nick Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, David Miller <davem@davemloft.net>, dingtianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, =?iso-8859-1?Q?J=FCrgen_Gro=DF?= <jgross@suse.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 16.07.2018 13:13, Ingo Molnar wrote:
+
+* Alexander Popov <alex.popov@linux.com> wrote:
+
+> > ... which would keep it initialized and wouldn't be racy, right?
 > 
-> * Alexander Popov <alex.popov@linux.com> wrote:
+> No, this will break the poison search logic.
+
+Ok.
+
+> > I.e. only the most expensive part of the function, the scanning, would be 
+> > turned off via the sysctl. I submit that this will avoid all measurable 
+> > aspects of the 1% kbuild performance overhead.
 > 
->> On 16.07.2018 01:44, Ingo Molnar wrote:
->>>
->>> * Kees Cook <keescook@chromium.org> wrote:
->>>
->>>> On Thu, Jul 12, 2018 at 2:22 PM, Alexander Popov <alex.popov@linux.com> wrote:
->>>>> On 12.07.2018 23:50, Ingo Molnar wrote:
->>>>>> Let's make sure informed users have an easy runtime way out
->>>>>> from the worst of the overhead that doesn't involve "recompile your distro
->>>>>> kernel". Also, make it easier to measure and fingerpoint the overhead...
->>>>>
->>>>> Would you like the following solution?
->>>>>
->>>>> I'll create the CONFIG_STACKLEAK_RUNTIME_DISABLE config option, which would be
->>>>> similar to CONFIG_SECURITY_SELINUX_DISABLE. That option will provide a sysctl
->>>>> switch disabling stackleak_erase(), which provides the most of performance penalty.
->>>>
->>>> I don't think CONFIG/sysctl is the way to go. I'd recommend making it
->>>> a boot arg and using a static key, similar to what's happening to
->>>> hardened_usercopy:
->>>
->>> Why no sysctl? It's a PITA to reboot systems just to turn a stupid knob off.
->>>
->>> Also, it's _much_ easier to measure performance impact when there's a sysctl.
->>
->> Yes, you are right.
->>
->> But I looked carefully and now see the troubles which sysctl would bring us.
->> Each 'task_struct' has 'lowest_stack', which must be initialized before enabling
->> STACKLEAK. So runtime enabling via sysctl is not plain and may bring race
->> conditions.
+> Yes, I've made an experiment - skipping stackleak_erase() cuts almost all 
+> performance penalty of the feature.
+
+Ok, that's good!
+
+> > A more involved approach can be done in the future if warranted, and the feature 
+> > could be disabled/enabled more thoroughly - but the runtime sysctl would be 
+> > acceptable for me for now, as a first iteration.
 > 
-> Firstly, a sysctl could still allow it to be *disabled*, once - which is the most 
-> important usecase of the sysctl anyway.
+> Thanks, I see your point.
+> I'll return with an additional patch introducing sysctl knob + static key for
+> one-time disabling of stack erasing.
 
-Yes, agree, such a fuse will work fine.
+Thank you!
 
-> Secondly, in the first iteration this could be kept included unconditionally:
-> 
-> 	current->lowest_stack = current_top_of_stack() - THREAD_SIZE/64;
-> 
-> ... which would keep it initialized and wouldn't be racy, right?
+I'll have a final review of the patch but I guess it will be fine, so if that's 
+the only change then you can also include my:
 
-No, this will break the poison search logic.
+  Acked-by: Ingo Molnar <mingo@kernel.org>
 
-'lowest_stack' is updated during syscall handling (the gcc plugin
-instrumentation is responsible for that) and is reset in stackleak_erase() at
-the end of syscall. The stackleak_erase() searching and erasing logic _depends_
-on that fact. Enabling STACKLEAK at some arbitrary moment would not be trivial -
-let's avoid that for now please.
+... to not hold the patch up for v4.19, and this can go upstream via Kees's tree?
 
-> I.e. only the most expensive part of the function, the scanning, would be turned 
-> off via the sysctl. I submit that this will avoid all measurable aspects of the 1% 
-> kbuild performance overhead.
-
-Yes, I've made an experiment - skipping stackleak_erase() cuts almost all
-performance penalty of the feature.
-
-> A more involved approach can be done in the future if warranted, and the feature 
-> could be disabled/enabled more thoroughly - but the runtime sysctl would be 
-> acceptable for me for now, as a first iteration.
-
-Thanks, I see your point.
-I'll return with an additional patch introducing sysctl knob + static key for
-one-time disabling of stack erasing.
-
-Best regards,
-Alexander
+	Ingo
