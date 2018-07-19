@@ -1,333 +1,197 @@
-Date: Thu, 19 Jul 2018 12:07:58 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Subject: Re: [PATCH 1/2] arm64: Introduce current_stack_type
-Message-ID: <20180719110757.jh4cnitfrz6pasho@lakrids.cambridge.arm.com>
-References: <20180718211013.14512-1-labbott@redhat.com>
- <20180718211013.14512-2-labbott@redhat.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180718211013.14512-2-labbott@redhat.com>
-To: Laura Abbott <labbott@redhat.com>
-Cc: Alexander Popov <alex.popov@linux.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, james.morse@arm.com
+From: Alexander Popov <alex.popov@linux.com>
+Subject: [PATCH v14 7/7] stackleak, sysctl: Allow runtime disabling of kernel stack erasing
+Date: Thu, 19 Jul 2018 14:31:29 +0300
+Message-Id: <1531999889-18343-1-git-send-email-alex.popov@linux.com>
+In-Reply-To: <20180717071223.GA29533@gmail.com>
+References: <20180717071223.GA29533@gmail.com>
+To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Kees Cook <keescook@google.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, x86@kernel.org, linux-kernel@vger.kernel.org, alex.popov@linux.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Laura,
+Introduce CONFIG_STACKLEAK_RUNTIME_DISABLE option, which provides
+'stack_erasing_bypass' sysctl. It can be used in runtime to disable
+kernel stack erasing for kernels built with CONFIG_GCC_PLUGIN_STACKLEAK.
+Stack erasing will then remain disabled and STACKLEAK_METRICS will not
+be updated until the next boot.
 
-On Wed, Jul 18, 2018 at 02:10:12PM -0700, Laura Abbott wrote:
-> 
-> In preparation for enabling the stackleak plugin on arm64,
-> we need a way to get the bounds of the current stack.
-> Introduce a new primitive current_stack_type which is similar
-> to x86's get_stack_info. Utilize that to rework
-> on_accessible_stack slightly as well.
-> 
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
-> ---
-> So this did end up looking quite a bit like get_stack_info but I didn't
-> really see the need to integrate this more than this. I do think
-> actually enumerating the types makes things a bit cleaner.
-> ---
->  arch/arm64/include/asm/sdei.h       |  8 ++-
->  arch/arm64/include/asm/stacktrace.h | 94 ++++++++++++++++++++++++-----
->  arch/arm64/kernel/ptrace.c          |  2 +-
->  arch/arm64/kernel/sdei.c            | 21 ++++++-
->  4 files changed, 103 insertions(+), 22 deletions(-)
-> 
-> diff --git a/arch/arm64/include/asm/sdei.h b/arch/arm64/include/asm/sdei.h
-> index e073e6886685..34f7b203845b 100644
-> --- a/arch/arm64/include/asm/sdei.h
-> +++ b/arch/arm64/include/asm/sdei.h
-> @@ -40,15 +40,17 @@ asmlinkage unsigned long __sdei_handler(struct pt_regs *regs,
->  unsigned long sdei_arch_get_entry_point(int conduit);
->  #define sdei_arch_get_entry_point(x)	sdei_arch_get_entry_point(x)
->  
-> -bool _on_sdei_stack(unsigned long sp);
-> -static inline bool on_sdei_stack(unsigned long sp)
-> +bool _on_sdei_stack(unsigned long sp, unsigned long *, unsigned long *);
-> +static inline bool on_sdei_stack(unsigned long sp,
-> +				unsigned long *stack_low,
-> +				unsigned long *stack_high)
->  {
->  	if (!IS_ENABLED(CONFIG_VMAP_STACK))
->  		return false;
->  	if (!IS_ENABLED(CONFIG_ARM_SDE_INTERFACE))
->  		return false;
->  	if (in_nmi())
-> -		return _on_sdei_stack(sp);
-> +		return _on_sdei_stack(sp, stack_low, stack_high);
->  
->  	return false;
->  }
-> diff --git a/arch/arm64/include/asm/stacktrace.h b/arch/arm64/include/asm/stacktrace.h
-> index 902f9edacbea..9855a0425e64 100644
-> --- a/arch/arm64/include/asm/stacktrace.h
-> +++ b/arch/arm64/include/asm/stacktrace.h
-> @@ -39,7 +39,9 @@ extern void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk);
->  
->  DECLARE_PER_CPU(unsigned long *, irq_stack_ptr);
->  
-> -static inline bool on_irq_stack(unsigned long sp)
-> +static inline bool on_irq_stack(unsigned long sp,
-> +				unsigned long *stack_low,
-> +				unsigned long *stack_high)
->  {
->  	unsigned long low = (unsigned long)raw_cpu_read(irq_stack_ptr);
->  	unsigned long high = low + IRQ_STACK_SIZE;
-> @@ -47,47 +49,109 @@ static inline bool on_irq_stack(unsigned long sp)
->  	if (!low)
->  		return false;
->  
-> -	return (low <= sp && sp < high);
-> +	if (sp < low || sp >= high)
-> +		return false;
-> +
-> +	if (stack_low && stack_high) {
-> +		*stack_low = low;
-> +		*stack_high = high;
-> +	}
-> +
-> +	return true;
->  }
+Signed-off-by: Alexander Popov <alex.popov@linux.com>
+---
+ Documentation/sysctl/kernel.txt | 19 +++++++++++++++++++
+ include/linux/stackleak.h       |  6 ++++++
+ kernel/stackleak.c              | 40 ++++++++++++++++++++++++++++++++++++++++
+ kernel/sysctl.c                 | 15 ++++++++++++++-
+ scripts/gcc-plugins/Kconfig     | 10 ++++++++++
+ 5 files changed, 89 insertions(+), 1 deletion(-)
 
-Rather than having to pass separete pointers to low/high, could we
-please wrap them up as a struct, e.g.
-
-struct stack_info {
-	unsigned long low, high;
-	stack_type type;
-}
-
-... and pass a single pointer to that? e.g.
-
-static inline bool on_irq_stack(unsigned long sp, struct stack_info *info)
-{
-	unsigned long low = (unsigned long)raw_cpu_read(irq_stack_ptr);
-	unsigned long high = low + IRQ_STACK_SIZE;
-
-	if (!low)
-		return false;
-	
-	if (sp < low || sp >= high)
-		return false;
-	
-	if (info) {
-		info->low = low;
-		info->high = high;
-		info->type = STACK_TYPE_IRQ;
-	}
-
-	return true;
-}
-
-That simplified the prototypes, and will allow us to distinguish the two
-SDEI stacks (which we'll need for making stack unwiding robust to
-cross-stack loops).
-
-> -static inline bool on_task_stack(struct task_struct *tsk, unsigned long sp)
-> +static inline bool on_task_stack(struct task_struct *tsk, unsigned long sp,
-> +				unsigned long *stack_low,
-> +				unsigned long *stack_high)
->  {
->  	unsigned long low = (unsigned long)task_stack_page(tsk);
->  	unsigned long high = low + THREAD_SIZE;
->  
-> -	return (low <= sp && sp < high);
-> +	if (sp < low || sp >= high)
-> +		return false;
-> +
-> +	if (stack_low && stack_high) {
-> +		*stack_low = low;
-> +		*stack_high = high;
-> +	}
-> +
-> +	return true;
->  }
->  
->  #ifdef CONFIG_VMAP_STACK
->  DECLARE_PER_CPU(unsigned long [OVERFLOW_STACK_SIZE/sizeof(long)], overflow_stack);
->  
-> -static inline bool on_overflow_stack(unsigned long sp)
-> +static inline bool on_overflow_stack(unsigned long sp,
-> +				unsigned long *stack_low,
-> +				unsigned long *stack_high)
->  {
->  	unsigned long low = (unsigned long)raw_cpu_ptr(overflow_stack);
->  	unsigned long high = low + OVERFLOW_STACK_SIZE;
->  
-> -	return (low <= sp && sp < high);
-> +	if (sp < low || sp >= high)
-> +		return false;
-> +
-> +	if (stack_low && stack_high) {
-> +		*stack_low = low;
-> +		*stack_high = high;
-> +	}
-> +
-> +	return true;
->  }
->  #else
-> -static inline bool on_overflow_stack(unsigned long sp) { return false; }
-> +static inline bool on_overflow_stack(unsigned long sp,
-> +			unsigned long *stack_low,
-> +			unsigned long *stack_high) { return false; }
->  #endif
->  
-> +enum stack_type {
-> +	STACK_TYPE_UNKNOWN,
-> +	STACK_TYPE_TASK,
-> +	STACK_TYPE_IRQ,
-> +	STACK_TYPE_OVERFLOW,
-> +	STACK_TYPE_SDEI,
-> +};
-
-For SDEI we'll need STACK_TYPE_SDEI_NORMAL and STACK_TYPE_SDEI_CRITICAL,
-at least for stack unwinding.
-
-> +
-> +static inline enum stack_type current_stack_type(struct task_struct *tsk,
-> +						unsigned long sp,
-> +						unsigned long *stack_low,
-> +						unsigned long *stack_high)
-> +{
-> +	if (on_task_stack(tsk, sp, stack_low, stack_high))
-> +		return STACK_TYPE_TASK;
-> +	if (on_irq_stack(sp, stack_low, stack_high))
-> +		return STACK_TYPE_IRQ;
-> +	if (on_overflow_stack(sp, stack_low, stack_high))
-> +		return STACK_TYPE_OVERFLOW;
-> +	if (on_sdei_stack(sp, stack_low, stack_high))
-> +		return STACK_TYPE_SDEI;
-> +	return STACK_TYPE_UNKNOWN;
-> +}
-> +
->  /*
->   * We can only safely access per-cpu stacks from current in a non-preemptible
->   * context.
->   */
->  static inline bool on_accessible_stack(struct task_struct *tsk, unsigned long sp)
->  {
-> -	if (on_task_stack(tsk, sp))
-> +	enum stack_type type;
-> +	unsigned long low, high;
-> +
-> +	type = current_stack_type(tsk, sp, &low, &high);
-> +
-> +	switch (type) {
-> +	case STACK_TYPE_TASK:
->  		return true;
-> -	if (tsk != current || preemptible())
-> +	case STACK_TYPE_IRQ:
-> +	case STACK_TYPE_OVERFLOW:
-> +	case STACK_TYPE_SDEI:
-> +		if (tsk != current || preemptible())
-> +			return false;
-> +		else
-> +			return true;
-> +	case STACK_TYPE_UNKNOWN:
->  		return false;
-> -	if (on_irq_stack(sp))
-> -		return true;
-> -	if (on_overflow_stack(sp))
-> -		return true;
-> -	if (on_sdei_stack(sp))
-> -		return true;
-> +	}
->  
->  	return false;
->  }
-
-With the stacut stack_info, I think we can leave the logic of
-on_accessible_stack() as-is, modulo a new info parameter that we pass on
-into each on_<foo>_stack(), and then we don't neeed a separate
-current_stack_type() function.
-
-> diff --git a/arch/arm64/kernel/ptrace.c b/arch/arm64/kernel/ptrace.c
-> index 5c338ce5a7fa..a6b3a2be7561 100644
-> --- a/arch/arm64/kernel/ptrace.c
-> +++ b/arch/arm64/kernel/ptrace.c
-> @@ -132,7 +132,7 @@ static bool regs_within_kernel_stack(struct pt_regs *regs, unsigned long addr)
->  {
->  	return ((addr & ~(THREAD_SIZE - 1))  ==
->  		(kernel_stack_pointer(regs) & ~(THREAD_SIZE - 1))) ||
-> -		on_irq_stack(addr);
-> +		on_irq_stack(addr, NULL, NULL);
->  }
->  
->  /**
-> diff --git a/arch/arm64/kernel/sdei.c b/arch/arm64/kernel/sdei.c
-> index 6b8d90d5ceae..8e18913a53fd 100644
-> --- a/arch/arm64/kernel/sdei.c
-> +++ b/arch/arm64/kernel/sdei.c
-> @@ -88,7 +88,9 @@ static int init_sdei_stacks(void)
->  	return err;
->  }
->  
-> -bool _on_sdei_stack(unsigned long sp)
-> +bool _on_sdei_stack(unsigned long sp,
-> +		unsigned long *stack_low,
-> +		unsigned long *stack_high)
->  {
->  	unsigned long low, high;
->  
-> @@ -98,13 +100,26 @@ bool _on_sdei_stack(unsigned long sp)
->  	low = (unsigned long)raw_cpu_read(sdei_stack_critical_ptr);
->  	high = low + SDEI_STACK_SIZE;
->  
-> -	if (low <= sp && sp < high)
-> +	if (low <= sp && sp < high) {
-> +		if (stack_low && stack_high) {
-> +			*stack_low = low;
-> +			*stack_high = high;
-> +		}
->  		return true;
-> +	}
->  
->  	low = (unsigned long)raw_cpu_read(sdei_stack_normal_ptr);
->  	high = low + SDEI_STACK_SIZE;
->  
-> -	return (low <= sp && sp < high);
-> +	if (low <= sp && sp < high) {
-> +		if (stack_low && stack_high) {
-> +			*stack_low = low;
-> +			*stack_high = high;
-> +		}
-> +		return true;
-> +	}
-> +
-> +	return false;
->  }
-
-We should probably split this into separate on_sdei_normal_stack() and
-on_sdei_critical_stack() functions.
-
-Then we can do:
-
-bool on_sdei_<foo>_stack(...)
-{
-	if (<out of bounds>)
-		return false;
-	
-	if (info) {
-		<assign info fields>;
-	}
-
-	return true;
-}
-
-bool _on_sdei_stack(unsigned long sp, struct stack_info *info)
-{
-	if (on_sedi_critical_stack(sp, info))
-		return true;
-	if (on_sdei_normal_stack(sp, info))
-		return true;
-	
-	return false;
-}
-
-... which is a little nicer for legibility.
-
-Otherwise, this looks good to me.
-
-Thanks,
-Mark.
+diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
+index eded671d..63b7493 100644
+--- a/Documentation/sysctl/kernel.txt
++++ b/Documentation/sysctl/kernel.txt
+@@ -87,6 +87,7 @@ show up in /proc/sys/kernel:
+ - shmmni
+ - softlockup_all_cpu_backtrace
+ - soft_watchdog
++- stack_erasing_bypass
+ - stop-a                      [ SPARC only ]
+ - sysrq                       ==> Documentation/admin-guide/sysrq.rst
+ - sysctl_writes_strict
+@@ -962,6 +963,24 @@ detect a hard lockup condition.
+ 
+ ==============================================================
+ 
++stack_erasing_bypass
++
++This parameter can be used to disable kernel stack erasing at the end
++of syscalls for kernels built with CONFIG_GCC_PLUGIN_STACKLEAK.
++
++That erasing reduces the information which kernel stack leak bugs
++can reveal and blocks some uninitialized stack variable attacks.
++The tradeoff is the performance impact: on a single CPU system kernel
++compilation sees a 1% slowdown, other systems and workloads may vary.
++
++  0: do nothing - stack erasing is enabled by default.
++
++  1: enable stack erasing bypass - stack erasing will then remain
++     disabled and STACKLEAK_METRICS will not be updated until the
++     next boot.
++
++==============================================================
++
+ tainted:
+ 
+ Non-zero if the kernel has been tainted. Numeric values, which can be
+diff --git a/include/linux/stackleak.h b/include/linux/stackleak.h
+index b911b97..e1fc3d1 100644
+--- a/include/linux/stackleak.h
++++ b/include/linux/stackleak.h
+@@ -22,6 +22,12 @@ static inline void stackleak_task_init(struct task_struct *t)
+ 	t->prev_lowest_stack = t->lowest_stack;
+ # endif
+ }
++
++#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
++int stack_erasing_bypass_sysctl(struct ctl_table *table, int write,
++			void __user *buffer, size_t *lenp, loff_t *ppos);
++#endif
++
+ #else /* !CONFIG_GCC_PLUGIN_STACKLEAK */
+ static inline void stackleak_task_init(struct task_struct *t) { }
+ #endif
+diff --git a/kernel/stackleak.c b/kernel/stackleak.c
+index f5c4111..f731c9a 100644
+--- a/kernel/stackleak.c
++++ b/kernel/stackleak.c
+@@ -14,6 +14,36 @@
+ 
+ #include <linux/stackleak.h>
+ 
++#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
++#include <linux/jump_label.h>
++
++static DEFINE_STATIC_KEY_FALSE(stack_erasing_bypass);
++
++int stack_erasing_bypass_sysctl(struct ctl_table *table, int write,
++			void __user *buffer, size_t *lenp, loff_t *ppos)
++{
++	int ret = 0;
++	int state = static_branch_unlikely(&stack_erasing_bypass);
++
++	table->data = &state;
++	table->maxlen = sizeof(int);
++	ret = proc_dointvec_minmax(table, write, buffer, lenp, ppos);
++	if (ret || !write)
++		return ret;
++
++	/* Stack erasing re-enabling is not supported */
++	if (static_branch_unlikely(&stack_erasing_bypass))
++		return -EOPNOTSUPP;
++
++	if (state) {
++		static_branch_enable(&stack_erasing_bypass);
++		pr_warn("stackleak: stack erasing is disabled until reboot\n");
++	}
++
++	return ret;
++}
++#endif /* CONFIG_STACKLEAK_RUNTIME_DISABLE */
++
+ asmlinkage void stackleak_erase(void)
+ {
+ 	/* It would be nice not to have 'kstack_ptr' and 'boundary' on stack */
+@@ -22,6 +52,11 @@ asmlinkage void stackleak_erase(void)
+ 	unsigned int poison_count = 0;
+ 	const unsigned int depth = STACKLEAK_SEARCH_DEPTH / sizeof(unsigned long);
+ 
++#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
++	if (static_branch_unlikely(&stack_erasing_bypass))
++		return;
++#endif
++
+ 	/* Search for the poison value in the kernel stack */
+ 	while (kstack_ptr > boundary && poison_count <= depth) {
+ 		if (*(unsigned long *)kstack_ptr == STACKLEAK_POISON)
+@@ -78,6 +113,11 @@ void __used stackleak_track_stack(void)
+ 	 */
+ 	unsigned long sp = (unsigned long)&sp;
+ 
++#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
++	if (static_branch_unlikely(&stack_erasing_bypass))
++		return;
++#endif
++
+ 	/*
+ 	 * Having CONFIG_STACKLEAK_TRACK_MIN_SIZE larger than
+ 	 * STACKLEAK_SEARCH_DEPTH makes the poison search in
+diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+index 2d9837c..0ac25ca 100644
+--- a/kernel/sysctl.c
++++ b/kernel/sysctl.c
+@@ -91,7 +91,9 @@
+ #ifdef CONFIG_CHR_DEV_SG
+ #include <scsi/sg.h>
+ #endif
+-
++#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
++#include <linux/stackleak.h>
++#endif
+ #ifdef CONFIG_LOCKUP_DETECTOR
+ #include <linux/nmi.h>
+ #endif
+@@ -1230,6 +1232,17 @@ static struct ctl_table kern_table[] = {
+ 		.extra2		= &one,
+ 	},
+ #endif
++#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
++	{
++		.procname	= "stack_erasing_bypass",
++		.data		= NULL,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= stack_erasing_bypass_sysctl,
++		.extra1		= &zero,
++		.extra2		= &one,
++	},
++#endif
+ 	{ }
+ };
+ 
+diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
+index 292161d..0028945 100644
+--- a/scripts/gcc-plugins/Kconfig
++++ b/scripts/gcc-plugins/Kconfig
+@@ -182,4 +182,14 @@ config STACKLEAK_METRICS
+ 	  can be useful for estimating the STACKLEAK performance impact for
+ 	  your workloads.
+ 
++config STACKLEAK_RUNTIME_DISABLE
++	bool "Allow runtime disabling of kernel stack erasing"
++	depends on GCC_PLUGIN_STACKLEAK
++	help
++	  This option provides 'stack_erasing_bypass' sysctl, which can be
++	  used in runtime to disable kernel stack erasing for kernels built
++	  with CONFIG_GCC_PLUGIN_STACKLEAK. Stack erasing will then remain
++	  disabled and STACKLEAK_METRICS will not be updated until the
++	  next boot.
++
+ endif
+-- 
+2.7.4
