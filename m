@@ -1,197 +1,216 @@
-From: Alexander Popov <alex.popov@linux.com>
-Subject: [PATCH v14 7/7] stackleak, sysctl: Allow runtime disabling of kernel stack erasing
-Date: Thu, 19 Jul 2018 14:31:29 +0300
-Message-Id: <1531999889-18343-1-git-send-email-alex.popov@linux.com>
-In-Reply-To: <20180717071223.GA29533@gmail.com>
-References: <20180717071223.GA29533@gmail.com>
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Kees Cook <keescook@google.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, x86@kernel.org, linux-kernel@vger.kernel.org, alex.popov@linux.com
+Date: Thu, 19 Jul 2018 12:41:25 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Subject: Re: [PATCH 2/2] arm64: Clear the stack
+Message-ID: <20180719114124.fzjkqtpqnhhtxexy@lakrids.cambridge.arm.com>
+References: <20180718211013.14512-1-labbott@redhat.com>
+ <20180718211013.14512-3-labbott@redhat.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180718211013.14512-3-labbott@redhat.com>
+To: Laura Abbott <labbott@redhat.com>
+Cc: Alexander Popov <alex.popov@linux.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Introduce CONFIG_STACKLEAK_RUNTIME_DISABLE option, which provides
-'stack_erasing_bypass' sysctl. It can be used in runtime to disable
-kernel stack erasing for kernels built with CONFIG_GCC_PLUGIN_STACKLEAK.
-Stack erasing will then remain disabled and STACKLEAK_METRICS will not
-be updated until the next boot.
+On Wed, Jul 18, 2018 at 02:10:13PM -0700, Laura Abbott wrote:
+> 
+> Implementation of stackleak based heavily on the x86 version
+> 
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+> Since last time: Minor style cleanups. Re-wrote check_alloca to
+> correctly handle all stack types. While doing that, I also realized
+> current_top_of_stack was incorrect so I fixed that as well.
+> ---
+>  arch/arm64/Kconfig                    |  1 +
+>  arch/arm64/include/asm/processor.h    | 17 ++++++++++++++
+>  arch/arm64/kernel/entry.S             |  7 ++++++
+>  arch/arm64/kernel/process.c           | 32 +++++++++++++++++++++++++++
+>  arch/arm64/kvm/hyp/Makefile           |  3 ++-
+>  drivers/firmware/efi/libstub/Makefile |  3 ++-
+>  include/linux/stackleak.h             |  1 +
+>  7 files changed, 62 insertions(+), 2 deletions(-)
+> 
+> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+> index 42c090cf0292..216d36a49ab5 100644
+> --- a/arch/arm64/Kconfig
+> +++ b/arch/arm64/Kconfig
+> @@ -96,6 +96,7 @@ config ARM64
+>  	select HAVE_ARCH_MMAP_RND_BITS
+>  	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
+>  	select HAVE_ARCH_SECCOMP_FILTER
+> +	select HAVE_ARCH_STACKLEAK
+>  	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
+>  	select HAVE_ARCH_TRACEHOOK
+>  	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+> diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
+> index a73ae1e49200..4f3062ee22c6 100644
+> --- a/arch/arm64/include/asm/processor.h
+> +++ b/arch/arm64/include/asm/processor.h
+> @@ -266,5 +266,22 @@ extern void __init minsigstksz_setup(void);
+>  #define SVE_SET_VL(arg)	sve_set_current_vl(arg)
+>  #define SVE_GET_VL()	sve_get_current_vl()
+>  
+> +/*
+> + * For CONFIG_STACKLEAK
+> + *
+> + * These need to be macros because otherwise we get stuck in a nightmare
+> + * of header definitions for the use of task_stack_page.
+> + */
+> +
+> +#define current_top_of_stack()		\
+> +({					\
+> +	unsigned long _low = 0;		\
+> +	unsigned long _high = 0;	\
+> +					\
+> +	current_stack_type(current, current_stack_pointer, &_low, &_high); \
+> +	_high;	\
+> +})
 
-Signed-off-by: Alexander Popov <alex.popov@linux.com>
----
- Documentation/sysctl/kernel.txt | 19 +++++++++++++++++++
- include/linux/stackleak.h       |  6 ++++++
- kernel/stackleak.c              | 40 ++++++++++++++++++++++++++++++++++++++++
- kernel/sysctl.c                 | 15 ++++++++++++++-
- scripts/gcc-plugins/Kconfig     | 10 ++++++++++
- 5 files changed, 89 insertions(+), 1 deletion(-)
+... with the info changes, this could be:
 
-diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
-index eded671d..63b7493 100644
---- a/Documentation/sysctl/kernel.txt
-+++ b/Documentation/sysctl/kernel.txt
-@@ -87,6 +87,7 @@ show up in /proc/sys/kernel:
- - shmmni
- - softlockup_all_cpu_backtrace
- - soft_watchdog
-+- stack_erasing_bypass
- - stop-a                      [ SPARC only ]
- - sysrq                       ==> Documentation/admin-guide/sysrq.rst
- - sysctl_writes_strict
-@@ -962,6 +963,24 @@ detect a hard lockup condition.
- 
- ==============================================================
- 
-+stack_erasing_bypass
-+
-+This parameter can be used to disable kernel stack erasing at the end
-+of syscalls for kernels built with CONFIG_GCC_PLUGIN_STACKLEAK.
-+
-+That erasing reduces the information which kernel stack leak bugs
-+can reveal and blocks some uninitialized stack variable attacks.
-+The tradeoff is the performance impact: on a single CPU system kernel
-+compilation sees a 1% slowdown, other systems and workloads may vary.
-+
-+  0: do nothing - stack erasing is enabled by default.
-+
-+  1: enable stack erasing bypass - stack erasing will then remain
-+     disabled and STACKLEAK_METRICS will not be updated until the
-+     next boot.
-+
-+==============================================================
-+
- tainted:
- 
- Non-zero if the kernel has been tainted. Numeric values, which can be
-diff --git a/include/linux/stackleak.h b/include/linux/stackleak.h
-index b911b97..e1fc3d1 100644
---- a/include/linux/stackleak.h
-+++ b/include/linux/stackleak.h
-@@ -22,6 +22,12 @@ static inline void stackleak_task_init(struct task_struct *t)
- 	t->prev_lowest_stack = t->lowest_stack;
- # endif
- }
-+
-+#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
-+int stack_erasing_bypass_sysctl(struct ctl_table *table, int write,
-+			void __user *buffer, size_t *lenp, loff_t *ppos);
-+#endif
-+
- #else /* !CONFIG_GCC_PLUGIN_STACKLEAK */
- static inline void stackleak_task_init(struct task_struct *t) { }
- #endif
-diff --git a/kernel/stackleak.c b/kernel/stackleak.c
-index f5c4111..f731c9a 100644
---- a/kernel/stackleak.c
-+++ b/kernel/stackleak.c
-@@ -14,6 +14,36 @@
- 
- #include <linux/stackleak.h>
- 
-+#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
-+#include <linux/jump_label.h>
-+
-+static DEFINE_STATIC_KEY_FALSE(stack_erasing_bypass);
-+
-+int stack_erasing_bypass_sysctl(struct ctl_table *table, int write,
-+			void __user *buffer, size_t *lenp, loff_t *ppos)
-+{
-+	int ret = 0;
-+	int state = static_branch_unlikely(&stack_erasing_bypass);
-+
-+	table->data = &state;
-+	table->maxlen = sizeof(int);
-+	ret = proc_dointvec_minmax(table, write, buffer, lenp, ppos);
-+	if (ret || !write)
-+		return ret;
-+
-+	/* Stack erasing re-enabling is not supported */
-+	if (static_branch_unlikely(&stack_erasing_bypass))
-+		return -EOPNOTSUPP;
-+
-+	if (state) {
-+		static_branch_enable(&stack_erasing_bypass);
-+		pr_warn("stackleak: stack erasing is disabled until reboot\n");
-+	}
-+
-+	return ret;
-+}
-+#endif /* CONFIG_STACKLEAK_RUNTIME_DISABLE */
-+
- asmlinkage void stackleak_erase(void)
- {
- 	/* It would be nice not to have 'kstack_ptr' and 'boundary' on stack */
-@@ -22,6 +52,11 @@ asmlinkage void stackleak_erase(void)
- 	unsigned int poison_count = 0;
- 	const unsigned int depth = STACKLEAK_SEARCH_DEPTH / sizeof(unsigned long);
- 
-+#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
-+	if (static_branch_unlikely(&stack_erasing_bypass))
-+		return;
-+#endif
-+
- 	/* Search for the poison value in the kernel stack */
- 	while (kstack_ptr > boundary && poison_count <= depth) {
- 		if (*(unsigned long *)kstack_ptr == STACKLEAK_POISON)
-@@ -78,6 +113,11 @@ void __used stackleak_track_stack(void)
- 	 */
- 	unsigned long sp = (unsigned long)&sp;
- 
-+#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
-+	if (static_branch_unlikely(&stack_erasing_bypass))
-+		return;
-+#endif
-+
- 	/*
- 	 * Having CONFIG_STACKLEAK_TRACK_MIN_SIZE larger than
- 	 * STACKLEAK_SEARCH_DEPTH makes the poison search in
-diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-index 2d9837c..0ac25ca 100644
---- a/kernel/sysctl.c
-+++ b/kernel/sysctl.c
-@@ -91,7 +91,9 @@
- #ifdef CONFIG_CHR_DEV_SG
- #include <scsi/sg.h>
- #endif
--
-+#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
-+#include <linux/stackleak.h>
-+#endif
- #ifdef CONFIG_LOCKUP_DETECTOR
- #include <linux/nmi.h>
- #endif
-@@ -1230,6 +1232,17 @@ static struct ctl_table kern_table[] = {
- 		.extra2		= &one,
- 	},
- #endif
-+#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
-+	{
-+		.procname	= "stack_erasing_bypass",
-+		.data		= NULL,
-+		.maxlen		= sizeof(int),
-+		.mode		= 0600,
-+		.proc_handler	= stack_erasing_bypass_sysctl,
-+		.extra1		= &zero,
-+		.extra2		= &one,
-+	},
-+#endif
- 	{ }
- };
- 
-diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
-index 292161d..0028945 100644
---- a/scripts/gcc-plugins/Kconfig
-+++ b/scripts/gcc-plugins/Kconfig
-@@ -182,4 +182,14 @@ config STACKLEAK_METRICS
- 	  can be useful for estimating the STACKLEAK performance impact for
- 	  your workloads.
- 
-+config STACKLEAK_RUNTIME_DISABLE
-+	bool "Allow runtime disabling of kernel stack erasing"
-+	depends on GCC_PLUGIN_STACKLEAK
-+	help
-+	  This option provides 'stack_erasing_bypass' sysctl, which can be
-+	  used in runtime to disable kernel stack erasing for kernels built
-+	  with CONFIG_GCC_PLUGIN_STACKLEAK. Stack erasing will then remain
-+	  disabled and STACKLEAK_METRICS will not be updated until the
-+	  next boot.
-+
- endif
--- 
-2.7.4
+#define current_top_of_stack()						\
+({									\
+	struct stack_info _info;					\
+	BUG_ON(!on_accessible_stack(current_stack_pinter, &_info));	\
+	_info->high;							\
+})
+
+> +#define on_thread_stack()	(on_task_stack(current, current_stack_pointer, NULL, NULL))
+
+... and one fewer NULL here.
+
+> +
+>  #endif /* __ASSEMBLY__ */
+>  #endif /* __ASM_PROCESSOR_H */
+> diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+> index 28ad8799406f..67d12016063d 100644
+> --- a/arch/arm64/kernel/entry.S
+> +++ b/arch/arm64/kernel/entry.S
+> @@ -431,6 +431,11 @@ tsk	.req	x28		// current thread_info
+>  
+>  	.text
+>  
+> +	.macro	stackleak_erase
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +	bl	stackleak_erase
+> +#endif
+> +	.endm
+>  /*
+>   * Exception vectors.
+>   */
+> @@ -910,6 +915,7 @@ ret_fast_syscall:
+>  	and	x2, x1, #_TIF_WORK_MASK
+>  	cbnz	x2, work_pending
+>  	enable_step_tsk x1, x2
+> +	stackleak_erase
+>  	kernel_exit 0
+>  ret_fast_syscall_trace:
+>  	enable_daif
+> @@ -936,6 +942,7 @@ ret_to_user:
+>  	cbnz	x2, work_pending
+>  finish_ret_to_user:
+>  	enable_step_tsk x1, x2
+> +	stackleak_erase
+>  	kernel_exit 0
+>  ENDPROC(ret_to_user)
+>  
+> diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
+> index e10bc363f533..904defa36689 100644
+> --- a/arch/arm64/kernel/process.c
+> +++ b/arch/arm64/kernel/process.c
+> @@ -493,3 +493,35 @@ void arch_setup_new_exec(void)
+>  {
+>  	current->mm->context.flags = is_compat_task() ? MMCF_AARCH32 : 0;
+>  }
+> +
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +void __used stackleak_check_alloca(unsigned long size)
+> +{
+> +	unsigned long stack_left;
+> +	enum stack_type type;
+> +	unsigned long current_sp = current_stack_pointer;
+> +	unsigned long low, high;
+> +
+> +	type = current_stack_type(current, current_sp, &low, &high);
+> +	BUG_ON(type == STACK_TYPE_UNKNOWN);
+> +
+> +	stack_left = current_sp - low;
+
+... similarly with the info changes, this could be:
+
+	unsigned long current_sp = current_stack_pointer;
+	unsigned long stack_left;
+	struct stack_info info;
+
+	BUG_ON(!on_accessible_stack(current, current_sp, &info));
+
+	stack_lead = current_sp - info->low;
+
+Otherwise, this looks good to me.
+
+Thanks,
+Mark.
+
+> +
+> +	if (size >= stack_left) {
+> +		/*
+> +		 * Kernel stack depth overflow is detected, let's report that.
+> +		 * If CONFIG_VMAP_STACK is enabled, we can safely use BUG().
+> +		 * If CONFIG_VMAP_STACK is disabled, BUG() handling can corrupt
+> +		 * the neighbour memory. CONFIG_SCHED_STACK_END_CHECK calls
+> +		 * panic() in a similar situation, so let's do the same if that
+> +		 * option is on. Otherwise just use BUG() and hope for the best.
+> +		 */
+> +#if !defined(CONFIG_VMAP_STACK) && defined(CONFIG_SCHED_STACK_END_CHECK)
+> +		panic("alloca() over the kernel stack boundary\n");
+> +#else
+> +		BUG();
+> +#endif
+> +	}
+> +}
+> +EXPORT_SYMBOL(stackleak_check_alloca);
+> +#endif
+> diff --git a/arch/arm64/kvm/hyp/Makefile b/arch/arm64/kvm/hyp/Makefile
+> index 4313f7475333..2fabc2dc1966 100644
+> --- a/arch/arm64/kvm/hyp/Makefile
+> +++ b/arch/arm64/kvm/hyp/Makefile
+> @@ -3,7 +3,8 @@
+>  # Makefile for Kernel-based Virtual Machine module, HYP part
+>  #
+>  
+> -ccflags-y += -fno-stack-protector -DDISABLE_BRANCH_PROFILING
+> +ccflags-y += -fno-stack-protector -DDISABLE_BRANCH_PROFILING \
+> +		$(DISABLE_STACKLEAK_PLUGIN)
+>  
+>  KVM=../../../../virt/kvm
+>  
+> diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
+> index a34e9290a699..25dd2a14560d 100644
+> --- a/drivers/firmware/efi/libstub/Makefile
+> +++ b/drivers/firmware/efi/libstub/Makefile
+> @@ -20,7 +20,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)	+= -I$(srctree)/scripts/dtc/libfdt
+>  KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
+>  				   -D__NO_FORTIFY \
+>  				   $(call cc-option,-ffreestanding) \
+> -				   $(call cc-option,-fno-stack-protector)
+> +				   $(call cc-option,-fno-stack-protector) \
+> +				   $(DISABLE_STACKLEAK_PLUGIN)
+>  
+>  GCOV_PROFILE			:= n
+>  KASAN_SANITIZE			:= n
+> diff --git a/include/linux/stackleak.h b/include/linux/stackleak.h
+> index b911b973d328..08420ec6b7c3 100644
+> --- a/include/linux/stackleak.h
+> +++ b/include/linux/stackleak.h
+> @@ -5,6 +5,7 @@
+>  #include <linux/sched.h>
+>  #include <linux/sched/task_stack.h>
+>  
+> +#include <asm/stacktrace.h>
+>  /*
+>   * Check that the poison value points to the unused hole in the
+>   * virtual memory map for your platform.
+> -- 
+> 2.17.1
+> 
