@@ -1,11 +1,11 @@
-Subject: Re: [PATCH 3/3] [RFC V3] KVM: X86: Adding skeleton for Memory ROE
+Subject: Re: [PATCH 1/3] [RFC V3] KVM: X86: Memory ROE documentation
 References: <20180719213802.17161-1-ahmedsoliman0x666@gmail.com>
- <20180719213802.17161-4-ahmedsoliman0x666@gmail.com>
+ <20180719213802.17161-2-ahmedsoliman0x666@gmail.com>
 From: Randy Dunlap <rdunlap@infradead.org>
-Message-ID: <26f2e29b-c016-7140-4fea-853fbbd01459@infradead.org>
-Date: Thu, 19 Jul 2018 18:07:59 -0700
+Message-ID: <7c7f7ad7-d8ee-cf12-9ec6-1a1d20b2e653@infradead.org>
+Date: Thu, 19 Jul 2018 18:11:11 -0700
 MIME-Version: 1.0
-In-Reply-To: <20180719213802.17161-4-ahmedsoliman0x666@gmail.com>
+In-Reply-To: <20180719213802.17161-2-ahmedsoliman0x666@gmail.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
 To: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>, kvm@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, virtualization@lists.linux-foundation.org, linux-doc@vger.kernel.org, x86@kernel.org
@@ -13,42 +13,42 @@ Cc: Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, nathan Corbet <corb
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On 07/19/2018 02:38 PM, Ahmed Abd El Mawgood wrote:
-> This patch introduces a hypercall implemented for X86 that can assist
-> against subset of kernel rootkits, it works by place readonly protection in
-> shadow PTE. The end result protection is also kept in a bitmap for each
-> kvm_memory_slot and is used as reference when updating SPTEs. The whole
-> goal is to protect the guest kernel static data from modification if
-> attacker is running from guest ring 0, for this reason there is no
-> hypercall to revert effect of Memory ROE hypercall. This patch doesn't
-> implement integrity check on guest TLB so obvious attack on the current
-> implementation will involve guest virtual address -> guest physical
-> address remapping, but there are plans to fix that.
+
+>  Documentation/virtual/kvm/hypercalls.txt | 14 ++++++++++++++
+>  1 file changed, 14 insertions(+)
 > 
-> Signed-off-by: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>
-> ---
-
-> diff --git a/arch/x86/kvm/Kconfig b/arch/x86/kvm/Kconfig
-> index 92fd433c50b9..8ae822a8dc7a 100644
-> --- a/arch/x86/kvm/Kconfig
-> +++ b/arch/x86/kvm/Kconfig
-> @@ -96,6 +96,13 @@ config KVM_MMU_AUDIT
->  	 This option adds a R/W kVM module parameter 'mmu_audit', which allows
->  	 auditing of KVM MMU events at runtime.
+> diff --git a/Documentation/virtual/kvm/hypercalls.txt b/Documentation/virtual/kvm/hypercalls.txt
+> index a890529c63ed..a9db68adb7c9 100644
+> --- a/Documentation/virtual/kvm/hypercalls.txt
+> +++ b/Documentation/virtual/kvm/hypercalls.txt
+> @@ -121,3 +121,17 @@ compute the CLOCK_REALTIME for its clock, at the same instant.
 >  
-> +config KVM_MROE
-> +	bool "Hypercall Memory Read-Only Enforcement"
-> +	depends on KVM && X86
-> +	help
-> +	This option add KVM_HC_HMROE hypercall to kvm which as hardening
-
-	            adds                       to kvm as a hardening   (???)
-
-
-> +	mechanism to protect memory pages from being edited.
+>  Returns KVM_EOPNOTSUPP if the host does not use TSC clocksource,
+>  or if clock type is different than KVM_CLOCK_PAIRING_WALLCLOCK.
 > +
->  # OK, it's a little counter-intuitive to do this, but it puts it neatly under
->  # the virtualization menu.
->  source drivers/vhost/Kconfig
+> +7. KVM_HC_HMROE
+> +----------------
+> +Architecture: x86
+> +Status: active
+> +Purpose: Hypercall used to apply Read-Only Enforcement to guest pages
+> +Usage:
+> +     a0: start address of page that should be protected.
+
+Is this done one page per call?  No grouping, no multiple pages?
+
+> +
+> +This hypercall lets a guest kernel to have part of its read/write memory
+
+                  lets a guest kernel have part of
+
+> +converted into read-only.  This action is irreversible. KVM_HC_HMROE can
+> +not be triggered from guest Ring 3 (user mode). The reason is that user
+> +mode malicious software can make use of it enforce read only protection on
+
+                               make use of it to enforce
+
+> +an arbitrary memory page thus crashing the kernel.
+> 
 
 
 -- 
