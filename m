@@ -1,55 +1,51 @@
-Date: Thu, 19 Jul 2018 22:45:33 -0400
-From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-Subject: Re: Memory Read Only Enforcement: VMM assisted kernel rootkit
- mitigation for KVM
-Message-ID: <20180720024533.GA27437@char.US.ORACLE.com>
-References: <20180719213802.17161-1-ahmedsoliman0x666@gmail.com>
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <1531935483-30784-1-git-send-email-s.mesoraca16@gmail.com>
+	<CAGXu5jK4q6HLDZ6jokTeDABbzVasY85Jo0HFNKYeaKWZYPjPKg@mail.gmail.com>
+Date: Fri, 20 Jul 2018 08:37:04 -0500
+In-Reply-To: <CAGXu5jK4q6HLDZ6jokTeDABbzVasY85Jo0HFNKYeaKWZYPjPKg@mail.gmail.com>
+	(Kees Cook's message of "Thu, 19 Jul 2018 22:15:15 -0700")
+Message-ID: <87effy9gfz.fsf@xmission.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180719213802.17161-1-ahmedsoliman0x666@gmail.com>
-To: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>, xen-devel@lists.xensource.com
-Cc: kvm@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, virtualization@lists.linux-foundation.org, linux-doc@vger.kernel.org, x86@kernel.org, Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, nathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, hpa@zytor.com, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, David Hildenbrand <david@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, David Vrabel <david.vrabel@nutanix.com>, nigel.edwards@hpe.com, Rik van Riel <riel@surriel.com>
+Content-Type: text/plain
+Subject: Re: [RFC] kconfig: add hardened defconfig helpers
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Laura Abbott <labbott@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-doc@vger.kernel.org, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jul 19, 2018 at 11:37:59PM +0200, Ahmed Abd El Mawgood wrote:
-> Hi,
-> 
-> This is my first set of patches that works as I would expect, and the
-> third revision I sent to mailing lists.
-> 
-> Following up with my previous discussions about kernel rootkit mitigation
-> via placing R/O protection on critical data structure, static data,
-> privileged registers with static content. These patches present the
-> first part where it is only possible to place these protections on
-> memory pages. Feature-wise, this set of patches is incomplete in the sense of:
-> - They still don't protect privileged registers
-> - They don't protect guest TLB from malicious gva -> gpa page mappings.
-> But they provide sketches for a basic working design. Note that I am totally
-> noob and it took lots of time and effort to get to this point. So sorry in
-> advance if I overlooked something.
+Kees Cook <keescook@chromium.org> writes:
 
-This reminds me of Xen PV page model. That is the hypervisor is the one
-auditing the page tables and the guest's pages are read-only.
+>> +CONFIG_USER_NS=n
+>> +~~~~~~~~~~~~~~~~
+>> +
+>> +**Negative side effects level:** Medium
+>
+> Unfortunately I think this is High or Extreme. USER_NS gets a lot of use.
+>
+>> +**- Protection type:** Attack surface reduction
+>> +
+>> +This allows containers to use user namespaces to provide different
+>> +user info for different servers.
+>> +User namespaces have been abused in the past for privilege
+>> +escalation.
 
-Ditto for IDT, GDT, etc. Gosh, did you by chance look at how
-Xen PV mechanism is done? It may provide the protection you are looking for?
+This is not a particularly good description.
 
-CC-ing xen-devel.
-> 
-> [PATCH 1/3] [RFC V3] KVM: X86: Memory ROE documentation
-> [PATCH 2/3] [RFC V3] KVM: X86: Adding arbitrary data pointer in kvm memslot itterator functions
-> [PATCH 3/3] [RFC V3] KVM: X86: Adding skeleton for Memory ROE
-> 
-> Summery:
-> 
->  Documentation/virtual/kvm/hypercalls.txt |  14 ++++
->  arch/x86/include/asm/kvm_host.h          |  11 ++-
->  arch/x86/kvm/Kconfig                     |   7 ++
->  arch/x86/kvm/mmu.c                       | 127 ++++++++++++++++++++++---------
->  arch/x86/kvm/x86.c                       |  82 +++++++++++++++++++-
->  include/linux/kvm_host.h                 |   3 +
->  include/uapi/linux/kvm_para.h            |   1 +
->  virt/kvm/kvm_main.c                      |  29 ++++++-
->  8 files changed, 232 insertions(+), 42 deletions(-)
-> 
+User namespaces do indeed increase the attack surface of programs that
+don't use them.
+
+User namespaces when used to build ``unprivileged containers'' remove or
+at least drastically reduce the need to run as root when setting up
+containers.  Which is attack surface reduction.
+
+User namespaces make available tools that are commonly used to build
+sandboxes.  Chrome for example uses users namespaces if they are
+available as part of setting up it's sandbox.
+
+User namespaces are not limited to containers.
+
+The bugs in the attack surface that user namespaces expose that have
+been used for privilege escalation have to the best of my knowledge
+closed.  So while there is some danger in the increased attack surface
+we are looking at implementation defects rather than design defects.
+
+Eric
