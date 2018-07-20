@@ -1,119 +1,164 @@
-Date: Fri, 20 Jul 2018 07:38:37 +0100
+Date: Fri, 20 Jul 2018 07:39:57 +0100
 From: Mark Rutland <mark.rutland@arm.com>
-Subject: Re: [PATCHv2 1/2] arm64: Add stack information to on_accessible_stack
-Message-ID: <20180720063837.5c5nxypv4urumz2m@salmiak>
+Subject: Re: [PATCHv2 2/2] arm64: Clear the stack
+Message-ID: <20180720063956.n64a2bgaykzj5xh6@salmiak>
 References: <20180719232806.3397-1-labbott@redhat.com>
- <20180719232806.3397-2-labbott@redhat.com>
+ <20180719232806.3397-3-labbott@redhat.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180719232806.3397-2-labbott@redhat.com>
+In-Reply-To: <20180719232806.3397-3-labbott@redhat.com>
 To: Laura Abbott <labbott@redhat.com>
 Cc: Alexander Popov <alex.popov@linux.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jul 19, 2018 at 04:28:05PM -0700, Laura Abbott wrote:
+On Thu, Jul 19, 2018 at 04:28:06PM -0700, Laura Abbott wrote:
 > 
-> In preparation for enabling the stackleak plugin on arm64,
-> we need a way to get the bounds of the current stack. Extend
-> on_accessible_stack to get this information.
+> Implementation of stackleak based heavily on the x86 version
 > 
 > Signed-off-by: Laura Abbott <labbott@redhat.com>
-> ---
-> v2: Switched to using struct stack_info for argument passing.
-> on_accessible_stack is now the primary API. Split STACK_TYPE_SDEI
-> into STACK_TYPE_SDEI_NORMAL and STACK_TYPE_SDEI_CRITICAL.
 
-[...]
-
-> -static inline bool on_irq_stack(unsigned long sp)
-> +static inline bool on_irq_stack(unsigned long sp,
-> +				struct stack_info *info)
->  {
->  	unsigned long low = (unsigned long)raw_cpu_read(irq_stack_ptr);
->  	unsigned long high = low + IRQ_STACK_SIZE;
-> @@ -47,46 +63,79 @@ static inline bool on_irq_stack(unsigned long sp)
->  	if (!low)
->  		return false;
->  
-> -	return (low <= sp && sp < high);
-> +	if (sp < low || sp >= high)
-> +		return false;
-> +
-> +	if (info) {
-> +		info->low = low;
-> +		info->high = high;
-> +		info->type = STACK_TYPE_IRQ;
-> +	}
-> +
-> +	return true;
->  }
-
-[...]
-
-> -bool _on_sdei_stack(unsigned long sp)
-> +bool on_sdei_normal_stack(unsigned long sp,
-> +			struct stack_info *info)
-> +{
-> +	unsigned long low = (unsigned long)raw_cpu_read(sdei_stack_normal_ptr);
-> +	unsigned long high = low + SDEI_STACK_SIZE;
-> +
-> +	if (low <= sp && sp < high) {
-> +		if (info) {
-> +			info->low = low;
-> +			info->high = high;
-> +			info->type = STACK_TYPE_SDEI_NORMAL;
-> +		}
-> +		return true;
-> +	}
-> +
-> +	return false;
-> +}
-> +
-> +bool on_sdei_critical_stack(unsigned long sp,
-> +			struct stack_info *info)
-> +{
-> +	unsigned long low = (unsigned long)raw_cpu_read(sdei_stack_critical_ptr);
-> +	unsigned long high = low + SDEI_STACK_SIZE;
-> +
-> +	if (low <= sp && sp < high) {
-> +		if (info) {
-> +			info->low = low;
-> +			info->high = high;
-> +			info->type = STACK_TYPE_SDEI_CRITICAL;
-> +		}
-> +		return true;
-> +	}
-> +
-> +	return false;
-> +}
-
-Minor nit, but it would be good to avoid the nested conditionals for these two
-by bailing out early when the SP is out of bounds, as with the other
-on_<foo>_stack() functions, e.g.
-
-bool on_sdei_normal_stack(unsigned long sp,
-			struct stack_info *info)
-{
-	unsigned long low = (unsigned long)raw_cpu_read(sdei_stack_normal_ptr);
-	unsigned long high = low + SDEI_STACK_SIZE;
-
-	if (sp < low || sp >= high)
-		return false;
-
-	if (info) {
-		info->low = low;
-		info->high = high;
-		info->type = STACK_TYPE_SDEI_NORMAL;
-	}
-
-	return true;
-}
-
-Otherwise, this all looks good to me. With that:
-
-Reviewed-by: Mark Rutland <mark.rutland@arm.com>
+Reviewed-by: Mark Rutlamd <mark.rutland@arm.com>
 
 Thanks for working on this!
 
 Mark.
+
+> ---
+> v2: Convert to adjusted on_acessible_stack APIs. Fixed alloca check to
+> just panic. Dropped the extra include per Kees. I also didn't add the
+> Reviewed-by since the APIs did change and I wanted another pass.
+> ---
+>  arch/arm64/Kconfig                    |  1 +
+>  arch/arm64/include/asm/processor.h    | 15 +++++++++++++++
+>  arch/arm64/kernel/entry.S             |  7 +++++++
+>  arch/arm64/kernel/process.c           | 17 +++++++++++++++++
+>  arch/arm64/kvm/hyp/Makefile           |  3 ++-
+>  drivers/firmware/efi/libstub/Makefile |  3 ++-
+>  6 files changed, 44 insertions(+), 2 deletions(-)
+> 
+> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+> index 42c090cf0292..216d36a49ab5 100644
+> --- a/arch/arm64/Kconfig
+> +++ b/arch/arm64/Kconfig
+> @@ -96,6 +96,7 @@ config ARM64
+>  	select HAVE_ARCH_MMAP_RND_BITS
+>  	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
+>  	select HAVE_ARCH_SECCOMP_FILTER
+> +	select HAVE_ARCH_STACKLEAK
+>  	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
+>  	select HAVE_ARCH_TRACEHOOK
+>  	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+> diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
+> index a73ae1e49200..0061450a793b 100644
+> --- a/arch/arm64/include/asm/processor.h
+> +++ b/arch/arm64/include/asm/processor.h
+> @@ -266,5 +266,20 @@ extern void __init minsigstksz_setup(void);
+>  #define SVE_SET_VL(arg)	sve_set_current_vl(arg)
+>  #define SVE_GET_VL()	sve_get_current_vl()
+>  
+> +/*
+> + * For CONFIG_GCC_PLUGIN_STACKLEAK
+> + *
+> + * These need to be macros because otherwise we get stuck in a nightmare
+> + * of header definitions for the use of task_stack_page.
+> + */
+> +
+> +#define current_top_of_stack()							\
+> +({										\
+> +	struct stack_info _info;						\
+> +	BUG_ON(!on_accessible_stack(current, current_stack_pointer, &_info));	\
+> +	_info.high;								\
+> +})
+> +#define on_thread_stack()	(on_task_stack(current, current_stack_pointer, NULL))
+> +
+>  #endif /* __ASSEMBLY__ */
+>  #endif /* __ASM_PROCESSOR_H */
+> diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+> index 28ad8799406f..67d12016063d 100644
+> --- a/arch/arm64/kernel/entry.S
+> +++ b/arch/arm64/kernel/entry.S
+> @@ -431,6 +431,11 @@ tsk	.req	x28		// current thread_info
+>  
+>  	.text
+>  
+> +	.macro	stackleak_erase
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +	bl	stackleak_erase
+> +#endif
+> +	.endm
+>  /*
+>   * Exception vectors.
+>   */
+> @@ -910,6 +915,7 @@ ret_fast_syscall:
+>  	and	x2, x1, #_TIF_WORK_MASK
+>  	cbnz	x2, work_pending
+>  	enable_step_tsk x1, x2
+> +	stackleak_erase
+>  	kernel_exit 0
+>  ret_fast_syscall_trace:
+>  	enable_daif
+> @@ -936,6 +942,7 @@ ret_to_user:
+>  	cbnz	x2, work_pending
+>  finish_ret_to_user:
+>  	enable_step_tsk x1, x2
+> +	stackleak_erase
+>  	kernel_exit 0
+>  ENDPROC(ret_to_user)
+>  
+> diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
+> index e10bc363f533..2724e4d31b16 100644
+> --- a/arch/arm64/kernel/process.c
+> +++ b/arch/arm64/kernel/process.c
+> @@ -493,3 +493,20 @@ void arch_setup_new_exec(void)
+>  {
+>  	current->mm->context.flags = is_compat_task() ? MMCF_AARCH32 : 0;
+>  }
+> +
+> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+> +void __used stackleak_check_alloca(unsigned long size)
+> +{
+> +	unsigned long stack_left;
+> +	unsigned long current_sp = current_stack_pointer;
+> +	struct stack_info info;
+> +
+> +	BUG_ON(!on_accessible_stack(current, current_sp, &info));
+> +
+> +	stack_left = current_sp - info.low;
+> +
+> +	if (size >= stack_left)
+> +		panic("alloca() over the kernel stack boundary\n");
+> +}
+> +EXPORT_SYMBOL(stackleak_check_alloca);
+> +#endif
+> diff --git a/arch/arm64/kvm/hyp/Makefile b/arch/arm64/kvm/hyp/Makefile
+> index 4313f7475333..2fabc2dc1966 100644
+> --- a/arch/arm64/kvm/hyp/Makefile
+> +++ b/arch/arm64/kvm/hyp/Makefile
+> @@ -3,7 +3,8 @@
+>  # Makefile for Kernel-based Virtual Machine module, HYP part
+>  #
+>  
+> -ccflags-y += -fno-stack-protector -DDISABLE_BRANCH_PROFILING
+> +ccflags-y += -fno-stack-protector -DDISABLE_BRANCH_PROFILING \
+> +		$(DISABLE_STACKLEAK_PLUGIN)
+>  
+>  KVM=../../../../virt/kvm
+>  
+> diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
+> index a34e9290a699..25dd2a14560d 100644
+> --- a/drivers/firmware/efi/libstub/Makefile
+> +++ b/drivers/firmware/efi/libstub/Makefile
+> @@ -20,7 +20,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)	+= -I$(srctree)/scripts/dtc/libfdt
+>  KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
+>  				   -D__NO_FORTIFY \
+>  				   $(call cc-option,-ffreestanding) \
+> -				   $(call cc-option,-fno-stack-protector)
+> +				   $(call cc-option,-fno-stack-protector) \
+> +				   $(DISABLE_STACKLEAK_PLUGIN)
+>  
+>  GCOV_PROFILE			:= n
+>  KASAN_SANITIZE			:= n
+> -- 
+> 2.17.1
+> 
