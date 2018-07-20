@@ -1,164 +1,55 @@
-Date: Fri, 20 Jul 2018 07:39:57 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Subject: Re: [PATCHv2 2/2] arm64: Clear the stack
-Message-ID: <20180720063956.n64a2bgaykzj5xh6@salmiak>
-References: <20180719232806.3397-1-labbott@redhat.com>
- <20180719232806.3397-3-labbott@redhat.com>
+Date: Thu, 19 Jul 2018 22:45:33 -0400
+From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Subject: Re: Memory Read Only Enforcement: VMM assisted kernel rootkit
+ mitigation for KVM
+Message-ID: <20180720024533.GA27437@char.US.ORACLE.com>
+References: <20180719213802.17161-1-ahmedsoliman0x666@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180719232806.3397-3-labbott@redhat.com>
-To: Laura Abbott <labbott@redhat.com>
-Cc: Alexander Popov <alex.popov@linux.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>
+In-Reply-To: <20180719213802.17161-1-ahmedsoliman0x666@gmail.com>
+To: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>, xen-devel@lists.xensource.com
+Cc: kvm@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, virtualization@lists.linux-foundation.org, linux-doc@vger.kernel.org, x86@kernel.org, Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, nathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, hpa@zytor.com, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, David Hildenbrand <david@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, David Vrabel <david.vrabel@nutanix.com>, nigel.edwards@hpe.com, Rik van Riel <riel@surriel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jul 19, 2018 at 04:28:06PM -0700, Laura Abbott wrote:
+On Thu, Jul 19, 2018 at 11:37:59PM +0200, Ahmed Abd El Mawgood wrote:
+> Hi,
 > 
-> Implementation of stackleak based heavily on the x86 version
+> This is my first set of patches that works as I would expect, and the
+> third revision I sent to mailing lists.
 > 
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> Following up with my previous discussions about kernel rootkit mitigation
+> via placing R/O protection on critical data structure, static data,
+> privileged registers with static content. These patches present the
+> first part where it is only possible to place these protections on
+> memory pages. Feature-wise, this set of patches is incomplete in the sense of:
+> - They still don't protect privileged registers
+> - They don't protect guest TLB from malicious gva -> gpa page mappings.
+> But they provide sketches for a basic working design. Note that I am totally
+> noob and it took lots of time and effort to get to this point. So sorry in
+> advance if I overlooked something.
 
-Reviewed-by: Mark Rutlamd <mark.rutland@arm.com>
+This reminds me of Xen PV page model. That is the hypervisor is the one
+auditing the page tables and the guest's pages are read-only.
 
-Thanks for working on this!
+Ditto for IDT, GDT, etc. Gosh, did you by chance look at how
+Xen PV mechanism is done? It may provide the protection you are looking for?
 
-Mark.
-
-> ---
-> v2: Convert to adjusted on_acessible_stack APIs. Fixed alloca check to
-> just panic. Dropped the extra include per Kees. I also didn't add the
-> Reviewed-by since the APIs did change and I wanted another pass.
-> ---
->  arch/arm64/Kconfig                    |  1 +
->  arch/arm64/include/asm/processor.h    | 15 +++++++++++++++
->  arch/arm64/kernel/entry.S             |  7 +++++++
->  arch/arm64/kernel/process.c           | 17 +++++++++++++++++
->  arch/arm64/kvm/hyp/Makefile           |  3 ++-
->  drivers/firmware/efi/libstub/Makefile |  3 ++-
->  6 files changed, 44 insertions(+), 2 deletions(-)
+CC-ing xen-devel.
 > 
-> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-> index 42c090cf0292..216d36a49ab5 100644
-> --- a/arch/arm64/Kconfig
-> +++ b/arch/arm64/Kconfig
-> @@ -96,6 +96,7 @@ config ARM64
->  	select HAVE_ARCH_MMAP_RND_BITS
->  	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
->  	select HAVE_ARCH_SECCOMP_FILTER
-> +	select HAVE_ARCH_STACKLEAK
->  	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
->  	select HAVE_ARCH_TRACEHOOK
->  	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
-> diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
-> index a73ae1e49200..0061450a793b 100644
-> --- a/arch/arm64/include/asm/processor.h
-> +++ b/arch/arm64/include/asm/processor.h
-> @@ -266,5 +266,20 @@ extern void __init minsigstksz_setup(void);
->  #define SVE_SET_VL(arg)	sve_set_current_vl(arg)
->  #define SVE_GET_VL()	sve_get_current_vl()
->  
-> +/*
-> + * For CONFIG_GCC_PLUGIN_STACKLEAK
-> + *
-> + * These need to be macros because otherwise we get stuck in a nightmare
-> + * of header definitions for the use of task_stack_page.
-> + */
-> +
-> +#define current_top_of_stack()							\
-> +({										\
-> +	struct stack_info _info;						\
-> +	BUG_ON(!on_accessible_stack(current, current_stack_pointer, &_info));	\
-> +	_info.high;								\
-> +})
-> +#define on_thread_stack()	(on_task_stack(current, current_stack_pointer, NULL))
-> +
->  #endif /* __ASSEMBLY__ */
->  #endif /* __ASM_PROCESSOR_H */
-> diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-> index 28ad8799406f..67d12016063d 100644
-> --- a/arch/arm64/kernel/entry.S
-> +++ b/arch/arm64/kernel/entry.S
-> @@ -431,6 +431,11 @@ tsk	.req	x28		// current thread_info
->  
->  	.text
->  
-> +	.macro	stackleak_erase
-> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-> +	bl	stackleak_erase
-> +#endif
-> +	.endm
->  /*
->   * Exception vectors.
->   */
-> @@ -910,6 +915,7 @@ ret_fast_syscall:
->  	and	x2, x1, #_TIF_WORK_MASK
->  	cbnz	x2, work_pending
->  	enable_step_tsk x1, x2
-> +	stackleak_erase
->  	kernel_exit 0
->  ret_fast_syscall_trace:
->  	enable_daif
-> @@ -936,6 +942,7 @@ ret_to_user:
->  	cbnz	x2, work_pending
->  finish_ret_to_user:
->  	enable_step_tsk x1, x2
-> +	stackleak_erase
->  	kernel_exit 0
->  ENDPROC(ret_to_user)
->  
-> diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
-> index e10bc363f533..2724e4d31b16 100644
-> --- a/arch/arm64/kernel/process.c
-> +++ b/arch/arm64/kernel/process.c
-> @@ -493,3 +493,20 @@ void arch_setup_new_exec(void)
->  {
->  	current->mm->context.flags = is_compat_task() ? MMCF_AARCH32 : 0;
->  }
-> +
-> +#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-> +void __used stackleak_check_alloca(unsigned long size)
-> +{
-> +	unsigned long stack_left;
-> +	unsigned long current_sp = current_stack_pointer;
-> +	struct stack_info info;
-> +
-> +	BUG_ON(!on_accessible_stack(current, current_sp, &info));
-> +
-> +	stack_left = current_sp - info.low;
-> +
-> +	if (size >= stack_left)
-> +		panic("alloca() over the kernel stack boundary\n");
-> +}
-> +EXPORT_SYMBOL(stackleak_check_alloca);
-> +#endif
-> diff --git a/arch/arm64/kvm/hyp/Makefile b/arch/arm64/kvm/hyp/Makefile
-> index 4313f7475333..2fabc2dc1966 100644
-> --- a/arch/arm64/kvm/hyp/Makefile
-> +++ b/arch/arm64/kvm/hyp/Makefile
-> @@ -3,7 +3,8 @@
->  # Makefile for Kernel-based Virtual Machine module, HYP part
->  #
->  
-> -ccflags-y += -fno-stack-protector -DDISABLE_BRANCH_PROFILING
-> +ccflags-y += -fno-stack-protector -DDISABLE_BRANCH_PROFILING \
-> +		$(DISABLE_STACKLEAK_PLUGIN)
->  
->  KVM=../../../../virt/kvm
->  
-> diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
-> index a34e9290a699..25dd2a14560d 100644
-> --- a/drivers/firmware/efi/libstub/Makefile
-> +++ b/drivers/firmware/efi/libstub/Makefile
-> @@ -20,7 +20,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)	+= -I$(srctree)/scripts/dtc/libfdt
->  KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
->  				   -D__NO_FORTIFY \
->  				   $(call cc-option,-ffreestanding) \
-> -				   $(call cc-option,-fno-stack-protector)
-> +				   $(call cc-option,-fno-stack-protector) \
-> +				   $(DISABLE_STACKLEAK_PLUGIN)
->  
->  GCOV_PROFILE			:= n
->  KASAN_SANITIZE			:= n
-> -- 
-> 2.17.1
+> [PATCH 1/3] [RFC V3] KVM: X86: Memory ROE documentation
+> [PATCH 2/3] [RFC V3] KVM: X86: Adding arbitrary data pointer in kvm memslot itterator functions
+> [PATCH 3/3] [RFC V3] KVM: X86: Adding skeleton for Memory ROE
+> 
+> Summery:
+> 
+>  Documentation/virtual/kvm/hypercalls.txt |  14 ++++
+>  arch/x86/include/asm/kvm_host.h          |  11 ++-
+>  arch/x86/kvm/Kconfig                     |   7 ++
+>  arch/x86/kvm/mmu.c                       | 127 ++++++++++++++++++++++---------
+>  arch/x86/kvm/x86.c                       |  82 +++++++++++++++++++-
+>  include/linux/kvm_host.h                 |   3 +
+>  include/uapi/linux/kvm_para.h            |   1 +
+>  virt/kvm/kvm_main.c                      |  29 ++++++-
+>  8 files changed, 232 insertions(+), 42 deletions(-)
 > 
