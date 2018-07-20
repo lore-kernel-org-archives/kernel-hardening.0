@@ -1,162 +1,30 @@
-From: Laura Abbott <labbott@redhat.com>
-Subject: [PATCHv3 2/2] arm64: Add support for STACKLEAK gcc plugin
-Date: Fri, 20 Jul 2018 14:41:54 -0700
-Message-Id: <20180720214154.2940-3-labbott@redhat.com>
-In-Reply-To: <20180720214154.2940-1-labbott@redhat.com>
-References: <20180720214154.2940-1-labbott@redhat.com>
-To: Alexander Popov <alex.popov@linux.com>, Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>
+From: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>
+Subject: Memory Read Only Enforcement: VMM assisted kernel rootkit mitigation for KVM V4
+Date: Sat, 21 Jul 2018 01:31:27 +0200
+Message-Id: <20180720233130.14129-1-ahmedsoliman0x666@gmail.com>
+To: kvm@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, virtualization@lists.linux-foundation.org, linux-doc@vger.kernel.org, x86@kernel.org, xen-devel@lists.xensource.com
+Cc: Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, nathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, hpa@zytor.com, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, David Hildenbrand <david@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, David Vrabel <david.vrabel@nutanix.com>, nigel.edwards@hpe.com, Rik van Riel <riel@surriel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Here is change log from V3 To V4:
+- Fixing spelling/grammar mistakes suggested by Randy Dunlap
+- Changing the hypercall interface to be able to process multiple pages
+  per one hypercall also suggested by Randy Dunlap. It turns out that
+  this will save lots of vmexist/memory slot flushes when protecting many
+  pages.
 
-This adds support for the STACKLEAK gcc plugin to arm64 by implementing
-stackleak_check_alloca(), based heavily on the x86 version, and adding the
-two helpers used by the stackleak common code: current_top_of_stack() and
-on_thread_stack(). The stack erasure calls are made at syscall returns.
-Additionally, this disables the plugin in hypervisor and EFI stub code,
-which are out of scope for the protection.
+[PATCH RFC V4 1/3] KVM: X86: Memory ROE documentation
+[PATCH RFC V4 2/3] KVM: X86: Adding arbitrary data pointer in kvm memslot iterator functions
+[PATCH RFC V4 3/3] KVM: X86: Adding skeleton for Memory ROE
 
-Reviewed-by: Mark Rutland <mark.rutland@arm.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Signed-off-by: Laura Abbott <labbott@redhat.com>
----
-v3: Actual commit text courtesy of Kees. A comment explaining why we
-panic
----
- arch/arm64/Kconfig                    |  1 +
- arch/arm64/include/asm/processor.h    | 15 +++++++++++++++
- arch/arm64/kernel/entry.S             |  7 +++++++
- arch/arm64/kernel/process.c           | 22 ++++++++++++++++++++++
- arch/arm64/kvm/hyp/Makefile           |  3 ++-
- drivers/firmware/efi/libstub/Makefile |  3 ++-
- 6 files changed, 49 insertions(+), 2 deletions(-)
+Summary:
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index 42c090cf0292..216d36a49ab5 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -96,6 +96,7 @@ config ARM64
- 	select HAVE_ARCH_MMAP_RND_BITS
- 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
- 	select HAVE_ARCH_SECCOMP_FILTER
-+	select HAVE_ARCH_STACKLEAK
- 	select HAVE_ARCH_THREAD_STRUCT_WHITELIST
- 	select HAVE_ARCH_TRACEHOOK
- 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
-diff --git a/arch/arm64/include/asm/processor.h b/arch/arm64/include/asm/processor.h
-index a73ae1e49200..0061450a793b 100644
---- a/arch/arm64/include/asm/processor.h
-+++ b/arch/arm64/include/asm/processor.h
-@@ -266,5 +266,20 @@ extern void __init minsigstksz_setup(void);
- #define SVE_SET_VL(arg)	sve_set_current_vl(arg)
- #define SVE_GET_VL()	sve_get_current_vl()
- 
-+/*
-+ * For CONFIG_GCC_PLUGIN_STACKLEAK
-+ *
-+ * These need to be macros because otherwise we get stuck in a nightmare
-+ * of header definitions for the use of task_stack_page.
-+ */
-+
-+#define current_top_of_stack()							\
-+({										\
-+	struct stack_info _info;						\
-+	BUG_ON(!on_accessible_stack(current, current_stack_pointer, &_info));	\
-+	_info.high;								\
-+})
-+#define on_thread_stack()	(on_task_stack(current, current_stack_pointer, NULL))
-+
- #endif /* __ASSEMBLY__ */
- #endif /* __ASM_PROCESSOR_H */
-diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-index 28ad8799406f..67d12016063d 100644
---- a/arch/arm64/kernel/entry.S
-+++ b/arch/arm64/kernel/entry.S
-@@ -431,6 +431,11 @@ tsk	.req	x28		// current thread_info
- 
- 	.text
- 
-+	.macro	stackleak_erase
-+#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-+	bl	stackleak_erase
-+#endif
-+	.endm
- /*
-  * Exception vectors.
-  */
-@@ -910,6 +915,7 @@ ret_fast_syscall:
- 	and	x2, x1, #_TIF_WORK_MASK
- 	cbnz	x2, work_pending
- 	enable_step_tsk x1, x2
-+	stackleak_erase
- 	kernel_exit 0
- ret_fast_syscall_trace:
- 	enable_daif
-@@ -936,6 +942,7 @@ ret_to_user:
- 	cbnz	x2, work_pending
- finish_ret_to_user:
- 	enable_step_tsk x1, x2
-+	stackleak_erase
- 	kernel_exit 0
- ENDPROC(ret_to_user)
- 
-diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
-index e10bc363f533..f0ad00fb6a71 100644
---- a/arch/arm64/kernel/process.c
-+++ b/arch/arm64/kernel/process.c
-@@ -493,3 +493,25 @@ void arch_setup_new_exec(void)
- {
- 	current->mm->context.flags = is_compat_task() ? MMCF_AARCH32 : 0;
- }
-+
-+#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
-+void __used stackleak_check_alloca(unsigned long size)
-+{
-+	unsigned long stack_left;
-+	unsigned long current_sp = current_stack_pointer;
-+	struct stack_info info;
-+
-+	BUG_ON(!on_accessible_stack(current, current_sp, &info));
-+
-+	stack_left = current_sp - info.low;
-+
-+	/*
-+	 * There's a good chance we're almost out of stack space if this
-+	 * is true. Using panic() over BUG() is more likely to give
-+	 * reliable debugging output.
-+	 */
-+	if (size >= stack_left)
-+		panic("alloca() over the kernel stack boundary\n");
-+}
-+EXPORT_SYMBOL(stackleak_check_alloca);
-+#endif
-diff --git a/arch/arm64/kvm/hyp/Makefile b/arch/arm64/kvm/hyp/Makefile
-index 4313f7475333..2fabc2dc1966 100644
---- a/arch/arm64/kvm/hyp/Makefile
-+++ b/arch/arm64/kvm/hyp/Makefile
-@@ -3,7 +3,8 @@
- # Makefile for Kernel-based Virtual Machine module, HYP part
- #
- 
--ccflags-y += -fno-stack-protector -DDISABLE_BRANCH_PROFILING
-+ccflags-y += -fno-stack-protector -DDISABLE_BRANCH_PROFILING \
-+		$(DISABLE_STACKLEAK_PLUGIN)
- 
- KVM=../../../../virt/kvm
- 
-diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
-index a34e9290a699..25dd2a14560d 100644
---- a/drivers/firmware/efi/libstub/Makefile
-+++ b/drivers/firmware/efi/libstub/Makefile
-@@ -20,7 +20,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)	+= -I$(srctree)/scripts/dtc/libfdt
- KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
- 				   -D__NO_FORTIFY \
- 				   $(call cc-option,-ffreestanding) \
--				   $(call cc-option,-fno-stack-protector)
-+				   $(call cc-option,-fno-stack-protector) \
-+				   $(DISABLE_STACKLEAK_PLUGIN)
- 
- GCOV_PROFILE			:= n
- KASAN_SANITIZE			:= n
--- 
-2.17.1
+ Documentation/virtual/kvm/hypercalls.txt |  14 ++++
+ arch/x86/include/asm/kvm_host.h          |  11 ++-
+ arch/x86/kvm/Kconfig                     |   7 ++
+ arch/x86/kvm/mmu.c                       | 127 ++++++++++++++++++++++---------
+ arch/x86/kvm/x86.c                       | 104 ++++++++++++++++++++++++-
+ include/linux/kvm_host.h                 |   3 +
+ include/uapi/linux/kvm_para.h            |   1 +
+ virt/kvm/kvm_main.c                      |  29 ++++++-
+ 8 files changed, 254 insertions(+), 42 deletions(-)
