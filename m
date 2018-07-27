@@ -1,34 +1,44 @@
-Date: Fri, 27 Jul 2018 16:21:14 -0400
-From: "Theodore Y. Ts'o" <tytso@mit.edu>
+Date: Fri, 27 Jul 2018 14:31:41 -0400
+From: Steven Rostedt <rostedt@goodmis.org>
 Subject: Re: [PATCH] tracing: do not leak kernel addresses
-Message-ID: <20180727202114.GH13922@thunk.org>
-References: <753E9YR1QhdsPhsFoYuXCwfUzfyntDrc_A93hMUkktMi7lbh3KUZMcbfqKVWUfi15zYhuiDFant-ROa4QNV5shx74ff4hGngq2BOJDv-hq4=@protonmail.ch>
- <CAG48ez1U=5nTOrnOqwMuXhdER-7XxJUYLcyYNuczwasQLQ0gXA@mail.gmail.com>
- <20180727094730.3a448629@gandalf.local.home>
- <CAKwvOdmg4DSSwy9YBccYWzc+6ZU2yKSSFmfnj72wqbYDJU0gzw@mail.gmail.com>
- <20180727143141.4b53d554@gandalf.local.home>
- <CAMx4XWv3OazvURuN1XU2+5C5tNDzPuTniMn_T=XTA4P8_uwS_A@mail.gmail.com>
- <CAG48ez25zgjTQRux_rk1fn2DUVthtK31dRU9cxE+55pBGmYjXQ@mail.gmail.com>
- <CAG48ez1MdupASE1DMt0OWXv+rqZO-2GAbfDthEQcvNXrc2pTsQ@mail.gmail.com>
- <20180727195416.GF13922@thunk.org>
- <20180727161103.797f12b7@gandalf.local.home>
+Message-ID: <20180727143141.4b53d554@gandalf.local.home>
+In-Reply-To: <CAKwvOdmg4DSSwy9YBccYWzc+6ZU2yKSSFmfnj72wqbYDJU0gzw@mail.gmail.com>
+References: <20180725202238.165314-1-salyzyn@android.com>
+	<20180725210717.3b807191@vmware.local.home>
+	<11437c3e-5131-7190-c496-7b51eb7fcc2a@android.com>
+	<20180726153153.GA8327@kroah.com>
+	<CAKwvOdk9s+=kUwcPGQzZNxR7eOGAiiasAyWhZxgKom4_6h+oxA@mail.gmail.com>
+	<20180726181558.25a5c3b8@gandalf.local.home>
+	<753E9YR1QhdsPhsFoYuXCwfUzfyntDrc_A93hMUkktMi7lbh3KUZMcbfqKVWUfi15zYhuiDFant-ROa4QNV5shx74ff4hGngq2BOJDv-hq4=@protonmail.ch>
+	<CAG48ez1U=5nTOrnOqwMuXhdER-7XxJUYLcyYNuczwasQLQ0gXA@mail.gmail.com>
+	<20180727094730.3a448629@gandalf.local.home>
+	<CAKwvOdmg4DSSwy9YBccYWzc+6ZU2yKSSFmfnj72wqbYDJU0gzw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180727161103.797f12b7@gandalf.local.home>
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: Jann Horn <jannh@google.com>, salyzyn@google.com, Nick Desaulniers <ndesaulniers@google.com>, Golden_Miller83@protonmail.ch, Greg KH <greg@kroah.com>, Kees Cook <keescook@google.com>, salyzyn@android.com, kernel list <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, kernel-team@android.com, stable@vger.kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Jeffrey Vander Stoep <jeffv@google.com>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: Nick Desaulniers <ndesaulniers@google.com>
+Cc: Jann Horn <jannh@google.com>, Golden_Miller83@protonmail.ch, greg@kroah.com, Kees Cook <keescook@google.com>, salyzyn@android.com, LKML <linux-kernel@vger.kernel.org>, mingo@redhat.com, kernel-team@android.com, stable@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jul 27, 2018 at 04:11:03PM -0400, Steven Rostedt wrote:
-> That said, I would assume that
-> other Android utilities are using other debugfs files for system
-> status and such.
+On Fri, 27 Jul 2018 11:13:51 -0700
+Nick Desaulniers <ndesaulniers@google.com> wrote:
 
-Yeah, I know we probably have lost the "debugfs is only for debugging
-and has no place in a production system" battle, and we should just
-move on and assume we need to completely harden all of debugfs.  But
-it's worth at least *asking* whether or not the use of debugfs for
-Android can be avoided....
+> I found the internal bug report (reported Jan '17, you'll have to
+> forgive me if my memory of the issue is hazy, or if the fix used at
+> the time wasn't perfect), which was reported against the Nexus 6.
+> >From the report, it was possible to `cat  
+> /sys/kernel/debug/tracing/printk_formats` without being root, which I
+> can't do on my workstations much more modern kernel (Nexus 6 was
+> 3.10).  So I guess the question is what governs access to files below
+> /sys/kernel/debug, and why was it missing from those kernels?  I
+> assume some check was added, but either not backported to 3.10 stable
+> (or more likely not pulled in to Nexus 6's kernel through stable;
+> Android is now in a much better place for that kind of issue).
 
-					- Ted
+As of commit 82aceae4f0d4 ("debugfs: more tightly restrict default
+mount mode") /sys/kernel/debug has been default mounted as 0700 (root
+only). But that was introduced in 3.7. Not sure why your 3.10 kernel
+didn't have that. Perhaps there's another commit that fixed
+permissions not being inherited?
+
+-- Steve
