@@ -1,54 +1,48 @@
-Date: Tue, 31 Jul 2018 23:10:40 +0900
+Date: Tue, 31 Jul 2018 23:25:57 +0900
 From: Jinbum Park <jinb.park7@gmail.com>
-Subject: [PATCH] mac80211_hwsim: Fix possible Spectre-v1 for
- hwsim_world_regdom_custom
-Message-ID: <20180731141040.GA8936@pjb1027-Latitude-E5410>
+Subject: [PATCH] perf/core: Fix possible Spectre-v1 for perf_swevent_enabled
+Message-ID: <20180731142557.GA12460@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-To: johannes@sipsolutions.net, kvalo@codeaurora.org, davem@davemloft.net
-Cc: linux-wireless@vger.kernel.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+To: peterz@infradead.org, mingo@redhat.com, acme@kernel.org, alexander.shishkin@linux.intel.com, jolsa@redhat.com, namhyung@kernel.org
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-User controls @idx which to be used as index of hwsim_world_regdom_custom.
+User controls @event_id which to be used as index of perf_swevent_enabled.
 So, It can be exploited via Spectre-like attack. (speculative execution)
 
-This kind of attack leaks address of hwsim_world_regdom_custom,
-It leads an attacker to bypass security mechanism such as KASLR.
+So sanitize @event_id before using it to prevent attack.
 
-So sanitize @idx before using it to prevent attack.
-
-I leveraged strategy [1] to find and exploit this gadget.
+I leveraged strategy [1] to find this gadget.
 
 [1] https://github.com/jinb-park/linux-exploit/
 tree/master/exploit-remaining-spectre-gadget/
 
 Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
 ---
- drivers/net/wireless/mac80211_hwsim.c | 4 ++++
- 1 file changed, 4 insertions(+)
+ kernel/events/core.c | 2 ++
+ 1 file changed, 2 insertions(+)
 
-diff --git a/drivers/net/wireless/mac80211_hwsim.c b/drivers/net/wireless/mac80211_hwsim.c
-index 998dfac..b41fdc3 100644
---- a/drivers/net/wireless/mac80211_hwsim.c
-+++ b/drivers/net/wireless/mac80211_hwsim.c
-@@ -34,6 +34,7 @@
- #include <net/net_namespace.h>
- #include <net/netns/generic.h>
- #include <linux/rhashtable.h>
+diff --git a/kernel/events/core.c b/kernel/events/core.c
+index f6ea33a..3313552 100644
+--- a/kernel/events/core.c
++++ b/kernel/events/core.c
+@@ -50,6 +50,7 @@
+ #include <linux/sched/mm.h>
+ #include <linux/proc_ns.h>
+ #include <linux/mount.h>
 +#include <linux/nospec.h>
- #include "mac80211_hwsim.h"
  
- #define WARN_QUEUE 100
-@@ -3350,6 +3351,9 @@ static int hwsim_new_radio_nl(struct sk_buff *msg, struct genl_info *info)
- 			kfree(hwname);
- 			return -EINVAL;
- 		}
-+
-+		idx = array_index_nospec(idx,
-+					 ARRAY_SIZE(hwsim_world_regdom_custom));
- 		param.regd = hwsim_world_regdom_custom[idx];
+ #include "internal.h"
+ 
+@@ -8200,6 +8201,7 @@ static int perf_swevent_init(struct perf_event *event)
+ 		if (err)
+ 			return err;
+ 
++		event_id = array_index_nospec(event_id, PERF_COUNT_SW_MAX);
+ 		static_key_slow_inc(&perf_swevent_enabled[event_id]);
+ 		event->destroy = sw_perf_event_destroy;
  	}
- 
 -- 
 1.9.1
