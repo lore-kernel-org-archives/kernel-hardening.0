@@ -1,201 +1,122 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [RFC/PoC PATCH 2/3] gcc: plugins: add ROP shield plugin for arm64
-Date: Thu,  2 Aug 2018 15:21:31 +0200
-Message-Id: <20180802132133.23999-3-ard.biesheuvel@linaro.org>
+Subject: [RFC/PoC PATCH 3/3] arm64: enable ROP protection by clearing SP bit #55 across function returns
+Date: Thu,  2 Aug 2018 15:21:32 +0200
+Message-Id: <20180802132133.23999-4-ard.biesheuvel@linaro.org>
 In-Reply-To: <20180802132133.23999-1-ard.biesheuvel@linaro.org>
 References: <20180802132133.23999-1-ard.biesheuvel@linaro.org>
 To: kernel-hardening@lists.openwall.com
 Cc: keescook@chromium.org, christoffer.dall@arm.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, labbott@fedoraproject.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a plugin that mangles every 'ret' instruction so bit 55 in the
-stack pointer register is cleared first, and every 'bl' or 'blr'
-instruction so that the bit is set again right after the call
-returns. This should make it very difficult for ROP attacks to be
-staged, given that the supply of gadgets is now reduced to those
-that start with the 'reset bit #55' sequence, which only occurs right
-after a function return when all caller save registers are dead.
+ROP attacks rely on a large supply of so-called 'gadgets', which are
+(in this context) short sequences of instructions ending in a stack
+pop and a return instruction. By exploiting a stack overflow to create
+a specially crafted stack frame, each gadget jumps to the next by
+popping off the next gadget's address as a fake return address,
+allowing non-trivial 'programs' to be executed by piecing together
+a large number of such gadgets.
+
+This attack vector relies heavily on the ability to jump to arbitrary
+places in the code. If we could limit where a function could return to,
+it is much more difficult to obtain critical mass in terms of a gadget
+collection that allows arbitrary attacks to be mounted.
+
+So let's try and do so by clearing bit #55 in the stack pointer register
+before returning from a function, and setting it again right after a
+'bl' or 'blr' instruction. That way, jumping to arbitrary places in the
+code and popping the next gadget's address becomes a lot more complicated,
+since the stack pointer will not be valid after a function return until
+the 'reset' sequence is executed (or after an exception is taken).
 
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/Kconfig                                  |   4 +
- drivers/firmware/efi/libstub/Makefile         |   3 +-
- scripts/Makefile.gcc-plugins                  |   7 ++
- scripts/gcc-plugins/arm64_rop_shield_plugin.c | 116 ++++++++++++++++++++
- 4 files changed, 129 insertions(+), 1 deletion(-)
+ arch/arm64/Kconfig                 | 10 ++++++++++
+ arch/arm64/include/asm/assembler.h |  9 +++++++++
+ arch/arm64/kernel/entry.S          | 18 ++++++++++++++++++
+ 3 files changed, 37 insertions(+)
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 1aa59063f1fd..d61d1249d986 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -549,6 +549,10 @@ config GCC_PLUGIN_RANDSTRUCT_PERFORMANCE
- 	  in structures.  This reduces the performance hit of RANDSTRUCT
- 	  at the cost of weakened randomization.
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 42c090cf0292..4562af0250b9 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -1011,6 +1011,16 @@ config ARM64_SW_TTBR0_PAN
+ 	  zeroed area and reserved ASID. The user access routines
+ 	  restore the valid TTBR0_EL1 temporarily.
  
-+config GCC_PLUGIN_ARM64_ROP_SHIELD
-+	bool
-+	depends on GCC_PLUGINS && ARM64
++config ARM64_ROP_SHIELD
++	bool "Enable basic ROP protection through the stack pointer sign bit"
++	depends on GCC_PLUGINS && VMAP_STACK
++	select GCC_PLUGIN_ARM64_ROP_SHIELD
++	help
++	  Enable protection against ROP attacks by clearing bit #55 in the
++	  stack pointer register across a function return.
 +
- config HAVE_STACKPROTECTOR
- 	bool
- 	help
-diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
-index a34e9290a699..9b1510e5957f 100644
---- a/drivers/firmware/efi/libstub/Makefile
-+++ b/drivers/firmware/efi/libstub/Makefile
-@@ -20,7 +20,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)	+= -I$(srctree)/scripts/dtc/libfdt
- KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
- 				   -D__NO_FORTIFY \
- 				   $(call cc-option,-ffreestanding) \
--				   $(call cc-option,-fno-stack-protector)
-+				   $(call cc-option,-fno-stack-protector) \
-+				   $(DISABLE_ARM64_ROP_SHIELD_PLUGIN)
++	  If paranoid, say Y here. If unsure, say N.
++
+ menu "ARMv8.1 architectural features"
  
- GCOV_PROFILE			:= n
- KASAN_SANITIZE			:= n
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index c961b9a65d11..f4f9c27fb3a0 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -17,10 +17,17 @@ gcc-plugin-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)	+= randomize_layout_plugin.so
- gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)	+= -DRANDSTRUCT_PLUGIN
- gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE)	+= -fplugin-arg-randomize_layout_plugin-performance-mode
+ config ARM64_HW_AFDBM
+diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
+index 346ada4de48a..95d3ec98eb58 100644
+--- a/arch/arm64/include/asm/assembler.h
++++ b/arch/arm64/include/asm/assembler.h
+@@ -701,12 +701,21 @@ USER(\label, ic	ivau, \tmp2)			// invalidate I line PoU
+ .Lyield_out_\@ :
+ 	.endm
  
-+ifdef CONFIG_GCC_PLUGIN_ARM64_ROP_SHIELD
-+gcc-plugin-y				+= arm64_rop_shield_plugin.so
-+gcc-plugin-cflags-y			+= -DARM64_ROP_SHIELD_PLUGIN
-+DISABLE_ARM64_ROP_SHIELD_PLUGIN		+= -fplugin-arg-arm64_rop_shield_plugin-disable
-+endif
++	.macro		unclobber_sp, tmp
++#ifdef CONFIG_ARM64_ROP_SHIELD
++	mov		\tmp, sp
++	orr		sp, \tmp, #(1 << 55)
++#endif
++	.endm
 +
- GCC_PLUGINS_CFLAGS := $(strip $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y)) $(gcc-plugin-cflags-y))
+ 	.macro		bl_c, target
+ 	bl		\target
++	unclobber_sp	x30
+ 	.endm
  
- export GCC_PLUGINS_CFLAGS GCC_PLUGIN GCC_PLUGIN_SUBDIR
- export DISABLE_LATENT_ENTROPY_PLUGIN
-+export DISABLE_ARM64_ROP_SHIELD_PLUGIN
+ 	.macro		blr_c, reg
+ 	blr		\reg
++	unclobber_sp	x30
+ 	.endm
  
- # sancov_plugin.so can be only in CFLAGS_KCOV because avoid duplication.
- GCC_PLUGINS_CFLAGS := $(filter-out %/sancov_plugin.so, $(GCC_PLUGINS_CFLAGS))
-diff --git a/scripts/gcc-plugins/arm64_rop_shield_plugin.c b/scripts/gcc-plugins/arm64_rop_shield_plugin.c
-new file mode 100644
-index 000000000000..e87f4a9b9ab0
---- /dev/null
-+++ b/scripts/gcc-plugins/arm64_rop_shield_plugin.c
-@@ -0,0 +1,116 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Copyright 2018 Ard Biesheuvel <ard.biesheuvel@linaro.org>
-+ */
+ #endif	/* __ASM_ASSEMBLER_H */
+diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+index eba5b6b528ea..2adebca74f11 100644
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -95,6 +95,9 @@ alternative_else_nop_endif
+ 	 */
+ 	add	sp, sp, x0			// sp' = sp + x0
+ 	sub	x0, sp, x0			// x0' = sp' - x0 = (sp + x0) - x0 = sp
++#ifdef CONFIG_ARM64_ROP_SHIELD
++	tbz	x0, #55, 1f
++#endif
+ 	tbnz	x0, #THREAD_SHIFT, 0f
+ 	sub	x0, sp, x0			// x0'' = sp' - x0' = (sp + x0) - sp = x0
+ 	sub	sp, sp, x0			// sp'' = sp' - x0 = (sp + x0) - x0 = sp
+@@ -129,6 +132,21 @@ alternative_else_nop_endif
+ 	/* We were already on the overflow stack. Restore sp/x0 and carry on. */
+ 	sub	sp, sp, x0
+ 	mrs	x0, tpidrro_el0
++	b	el\()\el\()_\label
 +
-+#include "gcc-common.h"
-+
-+__visible int plugin_is_GPL_compatible;
-+
-+static unsigned int arm64_rop_shield_execute(void)
-+{
-+	rtx_insn *insn;
-+	rtx body, x, y;
-+
-+	for (insn = get_insns(); insn; insn = NEXT_INSN(insn)) {
-+		if (JUMP_P(insn)) {
-+			body = PATTERN(insn);
-+
-+			if (GET_CODE(body) != RETURN)
-+				continue;
-+
-+			x = gen_rtx_ASM_OPERANDS(VOIDmode,
-+						 "mov	x16, sp		   \n\t"
-+						 "and	sp, x16, #~(1 << 55)",
-+						 "",
-+						 0,
-+						 rtvec_alloc(0),
-+						 rtvec_alloc(0),
-+						 rtvec_alloc(0),
-+						 UNKNOWN_LOCATION);
-+			MEM_VOLATILE_P(x) = true;
-+
-+			/*
-+			 * According to the AAPCS spec, x16 may only be used by
-+			 * subroutine calls that are exposed via a jump/call
-+			 * ELF relocation, and so the compiler may assume it is
-+			 * preserved across a call to a function in the same
-+			 * compilation unit. So mark x16 as clobbered
-+			 * explicitly.
-+			 */
-+			y = gen_rtx_CLOBBER(VOIDmode, gen_rtx_REG(Pmode, 16));
-+
-+			emit_insn_before(gen_rtx_PARALLEL(VOIDmode,
-+							  gen_rtvec(2, x, y)),
-+					 insn);
-+		}
-+
-+		if (CALL_P(insn)) {
-+			rtx_insn *next;
-+
-+			/*
-+			 * We can use x30 here without marking it as clobbered.
-+			 * The bl instruction already clobbers it, and whether
-+			 * we returned here via a plain 'ret' instruction or via
-+			 * some other way is unspecified, so it is no longer
-+			 * live when we get here.
-+			 */
-+			x = gen_rtx_ASM_OPERANDS(VOIDmode,
-+						 "mov	x30, sp		   \n\t"
-+						 "orr	sp, x30, #(1 << 55)",
-+						 "",
-+						 0,
-+						 rtvec_alloc(0),
-+						 rtvec_alloc(0),
-+						 rtvec_alloc(0),
-+						 UNKNOWN_LOCATION);
-+			MEM_VOLATILE_P(x) = true;
-+
-+			next = NEXT_INSN(insn);
-+			if (NOTE_P(next))
-+				insn = next;
-+
-+			emit_insn_after(x, insn);
-+		}
-+	}
-+	return 0;
-+}
-+
-+#define PASS_NAME arm64_rop_shield
-+
-+#define NO_GATE
-+#define TODO_FLAGS_FINISH TODO_dump_func
-+#include "gcc-generate-rtl-pass.h"
-+
-+__visible int plugin_init(struct plugin_name_args *plugin_info,
-+			  struct plugin_gcc_version *version)
-+{
-+	const struct plugin_argument *argv = plugin_info->argv;
-+	int argc = plugin_info->argc;
-+	bool enable = true;
-+	int i;
-+
-+	if (!plugin_default_version_check(version, &gcc_version)) {
-+		error(G_("incompatible gcc/plugin versions"));
-+		return 1;
-+	}
-+
-+	PASS_INFO(arm64_rop_shield, "shorten", 1, PASS_POS_INSERT_BEFORE);
-+
-+	for (i = 0; i < argc; i++) {
-+		if (!strcmp(argv[i].key, "disable")) {
-+			enable = false;
-+			continue;
-+		}
-+		error(G_("unknown option '-fplugin-arg-%s-%s'"),
-+		      plugin_info->base_name, argv[i].key);
-+	}
-+
-+	if (!enable)
-+		return 0;
-+
-+	register_callback(plugin_info->base_name, PLUGIN_PASS_MANAGER_SETUP,
-+			  NULL, &arm64_rop_shield_pass_info);
-+
-+	return 0;
-+}
++#ifdef CONFIG_ARM64_ROP_SHIELD
++1:	/*
++	 * We have to do a little dance here to set bit 55 in the stack
++	 * pointer register without clobbering anything else.
++	 */
++	orr	x0, x0, #(1 << 55)
++	str	x1, [x0]
++	mov	x1, sp
++	mov	sp, x0
++	and	x0, x0, #~(1 << 55)
++	sub	x0, x1, x0
++	ldr	x1, [sp]
++#endif
+ #endif
+ 	b	el\()\el\()_\label
+ 	.endm
 -- 
 2.18.0
