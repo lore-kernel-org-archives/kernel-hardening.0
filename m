@@ -1,248 +1,145 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v3 2/3] x86/modules: Increase randomization for modules
-Date: Wed, 15 Aug 2018 13:30:18 -0700
-Message-Id: <1534365020-18943-3-git-send-email-rick.p.edgecombe@intel.com>
+Subject: [PATCH v3 3/3] vmalloc: Add debugfs modfraginfo
+Date: Wed, 15 Aug 2018 13:30:19 -0700
+Message-Id: <1534365020-18943-4-git-send-email-rick.p.edgecombe@intel.com>
 In-Reply-To: <1534365020-18943-1-git-send-email-rick.p.edgecombe@intel.com>
 References: <1534365020-18943-1-git-send-email-rick.p.edgecombe@intel.com>
 To: tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, daniel@iogearbox.net, jannh@google.com, keescook@chromium.org
 Cc: kristen@linux.intel.com, dave.hansen@intel.com, arjan@linux.intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This changes the behavior of the KASLR logic for allocating memory for the text
-sections of loadable modules. It randomizes the location of each module text
-section with about 17 bits of entropy in typical use. This is enabled on X86_64
-only. For 32 bit, the behavior is unchanged. It refactors existing code around
-module randomization in order to cleanly implement this along side the unchanged
-32 bit behavior.
+Add debugfs file "modfraginfo" for providing info on module space fragmentation.
+This can be used for determining if loadable module randomization is causing any
+problems for extreme module loading situations, like huge numbers of modules or
+extremely large modules.
 
-The algorithm breaks the module space in two, a random area and a backup area.
-It first tries to allocate at a number of randomly located starting pages inside
-the random section without purging any lazy free vmap areas and triggering the
-associated TLB flush. If this fails, it will try again a number of times
-allowing for purges if needed.  Finally if those both fail to find a position it
-will allocate in the backup area. The backup area base will be offset in the
-same way as the current algorithm does for the base area, 1024 possible
-locations.
+Sample output when KASLR is enabled and X86_64 is configured:
+	Largest free space:	897912 kB
+	  Total free space:	1025424 kB
+Allocations in backup area:	0
+
+Sample output when just X86_64:
+	Largest free space:	897912 kB
+	  Total free space:	1025424 kB
 
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/include/asm/pgtable_64_types.h |   7 ++
- arch/x86/kernel/module.c                | 163 +++++++++++++++++++++++++++-----
- 2 files changed, 147 insertions(+), 23 deletions(-)
+ mm/vmalloc.c | 89 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 88 insertions(+), 1 deletion(-)
 
-diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/asm/pgtable_64_types.h
-index 054765a..c320b7f 100644
---- a/arch/x86/include/asm/pgtable_64_types.h
-+++ b/arch/x86/include/asm/pgtable_64_types.h
-@@ -142,6 +142,13 @@ extern unsigned int ptrs_per_p4d;
- #define MODULES_END		_AC(0xffffffffff000000, UL)
- #define MODULES_LEN		(MODULES_END - MODULES_VADDR)
+diff --git a/mm/vmalloc.c b/mm/vmalloc.c
+index fb85ec9..cb55138 100644
+--- a/mm/vmalloc.c
++++ b/mm/vmalloc.c
+@@ -18,6 +18,7 @@
+ #include <linux/interrupt.h>
+ #include <linux/proc_fs.h>
+ #include <linux/seq_file.h>
++#include <linux/debugfs.h>
+ #include <linux/debugobjects.h>
+ #include <linux/kallsyms.h>
+ #include <linux/list.h>
+@@ -33,6 +34,7 @@
+ #include <linux/bitops.h>
  
-+/*
-+ * Dedicate the first part of the module space to a randomized area when KASLR
-+ * is in use.  Leave the remaining part for a fallback if we are unable to
-+ * allocate in the random area.
-+ */
-+#define MODULES_RAND_LEN	PAGE_ALIGN((MODULES_LEN/3)*2)
-+
- #define ESPFIX_PGD_ENTRY	_AC(-2, UL)
- #define ESPFIX_BASE_ADDR	(ESPFIX_PGD_ENTRY << P4D_SHIFT)
+ #include <linux/uaccess.h>
++#include <asm/setup.h>
+ #include <asm/tlbflush.h>
+ #include <asm/shmparam.h>
  
-diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
-index f58336a..1cb8efa 100644
---- a/arch/x86/kernel/module.c
-+++ b/arch/x86/kernel/module.c
-@@ -48,34 +48,149 @@ do {							\
- } while (0)
- #endif
- 
--#ifdef CONFIG_RANDOMIZE_BASE
-+static inline int kaslr_randomize_each_module(void)
-+{
-+	return kaslr_enabled()
-+			&& IS_ENABLED(CONFIG_RANDOMIZE_BASE)
-+			&& IS_ENABLED(CONFIG_X86_64);
-+}
-+
-+static inline int kaslr_randomize_base(void)
-+{
-+	return kaslr_enabled()
-+			&& IS_ENABLED(CONFIG_RANDOMIZE_BASE)
-+			&& !IS_ENABLED(CONFIG_X86_64);
-+}
-+
-+#ifdef CONFIG_X86_64
-+static inline const unsigned long get_modules_rand_len(void)
-+{
-+	return MODULES_RAND_LEN;
-+}
+@@ -2925,7 +2927,92 @@ static int __init proc_vmalloc_init(void)
+ 		proc_create_seq("vmallocinfo", 0400, NULL, &vmalloc_op);
+ 	return 0;
+ }
+-module_init(proc_vmalloc_init);
 +#else
-+static inline const unsigned long get_modules_rand_len(void)
++static int __init proc_vmalloc_init(void)
 +{
-+	BUILD_BUG();
 +	return 0;
 +}
 +#endif
 +
- static unsigned long module_load_offset;
-+static const unsigned long NR_NO_PURGE = 5000;
-+static const unsigned long NR_TRY_PURGE = 5000;
- 
- /* Mutex protects the module_load_offset. */
- static DEFINE_MUTEX(module_kaslr_mutex);
- 
- static unsigned long int get_module_load_offset(void)
- {
--	if (kaslr_enabled()) {
--		mutex_lock(&module_kaslr_mutex);
--		/*
--		 * Calculate the module_load_offset the first time this
--		 * code is called. Once calculated it stays the same until
--		 * reboot.
--		 */
--		if (module_load_offset == 0)
--			module_load_offset =
--				(get_random_int() % 1024 + 1) * PAGE_SIZE;
--		mutex_unlock(&module_kaslr_mutex);
--	}
-+	mutex_lock(&module_kaslr_mutex);
-+	/*
-+	 * Calculate the module_load_offset the first time this
-+	 * code is called. Once calculated it stays the same until
-+	 * reboot.
-+	 */
-+	if (module_load_offset == 0)
-+		module_load_offset = (get_random_int() % 1024 + 1) * PAGE_SIZE;
-+	mutex_unlock(&module_kaslr_mutex);
-+
- 	return module_load_offset;
- }
--#else
--static unsigned long int get_module_load_offset(void)
-+
-+static unsigned long get_module_vmalloc_start(void)
- {
--	return 0;
-+	if (kaslr_randomize_each_module())
-+		return MODULES_VADDR + get_modules_rand_len()
-+					+ get_module_load_offset();
-+	else if (kaslr_randomize_base())
-+		return MODULES_VADDR + get_module_load_offset();
-+
-+	return MODULES_VADDR;
-+}
-+
-+static void *try_module_alloc(unsigned long addr, unsigned long size,
-+					int try_purge)
++#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_X86_64)
++static int modulefraginfo_debug_show(struct seq_file *m, void *v)
 +{
-+	const unsigned long vm_flags = 0;
++	unsigned long last_end = MODULES_VADDR;
++	unsigned long total_free = 0;
++	unsigned long largest_free = 0;
++	unsigned long backup_cnt = 0;
++	unsigned long gap;
++	struct vmap_area *prev, *cur = NULL;
 +
-+	return __vmalloc_node_try_addr(addr, size, GFP_KERNEL, PAGE_KERNEL_EXEC,
-+					vm_flags, NUMA_NO_NODE, try_purge,
-+					__builtin_return_address(0));
-+}
++	spin_lock(&vmap_area_lock);
 +
-+/*
-+ * Find a random address to try that wont obviosly not fit. Random areas are
-+ * allowed to overflow into the backup area
-+ */
-+static unsigned long get_rand_module_addr(unsigned long size)
-+{
-+	unsigned long nr_max_pos = (MODULES_LEN - size) / MODULE_ALIGN + 1;
-+	unsigned long nr_rnd_pos = get_modules_rand_len() / MODULE_ALIGN;
-+	unsigned long nr_pos = min(nr_max_pos, nr_rnd_pos);
++	if (!pvm_find_next_prev(MODULES_VADDR, &cur, &prev) || !cur)
++		goto done;
 +
-+	unsigned long module_position_nr = get_random_long() % nr_pos;
-+	unsigned long offset = module_position_nr * MODULE_ALIGN;
++	for (; cur->va_end <= MODULES_END; cur = list_next_entry(cur, list)) {
++		/* Don't count areas that are marked to be lazily freed */
++		if ((cur->flags & VM_LAZY_FREE))
++			continue;
 +
-+	return MODULES_VADDR + offset;
-+}
++		if (cur->va_start >= MODULES_VADDR + MODULES_RAND_LEN)
++			backup_cnt++;
++		gap = cur->va_start - last_end;
++		if (gap > largest_free)
++			largest_free = gap;
++		total_free += gap;
++		last_end = cur->va_end;
 +
-+/*
-+ * Try to allocate in the random area. First 5000 times without purging, then
-+ * 5000 times with purging. If these fail, return NULL.
-+ */
-+static void *try_module_randomize_each(unsigned long size)
-+{
-+	void *p = NULL;
-+	unsigned int i;
-+	unsigned long last_lazy_free_blocked = 0;
-+
-+	/* This will have a gaurd page */
-+	unsigned long real_size = PAGE_ALIGN(size) + PAGE_SIZE;
-+
-+	if (!kaslr_randomize_each_module())
-+		return NULL;
-+
-+	/* Make sure there is at least one address that might fit. */
-+	if (real_size < PAGE_ALIGN(size) || real_size > MODULES_LEN)
-+		return NULL;
-+
-+	/* Try to find a spot that doesn't need a lazy purge */
-+	for (i = 0; i < NR_NO_PURGE; i++) {
-+		unsigned long addr = get_rand_module_addr(real_size);
-+
-+		/* First try to avoid having to purge */
-+		p = try_module_alloc(addr, real_size, 0);
-+
-+		/*
-+		 * Save the last value that was blocked by a
-+		 * lazy purge area.
-+		 */
-+		if (IS_ERR(p) && PTR_ERR(p) == -EUCLEAN)
-+			last_lazy_free_blocked = addr;
-+		else if (!IS_ERR(p))
-+			return p;
++		if (list_is_last(&cur->list, &vmap_area_list))
++			break;
 +	}
 +
-+	/* Try the most recent spot that could be used after a lazy purge */
-+	if (last_lazy_free_blocked) {
-+		p = try_module_alloc(last_lazy_free_blocked, real_size, 1);
++done:
++	gap = (MODULES_END - last_end);
++	if (gap > largest_free)
++		largest_free = gap;
++	total_free += gap;
 +
-+		if (!IS_ERR(p))
-+			return p;
-+	}
-+
-+	/* Look for more spots and allow lazy purges */
-+	for (i = 0; i < NR_TRY_PURGE; i++) {
-+		unsigned long addr = get_rand_module_addr(real_size);
-+
-+		/* Give up and allow for purges */
-+		p = try_module_alloc(addr, real_size, 1);
-+
-+		if (!IS_ERR(p))
-+			return p;
-+	}
-+	return NULL;
- }
--#endif
++	spin_unlock(&vmap_area_lock);
  
- void *module_alloc(unsigned long size)
- {
-@@ -84,16 +199,18 @@ void *module_alloc(unsigned long size)
- 	if (PAGE_ALIGN(size) > MODULES_LEN)
- 		return NULL;
- 
--	p = __vmalloc_node_range(size, MODULE_ALIGN,
--				    MODULES_VADDR + get_module_load_offset(),
--				    MODULES_END, GFP_KERNEL,
--				    PAGE_KERNEL_EXEC, 0, NUMA_NO_NODE,
--				    __builtin_return_address(0));
-+	p = try_module_randomize_each(size);
++	seq_printf(m, "\tLargest free space:\t%lu kB\n", largest_free / 1024);
++	seq_printf(m, "\t  Total free space:\t%lu kB\n", total_free / 1024);
 +
-+	if (!p)
-+		p = __vmalloc_node_range(size, MODULE_ALIGN,
-+				get_module_vmalloc_start(), MODULES_END,
-+				GFP_KERNEL, PAGE_KERNEL_EXEC, 0,
-+				NUMA_NO_NODE, __builtin_return_address(0));
++	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE) && kaslr_enabled())
++		seq_printf(m, "Allocations in backup area:\t%lu\n", backup_cnt);
 +
- 	if (p && (kasan_module_alloc(p, size) < 0)) {
- 		vfree(p);
- 		return NULL;
- 	}
--
- 	return p;
- }
++	return 0;
++}
++
++static int proc_module_frag_debug_open(struct inode *inode, struct file *file)
++{
++	return single_open(file, modulefraginfo_debug_show, NULL);
++}
++
++static const struct file_operations debug_module_frag_operations = {
++	.open       = proc_module_frag_debug_open,
++	.read       = seq_read,
++	.llseek     = seq_lseek,
++	.release    = single_release,
++};
++
++static void __init debug_modfrag_init(void)
++{
++	debugfs_create_file("modfraginfo", 0400, NULL, NULL,
++			&debug_module_frag_operations);
++}
++#else /* defined(CONFIG_DEBUG_FS) && defined(CONFIG_X86_64) */
++static void __init debug_modfrag_init(void)
++{
++}
+ #endif
  
++#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_PROC_FS)
++static int __init info_vmalloc_init(void)
++{
++	proc_vmalloc_init();
++	debug_modfrag_init();
++	return 0;
++}
++
++module_init(info_vmalloc_init);
++#endif
 -- 
 2.7.4
