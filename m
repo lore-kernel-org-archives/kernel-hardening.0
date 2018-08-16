@@ -1,10 +1,10 @@
 MIME-Version: 1.0
-References: <20180815235355.14908-1-casey.schaufler@intel.com> <20180815235355.14908-3-casey.schaufler@intel.com>
-In-Reply-To: <20180815235355.14908-3-casey.schaufler@intel.com>
+References: <20180815235355.14908-1-casey.schaufler@intel.com> <20180815235355.14908-4-casey.schaufler@intel.com>
+In-Reply-To: <20180815235355.14908-4-casey.schaufler@intel.com>
 From: Jann Horn <jannh@google.com>
-Date: Thu, 16 Aug 2018 16:09:31 +0200
-Message-ID: <CAG48ez0=RSok9mAo9QHsho+Qnm_ZDqkH68Amfzj9A_jWmOZaOA@mail.gmail.com>
-Subject: Re: [PATCH RFC 2/5] X86: Support LSM determination of side-channel vulnerability
+Date: Thu, 16 Aug 2018 16:15:52 +0200
+Message-ID: <CAG48ez1kLTcc6aDf7hYXFMw4oD1hp9Dx74-wuAjbQ7hdAQzE=Q@mail.gmail.com>
+Subject: Re: [PATCH RFC 3/5] LSM: Security module checking for side-channel dangers
 Content-Type: text/plain; charset="UTF-8"
 To: casey.schaufler@intel.com
 Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, selinux@tycho.nsa.gov, SMACK-discuss@lists.01.org, Dave Hansen <dave.hansen@intel.com>, deneen.t.dock@intel.com, kristen@linux.intel.com, Arjan van de Ven <arjan@linux.intel.com>
@@ -15,49 +15,68 @@ On Thu, Aug 16, 2018 at 11:51 AM Casey Schaufler
 >
 > From: Casey Schaufler <cschaufler@localhost.localdomain>
 >
-> When switching between tasks it may be necessary
-> to set an indirect branch prediction barrier if the
-> tasks are potentially vulnerable to side-channel
-> attacks. This adds a call to security_task_safe_sidechannel
-> so that security modules can weigh in on the decision.
+> The sidechannel LSM checks for cases where a side-channel
+> attack may be dangerous based on security attributes of tasks.
+> This includes:
+>         Effective UID of the tasks is different
+>         Capablity sets are different
+>         Tasks are in different namespaces
+> An option is also provided to assert that task are never
+> to be considered safe. This is high paranoia, and expensive
+> as well.
 >
 > Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
-> ---
->  arch/x86/mm/tlb.c | 12 ++++++++----
->  1 file changed, 8 insertions(+), 4 deletions(-)
->
-> diff --git a/arch/x86/mm/tlb.c b/arch/x86/mm/tlb.c
-> index 6eb1f34c3c85..8714d4af06aa 100644
-> --- a/arch/x86/mm/tlb.c
-> +++ b/arch/x86/mm/tlb.c
-> @@ -7,6 +7,7 @@
->  #include <linux/export.h>
->  #include <linux/cpu.h>
->  #include <linux/debugfs.h>
-> +#include <linux/security.h>
->
->  #include <asm/tlbflush.h>
->  #include <asm/mmu_context.h>
-> @@ -270,11 +271,14 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
->                  * threads. It will also not flush if we switch to idle
->                  * thread and back to the same process. It will flush if we
->                  * switch to a different non-dumpable process.
-> +                * If a security module thinks that the transition
-> +                * is unsafe do the flush.
->                  */
-> -               if (tsk && tsk->mm &&
-> -                   tsk->mm->context.ctx_id != last_ctx_id &&
-> -                   get_dumpable(tsk->mm) != SUID_DUMP_USER)
-> -                       indirect_branch_prediction_barrier();
-> +               if (tsk && tsk->mm && tsk->mm->context.ctx_id != last_ctx_id) {
-> +                       if (get_dumpable(tsk->mm) != SUID_DUMP_USER ||
-> +                           security_task_safe_sidechannel(tsk) != 0)
-> +                               indirect_branch_prediction_barrier();
-> +               }
+[...]
+> +static int safe_by_uid(struct task_struct *p)
+> +{
+> +       const struct cred *ccred = current->cred;
+> +       const struct cred *pcred = p->cred;
 
-Does this enforce transitivity? What happens if we first switch from
-an attacker task to a task without ->mm, and immediately afterwards
-from the task without ->mm to a victim task? In that case, whether a
-flush happens between the attacker task and the victim task depends on
-whether the LSM thinks that the mm-less task should have access to the
-victim task, right?
+See below.
+
+[...]
+> +static int safe_by_capability(struct task_struct *p)
+> +{
+> +       const struct cred *ccred = current->cred;
+> +       const struct cred *pcred = p->cred;
+
+See below.
+
+[...]
+> +       if (current->cred->user_ns != p->cred->user_ns)
+> +               return -EACCES;
+
+Shouldn't this access be using one of the rcu_dereference_* helpers?
+Something like rcu_dereference_protected(..., 1).
+
+Also, you're looking at ->cred, and you don't want to do that. ->cred
+are the *subjective* credentials of the task, meaning the credentials
+that should only be used when this task actively performs an access.
+Depending on what userspace is doing, an unprivileged process' ->cred
+will randomly flake to something with GLOBAL_ROOT_UID because of
+override_creds() calls - for example, if you access a file through
+overlayfs in certain ways, your ->cred will temporarily be overwritten
+by ovl_override_creds(), which mostly switches to the credentials of
+the filesystem's creator (iow, normally root). coredumps can also
+override the EUID with GLOBAL_ROOT_UID:
+
+    if (__get_dumpable(cprm.mm_flags) == SUID_DUMP_ROOT) {
+        /* Setuid core dump mode */
+        cred->fsuid = GLOBAL_ROOT_UID;  /* Dump root private */
+        need_suid_safe = true;
+    }
+
+    retval = coredump_wait(siginfo->si_signo, &core_state);
+    if (retval < 0)
+        goto fail_creds;
+
+    old_cred = override_creds(cred);
+
+Please use the objective credentials (->real_cred) instead, which are
+not subject to random override_creds() effects, and are designed to be
+used when looking at the privileges associated with an overall task
+(as opposed to the privileges associated with the task's current
+syscall context).
+
+At least for the current-> access, you probably want
+current_real_cred(), which has been defined for this kind of use.
