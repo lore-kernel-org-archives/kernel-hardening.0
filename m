@@ -1,49 +1,40 @@
 From: Alexander Popov <alex.popov@linux.com>
-Subject: [PATCH v15 7/7] arm64: Drop unneeded stackleak_check_alloca()
-Date: Fri, 17 Aug 2018 01:17:04 +0300
-Message-Id: <1534457824-7211-8-git-send-email-alex.popov@linux.com>
+Subject: [PATCH v15 5/7] doc: self-protection: Add information about STACKLEAK feature
+Date: Fri, 17 Aug 2018 01:17:02 +0300
+Message-Id: <1534457824-7211-6-git-send-email-alex.popov@linux.com>
 In-Reply-To: <1534457824-7211-1-git-send-email-alex.popov@linux.com>
 References: <1534457824-7211-1-git-send-email-alex.popov@linux.com>
 To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, x86@kernel.org, linux-kernel@vger.kernel.org, alex.popov@linux.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Drop stackleak_check_alloca() for arm64 since the STACKLEAK gcc plugin now
-doesn't track stack depth overflow caused by alloca().
+Add information about STACKLEAK feature to the "Memory poisoning"
+section of self-protection.rst.
 
 Signed-off-by: Alexander Popov <alex.popov@linux.com>
 ---
- arch/arm64/kernel/process.c | 22 ----------------------
- 1 file changed, 22 deletions(-)
+ Documentation/security/self-protection.rst | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
 
-diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
-index 7f1628e..740b31f 100644
---- a/arch/arm64/kernel/process.c
-+++ b/arch/arm64/kernel/process.c
-@@ -493,25 +493,3 @@ void arch_setup_new_exec(void)
- {
- 	current->mm->context.flags = is_compat_task() ? MMCF_AARCH32 : 0;
- }
--
--#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
--void __used stackleak_check_alloca(unsigned long size)
--{
--	unsigned long stack_left;
--	unsigned long current_sp = current_stack_pointer;
--	struct stack_info info;
--
--	BUG_ON(!on_accessible_stack(current, current_sp, &info));
--
--	stack_left = current_sp - info.low;
--
--	/*
--	 * There's a good chance we're almost out of stack space if this
--	 * is true. Using panic() over BUG() is more likely to give
--	 * reliable debugging output.
--	 */
--	if (size >= stack_left)
--		panic("alloca() over the kernel stack boundary\n");
--}
--EXPORT_SYMBOL(stackleak_check_alloca);
--#endif
+diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
+index e1ca698..f584fb7 100644
+--- a/Documentation/security/self-protection.rst
++++ b/Documentation/security/self-protection.rst
+@@ -302,11 +302,11 @@ sure structure holes are cleared.
+ Memory poisoning
+ ----------------
+ 
+-When releasing memory, it is best to poison the contents (clear stack on
+-syscall return, wipe heap memory on a free), to avoid reuse attacks that
+-rely on the old contents of memory. This frustrates many uninitialized
+-variable attacks, stack content exposures, heap content exposures, and
+-use-after-free attacks.
++When releasing memory, it is best to poison the contents, to avoid reuse
++attacks that rely on the old contents of memory. E.g., clear stack on a
++syscall return (``CONFIG_GCC_PLUGIN_STACKLEAK``), wipe heap memory on a
++free. This frustrates many uninitialized variable attacks, stack content
++exposures, heap content exposures, and use-after-free attacks.
+ 
+ Destination tracking
+ --------------------
 -- 
 2.7.4
