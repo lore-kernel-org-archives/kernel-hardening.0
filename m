@@ -1,124 +1,183 @@
 From: Alexander Popov <alex.popov@linux.com>
-Subject: [PATCH v15 4/7] fs/proc: Show STACKLEAK metrics in the /proc file system
-Date: Fri, 17 Aug 2018 01:17:01 +0300
-Message-Id: <1534457824-7211-5-git-send-email-alex.popov@linux.com>
+Subject: [PATCH v15 6/7] stackleak: Allow runtime disabling of kernel stack erasing
+Date: Fri, 17 Aug 2018 01:17:03 +0300
+Message-Id: <1534457824-7211-7-git-send-email-alex.popov@linux.com>
 In-Reply-To: <1534457824-7211-1-git-send-email-alex.popov@linux.com>
 References: <1534457824-7211-1-git-send-email-alex.popov@linux.com>
 To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, x86@kernel.org, linux-kernel@vger.kernel.org, alex.popov@linux.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Introduce CONFIG_STACKLEAK_METRICS providing STACKLEAK information about
-tasks via the /proc file system. In particular, /proc/<pid>/stack_depth
-shows the maximum kernel stack consumption for the current and previous
-syscalls. Although this information is not precise, it can be useful for
-estimating the STACKLEAK performance impact for your workloads.
+Introduce CONFIG_STACKLEAK_RUNTIME_DISABLE option, which provides
+'stack_erasing' sysctl. It can be used in runtime to control kernel
+stack erasing for kernels built with CONFIG_GCC_PLUGIN_STACKLEAK.
 
 Suggested-by: Ingo Molnar <mingo@kernel.org>
 Signed-off-by: Alexander Popov <alex.popov@linux.com>
 ---
- fs/proc/base.c              | 18 ++++++++++++++++++
- include/linux/sched.h       |  1 +
- include/linux/stackleak.h   |  3 +++
- kernel/stackleak.c          |  4 ++++
- scripts/gcc-plugins/Kconfig | 12 ++++++++++++
- 5 files changed, 38 insertions(+)
+ Documentation/sysctl/kernel.txt | 18 ++++++++++++++++++
+ include/linux/stackleak.h       |  6 ++++++
+ kernel/stackleak.c              | 38 ++++++++++++++++++++++++++++++++++++++
+ kernel/sysctl.c                 | 15 ++++++++++++++-
+ scripts/gcc-plugins/Kconfig     |  8 ++++++++
+ 5 files changed, 84 insertions(+), 1 deletion(-)
 
-diff --git a/fs/proc/base.c b/fs/proc/base.c
-index aaffc0c..66ee5b7 100644
---- a/fs/proc/base.c
-+++ b/fs/proc/base.c
-@@ -2893,6 +2893,21 @@ static int proc_pid_patch_state(struct seq_file *m, struct pid_namespace *ns,
- }
- #endif /* CONFIG_LIVEPATCH */
+diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
+index eded671d..1feae79 100644
+--- a/Documentation/sysctl/kernel.txt
++++ b/Documentation/sysctl/kernel.txt
+@@ -87,6 +87,7 @@ show up in /proc/sys/kernel:
+ - shmmni
+ - softlockup_all_cpu_backtrace
+ - soft_watchdog
++- stack_erasing
+ - stop-a                      [ SPARC only ]
+ - sysrq                       ==> Documentation/admin-guide/sysrq.rst
+ - sysctl_writes_strict
+@@ -962,6 +963,23 @@ detect a hard lockup condition.
  
-+#ifdef CONFIG_STACKLEAK_METRICS
-+static int proc_stack_depth(struct seq_file *m, struct pid_namespace *ns,
-+				struct pid *pid, struct task_struct *task)
-+{
-+	unsigned long prev_depth = THREAD_SIZE -
-+				(task->prev_lowest_stack & (THREAD_SIZE - 1));
-+	unsigned long depth = THREAD_SIZE -
-+				(task->lowest_stack & (THREAD_SIZE - 1));
+ ==============================================================
+ 
++stack_erasing
 +
-+	seq_printf(m, "previous stack depth: %lu\nstack depth: %lu\n",
-+							prev_depth, depth);
-+	return 0;
-+}
-+#endif /* CONFIG_STACKLEAK_METRICS */
++This parameter can be used to control kernel stack erasing at the end
++of syscalls for kernels built with CONFIG_GCC_PLUGIN_STACKLEAK.
 +
- /*
-  * Thread groups
-  */
-@@ -2994,6 +3009,9 @@ static const struct pid_entry tgid_base_stuff[] = {
- #ifdef CONFIG_LIVEPATCH
- 	ONE("patch_state",  S_IRUSR, proc_pid_patch_state),
- #endif
-+#ifdef CONFIG_STACKLEAK_METRICS
-+	ONE("stack_depth", S_IRUGO, proc_stack_depth),
-+#endif
- };
++That erasing reduces the information which kernel stack leak bugs
++can reveal and blocks some uninitialized stack variable attacks.
++The tradeoff is the performance impact: on a single CPU system kernel
++compilation sees a 1% slowdown, other systems and workloads may vary.
++
++  0: kernel stack erasing is disabled, STACKLEAK_METRICS are not updated.
++
++  1: kernel stack erasing is enabled (default), it is performed before
++     returning to the userspace at the end of syscalls.
++
++==============================================================
++
+ tainted:
  
- static int proc_tgid_base_readdir(struct file *file, struct dir_context *ctx)
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index bbf2f7a..2540d0e 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -1189,6 +1189,7 @@ struct task_struct {
- 
- #ifdef CONFIG_GCC_PLUGIN_STACKLEAK
- 	unsigned long			lowest_stack;
-+	unsigned long			prev_lowest_stack;
- #endif
- 
- 	/*
+ Non-zero if the kernel has been tainted. Numeric values, which can be
 diff --git a/include/linux/stackleak.h b/include/linux/stackleak.h
-index 628c2b9..b911b97 100644
+index b911b97..3d5c327 100644
 --- a/include/linux/stackleak.h
 +++ b/include/linux/stackleak.h
-@@ -18,6 +18,9 @@
- static inline void stackleak_task_init(struct task_struct *t)
- {
- 	t->lowest_stack = (unsigned long)end_of_stack(t) + sizeof(unsigned long);
-+# ifdef CONFIG_STACKLEAK_METRICS
-+	t->prev_lowest_stack = t->lowest_stack;
-+# endif
+@@ -22,6 +22,12 @@ static inline void stackleak_task_init(struct task_struct *t)
+ 	t->prev_lowest_stack = t->lowest_stack;
+ # endif
  }
- #else /* !CONFIG_GCC_PLUGIN_STACKLEAK */
- static inline void stackleak_task_init(struct task_struct *t) { }
-diff --git a/kernel/stackleak.c b/kernel/stackleak.c
-index 628485d..f662395 100644
---- a/kernel/stackleak.c
-+++ b/kernel/stackleak.c
-@@ -41,6 +41,10 @@ asmlinkage void stackleak_erase(void)
- 	if (kstack_ptr == boundary)
- 		kstack_ptr += sizeof(unsigned long);
- 
-+#ifdef CONFIG_STACKLEAK_METRICS
-+	current->prev_lowest_stack = kstack_ptr;
++
++#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
++int stack_erasing_sysctl(struct ctl_table *table, int write,
++			void __user *buffer, size_t *lenp, loff_t *ppos);
 +#endif
 +
- 	/*
- 	 * Now write the poison value to the kernel stack. Start from
- 	 * 'kstack_ptr' and move up till the new 'boundary'. We assume that
+ #else /* !CONFIG_GCC_PLUGIN_STACKLEAK */
+ static inline void stackleak_task_init(struct task_struct *t) { }
+ #endif
+diff --git a/kernel/stackleak.c b/kernel/stackleak.c
+index f662395..e428929 100644
+--- a/kernel/stackleak.c
++++ b/kernel/stackleak.c
+@@ -12,6 +12,41 @@
+ 
+ #include <linux/stackleak.h>
+ 
++#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
++#include <linux/jump_label.h>
++#include <linux/sysctl.h>
++
++static DEFINE_STATIC_KEY_FALSE(stack_erasing_bypass);
++
++int stack_erasing_sysctl(struct ctl_table *table, int write,
++			void __user *buffer, size_t *lenp, loff_t *ppos)
++{
++	int ret = 0;
++	int state = !static_branch_unlikely(&stack_erasing_bypass);
++	int prev_state = state;
++
++	table->data = &state;
++	table->maxlen = sizeof(int);
++	ret = proc_dointvec_minmax(table, write, buffer, lenp, ppos);
++	state = !!state;
++	if (ret || !write || state == prev_state)
++		return ret;
++
++	if (state)
++		static_branch_disable(&stack_erasing_bypass);
++	else
++		static_branch_enable(&stack_erasing_bypass);
++
++	pr_warn("stackleak: kernel stack erasing is %s\n",
++					state ? "enabled" : "disabled");
++	return ret;
++}
++
++#define skip_erasing()	static_branch_unlikely(&stack_erasing_bypass)
++#else
++#define skip_erasing()	false
++#endif /* CONFIG_STACKLEAK_RUNTIME_DISABLE */
++
+ asmlinkage void stackleak_erase(void)
+ {
+ 	/* It would be nice not to have 'kstack_ptr' and 'boundary' on stack */
+@@ -20,6 +55,9 @@ asmlinkage void stackleak_erase(void)
+ 	unsigned int poison_count = 0;
+ 	const unsigned int depth = STACKLEAK_SEARCH_DEPTH / sizeof(unsigned long);
+ 
++	if (skip_erasing())
++		return;
++
+ 	/* Check that 'lowest_stack' value is sane */
+ 	if (unlikely(kstack_ptr - boundary >= THREAD_SIZE))
+ 		kstack_ptr = boundary;
+diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+index f22f76b..faa216d 100644
+--- a/kernel/sysctl.c
++++ b/kernel/sysctl.c
+@@ -91,7 +91,9 @@
+ #ifdef CONFIG_CHR_DEV_SG
+ #include <scsi/sg.h>
+ #endif
+-
++#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
++#include <linux/stackleak.h>
++#endif
+ #ifdef CONFIG_LOCKUP_DETECTOR
+ #include <linux/nmi.h>
+ #endif
+@@ -1222,6 +1224,17 @@ static struct ctl_table kern_table[] = {
+ 		.extra2		= &one,
+ 	},
+ #endif
++#ifdef CONFIG_STACKLEAK_RUNTIME_DISABLE
++	{
++		.procname	= "stack_erasing",
++		.data		= NULL,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= stack_erasing_sysctl,
++		.extra1		= &zero,
++		.extra2		= &one,
++	},
++#endif
+ 	{ }
+ };
+ 
 diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
-index cd69bff..f15093b 100644
+index f15093b..8b01c8e 100644
 --- a/scripts/gcc-plugins/Kconfig
 +++ b/scripts/gcc-plugins/Kconfig
-@@ -170,4 +170,16 @@ config STACKLEAK_TRACK_MIN_SIZE
- 	  a stack frame size greater than or equal to this parameter.
- 	  If unsure, leave the default value 100.
+@@ -182,4 +182,12 @@ config STACKLEAK_METRICS
+ 	  can be useful for estimating the STACKLEAK performance impact for
+ 	  your workloads.
  
-+config STACKLEAK_METRICS
-+	bool "Show STACKLEAK metrics in the /proc file system"
++config STACKLEAK_RUNTIME_DISABLE
++	bool "Allow runtime disabling of kernel stack erasing"
 +	depends on GCC_PLUGIN_STACKLEAK
-+	depends on PROC_FS
 +	help
-+	  If this is set, STACKLEAK metrics for every task are available in
-+	  the /proc file system. In particular, /proc/<pid>/stack_depth
-+	  shows the maximum kernel stack consumption for the current and
-+	  previous syscalls. Although this information is not precise, it
-+	  can be useful for estimating the STACKLEAK performance impact for
-+	  your workloads.
++	  This option provides 'stack_erasing' sysctl, which can be used in
++	  runtime to control kernel stack erasing for kernels built with
++	  CONFIG_GCC_PLUGIN_STACKLEAK.
 +
  endif
 -- 
