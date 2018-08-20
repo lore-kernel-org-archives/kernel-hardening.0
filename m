@@ -1,55 +1,46 @@
-From: Casey Schaufler <casey.schaufler@intel.com>
-Subject: [PATCH v3 4/5] Smack: Support determination of side-channel
-Date: Mon, 20 Aug 2018 17:04:43 -0700
-Message-Id: <20180821000444.7004-5-casey.schaufler@intel.com>
-In-Reply-To: <20180821000444.7004-1-casey.schaufler@intel.com>
-References: <20180821000444.7004-1-casey.schaufler@intel.com>
-To: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, selinux@tycho.nsa.gov, casey.schaufler@intel.com, dave.hansen@intel.com, deneen.t.dock@intel.com, kristen@linux.intel.com, arjan@linux.intel.com
+Date: Mon, 20 Aug 2018 17:25:56 -0400
+From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Subject: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs in
+ mind (for KVM to isolate its guests per CPU)
+Message-ID: <20180820212556.GC2230@char.us.oracle.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+To: kernel-hardening@lists.openwall.com, Liran Alon <liran.alon@oracle.com>, Deepa Srinivasan <deepa.srinivasan@oracle.com>, linux-mm@kvack.org, juerg.haefliger@hpe.com, khalid.aziz@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, keescook@google.com, andrew.cooper3@citrix.com, jcm@redhat.com, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Kanth <kanth.ghatraju@oracle.com>, Joao Martins <joao.m.martins@oracle.com>, jmattson@google.com, pradeep.vincent@oracle.com, Linus Torvalds <torvalds@linux-foundation.org>, ak@linux.intel.com, john.haxby@oracle.com, jsteckli@os.inf.tu-dresden.de
+Cc: linux-kernel@vger.kernel.org, tglx@linutronix.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Smack considers its private task data safe if the current task
-has read access to the passed task.
+Hi!
 
-Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
----
- security/smack/smack_lsm.c | 18 ++++++++++++++++++
- 1 file changed, 18 insertions(+)
+See eXclusive Page Frame Ownership (https://lwn.net/Articles/700606/) which was posted
+way back in in 2016..
 
-diff --git a/security/smack/smack_lsm.c b/security/smack/smack_lsm.c
-index 91750205a5de..85dc053e610c 100644
---- a/security/smack/smack_lsm.c
-+++ b/security/smack/smack_lsm.c
-@@ -2299,6 +2299,23 @@ static void smack_task_to_inode(struct task_struct *p, struct inode *inode)
- 	isp->smk_inode = skp;
- }
- 
-+/**
-+ * smack_task_safe_sidechannel - Are the task and current sidechannel safe?
-+ * @p: task to check on
-+ *
-+ * A crude value for sidechannel safety is that the current task is
-+ * already allowed to read from the other.
-+ *
-+ * Returns 0 if the tasks are sidechannel safe, -EACCES otherwise.
-+ */
-+static int smack_task_safe_sidechannel(struct task_struct *p)
-+{
-+	struct smack_known *skp = smk_of_task_struct(p);
-+	struct smack_known *ckp = smk_of_task_struct(current);
-+
-+	return smk_access(ckp, skp, MAY_READ, NULL);
-+}
-+
- /*
-  * Socket hooks.
-  */
-@@ -4718,6 +4735,7 @@ static struct security_hook_list smack_hooks[] __lsm_ro_after_init = {
- 	LSM_HOOK_INIT(task_movememory, smack_task_movememory),
- 	LSM_HOOK_INIT(task_kill, smack_task_kill),
- 	LSM_HOOK_INIT(task_to_inode, smack_task_to_inode),
-+	LSM_HOOK_INIT(task_safe_sidechannel, smack_task_safe_sidechannel),
- 
- 	LSM_HOOK_INIT(ipc_permission, smack_ipc_permission),
- 	LSM_HOOK_INIT(ipc_getsecid, smack_ipc_getsecid),
--- 
-2.17.1
+In the last couple of months there has been a slew of CPU issues that have complicated
+a lot of things. The latest - L1TF - is still fresh in folks's mind and it is
+especially acute to virtualization workloads.
+
+As such a bunch of various folks from different cloud companies (CCed) are looking
+at a way to make Linux kernel be more resistant to hardware having these sort of 
+bugs.
+
+In particular we are looking at a way to "remove as many mappings from the global
+kernel address space as possible. Specifically, while being in the
+context of process A, memory of process B should not be visible in the
+kernel." (email from Julian Stecklina). That is the high-level view and 
+how this could get done, well, that is why posting this on
+LKML/linux-hardening/kvm-devel/linux-mm to start the discussion.
+
+Usually I would start with a draft of RFC patches so folks can rip it apart, but
+thanks to other people (Juerg thank you!) it already exists:
+
+(see https://www.mail-archive.com/linux-kernel@vger.kernel.org/msg1222756.html)
+
+The idea would be to extend this to:
+
+ 1) Only do it for processes that run under CPUS which are in isolcpus list.
+
+ 2) Expand this to be a per-cpu page tables. That is each CPU has its own unique
+    set of pagetables - naturally _START_KERNEL -> __end would be mapped but the
+    rest would not.
+
+Thoughts? Is this possible? Crazy? Better ideas?
