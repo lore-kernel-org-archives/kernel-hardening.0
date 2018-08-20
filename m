@@ -1,126 +1,81 @@
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Subject: RE: [PATCH RFC v2 2/5] X86: Support LSM determination of
+ side-channel vulnerability
+Date: Mon, 20 Aug 2018 14:45:10 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6732143F769@ORSMSX107.amr.corp.intel.com>
+References: <20180817221624.10232-1-casey.schaufler@intel.com>
+ <20180817221624.10232-3-casey.schaufler@intel.com>
+ <CAG48ez23G+wcnkCMNZV_mxYMS=h+pZkpx1451Wz5GB9_tcDv3Q@mail.gmail.com>
+In-Reply-To: <CAG48ez23G+wcnkCMNZV_mxYMS=h+pZkpx1451Wz5GB9_tcDv3Q@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-In-Reply-To: <3d26b5e1-3e07-4166-1fe3-e1d6e44fcc98@redhat.com>
-References: <20180802132133.23999-1-ard.biesheuvel@linaro.org> <3d26b5e1-3e07-4166-1fe3-e1d6e44fcc98@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 20 Aug 2018 08:30:33 +0200
-Message-ID: <CAKv+Gu99Aq8kqm10j114Oq6EDWHNxbnYDRc9xoQXU0t1GyAk-A@mail.gmail.com>
-Subject: Re: [RFC/PoC PATCH 0/3] arm64: basic ROP mitigation
-Content-Type: text/plain; charset="UTF-8"
-To: Laura Abbott <labbott@redhat.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, Christoffer Dall <christoffer.dall@arm.com>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@fedoraproject.org>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>
+To: Jann Horn <jannh@google.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "selinux@tycho.nsa.gov" <selinux@tycho.nsa.gov>, "Hansen, Dave" <dave.hansen@intel.com>, "Dock,
+ Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, Arjan van de Ven <arjan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 18 August 2018 at 03:27, Laura Abbott <labbott@redhat.com> wrote:
-> On 08/02/2018 06:21 AM, Ard Biesheuvel wrote:
->>
->> This is a proof of concept I cooked up, primarily to trigger a discussion
->> about whether there is a point to doing anything like this, and if there
->> is, what the pitfalls are. Also, while I am not aware of any similar
->> implementations, the idea is so simple that I would be surprised if nobody
->> else thought of the same thing way before I did.
->>
->> The idea is that we can significantly limit the kernel's attack surface
->> for ROP based attacks by clearing the stack pointer's sign bit before
->> returning from a function, and setting it again right after proceeding
->> from the [expected] return address. This should make it much more
->> difficult
->> to return to arbitrary gadgets, given that they rely on being chained to
->> the next via a return address popped off the stack, and this is difficult
->> when the stack pointer is invalid.
->>
->> Of course, 4 additional instructions per function return is not exactly
->> for free, but they are just movs and adds, and leaf functions are
->> disregarded unless they allocate a stack frame (this comes for free
->> because simple_return insns are disregarded by the plugin)
->>
->> Please shoot, preferably with better ideas ...
->>
->> Ard Biesheuvel (3):
->>    arm64: use wrapper macro for bl/blx instructions from asm code
->>    gcc: plugins: add ROP shield plugin for arm64
->>    arm64: enable ROP protection by clearing SP bit #55 across function
->>      returns
->>
->>   arch/Kconfig                                  |   4 +
->>   arch/arm64/Kconfig                            |  10 ++
->>   arch/arm64/include/asm/assembler.h            |  21 +++-
->>   arch/arm64/kernel/entry-ftrace.S              |   6 +-
->>   arch/arm64/kernel/entry.S                     | 104 +++++++++-------
->>   arch/arm64/kernel/head.S                      |   4 +-
->>   arch/arm64/kernel/probes/kprobes_trampoline.S |   2 +-
->>   arch/arm64/kernel/sleep.S                     |   6 +-
->>   drivers/firmware/efi/libstub/Makefile         |   3 +-
->>   scripts/Makefile.gcc-plugins                  |   7 ++
->>   scripts/gcc-plugins/arm64_rop_shield_plugin.c | 116 ++++++++++++++++++
->>   11 files changed, 228 insertions(+), 55 deletions(-)
->>   create mode 100644 scripts/gcc-plugins/arm64_rop_shield_plugin.c
->>
->
-> I tried this on the Fedora config and it died in mutex_lock
->
-> #0  el1_sync () at arch/arm64/kernel/entry.S:570
-> #1  0xffff000008c62ed4 in __cmpxchg_case_acq_8 (new=<optimized out>,
-> old=<optimized out>, ptr=<optimized out>) at
-> ./arch/arm64/include/asm/atomic_lse.h:480
-> #2  __cmpxchg_acq (size=<optimized out>, new=<optimized out>, old=<optimized
-> out>, ptr=<optimized out>) at ./arch/arm64/include/asm/cmpxchg.h:141
-> #3  __mutex_trylock_fast (lock=<optimized out>) at
-> kernel/locking/mutex.c:144
-> #4  mutex_lock (lock=0xffff0000098dee48 <cgroup_mutex>) at
-> kernel/locking/mutex.c:241
-> #5  0xffff000008f40978 in kallsyms_token_index ()
->
-> ffff000008bda050 <mutex_lock>:
-> ffff000008bda050:       a9bf7bfd        stp     x29, x30, [sp, #-16]!
-> ffff000008bda054:       aa0003e3        mov     x3, x0
-> ffff000008bda058:       d5384102        mrs     x2, sp_el0
-> ffff000008bda05c:       910003fd        mov     x29, sp
-> ffff000008bda060:       d2800001        mov     x1, #0x0
-> // #0
-> ffff000008bda064:       97ff85af        bl      ffff000008bbb720
-> <__ll_sc___cmpxchg_case_acq_8>
-> ffff000008bda068:       d503201f        nop
-> ffff000008bda06c:       d503201f        nop
-> ffff000008bda070:       b50000c0        cbnz    x0, ffff000008bda088
-> <mutex_lock+0x38>
-> ffff000008bda074:       a8c17bfd        ldp     x29, x30, [sp], #16
-> ffff000008bda078:       910003f0        mov     x16, sp
-> ffff000008bda07c:       9248fa1f        and     sp, x16, #0xff7fffffffffffff
-> ffff000008bda080:       d65f03c0        ret
-> ffff000008bda084:       d503201f        nop
-> ffff000008bda088:       aa0303e0        mov     x0, x3
-> ffff000008bda08c:       97ffffe7        bl      ffff000008bda028
-> <__mutex_lock_slowpath>
-> ffff000008bda090:       910003fe        mov     x30, sp
-> ffff000008bda094:       b24903df        orr     sp, x30, #0x80000000000000
-> ffff000008bda098:       a8c17bfd        ldp     x29, x30, [sp], #16
-> ffff000008bda09c:       910003f0        mov     x16, sp
-> ffff000008bda0a0:       9248fa1f        and     sp, x16, #0xff7fffffffffffff
-> ffff000008bda0a4:       d65f03c0        ret
->
-> ffff000008bbb720 <__ll_sc___cmpxchg_case_acq_8>:
-> ffff000008bbb720:       f9800011        prfm    pstl1strm, [x0]
-> ffff000008bbb724:       c85ffc10        ldaxr   x16, [x0]
-> ffff000008bbb728:       ca010211        eor     x17, x16, x1
-> ffff000008bbb72c:       b5000071        cbnz    x17, ffff000008bbb738
-> <__ll_sc___cmpxchg_case_acq_8+0x18>
-> ffff000008bbb730:       c8117c02        stxr    w17, x2, [x0]
-> ffff000008bbb734:       35ffff91        cbnz    w17, ffff000008bbb724
-> <__ll_sc___cmpxchg_case_acq_8+0x4>
-> ffff000008bbb738:       aa1003e0        mov     x0, x16
-> ffff000008bbb73c:       910003f0        mov     x16, sp
-> ffff000008bbb740:       9248fa1f        and     sp, x16, #0xff7fffffffffffff
-> ffff000008bbb744:       d65f03c0        ret
->
-> If I turn off CONFIG_ARM64_LSE_ATOMICS it works
->
-
-Thanks Laura.
-
-It is unlikely that this series will be resubmitted in a form that is
-anywhere close to its current form, but this is a useful data point
-nonetheless. Disregarding ll_sc_atomics.o is straight-forward, and I
-am glad to hear that it works without issue otherwise.
-
--- 
-Ard.
+PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBKYW5uIEhvcm4gW21haWx0bzpq
+YW5uaEBnb29nbGUuY29tXQ0KPiBTZW50OiBGcmlkYXksIEF1Z3VzdCAxNywgMjAxOCA0OjU1IFBN
+DQo+IFRvOiBTY2hhdWZsZXIsIENhc2V5IDxjYXNleS5zY2hhdWZsZXJAaW50ZWwuY29tPg0KPiBD
+YzogS2VybmVsIEhhcmRlbmluZyA8a2VybmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2FsbC5jb20+
+OyBrZXJuZWwgbGlzdA0KPiA8bGludXgta2VybmVsQHZnZXIua2VybmVsLm9yZz47IGxpbnV4LXNl
+Y3VyaXR5LW1vZHVsZSA8bGludXgtc2VjdXJpdHktDQo+IG1vZHVsZUB2Z2VyLmtlcm5lbC5vcmc+
+OyBzZWxpbnV4QHR5Y2hvLm5zYS5nb3Y7IEhhbnNlbiwgRGF2ZQ0KPiA8ZGF2ZS5oYW5zZW5AaW50
+ZWwuY29tPjsgRG9jaywgRGVuZWVuIFQgPGRlbmVlbi50LmRvY2tAaW50ZWwuY29tPjsNCj4ga3Jp
+c3RlbkBsaW51eC5pbnRlbC5jb207IEFyamFuIHZhbiBkZSBWZW4gPGFyamFuQGxpbnV4LmludGVs
+LmNvbT4NCj4gU3ViamVjdDogUmU6IFtQQVRDSCBSRkMgdjIgMi81XSBYODY6IFN1cHBvcnQgTFNN
+IGRldGVybWluYXRpb24gb2Ygc2lkZS0NCj4gY2hhbm5lbCB2dWxuZXJhYmlsaXR5DQo+IA0KPiBP
+biBTYXQsIEF1ZyAxOCwgMjAxOCBhdCAxMjoxNyBBTSBDYXNleSBTY2hhdWZsZXINCj4gPGNhc2V5
+LnNjaGF1ZmxlckBpbnRlbC5jb20+IHdyb3RlOg0KPiA+DQo+ID4gRnJvbTogQ2FzZXkgU2NoYXVm
+bGVyIDxjc2NoYXVmbGVyQGxvY2FsaG9zdC5sb2NhbGRvbWFpbj4NCj4gPg0KPiA+IFdoZW4gc3dp
+dGNoaW5nIGJldHdlZW4gdGFza3MgaXQgbWF5IGJlIG5lY2Vzc2FyeQ0KPiA+IHRvIHNldCBhbiBp
+bmRpcmVjdCBicmFuY2ggcHJlZGljdGlvbiBiYXJyaWVyIGlmIHRoZQ0KPiA+IHRhc2tzIGFyZSBw
+b3RlbnRpYWxseSB2dWxuZXJhYmxlIHRvIHNpZGUtY2hhbm5lbA0KPiA+IGF0dGFja3MuIFRoaXMg
+YWRkcyBhIGNhbGwgdG8gc2VjdXJpdHlfdGFza19zYWZlX3NpZGVjaGFubmVsDQo+ID4gc28gdGhh
+dCBzZWN1cml0eSBtb2R1bGVzIGNhbiB3ZWlnaCBpbiBvbiB0aGUgZGVjaXNpb24uDQo+ID4NCj4g
+PiBTaWduZWQtb2ZmLWJ5OiBDYXNleSBTY2hhdWZsZXIgPGNhc2V5LnNjaGF1ZmxlckBpbnRlbC5j
+b20+DQo+ID4gLS0tDQo+ID4gIGFyY2gveDg2L21tL3RsYi5jIHwgMTIgKysrKysrKystLS0tDQo+
+ID4gIDEgZmlsZSBjaGFuZ2VkLCA4IGluc2VydGlvbnMoKyksIDQgZGVsZXRpb25zKC0pDQo+ID4N
+Cj4gPiBkaWZmIC0tZ2l0IGEvYXJjaC94ODYvbW0vdGxiLmMgYi9hcmNoL3g4Ni9tbS90bGIuYw0K
+PiA+IGluZGV4IDZlYjFmMzRjM2M4NS4uODcxNGQ0YWYwNmFhIDEwMDY0NA0KPiA+IC0tLSBhL2Fy
+Y2gveDg2L21tL3RsYi5jDQo+ID4gKysrIGIvYXJjaC94ODYvbW0vdGxiLmMNCj4gPiBAQCAtNyw2
+ICs3LDcgQEANCj4gPiAgI2luY2x1ZGUgPGxpbnV4L2V4cG9ydC5oPg0KPiA+ICAjaW5jbHVkZSA8
+bGludXgvY3B1Lmg+DQo+ID4gICNpbmNsdWRlIDxsaW51eC9kZWJ1Z2ZzLmg+DQo+ID4gKyNpbmNs
+dWRlIDxsaW51eC9zZWN1cml0eS5oPg0KPiA+DQo+ID4gICNpbmNsdWRlIDxhc20vdGxiZmx1c2gu
+aD4NCj4gPiAgI2luY2x1ZGUgPGFzbS9tbXVfY29udGV4dC5oPg0KPiA+IEBAIC0yNzAsMTEgKzI3
+MSwxNCBAQCB2b2lkIHN3aXRjaF9tbV9pcnFzX29mZihzdHJ1Y3QgbW1fc3RydWN0ICpwcmV2LA0K
+PiBzdHJ1Y3QgbW1fc3RydWN0ICpuZXh0LA0KPiA+ICAgICAgICAgICAgICAgICAgKiB0aHJlYWRz
+LiBJdCB3aWxsIGFsc28gbm90IGZsdXNoIGlmIHdlIHN3aXRjaCB0byBpZGxlDQo+ID4gICAgICAg
+ICAgICAgICAgICAqIHRocmVhZCBhbmQgYmFjayB0byB0aGUgc2FtZSBwcm9jZXNzLiBJdCB3aWxs
+IGZsdXNoIGlmIHdlDQo+ID4gICAgICAgICAgICAgICAgICAqIHN3aXRjaCB0byBhIGRpZmZlcmVu
+dCBub24tZHVtcGFibGUgcHJvY2Vzcy4NCj4gPiArICAgICAgICAgICAgICAgICogSWYgYSBzZWN1
+cml0eSBtb2R1bGUgdGhpbmtzIHRoYXQgdGhlIHRyYW5zaXRpb24NCj4gPiArICAgICAgICAgICAg
+ICAgICogaXMgdW5zYWZlIGRvIHRoZSBmbHVzaC4NCj4gPiAgICAgICAgICAgICAgICAgICovDQo+
+ID4gLSAgICAgICAgICAgICAgIGlmICh0c2sgJiYgdHNrLT5tbSAmJg0KPiA+IC0gICAgICAgICAg
+ICAgICAgICAgdHNrLT5tbS0+Y29udGV4dC5jdHhfaWQgIT0gbGFzdF9jdHhfaWQgJiYNCj4gPiAt
+ICAgICAgICAgICAgICAgICAgIGdldF9kdW1wYWJsZSh0c2stPm1tKSAhPSBTVUlEX0RVTVBfVVNF
+UikNCj4gPiAtICAgICAgICAgICAgICAgICAgICAgICBpbmRpcmVjdF9icmFuY2hfcHJlZGljdGlv
+bl9iYXJyaWVyKCk7DQo+ID4gKyAgICAgICAgICAgICAgIGlmICh0c2sgJiYgdHNrLT5tbSAmJiB0
+c2stPm1tLT5jb250ZXh0LmN0eF9pZCAhPSBsYXN0X2N0eF9pZCkgew0KPiA+ICsgICAgICAgICAg
+ICAgICAgICAgICAgIGlmIChnZXRfZHVtcGFibGUodHNrLT5tbSkgIT0gU1VJRF9EVU1QX1VTRVIg
+fHwNCj4gPiArICAgICAgICAgICAgICAgICAgICAgICAgICAgc2VjdXJpdHlfdGFza19zYWZlX3Np
+ZGVjaGFubmVsKHRzaykgIT0gMCkNCj4gPiArICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+IGluZGlyZWN0X2JyYW5jaF9wcmVkaWN0aW9uX2JhcnJpZXIoKTsNCj4gPiArICAgICAgICAgICAg
+ICAgfQ0KPiANCj4gV2hlbiB5b3UgcG9zdGVkIHYxIG9mIHRoaXMgc2VyaWVzLCBJIGFza2VkOg0K
+PiANCj4gfCBEb2VzIHRoaXMgZW5mb3JjZSB0cmFuc2l0aXZpdHk/IFdoYXQgaGFwcGVucyBpZiB3
+ZSBmaXJzdCBzd2l0Y2ggZnJvbQ0KPiB8IGFuIGF0dGFja2VyIHRhc2sgdG8gYSB0YXNrIHdpdGhv
+dXQgLT5tbSwgYW5kIGltbWVkaWF0ZWx5IGFmdGVyd2FyZHMNCj4gfCBmcm9tIHRoZSB0YXNrIHdp
+dGhvdXQgLT5tbSB0byBhIHZpY3RpbSB0YXNrPyBJbiB0aGF0IGNhc2UsIHdoZXRoZXIgYQ0KPiB8
+IGZsdXNoIGhhcHBlbnMgYmV0d2VlbiB0aGUgYXR0YWNrZXIgdGFzayBhbmQgdGhlIHZpY3RpbSB0
+YXNrIGRlcGVuZHMgb24NCj4gfCB3aGV0aGVyIHRoZSBMU00gdGhpbmtzIHRoYXQgdGhlIG1tLWxl
+c3MgdGFzayBzaG91bGQgaGF2ZSBhY2Nlc3MgdG8gdGhlDQo+IHwgdmljdGltIHRhc2ssIHJpZ2h0
+Pw0KPiANCj4gSGF2ZSB5b3UgYWRkcmVzc2VkIHRoYXQ/IEkgZG9uJ3Qgc2VlIGl0Li4uDQoNCk5v
+cGUuIFRoYXQncyBnb2luZyB0byByZXF1aXJlIG1haW50YWluaW5nIHN0YXRlIGFib3V0IGFsbCB0
+aGUNCnRhc2tzIGluIHRoZSBjaGFpbiB0aGF0IG1pZ2h0IHN0aWxsIGhhdmUgY2FjaGUgaW52b2x2
+ZW1lbnQuDQoNCglBIC0+IEIgLT4gQyAtPiBEDQoNCklmIEIgYW5kIEMgZG9uJ3QgZG8gYW55dGhp
+bmcgY2FjaGV3b3J0aHkgRCBjb3VsZCBjb25jZWl2YWJseSBhdHRhY2sgQS4NClRoZSBhbW91bnQg
+b2Ygc3RhdGUgcmVxdWlyZWQgdG8gZGV0ZWN0IHRoaXMgY2FzZSB3b3VsZCBiZSBwcm9oaWJpdGl2
+ZS4NCkkgdGhpbmsgdGhhdCBpZiB5b3UncmUgc3VmZmljaWVudGx5IGNvbmNlcm5lZCBhYm91dCB0
+aGlzIGNhc2UgeW91IHNob3VsZCBqdXN0DQpnbyBhaGVhZCBhbmQgc2V0IHRoZSBiYXJyaWVyLiBJ
+J20gd2lsbGluZyB0byBsZWFybiBzb21ldGhpbmcgdGhhdCBzYXlzIEknbQ0Kd3JvbmcuDQoNCg==
