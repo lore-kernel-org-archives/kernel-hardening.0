@@ -1,80 +1,85 @@
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Subject: RE: [PATCH RFC v2 5/5] SELinux: Support SELinux determination of
- side-channel vulnerability
-Date: Mon, 20 Aug 2018 19:30:57 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6732143F8DB@ORSMSX107.amr.corp.intel.com>
-References: <20180817221624.10232-1-casey.schaufler@intel.com>
- <20180817221624.10232-6-casey.schaufler@intel.com>
- <6e70b7c7-d932-91c8-35d1-70bd6cef16a5@tycho.nsa.gov>
- <99FC4B6EFCEFD44486C35F4C281DC6732143F80E@ORSMSX107.amr.corp.intel.com>
- <f74a5824-c80a-bdb9-2d4a-e83d19ae07e8@tycho.nsa.gov>
-In-Reply-To: <f74a5824-c80a-bdb9-2d4a-e83d19ae07e8@tycho.nsa.gov>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-To: Stephen Smalley <sds@tycho.nsa.gov>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "selinux@tycho.nsa.gov" <selinux@tycho.nsa.gov>, "Hansen, Dave" <dave.hansen@intel.com>, "Dock,
- Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "arjan@linux.intel.com" <arjan@linux.intel.com>
+References: <20180820212556.GC2230@char.us.oracle.com>
+In-Reply-To: <20180820212556.GC2230@char.us.oracle.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Mon, 20 Aug 2018 14:48:51 -0700
+Message-ID: <CA+55aFxZCyVZc4ZpRyZ3uDyakRSOG_=2XvnwMo4oejpsieF9=A@mail.gmail.com>
+Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
+ in mind (for KVM to isolate its guests per CPU)
+Content-Type: text/plain; charset="UTF-8"
+To: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Liran Alon <liran.alon@oracle.com>, deepa.srinivasan@oracle.com, linux-mm <linux-mm@kvack.org>, juerg.haefliger@hpe.com, Khalid Aziz <khalid.aziz@oracle.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, David Woodhouse <dwmw@amazon.co.uk>, Kees Cook <keescook@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Jon Masters <jcm@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, Jim Mattson <jmattson@google.com>, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, John Haxby <john.haxby@oracle.com>, jsteckli@os.inf.tu-dresden.de, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBTdGVwaGVuIFNtYWxsZXkgW21h
-aWx0bzpzZHNAdHljaG8ubnNhLmdvdl0NCj4gU2VudDogTW9uZGF5LCBBdWd1c3QgMjAsIDIwMTgg
-MTA6NDQgQU0NCj4gVG86IFNjaGF1ZmxlciwgQ2FzZXkgPGNhc2V5LnNjaGF1ZmxlckBpbnRlbC5j
-b20+OyBrZXJuZWwtDQo+IGhhcmRlbmluZ0BsaXN0cy5vcGVud2FsbC5jb207IGxpbnV4LWtlcm5l
-bEB2Z2VyLmtlcm5lbC5vcmc7IGxpbnV4LXNlY3VyaXR5LQ0KPiBtb2R1bGVAdmdlci5rZXJuZWwu
-b3JnOyBzZWxpbnV4QHR5Y2hvLm5zYS5nb3Y7IEhhbnNlbiwgRGF2ZQ0KPiA8ZGF2ZS5oYW5zZW5A
-aW50ZWwuY29tPjsgRG9jaywgRGVuZWVuIFQgPGRlbmVlbi50LmRvY2tAaW50ZWwuY29tPjsNCj4g
-a3Jpc3RlbkBsaW51eC5pbnRlbC5jb207IGFyamFuQGxpbnV4LmludGVsLmNvbQ0KPiBTdWJqZWN0
-OiBSZTogW1BBVENIIFJGQyB2MiA1LzVdIFNFTGludXg6IFN1cHBvcnQgU0VMaW51eCBkZXRlcm1p
-bmF0aW9uIG9mDQo+IHNpZGUtY2hhbm5lbCB2dWxuZXJhYmlsaXR5DQo+IA0KPiBPbiAwOC8yMC8y
-MDE4IDEyOjU5IFBNLCBTY2hhdWZsZXIsIENhc2V5IHdyb3RlOg0KPiA+PiAtLS0tLU9yaWdpbmFs
-IE1lc3NhZ2UtLS0tLQ0KPiA+PiBGcm9tOiBTdGVwaGVuIFNtYWxsZXkgW21haWx0bzpzZHNAdHlj
-aG8ubnNhLmdvdl0NCj4gPj4gU2VudDogTW9uZGF5LCBBdWd1c3QgMjAsIDIwMTggOTowMyBBTQ0K
-PiA+PiBUbzogU2NoYXVmbGVyLCBDYXNleSA8Y2FzZXkuc2NoYXVmbGVyQGludGVsLmNvbT47IGtl
-cm5lbC0NCj4gPj4gaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbTsgbGludXgta2VybmVsQHZn
-ZXIua2VybmVsLm9yZzsgbGludXgtc2VjdXJpdHktDQo+ID4+IG1vZHVsZUB2Z2VyLmtlcm5lbC5v
-cmc7IHNlbGludXhAdHljaG8ubnNhLmdvdjsgSGFuc2VuLCBEYXZlDQo+ID4+IDxkYXZlLmhhbnNl
-bkBpbnRlbC5jb20+OyBEb2NrLCBEZW5lZW4gVCA8ZGVuZWVuLnQuZG9ja0BpbnRlbC5jb20+Ow0K
-PiA+PiBrcmlzdGVuQGxpbnV4LmludGVsLmNvbTsgYXJqYW5AbGludXguaW50ZWwuY29tDQo+ID4+
-IFN1YmplY3Q6IFJlOiBbUEFUQ0ggUkZDIHYyIDUvNV0gU0VMaW51eDogU3VwcG9ydCBTRUxpbnV4
-IGRldGVybWluYXRpb24gb2YNCj4gPj4gc2lkZS1jaGFubmVsIHZ1bG5lcmFiaWxpdHkNCj4gPj4N
-Cj4gPj4gT24gMDgvMTcvMjAxOCAwNjoxNiBQTSwgQ2FzZXkgU2NoYXVmbGVyIHdyb3RlOg0KPiA+
-Pj4gU0VMaW51eCBjb25zaWRlcnMgdGFza3MgdG8gYmUgc2lkZS1jaGFubmVsIHNhZmUgaWYgdGhl
-eQ0KPiA+Pj4gaGF2ZSBQUk9DRVNTX1NIQVJFIGFjY2Vzcy4NCj4gPj4NCj4gPj4gTm93IHRoZSBk
-ZXNjcmlwdGlvbiBhbmQgdGhlIGNvZGUgbm8gbG9uZ2VyIG1hdGNoLg0KPiA+DQo+ID4gWW91J3Jl
-IHJpZ2h0Lg0KPiA+DQo+ID4+Pg0KPiA+Pj4gU2lnbmVkLW9mZi1ieTogQ2FzZXkgU2NoYXVmbGVy
-IDxjYXNleS5zY2hhdWZsZXJAaW50ZWwuY29tPg0KPiA+Pj4gLS0tDQo+ID4+PiAgICBzZWN1cml0
-eS9zZWxpbnV4L2hvb2tzLmMgfCA5ICsrKysrKysrKw0KPiA+Pj4gICAgMSBmaWxlIGNoYW5nZWQs
-IDkgaW5zZXJ0aW9ucygrKQ0KPiA+Pj4NCj4gPj4+IGRpZmYgLS1naXQgYS9zZWN1cml0eS9zZWxp
-bnV4L2hvb2tzLmMgYi9zZWN1cml0eS9zZWxpbnV4L2hvb2tzLmMNCj4gPj4+IGluZGV4IGE4YmYz
-MjQxMzBmNS4uN2ZiZDdkN2FjMWNiIDEwMDY0NA0KPiA+Pj4gLS0tIGEvc2VjdXJpdHkvc2VsaW51
-eC9ob29rcy5jDQo+ID4+PiArKysgYi9zZWN1cml0eS9zZWxpbnV4L2hvb2tzLmMNCj4gPj4+IEBA
-IC00MjE5LDYgKzQyMTksMTQgQEAgc3RhdGljIHZvaWQgc2VsaW51eF90YXNrX3RvX2lub2RlKHN0
-cnVjdA0KPiA+PiB0YXNrX3N0cnVjdCAqcCwNCj4gPj4+ICAgIAlzcGluX3VubG9jaygmaXNlYy0+
-bG9jayk7DQo+ID4+PiAgICB9DQo+ID4+Pg0KPiA+Pj4gK3N0YXRpYyBpbnQgc2VsaW51eF90YXNr
-X3NhZmVfc2lkZWNoYW5uZWwoc3RydWN0IHRhc2tfc3RydWN0ICpwKQ0KPiA+Pj4gK3sNCj4gPj4+
-ICsJc3RydWN0IGF2X2RlY2lzaW9uIGF2ZDsNCj4gPj4+ICsNCj4gPj4+ICsJcmV0dXJuIGF2Y19o
-YXNfcGVybV9ub2F1ZGl0KCZzZWxpbnV4X3N0YXRlLCBjdXJyZW50X3NpZCgpLA0KPiA+PiB0YXNr
-X3NpZChwKSwNCj4gPj4+ICsJCQkJICAgIFNFQ0NMQVNTX0ZJTEUsIEZJTEVfX1JFQUQsIDAsICZh
-dmQpOw0KPiA+Pj4gK30NCj4gPj4NCj4gPj4gQW5kIG15IHF1ZXN0aW9uIGZyb20gYmVmb3JlIHN0
-aWxsIHN0YW5kczogIHdoeSBkbyB3ZSBuZWVkIGEgbmV3IGhvb2sgYW5kDQo+ID4+IG5ldyBzZWN1
-cml0eSBtb2R1bGUgaW5zdGVhZCBvZiBqdXN0IHVzaW5nIHB0cmFjZV9tYXlfYWNjZXNzKCk/DQo+
-ID4NCj4gPiBMb2NraW5nLiBUaGUgU0VMaW51eCBjaGVjaywgZm9yIGV4YW1wbGUsIHdpbGwgbG9j
-ayB1cCBzb2xpZCB3aGlsZSB0cnlpbmcNCj4gPiB0byBnZW5lcmF0ZSBhbiBhdWRpdCByZWNvcmQu
-IFRoZXJlIGlzIG5vIGdvb2QgcmVhc29uIGFzaWRlIGZyb20gY29kaW5nDQo+ID4gY29udmVuaWVu
-Y2UgdG8gYXNzdW1lIHRoYXQgdGhlIHNhbWUgcmVzdHJpY3Rpb25zIHdpbGwgYXBwbHkgZm9yIHNp
-ZGUtY2hhbm5lbA0KPiA+IGFzIGFwcGx5IHRvIHB0cmFjZS4gSSdtIGFjdHVhbGx5IGEgdG91Y2gg
-c3VycHJpc2VkIHlvdSdyZSBub3Qgc3VnZ2VzdGluZyBhDQo+ID4gc2VwYXJhdGUgU0VDQ0xBU1Mg
-b3IgYWNjZXNzIG1vZGUgZm9yIHRoZSBTRUxpbnV4IGhvb2suDQo+IA0KPiBUaGUgUFRSQUNFX01P
-REVfTk9BVURJVCBmbGFnIHRvIHB0cmFjZV9tYXlfYWNjZXNzKCkgd291bGQgYWRkcmVzcyB0aGUN
-Cj4gbG9ja2luZyBjb25jZXJuLg0KDQpPSyAuLi4NCg0KPiBEdXBsaWNhdGluZyB0aGUgcHRyYWNl
-IGFjY2VzcyBjaGVja2luZyBsb2dpYyBzZWVtcw0KPiBwcm9uZSB0byBlcnJvcnMgYW5kIGluY29u
-c2lzdGVuY2llcy4NCg0KVGhhdCdzIHRydWUgb25seSBpZiB0aGUgcHRyYWNlIGxvZ2ljIGFuZCB0
-aGUgc2FmZS1zaWRlY2hhbm5lbCBsb2dpYw0KYXJlIGlkZW50aWNhbC4gSSBkb24ndCBiZWxpZXZl
-IHRoYXQgaXMgYSBzYWZlIGFzc3VtcHRpb24uIEl0IHdvdWxkIHN1cmUNCmJlIGNvbnZlbmllbnQu
-IEJ1dCBJIHdvdWxkIGhhdGUgdG8gc2VlIGEgY2hhbmdlIG1hZGUgZm9yIGVpdGhlcg0KcHRyYWNl
-IG9yIHNhZmVfc2lkZWNoYW5uZWwgdGhhdCBpbnRlcmZlcmVkIHdpdGggdGhlIGNvcnJlY3QgYmVo
-YXZpb3INCm9mIHRoZSBvdGhlci4NCg0KPiBJIGNhbid0IGltYWdpbmUgcG9saWN5IHdyaXRlcnMN
-Cj4gdW5kZXJzdGFuZGluZyB3aGF0ICJzYWZlIHNpZGVjaGFubmVsIiBtZWFucywgbXVjaCBsZXNz
-IGRlY2lkaW5nIHdoZW4gdG8NCj4gYWxsb3cgaXQuDQoNCkkgY2FuJ3QgYXJndWUgd2l0aCB0aGF0
-LiBCdXQgdGhlbiwgSSBoYXZlIGFsd2F5cyBoYWQgdHJvdWJsZSB3aXRoIHRoZQ0KU0VMaW51eCBw
-b2xpY3kgc2NoZW1lLg0KDQo=
+On Mon, Aug 20, 2018 at 2:26 PM Konrad Rzeszutek Wilk
+<konrad.wilk@oracle.com> wrote:
+>
+> See eXclusive Page Frame Ownership (https://lwn.net/Articles/700606/) which was posted
+> way back in in 2016..
+
+Ok, so my gut feel is that the above was reasonable within the context
+of 2016, but that the XPFO model is completely pointless and wrong in
+the post-Meltdown world we now live in.
+
+Why?
+
+Because with the Meltdown patches, we ALREADY HAVE the isolated page
+tables that XPFO tries to do.
+
+They are just the normal user page tables.
+
+So don't go around doing other crazy things.
+
+All you need to do is to literally:
+
+ - before you enter VMX mode, switch to the user page tables
+
+ - when you exit, switch back to the kernel page tables
+
+don't do anything else.  You're done.
+
+Now, this is complicated a bit by the fact that in order to enter VMX
+mode with the user page tables, you do need to add the VMX state
+itself to those user page tables (and add the actual trampoline code
+to the vmenter too).
+
+So it does imply we need to slightly extend the user mapping with a
+few new patches, but that doesn't sound bad.
+
+In fact, it sounds absolutely trivial to me.
+
+The other thing you want to do is is the trivial optimization of "hey.
+we exited VMX mode due to a host interrupt", which would look like
+this:
+
+ * switch to user page tables in order to do vmenter
+ * vmenter
+ * host interrupt happens
+    - switch to kernel page tables to handle irq
+    - do_IRQ etc
+    - switch back to user page tables
+    - iret
+ * switch to kernel page tables because the vmenter returned
+
+so you want to have some trivial short-circuiting of that last "switch
+to user page tables and back" dance. It may actually be that we don't
+even need it, because the irq code may just be looking at what *mode*
+we were in, not what page tables we were in. I looked at that code
+back in the meltdown days, but that's already so last-year now that we
+have all these _other_ CPU bugs we handled.
+
+But other than small details like that, doesn't this "use our Meltdown
+user page table" sound like the right thing to do?
+
+And note: no new VM code or complexity. None. We already have the
+"isolated KVM context with only pages for the KVM process" case
+handled.
+
+Of course, after the long (and entirely unrelated) discussion about
+the TLB flushing bug we had, I'm starting to worry about my own
+competence, and maybe I'm missing something really fundamental, and
+the XPFO patches do something else than what I think they do, or my
+"hey, let's use our Meltdown code" idea has some fundamental weakness
+that I'm missing.
+
+              Linus
