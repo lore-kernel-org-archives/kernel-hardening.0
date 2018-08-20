@@ -5,27 +5,31 @@ References: <20180820212556.GC2230@char.us.oracle.com>
  <1534801939.10027.24.camel@amazon.co.uk>
  <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
  <20180820223557.GC16961@cisco.cisco.com>
+ <bd148fb6-e139-a065-1bf5-8054f932d30a@intel.com>
+ <1534806880.10027.29.camel@infradead.org>
 From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <bd148fb6-e139-a065-1bf5-8054f932d30a@intel.com>
-Date: Mon, 20 Aug 2018 15:59:54 -0700
+Message-ID: <dd9657d2-f1c1-630d-4cce-7f1c67a968d6@intel.com>
+Date: Mon, 20 Aug 2018 16:26:32 -0700
 MIME-Version: 1.0
-In-Reply-To: <20180820223557.GC16961@cisco.cisco.com>
+In-Reply-To: <1534806880.10027.29.camel@infradead.org>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 8bit
-To: Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: David Woodhouse <dwmw@amazon.co.uk>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, jsteckli@os.inf.tu-dresden.de, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
+To: David Woodhouse <dwmw2@infradead.org>, Tycho Andersen <tycho@tycho.ws>, Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, jsteckli@os.inf.tu-dresden.de, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 08/20/2018 03:35 PM, Tycho Andersen wrote:
-> Since meltdown hit, I haven't worked seriously on understand and
-> implementing his suggestions, in part because it wasn't clear to me
-> what pieces of the infrastructure we might be able to re-use. Someone
-> who knows more about mm/ might be able to suggest an approach, though
+On 08/20/2018 04:14 PM, David Woodhouse wrote:
+> If you need the physmap, then rather than manually mapping with 4KiB
+> pages, you just switch. Having first ensured that no malicious guest or
+> userspace is running on a sibling, of course.
 
-Unfortunately, I'm not sure there's much of KPTI we can reuse.  KPTI
-still has a very static kernel map (well, two static kernel maps) and
-XPFO really needs a much more dynamic map.
+The problem is determining when "you need the physmap".  Tycho's
+patches, as I remember them basically classify pages between being
+"user" pages which are accessed only via kmap() and friends and "kernel"
+pages which need to be mapped all the time because they might have a
+'task_struct' or a page table or a 'struct file'.
 
-We do have a bit of infrastructure now to do TLB flushes near the kernel
-exit point, but it's entirely for the user address space, which isn't
-affected by XPFO.
+You're right that we could have a full physmap that we switch to for
+kmap()-like access to user pages.  But, the real problem is
+transitioning pages from kernel to user usage since it requires shooting
+down the old kernel mappings for those pages in some way.
