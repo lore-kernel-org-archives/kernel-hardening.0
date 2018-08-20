@@ -1,85 +1,40 @@
 MIME-Version: 1.0
-References: <20180820212556.GC2230@char.us.oracle.com>
-In-Reply-To: <20180820212556.GC2230@char.us.oracle.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Mon, 20 Aug 2018 14:48:51 -0700
-Message-ID: <CA+55aFxZCyVZc4ZpRyZ3uDyakRSOG_=2XvnwMo4oejpsieF9=A@mail.gmail.com>
+In-Reply-To: <1534801939.10027.24.camel@amazon.co.uk>
+References: <20180820212556.GC2230@char.us.oracle.com> <CA+55aFxZCyVZc4ZpRyZ3uDyakRSOG_=2XvnwMo4oejpsieF9=A@mail.gmail.com>
+ <1534801939.10027.24.camel@amazon.co.uk>
+From: Kees Cook <keescook@google.com>
+Date: Mon, 20 Aug 2018 15:18:20 -0700
+Message-ID: <CAGXu5jLSPGe7W0qpUYoQr4C-Yy5FV8Q=hUKRYO9zSbeUNSZn0g@mail.gmail.com>
 Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
  in mind (for KVM to isolate its guests per CPU)
 Content-Type: text/plain; charset="UTF-8"
-To: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Liran Alon <liran.alon@oracle.com>, deepa.srinivasan@oracle.com, linux-mm <linux-mm@kvack.org>, juerg.haefliger@hpe.com, Khalid Aziz <khalid.aziz@oracle.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, David Woodhouse <dwmw@amazon.co.uk>, Kees Cook <keescook@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Jon Masters <jcm@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, Jim Mattson <jmattson@google.com>, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, John Haxby <john.haxby@oracle.com>, jsteckli@os.inf.tu-dresden.de, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
+To: "Woodhouse, David" <dwmw@amazon.co.uk>
+Cc: "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "konrad.wilk@oracle.com" <konrad.wilk@oracle.com>, "juerg.haefliger@hpe.com" <juerg.haefliger@hpe.com>, "deepa.srinivasan@oracle.com" <deepa.srinivasan@oracle.com>, "jmattson@google.com" <jmattson@google.com>, "andrew.cooper3@citrix.com" <andrew.cooper3@citrix.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "boris.ostrovsky@oracle.com" <boris.ostrovsky@oracle.com>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "joao.m.martins@oracle.com" <joao.m.martins@oracle.com>, "pradeep.vincent@oracle.com" <pradeep.vincent@oracle.com>, "ak@linux.intel.com" <ak@linux.intel.com>, "khalid.aziz@oracle.com" <khalid.aziz@oracle.com>, "kanth.ghatraju@oracle.com" <kanth.ghatraju@oracle.com>, "liran.alon@oracle.com" <liran.alon@oracle.com>, "jsteckli@os.inf.tu-dresden.de" <jsteckli@os.inf.tu-dresden.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "chris.hyser@oracle.com" <chris.hyser@oracle.com>, "tyhicks@canonical.com" <tyhicks@canonical.com>, "john.haxby@oracle.com" <john.haxby@oracle.com>, "jcm@redhat.com" <jcm@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 20, 2018 at 2:26 PM Konrad Rzeszutek Wilk
-<konrad.wilk@oracle.com> wrote:
+On Mon, Aug 20, 2018 at 2:52 PM, Woodhouse, David <dwmw@amazon.co.uk> wrote:
+> On Mon, 2018-08-20 at 14:48 -0700, Linus Torvalds wrote:
+>>
+>> Of course, after the long (and entirely unrelated) discussion about
+>> the TLB flushing bug we had, I'm starting to worry about my own
+>> competence, and maybe I'm missing something really fundamental, and
+>> the XPFO patches do something else than what I think they do, or my
+>> "hey, let's use our Meltdown code" idea has some fundamental weakness
+>> that I'm missing.
 >
-> See eXclusive Page Frame Ownership (https://lwn.net/Articles/700606/) which was posted
-> way back in in 2016..
+> The interesting part is taking the user (and other) pages out of the
+> kernel's 1:1 physmap.
+>
+> It's the *kernel* we don't want being able to access those pages,
+> because of the multitude of unfixable cache load gadgets.
 
-Ok, so my gut feel is that the above was reasonable within the context
-of 2016, but that the XPFO model is completely pointless and wrong in
-the post-Meltdown world we now live in.
+Right. And even before Meltdown, it was desirable to remove those from
+the physmap to avoid SMAP (and in some cases SMEP) bypasses (as
+detailed in the mentioned paper:
+http://www.cs.columbia.edu/~vpk/papers/ret2dir.sec14.pdf).
 
-Why?
+-Kees
 
-Because with the Meltdown patches, we ALREADY HAVE the isolated page
-tables that XPFO tries to do.
-
-They are just the normal user page tables.
-
-So don't go around doing other crazy things.
-
-All you need to do is to literally:
-
- - before you enter VMX mode, switch to the user page tables
-
- - when you exit, switch back to the kernel page tables
-
-don't do anything else.  You're done.
-
-Now, this is complicated a bit by the fact that in order to enter VMX
-mode with the user page tables, you do need to add the VMX state
-itself to those user page tables (and add the actual trampoline code
-to the vmenter too).
-
-So it does imply we need to slightly extend the user mapping with a
-few new patches, but that doesn't sound bad.
-
-In fact, it sounds absolutely trivial to me.
-
-The other thing you want to do is is the trivial optimization of "hey.
-we exited VMX mode due to a host interrupt", which would look like
-this:
-
- * switch to user page tables in order to do vmenter
- * vmenter
- * host interrupt happens
-    - switch to kernel page tables to handle irq
-    - do_IRQ etc
-    - switch back to user page tables
-    - iret
- * switch to kernel page tables because the vmenter returned
-
-so you want to have some trivial short-circuiting of that last "switch
-to user page tables and back" dance. It may actually be that we don't
-even need it, because the irq code may just be looking at what *mode*
-we were in, not what page tables we were in. I looked at that code
-back in the meltdown days, but that's already so last-year now that we
-have all these _other_ CPU bugs we handled.
-
-But other than small details like that, doesn't this "use our Meltdown
-user page table" sound like the right thing to do?
-
-And note: no new VM code or complexity. None. We already have the
-"isolated KVM context with only pages for the KVM process" case
-handled.
-
-Of course, after the long (and entirely unrelated) discussion about
-the TLB flushing bug we had, I'm starting to worry about my own
-competence, and maybe I'm missing something really fundamental, and
-the XPFO patches do something else than what I think they do, or my
-"hey, let's use our Meltdown code" idea has some fundamental weakness
-that I'm missing.
-
-              Linus
+-- 
+Kees Cook
+Pixel Security
