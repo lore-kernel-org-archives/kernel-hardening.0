@@ -1,102 +1,126 @@
-Subject: Re: [PATCH v15 0/7] Introduce the STACKLEAK feature and a test for it
-References: <1534457824-7211-1-git-send-email-alex.popov@linux.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <2c6b7b5a-0db8-a4d0-ddfc-839aa67907f0@redhat.com>
-Date: Tue, 21 Aug 2018 09:20:11 -0700
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Subject: RE: [PATCH RFC v2 2/5] X86: Support LSM determination of
+ side-channel vulnerability
+Date: Tue, 21 Aug 2018 16:37:19 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC67321440056@ORSMSX107.amr.corp.intel.com>
+References: <20180817221624.10232-1-casey.schaufler@intel.com>
+ <20180817221624.10232-3-casey.schaufler@intel.com>
+ <CAG48ez23G+wcnkCMNZV_mxYMS=h+pZkpx1451Wz5GB9_tcDv3Q@mail.gmail.com>
+ <99FC4B6EFCEFD44486C35F4C281DC6732143F769@ORSMSX107.amr.corp.intel.com>
+ <CAG48ez1LHOHvB4ud+8asOjKARVLQJGV4ocdKVDJtvTXTfeMa9w@mail.gmail.com>
+In-Reply-To: <CAG48ez1LHOHvB4ud+8asOjKARVLQJGV4ocdKVDJtvTXTfeMa9w@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-In-Reply-To: <1534457824-7211-1-git-send-email-alex.popov@linux.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Alexander Popov <alex.popov@linux.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Richard Sandiford <richard.sandiford@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Dmitry V . Levin" <ldv@altlinux.org>, Emese Revfy <re.emese@gmail.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Alexei Starovoitov <ast@kernel.org>, Josef Bacik <jbacik@fb.com>, Masami Hiramatsu <mhiramat@kernel.org>, Nicholas Piggin <npiggin@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "David S . Miller" <davem@davemloft.net>, Ding Tianhong <dingtianhong@huawei.com>, David Woodhouse <dwmw@amazon.co.uk>, Josh Poimboeuf <jpoimboe@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Dominik Brodowski <linux@dominikbrodowski.net>, Juergen Gross <jgross@suse.com>, Linus Torvalds <torvalds@linux-foundation.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dan Williams <dan.j.williams@intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Vikas Shivappa <vikas.shivappa@linux.intel.com>, Kyle Huey <me@kylehuey.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Will Deacon <will.deacon@arm.com>, Arnd Bergmann <arnd@arndb.de>, Florian Weimer <fweimer@redhat.com>, Boris Lukashev <blukashev@sempervictus.com>, Andrey Konovalov <andreyknvl@google.com>, x86@kernel.org, linux-kernel@vger.kernel.org
+To: Jann Horn <jannh@google.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "selinux@tycho.nsa.gov" <selinux@tycho.nsa.gov>, "Hansen, Dave" <dave.hansen@intel.com>, "Dock,
+ Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, Arjan van de Ven <arjan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 08/16/2018 03:16 PM, Alexander Popov wrote:
-> This is the 15th version of the patch series introducing STACKLEAK to
-> the mainline kernel for x86. This version comes with changes according
-> to the feedback from Linus Torvalds:
->   1. BUG_ON() in stackleak_erase() is safely eliminated;
->   2. Stack Clash detection (alloca() check) is completely dropped, since global
->      '-Wvla' should arrive soon (https://patchwork.kernel.org/patch/10489873).
->      stackleak_check_alloca() for arm64 is dropped as well in a separate commit.
-> 
-> This version is rebased onto Linus' tree.
-> 
-> Previous version discussion:
->    https://lore.kernel.org/lkml/20180813214328.GA15137@beast/T/#u
-> 
-> Motivation
-> ==========
-> 
-> STACKLEAK (initially developed by PaX Team):
-> 
->   1. reduces the information that can be revealed through kernel stack leak bugs.
->      The idea of erasing the thread stack at the end of syscalls is similar to
->      CONFIG_PAGE_POISONING and memzero_explicit() in kernel crypto, which all
->      comply with FDP_RIP.2 (Full Residual Information Protection) of the
->      Common Criteria standard.
-> 
->   2. blocks some uninitialized stack variable attacks (e.g. CVE-2017-17712,
->      CVE-2010-2963). That kind of bugs should be killed by improving C compilers
->      in future, which might take a long time.
-> 
-> Performance impact
-> ==================
-> 
-> Hardware: Intel Core i7-4770, 16 GB RAM
-> 
-> Test #1: building the Linux kernel on a single core
-> 	0.91% slowdown
-> 
-> Test #2: hackbench -s 4096 -l 2000 -g 15 -f 25 -P
-> 	4.2% slowdown
-> 
-> So the STACKLEAK description in Kconfig includes:
-> "The tradeoff is the performance impact: on a single CPU system kernel
-> compilation sees a 1% slowdown, other systems and workloads may vary and you are
-> advised to test this feature on your expected workload before deploying it".
-> 
-> 
-> Alexander Popov (7):
->    x86/entry: Add STACKLEAK erasing the kernel stack at the end of
->      syscalls
->    gcc-plugins: Add STACKLEAK plugin for tracking the kernel stack
->    lkdtm: Add a test for STACKLEAK
->    fs/proc: Show STACKLEAK metrics in the /proc file system
->    doc: self-protection: Add information about STACKLEAK feature
->    stackleak: Allow runtime disabling of kernel stack erasing
->    arm64: Drop unneeded stackleak_check_alloca()
-> 
->   Documentation/security/self-protection.rst |  10 +-
->   Documentation/sysctl/kernel.txt            |  18 ++
->   Documentation/x86/x86_64/mm.txt            |   2 +
->   arch/Kconfig                               |   7 +
->   arch/arm64/kernel/process.c                |  22 --
->   arch/x86/Kconfig                           |   1 +
->   arch/x86/entry/calling.h                   |  14 +
->   arch/x86/entry/entry_32.S                  |   7 +
->   arch/x86/entry/entry_64.S                  |   3 +
->   arch/x86/entry/entry_64_compat.S           |   5 +
->   drivers/misc/lkdtm/Makefile                |   2 +
->   drivers/misc/lkdtm/core.c                  |   1 +
->   drivers/misc/lkdtm/lkdtm.h                 |   3 +
->   drivers/misc/lkdtm/stackleak.c             |  73 +++++
->   fs/proc/base.c                             |  18 ++
->   include/linux/sched.h                      |   5 +
->   include/linux/stackleak.h                  |  35 +++
->   kernel/Makefile                            |   4 +
->   kernel/fork.c                              |   3 +
->   kernel/stackleak.c                         | 132 +++++++++
->   kernel/sysctl.c                            |  15 +-
->   scripts/Makefile.gcc-plugins               |  10 +
->   scripts/gcc-plugins/Kconfig                |  51 ++++
->   scripts/gcc-plugins/stackleak_plugin.c     | 427 +++++++++++++++++++++++++++++
->   24 files changed, 840 insertions(+), 28 deletions(-)
->   create mode 100644 drivers/misc/lkdtm/stackleak.c
->   create mode 100644 include/linux/stackleak.h
->   create mode 100644 kernel/stackleak.c
->   create mode 100644 scripts/gcc-plugins/stackleak_plugin.c
-> 
-
-For arm64:
-
-Tested-by: Laura Abbott <labbott@redhat.com>
+PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBKYW5uIEhvcm4gW21haWx0bzpq
+YW5uaEBnb29nbGUuY29tXQ0KPiBTZW50OiBUdWVzZGF5LCBBdWd1c3QgMjEsIDIwMTggMzoyMCBB
+TQ0KPiBUbzogU2NoYXVmbGVyLCBDYXNleSA8Y2FzZXkuc2NoYXVmbGVyQGludGVsLmNvbT4NCj4g
+Q2M6IEtlcm5lbCBIYXJkZW5pbmcgPGtlcm5lbC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29t
+Pjsga2VybmVsIGxpc3QNCj4gPGxpbnV4LWtlcm5lbEB2Z2VyLmtlcm5lbC5vcmc+OyBsaW51eC1z
+ZWN1cml0eS1tb2R1bGUgPGxpbnV4LXNlY3VyaXR5LQ0KPiBtb2R1bGVAdmdlci5rZXJuZWwub3Jn
+Pjsgc2VsaW51eEB0eWNoby5uc2EuZ292OyBIYW5zZW4sIERhdmUNCj4gPGRhdmUuaGFuc2VuQGlu
+dGVsLmNvbT47IERvY2ssIERlbmVlbiBUIDxkZW5lZW4udC5kb2NrQGludGVsLmNvbT47DQo+IGty
+aXN0ZW5AbGludXguaW50ZWwuY29tOyBBcmphbiB2YW4gZGUgVmVuIDxhcmphbkBsaW51eC5pbnRl
+bC5jb20+DQo+IFN1YmplY3Q6IFJlOiBbUEFUQ0ggUkZDIHYyIDIvNV0gWDg2OiBTdXBwb3J0IExT
+TSBkZXRlcm1pbmF0aW9uIG9mIHNpZGUtDQo+IGNoYW5uZWwgdnVsbmVyYWJpbGl0eQ0KPiANCj4g
+T24gTW9uLCBBdWcgMjAsIDIwMTggYXQgNDo0NSBQTSBTY2hhdWZsZXIsIENhc2V5DQo+IDxjYXNl
+eS5zY2hhdWZsZXJAaW50ZWwuY29tPiB3cm90ZToNCj4gPg0KPiA+ID4gLS0tLS1PcmlnaW5hbCBN
+ZXNzYWdlLS0tLS0NCj4gPiA+IEZyb206IEphbm4gSG9ybiBbbWFpbHRvOmphbm5oQGdvb2dsZS5j
+b21dDQo+ID4gPiBTZW50OiBGcmlkYXksIEF1Z3VzdCAxNywgMjAxOCA0OjU1IFBNDQo+ID4gPiBU
+bzogU2NoYXVmbGVyLCBDYXNleSA8Y2FzZXkuc2NoYXVmbGVyQGludGVsLmNvbT4NCj4gPiA+IENj
+OiBLZXJuZWwgSGFyZGVuaW5nIDxrZXJuZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbT47
+IGtlcm5lbCBsaXN0DQo+ID4gPiA8bGludXgta2VybmVsQHZnZXIua2VybmVsLm9yZz47IGxpbnV4
+LXNlY3VyaXR5LW1vZHVsZSA8bGludXgtc2VjdXJpdHktDQo+ID4gPiBtb2R1bGVAdmdlci5rZXJu
+ZWwub3JnPjsgc2VsaW51eEB0eWNoby5uc2EuZ292OyBIYW5zZW4sIERhdmUNCj4gPiA+IDxkYXZl
+LmhhbnNlbkBpbnRlbC5jb20+OyBEb2NrLCBEZW5lZW4gVCA8ZGVuZWVuLnQuZG9ja0BpbnRlbC5j
+b20+Ow0KPiA+ID4ga3Jpc3RlbkBsaW51eC5pbnRlbC5jb207IEFyamFuIHZhbiBkZSBWZW4gPGFy
+amFuQGxpbnV4LmludGVsLmNvbT4NCj4gPiA+IFN1YmplY3Q6IFJlOiBbUEFUQ0ggUkZDIHYyIDIv
+NV0gWDg2OiBTdXBwb3J0IExTTSBkZXRlcm1pbmF0aW9uIG9mIHNpZGUtDQo+ID4gPiBjaGFubmVs
+IHZ1bG5lcmFiaWxpdHkNCj4gPiA+DQo+ID4gPiBPbiBTYXQsIEF1ZyAxOCwgMjAxOCBhdCAxMjox
+NyBBTSBDYXNleSBTY2hhdWZsZXINCj4gPiA+IDxjYXNleS5zY2hhdWZsZXJAaW50ZWwuY29tPiB3
+cm90ZToNCj4gPiA+ID4NCj4gPiA+ID4gRnJvbTogQ2FzZXkgU2NoYXVmbGVyIDxjc2NoYXVmbGVy
+QGxvY2FsaG9zdC5sb2NhbGRvbWFpbj4NCj4gPiA+ID4NCj4gPiA+ID4gV2hlbiBzd2l0Y2hpbmcg
+YmV0d2VlbiB0YXNrcyBpdCBtYXkgYmUgbmVjZXNzYXJ5DQo+ID4gPiA+IHRvIHNldCBhbiBpbmRp
+cmVjdCBicmFuY2ggcHJlZGljdGlvbiBiYXJyaWVyIGlmIHRoZQ0KPiA+ID4gPiB0YXNrcyBhcmUg
+cG90ZW50aWFsbHkgdnVsbmVyYWJsZSB0byBzaWRlLWNoYW5uZWwNCj4gPiA+ID4gYXR0YWNrcy4g
+VGhpcyBhZGRzIGEgY2FsbCB0byBzZWN1cml0eV90YXNrX3NhZmVfc2lkZWNoYW5uZWwNCj4gPiA+
+ID4gc28gdGhhdCBzZWN1cml0eSBtb2R1bGVzIGNhbiB3ZWlnaCBpbiBvbiB0aGUgZGVjaXNpb24u
+DQo+ID4gPiA+DQo+ID4gPiA+IFNpZ25lZC1vZmYtYnk6IENhc2V5IFNjaGF1ZmxlciA8Y2FzZXku
+c2NoYXVmbGVyQGludGVsLmNvbT4NCj4gPiA+ID4gLS0tDQo+ID4gPiA+ICBhcmNoL3g4Ni9tbS90
+bGIuYyB8IDEyICsrKysrKysrLS0tLQ0KPiA+ID4gPiAgMSBmaWxlIGNoYW5nZWQsIDggaW5zZXJ0
+aW9ucygrKSwgNCBkZWxldGlvbnMoLSkNCj4gPiA+ID4NCj4gPiA+ID4gZGlmZiAtLWdpdCBhL2Fy
+Y2gveDg2L21tL3RsYi5jIGIvYXJjaC94ODYvbW0vdGxiLmMNCj4gPiA+ID4gaW5kZXggNmViMWYz
+NGMzYzg1Li44NzE0ZDRhZjA2YWEgMTAwNjQ0DQo+ID4gPiA+IC0tLSBhL2FyY2gveDg2L21tL3Rs
+Yi5jDQo+ID4gPiA+ICsrKyBiL2FyY2gveDg2L21tL3RsYi5jDQo+ID4gPiA+IEBAIC03LDYgKzcs
+NyBAQA0KPiA+ID4gPiAgI2luY2x1ZGUgPGxpbnV4L2V4cG9ydC5oPg0KPiA+ID4gPiAgI2luY2x1
+ZGUgPGxpbnV4L2NwdS5oPg0KPiA+ID4gPiAgI2luY2x1ZGUgPGxpbnV4L2RlYnVnZnMuaD4NCj4g
+PiA+ID4gKyNpbmNsdWRlIDxsaW51eC9zZWN1cml0eS5oPg0KPiA+ID4gPg0KPiA+ID4gPiAgI2lu
+Y2x1ZGUgPGFzbS90bGJmbHVzaC5oPg0KPiA+ID4gPiAgI2luY2x1ZGUgPGFzbS9tbXVfY29udGV4
+dC5oPg0KPiA+ID4gPiBAQCAtMjcwLDExICsyNzEsMTQgQEAgdm9pZCBzd2l0Y2hfbW1faXJxc19v
+ZmYoc3RydWN0IG1tX3N0cnVjdA0KPiAqcHJldiwNCj4gPiA+IHN0cnVjdCBtbV9zdHJ1Y3QgKm5l
+eHQsDQo+ID4gPiA+ICAgICAgICAgICAgICAgICAgKiB0aHJlYWRzLiBJdCB3aWxsIGFsc28gbm90
+IGZsdXNoIGlmIHdlIHN3aXRjaCB0byBpZGxlDQo+ID4gPiA+ICAgICAgICAgICAgICAgICAgKiB0
+aHJlYWQgYW5kIGJhY2sgdG8gdGhlIHNhbWUgcHJvY2Vzcy4gSXQgd2lsbCBmbHVzaCBpZiB3ZQ0K
+PiA+ID4gPiAgICAgICAgICAgICAgICAgICogc3dpdGNoIHRvIGEgZGlmZmVyZW50IG5vbi1kdW1w
+YWJsZSBwcm9jZXNzLg0KPiA+ID4gPiArICAgICAgICAgICAgICAgICogSWYgYSBzZWN1cml0eSBt
+b2R1bGUgdGhpbmtzIHRoYXQgdGhlIHRyYW5zaXRpb24NCj4gPiA+ID4gKyAgICAgICAgICAgICAg
+ICAqIGlzIHVuc2FmZSBkbyB0aGUgZmx1c2guDQo+ID4gPiA+ICAgICAgICAgICAgICAgICAgKi8N
+Cj4gPiA+ID4gLSAgICAgICAgICAgICAgIGlmICh0c2sgJiYgdHNrLT5tbSAmJg0KPiA+ID4gPiAt
+ICAgICAgICAgICAgICAgICAgIHRzay0+bW0tPmNvbnRleHQuY3R4X2lkICE9IGxhc3RfY3R4X2lk
+ICYmDQo+ID4gPiA+IC0gICAgICAgICAgICAgICAgICAgZ2V0X2R1bXBhYmxlKHRzay0+bW0pICE9
+IFNVSURfRFVNUF9VU0VSKQ0KPiA+ID4gPiAtICAgICAgICAgICAgICAgICAgICAgICBpbmRpcmVj
+dF9icmFuY2hfcHJlZGljdGlvbl9iYXJyaWVyKCk7DQo+ID4gPiA+ICsgICAgICAgICAgICAgICBp
+ZiAodHNrICYmIHRzay0+bW0gJiYgdHNrLT5tbS0+Y29udGV4dC5jdHhfaWQgIT0gbGFzdF9jdHhf
+aWQpDQo+IHsNCj4gPiA+ID4gKyAgICAgICAgICAgICAgICAgICAgICAgaWYgKGdldF9kdW1wYWJs
+ZSh0c2stPm1tKSAhPSBTVUlEX0RVTVBfVVNFUiB8fA0KPiA+ID4gPiArICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgc2VjdXJpdHlfdGFza19zYWZlX3NpZGVjaGFubmVsKHRzaykgIT0gMCkNCj4g
+PiA+ID4gKyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBpbmRpcmVjdF9icmFuY2hfcHJl
+ZGljdGlvbl9iYXJyaWVyKCk7DQo+ID4gPiA+ICsgICAgICAgICAgICAgICB9DQo+ID4gPg0KPiA+
+ID4gV2hlbiB5b3UgcG9zdGVkIHYxIG9mIHRoaXMgc2VyaWVzLCBJIGFza2VkOg0KPiA+ID4NCj4g
+PiA+IHwgRG9lcyB0aGlzIGVuZm9yY2UgdHJhbnNpdGl2aXR5PyBXaGF0IGhhcHBlbnMgaWYgd2Ug
+Zmlyc3Qgc3dpdGNoIGZyb20NCj4gPiA+IHwgYW4gYXR0YWNrZXIgdGFzayB0byBhIHRhc2sgd2l0
+aG91dCAtPm1tLCBhbmQgaW1tZWRpYXRlbHkgYWZ0ZXJ3YXJkcw0KPiA+ID4gfCBmcm9tIHRoZSB0
+YXNrIHdpdGhvdXQgLT5tbSB0byBhIHZpY3RpbSB0YXNrPyBJbiB0aGF0IGNhc2UsIHdoZXRoZXIg
+YQ0KPiA+ID4gfCBmbHVzaCBoYXBwZW5zIGJldHdlZW4gdGhlIGF0dGFja2VyIHRhc2sgYW5kIHRo
+ZSB2aWN0aW0gdGFzayBkZXBlbmRzIG9uDQo+ID4gPiB8IHdoZXRoZXIgdGhlIExTTSB0aGlua3Mg
+dGhhdCB0aGUgbW0tbGVzcyB0YXNrIHNob3VsZCBoYXZlIGFjY2VzcyB0byB0aGUNCj4gPiA+IHwg
+dmljdGltIHRhc2ssIHJpZ2h0Pw0KPiA+ID4NCj4gPiA+IEhhdmUgeW91IGFkZHJlc3NlZCB0aGF0
+PyBJIGRvbid0IHNlZSBpdC4uLg0KPiA+DQo+ID4gTm9wZS4gVGhhdCdzIGdvaW5nIHRvIHJlcXVp
+cmUgbWFpbnRhaW5pbmcgc3RhdGUgYWJvdXQgYWxsIHRoZQ0KPiA+IHRhc2tzIGluIHRoZSBjaGFp
+biB0aGF0IG1pZ2h0IHN0aWxsIGhhdmUgY2FjaGUgaW52b2x2ZW1lbnQuDQo+ID4NCj4gPiAgICAg
+ICAgIEEgLT4gQiAtPiBDIC0+IEQNCj4gDQo+IFJlYWxseT8NCg0KSSBhbSB3aWxsaW5nIHRvIGJl
+IGVkdWNhdGVkIG90aGVyd2lzZS4gTXkgdW5kZXJzdGFuZGluZw0Kb2YgTW9kZXJuIFByb2Nlc3Nv
+ciBUZWNobm9sb2d5IHdpbGwgbmV2ZXIgYmUgc28gZGVlcCB0aGF0DQpJIHdvbid0IGxpc3RlbiB0
+byByZWFzb24uDQoNCj4gDQo+IEZyb20gd2hhdCBJIGNhbiB0ZWxsLCBpdCdkIGJlIGVub3VnaCB0
+bzoNCj4gDQo+ICAtIGVuc3VyZSB0aGF0IHRoZSBMU00tYmFzZWQgYWNjZXNzIGNoZWNrcyBiZWhh
+dmUgYXBwcm94aW1hdGVseSB0cmFuc2l0aXZlbHkNCj4gICAgKHdoaWNoIEkgdGhpbmsgdGhleSBh
+bHJlYWR5IGRvLCBtb3N0bHkpDQoNClNtYWNrIHJ1bGVzIGFyZSBleHBsaWNpdGx5IGFuZCBpbnRl
+bnRpb25hbGx5IG5vdCB0cmFuc2l0aXZlLg0KDQpBIHJlYWRzIEIsIEIgcmVhZHMgQyBkb2VzICpu
+b3QqIGltcGx5IEEgcmVhZHMgQy4NCg0KPiAgLSBrZWVwIGEgY29weSBvZiB0aGUgbWV0YWRhdGEg
+b2YgdGhlIGxhc3Qgbm9uLWtlcm5lbCB0YXNrIG9uIHRoZSBDUFUNCg0KRG8geW91IGhhdmUgYSBz
+dWdnZXN0aW9uIG9mIGhvdyBvbmUgbWlnaHQgZG8gdGhhdD8NCkknbSB3aWxsaW5nIHRvIGJlbGll
+dmUgdGhlIGluZm9ybWF0aW9uIGNvdWxkIGJlIGF2YWlsYWJsZSwNCmJ1dCBJIGhhdmUgeWV0IHRv
+IGNvbWUgdXAgd2l0aCBhIG1lY2hhbmlzbSBmb3IgZ2V0dGluZyBpdC4NCg0KPiANCj4gPiBJZiBC
+IGFuZCBDIGRvbid0IGRvIGFueXRoaW5nIGNhY2hld29ydGh5IEQgY291bGQgY29uY2VpdmFibHkg
+YXR0YWNrIEEuDQo+ID4gVGhlIGFtb3VudCBvZiBzdGF0ZSByZXF1aXJlZCB0byBkZXRlY3QgdGhp
+cyBjYXNlIHdvdWxkIGJlIHByb2hpYml0aXZlLg0KPiA+IEkgdGhpbmsgdGhhdCBpZiB5b3UncmUg
+c3VmZmljaWVudGx5IGNvbmNlcm5lZCBhYm91dCB0aGlzIGNhc2UgeW91IHNob3VsZCBqdXN0DQo+
+ID4gZ28gYWhlYWQgYW5kIHNldCB0aGUgYmFycmllci4gSSdtIHdpbGxpbmcgdG8gbGVhcm4gc29t
+ZXRoaW5nIHRoYXQgc2F5cyBJJ20NCj4gPiB3cm9uZy4NCj4gDQo+IFRoYXQgbWVhbnMgdGhhdCBh
+biBhdHRhY2tlciB3aG8gY2FuIGUuZy4gZ2V0IGEgQ1BVIHRvIGZpcnN0IHN3aXRjaA0KPiBmcm9t
+IGFuIGF0dGFja2VyIHRhc2sgdG8gYSBzb2Z0aXJxZCAoZS5nLiBmb3IgbmV0d29yayBwYWNrZXQN
+Cj4gcHJvY2Vzc2luZyBvciB3aGF0ZXZlciksIHRoZW4gc3dpdGNoIGZyb20gdGhlIHNvZnRpcnFk
+IHRvIGEgcm9vdC1vd25lZA0KPiB2aWN0aW0gdGFzayB3b3VsZCBiZSBhYmxlIHRvIGJ5cGFzcyB0
+aGUgY2hlY2ssIHJpZ2h0PyBUaGF0IGRvZXNuJ3QNCj4gc291bmQgbGlrZSBhIHZlcnkgY29tcGxp
+Y2F0ZWQgYXR0YWNrLi4uDQoNCk1heWJlIG15IGJyYWluIGlzIHN0aWxsIHN0dWNrIGluIHRoZSAx
+OTgwJ3MsIGJ1dCB0aGF0IHNvdW5kcyBwcmV0dHkNCmNvbXBsaWNhdGVkIHRvIG1lISBPZiBjb3Vy
+c2UsIHRoZSBmYWN0IHRoYXQgaXQncyBiZXlvbmQgd2hlcmUgSSB3b3VsZA0KZ28gZG9lc24ndCBt
+ZWFuIGl0J3MgaW1wbGF1c2libGUuDQoNCj4gDQo+IEkgdmVyeSBtdWNoIGRpc2xpa2UgdGhlIGlk
+ZWEgb2YgYWRkaW5nIGEgbWl0aWdhdGlvbiB3aXRoIGEga25vd24NCj4gYnlwYXNzIHRlY2huaXF1
+ZSB0byB0aGUga2VybmVsLg0KDQpUaGF0J3MgZmFpci4gSSdsbCBsb29rIG1vcmUgY2xvc2VseSBh
+dCBnZXR0aW5nIHByZXZpb3VzX2NyZWRfdGhpc19jcHUoKS4NCg0KVGhhbmshDQoNCg==
