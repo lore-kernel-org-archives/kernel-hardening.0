@@ -1,185 +1,160 @@
-MIME-Version: 1.0
-References: <20180817221624.10232-1-casey.schaufler@intel.com>
- <20180817221624.10232-3-casey.schaufler@intel.com> <CAG48ez23G+wcnkCMNZV_mxYMS=h+pZkpx1451Wz5GB9_tcDv3Q@mail.gmail.com>
- <99FC4B6EFCEFD44486C35F4C281DC6732143F769@ORSMSX107.amr.corp.intel.com>
- <CAG48ez1LHOHvB4ud+8asOjKARVLQJGV4ocdKVDJtvTXTfeMa9w@mail.gmail.com> <99FC4B6EFCEFD44486C35F4C281DC67321440056@ORSMSX107.amr.corp.intel.com>
-In-Reply-To: <99FC4B6EFCEFD44486C35F4C281DC67321440056@ORSMSX107.amr.corp.intel.com>
-From: Jann Horn <jannh@google.com>
-Date: Tue, 21 Aug 2018 19:45:03 +0200
-Message-ID: <CAG48ez0j4+4iaH60Xf857Oh8TwhXzA39M3-CC4kXJKf6Ctvchg@mail.gmail.com>
-Subject: Re: [PATCH RFC v2 2/5] X86: Support LSM determination of side-channel vulnerability
-Content-Type: text/plain; charset="UTF-8"
-To: Casey Schaufler <casey.schaufler@intel.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, selinux@tycho.nsa.gov, Dave Hansen <dave.hansen@intel.com>, deneen.t.dock@intel.com, kristen@linux.intel.com, Arjan van de Ven <arjan@linux.intel.com>, Andy Lutomirski <luto@kernel.org>
+Content-Type: text/plain;
+	charset=utf-8
+Mime-Version: 1.0 (Mac OS X Mail 11.1 \(3445.4.7\))
+Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
+ in mind (for KVM to isolate its guests per CPU)
+From: Liran Alon <liran.alon@oracle.com>
+In-Reply-To: <1534861342.14722.11.camel@infradead.org>
+Date: Wed, 22 Aug 2018 02:04:17 +0300
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <893B27C3-0532-407C-9D4A-B8EAB1B28957@oracle.com>
+References: <20180820212556.GC2230@char.us.oracle.com>
+ <CA+55aFxZCyVZc4ZpRyZ3uDyakRSOG_=2XvnwMo4oejpsieF9=A@mail.gmail.com>
+ <1534801939.10027.24.camel@amazon.co.uk>
+ <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
+ <1534845423.10027.44.camel@infradead.org>
+ <ED24D811-C740-417F-A443-B7A249F4FF4C@oracle.com>
+ <1534861342.14722.11.camel@infradead.org>
+To: David Woodhouse <dwmw2@infradead.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, Joao Martins <joao.m.martins@oracle.com>, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Kees Cook <keescook@google.com>, jsteckli@os.inf.tu-dresden.de, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>, Paolo Bonzini <pbonzini@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Aug 21, 2018 at 6:37 PM Schaufler, Casey
-<casey.schaufler@intel.com> wrote:
->
-> > -----Original Message-----
-> > From: Jann Horn [mailto:jannh@google.com]
-> > Sent: Tuesday, August 21, 2018 3:20 AM
-> > To: Schaufler, Casey <casey.schaufler@intel.com>
-> > Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>; kernel list
-> > <linux-kernel@vger.kernel.org>; linux-security-module <linux-security-
-> > module@vger.kernel.org>; selinux@tycho.nsa.gov; Hansen, Dave
-> > <dave.hansen@intel.com>; Dock, Deneen T <deneen.t.dock@intel.com>;
-> > kristen@linux.intel.com; Arjan van de Ven <arjan@linux.intel.com>
-> > Subject: Re: [PATCH RFC v2 2/5] X86: Support LSM determination of side-
-> > channel vulnerability
-> >
-> > On Mon, Aug 20, 2018 at 4:45 PM Schaufler, Casey
-> > <casey.schaufler@intel.com> wrote:
-> > >
-> > > > -----Original Message-----
-> > > > From: Jann Horn [mailto:jannh@google.com]
-> > > > Sent: Friday, August 17, 2018 4:55 PM
-> > > > To: Schaufler, Casey <casey.schaufler@intel.com>
-> > > > Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>; kernel list
-> > > > <linux-kernel@vger.kernel.org>; linux-security-module <linux-security-
-> > > > module@vger.kernel.org>; selinux@tycho.nsa.gov; Hansen, Dave
-> > > > <dave.hansen@intel.com>; Dock, Deneen T <deneen.t.dock@intel.com>;
-> > > > kristen@linux.intel.com; Arjan van de Ven <arjan@linux.intel.com>
-> > > > Subject: Re: [PATCH RFC v2 2/5] X86: Support LSM determination of side-
-> > > > channel vulnerability
-> > > >
-> > > > On Sat, Aug 18, 2018 at 12:17 AM Casey Schaufler
-> > > > <casey.schaufler@intel.com> wrote:
-> > > > >
-> > > > > From: Casey Schaufler <cschaufler@localhost.localdomain>
-> > > > >
-> > > > > When switching between tasks it may be necessary
-> > > > > to set an indirect branch prediction barrier if the
-> > > > > tasks are potentially vulnerable to side-channel
-> > > > > attacks. This adds a call to security_task_safe_sidechannel
-> > > > > so that security modules can weigh in on the decision.
-> > > > >
-> > > > > Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
-> > > > > ---
-> > > > >  arch/x86/mm/tlb.c | 12 ++++++++----
-> > > > >  1 file changed, 8 insertions(+), 4 deletions(-)
-> > > > >
-> > > > > diff --git a/arch/x86/mm/tlb.c b/arch/x86/mm/tlb.c
-> > > > > index 6eb1f34c3c85..8714d4af06aa 100644
-> > > > > --- a/arch/x86/mm/tlb.c
-> > > > > +++ b/arch/x86/mm/tlb.c
-> > > > > @@ -7,6 +7,7 @@
-> > > > >  #include <linux/export.h>
-> > > > >  #include <linux/cpu.h>
-> > > > >  #include <linux/debugfs.h>
-> > > > > +#include <linux/security.h>
-> > > > >
-> > > > >  #include <asm/tlbflush.h>
-> > > > >  #include <asm/mmu_context.h>
-> > > > > @@ -270,11 +271,14 @@ void switch_mm_irqs_off(struct mm_struct
-> > *prev,
-> > > > struct mm_struct *next,
-> > > > >                  * threads. It will also not flush if we switch to idle
-> > > > >                  * thread and back to the same process. It will flush if we
-> > > > >                  * switch to a different non-dumpable process.
-> > > > > +                * If a security module thinks that the transition
-> > > > > +                * is unsafe do the flush.
-> > > > >                  */
-> > > > > -               if (tsk && tsk->mm &&
-> > > > > -                   tsk->mm->context.ctx_id != last_ctx_id &&
-> > > > > -                   get_dumpable(tsk->mm) != SUID_DUMP_USER)
-> > > > > -                       indirect_branch_prediction_barrier();
-> > > > > +               if (tsk && tsk->mm && tsk->mm->context.ctx_id != last_ctx_id)
-> > {
-> > > > > +                       if (get_dumpable(tsk->mm) != SUID_DUMP_USER ||
-> > > > > +                           security_task_safe_sidechannel(tsk) != 0)
-> > > > > +                               indirect_branch_prediction_barrier();
-> > > > > +               }
-> > > >
-> > > > When you posted v1 of this series, I asked:
-> > > >
-> > > > | Does this enforce transitivity? What happens if we first switch from
-> > > > | an attacker task to a task without ->mm, and immediately afterwards
-> > > > | from the task without ->mm to a victim task? In that case, whether a
-> > > > | flush happens between the attacker task and the victim task depends on
-> > > > | whether the LSM thinks that the mm-less task should have access to the
-> > > > | victim task, right?
-> > > >
-> > > > Have you addressed that? I don't see it...
-> > >
-> > > Nope. That's going to require maintaining state about all the
-> > > tasks in the chain that might still have cache involvement.
-> > >
-> > >         A -> B -> C -> D
-> >
-> > Really?
->
-> I am willing to be educated otherwise. My understanding
-> of Modern Processor Technology will never be so deep that
-> I won't listen to reason.
->
-> >
-> > From what I can tell, it'd be enough to:
-> >
-> >  - ensure that the LSM-based access checks behave approximately transitively
-> >    (which I think they already do, mostly)
->
-> Smack rules are explicitly and intentionally not transitive.
->
-> A reads B, B reads C does *not* imply A reads C.
 
-Ah. :(
 
-Well, at least for UID-based checks, capability comparisons and
-namespace comparisons, the relationship should be transitive, right?
+> On 21 Aug 2018, at 17:22, David Woodhouse <dwmw2@infradead.org> wrote:
+>=20
+> On Tue, 2018-08-21 at 17:01 +0300, Liran Alon wrote:
+>>=20
+>>> On 21 Aug 2018, at 12:57, David Woodhouse <dwmw2@infradead.org>
+>> wrote:
+>>> =20
+>>> Another alternative... I'm told POWER8 does an interesting thing
+>> with
+>>> hyperthreading and gang scheduling for KVM. The host kernel doesn't
+>>> actually *see* the hyperthreads at all, and KVM just launches the
+>> full
+>>> set of siblings when it enters a guest, and gathers them again when
+>> any
+>>> of them exits. That's definitely worth investigating as an option
+>> for
+>>> x86, too.
+>>=20
+>> I actually think that such scheduling mechanism which prevents
+>> leaking cache entries to sibling hyperthreads should co-exist
+>> together with the KVM address space isolation to fully mitigate L1TF
+>> and other similar vulnerabilities. The address space isolation should
+>> prevent VMExit handlers code gadgets from loading arbitrary host
+>> memory to the cache. Once VMExit code path switches to full host
+>> address space, then we should also make sure that no other sibling
+>> hyprethread is running in the guest.
+>=20
+> The KVM POWER8 solution (see arch/powerpc/kvm/book3s_hv.c) does that.
+> The siblings are *never* running host kernel code; they're all torn
+> down when any of them exits the guest. And it's always the *same*
+> guest.
+>=20
 
-> >  - keep a copy of the metadata of the last non-kernel task on the CPU
->
-> Do you have a suggestion of how one might do that?
-> I'm willing to believe the information could be available,
-> but I have yet to come up with a mechanism for getting it.
+I wasn=E2=80=99t aware of this KVM Power8 mechanism. Thanks for the =
+pointer.
+(371fefd6f2dc ("KVM: PPC: Allow book3s_hv guests to use SMT processor =
+modes=E2=80=9D))
 
-The obvious solution would be to take a refcounted reference on the
-old task's objective creds, but you probably want to avoid the
-resulting cache line bouncing...
+Note though that my point regarding the co-existence of the isolated =
+address space together with such scheduling mechanism is still valid.
+The scheduling mechanism should not be seen as an alternative to the =
+isolated address space if we wish to reduce the frequency of events
+in which we need to kick sibling hyperthreads from guest.
 
-For safe_by_uid(), I think you could get away with just stashing the
-last UID in a percpu variable, instead of keeping the full creds
-struct around. That should be fairly cheap?
+>> Focusing on the scheduling mechanism, we must make sure that when a
+>> logical processor runs guest code, all siblings logical processors
+>> must run code which do not populate L1D cache with information
+>> unrelated to this VM. This includes forbidding one logical processor
+>> to run guest code while sibling is running a host task such as a NIC
+>> interrupt handler.
+>> Thus, when a vCPU thread exits the guest into the host and VMExit
+>> handler reaches code flow which could populate L1D cache with this
+>> information, we should force an exit from the guest of the siblings
+>> logical processors, such that they will be allowed to resume only on
+>> a core which we can promise that the L1D cache is free from
+>> information unrelated to this VM.
+>>=20
+>> At first, I have created a patch series which attempts to implement
+>> such mechanism in KVM. However, it became clear to me that this may
+>> need to be implemented in the scheduler itself. This is because:
+>> 1. It is difficult to handle all new scheduling contrains only in
+>> KVM.
+>> 2. This mechanism should be relevant for any Type-2 hypervisor which
+>> runs inside Linux besides KVM (Such as VMware Workstation or
+>> VirtualBox).
+>> 3. This mechanism could also be used to prevent future =E2=80=9Ccore-ca=
+che-
+>> leaking=E2=80=9D vulnerabilities to be exploited between processes of
+>> different security domains which run as siblings on the same core.
+>=20
+> I'm not sure I agree. If KVM is handling "only let siblings run the
+> *same* guest" and the siblings aren't visible to the host at all,
+> that's quite simple. Any other hypervisor can also do it.
+>=20
+> Now, the down-side of this is that the siblings aren't visible to the
+> host. They can't be used to run multiple threads of the same userspace
+> processes; only multiple threads of the same KVM guest. A truly =
+generic
+> core scheduler would cope with userspace threads too.
+>=20
+> BUT I strongly suspect there's a huge correlation between the set of
+> people who care enough about the KVM/L1TF issue to enable a costly
+> XFPO-like solution, and the set of people who mostly don't give a shit
+> about having sibling CPUs available to run the host's userspace =
+anyway.
+>=20
+> This is not the "I happen to run a Windows VM on my Linux desktop" use
+> case...
 
-Namespace comparisons, and whatever SELinux/Smack/AppArmor do
-internally, are probably more complicated, since you'd potentially
-have to deal with changes of internal IDs and such if the policy gets
-reloaded in the wrong moment.
-For namespaces, perhaps you could give each namespace a unique 128-bit
-ID and then save and compare those, just like UIDs.
-For LSMs whose internal IDs might change after a policy reload, things
-would probably be more messy. Perhaps you could save, e.g. for
-SELinux, something like an (sid,policy_generation_counter) pair? I
-don't know all that much about the internals of classic LSMs.
+If I understand your proposal correctly, you suggest to do something =
+similar to the KVM Power8 solution:
+1. Disable HyperThreading for use by host user space.
+2. Use sibling hyperthreads only in KVM and schedule group of vCPUs that =
+run on a single core as a =E2=80=9Cgang=E2=80=9D to enter and exit guest =
+together.
 
-> > > If B and C don't do anything cacheworthy D could conceivably attack A.
-> > > The amount of state required to detect this case would be prohibitive.
-> > > I think that if you're sufficiently concerned about this case you should just
-> > > go ahead and set the barrier. I'm willing to learn something that says I'm
-> > > wrong.
-> >
-> > That means that an attacker who can e.g. get a CPU to first switch
-> > from an attacker task to a softirqd (e.g. for network packet
-> > processing or whatever), then switch from the softirqd to a root-owned
-> > victim task would be able to bypass the check, right? That doesn't
-> > sound like a very complicated attack...
->
-> Maybe my brain is still stuck in the 1980's, but that sounds pretty
-> complicated to me! Of course, the fact that it's beyond where I would
-> go doesn't mean it's implausible.
+This solution may work well for KVM-based cloud providers that match the =
+following criteria:
+1. All compute instances run with SR-IOV and IOMMU Posted-Interrupts.
+2. Configure affinity such that host dedicate distinct set of physical =
+cores per guest. No physical core is able to run vCPUs from multiple =
+guests.
 
-It seems to me like this could happen relatively easily if you have
-one attacker task that keeps calling sched_yield() together with a
-victim task on a logical core that's also running a softirqd? Attacker
-voluntarily preempts, softirqd runs for packet processing, softirqd
-ends processing, kernel schedules victim? I'm not sure how high the
-injection success rate would be with that though.
+However, this may not necessarily be the case: Some cloud providers have =
+compute instances which all their devices are emulated or =
+ParaVirtualized.
+In the proposed scheduling mechanism, all the IOThreads of these guests =
+will not be able to utilize HyperThreading which can be a significant =
+performance hit.
+So Oracle Cloud (OCI) are folks who do care enough about the KVM/L1TF =
+issue but gives a shit about having sibling CPUs available to run host =
+userspace. :)
+Unless I=E2=80=99m missing something of course...
 
-> > I very much dislike the idea of adding a mitigation with a known
-> > bypass technique to the kernel.
->
-> That's fair. I'll look more closely at getting previous_cred_this_cpu().
->
-> Thank!
->
+In addition, desktop users who run VMs today, expect a security boundary =
+to exist between the guest and the host.
+Besides the L1TF HyperThreading variant, we were able to preserve such a =
+security boundary.
+It seems a bit weird that we will implement a mechanism in x86 KVM that =
+it=E2=80=99s message to users is basically:
+=E2=80=9CIf you want to have a security boundary between a VM and the =
+host, you need to enable this knob which will also cause the rest of =
+your host
+to see half the amount of logical processors=E2=80=9D.
+
+Furthermore, I think it is important to think about a mechanism which =
+may help us to mitigate future similar =E2=80=9Ccore-cache-leak=E2=80=9D =
+vulnerabilities.
+As I previously mentioned, the =E2=80=9Ccore scheduler=E2=80=9D could =
+help us mitigate these vulnerabilities on OS-level by disallowing =
+userspace tasks of different =E2=80=9Csecurity domain=E2=80=9D
+to run as siblings on the same core.
+
+-Liran
+
+(Cc Paolo who probably have good feedback on the entire email thread =
+as-well)
