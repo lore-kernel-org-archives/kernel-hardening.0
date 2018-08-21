@@ -1,46 +1,55 @@
 From: Casey Schaufler <casey.schaufler@intel.com>
-Subject: [PATCH v3 5/5] SELinux: Support SELinux determination of side-channel
-Date: Mon, 20 Aug 2018 17:04:44 -0700
-Message-Id: <20180821000444.7004-6-casey.schaufler@intel.com>
+Subject: [PATCH v3 4/5] Smack: Support determination of side-channel
+Date: Mon, 20 Aug 2018 17:04:43 -0700
+Message-Id: <20180821000444.7004-5-casey.schaufler@intel.com>
 In-Reply-To: <20180821000444.7004-1-casey.schaufler@intel.com>
 References: <20180821000444.7004-1-casey.schaufler@intel.com>
 To: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, selinux@tycho.nsa.gov, casey.schaufler@intel.com, dave.hansen@intel.com, deneen.t.dock@intel.com, kristen@linux.intel.com, arjan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-SELinux considers tasks to be side-channel safe if they
-have FILE__READ access.
+Smack considers its private task data safe if the current task
+has read access to the passed task.
 
 Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
 ---
- security/selinux/hooks.c | 9 +++++++++
- 1 file changed, 9 insertions(+)
+ security/smack/smack_lsm.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
 
-diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
-index a8bf324130f5..992f2402edaa 100644
---- a/security/selinux/hooks.c
-+++ b/security/selinux/hooks.c
-@@ -4219,6 +4219,14 @@ static void selinux_task_to_inode(struct task_struct *p,
- 	spin_unlock(&isec->lock);
+diff --git a/security/smack/smack_lsm.c b/security/smack/smack_lsm.c
+index 91750205a5de..85dc053e610c 100644
+--- a/security/smack/smack_lsm.c
++++ b/security/smack/smack_lsm.c
+@@ -2299,6 +2299,23 @@ static void smack_task_to_inode(struct task_struct *p, struct inode *inode)
+ 	isp->smk_inode = skp;
  }
  
-+static int selinux_task_safe_sidechannel(struct task_struct *p)
++/**
++ * smack_task_safe_sidechannel - Are the task and current sidechannel safe?
++ * @p: task to check on
++ *
++ * A crude value for sidechannel safety is that the current task is
++ * already allowed to read from the other.
++ *
++ * Returns 0 if the tasks are sidechannel safe, -EACCES otherwise.
++ */
++static int smack_task_safe_sidechannel(struct task_struct *p)
 +{
-+	struct av_decision avd;
++	struct smack_known *skp = smk_of_task_struct(p);
++	struct smack_known *ckp = smk_of_task_struct(current);
 +
-+	return avc_has_perm_noaudit(&selinux_state, current_sid(), task_sid(p),
-+				    SECCLASS_FILE, FILE__READ, 0, &avd);
++	return smk_access(ckp, skp, MAY_READ, NULL);
 +}
 +
- /* Returns error only if unable to parse addresses */
- static int selinux_parse_skb_ipv4(struct sk_buff *skb,
- 			struct common_audit_data *ad, u8 *proto)
-@@ -7002,6 +7010,7 @@ static struct security_hook_list selinux_hooks[] __lsm_ro_after_init = {
- 	LSM_HOOK_INIT(task_movememory, selinux_task_movememory),
- 	LSM_HOOK_INIT(task_kill, selinux_task_kill),
- 	LSM_HOOK_INIT(task_to_inode, selinux_task_to_inode),
-+	LSM_HOOK_INIT(task_safe_sidechannel, selinux_task_safe_sidechannel),
+ /*
+  * Socket hooks.
+  */
+@@ -4718,6 +4735,7 @@ static struct security_hook_list smack_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(task_movememory, smack_task_movememory),
+ 	LSM_HOOK_INIT(task_kill, smack_task_kill),
+ 	LSM_HOOK_INIT(task_to_inode, smack_task_to_inode),
++	LSM_HOOK_INIT(task_safe_sidechannel, smack_task_safe_sidechannel),
  
- 	LSM_HOOK_INIT(ipc_permission, selinux_ipc_permission),
- 	LSM_HOOK_INIT(ipc_getsecid, selinux_ipc_getsecid),
+ 	LSM_HOOK_INIT(ipc_permission, smack_ipc_permission),
+ 	LSM_HOOK_INIT(ipc_getsecid, smack_ipc_getsecid),
 -- 
 2.17.1
