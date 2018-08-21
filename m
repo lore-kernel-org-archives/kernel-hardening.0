@@ -1,35 +1,39 @@
-MIME-Version: 1.0
-References: <20180820212556.GC2230@char.us.oracle.com> <CA+55aFxZCyVZc4ZpRyZ3uDyakRSOG_=2XvnwMo4oejpsieF9=A@mail.gmail.com>
- <1534801939.10027.24.camel@amazon.co.uk> <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
- <20180820223557.GC16961@cisco.cisco.com> <bd148fb6-e139-a065-1bf5-8054f932d30a@intel.com>
- <1534806880.10027.29.camel@infradead.org> <dd9657d2-f1c1-630d-4cce-7f1c67a968d6@intel.com>
-In-Reply-To: <dd9657d2-f1c1-630d-4cce-7f1c67a968d6@intel.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Mon, 20 Aug 2018 16:38:31 -0700
-Message-ID: <CA+55aFxGpX_W_B8aiV7dWFj5=wckTSiQ4nzVx-moonO5t3e6Lw@mail.gmail.com>
-Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
- in mind (for KVM to isolate its guests per CPU)
-Content-Type: text/plain; charset="UTF-8"
-To: Dave Hansen <dave.hansen@intel.com>
-Cc: David Woodhouse <dwmw2@infradead.org>, Tycho Andersen <tycho@tycho.ws>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, jsteckli@os.inf.tu-dresden.de, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
+From: Casey Schaufler <casey.schaufler@intel.com>
+Subject: [PATCH RFC v3 0/5] LSM: Add and use a hook for side-channel safety checks
+Date: Mon, 20 Aug 2018 17:04:39 -0700
+Message-Id: <20180821000444.7004-1-casey.schaufler@intel.com>
+To: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, selinux@tycho.nsa.gov, casey.schaufler@intel.com, dave.hansen@intel.com, deneen.t.dock@intel.com, kristen@linux.intel.com, arjan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 20, 2018 at 4:27 PM Dave Hansen <dave.hansen@intel.com> wrote:
->
-> You're right that we could have a full physmap that we switch to for
-> kmap()-like access to user pages.  But, the real problem is
-> transitioning pages from kernel to user usage since it requires shooting
-> down the old kernel mappings for those pages in some way.
+v3: get_task_cred wasn't a good choice due to refcounts.
+    Use lower level protection instead
+v2: SELinux access policy corrected.
+    Use real_cred instead of cred.
 
-You might decide that you simply don't care enough, and are willing to
-leave possible stale TLB entries rather than shoot things down.
+This patchset provide a mechanism by which a security module
+can advise the system about potential side-channel vulnerabilities.
+If security_safe_sidechannel() returns 0 the security modules do
+not know of any data that would be subject to a side-channel
+attack. If the security module maintains data that it believes
+may be susceptible to a side-channel attack it will return -EACCES.
 
-Then you'd still possibly see user pages in the kernel map, but only
-for a fairly limited time, and only until the TLB entry gets re-used
-for other reasons.
+Simple hooks are provided for SELinux and Smack. A new security
+module is provided to make determinations regarding traditional
+task attributes, including user IDs, capability sets and namespaces.
 
-Even with kernel page table entries being marked global, their
-lifetime in the TLB is likely not very long, and definitely not long
-enough for some user that tries to scan for pages.
+Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
 
-             Linus
+---
+ MAINTAINERS                        |   6 ++
+ arch/x86/mm/tlb.c                  |  12 ++-
+ include/linux/lsm_hooks.h          |  12 +++
+ include/linux/security.h           |   1 +
+ security/Kconfig                   |   1 +
+ security/Makefile                  |   2 +
+ security/security.c                |   6 ++
+ security/selinux/hooks.c           |   9 +++
+ security/sidechannel/Kconfig       |  60 ++++++++++++++
+ security/sidechannel/Makefile      |   1 +
+ security/sidechannel/sidechannel.c | 162 +++++++++++++++++++++++++++++++++++++
+ security/smack/smack_lsm.c         |  18 +++++
+ 12 files changed, 286 insertions(+), 4 deletions(-)
