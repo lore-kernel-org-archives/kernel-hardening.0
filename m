@@ -1,160 +1,114 @@
-Content-Type: text/plain;
-	charset=utf-8
-Mime-Version: 1.0 (Mac OS X Mail 11.1 \(3445.4.7\))
-Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
- in mind (for KVM to isolate its guests per CPU)
-From: Liran Alon <liran.alon@oracle.com>
-In-Reply-To: <1534861342.14722.11.camel@infradead.org>
-Date: Wed, 22 Aug 2018 02:04:17 +0300
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <893B27C3-0532-407C-9D4A-B8EAB1B28957@oracle.com>
-References: <20180820212556.GC2230@char.us.oracle.com>
- <CA+55aFxZCyVZc4ZpRyZ3uDyakRSOG_=2XvnwMo4oejpsieF9=A@mail.gmail.com>
- <1534801939.10027.24.camel@amazon.co.uk>
- <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
- <1534845423.10027.44.camel@infradead.org>
- <ED24D811-C740-417F-A443-B7A249F4FF4C@oracle.com>
- <1534861342.14722.11.camel@infradead.org>
-To: David Woodhouse <dwmw2@infradead.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, Joao Martins <joao.m.martins@oracle.com>, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Kees Cook <keescook@google.com>, jsteckli@os.inf.tu-dresden.de, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>, Paolo Bonzini <pbonzini@redhat.com>
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Subject: RE: [PATCH v3 3/5] LSM: Security module checking for side-channel
+ dangers
+Date: Tue, 21 Aug 2018 23:44:23 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC673214402D3@ORSMSX107.amr.corp.intel.com>
+References: <20180821000444.7004-1-casey.schaufler@intel.com>
+ <20180821000444.7004-4-casey.schaufler@intel.com>
+ <CAG48ez1D-DPBP8ACA1W5=XZLNKUeVj7ZOGUG8uJ2nL1xOSR_9Q@mail.gmail.com>
+In-Reply-To: <CAG48ez1D-DPBP8ACA1W5=XZLNKUeVj7ZOGUG8uJ2nL1xOSR_9Q@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+To: Jann Horn <jannh@google.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "selinux@tycho.nsa.gov" <selinux@tycho.nsa.gov>, "Hansen, Dave" <dave.hansen@intel.com>, "Dock,
+ Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, Arjan van de Ven <arjan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-> On 21 Aug 2018, at 17:22, David Woodhouse <dwmw2@infradead.org> wrote:
->=20
-> On Tue, 2018-08-21 at 17:01 +0300, Liran Alon wrote:
->>=20
->>> On 21 Aug 2018, at 12:57, David Woodhouse <dwmw2@infradead.org>
->> wrote:
->>> =20
->>> Another alternative... I'm told POWER8 does an interesting thing
->> with
->>> hyperthreading and gang scheduling for KVM. The host kernel doesn't
->>> actually *see* the hyperthreads at all, and KVM just launches the
->> full
->>> set of siblings when it enters a guest, and gathers them again when
->> any
->>> of them exits. That's definitely worth investigating as an option
->> for
->>> x86, too.
->>=20
->> I actually think that such scheduling mechanism which prevents
->> leaking cache entries to sibling hyperthreads should co-exist
->> together with the KVM address space isolation to fully mitigate L1TF
->> and other similar vulnerabilities. The address space isolation should
->> prevent VMExit handlers code gadgets from loading arbitrary host
->> memory to the cache. Once VMExit code path switches to full host
->> address space, then we should also make sure that no other sibling
->> hyprethread is running in the guest.
->=20
-> The KVM POWER8 solution (see arch/powerpc/kvm/book3s_hv.c) does that.
-> The siblings are *never* running host kernel code; they're all torn
-> down when any of them exits the guest. And it's always the *same*
-> guest.
->=20
-
-I wasn=E2=80=99t aware of this KVM Power8 mechanism. Thanks for the =
-pointer.
-(371fefd6f2dc ("KVM: PPC: Allow book3s_hv guests to use SMT processor =
-modes=E2=80=9D))
-
-Note though that my point regarding the co-existence of the isolated =
-address space together with such scheduling mechanism is still valid.
-The scheduling mechanism should not be seen as an alternative to the =
-isolated address space if we wish to reduce the frequency of events
-in which we need to kick sibling hyperthreads from guest.
-
->> Focusing on the scheduling mechanism, we must make sure that when a
->> logical processor runs guest code, all siblings logical processors
->> must run code which do not populate L1D cache with information
->> unrelated to this VM. This includes forbidding one logical processor
->> to run guest code while sibling is running a host task such as a NIC
->> interrupt handler.
->> Thus, when a vCPU thread exits the guest into the host and VMExit
->> handler reaches code flow which could populate L1D cache with this
->> information, we should force an exit from the guest of the siblings
->> logical processors, such that they will be allowed to resume only on
->> a core which we can promise that the L1D cache is free from
->> information unrelated to this VM.
->>=20
->> At first, I have created a patch series which attempts to implement
->> such mechanism in KVM. However, it became clear to me that this may
->> need to be implemented in the scheduler itself. This is because:
->> 1. It is difficult to handle all new scheduling contrains only in
->> KVM.
->> 2. This mechanism should be relevant for any Type-2 hypervisor which
->> runs inside Linux besides KVM (Such as VMware Workstation or
->> VirtualBox).
->> 3. This mechanism could also be used to prevent future =E2=80=9Ccore-ca=
-che-
->> leaking=E2=80=9D vulnerabilities to be exploited between processes of
->> different security domains which run as siblings on the same core.
->=20
-> I'm not sure I agree. If KVM is handling "only let siblings run the
-> *same* guest" and the siblings aren't visible to the host at all,
-> that's quite simple. Any other hypervisor can also do it.
->=20
-> Now, the down-side of this is that the siblings aren't visible to the
-> host. They can't be used to run multiple threads of the same userspace
-> processes; only multiple threads of the same KVM guest. A truly =
-generic
-> core scheduler would cope with userspace threads too.
->=20
-> BUT I strongly suspect there's a huge correlation between the set of
-> people who care enough about the KVM/L1TF issue to enable a costly
-> XFPO-like solution, and the set of people who mostly don't give a shit
-> about having sibling CPUs available to run the host's userspace =
-anyway.
->=20
-> This is not the "I happen to run a Windows VM on my Linux desktop" use
-> case...
-
-If I understand your proposal correctly, you suggest to do something =
-similar to the KVM Power8 solution:
-1. Disable HyperThreading for use by host user space.
-2. Use sibling hyperthreads only in KVM and schedule group of vCPUs that =
-run on a single core as a =E2=80=9Cgang=E2=80=9D to enter and exit guest =
-together.
-
-This solution may work well for KVM-based cloud providers that match the =
-following criteria:
-1. All compute instances run with SR-IOV and IOMMU Posted-Interrupts.
-2. Configure affinity such that host dedicate distinct set of physical =
-cores per guest. No physical core is able to run vCPUs from multiple =
-guests.
-
-However, this may not necessarily be the case: Some cloud providers have =
-compute instances which all their devices are emulated or =
-ParaVirtualized.
-In the proposed scheduling mechanism, all the IOThreads of these guests =
-will not be able to utilize HyperThreading which can be a significant =
-performance hit.
-So Oracle Cloud (OCI) are folks who do care enough about the KVM/L1TF =
-issue but gives a shit about having sibling CPUs available to run host =
-userspace. :)
-Unless I=E2=80=99m missing something of course...
-
-In addition, desktop users who run VMs today, expect a security boundary =
-to exist between the guest and the host.
-Besides the L1TF HyperThreading variant, we were able to preserve such a =
-security boundary.
-It seems a bit weird that we will implement a mechanism in x86 KVM that =
-it=E2=80=99s message to users is basically:
-=E2=80=9CIf you want to have a security boundary between a VM and the =
-host, you need to enable this knob which will also cause the rest of =
-your host
-to see half the amount of logical processors=E2=80=9D.
-
-Furthermore, I think it is important to think about a mechanism which =
-may help us to mitigate future similar =E2=80=9Ccore-cache-leak=E2=80=9D =
-vulnerabilities.
-As I previously mentioned, the =E2=80=9Ccore scheduler=E2=80=9D could =
-help us mitigate these vulnerabilities on OS-level by disallowing =
-userspace tasks of different =E2=80=9Csecurity domain=E2=80=9D
-to run as siblings on the same core.
-
--Liran
-
-(Cc Paolo who probably have good feedback on the entire email thread =
-as-well)
+PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBKYW5uIEhvcm4gW21haWx0bzpq
+YW5uaEBnb29nbGUuY29tXQ0KPiBTZW50OiBUdWVzZGF5LCBBdWd1c3QgMjEsIDIwMTggMTA6MjQg
+QU0NCj4gVG86IFNjaGF1ZmxlciwgQ2FzZXkgPGNhc2V5LnNjaGF1ZmxlckBpbnRlbC5jb20+DQo+
+IENjOiBLZXJuZWwgSGFyZGVuaW5nIDxrZXJuZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNv
+bT47IGtlcm5lbCBsaXN0DQo+IDxsaW51eC1rZXJuZWxAdmdlci5rZXJuZWwub3JnPjsgbGludXgt
+c2VjdXJpdHktbW9kdWxlIDxsaW51eC1zZWN1cml0eS0NCj4gbW9kdWxlQHZnZXIua2VybmVsLm9y
+Zz47IHNlbGludXhAdHljaG8ubnNhLmdvdjsgSGFuc2VuLCBEYXZlDQo+IDxkYXZlLmhhbnNlbkBp
+bnRlbC5jb20+OyBEb2NrLCBEZW5lZW4gVCA8ZGVuZWVuLnQuZG9ja0BpbnRlbC5jb20+Ow0KPiBr
+cmlzdGVuQGxpbnV4LmludGVsLmNvbTsgQXJqYW4gdmFuIGRlIFZlbiA8YXJqYW5AbGludXguaW50
+ZWwuY29tPg0KPiBTdWJqZWN0OiBSZTogW1BBVENIIHYzIDMvNV0gTFNNOiBTZWN1cml0eSBtb2R1
+bGUgY2hlY2tpbmcgZm9yIHNpZGUtY2hhbm5lbA0KPiBkYW5nZXJzDQo+IA0KPiBPbiBUdWUsIEF1
+ZyAyMSwgMjAxOCBhdCAyOjA1IEFNIENhc2V5IFNjaGF1Zmxlcg0KPiA8Y2FzZXkuc2NoYXVmbGVy
+QGludGVsLmNvbT4gd3JvdGU6DQo+ID4NCj4gPiBUaGUgc2lkZWNoYW5uZWwgTFNNIGNoZWNrcyBm
+b3IgY2FzZXMgd2hlcmUgYSBzaWRlLWNoYW5uZWwNCj4gPiBhdHRhY2sgbWF5IGJlIGRhbmdlcm91
+cyBiYXNlZCBvbiBzZWN1cml0eSBhdHRyaWJ1dGVzIG9mIHRhc2tzLg0KPiA+IFRoaXMgaW5jbHVk
+ZXM6DQo+ID4gICAgICAgICBFZmZlY3RpdmUgVUlEIG9mIHRoZSB0YXNrcyBpcyBkaWZmZXJlbnQN
+Cj4gPiAgICAgICAgIENhcGFibGl0eSBzZXRzIGFyZSBkaWZmZXJlbnQNCj4gPiAgICAgICAgIFRh
+c2tzIGFyZSBpbiBkaWZmZXJlbnQgbmFtZXNwYWNlcw0KPiA+IEFuIG9wdGlvbiBpcyBhbHNvIHBy
+b3ZpZGVkIHRvIGFzc2VydCB0aGF0IHRhc2sgYXJlIG5ldmVyDQo+ID4gdG8gYmUgY29uc2lkZXJl
+ZCBzYWZlLiBUaGlzIGlzIGhpZ2ggcGFyYW5vaWEsIGFuZCBleHBlbnNpdmUNCj4gPiBhcyB3ZWxs
+Lg0KPiA+DQo+ID4gU2lnbmVkLW9mZi1ieTogQ2FzZXkgU2NoYXVmbGVyIDxjYXNleS5zY2hhdWZs
+ZXJAaW50ZWwuY29tPg0KPiA+IC0tLQ0KPiBbLi4uXQ0KPiA+IGRpZmYgLS1naXQgYS9zZWN1cml0
+eS9zaWRlY2hhbm5lbC9LY29uZmlnIGIvc2VjdXJpdHkvc2lkZWNoYW5uZWwvS2NvbmZpZw0KPiA+
+IG5ldyBmaWxlIG1vZGUgMTAwNjQ0DQo+ID4gaW5kZXggMDAwMDAwMDAwMDAwLi5hZjkzOTY1MzQx
+MjgNCj4gPiAtLS0gL2Rldi9udWxsDQo+ID4gKysrIGIvc2VjdXJpdHkvc2lkZWNoYW5uZWwvS2Nv
+bmZpZw0KPiBbLi4uXQ0KPiA+ICtjb25maWcgU0VDVVJJVFlfU0lERUNIQU5ORUxfQ0FQQUJJTElU
+SUVTDQo+ID4gKyAgICAgICBib29sICJTaWRlY2hhbm5lbCBjaGVjayBvbiBjYXBhYmlsaXR5IHNl
+dHMiDQo+ID4gKyAgICAgICBkZXBlbmRzIG9uIFNFQ1VSSVRZX1NJREVDSEFOTkVMDQo+ID4gKyAg
+ICAgICBkZWZhdWx0IG4NCj4gPiArICAgICAgIGhlbHANCj4gPiArICAgICAgICAgQXNzdW1lIHRo
+YXQgdGFza3Mgd2l0aCBkaWZmZXJlbnQgc2V0cyBvZiBwcml2aWxlZ2UgbWF5IGJlDQo+ID4gKyAg
+ICAgICAgIHN1YmplY3QgdG8gc2lkZS1jaGFubmVsIGF0dGFja3MuIFBvdGVudGlhbCBpbnRlcmFj
+dGlvbnMNCj4gPiArICAgICAgICAgd2hlcmUgdGhlIGF0dGFja2VyIGxhY2tzIGNhcGFiaWxpdGll
+cyB0aGUgYXR0YWNrZWQgaGFzDQo+ID4gKyAgICAgICAgIGFyZSBibG9ja2VkLg0KPiA+ICsNCj4g
+PiArICAgICAgICAgIElmIHlvdSBhcmUgdW5zdXJlIGhvdyB0byBhbnN3ZXIgdGhpcyBxdWVzdGlv
+biwgYW5zd2VyIE4uDQo+ID4gKw0KPiA+ICtjb25maWcgU0VDVVJJVFlfU0lERUNIQU5ORUxfTkFN
+RVNQQUNFUw0KPiA+ICsgICAgICAgYm9vbCAiU2lkZWNoYW5uZWwgY2hlY2sgb24gbmFtZXNwYWNl
+cyINCj4gPiArICAgICAgIGRlcGVuZHMgb24gU0VDVVJJVFlfU0lERUNIQU5ORUwNCj4gPiArICAg
+ICAgIGRlcGVuZHMgb24gTkFNRVNQQUNFUw0KPiA+ICsgICAgICAgZGVmYXVsdCBuDQo+ID4gKyAg
+ICAgICBoZWxwDQo+ID4gKyAgICAgICAgIEFzc3VtZSB0aGF0IHRhc2tzIGluIGRpZmZlcmVudCBu
+YW1lc3BhY2VzIG1heSBiZQ0KPiA+ICsgICAgICAgICBzdWJqZWN0IHRvIHNpZGUtY2hhbm5lbCBh
+dHRhY2tzLiBVc2VyLCBQSUQgYW5kIGNncm91cA0KPiA+ICsgICAgICAgICBuYW1lc3BhY2VzIGFy
+ZSBjaGVja2VkLg0KPiA+ICsNCj4gPiArICAgICAgICAgIElmIHlvdSBhcmUgdW5zdXJlIGhvdyB0
+byBhbnN3ZXIgdGhpcyBxdWVzdGlvbiwgYW5zd2VyIE4uDQo+IFsuLi5dDQo+ID4gZGlmZiAtLWdp
+dCBhL3NlY3VyaXR5L3NpZGVjaGFubmVsL3NpZGVjaGFubmVsLmMNCj4gYi9zZWN1cml0eS9zaWRl
+Y2hhbm5lbC9zaWRlY2hhbm5lbC5jDQo+ID4gbmV3IGZpbGUgbW9kZSAxMDA2NDQNCj4gPiBpbmRl
+eCAwMDAwMDAwMDAwMDAuLjRkYTdkNmRhZmRjNQ0KPiA+IC0tLSAvZGV2L251bGwNCj4gPiArKysg
+Yi9zZWN1cml0eS9zaWRlY2hhbm5lbC9zaWRlY2hhbm5lbC5jDQo+IFsuLi5dDQo+ID4gKy8qDQo+
+ID4gKyAqIHNhZmVfYnlfY2FwYWJpbGl0eSAtIEFyZSB0YXNrIGFuZCBjdXJyZW50IHNpZGVjaGFu
+bmVsIHNhZmU/DQo+ID4gKyAqIEBwOiB0YXNrIHRvIGNoZWNrIG9uDQo+ID4gKyAqDQo+ID4gKyAq
+IFJldHVybnMgMCBpZiB0aGUgdGFza3MgYXJlIHNpZGVjaGFubmVsIHNhZmUsIC1FQUNDRVMgb3Ro
+ZXJ3aXNlLg0KPiA+ICsgKi8NCj4gPiArI2lmZGVmIENPTkZJR19TRUNVUklUWV9TSURFQ0hBTk5F
+TF9DQVBBQklMSVRJRVMNCj4gPiArc3RhdGljIGludCBzYWZlX2J5X2NhcGFiaWxpdHkoc3RydWN0
+IHRhc2tfc3RydWN0ICpwKQ0KPiA+ICt7DQo+ID4gKyAgICAgICBjb25zdCBzdHJ1Y3QgY3JlZCAq
+Y2NyZWQgPSBjdXJyZW50X3JlYWxfY3JlZCgpOw0KPiA+ICsgICAgICAgY29uc3Qgc3RydWN0IGNy
+ZWQgKnBjcmVkID0gcmN1X2RlcmVmZXJlbmNlX3Byb3RlY3RlZChwLT5yZWFsX2NyZWQsIDEpOw0K
+PiA+ICsNCj4gPiArICAgICAgIC8qDQo+ID4gKyAgICAgICAgKiBDYXBhYmlsaXRpZXMgY2hlY2tz
+LiBDb25zaWRlcmVkIHNhZmUgaWY6DQo+ID4gKyAgICAgICAgKiAgICAgIGN1cnJlbnQgaGFzIGFs
+bCB0aGUgY2FwYWJpbGl0aWVzIHAgZG9lcw0KPiA+ICsgICAgICAgICovDQo+ID4gKyAgICAgICBp
+ZiAoY2NyZWQgIT0gcGNyZWQgJiYNCj4gPiArICAgICAgICAgICAhY2FwX2lzc3Vic2V0KHBjcmVk
+LT5jYXBfZWZmZWN0aXZlLCBjY3JlZC0+Y2FwX2VmZmVjdGl2ZSkpDQo+ID4gKyAgICAgICAgICAg
+ICAgIHJldHVybiAtRUFDQ0VTOw0KPiA+ICsgICAgICAgcmV0dXJuIDA7DQo+ID4gK30NCj4gDQo+
+IE9uIGl0cyBvd24gKHdpdGhvdXQgc2FmZV9ieV9uYW1lc3BhY2UoKSksIHRoaXMgY2hlY2sgbWFr
+ZXMgbm8gc2Vuc2UsIEkNCj4gdGhpbmsuIFlvdSdyZSBwZXJmb3JtaW5nIGEgdGVzdCBvbiB0aGUg
+bmFtZXNwYWNlZCBjYXBhYmlsaXR5IHNldHMNCj4gd2l0aG91dCBsb29raW5nIGF0IHdoaWNoIHVz
+ZXIgbmFtZXNwYWNlcyB0aGV5IGFyZSByZWxhdGl2ZSB0by4gTWF5YmUNCj4gZWl0aGVyIGludHJv
+ZHVjZSBhIGNvbmZpZ3VyYXRpb24gZGVwZW5kZW5jeSBvciBhZGQgYW4gZXh0cmEgbmFtZXNwYWNl
+DQo+IGNoZWNrIGhlcmU/DQoNCklmIHlvdSBkb24ndCBoYXZlIG5hbWVzcGFjZXMgdGhlIGNoZWNr
+IGlzIGNvcnJlY3QuIElmIHlvdSBkbywgYW5kIHVzZQ0Kc2FmZV9ieV9uYW1lc3BhY2UoKSB5b3Un
+cmUgYWxzbyBjb3JyZWN0LiBJZiB5b3UgdXNlIG5hbWVzcGFjZXMgYW5kDQpjYXJlIGFib3V0IHNp
+ZGUtY2hhbm5lbCBhdHRhY2tzIHlvdSBzaG91bGQgZW5hYmxlIHRoZSBuYW1lc3BhY2UgY2hlY2tz
+Lg0KSSBkb24ndCBzZWUgcmVhbCB2YWx1ZSBpbiBhZGRpbmcgbmFtZXNwYWNlIGNoZWNrcyBpbiB0
+aGUgY2FwYWJpbGl0eSBjaGVja3MNCmZvciB0aGUgZXZlbnQgd2hlcmUgc29tZW9uZSBoYXMgc2Fp
+ZCB0aGV5IGRvbid0IHdhbnQgbmFtZXNwYWNlIGNoZWNrcy4NCg0KSSBnb3QgZWFybHkgZmVlZGJh
+Y2sgdGhhdCBjb25maWd1cmFiaWxpdHkgd2FzIGNvbnNpZGVyZWQgaW1wb3J0YW50Lg0KVGhpcyBp
+cyB0aGUgY29ycmVjdCBiZWhhdmlvciBpZiB5b3Ugd2FudCBuYW1lc3BhY2UgY2hlY2tzIHRvIGJl
+DQpzZXBhcmF0ZWx5IGNvbmZpZ3VyYWJsZSBmcm9tIGNhcGFiaWxpdHkgY2hlY2tzLiBZb3UgY291
+bGQgYXNrIGZvcg0KZGlzdGluY3QgY29uZmlndXJhdGlvbiBvcHRpb25zIGZvciBlYWNoIGtpbmQg
+b2YgbmFtZXNwYWNlLCBidXQsIHdlbGwsIHl1Y2suDQoNCj4gPiArc3RhdGljIGludCBzYWZlX2J5
+X25hbWVzcGFjZShzdHJ1Y3QgdGFza19zdHJ1Y3QgKnApDQo+ID4gK3sNCj4gPiArICAgICAgIHN0
+cnVjdCBjZ3JvdXBfbmFtZXNwYWNlICpjY2duID0gTlVMTDsNCj4gPiArICAgICAgIHN0cnVjdCBj
+Z3JvdXBfbmFtZXNwYWNlICpwY2duID0gTlVMTDsNCj4gPiArICAgICAgIGNvbnN0IHN0cnVjdCBj
+cmVkICpjY3JlZDsNCj4gPiArICAgICAgIGNvbnN0IHN0cnVjdCBjcmVkICpwY3JlZDsNCj4gPiAr
+DQo+ID4gKyAgICAgICAvKg0KPiA+ICsgICAgICAgICogTmFtZXNwYWNlIGNoZWNrcy4gQ29uc2lk
+ZXJlZCBzYWZlIGlmOg0KPiA+ICsgICAgICAgICogICAgICBjZ3JvdXAgbmFtZXNwYWNlIGlzIHRo
+ZSBzYW1lDQo+ID4gKyAgICAgICAgKiAgICAgIFVzZXIgbmFtZXNwYWNlIGlzIHRoZSBzYW1lDQo+
+ID4gKyAgICAgICAgKiAgICAgIFBJRCBuYW1lc3BhY2UgaXMgdGhlIHNhbWUNCj4gPiArICAgICAg
+ICAqLw0KPiA+ICsgICAgICAgaWYgKGN1cnJlbnQtPm5zcHJveHkpDQo+ID4gKyAgICAgICAgICAg
+ICAgIGNjZ24gPSBjdXJyZW50LT5uc3Byb3h5LT5jZ3JvdXBfbnM7DQo+ID4gKyAgICAgICBpZiAo
+cC0+bnNwcm94eSkNCj4gPiArICAgICAgICAgICAgICAgcGNnbiA9IHAtPm5zcHJveHktPmNncm91
+cF9uczsNCj4gPiArICAgICAgIGlmIChjY2duICE9IHBjZ24pDQo+ID4gKyAgICAgICAgICAgICAg
+IHJldHVybiAtRUFDQ0VTOw0KPiA+ICsNCj4gPiArICAgICAgIGNjcmVkID0gY3VycmVudF9yZWFs
+X2NyZWQoKTsNCj4gPiArICAgICAgIHBjcmVkID0gcmN1X2RlcmVmZXJlbmNlX3Byb3RlY3RlZChw
+LT5yZWFsX2NyZWQsIDEpOw0KPiA+ICsNCj4gPiArICAgICAgIGlmIChjY3JlZC0+dXNlcl9ucyAh
+PSBwY3JlZC0+dXNlcl9ucykNCj4gPiArICAgICAgICAgICAgICAgcmV0dXJuIC1FQUNDRVM7DQo+
+ID4gKyAgICAgICBpZiAodGFza19hY3RpdmVfcGlkX25zKGN1cnJlbnQpICE9IHRhc2tfYWN0aXZl
+X3BpZF9ucyhwKSkNCj4gPiArICAgICAgICAgICAgICAgcmV0dXJuIC1FQUNDRVM7DQo+ID4gKyAg
+ICAgICByZXR1cm4gMDsNCj4gPiArfQ0K
