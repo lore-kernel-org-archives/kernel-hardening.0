@@ -1,113 +1,96 @@
-MIME-Version: 1.0
-References: <20180817221624.10232-1-casey.schaufler@intel.com>
- <20180817221624.10232-3-casey.schaufler@intel.com> <CAG48ez23G+wcnkCMNZV_mxYMS=h+pZkpx1451Wz5GB9_tcDv3Q@mail.gmail.com>
- <99FC4B6EFCEFD44486C35F4C281DC6732143F769@ORSMSX107.amr.corp.intel.com>
-In-Reply-To: <99FC4B6EFCEFD44486C35F4C281DC6732143F769@ORSMSX107.amr.corp.intel.com>
-From: Jann Horn <jannh@google.com>
-Date: Tue, 21 Aug 2018 12:20:21 +0200
-Message-ID: <CAG48ez1LHOHvB4ud+8asOjKARVLQJGV4ocdKVDJtvTXTfeMa9w@mail.gmail.com>
-Subject: Re: [PATCH RFC v2 2/5] X86: Support LSM determination of side-channel vulnerability
-Content-Type: text/plain; charset="UTF-8"
-To: Casey Schaufler <casey.schaufler@intel.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, selinux@tycho.nsa.gov, Dave Hansen <dave.hansen@intel.com>, deneen.t.dock@intel.com, kristen@linux.intel.com, Arjan van de Ven <arjan@linux.intel.com>
+Content-Type: text/plain;
+	charset=utf-8
+Mime-Version: 1.0 (Mac OS X Mail 11.1 \(3445.4.7\))
+Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
+ in mind (for KVM to isolate its guests per CPU)
+From: Liran Alon <liran.alon@oracle.com>
+In-Reply-To: <1534845423.10027.44.camel@infradead.org>
+Date: Tue, 21 Aug 2018 17:01:57 +0300
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <ED24D811-C740-417F-A443-B7A249F4FF4C@oracle.com>
+References: <20180820212556.GC2230@char.us.oracle.com>
+ <CA+55aFxZCyVZc4ZpRyZ3uDyakRSOG_=2XvnwMo4oejpsieF9=A@mail.gmail.com>
+ <1534801939.10027.24.camel@amazon.co.uk>
+ <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
+ <1534845423.10027.44.camel@infradead.org>
+To: David Woodhouse <dwmw2@infradead.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Kees Cook <keescook@google.com>, jsteckli@os.inf.tu-dresden.de, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 20, 2018 at 4:45 PM Schaufler, Casey
-<casey.schaufler@intel.com> wrote:
->
-> > -----Original Message-----
-> > From: Jann Horn [mailto:jannh@google.com]
-> > Sent: Friday, August 17, 2018 4:55 PM
-> > To: Schaufler, Casey <casey.schaufler@intel.com>
-> > Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>; kernel list
-> > <linux-kernel@vger.kernel.org>; linux-security-module <linux-security-
-> > module@vger.kernel.org>; selinux@tycho.nsa.gov; Hansen, Dave
-> > <dave.hansen@intel.com>; Dock, Deneen T <deneen.t.dock@intel.com>;
-> > kristen@linux.intel.com; Arjan van de Ven <arjan@linux.intel.com>
-> > Subject: Re: [PATCH RFC v2 2/5] X86: Support LSM determination of side-
-> > channel vulnerability
-> >
-> > On Sat, Aug 18, 2018 at 12:17 AM Casey Schaufler
-> > <casey.schaufler@intel.com> wrote:
-> > >
-> > > From: Casey Schaufler <cschaufler@localhost.localdomain>
-> > >
-> > > When switching between tasks it may be necessary
-> > > to set an indirect branch prediction barrier if the
-> > > tasks are potentially vulnerable to side-channel
-> > > attacks. This adds a call to security_task_safe_sidechannel
-> > > so that security modules can weigh in on the decision.
-> > >
-> > > Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
-> > > ---
-> > >  arch/x86/mm/tlb.c | 12 ++++++++----
-> > >  1 file changed, 8 insertions(+), 4 deletions(-)
-> > >
-> > > diff --git a/arch/x86/mm/tlb.c b/arch/x86/mm/tlb.c
-> > > index 6eb1f34c3c85..8714d4af06aa 100644
-> > > --- a/arch/x86/mm/tlb.c
-> > > +++ b/arch/x86/mm/tlb.c
-> > > @@ -7,6 +7,7 @@
-> > >  #include <linux/export.h>
-> > >  #include <linux/cpu.h>
-> > >  #include <linux/debugfs.h>
-> > > +#include <linux/security.h>
-> > >
-> > >  #include <asm/tlbflush.h>
-> > >  #include <asm/mmu_context.h>
-> > > @@ -270,11 +271,14 @@ void switch_mm_irqs_off(struct mm_struct *prev,
-> > struct mm_struct *next,
-> > >                  * threads. It will also not flush if we switch to idle
-> > >                  * thread and back to the same process. It will flush if we
-> > >                  * switch to a different non-dumpable process.
-> > > +                * If a security module thinks that the transition
-> > > +                * is unsafe do the flush.
-> > >                  */
-> > > -               if (tsk && tsk->mm &&
-> > > -                   tsk->mm->context.ctx_id != last_ctx_id &&
-> > > -                   get_dumpable(tsk->mm) != SUID_DUMP_USER)
-> > > -                       indirect_branch_prediction_barrier();
-> > > +               if (tsk && tsk->mm && tsk->mm->context.ctx_id != last_ctx_id) {
-> > > +                       if (get_dumpable(tsk->mm) != SUID_DUMP_USER ||
-> > > +                           security_task_safe_sidechannel(tsk) != 0)
-> > > +                               indirect_branch_prediction_barrier();
-> > > +               }
-> >
-> > When you posted v1 of this series, I asked:
-> >
-> > | Does this enforce transitivity? What happens if we first switch from
-> > | an attacker task to a task without ->mm, and immediately afterwards
-> > | from the task without ->mm to a victim task? In that case, whether a
-> > | flush happens between the attacker task and the victim task depends on
-> > | whether the LSM thinks that the mm-less task should have access to the
-> > | victim task, right?
-> >
-> > Have you addressed that? I don't see it...
->
-> Nope. That's going to require maintaining state about all the
-> tasks in the chain that might still have cache involvement.
->
->         A -> B -> C -> D
 
-Really?
+> On 21 Aug 2018, at 12:57, David Woodhouse <dwmw2@infradead.org> wrote:
+>=20
+> Another alternative... I'm told POWER8 does an interesting thing with
+> hyperthreading and gang scheduling for KVM. The host kernel doesn't
+> actually *see* the hyperthreads at all, and KVM just launches the full
+> set of siblings when it enters a guest, and gathers them again when =
+any
+> of them exits. That's definitely worth investigating as an option for
+> x86, too.
 
->From what I can tell, it'd be enough to:
+I actually think that such scheduling mechanism which prevents leaking =
+cache entries to sibling hyperthreads should co-exist together with the =
+KVM address space isolation to fully mitigate L1TF and other similar =
+vulnerabilities. The address space isolation should prevent VMExit =
+handlers code gadgets from loading arbitrary host memory to the cache. =
+Once VMExit code path switches to full host address space, then we =
+should also make sure that no other sibling hyprethread is running in =
+the guest.
 
- - ensure that the LSM-based access checks behave approximately transitively
-   (which I think they already do, mostly)
- - keep a copy of the metadata of the last non-kernel task on the CPU
+Focusing on the scheduling mechanism, we must make sure that when a =
+logical processor runs guest code, all siblings logical processors must =
+run code which do not populate L1D cache with information unrelated to =
+this VM. This includes forbidding one logical processor to run guest =
+code while sibling is running a host task such as a NIC interrupt =
+handler.
+Thus, when a vCPU thread exits the guest into the host and VMExit =
+handler reaches code flow which could populate L1D cache with this =
+information, we should force an exit from the guest of the siblings =
+logical processors, such that they will be allowed to resume only on a =
+core which we can promise that the L1D cache is free from information =
+unrelated to this VM.
 
-> If B and C don't do anything cacheworthy D could conceivably attack A.
-> The amount of state required to detect this case would be prohibitive.
-> I think that if you're sufficiently concerned about this case you should just
-> go ahead and set the barrier. I'm willing to learn something that says I'm
-> wrong.
+At first, I have created a patch series which attempts to implement such =
+mechanism in KVM. However, it became clear to me that this may need to =
+be implemented in the scheduler itself. This is because:
+1. It is difficult to handle all new scheduling contrains only in KVM.
+2. This mechanism should be relevant for any Type-2 hypervisor which =
+runs inside Linux besides KVM (Such as VMware Workstation or =
+VirtualBox).
+3. This mechanism could also be used to prevent future =
+=E2=80=9Ccore-cache-leaking=E2=80=9D vulnerabilities to be exploited =
+between processes of different security domains which run as siblings on =
+the same core.
 
-That means that an attacker who can e.g. get a CPU to first switch
-from an attacker task to a softirqd (e.g. for network packet
-processing or whatever), then switch from the softirqd to a root-owned
-victim task would be able to bypass the check, right? That doesn't
-sound like a very complicated attack...
+The main idea is a mechanism which is very similar to Microsoft's "core =
+scheduler" which they implemented to mitigate this vulnerability. The =
+mechanism should work as follows:
+1. Each CPU core will now be tagged with a "security domain id".
+2. The scheduler will provide a mechanism to tag a task with a security =
+domain id.
+3. Tasks will inherit their security domain id from their parent task.
+    3.1. First task in system will have security domain id of 0. Thus, =
+if nothing special is done, all tasks will be assigned with security =
+domain id of 0.
+4. Tasks will be able to allocate a new security domain id from the =
+scheduler and assign it to another task dynamically.
+5. Linux scheduler will prevent scheduling tasks on a core with a =
+different security domain id:
+    5.0. CPU core security domain id will be set to the security domain =
+id of the tasks which currently run on it.
+    5.1. The scheduler will attempt to first schedule a task on a core =
+with required security domain id if such exists.
+    5.2. Otherwise, will need to decide if it wishes to kick all tasks =
+running on some core to run the task with a different security domain id =
+on that core.
 
-I very much dislike the idea of adding a mitigation with a known
-bypass technique to the kernel.
+The above mechanism can be used to mitigate the L1TF HT variant by just =
+assigning vCPU tasks with a security domain id which is unique per VM =
+and also different than the security domain id of the host which is 0.
+
+I would be glad to hear feedback on the above suggestion.
+If this should better be discussed on a separate email thread, please =
+say so and I will open a new thread.
+
+Thanks,
+-Liran
