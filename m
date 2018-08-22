@@ -1,178 +1,254 @@
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Subject: RE: [PATCH v3 3/5] LSM: Security module checking for side-channel
- dangers
-Date: Wed, 22 Aug 2018 16:39:54 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC67321440770@ORSMSX107.amr.corp.intel.com>
-References: <20180821000444.7004-1-casey.schaufler@intel.com>
- <20180821000444.7004-4-casey.schaufler@intel.com>
- <CAG48ez1D-DPBP8ACA1W5=XZLNKUeVj7ZOGUG8uJ2nL1xOSR_9Q@mail.gmail.com>
- <99FC4B6EFCEFD44486C35F4C281DC673214402D3@ORSMSX107.amr.corp.intel.com>
- <CAG48ez3bh5cFgZ5ZY63pszTV+KX+KC4utRCm7E8en+uF5w6vKw@mail.gmail.com>
-In-Reply-To: <CAG48ez3bh5cFgZ5ZY63pszTV+KX+KC4utRCm7E8en+uF5w6vKw@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-To: Jann Horn <jannh@google.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "selinux@tycho.nsa.gov" <selinux@tycho.nsa.gov>, "Hansen, Dave" <dave.hansen@intel.com>, "Dock,
- Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, Arjan van de Ven <arjan@linux.intel.com>
+References: <20180821000444.7004-1-casey.schaufler@intel.com>
+ <20180821000444.7004-4-casey.schaufler@intel.com> <CAG48ez1D-DPBP8ACA1W5=XZLNKUeVj7ZOGUG8uJ2nL1xOSR_9Q@mail.gmail.com>
+ <99FC4B6EFCEFD44486C35F4C281DC673214402D3@ORSMSX107.amr.corp.intel.com>
+ <CAG48ez3bh5cFgZ5ZY63pszTV+KX+KC4utRCm7E8en+uF5w6vKw@mail.gmail.com> <99FC4B6EFCEFD44486C35F4C281DC67321440770@ORSMSX107.amr.corp.intel.com>
+In-Reply-To: <99FC4B6EFCEFD44486C35F4C281DC67321440770@ORSMSX107.amr.corp.intel.com>
+From: Jann Horn <jannh@google.com>
+Date: Wed, 22 Aug 2018 19:03:45 +0200
+Message-ID: <CAG48ez3OkpcrC34LJTWAvH4ZvREW7jDVkeMBZrLQe6cRSEBheg@mail.gmail.com>
+Subject: Re: [PATCH v3 3/5] LSM: Security module checking for side-channel dangers
+Content-Type: text/plain; charset="UTF-8"
+To: Casey Schaufler <casey.schaufler@intel.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, selinux@tycho.nsa.gov, Dave Hansen <dave.hansen@intel.com>, deneen.t.dock@intel.com, kristen@linux.intel.com, Arjan van de Ven <arjan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBKYW5uIEhvcm4gW21haWx0bzpq
-YW5uaEBnb29nbGUuY29tXQ0KPiBTZW50OiBUdWVzZGF5LCBBdWd1c3QgMjEsIDIwMTggNjowMSBQ
-TQ0KPiBUbzogU2NoYXVmbGVyLCBDYXNleSA8Y2FzZXkuc2NoYXVmbGVyQGludGVsLmNvbT4NCj4g
-Q2M6IEtlcm5lbCBIYXJkZW5pbmcgPGtlcm5lbC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29t
-Pjsga2VybmVsIGxpc3QNCj4gPGxpbnV4LWtlcm5lbEB2Z2VyLmtlcm5lbC5vcmc+OyBsaW51eC1z
-ZWN1cml0eS1tb2R1bGUgPGxpbnV4LXNlY3VyaXR5LQ0KPiBtb2R1bGVAdmdlci5rZXJuZWwub3Jn
-Pjsgc2VsaW51eEB0eWNoby5uc2EuZ292OyBIYW5zZW4sIERhdmUNCj4gPGRhdmUuaGFuc2VuQGlu
-dGVsLmNvbT47IERvY2ssIERlbmVlbiBUIDxkZW5lZW4udC5kb2NrQGludGVsLmNvbT47DQo+IGty
-aXN0ZW5AbGludXguaW50ZWwuY29tOyBBcmphbiB2YW4gZGUgVmVuIDxhcmphbkBsaW51eC5pbnRl
-bC5jb20+DQo+IFN1YmplY3Q6IFJlOiBbUEFUQ0ggdjMgMy81XSBMU006IFNlY3VyaXR5IG1vZHVs
-ZSBjaGVja2luZyBmb3Igc2lkZS1jaGFubmVsDQo+IGRhbmdlcnMNCj4gDQo+IE9uIFdlZCwgQXVn
-IDIyLCAyMDE4IGF0IDE6NDQgQU0gU2NoYXVmbGVyLCBDYXNleQ0KPiA8Y2FzZXkuc2NoYXVmbGVy
-QGludGVsLmNvbT4gd3JvdGU6DQo+ID4NCj4gPiA+IC0tLS0tT3JpZ2luYWwgTWVzc2FnZS0tLS0t
-DQo+ID4gPiBGcm9tOiBKYW5uIEhvcm4gW21haWx0bzpqYW5uaEBnb29nbGUuY29tXQ0KPiA+ID4g
-U2VudDogVHVlc2RheSwgQXVndXN0IDIxLCAyMDE4IDEwOjI0IEFNDQo+ID4gPiBUbzogU2NoYXVm
-bGVyLCBDYXNleSA8Y2FzZXkuc2NoYXVmbGVyQGludGVsLmNvbT4NCj4gPiA+IENjOiBLZXJuZWwg
-SGFyZGVuaW5nIDxrZXJuZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbT47IGtlcm5lbCBs
-aXN0DQo+ID4gPiA8bGludXgta2VybmVsQHZnZXIua2VybmVsLm9yZz47IGxpbnV4LXNlY3VyaXR5
-LW1vZHVsZSA8bGludXgtc2VjdXJpdHktDQo+ID4gPiBtb2R1bGVAdmdlci5rZXJuZWwub3JnPjsg
-c2VsaW51eEB0eWNoby5uc2EuZ292OyBIYW5zZW4sIERhdmUNCj4gPiA+IDxkYXZlLmhhbnNlbkBp
-bnRlbC5jb20+OyBEb2NrLCBEZW5lZW4gVCA8ZGVuZWVuLnQuZG9ja0BpbnRlbC5jb20+Ow0KPiA+
-ID4ga3Jpc3RlbkBsaW51eC5pbnRlbC5jb207IEFyamFuIHZhbiBkZSBWZW4gPGFyamFuQGxpbnV4
-LmludGVsLmNvbT4NCj4gPiA+IFN1YmplY3Q6IFJlOiBbUEFUQ0ggdjMgMy81XSBMU006IFNlY3Vy
-aXR5IG1vZHVsZSBjaGVja2luZyBmb3Igc2lkZS1jaGFubmVsDQo+ID4gPiBkYW5nZXJzDQo+ID4g
-Pg0KPiA+ID4gT24gVHVlLCBBdWcgMjEsIDIwMTggYXQgMjowNSBBTSBDYXNleSBTY2hhdWZsZXIN
-Cj4gPiA+IDxjYXNleS5zY2hhdWZsZXJAaW50ZWwuY29tPiB3cm90ZToNCj4gPiA+ID4NCj4gPiA+
-ID4gVGhlIHNpZGVjaGFubmVsIExTTSBjaGVja3MgZm9yIGNhc2VzIHdoZXJlIGEgc2lkZS1jaGFu
-bmVsDQo+ID4gPiA+IGF0dGFjayBtYXkgYmUgZGFuZ2Vyb3VzIGJhc2VkIG9uIHNlY3VyaXR5IGF0
-dHJpYnV0ZXMgb2YgdGFza3MuDQo+ID4gPiA+IFRoaXMgaW5jbHVkZXM6DQo+ID4gPiA+ICAgICAg
-ICAgRWZmZWN0aXZlIFVJRCBvZiB0aGUgdGFza3MgaXMgZGlmZmVyZW50DQo+ID4gPiA+ICAgICAg
-ICAgQ2FwYWJsaXR5IHNldHMgYXJlIGRpZmZlcmVudA0KPiA+ID4gPiAgICAgICAgIFRhc2tzIGFy
-ZSBpbiBkaWZmZXJlbnQgbmFtZXNwYWNlcw0KPiA+ID4gPiBBbiBvcHRpb24gaXMgYWxzbyBwcm92
-aWRlZCB0byBhc3NlcnQgdGhhdCB0YXNrIGFyZSBuZXZlcg0KPiA+ID4gPiB0byBiZSBjb25zaWRl
-cmVkIHNhZmUuIFRoaXMgaXMgaGlnaCBwYXJhbm9pYSwgYW5kIGV4cGVuc2l2ZQ0KPiA+ID4gPiBh
-cyB3ZWxsLg0KPiA+ID4gPg0KPiA+ID4gPiBTaWduZWQtb2ZmLWJ5OiBDYXNleSBTY2hhdWZsZXIg
-PGNhc2V5LnNjaGF1ZmxlckBpbnRlbC5jb20+DQo+ID4gPiA+IC0tLQ0KPiA+ID4gWy4uLl0NCj4g
-PiA+ID4gZGlmZiAtLWdpdCBhL3NlY3VyaXR5L3NpZGVjaGFubmVsL0tjb25maWcgYi9zZWN1cml0
-eS9zaWRlY2hhbm5lbC9LY29uZmlnDQo+ID4gPiA+IG5ldyBmaWxlIG1vZGUgMTAwNjQ0DQo+ID4g
-PiA+IGluZGV4IDAwMDAwMDAwMDAwMC4uYWY5Mzk2NTM0MTI4DQo+ID4gPiA+IC0tLSAvZGV2L251
-bGwNCj4gPiA+ID4gKysrIGIvc2VjdXJpdHkvc2lkZWNoYW5uZWwvS2NvbmZpZw0KPiA+ID4gWy4u
-Ll0NCj4gPiA+ID4gK2NvbmZpZyBTRUNVUklUWV9TSURFQ0hBTk5FTF9DQVBBQklMSVRJRVMNCj4g
-PiA+ID4gKyAgICAgICBib29sICJTaWRlY2hhbm5lbCBjaGVjayBvbiBjYXBhYmlsaXR5IHNldHMi
-DQo+ID4gPiA+ICsgICAgICAgZGVwZW5kcyBvbiBTRUNVUklUWV9TSURFQ0hBTk5FTA0KPiA+ID4g
-PiArICAgICAgIGRlZmF1bHQgbg0KPiA+ID4gPiArICAgICAgIGhlbHANCj4gPiA+ID4gKyAgICAg
-ICAgIEFzc3VtZSB0aGF0IHRhc2tzIHdpdGggZGlmZmVyZW50IHNldHMgb2YgcHJpdmlsZWdlIG1h
-eSBiZQ0KPiA+ID4gPiArICAgICAgICAgc3ViamVjdCB0byBzaWRlLWNoYW5uZWwgYXR0YWNrcy4g
-UG90ZW50aWFsIGludGVyYWN0aW9ucw0KPiA+ID4gPiArICAgICAgICAgd2hlcmUgdGhlIGF0dGFj
-a2VyIGxhY2tzIGNhcGFiaWxpdGllcyB0aGUgYXR0YWNrZWQgaGFzDQo+ID4gPiA+ICsgICAgICAg
-ICBhcmUgYmxvY2tlZC4NCj4gPiA+ID4gKw0KPiA+ID4gPiArICAgICAgICAgIElmIHlvdSBhcmUg
-dW5zdXJlIGhvdyB0byBhbnN3ZXIgdGhpcyBxdWVzdGlvbiwgYW5zd2VyIE4uDQo+ID4gPiA+ICsN
-Cj4gPiA+ID4gK2NvbmZpZyBTRUNVUklUWV9TSURFQ0hBTk5FTF9OQU1FU1BBQ0VTDQo+ID4gPiA+
-ICsgICAgICAgYm9vbCAiU2lkZWNoYW5uZWwgY2hlY2sgb24gbmFtZXNwYWNlcyINCj4gPiA+ID4g
-KyAgICAgICBkZXBlbmRzIG9uIFNFQ1VSSVRZX1NJREVDSEFOTkVMDQo+ID4gPiA+ICsgICAgICAg
-ZGVwZW5kcyBvbiBOQU1FU1BBQ0VTDQo+ID4gPiA+ICsgICAgICAgZGVmYXVsdCBuDQo+ID4gPiA+
-ICsgICAgICAgaGVscA0KPiA+ID4gPiArICAgICAgICAgQXNzdW1lIHRoYXQgdGFza3MgaW4gZGlm
-ZmVyZW50IG5hbWVzcGFjZXMgbWF5IGJlDQo+ID4gPiA+ICsgICAgICAgICBzdWJqZWN0IHRvIHNp
-ZGUtY2hhbm5lbCBhdHRhY2tzLiBVc2VyLCBQSUQgYW5kIGNncm91cA0KPiA+ID4gPiArICAgICAg
-ICAgbmFtZXNwYWNlcyBhcmUgY2hlY2tlZC4NCj4gPiA+ID4gKw0KPiA+ID4gPiArICAgICAgICAg
-IElmIHlvdSBhcmUgdW5zdXJlIGhvdyB0byBhbnN3ZXIgdGhpcyBxdWVzdGlvbiwgYW5zd2VyIE4u
-DQo+ID4gPiBbLi4uXQ0KPiA+ID4gPiBkaWZmIC0tZ2l0IGEvc2VjdXJpdHkvc2lkZWNoYW5uZWwv
-c2lkZWNoYW5uZWwuYw0KPiA+ID4gYi9zZWN1cml0eS9zaWRlY2hhbm5lbC9zaWRlY2hhbm5lbC5j
-DQo+ID4gPiA+IG5ldyBmaWxlIG1vZGUgMTAwNjQ0DQo+ID4gPiA+IGluZGV4IDAwMDAwMDAwMDAw
-MC4uNGRhN2Q2ZGFmZGM1DQo+ID4gPiA+IC0tLSAvZGV2L251bGwNCj4gPiA+ID4gKysrIGIvc2Vj
-dXJpdHkvc2lkZWNoYW5uZWwvc2lkZWNoYW5uZWwuYw0KPiA+ID4gWy4uLl0NCj4gPiA+ID4gKy8q
-DQo+ID4gPiA+ICsgKiBzYWZlX2J5X2NhcGFiaWxpdHkgLSBBcmUgdGFzayBhbmQgY3VycmVudCBz
-aWRlY2hhbm5lbCBzYWZlPw0KPiA+ID4gPiArICogQHA6IHRhc2sgdG8gY2hlY2sgb24NCj4gPiA+
-ID4gKyAqDQo+ID4gPiA+ICsgKiBSZXR1cm5zIDAgaWYgdGhlIHRhc2tzIGFyZSBzaWRlY2hhbm5l
-bCBzYWZlLCAtRUFDQ0VTIG90aGVyd2lzZS4NCj4gPiA+ID4gKyAqLw0KPiA+ID4gPiArI2lmZGVm
-IENPTkZJR19TRUNVUklUWV9TSURFQ0hBTk5FTF9DQVBBQklMSVRJRVMNCj4gPiA+ID4gK3N0YXRp
-YyBpbnQgc2FmZV9ieV9jYXBhYmlsaXR5KHN0cnVjdCB0YXNrX3N0cnVjdCAqcCkNCj4gPiA+ID4g
-K3sNCj4gPiA+ID4gKyAgICAgICBjb25zdCBzdHJ1Y3QgY3JlZCAqY2NyZWQgPSBjdXJyZW50X3Jl
-YWxfY3JlZCgpOw0KPiA+ID4gPiArICAgICAgIGNvbnN0IHN0cnVjdCBjcmVkICpwY3JlZCA9IHJj
-dV9kZXJlZmVyZW5jZV9wcm90ZWN0ZWQocC0+cmVhbF9jcmVkLA0KPiAxKTsNCj4gPiA+ID4gKw0K
-PiA+ID4gPiArICAgICAgIC8qDQo+ID4gPiA+ICsgICAgICAgICogQ2FwYWJpbGl0aWVzIGNoZWNr
-cy4gQ29uc2lkZXJlZCBzYWZlIGlmOg0KPiA+ID4gPiArICAgICAgICAqICAgICAgY3VycmVudCBo
-YXMgYWxsIHRoZSBjYXBhYmlsaXRpZXMgcCBkb2VzDQo+ID4gPiA+ICsgICAgICAgICovDQo+ID4g
-PiA+ICsgICAgICAgaWYgKGNjcmVkICE9IHBjcmVkICYmDQo+ID4gPiA+ICsgICAgICAgICAgICFj
-YXBfaXNzdWJzZXQocGNyZWQtPmNhcF9lZmZlY3RpdmUsIGNjcmVkLT5jYXBfZWZmZWN0aXZlKSkN
-Cj4gPiA+ID4gKyAgICAgICAgICAgICAgIHJldHVybiAtRUFDQ0VTOw0KPiA+ID4gPiArICAgICAg
-IHJldHVybiAwOw0KPiA+ID4gPiArfQ0KPiA+ID4NCj4gPiA+IE9uIGl0cyBvd24gKHdpdGhvdXQg
-c2FmZV9ieV9uYW1lc3BhY2UoKSksIHRoaXMgY2hlY2sgbWFrZXMgbm8gc2Vuc2UsIEkNCj4gPiA+
-IHRoaW5rLiBZb3UncmUgcGVyZm9ybWluZyBhIHRlc3Qgb24gdGhlIG5hbWVzcGFjZWQgY2FwYWJp
-bGl0eSBzZXRzDQo+ID4gPiB3aXRob3V0IGxvb2tpbmcgYXQgd2hpY2ggdXNlciBuYW1lc3BhY2Vz
-IHRoZXkgYXJlIHJlbGF0aXZlIHRvLiBNYXliZQ0KPiA+ID4gZWl0aGVyIGludHJvZHVjZSBhIGNv
-bmZpZ3VyYXRpb24gZGVwZW5kZW5jeSBvciBhZGQgYW4gZXh0cmEgbmFtZXNwYWNlDQo+ID4gPiBj
-aGVjayBoZXJlPw0KPiA+DQo+ID4gSWYgeW91IGRvbid0IGhhdmUgbmFtZXNwYWNlcyB0aGUgY2hl
-Y2sgaXMgY29ycmVjdC4gSWYgeW91IGRvLCBhbmQgdXNlDQo+ID4gc2FmZV9ieV9uYW1lc3BhY2Uo
-KSB5b3UncmUgYWxzbyBjb3JyZWN0LiBJZiB5b3UgdXNlIG5hbWVzcGFjZXMgYW5kDQo+ID4gY2Fy
-ZSBhYm91dCBzaWRlLWNoYW5uZWwgYXR0YWNrcyB5b3Ugc2hvdWxkIGVuYWJsZSB0aGUgbmFtZXNw
-YWNlIGNoZWNrcy4NCj4gDQo+IEJ5ICJ1c2UgbmFtZXNwYWNlcyIsIHlvdSBtZWFuICJoYXZlIENP
-TkZJR19VU0VSX05TPXkgc2V0IGluIHRoZSBrZXJuZWwNCj4gY29uZmlnIiwgcmlnaHQ/DQoNClRo
-YXQncyBjb3JyZWN0Lg0KDQo+IEl0IGRvZXNuJ3QgbWF0dGVyIG11Y2ggd2hldGhlciBwcm9jZXNz
-ZXMgb24geW91ciBzeXN0ZW0gYXJlDQo+IGludGVudGlvbmFsbHkgdXNpbmcgbmFtZXNwYWNlczsN
-Cg0KQWxzbyBjb3JyZWN0Lg0KDQo+IHdoYXQgbWF0dGVycyBpcyB3aGV0aGVyIHNvbWUgcmFuZG9t
-DQo+IHByb2Nlc3MgY2FuIGp1c3QgdXNlIHVuc2hhcmUoQ0xPTkVfTkVXVVNFUikgdG8gaW5jcmVh
-c2UgaXRzIGFwcGFyZW50DQo+IGNhcGFiaWxpdGllcyBhbmQgYnlwYXNzIHRoZSBjaGVja3MgcGVy
-Zm9ybWVkIGJ5IHRoaXMgTFNNLg0KDQpXaGljaCBwdXRzIGl0IGluIGEgbmV3IHVzZXIgbmFtZXNw
-YWNlLCB3aGljaCBnZXRzIGNhdWdodCBieSB0aGUNCnNhZmVfYnlfbmFtZXNwYWNlKCkgY2hlY2su
-DQoNCj4gTXkgZXhwZWN0YXRpb24gaXMgdGhhdCB1bnNoYXJlKENMT05FX05FV1VTRVIpIHNob3Vs
-ZCBub3QgaW5jcmVhc2UgdGhlDQo+IGNhbGxlcidzIGFiaWxpdGllcy4gWW91ciBwYXRjaCBzZWVt
-cyB0byB2aW9sYXRlIHRoYXQgZXhwZWN0YXRpb24uDQoNCklmIHlvdSBoYXZlIENPTkZJR19VU0VS
-X05TIGFuZCBub3QNCkNPTkZJR19TRUNVUklUWV9TSURFQ0hBTk5FTF9OQU1FU1BBQ0VTIHlvdSBk
-byBub3QgaW5jcmVhc2UgdGhlDQpjYWxsZXIncyBhYmlsaXRpZXMgZnJvbSB3aGF0IHlvdSBoYXZl
-IHdpdGhvdXQgc2FmZXNpZGVjaGFubmVsLiBJZiB5b3UgaGF2ZQ0KQ09ORklHX1NFQ1VSSVRZX1NJ
-REVDSEFOTkVMX05BTUVTUEFDRVMgeW91IGhhdmUgYWRkaXRpb25hbA0KcmVzdHJpY3Rpb24gKGFz
-c3VtaW5nIG9uZSBjb25zaWRlcnMgc2V0dGluZyB0aGUgYmFycmllciBhIHJlc3RyaWN0aW9uKSB0
-aGF0DQp0aGUgdGFza3MgbXVzdCBiZSBpbiB0aGUgc2FtZSBuYW1lc3BhY2UocykuIEFzIEkgc2Fp
-ZCwgaWYgeW91IGNhcmUgYWJvdXQNCm5hbWVzcGFjZSBpbXBsaWNhdGlvbnMgeW91IHNob3VsZCBj
-b25maWd1cmUgdGhlIHN5c3RlbSBhY2NvcmRpbmdseS4NCg0KPiA+IEkgZG9uJ3Qgc2VlIHJlYWwg
-dmFsdWUgaW4gYWRkaW5nIG5hbWVzcGFjZSBjaGVja3MgaW4gdGhlIGNhcGFiaWxpdHkgY2hlY2tz
-DQo+ID4gZm9yIHRoZSBldmVudCB3aGVyZSBzb21lb25lIGhhcyBzYWlkIHRoZXkgZG9uJ3Qgd2Fu
-dCBuYW1lc3BhY2UgY2hlY2tzLg0KPiANCj4gQ2FwYWJpbGl0aWVzIGFyZSBtZWFuaW5nbGVzcyBp
-ZiB5b3UgZG9uJ3QgY29uc2lkZXIgdGhlIG5hbWVzcGFjZXMNCj4gcmVsYXRpdmUgdG8gd2hpY2gg
-dGhleSBhcmUgZWZmZWN0aXZlLg0KDQpBZ3JlZWQuIEJ1dCBpZiBDT05GSUdfTkFNRVNQQUNFUyBp
-cyBvZmYgeW91IGFyZSBhbHdheXMgaW4gdGhlIHNhbWUNCm5hbWVzcGFjZSBhbmQgaWYgaXQgaXMg
-b24geW91IHNob3VsZCB1c2UgdGhlIHNpZGVjaGFubmVsIG5hbWVzcGFjZSBjaGVjay4NCg0KPiBB
-bnlvbmUgY2FuIGdldCBDQVBfU1lTX0FETUlOIG9yDQo+IHdoYXRldmVyIG90aGVyIGNhcGFiaWxp
-dGllcyB0aGV5IHdhbnQsIGJ5IGRlc2lnbiAtIGp1c3Qgbm90IHJlbGF0aXZlDQo+IHRvIG9iamVj
-dHMgdGhleSBkb24ndCBvd24uIExvb2s6DQo+IA0KPiAkIGdyZXAgXkNhcCAvcHJvYy9zZWxmL3N0
-YXR1cw0KPiBDYXBJbmg6IDAwMDAwMDAwMDAwMDAwMDANCj4gQ2FwUHJtOiAwMDAwMDAwMDAwMDAw
-MDAwDQo+IENhcEVmZjogMDAwMDAwMDAwMDAwMDAwMA0KPiBDYXBCbmQ6IDAwMDAwMDNmZmZmZmZm
-ZmYNCj4gQ2FwQW1iOiAwMDAwMDAwMDAwMDAwMDAwDQo+ICQgdW5zaGFyZSAtVXIgZ3JlcCBeQ2Fw
-IC9wcm9jL3NlbGYvc3RhdHVzDQo+IENhcEluaDogMDAwMDAwMDAwMDAwMDAwMA0KPiBDYXBQcm06
-IDAwMDAwMDNmZmZmZmZmZmYNCj4gQ2FwRWZmOiAwMDAwMDAzZmZmZmZmZmZmDQo+IENhcEJuZDog
-MDAwMDAwM2ZmZmZmZmZmZg0KPiBDYXBBbWI6IDAwMDAwMDAwMDAwMDAwMDANCj4gDQo+IFRhLWRh
-YSEgRnVsbCBjYXBhYmlsaXR5IHNldC4NCg0KWWVzLCBidXQgaW4gYSBkaWZmZXJlbnQgbmFtZXNw
-YWNlLiBIZW5jZSB0aGUgbmFtZXNwYWNlIGNoZWNrLg0KDQpXaGF0IEkgaGVhciB5b3Ugc2F5aW5n
-IGlzIHRoYXQgeW91IGRvbid0IHdhbnQgdGhlIGNhcGFiaWxpdHkgY2hlY2sNCnRvIGJlIGluZGVw
-ZW5kZW50IG9mIHRoZSBuYW1lc3BhY2UgY2hlY2suIFRoaXMgY29uZmxpY3RzIHdpdGggdGhlDQpz
-dHJvbmcgZGVzaXJlIGV4cHJlc3NlZCB0byBtZSB3aGVuIEkgc3RhcnRlZCB0aGlzIHRoYXQgdGhl
-IGNvbmZpZ3VyYXRpb24NCnNob3VsZCBiZSBmbGV4aWJsZS4gSSBjYW4gYmVlZiB1cCB0aGUgZGVz
-Y3JpcHRpb24gb2YgdGhlIHZhcmlvdXMgb3B0aW9ucy4NCldvdWxkIHRoYXQgYWRkcmVzcyB0aGUg
-aXNzdWU/DQoNCj4gDQo+ID4gSSBnb3QgZWFybHkgZmVlZGJhY2sgdGhhdCBjb25maWd1cmFiaWxp
-dHkgd2FzIGNvbnNpZGVyZWQgaW1wb3J0YW50Lg0KPiA+IFRoaXMgaXMgdGhlIGNvcnJlY3QgYmVo
-YXZpb3IgaWYgeW91IHdhbnQgbmFtZXNwYWNlIGNoZWNrcyB0byBiZQ0KPiA+IHNlcGFyYXRlbHkg
-Y29uZmlndXJhYmxlIGZyb20gY2FwYWJpbGl0eSBjaGVja3MuIFlvdSBjb3VsZCBhc2sgZm9yDQo+
-ID4gZGlzdGluY3QgY29uZmlndXJhdGlvbiBvcHRpb25zIGZvciBlYWNoIGtpbmQgb2YgbmFtZXNw
-YWNlLCBidXQsIHdlbGwsIHl1Y2suDQo+ID4NCj4gPiA+ID4gK3N0YXRpYyBpbnQgc2FmZV9ieV9u
-YW1lc3BhY2Uoc3RydWN0IHRhc2tfc3RydWN0ICpwKQ0KPiA+ID4gPiArew0KPiA+ID4gPiArICAg
-ICAgIHN0cnVjdCBjZ3JvdXBfbmFtZXNwYWNlICpjY2duID0gTlVMTDsNCj4gPiA+ID4gKyAgICAg
-ICBzdHJ1Y3QgY2dyb3VwX25hbWVzcGFjZSAqcGNnbiA9IE5VTEw7DQo+ID4gPiA+ICsgICAgICAg
-Y29uc3Qgc3RydWN0IGNyZWQgKmNjcmVkOw0KPiA+ID4gPiArICAgICAgIGNvbnN0IHN0cnVjdCBj
-cmVkICpwY3JlZDsNCj4gPiA+ID4gKw0KPiA+ID4gPiArICAgICAgIC8qDQo+ID4gPiA+ICsgICAg
-ICAgICogTmFtZXNwYWNlIGNoZWNrcy4gQ29uc2lkZXJlZCBzYWZlIGlmOg0KPiA+ID4gPiArICAg
-ICAgICAqICAgICAgY2dyb3VwIG5hbWVzcGFjZSBpcyB0aGUgc2FtZQ0KPiA+ID4gPiArICAgICAg
-ICAqICAgICAgVXNlciBuYW1lc3BhY2UgaXMgdGhlIHNhbWUNCj4gPiA+ID4gKyAgICAgICAgKiAg
-ICAgIFBJRCBuYW1lc3BhY2UgaXMgdGhlIHNhbWUNCj4gPiA+ID4gKyAgICAgICAgKi8NCj4gPiA+
-ID4gKyAgICAgICBpZiAoY3VycmVudC0+bnNwcm94eSkNCj4gPiA+ID4gKyAgICAgICAgICAgICAg
-IGNjZ24gPSBjdXJyZW50LT5uc3Byb3h5LT5jZ3JvdXBfbnM7DQo+ID4gPiA+ICsgICAgICAgaWYg
-KHAtPm5zcHJveHkpDQo+ID4gPiA+ICsgICAgICAgICAgICAgICBwY2duID0gcC0+bnNwcm94eS0+
-Y2dyb3VwX25zOw0KPiA+ID4gPiArICAgICAgIGlmIChjY2duICE9IHBjZ24pDQo+ID4gPiA+ICsg
-ICAgICAgICAgICAgICByZXR1cm4gLUVBQ0NFUzsNCj4gPiA+ID4gKw0KPiA+ID4gPiArICAgICAg
-IGNjcmVkID0gY3VycmVudF9yZWFsX2NyZWQoKTsNCj4gPiA+ID4gKyAgICAgICBwY3JlZCA9IHJj
-dV9kZXJlZmVyZW5jZV9wcm90ZWN0ZWQocC0+cmVhbF9jcmVkLCAxKTsNCj4gPiA+ID4gKw0KPiA+
-ID4gPiArICAgICAgIGlmIChjY3JlZC0+dXNlcl9ucyAhPSBwY3JlZC0+dXNlcl9ucykNCj4gPiA+
-ID4gKyAgICAgICAgICAgICAgIHJldHVybiAtRUFDQ0VTOw0KPiA+ID4gPiArICAgICAgIGlmICh0
-YXNrX2FjdGl2ZV9waWRfbnMoY3VycmVudCkgIT0gdGFza19hY3RpdmVfcGlkX25zKHApKQ0KPiA+
-ID4gPiArICAgICAgICAgICAgICAgcmV0dXJuIC1FQUNDRVM7DQo+ID4gPiA+ICsgICAgICAgcmV0
-dXJuIDA7DQo+ID4gPiA+ICt9DQo=
+On Wed, Aug 22, 2018 at 6:39 PM Schaufler, Casey
+<casey.schaufler@intel.com> wrote:
+>
+> > -----Original Message-----
+> > From: Jann Horn [mailto:jannh@google.com]
+> > Sent: Tuesday, August 21, 2018 6:01 PM
+> > To: Schaufler, Casey <casey.schaufler@intel.com>
+> > Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>; kernel list
+> > <linux-kernel@vger.kernel.org>; linux-security-module <linux-security-
+> > module@vger.kernel.org>; selinux@tycho.nsa.gov; Hansen, Dave
+> > <dave.hansen@intel.com>; Dock, Deneen T <deneen.t.dock@intel.com>;
+> > kristen@linux.intel.com; Arjan van de Ven <arjan@linux.intel.com>
+> > Subject: Re: [PATCH v3 3/5] LSM: Security module checking for side-channel
+> > dangers
+> >
+> > On Wed, Aug 22, 2018 at 1:44 AM Schaufler, Casey
+> > <casey.schaufler@intel.com> wrote:
+> > >
+> > > > -----Original Message-----
+> > > > From: Jann Horn [mailto:jannh@google.com]
+> > > > Sent: Tuesday, August 21, 2018 10:24 AM
+> > > > To: Schaufler, Casey <casey.schaufler@intel.com>
+> > > > Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>; kernel list
+> > > > <linux-kernel@vger.kernel.org>; linux-security-module <linux-security-
+> > > > module@vger.kernel.org>; selinux@tycho.nsa.gov; Hansen, Dave
+> > > > <dave.hansen@intel.com>; Dock, Deneen T <deneen.t.dock@intel.com>;
+> > > > kristen@linux.intel.com; Arjan van de Ven <arjan@linux.intel.com>
+> > > > Subject: Re: [PATCH v3 3/5] LSM: Security module checking for side-channel
+> > > > dangers
+> > > >
+> > > > On Tue, Aug 21, 2018 at 2:05 AM Casey Schaufler
+> > > > <casey.schaufler@intel.com> wrote:
+> > > > >
+> > > > > The sidechannel LSM checks for cases where a side-channel
+> > > > > attack may be dangerous based on security attributes of tasks.
+> > > > > This includes:
+> > > > >         Effective UID of the tasks is different
+> > > > >         Capablity sets are different
+> > > > >         Tasks are in different namespaces
+> > > > > An option is also provided to assert that task are never
+> > > > > to be considered safe. This is high paranoia, and expensive
+> > > > > as well.
+> > > > >
+> > > > > Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
+> > > > > ---
+> > > > [...]
+> > > > > diff --git a/security/sidechannel/Kconfig b/security/sidechannel/Kconfig
+> > > > > new file mode 100644
+> > > > > index 000000000000..af9396534128
+> > > > > --- /dev/null
+> > > > > +++ b/security/sidechannel/Kconfig
+> > > > [...]
+> > > > > +config SECURITY_SIDECHANNEL_CAPABILITIES
+> > > > > +       bool "Sidechannel check on capability sets"
+> > > > > +       depends on SECURITY_SIDECHANNEL
+> > > > > +       default n
+> > > > > +       help
+> > > > > +         Assume that tasks with different sets of privilege may be
+> > > > > +         subject to side-channel attacks. Potential interactions
+> > > > > +         where the attacker lacks capabilities the attacked has
+> > > > > +         are blocked.
+> > > > > +
+> > > > > +          If you are unsure how to answer this question, answer N.
+> > > > > +
+> > > > > +config SECURITY_SIDECHANNEL_NAMESPACES
+> > > > > +       bool "Sidechannel check on namespaces"
+> > > > > +       depends on SECURITY_SIDECHANNEL
+> > > > > +       depends on NAMESPACES
+> > > > > +       default n
+> > > > > +       help
+> > > > > +         Assume that tasks in different namespaces may be
+> > > > > +         subject to side-channel attacks. User, PID and cgroup
+> > > > > +         namespaces are checked.
+> > > > > +
+> > > > > +          If you are unsure how to answer this question, answer N.
+> > > > [...]
+> > > > > diff --git a/security/sidechannel/sidechannel.c
+> > > > b/security/sidechannel/sidechannel.c
+> > > > > new file mode 100644
+> > > > > index 000000000000..4da7d6dafdc5
+> > > > > --- /dev/null
+> > > > > +++ b/security/sidechannel/sidechannel.c
+> > > > [...]
+> > > > > +/*
+> > > > > + * safe_by_capability - Are task and current sidechannel safe?
+> > > > > + * @p: task to check on
+> > > > > + *
+> > > > > + * Returns 0 if the tasks are sidechannel safe, -EACCES otherwise.
+> > > > > + */
+> > > > > +#ifdef CONFIG_SECURITY_SIDECHANNEL_CAPABILITIES
+> > > > > +static int safe_by_capability(struct task_struct *p)
+> > > > > +{
+> > > > > +       const struct cred *ccred = current_real_cred();
+> > > > > +       const struct cred *pcred = rcu_dereference_protected(p->real_cred,
+> > 1);
+> > > > > +
+> > > > > +       /*
+> > > > > +        * Capabilities checks. Considered safe if:
+> > > > > +        *      current has all the capabilities p does
+> > > > > +        */
+> > > > > +       if (ccred != pcred &&
+> > > > > +           !cap_issubset(pcred->cap_effective, ccred->cap_effective))
+> > > > > +               return -EACCES;
+> > > > > +       return 0;
+> > > > > +}
+> > > >
+> > > > On its own (without safe_by_namespace()), this check makes no sense, I
+> > > > think. You're performing a test on the namespaced capability sets
+> > > > without looking at which user namespaces they are relative to. Maybe
+> > > > either introduce a configuration dependency or add an extra namespace
+> > > > check here?
+> > >
+> > > If you don't have namespaces the check is correct. If you do, and use
+> > > safe_by_namespace() you're also correct. If you use namespaces and
+> > > care about side-channel attacks you should enable the namespace checks.
+> >
+> > By "use namespaces", you mean "have CONFIG_USER_NS=y set in the kernel
+> > config", right?
+>
+> That's correct.
+>
+> > It doesn't matter much whether processes on your system are
+> > intentionally using namespaces;
+>
+> Also correct.
+>
+> > what matters is whether some random
+> > process can just use unshare(CLONE_NEWUSER) to increase its apparent
+> > capabilities and bypass the checks performed by this LSM.
+>
+> Which puts it in a new user namespace, which gets caught by the
+> safe_by_namespace() check.
+>
+> > My expectation is that unshare(CLONE_NEWUSER) should not increase the
+> > caller's abilities. Your patch seems to violate that expectation.
+>
+> If you have CONFIG_USER_NS and not
+> CONFIG_SECURITY_SIDECHANNEL_NAMESPACES you do not increase the
+> caller's abilities from what you have without safesidechannel. If you have
+> CONFIG_SECURITY_SIDECHANNEL_NAMESPACES you have additional
+> restriction (assuming one considers setting the barrier a restriction) that
+> the tasks must be in the same namespace(s). As I said, if you care about
+> namespace implications you should configure the system accordingly.
+>
+> > > I don't see real value in adding namespace checks in the capability checks
+> > > for the event where someone has said they don't want namespace checks.
+> >
+> > Capabilities are meaningless if you don't consider the namespaces
+> > relative to which they are effective.
+>
+> Agreed. But if CONFIG_NAMESPACES is off you are always in the same
+> namespace and if it is on you should use the sidechannel namespace check.
+>
+> > Anyone can get CAP_SYS_ADMIN or
+> > whatever other capabilities they want, by design - just not relative
+> > to objects they don't own. Look:
+> >
+> > $ grep ^Cap /proc/self/status
+> > CapInh: 0000000000000000
+> > CapPrm: 0000000000000000
+> > CapEff: 0000000000000000
+> > CapBnd: 0000003fffffffff
+> > CapAmb: 0000000000000000
+> > $ unshare -Ur grep ^Cap /proc/self/status
+> > CapInh: 0000000000000000
+> > CapPrm: 0000003fffffffff
+> > CapEff: 0000003fffffffff
+> > CapBnd: 0000003fffffffff
+> > CapAmb: 0000000000000000
+> >
+> > Ta-daa! Full capability set.
+>
+> Yes, but in a different namespace. Hence the namespace check.
+>
+> What I hear you saying is that you don't want the capability check
+> to be independent of the namespace check.
+
+The capability check doesn't always require a namespace match, and I
+don't care about non-user namespaces here, but I would prefer it if
+A->B with A having some capabilities required A's user namespace to be
+ancestor-or-self of B's user namespace. But alternatively:
+
+> This conflicts with the
+> strong desire expressed to me when I started this that the configuration
+> should be flexible. I can beef up the description of the various options.
+> Would that address the issue?
+
+It seems to me that it would make sense to express this as something
+like a Kconfig dependency. But I guess if you document that the
+combination of CONFIG_USER_NS=y,
+CONFIG_SECURITY_SIDECHANNEL_NAMESPACES=n and
+SECURITY_SIDECHANNEL_CAPABILITIES=y is nonsensical, that works too. I
+just don't see why you'd want to provide such a footgun?
+Configurability is nice, but if we know that one of the possible
+configurations doesn't make sense, it seems like a good idea to just
+not allow the system to be configured that way.
+
+You say that you were asked to make the configuration flexible. Did
+whoever told you that actually want the ability to compare raw
+capability sets on a system with CONFIG_USER_NS=y, and understand what
+semantics that has (and doesn't have)? Or was their intent more along
+the lines of "we want to flush if the new task has higher privileges,
+capability-wise, than the old task; but we don't explicitly care about
+namespaces"?
+
+> > > I got early feedback that configurability was considered important.
+> > > This is the correct behavior if you want namespace checks to be
+> > > separately configurable from capability checks. You could ask for
+> > > distinct configuration options for each kind of namespace, but, well, yuck.
+> > >
+> > > > > +static int safe_by_namespace(struct task_struct *p)
+> > > > > +{
+> > > > > +       struct cgroup_namespace *ccgn = NULL;
+> > > > > +       struct cgroup_namespace *pcgn = NULL;
+> > > > > +       const struct cred *ccred;
+> > > > > +       const struct cred *pcred;
+> > > > > +
+> > > > > +       /*
+> > > > > +        * Namespace checks. Considered safe if:
+> > > > > +        *      cgroup namespace is the same
+> > > > > +        *      User namespace is the same
+> > > > > +        *      PID namespace is the same
+> > > > > +        */
+> > > > > +       if (current->nsproxy)
+> > > > > +               ccgn = current->nsproxy->cgroup_ns;
+> > > > > +       if (p->nsproxy)
+> > > > > +               pcgn = p->nsproxy->cgroup_ns;
+> > > > > +       if (ccgn != pcgn)
+> > > > > +               return -EACCES;
+> > > > > +
+> > > > > +       ccred = current_real_cred();
+> > > > > +       pcred = rcu_dereference_protected(p->real_cred, 1);
+> > > > > +
+> > > > > +       if (ccred->user_ns != pcred->user_ns)
+> > > > > +               return -EACCES;
+> > > > > +       if (task_active_pid_ns(current) != task_active_pid_ns(p))
+> > > > > +               return -EACCES;
+> > > > > +       return 0;
+> > > > > +}
