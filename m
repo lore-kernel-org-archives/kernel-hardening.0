@@ -1,70 +1,89 @@
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Subject: RE: [PATCH v3 3/5] LSM: Security module checking for side-channel
- dangers
-Date: Wed, 22 Aug 2018 17:48:02 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC673214407ED@ORSMSX107.amr.corp.intel.com>
-References: <20180821000444.7004-1-casey.schaufler@intel.com>
- <20180821000444.7004-4-casey.schaufler@intel.com>
- <CAG48ez1D-DPBP8ACA1W5=XZLNKUeVj7ZOGUG8uJ2nL1xOSR_9Q@mail.gmail.com>
- <99FC4B6EFCEFD44486C35F4C281DC673214402D3@ORSMSX107.amr.corp.intel.com>
- <CAG48ez3bh5cFgZ5ZY63pszTV+KX+KC4utRCm7E8en+uF5w6vKw@mail.gmail.com>
- <99FC4B6EFCEFD44486C35F4C281DC67321440770@ORSMSX107.amr.corp.intel.com>
- <CAG48ez3OkpcrC34LJTWAvH4ZvREW7jDVkeMBZrLQe6cRSEBheg@mail.gmail.com>
-In-Reply-To: <CAG48ez3OkpcrC34LJTWAvH4ZvREW7jDVkeMBZrLQe6cRSEBheg@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-To: Jann Horn <jannh@google.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "selinux@tycho.nsa.gov" <selinux@tycho.nsa.gov>, "Hansen, Dave" <dave.hansen@intel.com>, "Dock,
- Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, Arjan van de Ven <arjan@linux.intel.com>
+References: <20180807012257.20157-1-jannh@google.com> <C6369CAA-CBB8-420F-97DB-7A242D9650A8@amacapital.net>
+In-Reply-To: <C6369CAA-CBB8-420F-97DB-7A242D9650A8@amacapital.net>
+From: Jann Horn <jannh@google.com>
+Date: Thu, 23 Aug 2018 01:53:23 +0200
+Message-ID: <CAG48ez0c0L+WyfjDcfx=3wDwOQDOSJM-2JSVUBoWJCaKDVEfbw@mail.gmail.com>
+Subject: Re: [RFC PATCH 1/2] x86: WARN() when uaccess helpers fault on kernel addresses
+Content-Type: text/plain; charset="UTF-8"
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>, Dmitry Vyukov <dvyukov@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBKYW5uIEhvcm4gW21haWx0bzpq
-YW5uaEBnb29nbGUuY29tXQ0KPiBTZW50OiBXZWRuZXNkYXksIEF1Z3VzdCAyMiwgMjAxOCAxMDow
-NCBBTQ0KPiBUbzogU2NoYXVmbGVyLCBDYXNleSA8Y2FzZXkuc2NoYXVmbGVyQGludGVsLmNvbT4N
-Cj4gQ2M6IEtlcm5lbCBIYXJkZW5pbmcgPGtlcm5lbC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwu
-Y29tPjsga2VybmVsIGxpc3QNCj4gPGxpbnV4LWtlcm5lbEB2Z2VyLmtlcm5lbC5vcmc+OyBsaW51
-eC1zZWN1cml0eS1tb2R1bGUgPGxpbnV4LXNlY3VyaXR5LQ0KPiBtb2R1bGVAdmdlci5rZXJuZWwu
-b3JnPjsgc2VsaW51eEB0eWNoby5uc2EuZ292OyBIYW5zZW4sIERhdmUNCj4gPGRhdmUuaGFuc2Vu
-QGludGVsLmNvbT47IERvY2ssIERlbmVlbiBUIDxkZW5lZW4udC5kb2NrQGludGVsLmNvbT47DQo+
-IGtyaXN0ZW5AbGludXguaW50ZWwuY29tOyBBcmphbiB2YW4gZGUgVmVuIDxhcmphbkBsaW51eC5p
-bnRlbC5jb20+DQo+IFN1YmplY3Q6IFJlOiBbUEFUQ0ggdjMgMy81XSBMU006IFNlY3VyaXR5IG1v
-ZHVsZSBjaGVja2luZyBmb3Igc2lkZS1jaGFubmVsDQo+IGRhbmdlcnMNCj4gDQo+IFtTTklQXQ0K
-DQo+ID4gWWVzLCBidXQgaW4gYSBkaWZmZXJlbnQgbmFtZXNwYWNlLiBIZW5jZSB0aGUgbmFtZXNw
-YWNlIGNoZWNrLg0KPiA+DQo+ID4gV2hhdCBJIGhlYXIgeW91IHNheWluZyBpcyB0aGF0IHlvdSBk
-b24ndCB3YW50IHRoZSBjYXBhYmlsaXR5IGNoZWNrDQo+ID4gdG8gYmUgaW5kZXBlbmRlbnQgb2Yg
-dGhlIG5hbWVzcGFjZSBjaGVjay4NCj4gDQo+IFRoZSBjYXBhYmlsaXR5IGNoZWNrIGRvZXNuJ3Qg
-YWx3YXlzIHJlcXVpcmUgYSBuYW1lc3BhY2UgbWF0Y2gsIGFuZCBJDQo+IGRvbid0IGNhcmUgYWJv
-dXQgbm9uLXVzZXIgbmFtZXNwYWNlcyBoZXJlLCBidXQgSSB3b3VsZCBwcmVmZXIgaXQgaWYNCj4g
-QS0+QiB3aXRoIEEgaGF2aW5nIHNvbWUgY2FwYWJpbGl0aWVzIHJlcXVpcmVkIEEncyB1c2VyIG5h
-bWVzcGFjZSB0byBiZQ0KPiBhbmNlc3Rvci1vci1zZWxmIG9mIEIncyB1c2VyIG5hbWVzcGFjZS4g
-QnV0IGFsdGVybmF0aXZlbHk6DQoNCkxvb2tpbmcgYXQgYW5jZXN0b3IgcmVsYXRpb25zIHN0YXJ0
-cyB0byBnZXQgdXMgcHJldHR5IGNsb3NlIHRvIHRoZQ0KcG9pbnQgd2hlcmUgdGhlIGNvc3Qgb2Yg
-Y2hlY2tpbmcgd2lsbCBvdmVyd2hlbG0gdGhlIHNhdmluZ3MuIFRoaXMNCmlzIHNvbWV0aGluZyB3
-ZSBoYXZlIHRvIGJlIHZlcnkgY2FyZWZ1bCBvZi4NCg0KPiA+IFRoaXMgY29uZmxpY3RzIHdpdGgg
-dGhlDQo+ID4gc3Ryb25nIGRlc2lyZSBleHByZXNzZWQgdG8gbWUgd2hlbiBJIHN0YXJ0ZWQgdGhp
-cyB0aGF0IHRoZSBjb25maWd1cmF0aW9uDQo+ID4gc2hvdWxkIGJlIGZsZXhpYmxlLiBJIGNhbiBi
-ZWVmIHVwIHRoZSBkZXNjcmlwdGlvbiBvZiB0aGUgdmFyaW91cyBvcHRpb25zLg0KPiA+IFdvdWxk
-IHRoYXQgYWRkcmVzcyB0aGUgaXNzdWU/DQo+IA0KPiBJdCBzZWVtcyB0byBtZSB0aGF0IGl0IHdv
-dWxkIG1ha2Ugc2Vuc2UgdG8gZXhwcmVzcyB0aGlzIGFzIHNvbWV0aGluZw0KPiBsaWtlIGEgS2Nv
-bmZpZyBkZXBlbmRlbmN5Lg0KDQpJIHRob3VnaHQgYWJvdXQgdGhhdC4gSXQgY291bGQgYmUgdGhl
-IGJlc3QgY2hvaWNlLiBJIHdpbGwgaW52ZXN0aWdhdGUNCmZ1cnRoZXIuDQoNCj4gQnV0IEkgZ3Vl
-c3MgaWYgeW91IGRvY3VtZW50IHRoYXQgdGhlDQo+IGNvbWJpbmF0aW9uIG9mIENPTkZJR19VU0VS
-X05TPXksDQo+IENPTkZJR19TRUNVUklUWV9TSURFQ0hBTk5FTF9OQU1FU1BBQ0VTPW4gYW5kDQo+
-IFNFQ1VSSVRZX1NJREVDSEFOTkVMX0NBUEFCSUxJVElFUz15IGlzIG5vbnNlbnNpY2FsLCB0aGF0
-IHdvcmtzIHRvby4gSQ0KPiBqdXN0IGRvbid0IHNlZSB3aHkgeW91J2Qgd2FudCB0byBwcm92aWRl
-IHN1Y2ggYSBmb290Z3VuPw0KDQpQb2ludC4NCg0KPiBDb25maWd1cmFiaWxpdHkgaXMgbmljZSwg
-YnV0IGlmIHdlIGtub3cgdGhhdCBvbmUgb2YgdGhlIHBvc3NpYmxlDQo+IGNvbmZpZ3VyYXRpb25z
-IGRvZXNuJ3QgbWFrZSBzZW5zZSwgaXQgc2VlbXMgbGlrZSBhIGdvb2QgaWRlYSB0byBqdXN0DQo+
-IG5vdCBhbGxvdyB0aGUgc3lzdGVtIHRvIGJlIGNvbmZpZ3VyZWQgdGhhdCB3YXkuDQoNCkFub3Ro
-ZXIgcG9pbnQuDQoNCj4gWW91IHNheSB0aGF0IHlvdSB3ZXJlIGFza2VkIHRvIG1ha2UgdGhlIGNv
-bmZpZ3VyYXRpb24gZmxleGlibGUuIERpZA0KPiB3aG9ldmVyIHRvbGQgeW91IHRoYXQgYWN0dWFs
-bHkgd2FudCB0aGUgYWJpbGl0eSB0byBjb21wYXJlIHJhdw0KPiBjYXBhYmlsaXR5IHNldHMgb24g
-YSBzeXN0ZW0gd2l0aCBDT05GSUdfVVNFUl9OUz15LCBhbmQgdW5kZXJzdGFuZCB3aGF0DQo+IHNl
-bWFudGljcyB0aGF0IGhhcyAoYW5kIGRvZXNuJ3QgaGF2ZSk/IE9yIHdhcyB0aGVpciBpbnRlbnQg
-bW9yZSBhbG9uZw0KPiB0aGUgbGluZXMgb2YgIndlIHdhbnQgdG8gZmx1c2ggaWYgdGhlIG5ldyB0
-YXNrIGhhcyBoaWdoZXIgcHJpdmlsZWdlcywNCj4gY2FwYWJpbGl0eS13aXNlLCB0aGFuIHRoZSBv
-bGQgdGFzazsgYnV0IHdlIGRvbid0IGV4cGxpY2l0bHkgY2FyZSBhYm91dA0KPiBuYW1lc3BhY2Vz
-Ij8NCg0KV2l0aG91dCBnb2luZyBpbnRvIHRvbyBtdWNoIGRldGFpbCwgaXQncyBhIG1hdHRlciBv
-ZiBwZW9wbGUgd2hvDQp1bmRlcnN0YW5kIGNoaXBzIGFuZCBwZXJmb3JtYW5jZSBiZXR0ZXIgdGhh
-biB0aGV5IHVuZGVyc3RhbmQNCnNlY3VyaXR5IG9yIHRoZSB1c2VyIGV4cGVyaWVuY2UuDQoNCg==
+On Tue, Aug 7, 2018 at 4:55 AM Andy Lutomirski <luto@amacapital.net> wrote:
+> > On Aug 6, 2018, at 6:22 PM, Jann Horn <jannh@google.com> wrote:
+> > There have been multiple kernel vulnerabilities that permitted userspace to
+> > pass completely unchecked pointers through to userspace accessors:
+> >
+> > - the waitid() bug - commit 96ca579a1ecc ("waitid(): Add missing
+> >  access_ok() checks")
+> > - the sg/bsg read/write APIs
+> > - the infiniband read/write APIs
+> >
+> > These don't happen all that often, but when they do happen, it is hard to
+> > test for them properly; and it is probably also hard to discover them with
+> > fuzzing. Even when an unmapped kernel address is supplied to such buggy
+> > code, it just returns -EFAULT instead of doing a proper BUG() or at least
+> > WARN().
+> >
+> > This patch attempts to make such misbehaving code a bit more visible by
+> > WARN()ing in the pagefault handler code when a userspace accessor causes
+> > #PF on a kernel address and the current context isn't whitelisted.
+>
+> I like this a lot, and, in fact, I once wrote a patch to do something similar. It was before the fancy extable code, though, so it was a mess.  Here are some thoughts:
+>
+> - It should be three patches. One patch to add the _UA annotations, one to improve the info passes to the handlers, and one to change behavior.
+>
+> - You should pass the vector, the error code, and the address to the handler.
+
+I'm polishing the patch a bit, and I've noticed that to plumb the
+error code and address through properly, I might need significantly
+more code churn because of kprobes - I want to make sure I'm not going
+down the completely wrong path here.
+
+I'm extending fixup_exception() to take two extra args "unsigned long
+error_code, unsigned long fault_addr". Most callers of
+fixup_exception() are fairly straightforward, but
+kprobe_fault_handler() has a dozen callchains from different exception
+handlers, and most of them are coming via notify_die(). (My RFC patch
+cheated by just feeding zeroes into fixup_exception() from
+kprobe_fault_handler().) Also, annoyingly, for !CONFIG_KPROBES,
+kprobe_fault_handler() is defined in include/linux/kprobes.h with a
+single prototype across architectures.
+
+Currently, for example, when do_general_protection() handles a kernel
+fault, it first directly calls into fixup_exception(); and then, if
+this is happening inside a kprobe, via
+notify_die()->atomic_notifier_call_chain()->kprobe_exceptions_notify()->kprobe_fault_handler()->fixup_exception(),
+it can end up calling fixup handlers a second time.
+I think there's also some inconsistency between #PF and #GP in the
+ordering of error handling:
+
+#PF handling:
+__do_page_fault
+  kprobes_fault
+    kprobe_fault_handler
+      ->fault_handler    # first: kprobe fault handler
+      fixup_exception    # second: kprobe's fixup call
+  bad_area_nosemaphore
+    __bad_area_nosemaphore
+      no_context
+        fixup_exception    # third: normal fixup call
+
+#GP handling:
+do_general_protection
+  fixup_exception    # first: normal fixup call
+  notify_die
+    atomic_notifier_call_chain
+      kprobe_exceptions_notify
+        kprobe_fault_handler
+          ->fault_handler    # second: kprobe fault handler
+          fixup_exception    # third: kprobe's fixup call
+
+
+Do you think I should actually plumb the error code and fault address
+all the way through notify_die() and the kprobe handling fault?
+Should I supply some "I don't want to trigger uaccess fault handlers"
+flag when coming from the kprobe code?
+Should the kprobe code not call into fixup_exception() at all (and if
+so, should I change that somehow)?
