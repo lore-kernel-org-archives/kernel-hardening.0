@@ -1,603 +1,255 @@
-Date: Mon, 27 Aug 2018 20:56:28 +0200
+Date: Mon, 27 Aug 2018 20:56:29 +0200
 In-Reply-To: <20180827185631.163506-1-jannh@google.com>
-Message-Id: <20180827185631.163506-5-jannh@google.com>
+Message-Id: <20180827185631.163506-6-jannh@google.com>
 Mime-Version: 1.0
 References: <20180827185631.163506-1-jannh@google.com>
-Subject: [PATCH v2 4/7] x86: introduce _ASM_EXTABLE_UA for uaccess fixups
+Subject: [PATCH v2 5/7] x86: plumb error code and fault address through to
+ fault handlers
 From: Jann Horn <jannh@google.com>
 Content-Type: text/plain; charset="UTF-8"
 To: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, x86@kernel.org, Andy Lutomirski <luto@kernel.org>, kernel-hardening@lists.openwall.com, Tony Luck <tony.luck@intel.com>, Borislav Petkov <bp@alien8.de>, jannh@google.com
 Cc: linux-kernel@vger.kernel.org, dvyukov@google.com, linux-edac@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently, most fixups for attempting to access userspace memory are
-handled using _ASM_EXTABLE, which is also used for various other types of
-fixups (e.g. safe MSR access, IRET failures, and a bunch of other things).
-In order to make it possible to add special safety checks to uaccess fixups
-(in particular, checking whether the fault address is actually in
-userspace), introduce a new exception table handler ex_handler_uaccess()
-and wire it up to all the user access fixups (excluding ones that
-already use _ASM_EXTABLE_EX).
+This is preparation for looking at trap number and fault address in the
+handlers for uaccess errors.
+This patch should not change any behavior.
 
 Signed-off-by: Jann Horn <jannh@google.com>
 ---
-NOTE: I haven't touched the two uaccess fixups in asm/fpu/internal.h
-because I'm not sure about what other kinds of exceptions those might
-have to handle.
+ arch/x86/include/asm/extable.h   |  3 ++-
+ arch/x86/include/asm/ptrace.h    |  2 ++
+ arch/x86/kernel/cpu/mcheck/mce.c |  2 +-
+ arch/x86/kernel/traps.c          |  6 ++---
+ arch/x86/mm/extable.c            | 40 ++++++++++++++++++++------------
+ arch/x86/mm/fault.c              |  2 +-
+ 6 files changed, 34 insertions(+), 21 deletions(-)
 
- arch/x86/include/asm/asm.h          |  10 ++-
- arch/x86/include/asm/fpu/internal.h |   2 +-
- arch/x86/include/asm/futex.h        |   6 +-
- arch/x86/include/asm/uaccess.h      |  22 ++---
- arch/x86/lib/checksum_32.S          |   4 +-
- arch/x86/lib/copy_user_64.S         |  90 ++++++++++----------
- arch/x86/lib/csum-copy_64.S         |   8 +-
- arch/x86/lib/getuser.S              |  12 +--
- arch/x86/lib/putuser.S              |  10 +--
- arch/x86/lib/usercopy_32.c          | 126 ++++++++++++++--------------
- arch/x86/lib/usercopy_64.c          |   4 +-
- arch/x86/mm/extable.c               |   8 ++
- 12 files changed, 160 insertions(+), 142 deletions(-)
-
-diff --git a/arch/x86/include/asm/asm.h b/arch/x86/include/asm/asm.h
-index 990770f9e76b..6467757bb39f 100644
---- a/arch/x86/include/asm/asm.h
-+++ b/arch/x86/include/asm/asm.h
-@@ -130,6 +130,9 @@
- # define _ASM_EXTABLE(from, to)					\
- 	_ASM_EXTABLE_HANDLE(from, to, ex_handler_default)
+diff --git a/arch/x86/include/asm/extable.h b/arch/x86/include/asm/extable.h
+index f9c3a5d502f4..d8c2198d543b 100644
+--- a/arch/x86/include/asm/extable.h
++++ b/arch/x86/include/asm/extable.h
+@@ -29,7 +29,8 @@ struct pt_regs;
+ 		(b)->handler = (tmp).handler - (delta);		\
+ 	} while (0)
  
-+# define _ASM_EXTABLE_UA(from, to)				\
-+	_ASM_EXTABLE_HANDLE(from, to, ex_handler_uaccess)
-+
- # define _ASM_EXTABLE_FAULT(from, to)				\
- 	_ASM_EXTABLE_HANDLE(from, to, ex_handler_fault)
+-extern int fixup_exception(struct pt_regs *regs, int trapnr);
++extern int fixup_exception(struct pt_regs *regs, int trapnr,
++			   unsigned long error_code, unsigned long fault_addr);
+ extern int fixup_bug(struct pt_regs *regs, int trapnr);
+ extern bool ex_has_fault_handler(unsigned long ip);
+ extern void early_fixup_exception(struct pt_regs *regs, int trapnr);
+diff --git a/arch/x86/include/asm/ptrace.h b/arch/x86/include/asm/ptrace.h
+index 6de1fd3d0097..6c68d4947a8f 100644
+--- a/arch/x86/include/asm/ptrace.h
++++ b/arch/x86/include/asm/ptrace.h
+@@ -37,8 +37,10 @@ struct pt_regs {
+ 	unsigned short __esh;
+ 	unsigned short fs;
+ 	unsigned short __fsh;
++/* On interrupt, gs and __gsh store the vector number. */
+ 	unsigned short gs;
+ 	unsigned short __gsh;
++/* On interrupt, this is the error code. */
+ 	unsigned long orig_ax;
+ 	unsigned long ip;
+ 	unsigned short cs;
+diff --git a/arch/x86/kernel/cpu/mcheck/mce.c b/arch/x86/kernel/cpu/mcheck/mce.c
+index 4b767284b7f5..e822d706d8c8 100644
+--- a/arch/x86/kernel/cpu/mcheck/mce.c
++++ b/arch/x86/kernel/cpu/mcheck/mce.c
+@@ -1347,7 +1347,7 @@ void do_machine_check(struct pt_regs *regs, long error_code)
+ 		local_irq_disable();
+ 		ist_end_non_atomic();
+ 	} else {
+-		if (!fixup_exception(regs, X86_TRAP_MC))
++		if (!fixup_exception(regs, X86_TRAP_MC, error_code, 0))
+ 			mce_panic("Failed kernel mode recovery", &m, NULL);
+ 	}
  
-@@ -165,8 +168,8 @@
- 	jmp copy_user_handle_tail
- 	.previous
+diff --git a/arch/x86/kernel/traps.c b/arch/x86/kernel/traps.c
+index bf9ab1aaa175..16c95cb90496 100644
+--- a/arch/x86/kernel/traps.c
++++ b/arch/x86/kernel/traps.c
+@@ -206,7 +206,7 @@ do_trap_no_signal(struct task_struct *tsk, int trapnr, char *str,
+ 	}
  
--	_ASM_EXTABLE(100b,103b)
--	_ASM_EXTABLE(101b,103b)
-+	_ASM_EXTABLE_UA(100b, 103b)
-+	_ASM_EXTABLE_UA(101b, 103b)
- 	.endm
+ 	if (!user_mode(regs)) {
+-		if (fixup_exception(regs, trapnr))
++		if (fixup_exception(regs, trapnr, error_code, 0))
+ 			return 0;
  
- #else
-@@ -182,6 +185,9 @@
- # define _ASM_EXTABLE(from, to)					\
- 	_ASM_EXTABLE_HANDLE(from, to, ex_handler_default)
+ 		tsk->thread.error_code = error_code;
+@@ -551,7 +551,7 @@ do_general_protection(struct pt_regs *regs, long error_code)
  
-+# define _ASM_EXTABLE_UA(from, to)				\
-+	_ASM_EXTABLE_HANDLE(from, to, ex_handler_uaccess)
-+
- # define _ASM_EXTABLE_FAULT(from, to)				\
- 	_ASM_EXTABLE_HANDLE(from, to, ex_handler_fault)
+ 	tsk = current;
+ 	if (!user_mode(regs)) {
+-		if (fixup_exception(regs, X86_TRAP_GP))
++		if (fixup_exception(regs, X86_TRAP_GP, error_code, 0))
+ 			return;
  
-diff --git a/arch/x86/include/asm/fpu/internal.h b/arch/x86/include/asm/fpu/internal.h
-index a38bf5a1e37a..068ff7689268 100644
---- a/arch/x86/include/asm/fpu/internal.h
-+++ b/arch/x86/include/asm/fpu/internal.h
-@@ -226,7 +226,7 @@ static inline void copy_fxregs_to_kernel(struct fpu *fpu)
- 		     "3: movl $-2,%[err]\n\t"				\
- 		     "jmp 2b\n\t"					\
- 		     ".popsection\n\t"					\
--		     _ASM_EXTABLE(1b, 3b)				\
-+		     _ASM_EXTABLE_UA(1b, 3b)				\
- 		     : [err] "=r" (err)					\
- 		     : "D" (st), "m" (*st), "a" (lmask), "d" (hmask)	\
- 		     : "memory")
-diff --git a/arch/x86/include/asm/futex.h b/arch/x86/include/asm/futex.h
-index de4d68852d3a..13c83fe97988 100644
---- a/arch/x86/include/asm/futex.h
-+++ b/arch/x86/include/asm/futex.h
-@@ -20,7 +20,7 @@
- 		     "3:\tmov\t%3, %1\n"			\
- 		     "\tjmp\t2b\n"				\
- 		     "\t.previous\n"				\
--		     _ASM_EXTABLE(1b, 3b)			\
-+		     _ASM_EXTABLE_UA(1b, 3b)			\
- 		     : "=r" (oldval), "=r" (ret), "+m" (*uaddr)	\
- 		     : "i" (-EFAULT), "0" (oparg), "1" (0))
+ 		tsk->thread.error_code = error_code;
+@@ -848,7 +848,7 @@ static void math_error(struct pt_regs *regs, int error_code, int trapnr)
+ 	cond_local_irq_enable(regs);
  
-@@ -36,8 +36,8 @@
- 		     "4:\tmov\t%5, %1\n"			\
- 		     "\tjmp\t3b\n"				\
- 		     "\t.previous\n"				\
--		     _ASM_EXTABLE(1b, 4b)			\
--		     _ASM_EXTABLE(2b, 4b)			\
-+		     _ASM_EXTABLE_UA(1b, 4b)			\
-+		     _ASM_EXTABLE_UA(2b, 4b)			\
- 		     : "=&a" (oldval), "=&r" (ret),		\
- 		       "+m" (*uaddr), "=&r" (tem)		\
- 		     : "r" (oparg), "i" (-EFAULT), "1" (0))
-diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
-index aae77eb8491c..b5e58cc0c5e7 100644
---- a/arch/x86/include/asm/uaccess.h
-+++ b/arch/x86/include/asm/uaccess.h
-@@ -198,8 +198,8 @@ __typeof__(__builtin_choose_expr(sizeof(x) > sizeof(0UL), 0ULL, 0UL))
- 		     "4:	movl %3,%0\n"				\
- 		     "	jmp 3b\n"					\
- 		     ".previous\n"					\
--		     _ASM_EXTABLE(1b, 4b)				\
--		     _ASM_EXTABLE(2b, 4b)				\
-+		     _ASM_EXTABLE_UA(1b, 4b)				\
-+		     _ASM_EXTABLE_UA(2b, 4b)				\
- 		     : "=r" (err)					\
- 		     : "A" (x), "r" (addr), "i" (errret), "0" (err))
+ 	if (!user_mode(regs)) {
+-		if (fixup_exception(regs, trapnr))
++		if (fixup_exception(regs, trapnr, error_code, 0))
+ 			return;
  
-@@ -340,8 +340,8 @@ do {									\
- 		     "	xorl %%edx,%%edx\n"				\
- 		     "	jmp 3b\n"					\
- 		     ".previous\n"					\
--		     _ASM_EXTABLE(1b, 4b)				\
--		     _ASM_EXTABLE(2b, 4b)				\
-+		     _ASM_EXTABLE_UA(1b, 4b)				\
-+		     _ASM_EXTABLE_UA(2b, 4b)				\
- 		     : "=r" (retval), "=&A"(x)				\
- 		     : "m" (__m(__ptr)), "m" __m(((u32 __user *)(__ptr)) + 1),	\
- 		       "i" (errret), "0" (retval));			\
-@@ -386,7 +386,7 @@ do {									\
- 		     "	xor"itype" %"rtype"1,%"rtype"1\n"		\
- 		     "	jmp 2b\n"					\
- 		     ".previous\n"					\
--		     _ASM_EXTABLE(1b, 3b)				\
-+		     _ASM_EXTABLE_UA(1b, 3b)				\
- 		     : "=r" (err), ltype(x)				\
- 		     : "m" (__m(addr)), "i" (errret), "0" (err))
- 
-@@ -398,7 +398,7 @@ do {									\
- 		     "3:	mov %3,%0\n"				\
- 		     "	jmp 2b\n"					\
- 		     ".previous\n"					\
--		     _ASM_EXTABLE(1b, 3b)				\
-+		     _ASM_EXTABLE_UA(1b, 3b)				\
- 		     : "=r" (err), ltype(x)				\
- 		     : "m" (__m(addr)), "i" (errret), "0" (err))
- 
-@@ -474,7 +474,7 @@ struct __large_struct { unsigned long buf[100]; };
- 		     "3:	mov %3,%0\n"				\
- 		     "	jmp 2b\n"					\
- 		     ".previous\n"					\
--		     _ASM_EXTABLE(1b, 3b)				\
-+		     _ASM_EXTABLE_UA(1b, 3b)				\
- 		     : "=r"(err)					\
- 		     : ltype(x), "m" (__m(addr)), "i" (errret), "0" (err))
- 
-@@ -602,7 +602,7 @@ extern void __cmpxchg_wrong_size(void)
- 			"3:\tmov     %3, %0\n"				\
- 			"\tjmp     2b\n"				\
- 			"\t.previous\n"					\
--			_ASM_EXTABLE(1b, 3b)				\
-+			_ASM_EXTABLE_UA(1b, 3b)				\
- 			: "+r" (__ret), "=a" (__old), "+m" (*(ptr))	\
- 			: "i" (-EFAULT), "q" (__new), "1" (__old)	\
- 			: "memory"					\
-@@ -618,7 +618,7 @@ extern void __cmpxchg_wrong_size(void)
- 			"3:\tmov     %3, %0\n"				\
- 			"\tjmp     2b\n"				\
- 			"\t.previous\n"					\
--			_ASM_EXTABLE(1b, 3b)				\
-+			_ASM_EXTABLE_UA(1b, 3b)				\
- 			: "+r" (__ret), "=a" (__old), "+m" (*(ptr))	\
- 			: "i" (-EFAULT), "r" (__new), "1" (__old)	\
- 			: "memory"					\
-@@ -634,7 +634,7 @@ extern void __cmpxchg_wrong_size(void)
- 			"3:\tmov     %3, %0\n"				\
- 			"\tjmp     2b\n"				\
- 			"\t.previous\n"					\
--			_ASM_EXTABLE(1b, 3b)				\
-+			_ASM_EXTABLE_UA(1b, 3b)				\
- 			: "+r" (__ret), "=a" (__old), "+m" (*(ptr))	\
- 			: "i" (-EFAULT), "r" (__new), "1" (__old)	\
- 			: "memory"					\
-@@ -653,7 +653,7 @@ extern void __cmpxchg_wrong_size(void)
- 			"3:\tmov     %3, %0\n"				\
- 			"\tjmp     2b\n"				\
- 			"\t.previous\n"					\
--			_ASM_EXTABLE(1b, 3b)				\
-+			_ASM_EXTABLE_UA(1b, 3b)				\
- 			: "+r" (__ret), "=a" (__old), "+m" (*(ptr))	\
- 			: "i" (-EFAULT), "r" (__new), "1" (__old)	\
- 			: "memory"					\
-diff --git a/arch/x86/lib/checksum_32.S b/arch/x86/lib/checksum_32.S
-index 46e71a74e612..ad8e0906d1ea 100644
---- a/arch/x86/lib/checksum_32.S
-+++ b/arch/x86/lib/checksum_32.S
-@@ -273,11 +273,11 @@ unsigned int csum_partial_copy_generic (const char *src, char *dst,
- 
- #define SRC(y...)			\
- 	9999: y;			\
--	_ASM_EXTABLE(9999b, 6001f)
-+	_ASM_EXTABLE_UA(9999b, 6001f)
- 
- #define DST(y...)			\
- 	9999: y;			\
--	_ASM_EXTABLE(9999b, 6002f)
-+	_ASM_EXTABLE_UA(9999b, 6002f)
- 
- #ifndef CONFIG_X86_USE_PPRO_CHECKSUM
- 
-diff --git a/arch/x86/lib/copy_user_64.S b/arch/x86/lib/copy_user_64.S
-index 020f75cc8cf6..db4e5aa0858b 100644
---- a/arch/x86/lib/copy_user_64.S
-+++ b/arch/x86/lib/copy_user_64.S
-@@ -92,26 +92,26 @@ ENTRY(copy_user_generic_unrolled)
- 60:	jmp copy_user_handle_tail /* ecx is zerorest also */
- 	.previous
- 
--	_ASM_EXTABLE(1b,30b)
--	_ASM_EXTABLE(2b,30b)
--	_ASM_EXTABLE(3b,30b)
--	_ASM_EXTABLE(4b,30b)
--	_ASM_EXTABLE(5b,30b)
--	_ASM_EXTABLE(6b,30b)
--	_ASM_EXTABLE(7b,30b)
--	_ASM_EXTABLE(8b,30b)
--	_ASM_EXTABLE(9b,30b)
--	_ASM_EXTABLE(10b,30b)
--	_ASM_EXTABLE(11b,30b)
--	_ASM_EXTABLE(12b,30b)
--	_ASM_EXTABLE(13b,30b)
--	_ASM_EXTABLE(14b,30b)
--	_ASM_EXTABLE(15b,30b)
--	_ASM_EXTABLE(16b,30b)
--	_ASM_EXTABLE(18b,40b)
--	_ASM_EXTABLE(19b,40b)
--	_ASM_EXTABLE(21b,50b)
--	_ASM_EXTABLE(22b,50b)
-+	_ASM_EXTABLE_UA(1b, 30b)
-+	_ASM_EXTABLE_UA(2b, 30b)
-+	_ASM_EXTABLE_UA(3b, 30b)
-+	_ASM_EXTABLE_UA(4b, 30b)
-+	_ASM_EXTABLE_UA(5b, 30b)
-+	_ASM_EXTABLE_UA(6b, 30b)
-+	_ASM_EXTABLE_UA(7b, 30b)
-+	_ASM_EXTABLE_UA(8b, 30b)
-+	_ASM_EXTABLE_UA(9b, 30b)
-+	_ASM_EXTABLE_UA(10b, 30b)
-+	_ASM_EXTABLE_UA(11b, 30b)
-+	_ASM_EXTABLE_UA(12b, 30b)
-+	_ASM_EXTABLE_UA(13b, 30b)
-+	_ASM_EXTABLE_UA(14b, 30b)
-+	_ASM_EXTABLE_UA(15b, 30b)
-+	_ASM_EXTABLE_UA(16b, 30b)
-+	_ASM_EXTABLE_UA(18b, 40b)
-+	_ASM_EXTABLE_UA(19b, 40b)
-+	_ASM_EXTABLE_UA(21b, 50b)
-+	_ASM_EXTABLE_UA(22b, 50b)
- ENDPROC(copy_user_generic_unrolled)
- EXPORT_SYMBOL(copy_user_generic_unrolled)
- 
-@@ -156,8 +156,8 @@ ENTRY(copy_user_generic_string)
- 	jmp copy_user_handle_tail
- 	.previous
- 
--	_ASM_EXTABLE(1b,11b)
--	_ASM_EXTABLE(3b,12b)
-+	_ASM_EXTABLE_UA(1b, 11b)
-+	_ASM_EXTABLE_UA(3b, 12b)
- ENDPROC(copy_user_generic_string)
- EXPORT_SYMBOL(copy_user_generic_string)
- 
-@@ -189,7 +189,7 @@ ENTRY(copy_user_enhanced_fast_string)
- 	jmp copy_user_handle_tail
- 	.previous
- 
--	_ASM_EXTABLE(1b,12b)
-+	_ASM_EXTABLE_UA(1b, 12b)
- ENDPROC(copy_user_enhanced_fast_string)
- EXPORT_SYMBOL(copy_user_enhanced_fast_string)
- 
-@@ -319,27 +319,27 @@ ENTRY(__copy_user_nocache)
- 	jmp copy_user_handle_tail
- 	.previous
- 
--	_ASM_EXTABLE(1b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(2b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(3b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(4b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(5b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(6b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(7b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(8b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(9b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(10b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(11b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(12b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(13b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(14b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(15b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(16b,.L_fixup_4x8b_copy)
--	_ASM_EXTABLE(20b,.L_fixup_8b_copy)
--	_ASM_EXTABLE(21b,.L_fixup_8b_copy)
--	_ASM_EXTABLE(30b,.L_fixup_4b_copy)
--	_ASM_EXTABLE(31b,.L_fixup_4b_copy)
--	_ASM_EXTABLE(40b,.L_fixup_1b_copy)
--	_ASM_EXTABLE(41b,.L_fixup_1b_copy)
-+	_ASM_EXTABLE_UA(1b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(2b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(3b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(4b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(5b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(6b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(7b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(8b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(9b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(10b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(11b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(12b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(13b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(14b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(15b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(16b, .L_fixup_4x8b_copy)
-+	_ASM_EXTABLE_UA(20b, .L_fixup_8b_copy)
-+	_ASM_EXTABLE_UA(21b, .L_fixup_8b_copy)
-+	_ASM_EXTABLE_UA(30b, .L_fixup_4b_copy)
-+	_ASM_EXTABLE_UA(31b, .L_fixup_4b_copy)
-+	_ASM_EXTABLE_UA(40b, .L_fixup_1b_copy)
-+	_ASM_EXTABLE_UA(41b, .L_fixup_1b_copy)
- ENDPROC(__copy_user_nocache)
- EXPORT_SYMBOL(__copy_user_nocache)
-diff --git a/arch/x86/lib/csum-copy_64.S b/arch/x86/lib/csum-copy_64.S
-index 45a53dfe1859..a4a379e79259 100644
---- a/arch/x86/lib/csum-copy_64.S
-+++ b/arch/x86/lib/csum-copy_64.S
-@@ -31,14 +31,18 @@
- 
- 	.macro source
- 10:
--	_ASM_EXTABLE(10b, .Lbad_source)
-+	_ASM_EXTABLE_UA(10b, .Lbad_source)
- 	.endm
- 
- 	.macro dest
- 20:
--	_ASM_EXTABLE(20b, .Lbad_dest)
-+	_ASM_EXTABLE_UA(20b, .Lbad_dest)
- 	.endm
- 
-+	/*
-+	 * No _ASM_EXTABLE_UA; this is used for intentional prefetch on a
-+	 * potentially unmapped kernel address.
-+	 */
- 	.macro ignore L=.Lignore
- 30:
- 	_ASM_EXTABLE(30b, \L)
-diff --git a/arch/x86/lib/getuser.S b/arch/x86/lib/getuser.S
-index 49b167f73215..74fdff968ea3 100644
---- a/arch/x86/lib/getuser.S
-+++ b/arch/x86/lib/getuser.S
-@@ -132,12 +132,12 @@ bad_get_user_8:
- END(bad_get_user_8)
- #endif
- 
--	_ASM_EXTABLE(1b,bad_get_user)
--	_ASM_EXTABLE(2b,bad_get_user)
--	_ASM_EXTABLE(3b,bad_get_user)
-+	_ASM_EXTABLE_UA(1b, bad_get_user)
-+	_ASM_EXTABLE_UA(2b, bad_get_user)
-+	_ASM_EXTABLE_UA(3b, bad_get_user)
- #ifdef CONFIG_X86_64
--	_ASM_EXTABLE(4b,bad_get_user)
-+	_ASM_EXTABLE_UA(4b, bad_get_user)
- #else
--	_ASM_EXTABLE(4b,bad_get_user_8)
--	_ASM_EXTABLE(5b,bad_get_user_8)
-+	_ASM_EXTABLE_UA(4b, bad_get_user_8)
-+	_ASM_EXTABLE_UA(5b, bad_get_user_8)
- #endif
-diff --git a/arch/x86/lib/putuser.S b/arch/x86/lib/putuser.S
-index 96dce5fe2a35..d2e5c9c39601 100644
---- a/arch/x86/lib/putuser.S
-+++ b/arch/x86/lib/putuser.S
-@@ -94,10 +94,10 @@ bad_put_user:
- 	EXIT
- END(bad_put_user)
- 
--	_ASM_EXTABLE(1b,bad_put_user)
--	_ASM_EXTABLE(2b,bad_put_user)
--	_ASM_EXTABLE(3b,bad_put_user)
--	_ASM_EXTABLE(4b,bad_put_user)
-+	_ASM_EXTABLE_UA(1b, bad_put_user)
-+	_ASM_EXTABLE_UA(2b, bad_put_user)
-+	_ASM_EXTABLE_UA(3b, bad_put_user)
-+	_ASM_EXTABLE_UA(4b, bad_put_user)
- #ifdef CONFIG_X86_32
--	_ASM_EXTABLE(5b,bad_put_user)
-+	_ASM_EXTABLE_UA(5b, bad_put_user)
- #endif
-diff --git a/arch/x86/lib/usercopy_32.c b/arch/x86/lib/usercopy_32.c
-index 7add8ba06887..71fb58d44d58 100644
---- a/arch/x86/lib/usercopy_32.c
-+++ b/arch/x86/lib/usercopy_32.c
-@@ -47,8 +47,8 @@ do {									\
- 		"3:	lea 0(%2,%0,4),%0\n"				\
- 		"	jmp 2b\n"					\
- 		".previous\n"						\
--		_ASM_EXTABLE(0b,3b)					\
--		_ASM_EXTABLE(1b,2b)					\
-+		_ASM_EXTABLE_UA(0b, 3b)					\
-+		_ASM_EXTABLE_UA(1b, 2b)					\
- 		: "=&c"(size), "=&D" (__d0)				\
- 		: "r"(size & 3), "0"(size / 4), "1"(addr), "a"(0));	\
- } while (0)
-@@ -153,44 +153,44 @@ __copy_user_intel(void __user *to, const void *from, unsigned long size)
- 		       "101:   lea 0(%%eax,%0,4),%0\n"
- 		       "       jmp 100b\n"
- 		       ".previous\n"
--		       _ASM_EXTABLE(1b,100b)
--		       _ASM_EXTABLE(2b,100b)
--		       _ASM_EXTABLE(3b,100b)
--		       _ASM_EXTABLE(4b,100b)
--		       _ASM_EXTABLE(5b,100b)
--		       _ASM_EXTABLE(6b,100b)
--		       _ASM_EXTABLE(7b,100b)
--		       _ASM_EXTABLE(8b,100b)
--		       _ASM_EXTABLE(9b,100b)
--		       _ASM_EXTABLE(10b,100b)
--		       _ASM_EXTABLE(11b,100b)
--		       _ASM_EXTABLE(12b,100b)
--		       _ASM_EXTABLE(13b,100b)
--		       _ASM_EXTABLE(14b,100b)
--		       _ASM_EXTABLE(15b,100b)
--		       _ASM_EXTABLE(16b,100b)
--		       _ASM_EXTABLE(17b,100b)
--		       _ASM_EXTABLE(18b,100b)
--		       _ASM_EXTABLE(19b,100b)
--		       _ASM_EXTABLE(20b,100b)
--		       _ASM_EXTABLE(21b,100b)
--		       _ASM_EXTABLE(22b,100b)
--		       _ASM_EXTABLE(23b,100b)
--		       _ASM_EXTABLE(24b,100b)
--		       _ASM_EXTABLE(25b,100b)
--		       _ASM_EXTABLE(26b,100b)
--		       _ASM_EXTABLE(27b,100b)
--		       _ASM_EXTABLE(28b,100b)
--		       _ASM_EXTABLE(29b,100b)
--		       _ASM_EXTABLE(30b,100b)
--		       _ASM_EXTABLE(31b,100b)
--		       _ASM_EXTABLE(32b,100b)
--		       _ASM_EXTABLE(33b,100b)
--		       _ASM_EXTABLE(34b,100b)
--		       _ASM_EXTABLE(35b,100b)
--		       _ASM_EXTABLE(36b,100b)
--		       _ASM_EXTABLE(37b,100b)
--		       _ASM_EXTABLE(99b,101b)
-+		       _ASM_EXTABLE_UA(1b, 100b)
-+		       _ASM_EXTABLE_UA(2b, 100b)
-+		       _ASM_EXTABLE_UA(3b, 100b)
-+		       _ASM_EXTABLE_UA(4b, 100b)
-+		       _ASM_EXTABLE_UA(5b, 100b)
-+		       _ASM_EXTABLE_UA(6b, 100b)
-+		       _ASM_EXTABLE_UA(7b, 100b)
-+		       _ASM_EXTABLE_UA(8b, 100b)
-+		       _ASM_EXTABLE_UA(9b, 100b)
-+		       _ASM_EXTABLE_UA(10b, 100b)
-+		       _ASM_EXTABLE_UA(11b, 100b)
-+		       _ASM_EXTABLE_UA(12b, 100b)
-+		       _ASM_EXTABLE_UA(13b, 100b)
-+		       _ASM_EXTABLE_UA(14b, 100b)
-+		       _ASM_EXTABLE_UA(15b, 100b)
-+		       _ASM_EXTABLE_UA(16b, 100b)
-+		       _ASM_EXTABLE_UA(17b, 100b)
-+		       _ASM_EXTABLE_UA(18b, 100b)
-+		       _ASM_EXTABLE_UA(19b, 100b)
-+		       _ASM_EXTABLE_UA(20b, 100b)
-+		       _ASM_EXTABLE_UA(21b, 100b)
-+		       _ASM_EXTABLE_UA(22b, 100b)
-+		       _ASM_EXTABLE_UA(23b, 100b)
-+		       _ASM_EXTABLE_UA(24b, 100b)
-+		       _ASM_EXTABLE_UA(25b, 100b)
-+		       _ASM_EXTABLE_UA(26b, 100b)
-+		       _ASM_EXTABLE_UA(27b, 100b)
-+		       _ASM_EXTABLE_UA(28b, 100b)
-+		       _ASM_EXTABLE_UA(29b, 100b)
-+		       _ASM_EXTABLE_UA(30b, 100b)
-+		       _ASM_EXTABLE_UA(31b, 100b)
-+		       _ASM_EXTABLE_UA(32b, 100b)
-+		       _ASM_EXTABLE_UA(33b, 100b)
-+		       _ASM_EXTABLE_UA(34b, 100b)
-+		       _ASM_EXTABLE_UA(35b, 100b)
-+		       _ASM_EXTABLE_UA(36b, 100b)
-+		       _ASM_EXTABLE_UA(37b, 100b)
-+		       _ASM_EXTABLE_UA(99b, 101b)
- 		       : "=&c"(size), "=&D" (d0), "=&S" (d1)
- 		       :  "1"(to), "2"(from), "0"(size)
- 		       : "eax", "edx", "memory");
-@@ -259,26 +259,26 @@ static unsigned long __copy_user_intel_nocache(void *to,
- 	       "9:      lea 0(%%eax,%0,4),%0\n"
- 	       "16:     jmp 8b\n"
- 	       ".previous\n"
--	       _ASM_EXTABLE(0b,16b)
--	       _ASM_EXTABLE(1b,16b)
--	       _ASM_EXTABLE(2b,16b)
--	       _ASM_EXTABLE(21b,16b)
--	       _ASM_EXTABLE(3b,16b)
--	       _ASM_EXTABLE(31b,16b)
--	       _ASM_EXTABLE(4b,16b)
--	       _ASM_EXTABLE(41b,16b)
--	       _ASM_EXTABLE(10b,16b)
--	       _ASM_EXTABLE(51b,16b)
--	       _ASM_EXTABLE(11b,16b)
--	       _ASM_EXTABLE(61b,16b)
--	       _ASM_EXTABLE(12b,16b)
--	       _ASM_EXTABLE(71b,16b)
--	       _ASM_EXTABLE(13b,16b)
--	       _ASM_EXTABLE(81b,16b)
--	       _ASM_EXTABLE(14b,16b)
--	       _ASM_EXTABLE(91b,16b)
--	       _ASM_EXTABLE(6b,9b)
--	       _ASM_EXTABLE(7b,16b)
-+	       _ASM_EXTABLE_UA(0b, 16b)
-+	       _ASM_EXTABLE_UA(1b, 16b)
-+	       _ASM_EXTABLE_UA(2b, 16b)
-+	       _ASM_EXTABLE_UA(21b, 16b)
-+	       _ASM_EXTABLE_UA(3b, 16b)
-+	       _ASM_EXTABLE_UA(31b, 16b)
-+	       _ASM_EXTABLE_UA(4b, 16b)
-+	       _ASM_EXTABLE_UA(41b, 16b)
-+	       _ASM_EXTABLE_UA(10b, 16b)
-+	       _ASM_EXTABLE_UA(51b, 16b)
-+	       _ASM_EXTABLE_UA(11b, 16b)
-+	       _ASM_EXTABLE_UA(61b, 16b)
-+	       _ASM_EXTABLE_UA(12b, 16b)
-+	       _ASM_EXTABLE_UA(71b, 16b)
-+	       _ASM_EXTABLE_UA(13b, 16b)
-+	       _ASM_EXTABLE_UA(81b, 16b)
-+	       _ASM_EXTABLE_UA(14b, 16b)
-+	       _ASM_EXTABLE_UA(91b, 16b)
-+	       _ASM_EXTABLE_UA(6b, 9b)
-+	       _ASM_EXTABLE_UA(7b, 16b)
- 	       : "=&c"(size), "=&D" (d0), "=&S" (d1)
- 	       :  "1"(to), "2"(from), "0"(size)
- 	       : "eax", "edx", "memory");
-@@ -321,9 +321,9 @@ do {									\
- 		"3:	lea 0(%3,%0,4),%0\n"				\
- 		"	jmp 2b\n"					\
- 		".previous\n"						\
--		_ASM_EXTABLE(4b,5b)					\
--		_ASM_EXTABLE(0b,3b)					\
--		_ASM_EXTABLE(1b,2b)					\
-+		_ASM_EXTABLE_UA(4b, 5b)					\
-+		_ASM_EXTABLE_UA(0b, 3b)					\
-+		_ASM_EXTABLE_UA(1b, 2b)					\
- 		: "=&c"(size), "=&D" (__d0), "=&S" (__d1), "=r"(__d2)	\
- 		: "3"(size), "0"(size), "1"(to), "2"(from)		\
- 		: "memory");						\
-diff --git a/arch/x86/lib/usercopy_64.c b/arch/x86/lib/usercopy_64.c
-index 9c5606d88f61..fefe64436398 100644
---- a/arch/x86/lib/usercopy_64.c
-+++ b/arch/x86/lib/usercopy_64.c
-@@ -37,8 +37,8 @@ unsigned long __clear_user(void __user *addr, unsigned long size)
- 		"3:	lea 0(%[size1],%[size8],8),%[size8]\n"
- 		"	jmp 2b\n"
- 		".previous\n"
--		_ASM_EXTABLE(0b,3b)
--		_ASM_EXTABLE(1b,2b)
-+		_ASM_EXTABLE_UA(0b, 3b)
-+		_ASM_EXTABLE_UA(1b, 2b)
- 		: [size8] "=&c"(size), [dst] "=&D" (__d0)
- 		: [size1] "r"(size & 7), "[size8]" (size / 8), "[dst]"(addr));
- 	clac();
+ 		task->thread.error_code = error_code;
 diff --git a/arch/x86/mm/extable.c b/arch/x86/mm/extable.c
-index 45f5d6cf65ae..0b8b5d889eec 100644
+index 0b8b5d889eec..4110cca93a08 100644
 --- a/arch/x86/mm/extable.c
 +++ b/arch/x86/mm/extable.c
-@@ -108,6 +108,14 @@ __visible bool ex_handler_fprestore(const struct exception_table_entry *fixup,
+@@ -8,7 +8,7 @@
+ #include <asm/kdebug.h>
+ 
+ typedef bool (*ex_handler_t)(const struct exception_table_entry *,
+-			    struct pt_regs *, int);
++			    struct pt_regs *, int, unsigned long);
+ 
+ static inline unsigned long
+ ex_fixup_addr(const struct exception_table_entry *x)
+@@ -22,7 +22,8 @@ ex_fixup_handler(const struct exception_table_entry *x)
  }
+ 
+ __visible bool ex_handler_default(const struct exception_table_entry *fixup,
+-				  struct pt_regs *regs, int trapnr)
++				  struct pt_regs *regs, int trapnr,
++				  unsigned long fault_addr)
+ {
+ 	regs->ip = ex_fixup_addr(fixup);
+ 	return true;
+@@ -30,7 +31,8 @@ __visible bool ex_handler_default(const struct exception_table_entry *fixup,
+ EXPORT_SYMBOL(ex_handler_default);
+ 
+ __visible bool ex_handler_fault(const struct exception_table_entry *fixup,
+-				struct pt_regs *regs, int trapnr)
++				struct pt_regs *regs, int trapnr,
++				unsigned long fault_addr)
+ {
+ 	regs->ip = ex_fixup_addr(fixup);
+ 	regs->ax = trapnr;
+@@ -43,7 +45,8 @@ EXPORT_SYMBOL_GPL(ex_handler_fault);
+  * result of a refcount inc/dec/add/sub.
+  */
+ __visible bool ex_handler_refcount(const struct exception_table_entry *fixup,
+-				   struct pt_regs *regs, int trapnr)
++				   struct pt_regs *regs, int trapnr,
++				   unsigned long fault_addr)
+ {
+ 	/* First unconditionally saturate the refcount. */
+ 	*(int *)regs->cx = INT_MIN / 2;
+@@ -96,7 +99,8 @@ EXPORT_SYMBOL(ex_handler_refcount);
+  * out all the FPU registers) if we can't restore from the task's FPU state.
+  */
+ __visible bool ex_handler_fprestore(const struct exception_table_entry *fixup,
+-				    struct pt_regs *regs, int trapnr)
++				    struct pt_regs *regs, int trapnr,
++				    unsigned long fault_addr)
+ {
+ 	regs->ip = ex_fixup_addr(fixup);
+ 
+@@ -109,7 +113,8 @@ __visible bool ex_handler_fprestore(const struct exception_table_entry *fixup,
  EXPORT_SYMBOL_GPL(ex_handler_fprestore);
  
-+__visible bool ex_handler_uaccess(const struct exception_table_entry *fixup,
-+				  struct pt_regs *regs, int trapnr)
-+{
-+	regs->ip = ex_fixup_addr(fixup);
-+	return true;
-+}
-+EXPORT_SYMBOL(ex_handler_uaccess);
-+
- __visible bool ex_handler_ext(const struct exception_table_entry *fixup,
- 			      struct pt_regs *regs, int trapnr)
+ __visible bool ex_handler_uaccess(const struct exception_table_entry *fixup,
+-				  struct pt_regs *regs, int trapnr)
++				  struct pt_regs *regs, int trapnr,
++				  unsigned long fault_addr)
  {
+ 	regs->ip = ex_fixup_addr(fixup);
+ 	return true;
+@@ -117,7 +122,8 @@ __visible bool ex_handler_uaccess(const struct exception_table_entry *fixup,
+ EXPORT_SYMBOL(ex_handler_uaccess);
+ 
+ __visible bool ex_handler_ext(const struct exception_table_entry *fixup,
+-			      struct pt_regs *regs, int trapnr)
++			      struct pt_regs *regs, int trapnr,
++			      unsigned long fault_addr)
+ {
+ 	/* Special hack for uaccess_err */
+ 	current->thread.uaccess_err = 1;
+@@ -127,7 +133,8 @@ __visible bool ex_handler_ext(const struct exception_table_entry *fixup,
+ EXPORT_SYMBOL(ex_handler_ext);
+ 
+ __visible bool ex_handler_rdmsr_unsafe(const struct exception_table_entry *fixup,
+-				       struct pt_regs *regs, int trapnr)
++				       struct pt_regs *regs, int trapnr,
++				       unsigned long fault_addr)
+ {
+ 	if (pr_warn_once("unchecked MSR access error: RDMSR from 0x%x at rIP: 0x%lx (%pF)\n",
+ 			 (unsigned int)regs->cx, regs->ip, (void *)regs->ip))
+@@ -142,7 +149,8 @@ __visible bool ex_handler_rdmsr_unsafe(const struct exception_table_entry *fixup
+ EXPORT_SYMBOL(ex_handler_rdmsr_unsafe);
+ 
+ __visible bool ex_handler_wrmsr_unsafe(const struct exception_table_entry *fixup,
+-				       struct pt_regs *regs, int trapnr)
++				       struct pt_regs *regs, int trapnr,
++				       unsigned long fault_addr)
+ {
+ 	if (pr_warn_once("unchecked MSR access error: WRMSR to 0x%x (tried to write 0x%08x%08x) at rIP: 0x%lx (%pF)\n",
+ 			 (unsigned int)regs->cx, (unsigned int)regs->dx,
+@@ -156,12 +164,13 @@ __visible bool ex_handler_wrmsr_unsafe(const struct exception_table_entry *fixup
+ EXPORT_SYMBOL(ex_handler_wrmsr_unsafe);
+ 
+ __visible bool ex_handler_clear_fs(const struct exception_table_entry *fixup,
+-				   struct pt_regs *regs, int trapnr)
++				   struct pt_regs *regs, int trapnr,
++				   unsigned long fault_addr)
+ {
+ 	if (static_cpu_has(X86_BUG_NULL_SEG))
+ 		asm volatile ("mov %0, %%fs" : : "rm" (__USER_DS));
+ 	asm volatile ("mov %0, %%fs" : : "rm" (0));
+-	return ex_handler_default(fixup, regs, trapnr);
++	return ex_handler_default(fixup, regs, trapnr, fault_addr);
+ }
+ EXPORT_SYMBOL(ex_handler_clear_fs);
+ 
+@@ -178,7 +187,8 @@ __visible bool ex_has_fault_handler(unsigned long ip)
+ 	return handler == ex_handler_fault;
+ }
+ 
+-int fixup_exception(struct pt_regs *regs, int trapnr)
++int fixup_exception(struct pt_regs *regs, int trapnr, unsigned long error_code,
++		    unsigned long fault_addr)
+ {
+ 	const struct exception_table_entry *e;
+ 	ex_handler_t handler;
+@@ -202,7 +212,7 @@ int fixup_exception(struct pt_regs *regs, int trapnr)
+ 		return 0;
+ 
+ 	handler = ex_fixup_handler(e);
+-	return handler(e, regs, trapnr);
++	return handler(e, regs, trapnr, fault_addr);
+ }
+ 
+ extern unsigned int early_recursion_flag;
+@@ -238,9 +248,9 @@ void __init early_fixup_exception(struct pt_regs *regs, int trapnr)
+ 	 * result in a hard-to-debug panic.
+ 	 *
+ 	 * Keep in mind that not all vectors actually get here.  Early
+-	 * fage faults, for example, are special.
++	 * page faults, for example, are special.
+ 	 */
+-	if (fixup_exception(regs, trapnr))
++	if (fixup_exception(regs, trapnr, regs->orig_ax, 0))
+ 		return;
+ 
+ 	if (fixup_bug(regs, trapnr))
+diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
+index 2254a30533b9..60f1678dc3d7 100644
+--- a/arch/x86/mm/fault.c
++++ b/arch/x86/mm/fault.c
+@@ -706,7 +706,7 @@ no_context(struct pt_regs *regs, unsigned long error_code,
+ 	int sig;
+ 
+ 	/* Are we prepared to handle this kernel fault? */
+-	if (fixup_exception(regs, X86_TRAP_PF)) {
++	if (fixup_exception(regs, X86_TRAP_PF, error_code, address)) {
+ 		/*
+ 		 * Any interrupt that takes a fault gets the fixup. This makes
+ 		 * the below recursive fault logic only apply to a faults from
 -- 
 2.19.0.rc0.228.g281dcd1b4d0-goog
