@@ -1,65 +1,56 @@
-Date: Mon, 27 Aug 2018 20:56:24 +0200
-Message-Id: <20180827185631.163506-1-jannh@google.com>
+Date: Mon, 27 Aug 2018 20:56:25 +0200
+In-Reply-To: <20180827185631.163506-1-jannh@google.com>
+Message-Id: <20180827185631.163506-2-jannh@google.com>
 Mime-Version: 1.0
-Subject: [PATCH v2 0/7] x86: BUG() on #GP / kernel #PF in uaccess
+References: <20180827185631.163506-1-jannh@google.com>
+Subject: [PATCH v2 1/7] x86: refactor kprobes_fault() like kprobe_exceptions_notify()
 From: Jann Horn <jannh@google.com>
 Content-Type: text/plain; charset="UTF-8"
 To: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, x86@kernel.org, Andy Lutomirski <luto@kernel.org>, kernel-hardening@lists.openwall.com, Tony Luck <tony.luck@intel.com>, Borislav Petkov <bp@alien8.de>, jannh@google.com
 Cc: linux-kernel@vger.kernel.org, dvyukov@google.com, linux-edac@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is the second version of "[RFC PATCH 1/2] x86: WARN() when uaccess
-helpers fault on kernel addresses".
+This is an extension of commit b506a9d08bae ("x86: code clarification patch
+to Kprobes arch code"). As that commit explains, even though
+kprobe_running() can't be called with preemption enabled, you don't have to
+disable preemption - if preemption is on, you can't be in a kprobe.
 
-See patch 6/7 ("x86: BUG() when uaccess helpers fault on kernel
-addresses") for a description of the motivation for this series.
+Also, use X86_TRAP_PF instead of 14.
 
-Patches 1 and 2 are cleanups that I did while working on this
-series, but the series doesn't depend on them. (I first thought these
-cleanups were necessary for the rest of the series, then noticed that
-they actually aren't, but decided to keep them since cleanups are good
-anyway.)
+Signed-off-by: Jann Horn <jannh@google.com>
+---
+ arch/x86/mm/fault.c | 19 ++++++++-----------
+ 1 file changed, 8 insertions(+), 11 deletions(-)
 
-Patches 3, 4 and 5 are prep work; 4 and 5 are loosely based on code
-from the v1 patch. They've changed quite a bit though.
-
-Patch 6 is the main semantic change.
-
-Patch 7 is a small testcase for verifying that patch 6 works.
-
-Jann Horn (7):
-  x86: refactor kprobes_fault() like kprobe_exceptions_notify()
-  x86: inline kprobe_exceptions_notify() into do_general_protection()
-  x86: stop calling fixup_exception() from kprobe_fault_handler()
-  x86: introduce _ASM_EXTABLE_UA for uaccess fixups
-  x86: plumb error code and fault address through to fault handlers
-  x86: BUG() when uaccess helpers fault on kernel addresses
-  lkdtm: test copy_to_user() on bad kernel pointer under KERNEL_DS
-
- arch/x86/include/asm/asm.h          |  10 ++-
- arch/x86/include/asm/extable.h      |   3 +-
- arch/x86/include/asm/fpu/internal.h |   2 +-
- arch/x86/include/asm/futex.h        |   6 +-
- arch/x86/include/asm/ptrace.h       |   2 +
- arch/x86/include/asm/uaccess.h      |  22 ++---
- arch/x86/kernel/cpu/mcheck/mce.c    |   2 +-
- arch/x86/kernel/kprobes/core.c      |  38 +--------
- arch/x86/kernel/traps.c             |  16 +++-
- arch/x86/lib/checksum_32.S          |   4 +-
- arch/x86/lib/copy_user_64.S         |  90 ++++++++++----------
- arch/x86/lib/csum-copy_64.S         |   8 +-
- arch/x86/lib/getuser.S              |  12 +--
- arch/x86/lib/putuser.S              |  10 +--
- arch/x86/lib/usercopy_32.c          | 126 ++++++++++++++--------------
- arch/x86/lib/usercopy_64.c          |   4 +-
- arch/x86/mm/extable.c               | 104 +++++++++++++++++++----
- arch/x86/mm/fault.c                 |  21 ++---
- drivers/misc/lkdtm/core.c           |   1 +
- drivers/misc/lkdtm/lkdtm.h          |   1 +
- drivers/misc/lkdtm/usercopy.c       |  13 +++
- include/linux/sched.h               |   6 ++
- mm/maccess.c                        |   6 ++
- 23 files changed, 297 insertions(+), 210 deletions(-)
-
+diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
+index b9123c497e0a..2254a30533b9 100644
+--- a/arch/x86/mm/fault.c
++++ b/arch/x86/mm/fault.c
+@@ -44,17 +44,14 @@ kmmio_fault(struct pt_regs *regs, unsigned long addr)
+ 
+ static nokprobe_inline int kprobes_fault(struct pt_regs *regs)
+ {
+-	int ret = 0;
+-
+-	/* kprobe_running() needs smp_processor_id() */
+-	if (kprobes_built_in() && !user_mode(regs)) {
+-		preempt_disable();
+-		if (kprobe_running() && kprobe_fault_handler(regs, 14))
+-			ret = 1;
+-		preempt_enable();
+-	}
+-
+-	return ret;
++	/*
++	 * To be potentially processing a kprobe fault and to be allowed to call
++	 * kprobe_running(), we have to be non-preemptible.
++	 */
++	if (kprobes_built_in() && !user_mode(regs) && !preemptible() &&
++	    kprobe_running() && kprobe_fault_handler(regs, X86_TRAP_PF))
++		return 1;
++	return 0;
+ }
+ 
+ /*
 -- 
 2.19.0.rc0.228.g281dcd1b4d0-goog
