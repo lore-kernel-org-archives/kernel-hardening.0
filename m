@@ -1,28 +1,62 @@
 MIME-Version: 1.0
-References: <20180824224117.3356-1-casey.schaufler@intel.com> <20180824224117.3356-4-casey.schaufler@intel.com>
-In-Reply-To: <20180824224117.3356-4-casey.schaufler@intel.com>
-From: Jann Horn <jannh@google.com>
-Date: Sat, 25 Aug 2018 01:17:37 +0200
-Message-ID: <CAG48ez0jY6xV+nQdYRy4aT3oH+8FwAM_6MOVFQ3jwYe4Nz+KnA@mail.gmail.com>
-Subject: Re: [PATCH v4 3/5] LSM: Security module checking for side-channel dangers
+In-Reply-To: <20180827185631.163506-4-jannh@google.com>
+References: <20180827185631.163506-1-jannh@google.com> <20180827185631.163506-4-jannh@google.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Mon, 27 Aug 2018 12:02:19 -0700
+Message-ID: <CALCETrUeRA63Vt_LBOGmUHc_M9gc3J7+ewK6j+sB8P=9ijk7ag@mail.gmail.com>
+Subject: Re: [PATCH v2 3/7] x86: stop calling fixup_exception() from kprobe_fault_handler()
 Content-Type: text/plain; charset="UTF-8"
-To: Casey Schaufler <casey.schaufler@intel.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, selinux@tycho.nsa.gov, Dave Hansen <dave.hansen@intel.com>, deneen.t.dock@intel.com, kristen@linux.intel.com, Arjan van de Ven <arjan@linux.intel.com>
+To: Jann Horn <jannh@google.com>, Masami Hiramatsu <mhiramat@kernel.org>, "Naveen N. Rao" <naveen.n.rao@linux.vnet.ibm.com>, Anil S Keshavamurthy <anil.s.keshavamurthy@intel.com>, "David S. Miller" <davem@davemloft.net>
+Cc: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, X86 ML <x86@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Tony Luck <tony.luck@intel.com>, Borislav Petkov <bp@alien8.de>, LKML <linux-kernel@vger.kernel.org>, Dmitry Vyukov <dvyukov@google.com>, linux-edac <linux-edac@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Aug 25, 2018 at 12:42 AM Casey Schaufler
-<casey.schaufler@intel.com> wrote:
-> +config SECURITY_SIDECHANNEL_CAPABILITIES
-> +       bool "Sidechannel check on capability sets"
-> +       depends on SECURITY_SIDECHANNEL
-> +       depends on !SECURITY_SIDECHANNEL_ALWAYS
-> +       default n
-> +       select SECURITY_SIDECHANNEL_NAMESPACES if USER_NS
-> +       help
-> +         Assume that tasks with different sets of privilege may be
-> +         subject to side-channel attacks. Potential interactions
-> +         where the attacker lacks capabilities the attacked has
-> +         are blocked. Selecting this when user namespaces (USER_NS)
-> +         are enabled will enable SECURITY_SIDECHANNEL_NAMESPACES.
+On Mon, Aug 27, 2018 at 11:56 AM, Jann Horn <jannh@google.com> wrote:
+> This removes the call into exception fixup that was added in
+> commit c28f896634f2 ("[PATCH] kprobes: fix broken fault handling for
+> x86_64").
+>
+> On X86, kprobe_fault_handler() is called from two places:
+> do_general_protection() (for #GP) and kprobes_fault() (for #PF).
+> In both paths, the fixup_exception() call in the kprobe fault handler is
+> redundant.
+>
+> For #GP, fixup_exception() is called immediately before
+> kprobe_fault_handler() is invoked - if someone wanted to fix up our #GP,
+> they've already done so, no need to try again. (This assumes that the
+> kprobe's fault handler isn't going to do something crazy like changing RIP
+> so that it suddenly points to an instruction that does userspace access.)
 
-Thanks!
+This needs review by someone who understands kprobes better than I do.
+What happens if someone puts a kprobe on a uaccess instruction and the
+uaccess subsequently faults?
+
+>
+> For #PF on a kernel address from kernel space, after the kprobe fault
+> handler has run, we'll go into no_context(), which calls fixup_exception().
+>
+> Signed-off-by: Jann Horn <jannh@google.com>
+> ---
+>  arch/x86/kernel/kprobes/core.c | 7 -------
+>  1 file changed, 7 deletions(-)
+>
+> diff --git a/arch/x86/kernel/kprobes/core.c b/arch/x86/kernel/kprobes/core.c
+> index 467ac22691b0..7315ac202aad 100644
+> --- a/arch/x86/kernel/kprobes/core.c
+> +++ b/arch/x86/kernel/kprobes/core.c
+> @@ -1021,13 +1021,6 @@ int kprobe_fault_handler(struct pt_regs *regs, int trapnr)
+>                 if (cur->fault_handler && cur->fault_handler(cur, regs, trapnr))
+>                         return 1;
+>
+> -               /*
+> -                * In case the user-specified fault handler returned
+> -                * zero, try to fix up.
+> -                */
+> -               if (fixup_exception(regs, trapnr))
+> -                       return 1;
+> -
+>                 /* fixup routine could not handle it. */
+>         }
+>
+> --
+> 2.19.0.rc0.228.g281dcd1b4d0-goog
+>
