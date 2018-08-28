@@ -1,44 +1,98 @@
-MIME-Version: 1.0
-References: <20180827185631.163506-1-jannh@google.com> <20180827185631.163506-7-jannh@google.com>
-In-Reply-To: <20180827185631.163506-7-jannh@google.com>
-From: Jann Horn <jannh@google.com>
-Date: Tue, 28 Aug 2018 02:51:10 +0200
-Message-ID: <CAG48ez2ScPzTM-0JOmops7ae6zotF=sYbP5hDZHJ=0=EuzQk8w@mail.gmail.com>
-Subject: Re: [PATCH v2 6/7] x86: BUG() when uaccess helpers fault on kernel addresses
-Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, tony.luck@intel.com, Borislav Petkov <bp@alien8.de>
-Cc: kernel list <linux-kernel@vger.kernel.org>, Dmitry Vyukov <dvyukov@google.com>, linux-edac@vger.kernel.org
+Date: Tue, 28 Aug 2018 10:21:26 +0900
+From: Masami Hiramatsu <mhiramat@kernel.org>
+Subject: Re: [PATCH v2 3/7] x86: stop calling fixup_exception() from
+ kprobe_fault_handler()
+Message-Id: <20180828102126.2cd006bc5c5893422761fc6b@kernel.org>
+In-Reply-To: <CAG48ez0=-nDmQVQiJtD_6ingdWWVJE+y+5_oWQrggQ9Eqg-UKQ@mail.gmail.com>
+References: <20180827185631.163506-1-jannh@google.com>
+	<20180827185631.163506-4-jannh@google.com>
+	<CALCETrUeRA63Vt_LBOGmUHc_M9gc3J7+ewK6j+sB8P=9ijk7ag@mail.gmail.com>
+	<CAG48ez0=-nDmQVQiJtD_6ingdWWVJE+y+5_oWQrggQ9Eqg-UKQ@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: Jann Horn <jannh@google.com>
+Cc: Andy Lutomirski <luto@kernel.org>, mhiramat@kernel.org, naveen.n.rao@linux.vnet.ibm.com, anil.s.keshavamurthy@intel.com, "David S. Miller" <davem@davemloft.net>, Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, tony.luck@intel.com, Borislav Petkov <bp@alien8.de>, kernel list <linux-kernel@vger.kernel.org>, Dmitry Vyukov <dvyukov@google.com>, linux-edac@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 27, 2018 at 8:58 PM Jann Horn <jannh@google.com> wrote:
->
-> There have been multiple kernel vulnerabilities that permitted userspace to
-> pass completely unchecked pointers through to userspace accessors:
->
->  - the waitid() bug - commit 96ca579a1ecc ("waitid(): Add missing
->    access_ok() checks")
->  - the sg/bsg read/write APIs
->  - the infiniband read/write APIs
->
-> These don't happen all that often, but when they do happen, it is hard to
-> test for them properly; and it is probably also hard to discover them with
-> fuzzing. Even when an unmapped kernel address is supplied to such buggy
-> code, it just returns -EFAULT instead of doing a proper BUG() or at least
-> WARN().
->
-> This patch attempts to make such misbehaving code a bit more visible by
-> refusing to do a fixup in the pagefault handler code when a userspace
-> accessor causes #PF on a kernel address and the current context isn't
-> whitelisted.
+On Mon, 27 Aug 2018 21:22:19 +0200
+Jann Horn <jannh@google.com> wrote:
 
-Kees noticed that when you have vmapped stacks on (I was testing with
-KASAN, so I couldn't enable vmapped stacks), exact_copy_from_user() in
-copy_mount_options() is incompatible with this patch when used on
-kernel pointers. do_mount_root() and devtmpfsd() call kys_mount() with
-kernel pointers. So I'll have to either add that to the whitelist
-and/or refactor the mount options copy logic first (so that it uses
-strncpy_from_user() as long as the data argument isn't binary data).
+> On Mon, Aug 27, 2018 at 9:02 PM Andy Lutomirski <luto@kernel.org> wrote:
+> >
+> > On Mon, Aug 27, 2018 at 11:56 AM, Jann Horn <jannh@google.com> wrote:
+> > > This removes the call into exception fixup that was added in
+> > > commit c28f896634f2 ("[PATCH] kprobes: fix broken fault handling for
+> > > x86_64").
+> > >
+> > > On X86, kprobe_fault_handler() is called from two places:
+> > > do_general_protection() (for #GP) and kprobes_fault() (for #PF).
+> > > In both paths, the fixup_exception() call in the kprobe fault handler is
+> > > redundant.
+> > >
+> > > For #GP, fixup_exception() is called immediately before
+> > > kprobe_fault_handler() is invoked - if someone wanted to fix up our #GP,
+> > > they've already done so, no need to try again. (This assumes that the
+> > > kprobe's fault handler isn't going to do something crazy like changing RIP
+> > > so that it suddenly points to an instruction that does userspace access.)
+> >
+> > This needs review by someone who understands kprobes better than I do.
+> > What happens if someone puts a kprobe on a uaccess instruction and the
+> > uaccess subsequently faults?
+> 
+> Ugh, good point. I'll admit to not having thought about that properly.
+> 
+> I think that's the "if (unlikely(regs->ip == (unsigned
+> long)cur->ainsn.insn))" branch in kprobe_fault_handler(), which I'm
+> not touching.
 
-I've wanted to fiddle with that code anyway - silent truncation at
-0xfff bytes isn't very robust, especially when suid binaries call
-sys_mount() with a partly user-controlled options string...
+Correct, probing on uaccess is handled by that block.
+So this fixup_exception() is just for safeness.
+As Jann said, no_context() handles it correctly, we don't need it.
+
+Acked-by: Masami Hiramatsu <mhiramat@kernel.org>
+
+Thank you!
+
+> 
+> For #PF, both without and with my patch, stuff should get fixed up by
+> the normal pagefault handler, since the fixup happens after the kprobe
+> handler has fiddled with the exception state.
+> 
+> For #GP, we're already past the fixup call, and I think both without
+> and with my patch, nothing will catch it - so I think that's a bug,
+> but I don't think it's one I'm introducing.
+> 
+> > > For #PF on a kernel address from kernel space, after the kprobe fault
+> > > handler has run, we'll go into no_context(), which calls fixup_exception().
+> > >
+> > > Signed-off-by: Jann Horn <jannh@google.com>
+> > > ---
+> > >  arch/x86/kernel/kprobes/core.c | 7 -------
+> > >  1 file changed, 7 deletions(-)
+> > >
+> > > diff --git a/arch/x86/kernel/kprobes/core.c b/arch/x86/kernel/kprobes/core.c
+> > > index 467ac22691b0..7315ac202aad 100644
+> > > --- a/arch/x86/kernel/kprobes/core.c
+> > > +++ b/arch/x86/kernel/kprobes/core.c
+> > > @@ -1021,13 +1021,6 @@ int kprobe_fault_handler(struct pt_regs *regs, int trapnr)
+> > >                 if (cur->fault_handler && cur->fault_handler(cur, regs, trapnr))
+> > >                         return 1;
+> > >
+> > > -               /*
+> > > -                * In case the user-specified fault handler returned
+> > > -                * zero, try to fix up.
+> > > -                */
+> > > -               if (fixup_exception(regs, trapnr))
+> > > -                       return 1;
+> > > -
+> > >                 /* fixup routine could not handle it. */
+> > >         }
+> > >
+> > > --
+> > > 2.19.0.rc0.228.g281dcd1b4d0-goog
+> > >
+
+
+-- 
+Masami Hiramatsu <mhiramat@kernel.org>
