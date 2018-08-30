@@ -1,47 +1,59 @@
-From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Subject: Re: [PATCH v4 0/3] KASLR feature to randomize each loadable module
-Date: Thu, 30 Aug 2018 18:24:28 +0000
-Message-ID: <1535653498.1689.175.camel@intel.com>
-References: <1535583579-6138-1-git-send-email-rick.p.edgecombe@intel.com>
-	 <20180830022703.xxl5eolthinicgwp@ast-mbp>
-In-Reply-To: <20180830022703.xxl5eolthinicgwp@ast-mbp>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <428C3DEADE9E50409548C98A6FE035EE@intel.com>
-Content-Transfer-Encoding: base64
+From: Julian Stecklina <jsteckli@amazon.de>
+Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs in mind (for KVM to isolate its guests per CPU)
+In-Reply-To: <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
+Date: Thu, 30 Aug 2018 18:00:51 +0200
+Message-ID: <ciirm8a7p3alos.fsf@u54ee758033e858cfa736.ant.amazon.com>
 MIME-Version: 1.0
-To: "alexei.starovoitov@gmail.com" <alexei.starovoitov@gmail.com>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "jannh@google.com" <jannh@google.com>, "keescook@chromium.org" <keescook@chromium.org>, "arjan@linux.intel.com" <arjan@linux.intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "x86@kernel.org" <x86@kernel.org>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "hpa@zytor.com" <hpa@zytor.com>, "mingo@redhat.com" <mingo@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Hansen, Dave" <dave.hansen@intel.com>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>
+Content-Type: text/plain
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: David Woodhouse <dwmw@amazon.co.uk>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gV2VkLCAyMDE4LTA4LTI5IGF0IDE5OjI3IC0wNzAwLCBBbGV4ZWkgU3Rhcm92b2l0b3Ygd3Jv
-dGU6DQo+IE9uIFdlZCwgQXVnIDI5LCAyMDE4IGF0IDAzOjU5OjM2UE0gLTA3MDAsIFJpY2sgRWRn
-ZWNvbWJlIHdyb3RlOg0KPiA+IENoYW5nZXMgZm9yIFYzOg0KPiA+IMKgLSBDb2RlIGNsZWFudXAg
-YmFzZWQgb24gaW50ZXJuYWwgZmVlZGJhY2suICh0aGFua3MgdG8gRGF2ZSBIYW5zZW4gYW5kDQo+
-ID4gQW5kcml5DQo+ID4gwqDCoMKgU2hldmNoZW5rbykNCj4gPiDCoC0gU2xpZ2h0IHJlZmFjdG9y
-IG9mIGV4aXN0aW5nIGFsZ29yaXRobSB0byBtb3JlIGNsZWFubHkgbGl2ZSBhbG9uZyBzaWRlIG5l
-dw0KPiA+IMKgwqDCoG9uZS4NCj4gPiDCoC0gQlBGIHN5bnRoZXRpYyBiZW5jaG1hcmsNCj4gSSBk
-b24ndCBzZWUgdGhpcyBiZW5jaG1hcmsgaW4gdGhpcyBwYXRjaCBzZXQuDQo+IENvdWxkIHlvdSBw
-cmVwYXJlIGl0IGFzIGEgdGVzdCBpbiB0b29scy90ZXN0aW5nL3NlbGZ0ZXN0cy9icGYvID8NCj4g
-c28gd2UgY2FuIGRvdWJsZSBjaGVjayB3aGF0IGlzIGJlaW5nIHRlc3RlZCBhbmQgcnVuIGl0IHJl
-Z3VsYXJseQ0KPiBsaWtlIHdlIGRvIGZvciBhbGwgb3RoZXIgdGVzdHMgaW4gdGhlcmUuDQpTdXJl
-Lg0KDQpUaGVyZSB3ZXJlIHR3byBiZW5jaG1hcmtzIEkgaGFkIHJ1biB3aXRoIEJQRiBpbiBtaW5k
-LCBvbmUgd2FzIHRoZSB0aW1pbmcgdGhlDQptb2R1bGVfYWxsb2MgZnVuY3Rpb24gaW4gZGlmZmVy
-ZW50IHNjZW5hcmlvcywgbG9va2luZyB0byBtYWtlIHN1cmUgdGhlcmUgd2VyZSBubw0Kc2xvd2Rv
-d25zIGZvciBpbnNlcnRpb25zLg0KDQpUaGUgb3RoZXIgd2FzIHRvIGNoZWNrIGlmIHRoZSBmcmFn
-bWVudGF0aW9uIGNhdXNlZCBhbnkgbWVhc3VyYWJsZSBydW50aW1lDQpwZXJmb3JtYW5jZToNCiJG
-b3IgcnVudGltZSBwZXJmb3JtYW5jZSwgYSBzeW50aGV0aWMgYmVuY2htYXJrIHdhcyBydW4gdGhh
-dCBkb2VzIDUwMDAwMDAgQlBGDQpKSVQgaW52b2NhdGlvbnMgZWFjaCwgZnJvbSB2YXJ5aW5nIG51
-bWJlcnMgb2YgcGFyYWxsZWwgcHJvY2Vzc2VzLCB3aGlsZSB0aGUNCmtlcm5lbCBjb21waWxlcyBz
-aGFyaW5nIHRoZSBzYW1lIENQVSB0byBzdGFuZCBpbiBmb3IgdGhlIGNhY2hlIGltcGFjdCBvZiBh
-IHJlYWwNCndvcmtsb2FkLiBUaGUgc2VjY29tcCBmaWx0ZXIgaW52b2NhdGlvbnMgd2VyZSBqdXN0
-IEphbm4gSG9ybidzIHNlY2NvbXAgZmlsdGVyaW5nDQp0ZXN0IGZyb20gdGhpcyB0aHJlYWQgaHR0
-cDovL29wZW53YWxsLmNvbS9saXN0cy9rZXJuZWwtaGFyZGVuaW5nLzIwMTgvMDcvMTgvMiwNCmV4
-Y2VwdCBub24tcmVhbCB0aW1lIHByaW9yaXR5LiBUaGUga2VybmVsIHdhcyBjb25maWd1cmVkIHdp
-dGggS1BUSSBhbmQNCnJldHBvbGluZSwgYW5kIHBjaWQgd2FzIGRpc2FibGVkLiBUaGVyZSB3YXNu
-J3QgYW55IHNpZ25pZmljYW50IGRpZmZlcmVuY2UNCmJldHdlZW4gdGhlIG5ldyBhbmQgdGhlIG9s
-ZC4iDQoNCkZyb20gd2hhdCBJIGtub3cgYWJvdXQgdGhlIGJwZiBrc2VsZnRlc3QsIHRoZSBmaXJz
-dCBvbmUgd291bGQgcHJvYmFibHkgYmUgYQ0KYmV0dGVyIGZpdC4gTm90IHN1cmUgaWYgdGhlIHNl
-Y29uZCBvbmUgd291bGQgZml0LCB3aXRoIHRoZSBrZXJuZWwgY29tcGlsaW5nDQpzaGFyaW5nIHRo
-ZSBzYW1lIENQVSwgYSBzcGVjaWFsIGNvbmZpZywgYW5kIGEgaHVnZSBhbW91bnQgb2YgcHJvY2Vz
-c2VzIGJlaW5nDQpzcGF3bmVkLi4uIEkgY2FuIHRyeSB0byBhZGQgYSBtaWNyby1iZW5jaG1hcmsg
-aW5zdGVhZCBpZiB0aGF0IHNvdW5kcyBnb29kLg0KDQpSaWNr
+Hey everyone,
+
+On Mon, 20 Aug 2018 15:27 Linus Torvalds <torvalds@linux-foundation.org> wrote:
+> On Mon, Aug 20, 2018 at 3:02 PM Woodhouse, David <dwmw@amazon.co.uk> wrote:
+>>
+>> It's the *kernel* we don't want being able to access those pages,
+>> because of the multitude of unfixable cache load gadgets.
+>
+> Ahh.
+> 
+> I guess the proof is in the pudding. Did somebody try to forward-port
+> that patch set and see what the performance is like?
+
+I've been spending some cycles on the XPFO patch set this week. For the
+patch set as it was posted for v4.13, the performance overhead of
+compiling a Linux kernel is ~40% on x86_64[1]. The overhead comes almost
+completely from TLB flushing. If we can live with stale TLB entries
+allowing temporary access (which I think is reasonable), we can remove
+all TLB flushing (on x86). This reduces the overhead to 2-3% for
+kernel compile.
+
+There were no problems in forward-porting the patch set to master.
+You can find the result here, including a patch makes the TLB flushing
+configurable:
+http://git.infradead.org/users/jsteckli/linux-xpfo.git/shortlog/refs/heads/xpfo-master
+
+It survived some casual stress-ng runs. I can rerun the benchmarks on
+this version, but I doubt there is any change.
+
+> It used to be just 500 LOC. Was that because they took horrible
+> shortcuts?
+
+The patch is still fairly small. As for the horrible shortcuts, I let
+others comment on that.
+
+HTH,
+Julian
+
+[1] Measured on my quad-core (8 hyperthreads) Kaby Lake desktop building
+Linux 4.18 with the Phoronix Test Suite.
+
+--
+Amazon Development Center Germany GmbH
+Berlin - Dresden - Aachen
+main office: Krausenstr. 38, 10117 Berlin
+Geschaeftsfuehrer: Dr. Ralf Herbrich, Christian Schlaeger
+Ust-ID: DE289237879
+Eingetragen am Amtsgericht Charlottenburg HRB 149173 B
