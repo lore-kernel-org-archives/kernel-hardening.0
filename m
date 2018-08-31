@@ -1,60 +1,61 @@
-Date: Fri, 31 Aug 2018 09:26:47 -0600
-From: Tycho Andersen <tycho@tycho.ws>
-Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
- in mind (for KVM to isolate its guests per CPU)
-Message-ID: <20180831152647.GC15213@cisco.cisco.com>
-References: <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
- <ciirm8a7p3alos.fsf@u54ee758033e858cfa736.ant.amazon.com>
+Date: Fri, 31 Aug 2018 13:44:06 -0400
+From: Konstantin Ryabitsev <konstantin@linuxfoundation.org>
+Subject: "Hardened" tree on kernel.org?
+Message-ID: <20180831174406.GA1702@chatter>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: multipart/signed; micalg=pgp-sha256;
+	protocol="application/pgp-signature"; boundary="FL5UXtIhxfXey3p5"
 Content-Disposition: inline
-In-Reply-To: <ciirm8a7p3alos.fsf@u54ee758033e858cfa736.ant.amazon.com>
-To: Julian Stecklina <jsteckli@amazon.de>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, David Woodhouse <dwmw@amazon.co.uk>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Aug 30, 2018 at 06:00:51PM +0200, Julian Stecklina wrote:
-> Hey everyone,
-> 
-> On Mon, 20 Aug 2018 15:27 Linus Torvalds <torvalds@linux-foundation.org> wrote:
-> > On Mon, Aug 20, 2018 at 3:02 PM Woodhouse, David <dwmw@amazon.co.uk> wrote:
-> >>
-> >> It's the *kernel* we don't want being able to access those pages,
-> >> because of the multitude of unfixable cache load gadgets.
-> >
-> > Ahh.
-> > 
-> > I guess the proof is in the pudding. Did somebody try to forward-port
-> > that patch set and see what the performance is like?
-> 
-> I've been spending some cycles on the XPFO patch set this week. For the
-> patch set as it was posted for v4.13, the performance overhead of
-> compiling a Linux kernel is ~40% on x86_64[1]. The overhead comes almost
-> completely from TLB flushing. If we can live with stale TLB entries
-> allowing temporary access (which I think is reasonable), we can remove
-> all TLB flushing (on x86). This reduces the overhead to 2-3% for
-> kernel compile.
 
-Cool, thanks for doing this! Do you have any thoughts about what the
-2-3% is? It seems to me like if we're not doing the TLB flushes, the
-rest of this should be *really* cheap, even cheaper than 2-3%. Dave
-Hansen had suggested coalescing things on a per mapping basis vs.
-doing it per page, which might help?
+--FL5UXtIhxfXey3p5
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-> > It used to be just 500 LOC. Was that because they took horrible
-> > shortcuts?
-> 
-> The patch is still fairly small. As for the horrible shortcuts, I let
-> others comment on that.
+Hi, all:
 
-Heh, things like xpfo_temp_map() aren't awesome, but that can
-hopefully be fixed by keeping a little bit of memory around for use
-where we are mapping things and can't fail. I remember some discussion
-about hopefully not having to sprinkle xpfo mapping calls everywhere
-in the kernel, so perhaps we could get rid of it entirely?
+There's a lot of excellent work being done on this list and as part of=20
+KSPP that enjoys limited exposure due to long and arduous upstreaming=20
+process. I am wondering if some of the proposed changes would see wider=20
+testing if there was a curated semi-official "hardened" tree hosted on=20
+kernel.org that would carry kernel hardening patches proposed for=20
+inclusion into mainline. There is at least one project that does=20
+something like this:
 
-Anyway, I'm working on some other stuff for the kernel right now, but
-I hope (:D) that it should be close to done, and I'll have more cycles
-to work on this soon too.
+https://git.kernel.org/pub/scm/linux/kernel/git/rt/linux-stable-rt.git
 
-Tycho
+though there's the distinction that, to my knowledge, RT is not intended=20
+to be upstreamed.
+
+I think wider testing and adoption would be easier if there was a place=20
+for folks to download a "hardened Linux tarball" -- with the=20
+understanding that it would include features that may or may not=20
+eventually make it into mainline. I know it's a lot of work, and I'm=20
+certainly not volunteering for it (I don't have the right set of skills=20
+for this), but I believe there is a demand for such resource among=20
+security enthusiasts and security-minded distros.
+
+In a sense, this would shadow Greg's work -- taking the latest stable=20
+tree and porting a hardening patchset on top of it. Maybe one of the LTS=20
+trees, too?
+
+Do you think this would be a worthwhile thing, or would that distract=20
+=66rom overall mainlining goals?
+
+-K
+
+--FL5UXtIhxfXey3p5
+Content-Type: application/pgp-signature; name="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iHUEABYIAB0WIQR2vl2yUnHhSB5njDW2xBzjVmSZbAUCW4l+ZgAKCRC2xBzjVmSZ
+bMZTAQCRq+z4OTL3MlxWYj+MO8SDZh5ApJ4bPP8nT1OExUf5XAD9Fr2PkfY9z6aS
+np9pVOPGcxaLOtmAz0yXiWumTB/wkAA=
+=bZht
+-----END PGP SIGNATURE-----
+
+--FL5UXtIhxfXey3p5--
