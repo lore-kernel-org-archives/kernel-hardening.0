@@ -1,59 +1,47 @@
-From: Julian Stecklina <jsteckli@amazon.de>
-Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs in mind (for KVM to isolate its guests per CPU)
-In-Reply-To: <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
-Date: Thu, 30 Aug 2018 18:00:51 +0200
-Message-ID: <ciirm8a7p3alos.fsf@u54ee758033e858cfa736.ant.amazon.com>
-MIME-Version: 1.0
-Content-Type: text/plain
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: David Woodhouse <dwmw@amazon.co.uk>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
+Message-ID: <1535705027.3085.5.camel@HansenPartnership.com>
+Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated
+ CPUs in mind (for KVM to isolate its guests per CPU)
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Date: Fri, 31 Aug 2018 09:43:47 +0100
+In-Reply-To: <1534801939.10027.24.camel@amazon.co.uk>
+References: <20180820212556.GC2230@char.us.oracle.com>
+	 <CA+55aFxZCyVZc4ZpRyZ3uDyakRSOG_=2XvnwMo4oejpsieF9=A@mail.gmail.com>
+	 <1534801939.10027.24.camel@amazon.co.uk>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+To: "Woodhouse, David" <dwmw@amazon.co.uk>, "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "konrad.wilk@oracle.com" <konrad.wilk@oracle.com>
+Cc: "juerg.haefliger@hpe.com" <juerg.haefliger@hpe.com>, "deepa.srinivasan@oracle.com" <deepa.srinivasan@oracle.com>, "jmattson@google.com" <jmattson@google.com>, "andrew.cooper3@citrix.com" <andrew.cooper3@citrix.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "boris.ostrovsky@oracle.com" <boris.ostrovsky@oracle.com>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "joao.m.martins@oracle.com" <joao.m.martins@oracle.com>, "pradeep.vincent@oracle.com" <pradeep.vincent@oracle.com>, "ak@linux.intel.com" <ak@linux.intel.com>, "khalid.aziz@oracle.com" <khalid.aziz@oracle.com>, "kanth.ghatraju@oracle.com" <kanth.ghatraju@oracle.com>, "liran.alon@oracle.com" <liran.alon@oracle.com>, "keescook@google.com" <keescook@google.com>, "jsteckli@os.inf.tu-dresden.de" <jsteckli@os.inf.tu-dresden.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "chris.hyser@oracle.com" <chris.hyser@oracle.com>, "tyhicks@canonical.com" <tyhicks@canonical.com>, "john.haxby@oracle.com" <john.haxby@oracle.com>, "jcm@redhat.com" <jcm@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hey everyone,
-
-On Mon, 20 Aug 2018 15:27 Linus Torvalds <torvalds@linux-foundation.org> wrote:
-> On Mon, Aug 20, 2018 at 3:02 PM Woodhouse, David <dwmw@amazon.co.uk> wrote:
->>
->> It's the *kernel* we don't want being able to access those pages,
->> because of the multitude of unfixable cache load gadgets.
->
-> Ahh.
+On Mon, 2018-08-20 at 21:52 +0000, Woodhouse, David wrote:
+> On Mon, 2018-08-20 at 14:48 -0700, Linus Torvalds wrote:
+> > 
+> > Of course, after the long (and entirely unrelated) discussion about
+> > the TLB flushing bug we had, I'm starting to worry about my own
+> > competence, and maybe I'm missing something really fundamental, and
+> > the XPFO patches do something else than what I think they do, or my
+> > "hey, let's use our Meltdown code" idea has some fundamental
+> > weakness
+> > that I'm missing.
 > 
-> I guess the proof is in the pudding. Did somebody try to forward-port
-> that patch set and see what the performance is like?
+> The interesting part is taking the user (and other) pages out of the
+> kernel's 1:1 physmap.
+> 
+> It's the *kernel* we don't want being able to access those pages,
+> because of the multitude of unfixable cache load gadgets.
 
-I've been spending some cycles on the XPFO patch set this week. For the
-patch set as it was posted for v4.13, the performance overhead of
-compiling a Linux kernel is ~40% on x86_64[1]. The overhead comes almost
-completely from TLB flushing. If we can live with stale TLB entries
-allowing temporary access (which I think is reasonable), we can remove
-all TLB flushing (on x86). This reduces the overhead to 2-3% for
-kernel compile.
+A long time ago, I gave a talk about precisely this at OLS (2005 I
+think).  On PA-RISC we have a problem with inequivalent aliasing in the
+ page cache (same physical page with two different virtual addresses
+modulo 4MB) which causes a machine check if it occurs. 
+Architecturally, PA can move into the cache any page for which it has a
+mapping and the kernel offset map of every page causes an inequivalency
+if the same page is in use in user space.  Of course, practically the
+caching machinery is too busy moving in and out pages we reference to
+have an interest in speculating on other pages it has a mapping for, so
+it almost never (the almost being a set of machine checks we see very
+occasionally in the latest and most aggressively cached and speculating
+CPUs).  If this were implemented, we'd be interested in using it.
 
-There were no problems in forward-porting the patch set to master.
-You can find the result here, including a patch makes the TLB flushing
-configurable:
-http://git.infradead.org/users/jsteckli/linux-xpfo.git/shortlog/refs/heads/xpfo-master
-
-It survived some casual stress-ng runs. I can rerun the benchmarks on
-this version, but I doubt there is any change.
-
-> It used to be just 500 LOC. Was that because they took horrible
-> shortcuts?
-
-The patch is still fairly small. As for the horrible shortcuts, I let
-others comment on that.
-
-HTH,
-Julian
-
-[1] Measured on my quad-core (8 hyperthreads) Kaby Lake desktop building
-Linux 4.18 with the Phoronix Test Suite.
-
---
-Amazon Development Center Germany GmbH
-Berlin - Dresden - Aachen
-main office: Krausenstr. 38, 10117 Berlin
-Geschaeftsfuehrer: Dr. Ralf Herbrich, Christian Schlaeger
-Ust-ID: DE289237879
-Eingetragen am Amtsgericht Charlottenburg HRB 149173 B
+James
