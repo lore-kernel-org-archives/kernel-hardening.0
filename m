@@ -1,66 +1,53 @@
+Date: Sun, 9 Sep 2018 21:19:03 +0200
+From: Sam Ravnborg <sam@ravnborg.org>
+Subject: Re: [PATCH v2] kconfig: add hardened defconfig helpers
+Message-ID: <20180909191903.GA2344@ravnborg.org>
+References: <1536516257-30871-1-git-send-email-s.mesoraca16@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20180909165647.GC22251@thunk.org>
-References: <CACXcFmki+t-TvaiYxfOyphkF+LRQcJHFQjgW31HrYGRhOCYrEg@mail.gmail.com>
- <20180909125912.GA17863@kroah.com> <20180909165647.GC22251@thunk.org>
-From: Boris Lukashev <blukashev@sempervictus.com>
-Date: Sun, 9 Sep 2018 14:24:13 -0400
-Message-ID: <CAFUG7CeV6wTe7_7ZXcB7FCP5+O3-x41hDRAbSO12vw=O2DJ0AQ@mail.gmail.com>
-Subject: Re: Checked C?
-Content-Type: text/plain; charset="UTF-8"
-To: "Theodore Y. Ts'o" <tytso@mit.edu>
-Cc: Greg KH <greg@kroah.com>, Sandy Harris <sandyinchina@gmail.com>, kernel-hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1536516257-30871-1-git-send-email-s.mesoraca16@gmail.com>
+To: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, linux-doc@vger.kernel.org, linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org, Jann Horn <jannh@google.com>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Marek <michal.lkml@markovi.net>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quick glance over the paper describes type and bounds checks
-attempting to make access safer at compile and runtime via new
-syntax... The caveat of "The safety provided by checked pointers can
-be thwarted by unsafe operations, such as writes to traditional
-pointers" leads to some immediate coverage concerns.
-Doesn't grsecurity/PaX already do things like this with GCC plugins?
-My understanding is that analogous functionality is available with
-GCC, and wouldn't require adopting MSFT's take on "how C should be" in
-Linux.
-If the kernel is to move to Clang (which seems to be a direction which
-Google and others are going), then implementing LLVM passes to do such
-things may not require explicit syntax to declare these pointers, but
-more likely exceptions to default use of safe types.
+Hi Salvatore.
 
--Boris
+On Sun, Sep 09, 2018 at 08:04:17PM +0200, Salvatore Mesoraca wrote:
+> Adds 4 new defconfig helpers (hardenedlowconfig, hardenedmediumconfig,
+> hardenedhighconfig, hardenedextremeconfig) to enable various hardening
+> features.
+> The list of config options to enable is based on KSPP's Recommended
+> Settings and on kconfig-hardened-check, with some modifications.
+> These options are divided into 4 levels (low, medium, high, extreme)
+> based on their negative side effects, not on their usefulness.
+> 'Low' level collects all those protections that have (almost) no
+> negative side effects.
+> 'Extreme' level collects those protections that may have so many
+> negative side effects that most people wouldn't want to enable them.
+> Every feature in each level is briefly documented in
+> Documentation/security/hardenedconfig.rst, this file also contain a
+> better explanation of what every level means.
+> To prevent this file from drifting from what the various defconfigs
+> actually do, it is used to dynamically generate the config fragments.
 
-On Sun, Sep 9, 2018 at 12:56 PM, Theodore Y. Ts'o <tytso@mit.edu> wrote:
-> On Sun, Sep 09, 2018 at 02:59:12PM +0200, Greg KH wrote:
->> On Sun, Sep 09, 2018 at 08:22:44AM -0400, Sandy Harris wrote:
->> > Slashdot reports that Microsoft have come up with something they call
->> > "checked C". It claims to prevent a wide variety of memory & pointer
->> > bugs, using a mix of compile-time and run-time checks, at moderate
->> > overheads.
->> >
->> > Implementation is as extensions to Clang so it might be hard to apply
->> > to the kernel which I think has some GNU-isms. Perhaps still worth a
->> > look?
->
-> What would be really interesting would be implementing the Microsoft
-> extensions as Clang plugins, so the kernel changes don't require
-> distributions to ship a modified Clang.
->
-> Whoever does this will need to remember that kernel modifications need
-> to work with:
->
->    * Clang with the extensions
->
->    * Clang without the extensions (in case the extensions are Clang
->      version dependent, and the system has a Clang which is too old).
->
->    * Gcc without the extensions
->
-> We've been doing that sort of thing already, using CPP magic, so there
-> are plenty of examples about ways of doing that.
->
->                                         - Ted
+In the above you nicely describes what is done.
+But there is nothing about the target group for this feature.
+Who will benefit from this?
 
+With respect to the actual implmentation we now
+have two ways to handle config fragments.
+Current solution is to save the config fragments in kernel/configs.
+And the new solution is to parse the config fragments from an rst file.
+The changelog fails to mentions why we need a new way to handle
+the config fragments.
 
+If we want to go the "parse from rst file" way - can it then
+be abstracted in a way so this is the only way to handle
+these in-kernel config fragments?
+And then move the current config fragment to the new way.
 
--- 
-Boris Lukashev
-Systems Architect
-Semper Victus
+It most be possible with a little careful design to make this
+a general solution and not a hardening thing only.
+
+	Sam
