@@ -1,54 +1,132 @@
-Date: Tue, 11 Sep 2018 10:41:48 +0200
-From: Greg KH <gregkh@linuxfoundation.org>
+Message-ID: <1536681497.3382.4.camel@linux.intel.com>
 Subject: Re: [RFC PATCH] x86: entry: flush the cache if syscall error
-Message-ID: <20180911084148.GA23570@kroah.com>
+From: Kristen C Accardi <kristen@linux.intel.com>
+Date: Tue, 11 Sep 2018 08:58:17 -0700
+In-Reply-To: <CAG48ez0Skq5SgVXh6SEYq1Jn=_yUvEeuJYNViEora5S2cXLtng@mail.gmail.com>
 References: <20180910191002.350195-1-kristen@linux.intel.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180910191002.350195-1-kristen@linux.intel.com>
-To: Kristen Carlson Accardi <kristen@linux.intel.com>
-Cc: kernel-hardening@lists.openwall.com
+	 <CAG48ez0Skq5SgVXh6SEYq1Jn=_yUvEeuJYNViEora5S2cXLtng@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+To: Jann Horn <jannh@google.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Sep 10, 2018 at 12:10:02PM -0700, Kristen Carlson Accardi wrote:
-> This patch aims to make it harder to perform cache timing attacks on data
-> left behind by system calls. If we have an error returned from a syscall,
-> flush the L1 cache.
+On Mon, 2018-09-10 at 22:32 +0200, Jann Horn wrote:
+> On Mon, Sep 10, 2018 at 9:14 PM Kristen Carlson Accardi
+> <kristen@linux.intel.com> wrote:
+> > This patch aims to make it harder to perform cache timing attacks
+> > on data
+> > left behind by system calls. If we have an error returned from a
+> > syscall,
+> > flush the L1 cache.
 > 
-> Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
-> ---
->  arch/x86/Kconfig        |  8 ++++++++
->  arch/x86/entry/common.c | 20 ++++++++++++++++++++
->  2 files changed, 28 insertions(+)
+> What kind of performance impact does this have on a process that e.g.
+> attempts to access a large number of paths to which it has no access,
+> and what is the impact on the hyperthread?
+
+This will undoubtedly have a performance impact - I can certainly run
+some benchmarks to find out just how much in this scenario.
+
 > 
-> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-> index c5ff296bc5d1..8a67642ff9fe 100644
-> --- a/arch/x86/Kconfig
-> +++ b/arch/x86/Kconfig
-> @@ -445,6 +445,14 @@ config RETPOLINE
->  	  code are eliminated. Since this includes the syscall entry path,
->  	  it is not entirely pointless.
->  
-> +config SYSCALL_FLUSH
-> +	bool "Clear L1 Cache on syscall errors"
-> +	default y
+> (You may want to also CC the X86 maintainers (especially Andy
+> Lutomirski) and LKML on this series relatively early - people on the
+> kernel-hardening list tend to have a different focus compared to the
+> relevant maintainers, so there's some feedback that you'll probably
+> only get once you submit this to places other than the
+> kernel-hardening@ list.)
 
-"y" normally is only for "your machine will not boot without this
-option", and I don't think that's the case here :)
+Thank you yes, I admit I decided to try to float this idea past a
+friendlier audience first :).
 
-> +	help
-> +	  Select to allow the L1 cache to be cleared upon return of
-> +	  an error code from a syscall. This will reduce the likelyhood of
-> +	  speculative execution style attacks on syscalls.
+> 
+> > Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
+> > ---
+> >  arch/x86/Kconfig        |  8 ++++++++
+> >  arch/x86/entry/common.c | 20 ++++++++++++++++++++
+> >  2 files changed, 28 insertions(+)
+> > 
+> > diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+> > index c5ff296bc5d1..8a67642ff9fe 100644
+> > --- a/arch/x86/Kconfig
+> > +++ b/arch/x86/Kconfig
+> > @@ -445,6 +445,14 @@ config RETPOLINE
+> >           code are eliminated. Since this includes the syscall
+> > entry path,
+> >           it is not entirely pointless.
+> > 
+> > +config SYSCALL_FLUSH
+> > +       bool "Clear L1 Cache on syscall errors"
+> > +       default y
+> > +       help
+> > +         Select to allow the L1 cache to be cleared upon return of
+> > +         an error code from a syscall. This will reduce the
+> > likelyhood of
+> > +         speculative execution style attacks on syscalls.
+> 
+> s/L1/L1D/ ?
 
-Shouldn't this help text refer to the fact that this needs CPU support
-for this type of functionality?
+I can change this - the documentation for this msr mentioned that on
+some processors the icache might be impacted as well - think that's
+worth mentioning?
 
-I like the idea, as a "gadget" normally only is used when an
-out-of-bands check happens, which implies someone could be trying to do
-something "bad", nice job.
-
-thanks,
-
-greg k-h
+> 
+> >  config INTEL_RDT
+> >         bool "Intel Resource Director Technology support"
+> >         default n
+> > diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
+> > index 3b2490b81918..77beff541013 100644
+> > --- a/arch/x86/entry/common.c
+> > +++ b/arch/x86/entry/common.c
+> > @@ -268,6 +268,22 @@ __visible inline void
+> > syscall_return_slowpath(struct pt_regs *regs)
+> >         prepare_exit_to_usermode(regs);
+> >  }
+> > 
+> > +__visible inline void l1_cache_flush(struct pt_regs *regs)
+> > +{
+> > +       if (IS_ENABLED(CONFIG_SYSCALL_FLUSH)) {
+> > +               if (regs->ax == 0 || regs->ax == -EAGAIN ||
+> > +                   regs->ax == -EEXIST || regs->ax == -ENOENT ||
+> > +                   regs->ax == -EXDEV || regs->ax == -ETIMEDOUT ||
+> > +                   regs->ax == -ENOTCONN || regs->ax ==
+> > -EINPROGRESS)
+> > +                       return;
+> > +
+> > +               if (static_cpu_has(X86_FEATURE_FLUSH_L1D)) {
+> 
+> Style nit: Maybe merge this condition into the first if() ?
+> 
+> > +                       wrmsrl(MSR_IA32_FLUSH_CMD, L1D_FLUSH);
+> > +                       return;
+> > +               }
+> > +       }
+> > +}
+> > +
+> >  #ifdef CONFIG_X86_64
+> >  __visible void do_syscall_64(unsigned long nr, struct pt_regs
+> > *regs)
+> >  {
+> > @@ -290,6 +306,8 @@ __visible void do_syscall_64(unsigned long nr,
+> > struct pt_regs *regs)
+> >                 regs->ax = sys_call_table[nr](regs);
+> >         }
+> > 
+> > +       l1_cache_flush(regs);
+> > +
+> >         syscall_return_slowpath(regs);
+> >  }
+> >  #endif
+> > @@ -338,6 +356,8 @@ static __always_inline void
+> > do_syscall_32_irqs_on(struct pt_regs *regs)
+> >  #endif /* CONFIG_IA32_EMULATION */
+> >         }
+> > 
+> > +       l1_cache_flush(regs);
+> > +
+> >         syscall_return_slowpath(regs);
+> >  }
+> > 
+> > --
+> > 2.14.4
+> > 
