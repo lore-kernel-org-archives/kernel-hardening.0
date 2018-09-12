@@ -1,67 +1,30 @@
-From: Julian Stecklina <jsteckli@amazon.de>
-Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs in mind (for KVM to isolate its guests per CPU)
-References: <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
-	<ciirm8a7p3alos.fsf@u54ee758033e858cfa736.ant.amazon.com>
-	<CA+55aFzHj_GNZWG4K2oDu4DPP9sZdTZ9PY7sBxGB6WoN9g8d=A@mail.gmail.com>
-	<ciirm8zhwyiqh4.fsf@u54ee758033e858cfa736.ant.amazon.com>
-Date: Wed, 12 Sep 2018 17:37:38 +0200
-In-Reply-To: <ciirm8zhwyiqh4.fsf@u54ee758033e858cfa736.ant.amazon.com> (Julian
-	Stecklina's message of "Mon, 03 Sep 2018 16:51:35 +0200")
-Message-ID: <ciirm8efdy916l.fsf@u54ee758033e858cfa736.ant.amazon.com>
-MIME-Version: 1.0
-Content-Type: text/plain
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: David Woodhouse <dwmw@amazon.co.uk>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
+Message-ID: <1536773389.3240.4.camel@linux.intel.com>
+Subject: Re: [RFC PATCH] x86: entry: flush the cache if syscall error
+From: Kristen C Accardi <kristen@linux.intel.com>
+Date: Wed, 12 Sep 2018 10:29:49 -0700
+In-Reply-To: <20180911160614.GA736@sol.localdomain>
+References: <20180910191002.350195-1-kristen@linux.intel.com>
+	 <20180911160614.GA736@sol.localdomain>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Julian Stecklina <jsteckli@amazon.de> writes:
+On Tue, 2018-09-11 at 09:06 -0700, Eric Biggers wrote:
+> On Mon, Sep 10, 2018 at 12:10:02PM -0700, Kristen Carlson Accardi
+> wrote:
+> > This patch aims to make it harder to perform cache timing attacks
+> > on data
+> > left behind by system calls. If we have an error returned from a
+> > syscall,
+> > flush the L1 cache.
+> 
+> Which L1 cache?  There's no guarantee the task stayed on the same
+> CPU...
 
-> Linus Torvalds <torvalds@linux-foundation.org> writes:
->
->> On Fri, Aug 31, 2018 at 12:45 AM Julian Stecklina <jsteckli@amazon.de> wrote:
->>>
->>> I've been spending some cycles on the XPFO patch set this week. For the
->>> patch set as it was posted for v4.13, the performance overhead of
->>> compiling a Linux kernel is ~40% on x86_64[1]. The overhead comes almost
->>> completely from TLB flushing. If we can live with stale TLB entries
->>> allowing temporary access (which I think is reasonable), we can remove
->>> all TLB flushing (on x86). This reduces the overhead to 2-3% for
->>> kernel compile.
->>
->> I have to say, even 2-3% for a kernel compile sounds absolutely horrendous.
->
-> Well, it's at least in a range where it doesn't look hopeless.
->
->> Kernel bullds are 90% user space at least for me, so a 2-3% slowdown
->> from a kernel is not some small unnoticeable thing.
->
-> The overhead seems to come from the hooks that XPFO adds to
-> alloc/free_pages. These hooks add a couple of atomic operations per
-> allocated (4K) page for book keeping. Some of these atomic ops are only
-> for debugging and could be removed. There is also some opportunity to
-> streamline the per-page space overhead of XPFO.
-
-I've updated my XPFO branch[1] to make some of the debugging optional
-and also integrated the XPFO bookkeeping with struct page, instead of
-requiring CONFIG_PAGE_EXTENSION, which removes some checks in the hot
-path. These changes push the overhead down to somewhere between 1.5 and
-2% for my quad core box in kernel compile. This is close to the
-measurement noise, so I take suggestions for a better benchmark here.
-
-Of course, if you hit contention on the xpfo spinlock then performance
-will suffer. I guess this is what happened on Khalid's large box.
-
-I'll try to remove the spinlocks and add fixup code to the pagefault
-handler to see whether this improves the situation on large boxes. This
-might turn out to be ugly, though.
-
-Julian
-
-[1] http://git.infradead.org/users/jsteckli/linux-xpfo.git/shortlog/refs/heads/xpfo-master
---
-Amazon Development Center Germany GmbH
-Berlin - Dresden - Aachen
-main office: Krausenstr. 38, 10117 Berlin
-Geschaeftsfuehrer: Dr. Ralf Herbrich, Christian Schlaeger
-Ust-ID: DE289237879
-Eingetragen am Amtsgericht Charlottenburg HRB 149173 B
+While this is true, it is unlikely that the task switched CPUs for this
+type of flow (i.e. an error path, presumably caught early-ish), and
+worst case this would just mean we were wiping the wrong cache. I can
+add a comment to indicate this scenario.
