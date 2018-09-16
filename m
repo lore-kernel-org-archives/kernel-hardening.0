@@ -1,71 +1,82 @@
-Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
- in mind (for KVM to isolate its guests per CPU)
-References: <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
- <ciirm8a7p3alos.fsf@u54ee758033e858cfa736.ant.amazon.com>
- <CA+55aFzHj_GNZWG4K2oDu4DPP9sZdTZ9PY7sBxGB6WoN9g8d=A@mail.gmail.com>
- <ciirm8zhwyiqh4.fsf@u54ee758033e858cfa736.ant.amazon.com>
- <ciirm8efdy916l.fsf@u54ee758033e858cfa736.ant.amazon.com>
-From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <5efc291c-b0ed-577e-02d1-285d080c293d@oracle.com>
-Date: Fri, 14 Sep 2018 11:06:53 -0600
 MIME-Version: 1.0
-In-Reply-To: <ciirm8efdy916l.fsf@u54ee758033e858cfa736.ant.amazon.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Julian Stecklina <jsteckli@amazon.de>, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: David Woodhouse <dwmw@amazon.co.uk>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
+References: <1536516257-30871-1-git-send-email-s.mesoraca16@gmail.com> <20180909191903.GA2344@ravnborg.org>
+In-Reply-To: <20180909191903.GA2344@ravnborg.org>
+From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
+Date: Sun, 16 Sep 2018 19:14:44 +0200
+Message-ID: <CAJHCu1++7sJv88Qg4wtx-AhfmQCbjy2psxuoePz2YViLNu-ahA@mail.gmail.com>
+Subject: Re: [PATCH v2] kconfig: add hardened defconfig helpers
+Content-Type: text/plain; charset="UTF-8"
+To: sam@ravnborg.org
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-doc@vger.kernel.org, linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org, Jann Horn <jannh@google.com>, corbet@lwn.net, keescook@chromium.org, labbott@redhat.com, yamada.masahiro@socionext.com, michal.lkml@markovi.net, ebiederm@xmission.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 09/12/2018 09:37 AM, Julian Stecklina wrote:
-> Julian Stecklina <jsteckli@amazon.de> writes:
-> 
->> Linus Torvalds <torvalds@linux-foundation.org> writes:
->>
->>> On Fri, Aug 31, 2018 at 12:45 AM Julian Stecklina <jsteckli@amazon.de> wrote:
->>>>
->>>> I've been spending some cycles on the XPFO patch set this week. For the
->>>> patch set as it was posted for v4.13, the performance overhead of
->>>> compiling a Linux kernel is ~40% on x86_64[1]. The overhead comes almost
->>>> completely from TLB flushing. If we can live with stale TLB entries
->>>> allowing temporary access (which I think is reasonable), we can remove
->>>> all TLB flushing (on x86). This reduces the overhead to 2-3% for
->>>> kernel compile.
->>>
->>> I have to say, even 2-3% for a kernel compile sounds absolutely horrendous.
->>
->> Well, it's at least in a range where it doesn't look hopeless.
->>
->>> Kernel bullds are 90% user space at least for me, so a 2-3% slowdown
->>> from a kernel is not some small unnoticeable thing.
->>
->> The overhead seems to come from the hooks that XPFO adds to
->> alloc/free_pages. These hooks add a couple of atomic operations per
->> allocated (4K) page for book keeping. Some of these atomic ops are only
->> for debugging and could be removed. There is also some opportunity to
->> streamline the per-page space overhead of XPFO.
-> 
-> I've updated my XPFO branch[1] to make some of the debugging optional
-> and also integrated the XPFO bookkeeping with struct page, instead of
-> requiring CONFIG_PAGE_EXTENSION, which removes some checks in the hot
-> path. These changes push the overhead down to somewhere between 1.5 and
-> 2% for my quad core box in kernel compile. This is close to the
-> measurement noise, so I take suggestions for a better benchmark here.
-> 
-> Of course, if you hit contention on the xpfo spinlock then performance
-> will suffer. I guess this is what happened on Khalid's large box.
-> 
-> I'll try to remove the spinlocks and add fixup code to the pagefault
-> handler to see whether this improves the situation on large boxes. This
-> might turn out to be ugly, though.
-> 
+Sam Ravnborg <sam@ravnborg.org> wrote:
+>
+> Hi Salvatore.
 
-Hi Julian,
+Hi Sam
 
-I ran tests with your updated code and gathered lock statistics. Change in system time for "make -j60" was in the noise margin (It actually went up by about 2%). There is some contention on xpfo_lock. Average wait time does not look high compared to other locks. Max hold time looks a little long. From /proc/lock_stat:
+> On Sun, Sep 09, 2018 at 08:04:17PM +0200, Salvatore Mesoraca wrote:
+> > Adds 4 new defconfig helpers (hardenedlowconfig, hardenedmediumconfig,
+> > hardenedhighconfig, hardenedextremeconfig) to enable various hardening
+> > features.
+> > The list of config options to enable is based on KSPP's Recommended
+> > Settings and on kconfig-hardened-check, with some modifications.
+> > These options are divided into 4 levels (low, medium, high, extreme)
+> > based on their negative side effects, not on their usefulness.
+> > 'Low' level collects all those protections that have (almost) no
+> > negative side effects.
+> > 'Extreme' level collects those protections that may have so many
+> > negative side effects that most people wouldn't want to enable them.
+> > Every feature in each level is briefly documented in
+> > Documentation/security/hardenedconfig.rst, this file also contain a
+> > better explanation of what every level means.
+> > To prevent this file from drifting from what the various defconfigs
+> > actually do, it is used to dynamically generate the config fragments.
+>
+> In the above you nicely describes what is done.
+> But there is nothing about the target group for this feature.
+> Who will benefit from this?
 
-              &(&page->xpfo_lock)->rlock:         29698          29897           0.06         134.39       15345.58           0.51      422474670      960222532           0.05       30362.05   195807002.62           0.20
+Sometimes people ask about kernel hardening features, that's the
+reason why the KSPP's list and the kconfig-hardened-check script were
+written.
+Unfortunately, kernel features with security implications have often
+misleading names and descriptions and are scattered around the
+menuconfig.
+This patchset will help anyone who want to have an "hardened kernel"
+but isn't following kernel development closely enough to know about
+all the features.
+On one hand, this will provide an official and understandable list of
+hardening features inside the kernel doc, on the other hand it also
+provide a fast and easy way to enable those features all at once.
 
-Nevertheless even a smaller average wait time can add up.
+> With respect to the actual implmentation we now
+> have two ways to handle config fragments.
+> Current solution is to save the config fragments in kernel/configs.
+> And the new solution is to parse the config fragments from an rst file.
+> The changelog fails to mentions why we need a new way to handle
+> the config fragments.
 
---
-Khalid
+The reason why I'm doing it like this is that I want both the config
+fragments and the doc in the kernel.
+Generating the fragments from the doc is the best way to make sure
+that they will always do what the doc says.
+
+> If we want to go the "parse from rst file" way - can it then
+> be abstracted in a way so this is the only way to handle
+> these in-kernel config fragments?
+> And then move the current config fragment to the new way.
+>
+> It most be possible with a little careful design to make this
+> a general solution and not a hardening thing only.
+
+I don't know if maintainers of the other fragments care at all about
+having every single option documented in detail.
+For hardening features it makes sense, because people may want to just
+learn about them and enable them manually.
+I don't know if this is common or desirable for other config fragments.
+
+Thank you for you comment,
+
+Salvatore
