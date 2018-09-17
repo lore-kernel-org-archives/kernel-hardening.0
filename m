@@ -5,50 +5,49 @@ References: <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
 	<CA+55aFzHj_GNZWG4K2oDu4DPP9sZdTZ9PY7sBxGB6WoN9g8d=A@mail.gmail.com>
 	<ciirm8zhwyiqh4.fsf@u54ee758033e858cfa736.ant.amazon.com>
 	<ciirm8efdy916l.fsf@u54ee758033e858cfa736.ant.amazon.com>
-	<5efc291c-b0ed-577e-02d1-285d080c293d@oracle.com>
-Date: Mon, 17 Sep 2018 11:51:38 +0200
-In-Reply-To: <5efc291c-b0ed-577e-02d1-285d080c293d@oracle.com> (Khalid Aziz's
-	message of "Fri, 14 Sep 2018 11:06:53 -0600")
-Message-ID: <ciirm8va743105.fsf@u54ee758033e858cfa736.ant.amazon.com>
+	<CADLDEKsxx=MSFu=4_4JLX1afUMr3GVjNxSQ-726NrbLn8KQaQg@mail.gmail.com>
+Date: Mon, 17 Sep 2018 12:01:02 +0200
+In-Reply-To: <CADLDEKsxx=MSFu=4_4JLX1afUMr3GVjNxSQ-726NrbLn8KQaQg@mail.gmail.com>
+	(Juerg Haefliger's message of "Thu, 13 Sep 2018 08:11:49 +0200")
+Message-ID: <ciirm8r2hs30kh.fsf@u54ee758033e858cfa736.ant.amazon.com>
 MIME-Version: 1.0
 Content-Type: text/plain
-To: Khalid Aziz <khalid.aziz@oracle.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, David Woodhouse <dwmw@amazon.co.uk>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
+To: Juerg Haefliger <juergh@gmail.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, David Woodhouse <dwmw@amazon.co.uk>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, Khalid Aziz <khalid.aziz@oracle.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Khalid Aziz <khalid.aziz@oracle.com> writes:
+Juerg Haefliger <juergh@gmail.com> writes:
 
-> I ran tests with your updated code and gathered lock statistics. Change in
-> system time for "make -j60" was in the noise margin (It actually went up by
-> about 2%). There is some contention on xpfo_lock. Average wait time does not
-> look high compared to other locks. Max hold time looks a little long. From
-> /proc/lock_stat:
+>> I've updated my XPFO branch[1] to make some of the debugging optional
+>> and also integrated the XPFO bookkeeping with struct page, instead of
+>> requiring CONFIG_PAGE_EXTENSION, which removes some checks in the hot
+>> path.
 >
->               &(&page->xpfo_lock)->rlock:         29698          29897           0.06         134.39       15345.58           0.51      422474670      960222532           0.05       30362.05   195807002.62           0.20
->
-> Nevertheless even a smaller average wait time can add up.
+> FWIW, that was my original design but there was some resistance to
+> adding more to the page struct and page extension was suggested
+> instead.
 
-Thanks for doing this!
+>From looking at both versions, I have to say that having the metadata in
+struct page makes the code easier to understand and removes some special
+cases and bookkeeping.
 
-I've spent some time optimizing spinlock usage in the code. See the two
-last commits in my xpfo-master branch[1]. The optimization in
-xpfo_kunmap is pretty safe. The last commit that optimizes locking in
-xpfo_kmap is tricky, though, and I'm not sure this is the right
-approach. FWIW, I've modeled this locking strategy in Spin and it
-doesn't find any problems with it.
+> I'm wondering how much performance we're loosing by having to split
+> hugepages. Any chance this can be quantified somehow? Maybe we can
+> have a pool of some sorts reserved for userpages and group allocations
+> so that we can track the XPFO state at the hugepage level instead of
+> at the 4k level to prevent/reduce page splitting. Not sure if that
+> causes issues or has any unwanted side effects though...
 
-I've tested the result on a box with 72 hardware threads and I didn't
-see a meaningful difference in kernel compile performance. It's still
-hovering around 2%. So the question is, whether it's actually useful to
-do these optimizations.
+Optimizing the allocation/deallocation path might be worthwhile, because
+that's where most of the overhead goes. I haven't looked into how to do
+this yet. I'd appreciate if someone has pointers to code that tries to
+achieve similar functionality to get me started.
 
-Khalid, you mentioned 5% overhead. Can you give the new code a spin and
-see whether anything changes?
+That being said, I'm wondering whether we have unrealistic expectations
+about the overhead here and whether it's worth turning this patch into
+something far more complicated. Opinions?
 
 Julian
-
-[1] http://git.infradead.org/users/jsteckli/linux-xpfo.git/shortlog/refs/heads/xpfo-master
-
 --
 Amazon Development Center Germany GmbH
 Berlin - Dresden - Aachen
