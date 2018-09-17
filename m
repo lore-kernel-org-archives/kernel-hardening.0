@@ -1,8 +1,8 @@
-Date: Mon, 17 Sep 2018 04:19:50 -0600
-From: Tycho Andersen <tycho@tycho.ws>
+Date: Mon, 17 Sep 2018 06:27:25 -0700
+From: Christoph Hellwig <hch@infradead.org>
 Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
  in mind (for KVM to isolate its guests per CPU)
-Message-ID: <20180917101950.GG4672@cisco>
+Message-ID: <20180917132725.GA3633@infradead.org>
 References: <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
  <ciirm8a7p3alos.fsf@u54ee758033e858cfa736.ant.amazon.com>
  <CA+55aFzHj_GNZWG4K2oDu4DPP9sZdTZ9PY7sBxGB6WoN9g8d=A@mail.gmail.com>
@@ -30,31 +30,19 @@ On Mon, Sep 17, 2018 at 12:01:02PM +0200, Julian Stecklina wrote:
 > > adding more to the page struct and page extension was suggested
 > > instead.
 > 
-> From looking at both versions, I have to say that having the metadata in
+> >From looking at both versions, I have to say that having the metadata in
 > struct page makes the code easier to understand and removes some special
 > cases and bookkeeping.
-> 
-> > I'm wondering how much performance we're loosing by having to split
-> > hugepages. Any chance this can be quantified somehow? Maybe we can
-> > have a pool of some sorts reserved for userpages and group allocations
-> > so that we can track the XPFO state at the hugepage level instead of
-> > at the 4k level to prevent/reduce page splitting. Not sure if that
-> > causes issues or has any unwanted side effects though...
-> 
-> Optimizing the allocation/deallocation path might be worthwhile, because
-> that's where most of the overhead goes. I haven't looked into how to do
-> this yet. I'd appreciate if someone has pointers to code that tries to
-> achieve similar functionality to get me started.
-> 
-> That being said, I'm wondering whether we have unrealistic expectations
-> about the overhead here and whether it's worth turning this patch into
-> something far more complicated. Opinions?
 
-I think that implementing Dave Hansen's suggestions of not doing
-flushes/other work on every map/unmap, but only when pages are added
-to the various free lists will probably help out a lot. That's where I
-got stuck last time when I was trying to do it, though :)
+Btw, can xpfo_lock be replaced with a bit spinlock in the page?
+Growing struct page too much might cause performance issues.  Then again
+going beyong the 64 byte cache line might already cause that, and even
+then it propbably is still way better than the page extensions.
 
-Cheers,
+OTOH if you keep the spinlock it might be worth to use
+atomic_dec_and_lock on the count.  Maybe the answer is an hash of
+spinlock, as we obviously can't take all that many of them at the same
+time anyway.
 
-Tycho
+Also for your trasitions froms zero it might be worth at looking at
+atomic_inc_unless_zero.
