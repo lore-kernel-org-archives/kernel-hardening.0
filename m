@@ -1,66 +1,58 @@
+From: Julian Stecklina <jsteckli@amazon.de>
+Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs in mind (for KVM to isolate its guests per CPU)
+References: <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
+	<ciirm8a7p3alos.fsf@u54ee758033e858cfa736.ant.amazon.com>
+	<CA+55aFzHj_GNZWG4K2oDu4DPP9sZdTZ9PY7sBxGB6WoN9g8d=A@mail.gmail.com>
+	<ciirm8zhwyiqh4.fsf@u54ee758033e858cfa736.ant.amazon.com>
+	<ciirm8efdy916l.fsf@u54ee758033e858cfa736.ant.amazon.com>
+	<5efc291c-b0ed-577e-02d1-285d080c293d@oracle.com>
+Date: Mon, 17 Sep 2018 11:51:38 +0200
+In-Reply-To: <5efc291c-b0ed-577e-02d1-285d080c293d@oracle.com> (Khalid Aziz's
+	message of "Fri, 14 Sep 2018 11:06:53 -0600")
+Message-ID: <ciirm8va743105.fsf@u54ee758033e858cfa736.ant.amazon.com>
 MIME-Version: 1.0
-References: <1536516257-30871-1-git-send-email-s.mesoraca16@gmail.com>
- <20180909191903.GA2344@ravnborg.org> <CAK7LNATP_3K0KYyW51K3mqHs-WiReJWMeB82Uxikh+zUqDKQ6A@mail.gmail.com>
-In-Reply-To: <CAK7LNATP_3K0KYyW51K3mqHs-WiReJWMeB82Uxikh+zUqDKQ6A@mail.gmail.com>
-From: Salvatore Mesoraca <s.mesoraca16@gmail.com>
-Date: Sun, 16 Sep 2018 19:44:09 +0200
-Message-ID: <CAJHCu1JtS2nTaxCbSDOvUYZe2Lf2LpcOvhBE00vX6XiFEH_hZg@mail.gmail.com>
-Subject: Re: [PATCH v2] kconfig: add hardened defconfig helpers
-Content-Type: text/plain; charset="UTF-8"
-To: yamada.masahiro@socionext.com
-Cc: sam@ravnborg.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-doc@vger.kernel.org, linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org, Jann Horn <jannh@google.com>, corbet@lwn.net, keescook@chromium.org, labbott@redhat.com, michal.lkml@markovi.net, ebiederm@xmission.com
+Content-Type: text/plain
+To: Khalid Aziz <khalid.aziz@oracle.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, David Woodhouse <dwmw@amazon.co.uk>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, juerg.haefliger@hpe.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, Andrew Cooper <andrew.cooper3@citrix.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, linux-mm <linux-mm@kvack.org>, Thomas Gleixner <tglx@linutronix.de>, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, Andi Kleen <ak@linux.intel.com>, kanth.ghatraju@oracle.com, Liran Alon <liran.alon@oracle.com>, Kees Cook <keescook@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, chris.hyser@oracle.com, Tyler Hicks <tyhicks@canonical.com>, John Haxby <john.haxby@oracle.com>, Jon Masters <jcm@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
->
-> 2018-09-10 4:19 GMT+09:00 Sam Ravnborg <sam@ravnborg.org>:
-> > Hi Salvatore.
-> >
-> > On Sun, Sep 09, 2018 at 08:04:17PM +0200, Salvatore Mesoraca wrote:
-> >> Adds 4 new defconfig helpers (hardenedlowconfig, hardenedmediumconfig,
-> >> hardenedhighconfig, hardenedextremeconfig) to enable various hardening
-> >> features.
-> >> The list of config options to enable is based on KSPP's Recommended
-> >> Settings and on kconfig-hardened-check, with some modifications.
-> >> These options are divided into 4 levels (low, medium, high, extreme)
-> >> based on their negative side effects, not on their usefulness.
-> >> 'Low' level collects all those protections that have (almost) no
-> >> negative side effects.
-> >> 'Extreme' level collects those protections that may have so many
-> >> negative side effects that most people wouldn't want to enable them.
-> >> Every feature in each level is briefly documented in
-> >> Documentation/security/hardenedconfig.rst, this file also contain a
-> >> better explanation of what every level means.
-> >> To prevent this file from drifting from what the various defconfigs
-> >> actually do, it is used to dynamically generate the config fragments.
-> >
-> > In the above you nicely describes what is done.
-> > But there is nothing about the target group for this feature.
-> > Who will benefit from this?
-> >
-> > With respect to the actual implmentation we now
-> > have two ways to handle config fragments.
-> > Current solution is to save the config fragments in kernel/configs.
-> > And the new solution is to parse the config fragments from an rst file.
-> > The changelog fails to mentions why we need a new way to handle
-> > the config fragments.
->
->
-> I agree.
->
-> Another new way this patch added is,
->
->  CONFIG options are now described in the ReST document,
->  but our current way is to describe the detailed information
->  in the 'help' section in Kconfig files.
+Khalid Aziz <khalid.aziz@oracle.com> writes:
 
-This is true, but hardening features are quite different from other
-types of features or config options, because they can't be easily
-found, unless you already know what you are looking for.
-Many people need a single place that lists them all, clearly
-explaining why they might want them or not without having to bounce
-around different Kconfig parts.
+> I ran tests with your updated code and gathered lock statistics. Change in
+> system time for "make -j60" was in the noise margin (It actually went up by
+> about 2%). There is some contention on xpfo_lock. Average wait time does not
+> look high compared to other locks. Max hold time looks a little long. From
+> /proc/lock_stat:
+>
+>               &(&page->xpfo_lock)->rlock:         29698          29897           0.06         134.39       15345.58           0.51      422474670      960222532           0.05       30362.05   195807002.62           0.20
+>
+> Nevertheless even a smaller average wait time can add up.
 
-Thank you for your time,
+Thanks for doing this!
 
-Salvatore
+I've spent some time optimizing spinlock usage in the code. See the two
+last commits in my xpfo-master branch[1]. The optimization in
+xpfo_kunmap is pretty safe. The last commit that optimizes locking in
+xpfo_kmap is tricky, though, and I'm not sure this is the right
+approach. FWIW, I've modeled this locking strategy in Spin and it
+doesn't find any problems with it.
+
+I've tested the result on a box with 72 hardware threads and I didn't
+see a meaningful difference in kernel compile performance. It's still
+hovering around 2%. So the question is, whether it's actually useful to
+do these optimizations.
+
+Khalid, you mentioned 5% overhead. Can you give the new code a spin and
+see whether anything changes?
+
+Julian
+
+[1] http://git.infradead.org/users/jsteckli/linux-xpfo.git/shortlog/refs/heads/xpfo-master
+
+--
+Amazon Development Center Germany GmbH
+Berlin - Dresden - Aachen
+main office: Krausenstr. 38, 10117 Berlin
+Geschaeftsfuehrer: Dr. Ralf Herbrich, Christian Schlaeger
+Ust-ID: DE289237879
+Eingetragen am Amtsgericht Charlottenburg HRB 149173 B
