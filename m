@@ -1,65 +1,55 @@
 MIME-Version: 1.0
-References: <20180820212556.GC2230@char.us.oracle.com> <CA+55aFxZCyVZc4ZpRyZ3uDyakRSOG_=2XvnwMo4oejpsieF9=A@mail.gmail.com>
- <1534801939.10027.24.camel@amazon.co.uk> <20180919010337.GC8537@350D>
-In-Reply-To: <20180919010337.GC8537@350D>
-From: Jonathan Adams <jwadams@google.com>
-Date: Wed, 19 Sep 2018 08:43:07 -0700
-Message-ID: <CA+VK+GM6CaPnGKcPjEn7U=4ubtC-JWZ9k98BTxzRH_TthaFXDw@mail.gmail.com>
-Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
- in mind (for KVM to isolate its guests per CPU)
-Content-Type: text/plain; charset="UTF-8"
-To: bsingharora@gmail.com
-Cc: dwmw@amazon.co.uk, torvalds@linux-foundation.org, konrad.wilk@oracle.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, andrew.cooper3@citrix.com, linux-kernel@vger.kernel.org, boris.ostrovsky@oracle.com, linux-mm@kvack.org, tglx@linutronix.de, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, ak@linux.intel.com, khalid.aziz@oracle.com, kanth.ghatraju@oracle.com, liran.alon@oracle.com, keescook@google.com, jsteckli@os.inf.tu-dresden.de, kernel-hardening@lists.openwall.com, chris.hyser@oracle.com, tyhicks@canonical.com, john.haxby@oracle.com, jcm@redhat.com
+From: Carter Cheng <cartercheng@gmail.com>
+Date: Sat, 22 Sep 2018 01:25:48 +0800
+Message-ID: <CALS6=qVgYYxcjv8Fj4pdPJ0Z_fUceTV60DtKwOhFkSz4HZohxg@mail.gmail.com>
+Subject: temporal and spatial locality in the kernel
+Content-Type: multipart/alternative; boundary="000000000000d3b9e0057664eedb"
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-(apologies again; resending due to formatting issues)
-On Tue, Sep 18, 2018 at 6:03 PM Balbir Singh <bsingharora@gmail.com> wrote:
->
-> On Mon, Aug 20, 2018 at 09:52:19PM +0000, Woodhouse, David wrote:
-> > On Mon, 2018-08-20 at 14:48 -0700, Linus Torvalds wrote:
-> > >
-> > > Of course, after the long (and entirely unrelated) discussion about
-> > > the TLB flushing bug we had, I'm starting to worry about my own
-> > > competence, and maybe I'm missing something really fundamental, and
-> > > the XPFO patches do something else than what I think they do, or my
-> > > "hey, let's use our Meltdown code" idea has some fundamental weakness
-> > > that I'm missing.
-> >
-> > The interesting part is taking the user (and other) pages out of the
-> > kernel's 1:1 physmap.
-> >
-> > It's the *kernel* we don't want being able to access those pages,
-> > because of the multitude of unfixable cache load gadgets.
->
-> I am missing why we need this since the kernel can't access
-> (SMAP) unless we go through to the copy/to/from interface
-> or execute any of the user pages. Is it because of the dependency
-> on the availability of those features?
->
-SMAP protects against kernel accesses to non-PRIV (i.e. userspace)
-mappings, but that isn't relevant to what's being discussed here.
+--000000000000d3b9e0057664eedb
+Content-Type: text/plain; charset="UTF-8"
 
-Davis is talking about the kernel Direct Map, which is a PRIV (i.e.
-kernel) mapping of all physical memory on the system, at
-  VA = (base + PA).
-Since this mapping exists for all physical addresses, speculative
-load gadgets (and the processor's prefetch mechanism, etc.) can
-load arbitrary data even if it is only otherwise mapped into user
-space.
+Hi,
 
-XPFO fixes this by unmapping the Direct Map translations when the
-page is allocated as a user page. The mapping is only restored:
-   1. temporarily if the kernel needs direct access to the page
-      (i.e. to zero it, access it from a device driver, etc),
-   2. when the page is freed
+I recently attended a computer security conference for the first time and
+have developed some interest in kernel hardening issues after one of the
+presenters demonstrated a kernel exploit based partly around a use after
+free bug.
 
-And in so doing, significantly reduces the amount of non-kernel data
-vulnerable to speculative execution attacks against the kernel.
-(and reduces what data can be loaded into the L1 data cache while
-in kernel mode, to be peeked at by the recent L1 Terminal Fault
-vulnerability).
+After scanning the literature a little bit and looking at some papers I
+have encountered before on CCured and Cyclone. I was curious to what extent
+full memory saftety checks are now possible.
 
-Does that make sense?
+There are many papers going back quite a bit on spatial safety
+implementations and some on temporal safety but they mainly target user
+space. I am curious why such things don't exist in the linux kernel at
+least as some sort of compile option. Is the slow down the main concern?
 
-Cheers,
-- jonathan
+It seems recent work has got the performance bound down to 1.29 is this
+considered too slow for many things?
+
+Regards,
+
+Carter
+
+--000000000000d3b9e0057664eedb
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">Hi,<div><br></div><div>I recently attended a computer secu=
+rity conference for the first time and have developed some interest in kern=
+el hardening issues after one of the presenters demonstrated a kernel explo=
+it based partly around a use after free bug.=C2=A0</div><div><br></div><div=
+>After scanning the literature a little bit and looking at some papers I ha=
+ve encountered before on CCured and Cyclone. I was curious to what extent f=
+ull memory saftety checks are now possible.=C2=A0</div><div><br></div><div>=
+There are many papers going back quite a bit on spatial safety implementati=
+ons and some on temporal safety but they mainly target user space. I am cur=
+ious why such things don&#39;t exist in the linux kernel at least as some s=
+ort of compile option. Is the slow down the main concern?</div><div><br></d=
+iv><div>It seems recent work has got the performance bound down to 1.29 is =
+this considered too slow for many things?</div><div><br></div><div>Regards,=
+</div><div><br></div><div>Carter=C2=A0</div></div>
+
+--000000000000d3b9e0057664eedb--
