@@ -1,34 +1,74 @@
+Date: Sun, 23 Sep 2018 12:33:15 +1000
+From: Balbir Singh <bsingharora@gmail.com>
+Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
+ in mind (for KVM to isolate its guests per CPU)
+Message-ID: <20180923023315.GF8537@350D>
+References: <20180820212556.GC2230@char.us.oracle.com>
+ <CA+55aFxZCyVZc4ZpRyZ3uDyakRSOG_=2XvnwMo4oejpsieF9=A@mail.gmail.com>
+ <1534801939.10027.24.camel@amazon.co.uk>
+ <20180919010337.GC8537@350D>
+ <CA+VK+GM6CaPnGKcPjEn7U=4ubtC-JWZ9k98BTxzRH_TthaFXDw@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <1536874298-23492-1-git-send-email-rick.p.edgecombe@intel.com>
-References: <1536874298-23492-1-git-send-email-rick.p.edgecombe@intel.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 21 Sep 2018 12:05:55 -0700
-Message-ID: <CAGXu5jKpwGHRJ92q7yCc+y8esdG6orFVOiZGoGMCi1XiY0JBoQ@mail.gmail.com>
-Subject: Re: [PATCH v6 0/4] KASLR feature to randomize each loadable module
-Content-Type: text/plain; charset="UTF-8"
-To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Daniel Borkmann <daniel@iogearbox.net>, Jann Horn <jannh@google.com>, Alexei Starovoitov <alexei.starovoitov@gmail.com>, Kristen Carlson Accardi <kristen@linux.intel.com>, Dave Hansen <dave.hansen@intel.com>, Arjan van de Ven <arjan@linux.intel.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CA+VK+GM6CaPnGKcPjEn7U=4ubtC-JWZ9k98BTxzRH_TthaFXDw@mail.gmail.com>
+To: Jonathan Adams <jwadams@google.com>
+Cc: dwmw@amazon.co.uk, torvalds@linux-foundation.org, konrad.wilk@oracle.com, deepa.srinivasan@oracle.com, Jim Mattson <jmattson@google.com>, andrew.cooper3@citrix.com, linux-kernel@vger.kernel.org, boris.ostrovsky@oracle.com, linux-mm@kvack.org, tglx@linutronix.de, joao.m.martins@oracle.com, pradeep.vincent@oracle.com, ak@linux.intel.com, khalid.aziz@oracle.com, kanth.ghatraju@oracle.com, liran.alon@oracle.com, keescook@google.com, jsteckli@os.inf.tu-dresden.de, kernel-hardening@lists.openwall.com, chris.hyser@oracle.com, tyhicks@canonical.com, john.haxby@oracle.com, jcm@redhat.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Sep 13, 2018 at 2:31 PM, Rick Edgecombe
-<rick.p.edgecombe@intel.com> wrote:
-> This is V6 of the "KASLR feature to randomize each loadable module" patchset.
-> The purpose is to increase the randomization and also to make the modules
-> randomized in relation to each other instead of just the base, so that if one
-> module leaks the location of the others can't be inferred.
+On Wed, Sep 19, 2018 at 08:43:07AM -0700, Jonathan Adams wrote:
+> (apologies again; resending due to formatting issues)
+> On Tue, Sep 18, 2018 at 6:03 PM Balbir Singh <bsingharora@gmail.com> wrote:
+> >
+> > On Mon, Aug 20, 2018 at 09:52:19PM +0000, Woodhouse, David wrote:
+> > > On Mon, 2018-08-20 at 14:48 -0700, Linus Torvalds wrote:
+> > > >
+> > > > Of course, after the long (and entirely unrelated) discussion about
+> > > > the TLB flushing bug we had, I'm starting to worry about my own
+> > > > competence, and maybe I'm missing something really fundamental, and
+> > > > the XPFO patches do something else than what I think they do, or my
+> > > > "hey, let's use our Meltdown code" idea has some fundamental weakness
+> > > > that I'm missing.
+> > >
+> > > The interesting part is taking the user (and other) pages out of the
+> > > kernel's 1:1 physmap.
+> > >
+> > > It's the *kernel* we don't want being able to access those pages,
+> > > because of the multitude of unfixable cache load gadgets.
+> >
+> > I am missing why we need this since the kernel can't access
+> > (SMAP) unless we go through to the copy/to/from interface
+> > or execute any of the user pages. Is it because of the dependency
+> > on the availability of those features?
+> >
+> SMAP protects against kernel accesses to non-PRIV (i.e. userspace)
+> mappings, but that isn't relevant to what's being discussed here.
+> 
+> Davis is talking about the kernel Direct Map, which is a PRIV (i.e.
+> kernel) mapping of all physical memory on the system, at
+>   VA = (base + PA).
+> Since this mapping exists for all physical addresses, speculative
+> load gadgets (and the processor's prefetch mechanism, etc.) can
+> load arbitrary data even if it is only otherwise mapped into user
+> space.
 
-I'm excited for this! :)
+Load aribtrary data with no permission checks (strict RWX).
 
-> Rick Edgecombe (4):
->   vmalloc: Add __vmalloc_node_try_addr function
->   x86/modules: Increase randomization for modules
->   vmalloc: Add debugfs modfraginfo
->   Kselftest for module text allocation benchmarking
+> 
+> XPFO fixes this by unmapping the Direct Map translations when the
+> page is allocated as a user page. The mapping is only restored:
+>    1. temporarily if the kernel needs direct access to the page
+>       (i.e. to zero it, access it from a device driver, etc),
+>    2. when the page is freed
+> 
+> And in so doing, significantly reduces the amount of non-kernel data
+> vulnerable to speculative execution attacks against the kernel.
+> (and reduces what data can be loaded into the L1 data cache while
+> in kernel mode, to be peeked at by the recent L1 Terminal Fault
+> vulnerability).
 
-Yay for self-tests! This is much appreciated.
+I see and there is no way for gadgets to invoke this path from
+user space to make their speculation successful? We still have to
+flush L1, indepenedent of whether XPFO is enabled or not right?
 
--Kees
-
--- 
-Kees Cook
-Pixel Security
+Balbir Singh.
