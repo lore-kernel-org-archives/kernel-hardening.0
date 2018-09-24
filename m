@@ -1,29 +1,56 @@
-Subject: Re: temporal and spatial locality in the kernel
-References: <CALS6=qVgYYxcjv8Fj4pdPJ0Z_fUceTV60DtKwOhFkSz4HZohxg@mail.gmail.com>
- <CAGXu5jKPeXWVV0480xt_5K4O2x8iA2xRf_9t8Rr0yG6szYebhQ@mail.gmail.com>
- <CALS6=qWNeRM18kgtvpVZw2O6+Zt5eJdOQ2cXbDCbEkBCeRSe4A@mail.gmail.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <c58828e1-2196-71b5-9b87-d2c31c7ccd5b@redhat.com>
-Date: Mon, 24 Sep 2018 00:42:40 -0700
+From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
+Subject: Re: [PATCH v6 2/4] x86/modules: Increase randomization for modules
+Date: Mon, 24 Sep 2018 18:57:35 +0000
+Message-ID: <1537815484.19013.48.camel@intel.com>
+References: <1536874298-23492-1-git-send-email-rick.p.edgecombe@intel.com>
+	 <1536874298-23492-3-git-send-email-rick.p.edgecombe@intel.com>
+	 <CAGXu5jJ9nZYbVn5xdi7nsMJRD6ScLeWP2DWjrD8yEfwi-XXcRw@mail.gmail.com>
+In-Reply-To: <CAGXu5jJ9nZYbVn5xdi7nsMJRD6ScLeWP2DWjrD8yEfwi-XXcRw@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <7C7B10887068584C86F3A3ACD6F60B7C@intel.com>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-In-Reply-To: <CALS6=qWNeRM18kgtvpVZw2O6+Zt5eJdOQ2cXbDCbEkBCeRSe4A@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Carter Cheng <cartercheng@gmail.com>, kernel-hardening@lists.openwall.com
+To: "keescook@chromium.org" <keescook@chromium.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "jannh@google.com" <jannh@google.com>, "arjan@linux.intel.com" <arjan@linux.intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "x86@kernel.org" <x86@kernel.org>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "hpa@zytor.com" <hpa@zytor.com>, "mingo@redhat.com" <mingo@redhat.com>, "alexei.starovoitov@gmail.com" <alexei.starovoitov@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Hansen, Dave" <dave.hansen@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 09/23/2018 01:39 AM, Carter Cheng wrote:
-> I suspect any modification would have to be made on the compilerside as some sort of compiler plugin since skimming over the papers
-in the area most optimize by doing some sort of dataflow analysis
-(removing runtime checks when not needed). To produce something like
-this would require reading through some of the literature and open
-source and constructing the compiler transform pass in gcc or clang.
-Is gcc currently preferred for something like this?
-
-gcc is still the "official" compiler but LLVM support has come a
-long way. I'd recommend starting with a gcc plugin since that's
-what we have the most support for. If you want to do work to
-add LLVM plugins, that would be great too.
-
-Thanks,
-Laura
+T24gRnJpLCAyMDE4LTA5LTIxIGF0IDEyOjA1IC0wNzAwLCBLZWVzIENvb2sgd3JvdGU6DQo+IE9u
+IFRodSwgU2VwIDEzLCAyMDE4IGF0IDI6MzEgUE0sIFJpY2sgRWRnZWNvbWJlDQo+IDxyaWNrLnAu
+ZWRnZWNvbWJlQGludGVsLmNvbT4gd3JvdGU6DQo+IEkgd291bGQgZmluZCB0aGlzIG11Y2ggbW9y
+ZSByZWFkYWJsZSBhczoNCj4gc3RhdGljIHVuc2lnbmVkIGxvbmcgZ2V0X21vZHVsZV92bWFsbG9j
+X3N0YXJ0KHZvaWQpDQo+IHsNCj4gwqDCoMKgwqDCoMKgwqB1bnNpZ25lZCBsb25nIGFkZHIgPSBN
+T0RVTEVTX1ZBRERSOw0KPiANCj4gwqDCoMKgwqDCoMKgwqBpZiAoa2FzbHJfcmFuZG9taXplX2Jh
+c2UoKSkNCj4gwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoGFkZHIgKz0gZ2V0X21vZHVsZV9s
+b2FkX29mZnNldCgpOw0KPiANCj4gwqDCoMKgwqDCoMKgwqBpZiAoa2FzbHJfcmFuZG9taXplX2Vh
+Y2hfbW9kdWxlKCkpDQo+IMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoGFkZHIgKz0gZ2V0
+X21vZHVsZXNfcmFuZF9sZW4oKTsNCj4gDQo+IMKgwqDCoMKgwqDCoMKgcmV0dXJuIGFkZHI7DQo+
+IH0NClRoYW5rcywgdGhhdCBsb29rcyBiZXR0ZXIuDQoNCj4gDQo+ID4gwqB2b2lkICptb2R1bGVf
+YWxsb2ModW5zaWduZWQgbG9uZyBzaXplKQ0KPiA+IMKgew0KPiA+IEBAIC04NCwxNiArMjAxLDE4
+IEBAIHZvaWQgKm1vZHVsZV9hbGxvYyh1bnNpZ25lZCBsb25nIHNpemUpDQo+ID4gwqDCoMKgwqDC
+oMKgwqDCoGlmIChQQUdFX0FMSUdOKHNpemUpID4gTU9EVUxFU19MRU4pDQo+ID4gwqDCoMKgwqDC
+oMKgwqDCoMKgwqDCoMKgwqDCoMKgwqByZXR1cm4gTlVMTDsNCj4gPiANCj4gPiAtwqDCoMKgwqDC
+oMKgwqBwID0gX192bWFsbG9jX25vZGVfcmFuZ2Uoc2l6ZSwgTU9EVUxFX0FMSUdOLA0KPiA+IC3C
+oMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKg
+wqDCoMKgwqDCoMKgTU9EVUxFU19WQUREUiArDQo+ID4gZ2V0X21vZHVsZV9sb2FkX29mZnNldCgp
+LA0KPiA+IC3CoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDC
+oMKgwqDCoMKgwqDCoMKgwqDCoMKgTU9EVUxFU19FTkQsIEdGUF9LRVJORUwsDQo+ID4gLcKgwqDC
+oMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKg
+wqDCoMKgwqBQQUdFX0tFUk5FTF9FWEVDLCAwLCBOVU1BX05PX05PREUsDQo+ID4gLcKgwqDCoMKg
+wqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDC
+oMKgwqBfX2J1aWx0aW5fcmV0dXJuX2FkZHJlc3MoMCkpOw0KPiA+ICvCoMKgwqDCoMKgwqDCoHAg
+PSB0cnlfbW9kdWxlX3JhbmRvbWl6ZV9lYWNoKHNpemUpOw0KPiA+ICsNCj4gPiArwqDCoMKgwqDC
+oMKgwqBpZiAoIXApDQo+ID4gK8KgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoHAgPSBfX3Zt
+YWxsb2Nfbm9kZV9yYW5nZShzaXplLCBNT0RVTEVfQUxJR04sDQo+ID4gK8KgwqDCoMKgwqDCoMKg
+wqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgZ2V0X21vZHVs
+ZV92bWFsbG9jX3N0YXJ0KCksIE1PRFVMRVNfRU5ELA0KPiA+ICvCoMKgwqDCoMKgwqDCoMKgwqDC
+oMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoEdGUF9LRVJORUwsIFBB
+R0VfS0VSTkVMX0VYRUMsIDAsDQo+ID4gK8KgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKg
+wqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgTlVNQV9OT19OT0RFLCBfX2J1aWx0aW5fcmV0
+dXJuX2FkZHJlc3MoMCkpOw0KPiBJbnN0ZWFkIG9mIGhhdmluZyB0d28gb3Blbi1jb2RlZCBfX3Zt
+YWxsb2Nfbm9kZV9yYW5nZSgpIGNhbGxzIGxlZnQgaW4NCj4gdGhpcyBhZnRlciB0aGUgY2hhbmdl
+LCBjYW4gdGhpcyBiZSBkb25lIGluIHRlcm1zIG9mIGEgY2FsbCB0bw0KPiB0cnlfbW9kdWxlX2Fs
+bG9jKCkgaW5zdGVhZD8gSSBzZWUgdGhleSdyZSBzbGlnaHRseSBkaWZmZXJlbnQsIGJ1dCBpdA0K
+PiBtaWdodCBiZSBuaWNlIGZvciBtYWtpbmcgdGhlIHR3byBwYXRocyBzaGFyZSBtb3JlIGNvZGUu
+DQpOb3Qgc3VyZSB3aGF0IHlvdSBtZWFuLiBBY3Jvc3MgdGhlIHdob2xlIGNoYW5nZSwgdGhlcmUg
+aXMgb25lIGNhbGwNCnRvwqBfX3ZtYWxsb2Nfbm9kZV9yYW5nZSwgYW5kIG9uZSB0b8KgX192bWFs
+bG9jX25vZGVfdHJ5X2FkZHIu
