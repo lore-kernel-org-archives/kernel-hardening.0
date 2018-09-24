@@ -1,56 +1,72 @@
-From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Subject: Re: [PATCH v6 3/4] vmalloc: Add debugfs modfraginfo
-Date: Mon, 24 Sep 2018 18:58:44 +0000
-Message-ID: <1537815554.19013.49.camel@intel.com>
-References: <1536874298-23492-1-git-send-email-rick.p.edgecombe@intel.com>
-	 <1536874298-23492-4-git-send-email-rick.p.edgecombe@intel.com>
-	 <CAGXu5jJj+08J9UeyQs5ku8CziYWA72iJ+hxMR2Z2tLiVwvU8MA@mail.gmail.com>
-In-Reply-To: <CAGXu5jJj+08J9UeyQs5ku8CziYWA72iJ+hxMR2Z2tLiVwvU8MA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <C183D5357C751A439DE80245741D78EA@intel.com>
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-To: "keescook@chromium.org" <keescook@chromium.org>
+In-Reply-To: <1537815484.19013.48.camel@intel.com>
+References: <1536874298-23492-1-git-send-email-rick.p.edgecombe@intel.com>
+ <1536874298-23492-3-git-send-email-rick.p.edgecombe@intel.com>
+ <CAGXu5jJ9nZYbVn5xdi7nsMJRD6ScLeWP2DWjrD8yEfwi-XXcRw@mail.gmail.com> <1537815484.19013.48.camel@intel.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 24 Sep 2018 12:58:51 -0700
+Message-ID: <CAGXu5jKho6Ui0sP6-4FN=i6zZ1+gXcd9Zyctqhvg+4r1cz-Mqw@mail.gmail.com>
+Subject: Re: [PATCH v6 2/4] x86/modules: Increase randomization for modules
+Content-Type: text/plain; charset="UTF-8"
+To: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
 Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "jannh@google.com" <jannh@google.com>, "arjan@linux.intel.com" <arjan@linux.intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "x86@kernel.org" <x86@kernel.org>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "hpa@zytor.com" <hpa@zytor.com>, "mingo@redhat.com" <mingo@redhat.com>, "alexei.starovoitov@gmail.com" <alexei.starovoitov@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Hansen, Dave" <dave.hansen@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gRnJpLCAyMDE4LTA5LTIxIGF0IDExOjU2IC0wNzAwLCBLZWVzIENvb2sgd3JvdGU6DQo+IE9u
-IFRodSwgU2VwIDEzLCAyMDE4IGF0IDI6MzEgUE0sIFJpY2sgRWRnZWNvbWJlDQo+IDxyaWNrLnAu
-ZWRnZWNvbWJlQGludGVsLmNvbT4gd3JvdGU6DQo+ID4gK2RvbmU6DQo+ID4gK8KgwqDCoMKgwqDC
-oMKgZ2FwID0gKE1PRFVMRVNfRU5EIC0gbGFzdF9lbmQpOw0KPiA+ICvCoMKgwqDCoMKgwqDCoGlm
-IChnYXAgPiBsYXJnZXN0X2ZyZWUpDQo+ID4gK8KgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDC
-oGxhcmdlc3RfZnJlZSA9IGdhcDsNCj4gPiArwqDCoMKgwqDCoMKgwqB0b3RhbF9mcmVlICs9IGdh
-cDsNCj4gPiArDQo+ID4gK8KgwqDCoMKgwqDCoMKgc3Bpbl91bmxvY2soJnZtYXBfYXJlYV9sb2Nr
-KTsNCj4gPiArDQo+ID4gK8KgwqDCoMKgwqDCoMKgc2VxX3ByaW50ZihtLCAiXHRMYXJnZXN0IGZy
-ZWUgc3BhY2U6XHQlbHUga0JcbiIsIGxhcmdlc3RfZnJlZSAvDQo+ID4gMTAyNCk7DQo+ID4gK8Kg
-wqDCoMKgwqDCoMKgc2VxX3ByaW50ZihtLCAiXHTCoMKgVG90YWwgZnJlZSBzcGFjZTpcdCVsdSBr
-QlxuIiwgdG90YWxfZnJlZSAvIDEwMjQpOw0KPiA+ICsNCj4gPiArwqDCoMKgwqDCoMKgwqBpZiAo
-SVNfRU5BQkxFRChDT05GSUdfUkFORE9NSVpFX0JBU0UpICYmIGthc2xyX2VuYWJsZWQoKSkNCj4g
-PiArwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgc2VxX3ByaW50ZihtLCAiQWxsb2NhdGlv
-bnMgaW4gYmFja3VwIGFyZWE6XHQlbHVcbiIsDQo+ID4gYmFja3VwX2NudCk7DQo+IEkgZG9uJ3Qg
-dGhpbmsgdGhlIElTX0VOQUJMRUQgaXMgbmVlZGVkIGhlcmU/DQpUaGUgcmVhc29uIGZvcsKgdGhp
-cyBpcyB0aGF0IGZvciBBUkNIPXVtLCBDT05GSUdfWDg2XzY0IGlzIGRlZmluZWQgYnV0DQprYXNs
-cl9lbmFibGVkIGlzIG5vdC4ga2FzbHJfZW5hYmxlZCBpcyBkZWNsYXJlZCBhYm92ZSB0byBwcm90
-ZWN0IGFnYWluc3QgYQ0KY29tcGlsZXIgZXJyb3IuDQoNClNvIElTX0VOQUJMRUQoQ09ORklHX1JB
-TkRPTUlaRV9CQVNFKSBpcyBwcm90ZWN0aW5nIGthc2xyX2VuYWJsZWQgZnJvbSBjYXVzaW5nIGEN
-CmxpbmtlciBlcnJvci4gSXQgZ2V0cyBjb25zdGFudCBldmFsdWF0ZWQgdG8gMCBhbmQgdGhlIGNv
-bXBpbGVyIG9wdGltaXplcyBvdXQgdGhlDQprYXNscl9lbmFibGVkIGNhbGwuIFRob3VnaHQgaXQg
-d2FzIGJldHRlciB0byBndWFyZCB3aXRoIENPTkZJR19SQU5ET01JWkVfQkFTRQ0KdGhhbiB3aXRo
-IENPTkZJR19VTSwgdG8gdHJ5IHRvIGNhdGNoIHRoZSBicm9hZGVyIHNpdHVhdGlvbi4gSSBndWVz
-cyBJIGNvdWxkIG1vdmUNCml0IHRvIGEgaGVscGVyIGluc2lkZSBpZmRlZnMgaW5zdGVhZC4gV2Fz
-IHRyeWluZyB0byBrZWVwIHRoZSBpZmRlZi1lZCBjb2RlIGRvd24uDQoNCj4gSSB3b25kZXIgaWYg
-dGhlcmUgaXMgYSBiZXR0ZXIgd2F5IHRvIGFycmFuZ2UgdGhpcyBjb2RlIHRoYXQgdXNlcyBmZXdl
-cg0KPiBpZmRlZnMsIGV0Yy4gTWF5YmUgYSBzaW5nbGUgQ09ORklHIHRoYXQgY2FwdHVyZSB3aGV0
-aGVyIG9yIG5vdA0KPiBmaW5lLWdyYWluZWQgbW9kdWxlIHJhbmRvbWl6YXRpb24gaXMgYnVpbHQg
-aW4sIGxpa2U6DQo+IA0KPiBjb25maWcgUkFORE9NSVpFX0ZJTkVfTU9EVUxFDQo+IMKgwqDCoMKg
-ZGVmX2Jvb2wgeSBpZiBSQU5ET01JWkVfQkFTRSAmJiBYODZfNjQNCj4gDQo+ICNpZmRlZiBDT05G
-SUdfUkFORE9NSVpFX0ZJTkVfTU9EVUxFDQo+IC4uLg0KPiAjZW5kaWYNCj4gDQo+IEJ1dCB0aGF0
-IGRvZXNuJ3QgY2FwdHVyZSB0aGUgREVCVUdfRlMgYW5kIFBST0NfRlMgYml0cyAuLi4gc28gLi4u
-DQo+IG1heWJlIG5vdCB3b3J0aCBpdC4gSSBndWVzcywgZWl0aGVyIHdheToNCkhtbW0sIGRpZG4n
-dCBrbm93IGFib3V0IHRoYXQuIFdvdWxkIGNsZWFuIGl0IHVwIHNvbWUgYXQgbGVhc3QuDQoNCkkg
-d2lzaCB0aGUgZGVidWdmcyBpbmZvIGNvdWxkIGJlIGluIG1vZHVsZS5jIHRvIGhlbHAgd2l0aCB0
-aGlzIElGREVGcywgYnV0IGl0DQpuZWVkcyB2bWFsbG9jIGludGVybmFscy4gTU9EVUxFU19WQURE
-UiBpcyBub3Qgc3RhbmRhcmRpemVkIGFjcm9zcyB0aGUgQVJDSCdzIGFzDQp3ZWxsLCBzbyB0aGlz
-IHdhcyBteSBiZXN0IGF0dGVtcHQgdG8gaW1wbGVtZW50IHRoaXMgd2l0aG91dCBoYXZpbmcgdG8g
-bWFrZQ0KY2hhbmdlcyBpbiBvdGhlciBhcmNoaXRlY3R1cmVzLg0KPiBSZXZpZXdlZC1ieTogS2Vl
-cyBDb29rIDxrZWVzY29va0BjaHJvbWl1bS5vcmc+DQo+IA0KPiAtS2Vlcw0KPiA=
+On Mon, Sep 24, 2018 at 11:57 AM, Edgecombe, Rick P
+<rick.p.edgecombe@intel.com> wrote:
+> On Fri, 2018-09-21 at 12:05 -0700, Kees Cook wrote:
+>> On Thu, Sep 13, 2018 at 2:31 PM, Rick Edgecombe
+>> <rick.p.edgecombe@intel.com> wrote:
+>> I would find this much more readable as:
+>> static unsigned long get_module_vmalloc_start(void)
+>> {
+>>        unsigned long addr = MODULES_VADDR;
+>>
+>>        if (kaslr_randomize_base())
+>>               addr += get_module_load_offset();
+>>
+>>        if (kaslr_randomize_each_module())
+>>                addr += get_modules_rand_len();
+>>
+>>        return addr;
+>> }
+> Thanks, that looks better.
+>
+>>
+>> >  void *module_alloc(unsigned long size)
+>> >  {
+>> > @@ -84,16 +201,18 @@ void *module_alloc(unsigned long size)
+>> >         if (PAGE_ALIGN(size) > MODULES_LEN)
+>> >                 return NULL;
+>> >
+>> > -       p = __vmalloc_node_range(size, MODULE_ALIGN,
+>> > -                                   MODULES_VADDR +
+>> > get_module_load_offset(),
+>> > -                                   MODULES_END, GFP_KERNEL,
+>> > -                                   PAGE_KERNEL_EXEC, 0, NUMA_NO_NODE,
+>> > -                                   __builtin_return_address(0));
+>> > +       p = try_module_randomize_each(size);
+>> > +
+>> > +       if (!p)
+>> > +               p = __vmalloc_node_range(size, MODULE_ALIGN,
+>> > +                               get_module_vmalloc_start(), MODULES_END,
+>> > +                               GFP_KERNEL, PAGE_KERNEL_EXEC, 0,
+>> > +                               NUMA_NO_NODE, __builtin_return_address(0));
+>> Instead of having two open-coded __vmalloc_node_range() calls left in
+>> this after the change, can this be done in terms of a call to
+>> try_module_alloc() instead? I see they're slightly different, but it
+>> might be nice for making the two paths share more code.
+> Not sure what you mean. Across the whole change, there is one call
+> to __vmalloc_node_range, and one to __vmalloc_node_try_addr.
+
+I guess I meant the vmalloc calls -- one for node_range and one for
+node_try_addr. I was wondering if the logic could be combined in some
+way so that the __vmalloc_node_range() could be made in terms of the
+the helper that try_module_randomize_each() uses. But this could just
+be me hoping for nice-to-read changes. ;)
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
