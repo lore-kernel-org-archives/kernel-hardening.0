@@ -1,10 +1,10 @@
 MIME-Version: 1.0
-References: <20180926203446.2004-1-casey.schaufler@intel.com> <20180926203446.2004-5-casey.schaufler@intel.com>
-In-Reply-To: <20180926203446.2004-5-casey.schaufler@intel.com>
+References: <20180926203446.2004-1-casey.schaufler@intel.com> <20180926203446.2004-3-casey.schaufler@intel.com>
+In-Reply-To: <20180926203446.2004-3-casey.schaufler@intel.com>
 From: Jann Horn <jannh@google.com>
-Date: Wed, 26 Sep 2018 23:26:07 +0200
-Message-ID: <CAG48ez1NqoW8bByrYe30MdyCn2th3X+tth=VhMHA2MA-PoaQVw@mail.gmail.com>
-Subject: Re: [PATCH v5 4/5] Capability: Complete PTRACE_MODE_SCHED
+Date: Wed, 26 Sep 2018 23:30:35 +0200
+Message-ID: <CAG48ez3_XJYCURiCurDeCousGguGUdPego30j5+UF8FebWxUtA@mail.gmail.com>
+Subject: Re: [PATCH v5 2/5] Smack: Prepare for PTRACE_MODE_SCHED
 Content-Type: text/plain; charset="UTF-8"
 To: Casey Schaufler <casey.schaufler@intel.com>
 Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, selinux@tycho.nsa.gov, Dave Hansen <dave.hansen@intel.com>, deneen.t.dock@intel.com, kristen@linux.intel.com, Arjan van de Ven <arjan@linux.intel.com>
@@ -12,47 +12,27 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 On Wed, Sep 26, 2018 at 10:35 PM Casey Schaufler
 <casey.schaufler@intel.com> wrote:
-> Allow a complete ptrace access check with mode PTRACE_MODE_SCHED.
-> Disable the inappropriate privilege check in the capability code
-> that does incompatible locking.
-
-What's that locking you're talking about?
-
+> A ptrace access check with mode PTRACE_MODE_SCHED gets called
+> from process switching code. This precludes the use of audit,
+> as the locking is incompatible. Don't do audit in the PTRACE_MODE_SCHED
+> case.
+>
 > Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
 > ---
->  kernel/ptrace.c      | 2 --
->  security/commoncap.c | 2 ++
->  2 files changed, 2 insertions(+), 2 deletions(-)
+>  security/smack/smack_lsm.c | 3 ++-
+>  1 file changed, 2 insertions(+), 1 deletion(-)
 >
-> diff --git a/kernel/ptrace.c b/kernel/ptrace.c
-> index 99cfddde6a55..0b6a9df51c3b 100644
-> --- a/kernel/ptrace.c
-> +++ b/kernel/ptrace.c
-> @@ -331,8 +331,6 @@ static int __ptrace_may_access(struct task_struct *task, unsigned int mode)
->              !ptrace_has_cap(mm->user_ns, mode)))
->             return -EPERM;
+> diff --git a/security/smack/smack_lsm.c b/security/smack/smack_lsm.c
+> index 340fc30ad85d..ffa95bcab599 100644
+> --- a/security/smack/smack_lsm.c
+> +++ b/security/smack/smack_lsm.c
+> @@ -422,7 +422,8 @@ static int smk_ptrace_rule_check(struct task_struct *tracer,
+>         struct task_smack *tsp;
+>         struct smack_known *tracer_known;
 >
-> -       if (mode & PTRACE_MODE_SCHED)
-> -               return 0;
->         return security_ptrace_access_check(task, mode);
->  }
->
-> diff --git a/security/commoncap.c b/security/commoncap.c
-> index 2e489d6a3ac8..e77457110d05 100644
-> --- a/security/commoncap.c
-> +++ b/security/commoncap.c
-> @@ -152,6 +152,8 @@ int cap_ptrace_access_check(struct task_struct *child, unsigned int mode)
->         if (cred->user_ns == child_cred->user_ns &&
->             cap_issubset(child_cred->cap_permitted, *caller_caps))
->                 goto out;
-> +       if (mode & PTRACE_MODE_SCHED)
-> +               goto out;
+> -       if ((mode & PTRACE_MODE_NOAUDIT) == 0) {
+> +       if ((mode & PTRACE_MODE_NOAUDIT) == 0 &&
+> +           (mode & PTRACE_MODE_SCHED) == 0) {
 
-So for PTRACE_MODE_SCHED, this function always returns 0, right? If
-that's intentional, perhaps you should instead just put "if (mode &
-PTRACE_MODE_SCHED) return 0;" at the start of the function, to avoid
-taking the RCU read lock in this case.
-
->         if (ns_capable(child_cred->user_ns, CAP_SYS_PTRACE))
->                 goto out;
->         ret = -EPERM;
+If you ORed PTRACE_MODE_NOAUDIT into the flags when calling the
+security hook, you could drop this patch, right?
