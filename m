@@ -1,58 +1,199 @@
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Subject: RE: temporal and spatial locality in the kernel
-Date: Wed, 26 Sep 2018 08:32:49 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B8D6450A2@IRSMSX102.ger.corp.intel.com>
+MIME-Version: 1.0
 References: <CALS6=qVgYYxcjv8Fj4pdPJ0Z_fUceTV60DtKwOhFkSz4HZohxg@mail.gmail.com>
  <CAGXu5jKPeXWVV0480xt_5K4O2x8iA2xRf_9t8Rr0yG6szYebhQ@mail.gmail.com>
- <CALS6=qWNeRM18kgtvpVZw2O6+Zt5eJdOQ2cXbDCbEkBCeRSe4A@mail.gmail.com>
-In-Reply-To: <CALS6=qWNeRM18kgtvpVZw2O6+Zt5eJdOQ2cXbDCbEkBCeRSe4A@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-MIME-Version: 1.0
-To: Carter Cheng <cartercheng@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Hans Liljestrand <liljestrandh@gmail.com>
+ <CALS6=qWNeRM18kgtvpVZw2O6+Zt5eJdOQ2cXbDCbEkBCeRSe4A@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612B8D6450A2@IRSMSX102.ger.corp.intel.com>
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B8D6450A2@IRSMSX102.ger.corp.intel.com>
+From: Carter Cheng <cartercheng@gmail.com>
+Date: Wed, 26 Sep 2018 22:39:22 +0800
+Message-ID: <CALS6=qUJh5PeyXK5jwakcbr=iJKWC1pM70KFHg_DKkUgcsbtTg@mail.gmail.com>
+Subject: Re: temporal and spatial locality in the kernel
+Content-Type: multipart/alternative; boundary="000000000000db78cc0576c730ef"
+To: elena.reshetova@intel.com
+Cc: kernel-hardening@lists.openwall.com, liljestrandh@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQo+SSBzdXNwZWN0IGFueSBtb2RpZmljYXRpb24gd291bGQgaGF2ZSB0byBiZSBtYWRlIG9uIHRo
-ZSBjb21waWxlciBzaWRlIGFzIHNvbWUgc29ydCBvZiBjb21waWxlciBwbHVnaW4gc2luY2Ugc2tp
-bW1pbmcgb3ZlciB0aGUgcGFwZXJzIGluIHRoZSBhcmVhIG1vc3Qgb3B0aW1pemUgYnkgZG9pbmcg
-c29tZSBzb3J0IG9mIGRhdGFmbG93IGFuYWx5c2lzKHJlbW92aW5nIHJ1bnRpbWUgY2hlY2tzIHdo
-ZW4gbm90IG5lZWRlZCkuIFRvID5wcm9kdWNlIHNvbWV0aGluZyBsaWtlIHRoaXMgd291bGQgcmVx
-dWlyZSByZWFkaW5nIHRocm91Z2ggc29tZSBvZiB0aGUgbGl0ZXJhdHVyZSBhbmQgb3BlbiBzb3Vy
-Y2UgYW5kIGNvbnN0cnVjdGluZyB0aGUgY29tcGlsZXIgdHJhbnNmb3JtIHBhc3MgaW4gZ2NjIG9y
-IGNsYW5nLiBJcyBnY2MgY3VycmVudGx5IHByZWZlcnJlZCBmb3Igc29tZXRoaW5nIGxpa2UgdGhp
-cz8NCg0KSGksDQoNCldlIGhhdmUgdHJpZWQgdG8gZG8gc29tZSBvZiB0aGlzIHZpYSBnY2MgcGx1
-Z2luIGFuZCB1c2luZyBleGlzdGluZyAoc3RpbGwgbGFzdCB5ZWFyKSBJbnRlbCBNUFggdGVjaG5v
-bG9neSB0byBwcmV2ZW50IHNwYXRpYWwgbWVtb3J5IGVycm9ycyBpbiBrZXJuZWwuIA0KVW5mb3J0
-dW5hdGVseSBNUFggc3VwcG9ydCBoYXMgYmVlbiBub3cgZHJvcHBlZCBvdXQgb2YgYm90aCBnY2Mg
-YW5kIGtlcm5lbCwgc28gb3VyIGV4ZXJjaXNlIGlzIG1vcmUgbGlrZSBhIHBhc3QgZXhhbXBsZSBu
-b3cuDQpIb3dldmVyIG91ciBjb2RlIGlzIHN0aWxsIGhlcmU6IGh0dHBzOi8vZ2l0aHViLmNvbS9z
-c2cta2VybmVsLW1lbW9yeS1zYWZldHkvbGludXgtbXB4aw0KDQpBbmQgdGhlIHBhcGVyIGlzIGhl
-cmU6IGh0dHBzOi8vb25saW5lbGlicmFyeS53aWxleS5jb20vZG9pL2Z1bGwvMTAuMTAwMi9zcGUu
-MjYzOA0KDQpJZiB5b3UgYXJlIGludGVyZXN0ZWQgdG8gY29udGludWUgb24gdGhpcyBkaXJlY3Rp
-b24sIGxldCBtZSBrbm93LCBIYW5zIGFuZCBtZSBjYW4gYXQgbGVhc3Qgc2hhcmUgdGhlIGV4cGVy
-aWVuY2UgYW5kIGtub3dsZWRnZSB3ZSBnb3Qgd2hpbGUgZG9pbmcgdGhpcyB3aXRoIHlvdS4gDQoN
-CkJlc3QgUmVnYXJkcywNCkVsZW5hLg0KDQpPbiBTYXQsIFNlcCAyMiwgMjAxOCBhdCAyOjQxIEFN
-IEtlZXMgQ29vayA8a2Vlc2Nvb2tAY2hyb21pdW0ub3JnPiB3cm90ZToNCk9uIEZyaSwgU2VwIDIx
-LCAyMDE4IGF0IDEwOjI1IEFNLCBDYXJ0ZXIgQ2hlbmcgPGNhcnRlcmNoZW5nQGdtYWlsLmNvbT4g
-d3JvdGU6DQo+IEhpLA0KDQpXZWxjb21lIQ0KDQo+IEkgcmVjZW50bHkgYXR0ZW5kZWQgYSBjb21w
-dXRlciBzZWN1cml0eSBjb25mZXJlbmNlIGZvciB0aGUgZmlyc3QgdGltZSBhbmQNCj4gaGF2ZSBk
-ZXZlbG9wZWQgc29tZSBpbnRlcmVzdCBpbiBrZXJuZWwgaGFyZGVuaW5nIGlzc3VlcyBhZnRlciBv
-bmUgb2YgdGhlDQo+IHByZXNlbnRlcnMgZGVtb25zdHJhdGVkIGEga2VybmVsIGV4cGxvaXQgYmFz
-ZWQgcGFydGx5IGFyb3VuZCBhIHVzZSBhZnRlcg0KPiBmcmVlIGJ1Zy4NCj4NCj4gQWZ0ZXIgc2Nh
-bm5pbmcgdGhlIGxpdGVyYXR1cmUgYSBsaXR0bGUgYml0IGFuZCBsb29raW5nIGF0IHNvbWUgcGFw
-ZXJzIEkgaGF2ZQ0KPiBlbmNvdW50ZXJlZCBiZWZvcmUgb24gQ0N1cmVkIGFuZCBDeWNsb25lLiBJ
-IHdhcyBjdXJpb3VzIHRvIHdoYXQgZXh0ZW50IGZ1bGwNCj4gbWVtb3J5IHNhZnRldHkgY2hlY2tz
-IGFyZSBub3cgcG9zc2libGUuDQoNCkNPTkZJR19LQVNBTiBjb3ZlcnMgYSBsb3Qgb2YgdGhpcywg
-YnV0IHdhc24ndCBpdHNlbGYgZGVzaWduZWQgZm9yDQoicHJvZHVjdGlvbiB1c2UiLiBUaGUgcHJp
-bWFyeSBjb25jZXJuLCB5ZXMsIGlzIHBlcmZvcm1hbmNlLg0KDQo+IFRoZXJlIGFyZSBtYW55IHBh
-cGVycyBnb2luZyBiYWNrIHF1aXRlIGEgYml0IG9uIHNwYXRpYWwgc2FmZXR5DQo+IGltcGxlbWVu
-dGF0aW9ucyBhbmQgc29tZSBvbiB0ZW1wb3JhbCBzYWZldHkgYnV0IHRoZXkgbWFpbmx5IHRhcmdl
-dCB1c2VyDQo+IHNwYWNlLiBJIGFtIGN1cmlvdXMgd2h5IHN1Y2ggdGhpbmdzIGRvbid0IGV4aXN0
-IGluIHRoZSBsaW51eCBrZXJuZWwgYXQgbGVhc3QNCj4gYXMgc29tZSBzb3J0IG9mIGNvbXBpbGUg
-b3B0aW9uLiBJcyB0aGUgc2xvdyBkb3duIHRoZSBtYWluIGNvbmNlcm4/DQo+DQo+IEl0IHNlZW1z
-IHJlY2VudCB3b3JrIGhhcyBnb3QgdGhlIHBlcmZvcm1hbmNlIGJvdW5kIGRvd24gdG8gMS4yOSBp
-cyB0aGlzDQo+IGNvbnNpZGVyZWQgdG9vIHNsb3cgZm9yIG1hbnkgdGhpbmdzPw0KDQpUaGlzIHNv
-dW5kcyBsb3ZlbHkhIDopIEknZCBiZSBjdXJpb3VzIHRvIHNlZSBwYXRjaGVzIGltcGxlbWVudGlu
-ZyB0aGUNCmNoZWNrcyB5b3UncmUgdGFsa2luZyBhYm91dC4NCg0KLUtlZXMNCg0KLS0gDQpLZWVz
-IENvb2sNClBpeGVsIFNlY3VyaXR5DQo=
+--000000000000db78cc0576c730ef
+Content-Type: text/plain; charset="UTF-8"
+
+Thanks Elena for the offer. I am actually a bit afraid of commiting to
+working on this and then underdelivering though I think I might be able to
+give it a serious attempt if nothing comparable ends up in the kernel in a
+couple months. I would love to hear what you have learned about the spatial
+safety issue from working on it. I am actually curious how a gcc plugin
+could ever get accepted into the kernel and be actively maintained even
+though I think this is the best way to get memory safety into the kernel
+since there are potentially gains in terms of maintenance when automation
+is used via static analysis.
+
+Regards,
+
+Carter.
+
+On Wed, Sep 26, 2018 at 4:32 PM Reshetova, Elena <elena.reshetova@intel.com>
+wrote:
+
+>
+> >I suspect any modification would have to be made on the compiler side as
+> some sort of compiler plugin since skimming over the papers in the area
+> most optimize by doing some sort of dataflow analysis(removing runtime
+> checks when not needed). To >produce something like this would require
+> reading through some of the literature and open source and constructing the
+> compiler transform pass in gcc or clang. Is gcc currently preferred for
+> something like this?
+>
+> Hi,
+>
+> We have tried to do some of this via gcc plugin and using existing (still
+> last year) Intel MPX technology to prevent spatial memory errors in kernel.
+> Unfortunately MPX support has been now dropped out of both gcc and kernel,
+> so our exercise is more like a past example now.
+> However our code is still here:
+> https://github.com/ssg-kernel-memory-safety/linux-mpxk
+>
+> And the paper is here:
+> https://onlinelibrary.wiley.com/doi/full/10.1002/spe.2638
+>
+> If you are interested to continue on this direction, let me know, Hans and
+> me can at least share the experience and knowledge we got while doing this
+> with you.
+>
+> Best Regards,
+> Elena.
+>
+> On Sat, Sep 22, 2018 at 2:41 AM Kees Cook <keescook@chromium.org> wrote:
+> On Fri, Sep 21, 2018 at 10:25 AM, Carter Cheng <cartercheng@gmail.com>
+> wrote:
+> > Hi,
+>
+> Welcome!
+>
+> > I recently attended a computer security conference for the first time and
+> > have developed some interest in kernel hardening issues after one of the
+> > presenters demonstrated a kernel exploit based partly around a use after
+> > free bug.
+> >
+> > After scanning the literature a little bit and looking at some papers I
+> have
+> > encountered before on CCured and Cyclone. I was curious to what extent
+> full
+> > memory saftety checks are now possible.
+>
+> CONFIG_KASAN covers a lot of this, but wasn't itself designed for
+> "production use". The primary concern, yes, is performance.
+>
+> > There are many papers going back quite a bit on spatial safety
+> > implementations and some on temporal safety but they mainly target user
+> > space. I am curious why such things don't exist in the linux kernel at
+> least
+> > as some sort of compile option. Is the slow down the main concern?
+> >
+> > It seems recent work has got the performance bound down to 1.29 is this
+> > considered too slow for many things?
+>
+> This sounds lovely! :) I'd be curious to see patches implementing the
+> checks you're talking about.
+>
+> -Kees
+>
+> --
+> Kees Cook
+> Pixel Security
+>
+
+--000000000000db78cc0576c730ef
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">Thanks Elena for the offer. I am actually a bit afraid of =
+commiting to working on this and then underdelivering though I think I migh=
+t be able to give it a serious attempt if nothing comparable ends up in the=
+ kernel in a couple months. I would love to hear what you have learned abou=
+t the spatial safety issue from working on it. I am actually curious how a =
+gcc plugin could ever get accepted into the kernel and be actively maintain=
+ed even though I think this is the best way to get memory safety into the k=
+ernel since there are potentially gains in terms of maintenance when automa=
+tion is used via static analysis.=C2=A0=C2=A0<div><br></div><div>Regards,</=
+div><div><br></div><div>Carter.</div></div><div dir=3D"ltr"></div><br><div =
+class=3D"gmail_quote"><div dir=3D"ltr">On Wed, Sep 26, 2018 at 4:32 PM Resh=
+etova, Elena &lt;<a href=3D"mailto:elena.reshetova@intel.com" target=3D"_bl=
+ank">elena.reshetova@intel.com</a>&gt; wrote:<br></div><blockquote class=3D=
+"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding=
+-left:1ex"><br>
+&gt;I suspect any modification would have to be made on the compiler side a=
+s some sort of compiler plugin since skimming over the papers in the area m=
+ost optimize by doing some sort of dataflow analysis(removing runtime check=
+s when not needed). To &gt;produce something like this would require readin=
+g through some of the literature and open source and constructing the compi=
+ler transform pass in gcc or clang. Is gcc currently preferred for somethin=
+g like this?<br>
+<br>
+Hi,<br>
+<br>
+We have tried to do some of this via gcc plugin and using existing (still l=
+ast year) Intel MPX technology to prevent spatial memory errors in kernel. =
+<br>
+Unfortunately MPX support has been now dropped out of both gcc and kernel, =
+so our exercise is more like a past example now.<br>
+However our code is still here: <a href=3D"https://github.com/ssg-kernel-me=
+mory-safety/linux-mpxk" rel=3D"noreferrer" target=3D"_blank">https://github=
+.com/ssg-kernel-memory-safety/linux-mpxk</a><br>
+<br>
+And the paper is here: <a href=3D"https://onlinelibrary.wiley.com/doi/full/=
+10.1002/spe.2638" rel=3D"noreferrer" target=3D"_blank">https://onlinelibrar=
+y.wiley.com/doi/full/10.1002/spe.2638</a><br>
+<br>
+If you are interested to continue on this direction, let me know, Hans and =
+me can at least share the experience and knowledge we got while doing this =
+with you. <br>
+<br>
+Best Regards,<br>
+Elena.<br>
+<br>
+On Sat, Sep 22, 2018 at 2:41 AM Kees Cook &lt;<a href=3D"mailto:keescook@ch=
+romium.org" target=3D"_blank">keescook@chromium.org</a>&gt; wrote:<br>
+On Fri, Sep 21, 2018 at 10:25 AM, Carter Cheng &lt;<a href=3D"mailto:carter=
+cheng@gmail.com" target=3D"_blank">cartercheng@gmail.com</a>&gt; wrote:<br>
+&gt; Hi,<br>
+<br>
+Welcome!<br>
+<br>
+&gt; I recently attended a computer security conference for the first time =
+and<br>
+&gt; have developed some interest in kernel hardening issues after one of t=
+he<br>
+&gt; presenters demonstrated a kernel exploit based partly around a use aft=
+er<br>
+&gt; free bug.<br>
+&gt;<br>
+&gt; After scanning the literature a little bit and looking at some papers =
+I have<br>
+&gt; encountered before on CCured and Cyclone. I was curious to what extent=
+ full<br>
+&gt; memory saftety checks are now possible.<br>
+<br>
+CONFIG_KASAN covers a lot of this, but wasn&#39;t itself designed for<br>
+&quot;production use&quot;. The primary concern, yes, is performance.<br>
+<br>
+&gt; There are many papers going back quite a bit on spatial safety<br>
+&gt; implementations and some on temporal safety but they mainly target use=
+r<br>
+&gt; space. I am curious why such things don&#39;t exist in the linux kerne=
+l at least<br>
+&gt; as some sort of compile option. Is the slow down the main concern?<br>
+&gt;<br>
+&gt; It seems recent work has got the performance bound down to 1.29 is thi=
+s<br>
+&gt; considered too slow for many things?<br>
+<br>
+This sounds lovely! :) I&#39;d be curious to see patches implementing the<b=
+r>
+checks you&#39;re talking about.<br>
+<br>
+-Kees<br>
+<br>
+-- <br>
+Kees Cook<br>
+Pixel Security<br>
+</blockquote></div>
+
+--000000000000db78cc0576c730ef--
