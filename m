@@ -1,50 +1,62 @@
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Subject: RE: [PATCH v5 2/5] Smack: Prepare for PTRACE_MODE_SCHED
-Date: Wed, 26 Sep 2018 22:53:27 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC673214625EA@ORSMSX107.amr.corp.intel.com>
-References: <20180926203446.2004-1-casey.schaufler@intel.com>
- <20180926203446.2004-3-casey.schaufler@intel.com>
- <CAG48ez3_XJYCURiCurDeCousGguGUdPego30j5+UF8FebWxUtA@mail.gmail.com>
-In-Reply-To: <CAG48ez3_XJYCURiCurDeCousGguGUdPego30j5+UF8FebWxUtA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-To: Jann Horn <jannh@google.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "selinux@tycho.nsa.gov" <selinux@tycho.nsa.gov>, "Hansen, Dave" <dave.hansen@intel.com>, "Dock,
- Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, Arjan van de Ven <arjan@linux.intel.com>
+References: <20180926203446.2004-1-casey.schaufler@intel.com>
+ <20180926203446.2004-3-casey.schaufler@intel.com> <CAG48ez3_XJYCURiCurDeCousGguGUdPego30j5+UF8FebWxUtA@mail.gmail.com>
+ <99FC4B6EFCEFD44486C35F4C281DC673214625EA@ORSMSX107.amr.corp.intel.com>
+In-Reply-To: <99FC4B6EFCEFD44486C35F4C281DC673214625EA@ORSMSX107.amr.corp.intel.com>
+From: Jann Horn <jannh@google.com>
+Date: Thu, 27 Sep 2018 00:58:00 +0200
+Message-ID: <CAG48ez1+9Bfadu4y4TzPYJfFpLk+N8w7GdCE+xwNCM5TfQ8W8Q@mail.gmail.com>
+Subject: Re: [PATCH v5 2/5] Smack: Prepare for PTRACE_MODE_SCHED
+Content-Type: text/plain; charset="UTF-8"
+To: Casey Schaufler <casey.schaufler@intel.com>, Jiri Kosina <jikos@kernel.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, selinux@tycho.nsa.gov, Dave Hansen <dave.hansen@intel.com>, deneen.t.dock@intel.com, kristen@linux.intel.com, Arjan van de Ven <arjan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBKYW5uIEhvcm4gW21haWx0bzpq
-YW5uaEBnb29nbGUuY29tXQ0KPiBTZW50OiBXZWRuZXNkYXksIFNlcHRlbWJlciAyNiwgMjAxOCAy
-OjMxIFBNDQo+IFRvOiBTY2hhdWZsZXIsIENhc2V5IDxjYXNleS5zY2hhdWZsZXJAaW50ZWwuY29t
-Pg0KPiBDYzogS2VybmVsIEhhcmRlbmluZyA8a2VybmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2Fs
-bC5jb20+OyBrZXJuZWwgbGlzdA0KPiA8bGludXgta2VybmVsQHZnZXIua2VybmVsLm9yZz47IGxp
-bnV4LXNlY3VyaXR5LW1vZHVsZSA8bGludXgtc2VjdXJpdHktDQo+IG1vZHVsZUB2Z2VyLmtlcm5l
-bC5vcmc+OyBzZWxpbnV4QHR5Y2hvLm5zYS5nb3Y7IEhhbnNlbiwgRGF2ZQ0KPiA8ZGF2ZS5oYW5z
-ZW5AaW50ZWwuY29tPjsgRG9jaywgRGVuZWVuIFQgPGRlbmVlbi50LmRvY2tAaW50ZWwuY29tPjsN
-Cj4ga3Jpc3RlbkBsaW51eC5pbnRlbC5jb207IEFyamFuIHZhbiBkZSBWZW4gPGFyamFuQGxpbnV4
-LmludGVsLmNvbT4NCj4gU3ViamVjdDogUmU6IFtQQVRDSCB2NSAyLzVdIFNtYWNrOiBQcmVwYXJl
-IGZvciBQVFJBQ0VfTU9ERV9TQ0hFRA0KPiANCj4gT24gV2VkLCBTZXAgMjYsIDIwMTggYXQgMTA6
-MzUgUE0gQ2FzZXkgU2NoYXVmbGVyDQo+IDxjYXNleS5zY2hhdWZsZXJAaW50ZWwuY29tPiB3cm90
-ZToNCj4gPiBBIHB0cmFjZSBhY2Nlc3MgY2hlY2sgd2l0aCBtb2RlIFBUUkFDRV9NT0RFX1NDSEVE
-IGdldHMgY2FsbGVkDQo+ID4gZnJvbSBwcm9jZXNzIHN3aXRjaGluZyBjb2RlLiBUaGlzIHByZWNs
-dWRlcyB0aGUgdXNlIG9mIGF1ZGl0LA0KPiA+IGFzIHRoZSBsb2NraW5nIGlzIGluY29tcGF0aWJs
-ZS4gRG9uJ3QgZG8gYXVkaXQgaW4gdGhlIFBUUkFDRV9NT0RFX1NDSEVEDQo+ID4gY2FzZS4NCj4g
-Pg0KPiA+IFNpZ25lZC1vZmYtYnk6IENhc2V5IFNjaGF1ZmxlciA8Y2FzZXkuc2NoYXVmbGVyQGlu
-dGVsLmNvbT4NCj4gPiAtLS0NCj4gPiAgc2VjdXJpdHkvc21hY2svc21hY2tfbHNtLmMgfCAzICsr
-LQ0KPiA+ICAxIGZpbGUgY2hhbmdlZCwgMiBpbnNlcnRpb25zKCspLCAxIGRlbGV0aW9uKC0pDQo+
-ID4NCj4gPiBkaWZmIC0tZ2l0IGEvc2VjdXJpdHkvc21hY2svc21hY2tfbHNtLmMgYi9zZWN1cml0
-eS9zbWFjay9zbWFja19sc20uYw0KPiA+IGluZGV4IDM0MGZjMzBhZDg1ZC4uZmZhOTViY2FiNTk5
-IDEwMDY0NA0KPiA+IC0tLSBhL3NlY3VyaXR5L3NtYWNrL3NtYWNrX2xzbS5jDQo+ID4gKysrIGIv
-c2VjdXJpdHkvc21hY2svc21hY2tfbHNtLmMNCj4gPiBAQCAtNDIyLDcgKzQyMiw4IEBAIHN0YXRp
-YyBpbnQgc21rX3B0cmFjZV9ydWxlX2NoZWNrKHN0cnVjdCB0YXNrX3N0cnVjdA0KPiAqdHJhY2Vy
-LA0KPiA+ICAgICAgICAgc3RydWN0IHRhc2tfc21hY2sgKnRzcDsNCj4gPiAgICAgICAgIHN0cnVj
-dCBzbWFja19rbm93biAqdHJhY2VyX2tub3duOw0KPiA+DQo+ID4gLSAgICAgICBpZiAoKG1vZGUg
-JiBQVFJBQ0VfTU9ERV9OT0FVRElUKSA9PSAwKSB7DQo+ID4gKyAgICAgICBpZiAoKG1vZGUgJiBQ
-VFJBQ0VfTU9ERV9OT0FVRElUKSA9PSAwICYmDQo+ID4gKyAgICAgICAgICAgKG1vZGUgJiBQVFJB
-Q0VfTU9ERV9TQ0hFRCkgPT0gMCkgew0KPiANCj4gSWYgeW91IE9SZWQgUFRSQUNFX01PREVfTk9B
-VURJVCBpbnRvIHRoZSBmbGFncyB3aGVuIGNhbGxpbmcgdGhlDQo+IHNlY3VyaXR5IGhvb2ssIHlv
-dSBjb3VsZCBkcm9wIHRoaXMgcGF0Y2gsIHJpZ2h0Pw0KDQpZZXMuIFNpbmNlIHRoZSBQVFJBQ0Vf
-TU9ERV9OT0FVRElUIHdhcyBpbiBQVFJBQ0VfTU9ERV9JQlBCDQppbiBKaXJpJ3MgcHJldmlvdXMg
-cGF0Y2ggc2V0IGFuZCBub3QgaW4gUFRSQUNFX01PREVfU0NIRUQgaW4gdGhpcyBvbmUNCkkgYXNz
-dW1lZCB0aGF0IHRoZXJlIHdhcyBhIGdvb2QgcmVhc29uIGZvciBpdC4NCg0K
++Jiri
+
+On Thu, Sep 27, 2018 at 12:54 AM Schaufler, Casey
+<casey.schaufler@intel.com> wrote:
+> > -----Original Message-----
+> > From: Jann Horn [mailto:jannh@google.com]
+> > Sent: Wednesday, September 26, 2018 2:31 PM
+> > To: Schaufler, Casey <casey.schaufler@intel.com>
+> > Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>; kernel list
+> > <linux-kernel@vger.kernel.org>; linux-security-module <linux-security-
+> > module@vger.kernel.org>; selinux@tycho.nsa.gov; Hansen, Dave
+> > <dave.hansen@intel.com>; Dock, Deneen T <deneen.t.dock@intel.com>;
+> > kristen@linux.intel.com; Arjan van de Ven <arjan@linux.intel.com>
+> > Subject: Re: [PATCH v5 2/5] Smack: Prepare for PTRACE_MODE_SCHED
+> >
+> > On Wed, Sep 26, 2018 at 10:35 PM Casey Schaufler
+> > <casey.schaufler@intel.com> wrote:
+> > > A ptrace access check with mode PTRACE_MODE_SCHED gets called
+> > > from process switching code. This precludes the use of audit,
+> > > as the locking is incompatible. Don't do audit in the PTRACE_MODE_SCHED
+> > > case.
+> > >
+> > > Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
+> > > ---
+> > >  security/smack/smack_lsm.c | 3 ++-
+> > >  1 file changed, 2 insertions(+), 1 deletion(-)
+> > >
+> > > diff --git a/security/smack/smack_lsm.c b/security/smack/smack_lsm.c
+> > > index 340fc30ad85d..ffa95bcab599 100644
+> > > --- a/security/smack/smack_lsm.c
+> > > +++ b/security/smack/smack_lsm.c
+> > > @@ -422,7 +422,8 @@ static int smk_ptrace_rule_check(struct task_struct
+> > *tracer,
+> > >         struct task_smack *tsp;
+> > >         struct smack_known *tracer_known;
+> > >
+> > > -       if ((mode & PTRACE_MODE_NOAUDIT) == 0) {
+> > > +       if ((mode & PTRACE_MODE_NOAUDIT) == 0 &&
+> > > +           (mode & PTRACE_MODE_SCHED) == 0) {
+> >
+> > If you ORed PTRACE_MODE_NOAUDIT into the flags when calling the
+> > security hook, you could drop this patch, right?
+>
+> Yes. Since the PTRACE_MODE_NOAUDIT was in PTRACE_MODE_IBPB
+> in Jiri's previous patch set and not in PTRACE_MODE_SCHED in this one
+> I assumed that there was a good reason for it.
+
+Jiri, was there a good reason for it, and if so, what was it?
