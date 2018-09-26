@@ -1,38 +1,67 @@
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Subject: RE: [PATCH v5 4/5] Capability: Complete PTRACE_MODE_SCHED
+Date: Wed, 26 Sep 2018 22:24:34 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6732146256E@ORSMSX107.amr.corp.intel.com>
+References: <20180926203446.2004-1-casey.schaufler@intel.com>
+ <20180926203446.2004-5-casey.schaufler@intel.com>
+ <CAG48ez1NqoW8bByrYe30MdyCn2th3X+tth=VhMHA2MA-PoaQVw@mail.gmail.com>
+In-Reply-To: <CAG48ez1NqoW8bByrYe30MdyCn2th3X+tth=VhMHA2MA-PoaQVw@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-References: <20180926203446.2004-1-casey.schaufler@intel.com> <20180926203446.2004-3-casey.schaufler@intel.com>
-In-Reply-To: <20180926203446.2004-3-casey.schaufler@intel.com>
-From: Jann Horn <jannh@google.com>
-Date: Wed, 26 Sep 2018 23:30:35 +0200
-Message-ID: <CAG48ez3_XJYCURiCurDeCousGguGUdPego30j5+UF8FebWxUtA@mail.gmail.com>
-Subject: Re: [PATCH v5 2/5] Smack: Prepare for PTRACE_MODE_SCHED
-Content-Type: text/plain; charset="UTF-8"
-To: Casey Schaufler <casey.schaufler@intel.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, selinux@tycho.nsa.gov, Dave Hansen <dave.hansen@intel.com>, deneen.t.dock@intel.com, kristen@linux.intel.com, Arjan van de Ven <arjan@linux.intel.com>
+To: Jann Horn <jannh@google.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "selinux@tycho.nsa.gov" <selinux@tycho.nsa.gov>, "Hansen, Dave" <dave.hansen@intel.com>, "Dock,
+ Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, Arjan van de Ven <arjan@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Sep 26, 2018 at 10:35 PM Casey Schaufler
-<casey.schaufler@intel.com> wrote:
-> A ptrace access check with mode PTRACE_MODE_SCHED gets called
-> from process switching code. This precludes the use of audit,
-> as the locking is incompatible. Don't do audit in the PTRACE_MODE_SCHED
-> case.
->
-> Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
-> ---
->  security/smack/smack_lsm.c | 3 ++-
->  1 file changed, 2 insertions(+), 1 deletion(-)
->
-> diff --git a/security/smack/smack_lsm.c b/security/smack/smack_lsm.c
-> index 340fc30ad85d..ffa95bcab599 100644
-> --- a/security/smack/smack_lsm.c
-> +++ b/security/smack/smack_lsm.c
-> @@ -422,7 +422,8 @@ static int smk_ptrace_rule_check(struct task_struct *tracer,
->         struct task_smack *tsp;
->         struct smack_known *tracer_known;
->
-> -       if ((mode & PTRACE_MODE_NOAUDIT) == 0) {
-> +       if ((mode & PTRACE_MODE_NOAUDIT) == 0 &&
-> +           (mode & PTRACE_MODE_SCHED) == 0) {
-
-If you ORed PTRACE_MODE_NOAUDIT into the flags when calling the
-security hook, you could drop this patch, right?
+PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBKYW5uIEhvcm4gW21haWx0bzpq
+YW5uaEBnb29nbGUuY29tXQ0KPiBTZW50OiBXZWRuZXNkYXksIFNlcHRlbWJlciAyNiwgMjAxOCAy
+OjI2IFBNDQo+IFRvOiBTY2hhdWZsZXIsIENhc2V5IDxjYXNleS5zY2hhdWZsZXJAaW50ZWwuY29t
+Pg0KPiBDYzogS2VybmVsIEhhcmRlbmluZyA8a2VybmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2Fs
+bC5jb20+OyBrZXJuZWwgbGlzdA0KPiA8bGludXgta2VybmVsQHZnZXIua2VybmVsLm9yZz47IGxp
+bnV4LXNlY3VyaXR5LW1vZHVsZSA8bGludXgtc2VjdXJpdHktDQo+IG1vZHVsZUB2Z2VyLmtlcm5l
+bC5vcmc+OyBzZWxpbnV4QHR5Y2hvLm5zYS5nb3Y7IEhhbnNlbiwgRGF2ZQ0KPiA8ZGF2ZS5oYW5z
+ZW5AaW50ZWwuY29tPjsgRG9jaywgRGVuZWVuIFQgPGRlbmVlbi50LmRvY2tAaW50ZWwuY29tPjsN
+Cj4ga3Jpc3RlbkBsaW51eC5pbnRlbC5jb207IEFyamFuIHZhbiBkZSBWZW4gPGFyamFuQGxpbnV4
+LmludGVsLmNvbT4NCj4gU3ViamVjdDogUmU6IFtQQVRDSCB2NSA0LzVdIENhcGFiaWxpdHk6IENv
+bXBsZXRlIFBUUkFDRV9NT0RFX1NDSEVEDQo+IA0KPiBPbiBXZWQsIFNlcCAyNiwgMjAxOCBhdCAx
+MDozNSBQTSBDYXNleSBTY2hhdWZsZXINCj4gPGNhc2V5LnNjaGF1ZmxlckBpbnRlbC5jb20+IHdy
+b3RlOg0KPiA+IEFsbG93IGEgY29tcGxldGUgcHRyYWNlIGFjY2VzcyBjaGVjayB3aXRoIG1vZGUg
+UFRSQUNFX01PREVfU0NIRUQuDQo+ID4gRGlzYWJsZSB0aGUgaW5hcHByb3ByaWF0ZSBwcml2aWxl
+Z2UgY2hlY2sgaW4gdGhlIGNhcGFiaWxpdHkgY29kZQ0KPiA+IHRoYXQgZG9lcyBpbmNvbXBhdGli
+bGUgbG9ja2luZy4NCj4gDQo+IFdoYXQncyB0aGF0IGxvY2tpbmcgeW91J3JlIHRhbGtpbmcgYWJv
+dXQ/DQoNCm5zX2NhcGFibGUoKSBldmVudHVhbGx5IGdldHMgeW91IHRvIGFuIGF1ZGl0IGNhbGwu
+IFRoZSBhdWRpdCBjb2RlDQppcyBnb2luZyB0byBkbyB0aGUgbG9ja2luZy4gRm9ydHVuYXRlbHks
+IHRoZSBwcmVjZWRpbmcgY2FwX2lzc3Vic2V0KCkNCmlzIHRoZSBjaGVjayB0aGF0IHdlIHJlYWxs
+eSBuZWVkIGhlcmUuDQoNCj4gDQo+ID4gU2lnbmVkLW9mZi1ieTogQ2FzZXkgU2NoYXVmbGVyIDxj
+YXNleS5zY2hhdWZsZXJAaW50ZWwuY29tPg0KPiA+IC0tLQ0KPiA+ICBrZXJuZWwvcHRyYWNlLmMg
+ICAgICB8IDIgLS0NCj4gPiAgc2VjdXJpdHkvY29tbW9uY2FwLmMgfCAyICsrDQo+ID4gIDIgZmls
+ZXMgY2hhbmdlZCwgMiBpbnNlcnRpb25zKCspLCAyIGRlbGV0aW9ucygtKQ0KPiA+DQo+ID4gZGlm
+ZiAtLWdpdCBhL2tlcm5lbC9wdHJhY2UuYyBiL2tlcm5lbC9wdHJhY2UuYw0KPiA+IGluZGV4IDk5
+Y2ZkZGRlNmE1NS4uMGI2YTlkZjUxYzNiIDEwMDY0NA0KPiA+IC0tLSBhL2tlcm5lbC9wdHJhY2Uu
+Yw0KPiA+ICsrKyBiL2tlcm5lbC9wdHJhY2UuYw0KPiA+IEBAIC0zMzEsOCArMzMxLDYgQEAgc3Rh
+dGljIGludCBfX3B0cmFjZV9tYXlfYWNjZXNzKHN0cnVjdCB0YXNrX3N0cnVjdA0KPiAqdGFzaywg
+dW5zaWduZWQgaW50IG1vZGUpDQo+ID4gICAgICAgICAgICAgICFwdHJhY2VfaGFzX2NhcChtbS0+
+dXNlcl9ucywgbW9kZSkpKQ0KPiA+ICAgICAgICAgICAgIHJldHVybiAtRVBFUk07DQo+ID4NCj4g
+PiAtICAgICAgIGlmIChtb2RlICYgUFRSQUNFX01PREVfU0NIRUQpDQo+ID4gLSAgICAgICAgICAg
+ICAgIHJldHVybiAwOw0KPiA+ICAgICAgICAgcmV0dXJuIHNlY3VyaXR5X3B0cmFjZV9hY2Nlc3Nf
+Y2hlY2sodGFzaywgbW9kZSk7DQo+ID4gIH0NCj4gPg0KPiA+IGRpZmYgLS1naXQgYS9zZWN1cml0
+eS9jb21tb25jYXAuYyBiL3NlY3VyaXR5L2NvbW1vbmNhcC5jDQo+ID4gaW5kZXggMmU0ODlkNmEz
+YWM4Li5lNzc0NTcxMTBkMDUgMTAwNjQ0DQo+ID4gLS0tIGEvc2VjdXJpdHkvY29tbW9uY2FwLmMN
+Cj4gPiArKysgYi9zZWN1cml0eS9jb21tb25jYXAuYw0KPiA+IEBAIC0xNTIsNiArMTUyLDggQEAg
+aW50IGNhcF9wdHJhY2VfYWNjZXNzX2NoZWNrKHN0cnVjdCB0YXNrX3N0cnVjdA0KPiAqY2hpbGQs
+IHVuc2lnbmVkIGludCBtb2RlKQ0KPiA+ICAgICAgICAgaWYgKGNyZWQtPnVzZXJfbnMgPT0gY2hp
+bGRfY3JlZC0+dXNlcl9ucyAmJg0KPiA+ICAgICAgICAgICAgIGNhcF9pc3N1YnNldChjaGlsZF9j
+cmVkLT5jYXBfcGVybWl0dGVkLCAqY2FsbGVyX2NhcHMpKQ0KPiA+ICAgICAgICAgICAgICAgICBn
+b3RvIG91dDsNCj4gPiArICAgICAgIGlmIChtb2RlICYgUFRSQUNFX01PREVfU0NIRUQpDQo+ID4g
+KyAgICAgICAgICAgICAgIGdvdG8gb3V0Ow0KPiANCj4gU28gZm9yIFBUUkFDRV9NT0RFX1NDSEVE
+LCB0aGlzIGZ1bmN0aW9uIGFsd2F5cyByZXR1cm5zIDAsIHJpZ2h0PyANCg0KVGhhdCBjYW4ndCBi
+ZSByaWdodCwgY2FuIGl0PyBEZXRlcm1pbmluZyB0aGF0IHdlIGhhdmUgUFRSQUNFX01PREVfU0NI
+RUQNCmF0IHRoaXMgcG9pbnQgc2hvdWxkIHJlc3VsdCBpbiAtRVBFUk0uIEkgbXVja2VkIHVwIG9u
+IHRoZSBsb2dpYyBmbG93LiBUaGUNCm5leHQgcmV2aXNpb24gd2lsbCBmaXggdGhpcy4NCg0KPiBJ
+ZiB0aGF0J3MgaW50ZW50aW9uYWwsIHBlcmhhcHMgeW91IHNob3VsZCBpbnN0ZWFkIGp1c3QgcHV0
+ICJpZiAobW9kZSAmDQo+IFBUUkFDRV9NT0RFX1NDSEVEKSByZXR1cm4gMDsiIGF0IHRoZSBzdGFy
+dCBvZiB0aGUgZnVuY3Rpb24sIHRvIGF2b2lkDQo+IHRha2luZyB0aGUgUkNVIHJlYWQgbG9jayBp
+biB0aGlzIGNhc2UuDQo+IA0KPiA+ICAgICAgICAgaWYgKG5zX2NhcGFibGUoY2hpbGRfY3JlZC0+
+dXNlcl9ucywgQ0FQX1NZU19QVFJBQ0UpKQ0KPiA+ICAgICAgICAgICAgICAgICBnb3RvIG91dDsN
+Cj4gPiAgICAgICAgIHJldCA9IC1FUEVSTTsNCg==
