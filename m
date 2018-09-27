@@ -1,62 +1,112 @@
 MIME-Version: 1.0
-References: <20180926203446.2004-1-casey.schaufler@intel.com>
- <20180926203446.2004-3-casey.schaufler@intel.com> <CAG48ez3_XJYCURiCurDeCousGguGUdPego30j5+UF8FebWxUtA@mail.gmail.com>
- <99FC4B6EFCEFD44486C35F4C281DC673214625EA@ORSMSX107.amr.corp.intel.com>
-In-Reply-To: <99FC4B6EFCEFD44486C35F4C281DC673214625EA@ORSMSX107.amr.corp.intel.com>
-From: Jann Horn <jannh@google.com>
-Date: Thu, 27 Sep 2018 00:58:00 +0200
-Message-ID: <CAG48ez1+9Bfadu4y4TzPYJfFpLk+N8w7GdCE+xwNCM5TfQ8W8Q@mail.gmail.com>
-Subject: Re: [PATCH v5 2/5] Smack: Prepare for PTRACE_MODE_SCHED
-Content-Type: text/plain; charset="UTF-8"
-To: Casey Schaufler <casey.schaufler@intel.com>, Jiri Kosina <jikos@kernel.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, selinux@tycho.nsa.gov, Dave Hansen <dave.hansen@intel.com>, deneen.t.dock@intel.com, kristen@linux.intel.com, Arjan van de Ven <arjan@linux.intel.com>
+References: <20180926203446.2004-1-casey.schaufler@intel.com> <20180926203446.2004-4-casey.schaufler@intel.com>
+In-Reply-To: <20180926203446.2004-4-casey.schaufler@intel.com>
+From: Stephen Smalley <stephen.smalley@gmail.com>
+Date: Wed, 26 Sep 2018 21:53:47 -0400
+Message-ID: <CAB9W1A0o+U+R3dXhjjskdy6VYL14ANRvq1HSjYw+PuOURmrSEQ@mail.gmail.com>
+Subject: Re: [PATCH v5 3/5] SELinux: Prepare for PTRACE_MODE_SCHED
+Content-Type: multipart/alternative; boundary="000000000000d6d6de0576d09cc2"
+To: "Schaufler, Casey" <casey.schaufler@intel.com>
+Cc: kernel-hardening@lists.openwall.com, Linux Kernel <linux-kernel@vger.kernel.org>, linux-security-module@vger.kernel.org, selinux@tycho.nsa.gov, dave.hansen@intel.com, deneen.t.dock@intel.com, kristen@linux.intel.com, arjan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-+Jiri
+--000000000000d6d6de0576d09cc2
+Content-Type: text/plain; charset="UTF-8"
 
-On Thu, Sep 27, 2018 at 12:54 AM Schaufler, Casey
-<casey.schaufler@intel.com> wrote:
-> > -----Original Message-----
-> > From: Jann Horn [mailto:jannh@google.com]
-> > Sent: Wednesday, September 26, 2018 2:31 PM
-> > To: Schaufler, Casey <casey.schaufler@intel.com>
-> > Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>; kernel list
-> > <linux-kernel@vger.kernel.org>; linux-security-module <linux-security-
-> > module@vger.kernel.org>; selinux@tycho.nsa.gov; Hansen, Dave
-> > <dave.hansen@intel.com>; Dock, Deneen T <deneen.t.dock@intel.com>;
-> > kristen@linux.intel.com; Arjan van de Ven <arjan@linux.intel.com>
-> > Subject: Re: [PATCH v5 2/5] Smack: Prepare for PTRACE_MODE_SCHED
-> >
-> > On Wed, Sep 26, 2018 at 10:35 PM Casey Schaufler
-> > <casey.schaufler@intel.com> wrote:
-> > > A ptrace access check with mode PTRACE_MODE_SCHED gets called
-> > > from process switching code. This precludes the use of audit,
-> > > as the locking is incompatible. Don't do audit in the PTRACE_MODE_SCHED
-> > > case.
-> > >
-> > > Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
-> > > ---
-> > >  security/smack/smack_lsm.c | 3 ++-
-> > >  1 file changed, 2 insertions(+), 1 deletion(-)
-> > >
-> > > diff --git a/security/smack/smack_lsm.c b/security/smack/smack_lsm.c
-> > > index 340fc30ad85d..ffa95bcab599 100644
-> > > --- a/security/smack/smack_lsm.c
-> > > +++ b/security/smack/smack_lsm.c
-> > > @@ -422,7 +422,8 @@ static int smk_ptrace_rule_check(struct task_struct
-> > *tracer,
-> > >         struct task_smack *tsp;
-> > >         struct smack_known *tracer_known;
-> > >
-> > > -       if ((mode & PTRACE_MODE_NOAUDIT) == 0) {
-> > > +       if ((mode & PTRACE_MODE_NOAUDIT) == 0 &&
-> > > +           (mode & PTRACE_MODE_SCHED) == 0) {
-> >
-> > If you ORed PTRACE_MODE_NOAUDIT into the flags when calling the
-> > security hook, you could drop this patch, right?
+On Wed, Sep 26, 2018, 4:35 PM Casey Schaufler <casey.schaufler@intel.com>
+wrote:
+
+> From: Casey Schaufler <casey@schaufler-ca.com>
 >
-> Yes. Since the PTRACE_MODE_NOAUDIT was in PTRACE_MODE_IBPB
-> in Jiri's previous patch set and not in PTRACE_MODE_SCHED in this one
-> I assumed that there was a good reason for it.
+> A ptrace access check with mode PTRACE_MODE_SCHED gets called
+> from process switching code. This precludes the use of audit or avc,
+> as the locking is incompatible. The only available check that
+> can be made without using avc is a comparison of the secids.
+> This is not very satisfactory as it will indicate possible
+> vulnerabilies much too aggressively.
+>
 
-Jiri, was there a good reason for it, and if so, what was it?
+We already have a flag to disable audit. What locking conflict is presented
+by the avc, which uses rcu?
+
+
+> Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
+> ---
+>  security/selinux/hooks.c | 2 ++
+>  1 file changed, 2 insertions(+)
+>
+> diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
+> index ad9a9b8e9979..160239791007 100644
+> --- a/security/selinux/hooks.c
+> +++ b/security/selinux/hooks.c
+> @@ -2267,6 +2267,8 @@ static int selinux_ptrace_access_check(struct
+> task_struct *child,
+>         u32 sid = current_sid();
+>         u32 csid = task_sid(child);
+>
+> +       if (mode & PTRACE_MODE_SCHED)
+> +               return sid == csid ? 0 : -EACCES;
+>         if (mode & PTRACE_MODE_READ)
+>                 return avc_has_perm(&selinux_state,
+>                                     sid, csid, SECCLASS_FILE, FILE__READ,
+> NULL);
+> --
+> 2.17.1
+>
+>
+
+--000000000000d6d6de0576d09cc2
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"auto"><div><div class=3D"gmail_quote"><div dir=3D"ltr">On Wed, =
+Sep 26, 2018, 4:35 PM Casey Schaufler &lt;<a href=3D"mailto:casey.schaufler=
+@intel.com">casey.schaufler@intel.com</a>&gt; wrote:<br></div><blockquote c=
+lass=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;=
+padding-left:1ex">From: Casey Schaufler &lt;<a href=3D"mailto:casey@schaufl=
+er-ca.com" target=3D"_blank" rel=3D"noreferrer">casey@schaufler-ca.com</a>&=
+gt;<br>
+<br>
+A ptrace access check with mode PTRACE_MODE_SCHED gets called<br>
+from process switching code. This precludes the use of audit or avc,<br>
+as the locking is incompatible. The only available check that<br>
+can be made without using avc is a comparison of the secids.<br>
+This is not very satisfactory as it will indicate possible<br>
+vulnerabilies much too aggressively.<br></blockquote></div></div><div dir=
+=3D"auto"><br></div><div dir=3D"auto">We already have a flag to disable aud=
+it. What locking conflict is presented by the avc, which uses rcu?=C2=A0</d=
+iv><div dir=3D"auto"><br></div><div dir=3D"auto"><div class=3D"gmail_quote"=
+><blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1=
+px #ccc solid;padding-left:1ex">
+<br>
+Signed-off-by: Casey Schaufler &lt;<a href=3D"mailto:casey.schaufler@intel.=
+com" target=3D"_blank" rel=3D"noreferrer">casey.schaufler@intel.com</a>&gt;=
+<br>
+---<br>
+=C2=A0security/selinux/hooks.c | 2 ++<br>
+=C2=A01 file changed, 2 insertions(+)<br>
+<br>
+diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c<br>
+index ad9a9b8e9979..160239791007 100644<br>
+--- a/security/selinux/hooks.c<br>
++++ b/security/selinux/hooks.c<br>
+@@ -2267,6 +2267,8 @@ static int selinux_ptrace_access_check(struct task_st=
+ruct *child,<br>
+=C2=A0 =C2=A0 =C2=A0 =C2=A0 u32 sid =3D current_sid();<br>
+=C2=A0 =C2=A0 =C2=A0 =C2=A0 u32 csid =3D task_sid(child);<br>
+<br>
++=C2=A0 =C2=A0 =C2=A0 =C2=A0if (mode &amp; PTRACE_MODE_SCHED)<br>
++=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0return sid =3D=3D c=
+sid ? 0 : -EACCES;<br>
+=C2=A0 =C2=A0 =C2=A0 =C2=A0 if (mode &amp; PTRACE_MODE_READ)<br>
+=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 return avc_has_perm=
+(&amp;selinux_state,<br>
+=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
+=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 sid, csid, SECCLASS_FI=
+LE, FILE__READ, NULL);<br>
+-- <br>
+2.17.1<br>
+<br>
+</blockquote></div></div></div>
+
+--000000000000d6d6de0576d09cc2--
