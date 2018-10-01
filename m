@@ -1,78 +1,48 @@
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Subject: RE: [PATCH v5 5/5] sidechannel: Linux Security Module for
- sidechannel
-Date: Fri, 28 Sep 2018 17:40:52 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6732146466E@ORSMSX107.amr.corp.intel.com>
-References: <20180926203446.2004-1-casey.schaufler@intel.com>
- <20180926203446.2004-6-casey.schaufler@intel.com>
- <alpine.LRH.2.21.1809280744560.8410@namei.org>
- <025d4742-5947-545e-f603-502a0c5ee03f@schaufler-ca.com>
- <alpine.LRH.2.21.1809280846280.8410@namei.org>
- <99FC4B6EFCEFD44486C35F4C281DC67321463CE3@ORSMSX107.amr.corp.intel.com>
- <alpine.LRH.2.21.1809280936290.13517@namei.org>
- <CAG48ez3Jnao-5z3O8s=RdoAx8=b68C_1pfKNKJSm+6R_HyU_fg@mail.gmail.com>
- <alpine.LRH.2.21.1809290233130.15725@namei.org>
-In-Reply-To: <alpine.LRH.2.21.1809290233130.15725@namei.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+From: Alexey Budankov <alexey.budankov@linux.intel.com>
+Subject: Re: [RFC 0/5] perf: Per PMU access controls (paranoid setting)
+References: <20180919122751.12439-1-tvrtko.ursulin@linux.intel.com>
+ <alpine.DEB.2.21.1809281151190.2004@nanos.tec.linutronix.de>
+ <e89ec139-1a97-803e-343c-76eedf244d65@linux.intel.com>
+ <CAG48ez17MOP4hLavskqJDj8KwF=otrNiwV6+cizFPwM_L0k6gA@mail.gmail.com>
+ <CAG48ez0Ux6p-Bcu9ymNm_eMpydLm0-DSBYKp4XJRv27XO_QqeA@mail.gmail.com>
+Message-ID: <d7ae4c13-262c-a5fb-7e00-cda4b05772ad@linux.intel.com>
+Date: Mon, 1 Oct 2018 09:27:07 +0300
 MIME-Version: 1.0
-To: James Morris <jmorris@namei.org>, Jann Horn <jannh@google.com>
-Cc: Casey Schaufler <casey@schaufler-ca.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, kernel list <linux-kernel@vger.kernel.org>, "Hansen, Dave" <dave.hansen@intel.com>, linux-security-module <linux-security-module@vger.kernel.org>, "selinux@tycho.nsa.gov" <selinux@tycho.nsa.gov>, Arjan van de Ven <arjan@linux.intel.com>
+In-Reply-To: <CAG48ez0Ux6p-Bcu9ymNm_eMpydLm0-DSBYKp4XJRv27XO_QqeA@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Jann Horn <jannh@google.com>, Kees Cook <keescook@chromium.org>
+Cc: tvrtko.ursulin@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, tursulin@ursulin.net, kernel list <linux-kernel@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, the arch/x86 maintainers <x86@kernel.org>, "H . Peter Anvin" <hpa@zytor.com>, acme@kernel.org, alexander.shishkin@linux.intel.com, jolsa@redhat.com, namhyung@kernel.org, maddy@linux.vnet.ibm.com, Andi Kleen <ak@linux.intel.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> -----Original Message-----
-> From: James Morris [mailto:jmorris@namei.org]
-> Sent: Friday, September 28, 2018 9:33 AM
-> To: Jann Horn <jannh@google.com>
-> Cc: Schaufler, Casey <casey.schaufler@intel.com>; Casey Schaufler
-> <casey@schaufler-ca.com>; kristen@linux.intel.com; Kernel Hardening
-> <kernel-hardening@lists.openwall.com>; Dock, Deneen T
-> <deneen.t.dock@intel.com>; kernel list <linux-kernel@vger.kernel.org>;
-> Hansen, Dave <dave.hansen@intel.com>; linux-security-module <linux-securi=
-ty-
-> module@vger.kernel.org>; selinux@tycho.nsa.gov; Arjan van de Ven
-> <arjan@linux.intel.com>
-> Subject: Re: [PATCH v5 5/5] sidechannel: Linux Security Module for sidech=
-annel
->=20
-> On Fri, 28 Sep 2018, Jann Horn wrote:
->=20
-> > > so with this hard-coded logic, you are saying this case is
-> > > 'safe' in a sidechannel context.
-> > >
-> > > Which hints at the deeper issue that containers are a userland
-> > > abstraction.  Protection of containers needs to be defined by userlan=
-d
-> > > policy.
-> >
-> > Or just compare mount namespaces additionally/instead. I think that
-> > containers will always use those, because AFAIK nobody uses chroot()
-> > for containers, given that the kernel makes absolutely no security
-> > guarantees about chroot().
->=20
-> We can't define this in the kernel. It has no concept of containers.
->=20
-> People utilize some combination of namespaces and cgroups and call them
-> containers,
+Hello Jann and Kees,
 
-There is an amazing variety of things called containers out there.
-I cite them as a use case, not a requirement.
+On 29.09.2018 1:02, Jann Horn wrote:
+<SNIP>
+> Ah, I guess the answer is "0", since you want to see data about what
+> other users are doing.
+> 
+> Does the i915 PMU expose sampling events, counting events, or both?
+> The thing about sampling events is that they AFAIK always let the user
+> pick arbitrary data to collect - like register contents, or userspace
+> stack memory -, and independent of the performance counter being
+> monitored, this kind of access should not be permitted to other
+> contexts. (But it might be that I misunderstand how perf works - I'm
+> not super familiar with its API.)
+> 
 
-> but we can't make assumptions from the kernel on what any of
-> this means from a security point of view, and hard-code kernel policy
-> based on those assumptions.
+Currently *core* paranoid >= 1 (per-process mode) prevents simultaneous 
+sampling on CPU events (perf record) and reading of uncore HW counters 
+(perf stat -I), because uncore counters count system wide and that is 
+allowed only when *core* paranoid <= 0.
 
-We can assume that namespaces are being used as a separation mechanism.
-That makes processes in different namespaces potentially vulnerable to
-side-channel attacks. That's true regardless of whether or not someone is
-using namespaces to implement containers.=20
+Uncore counts collected simultaneously with CPU event samples can be 
+correlated using timestamps taken from some common system clock e.g. 
+CLOCK_MONOTONIC_RAW.
 
-> This is violating the principal of separating mechanism and policy, and
-> also imposing semantics across the kernel/user boundary. The latter
-> creates an ABI which we can then never break.
+Could it be secure enough to still allow reading of system wide uncore 
+HW counters when sampling of CPU events is limited to specific processes 
+by *core* paranoid >= 1?
 
-The effects of the sidechannel security module are not API visible.
-The potential impact is on performance. This implementation of
-PTRACE_MODE_SCHED does not change what happens, but may affect
-when it happens. It is intended to aid in optimizing the use of expensive
-anti-side-channel countermeasures.
+Thanks,
+Alexey
