@@ -1,197 +1,29 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Subject: [PATCH net-next v7 06/28] zinc: ChaCha20 x86_64 implementation
-Date: Sat,  6 Oct 2018 04:56:47 +0200
-Message-Id: <20181006025709.4019-7-Jason@zx2c4.com>
+Subject: [PATCH net-next v7 07/28] zinc: import Andy Polyakov's ChaCha20 ARM and ARM64 implementations
+Date: Sat,  6 Oct 2018 04:56:48 +0200
+Message-Id: <20181006025709.4019-8-Jason@zx2c4.com>
 In-Reply-To: <20181006025709.4019-1-Jason@zx2c4.com>
 References: <20181006025709.4019-1-Jason@zx2c4.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 To: linux-kernel@vger.kernel.org, netdev@vger.kernel.org, davem@davemloft.net, gregkh@linuxfoundation.org
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Samuel Neves <sneves@dei.uc.pt>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, x86@kernel.org, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Andy Polyakov <appro@openssl.org>, Russell King <linux@armlinux.org.uk>, linux-arm-kernel@lists.infradead.org, Samuel Neves <sneves@dei.uc.pt>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This ports SSSE3, AVX-2, AVX-512F, and AVX-512VL implementations for
-ChaCha20. The AVX-512F implementation is disabled on Skylake, due to
-throttling, and the VL ymm implementation is used instead. These come
-from Andy Polyakov's implementation, with the following modifications
-from Samuel Neves:
+These NEON and non-NEON implementations come from Andy Polyakov's
+implementation, and are included here in raw form without modification,
+so that subsequent commits that fix these up for the kernel can see how
+it has changed.
 
-  - Some cosmetic changes, like renaming labels to .Lname, constants,
-    and other Linux conventions.
-
-  - CPU feature checking is done in C by the glue code, so that has been
-    removed from the assembly.
-
-  - Eliminate translating certain instructions, such as pshufb, palignr,
-    vprotd, etc, to .byte directives. This is meant for compatibility
-    with ancient toolchains, but presumably it is unnecessary here,
-    since the build system already does checks on what GNU as can
-    assemble.
-
-  - When aligning the stack, the original code was saving %rsp to %r9.
-    To keep objtool happy, we use instead the DRAP idiom to save %rsp
-    to %r10:
-
-      leaq    8(%rsp),%r10
-      ... code here ...
-      leaq    -8(%r10),%rsp
-
-  - The original code assumes the stack comes aligned to 16 bytes. This
-    is not necessarily the case, and to avoid crashes,
-    `andq $-alignment, %rsp` was added in the prolog of a few functions.
-
-  - The original hardcodes returns as .byte 0xf3,0xc3, aka "rep ret".
-    We replace this by "ret". "rep ret" was meant to help with AMD K8
-    chips, cf. http://repzret.org/p/repzret. It makes no sense to
-    continue to use this kludge for code that won't even run on ancient
-    AMD chips.
-
-Cycle counts on a Core i7 6700HQ using the AVX-2 codepath, comparing
-this implementation ("new") to the implementation in the current crypto
-api ("old"):
-
-size	old	new
-----	----	----
-0	62	52
-16	414	376
-32	410	400
-48	414	422
-64	362	356
-80	714	666
-96	714	700
-112	712	718
-128	692	646
-144	1042	674
-160	1042	694
-176	1042	726
-192	1018	650
-208	1366	686
-224	1366	696
-240	1366	722
-256	640	656
-272	988	1246
-288	988	1276
-304	992	1296
-320	972	1222
-336	1318	1256
-352	1318	1276
-368	1316	1294
-384	1294	1218
-400	1642	1258
-416	1642	1282
-432	1642	1302
-448	1628	1224
-464	1970	1258
-480	1970	1280
-496	1970	1300
-512	656	676
-528	1010	1290
-544	1010	1306
-560	1010	1332
-576	986	1254
-592	1340	1284
-608	1334	1310
-624	1340	1334
-640	1314	1254
-656	1664	1282
-672	1674	1306
-688	1662	1336
-704	1638	1250
-720	1992	1292
-736	1994	1308
-752	1988	1334
-768	1252	1254
-784	1596	1290
-800	1596	1314
-816	1596	1330
-832	1576	1256
-848	1922	1286
-864	1922	1314
-880	1926	1338
-896	1898	1258
-912	2248	1288
-928	2248	1320
-944	2248	1338
-960	2226	1268
-976	2574	1288
-992	2576	1312
-1008	2574	1340
-
-Cycle counts on a Xeon Gold 5120 using the AVX-512 codepath:
-
-size	old	new
-----	----	----
-0	64	54
-16	386	372
-32	388	396
-48	388	420
-64	366	350
-80	708	666
-96	708	692
-112	706	736
-128	692	648
-144	1036	682
-160	1036	708
-176	1036	730
-192	1016	658
-208	1360	684
-224	1362	708
-240	1360	732
-256	644	500
-272	990	526
-288	988	556
-304	988	576
-320	972	500
-336	1314	532
-352	1316	558
-368	1318	578
-384	1308	506
-400	1644	532
-416	1644	556
-432	1644	594
-448	1624	508
-464	1970	534
-480	1970	556
-496	1968	582
-512	660	624
-528	1016	682
-544	1016	702
-560	1018	728
-576	998	654
-592	1344	680
-608	1344	708
-624	1344	730
-640	1326	654
-656	1670	686
-672	1670	708
-688	1670	732
-704	1652	658
-720	1998	682
-736	1998	710
-752	1996	734
-768	1256	662
-784	1606	688
-800	1606	714
-816	1606	736
-832	1584	660
-848	1948	688
-864	1950	714
-880	1948	736
-896	1912	688
-912	2258	718
-928	2258	744
-944	2256	768
-960	2238	692
-976	2584	718
-992	2584	744
-1008	2584	770
+While this is CRYPTOGAMS code, the originating code for this happens to
+be the same as OpenSSL's commit 87cc649f30aaf69b351701875b9dac07c29ce8a2
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Signed-off-by: Samuel Neves <sneves@dei.uc.pt>
-Co-developed-by: Samuel Neves <sneves@dei.uc.pt>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: Ingo Molnar <mingo@redhat.com>
-Cc: x86@kernel.org
+Based-on-code-from: Andy Polyakov <appro@openssl.org>
+Cc: Andy Polyakov <appro@openssl.org>
+Cc: Russell King <linux@armlinux.org.uk>
+Cc: linux-arm-kernel@lists.infradead.org
+Cc: Samuel Neves <sneves@dei.uc.pt>
 Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Greg KH <gregkh@linuxfoundation.org>
@@ -200,2148 +32,3436 @@ Cc: Linus Torvalds <torvalds@linux-foundation.org>
 Cc: kernel-hardening@lists.openwall.com
 Cc: linux-crypto@vger.kernel.org
 ---
- lib/zinc/Makefile                             |    1 +
- lib/zinc/chacha20/chacha20-x86_64-glue.c      |  103 ++
- ...-x86_64-cryptogams.S => chacha20-x86_64.S} | 1557 ++++-------------
- lib/zinc/chacha20/chacha20.c                  |    4 +
- 4 files changed, 486 insertions(+), 1179 deletions(-)
- create mode 100644 lib/zinc/chacha20/chacha20-x86_64-glue.c
- rename lib/zinc/chacha20/{chacha20-x86_64-cryptogams.S => chacha20-x86_64.S} (71%)
+ lib/zinc/chacha20/chacha20-arm-cryptogams.S   | 1440 ++++++++++++
+ lib/zinc/chacha20/chacha20-arm64-cryptogams.S | 1973 +++++++++++++++++
+ 2 files changed, 3413 insertions(+)
+ create mode 100644 lib/zinc/chacha20/chacha20-arm-cryptogams.S
+ create mode 100644 lib/zinc/chacha20/chacha20-arm64-cryptogams.S
 
-diff --git a/lib/zinc/Makefile b/lib/zinc/Makefile
-index 3d80144d55a6..223a0816c918 100644
---- a/lib/zinc/Makefile
-+++ b/lib/zinc/Makefile
-@@ -3,4 +3,5 @@ ccflags-y += -D'pr_fmt(fmt)="zinc: " fmt'
- ccflags-$(CONFIG_ZINC_DEBUG) += -DDEBUG
- 
- zinc_chacha20-y := chacha20/chacha20.o
-+zinc_chacha20-$(CONFIG_ZINC_ARCH_X86_64) += chacha20/chacha20-x86_64.o
- obj-$(CONFIG_ZINC_CHACHA20) += zinc_chacha20.o
-diff --git a/lib/zinc/chacha20/chacha20-x86_64-glue.c b/lib/zinc/chacha20/chacha20-x86_64-glue.c
+diff --git a/lib/zinc/chacha20/chacha20-arm-cryptogams.S b/lib/zinc/chacha20/chacha20-arm-cryptogams.S
 new file mode 100644
-index 000000000000..8629d5d420e6
+index 000000000000..05a3a9e6e93f
 --- /dev/null
-+++ b/lib/zinc/chacha20/chacha20-x86_64-glue.c
-@@ -0,0 +1,103 @@
-+// SPDX-License-Identifier: GPL-2.0 OR MIT
++++ b/lib/zinc/chacha20/chacha20-arm-cryptogams.S
+@@ -0,0 +1,1440 @@
++/* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 +/*
-+ * Copyright (C) 2015-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
++ * Copyright (C) 2006-2017 CRYPTOGAMS by <appro@openssl.org>. All Rights Reserved.
 + */
 +
-+#include <asm/fpu/api.h>
-+#include <asm/cpufeature.h>
-+#include <asm/processor.h>
-+#include <asm/intel-family.h>
++#include "arm_arch.h"
 +
-+asmlinkage void hchacha20_ssse3(u32 *derived_key, const u8 *nonce,
-+				const u8 *key);
-+asmlinkage void chacha20_ssse3(u8 *out, const u8 *in, const size_t len,
-+			       const u32 key[8], const u32 counter[4]);
-+asmlinkage void chacha20_avx2(u8 *out, const u8 *in, const size_t len,
-+			      const u32 key[8], const u32 counter[4]);
-+asmlinkage void chacha20_avx512(u8 *out, const u8 *in, const size_t len,
-+				const u32 key[8], const u32 counter[4]);
-+asmlinkage void chacha20_avx512vl(u8 *out, const u8 *in, const size_t len,
-+				  const u32 key[8], const u32 counter[4]);
-+
-+static bool chacha20_use_ssse3 __ro_after_init;
-+static bool chacha20_use_avx2 __ro_after_init;
-+static bool chacha20_use_avx512 __ro_after_init;
-+static bool chacha20_use_avx512vl __ro_after_init;
-+static bool *const chacha20_nobs[] __initconst = {
-+	&chacha20_use_ssse3, &chacha20_use_avx2, &chacha20_use_avx512,
-+	&chacha20_use_avx512vl };
-+
-+static void __init chacha20_fpu_init(void)
-+{
-+	chacha20_use_ssse3 = boot_cpu_has(X86_FEATURE_SSSE3);
-+	chacha20_use_avx2 =
-+		boot_cpu_has(X86_FEATURE_AVX) &&
-+		boot_cpu_has(X86_FEATURE_AVX2) &&
-+		cpu_has_xfeatures(XFEATURE_MASK_SSE | XFEATURE_MASK_YMM, NULL);
-+	chacha20_use_avx512 =
-+		boot_cpu_has(X86_FEATURE_AVX) &&
-+		boot_cpu_has(X86_FEATURE_AVX2) &&
-+		boot_cpu_has(X86_FEATURE_AVX512F) &&
-+		cpu_has_xfeatures(XFEATURE_MASK_SSE | XFEATURE_MASK_YMM |
-+				  XFEATURE_MASK_AVX512, NULL) &&
-+		/* Skylake downclocks unacceptably much when using zmm. */
-+		boot_cpu_data.x86_model != INTEL_FAM6_SKYLAKE_X;
-+	chacha20_use_avx512vl =
-+		boot_cpu_has(X86_FEATURE_AVX) &&
-+		boot_cpu_has(X86_FEATURE_AVX2) &&
-+		boot_cpu_has(X86_FEATURE_AVX512F) &&
-+		boot_cpu_has(X86_FEATURE_AVX512VL) &&
-+		cpu_has_xfeatures(XFEATURE_MASK_SSE | XFEATURE_MASK_YMM |
-+				  XFEATURE_MASK_AVX512, NULL);
-+}
-+
-+static inline bool chacha20_arch(struct chacha20_ctx *ctx, u8 *dst,
-+				 const u8 *src, size_t len,
-+				 simd_context_t *simd_context)
-+{
-+	/* SIMD disables preemption, so relax after processing each page. */
-+	BUILD_BUG_ON(PAGE_SIZE < CHACHA20_BLOCK_SIZE ||
-+		     PAGE_SIZE % CHACHA20_BLOCK_SIZE);
-+
-+	if (!IS_ENABLED(CONFIG_AS_SSSE3) || !chacha20_use_ssse3 ||
-+	    len <= CHACHA20_BLOCK_SIZE || !simd_use(simd_context))
-+		return false;
-+
-+	for (;;) {
-+		const size_t bytes = min_t(size_t, len, PAGE_SIZE);
-+
-+		if (IS_ENABLED(CONFIG_AS_AVX512) && chacha20_use_avx512 &&
-+		    len >= CHACHA20_BLOCK_SIZE * 8)
-+			chacha20_avx512(dst, src, bytes, ctx->key, ctx->counter);
-+		else if (IS_ENABLED(CONFIG_AS_AVX512) && chacha20_use_avx512vl &&
-+			 len >= CHACHA20_BLOCK_SIZE * 4)
-+			chacha20_avx512vl(dst, src, bytes, ctx->key, ctx->counter);
-+		else if (IS_ENABLED(CONFIG_AS_AVX2) && chacha20_use_avx2 &&
-+			 len >= CHACHA20_BLOCK_SIZE * 4)
-+			chacha20_avx2(dst, src, bytes, ctx->key, ctx->counter);
-+		else
-+			chacha20_ssse3(dst, src, bytes, ctx->key, ctx->counter);
-+		ctx->counter[0] += (bytes + 63) / 64;
-+		len -= bytes;
-+		if (!len)
-+			break;
-+		dst += bytes;
-+		src += bytes;
-+		simd_relax(simd_context);
-+	}
-+
-+	return true;
-+}
-+
-+static inline bool hchacha20_arch(u32 derived_key[CHACHA20_KEY_WORDS],
-+				  const u8 nonce[HCHACHA20_NONCE_SIZE],
-+				  const u8 key[HCHACHA20_KEY_SIZE],
-+				  simd_context_t *simd_context)
-+{
-+	if (IS_ENABLED(CONFIG_AS_SSSE3) && chacha20_use_ssse3 &&
-+	    simd_use(simd_context)) {
-+		hchacha20_ssse3(derived_key, nonce, key);
-+		return true;
-+	}
-+	return false;
-+}
-diff --git a/lib/zinc/chacha20/chacha20-x86_64-cryptogams.S b/lib/zinc/chacha20/chacha20-x86_64.S
-similarity index 71%
-rename from lib/zinc/chacha20/chacha20-x86_64-cryptogams.S
-rename to lib/zinc/chacha20/chacha20-x86_64.S
-index 2bfc76f7e01f..3d10c7f21642 100644
---- a/lib/zinc/chacha20/chacha20-x86_64-cryptogams.S
-+++ b/lib/zinc/chacha20/chacha20-x86_64.S
-@@ -1,351 +1,148 @@
- /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
- /*
-+ * Copyright (C) 2017 Samuel Neves <sneves@dei.uc.pt>. All Rights Reserved.
-+ * Copyright (C) 2015-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-  * Copyright (C) 2006-2017 CRYPTOGAMS by <appro@openssl.org>. All Rights Reserved.
-+ *
-+ * This is based in part on Andy Polyakov's implementation from CRYPTOGAMS.
-  */
- 
--.text	
-+#include <linux/linkage.h>
- 
--
--
--.align	64
-+.section .rodata.cst16.Lzero, "aM", @progbits, 16
-+.align	16
- .Lzero:
- .long	0,0,0,0
-+.section .rodata.cst16.Lone, "aM", @progbits, 16
-+.align	16
- .Lone:
- .long	1,0,0,0
-+.section .rodata.cst16.Linc, "aM", @progbits, 16
-+.align	16
- .Linc:
- .long	0,1,2,3
-+.section .rodata.cst16.Lfour, "aM", @progbits, 16
-+.align	16
- .Lfour:
- .long	4,4,4,4
-+.section .rodata.cst32.Lincy, "aM", @progbits, 32
-+.align	32
- .Lincy:
- .long	0,2,4,6,1,3,5,7
-+.section .rodata.cst32.Leight, "aM", @progbits, 32
-+.align	32
- .Leight:
- .long	8,8,8,8,8,8,8,8
-+.section .rodata.cst16.Lrot16, "aM", @progbits, 16
-+.align	16
- .Lrot16:
- .byte	0x2,0x3,0x0,0x1, 0x6,0x7,0x4,0x5, 0xa,0xb,0x8,0x9, 0xe,0xf,0xc,0xd
-+.section .rodata.cst16.Lrot24, "aM", @progbits, 16
-+.align	16
- .Lrot24:
- .byte	0x3,0x0,0x1,0x2, 0x7,0x4,0x5,0x6, 0xb,0x8,0x9,0xa, 0xf,0xc,0xd,0xe
--.Ltwoy:
--.long	2,0,0,0, 2,0,0,0
-+.section .rodata.cst16.Lsigma, "aM", @progbits, 16
-+.align	16
-+.Lsigma:
-+.byte	101,120,112,97,110,100,32,51,50,45,98,121,116,101,32,107,0
-+.section .rodata.cst64.Lzeroz, "aM", @progbits, 64
- .align	64
- .Lzeroz:
- .long	0,0,0,0, 1,0,0,0, 2,0,0,0, 3,0,0,0
-+.section .rodata.cst64.Lfourz, "aM", @progbits, 64
-+.align	64
- .Lfourz:
- .long	4,0,0,0, 4,0,0,0, 4,0,0,0, 4,0,0,0
-+.section .rodata.cst64.Lincz, "aM", @progbits, 64
-+.align	64
- .Lincz:
- .long	0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-+.section .rodata.cst64.Lsixteen, "aM", @progbits, 64
-+.align	64
- .Lsixteen:
- .long	16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16
--.Lsigma:
--.byte	101,120,112,97,110,100,32,51,50,45,98,121,116,101,32,107,0
--.byte	67,104,97,67,104,97,50,48,32,102,111,114,32,120,56,54,95,54,52,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
--.globl	ChaCha20_ctr32
--.type	ChaCha20_ctr32,@function
-+.section .rodata.cst32.Ltwoy, "aM", @progbits, 32
- .align	64
--ChaCha20_ctr32:
--.cfi_startproc	
--	cmpq	$0,%rdx
--	je	.Lno_data
--	movq	OPENSSL_ia32cap_P+4(%rip),%r10
--	btq	$48,%r10
--	jc	.LChaCha20_avx512
--	testq	%r10,%r10
--	js	.LChaCha20_avx512vl
--	testl	$512,%r10d
--	jnz	.LChaCha20_ssse3
--
--	pushq	%rbx
--.cfi_adjust_cfa_offset	8
--.cfi_offset	%rbx,-16
--	pushq	%rbp
--.cfi_adjust_cfa_offset	8
--.cfi_offset	%rbp,-24
--	pushq	%r12
--.cfi_adjust_cfa_offset	8
--.cfi_offset	%r12,-32
--	pushq	%r13
--.cfi_adjust_cfa_offset	8
--.cfi_offset	%r13,-40
--	pushq	%r14
--.cfi_adjust_cfa_offset	8
--.cfi_offset	%r14,-48
--	pushq	%r15
--.cfi_adjust_cfa_offset	8
--.cfi_offset	%r15,-56
--	subq	$64+24,%rsp
--.cfi_adjust_cfa_offset	64+24
--.Lctr32_body:
--
--
--	movdqu	(%rcx),%xmm1
--	movdqu	16(%rcx),%xmm2
--	movdqu	(%r8),%xmm3
--	movdqa	.Lone(%rip),%xmm4
--
-+.Ltwoy:
-+.long	2,0,0,0, 2,0,0,0
- 
--	movdqa	%xmm1,16(%rsp)
--	movdqa	%xmm2,32(%rsp)
--	movdqa	%xmm3,48(%rsp)
--	movq	%rdx,%rbp
--	jmp	.Loop_outer
 +.text
- 
-+#ifdef CONFIG_AS_SSSE3
- .align	32
--.Loop_outer:
--	movl	$0x61707865,%eax
--	movl	$0x3320646e,%ebx
--	movl	$0x79622d32,%ecx
--	movl	$0x6b206574,%edx
--	movl	16(%rsp),%r8d
--	movl	20(%rsp),%r9d
--	movl	24(%rsp),%r10d
--	movl	28(%rsp),%r11d
--	movd	%xmm3,%r12d
--	movl	52(%rsp),%r13d
--	movl	56(%rsp),%r14d
--	movl	60(%rsp),%r15d
--
--	movq	%rbp,64+0(%rsp)
--	movl	$10,%ebp
--	movq	%rsi,64+8(%rsp)
--.byte	102,72,15,126,214
--	movq	%rdi,64+16(%rsp)
--	movq	%rsi,%rdi
--	shrq	$32,%rdi
--	jmp	.Loop
-+ENTRY(hchacha20_ssse3)
-+	movdqa	.Lsigma(%rip),%xmm0
-+	movdqu	(%rdx),%xmm1
-+	movdqu	16(%rdx),%xmm2
-+	movdqu	(%rsi),%xmm3
-+	movdqa	.Lrot16(%rip),%xmm6
-+	movdqa	.Lrot24(%rip),%xmm7
-+	movq	$10,%r8
-+	.align	32
-+.Loop_hssse3:
-+	paddd	%xmm1,%xmm0
-+	pxor	%xmm0,%xmm3
-+	pshufb	%xmm6,%xmm3
-+	paddd	%xmm3,%xmm2
-+	pxor	%xmm2,%xmm1
-+	movdqa	%xmm1,%xmm4
-+	psrld	$20,%xmm1
-+	pslld	$12,%xmm4
-+	por	%xmm4,%xmm1
-+	paddd	%xmm1,%xmm0
-+	pxor	%xmm0,%xmm3
-+	pshufb	%xmm7,%xmm3
-+	paddd	%xmm3,%xmm2
-+	pxor	%xmm2,%xmm1
-+	movdqa	%xmm1,%xmm4
-+	psrld	$25,%xmm1
-+	pslld	$7,%xmm4
-+	por	%xmm4,%xmm1
-+	pshufd	$78,%xmm2,%xmm2
-+	pshufd	$57,%xmm1,%xmm1
-+	pshufd	$147,%xmm3,%xmm3
-+	nop
-+	paddd	%xmm1,%xmm0
-+	pxor	%xmm0,%xmm3
-+	pshufb	%xmm6,%xmm3
-+	paddd	%xmm3,%xmm2
-+	pxor	%xmm2,%xmm1
-+	movdqa	%xmm1,%xmm4
-+	psrld	$20,%xmm1
-+	pslld	$12,%xmm4
-+	por	%xmm4,%xmm1
-+	paddd	%xmm1,%xmm0
-+	pxor	%xmm0,%xmm3
-+	pshufb	%xmm7,%xmm3
-+	paddd	%xmm3,%xmm2
-+	pxor	%xmm2,%xmm1
-+	movdqa	%xmm1,%xmm4
-+	psrld	$25,%xmm1
-+	pslld	$7,%xmm4
-+	por	%xmm4,%xmm1
-+	pshufd	$78,%xmm2,%xmm2
-+	pshufd	$147,%xmm1,%xmm1
-+	pshufd	$57,%xmm3,%xmm3
-+	decq	%r8
-+	jnz	.Loop_hssse3
-+	movdqu	%xmm0,0(%rdi)
-+	movdqu	%xmm3,16(%rdi)
-+	ret
-+ENDPROC(hchacha20_ssse3)
- 
- .align	32
--.Loop:
--	addl	%r8d,%eax
--	xorl	%eax,%r12d
--	roll	$16,%r12d
--	addl	%r9d,%ebx
--	xorl	%ebx,%r13d
--	roll	$16,%r13d
--	addl	%r12d,%esi
--	xorl	%esi,%r8d
--	roll	$12,%r8d
--	addl	%r13d,%edi
--	xorl	%edi,%r9d
--	roll	$12,%r9d
--	addl	%r8d,%eax
--	xorl	%eax,%r12d
--	roll	$8,%r12d
--	addl	%r9d,%ebx
--	xorl	%ebx,%r13d
--	roll	$8,%r13d
--	addl	%r12d,%esi
--	xorl	%esi,%r8d
--	roll	$7,%r8d
--	addl	%r13d,%edi
--	xorl	%edi,%r9d
--	roll	$7,%r9d
--	movl	%esi,32(%rsp)
--	movl	%edi,36(%rsp)
--	movl	40(%rsp),%esi
--	movl	44(%rsp),%edi
--	addl	%r10d,%ecx
--	xorl	%ecx,%r14d
--	roll	$16,%r14d
--	addl	%r11d,%edx
--	xorl	%edx,%r15d
--	roll	$16,%r15d
--	addl	%r14d,%esi
--	xorl	%esi,%r10d
--	roll	$12,%r10d
--	addl	%r15d,%edi
--	xorl	%edi,%r11d
--	roll	$12,%r11d
--	addl	%r10d,%ecx
--	xorl	%ecx,%r14d
--	roll	$8,%r14d
--	addl	%r11d,%edx
--	xorl	%edx,%r15d
--	roll	$8,%r15d
--	addl	%r14d,%esi
--	xorl	%esi,%r10d
--	roll	$7,%r10d
--	addl	%r15d,%edi
--	xorl	%edi,%r11d
--	roll	$7,%r11d
--	addl	%r9d,%eax
--	xorl	%eax,%r15d
--	roll	$16,%r15d
--	addl	%r10d,%ebx
--	xorl	%ebx,%r12d
--	roll	$16,%r12d
--	addl	%r15d,%esi
--	xorl	%esi,%r9d
--	roll	$12,%r9d
--	addl	%r12d,%edi
--	xorl	%edi,%r10d
--	roll	$12,%r10d
--	addl	%r9d,%eax
--	xorl	%eax,%r15d
--	roll	$8,%r15d
--	addl	%r10d,%ebx
--	xorl	%ebx,%r12d
--	roll	$8,%r12d
--	addl	%r15d,%esi
--	xorl	%esi,%r9d
--	roll	$7,%r9d
--	addl	%r12d,%edi
--	xorl	%edi,%r10d
--	roll	$7,%r10d
--	movl	%esi,40(%rsp)
--	movl	%edi,44(%rsp)
--	movl	32(%rsp),%esi
--	movl	36(%rsp),%edi
--	addl	%r11d,%ecx
--	xorl	%ecx,%r13d
--	roll	$16,%r13d
--	addl	%r8d,%edx
--	xorl	%edx,%r14d
--	roll	$16,%r14d
--	addl	%r13d,%esi
--	xorl	%esi,%r11d
--	roll	$12,%r11d
--	addl	%r14d,%edi
--	xorl	%edi,%r8d
--	roll	$12,%r8d
--	addl	%r11d,%ecx
--	xorl	%ecx,%r13d
--	roll	$8,%r13d
--	addl	%r8d,%edx
--	xorl	%edx,%r14d
--	roll	$8,%r14d
--	addl	%r13d,%esi
--	xorl	%esi,%r11d
--	roll	$7,%r11d
--	addl	%r14d,%edi
--	xorl	%edi,%r8d
--	roll	$7,%r8d
--	decl	%ebp
--	jnz	.Loop
--	movl	%edi,36(%rsp)
--	movl	%esi,32(%rsp)
--	movq	64(%rsp),%rbp
--	movdqa	%xmm2,%xmm1
--	movq	64+8(%rsp),%rsi
--	paddd	%xmm4,%xmm3
--	movq	64+16(%rsp),%rdi
--
--	addl	$0x61707865,%eax
--	addl	$0x3320646e,%ebx
--	addl	$0x79622d32,%ecx
--	addl	$0x6b206574,%edx
--	addl	16(%rsp),%r8d
--	addl	20(%rsp),%r9d
--	addl	24(%rsp),%r10d
--	addl	28(%rsp),%r11d
--	addl	48(%rsp),%r12d
--	addl	52(%rsp),%r13d
--	addl	56(%rsp),%r14d
--	addl	60(%rsp),%r15d
--	paddd	32(%rsp),%xmm1
--
--	cmpq	$64,%rbp
--	jb	.Ltail
--
--	xorl	0(%rsi),%eax
--	xorl	4(%rsi),%ebx
--	xorl	8(%rsi),%ecx
--	xorl	12(%rsi),%edx
--	xorl	16(%rsi),%r8d
--	xorl	20(%rsi),%r9d
--	xorl	24(%rsi),%r10d
--	xorl	28(%rsi),%r11d
--	movdqu	32(%rsi),%xmm0
--	xorl	48(%rsi),%r12d
--	xorl	52(%rsi),%r13d
--	xorl	56(%rsi),%r14d
--	xorl	60(%rsi),%r15d
--	leaq	64(%rsi),%rsi
--	pxor	%xmm1,%xmm0
--
--	movdqa	%xmm2,32(%rsp)
--	movd	%xmm3,48(%rsp)
--
--	movl	%eax,0(%rdi)
--	movl	%ebx,4(%rdi)
--	movl	%ecx,8(%rdi)
--	movl	%edx,12(%rdi)
--	movl	%r8d,16(%rdi)
--	movl	%r9d,20(%rdi)
--	movl	%r10d,24(%rdi)
--	movl	%r11d,28(%rdi)
--	movdqu	%xmm0,32(%rdi)
--	movl	%r12d,48(%rdi)
--	movl	%r13d,52(%rdi)
--	movl	%r14d,56(%rdi)
--	movl	%r15d,60(%rdi)
--	leaq	64(%rdi),%rdi
--
--	subq	$64,%rbp
--	jnz	.Loop_outer
--
--	jmp	.Ldone
-+ENTRY(chacha20_ssse3)
-+.Lchacha20_ssse3:
-+	cmpq	$0,%rdx
-+	je	.Lssse3_epilogue
-+	leaq	8(%rsp),%r10
- 
--.align	16
--.Ltail:
--	movl	%eax,0(%rsp)
--	movl	%ebx,4(%rsp)
--	xorq	%rbx,%rbx
--	movl	%ecx,8(%rsp)
--	movl	%edx,12(%rsp)
--	movl	%r8d,16(%rsp)
--	movl	%r9d,20(%rsp)
--	movl	%r10d,24(%rsp)
--	movl	%r11d,28(%rsp)
--	movdqa	%xmm1,32(%rsp)
--	movl	%r12d,48(%rsp)
--	movl	%r13d,52(%rsp)
--	movl	%r14d,56(%rsp)
--	movl	%r15d,60(%rsp)
--
--.Loop_tail:
--	movzbl	(%rsi,%rbx,1),%eax
--	movzbl	(%rsp,%rbx,1),%edx
--	leaq	1(%rbx),%rbx
--	xorl	%edx,%eax
--	movb	%al,-1(%rdi,%rbx,1)
--	decq	%rbp
--	jnz	.Loop_tail
--
--.Ldone:
--	leaq	64+24+48(%rsp),%rsi
--.cfi_def_cfa	%rsi,8
--	movq	-48(%rsi),%r15
--.cfi_restore	%r15
--	movq	-40(%rsi),%r14
--.cfi_restore	%r14
--	movq	-32(%rsi),%r13
--.cfi_restore	%r13
--	movq	-24(%rsi),%r12
--.cfi_restore	%r12
--	movq	-16(%rsi),%rbp
--.cfi_restore	%rbp
--	movq	-8(%rsi),%rbx
--.cfi_restore	%rbx
--	leaq	(%rsi),%rsp
--.cfi_def_cfa_register	%rsp
--.Lno_data:
--	.byte	0xf3,0xc3
--.cfi_endproc	
--.size	ChaCha20_ctr32,.-ChaCha20_ctr32
--.type	ChaCha20_ssse3,@function
--.align	32
--ChaCha20_ssse3:
--.cfi_startproc	
--.LChaCha20_ssse3:
--	movq	%rsp,%r9
--.cfi_def_cfa_register	%r9
--	testl	$2048,%r10d
--	jnz	.LChaCha20_4xop
- 	cmpq	$128,%rdx
--	je	.LChaCha20_128
--	ja	.LChaCha20_4x
-+	ja	.Lchacha20_4x
- 
- .Ldo_sse3_after_all:
- 	subq	$64+8,%rsp
-+	andq	$-32,%rsp
- 	movdqa	.Lsigma(%rip),%xmm0
- 	movdqu	(%rcx),%xmm1
- 	movdqu	16(%rcx),%xmm2
-@@ -375,7 +172,7 @@ ChaCha20_ssse3:
- .Loop_ssse3:
- 	paddd	%xmm1,%xmm0
- 	pxor	%xmm0,%xmm3
--.byte	102,15,56,0,222
-+	pshufb	%xmm6,%xmm3
- 	paddd	%xmm3,%xmm2
- 	pxor	%xmm2,%xmm1
- 	movdqa	%xmm1,%xmm4
-@@ -384,7 +181,7 @@ ChaCha20_ssse3:
- 	por	%xmm4,%xmm1
- 	paddd	%xmm1,%xmm0
- 	pxor	%xmm0,%xmm3
--.byte	102,15,56,0,223
-+	pshufb	%xmm7,%xmm3
- 	paddd	%xmm3,%xmm2
- 	pxor	%xmm2,%xmm1
- 	movdqa	%xmm1,%xmm4
-@@ -397,7 +194,7 @@ ChaCha20_ssse3:
- 	nop
- 	paddd	%xmm1,%xmm0
- 	pxor	%xmm0,%xmm3
--.byte	102,15,56,0,222
-+	pshufb	%xmm6,%xmm3
- 	paddd	%xmm3,%xmm2
- 	pxor	%xmm2,%xmm1
- 	movdqa	%xmm1,%xmm4
-@@ -406,7 +203,7 @@ ChaCha20_ssse3:
- 	por	%xmm4,%xmm1
- 	paddd	%xmm1,%xmm0
- 	pxor	%xmm0,%xmm3
--.byte	102,15,56,0,223
-+	pshufb	%xmm7,%xmm3
- 	paddd	%xmm3,%xmm2
- 	pxor	%xmm2,%xmm1
- 	movdqa	%xmm1,%xmm4
-@@ -465,194 +262,24 @@ ChaCha20_ssse3:
- 	jnz	.Loop_tail_ssse3
- 
- .Ldone_ssse3:
--	leaq	(%r9),%rsp
--.cfi_def_cfa_register	%rsp
--.Lssse3_epilogue:
--	.byte	0xf3,0xc3
--.cfi_endproc	
--.size	ChaCha20_ssse3,.-ChaCha20_ssse3
--.type	ChaCha20_128,@function
--.align	32
--ChaCha20_128:
--.cfi_startproc	
--.LChaCha20_128:
--	movq	%rsp,%r9
--.cfi_def_cfa_register	%r9
--	subq	$64+8,%rsp
--	movdqa	.Lsigma(%rip),%xmm8
--	movdqu	(%rcx),%xmm9
--	movdqu	16(%rcx),%xmm2
--	movdqu	(%r8),%xmm3
--	movdqa	.Lone(%rip),%xmm1
--	movdqa	.Lrot16(%rip),%xmm6
--	movdqa	.Lrot24(%rip),%xmm7
-+	leaq	-8(%r10),%rsp
- 
--	movdqa	%xmm8,%xmm10
--	movdqa	%xmm8,0(%rsp)
--	movdqa	%xmm9,%xmm11
--	movdqa	%xmm9,16(%rsp)
--	movdqa	%xmm2,%xmm0
--	movdqa	%xmm2,32(%rsp)
--	paddd	%xmm3,%xmm1
--	movdqa	%xmm3,48(%rsp)
--	movq	$10,%r8
--	jmp	.Loop_128
--
--.align	32
--.Loop_128:
--	paddd	%xmm9,%xmm8
--	pxor	%xmm8,%xmm3
--	paddd	%xmm11,%xmm10
--	pxor	%xmm10,%xmm1
--.byte	102,15,56,0,222
--.byte	102,15,56,0,206
--	paddd	%xmm3,%xmm2
--	paddd	%xmm1,%xmm0
--	pxor	%xmm2,%xmm9
--	pxor	%xmm0,%xmm11
--	movdqa	%xmm9,%xmm4
--	psrld	$20,%xmm9
--	movdqa	%xmm11,%xmm5
--	pslld	$12,%xmm4
--	psrld	$20,%xmm11
--	por	%xmm4,%xmm9
--	pslld	$12,%xmm5
--	por	%xmm5,%xmm11
--	paddd	%xmm9,%xmm8
--	pxor	%xmm8,%xmm3
--	paddd	%xmm11,%xmm10
--	pxor	%xmm10,%xmm1
--.byte	102,15,56,0,223
--.byte	102,15,56,0,207
--	paddd	%xmm3,%xmm2
--	paddd	%xmm1,%xmm0
--	pxor	%xmm2,%xmm9
--	pxor	%xmm0,%xmm11
--	movdqa	%xmm9,%xmm4
--	psrld	$25,%xmm9
--	movdqa	%xmm11,%xmm5
--	pslld	$7,%xmm4
--	psrld	$25,%xmm11
--	por	%xmm4,%xmm9
--	pslld	$7,%xmm5
--	por	%xmm5,%xmm11
--	pshufd	$78,%xmm2,%xmm2
--	pshufd	$57,%xmm9,%xmm9
--	pshufd	$147,%xmm3,%xmm3
--	pshufd	$78,%xmm0,%xmm0
--	pshufd	$57,%xmm11,%xmm11
--	pshufd	$147,%xmm1,%xmm1
--	paddd	%xmm9,%xmm8
--	pxor	%xmm8,%xmm3
--	paddd	%xmm11,%xmm10
--	pxor	%xmm10,%xmm1
--.byte	102,15,56,0,222
--.byte	102,15,56,0,206
--	paddd	%xmm3,%xmm2
--	paddd	%xmm1,%xmm0
--	pxor	%xmm2,%xmm9
--	pxor	%xmm0,%xmm11
--	movdqa	%xmm9,%xmm4
--	psrld	$20,%xmm9
--	movdqa	%xmm11,%xmm5
--	pslld	$12,%xmm4
--	psrld	$20,%xmm11
--	por	%xmm4,%xmm9
--	pslld	$12,%xmm5
--	por	%xmm5,%xmm11
--	paddd	%xmm9,%xmm8
--	pxor	%xmm8,%xmm3
--	paddd	%xmm11,%xmm10
--	pxor	%xmm10,%xmm1
--.byte	102,15,56,0,223
--.byte	102,15,56,0,207
--	paddd	%xmm3,%xmm2
--	paddd	%xmm1,%xmm0
--	pxor	%xmm2,%xmm9
--	pxor	%xmm0,%xmm11
--	movdqa	%xmm9,%xmm4
--	psrld	$25,%xmm9
--	movdqa	%xmm11,%xmm5
--	pslld	$7,%xmm4
--	psrld	$25,%xmm11
--	por	%xmm4,%xmm9
--	pslld	$7,%xmm5
--	por	%xmm5,%xmm11
--	pshufd	$78,%xmm2,%xmm2
--	pshufd	$147,%xmm9,%xmm9
--	pshufd	$57,%xmm3,%xmm3
--	pshufd	$78,%xmm0,%xmm0
--	pshufd	$147,%xmm11,%xmm11
--	pshufd	$57,%xmm1,%xmm1
--	decq	%r8
--	jnz	.Loop_128
--	paddd	0(%rsp),%xmm8
--	paddd	16(%rsp),%xmm9
--	paddd	32(%rsp),%xmm2
--	paddd	48(%rsp),%xmm3
--	paddd	.Lone(%rip),%xmm1
--	paddd	0(%rsp),%xmm10
--	paddd	16(%rsp),%xmm11
--	paddd	32(%rsp),%xmm0
--	paddd	48(%rsp),%xmm1
--
--	movdqu	0(%rsi),%xmm4
--	movdqu	16(%rsi),%xmm5
--	pxor	%xmm4,%xmm8
--	movdqu	32(%rsi),%xmm4
--	pxor	%xmm5,%xmm9
--	movdqu	48(%rsi),%xmm5
--	pxor	%xmm4,%xmm2
--	movdqu	64(%rsi),%xmm4
--	pxor	%xmm5,%xmm3
--	movdqu	80(%rsi),%xmm5
--	pxor	%xmm4,%xmm10
--	movdqu	96(%rsi),%xmm4
--	pxor	%xmm5,%xmm11
--	movdqu	112(%rsi),%xmm5
--	pxor	%xmm4,%xmm0
--	pxor	%xmm5,%xmm1
-+.Lssse3_epilogue:
-+	ret
- 
--	movdqu	%xmm8,0(%rdi)
--	movdqu	%xmm9,16(%rdi)
--	movdqu	%xmm2,32(%rdi)
--	movdqu	%xmm3,48(%rdi)
--	movdqu	%xmm10,64(%rdi)
--	movdqu	%xmm11,80(%rdi)
--	movdqu	%xmm0,96(%rdi)
--	movdqu	%xmm1,112(%rdi)
--	leaq	(%r9),%rsp
--.cfi_def_cfa_register	%rsp
--.L128_epilogue:
--	.byte	0xf3,0xc3
--.cfi_endproc	
--.size	ChaCha20_128,.-ChaCha20_128
--.type	ChaCha20_4x,@function
- .align	32
--ChaCha20_4x:
--.cfi_startproc	
--.LChaCha20_4x:
--	movq	%rsp,%r9
--.cfi_def_cfa_register	%r9
--	movq	%r10,%r11
--	shrq	$32,%r10
--	testq	$32,%r10
--	jnz	.LChaCha20_8x
--	cmpq	$192,%rdx
--	ja	.Lproceed4x
--
--	andq	$71303168,%r11
--	cmpq	$4194304,%r11
--	je	.Ldo_sse3_after_all
-+.Lchacha20_4x:
-+	leaq	8(%rsp),%r10
- 
- .Lproceed4x:
- 	subq	$0x140+8,%rsp
-+	andq	$-32,%rsp
- 	movdqa	.Lsigma(%rip),%xmm11
- 	movdqu	(%rcx),%xmm15
- 	movdqu	16(%rcx),%xmm7
- 	movdqu	(%r8),%xmm3
- 	leaq	256(%rsp),%rcx
--	leaq	.Lrot16(%rip),%r10
-+	leaq	.Lrot16(%rip),%r9
- 	leaq	.Lrot24(%rip),%r11
- 
- 	pshufd	$0x00,%xmm11,%xmm8
-@@ -716,7 +343,7 @@ ChaCha20_4x:
- .Loop_enter4x:
- 	movdqa	%xmm6,32(%rsp)
- 	movdqa	%xmm7,48(%rsp)
--	movdqa	(%r10),%xmm7
-+	movdqa	(%r9),%xmm7
- 	movl	$10,%eax
- 	movdqa	%xmm0,256-256(%rcx)
- 	jmp	.Loop4x
-@@ -727,8 +354,8 @@ ChaCha20_4x:
- 	paddd	%xmm13,%xmm9
- 	pxor	%xmm8,%xmm0
- 	pxor	%xmm9,%xmm1
--.byte	102,15,56,0,199
--.byte	102,15,56,0,207
-+	pshufb	%xmm7,%xmm0
-+	pshufb	%xmm7,%xmm1
- 	paddd	%xmm0,%xmm4
- 	paddd	%xmm1,%xmm5
- 	pxor	%xmm4,%xmm12
-@@ -746,8 +373,8 @@ ChaCha20_4x:
- 	paddd	%xmm13,%xmm9
- 	pxor	%xmm8,%xmm0
- 	pxor	%xmm9,%xmm1
--.byte	102,15,56,0,198
--.byte	102,15,56,0,206
-+	pshufb	%xmm6,%xmm0
-+	pshufb	%xmm6,%xmm1
- 	paddd	%xmm0,%xmm4
- 	paddd	%xmm1,%xmm5
- 	pxor	%xmm4,%xmm12
-@@ -759,7 +386,7 @@ ChaCha20_4x:
- 	pslld	$7,%xmm13
- 	por	%xmm7,%xmm12
- 	psrld	$25,%xmm6
--	movdqa	(%r10),%xmm7
-+	movdqa	(%r9),%xmm7
- 	por	%xmm6,%xmm13
- 	movdqa	%xmm4,0(%rsp)
- 	movdqa	%xmm5,16(%rsp)
-@@ -769,8 +396,8 @@ ChaCha20_4x:
- 	paddd	%xmm15,%xmm11
- 	pxor	%xmm10,%xmm2
- 	pxor	%xmm11,%xmm3
--.byte	102,15,56,0,215
--.byte	102,15,56,0,223
-+	pshufb	%xmm7,%xmm2
-+	pshufb	%xmm7,%xmm3
- 	paddd	%xmm2,%xmm4
- 	paddd	%xmm3,%xmm5
- 	pxor	%xmm4,%xmm14
-@@ -788,8 +415,8 @@ ChaCha20_4x:
- 	paddd	%xmm15,%xmm11
- 	pxor	%xmm10,%xmm2
- 	pxor	%xmm11,%xmm3
--.byte	102,15,56,0,214
--.byte	102,15,56,0,222
-+	pshufb	%xmm6,%xmm2
-+	pshufb	%xmm6,%xmm3
- 	paddd	%xmm2,%xmm4
- 	paddd	%xmm3,%xmm5
- 	pxor	%xmm4,%xmm14
-@@ -801,14 +428,14 @@ ChaCha20_4x:
- 	pslld	$7,%xmm15
- 	por	%xmm7,%xmm14
- 	psrld	$25,%xmm6
--	movdqa	(%r10),%xmm7
-+	movdqa	(%r9),%xmm7
- 	por	%xmm6,%xmm15
- 	paddd	%xmm13,%xmm8
- 	paddd	%xmm14,%xmm9
- 	pxor	%xmm8,%xmm3
- 	pxor	%xmm9,%xmm0
--.byte	102,15,56,0,223
--.byte	102,15,56,0,199
-+	pshufb	%xmm7,%xmm3
-+	pshufb	%xmm7,%xmm0
- 	paddd	%xmm3,%xmm4
- 	paddd	%xmm0,%xmm5
- 	pxor	%xmm4,%xmm13
-@@ -826,8 +453,8 @@ ChaCha20_4x:
- 	paddd	%xmm14,%xmm9
- 	pxor	%xmm8,%xmm3
- 	pxor	%xmm9,%xmm0
--.byte	102,15,56,0,222
--.byte	102,15,56,0,198
-+	pshufb	%xmm6,%xmm3
-+	pshufb	%xmm6,%xmm0
- 	paddd	%xmm3,%xmm4
- 	paddd	%xmm0,%xmm5
- 	pxor	%xmm4,%xmm13
-@@ -839,7 +466,7 @@ ChaCha20_4x:
- 	pslld	$7,%xmm14
- 	por	%xmm7,%xmm13
- 	psrld	$25,%xmm6
--	movdqa	(%r10),%xmm7
-+	movdqa	(%r9),%xmm7
- 	por	%xmm6,%xmm14
- 	movdqa	%xmm4,32(%rsp)
- 	movdqa	%xmm5,48(%rsp)
-@@ -849,8 +476,8 @@ ChaCha20_4x:
- 	paddd	%xmm12,%xmm11
- 	pxor	%xmm10,%xmm1
- 	pxor	%xmm11,%xmm2
--.byte	102,15,56,0,207
--.byte	102,15,56,0,215
-+	pshufb	%xmm7,%xmm1
-+	pshufb	%xmm7,%xmm2
- 	paddd	%xmm1,%xmm4
- 	paddd	%xmm2,%xmm5
- 	pxor	%xmm4,%xmm15
-@@ -868,8 +495,8 @@ ChaCha20_4x:
- 	paddd	%xmm12,%xmm11
- 	pxor	%xmm10,%xmm1
- 	pxor	%xmm11,%xmm2
--.byte	102,15,56,0,206
--.byte	102,15,56,0,214
-+	pshufb	%xmm6,%xmm1
-+	pshufb	%xmm6,%xmm2
- 	paddd	%xmm1,%xmm4
- 	paddd	%xmm2,%xmm5
- 	pxor	%xmm4,%xmm15
-@@ -881,7 +508,7 @@ ChaCha20_4x:
- 	pslld	$7,%xmm12
- 	por	%xmm7,%xmm15
- 	psrld	$25,%xmm6
--	movdqa	(%r10),%xmm7
-+	movdqa	(%r9),%xmm7
- 	por	%xmm6,%xmm12
- 	decl	%eax
- 	jnz	.Loop4x
-@@ -1035,7 +662,7 @@ ChaCha20_4x:
- 	jae	.L64_or_more4x
- 
- 
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 
- 	movdqa	%xmm12,16(%rsp)
- 	movdqa	%xmm4,32(%rsp)
-@@ -1060,7 +687,7 @@ ChaCha20_4x:
- 
- 	movdqa	16(%rsp),%xmm6
- 	leaq	64(%rsi),%rsi
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	movdqa	%xmm6,0(%rsp)
- 	movdqa	%xmm13,16(%rsp)
- 	leaq	64(%rdi),%rdi
-@@ -1100,7 +727,7 @@ ChaCha20_4x:
- 
- 	movdqa	32(%rsp),%xmm6
- 	leaq	128(%rsi),%rsi
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	movdqa	%xmm6,0(%rsp)
- 	movdqa	%xmm10,16(%rsp)
- 	leaq	128(%rdi),%rdi
-@@ -1155,7 +782,7 @@ ChaCha20_4x:
- 
- 	movdqa	48(%rsp),%xmm6
- 	leaq	64(%rsi),%rsi
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	movdqa	%xmm6,0(%rsp)
- 	movdqa	%xmm15,16(%rsp)
- 	leaq	64(%rdi),%rdi
-@@ -1164,463 +791,41 @@ ChaCha20_4x:
- 	movdqa	%xmm3,48(%rsp)
- 
- .Loop_tail4x:
--	movzbl	(%rsi,%r10,1),%eax
--	movzbl	(%rsp,%r10,1),%ecx
--	leaq	1(%r10),%r10
-+	movzbl	(%rsi,%r9,1),%eax
-+	movzbl	(%rsp,%r9,1),%ecx
-+	leaq	1(%r9),%r9
- 	xorl	%ecx,%eax
--	movb	%al,-1(%rdi,%r10,1)
-+	movb	%al,-1(%rdi,%r9,1)
- 	decq	%rdx
- 	jnz	.Loop_tail4x
- 
- .Ldone4x:
--	leaq	(%r9),%rsp
--.cfi_def_cfa_register	%rsp
--.L4x_epilogue:
--	.byte	0xf3,0xc3
--.cfi_endproc	
--.size	ChaCha20_4x,.-ChaCha20_4x
--.type	ChaCha20_4xop,@function
--.align	32
--ChaCha20_4xop:
--.cfi_startproc	
--.LChaCha20_4xop:
--	movq	%rsp,%r9
--.cfi_def_cfa_register	%r9
--	subq	$0x140+8,%rsp
--	vzeroupper
-+	leaq	-8(%r10),%rsp
- 
--	vmovdqa	.Lsigma(%rip),%xmm11
--	vmovdqu	(%rcx),%xmm3
--	vmovdqu	16(%rcx),%xmm15
--	vmovdqu	(%r8),%xmm7
--	leaq	256(%rsp),%rcx
--
--	vpshufd	$0x00,%xmm11,%xmm8
--	vpshufd	$0x55,%xmm11,%xmm9
--	vmovdqa	%xmm8,64(%rsp)
--	vpshufd	$0xaa,%xmm11,%xmm10
--	vmovdqa	%xmm9,80(%rsp)
--	vpshufd	$0xff,%xmm11,%xmm11
--	vmovdqa	%xmm10,96(%rsp)
--	vmovdqa	%xmm11,112(%rsp)
--
--	vpshufd	$0x00,%xmm3,%xmm0
--	vpshufd	$0x55,%xmm3,%xmm1
--	vmovdqa	%xmm0,128-256(%rcx)
--	vpshufd	$0xaa,%xmm3,%xmm2
--	vmovdqa	%xmm1,144-256(%rcx)
--	vpshufd	$0xff,%xmm3,%xmm3
--	vmovdqa	%xmm2,160-256(%rcx)
--	vmovdqa	%xmm3,176-256(%rcx)
--
--	vpshufd	$0x00,%xmm15,%xmm12
--	vpshufd	$0x55,%xmm15,%xmm13
--	vmovdqa	%xmm12,192-256(%rcx)
--	vpshufd	$0xaa,%xmm15,%xmm14
--	vmovdqa	%xmm13,208-256(%rcx)
--	vpshufd	$0xff,%xmm15,%xmm15
--	vmovdqa	%xmm14,224-256(%rcx)
--	vmovdqa	%xmm15,240-256(%rcx)
--
--	vpshufd	$0x00,%xmm7,%xmm4
--	vpshufd	$0x55,%xmm7,%xmm5
--	vpaddd	.Linc(%rip),%xmm4,%xmm4
--	vpshufd	$0xaa,%xmm7,%xmm6
--	vmovdqa	%xmm5,272-256(%rcx)
--	vpshufd	$0xff,%xmm7,%xmm7
--	vmovdqa	%xmm6,288-256(%rcx)
--	vmovdqa	%xmm7,304-256(%rcx)
--
--	jmp	.Loop_enter4xop
--
--.align	32
--.Loop_outer4xop:
--	vmovdqa	64(%rsp),%xmm8
--	vmovdqa	80(%rsp),%xmm9
--	vmovdqa	96(%rsp),%xmm10
--	vmovdqa	112(%rsp),%xmm11
--	vmovdqa	128-256(%rcx),%xmm0
--	vmovdqa	144-256(%rcx),%xmm1
--	vmovdqa	160-256(%rcx),%xmm2
--	vmovdqa	176-256(%rcx),%xmm3
--	vmovdqa	192-256(%rcx),%xmm12
--	vmovdqa	208-256(%rcx),%xmm13
--	vmovdqa	224-256(%rcx),%xmm14
--	vmovdqa	240-256(%rcx),%xmm15
--	vmovdqa	256-256(%rcx),%xmm4
--	vmovdqa	272-256(%rcx),%xmm5
--	vmovdqa	288-256(%rcx),%xmm6
--	vmovdqa	304-256(%rcx),%xmm7
--	vpaddd	.Lfour(%rip),%xmm4,%xmm4
--
--.Loop_enter4xop:
--	movl	$10,%eax
--	vmovdqa	%xmm4,256-256(%rcx)
--	jmp	.Loop4xop
--
--.align	32
--.Loop4xop:
--	vpaddd	%xmm0,%xmm8,%xmm8
--	vpaddd	%xmm1,%xmm9,%xmm9
--	vpaddd	%xmm2,%xmm10,%xmm10
--	vpaddd	%xmm3,%xmm11,%xmm11
--	vpxor	%xmm4,%xmm8,%xmm4
--	vpxor	%xmm5,%xmm9,%xmm5
--	vpxor	%xmm6,%xmm10,%xmm6
--	vpxor	%xmm7,%xmm11,%xmm7
--.byte	143,232,120,194,228,16
--.byte	143,232,120,194,237,16
--.byte	143,232,120,194,246,16
--.byte	143,232,120,194,255,16
--	vpaddd	%xmm4,%xmm12,%xmm12
--	vpaddd	%xmm5,%xmm13,%xmm13
--	vpaddd	%xmm6,%xmm14,%xmm14
--	vpaddd	%xmm7,%xmm15,%xmm15
--	vpxor	%xmm0,%xmm12,%xmm0
--	vpxor	%xmm1,%xmm13,%xmm1
--	vpxor	%xmm14,%xmm2,%xmm2
--	vpxor	%xmm15,%xmm3,%xmm3
--.byte	143,232,120,194,192,12
--.byte	143,232,120,194,201,12
--.byte	143,232,120,194,210,12
--.byte	143,232,120,194,219,12
--	vpaddd	%xmm8,%xmm0,%xmm8
--	vpaddd	%xmm9,%xmm1,%xmm9
--	vpaddd	%xmm2,%xmm10,%xmm10
--	vpaddd	%xmm3,%xmm11,%xmm11
--	vpxor	%xmm4,%xmm8,%xmm4
--	vpxor	%xmm5,%xmm9,%xmm5
--	vpxor	%xmm6,%xmm10,%xmm6
--	vpxor	%xmm7,%xmm11,%xmm7
--.byte	143,232,120,194,228,8
--.byte	143,232,120,194,237,8
--.byte	143,232,120,194,246,8
--.byte	143,232,120,194,255,8
--	vpaddd	%xmm4,%xmm12,%xmm12
--	vpaddd	%xmm5,%xmm13,%xmm13
--	vpaddd	%xmm6,%xmm14,%xmm14
--	vpaddd	%xmm7,%xmm15,%xmm15
--	vpxor	%xmm0,%xmm12,%xmm0
--	vpxor	%xmm1,%xmm13,%xmm1
--	vpxor	%xmm14,%xmm2,%xmm2
--	vpxor	%xmm15,%xmm3,%xmm3
--.byte	143,232,120,194,192,7
--.byte	143,232,120,194,201,7
--.byte	143,232,120,194,210,7
--.byte	143,232,120,194,219,7
--	vpaddd	%xmm1,%xmm8,%xmm8
--	vpaddd	%xmm2,%xmm9,%xmm9
--	vpaddd	%xmm3,%xmm10,%xmm10
--	vpaddd	%xmm0,%xmm11,%xmm11
--	vpxor	%xmm7,%xmm8,%xmm7
--	vpxor	%xmm4,%xmm9,%xmm4
--	vpxor	%xmm5,%xmm10,%xmm5
--	vpxor	%xmm6,%xmm11,%xmm6
--.byte	143,232,120,194,255,16
--.byte	143,232,120,194,228,16
--.byte	143,232,120,194,237,16
--.byte	143,232,120,194,246,16
--	vpaddd	%xmm7,%xmm14,%xmm14
--	vpaddd	%xmm4,%xmm15,%xmm15
--	vpaddd	%xmm5,%xmm12,%xmm12
--	vpaddd	%xmm6,%xmm13,%xmm13
--	vpxor	%xmm1,%xmm14,%xmm1
--	vpxor	%xmm2,%xmm15,%xmm2
--	vpxor	%xmm12,%xmm3,%xmm3
--	vpxor	%xmm13,%xmm0,%xmm0
--.byte	143,232,120,194,201,12
--.byte	143,232,120,194,210,12
--.byte	143,232,120,194,219,12
--.byte	143,232,120,194,192,12
--	vpaddd	%xmm8,%xmm1,%xmm8
--	vpaddd	%xmm9,%xmm2,%xmm9
--	vpaddd	%xmm3,%xmm10,%xmm10
--	vpaddd	%xmm0,%xmm11,%xmm11
--	vpxor	%xmm7,%xmm8,%xmm7
--	vpxor	%xmm4,%xmm9,%xmm4
--	vpxor	%xmm5,%xmm10,%xmm5
--	vpxor	%xmm6,%xmm11,%xmm6
--.byte	143,232,120,194,255,8
--.byte	143,232,120,194,228,8
--.byte	143,232,120,194,237,8
--.byte	143,232,120,194,246,8
--	vpaddd	%xmm7,%xmm14,%xmm14
--	vpaddd	%xmm4,%xmm15,%xmm15
--	vpaddd	%xmm5,%xmm12,%xmm12
--	vpaddd	%xmm6,%xmm13,%xmm13
--	vpxor	%xmm1,%xmm14,%xmm1
--	vpxor	%xmm2,%xmm15,%xmm2
--	vpxor	%xmm12,%xmm3,%xmm3
--	vpxor	%xmm13,%xmm0,%xmm0
--.byte	143,232,120,194,201,7
--.byte	143,232,120,194,210,7
--.byte	143,232,120,194,219,7
--.byte	143,232,120,194,192,7
--	decl	%eax
--	jnz	.Loop4xop
--
--	vpaddd	64(%rsp),%xmm8,%xmm8
--	vpaddd	80(%rsp),%xmm9,%xmm9
--	vpaddd	96(%rsp),%xmm10,%xmm10
--	vpaddd	112(%rsp),%xmm11,%xmm11
--
--	vmovdqa	%xmm14,32(%rsp)
--	vmovdqa	%xmm15,48(%rsp)
--
--	vpunpckldq	%xmm9,%xmm8,%xmm14
--	vpunpckldq	%xmm11,%xmm10,%xmm15
--	vpunpckhdq	%xmm9,%xmm8,%xmm8
--	vpunpckhdq	%xmm11,%xmm10,%xmm10
--	vpunpcklqdq	%xmm15,%xmm14,%xmm9
--	vpunpckhqdq	%xmm15,%xmm14,%xmm14
--	vpunpcklqdq	%xmm10,%xmm8,%xmm11
--	vpunpckhqdq	%xmm10,%xmm8,%xmm8
--	vpaddd	128-256(%rcx),%xmm0,%xmm0
--	vpaddd	144-256(%rcx),%xmm1,%xmm1
--	vpaddd	160-256(%rcx),%xmm2,%xmm2
--	vpaddd	176-256(%rcx),%xmm3,%xmm3
--
--	vmovdqa	%xmm9,0(%rsp)
--	vmovdqa	%xmm14,16(%rsp)
--	vmovdqa	32(%rsp),%xmm9
--	vmovdqa	48(%rsp),%xmm14
--
--	vpunpckldq	%xmm1,%xmm0,%xmm10
--	vpunpckldq	%xmm3,%xmm2,%xmm15
--	vpunpckhdq	%xmm1,%xmm0,%xmm0
--	vpunpckhdq	%xmm3,%xmm2,%xmm2
--	vpunpcklqdq	%xmm15,%xmm10,%xmm1
--	vpunpckhqdq	%xmm15,%xmm10,%xmm10
--	vpunpcklqdq	%xmm2,%xmm0,%xmm3
--	vpunpckhqdq	%xmm2,%xmm0,%xmm0
--	vpaddd	192-256(%rcx),%xmm12,%xmm12
--	vpaddd	208-256(%rcx),%xmm13,%xmm13
--	vpaddd	224-256(%rcx),%xmm9,%xmm9
--	vpaddd	240-256(%rcx),%xmm14,%xmm14
--
--	vpunpckldq	%xmm13,%xmm12,%xmm2
--	vpunpckldq	%xmm14,%xmm9,%xmm15
--	vpunpckhdq	%xmm13,%xmm12,%xmm12
--	vpunpckhdq	%xmm14,%xmm9,%xmm9
--	vpunpcklqdq	%xmm15,%xmm2,%xmm13
--	vpunpckhqdq	%xmm15,%xmm2,%xmm2
--	vpunpcklqdq	%xmm9,%xmm12,%xmm14
--	vpunpckhqdq	%xmm9,%xmm12,%xmm12
--	vpaddd	256-256(%rcx),%xmm4,%xmm4
--	vpaddd	272-256(%rcx),%xmm5,%xmm5
--	vpaddd	288-256(%rcx),%xmm6,%xmm6
--	vpaddd	304-256(%rcx),%xmm7,%xmm7
--
--	vpunpckldq	%xmm5,%xmm4,%xmm9
--	vpunpckldq	%xmm7,%xmm6,%xmm15
--	vpunpckhdq	%xmm5,%xmm4,%xmm4
--	vpunpckhdq	%xmm7,%xmm6,%xmm6
--	vpunpcklqdq	%xmm15,%xmm9,%xmm5
--	vpunpckhqdq	%xmm15,%xmm9,%xmm9
--	vpunpcklqdq	%xmm6,%xmm4,%xmm7
--	vpunpckhqdq	%xmm6,%xmm4,%xmm4
--	vmovdqa	0(%rsp),%xmm6
--	vmovdqa	16(%rsp),%xmm15
--
--	cmpq	$256,%rdx
--	jb	.Ltail4xop
--
--	vpxor	0(%rsi),%xmm6,%xmm6
--	vpxor	16(%rsi),%xmm1,%xmm1
--	vpxor	32(%rsi),%xmm13,%xmm13
--	vpxor	48(%rsi),%xmm5,%xmm5
--	vpxor	64(%rsi),%xmm15,%xmm15
--	vpxor	80(%rsi),%xmm10,%xmm10
--	vpxor	96(%rsi),%xmm2,%xmm2
--	vpxor	112(%rsi),%xmm9,%xmm9
--	leaq	128(%rsi),%rsi
--	vpxor	0(%rsi),%xmm11,%xmm11
--	vpxor	16(%rsi),%xmm3,%xmm3
--	vpxor	32(%rsi),%xmm14,%xmm14
--	vpxor	48(%rsi),%xmm7,%xmm7
--	vpxor	64(%rsi),%xmm8,%xmm8
--	vpxor	80(%rsi),%xmm0,%xmm0
--	vpxor	96(%rsi),%xmm12,%xmm12
--	vpxor	112(%rsi),%xmm4,%xmm4
--	leaq	128(%rsi),%rsi
--
--	vmovdqu	%xmm6,0(%rdi)
--	vmovdqu	%xmm1,16(%rdi)
--	vmovdqu	%xmm13,32(%rdi)
--	vmovdqu	%xmm5,48(%rdi)
--	vmovdqu	%xmm15,64(%rdi)
--	vmovdqu	%xmm10,80(%rdi)
--	vmovdqu	%xmm2,96(%rdi)
--	vmovdqu	%xmm9,112(%rdi)
--	leaq	128(%rdi),%rdi
--	vmovdqu	%xmm11,0(%rdi)
--	vmovdqu	%xmm3,16(%rdi)
--	vmovdqu	%xmm14,32(%rdi)
--	vmovdqu	%xmm7,48(%rdi)
--	vmovdqu	%xmm8,64(%rdi)
--	vmovdqu	%xmm0,80(%rdi)
--	vmovdqu	%xmm12,96(%rdi)
--	vmovdqu	%xmm4,112(%rdi)
--	leaq	128(%rdi),%rdi
--
--	subq	$256,%rdx
--	jnz	.Loop_outer4xop
--
--	jmp	.Ldone4xop
--
--.align	32
--.Ltail4xop:
--	cmpq	$192,%rdx
--	jae	.L192_or_more4xop
--	cmpq	$128,%rdx
--	jae	.L128_or_more4xop
--	cmpq	$64,%rdx
--	jae	.L64_or_more4xop
--
--	xorq	%r10,%r10
--	vmovdqa	%xmm6,0(%rsp)
--	vmovdqa	%xmm1,16(%rsp)
--	vmovdqa	%xmm13,32(%rsp)
--	vmovdqa	%xmm5,48(%rsp)
--	jmp	.Loop_tail4xop
--
--.align	32
--.L64_or_more4xop:
--	vpxor	0(%rsi),%xmm6,%xmm6
--	vpxor	16(%rsi),%xmm1,%xmm1
--	vpxor	32(%rsi),%xmm13,%xmm13
--	vpxor	48(%rsi),%xmm5,%xmm5
--	vmovdqu	%xmm6,0(%rdi)
--	vmovdqu	%xmm1,16(%rdi)
--	vmovdqu	%xmm13,32(%rdi)
--	vmovdqu	%xmm5,48(%rdi)
--	je	.Ldone4xop
--
--	leaq	64(%rsi),%rsi
--	vmovdqa	%xmm15,0(%rsp)
--	xorq	%r10,%r10
--	vmovdqa	%xmm10,16(%rsp)
--	leaq	64(%rdi),%rdi
--	vmovdqa	%xmm2,32(%rsp)
--	subq	$64,%rdx
--	vmovdqa	%xmm9,48(%rsp)
--	jmp	.Loop_tail4xop
--
--.align	32
--.L128_or_more4xop:
--	vpxor	0(%rsi),%xmm6,%xmm6
--	vpxor	16(%rsi),%xmm1,%xmm1
--	vpxor	32(%rsi),%xmm13,%xmm13
--	vpxor	48(%rsi),%xmm5,%xmm5
--	vpxor	64(%rsi),%xmm15,%xmm15
--	vpxor	80(%rsi),%xmm10,%xmm10
--	vpxor	96(%rsi),%xmm2,%xmm2
--	vpxor	112(%rsi),%xmm9,%xmm9
--
--	vmovdqu	%xmm6,0(%rdi)
--	vmovdqu	%xmm1,16(%rdi)
--	vmovdqu	%xmm13,32(%rdi)
--	vmovdqu	%xmm5,48(%rdi)
--	vmovdqu	%xmm15,64(%rdi)
--	vmovdqu	%xmm10,80(%rdi)
--	vmovdqu	%xmm2,96(%rdi)
--	vmovdqu	%xmm9,112(%rdi)
--	je	.Ldone4xop
--
--	leaq	128(%rsi),%rsi
--	vmovdqa	%xmm11,0(%rsp)
--	xorq	%r10,%r10
--	vmovdqa	%xmm3,16(%rsp)
--	leaq	128(%rdi),%rdi
--	vmovdqa	%xmm14,32(%rsp)
--	subq	$128,%rdx
--	vmovdqa	%xmm7,48(%rsp)
--	jmp	.Loop_tail4xop
-+.L4x_epilogue:
-+	ret
-+ENDPROC(chacha20_ssse3)
-+#endif /* CONFIG_AS_SSSE3 */
- 
-+#ifdef CONFIG_AS_AVX2
- .align	32
--.L192_or_more4xop:
--	vpxor	0(%rsi),%xmm6,%xmm6
--	vpxor	16(%rsi),%xmm1,%xmm1
--	vpxor	32(%rsi),%xmm13,%xmm13
--	vpxor	48(%rsi),%xmm5,%xmm5
--	vpxor	64(%rsi),%xmm15,%xmm15
--	vpxor	80(%rsi),%xmm10,%xmm10
--	vpxor	96(%rsi),%xmm2,%xmm2
--	vpxor	112(%rsi),%xmm9,%xmm9
--	leaq	128(%rsi),%rsi
--	vpxor	0(%rsi),%xmm11,%xmm11
--	vpxor	16(%rsi),%xmm3,%xmm3
--	vpxor	32(%rsi),%xmm14,%xmm14
--	vpxor	48(%rsi),%xmm7,%xmm7
--
--	vmovdqu	%xmm6,0(%rdi)
--	vmovdqu	%xmm1,16(%rdi)
--	vmovdqu	%xmm13,32(%rdi)
--	vmovdqu	%xmm5,48(%rdi)
--	vmovdqu	%xmm15,64(%rdi)
--	vmovdqu	%xmm10,80(%rdi)
--	vmovdqu	%xmm2,96(%rdi)
--	vmovdqu	%xmm9,112(%rdi)
--	leaq	128(%rdi),%rdi
--	vmovdqu	%xmm11,0(%rdi)
--	vmovdqu	%xmm3,16(%rdi)
--	vmovdqu	%xmm14,32(%rdi)
--	vmovdqu	%xmm7,48(%rdi)
--	je	.Ldone4xop
--
--	leaq	64(%rsi),%rsi
--	vmovdqa	%xmm8,0(%rsp)
--	xorq	%r10,%r10
--	vmovdqa	%xmm0,16(%rsp)
--	leaq	64(%rdi),%rdi
--	vmovdqa	%xmm12,32(%rsp)
--	subq	$192,%rdx
--	vmovdqa	%xmm4,48(%rsp)
--
--.Loop_tail4xop:
--	movzbl	(%rsi,%r10,1),%eax
--	movzbl	(%rsp,%r10,1),%ecx
--	leaq	1(%r10),%r10
--	xorl	%ecx,%eax
--	movb	%al,-1(%rdi,%r10,1)
--	decq	%rdx
--	jnz	.Loop_tail4xop
-+ENTRY(chacha20_avx2)
-+.Lchacha20_avx2:
-+	cmpq	$0,%rdx
-+	je	.L8x_epilogue
-+	leaq	8(%rsp),%r10
- 
--.Ldone4xop:
--	vzeroupper
--	leaq	(%r9),%rsp
--.cfi_def_cfa_register	%rsp
--.L4xop_epilogue:
--	.byte	0xf3,0xc3
--.cfi_endproc	
--.size	ChaCha20_4xop,.-ChaCha20_4xop
--.type	ChaCha20_8x,@function
--.align	32
--ChaCha20_8x:
--.cfi_startproc	
--.LChaCha20_8x:
--	movq	%rsp,%r9
--.cfi_def_cfa_register	%r9
- 	subq	$0x280+8,%rsp
- 	andq	$-32,%rsp
- 	vzeroupper
- 
--
--
--
--
--
--
--
--
--
- 	vbroadcasti128	.Lsigma(%rip),%ymm11
- 	vbroadcasti128	(%rcx),%ymm3
- 	vbroadcasti128	16(%rcx),%ymm15
- 	vbroadcasti128	(%r8),%ymm7
- 	leaq	256(%rsp),%rcx
- 	leaq	512(%rsp),%rax
--	leaq	.Lrot16(%rip),%r10
-+	leaq	.Lrot16(%rip),%r9
- 	leaq	.Lrot24(%rip),%r11
- 
- 	vpshufd	$0x00,%ymm11,%ymm8
-@@ -1684,7 +889,7 @@ ChaCha20_8x:
- .Loop_enter8x:
- 	vmovdqa	%ymm14,64(%rsp)
- 	vmovdqa	%ymm15,96(%rsp)
--	vbroadcasti128	(%r10),%ymm15
-+	vbroadcasti128	(%r9),%ymm15
- 	vmovdqa	%ymm4,512-512(%rax)
- 	movl	$10,%eax
- 	jmp	.Loop8x
-@@ -1719,7 +924,7 @@ ChaCha20_8x:
- 	vpslld	$7,%ymm0,%ymm15
- 	vpsrld	$25,%ymm0,%ymm0
- 	vpor	%ymm0,%ymm15,%ymm0
--	vbroadcasti128	(%r10),%ymm15
-+	vbroadcasti128	(%r9),%ymm15
- 	vpaddd	%ymm5,%ymm13,%ymm13
- 	vpxor	%ymm1,%ymm13,%ymm1
- 	vpslld	$7,%ymm1,%ymm14
-@@ -1757,7 +962,7 @@ ChaCha20_8x:
- 	vpslld	$7,%ymm2,%ymm15
- 	vpsrld	$25,%ymm2,%ymm2
- 	vpor	%ymm2,%ymm15,%ymm2
--	vbroadcasti128	(%r10),%ymm15
-+	vbroadcasti128	(%r9),%ymm15
- 	vpaddd	%ymm7,%ymm13,%ymm13
- 	vpxor	%ymm3,%ymm13,%ymm3
- 	vpslld	$7,%ymm3,%ymm14
-@@ -1791,7 +996,7 @@ ChaCha20_8x:
- 	vpslld	$7,%ymm1,%ymm15
- 	vpsrld	$25,%ymm1,%ymm1
- 	vpor	%ymm1,%ymm15,%ymm1
--	vbroadcasti128	(%r10),%ymm15
-+	vbroadcasti128	(%r9),%ymm15
- 	vpaddd	%ymm4,%ymm13,%ymm13
- 	vpxor	%ymm2,%ymm13,%ymm2
- 	vpslld	$7,%ymm2,%ymm14
-@@ -1829,7 +1034,7 @@ ChaCha20_8x:
- 	vpslld	$7,%ymm3,%ymm15
- 	vpsrld	$25,%ymm3,%ymm3
- 	vpor	%ymm3,%ymm15,%ymm3
--	vbroadcasti128	(%r10),%ymm15
-+	vbroadcasti128	(%r9),%ymm15
- 	vpaddd	%ymm6,%ymm13,%ymm13
- 	vpxor	%ymm0,%ymm13,%ymm0
- 	vpslld	$7,%ymm0,%ymm14
-@@ -1983,7 +1188,7 @@ ChaCha20_8x:
- 	cmpq	$64,%rdx
- 	jae	.L64_or_more8x
- 
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	vmovdqa	%ymm6,0(%rsp)
- 	vmovdqa	%ymm8,32(%rsp)
- 	jmp	.Loop_tail8x
-@@ -1997,7 +1202,7 @@ ChaCha20_8x:
- 	je	.Ldone8x
- 
- 	leaq	64(%rsi),%rsi
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	vmovdqa	%ymm1,0(%rsp)
- 	leaq	64(%rdi),%rdi
- 	subq	$64,%rdx
-@@ -2017,7 +1222,7 @@ ChaCha20_8x:
- 	je	.Ldone8x
- 
- 	leaq	128(%rsi),%rsi
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	vmovdqa	%ymm12,0(%rsp)
- 	leaq	128(%rdi),%rdi
- 	subq	$128,%rdx
-@@ -2041,7 +1246,7 @@ ChaCha20_8x:
- 	je	.Ldone8x
- 
- 	leaq	192(%rsi),%rsi
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	vmovdqa	%ymm10,0(%rsp)
- 	leaq	192(%rdi),%rdi
- 	subq	$192,%rdx
-@@ -2069,7 +1274,7 @@ ChaCha20_8x:
- 	je	.Ldone8x
- 
- 	leaq	256(%rsi),%rsi
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	vmovdqa	%ymm14,0(%rsp)
- 	leaq	256(%rdi),%rdi
- 	subq	$256,%rdx
-@@ -2101,7 +1306,7 @@ ChaCha20_8x:
- 	je	.Ldone8x
- 
- 	leaq	320(%rsi),%rsi
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	vmovdqa	%ymm3,0(%rsp)
- 	leaq	320(%rdi),%rdi
- 	subq	$320,%rdx
-@@ -2137,7 +1342,7 @@ ChaCha20_8x:
- 	je	.Ldone8x
- 
- 	leaq	384(%rsi),%rsi
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	vmovdqa	%ymm11,0(%rsp)
- 	leaq	384(%rdi),%rdi
- 	subq	$384,%rdx
-@@ -2177,40 +1382,43 @@ ChaCha20_8x:
- 	je	.Ldone8x
- 
- 	leaq	448(%rsi),%rsi
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	vmovdqa	%ymm0,0(%rsp)
- 	leaq	448(%rdi),%rdi
- 	subq	$448,%rdx
- 	vmovdqa	%ymm4,32(%rsp)
- 
- .Loop_tail8x:
--	movzbl	(%rsi,%r10,1),%eax
--	movzbl	(%rsp,%r10,1),%ecx
--	leaq	1(%r10),%r10
-+	movzbl	(%rsi,%r9,1),%eax
-+	movzbl	(%rsp,%r9,1),%ecx
-+	leaq	1(%r9),%r9
- 	xorl	%ecx,%eax
--	movb	%al,-1(%rdi,%r10,1)
-+	movb	%al,-1(%rdi,%r9,1)
- 	decq	%rdx
- 	jnz	.Loop_tail8x
- 
- .Ldone8x:
- 	vzeroall
--	leaq	(%r9),%rsp
--.cfi_def_cfa_register	%rsp
-+	leaq	-8(%r10),%rsp
-+
- .L8x_epilogue:
--	.byte	0xf3,0xc3
--.cfi_endproc	
--.size	ChaCha20_8x,.-ChaCha20_8x
--.type	ChaCha20_avx512,@function
-+	ret
-+ENDPROC(chacha20_avx2)
-+#endif /* CONFIG_AS_AVX2 */
-+
-+#ifdef CONFIG_AS_AVX512
- .align	32
--ChaCha20_avx512:
--.cfi_startproc	
--.LChaCha20_avx512:
--	movq	%rsp,%r9
--.cfi_def_cfa_register	%r9
-+ENTRY(chacha20_avx512)
-+.Lchacha20_avx512:
-+	cmpq	$0,%rdx
-+	je	.Lavx512_epilogue
-+	leaq	8(%rsp),%r10
-+
- 	cmpq	$512,%rdx
--	ja	.LChaCha20_16x
-+	ja	.Lchacha20_16x
- 
- 	subq	$64+8,%rsp
-+	andq	$-64,%rsp
- 	vbroadcasti32x4	.Lsigma(%rip),%zmm0
- 	vbroadcasti32x4	(%rcx),%zmm1
- 	vbroadcasti32x4	16(%rcx),%zmm2
-@@ -2385,181 +1593,25 @@ ChaCha20_avx512:
- 	decq	%rdx
- 	jnz	.Loop_tail_avx512
- 
--	vmovdqu32	%zmm16,0(%rsp)
-+	vmovdqa32	%zmm16,0(%rsp)
- 
- .Ldone_avx512:
- 	vzeroall
--	leaq	(%r9),%rsp
--.cfi_def_cfa_register	%rsp
--.Lavx512_epilogue:
--	.byte	0xf3,0xc3
--.cfi_endproc	
--.size	ChaCha20_avx512,.-ChaCha20_avx512
--.type	ChaCha20_avx512vl,@function
--.align	32
--ChaCha20_avx512vl:
--.cfi_startproc	
--.LChaCha20_avx512vl:
--	movq	%rsp,%r9
--.cfi_def_cfa_register	%r9
--	cmpq	$128,%rdx
--	ja	.LChaCha20_8xvl
--
--	subq	$64+8,%rsp
--	vbroadcasti128	.Lsigma(%rip),%ymm0
--	vbroadcasti128	(%rcx),%ymm1
--	vbroadcasti128	16(%rcx),%ymm2
--	vbroadcasti128	(%r8),%ymm3
-+	leaq	-8(%r10),%rsp
- 
--	vmovdqa32	%ymm0,%ymm16
--	vmovdqa32	%ymm1,%ymm17
--	vmovdqa32	%ymm2,%ymm18
--	vpaddd	.Lzeroz(%rip),%ymm3,%ymm3
--	vmovdqa32	.Ltwoy(%rip),%ymm20
--	movq	$10,%r8
--	vmovdqa32	%ymm3,%ymm19
--	jmp	.Loop_avx512vl
--
--.align	16
--.Loop_outer_avx512vl:
--	vmovdqa32	%ymm18,%ymm2
--	vpaddd	%ymm20,%ymm19,%ymm3
--	movq	$10,%r8
--	vmovdqa32	%ymm3,%ymm19
--	jmp	.Loop_avx512vl
-+.Lavx512_epilogue:
-+	ret
- 
- .align	32
--.Loop_avx512vl:
--	vpaddd	%ymm1,%ymm0,%ymm0
--	vpxor	%ymm0,%ymm3,%ymm3
--	vprold	$16,%ymm3,%ymm3
--	vpaddd	%ymm3,%ymm2,%ymm2
--	vpxor	%ymm2,%ymm1,%ymm1
--	vprold	$12,%ymm1,%ymm1
--	vpaddd	%ymm1,%ymm0,%ymm0
--	vpxor	%ymm0,%ymm3,%ymm3
--	vprold	$8,%ymm3,%ymm3
--	vpaddd	%ymm3,%ymm2,%ymm2
--	vpxor	%ymm2,%ymm1,%ymm1
--	vprold	$7,%ymm1,%ymm1
--	vpshufd	$78,%ymm2,%ymm2
--	vpshufd	$57,%ymm1,%ymm1
--	vpshufd	$147,%ymm3,%ymm3
--	vpaddd	%ymm1,%ymm0,%ymm0
--	vpxor	%ymm0,%ymm3,%ymm3
--	vprold	$16,%ymm3,%ymm3
--	vpaddd	%ymm3,%ymm2,%ymm2
--	vpxor	%ymm2,%ymm1,%ymm1
--	vprold	$12,%ymm1,%ymm1
--	vpaddd	%ymm1,%ymm0,%ymm0
--	vpxor	%ymm0,%ymm3,%ymm3
--	vprold	$8,%ymm3,%ymm3
--	vpaddd	%ymm3,%ymm2,%ymm2
--	vpxor	%ymm2,%ymm1,%ymm1
--	vprold	$7,%ymm1,%ymm1
--	vpshufd	$78,%ymm2,%ymm2
--	vpshufd	$147,%ymm1,%ymm1
--	vpshufd	$57,%ymm3,%ymm3
--	decq	%r8
--	jnz	.Loop_avx512vl
--	vpaddd	%ymm16,%ymm0,%ymm0
--	vpaddd	%ymm17,%ymm1,%ymm1
--	vpaddd	%ymm18,%ymm2,%ymm2
--	vpaddd	%ymm19,%ymm3,%ymm3
--
--	subq	$64,%rdx
--	jb	.Ltail64_avx512vl
--
--	vpxor	0(%rsi),%xmm0,%xmm4
--	vpxor	16(%rsi),%xmm1,%xmm5
--	vpxor	32(%rsi),%xmm2,%xmm6
--	vpxor	48(%rsi),%xmm3,%xmm7
--	leaq	64(%rsi),%rsi
--
--	vmovdqu	%xmm4,0(%rdi)
--	vmovdqu	%xmm5,16(%rdi)
--	vmovdqu	%xmm6,32(%rdi)
--	vmovdqu	%xmm7,48(%rdi)
--	leaq	64(%rdi),%rdi
--
--	jz	.Ldone_avx512vl
--
--	vextracti128	$1,%ymm0,%xmm4
--	vextracti128	$1,%ymm1,%xmm5
--	vextracti128	$1,%ymm2,%xmm6
--	vextracti128	$1,%ymm3,%xmm7
--
--	subq	$64,%rdx
--	jb	.Ltail_avx512vl
--
--	vpxor	0(%rsi),%xmm4,%xmm4
--	vpxor	16(%rsi),%xmm5,%xmm5
--	vpxor	32(%rsi),%xmm6,%xmm6
--	vpxor	48(%rsi),%xmm7,%xmm7
--	leaq	64(%rsi),%rsi
-+.Lchacha20_16x:
-+	leaq	8(%rsp),%r10
- 
--	vmovdqu	%xmm4,0(%rdi)
--	vmovdqu	%xmm5,16(%rdi)
--	vmovdqu	%xmm6,32(%rdi)
--	vmovdqu	%xmm7,48(%rdi)
--	leaq	64(%rdi),%rdi
--
--	vmovdqa32	%ymm16,%ymm0
--	vmovdqa32	%ymm17,%ymm1
--	jnz	.Loop_outer_avx512vl
--
--	jmp	.Ldone_avx512vl
--
--.align	16
--.Ltail64_avx512vl:
--	vmovdqa	%xmm0,0(%rsp)
--	vmovdqa	%xmm1,16(%rsp)
--	vmovdqa	%xmm2,32(%rsp)
--	vmovdqa	%xmm3,48(%rsp)
--	addq	$64,%rdx
--	jmp	.Loop_tail_avx512vl
--
--.align	16
--.Ltail_avx512vl:
--	vmovdqa	%xmm4,0(%rsp)
--	vmovdqa	%xmm5,16(%rsp)
--	vmovdqa	%xmm6,32(%rsp)
--	vmovdqa	%xmm7,48(%rsp)
--	addq	$64,%rdx
--
--.Loop_tail_avx512vl:
--	movzbl	(%rsi,%r8,1),%eax
--	movzbl	(%rsp,%r8,1),%ecx
--	leaq	1(%r8),%r8
--	xorl	%ecx,%eax
--	movb	%al,-1(%rdi,%r8,1)
--	decq	%rdx
--	jnz	.Loop_tail_avx512vl
--
--	vmovdqu32	%ymm16,0(%rsp)
--	vmovdqu32	%ymm16,32(%rsp)
--
--.Ldone_avx512vl:
--	vzeroall
--	leaq	(%r9),%rsp
--.cfi_def_cfa_register	%rsp
--.Lavx512vl_epilogue:
--	.byte	0xf3,0xc3
--.cfi_endproc	
--.size	ChaCha20_avx512vl,.-ChaCha20_avx512vl
--.type	ChaCha20_16x,@function
--.align	32
--ChaCha20_16x:
--.cfi_startproc	
--.LChaCha20_16x:
--	movq	%rsp,%r9
--.cfi_def_cfa_register	%r9
- 	subq	$64+8,%rsp
- 	andq	$-64,%rsp
- 	vzeroupper
- 
--	leaq	.Lsigma(%rip),%r10
--	vbroadcasti32x4	(%r10),%zmm3
-+	leaq	.Lsigma(%rip),%r9
-+	vbroadcasti32x4	(%r9),%zmm3
- 	vbroadcasti32x4	(%rcx),%zmm7
- 	vbroadcasti32x4	16(%rcx),%zmm11
- 	vbroadcasti32x4	(%r8),%zmm15
-@@ -2606,10 +1658,10 @@ ChaCha20_16x:
- 
- .align	32
- .Loop_outer16x:
--	vpbroadcastd	0(%r10),%zmm0
--	vpbroadcastd	4(%r10),%zmm1
--	vpbroadcastd	8(%r10),%zmm2
--	vpbroadcastd	12(%r10),%zmm3
-+	vpbroadcastd	0(%r9),%zmm0
-+	vpbroadcastd	4(%r9),%zmm1
-+	vpbroadcastd	8(%r9),%zmm2
-+	vpbroadcastd	12(%r9),%zmm3
- 	vpaddd	.Lsixteen(%rip),%zmm28,%zmm28
- 	vmovdqa64	%zmm20,%zmm4
- 	vmovdqa64	%zmm21,%zmm5
-@@ -2865,7 +1917,7 @@ ChaCha20_16x:
- 
- .align	32
- .Ltail16x:
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	subq	%rsi,%rdi
- 	cmpq	$64,%rdx
- 	jb	.Less_than_64_16x
-@@ -2993,11 +2045,11 @@ ChaCha20_16x:
- 	andq	$63,%rdx
- 
- .Loop_tail16x:
--	movzbl	(%rsi,%r10,1),%eax
--	movzbl	(%rsp,%r10,1),%ecx
--	leaq	1(%r10),%r10
-+	movzbl	(%rsi,%r9,1),%eax
-+	movzbl	(%rsp,%r9,1),%ecx
-+	leaq	1(%r9),%r9
- 	xorl	%ecx,%eax
--	movb	%al,-1(%rdi,%r10,1)
-+	movb	%al,-1(%rdi,%r9,1)
- 	decq	%rdx
- 	jnz	.Loop_tail16x
- 
-@@ -3006,25 +2058,172 @@ ChaCha20_16x:
- 
- .Ldone16x:
- 	vzeroall
--	leaq	(%r9),%rsp
--.cfi_def_cfa_register	%rsp
-+	leaq	-8(%r10),%rsp
-+
- .L16x_epilogue:
--	.byte	0xf3,0xc3
--.cfi_endproc	
--.size	ChaCha20_16x,.-ChaCha20_16x
--.type	ChaCha20_8xvl,@function
-+	ret
-+ENDPROC(chacha20_avx512)
-+
- .align	32
--ChaCha20_8xvl:
--.cfi_startproc	
--.LChaCha20_8xvl:
--	movq	%rsp,%r9
--.cfi_def_cfa_register	%r9
-+ENTRY(chacha20_avx512vl)
-+	cmpq	$0,%rdx
-+	je	.Lavx512vl_epilogue
-+
-+	leaq	8(%rsp),%r10
-+
-+	cmpq	$128,%rdx
-+	ja	.Lchacha20_8xvl
-+
-+	subq	$64+8,%rsp
-+	andq	$-64,%rsp
-+	vbroadcasti128	.Lsigma(%rip),%ymm0
-+	vbroadcasti128	(%rcx),%ymm1
-+	vbroadcasti128	16(%rcx),%ymm2
-+	vbroadcasti128	(%r8),%ymm3
-+
-+	vmovdqa32	%ymm0,%ymm16
-+	vmovdqa32	%ymm1,%ymm17
-+	vmovdqa32	%ymm2,%ymm18
-+	vpaddd	.Lzeroz(%rip),%ymm3,%ymm3
-+	vmovdqa32	.Ltwoy(%rip),%ymm20
-+	movq	$10,%r8
-+	vmovdqa32	%ymm3,%ymm19
-+	jmp	.Loop_avx512vl
-+
-+.align	16
-+.Loop_outer_avx512vl:
-+	vmovdqa32	%ymm18,%ymm2
-+	vpaddd	%ymm20,%ymm19,%ymm3
-+	movq	$10,%r8
-+	vmovdqa32	%ymm3,%ymm19
-+	jmp	.Loop_avx512vl
-+
-+.align	32
-+.Loop_avx512vl:
-+	vpaddd	%ymm1,%ymm0,%ymm0
-+	vpxor	%ymm0,%ymm3,%ymm3
-+	vprold	$16,%ymm3,%ymm3
-+	vpaddd	%ymm3,%ymm2,%ymm2
-+	vpxor	%ymm2,%ymm1,%ymm1
-+	vprold	$12,%ymm1,%ymm1
-+	vpaddd	%ymm1,%ymm0,%ymm0
-+	vpxor	%ymm0,%ymm3,%ymm3
-+	vprold	$8,%ymm3,%ymm3
-+	vpaddd	%ymm3,%ymm2,%ymm2
-+	vpxor	%ymm2,%ymm1,%ymm1
-+	vprold	$7,%ymm1,%ymm1
-+	vpshufd	$78,%ymm2,%ymm2
-+	vpshufd	$57,%ymm1,%ymm1
-+	vpshufd	$147,%ymm3,%ymm3
-+	vpaddd	%ymm1,%ymm0,%ymm0
-+	vpxor	%ymm0,%ymm3,%ymm3
-+	vprold	$16,%ymm3,%ymm3
-+	vpaddd	%ymm3,%ymm2,%ymm2
-+	vpxor	%ymm2,%ymm1,%ymm1
-+	vprold	$12,%ymm1,%ymm1
-+	vpaddd	%ymm1,%ymm0,%ymm0
-+	vpxor	%ymm0,%ymm3,%ymm3
-+	vprold	$8,%ymm3,%ymm3
-+	vpaddd	%ymm3,%ymm2,%ymm2
-+	vpxor	%ymm2,%ymm1,%ymm1
-+	vprold	$7,%ymm1,%ymm1
-+	vpshufd	$78,%ymm2,%ymm2
-+	vpshufd	$147,%ymm1,%ymm1
-+	vpshufd	$57,%ymm3,%ymm3
-+	decq	%r8
-+	jnz	.Loop_avx512vl
-+	vpaddd	%ymm16,%ymm0,%ymm0
-+	vpaddd	%ymm17,%ymm1,%ymm1
-+	vpaddd	%ymm18,%ymm2,%ymm2
-+	vpaddd	%ymm19,%ymm3,%ymm3
-+
-+	subq	$64,%rdx
-+	jb	.Ltail64_avx512vl
-+
-+	vpxor	0(%rsi),%xmm0,%xmm4
-+	vpxor	16(%rsi),%xmm1,%xmm5
-+	vpxor	32(%rsi),%xmm2,%xmm6
-+	vpxor	48(%rsi),%xmm3,%xmm7
-+	leaq	64(%rsi),%rsi
-+
-+	vmovdqu	%xmm4,0(%rdi)
-+	vmovdqu	%xmm5,16(%rdi)
-+	vmovdqu	%xmm6,32(%rdi)
-+	vmovdqu	%xmm7,48(%rdi)
-+	leaq	64(%rdi),%rdi
-+
-+	jz	.Ldone_avx512vl
-+
-+	vextracti128	$1,%ymm0,%xmm4
-+	vextracti128	$1,%ymm1,%xmm5
-+	vextracti128	$1,%ymm2,%xmm6
-+	vextracti128	$1,%ymm3,%xmm7
-+
-+	subq	$64,%rdx
-+	jb	.Ltail_avx512vl
-+
-+	vpxor	0(%rsi),%xmm4,%xmm4
-+	vpxor	16(%rsi),%xmm5,%xmm5
-+	vpxor	32(%rsi),%xmm6,%xmm6
-+	vpxor	48(%rsi),%xmm7,%xmm7
-+	leaq	64(%rsi),%rsi
-+
-+	vmovdqu	%xmm4,0(%rdi)
-+	vmovdqu	%xmm5,16(%rdi)
-+	vmovdqu	%xmm6,32(%rdi)
-+	vmovdqu	%xmm7,48(%rdi)
-+	leaq	64(%rdi),%rdi
-+
-+	vmovdqa32	%ymm16,%ymm0
-+	vmovdqa32	%ymm17,%ymm1
-+	jnz	.Loop_outer_avx512vl
-+
-+	jmp	.Ldone_avx512vl
-+
-+.align	16
-+.Ltail64_avx512vl:
-+	vmovdqa	%xmm0,0(%rsp)
-+	vmovdqa	%xmm1,16(%rsp)
-+	vmovdqa	%xmm2,32(%rsp)
-+	vmovdqa	%xmm3,48(%rsp)
-+	addq	$64,%rdx
-+	jmp	.Loop_tail_avx512vl
-+
-+.align	16
-+.Ltail_avx512vl:
-+	vmovdqa	%xmm4,0(%rsp)
-+	vmovdqa	%xmm5,16(%rsp)
-+	vmovdqa	%xmm6,32(%rsp)
-+	vmovdqa	%xmm7,48(%rsp)
-+	addq	$64,%rdx
-+
-+.Loop_tail_avx512vl:
-+	movzbl	(%rsi,%r8,1),%eax
-+	movzbl	(%rsp,%r8,1),%ecx
-+	leaq	1(%r8),%r8
-+	xorl	%ecx,%eax
-+	movb	%al,-1(%rdi,%r8,1)
-+	decq	%rdx
-+	jnz	.Loop_tail_avx512vl
-+
-+	vmovdqa32	%ymm16,0(%rsp)
-+	vmovdqa32	%ymm16,32(%rsp)
-+
-+.Ldone_avx512vl:
-+	vzeroall
-+	leaq	-8(%r10),%rsp
-+.Lavx512vl_epilogue:
-+	ret
-+
-+.align	32
-+.Lchacha20_8xvl:
-+	leaq	8(%rsp),%r10
- 	subq	$64+8,%rsp
- 	andq	$-64,%rsp
- 	vzeroupper
- 
--	leaq	.Lsigma(%rip),%r10
--	vbroadcasti128	(%r10),%ymm3
-+	leaq	.Lsigma(%rip),%r9
-+	vbroadcasti128	(%r9),%ymm3
- 	vbroadcasti128	(%rcx),%ymm7
- 	vbroadcasti128	16(%rcx),%ymm11
- 	vbroadcasti128	(%r8),%ymm15
-@@ -3073,8 +2272,8 @@ ChaCha20_8xvl:
- .Loop_outer8xvl:
- 
- 
--	vpbroadcastd	8(%r10),%ymm2
--	vpbroadcastd	12(%r10),%ymm3
-+	vpbroadcastd	8(%r9),%ymm2
-+	vpbroadcastd	12(%r9),%ymm3
- 	vpaddd	.Leight(%rip),%ymm28,%ymm28
- 	vmovdqa64	%ymm20,%ymm4
- 	vmovdqa64	%ymm21,%ymm5
-@@ -3314,8 +2513,8 @@ ChaCha20_8xvl:
- 	vmovdqu	%ymm12,96(%rdi)
- 	leaq	(%rdi,%rax,1),%rdi
- 
--	vpbroadcastd	0(%r10),%ymm0
--	vpbroadcastd	4(%r10),%ymm1
-+	vpbroadcastd	0(%r9),%ymm0
-+	vpbroadcastd	4(%r9),%ymm1
- 
- 	subq	$512,%rdx
- 	jnz	.Loop_outer8xvl
-@@ -3325,7 +2524,7 @@ ChaCha20_8xvl:
- .align	32
- .Ltail8xvl:
- 	vmovdqa64	%ymm19,%ymm8
--	xorq	%r10,%r10
-+	xorq	%r9,%r9
- 	subq	%rsi,%rdi
- 	cmpq	$64,%rdx
- 	jb	.Less_than_64_8xvl
-@@ -3411,11 +2610,11 @@ ChaCha20_8xvl:
- 	andq	$63,%rdx
- 
- .Loop_tail8xvl:
--	movzbl	(%rsi,%r10,1),%eax
--	movzbl	(%rsp,%r10,1),%ecx
--	leaq	1(%r10),%r10
-+	movzbl	(%rsi,%r9,1),%eax
-+	movzbl	(%rsp,%r9,1),%ecx
-+	leaq	1(%r9),%r9
- 	xorl	%ecx,%eax
--	movb	%al,-1(%rdi,%r10,1)
-+	movb	%al,-1(%rdi,%r9,1)
- 	decq	%rdx
- 	jnz	.Loop_tail8xvl
- 
-@@ -3425,9 +2624,9 @@ ChaCha20_8xvl:
- 
- .Ldone8xvl:
- 	vzeroall
--	leaq	(%r9),%rsp
--.cfi_def_cfa_register	%rsp
-+	leaq	-8(%r10),%rsp
- .L8xvl_epilogue:
--	.byte	0xf3,0xc3
--.cfi_endproc	
--.size	ChaCha20_8xvl,.-ChaCha20_8xvl
-+	ret
-+ENDPROC(chacha20_avx512vl)
-+
-+#endif /* CONFIG_AS_AVX512 */
-diff --git a/lib/zinc/chacha20/chacha20.c b/lib/zinc/chacha20/chacha20.c
-index 03209c15d1ca..22a21431c221 100644
---- a/lib/zinc/chacha20/chacha20.c
-+++ b/lib/zinc/chacha20/chacha20.c
-@@ -16,6 +16,9 @@
- #include <linux/vmalloc.h>
- #include <crypto/algapi.h> // For crypto_xor_cpy.
- 
-+#if defined(CONFIG_ZINC_ARCH_X86_64)
-+#include "chacha20-x86_64-glue.c"
-+#else
- static bool *const chacha20_nobs[] __initconst = { };
- static void __init chacha20_fpu_init(void)
- {
-@@ -33,6 +36,7 @@ static inline bool hchacha20_arch(u32 derived_key[CHACHA20_KEY_WORDS],
- {
- 	return false;
- }
++#if defined(__thumb2__) || defined(__clang__)
++.syntax	unified
 +#endif
- 
- #define QUARTER_ROUND(x, a, b, c, d) ( \
- 	x[a] += x[b], \
++#if defined(__thumb2__)
++.thumb
++#else
++.code	32
++#endif
++
++#if defined(__thumb2__) || defined(__clang__)
++#define ldrhsb	ldrbhs
++#endif
++
++.align	5
++.Lsigma:
++.long	0x61707865,0x3320646e,0x79622d32,0x6b206574	@ endian-neutral
++.Lone:
++.long	1,0,0,0
++.Lrot8:
++.long	0x02010003,0x06050407
++#if __ARM_MAX_ARCH__>=7
++.LOPENSSL_armcap:
++.word   OPENSSL_armcap_P-.LChaCha20_ctr32
++#else
++.word	-1
++#endif
++
++.globl	ChaCha20_ctr32
++.type	ChaCha20_ctr32,%function
++.align	5
++ChaCha20_ctr32:
++.LChaCha20_ctr32:
++	ldr	r12,[sp,#0]		@ pull pointer to counter and nonce
++	stmdb	sp!,{r0-r2,r4-r11,lr}
++#if __ARM_ARCH__<7 && !defined(__thumb2__)
++	sub	r14,pc,#16		@ ChaCha20_ctr32
++#else
++	adr	r14,.LChaCha20_ctr32
++#endif
++	cmp	r2,#0			@ len==0?
++#ifdef	__thumb2__
++	itt	eq
++#endif
++	addeq	sp,sp,#4*3
++	beq	.Lno_data
++#if __ARM_MAX_ARCH__>=7
++	cmp	r2,#192			@ test len
++	bls	.Lshort
++	ldr	r4,[r14,#-24]
++	ldr	r4,[r14,r4]
++# ifdef	__APPLE__
++	ldr	r4,[r4]
++# endif
++	tst	r4,#ARMV7_NEON
++	bne	.LChaCha20_neon
++.Lshort:
++#endif
++	ldmia	r12,{r4-r7}		@ load counter and nonce
++	sub	sp,sp,#4*(16)		@ off-load area
++	sub	r14,r14,#64		@ .Lsigma
++	stmdb	sp!,{r4-r7}		@ copy counter and nonce
++	ldmia	r3,{r4-r11}		@ load key
++	ldmia	r14,{r0-r3}		@ load sigma
++	stmdb	sp!,{r4-r11}		@ copy key
++	stmdb	sp!,{r0-r3}		@ copy sigma
++	str	r10,[sp,#4*(16+10)]	@ off-load "rx"
++	str	r11,[sp,#4*(16+11)]	@ off-load "rx"
++	b	.Loop_outer_enter
++
++.align	4
++.Loop_outer:
++	ldmia	sp,{r0-r9}		@ load key material
++	str	r11,[sp,#4*(32+2)]	@ save len
++	str	r12,  [sp,#4*(32+1)]	@ save inp
++	str	r14,  [sp,#4*(32+0)]	@ save out
++.Loop_outer_enter:
++	ldr	r11, [sp,#4*(15)]
++	 mov	r4,r4,ror#19	@ twist b[0..3]
++	ldr	r12,[sp,#4*(12)]	@ modulo-scheduled load
++	 mov	r5,r5,ror#19
++	ldr	r10, [sp,#4*(13)]
++	 mov	r6,r6,ror#19
++	ldr	r14,[sp,#4*(14)]
++	 mov	r7,r7,ror#19
++	mov	r11,r11,ror#8	@ twist d[0..3]
++	mov	r12,r12,ror#8
++	mov	r10,r10,ror#8
++	mov	r14,r14,ror#8
++	str	r11, [sp,#4*(16+15)]
++	mov	r11,#10
++	b	.Loop
++
++.align	4
++.Loop:
++	subs	r11,r11,#1
++	add	r0,r0,r4,ror#13
++	add	r1,r1,r5,ror#13
++	eor	r12,r0,r12,ror#24
++	eor	r10,r1,r10,ror#24
++	add	r8,r8,r12,ror#16
++	add	r9,r9,r10,ror#16
++	eor	r4,r8,r4,ror#13
++	eor	r5,r9,r5,ror#13
++	add	r0,r0,r4,ror#20
++	add	r1,r1,r5,ror#20
++	eor	r12,r0,r12,ror#16
++	eor	r10,r1,r10,ror#16
++	add	r8,r8,r12,ror#24
++	str	r10,[sp,#4*(16+13)]
++	add	r9,r9,r10,ror#24
++	ldr	r10,[sp,#4*(16+15)]
++	str	r8,[sp,#4*(16+8)]
++	eor	r4,r4,r8,ror#12
++	str	r9,[sp,#4*(16+9)]
++	eor	r5,r5,r9,ror#12
++	ldr	r8,[sp,#4*(16+10)]
++	add	r2,r2,r6,ror#13
++	ldr	r9,[sp,#4*(16+11)]
++	add	r3,r3,r7,ror#13
++	eor	r14,r2,r14,ror#24
++	eor	r10,r3,r10,ror#24
++	add	r8,r8,r14,ror#16
++	add	r9,r9,r10,ror#16
++	eor	r6,r8,r6,ror#13
++	eor	r7,r9,r7,ror#13
++	add	r2,r2,r6,ror#20
++	add	r3,r3,r7,ror#20
++	eor	r14,r2,r14,ror#16
++	eor	r10,r3,r10,ror#16
++	add	r8,r8,r14,ror#24
++	add	r9,r9,r10,ror#24
++	eor	r6,r6,r8,ror#12
++	eor	r7,r7,r9,ror#12
++	add	r0,r0,r5,ror#13
++	add	r1,r1,r6,ror#13
++	eor	r10,r0,r10,ror#24
++	eor	r12,r1,r12,ror#24
++	add	r8,r8,r10,ror#16
++	add	r9,r9,r12,ror#16
++	eor	r5,r8,r5,ror#13
++	eor	r6,r9,r6,ror#13
++	add	r0,r0,r5,ror#20
++	add	r1,r1,r6,ror#20
++	eor	r10,r0,r10,ror#16
++	eor	r12,r1,r12,ror#16
++	str	r10,[sp,#4*(16+15)]
++	add	r8,r8,r10,ror#24
++	ldr	r10,[sp,#4*(16+13)]
++	add	r9,r9,r12,ror#24
++	str	r8,[sp,#4*(16+10)]
++	eor	r5,r5,r8,ror#12
++	str	r9,[sp,#4*(16+11)]
++	eor	r6,r6,r9,ror#12
++	ldr	r8,[sp,#4*(16+8)]
++	add	r2,r2,r7,ror#13
++	ldr	r9,[sp,#4*(16+9)]
++	add	r3,r3,r4,ror#13
++	eor	r10,r2,r10,ror#24
++	eor	r14,r3,r14,ror#24
++	add	r8,r8,r10,ror#16
++	add	r9,r9,r14,ror#16
++	eor	r7,r8,r7,ror#13
++	eor	r4,r9,r4,ror#13
++	add	r2,r2,r7,ror#20
++	add	r3,r3,r4,ror#20
++	eor	r10,r2,r10,ror#16
++	eor	r14,r3,r14,ror#16
++	add	r8,r8,r10,ror#24
++	add	r9,r9,r14,ror#24
++	eor	r7,r7,r8,ror#12
++	eor	r4,r4,r9,ror#12
++	bne	.Loop
++
++	ldr	r11,[sp,#4*(32+2)]	@ load len
++
++	str	r8, [sp,#4*(16+8)]	@ modulo-scheduled store
++	str	r9, [sp,#4*(16+9)]
++	str	r12,[sp,#4*(16+12)]
++	str	r10, [sp,#4*(16+13)]
++	str	r14,[sp,#4*(16+14)]
++
++	@ at this point we have first half of 512-bit result in
++	@ rx and second half at sp+4*(16+8)
++
++	cmp	r11,#64		@ done yet?
++#ifdef	__thumb2__
++	itete	lo
++#endif
++	addlo	r12,sp,#4*(0)		@ shortcut or ...
++	ldrhs	r12,[sp,#4*(32+1)]	@ ... load inp
++	addlo	r14,sp,#4*(0)		@ shortcut or ...
++	ldrhs	r14,[sp,#4*(32+0)]	@ ... load out
++
++	ldr	r8,[sp,#4*(0)]	@ load key material
++	ldr	r9,[sp,#4*(1)]
++
++#if __ARM_ARCH__>=6 || !defined(__ARMEB__)
++# if __ARM_ARCH__<7
++	orr	r10,r12,r14
++	tst	r10,#3		@ are input and output aligned?
++	ldr	r10,[sp,#4*(2)]
++	bne	.Lunaligned
++	cmp	r11,#64		@ restore flags
++# else
++	ldr	r10,[sp,#4*(2)]
++# endif
++	ldr	r11,[sp,#4*(3)]
++
++	add	r0,r0,r8	@ accumulate key material
++	add	r1,r1,r9
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhs	r8,[r12],#16		@ load input
++	ldrhs	r9,[r12,#-12]
++
++	add	r2,r2,r10
++	add	r3,r3,r11
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhs	r10,[r12,#-8]
++	ldrhs	r11,[r12,#-4]
++# if __ARM_ARCH__>=6 && defined(__ARMEB__)
++	rev	r0,r0
++	rev	r1,r1
++	rev	r2,r2
++	rev	r3,r3
++# endif
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	eorhs	r0,r0,r8	@ xor with input
++	eorhs	r1,r1,r9
++	 add	r8,sp,#4*(4)
++	str	r0,[r14],#16		@ store output
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	eorhs	r2,r2,r10
++	eorhs	r3,r3,r11
++	 ldmia	r8,{r8-r11}	@ load key material
++	str	r1,[r14,#-12]
++	str	r2,[r14,#-8]
++	str	r3,[r14,#-4]
++
++	add	r4,r8,r4,ror#13 @ accumulate key material
++	add	r5,r9,r5,ror#13
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhs	r8,[r12],#16		@ load input
++	ldrhs	r9,[r12,#-12]
++	add	r6,r10,r6,ror#13
++	add	r7,r11,r7,ror#13
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhs	r10,[r12,#-8]
++	ldrhs	r11,[r12,#-4]
++# if __ARM_ARCH__>=6 && defined(__ARMEB__)
++	rev	r4,r4
++	rev	r5,r5
++	rev	r6,r6
++	rev	r7,r7
++# endif
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	eorhs	r4,r4,r8
++	eorhs	r5,r5,r9
++	 add	r8,sp,#4*(8)
++	str	r4,[r14],#16		@ store output
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	eorhs	r6,r6,r10
++	eorhs	r7,r7,r11
++	str	r5,[r14,#-12]
++	 ldmia	r8,{r8-r11}	@ load key material
++	str	r6,[r14,#-8]
++	 add	r0,sp,#4*(16+8)
++	str	r7,[r14,#-4]
++
++	ldmia	r0,{r0-r7}	@ load second half
++
++	add	r0,r0,r8	@ accumulate key material
++	add	r1,r1,r9
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhs	r8,[r12],#16		@ load input
++	ldrhs	r9,[r12,#-12]
++# ifdef	__thumb2__
++	itt	hi
++# endif
++	 strhi	r10,[sp,#4*(16+10)]	@ copy "rx" while at it
++	 strhi	r11,[sp,#4*(16+11)]	@ copy "rx" while at it
++	add	r2,r2,r10
++	add	r3,r3,r11
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhs	r10,[r12,#-8]
++	ldrhs	r11,[r12,#-4]
++# if __ARM_ARCH__>=6 && defined(__ARMEB__)
++	rev	r0,r0
++	rev	r1,r1
++	rev	r2,r2
++	rev	r3,r3
++# endif
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	eorhs	r0,r0,r8
++	eorhs	r1,r1,r9
++	 add	r8,sp,#4*(12)
++	str	r0,[r14],#16		@ store output
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	eorhs	r2,r2,r10
++	eorhs	r3,r3,r11
++	str	r1,[r14,#-12]
++	 ldmia	r8,{r8-r11}	@ load key material
++	str	r2,[r14,#-8]
++	str	r3,[r14,#-4]
++
++	add	r4,r8,r4,ror#24 @ accumulate key material
++	add	r5,r9,r5,ror#24
++# ifdef	__thumb2__
++	itt	hi
++# endif
++	 addhi	r8,r8,#1		@ next counter value
++	 strhi	r8,[sp,#4*(12)]	@ save next counter value
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhs	r8,[r12],#16		@ load input
++	ldrhs	r9,[r12,#-12]
++	add	r6,r10,r6,ror#24
++	add	r7,r11,r7,ror#24
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhs	r10,[r12,#-8]
++	ldrhs	r11,[r12,#-4]
++# if __ARM_ARCH__>=6 && defined(__ARMEB__)
++	rev	r4,r4
++	rev	r5,r5
++	rev	r6,r6
++	rev	r7,r7
++# endif
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	eorhs	r4,r4,r8
++	eorhs	r5,r5,r9
++# ifdef	__thumb2__
++	 it	ne
++# endif
++	 ldrne	r8,[sp,#4*(32+2)]	@ re-load len
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	eorhs	r6,r6,r10
++	eorhs	r7,r7,r11
++	str	r4,[r14],#16		@ store output
++	str	r5,[r14,#-12]
++# ifdef	__thumb2__
++	it	hs
++# endif
++	 subhs	r11,r8,#64		@ len-=64
++	str	r6,[r14,#-8]
++	str	r7,[r14,#-4]
++	bhi	.Loop_outer
++
++	beq	.Ldone
++# if __ARM_ARCH__<7
++	b	.Ltail
++
++.align	4
++.Lunaligned:				@ unaligned endian-neutral path
++	cmp	r11,#64		@ restore flags
++# endif
++#endif
++#if __ARM_ARCH__<7
++	ldr	r11,[sp,#4*(3)]
++	add	r0,r8,r0	@ accumulate key material
++	add	r1,r9,r1
++	add	r2,r10,r2
++# ifdef	__thumb2__
++	itete	lo
++# endif
++	eorlo	r8,r8,r8		@ zero or ...
++	ldrhsb	r8,[r12],#16			@ ... load input
++	eorlo	r9,r9,r9
++	ldrhsb	r9,[r12,#-12]
++
++	add	r3,r11,r3
++# ifdef	__thumb2__
++	itete	lo
++# endif
++	eorlo	r10,r10,r10
++	ldrhsb	r10,[r12,#-8]
++	eorlo	r11,r11,r11
++	ldrhsb	r11,[r12,#-4]
++
++	eor	r0,r8,r0		@ xor with input (or zero)
++	eor	r1,r9,r1
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-15]		@ load more input
++	ldrhsb	r9,[r12,#-11]
++	eor	r2,r10,r2
++	 strb	r0,[r14],#16		@ store output
++	eor	r3,r11,r3
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-7]
++	ldrhsb	r11,[r12,#-3]
++	 strb	r1,[r14,#-12]
++	eor	r0,r8,r0,lsr#8
++	 strb	r2,[r14,#-8]
++	eor	r1,r9,r1,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-14]		@ load more input
++	ldrhsb	r9,[r12,#-10]
++	 strb	r3,[r14,#-4]
++	eor	r2,r10,r2,lsr#8
++	 strb	r0,[r14,#-15]
++	eor	r3,r11,r3,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-6]
++	ldrhsb	r11,[r12,#-2]
++	 strb	r1,[r14,#-11]
++	eor	r0,r8,r0,lsr#8
++	 strb	r2,[r14,#-7]
++	eor	r1,r9,r1,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-13]		@ load more input
++	ldrhsb	r9,[r12,#-9]
++	 strb	r3,[r14,#-3]
++	eor	r2,r10,r2,lsr#8
++	 strb	r0,[r14,#-14]
++	eor	r3,r11,r3,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-5]
++	ldrhsb	r11,[r12,#-1]
++	 strb	r1,[r14,#-10]
++	 strb	r2,[r14,#-6]
++	eor	r0,r8,r0,lsr#8
++	 strb	r3,[r14,#-2]
++	eor	r1,r9,r1,lsr#8
++	 strb	r0,[r14,#-13]
++	eor	r2,r10,r2,lsr#8
++	 strb	r1,[r14,#-9]
++	eor	r3,r11,r3,lsr#8
++	 strb	r2,[r14,#-5]
++	 strb	r3,[r14,#-1]
++	add	r8,sp,#4*(4+0)
++	ldmia	r8,{r8-r11}		@ load key material
++	add	r0,sp,#4*(16+8)
++	add	r4,r8,r4,ror#13	@ accumulate key material
++	add	r5,r9,r5,ror#13
++	add	r6,r10,r6,ror#13
++# ifdef	__thumb2__
++	itete	lo
++# endif
++	eorlo	r8,r8,r8		@ zero or ...
++	ldrhsb	r8,[r12],#16			@ ... load input
++	eorlo	r9,r9,r9
++	ldrhsb	r9,[r12,#-12]
++
++	add	r7,r11,r7,ror#13
++# ifdef	__thumb2__
++	itete	lo
++# endif
++	eorlo	r10,r10,r10
++	ldrhsb	r10,[r12,#-8]
++	eorlo	r11,r11,r11
++	ldrhsb	r11,[r12,#-4]
++
++	eor	r4,r8,r4		@ xor with input (or zero)
++	eor	r5,r9,r5
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-15]		@ load more input
++	ldrhsb	r9,[r12,#-11]
++	eor	r6,r10,r6
++	 strb	r4,[r14],#16		@ store output
++	eor	r7,r11,r7
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-7]
++	ldrhsb	r11,[r12,#-3]
++	 strb	r5,[r14,#-12]
++	eor	r4,r8,r4,lsr#8
++	 strb	r6,[r14,#-8]
++	eor	r5,r9,r5,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-14]		@ load more input
++	ldrhsb	r9,[r12,#-10]
++	 strb	r7,[r14,#-4]
++	eor	r6,r10,r6,lsr#8
++	 strb	r4,[r14,#-15]
++	eor	r7,r11,r7,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-6]
++	ldrhsb	r11,[r12,#-2]
++	 strb	r5,[r14,#-11]
++	eor	r4,r8,r4,lsr#8
++	 strb	r6,[r14,#-7]
++	eor	r5,r9,r5,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-13]		@ load more input
++	ldrhsb	r9,[r12,#-9]
++	 strb	r7,[r14,#-3]
++	eor	r6,r10,r6,lsr#8
++	 strb	r4,[r14,#-14]
++	eor	r7,r11,r7,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-5]
++	ldrhsb	r11,[r12,#-1]
++	 strb	r5,[r14,#-10]
++	 strb	r6,[r14,#-6]
++	eor	r4,r8,r4,lsr#8
++	 strb	r7,[r14,#-2]
++	eor	r5,r9,r5,lsr#8
++	 strb	r4,[r14,#-13]
++	eor	r6,r10,r6,lsr#8
++	 strb	r5,[r14,#-9]
++	eor	r7,r11,r7,lsr#8
++	 strb	r6,[r14,#-5]
++	 strb	r7,[r14,#-1]
++	add	r8,sp,#4*(4+4)
++	ldmia	r8,{r8-r11}		@ load key material
++	ldmia	r0,{r0-r7}		@ load second half
++# ifdef	__thumb2__
++	itt	hi
++# endif
++	strhi	r10,[sp,#4*(16+10)]		@ copy "rx"
++	strhi	r11,[sp,#4*(16+11)]		@ copy "rx"
++	add	r0,r8,r0	@ accumulate key material
++	add	r1,r9,r1
++	add	r2,r10,r2
++# ifdef	__thumb2__
++	itete	lo
++# endif
++	eorlo	r8,r8,r8		@ zero or ...
++	ldrhsb	r8,[r12],#16			@ ... load input
++	eorlo	r9,r9,r9
++	ldrhsb	r9,[r12,#-12]
++
++	add	r3,r11,r3
++# ifdef	__thumb2__
++	itete	lo
++# endif
++	eorlo	r10,r10,r10
++	ldrhsb	r10,[r12,#-8]
++	eorlo	r11,r11,r11
++	ldrhsb	r11,[r12,#-4]
++
++	eor	r0,r8,r0		@ xor with input (or zero)
++	eor	r1,r9,r1
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-15]		@ load more input
++	ldrhsb	r9,[r12,#-11]
++	eor	r2,r10,r2
++	 strb	r0,[r14],#16		@ store output
++	eor	r3,r11,r3
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-7]
++	ldrhsb	r11,[r12,#-3]
++	 strb	r1,[r14,#-12]
++	eor	r0,r8,r0,lsr#8
++	 strb	r2,[r14,#-8]
++	eor	r1,r9,r1,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-14]		@ load more input
++	ldrhsb	r9,[r12,#-10]
++	 strb	r3,[r14,#-4]
++	eor	r2,r10,r2,lsr#8
++	 strb	r0,[r14,#-15]
++	eor	r3,r11,r3,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-6]
++	ldrhsb	r11,[r12,#-2]
++	 strb	r1,[r14,#-11]
++	eor	r0,r8,r0,lsr#8
++	 strb	r2,[r14,#-7]
++	eor	r1,r9,r1,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-13]		@ load more input
++	ldrhsb	r9,[r12,#-9]
++	 strb	r3,[r14,#-3]
++	eor	r2,r10,r2,lsr#8
++	 strb	r0,[r14,#-14]
++	eor	r3,r11,r3,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-5]
++	ldrhsb	r11,[r12,#-1]
++	 strb	r1,[r14,#-10]
++	 strb	r2,[r14,#-6]
++	eor	r0,r8,r0,lsr#8
++	 strb	r3,[r14,#-2]
++	eor	r1,r9,r1,lsr#8
++	 strb	r0,[r14,#-13]
++	eor	r2,r10,r2,lsr#8
++	 strb	r1,[r14,#-9]
++	eor	r3,r11,r3,lsr#8
++	 strb	r2,[r14,#-5]
++	 strb	r3,[r14,#-1]
++	add	r8,sp,#4*(4+8)
++	ldmia	r8,{r8-r11}		@ load key material
++	add	r4,r8,r4,ror#24	@ accumulate key material
++# ifdef	__thumb2__
++	itt	hi
++# endif
++	addhi	r8,r8,#1			@ next counter value
++	strhi	r8,[sp,#4*(12)]		@ save next counter value
++	add	r5,r9,r5,ror#24
++	add	r6,r10,r6,ror#24
++# ifdef	__thumb2__
++	itete	lo
++# endif
++	eorlo	r8,r8,r8		@ zero or ...
++	ldrhsb	r8,[r12],#16			@ ... load input
++	eorlo	r9,r9,r9
++	ldrhsb	r9,[r12,#-12]
++
++	add	r7,r11,r7,ror#24
++# ifdef	__thumb2__
++	itete	lo
++# endif
++	eorlo	r10,r10,r10
++	ldrhsb	r10,[r12,#-8]
++	eorlo	r11,r11,r11
++	ldrhsb	r11,[r12,#-4]
++
++	eor	r4,r8,r4		@ xor with input (or zero)
++	eor	r5,r9,r5
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-15]		@ load more input
++	ldrhsb	r9,[r12,#-11]
++	eor	r6,r10,r6
++	 strb	r4,[r14],#16		@ store output
++	eor	r7,r11,r7
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-7]
++	ldrhsb	r11,[r12,#-3]
++	 strb	r5,[r14,#-12]
++	eor	r4,r8,r4,lsr#8
++	 strb	r6,[r14,#-8]
++	eor	r5,r9,r5,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-14]		@ load more input
++	ldrhsb	r9,[r12,#-10]
++	 strb	r7,[r14,#-4]
++	eor	r6,r10,r6,lsr#8
++	 strb	r4,[r14,#-15]
++	eor	r7,r11,r7,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-6]
++	ldrhsb	r11,[r12,#-2]
++	 strb	r5,[r14,#-11]
++	eor	r4,r8,r4,lsr#8
++	 strb	r6,[r14,#-7]
++	eor	r5,r9,r5,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r8,[r12,#-13]		@ load more input
++	ldrhsb	r9,[r12,#-9]
++	 strb	r7,[r14,#-3]
++	eor	r6,r10,r6,lsr#8
++	 strb	r4,[r14,#-14]
++	eor	r7,r11,r7,lsr#8
++# ifdef	__thumb2__
++	itt	hs
++# endif
++	ldrhsb	r10,[r12,#-5]
++	ldrhsb	r11,[r12,#-1]
++	 strb	r5,[r14,#-10]
++	 strb	r6,[r14,#-6]
++	eor	r4,r8,r4,lsr#8
++	 strb	r7,[r14,#-2]
++	eor	r5,r9,r5,lsr#8
++	 strb	r4,[r14,#-13]
++	eor	r6,r10,r6,lsr#8
++	 strb	r5,[r14,#-9]
++	eor	r7,r11,r7,lsr#8
++	 strb	r6,[r14,#-5]
++	 strb	r7,[r14,#-1]
++# ifdef	__thumb2__
++	it	ne
++# endif
++	ldrne	r8,[sp,#4*(32+2)]		@ re-load len
++# ifdef	__thumb2__
++	it	hs
++# endif
++	subhs	r11,r8,#64			@ len-=64
++	bhi	.Loop_outer
++
++	beq	.Ldone
++#endif
++
++.Ltail:
++	ldr	r12,[sp,#4*(32+1)]	@ load inp
++	add	r9,sp,#4*(0)
++	ldr	r14,[sp,#4*(32+0)]	@ load out
++
++.Loop_tail:
++	ldrb	r10,[r9],#1	@ read buffer on stack
++	ldrb	r11,[r12],#1		@ read input
++	subs	r8,r8,#1
++	eor	r11,r11,r10
++	strb	r11,[r14],#1		@ store output
++	bne	.Loop_tail
++
++.Ldone:
++	add	sp,sp,#4*(32+3)
++.Lno_data:
++	ldmia	sp!,{r4-r11,pc}
++.size	ChaCha20_ctr32,.-ChaCha20_ctr32
++#if __ARM_MAX_ARCH__>=7
++.arch	armv7-a
++.fpu	neon
++
++.type	ChaCha20_neon,%function
++.align	5
++ChaCha20_neon:
++	ldr		r12,[sp,#0]		@ pull pointer to counter and nonce
++	stmdb		sp!,{r0-r2,r4-r11,lr}
++.LChaCha20_neon:
++	adr		r14,.Lsigma
++	vstmdb		sp!,{d8-d15}		@ ABI spec says so
++	stmdb		sp!,{r0-r3}
++
++	vld1.32		{q1-q2},[r3]		@ load key
++	ldmia		r3,{r4-r11}		@ load key
++
++	sub		sp,sp,#4*(16+16)
++	vld1.32		{q3},[r12]		@ load counter and nonce
++	add		r12,sp,#4*8
++	ldmia		r14,{r0-r3}		@ load sigma
++	vld1.32		{q0},[r14]!		@ load sigma
++	vld1.32		{q12},[r14]!		@ one
++	@ vld1.32	{d30},[r14]		@ rot8
++	vst1.32		{q2-q3},[r12]		@ copy 1/2key|counter|nonce
++	vst1.32		{q0-q1},[sp]		@ copy sigma|1/2key
++
++	str		r10,[sp,#4*(16+10)]	@ off-load "rx"
++	str		r11,[sp,#4*(16+11)]	@ off-load "rx"
++	vshl.i32	d26,d24,#1	@ two
++	vstr		d24,[sp,#4*(16+0)]
++	vshl.i32	d28,d24,#2	@ four
++	vstr		d26,[sp,#4*(16+2)]
++	vmov		q4,q0
++	vstr		d28,[sp,#4*(16+4)]
++	vmov		q8,q0
++	@ vstr		d30,[sp,#4*(16+6)]
++	vmov		q5,q1
++	vmov		q9,q1
++	b		.Loop_neon_enter
++
++.align	4
++.Loop_neon_outer:
++	ldmia		sp,{r0-r9}		@ load key material
++	cmp		r11,#64*2		@ if len<=64*2
++	bls		.Lbreak_neon		@ switch to integer-only
++	@ vldr		d30,[sp,#4*(16+6)]	@ rot8
++	vmov		q4,q0
++	str		r11,[sp,#4*(32+2)]	@ save len
++	vmov		q8,q0
++	str		r12,  [sp,#4*(32+1)]	@ save inp
++	vmov		q5,q1
++	str		r14,  [sp,#4*(32+0)]	@ save out
++	vmov		q9,q1
++.Loop_neon_enter:
++	ldr		r11, [sp,#4*(15)]
++	 mov		r4,r4,ror#19	@ twist b[0..3]
++	vadd.i32	q7,q3,q12		@ counter+1
++	ldr		r12,[sp,#4*(12)]	@ modulo-scheduled load
++	 mov		r5,r5,ror#19
++	vmov		q6,q2
++	ldr		r10, [sp,#4*(13)]
++	 mov		r6,r6,ror#19
++	vmov		q10,q2
++	ldr		r14,[sp,#4*(14)]
++	 mov		r7,r7,ror#19
++	vadd.i32	q11,q7,q12		@ counter+2
++	add		r12,r12,#3	@ counter+3
++	mov		r11,r11,ror#8	@ twist d[0..3]
++	mov		r12,r12,ror#8
++	mov		r10,r10,ror#8
++	mov		r14,r14,ror#8
++	str		r11, [sp,#4*(16+15)]
++	mov		r11,#10
++	b		.Loop_neon
++
++.align	4
++.Loop_neon:
++	subs		r11,r11,#1
++	vadd.i32	q0,q0,q1
++	add	r0,r0,r4,ror#13
++	vadd.i32	q4,q4,q5
++	add	r1,r1,r5,ror#13
++	vadd.i32	q8,q8,q9
++	eor	r12,r0,r12,ror#24
++	veor	q3,q3,q0
++	eor	r10,r1,r10,ror#24
++	veor	q7,q7,q4
++	add	r8,r8,r12,ror#16
++	veor	q11,q11,q8
++	add	r9,r9,r10,ror#16
++	vrev32.16	q3,q3
++	eor	r4,r8,r4,ror#13
++	vrev32.16	q7,q7
++	eor	r5,r9,r5,ror#13
++	vrev32.16	q11,q11
++	add	r0,r0,r4,ror#20
++	vadd.i32	q2,q2,q3
++	add	r1,r1,r5,ror#20
++	vadd.i32	q6,q6,q7
++	eor	r12,r0,r12,ror#16
++	vadd.i32	q10,q10,q11
++	eor	r10,r1,r10,ror#16
++	veor	q12,q1,q2
++	add	r8,r8,r12,ror#24
++	veor	q13,q5,q6
++	str	r10,[sp,#4*(16+13)]
++	veor	q14,q9,q10
++	add	r9,r9,r10,ror#24
++	vshr.u32	q1,q12,#20
++	ldr	r10,[sp,#4*(16+15)]
++	vshr.u32	q5,q13,#20
++	str	r8,[sp,#4*(16+8)]
++	vshr.u32	q9,q14,#20
++	eor	r4,r4,r8,ror#12
++	vsli.32	q1,q12,#12
++	str	r9,[sp,#4*(16+9)]
++	vsli.32	q5,q13,#12
++	eor	r5,r5,r9,ror#12
++	vsli.32	q9,q14,#12
++	ldr	r8,[sp,#4*(16+10)]
++	vadd.i32	q0,q0,q1
++	add	r2,r2,r6,ror#13
++	vadd.i32	q4,q4,q5
++	ldr	r9,[sp,#4*(16+11)]
++	vadd.i32	q8,q8,q9
++	add	r3,r3,r7,ror#13
++	veor	q12,q3,q0
++	eor	r14,r2,r14,ror#24
++	veor	q13,q7,q4
++	eor	r10,r3,r10,ror#24
++	veor	q14,q11,q8
++	add	r8,r8,r14,ror#16
++	vshr.u32	q3,q12,#24
++	add	r9,r9,r10,ror#16
++	vshr.u32	q7,q13,#24
++	eor	r6,r8,r6,ror#13
++	vshr.u32	q11,q14,#24
++	eor	r7,r9,r7,ror#13
++	vsli.32	q3,q12,#8
++	add	r2,r2,r6,ror#20
++	vsli.32	q7,q13,#8
++	add	r3,r3,r7,ror#20
++	vsli.32	q11,q14,#8
++	eor	r14,r2,r14,ror#16
++	vadd.i32	q2,q2,q3
++	eor	r10,r3,r10,ror#16
++	vadd.i32	q6,q6,q7
++	add	r8,r8,r14,ror#24
++	vadd.i32	q10,q10,q11
++	add	r9,r9,r10,ror#24
++	veor	q12,q1,q2
++	eor	r6,r6,r8,ror#12
++	veor	q13,q5,q6
++	eor	r7,r7,r9,ror#12
++	veor	q14,q9,q10
++	vshr.u32	q1,q12,#25
++	vshr.u32	q5,q13,#25
++	vshr.u32	q9,q14,#25
++	vsli.32	q1,q12,#7
++	vsli.32	q5,q13,#7
++	vsli.32	q9,q14,#7
++	vext.8	q2,q2,q2,#8
++	vext.8	q6,q6,q6,#8
++	vext.8	q10,q10,q10,#8
++	vext.8	q1,q1,q1,#4
++	vext.8	q5,q5,q5,#4
++	vext.8	q9,q9,q9,#4
++	vext.8	q3,q3,q3,#12
++	vext.8	q7,q7,q7,#12
++	vext.8	q11,q11,q11,#12
++	vadd.i32	q0,q0,q1
++	add	r0,r0,r5,ror#13
++	vadd.i32	q4,q4,q5
++	add	r1,r1,r6,ror#13
++	vadd.i32	q8,q8,q9
++	eor	r10,r0,r10,ror#24
++	veor	q3,q3,q0
++	eor	r12,r1,r12,ror#24
++	veor	q7,q7,q4
++	add	r8,r8,r10,ror#16
++	veor	q11,q11,q8
++	add	r9,r9,r12,ror#16
++	vrev32.16	q3,q3
++	eor	r5,r8,r5,ror#13
++	vrev32.16	q7,q7
++	eor	r6,r9,r6,ror#13
++	vrev32.16	q11,q11
++	add	r0,r0,r5,ror#20
++	vadd.i32	q2,q2,q3
++	add	r1,r1,r6,ror#20
++	vadd.i32	q6,q6,q7
++	eor	r10,r0,r10,ror#16
++	vadd.i32	q10,q10,q11
++	eor	r12,r1,r12,ror#16
++	veor	q12,q1,q2
++	str	r10,[sp,#4*(16+15)]
++	veor	q13,q5,q6
++	add	r8,r8,r10,ror#24
++	veor	q14,q9,q10
++	ldr	r10,[sp,#4*(16+13)]
++	vshr.u32	q1,q12,#20
++	add	r9,r9,r12,ror#24
++	vshr.u32	q5,q13,#20
++	str	r8,[sp,#4*(16+10)]
++	vshr.u32	q9,q14,#20
++	eor	r5,r5,r8,ror#12
++	vsli.32	q1,q12,#12
++	str	r9,[sp,#4*(16+11)]
++	vsli.32	q5,q13,#12
++	eor	r6,r6,r9,ror#12
++	vsli.32	q9,q14,#12
++	ldr	r8,[sp,#4*(16+8)]
++	vadd.i32	q0,q0,q1
++	add	r2,r2,r7,ror#13
++	vadd.i32	q4,q4,q5
++	ldr	r9,[sp,#4*(16+9)]
++	vadd.i32	q8,q8,q9
++	add	r3,r3,r4,ror#13
++	veor	q12,q3,q0
++	eor	r10,r2,r10,ror#24
++	veor	q13,q7,q4
++	eor	r14,r3,r14,ror#24
++	veor	q14,q11,q8
++	add	r8,r8,r10,ror#16
++	vshr.u32	q3,q12,#24
++	add	r9,r9,r14,ror#16
++	vshr.u32	q7,q13,#24
++	eor	r7,r8,r7,ror#13
++	vshr.u32	q11,q14,#24
++	eor	r4,r9,r4,ror#13
++	vsli.32	q3,q12,#8
++	add	r2,r2,r7,ror#20
++	vsli.32	q7,q13,#8
++	add	r3,r3,r4,ror#20
++	vsli.32	q11,q14,#8
++	eor	r10,r2,r10,ror#16
++	vadd.i32	q2,q2,q3
++	eor	r14,r3,r14,ror#16
++	vadd.i32	q6,q6,q7
++	add	r8,r8,r10,ror#24
++	vadd.i32	q10,q10,q11
++	add	r9,r9,r14,ror#24
++	veor	q12,q1,q2
++	eor	r7,r7,r8,ror#12
++	veor	q13,q5,q6
++	eor	r4,r4,r9,ror#12
++	veor	q14,q9,q10
++	vshr.u32	q1,q12,#25
++	vshr.u32	q5,q13,#25
++	vshr.u32	q9,q14,#25
++	vsli.32	q1,q12,#7
++	vsli.32	q5,q13,#7
++	vsli.32	q9,q14,#7
++	vext.8	q2,q2,q2,#8
++	vext.8	q6,q6,q6,#8
++	vext.8	q10,q10,q10,#8
++	vext.8	q1,q1,q1,#12
++	vext.8	q5,q5,q5,#12
++	vext.8	q9,q9,q9,#12
++	vext.8	q3,q3,q3,#4
++	vext.8	q7,q7,q7,#4
++	vext.8	q11,q11,q11,#4
++	bne		.Loop_neon
++
++	add		r11,sp,#32
++	vld1.32		{q12-q13},[sp]		@ load key material
++	vld1.32		{q14-q15},[r11]
++
++	ldr		r11,[sp,#4*(32+2)]	@ load len
++
++	str		r8, [sp,#4*(16+8)]	@ modulo-scheduled store
++	str		r9, [sp,#4*(16+9)]
++	str		r12,[sp,#4*(16+12)]
++	str		r10, [sp,#4*(16+13)]
++	str		r14,[sp,#4*(16+14)]
++
++	@ at this point we have first half of 512-bit result in
++	@ rx and second half at sp+4*(16+8)
++
++	ldr		r12,[sp,#4*(32+1)]	@ load inp
++	ldr		r14,[sp,#4*(32+0)]	@ load out
++
++	vadd.i32	q0,q0,q12		@ accumulate key material
++	vadd.i32	q4,q4,q12
++	vadd.i32	q8,q8,q12
++	vldr		d24,[sp,#4*(16+0)]	@ one
++
++	vadd.i32	q1,q1,q13
++	vadd.i32	q5,q5,q13
++	vadd.i32	q9,q9,q13
++	vldr		d26,[sp,#4*(16+2)]	@ two
++
++	vadd.i32	q2,q2,q14
++	vadd.i32	q6,q6,q14
++	vadd.i32	q10,q10,q14
++	vadd.i32	d14,d14,d24	@ counter+1
++	vadd.i32	d22,d22,d26	@ counter+2
++
++	vadd.i32	q3,q3,q15
++	vadd.i32	q7,q7,q15
++	vadd.i32	q11,q11,q15
++
++	cmp		r11,#64*4
++	blo		.Ltail_neon
++
++	vld1.8		{q12-q13},[r12]!	@ load input
++	 mov		r11,sp
++	vld1.8		{q14-q15},[r12]!
++	veor		q0,q0,q12		@ xor with input
++	veor		q1,q1,q13
++	vld1.8		{q12-q13},[r12]!
++	veor		q2,q2,q14
++	veor		q3,q3,q15
++	vld1.8		{q14-q15},[r12]!
++
++	veor		q4,q4,q12
++	 vst1.8		{q0-q1},[r14]!	@ store output
++	veor		q5,q5,q13
++	vld1.8		{q12-q13},[r12]!
++	veor		q6,q6,q14
++	 vst1.8		{q2-q3},[r14]!
++	veor		q7,q7,q15
++	vld1.8		{q14-q15},[r12]!
++
++	veor		q8,q8,q12
++	 vld1.32	{q0-q1},[r11]!	@ load for next iteration
++	 veor		d25,d25,d25
++	 vldr		d24,[sp,#4*(16+4)]	@ four
++	veor		q9,q9,q13
++	 vld1.32	{q2-q3},[r11]
++	veor		q10,q10,q14
++	 vst1.8		{q4-q5},[r14]!
++	veor		q11,q11,q15
++	 vst1.8		{q6-q7},[r14]!
++
++	vadd.i32	d6,d6,d24	@ next counter value
++	vldr		d24,[sp,#4*(16+0)]	@ one
++
++	ldmia		sp,{r8-r11}	@ load key material
++	add		r0,r0,r8	@ accumulate key material
++	ldr		r8,[r12],#16		@ load input
++	 vst1.8		{q8-q9},[r14]!
++	add		r1,r1,r9
++	ldr		r9,[r12,#-12]
++	 vst1.8		{q10-q11},[r14]!
++	add		r2,r2,r10
++	ldr		r10,[r12,#-8]
++	add		r3,r3,r11
++	ldr		r11,[r12,#-4]
++# ifdef	__ARMEB__
++	rev		r0,r0
++	rev		r1,r1
++	rev		r2,r2
++	rev		r3,r3
++# endif
++	eor		r0,r0,r8	@ xor with input
++	 add		r8,sp,#4*(4)
++	eor		r1,r1,r9
++	str		r0,[r14],#16		@ store output
++	eor		r2,r2,r10
++	str		r1,[r14,#-12]
++	eor		r3,r3,r11
++	 ldmia		r8,{r8-r11}	@ load key material
++	str		r2,[r14,#-8]
++	str		r3,[r14,#-4]
++
++	add		r4,r8,r4,ror#13 @ accumulate key material
++	ldr		r8,[r12],#16		@ load input
++	add		r5,r9,r5,ror#13
++	ldr		r9,[r12,#-12]
++	add		r6,r10,r6,ror#13
++	ldr		r10,[r12,#-8]
++	add		r7,r11,r7,ror#13
++	ldr		r11,[r12,#-4]
++# ifdef	__ARMEB__
++	rev		r4,r4
++	rev		r5,r5
++	rev		r6,r6
++	rev		r7,r7
++# endif
++	eor		r4,r4,r8
++	 add		r8,sp,#4*(8)
++	eor		r5,r5,r9
++	str		r4,[r14],#16		@ store output
++	eor		r6,r6,r10
++	str		r5,[r14,#-12]
++	eor		r7,r7,r11
++	 ldmia		r8,{r8-r11}	@ load key material
++	str		r6,[r14,#-8]
++	 add		r0,sp,#4*(16+8)
++	str		r7,[r14,#-4]
++
++	ldmia		r0,{r0-r7}	@ load second half
++
++	add		r0,r0,r8	@ accumulate key material
++	ldr		r8,[r12],#16		@ load input
++	add		r1,r1,r9
++	ldr		r9,[r12,#-12]
++# ifdef	__thumb2__
++	it	hi
++# endif
++	 strhi		r10,[sp,#4*(16+10)]	@ copy "rx" while at it
++	add		r2,r2,r10
++	ldr		r10,[r12,#-8]
++# ifdef	__thumb2__
++	it	hi
++# endif
++	 strhi		r11,[sp,#4*(16+11)]	@ copy "rx" while at it
++	add		r3,r3,r11
++	ldr		r11,[r12,#-4]
++# ifdef	__ARMEB__
++	rev		r0,r0
++	rev		r1,r1
++	rev		r2,r2
++	rev		r3,r3
++# endif
++	eor		r0,r0,r8
++	 add		r8,sp,#4*(12)
++	eor		r1,r1,r9
++	str		r0,[r14],#16		@ store output
++	eor		r2,r2,r10
++	str		r1,[r14,#-12]
++	eor		r3,r3,r11
++	 ldmia		r8,{r8-r11}	@ load key material
++	str		r2,[r14,#-8]
++	str		r3,[r14,#-4]
++
++	add		r4,r8,r4,ror#24 @ accumulate key material
++	 add		r8,r8,#4		@ next counter value
++	add		r5,r9,r5,ror#24
++	 str		r8,[sp,#4*(12)]	@ save next counter value
++	ldr		r8,[r12],#16		@ load input
++	add		r6,r10,r6,ror#24
++	 add		r4,r4,#3		@ counter+3
++	ldr		r9,[r12,#-12]
++	add		r7,r11,r7,ror#24
++	ldr		r10,[r12,#-8]
++	ldr		r11,[r12,#-4]
++# ifdef	__ARMEB__
++	rev		r4,r4
++	rev		r5,r5
++	rev		r6,r6
++	rev		r7,r7
++# endif
++	eor		r4,r4,r8
++# ifdef	__thumb2__
++	it	hi
++# endif
++	 ldrhi		r8,[sp,#4*(32+2)]	@ re-load len
++	eor		r5,r5,r9
++	eor		r6,r6,r10
++	str		r4,[r14],#16		@ store output
++	eor		r7,r7,r11
++	str		r5,[r14,#-12]
++	 sub		r11,r8,#64*4	@ len-=64*4
++	str		r6,[r14,#-8]
++	str		r7,[r14,#-4]
++	bhi		.Loop_neon_outer
++
++	b		.Ldone_neon
++
++.align	4
++.Lbreak_neon:
++	@ harmonize NEON and integer-only stack frames: load data
++	@ from NEON frame, but save to integer-only one; distance
++	@ between the two is 4*(32+4+16-32)=4*(20).
++
++	str		r11, [sp,#4*(20+32+2)]	@ save len
++	 add		r11,sp,#4*(32+4)
++	str		r12,   [sp,#4*(20+32+1)]	@ save inp
++	str		r14,   [sp,#4*(20+32+0)]	@ save out
++
++	ldr		r12,[sp,#4*(16+10)]
++	ldr		r14,[sp,#4*(16+11)]
++	 vldmia		r11,{d8-d15}			@ fulfill ABI requirement
++	str		r12,[sp,#4*(20+16+10)]	@ copy "rx"
++	str		r14,[sp,#4*(20+16+11)]	@ copy "rx"
++
++	ldr		r11, [sp,#4*(15)]
++	 mov		r4,r4,ror#19		@ twist b[0..3]
++	ldr		r12,[sp,#4*(12)]		@ modulo-scheduled load
++	 mov		r5,r5,ror#19
++	ldr		r10, [sp,#4*(13)]
++	 mov		r6,r6,ror#19
++	ldr		r14,[sp,#4*(14)]
++	 mov		r7,r7,ror#19
++	mov		r11,r11,ror#8		@ twist d[0..3]
++	mov		r12,r12,ror#8
++	mov		r10,r10,ror#8
++	mov		r14,r14,ror#8
++	str		r11, [sp,#4*(20+16+15)]
++	add		r11,sp,#4*(20)
++	vst1.32		{q0-q1},[r11]!		@ copy key
++	add		sp,sp,#4*(20)			@ switch frame
++	vst1.32		{q2-q3},[r11]
++	mov		r11,#10
++	b		.Loop				@ go integer-only
++
++.align	4
++.Ltail_neon:
++	cmp		r11,#64*3
++	bhs		.L192_or_more_neon
++	cmp		r11,#64*2
++	bhs		.L128_or_more_neon
++	cmp		r11,#64*1
++	bhs		.L64_or_more_neon
++
++	add		r8,sp,#4*(8)
++	vst1.8		{q0-q1},[sp]
++	add		r10,sp,#4*(0)
++	vst1.8		{q2-q3},[r8]
++	b		.Loop_tail_neon
++
++.align	4
++.L64_or_more_neon:
++	vld1.8		{q12-q13},[r12]!
++	vld1.8		{q14-q15},[r12]!
++	veor		q0,q0,q12
++	veor		q1,q1,q13
++	veor		q2,q2,q14
++	veor		q3,q3,q15
++	vst1.8		{q0-q1},[r14]!
++	vst1.8		{q2-q3},[r14]!
++
++	beq		.Ldone_neon
++
++	add		r8,sp,#4*(8)
++	vst1.8		{q4-q5},[sp]
++	add		r10,sp,#4*(0)
++	vst1.8		{q6-q7},[r8]
++	sub		r11,r11,#64*1	@ len-=64*1
++	b		.Loop_tail_neon
++
++.align	4
++.L128_or_more_neon:
++	vld1.8		{q12-q13},[r12]!
++	vld1.8		{q14-q15},[r12]!
++	veor		q0,q0,q12
++	veor		q1,q1,q13
++	vld1.8		{q12-q13},[r12]!
++	veor		q2,q2,q14
++	veor		q3,q3,q15
++	vld1.8		{q14-q15},[r12]!
++
++	veor		q4,q4,q12
++	veor		q5,q5,q13
++	 vst1.8		{q0-q1},[r14]!
++	veor		q6,q6,q14
++	 vst1.8		{q2-q3},[r14]!
++	veor		q7,q7,q15
++	vst1.8		{q4-q5},[r14]!
++	vst1.8		{q6-q7},[r14]!
++
++	beq		.Ldone_neon
++
++	add		r8,sp,#4*(8)
++	vst1.8		{q8-q9},[sp]
++	add		r10,sp,#4*(0)
++	vst1.8		{q10-q11},[r8]
++	sub		r11,r11,#64*2	@ len-=64*2
++	b		.Loop_tail_neon
++
++.align	4
++.L192_or_more_neon:
++	vld1.8		{q12-q13},[r12]!
++	vld1.8		{q14-q15},[r12]!
++	veor		q0,q0,q12
++	veor		q1,q1,q13
++	vld1.8		{q12-q13},[r12]!
++	veor		q2,q2,q14
++	veor		q3,q3,q15
++	vld1.8		{q14-q15},[r12]!
++
++	veor		q4,q4,q12
++	veor		q5,q5,q13
++	vld1.8		{q12-q13},[r12]!
++	veor		q6,q6,q14
++	 vst1.8		{q0-q1},[r14]!
++	veor		q7,q7,q15
++	vld1.8		{q14-q15},[r12]!
++
++	veor		q8,q8,q12
++	 vst1.8		{q2-q3},[r14]!
++	veor		q9,q9,q13
++	 vst1.8		{q4-q5},[r14]!
++	veor		q10,q10,q14
++	 vst1.8		{q6-q7},[r14]!
++	veor		q11,q11,q15
++	vst1.8		{q8-q9},[r14]!
++	vst1.8		{q10-q11},[r14]!
++
++	beq		.Ldone_neon
++
++	ldmia		sp,{r8-r11}	@ load key material
++	add		r0,r0,r8	@ accumulate key material
++	 add		r8,sp,#4*(4)
++	add		r1,r1,r9
++	add		r2,r2,r10
++	add		r3,r3,r11
++	 ldmia		r8,{r8-r11}	@ load key material
++
++	add		r4,r8,r4,ror#13 @ accumulate key material
++	 add		r8,sp,#4*(8)
++	add		r5,r9,r5,ror#13
++	add		r6,r10,r6,ror#13
++	add		r7,r11,r7,ror#13
++	 ldmia		r8,{r8-r11}	@ load key material
++# ifdef	__ARMEB__
++	rev		r0,r0
++	rev		r1,r1
++	rev		r2,r2
++	rev		r3,r3
++	rev		r4,r4
++	rev		r5,r5
++	rev		r6,r6
++	rev		r7,r7
++# endif
++	stmia		sp,{r0-r7}
++	 add		r0,sp,#4*(16+8)
++
++	ldmia		r0,{r0-r7}	@ load second half
++
++	add		r0,r0,r8	@ accumulate key material
++	 add		r8,sp,#4*(12)
++	add		r1,r1,r9
++	add		r2,r2,r10
++	add		r3,r3,r11
++	 ldmia		r8,{r8-r11}	@ load key material
++
++	add		r4,r8,r4,ror#24 @ accumulate key material
++	 add		r8,sp,#4*(8)
++	add		r5,r9,r5,ror#24
++	 add		r4,r4,#3		@ counter+3
++	add		r6,r10,r6,ror#24
++	add		r7,r11,r7,ror#24
++	 ldr		r11,[sp,#4*(32+2)]	@ re-load len
++# ifdef	__ARMEB__
++	rev		r0,r0
++	rev		r1,r1
++	rev		r2,r2
++	rev		r3,r3
++	rev		r4,r4
++	rev		r5,r5
++	rev		r6,r6
++	rev		r7,r7
++# endif
++	stmia		r8,{r0-r7}
++	 add		r10,sp,#4*(0)
++	 sub		r11,r11,#64*3	@ len-=64*3
++
++.Loop_tail_neon:
++	ldrb		r8,[r10],#1	@ read buffer on stack
++	ldrb		r9,[r12],#1		@ read input
++	subs		r11,r11,#1
++	eor		r8,r8,r9
++	strb		r8,[r14],#1		@ store output
++	bne		.Loop_tail_neon
++
++.Ldone_neon:
++	add		sp,sp,#4*(32+4)
++	vldmia		sp,{d8-d15}
++	add		sp,sp,#4*(16+3)
++	ldmia		sp!,{r4-r11,pc}
++.size	ChaCha20_neon,.-ChaCha20_neon
++.comm	OPENSSL_armcap_P,4,4
++#endif
+diff --git a/lib/zinc/chacha20/chacha20-arm64-cryptogams.S b/lib/zinc/chacha20/chacha20-arm64-cryptogams.S
+new file mode 100644
+index 000000000000..4d029bfdad3a
+--- /dev/null
++++ b/lib/zinc/chacha20/chacha20-arm64-cryptogams.S
+@@ -0,0 +1,1973 @@
++/* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
++/*
++ * Copyright (C) 2006-2017 CRYPTOGAMS by <appro@openssl.org>. All Rights Reserved.
++ */
++
++#include "arm_arch.h"
++
++.text
++
++
++
++.align	5
++.Lsigma:
++.quad	0x3320646e61707865,0x6b20657479622d32		// endian-neutral
++.Lone:
++.long	1,0,0,0
++.LOPENSSL_armcap_P:
++#ifdef	__ILP32__
++.long	OPENSSL_armcap_P-.
++#else
++.quad	OPENSSL_armcap_P-.
++#endif
++.byte	67,104,97,67,104,97,50,48,32,102,111,114,32,65,82,77,118,56,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
++.align	2
++
++.globl	ChaCha20_ctr32
++.type	ChaCha20_ctr32,%function
++.align	5
++ChaCha20_ctr32:
++	cbz	x2,.Labort
++	adr	x5,.LOPENSSL_armcap_P
++	cmp	x2,#192
++	b.lo	.Lshort
++#ifdef	__ILP32__
++	ldrsw	x6,[x5]
++#else
++	ldr	x6,[x5]
++#endif
++	ldr	w17,[x6,x5]
++	tst	w17,#ARMV7_NEON
++	b.ne	ChaCha20_neon
++
++.Lshort:
++	stp	x29,x30,[sp,#-96]!
++	add	x29,sp,#0
++
++	adr	x5,.Lsigma
++	stp	x19,x20,[sp,#16]
++	stp	x21,x22,[sp,#32]
++	stp	x23,x24,[sp,#48]
++	stp	x25,x26,[sp,#64]
++	stp	x27,x28,[sp,#80]
++	sub	sp,sp,#64
++
++	ldp	x22,x23,[x5]		// load sigma
++	ldp	x24,x25,[x3]		// load key
++	ldp	x26,x27,[x3,#16]
++	ldp	x28,x30,[x4]		// load counter
++#ifdef	__ARMEB__
++	ror	x24,x24,#32
++	ror	x25,x25,#32
++	ror	x26,x26,#32
++	ror	x27,x27,#32
++	ror	x28,x28,#32
++	ror	x30,x30,#32
++#endif
++
++.Loop_outer:
++	mov	w5,w22			// unpack key block
++	lsr	x6,x22,#32
++	mov	w7,w23
++	lsr	x8,x23,#32
++	mov	w9,w24
++	lsr	x10,x24,#32
++	mov	w11,w25
++	lsr	x12,x25,#32
++	mov	w13,w26
++	lsr	x14,x26,#32
++	mov	w15,w27
++	lsr	x16,x27,#32
++	mov	w17,w28
++	lsr	x19,x28,#32
++	mov	w20,w30
++	lsr	x21,x30,#32
++
++	mov	x4,#10
++	subs	x2,x2,#64
++.Loop:
++	sub	x4,x4,#1
++	add	w5,w5,w9
++	add	w6,w6,w10
++	add	w7,w7,w11
++	add	w8,w8,w12
++	eor	w17,w17,w5
++	eor	w19,w19,w6
++	eor	w20,w20,w7
++	eor	w21,w21,w8
++	ror	w17,w17,#16
++	ror	w19,w19,#16
++	ror	w20,w20,#16
++	ror	w21,w21,#16
++	add	w13,w13,w17
++	add	w14,w14,w19
++	add	w15,w15,w20
++	add	w16,w16,w21
++	eor	w9,w9,w13
++	eor	w10,w10,w14
++	eor	w11,w11,w15
++	eor	w12,w12,w16
++	ror	w9,w9,#20
++	ror	w10,w10,#20
++	ror	w11,w11,#20
++	ror	w12,w12,#20
++	add	w5,w5,w9
++	add	w6,w6,w10
++	add	w7,w7,w11
++	add	w8,w8,w12
++	eor	w17,w17,w5
++	eor	w19,w19,w6
++	eor	w20,w20,w7
++	eor	w21,w21,w8
++	ror	w17,w17,#24
++	ror	w19,w19,#24
++	ror	w20,w20,#24
++	ror	w21,w21,#24
++	add	w13,w13,w17
++	add	w14,w14,w19
++	add	w15,w15,w20
++	add	w16,w16,w21
++	eor	w9,w9,w13
++	eor	w10,w10,w14
++	eor	w11,w11,w15
++	eor	w12,w12,w16
++	ror	w9,w9,#25
++	ror	w10,w10,#25
++	ror	w11,w11,#25
++	ror	w12,w12,#25
++	add	w5,w5,w10
++	add	w6,w6,w11
++	add	w7,w7,w12
++	add	w8,w8,w9
++	eor	w21,w21,w5
++	eor	w17,w17,w6
++	eor	w19,w19,w7
++	eor	w20,w20,w8
++	ror	w21,w21,#16
++	ror	w17,w17,#16
++	ror	w19,w19,#16
++	ror	w20,w20,#16
++	add	w15,w15,w21
++	add	w16,w16,w17
++	add	w13,w13,w19
++	add	w14,w14,w20
++	eor	w10,w10,w15
++	eor	w11,w11,w16
++	eor	w12,w12,w13
++	eor	w9,w9,w14
++	ror	w10,w10,#20
++	ror	w11,w11,#20
++	ror	w12,w12,#20
++	ror	w9,w9,#20
++	add	w5,w5,w10
++	add	w6,w6,w11
++	add	w7,w7,w12
++	add	w8,w8,w9
++	eor	w21,w21,w5
++	eor	w17,w17,w6
++	eor	w19,w19,w7
++	eor	w20,w20,w8
++	ror	w21,w21,#24
++	ror	w17,w17,#24
++	ror	w19,w19,#24
++	ror	w20,w20,#24
++	add	w15,w15,w21
++	add	w16,w16,w17
++	add	w13,w13,w19
++	add	w14,w14,w20
++	eor	w10,w10,w15
++	eor	w11,w11,w16
++	eor	w12,w12,w13
++	eor	w9,w9,w14
++	ror	w10,w10,#25
++	ror	w11,w11,#25
++	ror	w12,w12,#25
++	ror	w9,w9,#25
++	cbnz	x4,.Loop
++
++	add	w5,w5,w22		// accumulate key block
++	add	x6,x6,x22,lsr#32
++	add	w7,w7,w23
++	add	x8,x8,x23,lsr#32
++	add	w9,w9,w24
++	add	x10,x10,x24,lsr#32
++	add	w11,w11,w25
++	add	x12,x12,x25,lsr#32
++	add	w13,w13,w26
++	add	x14,x14,x26,lsr#32
++	add	w15,w15,w27
++	add	x16,x16,x27,lsr#32
++	add	w17,w17,w28
++	add	x19,x19,x28,lsr#32
++	add	w20,w20,w30
++	add	x21,x21,x30,lsr#32
++
++	b.lo	.Ltail
++
++	add	x5,x5,x6,lsl#32	// pack
++	add	x7,x7,x8,lsl#32
++	ldp	x6,x8,[x1,#0]		// load input
++	add	x9,x9,x10,lsl#32
++	add	x11,x11,x12,lsl#32
++	ldp	x10,x12,[x1,#16]
++	add	x13,x13,x14,lsl#32
++	add	x15,x15,x16,lsl#32
++	ldp	x14,x16,[x1,#32]
++	add	x17,x17,x19,lsl#32
++	add	x20,x20,x21,lsl#32
++	ldp	x19,x21,[x1,#48]
++	add	x1,x1,#64
++#ifdef	__ARMEB__
++	rev	x5,x5
++	rev	x7,x7
++	rev	x9,x9
++	rev	x11,x11
++	rev	x13,x13
++	rev	x15,x15
++	rev	x17,x17
++	rev	x20,x20
++#endif
++	eor	x5,x5,x6
++	eor	x7,x7,x8
++	eor	x9,x9,x10
++	eor	x11,x11,x12
++	eor	x13,x13,x14
++	eor	x15,x15,x16
++	eor	x17,x17,x19
++	eor	x20,x20,x21
++
++	stp	x5,x7,[x0,#0]		// store output
++	add	x28,x28,#1			// increment counter
++	stp	x9,x11,[x0,#16]
++	stp	x13,x15,[x0,#32]
++	stp	x17,x20,[x0,#48]
++	add	x0,x0,#64
++
++	b.hi	.Loop_outer
++
++	ldp	x19,x20,[x29,#16]
++	add	sp,sp,#64
++	ldp	x21,x22,[x29,#32]
++	ldp	x23,x24,[x29,#48]
++	ldp	x25,x26,[x29,#64]
++	ldp	x27,x28,[x29,#80]
++	ldp	x29,x30,[sp],#96
++.Labort:
++	ret
++
++.align	4
++.Ltail:
++	add	x2,x2,#64
++.Less_than_64:
++	sub	x0,x0,#1
++	add	x1,x1,x2
++	add	x0,x0,x2
++	add	x4,sp,x2
++	neg	x2,x2
++
++	add	x5,x5,x6,lsl#32	// pack
++	add	x7,x7,x8,lsl#32
++	add	x9,x9,x10,lsl#32
++	add	x11,x11,x12,lsl#32
++	add	x13,x13,x14,lsl#32
++	add	x15,x15,x16,lsl#32
++	add	x17,x17,x19,lsl#32
++	add	x20,x20,x21,lsl#32
++#ifdef	__ARMEB__
++	rev	x5,x5
++	rev	x7,x7
++	rev	x9,x9
++	rev	x11,x11
++	rev	x13,x13
++	rev	x15,x15
++	rev	x17,x17
++	rev	x20,x20
++#endif
++	stp	x5,x7,[sp,#0]
++	stp	x9,x11,[sp,#16]
++	stp	x13,x15,[sp,#32]
++	stp	x17,x20,[sp,#48]
++
++.Loop_tail:
++	ldrb	w10,[x1,x2]
++	ldrb	w11,[x4,x2]
++	add	x2,x2,#1
++	eor	w10,w10,w11
++	strb	w10,[x0,x2]
++	cbnz	x2,.Loop_tail
++
++	stp	xzr,xzr,[sp,#0]
++	stp	xzr,xzr,[sp,#16]
++	stp	xzr,xzr,[sp,#32]
++	stp	xzr,xzr,[sp,#48]
++
++	ldp	x19,x20,[x29,#16]
++	add	sp,sp,#64
++	ldp	x21,x22,[x29,#32]
++	ldp	x23,x24,[x29,#48]
++	ldp	x25,x26,[x29,#64]
++	ldp	x27,x28,[x29,#80]
++	ldp	x29,x30,[sp],#96
++	ret
++.size	ChaCha20_ctr32,.-ChaCha20_ctr32
++
++.type	ChaCha20_neon,%function
++.align	5
++ChaCha20_neon:
++	stp	x29,x30,[sp,#-96]!
++	add	x29,sp,#0
++
++	adr	x5,.Lsigma
++	stp	x19,x20,[sp,#16]
++	stp	x21,x22,[sp,#32]
++	stp	x23,x24,[sp,#48]
++	stp	x25,x26,[sp,#64]
++	stp	x27,x28,[sp,#80]
++	cmp	x2,#512
++	b.hs	.L512_or_more_neon
++
++	sub	sp,sp,#64
++
++	ldp	x22,x23,[x5]		// load sigma
++	ld1	{v24.4s},[x5],#16
++	ldp	x24,x25,[x3]		// load key
++	ldp	x26,x27,[x3,#16]
++	ld1	{v25.4s,v26.4s},[x3]
++	ldp	x28,x30,[x4]		// load counter
++	ld1	{v27.4s},[x4]
++	ld1	{v31.4s},[x5]
++#ifdef	__ARMEB__
++	rev64	v24.4s,v24.4s
++	ror	x24,x24,#32
++	ror	x25,x25,#32
++	ror	x26,x26,#32
++	ror	x27,x27,#32
++	ror	x28,x28,#32
++	ror	x30,x30,#32
++#endif
++	add	v27.4s,v27.4s,v31.4s		// += 1
++	add	v28.4s,v27.4s,v31.4s
++	add	v29.4s,v28.4s,v31.4s
++	shl	v31.4s,v31.4s,#2			// 1 -> 4
++
++.Loop_outer_neon:
++	mov	w5,w22			// unpack key block
++	lsr	x6,x22,#32
++	mov	v0.16b,v24.16b
++	mov	w7,w23
++	lsr	x8,x23,#32
++	mov	v4.16b,v24.16b
++	mov	w9,w24
++	lsr	x10,x24,#32
++	mov	v16.16b,v24.16b
++	mov	w11,w25
++	mov	v1.16b,v25.16b
++	lsr	x12,x25,#32
++	mov	v5.16b,v25.16b
++	mov	w13,w26
++	mov	v17.16b,v25.16b
++	lsr	x14,x26,#32
++	mov	v3.16b,v27.16b
++	mov	w15,w27
++	mov	v7.16b,v28.16b
++	lsr	x16,x27,#32
++	mov	v19.16b,v29.16b
++	mov	w17,w28
++	mov	v2.16b,v26.16b
++	lsr	x19,x28,#32
++	mov	v6.16b,v26.16b
++	mov	w20,w30
++	mov	v18.16b,v26.16b
++	lsr	x21,x30,#32
++
++	mov	x4,#10
++	subs	x2,x2,#256
++.Loop_neon:
++	sub	x4,x4,#1
++	add	v0.4s,v0.4s,v1.4s
++	add	w5,w5,w9
++	add	v4.4s,v4.4s,v5.4s
++	add	w6,w6,w10
++	add	v16.4s,v16.4s,v17.4s
++	add	w7,w7,w11
++	eor	v3.16b,v3.16b,v0.16b
++	add	w8,w8,w12
++	eor	v7.16b,v7.16b,v4.16b
++	eor	w17,w17,w5
++	eor	v19.16b,v19.16b,v16.16b
++	eor	w19,w19,w6
++	rev32	v3.8h,v3.8h
++	eor	w20,w20,w7
++	rev32	v7.8h,v7.8h
++	eor	w21,w21,w8
++	rev32	v19.8h,v19.8h
++	ror	w17,w17,#16
++	add	v2.4s,v2.4s,v3.4s
++	ror	w19,w19,#16
++	add	v6.4s,v6.4s,v7.4s
++	ror	w20,w20,#16
++	add	v18.4s,v18.4s,v19.4s
++	ror	w21,w21,#16
++	eor	v20.16b,v1.16b,v2.16b
++	add	w13,w13,w17
++	eor	v21.16b,v5.16b,v6.16b
++	add	w14,w14,w19
++	eor	v22.16b,v17.16b,v18.16b
++	add	w15,w15,w20
++	ushr	v1.4s,v20.4s,#20
++	add	w16,w16,w21
++	ushr	v5.4s,v21.4s,#20
++	eor	w9,w9,w13
++	ushr	v17.4s,v22.4s,#20
++	eor	w10,w10,w14
++	sli	v1.4s,v20.4s,#12
++	eor	w11,w11,w15
++	sli	v5.4s,v21.4s,#12
++	eor	w12,w12,w16
++	sli	v17.4s,v22.4s,#12
++	ror	w9,w9,#20
++	add	v0.4s,v0.4s,v1.4s
++	ror	w10,w10,#20
++	add	v4.4s,v4.4s,v5.4s
++	ror	w11,w11,#20
++	add	v16.4s,v16.4s,v17.4s
++	ror	w12,w12,#20
++	eor	v20.16b,v3.16b,v0.16b
++	add	w5,w5,w9
++	eor	v21.16b,v7.16b,v4.16b
++	add	w6,w6,w10
++	eor	v22.16b,v19.16b,v16.16b
++	add	w7,w7,w11
++	ushr	v3.4s,v20.4s,#24
++	add	w8,w8,w12
++	ushr	v7.4s,v21.4s,#24
++	eor	w17,w17,w5
++	ushr	v19.4s,v22.4s,#24
++	eor	w19,w19,w6
++	sli	v3.4s,v20.4s,#8
++	eor	w20,w20,w7
++	sli	v7.4s,v21.4s,#8
++	eor	w21,w21,w8
++	sli	v19.4s,v22.4s,#8
++	ror	w17,w17,#24
++	add	v2.4s,v2.4s,v3.4s
++	ror	w19,w19,#24
++	add	v6.4s,v6.4s,v7.4s
++	ror	w20,w20,#24
++	add	v18.4s,v18.4s,v19.4s
++	ror	w21,w21,#24
++	eor	v20.16b,v1.16b,v2.16b
++	add	w13,w13,w17
++	eor	v21.16b,v5.16b,v6.16b
++	add	w14,w14,w19
++	eor	v22.16b,v17.16b,v18.16b
++	add	w15,w15,w20
++	ushr	v1.4s,v20.4s,#25
++	add	w16,w16,w21
++	ushr	v5.4s,v21.4s,#25
++	eor	w9,w9,w13
++	ushr	v17.4s,v22.4s,#25
++	eor	w10,w10,w14
++	sli	v1.4s,v20.4s,#7
++	eor	w11,w11,w15
++	sli	v5.4s,v21.4s,#7
++	eor	w12,w12,w16
++	sli	v17.4s,v22.4s,#7
++	ror	w9,w9,#25
++	ext	v2.16b,v2.16b,v2.16b,#8
++	ror	w10,w10,#25
++	ext	v6.16b,v6.16b,v6.16b,#8
++	ror	w11,w11,#25
++	ext	v18.16b,v18.16b,v18.16b,#8
++	ror	w12,w12,#25
++	ext	v3.16b,v3.16b,v3.16b,#12
++	ext	v7.16b,v7.16b,v7.16b,#12
++	ext	v19.16b,v19.16b,v19.16b,#12
++	ext	v1.16b,v1.16b,v1.16b,#4
++	ext	v5.16b,v5.16b,v5.16b,#4
++	ext	v17.16b,v17.16b,v17.16b,#4
++	add	v0.4s,v0.4s,v1.4s
++	add	w5,w5,w10
++	add	v4.4s,v4.4s,v5.4s
++	add	w6,w6,w11
++	add	v16.4s,v16.4s,v17.4s
++	add	w7,w7,w12
++	eor	v3.16b,v3.16b,v0.16b
++	add	w8,w8,w9
++	eor	v7.16b,v7.16b,v4.16b
++	eor	w21,w21,w5
++	eor	v19.16b,v19.16b,v16.16b
++	eor	w17,w17,w6
++	rev32	v3.8h,v3.8h
++	eor	w19,w19,w7
++	rev32	v7.8h,v7.8h
++	eor	w20,w20,w8
++	rev32	v19.8h,v19.8h
++	ror	w21,w21,#16
++	add	v2.4s,v2.4s,v3.4s
++	ror	w17,w17,#16
++	add	v6.4s,v6.4s,v7.4s
++	ror	w19,w19,#16
++	add	v18.4s,v18.4s,v19.4s
++	ror	w20,w20,#16
++	eor	v20.16b,v1.16b,v2.16b
++	add	w15,w15,w21
++	eor	v21.16b,v5.16b,v6.16b
++	add	w16,w16,w17
++	eor	v22.16b,v17.16b,v18.16b
++	add	w13,w13,w19
++	ushr	v1.4s,v20.4s,#20
++	add	w14,w14,w20
++	ushr	v5.4s,v21.4s,#20
++	eor	w10,w10,w15
++	ushr	v17.4s,v22.4s,#20
++	eor	w11,w11,w16
++	sli	v1.4s,v20.4s,#12
++	eor	w12,w12,w13
++	sli	v5.4s,v21.4s,#12
++	eor	w9,w9,w14
++	sli	v17.4s,v22.4s,#12
++	ror	w10,w10,#20
++	add	v0.4s,v0.4s,v1.4s
++	ror	w11,w11,#20
++	add	v4.4s,v4.4s,v5.4s
++	ror	w12,w12,#20
++	add	v16.4s,v16.4s,v17.4s
++	ror	w9,w9,#20
++	eor	v20.16b,v3.16b,v0.16b
++	add	w5,w5,w10
++	eor	v21.16b,v7.16b,v4.16b
++	add	w6,w6,w11
++	eor	v22.16b,v19.16b,v16.16b
++	add	w7,w7,w12
++	ushr	v3.4s,v20.4s,#24
++	add	w8,w8,w9
++	ushr	v7.4s,v21.4s,#24
++	eor	w21,w21,w5
++	ushr	v19.4s,v22.4s,#24
++	eor	w17,w17,w6
++	sli	v3.4s,v20.4s,#8
++	eor	w19,w19,w7
++	sli	v7.4s,v21.4s,#8
++	eor	w20,w20,w8
++	sli	v19.4s,v22.4s,#8
++	ror	w21,w21,#24
++	add	v2.4s,v2.4s,v3.4s
++	ror	w17,w17,#24
++	add	v6.4s,v6.4s,v7.4s
++	ror	w19,w19,#24
++	add	v18.4s,v18.4s,v19.4s
++	ror	w20,w20,#24
++	eor	v20.16b,v1.16b,v2.16b
++	add	w15,w15,w21
++	eor	v21.16b,v5.16b,v6.16b
++	add	w16,w16,w17
++	eor	v22.16b,v17.16b,v18.16b
++	add	w13,w13,w19
++	ushr	v1.4s,v20.4s,#25
++	add	w14,w14,w20
++	ushr	v5.4s,v21.4s,#25
++	eor	w10,w10,w15
++	ushr	v17.4s,v22.4s,#25
++	eor	w11,w11,w16
++	sli	v1.4s,v20.4s,#7
++	eor	w12,w12,w13
++	sli	v5.4s,v21.4s,#7
++	eor	w9,w9,w14
++	sli	v17.4s,v22.4s,#7
++	ror	w10,w10,#25
++	ext	v2.16b,v2.16b,v2.16b,#8
++	ror	w11,w11,#25
++	ext	v6.16b,v6.16b,v6.16b,#8
++	ror	w12,w12,#25
++	ext	v18.16b,v18.16b,v18.16b,#8
++	ror	w9,w9,#25
++	ext	v3.16b,v3.16b,v3.16b,#4
++	ext	v7.16b,v7.16b,v7.16b,#4
++	ext	v19.16b,v19.16b,v19.16b,#4
++	ext	v1.16b,v1.16b,v1.16b,#12
++	ext	v5.16b,v5.16b,v5.16b,#12
++	ext	v17.16b,v17.16b,v17.16b,#12
++	cbnz	x4,.Loop_neon
++
++	add	w5,w5,w22		// accumulate key block
++	add	v0.4s,v0.4s,v24.4s
++	add	x6,x6,x22,lsr#32
++	add	v4.4s,v4.4s,v24.4s
++	add	w7,w7,w23
++	add	v16.4s,v16.4s,v24.4s
++	add	x8,x8,x23,lsr#32
++	add	v2.4s,v2.4s,v26.4s
++	add	w9,w9,w24
++	add	v6.4s,v6.4s,v26.4s
++	add	x10,x10,x24,lsr#32
++	add	v18.4s,v18.4s,v26.4s
++	add	w11,w11,w25
++	add	v3.4s,v3.4s,v27.4s
++	add	x12,x12,x25,lsr#32
++	add	w13,w13,w26
++	add	v7.4s,v7.4s,v28.4s
++	add	x14,x14,x26,lsr#32
++	add	w15,w15,w27
++	add	v19.4s,v19.4s,v29.4s
++	add	x16,x16,x27,lsr#32
++	add	w17,w17,w28
++	add	v1.4s,v1.4s,v25.4s
++	add	x19,x19,x28,lsr#32
++	add	w20,w20,w30
++	add	v5.4s,v5.4s,v25.4s
++	add	x21,x21,x30,lsr#32
++	add	v17.4s,v17.4s,v25.4s
++
++	b.lo	.Ltail_neon
++
++	add	x5,x5,x6,lsl#32	// pack
++	add	x7,x7,x8,lsl#32
++	ldp	x6,x8,[x1,#0]		// load input
++	add	x9,x9,x10,lsl#32
++	add	x11,x11,x12,lsl#32
++	ldp	x10,x12,[x1,#16]
++	add	x13,x13,x14,lsl#32
++	add	x15,x15,x16,lsl#32
++	ldp	x14,x16,[x1,#32]
++	add	x17,x17,x19,lsl#32
++	add	x20,x20,x21,lsl#32
++	ldp	x19,x21,[x1,#48]
++	add	x1,x1,#64
++#ifdef	__ARMEB__
++	rev	x5,x5
++	rev	x7,x7
++	rev	x9,x9
++	rev	x11,x11
++	rev	x13,x13
++	rev	x15,x15
++	rev	x17,x17
++	rev	x20,x20
++#endif
++	ld1	{v20.16b,v21.16b,v22.16b,v23.16b},[x1],#64
++	eor	x5,x5,x6
++	eor	x7,x7,x8
++	eor	x9,x9,x10
++	eor	x11,x11,x12
++	eor	x13,x13,x14
++	eor	v0.16b,v0.16b,v20.16b
++	eor	x15,x15,x16
++	eor	v1.16b,v1.16b,v21.16b
++	eor	x17,x17,x19
++	eor	v2.16b,v2.16b,v22.16b
++	eor	x20,x20,x21
++	eor	v3.16b,v3.16b,v23.16b
++	ld1	{v20.16b,v21.16b,v22.16b,v23.16b},[x1],#64
++
++	stp	x5,x7,[x0,#0]		// store output
++	add	x28,x28,#4			// increment counter
++	stp	x9,x11,[x0,#16]
++	add	v27.4s,v27.4s,v31.4s		// += 4
++	stp	x13,x15,[x0,#32]
++	add	v28.4s,v28.4s,v31.4s
++	stp	x17,x20,[x0,#48]
++	add	v29.4s,v29.4s,v31.4s
++	add	x0,x0,#64
++
++	st1	{v0.16b,v1.16b,v2.16b,v3.16b},[x0],#64
++	ld1	{v0.16b,v1.16b,v2.16b,v3.16b},[x1],#64
++
++	eor	v4.16b,v4.16b,v20.16b
++	eor	v5.16b,v5.16b,v21.16b
++	eor	v6.16b,v6.16b,v22.16b
++	eor	v7.16b,v7.16b,v23.16b
++	st1	{v4.16b,v5.16b,v6.16b,v7.16b},[x0],#64
++
++	eor	v16.16b,v16.16b,v0.16b
++	eor	v17.16b,v17.16b,v1.16b
++	eor	v18.16b,v18.16b,v2.16b
++	eor	v19.16b,v19.16b,v3.16b
++	st1	{v16.16b,v17.16b,v18.16b,v19.16b},[x0],#64
++
++	b.hi	.Loop_outer_neon
++
++	ldp	x19,x20,[x29,#16]
++	add	sp,sp,#64
++	ldp	x21,x22,[x29,#32]
++	ldp	x23,x24,[x29,#48]
++	ldp	x25,x26,[x29,#64]
++	ldp	x27,x28,[x29,#80]
++	ldp	x29,x30,[sp],#96
++	ret
++
++.Ltail_neon:
++	add	x2,x2,#256
++	cmp	x2,#64
++	b.lo	.Less_than_64
++
++	add	x5,x5,x6,lsl#32	// pack
++	add	x7,x7,x8,lsl#32
++	ldp	x6,x8,[x1,#0]		// load input
++	add	x9,x9,x10,lsl#32
++	add	x11,x11,x12,lsl#32
++	ldp	x10,x12,[x1,#16]
++	add	x13,x13,x14,lsl#32
++	add	x15,x15,x16,lsl#32
++	ldp	x14,x16,[x1,#32]
++	add	x17,x17,x19,lsl#32
++	add	x20,x20,x21,lsl#32
++	ldp	x19,x21,[x1,#48]
++	add	x1,x1,#64
++#ifdef	__ARMEB__
++	rev	x5,x5
++	rev	x7,x7
++	rev	x9,x9
++	rev	x11,x11
++	rev	x13,x13
++	rev	x15,x15
++	rev	x17,x17
++	rev	x20,x20
++#endif
++	eor	x5,x5,x6
++	eor	x7,x7,x8
++	eor	x9,x9,x10
++	eor	x11,x11,x12
++	eor	x13,x13,x14
++	eor	x15,x15,x16
++	eor	x17,x17,x19
++	eor	x20,x20,x21
++
++	stp	x5,x7,[x0,#0]		// store output
++	add	x28,x28,#4			// increment counter
++	stp	x9,x11,[x0,#16]
++	stp	x13,x15,[x0,#32]
++	stp	x17,x20,[x0,#48]
++	add	x0,x0,#64
++	b.eq	.Ldone_neon
++	sub	x2,x2,#64
++	cmp	x2,#64
++	b.lo	.Less_than_128
++
++	ld1	{v20.16b,v21.16b,v22.16b,v23.16b},[x1],#64
++	eor	v0.16b,v0.16b,v20.16b
++	eor	v1.16b,v1.16b,v21.16b
++	eor	v2.16b,v2.16b,v22.16b
++	eor	v3.16b,v3.16b,v23.16b
++	st1	{v0.16b,v1.16b,v2.16b,v3.16b},[x0],#64
++	b.eq	.Ldone_neon
++	sub	x2,x2,#64
++	cmp	x2,#64
++	b.lo	.Less_than_192
++
++	ld1	{v20.16b,v21.16b,v22.16b,v23.16b},[x1],#64
++	eor	v4.16b,v4.16b,v20.16b
++	eor	v5.16b,v5.16b,v21.16b
++	eor	v6.16b,v6.16b,v22.16b
++	eor	v7.16b,v7.16b,v23.16b
++	st1	{v4.16b,v5.16b,v6.16b,v7.16b},[x0],#64
++	b.eq	.Ldone_neon
++	sub	x2,x2,#64
++
++	st1	{v16.16b,v17.16b,v18.16b,v19.16b},[sp]
++	b	.Last_neon
++
++.Less_than_128:
++	st1	{v0.16b,v1.16b,v2.16b,v3.16b},[sp]
++	b	.Last_neon
++.Less_than_192:
++	st1	{v4.16b,v5.16b,v6.16b,v7.16b},[sp]
++	b	.Last_neon
++
++.align	4
++.Last_neon:
++	sub	x0,x0,#1
++	add	x1,x1,x2
++	add	x0,x0,x2
++	add	x4,sp,x2
++	neg	x2,x2
++
++.Loop_tail_neon:
++	ldrb	w10,[x1,x2]
++	ldrb	w11,[x4,x2]
++	add	x2,x2,#1
++	eor	w10,w10,w11
++	strb	w10,[x0,x2]
++	cbnz	x2,.Loop_tail_neon
++
++	stp	xzr,xzr,[sp,#0]
++	stp	xzr,xzr,[sp,#16]
++	stp	xzr,xzr,[sp,#32]
++	stp	xzr,xzr,[sp,#48]
++
++.Ldone_neon:
++	ldp	x19,x20,[x29,#16]
++	add	sp,sp,#64
++	ldp	x21,x22,[x29,#32]
++	ldp	x23,x24,[x29,#48]
++	ldp	x25,x26,[x29,#64]
++	ldp	x27,x28,[x29,#80]
++	ldp	x29,x30,[sp],#96
++	ret
++.size	ChaCha20_neon,.-ChaCha20_neon
++.type	ChaCha20_512_neon,%function
++.align	5
++ChaCha20_512_neon:
++	stp	x29,x30,[sp,#-96]!
++	add	x29,sp,#0
++
++	adr	x5,.Lsigma
++	stp	x19,x20,[sp,#16]
++	stp	x21,x22,[sp,#32]
++	stp	x23,x24,[sp,#48]
++	stp	x25,x26,[sp,#64]
++	stp	x27,x28,[sp,#80]
++
++.L512_or_more_neon:
++	sub	sp,sp,#128+64
++
++	ldp	x22,x23,[x5]		// load sigma
++	ld1	{v24.4s},[x5],#16
++	ldp	x24,x25,[x3]		// load key
++	ldp	x26,x27,[x3,#16]
++	ld1	{v25.4s,v26.4s},[x3]
++	ldp	x28,x30,[x4]		// load counter
++	ld1	{v27.4s},[x4]
++	ld1	{v31.4s},[x5]
++#ifdef	__ARMEB__
++	rev64	v24.4s,v24.4s
++	ror	x24,x24,#32
++	ror	x25,x25,#32
++	ror	x26,x26,#32
++	ror	x27,x27,#32
++	ror	x28,x28,#32
++	ror	x30,x30,#32
++#endif
++	add	v27.4s,v27.4s,v31.4s		// += 1
++	stp	q24,q25,[sp,#0]		// off-load key block, invariant part
++	add	v27.4s,v27.4s,v31.4s		// not typo
++	str	q26,[sp,#32]
++	add	v28.4s,v27.4s,v31.4s
++	add	v29.4s,v28.4s,v31.4s
++	add	v30.4s,v29.4s,v31.4s
++	shl	v31.4s,v31.4s,#2			// 1 -> 4
++
++	stp	d8,d9,[sp,#128+0]		// meet ABI requirements
++	stp	d10,d11,[sp,#128+16]
++	stp	d12,d13,[sp,#128+32]
++	stp	d14,d15,[sp,#128+48]
++
++	sub	x2,x2,#512			// not typo
++
++.Loop_outer_512_neon:
++	mov	v0.16b,v24.16b
++	mov	v4.16b,v24.16b
++	mov	v8.16b,v24.16b
++	mov	v12.16b,v24.16b
++	mov	v16.16b,v24.16b
++	mov	v20.16b,v24.16b
++	mov	v1.16b,v25.16b
++	mov	w5,w22			// unpack key block
++	mov	v5.16b,v25.16b
++	lsr	x6,x22,#32
++	mov	v9.16b,v25.16b
++	mov	w7,w23
++	mov	v13.16b,v25.16b
++	lsr	x8,x23,#32
++	mov	v17.16b,v25.16b
++	mov	w9,w24
++	mov	v21.16b,v25.16b
++	lsr	x10,x24,#32
++	mov	v3.16b,v27.16b
++	mov	w11,w25
++	mov	v7.16b,v28.16b
++	lsr	x12,x25,#32
++	mov	v11.16b,v29.16b
++	mov	w13,w26
++	mov	v15.16b,v30.16b
++	lsr	x14,x26,#32
++	mov	v2.16b,v26.16b
++	mov	w15,w27
++	mov	v6.16b,v26.16b
++	lsr	x16,x27,#32
++	add	v19.4s,v3.4s,v31.4s			// +4
++	mov	w17,w28
++	add	v23.4s,v7.4s,v31.4s			// +4
++	lsr	x19,x28,#32
++	mov	v10.16b,v26.16b
++	mov	w20,w30
++	mov	v14.16b,v26.16b
++	lsr	x21,x30,#32
++	mov	v18.16b,v26.16b
++	stp	q27,q28,[sp,#48]		// off-load key block, variable part
++	mov	v22.16b,v26.16b
++	str	q29,[sp,#80]
++
++	mov	x4,#5
++	subs	x2,x2,#512
++.Loop_upper_neon:
++	sub	x4,x4,#1
++	add	v0.4s,v0.4s,v1.4s
++	add	w5,w5,w9
++	add	v4.4s,v4.4s,v5.4s
++	add	w6,w6,w10
++	add	v8.4s,v8.4s,v9.4s
++	add	w7,w7,w11
++	add	v12.4s,v12.4s,v13.4s
++	add	w8,w8,w12
++	add	v16.4s,v16.4s,v17.4s
++	eor	w17,w17,w5
++	add	v20.4s,v20.4s,v21.4s
++	eor	w19,w19,w6
++	eor	v3.16b,v3.16b,v0.16b
++	eor	w20,w20,w7
++	eor	v7.16b,v7.16b,v4.16b
++	eor	w21,w21,w8
++	eor	v11.16b,v11.16b,v8.16b
++	ror	w17,w17,#16
++	eor	v15.16b,v15.16b,v12.16b
++	ror	w19,w19,#16
++	eor	v19.16b,v19.16b,v16.16b
++	ror	w20,w20,#16
++	eor	v23.16b,v23.16b,v20.16b
++	ror	w21,w21,#16
++	rev32	v3.8h,v3.8h
++	add	w13,w13,w17
++	rev32	v7.8h,v7.8h
++	add	w14,w14,w19
++	rev32	v11.8h,v11.8h
++	add	w15,w15,w20
++	rev32	v15.8h,v15.8h
++	add	w16,w16,w21
++	rev32	v19.8h,v19.8h
++	eor	w9,w9,w13
++	rev32	v23.8h,v23.8h
++	eor	w10,w10,w14
++	add	v2.4s,v2.4s,v3.4s
++	eor	w11,w11,w15
++	add	v6.4s,v6.4s,v7.4s
++	eor	w12,w12,w16
++	add	v10.4s,v10.4s,v11.4s
++	ror	w9,w9,#20
++	add	v14.4s,v14.4s,v15.4s
++	ror	w10,w10,#20
++	add	v18.4s,v18.4s,v19.4s
++	ror	w11,w11,#20
++	add	v22.4s,v22.4s,v23.4s
++	ror	w12,w12,#20
++	eor	v24.16b,v1.16b,v2.16b
++	add	w5,w5,w9
++	eor	v25.16b,v5.16b,v6.16b
++	add	w6,w6,w10
++	eor	v26.16b,v9.16b,v10.16b
++	add	w7,w7,w11
++	eor	v27.16b,v13.16b,v14.16b
++	add	w8,w8,w12
++	eor	v28.16b,v17.16b,v18.16b
++	eor	w17,w17,w5
++	eor	v29.16b,v21.16b,v22.16b
++	eor	w19,w19,w6
++	ushr	v1.4s,v24.4s,#20
++	eor	w20,w20,w7
++	ushr	v5.4s,v25.4s,#20
++	eor	w21,w21,w8
++	ushr	v9.4s,v26.4s,#20
++	ror	w17,w17,#24
++	ushr	v13.4s,v27.4s,#20
++	ror	w19,w19,#24
++	ushr	v17.4s,v28.4s,#20
++	ror	w20,w20,#24
++	ushr	v21.4s,v29.4s,#20
++	ror	w21,w21,#24
++	sli	v1.4s,v24.4s,#12
++	add	w13,w13,w17
++	sli	v5.4s,v25.4s,#12
++	add	w14,w14,w19
++	sli	v9.4s,v26.4s,#12
++	add	w15,w15,w20
++	sli	v13.4s,v27.4s,#12
++	add	w16,w16,w21
++	sli	v17.4s,v28.4s,#12
++	eor	w9,w9,w13
++	sli	v21.4s,v29.4s,#12
++	eor	w10,w10,w14
++	add	v0.4s,v0.4s,v1.4s
++	eor	w11,w11,w15
++	add	v4.4s,v4.4s,v5.4s
++	eor	w12,w12,w16
++	add	v8.4s,v8.4s,v9.4s
++	ror	w9,w9,#25
++	add	v12.4s,v12.4s,v13.4s
++	ror	w10,w10,#25
++	add	v16.4s,v16.4s,v17.4s
++	ror	w11,w11,#25
++	add	v20.4s,v20.4s,v21.4s
++	ror	w12,w12,#25
++	eor	v24.16b,v3.16b,v0.16b
++	add	w5,w5,w10
++	eor	v25.16b,v7.16b,v4.16b
++	add	w6,w6,w11
++	eor	v26.16b,v11.16b,v8.16b
++	add	w7,w7,w12
++	eor	v27.16b,v15.16b,v12.16b
++	add	w8,w8,w9
++	eor	v28.16b,v19.16b,v16.16b
++	eor	w21,w21,w5
++	eor	v29.16b,v23.16b,v20.16b
++	eor	w17,w17,w6
++	ushr	v3.4s,v24.4s,#24
++	eor	w19,w19,w7
++	ushr	v7.4s,v25.4s,#24
++	eor	w20,w20,w8
++	ushr	v11.4s,v26.4s,#24
++	ror	w21,w21,#16
++	ushr	v15.4s,v27.4s,#24
++	ror	w17,w17,#16
++	ushr	v19.4s,v28.4s,#24
++	ror	w19,w19,#16
++	ushr	v23.4s,v29.4s,#24
++	ror	w20,w20,#16
++	sli	v3.4s,v24.4s,#8
++	add	w15,w15,w21
++	sli	v7.4s,v25.4s,#8
++	add	w16,w16,w17
++	sli	v11.4s,v26.4s,#8
++	add	w13,w13,w19
++	sli	v15.4s,v27.4s,#8
++	add	w14,w14,w20
++	sli	v19.4s,v28.4s,#8
++	eor	w10,w10,w15
++	sli	v23.4s,v29.4s,#8
++	eor	w11,w11,w16
++	add	v2.4s,v2.4s,v3.4s
++	eor	w12,w12,w13
++	add	v6.4s,v6.4s,v7.4s
++	eor	w9,w9,w14
++	add	v10.4s,v10.4s,v11.4s
++	ror	w10,w10,#20
++	add	v14.4s,v14.4s,v15.4s
++	ror	w11,w11,#20
++	add	v18.4s,v18.4s,v19.4s
++	ror	w12,w12,#20
++	add	v22.4s,v22.4s,v23.4s
++	ror	w9,w9,#20
++	eor	v24.16b,v1.16b,v2.16b
++	add	w5,w5,w10
++	eor	v25.16b,v5.16b,v6.16b
++	add	w6,w6,w11
++	eor	v26.16b,v9.16b,v10.16b
++	add	w7,w7,w12
++	eor	v27.16b,v13.16b,v14.16b
++	add	w8,w8,w9
++	eor	v28.16b,v17.16b,v18.16b
++	eor	w21,w21,w5
++	eor	v29.16b,v21.16b,v22.16b
++	eor	w17,w17,w6
++	ushr	v1.4s,v24.4s,#25
++	eor	w19,w19,w7
++	ushr	v5.4s,v25.4s,#25
++	eor	w20,w20,w8
++	ushr	v9.4s,v26.4s,#25
++	ror	w21,w21,#24
++	ushr	v13.4s,v27.4s,#25
++	ror	w17,w17,#24
++	ushr	v17.4s,v28.4s,#25
++	ror	w19,w19,#24
++	ushr	v21.4s,v29.4s,#25
++	ror	w20,w20,#24
++	sli	v1.4s,v24.4s,#7
++	add	w15,w15,w21
++	sli	v5.4s,v25.4s,#7
++	add	w16,w16,w17
++	sli	v9.4s,v26.4s,#7
++	add	w13,w13,w19
++	sli	v13.4s,v27.4s,#7
++	add	w14,w14,w20
++	sli	v17.4s,v28.4s,#7
++	eor	w10,w10,w15
++	sli	v21.4s,v29.4s,#7
++	eor	w11,w11,w16
++	ext	v2.16b,v2.16b,v2.16b,#8
++	eor	w12,w12,w13
++	ext	v6.16b,v6.16b,v6.16b,#8
++	eor	w9,w9,w14
++	ext	v10.16b,v10.16b,v10.16b,#8
++	ror	w10,w10,#25
++	ext	v14.16b,v14.16b,v14.16b,#8
++	ror	w11,w11,#25
++	ext	v18.16b,v18.16b,v18.16b,#8
++	ror	w12,w12,#25
++	ext	v22.16b,v22.16b,v22.16b,#8
++	ror	w9,w9,#25
++	ext	v3.16b,v3.16b,v3.16b,#12
++	ext	v7.16b,v7.16b,v7.16b,#12
++	ext	v11.16b,v11.16b,v11.16b,#12
++	ext	v15.16b,v15.16b,v15.16b,#12
++	ext	v19.16b,v19.16b,v19.16b,#12
++	ext	v23.16b,v23.16b,v23.16b,#12
++	ext	v1.16b,v1.16b,v1.16b,#4
++	ext	v5.16b,v5.16b,v5.16b,#4
++	ext	v9.16b,v9.16b,v9.16b,#4
++	ext	v13.16b,v13.16b,v13.16b,#4
++	ext	v17.16b,v17.16b,v17.16b,#4
++	ext	v21.16b,v21.16b,v21.16b,#4
++	add	v0.4s,v0.4s,v1.4s
++	add	w5,w5,w9
++	add	v4.4s,v4.4s,v5.4s
++	add	w6,w6,w10
++	add	v8.4s,v8.4s,v9.4s
++	add	w7,w7,w11
++	add	v12.4s,v12.4s,v13.4s
++	add	w8,w8,w12
++	add	v16.4s,v16.4s,v17.4s
++	eor	w17,w17,w5
++	add	v20.4s,v20.4s,v21.4s
++	eor	w19,w19,w6
++	eor	v3.16b,v3.16b,v0.16b
++	eor	w20,w20,w7
++	eor	v7.16b,v7.16b,v4.16b
++	eor	w21,w21,w8
++	eor	v11.16b,v11.16b,v8.16b
++	ror	w17,w17,#16
++	eor	v15.16b,v15.16b,v12.16b
++	ror	w19,w19,#16
++	eor	v19.16b,v19.16b,v16.16b
++	ror	w20,w20,#16
++	eor	v23.16b,v23.16b,v20.16b
++	ror	w21,w21,#16
++	rev32	v3.8h,v3.8h
++	add	w13,w13,w17
++	rev32	v7.8h,v7.8h
++	add	w14,w14,w19
++	rev32	v11.8h,v11.8h
++	add	w15,w15,w20
++	rev32	v15.8h,v15.8h
++	add	w16,w16,w21
++	rev32	v19.8h,v19.8h
++	eor	w9,w9,w13
++	rev32	v23.8h,v23.8h
++	eor	w10,w10,w14
++	add	v2.4s,v2.4s,v3.4s
++	eor	w11,w11,w15
++	add	v6.4s,v6.4s,v7.4s
++	eor	w12,w12,w16
++	add	v10.4s,v10.4s,v11.4s
++	ror	w9,w9,#20
++	add	v14.4s,v14.4s,v15.4s
++	ror	w10,w10,#20
++	add	v18.4s,v18.4s,v19.4s
++	ror	w11,w11,#20
++	add	v22.4s,v22.4s,v23.4s
++	ror	w12,w12,#20
++	eor	v24.16b,v1.16b,v2.16b
++	add	w5,w5,w9
++	eor	v25.16b,v5.16b,v6.16b
++	add	w6,w6,w10
++	eor	v26.16b,v9.16b,v10.16b
++	add	w7,w7,w11
++	eor	v27.16b,v13.16b,v14.16b
++	add	w8,w8,w12
++	eor	v28.16b,v17.16b,v18.16b
++	eor	w17,w17,w5
++	eor	v29.16b,v21.16b,v22.16b
++	eor	w19,w19,w6
++	ushr	v1.4s,v24.4s,#20
++	eor	w20,w20,w7
++	ushr	v5.4s,v25.4s,#20
++	eor	w21,w21,w8
++	ushr	v9.4s,v26.4s,#20
++	ror	w17,w17,#24
++	ushr	v13.4s,v27.4s,#20
++	ror	w19,w19,#24
++	ushr	v17.4s,v28.4s,#20
++	ror	w20,w20,#24
++	ushr	v21.4s,v29.4s,#20
++	ror	w21,w21,#24
++	sli	v1.4s,v24.4s,#12
++	add	w13,w13,w17
++	sli	v5.4s,v25.4s,#12
++	add	w14,w14,w19
++	sli	v9.4s,v26.4s,#12
++	add	w15,w15,w20
++	sli	v13.4s,v27.4s,#12
++	add	w16,w16,w21
++	sli	v17.4s,v28.4s,#12
++	eor	w9,w9,w13
++	sli	v21.4s,v29.4s,#12
++	eor	w10,w10,w14
++	add	v0.4s,v0.4s,v1.4s
++	eor	w11,w11,w15
++	add	v4.4s,v4.4s,v5.4s
++	eor	w12,w12,w16
++	add	v8.4s,v8.4s,v9.4s
++	ror	w9,w9,#25
++	add	v12.4s,v12.4s,v13.4s
++	ror	w10,w10,#25
++	add	v16.4s,v16.4s,v17.4s
++	ror	w11,w11,#25
++	add	v20.4s,v20.4s,v21.4s
++	ror	w12,w12,#25
++	eor	v24.16b,v3.16b,v0.16b
++	add	w5,w5,w10
++	eor	v25.16b,v7.16b,v4.16b
++	add	w6,w6,w11
++	eor	v26.16b,v11.16b,v8.16b
++	add	w7,w7,w12
++	eor	v27.16b,v15.16b,v12.16b
++	add	w8,w8,w9
++	eor	v28.16b,v19.16b,v16.16b
++	eor	w21,w21,w5
++	eor	v29.16b,v23.16b,v20.16b
++	eor	w17,w17,w6
++	ushr	v3.4s,v24.4s,#24
++	eor	w19,w19,w7
++	ushr	v7.4s,v25.4s,#24
++	eor	w20,w20,w8
++	ushr	v11.4s,v26.4s,#24
++	ror	w21,w21,#16
++	ushr	v15.4s,v27.4s,#24
++	ror	w17,w17,#16
++	ushr	v19.4s,v28.4s,#24
++	ror	w19,w19,#16
++	ushr	v23.4s,v29.4s,#24
++	ror	w20,w20,#16
++	sli	v3.4s,v24.4s,#8
++	add	w15,w15,w21
++	sli	v7.4s,v25.4s,#8
++	add	w16,w16,w17
++	sli	v11.4s,v26.4s,#8
++	add	w13,w13,w19
++	sli	v15.4s,v27.4s,#8
++	add	w14,w14,w20
++	sli	v19.4s,v28.4s,#8
++	eor	w10,w10,w15
++	sli	v23.4s,v29.4s,#8
++	eor	w11,w11,w16
++	add	v2.4s,v2.4s,v3.4s
++	eor	w12,w12,w13
++	add	v6.4s,v6.4s,v7.4s
++	eor	w9,w9,w14
++	add	v10.4s,v10.4s,v11.4s
++	ror	w10,w10,#20
++	add	v14.4s,v14.4s,v15.4s
++	ror	w11,w11,#20
++	add	v18.4s,v18.4s,v19.4s
++	ror	w12,w12,#20
++	add	v22.4s,v22.4s,v23.4s
++	ror	w9,w9,#20
++	eor	v24.16b,v1.16b,v2.16b
++	add	w5,w5,w10
++	eor	v25.16b,v5.16b,v6.16b
++	add	w6,w6,w11
++	eor	v26.16b,v9.16b,v10.16b
++	add	w7,w7,w12
++	eor	v27.16b,v13.16b,v14.16b
++	add	w8,w8,w9
++	eor	v28.16b,v17.16b,v18.16b
++	eor	w21,w21,w5
++	eor	v29.16b,v21.16b,v22.16b
++	eor	w17,w17,w6
++	ushr	v1.4s,v24.4s,#25
++	eor	w19,w19,w7
++	ushr	v5.4s,v25.4s,#25
++	eor	w20,w20,w8
++	ushr	v9.4s,v26.4s,#25
++	ror	w21,w21,#24
++	ushr	v13.4s,v27.4s,#25
++	ror	w17,w17,#24
++	ushr	v17.4s,v28.4s,#25
++	ror	w19,w19,#24
++	ushr	v21.4s,v29.4s,#25
++	ror	w20,w20,#24
++	sli	v1.4s,v24.4s,#7
++	add	w15,w15,w21
++	sli	v5.4s,v25.4s,#7
++	add	w16,w16,w17
++	sli	v9.4s,v26.4s,#7
++	add	w13,w13,w19
++	sli	v13.4s,v27.4s,#7
++	add	w14,w14,w20
++	sli	v17.4s,v28.4s,#7
++	eor	w10,w10,w15
++	sli	v21.4s,v29.4s,#7
++	eor	w11,w11,w16
++	ext	v2.16b,v2.16b,v2.16b,#8
++	eor	w12,w12,w13
++	ext	v6.16b,v6.16b,v6.16b,#8
++	eor	w9,w9,w14
++	ext	v10.16b,v10.16b,v10.16b,#8
++	ror	w10,w10,#25
++	ext	v14.16b,v14.16b,v14.16b,#8
++	ror	w11,w11,#25
++	ext	v18.16b,v18.16b,v18.16b,#8
++	ror	w12,w12,#25
++	ext	v22.16b,v22.16b,v22.16b,#8
++	ror	w9,w9,#25
++	ext	v3.16b,v3.16b,v3.16b,#4
++	ext	v7.16b,v7.16b,v7.16b,#4
++	ext	v11.16b,v11.16b,v11.16b,#4
++	ext	v15.16b,v15.16b,v15.16b,#4
++	ext	v19.16b,v19.16b,v19.16b,#4
++	ext	v23.16b,v23.16b,v23.16b,#4
++	ext	v1.16b,v1.16b,v1.16b,#12
++	ext	v5.16b,v5.16b,v5.16b,#12
++	ext	v9.16b,v9.16b,v9.16b,#12
++	ext	v13.16b,v13.16b,v13.16b,#12
++	ext	v17.16b,v17.16b,v17.16b,#12
++	ext	v21.16b,v21.16b,v21.16b,#12
++	cbnz	x4,.Loop_upper_neon
++
++	add	w5,w5,w22		// accumulate key block
++	add	x6,x6,x22,lsr#32
++	add	w7,w7,w23
++	add	x8,x8,x23,lsr#32
++	add	w9,w9,w24
++	add	x10,x10,x24,lsr#32
++	add	w11,w11,w25
++	add	x12,x12,x25,lsr#32
++	add	w13,w13,w26
++	add	x14,x14,x26,lsr#32
++	add	w15,w15,w27
++	add	x16,x16,x27,lsr#32
++	add	w17,w17,w28
++	add	x19,x19,x28,lsr#32
++	add	w20,w20,w30
++	add	x21,x21,x30,lsr#32
++
++	add	x5,x5,x6,lsl#32	// pack
++	add	x7,x7,x8,lsl#32
++	ldp	x6,x8,[x1,#0]		// load input
++	add	x9,x9,x10,lsl#32
++	add	x11,x11,x12,lsl#32
++	ldp	x10,x12,[x1,#16]
++	add	x13,x13,x14,lsl#32
++	add	x15,x15,x16,lsl#32
++	ldp	x14,x16,[x1,#32]
++	add	x17,x17,x19,lsl#32
++	add	x20,x20,x21,lsl#32
++	ldp	x19,x21,[x1,#48]
++	add	x1,x1,#64
++#ifdef	__ARMEB__
++	rev	x5,x5
++	rev	x7,x7
++	rev	x9,x9
++	rev	x11,x11
++	rev	x13,x13
++	rev	x15,x15
++	rev	x17,x17
++	rev	x20,x20
++#endif
++	eor	x5,x5,x6
++	eor	x7,x7,x8
++	eor	x9,x9,x10
++	eor	x11,x11,x12
++	eor	x13,x13,x14
++	eor	x15,x15,x16
++	eor	x17,x17,x19
++	eor	x20,x20,x21
++
++	stp	x5,x7,[x0,#0]		// store output
++	add	x28,x28,#1			// increment counter
++	mov	w5,w22			// unpack key block
++	lsr	x6,x22,#32
++	stp	x9,x11,[x0,#16]
++	mov	w7,w23
++	lsr	x8,x23,#32
++	stp	x13,x15,[x0,#32]
++	mov	w9,w24
++	lsr	x10,x24,#32
++	stp	x17,x20,[x0,#48]
++	add	x0,x0,#64
++	mov	w11,w25
++	lsr	x12,x25,#32
++	mov	w13,w26
++	lsr	x14,x26,#32
++	mov	w15,w27
++	lsr	x16,x27,#32
++	mov	w17,w28
++	lsr	x19,x28,#32
++	mov	w20,w30
++	lsr	x21,x30,#32
++
++	mov	x4,#5
++.Loop_lower_neon:
++	sub	x4,x4,#1
++	add	v0.4s,v0.4s,v1.4s
++	add	w5,w5,w9
++	add	v4.4s,v4.4s,v5.4s
++	add	w6,w6,w10
++	add	v8.4s,v8.4s,v9.4s
++	add	w7,w7,w11
++	add	v12.4s,v12.4s,v13.4s
++	add	w8,w8,w12
++	add	v16.4s,v16.4s,v17.4s
++	eor	w17,w17,w5
++	add	v20.4s,v20.4s,v21.4s
++	eor	w19,w19,w6
++	eor	v3.16b,v3.16b,v0.16b
++	eor	w20,w20,w7
++	eor	v7.16b,v7.16b,v4.16b
++	eor	w21,w21,w8
++	eor	v11.16b,v11.16b,v8.16b
++	ror	w17,w17,#16
++	eor	v15.16b,v15.16b,v12.16b
++	ror	w19,w19,#16
++	eor	v19.16b,v19.16b,v16.16b
++	ror	w20,w20,#16
++	eor	v23.16b,v23.16b,v20.16b
++	ror	w21,w21,#16
++	rev32	v3.8h,v3.8h
++	add	w13,w13,w17
++	rev32	v7.8h,v7.8h
++	add	w14,w14,w19
++	rev32	v11.8h,v11.8h
++	add	w15,w15,w20
++	rev32	v15.8h,v15.8h
++	add	w16,w16,w21
++	rev32	v19.8h,v19.8h
++	eor	w9,w9,w13
++	rev32	v23.8h,v23.8h
++	eor	w10,w10,w14
++	add	v2.4s,v2.4s,v3.4s
++	eor	w11,w11,w15
++	add	v6.4s,v6.4s,v7.4s
++	eor	w12,w12,w16
++	add	v10.4s,v10.4s,v11.4s
++	ror	w9,w9,#20
++	add	v14.4s,v14.4s,v15.4s
++	ror	w10,w10,#20
++	add	v18.4s,v18.4s,v19.4s
++	ror	w11,w11,#20
++	add	v22.4s,v22.4s,v23.4s
++	ror	w12,w12,#20
++	eor	v24.16b,v1.16b,v2.16b
++	add	w5,w5,w9
++	eor	v25.16b,v5.16b,v6.16b
++	add	w6,w6,w10
++	eor	v26.16b,v9.16b,v10.16b
++	add	w7,w7,w11
++	eor	v27.16b,v13.16b,v14.16b
++	add	w8,w8,w12
++	eor	v28.16b,v17.16b,v18.16b
++	eor	w17,w17,w5
++	eor	v29.16b,v21.16b,v22.16b
++	eor	w19,w19,w6
++	ushr	v1.4s,v24.4s,#20
++	eor	w20,w20,w7
++	ushr	v5.4s,v25.4s,#20
++	eor	w21,w21,w8
++	ushr	v9.4s,v26.4s,#20
++	ror	w17,w17,#24
++	ushr	v13.4s,v27.4s,#20
++	ror	w19,w19,#24
++	ushr	v17.4s,v28.4s,#20
++	ror	w20,w20,#24
++	ushr	v21.4s,v29.4s,#20
++	ror	w21,w21,#24
++	sli	v1.4s,v24.4s,#12
++	add	w13,w13,w17
++	sli	v5.4s,v25.4s,#12
++	add	w14,w14,w19
++	sli	v9.4s,v26.4s,#12
++	add	w15,w15,w20
++	sli	v13.4s,v27.4s,#12
++	add	w16,w16,w21
++	sli	v17.4s,v28.4s,#12
++	eor	w9,w9,w13
++	sli	v21.4s,v29.4s,#12
++	eor	w10,w10,w14
++	add	v0.4s,v0.4s,v1.4s
++	eor	w11,w11,w15
++	add	v4.4s,v4.4s,v5.4s
++	eor	w12,w12,w16
++	add	v8.4s,v8.4s,v9.4s
++	ror	w9,w9,#25
++	add	v12.4s,v12.4s,v13.4s
++	ror	w10,w10,#25
++	add	v16.4s,v16.4s,v17.4s
++	ror	w11,w11,#25
++	add	v20.4s,v20.4s,v21.4s
++	ror	w12,w12,#25
++	eor	v24.16b,v3.16b,v0.16b
++	add	w5,w5,w10
++	eor	v25.16b,v7.16b,v4.16b
++	add	w6,w6,w11
++	eor	v26.16b,v11.16b,v8.16b
++	add	w7,w7,w12
++	eor	v27.16b,v15.16b,v12.16b
++	add	w8,w8,w9
++	eor	v28.16b,v19.16b,v16.16b
++	eor	w21,w21,w5
++	eor	v29.16b,v23.16b,v20.16b
++	eor	w17,w17,w6
++	ushr	v3.4s,v24.4s,#24
++	eor	w19,w19,w7
++	ushr	v7.4s,v25.4s,#24
++	eor	w20,w20,w8
++	ushr	v11.4s,v26.4s,#24
++	ror	w21,w21,#16
++	ushr	v15.4s,v27.4s,#24
++	ror	w17,w17,#16
++	ushr	v19.4s,v28.4s,#24
++	ror	w19,w19,#16
++	ushr	v23.4s,v29.4s,#24
++	ror	w20,w20,#16
++	sli	v3.4s,v24.4s,#8
++	add	w15,w15,w21
++	sli	v7.4s,v25.4s,#8
++	add	w16,w16,w17
++	sli	v11.4s,v26.4s,#8
++	add	w13,w13,w19
++	sli	v15.4s,v27.4s,#8
++	add	w14,w14,w20
++	sli	v19.4s,v28.4s,#8
++	eor	w10,w10,w15
++	sli	v23.4s,v29.4s,#8
++	eor	w11,w11,w16
++	add	v2.4s,v2.4s,v3.4s
++	eor	w12,w12,w13
++	add	v6.4s,v6.4s,v7.4s
++	eor	w9,w9,w14
++	add	v10.4s,v10.4s,v11.4s
++	ror	w10,w10,#20
++	add	v14.4s,v14.4s,v15.4s
++	ror	w11,w11,#20
++	add	v18.4s,v18.4s,v19.4s
++	ror	w12,w12,#20
++	add	v22.4s,v22.4s,v23.4s
++	ror	w9,w9,#20
++	eor	v24.16b,v1.16b,v2.16b
++	add	w5,w5,w10
++	eor	v25.16b,v5.16b,v6.16b
++	add	w6,w6,w11
++	eor	v26.16b,v9.16b,v10.16b
++	add	w7,w7,w12
++	eor	v27.16b,v13.16b,v14.16b
++	add	w8,w8,w9
++	eor	v28.16b,v17.16b,v18.16b
++	eor	w21,w21,w5
++	eor	v29.16b,v21.16b,v22.16b
++	eor	w17,w17,w6
++	ushr	v1.4s,v24.4s,#25
++	eor	w19,w19,w7
++	ushr	v5.4s,v25.4s,#25
++	eor	w20,w20,w8
++	ushr	v9.4s,v26.4s,#25
++	ror	w21,w21,#24
++	ushr	v13.4s,v27.4s,#25
++	ror	w17,w17,#24
++	ushr	v17.4s,v28.4s,#25
++	ror	w19,w19,#24
++	ushr	v21.4s,v29.4s,#25
++	ror	w20,w20,#24
++	sli	v1.4s,v24.4s,#7
++	add	w15,w15,w21
++	sli	v5.4s,v25.4s,#7
++	add	w16,w16,w17
++	sli	v9.4s,v26.4s,#7
++	add	w13,w13,w19
++	sli	v13.4s,v27.4s,#7
++	add	w14,w14,w20
++	sli	v17.4s,v28.4s,#7
++	eor	w10,w10,w15
++	sli	v21.4s,v29.4s,#7
++	eor	w11,w11,w16
++	ext	v2.16b,v2.16b,v2.16b,#8
++	eor	w12,w12,w13
++	ext	v6.16b,v6.16b,v6.16b,#8
++	eor	w9,w9,w14
++	ext	v10.16b,v10.16b,v10.16b,#8
++	ror	w10,w10,#25
++	ext	v14.16b,v14.16b,v14.16b,#8
++	ror	w11,w11,#25
++	ext	v18.16b,v18.16b,v18.16b,#8
++	ror	w12,w12,#25
++	ext	v22.16b,v22.16b,v22.16b,#8
++	ror	w9,w9,#25
++	ext	v3.16b,v3.16b,v3.16b,#12
++	ext	v7.16b,v7.16b,v7.16b,#12
++	ext	v11.16b,v11.16b,v11.16b,#12
++	ext	v15.16b,v15.16b,v15.16b,#12
++	ext	v19.16b,v19.16b,v19.16b,#12
++	ext	v23.16b,v23.16b,v23.16b,#12
++	ext	v1.16b,v1.16b,v1.16b,#4
++	ext	v5.16b,v5.16b,v5.16b,#4
++	ext	v9.16b,v9.16b,v9.16b,#4
++	ext	v13.16b,v13.16b,v13.16b,#4
++	ext	v17.16b,v17.16b,v17.16b,#4
++	ext	v21.16b,v21.16b,v21.16b,#4
++	add	v0.4s,v0.4s,v1.4s
++	add	w5,w5,w9
++	add	v4.4s,v4.4s,v5.4s
++	add	w6,w6,w10
++	add	v8.4s,v8.4s,v9.4s
++	add	w7,w7,w11
++	add	v12.4s,v12.4s,v13.4s
++	add	w8,w8,w12
++	add	v16.4s,v16.4s,v17.4s
++	eor	w17,w17,w5
++	add	v20.4s,v20.4s,v21.4s
++	eor	w19,w19,w6
++	eor	v3.16b,v3.16b,v0.16b
++	eor	w20,w20,w7
++	eor	v7.16b,v7.16b,v4.16b
++	eor	w21,w21,w8
++	eor	v11.16b,v11.16b,v8.16b
++	ror	w17,w17,#16
++	eor	v15.16b,v15.16b,v12.16b
++	ror	w19,w19,#16
++	eor	v19.16b,v19.16b,v16.16b
++	ror	w20,w20,#16
++	eor	v23.16b,v23.16b,v20.16b
++	ror	w21,w21,#16
++	rev32	v3.8h,v3.8h
++	add	w13,w13,w17
++	rev32	v7.8h,v7.8h
++	add	w14,w14,w19
++	rev32	v11.8h,v11.8h
++	add	w15,w15,w20
++	rev32	v15.8h,v15.8h
++	add	w16,w16,w21
++	rev32	v19.8h,v19.8h
++	eor	w9,w9,w13
++	rev32	v23.8h,v23.8h
++	eor	w10,w10,w14
++	add	v2.4s,v2.4s,v3.4s
++	eor	w11,w11,w15
++	add	v6.4s,v6.4s,v7.4s
++	eor	w12,w12,w16
++	add	v10.4s,v10.4s,v11.4s
++	ror	w9,w9,#20
++	add	v14.4s,v14.4s,v15.4s
++	ror	w10,w10,#20
++	add	v18.4s,v18.4s,v19.4s
++	ror	w11,w11,#20
++	add	v22.4s,v22.4s,v23.4s
++	ror	w12,w12,#20
++	eor	v24.16b,v1.16b,v2.16b
++	add	w5,w5,w9
++	eor	v25.16b,v5.16b,v6.16b
++	add	w6,w6,w10
++	eor	v26.16b,v9.16b,v10.16b
++	add	w7,w7,w11
++	eor	v27.16b,v13.16b,v14.16b
++	add	w8,w8,w12
++	eor	v28.16b,v17.16b,v18.16b
++	eor	w17,w17,w5
++	eor	v29.16b,v21.16b,v22.16b
++	eor	w19,w19,w6
++	ushr	v1.4s,v24.4s,#20
++	eor	w20,w20,w7
++	ushr	v5.4s,v25.4s,#20
++	eor	w21,w21,w8
++	ushr	v9.4s,v26.4s,#20
++	ror	w17,w17,#24
++	ushr	v13.4s,v27.4s,#20
++	ror	w19,w19,#24
++	ushr	v17.4s,v28.4s,#20
++	ror	w20,w20,#24
++	ushr	v21.4s,v29.4s,#20
++	ror	w21,w21,#24
++	sli	v1.4s,v24.4s,#12
++	add	w13,w13,w17
++	sli	v5.4s,v25.4s,#12
++	add	w14,w14,w19
++	sli	v9.4s,v26.4s,#12
++	add	w15,w15,w20
++	sli	v13.4s,v27.4s,#12
++	add	w16,w16,w21
++	sli	v17.4s,v28.4s,#12
++	eor	w9,w9,w13
++	sli	v21.4s,v29.4s,#12
++	eor	w10,w10,w14
++	add	v0.4s,v0.4s,v1.4s
++	eor	w11,w11,w15
++	add	v4.4s,v4.4s,v5.4s
++	eor	w12,w12,w16
++	add	v8.4s,v8.4s,v9.4s
++	ror	w9,w9,#25
++	add	v12.4s,v12.4s,v13.4s
++	ror	w10,w10,#25
++	add	v16.4s,v16.4s,v17.4s
++	ror	w11,w11,#25
++	add	v20.4s,v20.4s,v21.4s
++	ror	w12,w12,#25
++	eor	v24.16b,v3.16b,v0.16b
++	add	w5,w5,w10
++	eor	v25.16b,v7.16b,v4.16b
++	add	w6,w6,w11
++	eor	v26.16b,v11.16b,v8.16b
++	add	w7,w7,w12
++	eor	v27.16b,v15.16b,v12.16b
++	add	w8,w8,w9
++	eor	v28.16b,v19.16b,v16.16b
++	eor	w21,w21,w5
++	eor	v29.16b,v23.16b,v20.16b
++	eor	w17,w17,w6
++	ushr	v3.4s,v24.4s,#24
++	eor	w19,w19,w7
++	ushr	v7.4s,v25.4s,#24
++	eor	w20,w20,w8
++	ushr	v11.4s,v26.4s,#24
++	ror	w21,w21,#16
++	ushr	v15.4s,v27.4s,#24
++	ror	w17,w17,#16
++	ushr	v19.4s,v28.4s,#24
++	ror	w19,w19,#16
++	ushr	v23.4s,v29.4s,#24
++	ror	w20,w20,#16
++	sli	v3.4s,v24.4s,#8
++	add	w15,w15,w21
++	sli	v7.4s,v25.4s,#8
++	add	w16,w16,w17
++	sli	v11.4s,v26.4s,#8
++	add	w13,w13,w19
++	sli	v15.4s,v27.4s,#8
++	add	w14,w14,w20
++	sli	v19.4s,v28.4s,#8
++	eor	w10,w10,w15
++	sli	v23.4s,v29.4s,#8
++	eor	w11,w11,w16
++	add	v2.4s,v2.4s,v3.4s
++	eor	w12,w12,w13
++	add	v6.4s,v6.4s,v7.4s
++	eor	w9,w9,w14
++	add	v10.4s,v10.4s,v11.4s
++	ror	w10,w10,#20
++	add	v14.4s,v14.4s,v15.4s
++	ror	w11,w11,#20
++	add	v18.4s,v18.4s,v19.4s
++	ror	w12,w12,#20
++	add	v22.4s,v22.4s,v23.4s
++	ror	w9,w9,#20
++	eor	v24.16b,v1.16b,v2.16b
++	add	w5,w5,w10
++	eor	v25.16b,v5.16b,v6.16b
++	add	w6,w6,w11
++	eor	v26.16b,v9.16b,v10.16b
++	add	w7,w7,w12
++	eor	v27.16b,v13.16b,v14.16b
++	add	w8,w8,w9
++	eor	v28.16b,v17.16b,v18.16b
++	eor	w21,w21,w5
++	eor	v29.16b,v21.16b,v22.16b
++	eor	w17,w17,w6
++	ushr	v1.4s,v24.4s,#25
++	eor	w19,w19,w7
++	ushr	v5.4s,v25.4s,#25
++	eor	w20,w20,w8
++	ushr	v9.4s,v26.4s,#25
++	ror	w21,w21,#24
++	ushr	v13.4s,v27.4s,#25
++	ror	w17,w17,#24
++	ushr	v17.4s,v28.4s,#25
++	ror	w19,w19,#24
++	ushr	v21.4s,v29.4s,#25
++	ror	w20,w20,#24
++	sli	v1.4s,v24.4s,#7
++	add	w15,w15,w21
++	sli	v5.4s,v25.4s,#7
++	add	w16,w16,w17
++	sli	v9.4s,v26.4s,#7
++	add	w13,w13,w19
++	sli	v13.4s,v27.4s,#7
++	add	w14,w14,w20
++	sli	v17.4s,v28.4s,#7
++	eor	w10,w10,w15
++	sli	v21.4s,v29.4s,#7
++	eor	w11,w11,w16
++	ext	v2.16b,v2.16b,v2.16b,#8
++	eor	w12,w12,w13
++	ext	v6.16b,v6.16b,v6.16b,#8
++	eor	w9,w9,w14
++	ext	v10.16b,v10.16b,v10.16b,#8
++	ror	w10,w10,#25
++	ext	v14.16b,v14.16b,v14.16b,#8
++	ror	w11,w11,#25
++	ext	v18.16b,v18.16b,v18.16b,#8
++	ror	w12,w12,#25
++	ext	v22.16b,v22.16b,v22.16b,#8
++	ror	w9,w9,#25
++	ext	v3.16b,v3.16b,v3.16b,#4
++	ext	v7.16b,v7.16b,v7.16b,#4
++	ext	v11.16b,v11.16b,v11.16b,#4
++	ext	v15.16b,v15.16b,v15.16b,#4
++	ext	v19.16b,v19.16b,v19.16b,#4
++	ext	v23.16b,v23.16b,v23.16b,#4
++	ext	v1.16b,v1.16b,v1.16b,#12
++	ext	v5.16b,v5.16b,v5.16b,#12
++	ext	v9.16b,v9.16b,v9.16b,#12
++	ext	v13.16b,v13.16b,v13.16b,#12
++	ext	v17.16b,v17.16b,v17.16b,#12
++	ext	v21.16b,v21.16b,v21.16b,#12
++	cbnz	x4,.Loop_lower_neon
++
++	add	w5,w5,w22		// accumulate key block
++	ldp	q24,q25,[sp,#0]
++	add	x6,x6,x22,lsr#32
++	ldp	q26,q27,[sp,#32]
++	add	w7,w7,w23
++	ldp	q28,q29,[sp,#64]
++	add	x8,x8,x23,lsr#32
++	add	v0.4s,v0.4s,v24.4s
++	add	w9,w9,w24
++	add	v4.4s,v4.4s,v24.4s
++	add	x10,x10,x24,lsr#32
++	add	v8.4s,v8.4s,v24.4s
++	add	w11,w11,w25
++	add	v12.4s,v12.4s,v24.4s
++	add	x12,x12,x25,lsr#32
++	add	v16.4s,v16.4s,v24.4s
++	add	w13,w13,w26
++	add	v20.4s,v20.4s,v24.4s
++	add	x14,x14,x26,lsr#32
++	add	v2.4s,v2.4s,v26.4s
++	add	w15,w15,w27
++	add	v6.4s,v6.4s,v26.4s
++	add	x16,x16,x27,lsr#32
++	add	v10.4s,v10.4s,v26.4s
++	add	w17,w17,w28
++	add	v14.4s,v14.4s,v26.4s
++	add	x19,x19,x28,lsr#32
++	add	v18.4s,v18.4s,v26.4s
++	add	w20,w20,w30
++	add	v22.4s,v22.4s,v26.4s
++	add	x21,x21,x30,lsr#32
++	add	v19.4s,v19.4s,v31.4s			// +4
++	add	x5,x5,x6,lsl#32	// pack
++	add	v23.4s,v23.4s,v31.4s			// +4
++	add	x7,x7,x8,lsl#32
++	add	v3.4s,v3.4s,v27.4s
++	ldp	x6,x8,[x1,#0]		// load input
++	add	v7.4s,v7.4s,v28.4s
++	add	x9,x9,x10,lsl#32
++	add	v11.4s,v11.4s,v29.4s
++	add	x11,x11,x12,lsl#32
++	add	v15.4s,v15.4s,v30.4s
++	ldp	x10,x12,[x1,#16]
++	add	v19.4s,v19.4s,v27.4s
++	add	x13,x13,x14,lsl#32
++	add	v23.4s,v23.4s,v28.4s
++	add	x15,x15,x16,lsl#32
++	add	v1.4s,v1.4s,v25.4s
++	ldp	x14,x16,[x1,#32]
++	add	v5.4s,v5.4s,v25.4s
++	add	x17,x17,x19,lsl#32
++	add	v9.4s,v9.4s,v25.4s
++	add	x20,x20,x21,lsl#32
++	add	v13.4s,v13.4s,v25.4s
++	ldp	x19,x21,[x1,#48]
++	add	v17.4s,v17.4s,v25.4s
++	add	x1,x1,#64
++	add	v21.4s,v21.4s,v25.4s
++
++#ifdef	__ARMEB__
++	rev	x5,x5
++	rev	x7,x7
++	rev	x9,x9
++	rev	x11,x11
++	rev	x13,x13
++	rev	x15,x15
++	rev	x17,x17
++	rev	x20,x20
++#endif
++	ld1	{v24.16b,v25.16b,v26.16b,v27.16b},[x1],#64
++	eor	x5,x5,x6
++	eor	x7,x7,x8
++	eor	x9,x9,x10
++	eor	x11,x11,x12
++	eor	x13,x13,x14
++	eor	v0.16b,v0.16b,v24.16b
++	eor	x15,x15,x16
++	eor	v1.16b,v1.16b,v25.16b
++	eor	x17,x17,x19
++	eor	v2.16b,v2.16b,v26.16b
++	eor	x20,x20,x21
++	eor	v3.16b,v3.16b,v27.16b
++	ld1	{v24.16b,v25.16b,v26.16b,v27.16b},[x1],#64
++
++	stp	x5,x7,[x0,#0]		// store output
++	add	x28,x28,#7			// increment counter
++	stp	x9,x11,[x0,#16]
++	stp	x13,x15,[x0,#32]
++	stp	x17,x20,[x0,#48]
++	add	x0,x0,#64
++	st1	{v0.16b,v1.16b,v2.16b,v3.16b},[x0],#64
++
++	ld1	{v0.16b,v1.16b,v2.16b,v3.16b},[x1],#64
++	eor	v4.16b,v4.16b,v24.16b
++	eor	v5.16b,v5.16b,v25.16b
++	eor	v6.16b,v6.16b,v26.16b
++	eor	v7.16b,v7.16b,v27.16b
++	st1	{v4.16b,v5.16b,v6.16b,v7.16b},[x0],#64
++
++	ld1	{v4.16b,v5.16b,v6.16b,v7.16b},[x1],#64
++	eor	v8.16b,v8.16b,v0.16b
++	ldp	q24,q25,[sp,#0]
++	eor	v9.16b,v9.16b,v1.16b
++	ldp	q26,q27,[sp,#32]
++	eor	v10.16b,v10.16b,v2.16b
++	eor	v11.16b,v11.16b,v3.16b
++	st1	{v8.16b,v9.16b,v10.16b,v11.16b},[x0],#64
++
++	ld1	{v8.16b,v9.16b,v10.16b,v11.16b},[x1],#64
++	eor	v12.16b,v12.16b,v4.16b
++	eor	v13.16b,v13.16b,v5.16b
++	eor	v14.16b,v14.16b,v6.16b
++	eor	v15.16b,v15.16b,v7.16b
++	st1	{v12.16b,v13.16b,v14.16b,v15.16b},[x0],#64
++
++	ld1	{v12.16b,v13.16b,v14.16b,v15.16b},[x1],#64
++	eor	v16.16b,v16.16b,v8.16b
++	eor	v17.16b,v17.16b,v9.16b
++	eor	v18.16b,v18.16b,v10.16b
++	eor	v19.16b,v19.16b,v11.16b
++	st1	{v16.16b,v17.16b,v18.16b,v19.16b},[x0],#64
++
++	shl	v0.4s,v31.4s,#1			// 4 -> 8
++	eor	v20.16b,v20.16b,v12.16b
++	eor	v21.16b,v21.16b,v13.16b
++	eor	v22.16b,v22.16b,v14.16b
++	eor	v23.16b,v23.16b,v15.16b
++	st1	{v20.16b,v21.16b,v22.16b,v23.16b},[x0],#64
++
++	add	v27.4s,v27.4s,v0.4s			// += 8
++	add	v28.4s,v28.4s,v0.4s
++	add	v29.4s,v29.4s,v0.4s
++	add	v30.4s,v30.4s,v0.4s
++
++	b.hs	.Loop_outer_512_neon
++
++	adds	x2,x2,#512
++	ushr	v0.4s,v31.4s,#2			// 4 -> 1
++
++	ldp	d8,d9,[sp,#128+0]		// meet ABI requirements
++	ldp	d10,d11,[sp,#128+16]
++	ldp	d12,d13,[sp,#128+32]
++	ldp	d14,d15,[sp,#128+48]
++
++	stp	q24,q31,[sp,#0]		// wipe off-load area
++	stp	q24,q31,[sp,#32]
++	stp	q24,q31,[sp,#64]
++
++	b.eq	.Ldone_512_neon
++
++	cmp	x2,#192
++	sub	v27.4s,v27.4s,v0.4s			// -= 1
++	sub	v28.4s,v28.4s,v0.4s
++	sub	v29.4s,v29.4s,v0.4s
++	add	sp,sp,#128
++	b.hs	.Loop_outer_neon
++
++	eor	v25.16b,v25.16b,v25.16b
++	eor	v26.16b,v26.16b,v26.16b
++	eor	v27.16b,v27.16b,v27.16b
++	eor	v28.16b,v28.16b,v28.16b
++	eor	v29.16b,v29.16b,v29.16b
++	eor	v30.16b,v30.16b,v30.16b
++	b	.Loop_outer
++
++.Ldone_512_neon:
++	ldp	x19,x20,[x29,#16]
++	add	sp,sp,#128+64
++	ldp	x21,x22,[x29,#32]
++	ldp	x23,x24,[x29,#48]
++	ldp	x25,x26,[x29,#64]
++	ldp	x27,x28,[x29,#80]
++	ldp	x29,x30,[sp],#96
++	ret
++.size	ChaCha20_512_neon,.-ChaCha20_512_neon
 -- 
 2.19.0
