@@ -1,46 +1,28 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Subject: [PATCH net-next v7 24/28] zinc: Curve25519 ARM implementation
-Date: Sat,  6 Oct 2018 04:57:05 +0200
-Message-Id: <20181006025709.4019-25-Jason@zx2c4.com>
+Subject: [PATCH net-next v7 27/28] security/keys: rewrite big_key crypto to use Zinc
+Date: Sat,  6 Oct 2018 04:57:08 +0200
+Message-Id: <20181006025709.4019-28-Jason@zx2c4.com>
 In-Reply-To: <20181006025709.4019-1-Jason@zx2c4.com>
 References: <20181006025709.4019-1-Jason@zx2c4.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 To: linux-kernel@vger.kernel.org, netdev@vger.kernel.org, davem@davemloft.net, gregkh@linuxfoundation.org
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Russell King <linux@armlinux.org.uk>, linux-arm-kernel@lists.infradead.org, Samuel Neves <sneves@dei.uc.pt>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, David Howells <dhowells@redhat.com>, Samuel Neves <sneves@dei.uc.pt>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This ports the SUPERCOP implementation for usage in kernel space. In
-addition to the usual header, macro, and style changes required for
-kernel space, it makes a few small changes to the code:
-
-  - The stack alignment is relaxed to 16 bytes.
-  - Superfluous mov statements have been removed.
-  - ldr for constants has been replaced with movw.
-  - ldreq has been replaced with moveq.
-  - The str epilogue has been made more idiomatic.
-  - SIMD registers are not pushed and popped at the beginning and end.
-  - The prologue and epilogue have been made idiomatic.
-  - A hole has been removed from the stack, saving 32 bytes.
-  - We write-back the base register whenever possible for vld1.8.
-  - Some multiplications have been reordered for better A7 performance.
-
-There are more opportunities for cleanup, since this code is from qhasm,
-which doesn't always do the most opportune thing. But even prior to
-extensive hand optimizations, this code delivers significant performance
-improvements (given in get_cycles() per call):
-
-		      ----------- -------------
-	             | generic C | this commit |
-	 ------------ ----------- -------------
-	| Cortex-A7  |     49136 |       22395 |
-	 ------------ ----------- -------------
-	| Cortex-A17 |     17326 |        4983 |
-	 ------------ ----------- -------------
+A while back, I noticed that the crypto and crypto API usage in big_keys
+were entirely broken in multiple ways, so I rewrote it. Now, I'm
+rewriting it again, but this time using Zinc's ChaCha20Poly1305
+function. This makes the file considerably more simple; the diffstat
+alone should justify this commit. It also should be faster, since it no
+longer requires a mutex around the "aead api object" (nor allocations),
+allowing us to encrypt multiple items in parallel. We also benefit from
+being able to pass any type of pointer to Zinc, so we can get rid of the
+ridiculously complex custom page allocator that big_key really doesn't
+need.
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: Russell King <linux@armlinux.org.uk>
-Cc: linux-arm-kernel@lists.infradead.org
+Cc: David Howells <dhowells@redhat.com>
 Cc: Samuel Neves <sneves@dei.uc.pt>
 Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 Cc: Andy Lutomirski <luto@kernel.org>
@@ -48,941 +30,388 @@ Cc: Greg KH <gregkh@linuxfoundation.org>
 Cc: Andrew Morton <akpm@linux-foundation.org>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>
 Cc: kernel-hardening@lists.openwall.com
-Cc: linux-crypto@vger.kernel.org
 ---
- lib/zinc/Makefile                             |   1 +
- lib/zinc/curve25519/curve25519-arm-glue.c     |  43 +++
- ...e25519-arm-supercop.S => curve25519-arm.S} | 349 ++++++++----------
- lib/zinc/curve25519/curve25519.c              |   2 +
- 4 files changed, 200 insertions(+), 195 deletions(-)
- create mode 100644 lib/zinc/curve25519/curve25519-arm-glue.c
- rename lib/zinc/curve25519/{curve25519-arm-supercop.S => curve25519-arm.S} (92%)
+ security/keys/Kconfig   |   4 +-
+ security/keys/big_key.c | 230 +++++-----------------------------------
+ 2 files changed, 28 insertions(+), 206 deletions(-)
 
-diff --git a/lib/zinc/Makefile b/lib/zinc/Makefile
-index 65440438c6e5..be73c342f9ba 100644
---- a/lib/zinc/Makefile
-+++ b/lib/zinc/Makefile
-@@ -27,4 +27,5 @@ zinc_blake2s-$(CONFIG_ZINC_ARCH_X86_64) += blake2s/blake2s-x86_64.o
- obj-$(CONFIG_ZINC_BLAKE2S) += zinc_blake2s.o
+diff --git a/security/keys/Kconfig b/security/keys/Kconfig
+index 6462e6654ccf..66ff26298fb3 100644
+--- a/security/keys/Kconfig
++++ b/security/keys/Kconfig
+@@ -45,9 +45,7 @@ config BIG_KEYS
+ 	bool "Large payload keys"
+ 	depends on KEYS
+ 	depends on TMPFS
+-	select CRYPTO
+-	select CRYPTO_AES
+-	select CRYPTO_GCM
++	select ZINC_CHACHA20POLY1305
+ 	help
+ 	  This option provides support for holding large keys within the kernel
+ 	  (for example Kerberos ticket caches).  The data may be stored out to
+diff --git a/security/keys/big_key.c b/security/keys/big_key.c
+index 2806e70d7f8f..bb15360221d8 100644
+--- a/security/keys/big_key.c
++++ b/security/keys/big_key.c
+@@ -1,6 +1,6 @@
+ /* Large capacity key type
+  *
+- * Copyright (C) 2017 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
++ * Copyright (C) 2017-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+  * Copyright (C) 2013 Red Hat, Inc. All Rights Reserved.
+  * Written by David Howells (dhowells@redhat.com)
+  *
+@@ -16,20 +16,10 @@
+ #include <linux/file.h>
+ #include <linux/shmem_fs.h>
+ #include <linux/err.h>
+-#include <linux/scatterlist.h>
+ #include <linux/random.h>
+-#include <linux/vmalloc.h>
+ #include <keys/user-type.h>
+ #include <keys/big_key-type.h>
+-#include <crypto/aead.h>
+-#include <crypto/gcm.h>
+-
+-struct big_key_buf {
+-	unsigned int		nr_pages;
+-	void			*virt;
+-	struct scatterlist	*sg;
+-	struct page		*pages[];
+-};
++#include <zinc/chacha20poly1305.h>
  
- zinc_curve25519-y := curve25519/curve25519.o
-+zinc_curve25519-$(CONFIG_ZINC_ARCH_ARM) += curve25519/curve25519-arm.o
- obj-$(CONFIG_ZINC_CURVE25519) += zinc_curve25519.o
-diff --git a/lib/zinc/curve25519/curve25519-arm-glue.c b/lib/zinc/curve25519/curve25519-arm-glue.c
-new file mode 100644
-index 000000000000..c71c981c3ba9
---- /dev/null
-+++ b/lib/zinc/curve25519/curve25519-arm-glue.c
-@@ -0,0 +1,43 @@
-+// SPDX-License-Identifier: GPL-2.0 OR MIT
-+/*
-+ * Copyright (C) 2015-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-+ */
-+
-+#include <linux/simd.h>
-+#include <asm/hwcap.h>
-+#include <asm/neon.h>
-+
-+asmlinkage void curve25519_neon(u8 mypublic[CURVE25519_KEY_SIZE],
-+				const u8 secret[CURVE25519_KEY_SIZE],
-+				const u8 basepoint[CURVE25519_KEY_SIZE]);
-+
-+static bool curve25519_use_neon __ro_after_init;
-+static bool *const curve25519_nobs[] __initconst = { &curve25519_use_neon };
-+static void __init curve25519_fpu_init(void)
-+{
-+	curve25519_use_neon = elf_hwcap & HWCAP_NEON;
-+}
-+
-+static inline bool curve25519_arch(u8 mypublic[CURVE25519_KEY_SIZE],
-+				   const u8 secret[CURVE25519_KEY_SIZE],
-+				   const u8 basepoint[CURVE25519_KEY_SIZE])
-+{
-+	simd_context_t simd_context;
-+	bool used_arch = false;
-+
-+	simd_get(&simd_context);
-+	if (IS_ENABLED(CONFIG_KERNEL_MODE_NEON) &&
-+	    !IS_ENABLED(CONFIG_CPU_BIG_ENDIAN) && curve25519_use_neon &&
-+	    simd_use(&simd_context)) {
-+		curve25519_neon(mypublic, secret, basepoint);
-+		used_arch = true;
-+	}
-+	simd_put(&simd_context);
-+	return used_arch;
-+}
-+
-+static inline bool curve25519_base_arch(u8 pub[CURVE25519_KEY_SIZE],
-+					const u8 secret[CURVE25519_KEY_SIZE])
-+{
-+	return false;
-+}
-diff --git a/lib/zinc/curve25519/curve25519-arm-supercop.S b/lib/zinc/curve25519/curve25519-arm.S
-similarity index 92%
-rename from lib/zinc/curve25519/curve25519-arm-supercop.S
-rename to lib/zinc/curve25519/curve25519-arm.S
-index f33b85fef382..b63ac48e7f8d 100644
---- a/lib/zinc/curve25519/curve25519-arm-supercop.S
-+++ b/lib/zinc/curve25519/curve25519-arm.S
-@@ -1,43 +1,36 @@
-+/* SPDX-License-Identifier: GPL-2.0 OR MIT */
  /*
-- * Public domain code from Daniel J. Bernstein and Peter Schwabe, from
-- * SUPERCOP's curve25519/neon2/scalarmult.s.
-+ * Copyright (C) 2015-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-+ *
-+ * Based on public domain code from Daniel J. Bernstein and Peter Schwabe. This
-+ * began from SUPERCOP's curve25519/neon2/scalarmult.s, but has subsequently been
-+ * manually reworked for use in kernel space.
+  * Layout of key payload words.
+@@ -41,14 +31,6 @@ enum {
+ 	big_key_len,
+ };
+ 
+-/*
+- * Crypto operation with big_key data
+- */
+-enum big_key_op {
+-	BIG_KEY_ENC,
+-	BIG_KEY_DEC,
+-};
+-
+ /*
+  * If the data is under this limit, there's no point creating a shm file to
+  * hold it as the permanently resident metadata for the shmem fs will be at
+@@ -56,16 +38,6 @@ enum big_key_op {
   */
+ #define BIG_KEY_FILE_THRESHOLD (sizeof(struct inode) + sizeof(struct dentry))
  
--.fpu neon
-+#if defined(CONFIG_KERNEL_MODE_NEON) && !defined(__ARMEB__)
-+#include <linux/linkage.h>
-+
- .text
-+.fpu neon
-+.arch armv7-a
- .align 4
--.global _crypto_scalarmult_curve25519_neon2
--.global crypto_scalarmult_curve25519_neon2
--.type _crypto_scalarmult_curve25519_neon2 STT_FUNC
--.type crypto_scalarmult_curve25519_neon2 STT_FUNC
--	_crypto_scalarmult_curve25519_neon2:
--	crypto_scalarmult_curve25519_neon2:
--	vpush		{q4, q5, q6, q7}
--	mov		r12, sp
--	sub		sp, sp, #736
--	and		sp, sp, #0xffffffe0
--	strd		r4, [sp, #0]
--	strd		r6, [sp, #8]
--	strd		r8, [sp, #16]
--	strd		r10, [sp, #24]
--	str		r12, [sp, #480]
--	str		r14, [sp, #484]
--	mov		r0, r0
--	mov		r1, r1
--	mov		r2, r2
--	add		r3, sp, #32
--	ldr		r4, =0
--	ldr		r5, =254
-+
-+ENTRY(curve25519_neon)
-+	push		{r4-r11, lr}
-+	mov		ip, sp
-+	sub		r3, sp, #704
-+	and		r3, r3, #0xfffffff0
-+	mov		sp, r3
-+	movw		r4, #0
-+	movw		r5, #254
- 	vmov.i32	q0, #1
- 	vshr.u64	q1, q0, #7
- 	vshr.u64	q0, q0, #8
- 	vmov.i32	d4, #19
- 	vmov.i32	d5, #38
--	add		r6, sp, #512
--	vst1.8		{d2-d3}, [r6, : 128]
--	add		r6, sp, #528
--	vst1.8		{d0-d1}, [r6, : 128]
--	add		r6, sp, #544
-+	add		r6, sp, #480
-+	vst1.8		{d2-d3}, [r6, : 128]!
-+	vst1.8		{d0-d1}, [r6, : 128]!
- 	vst1.8		{d4-d5}, [r6, : 128]
- 	add		r6, r3, #0
- 	vmov.i32	q2, #0
-@@ -45,12 +38,12 @@
- 	vst1.8		{d4-d5}, [r6, : 128]!
- 	vst1.8		d4, [r6, : 64]
- 	add		r6, r3, #0
--	ldr		r7, =960
-+	movw		r7, #960
- 	sub		r7, r7, #2
- 	neg		r7, r7
- 	sub		r7, r7, r7, LSL #7
- 	str		r7, [r6]
--	add		r6, sp, #704
-+	add		r6, sp, #672
- 	vld1.8		{d4-d5}, [r1]!
- 	vld1.8		{d6-d7}, [r1]
- 	vst1.8		{d4-d5}, [r6, : 128]!
-@@ -212,15 +205,15 @@
- 	vst1.8		{d0-d1}, [r6, : 128]!
- 	vst1.8		{d2-d3}, [r6, : 128]!
- 	vst1.8		d4, [r6, : 64]
--._mainloop:
-+.Lmainloop:
- 	mov		r2, r5, LSR #3
- 	and		r6, r5, #7
- 	ldrb		r2, [r1, r2]
- 	mov		r2, r2, LSR r6
- 	and		r2, r2, #1
--	str		r5, [sp, #488]
-+	str		r5, [sp, #456]
- 	eor		r4, r4, r2
--	str		r2, [sp, #492]
-+	str		r2, [sp, #460]
- 	neg		r2, r4
- 	add		r4, r3, #96
- 	add		r5, r3, #192
-@@ -291,7 +284,7 @@
- 	vsub.i32	q0, q1, q3
- 	vst1.8		d4, [r4, : 64]
- 	vst1.8		d0, [r6, : 64]
--	add		r2, sp, #544
-+	add		r2, sp, #512
- 	add		r4, r3, #96
- 	add		r5, r3, #144
- 	vld1.8		{d0-d1}, [r2, : 128]
-@@ -361,14 +354,13 @@
- 	vmlal.s32	q0, d12, d8
- 	vmlal.s32	q0, d13, d17
- 	vmlal.s32	q0, d6, d6
--	add		r2, sp, #512
--	vld1.8		{d18-d19}, [r2, : 128]
-+	add		r2, sp, #480
-+	vld1.8		{d18-d19}, [r2, : 128]!
- 	vmull.s32	q3, d16, d7
- 	vmlal.s32	q3, d10, d15
- 	vmlal.s32	q3, d11, d14
- 	vmlal.s32	q3, d12, d9
- 	vmlal.s32	q3, d13, d8
--	add		r2, sp, #528
- 	vld1.8		{d8-d9}, [r2, : 128]
- 	vadd.i64	q5, q12, q9
- 	vadd.i64	q6, q15, q9
-@@ -502,22 +494,19 @@
- 	vadd.i32	q5, q5, q0
- 	vtrn.32		q11, q14
- 	vadd.i32	q6, q6, q3
--	add		r2, sp, #560
-+	add		r2, sp, #528
- 	vadd.i32	q10, q10, q2
- 	vtrn.32		d24, d25
--	vst1.8		{d12-d13}, [r2, : 128]
-+	vst1.8		{d12-d13}, [r2, : 128]!
- 	vshl.i32	q6, q13, #1
--	add		r2, sp, #576
--	vst1.8		{d20-d21}, [r2, : 128]
-+	vst1.8		{d20-d21}, [r2, : 128]!
- 	vshl.i32	q10, q14, #1
--	add		r2, sp, #592
--	vst1.8		{d12-d13}, [r2, : 128]
-+	vst1.8		{d12-d13}, [r2, : 128]!
- 	vshl.i32	q15, q12, #1
- 	vadd.i32	q8, q8, q4
- 	vext.32		d10, d31, d30, #0
- 	vadd.i32	q7, q7, q1
--	add		r2, sp, #608
--	vst1.8		{d16-d17}, [r2, : 128]
-+	vst1.8		{d16-d17}, [r2, : 128]!
- 	vmull.s32	q8, d18, d5
- 	vmlal.s32	q8, d26, d4
- 	vmlal.s32	q8, d19, d9
-@@ -528,8 +517,7 @@
- 	vmlal.s32	q8, d29, d1
- 	vmlal.s32	q8, d24, d6
- 	vmlal.s32	q8, d25, d0
--	add		r2, sp, #624
--	vst1.8		{d14-d15}, [r2, : 128]
-+	vst1.8		{d14-d15}, [r2, : 128]!
- 	vmull.s32	q2, d18, d4
- 	vmlal.s32	q2, d12, d9
- 	vmlal.s32	q2, d13, d8
-@@ -537,8 +525,7 @@
- 	vmlal.s32	q2, d22, d2
- 	vmlal.s32	q2, d23, d1
- 	vmlal.s32	q2, d24, d0
--	add		r2, sp, #640
--	vst1.8		{d20-d21}, [r2, : 128]
-+	vst1.8		{d20-d21}, [r2, : 128]!
- 	vmull.s32	q7, d18, d9
- 	vmlal.s32	q7, d26, d3
- 	vmlal.s32	q7, d19, d8
-@@ -547,14 +534,12 @@
- 	vmlal.s32	q7, d28, d1
- 	vmlal.s32	q7, d23, d6
- 	vmlal.s32	q7, d29, d0
--	add		r2, sp, #656
--	vst1.8		{d10-d11}, [r2, : 128]
-+	vst1.8		{d10-d11}, [r2, : 128]!
- 	vmull.s32	q5, d18, d3
- 	vmlal.s32	q5, d19, d2
- 	vmlal.s32	q5, d22, d1
- 	vmlal.s32	q5, d23, d0
- 	vmlal.s32	q5, d12, d8
--	add		r2, sp, #672
- 	vst1.8		{d16-d17}, [r2, : 128]
- 	vmull.s32	q4, d18, d8
- 	vmlal.s32	q4, d26, d2
-@@ -566,7 +551,7 @@
- 	vmlal.s32	q8, d26, d1
- 	vmlal.s32	q8, d19, d6
- 	vmlal.s32	q8, d27, d0
--	add		r2, sp, #576
-+	add		r2, sp, #544
- 	vld1.8		{d20-d21}, [r2, : 128]
- 	vmlal.s32	q7, d24, d21
- 	vmlal.s32	q7, d25, d20
-@@ -575,32 +560,30 @@
- 	vmlal.s32	q8, d22, d21
- 	vmlal.s32	q8, d28, d20
- 	vmlal.s32	q5, d24, d20
--	add		r2, sp, #576
- 	vst1.8		{d14-d15}, [r2, : 128]
- 	vmull.s32	q7, d18, d6
- 	vmlal.s32	q7, d26, d0
--	add		r2, sp, #656
-+	add		r2, sp, #624
- 	vld1.8		{d30-d31}, [r2, : 128]
- 	vmlal.s32	q2, d30, d21
- 	vmlal.s32	q7, d19, d21
- 	vmlal.s32	q7, d27, d20
--	add		r2, sp, #624
-+	add		r2, sp, #592
- 	vld1.8		{d26-d27}, [r2, : 128]
- 	vmlal.s32	q4, d25, d27
- 	vmlal.s32	q8, d29, d27
- 	vmlal.s32	q8, d25, d26
- 	vmlal.s32	q7, d28, d27
- 	vmlal.s32	q7, d29, d26
--	add		r2, sp, #608
-+	add		r2, sp, #576
- 	vld1.8		{d28-d29}, [r2, : 128]
- 	vmlal.s32	q4, d24, d29
- 	vmlal.s32	q8, d23, d29
- 	vmlal.s32	q8, d24, d28
- 	vmlal.s32	q7, d22, d29
- 	vmlal.s32	q7, d23, d28
--	add		r2, sp, #608
- 	vst1.8		{d8-d9}, [r2, : 128]
--	add		r2, sp, #560
-+	add		r2, sp, #528
- 	vld1.8		{d8-d9}, [r2, : 128]
- 	vmlal.s32	q7, d24, d9
- 	vmlal.s32	q7, d25, d31
-@@ -621,36 +604,36 @@
- 	vmlal.s32	q0, d23, d26
- 	vmlal.s32	q0, d24, d31
- 	vmlal.s32	q0, d19, d20
--	add		r2, sp, #640
-+	add		r2, sp, #608
- 	vld1.8		{d18-d19}, [r2, : 128]
- 	vmlal.s32	q2, d18, d7
--	vmlal.s32	q2, d19, d6
- 	vmlal.s32	q5, d18, d6
--	vmlal.s32	q5, d19, d21
- 	vmlal.s32	q1, d18, d21
--	vmlal.s32	q1, d19, d29
- 	vmlal.s32	q0, d18, d28
--	vmlal.s32	q0, d19, d9
- 	vmlal.s32	q6, d18, d29
-+	vmlal.s32	q2, d19, d6
-+	vmlal.s32	q5, d19, d21
-+	vmlal.s32	q1, d19, d29
-+	vmlal.s32	q0, d19, d9
- 	vmlal.s32	q6, d19, d28
--	add		r2, sp, #592
-+	add		r2, sp, #560
- 	vld1.8		{d18-d19}, [r2, : 128]
--	add		r2, sp, #512
-+	add		r2, sp, #480
- 	vld1.8		{d22-d23}, [r2, : 128]
- 	vmlal.s32	q5, d19, d7
- 	vmlal.s32	q0, d18, d21
- 	vmlal.s32	q0, d19, d29
- 	vmlal.s32	q6, d18, d6
--	add		r2, sp, #528
-+	add		r2, sp, #496
- 	vld1.8		{d6-d7}, [r2, : 128]
- 	vmlal.s32	q6, d19, d21
--	add		r2, sp, #576
-+	add		r2, sp, #544
- 	vld1.8		{d18-d19}, [r2, : 128]
- 	vmlal.s32	q0, d30, d8
--	add		r2, sp, #672
-+	add		r2, sp, #640
- 	vld1.8		{d20-d21}, [r2, : 128]
- 	vmlal.s32	q5, d30, d29
--	add		r2, sp, #608
-+	add		r2, sp, #576
- 	vld1.8		{d24-d25}, [r2, : 128]
- 	vmlal.s32	q1, d30, d28
- 	vadd.i64	q13, q0, q11
-@@ -823,22 +806,19 @@
- 	vadd.i32	q5, q5, q0
- 	vtrn.32		q11, q14
- 	vadd.i32	q6, q6, q3
--	add		r2, sp, #560
-+	add		r2, sp, #528
- 	vadd.i32	q10, q10, q2
- 	vtrn.32		d24, d25
--	vst1.8		{d12-d13}, [r2, : 128]
-+	vst1.8		{d12-d13}, [r2, : 128]!
- 	vshl.i32	q6, q13, #1
--	add		r2, sp, #576
--	vst1.8		{d20-d21}, [r2, : 128]
-+	vst1.8		{d20-d21}, [r2, : 128]!
- 	vshl.i32	q10, q14, #1
--	add		r2, sp, #592
--	vst1.8		{d12-d13}, [r2, : 128]
-+	vst1.8		{d12-d13}, [r2, : 128]!
- 	vshl.i32	q15, q12, #1
- 	vadd.i32	q8, q8, q4
- 	vext.32		d10, d31, d30, #0
- 	vadd.i32	q7, q7, q1
--	add		r2, sp, #608
--	vst1.8		{d16-d17}, [r2, : 128]
-+	vst1.8		{d16-d17}, [r2, : 128]!
- 	vmull.s32	q8, d18, d5
- 	vmlal.s32	q8, d26, d4
- 	vmlal.s32	q8, d19, d9
-@@ -849,8 +829,7 @@
- 	vmlal.s32	q8, d29, d1
- 	vmlal.s32	q8, d24, d6
- 	vmlal.s32	q8, d25, d0
--	add		r2, sp, #624
--	vst1.8		{d14-d15}, [r2, : 128]
-+	vst1.8		{d14-d15}, [r2, : 128]!
- 	vmull.s32	q2, d18, d4
- 	vmlal.s32	q2, d12, d9
- 	vmlal.s32	q2, d13, d8
-@@ -858,8 +837,7 @@
- 	vmlal.s32	q2, d22, d2
- 	vmlal.s32	q2, d23, d1
- 	vmlal.s32	q2, d24, d0
--	add		r2, sp, #640
--	vst1.8		{d20-d21}, [r2, : 128]
-+	vst1.8		{d20-d21}, [r2, : 128]!
- 	vmull.s32	q7, d18, d9
- 	vmlal.s32	q7, d26, d3
- 	vmlal.s32	q7, d19, d8
-@@ -868,15 +846,13 @@
- 	vmlal.s32	q7, d28, d1
- 	vmlal.s32	q7, d23, d6
- 	vmlal.s32	q7, d29, d0
--	add		r2, sp, #656
--	vst1.8		{d10-d11}, [r2, : 128]
-+	vst1.8		{d10-d11}, [r2, : 128]!
- 	vmull.s32	q5, d18, d3
- 	vmlal.s32	q5, d19, d2
- 	vmlal.s32	q5, d22, d1
- 	vmlal.s32	q5, d23, d0
- 	vmlal.s32	q5, d12, d8
--	add		r2, sp, #672
--	vst1.8		{d16-d17}, [r2, : 128]
-+	vst1.8		{d16-d17}, [r2, : 128]!
- 	vmull.s32	q4, d18, d8
- 	vmlal.s32	q4, d26, d2
- 	vmlal.s32	q4, d19, d7
-@@ -887,7 +863,7 @@
- 	vmlal.s32	q8, d26, d1
- 	vmlal.s32	q8, d19, d6
- 	vmlal.s32	q8, d27, d0
--	add		r2, sp, #576
-+	add		r2, sp, #544
- 	vld1.8		{d20-d21}, [r2, : 128]
- 	vmlal.s32	q7, d24, d21
- 	vmlal.s32	q7, d25, d20
-@@ -896,32 +872,30 @@
- 	vmlal.s32	q8, d22, d21
- 	vmlal.s32	q8, d28, d20
- 	vmlal.s32	q5, d24, d20
--	add		r2, sp, #576
- 	vst1.8		{d14-d15}, [r2, : 128]
- 	vmull.s32	q7, d18, d6
- 	vmlal.s32	q7, d26, d0
--	add		r2, sp, #656
-+	add		r2, sp, #624
- 	vld1.8		{d30-d31}, [r2, : 128]
- 	vmlal.s32	q2, d30, d21
- 	vmlal.s32	q7, d19, d21
- 	vmlal.s32	q7, d27, d20
--	add		r2, sp, #624
-+	add		r2, sp, #592
- 	vld1.8		{d26-d27}, [r2, : 128]
- 	vmlal.s32	q4, d25, d27
- 	vmlal.s32	q8, d29, d27
- 	vmlal.s32	q8, d25, d26
- 	vmlal.s32	q7, d28, d27
- 	vmlal.s32	q7, d29, d26
--	add		r2, sp, #608
-+	add		r2, sp, #576
- 	vld1.8		{d28-d29}, [r2, : 128]
- 	vmlal.s32	q4, d24, d29
- 	vmlal.s32	q8, d23, d29
- 	vmlal.s32	q8, d24, d28
- 	vmlal.s32	q7, d22, d29
- 	vmlal.s32	q7, d23, d28
--	add		r2, sp, #608
- 	vst1.8		{d8-d9}, [r2, : 128]
--	add		r2, sp, #560
-+	add		r2, sp, #528
- 	vld1.8		{d8-d9}, [r2, : 128]
- 	vmlal.s32	q7, d24, d9
- 	vmlal.s32	q7, d25, d31
-@@ -942,36 +916,36 @@
- 	vmlal.s32	q0, d23, d26
- 	vmlal.s32	q0, d24, d31
- 	vmlal.s32	q0, d19, d20
--	add		r2, sp, #640
-+	add		r2, sp, #608
- 	vld1.8		{d18-d19}, [r2, : 128]
- 	vmlal.s32	q2, d18, d7
--	vmlal.s32	q2, d19, d6
- 	vmlal.s32	q5, d18, d6
--	vmlal.s32	q5, d19, d21
- 	vmlal.s32	q1, d18, d21
--	vmlal.s32	q1, d19, d29
- 	vmlal.s32	q0, d18, d28
--	vmlal.s32	q0, d19, d9
- 	vmlal.s32	q6, d18, d29
-+	vmlal.s32	q2, d19, d6
-+	vmlal.s32	q5, d19, d21
-+	vmlal.s32	q1, d19, d29
-+	vmlal.s32	q0, d19, d9
- 	vmlal.s32	q6, d19, d28
--	add		r2, sp, #592
-+	add		r2, sp, #560
- 	vld1.8		{d18-d19}, [r2, : 128]
--	add		r2, sp, #512
-+	add		r2, sp, #480
- 	vld1.8		{d22-d23}, [r2, : 128]
- 	vmlal.s32	q5, d19, d7
- 	vmlal.s32	q0, d18, d21
- 	vmlal.s32	q0, d19, d29
- 	vmlal.s32	q6, d18, d6
--	add		r2, sp, #528
-+	add		r2, sp, #496
- 	vld1.8		{d6-d7}, [r2, : 128]
- 	vmlal.s32	q6, d19, d21
--	add		r2, sp, #576
-+	add		r2, sp, #544
- 	vld1.8		{d18-d19}, [r2, : 128]
- 	vmlal.s32	q0, d30, d8
--	add		r2, sp, #672
-+	add		r2, sp, #640
- 	vld1.8		{d20-d21}, [r2, : 128]
- 	vmlal.s32	q5, d30, d29
--	add		r2, sp, #608
-+	add		r2, sp, #576
- 	vld1.8		{d24-d25}, [r2, : 128]
- 	vmlal.s32	q1, d30, d28
- 	vadd.i64	q13, q0, q11
-@@ -1069,7 +1043,7 @@
- 	sub		r4, r4, #24
- 	vst1.8		d0, [r2, : 64]
- 	vst1.8		d1, [r4, : 64]
--	add		r2, sp, #544
-+	add		r2, sp, #512
- 	add		r4, r3, #144
- 	add		r5, r3, #192
- 	vld1.8		{d0-d1}, [r2, : 128]
-@@ -1139,14 +1113,13 @@
- 	vmlal.s32	q0, d12, d8
- 	vmlal.s32	q0, d13, d17
- 	vmlal.s32	q0, d6, d6
--	add		r2, sp, #512
--	vld1.8		{d18-d19}, [r2, : 128]
-+	add		r2, sp, #480
-+	vld1.8		{d18-d19}, [r2, : 128]!
- 	vmull.s32	q3, d16, d7
- 	vmlal.s32	q3, d10, d15
- 	vmlal.s32	q3, d11, d14
- 	vmlal.s32	q3, d12, d9
- 	vmlal.s32	q3, d13, d8
--	add		r2, sp, #528
- 	vld1.8		{d8-d9}, [r2, : 128]
- 	vadd.i64	q5, q12, q9
- 	vadd.i64	q6, q15, q9
-@@ -1295,22 +1268,19 @@
- 	vadd.i32	q5, q5, q0
- 	vtrn.32		q11, q14
- 	vadd.i32	q6, q6, q3
--	add		r2, sp, #560
-+	add		r2, sp, #528
- 	vadd.i32	q10, q10, q2
- 	vtrn.32		d24, d25
--	vst1.8		{d12-d13}, [r2, : 128]
-+	vst1.8		{d12-d13}, [r2, : 128]!
- 	vshl.i32	q6, q13, #1
--	add		r2, sp, #576
--	vst1.8		{d20-d21}, [r2, : 128]
-+	vst1.8		{d20-d21}, [r2, : 128]!
- 	vshl.i32	q10, q14, #1
--	add		r2, sp, #592
--	vst1.8		{d12-d13}, [r2, : 128]
-+	vst1.8		{d12-d13}, [r2, : 128]!
- 	vshl.i32	q15, q12, #1
- 	vadd.i32	q8, q8, q4
- 	vext.32		d10, d31, d30, #0
- 	vadd.i32	q7, q7, q1
--	add		r2, sp, #608
--	vst1.8		{d16-d17}, [r2, : 128]
-+	vst1.8		{d16-d17}, [r2, : 128]!
- 	vmull.s32	q8, d18, d5
- 	vmlal.s32	q8, d26, d4
- 	vmlal.s32	q8, d19, d9
-@@ -1321,8 +1291,7 @@
- 	vmlal.s32	q8, d29, d1
- 	vmlal.s32	q8, d24, d6
- 	vmlal.s32	q8, d25, d0
--	add		r2, sp, #624
--	vst1.8		{d14-d15}, [r2, : 128]
-+	vst1.8		{d14-d15}, [r2, : 128]!
- 	vmull.s32	q2, d18, d4
- 	vmlal.s32	q2, d12, d9
- 	vmlal.s32	q2, d13, d8
-@@ -1330,8 +1299,7 @@
- 	vmlal.s32	q2, d22, d2
- 	vmlal.s32	q2, d23, d1
- 	vmlal.s32	q2, d24, d0
--	add		r2, sp, #640
--	vst1.8		{d20-d21}, [r2, : 128]
-+	vst1.8		{d20-d21}, [r2, : 128]!
- 	vmull.s32	q7, d18, d9
- 	vmlal.s32	q7, d26, d3
- 	vmlal.s32	q7, d19, d8
-@@ -1340,15 +1308,13 @@
- 	vmlal.s32	q7, d28, d1
- 	vmlal.s32	q7, d23, d6
- 	vmlal.s32	q7, d29, d0
--	add		r2, sp, #656
--	vst1.8		{d10-d11}, [r2, : 128]
-+	vst1.8		{d10-d11}, [r2, : 128]!
- 	vmull.s32	q5, d18, d3
- 	vmlal.s32	q5, d19, d2
- 	vmlal.s32	q5, d22, d1
- 	vmlal.s32	q5, d23, d0
- 	vmlal.s32	q5, d12, d8
--	add		r2, sp, #672
--	vst1.8		{d16-d17}, [r2, : 128]
-+	vst1.8		{d16-d17}, [r2, : 128]!
- 	vmull.s32	q4, d18, d8
- 	vmlal.s32	q4, d26, d2
- 	vmlal.s32	q4, d19, d7
-@@ -1359,7 +1325,7 @@
- 	vmlal.s32	q8, d26, d1
- 	vmlal.s32	q8, d19, d6
- 	vmlal.s32	q8, d27, d0
--	add		r2, sp, #576
-+	add		r2, sp, #544
- 	vld1.8		{d20-d21}, [r2, : 128]
- 	vmlal.s32	q7, d24, d21
- 	vmlal.s32	q7, d25, d20
-@@ -1368,32 +1334,30 @@
- 	vmlal.s32	q8, d22, d21
- 	vmlal.s32	q8, d28, d20
- 	vmlal.s32	q5, d24, d20
--	add		r2, sp, #576
- 	vst1.8		{d14-d15}, [r2, : 128]
- 	vmull.s32	q7, d18, d6
- 	vmlal.s32	q7, d26, d0
--	add		r2, sp, #656
-+	add		r2, sp, #624
- 	vld1.8		{d30-d31}, [r2, : 128]
- 	vmlal.s32	q2, d30, d21
- 	vmlal.s32	q7, d19, d21
- 	vmlal.s32	q7, d27, d20
--	add		r2, sp, #624
-+	add		r2, sp, #592
- 	vld1.8		{d26-d27}, [r2, : 128]
- 	vmlal.s32	q4, d25, d27
- 	vmlal.s32	q8, d29, d27
- 	vmlal.s32	q8, d25, d26
- 	vmlal.s32	q7, d28, d27
- 	vmlal.s32	q7, d29, d26
--	add		r2, sp, #608
-+	add		r2, sp, #576
- 	vld1.8		{d28-d29}, [r2, : 128]
- 	vmlal.s32	q4, d24, d29
- 	vmlal.s32	q8, d23, d29
- 	vmlal.s32	q8, d24, d28
- 	vmlal.s32	q7, d22, d29
- 	vmlal.s32	q7, d23, d28
--	add		r2, sp, #608
- 	vst1.8		{d8-d9}, [r2, : 128]
--	add		r2, sp, #560
-+	add		r2, sp, #528
- 	vld1.8		{d8-d9}, [r2, : 128]
- 	vmlal.s32	q7, d24, d9
- 	vmlal.s32	q7, d25, d31
-@@ -1414,36 +1378,36 @@
- 	vmlal.s32	q0, d23, d26
- 	vmlal.s32	q0, d24, d31
- 	vmlal.s32	q0, d19, d20
--	add		r2, sp, #640
-+	add		r2, sp, #608
- 	vld1.8		{d18-d19}, [r2, : 128]
- 	vmlal.s32	q2, d18, d7
--	vmlal.s32	q2, d19, d6
- 	vmlal.s32	q5, d18, d6
--	vmlal.s32	q5, d19, d21
- 	vmlal.s32	q1, d18, d21
--	vmlal.s32	q1, d19, d29
- 	vmlal.s32	q0, d18, d28
--	vmlal.s32	q0, d19, d9
- 	vmlal.s32	q6, d18, d29
-+	vmlal.s32	q2, d19, d6
-+	vmlal.s32	q5, d19, d21
-+	vmlal.s32	q1, d19, d29
-+	vmlal.s32	q0, d19, d9
- 	vmlal.s32	q6, d19, d28
--	add		r2, sp, #592
-+	add		r2, sp, #560
- 	vld1.8		{d18-d19}, [r2, : 128]
--	add		r2, sp, #512
-+	add		r2, sp, #480
- 	vld1.8		{d22-d23}, [r2, : 128]
- 	vmlal.s32	q5, d19, d7
- 	vmlal.s32	q0, d18, d21
- 	vmlal.s32	q0, d19, d29
- 	vmlal.s32	q6, d18, d6
--	add		r2, sp, #528
-+	add		r2, sp, #496
- 	vld1.8		{d6-d7}, [r2, : 128]
- 	vmlal.s32	q6, d19, d21
--	add		r2, sp, #576
-+	add		r2, sp, #544
- 	vld1.8		{d18-d19}, [r2, : 128]
- 	vmlal.s32	q0, d30, d8
--	add		r2, sp, #672
-+	add		r2, sp, #640
- 	vld1.8		{d20-d21}, [r2, : 128]
- 	vmlal.s32	q5, d30, d29
--	add		r2, sp, #608
-+	add		r2, sp, #576
- 	vld1.8		{d24-d25}, [r2, : 128]
- 	vmlal.s32	q1, d30, d28
- 	vadd.i64	q13, q0, q11
-@@ -1541,10 +1505,10 @@
- 	sub		r4, r4, #24
- 	vst1.8		d0, [r2, : 64]
- 	vst1.8		d1, [r4, : 64]
--	ldr		r2, [sp, #488]
--	ldr		r4, [sp, #492]
-+	ldr		r2, [sp, #456]
-+	ldr		r4, [sp, #460]
- 	subs		r5, r2, #1
--	bge		._mainloop
-+	bge		.Lmainloop
- 	add		r1, r3, #144
- 	add		r2, r3, #336
- 	vld1.8		{d0-d1}, [r1, : 128]!
-@@ -1553,41 +1517,41 @@
- 	vst1.8		{d0-d1}, [r2, : 128]!
- 	vst1.8		{d2-d3}, [r2, : 128]!
- 	vst1.8		d4, [r2, : 64]
--	ldr		r1, =0
--._invertloop:
-+	movw		r1, #0
-+.Linvertloop:
- 	add		r2, r3, #144
--	ldr		r4, =0
--	ldr		r5, =2
-+	movw		r4, #0
-+	movw		r5, #2
- 	cmp		r1, #1
--	ldreq		r5, =1
-+	moveq		r5, #1
- 	addeq		r2, r3, #336
- 	addeq		r4, r3, #48
- 	cmp		r1, #2
--	ldreq		r5, =1
-+	moveq		r5, #1
- 	addeq		r2, r3, #48
- 	cmp		r1, #3
--	ldreq		r5, =5
-+	moveq		r5, #5
- 	addeq		r4, r3, #336
- 	cmp		r1, #4
--	ldreq		r5, =10
-+	moveq		r5, #10
- 	cmp		r1, #5
--	ldreq		r5, =20
-+	moveq		r5, #20
- 	cmp		r1, #6
--	ldreq		r5, =10
-+	moveq		r5, #10
- 	addeq		r2, r3, #336
- 	addeq		r4, r3, #336
- 	cmp		r1, #7
--	ldreq		r5, =50
-+	moveq		r5, #50
- 	cmp		r1, #8
--	ldreq		r5, =100
-+	moveq		r5, #100
- 	cmp		r1, #9
--	ldreq		r5, =50
-+	moveq		r5, #50
- 	addeq		r2, r3, #336
- 	cmp		r1, #10
--	ldreq		r5, =5
-+	moveq		r5, #5
- 	addeq		r2, r3, #48
- 	cmp		r1, #11
--	ldreq		r5, =0
-+	moveq		r5, #0
- 	addeq		r2, r3, #96
- 	add		r6, r3, #144
- 	add		r7, r3, #288
-@@ -1598,8 +1562,8 @@
- 	vst1.8		{d2-d3}, [r7, : 128]!
- 	vst1.8		d4, [r7, : 64]
- 	cmp		r5, #0
--	beq		._skipsquaringloop
--._squaringloop:
-+	beq		.Lskipsquaringloop
-+.Lsquaringloop:
- 	add		r6, r3, #288
- 	add		r7, r3, #288
- 	add		r8, r3, #288
-@@ -1611,7 +1575,7 @@
- 	vld1.8		{d6-d7}, [r7, : 128]!
- 	vld1.8		{d9}, [r7, : 64]
- 	vld1.8		{d10-d11}, [r6, : 128]!
--	add		r7, sp, #416
-+	add		r7, sp, #384
- 	vld1.8		{d12-d13}, [r6, : 128]!
- 	vmul.i32	q7, q2, q0
- 	vld1.8		{d8}, [r6, : 64]
-@@ -1726,7 +1690,7 @@
- 	vext.32		d10, d6, d6, #0
- 	vmov.i32	q1, #0xffffffff
- 	vshl.i64	q4, q1, #25
--	add		r7, sp, #512
-+	add		r7, sp, #480
- 	vld1.8		{d14-d15}, [r7, : 128]
- 	vadd.i64	q9, q2, q7
- 	vshl.i64	q1, q1, #26
-@@ -1735,7 +1699,7 @@
- 	vadd.i64	q5, q5, q10
- 	vand		q9, q9, q1
- 	vld1.8		{d16}, [r6, : 64]!
--	add		r6, sp, #528
-+	add		r6, sp, #496
- 	vld1.8		{d20-d21}, [r6, : 128]
- 	vadd.i64	q11, q5, q10
- 	vsub.i64	q2, q2, q9
-@@ -1789,8 +1753,8 @@
- 	sub		r6, r6, #32
- 	vst1.8		d4, [r6, : 64]
- 	subs		r5, r5, #1
--	bhi		._squaringloop
--._skipsquaringloop:
-+	bhi		.Lsquaringloop
-+.Lskipsquaringloop:
- 	mov		r2, r2
- 	add		r5, r3, #288
- 	add		r6, r3, #144
-@@ -1802,7 +1766,7 @@
- 	vld1.8		{d6-d7}, [r5, : 128]!
- 	vld1.8		{d9}, [r5, : 64]
- 	vld1.8		{d10-d11}, [r2, : 128]!
--	add		r5, sp, #416
-+	add		r5, sp, #384
- 	vld1.8		{d12-d13}, [r2, : 128]!
- 	vmul.i32	q7, q2, q0
- 	vld1.8		{d8}, [r2, : 64]
-@@ -1917,7 +1881,7 @@
- 	vext.32		d10, d6, d6, #0
- 	vmov.i32	q1, #0xffffffff
- 	vshl.i64	q4, q1, #25
--	add		r5, sp, #512
-+	add		r5, sp, #480
- 	vld1.8		{d14-d15}, [r5, : 128]
- 	vadd.i64	q9, q2, q7
- 	vshl.i64	q1, q1, #26
-@@ -1926,7 +1890,7 @@
- 	vadd.i64	q5, q5, q10
- 	vand		q9, q9, q1
- 	vld1.8		{d16}, [r2, : 64]!
--	add		r2, sp, #528
-+	add		r2, sp, #496
- 	vld1.8		{d20-d21}, [r2, : 128]
- 	vadd.i64	q11, q5, q10
- 	vsub.i64	q2, q2, q9
-@@ -1980,7 +1944,7 @@
- 	sub		r2, r2, #32
- 	vst1.8		d4, [r2, : 64]
- 	cmp		r4, #0
--	beq		._skippostcopy
-+	beq		.Lskippostcopy
- 	add		r2, r3, #144
- 	mov		r4, r4
- 	vld1.8		{d0-d1}, [r2, : 128]!
-@@ -1989,9 +1953,9 @@
- 	vst1.8		{d0-d1}, [r4, : 128]!
- 	vst1.8		{d2-d3}, [r4, : 128]!
- 	vst1.8		d4, [r4, : 64]
--._skippostcopy:
-+.Lskippostcopy:
- 	cmp		r1, #1
--	bne		._skipfinalcopy
-+	bne		.Lskipfinalcopy
- 	add		r2, r3, #288
- 	add		r4, r3, #144
- 	vld1.8		{d0-d1}, [r2, : 128]!
-@@ -2000,10 +1964,10 @@
- 	vst1.8		{d0-d1}, [r4, : 128]!
- 	vst1.8		{d2-d3}, [r4, : 128]!
- 	vst1.8		d4, [r4, : 64]
--._skipfinalcopy:
-+.Lskipfinalcopy:
- 	add		r1, r1, #1
- 	cmp		r1, #12
--	blo		._invertloop
-+	blo		.Linvertloop
- 	add		r1, r3, #144
- 	ldr		r2, [r1], #4
- 	ldr		r3, [r1], #4
-@@ -2085,21 +2049,16 @@
- 	add		r8, r8, r10, LSL #12
- 	mov		r9, r10, LSR #20
- 	add		r1, r9, r1, LSL #6
--	str		r2, [r0], #4
--	str		r3, [r0], #4
--	str		r4, [r0], #4
--	str		r5, [r0], #4
--	str		r6, [r0], #4
--	str		r7, [r0], #4
--	str		r8, [r0], #4
--	str		r1, [r0]
--	ldrd		r4, [sp, #0]
--	ldrd		r6, [sp, #8]
--	ldrd		r8, [sp, #16]
--	ldrd		r10, [sp, #24]
--	ldr		r12, [sp, #480]
--	ldr		r14, [sp, #484]
--	ldr		r0, =0
--	mov		sp, r12
--	vpop		{q4, q5, q6, q7}
--	bx		lr
-+	str		r2, [r0]
-+	str		r3, [r0, #4]
-+	str		r4, [r0, #8]
-+	str		r5, [r0, #12]
-+	str		r6, [r0, #16]
-+	str		r7, [r0, #20]
-+	str		r8, [r0, #24]
-+	str		r1, [r0, #28]
-+	movw		r0, #0
-+	mov		sp, ip
-+	pop		{r4-r11, pc}
-+ENDPROC(curve25519_neon)
-+#endif
-diff --git a/lib/zinc/curve25519/curve25519.c b/lib/zinc/curve25519/curve25519.c
-index 4f9c45ba126d..30dd5c93d130 100644
---- a/lib/zinc/curve25519/curve25519.c
-+++ b/lib/zinc/curve25519/curve25519.c
-@@ -22,6 +22,8 @@
+-/*
+- * Key size for big_key data encryption
+- */
+-#define ENC_KEY_SIZE 32
+-
+-/*
+- * Authentication tag length
+- */
+-#define ENC_AUTHTAG_SIZE 16
+-
+ /*
+  * big_key defined keys take an arbitrary string as the description and an
+  * arbitrary blob of data as the payload
+@@ -79,136 +51,20 @@ struct key_type key_type_big_key = {
+ 	.destroy		= big_key_destroy,
+ 	.describe		= big_key_describe,
+ 	.read			= big_key_read,
+-	/* no ->update(); don't add it without changing big_key_crypt() nonce */
++	/* no ->update(); don't add it without changing chacha20poly1305's nonce */
+ };
  
- #if defined(CONFIG_ZINC_ARCH_X86_64)
- #include "curve25519-x86_64-glue.c"
-+#elif defined(CONFIG_ZINC_ARCH_ARM)
-+#include "curve25519-arm-glue.c"
- #else
- static bool *const curve25519_nobs[] __initconst = { };
- static void __init curve25519_fpu_init(void)
+-/*
+- * Crypto names for big_key data authenticated encryption
+- */
+-static const char big_key_alg_name[] = "gcm(aes)";
+-#define BIG_KEY_IV_SIZE		GCM_AES_IV_SIZE
+-
+-/*
+- * Crypto algorithms for big_key data authenticated encryption
+- */
+-static struct crypto_aead *big_key_aead;
+-
+-/*
+- * Since changing the key affects the entire object, we need a mutex.
+- */
+-static DEFINE_MUTEX(big_key_aead_lock);
+-
+-/*
+- * Encrypt/decrypt big_key data
+- */
+-static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t datalen, u8 *key)
+-{
+-	int ret;
+-	struct aead_request *aead_req;
+-	/* We always use a zero nonce. The reason we can get away with this is
+-	 * because we're using a different randomly generated key for every
+-	 * different encryption. Notably, too, key_type_big_key doesn't define
+-	 * an .update function, so there's no chance we'll wind up reusing the
+-	 * key to encrypt updated data. Simply put: one key, one encryption.
+-	 */
+-	u8 zero_nonce[BIG_KEY_IV_SIZE];
+-
+-	aead_req = aead_request_alloc(big_key_aead, GFP_KERNEL);
+-	if (!aead_req)
+-		return -ENOMEM;
+-
+-	memset(zero_nonce, 0, sizeof(zero_nonce));
+-	aead_request_set_crypt(aead_req, buf->sg, buf->sg, datalen, zero_nonce);
+-	aead_request_set_callback(aead_req, CRYPTO_TFM_REQ_MAY_SLEEP, NULL, NULL);
+-	aead_request_set_ad(aead_req, 0);
+-
+-	mutex_lock(&big_key_aead_lock);
+-	if (crypto_aead_setkey(big_key_aead, key, ENC_KEY_SIZE)) {
+-		ret = -EAGAIN;
+-		goto error;
+-	}
+-	if (op == BIG_KEY_ENC)
+-		ret = crypto_aead_encrypt(aead_req);
+-	else
+-		ret = crypto_aead_decrypt(aead_req);
+-error:
+-	mutex_unlock(&big_key_aead_lock);
+-	aead_request_free(aead_req);
+-	return ret;
+-}
+-
+-/*
+- * Free up the buffer.
+- */
+-static void big_key_free_buffer(struct big_key_buf *buf)
+-{
+-	unsigned int i;
+-
+-	if (buf->virt) {
+-		memset(buf->virt, 0, buf->nr_pages * PAGE_SIZE);
+-		vunmap(buf->virt);
+-	}
+-
+-	for (i = 0; i < buf->nr_pages; i++)
+-		if (buf->pages[i])
+-			__free_page(buf->pages[i]);
+-
+-	kfree(buf);
+-}
+-
+-/*
+- * Allocate a buffer consisting of a set of pages with a virtual mapping
+- * applied over them.
+- */
+-static void *big_key_alloc_buffer(size_t len)
+-{
+-	struct big_key_buf *buf;
+-	unsigned int npg = (len + PAGE_SIZE - 1) >> PAGE_SHIFT;
+-	unsigned int i, l;
+-
+-	buf = kzalloc(sizeof(struct big_key_buf) +
+-		      sizeof(struct page) * npg +
+-		      sizeof(struct scatterlist) * npg,
+-		      GFP_KERNEL);
+-	if (!buf)
+-		return NULL;
+-
+-	buf->nr_pages = npg;
+-	buf->sg = (void *)(buf->pages + npg);
+-	sg_init_table(buf->sg, npg);
+-
+-	for (i = 0; i < buf->nr_pages; i++) {
+-		buf->pages[i] = alloc_page(GFP_KERNEL);
+-		if (!buf->pages[i])
+-			goto nomem;
+-
+-		l = min_t(size_t, len, PAGE_SIZE);
+-		sg_set_page(&buf->sg[i], buf->pages[i], l, 0);
+-		len -= l;
+-	}
+-
+-	buf->virt = vmap(buf->pages, buf->nr_pages, VM_MAP, PAGE_KERNEL);
+-	if (!buf->virt)
+-		goto nomem;
+-
+-	return buf;
+-
+-nomem:
+-	big_key_free_buffer(buf);
+-	return NULL;
+-}
+-
+ /*
+  * Preparse a big key
+  */
+ int big_key_preparse(struct key_preparsed_payload *prep)
+ {
+-	struct big_key_buf *buf;
+ 	struct path *path = (struct path *)&prep->payload.data[big_key_path];
+ 	struct file *file;
+-	u8 *enckey;
++	u8 *buf, *enckey;
+ 	ssize_t written;
+-	size_t datalen = prep->datalen, enclen = datalen + ENC_AUTHTAG_SIZE;
++	size_t datalen = prep->datalen;
++	size_t enclen = datalen + CHACHA20POLY1305_AUTHTAG_SIZE;
+ 	int ret;
+ 
+ 	if (datalen <= 0 || datalen > 1024 * 1024 || !prep->data)
+@@ -224,28 +80,28 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ 		 * to be swapped out if needed.
+ 		 *
+ 		 * File content is stored encrypted with randomly generated key.
++		 * Since the key is random for each file, we can set the nonce
++		 * to zero, provided we never define a ->update() call.
+ 		 */
+ 		loff_t pos = 0;
+ 
+-		buf = big_key_alloc_buffer(enclen);
++		buf = kvmalloc(enclen, GFP_KERNEL);
+ 		if (!buf)
+ 			return -ENOMEM;
+-		memcpy(buf->virt, prep->data, datalen);
+ 
+ 		/* generate random key */
+-		enckey = kmalloc(ENC_KEY_SIZE, GFP_KERNEL);
++		enckey = kmalloc(CHACHA20POLY1305_KEY_SIZE, GFP_KERNEL);
+ 		if (!enckey) {
+ 			ret = -ENOMEM;
+ 			goto error;
+ 		}
+-		ret = get_random_bytes_wait(enckey, ENC_KEY_SIZE);
++		ret = get_random_bytes_wait(enckey, CHACHA20POLY1305_KEY_SIZE);
+ 		if (unlikely(ret))
+ 			goto err_enckey;
+ 
+-		/* encrypt aligned data */
+-		ret = big_key_crypt(BIG_KEY_ENC, buf, datalen, enckey);
+-		if (ret)
+-			goto err_enckey;
++		/* encrypt data */
++		chacha20poly1305_encrypt(buf, prep->data, datalen, NULL, 0,
++					 0, enckey);
+ 
+ 		/* save aligned data to file */
+ 		file = shmem_kernel_file_setup("", enclen, 0);
+@@ -254,7 +110,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ 			goto err_enckey;
+ 		}
+ 
+-		written = kernel_write(file, buf->virt, enclen, &pos);
++		written = kernel_write(file, buf, enclen, &pos);
+ 		if (written != enclen) {
+ 			ret = written;
+ 			if (written >= 0)
+@@ -269,7 +125,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ 		*path = file->f_path;
+ 		path_get(path);
+ 		fput(file);
+-		big_key_free_buffer(buf);
++		kvfree(buf);
+ 	} else {
+ 		/* Just store the data in a buffer */
+ 		void *data = kmalloc(datalen, GFP_KERNEL);
+@@ -287,7 +143,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ err_enckey:
+ 	kzfree(enckey);
+ error:
+-	big_key_free_buffer(buf);
++	kvfree(buf);
+ 	return ret;
+ }
+ 
+@@ -365,14 +221,13 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
+ 		return datalen;
+ 
+ 	if (datalen > BIG_KEY_FILE_THRESHOLD) {
+-		struct big_key_buf *buf;
+ 		struct path *path = (struct path *)&key->payload.data[big_key_path];
+ 		struct file *file;
+-		u8 *enckey = (u8 *)key->payload.data[big_key_data];
+-		size_t enclen = datalen + ENC_AUTHTAG_SIZE;
++		u8 *buf, *enckey = (u8 *)key->payload.data[big_key_data];
++		size_t enclen = datalen + CHACHA20POLY1305_AUTHTAG_SIZE;
+ 		loff_t pos = 0;
+ 
+-		buf = big_key_alloc_buffer(enclen);
++		buf = kvmalloc(enclen, GFP_KERNEL);
+ 		if (!buf)
+ 			return -ENOMEM;
+ 
+@@ -383,26 +238,27 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
+ 		}
+ 
+ 		/* read file to kernel and decrypt */
+-		ret = kernel_read(file, buf->virt, enclen, &pos);
++		ret = kernel_read(file, buf, enclen, &pos);
+ 		if (ret >= 0 && ret != enclen) {
+ 			ret = -EIO;
+ 			goto err_fput;
+ 		}
+ 
+-		ret = big_key_crypt(BIG_KEY_DEC, buf, enclen, enckey);
+-		if (ret)
++		ret = chacha20poly1305_decrypt(buf, buf, enclen, NULL, 0, 0,
++					       enckey) ? 0 : -EINVAL;
++		if (unlikely(ret))
+ 			goto err_fput;
+ 
+ 		ret = datalen;
+ 
+ 		/* copy decrypted data to user */
+-		if (copy_to_user(buffer, buf->virt, datalen) != 0)
++		if (copy_to_user(buffer, buf, datalen) != 0)
+ 			ret = -EFAULT;
+ 
+ err_fput:
+ 		fput(file);
+ error:
+-		big_key_free_buffer(buf);
++		kvfree(buf);
+ 	} else {
+ 		ret = datalen;
+ 		if (copy_to_user(buffer, key->payload.data[big_key_data],
+@@ -418,39 +274,7 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
+  */
+ static int __init big_key_init(void)
+ {
+-	int ret;
+-
+-	/* init block cipher */
+-	big_key_aead = crypto_alloc_aead(big_key_alg_name, 0, CRYPTO_ALG_ASYNC);
+-	if (IS_ERR(big_key_aead)) {
+-		ret = PTR_ERR(big_key_aead);
+-		pr_err("Can't alloc crypto: %d\n", ret);
+-		return ret;
+-	}
+-
+-	if (unlikely(crypto_aead_ivsize(big_key_aead) != BIG_KEY_IV_SIZE)) {
+-		WARN(1, "big key algorithm changed?");
+-		ret = -EINVAL;
+-		goto free_aead;
+-	}
+-
+-	ret = crypto_aead_setauthsize(big_key_aead, ENC_AUTHTAG_SIZE);
+-	if (ret < 0) {
+-		pr_err("Can't set crypto auth tag len: %d\n", ret);
+-		goto free_aead;
+-	}
+-
+-	ret = register_key_type(&key_type_big_key);
+-	if (ret < 0) {
+-		pr_err("Can't register type: %d\n", ret);
+-		goto free_aead;
+-	}
+-
+-	return 0;
+-
+-free_aead:
+-	crypto_free_aead(big_key_aead);
+-	return ret;
++	return register_key_type(&key_type_big_key);
+ }
+ 
+ late_initcall(big_key_init);
 -- 
 2.19.0
