@@ -1,417 +1,211 @@
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Subject: [PATCH net-next v7 27/28] security/keys: rewrite big_key crypto to use Zinc
-Date: Sat,  6 Oct 2018 04:57:08 +0200
-Message-Id: <20181006025709.4019-28-Jason@zx2c4.com>
-In-Reply-To: <20181006025709.4019-1-Jason@zx2c4.com>
-References: <20181006025709.4019-1-Jason@zx2c4.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: linux-kernel@vger.kernel.org, netdev@vger.kernel.org, davem@davemloft.net, gregkh@linuxfoundation.org
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, David Howells <dhowells@redhat.com>, Samuel Neves <sneves@dei.uc.pt>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com
+References: <20181004025750.498303-1-ast@kernel.org> <20181004025750.498303-2-ast@kernel.org>
+In-Reply-To: <20181004025750.498303-2-ast@kernel.org>
+From: Jann Horn <jannh@google.com>
+Date: Mon, 8 Oct 2018 02:56:15 +0200
+Message-ID: <CAG48ez2zuJP0qOSU5QAER1xP56d5SvC0HTrM0Yh3wkKEQZ9R3A@mail.gmail.com>
+Subject: Re: [PATCH bpf-next 1/6] bpf: introduce BPF_PROG_TYPE_FILE_FILTER
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Alexei Starovoitov <ast@kernel.org>
+Cc: "David S. Miller" <davem@davemloft.net>, Daniel Borkmann <daniel@iogearbox.net>, Andy Lutomirski <luto@amacapital.net>, Al Viro <viro@zeniv.linux.org.uk>, Network Development <netdev@vger.kernel.org>, kernel list <linux-kernel@vger.kernel.org>, kernel-team@fb.com, Kernel Hardening <kernel-hardening@lists.openwall.com>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-A while back, I noticed that the crypto and crypto API usage in big_keys
-were entirely broken in multiple ways, so I rewrote it. Now, I'm
-rewriting it again, but this time using Zinc's ChaCha20Poly1305
-function. This makes the file considerably more simple; the diffstat
-alone should justify this commit. It also should be faster, since it no
-longer requires a mutex around the "aead api object" (nor allocations),
-allowing us to encrypt multiple items in parallel. We also benefit from
-being able to pass any type of pointer to Zinc, so we can get rid of the
-ridiculously complex custom page allocator that big_key really doesn't
-need.
++cc kernel-hardening because this is related to sandboxing
++cc Micka=C3=ABl Sala=C3=BCn because this looks related to his Landlock pro=
+posal
 
-Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: David Howells <dhowells@redhat.com>
-Cc: Samuel Neves <sneves@dei.uc.pt>
-Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Greg KH <gregkh@linuxfoundation.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: kernel-hardening@lists.openwall.com
----
- security/keys/Kconfig   |   4 +-
- security/keys/big_key.c | 230 +++++-----------------------------------
- 2 files changed, 28 insertions(+), 206 deletions(-)
+On Mon, Oct 8, 2018 at 2:30 AM Alexei Starovoitov <ast@kernel.org> wrote:
+> Similar to networking sandboxing programs and cgroup-v2 based hooks
+> (BPF_CGROUP_INET_[INGRESS|EGRESS,] BPF_CGROUP_INET[4|6]_[BIND|CONNECT], e=
+tc)
+> introduce basic per-container sandboxing for file access via
+> new BPF_PROG_TYPE_FILE_FILTER program type that attaches after
+> security_file_open() LSM hook and works as additional file_open filter.
+> The new cgroup bpf hook is called BPF_CGROUP_FILE_OPEN.
 
-diff --git a/security/keys/Kconfig b/security/keys/Kconfig
-index 6462e6654ccf..66ff26298fb3 100644
---- a/security/keys/Kconfig
-+++ b/security/keys/Kconfig
-@@ -45,9 +45,7 @@ config BIG_KEYS
- 	bool "Large payload keys"
- 	depends on KEYS
- 	depends on TMPFS
--	select CRYPTO
--	select CRYPTO_AES
--	select CRYPTO_GCM
-+	select ZINC_CHACHA20POLY1305
- 	help
- 	  This option provides support for holding large keys within the kernel
- 	  (for example Kerberos ticket caches).  The data may be stored out to
-diff --git a/security/keys/big_key.c b/security/keys/big_key.c
-index 2806e70d7f8f..bb15360221d8 100644
---- a/security/keys/big_key.c
-+++ b/security/keys/big_key.c
-@@ -1,6 +1,6 @@
- /* Large capacity key type
-  *
-- * Copyright (C) 2017 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-+ * Copyright (C) 2017-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-  * Copyright (C) 2013 Red Hat, Inc. All Rights Reserved.
-  * Written by David Howells (dhowells@redhat.com)
-  *
-@@ -16,20 +16,10 @@
- #include <linux/file.h>
- #include <linux/shmem_fs.h>
- #include <linux/err.h>
--#include <linux/scatterlist.h>
- #include <linux/random.h>
--#include <linux/vmalloc.h>
- #include <keys/user-type.h>
- #include <keys/big_key-type.h>
--#include <crypto/aead.h>
--#include <crypto/gcm.h>
--
--struct big_key_buf {
--	unsigned int		nr_pages;
--	void			*virt;
--	struct scatterlist	*sg;
--	struct page		*pages[];
--};
-+#include <zinc/chacha20poly1305.h>
- 
- /*
-  * Layout of key payload words.
-@@ -41,14 +31,6 @@ enum {
- 	big_key_len,
- };
- 
--/*
-- * Crypto operation with big_key data
-- */
--enum big_key_op {
--	BIG_KEY_ENC,
--	BIG_KEY_DEC,
--};
--
- /*
-  * If the data is under this limit, there's no point creating a shm file to
-  * hold it as the permanently resident metadata for the shmem fs will be at
-@@ -56,16 +38,6 @@ enum big_key_op {
-  */
- #define BIG_KEY_FILE_THRESHOLD (sizeof(struct inode) + sizeof(struct dentry))
- 
--/*
-- * Key size for big_key data encryption
-- */
--#define ENC_KEY_SIZE 32
--
--/*
-- * Authentication tag length
-- */
--#define ENC_AUTHTAG_SIZE 16
--
- /*
-  * big_key defined keys take an arbitrary string as the description and an
-  * arbitrary blob of data as the payload
-@@ -79,136 +51,20 @@ struct key_type key_type_big_key = {
- 	.destroy		= big_key_destroy,
- 	.describe		= big_key_describe,
- 	.read			= big_key_read,
--	/* no ->update(); don't add it without changing big_key_crypt() nonce */
-+	/* no ->update(); don't add it without changing chacha20poly1305's nonce */
- };
- 
--/*
-- * Crypto names for big_key data authenticated encryption
-- */
--static const char big_key_alg_name[] = "gcm(aes)";
--#define BIG_KEY_IV_SIZE		GCM_AES_IV_SIZE
--
--/*
-- * Crypto algorithms for big_key data authenticated encryption
-- */
--static struct crypto_aead *big_key_aead;
--
--/*
-- * Since changing the key affects the entire object, we need a mutex.
-- */
--static DEFINE_MUTEX(big_key_aead_lock);
--
--/*
-- * Encrypt/decrypt big_key data
-- */
--static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t datalen, u8 *key)
--{
--	int ret;
--	struct aead_request *aead_req;
--	/* We always use a zero nonce. The reason we can get away with this is
--	 * because we're using a different randomly generated key for every
--	 * different encryption. Notably, too, key_type_big_key doesn't define
--	 * an .update function, so there's no chance we'll wind up reusing the
--	 * key to encrypt updated data. Simply put: one key, one encryption.
--	 */
--	u8 zero_nonce[BIG_KEY_IV_SIZE];
--
--	aead_req = aead_request_alloc(big_key_aead, GFP_KERNEL);
--	if (!aead_req)
--		return -ENOMEM;
--
--	memset(zero_nonce, 0, sizeof(zero_nonce));
--	aead_request_set_crypt(aead_req, buf->sg, buf->sg, datalen, zero_nonce);
--	aead_request_set_callback(aead_req, CRYPTO_TFM_REQ_MAY_SLEEP, NULL, NULL);
--	aead_request_set_ad(aead_req, 0);
--
--	mutex_lock(&big_key_aead_lock);
--	if (crypto_aead_setkey(big_key_aead, key, ENC_KEY_SIZE)) {
--		ret = -EAGAIN;
--		goto error;
--	}
--	if (op == BIG_KEY_ENC)
--		ret = crypto_aead_encrypt(aead_req);
--	else
--		ret = crypto_aead_decrypt(aead_req);
--error:
--	mutex_unlock(&big_key_aead_lock);
--	aead_request_free(aead_req);
--	return ret;
--}
--
--/*
-- * Free up the buffer.
-- */
--static void big_key_free_buffer(struct big_key_buf *buf)
--{
--	unsigned int i;
--
--	if (buf->virt) {
--		memset(buf->virt, 0, buf->nr_pages * PAGE_SIZE);
--		vunmap(buf->virt);
--	}
--
--	for (i = 0; i < buf->nr_pages; i++)
--		if (buf->pages[i])
--			__free_page(buf->pages[i]);
--
--	kfree(buf);
--}
--
--/*
-- * Allocate a buffer consisting of a set of pages with a virtual mapping
-- * applied over them.
-- */
--static void *big_key_alloc_buffer(size_t len)
--{
--	struct big_key_buf *buf;
--	unsigned int npg = (len + PAGE_SIZE - 1) >> PAGE_SHIFT;
--	unsigned int i, l;
--
--	buf = kzalloc(sizeof(struct big_key_buf) +
--		      sizeof(struct page) * npg +
--		      sizeof(struct scatterlist) * npg,
--		      GFP_KERNEL);
--	if (!buf)
--		return NULL;
--
--	buf->nr_pages = npg;
--	buf->sg = (void *)(buf->pages + npg);
--	sg_init_table(buf->sg, npg);
--
--	for (i = 0; i < buf->nr_pages; i++) {
--		buf->pages[i] = alloc_page(GFP_KERNEL);
--		if (!buf->pages[i])
--			goto nomem;
--
--		l = min_t(size_t, len, PAGE_SIZE);
--		sg_set_page(&buf->sg[i], buf->pages[i], l, 0);
--		len -= l;
--	}
--
--	buf->virt = vmap(buf->pages, buf->nr_pages, VM_MAP, PAGE_KERNEL);
--	if (!buf->virt)
--		goto nomem;
--
--	return buf;
--
--nomem:
--	big_key_free_buffer(buf);
--	return NULL;
--}
--
- /*
-  * Preparse a big key
-  */
- int big_key_preparse(struct key_preparsed_payload *prep)
- {
--	struct big_key_buf *buf;
- 	struct path *path = (struct path *)&prep->payload.data[big_key_path];
- 	struct file *file;
--	u8 *enckey;
-+	u8 *buf, *enckey;
- 	ssize_t written;
--	size_t datalen = prep->datalen, enclen = datalen + ENC_AUTHTAG_SIZE;
-+	size_t datalen = prep->datalen;
-+	size_t enclen = datalen + CHACHA20POLY1305_AUTHTAG_SIZE;
- 	int ret;
- 
- 	if (datalen <= 0 || datalen > 1024 * 1024 || !prep->data)
-@@ -224,28 +80,28 @@ int big_key_preparse(struct key_preparsed_payload *prep)
- 		 * to be swapped out if needed.
- 		 *
- 		 * File content is stored encrypted with randomly generated key.
-+		 * Since the key is random for each file, we can set the nonce
-+		 * to zero, provided we never define a ->update() call.
- 		 */
- 		loff_t pos = 0;
- 
--		buf = big_key_alloc_buffer(enclen);
-+		buf = kvmalloc(enclen, GFP_KERNEL);
- 		if (!buf)
- 			return -ENOMEM;
--		memcpy(buf->virt, prep->data, datalen);
- 
- 		/* generate random key */
--		enckey = kmalloc(ENC_KEY_SIZE, GFP_KERNEL);
-+		enckey = kmalloc(CHACHA20POLY1305_KEY_SIZE, GFP_KERNEL);
- 		if (!enckey) {
- 			ret = -ENOMEM;
- 			goto error;
- 		}
--		ret = get_random_bytes_wait(enckey, ENC_KEY_SIZE);
-+		ret = get_random_bytes_wait(enckey, CHACHA20POLY1305_KEY_SIZE);
- 		if (unlikely(ret))
- 			goto err_enckey;
- 
--		/* encrypt aligned data */
--		ret = big_key_crypt(BIG_KEY_ENC, buf, datalen, enckey);
--		if (ret)
--			goto err_enckey;
-+		/* encrypt data */
-+		chacha20poly1305_encrypt(buf, prep->data, datalen, NULL, 0,
-+					 0, enckey);
- 
- 		/* save aligned data to file */
- 		file = shmem_kernel_file_setup("", enclen, 0);
-@@ -254,7 +110,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
- 			goto err_enckey;
- 		}
- 
--		written = kernel_write(file, buf->virt, enclen, &pos);
-+		written = kernel_write(file, buf, enclen, &pos);
- 		if (written != enclen) {
- 			ret = written;
- 			if (written >= 0)
-@@ -269,7 +125,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
- 		*path = file->f_path;
- 		path_get(path);
- 		fput(file);
--		big_key_free_buffer(buf);
-+		kvfree(buf);
- 	} else {
- 		/* Just store the data in a buffer */
- 		void *data = kmalloc(datalen, GFP_KERNEL);
-@@ -287,7 +143,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
- err_enckey:
- 	kzfree(enckey);
- error:
--	big_key_free_buffer(buf);
-+	kvfree(buf);
- 	return ret;
- }
- 
-@@ -365,14 +221,13 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
- 		return datalen;
- 
- 	if (datalen > BIG_KEY_FILE_THRESHOLD) {
--		struct big_key_buf *buf;
- 		struct path *path = (struct path *)&key->payload.data[big_key_path];
- 		struct file *file;
--		u8 *enckey = (u8 *)key->payload.data[big_key_data];
--		size_t enclen = datalen + ENC_AUTHTAG_SIZE;
-+		u8 *buf, *enckey = (u8 *)key->payload.data[big_key_data];
-+		size_t enclen = datalen + CHACHA20POLY1305_AUTHTAG_SIZE;
- 		loff_t pos = 0;
- 
--		buf = big_key_alloc_buffer(enclen);
-+		buf = kvmalloc(enclen, GFP_KERNEL);
- 		if (!buf)
- 			return -ENOMEM;
- 
-@@ -383,26 +238,27 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
- 		}
- 
- 		/* read file to kernel and decrypt */
--		ret = kernel_read(file, buf->virt, enclen, &pos);
-+		ret = kernel_read(file, buf, enclen, &pos);
- 		if (ret >= 0 && ret != enclen) {
- 			ret = -EIO;
- 			goto err_fput;
- 		}
- 
--		ret = big_key_crypt(BIG_KEY_DEC, buf, enclen, enckey);
--		if (ret)
-+		ret = chacha20poly1305_decrypt(buf, buf, enclen, NULL, 0, 0,
-+					       enckey) ? 0 : -EINVAL;
-+		if (unlikely(ret))
- 			goto err_fput;
- 
- 		ret = datalen;
- 
- 		/* copy decrypted data to user */
--		if (copy_to_user(buffer, buf->virt, datalen) != 0)
-+		if (copy_to_user(buffer, buf, datalen) != 0)
- 			ret = -EFAULT;
- 
- err_fput:
- 		fput(file);
- error:
--		big_key_free_buffer(buf);
-+		kvfree(buf);
- 	} else {
- 		ret = datalen;
- 		if (copy_to_user(buffer, key->payload.data[big_key_data],
-@@ -418,39 +274,7 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
-  */
- static int __init big_key_init(void)
- {
--	int ret;
--
--	/* init block cipher */
--	big_key_aead = crypto_alloc_aead(big_key_alg_name, 0, CRYPTO_ALG_ASYNC);
--	if (IS_ERR(big_key_aead)) {
--		ret = PTR_ERR(big_key_aead);
--		pr_err("Can't alloc crypto: %d\n", ret);
--		return ret;
--	}
--
--	if (unlikely(crypto_aead_ivsize(big_key_aead) != BIG_KEY_IV_SIZE)) {
--		WARN(1, "big key algorithm changed?");
--		ret = -EINVAL;
--		goto free_aead;
--	}
--
--	ret = crypto_aead_setauthsize(big_key_aead, ENC_AUTHTAG_SIZE);
--	if (ret < 0) {
--		pr_err("Can't set crypto auth tag len: %d\n", ret);
--		goto free_aead;
--	}
--
--	ret = register_key_type(&key_type_big_key);
--	if (ret < 0) {
--		pr_err("Can't register type: %d\n", ret);
--		goto free_aead;
--	}
--
--	return 0;
--
--free_aead:
--	crypto_free_aead(big_key_aead);
--	return ret;
-+	return register_key_type(&key_type_big_key);
- }
- 
- late_initcall(big_key_init);
--- 
-2.19.0
+Why do_dentry_open() specifically, and nothing else? If you want to
+filter open, wouldn't you also want to filter a bunch of other
+filesystem operations with LSM hooks, like rename, unlink, truncate
+and so on? Landlock benefits there from re-using the existing security
+hooks.
+
+> Just like other cgroup-bpf programs new BPF_PROG_TYPE_FILE_FILTER type
+> is only available to root.
+>
+> This program type has access to single argument 'struct bpf_file_info'
+> that contains standard sys_stat fields:
+> struct bpf_file_info {
+>         __u64 inode;
+>         __u32 dev_major;
+>         __u32 dev_minor;
+>         __u32 fs_magic;
+>         __u32 mnt_id;
+>         __u32 nlink;
+>         __u32 mode;     /* file mode S_ISDIR, S_ISLNK, 0755, etc */
+>         __u32 flags;    /* open flags O_RDWR, O_CREAT, etc */
+> };
+> Other file attributes can be added in the future to the end of this struc=
+t
+> without breaking bpf programs.
+>
+> For debugging introduce bpf_get_file_path() helper that returns
+> NUL-terminated full path of the file. It should never be used for sandbox=
+ing.
+>
+> Use cases:
+> - disallow certain FS types within containers (fs_magic =3D=3D CGROUP2_SU=
+PER_MAGIC)
+> - restrict permissions in particular mount (mnt_id =3D=3D X && (flags & O=
+_RDWR))
+> - disallow access to hard linked sensitive files (nlink > 1 && mode =3D=
+=3D 0700)
+> - disallow access to world writeable files (mode =3D=3D 0..7)
+> - disallow access to given set of files (dev_major =3D=3D X && dev_minor =
+=3D=3D Y && inode =3D=3D Z)
+
+That last one sounds weird. It doesn't work if you want to ban access
+to a whole directory at once. And in general, highly specific
+blocklists make me nervous, because if you add anything new and forget
+to put it on the list, you have a problem.
+
+> Signed-off-by: Alexei Starovoitov <ast@kernel.org>
+> ---
+>  include/linux/bpf-cgroup.h |  10 +++
+>  include/linux/bpf_types.h  |   1 +
+>  include/uapi/linux/bpf.h   |  28 +++++-
+>  kernel/bpf/cgroup.c        | 171 +++++++++++++++++++++++++++++++++++++
+>  kernel/bpf/syscall.c       |   7 ++
+>  5 files changed, 216 insertions(+), 1 deletion(-)
+>
+> diff --git a/include/linux/bpf-cgroup.h b/include/linux/bpf-cgroup.h
+> index 588dd5f0bd85..766f0223c222 100644
+> --- a/include/linux/bpf-cgroup.h
+> +++ b/include/linux/bpf-cgroup.h
+> @@ -109,6 +109,8 @@ int __cgroup_bpf_run_filter_sock_ops(struct sock *sk,
+>  int __cgroup_bpf_check_dev_permission(short dev_type, u32 major, u32 min=
+or,
+>                                       short access, enum bpf_attach_type =
+type);
+>
+> +int __cgroup_bpf_file_filter(struct file *file, enum bpf_attach_type typ=
+e);
+> +
+>  static inline enum bpf_cgroup_storage_type cgroup_storage_type(
+>         struct bpf_map *map)
+>  {
+> @@ -253,6 +255,13 @@ int bpf_percpu_cgroup_storage_update(struct bpf_map =
+*map, void *key,
+>                                                                          =
+     \
+>         __ret;                                                           =
+     \
+>  })
+> +#define BPF_CGROUP_RUN_PROG_FILE_FILTER(file)                           =
+    \
+> +({                                                                      =
+     \
+> +       int __ret =3D 0;                                                 =
+       \
+> +       if (cgroup_bpf_enabled)                                          =
+     \
+> +               __ret =3D __cgroup_bpf_file_filter(file, BPF_CGROUP_FILE_=
+OPEN); \
+> +       __ret;                                                           =
+     \
+> +})
+>  int cgroup_bpf_prog_attach(const union bpf_attr *attr,
+>                            enum bpf_prog_type ptype, struct bpf_prog *pro=
+g);
+>  int cgroup_bpf_prog_detach(const union bpf_attr *attr,
+> @@ -321,6 +330,7 @@ static inline int bpf_percpu_cgroup_storage_update(st=
+ruct bpf_map *map,
+>  #define BPF_CGROUP_RUN_PROG_UDP6_SENDMSG_LOCK(sk, uaddr, t_ctx) ({ 0; })
+>  #define BPF_CGROUP_RUN_PROG_SOCK_OPS(sock_ops) ({ 0; })
+>  #define BPF_CGROUP_RUN_PROG_DEVICE_CGROUP(type,major,minor,access) ({ 0;=
+ })
+> +#define BPF_CGROUP_RUN_PROG_FILE_FILTER(file) ({ 0; })
+>
+>  #define for_each_cgroup_storage_type(stype) for (; false; )
+>
+> diff --git a/include/linux/bpf_types.h b/include/linux/bpf_types.h
+> index 5432f4c9f50e..f182b2e37b94 100644
+> --- a/include/linux/bpf_types.h
+> +++ b/include/linux/bpf_types.h
+> @@ -33,6 +33,7 @@ BPF_PROG_TYPE(BPF_PROG_TYPE_LIRC_MODE2, lirc_mode2)
+>  #ifdef CONFIG_INET
+>  BPF_PROG_TYPE(BPF_PROG_TYPE_SK_REUSEPORT, sk_reuseport)
+>  #endif
+> +BPF_PROG_TYPE(BPF_PROG_TYPE_FILE_FILTER, file_filter)
+>
+>  BPF_MAP_TYPE(BPF_MAP_TYPE_ARRAY, array_map_ops)
+>  BPF_MAP_TYPE(BPF_MAP_TYPE_PERCPU_ARRAY, percpu_array_map_ops)
+> diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
+> index f9187b41dff6..c0df8dd99edc 100644
+> --- a/include/uapi/linux/bpf.h
+> +++ b/include/uapi/linux/bpf.h
+> @@ -154,6 +154,7 @@ enum bpf_prog_type {
+>         BPF_PROG_TYPE_LIRC_MODE2,
+>         BPF_PROG_TYPE_SK_REUSEPORT,
+>         BPF_PROG_TYPE_FLOW_DISSECTOR,
+> +       BPF_PROG_TYPE_FILE_FILTER,
+>  };
+>
+>  enum bpf_attach_type {
+> @@ -175,6 +176,7 @@ enum bpf_attach_type {
+>         BPF_CGROUP_UDP6_SENDMSG,
+>         BPF_LIRC_MODE2,
+>         BPF_FLOW_DISSECTOR,
+> +       BPF_CGROUP_FILE_OPEN,
+>         __MAX_BPF_ATTACH_TYPE
+>  };
+>
+> @@ -2215,6 +2217,18 @@ union bpf_attr {
+>   *             pointer that was returned from bpf_sk_lookup_xxx\ ().
+>   *     Return
+>   *             0 on success, or a negative error in case of failure.
+> + *
+> + * int bpf_get_file_path(struct bpf_file_info *file, char *buf, u32 size=
+_of_buf)
+> + *     Description
+> + *             Reconstruct the full path of *file* and store it into *bu=
+f* of
+> + *             *size_of_buf*. The *size_of_buf* must be strictly positiv=
+e.
+> + *             On success, the helper makes sure that the *buf* is NUL-t=
+erminated.
+> + *             On failure, it is filled with string "(error)".
+> + *             This helper should only be used for debugging.
+> + *             'char *path' should never be used for permission checks.
+> + *     Return
+> + *             0 on success, or a negative error in case of failure.
+> + *
+>   */
+>  #define __BPF_FUNC_MAPPER(FN)          \
+>         FN(unspec),                     \
+> @@ -2303,7 +2317,8 @@ union bpf_attr {
+>         FN(skb_ancestor_cgroup_id),     \
+>         FN(sk_lookup_tcp),              \
+>         FN(sk_lookup_udp),              \
+> -       FN(sk_release),
+> +       FN(sk_release),                 \
+> +       FN(get_file_path),
+>
+>  /* integer value in 'imm' field of BPF_CALL instruction selects which he=
+lper
+>   * function eBPF program intends to call
+> @@ -2896,4 +2911,15 @@ struct bpf_flow_keys {
+>         };
+>  };
+>
+> +struct bpf_file_info {
+> +       __u64 inode;
+> +       __u32 dev_major;
+> +       __u32 dev_minor;
+> +       __u32 fs_magic;
+> +       __u32 mnt_id;
+> +       __u32 nlink;
+> +       __u32 mode;     /* file mode S_ISDIR, S_ISLNK, 0755, etc */
+> +       __u32 flags;    /* open flags O_RDWR, O_CREAT, etc */
+> +};
+[...]
