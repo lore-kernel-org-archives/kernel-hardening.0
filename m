@@ -1,7 +1,9 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v2 0/7] Rlimit for module space
-Date: Thu, 11 Oct 2018 16:31:10 -0700
-Message-Id: <20181011233117.7883-1-rick.p.edgecombe@intel.com>
+Subject: [PATCH v2 1/7] modules: Create rlimit for module space
+Date: Thu, 11 Oct 2018 16:31:11 -0700
+Message-Id: <20181011233117.7883-2-rick.p.edgecombe@intel.com>
+In-Reply-To: <20181011233117.7883-1-rick.p.edgecombe@intel.com>
+References: <20181011233117.7883-1-rick.p.edgecombe@intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -9,110 +11,279 @@ To: kernel-hardening@lists.openwall.com, daniel@iogearbox.net, keescook@chromium
 Cc: kristen@linux.intel.com, dave.hansen@intel.com, arjan@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
-
-This is v2 of a patch series that was first sent to security@kernel.org. The
-recommendation was to pursue the fix on public lists. First I’ll describe the
-issue that this is trying to solve, and then the general solution being
-proposed, and lastly summarize the feedback so far. At a high level, this is
-coming from a local DOS on eBPF, a KASLR module offset leak and desire for
-general hardening of module space usage.
-
-Problem
--------
-If BPF JIT is on, there is no effective limit to prevent filling the entire
-module space with JITed e/BPF filters. For classic BPF filters attached with
-setsockopt SO_ATTACH_FILTER, there is no memlock rlimit check to limit the
-number of insertions like this is for the bpf syscall. The cBPF gets converted
-to eBPF and then handled by the JIT depending on if JIT is enabled. There is a
-low enough default limit for open file descriptors per process, but this can be
-worked around easily by forking before inserting. If the memlock rlimit is set
-high for some other reason, eBPF programs inserted with the bpf syscall can also
-exhaust the space.
-
-This can cause problems not limited to:
- - Filling the entire module space with filters so that kernel modules cannot
-   be loaded.
- - If CONFIG_BPF_JIT_ALWAYS_ON is configured, then if the module space is full,
-   other BPF insertions will fail. This could cause filters that apps are
-   relying on for security to fail to insert.
- - Counting the allocations until failure, since the module space is
-   allocated linearly, the number of allocations can be used to de-randomize
-   modules, with KASLR module base randomization. (This has been POCed with some
-   assumptions)
-
-Thanks to Daniel Borkmann for helping me understand what was happening with the
-classic BPF JIT compilation and CONFIG_BPF_JIT_ALWAYS_ON config.
-
-Proposed solution
------------------
-The solution being proposed here is to add a per user rlimit for module space,
-similar to memlock rlimit. For the case of fds with attached filters being sent
-over domain sockets, there is tracking for the uid of each module allocation.
-
-Hopefully this could also be used for helping prevent BPF JIT spray type attacks
-if a lower, more locked down setting is used.
-
-The default memlock rlimit is pretty low, so just adding a check to classic BPF
-similar to what happens in the bpf syscall may cause breakages. In addition,
-some usages may increase the memlock limit for other reasons, which will remove
-the protection for exhausting the module space.
+This introduces a new rlimit, RLIMIT_MODSPACE, which limits the amount of
+module space a user can use. The intention is to be able to limit module space
+allocations that may come from un-privlidged users inserting e/BPF filters.
 
 There is unfortunately no cross platform place to perform this accounting
 during allocation in the module space, so instead two helpers are created to be
-inserted into the various arch’s that implement module_alloc. These helpers
-perform the checks and help with tracking. The intention is that they can be
-added to the other arch’s as easily as possible.
+inserted into the various arch’s that implement module_alloc. These
+helpers perform the checks and help with tracking. The intention is that they
+an be added to the various arch’s as easily as possible.
 
-For decrementing the module space usage when an area is free, there _is_ a
-cross-platform place to do this, so its done there. The behavior is that if the
-helpers to increment and check are not added into an arch’s module_alloc, then
-the decrement should have no effect. This is due to the allocation being missing
+Since filters attached to sockets can be passed to other processes via domain
+sockets and freed there, there is new tracking for the uid of each allocation.
+This way if the allocation is freed by a different user, it will not throw off
+the accounting.
+
+For decrementing the module space usage when an area is free, there is a
+cross-platform place to do this. The behavior is that if the helpers to
+increment and check are not added into an arch’s module_alloc, then the
+decrement should have no effect. This is due to the allocation being missing
 from the allocation-uid tracking.
 
-Changes since v1 RFC
---------------------
-Some feedback from Kees Cook was to try to plug this in for every architecture
-and so this is done in this set for every architecture that has a BPF JIT
-implementation. I have only done testing on x86.
+Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
+---
+ fs/proc/base.c                      |   1 +
+ include/asm-generic/resource.h      |   8 ++
+ include/linux/moduleloader.h        |   3 +
+ include/linux/sched/user.h          |   4 +
+ include/uapi/asm-generic/resource.h |   3 +-
+ kernel/module.c                     | 141 +++++++++++++++++++++++++++-
+ 6 files changed, 158 insertions(+), 2 deletions(-)
 
-There was also a suggestion from Daniel Borkmann to have default value for the
-rlimit scale with the module size. This was complicated because the module space
-size is not named the same accross architectures. It also is not always a
-compile time constant and so the struct initilization would need to be changed.
-So instead for this version a default value is added that can be overridden for
-each architecture. For this set it is just defined for x86, all others get the
-default.
-
-Questions
----------
- - Should there be any special behavior for root or users with superuser
-   capabilities?
-
-Rick Edgecombe (7):
-  modules: Create rlimit for module space
-  x86/modules: Add rlimit checking for x86 modules
-  arm/modules: Add rlimit checking for arm modules
-  arm64/modules: Add rlimit checking for arm64 modules
-  mips/modules: Add rlimit checking for mips modules
-  sparc/modules: Add rlimit for sparc modules
-  s390/modules: Add rlimit checking for s390 modules
-
- arch/arm/kernel/module.c                |  12 +-
- arch/arm64/kernel/module.c              |   5 +
- arch/mips/kernel/module.c               |  11 +-
- arch/s390/kernel/module.c               |  12 +-
- arch/sparc/kernel/module.c              |   5 +
- arch/x86/include/asm/pgtable_32_types.h |   3 +
- arch/x86/include/asm/pgtable_64_types.h |   2 +
- arch/x86/kernel/module.c                |   7 +-
- fs/proc/base.c                          |   1 +
- include/asm-generic/resource.h          |   8 ++
- include/linux/moduleloader.h            |   3 +
- include/linux/sched/user.h              |   4 +
- include/uapi/asm-generic/resource.h     |   3 +-
- kernel/module.c                         | 141 +++++++++++++++++++++++-
- 14 files changed, 210 insertions(+), 7 deletions(-)
-
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index 7e9f07bf260d..84824f50e9f8 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -562,6 +562,7 @@ static const struct limit_names lnames[RLIM_NLIMITS] = {
+ 	[RLIMIT_NICE] = {"Max nice priority", NULL},
+ 	[RLIMIT_RTPRIO] = {"Max realtime priority", NULL},
+ 	[RLIMIT_RTTIME] = {"Max realtime timeout", "us"},
++	[RLIMIT_MODSPACE] = {"Max module space", "bytes"},
+ };
+ 
+ /* Display limits for a process */
+diff --git a/include/asm-generic/resource.h b/include/asm-generic/resource.h
+index 8874f681b056..94c150e3dd12 100644
+--- a/include/asm-generic/resource.h
++++ b/include/asm-generic/resource.h
+@@ -4,6 +4,13 @@
+ 
+ #include <uapi/asm-generic/resource.h>
+ 
++/*
++ * If the module space rlimit is not defined in an arch specific way, leave
++ * room for 10000 large eBPF filters.
++ */
++#ifndef MODSPACE_LIMIT
++#define MODSPACE_LIMIT (5*PAGE_SIZE*10000)
++#endif
+ 
+ /*
+  * boot-time rlimit defaults for the init task:
+@@ -26,6 +33,7 @@
+ 	[RLIMIT_NICE]		= { 0, 0 },				\
+ 	[RLIMIT_RTPRIO]		= { 0, 0 },				\
+ 	[RLIMIT_RTTIME]		= {  RLIM_INFINITY,  RLIM_INFINITY },	\
++	[RLIMIT_MODSPACE]	= {  MODSPACE_LIMIT,  MODSPACE_LIMIT },	\
+ }
+ 
+ #endif
+diff --git a/include/linux/moduleloader.h b/include/linux/moduleloader.h
+index 31013c2effd3..206539e97579 100644
+--- a/include/linux/moduleloader.h
++++ b/include/linux/moduleloader.h
+@@ -86,6 +86,9 @@ void module_arch_cleanup(struct module *mod);
+ /* Any cleanup before freeing mod->module_init */
+ void module_arch_freeing_init(struct module *mod);
+ 
++int check_inc_mod_rlimit(unsigned long size);
++void update_mod_rlimit(void *addr, unsigned long size);
++
+ #ifdef CONFIG_KASAN
+ #include <linux/kasan.h>
+ #define MODULE_ALIGN (PAGE_SIZE << KASAN_SHADOW_SCALE_SHIFT)
+diff --git a/include/linux/sched/user.h b/include/linux/sched/user.h
+index 39ad98c09c58..4c6d99d066fe 100644
+--- a/include/linux/sched/user.h
++++ b/include/linux/sched/user.h
+@@ -44,6 +44,10 @@ struct user_struct {
+ 	atomic_long_t locked_vm;
+ #endif
+ 
++#ifdef CONFIG_MODULES
++	atomic_long_t module_vm;
++#endif
++
+ 	/* Miscellaneous per-user rate limit */
+ 	struct ratelimit_state ratelimit;
+ };
+diff --git a/include/uapi/asm-generic/resource.h b/include/uapi/asm-generic/resource.h
+index f12db7a0da64..3f998340ed30 100644
+--- a/include/uapi/asm-generic/resource.h
++++ b/include/uapi/asm-generic/resource.h
+@@ -46,7 +46,8 @@
+ 					   0-39 for nice level 19 .. -20 */
+ #define RLIMIT_RTPRIO		14	/* maximum realtime priority */
+ #define RLIMIT_RTTIME		15	/* timeout for RT tasks in us */
+-#define RLIM_NLIMITS		16
++#define RLIMIT_MODSPACE		16	/* max module space address usage */
++#define RLIM_NLIMITS		17
+ 
+ /*
+  * SuS says limits have to be unsigned.
+diff --git a/kernel/module.c b/kernel/module.c
+index 6746c85511fe..2ef9ed95bf60 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -2110,9 +2110,139 @@ static void free_module_elf(struct module *mod)
+ }
+ #endif /* CONFIG_LIVEPATCH */
+ 
++struct mod_alloc_user {
++	struct rb_node node;
++	unsigned long addr;
++	unsigned long pages;
++	kuid_t uid;
++};
++
++static struct rb_root alloc_users = RB_ROOT;
++static DEFINE_SPINLOCK(alloc_users_lock);
++
++static unsigned int get_mod_page_cnt(unsigned long size)
++{
++	/* Add one for guard page */
++	return (PAGE_ALIGN(size) >> PAGE_SHIFT) + 1;
++}
++
++void update_mod_rlimit(void *addr, unsigned long size)
++{
++	unsigned long addrl = (unsigned long) addr;
++	struct rb_node **new = &(alloc_users.rb_node), *parent = NULL;
++	struct mod_alloc_user *track = kmalloc(sizeof(struct mod_alloc_user),
++				GFP_KERNEL);
++	unsigned int pages = get_mod_page_cnt(size);
++
++	/*
++	 * If addr is NULL, then we need to reverse the earlier increment that
++	 * would have happened in an check_inc_mod_rlimit call.
++	 */
++	if (!addr) {
++		struct user_struct *user = get_current_user();
++
++		atomic_long_sub(pages, &user->module_vm);
++		free_uid(user);
++		return;
++	}
++
++	/* Now, add tracking for the uid that allocated this */
++	track->uid = current_uid();
++	track->addr = addrl;
++	track->pages = pages;
++
++	spin_lock(&alloc_users_lock);
++
++	while (*new) {
++		struct mod_alloc_user *cur =
++				rb_entry(*new, struct mod_alloc_user, node);
++		parent = *new;
++		if (cur->addr > addrl)
++			new = &(*new)->rb_left;
++		else
++			new = &(*new)->rb_right;
++	}
++
++	rb_link_node(&(track->node), parent, new);
++	rb_insert_color(&(track->node), &alloc_users);
++
++	spin_unlock(&alloc_users_lock);
++}
++
++/* Remove user allocation tracking, return NULL if allocation untracked */
++static struct user_struct *remove_user_alloc(void *addr, unsigned long *pages)
++{
++	struct rb_node *cur_node = alloc_users.rb_node;
++	unsigned long addrl = (unsigned long) addr;
++	struct mod_alloc_user *cur_alloc_user = NULL;
++	struct user_struct *user;
++
++	spin_lock(&alloc_users_lock);
++	while (cur_node) {
++		cur_alloc_user =
++			rb_entry(cur_node, struct mod_alloc_user, node);
++		if (cur_alloc_user->addr > addrl)
++			cur_node = cur_node->rb_left;
++		else if (cur_alloc_user->addr < addrl)
++			cur_node = cur_node->rb_right;
++		else
++			goto found;
++	}
++	spin_unlock(&alloc_users_lock);
++
++	return NULL;
++found:
++	rb_erase(&cur_alloc_user->node, &alloc_users);
++	spin_unlock(&alloc_users_lock);
++
++	user = find_user(cur_alloc_user->uid);
++	*pages = cur_alloc_user->pages;
++	kfree(cur_alloc_user);
++
++	return user;
++}
++
++int check_inc_mod_rlimit(unsigned long size)
++{
++	struct user_struct *user = get_current_user();
++	unsigned long modspace_pages = rlimit(RLIMIT_MODSPACE) >> PAGE_SHIFT;
++	unsigned long cur_pages = atomic_long_read(&user->module_vm);
++	unsigned long new_pages = get_mod_page_cnt(size);
++
++	if (rlimit(RLIMIT_MODSPACE) != RLIM_INFINITY
++			&& cur_pages + new_pages > modspace_pages) {
++		free_uid(user);
++		return 1;
++	}
++
++	atomic_long_add(new_pages, &user->module_vm);
++
++	if (atomic_long_read(&user->module_vm) > modspace_pages) {
++		atomic_long_sub(new_pages, &user->module_vm);
++		free_uid(user);
++		return 1;
++	}
++
++	free_uid(user);
++	return 0;
++}
++
++void dec_mod_rlimit(void *addr)
++{
++	unsigned long pages;
++	struct user_struct *user = remove_user_alloc(addr, &pages);
++
++	if (!user)
++		return;
++
++	atomic_long_sub(pages, &user->module_vm);
++	free_uid(user);
++}
++
+ void __weak module_memfree(void *module_region)
+ {
+ 	vfree(module_region);
++	dec_mod_rlimit(module_region);
+ }
+ 
+ void __weak module_arch_cleanup(struct module *mod)
+@@ -2730,7 +2860,16 @@ static void dynamic_debug_remove(struct module *mod, struct _ddebug *debug)
+ 
+ void * __weak module_alloc(unsigned long size)
+ {
+-	return vmalloc_exec(size);
++	void *p;
++
++	if (check_inc_mod_rlimit(size))
++		return NULL;
++
++	p = vmalloc_exec(size);
++
++	update_mod_rlimit(p, size);
++
++	return p;
+ }
+ 
+ #ifdef CONFIG_DEBUG_KMEMLEAK
 -- 
 2.17.1
