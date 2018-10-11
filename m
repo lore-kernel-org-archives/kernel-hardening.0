@@ -1,146 +1,92 @@
-MIME-Version: 1.0
-References: <CALS6=qXmb0sXPbaSS-9ftRidxNSCck-NMxQWpA9AfCWFhwXKwg@mail.gmail.com>
- <CALS6=qUf52a877nH414P0T2B7_9=A6FvqBLc24a-5duX0KrtSQ@mail.gmail.com> <CAGXu5j+kx_QE8fN0QjCLh-EwObTKfh9xt4BxBA0mF40oygcvqQ@mail.gmail.com>
-In-Reply-To: <CAGXu5j+kx_QE8fN0QjCLh-EwObTKfh9xt4BxBA0mF40oygcvqQ@mail.gmail.com>
-From: Carter Cheng <cartercheng@gmail.com>
-Date: Fri, 12 Oct 2018 02:52:53 +0800
-Message-ID: <CALS6=qWHdneaZ3=_BaZHKn=QeLGK6X_nUwxVA1+siJ-D4uuAvw@mail.gmail.com>
-Subject: Re: link time analysis for the kernel.
-Content-Type: multipart/alternative; boundary="00000000000018e6290577f87bb7"
-To: keescook@chromium.org
-Cc: kernel-hardening@lists.openwall.com
+From: Kristen Carlson Accardi <kristen@linux.intel.com>
+Subject: [PATCH] x86: entry: flush the cache if syscall error
+Date: Thu, 11 Oct 2018 11:54:58 -0700
+Message-Id: <20181011185458.10186-1-kristen@linux.intel.com>
+Cc: kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Andy Lutomirski <luto@kernel.org>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
---00000000000018e6290577f87bb7
-Content-Type: text/plain; charset="UTF-8"
+This patch aims to make it harder to perform cache timing attacks on data
+left behind by system calls. If we have an error returned from a syscall,
+flush the L1 cache.
 
-Thanks for the detailed reply. I actually am exploring whether it's
-feasible perhaps in the coming months for me to look at implementing some
-kind of automatic solution to the memory safety issue. I posted about this
-briefly before earlier this month on the mailing list. I am currently
-reviewing the relevant papers I have found and doing some exploratory
-thinking about the problem.
+It's important to note that this patch is not addressing any specific
+exploit, nor is it intended to be a complete defense against anything.
+It is intended to be a low cost way of eliminating some of side effects
+of a failed system call.
 
-On Fri, Oct 12, 2018 at 12:59 AM Kees Cook <keescook@chromium.org> wrote:
+A performance test using sysbench on one hyperthread and a script which
+attempts to repeatedly access files it does not have permission to access
+on the other hyperthread found no significant performance impact.
 
-> On Thu, Oct 11, 2018 at 9:38 AM, Carter Cheng <cartercheng@gmail.com>
-> wrote:
-> > There are some detaills about the current procedures for linking the
-> kernel
-> > that I am unfamiliar with. My understanding is that GCC and Clang both
-> have
-> > the ability to do link time analysis and transforms on code but is it
-> > possible to write link time passes that will run on the kernel since the
-> > linking phase is a bit different (i.e. doesnt produce an ELF file)?
->
-> I think you'd need to build with LTO for this to work. I'm not sure
-> what the state of gcc and LTO against the kernel is right now, but it
-> works under Clang[0] with some patches[1].
->
-> For gcc, once you get LTO working, I assume you'd want to write a
-> linker plugin[2].
->
-> >
-> > Are there other tools that are used for the purpose of analysing the
-> kernel
-> > and patching it? I have encountered a tool called Coccinelle but I am
-> > uncertain if CTL can be used to simulate the analysis I would need for
-> > adding and eliding runtime checks on various pointer operations.
->
-> Coccinelle isn't a linker, but rather a static analysis and semantic
-> patching tool. It's possible it might be able to do what you need,
-> though. What are you working on, specifically?
->
-> > I assume from previous discussions that the gcc would be best since clang
-> > still doesn't correctly compile the kernel without patches.
->
-> Building the kernel for arm64 works well with Clang. Doing x86 builds
-> requires a little more work, but that should be solved soon only
-> asm-goto support lands (it's under development now...)
->
-> -Kees
->
-> [0] https://llvm.org/docs/LinkTimeOptimization.html
-> [1] https://android-review.googlesource.com/q/topic:android-4.14-lto
-> [2] https://www.cleancss.com/explain-command/gcc/79600
->
-> --
-> Kees Cook
-> Pixel Security
->
+Suggested-by: Alan Cox <alan@linux.intel.com>
+Signed-off-by: Kristen Carlson Accardi <kristen@linux.intel.com>
+---
+ arch/x86/Kconfig        |  9 +++++++++
+ arch/x86/entry/common.c | 18 ++++++++++++++++++
+ 2 files changed, 27 insertions(+)
 
---00000000000018e6290577f87bb7
-Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-
-<div dir=3D"ltr">Thanks for the detailed reply. I actually am exploring whe=
-ther it&#39;s feasible perhaps in the coming months for me to look at imple=
-menting some kind of automatic solution to the memory safety issue. I poste=
-d about this briefly before earlier this month on the mailing list. I am cu=
-rrently reviewing the relevant papers I have found and doing some explorato=
-ry thinking about the problem.</div><br><div class=3D"gmail_quote"><div dir=
-=3D"ltr">On Fri, Oct 12, 2018 at 12:59 AM Kees Cook &lt;<a href=3D"mailto:k=
-eescook@chromium.org">keescook@chromium.org</a>&gt; wrote:<br></div><blockq=
-uote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc =
-solid;padding-left:1ex">On Thu, Oct 11, 2018 at 9:38 AM, Carter Cheng &lt;<=
-a href=3D"mailto:cartercheng@gmail.com" target=3D"_blank">cartercheng@gmail=
-.com</a>&gt; wrote:<br>
-&gt; There are some detaills about the current procedures for linking the k=
-ernel<br>
-&gt; that I am unfamiliar with. My understanding is that GCC and Clang both=
- have<br>
-&gt; the ability to do link time analysis and transforms on code but is it<=
-br>
-&gt; possible to write link time passes that will run on the kernel since t=
-he<br>
-&gt; linking phase is a bit different (i.e. doesnt produce an ELF file)?<br=
->
-<br>
-I think you&#39;d need to build with LTO for this to work. I&#39;m not sure=
-<br>
-what the state of gcc and LTO against the kernel is right now, but it<br>
-works under Clang[0] with some patches[1].<br>
-<br>
-For gcc, once you get LTO working, I assume you&#39;d want to write a<br>
-linker plugin[2].<br>
-<br>
-&gt;<br>
-&gt; Are there other tools that are used for the purpose of analysing the k=
-ernel<br>
-&gt; and patching it? I have encountered a tool called Coccinelle but I am<=
-br>
-&gt; uncertain if CTL can be used to simulate the analysis I would need for=
-<br>
-&gt; adding and eliding runtime checks on various pointer operations.<br>
-<br>
-Coccinelle isn&#39;t a linker, but rather a static analysis and semantic<br=
->
-patching tool. It&#39;s possible it might be able to do what you need,<br>
-though. What are you working on, specifically?<br>
-<br>
-&gt; I assume from previous discussions that the gcc would be best since cl=
-ang<br>
-&gt; still doesn&#39;t correctly compile the kernel without patches.<br>
-<br>
-Building the kernel for arm64 works well with Clang. Doing x86 builds<br>
-requires a little more work, but that should be solved soon only<br>
-asm-goto support lands (it&#39;s under development now...)<br>
-<br>
--Kees<br>
-<br>
-[0] <a href=3D"https://llvm.org/docs/LinkTimeOptimization.html" rel=3D"nore=
-ferrer" target=3D"_blank">https://llvm.org/docs/LinkTimeOptimization.html</=
-a><br>
-[1] <a href=3D"https://android-review.googlesource.com/q/topic:android-4.14=
--lto" rel=3D"noreferrer" target=3D"_blank">https://android-review.googlesou=
-rce.com/q/topic:android-4.14-lto</a><br>
-[2] <a href=3D"https://www.cleancss.com/explain-command/gcc/79600" rel=3D"n=
-oreferrer" target=3D"_blank">https://www.cleancss.com/explain-command/gcc/7=
-9600</a><br>
-<br>
--- <br>
-Kees Cook<br>
-Pixel Security<br>
-</blockquote></div>
-
---00000000000018e6290577f87bb7--
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 1a0be022f91d..bde978eb3b4e 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -445,6 +445,15 @@ config RETPOLINE
+ 	  code are eliminated. Since this includes the syscall entry path,
+ 	  it is not entirely pointless.
+ 
++config SYSCALL_FLUSH
++	bool "Clear L1 Cache on syscall errors"
++	default n
++	help
++	  Selecting 'y' allows the L1 cache to be cleared upon return of
++	  an error code from a syscall if the CPU supports "flush_l1d".
++	  This may reduce the likelyhood of speculative execution style
++	  attacks on syscalls.
++
+ config INTEL_RDT
+ 	bool "Intel Resource Director Technology support"
+ 	default n
+diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
+index 3b2490b81918..26de8ea71293 100644
+--- a/arch/x86/entry/common.c
++++ b/arch/x86/entry/common.c
+@@ -268,6 +268,20 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
+ 	prepare_exit_to_usermode(regs);
+ }
+ 
++__visible inline void l1_cache_flush(struct pt_regs *regs)
++{
++	if (IS_ENABLED(CONFIG_SYSCALL_FLUSH) &&
++	    static_cpu_has(X86_FEATURE_FLUSH_L1D)) {
++		if (regs->ax == 0 || regs->ax == -EAGAIN ||
++		    regs->ax == -EEXIST || regs->ax == -ENOENT ||
++		    regs->ax == -EXDEV || regs->ax == -ETIMEDOUT ||
++		    regs->ax == -ENOTCONN || regs->ax == -EINPROGRESS)
++			return;
++
++		wrmsrl(MSR_IA32_FLUSH_CMD, L1D_FLUSH);
++	}
++}
++
+ #ifdef CONFIG_X86_64
+ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
+ {
+@@ -290,6 +304,8 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
+ 		regs->ax = sys_call_table[nr](regs);
+ 	}
+ 
++	l1_cache_flush(regs);
++
+ 	syscall_return_slowpath(regs);
+ }
+ #endif
+@@ -338,6 +354,8 @@ static __always_inline void do_syscall_32_irqs_on(struct pt_regs *regs)
+ #endif /* CONFIG_IA32_EMULATION */
+ 	}
+ 
++	l1_cache_flush(regs);
++
+ 	syscall_return_slowpath(regs);
+ }
+ 
+-- 
+2.14.4
