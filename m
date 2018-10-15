@@ -1,46 +1,42 @@
+From: Khalid Aziz <khalid.aziz@oracle.com>
+Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
+ in mind (for KVM to isolate its guests per CPU)
+References: <CA+55aFxyUdhYjnQdnmWAt8tTwn4HQ1xz3SAMZJiawkLpMiJ_+w@mail.gmail.com>
+ <ciirm8a7p3alos.fsf@u54ee758033e858cfa736.ant.amazon.com>
+ <CA+55aFzHj_GNZWG4K2oDu4DPP9sZdTZ9PY7sBxGB6WoN9g8d=A@mail.gmail.com>
+ <ciirm8zhwyiqh4.fsf@u54ee758033e858cfa736.ant.amazon.com>
+ <ciirm8efdy916l.fsf@u54ee758033e858cfa736.ant.amazon.com>
+ <5efc291c-b0ed-577e-02d1-285d080c293d@oracle.com>
+ <ciirm8va743105.fsf@u54ee758033e858cfa736.ant.amazon.com>
+ <7221975d-6b67-effa-2747-06c22c041e78@oracle.com>
+ <1537800341.9745.20.camel@amazon.de>
+Message-ID: <063f5efc-afb2-471f-eb4b-79bf90db22dd@oracle.com>
+Date: Mon, 15 Oct 2018 02:07:17 -0600
 MIME-Version: 1.0
-References: <20181011233117.7883-1-rick.p.edgecombe@intel.com>
- <20181011233117.7883-2-rick.p.edgecombe@intel.com> <CAG48ez2fWg64nGxDXUQS3695KpVNrakAbarXJnYPd6xv5wOD+A@mail.gmail.com>
- <7b0714e26c7c2216721641d7df16a49687927e37.camel@intel.com>
- <CAG48ez0XfGFAWDYa75COMPCsKqqGfBFOtcNuGD4_dubGf2YeAQ@mail.gmail.com> <657e6d0ada18e8ca0350bc6b3a80c49b3c0b341c.camel@intel.com>
-In-Reply-To: <657e6d0ada18e8ca0350bc6b3a80c49b3c0b341c.camel@intel.com>
-From: Jann Horn <jannh@google.com>
-Date: Sat, 13 Oct 2018 02:09:09 +0200
-Message-ID: <CAG48ez383rjt+v_DvLF902X33od_SwMh8dZ-6=w1DZ-YPZ_U9Q@mail.gmail.com>
-Subject: Re: [PATCH v2 1/7] modules: Create rlimit for module space
-Content-Type: text/plain; charset="UTF-8"
-To: rick.p.edgecombe@intel.com
-Cc: linux-fsdevel@vger.kernel.org, kernel list <linux-kernel@vger.kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Kees Cook <keescook@chromium.org>, jeyu@kernel.org, Arjan van de Ven <arjan@linux.intel.com>, linux-mips@linux-mips.org, Thomas Gleixner <tglx@linutronix.de>, linux-s390 <linux-s390@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, kristen@linux.intel.com, deneen.t.dock@intel.com, Catalin Marinas <catalin.marinas@arm.com>, Ingo Molnar <mingo@redhat.com>, Will Deacon <will.deacon@arm.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave.hansen@intel.com>, linux-arm-kernel@lists.infradead.org, "David S. Miller" <davem@davemloft.net>, linux-arch <linux-arch@vger.kernel.org>, Arnd Bergmann <arnd@arndb.de>, sparclinux@vger.kernel.org
+In-Reply-To: <1537800341.9745.20.camel@amazon.de>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: "Stecklina, Julian" <jsteckli@amazon.de>
+Cc: "juerg.haefliger@hpe.com" <juerg.haefliger@hpe.com>, "deepa.srinivasan@oracle.com" <deepa.srinivasan@oracle.com>, "jmattson@google.com" <jmattson@google.com>, "andrew.cooper3@citrix.com" <andrew.cooper3@citrix.com>, "Woodhouse, David" <dwmw@amazon.co.uk>, "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "boris.ostrovsky@oracle.com" <boris.ostrovsky@oracle.com>, "pradeep.vincent@oracle.com" <pradeep.vincent@oracle.com>, "konrad.wilk@oracle.com" <konrad.wilk@oracle.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "kanth.ghatraju@oracle.com" <kanth.ghatraju@oracle.com>, "joao.m.martins@oracle.com" <joao.m.martins@oracle.com>, "liran.alon@oracle.com" <liran.alon@oracle.com>, "ak@linux.intel.com" <ak@linux.intel.com>, "keescook@google.com" <keescook@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "chris.hyser@oracle.com" <chris.hyser@oracle.com>, "tyhicks@canonical.com" <tyhicks@canonical.com>, "john.haxby@oracle.com" <john.haxby@oracle.com>, "jcm@redhat.com" <jcm@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Oct 13, 2018 at 2:04 AM Edgecombe, Rick P
-<rick.p.edgecombe@intel.com> wrote:
-> On Fri, 2018-10-12 at 19:22 +0200, Jann Horn wrote:
-> > On Fri, Oct 12, 2018 at 7:04 PM Edgecombe, Rick P
-> > <rick.p.edgecombe@intel.com> wrote:
-> > > On Fri, 2018-10-12 at 02:35 +0200, Jann Horn wrote:
-> > > > Why all the rbtree stuff instead of stashing a pointer in struct
-> > > > vmap_area, or something like that?
-> > >
-> > > Since the tracking was not for all vmalloc usage, the intention was to not
-> > > bloat
-> > > the structure for other usages likes stacks. I thought usually there
-> > > wouldn't be
-> > > nearly as much module space allocations as there would be kernel stacks, but
-> > > I
-> > > didn't do any actual measurements on the tradeoffs.
-> >
-> > I imagine that one extra pointer in there - pointing to your struct
-> > mod_alloc_user - would probably not be terrible. 8 bytes more per
-> > kernel stack shouldn't be so bad?
->
-> I looked into this and it starts to look a little messy. The nommu.c version of
-> vmalloc doesn't use or expose access to vmap_area or vm_struct. So it starts to
-> look like a bunch of IFDEFs to remove the rlimit in the nommu case or making a
-> stand in that maintains pretend vm struct's in nommu.c. I had actually
-> previously tried to at least pull the allocations size from vmalloc structs, but it broke on nommu.
->
-> Thought I would check back and see. How important do you think this is?
+On 09/24/2018 08:45 AM, Stecklina, Julian wrote:
+> I didn't test the version with TLB flushes, because it's clear that the
+> overhead is so bad that no one wants to use this.
 
-I don't think it's important - I just thought that it would be nice to
-avoid the extra complexity if it is easily avoidable.
+I don't think we can ignore the vulnerability caused by not flushing 
+stale TLB entries. On a mostly idle system, TLB entries hang around long 
+enough to make it fairly easy to exploit this. I was able to use the 
+additional test in lkdtm module added by this patch series to 
+successfully read pages unmapped from physmap by just waiting for system 
+to become idle. A rogue program can simply monitor system load and mount 
+its attack using ret2dir exploit when system is mostly idle. This brings 
+us back to the prohibitive cost of TLB flushes. If we are unmapping a 
+page from physmap every time the page is allocated to userspace, we are 
+forced to incur the cost of TLB flushes in some way. Work Tycho was 
+doing to implement Dave's suggestion can help here. Once Tycho has 
+something working, I can measure overhead on my test machine. Tycho, I 
+can help with your implementation if you need.
+
+--
+Khalid
