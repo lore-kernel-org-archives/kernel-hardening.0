@@ -1,45 +1,68 @@
-Date: Tue, 16 Oct 2018 13:44:05 +0200 (CEST)
-From: Jiri Kosina <jikos@kernel.org>
-Subject: Re: [PATCH v5 2/5] Smack: Prepare for PTRACE_MODE_SCHED
-In-Reply-To: <CAG48ez1OiAvqqtLXpBjxz-=9X+YdtR9iF7fA_pXhu2GfBt5osw@mail.gmail.com>
-Message-ID: <nycvar.YFH.7.76.1810161343110.23511@cbobk.fhfr.pm>
-References: <20180926203446.2004-1-casey.schaufler@intel.com> <20180926203446.2004-3-casey.schaufler@intel.com> <CAG48ez3_XJYCURiCurDeCousGguGUdPego30j5+UF8FebWxUtA@mail.gmail.com> <99FC4B6EFCEFD44486C35F4C281DC673214625EA@ORSMSX107.amr.corp.intel.com>
- <CAG48ez1+9Bfadu4y4TzPYJfFpLk+N8w7GdCE+xwNCM5TfQ8W8Q@mail.gmail.com> <nycvar.YFH.7.76.1810040942110.14430@cbobk.fhfr.pm> <CAG48ez1OiAvqqtLXpBjxz-=9X+YdtR9iF7fA_pXhu2GfBt5osw@mail.gmail.com>
+From: Michael Ellerman <mpe@ellerman.id.au>
+Subject: [PATCH] seq_buf: Make seq_buf_puts() NULL terminate the buffer
+Date: Wed, 17 Oct 2018 23:10:00 +1100
+Message-Id: <20181017121000.30240-1-mpe@ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Jann Horn <jannh@google.com>
-Cc: Casey Schaufler <casey.schaufler@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, selinux@tycho.nsa.gov, Dave Hansen <dave.hansen@intel.com>, deneen.t.dock@intel.com, kristen@linux.intel.com, Arjan van de Ven <arjan@linux.intel.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+To: rostedt@goodmis.org
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 4 Oct 2018, Jann Horn wrote:
+Currently seq_buf_puts() will happily create a non NULL terminated
+string for you in the buffer. This is particularly dangerous if the
+buffer is on the stack.
 
-> > Well, we can't really call out into audit from scheduler code, and the
-> > previous versions of the patchsets didn't have PTRACE_MODE_SCHED, so it
-> > had to be included in PTRACE_MODE_IBPB in order to make sure we're not
-> > calling into audit from context switch code.
-> >
-> > Or did I misunderstand the question?
-> 
-> If I understand Casey correctly, he is saying that your patch
-> (https://lore.kernel.org/lkml/nycvar.YFH.7.76.1809251437340.15880@cbobk.fhfr.pm/)
-> doesn't include PTRACE_MODE_NOAUDIT for IBPB, but the previous v6 of
-> your patch (https://lore.kernel.org/lkml/nycvar.YFH.7.76.1809121105330.15880@cbobk.fhfr.pm/)
-> did include it, and therefore Casey thinks that there is a specific
-> reason why you removed PTRACE_MODE_NOAUDIT, 
+For example:
 
-Quite honestly, I don't remember. I dont't think there is any deadlock 
-that'd be triggered by this.
+  char buf[8];
+  char secret = "secret";
+  struct seq_buf s;
 
-> and therefore Casey is adding special-case logic for PTRACE_MODE_SCHED 
-> to Smack when simply using PTRACE_MODE_NOAUDIT would also work.
-> 
-> I think that Casey should change ptrace_may_access_sched() to use
-> "mode | PTRACE_MODE_SCHED | PTRACE_MODE_NOAUDIT".
+  seq_buf_init(&s, buf, sizeof(buf));
+  seq_buf_puts(&s, "foo");
+  printk("Message is %s\n", buf);
 
-Agreed, that should work.
+Can result in:
 
-Thanks,
+  Message is fooªªªªªsecret
 
+We could require all users to memset() their buffer to NULL before
+use. But that seems likely to be forgotten and lead to bugs.
+
+Instead we can change seq_buf_puts() to always leave the buffer in a
+NULL terminated state.
+
+The only downside is that this makes the buffer 1 character smaller
+for seq_buf_puts(), but that seems like a good trade off.
+
+Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+---
+ lib/seq_buf.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+I recently merged a patch which actually hit this behaviour. I worked
+around it by using seq_buf_printf(), but it would be good to fix the
+problem at the source.
+
+diff --git a/lib/seq_buf.c b/lib/seq_buf.c
+index 11f2ae0f9099..b1570204cde3 100644
+--- a/lib/seq_buf.c
++++ b/lib/seq_buf.c
+@@ -144,9 +144,13 @@ int seq_buf_puts(struct seq_buf *s, const char *str)
+ 
+ 	WARN_ON(s->size == 0);
+ 
++	/* Add 1 to len for the trailing NULL which must be there */
++	len += 1;
++
+ 	if (seq_buf_can_fit(s, len)) {
+ 		memcpy(s->buffer + s->len, str, len);
+-		s->len += len;
++		/* Don't count the trailing NULL against the capacity */
++		s->len += len - 1;
+ 		return 0;
+ 	}
+ 	seq_buf_set_overflow(s);
 -- 
-Jiri Kosina
-SUSE Labs
+2.17.1
