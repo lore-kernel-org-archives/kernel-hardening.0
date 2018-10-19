@@ -1,291 +1,165 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v3 2/3] modules: Create rlimit for module space
-Date: Fri, 19 Oct 2018 13:47:22 -0700
-Message-Id: <20181019204723.3903-3-rick.p.edgecombe@intel.com>
+Subject: [PATCH v3 3/3] bpf: Add system wide BPF JIT limit
+Date: Fri, 19 Oct 2018 13:47:23 -0700
+Message-Id: <20181019204723.3903-4-rick.p.edgecombe@intel.com>
 In-Reply-To: <20181019204723.3903-1-rick.p.edgecombe@intel.com>
 References: <20181019204723.3903-1-rick.p.edgecombe@intel.com>
 To: kernel-hardening@lists.openwall.com, daniel@iogearbox.net, keescook@chromium.org, catalin.marinas@arm.com, will.deacon@arm.com, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, x86@kernel.org, arnd@arndb.de, jeyu@kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, linux-mips@linux-mips.org, linux-s390@vger.kernel.org, sparclinux@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, jannh@google.com
 Cc: kristen@linux.intel.com, dave.hansen@intel.com, arjan@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This introduces a new rlimit, RLIMIT_MODSPACE, which limits the amount of
-module space a user can use. The intention is to be able to limit module space
-allocations that may come from un-privlidged users inserting e/BPF filters.
+In case of games played with multiple users, also add a system wide limit
+(in bytes) for BPF JIT. The default intends to be big enough for 10000 BPF JIT
+filters. This cannot help with the DOS in the case of
+CONFIG_BPF_JIT_ALWAYS_ON, but it can help with DOS for module space and
+with forcing a module to be loaded at a paticular address.
 
-Since filters attached to sockets can be passed to other processes via domain
-sockets and freed there, there is new tracking for the uid of each allocation.
-This way if the allocation is freed by a different user, it will not throw off
-the accounting.
+The limit can be set like this:
+echo 5000000 > /proc/sys/net/core/bpf_jit_limit
 
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/include/asm/pgtable_32_types.h |   3 +
- arch/x86/include/asm/pgtable_64_types.h |   2 +
- fs/proc/base.c                          |   1 +
- include/asm-generic/resource.h          |   8 ++
- include/linux/sched/user.h              |   4 +
- include/uapi/asm-generic/resource.h     |   3 +-
- kernel/module.c                         | 140 +++++++++++++++++++++++-
- 7 files changed, 159 insertions(+), 2 deletions(-)
+ include/linux/bpf.h        |  7 +++++++
+ include/linux/filter.h     |  1 +
+ kernel/bpf/core.c          | 22 +++++++++++++++++++++-
+ kernel/bpf/inode.c         | 16 ++++++++++++++++
+ net/core/sysctl_net_core.c |  7 +++++++
+ 5 files changed, 52 insertions(+), 1 deletion(-)
 
-diff --git a/arch/x86/include/asm/pgtable_32_types.h b/arch/x86/include/asm/pgtable_32_types.h
-index b0bc0fff5f1f..185e382fa8c3 100644
---- a/arch/x86/include/asm/pgtable_32_types.h
-+++ b/arch/x86/include/asm/pgtable_32_types.h
-@@ -68,6 +68,9 @@ extern bool __vmalloc_start_set; /* set once high_memory is set */
- #define MODULES_END	VMALLOC_END
- #define MODULES_LEN	(MODULES_VADDR - MODULES_END)
+diff --git a/include/linux/bpf.h b/include/linux/bpf.h
+index 523481a3471b..4d7b729a1fe7 100644
+--- a/include/linux/bpf.h
++++ b/include/linux/bpf.h
+@@ -827,4 +827,11 @@ extern const struct bpf_func_proto bpf_get_local_storage_proto;
+ void bpf_user_rnd_init_once(void);
+ u64 bpf_user_rnd_u32(u64 r1, u64 r2, u64 r3, u64 r4, u64 r5);
  
-+/* Half of 128MB vmalloc space */
-+#define MODSPACE_LIMIT (1 << 25)
-+
- #define MAXMEM	(VMALLOC_END - PAGE_OFFSET - __VMALLOC_RESERVE)
- 
- #endif /* _ASM_X86_PGTABLE_32_DEFS_H */
-diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/asm/pgtable_64_types.h
-index 04edd2d58211..39288812be5a 100644
---- a/arch/x86/include/asm/pgtable_64_types.h
-+++ b/arch/x86/include/asm/pgtable_64_types.h
-@@ -143,6 +143,8 @@ extern unsigned int ptrs_per_p4d;
- #define MODULES_END		_AC(0xffffffffff000000, UL)
- #define MODULES_LEN		(MODULES_END - MODULES_VADDR)
- 
-+#define MODSPACE_LIMIT		(MODULES_LEN / 10)
-+
- #define ESPFIX_PGD_ENTRY	_AC(-2, UL)
- #define ESPFIX_BASE_ADDR	(ESPFIX_PGD_ENTRY << P4D_SHIFT)
- 
-diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 7e9f07bf260d..84824f50e9f8 100644
---- a/fs/proc/base.c
-+++ b/fs/proc/base.c
-@@ -562,6 +562,7 @@ static const struct limit_names lnames[RLIM_NLIMITS] = {
- 	[RLIMIT_NICE] = {"Max nice priority", NULL},
- 	[RLIMIT_RTPRIO] = {"Max realtime priority", NULL},
- 	[RLIMIT_RTTIME] = {"Max realtime timeout", "us"},
-+	[RLIMIT_MODSPACE] = {"Max module space", "bytes"},
- };
- 
- /* Display limits for a process */
-diff --git a/include/asm-generic/resource.h b/include/asm-generic/resource.h
-index 8874f681b056..94c150e3dd12 100644
---- a/include/asm-generic/resource.h
-+++ b/include/asm-generic/resource.h
-@@ -4,6 +4,13 @@
- 
- #include <uapi/asm-generic/resource.h>
- 
++#ifndef MOD_BPF_LIMIT_DEFAULT
 +/*
-+ * If the module space rlimit is not defined in an arch specific way, leave
-+ * room for 10000 large eBPF filters.
++ * Leave room for 10000 large eBPF filters as default.
 + */
-+#ifndef MODSPACE_LIMIT
-+#define MODSPACE_LIMIT (5*PAGE_SIZE*10000)
-+#endif
- 
- /*
-  * boot-time rlimit defaults for the init task:
-@@ -26,6 +33,7 @@
- 	[RLIMIT_NICE]		= { 0, 0 },				\
- 	[RLIMIT_RTPRIO]		= { 0, 0 },				\
- 	[RLIMIT_RTTIME]		= {  RLIM_INFINITY,  RLIM_INFINITY },	\
-+	[RLIMIT_MODSPACE]	= {  MODSPACE_LIMIT,  MODSPACE_LIMIT },	\
- }
- 
- #endif
-diff --git a/include/linux/sched/user.h b/include/linux/sched/user.h
-index 39ad98c09c58..4c6d99d066fe 100644
---- a/include/linux/sched/user.h
-+++ b/include/linux/sched/user.h
-@@ -44,6 +44,10 @@ struct user_struct {
- 	atomic_long_t locked_vm;
- #endif
- 
-+#ifdef CONFIG_MODULES
-+	atomic_long_t module_vm;
++#define MOD_BPF_LIMIT_DEFAULT (5 * PAGE_SIZE * 10000)
 +#endif
 +
- 	/* Miscellaneous per-user rate limit */
- 	struct ratelimit_state ratelimit;
- };
-diff --git a/include/uapi/asm-generic/resource.h b/include/uapi/asm-generic/resource.h
-index f12db7a0da64..3f998340ed30 100644
---- a/include/uapi/asm-generic/resource.h
-+++ b/include/uapi/asm-generic/resource.h
-@@ -46,7 +46,8 @@
- 					   0-39 for nice level 19 .. -20 */
- #define RLIMIT_RTPRIO		14	/* maximum realtime priority */
- #define RLIMIT_RTTIME		15	/* timeout for RT tasks in us */
--#define RLIM_NLIMITS		16
-+#define RLIMIT_MODSPACE		16	/* max module space address usage */
-+#define RLIM_NLIMITS		17
+ #endif /* _LINUX_BPF_H */
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index 6791a0ac0139..3e91ffc7962b 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -854,6 +854,7 @@ bpf_run_sk_reuseport(struct sock_reuseport *reuse, struct sock *sk,
+ extern int bpf_jit_enable;
+ extern int bpf_jit_harden;
+ extern int bpf_jit_kallsyms;
++extern int bpf_jit_limit;
  
- /*
-  * SuS says limits have to be unsigned.
-diff --git a/kernel/module.c b/kernel/module.c
-index 41c22aba8209..c26ad50365dd 100644
---- a/kernel/module.c
-+++ b/kernel/module.c
-@@ -2110,6 +2110,134 @@ static void free_module_elf(struct module *mod)
- }
- #endif /* CONFIG_LIVEPATCH */
+ typedef void (*bpf_jit_fill_hole_t)(void *area, unsigned int size);
  
-+struct mod_alloc_user {
-+	struct rb_node node;
-+	unsigned long addr;
-+	unsigned long pages;
-+	struct user_struct *user;
-+};
+diff --git a/kernel/bpf/core.c b/kernel/bpf/core.c
+index 3f5bf1af0826..12c20fa6f04b 100644
+--- a/kernel/bpf/core.c
++++ b/kernel/bpf/core.c
+@@ -369,6 +369,9 @@ void bpf_prog_kallsyms_del_all(struct bpf_prog *fp)
+ int bpf_jit_enable   __read_mostly = IS_BUILTIN(CONFIG_BPF_JIT_ALWAYS_ON);
+ int bpf_jit_harden   __read_mostly;
+ int bpf_jit_kallsyms __read_mostly;
++int bpf_jit_limit __read_mostly;
 +
-+static struct rb_root alloc_users = RB_ROOT;
-+static DEFINE_SPINLOCK(alloc_users_lock);
-+
-+static unsigned int get_mod_page_cnt(unsigned long size)
-+{
-+	/* Add one for guard page */
-+	return (PAGE_ALIGN(size) >> PAGE_SHIFT) + 1;
-+}
-+
-+void update_mod_rlimit(void *addr, unsigned long size)
-+{
-+	unsigned long addrl = (unsigned long) addr;
-+	struct rb_node **new = &(alloc_users.rb_node), *parent = NULL;
-+	struct mod_alloc_user *track = kmalloc(sizeof(struct mod_alloc_user),
-+				GFP_KERNEL);
-+	unsigned int pages = get_mod_page_cnt(size);
-+	struct user_struct *user = get_current_user();
-+
-+	/*
-+	 * If addr is NULL, then we need to reverse the earlier increment that
-+	 * would have happened in an check_inc_mod_rlimit call.
-+	 */
-+	if (!addr) {
-+		atomic_long_sub(pages, &user->module_vm);
-+		free_uid(user);
-+		return;
-+	}
-+
-+	/* Now, add tracking for the uid that allocated this */
-+	track->addr = addrl;
-+	track->pages = pages;
-+	track->user = user;
-+
-+	spin_lock(&alloc_users_lock);
-+
-+	while (*new) {
-+		struct mod_alloc_user *cur =
-+				rb_entry(*new, struct mod_alloc_user, node);
-+		parent = *new;
-+		if (cur->addr > addrl)
-+			new = &(*new)->rb_left;
-+		else
-+			new = &(*new)->rb_right;
-+	}
-+
-+	rb_link_node(&(track->node), parent, new);
-+	rb_insert_color(&(track->node), &alloc_users);
-+
-+	spin_unlock(&alloc_users_lock);
-+}
-+
-+/* Remove user allocation tracking, return NULL if allocation untracked */
-+static struct user_struct *remove_user_alloc(void *addr, unsigned long *pages)
-+{
-+	struct rb_node *cur_node = alloc_users.rb_node;
-+	unsigned long addrl = (unsigned long) addr;
-+	struct mod_alloc_user *cur_alloc_user = NULL;
-+	struct user_struct *user;
-+
-+	spin_lock(&alloc_users_lock);
-+	while (cur_node) {
-+		cur_alloc_user =
-+			rb_entry(cur_node, struct mod_alloc_user, node);
-+		if (cur_alloc_user->addr > addrl)
-+			cur_node = cur_node->rb_left;
-+		else if (cur_alloc_user->addr < addrl)
-+			cur_node = cur_node->rb_right;
-+		else
-+			goto found;
-+	}
-+	spin_unlock(&alloc_users_lock);
-+
-+	return NULL;
-+found:
-+	rb_erase(&cur_alloc_user->node, &alloc_users);
-+	spin_unlock(&alloc_users_lock);
-+
-+	user = cur_alloc_user->user;
-+	*pages = cur_alloc_user->pages;
-+	kfree(cur_alloc_user);
-+
-+	return user;
-+}
-+
-+int check_inc_mod_rlimit(unsigned long size)
-+{
-+	struct user_struct *user = get_current_user();
-+	unsigned long modspace_pages = rlimit(RLIMIT_MODSPACE) >> PAGE_SHIFT;
-+	unsigned long cur_pages = atomic_long_read(&user->module_vm);
-+	unsigned long new_pages = get_mod_page_cnt(size);
-+
-+	if (rlimit(RLIMIT_MODSPACE) != RLIM_INFINITY
-+			&& cur_pages + new_pages > modspace_pages) {
-+		free_uid(user);
-+		return 1;
-+	}
-+
-+	atomic_long_add(new_pages, &user->module_vm);
-+
-+	if (atomic_long_read(&user->module_vm) > modspace_pages) {
-+		atomic_long_sub(new_pages, &user->module_vm);
-+		free_uid(user);
-+		return 1;
-+	}
-+
-+	free_uid(user);
-+	return 0;
-+}
-+
-+void dec_mod_rlimit(void *addr)
-+{
-+	unsigned long pages;
-+	struct user_struct *user = remove_user_alloc(addr, &pages);
-+
-+	if (!user)
-+		return;
-+
-+	atomic_long_sub(pages, &user->module_vm);
-+	free_uid(user);
-+}
-+
- void __weak arch_module_memfree(void *module_region)
++static atomic_long_t module_vm;
+ 
+ static __always_inline void
+ bpf_get_prog_addr_region(const struct bpf_prog *prog,
+@@ -583,17 +586,31 @@ bpf_jit_binary_alloc(unsigned int proglen, u8 **image_ptr,
+ 		     bpf_jit_fill_hole_t bpf_fill_ill_insns)
  {
- 	vfree(module_region);
-@@ -2118,6 +2246,7 @@ void __weak arch_module_memfree(void *module_region)
- void module_memfree(void *module_region)
- {
- 	arch_module_memfree(module_region);
-+	dec_mod_rlimit(module_region);
- }
+ 	struct bpf_binary_header *hdr;
+-	unsigned int size, hole, start;
++	unsigned int size, hole, start, vpages;
  
- void __weak module_arch_cleanup(struct module *mod)
-@@ -2740,7 +2869,16 @@ void * __weak arch_module_alloc(unsigned long size)
- 
- void *module_alloc(unsigned long size)
- {
--	return arch_module_alloc(size);
-+	void *p;
+ 	/* Most of BPF filters are really small, but if some of them
+ 	 * fill a page, allow at least 128 extra bytes to insert a
+ 	 * random section of illegal instructions.
+ 	 */
+ 	size = round_up(proglen + sizeof(*hdr) + 128, PAGE_SIZE);
 +
-+	if (check_inc_mod_rlimit(size))
++	/* Size plus a guard page */
++	vpages = (PAGE_ALIGN(size) >> PAGE_SHIFT) + 1;
++
++	if (atomic_long_read(&module_vm) + vpages > bpf_jit_limit >> PAGE_SHIFT)
 +		return NULL;
 +
-+	p = arch_module_alloc(size);
+ 	hdr = module_alloc(size);
+ 	if (hdr == NULL)
+ 		return NULL;
+ 
++	atomic_long_add(vpages, &module_vm);
 +
-+	update_mod_rlimit(p, size);
++	if (atomic_long_read(&module_vm) > bpf_jit_limit >> PAGE_SHIFT) {
++		bpf_jit_binary_free(hdr);
++		return NULL;
++	}
 +
-+	return p;
+ 	/* Fill space with illegal/arch-dep instructions. */
+ 	bpf_fill_ill_insns(hdr, size);
+ 
+@@ -610,7 +627,10 @@ bpf_jit_binary_alloc(unsigned int proglen, u8 **image_ptr,
+ 
+ void bpf_jit_binary_free(struct bpf_binary_header *hdr)
+ {
++	/* Size plus the guard page */
++	unsigned int vpages = hdr->pages + 1;
+ 	module_memfree(hdr);
++	atomic_long_sub(vpages, &module_vm);
  }
  
- #ifdef CONFIG_DEBUG_KMEMLEAK
+ /* This symbol is only overridden by archs that have different
+diff --git a/kernel/bpf/inode.c b/kernel/bpf/inode.c
+index 2ada5e21dfa6..d0a109733294 100644
+--- a/kernel/bpf/inode.c
++++ b/kernel/bpf/inode.c
+@@ -667,10 +667,26 @@ static struct file_system_type bpf_fs_type = {
+ 	.kill_sb	= kill_litter_super,
+ };
+ 
++#ifdef CONFIG_BPF_JIT
++void set_bpf_jit_limit(void)
++{
++	bpf_jit_limit = MOD_BPF_LIMIT_DEFAULT;
++}
++#else
++void set_bpf_jit_limit(void)
++{
++}
++#endif
++
+ static int __init bpf_init(void)
+ {
+ 	int ret;
+ 
++	/*
++	 * Module space size can be non-compile time constant so set it here.
++	 */
++	set_bpf_jit_limit();
++
+ 	ret = sysfs_create_mount_point(fs_kobj, "bpf");
+ 	if (ret)
+ 		return ret;
+diff --git a/net/core/sysctl_net_core.c b/net/core/sysctl_net_core.c
+index b1a2c5e38530..6bdf4a3da2b2 100644
+--- a/net/core/sysctl_net_core.c
++++ b/net/core/sysctl_net_core.c
+@@ -396,6 +396,13 @@ static struct ctl_table net_core_table[] = {
+ 		.extra1		= &zero,
+ 		.extra2		= &one,
+ 	},
++	{
++		.procname	= "bpf_jit_limit",
++		.data		= &bpf_jit_limit,
++		.maxlen		= sizeof(int),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec,
++	},
+ # endif
+ #endif
+ 	{
 -- 
 2.17.1
