@@ -1,67 +1,40 @@
 From: Michael Ellerman <mpe@ellerman.id.au>
-Subject: [PATCH v2 1/2] seq_buf: Make seq_buf_puts() null-terminate the buffer
-Date: Fri, 19 Oct 2018 15:21:08 +1100
-Message-Id: <20181019042109.8064-1-mpe@ellerman.id.au>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH v2 2/2] seq_buf: Use size_t for len in seq_buf_puts()
+Date: Fri, 19 Oct 2018 15:21:09 +1100
+Message-Id: <20181019042109.8064-2-mpe@ellerman.id.au>
+In-Reply-To: <20181019042109.8064-1-mpe@ellerman.id.au>
+References: <20181019042109.8064-1-mpe@ellerman.id.au>
 To: rostedt@goodmis.org
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, jannh@google.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently seq_buf_puts() will happily create a non null-terminated
-string for you in the buffer. This is particularly dangerous if the
-buffer is on the stack.
+Jann Horn points out that we're using unsigned int for len in
+seq_buf_puts(), which could potentially overflow if we're passed a
+UINT_MAX sized string.
 
-For example:
+The rest of the code already uses size_t, so we should also use that
+in seq_buf_puts() to avoid any issues.
 
-  char buf[8];
-  char secret = "secret";
-  struct seq_buf s;
-
-  seq_buf_init(&s, buf, sizeof(buf));
-  seq_buf_puts(&s, "foo");
-  printk("Message is %s\n", buf);
-
-Can result in:
-
-  Message is fooªªªªªsecret
-
-We could require all users to memset() their buffer to zero before
-use. But that seems likely to be forgotten and lead to bugs.
-
-Instead we can change seq_buf_puts() to always leave the buffer in a
-null-terminated state.
-
-The only downside is that this makes the buffer 1 character smaller
-for seq_buf_puts(), but that seems like a good trade off.
-
-Acked-by: Kees Cook <keescook@chromium.org>
+Suggested-by: Jann Horn <jannh@google.com>
 Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
 ---
- lib/seq_buf.c | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
+ lib/seq_buf.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-v2: Fix NULL/null terminology.
+v2: New in v2.
 
 diff --git a/lib/seq_buf.c b/lib/seq_buf.c
-index 11f2ae0f9099..6aabb609dd87 100644
+index 6aabb609dd87..bd807f545a9d 100644
 --- a/lib/seq_buf.c
 +++ b/lib/seq_buf.c
-@@ -144,9 +144,13 @@ int seq_buf_puts(struct seq_buf *s, const char *str)
+@@ -140,7 +140,7 @@ int seq_buf_bprintf(struct seq_buf *s, const char *fmt, const u32 *binary)
+  */
+ int seq_buf_puts(struct seq_buf *s, const char *str)
+ {
+-	unsigned int len = strlen(str);
++	size_t len = strlen(str);
  
  	WARN_ON(s->size == 0);
  
-+	/* Add 1 to len for the trailing null byte which must be there */
-+	len += 1;
-+
- 	if (seq_buf_can_fit(s, len)) {
- 		memcpy(s->buffer + s->len, str, len);
--		s->len += len;
-+		/* Don't count the trailing null byte against the capacity */
-+		s->len += len - 1;
- 		return 0;
- 	}
- 	seq_buf_set_overflow(s);
 -- 
 2.17.2
