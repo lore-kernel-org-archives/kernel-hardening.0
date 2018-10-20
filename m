@@ -1,165 +1,112 @@
-From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v3 3/3] bpf: Add system wide BPF JIT limit
-Date: Fri, 19 Oct 2018 13:47:23 -0700
-Message-Id: <20181019204723.3903-4-rick.p.edgecombe@intel.com>
+MIME-Version: 1.0
 In-Reply-To: <20181019204723.3903-1-rick.p.edgecombe@intel.com>
 References: <20181019204723.3903-1-rick.p.edgecombe@intel.com>
-To: kernel-hardening@lists.openwall.com, daniel@iogearbox.net, keescook@chromium.org, catalin.marinas@arm.com, will.deacon@arm.com, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, x86@kernel.org, arnd@arndb.de, jeyu@kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, linux-mips@linux-mips.org, linux-s390@vger.kernel.org, sparclinux@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-arch@vger.kernel.org, jannh@google.com
-Cc: kristen@linux.intel.com, dave.hansen@intel.com, arjan@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Sat, 20 Oct 2018 19:20:03 +0200
+Message-ID: <CAKv+Gu_AgPv2o4=U0-7pnpgtSufEobnta8oKhhGfCdCxM82B5Q@mail.gmail.com>
+Subject: Re: [PATCH RFC v3 0/3] Rlimit for module space
+Content-Type: text/plain; charset="UTF-8"
+To: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Daniel Borkmann <daniel@iogearbox.net>, Kees Cook <keescook@chromium.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "David S. Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, the arch/x86 maintainers <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Jessica Yu <jeyu@kernel.org>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-mips <linux-mips@linux-mips.org>, linux-s390 <linux-s390@vger.kernel.org>, sparclinux@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>, Jann Horn <jannh@google.com>, kristen@linux.intel.com, Dave Hansen <dave.hansen@intel.com>, arjan@linux.intel.com, deneen.t.dock@intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In case of games played with multiple users, also add a system wide limit
-(in bytes) for BPF JIT. The default intends to be big enough for 10000 BPF JIT
-filters. This cannot help with the DOS in the case of
-CONFIG_BPF_JIT_ALWAYS_ON, but it can help with DOS for module space and
-with forcing a module to be loaded at a paticular address.
+Hi Rick,
 
-The limit can be set like this:
-echo 5000000 > /proc/sys/net/core/bpf_jit_limit
+On 19 October 2018 at 22:47, Rick Edgecombe <rick.p.edgecombe@intel.com> wrote:
+> If BPF JIT is on, there is no effective limit to prevent filling the entire
+> module space with JITed e/BPF filters.
 
-Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
----
- include/linux/bpf.h        |  7 +++++++
- include/linux/filter.h     |  1 +
- kernel/bpf/core.c          | 22 +++++++++++++++++++++-
- kernel/bpf/inode.c         | 16 ++++++++++++++++
- net/core/sysctl_net_core.c |  7 +++++++
- 5 files changed, 52 insertions(+), 1 deletion(-)
+Why do BPF filters use the module space, and does this reason apply to
+all architectures?
 
-diff --git a/include/linux/bpf.h b/include/linux/bpf.h
-index 523481a3471b..4d7b729a1fe7 100644
---- a/include/linux/bpf.h
-+++ b/include/linux/bpf.h
-@@ -827,4 +827,11 @@ extern const struct bpf_func_proto bpf_get_local_storage_proto;
- void bpf_user_rnd_init_once(void);
- u64 bpf_user_rnd_u32(u64 r1, u64 r2, u64 r3, u64 r4, u64 r5);
- 
-+#ifndef MOD_BPF_LIMIT_DEFAULT
-+/*
-+ * Leave room for 10000 large eBPF filters as default.
-+ */
-+#define MOD_BPF_LIMIT_DEFAULT (5 * PAGE_SIZE * 10000)
-+#endif
-+
- #endif /* _LINUX_BPF_H */
-diff --git a/include/linux/filter.h b/include/linux/filter.h
-index 6791a0ac0139..3e91ffc7962b 100644
---- a/include/linux/filter.h
-+++ b/include/linux/filter.h
-@@ -854,6 +854,7 @@ bpf_run_sk_reuseport(struct sock_reuseport *reuse, struct sock *sk,
- extern int bpf_jit_enable;
- extern int bpf_jit_harden;
- extern int bpf_jit_kallsyms;
-+extern int bpf_jit_limit;
- 
- typedef void (*bpf_jit_fill_hole_t)(void *area, unsigned int size);
- 
-diff --git a/kernel/bpf/core.c b/kernel/bpf/core.c
-index 3f5bf1af0826..12c20fa6f04b 100644
---- a/kernel/bpf/core.c
-+++ b/kernel/bpf/core.c
-@@ -369,6 +369,9 @@ void bpf_prog_kallsyms_del_all(struct bpf_prog *fp)
- int bpf_jit_enable   __read_mostly = IS_BUILTIN(CONFIG_BPF_JIT_ALWAYS_ON);
- int bpf_jit_harden   __read_mostly;
- int bpf_jit_kallsyms __read_mostly;
-+int bpf_jit_limit __read_mostly;
-+
-+static atomic_long_t module_vm;
- 
- static __always_inline void
- bpf_get_prog_addr_region(const struct bpf_prog *prog,
-@@ -583,17 +586,31 @@ bpf_jit_binary_alloc(unsigned int proglen, u8 **image_ptr,
- 		     bpf_jit_fill_hole_t bpf_fill_ill_insns)
- {
- 	struct bpf_binary_header *hdr;
--	unsigned int size, hole, start;
-+	unsigned int size, hole, start, vpages;
- 
- 	/* Most of BPF filters are really small, but if some of them
- 	 * fill a page, allow at least 128 extra bytes to insert a
- 	 * random section of illegal instructions.
- 	 */
- 	size = round_up(proglen + sizeof(*hdr) + 128, PAGE_SIZE);
-+
-+	/* Size plus a guard page */
-+	vpages = (PAGE_ALIGN(size) >> PAGE_SHIFT) + 1;
-+
-+	if (atomic_long_read(&module_vm) + vpages > bpf_jit_limit >> PAGE_SHIFT)
-+		return NULL;
-+
- 	hdr = module_alloc(size);
- 	if (hdr == NULL)
- 		return NULL;
- 
-+	atomic_long_add(vpages, &module_vm);
-+
-+	if (atomic_long_read(&module_vm) > bpf_jit_limit >> PAGE_SHIFT) {
-+		bpf_jit_binary_free(hdr);
-+		return NULL;
-+	}
-+
- 	/* Fill space with illegal/arch-dep instructions. */
- 	bpf_fill_ill_insns(hdr, size);
- 
-@@ -610,7 +627,10 @@ bpf_jit_binary_alloc(unsigned int proglen, u8 **image_ptr,
- 
- void bpf_jit_binary_free(struct bpf_binary_header *hdr)
- {
-+	/* Size plus the guard page */
-+	unsigned int vpages = hdr->pages + 1;
- 	module_memfree(hdr);
-+	atomic_long_sub(vpages, &module_vm);
- }
- 
- /* This symbol is only overridden by archs that have different
-diff --git a/kernel/bpf/inode.c b/kernel/bpf/inode.c
-index 2ada5e21dfa6..d0a109733294 100644
---- a/kernel/bpf/inode.c
-+++ b/kernel/bpf/inode.c
-@@ -667,10 +667,26 @@ static struct file_system_type bpf_fs_type = {
- 	.kill_sb	= kill_litter_super,
- };
- 
-+#ifdef CONFIG_BPF_JIT
-+void set_bpf_jit_limit(void)
-+{
-+	bpf_jit_limit = MOD_BPF_LIMIT_DEFAULT;
-+}
-+#else
-+void set_bpf_jit_limit(void)
-+{
-+}
-+#endif
-+
- static int __init bpf_init(void)
- {
- 	int ret;
- 
-+	/*
-+	 * Module space size can be non-compile time constant so set it here.
-+	 */
-+	set_bpf_jit_limit();
-+
- 	ret = sysfs_create_mount_point(fs_kobj, "bpf");
- 	if (ret)
- 		return ret;
-diff --git a/net/core/sysctl_net_core.c b/net/core/sysctl_net_core.c
-index b1a2c5e38530..6bdf4a3da2b2 100644
---- a/net/core/sysctl_net_core.c
-+++ b/net/core/sysctl_net_core.c
-@@ -396,6 +396,13 @@ static struct ctl_table net_core_table[] = {
- 		.extra1		= &zero,
- 		.extra2		= &one,
- 	},
-+	{
-+		.procname	= "bpf_jit_limit",
-+		.data		= &bpf_jit_limit,
-+		.maxlen		= sizeof(int),
-+		.mode		= 0600,
-+		.proc_handler	= proc_dointvec,
-+	},
- # endif
- #endif
- 	{
--- 
-2.17.1
+On arm64, we already support loading plain modules far away from the
+core kernel (i.e. out of range for ordinary relative jump/calll
+instructions), and so I'd expect BPF to be able to deal with this
+already as well. So for arm64, I wonder why an ordinary vmalloc_exec()
+wouldn't be more appropriate.
+
+So before refactoring the module alloc/free routines to accommodate
+BPF, I'd like to take one step back and assess whether it wouldn't be
+more appropriate to have a separate bpf_alloc/free API, which could be
+totally separate from module alloc/free if the arch permits it.
+
+
+> For classic BPF filters attached with
+> setsockopt SO_ATTACH_FILTER, there is no memlock rlimit check to limit the
+> number of insertions like there is for the bpf syscall.
+>
+> This patch adds a per user rlimit for module space, as well as a system wide
+> limit for BPF JIT. In a previously reviewed patchset, Jann Horn pointed out the
+> problem that in some cases a user can get access to 65536 UIDs, so the effective
+> limit cannot be set low enough to stop an attacker and be useful for the general
+> case. A discussed alternative solution was a system wide limit for BPF JIT
+> filters. This much more simply resolves the problem of exhaustion and
+> de-randomizing in the case of non-CONFIG_BPF_JIT_ALWAYS_ON. If
+> CONFIG_BPF_JIT_ALWAYS_ON is on however, BPF insertions will fail if another user
+> exhausts the BPF JIT limit. In this case a per user limit is still needed. If
+> the subuid facility is disabled for normal users, this should still be ok
+> because the higher limit will not be able to be worked around that way.
+>
+> The new BPF JIT limit can be set like this:
+> echo 5000000 > /proc/sys/net/core/bpf_jit_limit
+>
+> So I *think* this patchset should resolve that issue except for the
+> configuration of CONFIG_BPF_JIT_ALWAYS_ON and subuid allowed for normal users.
+> Better module space KASLR is another way to resolve the de-randomizing issue,
+> and so then you would just be left with the BPF DOS in that configuration.
+>
+> Jann also pointed out how, with purposely fragmenting the module space, you
+> could make the effective module space blockage area much larger. This is also
+> somewhat un-resolved. The impact would depend on how big of a space you are
+> trying to allocate. The limit has been lowered on x86_64 so that at least
+> typical sized BPF filters cannot be blocked.
+>
+> If anyone with more experience with subuid/user namespaces has any suggestions
+> I'd be glad to hear. On an Ubuntu machine it didn't seem like a un-privileged
+> user could do this. I am going to keep working on this and see if I can find a
+> better solution.
+>
+> Changes since v2:
+>  - System wide BPF JIT limit (discussion with Jann Horn)
+>  - Holding reference to user correctly (Jann)
+>  - Having arch versions of modulde_alloc (Dave Hansen, Jessica Yu)
+>  - Shrinking of default limits, to help prevent the limit being worked around
+>    with fragmentation (Jann)
+>
+> Changes since v1:
+>  - Plug in for non-x86
+>  - Arch specific default values
+>
+>
+> Rick Edgecombe (3):
+>   modules: Create arch versions of module alloc/free
+>   modules: Create rlimit for module space
+>   bpf: Add system wide BPF JIT limit
+>
+>  arch/arm/kernel/module.c                |   2 +-
+>  arch/arm64/kernel/module.c              |   2 +-
+>  arch/mips/kernel/module.c               |   2 +-
+>  arch/nds32/kernel/module.c              |   2 +-
+>  arch/nios2/kernel/module.c              |   4 +-
+>  arch/parisc/kernel/module.c             |   2 +-
+>  arch/s390/kernel/module.c               |   2 +-
+>  arch/sparc/kernel/module.c              |   2 +-
+>  arch/unicore32/kernel/module.c          |   2 +-
+>  arch/x86/include/asm/pgtable_32_types.h |   3 +
+>  arch/x86/include/asm/pgtable_64_types.h |   2 +
+>  arch/x86/kernel/module.c                |   2 +-
+>  fs/proc/base.c                          |   1 +
+>  include/asm-generic/resource.h          |   8 ++
+>  include/linux/bpf.h                     |   7 ++
+>  include/linux/filter.h                  |   1 +
+>  include/linux/sched/user.h              |   4 +
+>  include/uapi/asm-generic/resource.h     |   3 +-
+>  kernel/bpf/core.c                       |  22 +++-
+>  kernel/bpf/inode.c                      |  16 +++
+>  kernel/module.c                         | 152 +++++++++++++++++++++++-
+>  net/core/sysctl_net_core.c              |   7 ++
+>  22 files changed, 233 insertions(+), 15 deletions(-)
+>
+> --
+> 2.17.1
+>
