@@ -1,48 +1,61 @@
 From: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>
-Subject: Read Only Enforcement patches V4 [VMM based kernel hardening]
-Date: Sun, 21 Oct 2018 00:21:22 +0200
-Message-Id: <20181020222127.6368-1-ahmedsoliman0x666@gmail.com>
+Subject: [PATCH V4 1/5] KVM: X86: Memory ROE documentation
+Date: Sun, 21 Oct 2018 00:21:23 +0200
+Message-Id: <20181020222127.6368-2-ahmedsoliman0x666@gmail.com>
+In-Reply-To: <20181020222127.6368-1-ahmedsoliman0x666@gmail.com>
+References: <20181020222127.6368-1-ahmedsoliman0x666@gmail.com>
 To: Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, Jonathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, hpa@zytor.com, x86@kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, ahmedsoliman0x666@gmail.com, Ovich00@gmail.com, kernel-hardening@lists.openwall.com, nigel.edwards@hpe.com, Boris Lukashev <blukashev@sempervictus.com>, Hossam Hassan <7ossam9063@gmail.com>, Ahmed Lotfy <A7med.lotfey@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is the 4th version and the most complete one. ROE is a hypercall
-that enables host operating system to restrict guest's access to its own memory.
-This will provide a hardening mechanism that can be used to stop rootkits from
-manipulating kernel static data structures and code. Once a memory region is
-protected the guest kernel can't even request undoing the protection.
+Following up with my previous threads on KVM assisted Anti rootkit
+protections.
+The current version doesn't address the attacks involving pages
+remapping. It is still design in progress, nevertheless, it will be in
+my later patch sets.
 
-Memory protected by ROE should be non-swapable because even if the ROE protected
-page got swapped out, It won't be possible to write anything in its place.
+Signed-off-by: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>
+---
+ Documentation/virtual/kvm/hypercalls.txt | 31 ++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
 
-ROE hypercall should be capable of either protecting a whole memory frame or
-parts of it. With these two, it should be possible for guest kernel to protect
-its memory and all the page table entries for that memory inside the page table.
-I am still not sure whether this should be part of ROE job or the guest's job.
-
-
-The reason why it would be better to implement this from inside kvm: instead of
-(host) user space is the need to access SPTEs to modify the permissions, while
-mprotect() from user space can work in theory. It will become a big performance
-hit to vmexit and switch to user space mode on each fault, on the other hand,
-having the permission handled by EPT should make some remarkable performance
-gain.
-
-Our model assumes that an attacker got full root access to a running guest and
-his goal is to manipulate kernel code/data (hook syscalls, overwrite IDT ..etc).
-
-There is future work in progress to also put some sort of protection on the page
-table register CR3 and other critical registers that can be intercepted by KVM.
-This way it won't be possible for an attacker to manipulate any part of the
-guests page table.
-
-Summary:
-
-Documentation/virtual/kvm/hypercalls.txt | 40 -----
-arch/x86/include/asm/kvm_host.h | 11 +-
-arch/x86/kvm/Kconfig | 7 -
-arch/x86/kvm/mmu.c | 129 ++++----------
-arch/x86/kvm/x86.c | 281 +------------------------------
-include/linux/kvm_host.h | 29 ----
-include/uapi/linux/kvm_para.h | 5 -
-virt/kvm/kvm_main.c | 119 ++-----------
-8 files changed, 50 insertions(+), 571 deletions(-)
+diff --git a/Documentation/virtual/kvm/hypercalls.txt b/Documentation/virtual/kvm/hypercalls.txt
+index da24c138c8d1..8af64d826f03 100644
+--- a/Documentation/virtual/kvm/hypercalls.txt
++++ b/Documentation/virtual/kvm/hypercalls.txt
+@@ -141,3 +141,34 @@ a0 corresponds to the APIC ID in the third argument (a2), bit 1
+ corresponds to the APIC ID a2+1, and so on.
+ 
+ Returns the number of CPUs to which the IPIs were delivered successfully.
++
++7. KVM_HC_ROE
++----------------
++Architecture: x86
++Status: active
++Purpose: Hypercall used to apply Read-Only Enforcement to guest memory and
++registers
++Usage 1:
++     a0: ROE_VERSION
++
++Returns non-signed number that represents the current version of ROE
++implementation current version.
++
++Usage 2:
++
++     a0: ROE_MPROTECT	(requires version >= 1)
++     a1: Start address aligned to page boundary.
++     a2: Number of pages to be protected.
++
++This configuration lets a guest kernel have part of its read/write memory
++converted into read-only.  This action is irreversible.
++Upon successful run, the number of pages protected is returned.
++
++Error codes:
++	-KVM_ENOSYS: system call being triggered from ring 3 or it is not
++	implemented.
++	-EINVAL: error based on given parameters.
++
++Notes: KVM_HC_ROE can not be triggered from guest Ring 3 (user mode). The
++reason is that user mode malicious software can make use of it to enforce read
++only protection on an arbitrary memory page thus crashing the kernel.
+-- 
+2.18.1
