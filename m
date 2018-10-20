@@ -1,511 +1,500 @@
 From: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>
-Subject: [PATCH V4 3/5] KVM: X86: Adding skeleton for Memory ROE
-Date: Sun, 21 Oct 2018 00:21:25 +0200
-Message-Id: <20181020222127.6368-4-ahmedsoliman0x666@gmail.com>
+Subject: [PATCH V4 4/5] KVM: X86: Adding support for byte granular memory ROE
+Date: Sun, 21 Oct 2018 00:21:26 +0200
+Message-Id: <20181020222127.6368-5-ahmedsoliman0x666@gmail.com>
 In-Reply-To: <20181020222127.6368-1-ahmedsoliman0x666@gmail.com>
 References: <20181020222127.6368-1-ahmedsoliman0x666@gmail.com>
 To: Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, Jonathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, hpa@zytor.com, x86@kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, ahmedsoliman0x666@gmail.com, Ovich00@gmail.com, kernel-hardening@lists.openwall.com, nigel.edwards@hpe.com, Boris Lukashev <blukashev@sempervictus.com>, Hossam Hassan <7ossam9063@gmail.com>, Ahmed Lotfy <A7med.lotfey@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This patch introduces a hypercall implemented for X86 that can assist
-against subset of kernel rootkits, it works by place readonly protection in
-shadow PTE. The end result protection is also kept in a bitmap for each
-kvm_memory_slot and is used as reference when updating SPTEs. The whole
-goal is to protect the guest kernel static data from modification if
-attacker is running from guest ring 0, for this reason there is no
-hypercall to revert effect of Memory ROE hypercall. This patch doesn't
-implement integrity check on guest TLB so obvious attack on the current
-implementation will involve guest virtual address -> guest physical
-address remapping, but there are plans to fix that.
+This patch documents and implements ROE_MPROTECT_CHUNK, a part of ROE
+hypercall designed to protect regions of a memory page with byte
+granularity. This feature provides a key primitive to protect against
+attacks involving pages remapping. However this attack  will be
+addressed in future patches.
 
 Signed-off-by: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>
 ---
- arch/x86/include/asm/kvm_host.h |  11 ++-
- arch/x86/kvm/Kconfig            |   7 ++
- arch/x86/kvm/mmu.c              |  72 +++++++++++++---
- arch/x86/kvm/x86.c              | 143 +++++++++++++++++++++++++++++++-
- include/linux/kvm_host.h        |   3 +
- include/uapi/linux/kvm_para.h   |   4 +
- virt/kvm/kvm_main.c             |  34 +++++++-
- 7 files changed, 255 insertions(+), 19 deletions(-)
+ Documentation/virtual/kvm/hypercalls.txt |   9 ++
+ arch/x86/kvm/mmu.c                       |   6 +-
+ arch/x86/kvm/x86.c                       | 156 +++++++++++++++++++++--
+ include/linux/kvm_host.h                 |  26 ++++
+ include/uapi/linux/kvm_para.h            |   1 +
+ virt/kvm/kvm_main.c                      |  88 +++++++++++--
+ 6 files changed, 266 insertions(+), 20 deletions(-)
 
-diff --git a/arch/x86/include/asm/kvm_host.h b/arch/x86/include/asm/kvm_host.h
-index 09b2e3e2cf1b..aa080c3e302e 100644
---- a/arch/x86/include/asm/kvm_host.h
-+++ b/arch/x86/include/asm/kvm_host.h
-@@ -238,6 +238,15 @@ struct kvm_mmu_memory_cache {
- 	void *objects[KVM_NR_MEM_OBJS];
- };
+diff --git a/Documentation/virtual/kvm/hypercalls.txt b/Documentation/virtual/kvm/hypercalls.txt
+index 8af64d826f03..8708d69a7725 100644
+--- a/Documentation/virtual/kvm/hypercalls.txt
++++ b/Documentation/virtual/kvm/hypercalls.txt
+@@ -164,6 +164,15 @@ This configuration lets a guest kernel have part of its read/write memory
+ converted into read-only.  This action is irreversible.
+ Upon successful run, the number of pages protected is returned.
  
-+/*
-+ * This is internal structure used to be be able to access kvm memory slot and
-+ * have track of the number of current PTE when doing shadow PTE walk
-+ */
-+struct kvm_write_access_data {
-+	int i;
-+	struct kvm_memory_slot *memslot;
-+};
++Usage 3:
++     a0: ROE_MPROTECT_CHUNK	(requires version >= 2)
++     a1: Start address aligned to page boundary.
++     a2: Number of bytes to be protected.
++This configuration lets a guest kernel have part of its read/write memory
++converted into read-only with bytes granularity. ROE_MPROTECT_CHUNK is
++relatively slow compared to ROE_MPROTECT. This action is irreversible.
++Upon successful run, the number of pages protected is returned.
 +
- /*
-  * the pages used as guest page table on soft mmu are tracked by
-  * kvm_memory_slot.arch.gfn_track which is 16 bits, so the role bits used
-@@ -1178,7 +1187,7 @@ void kvm_mmu_set_mask_ptes(u64 user_mask, u64 accessed_mask,
- 		u64 acc_track_mask, u64 me_mask);
- 
- void kvm_mmu_reset_context(struct kvm_vcpu *vcpu);
--void kvm_mmu_slot_remove_write_access(struct kvm *kvm,
-+void kvm_mmu_slot_apply_write_access(struct kvm *kvm,
- 				      struct kvm_memory_slot *memslot);
- void kvm_mmu_zap_collapsible_sptes(struct kvm *kvm,
- 				   const struct kvm_memory_slot *memslot);
-diff --git a/arch/x86/kvm/Kconfig b/arch/x86/kvm/Kconfig
-index 1bbec387d289..2fcbb1788a24 100644
---- a/arch/x86/kvm/Kconfig
-+++ b/arch/x86/kvm/Kconfig
-@@ -96,6 +96,13 @@ config KVM_MMU_AUDIT
- 	 This option adds a R/W kVM module parameter 'mmu_audit', which allows
- 	 auditing of KVM MMU events at runtime.
- 
-+config KVM_ROE
-+	bool "Hypercall Memory Read-Only Enforcement"
-+	depends on KVM && X86
-+	help
-+	This option adds KVM_HC_ROE hypercall to kvm as a hardening
-+	mechanism to protect memory pages from being edited.
-+
- # OK, it's a little counter-intuitive to do this, but it puts it neatly under
- # the virtualization menu.
- source drivers/vhost/Kconfig
+ Error codes:
+ 	-KVM_ENOSYS: system call being triggered from ring 3 or it is not
+ 	implemented.
 diff --git a/arch/x86/kvm/mmu.c b/arch/x86/kvm/mmu.c
-index cc36abe1ee44..c54aa5287e14 100644
+index c54aa5287e14..c3d681bfa105 100644
 --- a/arch/x86/kvm/mmu.c
 +++ b/arch/x86/kvm/mmu.c
-@@ -1484,9 +1484,8 @@ static bool spte_write_protect(u64 *sptep, bool pt_protect)
- 	return mmu_spte_update(sptep, spte);
- }
- 
--static bool __rmap_write_protect(struct kvm *kvm,
--				 struct kvm_rmap_head *rmap_head,
--				 bool pt_protect, void *data)
-+static bool __rmap_write_protection(struct kvm *kvm,
-+		struct kvm_rmap_head *rmap_head, bool pt_protect)
- {
- 	u64 *sptep;
+@@ -1507,9 +1507,11 @@ static bool __rmap_write_protect_roe(struct kvm *kvm,
  	struct rmap_iterator iter;
-@@ -1498,6 +1497,38 @@ static bool __rmap_write_protect(struct kvm *kvm,
- 	return flush;
- }
- 
-+#ifdef CONFIG_KVM_ROE
-+static bool __rmap_write_protect_roe(struct kvm *kvm,
-+		struct kvm_rmap_head *rmap_head,
-+		bool pt_protect,
-+		struct kvm_write_access_data *d)
-+{
-+	u64 *sptep;
-+	struct rmap_iterator iter;
-+	bool prot;
-+	bool flush = false;
-+
-+	for_each_rmap_spte(rmap_head, &iter, sptep) {
-+		prot = !test_bit(d->i, d->memslot->roe_bitmap) && pt_protect;
-+		flush |= spte_write_protect(sptep, prot);
-+		d->i++;
-+	}
-+	return flush;
-+}
-+#endif
-+
-+static bool __rmap_write_protect(struct kvm *kvm,
-+		struct kvm_rmap_head *rmap_head,
-+		bool pt_protect,
-+		struct kvm_write_access_data *d)
-+{
-+#ifdef CONFIG_KVM_ROE
-+	if (d != NULL)
-+		return __rmap_write_protect_roe(kvm, rmap_head, pt_protect, d);
-+#endif
-+	return __rmap_write_protection(kvm, rmap_head, pt_protect);
-+}
-+
- static bool spte_clear_dirty(u64 *sptep)
- {
- 	u64 spte = *sptep;
-@@ -1585,7 +1616,7 @@ static void kvm_mmu_write_protect_pt_masked(struct kvm *kvm,
- 	while (mask) {
- 		rmap_head = __gfn_to_rmap(slot->base_gfn + gfn_offset + __ffs(mask),
- 					  PT_PAGE_TABLE_LEVEL, slot);
--		__rmap_write_protect(kvm, rmap_head, false, NULL);
-+		__rmap_write_protection(kvm, rmap_head, false);
- 
- 		/* clear the first set bit */
- 		mask &= mask - 1;
-@@ -1661,11 +1692,15 @@ bool kvm_mmu_slot_gfn_write_protect(struct kvm *kvm,
- 	struct kvm_rmap_head *rmap_head;
- 	int i;
- 	bool write_protected = false;
-+	struct kvm_write_access_data data = {
-+		.i = 0,
-+		.memslot = slot,
-+	};
- 
- 	for (i = PT_PAGE_TABLE_LEVEL; i <= PT_MAX_HUGEPAGE_LEVEL; ++i) {
- 		rmap_head = __gfn_to_rmap(gfn, i, slot);
- 		write_protected |= __rmap_write_protect(kvm, rmap_head, true,
--				NULL);
-+				&data);
+ 	bool prot;
+ 	bool flush = false;
+-
++	void *full_bmp =  d->memslot->roe_bitmap;
++	void *part_bmp = d->memslot->partial_roe_bitmap;
+ 	for_each_rmap_spte(rmap_head, &iter, sptep) {
+-		prot = !test_bit(d->i, d->memslot->roe_bitmap) && pt_protect;
++		prot = !(test_bit(d->i, full_bmp) || test_bit(d->i, part_bmp));
++		prot = prot && pt_protect;
+ 		flush |= spte_write_protect(sptep, prot);
+ 		d->i++;
  	}
- 
- 	return write_protected;
-@@ -5569,21 +5604,36 @@ static bool slot_rmap_write_protect(struct kvm *kvm,
- 				    struct kvm_rmap_head *rmap_head,
- 				    void *data)
- {
--	return __rmap_write_protect(kvm, rmap_head, false, data);
-+	return __rmap_write_protect(kvm, rmap_head, false,
-+			(struct kvm_write_access_data *)data);
- }
- 
--void kvm_mmu_slot_remove_write_access(struct kvm *kvm,
-+static bool slot_rmap_apply_protection(struct kvm *kvm,
-+		struct kvm_rmap_head *rmap_head,
-+		void *data)
-+{
-+	struct kvm_write_access_data *d = (struct kvm_write_access_data *) data;
-+	bool prot_mask = !(d->memslot->flags & KVM_MEM_READONLY);
-+
-+	return __rmap_write_protect(kvm, rmap_head, prot_mask, d);
-+}
-+
-+void kvm_mmu_slot_apply_write_access(struct kvm *kvm,
- 				      struct kvm_memory_slot *memslot)
- {
- 	bool flush;
-+	struct kvm_write_access_data data = {
-+		.i = 0,
-+		.memslot = memslot,
-+	};
- 
- 	spin_lock(&kvm->mmu_lock);
--	flush = slot_handle_all_level(kvm, memslot, slot_rmap_write_protect,
--				      false, NULL);
-+	flush = slot_handle_all_level(kvm, memslot, slot_rmap_apply_protection,
-+				      false, &data);
- 	spin_unlock(&kvm->mmu_lock);
- 
- 	/*
--	 * kvm_mmu_slot_remove_write_access() and kvm_vm_ioctl_get_dirty_log()
-+	 * kvm_mmu_slot_apply_write_access() and kvm_vm_ioctl_get_dirty_log()
- 	 * which do tlb flush out of mmu-lock should be serialized by
- 	 * kvm->slots_lock otherwise tlb flush would be missed.
- 	 */
-@@ -5680,7 +5730,7 @@ void kvm_mmu_slot_largepage_remove_write_access(struct kvm *kvm,
- 					false, NULL);
- 	spin_unlock(&kvm->mmu_lock);
- 
--	/* see kvm_mmu_slot_remove_write_access */
-+	/* see kvm_mmu_slot_apply_write_access*/
- 	lockdep_assert_held(&kvm->slots_lock);
- 
- 	if (flush)
 diff --git a/arch/x86/kvm/x86.c b/arch/x86/kvm/x86.c
-index ca717737347e..70f2b42a2f91 100644
+index 70f2b42a2f91..0c767ddd26a2 100644
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -4276,7 +4276,7 @@ int kvm_vm_ioctl_get_dirty_log(struct kvm *kvm, struct kvm_dirty_log *log)
+@@ -6800,17 +6800,23 @@ static int kvm_pv_clock_pairing(struct kvm_vcpu *vcpu, gpa_t paddr,
  
- 	/*
- 	 * All the TLBs can be flushed out of mmu lock, see the comments in
--	 * kvm_mmu_slot_remove_write_access().
-+	 * kvm_mmu_slot_apply_write_access().
- 	 */
- 	lockdep_assert_held(&kvm->slots_lock);
- 	if (is_dirty)
-@@ -6798,7 +6798,137 @@ static int kvm_pv_clock_pairing(struct kvm_vcpu *vcpu, gpa_t paddr,
+ #ifdef CONFIG_KVM_ROE
+ static void kvm_roe_protect_slot(struct kvm *kvm, struct kvm_memory_slot *slot,
+-				gfn_t gfn, u64 npages)
++				gfn_t gfn, u64 npages, bool partial)
+ {
+ 	int i;
++	void *bitmap;
+ 
++	if (partial)
++		bitmap = slot->partial_roe_bitmap;
++	else
++		bitmap = slot->roe_bitmap;
+ 	for (i = gfn - slot->base_gfn; i < gfn + npages - slot->base_gfn; i++)
+-		set_bit(i, slot->roe_bitmap);
++		set_bit(i, bitmap);
+ 	kvm_mmu_slot_apply_write_access(kvm, slot);
+ 	kvm_arch_flush_shadow_memslot(kvm, slot);
  }
- #endif
  
--/*
-+#ifdef CONFIG_KVM_ROE
-+static void kvm_roe_protect_slot(struct kvm *kvm, struct kvm_memory_slot *slot,
-+				gfn_t gfn, u64 npages)
+-static int __kvm_roe_protect_range(struct kvm *kvm, gpa_t gpa, u64 npages)
++static int __kvm_roe_protect_range(struct kvm *kvm, gpa_t gpa, u64 npages,
++				bool partial)
+ {
+ 	struct kvm_memory_slot *slot;
+ 	gfn_t gfn = gpa >> PAGE_SHIFT;
+@@ -6826,12 +6832,12 @@ static int __kvm_roe_protect_range(struct kvm *kvm, gpa_t gpa, u64 npages)
+ 		if (gfn + npages > slot->base_gfn + slot->npages) {
+ 			u64 _npages = slot->base_gfn + slot->npages - gfn;
+ 
+-			kvm_roe_protect_slot(kvm, slot, gfn, _npages);
++			kvm_roe_protect_slot(kvm, slot, gfn, _npages, partial);
+ 			gfn += _npages;
+ 			count += _npages;
+ 			npages -= _npages;
+ 		} else {
+-			kvm_roe_protect_slot(kvm, slot, gfn, npages);
++			kvm_roe_protect_slot(kvm, slot, gfn, npages, partial);
+ 			count += npages;
+ 			npages = 0;
+ 		}
+@@ -6841,12 +6847,13 @@ static int __kvm_roe_protect_range(struct kvm *kvm, gpa_t gpa, u64 npages)
+ 	return count;
+ }
+ 
+-static int kvm_roe_protect_range(struct kvm *kvm, gpa_t gpa, u64 npages)
++static int kvm_roe_protect_range(struct kvm *kvm, gpa_t gpa, u64 npages,
++		bool partial)
+ {
+ 	int r;
+ 
+ 	mutex_lock(&kvm->slots_lock);
+-	r = __kvm_roe_protect_range(kvm, gpa, npages);
++	r = __kvm_roe_protect_range(kvm, gpa, npages, partial);
+ 	mutex_unlock(&kvm->slots_lock);
+ 	return r;
+ }
+@@ -6895,7 +6902,7 @@ static int kvm_roe_full_protect_range(struct kvm_vcpu *vcpu, u64 gva,
+ 			continue;
+ 		if (!access_ok(VERIFY_WRITE, hva, 1 << PAGE_SHIFT))
+ 			continue;
+-		status =  kvm_roe_protect_range(vcpu->kvm, gpa, 1);
++		status =  kvm_roe_protect_range(vcpu->kvm, gpa, 1, false);
+ 		if (status > 0)
+ 			count += status;
+ 	}
+@@ -6903,7 +6910,135 @@ static int kvm_roe_full_protect_range(struct kvm_vcpu *vcpu, u64 gva,
+ 		return -EINVAL;
+ 	return count;
+ }
++static int kvm_roe_insert_chunk_next(struct list_head *pos, u64 gpa, u64 size)
 +{
-+	int i;
++	struct protected_chunk *chunk;
 +
-+	for (i = gfn - slot->base_gfn; i < gfn + npages - slot->base_gfn; i++)
-+		set_bit(i, slot->roe_bitmap);
-+	kvm_mmu_slot_apply_write_access(kvm, slot);
-+	kvm_arch_flush_shadow_memslot(kvm, slot);
++	chunk = kvzalloc(sizeof(struct protected_chunk), GFP_KERNEL);
++	chunk->gpa = gpa;
++	chunk->size = size;
++	INIT_LIST_HEAD(&chunk->list);
++	list_add(&chunk->list, pos);
++	return size;
++}
++static int kvm_roe_expand_chunk(struct protected_chunk *pos, u64 gpa, u64 size)
++{
++	u64 old_ptr = pos->gpa;
++	u64 old_size = pos->size;
++
++	if (gpa < old_ptr)
++		pos->gpa = gpa;
++	if (gpa + size > old_ptr + old_size)
++		pos->size = gpa + size - pos->gpa;
++	return size;
 +}
 +
-+static int __kvm_roe_protect_range(struct kvm *kvm, gpa_t gpa, u64 npages)
++static bool kvm_roe_merge_chunks(struct protected_chunk *chunk)
++{
++	/*attempt merging 2 consecutive given the first one*/
++	struct protected_chunk *next = list_next_entry(chunk, list);
++
++	if (!kvm_roe_range_overlap(chunk, next->gpa, next->size))
++		return false;
++	kvm_roe_expand_chunk(chunk, next->gpa, next->size);
++	list_del(&next->list);
++	kvfree(next);
++	return true;
++}
++static int __kvm_roe_insert_chunk(struct kvm_memory_slot *slot, u64 gpa,
++		u64 size)
++{
++	/* kvm->slots_lock must be acquired*/
++	struct protected_chunk *pos;
++	struct list_head *head = slot->prot_list;
++
++	if (list_empty(head))
++		return kvm_roe_insert_chunk_next(head, gpa, size);
++	/*
++	 * pos here will never get deleted maybe the next one will
++	 * that is why list_for_each_entry_safe is completely unsafe
++	 */
++	list_for_each_entry(pos, head, list) {
++		if (kvm_roe_range_overlap(pos, gpa, size)) {
++			int ret = kvm_roe_expand_chunk(pos, gpa, size);
++
++			while (head != pos->list.next)
++				if (!kvm_roe_merge_chunks(pos))
++					break;
++			return ret;
++		}
++		if (pos->gpa > gpa) {
++			struct protected_chunk *prev;
+ 
++			prev = list_prev_entry(pos, list);
++			return kvm_roe_insert_chunk_next(&prev->list, gpa,
++					size);
++		}
++	}
++	pos = list_last_entry(head, struct protected_chunk, list);
++
++	return kvm_roe_insert_chunk_next(&pos->list, gpa, size);
++}
++static int kvm_roe_insert_chunk(struct kvm *kvm, u64 gpa, u64 size)
 +{
 +	struct kvm_memory_slot *slot;
 +	gfn_t gfn = gpa >> PAGE_SHIFT;
-+	int count = 0;
-+
-+	while (npages != 0) {
-+		slot = gfn_to_memslot(kvm, gfn);
-+		if (!slot) {
-+			gfn += 1;
-+			npages -= 1;
-+			continue;
-+		}
-+		if (gfn + npages > slot->base_gfn + slot->npages) {
-+			u64 _npages = slot->base_gfn + slot->npages - gfn;
-+
-+			kvm_roe_protect_slot(kvm, slot, gfn, _npages);
-+			gfn += _npages;
-+			count += _npages;
-+			npages -= _npages;
-+		} else {
-+			kvm_roe_protect_slot(kvm, slot, gfn, npages);
-+			count += npages;
-+			npages = 0;
-+		}
-+	}
-+	if (count == 0)
-+		return -EINVAL;
-+	return count;
-+}
-+
-+static int kvm_roe_protect_range(struct kvm *kvm, gpa_t gpa, u64 npages)
-+{
-+	int r;
++	int ret;
 +
 +	mutex_lock(&kvm->slots_lock);
-+	r = __kvm_roe_protect_range(kvm, gpa, npages);
++	slot = gfn_to_memslot(kvm, gfn);
++	ret = __kvm_roe_insert_chunk(slot, gpa, size);
 +	mutex_unlock(&kvm->slots_lock);
-+	return r;
-+}
-+
-+static bool kvm_roe_userspace(struct kvm_vcpu *vcpu)
-+{
-+	u64 rflags;
-+	u64 cr0 = kvm_read_cr0(vcpu);
-+	u64 iopl;
-+
-+	// first checking we are not in protected mode
-+	if ((cr0 & 1) == 0)
-+		return false;
-+	/*
-+	 * we don't need to worry about comments in __get_regs
-+	 * because we are sure that this function will only be
-+	 * triggered at the end of a hypercall
-+	 */
-+	 rflags = kvm_get_rflags(vcpu);
-+	iopl = (rflags >> 12) & 3;
-+	if (iopl != 3)
-+		return false;
-+	return true;
-+}
-+
-+static int kvm_roe_full_protect_range(struct kvm_vcpu *vcpu, u64 gva,
-+		u64 npages)
-+{
-+	struct kvm *kvm = vcpu->kvm;
-+	gpa_t gpa;
-+	u64 hva;
-+	u64 count = 0;
-+	int i;
-+	int status;
-+
-+	if (gva & ~PAGE_MASK)
-+		return -EINVAL;
-+	// We need to make sure that there will be no overflow
-+	if ((npages << PAGE_SHIFT) >> PAGE_SHIFT != npages || npages == 0)
-+		return -EINVAL;
-+	for (i = 0; i < npages; i++) {
-+		gpa = kvm_mmu_gva_to_gpa_system(vcpu, gva + (i << PAGE_SHIFT),
-+				NULL);
-+		hva = gfn_to_hva(kvm, gpa >> PAGE_SHIFT);
-+		if (kvm_is_error_hva(hva))
-+			continue;
-+		if (!access_ok(VERIFY_WRITE, hva, 1 << PAGE_SHIFT))
-+			continue;
-+		status =  kvm_roe_protect_range(vcpu->kvm, gpa, 1);
-+		if (status > 0)
-+			count += status;
-+	}
-+	if (count == 0)
-+		return -EINVAL;
-+	return count;
-+}
-+
-+static int kvm_roe(struct kvm_vcpu *vcpu, u64 a0, u64 a1, u64 a2, u64 a3)
-+{
-+	int ret;
-+	/*
-+	 * First we need to make sure that we are running from something that
-+	 * isn't usermode
-+	 */
-+	if (kvm_roe_userspace(vcpu))
-+		return -KVM_ENOSYS;
-+	switch (a0) {
-+	case ROE_VERSION:
-+		ret = 1; //current version
-+		break;
-+	case ROE_MPROTECT:
-+		ret = kvm_roe_full_protect_range(vcpu, a1, a2);
-+		break;
-+	default:
-+		ret = -EINVAL;
-+	}
 +	return ret;
 +}
 +
-+#endif
++static int kvm_roe_partial_page_protect(struct kvm_vcpu *vcpu, u64 gva,
++		u64 size)
++{
++	gpa_t gpa = kvm_mmu_gva_to_gpa_system(vcpu, gva, NULL);
 +
-+ /*
-  * kvm_pv_kick_cpu_op:  Kick a vcpu.
-  *
-  * @apicid - apicid of vcpu to be kicked.
-@@ -6868,6 +6998,11 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
- 	case KVM_HC_SEND_IPI:
- 		ret = kvm_pv_send_ipi(vcpu->kvm, a0, a1, a2, a3, op_64_bit);
- 		break;
-+#endif
-+#ifdef CONFIG_KVM_ROE
-+	case KVM_HC_ROE:
-+		ret = kvm_roe(vcpu, a0, a1, a2, a3);
-+		break;
- #endif
- 	default:
- 		ret = -KVM_ENOSYS;
-@@ -9119,8 +9254,8 @@ static void kvm_mmu_slot_apply_flags(struct kvm *kvm,
- 				     struct kvm_memory_slot *new)
++	kvm_roe_protect_range(vcpu->kvm, gpa, 1, true);
++	return kvm_roe_insert_chunk(vcpu->kvm, gpa, size);
++}
++
++static int kvm_roe_partial_protect(struct kvm_vcpu *vcpu, u64 gva, u64 size)
++{
++	u64 gva_start = gva;
++	u64 gva_end = gva+size;
++	u64 gpn_start = gva_start >> PAGE_SHIFT;
++	u64 gpn_end = gva_end >> PAGE_SHIFT;
++	u64 _size;
++	int count = 0;
++	// We need to make sure that there will be no overflow or zero size
++	if (gva_end <= gva_start)
++		return -EINVAL;
++
++	// protect the partial page at the start
++	if (gpn_end > gpn_start)
++		_size = PAGE_SIZE - (gva_start & PAGE_MASK) + 1;
++	else
++		_size = size;
++	size -= _size;
++	count += kvm_roe_partial_page_protect(vcpu, gva_start, _size);
++	// full protect in the middle pages
++	if (gpn_end - gpn_start > 1) {
++		int ret;
++		u64 _gva = (gpn_start + 1) << PAGE_SHIFT;
++		u64 npages = gpn_end - gpn_start - 1;
++
++		size -= npages << PAGE_SHIFT;
++		ret = kvm_roe_full_protect_range(vcpu, _gva, npages);
++		if (ret > 0)
++			count += ret << PAGE_SHIFT;
++	}
++	// protect the partial page at the end
++	if (size != 0)
++		count += kvm_roe_partial_page_protect(vcpu,
++				gpn_end << PAGE_SHIFT, size);
++	if (count == 0)
++		return -EINVAL;
++	return count;
++}
+ static int kvm_roe(struct kvm_vcpu *vcpu, u64 a0, u64 a1, u64 a2, u64 a3)
  {
- 	/* Still write protect RO slot */
-+	kvm_mmu_slot_apply_write_access(kvm, new);
- 	if (new->flags & KVM_MEM_READONLY) {
--		kvm_mmu_slot_remove_write_access(kvm, new);
- 		return;
+ 	int ret;
+@@ -6915,11 +7050,14 @@ static int kvm_roe(struct kvm_vcpu *vcpu, u64 a0, u64 a1, u64 a2, u64 a3)
+ 		return -KVM_ENOSYS;
+ 	switch (a0) {
+ 	case ROE_VERSION:
+-		ret = 1; //current version
++		ret = 2; //current version
+ 		break;
+ 	case ROE_MPROTECT:
+ 		ret = kvm_roe_full_protect_range(vcpu, a1, a2);
+ 		break;
++	case ROE_MPROTECT_CHUNK:
++		ret = kvm_roe_partial_protect(vcpu, a1, a2);
++		break;
+ 	default:
+ 		ret = -EINVAL;
  	}
- 
-@@ -9158,7 +9293,7 @@ static void kvm_mmu_slot_apply_flags(struct kvm *kvm,
- 		if (kvm_x86_ops->slot_enable_log_dirty)
- 			kvm_x86_ops->slot_enable_log_dirty(kvm, new);
- 		else
--			kvm_mmu_slot_remove_write_access(kvm, new);
-+			kvm_mmu_slot_apply_write_access(kvm, new);
- 	} else {
- 		if (kvm_x86_ops->slot_disable_log_dirty)
- 			kvm_x86_ops->slot_disable_log_dirty(kvm, new);
 diff --git a/include/linux/kvm_host.h b/include/linux/kvm_host.h
-index c926698040e0..be6885bc28bc 100644
+index be6885bc28bc..a6749a52386b 100644
 --- a/include/linux/kvm_host.h
 +++ b/include/linux/kvm_host.h
-@@ -297,6 +297,9 @@ static inline int kvm_vcpu_exiting_guest_mode(struct kvm_vcpu *vcpu)
+@@ -294,11 +294,37 @@ static inline int kvm_vcpu_exiting_guest_mode(struct kvm_vcpu *vcpu)
+  */
+ #define KVM_MEM_MAX_NR_PAGES ((1UL << 31) - 1)
+ 
++#ifdef CONFIG_KVM_ROE
++/*
++ * This structure is used to hold memory areas that are to be protected in a
++ * memory frame with mixed page permissions.
++ **/
++struct protected_chunk {
++	gpa_t gpa;
++	u64 size;
++	struct list_head list;
++};
++
++static inline bool kvm_roe_range_overlap(struct protected_chunk *chunk,
++		gpa_t gpa, int len) {
++	/*
++	 * https://stackoverflow.com/questions/325933/
++	 * determine-whether-two-date-ranges-overlap
++	 * Assuming that it works, that link ^ provides a solution that is
++	 * better than anything I would ever come up with.
++	 */
++	return (gpa <= chunk->gpa + chunk->size - 1) &&
++		(gpa + len - 1 >= chunk->gpa);
++}
++#endif
++
  struct kvm_memory_slot {
  	gfn_t base_gfn;
  	unsigned long npages;
-+#ifdef CONFIG_KVM_ROE
-+	unsigned long *roe_bitmap;
-+#endif
+ #ifdef CONFIG_KVM_ROE
+ 	unsigned long *roe_bitmap;
++	unsigned long *partial_roe_bitmap;
++	struct list_head *prot_list;
+ #endif
  	unsigned long *dirty_bitmap;
  	struct kvm_arch_memory_slot arch;
- 	unsigned long userspace_addr;
 diff --git a/include/uapi/linux/kvm_para.h b/include/uapi/linux/kvm_para.h
-index 6c0ce49931e5..e6004e0750fd 100644
+index e6004e0750fd..4a84f974bc58 100644
 --- a/include/uapi/linux/kvm_para.h
 +++ b/include/uapi/linux/kvm_para.h
-@@ -28,7 +28,11 @@
- #define KVM_HC_MIPS_CONSOLE_OUTPUT	8
- #define KVM_HC_CLOCK_PAIRING		9
- #define KVM_HC_SEND_IPI		10
-+#define KVM_HC_ROE			11
- 
-+/* ROE Functionality parameters */
-+#define ROE_VERSION			0
-+#define ROE_MPROTECT			1
+@@ -33,6 +33,7 @@
+ /* ROE Functionality parameters */
+ #define ROE_VERSION			0
+ #define ROE_MPROTECT			1
++#define ROE_MPROTECT_CHUNK		2
  /*
   * hypercalls use architecture specific
   */
 diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
-index f986e31fa68c..423a9c014120 100644
+index 423a9c014120..d4f36faacd29 100644
 --- a/virt/kvm/kvm_main.c
 +++ b/virt/kvm/kvm_main.c
-@@ -554,6 +554,11 @@ static void kvm_destroy_dirty_bitmap(struct kvm_memory_slot *memslot)
- static void kvm_free_memslot(struct kvm *kvm, struct kvm_memory_slot *free,
+@@ -555,10 +555,19 @@ static void kvm_free_memslot(struct kvm *kvm, struct kvm_memory_slot *free,
  			      struct kvm_memory_slot *dont)
  {
-+#ifdef CONFIG_KVM_ROE
-+	if (!dont)
-+		kvfree(free->roe_bitmap);
-+#endif
-+
+ #ifdef CONFIG_KVM_ROE
+-	if (!dont)
++	if (!dont) {
++		//TODO still this might leak
++		struct protected_chunk *pos, *n;
++		struct list_head *head = free->prot_list;
+ 		kvfree(free->roe_bitmap);
++		kvfree(free->partial_roe_bitmap);
++		list_for_each_entry_safe(pos, n, head, list) {
++			list_del(&pos->list);
++			kvfree(pos);
++		}
++		kvfree(free->prot_list);
++	}
+ #endif
+-
  	if (!dont || free->dirty_bitmap != dont->dirty_bitmap)
  		kvm_destroy_dirty_bitmap(free);
  
-@@ -800,6 +805,17 @@ static int kvm_create_dirty_bitmap(struct kvm_memory_slot *memslot)
+@@ -805,13 +814,22 @@ static int kvm_create_dirty_bitmap(struct kvm_memory_slot *memslot)
  	return 0;
  }
  
-+static int kvm_init_roe_bitmap(struct kvm_memory_slot *slot)
-+{
-+#ifdef CONFIG_KVM_ROE
-+	slot->roe_bitmap = kvzalloc(BITS_TO_LONGS(slot->npages) *
+-static int kvm_init_roe_bitmap(struct kvm_memory_slot *slot)
++static int kvm_init_roe(struct kvm_memory_slot *slot)
+ {
+ #ifdef CONFIG_KVM_ROE
+ 	slot->roe_bitmap = kvzalloc(BITS_TO_LONGS(slot->npages) *
+ 	sizeof(unsigned long), GFP_KERNEL);
+ 	if (!slot->roe_bitmap)
+ 		return -ENOMEM;
++	slot->partial_roe_bitmap = kvzalloc(BITS_TO_LONGS(slot->npages) *
 +	sizeof(unsigned long), GFP_KERNEL);
-+	if (!slot->roe_bitmap)
++	if (!slot->partial_roe_bitmap) {
++		kvfree(slot->roe_bitmap);
 +		return -ENOMEM;
-+#endif
-+	return 0;
-+}
++	}
++	slot->prot_list = kvzalloc(sizeof(struct list_head), GFP_KERNEL);
++	INIT_LIST_HEAD(slot->prot_list);
 +
- /*
-  * Insert memslot and re-sort memslots based on their GFN,
-  * so binary search could be used to lookup GFN.
-@@ -1017,6 +1033,8 @@ int __kvm_set_memory_region(struct kvm *kvm,
+ #endif
+ 	return 0;
+ }
+@@ -1033,7 +1051,7 @@ int __kvm_set_memory_region(struct kvm *kvm,
  		if (kvm_create_dirty_bitmap(&new) < 0)
  			goto out_free;
  	}
-+	if (kvm_init_roe_bitmap(&new) < 0)
-+		goto out_free;
+-	if (kvm_init_roe_bitmap(&new) < 0)
++	if (kvm_init_roe(&new) < 0)
+ 		goto out_free;
  
  	slots = kvzalloc(sizeof(struct kvm_memslots), GFP_KERNEL);
- 	if (!slots)
-@@ -1270,13 +1288,23 @@ static bool memslot_is_readonly(struct kvm_memory_slot *slot)
+@@ -1287,26 +1305,37 @@ static bool memslot_is_readonly(struct kvm_memory_slot *slot)
+ {
  	return slot->flags & KVM_MEM_READONLY;
  }
- 
-+static bool gfn_is_readonly(struct kvm_memory_slot *slot, gfn_t gfn)
-+{
 +#ifdef CONFIG_KVM_ROE
-+	return test_bit(gfn - slot->base_gfn, slot->roe_bitmap) ||
-+		memslot_is_readonly(slot);
-+#else
-+	return memslot_is_readonly(slot);
-+#endif
++static bool gfn_is_partially_protected(struct kvm_memory_slot *slot, gfn_t gfn)
++{
++
++	return test_bit(gfn - slot->base_gfn, slot->partial_roe_bitmap);
 +}
+ 
++static bool gfn_is_fully_protected(struct kvm_memory_slot *slot, gfn_t gfn)
++{
++	return test_bit(gfn - slot->base_gfn, slot->roe_bitmap);
++}
++#endif
+ static bool gfn_is_readonly(struct kvm_memory_slot *slot, gfn_t gfn)
+ {
+ #ifdef CONFIG_KVM_ROE
+-	return test_bit(gfn - slot->base_gfn, slot->roe_bitmap) ||
+-		memslot_is_readonly(slot);
++	return gfn_is_fully_protected(slot, gfn) ||
++	       gfn_is_partially_protected(slot, gfn) ||
++	       memslot_is_readonly(slot);
+ #else
+ 	return memslot_is_readonly(slot);
+ #endif
+ }
+ 
 +
  static unsigned long __gfn_to_hva_many(struct kvm_memory_slot *slot, gfn_t gfn,
  				       gfn_t *nr_pages, bool write)
  {
  	if (!slot || slot->flags & KVM_MEMSLOT_INVALID)
  		return KVM_HVA_ERR_BAD;
- 
--	if (memslot_is_readonly(slot) && write)
-+	if (gfn_is_readonly(slot, gfn) && write)
+-
+ 	if (gfn_is_readonly(slot, gfn) && write)
  		return KVM_HVA_ERR_RO_BAD;
- 
+-
  	if (nr_pages)
-@@ -1320,7 +1348,7 @@ unsigned long gfn_to_hva_memslot_prot(struct kvm_memory_slot *slot,
- 	unsigned long hva = __gfn_to_hva_many(slot, gfn, NULL, false);
+ 		*nr_pages = slot->npages - (gfn - slot->base_gfn);
  
- 	if (!kvm_is_error_hva(hva) && writable)
--		*writable = !memslot_is_readonly(slot);
-+		*writable = !gfn_is_readonly(slot, gfn);
- 
- 	return hva;
+@@ -1864,14 +1893,55 @@ int kvm_vcpu_read_guest_atomic(struct kvm_vcpu *vcpu, gpa_t gpa,
+ 	return __kvm_read_guest_atomic(slot, gfn, data, offset, len);
  }
-@@ -1558,7 +1586,7 @@ kvm_pfn_t __gfn_to_pfn_memslot(struct kvm_memory_slot *slot, gfn_t gfn,
- 	}
+ EXPORT_SYMBOL_GPL(kvm_vcpu_read_guest_atomic);
++#ifdef CONFIG_KVM_ROE
  
- 	/* Do not map writable pfn in the readonly memslot. */
--	if (writable && memslot_is_readonly(slot)) {
-+	if (writable && gfn_is_readonly(slot, gfn)) {
- 		*writable = false;
- 		writable = NULL;
- 	}
++static bool kvm_roe_protected_range(struct kvm_memory_slot *slot, gpa_t gpa,
++		int len)
++{
++	struct list_head *pos;
++	struct protected_chunk *cur_chunk;
++
++	list_for_each(pos, slot->prot_list) {
++		cur_chunk = list_entry(pos, struct protected_chunk, list);
++		if (kvm_roe_range_overlap(cur_chunk, gpa, len))
++			return true;
++	}
++	return false;
++}
++static bool kvm_roe_check_range(struct kvm_memory_slot *slot,
++		gfn_t gfn, int offset, int len)
++{
++	gpa_t gpa = (gfn << PAGE_SHIFT) + offset;
++
++	if (!gfn_is_partially_protected(slot, gfn))
++		return false;
++	return kvm_roe_protected_range(slot, gpa, len);
++}
++#endif
++static u64 roe_gfn_to_hva(struct kvm_memory_slot *slot, gfn_t gfn, int offset,
++		int len)
++{
++	u64 addr;
++#ifdef CONFIG_KVM_ROE
++	if (kvm_roe_check_range(slot, gfn, offset, len))
++		return KVM_HVA_ERR_RO_BAD;
++	if (memslot_is_readonly(slot))
++		return KVM_HVA_ERR_RO_BAD;
++	if (gfn_is_fully_protected(slot, gfn))
++		return KVM_HVA_ERR_RO_BAD;
++	addr = __gfn_to_hva_many(slot, gfn, NULL, false);
++#else
++	addr = gfn_to_hva_memslot(slot, gfn);
++#endif
++	return addr;
++}
+ static int __kvm_write_guest_page(struct kvm_memory_slot *memslot, gfn_t gfn,
+ 			          const void *data, int offset, int len)
+ {
+ 	int r;
+ 	unsigned long addr;
+ 
+-	addr = gfn_to_hva_memslot(memslot, gfn);
++	addr = roe_gfn_to_hva(memslot, gfn, offset, len);
+ 	if (kvm_is_error_hva(addr))
+ 		return -EFAULT;
+ 	r = __copy_to_user((void __user *)addr + offset, data, len);
 -- 
 2.18.1
