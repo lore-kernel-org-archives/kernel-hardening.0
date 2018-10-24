@@ -1,41 +1,101 @@
-Subject: Re: [PATCH 06/17] prmem: test cases for memory protection
+Subject: Re: [PATCH 10/17] prmem: documentation
 References: <20181023213504.28905-1-igor.stoppa@huawei.com>
- <20181023213504.28905-7-igor.stoppa@huawei.com>
- <a6c74bb1-bd0c-ed8a-1dd3-b04f2e3c78d4@infradead.org>
+ <20181023213504.28905-11-igor.stoppa@huawei.com>
+ <b09b3feb-8e3d-5fab-4e2b-35e8c252b27c@infradead.org>
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <00461c0a-a214-1984-5614-c7a4a2a7ff83@gmail.com>
-Date: Wed, 24 Oct 2018 17:24:03 +0300
+Message-ID: <42e65f5f-2753-54a7-08a4-b51e56dfedbe@gmail.com>
+Date: Wed, 24 Oct 2018 17:30:52 +0300
 MIME-Version: 1.0
-In-Reply-To: <a6c74bb1-bd0c-ed8a-1dd3-b04f2e3c78d4@infradead.org>
+In-Reply-To: <b09b3feb-8e3d-5fab-4e2b-35e8c252b27c@infradead.org>
 Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
 To: Randy Dunlap <rdunlap@infradead.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org
-Cc: igor.stoppa@huawei.com, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Vlastimil Babka <vbabka@suse.cz>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Pavel Tatashin <pasha.tatashin@oracle.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org
+Cc: igor.stoppa@huawei.com, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Mike Rapoport <rppt@linux.vnet.ibm.com>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Hi,
 
-On 24/10/18 06:27, Randy Dunlap wrote:
-
-> a. It seems backwards (or upside down) to have a test case select a feature (PRMEM)
-> instead of depending on that feature.
+On 24/10/18 06:48, Randy Dunlap wrote:
+> Hi,
 > 
-> b. Since PRMEM depends on MMU (in patch 04/17), the "select" here could try to
-> enabled PRMEM even when MMU is not enabled.
+> On 10/23/18 2:34 PM, Igor Stoppa wrote:
+
+[...]
+
+>> +- The present document doesn't address such transient.
 > 
-> Changing this to "depends on PRMEM" would solve both of these issues.
-
-The weird dependency you pointed out is partially caused by the 
-incompleteness of PRMEM.
-
-What I have in mind is to have a fallback version of it for systems 
-without MMU capable of write protection.
-Possibly defaulting to kvmalloc.
-In that case there would not be any need for a configuration option.
-
-> c. Don't use "default n".  That is already the default.
+>                                                 transience.
 
 ok
+
+[...]
+
+>> +   are attempted after the write protection is in place, will cause
+> 
+> no comma.
+
+ok
+
+[...]
+
+>> +        - Its usefulness depends on the specific use case at hand
+> 
+> end above sentence with a period, please, like all of the others above it.
+
+ok
+
+
+>> +    - The "START_WR" mode is the only one which provides immediate protection, at the cost of speed.
+> 
+> Please try to keep the line above and a few below to < 80 characters in length.
+> (because some of us read rst files as text files, with a text editor, and line
+> wrap is ugly)
+
+ok, I still have to master .rst :-(
+
+[...]
+
+>> +- The users of rare write must take care of ensuring the atomicity of the
+> 
+> s/rare write/write rare/ ?
+
+thanks
+
+>> +  action, respect to the way they use the data being altered; for example,
+> 
+>    This ..   "respect to the way" is awkward, but I don't know what to
+> change it to.
+> 
+>> +  take a lock before making a copy of the value to modify (if it's
+>> +  relevant), then alter it, issue the call to rare write and finally
+>> +  release the lock. Some special scenario might be exempt from the need
+>> +  for locking, but in general rare-write must be treated as an operation
+> 
+> It seemed to me that "write-rare" (or write rare) was the going name, but now
+> it's being called "rare write" (or rare-write).  Just be consistent, please.
+
+
+write-rare it is, because it can be shortened as wr_xxx
+
+rare_write becomes rw_xxx
+
+which wrongly hints at read/write, which it definitely is not
+
+>> +  tlb entries. It still does a better job of it, compared to invoking
+> 
+>       TLB
+
+ok
+
+>> +  vmalloc for each allocation, but it is undeniably less optimized wrt to
+> 
+> s/wrt/with respect to/
+
+yes
+
+> Thanks for the documentation.
+
+thanks for the review :-)
 
 --
 igor
