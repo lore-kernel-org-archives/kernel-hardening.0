@@ -1,112 +1,84 @@
-Subject: Re: [PATCH 14/17] prmem: llist, hlist, both plain and rcu
+Subject: Re: [PATCH 08/17] prmem: struct page: track vmap_area
 References: <20181023213504.28905-1-igor.stoppa@huawei.com>
- <20181023213504.28905-15-igor.stoppa@huawei.com>
- <1634210774.446.1540381072927.JavaMail.zimbra@efficios.com>
- <243a8ff2-889c-089f-a1ff-c882933ca5c3@gmail.com>
- <20181024145606.GA9019@cisco>
+ <20181023213504.28905-9-igor.stoppa@huawei.com>
+ <20181024031200.GC25444@bombadil.infradead.org>
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <d630474b-73a5-c6ae-2141-49c1184381b2@gmail.com>
-Date: Thu, 25 Oct 2018 01:52:11 +0300
+Message-ID: <ffb887e1-2029-42d5-3a97-54546e4d28d8@gmail.com>
+Date: Thu, 25 Oct 2018 02:01:02 +0300
 MIME-Version: 1.0
-In-Reply-To: <20181024145606.GA9019@cisco>
+In-Reply-To: <20181024031200.GC25444@bombadil.infradead.org>
 Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-To: Tycho Andersen <tycho@tycho.ws>
-Cc: Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, igor stoppa <igor.stoppa@huawei.com>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Kate Stewart <kstewart@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Philippe Ombredanne <pombredanne@nexb.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Josh Triplett <josh@joshtriplett.org>, rostedt <rostedt@goodmis.org>, Lai Jiangshan <jiangshanlai@gmail.com>, linux-kernel <linux-kernel@vger.kernel.org>
+To: Matthew Wilcox <willy@infradead.org>
+Cc: Mimi Zohar <zohar@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, igor.stoppa@huawei.com, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Vlastimil Babka <vbabka@suse.cz>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Pavel Tatashin <pasha.tatashin@oracle.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 24/10/2018 17:56, Tycho Andersen wrote:
-> On Wed, Oct 24, 2018 at 05:03:01PM +0300, Igor Stoppa wrote:
->> On 24/10/18 14:37, Mathieu Desnoyers wrote:
->>> Also, is it the right approach to duplicate existing APIs, or should we
->>> rather hook into page fault handlers and let the kernel do those "shadow"
->>> mappings under the hood ?
->>
->> This question is probably a good candidate for the small Q&A section I have
->> in the 00/17.
->>
->>
->>> Adding a new GFP flags for dynamic allocation, and a macro mapping to
->>> a section attribute might suffice for allocation or definition of such
->>> mostly-read-only/seldom-updated data.
->>
->> I think what you are proposing makes sense from a pure hardening standpoint.
->>  From a more defensive one, I'd rather minimise the chances of giving a free
->> pass to an attacker.
->>
->> Maybe there is a better implementation of this, than what I have in mind.
->> But, based on my current understanding of what you are describing, there
->> would be few issues:
->>
->> 1) where would the pool go? The pool is a way to manage multiple vmas and
->> express common property they share. Even before a vma is associated to the
->> pool.
->>
->> 2) there would be more code that can seamlessly deal with both protected and
->> regular data. Based on what? Some parameter, I suppose.
->> That parameter would be the new target.
->> If the code is "duplicated", as you say, the actual differences are baked in
->> at compile time. The "duplication" would also allow to have always inlined
->> functions for write-rare and leave more freedom to the compiler for their
->> non-protected version.
->>
->> Besides, I think the separate wr version also makes it very clear, to the
->> user of the API, that there will be a price to pay, in terms of performance.
->> The more seamlessly alternative might make this price less obvious.
+
+
+On 24/10/2018 06:12, Matthew Wilcox wrote:
+> On Wed, Oct 24, 2018 at 12:34:55AM +0300, Igor Stoppa wrote:
+>> The connection between each page and its vmap_area avoids more expensive
+>> searches through the btree of vmap_areas.
 > 
-> What about something in the middle, where we move list to list_impl.h,
-> and add a few macros where you have list_set_prev() in prlist now, so
-> we could do,
+> Typo -- it's an rbtree.
+
+ack
+
+>> +++ b/include/linux/mm_types.h
+>> @@ -87,13 +87,24 @@ struct page {
+>>   			/* See page-flags.h for PAGE_MAPPING_FLAGS */
+>>   			struct address_space *mapping;
+>>   			pgoff_t index;		/* Our offset within mapping. */
+>> -			/**
+>> -			 * @private: Mapping-private opaque data.
+>> -			 * Usually used for buffer_heads if PagePrivate.
+>> -			 * Used for swp_entry_t if PageSwapCache.
+>> -			 * Indicates order in the buddy system if PageBuddy.
+>> -			 */
+>> -			unsigned long private;
+>> +			union {
+>> +				/**
+>> +				 * @private: Mapping-private opaque data.
+>> +				 * Usually used for buffer_heads if
+>> +				 * PagePrivate.
+>> +				 * Used for swp_entry_t if PageSwapCache.
+>> +				 * Indicates order in the buddy system if
+>> +				 * PageBuddy.
+>> +				 */
+>> +				unsigned long private;
+>> +				/**
+>> +				 * @area: reference to the containing area
+>> +				 * For pages that are mapped into a virtually
+>> +				 * contiguous area, avoids performing a more
+>> +				 * expensive lookup.
+>> +				 */
+>> +				struct vmap_area *area;
+>> +			};
 > 
-> // prlist.h
+> Not like this.  Make it part of a different struct in the existing union,
+> not a part of the pagecache struct.  And there's no need to use ->private
+> explicitly.
+
+Ok, I'll have a look at the googledoc you made
+
+>> @@ -1747,6 +1750,10 @@ void *__vmalloc_node_range(unsigned long size, unsigned long align,
+>>   	if (!addr)
+>>   		return NULL;
+>>   
+>> +	va = __find_vmap_area((unsigned long)addr);
+>> +	for (i = 0; i < va->vm->nr_pages; i++)
+>> +		va->vm->pages[i]->area = va;
 > 
-> #define list_set_next(head, next) wr_ptr(&head->next, next)
-> #define list_set_prev(head, prev) wr_ptr(&head->prev, prev)
+> I don't like it that you're calling this for _every_ vmalloc() caller
+> when most of them will never use this.  Perhaps have page->va be initially
+> NULL and then cache the lookup in it when it's accessed for the first time.
 > 
-> #include <linux/list_impl.h>
-> 
-> // list.h
-> 
-> #define list_set_next(next) (head->next = next)
-> #define list_set_next(prev) (head->prev = prev)
-> 
-> #include <linux/list_impl.h>
-> 
-> I wonder then if you can get rid of some of the type punning too? It's
-> not clear exactly why that's necessary from the series, but perhaps
-> I'm missing something obvious :)
 
-nothing obvious, probably there is only half a reference in the slides I 
-linked-to in the cover letter :-)
+If __find_vmap_area() was part of the API, this loop could be left out 
+from __vmalloc_node_range() and the user of the allocation could 
+initialize the field, if needed.
 
-So far I have minimized the number of "intrinsic" write rare functions,
-mostly because I would want first to reach an agreement on the 
-implementation of the core write-rare.
-
-However, once that is done, it might be good to convert also the prlists 
-to be "intrinsics". A list node is 2 pointers.
-If that was the alignment, i.e. __align(sizeof(list_head)), it might be 
-possible to speed up a lot the list handling even as write rare.
-
-Taking as example the insertion operation, it would be probably 
-sufficient, in most cases, to have only two remappings:
-- one covering the page with the latest two nodes
-- one covering the page with the list head
-
-That is 2 vs 8 remappings, and a good deal of memory barriers less.
-
-This would be incompatible with what you are proposing, yet it would be 
-justifiable, I think, because it would provide better performance to 
-prlist, potentially widening its adoption, where performance is a concern.
-
-> I also wonder how much the actual differences being baked in at
-> compile time makes. Most (all?) of this code is inlined.
-
-If the inlined function expects to receive a prlist_head *, instead of a 
-list_head *, doesn't it help turning runtime bugs into buildtime bugs?
-
-
-Or maybe I miss your point?
+What is the reason for keeping __find_vmap_area() private?
 
 --
 igor
