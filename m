@@ -1,70 +1,116 @@
-Date: Wed, 24 Oct 2018 16:00:29 +0100
-From: Tycho Andersen <tycho@tycho.ws>
-Subject: Re: Redoing eXclusive Page Frame Ownership (XPFO) with isolated CPUs
- in mind (for KVM to isolate its guests per CPU)
-Message-ID: <20181024150029.GB9019@cisco>
-References: <ciirm8a7p3alos.fsf@u54ee758033e858cfa736.ant.amazon.com>
- <CA+55aFzHj_GNZWG4K2oDu4DPP9sZdTZ9PY7sBxGB6WoN9g8d=A@mail.gmail.com>
- <ciirm8zhwyiqh4.fsf@u54ee758033e858cfa736.ant.amazon.com>
- <ciirm8efdy916l.fsf@u54ee758033e858cfa736.ant.amazon.com>
- <5efc291c-b0ed-577e-02d1-285d080c293d@oracle.com>
- <ciirm8va743105.fsf@u54ee758033e858cfa736.ant.amazon.com>
- <7221975d-6b67-effa-2747-06c22c041e78@oracle.com>
- <1537800341.9745.20.camel@amazon.de>
- <063f5efc-afb2-471f-eb4b-79bf90db22dd@oracle.com>
- <6cc985bb-6aed-4fb7-0ef2-43aad2717095@oracle.com>
+Date: Wed, 24 Oct 2018 17:07:06 +0200
+From: Jessica Yu <jeyu@kernel.org>
+Subject: Re: [PATCH RFC v3 0/3] Rlimit for module space
+Message-ID: <20181024150706.jewcclhhh756tupn@linux-8ccs>
+References: <20181019204723.3903-1-rick.p.edgecombe@intel.com>
+ <CAKv+Gu_AgPv2o4=U0-7pnpgtSufEobnta8oKhhGfCdCxM82B5Q@mail.gmail.com>
+ <6b1017c450d163539d2b974657baaaf697f0a138.camel@intel.com>
+ <CAKv+Gu-Rk-SQVOQ63L3DkF3=EVik3pHXzpNp5r5TrgDajTM_iQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=us-ascii; format=flowed
 Content-Disposition: inline
-In-Reply-To: <6cc985bb-6aed-4fb7-0ef2-43aad2717095@oracle.com>
-To: Khalid Aziz <khalid.aziz@oracle.com>
-Cc: "Stecklina, Julian" <jsteckli@amazon.de>, "juerg.haefliger@hpe.com" <juerg.haefliger@hpe.com>, "deepa.srinivasan@oracle.com" <deepa.srinivasan@oracle.com>, "jmattson@google.com" <jmattson@google.com>, "andrew.cooper3@citrix.com" <andrew.cooper3@citrix.com>, "Woodhouse, David" <dwmw@amazon.co.uk>, "torvalds@linux-foundation.org" <torvalds@linux-foundation.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "boris.ostrovsky@oracle.com" <boris.ostrovsky@oracle.com>, "pradeep.vincent@oracle.com" <pradeep.vincent@oracle.com>, "konrad.wilk@oracle.com" <konrad.wilk@oracle.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "kanth.ghatraju@oracle.com" <kanth.ghatraju@oracle.com>, "joao.m.martins@oracle.com" <joao.m.martins@oracle.com>, "liran.alon@oracle.com" <liran.alon@oracle.com>, "ak@linux.intel.com" <ak@linux.intel.com>, "keescook@google.com" <keescook@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "chris.hyser@oracle.com" <chris.hyser@oracle.com>, "tyhicks@canonical.com" <tyhicks@canonical.com>, "john.haxby@oracle.com" <john.haxby@oracle.com>, "jcm@redhat.com" <jcm@redhat.com>
+In-Reply-To: <CAKv+Gu-Rk-SQVOQ63L3DkF3=EVik3pHXzpNp5r5TrgDajTM_iQ@mail.gmail.com>
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "keescook@chromium.org" <keescook@chromium.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, "arjan@linux.intel.com" <arjan@linux.intel.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mips@linux-mips.org" <linux-mips@linux-mips.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, "jannh@google.com" <jannh@google.com>, "x86@kernel.org" <x86@kernel.org>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "catalin.marinas@arm.com" <catalin.marinas@arm.com>, "mingo@redhat.com" <mingo@redhat.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "bp@alien8.de" <bp@alien8.de>, "Hansen, Dave" <dave.hansen@intel.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "davem@davemloft.net" <davem@davemloft.net>, "arnd@arndb.de" <arnd@arndb.de>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "sparclinux@vger.kernel.org" <sparclinux@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 24, 2018 at 04:30:42PM +0530, Khalid Aziz wrote:
-> On 10/15/2018 01:37 PM, Khalid Aziz wrote:
-> > On 09/24/2018 08:45 AM, Stecklina, Julian wrote:
-> > > I didn't test the version with TLB flushes, because it's clear that the
-> > > overhead is so bad that no one wants to use this.
-> > 
-> > I don't think we can ignore the vulnerability caused by not flushing
-> > stale TLB entries. On a mostly idle system, TLB entries hang around long
-> > enough to make it fairly easy to exploit this. I was able to use the
-> > additional test in lkdtm module added by this patch series to
-> > successfully read pages unmapped from physmap by just waiting for system
-> > to become idle. A rogue program can simply monitor system load and mount
-> > its attack using ret2dir exploit when system is mostly idle. This brings
-> > us back to the prohibitive cost of TLB flushes. If we are unmapping a
-> > page from physmap every time the page is allocated to userspace, we are
-> > forced to incur the cost of TLB flushes in some way. Work Tycho was
-> > doing to implement Dave's suggestion can help here. Once Tycho has
-> > something working, I can measure overhead on my test machine. Tycho, I
-> > can help with your implementation if you need.
-> 
-> I looked at Tycho's last patch with batch update from
-> <https://lkml.org/lkml/2017/11/9/951>. I ported it on top of Julian's
-> patches and got it working well enough to gather performance numbers. Here
-> is what I see for system times on a machine with dual Xeon E5-2630 and 256GB
-> of memory when running "make -j30 all" on 4.18.6 kernel (percentages are
-> relative to base 4.19-rc8 kernel without xpfo):
-> 
-> 
-> Base 4.19-rc8				913.84s
-> 4.19-rc8 + xpfo, no TLB flush		1027.985s (+12.5%)
-> 4.19-rc8 + batch update, no TLB flush	970.39s (+6.2%)
-> 4.19-rc8 + xpfo, TLB flush		8458.449s (+825.6%)
-> 4.19-rc8 + batch update, TLB flush	4665.659s (+410.6%)
-> 
-> Batch update is significant improvement but we are starting so far behind
-> baseline, it is still a huge slow down.
++++ Ard Biesheuvel [23/10/18 08:54 -0300]:
+>On 22 October 2018 at 20:06, Edgecombe, Rick P
+><rick.p.edgecombe@intel.com> wrote:
+>> On Sat, 2018-10-20 at 19:20 +0200, Ard Biesheuvel wrote:
+>>> Hi Rick,
+>>>
+>>> On 19 October 2018 at 22:47, Rick Edgecombe <rick.p.edgecombe@intel.com>
+>>> wrote:
+>>> > If BPF JIT is on, there is no effective limit to prevent filling the entire
+>>> > module space with JITed e/BPF filters.
+>>>
+>>> Why do BPF filters use the module space, and does this reason apply to
+>>> all architectures?
+>>>
+>>> On arm64, we already support loading plain modules far away from the
+>>> core kernel (i.e. out of range for ordinary relative jump/calll
+>>> instructions), and so I'd expect BPF to be able to deal with this
+>>> already as well. So for arm64, I wonder why an ordinary vmalloc_exec()
+>>> wouldn't be more appropriate.
+>> AFAIK, it's like you said about relative instruction limits, but also because
+>> some predictors don't predict past a certain distance. So performance as well.
+>> Not sure the reasons for each arch, or if they all apply for BPF JIT. There seem
+>> to be 8 by my count, that have a dedicated module space for some reason.
+>>
+>>> So before refactoring the module alloc/free routines to accommodate
+>>> BPF, I'd like to take one step back and assess whether it wouldn't be
+>>> more appropriate to have a separate bpf_alloc/free API, which could be
+>>> totally separate from module alloc/free if the arch permits it.
+>>>
+>> I am not a BPF JIT expert unfortunately, hopefully someone more authoritative
+>> will chime in. I only ran into this because I was trying to increase
+>> randomization for the module space and wanted to find out how many allocations
+>> needed to be supported.
+>>
+>> I'd guess though, that BPF JIT is just assuming that there will be some arch
+>> specific constraints about where text can be placed optimally and they would
+>> already be taken into account in the module space allocator.
+>>
+>> If there are no constraints for some arch, I'd wonder why not just update its
+>> module_alloc to use the whole space available. What exactly are the constraints
+>> for arm64 for normal modules?
+>>
+>
+>Relative branches and the interactions with KAsan.
+>
+>We just fixed something similar in the kprobes code: it was using
+>RWX-mapped module memory to store kprobed instructions, and we
+>replaced that with a simple vmalloc_exec() [and code to remap it
+>read-only], which was possible given that relative branches are always
+>emulated by arm64 kprobes.
+>
+>So it depends on whether BPF code needs to be in relative branching
+>range from the calling code, and whether the BPF code itself is
+>emitted using relative branches into other parts of the code.
+>
+>> It seems fine to me for architectures to have the option of solving this a
+>> different way. If potentially the rlimit ends up being the best solution for
+>> some architectures though, do you think this refactor (pretty close to just a
+>> name change) is that intrusive?
+>>
+>> I guess it could be just a BPF JIT per user limit and not touch module space,
+>> but I thought the module space limit was a more general solution as that is the
+>> actual limited resource.
+>>
+>
+>I think it is wrong to conflate the two things. Limiting the number of
+>BPF allocations and the limiting number of module allocations are two
+>separate things, and the fact that BPF reuses module_alloc() out of
+>convenience does not mean a single rlimit for both is appropriate.
 
-There's some other stuff that Dave suggested that I didn't do; in
-particular coalesce xpfo bits instead of setting things once per page
-when mappings are shared, etc.
+Hm, I think Ard has a good point. AFAIK, and correct me if I'm wrong,
+users of module_alloc() i.e. kprobes, ftrace, bpf, seem to use it
+because it is an easy way to obtain executable kernel memory (and
+depending on the needs of the architecture, being additionally
+reachable via relative branches) during runtime. The side effect is
+that all these users share the "module" memory space, even though this
+memory region is not exclusively used by modules (well, personally I
+think it technically should be, because seeing module_alloc() usage
+outside of the module loader is kind of a misuse of the module API and
+it's confusing for people who don't know the reason behind its usage
+outside of the module loader).
 
-Perhaps that will help more?
+Right now I'm not sure if it makes sense to impose a blanket limit on
+all module_alloc() allocations when the real motivation behind the
+rlimit is related to BPF, i.e., to stop unprivileged users from
+hogging up all the vmalloc space for modules with JITed BPF filters.
+So the rlimit has more to do with limiting the memory usage of BPF
+filters than it has to do with modules themselves.
 
-I'm still stuck working on something else for now, but I hope to be
-able to participate more on this Soon (TM). Thanks for the testing!
+I think Ard's suggestion of having a separate bpf_alloc/free API makes
+a lot of sense if we want to keep track of bpf-related allocations
+(and then the rlimit would be enforced for those). Maybe part of the
+module mapping space could be carved out for bpf filters (e.g. have
+BPF_VADDR, BPF_VSIZE, etc like how we have it for modules), or
+continue sharing the region but explicitly define a separate bpf_alloc
+API, depending on an architecture's needs. What do people think?
 
-Tycho
+Thanks,
+
+Jessica
