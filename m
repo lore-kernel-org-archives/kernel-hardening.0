@@ -1,119 +1,41 @@
-Date: Thu, 25 Oct 2018 09:11:30 +0100
-From: Tycho Andersen <tycho@tycho.ws>
-Subject: Re: [PATCH 14/17] prmem: llist, hlist, both plain and rcu
-Message-ID: <20181025081130.GA31945@cisco>
-References: <20181023213504.28905-1-igor.stoppa@huawei.com>
- <20181023213504.28905-15-igor.stoppa@huawei.com>
- <1634210774.446.1540381072927.JavaMail.zimbra@efficios.com>
- <243a8ff2-889c-089f-a1ff-c882933ca5c3@gmail.com>
- <20181024145606.GA9019@cisco>
- <d630474b-73a5-c6ae-2141-49c1184381b2@gmail.com>
+Date: Thu, 25 Oct 2018 16:18:35 +0200
+From: Michal Hocko <mhocko@kernel.org>
+Subject: Re: [PATCH RFC v3 0/3] Rlimit for module space
+Message-ID: <20181025141835.GS18839@dhcp22.suse.cz>
+References: <20181019204723.3903-1-rick.p.edgecombe@intel.com>
+ <CAKv+Gu_AgPv2o4=U0-7pnpgtSufEobnta8oKhhGfCdCxM82B5Q@mail.gmail.com>
+ <6b1017c450d163539d2b974657baaaf697f0a138.camel@intel.com>
+ <CAKv+Gu-Rk-SQVOQ63L3DkF3=EVik3pHXzpNp5r5TrgDajTM_iQ@mail.gmail.com>
+ <20181024150706.jewcclhhh756tupn@linux-8ccs>
+ <d7cb6a8c-b7d6-5c82-6721-2b5387da673f@iogearbox.net>
+ <d1fec827d028168047eafbac56e8e47d37cf7fb5.camel@intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <d630474b-73a5-c6ae-2141-49c1184381b2@gmail.com>
-To: Igor Stoppa <igor.stoppa@gmail.com>
-Cc: Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, igor stoppa <igor.stoppa@huawei.com>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Kate Stewart <kstewart@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Philippe Ombredanne <pombredanne@nexb.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Josh Triplett <josh@joshtriplett.org>, rostedt <rostedt@goodmis.org>, Lai Jiangshan <jiangshanlai@gmail.com>, linux-kernel <linux-kernel@vger.kernel.org>
+In-Reply-To: <d1fec827d028168047eafbac56e8e47d37cf7fb5.camel@intel.com>
+To: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
+Cc: "daniel@iogearbox.net" <daniel@iogearbox.net>, "jeyu@kernel.org" <jeyu@kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "jannh@google.com" <jannh@google.com>, "keescook@chromium.org" <keescook@chromium.org>, "arjan@linux.intel.com" <arjan@linux.intel.com>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mips@linux-mips.org" <linux-mips@linux-mips.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "catalin.marinas@arm.com" <catalin.marinas@arm.com>, "mingo@redhat.com" <mingo@redhat.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "bp@alien8.de" <bp@alien8.de>, "Hansen, Dave" <dave.hansen@intel.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "davem@davemloft.net" <davem@davemloft.net>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, "arnd@arndb.de" <arnd@arndb.de>, "sparclinux@vger.kernel.org" <sparclinux@vger.kernel.org>, "alexei.starovoitov@gmail.com" <alexei.starovoitov@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Oct 25, 2018 at 01:52:11AM +0300, Igor Stoppa wrote:
-> On 24/10/2018 17:56, Tycho Andersen wrote:
-> > On Wed, Oct 24, 2018 at 05:03:01PM +0300, Igor Stoppa wrote:
-> > > On 24/10/18 14:37, Mathieu Desnoyers wrote:
-> > > > Also, is it the right approach to duplicate existing APIs, or should we
-> > > > rather hook into page fault handlers and let the kernel do those "shadow"
-> > > > mappings under the hood ?
-> > > 
-> > > This question is probably a good candidate for the small Q&A section I have
-> > > in the 00/17.
-> > > 
-> > > 
-> > > > Adding a new GFP flags for dynamic allocation, and a macro mapping to
-> > > > a section attribute might suffice for allocation or definition of such
-> > > > mostly-read-only/seldom-updated data.
-> > > 
-> > > I think what you are proposing makes sense from a pure hardening standpoint.
-> > >  From a more defensive one, I'd rather minimise the chances of giving a free
-> > > pass to an attacker.
-> > > 
-> > > Maybe there is a better implementation of this, than what I have in mind.
-> > > But, based on my current understanding of what you are describing, there
-> > > would be few issues:
-> > > 
-> > > 1) where would the pool go? The pool is a way to manage multiple vmas and
-> > > express common property they share. Even before a vma is associated to the
-> > > pool.
-> > > 
-> > > 2) there would be more code that can seamlessly deal with both protected and
-> > > regular data. Based on what? Some parameter, I suppose.
-> > > That parameter would be the new target.
-> > > If the code is "duplicated", as you say, the actual differences are baked in
-> > > at compile time. The "duplication" would also allow to have always inlined
-> > > functions for write-rare and leave more freedom to the compiler for their
-> > > non-protected version.
-> > > 
-> > > Besides, I think the separate wr version also makes it very clear, to the
-> > > user of the API, that there will be a price to pay, in terms of performance.
-> > > The more seamlessly alternative might make this price less obvious.
-> > 
-> > What about something in the middle, where we move list to list_impl.h,
-> > and add a few macros where you have list_set_prev() in prlist now, so
-> > we could do,
-> > 
-> > // prlist.h
-> > 
-> > #define list_set_next(head, next) wr_ptr(&head->next, next)
-> > #define list_set_prev(head, prev) wr_ptr(&head->prev, prev)
-> > 
-> > #include <linux/list_impl.h>
-> > 
-> > // list.h
-> > 
-> > #define list_set_next(next) (head->next = next)
-> > #define list_set_next(prev) (head->prev = prev)
-> > 
-> > #include <linux/list_impl.h>
-> > 
-> > I wonder then if you can get rid of some of the type punning too? It's
-> > not clear exactly why that's necessary from the series, but perhaps
-> > I'm missing something obvious :)
-> 
-> nothing obvious, probably there is only half a reference in the slides I
-> linked-to in the cover letter :-)
-> 
-> So far I have minimized the number of "intrinsic" write rare functions,
-> mostly because I would want first to reach an agreement on the
-> implementation of the core write-rare.
-> 
-> However, once that is done, it might be good to convert also the prlists to
-> be "intrinsics". A list node is 2 pointers.
-> If that was the alignment, i.e. __align(sizeof(list_head)), it might be
-> possible to speed up a lot the list handling even as write rare.
-> 
-> Taking as example the insertion operation, it would be probably sufficient,
-> in most cases, to have only two remappings:
-> - one covering the page with the latest two nodes
-> - one covering the page with the list head
-> 
-> That is 2 vs 8 remappings, and a good deal of memory barriers less.
-> 
-> This would be incompatible with what you are proposing, yet it would be
-> justifiable, I think, because it would provide better performance to prlist,
-> potentially widening its adoption, where performance is a concern.
+On Thu 25-10-18 01:01:44, Edgecombe, Rick P wrote:
+[...]
+> FWIW, cgroups seems like a better solution than rlimit to me too. Maybe you all
+> already know, but it looks like the cgroups vmalloc charge is done in the main
+> page allocator and counts against the whole kernel memory limit.
 
-I guess the writes to these are rare, right? So perhaps it's not such
-a big deal :)
+I am not sure I understand what you are saying but let me clarify that
+vmalloc memory is accounted against memory cgroup associated with the
+user context calling vmalloc. All you need to do is to add __GFP_ACCOUNT
+to the gfp mask. The only challenge here is the charged memory life
+cycle. When does it get deallocated? In the worst case the memory is not
+tight to any user context and as such it doesn't get deallocated by
+killing all processes which could lead to memcg limit exhaustion.
 
-> > I also wonder how much the actual differences being baked in at
-> > compile time makes. Most (all?) of this code is inlined.
-> 
-> If the inlined function expects to receive a prlist_head *, instead of a
-> list_head *, doesn't it help turning runtime bugs into buildtime bugs?
+> A user may want
+> to have a higher kernel limit than the module space size, so it seems it isn't
+> enough by itself and some new limit would need to be added.
 
-In principle it's not a bug to use the prmem helpers where the regular
-ones would do, it's just slower (assuming the types are the same). But
-mostly, it's a way to avoid actually copying and pasting most of the
-implementations of most of the data structures. I see some other
-replies in the thread already, but this seems not so good to me.
-
-Tycho
+If there is another restriction on this memory then you are right.
+-- 
+Michal Hocko
+SUSE Labs
