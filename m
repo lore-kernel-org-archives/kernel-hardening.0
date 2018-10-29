@@ -1,36 +1,149 @@
-Subject: Re: [PATCH V5 0/5] KVM: X86: Introducing ROE Protection Kernel
- Hardening
-References: <20181026151223.16810-1-ahmedsoliman0x666@gmail.com>
+Subject: Re: [PATCH 02/17] prmem: write rare for static allocation
+References: <20181023213504.28905-1-igor.stoppa@huawei.com>
+ <20181023213504.28905-3-igor.stoppa@huawei.com>
+ <23022d8a-dcef-20d5-cb07-a218b08b7b9a@intel.com>
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <1b3eb10e-c492-dc77-cbe6-3a3e692326d7@gmail.com>
-Date: Mon, 29 Oct 2018 20:01:42 +0200
+Message-ID: <311d06ab-df6d-134a-82fc-1e2098f8a924@gmail.com>
+Date: Mon, 29 Oct 2018 20:03:07 +0200
 MIME-Version: 1.0
-In-Reply-To: <20181026151223.16810-1-ahmedsoliman0x666@gmail.com>
+In-Reply-To: <23022d8a-dcef-20d5-cb07-a218b08b7b9a@intel.com>
 Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-To: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>, Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, Jonathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, hpa@zytor.com, x86@kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, ovich00@gmail.com, kernel-hardening@lists.openwall.com, nigel.edwards@hpe.com, Boris Lukashev <blukashev@sempervictus.com>, Hossam Hassan <7ossam9063@gmail.com>, Ahmed Lotfy <A7med.lotfey@gmail.com>
+To: Dave Hansen <dave.hansen@intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org
+Cc: igor.stoppa@huawei.com, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Vlastimil Babka <vbabka@suse.cz>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Pavel Tatashin <pasha.tatashin@oracle.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On 25/10/2018 01:24, Dave Hansen wrote:
+>> +static __always_inline bool __is_wr_after_init(const void *ptr, size_t size)
+>> +{
+>> +	size_t start = (size_t)&__start_wr_after_init;
+>> +	size_t end = (size_t)&__end_wr_after_init;
+>> +	size_t low = (size_t)ptr;
+>> +	size_t high = (size_t)ptr + size;
+>> +
+>> +	return likely(start <= low && low < high && high <= end);
+>> +}
+> 
+> size_t is an odd type choice for doing address arithmetic.
 
-On 26/10/2018 16:12, Ahmed Abd El Mawgood wrote:
+it seemed more portable than unsigned long
 
-> This is the 5th version which is 4th version with minor fixes. ROE is a
-> hypercall that enables host operating system to restrict guest's access to its
-> own memory. This will provide a hardening mechanism that can be used to stop
-> rootkits from manipulating kernel static data structures and code. Once a memory
-> region is protected the guest kernel can't even request undoing the protection.
+>> +/**
+>> + * wr_memset() - sets n bytes of the destination to the c value
+>> + * @dst: beginning of the memory to write to
+>> + * @c: byte to replicate
+>> + * @size: amount of bytes to copy
+>> + *
+>> + * Returns true on success, false otherwise.
+>> + */
+>> +static __always_inline
+>> +bool wr_memset(const void *dst, const int c, size_t n_bytes)
+>> +{
+>> +	size_t size;
+>> +	unsigned long flags;
+>> +	uintptr_t d = (uintptr_t)dst;
+>> +
+>> +	if (WARN(!__is_wr_after_init(dst, n_bytes), WR_ERR_RANGE_MSG))
+>> +		return false;
+>> +	while (n_bytes) {
+>> +		struct page *page;
+>> +		uintptr_t base;
+>> +		uintptr_t offset;
+>> +		uintptr_t offset_complement;
+> 
+> Again, these are really odd choices for types.  vmap() returns a void*
+> pointer, on which you can do arithmetic.  
 
-This is very interesting, because it seems a very good match to the work 
-I'm doing, for supporting the creation of more targets for protection:
+I wasn't sure of how much I could rely on the compiler not doing some 
+unwanted optimizations.
 
-https://www.openwall.com/lists/kernel-hardening/2018/10/23/3
+> Why bother keeping another
+> type to which you have to cast to and from?
 
-In my case the protection would extend also to write-rate type of data.
-There is an open problem of identifying legitimate write-rare 
-operations, however it should be possible to provide at least a certain 
-degree of confidence.
+For the above reason. If I'm worrying unnecessarily, I can switch back 
+to void *
+It certainly is easier to use.
+
+> BTW, our usual "pointer stored in an integer type" is 'unsigned long',
+> if a pointer needs to be manipulated.
+
+yes, I noticed that, but it seemed strange ...
+size_t corresponds to unsigned long, afaik
+
+but it seems that I have not fully understood where to use it
+
+anyway, I can stick to the convention with unsigned long
+
+> 
+>> +		local_irq_save(flags);
+> 
+> Why are you doing the local_irq_save()?
+
+The idea was to avoid the case where an attack would somehow freeze the 
+core doing the write-rare operation, while the temporary mapping is 
+accessible.
+
+I have seen comments about using mappings that are private to the 
+current core (and I will reply to those comments as well), but this 
+approach seems architecture-dependent, while I was looking for a 
+solution that, albeit not 100% reliable, would work on any system with 
+an MMU. This would not prevent each arch to come up with own custom 
+implementation that provides better coverage, performance, etc.
+
+>> +		page = virt_to_page(d);
+>> +		offset = d & ~PAGE_MASK;
+>> +		offset_complement = PAGE_SIZE - offset;
+>> +		size = min(n_bytes, offset_complement);
+>> +		base = (uintptr_t)vmap(&page, 1, VM_MAP, PAGE_KERNEL);
+> 
+> Can you even call vmap() (which sleeps) with interrupts off?
+
+I accidentally disabled sleeping while atomic debugging and I totally 
+missed this problem :-(
+
+However, to answer your question, nothing exploded while I was testing 
+(without that type of debugging).
+
+I suspect I was just "lucky". Or maybe I was simply not triggering the 
+sleeping sub-case.
+
+As I understood the code, sleeping _might_ happen, but it's not going to 
+happen systematically.
+
+I wonder if I could split vmap() into two parts: first the sleeping one, 
+with interrupts enabled, then the non sleeping one, with interrupts 
+disabled.
+
+I need to read the code more carefully, but it seems that sleeping might 
+happen when memory for the mapping meta data is not immediately available.
+
+BTW, wouldn't the might_sleep() call belong more to the part which 
+really sleeps, instead than to the whole vmap() ?
+
+>> +		if (WARN(!base, WR_ERR_PAGE_MSG)) {
+>> +			local_irq_restore(flags);
+>> +			return false;
+>> +		}
+> 
+> You really need some kmap_atomic()-style accessors to wrap this stuff
+> for you.  This little pattern is repeated over and over.
+
+I really need to learn more about the way the kernel works and is 
+structured. It's a work in progress. Thanks for the advice.
+
+> ...
+>> +const char WR_ERR_RANGE_MSG[] = "Write rare on invalid memory range.";
+>> +const char WR_ERR_PAGE_MSG[] = "Failed to remap write rare page.";
+> 
+> Doesn't the compiler de-duplicate duplicated strings for you?  Is there
+> any reason to declare these like this?
+
+I noticed I have made some accidental modifications in a couple of 
+cases, when replicating the command.
+
+So I thought that if I really want to use the same string, why not doing 
+it explicitly? It seemed also easier, in case I want to tweak the 
+message. I need to do it only in one place.
 
 --
-
 igor
