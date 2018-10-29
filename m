@@ -1,12 +1,12 @@
-Subject: Re: [PATCH 05/17] prmem: shorthands for write rare on common types
+Subject: Re: [PATCH 06/17] prmem: test cases for memory protection
 References: <20181023213504.28905-1-igor.stoppa@huawei.com>
- <20181023213504.28905-6-igor.stoppa@huawei.com>
- <fbb38802-3dc3-4890-c981-724b9096a6be@intel.com>
+ <20181023213504.28905-7-igor.stoppa@huawei.com>
+ <0175ca6a-40d1-0fde-350c-891488432ecb@intel.com>
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <aa6d9911-c5f8-d759-a117-810d59763467@gmail.com>
-Date: Mon, 29 Oct 2018 20:12:32 +0200
+Message-ID: <1ef1168c-0c44-274a-5942-257b84609051@gmail.com>
+Date: Mon, 29 Oct 2018 20:16:14 +0200
 MIME-Version: 1.0
-In-Reply-To: <fbb38802-3dc3-4890-c981-724b9096a6be@intel.com>
+In-Reply-To: <0175ca6a-40d1-0fde-350c-891488432ecb@intel.com>
 Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
 To: Dave Hansen <dave.hansen@intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org
@@ -15,20 +15,33 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 
 
-On 25/10/2018 01:28, Dave Hansen wrote:
-> On 10/23/18 2:34 PM, Igor Stoppa wrote:
->> Wrappers around the basic write rare functionality, addressing several
->> common data types found in the kernel, allowing to specify the new
->> values through immediates, like constants and defines.
+On 25/10/2018 17:43, Dave Hansen wrote:
+>> +static bool is_address_protected(void *p)
+>> +{
+>> +	struct page *page;
+>> +	struct vmap_area *area;
+>> +
+>> +	if (unlikely(!is_vmalloc_addr(p)))
+>> +		return false;
+>> +	page = vmalloc_to_page(p);
+>> +	if (unlikely(!page))
+>> +		return false;
+>> +	wmb(); /* Flush changes to the page table - is it needed? */
 > 
-> I have to wonder whether this is the right way, or whether a
-> size-agnostic function like put_user() is the right way.  put_user() is
-> certainly easier to use.
+> No.
 
-I definitely did not like it either.
-But it was the best that came to my mind ...
-The main purpose of this code was to show what I wanted to do.
-Once more, thanks for pointing out a better way to do it.
+ok
+
+> The rest of this is just pretty verbose and seems to have been very
+> heavily copied and pasted.  I guess that's OK for test code, though.
+
+I was tempted to play with macros, as templates to generate tests on the 
+fly, according to the type being passed.
+
+But I was afraid it might generate an even stronger rejection than the 
+rest of the patchset already has.
+
+Would it be acceptable/preferable?
 
 --
 igor
