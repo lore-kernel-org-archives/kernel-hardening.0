@@ -2,160 +2,165 @@ Subject: Re: [PATCH 10/17] prmem: documentation
 References: <20181023213504.28905-1-igor.stoppa@huawei.com>
  <20181023213504.28905-11-igor.stoppa@huawei.com>
  <20181026092609.GB3159@worktop.c.hoisthospitality.com>
+ <CAGXu5jKCs01jvtvpEFS7R8qCR-5iRqK11kJxLJY99NicGWc4aQ@mail.gmail.com>
+ <20181028183126.GB744@hirez.programming.kicks-ass.net>
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <cb42d84d-082a-e1e5-7b71-95c2c4a44d0e@gmail.com>
-Date: Mon, 29 Oct 2018 22:35:42 +0200
+Message-ID: <40cd77ce-f234-3213-f3cb-0c3137c5e201@gmail.com>
+Date: Mon, 29 Oct 2018 23:04:01 +0200
 MIME-Version: 1.0
-In-Reply-To: <20181026092609.GB3159@worktop.c.hoisthospitality.com>
+In-Reply-To: <20181028183126.GB744@hirez.programming.kicks-ass.net>
 Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Mimi Zohar <zohar@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, igor.stoppa@huawei.com, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org
+To: Peter Zijlstra <peterz@infradead.org>, Kees Cook <keescook@chromium.org>
+Cc: Mimi Zohar <zohar@linux.vnet.ibm.com>, Matthew Wilcox <willy@infradead.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 26/10/2018 10:26, Peter Zijlstra wrote:
 
->> +- Kernel code is protected at system level and, unlike data, it doesn't
->> +  require special attention.
+On 28/10/2018 18:31, Peter Zijlstra wrote:
+> On Fri, Oct 26, 2018 at 11:46:28AM +0100, Kees Cook wrote:
+>> On Fri, Oct 26, 2018 at 10:26 AM, Peter Zijlstra <peterz@infradead.org> wrote:
+>>> I still don't really understand the whole write-rare thing; how does it
+>>> really help? If we can write in kernel memory, we can write to
+>>> page-tables too.
 > 
-> What does this even mean?
-
-I was trying to convey the notion that the pages containing kernel code 
-do not require any special handling by the author of a generic kernel 
-component, for example a kernel driver.
-
-Pages containing either statically or dynamically allocated data, 
-instead, are not automatically protected.
-
-But yes, the sentence is far from being clear.
-
+>> One aspect of hardening the kernel against attack is reducing the
+>> internal attack surface. Not all flaws are created equal, so there is
+>> variation in what limitations an attacker may have when exploiting
+>> flaws (not many flaws end up being a fully controlled "write anything,
+>> anywhere, at any time"). By making the more sensitive data structures
+>> of the kernel read-only, we reduce the risk of an attacker finding a
+>> path to manipulating the kernel's behavior in a significant way.
+>>
+>> Examples of typical sensitive targets are function pointers, security
+>> policy, and page tables. Having these "read only at rest" makes them
+>> much harder to control by an attacker using memory integrity flaws.
 > 
->> +Protection mechanism
->> +--------------------
->> +
->> +- When available, the MMU can write protect memory pages that would be
->> +  otherwise writable.
+> Because 'write-anywhere' exploits are easier than (and the typical first
+> step to) arbitrary code execution thingies?
 > 
-> Again; what does this really want to say?
-
-That it is possible to use the MMU also for write-protecting pages 
-containing data which was not declared as constant.
+>> The "write rarely" name itself may not sufficiently describe what is
+>> wanted either (I'll take the blame for the inaccurate name), so I'm
+>> open to new ideas there. The implementation requirements for the
+>> "sensitive data read-only at rest" feature are rather tricky:
+>>
+>> - allow writes only from specific places in the kernel
+>> - keep those locations inline to avoid making them trivial ROP targets
+>> - keep the writeability window open only to a single uninterruptable CPU
 > 
->> +- The protection has page-level granularity.
+> The current patch set does not achieve that because it uses a global
+> address space for the alias mapping (vmap) which is equally accessible
+> from all CPUs.
+
+I never claimed to achieve 100% resilience to attacks.
+While it's true that the address space is accessible to all the CPUs, it 
+is also true that the access has a limited duration in time, and the 
+location where the access can be performed is not fixed.
+
+Iow, assuming that the CPUs not involved in the write-rare operations 
+are compromised and that they are trying to perform a concurrent access 
+to the data in the writable page, they have a limited window of opportunity.
+
+Said this, this I have posted is just a tentative implementation.
+My primary intent was to at least give an idea of what I'd like to do: 
+alter some data in a way that is not easily exploitable.
+
+>> - fast enough to deal with page table updates
 > 
-> I don't think Linux supports non-paging MMUs.
+> The proposed implementation needs page-tables for the alias; I don't see
+> how you could ever do R/O page-tables when you need page-tables to
+> modify your page-tables.
 
-This probably came from a model I had in mind where a separate execution 
-environment, such as an hypervisor, could trap and filter writes to a 
-certain parts of a page, rejecting some and performing others, 
-effectively emulating sub-page granularity.
+It's not all-or-nothing.
+I hope we agree at least on the reasoning that having only a limited 
+amount of address space directly attackable, instead of the whole set of 
+pages containing exploitable data, is  reducing the attack surface.
 
+Furthermore, if we think about possible limitations that the attack 
+might have (maximum reach), the level of protection might be even 
+higher. I have to use "might" because I cannot foresee the vulnerability.
+
+Furthermore, taking a different angle: your average attacker is not 
+necessarily very social and inclined to share the vulnerability found.
+It is safe to assume that in most cases each attacker has to identify 
+the attack strategy autonomously.
+Reducing the amount of individual who can perform an attack, by 
+increasing the expertise required is also a way of doing damage control.
+
+> And this is entirely irrespective of performance.
+
+I have not completely given up on performance, but, being write-rare, I 
+see improved performance as just a way of widening the range of possible 
+recipients for the hardening.
+
+>> The proposal I made a while back only covered .data things (and used
+>> x86-specific features).
 > 
->> +- An attempt to overwrite a protected page will trigger an exception.
->> +- **Write protected data must go exclusively to write protected pages**
->> +- **Writable data must go exclusively to writable pages**
+> Oh, right, that CR0.WP stuff.
 > 
-> WTH is with all those ** ?
-
-[...]
-
-> Can we ditch all the ** nonsense and put whitespace in there? More paragraphs
-> and whitespace are more good.
-
-Yes
-
-> Also, I really don't like how you differentiate between static and
-> dynamic wr.
-
-ok, but why? what would you suggest, instead?
-
-[...]
-
-> We already have RO, why do you need more RO?
-
-I can explain, but I'm at loss of what is the best place: I was under 
-the impression that this sort of document should focus mostly on the API 
-and its use. I was even considering removing most of the explanation and 
-instead put it in a separate document.
-
+>> Igor's proposal builds on this by including a
+>> way to do this with dynamic allocation too, which greatly expands the
+>> scope of structures that can be protected. Given that the x86-only
+>> method of write-window creation was firmly rejected, this is a new
+>> proposal for how to do it (vmap window). Using switch_mm() has also
+>> been suggested, etc.
 > 
->> +
->> +   **Remarks:**
->> +    - The "AUTO" modes perform automatic protection of the content, whenever
->> +       the current vmap_area is used up and a new one is allocated.
->> +        - At that point, the vmap_area being phased out is protected.
->> +        - The size of the vmap_area depends on various parameters.
->> +        - It might not be possible to know for sure *when* certain data will
->> +          be protected.
+> Right... /me goes find the patches we did for text_poke. Hmm, those
+> never seem to have made it:
 > 
-> Surely that is a problem?
+>    https://lkml.kernel.org/r/20180902173224.30606-1-namit@vmware.com
 > 
->> +        - The functionality is provided as tradeoff between hardening and speed.
+> like that. That approach will in fact work and not be a completely
+> broken mess like this thing.
+
+That approach is x86 specific.
+I preferred to start with something that would work on a broader set of 
+architectures, even if with less resilience.
+
+It can be done so that individual architectures can implement their own 
+specific way and obtain better results.
+
+>> We need to find a good way to do the write-windowing that works well
+>> for static and dynamic structures _and_ for the page tables... this
+>> continues to be tricky.
+>>
+>> Making it resilient against ROP-style targets makes it difficult to
+>> deal with certain data structures (like list manipulation). In my
+>> earlier RFC, I tried to provide enough examples of where this could
+>> get used to let people see some of the complexity[1]. Igor's series
+>> expands this to even more examples using dynamic allocation.
 > 
-> Which you fail to explain.
+> Doing 2 CR3 writes for 'every' WR write doesn't seem like it would be
+> fast enough for much of anything.
+
+Part of the reason for the duplication is that, even if the wr_API I 
+came up with, can be collapsed with the regular API, the implementation 
+needs to be different, to be faster.
+
+Ex:
+* force the list_head structure to be aligned so that it will always be 
+fully contained by a single page
+* create alternate mapping for all the pages involved (max 1 page for 
+each list_head)
+* do the lsit operation on the remapped list_heads
+* destroy all the mappings
+
+I can try to introduce some wrapper similar to kmap_atomic(), as 
+suggested by Dave Hansen, which can improve the coding, but it will not 
+change the actual set of operations performed.
+
+
+> And I don't suppose we can take the WP fault and then fix up from there,
+> because if we're doing R/O page-tables, that'll incrase the fault depth
+> and we'll double fault all the time, and tripple fault where we
+> currently double fault. And we all know how _awesome_ tripple faults
+> are.
 > 
->> +        - Its usefulness depends on the specific use case at hand
-> 
-> How about you write sensible text inside the option descriptions
-> instead?
-> 
-> This is not a presentation; less bullets, more content.
+> But duplicating (and wrapping in gunk) whole APIs is just not going to
+> work.
 
-I tried to say something, without saying too much, but it was clearly a 
-bad choice.
-
-Where should i put a thoroughly detailed explanation?
-Here or in a separate document?
-
-> 
->> +- Not only the pmalloc memory must be protected, but also any reference to
->> +  it that might become the target for an attack. The attack would replace
->> +  a reference to the protected memory with a reference to some other,
->> +  unprotected, memory.
-> 
-> I still don't really understand the whole write-rare thing; how does it
-> really help? If we can write in kernel memory, we can write to
-> page-tables too.
-
-It has already been answered by Kees, but I'll provide also my answer:
-
-the exploits used to write in kernel memory are specific to certain 
-products and SW builds, so it's not possible to generalize too much, 
-however there might be some limitation in the reach of a specific 
-vulnerability. For example, if a memory location is referred to as 
-offset from a base address, the maximum size of the offset limits the 
-scope of the attack. Which might make it impossible to use that specific 
-vulnerability for writing directly to the page table. But something 
-else, say a statically allocated variable, might be within reach.
-
-said this, there is also the almost orthogonal use case of providing 
-increased robustness by trapping accidental modifications, caused by bugs.
-
-> And I don't think this document even begins to explain _why_ you're
-> doing any of this. How does it help?
-
-ok, point taken
-
->> +- The users of rare write must take care of ensuring the atomicity of the
->> +  action, respect to the way they use the data being altered; for example,
->> +  take a lock before making a copy of the value to modify (if it's
->> +  relevant), then alter it, issue the call to rare write and finally
->> +  release the lock. Some special scenario might be exempt from the need
->> +  for locking, but in general rare-write must be treated as an operation
->> +  that can incur into races.
-> 
-> What?!
-
-Probably something along the lines of:
-
-"users of write-rare are responsible of using mechanisms that allow 
-reading/writing data in a consistent way"
-
-and if it seems obvious, I can just drop it.
-
-One of the problems I have faced is to decide what level of knowledge or 
-understanding I should expect from the reader of such document: what I 
-can take for granted and what I should explain.
+Would something like kmap_atomic() be acceptable?
+Do you have some better proposal, now that (I hope) it should be more 
+clear what I'm trying to do and why?
 
 --
 igor
