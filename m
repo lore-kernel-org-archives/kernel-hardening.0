@@ -1,96 +1,30 @@
-Subject: Re: [PATCH 09/17] prmem: hardened usercopy
-References: <20181023213504.28905-1-igor.stoppa@huawei.com>
- <20181023213504.28905-10-igor.stoppa@huawei.com>
-From: Chris von Recklinghausen <crecklin@redhat.com>
-Message-ID: <cd768a99-5afa-999c-989a-efee66fa0ddb@redhat.com>
-Date: Mon, 29 Oct 2018 07:45:14 -0400
+Date: Mon, 29 Oct 2018 09:42:29 -0700
+From: Sean Christopherson <sean.j.christopherson@intel.com>
+Subject: gRe: [PATCH V5 1/5] KVM: X86: Memory ROE documentation
+Message-ID: <20181029164229.GA27144@linux.intel.com>
+References: <20181026151223.16810-1-ahmedsoliman0x666@gmail.com>
+ <20181026151223.16810-2-ahmedsoliman0x666@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20181023213504.28905-10-igor.stoppa@huawei.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Igor Stoppa <igor.stoppa@gmail.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, kernel-hardening@lists.openwall.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org
-Cc: igor.stoppa@huawei.com, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20181026151223.16810-2-ahmedsoliman0x666@gmail.com>
+To: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>
+Cc: Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, Jonathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, hpa@zytor.com, x86@kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, ovich00@gmail.com, kernel-hardening@lists.openwall.com, nigel.edwards@hpe.com, Boris Lukashev <blukashev@sempervictus.com>, Hossam Hassan <7ossam9063@gmail.com>, Ahmed Lotfy <A7med.lotfey@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 10/23/2018 05:34 PM, Igor Stoppa wrote:
-> Prevent leaks of protected memory to userspace.
-> The protection from overwrited from userspace is already available, once
-> the memory is write protected.
->
-> Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
-> CC: Kees Cook <keescook@chromium.org>
-> CC: Chris von Recklinghausen <crecklin@redhat.com>
-> CC: linux-mm@kvack.org
-> CC: linux-kernel@vger.kernel.org
-> ---
->  include/linux/prmem.h | 24 ++++++++++++++++++++++++
->  mm/usercopy.c         |  5 +++++
->  2 files changed, 29 insertions(+)
->
-> diff --git a/include/linux/prmem.h b/include/linux/prmem.h
-> index cf713fc1c8bb..919d853ddc15 100644
-> --- a/include/linux/prmem.h
-> +++ b/include/linux/prmem.h
-> @@ -273,6 +273,30 @@ struct pmalloc_pool {
->  	uint8_t mode;
->  };
->  
-> +void __noreturn usercopy_abort(const char *name, const char *detail,
-> +			       bool to_user, unsigned long offset,
-> +			       unsigned long len);
-> +
-> +/**
-> + * check_pmalloc_object() - helper for hardened usercopy
-> + * @ptr: the beginning of the memory to check
-> + * @n: the size of the memory to check
-> + * @to_user: copy to userspace or from userspace
-> + *
-> + * If the check is ok, it will fall-through, otherwise it will abort.
-> + * The function is inlined, to minimize the performance impact of the
-> + * extra check that can end up on a hot path.
-> + * Non-exhaustive micro benchmarking with QEMU x86_64 shows a reduction of
-> + * the time spent in this fragment by 60%, when inlined.
-> + */
-> +static inline
-> +void check_pmalloc_object(const void *ptr, unsigned long n, bool to_user)
-> +{
-> +	if (unlikely(__is_wr_after_init(ptr, n) || __is_wr_pool(ptr, n)))
-> +		usercopy_abort("pmalloc", "accessing pmalloc obj", to_user,
-> +			       (const unsigned long)ptr, n);
-> +}
-> +
->  /*
->   * The write rare functionality is fully implemented as __always_inline,
->   * to prevent having an internal function call that is capable of modifying
-> diff --git a/mm/usercopy.c b/mm/usercopy.c
-> index 852eb4e53f06..a080dd37b684 100644
-> --- a/mm/usercopy.c
-> +++ b/mm/usercopy.c
-> @@ -22,8 +22,10 @@
->  #include <linux/thread_info.h>
->  #include <linux/atomic.h>
->  #include <linux/jump_label.h>
-> +#include <linux/prmem.h>
->  #include <asm/sections.h>
->  
-> +
->  /*
->   * Checks if a given pointer and length is contained by the current
->   * stack frame (if possible).
-> @@ -284,6 +286,9 @@ void __check_object_size(const void *ptr, unsigned long n, bool to_user)
->  
->  	/* Check for object in kernel to avoid text exposure. */
->  	check_kernel_text_object((const unsigned long)ptr, n, to_user);
-> +
-> +	/* Check if object is from a pmalloc chunk. */
-> +	check_pmalloc_object(ptr, n, to_user);
->  }
->  EXPORT_SYMBOL(__check_object_size);
->  
+On Fri, Oct 26, 2018 at 05:12:19PM +0200, Ahmed Abd El Mawgood wrote:
+> Following up with my previous threads on KVM assisted Anti rootkit
+> protections.
 
-Could you add code somewhere (lkdtm driver if possible) to demonstrate
-the issue and verify the code change?
+All of the changelogs in this series need to be rewritten to adhere to
+Documentation/process[1].  In particular, use imperative mood and
+describe why/what is being done in a self-contained manner, e.g. the
+above line isn't very helpful without a lot of prior context.
 
-Thanks,
+[1] https://github.com/torvalds/linux/blob/master/Documentation/process/submitting-patches.rst#2-describe-your-changes
 
-Chris
+> The current version doesn't address the attacks involving pages
+> remapping. It is still design in progress, nevertheless, it will be in
+> my later patch sets.
+
+This series should be tagged RFC if its design is a WIP.
