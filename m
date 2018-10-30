@@ -1,71 +1,55 @@
-Subject: Re: [PATCH V5 0/5] KVM: X86: Introducing ROE Protection Kernel
- Hardening
-References: <20181026151223.16810-1-ahmedsoliman0x666@gmail.com>
-From: Christian Borntraeger <borntraeger@de.ibm.com>
-Date: Tue, 30 Oct 2018 18:31:38 +0100
+Date: Tue, 30 Oct 2018 10:58:14 -0700
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH 10/17] prmem: documentation
+Message-ID: <20181030175814.GB10491@bombadil.infradead.org>
+References: <20181023213504.28905-1-igor.stoppa@huawei.com>
+ <20181023213504.28905-11-igor.stoppa@huawei.com>
+ <20181026092609.GB3159@worktop.c.hoisthospitality.com>
+ <CAGXu5jKCs01jvtvpEFS7R8qCR-5iRqK11kJxLJY99NicGWc4aQ@mail.gmail.com>
+ <20181028183126.GB744@hirez.programming.kicks-ass.net>
+ <40cd77ce-f234-3213-f3cb-0c3137c5e201@gmail.com>
+ <20181030152641.GE8177@hirez.programming.kicks-ass.net>
+ <CAGXu5jJftJ+Hq+jrZGHX5CTDLWOog7kGsd_Ne=yMvrRs__skSg@mail.gmail.com>
+ <0A7AFB50-9ADE-4E12-B541-EC7839223B65@amacapital.net>
 MIME-Version: 1.0
-In-Reply-To: <20181026151223.16810-1-ahmedsoliman0x666@gmail.com>
-Message-Id: <e778a30c-f32e-eb4c-5492-21c81926b87f@de.ibm.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-To: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>, Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, Jonathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, hpa@zytor.com, x86@kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, ovich00@gmail.com, kernel-hardening@lists.openwall.com, nigel.edwards@hpe.com, Boris Lukashev <blukashev@sempervictus.com>, Hossam Hassan <7ossam9063@gmail.com>, Ahmed Lotfy <A7med.lotfey@gmail.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <0A7AFB50-9ADE-4E12-B541-EC7839223B65@amacapital.net>
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Igor Stoppa <igor.stoppa@gmail.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Oct 30, 2018 at 10:06:51AM -0700, Andy Lutomirski wrote:
+> > On Oct 30, 2018, at 9:37 AM, Kees Cook <keescook@chromium.org> wrote:
+> I support the addition of a rare-write mechanism to the upstream kernel.
+> And I think that there is only one sane way to implement it: using an
+> mm_struct. That mm_struct, just like any sane mm_struct, should only
+> differ from init_mm in that it has extra mappings in the *user* region.
 
-On 10/26/2018 05:12 PM, Ahmed Abd El Mawgood wrote:
-> This is the 5th version which is 4th version with minor fixes. ROE is a 
-> hypercall that enables host operating system to restrict guest's access to its
-> own memory. This will provide a hardening mechanism that can be used to stop
-> rootkits from manipulating kernel static data structures and code. Once a memory
-> region is protected the guest kernel can't even request undoing the protection.
+I'd like to understand this approach a little better.  In a syscall path,
+we run with the user task's mm.  What you're proposing is that when we
+want to modify rare data, we switch to rare_mm which contains a
+writable mapping to all the kernel data which is rare-write.
 
-At the KVM forum we considered this as something that could be implemented across
-multiple architectures. Yes, there will be architecture specific implementations 
-and yes some  architectures might be not able to provide everything (e.g. sub-page
-granularity).
-But we should really check if we can come up with a guest interface or guest common 
-code that can be useful across architectures.
-> 
-> Memory protected by ROE should be non-swapable because even if the ROE protected
-> page got swapped out, It won't be possible to write anything in its place.
-> 
-> ROE hypercall should be capable of either protecting a whole memory frame or
-> parts of it. With these two, it should be possible for guest kernel to protect
-> its memory and all the page table entries for that memory inside the page table.
-> I am still not sure whether this should be part of ROE job or the guest's job.
-> 
-> 
-> The reason why it would be better to implement this from inside kvm: instead of
-> (host) user space is the need to access SPTEs to modify the permissions, while
-> mprotect() from user space can work in theory. It will become a big performance
-> hit to vmexit and switch to user space mode on each fault, on the other hand,
-> having the permission handled by EPT should make some remarkable performance
-> gain.
-> 
-> Our model assumes that an attacker got full root access to a running guest and
-> his goal is to manipulate kernel code/data (hook syscalls, overwrite IDT ..etc).
-> 
-> There is future work in progress to also put some sort of protection on the page
-> table register CR3 and other critical registers that can be intercepted by KVM.
-> This way it won't be possible for an attacker to manipulate any part of the
-> guests page table.
-> 
-> V4->V5 change log:
-> - Fixed summary (it was reverted summary)
-> - Fixed an inaccurate documentation in patch [4/5]
-> 
-> Summary:
-> 
->  Documentation/virtual/kvm/hypercalls.txt |  40 +++++
->  arch/x86/include/asm/kvm_host.h          |  11 +-
->  arch/x86/kvm/Kconfig                     |   7 +
->  arch/x86/kvm/mmu.c                       | 129 ++++++++++----
->  arch/x86/kvm/vmx.c                       |   2 +-
->  arch/x86/kvm/x86.c                       | 281 ++++++++++++++++++++++++++++++-
->  include/linux/kvm_host.h                 |  29 ++++
->  include/uapi/linux/kvm_para.h            |   5 +
->  virt/kvm/kvm_main.c                      | 119 +++++++++++--
->  9 files changed, 572 insertions(+), 51 deletions(-)
-> 
-> Signed-off-by: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>
-> 
+So the API might look something like this:
+
+	void *p = rare_alloc(...);	/* writable pointer */
+	p->a = x;
+	q = rare_protect(p);		/* read-only pointer */
+
+To subsequently modify q,
+
+	p = rare_modify(q);
+	q->a = y;
+	rare_protect(p);
+
+Under the covers, rare_modify() would switch to the rare_mm and return
+(void *)((unsigned long)q + ARCH_RARE_OFFSET).  All of the rare data
+would then be modifiable, although you don't have any other pointers
+to it.  rare_protect() would switch back to the previous mm and return
+(p - ARCH_RARE_OFFSET).
+
+Does this satisfy Igor's requirements?  We wouldn't be able to
+copy_to/from_user() while rare_mm was active.  I think that's a feature
+though!  It certainly satisfies my interests (kernel code be able to
+mark things as dynamically-allocated-and-read-only-after-initialisation)
