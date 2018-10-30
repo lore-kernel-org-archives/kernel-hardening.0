@@ -1,4 +1,7 @@
+Date: Tue, 30 Oct 2018 12:28:41 -0600
+From: Tycho Andersen <tycho@tycho.ws>
 Subject: Re: [PATCH 10/17] prmem: documentation
+Message-ID: <20181030182841.GE7343@cisco>
 References: <20181023213504.28905-1-igor.stoppa@huawei.com>
  <20181023213504.28905-11-igor.stoppa@huawei.com>
  <20181026092609.GB3159@worktop.c.hoisthospitality.com>
@@ -9,25 +12,56 @@ References: <20181023213504.28905-1-igor.stoppa@huawei.com>
  <CAGXu5jJftJ+Hq+jrZGHX5CTDLWOog7kGsd_Ne=yMvrRs__skSg@mail.gmail.com>
  <0A7AFB50-9ADE-4E12-B541-EC7839223B65@amacapital.net>
  <20181030175814.GB10491@bombadil.infradead.org>
-From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <d5b57049-419b-3bbb-dc8d-97e4024965df@intel.com>
-Date: Tue, 30 Oct 2018 11:03:51 -0700
 MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 In-Reply-To: <20181030175814.GB10491@bombadil.infradead.org>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-To: Matthew Wilcox <willy@infradead.org>, Andy Lutomirski <luto@amacapital.net>
-Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Igor Stoppa <igor.stoppa@gmail.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
+To: Matthew Wilcox <willy@infradead.org>
+Cc: Andy Lutomirski <luto@amacapital.net>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Igor Stoppa <igor.stoppa@gmail.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 10/30/18 10:58 AM, Matthew Wilcox wrote:
+On Tue, Oct 30, 2018 at 10:58:14AM -0700, Matthew Wilcox wrote:
+> On Tue, Oct 30, 2018 at 10:06:51AM -0700, Andy Lutomirski wrote:
+> > > On Oct 30, 2018, at 9:37 AM, Kees Cook <keescook@chromium.org> wrote:
+> > I support the addition of a rare-write mechanism to the upstream kernel.
+> > And I think that there is only one sane way to implement it: using an
+> > mm_struct. That mm_struct, just like any sane mm_struct, should only
+> > differ from init_mm in that it has extra mappings in the *user* region.
+> 
+> I'd like to understand this approach a little better.  In a syscall path,
+> we run with the user task's mm.  What you're proposing is that when we
+> want to modify rare data, we switch to rare_mm which contains a
+> writable mapping to all the kernel data which is rare-write.
+> 
+> So the API might look something like this:
+> 
+> 	void *p = rare_alloc(...);	/* writable pointer */
+> 	p->a = x;
+> 	q = rare_protect(p);		/* read-only pointer */
+> 
+> To subsequently modify q,
+> 
+> 	p = rare_modify(q);
+> 	q->a = y;
+
+Do you mean
+
+    p->a = y;
+
+here? I assume the intent is that q isn't writable ever, but that's
+the one we have in the structure at rest.
+
+Tycho
+
+> 	rare_protect(p);
+> 
+> Under the covers, rare_modify() would switch to the rare_mm and return
+> (void *)((unsigned long)q + ARCH_RARE_OFFSET).  All of the rare data
+> would then be modifiable, although you don't have any other pointers
+> to it.  rare_protect() would switch back to the previous mm and return
+> (p - ARCH_RARE_OFFSET).
+> 
 > Does this satisfy Igor's requirements?  We wouldn't be able to
 > copy_to/from_user() while rare_mm was active.  I think that's a feature
 > though!  It certainly satisfies my interests (kernel code be able to
 > mark things as dynamically-allocated-and-read-only-after-initialisation)
-
-It has to be more than copy_to/from_user(), though, I think.
-
-rare_modify(q) either has to preempt_disable(), or we need to teach the
-context-switching code when and how to switch in/out of the rare_mm.
-preempt_disable() would also keep us from sleeping.
