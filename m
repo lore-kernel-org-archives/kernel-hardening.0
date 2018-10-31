@@ -1,35 +1,86 @@
 MIME-Version: 1.0
-References: <20181026151223.16810-1-ahmedsoliman0x666@gmail.com>
- <20181026151223.16810-2-ahmedsoliman0x666@gmail.com> <20181029164229.GA27144@linux.intel.com>
-In-Reply-To: <20181029164229.GA27144@linux.intel.com>
-From: Ahmed Soliman <ahmedsoliman0x666@gmail.com>
-Date: Wed, 31 Oct 2018 18:02:59 +0200
-Message-ID: <CAAGnT3bJUSEnoZotJsMx1ZEMzKF94Fnx8jo=zx4q+uA7mjfLQg@mail.gmail.com>
-Subject: Re: gRe: [PATCH V5 1/5] KVM: X86: Memory ROE documentation
-Content-Type: text/plain; charset="UTF-8"
-To: sean.j.christopherson@intel.com
-Cc: Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, nathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, kvm@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, =?UTF-8?B?6rmA7J246rK4?= <ovich00@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, nigel.edwards@hpe.com, Boris Lukashev <blukashev@sempervictus.com>, Hossam Hassan <7ossam9063@gmail.com>, Ahmed Lotfy <A7med.lotfey@gmail.com>
+In-Reply-To: <CALS6=qXZh5Oaav3ahvP9Sfg9eGyBFLGOisPve8mR5vDNz8JwWA@mail.gmail.com>
+References: <CALS6=qXZh5Oaav3ahvP9Sfg9eGyBFLGOisPve8mR5vDNz8JwWA@mail.gmail.com>
+From: Wes Turner <wes.turner@gmail.com>
+Date: Wed, 31 Oct 2018 15:04:15 -0400
+Message-ID: <CACfEFw-QKzgmfZsM28niy-scVgRJ3EgaincorrVmnmXTnSy3MA@mail.gmail.com>
+Subject: Re: Empirically testing the effectiveness of kernel hardening patches
+Content-Type: multipart/alternative; boundary="000000000000fc498105798af78d"
+To: Carter Cheng <cartercheng@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 29 Oct 2018 at 18:42, Sean Christopherson
-<sean.j.christopherson@intel.com> wrote:
+--000000000000fc498105798af78d
+Content-Type: text/plain; charset="UTF-8"
+
+https://en.wikipedia.org/wiki/Fuzzing
+
+https://github.com/secfigo/Awesome-Fuzzing
+
+https://github.com/kernelslacker/trinity
+
+https://github.com/google/syzkaller/#external-articles
+
+https://github.com/google/syzkaller/blob/master/docs/syzbot.md
+
+> syzbot system continuously fuzzes main Linux kernel branches and
+automatically reports found bugs to kernel mailing lists
+
+https://github.com/oracle/kernel-fuzzing
+
+I just found these, so IDK
+
+Does Kali include virtualization  such as KVM and fuzzing / dynamic
+analysis / static analysis tools and a CI pipeline that can execute
+on_commit to new git branches?
+
+On Wednesday, October 31, 2018, Carter Cheng <cartercheng@gmail.com> wrote:
+
+> Hi,
 >
-> On Fri, Oct 26, 2018 at 05:12:19PM +0200, Ahmed Abd El Mawgood wrote:
-> > Following up with my previous threads on KVM assisted Anti rootkit
-> > protections.
+> Is there some sort of standard testbed for testing the effectivenss of a
+> kernel hardening patch to see how effective it is against current malware?
+> How does one go about this?
 >
-> All of the changelogs in this series need to be rewritten to adhere to
-> Documentation/process[1].  In particular, use imperative mood and
-> describe why/what is being done in a self-contained manner, e.g. the
-> above line isn't very helpful without a lot of prior context.
+> I assume when it comes to hardening the kernel the main target is certain
+> forms of privilege escalation. Is it possible to use Kali linux for this
+> purpose?
 >
-> [1] https://github.com/torvalds/linux/blob/master/Documentation/process/submitting-patches.rst#2-describe-your-changes
+> Thanks in advance,
 >
-> > The current version doesn't address the attacks involving pages
-> > remapping. It is still design in progress, nevertheless, it will be in
-> > my later patch sets.
+> Carter.
 >
-> This series should be tagged RFC if its design is a WIP.
-Ops my bad, the current description is obsolete and I forgot to remove
-it. I will have this fixed as well as your other comments in the next
-patch series.
+
+--000000000000fc498105798af78d
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div><a href=3D"https://en.wikipedia.org/wiki/Fuzzing">https://en.wikipedia=
+.org/wiki/Fuzzing</a><br></div><div><br></div><a href=3D"https://github.com=
+/secfigo/Awesome-Fuzzing">https://github.com/secfigo/Awesome-Fuzzing</a><di=
+v><br></div><div><a href=3D"https://github.com/kernelslacker/trinity">https=
+://github.com/kernelslacker/trinity</a><br></div><div><br></div><div><a hre=
+f=3D"https://github.com/google/syzkaller/#external-articles">https://github=
+.com/google/syzkaller/#external-articles</a></div><div><br></div><div><a hr=
+ef=3D"https://github.com/google/syzkaller/blob/master/docs/syzbot.md">https=
+://github.com/google/syzkaller/blob/master/docs/syzbot.md</a><br></div><div=
+><br></div><div>&gt;=C2=A0syzbot system continuously fuzzes main Linux kern=
+el branches and automatically reports found bugs to kernel mailing lists</d=
+iv><div><br></div><div><a href=3D"https://github.com/oracle/kernel-fuzzing"=
+>https://github.com/oracle/kernel-fuzzing</a></div><div><br></div><div>I ju=
+st found these, so IDK</div><div><br></div><div>Does Kali include virtualiz=
+ation=C2=A0 such as KVM and fuzzing / dynamic analysis / static analysis to=
+ols and a CI pipeline that can execute on_commit to new git branches?<br><b=
+r>On Wednesday, October 31, 2018, Carter Cheng &lt;<a href=3D"mailto:carter=
+cheng@gmail.com">cartercheng@gmail.com</a>&gt; wrote:<br><blockquote class=
+=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padd=
+ing-left:1ex"><div dir=3D"ltr">Hi,<div><br></div><div>Is there some sort of=
+ standard testbed for testing the effectivenss of a kernel hardening patch =
+to see how effective it is against current malware? How does one go about t=
+his?</div><div><br></div><div>I assume when it comes to hardening the kerne=
+l the main target is certain forms of privilege escalation. Is it possible =
+to use Kali linux for this purpose?</div><div><br></div><div>Thanks in adva=
+nce,</div><div><br></div><div>Carter.</div></div>
+</blockquote></div>
+
+--000000000000fc498105798af78d--
