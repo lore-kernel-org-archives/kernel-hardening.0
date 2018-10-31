@@ -1,62 +1,35 @@
-Date: Wed, 31 Oct 2018 04:33:03 -0700
-From: Matthew Wilcox <willy@infradead.org>
-Subject: Re: [PATCH 10/17] prmem: documentation
-Message-ID: <20181031113303.GJ10491@bombadil.infradead.org>
-References: <20181023213504.28905-11-igor.stoppa@huawei.com>
- <20181026092609.GB3159@worktop.c.hoisthospitality.com>
- <CAGXu5jKCs01jvtvpEFS7R8qCR-5iRqK11kJxLJY99NicGWc4aQ@mail.gmail.com>
- <20181028183126.GB744@hirez.programming.kicks-ass.net>
- <40cd77ce-f234-3213-f3cb-0c3137c5e201@gmail.com>
- <20181030152641.GE8177@hirez.programming.kicks-ass.net>
- <CAGXu5jJftJ+Hq+jrZGHX5CTDLWOog7kGsd_Ne=yMvrRs__skSg@mail.gmail.com>
- <0A7AFB50-9ADE-4E12-B541-EC7839223B65@amacapital.net>
- <20181030175814.GB10491@bombadil.infradead.org>
- <20181031093659.GL744@hirez.programming.kicks-ass.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20181031093659.GL744@hirez.programming.kicks-ass.net>
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Andy Lutomirski <luto@amacapital.net>, Kees Cook <keescook@chromium.org>, Igor Stoppa <igor.stoppa@gmail.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
+References: <20181026151223.16810-1-ahmedsoliman0x666@gmail.com>
+ <20181026151223.16810-2-ahmedsoliman0x666@gmail.com> <20181029164229.GA27144@linux.intel.com>
+In-Reply-To: <20181029164229.GA27144@linux.intel.com>
+From: Ahmed Soliman <ahmedsoliman0x666@gmail.com>
+Date: Wed, 31 Oct 2018 18:02:59 +0200
+Message-ID: <CAAGnT3bJUSEnoZotJsMx1ZEMzKF94Fnx8jo=zx4q+uA7mjfLQg@mail.gmail.com>
+Subject: Re: gRe: [PATCH V5 1/5] KVM: X86: Memory ROE documentation
+Content-Type: text/plain; charset="UTF-8"
+To: sean.j.christopherson@intel.com
+Cc: Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, nathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, kvm@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, =?UTF-8?B?6rmA7J246rK4?= <ovich00@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, nigel.edwards@hpe.com, Boris Lukashev <blukashev@sempervictus.com>, Hossam Hassan <7ossam9063@gmail.com>, Ahmed Lotfy <A7med.lotfey@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 31, 2018 at 10:36:59AM +0100, Peter Zijlstra wrote:
-> On Tue, Oct 30, 2018 at 10:58:14AM -0700, Matthew Wilcox wrote:
-> > On Tue, Oct 30, 2018 at 10:06:51AM -0700, Andy Lutomirski wrote:
-> > > > On Oct 30, 2018, at 9:37 AM, Kees Cook <keescook@chromium.org> wrote:
-> > > I support the addition of a rare-write mechanism to the upstream kernel.
-> > > And I think that there is only one sane way to implement it: using an
-> > > mm_struct. That mm_struct, just like any sane mm_struct, should only
-> > > differ from init_mm in that it has extra mappings in the *user* region.
-> > 
-> > I'd like to understand this approach a little better.  In a syscall path,
-> > we run with the user task's mm.  What you're proposing is that when we
-> > want to modify rare data, we switch to rare_mm which contains a
-> > writable mapping to all the kernel data which is rare-write.
-> > 
-> > So the API might look something like this:
-> > 
-> > 	void *p = rare_alloc(...);	/* writable pointer */
-> > 	p->a = x;
-> > 	q = rare_protect(p);		/* read-only pointer */
-> > 
-> > To subsequently modify q,
-> > 
-> > 	p = rare_modify(q);
-> > 	q->a = y;
-> > 	rare_protect(p);
-> 
-> Why would you have rare_alloc() imply rare_modify() ? Would you have the
-> allocator meta data inside the rare section?
-
-Normally when I allocate some memory I need to initialise it before
-doing anything else with it ;-)
-
-I mean, you could do:
-
-	ro = rare_alloc(..);
-	rare = rare_modify(ro);
-	rare->a = x;
-	rare_protect(rare);
-
-but that's more typing.
+On Mon, 29 Oct 2018 at 18:42, Sean Christopherson
+<sean.j.christopherson@intel.com> wrote:
+>
+> On Fri, Oct 26, 2018 at 05:12:19PM +0200, Ahmed Abd El Mawgood wrote:
+> > Following up with my previous threads on KVM assisted Anti rootkit
+> > protections.
+>
+> All of the changelogs in this series need to be rewritten to adhere to
+> Documentation/process[1].  In particular, use imperative mood and
+> describe why/what is being done in a self-contained manner, e.g. the
+> above line isn't very helpful without a lot of prior context.
+>
+> [1] https://github.com/torvalds/linux/blob/master/Documentation/process/submitting-patches.rst#2-describe-your-changes
+>
+> > The current version doesn't address the attacks involving pages
+> > remapping. It is still design in progress, nevertheless, it will be in
+> > my later patch sets.
+>
+> This series should be tagged RFC if its design is a WIP.
+Ops my bad, the current description is obsolete and I forgot to remove
+it. I will have this fixed as well as your other comments in the next
+patch series.
