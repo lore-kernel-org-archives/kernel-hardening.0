@@ -1,44 +1,69 @@
+Content-Type: text/plain;
+	charset=utf-8
+Mime-Version: 1.0 (Mac OS X Mail 11.5 \(3445.9.1\))
 Subject: Re: [PATCH 10/17] prmem: documentation
-References: <CAGXu5jJftJ+Hq+jrZGHX5CTDLWOog7kGsd_Ne=yMvrRs__skSg@mail.gmail.com>
+From: Nadav Amit <nadav.amit@gmail.com>
+In-Reply-To: <20181031090835.GG744@hirez.programming.kicks-ass.net>
+Date: Thu, 1 Nov 2018 11:31:59 -0500
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <59E8A6FB-9762-499F-89AC-D85E1498BE38@gmail.com>
+References: <20181026092609.GB3159@worktop.c.hoisthospitality.com>
+ <CAGXu5jKCs01jvtvpEFS7R8qCR-5iRqK11kJxLJY99NicGWc4aQ@mail.gmail.com>
+ <20181028183126.GB744@hirez.programming.kicks-ass.net>
+ <40cd77ce-f234-3213-f3cb-0c3137c5e201@gmail.com>
+ <20181030152641.GE8177@hirez.programming.kicks-ass.net>
+ <CAGXu5jJftJ+Hq+jrZGHX5CTDLWOog7kGsd_Ne=yMvrRs__skSg@mail.gmail.com>
  <0A7AFB50-9ADE-4E12-B541-EC7839223B65@amacapital.net>
- <20181030175814.GB10491@bombadil.infradead.org> <20181030182841.GE7343@cisco>
- <20181030192021.GC10491@bombadil.infradead.org>
- <9edbdf8b-b5fb-5a82-43b4-b639f5ec8484@gmail.com>
- <20181030213557.GE10491@bombadil.infradead.org>
- <CALCETrW1FcT88u0QY9k_PMOeZj0G8H6KNb5Bnreo-12NvmmCEQ@mail.gmail.com>
- <20181031100237.GN744@hirez.programming.kicks-ass.net>
- <659CFC78-22BF-492B-B2E4-B8E89AA08446@amacapital.net>
- <20181031210032.GA3159@hirez.programming.kicks-ass.net>
- <2E29C35B-3F98-473D-A874-0D9B9B15B399@amacapital.net>
- <4124995b-4363-9b37-19b1-1879bf04978b@gmail.com>
- <CALCETrWCvAfyfBWgcmhy8TGByiX3ZXXSOkLtZFdM385fDqYJVw@mail.gmail.com>
- <8675e9d8-0ef0-7515-a894-097d4be25b73@gmail.com>
- <alpine.DEB.2.21.1811010909480.1642@nanos.tec.linutronix.de>
-From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <f344a62a-07be-8424-d4cd-73afacc4da76@gmail.com>
-Date: Thu, 1 Nov 2018 17:58:43 +0200
-MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.21.1811010909480.1642@nanos.tec.linutronix.de>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Andy Lutomirski <luto@amacapital.net>, Peter Zijlstra <peterz@infradead.org>, Matthew Wilcox <willy@infradead.org>, Tycho Andersen <tycho@tycho.ws>, Kees Cook <keescook@chromium.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
+ <20181030175814.GB10491@bombadil.infradead.org>
+ <28C8CD2A-BDC0-49A5-854E-1E18968528B8@amacapital.net>
+ <CAC99157-7A9B-4AC6-BA41-EAA7A99FE53D@gmail.com>
+ <20181031090835.GG744@hirez.programming.kicks-ass.net>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>, Kees Cook <keescook@chromium.org>, Igor Stoppa <igor.stoppa@gmail.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/11/2018 10:21, Thomas Gleixner wrote:
-> On Thu, 1 Nov 2018, Igor Stoppa wrote:
+From: Peter Zijlstra
+Sent: October 31, 2018 at 9:08:35 AM GMT
+> To: Nadav Amit <nadav.amit@gmail.com>
+> Cc: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox =
+<willy@infradead.org>, Kees Cook <keescook@chromium.org>, Igor Stoppa =
+<igor.stoppa@gmail.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dave =
+Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal =
+Hocko <mhocko@kernel.org>, Kernel Hardening =
+<kernel-hardening@lists.openwall.com>, linux-integrity =
+<linux-integrity@vger.kernel.org>, linux-security-module =
+<linux-security-module@vger.kernel.org>, Igor Stoppa =
+<igor.stoppa@huawei.com>, Dave Hansen <dave.hansen@linux.intel.com>, =
+Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, =
+Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport =
+<rppt@linux.vnet.ibm.com>, open list:DOCUMENTATION =
+<linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas =
+Gleixner <tglx@linutronix.de>
+> Subject: Re: [PATCH 10/17] prmem: documentation
+>=20
+>=20
+> On Tue, Oct 30, 2018 at 04:18:39PM -0700, Nadav Amit wrote:
+>>> Nadav, want to resubmit your series? IIRC the only thing wrong with =
+it was
+>>> that it was a big change and we wanted a simpler fix to backport. =
+But
+>>> that=E2=80=99s all done now, and I, at least, rather liked your =
+code. :)
+>>=20
+>> I guess since it was based on your ideas=E2=80=A6
+>>=20
+>> Anyhow, the only open issue that I have with v2 is Peter=E2=80=99s =
+wish that I would
+>> make kgdb use of poke_text() less disgusting. I still don=E2=80=99t =
+know exactly
+>> how to deal with it.
+>>=20
+>> Perhaps it (fixing kgdb) can be postponed? In that case I can just =
+resend
+>> v2.
+>=20
+> Oh man, I completely forgot about kgdb :/
+>=20
+> Also, would it be possible to entirely remove that kmap fallback path?
 
->> The rework could be done afterward.
-> 
-> Please don't go there. The usual approach is to
-> 
->    1) Rework existing code in a way that the new functionality can be added
->       with minimal effort afterwards and without creating API horrors.
-
-
-Thanks a lot for the advice.
-It makes things even easier for me, as I can start the rework, while the 
-discussion on the actual write-rare mechanism continues.
-
---
-igor
+Let me see what I can do about it.=
