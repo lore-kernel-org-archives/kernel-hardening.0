@@ -1,46 +1,37 @@
 From: Casey Schaufler <casey.schaufler@intel.com>
-Subject: [PATCH v6 0/5] LSM: Support ptrace sidechannel access checks
-Date: Mon,  5 Nov 2018 11:04:59 -0800
-Message-Id: <20181105190504.500-1-casey.schaufler@intel.com>
+Subject: [PATCH v6 2/5] Smack: Prepare for PTRACE_MODE_SCHED
+Date: Mon,  5 Nov 2018 11:05:01 -0800
+Message-Id: <20181105190504.500-3-casey.schaufler@intel.com>
+In-Reply-To: <20181105190504.500-1-casey.schaufler@intel.com>
+References: <20181105190504.500-1-casey.schaufler@intel.com>
 To: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, selinux@tycho.nsa.gov, casey.schaufler@intel.com, dave.hansen@intel.com, deneen.t.dock@intel.com, kristen@linux.intel.com, arjan@linux.intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-V6: Based on Tim Chen's "[Patch v4 00/18] Provide process property
-    based options to enable Spectre v2 userspace-userspace protection*"
-    patch set.
-v5: Revamped to match Jiri Kosina <jkosina@suse.cz>
-    Harden spectrev2 userspace-userspace protection v7
-    Fixed locking issues in the LSM code.
-    Dropped the new LSM hook and use a ptrace hook instead.
-v4: select namespace checks if user namespaces are enabled
-    and credential checks are request.
-v3: get_task_cred wasn't a good choice due to refcounts.
-    Use lower level protection instead
-v2: SELinux access policy corrected.
-    Use real_cred instead of cred.
+From: Casey Schaufler <casey@schaufler-ca.com>
 
-This patchset provide a mechanism by which a security module
-can advise the system about potential side-channel vulnerabilities.
-The existing security modules have been updated to avoid locking
-issues in the face of PTRACE_MODE_SCHED. A new security
-module is provided to make determinations regarding task attributes
-including namespaces.
+A ptrace access check with mode PTRACE_MODE_SCHED gets called
+from process switching code. This precludes the use of audit,
+as the locking is incompatible. Don't do audit in the PTRACE_MODE_SCHED
+case.
 
 Signed-off-by: Casey Schaufler <casey.schaufler@intel.com>
 ---
- include/linux/lsm_hooks.h          |  5 +++
- kernel/ptrace.c                    |  2 -
- security/Kconfig                   |  1 +
- security/Makefile                  |  2 +
- security/apparmor/domain.c         |  2 +-
- security/apparmor/include/ipc.h    |  2 +-
- security/apparmor/ipc.c            |  8 ++--
- security/apparmor/lsm.c            |  5 ++-
- security/commoncap.c               |  3 +-
- security/security.c                |  1 +
- security/selinux/hooks.c           |  2 +
- security/sidechannel/Kconfig       | 13 ++++++
- security/sidechannel/Makefile      |  1 +
- security/sidechannel/sidechannel.c | 88 ++++++++++++++++++++++++++++++++++++++
- security/smack/smack_lsm.c         |  3 +-
- 15 files changed, 127 insertions(+), 11 deletions(-)
+ security/smack/smack_lsm.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/security/smack/smack_lsm.c b/security/smack/smack_lsm.c
+index 340fc30ad85d..ffa95bcab599 100644
+--- a/security/smack/smack_lsm.c
++++ b/security/smack/smack_lsm.c
+@@ -422,7 +422,8 @@ static int smk_ptrace_rule_check(struct task_struct *tracer,
+ 	struct task_smack *tsp;
+ 	struct smack_known *tracer_known;
+ 
+-	if ((mode & PTRACE_MODE_NOAUDIT) == 0) {
++	if ((mode & PTRACE_MODE_NOAUDIT) == 0 &&
++	    (mode & PTRACE_MODE_SCHED) == 0) {
+ 		smk_ad_init(&ad, func, LSM_AUDIT_DATA_TASK);
+ 		smk_ad_setfield_u_tsk(&ad, tracer);
+ 		saip = &ad;
+-- 
+2.17.1
