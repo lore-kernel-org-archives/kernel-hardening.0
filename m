@@ -1,56 +1,31 @@
-Date: Tue, 6 Nov 2018 13:05:57 -0800
-From: Andrew Morton <akpm@linux-foundation.org>
-Subject: Re: [PATCH v8 4/4] Kselftest for module text allocation
- benchmarking
-Message-Id: <20181106130557.11bfeddafe103bb609352aba@linux-foundation.org>
-In-Reply-To: <20181102192520.4522-5-rick.p.edgecombe@intel.com>
-References: <20181102192520.4522-1-rick.p.edgecombe@intel.com>
-	<20181102192520.4522-5-rick.p.edgecombe@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Subject: [PATCH v3 0/2]get rid of writable linear aliases of read-only vmalloc mappings
+Date: Tue,  6 Nov 2018 22:44:02 +0100
+Message-Id: <20181106214404.2497-1-ard.biesheuvel@linaro.org>
+MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: jeyu@kernel.org, willy@infradead.org, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, daniel@iogearbox.net, jannh@google.com, keescook@chromium.org, kristen@linux.intel.com, dave.hansen@intel.com, arjan@linux.intel.com
+To: linux-arm-kernel@lists.infradead.org
+Cc: keescook@chromium.org, kernel-hardening@lists.openwall.com, labbott@redhat.com, will.deacon@arm.com, jannh@google.com, mark.rutland@arm.com, james.morse@arm.com, catalin.marinas@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri,  2 Nov 2018 12:25:20 -0700 Rick Edgecombe <rick.p.edgecombe@intel.com> wrote:
+This is a followup to my patch 'arm64/mm: unmap the linear alias of module
+allocations'.
 
-> This adds a test module in lib/, and a script in kselftest that does
-> benchmarking on the allocation of memory in the module space. Performance here
-> would have some small impact on kernel module insertions, BPF JIT insertions
-> and kprobes. In the case of KASLR features for the module space, this module
-> can be used to measure the allocation performance of different configurations.
-> This module needs to be compiled into the kernel because module_alloc is not
-> exported.
+This version changes the approach to match what x86 does, i.e., to deal
+with the linear alias at a more fundamental level, in the set_memory_ro/rw
+routines.
 
-Well, we could export module_alloc().  Would that be helpful at all?
+Ard Biesheuvel (2):
+  arm64: mm: purge lazily unmapped vm regions before changing
+    permissions
+  arm64: mm: apply r/o permissions of VM areas to its linear alias as
+    well
 
-> With some modification to the code, as explained in the comments, it can be
-> enabled to measure TLB flushes as well.
-> 
-> There are two tests in the module. One allocates until failure in order to
-> test module capacity and the other times allocating space in the module area.
-> They both use module sizes that roughly approximate the distribution of in-tree
-> X86_64 modules.
-> 
-> You can control the number of modules used in the tests like this:
-> echo m1000>/dev/mod_alloc_test
-> 
-> Run the test for module capacity like:
-> echo t1>/dev/mod_alloc_test
-> 
-> The other test will measure the allocation time, and for CONFG_X86_64 and
-> CONFIG_RANDOMIZE_BASE, also give data on how often the “backup area" is used.
-> 
-> Run the test for allocation time and backup area usage like:
-> echo t2>/dev/mod_alloc_test
-> The output will be something like this:
-> num		all(ns)		last(ns)
-> 1000		1083		1099
-> Last module in backup count = 0
-> Total modules in backup     = 0
-> >1 module in backup count   = 0
+ arch/arm64/Kconfig                   | 14 ++++++++
+ arch/arm64/include/asm/mmu_context.h |  2 ++
+ arch/arm64/mm/mmu.c                  |  2 +-
+ arch/arm64/mm/pageattr.c             | 36 +++++++++++++++++---
+ 4 files changed, 48 insertions(+), 6 deletions(-)
 
-Are the above usage instructions captured in the kernel code somewhere?
-I can't see it, and expecting people to trawl git changelogs isn't
-very friendly.
+-- 
+2.19.1
