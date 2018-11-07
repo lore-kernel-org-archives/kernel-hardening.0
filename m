@@ -1,37 +1,42 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v4 0/2] get rid of writable linear aliases of read-only vmalloc mappings
-Date: Wed,  7 Nov 2018 11:36:18 +0100
-Message-Id: <20181107103620.16054-1-ard.biesheuvel@linaro.org>
+Subject: [PATCH v4 1/2] arm64: mm: purge lazily unmapped vm regions before changing permissions
+Date: Wed,  7 Nov 2018 11:36:19 +0100
+Message-Id: <20181107103620.16054-2-ard.biesheuvel@linaro.org>
+In-Reply-To: <20181107103620.16054-1-ard.biesheuvel@linaro.org>
+References: <20181107103620.16054-1-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 To: linux-arm-kernel@lists.infradead.org
 Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, labbott@redhat.com, will.deacon@arm.com, jannh@google.com, mark.rutland@arm.com, james.morse@arm.com, catalin.marinas@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a followup to my patch 'arm64/mm: unmap the linear alias of module
-allocations'. (v1-v2)
+Call vm_unmap_aliases() every time we apply any changes to permission
+attributes of mappings in the vmalloc region. This avoids any potential
+issues resulting from lingering writable or executable aliases of
+mappings that should be read-only or non-executable, respectively.
 
-This version changes the approach to match what x86 does, i.e., to deal
-with the linear alias at a more fundamental level, in the set_memory_ro/rw
-routines.
+Acked-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+---
+ arch/arm64/mm/pageattr.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
-Changes since v3:
-- drop boolean function parameter and infer whether to remap the alias from
-  set_mask/clear_mask
-- overload rodata= instead of adding yet another kernel cmdline arg
-- fix typos
-
-Ard Biesheuvel (2):
-  arm64: mm: purge lazily unmapped vm regions before changing
-    permissions
-  arm64: mm: apply r/o permissions of VM areas to its linear alias as
-    well
-
- arch/arm64/Kconfig                   | 14 +++++++++++++
- arch/arm64/include/asm/mmu_context.h |  2 ++
- arch/arm64/mm/mmu.c                  | 16 +++++++++++++--
- arch/arm64/mm/pageattr.c             | 21 ++++++++++++++++++++
- 4 files changed, 51 insertions(+), 2 deletions(-)
-
+diff --git a/arch/arm64/mm/pageattr.c b/arch/arm64/mm/pageattr.c
+index a56359373d8b..787f9e385e6d 100644
+--- a/arch/arm64/mm/pageattr.c
++++ b/arch/arm64/mm/pageattr.c
+@@ -93,6 +93,12 @@ static int change_memory_common(unsigned long addr, int numpages,
+ 	if (!numpages)
+ 		return 0;
+ 
++	/*
++	 * Get rid of potentially aliasing lazily unmapped vm areas that may
++	 * have permissions set that deviate from the ones we are setting here.
++	 */
++	vm_unmap_aliases();
++
+ 	return __change_memory_common(start, size, set_mask, clear_mask);
+ }
+ 
 -- 
 2.19.1
