@@ -1,42 +1,33 @@
-Subject: Re: [PATCH v4 2/2] arm64: mm: apply r/o permissions of VM areas to
- its linear alias as well
-References: <20181107103620.16054-1-ard.biesheuvel@linaro.org>
- <20181107103620.16054-3-ard.biesheuvel@linaro.org>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <e1c34f97-9687-0475-b7f3-02f54a7b200f@redhat.com>
-Date: Wed, 7 Nov 2018 15:17:36 -0800
+Subject: Re: [PATCH V6 0/8] KVM: X86: Introducing ROE Protection Kernel
+ Hardening
+References: <20181104171124.5717-1-ahmedsoliman0x666@gmail.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Message-ID: <24f900ba-6459-c6aa-4e97-92f0ec744896@redhat.com>
+Date: Thu, 8 Nov 2018 21:25:37 +0100
 MIME-Version: 1.0
-In-Reply-To: <20181107103620.16054-3-ard.biesheuvel@linaro.org>
-Content-Type: text/plain; charset=utf-8; format=flowed
+In-Reply-To: <20181104171124.5717-1-ahmedsoliman0x666@gmail.com>
+Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-arm-kernel@lists.infradead.org
-Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, will.deacon@arm.com, jannh@google.com, mark.rutland@arm.com, james.morse@arm.com, catalin.marinas@arm.com
+To: Ahmed Abd El Mawgood <ahmedsoliman0x666@gmail.com>, rkrcmar@redhat.com, Jonathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, hpa@zytor.com, x86@kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, ovich00@gmail.com, kernel-hardening@lists.openwall.com, nigel.edwards@hpe.com, Boris Lukashev <blukashev@sempervictus.com>, Hossam Hassan <7ossam9063@gmail.com>, "Ahmed Lotfy igor . stoppa @ gmail . com" <A7med.lotfey@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/7/18 2:36 AM, Ard Biesheuvel wrote:
-> @@ -93,6 +96,18 @@ static int change_memory_common(unsigned long addr, int numpages,
->   	if (!numpages)
->   		return 0;
->   
-> +	/*
-> +	 * If we are manipulating read-only permissions, apply the same
-> +	 * change to the linear mapping of the pages that back this VM area.
-> +	 */
-> +	if (rodata_full && (pgprot_val(set_mask) == PTE_RDONLY ||
-> +			    pgprot_val(clear_mask) == PTE_RDONLY)) {
-> +		for (i = 0; i < area->nr_pages; i++) {
-> +			__change_memory_common((u64)page_address(area->pages[i]),
-> +					       PAGE_SIZE, set_mask, clear_mask);
-> +		}
-> +	}
-> +
->   	/*
->   	 * Get rid of potentially aliasing lazily unmapped vm areas that may
->   	 * have permissions set that deviate from the ones we are setting here.
+On 04/11/2018 18:11, Ahmed Abd El Mawgood wrote:
+> Our model assumes that an attacker got full root access to a running guest and
+> his goal is to manipulate kernel code/data (hook syscalls, overwrite IDT ..etc).
+> 
+> There is future work in progress to also put some sort of protection on the page
+> table register CR3 and other critical registers that can be intercepted by KVM.
+> This way it won't be possible for an attacker to manipulate any part of the
+> guests page table.
+> 
 
+Do you have patches that enable usage of ROE in the kernel?
+Alternatively you can write testcases in tools/testing/selftests/kvm to
+test how guests should use it.
 
-This check assumes the masks are only adjusting the PTE_RDONLY bit.
-I guess this is fine for now since all the calls currently change one
-bit at a time.
+I would remove CONFIG_KVM_ROE altogether.  You can enable it
+unconditionally.
 
-Tested-by: Laura Abbott <labbott@redhat.com>
+I will continue reviewing the patches soon.
+
+Paolo
