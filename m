@@ -1,26 +1,86 @@
-Date: Sat, 10 Nov 2018 18:30:11 -0500
-From: Steven Rostedt <rostedt@goodmis.org>
-Subject: Re: [PATCH 1/1] stackleak: Disable ftrace for stackleak.c
-Message-ID: <20181110183011.2290fc20@gandalf.local.home>
-In-Reply-To: <1541887530-16610-1-git-send-email-alex.popov@linux.com>
-References: <1541887530-16610-1-git-send-email-alex.popov@linux.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: Alexander Popov <alex.popov@linux.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Joerg Roedel <joro@8bytes.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, Jan Kara <jack@suse.cz>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Dan Williams <dan.j.williams@intel.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Masami Hiramatsu <mhiramat@kernel.org>, x86@kernel.org, linux-kernel@vger.kernel.org
+From: Vitaly Chikunov <vt@altlinux.org>
+Subject: [PATCH v2] crypto: ecc - regularize scalar for scalar multiplication
+Date: Sun, 11 Nov 2018 20:40:02 +0300
+Message-Id: <20181111174002.30929-1-vt@altlinux.org>
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org
+Cc: Vitaly Chikunov <vt@altlinux.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, 11 Nov 2018 01:05:30 +0300
-Alexander Popov <alex.popov@linux.com> wrote:
+ecc_point_mult is supposed to be used with a regularized scalar,
+otherwise, it's possible to deduce the position of the top bit of the
+scalar with timing attack. This is important when the scalar is a
+private key.
 
-> The stackleak_erase() function is called on the trampoline stack at the
-> end of syscall. This stack is not big enough for ftrace operations,
-> e.g. it can be overflowed if we enable kprobe_events for stackleak_erase().
+ecc_point_mult is already using a regular algorithm (i.e. having an
+operation flow independent of the input scalar) but regularization step
+is not implemented.
 
-Is the issue with kprobes or with function tracing? Because this stops
-function tracing which I only want disabled if function tracing itself
-is an issue, not for other things that may use the function tracing
-infrastructure.
+Arrange scalar to always have fixed top bit by adding a multiple of the
+curve order (n).
 
--- Steve
+References:
+The constant time regularization step is based on micro-ecc by Kenneth
+MacKay and also referenced in the literature (Bernstein, D. J., & Lange,
+T. (2017). Montgomery curves and the Montgomery ladder. (Cryptology
+ePrint Archive; Vol. 2017/293). s.l.: IACR. Chapter 4.6.2.)
+
+Signed-off-by: Vitaly Chikunov <vt@altlinux.org>
+Cc: kernel-hardening@lists.openwall.com
+---
+
+Changes from v1:
+- No code changes, only description updates to be more informative.
+
+ crypto/ecc.c | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/crypto/ecc.c b/crypto/ecc.c
+index 8facafd67802..adcce310f646 100644
+--- a/crypto/ecc.c
++++ b/crypto/ecc.c
+@@ -842,15 +842,23 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2, u64 *curve_prime,
+ 
+ static void ecc_point_mult(struct ecc_point *result,
+ 			   const struct ecc_point *point, const u64 *scalar,
+-			   u64 *initial_z, u64 *curve_prime,
++			   u64 *initial_z, const struct ecc_curve *curve,
+ 			   unsigned int ndigits)
+ {
+ 	/* R0 and R1 */
+ 	u64 rx[2][ECC_MAX_DIGITS];
+ 	u64 ry[2][ECC_MAX_DIGITS];
+ 	u64 z[ECC_MAX_DIGITS];
++	u64 sk[2][ECC_MAX_DIGITS];
++	u64 *curve_prime = curve->p;
+ 	int i, nb;
+-	int num_bits = vli_num_bits(scalar, ndigits);
++	int num_bits;
++	int carry;
++
++	carry = vli_add(sk[0], scalar, curve->n, ndigits);
++	vli_add(sk[1], sk[0], curve->n, ndigits);
++	scalar = sk[!carry];
++	num_bits = sizeof(u64) * ndigits * 8 + 1;
+ 
+ 	vli_set(rx[1], point->x, ndigits);
+ 	vli_set(ry[1], point->y, ndigits);
+@@ -1004,7 +1012,7 @@ int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
+ 		goto out;
+ 	}
+ 
+-	ecc_point_mult(pk, &curve->g, priv, NULL, curve->p, ndigits);
++	ecc_point_mult(pk, &curve->g, priv, NULL, curve, ndigits);
+ 	if (ecc_point_is_zero(pk)) {
+ 		ret = -EAGAIN;
+ 		goto err_free_point;
+@@ -1090,7 +1098,7 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
+ 		goto err_alloc_product;
+ 	}
+ 
+-	ecc_point_mult(product, pk, priv, rand_z, curve->p, ndigits);
++	ecc_point_mult(product, pk, priv, rand_z, curve, ndigits);
+ 
+ 	ecc_swap_digits(product->x, secret, ndigits);
+ 
+-- 
+2.11.0
