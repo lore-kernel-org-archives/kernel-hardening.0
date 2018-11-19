@@ -1,44 +1,169 @@
-Date: Mon, 19 Nov 2018 10:49:32 +0000
-From: Jordan Glover <Golden_Miller83@protonmail.ch>
-Subject: Re: [PATCH v1 2/2]: Documentation/admin-guide: introduce perf-security.rst file
-Message-ID: <n06wPuXrWqZEywcNe2BID7GP8dShJlE4L4oLpxO9__duA3noKJO_maOemZwZGC7EHCW7Ur14war-RqLo5pco9uruYaGJMCPOyRVzPJrZyz4=@protonmail.ch>
-In-Reply-To: <20181119104646.GB9761@hirez.programming.kicks-ass.net>
+Subject: Re: [PATCH v1 1/2]: Documentation/admin-guide: update admin-guide
+ index.rst
 References: <0ac97cd0-4773-fff6-7d4e-74c4a1f076c4@linux.intel.com>
- <a44df303-d962-c1a4-4fe0-6bad887ebcdc@linux.intel.com>
- <aDN4nC6p93nK7ILVP3EH-Y4RcKK4KH0ppQKFkIgxTVxkfbOHWjAYJXdTeuq39nbPkySKItZ_8VHN2PfQS_T08GBzeooD5cvc2Xd8oZxSp9s=@protonmail.ch>
- <20181119104646.GB9761@hirez.programming.kicks-ass.net>
+ <810bb4aa-777f-77ed-19f0-882354bdf9c7@linux.intel.com>
+ <20181119100322.GA19910@kroah.com>
+From: Alexey Budankov <alexey.budankov@linux.intel.com>
+Message-ID: <660fcb45-bc63-0bf2-f14b-49b13b2580a0@linux.intel.com>
+Date: Mon, 19 Nov 2018 18:12:23 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Alexey Budankov <alexey.budankov@linux.intel.com>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Andi Kleen <ak@linux.intel.com>, Jonatan Corbet <corbet@lwn.net>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, linux-kernel <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+In-Reply-To: <20181119100322.GA19910@kroah.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Andi Kleen <ak@linux.intel.com>, Jonatan Corbet <corbet@lwn.net>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, linux-kernel <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, linux-doc@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Monday, November 19, 2018 11:46 AM, Peter Zijlstra <peterz@infradead.org=
-> wrote:
+Hello Greg,
 
-> On Mon, Nov 19, 2018 at 10:35:59AM +0000, Jordan Glover wrote:
->
-> > On Monday, November 19, 2018 6:42 AM, Alexey Budankov alexey.budankov@l=
-inux.intel.com wrote:
-> >
-> > > +>=3D3:
-> > >
-> > > -         Restrict *access* to PCL performance monitoring for unprivi=
-leged processes.
-> > >
-> > >
-> > > -         This is the default on Debian and Android [7]_ , [8]_ .
-> > >
-> > >
-> >
-> > AFAIK there is no support for '+>=3D3' in mainline kernel[1].
-> > Debian and Android use out-of-tree patch for that[2].
-> > Maybe someone should upstream it?
->
-> NAK still stands on that. Alternative's have been proposed but so far
-> nobody that cared seems to care enough to implement those.
+On 19.11.2018 13:03, Greg KH wrote:
+> On Mon, Nov 19, 2018 at 08:41:31AM +0300, Alexey Budankov wrote:
+>>
+>> Extend index.rst index file at admin-guide root directory with 
+>> the reference to perf-security.rst file being introduced.
+>>
+>> Signed-off-by: Alexey Budankov <alexey.budankov@linux.intel.com>
+>> ---
+>>  Documentation/admin-guide/index.rst | 1 +
+>>  1 file changed, 1 insertion(+)
+>>
+>> diff --git a/Documentation/admin-guide/index.rst b/Documentation/admin-guide/index.rst
+>> index 0873685bab0f..885cc0de9114 100644
+>> --- a/Documentation/admin-guide/index.rst
+>> +++ b/Documentation/admin-guide/index.rst
+>> @@ -75,6 +75,7 @@ configure specific aspects of kernel behavior to your liking.
+>>     thunderbolt
+>>     LSM/index
+>>     mm/index
+>> +   perf-security
+> 
+> You just broke the build with this patch.  They need to be ordered the
+> other way around :(
 
-So, I guess we can't document NAKed patches :)
+Thanks for pointing that out.
 
-Jordan
+The patches are now rebased according to MAINTAINERS here: 
+	git://git.lwn.net/linux.git docs-next
+
+make htmldocs SPHINXDIRS=admin-guide worked for me:
+...
+build succeeded, 10 warnings.
+The HTML pages are in Documentation/output/admin-guide.
+
+firefox Documentation/output/admin-guide/index.html 
+shows link to the document at the end of this paragraph:
+
+"The rest of this manual consists of various unordered guides on how to \
+ configure specific aspects of kernel behavior to your liking."
+
+Rebased changes are below for your convenience.
+
+Thanks,
+Alexey
+
+---
+ Documentation/admin-guide/index.rst         |  1 +
+ Documentation/admin-guide/perf-security.rst | 83 +++++++++++++++++++++++++++++
+ 2 files changed, 84 insertions(+)
+
+diff --git a/Documentation/admin-guide/index.rst b/Documentation/admin-guide/index.rst
+index 965745d5fb9a..0a491676685e 100644
+--- a/Documentation/admin-guide/index.rst
++++ b/Documentation/admin-guide/index.rst
+@@ -76,6 +76,7 @@ configure specific aspects of kernel behavior to your liking.
+    thunderbolt
+    LSM/index
+    mm/index
++   perf-security
+ 
+ .. only::  subproject and html
+ 
+diff --git a/Documentation/admin-guide/perf-security.rst b/Documentation/admin-guide/perf-security.rst
+new file mode 100644
+index 000000000000..b9564066e686
+--- /dev/null
++++ b/Documentation/admin-guide/perf-security.rst
+@@ -0,0 +1,83 @@
++.. _perf_security:
++
++PCL/Perf security
++=================
++
++Overview
++--------
++
++Usage of Performance Counters for Linux (PCL) [1]_ , [2]_ , [3]_ can impose a
++considerable risk of leaking sensitive data accessed by monitored processes.
++The data leakage is possible both in scenarios of direct usage of PCL system
++call API [2]_ and over data files generated by Perf tool user mode utility
++(Perf) [3]_ , [4]_ . The risk depends on the nature of data that PCL performance
++monitoring units (PMU) [2]_ collect and expose for performance analysis.
++Having that said PCL/Perf performance monitoring is the subject for security
++access control management [5]_ .
++
++PCL/Perf access control
++-----------------------
++
++For the purpose of performing security checks Linux implementation splits
++processes into two categories [6]_ : a) privileged processes (whose effective
++user ID is 0, referred to as superuser or root), and b) unprivileged processes
++(whose effective UID is nonzero). Privileged processes bypass all kernel
++security permission checks so PCL performance monitoring is fully available to
++privileged processes without *access*, *scope* and *resource* restrictions.
++Unprivileged processes are subject to full security permission check based
++on the process's credentials [5]_ (usually: effective UID, effective GID,
++and supplementary group list).
++
++PCL/Perf unprivileged users
++---------------------------
++
++PCL/Perf *scope* and *access* control for unprivileged processes is governed by
++perf_event_paranoid [2]_ setting:
++
++**-1**:
++     Impose no *scope* and *access* restrictions on using PCL performance
++     monitoring. Per-user per-cpu perf_event_mlock_kb [2]_ locking limit is
++     ignored when allocating memory buffers for storing performance data.
++     This is the least secure mode since allowed monitored *scope* is
++     maximized and no PCL specific limits are imposed on *resources*
++     allocated for performance monitoring.
++
++**>=0**:
++     *scope* includes per-process and system wide performance monitoring
++     but excludes raw tracepoints and ftrace function tracepoints monitoring.
++     CPU and system events happened when executing either in user or
++     in kernel space can be monitored and captured for later analysis.
++     Per-user per-cpu perf_event_mlock_kb locking limit is imposed but
++     ignored for unprivileged processes with CAP_IPC_LOCK [6]_ capability.
++
++**>=1**:
++     *scope* includes per-process performance monitoring only and excludes
++     system wide performance monitoring. CPU and system events happened when
++     executing either in user or in kernel space can be monitored and
++     captured for later analysis. Per-user per-cpu perf_event_mlock_kb
++     locking limit is imposed but ignored for unprivileged processes with
++     CAP_IPC_LOCK capability.
++
++**>=2**:
++     *scope* includes per-process performance monitoring only. CPU and system
++     events happened when executing in user space only can be monitored and
++     captured for later analysis. Per-user per-cpu perf_event_mlock_kb
++     locking limit is imposed but ignored for unprivileged processes with
++     CAP_IPC_LOCK capability.
++
++**>=3**:
++     Restrict *access* to PCL performance monitoring for unprivileged processes.
++     This is the default on Debian and Android [7]_ , [8]_ .
++
++Bibliography
++------------
++
++.. [1] `<https://lwn.net/Articles/337493/>`_
++.. [2] `<http://man7.org/linux/man-pages/man2/perf_event_open.2.html>`_
++.. [3] `<http://web.eece.maine.edu/~vweaver/projects/perf_events/>`_
++.. [4] `<https://perf.wiki.kernel.org/index.php/Main_Page>`_
++.. [5] `<https://www.kernel.org/doc/html/latest/security/credentials.html>`_
++.. [6] `<http://man7.org/linux/man-pages/man7/capabilities.7.html>`_
++.. [7] `<https://lkml.org/lkml/2016/1/11/587>`_
++.. [8] `<https://android-review.googlesource.com/#/c/234743/>`_
++
