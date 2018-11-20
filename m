@@ -1,82 +1,233 @@
-Subject: Re: Investigating a stack state mismatch in Linux kernel
-From: Alexander Popov <alex.popov@linux.com>
-References: <b7aad232-76e1-241f-00e2-77783ce30f87@linux.com>
- <875zwyabac.fsf@oldenburg.str.redhat.com>
- <2a2b1181-2175-7e4e-189c-12630f43d10d@linux.com>
-Message-ID: <57225f38-3f6d-4029-8f89-4b6eba97c3c1@linux.com>
-Date: Wed, 21 Nov 2018 02:08:29 +0300
+From: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Subject: [PATCH v9 RESEND 0/4] KASLR feature to randomize each loadable module
+Date: Tue, 20 Nov 2018 15:23:08 -0800
+Message-Id: <20181120232312.30037-1-rick.p.edgecombe@intel.com>
 MIME-Version: 1.0
-In-Reply-To: <2a2b1181-2175-7e4e-189c-12630f43d10d@linux.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Florian Weimer <fweimer@redhat.com>, Richard Sandiford <richard.sandiford@arm.com>, Segher Boessenkool <segher@kernel.crashing.org>, Alexander Monakov <amonakov@ispras.ru>
-Cc: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Emese Revfy <re.emese@gmail.com>, Thomas Garnier <thgarnie@google.com>, Alexei Starovoitov <ast@kernel.org>, Masami Hiramatsu <mhiramat@kernel.org>, "David S . Miller" <davem@davemloft.net>, Steven Rostedt <rostedt@goodmis.org>, Dave Hansen <dave.hansen@linux.intel.com>, Will Deacon <will.deacon@arm.com>, Jann Horn <jannh@google.com>, linux-arm-kernel@lists.infradead.org, gcc-bugs@gcc.gnu.org, gcc-help@gcc.gnu.org, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, gcc@gcc.gnu.org
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+To: jeyu@kernel.org, akpm@linux-foundation.org, willy@infradead.org, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, daniel@iogearbox.net, jannh@google.com, keescook@chromium.org
+Cc: kristen@linux.intel.com, dave.hansen@intel.com, arjan@linux.intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello everyone!
+Resending this because I missed Jessica in the "to" list. Also removing the part
+of this coverletter that talked about KPTI helping with some local kernel text
+de-randomizing methods, because I'm not sure I fully understand this.
 
-At irc.freenode.org/#gcc people told me that I should CC gcc@gcc.gnu.org to get
-some attention of gcc developers.
+------------------------------------------------------------
 
-Link to previous discussion:
- https://www.openwall.com/lists/kernel-hardening/2018/11/14/1
+This is V9 of the "KASLR feature to randomize each loadable module" patchset.
+The purpose is to increase the randomization for the module space from 10 to 17
+bits, and also to make the modules randomized in relation to each other instead
+of just the address where the allocations begin, so that if one module leaks the
+location of the others can't be inferred.
+
+Why its useful
+==============
+Randomizing the location of executable code is a defense against control flow
+attacks, where the kernel is tricked into jumping, or speculatively executing
+code other than what is intended. By randomizing the location of the code, the
+attacker doesn't know where to redirect the control flow.
+
+Today the RANDOMIZE_BASE feature randomizes the base address where the module
+allocations begin with 10 bits of entropy for this purpose. From here, a highly
+deterministic algorithm allocates space for the modules as they are loaded and
+unloaded. If an attacker can predict the order and identities for modules that
+will be loaded (either by the system, or controlled by the user with
+request_module or BPF), then a single text address leak can give the attacker
+access to the locations of other modules. So in this case this new algorithm can
+take the entropy of the other modules from ~0 to 17, making it much more robust.
+
+Another problem today is that the low 10 bits of entropy makes brute force
+attacks feasible, especially in the case of speculative execution where a wrong
+guess won't necessarily cause a crash. In this case, increasing the
+randomization will force attacks to take longer, and so increase the time an
+attacker may be detected on a system.
+
+There are multiple efforts to apply more randomization to the core kernel text
+as well, and so this module space piece can be a first step to increasing
+randomization for all kernel space executable code.
+
+Userspace ASLR can get 28 bits of entropy or more, so at least increasing this
+to 17 for now improves what is currently a pretty low amount of randomization
+for the higher privileged kernel space.
+
+How it works
+============
+The algorithm is pretty simple. It just breaks the module space in two, a random
+area (2/3 of module space) and a backup area (1/3 of module space). It first
+tries to allocate up to 10000 randomly located starting pages inside the random
+section. If this fails, it will allocate in the backup area. The backup area
+base will be offset in the same way as current algorithm does for the base area,
+which has 10 bits of entropy.
+
+The vmalloc allocator can be used to try an allocation at a specific address,
+however it is usually used to try an allocation over a large address range, and
+so some behaviors which are non-issues in normal usage can be be sub-optimal
+when trying the an allocation at 10000 small ranges. So this patch also includes
+a new vmalloc function __vmalloc_node_try_addr and some other vmalloc tweaks
+that allow for more efficient trying of addresses.
+
+This algorithm targets maintaining high entropy for many 1000's of module
+allocations. This is because there are other users of the module space besides
+kernel modules, like eBPF JIT, classic BPF socket filter JIT and kprobes.
+
+Performance
+===========
+Simulations were run using module sizes derived from the x86_64 modules to
+measure the allocation performance at various levels of fragmentation and
+whether the backup area was used.
+
+Capacity
+--------
+There is a slight reduction in the capacity of modules as simulated by the
+x86_64 module sizes of <1000. Note this is a worst case, since in practice
+module allocations in the 1000's will consist of smaller BPF JIT allocations or
+kprobes which would fit better in the random area.
+
+Allocation time
+---------------
+Below are three sets of measurements in ns of the allocation time as measured by
+the included kselftests. The first two columns are this new algorithm with and
+with out the vmalloc optimizations for trying random addresses quickly. They are
+included for consideration of whether the changes are worth it. The last column
+is the performance of the original algorithm.
+
+Modules Vmalloc optimization    No Vmalloc Optimization Existing Module KASLR
+1000    1433                    1993                    3821
+2000    2295                    3681                    7830
+3000    4424                    7450                    13012
+4000    7746                    13824                   18106
+5000    12721                   21852                   22572
+6000    19724                   33926                   26443
+7000    27638                   47427                   30473
+8000    37745                   64443                   34200
+
+These allocations are not taking very long, but it may show up on systems with
+very high usage of the module space (BPF JITs). If the trade-off of touching
+vmalloc doesn't seem worth it to people, I can remove the optimizations.
+
+Randomness
+----------
+Unlike the existing algorithm, the amount of randomness provided has a
+dependency on the number of modules allocated and the sizes of the modules text
+sections. The entropy provided for the Nth allocation will come from three
+sources of randomness, the range of addresses for the random area, the
+probability the section will be allocated in the backup area and randomness from
+the number of modules already allocated in the backup area. For computing a
+lower bound entropy in the following calculations, the randomness of the modules
+already in the backup area, or overlapping from the random area, is ignored
+since it is usually small and will only increase the entropy. Below is an
+attempt to compute a worst case value for entropy to compare to the existing
+algorithm.
+
+For probability of the Nth allocation being in the backup area, p, a lower bound
+entropy estimate is calculated here as:
+
+Random Area Slots = ((2/3)*1073741824)/4096 = 174762
+
+Entropy = -( (1-p)*log2((1-p)/174762) + p*log2(p/1024) )
+
+For >8000 modules the entropy remains above 17.3. For non-speculative control
+flow attacks, an attack might crash the system. So the probability of the
+first guess being right can be more important than the Nth guess. KASLR schemes
+usually have equal probability for each possible position, but in this scheme
+that is not the case. So a more conservative comparison to existing schemes is
+the amount of information that would have to be guessed correctly for the
+position that has the highest probability for having the Nth module allocated
+(as that would be the attackers best guess):
+
+Min Info = MIN(-log2(p/1024), -log2((1-p)/174762))
+
+Allocations     Entropy
+1000            17.4
+2000            17.4
+3000            17.4
+4000            16.8
+5000            15.8
+6000            14.9
+7000            14.8
+8000            14.2
+
+If anyone is keeping track, these numbers are different than as reported in V2,
+because they are generated using the more compact allocation size heuristic that
+is included in the kselftest rather than the real much larger dataset. The
+heuristic generates randomization benchmarks that are slightly slower than the
+real dataset. The real dataset also isn't representative of the case of mostly
+smaller BPF filters, so it represents a worst case lower bound for entropy and
+in practice 17+ bits should be maintained to much higher number of modules.
+
+PTE usage
+---------
+Since the allocations are spread out over a wider address space, there is
+increased PTE usage which should not exceed 1.3MB more than the old algorithm.
 
 
-On 15.11.2018 23:51, Alexander Popov wrote:
-> In the original grsecurity code the stackleak RTL pass was registered just
-> before the 'rtl-final' pass. Some time ago Richard Sandiford noted that:
-> 
->>>> This might be too late, since it happens e.g. after addresses have
->>>> been calculated for branch ranges, and after machine-specific passes
->>>> (e.g. bundling on ia64).
->>>>
->>>> The stack size is final after reload, so inserting the pass after that
->>>> might be better.
-> 
-> https://lore.kernel.org/patchwork/patch/879912/
-> 
-> So what is the best moment when we know the stack frame size and can safely
-> delete the CALL insn using delete_insn_and_edges()?
+Changes for V9:
+ - Better explanations in commit messages, instructions in kselftests (Andrew
+   Morton)
 
-At irc.oftc.net/#gcc Segher (kudos to him!) confirmed that 'final' pass is too
-late for this and proposed registering 'stackleak_cleanup' pass before
-'machine_reorg' pass. It's the moment when the stack frame size is already final
-and function prologues and epilogues are generated. That would also fit
-Richard's concerns.
+Changes for V8:
+ - Simplify code by removing logic for optimum handling of lazy free areas
 
-It looks reasonable -- that's what gcc/target.def says about
-machine_dependent_reorg() hook, which is called during 'machine_reorg' pass:
+Changes for V7:
+ - More 0-day build fixes, readability improvements (Kees Cook)
 
-"If non-null, this hook performs a target-specific pass over the
-instruction stream. The compiler will run it at all optimization levels,
-just before the point at which it normally does delayed-branch scheduling.
-The exact purpose of the hook varies from target to target.  Some use
-it to do transformations that are necessary for correctness, such as
-laying out in-function constant pools or avoiding hardware hazards.
-Others use it as an opportunity to do some machine-dependent optimizations".
+Changes for V6:
+ - 0-day build fixes by removing un-needed functional testing, more error
+   handling
+
+Changes for V5:
+ - Add module_alloc test module
+
+Changes for V4:
+ - Fix issue caused by KASAN, kmemleak being provided different allocation
+   lengths (padding).
+ - Avoid kmalloc until sure its needed in __vmalloc_node_try_addr.
+ - Fixed issues reported by 0-day.
+
+Changes for V3:
+ - Code cleanup based on internal feedback. (thanks to Dave Hansen and Andriy
+   Shevchenko)
+ - Slight refactor of existing algorithm to more cleanly live along side new
+   one.
+ - BPF synthetic benchmark
+
+Changes for V2:
+ - New implementation of __vmalloc_node_try_addr based on the
+   __vmalloc_node_range implementation, that only flushes TLB when needed.
+ - Modified module loading algorithm to try to reduce the TLB flushes further.
+ - Increase "random area" tries in order to increase the number of modules that
+   can get high randomness.
+ - Increase "random area" size to 2/3 of module area in order to increase the
+   number of modules that can get high randomness.
+ - Fix for 0day failures on other architectures.
+ - Fix for wrong debugfs permissions. (thanks to Jann Horn)
+ - Spelling fix. (thanks to Jann Horn)
+ - Data on module_alloc performance and TLB flushes. (brought up by Kees Cook
+   and Jann Horn)
+ - Data on memory usage. (suggested by Jann)
 
 
-So I would appreciate any comments on the following solution:
+Rick Edgecombe (4):
+  vmalloc: Add __vmalloc_node_try_addr function
+  x86/modules: Increase randomization for modules
+  vmalloc: Add debugfs modfraginfo
+  Kselftest for module text allocation benchmarking
 
-diff --git a/scripts/gcc-plugins/stackleak_plugin.c
-b/scripts/gcc-plugins/stackleak_plugin.c
-index 2f48da9..6f41b32 100644
---- a/scripts/gcc-plugins/stackleak_plugin.c
-+++ b/scripts/gcc-plugins/stackleak_plugin.c
-@@ -363,10 +363,12 @@ __visible int plugin_init(struct plugin_name_args
-*plugin_info,
-                                                PASS_POS_INSERT_BEFORE);
+ arch/x86/Kconfig                              |   3 +
+ arch/x86/include/asm/kaslr_modules.h          |  38 ++
+ arch/x86/include/asm/pgtable_64_types.h       |   7 +
+ arch/x86/kernel/module.c                      | 111 ++++--
+ include/linux/vmalloc.h                       |   3 +
+ lib/Kconfig.debug                             |   9 +
+ lib/Makefile                                  |   1 +
+ lib/test_mod_alloc.c                          | 375 ++++++++++++++++++
+ mm/vmalloc.c                                  | 228 +++++++++--
+ tools/testing/selftests/bpf/test_mod_alloc.sh |  29 ++
+ 10 files changed, 743 insertions(+), 61 deletions(-)
+ create mode 100644 arch/x86/include/asm/kaslr_modules.h
+ create mode 100644 lib/test_mod_alloc.c
+ create mode 100755 tools/testing/selftests/bpf/test_mod_alloc.sh
 
-        /*
--        * The stackleak_cleanup pass should be executed after the
--        * "reload" pass, when the stack frame size is final.
-+        * The stackleak_cleanup pass should be executed before the "mach"
-+        * pass, which performs the machine dependent code transformations.
-+        * It's the moment when the stack frame size is already final and
-+        * function prologues and epilogues are generated.
-         */
--       PASS_INFO(stackleak_cleanup, "reload", 1, PASS_POS_INSERT_AFTER);
-+       PASS_INFO(stackleak_cleanup, "mach", 1, PASS_POS_INSERT_BEFORE);
-
-        if (!plugin_default_version_check(version, &gcc_version)) {
-                error(G_("incompatible gcc/plugin versions"));
+-- 
+2.17.1
