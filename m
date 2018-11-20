@@ -1,54 +1,120 @@
-Date: Tue, 20 Nov 2018 16:26:19 -0700
+Date: Tue, 20 Nov 2018 16:50:37 -0700
 From: Tycho Andersen <tycho@tycho.ws>
-Subject: Re: [RFC PATCH 0/6] Process-local memory allocations
-Message-ID: <20181120232619.GA13641@cisco>
-References: <cover.1542722764.git.jsteckli@amazon.de>
+Subject: Re: [RFC PATCH 4/6] x86/speculation, mm: add process local virtual
+ memory region
+Message-ID: <20181120235037.GB13641@cisco>
+References: <cover.1542710668.git.jsteckli@amazon.de>
+ <717f82f41dd541512edb0eb60afde8983377340d.1542710668.git.jsteckli@amazon.de>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <cover.1542722764.git.jsteckli@amazon.de>
+In-Reply-To: <717f82f41dd541512edb0eb60afde8983377340d.1542710668.git.jsteckli@amazon.de>
 To: Julian Stecklina <jsteckli@amazon.de>
-Cc: kernel-hardening@lists.openwall.com, Liran Alon <liran.alon@oracle.com>, Jonathan Adams <jwadams@google.com>, David Woodhouse <dwmw2@infradead.org>, Igor Stoppa <igor.stoppa@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, Liran Alon <liran.alon@oracle.com>, Jonathan Adams <jwadams@google.com>, David Woodhouse <dwmw2@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 20, 2018 at 03:07:59PM +0100, Julian Stecklina wrote:
-> In a world with processor information leak vulnerabilities, having a treasure
-> trove of information available for leaking in the global kernel address space is
-> starting to be a liability. The biggest offender is the linear mapping of all
-> physical memory and there are already efforts (XPFO) to start addressing this.
-> In this patch series, I'd like to propose breaking up the kernel address space
-> further and introduce process-local mappings in the kernel.
+On Tue, Nov 20, 2018 at 03:10:25PM +0100, Julian Stecklina wrote:
+> The Linux kernel has a global address space that is the same for any
+> kernel code. This address space becomes a liability in a world with
+> processor information leak vulnerabilities, such as L1TF. With the right
+> cache load gadget, an attacker-controlled hyperthread pair can leak
+> arbitrary data via L1TF. The upstream Linux kernel currently suggests
+> disabling hyperthread, but this comes with a large performance hit for a
+> wide range of workloads.
 > 
-> The rationale is that there are allocations in the kernel containing data that
-> should only be accessible when the kernel is executing in the context of a
-> specific process. A prime example is KVM vCPU state. This patch series
-> introduces process-local memory in the kernel address space by claiming a PGD
-> entry for this specific purpose. Then it converts KVM on x86 to use these new
-> primitives to store GPR and FPU registers of vCPUs. KVM is a good testing
-> ground, because it makes sure userspace can only interact with a VM from a
-> single process.
+> An alternative mitigation is to not make certain data in the kernel
+> globally visible, but only when the kernel executes in the context of
+> the process where this data belongs to.
 > 
-> Process-local allocations in the kernel can be part of a robust L1TF mitigation
-> strategy that works even with SMT enabled. The specific goal here is to make it
-> harder for a random thread using cache load gadget (usually a bounds check of a
-> system call argument plus array access suffices) to prefetch interesting data
-> into the L1 cache and use L1TF to leak this data.
+> This patch adds the initial plumbing for allocating process-local
+> memory. By grabbing one entry in the PML4 of each set of page tables and
+> start treating it as process-local memory. We currently only support 2MB
+> of process-local allocations, but this is an arbitrary limitation and
+> can be lifted by working on the page table allocation code.
 > 
-> The patch set applies to kvm/next [1]. Feedback is very welcome, both about the
-> general approach and the actual implementation. As far as testing goes, the KVM
-> unit tests seem happy on Intel. AMD is only compile tested at the moment.
+> While memory is used for process-local allocations, it is unmapped from
+> the linear mapping of physical memory.
+> 
+> The code has some limitations that are spelled out in
+> arch/x86/mm/proclocal.c.
 
-This seems similar in spirit to prmem:
-https://lore.kernel.org/lkml/20181023213504.28905-2-igor.stoppa@huawei.com/T/#u
+Cool!
 
-Basically, we have some special memory that we want to leave unmapped
-(read only) most of the time, but map it (writable) sometimes. I
-wonder if we should merge the APIs in to one
+> +static int fault_in_process_local(unsigned long address)
+> +{
+> +#ifdef CONFIG_PROCLOCAL
+> +	return address >= PROCLOCAL_START && address <= PROCLOCAL_END;
+> +#else
+> +	return false;
+> +#endif
+> +}
+> +
 
-spmemalloc(size, flags, PRLOCAL)
+I think the kernel style for this is something like
 
-type thing? Could we share some infrastructure then? (I also didn't
-follow what happened to the patches Nadav was going to send that might
-replace prmem somehow.)
+#ifdef CONFIG_PROCLOCAL
+static bool fault_in_process_local(...) {
+    ...
+}
+#else
+static bool fault_in_process_local(...) {
+    return false;
+}
+
+We should probably change the return type to bool, or return 0 there.
+
+>  static inline bool smap_violation(int error_code, struct pt_regs *regs)
+>  {
+>  	if (!IS_ENABLED(CONFIG_X86_SMAP))
+> @@ -1240,6 +1249,11 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code,
+>  	 * protection error (error_code & 9) == 0.
+>  	 */
+>  	if (unlikely(fault_in_kernel_space(address))) {
+> +
+> +		if (unlikely(fault_in_process_local(address))) {
+> +			BUG();
+
+Do we really need a separate BUG() here? People don't like BUG() :) Can
+we just let the flow all the way to no_context() and do some
+annotation there?
+
+> +int kalloc_proclocal(struct proclocal *pl, size_t len)
+> +{
+> +	struct mm_struct *mm = current->mm;
+> +	size_t nr_pages = round_up(len, PAGE_SIZE) / PAGE_SIZE;
+> +	int order, free_page_off;
+> +	unsigned long vaddr;
+> +	size_t i;
+> +	
+> +	PRL_DBG("%s: mm=%lx len=%zu -> nr_pages=%zu\n",
+> +		(unsigned long)mm, len, nr_pages);
+> +
+> +	might_sleep();
+> +	BUG_ON(!mm);
+
+It's sort of unfortunate that you couldn't use this in kernel threads.
+I'm not sure if there are any kernel threads with secrets to protect,
+but I suppose there are some. I wonder if we can't do something like
+the prmem patches where we reserve a small special section for this or
+something?
+
+> +
+> +	if (len == 0)
+> +		goto fail;
+> +
+> +	down_write(&mm->mmap_sem);
+> +
+> +	if (mm->proclocal_in_use_pages == 0 && proclocal_init(mm))
+> +		goto fail_unlock;
+> +
+> +	order = get_count_order(nr_pages);
+> +	nr_pages = 1U << order;
+> +
+> +	free_page_off = bitmap_find_free_region(mm->proclocal_bitmap, MAX_PROCLOCAL_PAGES, order);
+
+Here and a few other places in the series there's some > 80 char
+lines.
+
+Cheers,
 
 Tycho
