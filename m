@@ -1,95 +1,80 @@
-Subject: Re: [PATCH 10/17] prmem: documentation
-References: <20181023213504.28905-1-igor.stoppa@huawei.com>
- <20181023213504.28905-11-igor.stoppa@huawei.com>
- <20181026092609.GB3159@worktop.c.hoisthospitality.com>
- <CAGXu5jKCs01jvtvpEFS7R8qCR-5iRqK11kJxLJY99NicGWc4aQ@mail.gmail.com>
- <20181028183126.GB744@hirez.programming.kicks-ass.net>
- <40cd77ce-f234-3213-f3cb-0c3137c5e201@gmail.com>
- <20181030152641.GE8177@hirez.programming.kicks-ass.net>
- <CAGXu5jJftJ+Hq+jrZGHX5CTDLWOog7kGsd_Ne=yMvrRs__skSg@mail.gmail.com>
- <0A7AFB50-9ADE-4E12-B541-EC7839223B65@amacapital.net>
- <6f60afc9-0fed-7f95-a11a-9a2eef33094c@gmail.com>
- <CALCETrXNckT9W288VXx-6inO5qYn-6dUPocKGcBT0GCO3xi3ZQ@mail.gmail.com>
- <386C0CB1-C4B1-43E2-A754-DA8DBE4FB3CB@gmail.com>
- <CALCETrWWcfLK4W3mn0bavzejmMBVKMX29aAUA3+VPQ8m9vmfhw@mail.gmail.com>
- <9373ccf0-f51b-4bfa-2b16-e03ebf3c670d@huawei.com>
- <2e52e103-15d0-0c26-275f-894dfd07e8ec@huawei.com>
- <CALCETrV0sPgf4ZgG1joF_5hM-ycPsWM9DWGO=diQ_LQKin4VuA@mail.gmail.com>
+Subject: Re: [RFC PATCH 0/6] Process-local memory allocations
+References: <cover.1542722764.git.jsteckli@amazon.de>
+ <20181120232619.GA13641@cisco>
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <1166e55c-0c06-195c-a501-383b4055ea46@gmail.com>
-Date: Wed, 21 Nov 2018 18:34:42 +0200
+Message-ID: <b37324d7-5d47-3ad6-d5f5-bd2b20a43f5b@gmail.com>
+Date: Wed, 21 Nov 2018 19:18:17 +0200
 MIME-Version: 1.0
-In-Reply-To: <CALCETrV0sPgf4ZgG1joF_5hM-ycPsWM9DWGO=diQ_LQKin4VuA@mail.gmail.com>
+In-Reply-To: <20181120232619.GA13641@cisco>
 Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-To: Andy Lutomirski <luto@kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>
-Cc: Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Matthew Wilcox <willy@infradead.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
+To: Tycho Andersen <tycho@tycho.ws>, Julian Stecklina <jsteckli@amazon.de>
+Cc: kernel-hardening@lists.openwall.com, Liran Alon <liran.alon@oracle.com>, Jonathan Adams <jwadams@google.com>, David Woodhouse <dwmw2@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Hi,
 
-On 13/11/2018 20:36, Andy Lutomirski wrote:
-> On Tue, Nov 13, 2018 at 10:33 AM Igor Stoppa <igor.stoppa@huawei.com> wrote:
+On 21/11/2018 01:26, Tycho Andersen wrote:
+> On Tue, Nov 20, 2018 at 03:07:59PM +0100, Julian Stecklina wrote:
+>> In a world with processor information leak vulnerabilities, having a treasure
+>> trove of information available for leaking in the global kernel address space is
+>> starting to be a liability. The biggest offender is the linear mapping of all
+>> physical memory and there are already efforts (XPFO) to start addressing this.
+>> In this patch series, I'd like to propose breaking up the kernel address space
+>> further and introduce process-local mappings in the kernel.
 >>
->> I forgot one sentence :-(
+>> The rationale is that there are allocations in the kernel containing data that
+>> should only be accessible when the kernel is executing in the context of a
+>> specific process. A prime example is KVM vCPU state. This patch series
+>> introduces process-local memory in the kernel address space by claiming a PGD
+>> entry for this specific purpose. Then it converts KVM on x86 to use these new
+>> primitives to store GPR and FPU registers of vCPUs. KVM is a good testing
+>> ground, because it makes sure userspace can only interact with a VM from a
+>> single process.
 >>
->> On 13/11/2018 20:31, Igor Stoppa wrote:
->>> On 13/11/2018 19:47, Andy Lutomirski wrote:
->>>
->>>> For general rare-writish stuff, I don't think we want IRQs running
->>>> with them mapped anywhere for write.  For AVC and IMA, I'm less sure.
->>>
->>> Why would these be less sensitive?
->>>
->>> But I see a big difference between my initial implementation and this one.
->>>
->>> In my case, by using a shared mapping, visible to all cores, freezing
->>> the core that is performing the write would have exposed the writable
->>> mapping to a potential attack run from another core.
->>>
->>> If the mapping is private to the core performing the write, even if it
->>> is frozen, it's much harder to figure out what it had mapped and where,
->>> from another core.
->>>
->>> To access that mapping, the attack should be performed from the ISR, I
->>> think.
+>> Process-local allocations in the kernel can be part of a robust L1TF mitigation
+>> strategy that works even with SMT enabled. The specific goal here is to make it
+>> harder for a random thread using cache load gadget (usually a bounds check of a
+>> system call argument plus array access suffices) to prefetch interesting data
+>> into the L1 cache and use L1TF to leak this data.
 >>
->> Unless the secondary mapping is also available to other cores, through
->> the shared mm_struct ?
->>
+>> The patch set applies to kvm/next [1]. Feedback is very welcome, both about the
+>> general approach and the actual implementation. As far as testing goes, the KVM
+>> unit tests seem happy on Intel. AMD is only compile tested at the moment.
+
+Where is the full set of patches?
+I'm sorry, I searched both KVM and LKML archives, but I couldn't find it.
+
+> This seems similar in spirit to prmem:
+> https://lore.kernel.org/lkml/20181023213504.28905-2-igor.stoppa@huawei.com/T/#u
 > 
-> I don't think this matters much.  The other cores will only be able to
-> use that mapping when they're doing a rare write.
+> Basically, we have some special memory that we want to leave unmapped
+> (read only) most of the time, but map it (writable) sometimes. I
+> wonder if we should merge the APIs in to one
+> 
+> spmemalloc(size, flags, PRLOCAL)
+> 
+> type thing? Could we share some infrastructure then?
 
+For what I can understand from the intro only, this seems to focus on 
+"local" information, related to processes, while prmem was mostly aimed, 
+at least at this stage, at system-level features, like LSM or SELinux.
+Those have probably little value, for protection from reading.
+And they are used quite often, typically on a critical path.
+The main thing is to prevent rogue writes, but reads are not a problem.
+Hiding/unhiding them even from read operations might not be so useful.
 
-I'm still mulling over this.
-There might be other reasons for replicating the mm_struct.
+However other components, like the kernel keyring, are used less 
+frequently and might be worth protecting them even from read operations.
 
-If I understand correctly how the text patching works, it happens 
-sequentially, because of the text_mutex used by arch_jump_label_transform
+> (I also didn't
+> follow what happened to the patches Nadav was going to send that might
+> replace prmem somehow.)
 
-Which might be fine for this specific case, but I think I shouldn't 
-introduce a global mutex, when it comes to data.
-Most likely, if two or more cores want to perform a write rare 
-operation, there is no correlation between them, they could proceed in 
-parallel. And if there really is, then the user of the API should 
-introduce own locking, for that specific case.
-
-A bit unrelated question, related to text patching: I see that each 
-patching operation is validated, but wouldn't it be more robust to first 
-validate  all of then, and only after they are all found to be 
-compliant, to proceed with the actual modifications?
-
-And about the actual implementation of the write rare for the statically 
-allocated variables, is it expected that I use Nadav's function?
-Or that I refactor the code?
-
-The name, referring to text would definitely not be ok for data.
-And I would have to also generalize it, to deal with larger amounts of data.
-
-I would find it easier, as first cut, to replicate its behavior and 
-refactor only later, once it has stabilized and possibly Nadav's patches 
-have been acked.
+I just replied to the old prmem thread - I stil lhave some doubts about 
+the implementation, however my understanding is that I could replicate 
+or at least base on those patches the very low level part of the write 
+rare mechanism.
 
 --
 igor
