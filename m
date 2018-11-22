@@ -1,304 +1,114 @@
-From: Russell Currey <ruscur@russell.cc>
-Subject: [PATCH 4/4] powerpc/64s: Implement KUAP for Radix MMU
-Date: Fri, 23 Nov 2018 01:04:16 +1100
-Message-Id: <20181122140416.3447-5-ruscur@russell.cc>
-In-Reply-To: <20181122140416.3447-1-ruscur@russell.cc>
-References: <20181122140416.3447-1-ruscur@russell.cc>
+Subject: Re: [PATCH 10/17] prmem: documentation
+References: <20181023213504.28905-1-igor.stoppa@huawei.com>
+ <20181026092609.GB3159@worktop.c.hoisthospitality.com>
+ <CAGXu5jKCs01jvtvpEFS7R8qCR-5iRqK11kJxLJY99NicGWc4aQ@mail.gmail.com>
+ <20181028183126.GB744@hirez.programming.kicks-ass.net>
+ <40cd77ce-f234-3213-f3cb-0c3137c5e201@gmail.com>
+ <20181030152641.GE8177@hirez.programming.kicks-ass.net>
+ <CAGXu5jJftJ+Hq+jrZGHX5CTDLWOog7kGsd_Ne=yMvrRs__skSg@mail.gmail.com>
+ <0A7AFB50-9ADE-4E12-B541-EC7839223B65@amacapital.net>
+ <6f60afc9-0fed-7f95-a11a-9a2eef33094c@gmail.com>
+ <CALCETrXNckT9W288VXx-6inO5qYn-6dUPocKGcBT0GCO3xi3ZQ@mail.gmail.com>
+ <386C0CB1-C4B1-43E2-A754-DA8DBE4FB3CB@gmail.com>
+ <CALCETrWWcfLK4W3mn0bavzejmMBVKMX29aAUA3+VPQ8m9vmfhw@mail.gmail.com>
+ <9373ccf0-f51b-4bfa-2b16-e03ebf3c670d@huawei.com>
+ <2e52e103-15d0-0c26-275f-894dfd07e8ec@huawei.com>
+ <CALCETrV0sPgf4ZgG1joF_5hM-ycPsWM9DWGO=diQ_LQKin4VuA@mail.gmail.com>
+ <1166e55c-0c06-195c-a501-383b4055ea46@gmail.com>
+ <3BB9DE07-E0AE-43E2-99F1-E4AA774CD462@amacapital.net>
+From: Igor Stoppa <igor.stoppa@gmail.com>
+Message-ID: <5e10c8e4-aa71-1eea-b1ce-50d7d0a60e8c@gmail.com>
+Date: Thu, 22 Nov 2018 21:27:02 +0200
 MIME-Version: 1.0
+In-Reply-To: <3BB9DE07-E0AE-43E2-99F1-E4AA774CD462@amacapital.net>
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 8bit
-To: linuxppc-dev@lists.ozlabs.org
-Cc: mpe@ellerman.id.au, benh@kernel.crashing.org, kernel-hardening@lists.openwall.com, christophe.leroy@c-s.fr, Russell Currey <ruscur@russell.cc>
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Andy Lutomirski <luto@kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Matthew Wilcox <willy@infradead.org>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kernel Userspace Access Prevention utilises a feature of
-the Radix MMU which disallows read and write access to userspace
-addresses.  By utilising this, the kernel is prevented from accessing
-user data from outside of trusted paths that perform proper safety checks,
-such as copy_{to/from}_user() and friends.
+On 21/11/2018 20:15, Andy Lutomirski wrote:
 
-Userspace access is disabled from early boot and is only enabled when:
+>> On Nov 21, 2018, at 9:34 AM, Igor Stoppa <igor.stoppa@gmail.com> wrote:
 
-        - exiting the kernel and entering userspace
-        - performing an operation like copy_{to/from}_user()
-        - context switching to a process that has access enabled
+[...]
 
-and similarly, access is disabled again when exiting userspace and entering
-the kernel.
+>> There might be other reasons for replicating the mm_struct.
+>>
+>> If I understand correctly how the text patching works, it happens sequentially, because of the text_mutex used by arch_jump_label_transform
+>>
+>> Which might be fine for this specific case, but I think I shouldn't introduce a global mutex, when it comes to data.
+>> Most likely, if two or more cores want to perform a write rare operation, there is no correlation between them, they could proceed in parallel. And if there really is, then the user of the API should introduce own locking, for that specific case.
+> 
+> Text patching uses the same VA for different physical addresses, so it need a mutex to avoid conflicts. I think that, for rare writes, you should just map each rare-writable address at a *different* VA.  You’ll still need a mutex (mmap_sem) to synchronize allocation and freeing of rare-writable ranges, but that shouldn’t have much contention.
 
-This feature has a slight performance impact which I roughly measured to be
-3% slower in the worst case (performing 1GB of 1 byte read()/write()
-syscalls), and is gated behind the CONFIG_PPC_KUAP option for
-performance-critical builds.
+I have studied the code involved with Nadav's patchset.
+I am perplexed about these sentences you wrote.
 
-This feature can be tested by using the lkdtm driver (CONFIG_LKDTM=y) and
-performing the following:
+More to the point (to the best of my understanding):
 
-        echo ACCESS_USERSPACE > [debugfs]/provoke-crash/DIRECT
+poking_init()
+-------------
+   1. it gets one random poking address and ensures to have at least 2
+      consecutive PTEs from the same PMD
+   2. it then proceeds to map/unmap an address from the first of the 2
+      consecutive PTEs, so that, later on, there will be no need to
+      allocate pages, which might fail, if poking from atomic context.
+   3. at this point, the page tables are populated, for the address that
+      was obtained at point 1, and this is ok, because the address is fixed
 
-if enabled, this should send SIGSEGV to the thread.
+write_rare
+----------
+   4. it can happen on any available core / thread at any time, therefore
+      each of them needs a different address
+   5. CPUs support hotplug, but from what I have read, I might get away
+      with having up to nr_cpus different addresses (determined at init)
+      and I would follow the same technique used by Nadav, of forcing the
+      mapping of 1 or 2 (1 could be enough, I have to loop anyway, at
+      some point) pages at each address, to ensure the population of the
+      page tables
 
-Signed-off-by: Russell Currey <ruscur@russell.cc>
----
- arch/powerpc/include/asm/book3s/64/radix.h | 43 ++++++++++++++++++++++
- arch/powerpc/include/asm/exception-64e.h   |  3 ++
- arch/powerpc/include/asm/exception-64s.h   | 19 +++++++++-
- arch/powerpc/include/asm/mmu.h             |  9 ++++-
- arch/powerpc/include/asm/reg.h             |  1 +
- arch/powerpc/kernel/entry_64.S             | 16 +++++++-
- arch/powerpc/mm/pgtable-radix.c            | 12 ++++++
- arch/powerpc/mm/pkeys.c                    |  7 +++-
- arch/powerpc/platforms/Kconfig.cputype     |  1 +
- 9 files changed, 105 insertions(+), 6 deletions(-)
+so far, so good, but ...
 
-diff --git a/arch/powerpc/include/asm/book3s/64/radix.h b/arch/powerpc/include/asm/book3s/64/radix.h
-index 7d1a3d1543fc..9af93d05e6fa 100644
---- a/arch/powerpc/include/asm/book3s/64/radix.h
-+++ b/arch/powerpc/include/asm/book3s/64/radix.h
-@@ -284,5 +284,48 @@ static inline unsigned long radix__get_tree_size(void)
- int radix__create_section_mapping(unsigned long start, unsigned long end, int nid);
- int radix__remove_section_mapping(unsigned long start, unsigned long end);
- #endif /* CONFIG_MEMORY_HOTPLUG */
-+
-+#ifdef CONFIG_PPC_KUAP
-+#include <asm/reg.h>
-+/*
-+ * We do have the ability to individually lock/unlock reads and writes rather
-+ * than both at once, however it's a significant performance hit due to needing
-+ * to do a read-modify-write, which adds a mfspr, which is slow.  As a result,
-+ * locking/unlocking both at once is preferred.
-+ */
-+static inline void __unlock_user_rd_access(void)
-+{
-+	if (!mmu_has_feature(MMU_FTR_RADIX_KUAP))
-+		return;
-+
-+	mtspr(SPRN_AMR, 0);
-+	isync();
-+}
-+
-+static inline void __lock_user_rd_access(void)
-+{
-+	if (!mmu_has_feature(MMU_FTR_RADIX_KUAP))
-+		return;
-+
-+	mtspr(SPRN_AMR, AMR_LOCKED);
-+}
-+
-+static inline void __unlock_user_wr_access(void)
-+{
-+	if (!mmu_has_feature(MMU_FTR_RADIX_KUAP))
-+		return;
-+
-+	mtspr(SPRN_AMR, 0);
-+	isync();
-+}
-+
-+static inline void __lock_user_wr_access(void)
-+{
-+	if (!mmu_has_feature(MMU_FTR_RADIX_KUAP))
-+		return;
-+
-+	mtspr(SPRN_AMR, AMR_LOCKED);
-+}
-+#endif /* CONFIG_PPC_KUAP */
- #endif /* __ASSEMBLY__ */
- #endif
-diff --git a/arch/powerpc/include/asm/exception-64e.h b/arch/powerpc/include/asm/exception-64e.h
-index 555e22d5e07f..bf25015834ee 100644
---- a/arch/powerpc/include/asm/exception-64e.h
-+++ b/arch/powerpc/include/asm/exception-64e.h
-@@ -215,5 +215,8 @@ exc_##label##_book3e:
- #define RFI_TO_USER							\
- 	rfi
- 
-+#define UNLOCK_USER_ACCESS(reg)
-+#define LOCK_USER_ACCESS(reg)
-+
- #endif /* _ASM_POWERPC_EXCEPTION_64E_H */
- 
-diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
-index 3b4767ed3ec5..d92614c66d87 100644
---- a/arch/powerpc/include/asm/exception-64s.h
-+++ b/arch/powerpc/include/asm/exception-64s.h
-@@ -264,6 +264,19 @@ BEGIN_FTR_SECTION_NESTED(943)						\
- 	std	ra,offset(r13);						\
- END_FTR_SECTION_NESTED(ftr,ftr,943)
- 
-+#define LOCK_USER_ACCESS(reg)							\
-+BEGIN_MMU_FTR_SECTION_NESTED(944)					\
-+	LOAD_REG_IMMEDIATE(reg,AMR_LOCKED);				\
-+	mtspr	SPRN_AMR,reg;						\
-+END_MMU_FTR_SECTION_NESTED(MMU_FTR_RADIX_KUAP,MMU_FTR_RADIX_KUAP,944)
-+
-+#define UNLOCK_USER_ACCESS(reg)							\
-+BEGIN_MMU_FTR_SECTION_NESTED(945)					\
-+	li	reg,0;							\
-+	mtspr	SPRN_AMR,reg;						\
-+	isync;								\
-+END_MMU_FTR_SECTION_NESTED(MMU_FTR_RADIX_KUAP,MMU_FTR_RADIX_KUAP,945)
-+
- #define EXCEPTION_PROLOG_0(area)					\
- 	GET_PACA(r13);							\
- 	std	r9,area+EX_R9(r13);	/* save r9 */			\
-@@ -500,7 +513,11 @@ END_FTR_SECTION_NESTED(ftr,ftr,943)
- 	beq	4f;			/* if from kernel mode		*/ \
- 	ACCOUNT_CPU_USER_ENTRY(r13, r9, r10);				   \
- 	SAVE_PPR(area, r9);						   \
--4:	EXCEPTION_PROLOG_COMMON_2(area)					   \
-+4:	lbz	r9,PACA_USER_ACCESS_ALLOWED(r13);			   \
-+	cmpwi	cr1,r9,0;						   \
-+	beq	5f;							   \
-+	LOCK_USER_ACCESS(r9);						   \
-+5:	EXCEPTION_PROLOG_COMMON_2(area)					\
- 	EXCEPTION_PROLOG_COMMON_3(n)					   \
- 	ACCOUNT_STOLEN_TIME
- 
-diff --git a/arch/powerpc/include/asm/mmu.h b/arch/powerpc/include/asm/mmu.h
-index 5631a906af55..a1450d56d0db 100644
---- a/arch/powerpc/include/asm/mmu.h
-+++ b/arch/powerpc/include/asm/mmu.h
-@@ -107,6 +107,10 @@
-  */
- #define MMU_FTR_1T_SEGMENT		ASM_CONST(0x40000000)
- 
-+/* Supports KUAP (key 0 controlling userspace addresses) on radix
-+ */
-+#define MMU_FTR_RADIX_KUAP		ASM_CONST(0x80000000)
-+
- /* MMU feature bit sets for various CPUs */
- #define MMU_FTRS_DEFAULT_HPTE_ARCH_V2	\
- 	MMU_FTR_HPTE_TABLE | MMU_FTR_PPCAS_ARCH_V2
-@@ -143,7 +147,10 @@ enum {
- 		MMU_FTR_KERNEL_RO | MMU_FTR_68_BIT_VA |
- #ifdef CONFIG_PPC_RADIX_MMU
- 		MMU_FTR_TYPE_RADIX |
--#endif
-+#ifdef CONFIG_PPC_KUAP
-+		MMU_FTR_RADIX_KUAP |
-+#endif /* CONFIG_PPC_KUAP */
-+#endif /* CONFIG_PPC_RADIX_MMU */
- 		0,
- };
- 
-diff --git a/arch/powerpc/include/asm/reg.h b/arch/powerpc/include/asm/reg.h
-index de52c3166ba4..d9598e6790d8 100644
---- a/arch/powerpc/include/asm/reg.h
-+++ b/arch/powerpc/include/asm/reg.h
-@@ -246,6 +246,7 @@
- #define SPRN_DSCR	0x11
- #define SPRN_CFAR	0x1c	/* Come From Address Register */
- #define SPRN_AMR	0x1d	/* Authority Mask Register */
-+#define   AMR_LOCKED	0xC000000000000000UL /* Read & Write disabled */
- #define SPRN_UAMOR	0x9d	/* User Authority Mask Override Register */
- #define SPRN_AMOR	0x15d	/* Authority Mask Override Register */
- #define SPRN_ACOP	0x1F	/* Available Coprocessor Register */
-diff --git a/arch/powerpc/kernel/entry_64.S b/arch/powerpc/kernel/entry_64.S
-index 7b1693adff2a..d5879f32bd34 100644
---- a/arch/powerpc/kernel/entry_64.S
-+++ b/arch/powerpc/kernel/entry_64.S
-@@ -297,7 +297,12 @@ END_FTR_SECTION_IFSET(CPU_FTR_HAS_PPR)
- 	b	.	/* prevent speculative execution */
- 
- 	/* exit to kernel */
--1:	ld	r2,GPR2(r1)
-+1:	/* if the AMR was unlocked before, unlock it again */
-+	lbz	r2,PACA_USER_ACCESS_ALLOWED(r13)
-+	cmpwi	cr1,0
-+	bne	2f
-+	UNLOCK_USER_ACCESS(r2)
-+2:	ld	r2,GPR2(r1)
- 	ld	r1,GPR1(r1)
- 	mtlr	r4
- 	mtcr	r5
-@@ -983,7 +988,14 @@ END_FTR_SECTION_IFSET(CPU_FTR_HAS_PPR)
- 	RFI_TO_USER
- 	b	.	/* prevent speculative execution */
- 
--1:	mtspr	SPRN_SRR1,r3
-+1:	/* exit to kernel */
-+	/* if the AMR was unlocked before, unlock it again */
-+	lbz	r2,PACA_USER_ACCESS_ALLOWED(r13)
-+	cmpwi	cr1,0
-+	bne	2f
-+	UNLOCK_USER_ACCESS(r2)
-+
-+2:	mtspr	SPRN_SRR1,r3
- 
- 	ld	r2,_CCR(r1)
- 	mtcrf	0xFF,r2
-diff --git a/arch/powerpc/mm/pgtable-radix.c b/arch/powerpc/mm/pgtable-radix.c
-index f08a459b4255..b064b542e09f 100644
---- a/arch/powerpc/mm/pgtable-radix.c
-+++ b/arch/powerpc/mm/pgtable-radix.c
-@@ -29,6 +29,7 @@
- #include <asm/powernv.h>
- #include <asm/sections.h>
- #include <asm/trace.h>
-+#include <asm/uaccess.h>
- 
- #include <trace/events/thp.h>
- 
-@@ -550,6 +551,17 @@ void setup_kuep(bool disabled)
- 	mtspr(SPRN_IAMR, (1ul << 62));
- }
- 
-+void setup_kuap(bool disabled)
-+{
-+	if (disabled)
-+		return;
-+
-+	pr_warn("Activating Kernel Userspace Access Prevention\n");
-+
-+	cur_cpu_spec->mmu_features |= MMU_FTR_RADIX_KUAP;
-+	mtspr(SPRN_AMR, AMR_LOCKED);
-+}
-+
- void __init radix__early_init_mmu(void)
- {
- 	unsigned long lpcr;
-diff --git a/arch/powerpc/mm/pkeys.c b/arch/powerpc/mm/pkeys.c
-index b271b283c785..bb3cf915016f 100644
---- a/arch/powerpc/mm/pkeys.c
-+++ b/arch/powerpc/mm/pkeys.c
-@@ -7,6 +7,7 @@
- 
- #include <asm/mman.h>
- #include <asm/setup.h>
-+#include <asm/uaccess.h>
- #include <linux/pkeys.h>
- #include <linux/of_device.h>
- 
-@@ -266,7 +267,8 @@ int __arch_set_user_pkey_access(struct task_struct *tsk, int pkey,
- 
- void thread_pkey_regs_save(struct thread_struct *thread)
- {
--	if (static_branch_likely(&pkey_disabled))
-+	if (static_branch_likely(&pkey_disabled) &&
-+	    !mmu_has_feature(MMU_FTR_RADIX_KUAP))
- 		return;
- 
- 	/*
-@@ -280,7 +282,8 @@ void thread_pkey_regs_save(struct thread_struct *thread)
- void thread_pkey_regs_restore(struct thread_struct *new_thread,
- 			      struct thread_struct *old_thread)
- {
--	if (static_branch_likely(&pkey_disabled))
-+	if (static_branch_likely(&pkey_disabled) &&
-+	    !mmu_has_feature(MMU_FTR_RADIX_KUAP))
- 		return;
- 
- 	if (old_thread->amr != new_thread->amr)
-diff --git a/arch/powerpc/platforms/Kconfig.cputype b/arch/powerpc/platforms/Kconfig.cputype
-index e6831d0ec159..5fbfa041194d 100644
---- a/arch/powerpc/platforms/Kconfig.cputype
-+++ b/arch/powerpc/platforms/Kconfig.cputype
-@@ -335,6 +335,7 @@ config PPC_RADIX_MMU
- 	depends on PPC_BOOK3S_64
- 	select ARCH_HAS_GIGANTIC_PAGE if (MEMORY_ISOLATION && COMPACTION) || CMA
- 	select PPC_HAVE_KUEP
-+	select PPC_HAVE_KUAP
- 	default y
- 	help
- 	  Enable support for the Power ISA 3.0 Radix style MMU. Currently this
--- 
-2.19.1
+   6. the addresses used by each CPU are fixed
+   7. I do not understand the reference you make to
+      "allocation and freeing of rare-writable ranges", because if I
+      treat the range as such, then there is a risk that I need to
+      populate more entries in the page table, which would have problems
+      with the atomic context, unless write_rare from atomic is ruled
+      out. If write_rare from atomic can be avoided, then I can also have
+      one-use randomized addresses at each write-rare operation, instead
+      of fixed ones, like in point 6.
+
+and, apologies for being dense: the following is still not clear to me:
+
+   8. you wrote:
+      > You’ll still need a mutex (mmap_sem) to synchronize allocation
+      > and freeing of rare-writable ranges, but that shouldn’t have much
+      > contention.
+      What causes the contention? It's the fact that the various cores
+      are using the same mm, if I understood correctly.
+      However, if there was one mm for each core, wouldn't that make it
+      unnecessary to have any mutex?
+      I feel there must be some obvious reason why multiple mms are not a
+      good idea, yet I cannot grasp it :-(
+
+      switch_mm_irqs_off() seems to have lots of references to
+      "this_cpu_something"; if there is any optimization from having the
+      same next across multiple cores, I'm missing it
+
+[...]
+
+> I would either refactor it or create a new function to handle the write. The main thing that Nadav is adding that I think you’ll want to use is the infrastructure for temporarily switching mms from a non-kernel-thread context.
+
+yes
+
+[...]
+
+
+> You’ll still want Nadav’s code for setting up the mm in the first place, though.
+
+yes
+
+--
+thanks, igor
