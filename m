@@ -1,62 +1,40 @@
-Date: Fri, 23 Nov 2018 17:06:38 +0300 (MSK)
-From: Alexander Monakov <amonakov@ispras.ru>
-Subject: Re: Investigating a stack state mismatch in Linux kernel
-In-Reply-To: <57225f38-3f6d-4029-8f89-4b6eba97c3c1@linux.com>
-Message-ID: <alpine.LNX.2.20.13.1811231634330.6732@monopod.intra.ispras.ru>
-References: <b7aad232-76e1-241f-00e2-77783ce30f87@linux.com> <875zwyabac.fsf@oldenburg.str.redhat.com> <2a2b1181-2175-7e4e-189c-12630f43d10d@linux.com> <57225f38-3f6d-4029-8f89-4b6eba97c3c1@linux.com>
+Subject: Re: [RFC PATCH 0/6] Process-local memory allocations
+References: <cover.1542722764.git.jsteckli@amazon.de>
+ <20181120232619.GA13641@cisco>
+ <b37324d7-5d47-3ad6-d5f5-bd2b20a43f5b@gmail.com>
+ <20181121174821.GA3313@cisco> <1542904826.6344.1.camel@amazon.de>
+From: Igor Stoppa <igor.stoppa@gmail.com>
+Message-ID: <5af3ae36-6e1a-b8f0-c4b6-8a93fb842343@gmail.com>
+Date: Fri, 23 Nov 2018 18:24:08 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Florian Weimer <fweimer@redhat.com>, Richard Sandiford <richard.sandiford@arm.com>, Segher Boessenkool <segher@kernel.crashing.org>, Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Emese Revfy <re.emese@gmail.com>, Thomas Garnier <thgarnie@google.com>, Alexei Starovoitov <ast@kernel.org>, Masami Hiramatsu <mhiramat@kernel.org>, "David S . Miller" <davem@davemloft.net>, Steven Rostedt <rostedt@goodmis.org>, Dave Hansen <dave.hansen@linux.intel.com>, Will Deacon <will.deacon@arm.com>, Jann Horn <jannh@google.com>, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, gcc@gcc.gnu.org
+In-Reply-To: <1542904826.6344.1.camel@amazon.de>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: "Stecklina, Julian" <jsteckli@amazon.de>, "tycho@tycho.ws" <tycho@tycho.ws>
+Cc: "liran.alon@oracle.com" <liran.alon@oracle.com>, "jwadams@google.com" <jwadams@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "dwmw2@infradead.org" <dwmw2@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
 
-On Wed, 21 Nov 2018, Alexander Popov wrote:
 
-> Hello everyone!
+On 22/11/2018 18:40, Stecklina, Julian wrote:
+> On Wed, 2018-11-21 at 10:48 -0700, Tycho Andersen wrote:
+>>> Where is the full set of patches?
+>>> I'm sorry, I searched both KVM and LKML archives, but I couldn't find it.
+>>
+>> It looks like they were only sent to kernel hardening, but not sent to
+>> the archives? I only see our replies here:
+>>
+>> https://www.openwall.com/lists/kernel-hardening/
+>>
+>> Julian, perhaps you can re-send with a CC to lkml as well?
 > 
-> At irc.freenode.org/#gcc people told me that I should CC gcc@gcc.gnu.org to get
-> some attention of gcc developers.
-> 
-> Link to previous discussion:
->  https://www.openwall.com/lists/kernel-hardening/2018/11/14/1
+> Will do. I messed up the threading, due to git send-email being hostile to me.
+> Sorry for the confusion.
 
-So just for information, it isn't a plugin bug. I'll elaborate below, but in
-short, objtool was complaining about unreachable code.  To be fair though,
-gcc could have made the problem easier to spot.
+If you are not subscribed to the hardening ml, it will neither archive, 
+nor forward to subscribers your emails.
 
-Now for the details.
+This very mail you wrote is not archived either.
 
-The repro uses an unusual (randomized) kernel config, in particular gcov is
-enabled and NR_CPUS is 1. Thus we have
-
-static int duplicate_processor_ids[] = {
-        [0 ... 1 - 1] = -1,
-};
-
-and the compiler deduces that the loop in acpi_duplicate_processor_id does not
-iterate:
-
-bool acpi_duplicate_processor_id(int proc_id)
-{
-        int i;
-
-        for (i = 0; i < nr_duplicate_ids; i++) {
-                if (duplicate_processor_ids[i] == proc_id)
-                        return true;
-        }
-        return false;
-}
-
-However as gcov is enabled, loop backedge remains, followed by gcov counter
-increment and __builtin_unreachable() (on GIMPLE). On RTL, however, the basic
-block with the increment ends with a barrier rtx, which is not visible in
-assembly and looks just as if control flow falls through to a function exit.
-Since the exit in question corresponds to a shrink-wrapped early exit that
-does not push/pop registers, objtool complains.
-
-Ultimately this is poor luck, if gcc optimized the code better or terminated
-the block that-should-not-be-reached with ud2, it would not arise.
-
-Alexander
+--
+igor
