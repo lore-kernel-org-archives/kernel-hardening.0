@@ -1,60 +1,68 @@
-MIME-Version: 1.0
-References: <6f60afc9-0fed-7f95-a11a-9a2eef33094c@gmail.com>
- <CALCETrXNckT9W288VXx-6inO5qYn-6dUPocKGcBT0GCO3xi3ZQ@mail.gmail.com>
- <386C0CB1-C4B1-43E2-A754-DA8DBE4FB3CB@gmail.com> <CALCETrWWcfLK4W3mn0bavzejmMBVKMX29aAUA3+VPQ8m9vmfhw@mail.gmail.com>
- <9373ccf0-f51b-4bfa-2b16-e03ebf3c670d@huawei.com> <2e52e103-15d0-0c26-275f-894dfd07e8ec@huawei.com>
- <CALCETrV0sPgf4ZgG1joF_5hM-ycPsWM9DWGO=diQ_LQKin4VuA@mail.gmail.com>
- <1166e55c-0c06-195c-a501-383b4055ea46@gmail.com> <3BB9DE07-E0AE-43E2-99F1-E4AA774CD462@amacapital.net>
- <5e10c8e4-aa71-1eea-b1ce-50d7d0a60e8c@gmail.com> <20181122200416.GS3065@bombadil.infradead.org>
-In-Reply-To: <20181122200416.GS3065@bombadil.infradead.org>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Thu, 22 Nov 2018 12:53:52 -0800
-Message-ID: <CALCETrXB34QBcYk=k5DT1t4h7EezaPxbxM2S_h2nYk5Nv1c4_Q@mail.gmail.com>
-Subject: Re: [PATCH 10/17] prmem: documentation
-Content-Type: text/plain; charset="UTF-8"
-To: Matthew Wilcox <willy@infradead.org>
-Cc: Igor Stoppa <igor.stoppa@gmail.com>, Andrew Lutomirski <luto@kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
+From: Masahiro Yamada <yamada.masahiro@socionext.com>
+Subject: [PATCH 2/2] kbuild: descend into scripts/gcc-plugins/ via scripts/Makefile
+Date: Fri, 23 Nov 2018 13:51:27 +0900
+Message-Id: <1542948687-7326-2-git-send-email-yamada.masahiro@socionext.com>
+In-Reply-To: <1542948687-7326-1-git-send-email-yamada.masahiro@socionext.com>
+References: <1542948687-7326-1-git-send-email-yamada.masahiro@socionext.com>
+To: linux-kbuild@vger.kernel.org
+Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Nov 22, 2018 at 12:04 PM Matthew Wilcox <willy@infradead.org> wrote:
->
-> On Thu, Nov 22, 2018 at 09:27:02PM +0200, Igor Stoppa wrote:
-> > I have studied the code involved with Nadav's patchset.
-> > I am perplexed about these sentences you wrote.
-> >
-> > More to the point (to the best of my understanding):
-> >
-> > poking_init()
-> > -------------
-> >   1. it gets one random poking address and ensures to have at least 2
-> >      consecutive PTEs from the same PMD
-> >   2. it then proceeds to map/unmap an address from the first of the 2
-> >      consecutive PTEs, so that, later on, there will be no need to
-> >      allocate pages, which might fail, if poking from atomic context.
-> >   3. at this point, the page tables are populated, for the address that
-> >      was obtained at point 1, and this is ok, because the address is fixed
-> >
-> > write_rare
-> > ----------
-> >   4. it can happen on any available core / thread at any time, therefore
-> >      each of them needs a different address
->
-> No?  Each CPU has its own CR3 (eg each CPU might be running a different
-> user task).  If you have _one_ address for each allocation, it may or
-> may not be mapped on other CPUs at the same time -- you simply don't care.
->
-> The writable address can even be a simple formula to calculate from
-> the read-only address, you don't have to allocate an address in the
-> writable mapping space.
->
+Now that 'prepare0' depends on 'scripts', building GCC plugins can
+go into scripts/Makefile, which is a more standard way.
 
-Agreed.  I suggest the formula:
+Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>
+---
 
-writable_address = readable_address - rare_write_offset.  For
-starters, rare_write_offset can just be a constant.  If we want to get
-fancy later on, it can be randomized.
+ Makefile                     | 2 +-
+ scripts/Makefile             | 3 ++-
+ scripts/Makefile.gcc-plugins | 8 --------
+ 3 files changed, 3 insertions(+), 10 deletions(-)
 
-If we do it like this, then we don't need to modify any pagetables at
-all when we do a rare write.  Instead we can set up the mapping at
-boot or when we allocate the rare write space, and the actual rare
-write code can just switch mms and do the write.
+diff --git a/Makefile b/Makefile
+index cee4cec..a8bbe68 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1114,7 +1114,7 @@ macroprepare: prepare1 archmacros
+ 
+ archprepare: archheaders archscripts macroprepare scripts_basic
+ 
+-prepare0: scripts archprepare gcc-plugins
++prepare0: scripts archprepare
+ 	$(Q)$(MAKE) $(build)=scripts/mod
+ 	$(Q)$(MAKE) $(build)=.
+ 
+diff --git a/scripts/Makefile b/scripts/Makefile
+index b48259d..feb1f71 100644
+--- a/scripts/Makefile
++++ b/scripts/Makefile
+@@ -36,9 +36,10 @@ PHONY += build_unifdef
+ build_unifdef: $(obj)/unifdef
+ 	@:
+ 
++subdir-$(CONFIG_GCC_PLUGINS) += gcc-plugins
+ subdir-$(CONFIG_MODVERSIONS) += genksyms
+ subdir-$(CONFIG_SECURITY_SELINUX) += selinux
+ subdir-$(CONFIG_GDB_SCRIPTS) += gdb
+ 
+ # Let clean descend into subdirs
+-subdir-	+= basic dtc kconfig mod package gcc-plugins
++subdir-	+= basic dtc kconfig mod package
+diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
+index 46c5c68..c36f199 100644
+--- a/scripts/Makefile.gcc-plugins
++++ b/scripts/Makefile.gcc-plugins
+@@ -49,11 +49,3 @@ KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
+ # All enabled GCC plugins are collected here for building below.
+ GCC_PLUGIN := $(gcc-plugin-y)
+ export GCC_PLUGIN
+-
+-# Actually do the build, if requested.
+-PHONY += gcc-plugins
+-gcc-plugins: scripts_basic
+-ifdef CONFIG_GCC_PLUGINS
+-	$(Q)$(MAKE) $(build)=scripts/gcc-plugins
+-endif
+-	@:
+-- 
+2.7.4
