@@ -1,68 +1,62 @@
-From: Masahiro Yamada <yamada.masahiro@socionext.com>
-Subject: [PATCH 2/2] kbuild: descend into scripts/gcc-plugins/ via scripts/Makefile
-Date: Fri, 23 Nov 2018 13:51:27 +0900
-Message-Id: <1542948687-7326-2-git-send-email-yamada.masahiro@socionext.com>
-In-Reply-To: <1542948687-7326-1-git-send-email-yamada.masahiro@socionext.com>
-References: <1542948687-7326-1-git-send-email-yamada.masahiro@socionext.com>
-To: linux-kbuild@vger.kernel.org
-Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, Michal Marek <michal.lkml@markovi.net>, Emese Revfy <re.emese@gmail.com>
+Date: Fri, 23 Nov 2018 17:06:38 +0300 (MSK)
+From: Alexander Monakov <amonakov@ispras.ru>
+Subject: Re: Investigating a stack state mismatch in Linux kernel
+In-Reply-To: <57225f38-3f6d-4029-8f89-4b6eba97c3c1@linux.com>
+Message-ID: <alpine.LNX.2.20.13.1811231634330.6732@monopod.intra.ispras.ru>
+References: <b7aad232-76e1-241f-00e2-77783ce30f87@linux.com> <875zwyabac.fsf@oldenburg.str.redhat.com> <2a2b1181-2175-7e4e-189c-12630f43d10d@linux.com> <57225f38-3f6d-4029-8f89-4b6eba97c3c1@linux.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Florian Weimer <fweimer@redhat.com>, Richard Sandiford <richard.sandiford@arm.com>, Segher Boessenkool <segher@kernel.crashing.org>, Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Emese Revfy <re.emese@gmail.com>, Thomas Garnier <thgarnie@google.com>, Alexei Starovoitov <ast@kernel.org>, Masami Hiramatsu <mhiramat@kernel.org>, "David S . Miller" <davem@davemloft.net>, Steven Rostedt <rostedt@goodmis.org>, Dave Hansen <dave.hansen@linux.intel.com>, Will Deacon <will.deacon@arm.com>, Jann Horn <jannh@google.com>, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, gcc@gcc.gnu.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Now that 'prepare0' depends on 'scripts', building GCC plugins can
-go into scripts/Makefile, which is a more standard way.
+Hi,
 
-Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>
----
+On Wed, 21 Nov 2018, Alexander Popov wrote:
 
- Makefile                     | 2 +-
- scripts/Makefile             | 3 ++-
- scripts/Makefile.gcc-plugins | 8 --------
- 3 files changed, 3 insertions(+), 10 deletions(-)
+> Hello everyone!
+> 
+> At irc.freenode.org/#gcc people told me that I should CC gcc@gcc.gnu.org to get
+> some attention of gcc developers.
+> 
+> Link to previous discussion:
+>  https://www.openwall.com/lists/kernel-hardening/2018/11/14/1
 
-diff --git a/Makefile b/Makefile
-index cee4cec..a8bbe68 100644
---- a/Makefile
-+++ b/Makefile
-@@ -1114,7 +1114,7 @@ macroprepare: prepare1 archmacros
- 
- archprepare: archheaders archscripts macroprepare scripts_basic
- 
--prepare0: scripts archprepare gcc-plugins
-+prepare0: scripts archprepare
- 	$(Q)$(MAKE) $(build)=scripts/mod
- 	$(Q)$(MAKE) $(build)=.
- 
-diff --git a/scripts/Makefile b/scripts/Makefile
-index b48259d..feb1f71 100644
---- a/scripts/Makefile
-+++ b/scripts/Makefile
-@@ -36,9 +36,10 @@ PHONY += build_unifdef
- build_unifdef: $(obj)/unifdef
- 	@:
- 
-+subdir-$(CONFIG_GCC_PLUGINS) += gcc-plugins
- subdir-$(CONFIG_MODVERSIONS) += genksyms
- subdir-$(CONFIG_SECURITY_SELINUX) += selinux
- subdir-$(CONFIG_GDB_SCRIPTS) += gdb
- 
- # Let clean descend into subdirs
--subdir-	+= basic dtc kconfig mod package gcc-plugins
-+subdir-	+= basic dtc kconfig mod package
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index 46c5c68..c36f199 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -49,11 +49,3 @@ KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
- # All enabled GCC plugins are collected here for building below.
- GCC_PLUGIN := $(gcc-plugin-y)
- export GCC_PLUGIN
--
--# Actually do the build, if requested.
--PHONY += gcc-plugins
--gcc-plugins: scripts_basic
--ifdef CONFIG_GCC_PLUGINS
--	$(Q)$(MAKE) $(build)=scripts/gcc-plugins
--endif
--	@:
--- 
-2.7.4
+So just for information, it isn't a plugin bug. I'll elaborate below, but in
+short, objtool was complaining about unreachable code.  To be fair though,
+gcc could have made the problem easier to spot.
+
+Now for the details.
+
+The repro uses an unusual (randomized) kernel config, in particular gcov is
+enabled and NR_CPUS is 1. Thus we have
+
+static int duplicate_processor_ids[] = {
+        [0 ... 1 - 1] = -1,
+};
+
+and the compiler deduces that the loop in acpi_duplicate_processor_id does not
+iterate:
+
+bool acpi_duplicate_processor_id(int proc_id)
+{
+        int i;
+
+        for (i = 0; i < nr_duplicate_ids; i++) {
+                if (duplicate_processor_ids[i] == proc_id)
+                        return true;
+        }
+        return false;
+}
+
+However as gcov is enabled, loop backedge remains, followed by gcov counter
+increment and __builtin_unreachable() (on GIMPLE). On RTL, however, the basic
+block with the increment ends with a barrier rtx, which is not visible in
+assembly and looks just as if control flow falls through to a function exit.
+Since the exit in question corresponds to a shrink-wrapped early exit that
+does not push/pop registers, objtool complains.
+
+Ultimately this is poor luck, if gcc optimized the code better or terminated
+the block that-should-not-be-reached with ud2, it would not arise.
+
+Alexander
