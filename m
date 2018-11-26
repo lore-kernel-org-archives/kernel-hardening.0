@@ -1,43 +1,58 @@
-Date: Sun, 25 Nov 2018 12:47:32 -0700
-From: Jonathan Corbet <corbet@lwn.net>
-Subject: Re: [PATCH v2 1/2] Documentation/admin-guide: introduce
- perf-security.rst file
-Message-ID: <20181125124732.6c1807de@lwn.net>
-In-Reply-To: <4d95341d-d1f4-fc48-f173-a6fedfc70d33@linux.intel.com>
-References: <259a9cd2-5c56-4f8d-57c4-cabaeaa774bc@linux.intel.com>
-	<4d95341d-d1f4-fc48-f173-a6fedfc70d33@linux.intel.com>
+From: Alexey Budankov <alexey.budankov@linux.intel.com>
+Subject: [PATCH v3 0/2] Documentation/admin-guide: introduce perf-security.rst
+ file and extend perf_event_paranoid documentation
+Message-ID: <6cfb235a-59bc-48f0-3425-59c5b6431b12@linux.intel.com>
+Date: Mon, 26 Nov 2018 11:57:11 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 8bit
-To: Alexey Budankov <alexey.budankov@linux.intel.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Andi Kleen <ak@linux.intel.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, linux-kernel <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Jonatan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Andi Kleen <ak@linux.intel.com>
+Cc: Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, linux-kernel <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 21 Nov 2018 12:14:14 +0300
-Alexey Budankov <alexey.budankov@linux.intel.com> wrote:
 
-> +For the purpose of performing security checks Linux implementation splits
-> +processes into two categories [6]_ : a) privileged processes (whose effective
-> +user ID is 0, referred to as superuser or root), and b) unprivileged processes
-> +(whose effective UID is nonzero).
+To facilitate informed decision making by system administrators [1]
+to permit and manage access to Perf Events (perf_events) / Perf tool 
+(Perf) [2],[3] performance monitoring for multiple users perf-security.rst 
+document suggested by Thomas Gleixner is introduced [4] that:
 
-Is that really what's going on here?  If I understand things correctly,
-it's looking for CAP_SYS_PTRACE rather than a specific UID; am I missing
-something here?
+a) states perf_events/Perf access security concerns for multi user environment
+b) refers to base Linux access control and management principles
+c) extends documentation of possible perf_event_paranoid knob settings 
 
-(Also, you would want "*the* Linux implementation" in the first sentence
-above).
+The file serves as single knowledge source for perf_events/Perf security and 
+access control related matter according to decisions, discussion and  
+PoC prototype previously made here [5],[6].
 
-One other thing:
+The file can later be extended with information describing:
 
-> +(whose effective UID is nonzero). Privileged processes bypass all kernel
-> +security permission checks so perf_events performance monitoring is fully
-> +available to privileged processes without *access*, *scope* and *resource*
-> +restrictions.
+a) perf_events/Perf usage models and its security implications
+b) perf_events/Perf user interface, its changes and related security implications
+c) security related implications of monitoring by a specific perf_events PMU [2]
 
-Could I ask for a slight toning down of the markup here?  There's a lot of
-*emphasis* here that isn't really needed and tends to get in the way.
+---
+Alexey Budankov (2):
+  Documentation/admin-guide: introduce perf-security.rst file
+  Documentation/admin-guide: update admin-guide index.rst
 
-Thanks,
+ Documentation/admin-guide/index.rst         |  1 +
+ Documentation/admin-guide/perf-security.rst | 77 +++++++++++++++++++++
+ 2 files changed, 78 insertions(+)
+ create mode 100644 Documentation/admin-guide/perf-security.rst
 
-jon
+---
+Changes in v3:
+- toning down of the markup for "scope, access and resource"
+- adding definite article for "Linux implementation"
+Changes in v2:
+- reverted patches order in the set to avoid CI issue
+- replaced old PCL referencing by PE (Perf Events)
+- skipped >=3 setting documentation at the moment
+
+---
+[1] https://marc.info/?l=linux-kernel&m=153815883923913&w=2
+[2] http://man7.org/linux/man-pages/man2/perf_event_open.2.html
+[3] https://perf.wiki.kernel.org/index.php/Main_Page
+[4] https://marc.info/?l=linux-kernel&m=153837512226838&w=2
+[5] https://marc.info/?l=linux-kernel&m=153736008310781&w=2
+[6] https://lkml.org/lkml/2018/5/21/156
