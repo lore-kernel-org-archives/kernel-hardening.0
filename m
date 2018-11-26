@@ -1,66 +1,116 @@
-Subject: Re: [PATCH v2 1/2] Documentation/admin-guide: introduce
- perf-security.rst file
-References: <259a9cd2-5c56-4f8d-57c4-cabaeaa774bc@linux.intel.com>
- <4d95341d-d1f4-fc48-f173-a6fedfc70d33@linux.intel.com>
- <20181125124732.6c1807de@lwn.net>
+Subject: [PATCH v3 1/2] Documentation/admin-guide: introduce perf-security.rst
+ file
 From: Alexey Budankov <alexey.budankov@linux.intel.com>
-Message-ID: <02dbd6dc-86b5-2307-4122-b716c51b9eaa@linux.intel.com>
-Date: Mon, 26 Nov 2018 11:57:21 +0300
+References: <6cfb235a-59bc-48f0-3425-59c5b6431b12@linux.intel.com>
+Message-ID: <d4153c24-ba23-6734-4bcf-39525056aef5@linux.intel.com>
+Date: Mon, 26 Nov 2018 12:02:18 +0300
 MIME-Version: 1.0
-In-Reply-To: <20181125124732.6c1807de@lwn.net>
+In-Reply-To: <6cfb235a-59bc-48f0-3425-59c5b6431b12@linux.intel.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Jonathan Corbet <corbet@lwn.net>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Andi Kleen <ak@linux.intel.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, linux-kernel <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+To: Jonatan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Andi Kleen <ak@linux.intel.com>
+Cc: Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, linux-kernel <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello Jon,
 
-On 25.11.2018 22:47, Jonathan Corbet wrote:
-> On Wed, 21 Nov 2018 12:14:14 +0300
-> Alexey Budankov <alexey.budankov@linux.intel.com> wrote:
-> 
->> +For the purpose of performing security checks Linux implementation splits
->> +processes into two categories [6]_ : a) privileged processes (whose effective
->> +user ID is 0, referred to as superuser or root), and b) unprivileged processes
->> +(whose effective UID is nonzero).
-> 
-> Is that really what's going on here?  If I understand things correctly,
-> it's looking for CAP_SYS_PTRACE rather than a specific UID; am I missing
-> something here?
+Implement initial version of perf-security.rst documentation file
+covering security concerns of perf_event_paranoid settings.
 
-You are right regarding CAP_SYS_PTRACE but this capability is not the only 
-one which is used by perf_events for security checks, so the capabilities 
-clarification is kept aside of these patches, because patches initial intention 
-is to clarify security specifics of sysctl_perf_even_paranoid settings.
+Suggested-by: Thomas Gleixner <tglx@linutronix.de>
+Signed-off-by: Alexey Budankov <alexey.budankov@linux.intel.com>
+---
+Changes in v3:
+- toning down of the markup for "scope, access and resource"
+- adding definite article for "Linux implementation"
+Changes in v2:
+- reverted patches order in the set to avoid CI issue
+- replaced old PCL referencing by PE (Perf Events)
+- skipped >=3 setting documentation at the moment
+---
+ Documentation/admin-guide/perf-security.rst | 77 +++++++++++++++++++++
+ 1 file changed, 77 insertions(+)
+ create mode 100644 Documentation/admin-guide/perf-security.rst
 
-I agree that the document can be extended with details clarifying capabilities 
-used by perf_events for security checks.
-
-> 
-> (Also, you would want "*the* Linux implementation" in the first sentence
-> above).
-
-Accepted.
-
-> 
-> One other thing:
-> 
->> +(whose effective UID is nonzero). Privileged processes bypass all kernel
->> +security permission checks so perf_events performance monitoring is fully
->> +available to privileged processes without *access*, *scope* and *resource*
->> +restrictions.
-> 
-> Could I ask for a slight toning down of the markup here?  There's a lot of
-> *emphasis* here that isn't really needed and tends to get in the way.
-
-Accepted.
-
-Thanks,
-Alexey
-
-> 
-> Thanks,
-> 
-> jon
-> 
+diff --git a/Documentation/admin-guide/perf-security.rst b/Documentation/admin-guide/perf-security.rst
+new file mode 100644
+index 000000000000..f0fb75cadaed
+--- /dev/null
++++ b/Documentation/admin-guide/perf-security.rst
+@@ -0,0 +1,77 @@
++.. _perf_security:
++
++Perf Events and tool security
++=============================
++
++Overview
++--------
++
++Usage of Performance Counters for Linux (perf_events) [1]_ , [2]_ , [3]_ can
++impose a considerable risk of leaking sensitive data accessed by monitored
++processes. The data leakage is possible both in scenarios of direct usage of
++perf_events system call API [2]_ and over data files generated by Perf tool user
++mode utility (Perf) [3]_ , [4]_ . The risk depends on the nature of data that
++perf_events performance monitoring units (PMU) [2]_ collect and expose for
++performance analysis. Having that said perf_events/Perf performance monitoring
++is the subject for security access control management [5]_ .
++
++perf_events/Perf access control
++-------------------------------
++
++For the purpose of performing security checks the Linux implementation splits
++processes into two categories [6]_ : a) privileged processes (whose effective
++user ID is 0, referred to as superuser or root), and b) unprivileged processes
++(whose effective UID is nonzero). Privileged processes bypass all kernel
++security permission checks so perf_events performance monitoring is fully
++available to privileged processes without access, scope and resource
++restrictions. Unprivileged processes are subject to full security permission
++check based on the process's credentials [5]_ (usually: effective UID, effective
++GID, and supplementary group list).
++
++perf_events/Perf unprivileged users
++-----------------------------------
++
++perf_events/Perf *scope* and *access* control for unprivileged processes is
++governed by perf_event_paranoid [2]_ setting:
++
++-1:
++     Impose no *scope* and *access* restrictions on using perf_events performance
++     monitoring. Per-user per-cpu perf_event_mlock_kb [2]_ locking limit is
++     ignored when allocating memory buffers for storing performance data.
++     This is the least secure mode since allowed monitored *scope* is
++     maximized and no perf_events specific limits are imposed on *resources*
++     allocated for performance monitoring.
++
++>=0:
++     *scope* includes per-process and system wide performance monitoring
++     but excludes raw tracepoints and ftrace function tracepoints monitoring.
++     CPU and system events happened when executing either in user or
++     in kernel space can be monitored and captured for later analysis.
++     Per-user per-cpu perf_event_mlock_kb locking limit is imposed but
++     ignored for unprivileged processes with CAP_IPC_LOCK [6]_ capability.
++
++>=1:
++     *scope* includes per-process performance monitoring only and excludes
++     system wide performance monitoring. CPU and system events happened when
++     executing either in user or in kernel space can be monitored and
++     captured for later analysis. Per-user per-cpu perf_event_mlock_kb
++     locking limit is imposed but ignored for unprivileged processes with
++     CAP_IPC_LOCK capability.
++
++>=2:
++     *scope* includes per-process performance monitoring only. CPU and system
++     events happened when executing in user space only can be monitored and
++     captured for later analysis. Per-user per-cpu perf_event_mlock_kb
++     locking limit is imposed but ignored for unprivileged processes with
++     CAP_IPC_LOCK capability.
++
++Bibliography
++------------
++
++.. [1] `<https://lwn.net/Articles/337493/>`_
++.. [2] `<http://man7.org/linux/man-pages/man2/perf_event_open.2.html>`_
++.. [3] `<http://web.eece.maine.edu/~vweaver/projects/perf_events/>`_
++.. [4] `<https://perf.wiki.kernel.org/index.php/Main_Page>`_
++.. [5] `<https://www.kernel.org/doc/html/latest/security/credentials.html>`_
++.. [6] `<http://man7.org/linux/man-pages/man7/capabilities.7.html>`_
++
