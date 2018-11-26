@@ -1,35 +1,48 @@
-Subject: Re: [PATCH] x86/fpu: XRSTOR is expected to raise #GP
-References: <20181126172706.184008-1-jannh@google.com>
- <20181126174945.r2ubrlg2gzwog2ez@linutronix.de>
-From: "H. Peter Anvin" <hpa@zytor.com>
-Message-ID: <4d4c4f1f-72e3-0182-151e-8bd455ccd143@zytor.com>
-Date: Mon, 26 Nov 2018 11:49:37 -0800
+Date: Mon, 26 Nov 2018 13:28:33 -0700
+From: Jonathan Corbet <corbet@lwn.net>
+Subject: Re: [PATCH v2 1/2] Documentation/admin-guide: introduce
+ perf-security.rst file
+Message-ID: <20181126132833.5302688b@lwn.net>
+In-Reply-To: <02dbd6dc-86b5-2307-4122-b716c51b9eaa@linux.intel.com>
+References: <259a9cd2-5c56-4f8d-57c4-cabaeaa774bc@linux.intel.com>
+	<4d95341d-d1f4-fc48-f173-a6fedfc70d33@linux.intel.com>
+	<20181125124732.6c1807de@lwn.net>
+	<02dbd6dc-86b5-2307-4122-b716c51b9eaa@linux.intel.com>
 MIME-Version: 1.0
-In-Reply-To: <20181126174945.r2ubrlg2gzwog2ez@linutronix.de>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Jann Horn <jannh@google.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, kernel-hardening@lists.openwall.com, "Naveen N. Rao" <naveen.n.rao@linux.vnet.ibm.com>, linux-kernel@vger.kernel.org, x86@kernel.org
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 8bit
+To: Alexey Budankov <alexey.budankov@linux.intel.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Andi Kleen <ak@linux.intel.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, linux-kernel <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/26/18 9:49 AM, Sebastian Andrzej Siewior wrote:
-> On 2018-11-26 18:27:06 [+0100], Jann Horn wrote:
->> commit 75045f77f7a7 ("x86/extable: Introduce _ASM_EXTABLE_UA for uaccess
->> fixups") incorrectly replaced the fixup entry for XSTATE_OP with a
->> user-#PF-only fixup. However, XRSTOR can also raise #GP when the supplied
->> address points to userspace memory. Change it back.
-> 
-> The #GP is raised if the xstate content is invalid. But I guess the
-> details don't matter.
-> 
->> Reported-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
->> Fixes: 75045f77f7a7 ("x86/extable: Introduce _ASM_EXTABLE_UA for uaccess fixups")
->> Signed-off-by: Jann Horn <jannh@google.com>
-> Acked-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
-> 
+On Mon, 26 Nov 2018 11:57:21 +0300
+Alexey Budankov <alexey.budankov@linux.intel.com> wrote:
 
-It does matter -- please correct the patch description, or we might have some
-serious confusion at some arbitrary point in the future with the result that
-the bug gets re-introduced; it would not be the first time.
+> >> +For the purpose of performing security checks Linux implementation splits
+> >> +processes into two categories [6]_ : a) privileged processes (whose effective
+> >> +user ID is 0, referred to as superuser or root), and b) unprivileged processes
+> >> +(whose effective UID is nonzero).  
+> > 
+> > Is that really what's going on here?  If I understand things correctly,
+> > it's looking for CAP_SYS_PTRACE rather than a specific UID; am I missing
+> > something here?  
+> 
+> You are right regarding CAP_SYS_PTRACE but this capability is not the only 
+> one which is used by perf_events for security checks, so the capabilities 
+> clarification is kept aside of these patches, because patches initial intention 
+> is to clarify security specifics of sysctl_perf_even_paranoid settings.
+> 
+> I agree that the document can be extended with details clarifying capabilities 
+> used by perf_events for security checks.
 
-	-hpa
+I don't really like the idea of adding a document that we know doesn't
+really describe how the security decision is made.  Even a one-line
+parenthetical saying that things are more complicated and giving a pointer
+to a place to look for details would help, IMO.
+
+Either way, I can merge this, but I'd like to have an ack from the perf
+folks first.
+
+Thanks,
+
+jon
