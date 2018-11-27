@@ -1,340 +1,98 @@
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [RFC/RFT PATCH v2] ARM: smp: add support for per-task stack canaries
-Date: Tue, 27 Nov 2018 01:15:34 +0100
-Message-Id: <20181127001534.24075-1-ard.biesheuvel@linaro.org>
+From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
+Subject: Re: [PATCH v9 RESEND 0/4] KASLR feature to randomize each loadable
+ module
+Date: Tue, 27 Nov 2018 00:19:19 +0000
+Message-ID: <54dafdec825859afc85a3bd651f9e850e57a59dc.camel@intel.com>
+References: <20181120232312.30037-1-rick.p.edgecombe@intel.com>
+	 <20181126153611.GA17169@linux-8ccs>
+In-Reply-To: <20181126153611.GA17169@linux-8ccs>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <DD9162A81F3AB248B951FE31C65C3B37@intel.com>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: linux-arm-kernel@lists.infradead.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Nicolas Pitre <nicolas.pitre@linaro.org>, Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com
+To: "jeyu@kernel.org" <jeyu@kernel.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "jannh@google.com" <jannh@google.com>, "keescook@chromium.org" <keescook@chromium.org>, "willy@infradead.org" <willy@infradead.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "arjan@linux.intel.com" <arjan@linux.intel.com>, "x86@kernel.org" <x86@kernel.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "hpa@zytor.com" <hpa@zytor.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "mingo@redhat.com" <mingo@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Hansen, Dave" <dave.hansen@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On ARM, we currently only change the value of the stack canary when
-switching tasks if the kernel was built for UP. On SMP kernels, this
-is impossible since the stack canary value is obtained via a global
-symbol reference, which means
-a) all running tasks on all CPUs must use the same value
-b) we can only modify the value when no kernel stack frames are live
-   on any CPU, which is effectively never.
-
-So instead, use a GCC plugin to add a RTL pass that replaces each
-reference to the address of the __stack_chk_guard symbol with an
-expression that produces the address of the 'stack_canary' field
-that is added to struct thread_info. This way, each task will use
-its own randomized value.
-
-Cc: Russell King <linux@armlinux.org.uk>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Emese Revfy <re.emese@gmail.com>
-Cc: Arnd Bergmann <arnd@arndb.de>
-Cc: Nicolas Pitre <nicolas.pitre@linaro.org>
-Cc: Laura Abbott <labbott@redhat.com>
-Cc: kernel-hardening@lists.openwall.com
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
-v2:
-- adopt powerpc Makefile approach to pass stack canary offset and thread
-  size to the plugin as command line arguments
-- depend on !XIP_DEFLATED_DATA
-
- arch/arm/Kconfig                              |  16 +++
- arch/arm/Makefile                             |  11 +++
- arch/arm/boot/compressed/Makefile             |   1 +
- arch/arm/include/asm/stackprotector.h         |  12 ++-
- arch/arm/include/asm/thread_info.h            |   3 +
- arch/arm/kernel/asm-offsets.c                 |   1 +
- arch/arm/kernel/process.c                     |   6 +-
- scripts/Makefile.gcc-plugins                  |   6 ++
- scripts/gcc-plugins/Kconfig                   |   4 +
- scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 103 ++++++++++++++++++++
- 10 files changed, 160 insertions(+), 3 deletions(-)
-
-diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 91be74d8df65..6142e83b45da 100644
---- a/arch/arm/Kconfig
-+++ b/arch/arm/Kconfig
-@@ -1810,6 +1810,22 @@ config XEN
- 	help
- 	  Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
- 
-+config STACKPROTECTOR_PER_TASK
-+	bool "Use a unique stack canary value for each task"
-+	depends on GCC_PLUGINS && STACKPROTECTOR && SMP && !XIP_DEFLATED_DATA
-+	select GCC_PLUGIN_ARM_SSP_PER_TASK
-+	help
-+	  Due to the fact that GCC uses an ordinary symbol reference from
-+	  which to load the value of the stack canary, this value can only
-+	  change at reboot time on SMP systems, and all tasks running in the
-+	  kernel's address space are forced to use the same canary value for
-+	  the entire duration that the system is up.
-+
-+	  Enable this option to switch to a different method that uses a
-+	  different canary value for each task.
-+
-+	  This is not enabled by default since it relies on a GCC plugin.
-+
- endmenu
- 
- menu "Boot options"
-diff --git a/arch/arm/Makefile b/arch/arm/Makefile
-index 05a91d8b89f3..50860ee3e771 100644
---- a/arch/arm/Makefile
-+++ b/arch/arm/Makefile
-@@ -303,6 +303,17 @@ else
- KBUILD_IMAGE := $(boot)/zImage
- endif
- 
-+ifeq ($(CONFIG_STACKPROTECTOR_PER_TASK),y)
-+prepare: stack_protector_prepare
-+stack_protector_prepare: prepare0
-+	$(eval KBUILD_CFLAGS += -fplugin-arg-arm_ssp_per_task_plugin-tso=$(shell\
-+			awk '{if ($$2 == "THREAD_SZ_ORDER") print $$3;}'	\
-+				include/generated/asm-offsets.h)		\
-+		-fplugin-arg-arm_ssp_per_task_plugin-offset=$(shell		\
-+			awk '{if ($$2 == "TSK_STACK_CANARY") print $$3;}'	\
-+				include/generated/asm-offsets.h))
-+endif
-+
- all:	$(notdir $(KBUILD_IMAGE))
- 
- 
-diff --git a/arch/arm/boot/compressed/Makefile b/arch/arm/boot/compressed/Makefile
-index 1f5a5ffe7fcf..01bf2585a0fa 100644
---- a/arch/arm/boot/compressed/Makefile
-+++ b/arch/arm/boot/compressed/Makefile
-@@ -101,6 +101,7 @@ clean-files += piggy_data lib1funcs.S ashldi3.S bswapsdi2.S \
- 		$(libfdt) $(libfdt_hdrs) hyp-stub.S
- 
- KBUILD_CFLAGS += -DDISABLE_BRANCH_PROFILING
-+KBUILD_CFLAGS += $(DISABLE_ARM_SSP_PER_TASK_PLUGIN)
- 
- ifeq ($(CONFIG_FUNCTION_TRACER),y)
- ORIG_CFLAGS := $(KBUILD_CFLAGS)
-diff --git a/arch/arm/include/asm/stackprotector.h b/arch/arm/include/asm/stackprotector.h
-index ef5f7b69443e..72a20c3a0a90 100644
---- a/arch/arm/include/asm/stackprotector.h
-+++ b/arch/arm/include/asm/stackprotector.h
-@@ -6,8 +6,10 @@
-  * the stack frame and verifying that it hasn't been overwritten when
-  * returning from the function.  The pattern is called stack canary
-  * and gcc expects it to be defined by a global variable called
-- * "__stack_chk_guard" on ARM.  This unfortunately means that on SMP
-- * we cannot have a different canary value per task.
-+ * "__stack_chk_guard" on ARM.  This prevents SMP systems from using a
-+ * different value for each task unless we enable a GCC plugin that
-+ * replaces these symbol references with references to each task's own
-+ * value.
-  */
- 
- #ifndef _ASM_STACKPROTECTOR_H
-@@ -16,6 +18,8 @@
- #include <linux/random.h>
- #include <linux/version.h>
- 
-+#include <asm/thread_info.h>
-+
- extern unsigned long __stack_chk_guard;
- 
- /*
-@@ -33,7 +37,11 @@ static __always_inline void boot_init_stack_canary(void)
- 	canary ^= LINUX_VERSION_CODE;
- 
- 	current->stack_canary = canary;
-+#ifndef CONFIG_STACKPROTECTOR_PER_TASK
- 	__stack_chk_guard = current->stack_canary;
-+#else
-+	current_thread_info()->stack_canary = current->stack_canary;
-+#endif
- }
- 
- #endif	/* _ASM_STACKPROTECTOR_H */
-diff --git a/arch/arm/include/asm/thread_info.h b/arch/arm/include/asm/thread_info.h
-index 8f55dc520a3e..bd661c7681b1 100644
---- a/arch/arm/include/asm/thread_info.h
-+++ b/arch/arm/include/asm/thread_info.h
-@@ -57,6 +57,9 @@ struct thread_info {
- 	__u32			syscall;	/* syscall number */
- 	__u8			used_cp[16];	/* thread used copro */
- 	unsigned long		tp_value[2];	/* TLS registers */
-+#ifdef CONFIG_STACKPROTECTOR_PER_TASK
-+	unsigned long		stack_canary;
-+#endif
- #ifdef CONFIG_CRUNCH
- 	struct crunch_state	crunchstate;
- #endif
-diff --git a/arch/arm/kernel/asm-offsets.c b/arch/arm/kernel/asm-offsets.c
-index 3968d6c22455..2e82926645b3 100644
---- a/arch/arm/kernel/asm-offsets.c
-+++ b/arch/arm/kernel/asm-offsets.c
-@@ -52,6 +52,7 @@ int main(void)
-   DEFINE(TSK_ACTIVE_MM,		offsetof(struct task_struct, active_mm));
- #ifdef CONFIG_STACKPROTECTOR
-   DEFINE(TSK_STACK_CANARY,	offsetof(struct task_struct, stack_canary));
-+  DEFINE(THREAD_SZ_ORDER,	THREAD_SIZE_ORDER);
- #endif
-   BLANK();
-   DEFINE(TI_FLAGS,		offsetof(struct thread_info, flags));
-diff --git a/arch/arm/kernel/process.c b/arch/arm/kernel/process.c
-index 82ab015bf42b..16601d1442d1 100644
---- a/arch/arm/kernel/process.c
-+++ b/arch/arm/kernel/process.c
-@@ -39,7 +39,7 @@
- #include <asm/tls.h>
- #include <asm/vdso.h>
- 
--#ifdef CONFIG_STACKPROTECTOR
-+#if defined(CONFIG_STACKPROTECTOR) && !defined(CONFIG_STACKPROTECTOR_PER_TASK)
- #include <linux/stackprotector.h>
- unsigned long __stack_chk_guard __read_mostly;
- EXPORT_SYMBOL(__stack_chk_guard);
-@@ -267,6 +267,10 @@ copy_thread(unsigned long clone_flags, unsigned long stack_start,
- 
- 	thread_notify(THREAD_NOTIFY_COPY, thread);
- 
-+#ifdef CONFIG_STACKPROTECTOR_PER_TASK
-+	thread->stack_canary = p->stack_canary;
-+#endif
-+
- 	return 0;
- }
- 
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index 46c5c6809806..048179d8c07f 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -36,6 +36,12 @@ ifdef CONFIG_GCC_PLUGIN_STACKLEAK
- endif
- export DISABLE_STACKLEAK_PLUGIN
- 
-+gcc-plugin-$(CONFIG_GCC_PLUGIN_ARM_SSP_PER_TASK) += arm_ssp_per_task_plugin.so
-+ifdef CONFIG_GCC_PLUGIN_ARM_SSP_PER_TASK
-+    DISABLE_ARM_SSP_PER_TASK_PLUGIN += -fplugin-arg-arm_ssp_per_task_plugin-disable
-+endif
-+export DISABLE_ARM_SSP_PER_TASK_PLUGIN
-+
- # All the plugin CFLAGS are collected here in case a build target needs to
- # filter them out of the KBUILD_CFLAGS.
- GCC_PLUGINS_CFLAGS := $(strip $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y)) $(gcc-plugin-cflags-y))
-diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
-index 0d5c799688f0..d45f7f36b859 100644
---- a/scripts/gcc-plugins/Kconfig
-+++ b/scripts/gcc-plugins/Kconfig
-@@ -190,4 +190,8 @@ config STACKLEAK_RUNTIME_DISABLE
- 	  runtime to control kernel stack erasing for kernels built with
- 	  CONFIG_GCC_PLUGIN_STACKLEAK.
- 
-+config GCC_PLUGIN_ARM_SSP_PER_TASK
-+	bool
-+	depends on GCC_PLUGINS && ARM
-+
- endif
-diff --git a/scripts/gcc-plugins/arm_ssp_per_task_plugin.c b/scripts/gcc-plugins/arm_ssp_per_task_plugin.c
-new file mode 100644
-index 000000000000..de70b8470971
---- /dev/null
-+++ b/scripts/gcc-plugins/arm_ssp_per_task_plugin.c
-@@ -0,0 +1,103 @@
-+// SPDX-License-Identifier: GPL-2.0
-+
-+#include "gcc-common.h"
-+
-+__visible int plugin_is_GPL_compatible;
-+
-+static unsigned int sp_mask, canary_offset;
-+
-+static unsigned int arm_pertask_ssp_rtl_execute(void)
-+{
-+	rtx_insn *insn;
-+
-+	for (insn = get_insns(); insn; insn = NEXT_INSN(insn)) {
-+		const char *sym;
-+		rtx body;
-+		rtx masked_sp;
-+
-+		/*
-+		 * Find a SET insn involving a SYMBOL_REF to __stack_chk_guard
-+		 */
-+		if (!INSN_P(insn))
-+			continue;
-+		body = PATTERN(insn);
-+		if (GET_CODE(body) != SET ||
-+		    GET_CODE(SET_SRC(body)) != SYMBOL_REF)
-+			continue;
-+		sym = XSTR(SET_SRC(body), 0);
-+		if (strcmp(sym, "__stack_chk_guard"))
-+			continue;
-+
-+		/*
-+		 * Replace the source of the SET insn with an expression that
-+		 * produces the address of the copy of the stack canary value
-+		 * stored in struct thread_info
-+		 */
-+		masked_sp = gen_reg_rtx(Pmode);
-+
-+		emit_insn_before(gen_rtx_SET(masked_sp,
-+					     gen_rtx_AND(Pmode,
-+							 stack_pointer_rtx,
-+							 GEN_INT(sp_mask))),
-+				 insn);
-+
-+		SET_SRC(body) = gen_rtx_PLUS(Pmode, masked_sp,
-+					     GEN_INT(canary_offset));
-+	}
-+	return 0;
-+}
-+
-+#define PASS_NAME arm_pertask_ssp_rtl
-+
-+#define NO_GATE
-+#include "gcc-generate-rtl-pass.h"
-+
-+__visible int plugin_init(struct plugin_name_args *plugin_info,
-+			  struct plugin_gcc_version *version)
-+{
-+	const char * const plugin_name = plugin_info->base_name;
-+	const int argc = plugin_info->argc;
-+	const struct plugin_argument *argv = plugin_info->argv;
-+	int tso = 0;
-+	int i;
-+
-+	if (!plugin_default_version_check(version, &gcc_version)) {
-+		error(G_("incompatible gcc/plugin versions"));
-+		return 1;
-+	}
-+
-+	for (i = 0; i < argc; ++i) {
-+		if (!strcmp(argv[i].key, "disable"))
-+			return 0;
-+
-+		/* all remaining options require a value */
-+		if (!argv[i].value) {
-+			error(G_("no value supplied for option '-fplugin-arg-%s-%s'"),
-+			      plugin_name, argv[i].key);
-+			return 1;
-+		}
-+
-+		if (!strcmp(argv[i].key, "tso")) {
-+			tso = atoi(argv[i].value);
-+			continue;
-+		}
-+
-+		if (!strcmp(argv[i].key, "offset")) {
-+			canary_offset = atoi(argv[i].value);
-+			continue;
-+		}
-+		error(G_("unknown option '-fplugin-arg-%s-%s'"),
-+		      plugin_name, argv[i].key);
-+		return 1;
-+	}
-+
-+	/* create the mask that produces the base of the stack */
-+	sp_mask = ~((1U << (12 + tso)) - 1);
-+
-+	PASS_INFO(arm_pertask_ssp_rtl, "expand", 1, PASS_POS_INSERT_AFTER);
-+
-+	register_callback(plugin_info->base_name, PLUGIN_PASS_MANAGER_SETUP,
-+			  NULL, &arm_pertask_ssp_rtl_pass_info);
-+
-+	return 0;
-+}
--- 
-2.19.1
+T24gTW9uLCAyMDE4LTExLTI2IGF0IDE2OjM2ICswMTAwLCBKZXNzaWNhIFl1IHdyb3RlOg0KPiAr
+KysgUmljayBFZGdlY29tYmUgWzIwLzExLzE4IDE1OjIzIC0wODAwXToNCltzbmlwXQ0KPiBIaSBS
+aWNrIQ0KPiANCj4gU29ycnkgZm9yIHRoZSBkZWxheS4gSSdkIGxpa2UgdG8gdGFrZSBhIHN0ZXAg
+YmFjayBhbmQgYXNrIHNvbWUgYnJvYWRlcg0KPiBxdWVzdGlvbnMgLQ0KPiANCj4gLSBJcyB0aGUg
+ZW5kIGdvYWwgb2YgdGhpcyBwYXRjaHNldCB0byByYW5kb21pemUgbG9hZGluZyBrZXJuZWwgbW9k
+dWxlcywgb3INCj4gbW9zdC9hbGwNCj4gICAgZXhlY3V0YWJsZSBrZXJuZWwgbWVtb3J5IGFsbG9j
+YXRpb25zLCBpbmNsdWRpbmcgYnBmLCBrcHJvYmVzLCBldGM/DQpUaGFua3MgZm9yIHRha2luZyBh
+IGxvb2shDQoNCkl0IHN0YXJ0ZWQgd2l0aCB0aGUgZ29hbCBvZiBqdXN0IHJhbmRvbWl6aW5nIG1v
+ZHVsZXMgKGhlbmNlIHRoZSBuYW1lKSwgYnV0IEkNCnRoaW5rIHRoZXJlIGlzIG1heWJlIHZhbHVl
+IGluIHJhbmRvbWl6aW5nIHRoZSBwbGFjZW1lbnQgb2YgYWxsIHJ1bnRpbWUgYWRkZWQNCmV4ZWN1
+dGFibGUgY29kZS4gQmV5b25kIGp1c3QgdHJ5aW5nIHRvIG1ha2UgZXhlY3V0YWJsZSBjb2RlIHBs
+YWNlbWVudCBsZXNzDQpkZXRlcm1pbmlzdGljIGluIGdlbmVyYWwsIHRvZGF5IGFsbCBvZiB0aGUg
+dXNhZ2VzIGhhdmUgdGhlIHByb3BlcnR5IG9mIHN0YXJ0aW5nDQp3aXRoIFJXIHBlcm1pc3Npb25z
+IGFuZCB0aGVuIGJlY29taW5nIFJPIGV4ZWN1dGFibGUsIHNvIHRoZXJlIGlzIHRoZSBiZW5lZml0
+IG9mDQpuYXJyb3dpbmcgdGhlIGNoYW5jZXMgYSBidWcgY291bGQgc3VjY2Vzc2Z1bGx5IHdyaXRl
+IHRvIGl0IGR1cmluZyB0aGUgUlcgd2luZG93Lg0KDQo+IC0gSXQgc2VlbXMgdGhhdCBhIGxvdCBv
+ZiBjb21wbGV4aXR5IGFuZCBoZXVyaXN0aWNzIGFyZSBpbnRyb2R1Y2VkIGp1c3QgdG8NCj4gICAg
+YWNjb21tb2RhdGUgdGhlIHBvdGVudGlhbCBmcmFnbWVudGF0aW9uIHRoYXQgY2FuIGhhcHBlbiB3
+aGVuIHRoZSBtb2R1bGUNCj4gdm1hbGxvYw0KPiAgICBzcGFjZSBzdGFydHMgdG8gZ2V0IGZyYWdt
+ZW50ZWQgd2l0aCBicGYgZmlsdGVycy4gSSdtIHBhcnRpYWwgdG8gdGhlIGlkZWEgb2YNCj4gICAg
+c3BsaXR0aW5nIG9yIGhhdmluZyBicGYgb3duIGl0cyBvd24gdm1hbGxvYyBzcGFjZSwgc2ltaWxh
+ciB0byB3aGF0IEFyZCBpcw0KPiBhbHJlYWR5DQo+ICAgIGltcGxlbWVudGluZyBmb3IgYXJtNjQu
+DQo+IA0KPiAgICBTbyBhIHF1ZXN0aW9uIGZvciB0aGUgYnBmIGFuZCB4ODYgZm9sa3MsIGlzIGhh
+dmluZyBhIGRlZGljYXRlZCB2bWFsbG9jDQo+IHJlZ2lvbg0KPiAgICAoYXMgd2VsbCBhcyBhIHNl
+cGVyYXRlIGJwZl9hbGxvYyBhcGkpIGZvciBicGYgZmVhc2libGUgb3IgZGVzaXJhYmxlIG9uDQo+
+IHg4Nl82ND8NCkkgYWN0dWFsbHkgZGlkIHNvbWUgcHJvdG90eXBpbmcgYW5kIHRlc3Rpbmcgb24g
+dGhpcy4gSXQgc2VlbXMgdGhlcmUgd291bGQgYmUNCnNvbWUgc2xvd2Rvd24gZnJvbSB0aGUgcmVx
+dWlyZWQgY2hhbmdlcyB0byB0aGUgSklUZWQgY29kZSB0byBzdXBwb3J0IGNhbGxpbmcNCmJhY2sg
+ZnJvbSB0aGUgdm1hbGxvYyByZWdpb24gaW50byB0aGUga2VybmVsLCBhbmQgc28gbW9kdWxlIHNw
+YWNlIHdvdWxkIHN0aWxsIGJlDQp0aGUgcHJlZmVycmVkIHJlZ2lvbi4NCg0KPiAgICBJZiBicGYg
+ZmlsdGVycyBuZWVkIHRvIGJlIHdpdGhpbiAyIEdCIG9mIHRoZSBjb3JlIGtlcm5lbCwgd291bGQg
+aXQgbWFrZQ0KPiBzZW5zZQ0KPiAgICB0byBjYXJ2ZSBvdXQgYSBwb3J0aW9uIG9mIHRoZSBjdXJy
+ZW50IG1vZHVsZSByZWdpb24gZm9yIGJwZg0KPiBmaWx0ZXJzPyAgQWNjb3JkaW5nDQo+ICAgIHRv
+IERvY3VtZW50YXRpb24veDg2L3g4Nl82NC9tbS50eHQsIHRoZSBtb2R1bGUgcmVnaW9uIGlzIH4x
+LjUgR0IuIEkgYW0NCj4gZG91YnRmdWwNCj4gICAgdGhhdCBhbnkgcmVhbCBzeXN0ZW0gd2lsbCBh
+Y3R1YWxseSBoYXZlIDEuNSBHQiB3b3J0aCBvZiBrZXJuZWwgbW9kdWxlcw0KPiBsb2FkZWQuDQo+
+ICAgIElzIHRoZXJlIGEgc3BlY2lmaWMgcmVhc29uIHdoeSB0aGF0IG11Y2ggc3BhY2UgaXMgZGVk
+aWNhdGVkIHRvIGtlcm5lbA0KPiBtb2R1bGVzLA0KPiAgICBhbmQgd291bGQgaXQgYmUgZmVhc2li
+bGUgdG8gc3BsaXQgdGhhdCByZWdpb24gY2xlYW5seSB3aXRoIGJwZj8NCkhvcGVmdWxseSBzb21l
+b25lIGZyb20gQlBGIHNpZGUgb2YgdGhpbmdzIHdpbGwgY2hpbWUgaW4sIGJ1dCBteSB1bmRlcnN0
+YW5kaW5nDQp3YXMgdGhhdCB0aGV5IHdvdWxkIGxpa2UgZXZlbiBtb3JlIHNwYWNlIHRoYW4gdG9k
+YXkgaWYgcG9zc2libGUgYW5kIHNvIHRoZXkgbWF5DQpub3QgbGlrZSB0aGUgcmVkdWNlZCBzcGFj
+ZS4NCg0KQWxzbyB3aXRoIEtBU0xSIG9uIHg4NiBpdHMgYWN0dWFsbHkgb25seSAxR0IsIHNvIGl0
+IHdvdWxkIG9ubHkgYmUgNTAwTUIgcGVyDQpzZWN0aW9uIChhc3N1bWluZyBrcHJvYmVzLCBldGMg
+d291bGQgc2hhcmUgdGhlIG5vbi1tb2R1bGUgcmVnaW9uLCBzbyBqdXN0IHR3bw0Kc2VjdGlvbnMp
+Lg0KDQo+IC0gSWYgYnBmIGdldHMgaXRzIG93biBkZWRpY2F0ZWQgdm1hbGxvYyBzcGFjZSwgYW5k
+IHdlIHN0aWNrIHRvIHRoZSBzaW5nbGUgdGFzaw0KPiAgICBvZiByYW5kb21pemluZyAqanVzdCog
+a2VybmVsIG1vZHVsZXMsIGNvdWxkIHRoZSB2bWFsbG9jIG9wdGltaXphdGlvbnMgYW5kDQo+IHRo
+ZQ0KPiAgICAiYmFja3VwIiBhcmVhIGJlIGRyb3BwZWQ/IFRoZSBiZW5lZml0cyBvZiB0aGUgdm1h
+bGxvYyBvcHRpbWl6YXRpb25zIHNlZW0gdG8NCj4gICAgb25seSBiZSBub3RpY2VhYmxlIHdoZW4g
+d2UgZ2V0IHRvIHRob3VzYW5kcyBvZiBtb2R1bGVfYWxsb2MgYWxsb2NhdGlvbnMgLQ0KPiAgICBh
+Z2FpbiwgYSBjb25jZXJuIGNhdXNlZCBieSBicGYgZmlsdGVycyBzaGFyaW5nIHRoZSBzYW1lIHNw
+YWNlIHdpdGgga2VybmVsDQo+ICAgIG1vZHVsZXMuDQpJIHRoaW5rIHRoZSBiYWNrdXAgYXJlYSBt
+YXkgc3RpbGwgYmUgbmVlZGVkLCBmb3IgZXhhbXBsZSBpZiB5b3UgaGF2ZSAyMDAgbW9kdWxlcw0K
+ZXZlbmx5IHNwYWNlZCBpbnNpZGUgNTAwTUIgdGhlcmUgaXMgb25seSBhdmVyYWdlIH4yLjVNQiBn
+YXAgYmV0d2VlbiB0aGVtLiBTbyBhDQpsYXRlIGFkZGVkIGxhcmdlIG1vZHVsZSBjb3VsZCBzdGls
+bCBnZXQgYmxvY2tlZC4NCg0KPiAgICBTbyB0bGRyLCBpdCBzZWVtcyB0byBtZSB0aGF0IHRoZSBj
+b25jZXJuIG9mIGZyYWdtZW50YXRpb24sIHRoZSB2bWFsbG9jDQo+ICAgIG9wdGltaXphdGlvbnMs
+IGFuZCB0aGUgbWFpbiBwdXJwb3NlIG9mIHRoZSBiYWNrdXAgYXJlYSAtIGJhc2ljYWxseSwgdGhl
+DQo+IG1vcmUNCj4gICAgY29tcGxleCBwYXJ0cyBvZiB0aGlzIHBhdGNoc2V0IC0gc3RlbXMgc3F1
+YXJlbHkgZnJvbSB0aGUgZmFjdCB0aGF0IGJwZg0KPiBmaWx0ZXJzDQo+ICAgIHNoYXJlIHRoZSBz
+YW1lIHNwYWNlIGFzIG1vZHVsZXMgb24geDg2LiBJZiB3ZSB3ZXJlIHRvIGZvY3VzIG9uIHJhbmRv
+bWl6aW5nDQo+ICAgICpqdXN0KiBrZXJuZWwgbW9kdWxlcywgYW5kIGlmIGJwZiBhbmQgbW9kdWxl
+cyBoYWQgdGhlaXIgb3duIGRlZGljYXRlZA0KPiByZWdpb25zLA0KPiAgICB0aGVuIEkgKnRoaW5r
+KiB0aGUgY29uY3JldGUgdXNlIGNhc2VzIGZvciB0aGUgYmFja3VwIGFyZWEgYW5kIHRoZSB2bWFs
+bG9jDQo+ICAgIG9wdGltaXphdGlvbnMgKGlmIHdlJ3JlIHN0cmljdGx5IGNvbnNpZGVyaW5nIGp1
+c3Qga2VybmVsIG1vZHVsZXMpIHdvdWxkDQo+ICAgIG1vc3RseSBkaXNhcHBlYXIgKHBsZWFzZSBj
+b3JyZWN0IG1lIGlmIEknbSBpbiB0aGUgd3JvbmcgaGVyZSkuIFRoZW4NCj4gdGFja2xpbmcgdGhl
+DQo+ICAgIHJhbmRvbWl6YXRpb24gb2YgYnBmIGFsbG9jYXRpb25zIGNvdWxkIHBvdGVudGlhbGx5
+IGJlIGEgc2VwYXJhdGUgdGFzayBvbg0KPiBpdHMgb3duLg0KWWVzIGl0IHNlZW1zIHRoZW4gdGhl
+IHZtYWxsb2Mgb3B0aW1pemF0aW9ucyBjb3VsZCBiZSBkcm9wcGVkIHRoZW4sIGJ1dCBJIGRvbid0
+DQp0aGluayB0aGUgYmFja3VwIGFyZWEgY291bGQgYmUuIEFsc28gdGhlIGVudHJvcHkgd291bGQg
+Z28gZG93biBzaW5jZSB0aGVyZSB3b3VsZA0KYmUgbGVzcyBwb3NzaWJsZSBwb3NpdGlvbnMgYW5k
+IHdlIHdvdWxkIHJlZHVjZSB0aGUgc3BhY2UgYXZhaWxhYmxlIHRvIEJQRi4gU28NCnRoZXJlIGFy
+ZSBzb21lIGRvd25zaWRlcyBqdXN0IHRvIHJlbW92ZSB0aGUgdm1hbGxvYyBwaWVjZS4NCg0KSXMg
+eW91ciBjb25jZXJuIHRoYXQgdm1hbGxvYyBvcHRpbWl6YXRpb25zIG1pZ2h0IHJlZ3Jlc3Mgc29t
+ZXRoaW5nIGVsc2U/IFRoZXJlDQppcyBhIG1pZGRsZSBncm91bmQgdm1hbGxvYyBvcHRpbWl6YXRp
+b24gd2hlcmUgb25seSB0aGUgdHJ5X3B1cmdlIGZsYWcgaXMgcGx1bWJlZA0KdGhyb3VnaC4gVGhl
+IGZsYWcgd2FzIG1vc3Qgb2YgdGhlIHBlcmZvcm1hbmNlIGdhaW5lZCBhbmQgd2l0aCBqdXN0IHRo
+YXQgcGllY2UgaXQNCnNob3VsZCBub3QgY2hhbmdlIGFueSBiZWhhdmlvciBmb3IgdGhlIG5vbi1t
+b2R1bGVzIGZsb3dzLiBXb3VsZCB0aGF0IGJlIG1vcmUNCmFjY2VwdGFibGU/DQoNCj4gVGhhbmtz
+IQ0KPiANCj4gSmVzc2ljYQ0KPiANCltzbmlwXQ0K
