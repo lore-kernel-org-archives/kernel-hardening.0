@@ -1,92 +1,60 @@
-Subject: Re: [PATCH v2 1/2] Documentation/admin-guide: introduce
- perf-security.rst file
-References: <259a9cd2-5c56-4f8d-57c4-cabaeaa774bc@linux.intel.com>
- <4d95341d-d1f4-fc48-f173-a6fedfc70d33@linux.intel.com>
- <20181125124732.6c1807de@lwn.net>
- <02dbd6dc-86b5-2307-4122-b716c51b9eaa@linux.intel.com>
- <20181126132833.5302688b@lwn.net>
 From: Alexey Budankov <alexey.budankov@linux.intel.com>
-Message-ID: <3a07906e-83c0-e7ae-7249-84deafdd52e0@linux.intel.com>
-Date: Tue, 27 Nov 2018 09:55:35 +0300
+Subject: [PATCH v4 0/2] Documentation/admin-guide: introduce perf-security.rst
+ file and extend perf_event_paranoid documentation
+Message-ID: <feac7efa-df6f-cca1-e321-28d220bf0411@linux.intel.com>
+Date: Tue, 27 Nov 2018 11:11:47 +0300
 MIME-Version: 1.0
-In-Reply-To: <20181126132833.5302688b@lwn.net>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Jonathan Corbet <corbet@lwn.net>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Andi Kleen <ak@linux.intel.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, linux-kernel <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+To: Jonatan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Andi Kleen <ak@linux.intel.com>
+Cc: Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, linux-kernel <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 26.11.2018 23:28, Jonathan Corbet wrote:
-> On Mon, 26 Nov 2018 11:57:21 +0300
-> Alexey Budankov <alexey.budankov@linux.intel.com> wrote:
-> 
->>>> +For the purpose of performing security checks Linux implementation splits
->>>> +processes into two categories [6]_ : a) privileged processes (whose effective
->>>> +user ID is 0, referred to as superuser or root), and b) unprivileged processes
->>>> +(whose effective UID is nonzero).  
->>>
->>> Is that really what's going on here?  If I understand things correctly,
->>> it's looking for CAP_SYS_PTRACE rather than a specific UID; am I missing
->>> something here?  
->>
->> You are right regarding CAP_SYS_PTRACE but this capability is not the only 
->> one which is used by perf_events for security checks, so the capabilities 
->> clarification is kept aside of these patches, because patches initial intention 
->> is to clarify security specifics of sysctl_perf_even_paranoid settings.
->>
->> I agree that the document can be extended with details clarifying capabilities 
->> used by perf_events for security checks.
-> 
-> I don't really like the idea of adding a document that we know doesn't
-> really describe how the security decision is made.  Even a one-line
-> parenthetical saying that things are more complicated and giving a pointer
-> to a place to look for details would help, IMO.
 
-Well, makes sense. It is possible to have something similar to this:
+To facilitate informed decision making by system administrators [1]
+to permit and manage access to Perf Events (perf_events) / Perf tool 
+(Perf) [2],[3] performance monitoring for multiple users perf-security.rst 
+document suggested by Thomas Gleixner is introduced [4] that:
 
-...
+a) states perf_events/Perf access security concerns for multi user environment
+b) refers to base Linux access control and management principles
+c) extends documentation of possible perf_event_paranoid knob settings 
 
-For the purpose of performing security checks the Linux implementation splits
-processes into two categories [6]_ : a) privileged processes (whose effective
-user ID is 0, referred to as superuser or root), and b) unprivileged processes
-(whose effective UID is nonzero).
+The file serves as single knowledge source for perf_events/Perf security and 
+access control related matter according to decisions, discussion and  
+PoC prototype previously made here [5],[6].
 
-Privileged processes bypass all kernel security permission checks so perf_events
-performance monitoring is fully available to privileged processes without
-access, scope and resource restrictions.
+The file can later be extended with information describing:
 
-Unprivileged processes are subject to full security permission check based on 
-the process's credentials [5]_ (usually: effective UID, effective GID, and 
-supplementary group list).
+a) perf_events/Perf usage models and its security implications
+b) perf_events/Perf user interface, its changes and related security implications
+c) security related implications of monitoring by a specific perf_events PMU [2]
 
-Linux divides the privileges traditionally associated with superuser into
-distinct units, known as capabilities [6]_, which can be independently enabled
-and disabled on per-thread basis for processes and files of unprivileged users.
+---
+Alexey Budankov (2):
+  Documentation/admin-guide: introduce perf-security.rst file
+  Documentation/admin-guide: update admin-guide index.rst
 
-Unprivileged processes with enabled CAP_SYS_ADMIN capability are treated as 
-privileged processes with respect to perf_events performance monitoring and
-bypass *scope* permissions checks in the kernel.
+ Documentation/admin-guide/index.rst         |  1 +
+ Documentation/admin-guide/perf-security.rst | 97 +++++++++++++++++++++
+ 2 files changed, 98 insertions(+)
+ create mode 100644 Documentation/admin-guide/perf-security.rst
 
-Unprivileged processes using perf_events system call API is also subject for
-PTRACE_MODE_READ_REALCREDS ptrace access mode check [7]_ , whose outcome determines
-whether monitoring is permitted. So unprivileged process provided with
-CAP_SYS_PTRACE capability are effectively permitted to pass the check.
+---
+Changes in v4:
+- added docs for perf_event related capabilities
+Changes in v3:
+- toning down of the markup for "scope, access and resource"
+- adding definite article for "Linux implementation"
+Changes in v2:
+- reverted patches order in the set to avoid CI issue
+- replaced old PCL referencing by PE (Perf Events)
+- skipped >=3 setting documentation at the moment
 
-Other capabilities being granted to unprivileged processes can effectively
-enable capturing of additional data required for later performance analysis of
-monitored processes or system. For example CAP_SYSLOG capability permits
-reading kernel space memory addresses from /proc/kallsyms file.
-
-...
-
-Thanks,
-Alexey
-
-> 
-> Either way, I can merge this, but I'd like to have an ack from the perf
-> folks first.
-> 
-> Thanks,
-> 
-> jon
-> 
+---
+[1] https://marc.info/?l=linux-kernel&m=153815883923913&w=2
+[2] http://man7.org/linux/man-pages/man2/perf_event_open.2.html
+[3] https://perf.wiki.kernel.org/index.php/Main_Page
+[4] https://marc.info/?l=linux-kernel&m=153837512226838&w=2
+[5] https://marc.info/?l=linux-kernel&m=153736008310781&w=2
+[6] https://lkml.org/lkml/2018/5/21/156
