@@ -1,24 +1,87 @@
-Date: Wed, 28 Nov 2018 16:34:37 +0100
-From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
-Subject: Re: [PATCH] x86/fpu: XRSTOR is expected to raise #GP
-Message-ID: <20181128153436.rftr3kfocxn2kcwo@linutronix.de>
-References: <20181126172706.184008-1-jannh@google.com>
- <20181126174945.r2ubrlg2gzwog2ez@linutronix.de>
- <4d4c4f1f-72e3-0182-151e-8bd455ccd143@zytor.com>
- <52276fe27116406eb601a99704459f80@AcuMS.aculab.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <52276fe27116406eb601a99704459f80@AcuMS.aculab.com>
-To: David Laight <David.Laight@ACULAB.COM>
-Cc: "'H. Peter Anvin'" <hpa@zytor.com>, Jann Horn <jannh@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Naveen N. Rao" <naveen.n.rao@linux.vnet.ibm.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>
+Content-Type: text/plain;
+	charset=utf-8
+Mime-Version: 1.0 (Mac OS X Mail 12.1 \(3445.101.1\))
+Subject: =?utf-8?Q?Re=3A_=5BPATCH_0/2=5D_Don=E2=80=99t_leave_executable_TL?=
+ =?utf-8?Q?B_entries_to_freed_pages?=
+From: Nadav Amit <nadav.amit@gmail.com>
+In-Reply-To: <20181128095734.GA23467@arm.com>
+Date: Wed, 28 Nov 2018 10:29:52 -0800
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <FB747B26-5C1A-4417-9DE9-8C356AB1C593@gmail.com>
+References: <20181128000754.18056-1-rick.p.edgecombe@intel.com>
+ <CDB8B7C1-FD55-44AD-9B71-B3A750BF5489@gmail.com>
+ <449E6648-5599-476D-8136-EE570101F930@gmail.com>
+ <20181128095734.GA23467@arm.com>
+To: Will Deacon <will.deacon@arm.com>
+Cc: Rick Edgecombe <rick.p.edgecombe@intel.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, linux-mm <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, naveen.n.rao@linux.vnet.ibm.com, anil.s.keshavamurthy@intel.com, David Miller <davem@davemloft.net>, Masami Hiramatsu <mhiramat@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, Ingo Molnar <mingo@redhat.com>, ast@kernel.org, Daniel Borkmann <daniel@iogearbox.net>, jeyu@kernel.org, netdev@vger.kernel.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Jann Horn <jannh@google.com>, kristen@linux.intel.com, dave.hansen@intel.com, deneen.t.dock@intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2018-11-28 15:27:28 [+0000], David Laight wrote:
-> Better still note it in the code.
+> On Nov 28, 2018, at 1:57 AM, Will Deacon <will.deacon@arm.com> wrote:
+>=20
+> On Tue, Nov 27, 2018 at 05:21:08PM -0800, Nadav Amit wrote:
+>>> On Nov 27, 2018, at 5:06 PM, Nadav Amit <nadav.amit@gmail.com> =
+wrote:
+>>>=20
+>>>> On Nov 27, 2018, at 4:07 PM, Rick Edgecombe =
+<rick.p.edgecombe@intel.com> wrote:
+>>>>=20
+>>>> Sometimes when memory is freed via the module subsystem, an =
+executable
+>>>> permissioned TLB entry can remain to a freed page. If the page is =
+re-used to
+>>>> back an address that will receive data from userspace, it can =
+result in user
+>>>> data being mapped as executable in the kernel. The root of this =
+behavior is
+>>>> vfree lazily flushing the TLB, but not lazily freeing the =
+underlying pages.=20
+>>>>=20
+>>>> There are sort of three categories of this which show up across =
+modules, bpf,
+>>>> kprobes and ftrace:
+>>>>=20
+>>>> 1. When executable memory is touched and then immediatly freed
+>>>>=20
+>>>> This shows up in a couple error conditions in the module loader and =
+BPF JIT
+>>>> compiler.
+>>>=20
+>>> Interesting!
+>>>=20
+>>> Note that this may cause conflict with "x86: avoid W^X being broken =
+during
+>>> modules loading=E2=80=9D, which I recently submitted.
+>>=20
+>> I actually have not looked on the vmalloc() code too much recent, but =
+it
+>> seems =E2=80=A6 strange:
+>>=20
+>>  void vm_unmap_aliases(void)
+>>  {      =20
+>>=20
+>>  ...
+>>  	mutex_lock(&vmap_purge_lock);
+>>  	purge_fragmented_blocks_allcpus();
+>>  	if (!__purge_vmap_area_lazy(start, end) && flush)
+>>  		flush_tlb_kernel_range(start, end);
+>>  	mutex_unlock(&vmap_purge_lock);
+>>  }
+>>=20
+>> Since __purge_vmap_area_lazy() releases the memory, it seems there is =
+a time
+>> window between the release of the region and the TLB flush, in which =
+the
+>> area can be allocated for another purpose. This can result in a
+>> (theoretical) correctness issue. No?
+>=20
+> If __purge_vmap_area_lazy() returns false, then it hasn't freed the =
+memory,
+> so we only invalidate the TLB if 'flush' is true in that case. If
+> __purge_vmap_area_lazy() returns true instead, then it takes care of =
+the TLB
+> invalidation before the freeing.
 
-I'm in favour of adding something to tools/testing/selftests/x86/.
+Right. Sorry for my misunderstanding.
 
-> 	David
-
-Sebastian
+Thanks,
+Nadav
