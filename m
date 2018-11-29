@@ -1,76 +1,88 @@
-From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Subject: =?utf-8?B?UmU6IFtQQVRDSCAwLzJdIERvbuKAmXQgbGVhdmUgZXhlY3V0YWJsZSBUTEIg?=
- =?utf-8?Q?entries_to_freed_pages?=
-Date: Thu, 29 Nov 2018 18:49:26 +0000
-Message-ID: <4cddc2ba36ba3b6d528556207b8d4592209797ea.camel@intel.com>
-References: <20181128000754.18056-1-rick.p.edgecombe@intel.com>
-	 <20181129230616.f017059a093841dbaa4b82e6@kernel.org>
-In-Reply-To: <20181129230616.f017059a093841dbaa4b82e6@kernel.org>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <A76C5CD0E9CE5E488A3D2C4CFA24D87C@intel.com>
-Content-Transfer-Encoding: base64
+Date: Thu, 29 Nov 2018 17:58:50 -0500 (EST)
+From: Nicolas Pitre <nicolas.pitre@linaro.org>
+Subject: Re: [RFC/RFT PATCH v2] ARM: smp: add support for per-task stack
+ canaries
+In-Reply-To: <20181127001534.24075-1-ard.biesheuvel@linaro.org>
+Message-ID: <nycvar.YSQ.7.76.1811291742340.3623@knanqh.ubzr>
+References: <20181127001534.24075-1-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-To: "mhiramat@kernel.org" <mhiramat@kernel.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "jeyu@kernel.org" <jeyu@kernel.org>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "ast@kernel.org" <ast@kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "jannh@google.com" <jannh@google.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "mingo@redhat.com" <mingo@redhat.com>, "luto@kernel.org" <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Keshavamurthy, Anil S" <anil.s.keshavamurthy@intel.com>, "Hansen, Dave" <dave.hansen@intel.com>, "naveen.n.rao@linux.vnet.ibm.com" <naveen.n.rao@linux.vnet.ibm.com>, "davem@davemloft.net" <davem@davemloft.net>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>
+Content-Type: text/plain; charset=US-ASCII
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, Russell King <linux@armlinux.org.uk>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gVGh1LCAyMDE4LTExLTI5IGF0IDIzOjA2ICswOTAwLCBNYXNhbWkgSGlyYW1hdHN1IHdyb3Rl
-Og0KPiBPbiBUdWUsIDI3IE5vdiAyMDE4IDE2OjA3OjUyIC0wODAwDQo+IFJpY2sgRWRnZWNvbWJl
-IDxyaWNrLnAuZWRnZWNvbWJlQGludGVsLmNvbT4gd3JvdGU6DQo+IA0KPiA+IFNvbWV0aW1lcyB3
-aGVuIG1lbW9yeSBpcyBmcmVlZCB2aWEgdGhlIG1vZHVsZSBzdWJzeXN0ZW0sIGFuIGV4ZWN1dGFi
-bGUNCj4gPiBwZXJtaXNzaW9uZWQgVExCIGVudHJ5IGNhbiByZW1haW4gdG8gYSBmcmVlZCBwYWdl
-LiBJZiB0aGUgcGFnZSBpcyByZS11c2VkIHRvDQo+ID4gYmFjayBhbiBhZGRyZXNzIHRoYXQgd2ls
-bCByZWNlaXZlIGRhdGEgZnJvbSB1c2Vyc3BhY2UsIGl0IGNhbiByZXN1bHQgaW4gdXNlcg0KPiA+
-IGRhdGEgYmVpbmcgbWFwcGVkIGFzIGV4ZWN1dGFibGUgaW4gdGhlIGtlcm5lbC4gVGhlIHJvb3Qg
-b2YgdGhpcyBiZWhhdmlvciBpcw0KPiA+IHZmcmVlIGxhemlseSBmbHVzaGluZyB0aGUgVExCLCBi
-dXQgbm90IGxhemlseSBmcmVlaW5nIHRoZSB1bmRlcmx5aW5nIHBhZ2VzLiANCj4gDQo+IEdvb2Qg
-Y2F0Y2ghDQo+IA0KPiA+IA0KPiA+IFRoZXJlIGFyZSBzb3J0IG9mIHRocmVlIGNhdGVnb3JpZXMg
-b2YgdGhpcyB3aGljaCBzaG93IHVwIGFjcm9zcyBtb2R1bGVzLA0KPiA+IGJwZiwNCj4gPiBrcHJv
-YmVzIGFuZCBmdHJhY2U6DQo+IA0KPiBGb3IgeDg2LTY0IGtwcm9iZSwgaXQgc2V0cyB0aGUgcGFn
-ZSBOWCBhbmQgYWZ0ZXIgdGhhdCBSVywgYW5kIHRoZW4gcmVsZWFzZQ0KPiB2aWEgbW9kdWxlX21l
-bWZyZWUuIFNvIEknbSBub3Qgc3VyZSBpdCByZWFsbHkgaGFwcGVucyBvbiBrcHJvYmVzLiAoT2Yg
-Y291cnNlDQo+IHRoZSBkZWZhdWx0IG1lbW9yeSBhbGxvY2F0b3IgaXMgc2ltcGxlciBzbyBpdCBt
-YXkgaGFwcGVuIG9uIG90aGVyIGFyY2hzKSBCdXQNCj4gaW50ZXJlc3RpbmcgZml4ZXMuDQpZZXMs
-IEkgdGhpbmsgeW91IGFyZSByaWdodCwgaXQgc2hvdWxkIG5vdCBsZWF2ZSBhbiBleGVjdXRhYmxl
-IFRMQiBlbnRyeSBpbiB0aGlzDQpjYXNlLiBGdHJhY2UgYWN0dWFsbHkgZG9lcyB0aGlzIG9uIHg4
-NiBhcyB3ZWxsLg0KDQpJcyB0aGVyZSBzb21lIG90aGVyIHJlYXNvbiBmb3IgY2FsbGluZyBzZXRf
-bWVtb3J5X254IHRoYXQgc2hvdWxkIGFwcGx5IGVsc2V3aGVyZQ0KZm9yIG1vZHVsZSB1c2Vycz8g
-T3IgY291bGQgaXQgYmUgcmVtb3ZlZCBpbiB0aGUgY2FzZSBvZiB0aGlzIHBhdGNoIHRvIGNlbnRy
-YWxpemUNCnRoZSBiZWhhdmlvcj8NCg0KVGhhbmtzLA0KDQpSaWNrDQoNCj4gVGhhbmsgeW91LA0K
-PiANCj4gDQo+ID4gDQo+ID4gMS4gV2hlbiBleGVjdXRhYmxlIG1lbW9yeSBpcyB0b3VjaGVkIGFu
-ZCB0aGVuIGltbWVkaWF0bHkgZnJlZWQNCj4gPiANCj4gPiAgICBUaGlzIHNob3dzIHVwIGluIGEg
-Y291cGxlIGVycm9yIGNvbmRpdGlvbnMgaW4gdGhlIG1vZHVsZSBsb2FkZXIgYW5kIEJQRg0KPiA+
-IEpJVA0KPiA+ICAgIGNvbXBpbGVyLg0KPiA+IA0KPiA+IDIuIFdoZW4gZXhlY3V0YWJsZSBtZW1v
-cnkgaXMgc2V0IHRvIFJXIHJpZ2h0IGJlZm9yZSBiZWluZyBmcmVlZA0KPiA+IA0KPiA+ICAgIElu
-IHRoaXMgY2FzZSAob24geDg2IGFuZCBwcm9iYWJseSBvdGhlcnMpIHRoZXJlIHdpbGwgYmUgYSBU
-TEIgZmx1c2ggd2hlbg0KPiA+IGl0cw0KPiA+ICAgIHNldCB0byBSVyBhbmQgc28gc2luY2UgdGhl
-IHBhZ2VzIGFyZSBub3QgdG91Y2hlZCBiZXR3ZWVuIHNldHRpbmcgdGhlDQo+ID4gICAgZmx1c2gg
-YW5kIHRoZSBmcmVlLCBpdCBzaG91bGQgbm90IGJlIGluIHRoZSBUTEIgaW4gbW9zdCBjYXNlcy4g
-U28gdGhpcw0KPiA+ICAgIGNhdGVnb3J5IGlzIG5vdCBhcyBiaWcgb2YgYSBjb25jZXJuLiBIb3dl
-dmVyLCB0ZWNoaW5pY2FsbHkgdGhlcmUgaXMgc3RpbGwNCj4gPiBhDQo+ID4gICAgcmFjZSB3aGVy
-ZSBhbiBhdHRhY2tlciBjb3VsZCB0cnkgdG8ga2VlcCBpdCBhbGl2ZSBmb3IgYSBzaG9ydCB3aW5k
-b3cgd2l0aA0KPiA+IGENCj4gPiAgICB3ZWxsIHRpbWVkIG91dC1vZi1ib3VuZCByZWFkIG9yIHNw
-ZWN1bGF0aXZlIHJlYWQsIHNvIGlkZWFsbHkgdGhpcyBjb3VsZA0KPiA+IGJlDQo+ID4gICAgYmxv
-Y2tlZCBhcyB3ZWxsLg0KPiA+IA0KPiA+IDMuIFdoZW4gZXhlY3V0YWJsZSBtZW1vcnkgaXMgZnJl
-ZWQgaW4gYW4gaW50ZXJydXB0DQo+ID4gDQo+ID4gICAgQXQgbGVhc3Qgb25lIGV4YW1wbGUgb2Yg
-dGhpcyBpcyB0aGUgZnJlZWluZyBvZiBpbml0IHNlY3Rpb25zIGluIHRoZQ0KPiA+IG1vZHVsZQ0K
-PiA+ICAgIGxvYWRlci4gU2luY2Ugdm1hbGxvYyByZXVzZXMgdGhlIGFsbG9jYXRpb24gZm9yIHRo
-ZSB3b3JrIHF1ZXVlIGxpbmtlZA0KPiA+IGxpc3QNCj4gPiAgICBub2RlIGZvciB0aGUgZGVmZXJy
-ZWQgZnJlZXMsIHRoZSBtZW1vcnkgYWN0dWFsbHkgZ2V0cyB0b3VjaGVkIGFzIHBhcnQgb2YNCj4g
-PiB0aGUNCj4gPiAgICB2ZnJlZSBvcGVyYXRpb24gYW5kIHNvIHJldHVybnMgdG8gdGhlIFRMQiBl
-dmVuIGFmdGVyIHRoZSBmbHVzaCBmcm9tDQo+ID4gcmVzZXR0aW5nDQo+ID4gICAgdGhlIHBlcm1p
-c3Npb25zLg0KPiA+IA0KPiA+IEkgaGF2ZSBvbmx5IGFjdHVhbGx5IHRlc3RlZCBjYXRlZ29yeSAx
-LCBhbmQgaWRlbnRpZmllZCAyIGFuZCAzIGp1c3QgZnJvbQ0KPiA+IHJlYWRpbmcNCj4gPiB0aGUg
-Y29kZS4NCj4gPiANCj4gPiBUbyBjYXRjaCBhbGwgb2YgdGhlc2UsIG1vZHVsZV9hbGxvYyBmb3Ig
-eDg2IGlzIGNoYW5nZWQgdG8gdXNlIGEgbmV3IGZsYWcNCj4gPiB0aGF0DQo+ID4gaW5zdHJ1Y3Rz
-IHRoZSB1bm1hcCBvcGVyYXRpb24gdG8gZmx1c2ggdGhlIFRMQiBiZWZvcmUgZnJlZWluZyB0aGUg
-cGFnZXMuDQo+ID4gDQo+ID4gSWYgdGhpcyBzb2x1dGlvbiBzZWVtcyBnb29kIEkgY2FuIHBsdWcg
-dGhlIGZsYWcgaW4gZm9yIG90aGVyIGFyY2hpdGVjdHVyZXMNCj4gPiB0aGF0DQo+ID4gZGVmaW5l
-IFBBR0VfS0VSTkVMX0VYRUMuDQo+ID4gDQo+ID4gDQo+ID4gUmljayBFZGdlY29tYmUgKDIpOg0K
-PiA+ICAgdm1hbGxvYzogTmV3IGZsYWcgZm9yIGZsdXNoIGJlZm9yZSByZWxlYXNpbmcgcGFnZXMN
-Cj4gPiAgIHg4Ni9tb2R1bGVzOiBNYWtlIHg4NiBhbGxvY3MgdG8gZmx1c2ggd2hlbiBmcmVlDQo+
-ID4gDQo+ID4gIGFyY2gveDg2L2tlcm5lbC9tb2R1bGUuYyB8ICA0ICsrLS0NCj4gPiAgaW5jbHVk
-ZS9saW51eC92bWFsbG9jLmggIHwgIDEgKw0KPiA+ICBtbS92bWFsbG9jLmMgICAgICAgICAgICAg
-fCAxMyArKysrKysrKysrKy0tDQo+ID4gIDMgZmlsZXMgY2hhbmdlZCwgMTQgaW5zZXJ0aW9ucygr
-KSwgNCBkZWxldGlvbnMoLSkNCj4gPiANCj4gPiAtLSANCj4gPiAyLjE3LjENCj4gPiANCj4gDQo+
-IA0K
+On Tue, 27 Nov 2018, Ard Biesheuvel wrote:
+
+> On ARM, we currently only change the value of the stack canary when
+> switching tasks if the kernel was built for UP. On SMP kernels, this
+> is impossible since the stack canary value is obtained via a global
+> symbol reference, which means
+> a) all running tasks on all CPUs must use the same value
+> b) we can only modify the value when no kernel stack frames are live
+>    on any CPU, which is effectively never.
+> 
+> So instead, use a GCC plugin to add a RTL pass that replaces each
+> reference to the address of the __stack_chk_guard symbol with an
+> expression that produces the address of the 'stack_canary' field
+> that is added to struct thread_info. This way, each task will use
+> its own randomized value.
+> 
+> Cc: Russell King <linux@armlinux.org.uk>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Emese Revfy <re.emese@gmail.com>
+> Cc: Arnd Bergmann <arnd@arndb.de>
+> Cc: Nicolas Pitre <nicolas.pitre@linaro.org>
+> Cc: Laura Abbott <labbott@redhat.com>
+> Cc: kernel-hardening@lists.openwall.com
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> ---
+> v2:
+> - adopt powerpc Makefile approach to pass stack canary offset and thread
+>   size to the plugin as command line arguments
+> - depend on !XIP_DEFLATED_DATA
+> 
+>  arch/arm/Kconfig                              |  16 +++
+>  arch/arm/Makefile                             |  11 +++
+>  arch/arm/boot/compressed/Makefile             |   1 +
+>  arch/arm/include/asm/stackprotector.h         |  12 ++-
+>  arch/arm/include/asm/thread_info.h            |   3 +
+>  arch/arm/kernel/asm-offsets.c                 |   1 +
+>  arch/arm/kernel/process.c                     |   6 +-
+>  scripts/Makefile.gcc-plugins                  |   6 ++
+>  scripts/gcc-plugins/Kconfig                   |   4 +
+>  scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 103 ++++++++++++++++++++
+>  10 files changed, 160 insertions(+), 3 deletions(-)
+> 
+> diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+> index 91be74d8df65..6142e83b45da 100644
+> --- a/arch/arm/Kconfig
+> +++ b/arch/arm/Kconfig
+> @@ -1810,6 +1810,22 @@ config XEN
+>  	help
+>  	  Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
+>  
+> +config STACKPROTECTOR_PER_TASK
+> +	bool "Use a unique stack canary value for each task"
+> +	depends on GCC_PLUGINS && STACKPROTECTOR && SMP && !XIP_DEFLATED_DATA
+> +	select GCC_PLUGIN_ARM_SSP_PER_TASK
+> +	help
+> +	  Due to the fact that GCC uses an ordinary symbol reference from
+> +	  which to load the value of the stack canary, this value can only
+> +	  change at reboot time on SMP systems, and all tasks running in the
+> +	  kernel's address space are forced to use the same canary value for
+> +	  the entire duration that the system is up.
+> +
+> +	  Enable this option to switch to a different method that uses a
+> +	  different canary value for each task.
+> +
+> +	  This is not enabled by default since it relies on a GCC plugin.
+
+Why wouldn't you default it to y and let the dependencies disable it 
+when not met?
+
+Other than that:
+
+Acked-by: Nicolas Pitre <nico@linaro.org>
+
+
+Nicolas
