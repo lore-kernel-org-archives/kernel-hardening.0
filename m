@@ -1,101 +1,56 @@
-MIME-Version: 1.0
-References: <1543583987-27948-1-git-send-email-alex.popov@linux.com> <CAGXu5jJ7LmHRJJxtH2HD4XEu5hPLtAe=koJbaCmqF9qoSw=sVw@mail.gmail.com>
-In-Reply-To: <CAGXu5jJ7LmHRJJxtH2HD4XEu5hPLtAe=koJbaCmqF9qoSw=sVw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 30 Nov 2018 09:12:26 -0800
-Message-ID: <CAGXu5jKcRLcAg7r-E-9LMjK0YisLJp2TVYoiBwE+4ctYzi5wkg@mail.gmail.com>
 Subject: Re: [PATCH 1/1] stackleak: Register the 'stackleak_cleanup' pass
  before the 'mach' pass
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Alexander Popov <alex.popov@linux.com>
+References: <1543583987-27948-1-git-send-email-alex.popov@linux.com>
+ <CAGXu5jJ7LmHRJJxtH2HD4XEu5hPLtAe=koJbaCmqF9qoSw=sVw@mail.gmail.com>
+ <CAGXu5jKcRLcAg7r-E-9LMjK0YisLJp2TVYoiBwE+4ctYzi5wkg@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <4ba60677-4a69-755c-2507-13793830ccd5@linux.com>
+Date: Sat, 1 Dec 2018 01:01:29 +0300
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5jKcRLcAg7r-E-9LMjK0YisLJp2TVYoiBwE+4ctYzi5wkg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+To: Kees Cook <keescook@chromium.org>
 Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Dave Hansen <dave.hansen@linux.intel.com>, Steven Rostedt <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>, Masami Hiramatsu <mhiramat@kernel.org>, Florian Weimer <fweimer@redhat.com>, Richard Sandiford <richard.sandiford@arm.com>, Segher Boessenkool <segher@kernel.crashing.org>, amonakov@ispras.ru, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Emese Revfy <re.emese@gmail.com>, Thomas Garnier <thgarnie@google.com>, Ingo Molnar <mingo@kernel.org>, Will Deacon <will.deacon@arm.com>, Alexei Starovoitov <ast@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "H. Peter Anvin" <hpa@zytor.com>, "David S. Miller" <davem@davemloft.net>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, gcc@gcc.gnu.org, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 30, 2018 at 9:09 AM Kees Cook <keescook@chromium.org> wrote:
->
-> On Fri, Nov 30, 2018 at 5:20 AM Alexander Popov <alex.popov@linux.com> wr=
-ote:
-> >
-> > Currently the 'stackleak_cleanup' pass deleting a CALL insn is executed
-> > after the 'reload' pass. That allows gcc to do some weird optimization =
-in
-> > function prologues and epilogues, which are generated later [1].
-> >
-> > Let's avoid that by registering the 'stackleak_cleanup' pass before
-> > the 'mach' pass, which performs the machine dependent code transformati=
-ons.
-> > It's the moment when the stack frame size is final and function prologu=
-es
-> > and epilogues are already generated.
-> >
-> > [1] https://www.openwall.com/lists/kernel-hardening/2018/11/23/2
-> >
-> > Reported-by: kbuild test robot <lkp@intel.com>
-> > Signed-off-by: Alexander Popov <alex.popov@linux.com>
->
-> Thanks, applied!
+On 30.11.2018 20:12, Kees Cook wrote:
+> On Fri, Nov 30, 2018 at 9:09 AM Kees Cook <keescook@chromium.org> wrote:
+>>
+>> On Fri, Nov 30, 2018 at 5:20 AM Alexander Popov <alex.popov@linux.com> wrote:
+>>>
+>>> Currently the 'stackleak_cleanup' pass deleting a CALL insn is executed
+>>> after the 'reload' pass. That allows gcc to do some weird optimization in
+>>> function prologues and epilogues, which are generated later [1].
+>>>
+>>> Let's avoid that by registering the 'stackleak_cleanup' pass before
+>>> the 'mach' pass, which performs the machine dependent code transformations.
+>>> It's the moment when the stack frame size is final and function prologues
+>>> and epilogues are already generated.
+>>>
+>>> [1] https://www.openwall.com/lists/kernel-hardening/2018/11/23/2
+>>>
+>>> Reported-by: kbuild test robot <lkp@intel.com>
+>>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+>>
+>> Thanks, applied!
+> 
+> Eek, no, this is breaking my build badly:
+> 
+> *** WARNING *** there are active plugins, do not report this as a bug
+> unless you can reproduce it without enabling any plugins.
+> Event                            | Plugins
+> PLUGIN_START_UNIT                | stackleak_plugin
+> kernel/exit.c: In function ‘release_task’:
+> kernel/exit.c:228:1: internal compiler error: Segmentation fault
+>  }
+> 
+> Failing with:
+> 
+> gcc (Ubuntu 7.3.0-16ubuntu3) 7.3.0
 
-Eek, no, this is breaking my build badly:
+Nice... I don't reproduce it with gcc-7.3 built from source.
+I'll investigate this, return with details and we'll decide what to do.
 
-*** WARNING *** there are active plugins, do not report this as a bug
-unless you can reproduce it without enabling any plugins.
-Event                            | Plugins
-PLUGIN_START_UNIT                | stackleak_plugin
-kernel/exit.c: In function =E2=80=98release_task=E2=80=99:
-kernel/exit.c:228:1: internal compiler error: Segmentation fault
- }
-
-Failing with:
-
-gcc (Ubuntu 7.3.0-16ubuntu3) 7.3.0
-
--Kees
-
->
-> -Kees
->
-> > ---
-> >  scripts/gcc-plugins/stackleak_plugin.c | 8 +++++---
-> >  1 file changed, 5 insertions(+), 3 deletions(-)
-> >
-> > diff --git a/scripts/gcc-plugins/stackleak_plugin.c b/scripts/gcc-plugi=
-ns/stackleak_plugin.c
-> > index 2f48da9..6f41b32 100644
-> > --- a/scripts/gcc-plugins/stackleak_plugin.c
-> > +++ b/scripts/gcc-plugins/stackleak_plugin.c
-> > @@ -363,10 +363,12 @@ __visible int plugin_init(struct plugin_name_args=
- *plugin_info,
-> >                                                 PASS_POS_INSERT_BEFORE)=
-;
-> >
-> >         /*
-> > -        * The stackleak_cleanup pass should be executed after the
-> > -        * "reload" pass, when the stack frame size is final.
-> > +        * The stackleak_cleanup pass should be executed before the "ma=
-ch"
-> > +        * pass, which performs the machine dependent code transformati=
-ons.
-> > +        * It's the moment when the stack frame size is already final a=
-nd
-> > +        * function prologues and epilogues are generated.
-> >          */
-> > -       PASS_INFO(stackleak_cleanup, "reload", 1, PASS_POS_INSERT_AFTER=
-);
-> > +       PASS_INFO(stackleak_cleanup, "mach", 1, PASS_POS_INSERT_BEFORE)=
-;
-> >
-> >         if (!plugin_default_version_check(version, &gcc_version)) {
-> >                 error(G_("incompatible gcc/plugin versions"));
-> > --
-> > 2.7.4
-> >
->
->
-> --
-> Kees Cook
-
-
-
---=20
-Kees Cook
+Thanks,
+Alexander
