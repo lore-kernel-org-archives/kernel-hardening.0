@@ -1,60 +1,92 @@
-Date: Fri, 30 Nov 2018 08:19:13 +0900
-From: Masami Hiramatsu <mhiramat@kernel.org>
-Subject: Re: [PATCH 0/2] =?ISO-2022-JP?B?RG9uGyRCIUcbKEJ0?= leave executable
- TLB entries to freed pages
-Message-Id: <20181130081913.916a27c8230b125da4bcf2f7@kernel.org>
-In-Reply-To: <4cddc2ba36ba3b6d528556207b8d4592209797ea.camel@intel.com>
-References: <20181128000754.18056-1-rick.p.edgecombe@intel.com>
-	<20181129230616.f017059a093841dbaa4b82e6@kernel.org>
-	<4cddc2ba36ba3b6d528556207b8d4592209797ea.camel@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "jeyu@kernel.org" <jeyu@kernel.org>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "ast@kernel.org" <ast@kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "jannh@google.com" <jannh@google.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "mingo@redhat.com" <mingo@redhat.com>, "luto@kernel.org" <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Keshavamurthy, Anil S" <anil.s.keshavamurthy@intel.com>, "Hansen, Dave" <dave.hansen@intel.com>, "naveen.n.rao@linux.vnet.ibm.com" <naveen.n.rao@linux.vnet.ibm.com>, "davem@davemloft.net" <davem@davemloft.net>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>
+MIME-Version: 1.0
+References: <20181127001534.24075-1-ard.biesheuvel@linaro.org> <nycvar.YSQ.7.76.1811291742340.3623@knanqh.ubzr>
+In-Reply-To: <nycvar.YSQ.7.76.1811291742340.3623@knanqh.ubzr>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Fri, 30 Nov 2018 09:42:05 +0100
+Message-ID: <CAKv+Gu-kSnndPqmC4_+JOUPbMk4cGmtTktS9WE+Z8_mse9y-2Q@mail.gmail.com>
+Subject: Re: [RFC/RFT PATCH v2] ARM: smp: add support for per-task stack canaries
+Content-Type: text/plain; charset="UTF-8"
+To: Nicolas Pitre <nicolas.pitre@linaro.org>, Kees Cook <keescook@chromium.org>
+Cc: linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Russell King <linux@armlinux.org.uk>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 29 Nov 2018 18:49:26 +0000
-"Edgecombe, Rick P" <rick.p.edgecombe@intel.com> wrote:
+On Thu, 29 Nov 2018 at 23:58, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+>
+> On Tue, 27 Nov 2018, Ard Biesheuvel wrote:
+>
+> > On ARM, we currently only change the value of the stack canary when
+> > switching tasks if the kernel was built for UP. On SMP kernels, this
+> > is impossible since the stack canary value is obtained via a global
+> > symbol reference, which means
+> > a) all running tasks on all CPUs must use the same value
+> > b) we can only modify the value when no kernel stack frames are live
+> >    on any CPU, which is effectively never.
+> >
+> > So instead, use a GCC plugin to add a RTL pass that replaces each
+> > reference to the address of the __stack_chk_guard symbol with an
+> > expression that produces the address of the 'stack_canary' field
+> > that is added to struct thread_info. This way, each task will use
+> > its own randomized value.
+> >
+> > Cc: Russell King <linux@armlinux.org.uk>
+> > Cc: Kees Cook <keescook@chromium.org>
+> > Cc: Emese Revfy <re.emese@gmail.com>
+> > Cc: Arnd Bergmann <arnd@arndb.de>
+> > Cc: Nicolas Pitre <nicolas.pitre@linaro.org>
+> > Cc: Laura Abbott <labbott@redhat.com>
+> > Cc: kernel-hardening@lists.openwall.com
+> > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> > ---
+> > v2:
+> > - adopt powerpc Makefile approach to pass stack canary offset and thread
+> >   size to the plugin as command line arguments
+> > - depend on !XIP_DEFLATED_DATA
+> >
+> >  arch/arm/Kconfig                              |  16 +++
+> >  arch/arm/Makefile                             |  11 +++
+> >  arch/arm/boot/compressed/Makefile             |   1 +
+> >  arch/arm/include/asm/stackprotector.h         |  12 ++-
+> >  arch/arm/include/asm/thread_info.h            |   3 +
+> >  arch/arm/kernel/asm-offsets.c                 |   1 +
+> >  arch/arm/kernel/process.c                     |   6 +-
+> >  scripts/Makefile.gcc-plugins                  |   6 ++
+> >  scripts/gcc-plugins/Kconfig                   |   4 +
+> >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 103 ++++++++++++++++++++
+> >  10 files changed, 160 insertions(+), 3 deletions(-)
+> >
+> > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+> > index 91be74d8df65..6142e83b45da 100644
+> > --- a/arch/arm/Kconfig
+> > +++ b/arch/arm/Kconfig
+> > @@ -1810,6 +1810,22 @@ config XEN
+> >       help
+> >         Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
+> >
+> > +config STACKPROTECTOR_PER_TASK
+> > +     bool "Use a unique stack canary value for each task"
+> > +     depends on GCC_PLUGINS && STACKPROTECTOR && SMP && !XIP_DEFLATED_DATA
+> > +     select GCC_PLUGIN_ARM_SSP_PER_TASK
+> > +     help
+> > +       Due to the fact that GCC uses an ordinary symbol reference from
+> > +       which to load the value of the stack canary, this value can only
+> > +       change at reboot time on SMP systems, and all tasks running in the
+> > +       kernel's address space are forced to use the same canary value for
+> > +       the entire duration that the system is up.
+> > +
+> > +       Enable this option to switch to a different method that uses a
+> > +       different canary value for each task.
+> > +
+> > +       This is not enabled by default since it relies on a GCC plugin.
+>
+> Why wouldn't you default it to y and let the dependencies disable it
+> when not met?
+>
+> Other than that:
+>
+> Acked-by: Nicolas Pitre <nico@linaro.org>
+>
 
-> On Thu, 2018-11-29 at 23:06 +0900, Masami Hiramatsu wrote:
-> > On Tue, 27 Nov 2018 16:07:52 -0800
-> > Rick Edgecombe <rick.p.edgecombe@intel.com> wrote:
-> > 
-> > > Sometimes when memory is freed via the module subsystem, an executable
-> > > permissioned TLB entry can remain to a freed page. If the page is re-used to
-> > > back an address that will receive data from userspace, it can result in user
-> > > data being mapped as executable in the kernel. The root of this behavior is
-> > > vfree lazily flushing the TLB, but not lazily freeing the underlying pages. 
-> > 
-> > Good catch!
-> > 
-> > > 
-> > > There are sort of three categories of this which show up across modules,
-> > > bpf,
-> > > kprobes and ftrace:
-> > 
-> > For x86-64 kprobe, it sets the page NX and after that RW, and then release
-> > via module_memfree. So I'm not sure it really happens on kprobes. (Of course
-> > the default memory allocator is simpler so it may happen on other archs) But
-> > interesting fixes.
-> Yes, I think you are right, it should not leave an executable TLB entry in this
-> case. Ftrace actually does this on x86 as well.
-> 
-> Is there some other reason for calling set_memory_nx that should apply elsewhere
-> for module users? Or could it be removed in the case of this patch to centralize
-> the behavior?
+Thanks Nico.
 
-According to the commit c93f5cf571e7 ("kprobes/x86: Fix to set RWX bits correctly
-before releasing trampoline"), if we release readonly page by module_memfree(),
-it causes kernel crash. And at this moment, on x86-64 set the trampoline page
-readonly becuase it is an exacutable page. Setting NX bit is for security reason
-that should be set before making it writable.
-So I think if you centralize setting NX bit, it should be done before setting
-writable bit.
-
-Thank you,
-
-
--- 
-Masami Hiramatsu <mhiramat@kernel.org>
+I wasn't sure about enabling it by default, though. Perhaps Kees has
+any insights?
