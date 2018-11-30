@@ -1,103 +1,64 @@
-Date: Fri, 30 Nov 2018 11:37:20 -0500 (EST)
-From: Nicolas Pitre <nicolas.pitre@linaro.org>
-Subject: Re: [RFC/RFT PATCH v2] ARM: smp: add support for per-task stack
- canaries
-In-Reply-To: <CAKv+Gu-kSnndPqmC4_+JOUPbMk4cGmtTktS9WE+Z8_mse9y-2Q@mail.gmail.com>
-Message-ID: <nycvar.YSQ.7.76.1811301131070.3623@knanqh.ubzr>
-References: <20181127001534.24075-1-ard.biesheuvel@linaro.org> <nycvar.YSQ.7.76.1811291742340.3623@knanqh.ubzr> <CAKv+Gu-kSnndPqmC4_+JOUPbMk4cGmtTktS9WE+Z8_mse9y-2Q@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Kees Cook <keescook@chromium.org>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Russell King <linux@armlinux.org.uk>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+References: <1543583987-27948-1-git-send-email-alex.popov@linux.com>
+In-Reply-To: <1543583987-27948-1-git-send-email-alex.popov@linux.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 30 Nov 2018 09:09:02 -0800
+Message-ID: <CAGXu5jJ7LmHRJJxtH2HD4XEu5hPLtAe=koJbaCmqF9qoSw=sVw@mail.gmail.com>
+Subject: Re: [PATCH 1/1] stackleak: Register the 'stackleak_cleanup' pass
+ before the 'mach' pass
+Content-Type: text/plain; charset="UTF-8"
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Dave Hansen <dave.hansen@linux.intel.com>, Steven Rostedt <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>, Masami Hiramatsu <mhiramat@kernel.org>, Florian Weimer <fweimer@redhat.com>, Richard Sandiford <richard.sandiford@arm.com>, Segher Boessenkool <segher@kernel.crashing.org>, amonakov@ispras.ru, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Emese Revfy <re.emese@gmail.com>, Thomas Garnier <thgarnie@google.com>, Ingo Molnar <mingo@kernel.org>, Will Deacon <will.deacon@arm.com>, Alexei Starovoitov <ast@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "H. Peter Anvin" <hpa@zytor.com>, "David S. Miller" <davem@davemloft.net>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, gcc@gcc.gnu.org, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 30 Nov 2018, Ard Biesheuvel wrote:
+On Fri, Nov 30, 2018 at 5:20 AM Alexander Popov <alex.popov@linux.com> wrote:
+>
+> Currently the 'stackleak_cleanup' pass deleting a CALL insn is executed
+> after the 'reload' pass. That allows gcc to do some weird optimization in
+> function prologues and epilogues, which are generated later [1].
+>
+> Let's avoid that by registering the 'stackleak_cleanup' pass before
+> the 'mach' pass, which performs the machine dependent code transformations.
+> It's the moment when the stack frame size is final and function prologues
+> and epilogues are already generated.
+>
+> [1] https://www.openwall.com/lists/kernel-hardening/2018/11/23/2
+>
+> Reported-by: kbuild test robot <lkp@intel.com>
+> Signed-off-by: Alexander Popov <alex.popov@linux.com>
 
-> On Thu, 29 Nov 2018 at 23:58, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
-> >
-> > On Tue, 27 Nov 2018, Ard Biesheuvel wrote:
-> >
-> > > On ARM, we currently only change the value of the stack canary when
-> > > switching tasks if the kernel was built for UP. On SMP kernels, this
-> > > is impossible since the stack canary value is obtained via a global
-> > > symbol reference, which means
-> > > a) all running tasks on all CPUs must use the same value
-> > > b) we can only modify the value when no kernel stack frames are live
-> > >    on any CPU, which is effectively never.
-> > >
-> > > So instead, use a GCC plugin to add a RTL pass that replaces each
-> > > reference to the address of the __stack_chk_guard symbol with an
-> > > expression that produces the address of the 'stack_canary' field
-> > > that is added to struct thread_info. This way, each task will use
-> > > its own randomized value.
-> > >
-> > > Cc: Russell King <linux@armlinux.org.uk>
-> > > Cc: Kees Cook <keescook@chromium.org>
-> > > Cc: Emese Revfy <re.emese@gmail.com>
-> > > Cc: Arnd Bergmann <arnd@arndb.de>
-> > > Cc: Nicolas Pitre <nicolas.pitre@linaro.org>
-> > > Cc: Laura Abbott <labbott@redhat.com>
-> > > Cc: kernel-hardening@lists.openwall.com
-> > > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> > > ---
-> > > v2:
-> > > - adopt powerpc Makefile approach to pass stack canary offset and thread
-> > >   size to the plugin as command line arguments
-> > > - depend on !XIP_DEFLATED_DATA
-> > >
-> > >  arch/arm/Kconfig                              |  16 +++
-> > >  arch/arm/Makefile                             |  11 +++
-> > >  arch/arm/boot/compressed/Makefile             |   1 +
-> > >  arch/arm/include/asm/stackprotector.h         |  12 ++-
-> > >  arch/arm/include/asm/thread_info.h            |   3 +
-> > >  arch/arm/kernel/asm-offsets.c                 |   1 +
-> > >  arch/arm/kernel/process.c                     |   6 +-
-> > >  scripts/Makefile.gcc-plugins                  |   6 ++
-> > >  scripts/gcc-plugins/Kconfig                   |   4 +
-> > >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 103 ++++++++++++++++++++
-> > >  10 files changed, 160 insertions(+), 3 deletions(-)
-> > >
-> > > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-> > > index 91be74d8df65..6142e83b45da 100644
-> > > --- a/arch/arm/Kconfig
-> > > +++ b/arch/arm/Kconfig
-> > > @@ -1810,6 +1810,22 @@ config XEN
-> > >       help
-> > >         Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
-> > >
-> > > +config STACKPROTECTOR_PER_TASK
-> > > +     bool "Use a unique stack canary value for each task"
-> > > +     depends on GCC_PLUGINS && STACKPROTECTOR && SMP && !XIP_DEFLATED_DATA
-> > > +     select GCC_PLUGIN_ARM_SSP_PER_TASK
-> > > +     help
-> > > +       Due to the fact that GCC uses an ordinary symbol reference from
-> > > +       which to load the value of the stack canary, this value can only
-> > > +       change at reboot time on SMP systems, and all tasks running in the
-> > > +       kernel's address space are forced to use the same canary value for
-> > > +       the entire duration that the system is up.
-> > > +
-> > > +       Enable this option to switch to a different method that uses a
-> > > +       different canary value for each task.
-> > > +
-> > > +       This is not enabled by default since it relies on a GCC plugin.
-> >
-> > Why wouldn't you default it to y and let the dependencies disable it
-> > when not met?
-> >
-> > Other than that:
-> >
-> > Acked-by: Nicolas Pitre <nico@linaro.org>
-> >
-> 
-> Thanks Nico.
-> 
-> I wasn't sure about enabling it by default, though. Perhaps Kees has
-> any insights?
+Thanks, applied!
 
-I'd say that if you have CONFIG_GCC_PLUGINS=y and 
-CONFIG_STACKPROTECTOR=y then it is pretty clear what the user expects 
-already. The fact that CONFIG_STACKPROTECTOR requires a twist on SMP is 
-an implementation detail not a feature.
+-Kees
+
+> ---
+>  scripts/gcc-plugins/stackleak_plugin.c | 8 +++++---
+>  1 file changed, 5 insertions(+), 3 deletions(-)
+>
+> diff --git a/scripts/gcc-plugins/stackleak_plugin.c b/scripts/gcc-plugins/stackleak_plugin.c
+> index 2f48da9..6f41b32 100644
+> --- a/scripts/gcc-plugins/stackleak_plugin.c
+> +++ b/scripts/gcc-plugins/stackleak_plugin.c
+> @@ -363,10 +363,12 @@ __visible int plugin_init(struct plugin_name_args *plugin_info,
+>                                                 PASS_POS_INSERT_BEFORE);
+>
+>         /*
+> -        * The stackleak_cleanup pass should be executed after the
+> -        * "reload" pass, when the stack frame size is final.
+> +        * The stackleak_cleanup pass should be executed before the "mach"
+> +        * pass, which performs the machine dependent code transformations.
+> +        * It's the moment when the stack frame size is already final and
+> +        * function prologues and epilogues are generated.
+>          */
+> -       PASS_INFO(stackleak_cleanup, "reload", 1, PASS_POS_INSERT_AFTER);
+> +       PASS_INFO(stackleak_cleanup, "mach", 1, PASS_POS_INSERT_BEFORE);
+>
+>         if (!plugin_default_version_check(version, &gcc_version)) {
+>                 error(G_("incompatible gcc/plugin versions"));
+> --
+> 2.7.4
+>
 
 
-Nicolas
+-- 
+Kees Cook
