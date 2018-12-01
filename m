@@ -1,56 +1,88 @@
-Subject: Re: [PATCH 1/1] stackleak: Register the 'stackleak_cleanup' pass
- before the 'mach' pass
-References: <1543583987-27948-1-git-send-email-alex.popov@linux.com>
- <CAGXu5jJ7LmHRJJxtH2HD4XEu5hPLtAe=koJbaCmqF9qoSw=sVw@mail.gmail.com>
- <CAGXu5jKcRLcAg7r-E-9LMjK0YisLJp2TVYoiBwE+4ctYzi5wkg@mail.gmail.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <4ba60677-4a69-755c-2507-13793830ccd5@linux.com>
-Date: Sat, 1 Dec 2018 01:01:29 +0300
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKcRLcAg7r-E-9LMjK0YisLJp2TVYoiBwE+4ctYzi5wkg@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Dave Hansen <dave.hansen@linux.intel.com>, Steven Rostedt <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>, Masami Hiramatsu <mhiramat@kernel.org>, Florian Weimer <fweimer@redhat.com>, Richard Sandiford <richard.sandiford@arm.com>, Segher Boessenkool <segher@kernel.crashing.org>, amonakov@ispras.ru, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Emese Revfy <re.emese@gmail.com>, Thomas Garnier <thgarnie@google.com>, Ingo Molnar <mingo@kernel.org>, Will Deacon <will.deacon@arm.com>, Alexei Starovoitov <ast@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "H. Peter Anvin" <hpa@zytor.com>, "David S. Miller" <davem@davemloft.net>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, gcc@gcc.gnu.org, LKML <linux-kernel@vger.kernel.org>
+References: <1543463791-18391-1-git-send-email-yamada.masahiro@socionext.com> <1543463791-18391-2-git-send-email-yamada.masahiro@socionext.com>
+In-Reply-To: <1543463791-18391-2-git-send-email-yamada.masahiro@socionext.com>
+From: Masahiro Yamada <yamada.masahiro@socionext.com>
+Date: Sat, 1 Dec 2018 23:56:31 +0900
+Message-ID: <CAK7LNARoQweReaTV7cFkf1VmiS3JzO+iGGPBMvvzsFqpw3JJOw@mail.gmail.com>
+Subject: Re: [PATCH v2 2/2] kbuild: descend into scripts/gcc-plugins/ via scripts/Makefile
+Content-Type: text/plain; charset="UTF-8"
+To: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Michal Marek <michal.lkml@markovi.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 30.11.2018 20:12, Kees Cook wrote:
-> On Fri, Nov 30, 2018 at 9:09 AM Kees Cook <keescook@chromium.org> wrote:
->>
->> On Fri, Nov 30, 2018 at 5:20 AM Alexander Popov <alex.popov@linux.com> wrote:
->>>
->>> Currently the 'stackleak_cleanup' pass deleting a CALL insn is executed
->>> after the 'reload' pass. That allows gcc to do some weird optimization in
->>> function prologues and epilogues, which are generated later [1].
->>>
->>> Let's avoid that by registering the 'stackleak_cleanup' pass before
->>> the 'mach' pass, which performs the machine dependent code transformations.
->>> It's the moment when the stack frame size is final and function prologues
->>> and epilogues are already generated.
->>>
->>> [1] https://www.openwall.com/lists/kernel-hardening/2018/11/23/2
->>>
->>> Reported-by: kbuild test robot <lkp@intel.com>
->>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
->>
->> Thanks, applied!
-> 
-> Eek, no, this is breaking my build badly:
-> 
-> *** WARNING *** there are active plugins, do not report this as a bug
-> unless you can reproduce it without enabling any plugins.
-> Event                            | Plugins
-> PLUGIN_START_UNIT                | stackleak_plugin
-> kernel/exit.c: In function ‘release_task’:
-> kernel/exit.c:228:1: internal compiler error: Segmentation fault
->  }
-> 
-> Failing with:
-> 
-> gcc (Ubuntu 7.3.0-16ubuntu3) 7.3.0
+On Thu, Nov 29, 2018 at 12:57 PM Masahiro Yamada
+<yamada.masahiro@socionext.com> wrote:
+>
+> Now that 'archprepare' depends on 'scripts', Kbuild can descend into
+> scripts/gcc-plugins in a more standard way.
+>
+> Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> ---
 
-Nice... I don't reproduce it with gcc-7.3 built from source.
-I'll investigate this, return with details and we'll decide what to do.
+Applied to linux-kbuild.
 
-Thanks,
-Alexander
+
+> Changes in v2:
+>   - It turned out UML + CONFIG_GCC_PLUGINS is broken for a long time.
+>     https://patchwork.kernel.org/patch/10703853/
+>     Rebased on the top of the fix-up
+>
+>  Makefile                     | 2 +-
+>  scripts/Makefile             | 3 ++-
+>  scripts/Makefile.gcc-plugins | 8 --------
+>  3 files changed, 3 insertions(+), 10 deletions(-)
+>
+> diff --git a/Makefile b/Makefile
+> index 9eb3f4f..c1f87cf 100644
+> --- a/Makefile
+> +++ b/Makefile
+> @@ -1112,7 +1112,7 @@ prepare1: prepare2 $(version_h) $(autoksyms_h) include/generated/utsrelease.h
+>
+>  macroprepare: prepare1 archmacros
+>
+> -archprepare: archheaders archscripts macroprepare scripts gcc-plugins
+> +archprepare: archheaders archscripts macroprepare scripts
+>
+>  prepare0: archprepare
+>         $(Q)$(MAKE) $(build)=scripts/mod
+> diff --git a/scripts/Makefile b/scripts/Makefile
+> index b48259d..feb1f71 100644
+> --- a/scripts/Makefile
+> +++ b/scripts/Makefile
+> @@ -36,9 +36,10 @@ PHONY += build_unifdef
+>  build_unifdef: $(obj)/unifdef
+>         @:
+>
+> +subdir-$(CONFIG_GCC_PLUGINS) += gcc-plugins
+>  subdir-$(CONFIG_MODVERSIONS) += genksyms
+>  subdir-$(CONFIG_SECURITY_SELINUX) += selinux
+>  subdir-$(CONFIG_GDB_SCRIPTS) += gdb
+>
+>  # Let clean descend into subdirs
+> -subdir-        += basic dtc kconfig mod package gcc-plugins
+> +subdir-        += basic dtc kconfig mod package
+> diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
+> index 46c5c68..c36f199 100644
+> --- a/scripts/Makefile.gcc-plugins
+> +++ b/scripts/Makefile.gcc-plugins
+> @@ -49,11 +49,3 @@ KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
+>  # All enabled GCC plugins are collected here for building below.
+>  GCC_PLUGIN := $(gcc-plugin-y)
+>  export GCC_PLUGIN
+> -
+> -# Actually do the build, if requested.
+> -PHONY += gcc-plugins
+> -gcc-plugins: scripts_basic
+> -ifdef CONFIG_GCC_PLUGINS
+> -       $(Q)$(MAKE) $(build)=scripts/gcc-plugins
+> -endif
+> -       @:
+> --
+> 2.7.4
+>
+
+
+-- 
+Best Regards
+Masahiro Yamada
