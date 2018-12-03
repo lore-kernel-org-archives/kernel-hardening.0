@@ -1,74 +1,71 @@
-Subject: Re: [PATCH v4 1/2] Documentation/admin-guide: introduce
- perf-security.rst file
-From: Alexey Budankov <alexey.budankov@linux.intel.com>
-References: <feac7efa-df6f-cca1-e321-28d220bf0411@linux.intel.com>
- <b1a4fa08-482d-0fcc-c798-efb9a9894a47@linux.intel.com>
- <20181127111148.75746f02@lwn.net>
- <5e1e9c08-dff5-956d-4c2b-8ee090c387c3@linux.intel.com>
-Message-ID: <e7fd5492-f48e-7696-f894-a3ab60479ac5@linux.intel.com>
-Date: Mon, 3 Dec 2018 12:42:09 +0300
+Subject: Re: [PATCH 1/1] stackleak: Register the 'stackleak_cleanup' pass
+ before the 'mach' pass
+References: <1543583987-27948-1-git-send-email-alex.popov@linux.com>
+ <CAGXu5jJ7LmHRJJxtH2HD4XEu5hPLtAe=koJbaCmqF9qoSw=sVw@mail.gmail.com>
+ <CAGXu5jKcRLcAg7r-E-9LMjK0YisLJp2TVYoiBwE+4ctYzi5wkg@mail.gmail.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <e1259720-423c-c1ca-1fe5-b9ef89ad19a3@linux.com>
+Date: Mon, 3 Dec 2018 21:25:01 +0300
 MIME-Version: 1.0
-In-Reply-To: <5e1e9c08-dff5-956d-4c2b-8ee090c387c3@linux.intel.com>
+In-Reply-To: <CAGXu5jKcRLcAg7r-E-9LMjK0YisLJp2TVYoiBwE+4ctYzi5wkg@mail.gmail.com>
 Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Jonathan Corbet <corbet@lwn.net>, Peter Zijlstra <peterz@infradead.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Andi Kleen <ak@linux.intel.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, linux-kernel <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+Content-Transfer-Encoding: 8bit
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Dave Hansen <dave.hansen@linux.intel.com>, Steven Rostedt <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>, Masami Hiramatsu <mhiramat@kernel.org>, Florian Weimer <fweimer@redhat.com>, Richard Sandiford <richard.sandiford@arm.com>, Segher Boessenkool <segher@kernel.crashing.org>, amonakov@ispras.ru, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Emese Revfy <re.emese@gmail.com>, Thomas Garnier <thgarnie@google.com>, Ingo Molnar <mingo@kernel.org>, Will Deacon <will.deacon@arm.com>, Alexei Starovoitov <ast@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "H. Peter Anvin" <hpa@zytor.com>, "David S. Miller" <davem@davemloft.net>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, gcc@gcc.gnu.org, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Peter,
+On 30.11.2018 20:12, Kees Cook wrote:
+> On Fri, Nov 30, 2018 at 9:09 AM Kees Cook <keescook@chromium.org> wrote:
+>>
+>> On Fri, Nov 30, 2018 at 5:20 AM Alexander Popov <alex.popov@linux.com> wrote:
+>>>
+>>> Currently the 'stackleak_cleanup' pass deleting a CALL insn is executed
+>>> after the 'reload' pass. That allows gcc to do some weird optimization in
+>>> function prologues and epilogues, which are generated later [1].
+>>>
+>>> Let's avoid that by registering the 'stackleak_cleanup' pass before
+>>> the 'mach' pass, which performs the machine dependent code transformations.
+>>> It's the moment when the stack frame size is final and function prologues
+>>> and epilogues are already generated.
+>>>
+>>> [1] https://www.openwall.com/lists/kernel-hardening/2018/11/23/2
+>>>
+>>> Reported-by: kbuild test robot <lkp@intel.com>
+>>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+>>
+>> Thanks, applied!
+> 
+> Eek, no, this is breaking my build badly:
+> 
+> *** WARNING *** there are active plugins, do not report this as a bug
+> unless you can reproduce it without enabling any plugins.
+> Event                            | Plugins
+> PLUGIN_START_UNIT                | stackleak_plugin
+> kernel/exit.c: In function ‘release_task’:
+> kernel/exit.c:228:1: internal compiler error: Segmentation fault
+>  }
+> 
+> Failing with:
+> 
+> gcc (Ubuntu 7.3.0-16ubuntu3) 7.3.0
 
-On 27.11.2018 22:13, Alexey Budankov wrote:
-> On 27.11.2018 21:11, Jonathan Corbet wrote:
->> On Tue, 27 Nov 2018 11:15:37 +0300
->> Alexey Budankov <alexey.budankov@linux.intel.com> wrote:
->>
->>> +To perform security checks, the Linux implementation splits processes into two
->>> +categories [6]_ : a) privileged processes (whose effective user ID is 0, referred
->>> +to as superuser or root), and b) unprivileged processes (whose effective UID is
->>> +nonzero). Privileged processes bypass all kernel security permission checks so
->>> +perf_events performance monitoring is fully available to privileged processes
->>> +without access, scope and resource restrictions.
->>> +
->>> +Unprivileged processes are subject to a full security permission check based on
->>> +the process's credentials [5]_ (usually: effective UID, effective GID, and
->>> +supplementary group list).
->>> +
->>> +Linux divides the privileges traditionally associated with superuser into
->>> +distinct units, known as capabilities [6]_ , which can be independently enabled
->>> +and disabled on per-thread basis for processes and files of unprivileged users.
->>> +
->>> +Unprivileged processes with enabled CAP_SYS_ADMIN capability are treated as
->>> +privileged processes with respect to perf_events performance monitoring and
->>> +bypass *scope* permissions checks in the kernel.
->>> +
->>> +Unprivileged processes using perf_events system call API is also subject for
->>> +PTRACE_MODE_READ_REALCREDS ptrace access mode check [7]_ , whose outcome
->>> +determines whether monitoring is permitted. So unprivileged processes provided
->>> +with CAP_SYS_PTRACE capability are effectively permitted to pass the check.
->>
->> It's good to have more information here.  I could certainly quibble
->> further with things - a process with CAP_SYS_ADMIN is not "unprivileged"!
->> - but I don't want to stand in the way of this any further.  I *would*
->> still like to see an ack from the perf world, though.
-> 
-> Thanks for meaningful comments! Looking forward to ack from perf world.
+I've done debugging of gcc with gdb and now understand my mistake.
 
-May I ask you to review v4 of the patches? 
-Your comments on v1 have been addressed in there.
+It turned out that I register the 'stackleak_cleanup' pass deleting CALL insn
+for that particular moment when the control flow graph is inconsistent.
 
-Thanks,
-Alexey
+That's what the machine-specific reorg passes do on various architectures:
 
-> 
->>
->> With regard to Kees's comment on merging the two patches; I would probably
->> add the new document to index.rst in the same patch, but it doesn't matter
->> that much.  Not worth redoing the patch just for that.
-> 
-> Thanks,
-> Alexey
-> 
->>
->> jon
->>
-> 
+  /* We are freeing block_for_insn in the toplev to keep compatibility
+     with old MDEP_REORGS that are not CFG based.  Recompute it now.  */
+  compute_bb_for_insn ();
+
+So recomputing basic block info for insns before calling delete_insn_and_edges()
+fixes the issue.
+
+But I think it's better to register the 'stackleak_cleanup' pass just one pass
+earlier -- before the '*free_cfg' pass. I'll double check it for different
+versions of gcc on all supported architectures and return with a new patch.
+
+Best regards,
+Alexander
