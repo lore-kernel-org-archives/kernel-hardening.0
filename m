@@ -1,122 +1,98 @@
+Subject: Re: [PATCH 10/17] prmem: documentation
+References: <6f60afc9-0fed-7f95-a11a-9a2eef33094c@gmail.com>
+ <CALCETrXNckT9W288VXx-6inO5qYn-6dUPocKGcBT0GCO3xi3ZQ@mail.gmail.com>
+ <386C0CB1-C4B1-43E2-A754-DA8DBE4FB3CB@gmail.com>
+ <CALCETrWWcfLK4W3mn0bavzejmMBVKMX29aAUA3+VPQ8m9vmfhw@mail.gmail.com>
+ <9373ccf0-f51b-4bfa-2b16-e03ebf3c670d@huawei.com>
+ <2e52e103-15d0-0c26-275f-894dfd07e8ec@huawei.com>
+ <CALCETrV0sPgf4ZgG1joF_5hM-ycPsWM9DWGO=diQ_LQKin4VuA@mail.gmail.com>
+ <1166e55c-0c06-195c-a501-383b4055ea46@gmail.com>
+ <3BB9DE07-E0AE-43E2-99F1-E4AA774CD462@amacapital.net>
+ <5e10c8e4-aa71-1eea-b1ce-50d7d0a60e8c@gmail.com>
+ <20181122200416.GS3065@bombadil.infradead.org>
+ <CALCETrXB34QBcYk=k5DT1t4h7EezaPxbxM2S_h2nYk5Nv1c4_Q@mail.gmail.com>
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Subject: [PATCH 6/6] __wr_after_init: lkdtm test
-Date: Tue,  4 Dec 2018 14:18:05 +0200
-Message-Id: <20181204121805.4621-7-igor.stoppa@huawei.com>
-In-Reply-To: <20181204121805.4621-1-igor.stoppa@huawei.com>
-References: <20181204121805.4621-1-igor.stoppa@huawei.com>
+Message-ID: <20ad363b-e78d-efcb-0a17-3ae2d3fbaa5f@gmail.com>
+Date: Tue, 4 Dec 2018 14:34:31 +0200
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: Andy Lutomirski <luto@amacapital.net>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>
-Cc: igor.stoppa@huawei.com, Nadav Amit <nadav.amit@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
+In-Reply-To: <CALCETrXB34QBcYk=k5DT1t4h7EezaPxbxM2S_h2nYk5Nv1c4_Q@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>
+Cc: Andrew Lutomirski <luto@kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Verify that trying to modify a variable with the __wr_after_init
-modifier wil lcause a crash.
+Hello,
+apologies for the delayed answer.
+Please find my reply to both last mails in the thread, below.
 
-Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
+On 22/11/2018 22:53, Andy Lutomirski wrote:
+> On Thu, Nov 22, 2018 at 12:04 PM Matthew Wilcox <willy@infradead.org> wrote:
+>>
+>> On Thu, Nov 22, 2018 at 09:27:02PM +0200, Igor Stoppa wrote:
+>>> I have studied the code involved with Nadav's patchset.
+>>> I am perplexed about these sentences you wrote.
+>>>
+>>> More to the point (to the best of my understanding):
+>>>
+>>> poking_init()
+>>> -------------
+>>>    1. it gets one random poking address and ensures to have at least 2
+>>>       consecutive PTEs from the same PMD
+>>>    2. it then proceeds to map/unmap an address from the first of the 2
+>>>       consecutive PTEs, so that, later on, there will be no need to
+>>>       allocate pages, which might fail, if poking from atomic context.
+>>>    3. at this point, the page tables are populated, for the address that
+>>>       was obtained at point 1, and this is ok, because the address is fixed
+>>>
+>>> write_rare
+>>> ----------
+>>>    4. it can happen on any available core / thread at any time, therefore
+>>>       each of them needs a different address
+>>
+>> No?  Each CPU has its own CR3 (eg each CPU might be running a different
+>> user task).  If you have _one_ address for each allocation, it may or
+>> may not be mapped on other CPUs at the same time -- you simply don't care.
 
-CC: Andy Lutomirski <luto@amacapital.net>
-CC: Nadav Amit <nadav.amit@gmail.com>
-CC: Matthew Wilcox <willy@infradead.org>
-CC: Peter Zijlstra <peterz@infradead.org>
-CC: Kees Cook <keescook@chromium.org>
-CC: Dave Hansen <dave.hansen@linux.intel.com>
-CC: linux-integrity@vger.kernel.org
-CC: kernel-hardening@lists.openwall.com
-CC: linux-mm@kvack.org
-CC: linux-kernel@vger.kernel.org
----
- drivers/misc/lkdtm/core.c  |  3 +++
- drivers/misc/lkdtm/lkdtm.h |  3 +++
- drivers/misc/lkdtm/perms.c | 29 +++++++++++++++++++++++++++++
- 3 files changed, 35 insertions(+)
+Yes, somehow I lost track of that aspect.
 
-diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
-index 2837dc77478e..73c34b17c433 100644
---- a/drivers/misc/lkdtm/core.c
-+++ b/drivers/misc/lkdtm/core.c
-@@ -155,6 +155,9 @@ static const struct crashtype crashtypes[] = {
- 	CRASHTYPE(ACCESS_USERSPACE),
- 	CRASHTYPE(WRITE_RO),
- 	CRASHTYPE(WRITE_RO_AFTER_INIT),
-+#ifdef CONFIG_PRMEM
-+	CRASHTYPE(WRITE_WR_AFTER_INIT),
-+#endif
- 	CRASHTYPE(WRITE_KERN),
- 	CRASHTYPE(REFCOUNT_INC_OVERFLOW),
- 	CRASHTYPE(REFCOUNT_ADD_OVERFLOW),
-diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
-index 3c6fd327e166..abba2f52ffa6 100644
---- a/drivers/misc/lkdtm/lkdtm.h
-+++ b/drivers/misc/lkdtm/lkdtm.h
-@@ -38,6 +38,9 @@ void lkdtm_READ_BUDDY_AFTER_FREE(void);
- void __init lkdtm_perms_init(void);
- void lkdtm_WRITE_RO(void);
- void lkdtm_WRITE_RO_AFTER_INIT(void);
-+#ifdef CONFIG_PRMEM
-+void lkdtm_WRITE_WR_AFTER_INIT(void);
-+#endif
- void lkdtm_WRITE_KERN(void);
- void lkdtm_EXEC_DATA(void);
- void lkdtm_EXEC_STACK(void);
-diff --git a/drivers/misc/lkdtm/perms.c b/drivers/misc/lkdtm/perms.c
-index 53b85c9d16b8..f681730aa652 100644
---- a/drivers/misc/lkdtm/perms.c
-+++ b/drivers/misc/lkdtm/perms.c
-@@ -9,6 +9,7 @@
- #include <linux/vmalloc.h>
- #include <linux/mman.h>
- #include <linux/uaccess.h>
-+#include <linux/prmem.h>
- #include <asm/cacheflush.h>
- 
- /* Whether or not to fill the target memory area with do_nothing(). */
-@@ -27,6 +28,10 @@ static const unsigned long rodata = 0xAA55AA55;
- /* This is marked __ro_after_init, so it should ultimately be .rodata. */
- static unsigned long ro_after_init __ro_after_init = 0x55AA5500;
- 
-+/* This is marked __wr_after_init, so it should be in .rodata. */
-+static
-+unsigned long wr_after_init __wr_after_init = 0x55AA5500;
-+
- /*
-  * This just returns to the caller. It is designed to be copied into
-  * non-executable memory regions.
-@@ -104,6 +109,28 @@ void lkdtm_WRITE_RO_AFTER_INIT(void)
- 	*ptr ^= 0xabcd1234;
- }
- 
-+#ifdef CONFIG_PRMEM
-+
-+void lkdtm_WRITE_WR_AFTER_INIT(void)
-+{
-+	unsigned long *ptr = &wr_after_init;
-+
-+	/*
-+	 * Verify we were written to during init. Since an Oops
-+	 * is considered a "success", a failure is to just skip the
-+	 * real test.
-+	 */
-+	if ((*ptr & 0xAA) != 0xAA) {
-+		pr_info("%p was NOT written during init!?\n", ptr);
-+		return;
-+	}
-+
-+	pr_info("attempting bad wr_after_init write at %p\n", ptr);
-+	*ptr ^= 0xabcd1234;
-+}
-+
-+#endif
-+
- void lkdtm_WRITE_KERN(void)
- {
- 	size_t size;
-@@ -200,4 +227,6 @@ void __init lkdtm_perms_init(void)
- 	/* Make sure we can write to __ro_after_init values during __init */
- 	ro_after_init |= 0xAA;
- 
-+	/* Make sure we can write to __wr_after_init during __init */
-+	wr_after_init |= 0xAA;
- }
--- 
-2.19.1
+>> The writable address can even be a simple formula to calculate from
+>> the read-only address, you don't have to allocate an address in the
+>> writable mapping space.
+>>
+> 
+> Agreed.  I suggest the formula:
+> 
+> writable_address = readable_address - rare_write_offset.  For
+> starters, rare_write_offset can just be a constant.  If we want to get
+> fancy later on, it can be randomized.
+
+ok, I hope I captured it here [1]
+
+> If we do it like this, then we don't need to modify any pagetables at
+> all when we do a rare write.  Instead we can set up the mapping at
+> boot or when we allocate the rare write space, and the actual rare
+> write code can just switch mms and do the write.
+
+I did it. I have little feeling about the actual amount of data 
+involved, but there is a (probably very remote) chance that the remap 
+wouldn't work, at least in the current implementation.
+
+It's a bit different from what I had in mind initially, since I was 
+thinking to have one single approach to both statically allocated memory 
+(is there a better way to describe it) and what is provided from the 
+allocator that would come next.
+
+As I wrote, I do not particularly like the way I implemented multiple 
+functionality vs remapping, but I couldn't figure out any better way to 
+do it, so eventually I kept this one, hoping to get some advice on how 
+to improve it.
+
+I did not provide yet an example, yet, but IMA has some flags that are 
+probably very suitable, since they depend on policy reloading, which can 
+happen multiple times, but could be used to disable it.
+
+[1] https://www.openwall.com/lists/kernel-hardening/2018/12/04/3
+
+--
+igor
