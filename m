@@ -1,71 +1,76 @@
-Subject: Re: [PATCH 1/1] stackleak: Register the 'stackleak_cleanup' pass
- before the 'mach' pass
-References: <1543583987-27948-1-git-send-email-alex.popov@linux.com>
- <CAGXu5jJ7LmHRJJxtH2HD4XEu5hPLtAe=koJbaCmqF9qoSw=sVw@mail.gmail.com>
- <CAGXu5jKcRLcAg7r-E-9LMjK0YisLJp2TVYoiBwE+4ctYzi5wkg@mail.gmail.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <e1259720-423c-c1ca-1fe5-b9ef89ad19a3@linux.com>
-Date: Mon, 3 Dec 2018 21:25:01 +0300
+From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
+Subject: Re: [PATCH 1/2] vmalloc: New flag for flush before releasing pages
+Date: Tue, 4 Dec 2018 00:04:21 +0000
+Message-ID: <f00a7c0b99cb3dae3f42e144c0532a6a299c06a0.camel@intel.com>
+References: <20181128000754.18056-1-rick.p.edgecombe@intel.com>
+	 <20181128000754.18056-2-rick.p.edgecombe@intel.com>
+In-Reply-To: <20181128000754.18056-2-rick.p.edgecombe@intel.com>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <DD455A0478EDF040A61027CE85944E93@intel.com>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKcRLcAg7r-E-9LMjK0YisLJp2TVYoiBwE+4ctYzi5wkg@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Dave Hansen <dave.hansen@linux.intel.com>, Steven Rostedt <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>, Masami Hiramatsu <mhiramat@kernel.org>, Florian Weimer <fweimer@redhat.com>, Richard Sandiford <richard.sandiford@arm.com>, Segher Boessenkool <segher@kernel.crashing.org>, amonakov@ispras.ru, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Emese Revfy <re.emese@gmail.com>, Thomas Garnier <thgarnie@google.com>, Ingo Molnar <mingo@kernel.org>, Will Deacon <will.deacon@arm.com>, Alexei Starovoitov <ast@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "H. Peter Anvin" <hpa@zytor.com>, "David S. Miller" <davem@davemloft.net>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, gcc@gcc.gnu.org, LKML <linux-kernel@vger.kernel.org>
+To: "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>
+Cc: "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "Dock, Deneen
+ T" <deneen.t.dock@intel.com>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "ast@kernel.org" <ast@kernel.org>, "jeyu@kernel.org" <jeyu@kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "jannh@google.com" <jannh@google.com>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "mingo@redhat.com" <mingo@redhat.com>, "luto@kernel.org" <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Hansen, Dave" <dave.hansen@intel.com>, "mhiramat@kernel.org" <mhiramat@kernel.org>, "naveen.n.rao@linux.vnet.ibm.com" <naveen.n.rao@linux.vnet.ibm.com>, "davem@davemloft.net" <davem@davemloft.net>, "Keshavamurthy, Anil S" <anil.s.keshavamurthy@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 30.11.2018 20:12, Kees Cook wrote:
-> On Fri, Nov 30, 2018 at 9:09 AM Kees Cook <keescook@chromium.org> wrote:
->>
->> On Fri, Nov 30, 2018 at 5:20 AM Alexander Popov <alex.popov@linux.com> wrote:
->>>
->>> Currently the 'stackleak_cleanup' pass deleting a CALL insn is executed
->>> after the 'reload' pass. That allows gcc to do some weird optimization in
->>> function prologues and epilogues, which are generated later [1].
->>>
->>> Let's avoid that by registering the 'stackleak_cleanup' pass before
->>> the 'mach' pass, which performs the machine dependent code transformations.
->>> It's the moment when the stack frame size is final and function prologues
->>> and epilogues are already generated.
->>>
->>> [1] https://www.openwall.com/lists/kernel-hardening/2018/11/23/2
->>>
->>> Reported-by: kbuild test robot <lkp@intel.com>
->>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
->>
->> Thanks, applied!
-> 
-> Eek, no, this is breaking my build badly:
-> 
-> *** WARNING *** there are active plugins, do not report this as a bug
-> unless you can reproduce it without enabling any plugins.
-> Event                            | Plugins
-> PLUGIN_START_UNIT                | stackleak_plugin
-> kernel/exit.c: In function ‘release_task’:
-> kernel/exit.c:228:1: internal compiler error: Segmentation fault
->  }
-> 
-> Failing with:
-> 
-> gcc (Ubuntu 7.3.0-16ubuntu3) 7.3.0
-
-I've done debugging of gcc with gdb and now understand my mistake.
-
-It turned out that I register the 'stackleak_cleanup' pass deleting CALL insn
-for that particular moment when the control flow graph is inconsistent.
-
-That's what the machine-specific reorg passes do on various architectures:
-
-  /* We are freeing block_for_insn in the toplev to keep compatibility
-     with old MDEP_REORGS that are not CFG based.  Recompute it now.  */
-  compute_bb_for_insn ();
-
-So recomputing basic block info for insns before calling delete_insn_and_edges()
-fixes the issue.
-
-But I think it's better to register the 'stackleak_cleanup' pass just one pass
-earlier -- before the '*free_cfg' pass. I'll double check it for different
-versions of gcc on all supported architectures and return with a new patch.
-
-Best regards,
-Alexander
+SXQgbG9va3MgbGlrZSB0aGlzIG5ldyBmbGFnIGlzIGluIGxpbnV4LW5leHQgbm93LiBBcyBJIGFt
+IHJlYWRpbmcgaXQsIHRoZXNlDQphcmNoaXRlY3R1cmVzIGhhdmUgYSBtb2R1bGVfYWxsb2MgdGhh
+dCB1c2VzIHNvbWUgc29ydCBvZiBleGVjdXRhYmxlIGZsYWcgYW5kDQphcmUgbm90IHVzaW5nIHRo
+ZSBkZWZhdWx0IG1vZHVsZV9hbGxvYyB3aGljaCBpcyBhbHJlYWR5IGNvdmVyZWQsIGFuZCBzbyBt
+YXkgbmVlZA0KaXQgcGx1Z2dlZCBpbjoNCmFybQ0KYXJtNjQNCnBhcmlzYw0KczM5MA0KdW5pY29y
+ZTMyDQoNClRoYW5rcywNCg0KUmljaw0KDQpPbiBUdWUsIDIwMTgtMTEtMjcgYXQgMTY6MDcgLTA4
+MDAsIFJpY2sgRWRnZWNvbWJlIHdyb3RlOg0KPiBTaW5jZSB2ZnJlZSB3aWxsIGxhemlseSBmbHVz
+aCB0aGUgVExCLCBidXQgbm90IGxhemlseSBmcmVlIHRoZSB1bmRlcmx5aW5nDQo+IHBhZ2VzLA0K
+PiBpdCBvZnRlbiBsZWF2ZXMgc3RhbGUgVExCIGVudHJpZXMgdG8gZnJlZWQgcGFnZXMgdGhhdCBj
+b3VsZCBnZXQgcmUtdXNlZC4gVGhpcw0KPiBpcw0KPiB1bmRlc2lyYWJsZSBmb3IgY2FzZXMgd2hl
+cmUgdGhlIG1lbW9yeSBiZWluZyBmcmVlZCBoYXMgc3BlY2lhbCBwZXJtaXNzaW9ucw0KPiBzdWNo
+DQo+IGFzIGV4ZWN1dGFibGUuDQo+IA0KPiBIYXZpbmcgY2FsbGVycyBmbHVzaCB0aGUgVExCIGFm
+dGVyIGNhbGxpbmcgdmZyZWUgc3RpbGwgbGVhdmVzIGEgd2luZG93IHdoZXJlDQo+IHRoZSBwYWdl
+cyBhcmUgZnJlZWQsIGJ1dCB0aGUgVExCIGVudHJ5IHJlbWFpbnMuIEFsc28gdGhlIGVudGlyZSBv
+cGVyYXRpb24gY2FuDQo+IGJlDQo+IGRlZmVycmVkIGlmIHRoZSB2ZnJlZSBpcyBjYWxsZWQgZnJv
+bSBhbiBpbnRlcnJ1cHQgYW5kIHNvIGEgVExCIGZsdXNoIGFmdGVyDQo+IGNhbGxpbmcgdmZyZWUg
+d291bGQgbWlzcyB0aGUgZW50aXJlIG9wZXJhdGlvbi4gU28gaW4gb3JkZXIgdG8gc3VwcG9ydCB0
+aGlzIHVzZQ0KPiBjYXNlLCBhIG5ldyBmbGFnIFZNX0lNTUVESUFURV9VTk1BUCBpcyBhZGRlZCwg
+dGhhdCB3aWxsIGNhdXNlIHRoZSBmcmVlDQo+IG9wZXJhdGlvbg0KPiB0byB0YWtlIHBsYWNlIGxp
+a2UgdGhpczoNCj4gICAgICAgICAxLiBVbm1hcA0KPiAgICAgICAgIDIuIEZsdXNoIFRMQi9Vbm1h
+cCBhbGlhc2VzDQo+ICAgICAgICAgMy4gRnJlZSBwYWdlcw0KPiBJbiB0aGUgZGVmZXJyZWQgY2Fz
+ZSB0aGVzZSBzdGVwcyBhcmUgYWxsIGRvbmUgYnkgdGhlIHdvcmsgcXVldWUuDQo+IA0KPiBUaGlz
+IGltcGxlbWVudGF0aW9uIGRlcml2ZXMgZnJvbSB0d28gc2tldGNoZXMgZnJvbSBEYXZlIEhhbnNl
+biBhbmQNCj4gQW5keSBMdXRvbWlyc2tpLg0KPiANCj4gU3VnZ2VzdGVkLWJ5OiBEYXZlIEhhbnNl
+biA8ZGF2ZS5oYW5zZW5AaW50ZWwuY29tPg0KPiBTdWdnZXN0ZWQtYnk6IEFuZHkgTHV0b21pcnNr
+aSA8bHV0b0BrZXJuZWwub3JnPg0KPiBTdWdnZXN0ZWQtYnk6IFdpbGwgRGVhY29uIDx3aWxsLmRl
+YWNvbkBhcm0uY29tPg0KPiBTaWduZWQtb2ZmLWJ5OiBSaWNrIEVkZ2Vjb21iZSA8cmljay5wLmVk
+Z2Vjb21iZUBpbnRlbC5jb20+DQo+IC0tLQ0KPiAgaW5jbHVkZS9saW51eC92bWFsbG9jLmggfCAg
+MSArDQo+ICBtbS92bWFsbG9jLmMgICAgICAgICAgICB8IDEzICsrKysrKysrKysrLS0NCj4gIDIg
+ZmlsZXMgY2hhbmdlZCwgMTIgaW5zZXJ0aW9ucygrKSwgMiBkZWxldGlvbnMoLSkNCj4gDQo+IGRp
+ZmYgLS1naXQgYS9pbmNsdWRlL2xpbnV4L3ZtYWxsb2MuaCBiL2luY2x1ZGUvbGludXgvdm1hbGxv
+Yy5oDQo+IGluZGV4IDM5OGU5Yzk1Y2Q2MS4uY2NhNmI2YjgzY2YwIDEwMDY0NA0KPiAtLS0gYS9p
+bmNsdWRlL2xpbnV4L3ZtYWxsb2MuaA0KPiArKysgYi9pbmNsdWRlL2xpbnV4L3ZtYWxsb2MuaA0K
+PiBAQCAtMjEsNiArMjEsNyBAQCBzdHJ1Y3Qgbm90aWZpZXJfYmxvY2s7CQkvKiBpbiBub3RpZmll
+ci5oICovDQo+ICAjZGVmaW5lIFZNX1VOSU5JVElBTElaRUQJMHgwMDAwMDAyMAkvKiB2bV9zdHJ1
+Y3QgaXMgbm90IGZ1bGx5DQo+IGluaXRpYWxpemVkICovDQo+ICAjZGVmaW5lIFZNX05PX0dVQVJE
+CQkweDAwMDAwMDQwICAgICAgLyogZG9uJ3QgYWRkIGd1YXJkIHBhZ2UgKi8NCj4gICNkZWZpbmUg
+Vk1fS0FTQU4JCTB4MDAwMDAwODAgICAgICAvKiBoYXMgYWxsb2NhdGVkIGthc2FuIHNoYWRvdw0K
+PiBtZW1vcnkgKi8NCj4gKyNkZWZpbmUgVk1fSU1NRURJQVRFX1VOTUFQCTB4MDAwMDAyMDAJLyog
+Zmx1c2ggYmVmb3JlIHJlbGVhc2luZw0KPiBwYWdlcyAqLw0KPiAgLyogYml0cyBbMjAuLjMyXSBy
+ZXNlcnZlZCBmb3IgYXJjaCBzcGVjaWZpYyBpb3JlbWFwIGludGVybmFscyAqLw0KPiAgDQo+ICAv
+Kg0KPiBkaWZmIC0tZ2l0IGEvbW0vdm1hbGxvYy5jIGIvbW0vdm1hbGxvYy5jDQo+IGluZGV4IDk3
+ZDRiMjVkMDM3My4uNjg3NjY2NTFiNWE3IDEwMDY0NA0KPiAtLS0gYS9tbS92bWFsbG9jLmMNCj4g
+KysrIGIvbW0vdm1hbGxvYy5jDQo+IEBAIC0xNTE2LDYgKzE1MTYsMTQgQEAgc3RhdGljIHZvaWQg
+X192dW5tYXAoY29uc3Qgdm9pZCAqYWRkciwgaW50DQo+IGRlYWxsb2NhdGVfcGFnZXMpDQo+ICAJ
+ZGVidWdfY2hlY2tfbm9fb2JqX2ZyZWVkKGFyZWEtPmFkZHIsIGdldF92bV9hcmVhX3NpemUoYXJl
+YSkpOw0KPiAgDQo+ICAJcmVtb3ZlX3ZtX2FyZWEoYWRkcik7DQo+ICsNCj4gKwkvKg0KPiArCSAq
+IE5lZWQgdG8gZmx1c2ggdGhlIFRMQiBiZWZvcmUgZnJlZWluZyBwYWdlcyBpbiB0aGUgY2FzZSBv
+ZiB0aGlzIGZsYWcuDQo+ICsJICogQXMgbG9uZyBhcyB0aGF0J3MgaGFwcGVuaW5nLCB1bm1hcCBh
+bGlhc2VzLg0KPiArCSAqLw0KPiArCWlmIChhcmVhLT5mbGFncyAmIFZNX0lNTUVESUFURV9VTk1B
+UCkNCj4gKwkJdm1fdW5tYXBfYWxpYXNlcygpOw0KPiArDQo+ICAJaWYgKGRlYWxsb2NhdGVfcGFn
+ZXMpIHsNCj4gIAkJaW50IGk7DQo+ICANCj4gQEAgLTE5MjUsOCArMTkzMyw5IEBAIEVYUE9SVF9T
+WU1CT0wodnphbGxvY19ub2RlKTsNCj4gIA0KPiAgdm9pZCAqdm1hbGxvY19leGVjKHVuc2lnbmVk
+IGxvbmcgc2l6ZSkNCj4gIHsNCj4gLQlyZXR1cm4gX192bWFsbG9jX25vZGUoc2l6ZSwgMSwgR0ZQ
+X0tFUk5FTCwgUEFHRV9LRVJORUxfRVhFQywNCj4gLQkJCSAgICAgIE5VTUFfTk9fTk9ERSwgX19i
+dWlsdGluX3JldHVybl9hZGRyZXNzKDApKTsNCj4gKwlyZXR1cm4gX192bWFsbG9jX25vZGVfcmFu
+Z2Uoc2l6ZSwgMSwgVk1BTExPQ19TVEFSVCwgVk1BTExPQ19FTkQsDQo+ICsJCQlHRlBfS0VSTkVM
+LCBQQUdFX0tFUk5FTF9FWEVDLCBWTV9JTU1FRElBVEVfVU5NQVAsDQo+ICsJCQlOVU1BX05PX05P
+REUsIF9fYnVpbHRpbl9yZXR1cm5fYWRkcmVzcygwKSk7DQo+ICB9DQo+ICANCj4gICNpZiBkZWZp
+bmVkKENPTkZJR182NEJJVCkgJiYgZGVmaW5lZChDT05GSUdfWk9ORV9ETUEzMikNCg==
