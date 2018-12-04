@@ -1,98 +1,106 @@
-Subject: Re: [PATCH 10/17] prmem: documentation
-References: <6f60afc9-0fed-7f95-a11a-9a2eef33094c@gmail.com>
- <CALCETrXNckT9W288VXx-6inO5qYn-6dUPocKGcBT0GCO3xi3ZQ@mail.gmail.com>
- <386C0CB1-C4B1-43E2-A754-DA8DBE4FB3CB@gmail.com>
- <CALCETrWWcfLK4W3mn0bavzejmMBVKMX29aAUA3+VPQ8m9vmfhw@mail.gmail.com>
- <9373ccf0-f51b-4bfa-2b16-e03ebf3c670d@huawei.com>
- <2e52e103-15d0-0c26-275f-894dfd07e8ec@huawei.com>
- <CALCETrV0sPgf4ZgG1joF_5hM-ycPsWM9DWGO=diQ_LQKin4VuA@mail.gmail.com>
- <1166e55c-0c06-195c-a501-383b4055ea46@gmail.com>
- <3BB9DE07-E0AE-43E2-99F1-E4AA774CD462@amacapital.net>
- <5e10c8e4-aa71-1eea-b1ce-50d7d0a60e8c@gmail.com>
- <20181122200416.GS3065@bombadil.infradead.org>
- <CALCETrXB34QBcYk=k5DT1t4h7EezaPxbxM2S_h2nYk5Nv1c4_Q@mail.gmail.com>
-From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <20ad363b-e78d-efcb-0a17-3ae2d3fbaa5f@gmail.com>
-Date: Tue, 4 Dec 2018 14:34:31 +0200
 MIME-Version: 1.0
-In-Reply-To: <CALCETrXB34QBcYk=k5DT1t4h7EezaPxbxM2S_h2nYk5Nv1c4_Q@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>
-Cc: Andrew Lutomirski <luto@kernel.org>, Igor Stoppa <igor.stoppa@huawei.com>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, James Morris <jmorris@namei.org>, Michal Hocko <mhocko@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Dave Hansen <dave.hansen@linux.intel.com>, Jonathan Corbet <corbet@lwn.net>, Laura Abbott <labbott@redhat.com>, Randy Dunlap <rdunlap@infradead.org>, Mike Rapoport <rppt@linux.vnet.ibm.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
+References: <20181127001534.24075-1-ard.biesheuvel@linaro.org>
+ <nycvar.YSQ.7.76.1811291742340.3623@knanqh.ubzr> <CAKv+Gu-kSnndPqmC4_+JOUPbMk4cGmtTktS9WE+Z8_mse9y-2Q@mail.gmail.com>
+ <nycvar.YSQ.7.76.1811301131070.3623@knanqh.ubzr>
+In-Reply-To: <nycvar.YSQ.7.76.1811301131070.3623@knanqh.ubzr>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Tue, 4 Dec 2018 16:04:33 +0100
+Message-ID: <CAKv+Gu9__vvZ+7yq7QGEPdufSU-tr99t_Jxe2TzfK-kJmorYjQ@mail.gmail.com>
+Subject: Re: [RFC/RFT PATCH v2] ARM: smp: add support for per-task stack canaries
+Content-Type: text/plain; charset="UTF-8"
+To: Nicolas Pitre <nicolas.pitre@linaro.org>
+Cc: Kees Cook <keescook@chromium.org>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Russell King <linux@armlinux.org.uk>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello,
-apologies for the delayed answer.
-Please find my reply to both last mails in the thread, below.
+On Fri, 30 Nov 2018 at 17:37, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+>
+> On Fri, 30 Nov 2018, Ard Biesheuvel wrote:
+>
+> > On Thu, 29 Nov 2018 at 23:58, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+> > >
+> > > On Tue, 27 Nov 2018, Ard Biesheuvel wrote:
+> > >
+> > > > On ARM, we currently only change the value of the stack canary when
+> > > > switching tasks if the kernel was built for UP. On SMP kernels, this
+> > > > is impossible since the stack canary value is obtained via a global
+> > > > symbol reference, which means
+> > > > a) all running tasks on all CPUs must use the same value
+> > > > b) we can only modify the value when no kernel stack frames are live
+> > > >    on any CPU, which is effectively never.
+> > > >
+> > > > So instead, use a GCC plugin to add a RTL pass that replaces each
+> > > > reference to the address of the __stack_chk_guard symbol with an
+> > > > expression that produces the address of the 'stack_canary' field
+> > > > that is added to struct thread_info. This way, each task will use
+> > > > its own randomized value.
+> > > >
+> > > > Cc: Russell King <linux@armlinux.org.uk>
+> > > > Cc: Kees Cook <keescook@chromium.org>
+> > > > Cc: Emese Revfy <re.emese@gmail.com>
+> > > > Cc: Arnd Bergmann <arnd@arndb.de>
+> > > > Cc: Nicolas Pitre <nicolas.pitre@linaro.org>
+> > > > Cc: Laura Abbott <labbott@redhat.com>
+> > > > Cc: kernel-hardening@lists.openwall.com
+> > > > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> > > > ---
+> > > > v2:
+> > > > - adopt powerpc Makefile approach to pass stack canary offset and thread
+> > > >   size to the plugin as command line arguments
+> > > > - depend on !XIP_DEFLATED_DATA
+> > > >
+> > > >  arch/arm/Kconfig                              |  16 +++
+> > > >  arch/arm/Makefile                             |  11 +++
+> > > >  arch/arm/boot/compressed/Makefile             |   1 +
+> > > >  arch/arm/include/asm/stackprotector.h         |  12 ++-
+> > > >  arch/arm/include/asm/thread_info.h            |   3 +
+> > > >  arch/arm/kernel/asm-offsets.c                 |   1 +
+> > > >  arch/arm/kernel/process.c                     |   6 +-
+> > > >  scripts/Makefile.gcc-plugins                  |   6 ++
+> > > >  scripts/gcc-plugins/Kconfig                   |   4 +
+> > > >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 103 ++++++++++++++++++++
+> > > >  10 files changed, 160 insertions(+), 3 deletions(-)
+> > > >
+> > > > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+> > > > index 91be74d8df65..6142e83b45da 100644
+> > > > --- a/arch/arm/Kconfig
+> > > > +++ b/arch/arm/Kconfig
+> > > > @@ -1810,6 +1810,22 @@ config XEN
+> > > >       help
+> > > >         Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
+> > > >
+> > > > +config STACKPROTECTOR_PER_TASK
+> > > > +     bool "Use a unique stack canary value for each task"
+> > > > +     depends on GCC_PLUGINS && STACKPROTECTOR && SMP && !XIP_DEFLATED_DATA
+> > > > +     select GCC_PLUGIN_ARM_SSP_PER_TASK
+> > > > +     help
+> > > > +       Due to the fact that GCC uses an ordinary symbol reference from
+> > > > +       which to load the value of the stack canary, this value can only
+> > > > +       change at reboot time on SMP systems, and all tasks running in the
+> > > > +       kernel's address space are forced to use the same canary value for
+> > > > +       the entire duration that the system is up.
+> > > > +
+> > > > +       Enable this option to switch to a different method that uses a
+> > > > +       different canary value for each task.
+> > > > +
+> > > > +       This is not enabled by default since it relies on a GCC plugin.
+> > >
+> > > Why wouldn't you default it to y and let the dependencies disable it
+> > > when not met?
+> > >
+> > > Other than that:
+> > >
+> > > Acked-by: Nicolas Pitre <nico@linaro.org>
+> > >
+> >
+> > Thanks Nico.
+> >
+> > I wasn't sure about enabling it by default, though. Perhaps Kees has
+> > any insights?
+>
+> I'd say that if you have CONFIG_GCC_PLUGINS=y and
+> CONFIG_STACKPROTECTOR=y then it is pretty clear what the user expects
+> already. The fact that CONFIG_STACKPROTECTOR requires a twist on SMP is
+> an implementation detail not a feature.
+>
 
-On 22/11/2018 22:53, Andy Lutomirski wrote:
-> On Thu, Nov 22, 2018 at 12:04 PM Matthew Wilcox <willy@infradead.org> wrote:
->>
->> On Thu, Nov 22, 2018 at 09:27:02PM +0200, Igor Stoppa wrote:
->>> I have studied the code involved with Nadav's patchset.
->>> I am perplexed about these sentences you wrote.
->>>
->>> More to the point (to the best of my understanding):
->>>
->>> poking_init()
->>> -------------
->>>    1. it gets one random poking address and ensures to have at least 2
->>>       consecutive PTEs from the same PMD
->>>    2. it then proceeds to map/unmap an address from the first of the 2
->>>       consecutive PTEs, so that, later on, there will be no need to
->>>       allocate pages, which might fail, if poking from atomic context.
->>>    3. at this point, the page tables are populated, for the address that
->>>       was obtained at point 1, and this is ok, because the address is fixed
->>>
->>> write_rare
->>> ----------
->>>    4. it can happen on any available core / thread at any time, therefore
->>>       each of them needs a different address
->>
->> No?  Each CPU has its own CR3 (eg each CPU might be running a different
->> user task).  If you have _one_ address for each allocation, it may or
->> may not be mapped on other CPUs at the same time -- you simply don't care.
-
-Yes, somehow I lost track of that aspect.
-
->> The writable address can even be a simple formula to calculate from
->> the read-only address, you don't have to allocate an address in the
->> writable mapping space.
->>
-> 
-> Agreed.  I suggest the formula:
-> 
-> writable_address = readable_address - rare_write_offset.  For
-> starters, rare_write_offset can just be a constant.  If we want to get
-> fancy later on, it can be randomized.
-
-ok, I hope I captured it here [1]
-
-> If we do it like this, then we don't need to modify any pagetables at
-> all when we do a rare write.  Instead we can set up the mapping at
-> boot or when we allocate the rare write space, and the actual rare
-> write code can just switch mms and do the write.
-
-I did it. I have little feeling about the actual amount of data 
-involved, but there is a (probably very remote) chance that the remap 
-wouldn't work, at least in the current implementation.
-
-It's a bit different from what I had in mind initially, since I was 
-thinking to have one single approach to both statically allocated memory 
-(is there a better way to describe it) and what is provided from the 
-allocator that would come next.
-
-As I wrote, I do not particularly like the way I implemented multiple 
-functionality vs remapping, but I couldn't figure out any better way to 
-do it, so eventually I kept this one, hoping to get some advice on how 
-to improve it.
-
-I did not provide yet an example, yet, but IMA has some flags that are 
-probably very suitable, since they depend on policy reloading, which can 
-happen multiple times, but could be used to disable it.
-
-[1] https://www.openwall.com/lists/kernel-hardening/2018/12/04/3
-
---
-igor
+Fair point.
