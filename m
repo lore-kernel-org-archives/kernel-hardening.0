@@ -2,114 +2,119 @@ MIME-Version: 1.0
 References: <20181127001534.24075-1-ard.biesheuvel@linaro.org>
  <nycvar.YSQ.7.76.1811291742340.3623@knanqh.ubzr> <CAKv+Gu-kSnndPqmC4_+JOUPbMk4cGmtTktS9WE+Z8_mse9y-2Q@mail.gmail.com>
  <nycvar.YSQ.7.76.1811301131070.3623@knanqh.ubzr> <CAKv+Gu9__vvZ+7yq7QGEPdufSU-tr99t_Jxe2TzfK-kJmorYjQ@mail.gmail.com>
-In-Reply-To: <CAKv+Gu9__vvZ+7yq7QGEPdufSU-tr99t_Jxe2TzfK-kJmorYjQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 5 Dec 2018 15:36:31 -0800
-Message-ID: <CAGXu5jKpR6Q-DXSxoKrN5T7AW2tE5uDWF_kYB1OWbPFNuZYNtQ@mail.gmail.com>
+ <CAGXu5jKpR6Q-DXSxoKrN5T7AW2tE5uDWF_kYB1OWbPFNuZYNtQ@mail.gmail.com>
+In-Reply-To: <CAGXu5jKpR6Q-DXSxoKrN5T7AW2tE5uDWF_kYB1OWbPFNuZYNtQ@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Thu, 6 Dec 2018 00:38:44 +0100
+Message-ID: <CAKv+Gu8agjTRzO6ydNDFQX8mvBasKgDrz2vVNPdxGdbBcZZn2A@mail.gmail.com>
 Subject: Re: [RFC/RFT PATCH v2] ARM: smp: add support for per-task stack canaries
 Content-Type: text/plain; charset="UTF-8"
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Nicolas Pitre <nicolas.pitre@linaro.org>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Russell King <linux@armlinux.org.uk>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Kees Cook <keescook@chromium.org>, Russell King <linux@armlinux.org.uk>
+Cc: Nicolas Pitre <nicolas.pitre@linaro.org>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Dec 4, 2018 at 7:04 AM Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
+On Thu, 6 Dec 2018 at 00:36, Kees Cook <keescook@chromium.org> wrote:
 >
-> On Fri, 30 Nov 2018 at 17:37, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+> On Tue, Dec 4, 2018 at 7:04 AM Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
 > >
-> > On Fri, 30 Nov 2018, Ard Biesheuvel wrote:
-> >
-> > > On Thu, 29 Nov 2018 at 23:58, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
-> > > >
-> > > > On Tue, 27 Nov 2018, Ard Biesheuvel wrote:
-> > > >
-> > > > > On ARM, we currently only change the value of the stack canary when
-> > > > > switching tasks if the kernel was built for UP. On SMP kernels, this
-> > > > > is impossible since the stack canary value is obtained via a global
-> > > > > symbol reference, which means
-> > > > > a) all running tasks on all CPUs must use the same value
-> > > > > b) we can only modify the value when no kernel stack frames are live
-> > > > >    on any CPU, which is effectively never.
-> > > > >
-> > > > > So instead, use a GCC plugin to add a RTL pass that replaces each
-> > > > > reference to the address of the __stack_chk_guard symbol with an
-> > > > > expression that produces the address of the 'stack_canary' field
-> > > > > that is added to struct thread_info. This way, each task will use
-> > > > > its own randomized value.
-> > > > >
-> > > > > Cc: Russell King <linux@armlinux.org.uk>
-> > > > > Cc: Kees Cook <keescook@chromium.org>
-> > > > > Cc: Emese Revfy <re.emese@gmail.com>
-> > > > > Cc: Arnd Bergmann <arnd@arndb.de>
-> > > > > Cc: Nicolas Pitre <nicolas.pitre@linaro.org>
-> > > > > Cc: Laura Abbott <labbott@redhat.com>
-> > > > > Cc: kernel-hardening@lists.openwall.com
-> > > > > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> > > > > ---
-> > > > > v2:
-> > > > > - adopt powerpc Makefile approach to pass stack canary offset and thread
-> > > > >   size to the plugin as command line arguments
-> > > > > - depend on !XIP_DEFLATED_DATA
-> > > > >
-> > > > >  arch/arm/Kconfig                              |  16 +++
-> > > > >  arch/arm/Makefile                             |  11 +++
-> > > > >  arch/arm/boot/compressed/Makefile             |   1 +
-> > > > >  arch/arm/include/asm/stackprotector.h         |  12 ++-
-> > > > >  arch/arm/include/asm/thread_info.h            |   3 +
-> > > > >  arch/arm/kernel/asm-offsets.c                 |   1 +
-> > > > >  arch/arm/kernel/process.c                     |   6 +-
-> > > > >  scripts/Makefile.gcc-plugins                  |   6 ++
-> > > > >  scripts/gcc-plugins/Kconfig                   |   4 +
-> > > > >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 103 ++++++++++++++++++++
-> > > > >  10 files changed, 160 insertions(+), 3 deletions(-)
-> > > > >
-> > > > > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-> > > > > index 91be74d8df65..6142e83b45da 100644
-> > > > > --- a/arch/arm/Kconfig
-> > > > > +++ b/arch/arm/Kconfig
-> > > > > @@ -1810,6 +1810,22 @@ config XEN
-> > > > >       help
-> > > > >         Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
-> > > > >
-> > > > > +config STACKPROTECTOR_PER_TASK
-> > > > > +     bool "Use a unique stack canary value for each task"
-> > > > > +     depends on GCC_PLUGINS && STACKPROTECTOR && SMP && !XIP_DEFLATED_DATA
-> > > > > +     select GCC_PLUGIN_ARM_SSP_PER_TASK
-> > > > > +     help
-> > > > > +       Due to the fact that GCC uses an ordinary symbol reference from
-> > > > > +       which to load the value of the stack canary, this value can only
-> > > > > +       change at reboot time on SMP systems, and all tasks running in the
-> > > > > +       kernel's address space are forced to use the same canary value for
-> > > > > +       the entire duration that the system is up.
-> > > > > +
-> > > > > +       Enable this option to switch to a different method that uses a
-> > > > > +       different canary value for each task.
-> > > > > +
-> > > > > +       This is not enabled by default since it relies on a GCC plugin.
-> > > >
-> > > > Why wouldn't you default it to y and let the dependencies disable it
-> > > > when not met?
-> > > >
-> > > > Other than that:
-> > > >
-> > > > Acked-by: Nicolas Pitre <nico@linaro.org>
-> > > >
+> > On Fri, 30 Nov 2018 at 17:37, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
 > > >
-> > > Thanks Nico.
+> > > On Fri, 30 Nov 2018, Ard Biesheuvel wrote:
 > > >
-> > > I wasn't sure about enabling it by default, though. Perhaps Kees has
-> > > any insights?
+> > > > On Thu, 29 Nov 2018 at 23:58, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+> > > > >
+> > > > > On Tue, 27 Nov 2018, Ard Biesheuvel wrote:
+> > > > >
+> > > > > > On ARM, we currently only change the value of the stack canary when
+> > > > > > switching tasks if the kernel was built for UP. On SMP kernels, this
+> > > > > > is impossible since the stack canary value is obtained via a global
+> > > > > > symbol reference, which means
+> > > > > > a) all running tasks on all CPUs must use the same value
+> > > > > > b) we can only modify the value when no kernel stack frames are live
+> > > > > >    on any CPU, which is effectively never.
+> > > > > >
+> > > > > > So instead, use a GCC plugin to add a RTL pass that replaces each
+> > > > > > reference to the address of the __stack_chk_guard symbol with an
+> > > > > > expression that produces the address of the 'stack_canary' field
+> > > > > > that is added to struct thread_info. This way, each task will use
+> > > > > > its own randomized value.
+> > > > > >
+> > > > > > Cc: Russell King <linux@armlinux.org.uk>
+> > > > > > Cc: Kees Cook <keescook@chromium.org>
+> > > > > > Cc: Emese Revfy <re.emese@gmail.com>
+> > > > > > Cc: Arnd Bergmann <arnd@arndb.de>
+> > > > > > Cc: Nicolas Pitre <nicolas.pitre@linaro.org>
+> > > > > > Cc: Laura Abbott <labbott@redhat.com>
+> > > > > > Cc: kernel-hardening@lists.openwall.com
+> > > > > > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> > > > > > ---
+> > > > > > v2:
+> > > > > > - adopt powerpc Makefile approach to pass stack canary offset and thread
+> > > > > >   size to the plugin as command line arguments
+> > > > > > - depend on !XIP_DEFLATED_DATA
+> > > > > >
+> > > > > >  arch/arm/Kconfig                              |  16 +++
+> > > > > >  arch/arm/Makefile                             |  11 +++
+> > > > > >  arch/arm/boot/compressed/Makefile             |   1 +
+> > > > > >  arch/arm/include/asm/stackprotector.h         |  12 ++-
+> > > > > >  arch/arm/include/asm/thread_info.h            |   3 +
+> > > > > >  arch/arm/kernel/asm-offsets.c                 |   1 +
+> > > > > >  arch/arm/kernel/process.c                     |   6 +-
+> > > > > >  scripts/Makefile.gcc-plugins                  |   6 ++
+> > > > > >  scripts/gcc-plugins/Kconfig                   |   4 +
+> > > > > >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 103 ++++++++++++++++++++
+> > > > > >  10 files changed, 160 insertions(+), 3 deletions(-)
+> > > > > >
+> > > > > > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+> > > > > > index 91be74d8df65..6142e83b45da 100644
+> > > > > > --- a/arch/arm/Kconfig
+> > > > > > +++ b/arch/arm/Kconfig
+> > > > > > @@ -1810,6 +1810,22 @@ config XEN
+> > > > > >       help
+> > > > > >         Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
+> > > > > >
+> > > > > > +config STACKPROTECTOR_PER_TASK
+> > > > > > +     bool "Use a unique stack canary value for each task"
+> > > > > > +     depends on GCC_PLUGINS && STACKPROTECTOR && SMP && !XIP_DEFLATED_DATA
+> > > > > > +     select GCC_PLUGIN_ARM_SSP_PER_TASK
+> > > > > > +     help
+> > > > > > +       Due to the fact that GCC uses an ordinary symbol reference from
+> > > > > > +       which to load the value of the stack canary, this value can only
+> > > > > > +       change at reboot time on SMP systems, and all tasks running in the
+> > > > > > +       kernel's address space are forced to use the same canary value for
+> > > > > > +       the entire duration that the system is up.
+> > > > > > +
+> > > > > > +       Enable this option to switch to a different method that uses a
+> > > > > > +       different canary value for each task.
+> > > > > > +
+> > > > > > +       This is not enabled by default since it relies on a GCC plugin.
+> > > > >
+> > > > > Why wouldn't you default it to y and let the dependencies disable it
+> > > > > when not met?
+> > > > >
+> > > > > Other than that:
+> > > > >
+> > > > > Acked-by: Nicolas Pitre <nico@linaro.org>
+> > > > >
+> > > >
+> > > > Thanks Nico.
+> > > >
+> > > > I wasn't sure about enabling it by default, though. Perhaps Kees has
+> > > > any insights?
+> > >
+> > > I'd say that if you have CONFIG_GCC_PLUGINS=y and
+> > > CONFIG_STACKPROTECTOR=y then it is pretty clear what the user expects
+> > > already. The fact that CONFIG_STACKPROTECTOR requires a twist on SMP is
+> > > an implementation detail not a feature.
+> > >
 > >
-> > I'd say that if you have CONFIG_GCC_PLUGINS=y and
-> > CONFIG_STACKPROTECTOR=y then it is pretty clear what the user expects
-> > already. The fact that CONFIG_STACKPROTECTOR requires a twist on SMP is
-> > an implementation detail not a feature.
-> >
+> > Fair point.
 >
-> Fair point.
+> Agreed. This should Just Work if either the compiler supports it or
+> GCC_PLUGINS are enabled. For v3, should I take it via gcc-plugins or
+> should this go via arm? I'm happy either way.
+>
 
-Agreed. This should Just Work if either the compiler supports it or
-GCC_PLUGINS are enabled. For v3, should I take it via gcc-plugins or
-should this go via arm? I'm happy either way.
+That's up to Russell.
 
--- 
-Kees Cook
+Russell, would you mind if Kees takes this through his tree?
