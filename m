@@ -1,131 +1,115 @@
 MIME-Version: 1.0
-References: <20181128000754.18056-1-rick.p.edgecombe@intel.com>
- <20181128000754.18056-2-rick.p.edgecombe@intel.com> <4883FED1-D0EC-41B0-A90F-1A697756D41D@gmail.com>
- <20181204160304.GB7195@arm.com> <51281e69a3722014f718a6840f43b2e6773eed90.camel@intel.com>
- <CALCETrUiEWkSjnruCbBSi8WsDm071YiU5WEqoPhZbjezS0CrFw@mail.gmail.com> <20181205114148.GA15160@arm.com>
-In-Reply-To: <20181205114148.GA15160@arm.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Wed, 5 Dec 2018 15:16:33 -0800
-Message-ID: <CALCETrUdTShjY+tQoRsE1uR1cnL9cr2Trbz-g5=WaLGA3rWXzA@mail.gmail.com>
-Subject: Re: [PATCH 1/2] vmalloc: New flag for flush before releasing pages
+References: <20181127001534.24075-1-ard.biesheuvel@linaro.org>
+ <nycvar.YSQ.7.76.1811291742340.3623@knanqh.ubzr> <CAKv+Gu-kSnndPqmC4_+JOUPbMk4cGmtTktS9WE+Z8_mse9y-2Q@mail.gmail.com>
+ <nycvar.YSQ.7.76.1811301131070.3623@knanqh.ubzr> <CAKv+Gu9__vvZ+7yq7QGEPdufSU-tr99t_Jxe2TzfK-kJmorYjQ@mail.gmail.com>
+In-Reply-To: <CAKv+Gu9__vvZ+7yq7QGEPdufSU-tr99t_Jxe2TzfK-kJmorYjQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 5 Dec 2018 15:36:31 -0800
+Message-ID: <CAGXu5jKpR6Q-DXSxoKrN5T7AW2tE5uDWF_kYB1OWbPFNuZYNtQ@mail.gmail.com>
+Subject: Re: [RFC/RFT PATCH v2] ARM: smp: add support for per-task stack canaries
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Will Deacon <will.deacon@arm.com>
-Cc: Andrew Lutomirski <luto@kernel.org>, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <nadav.amit@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, jeyu@kernel.org, Steven Rostedt <rostedt@goodmis.org>, Alexei Starovoitov <ast@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux-MM <linux-mm@kvack.org>, Jann Horn <jannh@google.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, Peter Zijlstra <peterz@infradead.org>, Kristen Carlson Accardi <kristen@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@redhat.com>, Anil S Keshavamurthy <anil.s.keshavamurthy@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Masami Hiramatsu <mhiramat@kernel.org>, "Naveen N . Rao" <naveen.n.rao@linux.vnet.ibm.com>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Dave Hansen <dave.hansen@intel.com>
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Nicolas Pitre <nicolas.pitre@linaro.org>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Russell King <linux@armlinux.org.uk>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 5, 2018 at 3:41 AM Will Deacon <will.deacon@arm.com> wrote:
+On Tue, Dec 4, 2018 at 7:04 AM Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
 >
-> On Tue, Dec 04, 2018 at 12:09:49PM -0800, Andy Lutomirski wrote:
-> > On Tue, Dec 4, 2018 at 12:02 PM Edgecombe, Rick P
-> > <rick.p.edgecombe@intel.com> wrote:
-> > >
-> > > On Tue, 2018-12-04 at 16:03 +0000, Will Deacon wrote:
-> > > > On Mon, Dec 03, 2018 at 05:43:11PM -0800, Nadav Amit wrote:
-> > > > > > On Nov 27, 2018, at 4:07 PM, Rick Edgecombe <rick.p.edgecombe@i=
-ntel.com>
-> > > > > > wrote:
-> > > > > >
-> > > > > > Since vfree will lazily flush the TLB, but not lazily free the =
-underlying
-> > > > > > pages,
-> > > > > > it often leaves stale TLB entries to freed pages that could get=
- re-used.
-> > > > > > This is
-> > > > > > undesirable for cases where the memory being freed has special =
-permissions
-> > > > > > such
-> > > > > > as executable.
-> > > > >
-> > > > > So I am trying to finish my patch-set for preventing transient W+=
-X mappings
-> > > > > from taking space, by handling kprobes & ftrace that I missed (th=
-anks again
-> > > > > for
-> > > > > pointing it out).
-> > > > >
-> > > > > But all of the sudden, I don=E2=80=99t understand why we have the=
- problem that this
-> > > > > (your) patch-set deals with at all. We already change the mapping=
-s to make
-> > > > > the memory writable before freeing the memory, so why can=E2=80=
-=99t we make it
-> > > > > non-executable at the same time? Actually, why do we make the mod=
-ule memory,
-> > > > > including its data executable before freeing it???
-> > > >
-> > > > Yeah, this is really confusing, but I have a suspicion it's a combi=
-nation
-> > > > of the various different configurations and hysterical raisins. We =
-can't
-> > > > rely on module_alloc() allocating from the vmalloc area (see nios2)=
- nor
-> > > > can we rely on disable_ro_nx() being available at build time.
-> > > >
-> > > > If we *could* rely on module allocations always using vmalloc(), th=
-en
-> > > > we could pass in Rick's new flag and drop disable_ro_nx() altogethe=
-r
-> > > > afaict -- who cares about the memory attributes of a mapping that's=
- about
-> > > > to disappear anyway?
-> > > >
-> > > > Is it just nios2 that does something different?
-> > > >
-> > > Yea it is really intertwined. I think for x86, set_memory_nx everywhe=
-re would
-> > > solve it as well, in fact that was what I first thought the solution =
-should be
-> > > until this was suggested. It's interesting that from the other thread=
- Masami
-> > > Hiramatsu referenced, set_memory_nx was suggested last year and would=
- have
-> > > inadvertently blocked this on x86. But, on the other architectures I =
-have since
-> > > learned it is a bit different.
-> > >
-> > > It looks like actually most arch's don't re-define set_memory_*, and =
-so all of
-> > > the frob_* functions are actually just noops. In which case allocatin=
-g RWX is
-> > > needed to make it work at all, because that is what the allocation is=
- going to
-> > > stay at. So in these archs, set_memory_nx won't solve it because it w=
-ill do
-> > > nothing.
-> > >
-> > > On x86 I think you cannot get rid of disable_ro_nx fully because ther=
-e is the
-> > > changing of the permissions on the directmap as well. You don't want =
-some other
-> > > caller getting a page that was left RO when freed and then trying to =
-write to
-> > > it, if I understand this.
-> > >
+> On Fri, 30 Nov 2018 at 17:37, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
 > >
-> > Exactly.
+> > On Fri, 30 Nov 2018, Ard Biesheuvel wrote:
+> >
+> > > On Thu, 29 Nov 2018 at 23:58, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
+> > > >
+> > > > On Tue, 27 Nov 2018, Ard Biesheuvel wrote:
+> > > >
+> > > > > On ARM, we currently only change the value of the stack canary when
+> > > > > switching tasks if the kernel was built for UP. On SMP kernels, this
+> > > > > is impossible since the stack canary value is obtained via a global
+> > > > > symbol reference, which means
+> > > > > a) all running tasks on all CPUs must use the same value
+> > > > > b) we can only modify the value when no kernel stack frames are live
+> > > > >    on any CPU, which is effectively never.
+> > > > >
+> > > > > So instead, use a GCC plugin to add a RTL pass that replaces each
+> > > > > reference to the address of the __stack_chk_guard symbol with an
+> > > > > expression that produces the address of the 'stack_canary' field
+> > > > > that is added to struct thread_info. This way, each task will use
+> > > > > its own randomized value.
+> > > > >
+> > > > > Cc: Russell King <linux@armlinux.org.uk>
+> > > > > Cc: Kees Cook <keescook@chromium.org>
+> > > > > Cc: Emese Revfy <re.emese@gmail.com>
+> > > > > Cc: Arnd Bergmann <arnd@arndb.de>
+> > > > > Cc: Nicolas Pitre <nicolas.pitre@linaro.org>
+> > > > > Cc: Laura Abbott <labbott@redhat.com>
+> > > > > Cc: kernel-hardening@lists.openwall.com
+> > > > > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> > > > > ---
+> > > > > v2:
+> > > > > - adopt powerpc Makefile approach to pass stack canary offset and thread
+> > > > >   size to the plugin as command line arguments
+> > > > > - depend on !XIP_DEFLATED_DATA
+> > > > >
+> > > > >  arch/arm/Kconfig                              |  16 +++
+> > > > >  arch/arm/Makefile                             |  11 +++
+> > > > >  arch/arm/boot/compressed/Makefile             |   1 +
+> > > > >  arch/arm/include/asm/stackprotector.h         |  12 ++-
+> > > > >  arch/arm/include/asm/thread_info.h            |   3 +
+> > > > >  arch/arm/kernel/asm-offsets.c                 |   1 +
+> > > > >  arch/arm/kernel/process.c                     |   6 +-
+> > > > >  scripts/Makefile.gcc-plugins                  |   6 ++
+> > > > >  scripts/gcc-plugins/Kconfig                   |   4 +
+> > > > >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 103 ++++++++++++++++++++
+> > > > >  10 files changed, 160 insertions(+), 3 deletions(-)
+> > > > >
+> > > > > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+> > > > > index 91be74d8df65..6142e83b45da 100644
+> > > > > --- a/arch/arm/Kconfig
+> > > > > +++ b/arch/arm/Kconfig
+> > > > > @@ -1810,6 +1810,22 @@ config XEN
+> > > > >       help
+> > > > >         Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
+> > > > >
+> > > > > +config STACKPROTECTOR_PER_TASK
+> > > > > +     bool "Use a unique stack canary value for each task"
+> > > > > +     depends on GCC_PLUGINS && STACKPROTECTOR && SMP && !XIP_DEFLATED_DATA
+> > > > > +     select GCC_PLUGIN_ARM_SSP_PER_TASK
+> > > > > +     help
+> > > > > +       Due to the fact that GCC uses an ordinary symbol reference from
+> > > > > +       which to load the value of the stack canary, this value can only
+> > > > > +       change at reboot time on SMP systems, and all tasks running in the
+> > > > > +       kernel's address space are forced to use the same canary value for
+> > > > > +       the entire duration that the system is up.
+> > > > > +
+> > > > > +       Enable this option to switch to a different method that uses a
+> > > > > +       different canary value for each task.
+> > > > > +
+> > > > > +       This is not enabled by default since it relies on a GCC plugin.
+> > > >
+> > > > Why wouldn't you default it to y and let the dependencies disable it
+> > > > when not met?
+> > > >
+> > > > Other than that:
+> > > >
+> > > > Acked-by: Nicolas Pitre <nico@linaro.org>
+> > > >
+> > >
+> > > Thanks Nico.
+> > >
+> > > I wasn't sure about enabling it by default, though. Perhaps Kees has
+> > > any insights?
+> >
+> > I'd say that if you have CONFIG_GCC_PLUGINS=y and
+> > CONFIG_STACKPROTECTOR=y then it is pretty clear what the user expects
+> > already. The fact that CONFIG_STACKPROTECTOR requires a twist on SMP is
+> > an implementation detail not a feature.
+> >
 >
-> Of course, I forgot about the linear mapping. On arm64, we've just queued
-> support for reflecting changes to read-only permissions in the linear map
-> [1]. So, whilst the linear map is always non-executable, we will need to
-> make parts of it writable again when freeing the module.
->
-> > After slightly more thought, I suggest renaming VM_IMMEDIATE_UNMAP to
-> > VM_MAY_ADJUST_PERMS or similar.  It would have the semantics you want,
-> > but it would also call some arch hooks to put back the direct map
-> > permissions before the flush.  Does that seem reasonable?  It would
-> > need to be hooked up that implement set_memory_ro(), but that should
-> > be quite easy.  If nothing else, it could fall back to set_memory_ro()
-> > in the absence of a better implementation.
->
-> You mean set_memory_rw() here, right? Although, eliding the TLB invalidat=
-ion
-> would open up a window where the vmap mapping is executable and the linea=
-r
-> mapping is writable, which is a bit rubbish.
->
+> Fair point.
 
-Right, and Rick pointed out the same issue.  Instead, we should set
-the direct map not-present or its ARM equivalent, then do the flush,
-then make it RW.  I assume this also works on arm and arm64, although
-I don't know for sure.  On x86, the CPU won't cache not-present PTEs.
+Agreed. This should Just Work if either the compiler supports it or
+GCC_PLUGINS are enabled. For v3, should I take it via gcc-plugins or
+should this go via arm? I'm happy either way.
+
+-- 
+Kees Cook
