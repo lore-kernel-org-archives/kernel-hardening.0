@@ -1,418 +1,131 @@
 MIME-Version: 1.0
-References: <20181204121805.4621-1-igor.stoppa@huawei.com> <20181204121805.4621-3-igor.stoppa@huawei.com>
-In-Reply-To: <20181204121805.4621-3-igor.stoppa@huawei.com>
+References: <20181128000754.18056-1-rick.p.edgecombe@intel.com>
+ <20181128000754.18056-2-rick.p.edgecombe@intel.com> <4883FED1-D0EC-41B0-A90F-1A697756D41D@gmail.com>
+ <20181204160304.GB7195@arm.com> <51281e69a3722014f718a6840f43b2e6773eed90.camel@intel.com>
+ <CALCETrUiEWkSjnruCbBSi8WsDm071YiU5WEqoPhZbjezS0CrFw@mail.gmail.com> <20181205114148.GA15160@arm.com>
+In-Reply-To: <20181205114148.GA15160@arm.com>
 From: Andy Lutomirski <luto@kernel.org>
-Date: Wed, 5 Dec 2018 15:13:56 -0800
-Message-ID: <CALCETrVvoui0vksdt0Y9rdGL5ipEn_FtSXVVUFdH03ZC93cy_A@mail.gmail.com>
-Subject: Re: [PATCH 2/6] __wr_after_init: write rare for static allocation
+Date: Wed, 5 Dec 2018 15:16:33 -0800
+Message-ID: <CALCETrUdTShjY+tQoRsE1uR1cnL9cr2Trbz-g5=WaLGA3rWXzA@mail.gmail.com>
+Subject: Re: [PATCH 1/2] vmalloc: New flag for flush before releasing pages
 Content-Type: text/plain; charset="UTF-8"
-To: Igor Stoppa <igor.stoppa@gmail.com>, linux-arch <linux-arch@vger.kernel.org>, linux-s390 <linux-s390@vger.kernel.org>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>
-Cc: Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Igor Stoppa <igor.stoppa@huawei.com>, Nadav Amit <nadav.amit@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, linux-integrity <linux-integrity@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
+Content-Transfer-Encoding: quoted-printable
+To: Will Deacon <will.deacon@arm.com>
+Cc: Andrew Lutomirski <luto@kernel.org>, Rick Edgecombe <rick.p.edgecombe@intel.com>, Nadav Amit <nadav.amit@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, jeyu@kernel.org, Steven Rostedt <rostedt@goodmis.org>, Alexei Starovoitov <ast@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux-MM <linux-mm@kvack.org>, Jann Horn <jannh@google.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, Peter Zijlstra <peterz@infradead.org>, Kristen Carlson Accardi <kristen@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@redhat.com>, Anil S Keshavamurthy <anil.s.keshavamurthy@intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Masami Hiramatsu <mhiramat@kernel.org>, "Naveen N . Rao" <naveen.n.rao@linux.vnet.ibm.com>, "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, Dave Hansen <dave.hansen@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I added some s390 and powerpc people.
+On Wed, Dec 5, 2018 at 3:41 AM Will Deacon <will.deacon@arm.com> wrote:
+>
+> On Tue, Dec 04, 2018 at 12:09:49PM -0800, Andy Lutomirski wrote:
+> > On Tue, Dec 4, 2018 at 12:02 PM Edgecombe, Rick P
+> > <rick.p.edgecombe@intel.com> wrote:
+> > >
+> > > On Tue, 2018-12-04 at 16:03 +0000, Will Deacon wrote:
+> > > > On Mon, Dec 03, 2018 at 05:43:11PM -0800, Nadav Amit wrote:
+> > > > > > On Nov 27, 2018, at 4:07 PM, Rick Edgecombe <rick.p.edgecombe@i=
+ntel.com>
+> > > > > > wrote:
+> > > > > >
+> > > > > > Since vfree will lazily flush the TLB, but not lazily free the =
+underlying
+> > > > > > pages,
+> > > > > > it often leaves stale TLB entries to freed pages that could get=
+ re-used.
+> > > > > > This is
+> > > > > > undesirable for cases where the memory being freed has special =
+permissions
+> > > > > > such
+> > > > > > as executable.
+> > > > >
+> > > > > So I am trying to finish my patch-set for preventing transient W+=
+X mappings
+> > > > > from taking space, by handling kprobes & ftrace that I missed (th=
+anks again
+> > > > > for
+> > > > > pointing it out).
+> > > > >
+> > > > > But all of the sudden, I don=E2=80=99t understand why we have the=
+ problem that this
+> > > > > (your) patch-set deals with at all. We already change the mapping=
+s to make
+> > > > > the memory writable before freeing the memory, so why can=E2=80=
+=99t we make it
+> > > > > non-executable at the same time? Actually, why do we make the mod=
+ule memory,
+> > > > > including its data executable before freeing it???
+> > > >
+> > > > Yeah, this is really confusing, but I have a suspicion it's a combi=
+nation
+> > > > of the various different configurations and hysterical raisins. We =
+can't
+> > > > rely on module_alloc() allocating from the vmalloc area (see nios2)=
+ nor
+> > > > can we rely on disable_ro_nx() being available at build time.
+> > > >
+> > > > If we *could* rely on module allocations always using vmalloc(), th=
+en
+> > > > we could pass in Rick's new flag and drop disable_ro_nx() altogethe=
+r
+> > > > afaict -- who cares about the memory attributes of a mapping that's=
+ about
+> > > > to disappear anyway?
+> > > >
+> > > > Is it just nios2 that does something different?
+> > > >
+> > > Yea it is really intertwined. I think for x86, set_memory_nx everywhe=
+re would
+> > > solve it as well, in fact that was what I first thought the solution =
+should be
+> > > until this was suggested. It's interesting that from the other thread=
+ Masami
+> > > Hiramatsu referenced, set_memory_nx was suggested last year and would=
+ have
+> > > inadvertently blocked this on x86. But, on the other architectures I =
+have since
+> > > learned it is a bit different.
+> > >
+> > > It looks like actually most arch's don't re-define set_memory_*, and =
+so all of
+> > > the frob_* functions are actually just noops. In which case allocatin=
+g RWX is
+> > > needed to make it work at all, because that is what the allocation is=
+ going to
+> > > stay at. So in these archs, set_memory_nx won't solve it because it w=
+ill do
+> > > nothing.
+> > >
+> > > On x86 I think you cannot get rid of disable_ro_nx fully because ther=
+e is the
+> > > changing of the permissions on the directmap as well. You don't want =
+some other
+> > > caller getting a page that was left RO when freed and then trying to =
+write to
+> > > it, if I understand this.
+> > >
+> >
+> > Exactly.
+>
+> Of course, I forgot about the linear mapping. On arm64, we've just queued
+> support for reflecting changes to read-only permissions in the linear map
+> [1]. So, whilst the linear map is always non-executable, we will need to
+> make parts of it writable again when freeing the module.
+>
+> > After slightly more thought, I suggest renaming VM_IMMEDIATE_UNMAP to
+> > VM_MAY_ADJUST_PERMS or similar.  It would have the semantics you want,
+> > but it would also call some arch hooks to put back the direct map
+> > permissions before the flush.  Does that seem reasonable?  It would
+> > need to be hooked up that implement set_memory_ro(), but that should
+> > be quite easy.  If nothing else, it could fall back to set_memory_ro()
+> > in the absence of a better implementation.
+>
+> You mean set_memory_rw() here, right? Although, eliding the TLB invalidat=
+ion
+> would open up a window where the vmap mapping is executable and the linea=
+r
+> mapping is writable, which is a bit rubbish.
+>
 
-On Tue, Dec 4, 2018 at 4:18 AM Igor Stoppa <igor.stoppa@gmail.com> wrote:
->
-> Implementation of write rare for statically allocated data, located in a
-> specific memory section through the use of the __write_rare label.
->
-> The basic functions are:
-> - wr_memset(): write rare counterpart of memset()
-> - wr_memcpy(): write rare counterpart of memcpy()
-> - wr_assign(): write rare counterpart of the assignment ('=') operator
-> - wr_rcu_assign_pointer(): write rare counterpart of rcu_assign_pointer()
->
-> The implementation is based on code from Andy Lutomirski and Nadav Amit
-> for patching the text on x86 [here goes reference to commits, once merged]
->
-> The modification of write protected data is done through an alternate
-> mapping of the same pages, as writable.
-> This mapping is local to each core and is active only for the duration
-> of each write operation.
-> Local interrupts are disabled, while the alternate mapping is active.
->
-> In theory, it could introduce a non-predictable delay, in a preemptible
-> system, however the amount of data to be altered is likely to be far
-> smaller than a page.
->
-> Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
->
-> CC: Andy Lutomirski <luto@amacapital.net>
-> CC: Nadav Amit <nadav.amit@gmail.com>
-> CC: Matthew Wilcox <willy@infradead.org>
-> CC: Peter Zijlstra <peterz@infradead.org>
-> CC: Kees Cook <keescook@chromium.org>
-> CC: Dave Hansen <dave.hansen@linux.intel.com>
-> CC: linux-integrity@vger.kernel.org
-> CC: kernel-hardening@lists.openwall.com
-> CC: linux-mm@kvack.org
-> CC: linux-kernel@vger.kernel.org
-> ---
->  include/linux/prmem.h | 133 ++++++++++++++++++++++++++++++++++++++++++
->  init/main.c           |   2 +
->  mm/Kconfig            |   4 ++
->  mm/Makefile           |   1 +
->  mm/prmem.c            | 124 +++++++++++++++++++++++++++++++++++++++
->  5 files changed, 264 insertions(+)
->  create mode 100644 include/linux/prmem.h
->  create mode 100644 mm/prmem.c
->
-> diff --git a/include/linux/prmem.h b/include/linux/prmem.h
-> new file mode 100644
-> index 000000000000..b0131c1f5dc0
-> --- /dev/null
-> +++ b/include/linux/prmem.h
-> @@ -0,0 +1,133 @@
-> +/* SPDX-License-Identifier: GPL-2.0 */
-> +/*
-> + * prmem.h: Header for memory protection library
-> + *
-> + * (C) Copyright 2018 Huawei Technologies Co. Ltd.
-> + * Author: Igor Stoppa <igor.stoppa@huawei.com>
-> + *
-> + * Support for:
-> + * - statically allocated write rare data
-> + */
-> +
-> +#ifndef _LINUX_PRMEM_H
-> +#define _LINUX_PRMEM_H
-> +
-> +#include <linux/set_memory.h>
-> +#include <linux/mm.h>
-> +#include <linux/vmalloc.h>
-> +#include <linux/string.h>
-> +#include <linux/slab.h>
-> +#include <linux/mutex.h>
-> +#include <linux/compiler.h>
-> +#include <linux/irqflags.h>
-> +
-> +/**
-> + * memtst() - test n bytes of the source to match the c value
-> + * @p: beginning of the memory to test
-> + * @c: byte to compare against
-> + * @len: amount of bytes to test
-> + *
-> + * Returns 0 on success, non-zero otherwise.
-> + */
-> +static inline int memtst(void *p, int c, __kernel_size_t len)
-> +{
-> +       __kernel_size_t i;
-> +
-> +       for (i = 0; i < len; i++) {
-> +               u8 d =  *(i + (u8 *)p) - (u8)c;
-> +
-> +               if (unlikely(d))
-> +                       return d;
-> +       }
-> +       return 0;
-> +}
-> +
-> +
-> +#ifndef CONFIG_PRMEM
-> +
-> +static inline void *wr_memset(void *p, int c, __kernel_size_t len)
-> +{
-> +       return memset(p, c, len);
-> +}
-> +
-> +static inline void *wr_memcpy(void *p, const void *q, __kernel_size_t size)
-> +{
-> +       return memcpy(p, q, size);
-> +}
-> +
-> +#define wr_assign(var, val)    ((var) = (val))
-> +
-> +#define wr_rcu_assign_pointer(p, v)    \
-> +       rcu_assign_pointer(p, v)
-> +
-> +#else
-> +
-> +enum wr_op_type {
-> +       WR_MEMCPY,
-> +       WR_MEMSET,
-> +       WR_RCU_ASSIGN_PTR,
-> +       WR_OPS_NUMBER,
-> +};
-> +
-> +void *__wr_op(unsigned long dst, unsigned long src, __kernel_size_t len,
-> +             enum wr_op_type op);
-> +
-> +/**
-> + * wr_memset() - sets n bytes of the destination to the c value
-> + * @p: beginning of the memory to write to
-> + * @c: byte to replicate
-> + * @len: amount of bytes to copy
-> + *
-> + * Returns true on success, false otherwise.
-> + */
-> +static inline void *wr_memset(void *p, int c, __kernel_size_t len)
-> +{
-> +       return __wr_op((unsigned long)p, (unsigned long)c, len, WR_MEMSET);
-> +}
-> +
-> +/**
-> + * wr_memcpy() - copyes n bytes from source to destination
-> + * @dst: beginning of the memory to write to
-> + * @src: beginning of the memory to read from
-> + * @n_bytes: amount of bytes to copy
-> + *
-> + * Returns pointer to the destination
-> + */
-> +static inline void *wr_memcpy(void *p, const void *q, __kernel_size_t size)
-> +{
-> +       return __wr_op((unsigned long)p, (unsigned long)q, size, WR_MEMCPY);
-> +}
-> +
-> +/**
-> + * wr_assign() - sets a write-rare variable to a specified value
-> + * @var: the variable to set
-> + * @val: the new value
-> + *
-> + * Returns: the variable
-> + *
-> + * Note: it might be possible to optimize this, to use wr_memset in some
-> + * cases (maybe with NULL?).
-> + */
-> +
-> +#define wr_assign(var, val) ({                 \
-> +       typeof(var) tmp = (typeof(var))val;     \
-> +                                               \
-> +       wr_memcpy(&var, &tmp, sizeof(var));     \
-> +       var;                                    \
-> +})
-> +
-> +/**
-> + * wr_rcu_assign_pointer() - initialize a pointer in rcu mode
-> + * @p: the rcu pointer
-> + * @v: the new value
-> + *
-> + * Returns the value assigned to the rcu pointer.
-> + *
-> + * It is provided as macro, to match rcu_assign_pointer()
-> + */
-> +#define wr_rcu_assign_pointer(p, v) ({                                 \
-> +       __wr_op((unsigned long)&p, v, sizeof(p), WR_RCU_ASSIGN_PTR);    \
-> +       p;                                                              \
-> +})
-> +#endif
-> +#endif
-> diff --git a/init/main.c b/init/main.c
-> index a461150adfb1..a36f2e54f937 100644
-> --- a/init/main.c
-> +++ b/init/main.c
-> @@ -498,6 +498,7 @@ void __init __weak thread_stack_cache_init(void)
->  void __init __weak mem_encrypt_init(void) { }
->
->  void __init __weak poking_init(void) { }
-> +void __init __weak wr_poking_init(void) { }
->
->  bool initcall_debug;
->  core_param(initcall_debug, initcall_debug, bool, 0644);
-> @@ -734,6 +735,7 @@ asmlinkage __visible void __init start_kernel(void)
->         delayacct_init();
->
->         poking_init();
-> +       wr_poking_init();
->         check_bugs();
->
->         acpi_subsystem_init();
-> diff --git a/mm/Kconfig b/mm/Kconfig
-> index d85e39da47ae..9b09339c027f 100644
-> --- a/mm/Kconfig
-> +++ b/mm/Kconfig
-> @@ -142,6 +142,10 @@ config ARCH_DISCARD_MEMBLOCK
->  config MEMORY_ISOLATION
->         bool
->
-> +config PRMEM
-> +       def_bool n
-> +       depends on STRICT_KERNEL_RWX && X86_64
-> +
->  #
->  # Only be set on architectures that have completely implemented memory hotplug
->  # feature. If you are not sure, don't touch it.
-> diff --git a/mm/Makefile b/mm/Makefile
-> index d210cc9d6f80..ef3867c16ce0 100644
-> --- a/mm/Makefile
-> +++ b/mm/Makefile
-> @@ -58,6 +58,7 @@ obj-$(CONFIG_SPARSEMEM)       += sparse.o
->  obj-$(CONFIG_SPARSEMEM_VMEMMAP) += sparse-vmemmap.o
->  obj-$(CONFIG_SLOB) += slob.o
->  obj-$(CONFIG_MMU_NOTIFIER) += mmu_notifier.o
-> +obj-$(CONFIG_PRMEM) += prmem.o
->  obj-$(CONFIG_KSM) += ksm.o
->  obj-$(CONFIG_PAGE_POISONING) += page_poison.o
->  obj-$(CONFIG_SLAB) += slab.o
-> diff --git a/mm/prmem.c b/mm/prmem.c
-> new file mode 100644
-> index 000000000000..e8ab76701831
-> --- /dev/null
-> +++ b/mm/prmem.c
-> @@ -0,0 +1,124 @@
-> +// SPDX-License-Identifier: GPL-2.0
-> +/*
-> + * prmem.c: Memory Protection Library
-> + *
-> + * (C) Copyright 2017-2018 Huawei Technologies Co. Ltd.
-> + * Author: Igor Stoppa <igor.stoppa@huawei.com>
-> + */
-> +
-> +#include <linux/mm.h>
-> +#include <linux/string.h>
-> +#include <linux/compiler.h>
-> +#include <linux/slab.h>
-> +#include <linux/mmu_context.h>
-> +#include <linux/rcupdate.h>
-> +#include <linux/prmem.h>
-> +
-> +static __ro_after_init bool wr_ready;
-> +static __ro_after_init struct mm_struct *wr_poking_mm;
-> +static __ro_after_init unsigned long wr_poking_base;
-> +
-> +/*
-> + * The following two variables are statically allocated by the linker
-> + * script at the the boundaries of the memory region (rounded up to
-> + * multiples of PAGE_SIZE) reserved for __wr_after_init.
-> + */
-> +extern long __start_wr_after_init;
-> +extern long __end_wr_after_init;
-> +
-> +static inline bool is_wr_after_init(unsigned long ptr, __kernel_size_t size)
-> +{
-> +       unsigned long start = (unsigned long)&__start_wr_after_init;
-> +       unsigned long end = (unsigned long)&__end_wr_after_init;
-> +       unsigned long low = ptr;
-> +       unsigned long high = ptr + size;
-> +
-> +       return likely(start <= low && low <= high && high <= end);
-> +}
-> +
-> +
-> +void *__wr_op(unsigned long dst, unsigned long src, __kernel_size_t len,
-> +             enum wr_op_type op)
-> +{
-
-You might end up wanting something like:
-
-#ifdef __arch_wr_op
-return __arch_wr_op(...);
-#endif
-
-if an arch (s390? powerpc?) decides to have a totally different
-implementation of this.
-
-Hi s390 and powerpc people: it would be nice if this generic
-implementation *worked* on your architectures and that it will allow
-you to add some straightforward way to add a better arch-specific
-implementation if you think that would be better.
-
---Andy
-
-> +       temporary_mm_state_t prev;
-> +       unsigned long flags;
-> +       unsigned long offset;
-> +       unsigned long wr_poking_addr;
-> +
-> +       /* Confirm that the writable mapping exists. */
-> +       BUG_ON(!wr_ready);
-> +
-> +       if (WARN_ONCE(op >= WR_OPS_NUMBER, "Invalid WR operation.") ||
-> +           WARN_ONCE(!is_wr_after_init(dst, len), "Invalid WR range."))
-> +               return (void *)dst;
-> +
-> +       offset = dst - (unsigned long)&__start_wr_after_init;
-> +       wr_poking_addr = wr_poking_base + offset;
-> +       local_irq_save(flags);
-> +       prev = use_temporary_mm(wr_poking_mm);
-> +
-> +       kasan_disable_current();
-> +       if (op == WR_MEMCPY)
-> +               memcpy((void *)wr_poking_addr, (void *)src, len);
-> +       else if (op == WR_MEMSET)
-> +               memset((u8 *)wr_poking_addr, (u8)src, len);
-> +       else if (op == WR_RCU_ASSIGN_PTR)
-> +               /* generic version of rcu_assign_pointer */
-> +               smp_store_release((void **)wr_poking_addr,
-> +                                 RCU_INITIALIZER((void **)src));
-> +       kasan_enable_current();
-
-Hmm.  I suspect this will explode quite badly on sane architectures
-like s390.  (In my book, despite how weird s390 is, it has a vastly
-nicer model of "user" memory than any other architecture I know
-of...).  I think you should use copy_to_user(), etc, instead.  I'm not
-entirely sure what the best smp_store_release() replacement is.
-Making this change may also mean you can get rid of the
-kasan_disable_current().
-
-> +
-> +       barrier(); /* XXX redundant? */
-
-I think it's redundant.  If unuse_temporary_mm() allows earlier stores
-to hit the wrong address space, then something is very very wrong, and
-something is also very very wrong if the optimizer starts moving
-stores across a function call that is most definitely a barrier.
-
-> +
-> +       unuse_temporary_mm(prev);
-> +       /* XXX make the verification optional? */
-> +       if (op == WR_MEMCPY)
-> +               BUG_ON(memcmp((void *)dst, (void *)src, len));
-> +       else if (op == WR_MEMSET)
-> +               BUG_ON(memtst((void *)dst, (u8)src, len));
-> +       else if (op == WR_RCU_ASSIGN_PTR)
-> +               BUG_ON(*(unsigned long *)dst != src);
-
-Hmm.  If you allowed cmpxchg or even plain xchg, then these bug_ons
-would be thoroughly buggy, but maybe they're okay.  But they should,
-at most, be WARN_ON_ONCE(), given that you can trigger them by writing
-the same addresses from two threads at once, and this isn't even
-entirely obviously bogus given the presence of smp_store_release().
-
-> +       local_irq_restore(flags);
-> +       return (void *)dst;
-> +}
-> +
-> +struct mm_struct *copy_init_mm(void);
-> +void __init wr_poking_init(void)
-> +{
-> +       unsigned long start = (unsigned long)&__start_wr_after_init;
-> +       unsigned long end = (unsigned long)&__end_wr_after_init;
-> +       unsigned long i;
-> +       unsigned long wr_range;
-> +
-> +       wr_poking_mm = copy_init_mm();
-> +       BUG_ON(!wr_poking_mm);
-> +
-> +       /* XXX What if it's too large to fit in the task unmapped mem? */
-> +       wr_range = round_up(end - start, PAGE_SIZE);
-> +
-> +       /* Randomize the poking address base*/
-> +       wr_poking_base = TASK_UNMAPPED_BASE +
-> +               (kaslr_get_random_long("Write Rare Poking") & PAGE_MASK) %
-> +               (TASK_SIZE - (TASK_UNMAPPED_BASE + wr_range));
-> +
-> +       /* Create alternate mapping for the entire wr_after_init range. */
-> +       for (i = start; i < end; i += PAGE_SIZE) {
-> +               struct page *page;
-> +               spinlock_t *ptl;
-> +               pte_t pte;
-> +               pte_t *ptep;
-> +               unsigned long wr_poking_addr;
-> +
-> +               BUG_ON(!(page = virt_to_page(i)));
-> +               wr_poking_addr = i - start + wr_poking_base;
-> +
-> +               /* The lock is not needed, but avoids open-coding. */
-> +               ptep = get_locked_pte(wr_poking_mm, wr_poking_addr, &ptl);
-> +               VM_BUG_ON(!ptep);
-> +
-> +               pte = mk_pte(page, PAGE_KERNEL);
-> +               set_pte_at(wr_poking_mm, wr_poking_addr, ptep, pte);
-> +               spin_unlock(ptl);
-> +       }
-> +       wr_ready = true;
-> +}
-> --
-> 2.19.1
->
+Right, and Rick pointed out the same issue.  Instead, we should set
+the direct map not-present or its ARM equivalent, then do the flush,
+then make it RW.  I assume this also works on arm and arm64, although
+I don't know for sure.  On x86, the CPU won't cache not-present PTEs.
