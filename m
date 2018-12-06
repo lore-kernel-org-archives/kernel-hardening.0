@@ -1,120 +1,150 @@
 MIME-Version: 1.0
-References: <20181127001534.24075-1-ard.biesheuvel@linaro.org>
- <nycvar.YSQ.7.76.1811291742340.3623@knanqh.ubzr> <CAKv+Gu-kSnndPqmC4_+JOUPbMk4cGmtTktS9WE+Z8_mse9y-2Q@mail.gmail.com>
- <nycvar.YSQ.7.76.1811301131070.3623@knanqh.ubzr> <CAKv+Gu9__vvZ+7yq7QGEPdufSU-tr99t_Jxe2TzfK-kJmorYjQ@mail.gmail.com>
- <CAGXu5jKpR6Q-DXSxoKrN5T7AW2tE5uDWF_kYB1OWbPFNuZYNtQ@mail.gmail.com>
-In-Reply-To: <CAGXu5jKpR6Q-DXSxoKrN5T7AW2tE5uDWF_kYB1OWbPFNuZYNtQ@mail.gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu, 6 Dec 2018 00:38:44 +0100
-Message-ID: <CAKv+Gu8agjTRzO6ydNDFQX8mvBasKgDrz2vVNPdxGdbBcZZn2A@mail.gmail.com>
-Subject: Re: [RFC/RFT PATCH v2] ARM: smp: add support for per-task stack canaries
+References: <feac7efa-df6f-cca1-e321-28d220bf0411@linux.intel.com> <b1a4fa08-482d-0fcc-c798-efb9a9894a47@linux.intel.com>
+In-Reply-To: <b1a4fa08-482d-0fcc-c798-efb9a9894a47@linux.intel.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 5 Dec 2018 17:10:48 -0800
+Message-ID: <CAGXu5jJ_CyE5A2VUSyyi-uj4webfZM9ZOACp523p5xFhv1KCAQ@mail.gmail.com>
+Subject: Re: [PATCH v4 1/2] Documentation/admin-guide: introduce
+ perf-security.rst file
 Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>, Russell King <linux@armlinux.org.uk>
-Cc: Nicolas Pitre <nicolas.pitre@linaro.org>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Laura Abbott <labbott@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+To: Alexey Budankov <alexey.budankov@linux.intel.com>
+Cc: Jonathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Andi Kleen <ak@linux.intel.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 6 Dec 2018 at 00:36, Kees Cook <keescook@chromium.org> wrote:
+On Tue, Nov 27, 2018 at 12:15 AM Alexey Budankov
+<alexey.budankov@linux.intel.com> wrote:
 >
-> On Tue, Dec 4, 2018 at 7:04 AM Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
-> >
-> > On Fri, 30 Nov 2018 at 17:37, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
-> > >
-> > > On Fri, 30 Nov 2018, Ard Biesheuvel wrote:
-> > >
-> > > > On Thu, 29 Nov 2018 at 23:58, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
-> > > > >
-> > > > > On Tue, 27 Nov 2018, Ard Biesheuvel wrote:
-> > > > >
-> > > > > > On ARM, we currently only change the value of the stack canary when
-> > > > > > switching tasks if the kernel was built for UP. On SMP kernels, this
-> > > > > > is impossible since the stack canary value is obtained via a global
-> > > > > > symbol reference, which means
-> > > > > > a) all running tasks on all CPUs must use the same value
-> > > > > > b) we can only modify the value when no kernel stack frames are live
-> > > > > >    on any CPU, which is effectively never.
-> > > > > >
-> > > > > > So instead, use a GCC plugin to add a RTL pass that replaces each
-> > > > > > reference to the address of the __stack_chk_guard symbol with an
-> > > > > > expression that produces the address of the 'stack_canary' field
-> > > > > > that is added to struct thread_info. This way, each task will use
-> > > > > > its own randomized value.
-> > > > > >
-> > > > > > Cc: Russell King <linux@armlinux.org.uk>
-> > > > > > Cc: Kees Cook <keescook@chromium.org>
-> > > > > > Cc: Emese Revfy <re.emese@gmail.com>
-> > > > > > Cc: Arnd Bergmann <arnd@arndb.de>
-> > > > > > Cc: Nicolas Pitre <nicolas.pitre@linaro.org>
-> > > > > > Cc: Laura Abbott <labbott@redhat.com>
-> > > > > > Cc: kernel-hardening@lists.openwall.com
-> > > > > > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> > > > > > ---
-> > > > > > v2:
-> > > > > > - adopt powerpc Makefile approach to pass stack canary offset and thread
-> > > > > >   size to the plugin as command line arguments
-> > > > > > - depend on !XIP_DEFLATED_DATA
-> > > > > >
-> > > > > >  arch/arm/Kconfig                              |  16 +++
-> > > > > >  arch/arm/Makefile                             |  11 +++
-> > > > > >  arch/arm/boot/compressed/Makefile             |   1 +
-> > > > > >  arch/arm/include/asm/stackprotector.h         |  12 ++-
-> > > > > >  arch/arm/include/asm/thread_info.h            |   3 +
-> > > > > >  arch/arm/kernel/asm-offsets.c                 |   1 +
-> > > > > >  arch/arm/kernel/process.c                     |   6 +-
-> > > > > >  scripts/Makefile.gcc-plugins                  |   6 ++
-> > > > > >  scripts/gcc-plugins/Kconfig                   |   4 +
-> > > > > >  scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 103 ++++++++++++++++++++
-> > > > > >  10 files changed, 160 insertions(+), 3 deletions(-)
-> > > > > >
-> > > > > > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-> > > > > > index 91be74d8df65..6142e83b45da 100644
-> > > > > > --- a/arch/arm/Kconfig
-> > > > > > +++ b/arch/arm/Kconfig
-> > > > > > @@ -1810,6 +1810,22 @@ config XEN
-> > > > > >       help
-> > > > > >         Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
-> > > > > >
-> > > > > > +config STACKPROTECTOR_PER_TASK
-> > > > > > +     bool "Use a unique stack canary value for each task"
-> > > > > > +     depends on GCC_PLUGINS && STACKPROTECTOR && SMP && !XIP_DEFLATED_DATA
-> > > > > > +     select GCC_PLUGIN_ARM_SSP_PER_TASK
-> > > > > > +     help
-> > > > > > +       Due to the fact that GCC uses an ordinary symbol reference from
-> > > > > > +       which to load the value of the stack canary, this value can only
-> > > > > > +       change at reboot time on SMP systems, and all tasks running in the
-> > > > > > +       kernel's address space are forced to use the same canary value for
-> > > > > > +       the entire duration that the system is up.
-> > > > > > +
-> > > > > > +       Enable this option to switch to a different method that uses a
-> > > > > > +       different canary value for each task.
-> > > > > > +
-> > > > > > +       This is not enabled by default since it relies on a GCC plugin.
-> > > > >
-> > > > > Why wouldn't you default it to y and let the dependencies disable it
-> > > > > when not met?
-> > > > >
-> > > > > Other than that:
-> > > > >
-> > > > > Acked-by: Nicolas Pitre <nico@linaro.org>
-> > > > >
-> > > >
-> > > > Thanks Nico.
-> > > >
-> > > > I wasn't sure about enabling it by default, though. Perhaps Kees has
-> > > > any insights?
-> > >
-> > > I'd say that if you have CONFIG_GCC_PLUGINS=y and
-> > > CONFIG_STACKPROTECTOR=y then it is pretty clear what the user expects
-> > > already. The fact that CONFIG_STACKPROTECTOR requires a twist on SMP is
-> > > an implementation detail not a feature.
-> > >
-> >
-> > Fair point.
 >
-> Agreed. This should Just Work if either the compiler supports it or
-> GCC_PLUGINS are enabled. For v3, should I take it via gcc-plugins or
-> should this go via arm? I'm happy either way.
+> Implement initial version of perf-security.rst documentation file
+> covering security concerns of perf_event_paranoid settings.
 >
+> Suggested-by: Thomas Gleixner <tglx@linutronix.de>
+> Signed-off-by: Alexey Budankov <alexey.budankov@linux.intel.com>
 
-That's up to Russell.
+Reviewed-by: Kees Cook <keescook@chromium.org>
 
-Russell, would you mind if Kees takes this through his tree?
+-Kees
+
+> ---
+> Changes in v4:
+> - added docs for perf_event related capabilities
+> Changes in v3:
+> - toning down of the markup for "scope, access and resource"
+> - adding definite article for "Linux implementation"
+> Changes in v2:
+> - reverted patches order in the set to avoid CI issue
+> - replaced old PCL referencing by PE (Perf Events)
+> - skipped >=3 setting documentation at the moment
+> ---
+>  Documentation/admin-guide/perf-security.rst | 97 +++++++++++++++++++++
+>  1 file changed, 97 insertions(+)
+>  create mode 100644 Documentation/admin-guide/perf-security.rst
+>
+> diff --git a/Documentation/admin-guide/perf-security.rst b/Documentation/admin-guide/perf-security.rst
+> new file mode 100644
+> index 000000000000..f73ebfe9bfe2
+> --- /dev/null
+> +++ b/Documentation/admin-guide/perf-security.rst
+> @@ -0,0 +1,97 @@
+> +.. _perf_security:
+> +
+> +Perf Events and tool security
+> +=============================
+> +
+> +Overview
+> +--------
+> +
+> +Usage of Performance Counters for Linux (perf_events) [1]_ , [2]_ , [3]_ can
+> +impose a considerable risk of leaking sensitive data accessed by monitored
+> +processes. The data leakage is possible both in scenarios of direct usage of
+> +perf_events system call API [2]_ and over data files generated by Perf tool user
+> +mode utility (Perf) [3]_ , [4]_ . The risk depends on the nature of data that
+> +perf_events performance monitoring units (PMU) [2]_ collect and expose for
+> +performance analysis. Having that said perf_events/Perf performance monitoring
+> +is the subject for security access control management [5]_ .
+> +
+> +perf_events/Perf access control
+> +-------------------------------
+> +
+> +To perform security checks, the Linux implementation splits processes into two
+> +categories [6]_ : a) privileged processes (whose effective user ID is 0, referred
+> +to as superuser or root), and b) unprivileged processes (whose effective UID is
+> +nonzero). Privileged processes bypass all kernel security permission checks so
+> +perf_events performance monitoring is fully available to privileged processes
+> +without access, scope and resource restrictions.
+> +
+> +Unprivileged processes are subject to a full security permission check based on
+> +the process's credentials [5]_ (usually: effective UID, effective GID, and
+> +supplementary group list).
+> +
+> +Linux divides the privileges traditionally associated with superuser into
+> +distinct units, known as capabilities [6]_ , which can be independently enabled
+> +and disabled on per-thread basis for processes and files of unprivileged users.
+> +
+> +Unprivileged processes with enabled CAP_SYS_ADMIN capability are treated as
+> +privileged processes with respect to perf_events performance monitoring and
+> +bypass *scope* permissions checks in the kernel.
+> +
+> +Unprivileged processes using perf_events system call API is also subject for
+> +PTRACE_MODE_READ_REALCREDS ptrace access mode check [7]_ , whose outcome
+> +determines whether monitoring is permitted. So unprivileged processes provided
+> +with CAP_SYS_PTRACE capability are effectively permitted to pass the check.
+> +
+> +Other capabilities being granted to unprivileged processes can effectively
+> +enable capturing of additional data required for later performance analysis of
+> +monitored processes or a system. For example, CAP_SYSLOG capability permits
+> +reading kernel space memory addresses from /proc/kallsyms file.
+> +
+> +perf_events/Perf unprivileged users
+> +-----------------------------------
+> +
+> +perf_events/Perf *scope* and *access* control for unprivileged processes is
+> +governed by perf_event_paranoid [2]_ setting:
+> +
+> +-1:
+> +     Impose no *scope* and *access* restrictions on using perf_events performance
+> +     monitoring. Per-user per-cpu perf_event_mlock_kb [2]_ locking limit is
+> +     ignored when allocating memory buffers for storing performance data.
+> +     This is the least secure mode since allowed monitored *scope* is
+> +     maximized and no perf_events specific limits are imposed on *resources*
+> +     allocated for performance monitoring.
+> +
+> +>=0:
+> +     *scope* includes per-process and system wide performance monitoring
+> +     but excludes raw tracepoints and ftrace function tracepoints monitoring.
+> +     CPU and system events happened when executing either in user or
+> +     in kernel space can be monitored and captured for later analysis.
+> +     Per-user per-cpu perf_event_mlock_kb locking limit is imposed but
+> +     ignored for unprivileged processes with CAP_IPC_LOCK [6]_ capability.
+> +
+> +>=1:
+> +     *scope* includes per-process performance monitoring only and excludes
+> +     system wide performance monitoring. CPU and system events happened when
+> +     executing either in user or in kernel space can be monitored and
+> +     captured for later analysis. Per-user per-cpu perf_event_mlock_kb
+> +     locking limit is imposed but ignored for unprivileged processes with
+> +     CAP_IPC_LOCK capability.
+> +
+> +>=2:
+> +     *scope* includes per-process performance monitoring only. CPU and system
+> +     events happened when executing in user space only can be monitored and
+> +     captured for later analysis. Per-user per-cpu perf_event_mlock_kb
+> +     locking limit is imposed but ignored for unprivileged processes with
+> +     CAP_IPC_LOCK capability.
+> +
+> +Bibliography
+> +------------
+> +
+> +.. [1] `<https://lwn.net/Articles/337493/>`_
+> +.. [2] `<http://man7.org/linux/man-pages/man2/perf_event_open.2.html>`_
+> +.. [3] `<http://web.eece.maine.edu/~vweaver/projects/perf_events/>`_
+> +.. [4] `<https://perf.wiki.kernel.org/index.php/Main_Page>`_
+> +.. [5] `<https://www.kernel.org/doc/html/latest/security/credentials.html>`_
+> +.. [6] `<http://man7.org/linux/man-pages/man7/capabilities.7.html>`_
+> +.. [7] `<http://man7.org/linux/man-pages/man2/ptrace.2.html>`_
+> +
+
+
+
+-- 
+Kees Cook
