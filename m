@@ -1,50 +1,156 @@
-Date: Thu, 6 Dec 2018 10:44:51 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Subject: Re: [PATCH 2/6] __wr_after_init: write rare for static allocation
-Message-ID: <20181206094451.GC13538@hirez.programming.kicks-ass.net>
-References: <20181204121805.4621-1-igor.stoppa@huawei.com>
- <20181204121805.4621-3-igor.stoppa@huawei.com>
- <CALCETrVvoui0vksdt0Y9rdGL5ipEn_FtSXVVUFdH03ZC93cy_A@mail.gmail.com>
+Subject: Re: [PATCH v4 1/2] Documentation/admin-guide: introduce
+ perf-security.rst file
+References: <feac7efa-df6f-cca1-e321-28d220bf0411@linux.intel.com>
+ <b1a4fa08-482d-0fcc-c798-efb9a9894a47@linux.intel.com>
+ <CAGXu5jJ_CyE5A2VUSyyi-uj4webfZM9ZOACp523p5xFhv1KCAQ@mail.gmail.com>
+From: Alexey Budankov <alexey.budankov@linux.intel.com>
+Message-ID: <dcbcef5d-82ab-1f8d-5cf3-2518b8feb781@linux.intel.com>
+Date: Thu, 6 Dec 2018 13:45:11 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CALCETrVvoui0vksdt0Y9rdGL5ipEn_FtSXVVUFdH03ZC93cy_A@mail.gmail.com>
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Igor Stoppa <igor.stoppa@gmail.com>, linux-arch <linux-arch@vger.kernel.org>, linux-s390 <linux-s390@vger.kernel.org>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Igor Stoppa <igor.stoppa@huawei.com>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux-integrity <linux-integrity@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <CAGXu5jJ_CyE5A2VUSyyi-uj4webfZM9ZOACp523p5xFhv1KCAQ@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Kees Cook <keescook@chromium.org>
+Cc: Jonathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Andi Kleen <ak@linux.intel.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 05, 2018 at 03:13:56PM -0800, Andy Lutomirski wrote:
-
-> > +       if (op == WR_MEMCPY)
-> > +               memcpy((void *)wr_poking_addr, (void *)src, len);
-> > +       else if (op == WR_MEMSET)
-> > +               memset((u8 *)wr_poking_addr, (u8)src, len);
-> > +       else if (op == WR_RCU_ASSIGN_PTR)
-> > +               /* generic version of rcu_assign_pointer */
-> > +               smp_store_release((void **)wr_poking_addr,
-> > +                                 RCU_INITIALIZER((void **)src));
-> > +       kasan_enable_current();
+On 06.12.2018 4:10, Kees Cook wrote:
+> On Tue, Nov 27, 2018 at 12:15 AM Alexey Budankov
+> <alexey.budankov@linux.intel.com> wrote:
+>>
+>>
+>> Implement initial version of perf-security.rst documentation file
+>> covering security concerns of perf_event_paranoid settings.
+>>
+>> Suggested-by: Thomas Gleixner <tglx@linutronix.de>
+>> Signed-off-by: Alexey Budankov <alexey.budankov@linux.intel.com>
 > 
-> Hmm.  I suspect this will explode quite badly on sane architectures
-> like s390.  (In my book, despite how weird s390 is, it has a vastly
-> nicer model of "user" memory than any other architecture I know
-> of...).  I think you should use copy_to_user(), etc, instead.  I'm not
-> entirely sure what the best smp_store_release() replacement is.
-> Making this change may also mean you can get rid of the
-> kasan_disable_current().
+> Reviewed-by: Kees Cook <keescook@chromium.org>
 
-If you make the MEMCPY one guarantee single-copy atomicity for native
-words then you're basically done.
+Thanks!
+-Alexey
 
-smp_store_release() can be implemented with:
-
-	smp_mb();
-	WRITE_ONCE();
-
-So if we make MEMCPY provide the WRITE_ONCE(), all we need is that
-barrier, which we can easily place at the call site and not overly
-complicate our interface with this.
-
-Because performance is down the drain already, an additional full
-memory barrier is peanuts here (and in fact already implied by the x86
-CR3 munging).
+> 
+> -Kees
+> 
+>> ---
+>> Changes in v4:
+>> - added docs for perf_event related capabilities
+>> Changes in v3:
+>> - toning down of the markup for "scope, access and resource"
+>> - adding definite article for "Linux implementation"
+>> Changes in v2:
+>> - reverted patches order in the set to avoid CI issue
+>> - replaced old PCL referencing by PE (Perf Events)
+>> - skipped >=3 setting documentation at the moment
+>> ---
+>>  Documentation/admin-guide/perf-security.rst | 97 +++++++++++++++++++++
+>>  1 file changed, 97 insertions(+)
+>>  create mode 100644 Documentation/admin-guide/perf-security.rst
+>>
+>> diff --git a/Documentation/admin-guide/perf-security.rst b/Documentation/admin-guide/perf-security.rst
+>> new file mode 100644
+>> index 000000000000..f73ebfe9bfe2
+>> --- /dev/null
+>> +++ b/Documentation/admin-guide/perf-security.rst
+>> @@ -0,0 +1,97 @@
+>> +.. _perf_security:
+>> +
+>> +Perf Events and tool security
+>> +=============================
+>> +
+>> +Overview
+>> +--------
+>> +
+>> +Usage of Performance Counters for Linux (perf_events) [1]_ , [2]_ , [3]_ can
+>> +impose a considerable risk of leaking sensitive data accessed by monitored
+>> +processes. The data leakage is possible both in scenarios of direct usage of
+>> +perf_events system call API [2]_ and over data files generated by Perf tool user
+>> +mode utility (Perf) [3]_ , [4]_ . The risk depends on the nature of data that
+>> +perf_events performance monitoring units (PMU) [2]_ collect and expose for
+>> +performance analysis. Having that said perf_events/Perf performance monitoring
+>> +is the subject for security access control management [5]_ .
+>> +
+>> +perf_events/Perf access control
+>> +-------------------------------
+>> +
+>> +To perform security checks, the Linux implementation splits processes into two
+>> +categories [6]_ : a) privileged processes (whose effective user ID is 0, referred
+>> +to as superuser or root), and b) unprivileged processes (whose effective UID is
+>> +nonzero). Privileged processes bypass all kernel security permission checks so
+>> +perf_events performance monitoring is fully available to privileged processes
+>> +without access, scope and resource restrictions.
+>> +
+>> +Unprivileged processes are subject to a full security permission check based on
+>> +the process's credentials [5]_ (usually: effective UID, effective GID, and
+>> +supplementary group list).
+>> +
+>> +Linux divides the privileges traditionally associated with superuser into
+>> +distinct units, known as capabilities [6]_ , which can be independently enabled
+>> +and disabled on per-thread basis for processes and files of unprivileged users.
+>> +
+>> +Unprivileged processes with enabled CAP_SYS_ADMIN capability are treated as
+>> +privileged processes with respect to perf_events performance monitoring and
+>> +bypass *scope* permissions checks in the kernel.
+>> +
+>> +Unprivileged processes using perf_events system call API is also subject for
+>> +PTRACE_MODE_READ_REALCREDS ptrace access mode check [7]_ , whose outcome
+>> +determines whether monitoring is permitted. So unprivileged processes provided
+>> +with CAP_SYS_PTRACE capability are effectively permitted to pass the check.
+>> +
+>> +Other capabilities being granted to unprivileged processes can effectively
+>> +enable capturing of additional data required for later performance analysis of
+>> +monitored processes or a system. For example, CAP_SYSLOG capability permits
+>> +reading kernel space memory addresses from /proc/kallsyms file.
+>> +
+>> +perf_events/Perf unprivileged users
+>> +-----------------------------------
+>> +
+>> +perf_events/Perf *scope* and *access* control for unprivileged processes is
+>> +governed by perf_event_paranoid [2]_ setting:
+>> +
+>> +-1:
+>> +     Impose no *scope* and *access* restrictions on using perf_events performance
+>> +     monitoring. Per-user per-cpu perf_event_mlock_kb [2]_ locking limit is
+>> +     ignored when allocating memory buffers for storing performance data.
+>> +     This is the least secure mode since allowed monitored *scope* is
+>> +     maximized and no perf_events specific limits are imposed on *resources*
+>> +     allocated for performance monitoring.
+>> +
+>> +>=0:
+>> +     *scope* includes per-process and system wide performance monitoring
+>> +     but excludes raw tracepoints and ftrace function tracepoints monitoring.
+>> +     CPU and system events happened when executing either in user or
+>> +     in kernel space can be monitored and captured for later analysis.
+>> +     Per-user per-cpu perf_event_mlock_kb locking limit is imposed but
+>> +     ignored for unprivileged processes with CAP_IPC_LOCK [6]_ capability.
+>> +
+>> +>=1:
+>> +     *scope* includes per-process performance monitoring only and excludes
+>> +     system wide performance monitoring. CPU and system events happened when
+>> +     executing either in user or in kernel space can be monitored and
+>> +     captured for later analysis. Per-user per-cpu perf_event_mlock_kb
+>> +     locking limit is imposed but ignored for unprivileged processes with
+>> +     CAP_IPC_LOCK capability.
+>> +
+>> +>=2:
+>> +     *scope* includes per-process performance monitoring only. CPU and system
+>> +     events happened when executing in user space only can be monitored and
+>> +     captured for later analysis. Per-user per-cpu perf_event_mlock_kb
+>> +     locking limit is imposed but ignored for unprivileged processes with
+>> +     CAP_IPC_LOCK capability.
+>> +
+>> +Bibliography
+>> +------------
+>> +
+>> +.. [1] `<https://lwn.net/Articles/337493/>`_
+>> +.. [2] `<http://man7.org/linux/man-pages/man2/perf_event_open.2.html>`_
+>> +.. [3] `<http://web.eece.maine.edu/~vweaver/projects/perf_events/>`_
+>> +.. [4] `<https://perf.wiki.kernel.org/index.php/Main_Page>`_
+>> +.. [5] `<https://www.kernel.org/doc/html/latest/security/credentials.html>`_
+>> +.. [6] `<http://man7.org/linux/man-pages/man7/capabilities.7.html>`_
+>> +.. [7] `<http://man7.org/linux/man-pages/man2/ptrace.2.html>`_
+>> +
+> 
+> 
+> 
