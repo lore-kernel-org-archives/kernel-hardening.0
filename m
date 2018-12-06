@@ -1,35 +1,64 @@
-Date: Thu, 6 Dec 2018 09:57:55 -0700
-From: Jonathan Corbet <corbet@lwn.net>
-Subject: Re: [PATCH v4 1/2] Documentation/admin-guide: introduce
- perf-security.rst file
-Message-ID: <20181206095755.2c2a0b6b@lwn.net>
-In-Reply-To: <CAGXu5jJ_CyE5A2VUSyyi-uj4webfZM9ZOACp523p5xFhv1KCAQ@mail.gmail.com>
-References: <feac7efa-df6f-cca1-e321-28d220bf0411@linux.intel.com>
-	<b1a4fa08-482d-0fcc-c798-efb9a9894a47@linux.intel.com>
-	<CAGXu5jJ_CyE5A2VUSyyi-uj4webfZM9ZOACp523p5xFhv1KCAQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 8bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Alexey Budankov <alexey.budankov@linux.intel.com>, Thomas Gleixner <tglx@linutronix.de>, Jann Horn <jannh@google.com>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Andi Kleen <ak@linux.intel.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tursulin@ursulin.net>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "open
- list:DOCUMENTATION" <linux-doc@vger.kernel.org>
+References: <1544109187-13805-1-git-send-email-alex.popov@linux.com>
+In-Reply-To: <1544109187-13805-1-git-send-email-alex.popov@linux.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 6 Dec 2018 10:25:17 -0800
+Message-ID: <CAGXu5jKPTaomgyBiSFCYJDFqGaVd=sWpXnjHpT-7YDmk1AVVyg@mail.gmail.com>
+Subject: Re: [PATCH v2 1/1] stackleak: Register the 'stackleak_cleanup' pass
+ before the '*free_cfg' pass
+Content-Type: text/plain; charset="UTF-8"
+To: Alexander Popov <alex.popov@linux.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@alien8.de>, Thomas Gleixner <tglx@linutronix.de>, Dave Hansen <dave.hansen@linux.intel.com>, Steven Rostedt <rostedt@goodmis.org>, Peter Zijlstra <peterz@infradead.org>, Masami Hiramatsu <mhiramat@kernel.org>, Florian Weimer <fweimer@redhat.com>, Richard Sandiford <richard.sandiford@arm.com>, Segher Boessenkool <segher@kernel.crashing.org>, amonakov@ispras.ru, Tycho Andersen <tycho@tycho.ws>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, Emese Revfy <re.emese@gmail.com>, Thomas Garnier <thgarnie@google.com>, Ingo Molnar <mingo@kernel.org>, Will Deacon <will.deacon@arm.com>, Alexei Starovoitov <ast@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "H. Peter Anvin" <hpa@zytor.com>, "David S. Miller" <davem@davemloft.net>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, gcc@gcc.gnu.org, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 5 Dec 2018 17:10:48 -0800
-Kees Cook <keescook@chromium.org> wrote:
+On Thu, Dec 6, 2018 at 7:13 AM Alexander Popov <alex.popov@linux.com> wrote:
+>
+> Currently the 'stackleak_cleanup' pass deleting a CALL insn is executed
+> after the 'reload' pass. That allows gcc to do some weird optimization in
+> function prologues and epilogues, which are generated later [1].
+>
+> Let's avoid that by registering the 'stackleak_cleanup' pass before
+> the '*free_cfg' pass. It's the moment when the stack frame size is
+> already final, function prologues and epilogues are generated, and the
+> machine-dependent code transformations are not done.
+>
+> [1] https://www.openwall.com/lists/kernel-hardening/2018/11/23/2
+>
+> Reported-by: kbuild test robot <lkp@intel.com>
+> Signed-off-by: Alexander Popov <alex.popov@linux.com>
 
-> On Tue, Nov 27, 2018 at 12:15 AM Alexey Budankov
-> <alexey.budankov@linux.intel.com> wrote:
-> >
-> >
-> > Implement initial version of perf-security.rst documentation file
-> > covering security concerns of perf_event_paranoid settings.
-> >
-> > Suggested-by: Thomas Gleixner <tglx@linutronix.de>
-> > Signed-off-by: Alexey Budankov <alexey.budankov@linux.intel.com>  
-> 
-> Reviewed-by: Kees Cook <keescook@chromium.org>
+Thanks! I've applied this to me tree and I'll send a pull request soon.
 
-OK, series applied, thanks.
+-Kees
 
-jon
+> ---
+>  scripts/gcc-plugins/stackleak_plugin.c | 8 +++++---
+>  1 file changed, 5 insertions(+), 3 deletions(-)
+>
+> diff --git a/scripts/gcc-plugins/stackleak_plugin.c b/scripts/gcc-plugins/stackleak_plugin.c
+> index 2f48da9..dbd3746 100644
+> --- a/scripts/gcc-plugins/stackleak_plugin.c
+> +++ b/scripts/gcc-plugins/stackleak_plugin.c
+> @@ -363,10 +363,12 @@ __visible int plugin_init(struct plugin_name_args *plugin_info,
+>                                                 PASS_POS_INSERT_BEFORE);
+>
+>         /*
+> -        * The stackleak_cleanup pass should be executed after the
+> -        * "reload" pass, when the stack frame size is final.
+> +        * The stackleak_cleanup pass should be executed before the "*free_cfg"
+> +        * pass. It's the moment when the stack frame size is already final,
+> +        * function prologues and epilogues are generated, and the
+> +        * machine-dependent code transformations are not done.
+>          */
+> -       PASS_INFO(stackleak_cleanup, "reload", 1, PASS_POS_INSERT_AFTER);
+> +       PASS_INFO(stackleak_cleanup, "*free_cfg", 1, PASS_POS_INSERT_BEFORE);
+>
+>         if (!plugin_default_version_check(version, &gcc_version)) {
+>                 error(G_("incompatible gcc/plugin versions"));
+> --
+> 2.7.4
+>
+
+
+-- 
+Kees Cook
