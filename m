@@ -1,148 +1,207 @@
-From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Subject: Re: [PATCH 1/2] vmalloc: New flag for flush before releasing pages
-Date: Fri, 7 Dec 2018 03:06:22 +0000
-Message-ID: <7b2ef6c657d2ab32c221f2ecbf69e8221e3dc844.camel@intel.com>
-References: <20181128000754.18056-1-rick.p.edgecombe@intel.com>
-	 <20181128000754.18056-2-rick.p.edgecombe@intel.com>
-	 <4883FED1-D0EC-41B0-A90F-1A697756D41D@gmail.com>
-	 <20181204160304.GB7195@arm.com>
-	 <51281e69a3722014f718a6840f43b2e6773eed90.camel@intel.com>
-	 <CALCETrUiEWkSjnruCbBSi8WsDm071YiU5WEqoPhZbjezS0CrFw@mail.gmail.com>
-	 <20181205114148.GA15160@arm.com>
-	 <CALCETrUdTShjY+tQoRsE1uR1cnL9cr2Trbz-g5=WaLGA3rWXzA@mail.gmail.com>
-	 <CAKv+Gu_EEjhwbfp1mdB0Pu3ZyAsZgNeaCDArs569hAeWzHMWpw@mail.gmail.com>
-	 <CALCETrVedB7yacMU=i3JaUZxiwsnM+PnABfG48K9TZK32UWshA@mail.gmail.com>
-	 <20181206190115.GC10086@cisco>
-	 <CALCETrUmxht8dibJPBbPudQnoe6mHsKocEBgkJ7O1eFrVBfekQ@mail.gmail.com>
-	 <F5664C1D-C3E7-433B-8E5A-7967023E0567@gmail.com>
-	 <CALCETrUbmmcL7pixsP9AH1-AE2WMVgbDkoP_E4wAJMbuZ0CzCg@mail.gmail.com>
-	 <EFB09636-D34F-4C63-87E6-76C49007C2CA@gmail.com>
-In-Reply-To: <EFB09636-D34F-4C63-87E6-76C49007C2CA@gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <846C93EE93403740BA4E3D176076C182@intel.com>
-Content-Transfer-Encoding: base64
+From: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
+Subject: [PATCH V7 0/10] KVM: X86: Introducing ROE Protection Kernel Hardening
+Date: Fri,  7 Dec 2018 14:47:53 +0200
+Message-Id: <20181207124803.10828-1-ahmedsoliman@mena.vt.edu>
 MIME-Version: 1.0
-To: "keescook@chromium.org" <keescook@chromium.org>, "luto@kernel.org" <luto@kernel.org>, "nadav.amit@gmail.com" <nadav.amit@gmail.com>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "ast@kernel.org" <ast@kernel.org>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "jeyu@kernel.org" <jeyu@kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "jannh@google.com" <jannh@google.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "peterz@infradead.org" <peterz@infradead.org>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "igor.stoppa@gmail.com" <igor.stoppa@gmail.com>, "tycho@tycho.ws" <tycho@tycho.ws>, "will.deacon@arm.com" <will.deacon@arm.com>, "mingo@redhat.com" <mingo@redhat.com>, "Keshavamurthy, Anil S" <anil.s.keshavamurthy@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "mhiramat@kernel.org" <mhiramat@kernel.org>, "naveen.n.rao@linux.vnet.ibm.com" <naveen.n.rao@linux.vnet.ibm.com>, "davem@davemloft.net" <davem@davemloft.net>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "Hansen, Dave" <dave.hansen@intel.com>
+Content-Transfer-Encoding: 8bit
+To: Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, Jonathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, hpa@zytor.com, x86@kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, ahmedsoliman0x666@gmail.com, ovich00@gmail.com, kernel-hardening@lists.openwall.com, nigel.edwards@hpe.com, Boris Lukashev <blukashev@sempervictus.com>, Igor Stoppa <igor.stoppa@gmail.com>
+Cc: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gVGh1LCAyMDE4LTEyLTA2IGF0IDE1OjA4IC0wODAwLCBOYWRhdiBBbWl0IHdyb3RlOg0KPiA+
-IE9uIERlYyA2LCAyMDE4LCBhdCAxMjoxNyBQTSwgQW5keSBMdXRvbWlyc2tpIDxsdXRvQGtlcm5l
-bC5vcmc+IHdyb3RlOg0KPiA+IA0KPiA+IE9uIFRodSwgRGVjIDYsIDIwMTggYXQgMTE6MzkgQU0g
-TmFkYXYgQW1pdCA8bmFkYXYuYW1pdEBnbWFpbC5jb20+IHdyb3RlOg0KPiA+ID4gPiBPbiBEZWMg
-NiwgMjAxOCwgYXQgMTE6MTkgQU0sIEFuZHkgTHV0b21pcnNraSA8bHV0b0BrZXJuZWwub3JnPiB3
-cm90ZToNCj4gPiA+ID4gDQo+ID4gPiA+IE9uIFRodSwgRGVjIDYsIDIwMTggYXQgMTE6MDEgQU0g
-VHljaG8gQW5kZXJzZW4gPHR5Y2hvQHR5Y2hvLndzPiB3cm90ZToNCj4gPiA+ID4gPiBPbiBUaHUs
-IERlYyAwNiwgMjAxOCBhdCAxMDo1Mzo1MEFNIC0wODAwLCBBbmR5IEx1dG9taXJza2kgd3JvdGU6
-DQo+ID4gPiA+ID4gPiA+IElmIHdlIGFyZSBnb2luZyB0byB1bm1hcCB0aGUgbGluZWFyIGFsaWFz
-LCB3aHkgbm90IGRvIGl0IGF0DQo+ID4gPiA+ID4gPiA+IHZtYWxsb2MoKQ0KPiA+ID4gPiA+ID4g
-PiB0aW1lIHJhdGhlciB0aGFuIHZmcmVlKCkgdGltZT8NCj4gPiA+ID4gPiA+IA0KPiA+ID4gPiA+
-ID4gVGhhdOKAmXMgbm90IHRvdGFsbHkgbnV0cy4gRG8gd2UgZXZlciBoYXZlIGNvZGUgdGhhdCBl
-eHBlY3RzIF9fdmEoKSB0bw0KPiA+ID4gPiA+ID4gd29yayBvbiBtb2R1bGUgZGF0YT8gIFBlcmhh
-cHMgY3J5cHRvIGNvZGUgdHJ5aW5nIHRvIGVuY3J5cHQgc3RhdGljDQo+ID4gPiA+ID4gPiBkYXRh
-IGJlY2F1c2Ugb3VyIEFQSXMgZG9u4oCZdCB1bmRlcnN0YW5kIHZpcnR1YWwgYWRkcmVzc2VzLiAg
-SSBndWVzcw0KPiA+ID4gPiA+ID4gaWYNCj4gPiA+ID4gPiA+IGhpZ2htZW0gaXMgZXZlciB1c2Vk
-IGZvciBtb2R1bGVzLCB0aGVuIHdlIHNob3VsZCBiZSBmaW5lLg0KPiA+ID4gPiA+ID4gDQo+ID4g
-PiA+ID4gPiBSTyBpbnN0ZWFkIG9mIG5vdCBwcmVzZW50IG1pZ2h0IGJlIHNhZmVyLiAgQnV0IEkg
-ZG8gbGlrZSB0aGUgaWRlYSBvZg0KPiA+ID4gPiA+ID4gcmVuYW1pbmcgUmljaydzIGZsYWcgdG8g
-c29tZXRoaW5nIGxpa2UgVk1fWFBGTyBvciBWTV9OT19ESVJFQ1RfTUFQDQo+ID4gPiA+ID4gPiBh
-bmQNCj4gPiA+ID4gPiA+IG1ha2luZyBpdCBkbyBhbGwgb2YgdGhpcy4NCj4gPiA+ID4gPiANCj4g
-PiA+ID4gPiBZZWFoLCBkb2luZyBpdCBmb3IgZXZlcnl0aGluZyBhdXRvbWF0aWNhbGx5IHNlZW1l
-ZCBsaWtlIGl0IHdhcy9pcw0KPiA+ID4gPiA+IGdvaW5nIHRvIGJlIGEgbG90IG9mIHdvcmsgdG8g
-ZGVidWcgYWxsIHRoZSBjb3JuZXIgY2FzZXMgd2hlcmUgdGhpbmdzDQo+ID4gPiA+ID4gZXhwZWN0
-IG1lbW9yeSB0byBiZSBtYXBwZWQgYnV0IGRvbid0IGV4cGxpY2l0bHkgc2F5IGl0LiBBbmQgaW4N
-Cj4gPiA+ID4gPiBwYXJ0aWN1bGFyLCB0aGUgWFBGTyBzZXJpZXMgb25seSBkb2VzIGl0IGZvciB1
-c2VyIG1lbW9yeSwgd2hlcmVhcyBhbg0KPiA+ID4gPiA+IGFkZGl0aW9uYWwgZmxhZyBsaWtlIHRo
-aXMgd291bGQgd29yayBmb3IgZXh0cmEgcGFyYW5vaWQgYWxsb2NhdGlvbnMNCj4gPiA+ID4gPiBv
-ZiBrZXJuZWwgbWVtb3J5IHRvby4NCj4gPiA+ID4gDQo+ID4gPiA+IEkganVzdCByZWFkIHRoZSBj
-b2RlLCBhbmQgSSBsb29rcyBsaWtlIHZtYWxsb2MoKSBpcyBhbHJlYWR5IHVzaW5nDQo+ID4gPiA+
-IGhpZ2htZW0gKF9fR0ZQX0hJR0gpIGlmIGF2YWlsYWJsZSwgc28sIG9uIGJpZyB4ODZfMzIgc3lz
-dGVtcywgZm9yDQo+ID4gPiA+IGV4YW1wbGUsIHdlIGFscmVhZHkgZG9uJ3QgaGF2ZSBtb2R1bGVz
-IGluIHRoZSBkaXJlY3QgbWFwLg0KPiA+ID4gPiANCj4gPiA+ID4gU28gSSBzYXkgd2UgZ28gZm9y
-IGl0LiAgVGhpcyBzaG91bGQgYmUgcXVpdGUgc2ltcGxlIHRvIGltcGxlbWVudCAtLQ0KPiA+ID4g
-PiB0aGUgcGFnZWF0dHIgY29kZSBhbHJlYWR5IGhhcyBhbG1vc3QgYWxsIHRoZSBuZWVkZWQgbG9n
-aWMgb24geDg2LiAgVGhlDQo+ID4gPiA+IG9ubHkgYXJjaCBzdXBwb3J0IHdlIHNob3VsZCBuZWVk
-IGlzIGEgcGFpciBvZiBmdW5jdGlvbnMgdG8gcmVtb3ZlIGENCj4gPiA+ID4gdm1hbGxvYyBhZGRy
-ZXNzIHJhbmdlIGZyb20gdGhlIGFkZHJlc3MgbWFwIChpZiBpdCB3YXMgcHJlc2VudCBpbiB0aGUN
-Cj4gPiA+ID4gZmlyc3QgcGxhY2UpIGFuZCBhIGZ1bmN0aW9uIHRvIHB1dCBpdCBiYWNrLiAgT24g
-eDg2LCB0aGlzIHNob3VsZCBvbmx5DQo+ID4gPiA+IGJlIGEgZmV3IGxpbmVzIG9mIGNvZGUuDQo+
-ID4gPiA+IA0KPiA+ID4gPiBXaGF0IGRvIHlvdSBhbGwgdGhpbms/ICBUaGlzIHNob3VsZCBzb2x2
-ZSBtb3N0IG9mIHRoZSBwcm9ibGVtcyB3ZSBoYXZlLg0KPiA+ID4gPiANCj4gPiA+ID4gSWYgd2Ug
-cmVhbGx5IHdhbnRlZCB0byBvcHRpbWl6ZSB0aGlzLCB3ZSdkIG1ha2UgaXQgc28gdGhhdA0KPiA+
-ID4gPiBtb2R1bGVfYWxsb2MoKSBhbGxvY2F0ZXMgbWVtb3J5IHRoZSBub3JtYWwgd2F5LCB0aGVu
-LCBsYXRlciBvbiwgd2UNCj4gPiA+ID4gY2FsbCBzb21lIGZ1bmN0aW9uIHRoYXQsIGFsbCBhdCBv
-bmNlLCByZW1vdmVzIHRoZSBtZW1vcnkgZnJvbSB0aGUNCj4gPiA+ID4gZGlyZWN0IG1hcCBhbmQg
-YXBwbGllcyB0aGUgcmlnaHQgcGVybWlzc2lvbnMgdG8gdGhlIHZtYWxsb2MgYWxpYXMgKG9yDQo+
-ID4gPiA+IGp1c3QgbWFrZXMgdGhlIHZtYWxsb2MgYWxpYXMgbm90LXByZXNlbnQgc28gd2UgY2Fu
-IGFkZCBwZXJtaXNzaW9ucw0KPiA+ID4gPiBsYXRlciB3aXRob3V0IGZsdXNoaW5nKSwgYW5kIGZs
-dXNoZXMgdGhlIFRMQi4gIEFuZCB3ZSBhcnJhbmdlIGZvcg0KPiA+ID4gPiB2dW5tYXAgdG8gemFw
-IHRoZSB2bWFsbG9jIHJhbmdlLCB0aGVuIHB1dCB0aGUgbWVtb3J5IGJhY2sgaW50byB0aGUNCj4g
-PiA+ID4gZGlyZWN0IG1hcCwgdGhlbiBmcmVlIHRoZSBwYWdlcyBiYWNrIHRvIHRoZSBwYWdlIGFs
-bG9jYXRvciwgd2l0aCB0aGUNCj4gPiA+ID4gZmx1c2ggaW4gdGhlIGFwcHJvcHJpYXRlIHBsYWNl
-Lg0KPiA+ID4gPiANCj4gPiA+ID4gSSBkb24ndCBzZWUgd2h5IHRoZSBwYWdlIGFsbG9jYXRvciBu
-ZWVkcyB0byBrbm93IGFib3V0IGFueSBvZiB0aGlzLg0KPiA+ID4gPiBJdCdzIGFscmVhZHkgb2th
-eSB3aXRoIHRoZSBwZXJtaXNzaW9ucyBiZWluZyBjaGFuZ2VkIG91dCBmcm9tIHVuZGVyIGl0DQo+
-ID4gPiA+IG9uIHg4NiwgYW5kIGl0IHNlZW1zIGZpbmUuICBSaWNrLCBkbyB5b3Ugd2FudCB0byBn
-aXZlIHNvbWUgdmFyaWFudCBvZg0KPiA+ID4gPiB0aGlzIGEgdHJ5Pw0KPiA+ID4gDQo+ID4gPiBT
-ZXR0aW5nIGl0IGFzIHJlYWQtb25seSBtYXkgd29yayAoYW5kIGFscmVhZHkgaGFwcGVucyBmb3Ig
-dGhlIHJlYWQtb25seQ0KPiA+ID4gbW9kdWxlIGRhdGEpLiBJIGFtIG5vdCBzdXJlIGFib3V0IHNl
-dHRpbmcgaXQgYXMgbm9uLXByZXNlbnQuDQo+ID4gPiANCj4gPiA+IEF0IHNvbWUgcG9pbnQsIGEg
-ZGlzY3Vzc2lvbiBhYm91dCBhIHRocmVhdC1tb2RlbCwgYXMgUmljayBpbmRpY2F0ZWQsIHdvdWxk
-DQo+ID4gPiBiZSByZXF1aXJlZC4gSSBwcmVzdW1lIFJPUCBhdHRhY2tzIGNhbiBlYXNpbHkgY2Fs
-bA0KPiA+ID4gc2V0X2FsbF9tb2R1bGVzX3RleHRfcncoKQ0KPiA+ID4gYW5kIG92ZXJyaWRlIGFs
-bCB0aGUgcHJvdGVjdGlvbnMuDQo+ID4gDQo+ID4gSSBhbSBmYXIgZnJvbSBhbiBleHBlcnQgb24g
-ZXhwbG9pdCB0ZWNobmlxdWVzLCBidXQgaGVyZSdzIGENCj4gPiBwb3RlbnRpYWxseSB1c2VmdWwg
-bW9kZWw6IGxldCdzIGFzc3VtZSB0aGVyZSdzIGFuIGF0dGFja2VyIHdobyBjYW4NCj4gPiB3cml0
-ZSBjb250cm9sbGVkIGRhdGEgdG8gYSBjb250cm9sbGVkIGtlcm5lbCBhZGRyZXNzIGJ1dCBjYW5u
-b3QNCj4gPiBkaXJlY3RseSBtb2RpZnkgY29udHJvbCBmbG93LiAgSXQgd291bGQgYmUgbmljZSBm
-b3Igc3VjaCBhbiBhdHRhY2tlcg0KPiA+IHRvIGhhdmUgYSB2ZXJ5IGRpZmZpY3VsdCB0aW1lIG9m
-IG1vZGlmeWluZyBrZXJuZWwgdGV4dCBvciBvZg0KPiA+IGNvbXByb21pc2luZyBjb250cm9sIGZs
-b3cuICBTbyB3ZSdyZSBhc3N1bWluZyBhIGZlYXR1cmUgbGlrZSBrZXJuZWwNCj4gPiBDRVQgb3Ig
-dGhhdCB0aGUgYXR0YWNrZXIgZmluZHMgaXQgdmVyeSBkaWZmaWN1bHQgdG8gZG8gc29tZXRoaW5n
-IGxpa2UNCj4gPiBtb2RpZnlpbmcgc29tZSB0aHJlYWQncyBJUkVUIGZyYW1lLg0KPiA+IA0KPiA+
-IEFkbWl0dGVkbHksIGZvciB0aGUga2VybmVsLCB0aGlzIGlzIGFuIG9kZCB0aHJlYXQgbW9kZWws
-IHNpbmNlIGFuDQo+ID4gYXR0YWNrZXIgY2FuIHByZXN1bWFibHkgcXVpdGUgZWFzaWx5IGxlYXJu
-IHRoZSBrZXJuZWwgc3RhY2sgYWRkcmVzcyBvZg0KPiA+IG9uZSBvZiB0aGVpciB0YXNrcywgZG8g
-c29tZSBzeXNjYWxsLCBhbmQgdGhlbiBtb2RpZnkgdGhlaXIga2VybmVsDQo+ID4gdGhyZWFkJ3Mg
-c3RhY2sgc3VjaCB0aGF0IGl0IHdpbGwgSVJFVCByaWdodCBiYWNrIHRvIGEgZnVsbHkgY29udHJv
-bGxlZA0KPiA+IHJlZ2lzdGVyIHN0YXRlIHdpdGggUlNQIHBvaW50aW5nIGF0IGFuIGF0dGFja2Vy
-LXN1cHBsaWVkIGtlcm5lbCBzdGFjay4NCj4gPiBTbyB0aGlzIHRocmVhdCBtb2RlbCBnaXZlcyB2
-ZXJ5IHN0cm9uZyBST1AgcG93ZXJzLiB1bmxlc3Mgd2UgaGF2ZQ0KPiA+IGVpdGhlciBDRVQgb3Ig
-c29tZSBzb2Z0d2FyZSB0ZWNobmlxdWUgdG8gaGFyZGVuIGFsbCB0aGUgUkVUDQo+ID4gaW5zdHJ1
-Y3Rpb25zIGluIHRoZSBrZXJuZWwuDQo+ID4gDQo+ID4gSSB3b25kZXIgaWYgdGhlcmUncyBhIGJl
-dHRlciBtb2RlbCB0byB1c2UuICBNYXliZSB3aXRoIHN0YWNrLXByb3RlY3Rvcg0KPiA+IHdlIGdl
-dCBzb21lIGRlZ3JlZSBvZiBwcm90ZWN0aW9uPyAgT3IgaXMgYWxsIG9mIHRoaXMgaXMgcmF0aGVy
-IHdlYWsNCj4gPiB1bnRpbCB3ZSBoYXZlIENFVCBvciBhIFJBUC1saWtlIGZlYXR1cmUuDQo+IA0K
-PiBJIGJlbGlldmUgdGhhdCBzZWVpbmcgdGhlIGVuZC1nb2FsIHdvdWxkIG1ha2UgcmVhc29uaW5n
-IGFib3V0IHBhdGNoZXMNCj4gZWFzaWVyLCBvdGhlcndpc2UgdGhlIGNvbXBsYWludCDigJxidXQg
-YW55aG93IGl04oCZcyBhbGwgaW5zZWN1cmXigJ0ga2VlcHMgcG9wcGluZw0KPiB1cC4NCj4gDQo+
-IEnigJltIG5vdCBzdXJlIENFVCBvciBvdGhlciBDRkkgd291bGQgYmUgZW5vdWdoIGV2ZW4gd2l0
-aCB0aGlzIHRocmVhdC1tb2RlbC4NCj4gVGhlIHBhZ2UtdGFibGVzICh0aGUgdmVyeSBsZWFzdCkg
-bmVlZCB0byBiZSB3cml0ZS1wcm90ZWN0ZWQsIGFzIG90aGVyd2lzZQ0KPiBjb250cm9sbGVkIGRh
-dGEgd3JpdGVzIG1heSBqdXN0IG1vZGlmeSB0aGVtLiBUaGVyZSBhcmUgdmFyaW91cyBwb3NzaWJs
-ZQ0KPiBzb2x1dGlvbnMgSSBwcmVzdW1lOiB3cml0ZV9yYXJlIGZvciBwYWdlLXRhYmxlcywgaHlw
-ZXJ2aXNvci1hc3Npc3RlZA0KPiBzZWN1cml0eSB0byBvYnRhaW4gcGh5c2ljYWwgbGV2ZWwgTlgv
-Uk8gKGEtbGEgTWljcm9zb2Z0IFZCUykgb3Igc29tZSBzb3J0IG9mDQo+IGhhcmR3YXJlIGVuY2xh
-dmUuDQo+IA0KPiBXaGF0IGRvIHlvdSB0aGluaz8NCg0KSSBhbSBub3Qgc3VyZSB3aGljaCBpc3N1
-ZSB5b3UgYXJlIHRhbGtpbmcgYWJvdXQuIEkgdGhpbmsgdGhlcmUgYXJlIGFjdHVhbGx5IHR3bw0K
-c2VwYXJhdGUgaXNzdWVzIHRoYXQgYXJlIG1lcmdlZCBkaXNjdXNzaW9ucyBmcm9tIG92ZXJsYXAg
-b2YgZml4IGZvciB0aGUgdGVhcmRvd24NCldeWCB3aW5kb3cuDQoNCkZvciB0aGUgV15YIHN0dWZm
-IEkgaGFkIG9yaWdpbmFsbHkgaW1hZ2luZWQgdGhlIHByb3RlY3Rpb24gd2FzIGZvciB3aGVuIGFu
-DQphdHRhY2tlciBoYXMgYSBsaW1pdGVkIGJ1ZyB0aGF0IGNvdWxkIHdyaXRlIHRvIGEgbG9jYXRp
-b24gaW4gdGhlIG1vZHVsZSBzcGFjZSwNCmJ1dCBub3Qgb3RoZXIgbG9jYXRpb25zIGR1ZSB0byBv
-bmx5IGhhdmluZyB0aGUgYWJpbGl0eSB0byBvdmVyd3JpdGUgcGFydCBvZiBhDQpwb2ludGVyIG9y
-IHNvbWUgc29tZXRoaW5nIGxpa2UgdGhhdC4gVGhlbiB0aGUgbW9kdWxlIGNvdWxkIGV4ZWN1dGUg
-dGhlIG5ldyBjb2RlDQphcyBpdCByYW4gbm9ybWFsbHkgYWZ0ZXIgZmluaXNoaW5nIGxvYWRpbmcu
-IFNvIHRoYXQgaXMgd2h5IEkgd2FzIHdvbmRlcmluZyBhYm91dA0KdGhlIFJXIHdpbmRvdyBkdXJp
-bmcgbG9hZC4gU3RpbGwgc2VlbXMgZ2VuZXJhbGx5IHNlbnNpYmxlIHRvIGVuZm9yY2UgV15YIHRo
-b3VnaC4NCg0KSSBsaWtlIHlvdXIgaWRlYSBhYm91dCBzb21ldGhpbmcgbGlrZSB0ZXh0X3Bva2Ug
-dG8gbG9hZCBtb2R1bGVzLiBJIHRoaW5rIG1heWJlDQpteSBtb2R1bGVzIEtBU0xSIHBhdGNoc2V0
-IGNvdWxkIGhlbHAgdGhlIGFib3ZlIHNvbWV3aGF0IHRvbyBzaW5jZSBpdCBsb2FkcyBhdCBhDQpm
-cmVzaGx5IHJhbmRvbWl6ZWQgYWRkcmVzcy4NCg0KU2luY2UgdGhlIGlzc3VlIHdpdGggdGhlIGZy
-ZWVkIHBhZ2VzIGJlZm9yZSBmbHVzaCAodGhlIG9yaWdpbmFsIHNvdXJjZSBvZiB0aGlzDQp0aHJl
-YWQpIGRvZXNuJ3QgcmVxdWlyZSBhIHdyaXRlIGJ1ZyB0byBpbnNlcnQgdGhlIGNvZGUsIGJ1dCBk
-b2VzIHJlcXVpcmUgYSB3YXkNCnRvIGp1bXAgdG8gaXQsIGl0cyBraW5kIG9mIHRoZSBvcHBvc2l0
-ZSBtb2RlbCBvZiB0aGUgYWJvdmUuIFNvIHRoYXQncyB3aHkgSQ0KdGhpbmsgdGhleSBhcmUgZGlm
-ZmVyZW50Lg0KDQpJIGFtIHN0aWxsIGxlYXJuaW5nIGxvdHMgb24ga2VybmVsIGV4cGxvaXRzIHRo
-b3VnaCwgbWF5YmUgS2VlcyBjYW4gcHJvdmlkZSBzb21lDQpiZXR0ZXIgaW5zaWdodCBoZXJlPw0K
-DQpUaGFua3MsDQoNClJpY2sNCg0KDQoNCg0K
+-- Summary --
+
+ROE is a hypercall that enables host operating system to restrict guest's access
+to its own memory. This will provide a hardening mechanism that can be used to
+stop rootkits from manipulating kernel static data structures and code. Once a
+memory region is protected the guest kernel can't even request undoing the
+protection.
+
+Memory protected by ROE should be non-swapable because even if the ROE protected
+page got swapped out, It won't be possible to write anything in its place.
+
+ROE hypercall should be capable of either protecting a whole memory frame or
+parts of it. With these two, it should be possible for guest kernel to protect
+its memory and all the page table entries for that memory inside the page table.
+I am still not sure whether this should be part of ROE job or the guest's job.
+
+
+The reason why it would be better to implement this from inside kvm: instead of
+(host) user space is the need to access SPTEs to modify the permissions, while
+mprotect() from user space can work in theory. It will become a big performance
+hit to vmexit and switch to user space mode on each fault, on the other hand,
+having the permission handled by EPT should make some remarkable performance
+gain.
+
+Our threat model assumes that an attacker got full root access to a running
+guest and his goal is to manipulate kernel code/data (hook syscalls, overwrite
+IDT ..etc).
+
+There is future work in progress to also put some sort of protection on the page
+table register CR3 and other critical registers that can be intercepted by KVM.
+This way it won't be possible for an attacker to manipulate any part of the
+guests page table.
+
+
+-- Test Case --
+
+I was requested to add a test to tools/testing/selftests/kvm/. But the original
+testing suite didn't work for my machine, I experienced shutdown due to triple
+fault because of EPT fault with the current tests. I tried bisecting but the
+triple fault was there from the very first commit.
+
+So instead I would provide here a demo kernel module to test the current
+implementation:
+
+```
+	#include <linux/init.h>
+	#include <linux/module.h>
+	#include <linux/kernel.h>
+	#include <linux/slab.h>
+	#include <linux/kvm_para.h>
+	#include <linux/mm.h>
+	MODULE_LICENSE("GPL");
+	MODULE_AUTHOR("OddCoder");
+	MODULE_DESCRIPTION("ROE Hello world Module");
+	MODULE_VERSION("0.0.1");
+
+	#define KVM_HC_ROE 11
+	#define ROE_VERSION 0
+	#define ROE_MPROTECT 1
+	#define ROE_MPROTECT_CHUNK 2
+
+	static long roe_version(void){
+		return kvm_hypercall1 (KVM_HC_ROE, ROE_VERSION);
+	}
+
+	static long roe_mprotect(void *addr, long pg_count) {
+		return kvm_hypercall3 (KVM_HC_ROE, ROE_MPROTECT, (u64)addr, pg_count);
+	}
+
+	static long roe_mprotect_chunk(void *addr, long size) {
+		return kvm_hypercall3 (KVM_HC_ROE, ROE_MPROTECT_CHUNK, (u64)addr, size);
+	}
+
+ 	static int __init hello(void ) {
+		int x;
+		struct page *pg1, *pg2;
+		void *memory;
+		pg1 = alloc_page(GFP_KERNEL);
+		pg2 = alloc_page(GFP_KERNEL);
+		memory = page_to_virt(pg1);
+		pr_info ("ROE_VERSION: %ld\n", roe_version());
+		pr_info ("Allocated memory: 0x%llx\n", (u64)memory);
+		pr_info("Physical Address: 0x%llx\n", virt_to_phys(memory));
+		strcpy((char *)memory, "ROE PROTECTED");
+		pr_info("memory_content: %s\n", (char *)memory);
+		x = roe_mprotect((void *)memory, 1);
+		strcpy((char *)memory, "The strcpy should silently fail and"
+					"memory content won't be modified");
+		pr_info("memory_content: %s\n", (char *)memory);
+		memory = page_to_virt(pg2);
+		pr_info ("Allocated memory: 0x%llx\n", (u64)memory);
+		pr_info("Physical Address: 0x%llx\n", virt_to_phys(memory));
+		strcpy((char *)memory, "ROE PROTECTED PARTIALLY");
+		roe_mprotect_chunk((void *)memory, strlen((char *)memory));
+		pr_info("memory_content: %s\n", (char *)memory);
+		strcpy((char *)memory, "XXXXXXXXXXXXXXXXXXXXXXX"
+					" <- Text here not modified still Can concat");
+		pr_info("memory_content: %s\n", (char *)memory);
+		return 0;
+	}
+	static void __exit bye(void) {
+		pr_info("Allocated Memory May never be freed at all!\n");
+		pr_info("Actually this is more of an ABI demonstration\n");
+		pr_info("than actual use case\n");
+		}
+	module_init(hello);
+	module_exit(bye);
+
+```
+
+I tried this on Gentoo host with Ubuntu guest and Qemu from git after applying
+the following changes to Qemu
+
+diff --git a/accel/kvm/kvm-all.c b/accel/kvm/kvm-all.c
+index 4880a05399..57d0973aca 100644
+--- a/accel/kvm/kvm-all.c
++++ b/accel/kvm/kvm-all.c
+@@ -2035,6 +2035,9 @@ int kvm_cpu_exec(CPUState *cpu)
+                              run->mmio.is_write);
+             ret = 0;
+             break;
++	case KVM_EXIT_ROE:
++	    ret = 0;
++	    break;
+         case KVM_EXIT_IRQ_WINDOW_OPEN:
+             DPRINTF("irq_window_open\n");
+             ret = EXCP_INTERRUPT;
+diff --git a/linux-headers/linux/kvm.h b/linux-headers/linux/kvm.h
+index f11a7eb49c..67aded8f00 100644
+--- a/linux-headers/linux/kvm.h
++++ b/linux-headers/linux/kvm.h
+@@ -235,7 +235,7 @@ struct kvm_hyperv_exit {
+ #define KVM_EXIT_S390_STSI        25
+ #define KVM_EXIT_IOAPIC_EOI       26
+ #define KVM_EXIT_HYPERV           27
+-
++#define KVM_EXIT_ROE              28
+ /* For KVM_EXIT_INTERNAL_ERROR */
+ /* Emulate instruction failed. */
+ #define KVM_INTERNAL_ERROR_EMULATION	1
+
+
+
+-- Change log V6 -> V7 --
+
+- Completely remove CONFIG_KVM_ROE, ROE is always enabled, since it is opt in
+  anyway.
+- Bug fixes regarding how each element in the protection bitmap maps to the
+  equivalent SPTE.
+- General Code cleaning.
+
+
+-- Known Issues --
+
+- THP is not supported yet. In general it is not supported when the guest frame
+  size is not the same as the equivalent EPT frame size.
+
+The previous version (V6) of the patch set can be found at [1]
+
+-- links --
+
+[1] https://lkml.org/lkml/2018/11/4/417
+
+-- List of patches --
+
+[PATCH V7 01/10] KVM: State whether memory should be freed in
+[PATCH V7 02/10] KVM: X86: Add arbitrary data pointer in kvm memslot
+[PATCH V7 03/10] KVM: X86: Add helper function to convert SPTE to GFN
+[PATCH V7 04/10] KVM: Document Memory ROE
+[PATCH V7 05/10] KVM: Create architecture independent ROE skeleton
+[PATCH V7 06/10] KVM: X86: Enable ROE for x86
+[PATCH V7 07/10] KVM: Add support for byte granular memory ROE
+[PATCH V7 08/10] KVM: X86: Port ROE_MPROTECT_CHUNK to x86
+[PATCH V7 09/10] KVM: Add new exit reason For ROE violations
+[PATCH V7 10/10] KVM: Log ROE violations in system log
+
+
+-- Difstat --
+
+ Documentation/virtual/kvm/hypercalls.txt |  40 ++++
+ arch/x86/include/asm/kvm_host.h          |   2 +-
+ arch/x86/kvm/Makefile                    |   4 +-
+ arch/x86/kvm/mmu.c                       | 121 +++++------
+ arch/x86/kvm/mmu.h                       |  31 ++-
+ arch/x86/kvm/roe.c                       | 104 ++++++++++
+ arch/x86/kvm/roe_arch.h                  |  28 +++
+ arch/x86/kvm/x86.c                       |  21 +-
+ include/kvm/roe.h                        |  28 +++
+ include/linux/kvm_host.h                 |  25 +++
+ include/uapi/linux/kvm.h                 |   2 +-
+ include/uapi/linux/kvm_para.h            |   5 +
+ virt/kvm/kvm_main.c                      |  56 +++--
+ virt/kvm/roe.c                           | 342 +++++++++++++++++++++++++++++++
+ virt/kvm/roe_generic.h                   |  18 ++
+ 15 files changed, 732 insertions(+), 95 deletions(-)
+
+Signed-off-by: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
