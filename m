@@ -1,7 +1,7 @@
 From: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
-Subject: [PATCH 03/10] KVM: X86: Add helper function to convert SPTE to GFN
-Date: Fri,  7 Dec 2018 14:47:56 +0200
-Message-Id: <20181207124803.10828-4-ahmedsoliman@mena.vt.edu>
+Subject: [PATCH 04/10] KVM: Document Memory ROE
+Date: Fri,  7 Dec 2018 14:47:57 +0200
+Message-Id: <20181207124803.10828-5-ahmedsoliman@mena.vt.edu>
 In-Reply-To: <20181207124803.10828-1-ahmedsoliman@mena.vt.edu>
 References: <20181207124803.10828-1-ahmedsoliman@mena.vt.edu>
 MIME-Version: 1.0
@@ -10,39 +10,59 @@ To: Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, Jonathan Corbet <co
 Cc: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+ROE version documented here is implemented in the next 2 patches
 Signed-off-by: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
 ---
- arch/x86/kvm/mmu.c | 7 +++++++
- arch/x86/kvm/mmu.h | 1 +
- 2 files changed, 8 insertions(+)
+ Documentation/virtual/kvm/hypercalls.txt | 40 ++++++++++++++++++++++++
+ 1 file changed, 40 insertions(+)
 
-diff --git a/arch/x86/kvm/mmu.c b/arch/x86/kvm/mmu.c
-index b67d743c33..a300e4acb8 100644
---- a/arch/x86/kvm/mmu.c
-+++ b/arch/x86/kvm/mmu.c
-@@ -1024,6 +1024,13 @@ static gfn_t kvm_mmu_page_get_gfn(struct kvm_mmu_page *sp, int index)
+diff --git a/Documentation/virtual/kvm/hypercalls.txt b/Documentation/virtual/kvm/hypercalls.txt
+index da24c138c8..a31f316ce6 100644
+--- a/Documentation/virtual/kvm/hypercalls.txt
++++ b/Documentation/virtual/kvm/hypercalls.txt
+@@ -141,3 +141,43 @@ a0 corresponds to the APIC ID in the third argument (a2), bit 1
+ corresponds to the APIC ID a2+1, and so on.
  
- 	return sp->gfn + (index << ((sp->role.level - 1) * PT64_LEVEL_BITS));
- }
-+gfn_t spte_to_gfn(u64 *spte)
-+{
-+	struct kvm_mmu_page *sp;
+ Returns the number of CPUs to which the IPIs were delivered successfully.
 +
-+	sp = page_header(__pa(spte));
-+	return kvm_mmu_page_get_gfn(sp, spte - sp->spt);
-+}
- 
- static void kvm_mmu_page_set_gfn(struct kvm_mmu_page *sp, int index, gfn_t gfn)
- {
-diff --git a/arch/x86/kvm/mmu.h b/arch/x86/kvm/mmu.h
-index c7b333147c..49d7f2f002 100644
---- a/arch/x86/kvm/mmu.h
-+++ b/arch/x86/kvm/mmu.h
-@@ -211,4 +211,5 @@ void kvm_mmu_gfn_allow_lpage(struct kvm_memory_slot *slot, gfn_t gfn);
- bool kvm_mmu_slot_gfn_write_protect(struct kvm *kvm,
- 				    struct kvm_memory_slot *slot, u64 gfn);
- int kvm_arch_write_log_dirty(struct kvm_vcpu *vcpu);
-+gfn_t spte_to_gfn(u64 *sptep);
- #endif
++7. KVM_HC_ROE
++----------------
++Architecture: x86
++Status: active
++Purpose: Hypercall used to apply Read-Only Enforcement to guest memory and
++registers
++Usage 1:
++     a0: ROE_VERSION
++
++Returns non-signed number that represents the current version of ROE
++implementation current version.
++
++Usage 2:
++
++     a0: ROE_MPROTECT	(requires version >= 1)
++     a1: Start address aligned to page boundary.
++     a2: Number of pages to be protected.
++
++This configuration lets a guest kernel have part of its read/write memory
++converted into read-only.  This action is irreversible.
++Upon successful run, the number of pages protected is returned.
++
++Usage 3:
++     a0: ROE_MPROTECT_CHUNK	(requires version >= 2)
++     a1: Start address aligned to page boundary.
++     a2: Number of bytes to be protected.
++This configuration lets a guest kernel have part of its read/write memory
++converted into read-only with bytes granularity. ROE_MPROTECT_CHUNK is
++relatively slow compared to ROE_MPROTECT. This action is irreversible.
++Upon successful run, the number of bytes protected is returned.
++
++Error codes:
++	-KVM_ENOSYS: system call being triggered from ring 3 or it is not
++	implemented.
++	-EINVAL: error based on given parameters.
++
++Notes: KVM_HC_ROE can not be triggered from guest Ring 3 (user mode). The
++reason is that user mode malicious software can make use of it to enforce read
++only protection on an arbitrary memory page thus crashing the kernel.
 -- 
 2.19.2
