@@ -1,98 +1,57 @@
-Date: Sun, 9 Dec 2018 10:37:40 +0000
-From: Russell King - ARM Linux <linux@armlinux.org.uk>
-Subject: Re: [PATCH v3] ARM: smp: add support for per-task stack canaries
-Message-ID: <20181209103740.GB30658@n2100.armlinux.org.uk>
-References: <20181206083257.9596-1-ard.biesheuvel@linaro.org>
- <201812091807.4emRkZ7L%fengguang.wu@intel.com>
+From: Tycho Andersen <tycho@tycho.ws>
+Subject: [RFC v1] copy_{to,from}_user(): only inline when !__CHECKER__
+Date: Sun,  9 Dec 2018 13:44:49 -0700
+Message-Id: <20181209204449.18906-1-tycho@tycho.ws>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <201812091807.4emRkZ7L%fengguang.wu@intel.com>
-Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
-To: kbuild test robot <lkp@intel.com>
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, kbuild-all@01.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com
+Content-Transfer-Encoding: 8bit
+To: linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: linux-kernel@vger.kernel.org, Tycho Andersen <tycho@tycho.ws>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Dec 09, 2018 at 06:28:11PM +0800, kbuild test robot wrote:
-> Hi Ard,
-> 
-> I love your patch! Perhaps something to improve:
+While working on some additional copy_to_user() checks for sparse, I
+noticed that sparse's current copy_to_user() checks are not triggered. This
+is because copy_to_user() is declared as __always_inline, and sparse
+specifically looks for a call instruction to copy_to_user() when it tries
+to apply the checks.
 
-Hi,
+A quick fix is to explicitly not inline when __CHECKER__ is defined, so
+that sparse will be able to analyze all the copy_{to,from}_user calls.
+There may be some refactoring in sparse that we can do to fix this,
+although it's not immediately obvious to me how, hence the RFC-ness of this
+patch.
 
-This looks to me like a false warning - how can a patch touching arch
-code affect the result of lib/test_ubsan.c?  Please can you double-
-check this result?
+Signed-off-by: Tycho Andersen <tycho@tycho.ws>
+---
+ include/linux/uaccess.h | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
 
-Thanks.
-
-> 
-> [auto build test WARNING on arm/for-next]
-> [also build test WARNING on v4.20-rc5]
-> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
-> 
-> url:    https://github.com/0day-ci/linux/commits/Ard-Biesheuvel/ARM-smp-add-support-for-per-task-stack-canaries/20181209-033321
-> base:   git://git.armlinux.org.uk/~rmk/linux-arm.git for-next
-> config: arm-allmodconfig (attached as .config)
-> compiler: arm-linux-gnueabi-gcc (Debian 7.2.0-11) 7.2.0
-> reproduce:
->         wget https://raw.githubusercontent.com/intel/lkp-tests/master/sbin/make.cross -O ~/bin/make.cross
->         chmod +x ~/bin/make.cross
->         # save the attached .config to linux build tree
->         GCC_VERSION=7.2.0 make.cross ARCH=arm 
-> 
-> All warnings (new ones prefixed by >>):
-> 
->    lib/test_ubsan.c: In function 'test_ubsan_vla_bound_not_positive':
-> >> lib/test_ubsan.c:48:2: warning: ISO C90 forbids variable length array 'buf' [-Wvla]
->      char buf[size];
->      ^~~~
->    lib/test_ubsan.c: In function 'test_ubsan_out_of_bounds':
-> >> lib/test_ubsan.c:64:2: warning: ISO C90 forbids variable length array 'arr' [-Wvla]
->      volatile int arr[i];
->      ^~~~~~~~
-> 
-> vim +/buf +48 lib/test_ubsan.c
-> 
-> 854686f4 Jinbum Park 2018-04-10  44  
-> 854686f4 Jinbum Park 2018-04-10  45  static void test_ubsan_vla_bound_not_positive(void)
-> 854686f4 Jinbum Park 2018-04-10  46  {
-> 854686f4 Jinbum Park 2018-04-10  47  	volatile int size = -1;
-> 854686f4 Jinbum Park 2018-04-10 @48  	char buf[size];
-> 854686f4 Jinbum Park 2018-04-10  49  
-> 854686f4 Jinbum Park 2018-04-10  50  	(void)buf;
-> 854686f4 Jinbum Park 2018-04-10  51  }
-> 854686f4 Jinbum Park 2018-04-10  52  
-> 854686f4 Jinbum Park 2018-04-10  53  static void test_ubsan_shift_out_of_bounds(void)
-> 854686f4 Jinbum Park 2018-04-10  54  {
-> 854686f4 Jinbum Park 2018-04-10  55  	volatile int val = -1;
-> 854686f4 Jinbum Park 2018-04-10  56  	int val2 = 10;
-> 854686f4 Jinbum Park 2018-04-10  57  
-> 854686f4 Jinbum Park 2018-04-10  58  	val2 <<= val;
-> 854686f4 Jinbum Park 2018-04-10  59  }
-> 854686f4 Jinbum Park 2018-04-10  60  
-> 854686f4 Jinbum Park 2018-04-10  61  static void test_ubsan_out_of_bounds(void)
-> 854686f4 Jinbum Park 2018-04-10  62  {
-> 854686f4 Jinbum Park 2018-04-10  63  	volatile int i = 4, j = 5;
-> 854686f4 Jinbum Park 2018-04-10 @64  	volatile int arr[i];
-> 854686f4 Jinbum Park 2018-04-10  65  
-> 854686f4 Jinbum Park 2018-04-10  66  	arr[j] = i;
-> 854686f4 Jinbum Park 2018-04-10  67  }
-> 854686f4 Jinbum Park 2018-04-10  68  
-> 
-> :::::: The code at line 48 was first introduced by commit
-> :::::: 854686f4edf483db1e0d26d972bdb8fb65c8bfaa lib: add testing module for UBSAN
-> 
-> :::::: TO: Jinbum Park <jinb.park7@gmail.com>
-> :::::: CC: Linus Torvalds <torvalds@linux-foundation.org>
-> 
-> ---
-> 0-DAY kernel test infrastructure                Open Source Technology Center
-> https://lists.01.org/pipermail/kbuild-all                   Intel Corporation
-
-
-
+diff --git a/include/linux/uaccess.h b/include/linux/uaccess.h
+index efe79c1cdd47..f20a2d173e1f 100644
+--- a/include/linux/uaccess.h
++++ b/include/linux/uaccess.h
+@@ -140,7 +140,13 @@ extern unsigned long
+ _copy_to_user(void __user *, const void *, unsigned long);
+ #endif
+ 
+-static __always_inline unsigned long __must_check
++#ifdef __CHECKER__
++#define uaccess_inline __attribute__((__noinline__))
++#else
++#define uaccess_inline __always_inline
++#endif
++
++static uaccess_inline unsigned long __must_check
+ copy_from_user(void *to, const void __user *from, unsigned long n)
+ {
+ 	if (likely(check_copy_size(to, n, false)))
+@@ -148,7 +154,7 @@ copy_from_user(void *to, const void __user *from, unsigned long n)
+ 	return n;
+ }
+ 
+-static __always_inline unsigned long __must_check
++static uaccess_inline unsigned long __must_check
+ copy_to_user(void __user *to, const void *from, unsigned long n)
+ {
+ 	if (likely(check_copy_size(from, n, true)))
 -- 
-RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
-FTTC broadband for 0.8mile line in suburbia: sync at 12.1Mbps down 622kbps up
-According to speedtest.net: 11.9Mbps down 500kbps up
+2.19.1
