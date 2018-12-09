@@ -1,60 +1,41 @@
-Date: Sun, 9 Dec 2018 22:39:52 +0100
+Date: Sun, 9 Dec 2018 23:08:40 +0100
 From: Luc Van Oostenryck <luc.vanoostenryck@gmail.com>
 Subject: Re: [RFC v1] copy_{to,from}_user(): only inline when !__CHECKER__
-Message-ID: <20181209213951.kumz33u6prb2seqz@ltop.local>
+Message-ID: <20181209220839.sf5t3mis4pawqthc@ltop.local>
 References: <20181209204449.18906-1-tycho@tycho.ws>
  <20181209210220.GB2217@ZenIV.linux.org.uk>
  <20181209212523.GE30796@cisco>
+ <20181209213951.kumz33u6prb2seqz@ltop.local>
+ <20181209215651.GD2217@ZenIV.linux.org.uk>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20181209212523.GE30796@cisco>
-To: Tycho Andersen <tycho@tycho.ws>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+In-Reply-To: <20181209215651.GD2217@ZenIV.linux.org.uk>
+To: Al Viro <viro@zeniv.linux.org.uk>
+Cc: Tycho Andersen <tycho@tycho.ws>, linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Dec 09, 2018 at 02:25:23PM -0700, Tycho Andersen wrote:
-> Hi Al,
+On Sun, Dec 09, 2018 at 09:56:51PM +0000, Al Viro wrote:
+> On Sun, Dec 09, 2018 at 10:39:52PM +0100, Luc Van Oostenryck wrote:
 > 
-> On Sun, Dec 09, 2018 at 09:02:21PM +0000, Al Viro wrote:
-> > On Sun, Dec 09, 2018 at 01:44:49PM -0700, Tycho Andersen wrote:
-> > > While working on some additional copy_to_user() checks for sparse, I
-> > > noticed that sparse's current copy_to_user() checks are not triggered. This
-> > > is because copy_to_user() is declared as __always_inline, and sparse
-> > > specifically looks for a call instruction to copy_to_user() when it tries
-> > > to apply the checks.
-> > > 
-> > > A quick fix is to explicitly not inline when __CHECKER__ is defined, so
-> > > that sparse will be able to analyze all the copy_{to,from}_user calls.
-> > > There may be some refactoring in sparse that we can do to fix this,
-> > > although it's not immediately obvious to me how, hence the RFC-ness of this
-> > > patch.
-> > 
-> > Which sparse checks do not trigger?  Explain, please - as it is, I had been
-> > unable to guess what could "specifically looks for a call instruction" refer
-> > to.
-> 
-> In sparse.c there's check_call_instruction(), which is triggered when
-> there's an instruction of OP_CALL type in the basic block. This simply
-> compares against the name of the call target to determine whether or
-> not to call check_ctu().
-> 
-> I think what's happening here is that the call is getting inlined, and
-> so the OP_CALL goes away, and check_call_instruction() never gets
-> called.
+> > There are several more or less bad/good solutions, like:
+> > * add raw_copy_{to,from}_user() in the list of checked function
+> >   (not inlined in most archs).
+> > * add a new annotation to force sparse to check the byte count
+> >   (I'm thinking about __range__/OP_RANGE or something similar).
+> > * do these checks before functions are inlined (but then some
+> >   constant count could not yet be seen as constant).
+>   * just spell it out in copy_to_user() itself - as in
+> #ifdef C_T_U_SIZE_LIMIT
+> 	if (__builtin_constant_p(count) && count > C_T_U_SIZE_LIMIT)
+> 		/* something warning-triggering */
+> #endif
+> in the beginning of copy_from_user().  Or simply
+> #ifdef C_T_U_SIZE_LIMIT
+> 	BUILD_BUG_ON(__builtin_constant_p(count) && count > C_T_U_SIZE_LIMIT);
+> #endif
+> in there...
 
-Yes, it's what's happening.
-
-There are several more or less bad/good solutions, like:
-* add raw_copy_{to,from}_user() in the list of checked function
-  (not inlined in most archs).
-* add a new annotation to force sparse to check the byte count
-  (I'm thinking about __range__/OP_RANGE or something similar).
-* do these checks before functions are inlined (but then some
-  constant count could not yet be seen as constant).
-* ...
-
-Wasn't there some plan to remove all these __always_inline
-because of the future 'asm inline'?
+Yes, I agree.
 
 -- Luc
