@@ -1,259 +1,63 @@
-From: Russell Currey <ruscur@russell.cc>
-Subject: [PATCH v2 3/3] powerpc/64s: Implement KUAP for Radix MMU
-Date: Mon, 10 Dec 2018 18:00:44 +1100
-Message-Id: <20181210070044.27503-4-ruscur@russell.cc>
-In-Reply-To: <20181210070044.27503-1-ruscur@russell.cc>
-References: <20181210070044.27503-1-ruscur@russell.cc>
+Date: Mon, 10 Dec 2018 10:59:55 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Subject: Re: [PATCH 2/6] __wr_after_init: write rare for static allocation
+Message-ID: <20181210095955.GI5289@hirez.programming.kicks-ass.net>
+References: <20181204121805.4621-1-igor.stoppa@huawei.com>
+ <20181204121805.4621-3-igor.stoppa@huawei.com>
+ <CALCETrVvoui0vksdt0Y9rdGL5ipEn_FtSXVVUFdH03ZC93cy_A@mail.gmail.com>
+ <20181206094451.GC13538@hirez.programming.kicks-ass.net>
+ <d9382720-3c39-5f10-afcd-dc17727fe4dc@gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: linuxppc-dev@lists.ozlabs.org
-Cc: mikey@neuling.org, mpe@ellerman.id.au, benh@kernel.crashing.org, npiggin@gmail.com, christophe.leroy@c-s.fr, kernel-hardening@lists.openwall.com, Russell Currey <ruscur@russell.cc>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <d9382720-3c39-5f10-afcd-dc17727fe4dc@gmail.com>
+To: Igor Stoppa <igor.stoppa@gmail.com>
+Cc: Andy Lutomirski <luto@kernel.org>, linux-arch <linux-arch@vger.kernel.org>, linux-s390 <linux-s390@vger.kernel.org>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Igor Stoppa <igor.stoppa@huawei.com>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux-integrity <linux-integrity@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kernel Userspace Access Prevention utilises a feature of
-the Radix MMU which disallows read and write access to userspace
-addresses.  By utilising this, the kernel is prevented from accessing
-user data from outside of trusted paths that perform proper safety
-checks, such as copy_{to/from}_user() and friends.
+On Mon, Dec 10, 2018 at 12:32:21AM +0200, Igor Stoppa wrote:
+> 
+> 
+> On 06/12/2018 11:44, Peter Zijlstra wrote:
+> > On Wed, Dec 05, 2018 at 03:13:56PM -0800, Andy Lutomirski wrote:
+> > 
+> > > > +       if (op == WR_MEMCPY)
+> > > > +               memcpy((void *)wr_poking_addr, (void *)src, len);
+> > > > +       else if (op == WR_MEMSET)
+> > > > +               memset((u8 *)wr_poking_addr, (u8)src, len);
+> > > > +       else if (op == WR_RCU_ASSIGN_PTR)
+> > > > +               /* generic version of rcu_assign_pointer */
+> > > > +               smp_store_release((void **)wr_poking_addr,
+> > > > +                                 RCU_INITIALIZER((void **)src));
+> > > > +       kasan_enable_current();
+> > > 
+> > > Hmm.  I suspect this will explode quite badly on sane architectures
+> > > like s390.  (In my book, despite how weird s390 is, it has a vastly
+> > > nicer model of "user" memory than any other architecture I know
+> > > of...).  I think you should use copy_to_user(), etc, instead.  I'm not
+> > > entirely sure what the best smp_store_release() replacement is.
+> > > Making this change may also mean you can get rid of the
+> > > kasan_disable_current().
+> > 
+> > If you make the MEMCPY one guarantee single-copy atomicity for native
+> > words then you're basically done.
+> > 
+> > smp_store_release() can be implemented with:
+> > 
+> > 	smp_mb();
+> > 	WRITE_ONCE();
+> > 
+> > So if we make MEMCPY provide the WRITE_ONCE(), all we need is that
+> > barrier, which we can easily place at the call site and not overly
+> > complicate our interface with this.
+> 
+> Ok, so the 3rd case (WR_RCU_ASSIGN_PTR) could be handled outside of this
+> function.
+> But, since now memcpy() will be replaced by copy_to_user(), can I assume
+> that also copy_to_user() will be atomic, if the destination is properly
+> aligned? On x86_64 it seems yes, however it's not clear to me if this is the
+> outcome of an optimization or if I can expect it to be always true.
 
-Userspace access is disabled from early boot and is only enabled when:
-
-        - exiting the kernel and entering userspace
-        - performing an operation like copy_{to/from}_user()
-        - context switching to a process that has access enabled
-
-and similarly, access is disabled again when exiting userspace and
-entering the kernel.
-
-This feature has a slight performance impact which I roughly measured
-to be
-3% slower in the worst case (performing 1GB of 1 byte read()/write()
-syscalls), and is gated behind the CONFIG_PPC_KUAP option for
-performance-critical builds.
-
-This feature can be tested by using the lkdtm driver (CONFIG_LKDTM=y)
-and performing the following:
-
-        echo ACCESS_USERSPACE > [debugfs]/provoke-crash/DIRECT
-
-if enabled, this should send SIGSEGV to the thread.
-
-The KUAP state is tracked in the PACA because reading the register
-that manages these accesses is costly. This Has the unfortunate
-downside of another layer of abstraction for platforms that implement
-the locks and unlocks, but this could be useful in future for other
-things too, like counters for benchmarking or smartly handling lots
-of small accesses at once.
-
-Signed-off-by: Russell Currey <ruscur@russell.cc>
----
- .../powerpc/include/asm/book3s/64/kup-radix.h | 36 +++++++++++++++++++
- arch/powerpc/include/asm/exception-64s.h      | 15 ++++++--
- arch/powerpc/include/asm/kup.h                |  3 ++
- arch/powerpc/include/asm/mmu.h                |  9 ++++-
- arch/powerpc/include/asm/reg.h                |  1 +
- arch/powerpc/mm/pgtable-radix.c               | 14 ++++++++
- arch/powerpc/mm/pkeys.c                       |  7 ++--
- arch/powerpc/platforms/Kconfig.cputype        |  1 +
- 8 files changed, 81 insertions(+), 5 deletions(-)
- create mode 100644 arch/powerpc/include/asm/book3s/64/kup-radix.h
-
-diff --git a/arch/powerpc/include/asm/book3s/64/kup-radix.h b/arch/powerpc/include/asm/book3s/64/kup-radix.h
-new file mode 100644
-index 000000000000..93273ca99310
---- /dev/null
-+++ b/arch/powerpc/include/asm/book3s/64/kup-radix.h
-@@ -0,0 +1,36 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+#ifndef _ASM_POWERPC_KUP_RADIX_H
-+#define _ASM_POWERPC_KUP_RADIX_H
-+
-+#ifndef __ASSEMBLY__
-+#ifdef CONFIG_PPC_KUAP
-+#include <asm/reg.h>
-+/*
-+ * We do have the ability to individually lock/unlock reads and writes rather
-+ * than both at once, however it's a significant performance hit due to needing
-+ * to do a read-modify-write, which adds a mfspr, which is slow.  As a result,
-+ * locking/unlocking both at once is preferred.
-+ */
-+static inline void unlock_user_access(void __user *to, const void __user *from,
-+				      unsigned long size)
-+{
-+	if (!mmu_has_feature(MMU_FTR_RADIX_KUAP))
-+		return;
-+
-+	mtspr(SPRN_AMR, 0);
-+	isync();
-+	get_paca()->user_access_allowed = 1;
-+}
-+
-+static inline void lock_user_access(void __user *to, const void __user *from,
-+				    unsigned long size)
-+{
-+	if (!mmu_has_feature(MMU_FTR_RADIX_KUAP))
-+		return;
-+
-+	mtspr(SPRN_AMR, AMR_LOCKED);
-+	get_paca()->user_access_allowed = 0;
-+}
-+#endif /* CONFIG_PPC_KUAP */
-+#endif /* __ASSEMBLY__ */
-+#endif
-diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
-index 4d971ca1e69b..0ed4923c1282 100644
---- a/arch/powerpc/include/asm/exception-64s.h
-+++ b/arch/powerpc/include/asm/exception-64s.h
-@@ -264,8 +264,19 @@ BEGIN_FTR_SECTION_NESTED(943)						\
- 	std	ra,offset(r13);						\
- END_FTR_SECTION_NESTED(ftr,ftr,943)
- 
--#define LOCK_USER_ACCESS(reg)
--#define UNLOCK_USER_ACCESS(reg)
-+#define LOCK_USER_ACCESS(reg)						\
-+BEGIN_MMU_FTR_SECTION_NESTED(944)					\
-+	lis	reg,(AMR_LOCKED)@highest;				\
-+	rldicr	reg,reg,32,31;						\
-+	mtspr	SPRN_AMR,reg;						\
-+END_MMU_FTR_SECTION_NESTED(MMU_FTR_RADIX_KUAP,MMU_FTR_RADIX_KUAP,944)
-+
-+#define UNLOCK_USER_ACCESS(reg)						\
-+BEGIN_MMU_FTR_SECTION_NESTED(945)					\
-+	li	reg,0;							\
-+	mtspr	SPRN_AMR,reg;						\
-+	isync;								\
-+END_MMU_FTR_SECTION_NESTED(MMU_FTR_RADIX_KUAP,MMU_FTR_RADIX_KUAP,945)
- 
- #define EXCEPTION_PROLOG_0(area)					\
- 	GET_PACA(r13);							\
-diff --git a/arch/powerpc/include/asm/kup.h b/arch/powerpc/include/asm/kup.h
-index 16ff3f9da29c..7813e2bcfb7c 100644
---- a/arch/powerpc/include/asm/kup.h
-+++ b/arch/powerpc/include/asm/kup.h
-@@ -8,6 +8,9 @@
- #ifdef CONFIG_PPC_BOOK3S_32
- #include <asm/book3s/32/kup.h>
- #endif
-+#ifdef CONFIG_PPC_BOOK3S_64
-+#include <asm/book3s/64/kup-radix.h>
-+#endif
- 
- #ifndef __ASSEMBLY__
- 
-diff --git a/arch/powerpc/include/asm/mmu.h b/arch/powerpc/include/asm/mmu.h
-index eb20eb3b8fb0..048df188fc10 100644
---- a/arch/powerpc/include/asm/mmu.h
-+++ b/arch/powerpc/include/asm/mmu.h
-@@ -107,6 +107,10 @@
-  */
- #define MMU_FTR_1T_SEGMENT		ASM_CONST(0x40000000)
- 
-+/* Supports KUAP (key 0 controlling userspace addresses) on radix
-+ */
-+#define MMU_FTR_RADIX_KUAP		ASM_CONST(0x80000000)
-+
- /* MMU feature bit sets for various CPUs */
- #define MMU_FTRS_DEFAULT_HPTE_ARCH_V2	\
- 	MMU_FTR_HPTE_TABLE | MMU_FTR_PPCAS_ARCH_V2
-@@ -143,7 +147,10 @@ enum {
- 		MMU_FTR_KERNEL_RO | MMU_FTR_68_BIT_VA |
- #ifdef CONFIG_PPC_RADIX_MMU
- 		MMU_FTR_TYPE_RADIX |
--#endif
-+#ifdef CONFIG_PPC_KUAP
-+		MMU_FTR_RADIX_KUAP |
-+#endif /* CONFIG_PPC_KUAP */
-+#endif /* CONFIG_PPC_RADIX_MMU */
- 		0,
- };
- 
-diff --git a/arch/powerpc/include/asm/reg.h b/arch/powerpc/include/asm/reg.h
-index c9c382e57017..6b5d2a61af5a 100644
---- a/arch/powerpc/include/asm/reg.h
-+++ b/arch/powerpc/include/asm/reg.h
-@@ -246,6 +246,7 @@
- #define SPRN_DSCR	0x11
- #define SPRN_CFAR	0x1c	/* Come From Address Register */
- #define SPRN_AMR	0x1d	/* Authority Mask Register */
-+#define   AMR_LOCKED	0xC000000000000000UL /* Read & Write disabled */
- #define SPRN_UAMOR	0x9d	/* User Authority Mask Override Register */
- #define SPRN_AMOR	0x15d	/* Authority Mask Override Register */
- #define SPRN_ACOP	0x1F	/* Available Coprocessor Register */
-diff --git a/arch/powerpc/mm/pgtable-radix.c b/arch/powerpc/mm/pgtable-radix.c
-index 3565e266994b..e248f330d6fd 100644
---- a/arch/powerpc/mm/pgtable-radix.c
-+++ b/arch/powerpc/mm/pgtable-radix.c
-@@ -29,6 +29,7 @@
- #include <asm/powernv.h>
- #include <asm/sections.h>
- #include <asm/trace.h>
-+#include <asm/uaccess.h>
- 
- #include <trace/events/thp.h>
- 
-@@ -552,6 +553,19 @@ void __init setup_kuep(bool disabled)
- }
- #endif
- 
-+#ifdef CONFIG_PPC_KUAP
-+void __init setup_kuap(bool disabled)
-+{
-+	if (disabled || !early_radix_enabled())
-+		return;
-+
-+	pr_info("Activating Kernel Userspace Access Prevention\n");
-+
-+	cur_cpu_spec->mmu_features |= MMU_FTR_RADIX_KUAP;
-+	mtspr(SPRN_AMR, AMR_LOCKED);
-+}
-+#endif
-+
- void __init radix__early_init_mmu(void)
- {
- 	unsigned long lpcr;
-diff --git a/arch/powerpc/mm/pkeys.c b/arch/powerpc/mm/pkeys.c
-index b271b283c785..bb3cf915016f 100644
---- a/arch/powerpc/mm/pkeys.c
-+++ b/arch/powerpc/mm/pkeys.c
-@@ -7,6 +7,7 @@
- 
- #include <asm/mman.h>
- #include <asm/setup.h>
-+#include <asm/uaccess.h>
- #include <linux/pkeys.h>
- #include <linux/of_device.h>
- 
-@@ -266,7 +267,8 @@ int __arch_set_user_pkey_access(struct task_struct *tsk, int pkey,
- 
- void thread_pkey_regs_save(struct thread_struct *thread)
- {
--	if (static_branch_likely(&pkey_disabled))
-+	if (static_branch_likely(&pkey_disabled) &&
-+	    !mmu_has_feature(MMU_FTR_RADIX_KUAP))
- 		return;
- 
- 	/*
-@@ -280,7 +282,8 @@ void thread_pkey_regs_save(struct thread_struct *thread)
- void thread_pkey_regs_restore(struct thread_struct *new_thread,
- 			      struct thread_struct *old_thread)
- {
--	if (static_branch_likely(&pkey_disabled))
-+	if (static_branch_likely(&pkey_disabled) &&
-+	    !mmu_has_feature(MMU_FTR_RADIX_KUAP))
- 		return;
- 
- 	if (old_thread->amr != new_thread->amr)
-diff --git a/arch/powerpc/platforms/Kconfig.cputype b/arch/powerpc/platforms/Kconfig.cputype
-index 48cc8df0fdd2..0b9a8eda413a 100644
---- a/arch/powerpc/platforms/Kconfig.cputype
-+++ b/arch/powerpc/platforms/Kconfig.cputype
-@@ -336,6 +336,7 @@ config PPC_RADIX_MMU
- 	depends on PPC_BOOK3S_64
- 	select ARCH_HAS_GIGANTIC_PAGE if (MEMORY_ISOLATION && COMPACTION) || CMA
- 	select PPC_HAVE_KUEP
-+	select PPC_HAVE_KUAP
- 	default y
- 	help
- 	  Enable support for the Power ISA 3.0 Radix style MMU. Currently this
--- 
-2.19.2
+This would be a new contraint; one that needs to be documented and
+verified by the various arch maintainers as they enable this feature on
+their platform.
