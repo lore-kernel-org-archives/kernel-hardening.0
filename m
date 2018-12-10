@@ -1,41 +1,58 @@
-Date: Sun, 9 Dec 2018 23:08:40 +0100
-From: Luc Van Oostenryck <luc.vanoostenryck@gmail.com>
-Subject: Re: [RFC v1] copy_{to,from}_user(): only inline when !__CHECKER__
-Message-ID: <20181209220839.sf5t3mis4pawqthc@ltop.local>
-References: <20181209204449.18906-1-tycho@tycho.ws>
- <20181209210220.GB2217@ZenIV.linux.org.uk>
- <20181209212523.GE30796@cisco>
- <20181209213951.kumz33u6prb2seqz@ltop.local>
- <20181209215651.GD2217@ZenIV.linux.org.uk>
+From: Russell Currey <ruscur@russell.cc>
+Subject: [PATCH v2 0/3] [PATCH v2 0/3] Kernel Userspace Protection for Radix MMU
+Date: Mon, 10 Dec 2018 18:00:41 +1100
+Message-Id: <20181210070044.27503-1-ruscur@russell.cc>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20181209215651.GD2217@ZenIV.linux.org.uk>
-To: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Tycho Andersen <tycho@tycho.ws>, linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Content-Transfer-Encoding: 8bit
+To: linuxppc-dev@lists.ozlabs.org
+Cc: mikey@neuling.org, mpe@ellerman.id.au, benh@kernel.crashing.org, npiggin@gmail.com, christophe.leroy@c-s.fr, kernel-hardening@lists.openwall.com, Russell Currey <ruscur@russell.cc>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Dec 09, 2018 at 09:56:51PM +0000, Al Viro wrote:
-> On Sun, Dec 09, 2018 at 10:39:52PM +0100, Luc Van Oostenryck wrote:
-> 
-> > There are several more or less bad/good solutions, like:
-> > * add raw_copy_{to,from}_user() in the list of checked function
-> >   (not inlined in most archs).
-> > * add a new annotation to force sparse to check the byte count
-> >   (I'm thinking about __range__/OP_RANGE or something similar).
-> > * do these checks before functions are inlined (but then some
-> >   constant count could not yet be seen as constant).
->   * just spell it out in copy_to_user() itself - as in
-> #ifdef C_T_U_SIZE_LIMIT
-> 	if (__builtin_constant_p(count) && count > C_T_U_SIZE_LIMIT)
-> 		/* something warning-triggering */
-> #endif
-> in the beginning of copy_from_user().  Or simply
-> #ifdef C_T_U_SIZE_LIMIT
-> 	BUILD_BUG_ON(__builtin_constant_p(count) && count > C_T_U_SIZE_LIMIT);
-> #endif
-> in there...
+This series is based on Christophe's series:
+http://patchwork.ozlabs.org/project/linuxppc-dev/list/?series=78469
+with some minor changes.
 
-Yes, I agree.
+I wanted to move my patches to apply at the tail of his series to make it
+easier for the two of us to work on independent parts, so I'm resending my
+part of the series with the intent that it applies at the end.  There are
+two required changes to his series to make this work:
 
--- Luc
+In patch 04/11, the #ifdef around the paca_struct flag user_access_allowed
+needs to be dropped.
+
+With my patches removed, patch 11/11 needs to not reference
+asm/book3s/64/kup-radix.h in asm/book3s/64/kup.h (so below the kup.h chunk
+in that patch).
+
+Sorry for being a pain, I'd rather not send a gigantic series full of
+patches that aren't mine.
+
+This branch shows how I'd imagine it would be pulled together:
+https://github.com/ruscur/linux/commits/kuap2
+
+Since the last version of this series:
+
+      - fixed issues booting on hash, and the series now fully bisects
+      - dropped some parts which are now part of Christophe's series
+      - Fix __patch_instruction() in early boot
+      - save three instructions in LOCK_USER_ACCESS()
+
+Russell Currey (3):
+  powerpc/mm/radix: Use KUEP API for Radix MMU
+  powerpc/lib: Refactor __patch_instruction() to use __put_user_asm()
+  powerpc/64s: Implement KUAP for Radix MMU
+
+ .../powerpc/include/asm/book3s/64/kup-radix.h | 36 +++++++++++++++++++
+ arch/powerpc/include/asm/exception-64s.h      | 15 ++++++--
+ arch/powerpc/include/asm/kup.h                |  3 ++
+ arch/powerpc/include/asm/mmu.h                |  9 ++++-
+ arch/powerpc/include/asm/reg.h                |  1 +
+ arch/powerpc/lib/code-patching.c              |  4 +--
+ arch/powerpc/mm/pgtable-radix.c               | 25 +++++++++++--
+ arch/powerpc/mm/pkeys.c                       |  7 ++--
+ arch/powerpc/platforms/Kconfig.cputype        |  2 ++
+ 9 files changed, 92 insertions(+), 10 deletions(-)
+ create mode 100644 arch/powerpc/include/asm/book3s/64/kup-radix.h
+
+-- 
+2.19.2
