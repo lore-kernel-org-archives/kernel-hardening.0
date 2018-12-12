@@ -1,125 +1,97 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v2 2/4] modules: Add new special vfree flags
-Date: Tue, 11 Dec 2018 16:03:52 -0800
-Message-Id: <20181212000354.31955-3-rick.p.edgecombe@intel.com>
+Subject: [PATCH v2 3/4] bpf: switch to new vmalloc vfree flags
+Date: Tue, 11 Dec 2018 16:03:53 -0800
+Message-Id: <20181212000354.31955-4-rick.p.edgecombe@intel.com>
 In-Reply-To: <20181212000354.31955-1-rick.p.edgecombe@intel.com>
 References: <20181212000354.31955-1-rick.p.edgecombe@intel.com>
 To: akpm@linux-foundation.org, luto@kernel.org, will.deacon@arm.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, naveen.n.rao@linux.vnet.ibm.com, anil.s.keshavamurthy@intel.com, davem@davemloft.net, mhiramat@kernel.org, rostedt@goodmis.org, mingo@redhat.com, ast@kernel.org, daniel@iogearbox.net, jeyu@kernel.org, namit@vmware.com, netdev@vger.kernel.org, ard.biesheuvel@linaro.org, jannh@google.com
 Cc: kristen@linux.intel.com, dave.hansen@intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add new flags for handling freeing of special permissioned memory in vmalloc,
-and remove places where the handling was done in module.c.
-
-This will enable this flag for all architectures.
+This switches to use the new vmalloc flags to control freeing memory with
+special permissions.
 
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- kernel/module.c | 43 ++++++++++++-------------------------------
- 1 file changed, 12 insertions(+), 31 deletions(-)
+ include/linux/filter.h | 26 ++++++++++++--------------
+ kernel/bpf/core.c      |  1 -
+ 2 files changed, 12 insertions(+), 15 deletions(-)
 
-diff --git a/kernel/module.c b/kernel/module.c
-index 49a405891587..910f92b402f8 100644
---- a/kernel/module.c
-+++ b/kernel/module.c
-@@ -1941,11 +1941,23 @@ void module_disable_ro(const struct module *mod)
- 	frob_rodata(&mod->init_layout, set_memory_rw);
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index 795ff0b869bb..2aeb93d3337d 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -20,6 +20,7 @@
+ #include <linux/set_memory.h>
+ #include <linux/kallsyms.h>
+ #include <linux/if_vlan.h>
++#include <linux/vmalloc.h>
+ 
+ #include <net/sch_generic.h>
+ 
+@@ -487,7 +488,6 @@ struct bpf_prog {
+ 	u16			pages;		/* Number of allocated pages */
+ 	u16			jited:1,	/* Is our filter JIT'ed? */
+ 				jit_requested:1,/* archs need to JIT the prog */
+-				undo_set_mem:1,	/* Passed set_memory_ro() checkpoint */
+ 				gpl_compatible:1, /* Is filter GPL compatible? */
+ 				cb_access:1,	/* Is control block accessed? */
+ 				dst_needed:1,	/* Do we need dst entry? */
+@@ -699,24 +699,23 @@ bpf_ctx_narrow_access_ok(u32 off, u32 size, u32 size_default)
+ 
+ static inline void bpf_prog_lock_ro(struct bpf_prog *fp)
+ {
+-	fp->undo_set_mem = 1;
+-	set_memory_ro((unsigned long)fp, fp->pages);
+-}
++	struct vm_struct *vm = find_vm_area(fp);
+ 
+-static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
+-{
+-	if (fp->undo_set_mem)
+-		set_memory_rw((unsigned long)fp, fp->pages);
++	if (vm)
++		vm->flags |= VM_HAS_SPECIAL_PERMS;
++	set_memory_ro((unsigned long)fp, fp->pages);
  }
  
-+static void module_set_vm_flags(const struct module_layout *layout)
-+{
-+	struct vm_struct *vm = find_vm_area(layout->base);
-+
+ static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
+ {
+-	set_memory_ro((unsigned long)hdr, hdr->pages);
+-}
++	struct vm_struct *vm = find_vm_area(hdr);
+ 
+-static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
+-{
+-	set_memory_rw((unsigned long)hdr, hdr->pages);
 +	if (vm) {
 +		vm->flags |= VM_HAS_SPECIAL_PERMS;
 +		vm->flags |= VM_IMMEDIATE_UNMAP;
 +	}
-+}
 +
- void module_enable_ro(const struct module *mod, bool after_init)
++	set_memory_ro((unsigned long)hdr, hdr->pages);
+ }
+ 
+ static inline struct bpf_binary_header *
+@@ -746,7 +745,6 @@ void __bpf_prog_free(struct bpf_prog *fp);
+ 
+ static inline void bpf_prog_unlock_free(struct bpf_prog *fp)
  {
- 	if (!rodata_enabled)
- 		return;
- 
-+	module_set_vm_flags(&mod->core_layout);
-+	module_set_vm_flags(&mod->init_layout);
- 	frob_text(&mod->core_layout, set_memory_ro);
- 	frob_rodata(&mod->core_layout, set_memory_ro);
- 	frob_text(&mod->init_layout, set_memory_ro);
-@@ -1964,15 +1976,6 @@ static void module_enable_nx(const struct module *mod)
- 	frob_writable_data(&mod->init_layout, set_memory_nx);
+-	bpf_prog_unlock_ro(fp);
+ 	__bpf_prog_free(fp);
  }
  
--static void module_disable_nx(const struct module *mod)
--{
--	frob_rodata(&mod->core_layout, set_memory_x);
--	frob_ro_after_init(&mod->core_layout, set_memory_x);
--	frob_writable_data(&mod->core_layout, set_memory_x);
--	frob_rodata(&mod->init_layout, set_memory_x);
--	frob_writable_data(&mod->init_layout, set_memory_x);
--}
--
- /* Iterate through all modules and set each module's text as RW */
- void set_all_modules_text_rw(void)
- {
-@@ -2016,23 +2019,8 @@ void set_all_modules_text_ro(void)
- 	}
- 	mutex_unlock(&module_mutex);
- }
--
--static void disable_ro_nx(const struct module_layout *layout)
--{
--	if (rodata_enabled) {
--		frob_text(layout, set_memory_rw);
--		frob_rodata(layout, set_memory_rw);
--		frob_ro_after_init(layout, set_memory_rw);
--	}
--	frob_rodata(layout, set_memory_x);
--	frob_ro_after_init(layout, set_memory_x);
--	frob_writable_data(layout, set_memory_x);
--}
--
- #else
--static void disable_ro_nx(const struct module_layout *layout) { }
- static void module_enable_nx(const struct module *mod) { }
--static void module_disable_nx(const struct module *mod) { }
- #endif
+diff --git a/kernel/bpf/core.c b/kernel/bpf/core.c
+index b1a3545d0ec8..bd3efd7ce526 100644
+--- a/kernel/bpf/core.c
++++ b/kernel/bpf/core.c
+@@ -663,7 +663,6 @@ void __weak bpf_jit_free(struct bpf_prog *fp)
+ 	if (fp->jited) {
+ 		struct bpf_binary_header *hdr = bpf_jit_binary_hdr(fp);
  
- #ifdef CONFIG_LIVEPATCH
-@@ -2163,7 +2151,6 @@ static void free_module(struct module *mod)
- 	mutex_unlock(&module_mutex);
+-		bpf_jit_binary_unlock_ro(hdr);
+ 		bpf_jit_binary_free(hdr);
  
- 	/* This may be empty, but that's OK */
--	disable_ro_nx(&mod->init_layout);
- 	module_arch_freeing_init(mod);
- 	module_memfree(mod->init_layout.base);
- 	kfree(mod->args);
-@@ -2173,7 +2160,6 @@ static void free_module(struct module *mod)
- 	lockdep_free_key_range(mod->core_layout.base, mod->core_layout.size);
- 
- 	/* Finally, free the core (containing the module structure) */
--	disable_ro_nx(&mod->core_layout);
- 	module_memfree(mod->core_layout.base);
- }
- 
-@@ -3497,7 +3483,6 @@ static noinline int do_init_module(struct module *mod)
- #endif
- 	module_enable_ro(mod, true);
- 	mod_tree_remove_init(mod);
--	disable_ro_nx(&mod->init_layout);
- 	module_arch_freeing_init(mod);
- 	mod->init_layout.base = NULL;
- 	mod->init_layout.size = 0;
-@@ -3812,10 +3797,6 @@ static int load_module(struct load_info *info, const char __user *uargs,
- 	module_bug_cleanup(mod);
- 	mutex_unlock(&module_mutex);
- 
--	/* we can't deallocate the module until we clear memory protection */
--	module_disable_ro(mod);
--	module_disable_nx(mod);
--
-  ddebug_cleanup:
- 	ftrace_release_mod(mod);
- 	dynamic_debug_remove(mod, info->debug);
+ 		WARN_ON_ONCE(!bpf_prog_kallsyms_verify_off(fp));
 -- 
 2.17.1
