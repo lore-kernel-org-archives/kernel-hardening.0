@@ -1,97 +1,182 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v2 3/4] bpf: switch to new vmalloc vfree flags
-Date: Tue, 11 Dec 2018 16:03:53 -0800
-Message-Id: <20181212000354.31955-4-rick.p.edgecombe@intel.com>
+Subject: [PATCH v2 4/4] x86/vmalloc: Add TLB efficient x86 arch_vunmap
+Date: Tue, 11 Dec 2018 16:03:54 -0800
+Message-Id: <20181212000354.31955-5-rick.p.edgecombe@intel.com>
 In-Reply-To: <20181212000354.31955-1-rick.p.edgecombe@intel.com>
 References: <20181212000354.31955-1-rick.p.edgecombe@intel.com>
 To: akpm@linux-foundation.org, luto@kernel.org, will.deacon@arm.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, naveen.n.rao@linux.vnet.ibm.com, anil.s.keshavamurthy@intel.com, davem@davemloft.net, mhiramat@kernel.org, rostedt@goodmis.org, mingo@redhat.com, ast@kernel.org, daniel@iogearbox.net, jeyu@kernel.org, namit@vmware.com, netdev@vger.kernel.org, ard.biesheuvel@linaro.org, jannh@google.com
 Cc: kristen@linux.intel.com, dave.hansen@intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This switches to use the new vmalloc flags to control freeing memory with
-special permissions.
+This adds a more efficient x86 architecture specific implementation of
+arch_vunmap, that can free any type of special permission memory with only 1 TLB
+flush.
 
+In order to enable this, _set_pages_p and _set_pages_np are made non-static and
+renamed set_pages_p_noflush and set_pages_np_noflush to better communicate
+their different (non-flushing) behavior from the rest of the set_pages_*
+functions.
+
+The method for doing this with only 1 TLB flush was suggested by Andy
+Lutomirski.
+
+Suggested-by: Andy Lutomirski <luto@kernel.org>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- include/linux/filter.h | 26 ++++++++++++--------------
- kernel/bpf/core.c      |  1 -
- 2 files changed, 12 insertions(+), 15 deletions(-)
+ arch/x86/include/asm/set_memory.h |  2 +
+ arch/x86/mm/Makefile              |  3 +-
+ arch/x86/mm/pageattr.c            | 11 +++--
+ arch/x86/mm/vmalloc.c             | 71 +++++++++++++++++++++++++++++++
+ 4 files changed, 80 insertions(+), 7 deletions(-)
+ create mode 100644 arch/x86/mm/vmalloc.c
 
-diff --git a/include/linux/filter.h b/include/linux/filter.h
-index 795ff0b869bb..2aeb93d3337d 100644
---- a/include/linux/filter.h
-+++ b/include/linux/filter.h
-@@ -20,6 +20,7 @@
- #include <linux/set_memory.h>
- #include <linux/kallsyms.h>
- #include <linux/if_vlan.h>
-+#include <linux/vmalloc.h>
+diff --git a/arch/x86/include/asm/set_memory.h b/arch/x86/include/asm/set_memory.h
+index 07a25753e85c..70ee81e8914b 100644
+--- a/arch/x86/include/asm/set_memory.h
++++ b/arch/x86/include/asm/set_memory.h
+@@ -84,6 +84,8 @@ int set_pages_x(struct page *page, int numpages);
+ int set_pages_nx(struct page *page, int numpages);
+ int set_pages_ro(struct page *page, int numpages);
+ int set_pages_rw(struct page *page, int numpages);
++int set_pages_np_noflush(struct page *page, int numpages);
++int set_pages_p_noflush(struct page *page, int numpages);
  
- #include <net/sch_generic.h>
+ extern int kernel_set_to_readonly;
+ void set_kernel_text_rw(void);
+diff --git a/arch/x86/mm/Makefile b/arch/x86/mm/Makefile
+index 4b101dd6e52f..189681f863a6 100644
+--- a/arch/x86/mm/Makefile
++++ b/arch/x86/mm/Makefile
+@@ -13,7 +13,8 @@ CFLAGS_REMOVE_mem_encrypt_identity.o	= -pg
+ endif
  
-@@ -487,7 +488,6 @@ struct bpf_prog {
- 	u16			pages;		/* Number of allocated pages */
- 	u16			jited:1,	/* Is our filter JIT'ed? */
- 				jit_requested:1,/* archs need to JIT the prog */
--				undo_set_mem:1,	/* Passed set_memory_ro() checkpoint */
- 				gpl_compatible:1, /* Is filter GPL compatible? */
- 				cb_access:1,	/* Is control block accessed? */
- 				dst_needed:1,	/* Do we need dst entry? */
-@@ -699,24 +699,23 @@ bpf_ctx_narrow_access_ok(u32 off, u32 size, u32 size_default)
+ obj-y	:=  init.o init_$(BITS).o fault.o ioremap.o extable.o pageattr.o mmap.o \
+-	    pat.o pgtable.o physaddr.o setup_nx.o tlb.o cpu_entry_area.o
++	    pat.o pgtable.o physaddr.o setup_nx.o tlb.o cpu_entry_area.o \
++	    vmalloc.o
  
- static inline void bpf_prog_lock_ro(struct bpf_prog *fp)
- {
--	fp->undo_set_mem = 1;
--	set_memory_ro((unsigned long)fp, fp->pages);
--}
-+	struct vm_struct *vm = find_vm_area(fp);
- 
--static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
--{
--	if (fp->undo_set_mem)
--		set_memory_rw((unsigned long)fp, fp->pages);
-+	if (vm)
-+		vm->flags |= VM_HAS_SPECIAL_PERMS;
-+	set_memory_ro((unsigned long)fp, fp->pages);
+ # Make sure __phys_addr has no stackprotector
+ nostackp := $(call cc-option, -fno-stack-protector)
+diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
+index db7a10082238..db0a4dfb5a7f 100644
+--- a/arch/x86/mm/pageattr.c
++++ b/arch/x86/mm/pageattr.c
+@@ -2248,9 +2248,7 @@ int set_pages_rw(struct page *page, int numpages)
+ 	return set_memory_rw(addr, numpages);
  }
  
- static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
+-#ifdef CONFIG_DEBUG_PAGEALLOC
+-
+-static int __set_pages_p(struct page *page, int numpages)
++int set_pages_p_noflush(struct page *page, int numpages)
  {
--	set_memory_ro((unsigned long)hdr, hdr->pages);
--}
-+	struct vm_struct *vm = find_vm_area(hdr);
+ 	unsigned long tempaddr = (unsigned long) page_address(page);
+ 	struct cpa_data cpa = { .vaddr = &tempaddr,
+@@ -2269,7 +2267,7 @@ static int __set_pages_p(struct page *page, int numpages)
+ 	return __change_page_attr_set_clr(&cpa, 0);
+ }
  
--static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
--{
--	set_memory_rw((unsigned long)hdr, hdr->pages);
-+	if (vm) {
-+		vm->flags |= VM_HAS_SPECIAL_PERMS;
-+		vm->flags |= VM_IMMEDIATE_UNMAP;
+-static int __set_pages_np(struct page *page, int numpages)
++int set_pages_np_noflush(struct page *page, int numpages)
+ {
+ 	unsigned long tempaddr = (unsigned long) page_address(page);
+ 	struct cpa_data cpa = { .vaddr = &tempaddr,
+@@ -2288,6 +2286,7 @@ static int __set_pages_np(struct page *page, int numpages)
+ 	return __change_page_attr_set_clr(&cpa, 0);
+ }
+ 
++#ifdef CONFIG_DEBUG_PAGEALLOC
+ void __kernel_map_pages(struct page *page, int numpages, int enable)
+ {
+ 	if (PageHighMem(page))
+@@ -2303,9 +2302,9 @@ void __kernel_map_pages(struct page *page, int numpages, int enable)
+ 	 * and hence no memory allocations during large page split.
+ 	 */
+ 	if (enable)
+-		__set_pages_p(page, numpages);
++		set_pages_p_noflush(page, numpages);
+ 	else
+-		__set_pages_np(page, numpages);
++		set_pages_np_noflush(page, numpages);
+ 
+ 	/*
+ 	 * We should perform an IPI and flush all tlbs,
+diff --git a/arch/x86/mm/vmalloc.c b/arch/x86/mm/vmalloc.c
+new file mode 100644
+index 000000000000..be9ea42c3dfe
+--- /dev/null
++++ b/arch/x86/mm/vmalloc.c
+@@ -0,0 +1,71 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * vmalloc.c: x86 arch version of vmalloc.c
++ *
++ * (C) Copyright 2018 Intel Corporation
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; version 2
++ * of the License.
++ */
++
++#include <linux/mm.h>
++#include <linux/set_memory.h>
++#include <linux/vmalloc.h>
++
++static void set_area_direct_np(struct vm_struct *area)
++{
++	int i;
++
++	for (i = 0; i < area->nr_pages; i++)
++		set_pages_np_noflush(area->pages[i], 1);
++}
++
++static void set_area_direct_prw(struct vm_struct *area)
++{
++	int i;
++
++	for (i = 0; i < area->nr_pages; i++)
++		set_pages_p_noflush(area->pages[i], 1);
++}
++
++void arch_vunmap(struct vm_struct *area, int deallocate_pages)
++{
++	int immediate = area->flags & VM_IMMEDIATE_UNMAP;
++	int special = area->flags & VM_HAS_SPECIAL_PERMS;
++
++	/* Unmap from vmalloc area */
++	remove_vm_area(area->addr);
++
++	/* If no need to reset directmap perms, just check if need to flush */
++	if (!(deallocate_pages || special)) {
++		if (immediate)
++			vm_unmap_aliases();
++		return;
 +	}
 +
-+	set_memory_ro((unsigned long)hdr, hdr->pages);
- }
- 
- static inline struct bpf_binary_header *
-@@ -746,7 +745,6 @@ void __bpf_prog_free(struct bpf_prog *fp);
- 
- static inline void bpf_prog_unlock_free(struct bpf_prog *fp)
- {
--	bpf_prog_unlock_ro(fp);
- 	__bpf_prog_free(fp);
- }
- 
-diff --git a/kernel/bpf/core.c b/kernel/bpf/core.c
-index b1a3545d0ec8..bd3efd7ce526 100644
---- a/kernel/bpf/core.c
-+++ b/kernel/bpf/core.c
-@@ -663,7 +663,6 @@ void __weak bpf_jit_free(struct bpf_prog *fp)
- 	if (fp->jited) {
- 		struct bpf_binary_header *hdr = bpf_jit_binary_hdr(fp);
- 
--		bpf_jit_binary_unlock_ro(hdr);
- 		bpf_jit_binary_free(hdr);
- 
- 		WARN_ON_ONCE(!bpf_prog_kallsyms_verify_off(fp));
++	/* From here we need to make sure to reset the direct map perms */
++
++	/*
++	 * If the area being freed does not have any extra capabilities, we can
++	 * just reset the directmap to RW before freeing.
++	 */
++	if (!immediate) {
++		set_area_direct_prw(area);
++		vm_unmap_aliases();
++		return;
++	}
++
++	/*
++	 * If the vm being freed has security sensitive capabilities such as
++	 * executable we need to make sure there is no W window on the directmap
++	 * before removing the X in the TLB. So we set not present first so we
++	 * can flush without any other CPU picking up the mapping. Then we reset
++	 * RW+P without a flush, since NP prevented it from being cached by
++	 * other cpus.
++	 */
++	set_area_direct_np(area);
++	vm_unmap_aliases();
++	set_area_direct_prw(area);
++}
 -- 
 2.17.1
