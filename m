@@ -1,41 +1,190 @@
-Date: Wed, 12 Dec 2018 08:50:57 -0500
-From: Steven Rostedt <rostedt@goodmis.org>
-Subject: Re: [PATCH v2 1/2] seq_buf: Make seq_buf_puts() null-terminate the
- buffer
-Message-ID: <20181212085057.5add880c@gandalf.local.home>
-In-Reply-To: <20181212084532.093fbf2c@gandalf.local.home>
-References: <20181019042109.8064-1-mpe@ellerman.id.au>
-	<87imzzvvlh.fsf@concordia.ellerman.id.au>
-	<20181212084532.093fbf2c@gandalf.local.home>
+Subject: Re: [RFC PATCH v1 3/5] Yama: Enforces noexec mounts or file
+ executability through O_MAYEXEC
+References: <20181212081712.32347-1-mic@digikod.net>
+ <20181212081712.32347-4-mic@digikod.net>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>
+Message-ID: <13fe4508-f0c0-66c7-8aab-8b3ccef5caa2@ssi.gouv.fr>
+Date: Wed, 12 Dec 2018 15:28:23 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-To: Michael Ellerman <mpe@ellerman.id.au>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, jannh@google.com, keescook@chromium.org
+In-Reply-To: <20181212081712.32347-4-mic@digikod.net>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+To: linux-kernel@vger.kernel.org
+Cc: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk <mtk.manpages@gmail.com>, Mimi Zohar <zohar@linux.ibm.com>, =?UTF-8?Q?Philippe_Tr=c3=a9buchet?= <philippe.trebuchet@ssi.gouv.fr>, Shuah Khan <shuah@kernel.org>, Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, Vincent Strubel <vincent.strubel@ssi.gouv.fr>, Yves-Alexis Perez <yves-alexis.perez@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 12 Dec 2018 08:45:32 -0500
-Steven Rostedt <rostedt@goodmis.org> wrote:
 
-> On Wed, 12 Dec 2018 22:21:46 +1100
-> Michael Ellerman <mpe@ellerman.id.au> wrote:
+
+Le 12/12/2018 à 09:17, Mickaël Salaün a écrit :
+> Enable to either propagate the mount options from the underlying VFS
+> mount to prevent execution, or to propagate the file execute permission.
+> This may allow a script interpreter to check execution permissions
+> before reading commands from a file.
 > 
-> > Hi Steve,
-> > 
-> > Friendly ping :)
-> > 
-> > Do you mind picking this one up for 4.21 ?
-> > 
-> >  
+> The main goal is to be able to protect the kernel by restricting
+> arbitrary syscalls that an attacker could perform with a crafted binary
+> or certain script languages.  It also improves multilevel isolation
+> by reducing the ability of an attacker to use side channels with
+> specific code.  These restrictions can natively be enforced for ELF
+> binaries (with the noexec mount option) but require this kernel
+> extension to properly handle scripts (e.g., Python, Perl).
 > 
-> Thanks for the reminder, I've been swamped lately. I'll take a look now.
+> Add a new sysctl kernel.yama.open_mayexec_enforce to control this
+> behavior.  A following patch adds documentation.
 > 
->
+> Signed-off-by: Mickaël Salaün <mic@digikod.net>
+> Reviewed-by: Philippe Trébuchet <philippe.trebuchet@ssi.gouv.fr>
+> Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Mickaël Salaün <mickael.salaun@ssi.gouv.fr>
+> ---
+>  security/yama/Kconfig    |  3 +-
+>  security/yama/yama_lsm.c | 82 +++++++++++++++++++++++++++++++++++++++-
+>  2 files changed, 83 insertions(+), 2 deletions(-)
+> 
+> diff --git a/security/yama/Kconfig b/security/yama/Kconfig
+> index 96b27405558a..9457619fabd5 100644
+> --- a/security/yama/Kconfig
+> +++ b/security/yama/Kconfig
+> @@ -5,7 +5,8 @@ config SECURITY_YAMA
+>  	help
+>  	  This selects Yama, which extends DAC support with additional
+>  	  system-wide security settings beyond regular Linux discretionary
+> -	  access controls. Currently available is ptrace scope restriction.
+> +	  access controls. Currently available are ptrace scope restriction and
+> +	  enforcement of the O_MAYEXEC open flag.
+>  	  Like capabilities, this security module stacks with other LSMs.
+>  	  Further information can be found in
+>  	  Documentation/admin-guide/LSM/Yama.rst.
+> diff --git a/security/yama/yama_lsm.c b/security/yama/yama_lsm.c
+> index ffda91a4a1aa..120664e94ee5 100644
+> --- a/security/yama/yama_lsm.c
+> +++ b/security/yama/yama_lsm.c
+> @@ -1,10 +1,12 @@
+>  /*
+>   * Yama Linux Security Module
+>   *
+> - * Author: Kees Cook <keescook@chromium.org>
+> + * Authors: Kees Cook <keescook@chromium.org>
+> + *          Mickaël Salaün <mickael.salaun@ssi.gouv.fr>
+>   *
+>   * Copyright (C) 2010 Canonical, Ltd.
+>   * Copyright (C) 2011 The Chromium OS Authors.
+> + * Copyright (C) 2018 ANSSI
+>   *
+>   * This program is free software; you can redistribute it and/or modify
+>   * it under the terms of the GNU General Public License version 2, as
+> @@ -28,7 +30,14 @@
+>  #define YAMA_SCOPE_CAPABILITY	2
+>  #define YAMA_SCOPE_NO_ATTACH	3
+>  
+> +#define YAMA_OMAYEXEC_ENFORCE_NONE	0
+> +#define YAMA_OMAYEXEC_ENFORCE_MOUNT	(1 << 0)
+> +#define YAMA_OMAYEXEC_ENFORCE_FILE	(1 << 1)
+> +#define _YAMA_OMAYEXEC_LAST		YAMA_OMAYEXEC_ENFORCE_FILE
+> +#define _YAMA_OMAYEXEC_MASK		((_YAMA_OMAYEXEC_LAST << 1) - 1)
+> +
+>  static int ptrace_scope = YAMA_SCOPE_RELATIONAL;
+> +static int open_mayexec_enforce = YAMA_OMAYEXEC_ENFORCE_NONE;
+>  
+>  /* describe a ptrace relationship for potential exception */
+>  struct ptrace_relation {
+> @@ -423,7 +432,40 @@ int yama_ptrace_traceme(struct task_struct *parent)
+>  	return rc;
+>  }
+>  
+> +/**
+> + * yama_inode_permission - check O_MAYEXEC permission before accessing an inode
+> + * @inode: inode structure to check
+> + * @mask: permission mask
+> + *
+> + * Return 0 if access is permitted, -EACCES otherwise.
+> + */
+> +int yama_inode_permission(struct inode *inode, int mask)
+> +{
+> +	if (!(mask & MAY_OPENEXEC))
+> +		return 0;
+> +	/*
+> +	 * Match regular files and directories to make it easier to
+> +	 * modify script interpreters.
+> +	 */
+> +	if (!S_ISREG(inode->i_mode) && !S_ISDIR(inode->i_mode))
+> +		return 0;
 
-OK, I applied both to my local queue, and it will reach linux-next
-probably some time at the end of this week or early next week. It needs
-to wait till I'm ready to run my local changes through my test suite.
+I forgot to mention that these checks do not handle fifos. This is
+relevant in a threat model targeting persistent attacks (and with
+additional protections/restrictions).
 
-Thanks!
-
--- Steve
+> +
+> +	if ((open_mayexec_enforce & YAMA_OMAYEXEC_ENFORCE_MOUNT) &&
+> +			!(mask & MAY_EXECMOUNT))
+> +		return -EACCES;
+> +
+> +	/*
+> +	 * May prefer acl_permission_check() instead of generic_permission(),
+> +	 * to not be bypassable with CAP_DAC_READ_SEARCH.
+> +	 */
+> +	if (open_mayexec_enforce & YAMA_OMAYEXEC_ENFORCE_FILE)
+> +		return generic_permission(inode, MAY_EXEC);
+> +
+> +	return 0;
+> +}
+> +
+>  static struct security_hook_list yama_hooks[] __lsm_ro_after_init = {
+> +	LSM_HOOK_INIT(inode_permission, yama_inode_permission),
+>  	LSM_HOOK_INIT(ptrace_access_check, yama_ptrace_access_check),
+>  	LSM_HOOK_INIT(ptrace_traceme, yama_ptrace_traceme),
+>  	LSM_HOOK_INIT(task_prctl, yama_task_prctl),
+> @@ -447,6 +489,37 @@ static int yama_dointvec_minmax(struct ctl_table *table, int write,
+>  	return proc_dointvec_minmax(&table_copy, write, buffer, lenp, ppos);
+>  }
+>  
+> +static int yama_dointvec_bitmask_macadmin(struct ctl_table *table, int write,
+> +					  void __user *buffer, size_t *lenp,
+> +					  loff_t *ppos)
+> +{
+> +	int error;
+> +
+> +	if (write) {
+> +		struct ctl_table table_copy;
+> +		int tmp_mayexec_enforce;
+> +
+> +		if (!capable(CAP_MAC_ADMIN))
+> +			return -EPERM;
+> +		tmp_mayexec_enforce = *((int *)table->data);
+> +		table_copy = *table;
+> +		/* do not erase open_mayexec_enforce */
+> +		table_copy.data = &tmp_mayexec_enforce;
+> +		error = proc_dointvec(&table_copy, write, buffer, lenp, ppos);
+> +		if (error)
+> +			return error;
+> +		if ((tmp_mayexec_enforce | _YAMA_OMAYEXEC_MASK) !=
+> +				_YAMA_OMAYEXEC_MASK)
+> +			return -EINVAL;
+> +		*((int *)table->data) = tmp_mayexec_enforce;
+> +	} else {
+> +		error = proc_dointvec(table, write, buffer, lenp, ppos);
+> +		if (error)
+> +			return error;
+> +	}
+> +	return 0;
+> +}
+> +
+>  static int zero;
+>  static int max_scope = YAMA_SCOPE_NO_ATTACH;
+>  
+> @@ -466,6 +539,13 @@ static struct ctl_table yama_sysctl_table[] = {
+>  		.extra1         = &zero,
+>  		.extra2         = &max_scope,
+>  	},
+> +	{
+> +		.procname       = "open_mayexec_enforce",
+> +		.data           = &open_mayexec_enforce,
+> +		.maxlen         = sizeof(int),
+> +		.mode           = 0644,
+> +		.proc_handler   = yama_dointvec_bitmask_macadmin,
+> +	},
+>  	{ }
+>  };
+>  static void __init yama_init_sysctl(void)
+> 
