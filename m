@@ -1,32 +1,29 @@
-From: Nadav Amit <namit@vmware.com>
-Subject: Re: [PATCH v2 2/4] modules: Add new special vfree flags
-Date: Wed, 12 Dec 2018 23:40:25 +0000
-Message-ID: <3AD9DBCA-C6EC-4FA6-84DC-09F3D4A9C47B@vmware.com>
-References: <20181212000354.31955-1-rick.p.edgecombe@intel.com>
- <20181212000354.31955-3-rick.p.edgecombe@intel.com>
-In-Reply-To: <20181212000354.31955-3-rick.p.edgecombe@intel.com>
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <ADD48BCB096691449093B6E0F0AE63DE@namprd05.prod.outlook.com>
-Content-Transfer-Encoding: quoted-printable
+Date: Thu, 13 Dec 2018 10:40:32 +1100 (AEDT)
+From: James Morris <jmorris@namei.org>
+Subject: Re: [RFC PATCH v1 0/5] Add support for O_MAYEXEC
+In-Reply-To: <87lg4upkpv.fsf@oldenburg2.str.redhat.com>
+Message-ID: <alpine.LRH.2.21.1812131039400.7600@namei.org>
+References: <20181212081712.32347-1-mic@digikod.net> <alpine.LRH.2.21.1812130642250.29507@namei.org> <87lg4upkpv.fsf@oldenburg2.str.redhat.com>
 MIME-Version: 1.0
-To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Will Deacon <will.deacon@arm.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "Naveen N . Rao" <naveen.n.rao@linux.vnet.ibm.com>, Anil S Keshavamurthy <anil.s.keshavamurthy@intel.com>, "David S. Miller" <davem@davemloft.net>, Masami Hiramatsu <mhiramat@kernel.org>, Steven Rostedt <rostedt@goodmis.org>, Ingo Molnar <mingo@redhat.com>, Alexei Starovoitov <ast@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Jessica Yu <jeyu@kernel.org>, Network Development <netdev@vger.kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Jann Horn <jannh@google.com>, Kristen Carlson Accardi <kristen@linux.intel.com>, Dave Hansen <dave.hansen@intel.com>, "deneen.t.dock@intel.com" <deneen.t.dock@intel.com>
+Content-Type: text/plain; charset=US-ASCII
+To: Florian Weimer <fweimer@redhat.com>
+Cc: =?ISO-8859-15?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, linux-kernel@vger.kernel.org, Al Viro <viro@zeniv.linux.org.uk>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk <mtk.manpages@gmail.com>, =?ISO-8859-15?Q?Micka=EBl_Sala=FCn?= <mickael.salaun@ssi.gouv.fr>, Mimi Zohar <zohar@linux.ibm.com>, =?ISO-8859-15?Q?Philippe_Tr=E9buchet?= <philippe.trebuchet@ssi.gouv.fr>, Shuah Khan <shuah@kernel.org>, Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, Vincent Strubel <vincent.strubel@ssi.gouv.fr>, Yves-Alexis Perez <yves-alexis.perez@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> On Dec 11, 2018, at 4:03 PM, Rick Edgecombe <rick.p.edgecombe@intel.com> =
-wrote:
->=20
-> Add new flags for handling freeing of special permissioned memory in vmal=
-loc,
-> and remove places where the handling was done in module.c.
->=20
-> This will enable this flag for all architectures.
->=20
-> Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
-> ---
-> kernel/module.c | 43 ++++++++++++-------------------------------
-> 1 file changed, 12 insertions(+), 31 deletions(-)
->=20
+On Wed, 12 Dec 2018, Florian Weimer wrote:
 
-I count on you for merging your patch-set with mine, since clearly they
-conflict.
+> * James Morris:
+> 
+> > If you're depending on the script interpreter to flag that the user may 
+> > execute code, this seems to be equivalent in security terms to depending 
+> > on the user.  e.g. what if the user uses ptrace and clears O_MAYEXEC?
+> 
+> The argument I've heard is this: Using ptrace (and adding the +x
+> attribute) are auditable events.
+
+I guess you could also preload a modified libc which strips the flag.
+
+
+-- 
+James Morris
+<jmorris@namei.org>
