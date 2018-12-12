@@ -1,57 +1,44 @@
-Subject: Re: [RFC PATCH v1 1/5] fs: Add support for an O_MAYEXEC flag on
- sys_open()
-From: Mimi Zohar <zohar@linux.ibm.com>
-Date: Wed, 12 Dec 2018 15:42:36 -0500
-In-Reply-To: <20181212144306.GA19945@quack2.suse.cz>
-References: <20181212081712.32347-1-mic@digikod.net>
-	 <20181212081712.32347-2-mic@digikod.net>
-	 <20181212144306.GA19945@quack2.suse.cz>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <1544647356.4028.105.camel@linux.ibm.com>
-To: Jan Kara <jack@suse.cz>, =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: linux-kernel@vger.kernel.org, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk <mtk.manpages@gmail.com>, =?ISO-8859-1?Q?Micka=EBl_Sala=FCn?= <mickael.salaun@ssi.gouv.fr>, Philippe =?ISO-8859-1?Q?Tr=E9buchet?= <philippe.trebuchet@ssi.gouv.fr>, Shuah Khan <shuah@kernel.org>, Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, Vincent Strubel <vincent.strubel@ssi.gouv.fr>, Yves-Alexis Perez <yves-alexis.perez@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, sgrubb@redhat.com, Matthew Bobrowski <mbobrowski@mbobrowski.org>
+From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
+Subject: Re: [PATCH v2 4/4] x86/vmalloc: Add TLB efficient x86 arch_vunmap
+Date: Wed, 12 Dec 2018 21:05:52 +0000
+Message-ID: <2604df8fb817d8f0c38f572f4fb184db36554bed.camel@intel.com>
+References: <20181212000354.31955-1-rick.p.edgecombe@intel.com>
+	 <20181212000354.31955-5-rick.p.edgecombe@intel.com>
+	 <90B10050-0CF1-48B2-B671-508FB092C2FE@vmware.com>
+In-Reply-To: <90B10050-0CF1-48B2-B671-508FB092C2FE@vmware.com>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <792665CDB5A0EF4E8075F61D4024023D@intel.com>
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+To: "namit@vmware.com" <namit@vmware.com>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "jeyu@kernel.org" <jeyu@kernel.org>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "ast@kernel.org" <ast@kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "jannh@google.com" <jannh@google.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "mingo@redhat.com" <mingo@redhat.com>, "luto@kernel.org" <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Keshavamurthy, Anil S" <anil.s.keshavamurthy@intel.com>, "mhiramat@kernel.org" <mhiramat@kernel.org>, "naveen.n.rao@linux.vnet.ibm.com" <naveen.n.rao@linux.vnet.ibm.com>, "davem@davemloft.net" <davem@davemloft.net>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "Hansen, Dave" <dave.hansen@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2018-12-12 at 15:43 +0100, Jan Kara wrote:
-
-
-> > diff --git a/fs/open.c b/fs/open.c
-> > index 0285ce7dbd51..75479b79a58f 100644
-> > --- a/fs/open.c
-> > +++ b/fs/open.c
-> > @@ -974,6 +974,10 @@ static inline int build_open_flags(int flags, umode_t mode, struct open_flags *o
-> >  	if (flags & O_APPEND)
-> >  		acc_mode |= MAY_APPEND;
-> >  
-> > +	/* Check execution permissions on open. */
-> > +	if (flags & O_MAYEXEC)
-> > +		acc_mode |= MAY_OPENEXEC;
-> > +
-> >  	op->acc_mode = acc_mode;
-> >  
-> >  	op->intent = flags & O_PATH ? 0 : LOOKUP_OPEN;
-> 
-> I don't feel experienced enough in security to tell whether we want this
-> functionality or not. But if we do this, shouldn't we also set FMODE_EXEC
-> on the resulting struct file? That way also security_file_open() can be
-> used to arbitrate such executable opens and in particular
-> fanotify permission event FAN_OPEN_EXEC will get properly generated which I
-> guess is desirable (support for it is sitting in my tree waiting for the
-> merge window) - adding some audit people involved in FAN_OPEN_EXEC to
-> CC. Just an idea...
-
-Assuming the interpreters are properly modified (and signed),
-MAY_OPENEXEC closes a major IMA measurement/appraisal gap.  The kernel
-has no insight into the files that the interpreter is opening.  Having
-the interpreter annotate the file open, allows IMA to differentiate
-scripts opening data files from code.
-
-IMA policy rules could then be written requiring code to be signed.
-
-Example IMA policy rules:
-measure func=FILE_CHECK mask=MAY_OPENEXEC
-appraise func=FILE_CHECK mask=MAY_OPENEXEC appraise_type=imasig
-
-Mimi
+T24gV2VkLCAyMDE4LTEyLTEyIGF0IDA2OjMwICswMDAwLCBOYWRhdiBBbWl0IHdyb3RlOg0KPiA+
+IE9uIERlYyAxMSwgMjAxOCwgYXQgNDowMyBQTSwgUmljayBFZGdlY29tYmUgPHJpY2sucC5lZGdl
+Y29tYmVAaW50ZWwuY29tPg0KPiA+IHdyb3RlOg0KPiA+IA0KPiA+IFRoaXMgYWRkcyBhIG1vcmUg
+ZWZmaWNpZW50IHg4NiBhcmNoaXRlY3R1cmUgc3BlY2lmaWMgaW1wbGVtZW50YXRpb24gb2YNCj4g
+PiBhcmNoX3Z1bm1hcCwgdGhhdCBjYW4gZnJlZSBhbnkgdHlwZSBvZiBzcGVjaWFsIHBlcm1pc3Np
+b24gbWVtb3J5IHdpdGggb25seSAxDQo+ID4gVExCDQo+ID4gZmx1c2guDQo+ID4gDQo+ID4gSW4g
+b3JkZXIgdG8gZW5hYmxlIHRoaXMsIF9zZXRfcGFnZXNfcCBhbmQgX3NldF9wYWdlc19ucCBhcmUg
+bWFkZSBub24tc3RhdGljDQo+ID4gYW5kDQo+ID4gcmVuYW1lZCBzZXRfcGFnZXNfcF9ub2ZsdXNo
+IGFuZCBzZXRfcGFnZXNfbnBfbm9mbHVzaCB0byBiZXR0ZXIgY29tbXVuaWNhdGUNCj4gPiB0aGVp
+ciBkaWZmZXJlbnQgKG5vbi1mbHVzaGluZykgYmVoYXZpb3IgZnJvbSB0aGUgcmVzdCBvZiB0aGUg
+c2V0X3BhZ2VzXyoNCj4gPiBmdW5jdGlvbnMuDQo+ID4gDQo+ID4gVGhlIG1ldGhvZCBmb3IgZG9p
+bmcgdGhpcyB3aXRoIG9ubHkgMSBUTEIgZmx1c2ggd2FzIHN1Z2dlc3RlZCBieSBBbmR5DQo+ID4g
+THV0b21pcnNraS4NCj4gPiANCj4gDQo+IFtzbmlwXQ0KPiANCj4gPiArCS8qDQo+ID4gKwkgKiBJ
+ZiB0aGUgdm0gYmVpbmcgZnJlZWQgaGFzIHNlY3VyaXR5IHNlbnNpdGl2ZSBjYXBhYmlsaXRpZXMg
+c3VjaCBhcw0KPiA+ICsJICogZXhlY3V0YWJsZSB3ZSBuZWVkIHRvIG1ha2Ugc3VyZSB0aGVyZSBp
+cyBubyBXIHdpbmRvdyBvbiB0aGUgZGlyZWN0bWFwDQo+ID4gKwkgKiBiZWZvcmUgcmVtb3Zpbmcg
+dGhlIFggaW4gdGhlIFRMQi4gU28gd2Ugc2V0IG5vdCBwcmVzZW50IGZpcnN0IHNvIHdlDQo+ID4g
+KwkgKiBjYW4gZmx1c2ggd2l0aG91dCBhbnkgb3RoZXIgQ1BVIHBpY2tpbmcgdXAgdGhlIG1hcHBp
+bmcuIFRoZW4gd2UgcmVzZXQNCj4gPiArCSAqIFJXK1Agd2l0aG91dCBhIGZsdXNoLCBzaW5jZSBO
+UCBwcmV2ZW50ZWQgaXQgZnJvbSBiZWluZyBjYWNoZWQgYnkNCj4gPiArCSAqIG90aGVyIGNwdXMu
+DQo+ID4gKwkgKi8NCj4gPiArCXNldF9hcmVhX2RpcmVjdF9ucChhcmVhKTsNCj4gPiArCXZtX3Vu
+bWFwX2FsaWFzZXMoKTsNCj4gDQo+IERvZXMgdm1fdW5tYXBfYWxpYXNlcygpIGZsdXNoIGluIHRo
+ZSBUTEIgdGhlIGRpcmVjdCBtYXBwaW5nIHJhbmdlIGFzIHdlbGw/IEkNCj4gY2FuIG9ubHkgZmlu
+ZCB0aGUgZmx1c2ggb2YgdGhlIHZtYWxsb2MgcmFuZ2UuDQpIbW1tLiBJdCBzaG91bGQgdXN1YWxs
+eSAoSSB0ZXN0ZWQpLCBidXQgbm93IEkgd29uZGVyIGlmIHRoZXJlIGFyZSBjYXNlcyB3aGVyZSBp
+dA0KZG9lc24ndCBhbmQgaXQgY291bGQgZGVwZW5kIG9uIGFyY2hpdGVjdHVyZSBhcyB3ZWxsLiBJ
+J2xsIGhhdmUgdG8gdHJhY2UgdGhyb3VnaA0KdGhpcyB0byB2ZXJpZnksIHRoYW5rcy4NCg0KUmlj
+aw0K
