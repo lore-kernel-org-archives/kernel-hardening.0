@@ -1,74 +1,52 @@
-From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Subject: [RFC PATCH v1 5/5] doc: Add documentation for Yama's open_mayexec_enforce
-Date: Wed, 12 Dec 2018 09:17:12 +0100
-Message-Id: <20181212081712.32347-6-mic@digikod.net>
-In-Reply-To: <20181212081712.32347-1-mic@digikod.net>
-References: <20181212081712.32347-1-mic@digikod.net>
+From: Nadav Amit <namit@vmware.com>
+Subject: Re: [PATCH v2 4/4] x86/vmalloc: Add TLB efficient x86 arch_vunmap
+Date: Wed, 12 Dec 2018 06:30:56 +0000
+Message-ID: <90B10050-0CF1-48B2-B671-508FB092C2FE@vmware.com>
+References: <20181212000354.31955-1-rick.p.edgecombe@intel.com>
+ <20181212000354.31955-5-rick.p.edgecombe@intel.com>
+In-Reply-To: <20181212000354.31955-5-rick.p.edgecombe@intel.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-ID: <7D8FBBAF5802454AB9BBEEE3320BC3F6@namprd05.prod.outlook.com>
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-To: linux-kernel@vger.kernel.org
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk <mtk.manpages@gmail.com>, =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mickael.salaun@ssi.gouv.fr>, Mimi Zohar <zohar@linux.ibm.com>, =?UTF-8?q?Philippe=20Tr=C3=A9buchet?= <philippe.trebuchet@ssi.gouv.fr>, Shuah Khan <shuah@kernel.org>, Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, Vincent Strubel <vincent.strubel@ssi.gouv.fr>, Yves-Alexis Perez <yves-alexis.perez@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org
+To: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Will Deacon <will.deacon@arm.com>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "naveen.n.rao@linux.vnet.ibm.com" <naveen.n.rao@linux.vnet.ibm.com>, "anil.s.keshavamurthy@intel.com" <anil.s.keshavamurthy@intel.com>, "davem@davemloft.net" <davem@davemloft.net>, "mhiramat@kernel.org" <mhiramat@kernel.org>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "mingo@redhat.com" <mingo@redhat.com>, "ast@kernel.org" <ast@kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "jeyu@kernel.org" <jeyu@kernel.org>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "jannh@google.com" <jannh@google.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "dave.hansen@intel.com" <dave.hansen@intel.com>, "deneen.t.dock@intel.com" <deneen.t.dock@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Reviewed-by: Philippe Trébuchet <philippe.trebuchet@ssi.gouv.fr>
-Reviewed-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
-Cc: Jonathan Corbet <corbet@lwn.net>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Mickaël Salaün <mickael.salaun@ssi.gouv.fr>
----
- Documentation/admin-guide/LSM/Yama.rst | 41 ++++++++++++++++++++++++++
- 1 file changed, 41 insertions(+)
+> On Dec 11, 2018, at 4:03 PM, Rick Edgecombe <rick.p.edgecombe@intel.com> =
+wrote:
+>=20
+> This adds a more efficient x86 architecture specific implementation of
+> arch_vunmap, that can free any type of special permission memory with onl=
+y 1 TLB
+> flush.
+>=20
+> In order to enable this, _set_pages_p and _set_pages_np are made non-stat=
+ic and
+> renamed set_pages_p_noflush and set_pages_np_noflush to better communicat=
+e
+> their different (non-flushing) behavior from the rest of the set_pages_*
+> functions.
+>=20
+> The method for doing this with only 1 TLB flush was suggested by Andy
+> Lutomirski.
+>=20
 
-diff --git a/Documentation/admin-guide/LSM/Yama.rst b/Documentation/admin-guide/LSM/Yama.rst
-index d0a060de3973..a72c86a24b35 100644
---- a/Documentation/admin-guide/LSM/Yama.rst
-+++ b/Documentation/admin-guide/LSM/Yama.rst
-@@ -72,3 +72,44 @@ The sysctl settings (writable only with ``CAP_SYS_PTRACE``) are:
-     ``PTRACE_TRACEME``. Once set, this sysctl value cannot be changed.
- 
- The original children-only logic was based on the restrictions in grsecurity.
-+
-+open_mayexec_enforce
-+====================
-+
-+The ``O_MAYEXEC`` flag can be passed to :manpage:`open(2)` to only open files
-+(or directories) that are executable.  If the file is not identified as
-+executable, then the syscall returns -EACCES.  This may allow a script
-+interpreter to check executable permission before reading commands from a file.
-+One interesting use case is to enforce a "write xor execute" policy through
-+interpreters.
-+
-+Thanks to this flag, Yama enables to enforce the ``noexec`` mount option (i.e.
-+the underlying mount point of the file is mounted with MNT_NOEXEC or its
-+underlying superblock is SB_I_NOEXEC) not only on ELF binaries but also on
-+scripts.  This may be possible thanks to script interpreters using the
-+``O_MAYEXEC`` flag.  The executable permission is then checked before reading
-+commands from a file, and thus can enforce the ``noexec`` at the interpreter
-+level by propagating this security policy to the scripts.  To be fully
-+effective, these interpreters also need to handle the other ways to execute
-+code (for which the kernel can't help): command line parameters (e.g., option
-+``-e`` for Perl), module loading (e.g., option ``-m`` for Python), stdin, file
-+sourcing, environment variables, configuration files...  According to the
-+threat model, it may be acceptable to allow some script interpreters (e.g.
-+Bash) to interpret commands from stdin, may it be a TTY or a pipe, because it
-+may not be enough to (directly) perform syscalls.
-+
-+Yama implements two complementary security policies to propagate the ``noexec``
-+mount option or the executable file permission.  These policies are handled by
-+the ``kernel.yama.open_mayexec_enforce`` sysctl (writable only with
-+``CAP_MAC_ADMIN``) as a bitmask:
-+
-+1 - mount restriction:
-+    check that the mount options for the underlying VFS mount do not prevent
-+    execution.
-+
-+2 - file permission restriction:
-+    check that the to-be-opened file is marked as executable for the current
-+    process (e.g., POSIX permissions).
-+
-+Code samples can be found in tools/testing/selftests/yama/test_omayexec.c and
-+https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC .
--- 
-2.20.0.rc2
+[snip]
+
+> +	/*
+> +	 * If the vm being freed has security sensitive capabilities such as
+> +	 * executable we need to make sure there is no W window on the directma=
+p
+> +	 * before removing the X in the TLB. So we set not present first so we
+> +	 * can flush without any other CPU picking up the mapping. Then we rese=
+t
+> +	 * RW+P without a flush, since NP prevented it from being cached by
+> +	 * other cpus.
+> +	 */
+> +	set_area_direct_np(area);
+> +	vm_unmap_aliases();
+
+Does vm_unmap_aliases() flush in the TLB the direct mapping range as well? =
+I
+can only find the flush of the vmalloc range.
