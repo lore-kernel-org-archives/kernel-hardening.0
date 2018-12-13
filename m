@@ -1,102 +1,93 @@
-Subject: Re: [kbuild-all] [PATCH v3] ARM: smp: add support for per-task stack
- canaries
-References: <20181206083257.9596-1-ard.biesheuvel@linaro.org>
- <201812091807.4emRkZ7L%fengguang.wu@intel.com>
- <20181209103740.GB30658@n2100.armlinux.org.uk>
-From: Rong Chen <rong.a.chen@intel.com>
-Message-ID: <47a91e5a-0e97-334c-2f36-a0bd966a0050@intel.com>
-Date: Thu, 13 Dec 2018 10:53:29 +0800
+Date: Thu, 13 Dec 2018 20:47:02 +1100
+From: Matthew Bobrowski <mbobrowski@mbobrowski.org>
+Subject: Re: [RFC PATCH v1 1/5] fs: Add support for an O_MAYEXEC flag on
+ sys_open()
+Message-ID: <20181213094658.GA996@lithium.mbobrowski.org>
+References: <20181212081712.32347-1-mic@digikod.net>
+ <20181212081712.32347-2-mic@digikod.net>
+ <20181212144306.GA19945@quack2.suse.cz>
 MIME-Version: 1.0
-In-Reply-To: <20181209103740.GB30658@n2100.armlinux.org.uk>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Russell King - ARM Linux <linux@armlinux.org.uk>, kbuild test robot <lkp@intel.com>
-Cc: Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Emese Revfy <re.emese@gmail.com>, kbuild-all@01.org, Laura Abbott <labbott@redhat.com>, linux-arm-kernel@lists.infradead.org
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <20181212144306.GA19945@quack2.suse.cz>
+To: Jan Kara <jack@suse.cz>
+Cc: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, linux-kernel@vger.kernel.org, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk <mtk.manpages@gmail.com>, =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mickael.salaun@ssi.gouv.fr>, Mimi Zohar <zohar@linux.ibm.com>, Philippe =?iso-8859-1?Q?Tr=E9buchet?= <philippe.trebuchet@ssi.gouv.fr>, Shuah Khan <shuah@kernel.org>, Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, Vincent Strubel <vincent.strubel@ssi.gouv.fr>, Yves-Alexis Perez <yves-alexis.perez@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, sgrubb@redhat.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Wed, Dec 12, 2018 at 03:43:06PM +0100, Jan Kara wrote:
+> > When the O_MAYEXEC flag is passed, sys_open() may be subject to
+> > additional restrictions depending on a security policy implemented by an
+> > LSM through the inode_permission hook.
+> > 
+> > The underlying idea is to be able to restrict scripts interpretation
+> > according to a policy defined by the system administrator.  For this to
+> > be possible, script interpreters must use the O_MAYEXEC flag
+> > appropriately.  To be fully effective, these interpreters also need to
+> > handle the other ways to execute code (for which the kernel can't help):
+> > command line parameters (e.g., option -e for Perl), module loading
+> > (e.g., option -m for Python), stdin, file sourcing, environment
+> > variables, configuration files...  According to the threat model, it may
+> > be acceptable to allow some script interpreters (e.g. Bash) to interpret
+> > commands from stdin, may it be a TTY or a pipe, because it may not be
+> > enough to (directly) perform syscalls.
+> > 
+> > A simple security policy implementation is available in a following
+> > patch for Yama.
+> > 
+> > This is an updated subset of the patch initially written by Vincent
+> > Strubel for CLIP OS:
+> > https://github.com/clipos-archive/src_platform_clip-patches/blob/f5cb330d6b684752e403b4e41b39f7004d88e561/1901_open_mayexec.patch
+> > This patch has been used for more than 10 years with customized script
+> > interpreters.  Some examples can be found here:
+> > https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC
+> > 
+> > Signed-off-by: Mickaël Salaün <mic@digikod.net>
+> > Signed-off-by: Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>
+> > Signed-off-by: Vincent Strubel <vincent.strubel@ssi.gouv.fr>
+> > Reviewed-by: Philippe Trébuchet <philippe.trebuchet@ssi.gouv.fr>
+> > Cc: Al Viro <viro@zeniv.linux.org.uk>
+> > Cc: Kees Cook <keescook@chromium.org>
+> > Cc: Mickaël Salaün <mickael.salaun@ssi.gouv.fr>
+> 
+> ...
+> 
+> > diff --git a/fs/open.c b/fs/open.c
+> > index 0285ce7dbd51..75479b79a58f 100644
+> > --- a/fs/open.c
+> > +++ b/fs/open.c
+> > @@ -974,6 +974,10 @@ static inline int build_open_flags(int flags, umode_t mode, struct open_flags *o
+> >  	if (flags & O_APPEND)
+> >  		acc_mode |= MAY_APPEND;
+> >  
+> > +	/* Check execution permissions on open. */
+> > +	if (flags & O_MAYEXEC)
+> > +		acc_mode |= MAY_OPENEXEC;
+> > +
+> >  	op->acc_mode = acc_mode;
+> >  
+> >  	op->intent = flags & O_PATH ? 0 : LOOKUP_OPEN;
+> 
+> I don't feel experienced enough in security to tell whether we want this
+> functionality or not. But if we do this, shouldn't we also set FMODE_EXEC
+> on the resulting struct file? That way also security_file_open() can be
+> used to arbitrate such executable opens and in particular
+> fanotify permission event FAN_OPEN_EXEC will get properly generated which I
+> guess is desirable (support for it is sitting in my tree waiting for the
+> merge window) - adding some audit people involved in FAN_OPEN_EXEC to
+> CC. Just an idea...
 
+If I'm understanding this patch series correctly, without an enforced LSM
+policy there's realistically no added benefit from a security perspective,
+right? Also, I'm in agreement with what Jan has mentioned in regards to setting
+the __FMODE_EXEC flag when O_MAYEXEC has been specified. This is something that
+would work quite nicely in conjunction with some of the new file access
+notification events.
 
-On 12/09/2018 06:37 PM, Russell King - ARM Linux wrote:
-> On Sun, Dec 09, 2018 at 06:28:11PM +0800, kbuild test robot wrote:
->> Hi Ard,
->>
->> I love your patch! Perhaps something to improve:
-> Hi,
->
-> This looks to me like a false warning - how can a patch touching arch
-> code affect the result of lib/test_ubsan.c?  Please can you double-
-> check this result?
+Rather than setting it on the resulting struct file, couldn't they simply
+incorporate it as part of op->open_flags when flags & O_MAYEXEC? Not entirely
+sure whether this is what you actually meant or not though? Pretty much the
+same as a call to exec(2)/execat(2) when it builds its open_flags.
 
-Hi,
-
-I'm sorry for the trouble, It's a false warning, we will look into it.
-
-Best Regards,
-Rong Chen
-
-> Thanks.
->
->> [auto build test WARNING on arm/for-next]
->> [also build test WARNING on v4.20-rc5]
->> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
->>
->> url:    https://github.com/0day-ci/linux/commits/Ard-Biesheuvel/ARM-smp-add-support-for-per-task-stack-canaries/20181209-033321
->> base:   git://git.armlinux.org.uk/~rmk/linux-arm.git for-next
->> config: arm-allmodconfig (attached as .config)
->> compiler: arm-linux-gnueabi-gcc (Debian 7.2.0-11) 7.2.0
->> reproduce:
->>          wget https://raw.githubusercontent.com/intel/lkp-tests/master/sbin/make.cross -O ~/bin/make.cross
->>          chmod +x ~/bin/make.cross
->>          # save the attached .config to linux build tree
->>          GCC_VERSION=7.2.0 make.cross ARCH=arm
->>
->> All warnings (new ones prefixed by >>):
->>
->>     lib/test_ubsan.c: In function 'test_ubsan_vla_bound_not_positive':
->>>> lib/test_ubsan.c:48:2: warning: ISO C90 forbids variable length array 'buf' [-Wvla]
->>       char buf[size];
->>       ^~~~
->>     lib/test_ubsan.c: In function 'test_ubsan_out_of_bounds':
->>>> lib/test_ubsan.c:64:2: warning: ISO C90 forbids variable length array 'arr' [-Wvla]
->>       volatile int arr[i];
->>       ^~~~~~~~
->>
->> vim +/buf +48 lib/test_ubsan.c
->>
->> 854686f4 Jinbum Park 2018-04-10  44
->> 854686f4 Jinbum Park 2018-04-10  45  static void test_ubsan_vla_bound_not_positive(void)
->> 854686f4 Jinbum Park 2018-04-10  46  {
->> 854686f4 Jinbum Park 2018-04-10  47  	volatile int size = -1;
->> 854686f4 Jinbum Park 2018-04-10 @48  	char buf[size];
->> 854686f4 Jinbum Park 2018-04-10  49
->> 854686f4 Jinbum Park 2018-04-10  50  	(void)buf;
->> 854686f4 Jinbum Park 2018-04-10  51  }
->> 854686f4 Jinbum Park 2018-04-10  52
->> 854686f4 Jinbum Park 2018-04-10  53  static void test_ubsan_shift_out_of_bounds(void)
->> 854686f4 Jinbum Park 2018-04-10  54  {
->> 854686f4 Jinbum Park 2018-04-10  55  	volatile int val = -1;
->> 854686f4 Jinbum Park 2018-04-10  56  	int val2 = 10;
->> 854686f4 Jinbum Park 2018-04-10  57
->> 854686f4 Jinbum Park 2018-04-10  58  	val2 <<= val;
->> 854686f4 Jinbum Park 2018-04-10  59  }
->> 854686f4 Jinbum Park 2018-04-10  60
->> 854686f4 Jinbum Park 2018-04-10  61  static void test_ubsan_out_of_bounds(void)
->> 854686f4 Jinbum Park 2018-04-10  62  {
->> 854686f4 Jinbum Park 2018-04-10  63  	volatile int i = 4, j = 5;
->> 854686f4 Jinbum Park 2018-04-10 @64  	volatile int arr[i];
->> 854686f4 Jinbum Park 2018-04-10  65
->> 854686f4 Jinbum Park 2018-04-10  66  	arr[j] = i;
->> 854686f4 Jinbum Park 2018-04-10  67  }
->> 854686f4 Jinbum Park 2018-04-10  68
->>
->> :::::: The code at line 48 was first introduced by commit
->> :::::: 854686f4edf483db1e0d26d972bdb8fb65c8bfaa lib: add testing module for UBSAN
->>
->> :::::: TO: Jinbum Park <jinb.park7@gmail.com>
->> :::::: CC: Linus Torvalds <torvalds@linux-foundation.org>
->>
->> ---
->> 0-DAY kernel test infrastructure                Open Source Technology Center
->> https://lists.01.org/pipermail/kbuild-all                   Intel Corporation
->
->
+-- 
+Matthew Bobrowski
