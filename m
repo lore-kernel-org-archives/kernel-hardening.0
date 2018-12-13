@@ -1,44 +1,118 @@
-From: Nadav Amit <namit@vmware.com>
-Subject: Re: [PATCH v2 2/4] modules: Add new special vfree flags
-Date: Thu, 13 Dec 2018 19:27:45 +0000
-Message-ID: <60C7B565-9009-4070-A632-8C982B692806@vmware.com>
-References: <20181212000354.31955-1-rick.p.edgecombe@intel.com>
- <20181212000354.31955-3-rick.p.edgecombe@intel.com>
- <3AD9DBCA-C6EC-4FA6-84DC-09F3D4A9C47B@vmware.com>
- <ae9292380803f891a2472ebec70361b7c1af48d8.camel@intel.com>
-In-Reply-To: <ae9292380803f891a2472ebec70361b7c1af48d8.camel@intel.com>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <0142D38DFCE0BA4B8AA61D16F5CE4B99@namprd05.prod.outlook.com>
-Content-Transfer-Encoding: base64
+Subject: Patch "x86: Introduce __uaccess_begin_nospec() and uaccess_try_nospec" has been added to the 4.4-stable tree
+From: <gregkh@linuxfoundation.org>
+Date: Thu, 13 Dec 2018 20:13:15 +0100
+Message-ID: <154472839510087@kroah.com>
 MIME-Version: 1.0
-To: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "jeyu@kernel.org" <jeyu@kernel.org>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "ast@kernel.org" <ast@kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "jannh@google.com" <jannh@google.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "mingo@redhat.com" <mingo@redhat.com>, "luto@kernel.org" <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Keshavamurthy, Anil S" <anil.s.keshavamurthy@intel.com>, "mhiramat@kernel.org" <mhiramat@kernel.org>, "naveen.n.rao@linux.vnet.ibm.com" <naveen.n.rao@linux.vnet.ibm.com>, "davem@davemloft.net" <davem@davemloft.net>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "Hansen, Dave" <dave.hansen@intel.com>
+Content-Type: text/plain; charset=ANSI_X3.4-1968
+Content-Transfer-Encoding: 8bit
+To: 151727415922.33451.5796614273104346583.stgit@dwillia2-desk3.amr.corp.intel.com, ak@linux.intel.com, alan@linux.intel.com, ben.hutchings@codethink.co.uk, dan.j.williams@intel.com, gregkh@linuxfoundation.org, keescook@chromium.org, kernel-hardening@lists.openwall.com, mingo@redhat.com, tglx@linutronix.de, thomas.lendacky@amd.com, torvalds@linux-foundation.org, viro@zeniv.linux.org.uk
+Cc: stable-commits@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiBPbiBEZWMgMTMsIDIwMTgsIGF0IDExOjAyIEFNLCBFZGdlY29tYmUsIFJpY2sgUCA8cmljay5w
-LmVkZ2Vjb21iZUBpbnRlbC5jb20+IHdyb3RlOg0KPiANCj4gT24gV2VkLCAyMDE4LTEyLTEyIGF0
-IDIzOjQwICswMDAwLCBOYWRhdiBBbWl0IHdyb3RlOg0KPj4+IE9uIERlYyAxMSwgMjAxOCwgYXQg
-NDowMyBQTSwgUmljayBFZGdlY29tYmUgPHJpY2sucC5lZGdlY29tYmVAaW50ZWwuY29tPg0KPj4+
-IHdyb3RlOg0KPj4+IA0KPj4+IEFkZCBuZXcgZmxhZ3MgZm9yIGhhbmRsaW5nIGZyZWVpbmcgb2Yg
-c3BlY2lhbCBwZXJtaXNzaW9uZWQgbWVtb3J5IGluDQo+Pj4gdm1hbGxvYywNCj4+PiBhbmQgcmVt
-b3ZlIHBsYWNlcyB3aGVyZSB0aGUgaGFuZGxpbmcgd2FzIGRvbmUgaW4gbW9kdWxlLmMuDQo+Pj4g
-DQo+Pj4gVGhpcyB3aWxsIGVuYWJsZSB0aGlzIGZsYWcgZm9yIGFsbCBhcmNoaXRlY3R1cmVzLg0K
-Pj4+IA0KPj4+IFNpZ25lZC1vZmYtYnk6IFJpY2sgRWRnZWNvbWJlIDxyaWNrLnAuZWRnZWNvbWJl
-QGludGVsLmNvbT4NCj4+PiAtLS0NCj4+PiBrZXJuZWwvbW9kdWxlLmMgfCA0MyArKysrKysrKysr
-KystLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tDQo+Pj4gMSBmaWxlIGNoYW5nZWQsIDEy
-IGluc2VydGlvbnMoKyksIDMxIGRlbGV0aW9ucygtKQ0KPj4gDQo+PiBJIGNvdW50IG9uIHlvdSBm
-b3IgbWVyZ2luZyB5b3VyIHBhdGNoLXNldCB3aXRoIG1pbmUsIHNpbmNlIGNsZWFybHkgdGhleQ0K
-Pj4gY29uZmxpY3QuDQo+IFllcywgSSBjYW4gcmViYXNlIG9uIHRvcCBvZiB5b3VycyBpZiB5b3Ug
-b21pdCB0aGUgY2hhbmdlcyBhcm91bmQgbW9kdWxlX21lbWZyZWUgDQo+IGZvciB5b3VyIG5leHQg
-dmVyc2lvbi4gSXQgc2hvdWxkIGZpdCB0b2dldGhlciBwcmV0dHkgY2xlYW5seSBmb3IgQlBGIGFu
-ZCBtb2R1bGVzDQo+IEkgdGhpbmsuIE5vdCBzdXJlIHdoYXQgeW91IGFyZSBwbGFubmluZyBmb3Ig
-a3Byb2JlcyBhbmQgZnRyYWNlLg0KDQpBcmUgeW91IGFza2luZyBhZnRlciBsb29raW5nIGF0IHRo
-ZSBsYXRlc3QgdmVyc2lvbiBvZiBteSBwYXRjaC1zZXQ/DQoNCktwcm9iZXMgaXMgZG9uZSBhbmQg
-YWNrJ2QuIGZ0cmFjZSBuZWVkcyB0byBiZSBicm9rZW4gaW50byB0d28gc2VwYXJhdGUNCmNoYW5n
-ZXMgKHNldHRpbmcgeCBhZnRlciB3cml0aW5nLCBhbmQgdXNpbmcgdGV4dF9wb2tlIGludGVyZmFj
-ZXMpLCB1bmxlc3MNClN0ZXZlbiBhY2vigJlzIHRoZW0uIFRoZSBjaGFuZ2VzIGludHJvZHVjZSBz
-b21lIG92ZXJoZWFkICgzeCksIGJ1dCBJIHRoaW5rIGl0DQppcyBhIHJlYXNvbmFibGUgc2xvd2Rv
-d24gZm9yIGEgZGVidWcgZmVhdHVyZS4NCg0KQ2FuIHlvdSBoYXZlIGEgbG9vayBhdCB0aGUgc2Vy
-aWVzIEnigJl2ZSBzZW50IGFuZCBsZXQgbWUga25vdyB3aGljaCBwYXRjaGVzDQp0byBkcm9wPyBJ
-dCB3b3VsZCBiZSBiZXN0IChmb3IgbWUpIGlmIHRoZSB0d28gc2VyaWVzIGFyZSBmdWxseSBtZXJn
-ZWQu
+
+This is a note to let you know that I've just added the patch titled
+
+    x86: Introduce __uaccess_begin_nospec() and uaccess_try_nospec
+
+to the 4.4-stable tree which can be found at:
+    http://www.kernel.org/git/?p=linux/kernel/git/stable/stable-queue.git;a=summary
+
+The filename of the patch is:
+     x86-introduce-__uaccess_begin_nospec-and-uaccess_try_nospec.patch
+and it can be found in the queue-4.4 subdirectory.
+
+If you, or anyone else, feels it should not be added to the stable tree,
+please let <stable@vger.kernel.org> know about it.
+
+
+>From foo@baz Thu Dec 13 20:11:30 CET 2018
+From: Dan Williams <dan.j.williams@intel.com>
+Date: Mon, 29 Jan 2018 17:02:39 -0800
+Subject: x86: Introduce __uaccess_begin_nospec() and uaccess_try_nospec
+
+From: Dan Williams <dan.j.williams@intel.com>
+
+commit b3bbfb3fb5d25776b8e3f361d2eedaabb0b496cd upstream.
+
+For __get_user() paths, do not allow the kernel to speculate on the value
+of a user controlled pointer. In addition to the 'stac' instruction for
+Supervisor Mode Access Protection (SMAP), a barrier_nospec() causes the
+access_ok() result to resolve in the pipeline before the CPU might take any
+speculative action on the pointer value. Given the cost of 'stac' the
+speculation barrier is placed after 'stac' to hopefully overlap the cost of
+disabling SMAP with the cost of flushing the instruction pipeline.
+
+Since __get_user is a major kernel interface that deals with user
+controlled pointers, the __uaccess_begin_nospec() mechanism will prevent
+speculative execution past an access_ok() permission check. While
+speculative execution past access_ok() is not enough to lead to a kernel
+memory leak, it is a necessary precondition.
+
+To be clear, __uaccess_begin_nospec() is addressing a class of potential
+problems near __get_user() usages.
+
+Note, that while the barrier_nospec() in __uaccess_begin_nospec() is used
+to protect __get_user(), pointer masking similar to array_index_nospec()
+will be used for get_user() since it incorporates a bounds check near the
+usage.
+
+uaccess_try_nospec provides the same mechanism for get_user_try.
+
+No functional changes.
+
+Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+Suggested-by: Andi Kleen <ak@linux.intel.com>
+Suggested-by: Ingo Molnar <mingo@redhat.com>
+Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Cc: linux-arch@vger.kernel.org
+Cc: Tom Lendacky <thomas.lendacky@amd.com>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com
+Cc: gregkh@linuxfoundation.org
+Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: alan@linux.intel.com
+Link: https://lkml.kernel.org/r/151727415922.33451.5796614273104346583.stgit@dwillia2-desk3.amr.corp.intel.com
+[bwh: Backported to 4.4: use current_thread_info()]
+Signed-off-by: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ arch/x86/include/asm/uaccess.h |    9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+--- a/arch/x86/include/asm/uaccess.h
++++ b/arch/x86/include/asm/uaccess.h
+@@ -146,6 +146,11 @@ extern int __get_user_bad(void);
+ 
+ #define __uaccess_begin() stac()
+ #define __uaccess_end()   clac()
++#define __uaccess_begin_nospec()	\
++({					\
++	stac();				\
++	barrier_nospec();		\
++})
+ 
+ /*
+  * This is a type: either unsigned long, if the argument fits into
+@@ -473,6 +478,10 @@ struct __large_struct { unsigned long bu
+ 	__uaccess_begin();						\
+ 	barrier();
+ 
++#define uaccess_try_nospec do {						\
++	current_thread_info()->uaccess_err = 0;				\
++	__uaccess_begin_nospec();					\
++
+ #define uaccess_catch(err)						\
+ 	__uaccess_end();						\
+ 	(err) |= (current_thread_info()->uaccess_err ? -EFAULT : 0);	\
+
+
+Patches currently in stable-queue which might be from dan.j.williams@intel.com are
+
+queue-4.4/x86-introduce-__uaccess_begin_nospec-and-uaccess_try_nospec.patch
+queue-4.4/kvm-vmx-emulate-msr_ia32_arch_capabilities.patch
+queue-4.4/x86-usercopy-replace-open-coded-stac-clac-with-__uaccess_-begin-end.patch
+queue-4.4/x86-uaccess-use-__uaccess_begin_nospec-and-uaccess_try_nospec.patch
+queue-4.4/kvm-vmx-allow-direct-access-to-msr_ia32_spec_ctrl.patch
+queue-4.4/kvm-x86-add-ibpb-support.patch
+queue-4.4/kvm-svm-allow-direct-access-to-msr_ia32_spec_ctrl.patch
