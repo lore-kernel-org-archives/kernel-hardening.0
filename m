@@ -1,79 +1,51 @@
-Resent-To: kernel-hardening@lists.openwall.com
-Resent-Message-ID: <ciirm8pnu5mmj5.fsf@u54ee758033e858cfa736.ant.amazon.com>
-From: Julian Stecklina <jsteckli@amazon.de>
-Subject: Re: [RFC PATCH 0/6] Process-local memory allocations
-References: <cover.1542722764.git.jsteckli@amazon.de>
-	<20181120232619.GA13641@cisco>
-Date: Thu, 13 Dec 2018 15:28:15 +0100
-In-Reply-To: <20181120232619.GA13641@cisco> (Tycho Andersen's message of "Tue,
-	20 Nov 2018 16:26:19 -0700")
-Message-ID: <ciirm8tvjhmrgg.fsf@u54ee758033e858cfa736.ant.amazon.com>
+Date: Thu, 13 Dec 2018 09:13:10 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [RFC PATCH v1 0/5] Add support for O_MAYEXEC
+Message-ID: <20181213171310.GR6830@bombadil.infradead.org>
+References: <20181212081712.32347-1-mic@digikod.net>
+ <20181213030228.GM6830@bombadil.infradead.org>
+ <374ea88c-edc5-f1a6-3637-748635e1e7df@ssi.gouv.fr>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: Tycho Andersen <tycho@tycho.ws>
-Cc: kernel-hardening@lists.openwall.com, Liran Alon <liran.alon@oracle.com>, Jonathan Adams <jwadams@google.com>, David Woodhouse <dwmw2@infradead.org>, Igor Stoppa <igor.stoppa@gmail.com>
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <374ea88c-edc5-f1a6-3637-748635e1e7df@ssi.gouv.fr>
+To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mickael.salaun@ssi.gouv.fr>
+Cc: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, linux-kernel@vger.kernel.org, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk <mtk.manpages@gmail.com>, Mimi Zohar <zohar@linux.ibm.com>, Philippe =?iso-8859-1?Q?Tr=E9buchet?= <philippe.trebuchet@ssi.gouv.fr>, Shuah Khan <shuah@kernel.org>, Thibaut Sautereau <thibaut.sautereau@ssi.gouv.fr>, Vincent Strubel <vincent.strubel@ssi.gouv.fr>, Yves-Alexis Perez <yves-alexis.perez@ssi.gouv.fr>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Tycho,
+On Thu, Dec 13, 2018 at 04:17:29PM +0100, Mickaël Salaün wrote:
+> On 13/12/2018 04:02, Matthew Wilcox wrote:
+> > On Wed, Dec 12, 2018 at 09:17:07AM +0100, Mickaël Salaün wrote:
+> >> The goal of this patch series is to control script interpretation.  A
+> >> new O_MAYEXEC flag used by sys_open() is added to enable userland script
+> >> interpreter to delegate to the kernel (and thus the system security
+> >> policy) the permission to interpret scripts or other files containing
+> >> what can be seen as commands.
+> > 
+> > I don't have a problem with the concept, but we're running low on O_ bits.
+> > Does this have to be done before the process gets a file descriptor,
+> > or could we have a new syscall?  Since we're going to be changing the
+> > interpreters anyway, it doesn't seem like too much of an imposition to
+> > ask them to use:
+> > 
+> > 	int verify_for_exec(int fd)
+> > 
+> > instead of adding an O_MAYEXEC.
+> 
+> Adding a new syscall for this simple use case seems excessive. I think
 
-sorry for the late response, I just returned from vacation.
+We have somewhat less than 400 syscalls today.  We have 20 O_ bits defined.
+Obviously there's a lower practical limit on syscalls, but in principle
+we could have up to 2^32 syscalls, and there are only 12 O_ bits remaining.
 
-Tycho Andersen <tycho@tycho.ws> writes:
+> that the open/openat syscall familly are the right place to do an atomic
+> open and permission check, the same way the kernel does for other file
+> access. Moreover, it will be easier to patch upstream interpreters
+> without the burden of handling a (new) syscall that may not exist on the
+> running system, whereas unknown open flags are ignored.
 
-> On Tue, Nov 20, 2018 at 03:07:59PM +0100, Julian Stecklina wrote:
->> In a world with processor information leak vulnerabilities, having a treasure
->> trove of information available for leaking in the global kernel address space
->> is
->> starting to be a liability. The biggest offender is the linear mapping of all
->> physical memory and there are already efforts (XPFO) to start addressing this.
->> In this patch series, I'd like to propose breaking up the kernel address space
->> further and introduce process-local mappings in the kernel.
->> 
->> The rationale is that there are allocations in the kernel containing data that
->> should only be accessible when the kernel is executing in the context of a
->> specific process. A prime example is KVM vCPU state. This patch series
->> introduces process-local memory in the kernel address space by claiming a PGD
->> entry for this specific purpose. Then it converts KVM on x86 to use these new
->> primitives to store GPR and FPU registers of vCPUs. KVM is a good testing
->> ground, because it makes sure userspace can only interact with a VM from a
->> single process.
-[...]
-> This seems similar in spirit to prmem:
-> https://lore.kernel.org/lkml/20181023213504.28905-2-igor.stoppa@huawei.com/T/#u
-
-It's similar in the sense that it adds a new way to allocate memory with
-interesting properties. In that sense, it would be useful to have a
-common allocation function.
-
-As far as usage is concerned, prmem and the process local memory is very
-different. From a quick glance at the prmem patchset, I see that it
-works for statically allocated memory. Process-local memory is by
-definition bound to the lifetime of a process (or address space to be
-more precise) and thus cannot be statically allocated. It's breaking up
-the global address space of the kernel and starts binding some
-allocations in the kernel to specific processes.
-
-My goal is specifically L1TF mitigation and preventing random parts of
-the kernel from prefetching user data, but this approach is equally
-effective for ordinary info leak vulnerabilities.
-
-> Basically, we have some special memory that we want to leave unmapped
-> (read only) most of the time, but map it (writable) sometimes. I
-
-Unmapped should really be unmapped, i.e. not present in the page table.
-Having it read-only defeats the purpose.
-
-> wonder if we should merge the APIs in to one
->
-> spmemalloc(size, flags, PRLOCAL)
->
-> type thing? Could we share some infrastructure then? (I also didn't
-> follow what happened to the patches Nadav was going to send that might
-> replace prmem somehow.)
-
-When writing the patch series, I had the feeling that the whole
-bookkeeping of what is allocated where is something that could be
-abstracted and re-used. Maybe there is already such an abstraction layer
-in the kernel and I just didn't find it.
-
-Julian
+Ah, but that's the problem.  The interpreter can see an -ENOSYS response
+and handle it appropriately.  If the flag is silently ignored, the
+interpreter has no idea whether it can do a racy check or whether to
+skip even trying to do the check.
