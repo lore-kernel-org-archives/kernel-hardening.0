@@ -1,14 +1,14 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.4 53/88] x86: Introduce __uaccess_begin_nospec() and uaccess_try_nospec
-Date: Fri, 14 Dec 2018 13:00:27 +0100
-Message-Id: <20181214115706.737688974@linuxfoundation.org>
+Subject: [PATCH 4.4 54/88] x86/usercopy: Replace open coded stac/clac with __uaccess_{begin, end}
+Date: Fri, 14 Dec 2018 13:00:28 +0100
+Message-Id: <20181214115706.840772097@linuxfoundation.org>
 In-Reply-To: <20181214115702.151309521@linuxfoundation.org>
 References: <20181214115702.151309521@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Andi Kleen <ak@linux.intel.com>, Ingo Molnar <mingo@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, alan@linux.intel.com, Ben Hutchings <ben.hutchings@codethink.co.uk>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Ingo Molnar <mingo@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arch@vger.kernel.org, Tom Lendacky <thomas.lendacky@amd.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, torvalds@linux-foundation.org, alan@linux.intel.com, Ben Hutchings <ben.hutchings@codethink.co.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 4.4-stable review patch.  If anyone has any objections, please let me know.
@@ -17,36 +17,15 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Dan Williams <dan.j.williams@intel.com>
 
-commit b3bbfb3fb5d25776b8e3f361d2eedaabb0b496cd upstream.
+commit b5c4ae4f35325d520b230bab6eb3310613b72ac1 upstream.
 
-For __get_user() paths, do not allow the kernel to speculate on the value
-of a user controlled pointer. In addition to the 'stac' instruction for
-Supervisor Mode Access Protection (SMAP), a barrier_nospec() causes the
-access_ok() result to resolve in the pipeline before the CPU might take any
-speculative action on the pointer value. Given the cost of 'stac' the
-speculation barrier is placed after 'stac' to hopefully overlap the cost of
-disabling SMAP with the cost of flushing the instruction pipeline.
-
-Since __get_user is a major kernel interface that deals with user
-controlled pointers, the __uaccess_begin_nospec() mechanism will prevent
-speculative execution past an access_ok() permission check. While
-speculative execution past access_ok() is not enough to lead to a kernel
-memory leak, it is a necessary precondition.
-
-To be clear, __uaccess_begin_nospec() is addressing a class of potential
-problems near __get_user() usages.
-
-Note, that while the barrier_nospec() in __uaccess_begin_nospec() is used
-to protect __get_user(), pointer masking similar to array_index_nospec()
-will be used for get_user() since it incorporates a bounds check near the
-usage.
-
-uaccess_try_nospec provides the same mechanism for get_user_try.
+In preparation for converting some __uaccess_begin() instances to
+__uacess_begin_nospec(), make sure all 'from user' uaccess paths are
+using the _begin(), _end() helpers rather than open-coded stac() and
+clac().
 
 No functional changes.
 
-Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
-Suggested-by: Andi Kleen <ak@linux.intel.com>
 Suggested-by: Ingo Molnar <mingo@redhat.com>
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
@@ -56,37 +35,100 @@ Cc: Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com
 Cc: gregkh@linuxfoundation.org
 Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: torvalds@linux-foundation.org
 Cc: alan@linux.intel.com
-Link: https://lkml.kernel.org/r/151727415922.33451.5796614273104346583.stgit@dwillia2-desk3.amr.corp.intel.com
-[bwh: Backported to 4.4: use current_thread_info()]
+Link: https://lkml.kernel.org/r/151727416438.33451.17309465232057176966.stgit@dwillia2-desk3.amr.corp.intel.com
+[bwh: Backported to 4.4:
+ - Convert several more functions to use __uaccess_begin_nospec(), that
+   are just wrappers in mainline
+ - Adjust context]
 Signed-off-by: Ben Hutchings <ben.hutchings@codethink.co.uk>
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 ---
- arch/x86/include/asm/uaccess.h |    9 +++++++++
- 1 file changed, 9 insertions(+)
+ arch/x86/lib/usercopy_32.c |   20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
 
---- a/arch/x86/include/asm/uaccess.h
-+++ b/arch/x86/include/asm/uaccess.h
-@@ -146,6 +146,11 @@ extern int __get_user_bad(void);
- 
- #define __uaccess_begin() stac()
- #define __uaccess_end()   clac()
-+#define __uaccess_begin_nospec()	\
-+({					\
-+	stac();				\
-+	barrier_nospec();		\
-+})
- 
- /*
-  * This is a type: either unsigned long, if the argument fits into
-@@ -473,6 +478,10 @@ struct __large_struct { unsigned long bu
- 	__uaccess_begin();						\
- 	barrier();
- 
-+#define uaccess_try_nospec do {						\
-+	current_thread_info()->uaccess_err = 0;				\
-+	__uaccess_begin_nospec();					\
-+
- #define uaccess_catch(err)						\
- 	__uaccess_end();						\
- 	(err) |= (current_thread_info()->uaccess_err ? -EFAULT : 0);	\
+--- a/arch/x86/lib/usercopy_32.c
++++ b/arch/x86/lib/usercopy_32.c
+@@ -570,12 +570,12 @@ do {									\
+ unsigned long __copy_to_user_ll(void __user *to, const void *from,
+ 				unsigned long n)
+ {
+-	stac();
++	__uaccess_begin();
+ 	if (movsl_is_ok(to, from, n))
+ 		__copy_user(to, from, n);
+ 	else
+ 		n = __copy_user_intel(to, from, n);
+-	clac();
++	__uaccess_end();
+ 	return n;
+ }
+ EXPORT_SYMBOL(__copy_to_user_ll);
+@@ -583,12 +583,12 @@ EXPORT_SYMBOL(__copy_to_user_ll);
+ unsigned long __copy_from_user_ll(void *to, const void __user *from,
+ 					unsigned long n)
+ {
+-	stac();
++	__uaccess_begin();
+ 	if (movsl_is_ok(to, from, n))
+ 		__copy_user_zeroing(to, from, n);
+ 	else
+ 		n = __copy_user_zeroing_intel(to, from, n);
+-	clac();
++	__uaccess_end();
+ 	return n;
+ }
+ EXPORT_SYMBOL(__copy_from_user_ll);
+@@ -596,13 +596,13 @@ EXPORT_SYMBOL(__copy_from_user_ll);
+ unsigned long __copy_from_user_ll_nozero(void *to, const void __user *from,
+ 					 unsigned long n)
+ {
+-	stac();
++	__uaccess_begin();
+ 	if (movsl_is_ok(to, from, n))
+ 		__copy_user(to, from, n);
+ 	else
+ 		n = __copy_user_intel((void __user *)to,
+ 				      (const void *)from, n);
+-	clac();
++	__uaccess_end();
+ 	return n;
+ }
+ EXPORT_SYMBOL(__copy_from_user_ll_nozero);
+@@ -610,7 +610,7 @@ EXPORT_SYMBOL(__copy_from_user_ll_nozero
+ unsigned long __copy_from_user_ll_nocache(void *to, const void __user *from,
+ 					unsigned long n)
+ {
+-	stac();
++	__uaccess_begin();
+ #ifdef CONFIG_X86_INTEL_USERCOPY
+ 	if (n > 64 && cpu_has_xmm2)
+ 		n = __copy_user_zeroing_intel_nocache(to, from, n);
+@@ -619,7 +619,7 @@ unsigned long __copy_from_user_ll_nocach
+ #else
+ 	__copy_user_zeroing(to, from, n);
+ #endif
+-	clac();
++	__uaccess_end();
+ 	return n;
+ }
+ EXPORT_SYMBOL(__copy_from_user_ll_nocache);
+@@ -627,7 +627,7 @@ EXPORT_SYMBOL(__copy_from_user_ll_nocach
+ unsigned long __copy_from_user_ll_nocache_nozero(void *to, const void __user *from,
+ 					unsigned long n)
+ {
+-	stac();
++	__uaccess_begin();
+ #ifdef CONFIG_X86_INTEL_USERCOPY
+ 	if (n > 64 && cpu_has_xmm2)
+ 		n = __copy_user_intel_nocache(to, from, n);
+@@ -636,7 +636,7 @@ unsigned long __copy_from_user_ll_nocach
+ #else
+ 	__copy_user(to, from, n);
+ #endif
+-	clac();
++	__uaccess_end();
+ 	return n;
+ }
+ EXPORT_SYMBOL(__copy_from_user_ll_nocache_nozero);
