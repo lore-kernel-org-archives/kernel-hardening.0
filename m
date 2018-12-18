@@ -1,455 +1,176 @@
+From: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
+Subject: Re: [PATCH v9 RESEND 0/4] KASLR feature to randomize each loadable
+ module
+Date: Tue, 18 Dec 2018 01:27:22 +0000
+Message-ID: <1956cc4de15ef25087a5c6b61ee448b81f615493.camel@intel.com>
+References: <20181120232312.30037-1-rick.p.edgecombe@intel.com>
+	 <20181126153611.GA17169@linux-8ccs>
+	 <54dafdec825859afc85a3bd651f9e850e57a59dc.camel@intel.com>
+	 <76b6ffbc-8c44-75ab-382b-ad281c20c2bf@iogearbox.net>
+	 <8d2ba1f5c90ffb937e97741d68683de622f55843.camel@intel.com>
+	 <0975aa62d9649df56832b8e745c78d0fb83a3610.camel@intel.com>
+	 <20181217044115.GA19913@linux-8ccs>
+In-Reply-To: <20181217044115.GA19913@linux-8ccs>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <89C924644DD7614FA1B21B194526332D@intel.com>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-References: <20181212000354.31955-1-rick.p.edgecombe@intel.com>
- <20181212000354.31955-2-rick.p.edgecombe@intel.com> <CALCETrVP577NvdeYj8bzpEfTXj3GZD3nFcJxnUq5n1daDBxU=g@mail.gmail.com>
- <f5cbf6aefeb19f12faafa6f213c6ff72bf693ddc.camel@intel.com>
- <CALCETrV0BGagp8stapCPBQ9iWOeepGkcKybzmi2WwLU_zzy2sQ@mail.gmail.com>
- <096da253543acc3d1aa23df22db5ce0acfc0c961.camel@intel.com>
- <CALCETrW+5JZOQDnJ6HYkDRvMHiz+cY5HAn06SrxCxmk2XzoyDQ@mail.gmail.com> <0b9818bbc334a03df0c9d2abce26f032d3b4796e.camel@intel.com>
-In-Reply-To: <0b9818bbc334a03df0c9d2abce26f032d3b4796e.camel@intel.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 17 Dec 2018 17:02:26 -0800
-Message-ID: <CALCETrWirPd3ESYpmsibPm66e9-UXdR7W5hQWx9XJDvqz-tnqA@mail.gmail.com>
-Subject: Re: [PATCH v2 1/4] vmalloc: New flags for safe vfree on special perms
-Content-Type: text/plain; charset="UTF-8"
-To: "Edgecombe, Rick P" <rick.p.edgecombe@intel.com>
-Cc: "luto@kernel.org" <luto@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "jeyu@kernel.org" <jeyu@kernel.org>, "rostedt@goodmis.org" <rostedt@goodmis.org>, "ast@kernel.org" <ast@kernel.org>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "jannh@google.com" <jannh@google.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "mingo@redhat.com" <mingo@redhat.com>, "namit@vmware.com" <namit@vmware.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Keshavamurthy, Anil S" <anil.s.keshavamurthy@intel.com>, "mhiramat@kernel.org" <mhiramat@kernel.org>, "naveen.n.rao@linux.vnet.ibm.com" <naveen.n.rao@linux.vnet.ibm.com>, "davem@davemloft.net" <davem@davemloft.net>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "Hansen, Dave" <dave.hansen@intel.com>
+To: "jeyu@kernel.org" <jeyu@kernel.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "daniel@iogearbox.net" <daniel@iogearbox.net>, "arjan@linux.intel.com" <arjan@linux.intel.com>, "ard.biesheuvel@linaro.org" <ard.biesheuvel@linaro.org>, "jannh@google.com" <jannh@google.com>, "keescook@chromium.org" <keescook@chromium.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "willy@infradead.org" <willy@infradead.org>, "x86@kernel.org" <x86@kernel.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "hpa@zytor.com" <hpa@zytor.com>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "alexei.starovoitov@gmail.com" <alexei.starovoitov@gmail.com>, "mingo@redhat.com" <mingo@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Hansen, Dave" <dave.hansen@intel.com>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 17, 2018 at 4:24 PM Edgecombe, Rick P
-<rick.p.edgecombe@intel.com> wrote:
->
-> On Sat, 2018-12-15 at 10:52 -0800, Andy Lutomirski wrote:
-> > On Wed, Dec 12, 2018 at 2:01 PM Edgecombe, Rick P
-> > <rick.p.edgecombe@intel.com> wrote:
-> > >
-> > > On Wed, 2018-12-12 at 11:57 -0800, Andy Lutomirski wrote:
-> > > > On Wed, Dec 12, 2018 at 11:50 AM Edgecombe, Rick P
-> > > > <rick.p.edgecombe@intel.com> wrote:
-> > > > >
-> > > > > On Tue, 2018-12-11 at 18:20 -0800, Andy Lutomirski wrote:
-> > > > > > On Tue, Dec 11, 2018 at 4:12 PM Rick Edgecombe
-> > > > > > <rick.p.edgecombe@intel.com> wrote:
-> > > > > > >
-> > > > > > > This adds two new flags VM_IMMEDIATE_UNMAP and VM_HAS_SPECIAL_PERMS,
-> > > > > > > for
-> > > > > > > enabling vfree operations to immediately clear executable TLB
-> > > > > > > entries to
-> > > > > > > freed
-> > > > > > > pages, and handle freeing memory with special permissions.
-> > > > > > >
-> > > > > > > In order to support vfree being called on memory that might be RO,
-> > > > > > > the
-> > > > > > > vfree
-> > > > > > > deferred list node is moved to a kmalloc allocated struct, from
-> > > > > > > where it
-> > > > > > > is
-> > > > > > > today, reusing the allocation being freed.
-> > > > > > >
-> > > > > > > arch_vunmap is a new __weak function that implements the actual
-> > > > > > > unmapping
-> > > > > > > and
-> > > > > > > resetting of the direct map permissions. It can be overridden by
-> > > > > > > more
-> > > > > > > efficient
-> > > > > > > architecture specific implementations.
-> > > > > > >
-> > > > > > > For the default implementation, it uses architecture agnostic
-> > > > > > > methods
-> > > > > > > which
-> > > > > > > are
-> > > > > > > equivalent to what most usages do before calling vfree. So now it is
-> > > > > > > just
-> > > > > > > centralized here.
-> > > > > > >
-> > > > > > > This implementation derives from two sketches from Dave Hansen and
-> > > > > > > Andy
-> > > > > > > Lutomirski.
-> > > > > > >
-> > > > > > > Suggested-by: Dave Hansen <dave.hansen@intel.com>
-> > > > > > > Suggested-by: Andy Lutomirski <luto@kernel.org>
-> > > > > > > Suggested-by: Will Deacon <will.deacon@arm.com>
-> > > > > > > Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
-> > > > > > > ---
-> > > > > > >  include/linux/vmalloc.h |  2 ++
-> > > > > > >  mm/vmalloc.c            | 73 +++++++++++++++++++++++++++++++++++++-
-> > > > > > > ---
-> > > > > > >  2 files changed, 69 insertions(+), 6 deletions(-)
-> > > > > > >
-> > > > > > > diff --git a/include/linux/vmalloc.h b/include/linux/vmalloc.h
-> > > > > > > index 398e9c95cd61..872bcde17aca 100644
-> > > > > > > --- a/include/linux/vmalloc.h
-> > > > > > > +++ b/include/linux/vmalloc.h
-> > > > > > > @@ -21,6 +21,8 @@ struct notifier_block;                /* in
-> > > > > > > notifier.h
-> > > > > > > */
-> > > > > > >  #define VM_UNINITIALIZED       0x00000020      /* vm_struct is not
-> > > > > > > fully
-> > > > > > > initialized */
-> > > > > > >  #define VM_NO_GUARD            0x00000040      /* don't add guard
-> > > > > > > page
-> > > > > > > */
-> > > > > > >  #define VM_KASAN               0x00000080      /* has allocated
-> > > > > > > kasan
-> > > > > > > shadow memory */
-> > > > > > > +#define VM_IMMEDIATE_UNMAP     0x00000200      /* flush before
-> > > > > > > releasing
-> > > > > > > pages */
-> > > > > > > +#define VM_HAS_SPECIAL_PERMS   0x00000400      /* may be freed with
-> > > > > > > special
-> > > > > > > perms */
-> > > > > > >  /* bits [20..32] reserved for arch specific ioremap internals */
-> > > > > > >
-> > > > > > >  /*
-> > > > > > > diff --git a/mm/vmalloc.c b/mm/vmalloc.c
-> > > > > > > index 97d4b25d0373..02b284d2245a 100644
-> > > > > > > --- a/mm/vmalloc.c
-> > > > > > > +++ b/mm/vmalloc.c
-> > > > > > > @@ -18,6 +18,7 @@
-> > > > > > >  #include <linux/interrupt.h>
-> > > > > > >  #include <linux/proc_fs.h>
-> > > > > > >  #include <linux/seq_file.h>
-> > > > > > > +#include <linux/set_memory.h>
-> > > > > > >  #include <linux/debugobjects.h>
-> > > > > > >  #include <linux/kallsyms.h>
-> > > > > > >  #include <linux/list.h>
-> > > > > > > @@ -38,6 +39,11 @@
-> > > > > > >
-> > > > > > >  #include "internal.h"
-> > > > > > >
-> > > > > > > +struct vfree_work {
-> > > > > > > +       struct llist_node node;
-> > > > > > > +       void *addr;
-> > > > > > > +};
-> > > > > > > +
-> > > > > > >  struct vfree_deferred {
-> > > > > > >         struct llist_head list;
-> > > > > > >         struct work_struct wq;
-> > > > > > > @@ -50,9 +56,13 @@ static void free_work(struct work_struct *w)
-> > > > > > >  {
-> > > > > > >         struct vfree_deferred *p = container_of(w, struct
-> > > > > > > vfree_deferred,
-> > > > > > > wq);
-> > > > > > >         struct llist_node *t, *llnode;
-> > > > > > > +       struct vfree_work *cur;
-> > > > > > >
-> > > > > > > -       llist_for_each_safe(llnode, t, llist_del_all(&p->list))
-> > > > > > > -               __vunmap((void *)llnode, 1);
-> > > > > > > +       llist_for_each_safe(llnode, t, llist_del_all(&p->list)) {
-> > > > > > > +               cur = container_of(llnode, struct vfree_work, node);
-> > > > > > > +               __vunmap(cur->addr, 1);
-> > > > > > > +               kfree(cur);
-> > > > > > > +       }
-> > > > > > >  }
-> > > > > > >
-> > > > > > >  /*** Page table manipulation functions ***/
-> > > > > > > @@ -1494,6 +1504,48 @@ struct vm_struct *remove_vm_area(const void
-> > > > > > > *addr)
-> > > > > > >         return NULL;
-> > > > > > >  }
-> > > > > > >
-> > > > > > > +/*
-> > > > > > > + * This function handles unmapping and resetting the direct map as
-> > > > > > > efficiently
-> > > > > > > + * as it can with cross arch functions. The three categories of
-> > > > > > > architectures
-> > > > > > > + * are:
-> > > > > > > + *   1. Architectures with no set_memory implementations and no
-> > > > > > > direct
-> > > > > > > map
-> > > > > > > + *      permissions.
-> > > > > > > + *   2. Architectures with set_memory implementations but no direct
-> > > > > > > map
-> > > > > > > + *      permissions
-> > > > > > > + *   3. Architectures with set_memory implementations and direct
-> > > > > > > map
-> > > > > > > permissions
-> > > > > > > + */
-> > > > > > > +void __weak arch_vunmap(struct vm_struct *area, int
-> > > > > > > deallocate_pages)
-> > > > > >
-> > > > > > My general preference is to avoid __weak functions -- they don't
-> > > > > > optimize well.  Instead, I prefer either:
-> > > > > >
-> > > > > > #ifndef arch_vunmap
-> > > > > > void arch_vunmap(...);
-> > > > > > #endif
-> > > > > >
-> > > > > > or
-> > > > > >
-> > > > > > #ifdef CONFIG_HAVE_ARCH_VUNMAP
-> > > > > > ...
-> > > > > > #endif
-> > > > >
-> > > > > Ok.
-> > > > > >
-> > > > > > > +{
-> > > > > > > +       unsigned long addr = (unsigned long)area->addr;
-> > > > > > > +       int immediate = area->flags & VM_IMMEDIATE_UNMAP;
-> > > > > > > +       int special = area->flags & VM_HAS_SPECIAL_PERMS;
-> > > > > > > +
-> > > > > > > +       /*
-> > > > > > > +        * In case of 2 and 3, use this general way of resetting the
-> > > > > > > permissions
-> > > > > > > +        * on the directmap. Do NX before RW, in case of X, so there
-> > > > > > > is
-> > > > > > > no
-> > > > > > > W^X
-> > > > > > > +        * violation window.
-> > > > > > > +        *
-> > > > > > > +        * For case 1 these will be noops.
-> > > > > > > +        */
-> > > > > > > +       if (immediate)
-> > > > > > > +               set_memory_nx(addr, area->nr_pages);
-> > > > > > > +       if (deallocate_pages && special)
-> > > > > > > +               set_memory_rw(addr, area->nr_pages);
-> > > > > >
-> > > > > > Can you elaborate on the intent here?  VM_IMMEDIATE_UNMAP means "I
-> > > > > > want that alias gone before any deallocation happens".
-> > > > > > VM_HAS_SPECIAL_PERMS means "I mucked with the direct map -- fix it for
-> > > > > > me, please".  deallocate means "this was vfree -- please free the
-> > > > > > pages".  I'm not convinced that all the various combinations make
-> > > > > > sense.  Do we really need both flags?
-> > > > >
-> > > > > VM_HAS_SPECIAL_PERMS is supposed to mean, like you said, "reset the
-> > > > > direct
-> > > > > map".
-> > > > > Where VM_IMMEDIATE_UNMAP means, the vmalloc allocation has extra
-> > > > > capabilties
-> > > > > where we don't want to leave an enhanced capability TLB entry to the
-> > > > > freed
-> > > > > page.
-> > > > >
-> > > > > I was trying to pick names that could apply more generally for potential
-> > > > > future
-> > > > > special memory capabilities. Today VM_HAS_SPECIAL_PERMS does just mean
-> > > > > reset
-> > > > > write to the directmap and VM_IMMEDIATE_UNMAP means vmalloc mapping is
-> > > > > executable.
-> > > > >
-> > > > > A present day reason for keeping both flags is, it is more efficient in
-> > > > > the
-> > > > > arch-agnostic implementation when freeing memory that is just RO and not
-> > > > > executable. It saves a TLB flush.
-> > > > >
-> > > > > > (VM_IMMEDIATE_UNMAP is a bit of a lie, since, if in_interrupt(), it's
-> > > > > > not immediate.)
-> > > > >
-> > > > > True, maybe VM_MUST_FLUSH or something else?
-> > > > >
-> > > > > > If we do keep both flags, maybe some restructuring would make sense,
-> > > > > > like this, perhaps.  Sorry about horrible whitespace damage.
-> > > > > >
-> > > > > > if (special) {
-> > > > > >   /* VM_HAS_SPECIAL_PERMS makes little sense without deallocate_pages.
-> > > > > > */
-> > > > > >   WARN_ON_ONCE(!deallocate_pages);
-> > > > > >
-> > > > > >   if (immediate) {
-> > > > > >     /* It's possible that the vmap alias is X and we're about to make
-> > > > > > the direct map RW.  To avoid a window where executable memory is
-> > > > > > writable, first mark the vmap alias NX.  This is silly, since we're
-> > > > > > about to *unmap* it, but this is the best we can do if all we have to
-> > > > > > work with is the set_memory_abc() APIs.  Architectures should override
-> > > > > > this whole function to get better behavior. */
-> > > > > >     set_memory_nx(...);
-> > > > > >   }
-> > > > > >
-> > > > > >   set_memory_rw(addr, area->nr_pages);
-> > > > > > }
-> > > > >
-> > > > > Ok.
-> > > > >
-> > > > > >
-> > > > > > > +
-> > > > > > > +       /* Always actually remove the area */
-> > > > > > > +       remove_vm_area(area->addr);
-> > > > > > > +
-> > > > > > > +       /*
-> > > > > > > +        * Need to flush the TLB before freeing pages in the case of
-> > > > > > > this
-> > > > > > > flag.
-> > > > > > > +        * As long as that's happening, unmap aliases.
-> > > > > > > +        *
-> > > > > > > +        * For 2 and 3, this will not be needed because of the
-> > > > > > > set_memory_nx
-> > > > > > > +        * above, because the stale TLBs will be NX.
-> > > > > >
-> > > > > > I'm not sure I agree with this comment.  If the caller asked for an
-> > > > > > immediate unmap, we should give an immediate unmap.  But I'm still not
-> > > > > > sure I see why VM_IMMEDIATE_UNMAP needs to exist as a separate flag.
-> > > > >
-> > > > > Yea. I was just trying to save a TLB flush, since for today's callers
-> > > > > that
-> > > > > have
-> > > > > set_memory there isn't a security downside I know of to just leaving it
-> > > > > NX.
-> > > > > Maybe its not worth the tradeoff of confusion? Or I can clarify that in
-> > > > > the
-> > > > > comment.
-> > > >
-> > > > Don't both of the users in your series set both flags, though?  My
-> > > > real objection to having them be separate is that, in the absence of
-> > > > users, it's less clear exactly what they should do and the code
-> > > > doesn't get exercised.
-> > >
-> > > The only "just RO" user today is one of the BPF allocations. I don't have a
-> > > strong objection to combining them, just explaining the thinking. I guess if
-> > > we
-> > > could always add another flag later if it becomes more needed.
-> > >
-> > > > If you document that VM_IMMEDIATE_UNMAP means "I want the TLB entries
-> > > > gone", then I can re-review the code in light of that.  But then I'm
-> > > > unconvinced by your generic implementation, since set_memory_nx()
-> > > > seems like an odd way to go about it.
-> > >
-> > > Masami Hiramatsu pointed out if we don't do set_memory_nx before
-> > > set_memory_rw,
-> > > then there will be a small window of W^X violation. So that was the concern
-> > > for
-> > > the executable case, regardless of the semantics. I think the concern
-> > > applies
-> > > for any "special capability" permissions. Alternatively, if we
-> > > remove_vm_area
-> > > before we reset the direct map perms RW, maybe that would accomplish the
-> > > same
-> > > thing, if that's possible in a cross arch way. Maybe this is too much
-> > > designing
-> > > for hypothetical future... just was trying to avoid having to change the
-> > > interface, and could just update the generic implementation if new
-> > > permissions
-> > > or usages come up.
-> > >
-> > > The set_memory_ stuff is really only needed for arm64 which seems to be the
-> > > only
-> > > other one with directmap permissions. So if it could eventually have its own
-> > > arch_vunmap then all of the set_memory_ parts could be dropped and the
-> > > default
-> > > would just be the simple unmap then flush logic that it was originally.
-> >
-> > I think that's probably the best solution.  If there are only two
-> > arches that have anything fancy here, let's just fix both of them up
-> > for real.
-> >
-> > >
-> > > Or we have up to three flushes for the generic version and meet the name
-> > > expectations and needed functionality today. I guess I'll just try that.
-> > > > >
-> > > > > > > +        */
-> > > > > > > +       if (immediate && !IS_ENABLED(ARCH_HAS_SET_MEMORY))
-> > > > > > > +               vm_unmap_aliases();
-> > > > > > > +}
-> > > > > > > +
-> > > > > > >  static void __vunmap(const void *addr, int deallocate_pages)
-> > > > > > >  {
-> > > > > > >         struct vm_struct *area;
-> > > > > > > @@ -1515,7 +1567,8 @@ static void __vunmap(const void *addr, int
-> > > > > > > deallocate_pages)
-> > > > > > >         debug_check_no_locks_freed(area->addr,
-> > > > > > > get_vm_area_size(area));
-> > > > > > >         debug_check_no_obj_freed(area->addr,
-> > > > > > > get_vm_area_size(area));
-> > > > > > >
-> > > > > > > -       remove_vm_area(addr);
-> > > > > > > +       arch_vunmap(area, deallocate_pages);
-> > > > > > > +
-> > > > > > >         if (deallocate_pages) {
-> > > > > > >                 int i;
-> > > > > > >
-> > > > > > > @@ -1542,8 +1595,15 @@ static inline void __vfree_deferred(const
-> > > > > > > void
-> > > > > > > *addr)
-> > > > > > >          * nother cpu's list.  schedule_work() should be fine with
-> > > > > > > this
-> > > > > > > too.
-> > > > > > >          */
-> > > > > > >         struct vfree_deferred *p = raw_cpu_ptr(&vfree_deferred);
-> > > > > > > +       struct vfree_work *w = kmalloc(sizeof(struct vfree_work),
-> > > > > > > GFP_ATOMIC);
-> > > > > > > +
-> > > > > > > +       /* If no memory for the deferred list node, give up */
-> > > > > > > +       if (!w)
-> > > > > > > +               return;
-> > > > > >
-> > > > > > That's nasty.  I see what you're trying to do here, but I think you're
-> > > > > > solving a problem that doesn't need solving quite so urgently.  How
-> > > > > > about dropping this part and replacing it with a comment like "NB:
-> > > > > > this writes a word to a potentially executable address.  It would be
-> > > > > > nice if we could avoid doing this."  And maybe a future patch could
-> > > > > > more robustly avoid it without risking memory leaks.
-> > > > >
-> > > > > Yea, sorry I should have called this out, because I wasn't sure on how
-> > > > > likely
-> > > > > that was to happen. I did find some other places in the kernel with the
-> > > > > same
-> > > > > ignoring logic.
-> > > > >
-> > > > > I'll have to think though, I am not sure what the alternative is. Since
-> > > > > the
-> > > > > memory can be RO in the module_memfree case, the old method of re-using
-> > > > > the
-> > > > > allocation will no longer work. The list node could be stuffed on the
-> > > > > vm_struct,
-> > > > > but then the all of the spin_lock(&vmap_area_lock)'s need to be changed
-> > > > > to
-> > > > > work
-> > > > > with interrupts so that the struct could be looked up. Not sure of the
-> > > > > implications of that. Or maybe have some slow backup that resets the
-> > > > > permissions
-> > > > > and re-uses the allocation if kmalloc fails?
-> > > > >
-> > > > > I guess it could also go back to the old v1 implementation that doesn't
-> > > > > handle
-> > > > > RO and the directmap, and leave the W^X violation window during
-> > > > > teardown.
-> > > > > Then
-> > > > > solve that problem when modules are loaded via something like Nadav's
-> > > > > stuff.
-> > > > >
-> > > >
-> > > > Hmm.  Switching to spin_lock_irqsave() doesn't seem so bad to me.
-> > >
-> > > Ok.
-> >
-> > Actually, I think I have a better solution.  Just declare the
-> > problematic case to be illegal: say that you may not free memory with
-> > the new flags set while IRQs are off.  Enforce this with a VM_WARN_ON
-> > in the code that reads the vfree_deferred list.
->
-> Thanks. Yea just making a rule for the one case seems better that disabling
-> interrupts all over. It turned out to lock in quite a few places, including the
-> longish lazy purge operation. Reading a little history on the deferred free list
-> - 6 years ago vfree used to not support interrupts at all, and different clients
-> had their own work queues. So this will just be having the original situation
-> for the new vm flag.
->
-> I think we only need to move the module init section free from the RCU callback
-> to a work queue, to get to the point where, functionally wise, everything should
-> work with the existing deferred free list implementation (since then we will
-> just not use it for the new special memory case).
-
-> We could also just add a
-> WARN_ON(in_interrupt()) in module_memfree to give context to some callers to
-> what will soon be a "BUG: unable to handle kernel paging request". Any objection
-> to leaving it there?
->
-
-Seems reasonable.
-
-> Over the above, moving the vfree_deferred list to the struct and the associated
-> cost of the lookup in every interrupt/atomic vfree would enable a WARN and the
-> handling of a (declared) illegal case that could deadlock anyway, right? Is it
-> worth it?
-
-I suspect it's not worth it.
-
->
-> I'm not sure we why we wouldn't have deadlocks in normal interrupt vfrees if we
-> don't use irq spinlocks everywhere...I may be missing your insight.
->
-
-I may be misunderstanding your question, but: I suspect that we can
-easily deadlock if vfree() is called with IRQs off but
-!in_interrupt().  Perhaps no one does that?  At the very least, I
-assume that lockdep would scream loudly if this happened.
-
---Andy
+T24gTW9uLCAyMDE4LTEyLTE3IGF0IDA1OjQxICswMTAwLCBKZXNzaWNhIFl1IHdyb3RlOg0KPiAr
+KysgRWRnZWNvbWJlLCBSaWNrIFAgWzEyLzEyLzE4IDIzOjA1ICswMDAwXToNCj4gPiBPbiBXZWQs
+IDIwMTgtMTEtMjggYXQgMDE6NDAgKzAwMDAsIEVkZ2Vjb21iZSwgUmljayBQIHdyb3RlOg0KPiA+
+ID4gT24gVHVlLCAyMDE4LTExLTI3IGF0IDExOjIxICswMTAwLCBEYW5pZWwgQm9ya21hbm4gd3Jv
+dGU6DQo+ID4gPiA+IE9uIDExLzI3LzIwMTggMDE6MTkgQU0sIEVkZ2Vjb21iZSwgUmljayBQIHdy
+b3RlOg0KPiA+ID4gPiA+IE9uIE1vbiwgMjAxOC0xMS0yNiBhdCAxNjozNiArMDEwMCwgSmVzc2lj
+YSBZdSB3cm90ZToNCj4gPiA+ID4gPiA+ICsrKyBSaWNrIEVkZ2Vjb21iZSBbMjAvMTEvMTggMTU6
+MjMgLTA4MDBdOg0KPiA+ID4gPiA+IA0KPiA+ID4gPiA+IFtzbmlwXQ0KPiA+ID4gPiA+ID4gSGkg
+UmljayENCj4gPiA+ID4gPiA+IA0KPiA+ID4gPiA+ID4gU29ycnkgZm9yIHRoZSBkZWxheS4gSSdk
+IGxpa2UgdG8gdGFrZSBhIHN0ZXAgYmFjayBhbmQgYXNrIHNvbWUNCj4gPiA+ID4gPiA+IGJyb2Fk
+ZXINCj4gPiA+ID4gPiA+IHF1ZXN0aW9ucyAtDQo+ID4gPiA+ID4gPiANCj4gPiA+ID4gPiA+IC0g
+SXMgdGhlIGVuZCBnb2FsIG9mIHRoaXMgcGF0Y2hzZXQgdG8gcmFuZG9taXplIGxvYWRpbmcga2Vy
+bmVsDQo+ID4gPiA+ID4gPiBtb2R1bGVzLA0KPiA+ID4gPiA+ID4gb3INCj4gPiA+ID4gPiA+IG1v
+c3QvYWxsDQo+ID4gPiA+ID4gPiAgICBleGVjdXRhYmxlIGtlcm5lbCBtZW1vcnkgYWxsb2NhdGlv
+bnMsIGluY2x1ZGluZyBicGYsIGtwcm9iZXMsDQo+ID4gPiA+ID4gPiBldGM/DQo+ID4gPiA+ID4g
+DQo+ID4gPiA+ID4gVGhhbmtzIGZvciB0YWtpbmcgYSBsb29rIQ0KPiA+ID4gPiA+IA0KPiA+ID4g
+PiA+IEl0IHN0YXJ0ZWQgd2l0aCB0aGUgZ29hbCBvZiBqdXN0IHJhbmRvbWl6aW5nIG1vZHVsZXMg
+KGhlbmNlIHRoZSBuYW1lKSwNCj4gPiA+ID4gPiBidXQNCj4gPiA+ID4gPiBJDQo+ID4gPiA+ID4g
+dGhpbmsgdGhlcmUgaXMgbWF5YmUgdmFsdWUgaW4gcmFuZG9taXppbmcgdGhlIHBsYWNlbWVudCBv
+ZiBhbGwgcnVudGltZQ0KPiA+ID4gPiA+IGFkZGVkDQo+ID4gPiA+ID4gZXhlY3V0YWJsZSBjb2Rl
+LiBCZXlvbmQganVzdCB0cnlpbmcgdG8gbWFrZSBleGVjdXRhYmxlIGNvZGUgcGxhY2VtZW50DQo+
+ID4gPiA+ID4gbGVzcw0KPiA+ID4gPiA+IGRldGVybWluaXN0aWMgaW4gZ2VuZXJhbCwgdG9kYXkg
+YWxsIG9mIHRoZSB1c2FnZXMgaGF2ZSB0aGUgcHJvcGVydHkgb2YNCj4gPiA+ID4gPiBzdGFydGlu
+Zw0KPiA+ID4gPiA+IHdpdGggUlcgcGVybWlzc2lvbnMgYW5kIHRoZW4gYmVjb21pbmcgUk8gZXhl
+Y3V0YWJsZSwgc28gdGhlcmUgaXMgdGhlDQo+ID4gPiA+ID4gYmVuZWZpdA0KPiA+ID4gPiA+IG9m
+DQo+ID4gPiA+ID4gbmFycm93aW5nIHRoZSBjaGFuY2VzIGEgYnVnIGNvdWxkIHN1Y2Nlc3NmdWxs
+eSB3cml0ZSB0byBpdCBkdXJpbmcgdGhlDQo+ID4gPiA+ID4gUlcNCj4gPiA+ID4gPiB3aW5kb3cu
+DQo+ID4gPiA+ID4gDQo+ID4gPiA+ID4gPiAtIEl0IHNlZW1zIHRoYXQgYSBsb3Qgb2YgY29tcGxl
+eGl0eSBhbmQgaGV1cmlzdGljcyBhcmUgaW50cm9kdWNlZA0KPiA+ID4gPiA+ID4ganVzdA0KPiA+
+ID4gPiA+ID4gdG8NCj4gPiA+ID4gPiA+ICAgIGFjY29tbW9kYXRlIHRoZSBwb3RlbnRpYWwgZnJh
+Z21lbnRhdGlvbiB0aGF0IGNhbiBoYXBwZW4gd2hlbiB0aGUNCj4gPiA+ID4gPiA+IG1vZHVsZQ0K
+PiA+ID4gPiA+ID4gdm1hbGxvYw0KPiA+ID4gPiA+ID4gICAgc3BhY2Ugc3RhcnRzIHRvIGdldCBm
+cmFnbWVudGVkIHdpdGggYnBmIGZpbHRlcnMuIEknbSBwYXJ0aWFsIHRvDQo+ID4gPiA+ID4gPiB0
+aGUNCj4gPiA+ID4gPiA+IGlkZWEgb2YNCj4gPiA+ID4gPiA+ICAgIHNwbGl0dGluZyBvciBoYXZp
+bmcgYnBmIG93biBpdHMgb3duIHZtYWxsb2Mgc3BhY2UsIHNpbWlsYXIgdG8NCj4gPiA+ID4gPiA+
+IHdoYXQNCj4gPiA+ID4gPiA+IEFyZA0KPiA+ID4gPiA+ID4gaXMNCj4gPiA+ID4gPiA+IGFscmVh
+ZHkNCj4gPiA+ID4gPiA+ICAgIGltcGxlbWVudGluZyBmb3IgYXJtNjQuDQo+ID4gPiA+ID4gPiAN
+Cj4gPiA+ID4gPiA+ICAgIFNvIGEgcXVlc3Rpb24gZm9yIHRoZSBicGYgYW5kIHg4NiBmb2xrcywg
+aXMgaGF2aW5nIGEgZGVkaWNhdGVkDQo+ID4gPiA+ID4gPiB2bWFsbG9jDQo+ID4gPiA+ID4gPiBy
+ZWdpb24NCj4gPiA+ID4gPiA+ICAgIChhcyB3ZWxsIGFzIGEgc2VwZXJhdGUgYnBmX2FsbG9jIGFw
+aSkgZm9yIGJwZiBmZWFzaWJsZSBvcg0KPiA+ID4gPiA+ID4gZGVzaXJhYmxlDQo+ID4gPiA+ID4g
+PiBvbg0KPiA+ID4gPiA+ID4geDg2XzY0Pw0KPiA+ID4gPiA+IA0KPiA+ID4gPiA+IEkgYWN0dWFs
+bHkgZGlkIHNvbWUgcHJvdG90eXBpbmcgYW5kIHRlc3Rpbmcgb24gdGhpcy4gSXQgc2VlbXMgdGhl
+cmUNCj4gPiA+ID4gPiB3b3VsZA0KPiA+ID4gPiA+IGJlDQo+ID4gPiA+ID4gc29tZSBzbG93ZG93
+biBmcm9tIHRoZSByZXF1aXJlZCBjaGFuZ2VzIHRvIHRoZSBKSVRlZCBjb2RlIHRvIHN1cHBvcnQN
+Cj4gPiA+ID4gPiBjYWxsaW5nDQo+ID4gPiA+ID4gYmFjayBmcm9tIHRoZSB2bWFsbG9jIHJlZ2lv
+biBpbnRvIHRoZSBrZXJuZWwsIGFuZCBzbyBtb2R1bGUgc3BhY2UNCj4gPiA+ID4gPiB3b3VsZA0K
+PiA+ID4gPiA+IHN0aWxsIGJlDQo+ID4gPiA+ID4gdGhlIHByZWZlcnJlZCByZWdpb24uDQo+ID4g
+PiA+IA0KPiA+ID4gPiBZZXMsIGFueSBydW50aW1lIHNsb3ctZG93biB3b3VsZCBiZSBuby1nbyBh
+cyBCUEYgc2l0cyBpbiB0aGUgbWlkZGxlIG9mDQo+ID4gPiA+IGNyaXRpY2FsDQo+ID4gPiA+IG5l
+dHdvcmtpbmcgZmFzdC1wYXRoIGFuZCBlLmcuIG9uIFhEUCBvciB0YyBsYXllciBhbmQgaXMgdXNl
+ZCBpbiBsb2FkLQ0KPiA+ID4gPiBiYWxhbmNpbmcsDQo+ID4gPiA+IGZpcmV3YWxsaW5nLCBERG9T
+IHByb3RlY3Rpb24gc2NlbmFyaW9zLCBzb21lIHJlY2VudCBleGFtcGxlcyBpbiBbMC0zXS4NCj4g
+PiA+ID4gDQo+ID4gPiA+ICAgWzBdIGh0dHA6Ly92Z2VyLmtlcm5lbC5vcmcvbHBjLW5ldHdvcmtp
+bmcyMDE4Lmh0bWwjc2Vzc2lvbi0xMA0KPiA+ID4gPiAgIFsxXSBodHRwOi8vdmdlci5rZXJuZWwu
+b3JnL2xwYy1uZXR3b3JraW5nMjAxOC5odG1sI3Nlc3Npb24tMTUNCj4gPiA+ID4gICBbMl0gaHR0
+cHM6Ly9ibG9nLmNsb3VkZmxhcmUuY29tL2hvdy10by1kcm9wLTEwLW1pbGxpb24tcGFja2V0cy8N
+Cj4gPiA+ID4gICBbM10gaHR0cDovL3ZnZXIua2VybmVsLm9yZy9scGMtYnBmMjAxOC5odG1sI3Nl
+c3Npb24tMQ0KPiA+ID4gPiANCj4gPiA+ID4gPiA+ICAgIElmIGJwZiBmaWx0ZXJzIG5lZWQgdG8g
+YmUgd2l0aGluIDIgR0Igb2YgdGhlIGNvcmUga2VybmVsLCB3b3VsZA0KPiA+ID4gPiA+ID4gaXQN
+Cj4gPiA+ID4gPiA+IG1ha2UNCj4gPiA+ID4gPiA+IHNlbnNlDQo+ID4gPiA+ID4gPiAgICB0byBj
+YXJ2ZSBvdXQgYSBwb3J0aW9uIG9mIHRoZSBjdXJyZW50IG1vZHVsZSByZWdpb24gZm9yIGJwZg0K
+PiA+ID4gPiA+ID4gZmlsdGVycz8gIEFjY29yZGluZw0KPiA+ID4gPiA+ID4gICAgdG8gRG9jdW1l
+bnRhdGlvbi94ODYveDg2XzY0L21tLnR4dCwgdGhlIG1vZHVsZSByZWdpb24gaXMgfjEuNSBHQi4N
+Cj4gPiA+ID4gPiA+IEkNCj4gPiA+ID4gPiA+IGFtDQo+ID4gPiA+ID4gPiBkb3VidGZ1bA0KPiA+
+ID4gPiA+ID4gICAgdGhhdCBhbnkgcmVhbCBzeXN0ZW0gd2lsbCBhY3R1YWxseSBoYXZlIDEuNSBH
+QiB3b3J0aCBvZiBrZXJuZWwNCj4gPiA+ID4gPiA+IG1vZHVsZXMNCj4gPiA+ID4gPiA+IGxvYWRl
+ZC4NCj4gPiA+ID4gPiA+ICAgIElzIHRoZXJlIGEgc3BlY2lmaWMgcmVhc29uIHdoeSB0aGF0IG11
+Y2ggc3BhY2UgaXMgZGVkaWNhdGVkIHRvDQo+ID4gPiA+ID4gPiBrZXJuZWwNCj4gPiA+ID4gPiA+
+IG1vZHVsZXMsDQo+ID4gPiA+ID4gPiAgICBhbmQgd291bGQgaXQgYmUgZmVhc2libGUgdG8gc3Bs
+aXQgdGhhdCByZWdpb24gY2xlYW5seSB3aXRoIGJwZj8NCj4gPiA+ID4gPiANCj4gPiA+ID4gPiBI
+b3BlZnVsbHkgc29tZW9uZSBmcm9tIEJQRiBzaWRlIG9mIHRoaW5ncyB3aWxsIGNoaW1lIGluLCBi
+dXQgbXkNCj4gPiA+ID4gPiB1bmRlcnN0YW5kaW5nDQo+ID4gPiA+ID4gd2FzIHRoYXQgdGhleSB3
+b3VsZCBsaWtlIGV2ZW4gbW9yZSBzcGFjZSB0aGFuIHRvZGF5IGlmIHBvc3NpYmxlIGFuZCBzbw0K
+PiA+ID4gPiA+IHRoZXkNCj4gPiA+ID4gPiBtYXkNCj4gPiA+ID4gPiBub3QgbGlrZSB0aGUgcmVk
+dWNlZCBzcGFjZS4NCj4gPiA+ID4gDQo+ID4gPiA+IEkgd291bGRuJ3QgbWluZCBvZiB0aGUgcmVn
+aW9uIGlzIHNwbGl0IGFzIEplc3NpY2Egc3VnZ2VzdHMgYnV0IGluIGEgd2F5DQo+ID4gPiA+IHdo
+ZXJlDQo+ID4gPiA+IHRoZXJlIHdvdWxkIGJlIF9ub18gcnVudGltZSByZWdyZXNzaW9ucyBmb3Ig
+QlBGLiBUaGlzIG1pZ2h0IGFsc28gYWxsb3cNCj4gPiA+ID4gdG8NCj4gPiA+ID4gaGF2ZQ0KPiA+
+ID4gPiBtb3JlIGZsZXhpYmlsaXR5IGluIHNpemluZyB0aGUgYXJlYSBkZWRpY2F0ZWQgZm9yIEJQ
+RiBpbiBmdXR1cmUsIGFuZA0KPiA+ID4gPiBjb3VsZA0KPiA+ID4gPiBwb3RlbnRpYWxseSBiZSBk
+b25lIGluIHNpbWlsYXIgd2F5IGFzIEFyZCB3YXMgcHJvcG9zaW5nIHJlY2VudGx5IFs0XS4NCj4g
+PiA+ID4gDQo+ID4gPiA+ICAgWzRdIGh0dHBzOi8vcGF0Y2h3b3JrLm96bGFicy5vcmcvcHJvamVj
+dC9uZXRkZXYvbGlzdC8/c2VyaWVzPTc3Nzc5DQo+ID4gPiANCj4gPiA+IENDaW5nIEFyZC4NCj4g
+PiA+IA0KPiA+ID4gVGhlIGJlbmVmaXQgb2Ygc2hhcmluZyB0aGUgc3BhY2UsIGZvciByYW5kb21p
+emF0aW9uIGF0IGxlYXN0LCBpcyB0aGF0IHlvdQ0KPiA+ID4gY2FuDQo+ID4gPiBzcHJlYWQgdGhl
+IGFsbG9jYXRpb25zIG92ZXIgYSBsYXJnZXIgYXJlYS4NCj4gPiA+IA0KPiA+ID4gSSB0aGluayB0
+aGVyZSBhcmUgYWxzbyBvdGhlciBiZW5lZml0cyB0byB1bmlmeWluZyBob3cgdGhpcyBtZW1vcnkg
+aXMNCj4gPiA+IG1hbmFnZWQNCj4gPiA+IHRob3VnaCwgcmF0aGVyIHRoYW4gc3ByZWFkaW5nIGl0
+IGZ1cnRoZXIuIFRvZGF5IHRoZXJlIGFyZSB2YXJpb3VzIHBhdHRlcm5zDQo+ID4gPiBhbmQNCj4g
+PiA+IHRlY2huaXF1ZXMgdXNlZCBsaWtlIGNhbGxpbmcgZGlmZmVyZW50IGNvbWJpbmF0aW9ucyBv
+ZiBzZXRfbWVtb3J5XyogYmVmb3JlDQo+ID4gPiBmcmVlaW5nLCB6ZXJvaW5nIGluIG1vZHVsZXMg
+b3Igc2V0dGluZyBpbnZhbGlkIGluc3RydWN0aW9ucyBsaWtlIEJQRiBkb2VzLA0KPiA+ID4gZXRj
+Lg0KPiA+ID4gVGhlcmUgaXMgYWxzbyBzcGVjaWFsIGNhcmUgdG8gYmUgdGFrZW4gb24gdmZyZWUt
+aW5nIGV4ZWN1dGFibGUgbWVtb3J5LiBTbw0KPiA+ID4gdGhpcw0KPiA+ID4gd2F5IHRoaW5ncyBv
+bmx5IGhhdmUgdG8gYmUgZG9uZSByaWdodCBvbmNlIGFuZCB0aGVyZSBpcyBsZXNzIGR1cGxpY2F0
+aW9uLg0KPiA+ID4gDQo+ID4gPiBOb3Qgc2F5aW5nIHRoZXJlIHNob3VsZG4ndCBiZSBfX3dlYWsg
+YWxsb2MgYW5kIGZyZWUgbWV0aG9kIGluIEJQRiBmb3IgYXJjaA0KPiA+ID4gc3BlY2lmaWMgYmVo
+YXZpb3IsIGp1c3QgdGhhdCB0aGVyZSBpcyBxdWl0ZSBhIGZldyBvdGhlciBjb25jZXJucyB0aGF0
+DQo+ID4gPiBjb3VsZCBiZQ0KPiA+ID4gZ29vZCB0byBjZW50cmFsaXplIGV2ZW4gbW9yZSB0aGFu
+IHRvZGF5Lg0KPiA+ID4gDQo+ID4gPiBXaGF0IGlmIHRoZXJlIHdhcyBhIHVuaWZpZWQgZXhlY3V0
+YWJsZSBhbGxvYyBBUEkgd2l0aCBzdXBwb3J0IGZvciB0aGluZ3MNCj4gPiA+IGxpa2U6DQo+ID4g
+PiAgLSBDb25jZXB0cyBvZiB0d28gcmVnaW9ucyBmb3IgQXJkJ3MgdXNhZ2UsIG5lYXIobW9kdWxl
+cykgYW5kIGZhcih2bWFsbG9jKQ0KPiA+ID4gZnJvbQ0KPiA+ID4gICAga2VybmVsIHRleHQuIFdv
+bid0IGFwcGx5IGZvciBldmVyeSBhcmNoLCBidXQgbWF5YmUgZW5vdWdoIHRoYXQgc29tZQ0KPiA+
+ID4gbG9naWMNCj4gPiA+ICAgIGNvdWxkIGJlIHVuaWZpZWQNCj4gPiA+ICAtIExpbWl0cyBmb3Ig
+ZWFjaCBvZiB0aGUgdXNhZ2VzIChtb2R1bGVzLCBicGYsIGtwcm9iZXMsIGZ0cmFjZSkNCj4gPiA+
+ICAtIENlbnRyYWxpemVkIGxvZ2ljIGZvciBtb3ZpbmcgYmV0d2VlbiBSVyBhbmQgUk8rWA0KPiA+
+ID4gIC0gT3B0aW9ucyBmb3IgZXhjbHVzaXZlIHJlZ2lvbnMgb3IgYWxsIHNoYXJlZA0KPiA+ID4g
+IC0gUmFuZG9taXppbmcgYmFzZSwgcmFuZG9taXppbmcgaW5kZXBlbmRlbnRseSBvciBub25lDQo+
+ID4gPiAgLSBTb21lIGNncm91cHMgaG9va3M/DQo+ID4gPiANCj4gPiA+IFdvdWxkIHRoZXJlIGJl
+IGFueSBpbnRlcmVzdCBpbiB0aGF0IGZvciB0aGUgZnV0dXJlPw0KPiA+ID4gDQo+ID4gPiBBcyBh
+IG5leHQgc3RlcCwgaWYgQlBGIGRvZXNuJ3Qgd2FudCB0byB1c2UgdGhpcyBieSBkZWZhdWx0LCBj
+b3VsZCBCUEYganVzdA0KPiA+ID4gY2FsbA0KPiA+ID4gdm1hbGxvY19ub2RlX3JhbmdlIGRpcmVj
+dGx5IGZyb20gQXJkJ3MgbmV3IF9fd2VhayBmdW5jdGlvbnMgb24geDg2PyBUaGVuDQo+ID4gPiBt
+b2R1bGVzDQo+ID4gPiBjYW4gcmFuZG9taXplIGFjcm9zcyB0aGUgd2hvbGUgc3BhY2UgYW5kIEJQ
+RiBjYW4gZmlsbCB0aGUgZ2FwcyBsaW5lYXJseQ0KPiA+ID4gZnJvbQ0KPiA+ID4gdGhlDQo+ID4g
+PiBiZWdpbm5pbmcuIElzIHRoYXQgYWNjZXB0YWJsZT8gVGhlbiB0aGUgdm1hbGxvYyBvcHRpbWl6
+YXRpb25zIGNvdWxkIGJlDQo+ID4gPiBkcm9wcGVkDQo+ID4gPiBmb3IgdGhlIHRpbWUgYmVpbmcg
+c2luY2UgdGhlIEJQRnMgd291bGQgbm90IGJlIGZyYWdtZW50ZWQsIGJ1dCB0aGUNCj4gPiA+IHNl
+cGFyYXRlDQo+ID4gPiByZWdpb25zIGNvdWxkIGNvbWUgYXMgcGFydCBvZiBmdXR1cmUgd29yay4N
+Cj4gPiANCj4gPiBKZXNzaWNhLCBEYW5pZWwsDQo+ID4gDQo+ID4gQW55IGFkdmljZSBmb3IgbWUg
+b24gaG93IHdlIGNvdWxkIG1vdmUgdGhpcyBmb3J3YXJkPw0KPiANCj4gSGkgUmljaywNCj4gDQo+
+IEl0IHdvdWxkIGJlIGdvb2QgZm9yIHRoZSB4ODYgZm9sa3MgdG8gY2hpbWUgaW4gaWYgdGhleSBm
+aW5kIHRoZQ0KPiB4ODYtcmVsYXRlZCBtb2R1bGUgY2hhbmdlcyBhZ3JlZWFibGUgKGluIHBhcnRp
+Y3VsYXIsIHRoZSBwYXJ0aXRpb25pbmcNCj4gYW5kIHNpemluZyBvZiB0aGUgbW9kdWxlIHNwYWNl
+IGluIHNlcGFyYXRlIHJhbmRvbWl6YXRpb24gYW5kIGJhY2t1cA0KPiBhcmVhcykuIEhhcyB0aGF0
+IGhhcHBlbmVkIGFscmVhZHkgb3IgZGlkIEkganVzdCBtaXNzIHRoYXQgaW4gdGhlDQo+IHByZXZp
+b3VzIHZlcnNpb25zPw0KQW5kcmV3IE1vcnRvbihvbiB2OCkgYW5kIEtlZXMgQ29vayh3YXkgYmFj
+ayBvbiB2MSBJSVJDKSBoYWQgYXNrZWQgaWYgd2UgbmVlZCB0aGUNCmJhY2t1cCBhcmVhIGF0IGFs
+bC4gVGhlIGFuc3dlciBpcyB5ZXMgaW4gdGhlIGNhc2Ugb2YgaGVhdnkgdXNhZ2UgZnJvbSB0aGUg
+b3RoZXINCm1vZHVsZV9hbGxvYyB1c2Vycywgb3IgbGF0ZSBhZGRlZCBsYXJnZSBtb2R1bGVzIGhh
+dmUgYSByZWFsIHdvcmxkIGNoYW5jZSBvZg0KYmVpbmcgYmxvY2tlZC4NCg0KVGhlIHNpemVzIG9m
+IHRoZSBhcmVhcyB3ZXJlIGNob3NlbiBleHBlcmltZW50YWxseSB3aXRoIHRoZSBzaW11bGF0aW9u
+cywgYnV0IEkNCmRpZG4ndCBzYXZlIHRoZSBkYXRhLg0KDQpBbnlvbmUgaW4gcGFydGljdWxhciB5
+b3Ugd291bGQgd2FudCB0byBzZWUgY29tbWVudCBvbiB0aGlzPw0KDQo+IEknbSBpbXBhcnRpYWwg
+dG93YXJkcyB0aGUgdm1hbGxvYyBvcHRpbWl6YXRpb25zLCBhcyBJIHdvdWxkbid0DQo+IGNvbnNp
+ZGVyIG1vZHVsZSBsb2FkaW5nIHBlcmZvcm1hbmNlLWNyaXRpY2FsIChGb3IgaW5zdGFuY2UsIHlv
+dSdkIG1vc3QNCj4gbGlrZWx5IGp1c3QgbG9hZCBhIGRyaXZlciBvbmNlIGFuZCBiZSBkb25lIHdp
+dGggaXQsIGFuZCBpdCdzIG5vdCBsaWtlDQo+IHlvdSdkIHZlcnkgZnJlcXVlbnRseSBiZSBsb2Fk
+aW5nL3VubG9hZGluZyBtb2R1bGVzLiBBbmQgbm90ZSBJIG1lYW4NCj4gbG9hZGluZyBhIGtlcm5l
+bCBtb2R1bGUsIG5vdCBtb2R1bGVfYWxsb2MoKSBhbGxvY2F0aW9ucy4gVGhlc2UgdHdvDQo+IGNv
+bmNlcHRzIGFyZSBzdGFydGluZyB0byBnZXQgY29uZmxhdGVkIDotLyApLiBTbywgSSdkIGxlYXZl
+IHRoZQ0KPiBvcHRpbWl6YXRpb25zIHVwIHRvIHRoZSBCUEYgZm9sa3MgaWYgdGhleSBjb25zaWRl
+ciB0aGF0IGJlbmVmaWNpYWwgZm9yDQo+IHRoZWlyIG1vZHVsZV9hbGxvYygpIGFsbG9jYXRpb25z
+Lg0KRGFuaWVsLCBBbGV4ZWksDQoNCkFueSB0aG91Z2h0cyBob3cgeW91IHdvdWxkIHByZWZlciB0
+aGlzIHdvcmtzIHdpdGggQlBGIEpJVD8NCg0KPiBBbmQgaXQgbG9va3MgbGlrZSB0aGVyZSBpc24n
+dCByZWFsbHkgYSBzdHJvbmcgcHVzaCBvciBpbnRlcmVzdCBvbg0KPiBoYXZpbmcgYSBzZXBhcmF0
+ZSB2bWFsbG9jIGFyZWEgZm9yIGJwZiwgc28gSSBzdXBwb3NlIHdlIGNhbiBkcm9wIHRoYXQNCj4g
+aWRlYSBmb3Igbm93ICh0aGF0IHdvdWxkIGJlIGEgc2VwYXJhdGUgcGF0Y2hzZXQgb24gaXRzIG93
+biBhbnl3YXkpLg0KPiBJIGp1c3Qgc3VnZ2VzdGVkIHRoZSBpZGVhIGJlY2F1c2UgSSB3YXMgY3Vy
+aW91cyBpZiB0aGF0IHdvdWxkIGhhdmUNCj4gaGVscGVkIHdpdGggdGhlIHBvdGVudGlhbCBmcmFn
+bWVudGF0aW9uIGlzc3Vlcy4gSW4gYW55IGNhc2UgaXQgc291bmRlZA0KPiBsaWtlIHRoZSBwb3Rl
+bnRpYWxseSByZWR1Y2VkIHNwYWNlIChzaG91bGQgdGhlIG1vZHVsZSBzcGFjZSBiZSBzcGxpdA0K
+PiBiZXR3ZWVuIGJwZiBhbmQgbW9kdWxlcykgaXNuJ3QgZGVzaXJhYmxlLg0KW3NuaXBdDQoNCg==
