@@ -1,7 +1,7 @@
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Subject: [PATCH 05/12] __wr_after_init: x86_64: debug writes
-Date: Wed, 19 Dec 2018 23:33:31 +0200
-Message-Id: <20181219213338.26619-6-igor.stoppa@huawei.com>
+Subject: [PATCH 06/12] __wr_after_init: Documentation: self-protection
+Date: Wed, 19 Dec 2018 23:33:32 +0200
+Message-Id: <20181219213338.26619-7-igor.stoppa@huawei.com>
 In-Reply-To: <20181219213338.26619-1-igor.stoppa@huawei.com>
 References: <20181219213338.26619-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
@@ -10,8 +10,8 @@ To: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>,
 Cc: igor.stoppa@huawei.com, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-After each write operation, confirm that it was successful, otherwise
-generate a warning.
+Update the self-protection documentation, to mention also the use of the
+__wr_after_init attribute.
 
 Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
 
@@ -27,45 +27,33 @@ CC: kernel-hardening@lists.openwall.com
 CC: linux-mm@kvack.org
 CC: linux-kernel@vger.kernel.org
 ---
- arch/x86/mm/prmem.c | 9 ++++++++-
- mm/Kconfig.debug    | 8 ++++++++
- 2 files changed, 16 insertions(+), 1 deletion(-)
+ Documentation/security/self-protection.rst | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
 
-diff --git a/arch/x86/mm/prmem.c b/arch/x86/mm/prmem.c
-index fc367551e736..9d98525c687a 100644
---- a/arch/x86/mm/prmem.c
-+++ b/arch/x86/mm/prmem.c
-@@ -60,7 +60,14 @@ void *__wr_op(unsigned long dst, unsigned long src, __kernel_size_t len,
- 		copy_to_user((void __user *)wr_poking_addr, (void *)src, len);
- 	else if (op == WR_MEMSET)
- 		memset_user((void __user *)wr_poking_addr, (u8)src, len);
--
-+#ifdef CONFIG_DEBUG_PRMEM
-+	if (op == WR_MEMCPY)
-+		VM_WARN_ONCE(memcmp((void *)dst, (void *)src, len),
-+			     "Failed wr_memcpy()");
-+	else if (op == WR_MEMSET)
-+		VM_WARN_ONCE(memtst((void *)dst, (u8)src, len),
-+			     "Failed wr_memset()");
-+#endif
- 	unuse_temporary_mm(prev);
- 	local_irq_enable();
- 	return (void *)dst;
-diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
-index 9a7b8b049d04..b10305cfac3c 100644
---- a/mm/Kconfig.debug
-+++ b/mm/Kconfig.debug
-@@ -94,3 +94,11 @@ config DEBUG_RODATA_TEST
-     depends on STRICT_KERNEL_RWX
-     ---help---
-       This option enables a testcase for the setting rodata read-only.
+diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
+index f584fb74b4ff..df2614bc25b9 100644
+--- a/Documentation/security/self-protection.rst
++++ b/Documentation/security/self-protection.rst
+@@ -84,12 +84,14 @@ For variables that are initialized once at ``__init`` time, these can
+ be marked with the (new and under development) ``__ro_after_init``
+ attribute.
+ 
+-What remains are variables that are updated rarely (e.g. GDT). These
+-will need another infrastructure (similar to the temporary exceptions
+-made to kernel code mentioned above) that allow them to spend the rest
+-of their lifetime read-only. (For example, when being updated, only the
+-CPU thread performing the update would be given uninterruptible write
+-access to the memory.)
++Others, which are statically allocated, but still need to be updated
++rarely, can be marked with the ``__wr_after_init`` attribute.
 +
-+config DEBUG_PRMEM
-+    bool "Verify each write rare operation."
-+    depends on PRMEM
-+    default n
-+    help
-+      After any write rare operation, compares the data written with the
-+      value provided by the caller.
++The update mechanism must avoid exposing the data to rogue alterations
++during the update. For example, only the CPU thread performing the update
++would be given uninterruptible write access to the memory.
++
++Currently there is no protection available for data allocated dynamically.
+ 
+ Segregation of kernel memory from userspace memory
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- 
 2.19.1
