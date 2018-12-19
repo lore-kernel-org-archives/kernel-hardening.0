@@ -1,60 +1,22 @@
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Subject: [RFC v2 PATCH 0/12] hardening: statically allocated protected memory
-Date: Wed, 19 Dec 2018 23:33:26 +0200
-Message-Id: <20181219213338.26619-1-igor.stoppa@huawei.com>
+Subject: [PATCH 01/12] x86_64: memset_user()
+Date: Wed, 19 Dec 2018 23:33:27 +0200
+Message-Id: <20181219213338.26619-2-igor.stoppa@huawei.com>
+In-Reply-To: <20181219213338.26619-1-igor.stoppa@huawei.com>
+References: <20181219213338.26619-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 To: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>
 Cc: igor.stoppa@huawei.com, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Patch-set implementing write-rare memory protection for statically
-allocated data.
-Its purpose it to keep data write protected kernel data which is seldom
-modified.
-There is no read overhead, however writing requires special operations that
-are probably unsitable for often-changing data.
-The use is opt-in, by applying the modifier __wr_after_init to a variable
-declaration.
+Create x86_64 specific version of memset for user space, based on
+clear_user().
+This will be used for implementing wr_memset() in the __wr_after_init
+scenario, where write-rare variables have an alternate mapping for
+writing.
 
-As the name implies, the write protection kicks in only after init() is
-completed; before that moment, the data is modifiable in the usual way.
-
-Current Limitations:
-* supports only data which is allocated statically, at build time.
-* supports only x86_64, other earchitectures need to provide own backend
-
-Some notes:
-- there is a part of generic code which is basically a NOP, but should
-  allow using unconditionally the write protection. It will automatically
-  default to non-protected functionality, if the specific architecture
-  doesn't support write-rare
-- to avoid the risk of weakening __ro_after_init, __wr_after_init data is
-  in a separate set of pages, and any invocation will confirm that the
-  memory affected falls within this range.
-  rodata_test is modified accordingly, to check also this case.
-- for now, the patchset addresses only x86_64, as each architecture seems
-  to have own way of dealing with user space. Once a few are implemented,
-  it should be more obvious what code can be refactored as common.
-- the memset_user() assembly function seems to work, but I'm not too sure
-  it's really ok
-- I've added a simple example: the protection of ima_policy_flags
-- the last patch is optional, but it seemed worth to do the refactoring
-
-Changelog:
-
-v1->v2
-
-* introduce cleaner split between generic and arch code
-* add x86_64 specific memset_user()
-* replace kernel-space memset() memcopy() with userspace counterpart
-* randomize the base address for the alternate map across the entire
-  available address range from user space (128TB - 64TB)
-* convert BUG() to WARN()
-* turn verification of written data into debugging option
-* wr_rcu_assign_pointer() as special case of wr_assign()
-* example with protection of ima_policy_flags
-* documentation
+Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
 
 CC: Andy Lutomirski <luto@amacapital.net>
 CC: Nadav Amit <nadav.amit@gmail.com>
@@ -67,41 +29,90 @@ CC: linux-integrity@vger.kernel.org
 CC: kernel-hardening@lists.openwall.com
 CC: linux-mm@kvack.org
 CC: linux-kernel@vger.kernel.org
+---
+ arch/x86/include/asm/uaccess_64.h |  6 ++++
+ arch/x86/lib/usercopy_64.c        | 54 +++++++++++++++++++++++++++++++
+ 2 files changed, 60 insertions(+)
 
-Igor Stoppa (12):
-	[PATCH 01/12] x86_64: memset_user()
-	[PATCH 02/12] __wr_after_init: linker section and label
-	[PATCH 03/12] __wr_after_init: generic header
-	[PATCH 04/12] __wr_after_init: x86_64: __wr_op
-	[PATCH 05/12] __wr_after_init: x86_64: debug writes
-	[PATCH 06/12] __wr_after_init: Documentation: self-protection
-	[PATCH 07/12] __wr_after_init: lkdtm test
-	[PATCH 08/12] rodata_test: refactor tests
-	[PATCH 09/12] rodata_test: add verification for __wr_after_init
-	[PATCH 10/12] __wr_after_init: test write rare functionality
-	[PATCH 11/12] IMA: turn ima_policy_flags into __wr_after_init
-	[PATCH 12/12] x86_64: __clear_user as case of __memset_user
-
-
-Documentation/security/self-protection.rst |  14 ++-
-arch/Kconfig                               |  15 +++
-arch/x86/Kconfig                           |   1 +
-arch/x86/include/asm/uaccess_64.h          |   6 +
-arch/x86/lib/usercopy_64.c                 |  41 +++++--
-arch/x86/mm/Makefile                       |   2 +
-arch/x86/mm/prmem.c                        | 127 +++++++++++++++++++++
-drivers/misc/lkdtm/core.c                  |   3 +
-drivers/misc/lkdtm/lkdtm.h                 |   3 +
-drivers/misc/lkdtm/perms.c                 |  29 +++++
-include/asm-generic/vmlinux.lds.h          |  25 +++++
-include/linux/cache.h                      |  21 ++++
-include/linux/prmem.h                      | 142 ++++++++++++++++++++++++
-init/main.c                                |   2 +
-mm/Kconfig.debug                           |  16 +++
-mm/Makefile                                |   1 +
-mm/rodata_test.c                           |  69 ++++++++----
-mm/test_write_rare.c                       | 135 ++++++++++++++++++++++
-security/integrity/ima/ima.h               |   3 +-
-security/integrity/ima/ima_init.c          |   5 +-
-security/integrity/ima/ima_policy.c        |   9 +-
-21 files changed, 629 insertions(+), 40 deletions(-)
+diff --git a/arch/x86/include/asm/uaccess_64.h b/arch/x86/include/asm/uaccess_64.h
+index a9d637bc301d..f194bfce4866 100644
+--- a/arch/x86/include/asm/uaccess_64.h
++++ b/arch/x86/include/asm/uaccess_64.h
+@@ -213,4 +213,10 @@ copy_user_handle_tail(char *to, char *from, unsigned len);
+ unsigned long
+ mcsafe_handle_tail(char *to, char *from, unsigned len);
+ 
++unsigned long __must_check
++memset_user(void __user *mem, int c, unsigned long len);
++
++unsigned long __must_check
++__memset_user(void __user *mem, int c, unsigned long len);
++
+ #endif /* _ASM_X86_UACCESS_64_H */
+diff --git a/arch/x86/lib/usercopy_64.c b/arch/x86/lib/usercopy_64.c
+index 1bd837cdc4b1..84f8f8a20b30 100644
+--- a/arch/x86/lib/usercopy_64.c
++++ b/arch/x86/lib/usercopy_64.c
+@@ -9,6 +9,60 @@
+ #include <linux/uaccess.h>
+ #include <linux/highmem.h>
+ 
++/*
++ * Memset Userspace
++ */
++
++unsigned long __memset_user(void __user *addr, int c, unsigned long size)
++{
++	long __d0;
++	unsigned long  pattern = 0;
++	int i;
++
++	for (i = 0; i < 8; i++)
++		pattern = (pattern << 8) | (0xFF & c);
++	might_fault();
++	/* no memory constraint: gcc doesn't know about this memory */
++	stac();
++	asm volatile(
++		"       movq %[val], %%rdx\n"
++		"	testq  %[size8],%[size8]\n"
++		"	jz     4f\n"
++		"0:	mov %%rdx,(%[dst])\n"
++		"	addq   $8,%[dst]\n"
++		"	decl %%ecx ; jnz   0b\n"
++		"4:	movq  %[size1],%%rcx\n"
++		"	testl %%ecx,%%ecx\n"
++		"	jz     2f\n"
++		"1:	movb   %%dl,(%[dst])\n"
++		"	incq   %[dst]\n"
++		"	decl %%ecx ; jnz  1b\n"
++		"2:\n"
++		".section .fixup,\"ax\"\n"
++		"3:	lea 0(%[size1],%[size8],8),%[size8]\n"
++		"	jmp 2b\n"
++		".previous\n"
++		_ASM_EXTABLE_UA(0b, 3b)
++		_ASM_EXTABLE_UA(1b, 2b)
++		: [size8] "=&c"(size), [dst] "=&D" (__d0)
++		: [size1] "r"(size & 7), "[size8]" (size / 8), "[dst]"(addr),
++		  [val] "ri"(pattern)
++		: "rdx");
++
++	clac();
++	return size;
++}
++EXPORT_SYMBOL(__memset_user);
++
++unsigned long memset_user(void __user *to, int c, unsigned long n)
++{
++	if (access_ok(VERIFY_WRITE, to, n))
++		return __memset_user(to, c, n);
++	return n;
++}
++EXPORT_SYMBOL(memset_user);
++
++
+ /*
+  * Zero Userspace
+  */
+-- 
+2.19.1
