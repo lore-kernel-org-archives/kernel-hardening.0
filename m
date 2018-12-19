@@ -1,77 +1,41 @@
+Subject: Re: [PATCH 2/6] __wr_after_init: write rare for static allocation
+References: <20181204121805.4621-1-igor.stoppa@huawei.com>
+ <20181204121805.4621-3-igor.stoppa@huawei.com>
+ <CALCETrVvoui0vksdt0Y9rdGL5ipEn_FtSXVVUFdH03ZC93cy_A@mail.gmail.com>
+ <20181212104900.0af52c34@mschwideX1>
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Subject: [PATCH 12/12] x86_64: __clear_user as case of __memset_user
-Date: Wed, 19 Dec 2018 23:33:38 +0200
-Message-Id: <20181219213338.26619-13-igor.stoppa@huawei.com>
-In-Reply-To: <20181219213338.26619-1-igor.stoppa@huawei.com>
-References: <20181219213338.26619-1-igor.stoppa@huawei.com>
+Message-ID: <cff2bb8d-bd61-c4a0-4e63-4de2133a7b38@gmail.com>
+Date: Thu, 20 Dec 2018 00:50:12 +0200
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>
-Cc: igor.stoppa@huawei.com, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
+In-Reply-To: <20181212104900.0af52c34@mschwideX1>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Martin Schwidefsky <schwidefsky@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
+Cc: linux-arch <linux-arch@vger.kernel.org>, linux-s390 <linux-s390@vger.kernel.org>, Heiko Carstens <heiko.carstens@de.ibm.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Kees Cook <keescook@chromium.org>, Matthew Wilcox <willy@infradead.org>, Igor Stoppa <igor.stoppa@huawei.com>, Nadav Amit <nadav.amit@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, linux-integrity <linux-integrity@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-To avoid code duplication, re-use __memset_user(), when clearing
-user-space memory.
 
-The overhead should be minimal (2 extra register assignments) and
-outside of the writing loop.
 
-Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
+On 12/12/2018 11:49, Martin Schwidefsky wrote:
+> On Wed, 5 Dec 2018 15:13:56 -0800
+> Andy Lutomirski <luto@kernel.org> wrote:
 
-CC: Andy Lutomirski <luto@amacapital.net>
-CC: Nadav Amit <nadav.amit@gmail.com>
-CC: Matthew Wilcox <willy@infradead.org>
-CC: Peter Zijlstra <peterz@infradead.org>
-CC: Kees Cook <keescook@chromium.org>
-CC: Dave Hansen <dave.hansen@linux.intel.com>
-CC: Mimi Zohar <zohar@linux.vnet.ibm.com>
-CC: linux-integrity@vger.kernel.org
-CC: kernel-hardening@lists.openwall.com
-CC: linux-mm@kvack.org
-CC: linux-kernel@vger.kernel.org
----
- arch/x86/lib/usercopy_64.c | 29 +----------------------------
- 1 file changed, 1 insertion(+), 28 deletions(-)
+>> Hi s390 and powerpc people: it would be nice if this generic
+>> implementation *worked* on your architectures and that it will allow
+>> you to add some straightforward way to add a better arch-specific
+>> implementation if you think that would be better.
+> 
+> As the code is right now I can guarantee that it will not work on s390.
 
-diff --git a/arch/x86/lib/usercopy_64.c b/arch/x86/lib/usercopy_64.c
-index 84f8f8a20b30..ab6aabb62055 100644
---- a/arch/x86/lib/usercopy_64.c
-+++ b/arch/x86/lib/usercopy_64.c
-@@ -69,34 +69,7 @@ EXPORT_SYMBOL(memset_user);
- 
- unsigned long __clear_user(void __user *addr, unsigned long size)
- {
--	long __d0;
--	might_fault();
--	/* no memory constraint because it doesn't change any memory gcc knows
--	   about */
--	stac();
--	asm volatile(
--		"	testq  %[size8],%[size8]\n"
--		"	jz     4f\n"
--		"0:	movq $0,(%[dst])\n"
--		"	addq   $8,%[dst]\n"
--		"	decl %%ecx ; jnz   0b\n"
--		"4:	movq  %[size1],%%rcx\n"
--		"	testl %%ecx,%%ecx\n"
--		"	jz     2f\n"
--		"1:	movb   $0,(%[dst])\n"
--		"	incq   %[dst]\n"
--		"	decl %%ecx ; jnz  1b\n"
--		"2:\n"
--		".section .fixup,\"ax\"\n"
--		"3:	lea 0(%[size1],%[size8],8),%[size8]\n"
--		"	jmp 2b\n"
--		".previous\n"
--		_ASM_EXTABLE_UA(0b, 3b)
--		_ASM_EXTABLE_UA(1b, 2b)
--		: [size8] "=&c"(size), [dst] "=&D" (__d0)
--		: [size1] "r"(size & 7), "[size8]" (size / 8), "[dst]"(addr));
--	clac();
--	return size;
-+	return __memset_user(addr, 0, size);
- }
- EXPORT_SYMBOL(__clear_user);
- 
--- 
-2.19.1
+OK, I have thrown the towel wrt developing at the same time for multiple 
+architectures.
+
+ATM I'm oriented toward getting support for one (x86_64), leaving the 
+actual mechanism as architecture specific.
+
+Then I can add another one or two and see what makes sense to refactor.
+This approach should minimize the churning, overall.
+
+
+--
+igor
