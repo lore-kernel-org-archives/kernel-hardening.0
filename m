@@ -1,77 +1,107 @@
-Date: Tue, 18 Dec 2018 15:11:30 +0100
-From: Solar Designer <solar@openwall.com>
-Subject: Re: grsecurity updated source code
-Message-ID: <20181218141130.GA15320@openwall.com>
-References: <CADvTj4qE8xKiEC8L5+XNypsTiSbFaBjf+t4ZpDVnVt9RqdcpSQ@mail.gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CADvTj4qE8xKiEC8L5+XNypsTiSbFaBjf+t4ZpDVnVt9RqdcpSQ@mail.gmail.com>
-To: kernel-hardening@lists.openwall.com
-Cc: James Hilliard <james.hilliard1@gmail.com>
+From: Igor Stoppa <igor.stoppa@gmail.com>
+Subject: [RFC v2 PATCH 0/12] hardening: statically allocated protected memory
+Date: Wed, 19 Dec 2018 23:33:26 +0200
+Message-Id: <20181219213338.26619-1-igor.stoppa@huawei.com>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+To: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>
+Cc: igor.stoppa@huawei.com, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 17, 2018 at 07:13:53PM -0700, James Hilliard wrote:
-> I've obtained and uploaded a recent grsecurity kernel here:
-> https://github.com/jameshilliard/linux-grsec/
-> 
-> From my understanding this is the stable patch.
-> 
-> Source code was obtained from a vendor via GPL request.
+Patch-set implementing write-rare memory protection for statically
+allocated data.
+Its purpose it to keep data write protected kernel data which is seldom
+modified.
+There is no read overhead, however writing requires special operations that
+are probably unsitable for often-changing data.
+The use is opt-in, by applying the modifier __wr_after_init to a variable
+declaration.
 
-As a moderator, I reluctantly accepted James' message.  Here are the
-aspects I considered:
+As the name implies, the write protection kicks in only after init() is
+completed; before that moment, the data is modifiable in the usual way.
 
-- Availability of Linux kernel hardening changes is on-topic here.
+Current Limitations:
+* supports only data which is allocated statically, at build time.
+* supports only x86_64, other earchitectures need to provide own backend
 
-- The kernel-hardening mailing list isn't limited to KSPP, so even if
-KSPP's current stance is possibly not to use code from "closed"
-grsecurity this doesn't make the message inappropriate for the list.
+Some notes:
+- there is a part of generic code which is basically a NOP, but should
+  allow using unconditionally the write protection. It will automatically
+  default to non-protected functionality, if the specific architecture
+  doesn't support write-rare
+- to avoid the risk of weakening __ro_after_init, __wr_after_init data is
+  in a separate set of pages, and any invocation will confirm that the
+  memory affected falls within this range.
+  rodata_test is modified accordingly, to check also this case.
+- for now, the patchset addresses only x86_64, as each architecture seems
+  to have own way of dealing with user space. Once a few are implemented,
+  it should be more obvious what code can be refactored as common.
+- the memset_user() assembly function seems to work, but I'm not too sure
+  it's really ok
+- I've added a simple example: the protection of ima_policy_flags
+- the last patch is optional, but it seemed worth to do the refactoring
 
-I also thought of many other aspects, but found them personal,
-subjective, and/or outright irrelevant to my decision-making as a
-moderator, so I didn't let them affect the moderation decision:
+Changelog:
 
-- Having this posted might result in some vendor's access to further
-grsecurity patches getting revoked.  Maybe that will negatively affect
-that vendors' product security, and thus security of their users.
+v1->v2
 
-- Having this posted might boost "accusations" against KSPP of
-"stealing" "closed" grsecurity work, regardless of whether there will be
-any use of this work by KSPP or not.  (I've seen such things stated as
-if they were accusations on some discussion forums, but not
-substantiated.  Now they might start referring to this thread.)
+* introduce cleaner split between generic and arch code
+* add x86_64 specific memset_user()
+* replace kernel-space memset() memcopy() with userspace counterpart
+* randomize the base address for the alternate map across the entire
+  available address range from user space (128TB - 64TB)
+* convert BUG() to WARN()
+* turn verification of written data into debugging option
+* wr_rcu_assign_pointer() as special case of wr_assign()
+* example with protection of ima_policy_flags
+* documentation
 
-- The reasons not to reuse "closed" grsecurity work under KSPP are that
-it's not independent innovation (does independent innovation have value
-on its own or/and would it be NIH syndrome?), that there's still more
-than enough to go through in older grsecurity, and that reusing the
-"closed" grsecurity work would go against their preference.  As far as
-I'm aware, there's nothing really stopping KSPP from doing that, and
-doing it might be for the benefit of Linux users.
+CC: Andy Lutomirski <luto@amacapital.net>
+CC: Nadav Amit <nadav.amit@gmail.com>
+CC: Matthew Wilcox <willy@infradead.org>
+CC: Peter Zijlstra <peterz@infradead.org>
+CC: Kees Cook <keescook@chromium.org>
+CC: Dave Hansen <dave.hansen@linux.intel.com>
+CC: Mimi Zohar <zohar@linux.vnet.ibm.com>
+CC: linux-integrity@vger.kernel.org
+CC: kernel-hardening@lists.openwall.com
+CC: linux-mm@kvack.org
+CC: linux-kernel@vger.kernel.org
 
-- I dislike the drama.  I wish James' message were never sent in here,
-as having it posted might contribute to further drama.
+Igor Stoppa (12):
+	[PATCH 01/12] x86_64: memset_user()
+	[PATCH 02/12] __wr_after_init: linker section and label
+	[PATCH 03/12] __wr_after_init: generic header
+	[PATCH 04/12] __wr_after_init: x86_64: __wr_op
+	[PATCH 05/12] __wr_after_init: x86_64: debug writes
+	[PATCH 06/12] __wr_after_init: Documentation: self-protection
+	[PATCH 07/12] __wr_after_init: lkdtm test
+	[PATCH 08/12] rodata_test: refactor tests
+	[PATCH 09/12] rodata_test: add verification for __wr_after_init
+	[PATCH 10/12] __wr_after_init: test write rare functionality
+	[PATCH 11/12] IMA: turn ima_policy_flags into __wr_after_init
+	[PATCH 12/12] x86_64: __clear_user as case of __memset_user
 
-- Having this posted might upset Brad.  That makes me unhappy.
 
-- I guess having this posted won't negatively affect grsecurity's
-business.  In fact, this is more like availability of a temporary
-free trial, which might boost sales a bit later.
-
-- I actually have mixed feelings about their business.  On one hand,
-it's cutting-edge Linux kernel hardening work that still benefits some
-users, and it's great that people are paid for the work.  On the other,
-grsecurity has demonstrated that they may use money against free speech.
-
-- At this point, I would be only slightly surprised if approving this
-kind of messages results in Brad threatening me.  I still have enough
-respect for him that I hope he won't.
-
-I also thought of possibly not commenting on my moderation decision, or
-not listing the "personal, subjective, and/or outright irrelevant"
-thoughts above as they might contribute to the drama.  But in the end I
-have included them, (naively?) hoping they'd help avoid further drama
-and need to explain that/why these things didn't affect the decision.
-
-Alexander
+Documentation/security/self-protection.rst |  14 ++-
+arch/Kconfig                               |  15 +++
+arch/x86/Kconfig                           |   1 +
+arch/x86/include/asm/uaccess_64.h          |   6 +
+arch/x86/lib/usercopy_64.c                 |  41 +++++--
+arch/x86/mm/Makefile                       |   2 +
+arch/x86/mm/prmem.c                        | 127 +++++++++++++++++++++
+drivers/misc/lkdtm/core.c                  |   3 +
+drivers/misc/lkdtm/lkdtm.h                 |   3 +
+drivers/misc/lkdtm/perms.c                 |  29 +++++
+include/asm-generic/vmlinux.lds.h          |  25 +++++
+include/linux/cache.h                      |  21 ++++
+include/linux/prmem.h                      | 142 ++++++++++++++++++++++++
+init/main.c                                |   2 +
+mm/Kconfig.debug                           |  16 +++
+mm/Makefile                                |   1 +
+mm/rodata_test.c                           |  69 ++++++++----
+mm/test_write_rare.c                       | 135 ++++++++++++++++++++++
+security/integrity/ima/ima.h               |   3 +-
+security/integrity/ima/ima_init.c          |   5 +-
+security/integrity/ima/ima_policy.c        |   9 +-
+21 files changed, 629 insertions(+), 40 deletions(-)
