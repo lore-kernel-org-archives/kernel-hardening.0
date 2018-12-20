@@ -1,66 +1,32 @@
-Subject: Re: [RFC PATCH 0/6] Process-local memory allocations
-References: <cover.1542722764.git.jsteckli@amazon.de>
- <20181120232619.GA13641@cisco>
- <ciirm8tvjhmrgg.fsf@u54ee758033e858cfa736.ant.amazon.com>
+Subject: Re: [PATCH 04/12] __wr_after_init: x86_64: __wr_op
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <89247bcb-d48e-99fb-8904-c1120c1567db@gmail.com>
-Date: Thu, 20 Dec 2018 01:00:13 +0200
+References: <20181219213338.26619-1-igor.stoppa@huawei.com>
+ <20181219213338.26619-5-igor.stoppa@huawei.com>
+Message-ID: <f800ee0f-9ac5-f91c-c1a6-3e094721c91d@gmail.com>
+Date: Thu, 20 Dec 2018 18:53:25 +0200
 MIME-Version: 1.0
-In-Reply-To: <ciirm8tvjhmrgg.fsf@u54ee758033e858cfa736.ant.amazon.com>
+In-Reply-To: <20181219213338.26619-5-igor.stoppa@huawei.com>
 Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-To: Julian Stecklina <jsteckli@amazon.de>, Tycho Andersen <tycho@tycho.ws>
-Cc: kernel-hardening@lists.openwall.com, Liran Alon <liran.alon@oracle.com>, Jonathan Adams <jwadams@google.com>, David Woodhouse <dwmw2@infradead.org>
+To: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>
+Cc: igor.stoppa@huawei.com, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On 19/12/2018 23:33, Igor Stoppa wrote:
 
-On 13/12/2018 16:28, Julian Stecklina wrote:
+> +	if (WARN_ONCE(op >= WR_OPS_NUMBER, "Invalid WR operation.") ||
+> +	    WARN_ONCE(!is_wr_after_init(dst, len), "Invalid WR range."))
+> +		return (void *)dst;
+> +
+> +	offset = dst - (unsigned long)&__start_wr_after_init;
 
-> As far as usage is concerned, prmem and the process local memory is very
-> different. From a quick glance at the prmem patchset, I see that it
-> works for statically allocated memory. 
+I forgot to remove the offset.
+If the whole kernel memory is remapped, it is shifted by wr_poking_base.
+I'll fix it in the next iteration.
 
-I suspect you have looked only at the latest patchset, which is a subset 
-of the whole feature-set.
-It was agreed that I would first address the integration of write-rare 
-for statically allocated memory, and so I did.
+> +	wr_poking_addr = wr_poking_base + offset;
 
-But the origin of this work actually resides in protecting the  SELinux 
-policyDB, which is entirely dynamically allocated.
-
-> Process-local memory is by
-> definition bound to the lifetime of a process (or address space to be
-> more precise) and thus cannot be statically allocated. It's breaking up
-> the global address space of the kernel and starts binding some
-> allocations in the kernel to specific processes.
-
-yes, I agree with the explanation you give, however the starting 
-assumption (prmem is only static) is not correct.
-> 
-> My goal is specifically L1TF mitigation and preventing random parts of
-> the kernel from prefetching user data, but this approach is equally
-> effective for ordinary info leak vulnerabilities.
-> 
->> Basically, we have some special memory that we want to leave unmapped
->> (read only) most of the time, but map it (writable) sometimes.
-
-
-This would apply nicely also to kernel data that is particularly 
-sensitive and one would not want to expose to random (possibly buggy) reads.
-
-> Unmapped should really be unmapped, i.e. not present in the page table.
-> Having it read-only defeats the purpose.
-
-Given the current implementation (for x86_64) which uses an alternate 
-mapping for writable, it should not be too difficult to use a similar 
-mechanism for implementing a sort of alternative to a TEE data-vault.
-
-Instead of using a special function to alter normally readable data, it 
-would use a special function to read/write normally unaccessible data.
-
-But, before getting into that, I'd prefer to first get the write rare 
-static merged or at least ACKed.
+	wr_poking_addr = wr_poking_base + dst;
 
 --
 igor
