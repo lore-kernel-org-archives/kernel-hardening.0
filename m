@@ -1,11 +1,11 @@
-References: <20181219213338.26619-1-igor.stoppa@huawei.com> <20181219213338.26619-5-igor.stoppa@huawei.com>
+References: <20181219213338.26619-1-igor.stoppa@huawei.com> <20181219213338.26619-12-igor.stoppa@huawei.com>
 From: Thiago Jung Bauermann <bauerman@linux.ibm.com>
-Subject: Re: [PATCH 04/12] __wr_after_init: x86_64: __wr_op
-In-reply-to: <20181219213338.26619-5-igor.stoppa@huawei.com>
-Date: Thu, 20 Dec 2018 15:20:29 -0200
+Subject: Re: [PATCH 11/12] IMA: turn ima_policy_flags into __wr_after_init
+In-reply-to: <20181219213338.26619-12-igor.stoppa@huawei.com>
+Date: Thu, 20 Dec 2018 15:30:01 -0200
 MIME-Version: 1.0
 Content-Type: text/plain
-Message-Id: <87r2ecunc2.fsf@morokweng.localdomain>
+Message-Id: <87pntwumw6.fsf@morokweng.localdomain>
 To: Igor Stoppa <igor.stoppa@gmail.com>
 Cc: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, igor.stoppa@huawei.com, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
@@ -13,92 +13,40 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 Hello Igor,
 
-> +/*
-> + * The following two variables are statically allocated by the linker
-> + * script at the the boundaries of the memory region (rounded up to
-> + * multiples of PAGE_SIZE) reserved for __wr_after_init.
-> + */
-> +extern long __start_wr_after_init;
-> +extern long __end_wr_after_init;
-> +
-> +static inline bool is_wr_after_init(unsigned long ptr, __kernel_size_t size)
-> +{
-> +	unsigned long start = (unsigned long)&__start_wr_after_init;
-> +	unsigned long end = (unsigned long)&__end_wr_after_init;
-> +	unsigned long low = ptr;
-> +	unsigned long high = ptr + size;
-> +
-> +	return likely(start <= low && low <= high && high <= end);
-> +}
-> +
-> +void *__wr_op(unsigned long dst, unsigned long src, __kernel_size_t len,
-> +	      enum wr_op_type op)
-> +{
-> +	temporary_mm_state_t prev;
-> +	unsigned long offset;
-> +	unsigned long wr_poking_addr;
-> +
-> +	/* Confirm that the writable mapping exists. */
-> +	if (WARN_ONCE(!wr_ready, "No writable mapping available"))
-> +		return (void *)dst;
-> +
-> +	if (WARN_ONCE(op >= WR_OPS_NUMBER, "Invalid WR operation.") ||
-> +	    WARN_ONCE(!is_wr_after_init(dst, len), "Invalid WR range."))
-> +		return (void *)dst;
-> +
-> +	offset = dst - (unsigned long)&__start_wr_after_init;
-> +	wr_poking_addr = wr_poking_base + offset;
-> +	local_irq_disable();
-> +	prev = use_temporary_mm(wr_poking_mm);
-> +
-> +	if (op == WR_MEMCPY)
-> +		copy_to_user((void __user *)wr_poking_addr, (void *)src, len);
-> +	else if (op == WR_MEMSET)
-> +		memset_user((void __user *)wr_poking_addr, (u8)src, len);
-> +
-> +	unuse_temporary_mm(prev);
-> +	local_irq_enable();
-> +	return (void *)dst;
-> +}
+Igor Stoppa <igor.stoppa@gmail.com> writes:
 
-There's a lot of casting back and forth between unsigned long and void *
-(also in the previous patch). Is there a reason for that? My impression
-is that there would be less casts if variables holding addresses were
-declared as void * in the first place. In that case, it wouldn't hurt to
-have an additional argument in __rw_op() to carry the byte value for the
-WR_MEMSET operation.
+> diff --git a/security/integrity/ima/ima_init.c b/security/integrity/ima/ima_init.c
+> index 59d834219cd6..5f4e13e671bf 100644
+> --- a/security/integrity/ima/ima_init.c
+> +++ b/security/integrity/ima/ima_init.c
+> @@ -21,6 +21,7 @@
+>  #include <linux/scatterlist.h>
+>  #include <linux/slab.h>
+>  #include <linux/err.h>
+> +#include <linux/prmem.h>
+>
+>  #include "ima.h"
+>
+> @@ -98,9 +99,9 @@ void __init ima_load_x509(void)
+>  {
+>  	int unset_flags = ima_policy_flag & IMA_APPRAISE;
+>
+> -	ima_policy_flag &= ~unset_flags;
+> +	wr_assign(ima_policy_flag, ima_policy_flag & ~unset_flags);
+>  	integrity_load_x509(INTEGRITY_KEYRING_IMA, CONFIG_IMA_X509_PATH);
+> -	ima_policy_flag |= unset_flags;
+> +	wr_assign(ima_policy_flag, ima_policy_flag | unset_flags);
+>  }
+>  #endif
 
-> +
-> +#define TB (1UL << 40)
-> +
-> +struct mm_struct *copy_init_mm(void);
-> +void __init wr_poking_init(void)
-> +{
-> +	unsigned long start = (unsigned long)&__start_wr_after_init;
-> +	unsigned long end = (unsigned long)&__end_wr_after_init;
-> +	unsigned long i;
-> +	unsigned long wr_range;
-> +
-> +	wr_poking_mm = copy_init_mm();
-> +	if (WARN_ONCE(!wr_poking_mm, "No alternate mapping available."))
-> +		return;
-> +
-> +	wr_range = round_up(end - start, PAGE_SIZE);
-> +
-> +	/* Randomize the poking address base*/
-> +	wr_poking_base = TASK_UNMAPPED_BASE +
-> +		(kaslr_get_random_long("Write Rare Poking") & PAGE_MASK) %
-> +		(TASK_SIZE - (TASK_UNMAPPED_BASE + wr_range));
-> +
-> +	/*
-> +	 * Place 64TB of kernel address space within 128TB of user address
-> +	 * space, at a random page aligned offset.
-> +	 */
-> +	wr_poking_base = (((unsigned long)kaslr_get_random_long("WR Poke")) &
-> +			  PAGE_MASK) % (64 * _BITUL(40));
+In the cover letter, you said:
 
-You're setting wr_poking_base twice in a row? Is this an artifact from
-rebase?
+> As the name implies, the write protection kicks in only after init()
+> is completed; before that moment, the data is modifiable in the usual
+> way.
+
+Given that, is it still necessary or useful to use wr_assign() in a
+function marked with __init?
 
 --
 Thiago Jung Bauermann
