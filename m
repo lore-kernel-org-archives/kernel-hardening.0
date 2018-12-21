@@ -1,109 +1,77 @@
-Subject: Re: 10e9ae9fab ("gcc-plugins: Add STACKLEAK plugin for tracking .."):
- WARNING: can't dereference registers at (null) for ip
- entry_SYSCALL_64_after_hwframe
-References: <5c18828f.VHbQvL3kBXAW0ohl%lkp@intel.com>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <532c3a5b-3358-6f70-b0e8-c2b4afbbbab3@linux.com>
-Date: Thu, 20 Dec 2018 23:18:01 +0300
 MIME-Version: 1.0
-In-Reply-To: <5c18828f.VHbQvL3kBXAW0ohl%lkp@intel.com>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-To: kernel test robot <lkp@intel.com>, Kees Cook <keescook@chromium.org>
-Cc: LKP <lkp@01.org>, kernel-hardening@lists.openwall.com, linux-kbuild@vger.kernel.org, linux-kernel@vger.kernel.org
+References: <20181207124803.10828-1-ahmedsoliman@mena.vt.edu>
+ <1544708187.5826.1.camel@amazon.de> <CANBxJ=FP9GSfMES3e5dSct2qV0Z=uz7uPXufQNqoi5e+sWxvgQ@mail.gmail.com>
+In-Reply-To: <CANBxJ=FP9GSfMES3e5dSct2qV0Z=uz7uPXufQNqoi5e+sWxvgQ@mail.gmail.com>
+From: Ahmed Soliman <ahmedsoliman@mena.vt.edu>
+Date: Fri, 21 Dec 2018 16:05:01 +0200
+Message-ID: <CANBxJ=H7x_LZ1h=+HrbTcBd2Qt+RWz+c+0_JkUseZG6k-ozvuQ@mail.gmail.com>
+Subject: Re: [PATCH V7 0/10] KVM: X86: Introducing ROE Protection Kernel Hardening
+Content-Type: text/plain; charset="UTF-8"
+To: jsteckli@amazon.de
+Cc: Jonathan Corbet <corbet@lwn.net>, kvm@vger.kernel.org, linux-kernel@vger.kernel.org, Ahmed Soliman <ahmedsoliman0x666@gmail.com>, Thomas Gleixner <tglx@linutronix.de>, =?UTF-8?B?6rmA7J246rK4?= <ovich00@gmail.com>, x86@kernel.org, Igor Stoppa <igor.stoppa@gmail.com>, hpa@zytor.com, Ingo Molnar <mingo@redhat.com>, nigel.edwards@hpe.com, Paolo Bonzini <pbonzini@redhat.com>, Borislav Petkov <bp@alien8.de>, kernel-hardening@lists.openwall.com, rkrcmar@redhat.com, linux-doc@vger.kernel.org, Boris Lukashev <blukashev@sempervictus.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello everyone,
+Hello,
 
-I've carefully worked with this report, let me share the results.
+> > I don't  understand why this path needs to be optimized. To me it seems, a straight-
+> > forward userspace implementation with no additional code in the kernel achieves
+> > the same feature. Can you elaborate?
 
-On 18.12.2018 8:15, kernel test robot wrote:
-> Greetings,
-> 
-> 0day kernel testing robot got the below dmesg and the first bad commit is
-> 
-> https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git master
-> 
-> commit 10e9ae9fabaf96c8e5227c1cd4827d58b3aa406d
->     gcc-plugins: Add STACKLEAK plugin for tracking the kernel stack
+I was doing some benchmarking to figure out the overhead introduced by
+ROE, I think I can add more
+details about the overhead I am talking about, first I will explain
+the existing paths for a memory write
+attempts:
+[1] Normal memory write is done directly in guest kernel space.
+[2] Writing into Fully ROE protected page (The write operation will fail).
+[3] Writing into Partial ROE protected region (The write operation will fail).
+[4] Writing into writable memory in a page that contains Partial ROE
+protected region (The write operation is committed to memory).
 
-This bot has been running trinity at the following points:
+Path [1] is the normal write... guest kernel will not have to switch
+to guest and the performance was almost the same between host and
+guest, Writing 1 MB (a byte at a time) took no more than 4
+milliseconds. This will not be affected by whether ROE is done from
+users pace or kernel space.
 
-> afaef01c00  x86/entry: Add STACKLEAK erasing the kernel stack at the end of syscalls
-> 10e9ae9fab  gcc-plugins: Add STACKLEAK plugin for tracking the kernel stack
+Path [2] will switch between guest's kernel to host kernel, then the
+host kernel switches to user space to decide what should be done.  The
+guest host ->host kernel -> host user space switch is done on ever
+separate write attempt (which is approx 1000000 in this case) It took
+~5000 milliseconds to fail the 1M write attempt. and as the above one
+user space ROE will not affect this one that much and I am not aware
+of any possible optimization, yet ideas are welcomed.
 
-    just after stackleak was merged into 4.20-rc1
+Path [3] will also switch between guest kernel to host kernel to host
+users pace...However the time taken to attempt 1M write took ~5000
+when the guest had less than 32 protected chunks system wide, as the
+number of chunks increased, the time also increased in a linear
+fashion till it reached 20 seconds took to do 1M write attempt when
+the system had about separate 2048 protected chunks. For this
+benchmark I allocated a page and protected every other byte :). I
+think this can be optimized by replacing the linked list used to keep
+track of chunks with maybe skip-list or Red Black tree. and It will be
+available in the next patch set. as the previous cases user space VS
+kernel space will not affect performance here at all.
 
-> 1a9430db28  ima: cleanup the match_token policy code
+Path [4] The guest kernel switches to host kernel and the write
+operation is done in the host kernel (note we saved a switch from host
+kernel to host user space)
+The host kernel emulates the write operation and get back to guest
+kernel. The writing speed was notably slow but on average twice the
+speed at Path[3] (~2900 ms for less than 32 chunks and it went up to
+11 seconds for 2048 chunks. Path [4] can be optimized the same way
+path [3].
 
-    near 4.20-rc7 (Dec 17)
+Note that the dominating factor here is how many switches are done, If
+ROE was implemented in user-space, Path [4] which will be at least as
+slow as Path [3] which is about 2x slower.
 
-> 6648e120dd  Add linux-next specific files for 20181217
+I hope it is less ambiguous now.
 
-    rc + next (Dec 17)
+Thanks,
 
-> +---------------------------------------------------------------+------------+------------+------------+---------------+
-> |                                                               | afaef01c00 | 10e9ae9fab | 1a9430db28 | next-20181217 |
-> +---------------------------------------------------------------+------------+------------+------------+---------------+
-> | boot_successes                                                | 386        | 141        | 134        | 135           |
-> | boot_failures                                                 | 68         | 9          | 16         | 8             |
-
-The following oopses happened on 4.20-rc1 and disappeared on 4.20-rc7:
-
-> | RIP:trace                                                     | 37         |            |            |               |
-> | WARNING:stack_recursion                                       | 36         |            |            |               |
-> | WARNING:at(____ptrval____)for_ip_syscall_return_via_sysret/0x | 37         |            |            |               |
-> | Kernel_panic-not_syncing:Machine_halted                       | 37         |            |            |               |
-> | PANIC:double_fault                                            | 27         |            |            |               |
-
-They are caused by stackleak issues with ftrace and kprobes, that are fixed
-in these commits:
-    e9c7d656610e
-    ef1a84093489
-
-I've double-checked that now stackleak works properly with function tracing,
-function_graph tracing and kprobes.
-
-> | Mem-Info                                                      | 2          | 0          | 1          |               |
-> | invoked_oom-killer:gfp_mask=0x                                | 1          | 0          | 1          |               |
-> | RIP:__put_user_4                                              | 1          |            |            |               |
-
-These 3 lines are not meaningful to me.
-
-> | BUG:KASAN:stack-out-of-bounds_in_u                            | 25         | 8          | 12         | 7             |
-
-This is interesting. How does KASAN work with stackleak? I tested it using
-test_kasan.ko -- it works properly both for KASAN outline and inline
-instrumentation.
-
-However I noticed that stackleak lkdtm test sometimes reports that kernel
-stack is not properly erased in case of KASAN outline instrumentation.
-I think it happens because KASAN increases kernel stack usage, so
-CONFIG_STACKLEAK_TRACK_MIN_SIZE should be adjusted. I will investigate
-that later.
-
-> | RIP:__x86_indirect_thunk_rdx                                  | 26         | 9          | 12         | 7             |
-> | INFO:rcu_preempt_detected_stalls_on_CPUs/tasks                | 3          | 0          | 3          |               |
-> | RIP:arch_local_irq_enable                                     | 1          |            |            |               |
-> | RIP:mntput_no_expire                                          | 1          |            |            |               |
-> | RIP:arch_local_irq_restore                                    | 1          |            |            |               |
-> | RIP:compound_head                                             | 1          |            |            |               |
-> | RIP:rcu_read_lock                                             | 1          |            |            |               |
-> | RIP:check_kill_permission                                     | 1          |            |            |               |
-> | RIP:radix_tree_load_root                                      | 1          |            |            |               |
-> | WARNING:at(null)for_ip_entry_SYSCALL_64_after_hwframe/0x      | 0          | 7          | 11         | 7             |
-> | WARNING:at(null)for_ip_async_page_fault/0x                    | 0          | 1          | 1          |               |
-> | WARNING:at_kernel/locking/lockdep.c:#lock_downgrade           | 0          | 0          | 2          |               |
-> | RIP:lock_downgrade                                            | 0          | 0          | 2          |               |
-> | RIP:xa_is_node                                                | 0          | 0          | 1          |               |
-> | BUG:kernel_reboot-without-warning_in_test_stage               | 0          | 0          | 0          | 1             |
-> +---------------------------------------------------------------+------------+------------+------------+---------------+
-
-Unfortunately, I can't extract anything useful from these lines.
-And trinity doesn't provide reproducers...
-
-Anyway, I've created exactly the same trinity setup and have been running
-it for 2 days (900 tests) on 4.20-rc7 -- no kernel crashes were hit.
-
-Best regards,
-Alexander
+--
+Ahmed.
+Junior Researcher, IoT and Cyber Security lab, SmartCI, Alexandria
+University, & CIS @  VMI
