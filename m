@@ -1,7 +1,7 @@
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Subject: [PATCH 07/12] __wr_after_init: lkdtm test
-Date: Fri, 21 Dec 2018 20:14:18 +0200
-Message-Id: <20181221181423.20455-8-igor.stoppa@huawei.com>
+Subject: [PATCH 08/12] rodata_test: refactor tests
+Date: Fri, 21 Dec 2018 20:14:19 +0200
+Message-Id: <20181221181423.20455-9-igor.stoppa@huawei.com>
 In-Reply-To: <20181221181423.20455-1-igor.stoppa@huawei.com>
 References: <20181221181423.20455-1-igor.stoppa@huawei.com>
 MIME-Version: 1.0
@@ -10,8 +10,8 @@ To: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>,
 Cc: igor.stoppa@huawei.com, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Ahmed Soliman <ahmedsoliman@mena.vt.edu>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Verify that trying to modify a variable with the __wr_after_init
-attribute will cause a crash.
+Refactor the test cases, in preparation for using them also for testing
+__wr_after_init memory, when available.
 
 Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
 
@@ -29,97 +29,85 @@ CC: kernel-hardening@lists.openwall.com
 CC: linux-mm@kvack.org
 CC: linux-kernel@vger.kernel.org
 ---
- drivers/misc/lkdtm/core.c  |  3 +++
- drivers/misc/lkdtm/lkdtm.h |  3 +++
- drivers/misc/lkdtm/perms.c | 29 +++++++++++++++++++++++++++++
- 3 files changed, 35 insertions(+)
+ mm/rodata_test.c | 48 ++++++++++++++++++++++++++++--------------------
+ 1 file changed, 28 insertions(+), 20 deletions(-)
 
-diff --git a/drivers/misc/lkdtm/core.c b/drivers/misc/lkdtm/core.c
-index 2837dc77478e..73c34b17c433 100644
---- a/drivers/misc/lkdtm/core.c
-+++ b/drivers/misc/lkdtm/core.c
-@@ -155,6 +155,9 @@ static const struct crashtype crashtypes[] = {
- 	CRASHTYPE(ACCESS_USERSPACE),
- 	CRASHTYPE(WRITE_RO),
- 	CRASHTYPE(WRITE_RO_AFTER_INIT),
-+#ifdef CONFIG_PRMEM
-+	CRASHTYPE(WRITE_WR_AFTER_INIT),
-+#endif
- 	CRASHTYPE(WRITE_KERN),
- 	CRASHTYPE(REFCOUNT_INC_OVERFLOW),
- 	CRASHTYPE(REFCOUNT_ADD_OVERFLOW),
-diff --git a/drivers/misc/lkdtm/lkdtm.h b/drivers/misc/lkdtm/lkdtm.h
-index 3c6fd327e166..abba2f52ffa6 100644
---- a/drivers/misc/lkdtm/lkdtm.h
-+++ b/drivers/misc/lkdtm/lkdtm.h
-@@ -38,6 +38,9 @@ void lkdtm_READ_BUDDY_AFTER_FREE(void);
- void __init lkdtm_perms_init(void);
- void lkdtm_WRITE_RO(void);
- void lkdtm_WRITE_RO_AFTER_INIT(void);
-+#ifdef CONFIG_PRMEM
-+void lkdtm_WRITE_WR_AFTER_INIT(void);
-+#endif
- void lkdtm_WRITE_KERN(void);
- void lkdtm_EXEC_DATA(void);
- void lkdtm_EXEC_STACK(void);
-diff --git a/drivers/misc/lkdtm/perms.c b/drivers/misc/lkdtm/perms.c
-index 53b85c9d16b8..f681730aa652 100644
---- a/drivers/misc/lkdtm/perms.c
-+++ b/drivers/misc/lkdtm/perms.c
-@@ -9,6 +9,7 @@
- #include <linux/vmalloc.h>
- #include <linux/mman.h>
+diff --git a/mm/rodata_test.c b/mm/rodata_test.c
+index d908c8769b48..e1349520b436 100644
+--- a/mm/rodata_test.c
++++ b/mm/rodata_test.c
+@@ -14,44 +14,52 @@
  #include <linux/uaccess.h>
-+#include <linux/prmem.h>
- #include <asm/cacheflush.h>
+ #include <asm/sections.h>
  
- /* Whether or not to fill the target memory area with do_nothing(). */
-@@ -27,6 +28,10 @@ static const unsigned long rodata = 0xAA55AA55;
- /* This is marked __ro_after_init, so it should ultimately be .rodata. */
- static unsigned long ro_after_init __ro_after_init = 0x55AA5500;
+-static const int rodata_test_data = 0xC3;
++#define INIT_TEST_VAL 0xC3
  
-+/* This is marked __wr_after_init, so it should be in .rodata. */
-+static
-+unsigned long wr_after_init __wr_after_init = 0x55AA5500;
+-void rodata_test(void)
++static const int rodata_test_data = INIT_TEST_VAL;
 +
- /*
-  * This just returns to the caller. It is designed to be copied into
-  * non-executable memory regions.
-@@ -104,6 +109,28 @@ void lkdtm_WRITE_RO_AFTER_INIT(void)
- 	*ptr ^= 0xabcd1234;
- }
- 
-+#ifdef CONFIG_PRMEM
-+
-+void lkdtm_WRITE_WR_AFTER_INIT(void)
-+{
-+	unsigned long *ptr = &wr_after_init;
-+
-+	/*
-+	 * Verify we were written to during init. Since an Oops
-+	 * is considered a "success", a failure is to just skip the
-+	 * real test.
-+	 */
-+	if ((*ptr & 0xAA) != 0xAA) {
-+		pr_info("%p was NOT written during init!?\n", ptr);
-+		return;
-+	}
-+
-+	pr_info("attempting bad wr_after_init write at %p\n", ptr);
-+	*ptr ^= 0xabcd1234;
-+}
-+
-+#endif
-+
- void lkdtm_WRITE_KERN(void)
++static bool test_data(char *data_type, const int *data,
++		      unsigned long start, unsigned long end)
  {
- 	size_t size;
-@@ -200,4 +227,6 @@ void __init lkdtm_perms_init(void)
- 	/* Make sure we can write to __ro_after_init values during __init */
- 	ro_after_init |= 0xAA;
+-	unsigned long start, end;
+ 	int zero = 0;
  
-+	/* Make sure we can write to __wr_after_init during __init */
-+	wr_after_init |= 0xAA;
+ 	/* test 1: read the value */
+ 	/* If this test fails, some previous testrun has clobbered the state */
+-	if (!rodata_test_data) {
+-		pr_err("test 1 fails (start data)\n");
+-		return;
++	if (*data != INIT_TEST_VAL) {
++		pr_err("%s: test 1 fails (init data value)\n", data_type);
++		return false;
+ 	}
+ 
+ 	/* test 2: write to the variable; this should fault */
+-	if (!probe_kernel_write((void *)&rodata_test_data,
+-				(void *)&zero, sizeof(zero))) {
+-		pr_err("test data was not read only\n");
+-		return;
++	if (!probe_kernel_write((void *)data, (void *)&zero, sizeof(zero))) {
++		pr_err("%s: test data was not read only\n", data_type);
++		return false;
+ 	}
+ 
+ 	/* test 3: check the value hasn't changed */
+-	if (rodata_test_data == zero) {
+-		pr_err("test data was changed\n");
+-		return;
++	if (*data != INIT_TEST_VAL) {
++		pr_err("%s: test data was changed\n", data_type);
++		return false;
+ 	}
+ 
+ 	/* test 4: check if the rodata section is PAGE_SIZE aligned */
+-	start = (unsigned long)__start_rodata;
+-	end = (unsigned long)__end_rodata;
+ 	if (start & (PAGE_SIZE - 1)) {
+-		pr_err("start of .rodata is not page size aligned\n");
+-		return;
++		pr_err("%s: start of data is not page size aligned\n",
++		       data_type);
++		return false;
+ 	}
+ 	if (end & (PAGE_SIZE - 1)) {
+-		pr_err("end of .rodata is not page size aligned\n");
+-		return;
++		pr_err("%s: end of data is not page size aligned\n",
++		       data_type);
++		return false;
+ 	}
++	pr_info("%s tests were successful", data_type);
++	return true;
++}
+ 
+-	pr_info("all tests were successful\n");
++void rodata_test(void)
++{
++	test_data("rodata", &rodata_test_data,
++		  (unsigned long)&__start_rodata,
++		  (unsigned long)&__end_rodata);
  }
 -- 
 2.19.1
