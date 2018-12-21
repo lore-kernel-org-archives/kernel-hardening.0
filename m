@@ -1,79 +1,30 @@
-From: Igor Stoppa <igor.stoppa@gmail.com>
-Subject: [PATCH 12/12] x86_64: __clear_user as case of __memset_user
-Date: Fri, 21 Dec 2018 20:14:23 +0200
-Message-Id: <20181221181423.20455-13-igor.stoppa@huawei.com>
-In-Reply-To: <20181221181423.20455-1-igor.stoppa@huawei.com>
+Date: Fri, 21 Dec 2018 10:25:16 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH 01/12] x86_64: memset_user()
+Message-ID: <20181221182515.GF10600@bombadil.infradead.org>
 References: <20181221181423.20455-1-igor.stoppa@huawei.com>
+ <20181221181423.20455-2-igor.stoppa@huawei.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: Andy Lutomirski <luto@amacapital.net>, Matthew Wilcox <willy@infradead.org>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Thiago Jung Bauermann <bauerman@linux.ibm.com>
-Cc: igor.stoppa@huawei.com, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Ahmed Soliman <ahmedsoliman@mena.vt.edu>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20181221181423.20455-2-igor.stoppa@huawei.com>
+To: Igor Stoppa <igor.stoppa@gmail.com>
+Cc: Andy Lutomirski <luto@amacapital.net>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Thiago Jung Bauermann <bauerman@linux.ibm.com>, igor.stoppa@huawei.com, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Ahmed Soliman <ahmedsoliman@mena.vt.edu>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-To avoid code duplication, re-use __memset_user(), when clearing
-user-space memory.
+On Fri, Dec 21, 2018 at 08:14:12PM +0200, Igor Stoppa wrote:
+> +unsigned long __memset_user(void __user *addr, int c, unsigned long size)
+> +{
+> +	long __d0;
+> +	unsigned long  pattern = 0;
+> +	int i;
+> +
+> +	for (i = 0; i < 8; i++)
+> +		pattern = (pattern << 8) | (0xFF & c);
 
-The overhead should be minimal (2 extra register assignments) and
-outside of the writing loop.
+That's inefficient.
 
-Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
-
-CC: Andy Lutomirski <luto@amacapital.net>
-CC: Nadav Amit <nadav.amit@gmail.com>
-CC: Matthew Wilcox <willy@infradead.org>
-CC: Peter Zijlstra <peterz@infradead.org>
-CC: Kees Cook <keescook@chromium.org>
-CC: Dave Hansen <dave.hansen@linux.intel.com>
-CC: Mimi Zohar <zohar@linux.vnet.ibm.com>
-CC: Thiago Jung Bauermann <bauerman@linux.ibm.com>
-CC: Ahmed Soliman <ahmedsoliman@mena.vt.edu>
-CC: linux-integrity@vger.kernel.org
-CC: kernel-hardening@lists.openwall.com
-CC: linux-mm@kvack.org
-CC: linux-kernel@vger.kernel.org
----
- arch/x86/lib/usercopy_64.c | 29 +----------------------------
- 1 file changed, 1 insertion(+), 28 deletions(-)
-
-diff --git a/arch/x86/lib/usercopy_64.c b/arch/x86/lib/usercopy_64.c
-index 84f8f8a20b30..ab6aabb62055 100644
---- a/arch/x86/lib/usercopy_64.c
-+++ b/arch/x86/lib/usercopy_64.c
-@@ -69,34 +69,7 @@ EXPORT_SYMBOL(memset_user);
- 
- unsigned long __clear_user(void __user *addr, unsigned long size)
- {
--	long __d0;
--	might_fault();
--	/* no memory constraint because it doesn't change any memory gcc knows
--	   about */
--	stac();
--	asm volatile(
--		"	testq  %[size8],%[size8]\n"
--		"	jz     4f\n"
--		"0:	movq $0,(%[dst])\n"
--		"	addq   $8,%[dst]\n"
--		"	decl %%ecx ; jnz   0b\n"
--		"4:	movq  %[size1],%%rcx\n"
--		"	testl %%ecx,%%ecx\n"
--		"	jz     2f\n"
--		"1:	movb   $0,(%[dst])\n"
--		"	incq   %[dst]\n"
--		"	decl %%ecx ; jnz  1b\n"
--		"2:\n"
--		".section .fixup,\"ax\"\n"
--		"3:	lea 0(%[size1],%[size8],8),%[size8]\n"
--		"	jmp 2b\n"
--		".previous\n"
--		_ASM_EXTABLE_UA(0b, 3b)
--		_ASM_EXTABLE_UA(1b, 2b)
--		: [size8] "=&c"(size), [dst] "=&D" (__d0)
--		: [size1] "r"(size & 7), "[size8]" (size / 8), "[dst]"(addr));
--	clac();
--	return size;
-+	return __memset_user(addr, 0, size);
- }
- EXPORT_SYMBOL(__clear_user);
- 
--- 
-2.19.1
+	pattern = (unsigned char)c;
+	pattern |= pattern << 8;
+	pattern |= pattern << 16;
+	pattern |= pattern << 32;
