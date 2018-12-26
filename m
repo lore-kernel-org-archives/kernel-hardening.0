@@ -1,92 +1,315 @@
-Subject: Re: [PATCH 03/12] __wr_after_init: generic header
-References: <20181219213338.26619-1-igor.stoppa@huawei.com>
- <20181219213338.26619-4-igor.stoppa@huawei.com>
- <8474D7CA-E5FF-40B1-9428-855854CDDB5F@gmail.com>
- <20181221194547.GI10600@bombadil.infradead.org>
-From: Igor Stoppa <igor.stoppa@gmail.com>
-Message-ID: <6562ebd3-e97d-41c4-261a-9f4b863118eb@gmail.com>
-Date: Sun, 23 Dec 2018 04:28:59 +0200
+From: Zhiyuan Hou <zhiyuan2048@linux.alibaba.com>
+Subject: [PATCH 4/4] locking/refcount: Add refcount_t API kernel-doc comments
+Date: Wed, 26 Dec 2018 03:58:37 -0500
+Message-Id: <20181226085837.16249-4-zhiyuan2048@linux.alibaba.com>
+In-Reply-To: <20181226085837.16249-1-zhiyuan2048@linux.alibaba.com>
+References: <20181226085837.16249-1-zhiyuan2048@linux.alibaba.com>
 MIME-Version: 1.0
-In-Reply-To: <20181221194547.GI10600@bombadil.infradead.org>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Matthew Wilcox <willy@infradead.org>, Nadav Amit <nadav.amit@gmail.com>
-Cc: Andy Lutomirski <luto@amacapital.net>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, igor.stoppa@huawei.com, Kees Cook <keescook@chromium.org>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
+Content-Transfer-Encoding: 8bit
+To: zhiyuan2048@linux.alibaba.com
+Cc: David Windsor <dwindsor@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, elena.reshetova@intel.com, kernel-hardening@lists.openwall.com, Ingo Molnar <mingo@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+From: David Windsor <dwindsor@gmail.com>
 
+Signed-off-by: David Windsor <dwindsor@gmail.com>
+Acked-by: Peter Zijlstra <peterz@infradead.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Paul E. McKenney <paulmck@linux.vnet.ibm.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: elena.reshetova@intel.com
+Cc: kernel-hardening@lists.openwall.com
+Link: http://lkml.kernel.org/r/1489160052-20293-1-git-send-email-dwindsor@gmail.com
+Signed-off-by: Ingo Molnar <mingo@kernel.org>
+(cherry picked from commit bd174169c7a12a37b3b4aa2221f084ade010b182)
+Signed-off-by: Zhiyuan Hou <zhiyuan2048@linux.alibaba.com>
+---
+ include/linux/refcount.h |  19 ++++++
+ lib/refcount.c           | 122 +++++++++++++++++++++++++++++++++++----
+ 2 files changed, 129 insertions(+), 12 deletions(-)
 
-On 21/12/2018 21:45, Matthew Wilcox wrote:
-> On Fri, Dec 21, 2018 at 11:38:16AM -0800, Nadav Amit wrote:
->>> On Dec 19, 2018, at 1:33 PM, Igor Stoppa <igor.stoppa@gmail.com> wrote:
->>>
->>> +static inline void *wr_memset(void *p, int c, __kernel_size_t len)
->>> +{
->>> +	return __wr_op((unsigned long)p, (unsigned long)c, len, WR_MEMSET);
->>> +}
->>
->> What do you think about doing something like:
->>
->> #define __wr          __attribute__((address_space(5)))
->>
->> And then make all the pointers to write-rarely memory to use this attribute?
->> It might require more changes to the code, but can prevent bugs.
-> 
-> I like this idea.  It was something I was considering suggesting.
-
-I have been thinking about this sort of problem, although from a bit 
-different angle:
-
-1) enforcing alignment for pointers
-This can be implemented in similar way, by creating a multi-attribute 
-that would define section, address space, like said here, and alignment.
-However I'm not sure if it's possible to do anything to enforce the 
-alignment of a pointer field within a structure. I haven't had time to 
-look into this yet.
-
-2) validation of the correctness of the actual value
-Inside the kernel code, a function is not supposed to sanitize its 
-arguments, as long as they come from some other trusted part of the 
-kernel, rather than say from userspace or from some HW interface.
-However,ROP/JOP should be considered.
-
-I am aware of various efforts to make it harder to exploit these 
-techniques, like signed pointers, CFI plugins, LTO.
-
-But they are not necessarily available on every platform and mostly, 
-afaik, they focus on specific type of attacks.
-
-
-LTO can help with global optimizations, for example inlining functions 
-across different objects.
-
-CFI can detect jumps in the middle of a function, rather than proper 
-function invocation, from its natural entry point.
-
-Signed pointers can prevent data-based attacks to the execution flow, 
-and they might have a role in preventing the attack I have in mind, but 
-they are not available on all platforms.
-
-What I'd like to do, is to verify, at runtime, that the pointer belongs 
-to the type that the receiving function is meant for.
-
-Ex: a legitimate __wr_after_init data must exist between 
-__start_wr_after_init and __end_wr_after_init
-
-That is easier and cleaner to test, imho.
-
-But dynamically allocated memory doesn't have any such constraint.
-If it was possible to introduce, for example, a flag to pass to vmalloc, 
-to get the vmap_area from within a specific address range, it would 
-reduce the attack surface.
-
-In the implementation I have right now, I'm using extra flags for the 
-pmalloc pages, which means the metadata is the new target for an attack.
-
-But with adding the constraint that a dynamically allocated protected 
-memory page must be within a range, then the attacker must change the 
-underlying PTE. And if a region of PTEs are all part of protected 
-memory, it is possible to make the PMD write rare.
-
---
-igor
+diff --git a/include/linux/refcount.h b/include/linux/refcount.h
+index 0023fee4bbbc..b34aa649d204 100644
+--- a/include/linux/refcount.h
++++ b/include/linux/refcount.h
+@@ -6,17 +6,36 @@
+ #include <linux/spinlock.h>
+ #include <linux/kernel.h>
+ 
++/**
++ * refcount_t - variant of atomic_t specialized for reference counts
++ * @refs: atomic_t counter field
++ *
++ * The counter saturates at UINT_MAX and will not move once
++ * there. This avoids wrapping the counter and causing 'spurious'
++ * use-after-free bugs.
++ */
+ typedef struct refcount_struct {
+ 	atomic_t refs;
+ } refcount_t;
+ 
+ #define REFCOUNT_INIT(n)	{ .refs = ATOMIC_INIT(n), }
+ 
++/**
++ * refcount_set - set a refcount's value
++ * @r: the refcount
++ * @n: value to which the refcount will be set
++ */
+ static inline void refcount_set(refcount_t *r, unsigned int n)
+ {
+ 	atomic_set(&r->refs, n);
+ }
+ 
++/**
++ * refcount_read - get a refcount's value
++ * @r: the refcount
++ *
++ * Return: the refcount's value
++ */
+ static inline unsigned int refcount_read(const refcount_t *r)
+ {
+ 	return atomic_read(&r->refs);
+diff --git a/lib/refcount.c b/lib/refcount.c
+index 1d33366189d1..d6e317aaf6cc 100644
+--- a/lib/refcount.c
++++ b/lib/refcount.c
+@@ -37,6 +37,24 @@
+ #include <linux/refcount.h>
+ #include <linux/bug.h>
+ 
++/**
++ * refcount_add_not_zero - add a value to a refcount unless it is 0
++ * @i: the value to add to the refcount
++ * @r: the refcount
++ *
++ * Will saturate at UINT_MAX and WARN.
++ *
++ * Provides no memory ordering, it is assumed the caller has guaranteed the
++ * object memory to be stable (RCU, etc.). It does provide a control dependency
++ * and thereby orders future stores. See the comment on top.
++ *
++ * Use of this function is not recommended for the normal reference counting
++ * use case in which references are taken and released one at a time.  In these
++ * cases, refcount_inc(), or one of its variants, should instead be used to
++ * increment a reference count.
++ *
++ * Return: false if the passed refcount is 0, true otherwise
++ */
+ bool refcount_add_not_zero(unsigned int i, refcount_t *r)
+ {
+ 	unsigned int old, new, val = atomic_read(&r->refs);
+@@ -64,18 +82,39 @@ bool refcount_add_not_zero(unsigned int i, refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_add_not_zero);
+ 
++/**
++ * refcount_add - add a value to a refcount
++ * @i: the value to add to the refcount
++ * @r: the refcount
++ *
++ * Similar to atomic_add(), but will saturate at UINT_MAX and WARN.
++ *
++ * Provides no memory ordering, it is assumed the caller has guaranteed the
++ * object memory to be stable (RCU, etc.). It does provide a control dependency
++ * and thereby orders future stores. See the comment on top.
++ *
++ * Use of this function is not recommended for the normal reference counting
++ * use case in which references are taken and released one at a time.  In these
++ * cases, refcount_inc(), or one of its variants, should instead be used to
++ * increment a reference count.
++ */
+ void refcount_add(unsigned int i, refcount_t *r)
+ {
+ 	WARN(!refcount_add_not_zero(i, r), "refcount_t: addition on 0; use-after-free.\n");
+ }
+ EXPORT_SYMBOL_GPL(refcount_add);
+ 
+-/*
+- * Similar to atomic_inc_not_zero(), will saturate at UINT_MAX and WARN.
++/**
++ * refcount_inc_not_zero - increment a refcount unless it is 0
++ * @r: the refcount to increment
++ *
++ * Similar to atomic_inc_not_zero(), but will saturate at UINT_MAX and WARN.
+  *
+  * Provides no memory ordering, it is assumed the caller has guaranteed the
+  * object memory to be stable (RCU, etc.). It does provide a control dependency
+  * and thereby orders future stores. See the comment on top.
++ *
++ * Return: true if the increment was successful, false otherwise
+  */
+ bool refcount_inc_not_zero(refcount_t *r)
+ {
+@@ -103,11 +142,17 @@ bool refcount_inc_not_zero(refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_inc_not_zero);
+ 
+-/*
+- * Similar to atomic_inc(), will saturate at UINT_MAX and WARN.
++/**
++ * refcount_inc - increment a refcount
++ * @r: the refcount to increment
++ *
++ * Similar to atomic_inc(), but will saturate at UINT_MAX and WARN.
+  *
+  * Provides no memory ordering, it is assumed the caller already has a
+- * reference on the object, will WARN when this is not so.
++ * reference on the object.
++ *
++ * Will WARN if the refcount is 0, as this represents a possible use-after-free
++ * condition.
+  */
+ void refcount_inc(refcount_t *r)
+ {
+@@ -115,6 +160,26 @@ void refcount_inc(refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_inc);
+ 
++/**
++ * refcount_sub_and_test - subtract from a refcount and test if it is 0
++ * @i: amount to subtract from the refcount
++ * @r: the refcount
++ *
++ * Similar to atomic_dec_and_test(), but it will WARN, return false and
++ * ultimately leak on underflow and will fail to decrement when saturated
++ * at UINT_MAX.
++ *
++ * Provides release memory ordering, such that prior loads and stores are done
++ * before, and provides a control dependency such that free() must come after.
++ * See the comment on top.
++ *
++ * Use of this function is not recommended for the normal reference counting
++ * use case in which references are taken and released one at a time.  In these
++ * cases, refcount_dec(), or one of its variants, should instead be used to
++ * decrement a reference count.
++ *
++ * Return: true if the resulting refcount is 0, false otherwise
++ */
+ bool refcount_sub_and_test(unsigned int i, refcount_t *r)
+ {
+ 	unsigned int old, new, val = atomic_read(&r->refs);
+@@ -140,13 +205,18 @@ bool refcount_sub_and_test(unsigned int i, refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_sub_and_test);
+ 
+-/*
++/**
++ * refcount_dec_and_test - decrement a refcount and test if it is 0
++ * @r: the refcount
++ *
+  * Similar to atomic_dec_and_test(), it will WARN on underflow and fail to
+  * decrement when saturated at UINT_MAX.
+  *
+  * Provides release memory ordering, such that prior loads and stores are done
+  * before, and provides a control dependency such that free() must come after.
+  * See the comment on top.
++ *
++ * Return: true if the resulting refcount is 0, false otherwise
+  */
+ bool refcount_dec_and_test(refcount_t *r)
+ {
+@@ -154,21 +224,26 @@ bool refcount_dec_and_test(refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_dec_and_test);
+ 
+-/*
++/**
++ * refcount_dec - decrement a refcount
++ * @r: the refcount
++ *
+  * Similar to atomic_dec(), it will WARN on underflow and fail to decrement
+  * when saturated at UINT_MAX.
+  *
+  * Provides release memory ordering, such that prior loads and stores are done
+  * before.
+  */
+-
+ void refcount_dec(refcount_t *r)
+ {
+ 	WARN(refcount_dec_and_test(r), "refcount_t: decrement hit 0; leaking memory.\n");
+ }
+ EXPORT_SYMBOL_GPL(refcount_dec);
+ 
+-/*
++/**
++ * refcount_dec_if_one - decrement a refcount if it is 1
++ * @r: the refcount
++ *
+  * No atomic_t counterpart, it attempts a 1 -> 0 transition and returns the
+  * success thereof.
+  *
+@@ -178,6 +253,8 @@ EXPORT_SYMBOL_GPL(refcount_dec);
+  * It can be used like a try-delete operator; this explicit case is provided
+  * and not cmpxchg in generic, because that would allow implementing unsafe
+  * operations.
++ *
++ * Return: true if the resulting refcount is 0, false otherwise
+  */
+ bool refcount_dec_if_one(refcount_t *r)
+ {
+@@ -185,11 +262,16 @@ bool refcount_dec_if_one(refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_dec_if_one);
+ 
+-/*
++/**
++ * refcount_dec_not_one - decrement a refcount if it is not 1
++ * @r: the refcount
++ *
+  * No atomic_t counterpart, it decrements unless the value is 1, in which case
+  * it will return false.
+  *
+  * Was often done like: atomic_add_unless(&var, -1, 1)
++ *
++ * Return: true if the decrement operation was successful, false otherwise
+  */
+ bool refcount_dec_not_one(refcount_t *r)
+ {
+@@ -219,13 +301,21 @@ bool refcount_dec_not_one(refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_dec_not_one);
+ 
+-/*
++/**
++ * refcount_dec_and_mutex_lock - return holding mutex if able to decrement
++ *                               refcount to 0
++ * @r: the refcount
++ * @lock: the mutex to be locked
++ *
+  * Similar to atomic_dec_and_mutex_lock(), it will WARN on underflow and fail
+  * to decrement when saturated at UINT_MAX.
+  *
+  * Provides release memory ordering, such that prior loads and stores are done
+  * before, and provides a control dependency such that free() must come after.
+  * See the comment on top.
++ *
++ * Return: true and hold mutex if able to decrement refcount to 0, false
++ *         otherwise
+  */
+ bool refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock)
+ {
+@@ -242,13 +332,21 @@ bool refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock)
+ }
+ EXPORT_SYMBOL_GPL(refcount_dec_and_mutex_lock);
+ 
+-/*
++/**
++ * refcount_dec_and_lock - return holding spinlock if able to decrement
++ *                         refcount to 0
++ * @r: the refcount
++ * @lock: the spinlock to be locked
++ *
+  * Similar to atomic_dec_and_lock(), it will WARN on underflow and fail to
+  * decrement when saturated at UINT_MAX.
+  *
+  * Provides release memory ordering, such that prior loads and stores are done
+  * before, and provides a control dependency such that free() must come after.
+  * See the comment on top.
++ *
++ * Return: true and hold spinlock if able to decrement refcount to 0, false
++ *         otherwise
+  */
+ bool refcount_dec_and_lock(refcount_t *r, spinlock_t *lock)
+ {
+-- 
+2.19.2
