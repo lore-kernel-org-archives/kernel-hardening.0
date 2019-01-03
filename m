@@ -1,74 +1,119 @@
 MIME-Version: 1.0
-References: <20190102093137.17136-1-yanaijie@huawei.com>
-In-Reply-To: <20190102093137.17136-1-yanaijie@huawei.com>
+References: <20181212081712.32347-1-mic@digikod.net> <20181212081712.32347-4-mic@digikod.net>
+ <CAG48ez3SAW8EyaJ9T1U3qPoRhYwe4CCyL9bAxuc3GxjrXipi-A@mail.gmail.com> <f13bf750-f418-343c-baa6-9eee6e0f5e19@ssi.gouv.fr>
+In-Reply-To: <f13bf750-f418-343c-baa6-9eee6e0f5e19@ssi.gouv.fr>
 From: Jann Horn <jannh@google.com>
-Date: Thu, 3 Jan 2019 10:36:02 +0100
-Message-ID: <CAG48ez3_oMX7Nzjaa4=QzipQ7i-BOOVojY5WVBNOBw0RZeik=g@mail.gmail.com>
-Subject: Re: [PATCH] usercopy: skip the check if not a real usercopy
+Date: Thu, 3 Jan 2019 12:17:18 +0100
+Message-ID: <CAG48ez00CpXOOJPLgpQd_e0gG2KgYb1p8bwssA8FDOugHTxRAA@mail.gmail.com>
+Subject: Re: [RFC PATCH v1 3/5] Yama: Enforces noexec mounts or file
+ executability through O_MAYEXEC
 Content-Type: text/plain; charset="UTF-8"
-To: Jason Yan <yanaijie@huawei.com>, Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, zhaohongjiang@huawei.com, miaoxie@huawei.com, Li Bin <huawei.libin@huawei.com>, Wei Yongjun <weiyongjun1@huawei.com>
+Content-Transfer-Encoding: quoted-printable
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mickael.salaun@ssi.gouv.fr>
+Cc: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, kernel list <linux-kernel@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk-manpages <mtk.manpages@gmail.com>, zohar@linux.ibm.com, philippe.trebuchet@ssi.gouv.fr, shuah@kernel.org, thibaut.sautereau@ssi.gouv.fr, vincent.strubel@ssi.gouv.fr, yves-alexis.perez@ssi.gouv.fr, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, linux-fsdevel@vger.kernel.org, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 2, 2019 at 12:10 PM Jason Yan <yanaijie@huawei.com> wrote:
-> Some kernel codes use copy_to/from_user to copy data between kernel
-> buffers by calling set_fs(KERNEL_DS). Hardened usercopy will check these
-> objects and sometimes soft lockup may happen as follows:
+On Thu, Dec 13, 2018 at 3:49 PM Micka=C3=ABl Sala=C3=BCn
+<mickael.salaun@ssi.gouv.fr> wrote:
+> On 12/12/2018 18:09, Jann Horn wrote:
+> > On Wed, Dec 12, 2018 at 9:18 AM Micka=C3=ABl Sala=C3=BCn <mic@digikod.n=
+et> wrote:
+> >> Enable to either propagate the mount options from the underlying VFS
+> >> mount to prevent execution, or to propagate the file execute permissio=
+n.
+> >> This may allow a script interpreter to check execution permissions
+> >> before reading commands from a file.
+> >>
+> >> The main goal is to be able to protect the kernel by restricting
+> >> arbitrary syscalls that an attacker could perform with a crafted binar=
+y
+> >> or certain script languages.  It also improves multilevel isolation
+> >> by reducing the ability of an attacker to use side channels with
+> >> specific code.  These restrictions can natively be enforced for ELF
+> >> binaries (with the noexec mount option) but require this kernel
+> >> extension to properly handle scripts (e.g., Python, Perl).
+> >>
+> >> Add a new sysctl kernel.yama.open_mayexec_enforce to control this
+> >> behavior.  A following patch adds documentation.
+[...]
+> >> +{
+> >> +       if (!(mask & MAY_OPENEXEC))
+> >> +               return 0;
+> >> +       /*
+> >> +        * Match regular files and directories to make it easier to
+> >> +        * modify script interpreters.
+> >> +        */
+> >> +       if (!S_ISREG(inode->i_mode) && !S_ISDIR(inode->i_mode))
+> >> +               return 0;
+> >
+> > So files are subject to checks, but loading code from things like
+> > sockets is always fine?
 >
-> [   96.314420] watchdog: BUG: soft lockup - CPU#4 stuck for 22s! [sh:356]
-> ......
-> [   96.674904] Call Trace:
-> [   96.684489]  __check_object_size+0x1f1/0x460
-> [   96.691669]  __probe_kernel_write+0x195/0x390
-> [   96.696821]  ftrace_write+0x67/0xa0
+> As I said in a previous email, these checks do not handle fifo either.
+> This is relevant in a threat model targeting persistent attacks (and
+> with additional protections/restrictions). We may want to only whitelist
+> fifo, but I don't get how a socket is relevant here. Can you please clari=
+fy?
 
-I think it makes sense to focus on the __probe_kernel_write(), not the
-KERNEL_DS.
+I don't think that there's a security problem here. I just think it's
+weird to have the extra check when it seems to me like it isn't really
+necessary - nobody is going to want to execute a socket or fifo
+anyway, right?
 
+> >
+> >> +       if ((open_mayexec_enforce & YAMA_OMAYEXEC_ENFORCE_MOUNT) &&
+> >> +                       !(mask & MAY_EXECMOUNT))
+> >> +               return -EACCES;
+> >> +
+> >> +       /*
+> >> +        * May prefer acl_permission_check() instead of generic_permis=
+sion(),
+> >> +        * to not be bypassable with CAP_DAC_READ_SEARCH.
+> >> +        */
+> >> +       if (open_mayexec_enforce & YAMA_OMAYEXEC_ENFORCE_FILE)
+> >> +               return generic_permission(inode, MAY_EXEC);
+> >> +
+> >> +       return 0;
+> >> +}
+> >> +
+> >>  static struct security_hook_list yama_hooks[] __lsm_ro_after_init =3D=
+ {
+> >> +       LSM_HOOK_INIT(inode_permission, yama_inode_permission),
+> >>         LSM_HOOK_INIT(ptrace_access_check, yama_ptrace_access_check),
+> >>         LSM_HOOK_INIT(ptrace_traceme, yama_ptrace_traceme),
+> >>         LSM_HOOK_INIT(task_prctl, yama_task_prctl),
+> >> @@ -447,6 +489,37 @@ static int yama_dointvec_minmax(struct ctl_table =
+*table, int write,
+> >>         return proc_dointvec_minmax(&table_copy, write, buffer, lenp, =
+ppos);
+> >>  }
+> >>
+> >> +static int yama_dointvec_bitmask_macadmin(struct ctl_table *table, in=
+t write,
+> >> +                                         void __user *buffer, size_t =
+*lenp,
+> >> +                                         loff_t *ppos)
+> >> +{
+> >> +       int error;
+> >> +
+> >> +       if (write) {
+> >> +               struct ctl_table table_copy;
+> >> +               int tmp_mayexec_enforce;
+> >> +
+> >> +               if (!capable(CAP_MAC_ADMIN))
+> >> +                       return -EPERM;
+> >
+> > Don't put capable() checks in sysctls, it doesn't work.
+> >
 >
-> It's unnecessary to check these objects for copying between kernel buffers.
-> So skip all hardened usercopy tests.
->
-> Signed-off-by: Jason Yan <yanaijie@huawei.com>
-> CC: Li Bin <huawei.libin@huawei.com>
-> CC: Wei Yongjun <weiyongjun1@huawei.com>
-> ---
->  mm/usercopy.c | 5 +++++
->  1 file changed, 5 insertions(+)
->
-> diff --git a/mm/usercopy.c b/mm/usercopy.c
-> index 852eb4e53f06..8a0a1854f564 100644
-> --- a/mm/usercopy.c
-> +++ b/mm/usercopy.c
-> @@ -23,6 +23,7 @@
->  #include <linux/atomic.h>
->  #include <linux/jump_label.h>
->  #include <asm/sections.h>
-> +#include <linux/uaccess.h>
->
->  /*
->   * Checks if a given pointer and length is contained by the current
-> @@ -255,6 +256,10 @@ void __check_object_size(const void *ptr, unsigned long n, bool to_user)
->         if (static_branch_unlikely(&bypass_usercopy_checks))
->                 return;
->
-> +       /* Skip all tests if it is not a real usercopy. */
-> +       if (uaccess_kernel())
-> +               return;
-> +
->         /* Skip all tests if size is zero. */
->         if (!n)
->                 return;
+> I tested it and the root user can indeed open the file even if the
+> process doesn't have CAP_MAC_ADMIN, however writing in the sysctl file
+> is denied. Btw there is a similar check in the previous function
+> (yama_dointvec_minmax).
 
-As an alternative, maybe it would make sense to only do this when the
-access is coming through __probe_kernel_read() and
-__probe_kernel_write()? These functions are specifically for accessing
-arbitrary kernel memory, including via things like kcore and kgdb; so
-I don't think usercopy restrictions make sense for them. I'm actually
-surprised that people haven't complained about this earlier.
-
-I had to do something similar for my "complain on kernel pagefault in
-usercopy code" series, by adding the per-task number
-"kernel_uaccess_faults_ok" and incrementing/decrementing it in
-__probe_kernel_{read,write}; see commit
-9da3f2b74054406f87dff7101a569217ffceb29b.
+It's still wrong. If an attacker without CAP_MAC_ADMIN opens the
+sysctl file, then passes the file descriptor to a setcap binary that
+has CAP_MAC_ADMIN as stdout/stderr, and the setcap binary writes to
+it, then the capable() check is bypassed. (But of course, to open the
+sysctl file in the first place, you'd need to be root (uid 0), so the
+check doesn't really matter.)
