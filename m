@@ -1,7 +1,7 @@
 From: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
-Subject: [PATCH V8 09/11] KVM: Add new exit reason For ROE violations
-Date: Sun,  6 Jan 2019 21:23:43 +0200
-Message-Id: <20190106192345.13578-10-ahmedsoliman@mena.vt.edu>
+Subject: [PATCH V8 10/11] KVM: Log ROE violations in system log
+Date: Sun,  6 Jan 2019 21:23:44 +0200
+Message-Id: <20190106192345.13578-11-ahmedsoliman@mena.vt.edu>
 In-Reply-To: <20190106192345.13578-1-ahmedsoliman@mena.vt.edu>
 References: <20190106192345.13578-1-ahmedsoliman@mena.vt.edu>
 MIME-Version: 1.0
@@ -10,124 +10,80 @@ To: Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, Jonathan Corbet <co
 Cc: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The problem is that qemu will not be able to detect ROE violations, so
-one option would be create host API to tell if a given page is ROE
-protected, or create ROE violation exit reason.
-
 Signed-off-by: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
 ---
- arch/x86/kvm/x86.c       | 10 +++++++++-
- include/kvm/roe.h        | 12 ++++++++++++
- include/uapi/linux/kvm.h |  2 +-
- virt/kvm/kvm_main.c      |  1 +
- virt/kvm/roe.c           |  2 +-
- virt/kvm/roe_generic.h   |  9 +--------
- 6 files changed, 25 insertions(+), 11 deletions(-)
+ virt/kvm/kvm_main.c    |  3 ++-
+ virt/kvm/roe.c         | 25 +++++++++++++++++++++++++
+ virt/kvm/roe_generic.h |  3 ++-
+ 3 files changed, 29 insertions(+), 2 deletions(-)
 
-diff --git a/arch/x86/kvm/x86.c b/arch/x86/kvm/x86.c
-index 19b0f2307e..368e3d99fd 100644
---- a/arch/x86/kvm/x86.c
-+++ b/arch/x86/kvm/x86.c
-@@ -5409,6 +5409,7 @@ static int emulator_read_write(struct x86_emulate_ctxt *ctxt,
- 			const struct read_write_emulator_ops *ops)
- {
- 	struct kvm_vcpu *vcpu = emul_to_vcpu(ctxt);
-+	struct kvm_memory_slot *slot;
- 	gpa_t gpa;
- 	int rc;
- 
-@@ -5450,7 +5451,14 @@ static int emulator_read_write(struct x86_emulate_ctxt *ctxt,
- 
- 	vcpu->run->mmio.len = min(8u, vcpu->mmio_fragments[0].len);
- 	vcpu->run->mmio.is_write = vcpu->mmio_is_write = ops->write;
--	vcpu->run->exit_reason = KVM_EXIT_MMIO;
-+	slot = kvm_vcpu_gfn_to_memslot(vcpu, gpa >> PAGE_SHIFT);
-+	if (slot && ops->write && (kvm_roe_check_range(slot, gpa>>PAGE_SHIFT,
-+			gpa - (gpa & PAGE_MASK), bytes) ||
-+			gfn_is_full_roe(slot, gpa>>PAGE_SHIFT)))
-+		vcpu->run->exit_reason = KVM_EXIT_ROE;
-+	else
-+		vcpu->run->exit_reason = KVM_EXIT_MMIO;
-+
- 	vcpu->run->mmio.phys_addr = gpa;
- 
- 	return ops->read_write_exit_mmio(vcpu, gpa, val, bytes);
-diff --git a/include/kvm/roe.h b/include/kvm/roe.h
-index 6a86866623..3121a67753 100644
---- a/include/kvm/roe.h
-+++ b/include/kvm/roe.h
-@@ -13,4 +13,16 @@ void kvm_roe_arch_commit_protection(struct kvm *kvm,
- 		struct kvm_memory_slot *slot);
- int kvm_roe(struct kvm_vcpu *vcpu, u64 a0, u64 a1, u64 a2, u64 a3);
- bool kvm_roe_arch_is_userspace(struct kvm_vcpu *vcpu);
-+bool kvm_roe_check_range(struct kvm_memory_slot *slot, gfn_t gfn, int offset,
-+		int len);
-+static inline bool gfn_is_full_roe(struct kvm_memory_slot *slot, gfn_t gfn)
-+{
-+	return test_bit(gfn - slot->base_gfn, slot->roe_bitmap);
-+
-+}
-+static inline bool gfn_is_partial_roe(struct kvm_memory_slot *slot, gfn_t gfn)
-+{
-+	return test_bit(gfn - slot->base_gfn, slot->partial_roe_bitmap);
-+}
-+
- #endif
-diff --git a/include/uapi/linux/kvm.h b/include/uapi/linux/kvm.h
-index 6d4ea4b6c9..0a386bb5f2 100644
---- a/include/uapi/linux/kvm.h
-+++ b/include/uapi/linux/kvm.h
-@@ -235,7 +235,7 @@ struct kvm_hyperv_exit {
- #define KVM_EXIT_S390_STSI        25
- #define KVM_EXIT_IOAPIC_EOI       26
- #define KVM_EXIT_HYPERV           27
--
-+#define KVM_EXIT_ROE		  28
- /* For KVM_EXIT_INTERNAL_ERROR */
- /* Emulate instruction failed. */
- #define KVM_INTERNAL_ERROR_EMULATION	1
 diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
-index 819033f475..d92d300539 100644
+index d92d300539..b3dc7255b0 100644
 --- a/virt/kvm/kvm_main.c
 +++ b/virt/kvm/kvm_main.c
-@@ -62,6 +62,7 @@
- #include "async_pf.h"
- #include "vfio.h"
- #include "roe_generic.h"
-+#include <kvm/roe.h>
- 
- #define CREATE_TRACE_POINTS
- #include <trace/events/kvm.h>
+@@ -1945,13 +1945,14 @@ static u64 roe_gfn_to_hva(struct kvm_memory_slot *slot, gfn_t gfn, int offset,
+ 	addr = __gfn_to_hva_many(slot, gfn, NULL, false);
+ 	return addr;
+ }
++
+ static int __kvm_write_guest_page(struct kvm_memory_slot *memslot, gfn_t gfn,
+ 			          const void *data, int offset, int len)
+ {
+ 	int r;
+ 	unsigned long addr;
+-
+ 	addr = roe_gfn_to_hva(memslot, gfn, offset, len);
++	kvm_roe_check_and_log(memslot, gfn, data, offset, len);
+ 	if (kvm_is_error_hva(addr))
+ 		return -EFAULT;
+ 	r = __copy_to_user((void __user *)addr + offset, data, len);
 diff --git a/virt/kvm/roe.c b/virt/kvm/roe.c
-index 4393a6a6a2..9540473f89 100644
+index 9540473f89..e424b45e1c 100644
 --- a/virt/kvm/roe.c
 +++ b/virt/kvm/roe.c
-@@ -60,7 +60,7 @@ bool kvm_roe_check_range(struct kvm_memory_slot *slot, gfn_t gfn, int offset,
- 		return false;
- 	return kvm_roe_protected_range(slot, gpa, len);
+@@ -76,6 +76,31 @@ void kvm_roe_free(struct kvm_memory_slot *slot)
+ 	kvfree(slot->prot_list);
  }
--
-+EXPORT_SYMBOL_GPL(kvm_roe_check_range);
  
- void kvm_roe_free(struct kvm_memory_slot *slot)
++static void kvm_warning_roe_violation(u64 addr, const void *data, int len)
++{
++	int i;
++	const char *d = data;
++	char *buf = kvmalloc(len * 3 + 1, GFP_KERNEL);
++
++	for (i = 0; i < len; i++)
++		sprintf(buf+3*i, " %02x", d[i]);
++	pr_warn("ROE violation:\n");
++	pr_warn("\tAttempt to write %d bytes at address 0x%08llx\n", len, addr);
++	pr_warn("\tData: %s\n", buf);
++	kvfree(buf);
++}
++
++void kvm_roe_check_and_log(struct kvm_memory_slot *memslot, gfn_t gfn,
++		const void *data, int offset, int len)
++{
++	if (!memslot)
++		return;
++	if (!gfn_is_full_roe(memslot, gfn) &&
++		!kvm_roe_check_range(memslot, gfn, offset, len))
++		return;
++	kvm_warning_roe_violation((gfn << PAGE_SHIFT) + offset, data, len);
++}
++
+ static void kvm_roe_protect_slot(struct kvm *kvm, struct kvm_memory_slot *slot,
+ 		gfn_t gfn, u64 npages, bool partial)
  {
 diff --git a/virt/kvm/roe_generic.h b/virt/kvm/roe_generic.h
-index ad121372f2..f1ce4a8aec 100644
+index f1ce4a8aec..6c5f0cf381 100644
 --- a/virt/kvm/roe_generic.h
 +++ b/virt/kvm/roe_generic.h
-@@ -14,12 +14,5 @@ void kvm_roe_free(struct kvm_memory_slot *slot);
+@@ -14,5 +14,6 @@ void kvm_roe_free(struct kvm_memory_slot *slot);
  int kvm_roe_init(struct kvm_memory_slot *slot);
  bool kvm_roe_check_range(struct kvm_memory_slot *slot, gfn_t gfn, int offset,
  		int len);
--static inline bool gfn_is_full_roe(struct kvm_memory_slot *slot, gfn_t gfn)
--{
--	return test_bit(gfn - slot->base_gfn, slot->roe_bitmap);
--}
--static inline bool gfn_is_partial_roe(struct kvm_memory_slot *slot, gfn_t gfn)
--{
--	return test_bit(gfn - slot->base_gfn, slot->partial_roe_bitmap);
--}
-+
+-
++void kvm_roe_check_and_log(struct kvm_memory_slot *memslot, gfn_t gfn,
++		const void *data, int offset, int len);
  #endif
 -- 
 2.19.2
