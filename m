@@ -1,124 +1,92 @@
-Subject: Re: [RFC PATCH v1 3/5] Yama: Enforces noexec mounts or file
- executability through O_MAYEXEC
-References: <20181212081712.32347-1-mic@digikod.net>
- <20181212081712.32347-4-mic@digikod.net>
- <CAG48ez3SAW8EyaJ9T1U3qPoRhYwe4CCyL9bAxuc3GxjrXipi-A@mail.gmail.com>
- <f13bf750-f418-343c-baa6-9eee6e0f5e19@ssi.gouv.fr>
- <CAG48ez00CpXOOJPLgpQd_e0gG2KgYb1p8bwssA8FDOugHTxRAA@mail.gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>
-Message-ID: <0f7d39f8-035b-8566-94c9-ea836b280e24@ssi.gouv.fr>
-Date: Tue, 8 Jan 2019 14:29:35 +0100
+From: Sasha Levin <sashal@kernel.org>
+Subject: [PATCH AUTOSEL 4.20 020/117] crypto: ecc - regularize scalar for scalar multiplication
+Date: Tue,  8 Jan 2019 14:24:48 -0500
+Message-Id: <20190108192628.121270-20-sashal@kernel.org>
+In-Reply-To: <20190108192628.121270-1-sashal@kernel.org>
+References: <20190108192628.121270-1-sashal@kernel.org>
 MIME-Version: 1.0
-In-Reply-To: <CAG48ez00CpXOOJPLgpQd_e0gG2KgYb1p8bwssA8FDOugHTxRAA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 8bit
-To: Jann Horn <jannh@google.com>
-Cc: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, kernel list <linux-kernel@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk-manpages <mtk.manpages@gmail.com>, zohar@linux.ibm.com, philippe.trebuchet@ssi.gouv.fr, shuah@kernel.org, thibaut.sautereau@ssi.gouv.fr, vincent.strubel@ssi.gouv.fr, yves-alexis.perez@ssi.gouv.fr, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, linux-fsdevel@vger.kernel.org, Andy Lutomirski <luto@kernel.org>
+To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
+Cc: Vitaly Chikunov <vt@altlinux.org>, kernel-hardening@lists.openwall.com, Herbert Xu <herbert@gondor.apana.org.au>, Sasha Levin <sashal@kernel.org>, linux-crypto@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+From: Vitaly Chikunov <vt@altlinux.org>
 
-On 03/01/2019 12:17, Jann Horn wrote:
-> On Thu, Dec 13, 2018 at 3:49 PM Mickaël Salaün
-> <mickael.salaun@ssi.gouv.fr> wrote:
->> On 12/12/2018 18:09, Jann Horn wrote:
->>> On Wed, Dec 12, 2018 at 9:18 AM Mickaël Salaün <mic@digikod.net> wrote:
->>>> Enable to either propagate the mount options from the underlying VFS
->>>> mount to prevent execution, or to propagate the file execute permission.
->>>> This may allow a script interpreter to check execution permissions
->>>> before reading commands from a file.
->>>>
->>>> The main goal is to be able to protect the kernel by restricting
->>>> arbitrary syscalls that an attacker could perform with a crafted binary
->>>> or certain script languages.  It also improves multilevel isolation
->>>> by reducing the ability of an attacker to use side channels with
->>>> specific code.  These restrictions can natively be enforced for ELF
->>>> binaries (with the noexec mount option) but require this kernel
->>>> extension to properly handle scripts (e.g., Python, Perl).
->>>>
->>>> Add a new sysctl kernel.yama.open_mayexec_enforce to control this
->>>> behavior.  A following patch adds documentation.
-> [...]
->>>> +{
->>>> +       if (!(mask & MAY_OPENEXEC))
->>>> +               return 0;
->>>> +       /*
->>>> +        * Match regular files and directories to make it easier to
->>>> +        * modify script interpreters.
->>>> +        */
->>>> +       if (!S_ISREG(inode->i_mode) && !S_ISDIR(inode->i_mode))
->>>> +               return 0;
->>>
->>> So files are subject to checks, but loading code from things like
->>> sockets is always fine?
->>
->> As I said in a previous email, these checks do not handle fifo either.
->> This is relevant in a threat model targeting persistent attacks (and
->> with additional protections/restrictions). We may want to only whitelist
->> fifo, but I don't get how a socket is relevant here. Can you please clarify?
-> 
-> I don't think that there's a security problem here. I just think it's
-> weird to have the extra check when it seems to me like it isn't really
-> necessary - nobody is going to want to execute a socket or fifo
-> anyway, right?
+[ Upstream commit 3da2c1dfdb802b184eea0653d1e589515b52d74b ]
 
-Right, the fifo whitelisting should answer your concern then.
+ecc_point_mult is supposed to be used with a regularized scalar,
+otherwise, it's possible to deduce the position of the top bit of the
+scalar with timing attack. This is important when the scalar is a
+private key.
 
-> 
->>>
->>>> +       if ((open_mayexec_enforce & YAMA_OMAYEXEC_ENFORCE_MOUNT) &&
->>>> +                       !(mask & MAY_EXECMOUNT))
->>>> +               return -EACCES;
->>>> +
->>>> +       /*
->>>> +        * May prefer acl_permission_check() instead of generic_permission(),
->>>> +        * to not be bypassable with CAP_DAC_READ_SEARCH.
->>>> +        */
->>>> +       if (open_mayexec_enforce & YAMA_OMAYEXEC_ENFORCE_FILE)
->>>> +               return generic_permission(inode, MAY_EXEC);
->>>> +
->>>> +       return 0;
->>>> +}
->>>> +
->>>>  static struct security_hook_list yama_hooks[] __lsm_ro_after_init = {
->>>> +       LSM_HOOK_INIT(inode_permission, yama_inode_permission),
->>>>         LSM_HOOK_INIT(ptrace_access_check, yama_ptrace_access_check),
->>>>         LSM_HOOK_INIT(ptrace_traceme, yama_ptrace_traceme),
->>>>         LSM_HOOK_INIT(task_prctl, yama_task_prctl),
->>>> @@ -447,6 +489,37 @@ static int yama_dointvec_minmax(struct ctl_table *table, int write,
->>>>         return proc_dointvec_minmax(&table_copy, write, buffer, lenp, ppos);
->>>>  }
->>>>
->>>> +static int yama_dointvec_bitmask_macadmin(struct ctl_table *table, int write,
->>>> +                                         void __user *buffer, size_t *lenp,
->>>> +                                         loff_t *ppos)
->>>> +{
->>>> +       int error;
->>>> +
->>>> +       if (write) {
->>>> +               struct ctl_table table_copy;
->>>> +               int tmp_mayexec_enforce;
->>>> +
->>>> +               if (!capable(CAP_MAC_ADMIN))
->>>> +                       return -EPERM;
->>>
->>> Don't put capable() checks in sysctls, it doesn't work.
->>>
->>
->> I tested it and the root user can indeed open the file even if the
->> process doesn't have CAP_MAC_ADMIN, however writing in the sysctl file
->> is denied. Btw there is a similar check in the previous function
->> (yama_dointvec_minmax).
-> 
-> It's still wrong. If an attacker without CAP_MAC_ADMIN opens the
-> sysctl file, then passes the file descriptor to a setcap binary that
-> has CAP_MAC_ADMIN as stdout/stderr, and the setcap binary writes to
-> it, then the capable() check is bypassed. (But of course, to open the
-> sysctl file in the first place, you'd need to be root (uid 0), so the
-> check doesn't really matter.)
+ecc_point_mult is already using a regular algorithm (i.e. having an
+operation flow independent of the input scalar) but regularization step
+is not implemented.
 
-I agree with you that a confused deputy attack may uses file
-descriptors, but I don't see how the current sysctl API may be used to
-check the process capability at open time. Anyway, on a properly
-configured system, especially one leveraging Linux capabilities (e.g.
-CLIP OS), root processes may not have CAP_SYS_ADMIN. Moreover, SUID or
-fcap binaries may not be available to an attacker (e.g. in a container).
+Arrange scalar to always have fixed top bit by adding a multiple of the
+curve order (n).
+
+References:
+The constant time regularization step is based on micro-ecc by Kenneth
+MacKay and also referenced in the literature (Bernstein, D. J., & Lange,
+T. (2017). Montgomery curves and the Montgomery ladder. (Cryptology
+ePrint Archive; Vol. 2017/293). s.l.: IACR. Chapter 4.6.2.)
+
+Signed-off-by: Vitaly Chikunov <vt@altlinux.org>
+Cc: kernel-hardening@lists.openwall.com
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+Signed-off-by: Sasha Levin <sashal@kernel.org>
+---
+ crypto/ecc.c | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/crypto/ecc.c b/crypto/ecc.c
+index 8facafd67802..adcce310f646 100644
+--- a/crypto/ecc.c
++++ b/crypto/ecc.c
+@@ -842,15 +842,23 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2, u64 *curve_prime,
+ 
+ static void ecc_point_mult(struct ecc_point *result,
+ 			   const struct ecc_point *point, const u64 *scalar,
+-			   u64 *initial_z, u64 *curve_prime,
++			   u64 *initial_z, const struct ecc_curve *curve,
+ 			   unsigned int ndigits)
+ {
+ 	/* R0 and R1 */
+ 	u64 rx[2][ECC_MAX_DIGITS];
+ 	u64 ry[2][ECC_MAX_DIGITS];
+ 	u64 z[ECC_MAX_DIGITS];
++	u64 sk[2][ECC_MAX_DIGITS];
++	u64 *curve_prime = curve->p;
+ 	int i, nb;
+-	int num_bits = vli_num_bits(scalar, ndigits);
++	int num_bits;
++	int carry;
++
++	carry = vli_add(sk[0], scalar, curve->n, ndigits);
++	vli_add(sk[1], sk[0], curve->n, ndigits);
++	scalar = sk[!carry];
++	num_bits = sizeof(u64) * ndigits * 8 + 1;
+ 
+ 	vli_set(rx[1], point->x, ndigits);
+ 	vli_set(ry[1], point->y, ndigits);
+@@ -1004,7 +1012,7 @@ int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
+ 		goto out;
+ 	}
+ 
+-	ecc_point_mult(pk, &curve->g, priv, NULL, curve->p, ndigits);
++	ecc_point_mult(pk, &curve->g, priv, NULL, curve, ndigits);
+ 	if (ecc_point_is_zero(pk)) {
+ 		ret = -EAGAIN;
+ 		goto err_free_point;
+@@ -1090,7 +1098,7 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
+ 		goto err_alloc_product;
+ 	}
+ 
+-	ecc_point_mult(product, pk, priv, rand_z, curve->p, ndigits);
++	ecc_point_mult(product, pk, priv, rand_z, curve, ndigits);
+ 
+ 	ecc_swap_digits(product->x, secret, ndigits);
+ 
+-- 
+2.19.1
