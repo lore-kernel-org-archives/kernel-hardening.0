@@ -1,92 +1,53 @@
-From: Sasha Levin <sashal@kernel.org>
-Subject: [PATCH AUTOSEL 4.19 17/97] crypto: ecc - regularize scalar for scalar multiplication
-Date: Tue,  8 Jan 2019 14:28:26 -0500
-Message-Id: <20190108192949.122407-17-sashal@kernel.org>
-In-Reply-To: <20190108192949.122407-1-sashal@kernel.org>
-References: <20190108192949.122407-1-sashal@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: Vitaly Chikunov <vt@altlinux.org>, kernel-hardening@lists.openwall.com, Herbert Xu <herbert@gondor.apana.org.au>, Sasha Levin <sashal@kernel.org>, linux-crypto@vger.kernel.org
+References: <20181212081712.32347-1-mic@digikod.net> <20181212081712.32347-4-mic@digikod.net>
+ <CAG48ez3SAW8EyaJ9T1U3qPoRhYwe4CCyL9bAxuc3GxjrXipi-A@mail.gmail.com>
+ <f13bf750-f418-343c-baa6-9eee6e0f5e19@ssi.gouv.fr> <CAG48ez00CpXOOJPLgpQd_e0gG2KgYb1p8bwssA8FDOugHTxRAA@mail.gmail.com>
+ <0f7d39f8-035b-8566-94c9-ea836b280e24@ssi.gouv.fr>
+In-Reply-To: <0f7d39f8-035b-8566-94c9-ea836b280e24@ssi.gouv.fr>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 8 Jan 2019 15:30:49 -0800
+Message-ID: <CAGXu5jKHPE6WfbXpiwzm=vRbgJ-rCePxsrYmVzZ1+RURp-6nJg@mail.gmail.com>
+Subject: Re: [RFC PATCH v1 3/5] Yama: Enforces noexec mounts or file
+ executability through O_MAYEXEC
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mickael.salaun@ssi.gouv.fr>
+Cc: Jann Horn <jannh@google.com>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, kernel list <linux-kernel@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk-manpages <mtk.manpages@gmail.com>, Mimi Zohar <zohar@linux.ibm.com>, philippe.trebuchet@ssi.gouv.fr, Shuah Khan <shuah@kernel.org>, thibaut.sautereau@ssi.gouv.fr, vincent.strubel@ssi.gouv.fr, Perez Yves-Alexis <yves-alexis.perez@ssi.gouv.fr>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Vitaly Chikunov <vt@altlinux.org>
+On Tue, Jan 8, 2019 at 5:29 AM Micka=C3=ABl Sala=C3=BCn
+<mickael.salaun@ssi.gouv.fr> wrote:
+>
+>
+> On 03/01/2019 12:17, Jann Horn wrote:
+> > On Thu, Dec 13, 2018 at 3:49 PM Micka=C3=ABl Sala=C3=BCn
+> > <mickael.salaun@ssi.gouv.fr> wrote:
+> >> On 12/12/2018 18:09, Jann Horn wrote:
+> >>> On Wed, Dec 12, 2018 at 9:18 AM Micka=C3=ABl Sala=C3=BCn <mic@digikod=
+.net> wrote:
+> >>>> Enable to either propagate the mount options from the underlying VFS
+> >>>> mount to prevent execution, or to propagate the file execute permiss=
+ion.
+> >>>> This may allow a script interpreter to check execution permissions
+> >>>> before reading commands from a file.
+> >>>>
+> >>>> The main goal is to be able to protect the kernel by restricting
+> >>>> arbitrary syscalls that an attacker could perform with a crafted bin=
+ary
+> >>>> or certain script languages.  It also improves multilevel isolation
+> >>>> by reducing the ability of an attacker to use side channels with
+> >>>> specific code.  These restrictions can natively be enforced for ELF
+> >>>> binaries (with the noexec mount option) but require this kernel
+> >>>> extension to properly handle scripts (e.g., Python, Perl).
 
-[ Upstream commit 3da2c1dfdb802b184eea0653d1e589515b52d74b ]
+I like this idea, but I think it shouldn't live in Yama (since it is
+currently intended to be a ptrace-policy-only LSM). It was
+_originally_ designed to do various DAC improvements, but the
+agreement was that those should live directly in the VFS instead (i.e.
+the symlink, hardlink and now fifo and regular file defenses).
 
-ecc_point_mult is supposed to be used with a regularized scalar,
-otherwise, it's possible to deduce the position of the top bit of the
-scalar with timing attack. This is important when the scalar is a
-private key.
+This should likely go in similarly. (But if not, it could also be its own L=
+SM.)
 
-ecc_point_mult is already using a regular algorithm (i.e. having an
-operation flow independent of the input scalar) but regularization step
-is not implemented.
-
-Arrange scalar to always have fixed top bit by adding a multiple of the
-curve order (n).
-
-References:
-The constant time regularization step is based on micro-ecc by Kenneth
-MacKay and also referenced in the literature (Bernstein, D. J., & Lange,
-T. (2017). Montgomery curves and the Montgomery ladder. (Cryptology
-ePrint Archive; Vol. 2017/293). s.l.: IACR. Chapter 4.6.2.)
-
-Signed-off-by: Vitaly Chikunov <vt@altlinux.org>
-Cc: kernel-hardening@lists.openwall.com
-Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
-Signed-off-by: Sasha Levin <sashal@kernel.org>
----
- crypto/ecc.c | 16 ++++++++++++----
- 1 file changed, 12 insertions(+), 4 deletions(-)
-
-diff --git a/crypto/ecc.c b/crypto/ecc.c
-index 8facafd67802..adcce310f646 100644
---- a/crypto/ecc.c
-+++ b/crypto/ecc.c
-@@ -842,15 +842,23 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2, u64 *curve_prime,
- 
- static void ecc_point_mult(struct ecc_point *result,
- 			   const struct ecc_point *point, const u64 *scalar,
--			   u64 *initial_z, u64 *curve_prime,
-+			   u64 *initial_z, const struct ecc_curve *curve,
- 			   unsigned int ndigits)
- {
- 	/* R0 and R1 */
- 	u64 rx[2][ECC_MAX_DIGITS];
- 	u64 ry[2][ECC_MAX_DIGITS];
- 	u64 z[ECC_MAX_DIGITS];
-+	u64 sk[2][ECC_MAX_DIGITS];
-+	u64 *curve_prime = curve->p;
- 	int i, nb;
--	int num_bits = vli_num_bits(scalar, ndigits);
-+	int num_bits;
-+	int carry;
-+
-+	carry = vli_add(sk[0], scalar, curve->n, ndigits);
-+	vli_add(sk[1], sk[0], curve->n, ndigits);
-+	scalar = sk[!carry];
-+	num_bits = sizeof(u64) * ndigits * 8 + 1;
- 
- 	vli_set(rx[1], point->x, ndigits);
- 	vli_set(ry[1], point->y, ndigits);
-@@ -1004,7 +1012,7 @@ int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
- 		goto out;
- 	}
- 
--	ecc_point_mult(pk, &curve->g, priv, NULL, curve->p, ndigits);
-+	ecc_point_mult(pk, &curve->g, priv, NULL, curve, ndigits);
- 	if (ecc_point_is_zero(pk)) {
- 		ret = -EAGAIN;
- 		goto err_free_point;
-@@ -1090,7 +1098,7 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
- 		goto err_alloc_product;
- 	}
- 
--	ecc_point_mult(product, pk, priv, rand_z, curve->p, ndigits);
-+	ecc_point_mult(product, pk, priv, rand_z, curve, ndigits);
- 
- 	ecc_swap_digits(product->x, secret, ndigits);
- 
--- 
-2.19.1
+--=20
+Kees Cook
