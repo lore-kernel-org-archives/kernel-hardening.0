@@ -1,390 +1,124 @@
-From: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
-Subject: [PATCH V8 11/11] KVM: ROE: Store protected chunks in red black tree
-Date: Sun,  6 Jan 2019 21:23:45 +0200
-Message-Id: <20190106192345.13578-12-ahmedsoliman@mena.vt.edu>
-In-Reply-To: <20190106192345.13578-1-ahmedsoliman@mena.vt.edu>
-References: <20190106192345.13578-1-ahmedsoliman@mena.vt.edu>
+Subject: Re: [RFC PATCH v1 3/5] Yama: Enforces noexec mounts or file
+ executability through O_MAYEXEC
+References: <20181212081712.32347-1-mic@digikod.net>
+ <20181212081712.32347-4-mic@digikod.net>
+ <CAG48ez3SAW8EyaJ9T1U3qPoRhYwe4CCyL9bAxuc3GxjrXipi-A@mail.gmail.com>
+ <f13bf750-f418-343c-baa6-9eee6e0f5e19@ssi.gouv.fr>
+ <CAG48ez00CpXOOJPLgpQd_e0gG2KgYb1p8bwssA8FDOugHTxRAA@mail.gmail.com>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>
+Message-ID: <0f7d39f8-035b-8566-94c9-ea836b280e24@ssi.gouv.fr>
+Date: Tue, 8 Jan 2019 14:29:35 +0100
 MIME-Version: 1.0
+In-Reply-To: <CAG48ez00CpXOOJPLgpQd_e0gG2KgYb1p8bwssA8FDOugHTxRAA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 8bit
-To: Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, Jonathan Corbet <corbet@lwn.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, hpa@zytor.com, x86@kernel.org, kvm@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, ahmedsoliman0x666@gmail.com, ovich00@gmail.com, kernel-hardening@lists.openwall.com, nigel.edwards@hpe.com, Boris Lukashev <blukashev@sempervictus.com>, Igor Stoppa <igor.stoppa@gmail.com>
-Cc: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
+To: Jann Horn <jannh@google.com>
+Cc: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, kernel list <linux-kernel@vger.kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk-manpages <mtk.manpages@gmail.com>, zohar@linux.ibm.com, philippe.trebuchet@ssi.gouv.fr, shuah@kernel.org, thibaut.sautereau@ssi.gouv.fr, vincent.strubel@ssi.gouv.fr, yves-alexis.perez@ssi.gouv.fr, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, linux-fsdevel@vger.kernel.org, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The old way of storing protected chunks was a linked list. That made
-linear overhead when searching for chunks. When reaching 2000 chunk, The
-time taken two read the last chunk was about 10 times slower than the
-first chunk. This patch stores the chunks as tree for faster search.
 
-Signed-off-by: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
----
- include/linux/kvm_host.h |  36 ++++++-
- virt/kvm/roe.c           | 228 +++++++++++++++++++++++++++------------
- virt/kvm/roe_generic.h   |   3 +
- 3 files changed, 197 insertions(+), 70 deletions(-)
+On 03/01/2019 12:17, Jann Horn wrote:
+> On Thu, Dec 13, 2018 at 3:49 PM Mickaël Salaün
+> <mickael.salaun@ssi.gouv.fr> wrote:
+>> On 12/12/2018 18:09, Jann Horn wrote:
+>>> On Wed, Dec 12, 2018 at 9:18 AM Mickaël Salaün <mic@digikod.net> wrote:
+>>>> Enable to either propagate the mount options from the underlying VFS
+>>>> mount to prevent execution, or to propagate the file execute permission.
+>>>> This may allow a script interpreter to check execution permissions
+>>>> before reading commands from a file.
+>>>>
+>>>> The main goal is to be able to protect the kernel by restricting
+>>>> arbitrary syscalls that an attacker could perform with a crafted binary
+>>>> or certain script languages.  It also improves multilevel isolation
+>>>> by reducing the ability of an attacker to use side channels with
+>>>> specific code.  These restrictions can natively be enforced for ELF
+>>>> binaries (with the noexec mount option) but require this kernel
+>>>> extension to properly handle scripts (e.g., Python, Perl).
+>>>>
+>>>> Add a new sysctl kernel.yama.open_mayexec_enforce to control this
+>>>> behavior.  A following patch adds documentation.
+> [...]
+>>>> +{
+>>>> +       if (!(mask & MAY_OPENEXEC))
+>>>> +               return 0;
+>>>> +       /*
+>>>> +        * Match regular files and directories to make it easier to
+>>>> +        * modify script interpreters.
+>>>> +        */
+>>>> +       if (!S_ISREG(inode->i_mode) && !S_ISDIR(inode->i_mode))
+>>>> +               return 0;
+>>>
+>>> So files are subject to checks, but loading code from things like
+>>> sockets is always fine?
+>>
+>> As I said in a previous email, these checks do not handle fifo either.
+>> This is relevant in a threat model targeting persistent attacks (and
+>> with additional protections/restrictions). We may want to only whitelist
+>> fifo, but I don't get how a socket is relevant here. Can you please clarify?
+> 
+> I don't think that there's a security problem here. I just think it's
+> weird to have the extra check when it seems to me like it isn't really
+> necessary - nobody is going to want to execute a socket or fifo
+> anyway, right?
 
-diff --git a/include/linux/kvm_host.h b/include/linux/kvm_host.h
-index 9acf5f54ac..5f4bec0662 100644
---- a/include/linux/kvm_host.h
-+++ b/include/linux/kvm_host.h
-@@ -9,6 +9,7 @@
- #include <linux/types.h>
- #include <linux/hardirq.h>
- #include <linux/list.h>
-+#include <linux/rbtree.h>
- #include <linux/mutex.h>
- #include <linux/spinlock.h>
- #include <linux/signal.h>
-@@ -301,7 +302,7 @@ static inline int kvm_vcpu_exiting_guest_mode(struct kvm_vcpu *vcpu)
- struct protected_chunk {
- 	gpa_t gpa;
- 	u64 size;
--	struct list_head list;
-+	struct rb_node node;
- };
- 
- static inline bool kvm_roe_range_overlap(struct protected_chunk *chunk,
-@@ -316,12 +317,43 @@ static inline bool kvm_roe_range_overlap(struct protected_chunk *chunk,
- 		(gpa + len - 1 >= chunk->gpa);
- }
- 
-+static inline int kvm_roe_range_cmp_position(struct protected_chunk *chunk,
-+		gpa_t gpa, int len) {
-+	/*
-+	 * returns -1 if the gpa and len are smaller than chunk.
-+	 * returns 0 if they overlap or strictly adjacent
-+	 * returns 1 if gpa and len are bigger than the chunk
-+	 */
-+
-+	if (gpa + len <= chunk->gpa)
-+		return -1;
-+	if (gpa >= chunk->gpa + chunk->size)
-+		return 1;
-+	return 0;
-+}
-+
-+static inline int kvm_roe_range_cmp_mergability(struct protected_chunk *chunk,
-+		gpa_t gpa, int len) {
-+	/*
-+	 * returns -1 if the gpa and len are smaller than chunk and not adjacent
-+	 * to it
-+	 * returns 0 if they overlap or strictly adjacent
-+	 * returns 1 if gpa and len are bigger than the chunk and not adjacent
-+	 * to it
-+	 */
-+	if (gpa + len < chunk->gpa)
-+		return -1;
-+	if (gpa > chunk->gpa + chunk->size)
-+		return 1;
-+	return 0;
-+
-+}
- struct kvm_memory_slot {
- 	gfn_t base_gfn;
- 	unsigned long npages;
- 	unsigned long *roe_bitmap;
- 	unsigned long *partial_roe_bitmap;
--	struct list_head *prot_list;
-+	struct rb_root  *prot_root;
- 	unsigned long *dirty_bitmap;
- 	struct kvm_arch_memory_slot arch;
- 	unsigned long userspace_addr;
-diff --git a/virt/kvm/roe.c b/virt/kvm/roe.c
-index e424b45e1c..15297c0e57 100644
---- a/virt/kvm/roe.c
-+++ b/virt/kvm/roe.c
-@@ -23,10 +23,10 @@ int kvm_roe_init(struct kvm_memory_slot *slot)
- 			sizeof(unsigned long), GFP_KERNEL);
- 	if (!slot->partial_roe_bitmap)
- 		goto fail2;
--	slot->prot_list = kvzalloc(sizeof(struct list_head), GFP_KERNEL);
--	if (!slot->prot_list)
-+	slot->prot_root = kvzalloc(sizeof(struct rb_root), GFP_KERNEL);
-+	if (!slot->prot_root)
- 		goto fail3;
--	INIT_LIST_HEAD(slot->prot_list);
-+	*slot->prot_root = RB_ROOT;
- 	return 0;
- fail3:
- 	kvfree(slot->partial_roe_bitmap);
-@@ -40,12 +40,19 @@ int kvm_roe_init(struct kvm_memory_slot *slot)
- static bool kvm_roe_protected_range(struct kvm_memory_slot *slot, gpa_t gpa,
- 		int len)
- {
--	struct list_head *pos;
--	struct protected_chunk *cur_chunk;
--
--	list_for_each(pos, slot->prot_list) {
--		cur_chunk = list_entry(pos, struct protected_chunk, list);
--		if (kvm_roe_range_overlap(cur_chunk, gpa, len))
-+	struct rb_node *node = slot->prot_root->rb_node;
-+
-+	while (node) {
-+		struct protected_chunk *cur_chunk;
-+		int cmp;
-+
-+		cur_chunk = rb_entry(node, struct protected_chunk, node);
-+		cmp = kvm_roe_range_cmp_position(cur_chunk, gpa, len);
-+		if (cmp < 0)/*target chunk is before current node*/
-+			node = node->rb_left;
-+		else if (cmp > 0)/*target chunk is after current node*/
-+			node = node->rb_right;
-+		else
- 			return true;
- 	}
- 	return false;
-@@ -62,18 +69,24 @@ bool kvm_roe_check_range(struct kvm_memory_slot *slot, gfn_t gfn, int offset,
- }
- EXPORT_SYMBOL_GPL(kvm_roe_check_range);
- 
--void kvm_roe_free(struct kvm_memory_slot *slot)
-+static void kvm_roe_destroy_tree(struct rb_node *node)
- {
--	struct protected_chunk *pos, *n;
--	struct list_head *head = slot->prot_list;
-+	struct protected_chunk *cur_chunk;
-+
-+	if (!node)
-+		return;
-+	kvm_roe_destroy_tree(node->rb_left);
-+	kvm_roe_destroy_tree(node->rb_right);
-+	cur_chunk = rb_entry(node, struct protected_chunk, node);
-+	kvfree(cur_chunk);
-+}
- 
-+void kvm_roe_free(struct kvm_memory_slot *slot)
-+{
- 	kvfree(slot->roe_bitmap);
- 	kvfree(slot->partial_roe_bitmap);
--	list_for_each_entry_safe(pos, n, head, list) {
--		list_del(&pos->list);
--		kvfree(pos);
--	}
--	kvfree(slot->prot_list);
-+	kvm_roe_destroy_tree(slot->prot_root->rb_node);
-+	kvfree(slot->prot_root);
- }
- 
- static void kvm_warning_roe_violation(u64 addr, const void *data, int len)
-@@ -193,40 +206,119 @@ static int kvm_roe_full_protect_range(struct kvm_vcpu *vcpu, u64 gva,
- 	return count;
- }
- 
--static int kvm_roe_insert_chunk_next(struct list_head *pos, u64 gpa, u64 size)
--{
--	struct protected_chunk *chunk;
--
--	chunk = kvzalloc(sizeof(struct protected_chunk), GFP_KERNEL);
--	chunk->gpa = gpa;
--	chunk->size = size;
--	INIT_LIST_HEAD(&chunk->list);
--	list_add(&chunk->list, pos);
--	return size;
--}
--
--static int kvm_roe_expand_chunk(struct protected_chunk *pos, u64 gpa, u64 size)
-+static u64 kvm_roe_expand_chunk(struct protected_chunk *pos, u64 gpa, u64 size)
- {
- 	u64 old_ptr = pos->gpa;
- 	u64 old_size = pos->size;
-+	u64 ret = 0;
- 
--	if (gpa < old_ptr)
-+	if (gpa < old_ptr) {
- 		pos->gpa = gpa;
--	if (gpa + size > old_ptr + old_size)
-+		ret |= KVM_ROE_MERGE_LEFT;
-+	}
-+	if (gpa + size > old_ptr + old_size) {
- 		pos->size = gpa + size - pos->gpa;
--	return size;
-+		ret |= KVM_ROE_MERGE_RIGHT;
-+	}
-+	return ret;
- }
-+static void kvm_roe_merge_left(struct rb_root *root, struct rb_node *start)
-+{
-+	struct rb_root fake_root;
-+	struct protected_chunk *target, *first;
-+	struct rb_node *node, *stop;
-+	u64 i, count = 0;
- 
--static bool kvm_roe_merge_chunks(struct protected_chunk *chunk)
-+	if (!start->rb_left)
-+		return;
-+	fake_root = (struct rb_root) {start->rb_left};
-+	stop = rb_prev(rb_first(&fake_root));
-+	/* Back traverse till no node can be merged*/
-+	target = container_of(start, struct protected_chunk, node);
-+	for (node = rb_last(&fake_root); node != stop; node = rb_prev(node)) {
-+		struct protected_chunk *pos;
-+
-+		pos = container_of(node, struct protected_chunk, node);
-+		if (kvm_roe_range_cmp_mergability(target, pos->gpa, pos->size))
-+			break;
-+		count += 1;
-+	}
-+	if (!count)
-+		return;
-+	/* merging step*/
-+	node = rb_next(node);
-+	first = container_of(node, struct protected_chunk, node);
-+	kvm_roe_expand_chunk(target, first->gpa, first->size);
-+	/* forward traverse and delete all in between*/
-+	for (i = 0; i < count; i++) {
-+		struct protected_chunk *pos;
-+
-+		pos = container_of(node, struct protected_chunk, node);
-+		rb_erase(node, root);
-+		kvfree(pos);
-+		node = rb_next(node);
-+	}
-+}
-+
-+static void kvm_roe_merge_right(struct rb_root *root, struct rb_node *start)
- {
--	/*attempt merging 2 consecutive given the first one*/
--	struct protected_chunk *next = list_next_entry(chunk, list);
-+	struct rb_root fake_root;
-+	struct protected_chunk *target, *first;
-+	struct rb_node *node, *stop;
-+	u64 i, count = 0;
- 
--	if (!kvm_roe_range_overlap(chunk, next->gpa, next->size))
--		return false;
--	kvm_roe_expand_chunk(chunk, next->gpa, next->size);
--	list_del(&next->list);
--	kvfree(next);
-+	if (!start->rb_right)
-+		return;
-+	fake_root = (struct rb_root) {start->rb_right};
-+	stop = rb_next(rb_last(&fake_root));
-+	/* Forward traverse till no node can be merged*/
-+	target = container_of(start, struct protected_chunk, node);
-+	for (node = rb_first(&fake_root); node != stop; node = rb_next(node)) {
-+		struct protected_chunk *pos;
-+
-+		pos = container_of(node, struct protected_chunk, node);
-+		if (kvm_roe_range_cmp_mergability(target, pos->gpa, pos->size))
-+			break;
-+		count += 1;
-+	}
-+	if (!count)
-+		return;
-+	/* merging step*/
-+	node = rb_prev(node);
-+	first = container_of(node, struct protected_chunk, node);
-+	kvm_roe_expand_chunk(target, first->gpa, first->size);
-+	/* Backward traverse and delete all in between*/
-+	for (i = 0; i < count; i++) {
-+		struct protected_chunk *pos;
-+
-+		pos = container_of(node, struct protected_chunk, node);
-+		rb_erase(node, root);
-+		kvfree(pos);
-+		node = rb_prev(node);
-+	}
-+}
-+
-+static bool kvm_roe_merge_chunks(struct rb_root *root, struct rb_node *target,
-+		u64 gpa, u64 size)
-+{
-+	/*
-+	 * attempt merging all adjacent chunks after inserting a chunk that is
-+	 * adjacent or inersecting with  an existing chunk
-+	 */
-+	struct protected_chunk *cur;
-+	u64 merge;
-+
-+	cur = container_of(target, struct protected_chunk, node);
-+	merge = kvm_roe_expand_chunk(cur, gpa, size);
-+	/*
-+	 * We will not have to worry about the parent node while merging
-+	 * If it was mergeable with the new to be inserted chunk we wouldn't
-+	 * have gone deeper.
-+	 **/
-+	if (merge & KVM_ROE_MERGE_LEFT)
-+		kvm_roe_merge_left(root, target);
-+	if (merge & KVM_ROE_MERGE_RIGHT)
-+		kvm_roe_merge_right(root, target);
- 	return true;
- }
- 
-@@ -234,35 +326,35 @@ static int __kvm_roe_insert_chunk(struct kvm_memory_slot *slot, u64 gpa,
- 		u64 size)
- {
- 	/* kvm->slots_lock must be acquired*/
--	struct protected_chunk *pos;
--	struct list_head *head = slot->prot_list;
--
--	if (list_empty(head))
--		return kvm_roe_insert_chunk_next(head, gpa, size);
--	/*
--	 * pos here will never get deleted maybe the next one will
--	 * that is why list_for_each_entry_safe is completely unsafe
--	 */
--	list_for_each_entry(pos, head, list) {
--		if (kvm_roe_range_overlap(pos, gpa, size)) {
--			int ret = kvm_roe_expand_chunk(pos, gpa, size);
--
--			while (head != pos->list.next)
--				if (!kvm_roe_merge_chunks(pos))
--					break;
--			return ret;
--		}
--		if (pos->gpa > gpa) {
--			struct protected_chunk *prev;
--
--			prev = list_prev_entry(pos, list);
--			return kvm_roe_insert_chunk_next(&prev->list, gpa,
--					size);
-+	struct rb_node **new = &(slot->prot_root->rb_node), *parent = NULL;
-+	struct protected_chunk *insert_me;
-+	bool merge = false;
-+
-+	while (*new) {
-+		struct protected_chunk *chunk;
-+		int cmp;
-+
-+		chunk = container_of(*new, struct protected_chunk, node);
-+		cmp = kvm_roe_range_cmp_mergability(chunk, gpa, size);
-+		parent = *new;
-+		if (cmp < 0) {
-+			new = &((*new)->rb_left);
-+		} else if (cmp > 0) {
-+			new = &((*new)->rb_right);
-+		} else {
-+			merge = true;
-+			kvm_roe_merge_chunks(slot->prot_root, *new, gpa, size);
-+			break;
- 		}
- 	}
--	pos = list_last_entry(head, struct protected_chunk, list);
--
--	return kvm_roe_insert_chunk_next(&pos->list, gpa, size);
-+	if (merge)
-+		return size;
-+	insert_me = kvzalloc(sizeof(struct protected_chunk), GFP_KERNEL);
-+	insert_me->gpa = gpa;
-+	insert_me->size = size;
-+	rb_link_node(&insert_me->node, parent, new);
-+	rb_insert_color(&insert_me->node, slot->prot_root);
-+	return size;
- }
- 
- static int kvm_roe_insert_chunk(struct kvm *kvm, u64 gpa, u64 size)
-diff --git a/virt/kvm/roe_generic.h b/virt/kvm/roe_generic.h
-index 6c5f0cf381..8e42c9795c 100644
---- a/virt/kvm/roe_generic.h
-+++ b/virt/kvm/roe_generic.h
-@@ -10,6 +10,9 @@
-  *
-  */
- 
-+#define KVM_ROE_MERGE_LEFT	0x1
-+#define KVM_ROE_MERGE_RIGHT	0x2
-+
- void kvm_roe_free(struct kvm_memory_slot *slot);
- int kvm_roe_init(struct kvm_memory_slot *slot);
- bool kvm_roe_check_range(struct kvm_memory_slot *slot, gfn_t gfn, int offset,
--- 
-2.19.2
+Right, the fifo whitelisting should answer your concern then.
+
+> 
+>>>
+>>>> +       if ((open_mayexec_enforce & YAMA_OMAYEXEC_ENFORCE_MOUNT) &&
+>>>> +                       !(mask & MAY_EXECMOUNT))
+>>>> +               return -EACCES;
+>>>> +
+>>>> +       /*
+>>>> +        * May prefer acl_permission_check() instead of generic_permission(),
+>>>> +        * to not be bypassable with CAP_DAC_READ_SEARCH.
+>>>> +        */
+>>>> +       if (open_mayexec_enforce & YAMA_OMAYEXEC_ENFORCE_FILE)
+>>>> +               return generic_permission(inode, MAY_EXEC);
+>>>> +
+>>>> +       return 0;
+>>>> +}
+>>>> +
+>>>>  static struct security_hook_list yama_hooks[] __lsm_ro_after_init = {
+>>>> +       LSM_HOOK_INIT(inode_permission, yama_inode_permission),
+>>>>         LSM_HOOK_INIT(ptrace_access_check, yama_ptrace_access_check),
+>>>>         LSM_HOOK_INIT(ptrace_traceme, yama_ptrace_traceme),
+>>>>         LSM_HOOK_INIT(task_prctl, yama_task_prctl),
+>>>> @@ -447,6 +489,37 @@ static int yama_dointvec_minmax(struct ctl_table *table, int write,
+>>>>         return proc_dointvec_minmax(&table_copy, write, buffer, lenp, ppos);
+>>>>  }
+>>>>
+>>>> +static int yama_dointvec_bitmask_macadmin(struct ctl_table *table, int write,
+>>>> +                                         void __user *buffer, size_t *lenp,
+>>>> +                                         loff_t *ppos)
+>>>> +{
+>>>> +       int error;
+>>>> +
+>>>> +       if (write) {
+>>>> +               struct ctl_table table_copy;
+>>>> +               int tmp_mayexec_enforce;
+>>>> +
+>>>> +               if (!capable(CAP_MAC_ADMIN))
+>>>> +                       return -EPERM;
+>>>
+>>> Don't put capable() checks in sysctls, it doesn't work.
+>>>
+>>
+>> I tested it and the root user can indeed open the file even if the
+>> process doesn't have CAP_MAC_ADMIN, however writing in the sysctl file
+>> is denied. Btw there is a similar check in the previous function
+>> (yama_dointvec_minmax).
+> 
+> It's still wrong. If an attacker without CAP_MAC_ADMIN opens the
+> sysctl file, then passes the file descriptor to a setcap binary that
+> has CAP_MAC_ADMIN as stdout/stderr, and the setcap binary writes to
+> it, then the capable() check is bypassed. (But of course, to open the
+> sysctl file in the first place, you'd need to be root (uid 0), so the
+> check doesn't really matter.)
+
+I agree with you that a confused deputy attack may uses file
+descriptors, but I don't see how the current sysctl API may be used to
+check the process capability at open time. Anyway, on a properly
+configured system, especially one leveraging Linux capabilities (e.g.
+CLIP OS), root processes may not have CAP_SYS_ADMIN. Moreover, SUID or
+fcap binaries may not be available to an attacker (e.g. in a container).
