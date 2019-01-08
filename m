@@ -1,9 +1,9 @@
 From: Sasha Levin <sashal@kernel.org>
-Subject: [PATCH AUTOSEL 4.20 020/117] crypto: ecc - regularize scalar for scalar multiplication
-Date: Tue,  8 Jan 2019 14:24:48 -0500
-Message-Id: <20190108192628.121270-20-sashal@kernel.org>
-In-Reply-To: <20190108192628.121270-1-sashal@kernel.org>
-References: <20190108192628.121270-1-sashal@kernel.org>
+Subject: [PATCH AUTOSEL 4.19 17/97] crypto: ecc - regularize scalar for scalar multiplication
+Date: Tue,  8 Jan 2019 14:28:26 -0500
+Message-Id: <20190108192949.122407-17-sashal@kernel.org>
+In-Reply-To: <20190108192949.122407-1-sashal@kernel.org>
+References: <20190108192949.122407-1-sashal@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
