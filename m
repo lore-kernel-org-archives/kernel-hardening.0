@@ -1,66 +1,52 @@
-Subject: Re: [RFC PATCH v1 3/5] Yama: Enforces noexec mounts or file
- executability through O_MAYEXEC
-References: <20181212081712.32347-1-mic@digikod.net>
- <20181212081712.32347-4-mic@digikod.net>
- <CAG48ez3SAW8EyaJ9T1U3qPoRhYwe4CCyL9bAxuc3GxjrXipi-A@mail.gmail.com>
- <f13bf750-f418-343c-baa6-9eee6e0f5e19@ssi.gouv.fr>
- <CAG48ez00CpXOOJPLgpQd_e0gG2KgYb1p8bwssA8FDOugHTxRAA@mail.gmail.com>
- <0f7d39f8-035b-8566-94c9-ea836b280e24@ssi.gouv.fr>
- <CAGXu5jKHPE6WfbXpiwzm=vRbgJ-rCePxsrYmVzZ1+RURp-6nJg@mail.gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>
-Message-ID: <58c59dbb-ae6b-ce06-d679-175b3ed6f652@ssi.gouv.fr>
-Date: Wed, 9 Jan 2019 14:41:12 +0100
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKHPE6WfbXpiwzm=vRbgJ-rCePxsrYmVzZ1+RURp-6nJg@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 8bit
-To: Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>
-Cc: Jann Horn <jannh@google.com>, =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, kernel list <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk-manpages <mtk.manpages@gmail.com>, Mimi Zohar <zohar@linux.ibm.com>, philippe.trebuchet@ssi.gouv.fr, Shuah Khan <shuah@kernel.org>, thibaut.sautereau@ssi.gouv.fr, vincent.strubel@ssi.gouv.fr, Perez Yves-Alexis <yves-alexis.perez@ssi.gouv.fr>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>
+References: <20181206083257.9596-1-ard.biesheuvel@linaro.org>
+ <201812091807.4emRkZ7L%fengguang.wu@intel.com> <20181209103740.GB30658@n2100.armlinux.org.uk>
+ <47a91e5a-0e97-334c-2f36-a0bd966a0050@intel.com> <235f0830-a293-5b00-4510-7d7d4c829d26@intel.com>
+In-Reply-To: <235f0830-a293-5b00-4510-7d7d4c829d26@intel.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 9 Jan 2019 13:37:49 -0800
+Message-ID: <CAGXu5jLYG=UBrJXmrtoZVCka-w4_k_op8c7M1cQXmZs702fZ5Q@mail.gmail.com>
+Subject: Re: [kbuild-all] [PATCH v3] ARM: smp: add support for per-task stack canaries
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Rong Chen <rong.a.chen@intel.com>
+Cc: Russell King - ARM Linux <linux@armlinux.org.uk>, kbuild test robot <lkp@intel.com>, Arnd Bergmann <arnd@arndb.de>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, LKML <linux-kernel@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>, kbuild-all@01.org, Laura Abbott <labbott@redhat.com>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Jan 8, 2019 at 10:30 PM Rong Chen <rong.a.chen@intel.com> wrote:
+> I tested the commit on another machine and the warnings are exist.
+> I found " -Wno-vla" was lost after the commit, so I think it's a real pro=
+blem.
+>
+> -Werror=3Ddesignated-init -fplugin-arg-arm_ssp_per_task_plugin-tso=3D1 -f=
+plugin-arg-arm_ssp_per_task_plugin-offset=3D24 -fsanitize=3Dshift -fsanitiz=
+e=3Dinteger-divide-by-zero -fsanitize=3Dunreachable -fsanitize=3Dvla-bound =
+-fsanitize=3Dsigned-integer-overflow -fsanitize=3Dbounds -fsanitize=3Dobjec=
+t-size -fsanitize=3Dbool -fsanitize=3Denum -fsanitize=3Dalignment -Wno-mayb=
+e-uninitialized -fsanitize-coverage=3Dtrace-pc -DMODULE -DKBUILD_BASENAME=
+=3D'"test_ubsan"' -DKBUILD_MODNAME=3D'"test_ubsan"' -c -o lib/.tmp_test_ubs=
+an.o lib/test_ubsan.c
+>
+> -Werror=3Ddesignated-init -Wno-vla -fsanitize=3Dshift -fsanitize=3Dintege=
+r-divide-by-zero -fsanitize=3Dunreachable -fsanitize=3Dvla-bound -fsanitize=
+=3Dsigned-integer-overflow -fsanitize=3Dbounds -fsanitize=3Dobject-size -fs=
+anitize=3Dbool -fsanitize=3Denum -fsanitize=3Dalignment -Wno-maybe-uninitia=
+lized -fsanitize-coverage=3Dtrace-pc -DMODULE -DKBUILD_BASENAME=3D'"test_ub=
+san"' -DKBUILD_MODNAME=3D'"test_ubsan"' -c -o lib/.tmp_test_ubsan.o lib/tes=
+t_ubsan.c
 
-On 09/01/2019 00:30, Kees Cook wrote:
-> On Tue, Jan 8, 2019 at 5:29 AM Mickaël Salaün
-> <mickael.salaun@ssi.gouv.fr> wrote:
->>
->>
->> On 03/01/2019 12:17, Jann Horn wrote:
->>> On Thu, Dec 13, 2018 at 3:49 PM Mickaël Salaün
->>> <mickael.salaun@ssi.gouv.fr> wrote:
->>>> On 12/12/2018 18:09, Jann Horn wrote:
->>>>> On Wed, Dec 12, 2018 at 9:18 AM Mickaël Salaün <mic@digikod.net> wrote:
->>>>>> Enable to either propagate the mount options from the underlying VFS
->>>>>> mount to prevent execution, or to propagate the file execute permission.
->>>>>> This may allow a script interpreter to check execution permissions
->>>>>> before reading commands from a file.
->>>>>>
->>>>>> The main goal is to be able to protect the kernel by restricting
->>>>>> arbitrary syscalls that an attacker could perform with a crafted binary
->>>>>> or certain script languages.  It also improves multilevel isolation
->>>>>> by reducing the ability of an attacker to use side channels with
->>>>>> specific code.  These restrictions can natively be enforced for ELF
->>>>>> binaries (with the noexec mount option) but require this kernel
->>>>>> extension to properly handle scripts (e.g., Python, Perl).
-> 
-> I like this idea, but I think it shouldn't live in Yama (since it is
-> currently intended to be a ptrace-policy-only LSM). It was
-> _originally_ designed to do various DAC improvements, but the
-> agreement was that those should live directly in the VFS instead (i.e.
-> the symlink, hardlink and now fifo and regular file defenses).
-> 
-> This should likely go in similarly. (But if not, it could also be its own LSM.)
-> 
+Hm, so the -Wno-vla is getting clobbered.
 
-I think that Yama is quite handy and make sense here, but I'm fine
-putting this knob elsewhere. However, I was thinking, for a future patch
-series, to add another sysctl to lock this choice, i.e. generalizing the
-way Yama can lock the ptrace_scope.
+in lib/Makefile, I see "+=3D", so I wouldn't expect a clobber:
+CFLAGS_test_kasan.o +=3D $(call cc-disable-warning, vla)
+...
+CFLAGS_test_ubsan.o +=3D $(call cc-disable-warning, vla)
 
-What matter here is the ability for an LSM to use this O_MAYEXEC flag.
-Yama is a good place to showcase this feature and I think it is cleaner
-to leverage the LSM framework to put new (optional) security features. I
-can easily create a new LSM but it would be pretty similar to Yama...
-What do you think about it James and Al?
+and scripts/Makefile.gcc-plugins is using +=3D against KBUILD_CFLAGS:
+KBUILD_CFLAGS +=3D $(GCC_PLUGINS_CFLAGS)
 
-Side question: wouldn't it be better to use a 0600 mode (instead of
-0644) for this kind of sysctl?
+I'm not sure where the per-target CFLAGS are built, but it seems like
+something has gone wrong there?
+
+--=20
+Kees Cook
