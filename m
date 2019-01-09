@@ -1,457 +1,66 @@
-Subject: Re: [kbuild-all] [PATCH v3] ARM: smp: add support for per-task stack
- canaries
-From: Rong Chen <rong.a.chen@intel.com>
-References: <20181206083257.9596-1-ard.biesheuvel@linaro.org>
- <201812091807.4emRkZ7L%fengguang.wu@intel.com>
- <20181209103740.GB30658@n2100.armlinux.org.uk>
- <47a91e5a-0e97-334c-2f36-a0bd966a0050@intel.com>
-Message-ID: <235f0830-a293-5b00-4510-7d7d4c829d26@intel.com>
-Date: Wed, 9 Jan 2019 14:30:38 +0800
+Subject: Re: [RFC PATCH v1 3/5] Yama: Enforces noexec mounts or file
+ executability through O_MAYEXEC
+References: <20181212081712.32347-1-mic@digikod.net>
+ <20181212081712.32347-4-mic@digikod.net>
+ <CAG48ez3SAW8EyaJ9T1U3qPoRhYwe4CCyL9bAxuc3GxjrXipi-A@mail.gmail.com>
+ <f13bf750-f418-343c-baa6-9eee6e0f5e19@ssi.gouv.fr>
+ <CAG48ez00CpXOOJPLgpQd_e0gG2KgYb1p8bwssA8FDOugHTxRAA@mail.gmail.com>
+ <0f7d39f8-035b-8566-94c9-ea836b280e24@ssi.gouv.fr>
+ <CAGXu5jKHPE6WfbXpiwzm=vRbgJ-rCePxsrYmVzZ1+RURp-6nJg@mail.gmail.com>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mickael.salaun@ssi.gouv.fr>
+Message-ID: <58c59dbb-ae6b-ce06-d679-175b3ed6f652@ssi.gouv.fr>
+Date: Wed, 9 Jan 2019 14:41:12 +0100
 MIME-Version: 1.0
-In-Reply-To: <47a91e5a-0e97-334c-2f36-a0bd966a0050@intel.com>
-Content-Type: multipart/alternative;
- boundary="------------6B591BEF4023DD9EFC53DA3A"
-To: Russell King - ARM Linux <linux@armlinux.org.uk>, kbuild test robot <lkp@intel.com>
-Cc: Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, kernel-hardening@lists.openwall.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-kernel@vger.kernel.org, Emese Revfy <re.emese@gmail.com>, kbuild-all@01.org, Laura Abbott <labbott@redhat.com>, linux-arm-kernel@lists.infradead.org
+In-Reply-To: <CAGXu5jKHPE6WfbXpiwzm=vRbgJ-rCePxsrYmVzZ1+RURp-6nJg@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+To: Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, James Morris <jmorris@namei.org>
+Cc: Jann Horn <jannh@google.com>, =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, kernel list <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@google.com>, Michael Kerrisk-manpages <mtk.manpages@gmail.com>, Mimi Zohar <zohar@linux.ibm.com>, philippe.trebuchet@ssi.gouv.fr, Shuah Khan <shuah@kernel.org>, thibaut.sautereau@ssi.gouv.fr, vincent.strubel@ssi.gouv.fr, Perez Yves-Alexis <yves-alexis.perez@ssi.gouv.fr>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a multi-part message in MIME format.
---------------6B591BEF4023DD9EFC53DA3A
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 8bit
 
-
-
-On 12/13/2018 10:53 AM, Rong Chen wrote:
->
->
-> On 12/09/2018 06:37 PM, Russell King - ARM Linux wrote:
->> On Sun, Dec 09, 2018 at 06:28:11PM +0800, kbuild test robot wrote:
->>> Hi Ard,
->>>
->>> I love your patch! Perhaps something to improve:
->> Hi,
->>
->> This looks to me like a false warning - how can a patch touching arch
->> code affect the result of lib/test_ubsan.c?  Please can you double-
->> check this result?
->
-> Hi,
->
-> I'm sorry for the trouble, It's a false warning, we will look into it.
->
-> Best Regards,
-> Rong Chen
->
-
-Hi all,
-
-I tested the commit on another machine and the warnings are exist.
-I found "-Wno-vla" was lost after the commit, so I think it's a real 
-problem.
-
--Werror=designated-init -fplugin-arg-arm_ssp_per_task_plugin-tso=1 
--fplugin-arg-arm_ssp_per_task_plugin-offset=24 
--fsanitize=shift-fsanitize=integer-divide-by-zero -fsanitize=unreachable 
--fsanitize=vla-bound -fsanitize=signed-integer-overflow 
--fsanitize=bounds -fsanitize=object-size -fsanitize=bool -fsanitize=enum 
--fsanitize=alignment -Wno-maybe-uninitialized 
--fsanitize-coverage=trace-pc -DMODULE -DKBUILD_BASENAME='"test_ubsan"' 
--DKBUILD_MODNAME='"test_ubsan"' -c -o lib/.tmp_test_ubsan.o lib/test_ubsan.c
-
--Werror=designated-init -Wno-vla 
--fsanitize=shift-fsanitize=integer-divide-by-zero -fsanitize=unreachable 
--fsanitize=vla-bound -fsanitize=signed-integer-overflow 
--fsanitize=bounds -fsanitize=object-size -fsanitize=bool -fsanitize=enum 
--fsanitize=alignment -Wno-maybe-uninitialized 
--fsanitize-coverage=trace-pc -DMODULE -DKBUILD_BASENAME='"test_ubsan"' 
--DKBUILD_MODNAME='"test_ubsan"' -c -o lib/.tmp_test_ubsan.o lib/test_ubsan.c
-
-Best Regards,
-Rong Chen
-
->> Thanks.
->>
->>> [auto build test WARNING on arm/for-next]
->>> [also build test WARNING on v4.20-rc5]
->>> [if your patch is applied to the wrong git tree, please drop us a 
->>> note to help improve the system]
->>>
->>> url: 
->>> https://github.com/0day-ci/linux/commits/Ard-Biesheuvel/ARM-smp-add-support-for-per-task-stack-canaries/20181209-033321
->>> base:   git://git.armlinux.org.uk/~rmk/linux-arm.git for-next
->>> config: arm-allmodconfig (attached as .config)
->>> compiler: arm-linux-gnueabi-gcc (Debian 7.2.0-11) 7.2.0
->>> reproduce:
->>>          wget 
->>> https://raw.githubusercontent.com/intel/lkp-tests/master/sbin/make.cross 
->>> -O ~/bin/make.cross
->>>          chmod +x ~/bin/make.cross
->>>          # save the attached .config to linux build tree
->>>          GCC_VERSION=7.2.0 make.cross ARCH=arm
->>>
->>> All warnings (new ones prefixed by >>):
->>>
->>>     lib/test_ubsan.c: In function 'test_ubsan_vla_bound_not_positive':
->>>>> lib/test_ubsan.c:48:2: warning: ISO C90 forbids variable length 
->>>>> array 'buf' [-Wvla]
->>>       char buf[size];
->>>       ^~~~
->>>     lib/test_ubsan.c: In function 'test_ubsan_out_of_bounds':
->>>>> lib/test_ubsan.c:64:2: warning: ISO C90 forbids variable length 
->>>>> array 'arr' [-Wvla]
->>>       volatile int arr[i];
->>>       ^~~~~~~~
->>>
->>> vim +/buf +48 lib/test_ubsan.c
->>>
->>> 854686f4 Jinbum Park 2018-04-10  44
->>> 854686f4 Jinbum Park 2018-04-10  45  static void 
->>> test_ubsan_vla_bound_not_positive(void)
->>> 854686f4 Jinbum Park 2018-04-10  46  {
->>> 854686f4 Jinbum Park 2018-04-10  47      volatile int size = -1;
->>> 854686f4 Jinbum Park 2018-04-10 @48      char buf[size];
->>> 854686f4 Jinbum Park 2018-04-10  49
->>> 854686f4 Jinbum Park 2018-04-10  50      (void)buf;
->>> 854686f4 Jinbum Park 2018-04-10  51  }
->>> 854686f4 Jinbum Park 2018-04-10  52
->>> 854686f4 Jinbum Park 2018-04-10  53  static void 
->>> test_ubsan_shift_out_of_bounds(void)
->>> 854686f4 Jinbum Park 2018-04-10  54  {
->>> 854686f4 Jinbum Park 2018-04-10  55      volatile int val = -1;
->>> 854686f4 Jinbum Park 2018-04-10  56      int val2 = 10;
->>> 854686f4 Jinbum Park 2018-04-10  57
->>> 854686f4 Jinbum Park 2018-04-10  58      val2 <<= val;
->>> 854686f4 Jinbum Park 2018-04-10  59  }
->>> 854686f4 Jinbum Park 2018-04-10  60
->>> 854686f4 Jinbum Park 2018-04-10  61  static void 
->>> test_ubsan_out_of_bounds(void)
->>> 854686f4 Jinbum Park 2018-04-10  62  {
->>> 854686f4 Jinbum Park 2018-04-10  63      volatile int i = 4, j = 5;
->>> 854686f4 Jinbum Park 2018-04-10 @64      volatile int arr[i];
->>> 854686f4 Jinbum Park 2018-04-10  65
->>> 854686f4 Jinbum Park 2018-04-10  66      arr[j] = i;
->>> 854686f4 Jinbum Park 2018-04-10  67  }
->>> 854686f4 Jinbum Park 2018-04-10  68
->>>
->>> :::::: The code at line 48 was first introduced by commit
->>> :::::: 854686f4edf483db1e0d26d972bdb8fb65c8bfaa lib: add testing 
->>> module for UBSAN
->>>
->>> :::::: TO: Jinbum Park <jinb.park7@gmail.com>
->>> :::::: CC: Linus Torvalds <torvalds@linux-foundation.org>
->>>
->>> ---
->>> 0-DAY kernel test infrastructure                Open Source 
->>> Technology Center
->>> https://lists.01.org/pipermail/kbuild-all Intel Corporation
+On 09/01/2019 00:30, Kees Cook wrote:
+> On Tue, Jan 8, 2019 at 5:29 AM Mickaël Salaün
+> <mickael.salaun@ssi.gouv.fr> wrote:
 >>
 >>
->
-> _______________________________________________
-> kbuild-all mailing list
-> kbuild-all@lists.01.org
-> https://lists.01.org/mailman/listinfo/kbuild-all
+>> On 03/01/2019 12:17, Jann Horn wrote:
+>>> On Thu, Dec 13, 2018 at 3:49 PM Mickaël Salaün
+>>> <mickael.salaun@ssi.gouv.fr> wrote:
+>>>> On 12/12/2018 18:09, Jann Horn wrote:
+>>>>> On Wed, Dec 12, 2018 at 9:18 AM Mickaël Salaün <mic@digikod.net> wrote:
+>>>>>> Enable to either propagate the mount options from the underlying VFS
+>>>>>> mount to prevent execution, or to propagate the file execute permission.
+>>>>>> This may allow a script interpreter to check execution permissions
+>>>>>> before reading commands from a file.
+>>>>>>
+>>>>>> The main goal is to be able to protect the kernel by restricting
+>>>>>> arbitrary syscalls that an attacker could perform with a crafted binary
+>>>>>> or certain script languages.  It also improves multilevel isolation
+>>>>>> by reducing the ability of an attacker to use side channels with
+>>>>>> specific code.  These restrictions can natively be enforced for ELF
+>>>>>> binaries (with the noexec mount option) but require this kernel
+>>>>>> extension to properly handle scripts (e.g., Python, Perl).
+> 
+> I like this idea, but I think it shouldn't live in Yama (since it is
+> currently intended to be a ptrace-policy-only LSM). It was
+> _originally_ designed to do various DAC improvements, but the
+> agreement was that those should live directly in the VFS instead (i.e.
+> the symlink, hardlink and now fifo and regular file defenses).
+> 
+> This should likely go in similarly. (But if not, it could also be its own LSM.)
+> 
 
+I think that Yama is quite handy and make sense here, but I'm fine
+putting this knob elsewhere. However, I was thinking, for a future patch
+series, to add another sysctl to lock this choice, i.e. generalizing the
+way Yama can lock the ptrace_scope.
 
---------------6B591BEF4023DD9EFC53DA3A
-Content-Type: text/html; charset=utf-8
-Content-Transfer-Encoding: 8bit
+What matter here is the ability for an LSM to use this O_MAYEXEC flag.
+Yama is a good place to showcase this feature and I think it is cleaner
+to leverage the LSM framework to put new (optional) security features. I
+can easily create a new LSM but it would be pretty similar to Yama...
+What do you think about it James and Al?
 
-<html>
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  </head>
-  <body text="#000000" bgcolor="#FFFFFF">
-    <p><br>
-    </p>
-    <br>
-    <div class="moz-cite-prefix">On 12/13/2018 10:53 AM, Rong Chen
-      wrote:<br>
-    </div>
-    <blockquote type="cite"
-      cite="mid:47a91e5a-0e97-334c-2f36-a0bd966a0050@intel.com">
-      <br>
-      <br>
-      On 12/09/2018 06:37 PM, Russell King - ARM Linux wrote:
-      <br>
-      <blockquote type="cite">On Sun, Dec 09, 2018 at 06:28:11PM +0800,
-        kbuild test robot wrote:
-        <br>
-        <blockquote type="cite">Hi Ard,
-          <br>
-          <br>
-          I love your patch! Perhaps something to improve:
-          <br>
-        </blockquote>
-        Hi,
-        <br>
-        <br>
-        This looks to me like a false warning - how can a patch touching
-        arch
-        <br>
-        code affect the result of lib/test_ubsan.c?  Please can you
-        double-
-        <br>
-        check this result?
-        <br>
-      </blockquote>
-      <br>
-      Hi,
-      <br>
-      <br>
-      I'm sorry for the trouble, It's a false warning, we will look into
-      it.
-      <br>
-      <br>
-      Best Regards,
-      <br>
-      Rong Chen
-      <br>
-      <br>
-    </blockquote>
-    <br>
-    Hi all,<br>
-    <br>
-    I tested the commit on another machine and the warnings are exist.<br>
-    I found "<span style="color: rgb(255, 0, 0); font-family:
-       -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto,
-      &quot;Noto Sans&quot;, Ubuntu, &quot;Droid Sans&quot;,
-      &quot;Helvetica Neue&quot;, sans-serif; font-size: 14px;
-      font-style: normal; font-variant-ligatures: normal;
-      font-variant-caps: normal; font-weight: 400; letter-spacing:
-      normal; orphans: 2; text-align: start; text-indent: 0px;
-      text-transform: none; white-space: normal; widows: 2;
-      word-spacing: 0px; -webkit-text-stroke-width: 0px;
-      background-color: rgb(245, 245, 245); text-decoration-style:
-      initial; text-decoration-color: initial; display: inline
-      !important; float: none;"><span> </span>-Wno-vla</span>" was lost
-    after the commit, so I think it's a real problem.<br>
-    <br>
-    <font style="outline: none !important; font-family:  -apple-system,
-      BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Noto
-      Sans&quot;, Ubuntu, &quot;Droid Sans&quot;, &quot;Helvetica
-      Neue&quot;, sans-serif; font-size: 14px; font-style: normal;
-      font-variant-ligatures: normal; font-variant-caps: normal;
-      font-weight: 400; letter-spacing: normal; orphans: 2; text-align:
-      start; text-indent: 0px; text-transform: none; white-space:
-      normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width:
-      0px; background-color: rgb(245, 245, 245); text-decoration-style:
-      initial; text-decoration-color: initial;" color="#FF0000">-Werror=designated-init
-      -fplugin-arg-arm_ssp_per_task_plugin-tso=1
-      -fplugin-arg-arm_ssp_per_task_plugin-offset=24 -fsanitize=shift<span> </span></font><span
-      style="color: rgb(51, 51, 51); font-family:  -apple-system,
-      BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Noto
-      Sans&quot;, Ubuntu, &quot;Droid Sans&quot;, &quot;Helvetica
-      Neue&quot;, sans-serif; font-size: 14px; font-style: normal;
-      font-variant-ligatures: normal; font-variant-caps: normal;
-      font-weight: 400; letter-spacing: normal; orphans: 2; text-align:
-      start; text-indent: 0px; text-transform: none; white-space:
-      normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width:
-      0px; background-color: rgb(245, 245, 245); text-decoration-style:
-      initial; text-decoration-color: initial; display: inline
-      !important; float: none;">-fsanitize=integer-divide-by-zero
-      -fsanitize=unreachable -fsanitize=vla-bound
-      -fsanitize=signed-integer-overflow -fsanitize=bounds
-      -fsanitize=object-size -fsanitize=bool -fsanitize=enum
-      -fsanitize=alignment -Wno-maybe-uninitialized
-      -fsanitize-coverage=trace-pc -DMODULE
-      -DKBUILD_BASENAME='"test_ubsan"' -DKBUILD_MODNAME='"test_ubsan"'
-      -c -o lib/.tmp_test_ubsan.o lib/test_ubsan.c</span><br>
-    <br>
-    <font style="outline: none !important; font-family:  -apple-system,
-      BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Noto
-      Sans&quot;, Ubuntu, &quot;Droid Sans&quot;, &quot;Helvetica
-      Neue&quot;, sans-serif; font-size: 14px; font-style: normal;
-      font-variant-ligatures: normal; font-variant-caps: normal;
-      font-weight: 400; letter-spacing: normal; orphans: 2; text-align:
-      start; text-indent: 0px; text-transform: none; white-space:
-      normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width:
-      0px; background-color: rgb(245, 245, 245); text-decoration-style:
-      initial; text-decoration-color: initial;" color="#FF0000">-Werror=designated-init
-      -Wno-vla -fsanitize=shift</font><span style="color: rgb(51, 51,
-      51); font-family:  -apple-system, BlinkMacSystemFont, &quot;Segoe
-      UI&quot;, Roboto, &quot;Noto Sans&quot;, Ubuntu, &quot;Droid
-      Sans&quot;, &quot;Helvetica Neue&quot;, sans-serif; font-size:
-      14px; font-style: normal; font-variant-ligatures: normal;
-      font-variant-caps: normal; font-weight: 400; letter-spacing:
-      normal; orphans: 2; text-align: start; text-indent: 0px;
-      text-transform: none; white-space: normal; widows: 2;
-      word-spacing: 0px; -webkit-text-stroke-width: 0px;
-      background-color: rgb(245, 245, 245); text-decoration-style:
-      initial; text-decoration-color: initial; display: inline
-      !important; float: none;"><span> </span>-fsanitize=integer-divide-by-zero
-      -fsanitize=unreachable -fsanitize=vla-bound
-      -fsanitize=signed-integer-overflow -fsanitize=bounds
-      -fsanitize=object-size -fsanitize=bool -fsanitize=enum
-      -fsanitize=alignment -Wno-maybe-uninitialized
-      -fsanitize-coverage=trace-pc -DMODULE
-      -DKBUILD_BASENAME='"test_ubsan"' -DKBUILD_MODNAME='"test_ubsan"'
-      -c -o lib/.tmp_test_ubsan.o lib/test_ubsan.c</span><br>
-    <br>
-    Best Regards,<br>
-    Rong Chen<br>
-    <br>
-    <blockquote type="cite"
-      cite="mid:47a91e5a-0e97-334c-2f36-a0bd966a0050@intel.com">
-      <blockquote type="cite">Thanks.
-        <br>
-        <br>
-        <blockquote type="cite">[auto build test WARNING on
-          arm/for-next]
-          <br>
-          [also build test WARNING on v4.20-rc5]
-          <br>
-          [if your patch is applied to the wrong git tree, please drop
-          us a note to help improve the system]
-          <br>
-          <br>
-          url:   
-<a class="moz-txt-link-freetext" href="https://github.com/0day-ci/linux/commits/Ard-Biesheuvel/ARM-smp-add-support-for-per-task-stack-canaries/20181209-033321">https://github.com/0day-ci/linux/commits/Ard-Biesheuvel/ARM-smp-add-support-for-per-task-stack-canaries/20181209-033321</a><br>
-          base:   git://git.armlinux.org.uk/~rmk/linux-arm.git for-next
-          <br>
-          config: arm-allmodconfig (attached as .config)
-          <br>
-          compiler: arm-linux-gnueabi-gcc (Debian 7.2.0-11) 7.2.0
-          <br>
-          reproduce:
-          <br>
-                   wget
-          <a class="moz-txt-link-freetext" href="https://raw.githubusercontent.com/intel/lkp-tests/master/sbin/make.cross">https://raw.githubusercontent.com/intel/lkp-tests/master/sbin/make.cross</a>
-          -O ~/bin/make.cross
-          <br>
-                   chmod +x ~/bin/make.cross
-          <br>
-                   # save the attached .config to linux build tree
-          <br>
-                   GCC_VERSION=7.2.0 make.cross ARCH=arm
-          <br>
-          <br>
-          All warnings (new ones prefixed by &gt;&gt;):
-          <br>
-          <br>
-              lib/test_ubsan.c: In function
-          'test_ubsan_vla_bound_not_positive':
-          <br>
-          <blockquote type="cite">
-            <blockquote type="cite">lib/test_ubsan.c:48:2: warning: ISO
-              C90 forbids variable length array 'buf' [-Wvla]
-              <br>
-            </blockquote>
-          </blockquote>
-                char buf[size];
-          <br>
-                ^~~~
-          <br>
-              lib/test_ubsan.c: In function 'test_ubsan_out_of_bounds':
-          <br>
-          <blockquote type="cite">
-            <blockquote type="cite">lib/test_ubsan.c:64:2: warning: ISO
-              C90 forbids variable length array 'arr' [-Wvla]
-              <br>
-            </blockquote>
-          </blockquote>
-                volatile int arr[i];
-          <br>
-                ^~~~~~~~
-          <br>
-          <br>
-          vim +/buf +48 lib/test_ubsan.c
-          <br>
-          <br>
-          854686f4 Jinbum Park 2018-04-10  44
-          <br>
-          854686f4 Jinbum Park 2018-04-10  45  static void
-          test_ubsan_vla_bound_not_positive(void)
-          <br>
-          854686f4 Jinbum Park 2018-04-10  46  {
-          <br>
-          854686f4 Jinbum Park 2018-04-10  47      volatile int size =
-          -1;
-          <br>
-          854686f4 Jinbum Park 2018-04-10 @48      char buf[size];
-          <br>
-          854686f4 Jinbum Park 2018-04-10  49
-          <br>
-          854686f4 Jinbum Park 2018-04-10  50      (void)buf;
-          <br>
-          854686f4 Jinbum Park 2018-04-10  51  }
-          <br>
-          854686f4 Jinbum Park 2018-04-10  52
-          <br>
-          854686f4 Jinbum Park 2018-04-10  53  static void
-          test_ubsan_shift_out_of_bounds(void)
-          <br>
-          854686f4 Jinbum Park 2018-04-10  54  {
-          <br>
-          854686f4 Jinbum Park 2018-04-10  55      volatile int val =
-          -1;
-          <br>
-          854686f4 Jinbum Park 2018-04-10  56      int val2 = 10;
-          <br>
-          854686f4 Jinbum Park 2018-04-10  57
-          <br>
-          854686f4 Jinbum Park 2018-04-10  58      val2 &lt;&lt;= val;
-          <br>
-          854686f4 Jinbum Park 2018-04-10  59  }
-          <br>
-          854686f4 Jinbum Park 2018-04-10  60
-          <br>
-          854686f4 Jinbum Park 2018-04-10  61  static void
-          test_ubsan_out_of_bounds(void)
-          <br>
-          854686f4 Jinbum Park 2018-04-10  62  {
-          <br>
-          854686f4 Jinbum Park 2018-04-10  63      volatile int i = 4, j
-          = 5;
-          <br>
-          854686f4 Jinbum Park 2018-04-10 @64      volatile int arr[i];
-          <br>
-          854686f4 Jinbum Park 2018-04-10  65
-          <br>
-          854686f4 Jinbum Park 2018-04-10  66      arr[j] = i;
-          <br>
-          854686f4 Jinbum Park 2018-04-10  67  }
-          <br>
-          854686f4 Jinbum Park 2018-04-10  68
-          <br>
-          <br>
-          :::::: The code at line 48 was first introduced by commit
-          <br>
-          :::::: 854686f4edf483db1e0d26d972bdb8fb65c8bfaa lib: add
-          testing module for UBSAN
-          <br>
-          <br>
-          :::::: TO: Jinbum Park <a class="moz-txt-link-rfc2396E" href="mailto:jinb.park7@gmail.com">&lt;jinb.park7@gmail.com&gt;</a>
-          <br>
-          :::::: CC: Linus Torvalds
-          <a class="moz-txt-link-rfc2396E" href="mailto:torvalds@linux-foundation.org">&lt;torvalds@linux-foundation.org&gt;</a>
-          <br>
-          <br>
-          ---
-          <br>
-          0-DAY kernel test infrastructure                Open Source
-          Technology Center
-          <br>
-          <a class="moz-txt-link-freetext" href="https://lists.01.org/pipermail/kbuild-all">https://lists.01.org/pipermail/kbuild-all</a>                  
-          Intel Corporation
-          <br>
-        </blockquote>
-        <br>
-        <br>
-      </blockquote>
-      <br>
-      _______________________________________________
-      <br>
-      kbuild-all mailing list
-      <br>
-      <a class="moz-txt-link-abbreviated" href="mailto:kbuild-all@lists.01.org">kbuild-all@lists.01.org</a>
-      <br>
-      <a class="moz-txt-link-freetext" href="https://lists.01.org/mailman/listinfo/kbuild-all">https://lists.01.org/mailman/listinfo/kbuild-all</a>
-      <br>
-    </blockquote>
-    <br>
-  </body>
-</html>
-
---------------6B591BEF4023DD9EFC53DA3A--
+Side question: wouldn't it be better to use a 0600 mode (instead of
+0644) for this kind of sysctl?
