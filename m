@@ -1,7 +1,7 @@
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Subject: [RFC PATCH v7 14/16] EXPERIMENTAL: xpfo, mm: optimize spin lock usage in xpfo_kmap
-Date: Thu, 10 Jan 2019 14:09:46 -0700
-Message-Id: <7e8e17f519ae87a91fc6cbb57b8b27094c96305c.1547153058.git.khalid.aziz@oracle.com>
+Subject: [RFC PATCH v7 13/16] xpfo, mm: optimize spinlock usage in xpfo_kunmap
+Date: Thu, 10 Jan 2019 14:09:45 -0700
+Message-Id: <95b6fa40ce6c7afb4a9e58f8d747d86aa7a94177.1547153058.git.khalid.aziz@oracle.com>
 In-Reply-To: <cover.1547153058.git.khalid.aziz@oracle.com>
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
 In-Reply-To: <cover.1547153058.git.khalid.aziz@oracle.com>
@@ -12,13 +12,11 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Julian Stecklina <jsteckli@amazon.de>
 
-We can reduce spin lock usage in xpfo_kmap to the 0->1 transition of
-the mapcount. This means that xpfo_kmap() can now race and that we
-get spurious page faults.
-
-The page fault handler helps the system make forward progress by
-fixing the page table instead of allowing repeated page faults until
-the right xpfo_kmap went through.
+Only the xpfo_kunmap call that needs to actually unmap the page
+needs to be serialized. We need to be careful to handle the case,
+where after the atomic decrement of the mapcount, a xpfo_kmap
+increased the mapcount again. In this case, we can safely skip
+modifying the page table.
 
 Model-checked with up to 4 concurrent callers with Spin.
 
@@ -32,130 +30,47 @@ Cc: Marco Benatto <marco.antonio.780@gmail.com>
 Cc: David Woodhouse <dwmw2@infradead.org>
 Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
 ---
- arch/x86/mm/fault.c  |  4 ++++
- include/linux/xpfo.h |  4 ++++
- mm/xpfo.c            | 50 +++++++++++++++++++++++++++++++++++++-------
- 3 files changed, 51 insertions(+), 7 deletions(-)
+ mm/xpfo.c | 22 ++++++++++++----------
+ 1 file changed, 12 insertions(+), 10 deletions(-)
 
-diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
-index ba51652fbd33..207081dcd572 100644
---- a/arch/x86/mm/fault.c
-+++ b/arch/x86/mm/fault.c
-@@ -18,6 +18,7 @@
- #include <linux/uaccess.h>		/* faulthandler_disabled()	*/
- #include <linux/efi.h>			/* efi_recover_from_page_fault()*/
- #include <linux/mm_types.h>
-+#include <linux/xpfo.h>
- 
- #include <asm/cpufeature.h>		/* boot_cpu_has, ...		*/
- #include <asm/traps.h>			/* dotraplinkage, ...		*/
-@@ -1218,6 +1219,9 @@ do_kern_addr_fault(struct pt_regs *regs, unsigned long hw_error_code,
- 	if (kprobes_fault(regs))
- 		return;
- 
-+	if (xpfo_spurious_fault(address))
-+		return;
-+
- 	/*
- 	 * Note, despite being a "bad area", there are quite a few
- 	 * acceptable reasons to get here, such as erratum fixups
-diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
-index ea5188882f49..58dd243637d2 100644
---- a/include/linux/xpfo.h
-+++ b/include/linux/xpfo.h
-@@ -54,6 +54,8 @@ bool xpfo_enabled(void);
- 
- phys_addr_t user_virt_to_phys(unsigned long addr);
- 
-+bool xpfo_spurious_fault(unsigned long addr);
-+
- #else /* !CONFIG_XPFO */
- 
- static inline void xpfo_init_single_page(struct page *page) { }
-@@ -81,6 +83,8 @@ static inline bool xpfo_enabled(void) { return false; }
- 
- static inline phys_addr_t user_virt_to_phys(unsigned long addr) { return 0; }
- 
-+static inline bool xpfo_spurious_fault(unsigned long addr) { return false; }
-+
- #endif /* CONFIG_XPFO */
- 
- #endif /* _LINUX_XPFO_H */
 diff --git a/mm/xpfo.c b/mm/xpfo.c
-index dbf20efb0499..85079377c91d 100644
+index cbfeafc2f10f..dbf20efb0499 100644
 --- a/mm/xpfo.c
 +++ b/mm/xpfo.c
-@@ -119,6 +119,16 @@ void xpfo_free_pages(struct page *page, int order)
- 	}
- }
- 
-+static void xpfo_do_map(void *kaddr, struct page *page)
-+{
-+	spin_lock(&page->xpfo_lock);
-+	if (PageXpfoUnmapped(page)) {
-+		set_kpte(kaddr, page, PAGE_KERNEL);
-+		ClearPageXpfoUnmapped(page);
-+	}
-+	spin_unlock(&page->xpfo_lock);
-+}
-+
- void xpfo_kmap(void *kaddr, struct page *page)
- {
- 	if (!static_branch_unlikely(&xpfo_inited))
-@@ -127,17 +137,12 @@ void xpfo_kmap(void *kaddr, struct page *page)
+@@ -149,22 +149,24 @@ void xpfo_kunmap(void *kaddr, struct page *page)
  	if (!PageXpfoUser(page))
  		return;
  
 -	spin_lock(&page->xpfo_lock);
 -
  	/*
- 	 * The page was previously allocated to user space, so map it back
- 	 * into the kernel. No TLB flush required.
+ 	 * The page is to be allocated back to user space, so unmap it from the
+ 	 * kernel, flush the TLB and tag it as a user page.
  	 */
--	if ((atomic_inc_return(&page->xpfo_mapcount) == 1) &&
--	    TestClearPageXpfoUnmapped(page))
--		set_kpte(kaddr, page, PAGE_KERNEL);
--
--	spin_unlock(&page->xpfo_lock);
-+	if (atomic_inc_return(&page->xpfo_mapcount) == 1)
-+		xpfo_do_map(kaddr, page);
- }
- EXPORT_SYMBOL(xpfo_kmap);
+ 	if (atomic_dec_return(&page->xpfo_mapcount) == 0) {
+-#ifdef CONFIG_XPFO_DEBUG
+-		BUG_ON(PageXpfoUnmapped(page));
+-#endif
+-		SetPageXpfoUnmapped(page);
+-		set_kpte(kaddr, page, __pgprot(0));
+-		xpfo_cond_flush_kernel_tlb(page, 0);
+-	}
++		spin_lock(&page->xpfo_lock);
  
-@@ -204,3 +209,34 @@ void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
- 			kunmap_atomic(mapping[i]);
- }
- EXPORT_SYMBOL(xpfo_temp_unmap);
-+
-+bool xpfo_spurious_fault(unsigned long addr)
-+{
-+	struct page *page;
-+	bool spurious;
-+	int mapcount;
-+
-+	if (!static_branch_unlikely(&xpfo_inited))
-+		return false;
-+
-+	/* XXX Is this sufficient to guard against calling virt_to_page() on a
-+	 * virtual address that has no corresponding struct page? */
-+	if (!virt_addr_valid(addr))
-+		return false;
-+
-+	page = virt_to_page(addr);
-+	mapcount = atomic_read(&page->xpfo_mapcount);
-+	spurious = PageXpfoUser(page) && mapcount;
-+
-+	/* Guarantee forward progress in case xpfo_kmap() raced. */
-+	if (spurious && PageXpfoUnmapped(page)) {
-+		xpfo_do_map((void *)(addr & PAGE_MASK), page);
+-	spin_unlock(&page->xpfo_lock);
++		/*
++		 * In the case, where we raced with kmap after the
++		 * atomic_dec_return, we must not nuke the mapping.
++		 */
++		if (atomic_read(&page->xpfo_mapcount) == 0) {
++			SetPageXpfoUnmapped(page);
++			set_kpte(kaddr, page, __pgprot(0));
++			xpfo_cond_flush_kernel_tlb(page, 0);
++		}
++		spin_unlock(&page->xpfo_lock);
 +	}
-+
-+	if (unlikely(!spurious))
-+		printk("XPFO non-spurious fault %lx user=%d unmapped=%d mapcount=%d\n",
-+			addr, PageXpfoUser(page), PageXpfoUnmapped(page),
-+			mapcount);
-+
-+	return spurious;
-+}
+ }
+ EXPORT_SYMBOL(xpfo_kunmap);
+ 
 -- 
 2.17.1
