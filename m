@@ -1,129 +1,103 @@
-From: Khalid Aziz <khalid.aziz@oracle.com>
-Subject: [RFC PATCH v7 11/16] mm, x86: omit TLB flushing by default for XPFO page table modifications
-Date: Thu, 10 Jan 2019 14:09:43 -0700
-Message-Id: <4e51a5d4409b54116968b8c0501f6d82c4eb9cb5.1547153058.git.khalid.aziz@oracle.com>
-In-Reply-To: <cover.1547153058.git.khalid.aziz@oracle.com>
+MIME-Version: 1.0
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
 In-Reply-To: <cover.1547153058.git.khalid.aziz@oracle.com>
-References: <cover.1547153058.git.khalid.aziz@oracle.com>
-To: juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com
-Cc: deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, x86@kernel.org, "Vasileios P . Kemerlis" <vpk@cs.columbia.edu>, Juerg Haefliger <juerg.haefliger@canonical.com>, Tycho Andersen <tycho@docker.com>, Marco Benatto <marco.antonio.780@gmail.com>, David Woodhouse <dwmw2@infradead.org>, Khalid Aziz <khalid.aziz@oracle.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 10 Jan 2019 15:07:38 -0800
+Message-ID: <CAGXu5jKS8XSw7nByaeXqgPbmRRw01E_zUYxLCk7zFepAVSw_aQ@mail.gmail.com>
+Subject: Re: [RFC PATCH v7 00/16] Add support for eXclusive Page Frame Ownership
+Content-Type: text/plain; charset="UTF-8"
+To: Khalid Aziz <khalid.aziz@oracle.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave.hansen@intel.com>, Ingo Molnar <mingo@kernel.org>, Juerg Haefliger <juergh@gmail.com>, Tycho Andersen <tycho@tycho.ws>, jsteckli@amazon.de, Andi Kleen <ak@linux.intel.com>, Linus Torvalds <torvalds@linux-foundation.org>, liran.alon@oracle.com, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, deepa.srinivasan@oracle.com, chris hyser <chris.hyser@oracle.com>, Tyler Hicks <tyhicks@canonical.com>, "Woodhouse, David" <dwmw@amazon.co.uk>, Andrew Cooper <andrew.cooper3@citrix.com>, Jon Masters <jcm@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, Jim Mattson <jmattson@google.com>, pradeep.vincent@oracle.com, John Haxby <john.haxby@oracle.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Christoph Hellwig <hch@lst.de>, steven.sistare@oracle.com, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Julian Stecklina <jsteckli@amazon.de>
+On Thu, Jan 10, 2019 at 1:10 PM Khalid Aziz <khalid.aziz@oracle.com> wrote:
+> I implemented a solution to reduce performance penalty and
+> that has had large impact. When XPFO code flushes stale TLB entries,
+> it does so for all CPUs on the system which may include CPUs that
+> may not have any matching TLB entries or may never be scheduled to
+> run the userspace task causing TLB flush. Problem is made worse by
+> the fact that if number of entries being flushed exceeds
+> tlb_single_page_flush_ceiling, it results in a full TLB flush on
+> every CPU. A rogue process can launch a ret2dir attack only from a
+> CPU that has dual mapping for its pages in physmap in its TLB. We
+> can hence defer TLB flush on a CPU until a process that would have
+> caused a TLB flush is scheduled on that CPU. I have added a cpumask
+> to task_struct which is then used to post pending TLB flush on CPUs
+> other than the one a process is running on. This cpumask is checked
+> when a process migrates to a new CPU and TLB is flushed at that
+> time. I measured system time for parallel make with unmodified 4.20
+> kernel, 4.20 with XPFO patches before this optimization and then
+> again after applying this optimization. Here are the results:
+>
+> Hardware: 96-core Intel Xeon Platinum 8160 CPU @ 2.10GHz, 768 GB RAM
+> make -j60 all
+>
+> 4.20                            915.183s
+> 4.20+XPFO                       24129.354s      26.366x
+> 4.20+XPFO+Deferred flush        1216.987s        1.330xx
+>
+>
+> Hardware: 4-core Intel Core i5-3550 CPU @ 3.30GHz, 8G RAM
+> make -j4 all
+>
+> 4.20                            607.671s
+> 4.20+XPFO                       1588.646s       2.614x
+> 4.20+XPFO+Deferred flush        794.473s        1.307xx
 
-XPFO carries a large performance overhead. In my tests, I saw >40%
-overhead for compiling a Linux kernel with XPFO enabled. The
-frequent TLB flushes that XPFO performs are the root cause of much
-of this overhead.
+Well that's an impressive improvement! Nice work. :)
 
-TLB flushing is required for full paranoia mode where we don't want
-TLB entries of physmap pages to stick around potentially
-indefinitely. In reality, though, these TLB entries are going to be
-evicted pretty rapidly even without explicit flushing. That means
-omitting TLB flushes only marginally lowers the security benefits of
-XPFO. For kernel compile, omitting TLB flushes pushes the overhead
-below 3%.
+(Are the cpumask improvements possible to be extended to other TLB
+flushing needs? i.e. could there be other performance gains with that
+code even for a non-XPFO system?)
 
-Change the default in XPFO to not flush TLBs unless the user
-explicitly requests to do so using a kernel parameter.
+> 30+% overhead is still very high and there is room for improvement.
+> Dave Hansen had suggested batch updating TLB entries and Tycho had
+> created an initial implementation but I have not been able to get
+> that to work correctly. I am still working on it and I suspect we
+> will see a noticeable improvement in performance with that. In the
+> code I added, I post a pending full TLB flush to all other CPUs even
+> when number of TLB entries being flushed on current CPU does not
+> exceed tlb_single_page_flush_ceiling. There has to be a better way
+> to do this. I just haven't found an efficient way to implemented
+> delayed limited TLB flush on other CPUs.
+>
+> I am not entirely sure if switch_mm_irqs_off() is indeed the right
+> place to perform the pending TLB flush for a CPU. Any feedback on
+> that will be very helpful. Delaying full TLB flushes on other CPUs
+> seems to help tremendously, so if there is a better way to implement
+> the same thing than what I have done in patch 16, I am open to
+> ideas.
 
-Signed-off-by: Julian Stecklina <jsteckli@amazon.de>
-Cc: x86@kernel.org
-Cc: kernel-hardening@lists.openwall.com
-Cc: Vasileios P. Kemerlis <vpk@cs.columbia.edu>
-Cc: Juerg Haefliger <juerg.haefliger@canonical.com>
-Cc: Tycho Andersen <tycho@docker.com>
-Cc: Marco Benatto <marco.antonio.780@gmail.com>
-Cc: David Woodhouse <dwmw2@infradead.org>
-Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
----
- mm/xpfo.c | 37 +++++++++++++++++++++++++++++--------
- 1 file changed, 29 insertions(+), 8 deletions(-)
+Dave, Andy, Ingo, Thomas, does anyone have time to look this over?
 
-diff --git a/mm/xpfo.c b/mm/xpfo.c
-index 25fba05d01bd..e80374b0c78e 100644
---- a/mm/xpfo.c
-+++ b/mm/xpfo.c
-@@ -36,6 +36,7 @@ struct xpfo {
- };
- 
- DEFINE_STATIC_KEY_FALSE(xpfo_inited);
-+DEFINE_STATIC_KEY_FALSE(xpfo_do_tlb_flush);
- 
- static bool xpfo_disabled __initdata;
- 
-@@ -46,7 +47,15 @@ static int __init noxpfo_param(char *str)
- 	return 0;
- }
- 
-+static int __init xpfotlbflush_param(char *str)
-+{
-+	static_branch_enable(&xpfo_do_tlb_flush);
-+
-+	return 0;
-+}
-+
- early_param("noxpfo", noxpfo_param);
-+early_param("xpfotlbflush", xpfotlbflush_param);
- 
- static bool __init need_xpfo(void)
- {
-@@ -76,6 +85,13 @@ bool __init xpfo_enabled(void)
- }
- EXPORT_SYMBOL(xpfo_enabled);
- 
-+
-+static void xpfo_cond_flush_kernel_tlb(struct page *page, int order)
-+{
-+	if (static_branch_unlikely(&xpfo_do_tlb_flush))
-+		xpfo_flush_kernel_tlb(page, order);
-+}
-+
- static inline struct xpfo *lookup_xpfo(struct page *page)
- {
- 	struct page_ext *page_ext = lookup_page_ext(page);
-@@ -114,12 +130,17 @@ void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp)
- 		     "xpfo: already mapped page being allocated\n");
- 
- 		if ((gfp & GFP_HIGHUSER) == GFP_HIGHUSER) {
--			/*
--			 * Tag the page as a user page and flush the TLB if it
--			 * was previously allocated to the kernel.
--			 */
--			if (!test_and_set_bit(XPFO_PAGE_USER, &xpfo->flags))
--				flush_tlb = 1;
-+			if (static_branch_unlikely(&xpfo_do_tlb_flush)) {
-+				/*
-+				 * Tag the page as a user page and flush the TLB if it
-+				 * was previously allocated to the kernel.
-+				 */
-+				if (!test_and_set_bit(XPFO_PAGE_USER, &xpfo->flags))
-+					flush_tlb = 1;
-+			} else {
-+				set_bit(XPFO_PAGE_USER, &xpfo->flags);
-+			}
-+
- 		} else {
- 			/* Tag the page as a non-user (kernel) page */
- 			clear_bit(XPFO_PAGE_USER, &xpfo->flags);
-@@ -127,7 +148,7 @@ void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp)
- 	}
- 
- 	if (flush_tlb)
--		xpfo_flush_kernel_tlb(page, order);
-+		xpfo_cond_flush_kernel_tlb(page, order);
- }
- 
- void xpfo_free_pages(struct page *page, int order)
-@@ -221,7 +242,7 @@ void xpfo_kunmap(void *kaddr, struct page *page)
- 		     "xpfo: unmapping already unmapped page\n");
- 		set_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags);
- 		set_kpte(kaddr, page, __pgprot(0));
--		xpfo_flush_kernel_tlb(page, 0);
-+		xpfo_cond_flush_kernel_tlb(page, 0);
- 	}
- 
- 	spin_unlock(&xpfo->maplock);
+> Performance with this patch set is good enough to use these as
+> starting point for further refinement before we merge it into main
+> kernel, hence RFC.
+>
+> Since not flushing stale TLB entries creates a false sense of
+> security, I would recommend making TLB flush mandatory and eliminate
+> the "xpfotlbflush" kernel parameter (patch "mm, x86: omit TLB
+> flushing by default for XPFO page table modifications").
+
+At this point, yes, that does seem to make sense.
+
+> What remains to be done beyond this patch series:
+>
+> 1. Performance improvements
+> 2. Remove xpfotlbflush parameter
+> 3. Re-evaluate the patch "arm64/mm: Add support for XPFO to swiotlb"
+>    from Juerg. I dropped it for now since swiotlb code for ARM has
+>    changed a lot in 4.20.
+> 4. Extend the patch "xpfo, mm: Defer TLB flushes for non-current
+>    CPUs" to other architectures besides x86.
+
+This seems like a good plan.
+
+I've put this series in one of my tree so that 0day will find it and
+grind tests...
+https://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git/log/?h=kspp/xpfo/v7
+
+Thanks!
+
 -- 
-2.17.1
+Kees Cook
