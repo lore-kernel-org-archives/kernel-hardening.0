@@ -1,59 +1,52 @@
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Subject: [RFC PATCH v7 07/16] arm64/mm, xpfo: temporarily map dcache regions
-Date: Thu, 10 Jan 2019 14:09:39 -0700
-Message-Id: <eba179acbfdea5a646c5548cb82138c1c3b74aa2.1547153058.git.khalid.aziz@oracle.com>
+Subject: [RFC PATCH v7 15/16] xpfo, mm: Fix hang when booting with "xpfotlbflush"
+Date: Thu, 10 Jan 2019 14:09:47 -0700
+Message-Id: <c65c84a5e0a3df290d2b65dc36867bbedf51cb97.1547153058.git.khalid.aziz@oracle.com>
 In-Reply-To: <cover.1547153058.git.khalid.aziz@oracle.com>
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
 In-Reply-To: <cover.1547153058.git.khalid.aziz@oracle.com>
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
 To: juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com
-Cc: Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Tycho Andersen <tycho@docker.com>, Khalid Aziz <khalid.aziz@oracle.com>
+Cc: Khalid Aziz <khalid.aziz@oracle.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Juerg Haefliger <juerg.haefliger@canonical.com>
+Kernel hangs when booted up with "xpfotlbflush" option. This is caused
+by xpfo_kunmap() fliushing TLB while holding xpfo lock starving other
+tasks waiting for the lock. This patch moves tlb flush outside of the
+code holding xpfo lock.
 
-If the page is unmapped by XPFO, a data cache flush results in a fatal
-page fault, so let's temporarily map the region, flush the cache, and then
-unmap it.
-
-v6: actually flush in the face of xpfo, and temporarily map the underlying
-    memory so it can be flushed correctly
-
-CC: linux-arm-kernel@lists.infradead.org
-Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
-Signed-off-by: Tycho Andersen <tycho@docker.com>
 Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
 ---
- arch/arm64/mm/flush.c | 7 +++++++
- 1 file changed, 7 insertions(+)
+ mm/xpfo.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
 
-diff --git a/arch/arm64/mm/flush.c b/arch/arm64/mm/flush.c
-index 30695a868107..f12f26b60319 100644
---- a/arch/arm64/mm/flush.c
-+++ b/arch/arm64/mm/flush.c
-@@ -20,6 +20,7 @@
- #include <linux/export.h>
- #include <linux/mm.h>
- #include <linux/pagemap.h>
-+#include <linux/xpfo.h>
+diff --git a/mm/xpfo.c b/mm/xpfo.c
+index 85079377c91d..79ffdba6af69 100644
+--- a/mm/xpfo.c
++++ b/mm/xpfo.c
+@@ -148,6 +148,8 @@ EXPORT_SYMBOL(xpfo_kmap);
  
- #include <asm/cacheflush.h>
- #include <asm/cache.h>
-@@ -28,9 +29,15 @@
- void sync_icache_aliases(void *kaddr, unsigned long len)
+ void xpfo_kunmap(void *kaddr, struct page *page)
  {
- 	unsigned long addr = (unsigned long)kaddr;
-+	unsigned long num_pages = XPFO_NUM_PAGES(addr, len);
-+	void *mapping[num_pages];
++	bool flush_tlb = false;
++
+ 	if (!static_branch_unlikely(&xpfo_inited))
+ 		return;
  
- 	if (icache_is_aliasing()) {
-+		xpfo_temp_map(kaddr, len, mapping,
-+			      sizeof(mapping[0]) * num_pages);
- 		__clean_dcache_area_pou(kaddr, len);
-+		xpfo_temp_unmap(kaddr, len, mapping,
-+			        sizeof(mapping[0]) * num_pages);
- 		__flush_icache_all();
- 	} else {
- 		flush_icache_range(addr, addr + len);
+@@ -168,10 +170,13 @@ void xpfo_kunmap(void *kaddr, struct page *page)
+ 		if (atomic_read(&page->xpfo_mapcount) == 0) {
+ 			SetPageXpfoUnmapped(page);
+ 			set_kpte(kaddr, page, __pgprot(0));
+-			xpfo_cond_flush_kernel_tlb(page, 0);
++			flush_tlb = true;
+ 		}
+ 		spin_unlock(&page->xpfo_lock);
+ 	}
++
++	if (flush_tlb)
++		xpfo_cond_flush_kernel_tlb(page, 0);
+ }
+ EXPORT_SYMBOL(xpfo_kunmap);
+ 
 -- 
 2.17.1
