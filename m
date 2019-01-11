@@ -1,68 +1,43 @@
-Date: Fri, 11 Jan 2019 12:50:37 -0700
-From: Tycho Andersen <tycho@tycho.ws>
-Subject: Re: [RFC PATCH v7 07/16] arm64/mm, xpfo: temporarily map dcache
- regions
-Message-ID: <20190111195037.GH4102@cisco>
+Subject: Re: [RFC PATCH v7 00/16] Add support for eXclusive Page Frame
+ Ownership
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
- <eba179acbfdea5a646c5548cb82138c1c3b74aa2.1547153058.git.khalid.aziz@oracle.com>
- <20190111145445.GA4102@cisco>
- <19e61a22-bbae-d0ae-8d41-158d4b46bf01@oracle.com>
+ <31fe7522-0a59-94c8-663e-049e9ad2bff6@intel.com>
+ <7e3b2c4b-51ff-2027-3a53-8c798c2ca588@oracle.com>
+From: Dave Hansen <dave.hansen@intel.com>
+Message-ID: <8ffc77a9-6eae-7287-0ea3-56bfb61758cd@intel.com>
+Date: Fri, 11 Jan 2019 12:42:14 -0800
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <19e61a22-bbae-d0ae-8d41-158d4b46bf01@oracle.com>
-To: Khalid Aziz <khalid.aziz@oracle.com>
-Cc: juergh@gmail.com, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org
+In-Reply-To: <7e3b2c4b-51ff-2027-3a53-8c798c2ca588@oracle.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+To: Khalid Aziz <khalid.aziz@oracle.com>, juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com
+Cc: deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 11, 2019 at 11:28:19AM -0700, Khalid Aziz wrote:
-> On 1/11/19 7:54 AM, Tycho Andersen wrote:
-> > On Thu, Jan 10, 2019 at 02:09:39PM -0700, Khalid Aziz wrote:
-> >> From: Juerg Haefliger <juerg.haefliger@canonical.com>
-> >>
-> >> If the page is unmapped by XPFO, a data cache flush results in a fatal
-> >> page fault, so let's temporarily map the region, flush the cache, and then
-> >> unmap it.
-> >>
-> >> v6: actually flush in the face of xpfo, and temporarily map the underlying
-> >>     memory so it can be flushed correctly
-> >>
-> >> CC: linux-arm-kernel@lists.infradead.org
-> >> Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
-> >> Signed-off-by: Tycho Andersen <tycho@docker.com>
-> >> Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
-> >> ---
-> >>  arch/arm64/mm/flush.c | 7 +++++++
-> >>  1 file changed, 7 insertions(+)
-> >>
-> >> diff --git a/arch/arm64/mm/flush.c b/arch/arm64/mm/flush.c
-> >> index 30695a868107..f12f26b60319 100644
-> >> --- a/arch/arm64/mm/flush.c
-> >> +++ b/arch/arm64/mm/flush.c
-> >> @@ -20,6 +20,7 @@
-> >>  #include <linux/export.h>
-> >>  #include <linux/mm.h>
-> >>  #include <linux/pagemap.h>
-> >> +#include <linux/xpfo.h>
-> >>  
-> >>  #include <asm/cacheflush.h>
-> >>  #include <asm/cache.h>
-> >> @@ -28,9 +29,15 @@
-> >>  void sync_icache_aliases(void *kaddr, unsigned long len)
-> >>  {
-> >>  	unsigned long addr = (unsigned long)kaddr;
-> >> +	unsigned long num_pages = XPFO_NUM_PAGES(addr, len);
-> >> +	void *mapping[num_pages];
-> > 
-> > Does this still compile with -Wvla? It was a bad hack on my part, and
-> > we should probably just drop it and come up with something else :)
+>> The second process could easily have the page's old TLB entry.  It could
+>> abuse that entry as long as that CPU doesn't context switch
+>> (switch_mm_irqs_off()) or otherwise flush the TLB entry.
 > 
-> I will make a note of it. I hope someone with better knowledge of arm64
-> than me can come up with a better solution ;)
+> That is an interesting scenario. Working through this scenario, physmap
+> TLB entry for a page is flushed on the local processor when the page is
+> allocated to userspace, in xpfo_alloc_pages(). When the userspace passes
+> page back into kernel, that page is mapped into kernel space using a va
+> from kmap pool in xpfo_kmap() which can be different for each new
+> mapping of the same page. The physical page is unmapped from kernel on
+> the way back from kernel to userspace by xpfo_kunmap(). So two processes
+> on different CPUs sharing same physical page might not be seeing the
+> same virtual address for that page while they are in the kernel, as long
+> as it is an address from kmap pool. ret2dir attack relies upon being
+> able to craft a predictable virtual address in the kernel physmap for a
+> physical page and redirect execution to that address. Does that sound right?
 
-It's not just arm64, IIRC everywhere I used xpfo_temp_map() has a VLA.
-I think this is in part because some of these paths don't allow
-allocation failures, so we can't do a dynamic allocation. Perhaps we
-need to reserve some memory for each call site?
+All processes share one set of kernel page tables.  Or, did your patches
+change that somehow that I missed?
 
-Tycho
+Since they share the page tables, they implicitly share kmap*()
+mappings.  kmap_atomic() is not *used* by more than one CPU, but the
+mapping is accessible and at least exists for all processors.
+
+I'm basically assuming that any entry mapped in a shared page table is
+exploitable on any CPU regardless of where we logically *want* it to be
+used.
