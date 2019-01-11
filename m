@@ -4,78 +4,82 @@ References: <cover.1547153058.git.khalid.aziz@oracle.com>
  <31fe7522-0a59-94c8-663e-049e9ad2bff6@intel.com>
  <7e3b2c4b-51ff-2027-3a53-8c798c2ca588@oracle.com>
  <8ffc77a9-6eae-7287-0ea3-56bfb61758cd@intel.com>
+ <CALCETrXqJJq1LMxfBA=LK=PYc5Q7hgeDQGap38h1AUAQuF2VHA@mail.gmail.com>
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <783eefa3-9725-34c1-9729-2453274b1736@oracle.com>
-Date: Fri, 11 Jan 2019 16:23:02 -0700
+Message-ID: <5284c6a5-01a2-41af-be14-fc0461b1797b@oracle.com>
+Date: Fri, 11 Jan 2019 16:25:03 -0700
 MIME-Version: 1.0
-In-Reply-To: <8ffc77a9-6eae-7287-0ea3-56bfb61758cd@intel.com>
+In-Reply-To: <CALCETrXqJJq1LMxfBA=LK=PYc5Q7hgeDQGap38h1AUAQuF2VHA@mail.gmail.com>
 Content-Type: multipart/mixed;
- boundary="------------4D9466AD76737D0389537E8D"
-To: Dave Hansen <dave.hansen@intel.com>, juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com
-Cc: deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
+ boundary="------------3B1C04C67CAC5EBC8F9B5BC7"
+To: Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave.hansen@intel.com>
+Cc: Juerg Haefliger <juergh@gmail.com>, Tycho Andersen <tycho@tycho.ws>, jsteckli@amazon.de, Andi Kleen <ak@linux.intel.com>, Linus Torvalds <torvalds@linux-foundation.org>, liran.alon@oracle.com, Kees Cook <keescook@google.com>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, deepa.srinivasan@oracle.com, chris hyser <chris.hyser@oracle.com>, Tyler Hicks <tyhicks@canonical.com>, "Woodhouse, David" <dwmw@amazon.co.uk>, Andrew Cooper <andrew.cooper3@citrix.com>, Jon Masters <jcm@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, kanth.ghatraju@oracle.com, Joao Martins <joao.m.martins@oracle.com>, Jim Mattson <jmattson@google.com>, pradeep.vincent@oracle.com, John Haxby <john.haxby@oracle.com>, Thomas Gleixner <tglx@linutronix.de>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Christoph Hellwig <hch@lst.de>, steven.sistare@oracle.com, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 This is a multi-part message in MIME format.
---------------4D9466AD76737D0389537E8D
+--------------3B1C04C67CAC5EBC8F9B5BC7
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
-On 1/11/19 1:42 PM, Dave Hansen wrote:
->>> The second process could easily have the page's old TLB entry.  It co=
-uld
->>> abuse that entry as long as that CPU doesn't context switch
->>> (switch_mm_irqs_off()) or otherwise flush the TLB entry.
+On 1/11/19 2:06 PM, Andy Lutomirski wrote:
+> On Fri, Jan 11, 2019 at 12:42 PM Dave Hansen <dave.hansen@intel.com> wr=
+ote:
 >>
->> That is an interesting scenario. Working through this scenario, physma=
-p
->> TLB entry for a page is flushed on the local processor when the page i=
-s
->> allocated to userspace, in xpfo_alloc_pages(). When the userspace pass=
+>>>> The second process could easily have the page's old TLB entry.  It c=
+ould
+>>>> abuse that entry as long as that CPU doesn't context switch
+>>>> (switch_mm_irqs_off()) or otherwise flush the TLB entry.
+>>>
+>>> That is an interesting scenario. Working through this scenario, physm=
+ap
+>>> TLB entry for a page is flushed on the local processor when the page =
+is
+>>> allocated to userspace, in xpfo_alloc_pages(). When the userspace pas=
+ses
+>>> page back into kernel, that page is mapped into kernel space using a =
+va
+>>> from kmap pool in xpfo_kmap() which can be different for each new
+>>> mapping of the same page. The physical page is unmapped from kernel o=
+n
+>>> the way back from kernel to userspace by xpfo_kunmap(). So two proces=
+ses
+>>> on different CPUs sharing same physical page might not be seeing the
+>>> same virtual address for that page while they are in the kernel, as l=
+ong
+>>> as it is an address from kmap pool. ret2dir attack relies upon being
+>>> able to craft a predictable virtual address in the kernel physmap for=
+ a
+>>> physical page and redirect execution to that address. Does that sound=
+ right?
+>>
+>> All processes share one set of kernel page tables.  Or, did your patch=
 es
->> page back into kernel, that page is mapped into kernel space using a v=
-a
->> from kmap pool in xpfo_kmap() which can be different for each new
->> mapping of the same page. The physical page is unmapped from kernel on=
+>> change that somehow that I missed?
+>>
+>> Since they share the page tables, they implicitly share kmap*()
+>> mappings.  kmap_atomic() is not *used* by more than one CPU, but the
+>> mapping is accessible and at least exists for all processors.
+>>
+>> I'm basically assuming that any entry mapped in a shared page table is=
 
->> the way back from kernel to userspace by xpfo_kunmap(). So two process=
-es
->> on different CPUs sharing same physical page might not be seeing the
->> same virtual address for that page while they are in the kernel, as lo=
-ng
->> as it is an address from kmap pool. ret2dir attack relies upon being
->> able to craft a predictable virtual address in the kernel physmap for =
-a
->> physical page and redirect execution to that address. Does that sound =
-right?
+>> exploitable on any CPU regardless of where we logically *want* it to b=
+e
+>> used.
+>>
+>>
 >=20
-> All processes share one set of kernel page tables.  Or, did your patche=
-s
-> change that somehow that I missed?
->=20
-> Since they share the page tables, they implicitly share kmap*()
-> mappings.  kmap_atomic() is not *used* by more than one CPU, but the
-> mapping is accessible and at least exists for all processors.
->=20
-> I'm basically assuming that any entry mapped in a shared page table is
-> exploitable on any CPU regardless of where we logically *want* it to be=
-
-> used.
->=20
+> We can, very easily, have kernel mappings that are private to a given
+> mm.  Maybe this is useful here.
 >=20
 
-Ah, I see what you are saying. Virtual address on one processor is
-visible on the other processor as well and one process could communicate
-that va to the other process in some way so it could be exploited by the
-other process. This va is exploitable only between the kmap and matching
-kunmap but the window exists. I am trying to understand your scenario,
-so I can address it right.
+That sounds like an interesting idea. kmap mappings would be a good
+candidate for that. Those are temporary mappings and should only be
+valid for one process.
 
 --
 Khalid
 
-
-
---------------4D9466AD76737D0389537E8D
+--------------3B1C04C67CAC5EBC8F9B5BC7
 Content-Type: application/pgp-keys;
  name="pEpkey.asc"
 Content-Transfer-Encoding: quoted-printable
@@ -124,4 +128,4 @@ E6wtYze9oihz8mbNHY3jtUGajTsv/F7Jl42rmnbeukwfN2H/4gTDV1sB/D8z5G1+
 =3DnPqY
 -----END PGP PUBLIC KEY BLOCK-----
 
---------------4D9466AD76737D0389537E8D--
+--------------3B1C04C67CAC5EBC8F9B5BC7--
