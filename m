@@ -1,89 +1,81 @@
 Subject: Re: [RFC PATCH v7 00/16] Add support for eXclusive Page Frame
  Ownership
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
- <CAGXu5jKS8XSw7nByaeXqgPbmRRw01E_zUYxLCk7zFepAVSw_aQ@mail.gmail.com>
- <CALCETrVWjdo6C53eFz8Gc99q4HFsGpwf4kDXR5OG8E96t-gSLw@mail.gmail.com>
+ <31fe7522-0a59-94c8-663e-049e9ad2bff6@intel.com>
+ <7e3b2c4b-51ff-2027-3a53-8c798c2ca588@oracle.com>
+ <8ffc77a9-6eae-7287-0ea3-56bfb61758cd@intel.com>
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <5dc08118-a406-0ae6-f0fa-12e8d194810c@oracle.com>
-Date: Fri, 11 Jan 2019 14:45:37 -0700
+Message-ID: <783eefa3-9725-34c1-9729-2453274b1736@oracle.com>
+Date: Fri, 11 Jan 2019 16:23:02 -0700
 MIME-Version: 1.0
-In-Reply-To: <CALCETrVWjdo6C53eFz8Gc99q4HFsGpwf4kDXR5OG8E96t-gSLw@mail.gmail.com>
+In-Reply-To: <8ffc77a9-6eae-7287-0ea3-56bfb61758cd@intel.com>
 Content-Type: multipart/mixed;
- boundary="------------9F41D4AFF400C7C034CFF85C"
-To: Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>
-Cc: Dave Hansen <dave.hansen@intel.com>, Ingo Molnar <mingo@kernel.org>, Juerg Haefliger <juergh@gmail.com>, Tycho Andersen <tycho@tycho.ws>, jsteckli@amazon.de, Andi Kleen <ak@linux.intel.com>, Linus Torvalds <torvalds@linux-foundation.org>, liran.alon@oracle.com, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, deepa.srinivasan@oracle.com, chris hyser <chris.hyser@oracle.com>, Tyler Hicks <tyhicks@canonical.com>, "Woodhouse, David" <dwmw@amazon.co.uk>, Andrew Cooper <andrew.cooper3@citrix.com>, Jon Masters <jcm@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, kanth.ghatraju@oracle.com, Joao Martins <joao.m.martins@oracle.com>, Jim Mattson <jmattson@google.com>, pradeep.vincent@oracle.com, John Haxby <john.haxby@oracle.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Christoph Hellwig <hch@lst.de>, steven.sistare@oracle.com, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>
+ boundary="------------4D9466AD76737D0389537E8D"
+To: Dave Hansen <dave.hansen@intel.com>, juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com
+Cc: deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 This is a multi-part message in MIME format.
---------------9F41D4AFF400C7C034CFF85C
+--------------4D9466AD76737D0389537E8D
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
-On 1/10/19 5:44 PM, Andy Lutomirski wrote:
-> On Thu, Jan 10, 2019 at 3:07 PM Kees Cook <keescook@chromium.org> wrote=
-:
+On 1/11/19 1:42 PM, Dave Hansen wrote:
+>>> The second process could easily have the page's old TLB entry.  It co=
+uld
+>>> abuse that entry as long as that CPU doesn't context switch
+>>> (switch_mm_irqs_off()) or otherwise flush the TLB entry.
 >>
->> On Thu, Jan 10, 2019 at 1:10 PM Khalid Aziz <khalid.aziz@oracle.com> w=
-rote:
->>> I implemented a solution to reduce performance penalty and
->>> that has had large impact. When XPFO code flushes stale TLB entries,
->>> it does so for all CPUs on the system which may include CPUs that
->>> may not have any matching TLB entries or may never be scheduled to
->>> run the userspace task causing TLB flush. Problem is made worse by
->>> the fact that if number of entries being flushed exceeds
->>> tlb_single_page_flush_ceiling, it results in a full TLB flush on
->>> every CPU. A rogue process can launch a ret2dir attack only from a
->>> CPU that has dual mapping for its pages in physmap in its TLB. We
->>> can hence defer TLB flush on a CPU until a process that would have
->>> caused a TLB flush is scheduled on that CPU. I have added a cpumask
->>> to task_struct which is then used to post pending TLB flush on CPUs
->>> other than the one a process is running on. This cpumask is checked
->>> when a process migrates to a new CPU and TLB is flushed at that
->>> time. I measured system time for parallel make with unmodified 4.20
->>> kernel, 4.20 with XPFO patches before this optimization and then
->>> again after applying this optimization. Here are the results:
->=20
-> I wasn't cc'd on the patch, so I don't know the exact details.
->=20
-> I'm assuming that "ret2dir" means that you corrupt the kernel into
-> using a direct-map page as its stack.  If so, then I don't see why the
-> task in whose context the attack is launched needs to be the same
-> process as the one that has the page mapped for user access.
+>> That is an interesting scenario. Working through this scenario, physma=
+p
+>> TLB entry for a page is flushed on the local processor when the page i=
+s
+>> allocated to userspace, in xpfo_alloc_pages(). When the userspace pass=
+es
+>> page back into kernel, that page is mapped into kernel space using a v=
+a
+>> from kmap pool in xpfo_kmap() which can be different for each new
+>> mapping of the same page. The physical page is unmapped from kernel on=
 
-You are right. More work is needed to refine delayed TLB flush to close
-this gap.
-
+>> the way back from kernel to userspace by xpfo_kunmap(). So two process=
+es
+>> on different CPUs sharing same physical page might not be seeing the
+>> same virtual address for that page while they are in the kernel, as lo=
+ng
+>> as it is an address from kmap pool. ret2dir attack relies upon being
+>> able to craft a predictable virtual address in the kernel physmap for =
+a
+>> physical page and redirect execution to that address. Does that sound =
+right?
 >=20
-> My advice would be to attempt an entirely different optimization: try
-> to avoid putting pages *back* into the direct map when they're freed
-> until there is an actual need to use them for kernel purposes.
-
-I had thought about that but it turns out the performance impact happens
-on the initial allocation of the page and resulting TLB flushes, not
-from putting the pages back into direct map. The way we could benefit
-from not adding page back to direct map is if we change page allocation
-to prefer pages not in direct map. That way we incur the cost of TLB
-flushes initially but then satisfy multiple allocation requests after
-that from those "xpfo cost" free pages. More changes will be needed to
-pick which of these pages can be added back to direct map without
-degenerating into worst case scenario of a page bouncing constantly
-between this list of preferred pages and direct mapped pages. It started
-to get complex enough that I decided to put this in my back pocket and
-attempt simpler approaches first :)
-
+> All processes share one set of kernel page tables.  Or, did your patche=
+s
+> change that somehow that I missed?
 >=20
-> How are you handing page cache?  Presumably MAP_SHARED PROT_WRITE
-> pages are still in the direct map so that IO works.
+> Since they share the page tables, they implicitly share kmap*()
+> mappings.  kmap_atomic() is not *used* by more than one CPU, but the
+> mapping is accessible and at least exists for all processors.
+>=20
+> I'm basically assuming that any entry mapped in a shared page table is
+> exploitable on any CPU regardless of where we logically *want* it to be=
+
+> used.
+>=20
 >=20
 
-Since Juerg wrote the actual implementation of XPFO, he probably
-understands it better. XPFO tackles only the page allocation requests
-from userspace and does not touch page cache pages.
+Ah, I see what you are saying. Virtual address on one processor is
+visible on the other processor as well and one process could communicate
+that va to the other process in some way so it could be exploited by the
+other process. This va is exploitable only between the kmap and matching
+kunmap but the window exists. I am trying to understand your scenario,
+so I can address it right.
 
 --
 Khalid
 
---------------9F41D4AFF400C7C034CFF85C
+
+
+--------------4D9466AD76737D0389537E8D
 Content-Type: application/pgp-keys;
  name="pEpkey.asc"
 Content-Transfer-Encoding: quoted-printable
@@ -132,4 +124,4 @@ E6wtYze9oihz8mbNHY3jtUGajTsv/F7Jl42rmnbeukwfN2H/4gTDV1sB/D8z5G1+
 =3DnPqY
 -----END PGP PUBLIC KEY BLOCK-----
 
---------------9F41D4AFF400C7C034CFF85C--
+--------------4D9466AD76737D0389537E8D--
