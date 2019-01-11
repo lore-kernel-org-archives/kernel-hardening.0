@@ -1,32 +1,69 @@
-Date: Fri, 11 Jan 2019 10:59:32 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Subject: Re: [RFC PATCH v7 00/16] Add support for eXclusive Page Frame
- Ownership
-Message-ID: <20190111095932.GN30894@hirez.programming.kicks-ass.net>
+Date: Fri, 11 Jan 2019 07:54:45 -0700
+From: Tycho Andersen <tycho@tycho.ws>
+Subject: Re: [RFC PATCH v7 07/16] arm64/mm, xpfo: temporarily map dcache
+ regions
+Message-ID: <20190111145445.GA4102@cisco>
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
- <31fe7522-0a59-94c8-663e-049e9ad2bff6@intel.com>
+ <eba179acbfdea5a646c5548cb82138c1c3b74aa2.1547153058.git.khalid.aziz@oracle.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <31fe7522-0a59-94c8-663e-049e9ad2bff6@intel.com>
-To: Dave Hansen <dave.hansen@intel.com>
-Cc: Khalid Aziz <khalid.aziz@oracle.com>, juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Andy Lutomirski <luto@kernel.org>
+In-Reply-To: <eba179acbfdea5a646c5548cb82138c1c3b74aa2.1547153058.git.khalid.aziz@oracle.com>
+To: Khalid Aziz <khalid.aziz@oracle.com>
+Cc: juergh@gmail.com, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 10, 2019 at 03:40:04PM -0800, Dave Hansen wrote:
-> Anything else you do will have *some* reduced mitigation value, which
-> isn't a deal-breaker (to me at least).  Some ideas:
+On Thu, Jan 10, 2019 at 02:09:39PM -0700, Khalid Aziz wrote:
+> From: Juerg Haefliger <juerg.haefliger@canonical.com>
 > 
-> Take a look at the SWITCH_TO_KERNEL_CR3 in head_64.S.  Every time that
-> gets called, we've (potentially) just done a user->kernel transition and
-> might benefit from flushing the TLB.  We're always doing a CR3 write (on
-> Meltdown-vulnerable hardware) and it can do a full TLB flush based on if
-> X86_CR3_PCID_NOFLUSH_BIT is set.  So, when you need a TLB flush, you
-> would set a bit that ADJUST_KERNEL_CR3 would see on the next
-> user->kernel transition on *each* CPU.  Potentially, multiple TLB
-> flushes could be coalesced this way.  The downside of this is that
-> you're exposed to the old TLB entries if a flush is needed while you are
-> already *in* the kernel.
+> If the page is unmapped by XPFO, a data cache flush results in a fatal
+> page fault, so let's temporarily map the region, flush the cache, and then
+> unmap it.
+> 
+> v6: actually flush in the face of xpfo, and temporarily map the underlying
+>     memory so it can be flushed correctly
+> 
+> CC: linux-arm-kernel@lists.infradead.org
+> Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
+> Signed-off-by: Tycho Andersen <tycho@docker.com>
+> Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
+> ---
+>  arch/arm64/mm/flush.c | 7 +++++++
+>  1 file changed, 7 insertions(+)
+> 
+> diff --git a/arch/arm64/mm/flush.c b/arch/arm64/mm/flush.c
+> index 30695a868107..f12f26b60319 100644
+> --- a/arch/arm64/mm/flush.c
+> +++ b/arch/arm64/mm/flush.c
+> @@ -20,6 +20,7 @@
+>  #include <linux/export.h>
+>  #include <linux/mm.h>
+>  #include <linux/pagemap.h>
+> +#include <linux/xpfo.h>
+>  
+>  #include <asm/cacheflush.h>
+>  #include <asm/cache.h>
+> @@ -28,9 +29,15 @@
+>  void sync_icache_aliases(void *kaddr, unsigned long len)
+>  {
+>  	unsigned long addr = (unsigned long)kaddr;
+> +	unsigned long num_pages = XPFO_NUM_PAGES(addr, len);
+> +	void *mapping[num_pages];
 
-I would really prefer not to depend on the PTI crud for new stuff. We
-really want to get rid of that code on unaffected CPUs.
+Does this still compile with -Wvla? It was a bad hack on my part, and
+we should probably just drop it and come up with something else :)
+
+Tycho
+
+>  	if (icache_is_aliasing()) {
+> +		xpfo_temp_map(kaddr, len, mapping,
+> +			      sizeof(mapping[0]) * num_pages);
+>  		__clean_dcache_area_pou(kaddr, len);
+> +		xpfo_temp_unmap(kaddr, len, mapping,
+> +			        sizeof(mapping[0]) * num_pages);
+>  		__flush_icache_all();
+>  	} else {
+>  		flush_icache_range(addr, addr + len);
+> -- 
+> 2.17.1
+> 
