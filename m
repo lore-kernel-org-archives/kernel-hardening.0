@@ -1,128 +1,92 @@
-Subject: Re: [RFC PATCH v7 00/16] Add support for eXclusive Page Frame
- Ownership
+Subject: Re: [RFC PATCH v7 07/16] arm64/mm, xpfo: temporarily map dcache
+ regions
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
- <31fe7522-0a59-94c8-663e-049e9ad2bff6@intel.com>
+ <eba179acbfdea5a646c5548cb82138c1c3b74aa2.1547153058.git.khalid.aziz@oracle.com>
+ <20190111145445.GA4102@cisco>
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <7e3b2c4b-51ff-2027-3a53-8c798c2ca588@oracle.com>
-Date: Fri, 11 Jan 2019 11:21:04 -0700
+Message-ID: <19e61a22-bbae-d0ae-8d41-158d4b46bf01@oracle.com>
+Date: Fri, 11 Jan 2019 11:28:19 -0700
 MIME-Version: 1.0
-In-Reply-To: <31fe7522-0a59-94c8-663e-049e9ad2bff6@intel.com>
+In-Reply-To: <20190111145445.GA4102@cisco>
 Content-Type: multipart/mixed;
- boundary="------------CF7DB4497E0E08B56DB0F0CA"
-To: Dave Hansen <dave.hansen@intel.com>, juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com
-Cc: deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>
+ boundary="------------3BB60CD6A7EC85D34E24789D"
+To: Tycho Andersen <tycho@tycho.ws>
+Cc: juergh@gmail.com, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 This is a multi-part message in MIME format.
---------------CF7DB4497E0E08B56DB0F0CA
+--------------3BB60CD6A7EC85D34E24789D
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
-Hi Dave,
+On 1/11/19 7:54 AM, Tycho Andersen wrote:
+> On Thu, Jan 10, 2019 at 02:09:39PM -0700, Khalid Aziz wrote:
+>> From: Juerg Haefliger <juerg.haefliger@canonical.com>
+>>
+>> If the page is unmapped by XPFO, a data cache flush results in a fatal=
 
-Thanks for looking at this and providing feedback.
-
-On 1/10/19 4:40 PM, Dave Hansen wrote:
-> First of all, thanks for picking this back up.  It looks to be going in=
-
-> a very positive direction!
+>> page fault, so let's temporarily map the region, flush the cache, and =
+then
+>> unmap it.
+>>
+>> v6: actually flush in the face of xpfo, and temporarily map the underl=
+ying
+>>     memory so it can be flushed correctly
+>>
+>> CC: linux-arm-kernel@lists.infradead.org
+>> Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
+>> Signed-off-by: Tycho Andersen <tycho@docker.com>
+>> Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
+>> ---
+>>  arch/arm64/mm/flush.c | 7 +++++++
+>>  1 file changed, 7 insertions(+)
+>>
+>> diff --git a/arch/arm64/mm/flush.c b/arch/arm64/mm/flush.c
+>> index 30695a868107..f12f26b60319 100644
+>> --- a/arch/arm64/mm/flush.c
+>> +++ b/arch/arm64/mm/flush.c
+>> @@ -20,6 +20,7 @@
+>>  #include <linux/export.h>
+>>  #include <linux/mm.h>
+>>  #include <linux/pagemap.h>
+>> +#include <linux/xpfo.h>
+>> =20
+>>  #include <asm/cacheflush.h>
+>>  #include <asm/cache.h>
+>> @@ -28,9 +29,15 @@
+>>  void sync_icache_aliases(void *kaddr, unsigned long len)
+>>  {
+>>  	unsigned long addr =3D (unsigned long)kaddr;
+>> +	unsigned long num_pages =3D XPFO_NUM_PAGES(addr, len);
+>> +	void *mapping[num_pages];
 >=20
-> On 1/10/19 1:09 PM, Khalid Aziz wrote:
->> I implemented a solution to reduce performance penalty and
->> that has had large impact. When XPFO code flushes stale TLB entries,
->> it does so for all CPUs on the system which may include CPUs that
->> may not have any matching TLB entries or may never be scheduled to
->> run the userspace task causing TLB flush.
-> ...
->> A rogue process can launch a ret2dir attack only from a CPU that has=20
->> dual mapping for its pages in physmap in its TLB. We can hence defer=20
->> TLB flush on a CPU until a process that would have caused a TLB
->> flush is scheduled on that CPU.
->=20
-> This logic is a bit suspect to me.  Imagine a situation where we have
-> two attacker processes: one which is causing page to go from
-> kernel->user (and be unmapped from the kernel) and a second process tha=
-t
-> *was* accessing that page.
->=20
-> The second process could easily have the page's old TLB entry.  It coul=
-d
-> abuse that entry as long as that CPU doesn't context switch
-> (switch_mm_irqs_off()) or otherwise flush the TLB entry.
+> Does this still compile with -Wvla? It was a bad hack on my part, and
+> we should probably just drop it and come up with something else :)
 
-That is an interesting scenario. Working through this scenario, physmap
-TLB entry for a page is flushed on the local processor when the page is
-allocated to userspace, in xpfo_alloc_pages(). When the userspace passes
-page back into kernel, that page is mapped into kernel space using a va
-from kmap pool in xpfo_kmap() which can be different for each new
-mapping of the same page. The physical page is unmapped from kernel on
-the way back from kernel to userspace by xpfo_kunmap(). So two processes
-on different CPUs sharing same physical page might not be seeing the
-same virtual address for that page while they are in the kernel, as long
-as it is an address from kmap pool. ret2dir attack relies upon being
-able to craft a predictable virtual address in the kernel physmap for a
-physical page and redirect execution to that address. Does that sound rig=
-ht?
-
-Now what happens if only one of these cooperating processes allocates
-the page, places malicious payload on that page and passes the address
-of this page to the other process which can deduce physmap for the page
-through /proc and exploit the physmap entry for the page on its CPU.
-That must be the scenario you are referring to.
-
->=20
-> As for where to flush the TLB...  As you know, using synchronous IPIs i=
-s
-> obviously the most bulletproof from a mitigation perspective.  If you
-> can batch the IPIs, you can get the overhead down, but you need to do
-> the flushes for a bunch of pages at once, which I think is what you wer=
-e
-> exploring but haven't gotten working yet.
->=20
-> Anything else you do will have *some* reduced mitigation value, which
-> isn't a deal-breaker (to me at least).  Some ideas:
-
-Even without batched IPIs working reliably, I was able to measure the
-performance impact of this partially working solution. With just batched
-IPIs and no delayed TLB flushes, performance improved by a factor of 2.
-The 26x system time went down to 12x-13x but it was still too high and a
-non-starter. Combining batched IPI with delayed TLB flushes improved
-performance to about 1.1x as opposed to 1.33x with delayed TLB flush
-alone. Those numbers are very rough since the batching implementation is
-incomplete.
-
->=20
-> Take a look at the SWITCH_TO_KERNEL_CR3 in head_64.S.  Every time that
-> gets called, we've (potentially) just done a user->kernel transition an=
-d
-> might benefit from flushing the TLB.  We're always doing a CR3 write (o=
-n
-> Meltdown-vulnerable hardware) and it can do a full TLB flush based on i=
-f
-> X86_CR3_PCID_NOFLUSH_BIT is set.  So, when you need a TLB flush, you
-> would set a bit that ADJUST_KERNEL_CR3 would see on the next
-> user->kernel transition on *each* CPU.  Potentially, multiple TLB
-> flushes could be coalesced this way.  The downside of this is that
-> you're exposed to the old TLB entries if a flush is needed while you ar=
-e
-> already *in* the kernel.
->=20
-> You could also potentially do this from C code, like in the syscall
-> entry code, or in sensitive places, like when you're returning from a
-> guest after a VMEXIT in the kvm code.
->=20
-
-Good suggestions. Thanks.
-
-I think benefit will be highest from batching TLB flushes. I see a lot
-of time consumed by full TLB flushes on other processors when local
-processor did only a limited TLB flush. I will continue to debug the
-batch TLB updates.
+I will make a note of it. I hope someone with better knowledge of arm64
+than me can come up with a better solution ;)
 
 --
 Khalid
 
---------------CF7DB4497E0E08B56DB0F0CA
+>=20
+> Tycho
+>=20
+>>  	if (icache_is_aliasing()) {
+>> +		xpfo_temp_map(kaddr, len, mapping,
+>> +			      sizeof(mapping[0]) * num_pages);
+>>  		__clean_dcache_area_pou(kaddr, len);
+>> +		xpfo_temp_unmap(kaddr, len, mapping,
+>> +			        sizeof(mapping[0]) * num_pages);
+>>  		__flush_icache_all();
+>>  	} else {
+>>  		flush_icache_range(addr, addr + len);
+>> --=20
+>> 2.17.1
+>>
+
+
+--------------3BB60CD6A7EC85D34E24789D
 Content-Type: application/pgp-keys;
  name="pEpkey.asc"
 Content-Transfer-Encoding: quoted-printable
@@ -171,4 +135,4 @@ E6wtYze9oihz8mbNHY3jtUGajTsv/F7Jl42rmnbeukwfN2H/4gTDV1sB/D8z5G1+
 =3DnPqY
 -----END PGP PUBLIC KEY BLOCK-----
 
---------------CF7DB4497E0E08B56DB0F0CA--
+--------------3BB60CD6A7EC85D34E24789D--
