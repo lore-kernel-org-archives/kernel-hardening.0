@@ -1,69 +1,33 @@
-Date: Fri, 11 Jan 2019 07:54:45 -0700
-From: Tycho Andersen <tycho@tycho.ws>
-Subject: Re: [RFC PATCH v7 07/16] arm64/mm, xpfo: temporarily map dcache
- regions
-Message-ID: <20190111145445.GA4102@cisco>
-References: <cover.1547153058.git.khalid.aziz@oracle.com>
- <eba179acbfdea5a646c5548cb82138c1c3b74aa2.1547153058.git.khalid.aziz@oracle.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <eba179acbfdea5a646c5548cb82138c1c3b74aa2.1547153058.git.khalid.aziz@oracle.com>
-To: Khalid Aziz <khalid.aziz@oracle.com>
-Cc: juergh@gmail.com, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org
+References: <1547198328-26359-1-git-send-email-yamada.masahiro@socionext.com> <1547198328-26359-2-git-send-email-yamada.masahiro@socionext.com>
+In-Reply-To: <1547198328-26359-2-git-send-email-yamada.masahiro@socionext.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 11 Jan 2019 09:20:05 -0800
+Message-ID: <CAGXu5jJCZ35qM6y8p+J=1Z58cGM-ZZTpbcke46uQmCNBpptRmg@mail.gmail.com>
+Subject: Re: [PATCH 2/2] kbuild: simplify GCC plugin build rules
+Content-Type: text/plain; charset="UTF-8"
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Emese Revfy <re.emese@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Michal Marek <michal.lkml@markovi.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 10, 2019 at 02:09:39PM -0700, Khalid Aziz wrote:
-> From: Juerg Haefliger <juerg.haefliger@canonical.com>
-> 
-> If the page is unmapped by XPFO, a data cache flush results in a fatal
-> page fault, so let's temporarily map the region, flush the cache, and then
-> unmap it.
-> 
-> v6: actually flush in the face of xpfo, and temporarily map the underlying
->     memory so it can be flushed correctly
-> 
-> CC: linux-arm-kernel@lists.infradead.org
-> Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
-> Signed-off-by: Tycho Andersen <tycho@docker.com>
-> Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
-> ---
->  arch/arm64/mm/flush.c | 7 +++++++
->  1 file changed, 7 insertions(+)
-> 
-> diff --git a/arch/arm64/mm/flush.c b/arch/arm64/mm/flush.c
-> index 30695a868107..f12f26b60319 100644
-> --- a/arch/arm64/mm/flush.c
-> +++ b/arch/arm64/mm/flush.c
-> @@ -20,6 +20,7 @@
->  #include <linux/export.h>
->  #include <linux/mm.h>
->  #include <linux/pagemap.h>
-> +#include <linux/xpfo.h>
->  
->  #include <asm/cacheflush.h>
->  #include <asm/cache.h>
-> @@ -28,9 +29,15 @@
->  void sync_icache_aliases(void *kaddr, unsigned long len)
->  {
->  	unsigned long addr = (unsigned long)kaddr;
-> +	unsigned long num_pages = XPFO_NUM_PAGES(addr, len);
-> +	void *mapping[num_pages];
+On Fri, Jan 11, 2019 at 1:19 AM Masahiro Yamada
+<yamada.masahiro@socionext.com> wrote:
+>
+> GCC-plugin is the only user of the shared library build rules in
+> scripts/Makefile.host. Hence, those rules do not need to be treewide
+> available.
+>
+> The build rules in scripts/Makefile.host are written in a too generic
+> way. I guess the main reason is because commit 24403874316a ("Shared
+> library support") revived the code ripped off by commit 62e2210798ed
+> ("kbuild: drop shared library support from Makefile.host").
+>
+> Currently, every plugin is built from a single C file. So, all we need
+> is a pattern rule to create %.so from %.c.
 
-Does this still compile with -Wvla? It was a bad hack on my part, and
-we should probably just drop it and come up with something else :)
+What'll it look like if we get a multi-file plugin in the future?
+There are existing out-of-tree plugins that this change may make
+porting more difficult...
 
-Tycho
-
->  	if (icache_is_aliasing()) {
-> +		xpfo_temp_map(kaddr, len, mapping,
-> +			      sizeof(mapping[0]) * num_pages);
->  		__clean_dcache_area_pou(kaddr, len);
-> +		xpfo_temp_unmap(kaddr, len, mapping,
-> +			        sizeof(mapping[0]) * num_pages);
->  		__flush_icache_all();
->  	} else {
->  		flush_icache_range(addr, addr + len);
-> -- 
-> 2.17.1
-> 
+-- 
+Kees Cook
