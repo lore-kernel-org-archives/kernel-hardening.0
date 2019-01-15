@@ -1,111 +1,162 @@
-Date: Tue, 15 Jan 2019 17:02:42 +0000 (UTC)
 From: Ruslan Nikolaev <nruslan_devel@yahoo.com>
-Message-ID: <720903475.468432.1547571762227@mail.yahoo.com>
-Subject: [PATCH v1 01/06]: Extending objtool for PIC
+Subject: [PATCH v1 01/06]: Extending objtool for PIC modules
+Message-ID: <a562f9f5-79c1-8a10-8c1e-91fec7ee6614@yahoo.com>
+Date: Tue, 15 Jan 2019 13:56:40 -0500
 MIME-Version: 1.0
-Content-Type: multipart/mixed;
-	boundary="----=_Part_468431_232478151.1547571762227"
-References: <720903475.468432.1547571762227.ref@mail.yahoo.com>
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Ruslan Nikolaev <nruslan_devel@yahoo.com>, "thgarnie@google.com" <thgarnie@google.com>, "x86@kernel.org" <x86@kernel.org>, "kstewart@linuxfoundation.org" <kstewart@linuxfoundation.org>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: kernel-hardening@lists.openwall.com
+Cc: thgarnie@google.com, x86@kernel.org, kstewart@linuxfoundation.org, gregkh@linuxfoundation.org, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-------=_Part_468431_232478151.1547571762227
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 7bit
+Extending objtool for PIC modules
 
+The patch is by Hassan Nadeem and Ruslan Nikolaev. This extends
+the prior PIE kernel patch (by Thomas Garnier) to also support
+position-independent modules that can be placed anywhere in the
+48/64-bit address space (for better KASLR).
 
-------=_Part_468431_232478151.1547571762227
-Content-Type: text/x-patch
-Content-Transfer-Encoding: base64
-Content-Disposition: attachment; filename="pic_1.patch"
-Content-ID: <14e97949-371e-a3c2-420a-01ab698c358d@yahoo.com>
+Signed-off-by: Ruslan Nikolaev <nruslan_devel@yahoo.com>
+---
+  check.c |   39 ++++++++++++++++++++++++++++-----------
+  1 file changed, 28 insertions(+), 11 deletions(-)
 
-RXh0ZW5kaW5nIG9ianRvb2wgZm9yIFBJQwoKVGhlIHBhdGNoIGlzIGJ5IEhhc3NhbiBOYWRlZW0g
-YW5kIFJ1c2xhbiBOaWtvbGFldi4gVGhpcyBleHRlbmRzCnRoZSBwcmlvciBQSUUga2VybmVsIHBh
-dGNoIChieSBUaG9tYXMgR2FybmllcikgdG8gYWxzbyBzdXBwb3J0CnBvc2l0aW9uLWluZGVwZW5k
-ZW50IG1vZHVsZXMgdGhhdCBjYW4gYmUgcGxhY2VkIGFueXdoZXJlIGluIHRoZQo0OC82NC1iaXQg
-YWRkcmVzcyBzcGFjZSAoZm9yIGJldHRlciBLQVNMUikuCgpTaWduZWQtb2ZmLWJ5OiBSdXNsYW4g
-Tmlrb2xhZXYgPG5ydXNsYW5fZGV2ZWxAeWFob28uY29tPgotLS0KIGNoZWNrLmMgfCAgIDM5ICsr
-KysrKysrKysrKysrKysrKysrKysrKysrKystLS0tLS0tLS0tLQogMSBmaWxlIGNoYW5nZWQsIDI4
-IGluc2VydGlvbnMoKyksIDExIGRlbGV0aW9ucygtKQoKZGlmZiAtdXByTiBhL3Rvb2xzL29ianRv
-b2wvY2hlY2suYyBiL3Rvb2xzL29ianRvb2wvY2hlY2suYwotLS0gYS90b29scy9vYmp0b29sL2No
-ZWNrLmMJMjAxOS0wMS0xNSAxMToyMDo0Ni4wNDcxNzYyMTYgLTA1MDAKKysrIGIvdG9vbHMvb2Jq
-dG9vbC9jaGVjay5jCTIwMTktMDEtMTUgMTE6MjA6NTcuNzI3Mjk0MTk3IC0wNTAwCkBAIC0xNzks
-NyArMTc5LDcgQEAgc3RhdGljIGludCBfX2RlYWRfZW5kX2Z1bmN0aW9uKHN0cnVjdCBvYgogCQly
-ZXR1cm4gMDsKIAogCWluc24gPSBmaW5kX2luc24oZmlsZSwgZnVuYy0+c2VjLCBmdW5jLT5vZmZz
-ZXQpOwotCWlmICghaW5zbi0+ZnVuYykKKwlpZiAoIWluc24gfHwgIWluc24tPmZ1bmMpCiAJCXJl
-dHVybiAwOwogCiAJZnVuY19mb3JfZWFjaF9pbnNuX2FsbChmaWxlLCBmdW5jLCBpbnNuKSB7CkBA
-IC0yMzMsNiArMjMzLDggQEAgc3RhdGljIGludCBfX2RlYWRfZW5kX2Z1bmN0aW9uKHN0cnVjdCBv
-YgogCiBzdGF0aWMgaW50IGRlYWRfZW5kX2Z1bmN0aW9uKHN0cnVjdCBvYmp0b29sX2ZpbGUgKmZp
-bGUsIHN0cnVjdCBzeW1ib2wgKmZ1bmMpCiB7CisJaWYgKCFmdW5jKQorCQlyZXR1cm4gMDsKIAly
-ZXR1cm4gX19kZWFkX2VuZF9mdW5jdGlvbihmaWxlLCBmdW5jLCAwKTsKIH0KIApAQCAtNTgxLDcg
-KzU4Myw3IEBAIHN0YXRpYyBpbnQgYWRkX2NhbGxfZGVzdGluYXRpb25zKHN0cnVjdAogCXN0cnVj
-dCByZWxhICpyZWxhOwogCiAJZm9yX2VhY2hfaW5zbihmaWxlLCBpbnNuKSB7Ci0JCWlmIChpbnNu
-LT50eXBlICE9IElOU05fQ0FMTCkKKwkJaWYgKGluc24tPnR5cGUgIT0gSU5TTl9DQUxMICYmIGlu
-c24tPnR5cGUgIT0gSU5TTl9DQUxMX0RZTkFNSUMpCiAJCQljb250aW51ZTsKIAogCQlyZWxhID0g
-ZmluZF9yZWxhX2J5X2Rlc3RfcmFuZ2UoaW5zbi0+c2VjLCBpbnNuLT5vZmZzZXQsCkBAIC01OTAs
-OCArNTkyLDggQEAgc3RhdGljIGludCBhZGRfY2FsbF9kZXN0aW5hdGlvbnMoc3RydWN0CiAJCQlk
-ZXN0X29mZiA9IGluc24tPm9mZnNldCArIGluc24tPmxlbiArIGluc24tPmltbWVkaWF0ZTsKIAkJ
-CWluc24tPmNhbGxfZGVzdCA9IGZpbmRfc3ltYm9sX2J5X29mZnNldChpbnNuLT5zZWMsCiAJCQkJ
-CQkJCWRlc3Rfb2ZmKTsKLQotCQkJaWYgKCFpbnNuLT5jYWxsX2Rlc3QgJiYgIWluc24tPmlnbm9y
-ZSkgeworCQkJaWYgKCFpbnNuLT5jYWxsX2Rlc3QgJiYgIWluc24tPmlnbm9yZSAmJgorCQkJICAg
-IGluc24tPnR5cGUgIT0gSU5TTl9DQUxMX0RZTkFNSUMpIHsKIAkJCQlXQVJOX0ZVTkMoInVuc3Vw
-cG9ydGVkIGludHJhLWZ1bmN0aW9uIGNhbGwiLAogCQkJCQkgIGluc24tPnNlYywgaW5zbi0+b2Zm
-c2V0KTsKIAkJCQlpZiAocmV0cG9saW5lKQpAQCAtNjAyLDggKzYwNCw5IEBAIHN0YXRpYyBpbnQg
-YWRkX2NhbGxfZGVzdGluYXRpb25zKHN0cnVjdAogCQl9IGVsc2UgaWYgKHJlbGEtPnN5bS0+dHlw
-ZSA9PSBTVFRfU0VDVElPTikgewogCQkJaW5zbi0+Y2FsbF9kZXN0ID0gZmluZF9zeW1ib2xfYnlf
-b2Zmc2V0KHJlbGEtPnN5bS0+c2VjLAogCQkJCQkJCQlyZWxhLT5hZGRlbmQrNCk7Ci0JCQlpZiAo
-IWluc24tPmNhbGxfZGVzdCB8fAotCQkJICAgIGluc24tPmNhbGxfZGVzdC0+dHlwZSAhPSBTVFRf
-RlVOQykgeworCQkJaWYgKCghaW5zbi0+Y2FsbF9kZXN0IHx8CisJCQkgICAgIGluc24tPmNhbGxf
-ZGVzdC0+dHlwZSAhPSBTVFRfRlVOQykgJiYKKwkJCSAgICBpbnNuLT50eXBlICE9IElOU05fQ0FM
-TF9EWU5BTUlDKSB7CiAJCQkJV0FSTl9GVU5DKCJjYW4ndCBmaW5kIGNhbGwgZGVzdCBzeW1ib2wg
-YXQgJXMrMHgleCIsCiAJCQkJCSAgaW5zbi0+c2VjLCBpbnNuLT5vZmZzZXQsCiAJCQkJCSAgcmVs
-YS0+c3ltLT5zZWMtPm5hbWUsCkBAIC04MzYsNiArODM5LDExIEBAIHN0YXRpYyBpbnQgYWRkX3N3
-aXRjaF90YWJsZShzdHJ1Y3Qgb2JqdG8KIAlzdHJ1Y3Qgc3ltYm9sICpwZnVuYyA9IGluc24tPmZ1
-bmMtPnBmdW5jOwogCXVuc2lnbmVkIGludCBwcmV2X29mZnNldCA9IDA7CiAKKwkvKiBJZiBQQzMy
-IHJlbG9jYXRpb25zIGFyZSB1c2VkIChhcyBpbiBQSUMpLCB0aGUgZm9sbG93aW5nIGxvZ2ljCisJ
-ICogY2FuIGJlIGJyb2tlbiBpbiBtYW55IHdheXMuCisJICovCisJaWYgKGZpbGUtPmlnbm9yZV91
-bnJlYWNoYWJsZXMpCisJCXJldHVybiAwOwogCWxpc3RfZm9yX2VhY2hfZW50cnlfZnJvbShyZWxh
-LCAmZmlsZS0+cm9kYXRhLT5yZWxhLT5yZWxhX2xpc3QsIGxpc3QpIHsKIAkJaWYgKHJlbGEgPT0g
-bmV4dF90YWJsZSkKIAkJCWJyZWFrOwpAQCAtMTI0NCw3ICsxMjUyLDcgQEAgc3RhdGljIGludCBk
-ZWNvZGVfc2VjdGlvbnMoc3RydWN0IG9ianRvbwogCiBzdGF0aWMgYm9vbCBpc19mZW50cnlfY2Fs
-bChzdHJ1Y3QgaW5zdHJ1Y3Rpb24gKmluc24pCiB7Ci0JaWYgKGluc24tPnR5cGUgPT0gSU5TTl9D
-QUxMICYmCisJaWYgKGluc24tPmNhbGxfZGVzdCAmJgogCSAgICBpbnNuLT5jYWxsX2Rlc3QtPnR5
-cGUgPT0gU1RUX05PVFlQRSAmJgogCSAgICAhc3RyY21wKGluc24tPmNhbGxfZGVzdC0+bmFtZSwg
-Il9fZmVudHJ5X18iKSkKIAkJcmV0dXJuIHRydWU7CkBAIC0xODg5LDYgKzE4OTcsNyBAQCBzdGF0
-aWMgaW50IHZhbGlkYXRlX2JyYW5jaChzdHJ1Y3Qgb2JqdG9vCiAJCQlyZXR1cm4gMDsKIAogCQlj
-YXNlIElOU05fQ0FMTDoKKwkJY2FzZSBJTlNOX0NBTExfRFlOQU1JQzoKIAkJCWlmIChpc19mZW50
-cnlfY2FsbChpbnNuKSkKIAkJCQlicmVhazsKIApAQCAtMTg5OCw4ICsxOTA3LDYgQEAgc3RhdGlj
-IGludCB2YWxpZGF0ZV9icmFuY2goc3RydWN0IG9ianRvbwogCQkJaWYgKHJldCA9PSAtMSkKIAkJ
-CQlyZXR1cm4gMTsKIAotCQkJLyogZmFsbHRocm91Z2ggKi8KLQkJY2FzZSBJTlNOX0NBTExfRFlO
-QU1JQzoKIAkJCWlmICghbm9fZnAgJiYgZnVuYyAmJiAhaGFzX3ZhbGlkX3N0YWNrX2ZyYW1lKCZz
-dGF0ZSkpIHsKIAkJCQlXQVJOX0ZVTkMoImNhbGwgd2l0aG91dCBmcmFtZSBwb2ludGVyIHNhdmUv
-c2V0dXAiLAogCQkJCQkgIHNlYywgaW5zbi0+b2Zmc2V0KTsKQEAgLTE5MjksMTIgKzE5MzYsMTUg
-QEAgc3RhdGljIGludCB2YWxpZGF0ZV9icmFuY2goc3RydWN0IG9ianRvbwogCQkJYnJlYWs7CiAK
-IAkJY2FzZSBJTlNOX0pVTVBfRFlOQU1JQzoKKwkJCS8qIFhYWDogRG9lcyBub3Qgd29yayBwcm9w
-ZXJseSB3aXRoIFBJQyBjb2RlLiAqLworI2lmIDAKIAkJCWlmIChmdW5jICYmIGxpc3RfZW1wdHko
-Jmluc24tPmFsdHMpICYmCiAJCQkgICAgaGFzX21vZGlmaWVkX3N0YWNrX2ZyYW1lKCZzdGF0ZSkp
-IHsKIAkJCQlXQVJOX0ZVTkMoInNpYmxpbmcgY2FsbCBmcm9tIGNhbGxhYmxlIGluc3RydWN0aW9u
-IHdpdGggbW9kaWZpZWQgc3RhY2sgZnJhbWUiLAogCQkJCQkgIHNlYywgaW5zbi0+b2Zmc2V0KTsK
-IAkJCQlyZXR1cm4gMTsKIAkJCX0KKyNlbmRpZgogCiAJCQlyZXR1cm4gMDsKIApAQCAtMjAxNSw2
-ICsyMDI1LDExIEBAIHN0YXRpYyBpbnQgdmFsaWRhdGVfcmV0cG9saW5lKHN0cnVjdCBvYmoKIAkJ
-aWYgKCFzdHJjbXAoaW5zbi0+c2VjLT5uYW1lLCAiLmluaXQudGV4dCIpICYmICFtb2R1bGUpCiAJ
-CQljb250aW51ZTsKIAorCQkvKiBpZ25vcmUgZnRyYWNlIGNhbGxzIGluIFBJQyBjb2RlICovCisJ
-CWlmICghaW5zbi0+Y2FsbF9kZXN0IHx8CisJCSAgICAhc3RyY21wKGluc24tPmNhbGxfZGVzdC0+
-bmFtZSwgIl9fZmVudHJ5X18iKSkKKwkJCWNvbnRpbnVlOworCiAJCVdBUk5fRlVOQygiaW5kaXJl
-Y3QgJXMgZm91bmQgaW4gUkVUUE9MSU5FIGJ1aWxkIiwKIAkJCSAgaW5zbi0+c2VjLCBpbnNuLT5v
-ZmZzZXQsCiAJCQkgIGluc24tPnR5cGUgPT0gSU5TTl9KVU1QX0RZTkFNSUMgPyAianVtcCIgOiAi
-Y2FsbCIpOwpAQCAtMjAyNywxMyArMjA0MiwxNSBAQCBzdGF0aWMgaW50IHZhbGlkYXRlX3JldHBv
-bGluZShzdHJ1Y3Qgb2JqCiAKIHN0YXRpYyBib29sIGlzX2thc2FuX2luc24oc3RydWN0IGluc3Ry
-dWN0aW9uICppbnNuKQogewotCXJldHVybiAoaW5zbi0+dHlwZSA9PSBJTlNOX0NBTEwgJiYKKwly
-ZXR1cm4gKChpbnNuLT50eXBlID09IElOU05fQ0FMTCB8fCBpbnNuLT50eXBlID09IElOU05fQ0FM
-TF9EWU5BTUlDKSAmJgorCQlpbnNuLT5jYWxsX2Rlc3QgJiYKIAkJIXN0cmNtcChpbnNuLT5jYWxs
-X2Rlc3QtPm5hbWUsICJfX2FzYW5faGFuZGxlX25vX3JldHVybiIpKTsKIH0KIAogc3RhdGljIGJv
-b2wgaXNfdWJzYW5faW5zbihzdHJ1Y3QgaW5zdHJ1Y3Rpb24gKmluc24pCiB7Ci0JcmV0dXJuIChp
-bnNuLT50eXBlID09IElOU05fQ0FMTCAmJgorCXJldHVybiAoKGluc24tPnR5cGUgPT0gSU5TTl9D
-QUxMIHx8IGluc24tPnR5cGUgPT0gSU5TTl9DQUxMX0RZTkFNSUMpICYmCisJCWluc24tPmNhbGxf
-ZGVzdCAmJgogCQkhc3RyY21wKGluc24tPmNhbGxfZGVzdC0+bmFtZSwKIAkJCSJfX3Vic2FuX2hh
-bmRsZV9idWlsdGluX3VucmVhY2hhYmxlIikpOwogfQo=
+diff -uprN a/tools/objtool/check.c b/tools/objtool/check.c
+--- a/tools/objtool/check.c	2019-01-15 11:20:46.047176216 -0500
++++ b/tools/objtool/check.c	2019-01-15 11:20:57.727294197 -0500
+@@ -179,7 +179,7 @@ static int __dead_end_function(struct ob
+  		return 0;
 
-------=_Part_468431_232478151.1547571762227--
+  	insn = find_insn(file, func->sec, func->offset);
+-	if (!insn->func)
++	if (!insn || !insn->func)
+  		return 0;
+
+  	func_for_each_insn_all(file, func, insn) {
+@@ -233,6 +233,8 @@ static int __dead_end_function(struct ob
+
+  static int dead_end_function(struct objtool_file *file, struct symbol 
+*func)
+  {
++	if (!func)
++		return 0;
+  	return __dead_end_function(file, func, 0);
+  }
+
+@@ -581,7 +583,7 @@ static int add_call_destinations(struct
+  	struct rela *rela;
+
+  	for_each_insn(file, insn) {
+-		if (insn->type != INSN_CALL)
++		if (insn->type != INSN_CALL && insn->type != INSN_CALL_DYNAMIC)
+  			continue;
+
+  		rela = find_rela_by_dest_range(insn->sec, insn->offset,
+@@ -590,8 +592,8 @@ static int add_call_destinations(struct
+  			dest_off = insn->offset + insn->len + insn->immediate;
+  			insn->call_dest = find_symbol_by_offset(insn->sec,
+  								dest_off);
+-
+-			if (!insn->call_dest && !insn->ignore) {
++			if (!insn->call_dest && !insn->ignore &&
++			    insn->type != INSN_CALL_DYNAMIC) {
+  				WARN_FUNC("unsupported intra-function call",
+  					  insn->sec, insn->offset);
+  				if (retpoline)
+@@ -602,8 +604,9 @@ static int add_call_destinations(struct
+  		} else if (rela->sym->type == STT_SECTION) {
+  			insn->call_dest = find_symbol_by_offset(rela->sym->sec,
+  								rela->addend+4);
+-			if (!insn->call_dest ||
+-			    insn->call_dest->type != STT_FUNC) {
++			if ((!insn->call_dest ||
++			     insn->call_dest->type != STT_FUNC) &&
++			    insn->type != INSN_CALL_DYNAMIC) {
+  				WARN_FUNC("can't find call dest symbol at %s+0x%x",
+  					  insn->sec, insn->offset,
+  					  rela->sym->sec->name,
+@@ -836,6 +839,11 @@ static int add_switch_table(struct objto
+  	struct symbol *pfunc = insn->func->pfunc;
+  	unsigned int prev_offset = 0;
+
++	/* If PC32 relocations are used (as in PIC), the following logic
++	 * can be broken in many ways.
++	 */
++	if (file->ignore_unreachables)
++		return 0;
+  	list_for_each_entry_from(rela, &file->rodata->rela->rela_list, list) {
+  		if (rela == next_table)
+  			break;
+@@ -1244,7 +1252,7 @@ static int decode_sections(struct objtoo
+
+  static bool is_fentry_call(struct instruction *insn)
+  {
+-	if (insn->type == INSN_CALL &&
++	if (insn->call_dest &&
+  	    insn->call_dest->type == STT_NOTYPE &&
+  	    !strcmp(insn->call_dest->name, "__fentry__"))
+  		return true;
+@@ -1889,6 +1897,7 @@ static int validate_branch(struct objtoo
+  			return 0;
+
+  		case INSN_CALL:
++		case INSN_CALL_DYNAMIC:
+  			if (is_fentry_call(insn))
+  				break;
+
+@@ -1898,8 +1907,6 @@ static int validate_branch(struct objtoo
+  			if (ret == -1)
+  				return 1;
+
+-			/* fallthrough */
+-		case INSN_CALL_DYNAMIC:
+  			if (!no_fp && func && !has_valid_stack_frame(&state)) {
+  				WARN_FUNC("call without frame pointer save/setup",
+  					  sec, insn->offset);
+@@ -1929,12 +1936,15 @@ static int validate_branch(struct objtoo
+  			break;
+
+  		case INSN_JUMP_DYNAMIC:
++			/* XXX: Does not work properly with PIC code. */
++#if 0
+  			if (func && list_empty(&insn->alts) &&
+  			    has_modified_stack_frame(&state)) {
+  				WARN_FUNC("sibling call from callable instruction with modified 
+stack frame",
+  					  sec, insn->offset);
+  				return 1;
+  			}
++#endif
+
+  			return 0;
+
+@@ -2015,6 +2025,11 @@ static int validate_retpoline(struct obj
+  		if (!strcmp(insn->sec->name, ".init.text") && !module)
+  			continue;
+
++		/* ignore ftrace calls in PIC code */
++		if (!insn->call_dest ||
++		    !strcmp(insn->call_dest->name, "__fentry__"))
++			continue;
++
+  		WARN_FUNC("indirect %s found in RETPOLINE build",
+  			  insn->sec, insn->offset,
+  			  insn->type == INSN_JUMP_DYNAMIC ? "jump" : "call");
+@@ -2027,13 +2042,15 @@ static int validate_retpoline(struct obj
+
+  static bool is_kasan_insn(struct instruction *insn)
+  {
+-	return (insn->type == INSN_CALL &&
++	return ((insn->type == INSN_CALL || insn->type == INSN_CALL_DYNAMIC) &&
++		insn->call_dest &&
+  		!strcmp(insn->call_dest->name, "__asan_handle_no_return"));
+  }
+
+  static bool is_ubsan_insn(struct instruction *insn)
+  {
+-	return (insn->type == INSN_CALL &&
++	return ((insn->type == INSN_CALL || insn->type == INSN_CALL_DYNAMIC) &&
++		insn->call_dest &&
+  		!strcmp(insn->call_dest->name,
+  			"__ubsan_handle_builtin_unreachable"));
+  }
