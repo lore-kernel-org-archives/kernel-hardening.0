@@ -1,192 +1,157 @@
-Subject: Re: [RFC PATCH v7 14/16] EXPERIMENTAL: xpfo, mm: optimize spin lock
- usage in xpfo_kmap
-References: <cover.1547153058.git.khalid.aziz@oracle.com>
- <7e8e17f519ae87a91fc6cbb57b8b27094c96305c.1547153058.git.khalid.aziz@oracle.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <b2ffc4fd-e449-b6da-7070-4f182d44dd5b@redhat.com>
-Date: Wed, 16 Jan 2019 16:18:14 -0800
-MIME-Version: 1.0
-In-Reply-To: <7e8e17f519ae87a91fc6cbb57b8b27094c96305c.1547153058.git.khalid.aziz@oracle.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-To: Khalid Aziz <khalid.aziz@oracle.com>, juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com
-Cc: deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, x86@kernel.org, "Vasileios P . Kemerlis" <vpk@cs.columbia.edu>, Juerg Haefliger <juerg.haefliger@canonical.com>, Tycho Andersen <tycho@docker.com>, Marco Benatto <marco.antonio.780@gmail.com>, David Woodhouse <dwmw2@infradead.org>
+From: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Subject: [PATCH 05/17] x86/alternative: initializing temporary mm for patching
+Date: Wed, 16 Jan 2019 16:32:47 -0800
+Message-Id: <20190117003259.23141-6-rick.p.edgecombe@intel.com>
+In-Reply-To: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
+References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
+To: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 1/10/19 1:09 PM, Khalid Aziz wrote:
-> From: Julian Stecklina <jsteckli@amazon.de>
-> 
-> We can reduce spin lock usage in xpfo_kmap to the 0->1 transition of
-> the mapcount. This means that xpfo_kmap() can now race and that we
-> get spurious page faults.
-> 
-> The page fault handler helps the system make forward progress by
-> fixing the page table instead of allowing repeated page faults until
-> the right xpfo_kmap went through.
-> 
-> Model-checked with up to 4 concurrent callers with Spin.
-> 
+From: Nadav Amit <namit@vmware.com>
 
-This needs the spurious check for arm64 as well. This at
-least gets me booting but could probably use more review:
+To prevent improper use of the PTEs that are used for text patching, we
+want to use a temporary mm struct. We initailize it by copying the init
+mm.
 
-diff --git a/arch/arm64/mm/fault.c b/arch/arm64/mm/fault.c
-index 7d9571f4ae3d..8f425848cbb9 100644
---- a/arch/arm64/mm/fault.c
-+++ b/arch/arm64/mm/fault.c
-@@ -32,6 +32,7 @@
-  #include <linux/perf_event.h>
-  #include <linux/preempt.h>
-  #include <linux/hugetlb.h>
-+#include <linux/xpfo.h>
-  
-  #include <asm/bug.h>
-  #include <asm/cmpxchg.h>
-@@ -289,6 +290,9 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
-         if (!is_el1_instruction_abort(esr) && fixup_exception(regs))
-                 return;
-  
-+       if (xpfo_spurious_fault(addr))
-+               return;
+The address that will be used for patching is taken from the lower area
+that is usually used for the task memory. Doing so prevents the need to
+frequently synchronize the temporary-mm (e.g., when BPF programs are
+installed), since different PGDs are used for the task memory.
+
+Finally, we randomize the address of the PTEs to harden against exploits
+that use these PTEs.
+
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Dave Hansen <dave.hansen@intel.com>
+Reviewed-by: Masami Hiramatsu <mhiramat@kernel.org>
+Tested-by: Masami Hiramatsu <mhiramat@kernel.org>
+Suggested-by: Andy Lutomirski <luto@kernel.org>
+Signed-off-by: Nadav Amit <namit@vmware.com>
+Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
+---
+ arch/x86/include/asm/pgtable.h       |  3 +++
+ arch/x86/include/asm/text-patching.h |  2 ++
+ arch/x86/kernel/alternative.c        |  3 +++
+ arch/x86/mm/init_64.c                | 36 ++++++++++++++++++++++++++++
+ init/main.c                          |  3 +++
+ 5 files changed, 47 insertions(+)
+
+diff --git a/arch/x86/include/asm/pgtable.h b/arch/x86/include/asm/pgtable.h
+index 40616e805292..e8f630d9a2ed 100644
+--- a/arch/x86/include/asm/pgtable.h
++++ b/arch/x86/include/asm/pgtable.h
+@@ -1021,6 +1021,9 @@ static inline void __meminit init_trampoline_default(void)
+ 	/* Default trampoline pgd value */
+ 	trampoline_pgd_entry = init_top_pgt[pgd_index(__PAGE_OFFSET)];
+ }
 +
-         if (is_el1_permission_fault(addr, esr, regs)) {
-                 if (esr & ESR_ELx_WNR)
-                         msg = "write to read-only memory";
-
-
-> Signed-off-by: Julian Stecklina <jsteckli@amazon.de>
-> Cc: x86@kernel.org
-> Cc: kernel-hardening@lists.openwall.com
-> Cc: Vasileios P. Kemerlis <vpk@cs.columbia.edu>
-> Cc: Juerg Haefliger <juerg.haefliger@canonical.com>
-> Cc: Tycho Andersen <tycho@docker.com>
-> Cc: Marco Benatto <marco.antonio.780@gmail.com>
-> Cc: David Woodhouse <dwmw2@infradead.org>
-> Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
-> ---
->   arch/x86/mm/fault.c  |  4 ++++
->   include/linux/xpfo.h |  4 ++++
->   mm/xpfo.c            | 50 +++++++++++++++++++++++++++++++++++++-------
->   3 files changed, 51 insertions(+), 7 deletions(-)
-> 
-> diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
-> index ba51652fbd33..207081dcd572 100644
-> --- a/arch/x86/mm/fault.c
-> +++ b/arch/x86/mm/fault.c
-> @@ -18,6 +18,7 @@
->   #include <linux/uaccess.h>		/* faulthandler_disabled()	*/
->   #include <linux/efi.h>			/* efi_recover_from_page_fault()*/
->   #include <linux/mm_types.h>
-> +#include <linux/xpfo.h>
->   
->   #include <asm/cpufeature.h>		/* boot_cpu_has, ...		*/
->   #include <asm/traps.h>			/* dotraplinkage, ...		*/
-> @@ -1218,6 +1219,9 @@ do_kern_addr_fault(struct pt_regs *regs, unsigned long hw_error_code,
->   	if (kprobes_fault(regs))
->   		return;
->   
-> +	if (xpfo_spurious_fault(address))
-> +		return;
-> +
->   	/*
->   	 * Note, despite being a "bad area", there are quite a few
->   	 * acceptable reasons to get here, such as erratum fixups
-> diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
-> index ea5188882f49..58dd243637d2 100644
-> --- a/include/linux/xpfo.h
-> +++ b/include/linux/xpfo.h
-> @@ -54,6 +54,8 @@ bool xpfo_enabled(void);
->   
->   phys_addr_t user_virt_to_phys(unsigned long addr);
->   
-> +bool xpfo_spurious_fault(unsigned long addr);
-> +
->   #else /* !CONFIG_XPFO */
->   
->   static inline void xpfo_init_single_page(struct page *page) { }
-> @@ -81,6 +83,8 @@ static inline bool xpfo_enabled(void) { return false; }
->   
->   static inline phys_addr_t user_virt_to_phys(unsigned long addr) { return 0; }
->   
-> +static inline bool xpfo_spurious_fault(unsigned long addr) { return false; }
-> +
->   #endif /* CONFIG_XPFO */
->   
->   #endif /* _LINUX_XPFO_H */
-> diff --git a/mm/xpfo.c b/mm/xpfo.c
-> index dbf20efb0499..85079377c91d 100644
-> --- a/mm/xpfo.c
-> +++ b/mm/xpfo.c
-> @@ -119,6 +119,16 @@ void xpfo_free_pages(struct page *page, int order)
->   	}
->   }
->   
-> +static void xpfo_do_map(void *kaddr, struct page *page)
-> +{
-> +	spin_lock(&page->xpfo_lock);
-> +	if (PageXpfoUnmapped(page)) {
-> +		set_kpte(kaddr, page, PAGE_KERNEL);
-> +		ClearPageXpfoUnmapped(page);
-> +	}
-> +	spin_unlock(&page->xpfo_lock);
-> +}
-> +
->   void xpfo_kmap(void *kaddr, struct page *page)
->   {
->   	if (!static_branch_unlikely(&xpfo_inited))
-> @@ -127,17 +137,12 @@ void xpfo_kmap(void *kaddr, struct page *page)
->   	if (!PageXpfoUser(page))
->   		return;
->   
-> -	spin_lock(&page->xpfo_lock);
-> -
->   	/*
->   	 * The page was previously allocated to user space, so map it back
->   	 * into the kernel. No TLB flush required.
->   	 */
-> -	if ((atomic_inc_return(&page->xpfo_mapcount) == 1) &&
-> -	    TestClearPageXpfoUnmapped(page))
-> -		set_kpte(kaddr, page, PAGE_KERNEL);
-> -
-> -	spin_unlock(&page->xpfo_lock);
-> +	if (atomic_inc_return(&page->xpfo_mapcount) == 1)
-> +		xpfo_do_map(kaddr, page);
->   }
->   EXPORT_SYMBOL(xpfo_kmap);
->   
-> @@ -204,3 +209,34 @@ void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
->   			kunmap_atomic(mapping[i]);
->   }
->   EXPORT_SYMBOL(xpfo_temp_unmap);
-> +
-> +bool xpfo_spurious_fault(unsigned long addr)
-> +{
-> +	struct page *page;
-> +	bool spurious;
-> +	int mapcount;
-> +
-> +	if (!static_branch_unlikely(&xpfo_inited))
-> +		return false;
-> +
-> +	/* XXX Is this sufficient to guard against calling virt_to_page() on a
-> +	 * virtual address that has no corresponding struct page? */
-> +	if (!virt_addr_valid(addr))
-> +		return false;
-> +
-> +	page = virt_to_page(addr);
-> +	mapcount = atomic_read(&page->xpfo_mapcount);
-> +	spurious = PageXpfoUser(page) && mapcount;
-> +
-> +	/* Guarantee forward progress in case xpfo_kmap() raced. */
-> +	if (spurious && PageXpfoUnmapped(page)) {
-> +		xpfo_do_map((void *)(addr & PAGE_MASK), page);
-> +	}
-> +
-> +	if (unlikely(!spurious))
-> +		printk("XPFO non-spurious fault %lx user=%d unmapped=%d mapcount=%d\n",
-> +			addr, PageXpfoUser(page), PageXpfoUnmapped(page),
-> +			mapcount);
-> +
-> +	return spurious;
-> +}
-> 
++void __init poking_init(void);
++
+ # ifdef CONFIG_RANDOMIZE_MEMORY
+ void __meminit init_trampoline(void);
+ # else
+diff --git a/arch/x86/include/asm/text-patching.h b/arch/x86/include/asm/text-patching.h
+index f8fc8e86cf01..a75eed841eed 100644
+--- a/arch/x86/include/asm/text-patching.h
++++ b/arch/x86/include/asm/text-patching.h
+@@ -39,5 +39,7 @@ extern void *text_poke_kgdb(void *addr, const void *opcode, size_t len);
+ extern int poke_int3_handler(struct pt_regs *regs);
+ extern void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler);
+ extern int after_bootmem;
++extern __ro_after_init struct mm_struct *poking_mm;
++extern __ro_after_init unsigned long poking_addr;
+ 
+ #endif /* _ASM_X86_TEXT_PATCHING_H */
+diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
+index c6a3a10a2fd5..57fdde308bb6 100644
+--- a/arch/x86/kernel/alternative.c
++++ b/arch/x86/kernel/alternative.c
+@@ -678,6 +678,9 @@ void *__init_or_module text_poke_early(void *addr, const void *opcode,
+ 	return addr;
+ }
+ 
++__ro_after_init struct mm_struct *poking_mm;
++__ro_after_init unsigned long poking_addr;
++
+ static void *__text_poke(void *addr, const void *opcode, size_t len)
+ {
+ 	unsigned long flags;
+diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
+index bccff68e3267..125c8c48aa24 100644
+--- a/arch/x86/mm/init_64.c
++++ b/arch/x86/mm/init_64.c
+@@ -53,6 +53,7 @@
+ #include <asm/init.h>
+ #include <asm/uv/uv.h>
+ #include <asm/setup.h>
++#include <asm/text-patching.h>
+ 
+ #include "mm_internal.h"
+ 
+@@ -1383,6 +1384,41 @@ unsigned long memory_block_size_bytes(void)
+ 	return memory_block_size_probed;
+ }
+ 
++/*
++ * Initialize an mm_struct to be used during poking and a pointer to be used
++ * during patching.
++ */
++void __init poking_init(void)
++{
++	spinlock_t *ptl;
++	pte_t *ptep;
++
++	poking_mm = copy_init_mm();
++	BUG_ON(!poking_mm);
++
++	/*
++	 * Randomize the poking address, but make sure that the following page
++	 * will be mapped at the same PMD. We need 2 pages, so find space for 3,
++	 * and adjust the address if the PMD ends after the first one.
++	 */
++	poking_addr = TASK_UNMAPPED_BASE;
++	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE))
++		poking_addr += (kaslr_get_random_long("Poking") & PAGE_MASK) %
++			(TASK_SIZE - TASK_UNMAPPED_BASE - 3 * PAGE_SIZE);
++
++	if (((poking_addr + PAGE_SIZE) & ~PMD_MASK) == 0)
++		poking_addr += PAGE_SIZE;
++
++	/*
++	 * We need to trigger the allocation of the page-tables that will be
++	 * needed for poking now. Later, poking may be performed in an atomic
++	 * section, which might cause allocation to fail.
++	 */
++	ptep = get_locked_pte(poking_mm, poking_addr, &ptl);
++	BUG_ON(!ptep);
++	pte_unmap_unlock(ptep, ptl);
++}
++
+ #ifdef CONFIG_SPARSEMEM_VMEMMAP
+ /*
+  * Initialise the sparsemem vmemmap using huge-pages at the PMD level.
+diff --git a/init/main.c b/init/main.c
+index e2e80ca3165a..f5947ba53bb4 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -496,6 +496,8 @@ void __init __weak thread_stack_cache_init(void)
+ 
+ void __init __weak mem_encrypt_init(void) { }
+ 
++void __init __weak poking_init(void) { }
++
+ bool initcall_debug;
+ core_param(initcall_debug, initcall_debug, bool, 0644);
+ 
+@@ -730,6 +732,7 @@ asmlinkage __visible void __init start_kernel(void)
+ 	taskstats_init_early();
+ 	delayacct_init();
+ 
++	poking_init();
+ 	check_bugs();
+ 
+ 	acpi_subsystem_init();
+-- 
+2.17.1
