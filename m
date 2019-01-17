@@ -1,37 +1,62 @@
-From: Nadav Amit <namit@vmware.com>
-Subject: Re: [PATCH 17/17] module: Prevent module removal racing with
- text_poke()
-Date: Thu, 17 Jan 2019 18:07:03 +0000
-Message-ID: <B48C6E93-AD57-4FF8-BBE8-887A5E965793@vmware.com>
-References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
- <20190117003259.23141-18-rick.p.edgecombe@intel.com>
- <20190117165422.d33d1af83db8716e24960a3c@kernel.org>
-In-Reply-To: <20190117165422.d33d1af83db8716e24960a3c@kernel.org>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <697B667B5CAE78419D006F479D0BF3CB@namprd05.prod.outlook.com>
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-To: Masami Hiramatsu <mhiramat@kernel.org>
-Cc: Rick Edgecombe <rick.p.edgecombe@intel.com>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, Linux List Kernel Mailing <linux-kernel@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, Damian Tometzki <linux_dti@icloud.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "deneen.t.dock@intel.com" <deneen.t.dock@intel.com>
+References: <20190117003259.23141-1-rick.p.edgecombe@intel.com> <20190117003259.23141-7-rick.p.edgecombe@intel.com>
+In-Reply-To: <20190117003259.23141-7-rick.p.edgecombe@intel.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Thu, 17 Jan 2019 12:27:23 -0800
+Message-ID: <CALCETrUMAsXoZogEJg7ssv0CO56vzBV2C7VotmWcwNM7iH9Wqw@mail.gmail.com>
+Subject: Re: [PATCH 06/17] x86/alternative: use temporary mm for text poking
+Content-Type: text/plain; charset="UTF-8"
+To: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kristen Carlson Accardi <kristen@linux.intel.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiBPbiBKYW4gMTYsIDIwMTksIGF0IDExOjU0IFBNLCBNYXNhbWkgSGlyYW1hdHN1IDxtaGlyYW1h
-dEBrZXJuZWwub3JnPiB3cm90ZToNCj4gDQo+IE9uIFdlZCwgMTYgSmFuIDIwMTkgMTY6MzI6NTkg
-LTA4MDANCj4gUmljayBFZGdlY29tYmUgPHJpY2sucC5lZGdlY29tYmVAaW50ZWwuY29tPiB3cm90
-ZToNCj4gDQo+PiBGcm9tOiBOYWRhdiBBbWl0IDxuYW1pdEB2bXdhcmUuY29tPg0KPj4gDQo+PiBJ
-dCBzZWVtcyBkYW5nZXJvdXMgdG8gYWxsb3cgY29kZSBtb2RpZmljYXRpb25zIHRvIHRha2UgcGxh
-Y2UNCj4+IGNvbmN1cnJlbnRseSB3aXRoIG1vZHVsZSB1bmxvYWRpbmcuIFNvIHRha2UgdGhlIHRl
-eHRfbXV0ZXggd2hpbGUgdGhlDQo+PiBtZW1vcnkgb2YgdGhlIG1vZHVsZSBpcyBmcmVlZC4NCj4g
-DQo+IEF0IHRoYXQgcG9pbnQsIHNpbmNlIHRoZSBtb2R1bGUgaXRzZWxmIGlzIHJlbW92ZWQgZnJv
-bSBtb2R1bGUgbGlzdCwNCj4gaXQgc2VlbXMgbm8gYWN0dWFsIGhhcm0uIE9yIHdvdWxkIHlvdSBo
-YXZlIGFueSBjb25jZXJuPw0KDQpTbyBpdCBhcHBlYXJzIHRoYXQgeW91IGFyZSByaWdodCBhbmQg
-YWxsIHRoZSB1c2VycyBvZiB0ZXh0X3Bva2UoKSBhbmQNCnRleHRfcG9rZV9icCgpIGRvIGluc3Rh
-bGwgbW9kdWxlIG5vdGlmaWVycywgYW5kIHJlbW92ZSB0aGUgbW9kdWxlIGZyb20gdGhlaXINCmlu
-dGVybmFsIGRhdGEgc3RydWN0dXJlIHdoZW4gdGhleSBhcmUgZG9uZSAoKikuIEFzIGxvbmcgYXMg
-dGhleSBwcmV2ZW50DQp0ZXh0X3Bva2UqKCkgdG8gYmUgY2FsbGVkIGNvbmN1cnJlbnRseSAoZS5n
-LiwgdXNpbmcganVtcF9sYWJlbF9sb2NrKCkpLA0KZXZlcnl0aGluZyBpcyBmaW5lLg0KDQpIYXZp
-bmcgc2FpZCB0aGF0LCB0aGUgcXVlc3Rpb24gaXMgd2hldGhlciB5b3Ug4oCcdHJ1c3TigJ0gdGV4
-dF9wb2tlKigpIHVzZXJzIHRvDQpkbyBzby4gdGV4dF9wb2tlKCkgZGVzY3JpcHRpb24gZG9lcyBu
-b3QgZGF5IGV4cGxpY2l0bHkgdGhhdCB5b3UgbmVlZCB0bw0KcHJldmVudCBtb2R1bGVzIGZyb20g
-YmVpbmcgcmVtb3ZlZC4NCg0KV2hhdCBkbyB5b3Ugc2F5Pw0KDQoNCigqKSBJIGFtIG5vdCBzdXJl
-IGFib3V0IGtnZGIsIGJ1dCBpdCBwcm9iYWJseSBkb2VzIG5vdCBtYXR0ZXIgbXVjaA==
+On Wed, Jan 16, 2019 at 4:33 PM Rick Edgecombe
+<rick.p.edgecombe@intel.com> wrote:
+>
+> From: Nadav Amit <namit@vmware.com>
+>
+> text_poke() can potentially compromise the security as it sets temporary
+> PTEs in the fixmap. These PTEs might be used to rewrite the kernel code
+> from other cores accidentally or maliciously, if an attacker gains the
+> ability to write onto kernel memory.
+
+i think this may be sufficient, but barely.
+
+> +       pte_clear(poking_mm, poking_addr, ptep);
+> +
+> +       /*
+> +        * __flush_tlb_one_user() performs a redundant TLB flush when PTI is on,
+> +        * as it also flushes the corresponding "user" address spaces, which
+> +        * does not exist.
+> +        *
+> +        * Poking, however, is already very inefficient since it does not try to
+> +        * batch updates, so we ignore this problem for the time being.
+> +        *
+> +        * Since the PTEs do not exist in other kernel address-spaces, we do
+> +        * not use __flush_tlb_one_kernel(), which when PTI is on would cause
+> +        * more unwarranted TLB flushes.
+> +        *
+> +        * There is a slight anomaly here: the PTE is a supervisor-only and
+> +        * (potentially) global and we use __flush_tlb_one_user() but this
+> +        * should be fine.
+> +        */
+> +       __flush_tlb_one_user(poking_addr);
+> +       if (cross_page_boundary) {
+> +               pte_clear(poking_mm, poking_addr + PAGE_SIZE, ptep + 1);
+> +               __flush_tlb_one_user(poking_addr + PAGE_SIZE);
+> +       }
+
+In principle, another CPU could still have the old translation.  Your
+mutex probably makes this impossible, but it makes me nervous.
+Ideally you'd use flush_tlb_mm_range(), but I guess you can't do that
+with IRQs off.  Hmm.  I think you should add an inc_mm_tlb_gen() here.
+Arguably, if you did that, you could omit the flushes, but maybe
+that's silly.
+
+If we start getting new users of use_temporary_mm(), we should give
+some serious thought to the SMP semantics.
+
+Also, you're using PAGE_KERNEL.  Please tell me that the global bit
+isn't set in there.
+
+--Andy
