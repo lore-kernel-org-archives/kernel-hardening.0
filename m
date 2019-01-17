@@ -1,147 +1,136 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH 10/17] x86: avoid W^X being broken during modules loading
-Date: Wed, 16 Jan 2019 16:32:52 -0800
-Message-Id: <20190117003259.23141-11-rick.p.edgecombe@intel.com>
+Subject: [PATCH 13/17] Add set_alias_ function and x86 implementation
+Date: Wed, 16 Jan 2019 16:32:55 -0800
+Message-Id: <20190117003259.23141-14-rick.p.edgecombe@intel.com>
 In-Reply-To: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
 References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
 To: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>, Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Nadav Amit <namit@vmware.com>
+This adds two new functions set_alias_default_noflush and set_alias_nv_noflush
+for setting the alias mapping for the page to its default valid permissions
+and to an invalid state that cannot be cached in a TLB, respectively. These
+functions to not flush the TLB.
 
-When modules and BPF filters are loaded, there is a time window in
-which some memory is both writable and executable. An attacker that has
-already found another vulnerability (e.g., a dangling pointer) might be
-able to exploit this behavior to overwrite kernel code. This patch
-prevents having writable executable PTEs in this stage.
+Note, __kernel_map_pages does something similar but flushes the TLB and doesn't
+reset the permission bits to default on all architectures.
 
-In addition, avoiding having R+X mappings can also slightly simplify the
-patching of modules code on initialization (e.g., by alternatives and
-static-key), as would be done in the next patch. This was actually the
-main motivation for this patch.
+There is also an ARCH config ARCH_HAS_SET_ALIAS for specifying whether these
+have an actual implementation or a default empty one.
 
-To avoid having W+X mappings, set them initially as RW (NX) and after
-they are set as RO set them as X as well. Setting them as executable is
-done as a separate step to avoid one core in which the old PTE is cached
-(hence writable), and another which sees the updated PTE (executable),
-which would break the W^X protection.
-
-Cc: Kees Cook <keescook@chromium.org>
+Cc: Dave Hansen <dave.hansen@linux.intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Peter Zijlstra <peterz@infradead.org>
-Cc: Dave Hansen <dave.hansen@intel.com>
-Cc: Masami Hiramatsu <mhiramat@kernel.org>
-Suggested-by: Thomas Gleixner <tglx@linutronix.de>
-Suggested-by: Andy Lutomirski <luto@amacapital.net>
-Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/kernel/alternative.c | 28 +++++++++++++++++++++-------
- arch/x86/kernel/module.c      |  2 +-
- include/linux/filter.h        |  4 ++--
- kernel/module.c               |  5 +++++
- 4 files changed, 29 insertions(+), 10 deletions(-)
+ arch/Kconfig                      |  4 ++++
+ arch/x86/Kconfig                  |  1 +
+ arch/x86/include/asm/set_memory.h |  3 +++
+ arch/x86/mm/pageattr.c            | 14 +++++++++++---
+ include/linux/set_memory.h        | 10 ++++++++++
+ 5 files changed, 29 insertions(+), 3 deletions(-)
 
-diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
-index 8fc4685f3117..18415e3b6000 100644
---- a/arch/x86/kernel/alternative.c
-+++ b/arch/x86/kernel/alternative.c
-@@ -667,15 +667,29 @@ void __init alternative_instructions(void)
-  * handlers seeing an inconsistent instruction while you patch.
-  */
- void *__init_or_module text_poke_early(void *addr, const void *opcode,
--					      size_t len)
-+				       size_t len)
- {
- 	unsigned long flags;
--	local_irq_save(flags);
--	memcpy(addr, opcode, len);
--	local_irq_restore(flags);
--	sync_core();
--	/* Could also do a CLFLUSH here to speed up CPU recovery; but
--	   that causes hangs on some VIA CPUs. */
+diff --git a/arch/Kconfig b/arch/Kconfig
+index 4cfb6de48f79..4ef9db190f2d 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -249,6 +249,10 @@ config ARCH_HAS_FORTIFY_SOURCE
+ config ARCH_HAS_SET_MEMORY
+ 	bool
+ 
++# Select if arch has all set_alias_nv/default() functions
++config ARCH_HAS_SET_ALIAS
++	bool
 +
-+	if (static_cpu_has(X86_FEATURE_NX) &&
-+	    is_module_text_address((unsigned long)addr)) {
-+		/*
-+		 * Modules text is marked initially as non-executable, so the
-+		 * code cannot be running and speculative code-fetches are
-+		 * prevented. We can just change the code.
-+		 */
-+		memcpy(addr, opcode, len);
-+	} else {
-+		local_irq_save(flags);
-+		memcpy(addr, opcode, len);
-+		local_irq_restore(flags);
-+		sync_core();
+ # Select if arch init_task must go in the __init_task_data section
+ config ARCH_TASK_STRUCT_ON_STACK
+        bool
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 15af091611e2..14ad28769256 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -66,6 +66,7 @@ config X86
+ 	select ARCH_HAS_UACCESS_FLUSHCACHE	if X86_64
+ 	select ARCH_HAS_UACCESS_MCSAFE		if X86_64 && X86_MCE
+ 	select ARCH_HAS_SET_MEMORY
++	select ARCH_HAS_SET_ALIAS
+ 	select ARCH_HAS_STRICT_KERNEL_RWX
+ 	select ARCH_HAS_STRICT_MODULE_RWX
+ 	select ARCH_HAS_SYNC_CORE_BEFORE_USERMODE
+diff --git a/arch/x86/include/asm/set_memory.h b/arch/x86/include/asm/set_memory.h
+index 07a25753e85c..2ef4e4222df1 100644
+--- a/arch/x86/include/asm/set_memory.h
++++ b/arch/x86/include/asm/set_memory.h
+@@ -85,6 +85,9 @@ int set_pages_nx(struct page *page, int numpages);
+ int set_pages_ro(struct page *page, int numpages);
+ int set_pages_rw(struct page *page, int numpages);
+ 
++int set_alias_nv_noflush(struct page *page);
++int set_alias_default_noflush(struct page *page);
 +
-+		/*
-+		 * Could also do a CLFLUSH here to speed up CPU recovery; but
-+		 * that causes hangs on some VIA CPUs.
-+		 */
-+	}
- 	return addr;
+ extern int kernel_set_to_readonly;
+ void set_kernel_text_rw(void);
+ void set_kernel_text_ro(void);
+diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
+index 4f8972311a77..3a51915a1410 100644
+--- a/arch/x86/mm/pageattr.c
++++ b/arch/x86/mm/pageattr.c
+@@ -2209,8 +2209,6 @@ int set_pages_rw(struct page *page, int numpages)
+ 	return set_memory_rw(addr, numpages);
  }
  
-diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
-index b052e883dd8c..cfa3106faee4 100644
---- a/arch/x86/kernel/module.c
-+++ b/arch/x86/kernel/module.c
-@@ -87,7 +87,7 @@ void *module_alloc(unsigned long size)
- 	p = __vmalloc_node_range(size, MODULE_ALIGN,
- 				    MODULES_VADDR + get_module_load_offset(),
- 				    MODULES_END, GFP_KERNEL,
--				    PAGE_KERNEL_EXEC, 0, NUMA_NO_NODE,
-+				    PAGE_KERNEL, 0, NUMA_NO_NODE,
- 				    __builtin_return_address(0));
- 	if (p && (kasan_module_alloc(p, size) < 0)) {
- 		vfree(p);
-diff --git a/include/linux/filter.h b/include/linux/filter.h
-index ad106d845b22..f18cd317faf8 100644
---- a/include/linux/filter.h
-+++ b/include/linux/filter.h
-@@ -483,7 +483,7 @@ struct bpf_prog {
- 	u16			pages;		/* Number of allocated pages */
- 	u16			jited:1,	/* Is our filter JIT'ed? */
- 				jit_requested:1,/* archs need to JIT the prog */
--				undo_set_mem:1,	/* Passed set_memory_ro() checkpoint */
-+				undo_set_mem:1, /* Passed set_memory_ro() checkpoint */
- 				gpl_compatible:1, /* Is filter GPL compatible? */
- 				cb_access:1,	/* Is control block accessed? */
- 				dst_needed:1,	/* Do we need dst entry? */
-@@ -681,7 +681,6 @@ bpf_ctx_narrow_access_ok(u32 off, u32 size, u32 size_default)
- 
- static inline void bpf_prog_lock_ro(struct bpf_prog *fp)
+-#ifdef CONFIG_DEBUG_PAGEALLOC
+-
+ static int __set_pages_p(struct page *page, int numpages)
  {
--	fp->undo_set_mem = 1;
- 	set_memory_ro((unsigned long)fp, fp->pages);
+ 	unsigned long tempaddr = (unsigned long) page_address(page);
+@@ -2249,6 +2247,17 @@ static int __set_pages_np(struct page *page, int numpages)
+ 	return __change_page_attr_set_clr(&cpa, 0);
  }
  
-@@ -694,6 +693,7 @@ static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
- static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
++int set_alias_nv_noflush(struct page *page)
++{
++	return __set_pages_np(page, 1);
++}
++
++int set_alias_default_noflush(struct page *page)
++{
++	return __set_pages_p(page, 1);
++}
++
++#ifdef CONFIG_DEBUG_PAGEALLOC
+ void __kernel_map_pages(struct page *page, int numpages, int enable)
  {
- 	set_memory_ro((unsigned long)hdr, hdr->pages);
-+	set_memory_x((unsigned long)hdr, hdr->pages);
+ 	if (PageHighMem(page))
+@@ -2282,7 +2291,6 @@ void __kernel_map_pages(struct page *page, int numpages, int enable)
  }
  
- static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
-diff --git a/kernel/module.c b/kernel/module.c
-index 2ad1b5239910..ae1b77da6a20 100644
---- a/kernel/module.c
-+++ b/kernel/module.c
-@@ -1950,8 +1950,13 @@ void module_enable_ro(const struct module *mod, bool after_init)
- 		return;
+ #ifdef CONFIG_HIBERNATION
+-
+ bool kernel_page_present(struct page *page)
+ {
+ 	unsigned int level;
+diff --git a/include/linux/set_memory.h b/include/linux/set_memory.h
+index 2a986d282a97..d19481ac6a8f 100644
+--- a/include/linux/set_memory.h
++++ b/include/linux/set_memory.h
+@@ -10,6 +10,16 @@
  
- 	frob_text(&mod->core_layout, set_memory_ro);
-+	frob_text(&mod->core_layout, set_memory_x);
-+
- 	frob_rodata(&mod->core_layout, set_memory_ro);
-+
- 	frob_text(&mod->init_layout, set_memory_ro);
-+	frob_text(&mod->init_layout, set_memory_x);
-+
- 	frob_rodata(&mod->init_layout, set_memory_ro);
- 
- 	if (after_init)
+ #ifdef CONFIG_ARCH_HAS_SET_MEMORY
+ #include <asm/set_memory.h>
++#ifndef CONFIG_ARCH_HAS_SET_ALIAS
++static inline int set_alias_nv_noflush(struct page *page)
++{
++	return 0;
++}
++static inline int set_alias_default_noflush(struct page *page)
++{
++	return 0;
++}
++#endif
+ #else
+ static inline int set_memory_ro(unsigned long addr, int numpages) { return 0; }
+ static inline int set_memory_rw(unsigned long addr, int numpages) { return 0; }
 -- 
 2.17.1
