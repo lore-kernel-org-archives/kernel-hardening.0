@@ -1,100 +1,192 @@
-Subject: Re: [RFC PATCH v7 00/16] Add support for eXclusive Page Frame
- Ownership
+Subject: Re: [RFC PATCH v7 14/16] EXPERIMENTAL: xpfo, mm: optimize spin lock
+ usage in xpfo_kmap
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
- <ciirm8o98gzm4z.fsf@u54ee758033e858cfa736.ant.amazon.com>
-From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <2e274b82-75a7-63b9-d7db-b81132114089@oracle.com>
-Date: Wed, 16 Jan 2019 08:16:47 -0700
+ <7e8e17f519ae87a91fc6cbb57b8b27094c96305c.1547153058.git.khalid.aziz@oracle.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <b2ffc4fd-e449-b6da-7070-4f182d44dd5b@redhat.com>
+Date: Wed, 16 Jan 2019 16:18:14 -0800
 MIME-Version: 1.0
-In-Reply-To: <ciirm8o98gzm4z.fsf@u54ee758033e858cfa736.ant.amazon.com>
-Content-Type: multipart/mixed;
- boundary="------------1F66028AF58B3FA1222C73F6"
-To: Julian Stecklina <jsteckli@amazon.de>
-Cc: juergh@gmail.com, tycho@tycho.ws, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
+In-Reply-To: <7e8e17f519ae87a91fc6cbb57b8b27094c96305c.1547153058.git.khalid.aziz@oracle.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+To: Khalid Aziz <khalid.aziz@oracle.com>, juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com
+Cc: deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, x86@kernel.org, "Vasileios P . Kemerlis" <vpk@cs.columbia.edu>, Juerg Haefliger <juerg.haefliger@canonical.com>, Tycho Andersen <tycho@docker.com>, Marco Benatto <marco.antonio.780@gmail.com>, David Woodhouse <dwmw2@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a multi-part message in MIME format.
---------------1F66028AF58B3FA1222C73F6
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
+On 1/10/19 1:09 PM, Khalid Aziz wrote:
+> From: Julian Stecklina <jsteckli@amazon.de>
+> 
+> We can reduce spin lock usage in xpfo_kmap to the 0->1 transition of
+> the mapcount. This means that xpfo_kmap() can now race and that we
+> get spurious page faults.
+> 
+> The page fault handler helps the system make forward progress by
+> fixing the page table instead of allowing repeated page faults until
+> the right xpfo_kmap went through.
+> 
+> Model-checked with up to 4 concurrent callers with Spin.
+> 
 
-On 1/16/19 7:56 AM, Julian Stecklina wrote:
-> Khalid Aziz <khalid.aziz@oracle.com> writes:
->=20
->> I am continuing to build on the work Juerg, Tycho and Julian have done=
+This needs the spurious check for arm64 as well. This at
+least gets me booting but could probably use more review:
 
->> on XPFO.
->=20
-> Awesome!
->=20
->> A rogue process can launch a ret2dir attack only from a CPU that has
->> dual mapping for its pages in physmap in its TLB. We can hence defer
->> TLB flush on a CPU until a process that would have caused a TLB flush
->> is scheduled on that CPU.
->=20
-> Assuming the attacker already has the ability to execute arbitrary code=
-
-> in userspace, they can just create a second process and thus avoid the
-> TLB flush. Am I getting this wrong?
-
-No, you got it right. The patch I wrote closes the security hole when
-attack is launched from the same process but still leaves a window open
-when attack is launched from another process. I am working on figuring
-out how to close that hole while keeping the performance the same as it
-is now. Synchronous TLB flush across all cores is the most secure but
-performance impact is horrendous.
-
---
-Khalid
+diff --git a/arch/arm64/mm/fault.c b/arch/arm64/mm/fault.c
+index 7d9571f4ae3d..8f425848cbb9 100644
+--- a/arch/arm64/mm/fault.c
++++ b/arch/arm64/mm/fault.c
+@@ -32,6 +32,7 @@
+  #include <linux/perf_event.h>
+  #include <linux/preempt.h>
+  #include <linux/hugetlb.h>
++#include <linux/xpfo.h>
+  
+  #include <asm/bug.h>
+  #include <asm/cmpxchg.h>
+@@ -289,6 +290,9 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
+         if (!is_el1_instruction_abort(esr) && fixup_exception(regs))
+                 return;
+  
++       if (xpfo_spurious_fault(addr))
++               return;
++
+         if (is_el1_permission_fault(addr, esr, regs)) {
+                 if (esr & ESR_ELx_WNR)
+                         msg = "write to read-only memory";
 
 
---------------1F66028AF58B3FA1222C73F6
-Content-Type: application/pgp-keys;
- name="pEpkey.asc"
-Content-Transfer-Encoding: quoted-printable
-Content-Disposition: attachment;
- filename="pEpkey.asc"
-
------BEGIN PGP PUBLIC KEY BLOCK-----
-
-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
-+Wrj8Rwom6h21PXZRKnlkis7ibQfE+TxqOI7vg=3D=3D
-=3DnPqY
------END PGP PUBLIC KEY BLOCK-----
-
---------------1F66028AF58B3FA1222C73F6--
+> Signed-off-by: Julian Stecklina <jsteckli@amazon.de>
+> Cc: x86@kernel.org
+> Cc: kernel-hardening@lists.openwall.com
+> Cc: Vasileios P. Kemerlis <vpk@cs.columbia.edu>
+> Cc: Juerg Haefliger <juerg.haefliger@canonical.com>
+> Cc: Tycho Andersen <tycho@docker.com>
+> Cc: Marco Benatto <marco.antonio.780@gmail.com>
+> Cc: David Woodhouse <dwmw2@infradead.org>
+> Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
+> ---
+>   arch/x86/mm/fault.c  |  4 ++++
+>   include/linux/xpfo.h |  4 ++++
+>   mm/xpfo.c            | 50 +++++++++++++++++++++++++++++++++++++-------
+>   3 files changed, 51 insertions(+), 7 deletions(-)
+> 
+> diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
+> index ba51652fbd33..207081dcd572 100644
+> --- a/arch/x86/mm/fault.c
+> +++ b/arch/x86/mm/fault.c
+> @@ -18,6 +18,7 @@
+>   #include <linux/uaccess.h>		/* faulthandler_disabled()	*/
+>   #include <linux/efi.h>			/* efi_recover_from_page_fault()*/
+>   #include <linux/mm_types.h>
+> +#include <linux/xpfo.h>
+>   
+>   #include <asm/cpufeature.h>		/* boot_cpu_has, ...		*/
+>   #include <asm/traps.h>			/* dotraplinkage, ...		*/
+> @@ -1218,6 +1219,9 @@ do_kern_addr_fault(struct pt_regs *regs, unsigned long hw_error_code,
+>   	if (kprobes_fault(regs))
+>   		return;
+>   
+> +	if (xpfo_spurious_fault(address))
+> +		return;
+> +
+>   	/*
+>   	 * Note, despite being a "bad area", there are quite a few
+>   	 * acceptable reasons to get here, such as erratum fixups
+> diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
+> index ea5188882f49..58dd243637d2 100644
+> --- a/include/linux/xpfo.h
+> +++ b/include/linux/xpfo.h
+> @@ -54,6 +54,8 @@ bool xpfo_enabled(void);
+>   
+>   phys_addr_t user_virt_to_phys(unsigned long addr);
+>   
+> +bool xpfo_spurious_fault(unsigned long addr);
+> +
+>   #else /* !CONFIG_XPFO */
+>   
+>   static inline void xpfo_init_single_page(struct page *page) { }
+> @@ -81,6 +83,8 @@ static inline bool xpfo_enabled(void) { return false; }
+>   
+>   static inline phys_addr_t user_virt_to_phys(unsigned long addr) { return 0; }
+>   
+> +static inline bool xpfo_spurious_fault(unsigned long addr) { return false; }
+> +
+>   #endif /* CONFIG_XPFO */
+>   
+>   #endif /* _LINUX_XPFO_H */
+> diff --git a/mm/xpfo.c b/mm/xpfo.c
+> index dbf20efb0499..85079377c91d 100644
+> --- a/mm/xpfo.c
+> +++ b/mm/xpfo.c
+> @@ -119,6 +119,16 @@ void xpfo_free_pages(struct page *page, int order)
+>   	}
+>   }
+>   
+> +static void xpfo_do_map(void *kaddr, struct page *page)
+> +{
+> +	spin_lock(&page->xpfo_lock);
+> +	if (PageXpfoUnmapped(page)) {
+> +		set_kpte(kaddr, page, PAGE_KERNEL);
+> +		ClearPageXpfoUnmapped(page);
+> +	}
+> +	spin_unlock(&page->xpfo_lock);
+> +}
+> +
+>   void xpfo_kmap(void *kaddr, struct page *page)
+>   {
+>   	if (!static_branch_unlikely(&xpfo_inited))
+> @@ -127,17 +137,12 @@ void xpfo_kmap(void *kaddr, struct page *page)
+>   	if (!PageXpfoUser(page))
+>   		return;
+>   
+> -	spin_lock(&page->xpfo_lock);
+> -
+>   	/*
+>   	 * The page was previously allocated to user space, so map it back
+>   	 * into the kernel. No TLB flush required.
+>   	 */
+> -	if ((atomic_inc_return(&page->xpfo_mapcount) == 1) &&
+> -	    TestClearPageXpfoUnmapped(page))
+> -		set_kpte(kaddr, page, PAGE_KERNEL);
+> -
+> -	spin_unlock(&page->xpfo_lock);
+> +	if (atomic_inc_return(&page->xpfo_mapcount) == 1)
+> +		xpfo_do_map(kaddr, page);
+>   }
+>   EXPORT_SYMBOL(xpfo_kmap);
+>   
+> @@ -204,3 +209,34 @@ void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
+>   			kunmap_atomic(mapping[i]);
+>   }
+>   EXPORT_SYMBOL(xpfo_temp_unmap);
+> +
+> +bool xpfo_spurious_fault(unsigned long addr)
+> +{
+> +	struct page *page;
+> +	bool spurious;
+> +	int mapcount;
+> +
+> +	if (!static_branch_unlikely(&xpfo_inited))
+> +		return false;
+> +
+> +	/* XXX Is this sufficient to guard against calling virt_to_page() on a
+> +	 * virtual address that has no corresponding struct page? */
+> +	if (!virt_addr_valid(addr))
+> +		return false;
+> +
+> +	page = virt_to_page(addr);
+> +	mapcount = atomic_read(&page->xpfo_mapcount);
+> +	spurious = PageXpfoUser(page) && mapcount;
+> +
+> +	/* Guarantee forward progress in case xpfo_kmap() raced. */
+> +	if (spurious && PageXpfoUnmapped(page)) {
+> +		xpfo_do_map((void *)(addr & PAGE_MASK), page);
+> +	}
+> +
+> +	if (unlikely(!spurious))
+> +		printk("XPFO non-spurious fault %lx user=%d unmapped=%d mapcount=%d\n",
+> +			addr, PageXpfoUser(page), PageXpfoUnmapped(page),
+> +			mapcount);
+> +
+> +	return spurious;
+> +}
+> 
