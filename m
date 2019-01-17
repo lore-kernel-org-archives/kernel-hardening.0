@@ -1,93 +1,69 @@
-Date: Thu, 17 Jan 2019 15:51:22 +0900
+Date: Thu, 17 Jan 2019 16:54:22 +0900
 From: Masami Hiramatsu <mhiramat@kernel.org>
-Subject: Re: [PATCH 09/17] x86/kprobes: Instruction pages initialization
- enhancements
-Message-Id: <20190117155122.46058c707d6d07237ad913d0@kernel.org>
-In-Reply-To: <20190117003259.23141-10-rick.p.edgecombe@intel.com>
+Subject: Re: [PATCH 17/17] module: Prevent module removal racing with
+ text_poke()
+Message-Id: <20190117165422.d33d1af83db8716e24960a3c@kernel.org>
+In-Reply-To: <20190117003259.23141-18-rick.p.edgecombe@intel.com>
 References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
-	<20190117003259.23141-10-rick.p.edgecombe@intel.com>
+	<20190117003259.23141-18-rick.p.edgecombe@intel.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
 To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Masami Hiramatsu <mhiramat@kernel.org>
+Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 16 Jan 2019 16:32:51 -0800
+On Wed, 16 Jan 2019 16:32:59 -0800
 Rick Edgecombe <rick.p.edgecombe@intel.com> wrote:
 
 > From: Nadav Amit <namit@vmware.com>
 > 
-> This patch is a preparatory patch for a following patch that makes
-> module allocated pages non-executable. The patch sets the page as
-> executable after allocation.
+> It seems dangerous to allow code modifications to take place
+> concurrently with module unloading. So take the text_mutex while the
+> memory of the module is freed.
+
+At that point, since the module itself is removed from module list,
+it seems no actual harm. Or would you have any concern?
+
+Thank you,
+
 > 
-> In the future, we may get better protection of executables. For example,
-> by using hypercalls to request the hypervisor to protect VM executable
-> pages from modifications using nested page-tables. This would allow
-> us to ensure the executable has not changed between allocation and
-> its write-protection.
-> 
-> While at it, do some small cleanup of what appears to be unnecessary
-> masking.
-> 
-
-OK, then this should be done.
-
-Acked-by: Masami Hiramatsu <mhiramat@kernel.org>
-
-Thank you!
-
-
-> Cc: Masami Hiramatsu <mhiramat@kernel.org>
 > Signed-off-by: Nadav Amit <namit@vmware.com>
 > Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 > ---
->  arch/x86/kernel/kprobes/core.c | 24 ++++++++++++++++++++----
->  1 file changed, 20 insertions(+), 4 deletions(-)
+>  kernel/module.c | 5 +++++
+>  1 file changed, 5 insertions(+)
 > 
-> diff --git a/arch/x86/kernel/kprobes/core.c b/arch/x86/kernel/kprobes/core.c
-> index 4ba75afba527..fac692e36833 100644
-> --- a/arch/x86/kernel/kprobes/core.c
-> +++ b/arch/x86/kernel/kprobes/core.c
-> @@ -431,8 +431,20 @@ void *alloc_insn_page(void)
->  	void *page;
+> diff --git a/kernel/module.c b/kernel/module.c
+> index 1af5c8e19086..90cfc4988d98 100644
+> --- a/kernel/module.c
+> +++ b/kernel/module.c
+> @@ -64,6 +64,7 @@
+>  #include <linux/bsearch.h>
+>  #include <linux/dynamic_debug.h>
+>  #include <linux/audit.h>
+> +#include <linux/memory.h>
+>  #include <uapi/linux/module.h>
+>  #include "module-internal.h"
 >  
->  	page = module_alloc(PAGE_SIZE);
-> -	if (page)
-> -		set_memory_ro((unsigned long)page & PAGE_MASK, 1);
-> +	if (page == NULL)
-> +		return NULL;
-> +
-> +	/*
-> +	 * First make the page read-only, and then only then make it executable
-> +	 * to prevent it from being W+X in between.
-> +	 */
-> +	set_memory_ro((unsigned long)page, 1);
-> +
-> +	/*
-> +	 * TODO: Once additional kernel code protection mechanisms are set, ensure
-> +	 * that the page was not maliciously altered and it is still zeroed.
-> +	 */
-> +	set_memory_x((unsigned long)page, 1);
+> @@ -2157,6 +2158,9 @@ static void free_module(struct module *mod)
+>  	synchronize_rcu();
+>  	mutex_unlock(&module_mutex);
 >  
->  	return page;
->  }
-> @@ -440,8 +452,12 @@ void *alloc_insn_page(void)
->  /* Recover page to RW mode before releasing it */
->  void free_insn_page(void *page)
->  {
-> -	set_memory_nx((unsigned long)page & PAGE_MASK, 1);
-> -	set_memory_rw((unsigned long)page & PAGE_MASK, 1);
-> +	/*
-> +	 * First make the page non-executable, and then only then make it
-> +	 * writable to prevent it from being W+X in between.
-> +	 */
-> +	set_memory_nx((unsigned long)page, 1);
-> +	set_memory_rw((unsigned long)page, 1);
->  	module_memfree(page);
+> +	/* Protect against patching of the module while it is being removed */
+> +	mutex_lock(&text_mutex);
+> +
+>  	/* This may be empty, but that's OK */
+>  	module_arch_freeing_init(mod);
+>  	module_memfree(mod->init_layout.base);
+> @@ -2168,6 +2172,7 @@ static void free_module(struct module *mod)
+>  
+>  	/* Finally, free the core (containing the module structure) */
+>  	module_memfree(mod->core_layout.base);
+> +	mutex_unlock(&text_mutex);
 >  }
 >  
+>  void *__symbol_get(const char *symbol)
 > -- 
 > 2.17.1
 > 
