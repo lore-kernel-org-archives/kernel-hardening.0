@@ -1,73 +1,73 @@
-Date: Thu, 17 Jan 2019 16:54:22 +0900
-From: Masami Hiramatsu <mhiramat@kernel.org>
-Subject: Re: [PATCH 17/17] module: Prevent module removal racing with
- text_poke()
-Message-Id: <20190117165422.d33d1af83db8716e24960a3c@kernel.org>
-In-Reply-To: <20190117003259.23141-18-rick.p.edgecombe@intel.com>
+Date: Thu, 17 Jan 2019 10:39:50 +0100
+From: Pavel Machek <pavel@ucw.cz>
+Subject: Re: [PATCH 14/17] mm: Make hibernate handle unmapped pages
+Message-ID: <20190117093950.GA17930@amd>
 References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
-	<20190117003259.23141-18-rick.p.edgecombe@intel.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
+ <20190117003259.23141-15-rick.p.edgecombe@intel.com>
+MIME-Version: 1.0
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="jRHKVT23PllUwdXP"
+Content-Disposition: inline
+In-Reply-To: <20190117003259.23141-15-rick.p.edgecombe@intel.com>
 To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, "Rafael J. Wysocki" <rjw@rjwysocki.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 16 Jan 2019 16:32:59 -0800
-Rick Edgecombe <rick.p.edgecombe@intel.com> wrote:
 
-> From: Nadav Amit <namit@vmware.com>
-> 
-> It seems dangerous to allow code modifications to take place
-> concurrently with module unloading. So take the text_mutex while the
-> memory of the module is freed.
+--jRHKVT23PllUwdXP
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-At that point, since the module itself is removed from module list,
-it seems no actual harm. Or would you have any concern?
+Hi!
 
-Thank you,
+> For architectures with CONFIG_ARCH_HAS_SET_ALIAS, pages can be unmapped
+> briefly on the directmap, even when CONFIG_DEBUG_PAGEALLOC is not configu=
+red.
+> So this changes kernel_map_pages and kernel_page_present to be defined wh=
+en
+> CONFIG_ARCH_HAS_SET_ALIAS is defined as well. It also changes places
+> (page_alloc.c) where those functions are assumed to only be implemented w=
+hen
+> CONFIG_DEBUG_PAGEALLOC is defined.
 
-> 
-> Signed-off-by: Nadav Amit <namit@vmware.com>
-> Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
-> ---
->  kernel/module.c | 5 +++++
->  1 file changed, 5 insertions(+)
-> 
-> diff --git a/kernel/module.c b/kernel/module.c
-> index 1af5c8e19086..90cfc4988d98 100644
-> --- a/kernel/module.c
-> +++ b/kernel/module.c
-> @@ -64,6 +64,7 @@
->  #include <linux/bsearch.h>
->  #include <linux/dynamic_debug.h>
->  #include <linux/audit.h>
-> +#include <linux/memory.h>
->  #include <uapi/linux/module.h>
->  #include "module-internal.h"
->  
-> @@ -2157,6 +2158,9 @@ static void free_module(struct module *mod)
->  	synchronize_rcu();
->  	mutex_unlock(&module_mutex);
->  
-> +	/* Protect against patching of the module while it is being removed */
-> +	mutex_lock(&text_mutex);
-> +
->  	/* This may be empty, but that's OK */
->  	module_arch_freeing_init(mod);
->  	module_memfree(mod->init_layout.base);
-> @@ -2168,6 +2172,7 @@ static void free_module(struct module *mod)
->  
->  	/* Finally, free the core (containing the module structure) */
->  	module_memfree(mod->core_layout.base);
-> +	mutex_unlock(&text_mutex);
+Which architectures are that?
+
+Should this be merged to the patch where HAS_SET_ALIAS is introduced? We
+don't want broken hibernation in between....
+
+
+> -#ifdef CONFIG_DEBUG_PAGEALLOC
+>  extern bool _debug_pagealloc_enabled;
+> -extern void __kernel_map_pages(struct page *page, int numpages, int enab=
+le);
+> =20
+>  static inline bool debug_pagealloc_enabled(void)
+>  {
+> -	return _debug_pagealloc_enabled;
+> +	return IS_ENABLED(CONFIG_DEBUG_PAGEALLOC) && _debug_pagealloc_enabled;
 >  }
->  
->  void *__symbol_get(const char *symbol)
-> -- 
-> 2.17.1
-> 
 
+This will break build AFAICT. _debug_pagealloc_enabled variable does
+not exist in !CONFIG_DEBUG_PAGEALLOC case.
 
--- 
-Masami Hiramatsu <mhiramat@kernel.org>
+									Pavel
+
+--=20
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
+g.html
+
+--jRHKVT23PllUwdXP
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iEYEARECAAYFAlxATWYACgkQMOfwapXb+vLhEwCfboaaFJileFziF32t0acTiuuz
+dewAn0oneo6RWHmnu+B3dnprdMW4dCOy
+=4kpb
+-----END PGP SIGNATURE-----
+
+--jRHKVT23PllUwdXP--
