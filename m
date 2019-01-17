@@ -1,159 +1,284 @@
-From: Nadav Amit <namit@vmware.com>
-Subject: Re: [PATCH 01/17] Fix "x86/alternatives: Lockdep-enforce text_mutex
- in text_poke*()"
-Date: Thu, 17 Jan 2019 22:39:15 +0000
-Message-ID: <8817DE5F-BCF4-4F6A-A496-E0DB6889D86E@vmware.com>
-References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
- <20190117003259.23141-2-rick.p.edgecombe@intel.com>
- <20190117154701.78aa8e9d0130716e0d9ac026@kernel.org>
- <F3B332DA-4637-4A3B-93F9-C7903C1D9FF9@zytor.com>
-In-Reply-To: <F3B332DA-4637-4A3B-93F9-C7903C1D9FF9@zytor.com>
-Content-Type: text/plain; charset="utf-8"
-Content-ID: <D15D5A09441E2E45B1C3866169288B31@namprd05.prod.outlook.com>
-Content-Transfer-Encoding: base64
+Date: Thu, 17 Jan 2019 14:59:09 -0800
+In-Reply-To: <8817DE5F-BCF4-4F6A-A496-E0DB6889D86E@vmware.com>
+References: <20190117003259.23141-1-rick.p.edgecombe@intel.com> <20190117003259.23141-2-rick.p.edgecombe@intel.com> <20190117154701.78aa8e9d0130716e0d9ac026@kernel.org> <F3B332DA-4637-4A3B-93F9-C7903C1D9FF9@zytor.com> <8817DE5F-BCF4-4F6A-A496-E0DB6889D86E@vmware.com>
 MIME-Version: 1.0
-To: "H. Peter Anvin" <hpa@zytor.com>
+Content-Type: text/plain;
+ charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+Subject: Re: [PATCH 01/17] Fix "x86/alternatives: Lockdep-enforce text_mutex in text_poke*()"
+From: hpa@zytor.com
+Message-ID: <F84CA28B-8BAA-468E-BA85-442E245871E5@zytor.com>
+To: Nadav Amit <namit@vmware.com>
 Cc: Masami Hiramatsu <mhiramat@kernel.org>, Rick Edgecombe <rick.p.edgecombe@intel.com>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, Damian Tometzki <linux_dti@icloud.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kristen Carlson Accardi <kristen@linux.intel.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiBPbiBKYW4gMTcsIDIwMTksIGF0IDE6MTUgUE0sIGhwYUB6eXRvci5jb20gd3JvdGU6DQo+IA0K
-PiBPbiBKYW51YXJ5IDE2LCAyMDE5IDEwOjQ3OjAxIFBNIFBTVCwgTWFzYW1pIEhpcmFtYXRzdSA8
-bWhpcmFtYXRAa2VybmVsLm9yZz4gd3JvdGU6DQo+PiBPbiBXZWQsIDE2IEphbiAyMDE5IDE2OjMy
-OjQzIC0wODAwDQo+PiBSaWNrIEVkZ2Vjb21iZSA8cmljay5wLmVkZ2Vjb21iZUBpbnRlbC5jb20+
-IHdyb3RlOg0KPj4gDQo+Pj4gRnJvbTogTmFkYXYgQW1pdCA8bmFtaXRAdm13YXJlLmNvbT4NCj4+
-PiANCj4+PiB0ZXh0X211dGV4IGlzIGN1cnJlbnRseSBleHBlY3RlZCB0byBiZSBoZWxkIGJlZm9y
-ZSB0ZXh0X3Bva2UoKSBpcw0KPj4+IGNhbGxlZCwgYnV0IHdlIGtnZGIgZG9lcyBub3QgdGFrZSB0
-aGUgbXV0ZXgsIGFuZCBpbnN0ZWFkICpzdXBwb3NlZGx5Kg0KPj4+IGVuc3VyZXMgdGhlIGxvY2sg
-aXMgbm90IHRha2VuIGFuZCB3aWxsIG5vdCBiZSBhY3F1aXJlZCBieSBhbnkgb3RoZXINCj4+IGNv
-cmUNCj4+PiB3aGlsZSB0ZXh0X3Bva2UoKSBpcyBydW5uaW5nLg0KPj4+IA0KPj4+IFRoZSByZWFz
-b24gZm9yIHRoZSAic3VwcG9zZWRseSIgY29tbWVudCBpcyB0aGF0IGl0IGlzIG5vdCBlbnRpcmVs
-eQ0KPj4gY2xlYXINCj4+PiB0aGF0IHRoaXMgd291bGQgYmUgdGhlIGNhc2UgaWYgZ2RiX2RvX3Jv
-dW5kdXAgaXMgemVyby4NCj4+PiANCj4+PiBUaGlzIHBhdGNoIGNyZWF0ZXMgdHdvIHdyYXBwZXIg
-ZnVuY3Rpb25zLCB0ZXh0X3Bva2UoKSBhbmQNCj4+PiB0ZXh0X3Bva2Vfa2dkYigpIHdoaWNoIGRv
-IG9yIGRvIG5vdCBydW4gdGhlIGxvY2tkZXAgYXNzZXJ0aW9uDQo+Pj4gcmVzcGVjdGl2ZWx5Lg0K
-Pj4+IA0KPj4+IFdoaWxlIHdlIGFyZSBhdCBpdCwgY2hhbmdlIHRoZSByZXR1cm4gY29kZSBvZiB0
-ZXh0X3Bva2UoKSB0bw0KPj4gc29tZXRoaW5nDQo+Pj4gbWVhbmluZ2Z1bC4gT25lIGRheSwgY2Fs
-bGVycyBtaWdodCBhY3R1YWxseSByZXNwZWN0IGl0IGFuZCB0aGUNCj4+IGV4aXN0aW5nDQo+Pj4g
-QlVHX09OKCkgd2hlbiBwYXRjaGluZyBmYWlscyBjb3VsZCBiZSByZW1vdmVkLiBGb3Iga2dkYiwg
-dGhlIHJldHVybg0KPj4+IHZhbHVlIGNhbiBhY3R1YWxseSBiZSB1c2VkLg0KPj4gDQo+PiBMb29r
-cyBnb29kIHRvIG1lLg0KPj4gDQo+PiBSZXZpZXdlZC1ieTogTWFzYW1pIEhpcmFtYXRzdSA8bWhp
-cmFtYXRAa2VybmVsLm9yZz4NCj4+IA0KPj4gVGhhbmsgeW91LA0KPj4gDQo+Pj4gQ2M6IEFuZHkg
-THV0b21pcnNraSA8bHV0b0BrZXJuZWwub3JnPg0KPj4+IENjOiBLZWVzIENvb2sgPGtlZXNjb29r
-QGNocm9taXVtLm9yZz4NCj4+PiBDYzogRGF2ZSBIYW5zZW4gPGRhdmUuaGFuc2VuQGludGVsLmNv
-bT4NCj4+PiBDYzogTWFzYW1pIEhpcmFtYXRzdSA8bWhpcmFtYXRAa2VybmVsLm9yZz4NCj4+PiBG
-aXhlczogOTIyMmY2MDY1MDZjICgieDg2L2FsdGVybmF0aXZlczogTG9ja2RlcC1lbmZvcmNlIHRl
-eHRfbXV0ZXggaW4NCj4+IHRleHRfcG9rZSooKSIpDQo+Pj4gU3VnZ2VzdGVkLWJ5OiBQZXRlciBa
-aWpsc3RyYSA8cGV0ZXJ6QGluZnJhZGVhZC5vcmc+DQo+Pj4gQWNrZWQtYnk6IEppcmkgS29zaW5h
-IDxqa29zaW5hQHN1c2UuY3o+DQo+Pj4gU2lnbmVkLW9mZi1ieTogTmFkYXYgQW1pdCA8bmFtaXRA
-dm13YXJlLmNvbT4NCj4+PiBTaWduZWQtb2ZmLWJ5OiBSaWNrIEVkZ2Vjb21iZSA8cmljay5wLmVk
-Z2Vjb21iZUBpbnRlbC5jb20+DQo+Pj4gLS0tDQo+Pj4gYXJjaC94ODYvaW5jbHVkZS9hc20vdGV4
-dC1wYXRjaGluZy5oIHwgIDEgKw0KPj4+IGFyY2gveDg2L2tlcm5lbC9hbHRlcm5hdGl2ZS5jICAg
-ICAgICB8IDUyDQo+PiArKysrKysrKysrKysrKysrKysrKy0tLS0tLS0tDQo+Pj4gYXJjaC94ODYv
-a2VybmVsL2tnZGIuYyAgICAgICAgICAgICAgIHwgMTEgKysrLS0tDQo+Pj4gMyBmaWxlcyBjaGFu
-Z2VkLCA0NSBpbnNlcnRpb25zKCspLCAxOSBkZWxldGlvbnMoLSkNCj4+PiANCj4+PiBkaWZmIC0t
-Z2l0IGEvYXJjaC94ODYvaW5jbHVkZS9hc20vdGV4dC1wYXRjaGluZy5oDQo+PiBiL2FyY2gveDg2
-L2luY2x1ZGUvYXNtL3RleHQtcGF0Y2hpbmcuaA0KPj4+IGluZGV4IGU4NWZmNjVjNDNjMy4uZjhm
-YzhlODZjZjAxIDEwMDY0NA0KPj4+IC0tLSBhL2FyY2gveDg2L2luY2x1ZGUvYXNtL3RleHQtcGF0
-Y2hpbmcuaA0KPj4+ICsrKyBiL2FyY2gveDg2L2luY2x1ZGUvYXNtL3RleHQtcGF0Y2hpbmcuaA0K
-Pj4+IEBAIC0zNSw2ICszNSw3IEBAIGV4dGVybiB2b2lkICp0ZXh0X3Bva2VfZWFybHkodm9pZCAq
-YWRkciwgY29uc3Qgdm9pZA0KPj4gKm9wY29kZSwgc2l6ZV90IGxlbik7DQo+Pj4gICogaW5jb25z
-aXN0ZW50IGluc3RydWN0aW9uIHdoaWxlIHlvdSBwYXRjaC4NCj4+PiAgKi8NCj4+PiBleHRlcm4g
-dm9pZCAqdGV4dF9wb2tlKHZvaWQgKmFkZHIsIGNvbnN0IHZvaWQgKm9wY29kZSwgc2l6ZV90IGxl
-bik7DQo+Pj4gK2V4dGVybiB2b2lkICp0ZXh0X3Bva2Vfa2dkYih2b2lkICphZGRyLCBjb25zdCB2
-b2lkICpvcGNvZGUsIHNpemVfdA0KPj4gbGVuKTsNCj4+PiBleHRlcm4gaW50IHBva2VfaW50M19o
-YW5kbGVyKHN0cnVjdCBwdF9yZWdzICpyZWdzKTsNCj4+PiBleHRlcm4gdm9pZCAqdGV4dF9wb2tl
-X2JwKHZvaWQgKmFkZHIsIGNvbnN0IHZvaWQgKm9wY29kZSwgc2l6ZV90DQo+PiBsZW4sIHZvaWQg
-KmhhbmRsZXIpOw0KPj4+IGV4dGVybiBpbnQgYWZ0ZXJfYm9vdG1lbTsNCj4+PiBkaWZmIC0tZ2l0
-IGEvYXJjaC94ODYva2VybmVsL2FsdGVybmF0aXZlLmMNCj4+IGIvYXJjaC94ODYva2VybmVsL2Fs
-dGVybmF0aXZlLmMNCj4+PiBpbmRleCBlYmVhYzQ4N2EyMGMuLmM2YTNhMTBhMmZkNSAxMDA2NDQN
-Cj4+PiAtLS0gYS9hcmNoL3g4Ni9rZXJuZWwvYWx0ZXJuYXRpdmUuYw0KPj4+ICsrKyBiL2FyY2gv
-eDg2L2tlcm5lbC9hbHRlcm5hdGl2ZS5jDQo+Pj4gQEAgLTY3OCwxOCArNjc4LDcgQEAgdm9pZCAq
-X19pbml0X29yX21vZHVsZSB0ZXh0X3Bva2VfZWFybHkodm9pZA0KPj4gKmFkZHIsIGNvbnN0IHZv
-aWQgKm9wY29kZSwNCj4+PiByZXR1cm4gYWRkcjsNCj4+PiB9DQo+Pj4gDQo+Pj4gLS8qKg0KPj4+
-IC0gKiB0ZXh0X3Bva2UgLSBVcGRhdGUgaW5zdHJ1Y3Rpb25zIG9uIGEgbGl2ZSBrZXJuZWwNCj4+
-PiAtICogQGFkZHI6IGFkZHJlc3MgdG8gbW9kaWZ5DQo+Pj4gLSAqIEBvcGNvZGU6IHNvdXJjZSBv
-ZiB0aGUgY29weQ0KPj4+IC0gKiBAbGVuOiBsZW5ndGggdG8gY29weQ0KPj4+IC0gKg0KPj4+IC0g
-KiBPbmx5IGF0b21pYyB0ZXh0IHBva2Uvc2V0IHNob3VsZCBiZSBhbGxvd2VkIHdoZW4gbm90IGRv
-aW5nIGVhcmx5DQo+PiBwYXRjaGluZy4NCj4+PiAtICogSXQgbWVhbnMgdGhlIHNpemUgbXVzdCBi
-ZSB3cml0YWJsZSBhdG9taWNhbGx5IGFuZCB0aGUgYWRkcmVzcw0KPj4gbXVzdCBiZSBhbGlnbmVk
-DQo+Pj4gLSAqIGluIGEgd2F5IHRoYXQgcGVybWl0cyBhbiBhdG9taWMgd3JpdGUuIEl0IGFsc28g
-bWFrZXMgc3VyZSB3ZSBmaXQNCj4+IG9uIGEgc2luZ2xlDQo+Pj4gLSAqIHBhZ2UuDQo+Pj4gLSAq
-Lw0KPj4+IC12b2lkICp0ZXh0X3Bva2Uodm9pZCAqYWRkciwgY29uc3Qgdm9pZCAqb3Bjb2RlLCBz
-aXplX3QgbGVuKQ0KPj4+ICtzdGF0aWMgdm9pZCAqX190ZXh0X3Bva2Uodm9pZCAqYWRkciwgY29u
-c3Qgdm9pZCAqb3Bjb2RlLCBzaXplX3QgbGVuKQ0KPj4+IHsNCj4+PiAJdW5zaWduZWQgbG9uZyBm
-bGFnczsNCj4+PiAJY2hhciAqdmFkZHI7DQo+Pj4gQEAgLTcwMiw4ICs2OTEsNiBAQCB2b2lkICp0
-ZXh0X3Bva2Uodm9pZCAqYWRkciwgY29uc3Qgdm9pZCAqb3Bjb2RlLA0KPj4gc2l6ZV90IGxlbikN
-Cj4+PiAgKi8NCj4+PiAJQlVHX09OKCFhZnRlcl9ib290bWVtKTsNCj4+PiANCj4+PiAtCWxvY2tk
-ZXBfYXNzZXJ0X2hlbGQoJnRleHRfbXV0ZXgpOw0KPj4+IC0NCj4+PiAJaWYgKCFjb3JlX2tlcm5l
-bF90ZXh0KCh1bnNpZ25lZCBsb25nKWFkZHIpKSB7DQo+Pj4gCQlwYWdlc1swXSA9IHZtYWxsb2Nf
-dG9fcGFnZShhZGRyKTsNCj4+PiAJCXBhZ2VzWzFdID0gdm1hbGxvY190b19wYWdlKGFkZHIgKyBQ
-QUdFX1NJWkUpOw0KPj4+IEBAIC03MzIsNiArNzE5LDQzIEBAIHZvaWQgKnRleHRfcG9rZSh2b2lk
-ICphZGRyLCBjb25zdCB2b2lkICpvcGNvZGUsDQo+PiBzaXplX3QgbGVuKQ0KPj4+IHJldHVybiBh
-ZGRyOw0KPj4+IH0NCj4+PiANCj4+PiArLyoqDQo+Pj4gKyAqIHRleHRfcG9rZSAtIFVwZGF0ZSBp
-bnN0cnVjdGlvbnMgb24gYSBsaXZlIGtlcm5lbA0KPj4+ICsgKiBAYWRkcjogYWRkcmVzcyB0byBt
-b2RpZnkNCj4+PiArICogQG9wY29kZTogc291cmNlIG9mIHRoZSBjb3B5DQo+Pj4gKyAqIEBsZW46
-IGxlbmd0aCB0byBjb3B5DQo+Pj4gKyAqDQo+Pj4gKyAqIE9ubHkgYXRvbWljIHRleHQgcG9rZS9z
-ZXQgc2hvdWxkIGJlIGFsbG93ZWQgd2hlbiBub3QgZG9pbmcgZWFybHkNCj4+IHBhdGNoaW5nLg0K
-Pj4+ICsgKiBJdCBtZWFucyB0aGUgc2l6ZSBtdXN0IGJlIHdyaXRhYmxlIGF0b21pY2FsbHkgYW5k
-IHRoZSBhZGRyZXNzDQo+PiBtdXN0IGJlIGFsaWduZWQNCj4+PiArICogaW4gYSB3YXkgdGhhdCBw
-ZXJtaXRzIGFuIGF0b21pYyB3cml0ZS4gSXQgYWxzbyBtYWtlcyBzdXJlIHdlIGZpdA0KPj4gb24g
-YSBzaW5nbGUNCj4+PiArICogcGFnZS4NCj4+PiArICovDQo+Pj4gK3ZvaWQgKnRleHRfcG9rZSh2
-b2lkICphZGRyLCBjb25zdCB2b2lkICpvcGNvZGUsIHNpemVfdCBsZW4pDQo+Pj4gK3sNCj4+PiAr
-CWxvY2tkZXBfYXNzZXJ0X2hlbGQoJnRleHRfbXV0ZXgpOw0KPj4+ICsNCj4+PiArCXJldHVybiBf
-X3RleHRfcG9rZShhZGRyLCBvcGNvZGUsIGxlbik7DQo+Pj4gK30NCj4+PiArDQo+Pj4gKy8qKg0K
-Pj4+ICsgKiB0ZXh0X3Bva2Vfa2dkYiAtIFVwZGF0ZSBpbnN0cnVjdGlvbnMgb24gYSBsaXZlIGtl
-cm5lbCBieSBrZ2RiDQo+Pj4gKyAqIEBhZGRyOiBhZGRyZXNzIHRvIG1vZGlmeQ0KPj4+ICsgKiBA
-b3Bjb2RlOiBzb3VyY2Ugb2YgdGhlIGNvcHkNCj4+PiArICogQGxlbjogbGVuZ3RoIHRvIGNvcHkN
-Cj4+PiArICoNCj4+PiArICogT25seSBhdG9taWMgdGV4dCBwb2tlL3NldCBzaG91bGQgYmUgYWxs
-b3dlZCB3aGVuIG5vdCBkb2luZyBlYXJseQ0KPj4gcGF0Y2hpbmcuDQo+Pj4gKyAqIEl0IG1lYW5z
-IHRoZSBzaXplIG11c3QgYmUgd3JpdGFibGUgYXRvbWljYWxseSBhbmQgdGhlIGFkZHJlc3MNCj4+
-IG11c3QgYmUgYWxpZ25lZA0KPj4+ICsgKiBpbiBhIHdheSB0aGF0IHBlcm1pdHMgYW4gYXRvbWlj
-IHdyaXRlLiBJdCBhbHNvIG1ha2VzIHN1cmUgd2UgZml0DQo+PiBvbiBhIHNpbmdsZQ0KPj4+ICsg
-KiBwYWdlLg0KPj4+ICsgKg0KPj4+ICsgKiBDb250ZXh0OiBzaG91bGQgb25seSBiZSB1c2VkIGJ5
-IGtnZGIsIHdoaWNoIGVuc3VyZXMgbm8gb3RoZXIgY29yZQ0KPj4gaXMgcnVubmluZywNCj4+PiAr
-ICoJICAgIGRlc3BpdGUgdGhlIGZhY3QgaXQgZG9lcyBub3QgaG9sZCB0aGUgdGV4dF9tdXRleC4N
-Cj4+PiArICovDQo+Pj4gK3ZvaWQgKnRleHRfcG9rZV9rZ2RiKHZvaWQgKmFkZHIsIGNvbnN0IHZv
-aWQgKm9wY29kZSwgc2l6ZV90IGxlbikNCj4+PiArew0KPj4+ICsJcmV0dXJuIF9fdGV4dF9wb2tl
-KGFkZHIsIG9wY29kZSwgbGVuKTsNCj4+PiArfQ0KPj4+ICsNCj4+PiBzdGF0aWMgdm9pZCBkb19z
-eW5jX2NvcmUodm9pZCAqaW5mbykNCj4+PiB7DQo+Pj4gCXN5bmNfY29yZSgpOw0KPj4+IGRpZmYg
-LS1naXQgYS9hcmNoL3g4Ni9rZXJuZWwva2dkYi5jIGIvYXJjaC94ODYva2VybmVsL2tnZGIuYw0K
-Pj4+IGluZGV4IDVkYjA4NDI1MDYzZS4uMTQ2MTU0NGNiYThiIDEwMDY0NA0KPj4+IC0tLSBhL2Fy
-Y2gveDg2L2tlcm5lbC9rZ2RiLmMNCj4+PiArKysgYi9hcmNoL3g4Ni9rZXJuZWwva2dkYi5jDQo+
-Pj4gQEAgLTc1OCwxMyArNzU4LDEzIEBAIGludCBrZ2RiX2FyY2hfc2V0X2JyZWFrcG9pbnQoc3Ry
-dWN0IGtnZGJfYmtwdA0KPj4gKmJwdCkNCj4+PiBpZiAoIWVycikNCj4+PiAJCXJldHVybiBlcnI7
-DQo+Pj4gCS8qDQo+Pj4gLQkgKiBJdCBpcyBzYWZlIHRvIGNhbGwgdGV4dF9wb2tlKCkgYmVjYXVz
-ZSBub3JtYWwga2VybmVsIGV4ZWN1dGlvbg0KPj4+ICsJICogSXQgaXMgc2FmZSB0byBjYWxsIHRl
-eHRfcG9rZV9rZ2RiKCkgYmVjYXVzZSBub3JtYWwga2VybmVsDQo+PiBleGVjdXRpb24NCj4+PiAg
-KiBpcyBzdG9wcGVkIG9uIGFsbCBjb3Jlcywgc28gbG9uZyBhcyB0aGUgdGV4dF9tdXRleCBpcyBu
-b3QNCj4+IGxvY2tlZC4NCj4+PiAgKi8NCj4+PiAJaWYgKG11dGV4X2lzX2xvY2tlZCgmdGV4dF9t
-dXRleCkpDQo+Pj4gCQlyZXR1cm4gLUVCVVNZOw0KPj4+IC0JdGV4dF9wb2tlKCh2b2lkICopYnB0
-LT5icHRfYWRkciwgYXJjaF9rZ2RiX29wcy5nZGJfYnB0X2luc3RyLA0KPj4+IC0JCSAgQlJFQUtf
-SU5TVFJfU0laRSk7DQo+Pj4gKwl0ZXh0X3Bva2Vfa2dkYigodm9pZCAqKWJwdC0+YnB0X2FkZHIs
-IGFyY2hfa2dkYl9vcHMuZ2RiX2JwdF9pbnN0ciwNCj4+PiArCQkgICAgICAgQlJFQUtfSU5TVFJf
-U0laRSk7DQo+Pj4gCWVyciA9IHByb2JlX2tlcm5lbF9yZWFkKG9wYywgKGNoYXIgKilicHQtPmJw
-dF9hZGRyLA0KPj4gQlJFQUtfSU5TVFJfU0laRSk7DQo+Pj4gaWYgKGVycikNCj4+PiAJCXJldHVy
-biBlcnI7DQo+Pj4gQEAgLTc4MywxMiArNzgzLDEzIEBAIGludCBrZ2RiX2FyY2hfcmVtb3ZlX2Jy
-ZWFrcG9pbnQoc3RydWN0DQo+PiBrZ2RiX2JrcHQgKmJwdCkNCj4+PiBpZiAoYnB0LT50eXBlICE9
-IEJQX1BPS0VfQlJFQUtQT0lOVCkNCj4+PiAJCWdvdG8ga25sX3dyaXRlOw0KPj4+IAkvKg0KPj4+
-IC0JICogSXQgaXMgc2FmZSB0byBjYWxsIHRleHRfcG9rZSgpIGJlY2F1c2Ugbm9ybWFsIGtlcm5l
-bCBleGVjdXRpb24NCj4+PiArCSAqIEl0IGlzIHNhZmUgdG8gY2FsbCB0ZXh0X3Bva2Vfa2dkYigp
-IGJlY2F1c2Ugbm9ybWFsIGtlcm5lbA0KPj4gZXhlY3V0aW9uDQo+Pj4gICogaXMgc3RvcHBlZCBv
-biBhbGwgY29yZXMsIHNvIGxvbmcgYXMgdGhlIHRleHRfbXV0ZXggaXMgbm90DQo+PiBsb2NrZWQu
-DQo+Pj4gICovDQo+Pj4gCWlmIChtdXRleF9pc19sb2NrZWQoJnRleHRfbXV0ZXgpKQ0KPj4+IAkJ
-Z290byBrbmxfd3JpdGU7DQo+Pj4gLQl0ZXh0X3Bva2UoKHZvaWQgKilicHQtPmJwdF9hZGRyLCBi
-cHQtPnNhdmVkX2luc3RyLA0KPj4gQlJFQUtfSU5TVFJfU0laRSk7DQo+Pj4gKwl0ZXh0X3Bva2Vf
-a2dkYigodm9pZCAqKWJwdC0+YnB0X2FkZHIsIGJwdC0+c2F2ZWRfaW5zdHIsDQo+Pj4gKwkJICAg
-ICAgIEJSRUFLX0lOU1RSX1NJWkUpOw0KPj4+IAllcnIgPSBwcm9iZV9rZXJuZWxfcmVhZChvcGMs
-IChjaGFyICopYnB0LT5icHRfYWRkciwNCj4+IEJSRUFLX0lOU1RSX1NJWkUpOw0KPj4+IGlmIChl
-cnIgfHwgbWVtY21wKG9wYywgYnB0LT5zYXZlZF9pbnN0ciwgQlJFQUtfSU5TVFJfU0laRSkpDQo+
-Pj4gCQlnb3RvIGtubF93cml0ZTsNCj4+PiAtLSANCj4+PiAyLjE3LjENCj4gDQo+IElmIHlvdSBh
-cmUgcmVvcmdhbml6aW5nIHRoaXMgY29kZSwgcGxlYXNlIGRvIHNvIHNvIHRoYXQgdGhlIGNhbGxl
-ciBkb2VzbuKAmXQNCj4gaGF2ZSB0byB3b3JyeSBhYm91dCBpZiBpdCBzaG91bGQgY2FsbCB0ZXh0
-X3Bva2VfYnAoKSBvciB0ZXh0X3Bva2VfZWFybHkoKS4NCj4gUmlnaHQgbm93IHRoZSBjYWxsZXIg
-aGFkIHRvIGtub3cgdGhhdCwgd2hpY2ggbWFrZXMgbm8gc2Vuc2UuDQoNCkRpZCB5b3UgbG9vayBh
-dCAiWzExLzE3XSB4ODYvanVtcC1sYWJlbDogcmVtb3ZlIHN1cHBvcnQgZm9yIGN1c3RvbSBwb2tl
-cuKAnT8NCg0KaHR0cHM6Ly9sb3JlLmtlcm5lbC5vcmcvcGF0Y2h3b3JrL3BhdGNoLzEwMzI4NTcv
-DQoNCklmIHRoaXMgaXMgbm90IHdoYXQgeW91IHJlZ2FyZCwgcGxlYXNlIGJlIG1vcmUgY29uY3Jl
-dGUuIHRleHRfcG9rZV9lYXJseSgpDQppcyBzdGlsbCB1c2VkIGRpcmVjdGx5IG9uIGluaXQgYW5k
-IHdoaWxlIG1vZHVsZXMgYXJlIGxvYWRlZCwgd2hpY2ggbWlnaHQgbm90DQpiZSBncmVhdCwgYnV0
-IGlzIG91dHNpZGUgb2YgdGhlIHNjb3BlIG9mIHRoaXMgcGF0Y2gtc2V0Lg0KDQo=
+On January 17, 2019 2:39:15 PM PST, Nadav Amit <namit@vmware=2Ecom> wrote:
+>> On Jan 17, 2019, at 1:15 PM, hpa@zytor=2Ecom wrote:
+>>=20
+>> On January 16, 2019 10:47:01 PM PST, Masami Hiramatsu
+><mhiramat@kernel=2Eorg> wrote:
+>>> On Wed, 16 Jan 2019 16:32:43 -0800
+>>> Rick Edgecombe <rick=2Ep=2Eedgecombe@intel=2Ecom> wrote:
+>>>=20
+>>>> From: Nadav Amit <namit@vmware=2Ecom>
+>>>>=20
+>>>> text_mutex is currently expected to be held before text_poke() is
+>>>> called, but we kgdb does not take the mutex, and instead
+>*supposedly*
+>>>> ensures the lock is not taken and will not be acquired by any other
+>>> core
+>>>> while text_poke() is running=2E
+>>>>=20
+>>>> The reason for the "supposedly" comment is that it is not entirely
+>>> clear
+>>>> that this would be the case if gdb_do_roundup is zero=2E
+>>>>=20
+>>>> This patch creates two wrapper functions, text_poke() and
+>>>> text_poke_kgdb() which do or do not run the lockdep assertion
+>>>> respectively=2E
+>>>>=20
+>>>> While we are at it, change the return code of text_poke() to
+>>> something
+>>>> meaningful=2E One day, callers might actually respect it and the
+>>> existing
+>>>> BUG_ON() when patching fails could be removed=2E For kgdb, the return
+>>>> value can actually be used=2E
+>>>=20
+>>> Looks good to me=2E
+>>>=20
+>>> Reviewed-by: Masami Hiramatsu <mhiramat@kernel=2Eorg>
+>>>=20
+>>> Thank you,
+>>>=20
+>>>> Cc: Andy Lutomirski <luto@kernel=2Eorg>
+>>>> Cc: Kees Cook <keescook@chromium=2Eorg>
+>>>> Cc: Dave Hansen <dave=2Ehansen@intel=2Ecom>
+>>>> Cc: Masami Hiramatsu <mhiramat@kernel=2Eorg>
+>>>> Fixes: 9222f606506c ("x86/alternatives: Lockdep-enforce text_mutex
+>in
+>>> text_poke*()")
+>>>> Suggested-by: Peter Zijlstra <peterz@infradead=2Eorg>
+>>>> Acked-by: Jiri Kosina <jkosina@suse=2Ecz>
+>>>> Signed-off-by: Nadav Amit <namit@vmware=2Ecom>
+>>>> Signed-off-by: Rick Edgecombe <rick=2Ep=2Eedgecombe@intel=2Ecom>
+>>>> ---
+>>>> arch/x86/include/asm/text-patching=2Eh |  1 +
+>>>> arch/x86/kernel/alternative=2Ec        | 52
+>>> ++++++++++++++++++++--------
+>>>> arch/x86/kernel/kgdb=2Ec               | 11 +++---
+>>>> 3 files changed, 45 insertions(+), 19 deletions(-)
+>>>>=20
+>>>> diff --git a/arch/x86/include/asm/text-patching=2Eh
+>>> b/arch/x86/include/asm/text-patching=2Eh
+>>>> index e85ff65c43c3=2E=2Ef8fc8e86cf01 100644
+>>>> --- a/arch/x86/include/asm/text-patching=2Eh
+>>>> +++ b/arch/x86/include/asm/text-patching=2Eh
+>>>> @@ -35,6 +35,7 @@ extern void *text_poke_early(void *addr, const
+>void
+>>> *opcode, size_t len);
+>>>>  * inconsistent instruction while you patch=2E
+>>>>  */
+>>>> extern void *text_poke(void *addr, const void *opcode, size_t len);
+>>>> +extern void *text_poke_kgdb(void *addr, const void *opcode, size_t
+>>> len);
+>>>> extern int poke_int3_handler(struct pt_regs *regs);
+>>>> extern void *text_poke_bp(void *addr, const void *opcode, size_t
+>>> len, void *handler);
+>>>> extern int after_bootmem;
+>>>> diff --git a/arch/x86/kernel/alternative=2Ec
+>>> b/arch/x86/kernel/alternative=2Ec
+>>>> index ebeac487a20c=2E=2Ec6a3a10a2fd5 100644
+>>>> --- a/arch/x86/kernel/alternative=2Ec
+>>>> +++ b/arch/x86/kernel/alternative=2Ec
+>>>> @@ -678,18 +678,7 @@ void *__init_or_module text_poke_early(void
+>>> *addr, const void *opcode,
+>>>> return addr;
+>>>> }
+>>>>=20
+>>>> -/**
+>>>> - * text_poke - Update instructions on a live kernel
+>>>> - * @addr: address to modify
+>>>> - * @opcode: source of the copy
+>>>> - * @len: length to copy
+>>>> - *
+>>>> - * Only atomic text poke/set should be allowed when not doing
+>early
+>>> patching=2E
+>>>> - * It means the size must be writable atomically and the address
+>>> must be aligned
+>>>> - * in a way that permits an atomic write=2E It also makes sure we
+>fit
+>>> on a single
+>>>> - * page=2E
+>>>> - */
+>>>> -void *text_poke(void *addr, const void *opcode, size_t len)
+>>>> +static void *__text_poke(void *addr, const void *opcode, size_t
+>len)
+>>>> {
+>>>> 	unsigned long flags;
+>>>> 	char *vaddr;
+>>>> @@ -702,8 +691,6 @@ void *text_poke(void *addr, const void *opcode,
+>>> size_t len)
+>>>>  */
+>>>> 	BUG_ON(!after_bootmem);
+>>>>=20
+>>>> -	lockdep_assert_held(&text_mutex);
+>>>> -
+>>>> 	if (!core_kernel_text((unsigned long)addr)) {
+>>>> 		pages[0] =3D vmalloc_to_page(addr);
+>>>> 		pages[1] =3D vmalloc_to_page(addr + PAGE_SIZE);
+>>>> @@ -732,6 +719,43 @@ void *text_poke(void *addr, const void
+>*opcode,
+>>> size_t len)
+>>>> return addr;
+>>>> }
+>>>>=20
+>>>> +/**
+>>>> + * text_poke - Update instructions on a live kernel
+>>>> + * @addr: address to modify
+>>>> + * @opcode: source of the copy
+>>>> + * @len: length to copy
+>>>> + *
+>>>> + * Only atomic text poke/set should be allowed when not doing
+>early
+>>> patching=2E
+>>>> + * It means the size must be writable atomically and the address
+>>> must be aligned
+>>>> + * in a way that permits an atomic write=2E It also makes sure we
+>fit
+>>> on a single
+>>>> + * page=2E
+>>>> + */
+>>>> +void *text_poke(void *addr, const void *opcode, size_t len)
+>>>> +{
+>>>> +	lockdep_assert_held(&text_mutex);
+>>>> +
+>>>> +	return __text_poke(addr, opcode, len);
+>>>> +}
+>>>> +
+>>>> +/**
+>>>> + * text_poke_kgdb - Update instructions on a live kernel by kgdb
+>>>> + * @addr: address to modify
+>>>> + * @opcode: source of the copy
+>>>> + * @len: length to copy
+>>>> + *
+>>>> + * Only atomic text poke/set should be allowed when not doing
+>early
+>>> patching=2E
+>>>> + * It means the size must be writable atomically and the address
+>>> must be aligned
+>>>> + * in a way that permits an atomic write=2E It also makes sure we
+>fit
+>>> on a single
+>>>> + * page=2E
+>>>> + *
+>>>> + * Context: should only be used by kgdb, which ensures no other
+>core
+>>> is running,
+>>>> + *	    despite the fact it does not hold the text_mutex=2E
+>>>> + */
+>>>> +void *text_poke_kgdb(void *addr, const void *opcode, size_t len)
+>>>> +{
+>>>> +	return __text_poke(addr, opcode, len);
+>>>> +}
+>>>> +
+>>>> static void do_sync_core(void *info)
+>>>> {
+>>>> 	sync_core();
+>>>> diff --git a/arch/x86/kernel/kgdb=2Ec b/arch/x86/kernel/kgdb=2Ec
+>>>> index 5db08425063e=2E=2E1461544cba8b 100644
+>>>> --- a/arch/x86/kernel/kgdb=2Ec
+>>>> +++ b/arch/x86/kernel/kgdb=2Ec
+>>>> @@ -758,13 +758,13 @@ int kgdb_arch_set_breakpoint(struct kgdb_bkpt
+>>> *bpt)
+>>>> if (!err)
+>>>> 		return err;
+>>>> 	/*
+>>>> -	 * It is safe to call text_poke() because normal kernel execution
+>>>> +	 * It is safe to call text_poke_kgdb() because normal kernel
+>>> execution
+>>>>  * is stopped on all cores, so long as the text_mutex is not
+>>> locked=2E
+>>>>  */
+>>>> 	if (mutex_is_locked(&text_mutex))
+>>>> 		return -EBUSY;
+>>>> -	text_poke((void *)bpt->bpt_addr, arch_kgdb_ops=2Egdb_bpt_instr,
+>>>> -		  BREAK_INSTR_SIZE);
+>>>> +	text_poke_kgdb((void *)bpt->bpt_addr,
+>arch_kgdb_ops=2Egdb_bpt_instr,
+>>>> +		       BREAK_INSTR_SIZE);
+>>>> 	err =3D probe_kernel_read(opc, (char *)bpt->bpt_addr,
+>>> BREAK_INSTR_SIZE);
+>>>> if (err)
+>>>> 		return err;
+>>>> @@ -783,12 +783,13 @@ int kgdb_arch_remove_breakpoint(struct
+>>> kgdb_bkpt *bpt)
+>>>> if (bpt->type !=3D BP_POKE_BREAKPOINT)
+>>>> 		goto knl_write;
+>>>> 	/*
+>>>> -	 * It is safe to call text_poke() because normal kernel execution
+>>>> +	 * It is safe to call text_poke_kgdb() because normal kernel
+>>> execution
+>>>>  * is stopped on all cores, so long as the text_mutex is not
+>>> locked=2E
+>>>>  */
+>>>> 	if (mutex_is_locked(&text_mutex))
+>>>> 		goto knl_write;
+>>>> -	text_poke((void *)bpt->bpt_addr, bpt->saved_instr,
+>>> BREAK_INSTR_SIZE);
+>>>> +	text_poke_kgdb((void *)bpt->bpt_addr, bpt->saved_instr,
+>>>> +		       BREAK_INSTR_SIZE);
+>>>> 	err =3D probe_kernel_read(opc, (char *)bpt->bpt_addr,
+>>> BREAK_INSTR_SIZE);
+>>>> if (err || memcmp(opc, bpt->saved_instr, BREAK_INSTR_SIZE))
+>>>> 		goto knl_write;
+>>>> --=20
+>>>> 2=2E17=2E1
+>>=20
+>> If you are reorganizing this code, please do so so that the caller
+>doesn=E2=80=99t
+>> have to worry about if it should call text_poke_bp() or
+>text_poke_early()=2E
+>> Right now the caller had to know that, which makes no sense=2E
+>
+>Did you look at "[11/17] x86/jump-label: remove support for custom
+>poker=E2=80=9D?
+>
+>https://lore=2Ekernel=2Eorg/patchwork/patch/1032857/
+>
+>If this is not what you regard, please be more concrete=2E
+>text_poke_early()
+>is still used directly on init and while modules are loaded, which
+>might not
+>be great, but is outside of the scope of this patch-set=2E
+
+I don't think it is out of scope, although that patch is a huge step in th=
+e right direction=2E
+
+text_poke_{early,bp,=2E=2E=2E}, however, should be fully internal, that is=
+, static functions, and we should present a single interface, preferably ca=
+lled text_poke(), to the outside world=2E
+
+I think we have three subcases:
+
+1=2E Early, UP, or under stop_machine();
+2=2E Atomic and aligned;
+3=2E Breakpoint=2E
+
+My proposed algorithm should remove the need for a fixup which should help=
+ this interface, too=2E
+
+The specific alignment needed for #2 is started by the hardware people to =
+be not crossing 16 bytes (NOT a cache line) on any CPU we support SMP on an=
+d, of course, being possible to do atomically do on the specific CPU (note =
+that we *can* do a redundantly large store of existing bytes, which adds fl=
+exibility=2E)
+
+To the best of my knowledge any CPU supporting SSE can do an atomic (for o=
+ur purposes) aligned 16-byte store via MOVAPS; of course any CPU with cx16 =
+can do it without SSE registers=2E For older CPUs we may be limited to 8-by=
+te stores (cx8) or even 4-byte stores before we need to use the breakpoint =
+algorithm=2E
+
+--=20
+Sent from my Android device with K-9 Mail=2E Please excuse my brevity=2E
