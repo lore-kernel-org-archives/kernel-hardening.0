@@ -1,65 +1,37 @@
-Subject: Re: [RFC PATCH v7 14/16] EXPERIMENTAL: xpfo, mm: optimize spin lock
- usage in xpfo_kmap
-References: <cover.1547153058.git.khalid.aziz@oracle.com>
- <7e8e17f519ae87a91fc6cbb57b8b27094c96305c.1547153058.git.khalid.aziz@oracle.com>
- <b2ffc4fd-e449-b6da-7070-4f182d44dd5b@redhat.com>
-From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <1b46e0a5-476b-1eaa-3376-6848caf9e7ab@oracle.com>
-Date: Thu, 17 Jan 2019 08:14:41 -0700
+From: Nadav Amit <namit@vmware.com>
+Subject: Re: [PATCH 17/17] module: Prevent module removal racing with
+ text_poke()
+Date: Thu, 17 Jan 2019 18:07:03 +0000
+Message-ID: <B48C6E93-AD57-4FF8-BBE8-887A5E965793@vmware.com>
+References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
+ <20190117003259.23141-18-rick.p.edgecombe@intel.com>
+ <20190117165422.d33d1af83db8716e24960a3c@kernel.org>
+In-Reply-To: <20190117165422.d33d1af83db8716e24960a3c@kernel.org>
+Content-Type: text/plain; charset="utf-8"
+Content-ID: <697B667B5CAE78419D006F479D0BF3CB@namprd05.prod.outlook.com>
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-In-Reply-To: <b2ffc4fd-e449-b6da-7070-4f182d44dd5b@redhat.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-To: Laura Abbott <labbott@redhat.com>, juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, konrad.wilk@oracle.com
-Cc: deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, x86@kernel.org, "Vasileios P . Kemerlis" <vpk@cs.columbia.edu>, Juerg Haefliger <juerg.haefliger@canonical.com>, Tycho Andersen <tycho@docker.com>, Marco Benatto <marco.antonio.780@gmail.com>, David Woodhouse <dwmw2@infradead.org>
+To: Masami Hiramatsu <mhiramat@kernel.org>
+Cc: Rick Edgecombe <rick.p.edgecombe@intel.com>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, Linux List Kernel Mailing <linux-kernel@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, Damian Tometzki <linux_dti@icloud.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "kristen@linux.intel.com" <kristen@linux.intel.com>, "deneen.t.dock@intel.com" <deneen.t.dock@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 1/16/19 5:18 PM, Laura Abbott wrote:
-> On 1/10/19 1:09 PM, Khalid Aziz wrote:
->> From: Julian Stecklina <jsteckli@amazon.de>
->>
->> We can reduce spin lock usage in xpfo_kmap to the 0->1 transition of
->> the mapcount. This means that xpfo_kmap() can now race and that we
->> get spurious page faults.
->>
->> The page fault handler helps the system make forward progress by
->> fixing the page table instead of allowing repeated page faults until
->> the right xpfo_kmap went through.
->>
->> Model-checked with up to 4 concurrent callers with Spin.
->>
-> 
-> This needs the spurious check for arm64 as well. This at
-> least gets me booting but could probably use more review:
-> 
-> diff --git a/arch/arm64/mm/fault.c b/arch/arm64/mm/fault.c
-> index 7d9571f4ae3d..8f425848cbb9 100644
-> --- a/arch/arm64/mm/fault.c
-> +++ b/arch/arm64/mm/fault.c
-> @@ -32,6 +32,7 @@
->  #include <linux/perf_event.h>
->  #include <linux/preempt.h>
->  #include <linux/hugetlb.h>
-> +#include <linux/xpfo.h>
->  
->  #include <asm/bug.h>
->  #include <asm/cmpxchg.h>
-> @@ -289,6 +290,9 @@ static void __do_kernel_fault(unsigned long addr,
-> unsigned int esr,
->         if (!is_el1_instruction_abort(esr) && fixup_exception(regs))
->                 return;
->  
-> +       if (xpfo_spurious_fault(addr))
-> +               return;
-> +
->         if (is_el1_permission_fault(addr, esr, regs)) {
->                 if (esr & ESR_ELx_WNR)
->                         msg = "write to read-only memory";
-> 
-> 
-
-That makes sense. Thanks for debugging this. I will add this to patch 14
-("EXPERIMENTAL: xpfo, mm: optimize spin lock usage in xpfo_kmap").
-
-Thanks,
-Khalid
+PiBPbiBKYW4gMTYsIDIwMTksIGF0IDExOjU0IFBNLCBNYXNhbWkgSGlyYW1hdHN1IDxtaGlyYW1h
+dEBrZXJuZWwub3JnPiB3cm90ZToNCj4gDQo+IE9uIFdlZCwgMTYgSmFuIDIwMTkgMTY6MzI6NTkg
+LTA4MDANCj4gUmljayBFZGdlY29tYmUgPHJpY2sucC5lZGdlY29tYmVAaW50ZWwuY29tPiB3cm90
+ZToNCj4gDQo+PiBGcm9tOiBOYWRhdiBBbWl0IDxuYW1pdEB2bXdhcmUuY29tPg0KPj4gDQo+PiBJ
+dCBzZWVtcyBkYW5nZXJvdXMgdG8gYWxsb3cgY29kZSBtb2RpZmljYXRpb25zIHRvIHRha2UgcGxh
+Y2UNCj4+IGNvbmN1cnJlbnRseSB3aXRoIG1vZHVsZSB1bmxvYWRpbmcuIFNvIHRha2UgdGhlIHRl
+eHRfbXV0ZXggd2hpbGUgdGhlDQo+PiBtZW1vcnkgb2YgdGhlIG1vZHVsZSBpcyBmcmVlZC4NCj4g
+DQo+IEF0IHRoYXQgcG9pbnQsIHNpbmNlIHRoZSBtb2R1bGUgaXRzZWxmIGlzIHJlbW92ZWQgZnJv
+bSBtb2R1bGUgbGlzdCwNCj4gaXQgc2VlbXMgbm8gYWN0dWFsIGhhcm0uIE9yIHdvdWxkIHlvdSBo
+YXZlIGFueSBjb25jZXJuPw0KDQpTbyBpdCBhcHBlYXJzIHRoYXQgeW91IGFyZSByaWdodCBhbmQg
+YWxsIHRoZSB1c2VycyBvZiB0ZXh0X3Bva2UoKSBhbmQNCnRleHRfcG9rZV9icCgpIGRvIGluc3Rh
+bGwgbW9kdWxlIG5vdGlmaWVycywgYW5kIHJlbW92ZSB0aGUgbW9kdWxlIGZyb20gdGhlaXINCmlu
+dGVybmFsIGRhdGEgc3RydWN0dXJlIHdoZW4gdGhleSBhcmUgZG9uZSAoKikuIEFzIGxvbmcgYXMg
+dGhleSBwcmV2ZW50DQp0ZXh0X3Bva2UqKCkgdG8gYmUgY2FsbGVkIGNvbmN1cnJlbnRseSAoZS5n
+LiwgdXNpbmcganVtcF9sYWJlbF9sb2NrKCkpLA0KZXZlcnl0aGluZyBpcyBmaW5lLg0KDQpIYXZp
+bmcgc2FpZCB0aGF0LCB0aGUgcXVlc3Rpb24gaXMgd2hldGhlciB5b3Ug4oCcdHJ1c3TigJ0gdGV4
+dF9wb2tlKigpIHVzZXJzIHRvDQpkbyBzby4gdGV4dF9wb2tlKCkgZGVzY3JpcHRpb24gZG9lcyBu
+b3QgZGF5IGV4cGxpY2l0bHkgdGhhdCB5b3UgbmVlZCB0bw0KcHJldmVudCBtb2R1bGVzIGZyb20g
+YmVpbmcgcmVtb3ZlZC4NCg0KV2hhdCBkbyB5b3Ugc2F5Pw0KDQoNCigqKSBJIGFtIG5vdCBzdXJl
+IGFib3V0IGtnZGIsIGJ1dCBpdCBwcm9iYWJseSBkb2VzIG5vdCBtYXR0ZXIgbXVjaA==
