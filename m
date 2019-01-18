@@ -1,66 +1,74 @@
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH 2/2] gcc-plugins: arm_ssp_per_task_plugin: fix for GCC 9+
-Date: Fri, 18 Jan 2019 11:58:07 +0100
-Message-Id: <20190118105807.26425-3-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190118105807.26425-1-ard.biesheuvel@linaro.org>
-References: <20190118105807.26425-1-ard.biesheuvel@linaro.org>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: keescook@chromium.org
-Cc: re.emese@gmail.com, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Fri, 18 Jan 2019 22:32:49 +0900
+From: Masami Hiramatsu <mhiramat@kernel.org>
+Subject: Re: [PATCH 17/17] module: Prevent module removal racing with
+ text_poke()
+Message-Id: <20190118223249.94436b58fbf5f9592d92dfca@kernel.org>
+In-Reply-To: <69EA2C81-826F-46BA-8D80-241C39B0B70B@gmail.com>
+References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
+	<20190117003259.23141-18-rick.p.edgecombe@intel.com>
+	<20190117165422.d33d1af83db8716e24960a3c@kernel.org>
+	<e865e051-be79-adce-7275-72abf2173bdb@zytor.com>
+	<69EA2C81-826F-46BA-8D80-241C39B0B70B@gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=ISO-2022-JP
+Content-Transfer-Encoding: 7bit
+To: Nadav Amit <nadav.amit@gmail.com>
+Cc: "H. Peter Anvin" <hpa@zytor.com>, Masami Hiramatsu <mhiramat@kernel.org>, Rick Edgecombe <rick.p.edgecombe@intel.com>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, Damian Tometzki <linux_dti@icloud.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Will Deacon <will.deacon@arm.com>, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-GCC 9 reworks the way the references to the stack canary are
-emitted, to prevent the value from being spilled to the stack
-before the final comparison in the epilogue, defeating the
-purpose, given that the spill slot is under control of the
-attacker that we are protecting ourselves from.
+On Thu, 17 Jan 2019 17:15:27 -0800
+Nadav Amit <nadav.amit@gmail.com> wrote:
 
-Since our canary value address is obtained without accessing
-memory (as opposed to pre-v7 code that will obtain it from a
-literal pool), it is unlikely (although not guaranteed) that
-the compiler will spill the canary value in the same way, so
-let's just disable this improvement when building with GCC9+.
+> > On Jan 17, 2019, at 3:58 PM, H. Peter Anvin <hpa@zytor.com> wrote:
+> > 
+> > On 1/16/19 11:54 PM, Masami Hiramatsu wrote:
+> >> On Wed, 16 Jan 2019 16:32:59 -0800
+> >> Rick Edgecombe <rick.p.edgecombe@intel.com> wrote:
+> >> 
+> >>> From: Nadav Amit <namit@vmware.com>
+> >>> 
+> >>> It seems dangerous to allow code modifications to take place
+> >>> concurrently with module unloading. So take the text_mutex while the
+> >>> memory of the module is freed.
+> >> 
+> >> At that point, since the module itself is removed from module list,
+> >> it seems no actual harm. Or would you have any concern?
+> > 
+> > The issue isn't the module list, but rather when it is safe to free the
+> > contents, so we don't clobber anything. We absolutely need to enforce
+> > that we can't text_poke() something that might have already been freed.
+> > 
+> > That being said, we *also* really would prefer to enforce that we can't
+> > text_poke() memory that doesn't actually contain code; as far as I can
+> > tell we don't currently do that check.
+> 
+> Yes, that what the mutex was supposed to achieve. It’s not supposed just
+> to check whether it is a code page, but also that it is the same code
+> page that you wanted to patch. 
+> 
+> > This, again, is a good use for a separate mm context. We can enforce
+> > that that context will only ever contain valid page mappings for actual
+> > code pages.
+> 
+> This will not tell you that you have the *right* code-page. The module
+> notifiers help to do so, since they synchronize the text poking with
+> the module removal.
+> 
+> > (Note: in my proposed algorithm, with a separate mm, replace INVLPG with
+> > switching CR3 if we have to do a rollback or roll forward in the
+> > breakpoint handler.)
+> 
+> I really need to read your patches more carefully to see what you mean.
+> 
+> Anyhow, so what do you prefer? I’m ok with either one:
+> 	1. Keep this patch
+> 	2. Remove this patch and change into a comment on text_poke()
+> 	3. Just drop the patch
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- scripts/gcc-plugins/arm_ssp_per_task_plugin.c | 18 ++++++++++++++++++
- 1 file changed, 18 insertions(+)
+I would prefer 2. so at least we should add a comment to text_poke().
 
-diff --git a/scripts/gcc-plugins/arm_ssp_per_task_plugin.c b/scripts/gcc-plugins/arm_ssp_per_task_plugin.c
-index a65fbefb8501..89c47f57d1ce 100644
---- a/scripts/gcc-plugins/arm_ssp_per_task_plugin.c
-+++ b/scripts/gcc-plugins/arm_ssp_per_task_plugin.c
-@@ -53,6 +53,19 @@ static unsigned int arm_pertask_ssp_rtl_execute(void)
- #define NO_GATE
- #include "gcc-generate-rtl-pass.h"
- 
-+#if BUILDING_GCC_VERSION >= 9000
-+static bool no(void)
-+{
-+	return false;
-+}
-+
-+static void arm_pertask_ssp_start_unit(void *gcc_data, void *user_data)
-+{
-+	targetm.have_stack_protect_combined_set = no;
-+	targetm.have_stack_protect_combined_test = no;
-+}
-+#endif
-+
- __visible int plugin_init(struct plugin_name_args *plugin_info,
- 			  struct plugin_gcc_version *version)
- {
-@@ -100,5 +113,10 @@ __visible int plugin_init(struct plugin_name_args *plugin_info,
- 	register_callback(plugin_info->base_name, PLUGIN_PASS_MANAGER_SETUP,
- 			  NULL, &arm_pertask_ssp_rtl_pass_info);
- 
-+#if BUILDING_GCC_VERSION >= 9000
-+	register_callback(plugin_info->base_name, PLUGIN_START_UNIT,
-+			  arm_pertask_ssp_start_unit, NULL);
-+#endif
-+
- 	return 0;
- }
+Thank you,
+
+
 -- 
-2.20.1
+Masami Hiramatsu <mhiramat@kernel.org>
