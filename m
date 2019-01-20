@@ -1,29 +1,38 @@
+Date: Mon, 21 Jan 2019 08:05:10 +1300
+From: Tycho Andersen <tycho@tycho.ws>
+Subject: Re: [RFC v1 0/4] static analysis of copy_to_user()
+Message-ID: <20190120190510.GC3987@cisco>
+References: <20181220195931.20331-1-tycho@tycho.ws>
+ <20181221224717.zixqkz26xujllmq4@ltop.local>
 MIME-Version: 1.0
-References: <20190118105807.26425-1-ard.biesheuvel@linaro.org> <CAGXu5jKa6Tzea9SyTi5aOZusnb+1+yTJhMNaz-Ha8sjR7oCWsw@mail.gmail.com>
-In-Reply-To: <CAGXu5jKa6Tzea9SyTi5aOZusnb+1+yTJhMNaz-Ha8sjR7oCWsw@mail.gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sun, 20 Jan 2019 16:43:22 +0100
-Message-ID: <CAKv+Gu_VBQOfV7Z=PfAoBhUbyNtYg8tHumOciN7Yxa8RuQ06XQ@mail.gmail.com>
-Subject: Re: [PATCH 0/2] gcc-plugins: fixes for arm_ssp_per_task_plugin
-Content-Type: text/plain; charset="UTF-8"
-To: Kees Cook <keescook@chromium.org>
-Cc: Emese Revfy <re.emese@gmail.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20181221224717.zixqkz26xujllmq4@ltop.local>
+To: Luc Van Oostenryck <luc.vanoostenryck@gmail.com>
+Cc: linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, 20 Jan 2019 at 02:51, Kees Cook <keescook@chromium.org> wrote:
->
-> On Fri, Jan 18, 2019 at 2:58 AM Ard Biesheuvel
-> <ard.biesheuvel@linaro.org> wrote:
-> >
-> > A couple of fixes to permit newer versions of GCC to use the stack
-> > protector plugin for ARM.
-> >
-> > Ard Biesheuvel (2):
-> >   gcc-plugins: arm_ssp_per_task_plugin: sign extend the SP mask
-> >   gcc-plugins: arm_ssp_per_task_plugin: fix for GCC 9+
->
-> Nice; thanks! It seems like these should go into -rc4, yes? I'll get
-> them queued up for Linus...
->
+Hey Luc,
 
-Yes, given that it is new code anyway, let's merge it as fixes.
+On Fri, Dec 21, 2018 at 11:47:19PM +0100, Luc Van Oostenryck wrote:
+> On Thu, Dec 20, 2018 at 12:59:27PM -0700, Tycho Andersen wrote:
+> > Hi all,
+> > 
+> > A while ago I talked with various people about whether some static
+> > analsys of copy_to_user() could be productive in finding infoleaks.
+> > Unfortunately, due to the various issues outlined in the patch notes, it
+> > doesn't seem like it is. Perhaps these checks are useful to put in just
+> > to future proof ourselves against these sorts of issues, though.
+> > 
+> > Anyway, here's the code. Thoughts welcome!
+> 
+> Hi,
+> 
+> I'm taking the first patch directly but I won't be able to look
+> closer at the other patches until next week.
+
+Any chance you can take a peek at these?
+
+Cheers,
+
+Tycho
