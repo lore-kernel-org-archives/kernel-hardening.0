@@ -1,7 +1,7 @@
 From: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
-Subject: [RESEND PATCH V8 02/11] KVM: X86: Add arbitrary data pointer in kvm memslot iterator functions
-Date: Mon, 21 Jan 2019 01:39:31 +0200
-Message-Id: <20190120233940.15282-3-ahmedsoliman@mena.vt.edu>
+Subject: [RESEND PATCH V8 03/11] KVM: X86: Add helper function to convert SPTE to GFN
+Date: Mon, 21 Jan 2019 01:39:32 +0200
+Message-Id: <20190120233940.15282-4-ahmedsoliman@mena.vt.edu>
 In-Reply-To: <20190120233940.15282-1-ahmedsoliman@mena.vt.edu>
 References: <20190120233940.15282-1-ahmedsoliman@mena.vt.edu>
 MIME-Version: 1.0
@@ -10,245 +10,39 @@ To: Paolo Bonzini <pbonzini@redhat.com>, rkrcmar@redhat.com, Jonathan Corbet <co
 Cc: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This will help sharing data into the slot_level_handler callback. In my
-case I need to a share a counter for the pages traversed to use it in some
-bitmap. Being able to send arbitrary memory pointer into the
-slot_level_handler callback made it easy.
-
 Signed-off-by: Ahmed Abd El Mawgood <ahmedsoliman@mena.vt.edu>
 ---
- arch/x86/kvm/mmu.c | 65 ++++++++++++++++++++++++++--------------------
- 1 file changed, 37 insertions(+), 28 deletions(-)
+ arch/x86/kvm/mmu.c | 7 +++++++
+ arch/x86/kvm/mmu.h | 1 +
+ 2 files changed, 8 insertions(+)
 
 diff --git a/arch/x86/kvm/mmu.c b/arch/x86/kvm/mmu.c
-index ce770b4462..098df7d135 100644
+index 098df7d135..bbfe3f2863 100644
 --- a/arch/x86/kvm/mmu.c
 +++ b/arch/x86/kvm/mmu.c
-@@ -1525,7 +1525,7 @@ static bool spte_write_protect(u64 *sptep, bool pt_protect)
+@@ -1053,6 +1053,13 @@ static gfn_t kvm_mmu_page_get_gfn(struct kvm_mmu_page *sp, int index)
  
- static bool __rmap_write_protect(struct kvm *kvm,
- 				 struct kvm_rmap_head *rmap_head,
--				 bool pt_protect)
-+				 bool pt_protect, void *data)
- {
- 	u64 *sptep;
- 	struct rmap_iterator iter;
-@@ -1564,7 +1564,8 @@ static bool wrprot_ad_disabled_spte(u64 *sptep)
-  *	- W bit on ad-disabled SPTEs.
-  * Returns true iff any D or W bits were cleared.
-  */
--static bool __rmap_clear_dirty(struct kvm *kvm, struct kvm_rmap_head *rmap_head)
-+static bool __rmap_clear_dirty(struct kvm *kvm, struct kvm_rmap_head *rmap_head,
-+				void *data)
- {
- 	u64 *sptep;
- 	struct rmap_iterator iter;
-@@ -1590,7 +1591,8 @@ static bool spte_set_dirty(u64 *sptep)
- 	return mmu_spte_update(sptep, spte);
+ 	return sp->gfn + (index << ((sp->role.level - 1) * PT64_LEVEL_BITS));
  }
++gfn_t spte_to_gfn(u64 *spte)
++{
++	struct kvm_mmu_page *sp;
++
++	sp = page_header(__pa(spte));
++	return kvm_mmu_page_get_gfn(sp, spte - sp->spt);
++}
  
--static bool __rmap_set_dirty(struct kvm *kvm, struct kvm_rmap_head *rmap_head)
-+static bool __rmap_set_dirty(struct kvm *kvm, struct kvm_rmap_head *rmap_head,
-+				void *data)
+ static void kvm_mmu_page_set_gfn(struct kvm_mmu_page *sp, int index, gfn_t gfn)
  {
- 	u64 *sptep;
- 	struct rmap_iterator iter;
-@@ -1622,7 +1624,7 @@ static void kvm_mmu_write_protect_pt_masked(struct kvm *kvm,
- 	while (mask) {
- 		rmap_head = __gfn_to_rmap(slot->base_gfn + gfn_offset + __ffs(mask),
- 					  PT_PAGE_TABLE_LEVEL, slot);
--		__rmap_write_protect(kvm, rmap_head, false);
-+		__rmap_write_protect(kvm, rmap_head, false, NULL);
- 
- 		/* clear the first set bit */
- 		mask &= mask - 1;
-@@ -1648,7 +1650,7 @@ void kvm_mmu_clear_dirty_pt_masked(struct kvm *kvm,
- 	while (mask) {
- 		rmap_head = __gfn_to_rmap(slot->base_gfn + gfn_offset + __ffs(mask),
- 					  PT_PAGE_TABLE_LEVEL, slot);
--		__rmap_clear_dirty(kvm, rmap_head);
-+		__rmap_clear_dirty(kvm, rmap_head, NULL);
- 
- 		/* clear the first set bit */
- 		mask &= mask - 1;
-@@ -1701,7 +1703,8 @@ bool kvm_mmu_slot_gfn_write_protect(struct kvm *kvm,
- 
- 	for (i = PT_PAGE_TABLE_LEVEL; i <= PT_MAX_HUGEPAGE_LEVEL; ++i) {
- 		rmap_head = __gfn_to_rmap(gfn, i, slot);
--		write_protected |= __rmap_write_protect(kvm, rmap_head, true);
-+		write_protected |= __rmap_write_protect(kvm, rmap_head, true,
-+				NULL);
- 	}
- 
- 	return write_protected;
-@@ -1715,7 +1718,8 @@ static bool rmap_write_protect(struct kvm_vcpu *vcpu, u64 gfn)
- 	return kvm_mmu_slot_gfn_write_protect(vcpu->kvm, slot, gfn);
- }
- 
--static bool kvm_zap_rmapp(struct kvm *kvm, struct kvm_rmap_head *rmap_head)
-+static bool kvm_zap_rmapp(struct kvm *kvm, struct kvm_rmap_head *rmap_head,
-+		void *data)
- {
- 	u64 *sptep;
- 	struct rmap_iterator iter;
-@@ -1735,7 +1739,7 @@ static int kvm_unmap_rmapp(struct kvm *kvm, struct kvm_rmap_head *rmap_head,
- 			   struct kvm_memory_slot *slot, gfn_t gfn, int level,
- 			   unsigned long data)
- {
--	return kvm_zap_rmapp(kvm, rmap_head);
-+	return kvm_zap_rmapp(kvm, rmap_head, NULL);
- }
- 
- static int kvm_set_pte_rmapp(struct kvm *kvm, struct kvm_rmap_head *rmap_head,
-@@ -5552,13 +5556,15 @@ void kvm_mmu_uninit_vm(struct kvm *kvm)
- }
- 
- /* The return value indicates if tlb flush on all vcpus is needed. */
--typedef bool (*slot_level_handler) (struct kvm *kvm, struct kvm_rmap_head *rmap_head);
-+typedef bool (*slot_level_handler) (struct kvm *kvm,
-+		struct kvm_rmap_head *rmap_head, void *data);
- 
- /* The caller should hold mmu-lock before calling this function. */
- static __always_inline bool
- slot_handle_level_range(struct kvm *kvm, struct kvm_memory_slot *memslot,
- 			slot_level_handler fn, int start_level, int end_level,
--			gfn_t start_gfn, gfn_t end_gfn, bool lock_flush_tlb)
-+			gfn_t start_gfn, gfn_t end_gfn, bool lock_flush_tlb,
-+			void *data)
- {
- 	struct slot_rmap_walk_iterator iterator;
- 	bool flush = false;
-@@ -5566,7 +5572,7 @@ slot_handle_level_range(struct kvm *kvm, struct kvm_memory_slot *memslot,
- 	for_each_slot_rmap_range(memslot, start_level, end_level, start_gfn,
- 			end_gfn, &iterator) {
- 		if (iterator.rmap)
--			flush |= fn(kvm, iterator.rmap);
-+			flush |= fn(kvm, iterator.rmap, data);
- 
- 		if (need_resched() || spin_needbreak(&kvm->mmu_lock)) {
- 			if (flush && lock_flush_tlb) {
-@@ -5588,36 +5594,36 @@ slot_handle_level_range(struct kvm *kvm, struct kvm_memory_slot *memslot,
- static __always_inline bool
- slot_handle_level(struct kvm *kvm, struct kvm_memory_slot *memslot,
- 		  slot_level_handler fn, int start_level, int end_level,
--		  bool lock_flush_tlb)
-+		  bool lock_flush_tlb, void *data)
- {
- 	return slot_handle_level_range(kvm, memslot, fn, start_level,
- 			end_level, memslot->base_gfn,
- 			memslot->base_gfn + memslot->npages - 1,
--			lock_flush_tlb);
-+			lock_flush_tlb, data);
- }
- 
- static __always_inline bool
- slot_handle_all_level(struct kvm *kvm, struct kvm_memory_slot *memslot,
--		      slot_level_handler fn, bool lock_flush_tlb)
-+		      slot_level_handler fn, bool lock_flush_tlb, void *data)
- {
- 	return slot_handle_level(kvm, memslot, fn, PT_PAGE_TABLE_LEVEL,
--				 PT_MAX_HUGEPAGE_LEVEL, lock_flush_tlb);
-+				 PT_MAX_HUGEPAGE_LEVEL, lock_flush_tlb, data);
- }
- 
- static __always_inline bool
- slot_handle_large_level(struct kvm *kvm, struct kvm_memory_slot *memslot,
--			slot_level_handler fn, bool lock_flush_tlb)
-+			slot_level_handler fn, bool lock_flush_tlb, void *data)
- {
- 	return slot_handle_level(kvm, memslot, fn, PT_PAGE_TABLE_LEVEL + 1,
--				 PT_MAX_HUGEPAGE_LEVEL, lock_flush_tlb);
-+				 PT_MAX_HUGEPAGE_LEVEL, lock_flush_tlb, data);
- }
- 
- static __always_inline bool
- slot_handle_leaf(struct kvm *kvm, struct kvm_memory_slot *memslot,
--		 slot_level_handler fn, bool lock_flush_tlb)
-+		 slot_level_handler fn, bool lock_flush_tlb, void *data)
- {
- 	return slot_handle_level(kvm, memslot, fn, PT_PAGE_TABLE_LEVEL,
--				 PT_PAGE_TABLE_LEVEL, lock_flush_tlb);
-+				 PT_PAGE_TABLE_LEVEL, lock_flush_tlb, data);
- }
- 
- void kvm_zap_gfn_range(struct kvm *kvm, gfn_t gfn_start, gfn_t gfn_end)
-@@ -5645,7 +5651,7 @@ void kvm_zap_gfn_range(struct kvm *kvm, gfn_t gfn_start, gfn_t gfn_end)
- 			flush |= slot_handle_level_range(kvm, memslot,
- 					kvm_zap_rmapp, PT_PAGE_TABLE_LEVEL,
- 					PT_MAX_HUGEPAGE_LEVEL, start,
--					end - 1, flush_tlb);
-+					end - 1, flush_tlb, NULL);
- 		}
- 	}
- 
-@@ -5657,9 +5663,10 @@ void kvm_zap_gfn_range(struct kvm *kvm, gfn_t gfn_start, gfn_t gfn_end)
- }
- 
- static bool slot_rmap_write_protect(struct kvm *kvm,
--				    struct kvm_rmap_head *rmap_head)
-+				    struct kvm_rmap_head *rmap_head,
-+				    void *data)
- {
--	return __rmap_write_protect(kvm, rmap_head, false);
-+	return __rmap_write_protect(kvm, rmap_head, false, data);
- }
- 
- void kvm_mmu_slot_remove_write_access(struct kvm *kvm,
-@@ -5669,7 +5676,7 @@ void kvm_mmu_slot_remove_write_access(struct kvm *kvm,
- 
- 	spin_lock(&kvm->mmu_lock);
- 	flush = slot_handle_all_level(kvm, memslot, slot_rmap_write_protect,
--				      false);
-+				      false, NULL);
- 	spin_unlock(&kvm->mmu_lock);
- 
- 	/*
-@@ -5696,7 +5703,8 @@ void kvm_mmu_slot_remove_write_access(struct kvm *kvm,
- }
- 
- static bool kvm_mmu_zap_collapsible_spte(struct kvm *kvm,
--					 struct kvm_rmap_head *rmap_head)
-+					 struct kvm_rmap_head *rmap_head,
-+					 void *data)
- {
- 	u64 *sptep;
- 	struct rmap_iterator iter;
-@@ -5740,7 +5748,7 @@ void kvm_mmu_zap_collapsible_sptes(struct kvm *kvm,
- 	/* FIXME: const-ify all uses of struct kvm_memory_slot.  */
- 	spin_lock(&kvm->mmu_lock);
- 	slot_handle_leaf(kvm, (struct kvm_memory_slot *)memslot,
--			 kvm_mmu_zap_collapsible_spte, true);
-+			 kvm_mmu_zap_collapsible_spte, true, NULL);
- 	spin_unlock(&kvm->mmu_lock);
- }
- 
-@@ -5750,7 +5758,7 @@ void kvm_mmu_slot_leaf_clear_dirty(struct kvm *kvm,
- 	bool flush;
- 
- 	spin_lock(&kvm->mmu_lock);
--	flush = slot_handle_leaf(kvm, memslot, __rmap_clear_dirty, false);
-+	flush = slot_handle_leaf(kvm, memslot, __rmap_clear_dirty, false, NULL);
- 	spin_unlock(&kvm->mmu_lock);
- 
- 	lockdep_assert_held(&kvm->slots_lock);
-@@ -5774,7 +5782,7 @@ void kvm_mmu_slot_largepage_remove_write_access(struct kvm *kvm,
- 
- 	spin_lock(&kvm->mmu_lock);
- 	flush = slot_handle_large_level(kvm, memslot, slot_rmap_write_protect,
--					false);
-+					false, NULL);
- 	spin_unlock(&kvm->mmu_lock);
- 
- 	/* see kvm_mmu_slot_remove_write_access */
-@@ -5792,7 +5800,8 @@ void kvm_mmu_slot_set_dirty(struct kvm *kvm,
- 	bool flush;
- 
- 	spin_lock(&kvm->mmu_lock);
--	flush = slot_handle_all_level(kvm, memslot, __rmap_set_dirty, false);
-+	flush = slot_handle_all_level(kvm, memslot, __rmap_set_dirty, false,
-+			NULL);
- 	spin_unlock(&kvm->mmu_lock);
- 
- 	lockdep_assert_held(&kvm->slots_lock);
+diff --git a/arch/x86/kvm/mmu.h b/arch/x86/kvm/mmu.h
+index c7b333147c..49d7f2f002 100644
+--- a/arch/x86/kvm/mmu.h
++++ b/arch/x86/kvm/mmu.h
+@@ -211,4 +211,5 @@ void kvm_mmu_gfn_allow_lpage(struct kvm_memory_slot *slot, gfn_t gfn);
+ bool kvm_mmu_slot_gfn_write_protect(struct kvm *kvm,
+ 				    struct kvm_memory_slot *slot, u64 gfn);
+ int kvm_arch_write_log_dirty(struct kvm_vcpu *vcpu);
++gfn_t spte_to_gfn(u64 *sptep);
+ #endif
 -- 
 2.19.2
