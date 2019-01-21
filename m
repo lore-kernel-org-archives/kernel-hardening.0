@@ -1,40 +1,78 @@
+Date: Mon, 21 Jan 2019 22:41:28 +0100
+From: Luc Van Oostenryck <luc.vanoostenryck@gmail.com>
+Subject: Re: [RFC v1 0/4] static analysis of copy_to_user()
+Message-ID: <20190121214127.t3opb6cffaz4ibp5@ltop.local>
+References: <20181220195931.20331-1-tycho@tycho.ws>
+ <20181221224717.zixqkz26xujllmq4@ltop.local>
+ <20190120190510.GC3987@cisco>
 MIME-Version: 1.0
-References: <1548076208-6442-1-git-send-email-jsteckli@amazon.de>
- <20190121183618.GP6118@tassilo.jf.intel.com> <20190121191541.GB4026@kroah.com>
-In-Reply-To: <20190121191541.GB4026@kroah.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 22 Jan 2019 09:42:13 +1300
-Message-ID: <CAGXu5j+h9RKAND8+SJR6P6CQY_YO3ezjsnfuzLGsQbY=O4XCuw@mail.gmail.com>
-Subject: Re: [RFC] x86/speculation: add L1 Terminal Fault / Foreshadow demo
-Content-Type: text/plain; charset="UTF-8"
-To: Greg KH <gregkh@linuxfoundation.org>
-Cc: Andi Kleen <ak@linux.intel.com>, Julian Stecklina <jsteckli@amazon.de>, LKML <linux-kernel@vger.kernel.org>, David Woodhouse <dwmw2@infradead.org>, Liran Alon <liran.alon@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, X86 ML <x86@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190120190510.GC3987@cisco>
+To: Tycho Andersen <tycho@tycho.ws>
+Cc: linux-sparse@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 22, 2019 at 8:15 AM Greg KH <gregkh@linuxfoundation.org> wrote:
->
-> On Mon, Jan 21, 2019 at 10:36:18AM -0800, Andi Kleen wrote:
-> > > +   /* Check the start address: needs to be page-aligned.. */
-> > > +-  if (start & ~PAGE_MASK)
-> > > ++  if (start & ~PAGE_MASK) {
-> > > ++
-> > > ++          /*
-> > > ++           * XXX Hack
-> > > ++           *
-> > > ++           * We re-use this error case to show case a cache load gadget:
-> > > ++           * There is a mispredicted branch, which leads to prefetching
-> > > ++           * the cache with attacker controlled data.
-> > > ++           */
-> > > ++          asm volatile (
-> >
-> > Obviously that can never be added to a standard kernel.
->
-> No, that's why it is a patch, right?  People want to test things, it's
-> nice to have a way to easily do this.
+On Mon, Jan 21, 2019 at 08:05:10AM +1300, Tycho Andersen wrote:
+> Hey Luc,
+> 
+> On Fri, Dec 21, 2018 at 11:47:19PM +0100, Luc Van Oostenryck wrote:
+> > On Thu, Dec 20, 2018 at 12:59:27PM -0700, Tycho Andersen wrote:
+> > > Hi all,
+> > > 
+> > > A while ago I talked with various people about whether some static
+> > > analsys of copy_to_user() could be productive in finding infoleaks.
+> > > Unfortunately, due to the various issues outlined in the patch notes, it
+> > > doesn't seem like it is. Perhaps these checks are useful to put in just
+> > > to future proof ourselves against these sorts of issues, though.
+> > > 
+> > > Anyway, here's the code. Thoughts welcome!
+> > 
+> > Hi,
+> > 
+> > I'm taking the first patch directly but I won't be able to look
+> > closer at the other patches until next week.
+> 
+> Any chance you can take a peek at these?
 
-What about adding something like it to drivers/misc/lkdtm/ instead?
+Hi,
 
-It's not a "production" module, but it regularly get built for selftest builds.
+Sorry, I've had few available time the last weeks.
+I had look at them shortly after you send them but
+I haven't yet made my mind about them.
 
--- 
-Kees Cook
+I'm quite reluctant to add complexity (the AST walking)
+if it doesn't bring much benefit if any.
+
+In, short the problems are:
+1) duplication of the AST walking
+2) unreliable type because of using void *
+3) unreliable size because array to pointer degeneracy
+
+There is some solutions, though:
+1) what *could* be done is to add a method 'check'
+   to struct symbol_op and call it, *for example*,
+   just after op->expand() in expand_symbol_call()
+   (and add a mechanism to set this method for the symbol
+   corresponding to copy_to_user()).
+
+   Otherwise, splitting the AST walking from sparse.c
+   and making it something generic would be preferable.
+
+   Another approach could be keep the check via OP_CALL
+   but doing it just after linearization, before the
+   optimization destroy the types (and add, if needed,
+   some flag to force linearize_cast() keep absolutely
+   all type info).
+
+2) this one seems pretty hopeless
+
+3) the current calls degenerate()/create_pointer()
+   do indeed destroy the original type and (at first sight)
+   no 'addressof' should exist anymore after evaluation.
+   This is inconsistent with the existence of expand_addressof().
+   By changing degenerate()/create_pointer() the original
+   type should stay available.
+
+Sorry again for the late reply,
+-- Luc
