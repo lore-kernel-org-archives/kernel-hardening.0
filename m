@@ -1,18 +1,40 @@
-Subject: Re: [PATCH] KVM: x86: Fix single-step debugging
-References: <1548073224-5363-1-git-send-email-alex.popov@linux.com>
 From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <626dba43-581f-a489-96ab-c9f2fb4bc990@linux.com>
-Date: Mon, 21 Jan 2019 15:47:08 +0300
-MIME-Version: 1.0
-In-Reply-To: <1548073224-5363-1-git-send-email-alex.popov@linux.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Paolo Bonzini <pbonzini@redhat.com>, Radim Krcmar <rkrcmar@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Andy Lutomirski <luto@kernel.org>, Stefan Hajnoczi <stefanha@redhat.com>, H Peter Anvin <hpa@zytor.com>, x86@kernel.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
-Cc: Alexander Popov <alex.popov@linux.com>
+Subject: [PATCH v2] KVM: x86: Fix single-step debugging
+Date: Mon, 21 Jan 2019 15:48:40 +0300
+Message-Id: <1548074920-10651-1-git-send-email-alex.popov@linux.com>
+To: Paolo Bonzini <pbonzini@redhat.com>, Radim Krcmar <rkrcmar@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Andy Lutomirski <luto@kernel.org>, Stefan Hajnoczi <stefanha@redhat.com>, H Peter Anvin <hpa@zytor.com>, x86@kernel.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Alexander Popov <alex.popov@linux.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Oops. I've forgotten about checkpatch.pl.
-I've fixed the commit message and will resend the patch shortly.
+The single-step debugging of KVM guests on x86 is broken: if we run
+gdb 'stepi' command at the breakpoint when the guest interrupts are
+enabled, RIP always jumps to native_apic_mem_write(). Then other
+nasty effects follow.
 
---
-Alexander
+Long investigation showed that on Jun 7, 2017 the
+commit c8401dda2f0a00cd25c0 ("KVM: x86: fix singlestepping over syscall")
+introduced the kvm_run.debug corruption: kvm_vcpu_do_singlestep() can
+be called without X86_EFLAGS_TF set.
+
+Let's fix it. Please consider that for -stable.
+
+Signed-off-by: Alexander Popov <alex.popov@linux.com>
+---
+ arch/x86/kvm/x86.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/x86/kvm/x86.c b/arch/x86/kvm/x86.c
+index f049ecf..9686068 100644
+--- a/arch/x86/kvm/x86.c
++++ b/arch/x86/kvm/x86.c
+@@ -6407,8 +6407,7 @@ int x86_emulate_instruction(struct kvm_vcpu *vcpu,
+ 		toggle_interruptibility(vcpu, ctxt->interruptibility);
+ 		vcpu->arch.emulate_regs_need_sync_to_vcpu = false;
+ 		kvm_rip_write(vcpu, ctxt->eip);
+-		if (r == EMULATE_DONE &&
+-		    (ctxt->tf || (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP)))
++		if (r == EMULATE_DONE && ctxt->tf)
+ 			kvm_vcpu_do_singlestep(vcpu, &r);
+ 		if (!ctxt->have_exception ||
+ 		    exception_type(ctxt->exception.vector) == EXCPT_TRAP)
+-- 
+2.7.4
