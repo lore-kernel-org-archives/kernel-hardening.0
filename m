@@ -1,39 +1,164 @@
-Date: Mon, 21 Jan 2019 15:24:27 +0100
-From: Greg KH <gregkh@linuxfoundation.org>
-Subject: Re: [PATCH v2] KVM: x86: Fix single-step debugging
-Message-ID: <20190121142427.GA26671@kroah.com>
-References: <1548074920-10651-1-git-send-email-alex.popov@linux.com>
+Date: Mon, 21 Jan 2019 17:26:42 +0100
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Subject: [PATCH] tty: ldisc: add sysctl to prevent autoloading of ldiscs
+Message-ID: <20190121162642.GA2944@kroah.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1548074920-10651-1-git-send-email-alex.popov@linux.com>
-To: Alexander Popov <alex.popov@linux.com>
-Cc: Paolo Bonzini <pbonzini@redhat.com>, Radim Krcmar <rkrcmar@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Andy Lutomirski <luto@kernel.org>, Stefan Hajnoczi <stefanha@redhat.com>, H Peter Anvin <hpa@zytor.com>, x86@kernel.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+To: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-serial@vger.kernel.org
+Cc: Jiri Slaby <jslaby@suse.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 21, 2019 at 03:48:40PM +0300, Alexander Popov wrote:
-> The single-step debugging of KVM guests on x86 is broken: if we run
-> gdb 'stepi' command at the breakpoint when the guest interrupts are
-> enabled, RIP always jumps to native_apic_mem_write(). Then other
-> nasty effects follow.
-> 
-> Long investigation showed that on Jun 7, 2017 the
-> commit c8401dda2f0a00cd25c0 ("KVM: x86: fix singlestepping over syscall")
-> introduced the kvm_run.debug corruption: kvm_vcpu_do_singlestep() can
-> be called without X86_EFLAGS_TF set.
-> 
-> Let's fix it. Please consider that for -stable.
-> 
-> Signed-off-by: Alexander Popov <alex.popov@linux.com>
-> ---
->  arch/x86/kvm/x86.c | 3 +--
->  1 file changed, 1 insertion(+), 2 deletions(-)
+By default, the kernel will automatically load the module of any line
+dicipline that is asked for.  As this sometimes isn't the safest thing
+to do, provide a sysctl to disable this feature.
 
-<formletter>
+By default, we set this to 'y' as that is the historical way that Linux
+has worked, and we do not want to break working systems.  But in the
+future, perhaps this can default to 'n' to prevent this functionality.
 
-This is not the correct way to submit patches for inclusion in the
-stable kernel tree.  Please read:
-    https://www.kernel.org/doc/html/latest/process/stable-kernel-rules.html
-for how to do this properly.
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
 
-</formletter>
+Every once in a while people are really surprised that any line
+discipline can be loaded by any user.  Despite the ability to just
+disable the modules from the modules.conf file, sometimes it is good to
+provide protection from within the kernel instead of relying on a module
+configuration file.
+
+So that's why I wrote this patch up.  Anyone have any objections to it.
+It keeps the functionality that we have today by default, but allows
+admins to disable the auto-loading if they want to at runtime.
+
+
+
+ drivers/tty/Kconfig     | 24 +++++++++++++++++++++
+ drivers/tty/tty_io.c    |  3 +++
+ drivers/tty/tty_ldisc.c | 47 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 74 insertions(+)
+
+diff --git a/drivers/tty/Kconfig b/drivers/tty/Kconfig
+index 0840d27381ea..e0a04bfc873e 100644
+--- a/drivers/tty/Kconfig
++++ b/drivers/tty/Kconfig
+@@ -441,4 +441,28 @@ config VCC
+ 	depends on SUN_LDOMS
+ 	help
+ 	  Support for Sun logical domain consoles.
++
++config LDISC_AUTOLOAD
++	bool "Automatically load TTY Line Disciplines"
++	default y
++	help
++	  Historically the kernel has always automatically loaded any
++	  line discipline that is in a kernel module when a user asks
++	  for it to be loaded with the TIOCSETD ioctl, or through other
++	  means.  This is not always the best thing to do on systems
++	  where you know you will not be using some of the more
++	  "ancient" line disciplines, so prevent the kernel from doing
++	  this unless the request is coming from a process with the
++	  CAP_SYS_MODULE permissions.
++
++	  Say 'Y' here if you trust your userspace users to do the right
++	  thing, or if you have only provided the line disciplines that
++	  you know you will be using, or if you wish to continue to use
++	  the traditional method of on-demand loading of these modules
++	  by any user.
++
++	  This functionality can be changed at runtime with the
++	  dev.tty.ldisc_autoload sysctl, this configuration option will
++	  only set the default value of this functionality.
++
+ endif # TTY
+diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
+index 21ffcce16927..5fa250157025 100644
+--- a/drivers/tty/tty_io.c
++++ b/drivers/tty/tty_io.c
+@@ -513,6 +513,8 @@ static const struct file_operations hung_up_tty_fops = {
+ static DEFINE_SPINLOCK(redirect_lock);
+ static struct file *redirect;
+ 
++extern void tty_sysctl_init(void);
++
+ /**
+  *	tty_wakeup	-	request more data
+  *	@tty: terminal
+@@ -3483,6 +3485,7 @@ void console_sysfs_notify(void)
+  */
+ int __init tty_init(void)
+ {
++	tty_sysctl_init();
+ 	cdev_init(&tty_cdev, &tty_fops);
+ 	if (cdev_add(&tty_cdev, MKDEV(TTYAUX_MAJOR, 0), 1) ||
+ 	    register_chrdev_region(MKDEV(TTYAUX_MAJOR, 0), 1, "/dev/tty") < 0)
+diff --git a/drivers/tty/tty_ldisc.c b/drivers/tty/tty_ldisc.c
+index 45eda69b150c..e38f104db174 100644
+--- a/drivers/tty/tty_ldisc.c
++++ b/drivers/tty/tty_ldisc.c
+@@ -156,6 +156,13 @@ static void put_ldops(struct tty_ldisc_ops *ldops)
+  *		takes tty_ldiscs_lock to guard against ldisc races
+  */
+ 
++#if defined(CONFIG_LDISC_AUTOLOAD)
++	#define INITIAL_AUTOLOAD_STATE	1
++#else
++	#define INITIAL_AUTOLOAD_STATE	0
++#endif
++static int tty_ldisc_autoload = INITIAL_AUTOLOAD_STATE;
++
+ static struct tty_ldisc *tty_ldisc_get(struct tty_struct *tty, int disc)
+ {
+ 	struct tty_ldisc *ld;
+@@ -170,6 +177,8 @@ static struct tty_ldisc *tty_ldisc_get(struct tty_struct *tty, int disc)
+ 	 */
+ 	ldops = get_ldops(disc);
+ 	if (IS_ERR(ldops)) {
++		if (!capable(CAP_SYS_MODULE) && !tty_ldisc_autoload)
++			return ERR_PTR(-EPERM);
+ 		request_module("tty-ldisc-%d", disc);
+ 		ldops = get_ldops(disc);
+ 		if (IS_ERR(ldops))
+@@ -845,3 +854,41 @@ void tty_ldisc_deinit(struct tty_struct *tty)
+ 		tty_ldisc_put(tty->ldisc);
+ 	tty->ldisc = NULL;
+ }
++
++static int zero;
++static int one = 1;
++static struct ctl_table tty_table[] = {
++	{
++		.procname	= "ldisc_autoload",
++		.data		= &tty_ldisc_autoload,
++		.maxlen		= sizeof(tty_ldisc_autoload),
++		.mode		= 0644,
++		.proc_handler	= proc_dointvec,
++		.extra1		= &zero,
++		.extra2		= &one,
++	},
++	{ }
++};
++
++static struct ctl_table tty_dir_table[] = {
++	{
++		.procname	= "tty",
++		.mode		= 0555,
++		.child		= tty_table,
++	},
++	{ }
++};
++
++static struct ctl_table tty_root_table[] = {
++	{
++		.procname	= "dev",
++		.mode		= 0555,
++		.child		= tty_dir_table,
++	},
++	{ }
++};
++
++void tty_sysctl_init(void)
++{
++	register_sysctl_table(tty_root_table);
++}
+-- 
+2.20.1
