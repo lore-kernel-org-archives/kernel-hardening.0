@@ -1,164 +1,49 @@
-Date: Mon, 21 Jan 2019 17:26:42 +0100
-From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH] tty: ldisc: add sysctl to prevent autoloading of ldiscs
-Message-ID: <20190121162642.GA2944@kroah.com>
+Date: Mon, 21 Jan 2019 10:36:18 -0800
+From: Andi Kleen <ak@linux.intel.com>
+Subject: Re: [RFC] x86/speculation: add L1 Terminal Fault / Foreshadow demo
+Message-ID: <20190121183618.GP6118@tassilo.jf.intel.com>
+References: <1548076208-6442-1-git-send-email-jsteckli@amazon.de>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-To: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-serial@vger.kernel.org
-Cc: Jiri Slaby <jslaby@suse.com>
+In-Reply-To: <1548076208-6442-1-git-send-email-jsteckli@amazon.de>
+To: Julian Stecklina <jsteckli@amazon.de>
+Cc: linux-kernel@vger.kernel.org, David Woodhouse <dwmw2@infradead.org>, Liran Alon <liran.alon@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, x86@kernel.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-By default, the kernel will automatically load the module of any line
-dicipline that is asked for.  As this sometimes isn't the safest thing
-to do, provide a sysctl to disable this feature.
+> + 	/* Check the start address: needs to be page-aligned.. */
+> +-	if (start & ~PAGE_MASK)
+> ++	if (start & ~PAGE_MASK) {
+> ++
+> ++		/*
+> ++		 * XXX Hack
+> ++		 *
+> ++		 * We re-use this error case to show case a cache load gadget:
+> ++		 * There is a mispredicted branch, which leads to prefetching
+> ++		 * the cache with attacker controlled data.
+> ++		 */
+> ++		asm volatile (
 
-By default, we set this to 'y' as that is the historical way that Linux
-has worked, and we do not want to break working systems.  But in the
-future, perhaps this can default to 'n' to prevent this functionality.
+Obviously that can never be added to a standard kernel.
 
-Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
----
+And I don't see much point in shipping test cases that require non
+standard kernel patching. The idea of shipping test cases is that
+you can easily test them, but in this form it can't.
 
-Every once in a while people are really surprised that any line
-discipline can be loaded by any user.  Despite the ability to just
-disable the modules from the modules.conf file, sometimes it is good to
-provide protection from within the kernel instead of relying on a module
-configuration file.
+Also even without that problem, not sure what benefit including such a thing 
+would have.
 
-So that's why I wrote this patch up.  Anyone have any objections to it.
-It keeps the functionality that we have today by default, but allows
-admins to disable the auto-loading if they want to at runtime.
+If you want to improve regression test coverage, it would be far better to have
+test cases which do more directed unit testing against specific software 
+parts of the mitigation.
 
+For example some automated testing that the host page tables are inverted as
+expected for different scenarios. I checked that manually during development,
+but something automated would be great as a regression test. It would
+need some way to translate VA->PA in user space.
 
+Or have some tests that run test cases with PT or the MSR tracer with
+a guest and automatically check that the MSR writes for VM entries are in
+the right location.
 
- drivers/tty/Kconfig     | 24 +++++++++++++++++++++
- drivers/tty/tty_io.c    |  3 +++
- drivers/tty/tty_ldisc.c | 47 +++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 74 insertions(+)
-
-diff --git a/drivers/tty/Kconfig b/drivers/tty/Kconfig
-index 0840d27381ea..e0a04bfc873e 100644
---- a/drivers/tty/Kconfig
-+++ b/drivers/tty/Kconfig
-@@ -441,4 +441,28 @@ config VCC
- 	depends on SUN_LDOMS
- 	help
- 	  Support for Sun logical domain consoles.
-+
-+config LDISC_AUTOLOAD
-+	bool "Automatically load TTY Line Disciplines"
-+	default y
-+	help
-+	  Historically the kernel has always automatically loaded any
-+	  line discipline that is in a kernel module when a user asks
-+	  for it to be loaded with the TIOCSETD ioctl, or through other
-+	  means.  This is not always the best thing to do on systems
-+	  where you know you will not be using some of the more
-+	  "ancient" line disciplines, so prevent the kernel from doing
-+	  this unless the request is coming from a process with the
-+	  CAP_SYS_MODULE permissions.
-+
-+	  Say 'Y' here if you trust your userspace users to do the right
-+	  thing, or if you have only provided the line disciplines that
-+	  you know you will be using, or if you wish to continue to use
-+	  the traditional method of on-demand loading of these modules
-+	  by any user.
-+
-+	  This functionality can be changed at runtime with the
-+	  dev.tty.ldisc_autoload sysctl, this configuration option will
-+	  only set the default value of this functionality.
-+
- endif # TTY
-diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
-index 21ffcce16927..5fa250157025 100644
---- a/drivers/tty/tty_io.c
-+++ b/drivers/tty/tty_io.c
-@@ -513,6 +513,8 @@ static const struct file_operations hung_up_tty_fops = {
- static DEFINE_SPINLOCK(redirect_lock);
- static struct file *redirect;
- 
-+extern void tty_sysctl_init(void);
-+
- /**
-  *	tty_wakeup	-	request more data
-  *	@tty: terminal
-@@ -3483,6 +3485,7 @@ void console_sysfs_notify(void)
-  */
- int __init tty_init(void)
- {
-+	tty_sysctl_init();
- 	cdev_init(&tty_cdev, &tty_fops);
- 	if (cdev_add(&tty_cdev, MKDEV(TTYAUX_MAJOR, 0), 1) ||
- 	    register_chrdev_region(MKDEV(TTYAUX_MAJOR, 0), 1, "/dev/tty") < 0)
-diff --git a/drivers/tty/tty_ldisc.c b/drivers/tty/tty_ldisc.c
-index 45eda69b150c..e38f104db174 100644
---- a/drivers/tty/tty_ldisc.c
-+++ b/drivers/tty/tty_ldisc.c
-@@ -156,6 +156,13 @@ static void put_ldops(struct tty_ldisc_ops *ldops)
-  *		takes tty_ldiscs_lock to guard against ldisc races
-  */
- 
-+#if defined(CONFIG_LDISC_AUTOLOAD)
-+	#define INITIAL_AUTOLOAD_STATE	1
-+#else
-+	#define INITIAL_AUTOLOAD_STATE	0
-+#endif
-+static int tty_ldisc_autoload = INITIAL_AUTOLOAD_STATE;
-+
- static struct tty_ldisc *tty_ldisc_get(struct tty_struct *tty, int disc)
- {
- 	struct tty_ldisc *ld;
-@@ -170,6 +177,8 @@ static struct tty_ldisc *tty_ldisc_get(struct tty_struct *tty, int disc)
- 	 */
- 	ldops = get_ldops(disc);
- 	if (IS_ERR(ldops)) {
-+		if (!capable(CAP_SYS_MODULE) && !tty_ldisc_autoload)
-+			return ERR_PTR(-EPERM);
- 		request_module("tty-ldisc-%d", disc);
- 		ldops = get_ldops(disc);
- 		if (IS_ERR(ldops))
-@@ -845,3 +854,41 @@ void tty_ldisc_deinit(struct tty_struct *tty)
- 		tty_ldisc_put(tty->ldisc);
- 	tty->ldisc = NULL;
- }
-+
-+static int zero;
-+static int one = 1;
-+static struct ctl_table tty_table[] = {
-+	{
-+		.procname	= "ldisc_autoload",
-+		.data		= &tty_ldisc_autoload,
-+		.maxlen		= sizeof(tty_ldisc_autoload),
-+		.mode		= 0644,
-+		.proc_handler	= proc_dointvec,
-+		.extra1		= &zero,
-+		.extra2		= &one,
-+	},
-+	{ }
-+};
-+
-+static struct ctl_table tty_dir_table[] = {
-+	{
-+		.procname	= "tty",
-+		.mode		= 0555,
-+		.child		= tty_table,
-+	},
-+	{ }
-+};
-+
-+static struct ctl_table tty_root_table[] = {
-+	{
-+		.procname	= "dev",
-+		.mode		= 0555,
-+		.child		= tty_dir_table,
-+	},
-+	{ }
-+};
-+
-+void tty_sysctl_init(void)
-+{
-+	register_sysctl_table(tty_root_table);
-+}
--- 
-2.20.1
+-Andi
