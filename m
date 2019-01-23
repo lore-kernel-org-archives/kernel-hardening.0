@@ -1,17 +1,44 @@
-Date: Wed, 23 Jan 2019 10:03:36 -0500
-From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-Subject: Re: [RFC PATCH v7 09/16] mm: add a user_virt_to_phys symbol
-Message-ID: <20190123150248.GE19289@Konrads-MacBook-Pro.local>
-References: <cover.1547153058.git.khalid.aziz@oracle.com>
- <c9a409397fc608f7ae6297597d9ea3d21eeb3b38.1547153058.git.khalid.aziz@oracle.com>
+From: "Edwin Zimmerman" <edwin@211mainstreet.net>
+References: <20190123110349.35882-1-keescook@chromium.org> <20190123110349.35882-2-keescook@chromium.org> <20190123115829.GA31385@kroah.com> <874l9z31c5.fsf@intel.com>
+In-Reply-To: <874l9z31c5.fsf@intel.com>
+Subject: RE: [Intel-gfx] [PATCH 1/3] treewide: Lift switch variables out of switches
+Date: Wed, 23 Jan 2019 09:47:06 -0500
+Message-ID: <000001d4b32a$845e06e0$8d1a14a0$@211mainstreet.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <c9a409397fc608f7ae6297597d9ea3d21eeb3b38.1547153058.git.khalid.aziz@oracle.com>
-To: Khalid Aziz <khalid.aziz@oracle.com>
-Cc: juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, Tycho Andersen <tycho@docker.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, x86@kernel.org
+Content-Type: text/plain;
+	charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+To: 'Jani Nikula' <jani.nikula@linux.intel.com>, 'Greg KH' <gregkh@linuxfoundation.org>, 'Kees Cook' <keescook@chromium.org>
+Cc: dev@openvswitch.org, 'Ard Biesheuvel' <ard.biesheuvel@linaro.org>, netdev@vger.kernel.org, intel-gfx@lists.freedesktop.org, linux-usb@vger.kernel.org, linux-kernel@vger.kernel.org, dri-devel@lists.freedesktop.org, linux-mm@kvack.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, intel-wired-lan@lists.osuosl.org, linux-fsdevel@vger.kernel.org, xen-devel@lists.xenproject.org, 'Laura Abbott' <labbott@redhat.com>, linux-kbuild@vger.kernel.org, 'Alexander Popov' <alex.popov@linux.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> +EXPORT_SYMBOL(user_virt_to_phys);
+On Wed, 23 Jan 2019, Jani Nikula <jani.nikula@linux.intel.com> wrote:
+> On Wed, 23 Jan 2019, Greg KH <gregkh@linuxfoundation.org> wrote:
+> > On Wed, Jan 23, 2019 at 03:03:47AM -0800, Kees Cook wrote:
+> >> Variables declared in a switch statement before any case statements
+> >> cannot be initialized, so move all instances out of the switches.
+> >> After this, future always-initialized stack variables will work
+> >> and not throw warnings like this:
+> >>
+> >> fs/fcntl.c: In function =E2=80=98send_sigio_to_task=E2=80=99:
+> >> fs/fcntl.c:738:13: warning: statement will never be executed =
+[-Wswitch-unreachable]
+> >>    siginfo_t si;
+> >>              ^~
+> >
+> > That's a pain, so this means we can't have any new variables in { }
+> > scope except for at the top of a function?
+> >
+> > That's going to be a hard thing to keep from happening over time, as
+> > this is valid C :(
+>=20
+> Not all valid C is meant to be used! ;)
 
-Could it be _GPL? OTherwise looks OK to me.
+Very true.  The other thing to keep in mind is the burden of enforcing a =
+prohibition on a valid C construct like this. =20
+It seems to me that patch reviewers and maintainers have enough to do =
+without forcing them to watch for variable
+declarations in switch statements.  Automating this prohibition, should =
+it be accepted, seems like a good idea to me.
+
+-Edwin Zimmerman
