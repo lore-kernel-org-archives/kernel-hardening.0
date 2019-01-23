@@ -1,7 +1,7 @@
-Date: Wed, 23 Jan 2019 09:20:49 -0500
+Date: Wed, 23 Jan 2019 09:24:13 -0500
 From: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
 Subject: Re: [RFC PATCH v7 05/16] arm64/mm: Add support for XPFO
-Message-ID: <20190123142047.GB19289@Konrads-MacBook-Pro.local>
+Message-ID: <20190123142410.GC19289@Konrads-MacBook-Pro.local>
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
  <89f03091af87f5ab27bd6cafb032236d5bd81d65.1547153058.git.khalid.aziz@oracle.com>
 MIME-Version: 1.0
@@ -83,5 +83,50 @@ On Thu, Jan 10, 2019 at 02:09:37PM -0700, Khalid Aziz wrote:
 > + * the entry. Based on x86 tree.
 > + */
 > +static pte_t *lookup_address(unsigned long addr)
+> +{
+> +	pgd_t *pgd;
+> +	pud_t *pud;
+> +	pmd_t *pmd;
+> +
+> +	pgd = pgd_offset_k(addr);
+> +	if (pgd_none(*pgd))
+> +		return NULL;
+> +
+> +	pud = pud_offset(pgd, addr);
+> +	if (pud_none(*pud))
+> +		return NULL;
+> +
+> +	pmd = pmd_offset(pud, addr);
+> +	if (pmd_none(*pmd))
+> +		return NULL;
+> +
+> +	return pte_offset_kernel(pmd, addr);
+> +}
+> +
+> +/* Update a single kernel page table entry */
+> +inline void set_kpte(void *kaddr, struct page *page, pgprot_t prot)
+> +{
+> +	pte_t *pte = lookup_address((unsigned long)kaddr);
+> +
+> +	set_pte(pte, pfn_pte(page_to_pfn(page), prot));
 
-The x86 also has level. Would it make sense to include that in here?
+Thought on the other hand.. what if the page is PMD? Do you really want
+to do this?
+
+What if 'pte' is NULL?
+> +}
+> +
+> +inline void xpfo_flush_kernel_tlb(struct page *page, int order)
+> +{
+> +	unsigned long kaddr = (unsigned long)page_address(page);
+> +	unsigned long size = PAGE_SIZE;
+> +
+> +	flush_tlb_kernel_range(kaddr, kaddr + (1 << order) * size);
+
+Ditto here. You are assuming it is PTE, but it may be PMD or such.
+Or worts - the lookup_address could be NULL.
+
+> +}
+> -- 
+> 2.17.1
+> 
