@@ -1,63 +1,182 @@
-From: Julian Stecklina <jsteckli@amazon.de>
-Subject: Re: [RFC] x86/speculation: add L1 Terminal Fault / Foreshadow demo
-References: <1548076208-6442-1-git-send-email-jsteckli@amazon.de>
-	<20190121183618.GP6118@tassilo.jf.intel.com>
-	<20190121191541.GB4026@kroah.com>
-	<CAGXu5j+h9RKAND8+SJR6P6CQY_YO3ezjsnfuzLGsQbY=O4XCuw@mail.gmail.com>
-Date: Tue, 22 Jan 2019 16:34:18 +0200
-In-Reply-To: <CAGXu5j+h9RKAND8+SJR6P6CQY_YO3ezjsnfuzLGsQbY=O4XCuw@mail.gmail.com>
-	(Kees Cook's message of "Tue, 22 Jan 2019 09:42:13 +1300")
-Message-ID: <ciirm8va2gg3rp.fsf@u54ee758033e858cfa736.ant.amazon.com>
-MIME-Version: 1.0
-Content-Type: text/plain
-To: Kees Cook <keescook@chromium.org>
-Cc: Greg KH <gregkh@linuxfoundation.org>, Andi Kleen <ak@linux.intel.com>, LKML <linux-kernel@vger.kernel.org>, David Woodhouse <dwmw2@infradead.org>, Liran Alon <liran.alon@oracle.com>, Paolo Bonzini <pbonzini@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Linus Torvalds <torvalds@linux-foundation.org>, X86 ML <x86@kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+From: Kees Cook <keescook@chromium.org>
+Subject: [PATCH 2/3] gcc-plugins: Introduce stackinit plugin
+Date: Wed, 23 Jan 2019 03:03:48 -0800
+Message-Id: <20190123110349.35882-3-keescook@chromium.org>
+In-Reply-To: <20190123110349.35882-1-keescook@chromium.org>
+References: <20190123110349.35882-1-keescook@chromium.org>
+To: linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <labbott@redhat.com>, Alexander Popov <alex.popov@linux.com>, xen-devel@lists.xenproject.org, dri-devel@lists.freedesktop.org, intel-gfx@lists.freedesktop.org, intel-wired-lan@lists.osuosl.org, netdev@vger.kernel.org, linux-usb@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-mm@kvack.org, dev@openvswitch.org, linux-kbuild@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook <keescook@chromium.org> writes:
+This attempts to duplicate the proposed gcc option -finit-local-vars[1]
+in an effort to implement the "always initialize local variables" kernel
+development goal[2].
 
-> On Tue, Jan 22, 2019 at 8:15 AM Greg KH <gregkh@linuxfoundation.org> wrote:
->>
->> On Mon, Jan 21, 2019 at 10:36:18AM -0800, Andi Kleen wrote:
->> > > +   /* Check the start address: needs to be page-aligned.. */
->> > > +-  if (start & ~PAGE_MASK)
->> > > ++  if (start & ~PAGE_MASK) {
->> > > ++
->> > > ++          /*
->> > > ++           * XXX Hack
->> > > ++           *
->> > > ++           * We re-use this error case to show case a cache load gadget:
->> > > ++           * There is a mispredicted branch, which leads to prefetching
->> > > ++           * the cache with attacker controlled data.
->> > > ++           */
->> > > ++          asm volatile (
->> >
->> > Obviously that can never be added to a standard kernel.
->>
->> No, that's why it is a patch, right?
+Enabling CONFIG_GCC_PLUGIN_STACKINIT should stop all "uninitialized
+stack variable" flaws as long as they don't depend on being zero. :)
 
-Yes, this is obviously only for experimenting.
+[1] https://gcc.gnu.org/ml/gcc-patches/2014-06/msg00615.html
+[2] https://lkml.kernel.org/r/CA+55aFykZL+cSBJjBBts7ebEFfyGPdMzTmLSxKnT_29=j942dA@mail.gmail.com
 
->> People want to test things, it's nice to have a way to easily do
->> this.
->
-> What about adding something like it to drivers/misc/lkdtm/ instead?
->
-> It's not a "production" module, but it regularly get built for selftest builds.
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ scripts/Makefile.gcc-plugins           |  6 ++
+ scripts/gcc-plugins/Kconfig            |  9 +++
+ scripts/gcc-plugins/gcc-common.h       | 11 +++-
+ scripts/gcc-plugins/stackinit_plugin.c | 79 ++++++++++++++++++++++++++
+ 4 files changed, 102 insertions(+), 3 deletions(-)
+ create mode 100644 scripts/gcc-plugins/stackinit_plugin.c
 
-For people who want to test L1TF hardening patches in the kernel (e.g.
-XPFO) it's certainly nice to not have to manually patch the kernel to add
-an easy to reach cache load gadget. It's also nice if you quickly want
-to test whether a random Intel CPU has this vulnerability.
-
-The cache load gadget as it is right now is mostly to show a reasonably
-realistic scenario of speculatively executed code fetching memory into
-the L1 cache. I didn't want to make this a completely crafted example
-where I just literally execute a prefetch instruction.
-
-But what I could do is add a bit of code in lkdtm that exposes a debugfs
-file with this functionality.
-
-Thoughts?
-
-Julian
+diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
+index 35042d96cf5d..2483121d781c 100644
+--- a/scripts/Makefile.gcc-plugins
++++ b/scripts/Makefile.gcc-plugins
+@@ -12,6 +12,12 @@ export DISABLE_LATENT_ENTROPY_PLUGIN
+ 
+ gcc-plugin-$(CONFIG_GCC_PLUGIN_SANCOV)		+= sancov_plugin.so
+ 
++gcc-plugin-$(CONFIG_GCC_PLUGIN_STACKINIT)	+= stackinit_plugin.so
++ifdef CONFIG_GCC_PLUGIN_STACKINIT
++    DISABLE_STACKINIT_PLUGIN += -fplugin-arg-stackinit_plugin-disable
++endif
++export DISABLE_STACKINIT_PLUGIN
++
+ gcc-plugin-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)	+= structleak_plugin.so
+ gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE)	\
+ 		+= -fplugin-arg-structleak_plugin-verbose
+diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
+index d45f7f36b859..b117fe83f1d3 100644
+--- a/scripts/gcc-plugins/Kconfig
++++ b/scripts/gcc-plugins/Kconfig
+@@ -66,6 +66,15 @@ config GCC_PLUGIN_LATENT_ENTROPY
+ 	   * https://grsecurity.net/
+ 	   * https://pax.grsecurity.net/
+ 
++config GCC_PLUGIN_STACKINIT
++	bool "Initialize all stack variables to zero by default"
++	depends on GCC_PLUGINS
++	depends on !GCC_PLUGIN_STRUCTLEAK
++	help
++	  This plugin zero-initializes all stack variables. This is more
++	  comprehensive than GCC_PLUGIN_STRUCTLEAK, and attempts to
++	  duplicate the proposed -finit-local-vars gcc build flag.
++
+ config GCC_PLUGIN_STRUCTLEAK
+ 	bool "Force initialization of variables containing userspace addresses"
+ 	# Currently STRUCTLEAK inserts initialization out of live scope of
+diff --git a/scripts/gcc-plugins/gcc-common.h b/scripts/gcc-plugins/gcc-common.h
+index 552d5efd7cb7..f690b4deeabd 100644
+--- a/scripts/gcc-plugins/gcc-common.h
++++ b/scripts/gcc-plugins/gcc-common.h
+@@ -76,6 +76,14 @@
+ #include "c-common.h"
+ #endif
+ 
++#if BUILDING_GCC_VERSION > 4005
++#include "c-tree.h"
++#else
++/* should come from c-tree.h if only it were installed for gcc 4.5... */
++#define C_TYPE_FIELDS_READONLY(TYPE) TREE_LANG_FLAG_1(TYPE)
++extern bool global_bindings_p (void);
++#endif
++
+ #if BUILDING_GCC_VERSION <= 4008
+ #include "tree-flow.h"
+ #else
+@@ -158,9 +166,6 @@ void dump_gimple_stmt(pretty_printer *, gimple, int, int);
+ #define TYPE_NAME_POINTER(node) IDENTIFIER_POINTER(TYPE_NAME(node))
+ #define TYPE_NAME_LENGTH(node) IDENTIFIER_LENGTH(TYPE_NAME(node))
+ 
+-/* should come from c-tree.h if only it were installed for gcc 4.5... */
+-#define C_TYPE_FIELDS_READONLY(TYPE) TREE_LANG_FLAG_1(TYPE)
+-
+ static inline tree build_const_char_string(int len, const char *str)
+ {
+ 	tree cstr, elem, index, type;
+diff --git a/scripts/gcc-plugins/stackinit_plugin.c b/scripts/gcc-plugins/stackinit_plugin.c
+new file mode 100644
+index 000000000000..41055cd7098e
+--- /dev/null
++++ b/scripts/gcc-plugins/stackinit_plugin.c
+@@ -0,0 +1,79 @@
++/* SPDX-License: GPLv2 */
++/*
++ * This will zero-initialize local stack variables. (Though structure
++ * padding may remain uninitialized in certain cases.)
++ *
++ * Implements Florian Weimer's "-finit-local-vars" gcc patch as a plugin:
++ * https://gcc.gnu.org/ml/gcc-patches/2014-06/msg00615.html
++ *
++ * Plugin skeleton code thanks to PaX Team.
++ *
++ * Options:
++ * -fplugin-arg-stackinit_plugin-disable
++ */
++
++#include "gcc-common.h"
++
++__visible int plugin_is_GPL_compatible;
++
++static struct plugin_info stackinit_plugin_info = {
++	.version	= "20190122",
++	.help		= "disable\tdo not activate plugin\n",
++};
++
++static void finish_decl(void *event_data, void *data)
++{
++	tree decl = (tree)event_data;
++	tree type;
++
++	if (TREE_CODE (decl) != VAR_DECL)
++		return;
++
++	if (DECL_EXTERNAL (decl))
++		return;
++
++	if (DECL_INITIAL (decl) != NULL_TREE)
++		return;
++
++	if (global_bindings_p ())
++		return;
++
++	type = TREE_TYPE (decl);
++	if (AGGREGATE_TYPE_P (type))
++		DECL_INITIAL (decl) = build_constructor (type, NULL);
++	else
++		DECL_INITIAL (decl) = fold_convert (type, integer_zero_node);
++}
++
++__visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
++{
++	int i;
++	const char * const plugin_name = plugin_info->base_name;
++	const int argc = plugin_info->argc;
++	const struct plugin_argument * const argv = plugin_info->argv;
++	bool enable = true;
++
++	if (!plugin_default_version_check(version, &gcc_version)) {
++		error(G_("incompatible gcc/plugin versions"));
++		return 1;
++	}
++
++	if (strncmp(lang_hooks.name, "GNU C", 5) && !strncmp(lang_hooks.name, "GNU C+", 6)) {
++		inform(UNKNOWN_LOCATION, G_("%s supports C only, not %s"), plugin_name, lang_hooks.name);
++		enable = false;
++	}
++
++	for (i = 0; i < argc; ++i) {
++		if (!strcmp(argv[i].key, "disable")) {
++			enable = false;
++			continue;
++		}
++		error(G_("unknown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
++	}
++
++	register_callback(plugin_name, PLUGIN_INFO, NULL, &stackinit_plugin_info);
++	if (enable)
++		register_callback(plugin_name, PLUGIN_FINISH_DECL, finish_decl, NULL);
++
++	return 0;
++}
+-- 
+2.17.1
