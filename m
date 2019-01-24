@@ -1,49 +1,33 @@
-Date: Thu, 24 Jan 2019 09:10:24 +0100
-From: Greg KH <gregkh@linuxfoundation.org>
-Subject: Re: [Intel-gfx] [PATCH 1/3] treewide: Lift switch variables out of
- switches
-Message-ID: <20190124081024.GA1108@kroah.com>
-References: <20190123110349.35882-1-keescook@chromium.org>
- <20190123110349.35882-2-keescook@chromium.org>
- <20190123115829.GA31385@kroah.com>
- <874l9z31c5.fsf@intel.com>
- <000001d4b32a$845e06e0$8d1a14a0$@211mainstreet.net>
- <87va2f1int.fsf@intel.com>
- <CAGXu5jJUxHtFq0rBJ9FwzMcZDWnusPUauC_=MaOz7H0_PF25jQ@mail.gmail.com>
+Subject: Re: [PATCH v2] KVM: x86: Fix single-step debugging
+References: <1548074920-10651-1-git-send-email-alex.popov@linux.com>
+From: Alexander Popov <alex.popov@linux.com>
+Message-ID: <845b834f-3529-056d-4373-312f7c6fc794@linux.com>
+Date: Thu, 24 Jan 2019 11:41:22 +0300
 MIME-Version: 1.0
+In-Reply-To: <1548074920-10651-1-git-send-email-alex.popov@linux.com>
 Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAGXu5jJUxHtFq0rBJ9FwzMcZDWnusPUauC_=MaOz7H0_PF25jQ@mail.gmail.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: Jani Nikula <jani.nikula@linux.intel.com>, Edwin Zimmerman <edwin@211mainstreet.net>, dev@openvswitch.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Network Development <netdev@vger.kernel.org>, intel-gfx@lists.freedesktop.org, linux-usb@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, Maling list - DRI developers <dri-devel@lists.freedesktop.org>, Linux-MM <linux-mm@kvack.org>, linux-security-module <linux-security-module@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, intel-wired-lan@lists.osuosl.org, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, xen-devel <xen-devel@lists.xenproject.org>, Laura Abbott <labbott@redhat.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, Alexander Popov <alex.popov@linux.com>
+Content-Transfer-Encoding: 7bit
+To: Paolo Bonzini <pbonzini@redhat.com>, Radim Krcmar <rkrcmar@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Andy Lutomirski <luto@kernel.org>, Stefan Hajnoczi <stefanha@redhat.com>, H Peter Anvin <hpa@zytor.com>, x86@kernel.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Cc: Greg KH <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 24, 2019 at 07:55:51AM +1300, Kees Cook wrote:
-> On Thu, Jan 24, 2019 at 4:44 AM Jani Nikula <jani.nikula@linux.intel.com> wrote:
-> >
-> > On Wed, 23 Jan 2019, Edwin Zimmerman <edwin@211mainstreet.net> wrote:
-> > > On Wed, 23 Jan 2019, Jani Nikula <jani.nikula@linux.intel.com> wrote:
-> > >> On Wed, 23 Jan 2019, Greg KH <gregkh@linuxfoundation.org> wrote:
-> > >> > On Wed, Jan 23, 2019 at 03:03:47AM -0800, Kees Cook wrote:
-> > >> >> Variables declared in a switch statement before any case statements
-> > >> >> cannot be initialized, so move all instances out of the switches.
-> > >> >> After this, future always-initialized stack variables will work
-> > >> >> and not throw warnings like this:
-> > >> >>
-> > >> >> fs/fcntl.c: In function ‘send_sigio_to_task’:
-> > >> >> fs/fcntl.c:738:13: warning: statement will never be executed [-Wswitch-unreachable]
-> > >> >>    siginfo_t si;
-> > >> >>              ^~
-> > >> >
-> > >> > That's a pain, so this means we can't have any new variables in { }
-> > >> > scope except for at the top of a function?
+On 21.01.2019 15:48, Alexander Popov wrote:
+> The single-step debugging of KVM guests on x86 is broken: if we run
+> gdb 'stepi' command at the breakpoint when the guest interrupts are
+> enabled, RIP always jumps to native_apic_mem_write(). Then other
+> nasty effects follow.
 > 
-> Just in case this wasn't clear: no, it's just the switch statement
-> before the first "case". I cannot imagine how bad it would be if we
-> couldn't have block-scoped variables! Heh. :)
+> Long investigation showed that on Jun 7, 2017 the
+> commit c8401dda2f0a00cd25c0 ("KVM: x86: fix singlestepping over syscall")
+> introduced the kvm_run.debug corruption: kvm_vcpu_do_singlestep() can
+> be called without X86_EFLAGS_TF set.
+> 
+> Let's fix it. Please consider that for -stable.
 
-Sorry, it was not clear at first glance.  So no more objection from me
-for this change.
+Hello everyone!
 
-greg k-h
+Just a friendly ping about this fix.
+Looking forward to the feedback.
+
+Best regards,
+Alexander
