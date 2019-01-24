@@ -1,9 +1,9 @@
 From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.19 026/106] crypto: ecc - regularize scalar for scalar multiplication
-Date: Thu, 24 Jan 2019 20:19:43 +0100
-Message-Id: <20190124190208.023634852@linuxfoundation.org>
-In-Reply-To: <20190124190206.342411005@linuxfoundation.org>
-References: <20190124190206.342411005@linuxfoundation.org>
+Subject: [PATCH 4.20 032/127] crypto: ecc - regularize scalar for scalar multiplication
+Date: Thu, 24 Jan 2019 20:19:38 +0100
+Message-Id: <20190124190213.666243105@linuxfoundation.org>
+In-Reply-To: <20190124190211.984305387@linuxfoundation.org>
+References: <20190124190211.984305387@linuxfoundation.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -11,7 +11,7 @@ To: linux-kernel@vger.kernel.org
 Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Vitaly Chikunov <vt@altlinux.org>, kernel-hardening@lists.openwall.com, Herbert Xu <herbert@gondor.apana.org.au>, Sasha Levin <sashal@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-4.19-stable review patch.  If anyone has any objections, please let me know.
+4.20-stable review patch.  If anyone has any objections, please let me know.
 
 ------------------
 
