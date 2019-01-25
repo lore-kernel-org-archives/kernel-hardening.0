@@ -1,95 +1,88 @@
-From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Subject: [PATCH 4.20 032/127] crypto: ecc - regularize scalar for scalar multiplication
-Date: Thu, 24 Jan 2019 20:19:38 +0100
-Message-Id: <20190124190213.666243105@linuxfoundation.org>
-In-Reply-To: <20190124190211.984305387@linuxfoundation.org>
-References: <20190124190211.984305387@linuxfoundation.org>
+Date: Fri, 25 Jan 2019 10:30:52 +0100
+From: Borislav Petkov <bp@alien8.de>
+Subject: Re: [PATCH 01/17] Fix "x86/alternatives: Lockdep-enforce text_mutex
+ in text_poke*()"
+Message-ID: <20190125093052.GA27998@zn.tnic>
+References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
+ <20190117003259.23141-2-rick.p.edgecombe@intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-To: linux-kernel@vger.kernel.org
-Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, stable@vger.kernel.org, Vitaly Chikunov <vt@altlinux.org>, kernel-hardening@lists.openwall.com, Herbert Xu <herbert@gondor.apana.org.au>, Sasha Levin <sashal@kernel.org>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <20190117003259.23141-2-rick.p.edgecombe@intel.com>
+To: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-4.20-stable review patch.  If anyone has any objections, please let me know.
+On Wed, Jan 16, 2019 at 04:32:43PM -0800, Rick Edgecombe wrote:
+> From: Nadav Amit <namit@vmware.com>
+> 
+> text_mutex is currently expected to be held before text_poke() is
+> called, but we kgdb does not take the mutex, and instead *supposedly*
+> ensures the lock is not taken and will not be acquired by any other core
+> while text_poke() is running.
+> 
+> The reason for the "supposedly" comment is that it is not entirely clear
+> that this would be the case if gdb_do_roundup is zero.
 
-------------------
+I guess that variable name is "kgdb_do_roundup" ?
 
-[ Upstream commit 3da2c1dfdb802b184eea0653d1e589515b52d74b ]
+> This patch creates two wrapper functions, text_poke() and
 
-ecc_point_mult is supposed to be used with a regularized scalar,
-otherwise, it's possible to deduce the position of the top bit of the
-scalar with timing attack. This is important when the scalar is a
-private key.
+Avoid having "This patch" or "This commit" in the commit message. It is
+tautologically useless.
 
-ecc_point_mult is already using a regular algorithm (i.e. having an
-operation flow independent of the input scalar) but regularization step
-is not implemented.
+Also, do
 
-Arrange scalar to always have fixed top bit by adding a multiple of the
-curve order (n).
+$ git grep 'This patch' Documentation/process
 
-References:
-The constant time regularization step is based on micro-ecc by Kenneth
-MacKay and also referenced in the literature (Bernstein, D. J., & Lange,
-T. (2017). Montgomery curves and the Montgomery ladder. (Cryptology
-ePrint Archive; Vol. 2017/293). s.l.: IACR. Chapter 4.6.2.)
+for more details.
 
-Signed-off-by: Vitaly Chikunov <vt@altlinux.org>
-Cc: kernel-hardening@lists.openwall.com
-Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
-Signed-off-by: Sasha Levin <sashal@kernel.org>
----
- crypto/ecc.c | 16 ++++++++++++----
- 1 file changed, 12 insertions(+), 4 deletions(-)
+> text_poke_kgdb() which do or do not run the lockdep assertion
+> respectively.
+> 
+> While we are at it, change the return code of text_poke() to something
+> meaningful. One day, callers might actually respect it and the existing
+> BUG_ON() when patching fails could be removed. For kgdb, the return
+> value can actually be used.
+> 
+> Cc: Andy Lutomirski <luto@kernel.org>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Dave Hansen <dave.hansen@intel.com>
+> Cc: Masami Hiramatsu <mhiramat@kernel.org>
+> Fixes: 9222f606506c ("x86/alternatives: Lockdep-enforce text_mutex in text_poke*()")
+> Suggested-by: Peter Zijlstra <peterz@infradead.org>
+> Acked-by: Jiri Kosina <jkosina@suse.cz>
+> Signed-off-by: Nadav Amit <namit@vmware.com>
+> Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
+> ---
+>  arch/x86/include/asm/text-patching.h |  1 +
+>  arch/x86/kernel/alternative.c        | 52 ++++++++++++++++++++--------
+>  arch/x86/kernel/kgdb.c               | 11 +++---
+>  3 files changed, 45 insertions(+), 19 deletions(-)
 
-diff --git a/crypto/ecc.c b/crypto/ecc.c
-index 8facafd67802..adcce310f646 100644
---- a/crypto/ecc.c
-+++ b/crypto/ecc.c
-@@ -842,15 +842,23 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2, u64 *curve_prime,
- 
- static void ecc_point_mult(struct ecc_point *result,
- 			   const struct ecc_point *point, const u64 *scalar,
--			   u64 *initial_z, u64 *curve_prime,
-+			   u64 *initial_z, const struct ecc_curve *curve,
- 			   unsigned int ndigits)
- {
- 	/* R0 and R1 */
- 	u64 rx[2][ECC_MAX_DIGITS];
- 	u64 ry[2][ECC_MAX_DIGITS];
- 	u64 z[ECC_MAX_DIGITS];
-+	u64 sk[2][ECC_MAX_DIGITS];
-+	u64 *curve_prime = curve->p;
- 	int i, nb;
--	int num_bits = vli_num_bits(scalar, ndigits);
-+	int num_bits;
-+	int carry;
-+
-+	carry = vli_add(sk[0], scalar, curve->n, ndigits);
-+	vli_add(sk[1], sk[0], curve->n, ndigits);
-+	scalar = sk[!carry];
-+	num_bits = sizeof(u64) * ndigits * 8 + 1;
- 
- 	vli_set(rx[1], point->x, ndigits);
- 	vli_set(ry[1], point->y, ndigits);
-@@ -1004,7 +1012,7 @@ int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
- 		goto out;
- 	}
- 
--	ecc_point_mult(pk, &curve->g, priv, NULL, curve->p, ndigits);
-+	ecc_point_mult(pk, &curve->g, priv, NULL, curve, ndigits);
- 	if (ecc_point_is_zero(pk)) {
- 		ret = -EAGAIN;
- 		goto err_free_point;
-@@ -1090,7 +1098,7 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
- 		goto err_alloc_product;
- 	}
- 
--	ecc_point_mult(product, pk, priv, rand_z, curve->p, ndigits);
-+	ecc_point_mult(product, pk, priv, rand_z, curve, ndigits);
- 
- 	ecc_swap_digits(product->x, secret, ndigits);
- 
+...
+
+> +/**
+> + * text_poke_kgdb - Update instructions on a live kernel by kgdb
+> + * @addr: address to modify
+> + * @opcode: source of the copy
+> + * @len: length to copy
+> + *
+> + * Only atomic text poke/set should be allowed when not doing early patching.
+> + * It means the size must be writable atomically and the address must be aligned
+> + * in a way that permits an atomic write. It also makes sure we fit on a single
+> + * page.
+> + *
+> + * Context: should only be used by kgdb, which ensures no other core is running,
+> + *	    despite the fact it does not hold the text_mutex.
+> + */
+> +void *text_poke_kgdb(void *addr, const void *opcode, size_t len)
+
+text_poke_unlocked() I guess. I don't think kgdb is that special that it
+needs its own function flavor.
+
 -- 
-2.19.1
+Regards/Gruss,
+    Boris.
+
+Good mailing practices for 400: avoid top-posting and trim the reply.
