@@ -1,88 +1,84 @@
-Date: Fri, 25 Jan 2019 10:30:52 +0100
-From: Borislav Petkov <bp@alien8.de>
-Subject: Re: [PATCH 01/17] Fix "x86/alternatives: Lockdep-enforce text_mutex
- in text_poke*()"
-Message-ID: <20190125093052.GA27998@zn.tnic>
-References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
- <20190117003259.23141-2-rick.p.edgecombe@intel.com>
+Subject: Re: [PATCH v2 2/3] powerpc/lib: Refactor __patch_instruction() to use
+ __put_user_asm()
+References: <20181210070044.27503-1-ruscur@russell.cc>
+ <20181210070044.27503-3-ruscur@russell.cc>
+ <3b213170-9b93-cb71-b0c2-220ea31dbdea@c-s.fr>
+From: Christophe Leroy <christophe.leroy@c-s.fr>
+Message-ID: <5ff8b24e-a748-19d3-8651-b626dd676ea4@c-s.fr>
+Date: Fri, 25 Jan 2019 12:45:50 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <20190117003259.23141-2-rick.p.edgecombe@intel.com>
-To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>
+In-Reply-To: <3b213170-9b93-cb71-b0c2-220ea31dbdea@c-s.fr>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 8bit
+To: Russell Currey <ruscur@russell.cc>, linuxppc-dev@lists.ozlabs.org
+Cc: mikey@neuling.org, mpe@ellerman.id.au, benh@kernel.crashing.org, npiggin@gmail.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 16, 2019 at 04:32:43PM -0800, Rick Edgecombe wrote:
-> From: Nadav Amit <namit@vmware.com>
+Hi Russel,
+
+Le 17/12/2018 à 08:09, Christophe Leroy a écrit :
+> Hi Russel,
 > 
-> text_mutex is currently expected to be held before text_poke() is
-> called, but we kgdb does not take the mutex, and instead *supposedly*
-> ensures the lock is not taken and will not be acquired by any other core
-> while text_poke() is running.
+> Le 10/12/2018 à 08:00, Russell Currey a écrit :
+>> __patch_instruction() is called in early boot, and uses
+>> __put_user_size(), which includes the locks and unlocks for KUAP,
+>> which could either be called too early, or in the Radix case, forced to
+>> use "early_" versions of functions just to safely handle this one case.
 > 
-> The reason for the "supposedly" comment is that it is not entirely clear
-> that this would be the case if gdb_do_roundup is zero.
-
-I guess that variable name is "kgdb_do_roundup" ?
-
-> This patch creates two wrapper functions, text_poke() and
-
-Avoid having "This patch" or "This commit" in the commit message. It is
-tautologically useless.
-
-Also, do
-
-$ git grep 'This patch' Documentation/process
-
-for more details.
-
-> text_poke_kgdb() which do or do not run the lockdep assertion
-> respectively.
+> Looking at x86, I see that __put_user_size() doesn't includes the locks. 
+> The lock/unlock is do by callers. I'll do the same.
 > 
-> While we are at it, change the return code of text_poke() to something
-> meaningful. One day, callers might actually respect it and the existing
-> BUG_ON() when patching fails could be removed. For kgdb, the return
-> value can actually be used.
 > 
-> Cc: Andy Lutomirski <luto@kernel.org>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Dave Hansen <dave.hansen@intel.com>
-> Cc: Masami Hiramatsu <mhiramat@kernel.org>
-> Fixes: 9222f606506c ("x86/alternatives: Lockdep-enforce text_mutex in text_poke*()")
-> Suggested-by: Peter Zijlstra <peterz@infradead.org>
-> Acked-by: Jiri Kosina <jkosina@suse.cz>
-> Signed-off-by: Nadav Amit <namit@vmware.com>
-> Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
-> ---
->  arch/x86/include/asm/text-patching.h |  1 +
->  arch/x86/kernel/alternative.c        | 52 ++++++++++++++++++++--------
->  arch/x86/kernel/kgdb.c               | 11 +++---
->  3 files changed, 45 insertions(+), 19 deletions(-)
+>>
+>> __put_user_asm() does not do this, and thus is safe to use both in early
+>> boot, and later on since in this case it should only ever be touching
+>> kernel memory.
+>>
+>> __patch_instruction() was previously refactored to use __put_user_size()
+>> in order to be able to return -EFAULT, which would allow the kernel to
+>> patch instructions in userspace, which should never happen.  This has
+>> the functional change of causing faults on userspace addresses if KUAP
+>> is turned on, which should never happen in practice.
+>>
+>> A future enhancement could be to double check the patch address is
+>> definitely allowed to be tampered with by the kernel.
+> 
+> This makes me realise that we are calling lock_user_access() with kernel 
+> addresses. That most likely breaks protection on kernel addresses for 
+> book3s/32. I'll have to work around it.
+> 
+> Another thing I realised also is that get_user() at least is called in 
+> some exceptions/trap handlers. Which means it can be called nested with 
+> an ongoing user access. It means that get_paca()->user_access_allowed 
+> might be modified during those exceptions/traps.
 
-...
+Any comment about that ? Isn't it a problem ?
 
-> +/**
-> + * text_poke_kgdb - Update instructions on a live kernel by kgdb
-> + * @addr: address to modify
-> + * @opcode: source of the copy
-> + * @len: length to copy
-> + *
-> + * Only atomic text poke/set should be allowed when not doing early patching.
-> + * It means the size must be writable atomically and the address must be aligned
-> + * in a way that permits an atomic write. It also makes sure we fit on a single
-> + * page.
-> + *
-> + * Context: should only be used by kgdb, which ensures no other core is running,
-> + *	    despite the fact it does not hold the text_mutex.
-> + */
-> +void *text_poke_kgdb(void *addr, const void *opcode, size_t len)
+Christophe
 
-text_poke_unlocked() I guess. I don't think kgdb is that special that it
-needs its own function flavor.
-
--- 
-Regards/Gruss,
-    Boris.
-
-Good mailing practices for 400: avoid top-posting and trim the reply.
+> 
+> Christophe
+> 
+>>
+>> Signed-off-by: Russell Currey <ruscur@russell.cc>
+>> ---
+>>   arch/powerpc/lib/code-patching.c | 4 ++--
+>>   1 file changed, 2 insertions(+), 2 deletions(-)
+>>
+>> diff --git a/arch/powerpc/lib/code-patching.c 
+>> b/arch/powerpc/lib/code-patching.c
+>> index 89502cbccb1b..15e8c6339960 100644
+>> --- a/arch/powerpc/lib/code-patching.c
+>> +++ b/arch/powerpc/lib/code-patching.c
+>> @@ -26,9 +26,9 @@
+>>   static int __patch_instruction(unsigned int *exec_addr, unsigned int 
+>> instr,
+>>                      unsigned int *patch_addr)
+>>   {
+>> -    int err;
+>> +    int err = 0;
+>> -    __put_user_size(instr, patch_addr, 4, err);
+>> +    __put_user_asm(instr, patch_addr, err, "stw");
+>>       if (err)
+>>           return err;
+>>
