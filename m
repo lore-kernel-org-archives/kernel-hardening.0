@@ -1,32 +1,46 @@
-From: Matthew Wilcox <willy@infradead.org>
-Subject: [PATCH] mm: Prevent mapping slab pages to userspace
-Date: Fri, 25 Jan 2019 09:38:27 -0800
-Message-Id: <20190125173827.2658-1-willy@infradead.org>
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Matthew Wilcox <willy@infradead.org>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Rik van Riel <riel@surriel.com>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Michael Ellerman <mpe@ellerman.id.au>
+Subject: Re: [PATCH v2] KVM: x86: Fix single-step debugging
+References: <1548074920-10651-1-git-send-email-alex.popov@linux.com>
+ <20190121142427.GA26671@kroah.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Message-ID: <4db72046-7510-34cc-5ec4-254f7847cd80@redhat.com>
+Date: Fri, 25 Jan 2019 18:38:59 +0100
+MIME-Version: 1.0
+In-Reply-To: <20190121142427.GA26671@kroah.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Greg KH <gregkh@linuxfoundation.org>, Alexander Popov <alex.popov@linux.com>
+Cc: Radim Krcmar <rkrcmar@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Andy Lutomirski <luto@kernel.org>, Stefan Hajnoczi <stefanha@redhat.com>, H Peter Anvin <hpa@zytor.com>, x86@kernel.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-It's never appropriate to map a page allocated by SLAB into userspace.
-A buggy device driver might try this, or an attacker might be able to
-find a way to make it happen.
+On 21/01/19 15:24, Greg KH wrote:
+> On Mon, Jan 21, 2019 at 03:48:40PM +0300, Alexander Popov wrote:
+>> The single-step debugging of KVM guests on x86 is broken: if we run
+>> gdb 'stepi' command at the breakpoint when the guest interrupts are
+>> enabled, RIP always jumps to native_apic_mem_write(). Then other
+>> nasty effects follow.
+>>
+>> Long investigation showed that on Jun 7, 2017 the
+>> commit c8401dda2f0a00cd25c0 ("KVM: x86: fix singlestepping over syscall")
+>> introduced the kvm_run.debug corruption: kvm_vcpu_do_singlestep() can
+>> be called without X86_EFLAGS_TF set.
+>>
+>> Let's fix it. Please consider that for -stable.
+>>
+>> Signed-off-by: Alexander Popov <alex.popov@linux.com>
+>> ---
+>>  arch/x86/kvm/x86.c | 3 +--
+>>  1 file changed, 1 insertion(+), 2 deletions(-)
+> 
+> <formletter>
+> 
+> This is not the correct way to submit patches for inclusion in the
+> stable kernel tree.  Please read:
+>     https://www.kernel.org/doc/html/latest/process/stable-kernel-rules.html
+> for how to do this properly.
+> 
+> </formletter>
+> 
 
-Signed-off-by: Matthew Wilcox <willy@infradead.org>
----
- mm/memory.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+Yup, will take care of doing this properly. :)
 
-diff --git a/mm/memory.c b/mm/memory.c
-index e11ca9dd823f..ce8c90b752be 100644
---- a/mm/memory.c
-+++ b/mm/memory.c
-@@ -1451,7 +1451,7 @@ static int insert_page(struct vm_area_struct *vma, unsigned long addr,
- 	spinlock_t *ptl;
- 
- 	retval = -EINVAL;
--	if (PageAnon(page))
-+	if (PageAnon(page) || PageSlab(page))
- 		goto out;
- 	retval = -ENOMEM;
- 	flush_dcache_page(page);
--- 
-2.20.1
+Paolo
