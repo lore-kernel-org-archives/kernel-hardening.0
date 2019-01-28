@@ -1,46 +1,21 @@
-From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v2 18/20] x86/ftrace: Use vmalloc special flag
-Date: Mon, 28 Jan 2019 16:34:20 -0800
-Message-Id: <20190129003422.9328-19-rick.p.edgecombe@intel.com>
-In-Reply-To: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
-References: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
-To: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>, Steven Rostedt <rostedt@goodmis.org>
+Date: Mon, 28 Jan 2019 20:08:23 +0000
+From: Christopher Lameter <cl@linux.com>
+Subject: Re: [PATCH] mm: Prevent mapping slab pages to userspace
+In-Reply-To: <CAGXu5jJkf4pKr0WVUcFitZnnUbq3annautZxzYPC0TQaB5HaGA@mail.gmail.com>
+Message-ID: <010001689613c1b5-6539225d-b74e-4248-8d8f-5b801c1a333b-000000@email.amazonses.com>
+References: <20190125173827.2658-1-willy@infradead.org> <20190128102055.5b0790549542891c4dca47a3@linux-foundation.org> <CAGXu5jJkf4pKr0WVUcFitZnnUbq3annautZxzYPC0TQaB5HaGA@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Matthew Wilcox <willy@infradead.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Rik van Riel <riel@surriel.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Michael Ellerman <mpe@ellerman.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Use new flag VM_HAS_SPECIAL_PERMS for handling freeing of special
-permissioned memory in vmalloc and remove places where memory was set NX
-and RW before freeing which is no longer needed.
+On Tue, 29 Jan 2019, Kees Cook wrote:
 
-Cc: Steven Rostedt <rostedt@goodmis.org>
-Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
----
- arch/x86/kernel/ftrace.c | 6 ++----
- 1 file changed, 2 insertions(+), 4 deletions(-)
+> It seems like a fatal condition to me? There's nothing to check that
+> such a page wouldn't get freed by the slab while still mapped to
+> userspace, right?
 
-diff --git a/arch/x86/kernel/ftrace.c b/arch/x86/kernel/ftrace.c
-index 13c8249b197f..cf30594a2032 100644
---- a/arch/x86/kernel/ftrace.c
-+++ b/arch/x86/kernel/ftrace.c
-@@ -692,10 +692,6 @@ static inline void *alloc_tramp(unsigned long size)
- }
- static inline void tramp_free(void *tramp, int size)
- {
--	int npages = PAGE_ALIGN(size) >> PAGE_SHIFT;
--
--	set_memory_nx((unsigned long)tramp, npages);
--	set_memory_rw((unsigned long)tramp, npages);
- 	module_memfree(tramp);
- }
- #else
-@@ -820,6 +816,8 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
- 	/* ALLOC_TRAMP flags lets us know we created it */
- 	ops->flags |= FTRACE_OPS_FL_ALLOC_TRAMP;
- 
-+	set_vm_special(trampoline);
-+
- 	/*
- 	 * Module allocation needs to be completed by making the page
- 	 * executable. The page is still writable, which is a security hazard,
--- 
-2.17.1
+Lets just fail the code.  Currently this may work with SLUB. But SLAB and
+SLOB overlay fields with mapcount. So you would have a corrupted page
+struct if you mapped a slab page to user space.
