@@ -1,73 +1,137 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v2 09/20] x86/kprobes: instruction pages initialization enhancements
-Date: Mon, 28 Jan 2019 16:34:11 -0800
-Message-Id: <20190129003422.9328-10-rick.p.edgecombe@intel.com>
+Subject: [PATCH v2 10/20] x86: avoid W^X being broken during modules loading
+Date: Mon, 28 Jan 2019 16:34:12 -0800
+Message-Id: <20190129003422.9328-11-rick.p.edgecombe@intel.com>
 In-Reply-To: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
 References: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
 To: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Nadav Amit <namit@vmware.com>
 
-Make kprobes instruction pages read-only (and executable) after they are
-set to prevent them from mistaken or malicious modifications.
+When modules and BPF filters are loaded, there is a time window in
+which some memory is both writable and executable. An attacker that has
+already found another vulnerability (e.g., a dangling pointer) might be
+able to exploit this behavior to overwrite kernel code.
 
-This is a preparatory patch for a following patch that makes module
-allocated pages non-executable and sets the page as executable after
-allocation.
+Prevent having writable executable PTEs in this stage. In addition,
+avoiding having W+X mappings can also slightly simplify the patching of
+modules code on initialization (e.g., by alternatives and static-key),
+as would be done in the next patch.
 
-While at it, do some small cleanup of what appears to be unnecessary
-masking.
+To avoid having W+X mappings, set them initially as RW (NX) and after
+they are set as RO set them as X as well. Setting them as executable is
+done as a separate step to avoid one core in which the old PTE is cached
+(hence writable), and another which sees the updated PTE (executable),
+which would break the W^X protection.
 
-Acked-by: Masami Hiramatsu <mhiramat@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Dave Hansen <dave.hansen@intel.com>
+Cc: Masami Hiramatsu <mhiramat@kernel.org>
+Suggested-by: Thomas Gleixner <tglx@linutronix.de>
+Suggested-by: Andy Lutomirski <luto@amacapital.net>
 Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/kernel/kprobes/core.c | 24 ++++++++++++++++++++----
- 1 file changed, 20 insertions(+), 4 deletions(-)
+ arch/x86/kernel/alternative.c | 28 +++++++++++++++++++++-------
+ arch/x86/kernel/module.c      |  2 +-
+ include/linux/filter.h        |  2 +-
+ kernel/module.c               |  5 +++++
+ 4 files changed, 28 insertions(+), 9 deletions(-)
 
-diff --git a/arch/x86/kernel/kprobes/core.c b/arch/x86/kernel/kprobes/core.c
-index 4ba75afba527..fac692e36833 100644
---- a/arch/x86/kernel/kprobes/core.c
-+++ b/arch/x86/kernel/kprobes/core.c
-@@ -431,8 +431,20 @@ void *alloc_insn_page(void)
- 	void *page;
- 
- 	page = module_alloc(PAGE_SIZE);
--	if (page)
--		set_memory_ro((unsigned long)page & PAGE_MASK, 1);
-+	if (page == NULL)
-+		return NULL;
-+
-+	/*
-+	 * First make the page read-only, and then only then make it executable
-+	 * to prevent it from being W+X in between.
-+	 */
-+	set_memory_ro((unsigned long)page, 1);
-+
-+	/*
-+	 * TODO: Once additional kernel code protection mechanisms are set, ensure
-+	 * that the page was not maliciously altered and it is still zeroed.
-+	 */
-+	set_memory_x((unsigned long)page, 1);
- 
- 	return page;
- }
-@@ -440,8 +452,12 @@ void *alloc_insn_page(void)
- /* Recover page to RW mode before releasing it */
- void free_insn_page(void *page)
+diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
+index 76d482a2b716..69f3e650ada8 100644
+--- a/arch/x86/kernel/alternative.c
++++ b/arch/x86/kernel/alternative.c
+@@ -667,15 +667,29 @@ void __init alternative_instructions(void)
+  * handlers seeing an inconsistent instruction while you patch.
+  */
+ void *__init_or_module text_poke_early(void *addr, const void *opcode,
+-					      size_t len)
++				       size_t len)
  {
--	set_memory_nx((unsigned long)page & PAGE_MASK, 1);
--	set_memory_rw((unsigned long)page & PAGE_MASK, 1);
-+	/*
-+	 * First make the page non-executable, and then only then make it
-+	 * writable to prevent it from being W+X in between.
-+	 */
-+	set_memory_nx((unsigned long)page, 1);
-+	set_memory_rw((unsigned long)page, 1);
- 	module_memfree(page);
+ 	unsigned long flags;
+-	local_irq_save(flags);
+-	memcpy(addr, opcode, len);
+-	local_irq_restore(flags);
+-	sync_core();
+-	/* Could also do a CLFLUSH here to speed up CPU recovery; but
+-	   that causes hangs on some VIA CPUs. */
++
++	if (static_cpu_has(X86_FEATURE_NX) &&
++	    is_module_text_address((unsigned long)addr)) {
++		/*
++		 * Modules text is marked initially as non-executable, so the
++		 * code cannot be running and speculative code-fetches are
++		 * prevented. We can just change the code.
++		 */
++		memcpy(addr, opcode, len);
++	} else {
++		local_irq_save(flags);
++		memcpy(addr, opcode, len);
++		local_irq_restore(flags);
++		sync_core();
++
++		/*
++		 * Could also do a CLFLUSH here to speed up CPU recovery; but
++		 * that causes hangs on some VIA CPUs.
++		 */
++	}
+ 	return addr;
  }
  
+diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
+index b052e883dd8c..cfa3106faee4 100644
+--- a/arch/x86/kernel/module.c
++++ b/arch/x86/kernel/module.c
+@@ -87,7 +87,7 @@ void *module_alloc(unsigned long size)
+ 	p = __vmalloc_node_range(size, MODULE_ALIGN,
+ 				    MODULES_VADDR + get_module_load_offset(),
+ 				    MODULES_END, GFP_KERNEL,
+-				    PAGE_KERNEL_EXEC, 0, NUMA_NO_NODE,
++				    PAGE_KERNEL, 0, NUMA_NO_NODE,
+ 				    __builtin_return_address(0));
+ 	if (p && (kasan_module_alloc(p, size) < 0)) {
+ 		vfree(p);
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index d531d4250bff..9cdfab7f383c 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -681,7 +681,6 @@ bpf_ctx_narrow_access_ok(u32 off, u32 size, u32 size_default)
+ 
+ static inline void bpf_prog_lock_ro(struct bpf_prog *fp)
+ {
+-	fp->undo_set_mem = 1;
+ 	set_memory_ro((unsigned long)fp, fp->pages);
+ }
+ 
+@@ -694,6 +693,7 @@ static inline void bpf_prog_unlock_ro(struct bpf_prog *fp)
+ static inline void bpf_jit_binary_lock_ro(struct bpf_binary_header *hdr)
+ {
+ 	set_memory_ro((unsigned long)hdr, hdr->pages);
++	set_memory_x((unsigned long)hdr, hdr->pages);
+ }
+ 
+ static inline void bpf_jit_binary_unlock_ro(struct bpf_binary_header *hdr)
+diff --git a/kernel/module.c b/kernel/module.c
+index 2ad1b5239910..ae1b77da6a20 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -1950,8 +1950,13 @@ void module_enable_ro(const struct module *mod, bool after_init)
+ 		return;
+ 
+ 	frob_text(&mod->core_layout, set_memory_ro);
++	frob_text(&mod->core_layout, set_memory_x);
++
+ 	frob_rodata(&mod->core_layout, set_memory_ro);
++
+ 	frob_text(&mod->init_layout, set_memory_ro);
++	frob_text(&mod->init_layout, set_memory_x);
++
+ 	frob_rodata(&mod->init_layout, set_memory_ro);
+ 
+ 	if (after_init)
 -- 
 2.17.1
