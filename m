@@ -1,36 +1,123 @@
-Subject: Re: [PATCH 0/3] gcc-plugins: Introduce stackinit plugin
-References: <20190123110349.35882-1-keescook@chromium.org>
-From: Alexander Popov <alex.popov@linux.com>
-Message-ID: <874b8c23-068b-f8e7-2168-12947c06e145@linux.com>
-Date: Tue, 29 Jan 2019 03:12:24 +0300
+From: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Subject: [PATCH v2 00/20] Merge text_poke fixes and executable lockdowns
+Date: Mon, 28 Jan 2019 16:34:02 -0800
+Message-Id: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
 MIME-Version: 1.0
-In-Reply-To: <20190123110349.35882-1-keescook@chromium.org>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <labbott@redhat.com>, xen-devel@lists.xenproject.org, dri-devel@lists.freedesktop.org, intel-gfx@lists.freedesktop.org, intel-wired-lan@lists.osuosl.org, netdev@vger.kernel.org, linux-usb@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-mm@kvack.org, dev@openvswitch.org, linux-kbuild@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, Greg KH <gregkh@linuxfoundation.org>, Jann Horn <jannh@google.com>, William Kucharski <william.kucharski@oracle.com>, Jani Nikula <jani.nikula@linux.intel.com>, Edwin Zimmerman <edwin@211mainstreet.net>, Matthew Wilcox <willy@infradead.org>, Jeff Kirsher <jeffrey.t.kirsher@intel.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+To: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 23.01.2019 14:03, Kees Cook wrote:
-> This adds a new plugin "stackinit" that attempts to perform unconditional
-> initialization of all stack variables
+This patchset improves several overlapping issues around stale TLB
+entries and W^X violations. It is combined from a slightly tweaked
+"x86/alternative: text_poke() enhancements v7" [1] and a next version of
+the "Don’t leave executable TLB entries to freed pages v2" [2]
+patchsets that were conflicting.
 
-Hello Kees! Hello everyone!
+The related issues that this fixes:
+1. Fixmap PTEs that are used for patching are available for access from
+   other cores and might be exploited. They are not even flushed from
+   the TLB in remote cores, so the risk is even higher. Address this
+   issue by introducing a temporary mm that is only used during
+   patching. Unfortunately, due to init ordering, fixmap is still used
+   during boot-time patching. Future patches can eliminate the need for
+   it.
+2. Missing lockdep assertion to ensure text_mutex is taken. It is
+   actually not always taken, so fix the instances that were found not
+   to take the lock (although they should be safe even without taking
+   the lock).
+3. Module_alloc returning memory that is RWX until a module is finished
+   loading.
+4. Sometimes when memory is freed via the module subsystem, an
+   executable permissioned TLB entry can remain to a freed page. If the
+   page is re-used to back an address that will receive data from
+   userspace, it can result in user data being mapped as executable in
+   the kernel. The root of this behavior is vfree lazily flushing the
+   TLB, but not lazily freeing the underlying pages.
 
-I was curious about the performance impact of the initialization of all stack
-variables. So I did a very brief test with this plugin on top of 4.20.5.
+Changes for v2:
+ - Adding “Reviewed-by tag” [Masami]
+ - Comment instead of code to warn against module removal while patching [Masami]
+ - Avoiding open-coded TLB flush [Andy]
+ - Remove "This patch" [Borislav Petkov]
+ - Not set global bit during text poking [Andy, hpa]
+ - Add Ack from [Pavel Machek]
+ - Split patch 16 "Plug in new special vfree flag" into 4 patches (16-19)
+   to make it easier to review. There were no code changes.
 
-hackbench on Intel Core i7-4770 showed ~0.7% slowdown.
-hackbench on Kirin 620 (ARM Cortex-A53 Octa-core 1.2GHz) showed ~1.3% slowdown.
+The changes from "Don’t leave executable TLB entries to freed pages
+v2" to v1:
+ - Add support for case of hibernate trying to save an unmapped page
+   on the directmap. (Ard Biesheuvel)
+ - No week arch breakout for vfree-ing special memory (Andy Lutomirski)
+ - Avoid changing deferred free code by moving modules init free to work
+   queue (Andy Lutomirski)
+ - Plug in new flag for kprobes and ftrace
+ - More arch generic names for set_pages functions (Ard Biesheuvel)
+ - Fix for TLB not always flushing the directmap (Nadav Amit)
+ 
+Changes from "x86/alternative: text_poke() enhancements v7" to v1
+ - Fix build failure on CONFIG_RANDOMIZE_BASE=n (Rick)
+ - Remove text_poke usage from ftrace (Nadav)
+ 
+[1] https://lkml.org/lkml/2018/12/5/200
+[2] https://lkml.org/lkml/2018/12/11/1571
 
-This test involves the kernel scheduler and allocator. I can't say whether they
-use stack aggressively. Maybe performance tests of other subsystems (e.g.
-network subsystem) can show different numbers. Did you try?
+Andy Lutomirski (1):
+  x86/mm: temporary mm struct
 
-I've heard a hypothesis that the initialization of all stack variables would
-pollute CPU caches, which is critical for some types of computations. Maybe some
-micro-benchmarks can disprove/confirm that?
+Nadav Amit (12):
+  Fix "x86/alternatives: Lockdep-enforce text_mutex in text_poke*()"
+  x86/jump_label: Use text_poke_early() during early init
+  fork: provide a function for copying init_mm
+  x86/alternative: initializing temporary mm for patching
+  x86/alternative: use temporary mm for text poking
+  x86/kgdb: avoid redundant comparison of patched code
+  x86/ftrace: set trampoline pages as executable
+  x86/kprobes: instruction pages initialization enhancements
+  x86: avoid W^X being broken during modules loading
+  x86/jump-label: remove support for custom poker
+  x86/alternative: Remove the return value of text_poke_*()
+  x86/alternative: comment about module removal races
 
-Thanks!
-Best regards,
-Alexander
+Rick Edgecombe (7):
+  Add set_alias_ function and x86 implementation
+  mm: Make hibernate handle unmapped pages
+  vmalloc: New flags for safe vfree on special perms
+  modules: Use vmalloc special flag
+  bpf: Use vmalloc special flag
+  x86/ftrace: Use vmalloc special flag
+  x86/kprobes: Use vmalloc special flag
+
+ arch/Kconfig                         |   4 +
+ arch/x86/Kconfig                     |   1 +
+ arch/x86/include/asm/fixmap.h        |   2 -
+ arch/x86/include/asm/mmu_context.h   |  32 +++++
+ arch/x86/include/asm/pgtable.h       |   3 +
+ arch/x86/include/asm/set_memory.h    |   3 +
+ arch/x86/include/asm/text-patching.h |   7 +-
+ arch/x86/kernel/alternative.c        | 199 ++++++++++++++++++++-------
+ arch/x86/kernel/ftrace.c             |  14 +-
+ arch/x86/kernel/jump_label.c         |  19 ++-
+ arch/x86/kernel/kgdb.c               |  25 +---
+ arch/x86/kernel/kprobes/core.c       |  19 ++-
+ arch/x86/kernel/module.c             |   2 +-
+ arch/x86/mm/init_64.c                |  36 +++++
+ arch/x86/mm/pageattr.c               |  16 ++-
+ arch/x86/xen/mmu_pv.c                |   2 -
+ include/linux/filter.h               |  18 +--
+ include/linux/mm.h                   |  18 +--
+ include/linux/sched/task.h           |   1 +
+ include/linux/set_memory.h           |  10 ++
+ include/linux/vmalloc.h              |  13 ++
+ init/main.c                          |   3 +
+ kernel/bpf/core.c                    |   1 -
+ kernel/fork.c                        |  24 +++-
+ kernel/module.c                      |  82 ++++++-----
+ mm/page_alloc.c                      |   7 +-
+ mm/vmalloc.c                         | 122 +++++++++++++---
+ 27 files changed, 494 insertions(+), 189 deletions(-)
+
+-- 
+2.17.1
