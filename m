@@ -1,88 +1,93 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v2 03/20] x86/mm: temporary mm struct
-Date: Mon, 28 Jan 2019 16:34:05 -0800
-Message-Id: <20190129003422.9328-4-rick.p.edgecombe@intel.com>
+Subject: [PATCH v2 04/20] fork: provide a function for copying init_mm
+Date: Mon, 28 Jan 2019 16:34:06 -0800
+Message-Id: <20190129003422.9328-5-rick.p.edgecombe@intel.com>
 In-Reply-To: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
 References: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
 To: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Nadav Amit <namit@vmware.com>, Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Andy Lutomirski <luto@kernel.org>
+From: Nadav Amit <namit@vmware.com>
 
-Sometimes we want to set a temporary page-table entries (PTEs) in one of
-the cores, without allowing other cores to use - even speculatively -
-these mappings. There are two benefits for doing so:
+Provide a function for copying init_mm. This function will be later used
+for setting a temporary mm.
 
-(1) Security: if sensitive PTEs are set, temporary mm prevents their use
-in other cores. This hardens the security as it prevents exploding a
-dangling pointer to overwrite sensitive data using the sensitive PTE.
-
-(2) Avoiding TLB shootdowns: the PTEs do not need to be flushed in
-remote page-tables.
-
-To do so a temporary mm_struct can be used. Mappings which are private
-for this mm can be set in the userspace part of the address-space.
-During the whole time in which the temporary mm is loaded, interrupts
-must be disabled.
-
-The first use-case for temporary PTEs, which will follow, is for poking
-the kernel text.
-
-[ Commit message was written by Nadav ]
-
+Cc: Andy Lutomirski <luto@kernel.org>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Dave Hansen <dave.hansen@intel.com>
 Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 Reviewed-by: Masami Hiramatsu <mhiramat@kernel.org>
 Tested-by: Masami Hiramatsu <mhiramat@kernel.org>
-Signed-off-by: Andy Lutomirski <luto@kernel.org>
 Signed-off-by: Nadav Amit <namit@vmware.com>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/include/asm/mmu_context.h | 32 ++++++++++++++++++++++++++++++
- 1 file changed, 32 insertions(+)
+ include/linux/sched/task.h |  1 +
+ kernel/fork.c              | 24 ++++++++++++++++++------
+ 2 files changed, 19 insertions(+), 6 deletions(-)
 
-diff --git a/arch/x86/include/asm/mmu_context.h b/arch/x86/include/asm/mmu_context.h
-index 19d18fae6ec6..cd0c29e494a6 100644
---- a/arch/x86/include/asm/mmu_context.h
-+++ b/arch/x86/include/asm/mmu_context.h
-@@ -356,4 +356,36 @@ static inline unsigned long __get_current_cr3_fast(void)
- 	return cr3;
+diff --git a/include/linux/sched/task.h b/include/linux/sched/task.h
+index 44c6f15800ff..c5a00a7b3beb 100644
+--- a/include/linux/sched/task.h
++++ b/include/linux/sched/task.h
+@@ -76,6 +76,7 @@ extern void exit_itimers(struct signal_struct *);
+ extern long _do_fork(unsigned long, unsigned long, unsigned long, int __user *, int __user *, unsigned long);
+ extern long do_fork(unsigned long, unsigned long, unsigned long, int __user *, int __user *);
+ struct task_struct *fork_idle(int);
++struct mm_struct *copy_init_mm(void);
+ extern pid_t kernel_thread(int (*fn)(void *), void *arg, unsigned long flags);
+ extern long kernel_wait4(pid_t, int __user *, int, struct rusage *);
+ 
+diff --git a/kernel/fork.c b/kernel/fork.c
+index b69248e6f0e0..d7b156c49f29 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -1299,13 +1299,20 @@ void mm_release(struct task_struct *tsk, struct mm_struct *mm)
+ 		complete_vfork_done(tsk);
  }
  
-+typedef struct {
-+	struct mm_struct *prev;
-+} temporary_mm_state_t;
-+
-+/*
-+ * Using a temporary mm allows to set temporary mappings that are not accessible
-+ * by other cores. Such mappings are needed to perform sensitive memory writes
-+ * that override the kernel memory protections (e.g., W^X), without exposing the
-+ * temporary page-table mappings that are required for these write operations to
-+ * other cores.
+-/*
+- * Allocate a new mm structure and copy contents from the
+- * mm structure of the passed in task structure.
++/**
++ * dup_mm() - duplicates an existing mm structure
++ * @tsk: the task_struct with which the new mm will be associated.
++ * @oldmm: the mm to duplicate.
 + *
-+ * Context: The temporary mm needs to be used exclusively by a single core. To
-+ *          harden security IRQs must be disabled while the temporary mm is
-+ *          loaded, thereby preventing interrupt handler bugs from override the
-+ *          kernel memory protection.
-+ */
-+static inline temporary_mm_state_t use_temporary_mm(struct mm_struct *mm)
++ * Allocates a new mm structure and copy contents from the provided
++ * @oldmm structure.
++ *
++ * Return: the duplicated mm or NULL on failure.
+  */
+-static struct mm_struct *dup_mm(struct task_struct *tsk)
++static struct mm_struct *dup_mm(struct task_struct *tsk,
++				struct mm_struct *oldmm)
+ {
+-	struct mm_struct *mm, *oldmm = current->mm;
++	struct mm_struct *mm;
+ 	int err;
+ 
+ 	mm = allocate_mm();
+@@ -1372,7 +1379,7 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
+ 	}
+ 
+ 	retval = -ENOMEM;
+-	mm = dup_mm(tsk);
++	mm = dup_mm(tsk, current->mm);
+ 	if (!mm)
+ 		goto fail_nomem;
+ 
+@@ -2187,6 +2194,11 @@ struct task_struct *fork_idle(int cpu)
+ 	return task;
+ }
+ 
++struct mm_struct *copy_init_mm(void)
 +{
-+	temporary_mm_state_t state;
-+
-+	lockdep_assert_irqs_disabled();
-+	state.prev = this_cpu_read(cpu_tlbstate.loaded_mm);
-+	switch_mm_irqs_off(NULL, mm, current);
-+	return state;
++	return dup_mm(NULL, &init_mm);
 +}
 +
-+static inline void unuse_temporary_mm(temporary_mm_state_t prev)
-+{
-+	lockdep_assert_irqs_disabled();
-+	switch_mm_irqs_off(NULL, prev.prev, current);
-+}
-+
- #endif /* _ASM_X86_MMU_CONTEXT_H */
+ /*
+  *  Ok, this is the main fork-routine.
+  *
 -- 
 2.17.1
