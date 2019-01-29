@@ -1,100 +1,136 @@
 From: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Subject: [PATCH v2 12/20] x86/alternative: Remove the return value of text_poke_*()
-Date: Mon, 28 Jan 2019 16:34:14 -0800
-Message-Id: <20190129003422.9328-13-rick.p.edgecombe@intel.com>
+Subject: [PATCH v2 13/20] Add set_alias_ function and x86 implementation
+Date: Mon, 28 Jan 2019 16:34:15 -0800
+Message-Id: <20190129003422.9328-14-rick.p.edgecombe@intel.com>
 In-Reply-To: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
 References: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
 To: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>, Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rick Edgecombe <rick.p.edgecombe@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Nadav Amit <namit@vmware.com>
+This adds two new functions set_alias_default_noflush and
+set_alias_nv_noflush for setting the alias mapping for the page to its
+default valid permissions and to an invalid state that cannot be cached in
+a TLB, respectively. These functions to not flush the TLB.
 
-The return value of text_poke_early() and text_poke_bp() is useless.
-Remove it.
+Note, __kernel_map_pages does something similar but flushes the TLB and
+doesn't reset the permission bits to default on all architectures.
 
+There is also an ARCH config ARCH_HAS_SET_ALIAS for specifying whether
+these have an actual implementation or a default empty one.
+
+Cc: Dave Hansen <dave.hansen@linux.intel.com>
 Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Dave Hansen <dave.hansen@intel.com>
-Cc: Masami Hiramatsu <mhiramat@kernel.org>
-Acked-by: Peter Zijlstra (Intel) <peterz@infradead.org>
-Signed-off-by: Nadav Amit <namit@vmware.com>
+Cc: Peter Zijlstra <peterz@infradead.org>
 Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
 ---
- arch/x86/include/asm/text-patching.h |  4 ++--
- arch/x86/kernel/alternative.c        | 11 ++++-------
- 2 files changed, 6 insertions(+), 9 deletions(-)
+ arch/Kconfig                      |  4 ++++
+ arch/x86/Kconfig                  |  1 +
+ arch/x86/include/asm/set_memory.h |  3 +++
+ arch/x86/mm/pageattr.c            | 14 +++++++++++---
+ include/linux/set_memory.h        | 10 ++++++++++
+ 5 files changed, 29 insertions(+), 3 deletions(-)
 
-diff --git a/arch/x86/include/asm/text-patching.h b/arch/x86/include/asm/text-patching.h
-index a75eed841eed..c90678fd391a 100644
---- a/arch/x86/include/asm/text-patching.h
-+++ b/arch/x86/include/asm/text-patching.h
-@@ -18,7 +18,7 @@ static inline void apply_paravirt(struct paravirt_patch_site *start,
- #define __parainstructions_end	NULL
- #endif
+diff --git a/arch/Kconfig b/arch/Kconfig
+index 4cfb6de48f79..4ef9db190f2d 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -249,6 +249,10 @@ config ARCH_HAS_FORTIFY_SOURCE
+ config ARCH_HAS_SET_MEMORY
+ 	bool
  
--extern void *text_poke_early(void *addr, const void *opcode, size_t len);
-+extern void text_poke_early(void *addr, const void *opcode, size_t len);
++# Select if arch has all set_alias_nv/default() functions
++config ARCH_HAS_SET_ALIAS
++	bool
++
+ # Select if arch init_task must go in the __init_task_data section
+ config ARCH_TASK_STRUCT_ON_STACK
+        bool
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 26387c7bf305..42bb1df4ea94 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -66,6 +66,7 @@ config X86
+ 	select ARCH_HAS_UACCESS_FLUSHCACHE	if X86_64
+ 	select ARCH_HAS_UACCESS_MCSAFE		if X86_64 && X86_MCE
+ 	select ARCH_HAS_SET_MEMORY
++	select ARCH_HAS_SET_ALIAS
+ 	select ARCH_HAS_STRICT_KERNEL_RWX
+ 	select ARCH_HAS_STRICT_MODULE_RWX
+ 	select ARCH_HAS_SYNC_CORE_BEFORE_USERMODE
+diff --git a/arch/x86/include/asm/set_memory.h b/arch/x86/include/asm/set_memory.h
+index 07a25753e85c..2ef4e4222df1 100644
+--- a/arch/x86/include/asm/set_memory.h
++++ b/arch/x86/include/asm/set_memory.h
+@@ -85,6 +85,9 @@ int set_pages_nx(struct page *page, int numpages);
+ int set_pages_ro(struct page *page, int numpages);
+ int set_pages_rw(struct page *page, int numpages);
  
- /*
-  * Clear and restore the kernel write-protection flag on the local CPU.
-@@ -37,7 +37,7 @@ extern void *text_poke_early(void *addr, const void *opcode, size_t len);
- extern void *text_poke(void *addr, const void *opcode, size_t len);
- extern void *text_poke_kgdb(void *addr, const void *opcode, size_t len);
- extern int poke_int3_handler(struct pt_regs *regs);
--extern void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler);
-+extern void text_poke_bp(void *addr, const void *opcode, size_t len, void *handler);
- extern int after_bootmem;
- extern __ro_after_init struct mm_struct *poking_mm;
- extern __ro_after_init unsigned long poking_addr;
-diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
-index 69f3e650ada8..81876e3ef3fd 100644
---- a/arch/x86/kernel/alternative.c
-+++ b/arch/x86/kernel/alternative.c
-@@ -264,7 +264,7 @@ static void __init_or_module add_nops(void *insns, unsigned int len)
- 
- extern struct alt_instr __alt_instructions[], __alt_instructions_end[];
- extern s32 __smp_locks[], __smp_locks_end[];
--void *text_poke_early(void *addr, const void *opcode, size_t len);
-+void text_poke_early(void *addr, const void *opcode, size_t len);
- 
- /*
-  * Are we looking at a near JMP with a 1 or 4-byte displacement.
-@@ -666,8 +666,8 @@ void __init alternative_instructions(void)
-  * instructions. And on the local CPU you need to be protected again NMI or MCE
-  * handlers seeing an inconsistent instruction while you patch.
-  */
--void *__init_or_module text_poke_early(void *addr, const void *opcode,
--				       size_t len)
-+void __init_or_module text_poke_early(void *addr, const void *opcode,
-+				      size_t len)
- {
- 	unsigned long flags;
- 
-@@ -690,7 +690,6 @@ void *__init_or_module text_poke_early(void *addr, const void *opcode,
- 		 * that causes hangs on some VIA CPUs.
- 		 */
- 	}
--	return addr;
++int set_alias_nv_noflush(struct page *page);
++int set_alias_default_noflush(struct page *page);
++
+ extern int kernel_set_to_readonly;
+ void set_kernel_text_rw(void);
+ void set_kernel_text_ro(void);
+diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
+index 4f8972311a77..3a51915a1410 100644
+--- a/arch/x86/mm/pageattr.c
++++ b/arch/x86/mm/pageattr.c
+@@ -2209,8 +2209,6 @@ int set_pages_rw(struct page *page, int numpages)
+ 	return set_memory_rw(addr, numpages);
  }
  
- __ro_after_init struct mm_struct *poking_mm;
-@@ -890,7 +889,7 @@ int poke_int3_handler(struct pt_regs *regs)
-  *	  replacing opcode
-  *	- sync cores
-  */
--void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler)
-+void text_poke_bp(void *addr, const void *opcode, size_t len, void *handler)
- {
- 	unsigned char int3 = 0xcc;
- 
-@@ -932,7 +931,5 @@ void *text_poke_bp(void *addr, const void *opcode, size_t len, void *handler)
- 	 * the writing of the new instruction.
- 	 */
- 	bp_patching_in_progress = false;
+-#ifdef CONFIG_DEBUG_PAGEALLOC
 -
--	return addr;
+ static int __set_pages_p(struct page *page, int numpages)
+ {
+ 	unsigned long tempaddr = (unsigned long) page_address(page);
+@@ -2249,6 +2247,17 @@ static int __set_pages_np(struct page *page, int numpages)
+ 	return __change_page_attr_set_clr(&cpa, 0);
  }
  
++int set_alias_nv_noflush(struct page *page)
++{
++	return __set_pages_np(page, 1);
++}
++
++int set_alias_default_noflush(struct page *page)
++{
++	return __set_pages_p(page, 1);
++}
++
++#ifdef CONFIG_DEBUG_PAGEALLOC
+ void __kernel_map_pages(struct page *page, int numpages, int enable)
+ {
+ 	if (PageHighMem(page))
+@@ -2282,7 +2291,6 @@ void __kernel_map_pages(struct page *page, int numpages, int enable)
+ }
+ 
+ #ifdef CONFIG_HIBERNATION
+-
+ bool kernel_page_present(struct page *page)
+ {
+ 	unsigned int level;
+diff --git a/include/linux/set_memory.h b/include/linux/set_memory.h
+index 2a986d282a97..d19481ac6a8f 100644
+--- a/include/linux/set_memory.h
++++ b/include/linux/set_memory.h
+@@ -10,6 +10,16 @@
+ 
+ #ifdef CONFIG_ARCH_HAS_SET_MEMORY
+ #include <asm/set_memory.h>
++#ifndef CONFIG_ARCH_HAS_SET_ALIAS
++static inline int set_alias_nv_noflush(struct page *page)
++{
++	return 0;
++}
++static inline int set_alias_default_noflush(struct page *page)
++{
++	return 0;
++}
++#endif
+ #else
+ static inline int set_memory_ro(unsigned long addr, int numpages) { return 0; }
+ static inline int set_memory_rw(unsigned long addr, int numpages) { return 0; }
 -- 
 2.17.1
