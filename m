@@ -1,75 +1,131 @@
 From: Thomas Garnier <thgarnie@chromium.org>
-Subject: [PATCH v6 16/27] compiler: Option to add PROVIDE_HIDDEN replacement for weak symbols
-Date: Thu, 31 Jan 2019 11:24:23 -0800
-Message-Id: <20190131192533.34130-17-thgarnie@chromium.org>
+Subject: [PATCH v6 18/27] xen: Adapt assembly for PIE support
+Date: Thu, 31 Jan 2019 11:24:25 -0800
+Message-Id: <20190131192533.34130-19-thgarnie@chromium.org>
 In-Reply-To: <20190131192533.34130-1-thgarnie@chromium.org>
 References: <20190131192533.34130-1-thgarnie@chromium.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 To: kernel-hardening@lists.openwall.com
-Cc: kristen@linux.intel.com, Thomas Garnier <thgarnie@chromium.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Ingo Molnar <mingo@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Thomas Garnier <thgarnie@google.com>, Nicholas Piggin <npiggin@gmail.com>, Sam Ravnborg <sam@ravnborg.org>, Palmer Dabbelt <palmer@sifive.com>, Michael Forney <forney@google.com>, Cao jin <caoj.fnst@cn.fujitsu.com>, linux-kernel@vger.kernel.org
+Cc: kristen@linux.intel.com, Thomas Garnier <thgarnie@chromium.org>, Juergen Gross <jgross@suse.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Stefano Stabellini <sstabellini@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Thomas Garnier <thgarnie@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Joerg Roedel <jroedel@suse.de>, "H.J. Lu" <hjl.tools@gmail.com>, Jordan Borgner <mail@jordan-borgner.de>, xen-devel@lists.xenproject.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Provide an option to have a PROVIDE_HIDDEN (linker script) entry for
-each weak symbol. This option solves an error in x86_64 where the linker
-optimizes PIE generated code to be non-PIE because --emit-relocs was used
-instead of -pie (to reduce dynamic relocations).
+Change the assembly code to use the new _ASM_MOVABS macro which get a
+symbol reference while being PIE compatible. Adapt the relocation tool
+to ignore 32-bit Xen code.
+
+Position Independent Executable (PIE) support will allow to extend the
+KASLR randomization range below 0xffffffff80000000.
 
 Signed-off-by: Thomas Garnier <thgarnie@chromium.org>
+Reviewed-by: Juergen Gross <jgross@suse.com>
 ---
- init/Kconfig            |  7 +++++++
- scripts/link-vmlinux.sh | 14 ++++++++++++++
- 2 files changed, 21 insertions(+)
+ arch/x86/platform/pvh/head.S | 14 ++++++++++----
+ arch/x86/tools/relocs.c      | 16 +++++++++++++++-
+ arch/x86/xen/xen-head.S      | 11 ++++++-----
+ 3 files changed, 31 insertions(+), 10 deletions(-)
 
-diff --git a/init/Kconfig b/init/Kconfig
-index 116e0de4817f..2261c9891631 100644
---- a/init/Kconfig
-+++ b/init/Kconfig
-@@ -2104,6 +2104,13 @@ config ASN1
- 	  inform it as to what tags are to be expected in a stream and what
- 	  functions to call on what tags.
+diff --git a/arch/x86/platform/pvh/head.S b/arch/x86/platform/pvh/head.S
+index 1f8825bbaffb..e52d8b31e01d 100644
+--- a/arch/x86/platform/pvh/head.S
++++ b/arch/x86/platform/pvh/head.S
+@@ -103,8 +103,8 @@ ENTRY(pvh_start_xen)
+ 	call xen_prepare_pvh
  
-+config WEAK_PROVIDE_HIDDEN
-+	bool
-+	help
-+	  Generate linker script PROVIDE_HIDDEN entries for all weak symbols. It
-+	  allows to prevent non-PIE code being replaced by the linker if the
-+	  emit-relocs option is used instead of PIE (useful for x86_64 PIE).
-+
- source "kernel/Kconfig.locks"
+ 	/* startup_64 expects boot_params in %rsi. */
+-	mov $_pa(pvh_bootparams), %rsi
+-	mov $_pa(startup_64), %rax
++	movabs $_pa(pvh_bootparams), %rsi
++	movabs $_pa(startup_64), %rax
+ 	jmp *%rax
  
- config ARCH_HAS_SYNC_CORE_BEFORE_USERMODE
-diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
-index bc7f1fc1f55b..abf44a804c79 100755
---- a/scripts/link-vmlinux.sh
-+++ b/scripts/link-vmlinux.sh
-@@ -119,6 +119,17 @@ kallsyms()
- 	${CC} ${aflags} -c -o ${2} ${afile}
+ #else /* CONFIG_X86_64 */
+@@ -150,10 +150,16 @@ END(pvh_start_xen)
+ 
+ 	.section ".init.data","aw"
+ 	.balign 8
++	/*
++	 * Use an ASM_PTR (quad on x64) for _pa(gdt_start) because PIE requires
++	 * a pointer size storage value before applying the relocation. On
++	 * 32-bit _ASM_PTR will be a long which is aligned the space needed for
++	 * relocation.
++	 */
+ gdt:
+ 	.word gdt_end - gdt_start
+-	.long _pa(gdt_start)
+-	.word 0
++	_ASM_PTR _pa(gdt_start)
++	.balign 8
+ gdt_start:
+ 	.quad 0x0000000000000000            /* NULL descriptor */
+ #ifdef CONFIG_X86_64
+diff --git a/arch/x86/tools/relocs.c b/arch/x86/tools/relocs.c
+index 2a3c703218cc..1b5ee38446b6 100644
+--- a/arch/x86/tools/relocs.c
++++ b/arch/x86/tools/relocs.c
+@@ -837,6 +837,16 @@ static int is_percpu_sym(ElfW(Sym) *sym, const char *symname)
+ 		strncmp(symname, "init_per_cpu_", 13);
  }
  
-+gen_weak_provide_hidden()
++/*
++ * Check if the 32-bit relocation is within the xenpvh 32-bit code.
++ * If so, ignores it.
++ */
++static int is_in_xenpvh_assembly(Elf_Addr offset)
 +{
-+        if [ -n "${CONFIG_WEAK_PROVIDE_HIDDEN}" ]; then
-+                local pattern="s/^\s\+ w \(\w\+\)$/PROVIDE_HIDDEN(\1 = .);/gp"
-+                echo -e "SECTIONS {\n. = _end;" > .tmp_vmlinux_hiddenld
-+                ${NM} ${1} | sed -n "${pattern}" >> .tmp_vmlinux_hiddenld
-+                echo "}" >> .tmp_vmlinux_hiddenld
-+                LDFLAGS_vmlinux="${LDFLAGS_vmlinux} -T .tmp_vmlinux_hiddenld"
-+        fi
++	Elf_Sym *sym = sym_lookup("pvh_start_xen");
++	return sym && (offset >= sym->st_value) &&
++		(offset < (sym->st_value + sym->st_size));
 +}
-+
- # Create map file with all symbols from ${1}
- # See mksymap for additional details
- mksysmap()
-@@ -200,6 +211,9 @@ modpost_link vmlinux.o
- # modpost vmlinux.o to check for section mismatches
- ${MAKE} -f "${srctree}/scripts/Makefile.modpost" vmlinux.o
  
-+# Generate weak linker script
-+gen_weak_provide_hidden vmlinux.o
-+
- kallsymso=""
- kallsyms_vmlinux=""
- if [ -n "${CONFIG_KALLSYMS}" ]; then
+ static int do_reloc64(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
+ 		      const char *symname)
+@@ -909,8 +919,12 @@ static int do_reloc64(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
+ 		 * the relocations are processed.
+ 		 * Make sure that the offset will fit.
+ 		 */
+-		if (r_type != R_X86_64_64 && (int32_t)offset != (int64_t)offset)
++		if (r_type != R_X86_64_64 &&
++		    (int32_t)offset != (int64_t)offset) {
++			if (is_in_xenpvh_assembly(offset))
++				break;
+ 			die("Relocation offset doesn't fit in 32 bits\n");
++		}
+ 
+ 		if (r_type == R_X86_64_64)
+ 			add_reloc(&relocs64, offset);
+diff --git a/arch/x86/xen/xen-head.S b/arch/x86/xen/xen-head.S
+index 5077ead5e59c..4418ff0a1d96 100644
+--- a/arch/x86/xen/xen-head.S
++++ b/arch/x86/xen/xen-head.S
+@@ -28,14 +28,15 @@ ENTRY(startup_xen)
+ 
+ 	/* Clear .bss */
+ 	xor %eax,%eax
+-	mov $__bss_start, %_ASM_DI
+-	mov $__bss_stop, %_ASM_CX
++	_ASM_MOVABS $__bss_start, %_ASM_DI
++	_ASM_MOVABS $__bss_stop, %_ASM_CX
+ 	sub %_ASM_DI, %_ASM_CX
+ 	shr $__ASM_SEL(2, 3), %_ASM_CX
+ 	rep __ASM_SIZE(stos)
+ 
+-	mov %_ASM_SI, xen_start_info
+-	mov $init_thread_union+THREAD_SIZE, %_ASM_SP
++	_ASM_MOVABS $xen_start_info, %_ASM_AX
++	_ASM_MOV %_ASM_SI, (%_ASM_AX)
++	_ASM_MOVABS $init_thread_union+THREAD_SIZE, %_ASM_SP
+ 
+ #ifdef CONFIG_X86_64
+ 	/* Set up %gs.
+@@ -46,7 +47,7 @@ ENTRY(startup_xen)
+ 	 * init data section till per cpu areas are set up.
+ 	 */
+ 	movl	$MSR_GS_BASE,%ecx
+-	movq	$INIT_PER_CPU_VAR(irq_stack_union),%rax
++	movabsq	$INIT_PER_CPU_VAR(irq_stack_union),%rax
+ 	cdq
+ 	wrmsr
+ #endif
 -- 
 2.20.1.495.gaa96b0ce6b-goog
