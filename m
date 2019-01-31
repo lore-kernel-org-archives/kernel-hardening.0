@@ -1,58 +1,48 @@
 From: Thomas Garnier <thgarnie@chromium.org>
-Subject: [PATCH v6 11/27] x86/paravirt: Adapt assembly for PIE support
-Date: Thu, 31 Jan 2019 11:24:18 -0800
-Message-Id: <20190131192533.34130-12-thgarnie@chromium.org>
+Subject: [PATCH v6 12/27] x86/alternatives: Adapt assembly for PIE support
+Date: Thu, 31 Jan 2019 11:24:19 -0800
+Message-Id: <20190131192533.34130-13-thgarnie@chromium.org>
 In-Reply-To: <20190131192533.34130-1-thgarnie@chromium.org>
 References: <20190131192533.34130-1-thgarnie@chromium.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 To: kernel-hardening@lists.openwall.com
-Cc: kristen@linux.intel.com, Thomas Garnier <thgarnie@chromium.org>, Juergen Gross <jgross@suse.com>, Alok Kataria <akataria@vmware.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, virtualization@lists.linux-foundation.org, linux-kernel@vger.kernel.org
+Cc: kristen@linux.intel.com, Thomas Garnier <thgarnie@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Thomas Garnier <thgarnie@google.com>, Alexey Dobriyan <adobriyan@gmail.com>, Nadav Amit <namit@vmware.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-if PIE is enabled, switch the paravirt assembly constraints to be
-compatible. The %c/i constrains generate smaller code so is kept by
-default.
+Change the assembly options to work with pointers instead of integers.
 
 Position Independent Executable (PIE) support will allow to extend the
 KASLR randomization range below 0xffffffff80000000.
 
 Signed-off-by: Thomas Garnier <thgarnie@chromium.org>
 ---
- arch/x86/include/asm/paravirt_types.h | 12 ++++++++++--
- 1 file changed, 10 insertions(+), 2 deletions(-)
+ arch/x86/include/asm/alternative.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/arch/x86/include/asm/paravirt_types.h b/arch/x86/include/asm/paravirt_types.h
-index 488c59686a73..8cfcc1b463de 100644
---- a/arch/x86/include/asm/paravirt_types.h
-+++ b/arch/x86/include/asm/paravirt_types.h
-@@ -342,9 +342,17 @@ extern struct paravirt_patch_template pv_ops;
- #define PARAVIRT_PATCH(x)					\
- 	(offsetof(struct paravirt_patch_template, x) / sizeof(void *))
- 
-+#ifdef CONFIG_X86_PIE
-+#define paravirt_opptr_call "a"
-+#define paravirt_opptr_type "p"
-+#else
-+#define paravirt_opptr_call "c"
-+#define paravirt_opptr_type "i"
-+#endif
-+
- #define paravirt_type(op)				\
- 	[paravirt_typenum] "i" (PARAVIRT_PATCH(op)),	\
--	[paravirt_opptr] "i" (&(pv_ops.op))
-+	[paravirt_opptr] paravirt_opptr_type (&(pv_ops.op))
- #define paravirt_clobber(clobber)		\
- 	[paravirt_clobber] "i" (clobber)
- 
-@@ -392,7 +400,7 @@ int paravirt_disable_iospace(void);
-  */
- #define PARAVIRT_CALL					\
- 	ANNOTATE_RETPOLINE_SAFE				\
--	"call *%c[paravirt_opptr];"
-+	"call *%" paravirt_opptr_call "[paravirt_opptr];"
+diff --git a/arch/x86/include/asm/alternative.h b/arch/x86/include/asm/alternative.h
+index 4c74073a19cc..f5d6fe1d294b 100644
+--- a/arch/x86/include/asm/alternative.h
++++ b/arch/x86/include/asm/alternative.h
+@@ -233,7 +233,7 @@ static inline int alternatives_text_reserved(void *start, void *end)
+ /* Like alternative_io, but for replacing a direct call with another one. */
+ #define alternative_call(oldfunc, newfunc, feature, output, input...)	\
+ 	asm volatile (ALTERNATIVE("call %P[old]", "call %P[new]", feature) \
+-		: output : [old] "i" (oldfunc), [new] "i" (newfunc), ## input)
++		: output : [old] "X" (oldfunc), [new] "X" (newfunc), ## input)
  
  /*
-  * These macros are intended to wrap calls through one of the paravirt
+  * Like alternative_call, but there are two features and respective functions.
+@@ -246,8 +246,8 @@ static inline int alternatives_text_reserved(void *start, void *end)
+ 	asm volatile (ALTERNATIVE_2("call %P[old]", "call %P[new1]", feature1,\
+ 		"call %P[new2]", feature2)				      \
+ 		: output, ASM_CALL_CONSTRAINT				      \
+-		: [old] "i" (oldfunc), [new1] "i" (newfunc1),		      \
+-		  [new2] "i" (newfunc2), ## input)
++		: [old] "X" (oldfunc), [new1] "X" (newfunc1),		      \
++		  [new2] "X" (newfunc2), ## input)
+ 
+ /*
+  * use this macro(s) if you need more than one output parameter
 -- 
 2.20.1.495.gaa96b0ce6b-goog
