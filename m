@@ -1,25 +1,40 @@
-Date: Fri, 1 Feb 2019 10:12:59 +0300
-From: Dan Carpenter <dan.carpenter@oracle.com>
-Subject: Re: [PATCH v6 15/27] compiler: Option to default to hidden symbols
-Message-ID: <20190201071259.GB14343@kadam>
-References: <20190131192533.34130-1-thgarnie@chromium.org>
- <20190131192533.34130-16-thgarnie@chromium.org>
+From: Alexey Budankov <alexey.budankov@linux.intel.com>
+Subject: [PATCH v1 0/3] admin-guide: extend perf-security with resource
+ control, data categories and privileged users
+Message-ID: <9cfbf7a1-72dd-f9d0-8137-0f120fa74d21@linux.intel.com>
+Date: Fri, 1 Feb 2019 10:23:24 +0300
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190131192533.34130-16-thgarnie@chromium.org>
-To: Thomas Garnier <thgarnie@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, kristen@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Luis Chamberlain <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Rafael J. Wysocki" <rafael@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Luc Van Oostenryck <luc.vanoostenryck@gmail.com>, Steven Rostedt <rostedt@goodmis.org>, Jason Baron <jbaron@akamai.com>, Thomas Garnier <thgarnie@google.com>, Jordan Borgner <mail@jordan-borgner.de>, Masami Hiramatsu <mhiramat@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Arnaldo Carvalho de Melo <acme@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jan Beulich <JBeulich@suse.com>, Song Liu <songliubraving@fb.com>, Adrian Hunter <adrian.hunter@intel.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Jonatan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>
+Cc: Jann Horn <jannh@google.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Mark Rutland <mark.rutland@arm.com>, Andi Kleen <ak@linux.intel.com>, Tvrtko Ursulin <tvrtko.ursulin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 31, 2019 at 11:24:22AM -0800, Thomas Garnier wrote:
-> Provide an option to default visibility to hidden except for key
-> symbols.
 
-It took me a while to figure out the verb in this sentence...  :P
+The patch set extends the first version of perf-security.rst documentation
+file [1], [2], [3] with the following topics:
 
-It's weird that we're annotating things to be default.  What visibility
-are they we leave off the annotation?
+1) perf_events/Perf resource limits and control management that describes
+   RLIMIT_NOFILE and perf_event_mlock_kb settings for processes conducting
+   performance monitoring;
 
-regards,
-dan carpenter
+2) categories of system and performance data that can be captured by
+   perf_events/Perf with explicit designation of process sensitive data;
+
+3) possible steps to create perf_event/Perf privileged users groups for 
+   the current implementations of perf_events syscall API [4] and Perf tool;
+
+---
+Alexey Budankov (3):
+  perf-security: document perf_events/Perf resource control
+  perf-security: document collected perf_events/Perf data categories
+  perf-security: document perf_events/Perf resource control
+
+ Documentation/admin-guide/perf-security.rst | 111 +++++++++++++++++++-
+ 1 file changed, 109 insertions(+), 2 deletions(-)
+
+---
+[1] https://marc.info/?l=linux-kernel&m=153736008310781&w=2
+[2] https://lkml.org/lkml/2018/5/21/156
+[3] https://lkml.org/lkml/2018/11/27/604
+[4] http://man7.org/linux/man-pages/man2/perf_event_open.2.html
