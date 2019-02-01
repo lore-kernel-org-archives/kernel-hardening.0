@@ -1,77 +1,30 @@
 MIME-Version: 1.0
-References: <20190131192533.34130-1-thgarnie@chromium.org> <20190131192533.34130-14-thgarnie@chromium.org>
- <20190201111532.3oszgzj4grdyej5q@kshutemo-mobl1>
-In-Reply-To: <20190201111532.3oszgzj4grdyej5q@kshutemo-mobl1>
+References: <20190131192533.34130-1-thgarnie@chromium.org> <20190131192533.34130-15-thgarnie@chromium.org>
+ <01000168a5b35a86-b79bfe67-191e-43bc-a5c7-0e74eac06195-000000@email.amazonses.com>
+ <CAJcbSZGKR7dKVqNEDEO7Qzf7tnNqmL=p1uVKvsUefS=Hs-=iNA@mail.gmail.com> <01000168a6e5ab88-0deea73f-387f-4941-bd11-d1c161aac88a-000000@email.amazonses.com>
+In-Reply-To: <01000168a6e5ab88-0deea73f-387f-4941-bd11-d1c161aac88a-000000@email.amazonses.com>
 From: Thomas Garnier <thgarnie@chromium.org>
-Date: Fri, 1 Feb 2019 09:11:37 -0800
-Message-ID: <CAJcbSZGa2=YLaFxqoZ79h1Gh794DPWpuCArSMirYVbHLYzBu5w@mail.gmail.com>
-Subject: Re: [PATCH v6 13/27] x86/boot/64: Build head64.c as mcmodel large
- when PIE is enabled
+Date: Fri, 1 Feb 2019 09:13:58 -0800
+Message-ID: <CAJcbSZFvafvNX1pS96jaTBGNJad+NszLwSgKnRQgyT70gUGWqQ@mail.gmail.com>
+Subject: Re: [PATCH v6 14/27] x86/percpu: Adapt percpu for PIE support
 Content-Type: text/plain; charset="UTF-8"
-To: "Kirill A. Shutemov" <kirill@shutemov.name>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kristen@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, Mimi Zohar <zohar@linux.ibm.com>, Juergen Gross <jgross@suse.com>, Nayna Jain <nayna@linux.ibm.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Jan Kiszka <jan.kiszka@siemens.com>, Nick Desaulniers <ndesaulniers@google.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, LKML <linux-kernel@vger.kernel.org>
+To: Christopher Lameter <cl@linux.com>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, kristen@linux.intel.com, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, Dennis Zhou <dennis@kernel.org>, Tejun Heo <tj@kernel.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Stefano Stabellini <sstabellini@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Andi Kleen <ak@linux.intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michal Hocko <mhocko@suse.com>, Mike Rapoport <rppt@linux.vnet.ibm.com>, Stephen Rothwell <sfr@canb.auug.org.au>, Cao jin <caoj.fnst@cn.fujitsu.com>, Brijesh Singh <brijesh.singh@amd.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Joerg Roedel <jroedel@suse.de>, Peter Zijlstra <peterz@infradead.org>, Kees Cook <keescook@chromium.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, LKML <linux-kernel@vger.kernel.org>, xen-devel <xen-devel@lists.xenproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 1, 2019 at 3:15 AM Kirill A. Shutemov <kirill@shutemov.name> wrote:
+On Thu, Jan 31, 2019 at 6:31 PM Christopher Lameter <cl@linux.com> wrote:
 >
-> On Thu, Jan 31, 2019 at 11:24:20AM -0800, Thomas Garnier wrote:
-> > The __startup_64 function assumes all symbols have relocated addresses
-> > instead of the current boot virtual address. PIE generated code favor
-> > relative addresses making all virtual and physical address math incorrect.
-> > If PIE is enabled, build head64.c as mcmodel large instead to ensure absolute
-> > references on all memory access. Add a global __force_order variable required
-> > when using a large model with read_cr* functions.
-> >
-> > To build head64.c as mcmodel=large, disable the retpoline gcc flags.
-> > This code is used at early boot and removed later, it doesn't need
-> > retpoline mitigation.
-> >
-> > Position Independent Executable (PIE) support will allow to extend the
-> > KASLR randomization range below 0xffffffff80000000.
-> >
-> > Signed-off-by: Thomas Garnier <thgarnie@chromium.org>
-> > ---
-> >  arch/x86/kernel/Makefile | 6 ++++++
-> >  arch/x86/kernel/head64.c | 3 +++
-> >  2 files changed, 9 insertions(+)
-> >
-> > diff --git a/arch/x86/kernel/Makefile b/arch/x86/kernel/Makefile
-> > index 00b7e27bc2b7..1f98f52eab9f 100644
-> > --- a/arch/x86/kernel/Makefile
-> > +++ b/arch/x86/kernel/Makefile
-> > @@ -22,6 +22,12 @@ CFLAGS_REMOVE_early_printk.o = -pg
-> >  CFLAGS_REMOVE_head64.o = -pg
-> >  endif
-> >
-> > +ifdef CONFIG_X86_PIE
-> > +# Remove PIE and retpoline flags that are incompatible with mcmodel=large
-> > +CFLAGS_REMOVE_head64.o += -fPIE -mindirect-branch=thunk-extern -mindirect-branch-register
-> > +CFLAGS_head64.o = -mcmodel=large
-> > +endif
-> > +
-> >  KASAN_SANITIZE_head$(BITS).o                         := n
-> >  KASAN_SANITIZE_dumpstack.o                           := n
-> >  KASAN_SANITIZE_dumpstack_$(BITS).o                   := n
-> > diff --git a/arch/x86/kernel/head64.c b/arch/x86/kernel/head64.c
-> > index 16b1cbd3a61e..22e81275495b 100644
-> > --- a/arch/x86/kernel/head64.c
-> > +++ b/arch/x86/kernel/head64.c
-> > @@ -63,6 +63,9 @@ EXPORT_SYMBOL(vmemmap_base);
-> >
-> >  #define __head       __section(.head.text)
-> >
-> > +/* Required for read_cr3 when building as PIE */
-> > +unsigned long __force_order;
-> > +
+> On Thu, 31 Jan 2019, Thomas Garnier wrote:
 >
-> I believe it only needed for GCC < 5. Newer GCC can eliminate the
-> reference. See my comment in arch/x86/boot/compressed/pgtable_64.c.
+> > The per-cpu symbols are in a section that is zero based to create
+> > offsets. The compiler doesn't see them as offsets but as relative
+> > symbol and try to relocate them. Given the distance between zero and
+> > the mapped kernel is much larger than the instruction offset range, it
+> > fails to do it.
 >
-> Maybe we should expand the comment here too?
+> We switch that off in the linker. If that does not work with your
+> modifications then you need to figure out how to update the link
+> configuration.
+>
 
-Make sense, I will add a similar comment in the next iteration. Thanks
-for pointing that out.
-
->
-> --
->  Kirill A. Shutemov
+It didn't work originally but I will revisit to see if I missed something.
