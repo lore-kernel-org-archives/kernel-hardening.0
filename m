@@ -1,83 +1,25 @@
-Subject: [PATCH v1 3/3] perf-security: document perf_events/Perf resource
- control
-From: Alexey Budankov <alexey.budankov@linux.intel.com>
-References: <9cfbf7a1-72dd-f9d0-8137-0f120fa74d21@linux.intel.com>
-Message-ID: <5ac4b7aa-b640-d8a4-1926-cf612fada974@linux.intel.com>
-Date: Fri, 1 Feb 2019 10:30:58 +0300
+Subject: Re: [PATCH v6 15/27] compiler: Option to default to hidden symbols
+References: <20190131192533.34130-1-thgarnie@chromium.org>
+ <20190131192533.34130-16-thgarnie@chromium.org>
+From: Adrian Hunter <adrian.hunter@intel.com>
+Message-ID: <3a2bdc07-e8c4-c340-dde7-516ab0de66f2@intel.com>
+Date: Fri, 1 Feb 2019 10:22:22 +0200
 MIME-Version: 1.0
-In-Reply-To: <9cfbf7a1-72dd-f9d0-8137-0f120fa74d21@linux.intel.com>
+In-Reply-To: <20190131192533.34130-16-thgarnie@chromium.org>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
-To: Jonatan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>
-Cc: Jann Horn <jannh@google.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Mark Rutland <mark.rutland@arm.com>, Andi Kleen <ak@linux.intel.com>, Tvrtko Ursulin <tvrtko.ursulin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
+To: Thomas Garnier <thgarnie@chromium.org>, kernel-hardening@lists.openwall.com
+Cc: kristen@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Luis Chamberlain <mcgrof@kernel.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "Rafael J. Wysocki" <rafael@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Luc Van Oostenryck <luc.vanoostenryck@gmail.com>, Steven Rostedt <rostedt@goodmis.org>, Jason Baron <jbaron@akamai.com>, Thomas Garnier <thgarnie@google.com>, Jordan Borgner <mail@jordan-borgner.de>, Masami Hiramatsu <mhiramat@kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Arnaldo Carvalho de Melo <acme@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jan Beulich <JBeulich@suse.com>, Song Liu <songliubraving@fb.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-sparse@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 31/01/19 9:24 PM, Thomas Garnier wrote:
+> Provide an option to default visibility to hidden except for key
+> symbols. This option is disabled by default and will be used by x86_64
+> PIE support to remove errors between compilation units.
+> 
+> The default visibility is also enabled for external symbols that are
+> compared as they maybe equals (start/end of sections). In this case,
+> older versions of GCC will remove the comparison if the symbols are
+> hidden. This issue exists at least on gcc 4.9 and before.
 
-Elaborate on possible perf_event/Perf privileged users groups
-and document steps about creating such groups.
-
-Signed-off-by: Alexey Budankov <alexey.budankov@linux.intel.com>
----
- Documentation/admin-guide/perf-security.rst | 43 +++++++++++++++++++++
- 1 file changed, 43 insertions(+)
-
-diff --git a/Documentation/admin-guide/perf-security.rst b/Documentation/admin-guide/perf-security.rst
-index 7da7fa459718..fe90f8952be9 100644
---- a/Documentation/admin-guide/perf-security.rst
-+++ b/Documentation/admin-guide/perf-security.rst
-@@ -73,6 +73,48 @@ enable capturing of additional data required for later performance analysis of
- monitored processes or a system. For example, CAP_SYSLOG capability permits
- reading kernel space memory addresses from /proc/kallsyms file.
- 
-+perf_events/Perf privileged users
-+---------------------------------
-+
-+Mechanisms of capabilities, privileged capability-dumb files [6]_ and file system
-+ACLs [10]_ can be used to create a dedicated group of perf_events/Perf privileged
-+users who are permitted to execute performance monitoring without *scope* limits.
-+The following steps can be taken to create such a group of privileged Perf users.
-+
-+1. Create perf_users group of privileged Perf users, assign perf_users group to
-+   Perf tool executable and limit *access* to the executable for other users in
-+   the system:
-+
-+::
-+
-+   # groupadd perf_users
-+   # ls -alhF
-+   -rwxr-xr-x  2 root root  11M Oct 19 15:12 perf
-+   # chgrp perf_users perf
-+   # ls -alhF
-+   -rwxr-xr-x  2 root perf_users  11M Oct 19 15:12 perf
-+   # chmod o-rwx perf
-+   # ls -alhF
-+   -rwxr-x---  2 root perf_users  11M Oct 19 15:12 perf
-+
-+2. Assign required capabilities to the Perf tool executable file and enable
-+   members of perf_users group with performance monitoring privileges [6]_ :
-+
-+::
-+
-+   # setcap "cap_sys_admin,cap_sys_ptrace,cap_syslog=ep" perf
-+   # setcap -v "cap_sys_admin,cap_sys_ptrace,cap_syslog=ep" perf
-+   perf: OK
-+   # getcap perf
-+   perf = cap_sys_ptrace,cap_sys_admin,cap_syslog+ep
-+
-+As a result, members of perf_users group are capable of conducting performance
-+monitoring by using functionality of the configured Perf tool executable that,
-+when executes, passes perf_events subsystem *scope* checks.
-+
-+This specific *access* control management is only available to superuser or root
-+running processes with CAP_SETPCAP, CAP_SETFCAP [6]_ capabilities.
-+
- perf_events/Perf unprivileged users
- -----------------------------------
- 
-@@ -156,6 +198,7 @@ Bibliography
- .. [7] `<http://man7.org/linux/man-pages/man2/ptrace.2.html>`_
- .. [8] `<https://en.wikipedia.org/wiki/Hardware_performance_counter>`_
- .. [9] `<https://en.wikipedia.org/wiki/Model-specific_register>`_
-+.. [10] `<http://man7.org/linux/man-pages/man5/acl.5.html>`_
- .. [11] `<http://man7.org/linux/man-pages/man2/getrlimit.2.html>`_
- .. [12] `<http://man7.org/linux/man-pages/man5/limits.conf.5.html>`_
+What does this mean, if anything, for what/how symbols appear in /proc/kallsyms?
