@@ -1,36 +1,38 @@
-Date: Tue, 5 Feb 2019 14:29:53 +0100
-From: Peter Zijlstra <peterz@infradead.org>
+From: Nadav Amit <namit@vmware.com>
 Subject: Re: [PATCH v2 06/20] x86/alternative: use temporary mm for text
  poking
-Message-ID: <20190205132953.GF17582@hirez.programming.kicks-ass.net>
+Date: Tue, 5 Feb 2019 17:54:56 +0000
+Message-ID: <6D321F51-6B19-46F6-91AC-74248A542BA0@vmware.com>
 References: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
  <20190129003422.9328-7-rick.p.edgecombe@intel.com>
  <20190205095853.GJ21801@zn.tnic>
  <20190205113146.GP17528@hirez.programming.kicks-ass.net>
+ <20190205123533.GN21801@zn.tnic>
+In-Reply-To: <20190205123533.GN21801@zn.tnic>
+Content-Type: text/plain; charset="us-ascii"
+Content-ID: <F6D00271B554CB47B00297C100C54604@namprd05.prod.outlook.com>
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190205113146.GP17528@hirez.programming.kicks-ass.net>
 To: Borislav Petkov <bp@alien8.de>
-Cc: Rick Edgecombe <rick.p.edgecombe@intel.com>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Nadav Amit <namit@vmware.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>
+Cc: Peter Zijlstra <peterz@infradead.org>, Rick Edgecombe <rick.p.edgecombe@intel.com>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Dave Hansen <dave.hansen@linux.intel.com>, Damian Tometzki <linux_dti@icloud.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kristen Carlson Accardi <kristen@linux.intel.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Masami Hiramatsu <mhiramat@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 05, 2019 at 12:31:46PM +0100, Peter Zijlstra wrote:
-> In general, text_poke() cannot fail:
-> 
->  - suppose changing a single jump label requires poking multiple sites
->    (not uncommon), we fail halfway through and then have to undo the
->    first pokes, but those pokes fail again.
-> 
->  - this then leaves us no way forward and no way back, we've got
->    inconsistent text state -> FAIL.
+> On Feb 5, 2019, at 4:35 AM, Borislav Petkov <bp@alien8.de> wrote:
+>=20
+> On Tue, Feb 05, 2019 at 12:31:46PM +0100, Peter Zijlstra wrote:
+>> ...
+>>=20
+>> So while in general I agree with BUG_ON() being undesirable, I think
+>> liberal sprinking in text_poke() is fine; you really _REALLY_ want this
+>> to work or fail loudly. Text corruption is just painful.
+>=20
+> Ok. It would be good to have the gist of this sentiment in a comment
+> above it so that it is absolutely clear why we're doing it.
 
-Note that this exact fail scenario still exists in the CPU hotplug code.
-See kernel/cpu.c:cpuhp_thread_fun():
+I added a short comment for v3 above each BUG_ON().
 
-		/*
-		 * If we fail on a rollback, we're up a creek without no
-		 * paddle, no way forward, no way back. We loose, thanks for
-		 * playing.
-		 */
-		WARN_ON_ONCE(st->rollback);
+> And since text_poke() can't fail, then it doesn't need a retval too.
+> AFAICT, nothing is actually using it.
+
+As Peter said, this is addressed in a separate patch (one patch per logical
+change).
