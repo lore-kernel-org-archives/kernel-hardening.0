@@ -1,175 +1,128 @@
+Date: Wed, 6 Feb 2019 16:58:58 -0700
+From: Jonathan Corbet <corbet@lwn.net>
+Subject: Re: [PATCH v1 1/3] perf-security: document perf_events/Perf
+ resource control
+Message-ID: <20190206165858.19fdaf58@lwn.net>
+In-Reply-To: <bfd0e4bb-a4a5-e65d-e8e2-d2c9d03f3160@linux.intel.com>
+References: <9cfbf7a1-72dd-f9d0-8137-0f120fa74d21@linux.intel.com>
+	<bfd0e4bb-a4a5-e65d-e8e2-d2c9d03f3160@linux.intel.com>
 MIME-Version: 1.0
-References: <20190131192533.34130-1-thgarnie@chromium.org> <20190131192533.34130-20-thgarnie@chromium.org>
- <20190206195642.GD9575@linux.intel.com>
-In-Reply-To: <20190206195642.GD9575@linux.intel.com>
-From: Thomas Garnier <thgarnie@chromium.org>
-Date: Wed, 6 Feb 2019 13:23:31 -0800
-Message-ID: <CAJcbSZGhPej6=jroABPtR00Z46LY-vd-dmiw71Sx3Dj8UxmD+g@mail.gmail.com>
-Subject: Re: [PATCH v6 19/27] kvm: Adapt assembly for PIE support
-Content-Type: text/plain; charset="UTF-8"
-To: Sean Christopherson <sean.j.christopherson@intel.com>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Kristen Carlson Accardi <kristen@linux.intel.com>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, "H. Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, Joerg Roedel <joro@8bytes.org>, kvm list <kvm@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 8bit
+To: Alexey Budankov <alexey.budankov@linux.intel.com>
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, Jann Horn <jannh@google.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Mark Rutland <mark.rutland@arm.com>, Andi Kleen <ak@linux.intel.com>, Tvrtko Ursulin <tvrtko.ursulin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 6, 2019 at 11:56 AM Sean Christopherson
-<sean.j.christopherson@intel.com> wrote:
->
-> On Thu, Jan 31, 2019 at 11:24:26AM -0800, Thomas Garnier wrote:
-> > Change the assembly code to use only relative references of symbols for the
-> > kernel to be PIE compatible. The new __ASM_MOVABS macro is used to
-> > get the address of a symbol on both 32 and 64-bit with PIE support.
-> >
-> > Position Independent Executable (PIE) support will allow to extend the
-> > KASLR randomization range below 0xffffffff80000000.
-> >
-> > Signed-off-by: Thomas Garnier <thgarnie@chromium.org>
-> > ---
-> >  arch/x86/include/asm/kvm_host.h | 8 ++++++--
-> >  arch/x86/kernel/kvm.c           | 6 ++++--
-> >  arch/x86/kvm/svm.c              | 4 ++--
-> >  arch/x86/kvm/vmx/vmx.c          | 2 +-
-> >  4 files changed, 13 insertions(+), 7 deletions(-)
-> >
-> > diff --git a/arch/x86/include/asm/kvm_host.h b/arch/x86/include/asm/kvm_host.h
-> > index 4660ce90de7f..fdb3307d5fe1 100644
-> > --- a/arch/x86/include/asm/kvm_host.h
-> > +++ b/arch/x86/include/asm/kvm_host.h
-> > @@ -1498,9 +1498,13 @@ asmlinkage void kvm_spurious_fault(void);
-> >       ".pushsection .fixup, \"ax\" \n" \
-> >       "667: \n\t" \
-> >       cleanup_insn "\n\t"                   \
-> > -     "cmpb $0, kvm_rebooting \n\t"         \
-> > +     "cmpb $0, kvm_rebooting" __ASM_SEL(, (%%rip)) " \n\t" \
-> >       "jne 668b \n\t"                       \
-> > -     __ASM_SIZE(push) " $666b \n\t"        \
-> > +     __ASM_SIZE(push) "$0 \n\t"              \
-> > +     __ASM_SIZE(push) "%%" _ASM_AX " \n\t"           \
-> > +     _ASM_MOVABS " $666b, %%" _ASM_AX "\n\t" \
-> > +     _ASM_MOV " %%" _ASM_AX ", " __ASM_SEL(4, 8) "(%%" _ASM_SP ") \n\t" \
-> > +     __ASM_SIZE(pop) "%%" _ASM_AX " \n\t"            \
->
-> This blob isn't very intuitive to begin with, and the extra stack
-> shenanigans are a bit much when PIE is disabled.  What about breaking
-> out the behavior to separate helper macros to keep the simpler code
-> for non-PIE and to make the code somewhat self-documenting?  E.g.:
->
-> #ifndef CONFIG_X86_PIE
-> #define KVM_PUSH_FAULTING_INSN_RIP       __ASM_SIZE(push) " $666b \n\t"
-> #else
-> #define KVM_PUSH_FAULTING_INSN_RIP                                         \
->         __ASM_SIZE(push) "$0 \n\t"                                         \
->         __ASM_SIZE(push) "%%" _ASM_AX " \n\t"                              \
->         _ASM_MOVABS " $666b, %%" _ASM_AX "\n\t"                            \
->         _ASM_MOV " %%" _ASM_AX ", " __ASM_SEL(4, 8) "(%%" _ASM_SP ") \n\t" \
->         __ASM_SIZE(pop) "%%" _ASM_AX " \n\t"
-> #endif
->
-> #define ____kvm_handle_fault_on_reboot(insn, cleanup_insn)      \
->         "666: " insn "\n\t" \
->         "668: \n\t"                           \
->         ".pushsection .fixup, \"ax\" \n" \
->         "667: \n\t" \
->         cleanup_insn "\n\t"                   \
->         "cmpb $0, kvm_rebooting" __ASM_SEL(, (%%rip)) " \n\t" \
->         "jne 668b \n\t"                       \
->         KVM_PUSH_FAULTING_INSN_RIP              \
->         "jmp kvm_spurious_fault \n\t"         \
->         ".popsection \n\t" \
->         _ASM_EXTABLE(666b, 667b)
->
-> >       "jmp kvm_spurious_fault \n\t"         \
-> >       ".popsection \n\t" \
-> >       _ASM_EXTABLE(666b, 667b)
-> > diff --git a/arch/x86/kernel/kvm.c b/arch/x86/kernel/kvm.c
-> > index 5c93a65ee1e5..f6eb02004e43 100644
-> > --- a/arch/x86/kernel/kvm.c
-> > +++ b/arch/x86/kernel/kvm.c
->
-> This change to arch/x86/kernel/kvm.c should be done in a separate patch
-> as it affects the kernel itself when running as a guest under KVM,
-> whereas arch/x86/kvm/**/* and arch/x86/include/asm/kvm_host.h affect
-> KVM as a host, i.e. the KVM module.  Case in point, the below bug causes
-> a kernel panic when running as a KVM guest but has no impact on the KVM
-> module.
+On Fri, 1 Feb 2019 10:29:11 +0300
+Alexey Budankov <alexey.budankov@linux.intel.com> wrote:
 
-Got it, will split in next iteration.
+> Extend perf-security.rst file with perf_events/Perf resource control
+> section describing RLIMIT_NOFILE and perf_event_mlock_kb settings for
+> performance monitoring user processes.
+> 
+> Signed-off-by: Alexey Budankov <alexey.budankov@linux.intel.com>
 
->
-> > @@ -826,8 +826,10 @@ asm(
-> >  ".global __raw_callee_save___kvm_vcpu_is_preempted;"
-> >  ".type __raw_callee_save___kvm_vcpu_is_preempted, @function;"
-> >  "__raw_callee_save___kvm_vcpu_is_preempted:"
-> > -"movq        __per_cpu_offset(,%rdi,8), %rax;"
-> > -"cmpb        $0, " __stringify(KVM_STEAL_TIME_preempted) "+steal_time(%rax);"
-> > +"leaq        __per_cpu_offset(%rip), %rax;"
-> > +"movq        (%rax,%rdi,8), %rax;"
-> > +"addq        " __stringify(KVM_STEAL_TIME_preempted) "+steal_time(%rip), %rax;"
->
-> This is wrong, it's directly accessing the per-cpu offset of 'steal_time'
-> as a virtual address, e.g. without PIE enabled:
->
->     0xffffffff8104820b <+11>:    add    0x7efccffe(%rip),%rax        # 0x15210 <steal_time+16>
->
-> This results in kernel panics due to unhandled page faults:
->
->     [    0.001453] BUG: unable to handle kernel paging request at 0000000000015210
->     [    0.001453] #PF error: [normal kernel read fault]
+Overall these patches seem reasonable, though I have some nits to pick.
+I'm happy to apply them but wouldn't mind an ack from the perf camp.
 
-Yes, I think something went wrong in rebasing. Thanks for pointing it out.
+Alexey, could you wrap your paragraphs at 72-75 columns?
 
->
-> I think you want something like the following, except that the whole
-> point of handcoded assembly is to avoid modifying registers other than
-> RAX, i.e. modifying RDI is a no-no.
->
->     "leaq   " __stringify(KVM_STEAL_TIME_preempted) "+steal_time(%rip), %rdi;"
->     "cmpb   $0, (%rax,%rdi,1);"
->
->
-> And similar to the comment on ____kvm_handle_fault_on_reboot(), what
-> about wrapping the PIE-specific version in an ifdef?
+> ---
+>  Documentation/admin-guide/perf-security.rst | 36 +++++++++++++++++++++
+>  1 file changed, 36 insertions(+)
+> 
+> diff --git a/Documentation/admin-guide/perf-security.rst b/Documentation/admin-guide/perf-security.rst
+> index f73ebfe9bfe2..ff6832191577 100644
+> --- a/Documentation/admin-guide/perf-security.rst
+> +++ b/Documentation/admin-guide/perf-security.rst
+> @@ -84,6 +84,40 @@ governed by perf_event_paranoid [2]_ setting:
+>       locking limit is imposed but ignored for unprivileged processes with
+>       CAP_IPC_LOCK capability.
+>  
+> +perf_events/Perf resource control
+> +---------------------------------
+> +
+> +perf_events system call API [2]_ allocates file descriptors for every configured
 
-I will look into this and try your approach.
+*The* perf_events system call API
 
->
-> > +"cmpb        $0, (%rax);"
-> >  "setne       %al;"
-> >  "ret;"
-> >  ".popsection");
-> > diff --git a/arch/x86/kvm/svm.c b/arch/x86/kvm/svm.c
-> > index f13a3a24d360..26abb82b1b67 100644
-> > --- a/arch/x86/kvm/svm.c
-> > +++ b/arch/x86/kvm/svm.c
-> > @@ -706,12 +706,12 @@ static u32 svm_msrpm_offset(u32 msr)
-> >
-> >  static inline void clgi(void)
-> >  {
-> > -     asm volatile (__ex("clgi"));
-> > +     asm volatile (__ex("clgi") : :);
-> >  }
-> >
-> >  static inline void stgi(void)
-> >  {
-> > -     asm volatile (__ex("stgi"));
-> > +     asm volatile (__ex("stgi") : :);
-> >  }
-> >
-> >  static inline void invlpga(unsigned long addr, u32 asid)
-> > diff --git a/arch/x86/kvm/vmx/vmx.c b/arch/x86/kvm/vmx/vmx.c
-> > index 4341175339f3..3275761a7375 100644
-> > --- a/arch/x86/kvm/vmx/vmx.c
-> > +++ b/arch/x86/kvm/vmx/vmx.c
-> > @@ -2161,7 +2161,7 @@ static void vmclear_local_loaded_vmcss(void)
-> >   */
-> >  static void kvm_cpu_vmxoff(void)
-> >  {
-> > -     asm volatile (__ex("vmxoff"));
-> > +     asm volatile (__ex("vmxoff") :::);
-> >
-> >       intel_pt_handle_vmx(0);
-> >       cr4_clear_bits(X86_CR4_VMXE);
-> > --
-> > 2.20.1.495.gaa96b0ce6b-goog
-> >
+> +PMU event. Open file descriptors are a per-process accountable *resource* governed
+> +by RLIMIT_NOFILE [11]_ limit (ulimit -n), which is usually derived from the login
 
-Thanks for the feedback.
+by *the* RLIMIT_NOFILE
+
+> +shell process. When configuring Perf collection for a long list of events on a
+> +large server system, this limit can be easily hit preventing required monitoring
+> +configuration. RLIMIT_NOFILE limit can be increased on per-user basis modifying
+> +content of limits.conf file [12]_ on some systems. Ordinary Perf sampling session
+
+of *the* limits.conf file
+
+Ordinarily, a Perf
+
+> +(perf record) requires an amount of open perf_event file descriptors that is not
+> +less than a number of monitored events multiplied by a number of monitored CPUs.
+> +
+> +An amount of memory available to user processes for capturing performance monitoring
+> +data is governed by perf_event_mlock_kb [2]_ setting. This perf_event specific
+
+by *the* perf_event_mlock_kb
+
+> +*resource* setting defines overall per-cpu limits of memory allowed for mapping
+
+Why the *emphasis* here?
+
+> +by the user processes to execute performance monitoring. The setting essentially
+> +extends RLIMIT_MEMLOCK [11]_ limit but only for memory regions mapped specially
+
+extends *the* RMLIMIT_MEMLOCK limit *,* but only
+
+> +for capturing monitored performance events and related data.
+> +
+> +For example, if a machine has eight cores and perf_event_mlock_kb limit is set
+> +to 516 KiB then a user process is provided with 516 KiB * 8 = 4128 KiB of memory
+
+Kib, then
+
+> +above RLIMIT_MEMLOCK limit (ulimit -l) for perf_event mmap buffers. In particular
+
+above *the* RLIMIT_MEMLOCK
+
+particular,
+
+> +this means that if the user wants to start two or more performance monitoring
+
+that, if
+
+> +processes, it is required to manually distribute available 4128 KiB between the
+
+s/it is/they are/
+
+> +monitoring processes, for example, using --mmap-pages Perf record mode option.
+
+using *the* --mmap-pages option
+
+> +Otherwise, the first started performance monitoring process allocates all available
+> +4128 KiB and the other processes will fail to proceed due to the lack of memory.
+> +
+> +RLIMIT_MEMLOCK and perf_event_mlock_kb *resource* constraints are ignored for
+> +processes with CAP_IPC_LOCK capability. Thus, perf_events/Perf privileged users
+
+with *the* CAP_IPC_LOCK
+
+> +can be provided with memory above the constraints for perf_events/Perf performance
+> +monitoring purpose by providing the Perf executable with CAP_IPC_LOCK capability.
+> +
+>  Bibliography
+>  ------------
+>  
+> @@ -94,4 +128,6 @@ Bibliography
+>  .. [5] `<https://www.kernel.org/doc/html/latest/security/credentials.html>`_
+>  .. [6] `<http://man7.org/linux/man-pages/man7/capabilities.7.html>`_
+>  .. [7] `<http://man7.org/linux/man-pages/man2/ptrace.2.html>`_
+> +.. [11] `<http://man7.org/linux/man-pages/man2/getrlimit.2.html>`_
+> +.. [12] `<http://man7.org/linux/man-pages/man5/limits.conf.5.html>`_
+
+Thanks,
+
+jon
