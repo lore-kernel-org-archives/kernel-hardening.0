@@ -1,56 +1,51 @@
+Date: Wed, 6 Feb 2019 11:23:56 -0500
+From: Steven Rostedt <rostedt@goodmis.org>
+Subject: Re: [PATCH 16/17] Plug in new special vfree flag
+Message-ID: <20190206112356.64cc5f0d@gandalf.local.home>
+In-Reply-To: <20190117003259.23141-17-rick.p.edgecombe@intel.com>
+References: <20190117003259.23141-1-rick.p.edgecombe@intel.com>
+	<20190117003259.23141-17-rick.p.edgecombe@intel.com>
 MIME-Version: 1.0
-References: <1548074920-10651-1-git-send-email-alex.popov@linux.com> <2cf80ef9-cacc-c730-7a9e-301703ddc80d@redhat.com>
-In-Reply-To: <2cf80ef9-cacc-c730-7a9e-301703ddc80d@redhat.com>
-From: Jim Mattson <jmattson@google.com>
-Date: Tue, 5 Feb 2019 14:55:55 -0800
-Message-ID: <CALMp9eQ06b-x26GQX1LQ=VQ9dXPvUnEjhJgSU2fYp1xbkOiZhA@mail.gmail.com>
-Subject: Re: [PATCH v2] KVM: x86: Fix single-step debugging
-Content-Type: text/plain; charset="UTF-8"
-To: Paolo Bonzini <pbonzini@redhat.com>
-Cc: Alexander Popov <alex.popov@linux.com>, Radim Krcmar <rkrcmar@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Andy Lutomirski <luto@kernel.org>, Stefan Hajnoczi <stefanha@redhat.com>, H Peter Anvin <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, kvm list <kvm@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+To: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, Rusty Russell <rusty@rustcorp.com.au>, Masami Hiramatsu <mhiramat@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Jessica Yu <jeyu@kernel.org>, "Paul E . McKenney" <paulmck@linux.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 25, 2019 at 9:52 AM Paolo Bonzini <pbonzini@redhat.com> wrote:
->
-> On 21/01/19 13:48, Alexander Popov wrote:
-> > The single-step debugging of KVM guests on x86 is broken: if we run
-> > gdb 'stepi' command at the breakpoint when the guest interrupts are
-> > enabled, RIP always jumps to native_apic_mem_write(). Then other
-> > nasty effects follow.
-> >
-> > Long investigation showed that on Jun 7, 2017 the
-> > commit c8401dda2f0a00cd25c0 ("KVM: x86: fix singlestepping over syscall")
-> > introduced the kvm_run.debug corruption: kvm_vcpu_do_singlestep() can
-> > be called without X86_EFLAGS_TF set.
-> >
-> > Let's fix it. Please consider that for -stable.
-> >
-> > Signed-off-by: Alexander Popov <alex.popov@linux.com>
-> > ---
-> >  arch/x86/kvm/x86.c | 3 +--
-> >  1 file changed, 1 insertion(+), 2 deletions(-)
-> >
-> > diff --git a/arch/x86/kvm/x86.c b/arch/x86/kvm/x86.c
-> > index f049ecf..9686068 100644
-> > --- a/arch/x86/kvm/x86.c
-> > +++ b/arch/x86/kvm/x86.c
-> > @@ -6407,8 +6407,7 @@ int x86_emulate_instruction(struct kvm_vcpu *vcpu,
-> >               toggle_interruptibility(vcpu, ctxt->interruptibility);
-> >               vcpu->arch.emulate_regs_need_sync_to_vcpu = false;
-> >               kvm_rip_write(vcpu, ctxt->eip);
-> > -             if (r == EMULATE_DONE &&
-> > -                 (ctxt->tf || (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP)))
-> > +             if (r == EMULATE_DONE && ctxt->tf)
-> >                       kvm_vcpu_do_singlestep(vcpu, &r);
-> >               if (!ctxt->have_exception ||
-> >                   exception_type(ctxt->exception.vector) == EXCPT_TRAP)
-> >
->
-> Queued, with Cc to stable and the right "Fixes" trailer.
->
-> Paolo
+On Wed, 16 Jan 2019 16:32:58 -0800
+Rick Edgecombe <rick.p.edgecombe@intel.com> wrote:
 
-This patch seems to imply that userspace is expected to set the
-guest's RFLAGS.TF when requesting KVM_GUEST_SINGLESTEP, but the
-documentation for KVM_GUEST_SINGLESTEP is not clear about this. Can
-someone clarify how KVM_GUEST_SINGLESTEP is supposed to work?
+> Add new flag for handling freeing of special permissioned memory in vmalloc
+> and remove places where memory was set RW before freeing which is no longer
+> needed.
+> 
+> In kprobes, bpf and ftrace this just adds the flag, and removes the now
+> unneeded set_memory_ calls before calling vfree.
+> 
+> In modules, the freeing of init sections is moved to a work queue, since
+> freeing of RO memory is not supported in an interrupt by vmalloc.
+> Instead of call_rcu, it now uses synchronize_rcu() in the work queue.
+> 
+> Cc: Rusty Russell <rusty@rustcorp.com.au>
+> Cc: Masami Hiramatsu <mhiramat@kernel.org>
+> Cc: Daniel Borkmann <daniel@iogearbox.net>
+> Cc: Alexei Starovoitov <ast@kernel.org>
+> Cc: Jessica Yu <jeyu@kernel.org>
+> Cc: Steven Rostedt <rostedt@goodmis.org>
+> Cc: Paul E. McKenney <paulmck@linux.ibm.com>
+> Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
+> ---
+>  arch/x86/kernel/ftrace.c       |  6 +--
+
+For the ftrace code.
+
+Acked-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
+
+-- Steve
+
+>  arch/x86/kernel/kprobes/core.c |  7 +---
+>  include/linux/filter.h         | 16 ++-----
+>  kernel/bpf/core.c              |  1 -
+>  kernel/module.c                | 77 +++++++++++++++++-----------------
+>  5 files changed, 45 insertions(+), 62 deletions(-)
+>
