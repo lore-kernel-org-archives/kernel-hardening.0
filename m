@@ -1,44 +1,45 @@
-Date: Thu, 7 Feb 2019 16:35:55 -0700
-From: Tycho Andersen <tycho@tycho.ws>
-Subject: Re: [PATCH 3/3] leaking_addresses: Expand tilde in output file name
-Message-ID: <20190207233555.GA5122@cisco>
-References: <20190207225026.11723-1-tobin@kernel.org>
- <20190207225026.11723-4-tobin@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190207225026.11723-4-tobin@kernel.org>
-To: "Tobin C. Harding" <tobin@kernel.org>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+References: <20190131192533.34130-1-thgarnie@chromium.org> <20190131192533.34130-3-thgarnie@chromium.org>
+ <20190207121729.GE2414@zn.tnic> <CAJcbSZFe+Cn9+gEa4iv56sZE+WXXiHjeR8Mcte9s_HYr8QBrsw@mail.gmail.com>
+ <20190207171145.GH2414@zn.tnic>
+In-Reply-To: <20190207171145.GH2414@zn.tnic>
+From: Thomas Garnier <thgarnie@chromium.org>
+Date: Thu, 7 Feb 2019 15:55:35 -0800
+Message-ID: <CAJcbSZFTiHcRM8gy8LbVMQYM2b7H=Gngbsf6bMGKmkDo7mKbjg@mail.gmail.com>
+Subject: Re: [PATCH v6 02/27] x86: Use symbol name in jump table for PIE support
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: Borislav Petkov <bp@alien8.de>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Kristen Carlson Accardi <kristen@linux.intel.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, the arch/x86 maintainers <x86@kernel.org>, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Nadav Amit <namit@vmware.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 08, 2019 at 09:50:26AM +1100, Tobin C. Harding wrote:
-> Currently if user passes an output file to the script via
-> --output-raw we do not handle expansion of tilde.
-> 
-> Use perl function glob() to expand tilde in output file name.
-> 
-> Signed-off-by: Tobin C. Harding <tobin@kernel.org>
-> ---
->  scripts/leaking_addresses.pl | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
-> 
-> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-> index ef9e5b2a1614..ce545ca3fb70 100755
-> --- a/scripts/leaking_addresses.pl
-> +++ b/scripts/leaking_addresses.pl
-> @@ -150,7 +150,7 @@ if (!(is_supported_architecture() or $opt_32bit or $page_offset_32bit)) {
->  }
->  
->  if ($output_raw) {
-> -	open my $fh, '>', $output_raw or die "$0: $output_raw: $!\n";
-> +	open my $fh, '>', glob($output_raw) or die "$0: $output_raw: $!\n";
+On Thu, Feb 7, 2019 at 9:11 AM Borislav Petkov <bp@alien8.de> wrote:
+>
+> On Thu, Feb 07, 2019 at 09:04:45AM -0800, Thomas Garnier wrote:
+> > I assume that's an optimisation done by gcc later.
+>
+> So why is that change even needed? Where does it break?
+>
+> > The P modifier in the documentation does state that it is used to
+> > generate PIC code.
+>
+> The documentation says:
+>
+> "If used for a function, print the PLT suffix and generate PIC code. For
+> example, emit foo@PLT instead of =E2=80=99foo=E2=80=99 for the function f=
+oo()."
+>
+> when you use %P for a function. Which is not how it is used here.
 
-Seems like you might also have the same problem with $input_raw? I
-wonder if you can just do this in GetOptions somehow, so that all
-users of these further down in the script don't have to remember to do
-this.
+I did more checks about that. I think Ard's patch to make jump label
+relative actually fixed the issue I had with them.
 
-Cheers,
+Thanks for spotting this, I will do additional checks and look at
+removing this change.
 
-Tycho
+>
+> --
+> Regards/Gruss,
+>     Boris.
+>
+> Good mailing practices for 400: avoid top-posting and trim the reply.
