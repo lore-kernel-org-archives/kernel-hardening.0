@@ -1,63 +1,109 @@
-Date: Thu, 7 Feb 2019 13:17:29 +0100
-From: Borislav Petkov <bp@alien8.de>
-Subject: Re: [PATCH v6 02/27] x86: Use symbol name in jump table for PIE
- support
-Message-ID: <20190207121729.GE2414@zn.tnic>
-References: <20190131192533.34130-1-thgarnie@chromium.org>
- <20190131192533.34130-3-thgarnie@chromium.org>
+From: Alexey Budankov <alexey.budankov@linux.intel.com>
+Subject: Re: [PATCH v1 3/3] perf-security: document perf_events/Perf resource
+ control
+References: <9cfbf7a1-72dd-f9d0-8137-0f120fa74d21@linux.intel.com>
+ <5ac4b7aa-b640-d8a4-1926-cf612fada974@linux.intel.com>
+ <20190206170151.00c92333@lwn.net>
+Message-ID: <e3bbc79a-fd7e-6cae-6385-97dca1fc7f85@linux.intel.com>
+Date: Thu, 7 Feb 2019 16:14:16 +0300
 MIME-Version: 1.0
+In-Reply-To: <20190206170151.00c92333@lwn.net>
 Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <20190131192533.34130-3-thgarnie@chromium.org>
-To: Thomas Garnier <thgarnie@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, kristen@linux.intel.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, "Peter Zijlstra (Intel)" <peterz@infradead.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Thomas Garnier <thgarnie@google.com>, Nadav Amit <namit@vmware.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kernel@vger.kernel.org
+Content-Transfer-Encoding: 7bit
+To: Jonathan Corbet <corbet@lwn.net>
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, Jann Horn <jannh@google.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Mark Rutland <mark.rutland@arm.com>, Andi Kleen <ak@linux.intel.com>, Tvrtko Ursulin <tvrtko.ursulin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 31, 2019 at 11:24:09AM -0800, Thomas Garnier wrote:
-> Replace the %c constraint with %P. The %c is incompatible with PIE
-> because it implies an immediate value whereas %P reference a symbol.
 
-How so?
+On 07.02.2019 3:01, Jonathan Corbet wrote:
+> On Fri, 1 Feb 2019 10:30:58 +0300
+> Alexey Budankov <alexey.budankov@linux.intel.com> wrote:
+> 
+>> Elaborate on possible perf_event/Perf privileged users groups
+>> and document steps about creating such groups.
+>>
+>> Signed-off-by: Alexey Budankov <alexey.budankov@linux.intel.com>
+>> ---
+>>  Documentation/admin-guide/perf-security.rst | 43 +++++++++++++++++++++
+>>  1 file changed, 43 insertions(+)
+>>
+>> diff --git a/Documentation/admin-guide/perf-security.rst b/Documentation/admin-guide/perf-security.rst
+>> index 7da7fa459718..fe90f8952be9 100644
+>> --- a/Documentation/admin-guide/perf-security.rst
+>> +++ b/Documentation/admin-guide/perf-security.rst
+>> @@ -73,6 +73,48 @@ enable capturing of additional data required for later performance analysis of
+>>  monitored processes or a system. For example, CAP_SYSLOG capability permits
+>>  reading kernel space memory addresses from /proc/kallsyms file.
+>>  
+>> +perf_events/Perf privileged users
+>> +---------------------------------
+>> +
+>> +Mechanisms of capabilities, privileged capability-dumb files [6]_ and file system
+>> +ACLs [10]_ can be used to create a dedicated group of perf_events/Perf privileged
+>> +users who are permitted to execute performance monitoring without *scope* limits.
+>> +The following steps can be taken to create such a group of privileged Perf user
+>> +
+>> +1. Create perf_users group of privileged Perf users, assign perf_users group to
+>> +   Perf tool executable and limit *access* to the executable for other users in
+>> +   the system:
+>> +
+>> +::
+>> +
+>> +   # groupadd perf_users
+>> +   # ls -alhF
+>> +   -rwxr-xr-x  2 root root  11M Oct 19 15:12 perf
+>> +   # chgrp perf_users perf
+>> +   # ls -alhF
+>> +   -rwxr-xr-x  2 root perf_users  11M Oct 19 15:12 perf
+>> +   # chmod o-rwx perf
+>> +   # ls -alhF
+>> +   -rwxr-x---  2 root perf_users  11M Oct 19 15:12 perf
+> 
+> Since we're giving basic sysadmin info here, we should probably say
+> explicitly that this will block access to the perf binary to anybody who
+> is not in the perf_users group.
 
-AFAIK, %c requires a constant operand and if %P is used to print a
-constant, it simply drops syntax-specific prefixes and does a bare
-constant.
+We already say that above:
+	"limit *access* to the executable for other users in the system".
 
-I guess that here
+Let's have it this way then:
+	"limit access to the executable for other users in the system 
+         who are not in the perf_users group".
 
-https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#x86Operandmodifiers
+> 
+>> +2. Assign required capabilities to the Perf tool executable file and enable
+> 
+> Assign *the* required
 
-is not entirely correct as it should not say "If used for a constant"
-for %P but say "symbol or constant".
+Accepted.
 
-But before/after asm doesn't show any difference. So what gives?
+> 
+>> +   members of perf_users group with performance monitoring privileges [6]_ :
+>> +
+>> +::
+>> +
+>> +   # setcap "cap_sys_admin,cap_sys_ptrace,cap_syslog=ep" perf
+>> +   # setcap -v "cap_sys_admin,cap_sys_ptrace,cap_syslog=ep" perf
+>> +   perf: OK
+>> +   # getcap perf
+>> +   perf = cap_sys_ptrace,cap_sys_admin,cap_syslog+ep
+>> +
+>> +As a result, members of perf_users group are capable of conducting performance
+>> +monitoring by using functionality of the configured Perf tool executable that,
+>> +when executes, passes perf_events subsystem *scope* checks.
+>> +
+>> +This specific *access* control management is only available to superuser or root
+> 
+> Why the *emphasis* here?  We prefer to minimize this kind of markup
+> whenever possible.
 
-before:
-# 39 "./arch/x86/include/asm/jump_label.h" 1
-        1:
-        .byte 0xe9
-         .long .L241 - 2f       #
-        2:
-        .pushsection __jump_table,  "aw" 
-         .balign 8 
-        .long 1b - ., .L241 - .         #
-         .quad __use_tsc + 1 - .        #,
-        .popsection
+Avoided emphasis here and in the other places of this paragraph.
 
-after:
-# 39 "./arch/x86/include/asm/jump_label.h" 1
-        1:
-        .byte 0xe9
-         .long .L241 - 2f       #
-        2:
-        .pushsection __jump_table,  "aw" 
-         .balign 8 
-        .long 1b - ., .L241 - .         #
-         .quad __use_tsc+1 - .  #
-        .popsection 
+> 
+> Thanks,
+> 
+> jon
+> 
 
--- 
-Regards/Gruss,
-    Boris.
-
-Good mailing practices for 400: avoid top-posting and trim the reply.
+Thanks,
+Alexey
