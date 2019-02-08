@@ -1,37 +1,40 @@
-From: "Tobin C. Harding" <tobin@kernel.org>
-Subject: [PATCH 3/3] leaking_addresses: Expand tilde in output file name
-Date: Fri,  8 Feb 2019 09:50:26 +1100
-Message-Id: <20190207225026.11723-4-tobin@kernel.org>
-In-Reply-To: <20190207225026.11723-1-tobin@kernel.org>
-References: <20190207225026.11723-1-tobin@kernel.org>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+From: Elena Reshetova <elena.reshetova@intel.com>
+Subject: [RFC PATCH] Early version of thread stack randomization
+Date: Fri,  8 Feb 2019 14:15:48 +0200
+Message-Id: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
 To: kernel-hardening@lists.openwall.com
-Cc: "Tobin C. Harding" <tobin@kernel.org>, Tycho Andersen <tycho@tycho.ws>, linux-kernel@vger.kernel.org
+Cc: luto@kernel.org, tglx@linutronix.de, mingo@redhat.com, bp@alien8.de, peterz@infradead.org, keescook@chromium.org, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently if user passes an output file to the script via
---output-raw we do not handle expansion of tilde.
+I would really like to get an early feedback and opinions
+on this stack randomization feature since there are many
+ways on how this can be developed further, and I want to
+hear all the opinions and objections first.
 
-Use perl function glob() to expand tilde in output file name.
+This is based on my 4.20 stable branch, compiles, boots
+and can be played with.
+I also have a repo for this, if it is more convenient
+for anyone.
 
-Signed-off-by: Tobin C. Harding <tobin@kernel.org>
----
- scripts/leaking_addresses.pl | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-index ef9e5b2a1614..ce545ca3fb70 100755
---- a/scripts/leaking_addresses.pl
-+++ b/scripts/leaking_addresses.pl
-@@ -150,7 +150,7 @@ if (!(is_supported_architecture() or $opt_32bit or $page_offset_32bit)) {
- }
- 
- if ($output_raw) {
--	open my $fh, '>', $output_raw or die "$0: $output_raw: $!\n";
-+	open my $fh, '>', glob($output_raw) or die "$0: $output_raw: $!\n";
- 	select $fh;
- }
- 
+Elena Reshetova (1):
+  x86/entry/64: randomize kernel stack offset upon system call
+
+ arch/Kconfig                     | 15 +++++++++++++++
+ arch/x86/Kconfig                 |  1 +
+ arch/x86/entry/calling.h         |  8 ++++++++
+ arch/x86/entry/common.c          | 21 +++++++++++++++++++++
+ arch/x86/entry/entry_64.S        |  4 ++++
+ arch/x86/include/asm/processor.h | 15 ++++++++++++---
+ arch/x86/kernel/dumpstack.c      |  2 +-
+ arch/x86/kernel/irq_64.c         |  2 +-
+ arch/x86/kernel/process.c        |  2 +-
+ include/linux/sched.h            |  3 +++
+ include/linux/sched/task_stack.h | 18 +++++++++++++++++-
+ kernel/fork.c                    | 10 ++++++++++
+ mm/kmemleak.c                    |  2 +-
+ mm/usercopy.c                    |  2 +-
+ 14 files changed, 96 insertions(+), 9 deletions(-)
+
 -- 
-2.20.1
+2.7.4
