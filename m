@@ -1,8 +1,8 @@
-Date: Fri, 8 Feb 2019 15:26:43 +0100
+Date: Fri, 8 Feb 2019 16:15:02 +0100
 From: Peter Zijlstra <peterz@infradead.org>
 Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
  system call
-Message-ID: <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
+Message-ID: <20190208151502.GC32494@hirez.programming.kicks-ass.net>
 References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
  <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
  <20190208130544.GI32511@hirez.programming.kicks-ass.net>
@@ -18,20 +18,13 @@ List-ID: <kernel-hardening.lists.openwall.com>
 On Fri, Feb 08, 2019 at 01:20:09PM +0000, Reshetova, Elena wrote:
 > > On Fri, Feb 08, 2019 at 02:15:49PM +0200, Elena Reshetova wrote:
 
-> > 
-> > Why can't we change the stack offset periodically from an interrupt or
-> > so, and then have every later entry use that.
-> 
-> Hm... This sounds more complex conceptually - we cannot touch
-> stack when it is in use, so we have to periodically probe for a 
-> good time (when process is in userspace I guess) to change it from an interrupt?
-> IMO trampoline stack provides such a good clean place for doing it and we
-> have stackleak there doing stack cleanup, so would make sense to keep
-> these features operating together.
+> I can measure the impact with rdtsc(), I think it is *very* small. 
+> Btw, what should be the good measurement test?
+> I am not that happy with just looping on fopen-fclose, too
+> much noise. 
 
-The idea was to just change a per-cpu (possible per-task if you ctxsw
-it) offset that is used on entry to offset the stack.
+IIRC amluto had a nice micro-bench for 'pure' syscall overhead
+somewhere.
 
-So only entries after the change will have the updated offset, any
-in-progress syscalls will continue with their current offset and will be
-unaffected.
+Something like getpid/gettid in a loop should work fairly well, that's a
+really light syscall to make.
