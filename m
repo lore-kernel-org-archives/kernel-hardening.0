@@ -1,7 +1,7 @@
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Subject: [RFC PATCH v4 02/12] __wr_after_init: x86_64: memset_user()
-Date: Tue, 12 Feb 2019 01:27:39 +0200
-Message-Id: <afc5b052d43606a3d53e674fb2e36abbf984c516.1549927666.git.igor.stoppa@huawei.com>
+Subject: [RFC PATCH v4 03/12] __wr_after_init: x86_64: randomize mapping offset
+Date: Tue, 12 Feb 2019 01:27:40 +0200
+Message-Id: <378ee1e7e4c17e3bf6e49e1fb6c7cd9abd18ccfe.1549927666.git.igor.stoppa@huawei.com>
 In-Reply-To: <cover.1549927666.git.igor.stoppa@huawei.com>
 References: <cover.1549927666.git.igor.stoppa@huawei.com>
 MIME-Version: 1.0
@@ -9,16 +9,15 @@ Content-Transfer-Encoding: 8bit
 Cc: Igor Stoppa <igor.stoppa@huawei.com>, Andy Lutomirski <luto@amacapital.net>, Nadav Amit <nadav.amit@gmail.com>, Matthew Wilcox <willy@infradead.org>, Peter Zijlstra <peterz@infradead.org>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Thiago Jung Bauermann <bauerman@linux.ibm.com>, Ahmed Soliman <ahmedsoliman@mena.vt.edu>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-x86_64 specific version of memset() for user space, memset_user()
+x86_64 specialized way of defining the base address for the alternate
+mapping used by write-rare.
 
-In the __wr_after_init scenario, write-rare variables have:
-- a primary read-only mapping in kernel memory space
-- an alternate, writable mapping, implemented as user-space mapping
+Since the kernel address space spans across 64TB and it is mapped into a
+used address space of 128TB, the kernel address space can be shifted by a
+random offset that is up to 64TB and page aligned.
 
-The write rare implementation expects the arch code to privide a
-memset_user() function, which is currently missing.
-
-clear_user() is the base for memset_user()
+This is accomplished by providing arch-specific version of the function
+__init_wr_base()
 
 Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
 
@@ -36,86 +35,45 @@ CC: kernel-hardening@lists.openwall.com
 CC: linux-mm@kvack.org
 CC: linux-kernel@vger.kernel.org
 ---
- arch/x86/include/asm/uaccess_64.h |  6 ++++
- arch/x86/lib/usercopy_64.c        | 51 +++++++++++++++++++++++++++++++++
- 2 files changed, 57 insertions(+)
+ arch/x86/mm/Makefile      |  2 ++
+ arch/x86/mm/prmem.c (new) | 20 ++++++++++++++++++++
+ 2 files changed, 22 insertions(+)
 
-diff --git a/arch/x86/include/asm/uaccess_64.h b/arch/x86/include/asm/uaccess_64.h
-index a9d637bc301d..f194bfce4866 100644
---- a/arch/x86/include/asm/uaccess_64.h
-+++ b/arch/x86/include/asm/uaccess_64.h
-@@ -213,4 +213,10 @@ copy_user_handle_tail(char *to, char *from, unsigned len);
- unsigned long
- mcsafe_handle_tail(char *to, char *from, unsigned len);
- 
-+unsigned long __must_check
-+memset_user(void __user *mem, int c, unsigned long len);
+diff --git a/arch/x86/mm/Makefile b/arch/x86/mm/Makefile
+index 4b101dd6e52f..66652de1e2c7 100644
+--- a/arch/x86/mm/Makefile
++++ b/arch/x86/mm/Makefile
+@@ -53,3 +53,5 @@ obj-$(CONFIG_PAGE_TABLE_ISOLATION)		+= pti.o
+ obj-$(CONFIG_AMD_MEM_ENCRYPT)	+= mem_encrypt.o
+ obj-$(CONFIG_AMD_MEM_ENCRYPT)	+= mem_encrypt_identity.o
+ obj-$(CONFIG_AMD_MEM_ENCRYPT)	+= mem_encrypt_boot.o
 +
-+unsigned long __must_check
-+__memset_user(void __user *mem, int c, unsigned long len);
-+
- #endif /* _ASM_X86_UACCESS_64_H */
-diff --git a/arch/x86/lib/usercopy_64.c b/arch/x86/lib/usercopy_64.c
-index ee42bb0cbeb3..e61963585354 100644
---- a/arch/x86/lib/usercopy_64.c
-+++ b/arch/x86/lib/usercopy_64.c
-@@ -9,6 +9,57 @@
- #include <linux/uaccess.h>
- #include <linux/highmem.h>
- 
++obj-$(CONFIG_PRMEM)		+= prmem.o
+diff --git a/arch/x86/mm/prmem.c b/arch/x86/mm/prmem.c
+new file mode 100644
+index 000000000000..b04fc03f92fb
+--- /dev/null
++++ b/arch/x86/mm/prmem.c
+@@ -0,0 +1,20 @@
++// SPDX-License-Identifier: GPL-2.0
 +/*
-+ * Memset Userspace
++ * prmem.c: Memory Protection Library - x86_64 backend
++ *
++ * (C) Copyright 2018-2019 Huawei Technologies Co. Ltd.
++ * Author: Igor Stoppa <igor.stoppa@huawei.com>
 + */
 +
-+unsigned long __memset_user(void __user *addr, int c, unsigned long size)
++#include <linux/mm.h>
++#include <linux/mmu_context.h>
++
++unsigned long __init __init_wr_base(void)
 +{
-+	long __d0;
-+	unsigned long  pattern = 0x0101010101010101UL * (0xFFUL & c);
-+
-+	might_fault();
-+	/* no memory constraint: gcc doesn't know about this memory */
-+	stac();
-+	asm volatile(
-+		"	movq %[pattern], %%rdx\n"
-+		"	testq  %[size8],%[size8]\n"
-+		"	jz     4f\n"
-+		"0:	mov %%rdx,(%[dst])\n"
-+		"	addq   $8,%[dst]\n"
-+		"	decl %%ecx ; jnz   0b\n"
-+		"4:	movq  %[size1],%%rcx\n"
-+		"	testl %%ecx,%%ecx\n"
-+		"	jz     2f\n"
-+		"1:	movb   %%dl,(%[dst])\n"
-+		"	incq   %[dst]\n"
-+		"	decl %%ecx ; jnz  1b\n"
-+		"2:\n"
-+		".section .fixup,\"ax\"\n"
-+		"3:	lea 0(%[size1],%[size8],8),%[size8]\n"
-+		"	jmp 2b\n"
-+		".previous\n"
-+		_ASM_EXTABLE_UA(0b, 3b)
-+		_ASM_EXTABLE_UA(1b, 2b)
-+		: [size8] "=&c"(size), [dst] "=&D" (__d0)
-+		: [size1] "r" (size & 7), "[size8]" (size / 8),
-+		  "[dst]" (addr), [pattern] "r" (pattern)
-+		: "rdx");
-+
-+	clac();
-+	return size;
++	/*
++	 * Place 64TB of kernel address space within 128TB of user address
++	 * space, at a random page aligned offset.
++	 */
++	return (((unsigned long)kaslr_get_random_long("WR Poke")) &
++		PAGE_MASK) % (64 * _BITUL(40));
 +}
-+EXPORT_SYMBOL(__memset_user);
-+
-+unsigned long memset_user(void __user *to, int c, unsigned long n)
-+{
-+	if (access_ok(to, n))
-+		return __memset_user(to, c, n);
-+	return n;
-+}
-+EXPORT_SYMBOL(memset_user);
-+
-+
- /*
-  * Zero Userspace
-  */
 -- 
 2.19.1
