@@ -1,129 +1,132 @@
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Subject: RE: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
- system call
-Date: Mon, 11 Feb 2019 06:39:04 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
-References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
- <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
- <20190208130544.GI32511@hirez.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
- <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
- <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
-In-Reply-To: <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Subject: Re: [PATCH v2 1/4] perf-security: document perf_events/Perf resource
+ control
+References: <fd896eec-7833-f23a-ad2f-95005dca5fff@linux.intel.com>
+ <a108c800-d6c1-fac1-b73b-e390e579e6ef@linux.intel.com>
+ <alpine.DEB.2.21.1902102300210.8784@nanos.tec.linutronix.de>
+From: Alexey Budankov <alexey.budankov@linux.intel.com>
+Message-ID: <969b6ea5-a5bf-70b7-7031-38b07538f744@linux.intel.com>
+Date: Mon, 11 Feb 2019 15:46:02 +0300
 MIME-Version: 1.0
-To: Andy Lutomirski <luto@kernel.org>, Jann Horn <jannh@google.com>, "Perla,
- Enrico" <enrico.perla@intel.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "keescook@chromium.org" <keescook@chromium.org>, "tytso@mit.edu" <tytso@mit.edu>
+In-Reply-To: <alpine.DEB.2.21.1902102300210.8784@nanos.tec.linutronix.de>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Thomas Gleixner <tglx@linutronix.de>
+Cc: Jonatan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Jann Horn <jannh@google.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Andi Kleen <ak@linux.intel.com>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tvrtko.ursulin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiBPbiBTYXQsIEZlYiA5LCAyMDE5IGF0IDM6MTMgQU0gUmVzaGV0b3ZhLCBFbGVuYQ0KPiA8ZWxl
-bmEucmVzaGV0b3ZhQGludGVsLmNvbT4gd3JvdGU6DQo+ID4NCj4gPiA+IE9uIEZyaSwgRmViIDA4
-LCAyMDE5IGF0IDAxOjIwOjA5UE0gKzAwMDAsIFJlc2hldG92YSwgRWxlbmEgd3JvdGU6DQo+ID4g
-PiA+ID4gT24gRnJpLCBGZWIgMDgsIDIwMTkgYXQgMDI6MTU6NDlQTSArMDIwMCwgRWxlbmEgUmVz
-aGV0b3ZhIHdyb3RlOg0KPiA+ID4NCj4gPiA+ID4gPg0KPiA+ID4gPiA+IFdoeSBjYW4ndCB3ZSBj
-aGFuZ2UgdGhlIHN0YWNrIG9mZnNldCBwZXJpb2RpY2FsbHkgZnJvbSBhbiBpbnRlcnJ1cHQgb3IN
-Cj4gPiA+ID4gPiBzbywgYW5kIHRoZW4gaGF2ZSBldmVyeSBsYXRlciBlbnRyeSB1c2UgdGhhdC4N
-Cj4gPiA+ID4NCj4gPiA+ID4gSG0uLi4gVGhpcyBzb3VuZHMgbW9yZSBjb21wbGV4IGNvbmNlcHR1
-YWxseSAtIHdlIGNhbm5vdCB0b3VjaA0KPiA+ID4gPiBzdGFjayB3aGVuIGl0IGlzIGluIHVzZSwg
-c28gd2UgaGF2ZSB0byBwZXJpb2RpY2FsbHkgcHJvYmUgZm9yIGENCj4gPiA+ID4gZ29vZCB0aW1l
-ICh3aGVuIHByb2Nlc3MgaXMgaW4gdXNlcnNwYWNlIEkgZ3Vlc3MpIHRvIGNoYW5nZSBpdCBmcm9t
-IGFuDQo+IGludGVycnVwdD8NCj4gPiA+ID4gSU1PIHRyYW1wb2xpbmUgc3RhY2sgcHJvdmlkZXMg
-c3VjaCBhIGdvb2QgY2xlYW4gcGxhY2UgZm9yIGRvaW5nIGl0IGFuZCB3ZQ0KPiA+ID4gPiBoYXZl
-IHN0YWNrbGVhayB0aGVyZSBkb2luZyBzdGFjayBjbGVhbnVwLCBzbyB3b3VsZCBtYWtlIHNlbnNl
-IHRvIGtlZXANCj4gPiA+ID4gdGhlc2UgZmVhdHVyZXMgb3BlcmF0aW5nIHRvZ2V0aGVyLg0KPiA+
-ID4NCj4gPiA+IFRoZSBpZGVhIHdhcyB0byBqdXN0IGNoYW5nZSBhIHBlci1jcHUgKHBvc3NpYmxl
-IHBlci10YXNrIGlmIHlvdSBjdHhzdw0KPiA+ID4gaXQpIG9mZnNldCB0aGF0IGlzIHVzZWQgb24g
-ZW50cnkgdG8gb2Zmc2V0IHRoZSBzdGFjay4NCj4gPiA+IFNvIG9ubHkgZW50cmllcyBhZnRlciB0
-aGUgY2hhbmdlIHdpbGwgaGF2ZSB0aGUgdXBkYXRlZCBvZmZzZXQsIGFueQ0KPiA+ID4gaW4tcHJv
-Z3Jlc3Mgc3lzY2FsbHMgd2lsbCBjb250aW51ZSB3aXRoIHRoZWlyIGN1cnJlbnQgb2Zmc2V0IGFu
-ZCB3aWxsIGJlDQo+ID4gPiB1bmFmZmVjdGVkLg0KPiA+DQo+ID4gTGV0IG1lIHRyeSB0byB3cml0
-ZSB0aGlzIGludG8gc2ltcGxlIHN0ZXBzIHRvIG1ha2Ugc3VyZSBJIHVuZGVyc3RhbmQgeW91cg0K
-PiA+IGFwcHJvYWNoOg0KPiA+DQo+ID4gLSBjcmVhdGUgYSBuZXcgcGVyLXN0YWNrIHZhbHVlIChh
-bmQgcG90ZW50aWFsbHkgaXRzIHBlci1jcHUgInNoYWRvdyIpIGNhbGxlZA0KPiBzdGFja19vZmZz
-ZXQgPSAwDQo+ID4gLSBwZXJpb2RpY2FsbHkgaXNzdWUgYW4gaW50ZXJydXB0LCBhbmQgaW5zaWRl
-IGl0IHdhbGsgdGhlIHByb2Nlc3MgdHJlZSBhbmQNCj4gPiAgIHVwZGF0ZSBzdGFja19vZmZzZXQg
-cmFuZG9tbHkgZm9yIGVhY2ggcHJvY2Vzcw0KPiA+IC0gd2hlbiBhIHByb2Nlc3MgbWFrZXMgYSBu
-ZXcgc3lzY2FsbCwgaXQgc3VidHJhY3RzIHN0YWNrX29mZnNldCB2YWx1ZSBmcm9tDQo+IHRvcF9v
-Zl9zdGFjaygpDQo+ID4gIGFuZCB0aGF0IGJlY29tZXMgaXRzIG5ldyAgdG9wX29mX3N0YWNrKCkg
-Zm9yIHRoYXQgc3lzdGVtIGNhbGwuDQo+ID4NCj4gPiBTbXRoIGxpa2UgdGhpcz8NCj4gDQo+IEkn
-bSBwcm9wb3Npbmcgc29tdGhpbmcgdGhhdCBpcyBjb25jZXB0dWFsbHkgZGlmZmVyZW50LiANCg0K
-T0ssIGxvb2tzIGxpa2UgSSBmdWxseSBtaXN1bmRlcnN0YW5kIHdoYXQgeW91IG1lYW50IGluZGVl
-ZC4NClRoZSByZWFzb24gSSBkaWRu4oCZdCByZXBseSB0byB5b3VyIGVhcmxpZXIgYW5zd2VyIGlz
-IHRoYXQgSSBzdGFydGVkIHRvIGxvb2sNCmludG8gdW53aW5kZXIgY29kZSAmIGxvZ2ljIHRvIGdl
-dCBhdCBsZWFzdCBhIHNsaWdodCBjbHVlIG9uIGhvdyB0aGluZ3MNCmNhbiBiZSBkb25lIHNpbmNl
-IEkgaGF2ZW4ndCBsb29rZWQgaW4gaXQgYWxtb3N0IGF0IGFsbCBiZWZvcmUgKEkgd2Fzbid0IGNo
-YW5naW5nDQphbnl0aGluZyB3aXRoIHJlZ2FyZHMgdG8gaXQsIHNvIEkgZGlkbid0IGhhdmUgdG8p
-LiBTbywgSSBtZWFudCB0byBjb21lIGJhY2sNCndpdGggYSBtb3JlIHJpZ2lkIGFuc3dlciB0aGF0
-IGp1c3QgImxldCBtZSBzdHVkeSB0aGlzIGZpcnN0Ii4uLg0KDQogWW91IGFyZSwNCj4gY29uY2Vw
-dHVhbGx5LCBjaGFuZ2luZyB0aGUgbG9jYXRpb24gb2YgdGhlIHN0YWNrLiAgSSdtIHN1Z2dlc3Rp
-bmcgdGhhdA0KPiB5b3UgbGVhdmUgdGhlIHN0YWNrIGFsb25lIGFuZCwgaW5zdGVhZCwgcmFuZG9t
-aXplIGhvdyB5b3UgdXNlIHRoZQ0KPiBzdGFjay4gDQoNCg0KU28sIHllcywgaW5zdGVhZCBvZiBo
-YXZpbmc6DQoNCmFsbG9jYXRlZF9zdGFja190b3ANCnJhbmRvbV9vZmZzZXQNCmFjdHVhbF9zdGFj
-a190b3ANCnB0X3JlZ3MNCi4uLg0KYW5kIHNvIG9uDQoNCldlIHdpbGwgaGF2ZSBzbXRoIGxpa2U6
-DQoNCmFsbG9jYXRlZF9zdGFja190b3AgPSBhY3R1YWxfc3RhY2tfdG9wDQpwdF9yZWdzDQpyYW5k
-b21fb2Zmc2V0DQouLi4NCg0KU28sIGNvbmNlcHR1YWxseSB3ZSBoYXZlIHRoZSBzYW1lIGFtb3Vu
-dCBvZiByYW5kb21pemF0aW9uIHdpdGggDQpib3RoIGFwcHJvYWNoZXMsIGJ1dCBpdCBpcyBhcHBs
-aWVkIHZlcnkgZGlmZmVyZW50bHkuIA0KDQpTZWN1cml0eS13aXNlIEkgd2lsbCBoYXZlIHRvIHRo
-aW5rIG1vcmUgaWYgc2Vjb25kIGFwcHJvYWNoIGhhcyBhbnkgbmVnYXRpdmUNCmNvbnNlcXVlbmNl
-cywgaW4gYWRkaXRpb24gdG8gcG9zaXRpdmUgb25lcy4gQXMgYSBwYXJhbm9pZCBzZWN1cml0eSBw
-ZXJzb24sDQp5b3UgbWlnaHQgd2FudCB0byBtZXJnZSBib3RoIGFwcHJvYWNoZXMgYW5kIHJhbmRv
-bWl6ZSBib3RoIHBsYWNlcyAoYmVmb3JlIGFuZA0KYWZ0ZXIgcHRfcmVncykgd2l0aCBkaWZmZXJl
-bnQgb2Zmc2V0cywgYnV0IEkgZ3Vlc3MgdGhpcyB3b3VsZCBiZSBvdXQgb2YgcXVlc3Rpb24sIHJp
-Z2h0PyANCg0KSSBhbSBub3QgdGhhdCBleHBlcmllbmNlZCB3aXRoIGV4cGxvaXRzICwgYnV0IHdl
-IGhhdmUgYmVlbg0KdGFsa2luZyBub3cgd2l0aCBKYW5uIGFuZCBFbnJpY28gb24gdGhpcywgc28g
-SSB0aGluayBpdCBpcyB0aGUgYmVzdCB0aGV5IGNvbW1lbnQNCmRpcmVjdGx5IGhlcmUuIEkgYW0g
-anVzdCB3b25kZXJpbmcgaWYgaGF2aW5nIHB0X3JlZ3MgaW4gYSBmaXhlZCBwbGFjZSBjYW4NCmJl
-IGFuIGFkdmFudGFnZSBmb3IgYW4gYXR0YWNrZXIgdW5kZXIgYW55IHNjZW5hcmlvLi4uIA0KDQog
-SW4gcGxhaW4gQywgdGhpcyB3b3VsZCBjb25zaXN0IG9mIGFkZGluZyByb3VnaGx5IHRoaXMgc25p
-cHBldA0KPiBpbiBkb19zeXNjYWxsXzY0KCkgYW5kIHBvc3NpYmx5IG90aGVyIGVudHJ5IGZ1bmN0
-aW9uczoNCj4gDQo+IGlmIChyYW5kb21pemVfc3RhY2soKSkgew0KPiAgIHZvaWQgKmR1bW15ID0g
-YWxsb2NhKHJkcmFuZCgpICYgMHg3ZjgpOw0KPiANCj4gICAvKiBNYWtlIHN1cmUgdGhlIGNvbXBp
-bGVyIGRvZXNuJ3Qgb3B0aW1pemUgb3V0IHRoZSBhbGxvY2EuICovDQo+ICAgYXNtIHZvbGF0aWxl
-ICgiIiA6OiAiPXJtIiAoZHVtbXkpKTsNCj4gfQ0KPiANCj4gLi4uIGRvIHRoZSBhY3R1YWwgc3lz
-Y2FsbCB3b3JrIGhlcmUuDQo+IA0KPiBUaGlzIGhhcyBhIGZldyBwcm9ibGVtcywgbmFtZWx5IHRo
-YXQgdGhlIGdlbmVyYXRlZCBjb2RlIG1pZ2h0IGJlIGF3ZnVsDQo+IGFuZCB0aGF0IGFsbG9jYSBp
-cyBtb3JlIG9yIGxlc3MgYmFubmVkIGluIHRoZSBrZXJuZWwuICBJIHN1cHBvc2UNCj4gYWxsb2Nh
-IGNvdWxkIGJlIHVuYmFubmVkIGluIHRoZSBlbnRyeSBDIGNvZGUsIGJ1dCB0aGlzIGNvdWxkIGFs
-c28gYmUNCj4gZG9uZSBmYWlybHkgZWFzaWx5IGluIHRoZSBhc20gY29kZS4gIFlvdSdkIGp1c3Qg
-bmVlZCB0byB1c2UgYSByZWdpc3Rlcg0KPiB0byBzdG9yZSB3aGF0ZXZlciBpcyBuZWVkZWQgdG8g
-cHV0IFJTUCBiYWNrIGluIHRoZSBleGl0IGNvZGUuICANCg0KWWVzLCBJIHdhcyBhY3R1YWxseSB0
-aGlua2luZyBub3cgb24gZG9pbmcgaXQgaW4gYXNzZW1ibHkgc2luY2UgSSB0aGluaw0KaXQgd291
-bGQgbG9vayBzbWFsbGVyIGFuZCBtb3JlIGNsZWFyZXIgaW4gaXQuIEp1c3QgbmVlZCB0byBnZXQg
-ZGV0YWlscyBzbG93bHkNCmluIHBsYWNlLiANCg0KDQpUaGUNCj4gb2J2aW91cyB3YXkgd291bGQg
-YmUgdG8gdXNlIFJCUCwgYnV0IGl0J3MgcGxhdXNpYmxlIHRoYXQgdXNpbmcgYQ0KPiBkaWZmZXJl
-bnQgY2FsbGVlLXNhdmVkIHJlZ2lzdGVyIHdvdWxkIG1ha2UgdGhlIHVud2luZGVyIGludGVyYWN0
-aW9ucw0KPiBlYXNpZXIgdG8gZ2V0IHJpZ2h0Lg0KDQpUaGlzIGlzIHdoYXQgSSBzdGFydGVkIGxv
-b2tpbmcgaW50bywgYmVhciB3aXRoIG1lIHBsZWFzZSwgYWxsIHRoaXMgc3R1ZmYgaXMgbmV3DQpm
-b3IgbXkgZXllcywgc28gSSBhbSBzbG93Li4uDQoNCj4gDQo+IFdpdGggdGhpcyBhcHByb2FjaCwg
-eW91IGRvbid0IG1vZGlmeSBhbnkgb2YgdGhlIHRvcF9vZl9zdGFjaygpDQo+IGZ1bmN0aW9ucyBv
-ciBtYWNyb3MgYXQgYWxsIC0tIHRoZSB0b3Agb2Ygc3RhY2sgaXNuJ3QgY2hhbmdlZC4NCg0KWWVz
-LCB1bmRlcnN0b29kLiANCg0KPiANCj4gPg0KPiA+IEkgdGhpbmsgaXQgaXMgY2xvc2UgdG8gd2hh
-dCBBbmR5IGhhcyBwcm9wb3NlZA0KPiA+IGluIGhpcyByZXBseSwgYnV0IHRoZSBtYWluIGRpZmZl
-cmVuY2UgaXMgdGhhdCB5b3UgcHJvcG9zZSB0byBkbyB0aGlzIHZpYSBhbiBpbnRlcnJ1cHQuDQo+
-ID4gQW5kIHRoZSBtYWluIHJlYXNvbmluZyBmb3IgZG9pbmcgdGhpcyB2aWEgaW50ZXJydXB0IHdv
-dWxkIGJlIG5vdCB0byBhZmZlY3QNCj4gPiBzeXNjYWxsIHBlcmZvcm1hbmNlLCByaWdodD8NCj4g
-Pg0KPiA+IFRoZSBwcm9ibGVtIEkgc2VlIHdpdGggaW50ZXJydXB0IGFwcHJvYWNoIGlzIGhvdyBv
-ZnRlbiB0aGF0IHNob3VsZCBiZSBkb25lPw0KPiA+IEJlY2F1c2Ugd2UgZG9uJ3Qgd2FudCB0byBl
-bmQgdXAgd2l0aCBzaXR1YXRpb24gd2hlbiB3ZSBpc3N1ZSBpdCB0b28gb2Z0ZW4sIHNpbmNlDQo+
-ID4gaXQgaXMgbm90IGdvaW5nIHRvIGJlIHZlcnkgbGlnaHQtd2VpZ2h0IG9wZXJhdGlvbiAodXBk
-YXRlIGFsbCBwcm9jZXNzZXMpLCBhbmQgd2UNCj4gPiBkb24ndCB3YW50IGl0IHRvIGJlIHRvbyBy
-YXJlbHkgZG9uZSB0aGF0IHdlIGVuZCB1cCB3aXRoIHByb2Nlc3NlcyB0aGF0IGV4ZWN1dGUNCj4g
-bWFueQ0KPiA+IHN5c2NhbGxzIHdpdGggdGhlIHNhbWUgb2Zmc2V0LiBTbywgd2UgbWlnaHQgaGF2
-ZSBhIHNpdHVhdGlvbiB3aGVuIHNvbWUgcHJvY2Vzc2VzDQo+ID4gIHdpbGwgZXhlY3V0ZSBhIG51
-bWJlciBvZiBzeXNjYWxscyB3aXRoIHNhbWUgb2Zmc2V0IGFuZCBzb21lIHdpbGwgY2hhbmdlIHRo
-ZWlyDQo+IG9mZnNldA0KPiA+IG1vcmUgdGhhbiBvbmNlIHdpdGhvdXQgZXZlbiBtYWtpbmcgYSBz
-aW5nbGUgc3lzY2FsbC4NCj4gDQo+IEkgYmV0IHRoYXQgYW55IGF0dGFja2VyIHdvcnRoIHRoZWly
-IHNhbHQgY291bGQgbGVhcm4gdGhlIG9mZnNldCBieQ0KPiBkb2luZyBhIGNvdXBsZSBvZiBjYXJl
-ZnVsIHN5c2NhbGxzIGFuZCBsb29raW5nIGZvciBjYWNoZSBhbmQvb3IgVExCDQo+IGVmZmVjdHMu
-ICBUaGlzIG1pZ2h0IG1ha2UgdGhlIHdob2xlIGV4ZXJjaXNlIG1vc3RseSB1c2VsZXNzLiAgSXNu
-J3QNCj4gUkRSQU5EIHN1cHBvc2VkIHRvIGJlIGV4dHJlbWVseSBmYXN0LCB0aG91Z2g/DQo+IA0K
-PiBJIHVzdWFsbHkgYmVuY2htYXJrIGxpa2UgdGhpczoNCj4gDQo+ICQgLi90aW1pbmdfdGVzdF82
-NCAxME0gc3lzX2Vub3N5cw0KPiAxMDAwMDAwMCBsb29wcyBpbiAyLjUzNDg0cyA9IDI1My40OCBu
-c2VjIC8gbG9vcA0KPiANCj4gdXNpbmcgaHR0cHM6Ly9naXQua2VybmVsLm9yZy9wdWIvc2NtL2xp
-bnV4L2tlcm5lbC9naXQvbHV0by9taXNjLXRlc3RzLmdpdC8NCg0KVGhhbmsgeW91IGZvciB0aGUg
-cG9pbnRlciEgDQpXaXRoIGV2ZXJ5b25lJ3Mgc3VnZ2VzdGlvbnMgSSBhbSBub3cgaGF2aW5nIG11
-Y2ggYmV0dGVyIHNldCBvZiB0b29scyB0byBkbw0KbXkgbmV4dCBtZWFzdXJlbWVudHMuDQoNCkJl
-c3QgUmVnYXJkcywNCkVsZW5hLg0K
+
+On 11.02.2019 1:34, Thomas Gleixner wrote:
+> On Thu, 7 Feb 2019, Alexey Budankov wrote:
+> 
+> General note: Please stay in the 80 char limit for all of the text.
+
+Yes, sure. [PATCH v2 4/4] implements wrapping at 72 columns.
+
+> 
+>> +The perf_events system call API [2]_ allocates file descriptors for every configured
+>> +PMU event. Open file descriptors are a per-process accountable resource governed
+>> +by the RLIMIT_NOFILE [11]_ limit (ulimit -n), which is usually derived from the login
+>> +shell process. When configuring Perf collection for a long list of events on a
+>> +large server system, this limit can be easily hit preventing required monitoring
+>> +configuration.
+> 
+> I'd move this sentence into a different paragraph and keep those related to
+> RLIMIT_NOFILE together.
+
+Makes sense. Let's have these two paragraphs:
+
+Open file descriptors
++++++++++++++++++++++
+
+Memory allocation
++++++++++++++++++
+
+> 
+>> ... RLIMIT_NOFILE limit can be increased on per-user basis modifying
+>> +content of the limits.conf file [12]_ on some systems.
+> 
+> On some systems?
+
+Well, let's avoid this subtlety and have it like:
+
+'RLIMIT_NOFILE limit can be increased on per-user basis 
+ modifying content of the limits.conf file [12]_ .'
+
+> 
+>> Ordinarily, a Perf sampling session
+>> +(perf record) requires an amount of open perf_event file descriptors that is not
+>> +less than a number of monitored events multiplied by a number of monitored CPUs.
+> 
+>   s/a number of/the number of/
+
+Accepted.
+
+> 
+> The ordinary use case is:
+> 
+>     perf CMD pile-of-events PROCESS
+> 
+> which does not specify the monitored CPUs at all. Then the number of file
+> descriptors is NR_EVENTS * NR_ONLINE_CPUS.
+> 
+>> +An amount of memory available to user processes for capturing performance monitoring
+> 
+> The amount ...
+
+Accepted.
+
+> 
+>> +data is governed by the perf_event_mlock_kb [2]_ setting. This perf_event specific
+>> +resource setting defines overall per-cpu limits of memory allowed for mapping
+>> +by the user processes to execute performance monitoring. The setting essentially
+>> +extends the RLIMIT_MEMLOCK [11]_ limit, but only for memory regions mapped specially
+> 
+> s/specially/specifically/
+
+Accepted.
+
+> 
+>> +for capturing monitored performance events and related data.
+>> +
+>> +For example, if a machine has eight cores and perf_event_mlock_kb limit is set
+>> +to 516 KiB, then a user process is provided with 516 KiB * 8 = 4128 KiB of memory
+>> +above the RLIMIT_MEMLOCK limit (ulimit -l) for perf_event mmap buffers. In particular,
+>> +this means that, if the user wants to start two or more performance monitoring
+>> +processes, the user is required to manually distribute available 4128 KiB between the
+> 
+> distribute the available
+
+Accepted.
+
+> 
+>> +monitoring processes, for example, using the --mmap-pages Perf record mode option.
+>> +Otherwise, the first started performance monitoring process allocates all available
+>> +4128 KiB and the other processes will fail to proceed due to the lack of memory.
+>> +
+>> +RLIMIT_MEMLOCK and perf_event_mlock_kb resource costraints are ignored for
+> 
+> constraints.
+
+Accepted.
+
+> 
+>> +processes with the CAP_IPC_LOCK capability. Thus, perf_events/Perf privileged users
+> 
+> what means perf_events/Perf ?
+
+'perf_events/Perf privileged users' refers to the paragraph about privileged users.
+'perf_events/Perf' means exact combination of the kernel subsystem (perf_events) and 
+the privileged Perf tool (Perf) executable that enables certain group of users with
+performance monitoring capabilities without scope limit.
+
+> 
+>> +can be provided with memory above the constraints for perf_events/Perf performance
+>> +monitoring purpose by providing the Perf executable with CAP_IPC_LOCK capability.
+> 
+> Thanks,
+> 
+> 	tglx
+> 
+
+Thanks,
+Alexey
