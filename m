@@ -1,35 +1,50 @@
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Subject: RE: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
- system call
-Date: Mon, 11 Feb 2019 12:47:21 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612BA4BBAD89@IRSMSX102.ger.corp.intel.com>
-References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
- <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
- <CAGXu5jKctN4SQr4H-jPywEw4Te+ObVZSV0bUR5MLqu1ZrgNEBA@mail.gmail.com>
-In-Reply-To: <CAGXu5jKctN4SQr4H-jPywEw4Te+ObVZSV0bUR5MLqu1ZrgNEBA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+From: Alexey Budankov <alexey.budankov@linux.intel.com>
+Subject: [PATCH v3 0/3] admin-guide: extend perf-security with resource
+ control, data categories and privileged users
+Message-ID: <784bbe0d-56c1-bd63-1879-b7db988e40c0@linux.intel.com>
+Date: Mon, 11 Feb 2019 16:32:33 +0300
 MIME-Version: 1.0
-To: Kees Cook <keescook@chromium.org>
-Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Peter Zijlstra <peterz@infradead.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+To: Jonatan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>
+Cc: Jann Horn <jannh@google.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Andi Kleen <ak@linux.intel.com>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tvrtko.ursulin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQo+IE9uIEZyaSwgRmViIDgsIDIwMTkgYXQgNDoxNiBBTSBFbGVuYSBSZXNoZXRvdmENCj4gPGVs
-ZW5hLnJlc2hldG92YUBpbnRlbC5jb20+IHdyb3RlOg0KPiA+IC0tLSBhL21tL3VzZXJjb3B5LmMN
-Cj4gPiArKysgYi9tbS91c2VyY29weS5jDQo+ID4gQEAgLTM3LDcgKzM3LDcgQEANCj4gPiAgc3Rh
-dGljIG5vaW5saW5lIGludCBjaGVja19zdGFja19vYmplY3QoY29uc3Qgdm9pZCAqb2JqLCB1bnNp
-Z25lZCBsb25nIGxlbikNCj4gPiAgew0KPiA+ICAgICAgICAgY29uc3Qgdm9pZCAqIGNvbnN0IHN0
-YWNrID0gdGFza19zdGFja19wYWdlKGN1cnJlbnQpOw0KPiA+IC0gICAgICAgY29uc3Qgdm9pZCAq
-IGNvbnN0IHN0YWNrZW5kID0gc3RhY2sgKyBUSFJFQURfU0laRTsNCj4gPiArICAgICAgIGNvbnN0
-IHZvaWQgKiBjb25zdCBzdGFja2VuZCA9ICh2b2lkICopdGFza190b3Bfb2Zfc3RhY2soY3VycmVu
-dCk7DQo+ID4gICAgICAgICBpbnQgcmV0Ow0KPiA+DQo+ID4gICAgICAgICAvKiBPYmplY3QgaXMg
-bm90IG9uIHRoZSBzdGFjayBhdCBhbGwuICovDQo+IA0KPiBJdCBzZWVtcyBsaWtlIGhhdmluZyB0
-YXNrX3RvcF9vZl9zdGFjaygpIHdvdWxkIGJlIGEgbmljZSByZWZhY3RvcmluZw0KPiB0byBoYXZl
-IHJlZ2FyZGxlc3Mgb2YgdGhpcyBmZWF0dXJlIChhbmQgc3BsaXR0aW5nIG91dCB3b3VsZCBtYWtl
-IHRoaXMNCj4gcGF0Y2ggYSBiaXQgZWFzaWVyIHRvIHJlYWQgdG9vKS4NCg0KWWVzLCBpZiBteSBy
-ZWZhY3RvcmluZyBpbiB0aGVzZSBwbGFjZXMgbG9va3MgY29ycmVjdCwgSSBjYW4gY3JlYXRlIGEg
-c2VwYXJhdGUNCnBhdGNoIHRvIGp1c3QgdXNlIHRhc2tfdG9wX29mX3N0YWNrKCkgaW5zdGVhZCBv
-ZiBoYXJkIGNvZGluZyBzb21lIG1hdGggbGlrZQ0KYWJvdmUuIERvZXMgaXQgc291bmQgY29ycmVj
-dCB0byBwZW9wbGU/IEkgY291bGQgbm90IGZpbmQgYSByZWFzb24gd2h5IHRoZXNlDQpwbGFjZXMg
-ZG8gbm90IHVzZSB0YXNrX3RvcF9vZl9zdGFjaygpIHRvIGJlZ2luIHdpdGguLi4gDQoNCkJlc3Qg
-UmVnYXJkcywNCkVsZW5hLg0K
+
+The patch set extends the first version of perf-security.rst documentation
+file [1], [2], [3] with the following topics:
+
+1) perf_events/Perf resource limits and control management that describes
+   RLIMIT_NOFILE and perf_event_mlock_kb settings for processes conducting
+   performance monitoring;
+
+2) categories of system and performance data that can be captured by
+   perf_events/Perf with explicit designation of process sensitive data;
+
+3) possible steps to create perf_event/Perf privileged users groups for 
+   the current implementations of perf_events syscall API [4] and Perf tool;
+
+---
+Alexey Budankov (4):
+  perf-security: document perf_events/Perf resource control
+  perf-security: document collected perf_events/Perf data categories
+  perf-security: elaborate on perf_events/Perf privileged users
+  perf-security: wrap paragraphs on 72 columns
+
+ Documentation/admin-guide/perf-security.rst | 253 +++++++++++++++-----
+ 1 file changed, 193 insertions(+), 60 deletions(-)
+
+---
+Changes in v3:
+- added two more paragraphs on open fds and memory allocation
+- applied comments and corrected typos
+
+Changes in v2:
+- addressed comments for v1
+- added fourth patch implementing 72 columns paragraph width
+
+---
+[1] https://marc.info/?l=linux-kernel&m=153736008310781&w=2
+[2] https://lkml.org/lkml/2018/5/21/156
+[3] https://lkml.org/lkml/2018/11/27/604
+[4] http://man7.org/linux/man-pages/man2/perf_event_open.2.html
