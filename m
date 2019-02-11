@@ -1,132 +1,35 @@
-Subject: Re: [PATCH v2 1/4] perf-security: document perf_events/Perf resource
- control
-References: <fd896eec-7833-f23a-ad2f-95005dca5fff@linux.intel.com>
- <a108c800-d6c1-fac1-b73b-e390e579e6ef@linux.intel.com>
- <alpine.DEB.2.21.1902102300210.8784@nanos.tec.linutronix.de>
-From: Alexey Budankov <alexey.budankov@linux.intel.com>
-Message-ID: <969b6ea5-a5bf-70b7-7031-38b07538f744@linux.intel.com>
-Date: Mon, 11 Feb 2019 15:46:02 +0300
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Subject: RE: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
+ system call
+Date: Mon, 11 Feb 2019 12:47:21 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612BA4BBAD89@IRSMSX102.ger.corp.intel.com>
+References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
+ <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
+ <CAGXu5jKctN4SQr4H-jPywEw4Te+ObVZSV0bUR5MLqu1ZrgNEBA@mail.gmail.com>
+In-Reply-To: <CAGXu5jKctN4SQr4H-jPywEw4Te+ObVZSV0bUR5MLqu1ZrgNEBA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.21.1902102300210.8784@nanos.tec.linutronix.de>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Jonatan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Jann Horn <jannh@google.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Andi Kleen <ak@linux.intel.com>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tvrtko.ursulin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Kernel Hardening <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-On 11.02.2019 1:34, Thomas Gleixner wrote:
-> On Thu, 7 Feb 2019, Alexey Budankov wrote:
-> 
-> General note: Please stay in the 80 char limit for all of the text.
-
-Yes, sure. [PATCH v2 4/4] implements wrapping at 72 columns.
-
-> 
->> +The perf_events system call API [2]_ allocates file descriptors for every configured
->> +PMU event. Open file descriptors are a per-process accountable resource governed
->> +by the RLIMIT_NOFILE [11]_ limit (ulimit -n), which is usually derived from the login
->> +shell process. When configuring Perf collection for a long list of events on a
->> +large server system, this limit can be easily hit preventing required monitoring
->> +configuration.
-> 
-> I'd move this sentence into a different paragraph and keep those related to
-> RLIMIT_NOFILE together.
-
-Makes sense. Let's have these two paragraphs:
-
-Open file descriptors
-+++++++++++++++++++++
-
-Memory allocation
-+++++++++++++++++
-
-> 
->> ... RLIMIT_NOFILE limit can be increased on per-user basis modifying
->> +content of the limits.conf file [12]_ on some systems.
-> 
-> On some systems?
-
-Well, let's avoid this subtlety and have it like:
-
-'RLIMIT_NOFILE limit can be increased on per-user basis 
- modifying content of the limits.conf file [12]_ .'
-
-> 
->> Ordinarily, a Perf sampling session
->> +(perf record) requires an amount of open perf_event file descriptors that is not
->> +less than a number of monitored events multiplied by a number of monitored CPUs.
-> 
->   s/a number of/the number of/
-
-Accepted.
-
-> 
-> The ordinary use case is:
-> 
->     perf CMD pile-of-events PROCESS
-> 
-> which does not specify the monitored CPUs at all. Then the number of file
-> descriptors is NR_EVENTS * NR_ONLINE_CPUS.
-> 
->> +An amount of memory available to user processes for capturing performance monitoring
-> 
-> The amount ...
-
-Accepted.
-
-> 
->> +data is governed by the perf_event_mlock_kb [2]_ setting. This perf_event specific
->> +resource setting defines overall per-cpu limits of memory allowed for mapping
->> +by the user processes to execute performance monitoring. The setting essentially
->> +extends the RLIMIT_MEMLOCK [11]_ limit, but only for memory regions mapped specially
-> 
-> s/specially/specifically/
-
-Accepted.
-
-> 
->> +for capturing monitored performance events and related data.
->> +
->> +For example, if a machine has eight cores and perf_event_mlock_kb limit is set
->> +to 516 KiB, then a user process is provided with 516 KiB * 8 = 4128 KiB of memory
->> +above the RLIMIT_MEMLOCK limit (ulimit -l) for perf_event mmap buffers. In particular,
->> +this means that, if the user wants to start two or more performance monitoring
->> +processes, the user is required to manually distribute available 4128 KiB between the
-> 
-> distribute the available
-
-Accepted.
-
-> 
->> +monitoring processes, for example, using the --mmap-pages Perf record mode option.
->> +Otherwise, the first started performance monitoring process allocates all available
->> +4128 KiB and the other processes will fail to proceed due to the lack of memory.
->> +
->> +RLIMIT_MEMLOCK and perf_event_mlock_kb resource costraints are ignored for
-> 
-> constraints.
-
-Accepted.
-
-> 
->> +processes with the CAP_IPC_LOCK capability. Thus, perf_events/Perf privileged users
-> 
-> what means perf_events/Perf ?
-
-'perf_events/Perf privileged users' refers to the paragraph about privileged users.
-'perf_events/Perf' means exact combination of the kernel subsystem (perf_events) and 
-the privileged Perf tool (Perf) executable that enables certain group of users with
-performance monitoring capabilities without scope limit.
-
-> 
->> +can be provided with memory above the constraints for perf_events/Perf performance
->> +monitoring purpose by providing the Perf executable with CAP_IPC_LOCK capability.
-> 
-> Thanks,
-> 
-> 	tglx
-> 
-
-Thanks,
-Alexey
+DQo+IE9uIEZyaSwgRmViIDgsIDIwMTkgYXQgNDoxNiBBTSBFbGVuYSBSZXNoZXRvdmENCj4gPGVs
+ZW5hLnJlc2hldG92YUBpbnRlbC5jb20+IHdyb3RlOg0KPiA+IC0tLSBhL21tL3VzZXJjb3B5LmMN
+Cj4gPiArKysgYi9tbS91c2VyY29weS5jDQo+ID4gQEAgLTM3LDcgKzM3LDcgQEANCj4gPiAgc3Rh
+dGljIG5vaW5saW5lIGludCBjaGVja19zdGFja19vYmplY3QoY29uc3Qgdm9pZCAqb2JqLCB1bnNp
+Z25lZCBsb25nIGxlbikNCj4gPiAgew0KPiA+ICAgICAgICAgY29uc3Qgdm9pZCAqIGNvbnN0IHN0
+YWNrID0gdGFza19zdGFja19wYWdlKGN1cnJlbnQpOw0KPiA+IC0gICAgICAgY29uc3Qgdm9pZCAq
+IGNvbnN0IHN0YWNrZW5kID0gc3RhY2sgKyBUSFJFQURfU0laRTsNCj4gPiArICAgICAgIGNvbnN0
+IHZvaWQgKiBjb25zdCBzdGFja2VuZCA9ICh2b2lkICopdGFza190b3Bfb2Zfc3RhY2soY3VycmVu
+dCk7DQo+ID4gICAgICAgICBpbnQgcmV0Ow0KPiA+DQo+ID4gICAgICAgICAvKiBPYmplY3QgaXMg
+bm90IG9uIHRoZSBzdGFjayBhdCBhbGwuICovDQo+IA0KPiBJdCBzZWVtcyBsaWtlIGhhdmluZyB0
+YXNrX3RvcF9vZl9zdGFjaygpIHdvdWxkIGJlIGEgbmljZSByZWZhY3RvcmluZw0KPiB0byBoYXZl
+IHJlZ2FyZGxlc3Mgb2YgdGhpcyBmZWF0dXJlIChhbmQgc3BsaXR0aW5nIG91dCB3b3VsZCBtYWtl
+IHRoaXMNCj4gcGF0Y2ggYSBiaXQgZWFzaWVyIHRvIHJlYWQgdG9vKS4NCg0KWWVzLCBpZiBteSBy
+ZWZhY3RvcmluZyBpbiB0aGVzZSBwbGFjZXMgbG9va3MgY29ycmVjdCwgSSBjYW4gY3JlYXRlIGEg
+c2VwYXJhdGUNCnBhdGNoIHRvIGp1c3QgdXNlIHRhc2tfdG9wX29mX3N0YWNrKCkgaW5zdGVhZCBv
+ZiBoYXJkIGNvZGluZyBzb21lIG1hdGggbGlrZQ0KYWJvdmUuIERvZXMgaXQgc291bmQgY29ycmVj
+dCB0byBwZW9wbGU/IEkgY291bGQgbm90IGZpbmQgYSByZWFzb24gd2h5IHRoZXNlDQpwbGFjZXMg
+ZG8gbm90IHVzZSB0YXNrX3RvcF9vZl9zdGFjaygpIHRvIGJlZ2luIHdpdGguLi4gDQoNCkJlc3Qg
+UmVnYXJkcywNCkVsZW5hLg0K
