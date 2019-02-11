@@ -1,7 +1,7 @@
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Subject: [RFC PATCH v4 06/12] __wr_after_init: arm64: enable
-Date: Tue, 12 Feb 2019 01:27:43 +0200
-Message-Id: <3aa3892bcef3aa8613df74c911c56a3d07599630.1549927666.git.igor.stoppa@huawei.com>
+Subject: [RFC PATCH v4 07/12] __wr_after_init: Documentation: self-protection
+Date: Tue, 12 Feb 2019 01:27:44 +0200
+Message-Id: <cb930b9825a374126b62b897569cc722d3032161.1549927666.git.igor.stoppa@huawei.com>
 In-Reply-To: <cover.1549927666.git.igor.stoppa@huawei.com>
 References: <cover.1549927666.git.igor.stoppa@huawei.com>
 MIME-Version: 1.0
@@ -9,7 +9,8 @@ Content-Transfer-Encoding: 8bit
 Cc: Igor Stoppa <igor.stoppa@huawei.com>, Andy Lutomirski <luto@amacapital.net>, Nadav Amit <nadav.amit@gmail.com>, Matthew Wilcox <willy@infradead.org>, Peter Zijlstra <peterz@infradead.org>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Thiago Jung Bauermann <bauerman@linux.ibm.com>, Ahmed Soliman <ahmedsoliman@mena.vt.edu>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Set ARCH_HAS_PRMEM to Y for arm64
+Update the self-protection documentation, to mention also the use of the
+__wr_after_init attribute.
 
 Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
 
@@ -27,20 +28,33 @@ CC: kernel-hardening@lists.openwall.com
 CC: linux-mm@kvack.org
 CC: linux-kernel@vger.kernel.org
 ---
- arch/arm64/Kconfig | 1 +
- 1 file changed, 1 insertion(+)
+ Documentation/security/self-protection.rst | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index a4168d366127..7cbb2c133ed7 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -66,6 +66,7 @@ config ARM64
- 	select ARCH_WANT_COMPAT_IPC_PARSE_VERSION
- 	select ARCH_WANT_FRAME_POINTERS
- 	select ARCH_HAS_UBSAN_SANITIZE_ALL
-+	select ARCH_HAS_PRMEM
- 	select ARM_AMBA
- 	select ARM_ARCH_TIMER
- 	select ARM_GIC
+diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
+index f584fb74b4ff..df2614bc25b9 100644
+--- a/Documentation/security/self-protection.rst
++++ b/Documentation/security/self-protection.rst
+@@ -84,12 +84,14 @@ For variables that are initialized once at ``__init`` time, these can
+ be marked with the (new and under development) ``__ro_after_init``
+ attribute.
+ 
+-What remains are variables that are updated rarely (e.g. GDT). These
+-will need another infrastructure (similar to the temporary exceptions
+-made to kernel code mentioned above) that allow them to spend the rest
+-of their lifetime read-only. (For example, when being updated, only the
+-CPU thread performing the update would be given uninterruptible write
+-access to the memory.)
++Others, which are statically allocated, but still need to be updated
++rarely, can be marked with the ``__wr_after_init`` attribute.
++
++The update mechanism must avoid exposing the data to rogue alterations
++during the update. For example, only the CPU thread performing the update
++would be given uninterruptible write access to the memory.
++
++Currently there is no protection available for data allocated dynamically.
+ 
+ Segregation of kernel memory from userspace memory
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- 
 2.19.1
