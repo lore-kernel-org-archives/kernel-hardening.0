@@ -1,45 +1,146 @@
+From: Igor Stoppa <igor.stoppa@gmail.com>
+Subject: [RFC PATCH v4 00/12] hardening: statically allocated protected memory
+Date: Tue, 12 Feb 2019 01:27:37 +0200
+Message-Id: <cover.1549927666.git.igor.stoppa@huawei.com>
 MIME-Version: 1.0
-References: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
- <20190129003422.9328-14-rick.p.edgecombe@intel.com> <20190211190925.GQ19618@zn.tnic>
-In-Reply-To: <20190211190925.GQ19618@zn.tnic>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 11 Feb 2019 14:59:55 -0800
-Message-ID: <CALCETrX2AOTTZOQafZgOFxiQsFgdYHVaLonXTqTa3RUs5MPVUQ@mail.gmail.com>
-Subject: Re: [PATCH v2 13/20] Add set_alias_ function and x86 implementation
-Content-Type: text/plain; charset="UTF-8"
-To: Borislav Petkov <bp@alien8.de>
-Cc: Rick Edgecombe <rick.p.edgecombe@intel.com>, Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kristen Carlson Accardi <kristen@linux.intel.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>
+Content-Transfer-Encoding: 8bit
+Cc: Igor Stoppa <igor.stoppa@huawei.com>, Kees Cook <keescook@chromium.org>, Ahmed Soliman <ahmedsoliman@mena.vt.edu>, linux-integrity <linux-integrity@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 11, 2019 at 11:09 AM Borislav Petkov <bp@alien8.de> wrote:
->
-> On Mon, Jan 28, 2019 at 04:34:15PM -0800, Rick Edgecombe wrote:
-> > This adds two new functions set_alias_default_noflush and
->
-> s/This adds/Add/
->
-> > set_alias_nv_noflush for setting the alias mapping for the page to its
->
-> Please end function names with parentheses, below too.
->
-> > default valid permissions and to an invalid state that cannot be cached in
-> > a TLB, respectively. These functions to not flush the TLB.
->
-> s/to/do/
->
-> Also, pls put that description as comments over the functions in the
-> code. Otherwise that "nv" as part of the name doesn't really explain
-> what it does.
->
-> Actually, you could just as well call the function
->
-> set_alias_invalid_noflush()
->
-> All the other words are written in full, no need to have "nv" there.
+To: Andy Lutomirski <luto@amacapital.net>,
+To: Matthew Wilcox <willy@infradead.org>,
+To: Nadav Amit <nadav.amit@gmail.com>
+To: Peter Zijlstra <peterz@infradead.org>,
+To: Dave Hansen <dave.hansen@linux.intel.com>,
+To: Mimi Zohar <zohar@linux.vnet.ibm.com>
+To: Thiago Jung Bauermann <bauerman@linux.ibm.com>
+CC: Kees Cook <keescook@chromium.org>
+CC: Ahmed Soliman <ahmedsoliman@mena.vt.edu>
+CC: linux-integrity <linux-integrity@vger.kernel.org>
+CC: Kernel Hardening <kernel-hardening@lists.openwall.com>
+CC: Linux-MM <linux-mm@kvack.org>
+CC: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 
-Why are you calling this an "alias"?  You're modifying the direct map.
-Your patches are thinking of the direct map as an alias of the vmap
-mapping, but that does seem a bit backwards.  How about
-set_direct_map_invalid_noflush(), etc?
+Hello,
+at last I'm able to resume work on the memory protection patchset I've
+proposed some time ago. This version should address comments received so
+far and introduce support for arm64. Details below.
 
---Andy
+Patch-set implementing write-rare memory protection for statically
+allocated data.
+Its purpose is to keep write protected the kernel data which is seldom
+modified, especially if altering it can be exploited during an attack.
+
+There is no read overhead, however writing requires special operations that
+are probably unsuitable for often-changing data.
+The use is opt-in, by applying the modifier __wr_after_init to a variable
+declaration.
+
+As the name implies, the write protection kicks in only after init() is
+completed; before that moment, the data is modifiable in the usual way.
+
+Current Limitations:
+* supports only data which is allocated statically, at build time.
+* supports only x86_64 and arm64;other architectures need to provide own
+  backend
+
+Some notes:
+- in case an architecture doesn't support write rare, the behavior is to
+  fallback to regular write operations
+- before altering any memory, the destination is sanitized
+- write rare data is segregated into own set of pages
+- only x86_64 and arm64 supported, atm
+- the memset_user() assembly functions seems to work, but I'm not too sure
+  they are really ok
+- I've added a simple example: the protection of ima_policy_flags
+- the last patch is optional, but it seemed worth to do the refactoring
+- the x86_64 user space address range is double the size of the kernel
+  address space, so it's possible to randomize the beginning of the
+  mapping of the kernel address space, but on arm64 they have the same
+  size, so it's not possible to do the same
+- I'm not sure if it's correct, since it doesn't seem to be that common in
+  kernel sources, but instead of using #defines for overriding default
+  function calls, I'm using "weak" for the default functions.
+- unaddressed: Nadav proposed to do:
+	#define __wr          __attribute__((address_space(5)))
+  but I don't know exactly where to use it atm
+
+Changelog:
+
+v3->v4
+------
+
+* added function for setting memory in user space mapping for arm64
+* refactored code, to work with both supported architectures
+* reduced dependency on x86_64 specific code, to support by default also
+  arm64
+* improved memset_user() for x86_64, but I'm not sure if I understood
+  correctly what was the best way to enhance it.
+
+v2->v3
+------
+
+* both wr_memset and wr_memcpy are implemented as generic functions
+  the arch code must provide suitable helpers
+* regular initialization for ima_policy_flags: it happens during init
+* remove spurious code from the initialization function
+
+v1->v2
+------
+
+* introduce cleaner split between generic and arch code
+* add x86_64 specific memset_user()
+* replace kernel-space memset() memcopy() with userspace counterpart
+* randomize the base address for the alternate map across the entire
+  available address range from user space (128TB - 64TB)
+* convert BUG() to WARN()
+* turn verification of written data into debugging option
+* wr_rcu_assign_pointer() as special case of wr_assign()
+* example with protection of ima_policy_flags
+* documentation
+
+Igor Stoppa (12):
+  __wr_after_init: Core and default arch
+  __wr_after_init: x86_64: memset_user()
+  __wr_after_init: x86_64: randomize mapping offset
+  __wr_after_init: x86_64: enable
+  __wr_after_init: arm64: memset_user()
+  __wr_after_init: arm64: enable
+  __wr_after_init: Documentation: self-protection
+  __wr_after_init: lkdtm test
+  __wr_after_init: rodata_test: refactor tests
+  __wr_after_init: rodata_test: test __wr_after_init
+  __wr_after_init: test write rare functionality
+  IMA: turn ima_policy_flags into __wr_after_init
+
+ Documentation/security/self-protection.rst |  14 +-
+ arch/Kconfig                               |   7 +
+ arch/arm64/Kconfig                         |   1 +
+ arch/arm64/include/asm/uaccess.h           |   9 ++
+ arch/arm64/lib/Makefile                    |   2 +-
+ arch/arm64/lib/memset_user.S (new)         |  63 ++++++++
+ arch/x86/Kconfig                           |   1 +
+ arch/x86/include/asm/uaccess_64.h          |   6 +
+ arch/x86/lib/usercopy_64.c                 |  51 ++++++
+ arch/x86/mm/Makefile                       |   2 +
+ arch/x86/mm/prmem.c (new)                  |  20 +++
+ drivers/misc/lkdtm/core.c                  |   3 +
+ drivers/misc/lkdtm/lkdtm.h                 |   3 +
+ drivers/misc/lkdtm/perms.c                 |  29 ++++
+ include/linux/prmem.h (new)                |  71 ++++++++
+ mm/Kconfig.debug                           |   8 +
+ mm/Makefile                                |   2 +
+ mm/prmem.c (new)                           | 179 +++++++++++++++++++++
+ mm/rodata_test.c                           |  69 +++++---
+ mm/test_write_rare.c (new)                 | 136 ++++++++++++++++
+ security/integrity/ima/ima.h               |   3 +-
+ security/integrity/ima/ima_policy.c        |   9 +-
+ 22 files changed, 656 insertions(+), 32 deletions(-)
+ create mode 100644 arch/arm64/lib/memset_user.S
+ create mode 100644 arch/x86/mm/prmem.c
+ create mode 100644 include/linux/prmem.h
+ create mode 100644 mm/prmem.c
+ create mode 100644 mm/test_write_rare.c
+
+-- 
+2.19.1
