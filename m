@@ -1,69 +1,162 @@
-From: "Perla, Enrico" <enrico.perla@intel.com>
-Subject: RE: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
- system call
-Date: Tue, 12 Feb 2019 10:16:01 +0000
-Message-ID: <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
-References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
- <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
- <20190208130544.GI32511@hirez.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
- <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
- <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
- <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net>
-In-Reply-To: <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net>
-Content-Type: text/plain; charset="utf-8"
+Subject: Re: [RFC PATCH v7 05/16] arm64/mm: Add support for XPFO
+References: <cover.1547153058.git.khalid.aziz@oracle.com>
+ <89f03091af87f5ab27bd6cafb032236d5bd81d65.1547153058.git.khalid.aziz@oracle.com>
+ <20190123142047.GB19289@Konrads-MacBook-Pro.local>
+From: Khalid Aziz <khalid.aziz@oracle.com>
+Message-ID: <0ea68b21-ac03-e9d1-3285-14e6084e10fa@oracle.com>
+Date: Tue, 12 Feb 2019 08:45:41 -0700
 MIME-Version: 1.0
-Content-Transfer-Encoding: base64
-To: Andy Lutomirski <luto@amacapital.net>, "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Jann Horn <jannh@google.com>, Peter
- Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "keescook@chromium.org" <keescook@chromium.org>, "tytso@mit.edu" <tytso@mit.edu>
+In-Reply-To: <20190123142047.GB19289@Konrads-MacBook-Pro.local>
+Content-Type: multipart/mixed;
+ boundary="------------CE9BD2F746D7F2667607891B"
+To: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Cc: juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Tycho Andersen <tycho@docker.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-SGksDQogIEkgd2FzIHNvbWV3aGF0IGZvbmQgb2YgcmFuZG9taXppbmcgdGhlIHB0X3JlZ3MgbG9j
-YXRpb24sIGFzIHRoYXQgaXMgc29tZXRoaW5nIEkgY291bGQgcmVsYXRlIHdpdGggaW4gd3JpdGlu
-ZyBhbiBleHBsb2l0IChoYW5keSB3YXkgdG8gbG9hZCB1c2VyIGNvbnRyb2xsZWQgZGF0YSB0byBr
-ZXJuZWwgYXQgYSBrbm93biBsb2NhdGlvbikuDQoNCkJ1dCwgYXMgSmFubiBwb2ludGVkIG91dCwg
-dGhhdCBvbmx5IGhhcyB2YWx1ZSBpbiBhIHB0cmFjZS1ibG9ja2VkIHNhbmRib3gsIGJlY2F1c2Ug
-dGhlIHJhbmRvbWl6YXRpb24gb2Zmc2V0IGNhbiBiZSBsZWFrZWQgb3RoZXJ3aXNlIHRocm91Z2gg
-cHRyYWNlIFBFRUsvUE9LRSBhbmQgb2JzZXJ2aW5nIGNhY2hlIGJlaGF2aW9yLiBXb3JzZSwgaWYg
-cHRyYWNlIGlzIHByZXNlbnQsIHRoZW4gdGhlIHJhbmRvbWl6YXRpb24gaXMgbW9vdC4NCg0KU2lu
-Y2UgY29udGFpbmVycyBzZWVtcyB0byBiZSBnb2luZyB0b3dhcmRzIGxlYXZpbmcgcHRyYWNlIG9w
-ZW4sIEknbSBub3cgd29uZGVyaW5nIHdoZXRoZXIgdGhhdCBpcyBhIGdvb2QgbW90aXZhdGlvbiBh
-dCBhbGwgYW5kIHRoZSBwcm9wb3NlZCBzaW1wbGlmaWVkIHZlcnNpb24gaXMgbm90IGp1c3QgYmV0
-dGVyLiANCg0KPiANCj4gSWYgYW4gYXR0YWNrZXIgaGFzIHdyaXRlLXdoYXQtd2hlcmUgKGkuZS4g
-Y2FuIHdyaXRlIGNvbnRyb2xsZWQgdmFsdWVzIHRvDQo+IGNvbnRyb2xsZWQgYWJzb2x1dGUgdmly
-dHVhbCBhZGRyZXNzZXMpLCB0aGVuIEkgZXhwZWN0IHRoYXQgcHRfcmVncyBpcyBhIHByZXR0eQ0K
-PiBsb3cgcmFua2luZyB0YXJnZXQuICBCdXQgaXQgbWF5IGJlIGEgZmFpcmx5IGp1aWN5IHRhcmdl
-dCBpZiB5b3UgaGF2ZSBhIHN0YWNrDQo+IGJ1ZmZlciBvdmVyZmxvdyB0aGF0IGxldHMgYW4gYXR0
-YWNrZXIgd3JpdGUgdG8gYSBjb250cm9sbGVkICpvZmZzZXQqIGZyb20gdGhlDQo+IHN0YWNrLiBX
-ZSB1c2VkIHRvIGtlZXAgdGhyZWFkX2luZm8gYXQgdGhlIGJvdHRvbSBvZiB0aGUgc3RhY2ssIGFu
-ZCB0aGF0IHdhcw0KPiBhIGdyZWF0IGF0dGFjayB0YXJnZXQuDQo+IA0KPiBCdXQgdGhlcmXigJlz
-IGFuIGVhc2llciBtaXRpZ2F0aW9uOiBqdXN0IGRvIHJlZ3MtPmNzIHw9IDMgb3Igc29tZXRoaW5n
-IGxpa2UgdGhhdA0KPiBpbiB0aGUgZXhpdCBjb2RlLiBUaGVuIGFueSBzdWNoIGF0dGFjayBjYW4g
-b25seSBjb3JydXB0ICp1c2VyKiBzdGF0ZS4gIFRoZQ0KPiBwZXJmb3JtYW5jZSBpbXBhY3Qgd291
-bGQgYmUgKnZlcnkqIGxvdywgc2luY2UgdGhpcyBjb3VsZCBnbyBpbiB0aGUgYXNtDQo+IHBhdGgg
-dGhhdOKAmXMgb25seSB1c2VkIGZvciBJUkVUIHRvIHVzZXIgbW9kZS4NCg0KVGhhdCdzIGFsbCBm
-YWlyLiBXaGF0IEkgc3RydWdnbGUgd2l0aCBpcyBmaW5kaW5nIGEgcHJlY2lzZSBtb3RpdmF0aW9u
-IGZvciB0aGUgcmFuZG9taXphdGlvbiAoZ3JhbnRlZCB0aGlzIG1pZ2h0IGJlIGV4dGVuZGVkIHRv
-IG90aGVyIEtBU0xSIGNhc2VzLCBzbyBwZXJoYXBzIGlzIG5vdCBhIHN0cm9uZyBoYXJkIHN0b3Ap
-Lg0KDQpUaGUgcHJvcG9zZWQgcmFuZG9taXphdGlvbiBkb2VzIGZpdCB0aGUgb3ZlcmFsbCBLQVNM
-UiBzdG9yeSBhbmQgaXQgZG9lcyBpdHMgam9iIG9mIG5vdCBsZXR0aW5nIGFuIGF0dGFja2VyIHBy
-ZWRpY3QgZnV0dXJlIHN0YWNrIG9mZnNldCBmcm9tIG9uZSBsZWFrLCBidXQgaW4gcHJhY3RpY2Fs
-IHRlcm1zIEknbSBzdHJ1Z2dsaW5nIHRvIGZpbmQgYSBjYXNlIG9yIHR3byB3aGVyZSB0aGlzIHdv
-dWxkIGhhdmUgbWFkZSBhIGRpZmZlcmVuY2UgaW4gYW4gZXhwbG9pdC4NCg0KQ2FuIGFueSBvZiB5
-b3UgdGhpbmsgb2Ygc29tZT8NCg0KDQogICAgICAgICAgICAgICAgIC0gICBFbnJpY28NCg0KLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tCklOVEVMIENPUlBPUkFUSU9OIElUQUxJQSBTLnAuQS4gY29uIHVuaWNvIHNvY2lv
-ClNlZGU6IE1pbGFub2Zpb3JpIFBhbGF6em8gRSA0IApDQVAgMjAwOTQgQXNzYWdvIChNSSkKQ2Fw
-aXRhbGUgU29jaWFsZSBFdXJvIDEwNC4wMDAsMDAgaW50ZXJhbWVudGUgdmVyc2F0bwpQYXJ0aXRh
-IEkuVi5BLiBlIENvZGljZSBGaXNjYWxlICAwNDIzNjc2MDE1NQpSZXBlcnRvcmlvIEVjb25vbWlj
-byBBbW1pbmlzdHJhdGl2byBuLiA5OTcxMjQgClJlZ2lzdHJvIGRlbGxlIEltcHJlc2UgZGkgTWls
-YW5vIG5yLiAxODM5ODMvNTI4MS8zMwpTb2dnZXR0YSBhZCBhdHRpdml0YScgZGkgZGlyZXppb25l
-IGUgY29vcmRpbmFtZW50byBkaSAKSU5URUwgQ09SUE9SQVRJT04sIFVTQQoKVGhpcyBlLW1haWwg
-YW5kIGFueSBhdHRhY2htZW50cyBtYXkgY29udGFpbiBjb25maWRlbnRpYWwgbWF0ZXJpYWwgZm9y
-CnRoZSBzb2xlIHVzZSBvZiB0aGUgaW50ZW5kZWQgcmVjaXBpZW50KHMpLiBBbnkgcmV2aWV3IG9y
-IGRpc3RyaWJ1dGlvbgpieSBvdGhlcnMgaXMgc3RyaWN0bHkgcHJvaGliaXRlZC4gSWYgeW91IGFy
-ZSBub3QgdGhlIGludGVuZGVkCnJlY2lwaWVudCwgcGxlYXNlIGNvbnRhY3QgdGhlIHNlbmRlciBh
-bmQgZGVsZXRlIGFsbCBjb3BpZXMuCg==
+This is a multi-part message in MIME format.
+--------------CE9BD2F746D7F2667607891B
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+On 1/23/19 7:20 AM, Konrad Rzeszutek Wilk wrote:
+> On Thu, Jan 10, 2019 at 02:09:37PM -0700, Khalid Aziz wrote:
+>> From: Juerg Haefliger <juerg.haefliger@canonical.com>
+>>
+>> Enable support for eXclusive Page Frame Ownership (XPFO) for arm64 and=
+
+>> provide a hook for updating a single kernel page table entry (which is=
+
+>> required by the generic XPFO code).
+>>
+>> v6: use flush_tlb_kernel_range() instead of __flush_tlb_one()
+>>
+>> CC: linux-arm-kernel@lists.infradead.org
+>> Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
+>> Signed-off-by: Tycho Andersen <tycho@docker.com>
+>> Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
+>> ---
+>>  arch/arm64/Kconfig     |  1 +
+>>  arch/arm64/mm/Makefile |  2 ++
+>>  arch/arm64/mm/xpfo.c   | 58 +++++++++++++++++++++++++++++++++++++++++=
++
+>>  3 files changed, 61 insertions(+)
+>>  create mode 100644 arch/arm64/mm/xpfo.c
+>>
+>> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+>> index ea2ab0330e3a..f0a9c0007d23 100644
+>> --- a/arch/arm64/Kconfig
+>> +++ b/arch/arm64/Kconfig
+>> @@ -171,6 +171,7 @@ config ARM64
+>>  	select SWIOTLB
+>>  	select SYSCTL_EXCEPTION_TRACE
+>>  	select THREAD_INFO_IN_TASK
+>> +	select ARCH_SUPPORTS_XPFO
+>>  	help
+>>  	  ARM 64-bit (AArch64) Linux support.
+>> =20
+>> diff --git a/arch/arm64/mm/Makefile b/arch/arm64/mm/Makefile
+>> index 849c1df3d214..cca3808d9776 100644
+>> --- a/arch/arm64/mm/Makefile
+>> +++ b/arch/arm64/mm/Makefile
+>> @@ -12,3 +12,5 @@ KASAN_SANITIZE_physaddr.o	+=3D n
+>> =20
+>>  obj-$(CONFIG_KASAN)		+=3D kasan_init.o
+>>  KASAN_SANITIZE_kasan_init.o	:=3D n
+>> +
+>> +obj-$(CONFIG_XPFO)		+=3D xpfo.o
+>> diff --git a/arch/arm64/mm/xpfo.c b/arch/arm64/mm/xpfo.c
+>> new file mode 100644
+>> index 000000000000..678e2be848eb
+>> --- /dev/null
+>> +++ b/arch/arm64/mm/xpfo.c
+>> @@ -0,0 +1,58 @@
+>> +/*
+>> + * Copyright (C) 2017 Hewlett Packard Enterprise Development, L.P.
+>> + * Copyright (C) 2016 Brown University. All rights reserved.
+>> + *
+>> + * Authors:
+>> + *   Juerg Haefliger <juerg.haefliger@hpe.com>
+>> + *   Vasileios P. Kemerlis <vpk@cs.brown.edu>
+>> + *
+>> + * This program is free software; you can redistribute it and/or modi=
+fy it
+>> + * under the terms of the GNU General Public License version 2 as pub=
+lished by
+>> + * the Free Software Foundation.
+>> + */
+>> +
+>> +#include <linux/mm.h>
+>> +#include <linux/module.h>
+>> +
+>> +#include <asm/tlbflush.h>
+>> +
+>> +/*
+>> + * Lookup the page table entry for a virtual address and return a poi=
+nter to
+>> + * the entry. Based on x86 tree.
+>> + */
+>> +static pte_t *lookup_address(unsigned long addr)
+>=20
+> The x86 also has level. Would it make sense to include that in here?
+>=20
+
+Possibly. ARM64 does not define page levels (as in the enum for page
+levels) at this time but that can be added easily. Adding level to
+lookup_address() for arm will make it uniform with x86 but is there any
+other rationale besides that? Do you see a future use for this
+information? The only other architecture I could see that defines
+lookup_address() is sh but it uses it for trapped io only.
+
+Thanks,
+Khalid
+
+--------------CE9BD2F746D7F2667607891B
+Content-Type: application/pgp-keys;
+ name="pEpkey.asc"
+Content-Transfer-Encoding: quoted-printable
+Content-Disposition: attachment;
+ filename="pEpkey.asc"
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+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
++Wrj8Rwom6h21PXZRKnlkis7ibQfE+TxqOI7vg=3D=3D
+=3DnPqY
+-----END PGP PUBLIC KEY BLOCK-----
+
+--------------CE9BD2F746D7F2667607891B--
