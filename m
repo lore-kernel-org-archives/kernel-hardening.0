@@ -1,592 +1,273 @@
 From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH 2/2] lib: Introduce test_stackinit module
-Date: Tue, 12 Feb 2019 10:04:41 -0800
-Message-Id: <20190212180441.15340-3-keescook@chromium.org>
+Subject: [PATCH 1/2] gcc-plugins: structleak: Generalize to all variable types
+Date: Tue, 12 Feb 2019 10:04:40 -0800
+Message-Id: <20190212180441.15340-2-keescook@chromium.org>
 In-Reply-To: <20190212180441.15340-1-keescook@chromium.org>
 References: <20190212180441.15340-1-keescook@chromium.org>
 To: linux-kernel@vger.kernel.org
 Cc: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Alexander Popov <alex.popov@linux.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <labbott@redhat.com>, Jann Horn <jannh@google.com>, Alexander Potapenko <glider@google.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Adds test for stack initialization coverage. We have several build options
-that control the level of stack variable initialization. This test lets us
-visualize which options cover which cases, and provide tests for some of
-the pathological padding conditions the compiler will sometimes fail to
-initialize.
+This adjusts structleak to also work with non-struct types when they
+are passed by reference, since those variables may leak just like
+anything else. This is exposed via an improved set of Kconfig options.
+(This does mean structleak is slightly misnamed now.)
 
-All options pass the explicit initialization cases and the partial
-initializers (even with padding):
+Building with CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL should give the
+kernel complete initialization coverage of all stack variables passed
+by reference, including padding (see lib/test_stackinit.c).
 
-test_stackinit: u8_zero ok
-test_stackinit: u16_zero ok
-test_stackinit: u32_zero ok
-test_stackinit: u64_zero ok
-test_stackinit: char_array_zero ok
-test_stackinit: small_hole_zero ok
-test_stackinit: big_hole_zero ok
-test_stackinit: trailing_hole_zero ok
-test_stackinit: packed_zero ok
-test_stackinit: small_hole_dynamic_partial ok
-test_stackinit: big_hole_dynamic_partial ok
-test_stackinit: trailing_hole_dynamic_partial ok
-test_stackinit: packed_dynamic_partial ok
-test_stackinit: small_hole_static_partial ok
-test_stackinit: big_hole_static_partial ok
-test_stackinit: trailing_hole_static_partial ok
-test_stackinit: packed_static_partial ok
-test_stackinit: packed_static_all ok
-test_stackinit: packed_dynamic_all ok
-test_stackinit: packed_runtime_all ok
+Using CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE to count added initializations
+under defconfig:
 
-The results of the other tests (which contain no explicit initialization),
-change based on the build's configured compiler instrumentation.
+	..._BYREF:      5945 added initializations
+	..._BYREF_ALL: 16606 added initializations
 
-No options:
+There is virtually no change to text+data size (both have less than 0.05%
+growth):
 
-test_stackinit: small_hole_static_all FAIL (uninit bytes: 3)
-test_stackinit: big_hole_static_all FAIL (uninit bytes: 61)
-test_stackinit: trailing_hole_static_all FAIL (uninit bytes: 7)
-test_stackinit: small_hole_dynamic_all FAIL (uninit bytes: 3)
-test_stackinit: big_hole_dynamic_all FAIL (uninit bytes: 61)
-test_stackinit: trailing_hole_dynamic_all FAIL (uninit bytes: 7)
-test_stackinit: small_hole_runtime_partial FAIL (uninit bytes: 23)
-test_stackinit: big_hole_runtime_partial FAIL (uninit bytes: 127)
-test_stackinit: trailing_hole_runtime_partial FAIL (uninit bytes: 24)
-test_stackinit: packed_runtime_partial FAIL (uninit bytes: 24)
-test_stackinit: small_hole_runtime_all FAIL (uninit bytes: 3)
-test_stackinit: big_hole_runtime_all FAIL (uninit bytes: 61)
-test_stackinit: trailing_hole_runtime_all FAIL (uninit bytes: 7)
-test_stackinit: u8_none FAIL (uninit bytes: 1)
-test_stackinit: u16_none FAIL (uninit bytes: 2)
-test_stackinit: u32_none FAIL (uninit bytes: 4)
-test_stackinit: u64_none FAIL (uninit bytes: 8)
-test_stackinit: char_array_none FAIL (uninit bytes: 16)
-test_stackinit: switch_1_none FAIL (uninit bytes: 8)
-test_stackinit: switch_2_none FAIL (uninit bytes: 8)
-test_stackinit: small_hole_none FAIL (uninit bytes: 24)
-test_stackinit: big_hole_none FAIL (uninit bytes: 128)
-test_stackinit: trailing_hole_none FAIL (uninit bytes: 32)
-test_stackinit: packed_none FAIL (uninit bytes: 32)
-test_stackinit: user FAIL (uninit bytes: 32)
-test_stackinit: failures: 25
+   text    data     bss     dec     hex filename
+19502103        5051456 1917000 26470559        193e89f vmlinux.stock
+19513412        5051456 1908808 26473676        193f4cc vmlinux.byref
+19516974        5047360 1900616 26464950        193d2b6 vmlinux.byref_all
 
-CONFIG_GCC_PLUGIN_STRUCTLEAK_USER=y
-This only tries to initialize structs with __user markings, so
-only the difference from above is now the "user" test passes:
+The measured performance difference is in the noise for hackbench and
+kernel build benchmarks:
 
-test_stackinit: small_hole_static_all FAIL (uninit bytes: 3)
-test_stackinit: big_hole_static_all FAIL (uninit bytes: 61)
-test_stackinit: trailing_hole_static_all FAIL (uninit bytes: 7)
-test_stackinit: small_hole_dynamic_all FAIL (uninit bytes: 3)
-test_stackinit: big_hole_dynamic_all FAIL (uninit bytes: 61)
-test_stackinit: trailing_hole_dynamic_all FAIL (uninit bytes: 7)
-test_stackinit: small_hole_runtime_partial FAIL (uninit bytes: 23)
-test_stackinit: big_hole_runtime_partial FAIL (uninit bytes: 127)
-test_stackinit: trailing_hole_runtime_partial FAIL (uninit bytes: 24)
-test_stackinit: packed_runtime_partial FAIL (uninit bytes: 24)
-test_stackinit: small_hole_runtime_all FAIL (uninit bytes: 3)
-test_stackinit: big_hole_runtime_all FAIL (uninit bytes: 61)
-test_stackinit: trailing_hole_runtime_all FAIL (uninit bytes: 7)
-test_stackinit: u8_none FAIL (uninit bytes: 1)
-test_stackinit: u16_none FAIL (uninit bytes: 2)
-test_stackinit: u32_none FAIL (uninit bytes: 4)
-test_stackinit: u64_none FAIL (uninit bytes: 8)
-test_stackinit: char_array_none FAIL (uninit bytes: 16)
-test_stackinit: switch_1_none FAIL (uninit bytes: 8)
-test_stackinit: switch_2_none FAIL (uninit bytes: 8)
-test_stackinit: small_hole_none FAIL (uninit bytes: 24)
-test_stackinit: big_hole_none FAIL (uninit bytes: 128)
-test_stackinit: trailing_hole_none FAIL (uninit bytes: 32)
-test_stackinit: packed_none FAIL (uninit bytes: 32)
-test_stackinit: user ok
-test_stackinit: failures: 24
+Stock:
 
-CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF=y
-This initializes all structures passed by reference (scalars and strings
-remain uninitialized):
+	5x hackbench -g 20 -l 1000
+	Mean:   10.649s
+	Std Dev: 0.339
 
-test_stackinit: small_hole_static_all ok
-test_stackinit: big_hole_static_all ok
-test_stackinit: trailing_hole_static_all ok
-test_stackinit: small_hole_dynamic_all ok
-test_stackinit: big_hole_dynamic_all ok
-test_stackinit: trailing_hole_dynamic_all ok
-test_stackinit: small_hole_runtime_partial ok
-test_stackinit: big_hole_runtime_partial ok
-test_stackinit: trailing_hole_runtime_partial ok
-test_stackinit: packed_runtime_partial ok
-test_stackinit: small_hole_runtime_all ok
-test_stackinit: big_hole_runtime_all ok
-test_stackinit: trailing_hole_runtime_all ok
-test_stackinit: u8_none FAIL (uninit bytes: 1)
-test_stackinit: u16_none FAIL (uninit bytes: 2)
-test_stackinit: u32_none FAIL (uninit bytes: 4)
-test_stackinit: u64_none FAIL (uninit bytes: 8)
-test_stackinit: char_array_none FAIL (uninit bytes: 16)
-test_stackinit: switch_1_none FAIL (uninit bytes: 8)
-test_stackinit: switch_2_none FAIL (uninit bytes: 8)
-test_stackinit: small_hole_none ok
-test_stackinit: big_hole_none ok
-test_stackinit: trailing_hole_none ok
-test_stackinit: packed_none ok
-test_stackinit: user ok
-test_stackinit: failures: 7
+	5x kernel build (4-way parallel)
+	Mean:  261.98s
+	Std Dev: 1.53
 
-CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL=y
-This initializes all variables, so it matches above with the scalars
-and arrays included:
+CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF:
 
-test_stackinit: small_hole_static_all ok
-test_stackinit: big_hole_static_all ok
-test_stackinit: trailing_hole_static_all ok
-test_stackinit: small_hole_dynamic_all ok
-test_stackinit: big_hole_dynamic_all ok
-test_stackinit: trailing_hole_dynamic_all ok
-test_stackinit: small_hole_runtime_partial ok
-test_stackinit: big_hole_runtime_partial ok
-test_stackinit: trailing_hole_runtime_partial ok
-test_stackinit: packed_runtime_partial ok
-test_stackinit: small_hole_runtime_all ok
-test_stackinit: big_hole_runtime_all ok
-test_stackinit: trailing_hole_runtime_all ok
-test_stackinit: u8_none ok
-test_stackinit: u16_none ok
-test_stackinit: u32_none ok
-test_stackinit: u64_none ok
-test_stackinit: char_array_none ok
-test_stackinit: switch_1_none ok
-test_stackinit: switch_2_none ok
-test_stackinit: small_hole_none ok
-test_stackinit: big_hole_none ok
-test_stackinit: trailing_hole_none ok
-test_stackinit: packed_none ok
-test_stackinit: user ok
-test_stackinit: all tests passed!
+	5x hackbench -g 20 -l 1000
+	Mean:   10.540s
+	Std Dev: 0.233
+
+	5x kernel build (4-way parallel)
+	Mean:  260.52s
+	Std Dev: 1.31
+
+CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL:
+
+	5x hackbench -g 20 -l 1000
+	Mean:   10.320
+	Std Dev: 0.413
+
+	5x kernel build (4-way parallel)
+	Mean:  260.10
+	Std Dev: 0.86
+
+This does not yet solve missing padding initialization for structures
+on the stack that are never passed by reference (which should be a tiny
+minority). Hopefully this will be more easily addressed by upstream
+compiler fixes after clarifying the C11 padding initialization
+specification.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- lib/Kconfig.debug    |  10 ++
- lib/Makefile         |   1 +
- lib/test_stackinit.c | 378 +++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 389 insertions(+)
- create mode 100644 lib/test_stackinit.c
+ scripts/Makefile.gcc-plugins            |  2 +
+ scripts/gcc-plugins/Kconfig             | 58 ++++++++++++++++++++-----
+ scripts/gcc-plugins/structleak_plugin.c | 36 ++++++++++-----
+ 3 files changed, 74 insertions(+), 22 deletions(-)
 
-diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-index d4df5b24d75e..6f543a4bc704 100644
---- a/lib/Kconfig.debug
-+++ b/lib/Kconfig.debug
-@@ -2001,6 +2001,16 @@ config TEST_OBJAGG
+diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
+index 35042d96cf5d..5f7df50cfe7a 100644
+--- a/scripts/Makefile.gcc-plugins
++++ b/scripts/Makefile.gcc-plugins
+@@ -15,6 +15,8 @@ gcc-plugin-$(CONFIG_GCC_PLUGIN_SANCOV)		+= sancov_plugin.so
+ gcc-plugin-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)	+= structleak_plugin.so
+ gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE)	\
+ 		+= -fplugin-arg-structleak_plugin-verbose
++gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF)		\
++		+= -fplugin-arg-structleak_plugin-byref
+ gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL)	\
+ 		+= -fplugin-arg-structleak_plugin-byref-all
+ gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)		\
+diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
+index d45f7f36b859..d0cc92e48f6f 100644
+--- a/scripts/gcc-plugins/Kconfig
++++ b/scripts/gcc-plugins/Kconfig
+@@ -67,27 +67,63 @@ config GCC_PLUGIN_LATENT_ENTROPY
+ 	   * https://pax.grsecurity.net/
  
- 	  If unsure, say N.
+ config GCC_PLUGIN_STRUCTLEAK
+-	bool "Force initialization of variables containing userspace addresses"
++	bool "Zero initialize stack variables"
+ 	# Currently STRUCTLEAK inserts initialization out of live scope of
+ 	# variables from KASAN point of view. This leads to KASAN false
+ 	# positive reports. Prohibit this combination for now.
+ 	depends on !KASAN_EXTRA
+ 	help
+-	  This plugin zero-initializes any structures containing a
+-	  __user attribute. This can prevent some classes of information
+-	  exposures.
+-
+-	  This plugin was ported from grsecurity/PaX. More information at:
++	  While the kernel is built with warnings enabled for any missed
++	  stack variable initializations, this warning is silenced for
++	  anything passed by reference to another function, under the
++	  occasionally misguided assumption that the function will do
++	  the initialization. As this regularly leads to exploitable
++	  flaws, this plugin is available to identify and zero-initialize
++	  such variables, depending on the chosen level of coverage.
++
++	  This plugin was originally ported from grsecurity/PaX. More
++	  information at:
+ 	   * https://grsecurity.net/
+ 	   * https://pax.grsecurity.net/
  
-+config TEST_STACKINIT
-+	tristate "Test level of stack variable initialization"
-+	help
-+	  Test if the kernel is zero-initializing stack variables and
-+	  padding. Coverage is controlled by compiler flags,
-+	  CONFIG_GCC_PLUGIN_STRUCTLEAK, CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF,
-+	  or CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL.
+-config GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
+-	bool "Force initialize all struct type variables passed by reference"
++choice
++	prompt "Coverage"
+ 	depends on GCC_PLUGIN_STRUCTLEAK
+-	depends on !COMPILE_TEST
++	default GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
+ 	help
+-	  Zero initialize any struct type local variable that may be passed by
+-	  reference without having been initialized.
++	  This chooses the level of coverage over classes of potentially
++	  uninitialized variables. The selected class will be
++	  zero-initialized before use.
 +
-+	  If unsure, say N.
++	config GCC_PLUGIN_STRUCTLEAK_USER
++		bool "structs marked for userspace"
++		help
++		  Zero-initialize any structures on the stack containing
++		  a __user attribute. This can prevent some classes of
++		  uninitialized stack variable exploits and information
++		  exposures, like CVE-2013-2141:
++		  https://git.kernel.org/linus/b9e146d8eb3b9eca
 +
- endif # RUNTIME_TESTING_MENU
++	config GCC_PLUGIN_STRUCTLEAK_BYREF
++		bool "structs passed by reference"
++		help
++		  Zero-initialize any structures on the stack that may
++		  be passed by reference and had not already been
++		  explicitly initialized. This can prevent most classes
++		  of uninitialized stack variable exploits and information
++		  exposures, like CVE-2017-1000410:
++		  https://git.kernel.org/linus/06e7e776ca4d3654
++
++	config GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
++		bool "anything passed by reference"
++		help
++		  Zero-initialize any stack variables that may be passed
++		  by reference and had not already been explicitly
++		  initialized. This is intended to eliminate all classes
++		  of uninitialized stack variable exploits and information
++		  exposures.
++
++endchoice
  
- config MEMTEST
-diff --git a/lib/Makefile b/lib/Makefile
-index e1b59da71418..c81a66d4d00d 100644
---- a/lib/Makefile
-+++ b/lib/Makefile
-@@ -76,6 +76,7 @@ obj-$(CONFIG_TEST_KMOD) += test_kmod.o
- obj-$(CONFIG_TEST_DEBUG_VIRTUAL) += test_debug_virtual.o
- obj-$(CONFIG_TEST_MEMCAT_P) += test_memcat_p.o
- obj-$(CONFIG_TEST_OBJAGG) += test_objagg.o
-+obj-$(CONFIG_TEST_STACKINIT) += test_stackinit.o
+ config GCC_PLUGIN_STRUCTLEAK_VERBOSE
+ 	bool "Report forcefully initialized variables"
+diff --git a/scripts/gcc-plugins/structleak_plugin.c b/scripts/gcc-plugins/structleak_plugin.c
+index 10292f791e99..e89be8f5c859 100644
+--- a/scripts/gcc-plugins/structleak_plugin.c
++++ b/scripts/gcc-plugins/structleak_plugin.c
+@@ -16,6 +16,7 @@
+  * Options:
+  * -fplugin-arg-structleak_plugin-disable
+  * -fplugin-arg-structleak_plugin-verbose
++ * -fplugin-arg-structleak_plugin-byref
+  * -fplugin-arg-structleak_plugin-byref-all
+  *
+  * Usage:
+@@ -26,7 +27,6 @@
+  * $ gcc -fplugin=./structleak_plugin.so test.c -O2
+  *
+  * TODO: eliminate redundant initializers
+- *       increase type coverage
+  */
  
- ifeq ($(CONFIG_DEBUG_KOBJECT),y)
- CFLAGS_kobject.o += -DDEBUG
-diff --git a/lib/test_stackinit.c b/lib/test_stackinit.c
-new file mode 100644
-index 000000000000..13115b6f2b88
---- /dev/null
-+++ b/lib/test_stackinit.c
-@@ -0,0 +1,378 @@
-+// SPDX-Licenses: GPLv2
-+/*
-+ * Test cases for compiler-based stack variable zeroing via future
-+ * compiler flags or CONFIG_GCC_PLUGIN_STRUCTLEAK*.
-+ */
-+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+ #include "gcc-common.h"
+@@ -37,13 +37,18 @@
+ __visible int plugin_is_GPL_compatible;
+ 
+ static struct plugin_info structleak_plugin_info = {
+-	.version	= "201607271510vanilla",
++	.version	= "20190125vanilla",
+ 	.help		= "disable\tdo not activate plugin\n"
+-			   "verbose\tprint all initialized variables\n",
++			  "byref\tinit structs passed by reference\n"
++			  "byref-all\tinit anything passed by reference\n"
++			  "verbose\tprint all initialized variables\n",
+ };
+ 
++#define BYREF_STRUCT	1
++#define BYREF_ALL	2
 +
-+#include <linux/init.h>
-+#include <linux/kernel.h>
-+#include <linux/module.h>
-+#include <linux/string.h>
-+
-+/* Exfiltration buffer. */
-+#define MAX_VAR_SIZE	128
-+static char check_buf[MAX_VAR_SIZE];
-+
-+/* Character array to trigger stack protector in all functions. */
-+#define VAR_BUFFER	 32
-+
-+/* Volatile mask to convince compiler to copy memory with 0xff. */
-+static volatile u8 forced_mask = 0xff;
-+
-+/* Location and size tracking to validate fill and test are colocated. */
-+static void *fill_start, *target_start;
-+static size_t fill_size, target_size;
-+
-+static bool range_contains(char *haystack_start, size_t haystack_size,
-+			   char *needle_start, size_t needle_size)
-+{
-+	if (needle_start >= haystack_start &&
-+	    needle_start + needle_size <= haystack_start + haystack_size)
-+		return true;
-+	return false;
-+}
-+
-+#define DO_NOTHING_TYPE_SCALAR(var_type)	var_type
-+#define DO_NOTHING_TYPE_STRING(var_type)	void
-+#define DO_NOTHING_TYPE_STRUCT(var_type)	void
-+
-+#define DO_NOTHING_RETURN_SCALAR(ptr)		*(ptr)
-+#define DO_NOTHING_RETURN_STRING(ptr)		/**/
-+#define DO_NOTHING_RETURN_STRUCT(ptr)		/**/
-+
-+#define DO_NOTHING_CALL_SCALAR(var, name)			\
-+		(var) = do_nothing_ ## name(&(var))
-+#define DO_NOTHING_CALL_STRING(var, name)			\
-+		do_nothing_ ## name(var)
-+#define DO_NOTHING_CALL_STRUCT(var, name)			\
-+		do_nothing_ ## name(&(var))
-+
-+#define FETCH_ARG_SCALAR(var)		&var
-+#define FETCH_ARG_STRING(var)		var
-+#define FETCH_ARG_STRUCT(var)		&var
-+
-+#define FILL_SIZE_STRING		16
-+
-+#define INIT_CLONE_SCALAR		/**/
-+#define INIT_CLONE_STRING		[FILL_SIZE_STRING]
-+#define INIT_CLONE_STRUCT		/**/
-+
-+#define INIT_SCALAR_none		/**/
-+#define INIT_SCALAR_zero		= 0
-+
-+#define INIT_STRING_none		[FILL_SIZE_STRING] /**/
-+#define INIT_STRING_zero		[FILL_SIZE_STRING] = { }
-+
-+#define INIT_STRUCT_none		/**/
-+#define INIT_STRUCT_zero		= { }
-+#define INIT_STRUCT_static_partial	= { .two = 0, }
-+#define INIT_STRUCT_static_all		= { .one = arg->one,		\
-+					    .two = arg->two,		\
-+					    .three = arg->three,	\
-+					    .four = arg->four,		\
-+					}
-+#define INIT_STRUCT_dynamic_partial	= { .two = arg->two, }
-+#define INIT_STRUCT_dynamic_all		= { .one = arg->one,		\
-+					    .two = arg->two,		\
-+					    .three = arg->three,	\
-+					    .four = arg->four,		\
-+					}
-+#define INIT_STRUCT_runtime_partial	;				\
-+					var.two = 0
-+#define INIT_STRUCT_runtime_all		;				\
-+					var.one = 0;			\
-+					var.two = 0;			\
-+					var.three = 0;			\
-+					memset(&var.four, 0,		\
-+					       sizeof(var.four))
-+
-+/*
-+ * @name: unique string name for the test
-+ * @var_type: type to be tested for zeroing initialization
-+ * @which: is this a SCALAR, STRING, or STRUCT type?
-+ * @init_level: what kind of initialization is performed
-+ */
-+#define DEFINE_TEST_DRIVER(name, var_type, which)		\
-+/* Returns 0 on success, 1 on failure. */			\
-+static noinline __init int test_ ## name (void)			\
-+{								\
-+	var_type zero INIT_CLONE_ ## which;			\
-+	int ignored;						\
-+	u8 sum = 0, i;						\
-+								\
-+	/* Notice when a new test is larger than expected. */	\
-+	BUILD_BUG_ON(sizeof(zero) > MAX_VAR_SIZE);		\
-+								\
-+	/* Fill clone type with zero for per-field init. */	\
-+	memset(&zero, 0x00, sizeof(zero));			\
-+	/* Fill stack with 0xFF. */				\
-+	ignored = leaf_ ##name((unsigned long)&ignored, 1,	\
-+				FETCH_ARG_ ## which(zero));	\
-+	/* Clear entire check buffer for later bit tests. */	\
-+	memset(check_buf, 0x00, sizeof(check_buf));		\
-+	/* Extract stack-defined variable contents. */		\
-+	ignored = leaf_ ##name((unsigned long)&ignored, 0,	\
-+				FETCH_ARG_ ## which(zero));	\
-+								\
-+	/* Validate that compiler lined up fill and target. */	\
-+	if (!range_contains(fill_start, fill_size,		\
-+			    target_start, target_size)) {	\
-+		pr_err(#name ": stack fill missed target!?\n");	\
-+		pr_err(#name ": fill %zu wide\n", fill_size);	\
-+		pr_err(#name ": target offset by %d\n",	\
-+			(int)((ssize_t)(uintptr_t)fill_start -	\
-+			(ssize_t)(uintptr_t)target_start));	\
-+		return 1;					\
-+	}							\
-+								\
-+	/* Look for any set bits in the check region. */	\
-+	for (i = 0; i < sizeof(check_buf); i++)			\
-+		sum += (check_buf[i] != 0);			\
-+								\
-+	if (sum == 0)						\
-+		pr_info(#name " ok\n");				\
-+	else							\
-+		pr_warn(#name " FAIL (uninit bytes: %d)\n",	\
-+			sum);					\
-+								\
-+	return (sum != 0);					\
-+}
-+#define DEFINE_TEST(name, var_type, which, init_level)		\
-+/* no-op to force compiler into ignoring "uninitialized" vars */\
-+static noinline __init DO_NOTHING_TYPE_ ## which(var_type)	\
-+do_nothing_ ## name(var_type *ptr)				\
-+{								\
-+	/* Will always be true, but compiler doesn't know. */	\
-+	if ((unsigned long)ptr > 0x2)				\
-+		return DO_NOTHING_RETURN_ ## which(ptr);	\
-+	else							\
-+		return DO_NOTHING_RETURN_ ## which(ptr + 1);	\
-+}								\
-+static noinline __init int leaf_ ## name(unsigned long sp,	\
-+					 bool fill,		\
-+					 var_type *arg)		\
-+{								\
-+	char buf[VAR_BUFFER];					\
-+	var_type var INIT_ ## which ## _ ## init_level;		\
-+								\
-+	target_start = &var;					\
-+	target_size = sizeof(var);				\
-+	/*							\
-+	 * Keep this buffer around to make sure we've got a	\
-+	 * stack frame of SOME kind...				\
-+	 */							\
-+	memset(buf, (char)(sp && 0xff), sizeof(buf));		\
-+	/* Fill variable with 0xFF. */				\
-+	if (fill) {						\
-+		fill_start = &var;				\
-+		fill_size = sizeof(var);			\
-+		memset(fill_start,				\
-+		       (char)((sp && 0xff) | forced_mask),	\
-+		       fill_size);				\
-+	}							\
-+								\
-+	/* Silence "never initialized" warnings. */		\
-+	DO_NOTHING_CALL_ ## which(var, name);			\
-+								\
-+	/* Exfiltrate "var". */					\
-+	memcpy(check_buf, target_start, target_size);		\
-+								\
-+	return (int)buf[0] | (int)buf[sizeof(buf) - 1];		\
-+}								\
-+DEFINE_TEST_DRIVER(name, var_type, which)
-+
-+/* Structure with no padding. */
-+struct test_packed {
-+	unsigned long one;
-+	unsigned long two;
-+	unsigned long three;
-+	unsigned long four;
-+};
-+
-+/* Simple structure with padding likely to be covered by compiler. */
-+struct test_small_hole {
-+	size_t one;
-+	char two;
-+	/* 3 byte padding hole here. */
-+	int three;
-+	unsigned long four;
-+};
-+
-+/* Try to trigger unhandled padding in a structure. */
-+struct test_aligned {
-+	u32 internal1;
-+	u64 internal2;
-+} __aligned(64);
-+
-+struct test_big_hole {
-+	u8 one;
-+	u8 two;
-+	u8 three;
-+	/* 61 byte padding hole here. */
-+	struct test_aligned four;
-+} __aligned(64);
-+
-+struct test_trailing_hole {
-+	char *one;
-+	char *two;
-+	char *three;
-+	char four;
-+	/* "sizeof(unsigned long) - 1" byte padding hole here. */
-+};
-+
-+/* Test if STRUCTLEAK is clearing structs with __user fields. */
-+struct test_user {
-+	u8 one;
-+	unsigned long two;
-+	char __user *three;
-+	unsigned long four;
-+};
-+
-+#define DEFINE_SCALAR_TEST(name, init)				\
-+		DEFINE_TEST(name ## _ ## init, name, SCALAR, init)
-+
-+#define DEFINE_SCALAR_TESTS(init)				\
-+		DEFINE_SCALAR_TEST(u8, init);			\
-+		DEFINE_SCALAR_TEST(u16, init);			\
-+		DEFINE_SCALAR_TEST(u32, init);			\
-+		DEFINE_SCALAR_TEST(u64, init);			\
-+		DEFINE_TEST(char_array_ ## init, unsigned char, STRING, init)
-+
-+#define DEFINE_STRUCT_TEST(name, init)				\
-+		DEFINE_TEST(name ## _ ## init,			\
-+			    struct test_ ## name, STRUCT, init)
-+
-+#define DEFINE_STRUCT_TESTS(init)				\
-+		DEFINE_STRUCT_TEST(small_hole, init);		\
-+		DEFINE_STRUCT_TEST(big_hole, init);		\
-+		DEFINE_STRUCT_TEST(trailing_hole, init);	\
-+		DEFINE_STRUCT_TEST(packed, init)
-+
-+/* These should be fully initialized all the time! */
-+DEFINE_SCALAR_TESTS(zero);
-+DEFINE_STRUCT_TESTS(zero);
-+/* Static initialization: padding may be left uninitialized. */
-+DEFINE_STRUCT_TESTS(static_partial);
-+DEFINE_STRUCT_TESTS(static_all);
-+/* Dynamic initialization: padding may be left uninitialized. */
-+DEFINE_STRUCT_TESTS(dynamic_partial);
-+DEFINE_STRUCT_TESTS(dynamic_all);
-+/* Runtime initialization: padding may be left uninitialized. */
-+DEFINE_STRUCT_TESTS(runtime_partial);
-+DEFINE_STRUCT_TESTS(runtime_all);
-+/* No initialization without compiler instrumentation. */
-+DEFINE_SCALAR_TESTS(none);
-+DEFINE_STRUCT_TESTS(none);
-+DEFINE_TEST(user, struct test_user, STRUCT, none);
-+
-+/*
-+ * Check two uses through a variable declaration outside either path,
-+ * which was noticed as a special case in porting earlier stack init
-+ * compiler logic.
-+ */
-+static int noinline __leaf_switch_none(int path, bool fill)
-+{
-+	switch (path) {
-+		uint64_t var;
-+
-+	case 1:
-+		target_start = &var;
-+		target_size = sizeof(var);
-+		if (fill) {
-+			fill_start = &var;
-+			fill_size = sizeof(var);
-+
-+			memset(fill_start, forced_mask | 0x55, fill_size);
-+		}
-+		memcpy(check_buf, target_start, target_size);
-+		break;
-+	case 2:
-+		target_start = &var;
-+		target_size = sizeof(var);
-+		if (fill) {
-+			fill_start = &var;
-+			fill_size = sizeof(var);
-+
-+			memset(fill_start, forced_mask | 0xaa, fill_size);
-+		}
-+		memcpy(check_buf, target_start, target_size);
-+		break;
-+	default:
-+		var = 5;
-+		return var & forced_mask;
-+	}
-+	return 0;
-+}
-+
-+static noinline __init int leaf_switch_1_none(unsigned long sp, bool fill,
-+					      uint64_t *arg)
-+{
-+	return __leaf_switch_none(1, fill);
-+}
-+
-+static noinline __init int leaf_switch_2_none(unsigned long sp, bool fill,
-+					      uint64_t *arg)
-+{
-+	return __leaf_switch_none(2, fill);
-+}
-+
-+DEFINE_TEST_DRIVER(switch_1_none, uint64_t, SCALAR);
-+DEFINE_TEST_DRIVER(switch_2_none, uint64_t, SCALAR);
-+
-+static int __init test_stackinit_init(void)
-+{
-+	unsigned int failures = 0;
-+
-+#define test_scalars(init)	do {				\
-+		failures += test_u8_ ## init ();		\
-+		failures += test_u16_ ## init ();		\
-+		failures += test_u32_ ## init ();		\
-+		failures += test_u64_ ## init ();		\
-+		failures += test_char_array_ ## init ();	\
-+	} while (0)
-+
-+#define test_structs(init)	do {				\
-+		failures += test_small_hole_ ## init ();	\
-+		failures += test_big_hole_ ## init ();		\
-+		failures += test_trailing_hole_ ## init ();	\
-+		failures += test_packed_ ## init ();		\
-+	} while (0)
-+
-+	/* These are explicitly initialized and should always pass. */
-+	test_scalars(zero);
-+	test_structs(zero);
-+	/* Padding here appears to be accidentally always initialized? */
-+	test_structs(dynamic_partial);
-+	/* Padding initialization depends on compiler behaviors. */
-+	test_structs(static_partial);
-+	test_structs(static_all);
-+	test_structs(dynamic_all);
-+	test_structs(runtime_partial);
-+	test_structs(runtime_all);
-+
-+	/* STRUCTLEAK_BYREF_ALL should cover everything from here down. */
-+	test_scalars(none);
-+	failures += test_switch_1_none();
-+	failures += test_switch_2_none();
-+
-+	/* STRUCTLEAK_BYREF should cover from here down. */
-+	test_structs(none);
-+
-+	/* STRUCTLEAK will only cover this. */
-+	failures += test_user();
-+
-+	if (failures == 0)
-+		pr_info("all tests passed!\n");
+ static bool verbose;
+-static bool byref_all;
++static int byref;
+ 
+ static tree handle_user_attribute(tree *node, tree name, tree args, int flags, bool *no_add_attrs)
+ {
+@@ -118,6 +123,7 @@ static void initialize(tree var)
+ 	gimple_stmt_iterator gsi;
+ 	tree initializer;
+ 	gimple init_stmt;
++	tree type;
+ 
+ 	/* this is the original entry bb before the forced split */
+ 	bb = single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun));
+@@ -148,11 +154,15 @@ static void initialize(tree var)
+ 	if (verbose)
+ 		inform(DECL_SOURCE_LOCATION(var),
+ 			"%s variable will be forcibly initialized",
+-			(byref_all && TREE_ADDRESSABLE(var)) ? "byref"
+-							     : "userspace");
++			(byref && TREE_ADDRESSABLE(var)) ? "byref"
++							 : "userspace");
+ 
+ 	/* build the initializer expression */
+-	initializer = build_constructor(TREE_TYPE(var), NULL);
++	type = TREE_TYPE(var);
++	if (AGGREGATE_TYPE_P(type))
++		initializer = build_constructor(type, NULL);
 +	else
-+		pr_err("failures: %u\n", failures);
-+
-+	return failures ? -EINVAL : 0;
-+}
-+module_init(test_stackinit_init);
-+
-+static void __exit test_stackinit_exit(void)
-+{ }
-+module_exit(test_stackinit_exit);
-+
-+MODULE_LICENSE("GPL");
++		initializer = fold_convert(type, integer_zero_node);
+ 
+ 	/* build the initializer stmt */
+ 	init_stmt = gimple_build_assign(var, initializer);
+@@ -184,13 +194,13 @@ static unsigned int structleak_execute(void)
+ 		if (!auto_var_in_fn_p(var, current_function_decl))
+ 			continue;
+ 
+-		/* only care about structure types */
+-		if (TREE_CODE(type) != RECORD_TYPE && TREE_CODE(type) != UNION_TYPE)
++		/* only care about structure types unless byref-all */
++		if (byref != BYREF_ALL && TREE_CODE(type) != RECORD_TYPE && TREE_CODE(type) != UNION_TYPE)
+ 			continue;
+ 
+ 		/* if the type is of interest, examine the variable */
+ 		if (TYPE_USERSPACE(type) ||
+-		    (byref_all && TREE_ADDRESSABLE(var)))
++		    (byref && TREE_ADDRESSABLE(var)))
+ 			initialize(var);
+ 	}
+ 
+@@ -232,8 +242,12 @@ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gc
+ 			verbose = true;
+ 			continue;
+ 		}
++		if (!strcmp(argv[i].key, "byref")) {
++			byref = BYREF_STRUCT;
++			continue;
++		}
+ 		if (!strcmp(argv[i].key, "byref-all")) {
+-			byref_all = true;
++			byref = BYREF_ALL;
+ 			continue;
+ 		}
+ 		error(G_("unknown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
 -- 
 2.17.1
