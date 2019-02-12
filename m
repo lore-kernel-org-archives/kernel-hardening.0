@@ -1,24 +1,24 @@
 Subject: Re: [RFC PATCH v7 05/16] arm64/mm: Add support for XPFO
 References: <cover.1547153058.git.khalid.aziz@oracle.com>
  <89f03091af87f5ab27bd6cafb032236d5bd81d65.1547153058.git.khalid.aziz@oracle.com>
- <20190123142047.GB19289@Konrads-MacBook-Pro.local>
+ <20190123142410.GC19289@Konrads-MacBook-Pro.local>
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <0ea68b21-ac03-e9d1-3285-14e6084e10fa@oracle.com>
-Date: Tue, 12 Feb 2019 08:45:41 -0700
+Message-ID: <4dfba458-1bf6-25ff-df4c-b96a1221cd95@oracle.com>
+Date: Tue, 12 Feb 2019 08:52:51 -0700
 MIME-Version: 1.0
-In-Reply-To: <20190123142047.GB19289@Konrads-MacBook-Pro.local>
+In-Reply-To: <20190123142410.GC19289@Konrads-MacBook-Pro.local>
 Content-Type: multipart/mixed;
- boundary="------------CE9BD2F746D7F2667607891B"
+ boundary="------------E60D98927E4F6B22818A3147"
 To: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
 Cc: juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Tycho Andersen <tycho@docker.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 This is a multi-part message in MIME format.
---------------CE9BD2F746D7F2667607891B
+--------------E60D98927E4F6B22818A3147
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
-On 1/23/19 7:20 AM, Konrad Rzeszutek Wilk wrote:
+On 1/23/19 7:24 AM, Konrad Rzeszutek Wilk wrote:
 > On Thu, Jan 10, 2019 at 02:09:37PM -0700, Khalid Aziz wrote:
 >> From: Juerg Haefliger <juerg.haefliger@canonical.com>
 >>
@@ -96,21 +96,67 @@ nter to
 >> + * the entry. Based on x86 tree.
 >> + */
 >> +static pte_t *lookup_address(unsigned long addr)
+>> +{
+>> +	pgd_t *pgd;
+>> +	pud_t *pud;
+>> +	pmd_t *pmd;
+>> +
+>> +	pgd =3D pgd_offset_k(addr);
+>> +	if (pgd_none(*pgd))
+>> +		return NULL;
+>> +
+>> +	pud =3D pud_offset(pgd, addr);
+>> +	if (pud_none(*pud))
+>> +		return NULL;
+>> +
+>> +	pmd =3D pmd_offset(pud, addr);
+>> +	if (pmd_none(*pmd))
+>> +		return NULL;
+>> +
+>> +	return pte_offset_kernel(pmd, addr);
+>> +}
+>> +
+>> +/* Update a single kernel page table entry */
+>> +inline void set_kpte(void *kaddr, struct page *page, pgprot_t prot)
+>> +{
+>> +	pte_t *pte =3D lookup_address((unsigned long)kaddr);
+>> +
+>> +	set_pte(pte, pfn_pte(page_to_pfn(page), prot));
 >=20
-> The x86 also has level. Would it make sense to include that in here?
->=20
+> Thought on the other hand.. what if the page is PMD? Do you really want=
 
-Possibly. ARM64 does not define page levels (as in the enum for page
-levels) at this time but that can be added easily. Adding level to
-lookup_address() for arm will make it uniform with x86 but is there any
-other rationale besides that? Do you see a future use for this
-information? The only other architecture I could see that defines
-lookup_address() is sh but it uses it for trapped io only.
+> to do this?
+>=20
+> What if 'pte' is NULL?
+>> +}
+>> +
+>> +inline void xpfo_flush_kernel_tlb(struct page *page, int order)
+>> +{
+>> +	unsigned long kaddr =3D (unsigned long)page_address(page);
+>> +	unsigned long size =3D PAGE_SIZE;
+>> +
+>> +	flush_tlb_kernel_range(kaddr, kaddr + (1 << order) * size);
+>=20
+> Ditto here. You are assuming it is PTE, but it may be PMD or such.
+> Or worts - the lookup_address could be NULL.
+>=20
+>> +}
+>> --=20
+>> 2.17.1
+>>
+
+Hi Konrad,
+
+This makes sense. x86 version of set_kpte() checks pte for NULL and also
+checks if the page is PMD. Now what you said about adding level to
+lookup_address() for arm makes more sense.
+
+Can someone with knowledge of arm64 mmu make recommendations here?
 
 Thanks,
 Khalid
 
---------------CE9BD2F746D7F2667607891B
+--------------E60D98927E4F6B22818A3147
 Content-Type: application/pgp-keys;
  name="pEpkey.asc"
 Content-Transfer-Encoding: quoted-printable
@@ -159,4 +205,4 @@ E6wtYze9oihz8mbNHY3jtUGajTsv/F7Jl42rmnbeukwfN2H/4gTDV1sB/D8z5G1+
 =3DnPqY
 -----END PGP PUBLIC KEY BLOCK-----
 
---------------CE9BD2F746D7F2667607891B--
+--------------E60D98927E4F6B22818A3147--
