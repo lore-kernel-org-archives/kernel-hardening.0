@@ -1,273 +1,144 @@
-From: Kees Cook <keescook@chromium.org>
-Subject: [PATCH 1/2] gcc-plugins: structleak: Generalize to all variable types
-Date: Tue, 12 Feb 2019 10:04:40 -0800
-Message-Id: <20190212180441.15340-2-keescook@chromium.org>
-In-Reply-To: <20190212180441.15340-1-keescook@chromium.org>
-References: <20190212180441.15340-1-keescook@chromium.org>
-To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Alexander Popov <alex.popov@linux.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <labbott@redhat.com>, Jann Horn <jannh@google.com>, Alexander Potapenko <glider@google.com>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain;
+	charset=us-ascii
+Mime-Version: 1.0 (Mac OS X Mail 12.2 \(3445.102.3\))
+Subject: Re: [PATCH v2 05/20] x86/alternative: initializing temporary mm for
+ patching
+From: Nadav Amit <nadav.amit@gmail.com>
+In-Reply-To: <CALCETrXE0n4BrkX2ZLDJjdLqD-N_WwSZHt=S2KKBrTV6Zt5Teg@mail.gmail.com>
+Date: Tue, 12 Feb 2019 10:23:35 -0800
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <570C76C6-DDD2-49C4-8DAF-E8CFEAA21081@gmail.com>
+References: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
+ <20190129003422.9328-6-rick.p.edgecombe@intel.com>
+ <162C6C29-CD81-46FE-9A54-6ED05A93A9CB@gmail.com>
+ <00649AE8-69C0-4CD2-A916-B8C8F0F5DAC3@amacapital.net>
+ <6FE10C97-25FF-4E99-A96A-465CBACA935B@gmail.com>
+ <CALCETrVaBaorbOA8QE=Pk=C+PfXZAz0-aX_3O8Y=nJV4QKELbw@mail.gmail.com>
+ <3EA322C6-5645-4900-AEC6-97FC05716F75@gmail.com>
+ <CALCETrXE0n4BrkX2ZLDJjdLqD-N_WwSZHt=S2KKBrTV6Zt5Teg@mail.gmail.com>
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Rick Edgecombe <rick.p.edgecombe@intel.com>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, Damian Tometzki <linux_dti@icloud.com>, linux-integrity <linux-integrity@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Kristen Carlson Accardi <kristen@linux.intel.com>, "Dock, Deneen T" <deneen.t.dock@intel.com>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This adjusts structleak to also work with non-struct types when they
-are passed by reference, since those variables may leak just like
-anything else. This is exposed via an improved set of Kconfig options.
-(This does mean structleak is slightly misnamed now.)
+> On Feb 11, 2019, at 2:47 PM, Andy Lutomirski <luto@kernel.org> wrote:
+>=20
+> On Mon, Feb 11, 2019 at 11:18 AM Nadav Amit <nadav.amit@gmail.com> =
+wrote:
+>>=20
+>> +
+>> +       /*
+>> +        * If breakpoints are enabled, disable them while the =
+temporary mm is
+>> +        * used - they do not belong and might cause wrong signals or =
+crashes.
+>> +        */
+>=20
+> Maybe clarify this?  Add some mention that the specific problem is
+> that user code could set a watchpoint on an address that is also used
+> in the temporary mm.
+>=20
+> Arguably we should not disable *kernel* breakpoints a la perf, but
+> that seems like quite a minor issue, at least as long as
+> use_temporary_mm() doesn't get wider use.  But a comment that this
+> also disables perf breakpoints and that this could be undesirable
+> might be in order as well.
 
-Building with CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL should give the
-kernel complete initialization coverage of all stack variables passed
-by reference, including padding (see lib/test_stackinit.c).
+I think that in the future there may also be security benefits for =
+disabling
+breakpoints when you are in a sensitive code-block, for instance when =
+you
+poke text, to prevent the control flow from being hijacked (by =
+exploiting a
+bug in the debug exception handler). Some additional steps need to be =
+taken
+for that to be beneficial so I leave it out of the comment for now.
 
-Using CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE to count added initializations
-under defconfig:
+Anyhow, how about this:
 
-	..._BYREF:      5945 added initializations
-	..._BYREF_ALL: 16606 added initializations
+-- >8 --
 
-There is virtually no change to text+data size (both have less than 0.05%
-growth):
+From: Nadav Amit <namit@vmware.com>
+Date: Mon, 11 Feb 2019 03:07:08 -0800
+Subject: [PATCH] x86/mm: Save DRs when loading a temporary mm
 
-   text    data     bss     dec     hex filename
-19502103        5051456 1917000 26470559        193e89f vmlinux.stock
-19513412        5051456 1908808 26473676        193f4cc vmlinux.byref
-19516974        5047360 1900616 26464950        193d2b6 vmlinux.byref_all
+Prevent user watchpoints from mistakenly firing while the temporary mm
+is being used. As the addresses that of the temporary mm might overlap
+those of the user-process, this is necessary to prevent wrong signals
+or worse things from happening.
 
-The measured performance difference is in the noise for hackbench and
-kernel build benchmarks:
-
-Stock:
-
-	5x hackbench -g 20 -l 1000
-	Mean:   10.649s
-	Std Dev: 0.339
-
-	5x kernel build (4-way parallel)
-	Mean:  261.98s
-	Std Dev: 1.53
-
-CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF:
-
-	5x hackbench -g 20 -l 1000
-	Mean:   10.540s
-	Std Dev: 0.233
-
-	5x kernel build (4-way parallel)
-	Mean:  260.52s
-	Std Dev: 1.31
-
-CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL:
-
-	5x hackbench -g 20 -l 1000
-	Mean:   10.320
-	Std Dev: 0.413
-
-	5x kernel build (4-way parallel)
-	Mean:  260.10
-	Std Dev: 0.86
-
-This does not yet solve missing padding initialization for structures
-on the stack that are never passed by reference (which should be a tiny
-minority). Hopefully this will be more easily addressed by upstream
-compiler fixes after clarifying the C11 padding initialization
-specification.
-
-Signed-off-by: Kees Cook <keescook@chromium.org>
+Cc: Andy Lutomirski <luto@kernel.org>
+Signed-off-by: Nadav Amit <namit@vmware.com>
 ---
- scripts/Makefile.gcc-plugins            |  2 +
- scripts/gcc-plugins/Kconfig             | 58 ++++++++++++++++++++-----
- scripts/gcc-plugins/structleak_plugin.c | 36 ++++++++++-----
- 3 files changed, 74 insertions(+), 22 deletions(-)
+ arch/x86/include/asm/mmu_context.h | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
 
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index 35042d96cf5d..5f7df50cfe7a 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -15,6 +15,8 @@ gcc-plugin-$(CONFIG_GCC_PLUGIN_SANCOV)		+= sancov_plugin.so
- gcc-plugin-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)	+= structleak_plugin.so
- gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE)	\
- 		+= -fplugin-arg-structleak_plugin-verbose
-+gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF)		\
-+		+= -fplugin-arg-structleak_plugin-byref
- gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL)	\
- 		+= -fplugin-arg-structleak_plugin-byref-all
- gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)		\
-diff --git a/scripts/gcc-plugins/Kconfig b/scripts/gcc-plugins/Kconfig
-index d45f7f36b859..d0cc92e48f6f 100644
---- a/scripts/gcc-plugins/Kconfig
-+++ b/scripts/gcc-plugins/Kconfig
-@@ -67,27 +67,63 @@ config GCC_PLUGIN_LATENT_ENTROPY
- 	   * https://pax.grsecurity.net/
- 
- config GCC_PLUGIN_STRUCTLEAK
--	bool "Force initialization of variables containing userspace addresses"
-+	bool "Zero initialize stack variables"
- 	# Currently STRUCTLEAK inserts initialization out of live scope of
- 	# variables from KASAN point of view. This leads to KASAN false
- 	# positive reports. Prohibit this combination for now.
- 	depends on !KASAN_EXTRA
- 	help
--	  This plugin zero-initializes any structures containing a
--	  __user attribute. This can prevent some classes of information
--	  exposures.
--
--	  This plugin was ported from grsecurity/PaX. More information at:
-+	  While the kernel is built with warnings enabled for any missed
-+	  stack variable initializations, this warning is silenced for
-+	  anything passed by reference to another function, under the
-+	  occasionally misguided assumption that the function will do
-+	  the initialization. As this regularly leads to exploitable
-+	  flaws, this plugin is available to identify and zero-initialize
-+	  such variables, depending on the chosen level of coverage.
+diff --git a/arch/x86/include/asm/mmu_context.h =
+b/arch/x86/include/asm/mmu_context.h
+index d684b954f3c0..0d6c72ece750 100644
+--- a/arch/x86/include/asm/mmu_context.h
++++ b/arch/x86/include/asm/mmu_context.h
+@@ -13,6 +13,7 @@
+ #include <asm/tlbflush.h>
+ #include <asm/paravirt.h>
+ #include <asm/mpx.h>
++#include <asm/debugreg.h>
+=20
+ extern atomic64_t last_mm_ctx_id;
+=20
+@@ -358,6 +359,7 @@ static inline unsigned long =
+__get_current_cr3_fast(void)
+=20
+ typedef struct {
+ 	struct mm_struct *prev;
++	unsigned short bp_enabled : 1;
+ } temp_mm_state_t;
+=20
+ /*
+@@ -380,6 +382,22 @@ static inline temp_mm_state_t =
+use_temporary_mm(struct mm_struct *mm)
+ 	lockdep_assert_irqs_disabled();
+ 	state.prev =3D this_cpu_read(cpu_tlbstate.loaded_mm);
+ 	switch_mm_irqs_off(NULL, mm, current);
 +
-+	  This plugin was originally ported from grsecurity/PaX. More
-+	  information at:
- 	   * https://grsecurity.net/
- 	   * https://pax.grsecurity.net/
- 
--config GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
--	bool "Force initialize all struct type variables passed by reference"
-+choice
-+	prompt "Coverage"
- 	depends on GCC_PLUGIN_STRUCTLEAK
--	depends on !COMPILE_TEST
-+	default GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
- 	help
--	  Zero initialize any struct type local variable that may be passed by
--	  reference without having been initialized.
-+	  This chooses the level of coverage over classes of potentially
-+	  uninitialized variables. The selected class will be
-+	  zero-initialized before use.
++	/*
++	 * If breakpoints are enabled, disable them while the temporary =
+mm is
++	 * used. Userspace might set up watchpoints on addresses that =
+are used
++	 * in the temporary mm, which would lead to wrong signals being =
+sent or
++	 * crashes.
++	 *
++	 * Note that breakpoints are not disabled selectively, which =
+also causes
++	 * kernel breakpoints (e.g., perf's) to be disabled. This might =
+be
++	 * undesirable, but still seems reasonable as the code that runs =
+in the
++	 * temporary mm should be short.
++	 */
++	state.bp_enabled =3D hw_breakpoint_active();
++	if (state.bp_enabled)
++		hw_breakpoint_disable();
 +
-+	config GCC_PLUGIN_STRUCTLEAK_USER
-+		bool "structs marked for userspace"
-+		help
-+		  Zero-initialize any structures on the stack containing
-+		  a __user attribute. This can prevent some classes of
-+		  uninitialized stack variable exploits and information
-+		  exposures, like CVE-2013-2141:
-+		  https://git.kernel.org/linus/b9e146d8eb3b9eca
-+
-+	config GCC_PLUGIN_STRUCTLEAK_BYREF
-+		bool "structs passed by reference"
-+		help
-+		  Zero-initialize any structures on the stack that may
-+		  be passed by reference and had not already been
-+		  explicitly initialized. This can prevent most classes
-+		  of uninitialized stack variable exploits and information
-+		  exposures, like CVE-2017-1000410:
-+		  https://git.kernel.org/linus/06e7e776ca4d3654
-+
-+	config GCC_PLUGIN_STRUCTLEAK_BYREF_ALL
-+		bool "anything passed by reference"
-+		help
-+		  Zero-initialize any stack variables that may be passed
-+		  by reference and had not already been explicitly
-+		  initialized. This is intended to eliminate all classes
-+		  of uninitialized stack variable exploits and information
-+		  exposures.
-+
-+endchoice
- 
- config GCC_PLUGIN_STRUCTLEAK_VERBOSE
- 	bool "Report forcefully initialized variables"
-diff --git a/scripts/gcc-plugins/structleak_plugin.c b/scripts/gcc-plugins/structleak_plugin.c
-index 10292f791e99..e89be8f5c859 100644
---- a/scripts/gcc-plugins/structleak_plugin.c
-+++ b/scripts/gcc-plugins/structleak_plugin.c
-@@ -16,6 +16,7 @@
-  * Options:
-  * -fplugin-arg-structleak_plugin-disable
-  * -fplugin-arg-structleak_plugin-verbose
-+ * -fplugin-arg-structleak_plugin-byref
-  * -fplugin-arg-structleak_plugin-byref-all
-  *
-  * Usage:
-@@ -26,7 +27,6 @@
-  * $ gcc -fplugin=./structleak_plugin.so test.c -O2
-  *
-  * TODO: eliminate redundant initializers
-- *       increase type coverage
-  */
- 
- #include "gcc-common.h"
-@@ -37,13 +37,18 @@
- __visible int plugin_is_GPL_compatible;
- 
- static struct plugin_info structleak_plugin_info = {
--	.version	= "201607271510vanilla",
-+	.version	= "20190125vanilla",
- 	.help		= "disable\tdo not activate plugin\n"
--			   "verbose\tprint all initialized variables\n",
-+			  "byref\tinit structs passed by reference\n"
-+			  "byref-all\tinit anything passed by reference\n"
-+			  "verbose\tprint all initialized variables\n",
- };
- 
-+#define BYREF_STRUCT	1
-+#define BYREF_ALL	2
-+
- static bool verbose;
--static bool byref_all;
-+static int byref;
- 
- static tree handle_user_attribute(tree *node, tree name, tree args, int flags, bool *no_add_attrs)
+ 	return state;
+ }
+=20
+@@ -387,6 +405,13 @@ static inline void =
+unuse_temporary_mm(temp_mm_state_t prev)
  {
-@@ -118,6 +123,7 @@ static void initialize(tree var)
- 	gimple_stmt_iterator gsi;
- 	tree initializer;
- 	gimple init_stmt;
-+	tree type;
- 
- 	/* this is the original entry bb before the forced split */
- 	bb = single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun));
-@@ -148,11 +154,15 @@ static void initialize(tree var)
- 	if (verbose)
- 		inform(DECL_SOURCE_LOCATION(var),
- 			"%s variable will be forcibly initialized",
--			(byref_all && TREE_ADDRESSABLE(var)) ? "byref"
--							     : "userspace");
-+			(byref && TREE_ADDRESSABLE(var)) ? "byref"
-+							 : "userspace");
- 
- 	/* build the initializer expression */
--	initializer = build_constructor(TREE_TYPE(var), NULL);
-+	type = TREE_TYPE(var);
-+	if (AGGREGATE_TYPE_P(type))
-+		initializer = build_constructor(type, NULL);
-+	else
-+		initializer = fold_convert(type, integer_zero_node);
- 
- 	/* build the initializer stmt */
- 	init_stmt = gimple_build_assign(var, initializer);
-@@ -184,13 +194,13 @@ static unsigned int structleak_execute(void)
- 		if (!auto_var_in_fn_p(var, current_function_decl))
- 			continue;
- 
--		/* only care about structure types */
--		if (TREE_CODE(type) != RECORD_TYPE && TREE_CODE(type) != UNION_TYPE)
-+		/* only care about structure types unless byref-all */
-+		if (byref != BYREF_ALL && TREE_CODE(type) != RECORD_TYPE && TREE_CODE(type) != UNION_TYPE)
- 			continue;
- 
- 		/* if the type is of interest, examine the variable */
- 		if (TYPE_USERSPACE(type) ||
--		    (byref_all && TREE_ADDRESSABLE(var)))
-+		    (byref && TREE_ADDRESSABLE(var)))
- 			initialize(var);
- 	}
- 
-@@ -232,8 +242,12 @@ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gc
- 			verbose = true;
- 			continue;
- 		}
-+		if (!strcmp(argv[i].key, "byref")) {
-+			byref = BYREF_STRUCT;
-+			continue;
-+		}
- 		if (!strcmp(argv[i].key, "byref-all")) {
--			byref_all = true;
-+			byref = BYREF_ALL;
- 			continue;
- 		}
- 		error(G_("unknown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
--- 
-2.17.1
+ 	lockdep_assert_irqs_disabled();
+ 	switch_mm_irqs_off(NULL, prev.prev, current);
++
++	/*
++	 * Restore the breakpoints if they were disabled before the =
+temporary mm
++	 * was loaded.
++	 */
++	if (prev.bp_enabled)
++		hw_breakpoint_restore();
+ }
+=20
+ #endif /* _ASM_X86_MMU_CONTEXT_H */
+--=20
+2.17.1=
