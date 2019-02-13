@@ -1,7 +1,7 @@
 From: Igor Stoppa <igor.stoppa@gmail.com>
-Subject: [RFC PATCH v5 05/12] __wr_after_init: x86_64: enable
-Date: Thu, 14 Feb 2019 00:41:34 +0200
-Message-Id: <c5838cd211a1648f44e0c2f48ab5bcbc1387cb8c.1550097697.git.igor.stoppa@huawei.com>
+Subject: [RFC PATCH v5 06/12] __wr_after_init: arm64: enable
+Date: Thu, 14 Feb 2019 00:41:35 +0200
+Message-Id: <c81c8be7d5bfcc234dce969b8be7efad3d18d1b8.1550097697.git.igor.stoppa@huawei.com>
 In-Reply-To: <cover.1550097697.git.igor.stoppa@huawei.com>
 References: <cover.1550097697.git.igor.stoppa@huawei.com>
 MIME-Version: 1.0
@@ -9,7 +9,7 @@ Content-Transfer-Encoding: 8bit
 Cc: Igor Stoppa <igor.stoppa@huawei.com>, Andy Lutomirski <luto@amacapital.net>, Nadav Amit <nadav.amit@gmail.com>, Matthew Wilcox <willy@infradead.org>, Peter Zijlstra <peterz@infradead.org>, Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@linux.intel.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Thiago Jung Bauermann <bauerman@linux.ibm.com>, Ahmed Soliman <ahmedsoliman@mena.vt.edu>, linux-integrity@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Set ARCH_HAS_PRMEM to Y for x86_64
+Set ARCH_HAS_PRMEM to Y for arm64
 
 Signed-off-by: Igor Stoppa <igor.stoppa@huawei.com>
 
@@ -27,20 +27,20 @@ CC: kernel-hardening@lists.openwall.com
 CC: linux-mm@kvack.org
 CC: linux-kernel@vger.kernel.org
 ---
- arch/x86/Kconfig | 1 +
+ arch/arm64/Kconfig | 1 +
  1 file changed, 1 insertion(+)
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 68261430fe6e..7392b53b12c2 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -32,6 +32,7 @@ config X86_64
- 	select SWIOTLB
- 	select X86_DEV_DMA_OPS
- 	select ARCH_HAS_SYSCALL_WRAPPER
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index a4168d366127..7cbb2c133ed7 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -66,6 +66,7 @@ config ARM64
+ 	select ARCH_WANT_COMPAT_IPC_PARSE_VERSION
+ 	select ARCH_WANT_FRAME_POINTERS
+ 	select ARCH_HAS_UBSAN_SANITIZE_ALL
 +	select ARCH_HAS_PRMEM
- 
- #
- # Arch settings
+ 	select ARM_AMBA
+ 	select ARM_ARCH_TIMER
+ 	select ARM_GIC
 -- 
 2.19.1
