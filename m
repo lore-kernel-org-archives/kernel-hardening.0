@@ -1,43 +1,53 @@
+From: David Laight <David.Laight@ACULAB.COM>
+Subject: RE: [PATCH 3/3] leaking_addresses: Expand tilde in output file name
+Date: Wed, 13 Feb 2019 15:56:47 +0000
+Message-ID: <6aed136f16e8451dbcfa97f90c04438f@AcuMS.aculab.com>
+References: <20190207225026.11723-1-tobin@kernel.org>
+ <20190207225026.11723-4-tobin@kernel.org>
+In-Reply-To: <20190207225026.11723-4-tobin@kernel.org>
 MIME-Version: 1.0
-References: <cover.1549927666.git.igor.stoppa@huawei.com> <CAGXu5j+n3ky2dOe4F+VyneQsM4VJbGPUw+DO55NkxxPhKzKHag@mail.gmail.com>
- <25bf3c63-c54c-f7ea-bec1-996a2c05d997@gmail.com> <CAGXu5jLqmYRUVLb7-jPsN4onO5UNH+D6qOF=9TOiVjJa-=DnZQ@mail.gmail.com>
- <CAH2bzCRZ5xYOT0R8piqZx4mSGj1_8fNG=Ce4UU8i6F7mYD9m9Q@mail.gmail.com>
- <CAGXu5jLRJZuWjnwEuK=7AMeCrj-eioVGksPL9dE9pbzHM=+Rmg@mail.gmail.com> <29cd9541-9af2-fc1c-c264-f4cb9c29349a@gmail.com>
-In-Reply-To: <29cd9541-9af2-fc1c-c264-f4cb9c29349a@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 12 Feb 2019 14:39:02 -0800
-Message-ID: <CAGXu5jJyWb7aTJpDfBPD3GqMmNaJVT0pajdrPV93xnLoOa=0Vw@mail.gmail.com>
-Subject: Re: [RFC PATCH v4 00/12] hardening: statically allocated protected memory
-Content-Type: text/plain; charset="UTF-8"
-To: Igor Stoppa <igor.stoppa@gmail.com>
-Cc: Igor Stoppa <igor.stoppa@huawei.com>, Ahmed Soliman <ahmedsoliman@mena.vt.edu>, linux-integrity <linux-integrity@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux-MM <linux-mm@kvack.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+To: "'Tobin C. Harding'" <tobin@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Tycho Andersen <tycho@tycho.ws>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 11, 2019 at 11:09 PM Igor Stoppa <igor.stoppa@gmail.com> wrote:
-> wr_assign() does just that.
->
-> However, reading again your previous mails, I realize that I might have
-> misinterpreted what you were suggesting.
->
-> If the advice is to have also a default memset_user() which relies on
-> put_user(), but do not activate the feature by default for every
-> architecture, I definitely agree that it would be good to have it.
-> I just didn't think about it before.
+From: Tobin C. Harding
+> Sent: 07 February 2019 22:50
+>=20
+> Currently if user passes an output file to the script via
+> --output-raw we do not handle expansion of tilde.
+>=20
+> Use perl function glob() to expand tilde in output file name.
 
-Yeah, I just mean you could have an arch-agnostic memset_user() implementation.
+What happens if glob() returns multiple files?
+I'm guessing that it can...
 
-> But I now realize that most likely you were just suggesting to have
-> full, albeit inefficient default support and then let various archs
-> review/enhance it. I can certainly do this.
+=09David
 
-Right.
+> Signed-off-by: Tobin C. Harding <tobin@kernel.org>
+> ---
+>  scripts/leaking_addresses.pl | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+>=20
+> diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
+> index ef9e5b2a1614..ce545ca3fb70 100755
+> --- a/scripts/leaking_addresses.pl
+> +++ b/scripts/leaking_addresses.pl
+> @@ -150,7 +150,7 @@ if (!(is_supported_architecture() or $opt_32bit or $p=
+age_offset_32bit)) {
+>  }
+>=20
+>  if ($output_raw) {
+> -=09open my $fh, '>', $output_raw or die "$0: $output_raw: $!\n";
+> +=09open my $fh, '>', glob($output_raw) or die "$0: $output_raw: $!\n";
+>  =09select $fh;
+>  }
+>=20
+> --
+> 2.20.1
 
-> Regarding testing I have a question: how much can/should I lean on qemu?
-> In most cases the MMU might not need to be fully emulated, so I wonder
-> how well qemu-based testing can ensure that real life scenarios will work.
-
-I think qemu lets you know if it works (kvm is using the real MMU),
-and baremetal will give you more stable performance numbers.
-
--- 
-Kees Cook
+-
+Registered Address Lakeside, Bramley Road, Mount Farm, Milton Keynes, MK1 1=
+PT, UK
+Registration No: 1397386 (Wales)
