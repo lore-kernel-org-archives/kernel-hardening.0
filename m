@@ -1,104 +1,160 @@
-Subject: Re: [RFC PATCH v8 04/14] swiotlb: Map the buffer if it was unmapped
- by XPFO
+Subject: Re: [RFC PATCH v8 03/14] mm, x86: Add support for eXclusive Page
+ Frame Ownership (XPFO)
 References: <cover.1550088114.git.khalid.aziz@oracle.com>
- <b595ffb3231dfef3c6b6c896a8e1cba0e838978c.1550088114.git.khalid.aziz@oracle.com>
- <20190214074747.GA10666@lst.de>
+ <8275de2a7e6b72d19b1cd2ec5d71a42c2c7dd6c5.1550088114.git.khalid.aziz@oracle.com>
+ <20190214105631.GJ32494@hirez.programming.kicks-ass.net>
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <3c75c46c-2a5a-cd75-83d4-f77d96d22f7d@oracle.com>
-Date: Thu, 14 Feb 2019 09:56:24 -0700
+Message-ID: <e157e274-1bdf-0987-bfe9-21c9301578ab@oracle.com>
+Date: Thu, 14 Feb 2019 10:13:54 -0700
 MIME-Version: 1.0
-In-Reply-To: <20190214074747.GA10666@lst.de>
+In-Reply-To: <20190214105631.GJ32494@hirez.programming.kicks-ass.net>
 Content-Type: multipart/mixed;
- boundary="------------4E8F634EF1C80F4AD05A0F4B"
-To: Christoph Hellwig <hch@lst.de>
-Cc: juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, akpm@linux-foundation.org, mhocko@suse.com, catalin.marinas@arm.com, will.deacon@arm.com, jmorris@namei.org, konrad.wilk@oracle.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, oao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, peterz@infradead.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Tycho Andersen <tycho@docker.com>
+ boundary="------------5EB9E0AEF4F8AD7EE9E16E15"
+To: Peter Zijlstra <peterz@infradead.org>, juergh@gmail.com, jsteckli@amazon.de
+Cc: tycho@tycho.ws, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, akpm@linux-foundation.org, mhocko@suse.com, catalin.marinas@arm.com, will.deacon@arm.com, jmorris@namei.org, konrad.wilk@oracle.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, oao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Tycho Andersen <tycho@docker.com>, Marco Benatto <marco.antonio.780@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 This is a multi-part message in MIME format.
---------------4E8F634EF1C80F4AD05A0F4B
+--------------5EB9E0AEF4F8AD7EE9E16E15
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
-On 2/14/19 12:47 AM, Christoph Hellwig wrote:
-> On Wed, Feb 13, 2019 at 05:01:27PM -0700, Khalid Aziz wrote:
->> +++ b/kernel/dma/swiotlb.c
->> @@ -396,8 +396,9 @@ static void swiotlb_bounce(phys_addr_t orig_addr, =
-phys_addr_t tlb_addr,
+On 2/14/19 3:56 AM, Peter Zijlstra wrote:
+> On Wed, Feb 13, 2019 at 05:01:26PM -0700, Khalid Aziz wrote:
+>>  static inline void *kmap_atomic(struct page *page)
 >>  {
->>  	unsigned long pfn =3D PFN_DOWN(orig_addr);
->>  	unsigned char *vaddr =3D phys_to_virt(tlb_addr);
->> +	struct page *page =3D pfn_to_page(pfn);
+>> +	void *kaddr;
+>> +
+>>  	preempt_disable();
+>>  	pagefault_disable();
+>> +	kaddr =3D page_address(page);
+>> +	xpfo_kmap(kaddr, page);
+>> +	return kaddr;
+>>  }
+>>  #define kmap_atomic_prot(page, prot)	kmap_atomic(page)
 >> =20
->> -	if (PageHighMem(pfn_to_page(pfn))) {
->> +	if (PageHighMem(page) || xpfo_page_is_unmapped(page)) {
+>>  static inline void __kunmap_atomic(void *addr)
+>>  {
+>> +	xpfo_kunmap(addr, virt_to_page(addr));
+>>  	pagefault_enable();
+>>  	preempt_enable();
+>>  }
 >=20
-> I think this just wants a page_unmapped or similar helper instead of
-> needing the xpfo_page_is_unmapped check.  We actually have quite
-> a few similar construct in the arch dma mapping code for architectures
-> that require cache flushing.
-
-As I am not the original author of this patch, I am interpreting the
-original intent. I think xpfo_page_is_unmapped() was added to account
-for kernel build without CONFIG_XPFO. xpfo_page_is_unmapped() has an
-alternate definition to return false if CONFIG_XPFO is not defined.
-xpfo_is_unmapped() is cleaned up further in patch 11 ("xpfo, mm: remove
-dependency on CONFIG_PAGE_EXTENSION") to a one-liner "return
-PageXpfoUnmapped(page);". xpfo_is_unmapped() can be eliminated entirely
-by adding an else clause to the following code added by that patch:
-
---- a/include/linux/page-flags.h
-+++ b/include/linux/page-flags.h
-@@ -398,6 +402,15 @@ TESTCLEARFLAG(Young, young, PF_ANY)
- PAGEFLAG(Idle, idle, PF_ANY)
- #endif
-
-+#ifdef CONFIG_XPFO
-+PAGEFLAG(XpfoUser, xpfo_user, PF_ANY)
-+TESTCLEARFLAG(XpfoUser, xpfo_user, PF_ANY)
-+TESTSETFLAG(XpfoUser, xpfo_user, PF_ANY)
-+PAGEFLAG(XpfoUnmapped, xpfo_unmapped, PF_ANY)
-+TESTCLEARFLAG(XpfoUnmapped, xpfo_unmapped, PF_ANY)
-+TESTSETFLAG(XpfoUnmapped, xpfo_unmapped, PF_ANY)
-+#endif
-+
- /*
-  * On an anonymous page mapped into a user virtual memory area,
-  * page->mapping points to its anon_vma, not to a struct address_space;
-
-
-Adding the following #else to above conditional:
-
-#else
-TESTPAGEFLAG_FALSE(XpfoUser)
-TESTPAGEFLAG_FALSE(XpfoUnmapped)
-
-should allow us to eliminate xpfo_is_unmapped(). Right?
-
-Thanks,
-Khalid
-
+> How is that supposed to work; IIRC kmap_atomic was supposed to be
+> IRQ-safe.
 >=20
->> +bool xpfo_page_is_unmapped(struct page *page)
+
+Ah, the spin_lock in in xpfo_kmap() can be problematic in interrupt
+context. I will see if I can fix that.
+
+Juerg, you wrote the original code and understand what you were trying
+to do here. If you have ideas on how to tackle this, I would very much
+appreciate it.
+
+>> +/* Per-page XPFO house-keeping data */
+>> +struct xpfo {
+>> +	unsigned long flags;	/* Page state */
+>> +	bool inited;		/* Map counter and lock initialized */
+>=20
+> What's sizeof(_Bool) ? Why can't you use a bit in that flags word?
+>=20
+>> +	atomic_t mapcount;	/* Counter for balancing map/unmap requests */
+>> +	spinlock_t maplock;	/* Lock to serialize map/unmap requests */
+>> +};
+>=20
+> Without that bool, the structure would be 16 bytes on 64bit, which seem=
+s
+> like a good number.
+>=20
+
+Patch 11 ("xpfo, mm: remove dependency on CONFIG_PAGE_EXTENSION") cleans
+all this up. If the original authors of these two patches, Juerg
+Haefliger and Julian Stecklina, are ok with it, I would like to combine
+the two patches in one.
+
+>> +void xpfo_kmap(void *kaddr, struct page *page)
 >> +{
 >> +	struct xpfo *xpfo;
 >> +
 >> +	if (!static_branch_unlikely(&xpfo_inited))
->> +		return false;
+>> +		return;
 >> +
 >> +	xpfo =3D lookup_xpfo(page);
->> +	if (unlikely(!xpfo) && !xpfo->inited)
->> +		return false;
 >> +
->> +	return test_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags);
+>> +	/*
+>> +	 * The page was allocated before page_ext was initialized (which mea=
+ns
+>> +	 * it's a kernel page) or it's allocated to the kernel, so nothing t=
+o
+>> +	 * do.
+>> +	 */
+>> +	if (!xpfo || unlikely(!xpfo->inited) ||
+>> +	    !test_bit(XPFO_PAGE_USER, &xpfo->flags))
+>> +		return;
+>> +
+>> +	spin_lock(&xpfo->maplock);
+>> +
+>> +	/*
+>> +	 * The page was previously allocated to user space, so map it back
+>> +	 * into the kernel. No TLB flush required.
+>> +	 */
+>> +	if ((atomic_inc_return(&xpfo->mapcount) =3D=3D 1) &&
+>> +	    test_and_clear_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags))
+>> +		set_kpte(kaddr, page, PAGE_KERNEL);
+>> +
+>> +	spin_unlock(&xpfo->maplock);
 >> +}
->> +EXPORT_SYMBOL(xpfo_page_is_unmapped);
+>> +EXPORT_SYMBOL(xpfo_kmap);
+>> +
+>> +void xpfo_kunmap(void *kaddr, struct page *page)
+>> +{
+>> +	struct xpfo *xpfo;
+>> +
+>> +	if (!static_branch_unlikely(&xpfo_inited))
+>> +		return;
+>> +
+>> +	xpfo =3D lookup_xpfo(page);
+>> +
+>> +	/*
+>> +	 * The page was allocated before page_ext was initialized (which mea=
+ns
+>> +	 * it's a kernel page) or it's allocated to the kernel, so nothing t=
+o
+>> +	 * do.
+>> +	 */
+>> +	if (!xpfo || unlikely(!xpfo->inited) ||
+>> +	    !test_bit(XPFO_PAGE_USER, &xpfo->flags))
+>> +		return;
+>> +
+>> +	spin_lock(&xpfo->maplock);
+>> +
+>> +	/*
+>> +	 * The page is to be allocated back to user space, so unmap it from =
+the
+>> +	 * kernel, flush the TLB and tag it as a user page.
+>> +	 */
+>> +	if (atomic_dec_return(&xpfo->mapcount) =3D=3D 0) {
+>> +		WARN(test_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags),
+>> +		     "xpfo: unmapping already unmapped page\n");
+>> +		set_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags);
+>> +		set_kpte(kaddr, page, __pgprot(0));
+>> +		xpfo_flush_kernel_tlb(page, 0);
+>> +	}
+>> +
+>> +	spin_unlock(&xpfo->maplock);
+>> +}
+>> +EXPORT_SYMBOL(xpfo_kunmap);
 >=20
-> And at least for swiotlb there is no need to export this helper,
-> as it is always built in.
+> And these here things are most definitely not IRQ-safe.
 >=20
 
+Got it. I will work on this.
 
---------------4E8F634EF1C80F4AD05A0F4B
+Thanks,
+Khalid
+
+
+--------------5EB9E0AEF4F8AD7EE9E16E15
 Content-Type: application/pgp-keys;
  name="pEpkey.asc"
 Content-Transfer-Encoding: quoted-printable
@@ -147,4 +203,4 @@ E6wtYze9oihz8mbNHY3jtUGajTsv/F7Jl42rmnbeukwfN2H/4gTDV1sB/D8z5G1+
 =3DnPqY
 -----END PGP PUBLIC KEY BLOCK-----
 
---------------4E8F634EF1C80F4AD05A0F4B--
+--------------5EB9E0AEF4F8AD7EE9E16E15--
