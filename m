@@ -1,51 +1,106 @@
-Date: Thu, 14 Feb 2019 15:13:49 +1100
-From: "Tobin C. Harding" <tobin@kernel.org>
-Subject: Re: [PATCH 3/3] leaking_addresses: Expand tilde in output file name
-Message-ID: <20190214041336.GA23878@eros.localdomain>
-References: <20190207225026.11723-1-tobin@kernel.org>
- <20190207225026.11723-4-tobin@kernel.org>
- <20190207233555.GA5122@cisco>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Subject: RE: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
+ system call
+Date: Thu, 14 Feb 2019 07:52:07 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612BA4BC57C1@IRSMSX102.ger.corp.intel.com>
+References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
+ <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
+ <20190208130544.GI32511@hirez.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
+ <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
+ <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
+ <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net>
+ <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
+In-Reply-To: <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190207233555.GA5122@cisco>
-To: Tycho Andersen <tycho@tycho.ws>
-Cc: "Tobin C. Harding" <tobin@kernel.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+To: "Perla, Enrico" <enrico.perla@intel.com>, Andy Lutomirski <luto@amacapital.net>, "keescook@chromium.org" <keescook@chromium.org>, Jann Horn <jannh@google.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 07, 2019 at 04:35:55PM -0700, Tycho Andersen wrote:
-> On Fri, Feb 08, 2019 at 09:50:26AM +1100, Tobin C. Harding wrote:
-> > Currently if user passes an output file to the script via
-> > --output-raw we do not handle expansion of tilde.
-> > 
-> > Use perl function glob() to expand tilde in output file name.
-> > 
-> > Signed-off-by: Tobin C. Harding <tobin@kernel.org>
-> > ---
-> >  scripts/leaking_addresses.pl | 2 +-
-> >  1 file changed, 1 insertion(+), 1 deletion(-)
-> > 
-> > diff --git a/scripts/leaking_addresses.pl b/scripts/leaking_addresses.pl
-> > index ef9e5b2a1614..ce545ca3fb70 100755
-> > --- a/scripts/leaking_addresses.pl
-> > +++ b/scripts/leaking_addresses.pl
-> > @@ -150,7 +150,7 @@ if (!(is_supported_architecture() or $opt_32bit or $page_offset_32bit)) {
-> >  }
-> >  
-> >  if ($output_raw) {
-> > -	open my $fh, '>', $output_raw or die "$0: $output_raw: $!\n";
-> > +	open my $fh, '>', glob($output_raw) or die "$0: $output_raw: $!\n";
-> 
-> Seems like you might also have the same problem with $input_raw? I
-> wonder if you can just do this in GetOptions somehow, so that all
-> users of these further down in the script don't have to remember to do
-> this.
-
-I don't know what changed between now and when I first wrote this patch
-(a fair while ago) but I just tested with bash and zsh _without_ this
-patch and tilde was handled fine.
-
-Dropping this patch, moving the other two onto leaks-next.
-
-thanks,
-Tobin.
+QWZ0ZXIgc29tZSB0aGlua2luZyBhbmQgZGlzY3Vzc2lvbnMsIGxldCBtZSB0cnkgdG8gc3VtbWFy
+aXplIHRoZSBvcHRpb25zIGFuZCB0aGUNCnNlY3VyaXR5IGJlbmVmaXRzIG9mIGVhY2ggYXBwcm9h
+Y2ggYmFzZWQgb24gZXZlcnlvbmUgZWxzZSBmZWVkYmFjayBiZWZvcmUNCmdvaW5nIGFueSBmdXJ0
+aGVyIHdpdGggd29yay4gV2UgYWxsIHdhbnQgb25seSB1c2VmdWwgdGhpbmdzIGluIGtlcm5lbCwg
+c28gbWVyZ2luZw0Kc210aCB0aGF0IHByb3ZpZGVzIGEgc3VidGxlL2FsbW9zdCBub24tZXhpc3Rp
+bmcgYmVuZWZpdCBpcyBjbGVhcmx5IG5vdCBhIHByaW9yaXR5LiANCg0KU28sIGZpcnN0IGFib3V0
+IHRoZSBwcm90ZWN0aW9uIG1ldGhvZHMuIFdlIGNhbiBkbyByYW5kb21pemF0aW9uIGluIHR3byB3
+YXlzOg0KDQoxLiBzdGFjayB0b3AgaXRzZWxmIChhbmQgbG9jYXRpb24gb2YgcHRfcmVncykgDQoy
+LiByZWxhdGl2ZSBzdGFjayBwb3NpdGlvbmluZyAob2Zmc2V0IGZyb20gcHRfcmVncykuDQoNCklu
+IGFkZGl0aW9uIHRvIHJhbmRvbWl6YXRpb24gd2UgY2FuIGRvIHNvbWUgZml4dXAgb24gZXhpdCwg
+bGlrZSBBbmR5IHByb3Bvc2VkOg0KDQozLiBNYWtlIHN1cmUgQ1MgYWx3YXlzIHBvaW50cyB0byB1
+c2VyIG9uIGV4aXQgKGZvciBleGFtcGxlIGJ5IHJlZ3MtPmNzIHw9IDMpLA0KcG90ZW50aWFsbHkg
+c210aCBlbHNlIGNhbiBiZSBmaXhlZCB1cCBzaW1pbGFybHksIGlmIG5lZWRlZA0KDQpIZXJlIGFy
+ZSAqa25vd24qIChhdCBsZWFzdCB0byBtZSwgcGxlYXNlIHNob3V0IGlmIHlvdSBrbm93IG1vcmUh
+KSBwb3NzaWJsZQ0KYXR0YWNrcyB2ZWN0b3JzIGFuZCBpbXBsaWNhdGlvbnMgb24gdGhlbSBieSBk
+b2luZyAxKSwgMikgb3IgMykNCg0KYSkgYXR0YWNrZXIncyBnb2FsIGlzIHRvIHN0b3JlIHNvbWUg
+dXNlci1jb250cm9sbGVkIGRhdGEgaW4gcHRfcmVncyB0byByZWZlcmVuY2UgaXQgbGF0ZXINCiAg
+MSkgcHRfcmVncyBpcyBub3QgcHJlZGljdGFibGUsIGJ1dCBjYW4gYmUgZGlzY292ZXJlZCBpbiBw
+dHJhY2Utc3R5bGUgc2NlbmFyaW8gb3IgY2FjaGUtcHJvYmluZy4NCiAgICAgSWYgZGlzY292ZXJl
+ZCwgdGhlbiBhdHRhY2sgc3VjY2VlZHMgYXMgb2Ygbm93Lg0KICAyKSBub3RoaW5nIGNoYW5nZWQg
+Zm9yIHRoaXMgdHlwZSBvZiBhdHRhY2ssIGF0dGFjayBzdWNjZWVkcyBhcyBvZiBub3cNCiAgMykg
+bm90aGluZyBjaGFuZ2VkIGZvciB0aGlzIHR5cGUgb2YgYXR0YWNrLCBhdHRhY2sgc3VjY2VlZHMg
+YXMgb2Ygbm93DQoNCmIpIGF0dGFja2VyJ3MgZ29hbCBpcyB0byByZXR1cm4gdG8gdXNlcmxhbmQg
+ZnJvbSBhIHN5c2NhbGwgd2l0aCBDUyBwb2ludGluZyB0byBrZXJuZWwNCiAxKSBwdF9yZWdzIGlz
+IG5vdCBwcmVkaWN0YWJsZSwgYnV0IGNhbiBiZSBkaXNjb3ZlcmVkIGluIHB0cmFjZS1zdHlsZSBz
+Y2VuYXJpbyBvciBjYWNoZS1wcm9iaW5nLg0KICAgICBJZiBkaXNjb3ZlcmVkLCB0aGVuIGF0dGFj
+ayBzdWNjZWVkcyBhcyBvZiBub3cuDQogMikgbm90aGluZyBjaGFuZ2VkIGZvciB0aGlzIHR5cGUg
+b2YgYXR0YWNrLCBhdHRhY2sgc3VjY2VlZHMgYXMgb2Ygbm93DQogMykgQ1MgY2hhbmdlZCBleHBs
+aWNpdGx5IG9uIGV4aXQsIHNvIGltcG9zc2libGUgdG8gaGF2ZSB0aGlzIGF0dGFjaywgKmdpdmVu
+KiB0aGF0IHRoZQ0KICAgIGNoYW5nZSBpcyBkb25lIGxhdGUgZW5vdWdoIGFuZCBubyByYWNlcywg
+c2xlZXBzLCBldGMuIGFyZSBwb3NzaWJsZQ0KDQpjKSBhdHRhY2tlcidzIGdvYWwgaXMgdG8gcGVy
+Zm9ybSBzb21lIGtpbmQgb2Ygc3RhY2sgb3ZlcmZsb3cgaW50byBwYXJ0cyBvZiBhZGp1c3RlZCBz
+dGFjayANCiAgbWVtb3J5IHZpYSBzb21lIG1ldGhvZC4gSGVyZSB0aGUgbWFpbiB1bmtub3duIGlz
+IHRoZSAibWV0aG9kIi4NClRoaXMgdmVjdG9yIG9mIGF0dGFjayBpcyB0aGUgY2hhbGxlbmdlIGZv
+ciB0aGUgY3VycmVudCBleHBsb2l0IHdyaXRlcnM6IEkgZ3Vlc3MgaWYgeW91IGNhbiBkbw0KaXQg
+bm93IHdpdGggYWxsIHRoZSBjdXJyZW50IHByb3RlY3Rpb25zIGZvciBzdGFjayBlbmFibGVkLCB5
+b3UgZ2V0IGEgbmljZSBkZWZjb24gdGFsayBhdCBsZWFzdCA6KSANClZMQSB1c2VkIHRvIGJlIGFu
+IGVhc3kgd2F5IG9mIGRvaW5nIGl0LCBob3BlZnVsbHkgdGhleSBhcmUgZ29uZSBmcm9tIHRoZSBt
+YWluIHNvdXJjZSBub3cNCihvdXQgb2YgdHJlZSBkcml2ZXJzIGlzIGEgZGlmZmVyZW50IHN0b3J5
+KS4gDQpVbmluaXRpYWxpemVkIGxvY2FscyBtaWdodCBiZSBvdGhlciB3YXksIGJ1dCB0aGVyZSBp
+cyB3b3JrIG9uZ29pbmcgdG8gY2xvc2UgdGhpcyAoc2VlIEtlZXMncw0KcGF0Y2hlcyBvbiBzdGFj
+a2luaXQpLg0KU210aCBlbHNlIHdlIGRvbuKAmXQgeWV0IGtub3c/IA0KTm93IGJhY2sgdG8gb3Vy
+IHByb3Bvc2VkIGNvdW50ZXJtZWFzdXJlcyBnaXZlbiB0aGF0IGF0dGFja2VyIGhhcyBmb3VuZCBh
+IHdheSB0byBkbw0KYSBjcmFmdGVkIG92ZXJmbG93IGFuZCBvdmVyd3JpdGU6DQoNCiAgMSkgcHRf
+cmVncyBpcyBub3QgcHJlZGljdGFibGUsIGJ1dCBjYW4gYmUgZGlzY292ZXJlZCBpbiBwdHJhY2Ut
+c3R5bGUgc2NlbmFyaW8gb3IgY2FjaGUtcHJvYmluZy4NCiAgICAgSWYgZGlzY292ZXJlZCwgdGhl
+biBhdHRhY2sgc3VjY2VlZHMgYXMgb2Ygbm93LiANCiAgMikgcmVsYXRpdmUgc3RhY2sgb2Zmc2V0
+IGlzIG5vdCBwcmVkaWN0YWJsZSBhbmQgcmFuZG9taXplZCwgY2Fubm90IGJlIHByb2JlZCB2ZXJ5
+IGVhc2lseSB2aWEgDQogICAgICBjYWNoZSBvciBwdHJhY2UuIFNvLCB0aGlzIGlzIGFuIGFkZGl0
+aW9uYWwgaHVyZGxlIG9uIHRoZSBhdHRhY2tlcidzIHdheSBzaW5jZSBzdGFjayBpcyBub24tDQog
+ICAgICBkZXRlcm1pbmlzdGljIG5vdy4NCiAgMykgbm90aGluZyBjaGFuZ2VkIGZvciB0aGlzIHR5
+cGUgb2YgYXR0YWNrLCBnaXZlbiB0aGF0IGF0dGFja2VyJ3MgZ29hbCBpcyBub3QgdG8gb3Zlcndy
+aXRlIENTDQogICAgICBpbiBhZGp1c3RlZCBwdF9yZWdzLiBJZiBpdCBpcyBoaXMgZ29hbCwgdGhl
+biBpdCBoZWxwcyB3aXRoIHRoYXQuIA0KDQoNCk5vdyBzdW1tYXJ5Og0KDQpJdCB3b3VsZCBzZWVt
+IHRvIG1lIHRoYXQ6DQoNCi0gcmVncy0+Y3MgfD0gMyBvbiBleGl0IGlzIGEgdGhpbmcgd29ydGgg
+ZG9pbmcgYW55d2F5LCBqdXN0IGJlY2F1c2UgaXQgaXMgY2hlYXAsIGFzIEFuZHkgc2FpZCwgYW5k
+IGl0IA0KbWlnaHQgbWFrZSBhIHBvc2l0aXZlIGRpZmZlcmVuY2UgaW4gdHdvIG91dCBvZiB0aHJl
+ZSBhdHRhY2sgc2NlbmFyaW9zLiBPYmplY3Rpb25zPw0KDQotIHJhbmRvbWl6YXRpb24gb2Ygc3Rh
+Y2sgdG9wIGlzIG9ubHkgd29ydGggZG9pbmcgaW4gcHRyYWNlLWJsb2NrZWQgc2NlbmFyaW8uIA0K
+RG8gd2UgaGF2ZSBzdWNoIHNjZW5hcmlvcyBsZWZ0IHRoYXQgcGVvcGxlIGNhcmUgYWJvdXQ/IA0K
+QmVjYXVzZSBpZiB3ZSBkbywgdGhlbiB3ZSBrbm93IHRoYXQgdGhlcmUgaXMgYSByZWFsIGF0dGFj
+ayB2ZWN0b3IgdGhhdCB3ZSBjbG9zZSB0aGlzIHdheSwgb3RoZXJ3aXNlIG5vdC4gDQpUaGlzIGlz
+IGFjdHVhbGx5IGludGVyZXN0aW5nLCBiZWNhdXNlIHdlIG5lZWQgdG8gcmVtZW1iZXIgdG8gdGFr
+ZSBwdHJhY2UgaW50byBvdXIgb3ZlcmFsbA0Ka2VybmVsIGhhcmRlbmluZyB0aHJlYXQgbW9kZWwg
+KHNtdGggdGhhdCBhdCBsZWFzdCBJIGhhdmVuJ3QgcXVpdGUgcmVhbGl6ZWQgYmVmb3JlKSBhbmQg
+ZXZhbHVhdGUgZXZlcnkgbmV3DQpmZWF0dXJlIChlc3BlY2lhbGx5IHJhbmRvbWl6YXRpb24gb25l
+cykgYmVpbmcgcm9idXN0IGFnYWluc3QgcHRyYWNlIHByb2JpbmcuIA0KDQotIHJhbmRvbWl6YXRp
+b24gYWZ0ZXIgcHRfcmVncyBvbmx5IHdvdWxkIG1ha2UgYSBkaWZmZXJlbmNlIGluIGF0dGFjayBz
+Y2VuYXJpbyAiYyIsIGZvciB3aGljaCANCiAgd2UgZG9uJ3QgeWV0IGhhdmUgYSBwcm9vZiBvZiBj
+b25jZXB0IGV4cGxvaXQgb3IgdGVjaG5pcXVlIHRoYXQgd291bGQgd29yayAoZG9lcyBub3QgZ3Vh
+cmFudGVlIHRoYXQNCmF0dGFja2VycyBkb24ndCBoYXZlIHRoZSBleHBsb2l0cyByZWFkeSB0aHJv
+dWdoIDooICkuIA0KU28sIGlmIHdlIGltcGxlbWVudCB0aGlzLCB0aGUgImp1c3RpZmljYXRpb24g
+cGFydCIgZm9yIHRoZSBmZWF0dXJlIHdvdWxkIGJlIHNtdGggbGlrZSAidG8gbWFrZSBpdA0KaGFy
+ZGVyIGZvciBmdXR1cmUgcG9zc2libGUgc3RhY2stYmFzZWQgZXhwbG9pdHMgdGhhdCB1dGlsaXpl
+IG92ZXJmbG93cyIsIGlmL3doZW4gc29tZW9uZSBmaW5kIGEgbmV3DQonYWxhIFZMQScgd2F5IG9m
+IGRvaW5nIHRoZSBjb250cm9sbGVkIG92ZXJmbG93LiANCkhvdyBkbyBwZW9wbGUgZmVlbCBhYm91
+dCBpdD8gSXMgaXQgd29ydGggaGF2aW5nPyBJIGNhbiB3b3JrIG9uIHRoZSBQT0MgZm9yIHRoaXMg
+aW4gZGlyZWN0aW9uIHRoYXQgQW5keSANCm91dGxpbmVkIGFuZCBjYW4gcHJvdmlkZSBwZXJmb3Jt
+YW5jZSBpbXBhY3QvZXRjLiwgYnV0IGl0IGlzIGdvb2QgdGhhdCB3ZSB1bmRlcnN0YW5kIHRoYXQg
+d2UgY2Fubm90DQpwcm92aWRlIGEgYmV0dGVyIGp1c3RpZmljYXRpb24gZm9yIHRoaXMgZmVhdHVy
+ZSBhdCB0aGUgbW9tZW50IHVubGVzcyBzb21lb25lIGlzIHJlYWR5IHRvIHNoYXJlIHNvbWUNCm5l
+dyBleHBsb2l0IHRlY2huaXF1ZSB3aXRoIHVzLiANCg0KQmVzdCBSZWdhcmRzLA0KRWxlbmEuDQoN
+Cg0K
