@@ -1,7 +1,7 @@
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Subject: [RFC PATCH v8 06/14] xpfo: add primitives for mapping underlying memory
-Date: Wed, 13 Feb 2019 17:01:29 -0700
-Message-Id: <c285cc243176ae5fdd22f316dc8b118c1c153434.1550088114.git.khalid.aziz@oracle.com>
+Subject: [RFC PATCH v8 08/14] arm64/mm: disable section/contiguous mappings if XPFO is enabled
+Date: Wed, 13 Feb 2019 17:01:31 -0700
+Message-Id: <0b9624b6c1fe5a31d73a6390e063d551bfebc321.1550088114.git.khalid.aziz@oracle.com>
 In-Reply-To: <cover.1550088114.git.khalid.aziz@oracle.com>
 References: <cover.1550088114.git.khalid.aziz@oracle.com>
 In-Reply-To: <cover.1550088114.git.khalid.aziz@oracle.com>
@@ -12,102 +12,72 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Tycho Andersen <tycho@docker.com>
 
-In some cases (on arm64 DMA and data cache flushes) we may have unmapped
-the underlying pages needed for something via XPFO. Here are some
-primitives useful for ensuring the underlying memory is mapped/unmapped in
-the face of xpfo.
+XPFO doesn't support section/contiguous mappings yet, so let's disable it
+if XPFO is turned on.
 
+Thanks to Laura Abbot for the simplification from v5, and Mark Rutland for
+pointing out we need NO_CONT_MAPPINGS too.
+
+CC: linux-arm-kernel@lists.infradead.org
 Signed-off-by: Tycho Andersen <tycho@docker.com>
 Reviewed-by: Khalid Aziz <khalid.aziz@oracle.com>
 ---
- include/linux/xpfo.h | 22 ++++++++++++++++++++++
- mm/xpfo.c            | 30 ++++++++++++++++++++++++++++++
- 2 files changed, 52 insertions(+)
+ arch/arm64/mm/mmu.c  | 2 +-
+ include/linux/xpfo.h | 4 ++++
+ mm/xpfo.c            | 6 ++++++
+ 3 files changed, 11 insertions(+), 1 deletion(-)
 
+diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+index d1d6601b385d..f4dd27073006 100644
+--- a/arch/arm64/mm/mmu.c
++++ b/arch/arm64/mm/mmu.c
+@@ -451,7 +451,7 @@ static void __init map_mem(pgd_t *pgdp)
+ 	struct memblock_region *reg;
+ 	int flags = 0;
+ 
+-	if (debug_pagealloc_enabled())
++	if (debug_pagealloc_enabled() || xpfo_enabled())
+ 		flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
+ 
+ 	/*
 diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
-index cba37ffb09b1..1ae05756344d 100644
+index 1ae05756344d..8b029918a958 100644
 --- a/include/linux/xpfo.h
 +++ b/include/linux/xpfo.h
-@@ -38,6 +38,15 @@ void xpfo_free_pages(struct page *page, int order);
+@@ -47,6 +47,8 @@ void xpfo_temp_map(const void *addr, size_t size, void **mapping,
+ void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
+ 		     size_t mapping_len);
  
- bool xpfo_page_is_unmapped(struct page *page);
- 
-+#define XPFO_NUM_PAGES(addr, size) \
-+	(PFN_UP((unsigned long) (addr) + (size)) - \
-+		PFN_DOWN((unsigned long) (addr)))
-+
-+void xpfo_temp_map(const void *addr, size_t size, void **mapping,
-+		   size_t mapping_len);
-+void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
-+		     size_t mapping_len);
++bool xpfo_enabled(void);
 +
  #else /* !CONFIG_XPFO */
  
  static inline void xpfo_kmap(void *kaddr, struct page *page) { }
-@@ -47,6 +56,19 @@ static inline void xpfo_free_pages(struct page *page, int order) { }
+@@ -69,6 +71,8 @@ static inline void xpfo_temp_unmap(const void *addr, size_t size,
+ }
  
- static inline bool xpfo_page_is_unmapped(struct page *page) { return false; }
  
-+#define XPFO_NUM_PAGES(addr, size) 0
-+
-+static inline void xpfo_temp_map(const void *addr, size_t size, void **mapping,
-+				 size_t mapping_len)
-+{
-+}
-+
-+static inline void xpfo_temp_unmap(const void *addr, size_t size,
-+				   void **mapping, size_t mapping_len)
-+{
-+}
-+
++static inline bool xpfo_enabled(void) { return false; }
 +
  #endif /* CONFIG_XPFO */
  
  #endif /* _LINUX_XPFO_H */
 diff --git a/mm/xpfo.c b/mm/xpfo.c
-index 67884736bebe..92ca6d1baf06 100644
+index 92ca6d1baf06..150784ae0f08 100644
 --- a/mm/xpfo.c
 +++ b/mm/xpfo.c
-@@ -14,6 +14,7 @@
-  * the Free Software Foundation.
-  */
+@@ -71,6 +71,12 @@ struct page_ext_operations page_xpfo_ops = {
+ 	.init = init_xpfo,
+ };
  
-+#include <linux/highmem.h>
- #include <linux/mm.h>
- #include <linux/module.h>
- #include <linux/page_ext.h>
-@@ -236,3 +237,32 @@ bool xpfo_page_is_unmapped(struct page *page)
- 	return test_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags);
- }
- EXPORT_SYMBOL(xpfo_page_is_unmapped);
-+
-+void xpfo_temp_map(const void *addr, size_t size, void **mapping,
-+		   size_t mapping_len)
++bool __init xpfo_enabled(void)
 +{
-+	struct page *page = virt_to_page(addr);
-+	int i, num_pages = mapping_len / sizeof(mapping[0]);
-+
-+	memset(mapping, 0, mapping_len);
-+
-+	for (i = 0; i < num_pages; i++) {
-+		if (page_to_virt(page + i) >= addr + size)
-+			break;
-+
-+		if (xpfo_page_is_unmapped(page + i))
-+			mapping[i] = kmap_atomic(page + i);
-+	}
++	return !xpfo_disabled;
 +}
-+EXPORT_SYMBOL(xpfo_temp_map);
++EXPORT_SYMBOL(xpfo_enabled);
 +
-+void xpfo_temp_unmap(const void *addr, size_t size, void **mapping,
-+		     size_t mapping_len)
-+{
-+	int i, num_pages = mapping_len / sizeof(mapping[0]);
-+
-+	for (i = 0; i < num_pages; i++)
-+		if (mapping[i])
-+			kunmap_atomic(mapping[i]);
-+}
-+EXPORT_SYMBOL(xpfo_temp_unmap);
+ static inline struct xpfo *lookup_xpfo(struct page *page)
+ {
+ 	struct page_ext *page_ext = lookup_page_ext(page);
 -- 
 2.17.1
