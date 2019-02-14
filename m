@@ -3,158 +3,40 @@ Subject: Re: [RFC PATCH v8 03/14] mm, x86: Add support for eXclusive Page
 References: <cover.1550088114.git.khalid.aziz@oracle.com>
  <8275de2a7e6b72d19b1cd2ec5d71a42c2c7dd6c5.1550088114.git.khalid.aziz@oracle.com>
  <20190214105631.GJ32494@hirez.programming.kicks-ass.net>
+ <20190214161552.GF4423@zn.tnic>
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <e157e274-1bdf-0987-bfe9-21c9301578ab@oracle.com>
-Date: Thu, 14 Feb 2019 10:13:54 -0700
+Message-ID: <6c689028-6748-66b9-0d9c-2b57b5dd6383@oracle.com>
+Date: Thu, 14 Feb 2019 10:19:23 -0700
 MIME-Version: 1.0
-In-Reply-To: <20190214105631.GJ32494@hirez.programming.kicks-ass.net>
+In-Reply-To: <20190214161552.GF4423@zn.tnic>
 Content-Type: multipart/mixed;
- boundary="------------5EB9E0AEF4F8AD7EE9E16E15"
-To: Peter Zijlstra <peterz@infradead.org>, juergh@gmail.com, jsteckli@amazon.de
-Cc: tycho@tycho.ws, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, akpm@linux-foundation.org, mhocko@suse.com, catalin.marinas@arm.com, will.deacon@arm.com, jmorris@namei.org, konrad.wilk@oracle.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, oao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Tycho Andersen <tycho@docker.com>, Marco Benatto <marco.antonio.780@gmail.com>
+ boundary="------------8D637083EDAD02B721201657"
+To: Borislav Petkov <bp@alien8.de>, juergh@gmail.com
+Cc: Peter Zijlstra <peterz@infradead.org>, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, akpm@linux-foundation.org, mhocko@suse.com, catalin.marinas@arm.com, will.deacon@arm.com, jmorris@namei.org, konrad.wilk@oracle.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Marco Benatto <marco.antonio.780@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 This is a multi-part message in MIME format.
---------------5EB9E0AEF4F8AD7EE9E16E15
+--------------8D637083EDAD02B721201657
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
-On 2/14/19 3:56 AM, Peter Zijlstra wrote:
-> On Wed, Feb 13, 2019 at 05:01:26PM -0700, Khalid Aziz wrote:
->>  static inline void *kmap_atomic(struct page *page)
->>  {
->> +	void *kaddr;
->> +
->>  	preempt_disable();
->>  	pagefault_disable();
->> +	kaddr =3D page_address(page);
->> +	xpfo_kmap(kaddr, page);
->> +	return kaddr;
->>  }
->>  #define kmap_atomic_prot(page, prot)	kmap_atomic(page)
->> =20
->>  static inline void __kunmap_atomic(void *addr)
->>  {
->> +	xpfo_kunmap(addr, virt_to_page(addr));
->>  	pagefault_enable();
->>  	preempt_enable();
->>  }
+On 2/14/19 9:15 AM, Borislav Petkov wrote:
+> On Thu, Feb 14, 2019 at 11:56:31AM +0100, Peter Zijlstra wrote:
+>>> +EXPORT_SYMBOL(xpfo_kunmap);
+>>
+>> And these here things are most definitely not IRQ-safe.
 >=20
-> How is that supposed to work; IIRC kmap_atomic was supposed to be
-> IRQ-safe.
+> Should also be EXPORT_SYMBOL_GPL.
 >=20
 
-Ah, the spin_lock in in xpfo_kmap() can be problematic in interrupt
-context. I will see if I can fix that.
-
-Juerg, you wrote the original code and understand what you were trying
-to do here. If you have ideas on how to tackle this, I would very much
-appreciate it.
-
->> +/* Per-page XPFO house-keeping data */
->> +struct xpfo {
->> +	unsigned long flags;	/* Page state */
->> +	bool inited;		/* Map counter and lock initialized */
->=20
-> What's sizeof(_Bool) ? Why can't you use a bit in that flags word?
->=20
->> +	atomic_t mapcount;	/* Counter for balancing map/unmap requests */
->> +	spinlock_t maplock;	/* Lock to serialize map/unmap requests */
->> +};
->=20
-> Without that bool, the structure would be 16 bytes on 64bit, which seem=
-s
-> like a good number.
->=20
-
-Patch 11 ("xpfo, mm: remove dependency on CONFIG_PAGE_EXTENSION") cleans
-all this up. If the original authors of these two patches, Juerg
-Haefliger and Julian Stecklina, are ok with it, I would like to combine
-the two patches in one.
-
->> +void xpfo_kmap(void *kaddr, struct page *page)
->> +{
->> +	struct xpfo *xpfo;
->> +
->> +	if (!static_branch_unlikely(&xpfo_inited))
->> +		return;
->> +
->> +	xpfo =3D lookup_xpfo(page);
->> +
->> +	/*
->> +	 * The page was allocated before page_ext was initialized (which mea=
-ns
->> +	 * it's a kernel page) or it's allocated to the kernel, so nothing t=
-o
->> +	 * do.
->> +	 */
->> +	if (!xpfo || unlikely(!xpfo->inited) ||
->> +	    !test_bit(XPFO_PAGE_USER, &xpfo->flags))
->> +		return;
->> +
->> +	spin_lock(&xpfo->maplock);
->> +
->> +	/*
->> +	 * The page was previously allocated to user space, so map it back
->> +	 * into the kernel. No TLB flush required.
->> +	 */
->> +	if ((atomic_inc_return(&xpfo->mapcount) =3D=3D 1) &&
->> +	    test_and_clear_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags))
->> +		set_kpte(kaddr, page, PAGE_KERNEL);
->> +
->> +	spin_unlock(&xpfo->maplock);
->> +}
->> +EXPORT_SYMBOL(xpfo_kmap);
->> +
->> +void xpfo_kunmap(void *kaddr, struct page *page)
->> +{
->> +	struct xpfo *xpfo;
->> +
->> +	if (!static_branch_unlikely(&xpfo_inited))
->> +		return;
->> +
->> +	xpfo =3D lookup_xpfo(page);
->> +
->> +	/*
->> +	 * The page was allocated before page_ext was initialized (which mea=
-ns
->> +	 * it's a kernel page) or it's allocated to the kernel, so nothing t=
-o
->> +	 * do.
->> +	 */
->> +	if (!xpfo || unlikely(!xpfo->inited) ||
->> +	    !test_bit(XPFO_PAGE_USER, &xpfo->flags))
->> +		return;
->> +
->> +	spin_lock(&xpfo->maplock);
->> +
->> +	/*
->> +	 * The page is to be allocated back to user space, so unmap it from =
-the
->> +	 * kernel, flush the TLB and tag it as a user page.
->> +	 */
->> +	if (atomic_dec_return(&xpfo->mapcount) =3D=3D 0) {
->> +		WARN(test_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags),
->> +		     "xpfo: unmapping already unmapped page\n");
->> +		set_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags);
->> +		set_kpte(kaddr, page, __pgprot(0));
->> +		xpfo_flush_kernel_tlb(page, 0);
->> +	}
->> +
->> +	spin_unlock(&xpfo->maplock);
->> +}
->> +EXPORT_SYMBOL(xpfo_kunmap);
->=20
-> And these here things are most definitely not IRQ-safe.
->=20
-
-Got it. I will work on this.
+Agreed. On the other hand, is there even a need to export this? It
+should only be called from kunmap() or kunmap_atomic() and not from any
+module directly. Same for xpfo_kmap.
 
 Thanks,
 Khalid
 
-
---------------5EB9E0AEF4F8AD7EE9E16E15
+--------------8D637083EDAD02B721201657
 Content-Type: application/pgp-keys;
  name="pEpkey.asc"
 Content-Transfer-Encoding: quoted-printable
@@ -203,4 +85,4 @@ E6wtYze9oihz8mbNHY3jtUGajTsv/F7Jl42rmnbeukwfN2H/4gTDV1sB/D8z5G1+
 =3DnPqY
 -----END PGP PUBLIC KEY BLOCK-----
 
---------------5EB9E0AEF4F8AD7EE9E16E15--
+--------------8D637083EDAD02B721201657--
