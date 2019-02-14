@@ -1,42 +1,100 @@
-Subject: Re: [RFC PATCH v8 03/14] mm, x86: Add support for eXclusive Page
- Frame Ownership (XPFO)
+Subject: Re: [RFC PATCH v8 07/14] arm64/mm, xpfo: temporarily map dcache
+ regions
 References: <cover.1550088114.git.khalid.aziz@oracle.com>
- <8275de2a7e6b72d19b1cd2ec5d71a42c2c7dd6c5.1550088114.git.khalid.aziz@oracle.com>
- <20190214105631.GJ32494@hirez.programming.kicks-ass.net>
- <20190214161552.GF4423@zn.tnic>
+ <ea50404604bdbe1547601b6ea0af89e3da8886b0.1550088114.git.khalid.aziz@oracle.com>
+ <20190214155435.GA15694@cisco>
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Message-ID: <6c689028-6748-66b9-0d9c-2b57b5dd6383@oracle.com>
-Date: Thu, 14 Feb 2019 10:19:23 -0700
+Message-ID: <92787149-bb9e-6ee9-6d04-431ec145e9a4@oracle.com>
+Date: Thu, 14 Feb 2019 10:29:52 -0700
 MIME-Version: 1.0
-In-Reply-To: <20190214161552.GF4423@zn.tnic>
+In-Reply-To: <20190214155435.GA15694@cisco>
 Content-Type: multipart/mixed;
- boundary="------------8D637083EDAD02B721201657"
-To: Borislav Petkov <bp@alien8.de>, juergh@gmail.com
-Cc: Peter Zijlstra <peterz@infradead.org>, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, akpm@linux-foundation.org, mhocko@suse.com, catalin.marinas@arm.com, will.deacon@arm.com, jmorris@namei.org, konrad.wilk@oracle.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Marco Benatto <marco.antonio.780@gmail.com>
+ boundary="------------831B727C76672501BCC5E3E8"
+To: Tycho Andersen <tycho@tycho.ws>
+Cc: juergh@gmail.com, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, akpm@linux-foundation.org, mhocko@suse.com, catalin.marinas@arm.com, will.deacon@arm.com, jmorris@namei.org, konrad.wilk@oracle.com, Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, joao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, peterz@infradead.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 This is a multi-part message in MIME format.
---------------8D637083EDAD02B721201657
+--------------831B727C76672501BCC5E3E8
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
-On 2/14/19 9:15 AM, Borislav Petkov wrote:
-> On Thu, Feb 14, 2019 at 11:56:31AM +0100, Peter Zijlstra wrote:
->>> +EXPORT_SYMBOL(xpfo_kunmap);
->>
->> And these here things are most definitely not IRQ-safe.
+On 2/14/19 8:54 AM, Tycho Andersen wrote:
+> Hi,
 >=20
-> Should also be EXPORT_SYMBOL_GPL.
+> On Wed, Feb 13, 2019 at 05:01:30PM -0700, Khalid Aziz wrote:
+>> From: Juerg Haefliger <juerg.haefliger@canonical.com>
+>>
+>> If the page is unmapped by XPFO, a data cache flush results in a fatal=
+
+>> page fault, so let's temporarily map the region, flush the cache, and =
+then
+>> unmap it.
+>>
+>> v6: actually flush in the face of xpfo, and temporarily map the underl=
+ying
+>>     memory so it can be flushed correctly
+>>
+>> CC: linux-arm-kernel@lists.infradead.org
+>> Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
+>> Signed-off-by: Tycho Andersen <tycho@docker.com>
+>> ---
+>>  arch/arm64/mm/flush.c | 7 +++++++
+>>  1 file changed, 7 insertions(+)
+>>
+>> diff --git a/arch/arm64/mm/flush.c b/arch/arm64/mm/flush.c
+>> index 30695a868107..fad09aafd9d5 100644
+>> --- a/arch/arm64/mm/flush.c
+>> +++ b/arch/arm64/mm/flush.c
+>> @@ -20,6 +20,7 @@
+>>  #include <linux/export.h>
+>>  #include <linux/mm.h>
+>>  #include <linux/pagemap.h>
+>> +#include <linux/xpfo.h>
+>> =20
+>>  #include <asm/cacheflush.h>
+>>  #include <asm/cache.h>
+>> @@ -28,9 +29,15 @@
+>>  void sync_icache_aliases(void *kaddr, unsigned long len)
+>>  {
+>>  	unsigned long addr =3D (unsigned long)kaddr;
+>> +	unsigned long num_pages =3D XPFO_NUM_PAGES(addr, len);
+>> +	void *mapping[num_pages];
+>=20
+> What version does this build on? Presumably -Wvla will cause an error
+> here, but,
+>=20
+>>  	if (icache_is_aliasing()) {
+>> +		xpfo_temp_map(kaddr, len, mapping,
+>> +			      sizeof(mapping[0]) * num_pages);
+>>  		__clean_dcache_area_pou(kaddr, len);
+>=20
+> Here, we map the pages to some random address via xpfo_temp_map(),
+> then pass the *original* address (which may not have been mapped) to
+> __clean_dcache_area_pou(). So I think this whole approach is wrong.
+>=20
+> If we want to do it this way, it may be that we need some
+> xpfo_map_contiguous() type thing, but since we're just going to flush
+> it anyway, that seems a little crazy. Maybe someone who knows more
+> about arm64 knows a better way?
+>=20
+> Tycho
 >=20
 
-Agreed. On the other hand, is there even a need to export this? It
-should only be called from kunmap() or kunmap_atomic() and not from any
-module directly. Same for xpfo_kmap.
+Hi Tycho,
+
+You are right. Things don't quite look right with this patch. I don't
+know arm64 well enough either, so I will wait for someone more
+knowledgeable to make a recommendation here.
+
+On a side note, do you mind if I update your address in your
+signed-off-by from tycho@docker.com when I send the next version of this
+series?
 
 Thanks,
 Khalid
 
---------------8D637083EDAD02B721201657
+--------------831B727C76672501BCC5E3E8
 Content-Type: application/pgp-keys;
  name="pEpkey.asc"
 Content-Transfer-Encoding: quoted-printable
@@ -85,4 +143,4 @@ E6wtYze9oihz8mbNHY3jtUGajTsv/F7Jl42rmnbeukwfN2H/4gTDV1sB/D8z5G1+
 =3DnPqY
 -----END PGP PUBLIC KEY BLOCK-----
 
---------------8D637083EDAD02B721201657--
+--------------831B727C76672501BCC5E3E8--
