@@ -1,86 +1,89 @@
 From: Khalid Aziz <khalid.aziz@oracle.com>
-Subject: [RFC PATCH v8 12/14] xpfo, mm: optimize spinlock usage in xpfo_kunmap
-Date: Wed, 13 Feb 2019 17:01:35 -0700
-Message-Id: <fb183dba421ad5cc1eda9acaf0678970bdf2159b.1550088114.git.khalid.aziz@oracle.com>
+Subject: [RFC PATCH v8 04/14] swiotlb: Map the buffer if it was unmapped by XPFO
+Date: Wed, 13 Feb 2019 17:01:27 -0700
+Message-Id: <b595ffb3231dfef3c6b6c896a8e1cba0e838978c.1550088114.git.khalid.aziz@oracle.com>
 In-Reply-To: <cover.1550088114.git.khalid.aziz@oracle.com>
 References: <cover.1550088114.git.khalid.aziz@oracle.com>
 In-Reply-To: <cover.1550088114.git.khalid.aziz@oracle.com>
 References: <cover.1550088114.git.khalid.aziz@oracle.com>
 To: juergh@gmail.com, tycho@tycho.ws, jsteckli@amazon.de, ak@linux.intel.com, torvalds@linux-foundation.org, liran.alon@oracle.com, keescook@google.com, akpm@linux-foundation.org, mhocko@suse.com, catalin.marinas@arm.com, will.deacon@arm.com, jmorris@namei.org, konrad.wilk@oracle.com
-Cc: deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, oao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, peterz@infradead.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Khalid Aziz <khalid.aziz@oracle.com>, "Vasileios P . Kemerlis" <vpk@cs.columbia.edu>, Juerg Haefliger <juerg.haefliger@canonical.com>, Tycho Andersen <tycho@docker.com>, Marco Benatto <marco.antonio.780@gmail.com>, David Woodhouse <dwmw2@infradead.org>
+Cc: Juerg Haefliger <juerg.haefliger@canonical.com>, deepa.srinivasan@oracle.com, chris.hyser@oracle.com, tyhicks@canonical.com, dwmw@amazon.co.uk, andrew.cooper3@citrix.com, jcm@redhat.com, boris.ostrovsky@oracle.com, kanth.ghatraju@oracle.com, oao.m.martins@oracle.com, jmattson@google.com, pradeep.vincent@oracle.com, john.haxby@oracle.com, tglx@linutronix.de, kirill.shutemov@linux.intel.com, hch@lst.de, steven.sistare@oracle.com, labbott@redhat.com, luto@kernel.org, dave.hansen@intel.com, peterz@infradead.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Tycho Andersen <tycho@docker.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Julian Stecklina <jsteckli@amazon.de>
+From: Juerg Haefliger <juerg.haefliger@canonical.com>
 
-Only the xpfo_kunmap call that needs to actually unmap the page
-needs to be serialized. We need to be careful to handle the case,
-where after the atomic decrement of the mapcount, a xpfo_kmap
-increased the mapcount again. In this case, we can safely skip
-modifying the page table.
+v6: * guard against lookup_xpfo() returning NULL
 
-Model-checked with up to 4 concurrent callers with Spin.
-
-Signed-off-by: Julian Stecklina <jsteckli@amazon.de>
-Signed-off-by: Khalid Aziz <khalid.aziz@oracle.com>
-Cc: x86@kernel.org
-Cc: kernel-hardening@lists.openwall.com
-Cc: Vasileios P. Kemerlis <vpk@cs.columbia.edu>
-Cc: Juerg Haefliger <juerg.haefliger@canonical.com>
-Cc: Tycho Andersen <tycho@docker.com>
-Cc: Marco Benatto <marco.antonio.780@gmail.com>
-Cc: David Woodhouse <dwmw2@infradead.org>
+CC: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Signed-off-by: Juerg Haefliger <juerg.haefliger@canonical.com>
+Signed-off-by: Tycho Andersen <tycho@docker.com>
+Reviewed-by: Khalid Aziz <khalid.aziz@oracle.com>
+Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
 ---
- mm/xpfo.c | 25 ++++++++++++++++---------
- 1 file changed, 16 insertions(+), 9 deletions(-)
+ include/linux/xpfo.h |  4 ++++
+ kernel/dma/swiotlb.c |  3 ++-
+ mm/xpfo.c            | 15 +++++++++++++++
+ 3 files changed, 21 insertions(+), 1 deletion(-)
 
+diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
+index b15234745fb4..cba37ffb09b1 100644
+--- a/include/linux/xpfo.h
++++ b/include/linux/xpfo.h
+@@ -36,6 +36,8 @@ void xpfo_kunmap(void *kaddr, struct page *page);
+ void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp);
+ void xpfo_free_pages(struct page *page, int order);
+ 
++bool xpfo_page_is_unmapped(struct page *page);
++
+ #else /* !CONFIG_XPFO */
+ 
+ static inline void xpfo_kmap(void *kaddr, struct page *page) { }
+@@ -43,6 +45,8 @@ static inline void xpfo_kunmap(void *kaddr, struct page *page) { }
+ static inline void xpfo_alloc_pages(struct page *page, int order, gfp_t gfp) { }
+ static inline void xpfo_free_pages(struct page *page, int order) { }
+ 
++static inline bool xpfo_page_is_unmapped(struct page *page) { return false; }
++
+ #endif /* CONFIG_XPFO */
+ 
+ #endif /* _LINUX_XPFO_H */
+diff --git a/kernel/dma/swiotlb.c b/kernel/dma/swiotlb.c
+index 045930e32c0e..820a54b57491 100644
+--- a/kernel/dma/swiotlb.c
++++ b/kernel/dma/swiotlb.c
+@@ -396,8 +396,9 @@ static void swiotlb_bounce(phys_addr_t orig_addr, phys_addr_t tlb_addr,
+ {
+ 	unsigned long pfn = PFN_DOWN(orig_addr);
+ 	unsigned char *vaddr = phys_to_virt(tlb_addr);
++	struct page *page = pfn_to_page(pfn);
+ 
+-	if (PageHighMem(pfn_to_page(pfn))) {
++	if (PageHighMem(page) || xpfo_page_is_unmapped(page)) {
+ 		/* The buffer does not have a mapping.  Map it in and copy */
+ 		unsigned int offset = orig_addr & ~PAGE_MASK;
+ 		char *buffer;
 diff --git a/mm/xpfo.c b/mm/xpfo.c
-index dc03c423c52f..5157cbebce4b 100644
+index 24b33d3c20cb..67884736bebe 100644
 --- a/mm/xpfo.c
 +++ b/mm/xpfo.c
-@@ -124,28 +124,35 @@ EXPORT_SYMBOL(xpfo_kmap);
- 
- void xpfo_kunmap(void *kaddr, struct page *page)
- {
-+	bool flush_tlb = false;
-+
- 	if (!static_branch_unlikely(&xpfo_inited))
- 		return;
- 
- 	if (!PageXpfoUser(page))
- 		return;
- 
--	spin_lock(&page->xpfo_lock);
--
- 	/*
- 	 * The page is to be allocated back to user space, so unmap it from the
- 	 * kernel, flush the TLB and tag it as a user page.
- 	 */
- 	if (atomic_dec_return(&page->xpfo_mapcount) == 0) {
--#ifdef CONFIG_XPFO_DEBUG
--		BUG_ON(PageXpfoUnmapped(page));
--#endif
--		SetPageXpfoUnmapped(page);
--		set_kpte(kaddr, page, __pgprot(0));
--		xpfo_flush_kernel_tlb(page, 0);
-+		spin_lock(&page->xpfo_lock);
-+
-+		/*
-+		 * In the case, where we raced with kmap after the
-+		 * atomic_dec_return, we must not nuke the mapping.
-+		 */
-+		if (atomic_read(&page->xpfo_mapcount) == 0) {
-+			SetPageXpfoUnmapped(page);
-+			set_kpte(kaddr, page, __pgprot(0));
-+			flush_tlb = true;
-+		}
-+		spin_unlock(&page->xpfo_lock);
- 	}
- 
--	spin_unlock(&page->xpfo_lock);
-+	if (flush_tlb)
-+		xpfo_flush_kernel_tlb(page, 0);
+@@ -221,3 +221,18 @@ void xpfo_kunmap(void *kaddr, struct page *page)
+ 	spin_unlock(&xpfo->maplock);
  }
  EXPORT_SYMBOL(xpfo_kunmap);
- 
++
++bool xpfo_page_is_unmapped(struct page *page)
++{
++	struct xpfo *xpfo;
++
++	if (!static_branch_unlikely(&xpfo_inited))
++		return false;
++
++	xpfo = lookup_xpfo(page);
++	if (unlikely(!xpfo) && !xpfo->inited)
++		return false;
++
++	return test_bit(XPFO_PAGE_UNMAPPED, &xpfo->flags);
++}
++EXPORT_SYMBOL(xpfo_page_is_unmapped);
 -- 
 2.17.1
