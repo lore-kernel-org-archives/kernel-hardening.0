@@ -1,42 +1,82 @@
-Subject: Re: [PATCH v3 0/3] admin-guide: extend perf-security with resource
- control, data categories and privileged users
-References: <784bbe0d-56c1-bd63-1879-b7db988e40c0@linux.intel.com>
- <20190217161428.6b43608a@lwn.net>
-From: Alexey Budankov <alexey.budankov@linux.intel.com>
-Message-ID: <c26bd0a2-f0a3-47d4-0ff8-620a677d7a91@linux.intel.com>
-Date: Mon, 18 Feb 2019 11:56:30 +0300
+From: "Tobin C. Harding" <tobin@kernel.org>
+Subject: [PATCH 0/6] lib: Add safe string funtions 
+Date: Tue, 19 Feb 2019 10:23:02 +1100
+Message-Id: <20190218232308.11241-1-tobin@kernel.org>
 MIME-Version: 1.0
-In-Reply-To: <20190217161428.6b43608a@lwn.net>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-To: Jonathan Corbet <corbet@lwn.net>
-Cc: Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, Jann Horn <jannh@google.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Andi Kleen <ak@linux.intel.com>, Mark Rutland <mark.rutland@arm.com>, Tvrtko Ursulin <tvrtko.ursulin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>
+Content-Transfer-Encoding: 8bit
+To: Kees Cook <keescook@chromium.org>
+Cc: "Tobin C. Harding" <tobin@kernel.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+No file maintainer, CC'ing all those who touched this file :) And
+Shua for kselftest stuff.
 
-On 18.02.2019 2:14, Jonathan Corbet wrote:
-> On Mon, 11 Feb 2019 16:32:33 +0300
-> Alexey Budankov <alexey.budankov@linux.intel.com> wrote:
-> 
->> The patch set extends the first version of perf-security.rst documentation
->> file [1], [2], [3] with the following topics:
->>
->> 1) perf_events/Perf resource limits and control management that describes
->>    RLIMIT_NOFILE and perf_event_mlock_kb settings for processes conducting
->>    performance monitoring;
->>
->> 2) categories of system and performance data that can be captured by
->>    perf_events/Perf with explicit designation of process sensitive data;
->>
->> 3) possible steps to create perf_event/Perf privileged users groups for 
->>    the current implementations of perf_events syscall API [4] and Perf tool;
-> 
-> I've applied the set, thanks.
 
-Thanks a lot Jon!
+Hi Kess,
 
-~Alexey
+During your talk at LCA you mentioned that we could do with a couple
+more safe string functions.  One to zero the tail of the destination
+buffer after call to strscpy() and also the self explanatory
+strscpy_from_user().
 
-> 
-> jon
-> 
+Here is a patch set with my attempts to implement these two functions.
+
+While doing this I noticed that we have a test module for lib/string.c
+(lib/test_string.c) that is not tied into kselftest.  So I enable this
+first up in patch 1.
+
+Patch 2 and 3 are function docstring cleanups.
+
+Patch 4 adds the copy and zero function, naming it strscpy_zeroed().
+I'd love some help naming this better.  Patch also adds test code.
+
+Patch 5 fixes function docstring to correctly document the behavior of
+strncpy_from_user().
+
+Patch 6 adds strscpy_from_user().  Does not include test code.
+
+I had to do a bit of learning for getting the tests hooked into
+kselftest, I think its all correct.  Module is built correctly when the
+config option is present and the tests run both via
+
+	make -C tools/testing/selftests TARGETS=lib run_tests
+
+and via loading the module manually.  As a side note, this series leaves
+tools/testing/selftests/lib with 4 shell scripts that are identical
+except the test name.  We could probably do with refactoring them into a
+single script.
+
+Patchset introduces a checkpatch warning
+
+	WARNING:CONFIG_DESCRIPTION: please write a paragraph that describes the config symbol fully
+
+I couldn't work out if this is a false positive or not?  Does the new
+config option CONFIG_TEST_STRING need more documentation?  I don't see
+where extra docs should be added and it seems self explanatory as is.
+
+
+thanks,
+Tobin.
+
+Tobin C. Harding (6):
+  lib/string: Enable string selftesting
+  lib/string: Fix erroneous 'overflow' documentation
+  lib/string: Use correct docstring format
+  lib/string: Add string copy/zero function
+  lib: Fix function documentation for strncpy_from_user
+  lib: Add function strscpy_from_user()
+
+ include/linux/string.h                |  4 ++
+ lib/Kconfig.debug                     | 14 +++++++
+ lib/Makefile                          |  2 +-
+ lib/string.c                          | 41 ++++++++++++++----
+ lib/strncpy_from_user.c               | 60 ++++++++++++++++++++++-----
+ lib/test_string.c                     | 35 +++++++++++++++-
+ tools/testing/selftests/lib/Makefile  |  2 +-
+ tools/testing/selftests/lib/config    |  1 +
+ tools/testing/selftests/lib/string.sh | 19 +++++++++
+ 9 files changed, 157 insertions(+), 21 deletions(-)
+ create mode 100755 tools/testing/selftests/lib/string.sh
+
+-- 
+2.20.1
