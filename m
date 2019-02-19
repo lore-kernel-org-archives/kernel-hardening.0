@@ -1,153 +1,66 @@
+Date: Tue, 19 Feb 2019 12:04:00 +0100
+From: Borislav Petkov <bp@alien8.de>
+Subject: Re: [PATCH v2 14/20] mm: Make hibernate handle unmapped pages
+Message-ID: <20190219110400.GA19514@zn.tnic>
+References: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
+ <20190129003422.9328-15-rick.p.edgecombe@intel.com>
 MIME-Version: 1.0
-References: <20190218232308.11241-1-tobin@kernel.org> <20190218232308.11241-2-tobin@kernel.org>
-In-Reply-To: <20190218232308.11241-2-tobin@kernel.org>
-From: Andy Shevchenko <andy.shevchenko@gmail.com>
-Date: Tue, 19 Feb 2019 12:55:09 +0200
-Message-ID: <CAHp75VfP_gyx_+8XKhyJMShooPubpR2KJ7gvzu0Mbv3+TaFTxg@mail.gmail.com>
-Subject: Re: [PATCH 1/6] lib/string: Enable string selftesting
-Content-Type: text/plain; charset="UTF-8"
-To: "Tobin C. Harding" <tobin@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <20190129003422.9328-15-rick.p.edgecombe@intel.com>
+To: Rick Edgecombe <rick.p.edgecombe@intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Pavel Machek <pavel@ucw.cz>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 19, 2019 at 4:44 AM Tobin C. Harding <tobin@kernel.org> wrote:
->
-> Currently we have a test module but it is not tied into the kselftest
-> infrastructure.  In preparation for adding string manipulation functions
-> and testing we should enable kselftest to utilize the test module.
->
-> Enable string testing via kselftest infrastructure.
->
-> Signed-off-by: Tobin C. Harding <tobin@kernel.org>
-> ---
->  lib/Kconfig.debug                     | 14 ++++++++++++++
->  lib/Makefile                          |  2 +-
->  lib/test_string.c                     |  4 ++--
->  tools/testing/selftests/lib/Makefile  |  2 +-
->  tools/testing/selftests/lib/config    |  1 +
->  tools/testing/selftests/lib/string.sh | 19 +++++++++++++++++++
->  6 files changed, 38 insertions(+), 4 deletions(-)
->  create mode 100755 tools/testing/selftests/lib/string.sh
->
-> diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-> index d4df5b24d75e..0dca64c1d8a4 100644
-> --- a/lib/Kconfig.debug
-> +++ b/lib/Kconfig.debug
-> @@ -1802,8 +1802,22 @@ config ASYNC_RAID6_TEST
->  config TEST_HEXDUMP
->         tristate "Test functions located in the hexdump module at runtime"
->
-> +config TEST_STRING
-> +       tristate "Perform selftest on string manipulation functions"
+On Mon, Jan 28, 2019 at 04:34:16PM -0800, Rick Edgecombe wrote:
+> For architectures with CONFIG_ARCH_HAS_SET_ALIAS, pages can be unmapped
+> briefly on the directmap, even when CONFIG_DEBUG_PAGEALLOC is not
+> configured. So this changes kernel_map_pages and kernel_page_present to be
 
-> +       default n
+s/this changes/change/
 
-Redundant
+>From Documentation/process/submitting-patches.rst:
 
-> +       help
-> +        Enable this option to test string manipulation functions.
-> +       Currently this only tests memset_{16,32,64}.
-> +
-> +       If unsure, say N.
-> +
->  config TEST_STRING_HELPERS
->         tristate "Test functions located in the string_helpers module at runtime"
+ "Describe your changes in imperative mood, e.g. "make xyzzy do frotz"
+  instead of "[This patch] makes xyzzy do frotz" or "[I] changed xyzzy
+  to do frotz", as if you are giving orders to the codebase to change
+  its behaviour."
 
-> +       default n
+Also, please end function names with parentheses.
 
-Redundant
+> defined when CONFIG_ARCH_HAS_SET_ALIAS is defined as well. It also changes
+> places (page_alloc.c) where those functions are assumed to only be
+> implemented when CONFIG_DEBUG_PAGEALLOC is defined.
 
-> +       help
-> +        Enable this option to unit test code in lib/string_helpers.c
-> +
-> +        If unsure, say N.
->
->  config TEST_KSTRTOX
->         tristate "Test kstrto*() family of functions at runtime"
-> diff --git a/lib/Makefile b/lib/Makefile
-> index e1b59da71418..9c30e1fee27f 100644
-> --- a/lib/Makefile
-> +++ b/lib/Makefile
-> @@ -39,7 +39,7 @@ obj-y += bcd.o div64.o sort.o parser.o debug_locks.o random32.o \
->          bsearch.o find_bit.o llist.o memweight.o kfifo.o \
->          percpu-refcount.o rhashtable.o reciprocal_div.o \
->          once.o refcount.o usercopy.o errseq.o bucket_locks.o
-> -obj-$(CONFIG_STRING_SELFTEST) += test_string.o
-> +obj-$(CONFIG_TEST_STRING) += test_string.o
->  obj-y += string_helpers.o
->  obj-$(CONFIG_TEST_STRING_HELPERS) += test-string_helpers.o
->  obj-y += hexdump.o
-> diff --git a/lib/test_string.c b/lib/test_string.c
-> index 0fcdb82dca86..a9cba442389a 100644
-> --- a/lib/test_string.c
-> +++ b/lib/test_string.c
-> @@ -111,7 +111,7 @@ static __init int memset64_selftest(void)
->         return 0;
->  }
->
-> -static __init int string_selftest_init(void)
-> +static __init int test_string_init(void)
->  {
->         int test, subtest;
->
-> @@ -137,5 +137,5 @@ static __init int string_selftest_init(void)
->         return 0;
->  }
->
-> -module_init(string_selftest_init);
-> +module_init(test_string_init);
->  MODULE_LICENSE("GPL v2");
-> diff --git a/tools/testing/selftests/lib/Makefile b/tools/testing/selftests/lib/Makefile
-> index 70d5711e3ac8..2ee4559b277e 100644
-> --- a/tools/testing/selftests/lib/Makefile
-> +++ b/tools/testing/selftests/lib/Makefile
-> @@ -3,6 +3,6 @@
->  # No binaries, but make sure arg-less "make" doesn't trigger "run_tests"
->  all:
->
-> -TEST_PROGS := printf.sh bitmap.sh prime_numbers.sh
-> +TEST_PROGS := printf.sh bitmap.sh prime_numbers.sh string.sh
->
->  include ../lib.mk
-> diff --git a/tools/testing/selftests/lib/config b/tools/testing/selftests/lib/config
-> index 126933bcc950..2032402ad409 100644
-> --- a/tools/testing/selftests/lib/config
-> +++ b/tools/testing/selftests/lib/config
-> @@ -1,3 +1,4 @@
->  CONFIG_TEST_PRINTF=m
->  CONFIG_TEST_BITMAP=m
-> +CONFIG_TEST_STRING=m
->  CONFIG_PRIME_NUMBERS=m
-> diff --git a/tools/testing/selftests/lib/string.sh b/tools/testing/selftests/lib/string.sh
-> new file mode 100755
-> index 000000000000..99024b6f3a6a
-> --- /dev/null
-> +++ b/tools/testing/selftests/lib/string.sh
-> @@ -0,0 +1,19 @@
-> +#!/bin/sh
-> +# SPDX-License-Identifier: GPL-2.0
-> +# Runs string manipulation tests using test_string kernel module
-> +
-> +# Kselftest framework requirement - SKIP code is 4.
-> +ksft_skip=4
-> +
-> +if ! /sbin/modprobe -q -n test_string; then
-> +       echo "string: module test_string is not found [SKIP]"
-> +       exit $ksft_skip
-> +fi
-> +
-> +if /sbin/modprobe -q test_string; then
-> +       /sbin/modprobe -q -r test_string
-> +       echo "string: ok"
-> +else
-> +       echo "string: [FAIL]"
-> +       exit 1
-> +fi
-> --
-> 2.20.1
->
+The commit message doesn't need to say "what" you're doing - that should
+be obvious from the diff below. It should rather say "why" you're doing
+it.
 
+> So now when CONFIG_ARCH_HAS_SET_ALIAS=y, hibernate will handle not present
+> page when saving. Previously this was already done when
+
+pages
+
+> CONFIG_DEBUG_PAGEALLOC was configured. It does not appear to have a big
+> hibernating performance impact.
+
+Comment over safe_copy_page() needs updating I guess.
+
+> Before:
+> [    4.670938] PM: Wrote 171996 kbytes in 0.21 seconds (819.02 MB/s)
+> 
+> After:
+> [    4.504714] PM: Wrote 178932 kbytes in 0.22 seconds (813.32 MB/s)
+
+IINM, that's like 1734 pages more. How am I to understand this number?
+
+Code has called set_alias_nv_noflush() on them and safe_copy_page() now
+maps them one by one to copy them to the hibernation image?
+
+Thx.
 
 -- 
-With Best Regards,
-Andy Shevchenko
+Regards/Gruss,
+    Boris.
+
+Good mailing practices for 400: avoid top-posting and trim the reply.
