@@ -1,40 +1,153 @@
 MIME-Version: 1.0
-References: <20190218232308.11241-1-tobin@kernel.org> <20190218232308.11241-7-tobin@kernel.org>
-In-Reply-To: <20190218232308.11241-7-tobin@kernel.org>
-From: Jann Horn <jannh@google.com>
-Date: Tue, 19 Feb 2019 03:12:33 +0100
-Message-ID: <CAG48ez1n=+GsvhMxHhxL=EBxD6VEqopdLRPcEAff9vrP3+a30g@mail.gmail.com>
-Subject: Re: [PATCH 6/6] lib: Add function strscpy_from_user()
+References: <20190218232308.11241-1-tobin@kernel.org> <20190218232308.11241-2-tobin@kernel.org>
+In-Reply-To: <20190218232308.11241-2-tobin@kernel.org>
+From: Andy Shevchenko <andy.shevchenko@gmail.com>
+Date: Tue, 19 Feb 2019 12:55:09 +0200
+Message-ID: <CAHp75VfP_gyx_+8XKhyJMShooPubpR2KJ7gvzu0Mbv3+TaFTxg@mail.gmail.com>
+Subject: Re: [PATCH 1/6] lib/string: Enable string selftesting
 Content-Type: text/plain; charset="UTF-8"
 To: "Tobin C. Harding" <tobin@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, kernel list <linux-kernel@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Shuah Khan <shuah@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 19, 2019 at 12:25 AM Tobin C. Harding <tobin@kernel.org> wrote:
-> Currently we have strncpy_from_userspace().  If the user string is
-> longer than the destination kernel buffer we get an error code -EFAULT.
-> We are unable to recover from here because this is the same error
-> returned if the access to userspace fails totally.
+On Tue, Feb 19, 2019 at 4:44 AM Tobin C. Harding <tobin@kernel.org> wrote:
 >
-> There is no reason we cannot continue execution with the user string
-> truncated.
+> Currently we have a test module but it is not tied into the kselftest
+> infrastructure.  In preparation for adding string manipulation functions
+> and testing we should enable kselftest to utilize the test module.
 >
-> Add a function strscpy_from_user() that guarantees the string written is
-> null-terminated.  If user string is longer than destination buffer
-> truncates the string.  Returns the number of characters written
-> excluding the null-terminator.
+> Enable string testing via kselftest infrastructure.
 >
 > Signed-off-by: Tobin C. Harding <tobin@kernel.org>
 > ---
->  lib/strncpy_from_user.c | 43 +++++++++++++++++++++++++++++++++++++++++
->  1 file changed, 43 insertions(+)
+>  lib/Kconfig.debug                     | 14 ++++++++++++++
+>  lib/Makefile                          |  2 +-
+>  lib/test_string.c                     |  4 ++--
+>  tools/testing/selftests/lib/Makefile  |  2 +-
+>  tools/testing/selftests/lib/config    |  1 +
+>  tools/testing/selftests/lib/string.sh | 19 +++++++++++++++++++
+>  6 files changed, 38 insertions(+), 4 deletions(-)
+>  create mode 100755 tools/testing/selftests/lib/string.sh
 >
-> diff --git a/lib/strncpy_from_user.c b/lib/strncpy_from_user.c
-> index 11fe9a4a00fd..6bd603ccec7a 100644
-> --- a/lib/strncpy_from_user.c
-> +++ b/lib/strncpy_from_user.c
+> diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
+> index d4df5b24d75e..0dca64c1d8a4 100644
+> --- a/lib/Kconfig.debug
+> +++ b/lib/Kconfig.debug
+> @@ -1802,8 +1802,22 @@ config ASYNC_RAID6_TEST
+>  config TEST_HEXDUMP
+>         tristate "Test functions located in the hexdump module at runtime"
+>
+> +config TEST_STRING
+> +       tristate "Perform selftest on string manipulation functions"
 
-This file is only built when CONFIG_GENERIC_STRNCPY_FROM_USER is set.
-Some architectures have their own versions of strncpy_from_user() and
-don't set that, so on those architectures, your code wouldn't be built
-into the kernel.
+> +       default n
+
+Redundant
+
+> +       help
+> +        Enable this option to test string manipulation functions.
+> +       Currently this only tests memset_{16,32,64}.
+> +
+> +       If unsure, say N.
+> +
+>  config TEST_STRING_HELPERS
+>         tristate "Test functions located in the string_helpers module at runtime"
+
+> +       default n
+
+Redundant
+
+> +       help
+> +        Enable this option to unit test code in lib/string_helpers.c
+> +
+> +        If unsure, say N.
+>
+>  config TEST_KSTRTOX
+>         tristate "Test kstrto*() family of functions at runtime"
+> diff --git a/lib/Makefile b/lib/Makefile
+> index e1b59da71418..9c30e1fee27f 100644
+> --- a/lib/Makefile
+> +++ b/lib/Makefile
+> @@ -39,7 +39,7 @@ obj-y += bcd.o div64.o sort.o parser.o debug_locks.o random32.o \
+>          bsearch.o find_bit.o llist.o memweight.o kfifo.o \
+>          percpu-refcount.o rhashtable.o reciprocal_div.o \
+>          once.o refcount.o usercopy.o errseq.o bucket_locks.o
+> -obj-$(CONFIG_STRING_SELFTEST) += test_string.o
+> +obj-$(CONFIG_TEST_STRING) += test_string.o
+>  obj-y += string_helpers.o
+>  obj-$(CONFIG_TEST_STRING_HELPERS) += test-string_helpers.o
+>  obj-y += hexdump.o
+> diff --git a/lib/test_string.c b/lib/test_string.c
+> index 0fcdb82dca86..a9cba442389a 100644
+> --- a/lib/test_string.c
+> +++ b/lib/test_string.c
+> @@ -111,7 +111,7 @@ static __init int memset64_selftest(void)
+>         return 0;
+>  }
+>
+> -static __init int string_selftest_init(void)
+> +static __init int test_string_init(void)
+>  {
+>         int test, subtest;
+>
+> @@ -137,5 +137,5 @@ static __init int string_selftest_init(void)
+>         return 0;
+>  }
+>
+> -module_init(string_selftest_init);
+> +module_init(test_string_init);
+>  MODULE_LICENSE("GPL v2");
+> diff --git a/tools/testing/selftests/lib/Makefile b/tools/testing/selftests/lib/Makefile
+> index 70d5711e3ac8..2ee4559b277e 100644
+> --- a/tools/testing/selftests/lib/Makefile
+> +++ b/tools/testing/selftests/lib/Makefile
+> @@ -3,6 +3,6 @@
+>  # No binaries, but make sure arg-less "make" doesn't trigger "run_tests"
+>  all:
+>
+> -TEST_PROGS := printf.sh bitmap.sh prime_numbers.sh
+> +TEST_PROGS := printf.sh bitmap.sh prime_numbers.sh string.sh
+>
+>  include ../lib.mk
+> diff --git a/tools/testing/selftests/lib/config b/tools/testing/selftests/lib/config
+> index 126933bcc950..2032402ad409 100644
+> --- a/tools/testing/selftests/lib/config
+> +++ b/tools/testing/selftests/lib/config
+> @@ -1,3 +1,4 @@
+>  CONFIG_TEST_PRINTF=m
+>  CONFIG_TEST_BITMAP=m
+> +CONFIG_TEST_STRING=m
+>  CONFIG_PRIME_NUMBERS=m
+> diff --git a/tools/testing/selftests/lib/string.sh b/tools/testing/selftests/lib/string.sh
+> new file mode 100755
+> index 000000000000..99024b6f3a6a
+> --- /dev/null
+> +++ b/tools/testing/selftests/lib/string.sh
+> @@ -0,0 +1,19 @@
+> +#!/bin/sh
+> +# SPDX-License-Identifier: GPL-2.0
+> +# Runs string manipulation tests using test_string kernel module
+> +
+> +# Kselftest framework requirement - SKIP code is 4.
+> +ksft_skip=4
+> +
+> +if ! /sbin/modprobe -q -n test_string; then
+> +       echo "string: module test_string is not found [SKIP]"
+> +       exit $ksft_skip
+> +fi
+> +
+> +if /sbin/modprobe -q test_string; then
+> +       /sbin/modprobe -q -r test_string
+> +       echo "string: ok"
+> +else
+> +       echo "string: [FAIL]"
+> +       exit 1
+> +fi
+> --
+> 2.20.1
+>
+
+
+-- 
+With Best Regards,
+Andy Shevchenko
