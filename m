@@ -1,307 +1,112 @@
-Date: Tue, 19 Feb 2019 13:48:53 +0100
-From: Borislav Petkov <bp@alien8.de>
-Subject: Re: [PATCH v2 15/20] vmalloc: New flags for safe vfree on special
- perms
-Message-ID: <20190219124853.GB19514@zn.tnic>
-References: <20190129003422.9328-1-rick.p.edgecombe@intel.com>
- <20190129003422.9328-16-rick.p.edgecombe@intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <20190129003422.9328-16-rick.p.edgecombe@intel.com>
-To: Rick Edgecombe <rick.p.edgecombe@intel.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, x86@kernel.org, hpa@zytor.com, Thomas Gleixner <tglx@linutronix.de>, Nadav Amit <nadav.amit@gmail.com>, Dave Hansen <dave.hansen@linux.intel.com>, Peter Zijlstra <peterz@infradead.org>, linux_dti@icloud.com, linux-integrity@vger.kernel.org, linux-security-module@vger.kernel.org, akpm@linux-foundation.org, kernel-hardening@lists.openwall.com, linux-mm@kvack.org, will.deacon@arm.com, ard.biesheuvel@linaro.org, kristen@linux.intel.com, deneen.t.dock@intel.com
+References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
+ <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
+ <20190208130544.GI32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
+ <20190208142642.GJ32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB96C5@IRSMSX102.ger.corp.intel.com>
+ <CALCETrXA8PBtu6B5z5gjJV4X_pe16f4DE7T5o5AspgMckBRWKA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612BA4BBA73C@IRSMSX102.ger.corp.intel.com>
+ <EBF96DB2-B25D-437B-A067-F187E031BC3E@amacapital.net> <5E269FBC3009974381A340959F3135C95C8F78E5@hasmsx108.ger.corp.intel.com>
+ <2236FBA76BA1254E88B949DDB74E612BA4BC57C1@IRSMSX102.ger.corp.intel.com>
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612BA4BC57C1@IRSMSX102.ger.corp.intel.com>
+From: Jann Horn <jannh@google.com>
+Date: Tue, 19 Feb 2019 15:47:41 +0100
+Message-ID: <CAG48ez2xpgLhEQp7y9AJw0gS2yk1kBC7SDbOG_7Piqti-1eiNA@mail.gmail.com>
+Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
+ system call
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: "Perla, Enrico" <enrico.perla@intel.com>, Andy Lutomirski <luto@amacapital.net>, "keescook@chromium.org" <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 28, 2019 at 04:34:17PM -0800, Rick Edgecombe wrote:
-> This adds a new flags VM_HAS_SPECIAL_PERMS, for enabling vfree operations
+On Thu, Feb 14, 2019 at 8:52 AM Reshetova, Elena
+<elena.reshetova@intel.com> wrote:
+> After some thinking and discussions, let me try to summarize the options =
+and the
+> security benefits of each approach based on everyone else feedback before
+> going any further with work. We all want only useful things in kernel, so=
+ merging
+> smth that provides a subtle/almost non-existing benefit is clearly not a =
+priority.
+>
+> So, first about the protection methods. We can do randomization in two wa=
+ys:
+>
+> 1. stack top itself (and location of pt_regs)
+> 2. relative stack positioning (offset from pt_regs).
+>
+> In addition to randomization we can do some fixup on exit, like Andy prop=
+osed:
+>
+> 3. Make sure CS always points to user on exit (for example by regs->cs |=
+=3D 3),
+> potentially smth else can be fixed up similarly, if needed
+>
+> Here are *known* (at least to me, please shout if you know more!) possibl=
+e
+> attacks vectors and implications on them by doing 1), 2) or 3)
+>
+> a) attacker's goal is to store some user-controlled data in pt_regs to re=
+ference it later
+>   1) pt_regs is not predictable, but can be discovered in ptrace-style sc=
+enario or cache-probing.
+>      If discovered, then attack succeeds as of now.
+>   2) nothing changed for this type of attack, attack succeeds as of now
+>   3) nothing changed for this type of attack, attack succeeds as of now
+>
+> b) attacker's goal is to return to userland from a syscall with CS pointi=
+ng to kernel
+>  1) pt_regs is not predictable, but can be discovered in ptrace-style sce=
+nario or cache-probing.
+>      If discovered, then attack succeeds as of now.
+>  2) nothing changed for this type of attack, attack succeeds as of now
+>  3) CS changed explicitly on exit, so impossible to have this attack, *gi=
+ven* that the
+>     change is done late enough and no races, sleeps, etc. are possible
+>
+> c) attacker's goal is to perform some kind of stack overflow into parts o=
+f adjusted stack
+>   memory via some method. Here the main unknown is the "method".
+> This vector of attack is the challenge for the current exploit writers: I=
+ guess if you can do
+> it now with all the current protections for stack enabled, you get a nice=
+ defcon talk at least :)
+> VLA used to be an easy way of doing it, hopefully they are gone from the =
+main source now
+> (out of tree drivers is a different story).
+> Uninitialized locals might be other way, but there is work ongoing to clo=
+se this (see Kees's
+> patches on stackinit).
+> Smth else we don=E2=80=99t yet know?
+> Now back to our proposed countermeasures given that attacker has found a =
+way to do
+> a crafted overflow and overwrite:
+>
+>   1) pt_regs is not predictable, but can be discovered in ptrace-style sc=
+enario or cache-probing.
+>      If discovered, then attack succeeds as of now.
+>   2) relative stack offset is not predictable and randomized, cannot be p=
+robed very easily via
+>       cache or ptrace. So, this is an additional hurdle on the attacker's=
+ way since stack is non-
+>       deterministic now.
+>   3) nothing changed for this type of attack, given that attacker's goal =
+is not to overwrite CS
+>       in adjusted pt_regs. If it is his goal, then it helps with that.
+>
+>
+> Now summary:
+>
+> It would seem to me that:
+>
+> - regs->cs |=3D 3 on exit is a thing worth doing anyway, just because it =
+is cheap, as Andy said, and it
+> might make a positive difference in two out of three attack scenarios. Ob=
+jections?
+>
+> - randomization of stack top is only worth doing in ptrace-blocked scenar=
+io.
+> Do we have such scenarios left that people care about?
 
-s/This adds/add/ - you get the idea. :)
-
-s/flags/flag/
-
-> to immediately clear executable TLB entries to freed pages, and handle
-> freeing memory with special permissions. It also takes care of resetting
-> the direct map permissions for the pages being unmapped. So this flag is
-> useful for any kind of memory with elevated permissions, or where there can
-> be related permissions changes on the directmap. Today this is RO+X and RO
-> memory.
-> 
-> Although this enables directly vfreeing RO memory now, RO memory cannot be
-> freed in an interrupt because the allocation itself is used as a node on
-> deferred free list. So when RO memory needs to be freed in an interrupt
-> the code doing the vfree needs to have its own work queue, as was the case
-> before the deferred vfree list handling was added. Today there is only one
-> case where this happens.
-> 
-> For architectures with set_alias_ implementations this whole operation
-> can be done with one TLB flush when centralized like this. For others with
-> directmap permissions, currently only arm64, a backup method using
-> set_memory functions is used to reset the directmap. When arm64 adds
-> set_alias_ functions, this backup can be removed.
-> 
-> When the TLB is flushed to both remove TLB entries for the vmalloc range
-> mapping and the direct map permissions, the lazy purge operation could be
-> done to try to save a TLB flush later. However today vm_unmap_aliases
-> could flush a TLB range that does not include the directmap. So a helper
-> is added with extra parameters that can allow both the vmalloc address and
-> the direct mapping to be flushed during this operation. The behavior of the
-> normal vm_unmap_aliases function is unchanged.
-> 
-> Suggested-by: Dave Hansen <dave.hansen@intel.com>
-> Suggested-by: Andy Lutomirski <luto@kernel.org>
-> Suggested-by: Will Deacon <will.deacon@arm.com>
-> Signed-off-by: Rick Edgecombe <rick.p.edgecombe@intel.com>
-> ---
->  include/linux/vmalloc.h |  13 +++++
->  mm/vmalloc.c            | 122 +++++++++++++++++++++++++++++++++-------
->  2 files changed, 116 insertions(+), 19 deletions(-)
-> 
-> diff --git a/include/linux/vmalloc.h b/include/linux/vmalloc.h
-> index 398e9c95cd61..9f643f917360 100644
-> --- a/include/linux/vmalloc.h
-> +++ b/include/linux/vmalloc.h
-> @@ -21,6 +21,11 @@ struct notifier_block;		/* in notifier.h */
->  #define VM_UNINITIALIZED	0x00000020	/* vm_struct is not fully initialized */
->  #define VM_NO_GUARD		0x00000040      /* don't add guard page */
->  #define VM_KASAN		0x00000080      /* has allocated kasan shadow memory */
-> +/*
-> + * Memory with VM_HAS_SPECIAL_PERMS cannot be freed in an interrupt or with
-> + * vfree_atomic.
-
-Please end function names with parentheses. You should go over the whole
-patchset - there are a bunch of places.
-
-> + */
-> +#define VM_HAS_SPECIAL_PERMS	0x00000200      /* Reset directmap and flush TLB on unmap */
-
-After 0x00000080 comes 0x00000100. 0x00000010 is free too. What's up?
-
->  /* bits [20..32] reserved for arch specific ioremap internals */
->  
->  /*
-> @@ -135,6 +140,14 @@ extern struct vm_struct *__get_vm_area_caller(unsigned long size,
->  extern struct vm_struct *remove_vm_area(const void *addr);
->  extern struct vm_struct *find_vm_area(const void *addr);
->  
-> +static inline void set_vm_special(void *addr)
-
-You need a different name than "special" for a vm which needs to flush
-and clear mapping perms on removal. VM_RESET_PERMS or whatever is more
-to the point than "special", for example, which could mean a lot of
-things.
-
-> +{
-> +	struct vm_struct *vm = find_vm_area(addr);
-> +
-> +	if (vm)
-> +		vm->flags |= VM_HAS_SPECIAL_PERMS;
-> +}
-> +
->  extern int map_vm_area(struct vm_struct *area, pgprot_t prot,
->  			struct page **pages);
->  #ifdef CONFIG_MMU
-> diff --git a/mm/vmalloc.c b/mm/vmalloc.c
-> index 871e41c55e23..d459b5b9649b 100644
-> --- a/mm/vmalloc.c
-> +++ b/mm/vmalloc.c
-> @@ -18,6 +18,7 @@
->  #include <linux/interrupt.h>
->  #include <linux/proc_fs.h>
->  #include <linux/seq_file.h>
-> +#include <linux/set_memory.h>
->  #include <linux/debugobjects.h>
->  #include <linux/kallsyms.h>
->  #include <linux/list.h>
-> @@ -1055,24 +1056,11 @@ static void vb_free(const void *addr, unsigned long size)
->  		spin_unlock(&vb->lock);
->  }
->  
-> -/**
-> - * vm_unmap_aliases - unmap outstanding lazy aliases in the vmap layer
-> - *
-> - * The vmap/vmalloc layer lazily flushes kernel virtual mappings primarily
-> - * to amortize TLB flushing overheads. What this means is that any page you
-> - * have now, may, in a former life, have been mapped into kernel virtual
-> - * address by the vmap layer and so there might be some CPUs with TLB entries
-> - * still referencing that page (additional to the regular 1:1 kernel mapping).
-> - *
-> - * vm_unmap_aliases flushes all such lazy mappings. After it returns, we can
-> - * be sure that none of the pages we have control over will have any aliases
-> - * from the vmap layer.
-> - */
-> -void vm_unmap_aliases(void)
-> +static void _vm_unmap_aliases(unsigned long start, unsigned long end,
-> +				int must_flush)
-
-Align arguments on the opening brace. There's more places below, pls fix
-them all.
-
->  {
-> -	unsigned long start = ULONG_MAX, end = 0;
->  	int cpu;
-> -	int flush = 0;
-> +	int flush = must_flush;
-
-You can't use must_flush directly because...?
-
-gcc produces the same asm here, with or without the local "flush" var.
-
->  
->  	if (unlikely(!vmap_initialized))
->  		return;
-> @@ -1109,6 +1097,27 @@ void vm_unmap_aliases(void)
->  		flush_tlb_kernel_range(start, end);
->  	mutex_unlock(&vmap_purge_lock);
->  }
-> +
-> +/**
-> + * vm_unmap_aliases - unmap outstanding lazy aliases in the vmap layer
-> + *
-> + * The vmap/vmalloc layer lazily flushes kernel virtual mappings primarily
-> + * to amortize TLB flushing overheads. What this means is that any page you
-> + * have now, may, in a former life, have been mapped into kernel virtual
-> + * address by the vmap layer and so there might be some CPUs with TLB entries
-> + * still referencing that page (additional to the regular 1:1 kernel mapping).
-> + *
-> + * vm_unmap_aliases flushes all such lazy mappings. After it returns, we can
-> + * be sure that none of the pages we have control over will have any aliases
-> + * from the vmap layer.
-> + */
-> +void vm_unmap_aliases(void)
-> +{
-> +	unsigned long start = ULONG_MAX, end = 0;
-> +	int must_flush = 0;
-> +
-> +	_vm_unmap_aliases(start, end, must_flush);
-> +}
->  EXPORT_SYMBOL_GPL(vm_unmap_aliases);
->  
->  /**
-> @@ -1494,6 +1503,79 @@ struct vm_struct *remove_vm_area(const void *addr)
->  	return NULL;
->  }
->  
-> +static inline void set_area_alias(const struct vm_struct *area,
-> +			int (*set_alias)(struct page *page))
-> +{
-> +	int i;
-> +
-> +	for (i = 0; i < area->nr_pages; i++) {
-> +		unsigned long addr =
-> +			(unsigned long)page_address(area->pages[i]);
-> +
-> +		if (addr)
-> +			set_alias(area->pages[i]);
-
-What's wrong with simply:
-
-        for (i = 0; i < area->nr_pages; i++) {
-                if (page_address(area->pages[i]))
-                        set_alias(area->pages[i]);
-        }
-
-?
-
-> +	}
-> +}
-> +
-> +/* This handles removing and resetting vm mappings related to the vm_struct. */
-
-s/This handles/Handle/
-
-> +static void vm_remove_mappings(struct vm_struct *area, int deallocate_pages)
-> +{
-> +	unsigned long addr = (unsigned long)area->addr;
-> +	unsigned long start = ULONG_MAX, end = 0;
-> +	int special = area->flags & VM_HAS_SPECIAL_PERMS;
-> +	int i;
-> +
-> +	/*
-> +	 * The below block can be removed when all architectures that have
-> +	 * direct map permissions also have set_alias_ implementations. This is
-> +	 * to do resetting on the directmap for any special permissions (today
-> +	 * only X), without leaving a RW+X window.
-> +	 */
-> +	if (special && !IS_ENABLED(CONFIG_ARCH_HAS_SET_ALIAS)) {
-> +		set_memory_nx(addr, area->nr_pages);
-> +		set_memory_rw(addr, area->nr_pages);
-
-That's two not very cheap calls to the underlying worker function, for
-example change_memory_common() on ARM64, instead of calling it once with
-the respective flags. You allude to that in the commit message but you
-might wanna run it by ARM folks first.
-
-> +	}
-> +
-> +	remove_vm_area(area->addr);
-> +
-> +	/* If this is not special memory, we can skip the below. */
-> +	if (!special)
-> +		return;
-> +
-> +	/*
-> +	 * If we are not deallocating pages, we can just do the flush of the VM
-> +	 * area and return.
-> +	 */
-> +	if (!deallocate_pages) {
-> +		vm_unmap_aliases();
-> +		return;
-> +	}
-> +
-> +	/*
-> +	 * If we are here, we need to flush the vm mapping and reset the direct
-> +	 * map.
-> +	 * First find the start and end range of the direct mappings to make
-> +	 * sure the vm_unmap_aliases flush includes the direct map.
-> +	 */
-> +	for (i = 0; i < area->nr_pages; i++) {
-> +		unsigned long addr =
-> +			(unsigned long)page_address(area->pages[i]);
-> +		if (addr) {
-
-		if (page_address(area->pages[i]))
-
-as above.
-
-> +			start = min(addr, start);
-> +			end = max(addr, end);
-> +		}
-> +	}
-> +
-> +	/*
-> +	 * First we set direct map to something not valid so that it won't be
-
-Above comment says "First" too. In general, all those "we" formulations
-do not make the comments as easy to read as when you make them
-impersonal and imperative:
-
-	/*
-	 * Set the direct map to something invalid...
-
-Just like Documentation/process/submitting-patches.rst says:
-
- "Describe your changes in imperative mood, e.g. "make xyzzy do frotz"
-  instead of "[This patch] makes xyzzy do frotz" or "[I] changed xyzzy
-  to do frotz", as if you are giving orders to the codebase to change
-  its behaviour."
-
-you simply order your code to do stuff. :-)
-
-> +	 * cached if there are any accesses after the TLB flush, then we flush
-> +	 * the TLB, and reset the directmap permissions to the default.
-> +	 */
-> +	set_area_alias(area, set_alias_nv_noflush);
-> +	_vm_unmap_aliases(start, end, 1);
-> +	set_area_alias(area, set_alias_default_noflush);
-> +}
-> +
->  static void __vunmap(const void *addr, int deallocate_pages)
->  {
->  	struct vm_struct *area;
-
--- 
-Regards/Gruss,
-    Boris.
-
-Good mailing practices for 400: avoid top-posting and trim the reply.
+There are some, I think; for example, Chrome renderers on desktop
+Linux can't use ptrace.
