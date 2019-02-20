@@ -1,42 +1,54 @@
 MIME-Version: 1.0
-References: <20190220180934.GA46255@beast> <20190220184859.GA6429@openwall.com>
-In-Reply-To: <20190220184859.GA6429@openwall.com>
+References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
+ <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
+ <20190208130544.GI32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
+ <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
+In-Reply-To: <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 20 Feb 2019 13:20:58 -0800
-Message-ID: <CAGXu5jLB=so4r169pq1KF3Kyfh2Kw_t6ZXGavpzVO2sg3=D1tw@mail.gmail.com>
-Subject: Re: [PATCH v2] x86/asm: Pin sensitive CR4 bits
+Date: Wed, 20 Feb 2019 13:51:44 -0800
+Message-ID: <CAGXu5jJ65i5nu7kZhSnE71ohuiz-FCxWvGapdktVzkvcf1FJfg@mail.gmail.com>
+Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
+ system call
 Content-Type: text/plain; charset="UTF-8"
-To: Solar Designer <solar@openwall.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Jann Horn <jannh@google.com>, Dominik Brodowski <linux@dominikbrodowski.net>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "luto@kernel.org" <luto@kernel.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 20, 2019 at 10:49 AM Solar Designer <solar@openwall.com> wrote:
+On Fri, Feb 8, 2019 at 6:26 AM Peter Zijlstra <peterz@infradead.org> wrote:
+> On Fri, Feb 08, 2019 at 01:20:09PM +0000, Reshetova, Elena wrote:
+> > > On Fri, Feb 08, 2019 at 02:15:49PM +0200, Elena Reshetova wrote:
 >
-> On Wed, Feb 20, 2019 at 10:09:34AM -0800, Kees Cook wrote:
-> > +     if (WARN_ONCE((val & cr4_pin) != cr4_pin, "cr4 bypass attempt?!\n"))
-> > +             goto again;
+> > >
+> > > Why can't we change the stack offset periodically from an interrupt or
+> > > so, and then have every later entry use that.
+> >
+> > Hm... This sounds more complex conceptually - we cannot touch
+> > stack when it is in use, so we have to periodically probe for a
+> > good time (when process is in userspace I guess) to change it from an interrupt?
+> > IMO trampoline stack provides such a good clean place for doing it and we
+> > have stackleak there doing stack cleanup, so would make sense to keep
+> > these features operating together.
 >
-> I think "goto again" is too mild a response given that it occurs after a
-> successful write of a non-pinned value to CR4.  I think it'd allow some
-> exploits to eventually win the race: make their desired use of whatever
-> functionality SMEP, etc. would have prevented - which may be just a few
-> instructions they need to run - before the CR4 value is reverted after
-> "goto again".  I think it's one of those cases where a kernel panic
-> would be more appropriate.
+> The idea was to just change a per-cpu (possible per-task if you ctxsw
+> it) offset that is used on entry to offset the stack.
+>
+> So only entries after the change will have the updated offset, any
+> in-progress syscalls will continue with their current offset and will be
+> unaffected.
 
-It will not land upstream with a BUG() or panic(). Linus has
-explicitly stated that none of this work can do that until it has
-"baked" in the kernel for a couple years.
+These defenses tend to need randomization between syscalls to actually
+disrupt an attack. (Take for example, the attack I demonstrated with
+uninitialized stack variables[1], which used back-to-back syscalls,
+one to prime the memory contents followed by one to use those values
+for an exploit.)
 
-In his defense, anyone sufficiently paranoid can already raise the
-priority of a WARN() into a panic via sysctl kernel.panic_on_warn (and
-kernel.panic_on_oops).
+(Though I would say that with CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL=y
+the uninitialized variables issue.)
 
-> Also, WARN_ONCE possibly introduces a delay sufficient to realistically
-> win this race on the first try.  If we choose to warn, we should do it
-> after having reverted the CR4 value, not before.
+-Kees
 
-Isn't cr4 CPU-local though? Couldn't we turn off interrupts to stop the race?
+[1] https://www.defcon.org/images/defcon-19/dc-19-presentations/Cook/DEFCON-19-Cook-Kernel-Exploitation.pdf
+slide 21
 
 -- 
 Kees Cook
