@@ -1,54 +1,50 @@
 MIME-Version: 1.0
 References: <1549628149-11881-1-git-send-email-elena.reshetova@intel.com>
- <1549628149-11881-2-git-send-email-elena.reshetova@intel.com>
- <20190208130544.GI32511@hirez.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612BA4BB7580@IRSMSX102.ger.corp.intel.com>
- <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
-In-Reply-To: <20190208142642.GJ32511@hirez.programming.kicks-ass.net>
+ <1549628149-11881-2-git-send-email-elena.reshetova@intel.com> <1D62D311-DD73-43BD-9ED1-8B9450842B89@amacapital.net>
+In-Reply-To: <1D62D311-DD73-43BD-9ED1-8B9450842B89@amacapital.net>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 20 Feb 2019 13:51:44 -0800
-Message-ID: <CAGXu5jJ65i5nu7kZhSnE71ohuiz-FCxWvGapdktVzkvcf1FJfg@mail.gmail.com>
+Date: Wed, 20 Feb 2019 14:03:13 -0800
+Message-ID: <CAGXu5jL1Bx6_JfS9ei7dZA=9Hk4wBBQXRLtYPpqOAhRUoYDbuQ@mail.gmail.com>
 Subject: Re: [RFC PATCH] x86/entry/64: randomize kernel stack offset upon
  system call
 Content-Type: text/plain; charset="UTF-8"
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "luto@kernel.org" <luto@kernel.org>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "bp@alien8.de" <bp@alien8.de>, "tytso@mit.edu" <tytso@mit.edu>
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Elena Reshetova <elena.reshetova@intel.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 8, 2019 at 6:26 AM Peter Zijlstra <peterz@infradead.org> wrote:
-> On Fri, Feb 08, 2019 at 01:20:09PM +0000, Reshetova, Elena wrote:
-> > > On Fri, Feb 08, 2019 at 02:15:49PM +0200, Elena Reshetova wrote:
->
-> > >
-> > > Why can't we change the stack offset periodically from an interrupt or
-> > > so, and then have every later entry use that.
+On Fri, Feb 8, 2019 at 8:34 AM Andy Lutomirski <luto@amacapital.net> wrote:
+> > On Feb 8, 2019, at 4:15 AM, Elena Reshetova <elena.reshetova@intel.com> wrote:
+> > This feature should make considerably harder various
+> > stack-based attacks that are based upon overflowing
+> > a kernel stack into adjusted kernel stack with a
+> > possibility to jump over a guard page.
+> > Since the stack offset is randomized upon each
+> > system call, it is very hard for attacker to reliably
+> > land in any particular place on the adjusted stack.
 > >
-> > Hm... This sounds more complex conceptually - we cannot touch
-> > stack when it is in use, so we have to periodically probe for a
-> > good time (when process is in userspace I guess) to change it from an interrupt?
-> > IMO trampoline stack provides such a good clean place for doing it and we
-> > have stackleak there doing stack cleanup, so would make sense to keep
-> > these features operating together.
 >
-> The idea was to just change a per-cpu (possible per-task if you ctxsw
-> it) offset that is used on entry to offset the stack.
->
-> So only entries after the change will have the updated offset, any
-> in-progress syscalls will continue with their current offset and will be
-> unaffected.
+> I think we need a better justification. With VLAs gone, it should be statically impossible to overflow past a guard page.
 
-These defenses tend to need randomization between syscalls to actually
-disrupt an attack. (Take for example, the attack I demonstrated with
-uninitialized stack variables[1], which used back-to-back syscalls,
-one to prime the memory contents followed by one to use those values
-for an exploit.)
+I do agree, that the stack is a much more well-defended area right
+now, and that the urgency for this feature is lower, but if it's easy
+to implement, I think we should do it.
 
-(Though I would say that with CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL=y
-the uninitialized variables issue.)
+With VLAs universally gone, we can't get unbounded allocations that
+lead to both linear overflows and indexed overflows. But this doesn't
+mean a counter or index can't still go crazy -- it just means the
+expected stack layout will no longer be attached to it.
 
--Kees
+With VMAP_STACK we stop linear overflows of the stack since we'll hit
+a guard page. However, this does not stop indexed overflows where we
+can jump the guard page. It is harder to control an indexed overflow
+vs a linear overflow, but it's still possible. Adding more variability
+to this, I think, has value in making attacks less reliable.
 
-[1] https://www.defcon.org/images/defcon-19/dc-19-presentations/Cook/DEFCON-19-Cook-Kernel-Exploitation.pdf
-slide 21
+Also, I'd note that while this is currently an x86-only
+implementation, it's not hard to extend to other architectures that
+don't already have VMAP_STACK. (And while it is the default, not all
+x86 builds have CONFIG_VMAP_STACK=y, though why you'd turn that off
+and turn this on, I'm not sure.)
 
 -- 
 Kees Cook
